@@ -101,3 +101,38 @@ export async function deleteModel(repo_id: string): Promise<{ deleted: boolean; 
   return r.json();
 }
 
+// ── Pre-flight system check ───────────────────────────────────────────────
+
+export type CheckStatus = 'pass' | 'warn' | 'fail';
+
+export interface PreflightCheck {
+  id: string;
+  label: string;
+  status: CheckStatus;
+  detail: string;
+  fix: string | null;
+}
+
+export interface PreflightDevice {
+  os: string;
+  arch: string;
+  gpu_vendor: 'nvidia' | 'amd' | 'apple' | 'intel' | 'unknown' | 'none';
+  gpu_backend: 'cuda' | 'rocm' | 'mps' | 'cpu';
+  gpu_available: boolean;
+  gpu_driver: string | null;
+  gpu_device_name: string | null;
+  ram_gb: number;
+  disk_free_gb: number;
+}
+
+export interface PreflightReport {
+  ok: boolean;
+  has_warnings: boolean;
+  checks: PreflightCheck[];
+  device: PreflightDevice;
+}
+
+export async function preflight(): Promise<PreflightReport> {
+  return apiJson<PreflightReport>('/setup/preflight');
+}
+

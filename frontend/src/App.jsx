@@ -1233,8 +1233,14 @@ function App() {
         const m = e.data ? JSON.parse(e.data) : null;
         if (m && m.detail) { close(); reject(new Error(m.detail)); return; }
       } catch {}
-      if (gotFinal) { close(); resolve(); }
-      else if (evt.readyState === EventSource.CLOSED) { reject(new Error('transcribe stream closed')); }
+      if (gotFinal) { close(); resolve(); return; }
+      // EventSource auto-reconnects on transport errors; force-close so we
+      // don't loop against a broken endpoint, and surface a pointed message.
+      close();
+      reject(new Error(
+        'Transcribe stream dropped before emitting any segments. ' +
+        'Likely ASR backend failed to load — check backend log + Settings → Models.'
+      ));
     });
   });
 

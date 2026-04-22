@@ -273,33 +273,45 @@ _prep_event_helper = dub_pipeline.prep_event  # alias; we keep the module-local 
 
 @router.get("/dub/transcribe-stream/{job_id}")
 async def dub_transcribe_stream(job_id: str):
-    """Stream per-chunk segments via SSE, then emit diarized final pass."""
+    """Stream per-chunk segments via SSE, then emit diarized final pass.
+
+    Pre-flight checks (missing job, missing audio, ASR not loaded) are emitted
+    as in-stream `error` events rather than HTTP errors, because EventSource
+    on the client can't read non-2xx response bodies — a 503 there surfaces
+    as an opaque "network error" instead of the actionable message we want.
+    """
     job = _get_job(job_id)
+
+    preflight_error: Optional[str] = None
+    asr_audio_target: Optional[str] = None
+    _asr_backend = None
+    scene_cuts: list = []
+
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    _model = await get_model()
-    if _model._asr_pipe is None:
-        raise HTTPException(
-            status_code=503,
-            detail="ASR (speech recognition) isn't loaded yet. The model is still warming up or Whisper failed to initialise — check Settings → Models for status, or restart the server if 'Idle' persists.",
-        )
-
-    asr_audio_target = job.get("vocals_path")
-    if not asr_audio_target or not os.path.exists(asr_audio_target):
-        asr_audio_target = job.get("audio_path")
-    if not asr_audio_target or not os.path.exists(asr_audio_target):
-        raise HTTPException(status_code=404, detail="No audio available for transcription")
-
-    # ASR routing now goes through services.asr_backend so the active engine
-    # (WhisperX by default, with faster-whisper / mlx / pytorch fallbacks) is
-    # used consistently across platforms. dub pipelines specifically benefit
-    # from WhisperX's wav2vec2 alignment (±10-30 ms word timing vs Whisper's
-    # ±100-300 ms) — critical for lip-sync quality.
-    from services.asr_backend import get_active_asr_backend
-    _asr_backend = get_active_asr_backend(asr_pipe=getattr(_model, "_asr_pipe", None))
-    scene_cuts = job.get("scene_cuts") or []
+        preflight_error = "Job not found. It may have been cleaned up or was never created."
+    else:
+        _model = await get_model()
+        if _model._asr_pipe is None:
+            preflight_error = (
+                "ASR (speech recognition) isn't loaded yet. The model is still warming up or "
+                "Whisper failed to initialise — check Settings → Models for status, or restart "
+                "the server if 'Idle' persists."
+            )
+        else:
+            asr_audio_target = job.get("vocals_path")
+            if not asr_audio_target or not os.path.exists(asr_audio_target):
+                asr_audio_target = job.get("audio_path")
+            if not asr_audio_target or not os.path.exists(asr_audio_target):
+                preflight_error = "No audio available for transcription."
+            else:
+                from services.asr_backend import get_active_asr_backend
+                _asr_backend = get_active_asr_backend(asr_pipe=getattr(_model, "_asr_pipe", None))
+                scene_cuts = job.get("scene_cuts") or []
 
     async def gen():
+        if preflight_error:
+            yield _sse_event("error", {"detail": preflight_error})
+            return
         import math
         import tempfile
         loop = asyncio.get_event_loop()

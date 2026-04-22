@@ -394,6 +394,354 @@ def delete_model(repo_id: str):
         )
 
 
+# ── Pre-flight system check ───────────────────────────────────────────────
+#
+# Single endpoint that probes every runtime requirement we care about
+# (OS, RAM, disk, ffmpeg, GPU driver, network) so the wizard can show a
+# pass/warn/fail list instead of silently falling back to CPU when a user's
+# GPU driver is stale or ROCm isn't configured.
+#
+# Each check returns {id, label, status, detail, fix?}. status is one of
+# "pass" / "warn" / "fail". The wizard blocks step advancement on any fail
+# but lets warns through.
+
+# Minimum NVIDIA driver for the cu128 torch wheels we ship. Users below this
+# get CUDA loaded but kernel launches fail with "no kernel image" errors —
+# catch it here with a clear message instead.
+_MIN_NVIDIA_DRIVER = 555
+
+# RAM thresholds (GB). Below _RAM_FAIL_GB the app will OOM on first dub.
+_RAM_FAIL_GB = 8
+_RAM_WARN_GB = 12
+
+
+def _run_cmd(args: list[str], timeout: float = 2.0) -> tuple[int, str]:
+    """Run a subprocess synchronously with a short timeout. Returns (rc, stdout).
+    Never raises — missing binary or timeout returns (-1, '')."""
+    import subprocess
+    try:
+        out = subprocess.run(
+            args, capture_output=True, text=True, timeout=timeout, check=False,
+        )
+        return out.returncode, out.stdout
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return -1, ""
+
+
+def _detect_gpu() -> dict:
+    """Best-effort detection of GPU vendor + driver + compute backend.
+
+    Returns: {vendor, driver, device_name, backend, available, notes}
+      vendor: 'nvidia' | 'amd' | 'apple' | 'intel' | 'none'
+      backend: 'cuda' | 'rocm' | 'mps' | 'cpu'
+      available: bool — whether torch can actually use it
+    """
+    info = {
+        "vendor": "none", "driver": None, "device_name": None,
+        "backend": "cpu", "available": False, "notes": [],
+    }
+
+    # Apple Silicon → MPS (Metal). No external driver to probe.
+    if sys.platform == "darwin" and _platform.machine() == "arm64":
+        info["vendor"] = "apple"
+        info["backend"] = "mps"
+        info["device_name"] = "Apple Silicon GPU (Metal)"
+        try:
+            import torch
+            info["available"] = bool(torch.backends.mps.is_available())
+        except Exception:
+            info["available"] = False
+        return info
+
+    # NVIDIA — nvidia-smi is the authoritative source on both Linux + Windows.
+    rc, out = _run_cmd([
+        "nvidia-smi",
+        "--query-gpu=driver_version,name",
+        "--format=csv,noheader",
+    ])
+    if rc == 0 and out.strip():
+        line = out.strip().splitlines()[0]
+        parts = [p.strip() for p in line.split(",")]
+        driver = parts[0] if parts else None
+        name = parts[1] if len(parts) > 1 else None
+        info.update({"vendor": "nvidia", "driver": driver, "device_name": name})
+        try:
+            import torch
+            info["available"] = bool(torch.cuda.is_available())
+            info["backend"] = "cuda" if info["available"] else "cpu"
+        except Exception:
+            pass
+        # Driver sanity — compare major version against bundled cu128 minimum.
+        try:
+            major = int((driver or "0").split(".")[0])
+            if major < _MIN_NVIDIA_DRIVER:
+                info["notes"].append(
+                    f"NVIDIA driver {driver} below {_MIN_NVIDIA_DRIVER} required "
+                    f"by the bundled CUDA 12.8 runtime — GPU will fail to launch "
+                    f"kernels. Update drivers before dubbing."
+                )
+                info["available"] = False
+        except Exception:
+            pass
+        return info
+
+    # AMD — rocm-smi ships with ROCm on Linux.
+    rc, out = _run_cmd(["rocm-smi", "--showproductname"])
+    if rc == 0 and out.strip():
+        info["vendor"] = "amd"
+        info["device_name"] = out.strip().splitlines()[0][:120]
+        # Check if torch was built with ROCm support. The CUDA-flavoured
+        # wheels we ship don't include ROCm — users need `uv sync` against
+        # the pytorch-rocm index manually.
+        try:
+            import torch
+            has_hip = getattr(torch.version, "hip", None) is not None
+            if has_hip and torch.cuda.is_available():
+                info["backend"] = "rocm"
+                info["available"] = True
+            else:
+                info["backend"] = "cpu"
+                info["notes"].append(
+                    "AMD GPU detected but torch was installed with CUDA wheels. "
+                    "Re-run `uv sync --index-url https://download.pytorch.org/whl/rocm6.1` "
+                    "to enable ROCm acceleration."
+                )
+        except Exception:
+            info["notes"].append("AMD GPU detected but torch not importable.")
+        return info
+
+    # No discrete GPU detected. If torch still reports cuda.is_available (WSL
+    # passthrough, rare), honour it; otherwise fall back to CPU.
+    try:
+        import torch
+        if torch.cuda.is_available():
+            info["vendor"] = "unknown"
+            info["backend"] = "cuda"
+            info["available"] = True
+            info["notes"].append(
+                "torch.cuda.is_available() is True but no nvidia-smi/rocm-smi "
+                "found — running through WSL or virtual GPU?"
+            )
+    except Exception:
+        pass
+    return info
+
+
+def _probe_network(host: str = "huggingface.co", timeout: float = 2.0) -> bool:
+    """Tiny TCP connect test — avoids hitting the CDN + no SSL handshake."""
+    import socket
+    try:
+        with socket.create_connection((host, 443), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
+def _ram_gb() -> float:
+    try:
+        import psutil
+        return psutil.virtual_memory().total / (1024 ** 3)
+    except Exception:
+        return 0.0
+
+
+@router.get("/setup/preflight")
+def preflight():
+    """One-shot system health check. The wizard renders these as a pass/warn/
+    fail list before letting the user proceed to model install.
+
+    Checks: OS + arch, Python runtime, RAM, disk, ffmpeg, ffprobe, GPU vendor
+    + driver, torch compute backend, network reach to huggingface, HF cache
+    writable. Each entry is safe to ignore individually — the wizard treats
+    'warn' as pass-through and only blocks on 'fail'.
+    """
+    import shutil as _shutil
+
+    checks: list[dict] = []
+
+    # ── OS + arch (info-only)
+    arch = _platform.machine()
+    os_ver = _platform.platform(terse=True)
+    checks.append({
+        "id": "os", "label": "Operating system", "status": "pass",
+        "detail": f"{os_ver} ({arch})", "fix": None,
+    })
+
+    # ── Python runtime
+    checks.append({
+        "id": "python", "label": "Python runtime", "status": "pass",
+        "detail": f"Python {sys.version.split()[0]}", "fix": None,
+    })
+
+    # ── RAM
+    ram = _ram_gb()
+    if ram == 0:
+        ram_status, ram_detail, ram_fix = (
+            "warn", "Could not detect system RAM.",
+            "Install psutil in the backend environment or ignore this warning.",
+        )
+    elif ram < _RAM_FAIL_GB:
+        ram_status, ram_detail, ram_fix = (
+            "fail", f"{ram:.1f} GB total (need ≥ {_RAM_FAIL_GB} GB)",
+            "The app will OOM on first dub. Close other apps or upgrade RAM.",
+        )
+    elif ram < _RAM_WARN_GB:
+        ram_status, ram_detail, ram_fix = (
+            "warn", f"{ram:.1f} GB total ({_RAM_WARN_GB}+ GB recommended)",
+            "Long videos may hit swap. Keep other apps closed during dubbing.",
+        )
+    else:
+        ram_status, ram_detail, ram_fix = ("pass", f"{ram:.1f} GB total", None)
+    checks.append({
+        "id": "ram", "label": "System RAM", "status": ram_status,
+        "detail": ram_detail, "fix": ram_fix,
+    })
+
+    # ── Disk free (HF cache partition)
+    cache = _hf_cache_dir()
+    free = _disk_free_gb(cache)
+    if free < MIN_FREE_GB:
+        disk = {
+            "status": "fail",
+            "detail": f"{free:.1f} GB free at {cache} (need ≥ {MIN_FREE_GB} GB)",
+            "fix": f"Free up disk space or set HF_HOME to a larger partition.",
+        }
+    else:
+        disk = {"status": "pass", "detail": f"{free:.1f} GB free at {cache}", "fix": None}
+    checks.append({"id": "disk", **{"label": "Disk space", **disk}})
+
+    # ── HF cache writable
+    try:
+        os.makedirs(cache, exist_ok=True)
+        writable = os.access(cache, os.W_OK)
+    except Exception:
+        writable = False
+    checks.append({
+        "id": "hf_cache_writable", "label": "HuggingFace cache writable",
+        "status": "pass" if writable else "fail",
+        "detail": cache,
+        "fix": None if writable else
+            f"Fix write permissions on {cache} or point HF_HOME elsewhere.",
+    })
+
+    # ── FFmpeg (required)
+    ffmpeg_path = None
+    try:
+        from services.ffmpeg_utils import find_ffmpeg
+        ffmpeg_path = find_ffmpeg()
+    except Exception as e:
+        checks.append({
+            "id": "ffmpeg", "label": "FFmpeg", "status": "fail",
+            "detail": str(e)[:200],
+            "fix": "Install ffmpeg via your package manager "
+                   "(brew install ffmpeg / apt install ffmpeg / choco install ffmpeg).",
+        })
+    else:
+        checks.append({
+            "id": "ffmpeg", "label": "FFmpeg", "status": "pass",
+            "detail": ffmpeg_path, "fix": None,
+        })
+
+    # ── FFprobe (warn — some endpoints need it)
+    ffprobe_path = None
+    if ffmpeg_path:
+        candidate = ffmpeg_path.replace("ffmpeg", "ffprobe")
+        if os.path.exists(candidate):
+            ffprobe_path = candidate
+        else:
+            # System PATH fallback
+            system_probe = _shutil.which("ffprobe")
+            if system_probe:
+                ffprobe_path = system_probe
+    if ffprobe_path:
+        checks.append({
+            "id": "ffprobe", "label": "FFprobe", "status": "pass",
+            "detail": ffprobe_path, "fix": None,
+        })
+    else:
+        checks.append({
+            "id": "ffprobe", "label": "FFprobe", "status": "warn",
+            "detail": "Not bundled alongside ffmpeg.",
+            "fix": "File-probe endpoint (/tools/probe) will 501. "
+                   "Install system ffmpeg (includes ffprobe) to enable it.",
+        })
+
+    # ── GPU + compute backend
+    gpu = _detect_gpu()
+    if gpu["vendor"] == "apple" and gpu["available"]:
+        gpu_status, gpu_fix = "pass", None
+        gpu_detail = f"{gpu['device_name']} — Metal (MPS) ready"
+    elif gpu["vendor"] == "nvidia" and gpu["available"]:
+        gpu_status, gpu_fix = "pass", None
+        gpu_detail = f"{gpu['device_name']} (driver {gpu['driver']}) — CUDA ready"
+    elif gpu["vendor"] == "nvidia" and not gpu["available"]:
+        gpu_status = "fail"
+        gpu_detail = (
+            f"{gpu['device_name']} found but CUDA not usable "
+            f"(driver {gpu['driver']}). " + " ".join(gpu["notes"])
+        )
+        gpu_fix = (
+            f"Update NVIDIA drivers to ≥ R{_MIN_NVIDIA_DRIVER} "
+            "(https://www.nvidia.com/Download/index.aspx). Or run CPU-only "
+            "by continuing past this step — dubbing will be ~10× slower."
+        )
+    elif gpu["vendor"] == "amd":
+        gpu_status = "warn"
+        gpu_detail = (
+            f"{gpu['device_name']} — ROCm "
+            + ("ready" if gpu["available"] else "not configured")
+        )
+        gpu_fix = (
+            None if gpu["available"] else
+            "AMD support is experimental. Re-run `uv sync --index-url "
+            "https://download.pytorch.org/whl/rocm6.1` to enable. App works "
+            "on CPU otherwise (slower)."
+        )
+    else:
+        gpu_status = "warn"
+        gpu_detail = "No compatible GPU detected — running CPU-only."
+        gpu_fix = (
+            "Dubbing will work but ~10× slower than GPU. If you have an "
+            "NVIDIA/AMD card, check drivers are installed."
+        )
+    checks.append({
+        "id": "gpu", "label": "GPU acceleration",
+        "status": gpu_status, "detail": gpu_detail, "fix": gpu_fix,
+    })
+
+    # ── Network reach to huggingface.co (required for first-run downloads)
+    net_ok = _probe_network()
+    checks.append({
+        "id": "network", "label": "Network (huggingface.co)",
+        "status": "pass" if net_ok else "fail",
+        "detail": "Reachable" if net_ok else "Unreachable on port 443",
+        "fix": None if net_ok else
+            "Check internet connection, VPN, or corporate firewall "
+            "whitelist for huggingface.co.",
+    })
+
+    # Aggregate
+    any_fail = any(c["status"] == "fail" for c in checks)
+    any_warn = any(c["status"] == "warn" for c in checks)
+
+    return {
+        "ok": not any_fail,
+        "has_warnings": any_warn,
+        "checks": checks,
+        "device": {
+            "os": sys.platform,
+            "arch": arch,
+            "gpu_vendor": gpu["vendor"],
+            "gpu_backend": gpu["backend"],
+            "gpu_available": gpu["available"],
+            "gpu_driver": gpu["driver"],
+            "gpu_device_name": gpu["device_name"],
+            "ram_gb": round(ram, 1),
+            "disk_free_gb": round(free, 1),
+        },
+    }
+
+
 @router.get("/setup/recommendations")
 def recommendations():
     """Return a curated model preset for the caller's device + architecture.
