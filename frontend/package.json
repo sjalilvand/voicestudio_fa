@@ -9,7 +9,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test ../tests/frontend/*.test.mjs",
+    "test": "node --experimental-strip-types --no-warnings --test ../tests/frontend/*.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
