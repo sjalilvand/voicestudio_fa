@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Globe, Fingerprint, Wand2, Film, FolderOpen, Settings2, ArrowLeftRight,
+  Library,
 } from 'lucide-react';
 
 const ITEMS = [
@@ -8,6 +9,7 @@ const ITEMS = [
   { id: 'clone',     label: 'Clone',     Icon: Fingerprint, accent: '#d3869b' },
   { id: 'design',    label: 'Design',    Icon: Wand2,       accent: '#8ec07c' },
   { id: 'dub',       label: 'Dub',       Icon: Film,        accent: '#fe8019' },
+  { id: 'gallery',   label: 'Gallery',   Icon: Library,     accent: '#b8bb26' },
   { id: 'projects',  label: 'Projects',  Icon: FolderOpen,  accent: '#83a598' },
 ];
 const FOOTER_ITEMS = [

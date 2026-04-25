@@ -3,6 +3,7 @@ import sys
 
 try:
     import dotenv
+
     dotenv.load_dotenv()
     # Also load the durable per-user config so env vars set once survive
     # Tauri/Finder launches that don't inherit a shell environment.
@@ -71,11 +72,12 @@ class _JsonFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         import json as _json
+
         payload = {
-            "t":     self.formatTime(record, datefmt="%Y-%m-%dT%H:%M:%S"),
+            "t": self.formatTime(record, datefmt="%Y-%m-%dT%H:%M:%S"),
             "level": record.levelname,
-            "name":  record.name,
-            "msg":   record.getMessage(),
+            "name": record.name,
+            "msg": record.getMessage(),
         }
         if record.exc_info:
             payload["exc"] = self.formatException(record.exc_info)
@@ -96,13 +98,21 @@ if _json_logs:
 # Attached to root so uvicorn, fastapi, and every `omnivoice.*` namespace land here.
 # Not attached under _disable_file_log to keep CI/headless tests quiet.
 if not os.environ.get("OMNIVOICE_DISABLE_FILE_LOG"):
-    from core.config import LOG_PATH as _LOG_PATH  # local import — avoids circular import at module top
+    from core.config import (
+        LOG_PATH as _LOG_PATH,
+    )  # local import — avoids circular import at module top
+
     try:
         _file_handler = RotatingFileHandler(
-            _LOG_PATH, maxBytes=2 * 1024 * 1024, backupCount=3, encoding="utf-8",
+            _LOG_PATH,
+            maxBytes=2 * 1024 * 1024,
+            backupCount=3,
+            encoding="utf-8",
         )
         _file_handler.setLevel(logging.INFO)
-        _file_handler.setFormatter(_JsonFormatter() if _json_logs else logging.Formatter(_LOG_FMT))
+        _file_handler.setFormatter(
+            _JsonFormatter() if _json_logs else logging.Formatter(_LOG_FMT)
+        )
         logging.getLogger().addHandler(_file_handler)
     except Exception as _e:  # disk full, permission denied, etc. — don't block startup
         logging.getLogger("omnivoice.api").warning("Runtime log file disabled: %s", _e)
@@ -127,7 +137,22 @@ from core.tasks import task_manager
 from core import job_store
 from services.model_manager import idle_worker
 
-from api.routers import system, profiles, exports, generation, dub_core, dub_generate, dub_export, dub_translate, projects, glossary, engines, tools, setup
+from api.routers import (
+    system,
+    profiles,
+    exports,
+    generation,
+    dub_core,
+    dub_generate,
+    dub_export,
+    dub_translate,
+    projects,
+    glossary,
+    engines,
+    tools,
+    setup,
+    gallery,
+)
 from utils import hf_progress
 
 # Install the HuggingFace tqdm patch early — every downstream library import
@@ -135,9 +160,13 @@ from utils import hf_progress
 # the patched class, not the original.
 hf_progress.install()
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    from api.routers.gallery import _init_gallery_db
+
+    _init_gallery_db()
     # Any job still in pending/running at startup is orphaned — a previous
     # process didn't finish it. Flip to failed with a clear message so the
     # UI doesn't show a fake spinner.
@@ -153,7 +182,9 @@ async def lifespan(app: FastAPI):
     idle_task.cancel()
     worker_task.cancel()
 
+
 app = FastAPI(title="OmniVoice Studio API", version="0.4.0", lifespan=lifespan)
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -161,7 +192,10 @@ async def global_exception_handler(request: Request, exc: Exception):
     # The response is already partially sent — trying to wrap it in a 500 just
     # produces a second protocol error. Log a one-liner and bail.
     exc_name = type(exc).__name__
-    if exc_name in ("LocalProtocolError", "ClientDisconnect") or "Content-Length" in str(exc):
+    if exc_name in (
+        "LocalProtocolError",
+        "ClientDisconnect",
+    ) or "Content-Length" in str(exc):
         logger.info("Client disconnect during %s (%s)", request.url, exc_name)
         return Response(status_code=499)
     try:
@@ -184,6 +218,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         headers["Vary"] = "Origin"
     return JSONResponse({"detail": str(exc)}, status_code=500, headers=headers)
 
+
 _allowed = os.environ.get(
     "OMNIVOICE_ALLOWED_ORIGINS",
     "http://localhost:3901,http://127.0.0.1:3901,tauri://localhost,http://tauri.localhost",
@@ -193,7 +228,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in _allowed if o.strip()],
     allow_credentials=True,
-    allow_methods=["*"], allow_headers=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
     expose_headers=["Content-Disposition"],
 )
 
@@ -213,17 +249,21 @@ app.include_router(glossary.router)
 app.include_router(engines.router)
 app.include_router(tools.router)
 app.include_router(setup.router)
+app.include_router(gallery.router)
 
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 if os.path.exists(frontend_path):
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
 else:
+
     @app.get("/")
     def _dev_fallback():
         return RedirectResponse(url="http://localhost:3901")
 
+
 if __name__ == "__main__":
     import uvicorn
+
     # Port 3900 picked to dodge common 8000 conflicts (Django/Rails/Jupyter).
     # Rust sidecar launcher in lib.rs::BACKEND_PORT must stay in sync.
     uvicorn.run(app, host="0.0.0.0", port=3900)

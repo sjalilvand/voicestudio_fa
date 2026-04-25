@@ -19,6 +19,7 @@ const SetupWizard = lazy(() => import('./pages/SetupWizard'));
 const KeyboardCheatsheet = lazy(() => import('./components/KeyboardCheatsheet'));
 const LogsFooter = lazy(() => import('./components/LogsFooter'));
 const ProjectsPage = lazy(() => import('./pages/Projects'));
+const VoiceGallery = lazy(() => import('./pages/VoiceGallery'));
 import Header from './components/Header';
 import NavRail from './components/NavRail';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -198,7 +199,7 @@ function App() {
   const openVoiceProfile = useAppStore(s => s.openVoiceProfile);
   const closeVoiceProfile = useAppStore(s => s.closeVoiceProfile);
   const hideSidebar = mode === 'launchpad' || mode === 'settings' || mode === 'voice'
-    || mode === 'queue' || mode === 'tools' || mode === 'projects';
+    || mode === 'queue' || mode === 'tools' || mode === 'projects' || mode === 'gallery';
   const availableSidebarTabs = mode === 'dub'
     ? ['projects', 'history', 'downloads']
     : (mode === 'clone' || mode === 'design')
@@ -2059,6 +2060,12 @@ function App() {
                 onOpenProfile={(id) => { openVoiceProfile(id); }}
                 onRevealExport={(path) => { exportReveal({ path }).catch(() => {}); }}
               />
+            </Suspense>
+          </ErrorBoundary>
+        ) : mode === 'gallery' ? (
+          <ErrorBoundary name="gallery">
+            <Suspense fallback={<LazyFallback />}>
+              <VoiceGallery />
             </Suspense>
           </ErrorBoundary>
         ) : mode === 'launchpad' ? (
