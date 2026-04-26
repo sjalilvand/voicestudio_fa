@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import { Play, Pause, ZoomIn, ZoomOut, SkipBack, Loader } from 'lucide-react';
+import './WaveformErrorBoundary.css';
 
 const REGION_COLORS = [
   'rgba(211,134,155,0.3)',
@@ -325,11 +326,7 @@ export default function WaveformTimeline({
   if (loadError) {
     return (
       <div className="waveform-timeline">
-        <div style={{
-          display:'flex', alignItems:'center', justifyContent:'center',
-          padding:8, background:'rgba(0,0,0,0.15)', borderRadius:4,
-          border:'1px solid rgba(255,255,255,0.04)', color:'#a89984', fontSize:'0.7rem',
-        }}>
+        <div className="wfm-error">
           ⚠ Could not load audio from this file
         </div>
       </div>
@@ -337,50 +334,36 @@ export default function WaveformTimeline({
   }
 
   return (
-    <div className="waveform-timeline" style={{display:'flex', flexDirection:'column', flex:1, minHeight:0}}>
+    <div className="waveform-timeline wfm-layout">
       {/* Video + Waveform stacked vertically */}
-      <div style={{display:'flex', flexDirection:'column', gap:4, flex:1, minHeight:0}}>
+      <div className="wfm-stack">
         {/* Video preview — pinned to its aspect ratio so we don't letterbox
             into huge black bars. Waveform gets the remaining height. */}
         {videoSrc && (
           <div
             ref={videoContainerRef}
-            style={{
-              flex:'0 0 auto', aspectRatio:'16 / 9', maxHeight:'55%',
-              background:'#000', borderRadius:4, overflow:'hidden',
-              border:'1px solid rgba(255,255,255,0.05)', display: 'flex',
-            }}
+            className="wfm-video-preview"
           />
         )}
 
         {/* Waveform — fills the rest. This is the actual editing surface. */}
-        <div style={{position:'relative', overflow:'hidden', flex:'1 1 auto', minHeight:140}}>
+        <div className="wfm-wave-wrap">
           <div
             ref={waveContainerRef}
-            className="waveform-container"
-            style={{height:'100%', minHeight:140, borderRadius:4, width:'100%', overflow:'hidden'}}
+            className="waveform-container wfm-wave-inner"
           />
 
           {/* Loading shimmer */}
           {!ready && !loadError && (
-            <div style={{
-              position:'absolute', inset:0, display:'flex', alignItems:'center',
-              justifyContent:'center', background:'rgba(0,0,0,0.45)',
-              borderRadius:4, zIndex:3, gap:6,
-            }}>
+            <div className="wfm-loading">
               <Loader className="spinner" size={12} color="#d3869b"/>
-              <span style={{fontSize:'0.65rem', color:'#a89984'}}>Loading waveform…</span>
+              <span className="wfm-loading__text">Loading waveform…</span>
             </div>
           )}
 
           {/* Overlay slot — transcription / dubbing progress */}
           {overlayContent && (
-            <div style={{
-              position:'absolute', inset:0, borderRadius:4, zIndex:4,
-              background:'rgba(29,32,33,0.85)', backdropFilter:'blur(3px)',
-              display:'flex', flexDirection:'column', alignItems:'center',
-              justifyContent:'center', gap:6, padding:8,
-            }}>
+            <div className="wfm-overlay">
               {overlayContent}
             </div>
           )}
@@ -388,7 +371,7 @@ export default function WaveformTimeline({
       </div>
 
       {/* Controls */}
-      <div className="waveform-controls" style={{flexShrink:0, marginTop:3}}>
+      <div className="waveform-controls wfm-controls">
         <div className="waveform-controls-left">
           <button className="waveform-btn" onClick={() => seekTo(0)} title="Restart"><SkipBack size={11}/></button>
           <button className="waveform-btn waveform-btn-play" onClick={togglePlay} disabled={!ready}>
