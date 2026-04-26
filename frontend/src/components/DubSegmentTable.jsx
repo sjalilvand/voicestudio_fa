@@ -8,12 +8,12 @@ const BASE_ROW_HEIGHT = 28;
 const ROW_HEIGHT_WITH_ORIG = 44;
 
 const COLUMNS = [
-  { key: 'time',  label: 'Time',  width: 48 },
-  { key: 'spkr',  label: 'Spkr',  width: 42 },
+  { key: 'time',  label: 'Time',  width: 50 },
+  { key: 'spkr',  label: 'Spkr',  width: 45 },
   { key: 'text',  label: 'Text',  flex: 1 },
-  { key: 'lang',  label: 'Lang',  width: 38 },
-  { key: 'voice', label: 'Voice', width: 70 },
-  { key: 'vol',   label: 'Vol',   width: 24, title: 'Volume (0–200%)' },
+  { key: 'lang',  label: 'Lang',  width: 42 },
+  { key: 'voice', label: 'Voice', width: 65 },
+  { key: 'vol',   label: 'Vol',   width: 28, title: 'Volume (0–200%)' },
   { key: 'act',   label: '',      width: 46 },
 ];
 
@@ -124,6 +124,7 @@ export default function DubSegmentTable({
       </Table.Toolbar>
 
       <Table.Header
+        className="dub-segment-table__header"
         columns={COLUMNS}
         leading={
           <span className="dub-segment-table__select-all">

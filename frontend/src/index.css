@@ -759,6 +759,7 @@ audio::-webkit-media-controls-time-remaining-display { color: var(--chrome-fg); 
 .segment-row {
   display: flex; align-items: center; gap: 3px;
   padding: 2px 4px;
+  box-sizing: border-box;
   border-bottom: 1px solid rgba(255,255,255,0.02);
   transition: background var(--transition-fast);
 }

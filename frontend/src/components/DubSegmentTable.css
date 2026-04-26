@@ -1,5 +1,10 @@
 /* Table body specific styles — chrome comes from ui/Table. */
 
+.dub-segment-table__header {
+  padding: 3px 4px !important;
+  gap: 3px !important;
+}
+
 .dub-segment-table__body { flex: 1; min-height: 0; }
 
 .dub-segment-table__select-all {
