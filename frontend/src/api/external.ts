@@ -8,20 +8,20 @@
 
 const isTauri =
   typeof window !== 'undefined' &&
-  !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
+  !!((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__);
 
-let _openUrl = null;
+let _openUrl: ((url: string) => Promise<void>) | null = null;
 
 /**
  * Open an external URL in the system default browser.
  * @param {string} url — the URL to open
  */
-export async function openExternal(url) {
+export async function openExternal(url: string) {
   if (isTauri) {
     try {
       if (!_openUrl) {
         const mod = await import('@tauri-apps/plugin-opener');
-        _openUrl = mod.openUrl;
+        _openUrl = mod.openUrl as (url: string) => Promise<void>;
       }
       await _openUrl(url);
       return;

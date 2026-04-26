@@ -106,9 +106,9 @@ def offload_tts_for_asr():
     if not torch.cuda.is_available():
         return  # Only needed on CUDA (limited VRAM)
     try:
-        # Check if there's enough free VRAM to skip offloading (~4 GB needed for ASR)
+        # Check if there's enough free VRAM to skip offloading (WhisperX + context needs >6GB safely)
         free_mem = torch.cuda.mem_get_info()[0]
-        if free_mem > 4 * 1024 ** 3:  # > 4 GB free → probably fine
+        if free_mem > 8 * 1024 ** 3:  # > 8 GB free → plenty of room, skip offload
             return
     except Exception:
         pass
