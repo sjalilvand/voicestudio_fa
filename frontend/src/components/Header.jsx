@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { Globe, Fingerprint, Wand2, Film, FolderOpen, RefreshCw, Settings2, ChevronRight, Zap } from 'lucide-react';
+import { Globe, Fingerprint, Wand2, Film, FolderOpen, RefreshCw, Settings2, ChevronRight, Zap, Building2 } from 'lucide-react';
 import { Button, Badge } from '../ui';
 
 const VIEW_META = {
-  launchpad: { label: 'Launchpad',       Icon: Globe,       accent: '#f3a5b6', kicker: 'Studio' },
-  clone:     { label: 'Voice Clone',     Icon: Fingerprint, accent: '#d3869b', kicker: 'Studio' },
-  design:    { label: 'Voice Design',    Icon: Wand2,       accent: '#8ec07c', kicker: 'Studio' },
-  dub:       { label: 'Dubbing',         Icon: Film,        accent: '#fe8019', kicker: 'Studio' },
-  projects:  { label: 'Projects',        Icon: FolderOpen,  accent: '#83a598', kicker: 'Library' },
-  settings:  { label: 'Settings',        Icon: Settings2,   accent: '#fabd2f', kicker: 'Preferences' },
+  launchpad:  { label: 'Launchpad',       Icon: Globe,       accent: '#f3a5b6', kicker: 'Studio' },
+  clone:      { label: 'Voice Clone',     Icon: Fingerprint, accent: '#d3869b', kicker: 'Studio' },
+  design:     { label: 'Voice Design',    Icon: Wand2,       accent: '#8ec07c', kicker: 'Studio' },
+  dub:        { label: 'Dubbing',         Icon: Film,        accent: '#fe8019', kicker: 'Studio' },
+  projects:   { label: 'Projects',        Icon: FolderOpen,  accent: '#83a598', kicker: 'Library' },
+  settings:   { label: 'Settings',        Icon: Settings2,   accent: '#fabd2f', kicker: 'Preferences' },
+  enterprise: { label: 'Commercial License', Icon: Building2, accent: '#fe8019', kicker: 'Licensing' },
 };
 
 function WaveBars({ color = '#f3a5b6', active }) {

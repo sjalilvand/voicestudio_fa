@@ -9,9 +9,10 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   Cpu, FileText, Info, ShieldCheck, RefreshCw, Trash2, ExternalLink,
-  CheckCircle, AlertCircle, Plug, Mic, MessageSquare, Download, Copy,
+  CheckCircle, AlertCircle, Plug, Mic, MessageSquare, Download, Copy, Building2,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { openExternal } from '../api/external';
 import { systemLogs, systemLogsTauri, clearSystemLogs, clearTauriLogs } from '../api/system';
 import { useSysinfo, useModelStatus, useSystemInfo } from '../api/hooks';
 import { listEngines, selectEngine } from '../api/engines';
@@ -274,7 +275,7 @@ export function ModelStoreTab({ info, modelBadge }) {
       id: 'name',
       accessorFn: m => `${m.label || ''} ${m.repo_id || ''}`,
       header: 'Model',
-      size: 420,
+      size: 260,
       meta: { className: 'models-row__name' },
       cell: ({ row }) => {
         const m = row.original;
@@ -349,7 +350,7 @@ export function ModelStoreTab({ info, modelBadge }) {
       id: 'role',
       accessorFn: m => (m.role || 'other').toLowerCase(),
       header: 'Role',
-      size: 92,
+      size: 58,
       filterFn: (row, id, value) => !value || row.getValue(id) === value,
       cell: ({ row }) => <span className="models-row__role">{MODEL_ROLE_LABEL[row.getValue('role')] || row.original.role || 'Other'}</span>,
     },
@@ -357,7 +358,7 @@ export function ModelStoreTab({ info, modelBadge }) {
       id: 'size',
       accessorFn: m => m.installed ? (m.size_on_disk_bytes || 0) : (m.size_gb || 0) * 1024 ** 3,
       header: 'Size',
-      size: 86,
+      size: 68,
       meta: { align: 'right', className: 'models-row__size' },
       cell: ({ row }) => {
         const m = row.original;
@@ -368,7 +369,7 @@ export function ModelStoreTab({ info, modelBadge }) {
       id: 'status',
       accessorFn: m => m.installed ? 2 : (m.supported === false ? 0 : 1),
       header: 'Status',
-      size: 116,
+      size: 96,
       meta: { align: 'center', className: 'models-row__status' },
       cell: ({ row }) => {
         const m = row.original;
@@ -389,7 +390,7 @@ export function ModelStoreTab({ info, modelBadge }) {
     {
       id: 'actions',
       header: '',
-      size: 118,
+      size: 90,
       enableSorting: false,
       meta: { align: 'right', className: 'models-row__actions' },
       cell: ({ row }) => {
@@ -399,7 +400,7 @@ export function ModelStoreTab({ info, modelBadge }) {
           <>
             <Button
               variant="icon" iconSize="sm"
-              onClick={() => window.open(`https://huggingface.co/${m.repo_id}`, '_blank', 'noopener,noreferrer')}
+              onClick={() => openExternal(`https://huggingface.co/${m.repo_id}`)}
               title="View on HuggingFace"
               aria-label="View on HuggingFace"
             >
@@ -1077,7 +1078,7 @@ export default function Settings() {
               variant="subtle"
               size="md"
               leading={<ExternalLink size={12} />}
-              onClick={() => window.open('https://github.com/k2-fsa/OmniVoice', '_blank', 'noopener,noreferrer')}
+              onClick={() => openExternal('https://github.com/k2-fsa/OmniVoice')}
             >
               OmniVoice on GitHub
             </Button>
@@ -1085,9 +1086,17 @@ export default function Settings() {
               variant="subtle"
               size="md"
               leading={<ExternalLink size={12} />}
-              onClick={() => window.open('https://huggingface.co/k2-fsa/OmniVoice', '_blank', 'noopener,noreferrer')}
+              onClick={() => openExternal('https://huggingface.co/k2-fsa/OmniVoice')}
             >
               Model card
+            </Button>
+            <Button
+              variant="subtle"
+              size="md"
+              leading={<Building2 size={12} />}
+              onClick={() => { useAppStore.getState().setMode?.('enterprise'); }}
+            >
+              Commercial License
             </Button>
           </div>
         </section>

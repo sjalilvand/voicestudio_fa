@@ -62,6 +62,7 @@
   gap: 8px;
   min-width: 0;
   flex: 1;
+  overflow: hidden;
 }
 .logs-footer__title {
   color: #a89984;
@@ -161,11 +162,34 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
 }
 .logs-footer__actions {
   display: flex;
   align-items: center;
   gap: 2px;
+}
+
+/* Discord button */
+.logs-footer__discord {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  color: #7289da;
+  opacity: 0.6;
+  transition: color 0.15s, opacity 0.15s, transform 0.15s;
+}
+.logs-footer__discord:hover {
+  opacity: 1;
+  color: #5865F2;
+  transform: scale(1.1);
 }
 
 /* Glowing donate heart */
@@ -178,6 +202,7 @@
   justify-content: center;
   width: 24px;
   height: 24px;
+  flex-shrink: 0;
   border-radius: 4px;
   color: #d3869b;
   margin-left: 4px;

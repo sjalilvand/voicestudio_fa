@@ -334,3 +334,29 @@
   display: inline-flex;
   gap: var(--space-2);
 }
+
+/* ── License notice ─────────────────────────────────────────── */
+.export-modal__license-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px var(--space-3);
+  font-family: var(--chrome-font-mono);
+  font-size: var(--chrome-label-size);
+  letter-spacing: var(--chrome-label-track);
+  color: var(--chrome-fg-dim);
+  border-top: 1px solid var(--chrome-border);
+}
+.export-modal__license-link {
+  background: none;
+  border: none;
+  color: var(--chrome-accent);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
+}
+.export-modal__license-link:hover {
+  color: var(--chrome-fg);
+}

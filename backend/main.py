@@ -185,6 +185,7 @@ from api.routers import (
     setup,
     gallery,
     batch,
+    watermark,
 )
 from utils import hf_progress
 
@@ -314,6 +315,7 @@ app.include_router(tools.router)
 app.include_router(setup.router)
 app.include_router(gallery.router)
 app.include_router(batch.router)
+app.include_router(watermark.router)
 
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 if os.path.exists(frontend_path):

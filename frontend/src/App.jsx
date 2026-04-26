@@ -22,6 +22,7 @@ const LogsFooter = lazy(() => import('./components/LogsFooter'));
 const ProjectsPage = lazy(() => import('./pages/Projects'));
 const VoiceGallery = lazy(() => import('./pages/VoiceGallery'));
 const DonatePage = lazy(() => import('./pages/DonatePage'));
+const EnterprisePage = lazy(() => import('./pages/EnterprisePage'));
 import Header from './components/Header';
 import NavRail from './components/NavRail';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -204,7 +205,7 @@ function App() {
   const openVoiceProfile = useAppStore(s => s.openVoiceProfile);
   const closeVoiceProfile = useAppStore(s => s.closeVoiceProfile);
   const hideSidebar = mode === 'launchpad' || mode === 'settings' || mode === 'voice' || mode === 'donate'
-    || mode === 'queue' || mode === 'tools' || mode === 'projects' || mode === 'gallery';
+    || mode === 'queue' || mode === 'tools' || mode === 'projects' || mode === 'gallery' || mode === 'enterprise';
   const availableSidebarTabs = mode === 'dub'
     ? ['projects', 'history', 'downloads']
     : (mode === 'clone' || mode === 'design')
@@ -2031,7 +2032,13 @@ function App() {
         ) : mode === 'donate' ? (
           <ErrorBoundary name="donate">
             <Suspense fallback={<LazyFallback />}>
-              <DonatePage onBack={() => setMode('launchpad')} />
+              <DonatePage onBack={() => setMode('launchpad')} onEnterprise={() => setMode('enterprise')} />
+            </Suspense>
+          </ErrorBoundary>
+        ) : mode === 'enterprise' ? (
+          <ErrorBoundary name="enterprise">
+            <Suspense fallback={<LazyFallback />}>
+              <EnterprisePage onBack={() => setMode('launchpad')} />
             </Suspense>
           </ErrorBoundary>
         ) : mode === 'launchpad' ? (

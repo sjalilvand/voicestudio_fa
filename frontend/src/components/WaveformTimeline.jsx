@@ -267,7 +267,13 @@ export default function WaveformTimeline({
 
   // ── Zoom ────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (wsRef.current && ready) wsRef.current.zoom(zoom);
+    if (wsRef.current && ready) {
+      try {
+        wsRef.current.zoom(zoom);
+      } catch (err) {
+        console.warn('WaveSurfer zoom failed:', err);
+      }
+    }
   }, [zoom, ready]);
 
   // ── Sync regions — skips when dragging or fingerprint unchanged ─────────────

@@ -486,6 +486,12 @@ async def dub_transcribe_stream(job_id: str):
         _save_job(job_id, job)
 
         # Restore TTS model to GPU now that ASR is done
+        if _asr_backend:
+            try:
+                _asr_backend.unload()
+            except Exception as e:
+                logger.warning("Failed to unload ASR backend: %s", e)
+
         await loop.run_in_executor(_cpu_pool, restore_tts_after_asr)
 
         if torch.backends.mps.is_available():
@@ -584,6 +590,11 @@ async def dub_transcribe(job_id: str):
         for s in segments:
             s.setdefault("text_original", s.get("text", ""))
         job["full_transcript"] = " ".join(s["text"] for s in segments)
+
+        try:
+            _asr.unload()
+        except Exception as e:
+            logger.warning("Failed to unload ASR backend: %s", e)
 
         if torch.backends.mps.is_available():
             torch.mps.empty_cache()

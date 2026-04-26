@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Film, Volume2, FileText, Package, Music, Layers, Download,
-  Check, Globe, Zap, X,
+  Check, Globe, Zap, X, Building2,
 } from 'lucide-react';
 import { Button, Segmented, Badge } from '../ui';
 import './ExportModal.css';
@@ -36,6 +36,7 @@ export default function ExportModal({
   triggerDownload,
   handleDubDownload, handleDubAudioDownload, handleAudioExport,
   segmentCount = 0,
+  onEnterprise,
 }) {
   const [tab, setTab] = useState('video');
 
@@ -372,6 +373,12 @@ export default function ExportModal({
               />
             </div>
           )}
+        </div>
+
+        {/* Commercial license notice */}
+        <div className="export-modal__license-notice">
+          <Building2 size={11} />
+          <span>Commercial use requires a <button type="button" className="export-modal__license-link" onClick={() => { onClose(); onEnterprise?.(); }}>license</button>.</span>
         </div>
 
         {/* Summary footer */}

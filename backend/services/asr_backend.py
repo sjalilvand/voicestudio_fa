@@ -50,6 +50,10 @@ class ASRBackend(ABC):
         that already speak the shape plug in with zero adapter work.
         """
 
+    def unload(self) -> None:
+        """Release the model from memory."""
+        pass
+
 
 # ── WhisperX (cross-platform default — forced-alignment word timing) ────────
 
@@ -240,6 +244,17 @@ class WhisperXBackend(ASRBackend):
             "language": lang,
         }
 
+    def unload(self) -> None:
+        self._asr = None
+        self._align_cache.clear()
+        import gc
+        gc.collect()
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
 
 # ── Faster-Whisper (cross-platform fallback) ────────────────────────────────
 
@@ -338,6 +353,17 @@ class FasterWhisperBackend(ASRBackend):
             "duration": info.duration,
         }
         return out
+
+    def unload(self) -> None:
+        self._asr = None
+        import gc
+        gc.collect()
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
 
 
 # ── MLX Whisper (Apple Silicon optional) ────────────────────────────────────

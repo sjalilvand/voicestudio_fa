@@ -973,6 +973,7 @@ export default function DubTab(props) {
         handleDubAudioDownload={handleDubAudioDownload}
         handleAudioExport={handleAudioExport}
         segmentCount={dubSegments.length}
+        onEnterprise={() => useAppStore.getState().setMode?.('enterprise')}
       />
     </div>
   );

@@ -1,11 +1,20 @@
 <div align="center">
-  <img src="frontend/public/favicon.svg" alt="OmniVoice Logo" width="100" />
+  <img src="docs/logo.png" alt="OmniVoice Logo" width="160" />
   <h1>OmniVoice Studio</h1>
-  <p><b>Local cinematic AI dubbing. No API keys. No cloud. Just run it.</b></p>
+  <p><b>The open-source ElevenLabs alternative.</b></p>
+  <p>Voice cloning · Voice design · Video dubbing — 646 languages, runs 100% locally, forever free.</p>
   <p>
+    <a href="https://github.com/debpalash/OmniVoice-Studio/stargazers"><img src="https://img.shields.io/github/stars/debpalash/OmniVoice-Studio?style=flat-square&color=f59e0b" alt="Stars" /></a>
+    <a href="https://github.com/debpalash/OmniVoice-Studio/releases/latest"><img src="https://img.shields.io/github/v/release/debpalash/OmniVoice-Studio?style=flat-square&color=10b981" alt="Release" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-Dual_(Free_%2B_Commercial)-blue?style=flat-square" alt="License" /></a>
+    <a href="https://github.com/debpalash/OmniVoice-Studio/issues"><img src="https://img.shields.io/github/issues/debpalash/OmniVoice-Studio?style=flat-square&color=ef4444" alt="Issues" /></a>
+    <a href="https://discord.gg/aRRdVj3de7"><img src="https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord" /></a>
+  </p>
+  <p>
+    <a href="https://github.com/debpalash/OmniVoice-Studio/releases/latest">Download</a> ·
     <a href="#features">Features</a> ·
     <a href="#quickstart">Quickstart</a> ·
-    <a href="#architecture">Architecture</a> ·
+    <a href="#why-open-source">Why Open Source?</a> ·
     <a href="#roadmap">Roadmap</a>
   </p>
   <p>
@@ -21,26 +30,77 @@
 <div align="center">
   <img src="preview.png" alt="OmniVoice Studio — Launchpad" width="100%"/>
   <br/>
-  <sub>Launchpad — Voice Clone · Voice Design · Video Dubbing, all in one studio.</sub>
+  <sub>Launchpad — Voice Clone · Voice Design · Video Dubbing, all in one place.</sub>
 </div>
 
-<details>
-<summary><b>📸 More screenshots</b></summary>
 <br/>
+
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshot-clone.png" width="100%"/><br/><sub><b>Voice Clone</b> — Drop a 3s clip, mirror the voice</sub></td>
-    <td align="center"><img src="docs/screenshot-design.png" width="100%"/><br/><sub><b>Voice Design</b> — Build voices by gender, age, accent, pitch</sub></td>
+    <td align="center" width="50%">
+      <img src="docs/screenshot-clone.png" alt="Voice Clone" width="100%"/>
+      <br/><b>Voice Clone</b><br/>
+      <sub>Drop a 3-second clip → mirror any voice. 646 languages, zero-shot.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/screenshot-design.png" alt="Voice Design" width="100%"/>
+      <br/><b>Voice Design</b><br/>
+      <sub>Build new voices from scratch — gender, age, accent, pitch, style.</sub>
+    </td>
   </tr>
   <tr>
-    <td align="center" colspan="2"><img src="docs/screenshot-dub.png" width="100%"/><br/><sub><b>Video Dubbing</b> — Upload or paste URL, transcribe, translate, re-voice</sub></td>
+    <td align="center">
+      <img src="docs/screenshot-dub.png" alt="Video Dubbing" width="100%"/>
+      <br/><b>Video Dubbing</b><br/>
+      <sub>Upload or paste a YouTube URL. Transcribe, translate, re-voice, export.</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshot-gallery.png" alt="Voice Gallery" width="100%"/>
+      <br/><b>Voice Gallery</b><br/>
+      <sub>Search YouTube, browse categories, download clips, build your library.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshot-settings.png" alt="Settings — Models" width="100%"/>
+      <br/><b>Settings → Models</b><br/>
+      <sub>15 models. One-click install. Auto-detects your platform (CUDA / MPS / CPU).</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshot-libraryprojects.png" alt="Projects" width="100%"/>
+      <br/><b>Projects</b><br/>
+      <sub>Dub projects, voice profiles, generation history, exports — all searchable.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <img src="docs/screenshot-logs.png" alt="Settings — Logs" width="100%"/>
+      <br/><b>Settings → Logs</b><br/>
+      <sub>Live backend, frontend, and Tauri runtime logs. Filter, refresh, clear.</sub>
+    </td>
   </tr>
 </table>
-</details>
 
 ---
 
-Full-stack video dubbing studio built on the open-source [OmniVoice](https://github.com/k2-fsa/OmniVoice) 600-language zero-shot diffusion TTS model. Upload a video, get broadcast-quality dubs in any language with the original speaker's voice preserved.
+## Why Open Source?
+
+ElevenLabs charges **$5–$330/mo** and processes your audio on their servers. OmniVoice Studio runs **on your hardware, with no usage limits.**
+
+| | **ElevenLabs** | **OmniVoice Studio** |
+|---|---|---|
+| **Pricing** | $5–$330/mo, per-character billing | Free for personal use · [Commercial license](#license) for business |
+| **Voice Cloning** | ✅ 3s clip | ✅ 3s clip, zero-shot |
+| **Voice Design** | ✅ Gender, age | ✅ Gender, age, accent, pitch, style, dialect |
+| **Languages** | 32 | **646** |
+| **Video Dubbing** | ✅ Cloud-only | ✅ Fully local |
+| **Data Privacy** | Audio sent to cloud | **Nothing leaves your machine** |
+| **API Keys** | Required | Not needed |
+| **GPU Support** | N/A (cloud) | CUDA · Apple Silicon · ROCm · CPU |
+| **Desktop App** | ❌ | ✅ macOS · Windows · Linux |
+| **Customizable** | ❌ Closed | ✅ Fork it, extend it, ship it |
+
+Built on the [OmniVoice](https://github.com/k2-fsa/OmniVoice) 600-language zero-shot diffusion TTS model. Upload a video, get broadcast-quality dubs in any language with the original speaker's voice preserved.
 
 ## Features
 
@@ -68,6 +128,12 @@ Full-stack video dubbing studio built on the open-source [OmniVoice](https://git
 - **VRAM-Aware** — Automatically offloads TTS to CPU during transcription on ≤8 GB GPUs. Zero config.
 - **Live Telemetry** — Real-time CPU/RAM/VRAM stats with model warm-up indicator.
 - **Keyboard-First** — `⌘+Enter` generate, `⌘+S` save, `⌘+Z`/`⌘+⇧+Z` undo/redo.
+
+### AI Provenance
+- **Invisible Watermark** — AudioSeal-powered (Meta) neural watermark embedded in every generated audio. Imperceptible, survives compression/editing.
+- **Detection API** — Upload any audio to `/watermark/detect` to verify OmniVoice origin with confidence score.
+- **Video Branding** — Optional logo overlay on exported MP4s (5s fade-out, bottom-right).
+- **Configurable** — Toggle invisible/visible watermarks independently in Settings → Privacy.
 
 ---
 
@@ -102,13 +168,31 @@ This boots both services:
 | **Frontend** | `localhost:3901` | React · Vite · Waveform timeline · Glassmorphism UI |
 
 > [!NOTE]
-> First run downloads model weights (~2.4 GB) from HuggingFace. Set `HF_TOKEN` for faster authenticated downloads.
+> First run downloads model weights (~2.4 GB). This works out of the box — no account needed. For faster downloads, optionally set `HF_TOKEN=hf_...` in your environment ([get a free token here](https://huggingface.co/settings/tokens)).
+>
+> **Having issues?** Join our [Discord](https://discord.gg/aRRdVj3de7) for setup help and troubleshooting.
 
 ### Desktop App
 
 ```bash
 bun run desktop    # Launches Tauri native app (macOS / Windows / Linux)
 ```
+
+---
+
+## System Requirements
+
+| | **Minimum** | **Recommended** |
+|---|---|---|
+| **OS** | Windows 10, macOS 12+, Ubuntu 20.04+ | Any modern 64-bit OS |
+| **RAM** | 8 GB | 16 GB+ |
+| **VRAM (GPU)** | 4 GB (auto-offloads TTS to CPU) | 8 GB+ (NVIDIA RTX 3060+) |
+| **Disk** | 10 GB free (models + cache) | 20 GB+ SSD |
+| **Python** | 3.10+ (managed by `uv`) | 3.11–3.12 |
+| **GPU** | Optional — CPU works | NVIDIA CUDA · Apple Silicon MPS · AMD ROCm |
+
+> [!TIP]
+> On GPUs with **≤8 GB VRAM**, OmniVoice automatically offloads TTS to CPU during transcription — no config needed. A dedicated GPU is not required; the entire pipeline runs on CPU (just slower).
 
 ---
 
@@ -143,6 +227,7 @@ bun run desktop    # Launches Tauri native app (macOS / Windows / Linux)
 | **Multi-Lang** | Multi-language batch picker, batch dubbing queue with sequential GPU execution |
 | **Diarization** | Pyannote ML diarization, auto speaker clone extraction, per-speaker voice assignment |
 | **Infra** | Docker deployment, CUDA/MPS/ROCm auto-detect, cuDNN 8 compat, VRAM-aware model offloading |
+| **AI Provenance** | AudioSeal invisible watermarking (SynthID-like), video logo overlay, watermark detection API |
 | **UX** | Undo/redo, keyboard shortcuts, drag-and-drop, session persistence, glassmorphism design system |
 
 ### 🔜 Next — by priority
@@ -172,9 +257,77 @@ bun run desktop    # Launches Tauri native app (macOS / Windows / Linux)
 
 ---
 
+## FAQ
+
+<details>
+<summary><b>Is this really as good as ElevenLabs?</b></summary>
+<br/>
+For voice cloning and dubbing, yes — OmniVoice uses a state-of-the-art diffusion TTS model with 646 languages (ElevenLabs supports 32). Quality is comparable for most use cases. Where ElevenLabs wins is in their polished cloud API and pre-made voice library. OmniVoice wins on privacy, cost, language coverage, and customizability.
+</details>
+
+<details>
+<summary><b>Does it work on Apple Silicon (M1/M2/M3/M4)?</b></summary>
+<br/>
+Yes. MPS acceleration is auto-detected. MLX-optimized Whisper models are available for faster transcription on Apple hardware.
+</details>
+
+<details>
+<summary><b>How much VRAM do I need?</b></summary>
+<br/>
+<b>4 GB minimum.</b> With ≤8 GB, the TTS model is automatically offloaded to CPU during transcription. With 8+ GB, everything runs on GPU simultaneously. No GPU at all? CPU mode works — just slower (~3× for TTS).
+</details>
+
+<details>
+<summary><b>Can I use this commercially?</b></summary>
+<br/>
+Personal and non-commercial use is free. Commercial use requires a paid license — see <a href="#license">License</a>. 30-day free evaluation for businesses.
+</details>
+
+<details>
+<summary><b>What languages are supported?</b></summary>
+<br/>
+646 languages for TTS via the OmniVoice model. Transcription (WhisperX) supports 99 languages. Translation coverage depends on the target language pair.
+</details>
+
+<details>
+<summary><b>Can I add my own TTS engine?</b></summary>
+<br/>
+Not yet — a Plugin SDK is on the <a href="#roadmap">roadmap</a>. The architecture is modular, so integration is straightforward for contributors.
+</details>
+
+---
+
+## License
+
+**Personal, educational, and non-commercial use** — completely free. No restrictions, no limits.
+
+**Commercial use** (SaaS, paid products, enterprise) — requires a paid license. 30-day free evaluation included.
+
+See [`LICENSE`](LICENSE) for the full terms. For commercial inquiries, reach out at **OmniVoice@palash.dev**.
+
+---
+
 ## Contributing
 
-Issues and PRs welcome. See the [roadmap](#roadmap) for areas where help is most needed.
+Issues and PRs welcome. See the [roadmap](#roadmap) for areas where help is most needed. Join our [Discord](https://discord.gg/aRRdVj3de7) to discuss ideas, get help, or find what to work on.
+
+---
+
+## Acknowledgments
+
+OmniVoice Studio is built on the shoulders of exceptional open-source work:
+
+| Project | Role |
+|---------|------|
+| [**OmniVoice (k2-fsa)**](https://github.com/k2-fsa/OmniVoice) | Zero-shot diffusion TTS engine — the core voice synthesis model |
+| [**WhisperX**](https://github.com/m-bain/whisperX) | Word-level speech recognition and alignment |
+| [**Demucs (Meta)**](https://github.com/facebookresearch/demucs) | Music source separation for vocal isolation |
+| [**Pyannote**](https://github.com/pyannote/pyannote-audio) | Speaker diarization — who said what |
+| [**CTranslate2**](https://github.com/OpenNMT/CTranslate2) | Optimized Transformer inference on CPU and GPU |
+| [**AudioSeal (Meta)**](https://github.com/facebookresearch/audioseal) | Invisible neural audio watermarking for AI provenance |
+| [**Tauri**](https://tauri.app) | Native desktop app framework |
+
+---
 
 <div align="center">
 

@@ -59,7 +59,32 @@ def export_file(req: ExportRequest):
     src = _safe_source(req.source_filename)
     dest = _safe_destination(req.destination_path)
     try:
-        shutil.copy2(src, dest)
+        # Video exports: overlay OmniVoice logo if visible watermark is enabled
+        if src.lower().endswith(".mp4"):
+            from services.watermark import is_visible_video_enabled, get_ffmpeg_overlay_args
+            logo_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "docs", "logo.png")
+            logo_path = os.path.realpath(logo_path)
+            if is_visible_video_enabled() and os.path.exists(logo_path):
+                overlay_args = get_ffmpeg_overlay_args(logo_path)
+                if overlay_args:
+                    try:
+                        subprocess.run(
+                            ["ffmpeg", "-y", "-i", src, "-i", logo_path]
+                            + overlay_args
+                            + ["-codec:a", "copy", dest],
+                            check=True,
+                            capture_output=True,
+                            timeout=120,
+                        )
+                    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                        # Fallback: plain copy if ffmpeg overlay fails
+                        shutil.copy2(src, dest)
+                else:
+                    shutil.copy2(src, dest)
+            else:
+                shutil.copy2(src, dest)
+        else:
+            shutil.copy2(src, dest)
     except OSError as e:
         raise HTTPException(status_code=500, detail=str(e))
 

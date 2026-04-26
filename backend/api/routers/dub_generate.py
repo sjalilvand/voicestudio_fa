@@ -16,6 +16,7 @@ from services.model_manager import get_model, _gpu_pool
 from services.audio_dsp import apply_mastering, normalize_audio
 from services.rvc import apply_rvc, is_enabled as rvc_is_enabled
 from services.incremental import segment_fingerprint
+from services.watermark import embed_watermark
 from api.routers.dub_core import _get_job, _save_job
 
 logger = logging.getLogger("omnivoice.dub")
@@ -296,6 +297,8 @@ async def dub_generate(job_id: str, req: DubRequest):
         for (_si, _wav, _sr, _sid, _fp, _nstep) in _pending_seg_writes:
             seg_wav_path = os.path.join(DUB_DIR, job_id, f"seg_{_si}.wav")
             try:
+                # Apply invisible watermark before writing to disk
+                _wav = embed_watermark(_wav, _sr)
                 torchaudio.save(seg_wav_path, _wav, _sr)
             except Exception as e:
                 logger.warning("deferred seg write failed for %s: %s", _sid, e)
@@ -356,6 +359,8 @@ async def dub_generate(job_id: str, req: DubRequest):
         lang_code = req.language_code or "und"
         track_path = os.path.join(DUB_DIR, job_id, f"dubbed_{lang_code}.wav")
         _t_save_0 = time.perf_counter()
+        # Apply invisible watermark to the final assembled track
+        full_audio = embed_watermark(full_audio, sr)
         torchaudio.save(track_path, full_audio, sr)
         _t_save = time.perf_counter() - _t_save_0
         _t_mix = _t_save_0 - _t_loop_end

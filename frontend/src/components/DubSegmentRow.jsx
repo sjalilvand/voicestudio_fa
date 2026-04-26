@@ -129,7 +129,7 @@ function DubSegmentRow({
       </span>
 
       <select
-        className="input-base segment-input seg-lang-select"
+        className="input-base seg-lang-select"
         value={seg.target_lang || ''}
         disabled={disabled}
         onChange={(e) => onEditField(seg.id, 'target_lang', e.target.value)}
