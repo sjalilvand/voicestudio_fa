@@ -3,6 +3,7 @@ import { Sparkles, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Dialog, Button, Textarea, Field, Badge } from '../ui';
 import { apiPost } from '../api/client';
+import './Misc.css';
 
 /**
  * DirectionDialog — Phase 4.2 per-segment direction editor.
@@ -63,7 +64,7 @@ export default function DirectionDialog({ open, seg, onSave, onClose }) {
               variant="ghost" size="sm"
               onClick={() => { setText(''); }}
               leading={<X size={11} />}
-              style={{ marginRight: 'auto' }}
+              className="dir-clear-btn"
             >
               Clear
             </Button>
@@ -91,7 +92,7 @@ export default function DirectionDialog({ open, seg, onSave, onClose }) {
         />
       </Field>
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+      <div className="dir-preview-actions">
         <Button
           variant="subtle" size="sm"
           onClick={runPreview}
@@ -117,8 +118,8 @@ export default function DirectionDialog({ open, seg, onSave, onClose }) {
           </div>
           <div>
             <strong>Rate bias:</strong> <code>{preview.rate_bias?.toFixed?.(2)}</code>
-            {preview.rate_bias > 1.05 && <> · <span style={{ color: 'var(--color-brand)' }}>speeds up</span></>}
-            {preview.rate_bias < 0.95 && <> · <span style={{ color: 'var(--color-info)' }}>slows down</span></>}
+            {preview.rate_bias > 1.05 && <> · <span className="dir-rate-up">speeds up</span></>}
+            {preview.rate_bias < 0.95 && <> · <span className="dir-rate-down">slows down</span></>}
           </div>
           {Object.keys(preview.tokens || {}).length > 0 && (
             <details>
@@ -127,7 +128,7 @@ export default function DirectionDialog({ open, seg, onSave, onClose }) {
             </details>
           )}
           {preview.error && (
-            <div style={{ color: 'var(--color-warn)', fontSize: '0.7rem' }}>
+            <div className="dir-error">
               {preview.error}
             </div>
           )}

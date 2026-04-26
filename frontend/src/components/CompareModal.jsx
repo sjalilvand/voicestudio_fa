@@ -121,7 +121,7 @@ export default function CompareModal({
               value={compareText}
               onChange={e => setCompareText(e.target.value)}
               rows={2}
-              style={{ resize: 'none' }}
+              className="compare-textarea--noresize"
             />
           </Field>
 

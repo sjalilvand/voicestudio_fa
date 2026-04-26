@@ -27,7 +27,9 @@ import NavRail from './components/NavRail';
 import ErrorBoundary from './components/ErrorBoundary';
 import { BootstrapSplash, useBootstrapStage } from './components/BootstrapSplash';
 
-const LazyFallback = () => <div style={{ padding: 12, color: '#6b6657', fontSize: '0.7rem' }}>Loading…</div>;
+import './components/Misc.css';
+
+const LazyFallback = () => <div className="app-lazy-fallback">Loading…</div>;
 
 import { Toaster, toast } from 'react-hot-toast';
 import ALL_LANGUAGES from './languages.json';
@@ -1885,8 +1887,8 @@ function App() {
   // flash the empty studio before the wizard has a chance to mount.
   if (!setupChecked) {
     return (
-      <div className="app-container sidebar-hidden" style={{ zoom: uiScale, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: 12, color: '#a89984', fontSize: 13 }}>
-        <div style={{ fontSize: 18, color: '#ebdbb2' }}>OmniVoice Studio</div>
+      <div className="app-container sidebar-hidden app-startup" style={{ zoom: uiScale }}>
+        <div className="app-startup__title">OmniVoice Studio</div>
         <div>Starting backend…</div>
       </div>
     );
@@ -1897,20 +1899,8 @@ function App() {
     // studio layout reserves for the main content column.
     return (
       <div
-        style={{
-          /* Same pattern as .app-container: shrink by whatever the
-             LogsFooter is currently occupying so it never covers the
-             wizard footer buttons / content. */
-          minHeight: 'calc(100vh - var(--logs-footer-height, 28px))',
-          maxHeight: 'calc(100vh - var(--logs-footer-height, 28px))',
-          width: '100%',
-          overflow: 'hidden',
-          zoom: uiScale,
-          background: 'var(--color-bg, #1d2021)',
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
+        className="app-wizard-wrap"
+        style={{ zoom: uiScale }}
       >
         {/* Invisible drag strip across the top 28 px of the wizard —
             matches the macOS traffic-light zone so the window can be
@@ -1924,10 +1914,7 @@ function App() {
               ).catch(() => {});
             }
           }}
-          style={{
-            position: 'fixed', top: 0, left: 0, right: 0,
-            height: 28, zIndex: 10,
-          }}
+          className="app-wizard-dragstrip"
         />
         <Suspense fallback={<LazyFallback />}>
           <SetupWizard onReady={() => setSetupNeeded(false)} />

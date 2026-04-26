@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle, ArrowRight, X, Sparkles, Languages, Mic } from 'lucide-react';
 import { Button } from '../ui';
+import './Misc.css';
 
 /**
  * Phase 4.3 — between-stage checkpoint banner.
@@ -50,48 +51,23 @@ export default function CheckpointBanner({ stage, count, onContinue, onDismiss, 
 
   return (
     <div
-      className="checkpoint-banner"
-      style={{
-        // Accent shows through as a left-edge bar instead of a gradient wash,
-        // and the fill stays flat chrome so the banner rhymes with the rest
-        // of the studio strips.
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '8px 12px',
-        marginBottom: 6,
-        borderRadius: 'var(--chrome-radius-pill)',
-        background: 'var(--chrome-bg)',
-        border: '1px solid var(--chrome-border)',
-        borderLeft: `2px solid ${cfg.accent}`,
-      }}
+      className="checkpoint-banner ckpt-banner"
+      style={{ borderLeft: `2px solid ${cfg.accent}` }}
       role="status"
     >
-      <Icon size={14} color={cfg.accent} style={{ flexShrink: 0 }} />
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-          <span style={{
-            fontFamily: 'var(--chrome-font-mono)',
-            fontSize: 'var(--chrome-label-size)',
-            letterSpacing: 'var(--chrome-label-track)',
-            textTransform: 'uppercase',
-            fontWeight: 600,
-            color: 'var(--chrome-fg)',
-          }}>
+      <Icon size={14} color={cfg.accent} className="ckpt-icon" />
+      <div className="ckpt-body">
+        <div className="ckpt-head">
+          <span className="ckpt-title">
             {cfg.title}
           </span>
           {typeof count === 'number' && (
-            <span style={{
-              fontFamily: 'var(--chrome-font-mono)',
-              fontSize: 'var(--chrome-label-size)',
-              color: 'var(--chrome-fg-muted)',
-              fontVariantNumeric: 'tabular-nums',
-            }}>
+            <span className="ckpt-count">
               {count} segment{count === 1 ? '' : 's'}
             </span>
           )}
         </div>
-        <span style={{ fontSize: '0.64rem', color: 'var(--chrome-fg-muted)', lineHeight: 1.35 }}>
+        <span className="ckpt-hint">
           {cfg.hint}
         </span>
       </div>

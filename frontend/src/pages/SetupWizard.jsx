@@ -4,6 +4,7 @@ import { Button } from '../ui';
 import { useSetupStatus, usePreflight } from '../api/hooks';
 import { ModelStoreTab, EnginesTab } from './Settings';
 import './SetupWizard.css';
+import '../components/Misc.css';
 
 // macOS convention: double-click the title-bar drag region to toggle zoom.
 const doubleClickMaximize = async () => {
@@ -27,17 +28,17 @@ const CHECK_ICON = {
 function PreflightPanel({ report, loading, onRecheck }) {
   if (loading && !report) {
     return (
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', padding: 20, color: 'var(--color-fg-muted)' }}>
+      <div className="swiz-loading">
         <Loader className="spinner" size={14} /> Probing system…
       </div>
     );
   }
   if (!report) return null;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div className="swiz-checklist">
       {report.checks.map((c) => (
         <div key={c.id} className="setup-wizard__row" style={{ alignItems: 'flex-start', padding: '6px 2px' }}>
-          <span style={{ flexShrink: 0, paddingTop: 2 }}>{CHECK_ICON[c.status] || null}</span>
+          <span className="swiz-check-icon">{CHECK_ICON[c.status] || null}</span>
           <div className="setup-wizard__row-body">
             <span className="setup-wizard__row-title">{c.label}</span>
             <span className="setup-wizard__muted" style={{ whiteSpace: 'normal' }}>{c.detail}</span>
@@ -53,7 +54,7 @@ function PreflightPanel({ report, loading, onRecheck }) {
           </div>
         </div>
       ))}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 4 }}>
+      <div className="swiz-check-footer">
         <Button variant="ghost" size="sm" onClick={onRecheck} leading={<RefreshCw size={12} />}>
           Re-check
         </Button>
@@ -219,7 +220,7 @@ export default function SetupWizard({ onReady }) {
             </Button>
           </div>
           {!modelsReady && status?.missing?.length > 0 && (
-            <p className="setup-wizard__muted" style={{ textAlign: 'center', fontSize: '0.78rem', margin: 0 }}>
+            <p className="setup-wizard__muted swiz-missing">
               Still needed:{' '}
               {status.missing.map(m => m.label).join(', ')}
             </p>
@@ -247,7 +248,7 @@ export default function SetupWizard({ onReady }) {
       )}
 
       {!status && step > 1 && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', color: 'var(--color-fg-muted)' }}>
+        <div className="swiz-status-loading">
           <Loader className="spinner" size={14} /> Checking setup…
         </div>
       )}

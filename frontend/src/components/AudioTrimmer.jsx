@@ -650,7 +650,7 @@ export default function AudioTrimmer({ file, maxSeconds = 15, onConfirm, onCance
             onClick={togglePlay}
             disabled={!ready}
             leading={playing ? <Pause size={12} /> : <Play size={12} />}
-            style={{ color: 'var(--color-success)', borderColor: 'rgba(142,192,124,0.3)', background: 'rgba(142,192,124,0.08)' }}
+            className="audio-trimmer__play-btn"
           >
             {playing ? 'Pause' : 'Preview selection'}
           </Button>
