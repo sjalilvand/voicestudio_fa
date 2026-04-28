@@ -67,7 +67,9 @@ async def transcribe_audio(
             from services.asr_backend import get_active_asr_backend
 
             backend = get_active_asr_backend(asr_pipe=_model._asr_pipe)
-            result = backend.transcribe(tmp.name, language=language)
+            # Note: WhisperXBackend.transcribe() auto-detects language;
+            # the `language` form field is reserved for future use.
+            result = backend.transcribe(tmp.name)
             return result
 
         loop = asyncio.get_event_loop()
