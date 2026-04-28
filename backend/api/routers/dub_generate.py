@@ -386,3 +386,110 @@ async def dub_generate(job_id: str, req: DubRequest):
     task_id = f"dub_{job_id}_{int(time.time())}"
     await task_manager.add_task(task_id, "dub_generate", _stream, task_id)
     return {"task_id": task_id}
+
+
+# ── Real-time segment preview ──────────────────────────────────────────
+# Stream TTS for a single segment without the full pipeline overhead.
+# The frontend calls this when the user edits a segment's text/instruct
+# and wants to hear the result immediately.
+
+from pydantic import BaseModel
+from typing import Optional
+from fastapi.responses import Response
+import io
+
+
+class SegmentPreviewRequest(BaseModel):
+    text: str
+    language: str = "Auto"
+    instruct: Optional[str] = None
+    profile_id: Optional[str] = None
+    speed: float = 1.0
+    duration: Optional[float] = None
+
+
+@router.post("/dub/preview-segment/{job_id}")
+async def preview_segment(job_id: str, req: SegmentPreviewRequest):
+    """Generate TTS for a single segment and return WAV bytes.
+
+    This is the fast path for interactive editing — 8 diffusion steps,
+    no disk write, no watermark, no mix. Just raw audio preview.
+    """
+    job = _get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    _model = await get_model()
+
+    def _gen():
+        ref_audio = None
+        ref_text = None
+
+        # Resolve profile / auto-clone
+        pid = req.profile_id
+        if pid and pid.startswith("auto:"):
+            key = pid[len("auto:"):]
+            clones = job.get("speaker_clones") or {}
+            for spk, info in clones.items():
+                if spk.lower().replace(" ", "_") == key or spk == key:
+                    ref_audio = info.get("ref_audio")
+                    ref_text = info.get("ref_text")
+                    break
+            pid = None
+
+        instruct_str = req.instruct
+        if pid:
+            conn = get_db()
+            try:
+                row = conn.execute(
+                    "SELECT * FROM voice_profiles WHERE id=?", (pid,)
+                ).fetchone()
+            finally:
+                conn.close()
+            if row:
+                if row["is_locked"] and row["locked_audio_path"]:
+                    ref_audio = os.path.join(VOICES_DIR, row["locked_audio_path"])
+                    ref_text = row["ref_text"]
+                elif row["ref_audio_path"]:
+                    ref_audio = os.path.join(VOICES_DIR, row["ref_audio_path"])
+                    ref_text = row["ref_text"]
+                if not instruct_str and row["instruct"]:
+                    instruct_str = row["instruct"]
+
+        lang = req.language if req.language != "Auto" else None
+        audios = _model.generate(
+            text=req.text,
+            language=lang,
+            ref_audio=ref_audio,
+            ref_text=ref_text,
+            instruct=instruct_str if instruct_str else None,
+            duration=req.duration,
+            num_step=8,  # fast preview
+            guidance_scale=2.0,
+            speed=req.speed,
+            denoise=True,
+            postprocess_output=True,
+        )
+        audio_out = audios[0]
+        mastered = apply_mastering(
+            audio_out,
+            sample_rate=getattr(_model, "sampling_rate", 24000),
+        )
+        return normalize_audio(mastered, target_dBFS=-2.0)
+
+    loop = asyncio.get_event_loop()
+    audio_tensor = await loop.run_in_executor(_gpu_pool, _gen)
+
+    sr = getattr(_model, "sampling_rate", 24000)
+    buf = io.BytesIO()
+    torchaudio.save(buf, audio_tensor, sr, format="wav")
+    buf.seek(0)
+
+    return Response(
+        content=buf.read(),
+        media_type="audio/wav",
+        headers={
+            "X-Audio-Duration": str(round(audio_tensor.shape[-1] / sr, 2)),
+        },
+    )
+

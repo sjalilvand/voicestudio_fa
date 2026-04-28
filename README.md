@@ -111,7 +111,10 @@ Built on the [OmniVoice](https://github.com/k2-fsa/OmniVoice) 600-language zero-
 - **Multi-Speaker Diarization** — Pyannote + WhisperX fusion auto-identifies speakers and assigns unique voice profiles.
 
 ### Studio Tools
+- **Voice Capture** — Press `⌘+⇧+Space` to record from your mic, transcribe, and copy to clipboard. Global dictation.
+- **Speaker Casting** — Visual speaker-to-voice assignment grid. Auto-cast from video clones or assign saved profiles.
 - **Voice Preview** — Floating widget for instant 8-step TTS testing. Try voices without leaving the workspace.
+- **Real-time Dub Preview** — Edit a segment's text, preview the audio instantly without full re-render.
 - **Multi-Language Batch** — Select multiple target languages, dub to all in one pass.
 - **Batch Queue** — Drag-and-drop bulk video processing with sequential GPU execution.
 - **Voice Library** — Browse, favorite, tag, and convert gallery clips into permanent voice profiles.
@@ -302,12 +305,12 @@ chmod +x OmniVoice.Studio_*.AppImage
 - [ ] Crash-sandbox GPU engines (subprocess isolation)
 
 **✨ Differentiators**
-- [ ] Global hotkey dictation — system-wide record → transcribe → paste (inspired by [VoiceBox Capture](https://github.com/jamiepine/voicebox))
+- [x] ~~Global hotkey dictation — system-wide record → transcribe → paste (⌘+⇧+Space)~~
 - [x] ~~MCP server — expose OmniVoice as an AI agent tool (Claude, Cursor, etc.)~~
 - [x] ~~Voice personalities — named presets (narrator, casual, formal) with saved TTS params~~
 - [x] ~~Audio effects chain — post-processing pipeline (reverb, EQ, compression)~~
-- [ ] Real-time dub preview — stream TTS as you edit, no full re-render
-- [ ] Project-level casting view — drag voices to speakers
+- [x] ~~Real-time dub preview — single-segment TTS preview without full re-render~~
+- [x] ~~Project-level casting view — assign voices to speakers~~
 
 **🎨 Polish & Quality**
 - [x] ~~i18n framework — UI translation support (community-driven)~~
