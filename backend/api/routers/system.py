@@ -327,6 +327,125 @@ async def flush_memory(unload_model: bool = False):
         "vram_after": round(vram_after, 2),
     }
 
+
+# ── Actionable notifications ──────────────────────────────────────────────
+
+
+@router.get("/system/notifications")
+def system_notifications():
+    """Return actionable notifications for the UI notification panel.
+
+    Each notification has:
+      - id: unique key (for dismiss tracking)
+      - level: "info" | "warn" | "error"
+      - title: short heading
+      - message: longer description
+      - action: optional {"label": str, "type": "navigate|link|api", "target": str}
+    """
+    notes = []
+
+    # 1. Missing HF_TOKEN
+    if not os.environ.get("HF_TOKEN"):
+        notes.append({
+            "id": "hf-token-missing",
+            "level": "warn",
+            "title": "HuggingFace token not set",
+            "message": (
+                "Downloads may be rate-limited and speaker diarization "
+                "won't work without a HuggingFace token."
+            ),
+            "action": {
+                "label": "Set token",
+                "type": "navigate",
+                "target": "settings",
+            },
+        })
+
+    # 2. Missing ffmpeg
+    ffmpeg_path = find_ffmpeg()
+    if not ffmpeg_path or not os.path.exists(ffmpeg_path):
+        notes.append({
+            "id": "ffmpeg-missing",
+            "level": "error",
+            "title": "ffmpeg not found",
+            "message": (
+                "Video processing, audio conversion, and dubbing require ffmpeg. "
+                "Install it with: brew install ffmpeg (macOS) or apt install ffmpeg (Linux)."
+            ),
+            "action": {
+                "label": "Install guide",
+                "type": "link",
+                "target": "https://ffmpeg.org/download.html",
+            },
+        })
+
+    # 3. Low disk space
+    try:
+        usage = shutil.disk_usage(DATA_DIR)
+        free_gb = usage.free / (1024 ** 3)
+        if free_gb < 5:
+            notes.append({
+                "id": "disk-low",
+                "level": "warn",
+                "title": f"Low disk space ({free_gb:.1f} GB free)",
+                "message": "OmniVoice needs disk space for models, audio, and temp files.",
+                "action": None,
+            })
+    except Exception:
+        pass
+
+    # 4. GPU not available
+    device = get_best_device()
+    if device == "cpu":
+        notes.append({
+            "id": "gpu-unavailable",
+            "level": "info",
+            "title": "Running on CPU",
+            "message": (
+                "No GPU detected. TTS generation will be slower. "
+                "If you have a GPU, check CUDA/MPS drivers."
+            ),
+            "action": None,
+        })
+
+    return {"notifications": notes, "count": len(notes)}
+
+
+# ── Environment variable setter ───────────────────────────────────────────
+
+
+@router.post("/system/set-env")
+async def set_env_var(body: dict):
+    """Set an environment variable at runtime.
+
+    Currently supports:
+      - HF_TOKEN: HuggingFace access token
+      - TRANSLATE_API_KEY: Translation API key
+      - ELEVENLABS_API_KEY: ElevenLabs API key
+
+    The value is set on os.environ for the running process.
+    For persistence across restarts, users should set it in their shell profile.
+    """
+    ALLOWED_KEYS = {"HF_TOKEN", "TRANSLATE_API_KEY", "ELEVENLABS_API_KEY"}
+    key = body.get("key", "")
+    value = body.get("value", "")
+
+    if key not in ALLOWED_KEYS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Key '{key}' is not allowed. Allowed: {', '.join(sorted(ALLOWED_KEYS))}",
+        )
+
+    if value:
+        os.environ[key] = value
+        logger.info("Set environment variable: %s (length=%d)", key, len(value))
+    else:
+        os.environ.pop(key, None)
+        logger.info("Cleared environment variable: %s", key)
+
+    return {"key": key, "set": bool(value)}
+
+
 @router.post("/clean-audio")
 async def clean_audio(audio: UploadFile = File(...)):
     """Accept a raw mic recording, run demucs vocal isolation, return clean WAV."""

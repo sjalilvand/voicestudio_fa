@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Globe, Fingerprint, Wand2, Film, FolderOpen, RefreshCw, Settings2, ChevronRight, Zap, Building2 } from 'lucide-react';
+import { Globe, Fingerprint, Wand2, Film, FolderOpen, RefreshCw, Settings2, ChevronRight, Zap, Building2, Library, FileText } from 'lucide-react';
 import { Button, Badge } from '../ui';
+import NotificationPanel from './NotificationPanel';
 
 const VIEW_META = {
   launchpad:  { label: 'Launchpad',       Icon: Globe,       accent: '#f3a5b6', kicker: 'Studio' },
@@ -8,6 +9,8 @@ const VIEW_META = {
   design:     { label: 'Voice Design',    Icon: Wand2,       accent: '#8ec07c', kicker: 'Studio' },
   dub:        { label: 'Dubbing',         Icon: Film,        accent: '#fe8019', kicker: 'Studio' },
   projects:   { label: 'Projects',        Icon: FolderOpen,  accent: '#83a598', kicker: 'Library' },
+  gallery:    { label: 'Gallery',         Icon: Library,     accent: '#b8bb26', kicker: 'Library' },
+  transcriptions: { label: 'Transcriptions', Icon: FileText, accent: '#d3869b', kicker: 'Library' },
   settings:   { label: 'Settings',        Icon: Settings2,   accent: '#fabd2f', kicker: 'Preferences' },
   enterprise: { label: 'Commercial License', Icon: Building2, accent: '#fe8019', kicker: 'Licensing' },
 };
@@ -98,6 +101,7 @@ export default function Header({
       {/* Right: wave + sys stats. UI scale (S/M/L) lives in the bottom
           LogsFooter bar so all app-wide chrome sits together. */}
       <div className="hq-col-right">
+        <NotificationPanel onNavigate={setMode} />
         <WaveBars color={view.accent} active={modelStatus === 'ready' || modelStatus === 'loading'} />
         {sysStats && (
           <div className="hq-stats">

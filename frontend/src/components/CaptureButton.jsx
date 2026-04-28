@@ -5,6 +5,7 @@ import { useAppStore } from '../store';
 import './CaptureButton.css';
 
 import { API as API_BASE } from '../api/client';
+import { addTranscription } from '../pages/Transcriptions';
 
 /**
  * CaptureButton — global dictation / voice capture widget.
@@ -113,6 +114,10 @@ export default function CaptureButton() {
       const data = await res.json();
       setTranscript(data.text || '');
       setState('done');
+      // Persist to Transcriptions page history
+      if (data.text) {
+        addTranscription(data);
+      }
     } catch (err) {
       toast.error(`Transcription failed: ${err.message}`);
       setState('error');

@@ -23,6 +23,7 @@ const ProjectsPage = lazy(() => import('./pages/Projects'));
 const VoiceGallery = lazy(() => import('./pages/VoiceGallery'));
 const DonatePage = lazy(() => import('./pages/DonatePage'));
 const EnterprisePage = lazy(() => import('./pages/EnterprisePage'));
+const TranscriptionsPage = lazy(() => import('./pages/Transcriptions'));
 import Header from './components/Header';
 import NavRail from './components/NavRail';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -216,7 +217,7 @@ function App() {
   const openVoiceProfile = useAppStore(s => s.openVoiceProfile);
   const closeVoiceProfile = useAppStore(s => s.closeVoiceProfile);
   const hideSidebar = mode === 'launchpad' || mode === 'settings' || mode === 'voice' || mode === 'donate'
-    || mode === 'queue' || mode === 'tools' || mode === 'projects' || mode === 'gallery' || mode === 'enterprise';
+    || mode === 'queue' || mode === 'tools' || mode === 'projects' || mode === 'gallery' || mode === 'enterprise' || mode === 'transcriptions';
   const availableSidebarTabs = mode === 'dub'
     ? ['projects', 'history', 'downloads']
     : (mode === 'clone' || mode === 'design')
@@ -2102,6 +2103,12 @@ function App() {
           <ErrorBoundary name="gallery">
             <Suspense fallback={<LazyFallback />}>
               <VoiceGallery />
+            </Suspense>
+          </ErrorBoundary>
+        ) : mode === 'transcriptions' ? (
+          <ErrorBoundary name="transcriptions">
+            <Suspense fallback={<LazyFallback />}>
+              <TranscriptionsPage />
             </Suspense>
           </ErrorBoundary>
         ) : mode === 'donate' ? (
