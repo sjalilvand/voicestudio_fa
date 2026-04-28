@@ -845,6 +845,11 @@ fn spawn_backend<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Option<
         env.push(("HF_HUB_DISABLE_SYMLINKS_WARNING".into(), "1".into()));
         env.push(("HF_HUB_DISABLE_SYMLINKS".into(), "1".into()));
     }
+    // Pass through HF_ENDPOINT so users behind the Great Firewall can
+    // set it to https://hf-mirror.com before launching the app (#33).
+    if let Ok(hf_ep) = std::env::var("HF_ENDPOINT") {
+        env.push(("HF_ENDPOINT".into(), hf_ep));
+    }
     if let Some(ff) = ffmpeg_path {
         env.push(("OMNIVOICE_FFMPEG".into(), ff.to_string_lossy().into_owned()));
         let path_sep = if cfg!(windows) { ";" } else { ":" };
