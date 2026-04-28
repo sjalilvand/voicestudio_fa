@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
@@ -61,6 +61,53 @@ pub enum BootstrapStage {
 pub struct BootstrapState {
     pub stage: Arc<Mutex<BootstrapStage>>,
     pub logs: Arc<Mutex<Vec<LogPayload>>>,
+}
+
+// ── Persistent app config (region, etc.) ──────────────────────────────────
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AppConfig {
+    /// "global" or "china"
+    #[serde(default = "default_region")]
+    pub region: String,
+}
+fn default_region() -> String { "global".into() }
+impl Default for AppConfig {
+    fn default() -> Self { Self { region: default_region() } }
+}
+
+fn config_path<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<PathBuf> {
+    app.path().app_local_data_dir().ok().map(|d| d.join("config.json"))
+}
+
+fn load_config<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> AppConfig {
+    config_path(app)
+        .and_then(|p| fs::read_to_string(&p).ok())
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+fn save_config<R: tauri::Runtime>(app: &tauri::AppHandle<R>, cfg: &AppConfig) {
+    if let Some(p) = config_path(app) {
+        if let Some(parent) = p.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        let _ = fs::write(&p, serde_json::to_string_pretty(cfg).unwrap_or_default());
+    }
+}
+
+#[tauri::command]
+fn get_region(app: tauri::AppHandle) -> String {
+    load_config(&app).region
+}
+
+#[tauri::command]
+fn set_region(app: tauri::AppHandle, region: String) -> String {
+    let r = if region == "china" { "china" } else { "global" };
+    let mut cfg = load_config(&app);
+    cfg.region = r.to_string();
+    save_config(&app, &cfg);
+    r.to_string()
 }
 
 fn set_stage(state: &Arc<Mutex<BootstrapStage>>, stage: BootstrapStage) {
@@ -845,10 +892,15 @@ fn spawn_backend<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Option<
         env.push(("HF_HUB_DISABLE_SYMLINKS_WARNING".into(), "1".into()));
         env.push(("HF_HUB_DISABLE_SYMLINKS".into(), "1".into()));
     }
-    // Pass through HF_ENDPOINT so users behind the Great Firewall can
-    // set it to https://hf-mirror.com before launching the app (#33).
+    // HF_ENDPOINT: prefer system env var, then config region.
+    // China region → https://hf-mirror.com (#33).
     if let Ok(hf_ep) = std::env::var("HF_ENDPOINT") {
         env.push(("HF_ENDPOINT".into(), hf_ep));
+    } else {
+        let cfg = load_config(app);
+        if cfg.region == "china" {
+            env.push(("HF_ENDPOINT".into(), "https://hf-mirror.com".into()));
+        }
     }
     if let Some(ff) = ffmpeg_path {
         env.push(("OMNIVOICE_FFMPEG".into(), ff.to_string_lossy().into_owned()));
@@ -1242,6 +1294,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             bootstrap_status,
             get_bootstrap_logs,
+            get_region,
+            set_region,
             get_sysinfo,
             read_log_tail,
             hf_cache_scan,

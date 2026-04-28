@@ -41,6 +41,33 @@
   font-variant-numeric: tabular-nums;
 }
 
+.bootstrap-splash__region {
+  margin-left: auto;
+  display: flex;
+  gap: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--chrome-fg, #eee) 12%, transparent);
+}
+
+.bootstrap-splash__region-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.72rem;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.15s ease;
+}
+.bootstrap-splash__region-btn:hover { opacity: 0.8; }
+.bootstrap-splash__region-btn.is-active {
+  background: color-mix(in srgb, var(--chrome-fg, #eee) 10%, transparent);
+  opacity: 1;
+  font-weight: 600;
+}
+
 .bootstrap-splash__status {
   margin: 0 0 1.25rem;
   font-size: 0.95rem;

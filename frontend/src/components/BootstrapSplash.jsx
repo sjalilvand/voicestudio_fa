@@ -52,8 +52,29 @@ export function BootstrapSplash({ stage, message }) {
   const [logs, setLogs] = useState([]);
   const [logsOpen, setLogsOpen] = useState(true); // always open by default
   const [copied, setCopied] = useState(false);
-  const [progress, setProgress] = useState(null); // { stage, bytes_done, bytes_total, percent }
+  const [progress, setProgress] = useState(null);
+  const [region, setRegionState] = useState('global');
   const logRef = useRef(null);
+
+  // Load persisted region on mount.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('__TAURI_INTERNALS__' in window)) return;
+    (async () => {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const r = await invoke('get_region');
+        if (r) setRegionState(r);
+      } catch { /* older build without region support */ }
+    })();
+  }, []);
+
+  const handleRegionChange = async (newRegion) => {
+    setRegionState(newRegion);
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('set_region', { region: newRegion });
+    } catch { /* silent */ }
+  };
 
   // Subscribe to live log + progress events from the Rust bootstrap.
   // Also backfill any logs emitted before the webview finished loading.
@@ -145,6 +166,22 @@ export function BootstrapSplash({ stage, message }) {
         <div className="bootstrap-splash__title-row">
           <h1>OmniVoice Studio</h1>
           <span className="bootstrap-splash__version">v{APP_VERSION}</span>
+          <div className="bootstrap-splash__region">
+            <button
+              type="button"
+              className={`bootstrap-splash__region-btn${region === 'global' ? ' is-active' : ''}`}
+              onClick={() => handleRegionChange('global')}
+            >
+              🌐 Global
+            </button>
+            <button
+              type="button"
+              className={`bootstrap-splash__region-btn${region === 'china' ? ' is-active' : ''}`}
+              onClick={() => handleRegionChange('china')}
+            >
+              🇨🇳 China
+            </button>
+          </div>
         </div>
         <p className="bootstrap-splash__status">{label}</p>
         {isFailed ? (
