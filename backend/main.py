@@ -304,6 +304,22 @@ app.add_middleware(
 app.mount("/audio", StaticFiles(directory=OUTPUTS_DIR), name="audio")
 app.mount("/voice_audio", StaticFiles(directory=VOICES_DIR), name="voice_audio")
 
+
+# ── Health check ────────────────────────────────────────────────────────
+# Used by Docker health checks, load balancers, and the Tauri desktop shell.
+@app.get("/health")
+def health():
+    import torch
+
+    device = "cpu"
+    if torch.cuda.is_available():
+        device = f"cuda ({torch.cuda.get_device_name(0)})"
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        device = "mps"
+
+    return {"status": "ok", "device": device}
+
+
 app.include_router(system.router)
 app.include_router(profiles.router)
 app.include_router(exports.router)

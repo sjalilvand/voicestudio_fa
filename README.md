@@ -144,10 +144,15 @@ Built on the [OmniVoice](https://github.com/k2-fsa/OmniVoice) 600-language zero-
 ```bash
 git clone https://github.com/debpalash/OmniVoice-Studio.git
 cd OmniVoice-Studio
+
+# CPU mode
 docker compose up --build -d
+
+# Or with NVIDIA GPU
+docker compose --profile gpu up --build -d
 ```
 
-Open [http://localhost:8000](http://localhost:8000). GPU passthrough works automatically if `nvidia-container-toolkit` is installed.
+Open [http://localhost:3900](http://localhost:3900) once the health check passes. First run downloads ~4 GB of model weights — progress is shown in `docker compose logs -f`.
 
 ### Local Development
 
