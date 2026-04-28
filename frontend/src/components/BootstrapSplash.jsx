@@ -11,6 +11,9 @@
 import { useEffect, useRef, useState } from 'react';
 import './BootstrapSplash.css';
 
+// Vite injects package.json version at build time.
+const APP_VERSION = __APP_VERSION__ || '0.0.0';
+
 const STAGE_LABEL = {
   checking:           'Checking environment…',
   downloading_uv:     'Downloading uv (Python package manager)…',
@@ -121,7 +124,10 @@ export function BootstrapSplash({ stage, message }) {
   return (
     <div className="bootstrap-splash">
       <div className="bootstrap-splash__card">
-        <h1>OmniVoice Studio</h1>
+        <div className="bootstrap-splash__title-row">
+          <h1>OmniVoice Studio</h1>
+          <span className="bootstrap-splash__version">v{APP_VERSION}</span>
+        </div>
         <p className="bootstrap-splash__status">{label}</p>
         {isFailed ? (
           <pre className="bootstrap-splash__error">{message || 'Unknown error'}</pre>

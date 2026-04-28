@@ -419,7 +419,52 @@ fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Opt
     let backend_dir = project_dir.join("backend");
 
     if venv_py.is_file() && backend_dir.is_dir() {
-        return Some((venv_py, backend_dir));
+        // Sanity check: verify uvicorn is importable. If a previous
+        // bootstrap created the venv but uv sync failed (e.g. missing
+        // lockfile), the venv exists but has no packages installed.
+        let uvicorn_check = Command::new(&venv_py)
+            .args(["-c", "import uvicorn"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+        if matches!(uvicorn_check, Ok(ref s) if s.success()) {
+            return Some((venv_py, backend_dir));
+        }
+        // uvicorn not installed — fall through to re-bootstrap.
+        log::warn!(
+            "Venv exists at {} but uvicorn is not importable — re-running uv sync",
+            venv_dir.display()
+        );
+        if let Some(p) = progress {
+            set_stage(p, BootstrapStage::InstallingDeps);
+        }
+        // Try to repair by running uv sync in the existing project dir.
+        let uv_path = match Command::new("uv").arg("--version").output() {
+            Ok(_) => PathBuf::from("uv"),
+            Err(_) => {
+                match install_uv_standalone(&app_data.join("tools")) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        fail(progress, &format!("uv install failed: {}", e));
+                        return None;
+                    }
+                }
+            }
+        };
+        let mut repair_cmd = Command::new(&uv_path);
+        let has_lockfile = project_dir.join("uv.lock").is_file();
+        if has_lockfile {
+            repair_cmd.args(["sync", "--frozen", "--no-dev", "--verbose"]);
+        } else {
+            repair_cmd.args(["sync", "--no-dev", "--verbose"]);
+        }
+        repair_cmd.current_dir(&project_dir);
+        let repair_status = run_streaming(app, "installing_deps", &mut repair_cmd);
+        if matches!(repair_status, Ok(ref s) if s.success()) {
+            return Some((venv_py, backend_dir));
+        }
+        fail(progress, &format!("Repair uv sync failed: {:?}", repair_status));
+        return None;
     }
 
     let resource_dir = app.path().resource_dir().ok()?;
