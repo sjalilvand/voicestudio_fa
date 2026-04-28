@@ -163,6 +163,7 @@ export function ModelStoreTab({ info, modelBadge }) {
             total: ev.total || 0,
             pct: ev.pct || 0,
             phase: ev.phase,
+            rate: ev.rate || 0,
           }};
           return { ...prev, [ev.repo_id]: { ...cur, phase: 'active', files } };
         });
@@ -278,6 +279,10 @@ export function ModelStoreTab({ info, modelBadge }) {
       total: a.total + (f.total || 0),
       done: a.done + (f.phase === 'done' ? 1 : 0),
     }), { downloaded: 0, total: 0, done: 0 });
+    // Sum backend-reported rate from active (non-done) files
+    const backendRate = fileList
+      .filter(([, f]) => f.phase !== 'done' && f.rate > 0)
+      .reduce((s, [, f]) => s + f.rate, 0);
     const hasFiles = fileList.length > 0;
     const aggPct = totals.total > 0 ? (totals.downloaded / totals.total) * 100 : null;
     const showBar = phase === 'install_start' || phase === 'active' || phase === 'delete_start';
@@ -297,6 +302,7 @@ export function ModelStoreTab({ info, modelBadge }) {
       showBar,
       activeFilename,
       unsupported,
+      backendRate,
     };
   }, [busy, rowState]);
 
@@ -343,7 +349,7 @@ export function ModelStoreTab({ info, modelBadge }) {
                           const now = Date.now();
                           if (sp && rt.totals.downloaded > 0) {
                             const dt = (now - sp.lastTime) / 1000;
-                            if (dt >= 2) {
+                            if (dt >= 1) {
                               sp.speed = Math.max(0, (rt.totals.downloaded - sp.lastBytes) / dt);
                               sp.lastBytes = rt.totals.downloaded;
                               sp.lastTime = now;
@@ -351,7 +357,8 @@ export function ModelStoreTab({ info, modelBadge }) {
                           } else {
                             speedRef.current[m.repo_id] = { lastBytes: rt.totals.downloaded, lastTime: now, speed: 0 };
                           }
-                          const speed = sp?.speed || 0;
+                          // Prefer backend tqdm rate (available immediately), fall back to client delta
+                          const speed = rt.backendRate > 0 ? rt.backendRate : (sp?.speed || 0);
                           const remaining = rt.totals.total - rt.totals.downloaded;
                           const etaSec = speed > 0 ? remaining / speed : 0;
                           const etaStr = etaSec > 0
@@ -363,7 +370,7 @@ export function ModelStoreTab({ info, modelBadge }) {
                           const parts = [
                             `${fmtBytes(rt.totals.downloaded)} / ${rt.totals.total ? fmtBytes(rt.totals.total) : '?'}`,
                             pctStr,
-                            speed > 0 ? `${fmtBytes(speed)}/s` : null,
+                            speed > 0 ? `${fmtBytes(speed)}/s` : 'measuring speed…',
                             etaStr || null,
                           ].filter(Boolean);
                           const extra = [];
@@ -377,7 +384,7 @@ export function ModelStoreTab({ info, modelBadge }) {
                             ? `${parts.join(' · ')}  ⸱  ${extra.join(' · ')}`
                             : parts.join(' · ');
                         })()
-                      : 'Preparing download…'}
+                      : rt.phase === 'install_start' ? 'Connecting to HuggingFace…' : 'Preparing download…'}
                 </span>
               </div>
             )}

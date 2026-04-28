@@ -14,6 +14,9 @@
     "dev": "bun run setup:api && concurrently -n api,fe -c green,cyan --kill-others-on-fail \"bun run dev:api\" \"bun run wait:api && bun run dev:frontend\"",
     "predesktop": "kill-port 3900 3901 || true",
     "desktop": "bun run setup:api && concurrently -n api,app -c green,magenta --kill-others-on-fail \"bun run dev:api\" \"bun run wait:api && bun run dev:desktop\"",
+    "desktop-prod": "bash scripts/desktop-prod.sh",
+    "desktop-prod:run": "bash scripts/desktop-prod.sh --skip-build",
+    "desktop-prod:upgrade": "bash scripts/desktop-prod.sh --keep-data",
     "build": "turbo run build",
     "start": "turbo run start",
     "test:frontend": "node --test tests/frontend/*.test.mjs"

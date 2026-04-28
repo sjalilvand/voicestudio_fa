@@ -36,6 +36,12 @@ function PreflightPanel({ report, loading, onRecheck }) {
   if (!report) return null;
   return (
     <div className="swiz-checklist">
+      <div className="swiz-check-header">
+        <span className="swiz-check-header__label">System preflight</span>
+        <Button variant="ghost" size="sm" onClick={onRecheck} leading={<RefreshCw size={12} />}>
+          Re-check
+        </Button>
+      </div>
       {report.checks.map((c) => (
         <div key={c.id} className="setup-wizard__row" style={{ alignItems: 'flex-start', padding: '6px 2px' }}>
           <span className="swiz-check-icon">{CHECK_ICON[c.status] || null}</span>
@@ -54,11 +60,6 @@ function PreflightPanel({ report, loading, onRecheck }) {
           </div>
         </div>
       ))}
-      <div className="swiz-check-footer">
-        <Button variant="ghost" size="sm" onClick={onRecheck} leading={<RefreshCw size={12} />}>
-          Re-check
-        </Button>
-      </div>
     </div>
   );
 }

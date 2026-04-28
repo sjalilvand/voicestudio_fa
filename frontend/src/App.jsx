@@ -1975,9 +1975,11 @@ function App() {
   // flash the empty studio before the wizard has a chance to mount.
   if (!setupChecked) {
     return (
-      <div className="app-container sidebar-hidden app-startup" style={{ zoom: uiScale }}>
-        <div className="app-startup__title">OmniVoice Studio</div>
-        <div>Starting backend…</div>
+      <div style={{ zoom: uiScale }}>
+        <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
+        <Suspense fallback={null}>
+          <LogsFooter />
+        </Suspense>
       </div>
     );
   }

@@ -36,6 +36,21 @@ const STEPS = [
 
 const MAX_LOG_LINES = 200;
 
+/** Scan logs + error message for known failure patterns and return actionable hints. */
+function detectHints(message, logs) {
+  const hints = [];
+  const all = (message || '') + '\n' + logs.map(l => l.line).join('\n');
+  if (/README\.md/i.test(all))           hints.push('README.md was missing from the bundle. This is now auto-fixed — retry should work.');
+  if (/uv.*download|uv.*install/i.test(all) && /timeout|connection/i.test(all)) hints.push('Network timeout downloading uv. Check your internet connection or try the China mirror.');
+  if (/uv sync failed/i.test(all))       hints.push('Dependency install failed. "Clean & Retry" will delete the cached venv and start fresh.');
+  if (/hatchling|build_editable/i.test(all)) hints.push('Python build backend error. "Clean & Retry" removes the broken venv so it rebuilds from scratch.');
+  if (/ffmpeg/i.test(all) && /download|timeout/i.test(all)) hints.push('ffmpeg download failed. This is non-fatal — retry or install ffmpeg manually.');
+  if (/port.*in use|address.*in use/i.test(all)) hints.push('Port 3900 is already in use. Close other instances of OmniVoice or apps using that port.');
+  if (/no error output/i.test(all))      hints.push('Backend crashed silently. "Clean & Retry" often fixes corrupt venv issues.');
+  if (hints.length === 0)                hints.push('Try "Retry" first. If it fails again, "Clean & Retry" will rebuild the environment from scratch.');
+  return hints;
+}
+
 function formatBytes(n) {
   if (!n || n < 0) return '';
   const units = ['B', 'KB', 'MB', 'GB'];
@@ -50,11 +65,35 @@ export function BootstrapSplash({ stage, message }) {
   const stepIndex = Math.max(0, STEPS.indexOf(stage));
   const isFailed = stage === 'failed';
   const [logs, setLogs] = useState([]);
-  const [logsOpen, setLogsOpen] = useState(true); // always open by default
+  const [logsOpen, setLogsOpen] = useState(true);
   const [copied, setCopied] = useState(false);
   const [progress, setProgress] = useState(null);
   const [region, setRegionState] = useState('global');
+  const [retrying, setRetrying] = useState(false);
   const logRef = useRef(null);
+
+  const handleRetry = async () => {
+    if (retrying) return;
+    setRetrying(true);
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      setLogs([]);
+      await invoke('retry_bootstrap');
+    } catch (e) { console.error('retry failed', e); }
+    finally { setRetrying(false); }
+  };
+
+  const handleCleanRetry = async () => {
+    if (retrying) return;
+    if (!confirm('This will delete the cached Python environment and re-download all dependencies (~5-10 min). Continue?')) return;
+    setRetrying(true);
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      setLogs([]);
+      await invoke('clean_and_retry_bootstrap');
+    } catch (e) { console.error('clean retry failed', e); }
+    finally { setRetrying(false); }
+  };
 
   // Load persisted region on mount.
   useEffect(() => {
@@ -185,7 +224,23 @@ export function BootstrapSplash({ stage, message }) {
         </div>
         <p className="bootstrap-splash__status">{label}</p>
         {isFailed ? (
-          <pre className="bootstrap-splash__error">{message || 'Unknown error'}</pre>
+          <>
+            <pre className="bootstrap-splash__error">{message || 'Unknown error'}</pre>
+            <div className="bootstrap-splash__hints">
+              <strong>💡 What to try:</strong>
+              <ul>
+                {detectHints(message, logs).map((h, i) => <li key={i}>{h}</li>)}
+              </ul>
+            </div>
+            <div className="bootstrap-splash__actions">
+              <button className="bootstrap-splash__retry-btn" onClick={handleRetry} disabled={retrying}>
+                {retrying ? '⏳ Retrying…' : '🔄 Retry'}
+              </button>
+              <button className="bootstrap-splash__retry-btn bootstrap-splash__retry-btn--danger" onClick={handleCleanRetry} disabled={retrying}>
+                🧹 Clean & Retry
+              </button>
+            </div>
+          </>
         ) : (
           <>
             <div className="bootstrap-splash__bar">

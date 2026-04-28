@@ -122,12 +122,12 @@ def install() -> None:
         class TrackedTqdm(original):  # type: ignore[misc,valid-type]
             """tqdm subclass that emits a progress event on every update."""
 
+            _last_emit_time: float = 0.0
+
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
-                # Emit once on construction so the UI can show the file
-                # before a single byte is read. Some tqdm variants don't
-                # populate `desc` / `n` as attributes — use getattr so a
-                # patched tqdm never crashes the whole model load.
+                import time as _t
+                self._last_emit_time = _t.monotonic()
                 try:
                     desc = getattr(self, "desc", None)
                     total = int(getattr(self, "total", 0) or 0)
@@ -139,25 +139,52 @@ def install() -> None:
                         "phase": "start",
                     })
                 except Exception:
-                    # Never let progress telemetry break a real download.
                     pass
 
-            def update(self, n=1):
-                super().update(n)
+            def _emit_progress(self):
+                """Emit current state as a progress event."""
                 try:
                     desc = getattr(self, "desc", None)
                     total = int(getattr(self, "total", 0) or 0)
                     done = int(getattr(self, "n", 0) or 0)
                     pct = (done / total) if total > 0 else 0.0
-                    _emit({
+                    # Pull rate from tqdm's own calculations if available
+                    rate = None
+                    try:
+                        rate = self.format_dict.get("rate")
+                    except Exception:
+                        pass
+                    event = {
                         "filename": str(desc or "download"),
                         "downloaded": done,
                         "total": total,
                         "pct": pct,
                         "phase": "done" if (total > 0 and done >= total) else "progress",
-                    })
+                    }
+                    if rate and rate > 0:
+                        event["rate"] = rate  # bytes/sec from tqdm
+                    _emit(event)
                 except Exception:
                     pass
+
+            def update(self, n=1):
+                super().update(n)
+                import time as _t
+                now = _t.monotonic()
+                # Throttle: emit at most every 0.3s to avoid flooding SSE
+                if (now - self._last_emit_time) >= 0.3:
+                    self._last_emit_time = now
+                    self._emit_progress()
+
+            def display(self, msg=None, pos=None):
+                """tqdm calls display() on its refresh cycle; piggyback for
+                periodic emits even when update() intervals are large."""
+                import time as _t
+                now = _t.monotonic()
+                if (now - self._last_emit_time) >= 0.5:
+                    self._last_emit_time = now
+                    self._emit_progress()
+                return super().display(msg, pos)
 
         # Stash the original for inspection / uninstall, then swap.
         hf_tqdm_module._omnivoice_original_tqdm = original  # type: ignore[attr-defined]

@@ -47,6 +47,8 @@
     "resources": [
       "../../pyproject.toml",
       "../../uv.lock",
+      "../../README.md",
+      "../../omnivoice",
       "../../backend"
     ],
     "macOS": {

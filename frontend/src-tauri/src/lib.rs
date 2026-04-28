@@ -228,6 +228,101 @@ fn get_bootstrap_logs(state: tauri::State<'_, BootstrapState>) -> Vec<LogPayload
         .unwrap_or_default()
 }
 
+/// Re-trigger the full bootstrap sequence from the frontend. Resets the stage
+/// to `Checking`, clears buffered logs, and spawns a new bootstrap thread.
+/// This lets the user retry after a transient failure (network timeout, missing
+/// file) without restarting the entire app.
+#[tauri::command]
+fn retry_bootstrap(app: tauri::AppHandle, state: tauri::State<'_, BootstrapState>) {
+    // Reset stage
+    if let Ok(mut guard) = state.stage.lock() {
+        *guard = BootstrapStage::Checking;
+    }
+    // Clear old logs
+    if let Ok(mut logs) = state.logs.lock() {
+        logs.clear();
+    }
+    // Re-run the bootstrap in a background thread
+    let stage_handle = state.stage.clone();
+    std::thread::spawn(move || {
+        let skip_spawn = std::env::var("TAURI_SKIP_BACKEND").is_ok();
+        if skip_spawn {
+            log::info!("TAURI_SKIP_BACKEND set — not spawning");
+            set_stage(&stage_handle, BootstrapStage::Ready);
+            return;
+        }
+        if backend_healthy(backend_port()) {
+            log::info!("Port {} already serving OmniVoice backend — attaching", backend_port());
+            set_stage(&stage_handle, BootstrapStage::Ready);
+            return;
+        }
+        if port_in_use(backend_port()) {
+            log::warn!("Port {} in use — taking ownership", backend_port());
+            kill_orphan_on_port(backend_port());
+            std::thread::sleep(Duration::from_millis(500));
+        }
+        let child = spawn_backend(&app, Some(&stage_handle));
+        if let Ok(mut guard) = app.state::<BackendState>().process.lock() {
+            *guard = child;
+        }
+        let start = std::time::Instant::now();
+        while start.elapsed() < Duration::from_secs(300) {
+            if backend_healthy(backend_port()) {
+                set_stage(&stage_handle, BootstrapStage::Ready);
+                return;
+            }
+            let process_dead = if let Ok(mut guard) = app.state::<BackendState>().process.lock() {
+                match guard.as_mut() {
+                    Some(child) => match child.try_wait() {
+                        Ok(Some(status)) => Some(status.to_string()),
+                        Ok(None) => None,
+                        Err(_) => Some("unknown".to_string()),
+                    },
+                    None => Some("never started".to_string()),
+                }
+            } else {
+                None
+            };
+            if let Some(exit_info) = process_dead {
+                let err_tail = read_error_log_tail(30);
+                let msg = if err_tail.is_empty() {
+                    format!("Backend process exited ({}) — no error output captured", exit_info)
+                } else {
+                    format!("Backend process exited ({}):\n{}", exit_info, err_tail)
+                };
+                log::error!("Backend died early: {}", msg);
+                set_stage(&stage_handle, BootstrapStage::Failed { message: msg });
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(500));
+        }
+        let err_tail = read_error_log_tail(20);
+        let msg = if err_tail.is_empty() {
+            "Backend did not respond within 300 s".to_string()
+        } else {
+            format!("Backend did not respond within 300 s. Last stderr output:\n{}", err_tail)
+        };
+        set_stage(&stage_handle, BootstrapStage::Failed { message: msg });
+    });
+}
+
+/// Like `retry_bootstrap` but first wipes the cached project dir so the
+/// venv + dependencies are re-created from scratch. Nuclear option for
+/// corrupt-venv situations.
+#[tauri::command]
+fn clean_and_retry_bootstrap(app: tauri::AppHandle, state: tauri::State<'_, BootstrapState>) {
+    // Delete the project dir
+    if let Ok(data_dir) = app.path().app_local_data_dir() {
+        let project_dir = data_dir.join("project");
+        if project_dir.is_dir() {
+            log::info!("Clean retry: removing {}", project_dir.display());
+            let _ = fs::remove_dir_all(&project_dir);
+        }
+    }
+    // Delegate to the normal retry
+    retry_bootstrap(app, state);
+}
+
 // ── Port probing ──────────────────────────────────────────────────────────
 
 /// Just "something is listening on :port"
@@ -540,10 +635,10 @@ fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Opt
     let flat = resource_dir.clone();
     let up2  = resource_dir.join("_up_").join("_up_");
 
-    let (resource_pyproject, resource_uvlock, resource_backend) = if flat.join("pyproject.toml").is_file() {
-        (flat.join("pyproject.toml"), flat.join("uv.lock"), flat.join("backend"))
+    let (resource_pyproject, resource_uvlock, resource_readme, resource_omnivoice, resource_backend) = if flat.join("pyproject.toml").is_file() {
+        (flat.join("pyproject.toml"), flat.join("uv.lock"), flat.join("README.md"), flat.join("omnivoice"), flat.join("backend"))
     } else if up2.join("pyproject.toml").is_file() {
-        (up2.join("pyproject.toml"), up2.join("uv.lock"), up2.join("backend"))
+        (up2.join("pyproject.toml"), up2.join("uv.lock"), up2.join("README.md"), up2.join("omnivoice"), up2.join("backend"))
     } else {
         fail(progress, &format!(
             "Missing bootstrap resources — checked flat={} and _up_={}\n  pyproject.toml: flat={}, up2={}",
@@ -575,6 +670,25 @@ fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Opt
         }
     } else {
         log::warn!("No uv.lock in bundle — uv sync will resolve from scratch");
+    }
+    // README.md is required by hatchling's metadata validator (pyproject.toml
+    // declares `readme = "README.md"`). Copy from bundle, or create a stub
+    // so `uv sync` never fails on a missing readme.
+    if resource_readme.is_file() {
+        let _ = fs::copy(&resource_readme, project_dir.join("README.md"));
+    } else if !project_dir.join("README.md").exists() {
+        let _ = fs::write(project_dir.join("README.md"), "# OmniVoice\n");
+        log::warn!("No README.md in bundle — created stub");
+    }
+    // omnivoice/ Python source package — needed for the editable install
+    // so `import omnivoice` works in the bundled backend.
+    let omnivoice_dir = project_dir.join("omnivoice");
+    if resource_omnivoice.is_dir() {
+        if let Err(e) = copy_dir_recursive(&resource_omnivoice, &omnivoice_dir) {
+            log::warn!("Could not copy omnivoice/ source package: {}", e);
+        }
+    } else {
+        log::warn!("No omnivoice/ in bundle — model preload may fail");
     }
     if let Err(e) = copy_dir_recursive(&resource_backend, &backend_dir) {
         fail(progress, &format!("copy backend/: {}", e));
@@ -1294,6 +1408,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             bootstrap_status,
             get_bootstrap_logs,
+            retry_bootstrap,
+            clean_and_retry_bootstrap,
             get_region,
             set_region,
             get_sysinfo,

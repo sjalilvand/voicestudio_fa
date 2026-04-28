@@ -237,3 +237,43 @@
 .bootstrap-splash__copy-btn:hover {
   background: color-mix(in srgb, var(--chrome-fg, #eee) 14%, transparent);
 }
+
+/* ── Error hints + retry actions ── */
+.bootstrap-splash__hints {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  opacity: 0.9;
+  line-height: 1.5;
+}
+.bootstrap-splash__hints strong { display: block; margin-bottom: 0.35rem; }
+.bootstrap-splash__hints ul {
+  margin: 0; padding-left: 1.25rem;
+  display: flex; flex-direction: column; gap: 0.25rem;
+}
+.bootstrap-splash__hints li { opacity: 0.85; }
+
+.bootstrap-splash__actions {
+  display: flex; gap: 0.5rem; margin-top: 1rem;
+}
+.bootstrap-splash__retry-btn {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--chrome-fg, #eee) 15%, transparent);
+  background: color-mix(in srgb, var(--chrome-accent, #8ec07c) 15%, transparent);
+  color: var(--chrome-fg, #eee);
+  font: inherit; font-size: 0.82rem; font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.bootstrap-splash__retry-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--chrome-accent, #8ec07c) 25%, transparent);
+}
+.bootstrap-splash__retry-btn:disabled { opacity: 0.5; cursor: wait; }
+.bootstrap-splash__retry-btn--danger {
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+  border-color: color-mix(in srgb, #ef4444 30%, transparent);
+}
+.bootstrap-splash__retry-btn--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, #ef4444 22%, transparent);
+}

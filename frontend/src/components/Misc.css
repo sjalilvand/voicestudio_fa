@@ -40,7 +40,16 @@
 }
 .swiz-checklist { display: flex; flex-direction: column; gap: 6px; }
 .swiz-check-icon { flex-shrink: 0; padding-top: 2px; }
-.swiz-check-footer { display: flex; justify-content: flex-end; padding-top: 4px; }
+.swiz-check-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 4px; margin-bottom: 2px;
+  border-bottom: 1px solid var(--chrome-border, rgba(255,255,255,0.06));
+}
+.swiz-check-header__label {
+  font-size: 0.78rem; font-weight: 600;
+  color: var(--color-fg-muted, #a89984);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
 .swiz-missing { text-align: center; font-size: 0.78rem; margin: 0; }
 .swiz-status-loading {
   display: flex; gap: 8px; align-items: center;
