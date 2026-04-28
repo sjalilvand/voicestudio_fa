@@ -146,3 +146,35 @@ def list_tts_plugins():
     """Return all registered TTS engine plugins and their availability."""
     from services.plugin_sdk import list_plugins
     return list_plugins()
+
+
+# ── Video context analysis ─────────────────────────────────────────────────
+
+
+@router.post("/tools/video-context/{job_id}")
+async def analyse_video_context(job_id: str):
+    """Analyse the source video's visual context for dubbing decisions.
+
+    Returns per-segment mood, brightness, and complexity cues that
+    can be used as TTS instruct hints.
+    """
+    import os
+    from api.routers.dub_core import _get_job
+    from core.config import DUB_DIR
+    from services.video_context import analyse_video
+
+    job = _get_job(job_id)
+    if not job:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    video_path = os.path.join(DUB_DIR, job_id, "source.mp4")
+    if not os.path.exists(video_path):
+        video_path = job.get("video_path", "")
+
+    if not video_path or not os.path.exists(video_path):
+        return {"error": "Source video not found", "segments": {}}
+
+    segments = job.get("segments") or []
+    ctx = await analyse_video(video_path, segments)
+    return ctx.to_dict()

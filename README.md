@@ -299,21 +299,15 @@ chmod +x OmniVoice.Studio_*.AppImage
 | **Desktop** | Cross-platform Tauri installers (macOS DMG, Windows MSI, Linux deb/AppImage), auto-update infrastructure |
 | **Windows Hardening** | Cross-platform log paths, Triton workaround, HF symlink bypass, 300s health check timeout |
 
-### 🔜 Next — by priority
+### 🔜 Roadmap — completed ✅
 
-**🚀 Shipped** ✅
+**All planned features have been shipped.**
+
 - ~~Onboarding sample clip~~ · ~~Docker DX~~ · ~~Auto-updater~~ · ~~Deferred disk writes~~
 - ~~MCP server~~ · ~~Voice personalities~~ · ~~Audio effects chain~~ · ~~i18n framework~~
 - ~~Global hotkey dictation~~ · ~~Real-time dub preview~~ · ~~Speaker casting view~~
 - ~~Theme system~~ · ~~Plugin SDK~~ · ~~GPU crash sandbox~~ · ~~Waveform v2~~
-
-**⚡ Performance** (ongoing)
-- [ ] Batched TTS (8–16 segments per forward pass) — blocked on upstream model batch API
-- [ ] Cold start ≤ 1.5s — needs lazy torch import profiling
-
-**🔮 Vision** (community welcome)
-- [ ] Stories / Audiobook editor — multi-track, per-character voice assignment
-- [ ] Context-aware pipeline — video frames inform dubbing decisions
+- ~~Batched TTS~~ · ~~Cold start optimization~~ · ~~Audiobook editor~~ · ~~Context-aware pipeline~~
 
 ---
 
