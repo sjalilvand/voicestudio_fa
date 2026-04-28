@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
-import { Play, Pause, ZoomIn, ZoomOut, SkipBack, Loader } from 'lucide-react';
+import MinimapPlugin from 'wavesurfer.js/dist/plugins/minimap.esm.js';
+import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js';
+import { Play, Pause, ZoomIn, ZoomOut, SkipBack, Loader, Keyboard } from 'lucide-react';
 import './WaveformErrorBoundary.css';
 
 const REGION_COLORS = [
@@ -120,6 +122,21 @@ export default function WaveformTimeline({
       // keeps WaveSurfer in sync when the column resizes. Fallback to 200
       // if layout hasn't settled yet so we never render a flat sliver.
       const initialHeight = Math.max(140, waveContainerRef.current.clientHeight || 200);
+      const minimap = MinimapPlugin.create({
+        height: 20,
+        waveColor: 'rgba(168,153,132,0.25)',
+        progressColor: 'rgba(211,134,155,0.4)',
+        cursorColor: '#d3869b',
+      });
+      const timeline = TimelinePlugin.create({
+        height: 14,
+        timeInterval: 1,
+        primaryLabelInterval: 5,
+        style: {
+          fontSize: '9px',
+          color: 'rgba(168,153,132,0.5)',
+        },
+      });
       ws = WaveSurfer.create({
         container:     waveContainerRef.current,
         waveColor:     'rgba(168,153,132,0.45)',
@@ -131,8 +148,8 @@ export default function WaveformTimeline({
         barGap:        1,
         barRadius:     2,
         normalize:     true,
-        media:         mediaEl,   // single source of truth — no sync conflicts
-        plugins:       [regions],
+        media:         mediaEl,
+        plugins:       [regions, minimap, timeline],
       });
     } catch (initErr) {
       console.warn('WaveSurfer init failed (WebKit restriction?):', initErr);
@@ -328,6 +345,22 @@ export default function WaveformTimeline({
     return `${m}:${s.padStart(4, '0')}`;
   };
 
+  // ── Keyboard shortcuts (J/K/L video-editor style) ──────────────────────────
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === ' ' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        togglePlay();
+      }
+      if (e.key === 'j') seekTo(Math.max(0, currentTime - 5));
+      if (e.key === 'l') seekTo(Math.min(duration, currentTime + 5));
+      if (e.key === 'k') togglePlay();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [currentTime, duration, togglePlay, seekTo]);
+
   // ── Error fallback ──────────────────────────────────────────────────────────
   if (loadError) {
     return (
@@ -340,7 +373,7 @@ export default function WaveformTimeline({
   }
 
   return (
-    <div className="waveform-timeline wfm-layout">
+    <div className="waveform-timeline wfm-layout" role="region" aria-label="Audio waveform timeline">
       {/* Video + Waveform stacked vertically */}
       <div className="wfm-stack">
         {/* Video preview — pinned to its aspect ratio so we don't letterbox
@@ -377,19 +410,21 @@ export default function WaveformTimeline({
       </div>
 
       {/* Controls */}
-      <div className="waveform-controls wfm-controls">
+      <div className="waveform-controls wfm-controls" role="toolbar" aria-label="Playback controls">
         <div className="waveform-controls-left">
-          <button className="waveform-btn" onClick={() => seekTo(0)} title="Restart"><SkipBack size={11}/></button>
-          <button className="waveform-btn waveform-btn-play" onClick={togglePlay} disabled={!ready}>
+          <button className="waveform-btn" onClick={() => seekTo(0)} title="Restart" aria-label="Restart playback"><SkipBack size={11}/></button>
+          <button className="waveform-btn waveform-btn-play" onClick={togglePlay} disabled={!ready} aria-label={isPlaying ? 'Pause' : 'Play'}>
             {isPlaying ? <Pause size={11}/> : <Play size={11}/>}
           </button>
-          <span className="waveform-time">{fmt(currentTime)} / {fmt(duration)}</span>
+          <span className="waveform-time" aria-live="off">{fmt(currentTime)} / {fmt(duration)}</span>
+          <span className="wfm-kbd-hint" title="J/K/L: rewind, play/pause, forward"><Keyboard size={10}/></span>
         </div>
         <div className="waveform-controls-right">
-          <button className="waveform-btn" onClick={() => setZoom(z => Math.max(10, z - 20))}><ZoomOut size={11}/></button>
+          <button className="waveform-btn" onClick={() => setZoom(z => Math.max(10, z - 20))} aria-label="Zoom out"><ZoomOut size={11}/></button>
           <input type="range" min="10" max="300" value={zoom}
-            onChange={e => setZoom(Number(e.target.value))} className="waveform-zoom-slider"/>
-          <button className="waveform-btn" onClick={() => setZoom(z => Math.min(300, z + 20))}><ZoomIn size={11}/></button>
+            onChange={e => setZoom(Number(e.target.value))} className="waveform-zoom-slider"
+            aria-label="Zoom level" />
+          <button className="waveform-btn" onClick={() => setZoom(z => Math.min(300, z + 20))} aria-label="Zoom in"><ZoomIn size={11}/></button>
         </div>
       </div>
     </div>

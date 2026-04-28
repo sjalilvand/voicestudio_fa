@@ -149,6 +149,16 @@ Built on the [OmniVoice](https://github.com/k2-fsa/OmniVoice) 600-language zero-
 - **Pedalboard-powered** — Spotify's production-grade DSP (EQ, compressor, reverb, noise gate, limiter).
 - **API-driven** — `GET /tools/effects` returns presets; custom chains via `apply_effects_chain()`.
 
+### Plugin SDK (Third-Party TTS Engines)
+- **Abstract interface** — Subclass `TTSPlugin` to add any TTS engine in ~50 lines.
+- **Built-in plugins** — ElevenLabs (cloud) and Bark (local) ship out of the box.
+- **Auto-discovery** — Drop a `.py` file in `backend/plugins/`, it registers automatically.
+- **API** — `GET /tools/plugins` lists all engines and their availability status.
+
+### GPU Safety
+- **Crash sandbox** — GPU-intensive ops can run in subprocess isolation. A CUDA OOM or driver crash kills the worker, not the server.
+- **6 color themes** — Gruvbox (default), Midnight Blue, Nord, Solarized, Rosé Pine, Catppuccin Mocha.
+
 ---
 
 ## Quickstart
@@ -295,20 +305,13 @@ chmod +x OmniVoice.Studio_*.AppImage
 - ~~Onboarding sample clip~~ · ~~Docker DX~~ · ~~Auto-updater~~ · ~~Deferred disk writes~~
 - ~~MCP server~~ · ~~Voice personalities~~ · ~~Audio effects chain~~ · ~~i18n framework~~
 - ~~Global hotkey dictation~~ · ~~Real-time dub preview~~ · ~~Speaker casting view~~
+- ~~Theme system~~ · ~~Plugin SDK~~ · ~~GPU crash sandbox~~ · ~~Waveform v2~~
 
-**⚡ Performance**
-- [ ] Batched TTS (8–16 segments per forward pass) — 3–5× throughput
-- [ ] Cold start ≤ 1.5s (currently ~4s on Apple Silicon)
-- [ ] Crash-sandbox GPU engines (subprocess isolation)
+**⚡ Performance** (ongoing)
+- [ ] Batched TTS (8–16 segments per forward pass) — blocked on upstream model batch API
+- [ ] Cold start ≤ 1.5s — needs lazy torch import profiling
 
-**🎨 Polish & Quality**
-- [ ] Waveform timeline v2 — WaveSurfer continuous regions overlay
-- [ ] Accessibility audit — WCAG AA, ARIA live regions, full keyboard nav
-- [x] ~~Theme system — 6 themes (Gruvbox, Midnight, Nord, Solarized, Rosé Pine, Catppuccin)~~
-
-**📦 Ecosystem**
-- [ ] Plugin SDK for third-party TTS engines (ElevenLabs, XTTS, Bark, Fish)
-- [ ] LLM-powered translation (GPT/Claude for nuanced localization)
+**🔮 Vision** (community welcome)
 - [ ] Stories / Audiobook editor — multi-track, per-character voice assignment
 - [ ] Context-aware pipeline — video frames inform dubbing decisions
 

@@ -137,3 +137,12 @@ def list_effects():
     from services.audio_dsp import list_effect_presets
     return list_effect_presets()
 
+
+# ── TTS Plugin SDK ─────────────────────────────────────────────────────────
+
+
+@router.get("/tools/plugins")
+def list_tts_plugins():
+    """Return all registered TTS engine plugins and their availability."""
+    from services.plugin_sdk import list_plugins
+    return list_plugins()

@@ -27,6 +27,13 @@
   justify-content: center; gap: 6px; padding: 8px;
 }
 .wfm-controls { flex-shrink: 0; margin-top: 3px; }
+/* Keyboard shortcut hint icon */
+.wfm-kbd-hint {
+  color: rgba(168,153,132,0.4);
+  display: flex; align-items: center;
+  cursor: help; margin-left: 4px;
+}
+.wfm-kbd-hint:hover { color: rgba(168,153,132,0.7); }
 .wfm-error {
   display: flex; align-items: center; justify-content: center;
   padding: 8px; background: rgba(0,0,0,0.15); border-radius: 4px;
