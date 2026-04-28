@@ -18,10 +18,10 @@
     <a href="#roadmap">Roadmap</a>
   </p>
   <p>
-    <a href="https://github.com/debpalash/OmniVoice-Studio/releases/download/v0.2.2/OmniVoice.Studio_0.2.2_aarch64.dmg"><img src="https://img.shields.io/badge/macOS-DMG_(Apple_Silicon)-000?style=for-the-badge&logo=apple&logoColor=white" alt="Download macOS DMG" /></a>
-    <a href="https://github.com/debpalash/OmniVoice-Studio/releases/download/v0.2.2/OmniVoice.Studio_0.2.2_x64_en-US.msi"><img src="https://img.shields.io/badge/Windows-MSI_(x64)-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download Windows MSI" /></a>
-    <a href="https://github.com/debpalash/OmniVoice-Studio/releases/download/v0.2.2/OmniVoice.Studio_0.2.2_amd64.AppImage"><img src="https://img.shields.io/badge/Linux-AppImage_(x64)-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download Linux AppImage" /></a>
-    <a href="https://github.com/debpalash/OmniVoice-Studio/releases/download/v0.2.2/OmniVoice.Studio_0.2.2_amd64.deb"><img src="https://img.shields.io/badge/Debian-.deb-A81D33?style=for-the-badge&logo=debian&logoColor=white" alt="Download Debian .deb" /></a>
+    <a href="https://github.com/debpalash/OmniVoice-Studio/releases/download/v0.2.4/OmniVoice.Studio_0.2.4_aarch64.dmg"><img src="https://img.shields.io/badge/macOS-DMG_(Apple_Silicon)-000?style=for-the-badge&logo=apple&logoColor=white" alt="Download macOS DMG" /></a>
+    <a href="https://github.com/debpalash/OmniVoice-Studio/releases/download/v0.2.4/OmniVoice.Studio_0.2.4_x64_en-US.msi"><img src="https://img.shields.io/badge/Windows-MSI_(x64)-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download Windows MSI" /></a>
+    <a href="https://github.com/debpalash/OmniVoice-Studio/releases/download/v0.2.4/OmniVoice.Studio_0.2.4_amd64.AppImage"><img src="https://img.shields.io/badge/Linux-AppImage_(x64)-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download Linux AppImage" /></a>
+    <a href="https://github.com/debpalash/OmniVoice-Studio/releases/download/v0.2.4/OmniVoice.Studio_0.2.4_amd64.deb"><img src="https://img.shields.io/badge/Debian-.deb-A81D33?style=for-the-badge&logo=debian&logoColor=white" alt="Download Debian .deb" /></a>
   </p>
 </div>
 
@@ -174,9 +174,25 @@ This boots both services:
 
 ### Desktop App
 
+Pre-built installers are available on the [Releases](https://github.com/debpalash/OmniVoice-Studio/releases/latest) page. Or build from source:
+
 ```bash
 bun run desktop    # Launches Tauri native app (macOS / Windows / Linux)
 ```
+
+> [!IMPORTANT]
+> **macOS — "app is damaged" error after downloading the `.dmg`**
+>
+> macOS Gatekeeper quarantines apps downloaded from the internet. After dragging OmniVoice Studio to `/Applications`, run:
+> ```bash
+> xattr -cr /Applications/OmniVoice\ Studio.app
+> ```
+> Then open the app normally. This only needs to be done once.
+
+> [!TIP]
+> **Windows — first launch takes 5–10 minutes.** The app bootstraps a Python virtual environment, installs dependencies, and downloads ffmpeg automatically. The splash screen shows progress.
+>
+> **Linux — AppImage requires FUSE.** If your distro doesn't have FUSE, use the `.deb` package instead, or run: `chmod +x OmniVoice.Studio_*.AppImage && ./OmniVoice.Studio_*.AppImage --appimage-extract-and-run`
 
 ---
 
