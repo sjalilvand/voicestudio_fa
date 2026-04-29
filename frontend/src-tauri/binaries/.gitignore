@@ -1,0 +1,4 @@
+# Binaries dropped here are either build-time placeholders (created by
+# build.rs) or real per-target uv binaries fetched in CI before the
+# tauri-action bundle step. None of them belong in version control.
+uv-*

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 use tauri::image::Image;
@@ -72,9 +72,6 @@ pub enum BootstrapStage {
     /// Running `uv sync --frozen --no-dev`. Biggest time sink on first run
     /// (~5-10 min to pull torch + whisperx + faster-whisper + demucs).
     InstallingDeps,
-    /// Fetching the per-platform static ffmpeg binary from the
-    /// ffmpeg-static GitHub release. ~30-70 MB.
-    DownloadingFfmpeg { percent: Option<u8> },
     /// Venv ready, spawning uvicorn. Should be <5 s.
     StartingBackend,
     /// Backend is listening and healthy. Frontend can leave the splash.
@@ -165,14 +162,6 @@ pub struct LogPayload {
     pub line: String,
 }
 
-#[derive(Clone, Serialize)]
-struct ProgressPayload {
-    stage: String,
-    bytes_done: u64,
-    bytes_total: u64,
-    percent: Option<u8>,
-}
-
 fn emit_log<R: tauri::Runtime>(app: &tauri::AppHandle<R>, stage: &str, line: &str) {
     let payload = LogPayload { stage: stage.to_string(), line: line.to_string() };
     // Buffer the log so the frontend can backfill on mount.
@@ -182,28 +171,6 @@ fn emit_log<R: tauri::Runtime>(app: &tauri::AppHandle<R>, stage: &str, line: &st
         }
     }
     let _ = app.emit("bootstrap-log", payload);
-}
-
-fn emit_progress<R: tauri::Runtime>(
-    app: &tauri::AppHandle<R>,
-    stage: &str,
-    done: u64,
-    total: u64,
-) {
-    let percent = if total > 0 {
-        Some(((done as f64 / total as f64) * 100.0).min(100.0) as u8)
-    } else {
-        None
-    };
-    let _ = app.emit(
-        "bootstrap-progress",
-        ProgressPayload {
-            stage: stage.to_string(),
-            bytes_done: done,
-            bytes_total: total,
-            percent,
-        },
-    );
 }
 
 /// Stream stdout+stderr of a long-running subprocess line-by-line into the
@@ -474,6 +441,66 @@ fn uv_download_url() -> Option<(String, bool)> {
     ))
 }
 
+/// Look for a `uv` binary bundled alongside the app via Tauri's
+/// `bundle.externalBin`. Tauri places the per-target sidecar at the same
+/// path as the main app executable on Linux/Windows, and inside
+/// `Contents/MacOS/` on macOS .app bundles. The bundled file keeps its
+/// `uv-<target-triple>{.exe}` name.
+///
+/// Returns `None` in dev (`cargo run`) builds where the sidecar wasn't
+/// bundled — the caller then falls back to PATH lookup or the download
+/// path.
+fn find_bundled_uv() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let dir = exe.parent()?;
+    let triple = match (std::env::consts::OS, std::env::consts::ARCH) {
+        ("macos", "aarch64") => "aarch64-apple-darwin",
+        ("macos", "x86_64") => "x86_64-apple-darwin",
+        ("linux", "x86_64") => "x86_64-unknown-linux-gnu",
+        ("windows", "x86_64") => "x86_64-pc-windows-msvc",
+        _ => return None,
+    };
+    let ext = if cfg!(windows) { ".exe" } else { "" };
+    let candidate = dir.join(format!("uv-{}{}", triple, ext));
+    if !candidate.is_file() {
+        return None;
+    }
+    // build.rs writes a zero-byte placeholder so tauri-build's externalBin
+    // existence check passes during dev / `cargo check`. Reject it here so
+    // we don't try to exec an empty file as uv — bootstrap falls back to
+    // PATH lookup or the download path instead.
+    let len = std::fs::metadata(&candidate).ok().map(|m| m.len()).unwrap_or(0);
+    if len < 1024 {
+        return None;
+    }
+    Some(candidate)
+}
+
+/// Resolve a usable `uv` binary. Order: bundled sidecar (shipped with the
+/// release installer via `bundle.externalBin`), system PATH (dev / power
+/// users), or — last resort — download the standalone binary from
+/// astral-sh/uv into `app_data/tools`. The download path stays as a
+/// fallback so dev builds (which never bundle a sidecar) still bootstrap.
+fn resolve_uv<R: tauri::Runtime>(
+    _app: &tauri::AppHandle<R>,
+    app_data: &Path,
+    progress: Option<&Arc<Mutex<BootstrapStage>>>,
+) -> Result<PathBuf, String> {
+    if let Some(p) = find_bundled_uv() {
+        log::info!("Using bundled uv at {}", p.display());
+        return Ok(p);
+    }
+    if Command::new("uv").arg("--version").output().is_ok() {
+        log::info!("Using system uv from PATH");
+        return Ok(PathBuf::from("uv"));
+    }
+    if let Some(p) = progress {
+        set_stage(p, BootstrapStage::DownloadingUv { percent: None });
+    }
+    install_uv_standalone(&app_data.join("tools"))
+        .map_err(|e| format!("uv install failed: {}", e))
+}
+
 /// Download and extract the standalone `uv` binary into `dest`. Idempotent:
 /// if the binary is already present, returns its path immediately.
 fn install_uv_standalone(dest: &Path) -> io::Result<PathBuf> {
@@ -634,17 +661,9 @@ fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Opt
             set_stage(p, BootstrapStage::InstallingDeps);
         }
         // Try to repair by running uv sync in the existing project dir.
-        let uv_path = match Command::new("uv").arg("--version").output() {
-            Ok(_) => PathBuf::from("uv"),
-            Err(_) => {
-                match install_uv_standalone(&app_data.join("tools")) {
-                    Ok(p) => p,
-                    Err(e) => {
-                        fail(progress, &format!("uv install failed: {}", e));
-                        return None;
-                    }
-                }
-            }
+        let uv_path = match resolve_uv(app, &app_data, progress) {
+            Ok(p) => p,
+            Err(e) => { fail(progress, &e); return None; }
         };
         let mut repair_cmd = Command::new(&uv_path);
         let has_lockfile = project_dir.join("uv.lock").is_file();
@@ -732,22 +751,10 @@ fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Opt
         return None;
     }
 
-    // Prefer a system `uv` if one is on PATH; otherwise download the
-    // standalone binary into `app_data/tools`.
-    let uv_path = match Command::new("uv").arg("--version").output() {
-        Ok(_) => PathBuf::from("uv"),
-        Err(_) => {
-            if let Some(p) = progress {
-                set_stage(p, BootstrapStage::DownloadingUv { percent: None });
-            }
-            match install_uv_standalone(&app_data.join("tools")) {
-                Ok(p) => p,
-                Err(e) => {
-                    fail(progress, &format!("uv install failed: {}", e));
-                    return None;
-                }
-            }
-        }
+    // Bundled sidecar → system PATH → standalone download (see resolve_uv).
+    let uv_path = match resolve_uv(app, &app_data, progress) {
+        Ok(p) => p,
+        Err(e) => { fail(progress, &e); return None; }
     };
     log::info!("Bootstrap uv: {}", uv_path.display());
 
@@ -842,164 +849,6 @@ fn read_error_log_tail(max_lines: usize) -> String {
     }
 }
 
-// ── ffmpeg static binary fetch (cross-platform, no extraction) ───────────
-//
-// We pull a single statically-linked binary per host platform from the
-// long-lived `ffmpeg-static` GitHub release (MIT, ffmpeg-6.0). One binary,
-// no archive — just download, chmod +x, done. URLs intentionally pinned
-// to a specific tag for reproducibility; bump `FFMPEG_TAG` to upgrade.
-const FFMPEG_TAG: &str = "b6.0";
-
-fn ffmpeg_download_url() -> Option<&'static str> {
-    match (std::env::consts::OS, std::env::consts::ARCH) {
-        ("macos", "aarch64")  => Some("ffmpeg-darwin-arm64"),
-        ("macos", "x86_64")   => Some("ffmpeg-darwin-x64"),
-        ("linux", "x86_64")   => Some("ffmpeg-linux-x64"),
-        ("linux", "aarch64")  => Some("ffmpeg-linux-arm64"),
-        ("windows", "x86_64") => Some("ffmpeg-win32-x64.exe"),
-        _ => None,
-    }
-}
-
-/// Download the static ffmpeg binary into `app_data/bin/ffmpeg[.exe]`.
-/// Idempotent: if the file exists and is executable, no-ops. Streams byte
-/// progress to the splash via `bootstrap-progress`.
-fn install_ffmpeg<R: tauri::Runtime>(
-    app: &tauri::AppHandle<R>,
-    dest_dir: &Path,
-    progress: Option<&Arc<Mutex<BootstrapStage>>>,
-) -> io::Result<PathBuf> {
-    let bin_name = if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" };
-    let final_path = dest_dir.join(bin_name);
-
-    if final_path.is_file() {
-        // Treat any non-zero file as good enough — the user can delete it
-        // to force a re-download. Avoids bullying users on flaky networks.
-        if let Ok(meta) = fs::metadata(&final_path) {
-            if meta.len() > 1_000_000 {
-                return Ok(final_path);
-            }
-        }
-    }
-
-    let asset = ffmpeg_download_url().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::Unsupported, "no ffmpeg binary for this platform")
-    })?;
-    let url = format!(
-        "https://github.com/eugeneware/ffmpeg-static/releases/download/{}/{}",
-        FFMPEG_TAG, asset
-    );
-
-    fs::create_dir_all(dest_dir)?;
-    let tmp_path = dest_dir.join(format!("{}.part", bin_name));
-    let _ = fs::remove_file(&tmp_path);
-
-    if let Some(p) = progress {
-        set_stage(p, BootstrapStage::DownloadingFfmpeg { percent: Some(0) });
-    }
-    emit_log(app, "downloading_ffmpeg", &format!("GET {}", url));
-
-    let resp = ureq::get(&url)
-        .timeout(Duration::from_secs(300))
-        .call()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("ffmpeg download: {}", e)))?;
-    if resp.status() != 200 {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!("ffmpeg HTTP {} from {}", resp.status(), url),
-        ));
-    }
-    let total: u64 = resp
-        .header("Content-Length")
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(0);
-
-    let mut reader = resp.into_reader();
-    let mut out = fs::File::create(&tmp_path)?;
-    let mut buf = [0u8; 64 * 1024];
-    let mut done: u64 = 0;
-    let mut last_emit = Instant::now();
-    loop {
-        let n = reader.read(&mut buf)?;
-        if n == 0 { break; }
-        use std::io::Write;
-        out.write_all(&buf[..n])?;
-        done += n as u64;
-        if last_emit.elapsed() > Duration::from_millis(150) {
-            emit_progress(app, "downloading_ffmpeg", done, total);
-            if let Some(p) = progress {
-                let pct = if total > 0 {
-                    Some(((done as f64 / total as f64) * 100.0) as u8)
-                } else { None };
-                set_stage(p, BootstrapStage::DownloadingFfmpeg { percent: pct });
-            }
-            last_emit = Instant::now();
-        }
-    }
-    drop(out);
-    emit_progress(app, "downloading_ffmpeg", done, total.max(done));
-
-    fs::rename(&tmp_path, &final_path)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&final_path)?.permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&final_path, perms)?;
-    }
-    emit_log(app, "downloading_ffmpeg",
-        &format!("ffmpeg ready at {} ({} bytes)", final_path.display(), done));
-    Ok(final_path)
-}
-
-/// Resolve the ffmpeg path to inject into the backend env. Order: app-data
-/// download (preferred — controlled), bundled resource (legacy), system
-/// PATH (None — let the backend find it). Triggers a fresh download into
-/// `app_data/bin/` if nothing usable is on disk.
-fn ensure_ffmpeg_ready<R: tauri::Runtime>(
-    app: &tauri::AppHandle<R>,
-    progress: Option<&Arc<Mutex<BootstrapStage>>>,
-) -> Option<PathBuf> {
-    let app_data = app.path().app_local_data_dir().ok()?;
-    let bin_dir = app_data.join("bin");
-    let installed = bin_dir.join(if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" });
-    if installed.is_file() {
-        return Some(installed);
-    }
-    if let Some(bundled) = find_bundled_ffmpeg(app) {
-        return Some(bundled);
-    }
-    match install_ffmpeg(app, &bin_dir, progress) {
-        Ok(p) => Some(p),
-        Err(e) => {
-            emit_log(app, "downloading_ffmpeg", &format!("ffmpeg fetch failed: {}", e));
-            log::warn!("ffmpeg fetch failed: {} — backend will fall back to system PATH", e);
-            None
-        }
-    }
-}
-
-/// Stage the bundled ffmpeg binary and return its absolute path. The path is
-/// exported via `OMNIVOICE_FFMPEG` so the Python backend uses it over a
-/// system install. Returns None if the bundled binary isn't present.
-fn find_bundled_ffmpeg<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<PathBuf> {
-    let dir = app.path().resource_dir().ok()?;
-    let candidates = [
-        dir.join("bin/ffmpeg"),
-        dir.join("binaries/ffmpeg"),
-        // Tauri "resources" ships ffmpeg inside the backend folder because
-        // top-level `binaries/ffmpeg` hit macOS provenance-xattr permission
-        // errors during bundling. Keep it next to the PyInstaller binary.
-        dir.join("backend/omnivoice-backend/bin/ffmpeg"),
-    ];
-    for c in &candidates {
-        if c.is_file() {
-            return Some(c.clone());
-        }
-    }
-    None
-}
-
 // ── Spawn the backend via the bootstrapped venv Python ────────────────────
 
 fn spawn_backend<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Option<&Arc<Mutex<BootstrapStage>>>) -> Option<Child> {
@@ -1019,10 +868,9 @@ fn spawn_backend<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Option<
         }
     };
 
-    // Fetch ffmpeg before flipping to StartingBackend so the splash shows
-    // the real-time download. Failure isn't fatal — we'll fall back to the
-    // system PATH and let the backend log the missing-ffmpeg error itself.
-    let ffmpeg_path = ensure_ffmpeg_ready(app, progress);
+    // ffmpeg is no longer fetched here — the backend resolves it via
+    // imageio-ffmpeg, which ships per-platform binaries inside its pip
+    // wheel. `uv sync` already pulled it during venv bootstrap.
 
     if let Some(p) = progress {
         set_stage(p, BootstrapStage::StartingBackend);
@@ -1053,20 +901,6 @@ fn spawn_backend<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Option<
             env.push(("HF_ENDPOINT".into(), "https://hf-mirror.com".into()));
         }
     }
-    if let Some(ff) = ffmpeg_path {
-        env.push(("OMNIVOICE_FFMPEG".into(), ff.to_string_lossy().into_owned()));
-        let path_sep = if cfg!(windows) { ";" } else { ":" };
-        env.push((
-            "PATH".into(),
-            format!(
-                "{}{}{}",
-                ff.parent().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default(),
-                path_sep,
-                std::env::var("PATH").unwrap_or_default(),
-            ),
-        ));
-    }
-
     let mut cmd = Command::new(&python);
     for (k, v) in &env {
         cmd.env(k, v);

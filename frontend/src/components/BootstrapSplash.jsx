@@ -19,7 +19,6 @@ const STAGE_LABEL = {
   downloading_uv:     'Downloading uv (Python package manager)…',
   creating_venv:      'Creating Python virtual environment…',
   installing_deps:    'Installing dependencies — first run, 5–10 min.',
-  downloading_ffmpeg: 'Downloading ffmpeg…',
   starting_backend:   'Starting backend…',
   ready:              'Ready',
   failed:             'Setup failed',
@@ -30,7 +29,6 @@ const STEPS = [
   'downloading_uv',
   'creating_venv',
   'installing_deps',
-  'downloading_ffmpeg',
   'starting_backend',
 ];
 

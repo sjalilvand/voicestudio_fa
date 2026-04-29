@@ -51,6 +51,9 @@
       "../../omnivoice",
       "../../backend"
     ],
+    "externalBin": [
+      "binaries/uv"
+    ],
     "macOS": {
       "minimumSystemVersion": "12.0"
     }
