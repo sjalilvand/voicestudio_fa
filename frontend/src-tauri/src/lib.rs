@@ -126,7 +126,7 @@ pub fn run() {
                         .with_handler(move |app_handle, _shortcut, event| {
                             if event.state == ShortcutState::Pressed {
                                 log::info!("Global shortcut triggered: dictation");
-                                if let Some(win) = app_handle.get_webview_window("main") {
+                                if let Some(win) = app_handle.get_webview_window("widget") {
                                     let _ = win.show();
                                     let _ = win.set_focus();
                                 }

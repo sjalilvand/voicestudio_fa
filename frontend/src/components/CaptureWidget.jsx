@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Clipboard, X, Loader, Zap, Target, Check } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAppStore } from '../store';
-import './CaptureButton.css';
+import './CaptureWidget.css';
 
 import { API as API_BASE } from '../api/client';
 import { addTranscription } from '../pages/Transcriptions';
@@ -33,11 +33,10 @@ const LS_AUTO_COPY = 'omni_capture_auto_copy';
  *
  * Auto-copies to clipboard so users can immediately ⌘V into any app.
  */
-export default function CaptureButton() {
+export default function CaptureWidget() {
   const [state, setState] = useState('idle'); // idle | recording | transcribing | done | error
   const [transcript, setTranscript] = useState('');
   const [duration, setDuration] = useState(0);
-  const [expanded, setExpanded] = useState(false);
   const [captureMode, setCaptureMode] = useState(() =>
     localStorage.getItem(LS_CAPTURE_MODE) || 'fast'
   );
@@ -137,6 +136,19 @@ export default function CaptureButton() {
         } catch {
           toast.success('Copied to clipboard — paste with ⌘V', { duration: 2000 });
         }
+        
+        // Auto-dismiss the floating widget after 2.5 seconds so it gets out of the way
+        setTimeout(async () => {
+          setState('idle');
+          setTranscript('');
+          setDuration(0);
+          setCopied(false);
+          try {
+            const { getCurrentWindow } = await import('@tauri-apps/api/window');
+            await getCurrentWindow().hide();
+          } catch { /* not in Tauri */ }
+        }, 2500);
+
       } catch { /* clipboard API may fail in some contexts */ }
     }
   }, [autoCopy]);
@@ -371,12 +383,15 @@ export default function CaptureButton() {
     });
   }, [transcript]);
 
-  const dismiss = () => {
+  const dismiss = async () => {
     setState('idle');
     setTranscript('');
-    setExpanded(false);
     setDuration(0);
     setCopied(false);
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      await getCurrentWindow().hide();
+    } catch { /* not in Tauri */ }
   };
 
   const toggleCapture = () => {
@@ -395,11 +410,9 @@ export default function CaptureButton() {
   };
 
   return (
-    <div className={`capture-widget ${expanded ? 'capture-widget--expanded' : ''}`}>
-      {/* Expanded panel */}
-      {expanded && (
+    <div className="capture-widget">
         <div className="capture-panel">
-          <div className="capture-panel__header">
+          <div className="capture-panel__header" data-tauri-drag-region>
             <span className="capture-panel__title">
               {state === 'recording' && '🎙️ Listening…'}
               {state === 'transcribing' && '📝 Transcribing…'}
@@ -491,22 +504,10 @@ export default function CaptureButton() {
             </button>
           </div>
 
-          <div className="capture-panel__hint">
+          <div className="capture-panel__hint" data-tauri-drag-region>
             <kbd>{navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'}</kbd>+<kbd>⇧</kbd>+<kbd>Space</kbd>
           </div>
         </div>
-      )}
-
-      {/* Main FAB button */}
-      <button
-        className={`capture-fab ${state === 'recording' ? 'capture-fab--recording' : ''} ${state === 'transcribing' ? 'capture-fab--busy' : ''}`}
-        onClick={toggleCapture}
-        disabled={state === 'transcribing'}
-        title={state === 'recording' ? 'Stop recording' : 'Start dictation (⌘+⇧+Space)'}
-        aria-label={state === 'recording' ? 'Stop recording' : 'Start voice dictation'}
-      >
-        {state === 'recording' ? <MicOff size={20} /> : state === 'transcribing' ? <Loader size={20} className="spinner" /> : <Mic size={20} />}
-      </button>
     </div>
   );
 }

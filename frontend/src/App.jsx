@@ -28,7 +28,7 @@ import Header from './components/Header';
 import NavRail from './components/NavRail';
 import ErrorBoundary from './components/ErrorBoundary';
 import FloatingPill from './components/FloatingPill';
-import CaptureButton from './components/CaptureButton';
+
 import useRealtimeEvents from './hooks/useRealtimeEvents';
 import { BootstrapSplash, useBootstrapStage } from './components/BootstrapSplash';
 
@@ -1767,7 +1767,7 @@ function App() {
       }}/>
 
       <FloatingPill />
-      <CaptureButton />
+
 
       <Header
         mode={mode} setMode={setMode}

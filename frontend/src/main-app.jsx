@@ -27,11 +27,22 @@ const queryClient = new QueryClient({
   },
 });
 
+import { Suspense, lazy } from 'react';
+const CaptureWidget = lazy(() => import('./components/CaptureWidget.jsx'));
+
 export function bootstrapApp() {
+  const isWidget = window.location.search.includes('window=widget');
+  
   createRoot(document.getElementById('root')).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <App />
+        {isWidget ? (
+          <Suspense fallback={<div>Loading...</div>}>
+            <CaptureWidget />
+          </Suspense>
+        ) : (
+          <App />
+        )}
       </QueryClientProvider>
     </StrictMode>,
   );
