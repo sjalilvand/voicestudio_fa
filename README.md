@@ -42,42 +42,25 @@
 
 ## Features
 
-<table>
-<tr>
-<td width="50%" valign="top">
-
-### 🎙️ Clone any voice in 3 seconds
-Record a short clip — or drag in an audio file — and
-OmniVoice mirrors it across **646 languages**. No training,
-no fine-tuning, no waiting.
-
-### 🎨 Design voices that don't exist yet
-Dial in gender, age, accent, pitch, speed, and emotion.
-Generate unlimited unique voices without paying per character.
-
-### 🎬 Dub entire videos, one click
-Drop a file or paste a YouTube URL. The pipeline transcribes,
-translates, re-voices every speaker, and exports a finished MP4.
-
-</td>
-<td width="50%" valign="top">
-
-### ⌨️ Dictate into any app
-Press `⌘+⇧+Space` anywhere — a transparent floating widget
-appears, transcribes your speech in real time, and pastes the
-text where your cursor is. Then it disappears.
-
-### 🔐 Your voice data never leaves your machine
-No API keys. No cloud. No accounts. No telemetry.
-Everything runs on your hardware — period.
-
-### ⚡ Works on the GPU you already have
-Auto-detects CUDA, Apple Silicon MPS, ROCm, or CPU.
-No config. ≤8 GB VRAM? TTS auto-offloads to CPU.
-
-</td>
-</tr>
-</table>
+- 🎙️ **Voice Cloning** — 3-second clip → mirror any voice. 646 languages, zero-shot.
+- 🎨 **Voice Design** — Gender, age, accent, pitch, speed, emotion, dialect — dial it in.
+- 🎬 **Video Dubbing** — YouTube URL or file → transcribe → translate → re-voice → MP4.
+- ⌨️ **Dictation Widget** — `⌘+⇧+Space` from any app. Transcribes, auto-pastes, disappears.
+- 🔊 **Vocal Isolation** — Demucs-powered. Splits speech from music, keeps the background.
+- 👥 **Speaker Diarization** — Pyannote + WhisperX. Auto-identifies who said what.
+- 🎭 **Speaker Casting** — Drag voices onto speakers. Auto-cast from clones.
+- 🔄 **A/B Comparison** — Side-by-side voice audition before you commit.
+- 📦 **Batch Queue** — Drop 50 videos, walk away. Progress bars per job.
+- 🌍 **Multi-Language Batch** — Pick 10 languages, dub to all in one pass.
+- 🎛️ **Audio Effects** — 6 presets via Spotify's Pedalboard DSP. Broadcast-ready.
+- 🤖 **MCP Server** — Use OmniVoice from Claude, Cursor, or any MCP client.
+- 🛡️ **AI Watermark** — AudioSeal (Meta). Invisible, survives compression.
+- 📤 **Export** — MP4, SRT, VTT, stems, per-segment gain. Production-grade.
+- 🔐 **100% Local** — No keys, no cloud, no accounts. Your machine only.
+- ⚡ **GPU Auto-Detect** — CUDA · MPS · ROCm · CPU. ≤8 GB? Auto-offloads.
+- 🎹 **Keyboard-First** — `⌘+Enter` generate, `⌘+S` save, full undo/redo.
+- 🎨 **6 Themes** — Gruvbox · Midnight Blue · Nord · Solarized · Rosé Pine · Catppuccin.
+- 🧩 **Extensible** — Subclass `TTSBackend`, add any engine in ~50 lines.
 
 ---
 
@@ -224,84 +207,7 @@ ElevenLabs charges **$5–$330/mo** and processes your audio on their servers. O
 | **Desktop App** | ❌ | ✅ macOS · Windows · Linux |
 | **Customizable** | ❌ Closed | ✅ Fork it, extend it, ship it |
 
-Built on the [OmniVoice](https://github.com/k2-fsa/OmniVoice) 600-language zero-shot diffusion TTS model. Upload a video, get broadcast-quality dubs in any language with the original speaker's voice preserved.
-
----
-
-## Features
-
-### Core Pipeline
-- **Video Dubbing** — Transcribe → translate → synthesize → mux back to MP4. One-click end-to-end.
-- **Vocal Isolation** — Demucs-powered speech/music separation. Background audio preserved automatically.
-- **Voice Cloning** — Clone any voice from a 3-second clip. Zero-shot, 600+ languages.
-- **Multi-Speaker Diarization** — Pyannote + WhisperX fusion auto-identifies speakers and assigns unique voice profiles.
-
-### Studio Tools
-- **Frameless Dictation Widget** — Press `⌘+⇧+Space` **from any app** to summon a transparent, OS-level floating widget. It records, transcribes with live partials, auto-pastes into your active text field, and auto-hides out of your way.
-- **Speaker Casting** — Visual speaker-to-voice assignment grid. Auto-cast from video clones or assign saved profiles.
-- **Voice Preview** — Floating widget for instant 8-step TTS testing. Try voices without leaving the workspace.
-- **Real-time Dub Preview** — Edit a segment's text, preview the audio instantly without full re-render.
-- **Multi-Language Batch** — Select multiple target languages, dub to all in one pass.
-- **Batch Queue** — Drag-and-drop bulk video processing. Full pipeline: extract → transcribe → translate → generate → mix → export. Real-time progress bars per job.
-- **Voice Library** — Browse, favorite, tag, and convert gallery clips into permanent voice profiles.
-- **A/B Comparison** — Side-by-side voice audition for casting decisions.
-
-### Production Export
-- **Selective Track Export** — Choose which language tracks to include in the final MP4.
-- **Subtitle Export** — SRT and VTT generation alongside dubbed video.
-- **Stem Export** — Separate vocals and background audio as individual files.
-- **Per-Segment Mixing** — 0–200% gain control per segment for broadcast-quality balancing.
-
-<details>
-<summary><b>🔧 Technical Details</b></summary>
-<br/>
-
-- **Cross-Platform GPU** — Auto-detects CUDA, Apple Silicon (MPS), ROCm, or CPU. Includes automatic cuDNN 8/9 compatibility handling.
-- **VRAM-Aware** — Automatically offloads TTS to CPU during transcription on ≤8 GB GPUs. Zero config.
-- **Streaming ASR** — WebSocket-based speech-to-text (`/ws/transcribe`) delivers live partial results during recording. 2s buffer interval, configurable.
-- **Auto-Paste** — Dictated text is automatically pasted into the active app via system keyboard simulation (macOS Accessibility / Windows SendInput).
-- **Live Telemetry** — Real-time CPU/RAM/VRAM stats with model warm-up indicator.
-- **Keyboard-First** — `⌘+Enter` generate, `⌘+S` save, `⌘+Z`/`⌘+⇧+Z` undo/redo.
-</details>
-
-<details>
-<summary><b>🛡️ AI Provenance</b></summary>
-<br/>
-
-- **Invisible Watermark** — AudioSeal-powered (Meta) neural watermark embedded in every generated audio. Imperceptible, survives compression/editing.
-- **Detection API** — Upload any audio to `/watermark/detect` to verify OmniVoice origin with confidence score.
-- **Video Branding** — Optional logo overlay on exported MP4s (5s fade-out, bottom-right).
-- **Configurable** — Toggle invisible/visible watermarks independently in Settings → Privacy.
-</details>
-
-<details>
-<summary><b>🤖 MCP Server (AI Agent Integration)</b></summary>
-<br/>
-
-- **Model Context Protocol** — Expose OmniVoice as an AI agent tool for Claude, Cursor, and any MCP-compatible client.
-- **5 Tools** — `generate_speech`, `list_voices`, `list_personalities`, `list_languages`, `check_health`.
-- **stdio + SSE** — Works locally (Claude Desktop) or remotely (networked agents).
-- **Zero config** — Drop `mcp.json` into your client config and go. See [`mcp.json`](docs/mcp.json).
-</details>
-
-<details>
-<summary><b>🎛️ Audio Effects Chain</b></summary>
-<br/>
-
-- **6 presets** — Broadcast 📻, Cinematic 🎬, Podcast 🎙️, Warm ☀️, Bright ✨, Raw 🔇.
-- **Pedalboard-powered** — Spotify's production-grade DSP (EQ, compressor, reverb, noise gate, limiter).
-- **API-driven** — `GET /tools/effects` returns presets; custom chains via `apply_effects_chain()`.
-</details>
-
-<details>
-<summary><b>🧩 Built-in Backend Registry (Third-Party TTS Engines)</b></summary>
-<br/>
-
-- **Abstract interface** — Subclass `TTSBackend` to add any TTS engine in ~50 lines.
-- **6 built-in engines** — OmniVoice, CosyVoice 3, MLX-Audio, VoxCPM2, MOSS-TTS-Nano, KittenTTS.
-- **Auto-detection** — Add your class to the `_REGISTRY` dictionary and it registers automatically.
-- **API** — `GET /tools/plugins` lists all engines and their availability status.
-</details>
+OmniVoice Studio gives you professional-grade AI tools without the subscription or the cloud.
 
 ---
 
