@@ -58,43 +58,43 @@
   </td>
 </tr>
 <tr>
-  <td align="center">
+  <td align="center" valign="top">
     <h3>⌨️ Dictation Widget</h3>
     <p><code>⌘+⇧+Space</code> from <b>any app</b>.<br/>Transcribes, auto-pastes, disappears.</p>
   </td>
-  <td align="center">
+  <td align="center" valign="top">
     <h3>🔊 Vocal Isolation</h3>
     <p>Demucs-powered. Splits speech<br/>from music, <b>keeps the background</b>.</p>
   </td>
-  <td align="center">
+  <td align="center" valign="top">
     <h3>👥 Speaker Diarization</h3>
     <p>Pyannote + WhisperX.<br/><b>Auto-identifies</b> who said what.</p>
   </td>
 </tr>
 <tr>
-  <td align="center">
+  <td align="center" valign="top">
     <h3>📦 Batch Queue</h3>
     <p>Drop <b>50 videos</b>, walk away.<br/>Progress bars per job.</p>
   </td>
-  <td align="center">
+  <td align="center" valign="top">
     <h3>🤖 MCP Server</h3>
     <p>Use OmniVoice from <b>Claude</b>,<br/>Cursor, or any MCP client.</p>
   </td>
-  <td align="center">
+  <td align="center" valign="top">
     <h3>🛡️ AI Watermark</h3>
     <p>AudioSeal (Meta). <b>Invisible</b>,<br/>survives compression.</p>
   </td>
 </tr>
 <tr>
-  <td align="center">
+  <td align="center" valign="top">
     <h3>🔐 100% Local</h3>
     <p>No keys, no cloud, no accounts.<br/><b>Your machine only</b>.</p>
   </td>
-  <td align="center">
+  <td align="center" valign="top">
     <h3>⚡ GPU Auto-Detect</h3>
     <p>CUDA · MPS · ROCm · CPU.<br/>≤8 GB? <b>Auto-offloads</b>.</p>
   </td>
-  <td align="center">
+  <td align="center" valign="top">
     <h3>🧩 Extensible</h3>
     <p>Subclass <code>TTSBackend</code>,<br/>add any engine in <b>~50 lines</b>.</p>
   </td>
