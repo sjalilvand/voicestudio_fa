@@ -1,8 +1,9 @@
 <div align="center">
-  <img src="docs/logo.png" alt="OmniVoice Logo" width="160" />
+  <img src="docs/logo.png" alt="OmniVoice Logo" width="120" />
   <h1>OmniVoice Studio</h1>
-  <p><b>The open-source ElevenLabs alternative.</b></p>
-  <p>Real-time dictation, zero-shot voice cloning, and cinematic video dubbing, all on your desktop. Open-source, no API keys, fully local.</p>
+  <h3>The open-source ElevenLabs alternative.</h3>
+  <p>Real-time dictation, zero-shot voice cloning, and cinematic video dubbing — all on your desktop.<br/>Open-source, no API keys, fully local. <b>646 languages.</b></p>
+
   <p>
     <a href="https://github.com/debpalash/OmniVoice-Studio/stargazers"><img src="https://img.shields.io/github/stars/debpalash/OmniVoice-Studio?style=flat-square&color=f59e0b" alt="Stars" /></a>
     <a href="https://github.com/debpalash/OmniVoice-Studio/releases/latest"><img src="https://img.shields.io/github/v/release/debpalash/OmniVoice-Studio?style=flat-square&color=10b981" alt="Release" /></a>
@@ -10,13 +11,16 @@
     <a href="https://github.com/debpalash/OmniVoice-Studio/issues"><img src="https://img.shields.io/github/issues/debpalash/OmniVoice-Studio?style=flat-square&color=ef4444" alt="Issues" /></a>
     <a href="https://discord.gg/aRRdVj3de7"><img src="https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord" /></a>
   </p>
+
   <p>
-    <a href="https://github.com/debpalash/OmniVoice-Studio/releases/latest">Download</a> ·
-    <a href="#features">Features</a> ·
     <a href="#quickstart">Quickstart</a> ·
+    <a href="#features">Features</a> ·
     <a href="#why-open-source">Why Open Source?</a> ·
-    <a href="#roadmap">Roadmap</a>
+    <a href="#tts-engines">TTS Engines</a> ·
+    <a href="#contributing">Contributing</a> ·
+    <a href="https://discord.gg/aRRdVj3de7">Discord</a>
   </p>
+
   <p>
     <a href="https://github.com/debpalash/OmniVoice-Studio/releases/download/v0.2.7/OmniVoice.Studio_0.2.7_aarch64.dmg"><img src="https://img.shields.io/badge/macOS-DMG_(Apple_Silicon)-000?style=for-the-badge&logo=apple&logoColor=white" alt="Download macOS DMG" /></a>
     <a href="https://github.com/debpalash/OmniVoice-Studio/releases/download/v0.2.7/OmniVoice.Studio_0.2.7_x64_en-US.msi"><img src="https://img.shields.io/badge/Windows-MSI_(x64)-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download Windows MSI" /></a>
@@ -32,6 +36,125 @@
 </div>
 
 <br/>
+
+## ✨ Highlights
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🎙️ Voice Clone
+Drop a **3-second clip** → mirror any voice.
+646 languages, zero-shot, instant.
+
+### 🎨 Voice Design
+Build new voices from scratch — gender,
+age, accent, pitch, style, dialect.
+
+### 🌍 Video Dubbing
+Upload a video or paste a YouTube URL.
+Transcribe → translate → re-voice → export.
+
+</td>
+<td width="50%" valign="top">
+
+### ⌨️ Dictation Widget
+Press `⌘+⇧+Space` from **any app** — a transparent
+floating widget records, transcribes, and auto-pastes.
+
+### 🔐 100% Private
+Nothing leaves your machine. No API keys,
+no cloud, no accounts. Ever.
+
+### ⚡ GPU-Accelerated
+Auto-detects CUDA, Apple Silicon MPS,
+ROCm, or CPU. Zero config.
+
+</td>
+</tr>
+</table>
+
+> **⭐ If you find OmniVoice useful, please consider [giving it a star](https://github.com/debpalash/OmniVoice-Studio). It helps others discover the project!**
+
+---
+
+## Quickstart
+
+### One-command install
+
+```bash
+git clone https://github.com/debpalash/OmniVoice-Studio.git && cd OmniVoice-Studio && bun install && bun run dev
+```
+
+That's it. Open [localhost:3901](http://localhost:3901) and start cloning voices.
+
+### Docker
+
+```bash
+# CPU mode
+docker compose up --build -d
+
+# Or with NVIDIA GPU
+docker compose --profile gpu up --build -d
+```
+
+Open [http://localhost:3900](http://localhost:3900) once the health check passes. First run downloads ~4 GB of model weights — progress is shown in `docker compose logs -f`.
+
+> **Network access:** the container binds to `127.0.0.1` only. To reach OmniVoice from another machine on your LAN, change the port mapping in `docker-compose.yml` to `"0.0.0.0:3900:3900"`. OmniVoice ships no built-in authentication — when exposing it beyond your machine, put it behind a reverse proxy with auth (Caddy `basic_auth`, nginx + htpasswd, Tailscale, etc.).
+
+### Desktop App
+
+Pre-built installers (~6–8 MB) are available on the [**Releases**](https://github.com/debpalash/OmniVoice-Studio/releases/latest) page. On first launch, the app bootstraps a Python environment and downloads model weights automatically — the splash screen shows progress.
+
+```bash
+bun run desktop    # Build from source (macOS / Windows / Linux)
+```
+
+<details>
+<summary><b>macOS — "app is damaged and can't be opened"</b></summary>
+<br/>
+
+macOS quarantines apps downloaded outside the App Store. After dragging to `/Applications`:
+
+```bash
+xattr -cr /Applications/OmniVoice\ Studio.app
+```
+
+Open normally after. One-time fix.
+</details>
+
+<details>
+<summary><b>Windows — first launch takes 5–10 minutes</b></summary>
+<br/>
+
+The app bootstraps a Python virtual environment, installs dependencies, and downloads ffmpeg on first run. The splash screen shows each step. Subsequent launches start in seconds.
+</details>
+
+<details>
+<summary><b>Linux — AppImage needs FUSE</b></summary>
+<br/>
+
+If FUSE isn't available, use the `.deb` package or extract-and-run:
+
+```bash
+chmod +x OmniVoice.Studio_*.AppImage
+./OmniVoice.Studio_*.AppImage --appimage-extract-and-run
+```
+</details>
+
+> [!NOTE]
+> First run downloads model weights (~2.4 GB). This works out of the box — no account needed. For faster downloads, optionally set `HF_TOKEN=hf_...` in your environment ([get a free token here](https://huggingface.co/settings/tokens)).
+>
+> **Having issues?** Join our [Discord](https://discord.gg/aRRdVj3de7) for setup help and troubleshooting.
+
+| Service | URL | Stack |
+|---------|-----|-------|
+| **Backend** | `localhost:3900` | FastAPI · 97 endpoints · WhisperX · Demucs · OmniVoice |
+| **Frontend** | `localhost:3901` | React · Vite · Waveform timeline · Glassmorphism UI |
+
+---
+
+## Screenshots
 
 <table>
   <tr>
@@ -100,6 +223,8 @@ ElevenLabs charges **$5–$330/mo** and processes your audio on their servers. O
 
 Built on the [OmniVoice](https://github.com/k2-fsa/OmniVoice) 600-language zero-shot diffusion TTS model. Upload a video, get broadcast-quality dubs in any language with the original speaker's voice preserved.
 
+---
+
 ## Features
 
 ### Core Pipeline
@@ -124,125 +249,55 @@ Built on the [OmniVoice](https://github.com/k2-fsa/OmniVoice) 600-language zero-
 - **Stem Export** — Separate vocals and background audio as individual files.
 - **Per-Segment Mixing** — 0–200% gain control per segment for broadcast-quality balancing.
 
-### Technical
+<details>
+<summary><b>🔧 Technical Details</b></summary>
+<br/>
+
 - **Cross-Platform GPU** — Auto-detects CUDA, Apple Silicon (MPS), ROCm, or CPU. Includes automatic cuDNN 8/9 compatibility handling.
 - **VRAM-Aware** — Automatically offloads TTS to CPU during transcription on ≤8 GB GPUs. Zero config.
 - **Streaming ASR** — WebSocket-based speech-to-text (`/ws/transcribe`) delivers live partial results during recording. 2s buffer interval, configurable.
 - **Auto-Paste** — Dictated text is automatically pasted into the active app via system keyboard simulation (macOS Accessibility / Windows SendInput).
 - **Live Telemetry** — Real-time CPU/RAM/VRAM stats with model warm-up indicator.
 - **Keyboard-First** — `⌘+Enter` generate, `⌘+S` save, `⌘+Z`/`⌘+⇧+Z` undo/redo.
+</details>
 
-### AI Provenance
+<details>
+<summary><b>🛡️ AI Provenance</b></summary>
+<br/>
+
 - **Invisible Watermark** — AudioSeal-powered (Meta) neural watermark embedded in every generated audio. Imperceptible, survives compression/editing.
 - **Detection API** — Upload any audio to `/watermark/detect` to verify OmniVoice origin with confidence score.
 - **Video Branding** — Optional logo overlay on exported MP4s (5s fade-out, bottom-right).
 - **Configurable** — Toggle invisible/visible watermarks independently in Settings → Privacy.
+</details>
 
-### MCP Server (AI Agent Integration)
+<details>
+<summary><b>🤖 MCP Server (AI Agent Integration)</b></summary>
+<br/>
+
 - **Model Context Protocol** — Expose OmniVoice as an AI agent tool for Claude, Cursor, and any MCP-compatible client.
 - **5 Tools** — `generate_speech`, `list_voices`, `list_personalities`, `list_languages`, `check_health`.
 - **stdio + SSE** — Works locally (Claude Desktop) or remotely (networked agents).
 - **Zero config** — Drop `mcp.json` into your client config and go. See [`mcp.json`](docs/mcp.json).
+</details>
 
-### Audio Effects Chain
+<details>
+<summary><b>🎛️ Audio Effects Chain</b></summary>
+<br/>
+
 - **6 presets** — Broadcast 📻, Cinematic 🎬, Podcast 🎙️, Warm ☀️, Bright ✨, Raw 🔇.
 - **Pedalboard-powered** — Spotify's production-grade DSP (EQ, compressor, reverb, noise gate, limiter).
 - **API-driven** — `GET /tools/effects` returns presets; custom chains via `apply_effects_chain()`.
+</details>
 
-### Plugin SDK (Third-Party TTS Engines)
-- **Abstract interface** — Subclass `TTSPlugin` to add any TTS engine in ~50 lines.
-- **Built-in plugins** — ElevenLabs (cloud) and Bark (local) ship out of the box.
-- **Auto-discovery** — Drop a `.py` file in `backend/plugins/`, it registers automatically.
+<details>
+<summary><b>🧩 Built-in Backend Registry (Third-Party TTS Engines)</b></summary>
+<br/>
+
+- **Abstract interface** — Subclass `TTSBackend` to add any TTS engine in ~50 lines.
+- **6 built-in engines** — OmniVoice, CosyVoice 3, MLX-Audio, VoxCPM2, MOSS-TTS-Nano, KittenTTS.
+- **Auto-detection** — Add your class to the `_REGISTRY` dictionary and it registers automatically.
 - **API** — `GET /tools/plugins` lists all engines and their availability status.
-
-### GPU Safety
-- **Crash sandbox** — GPU-intensive ops can run in subprocess isolation. A CUDA OOM or driver crash kills the worker, not the server.
-- **6 color themes** — Gruvbox (default), Midnight Blue, Nord, Solarized, Rosé Pine, Catppuccin Mocha.
-
----
-
-## Quickstart
-
-### Docker (recommended)
-
-```bash
-git clone https://github.com/debpalash/OmniVoice-Studio.git
-cd OmniVoice-Studio
-
-# CPU mode
-docker compose up --build -d
-
-# Or with NVIDIA GPU
-docker compose --profile gpu up --build -d
-```
-
-Open [http://localhost:3900](http://localhost:3900) once the health check passes. First run downloads ~4 GB of model weights — progress is shown in `docker compose logs -f`.
-
-> **Network access:** the container binds to `127.0.0.1` only. To reach OmniVoice from another machine on your LAN, change the port mapping in `docker-compose.yml` to `"0.0.0.0:3900:3900"`. OmniVoice ships no built-in authentication — when exposing it beyond your machine, put it behind a reverse proxy with auth (Caddy `basic_auth`, nginx + htpasswd, Tailscale, etc.).
-
-### Local Development
-
-**Prerequisites:** [ffmpeg](https://ffmpeg.org/), [Bun](https://bun.sh/), [uv](https://docs.astral.sh/uv/)
-
-```bash
-git clone https://github.com/debpalash/OmniVoice-Studio.git
-cd OmniVoice-Studio
-bun install
-bun run dev
-```
-
-This boots both services:
-
-| Service | URL | Stack |
-|---------|-----|-------|
-| **Backend** | `localhost:3900` | FastAPI · 97 endpoints · WhisperX · Demucs · OmniVoice |
-| **Frontend** | `localhost:3901` | React · Vite · Waveform timeline · Glassmorphism UI |
-
-> [!NOTE]
-> First run downloads model weights (~2.4 GB). This works out of the box — no account needed. For faster downloads, optionally set `HF_TOKEN=hf_...` in your environment ([get a free token here](https://huggingface.co/settings/tokens)).
->
-> **Having issues?** Join our [Discord](https://discord.gg/aRRdVj3de7) for setup help and troubleshooting.
-
-### Desktop App
-
-Pre-built installers (~6–8 MB) are available on the [**Releases**](https://github.com/debpalash/OmniVoice-Studio/releases/latest) page. On first launch, the app bootstraps a Python environment and downloads model weights automatically — the splash screen shows progress.
-
-To build from source instead:
-
-```bash
-bun run desktop    # Launches Tauri native app (macOS / Windows / Linux)
-```
-
-<details>
-<summary><b>macOS — "app is damaged and can't be opened"</b></summary>
-<br/>
-
-macOS quarantines apps downloaded outside the App Store. After dragging to `/Applications`:
-
-```bash
-xattr -cr /Applications/OmniVoice\ Studio.app
-```
-
-Open normally after. One-time fix.
-</details>
-
-<details>
-<summary><b>Windows — first launch takes 5–10 minutes</b></summary>
-<br/>
-
-The app bootstraps a Python virtual environment, installs dependencies, and downloads ffmpeg on first run. The splash screen shows each step. Subsequent launches start in seconds.
-</details>
-
-<details>
-<summary><b>Linux — AppImage needs FUSE</b></summary>
-<br/>
-
-If FUSE isn't available, use the `.deb` package or extract-and-run:
-
-```bash
-chmod +x OmniVoice.Studio_*.AppImage
-./OmniVoice.Studio_*.AppImage --appimage-extract-and-run
-```
 </details>
 
 ---
@@ -315,18 +370,15 @@ OmniVoice ships a multi-engine TTS backend. The default engine (OmniVoice) is al
 | **State Management** | Zustand store migration — `uiSlice`, `pillSlice`, `dubSlice`, `generateSlice`, `prefsSlice`, `glossarySlice` |
 | **Desktop** | Cross-platform Tauri installers (macOS DMG, Windows MSI, Linux deb/AppImage), auto-update infrastructure |
 | **Windows Hardening** | Cross-platform log paths, Triton workaround, HF symlink bypass, 300s health check timeout |
-| **Dictation** | Global system-wide hotkey (`⌘+⇧+Space`), streaming ASR via WebSocket, auto-paste into active app |
+| **Dictation** | Global system-wide hotkey (`⌘+⇧+Space`), frameless floating widget, streaming ASR via WebSocket, auto-paste |
 | **Batch Pipeline** | Full batch TTS: extract → transcribe → translate → generate → mix → export, with live progress tracking |
 
-### 🔜 Roadmap — completed ✅
+### 🔜 Up Next
 
-**All planned features have been shipped.**
-
-- ~~Onboarding sample clip~~ · ~~Docker DX~~ · ~~Auto-updater~~ · ~~Deferred disk writes~~
-- ~~MCP server~~ · ~~Voice personalities~~ · ~~Audio effects chain~~ · ~~i18n framework~~
-- ~~Global hotkey dictation~~ · ~~Real-time dub preview~~ · ~~Speaker casting view~~
-- ~~Theme system~~ · ~~Plugin SDK~~ · ~~GPU crash sandbox~~ · ~~Waveform v2~~
-- ~~Batched TTS~~ · ~~Cold start optimization~~ · ~~Audiobook editor~~ · ~~Context-aware pipeline~~
+- 🎬 **Lip-sync v2** — visual speech timing with wav2lip
+- 📖 **Audiobook Editor** — chapter-aware long-form narration
+- 🌐 **Hosted Demo** — try OmniVoice without installing anything
+- 🔌 **Plugin Marketplace** — community-contributed TTS engines and effects
 
 ---
 
