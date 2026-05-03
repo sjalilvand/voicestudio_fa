@@ -40,7 +40,7 @@
 
 <br/>
 
-## ✨ What you get
+## Features
 
 <table>
 <tr>
