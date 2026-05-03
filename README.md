@@ -37,6 +37,8 @@
 
 > [!WARNING]
 > **OmniVoice Studio is in active beta.** Things may break between releases. For the latest features and fixes, clone the repo and run from source rather than using pre-built installers. Bug reports and PRs are very welcome — [open an issue](https://github.com/debpalash/OmniVoice-Studio/issues) or [join Discord](https://discord.gg/aRRdVj3de7).
+>
+> **If you like what we're building, [please ⭐ star this repo](https://github.com/debpalash/OmniVoice-Studio) — it helps others discover OmniVoice and keeps us motivated!**
 
 <br/>
 
