@@ -42,25 +42,64 @@
 
 ## Features
 
-- 🎙️ **Voice Cloning** — 3-second clip → mirror any voice. 646 languages, zero-shot.
-- 🎨 **Voice Design** — Gender, age, accent, pitch, speed, emotion, dialect — dial it in.
-- 🎬 **Video Dubbing** — YouTube URL or file → transcribe → translate → re-voice → MP4.
-- ⌨️ **Dictation Widget** — `⌘+⇧+Space` from any app. Transcribes, auto-pastes, disappears.
-- 🔊 **Vocal Isolation** — Demucs-powered. Splits speech from music, keeps the background.
-- 👥 **Speaker Diarization** — Pyannote + WhisperX. Auto-identifies who said what.
-- 🎭 **Speaker Casting** — Drag voices onto speakers. Auto-cast from clones.
-- 🔄 **A/B Comparison** — Side-by-side voice audition before you commit.
-- 📦 **Batch Queue** — Drop 50 videos, walk away. Progress bars per job.
-- 🌍 **Multi-Language Batch** — Pick 10 languages, dub to all in one pass.
-- 🎛️ **Audio Effects** — 6 presets via Spotify's Pedalboard DSP. Broadcast-ready.
-- 🤖 **MCP Server** — Use OmniVoice from Claude, Cursor, or any MCP client.
-- 🛡️ **AI Watermark** — AudioSeal (Meta). Invisible, survives compression.
-- 📤 **Export** — MP4, SRT, VTT, stems, per-segment gain. Production-grade.
-- 🔐 **100% Local** — No keys, no cloud, no accounts. Your machine only.
-- ⚡ **GPU Auto-Detect** — CUDA · MPS · ROCm · CPU. ≤8 GB? Auto-offloads.
-- 🎹 **Keyboard-First** — `⌘+Enter` generate, `⌘+S` save, full undo/redo.
-- 🎨 **6 Themes** — Gruvbox · Midnight Blue · Nord · Solarized · Rosé Pine · Catppuccin.
-- 🧩 **Extensible** — Subclass `TTSBackend`, add any engine in ~50 lines.
+<table>
+<tr>
+  <td align="center" width="33%">
+    <h3>🎙️ Voice Cloning</h3>
+    <p>3-second clip → mirror any voice.<br/><b>646 languages</b>, zero-shot.</p>
+  </td>
+  <td align="center" width="33%">
+    <h3>🎨 Voice Design</h3>
+    <p>Gender, age, accent, pitch, speed,<br/>emotion, dialect — <b>dial it in</b>.</p>
+  </td>
+  <td align="center" width="33%">
+    <h3>🎬 Video Dubbing</h3>
+    <p>YouTube URL or file → transcribe →<br/>translate → re-voice → <b>MP4</b>.</p>
+  </td>
+</tr>
+<tr>
+  <td align="center">
+    <h3>⌨️ Dictation Widget</h3>
+    <p><code>⌘+⇧+Space</code> from <b>any app</b>.<br/>Transcribes, auto-pastes, disappears.</p>
+  </td>
+  <td align="center">
+    <h3>🔊 Vocal Isolation</h3>
+    <p>Demucs-powered. Splits speech<br/>from music, <b>keeps the background</b>.</p>
+  </td>
+  <td align="center">
+    <h3>👥 Speaker Diarization</h3>
+    <p>Pyannote + WhisperX.<br/><b>Auto-identifies</b> who said what.</p>
+  </td>
+</tr>
+<tr>
+  <td align="center">
+    <h3>📦 Batch Queue</h3>
+    <p>Drop <b>50 videos</b>, walk away.<br/>Progress bars per job.</p>
+  </td>
+  <td align="center">
+    <h3>🤖 MCP Server</h3>
+    <p>Use OmniVoice from <b>Claude</b>,<br/>Cursor, or any MCP client.</p>
+  </td>
+  <td align="center">
+    <h3>🛡️ AI Watermark</h3>
+    <p>AudioSeal (Meta). <b>Invisible</b>,<br/>survives compression.</p>
+  </td>
+</tr>
+<tr>
+  <td align="center">
+    <h3>🔐 100% Local</h3>
+    <p>No keys, no cloud, no accounts.<br/><b>Your machine only</b>.</p>
+  </td>
+  <td align="center">
+    <h3>⚡ GPU Auto-Detect</h3>
+    <p>CUDA · MPS · ROCm · CPU.<br/>≤8 GB? <b>Auto-offloads</b>.</p>
+  </td>
+  <td align="center">
+    <h3>🧩 Extensible</h3>
+    <p>Subclass <code>TTSBackend</code>,<br/>add any engine in <b>~50 lines</b>.</p>
+  </td>
+</tr>
+</table>
 
 ---
 
