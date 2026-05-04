@@ -132,6 +132,9 @@ logging.getLogger("asyncio").addFilter(AsyncioExceptionFilter())
 
 # Silence HF Hub unauthenticated warnings unless specifically requested.
 logging.getLogger("huggingface_hub.utils._http").setLevel(logging.ERROR)
+# Silence httpx INFO — every HF Hub API call logs a line; the SSE stream
+# already surfaces download progress to the UI.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 if _json_logs:
     # Replace every existing handler's formatter with the JSON one.
     for _h in logging.getLogger().handlers:
@@ -170,6 +173,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from scalar_fastapi import get_scalar_api_reference
 import traceback
 
 _crash_log_lock = threading.Lock()
@@ -200,6 +204,9 @@ from api.routers import (
     events,
     capture,
     capture_ws,
+    openai_compat,
+    tts_stream,
+    marketplace,
 )
 from utils import hf_progress
 
@@ -232,8 +239,8 @@ async def lifespan(app: FastAPI):
     # Warm the TTS model in the background so first /generate is instant.
     preload_task = asyncio.create_task(preload_model())
     # Warm the capture ASR engine (MLX Whisper Turbo on Apple Silicon) so
-    # first dictation is instant — like Ghost Pepper and VoiceBox do.
-    # Without this, the first capture takes ~25s just to load the model.
+    # first dictation is instant. Without this, first capture takes ~25s
+    # just to load the model.
     async def _preload_capture_asr():
         try:
             from services.model_manager import _gpu_pool, _loading_detail
@@ -290,7 +297,22 @@ async def lifespan(app: FastAPI):
     logger.info("Shutdown: done.")
 
 
-app = FastAPI(title="OmniVoice Studio API", version="0.4.0", lifespan=lifespan)
+app = FastAPI(
+    title="OmniVoice Studio API",
+    version="0.4.0",
+    lifespan=lifespan,
+    docs_url=None,       # Disabled — replaced by Scalar at /docs
+    redoc_url=None,      # Disabled — Scalar covers this
+)
+
+
+@app.get("/docs", include_in_schema=False)
+async def scalar_docs():
+    """Interactive API documentation powered by Scalar."""
+    return get_scalar_api_reference(
+        openapi_url=app.openapi_url,
+        title=app.title,
+    )
 
 
 @app.exception_handler(Exception)
@@ -378,6 +400,9 @@ app.include_router(watermark.router)
 app.include_router(events.router)
 app.include_router(capture.router)
 app.include_router(capture_ws.router)
+app.include_router(openai_compat.router)
+app.include_router(tts_stream.router)
+app.include_router(marketplace.router)
 
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 if os.path.exists(frontend_path):

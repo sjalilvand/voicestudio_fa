@@ -24,6 +24,7 @@ const VoiceGallery = lazy(() => import('./pages/VoiceGallery'));
 const DonatePage = lazy(() => import('./pages/DonatePage'));
 const EnterprisePage = lazy(() => import('./pages/EnterprisePage'));
 const TranscriptionsPage = lazy(() => import('./pages/Transcriptions'));
+
 import Header from './components/Header';
 import NavRail from './components/NavRail';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -97,6 +98,8 @@ function App() {
   const showCheatsheet = useAppStore(s => s.showCheatsheet);
   const setShowCheatsheet = useAppStore(s => s.setShowCheatsheet);
 
+
+
   // Global '?' → open cheatsheet
   useEffect(() => {
     const h = (e) => {
@@ -110,6 +113,10 @@ function App() {
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, []);
+
+
+
+
 
   // Listen for tray navigation events (Tauri desktop)
   useEffect(() => {
@@ -2044,6 +2051,8 @@ function App() {
           />
         </Suspense>
       )}
+
+
 
       {/* ═══ BOTTOM LOGS PANEL (VSCode-style) ═══ */}
       <Suspense fallback={null}>

@@ -37,7 +37,11 @@ PARTIAL_INTERVAL_S = float(os.environ.get("OMNIVOICE_STREAM_INTERVAL", "2.0"))
 SILENCE_TIMEOUT_S = float(os.environ.get("OMNIVOICE_STREAM_SILENCE", "3.0"))
 
 # Minimum buffer size before first partial (bytes of raw audio).
-MIN_BUFFER_BYTES = 16000  # ~0.5s of 16-bit mono 16kHz
+MIN_BUFFER_BYTES = 64000  # ~2s of 16-bit mono 16kHz — needs enough WebM frames for ffmpeg
+
+# Minimum buffer for final transcription — much lower since we always want
+# to transcribe whatever the user recorded, even short utterances.
+MIN_FINAL_BUFFER_BYTES = 4000  # ~125ms of 16-bit mono 16kHz
 
 
 @router.websocket("/ws/transcribe")
@@ -156,7 +160,7 @@ async def ws_transcribe(websocket: WebSocket):
             pass
 
     # Final transcription on complete buffer — skip if client already gone.
-    if total_bytes > MIN_BUFFER_BYTES:
+    if total_bytes > MIN_FINAL_BUFFER_BYTES:
         try:
             result = await _transcribe_buffer_full(audio_chunks)
             if not await _safe_send({"type": "final", **result}):
@@ -262,6 +266,9 @@ def _chunks_to_wav(chunks: list[bytes]) -> str | None:
 
     Handles both raw PCM (from AudioWorklet) and WebM/Opus blobs
     (from MediaRecorder) by converting through ffmpeg.
+
+    Falls back to saving raw WebM if ffmpeg conversion fails — the ASR
+    backends (MLX Whisper, WhisperX) can decode WebM/Opus natively.
     """
     if not chunks:
         return None
@@ -289,16 +296,20 @@ def _chunks_to_wav(chunks: list[bytes]) -> str | None:
             timeout=10,
             check=True,
         )
-        return tmp_out.name
-    except Exception as e:
-        logger.warning("ffmpeg conversion failed: %s", e)
-        try:
-            os.unlink(tmp_out.name)
-        except OSError:
-            pass
-        return None
-    finally:
+        # ffmpeg succeeded — clean up input, return WAV
         try:
             os.unlink(tmp_in.name)
         except OSError:
             pass
+        return tmp_out.name
+    except Exception as e:
+        logger.debug("ffmpeg conversion failed: %s", e)
+        try:
+            os.unlink(tmp_out.name)
+        except OSError:
+            pass
+        # Fallback: return the raw WebM — ASR backends (MLX Whisper,
+        # WhisperX) can decode WebM/Opus containers natively.
+        logger.debug("Falling back to raw WebM input for ASR")
+        return tmp_in.name
+

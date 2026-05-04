@@ -256,11 +256,11 @@ samp,
 
 /* ≤1100: auto-collapse sidebar, keep nav + main */
 @media (max-width: 1100px) {
-  .app-container { grid-template-columns: 48px minmax(0, 1fr); }
-  .app-container > .history-panel { display: none; }
-  .app-container > .main-content { grid-column: 2; }
-  .app-container.rail-right { grid-template-columns: minmax(0, 1fr) 48px; }
-  .app-container.rail-right > .main-content { grid-column: 1; }
+  .app-container { grid-template-columns: 48px minmax(0, 1fr) !important; }
+  .app-container > .history-panel { display: none !important; }
+  .app-container > .main-content { grid-column: 2 !important; }
+  .app-container.rail-right { grid-template-columns: minmax(0, 1fr) 48px !important; }
+  .app-container.rail-right > .main-content { grid-column: 1 !important; }
 }
 
 /* ≤600: hide nav rail too, full-width main */
@@ -2342,4 +2342,19 @@ div[role="dialog"].audio-trimmer {
   .btn-primary { font-size: 0.7rem; padding: 5px 8px; }
   .input-base { font-size: 0.7rem; }
   select.input-base { font-size: 0.7rem; }
+}
+
+/* ═══ CAPTURE / DICTATION PILL HOST ═══ */
+/* Positions the CaptureWidget pill at top-center of the main window.
+   Non-blocking — no dark backdrop, no modal trap. */
+.capture-pill-host {
+  position: fixed;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  pointer-events: none;
+}
+.capture-pill-host > * {
+  pointer-events: auto;
 }
