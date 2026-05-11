@@ -437,7 +437,7 @@ export default function LogsFooter() {
           <button
             type="button"
             className="logs-footer__discord"
-            onClick={() => { import('../api/external').then(m => m.openExternal('https://discord.gg/aRRdVj3de7')); }}
+            onClick={() => { import('../api/external').then(m => m.openExternal('https://discord.gg/bzQavDfVV9')); }}
             title="Join our Discord"
             aria-label="Join our Discord community"
           >

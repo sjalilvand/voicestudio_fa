@@ -1,6 +1,14 @@
 import os
 import sys
 
+# Ensure `backend/` is on sys.path so bare imports like `from core.config`
+# work regardless of how uvicorn is invoked:
+#   - `uvicorn main:app`           (cwd = backend/)
+#   - `uvicorn backend.main:app`   (cwd = /app, Docker)
+_backend_dir = os.path.dirname(os.path.abspath(__file__))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
 try:
     import dotenv
 

@@ -887,10 +887,17 @@ export function EnginesTab() {
                     </span>
                     <span className="models-row__repo">
                       <code>{b.id}</code>
-                      {!b.available && b.reason && <span className="models-row__note"> · {b.reason}</span>}
+                      {!b.available && b.reason && (
+                        <span className="models-row__note" title={b.reason}> · {b.reason}</span>
+                      )}
                     </span>
+                    {b.install_hint && (
+                      <span className="models-row__hint" title={b.install_hint}>
+                        <Info size={11} /> {b.install_hint}
+                      </span>
+                    )}
                   </div>
-                  <div className="models-row__cell" style={{ width: 120, display: 'flex', justifyContent: 'center' }}>
+                  <div className="models-row__cell" style={{ width: 120, display: 'flex', justifyContent: 'center' }} title={b.available ? 'Installed and ready' : (b.reason || 'Not installed')}>
                     {b.available
                       ? <Badge tone="success" size="xs">ready</Badge>
                       : <Badge tone="warn" size="xs">unavailable</Badge>}

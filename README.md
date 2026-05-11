@@ -9,7 +9,7 @@
     <a href="https://github.com/debpalash/OmniVoice-Studio/releases/latest"><img src="https://img.shields.io/github/v/release/debpalash/OmniVoice-Studio?style=flat-square&color=10b981" alt="Release" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-FSL--1.1--ALv2-blue?style=flat-square" alt="License" /></a>
     <a href="https://github.com/debpalash/OmniVoice-Studio/issues"><img src="https://img.shields.io/github/issues/debpalash/OmniVoice-Studio?style=flat-square&color=ef4444" alt="Issues" /></a>
-    <a href="https://discord.gg/aRRdVj3de7"><img src="https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord" /></a>
+    <a href="https://discord.gg/bzQavDfVV9"><img src="https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord" /></a>
   </p>
 
   <p>
@@ -18,7 +18,7 @@
     <a href="#why-omnivoice-studio">Why OmniVoice Studio?</a> ·
     <a href="#tts-engines">TTS Engines</a> ·
     <a href="#contributing">Contributing</a> ·
-    <a href="https://discord.gg/aRRdVj3de7">Discord</a>
+    <a href="https://discord.gg/bzQavDfVV9">Discord</a>
   </p>
 
   <p>
@@ -36,7 +36,7 @@
 </div>
 
 > [!WARNING]
-> **OmniVoice Studio is in active beta.** Things may break between releases. For the latest features and fixes, clone the repo and run from source rather than using pre-built installers. Bug reports and PRs are very welcome — [open an issue](https://github.com/debpalash/OmniVoice-Studio/issues) or [join Discord](https://discord.gg/aRRdVj3de7).
+> **OmniVoice Studio is in active beta.** Things may break between releases. For the latest features and fixes, clone the repo and run from source rather than using pre-built installers. Bug reports and PRs are very welcome — [open an issue](https://github.com/debpalash/OmniVoice-Studio/issues) or [join Discord](https://discord.gg/bzQavDfVV9).
 
 <br/>
 
@@ -248,7 +248,7 @@ bun run desktop    # Build the native desktop app from source
 > [!NOTE]
 > First run downloads model weights (~2.4 GB). No account needed. For faster downloads, optionally set `HF_TOKEN=hf_...` in your environment ([get a free token here](https://huggingface.co/settings/tokens)).
 >
-> **Having issues?** Join our [Discord](https://discord.gg/aRRdVj3de7) for setup help and troubleshooting.
+> **Having issues?** Join our [Discord](https://discord.gg/bzQavDfVV9) for setup help and troubleshooting.
 
 ---
 
@@ -409,7 +409,7 @@ We welcome contributions of all kinds — bug fixes, new TTS engine adapters, UI
 
 - 📖 Read the **[Contributing Guide](CONTRIBUTING.md)** for setup, code style, and PR workflow
 - 🐛 Browse [good first issues](https://github.com/debpalash/OmniVoice-Studio/labels/good%20first%20issue)
-- 💬 Join our [Discord](https://discord.gg/aRRdVj3de7) to discuss ideas or ask for help
+- 💬 Join our [Discord](https://discord.gg/bzQavDfVV9) to discuss ideas or ask for help
 
 ---
 

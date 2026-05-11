@@ -6,7 +6,7 @@ Thanks for your interest in improving OmniVoice Studio! This guide covers everyt
 
 | | |
 |---|---|
-| 💬 **Chat** | [Discord](https://discord.gg/aRRdVj3de7) |
+| 💬 **Chat** | [Discord](https://discord.gg/bzQavDfVV9) |
 | 🐛 **Bugs** | [GitHub Issues](https://github.com/debpalash/OmniVoice-Studio/issues) |
 | 🏷️ **Good First Issues** | [Filtered list](https://github.com/debpalash/OmniVoice-Studio/labels/good%20first%20issue) |
 | 📋 **Roadmap** | [README → Roadmap](README.md#roadmap) |
@@ -194,7 +194,7 @@ cd frontend/src-tauri && cargo check
 
 ## Need Help?
 
-- **Stuck on setup?** Ask in [Discord #help](https://discord.gg/aRRdVj3de7)
+- **Stuck on setup?** Ask in [Discord #help](https://discord.gg/bzQavDfVV9)
 - **Not sure where to start?** Check [good first issues](https://github.com/debpalash/OmniVoice-Studio/labels/good%20first%20issue)
 - **Want to discuss a big change?** Open a [discussion](https://github.com/debpalash/OmniVoice-Studio/discussions) or Discord thread before coding
 

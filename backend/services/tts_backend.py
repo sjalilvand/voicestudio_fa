@@ -725,8 +725,13 @@ class IndexTTS2Backend(TTSBackend):
 
     Installation:
         git clone https://github.com/index-tts/index-tts.git
-        cd index-tts && uv sync --all-extras
+        cd index-tts && uv pip install -e .
         hf download IndexTeam/IndexTTS-2 --local-dir=checkpoints
+
+    ⚠️  Do NOT use ``uv sync --all-extras`` — it overwrites OmniVoice's lock
+    file and replaces transformers>=5.3 with transformers<5, breaking OmniVoice.
+    Use ``uv pip install -e .`` instead to add IndexTTS without clobbering deps.
+    On Windows, ``--all-extras`` also fails because deepspeed cannot compile.
 
     Set ``OMNIVOICE_INDEXTTS_DIR`` to the repo root (containing ``checkpoints/``).
 
@@ -746,12 +751,33 @@ class IndexTTS2Backend(TTSBackend):
         try:
             from indextts.infer_v2 import IndexTTS2 as _Model  # noqa: F401
             return True, "ready"
-        except ImportError:
+        except ImportError as e:
+            err = str(e)
+            # Detect the transformers version conflict specifically
+            if "transformers" in err or "OffloadedCache" in err or "HiggsAudio" in err:
+                return False, (
+                    f"IndexTTS dependency conflict: {err}. "
+                    "IndexTTS requires transformers<5 but OmniVoice needs "
+                    "transformers>=5.3. Install IndexTTS in a separate venv "
+                    "and run it as a sidecar process, or use "
+                    "`uv pip install -e .` (not `uv sync --all-extras`) "
+                    "to avoid overwriting OmniVoice's lock file."
+                )
             return False, (
                 "indextts package not installed. Clone the repo and install: "
                 "git clone https://github.com/index-tts/index-tts.git && "
-                "cd index-tts && uv sync --all-extras. Then set "
+                "cd index-tts && uv pip install -e . "
+                "(Note: use `uv pip install -e .` instead of `uv sync --all-extras` "
+                "to avoid overwriting OmniVoice dependencies). Then set "
                 "OMNIVOICE_INDEXTTS_DIR to the repo root."
+            )
+        except Exception as e:
+            # Catch deeper crashes from the import chain (e.g. transformers
+            # internal ImportError that surfaces as a regular Exception)
+            return False, (
+                f"IndexTTS failed to load: {e}. This is usually caused by "
+                "a transformers version conflict (IndexTTS needs <5, OmniVoice "
+                "needs >=5.3). Consider running IndexTTS in a separate venv."
             )
 
     @property
@@ -1101,6 +1127,21 @@ _REGISTRY: dict[str, type[TTSBackend]] = {
 
 
 
+# Short install hints surfaced as tooltips on the Settings → Engines UI.
+# Helps users understand what pip package to install and where.
+_INSTALL_HINTS: dict[str, str] = {
+    "omnivoice":     "pip install omnivoice  (bundled — no extra install needed)",
+    "cosyvoice":     "git clone --recursive FunAudioLLM/CosyVoice + pip install -r requirements.txt + SoX",
+    "kittentts":     "pip install kittentts  (ONNX, CPU-only, ~80 MB)",
+    "mlx-audio":     "pip install mlx-audio  (Apple Silicon only)",
+    "voxcpm2":       "pip install voxcpm     (CPU/MPS supported; CUDA recommended for speed)",
+    "moss-tts-nano": "git clone OpenMOSS/MOSS-TTS-Nano && pip install -e .  (not on PyPI)",
+    "indextts2":     "git clone index-tts/index-tts && uv pip install -e .  (NOT uv sync --all-extras)",
+    "gpt-sovits":    "External API server — start api_v2.py on port 9880",
+    "sherpa-onnx":   "pip install sherpa-onnx  (universal ONNX runtime, WASM-ready)",
+}
+
+
 def list_backends() -> list[dict]:
     """Enumerate every registered backend with its availability state.
     Shape matches what a Settings-UI engine picker wants.
@@ -1113,6 +1154,7 @@ def list_backends() -> list[dict]:
             "display_name": cls.display_name,
             "available": ok,
             "reason": None if ok else msg,
+            "install_hint": _INSTALL_HINTS.get(bid),
         })
     return out
 

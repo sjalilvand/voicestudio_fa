@@ -129,7 +129,7 @@ export default function EnterprisePage({ onBack }) {
         <div className="ent-cta-footer">
           <p>Questions? Reach out at <button type="button" className="ent-cta-footer__link" onClick={() => openExternal('mailto:OmniVoice@palash.dev')}>OmniVoice@palash.dev</button></p>
           <p className="ent-cta-footer__sub">
-            Join our <button type="button" className="ent-cta-footer__link" onClick={() => openExternal('https://discord.gg/aRRdVj3de7')}>Discord</button> for community support.
+            Join our <button type="button" className="ent-cta-footer__link" onClick={() => openExternal('https://discord.gg/bzQavDfVV9')}>Discord</button> for community support.
           </p>
         </div>
       </div>
