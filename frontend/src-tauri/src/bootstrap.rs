@@ -203,6 +203,13 @@ pub fn clean_and_retry_bootstrap(app: tauri::AppHandle, state: tauri::State<'_, 
             let _ = fs::remove_dir_all(&project_dir);
         }
     }
+    // Kill any zombie backend still occupying the port from the deleted
+    // project dir, otherwise bootstrap will "attach" to the stale process.
+    if crate::backend::port_in_use(backend_port()) {
+        log::warn!("Clean retry: killing stale backend on port {}", backend_port());
+        crate::backend::kill_orphan_on_port(backend_port());
+        std::thread::sleep(Duration::from_millis(500));
+    }
     retry_bootstrap(app, state);
 }
 
@@ -284,12 +291,43 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
     let backend_dir = project_dir.join("backend");
 
     if venv_py.is_file() && backend_dir.is_dir() {
-        let uvicorn_check = Command::new(&venv_py)
+        let mut uvicorn_check_cmd = Command::new(&venv_py);
+        uvicorn_check_cmd.env_remove("PYTHONHOME").env_remove("PYTHONPATH").env_remove("LD_LIBRARY_PATH");
+        let uvicorn_check = uvicorn_check_cmd
             .args(["-c", "import uvicorn"])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();
         if matches!(uvicorn_check, Ok(ref s) if s.success()) {
+            // Always sync source dirs from bundle so code fixes land on
+            // existing installs without requiring a full clean+reinstall.
+            let resource_dir = app.path().resource_dir().ok();
+            if let Some(ref res) = resource_dir {
+                let flat = res.clone();
+                let up2  = res.join("_up_").join("_up_");
+                let (res_omni, res_backend) = if flat.join("pyproject.toml").is_file() {
+                    (flat.join("omnivoice"), flat.join("backend"))
+                } else {
+                    (up2.join("omnivoice"), up2.join("backend"))
+                };
+                if res_omni.is_dir() {
+                    let omnivoice_dir = project_dir.join("omnivoice");
+                    let _ = fs::remove_dir_all(&omnivoice_dir);
+                    if let Err(e) = copy_dir_recursive(&res_omni, &omnivoice_dir) {
+                        fail(progress, &format!("Failed to sync omnivoice/ sources: {}", e));
+                        return None;
+                    }
+                    log::info!("Synced omnivoice/ from bundle");
+                }
+                if res_backend.is_dir() {
+                    let _ = fs::remove_dir_all(&backend_dir);
+                    if let Err(e) = copy_dir_recursive(&res_backend, &backend_dir) {
+                        fail(progress, &format!("Failed to sync backend/ sources: {}", e));
+                        return None;
+                    }
+                    log::info!("Synced backend/ from bundle");
+                }
+            }
             return Some((venv_py, backend_dir));
         }
         log::warn!(
@@ -304,6 +342,7 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
             Err(e) => { fail(progress, &e); return None; }
         };
         let mut repair_cmd = Command::new(&uv_path);
+        repair_cmd.env_remove("PYTHONHOME").env_remove("PYTHONPATH").env_remove("LD_LIBRARY_PATH");
         let has_lockfile = project_dir.join("uv.lock").is_file();
         if has_lockfile {
             repair_cmd.args(["sync", "--frozen", "--no-dev", "--verbose"]);
@@ -386,6 +425,7 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
         set_stage(p, BootstrapStage::CreatingVenv);
     }
     let mut venv_cmd = Command::new(&uv_path);
+    venv_cmd.env_remove("PYTHONHOME").env_remove("PYTHONPATH").env_remove("LD_LIBRARY_PATH");
     venv_cmd.args(["venv", "--python", "3.11", "--managed-python"]).current_dir(&project_dir);
     let status = run_streaming(app, "creating_venv", &mut venv_cmd);
     if !matches!(status, Ok(ref s) if s.success()) {
@@ -397,6 +437,7 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
         set_stage(p, BootstrapStage::InstallingDeps);
     }
     let mut sync_cmd = Command::new(&uv_path);
+    sync_cmd.env_remove("PYTHONHOME").env_remove("PYTHONPATH").env_remove("LD_LIBRARY_PATH");
     let has_lockfile = project_dir.join("uv.lock").is_file();
     if has_lockfile {
         sync_cmd
