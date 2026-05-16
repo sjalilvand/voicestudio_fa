@@ -174,6 +174,30 @@ chmod +x OmniVoice.Studio_*.AppImage
 ```
 </details>
 
+<details>
+<summary><b>Linux — White screen on Fedora 44 / Ubuntu 24.04</b></summary>
+<br/>
+
+Some newer distros ship a WebKit/GTK version with compositing issues. Try:
+
+```bash
+WEBKIT_DISABLE_COMPOSITING_MODE=1 ./OmniVoice.Studio_*.AppImage
+```
+
+If that doesn't help, use the `.deb` package or run from source instead.
+</details>
+
+<details>
+<summary><b>Installation fails behind a firewall / in Russia</b></summary>
+<br/>
+
+The desktop app downloads Python from GitHub during first launch. If your network blocks GitHub:
+
+1. Install Python 3.11 manually from [python.org](https://python.org/downloads/)
+2. Set `UV_PYTHON_PREFERENCE=system` before launching, or run from source with `bun run dev`
+3. For PyPI mirrors: set `UV_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/`
+</details>
+
 ---
 
 ### 🐳 Option 2 — Docker
