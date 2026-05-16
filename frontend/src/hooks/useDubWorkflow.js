@@ -3,7 +3,7 @@ import { useAppStore } from '../store';
 import {
   dubUpload, dubIngestUrl, dubAbort as apiDubAbort, dubCleanupSegments,
   dubTranslate, dubGenerate, tasksStreamUrl, tasksCancel,
-  transcribeStreamUrl,
+  transcribeStreamUrl, dubImportSrt,
 } from '../api/dub';
 import { PRESETS } from '../utils/constants';
 import { apiPost } from '../api/client';
@@ -231,6 +231,35 @@ export default function useDubWorkflow({ loadProjects, loadProfiles, loadDubHist
     } finally { dubAbortCtrlRef.current = null; }
   }, [dubJobId, setDubError, setDubSegments, setDubStep, _waitForTranscribe, loadProjects]);
 
+  const handleDubImportSrt = useCallback(async (file) => {
+    if (!dubJobId) {
+      toast.error('Upload or ingest a video first — there is no job to attach subtitles to.');
+      return;
+    }
+    if (!file) return;
+    try {
+      setDubError('');
+      const res = await dubImportSrt(dubJobId, file);
+      const segs = (res && res.segments) || [];
+      setDubSegments(segs.map(s => ({
+        ...s,
+        id: s.id != null ? String(s.id) : String(Math.random()),
+      })));
+      setDubStep('editing');
+      const stats = res?.stats || {};
+      const noteParts = [`Imported ${stats.imported ?? segs.length} cue(s) from ${file.name || '.srt'}`];
+      if (stats.skipped_malformed) noteParts.push(`${stats.skipped_malformed} skipped (malformed)`);
+      if (stats.dropped_overlap) noteParts.push(`${stats.dropped_overlap} dropped (overlap)`);
+      if (stats.clamped_to_duration) noteParts.push(`${stats.clamped_to_duration} clamped to media length`);
+      toast.success(noteParts.join(' · '), { duration: 6000 });
+      loadProjects();
+    } catch (err) {
+      const msg = err?.message || 'SRT import failed';
+      setDubError(msg);
+      toast.error(msg);
+    }
+  }, [dubJobId, setDubError, setDubSegments, setDubStep, loadProjects]);
+
   const handleCleanupSegments = useCallback(async () => {
     if (!dubJobId || !dubSegments.length) return;
     const before = dubSegments.length;
@@ -387,5 +416,6 @@ export default function useDubWorkflow({ loadProjects, loadProfiles, loadDubHist
     handleDubAbort, handleDubRetryTranscribe,
     handleDubStop, handleDubGenerate,
     handleCleanupSegments, handleTranslateAll,
+    handleDubImportSrt,
   };
 }

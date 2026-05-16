@@ -56,6 +56,83 @@ _kill_job_procs    = dub_pipeline.kill_job_procs
 _get_job           = dub_pipeline.get_job
 _save_job          = dub_pipeline.save_job
 
+@router.post("/dub/import-srt/{job_id}")
+async def dub_import_srt(job_id: str, file: UploadFile = File(...)):
+    """Replace `job["segments"]` with timestamps + text parsed from an SRT
+    file. Used as a fallback when Whisper mis-transcribes — the user can
+    point at their own pre-synced subtitles and skip ASR entirely.
+
+    Returns the new segment list plus counts of any cues we had to skip or
+    re-time (overlap shifts). The caller surfaces these so the user knows
+    if the import wasn't lossless.
+    """
+    job = _get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    try:
+        raw_bytes = await file.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not read uploaded file: {e}") from e
+    if not raw_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded SRT file is empty.")
+    # Most SRT files are UTF-8 (with or without BOM); fall back to latin-1
+    # so legacy Windows-encoded subs don't blow up the import.
+    try:
+        text = raw_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = raw_bytes.decode("latin-1", errors="replace")
+
+    from services.srt_parser import parse_srt
+    result = parse_srt(text)
+    if not result.segments:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "No valid cues found in the uploaded file. "
+                f"Skipped {result.skipped_cues} malformed cue(s). "
+                "Expected SubRip (.srt) format: index, then 'HH:MM:SS,ms --> HH:MM:SS,ms', then text, blank line."
+            ),
+        )
+
+    # Clamp cues that run past the source media's known duration. Pipeline
+    # downstream code assumes segment.end <= duration; without this, dub
+    # generation would try to time-stretch into negative slack.
+    duration = float(job.get("duration") or 0.0)
+    clamped = 0
+    if duration > 0:
+        kept = []
+        for seg in result.segments:
+            if seg["start"] >= duration:
+                continue
+            if seg["end"] > duration:
+                seg = {**seg, "end": round(duration, 3)}
+                clamped += 1
+            kept.append(seg)
+        # Re-id after clamp drops.
+        segments = [{**s, "id": i} for i, s in enumerate(kept)]
+    else:
+        segments = result.segments
+
+    job["segments"] = segments
+    # `source_lang` stays whatever the user (or the upload step) set; we
+    # don't try to language-detect off the cue text — that's noisy and the
+    # user usually knows what their .srt is.
+    _save_job(job_id, job)
+    logger.info(
+        "Imported %d cue(s) from .srt for job %s (skipped=%d, overlap_shifted=%d, clamped=%d)",
+        len(segments), job_id, result.skipped_cues, result.dropped_overlaps, clamped,
+    )
+    return {
+        "segments": segments,
+        "stats": {
+            "imported": len(segments),
+            "skipped_malformed": result.skipped_cues,
+            "dropped_overlap": result.dropped_overlaps,
+            "clamped_to_duration": clamped,
+        },
+    }
+
+
 @router.post("/dub/cleanup-segments/{job_id}")
 def dub_cleanup_segments(job_id: str):
     """Re-run merge/stitch passes on a job's existing segments to drop fragments."""

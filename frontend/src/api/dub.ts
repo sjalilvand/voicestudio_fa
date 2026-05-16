@@ -50,6 +50,29 @@ export async function dubCleanupSegments(jobId: string): Promise<unknown> {
   return apiPost(`/dub/cleanup-segments/${jobId}`);
 }
 
+export interface DubImportSrtResponse {
+  segments: Array<{
+    id: number;
+    start: number;
+    end: number;
+    text: string;
+    text_original: string;
+    speaker_id: string;
+  }>;
+  stats: {
+    imported: number;
+    skipped_malformed: number;
+    dropped_overlap: number;
+    clamped_to_duration: number;
+  };
+}
+
+export async function dubImportSrt(jobId: string, file: File | Blob): Promise<DubImportSrtResponse> {
+  const fd = new FormData();
+  fd.append('file', file);
+  return apiPost<DubImportSrtResponse>(`/dub/import-srt/${jobId}`, fd);
+}
+
 export async function dubTranslate(body: Record<string, unknown>): Promise<DubTranslateResponse> {
   return apiPost<DubTranslateResponse>('/dub/translate', body);
 }

@@ -295,6 +295,7 @@ function App() {
     handleDubAbort, handleDubRetryTranscribe,
     handleDubStop, handleDubGenerate,
     handleCleanupSegments, handleTranslateAll,
+    handleDubImportSrt,
   } = useDubWorkflow({ loadProjects, loadProfiles, loadDubHistory, setLastGenFingerprints });
 
   const [dubVideoFile, setDubVideoFile] = useState(null);
@@ -969,6 +970,7 @@ function App() {
               incrementalPlan={incrementalPlan}
               handleTranslateAll={handleTranslateAll}
               handleCleanupSegments={handleCleanupSegments}
+              handleDubImportSrt={handleDubImportSrt}
               triggerDownload={triggerDownload}
               fileToMediaUrl={fileToMediaUrl}
               editSegments={editSegments}
