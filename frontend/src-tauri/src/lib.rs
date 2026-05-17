@@ -59,10 +59,18 @@ pub const TRAY_ICON_RECORDING: &[u8] = include_bytes!("../icons/tray-recording.p
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // ── Detect pill mode from CLI args ────────────────────────────────────
-    let pill_mode = std::env::args().any(|a| a == "--pill");
+    // ── Detect pill mode from CLI args OR persisted config ────────────────
+    // CLI flag takes precedence. If not passed, fall back to the
+    // `launch_as_widget` config field (set via tray "Switch to Pill Mode" or
+    // Settings → Launch options checkbox). This means a user can configure
+    // "launch as widget by default" once and never need to remember the flag.
+    let cli_pill = std::env::args().any(|a| a == "--pill");
+    let pill_mode = cli_pill || crate::config::load_config_pre_app().launch_as_widget;
     if pill_mode {
-        log::info!("Starting in pill (dictation-only) mode");
+        log::info!(
+            "Starting in pill (dictation-only) mode (source: {})",
+            if cli_pill { "--pill flag" } else { "config.launch_as_widget" }
+        );
         // On macOS, hide the Dock icon in pill mode so only the tray shows.
         // This is handled after the app builds via set_activation_policy.
     }
@@ -96,6 +104,8 @@ pub fn run() {
             commands::quit_app,
             commands::get_dictation_shortcut,
             commands::set_dictation_shortcut,
+            commands::get_launch_as_widget,
+            commands::set_launch_as_widget,
             commands::enable_pill_autostart,
             commands::disable_pill_autostart,
             commands::is_pill_autostart_enabled,
@@ -118,6 +128,35 @@ pub fn run() {
                     ])
                     .build(),
             )?;
+
+            // ── Programmatic widget window creation ──────────────────────
+            // Tauri 2's config-array creation silently dropped the widget
+            // window (declared in tauri.conf.json with create:false to
+            // make the handoff explicit). Some combination of transparent
+            // + decorations:false + visible:false + always-on-top was being
+            // rejected without an error. Building via WebviewWindowBuilder
+            // works and surfaces real errors on failure.
+            {
+                use tauri::{WebviewWindowBuilder, WebviewUrl};
+                let result = WebviewWindowBuilder::new(
+                    app,
+                    "widget",
+                    WebviewUrl::App("index.html".into()),
+                )
+                .title("Capture")
+                .inner_size(300.0, 64.0)
+                .resizable(false)
+                .transparent(true)
+                .decorations(false)
+                .always_on_top(true)
+                .visible(false)
+                .skip_taskbar(true)
+                .center()
+                .build();
+                if let Err(e) = result {
+                    log::error!("Failed to create widget window: {e:?}");
+                }
+            }
 
             app.manage(AppFlags {
                 quitting: AtomicBool::new(false),
@@ -223,6 +262,9 @@ pub fn run() {
                 let dictate_i = MenuItemBuilder::new("Start Dictation  ⌘⇧Space")
                     .id("dictate")
                     .build(app)?;
+                let switch_to_pill_i = MenuItemBuilder::new("Switch to Dictation Widget")
+                    .id("switch_to_pill")
+                    .build(app)?;
                 let settings_i = MenuItemBuilder::new("Settings")
                     .id("settings")
                     .build(app)?;
@@ -233,6 +275,7 @@ pub fn run() {
                     .item(&show_i)
                     .separator()
                     .item(&dictate_i)
+                    .item(&switch_to_pill_i)
                     .item(&settings_i)
                     .separator()
                     .item(&quit_i)
@@ -255,11 +298,35 @@ pub fn run() {
                             }
                         }
                         "open_studio" => {
-                            // Launch ourselves without --pill to open the full studio
+                            // Persist the preference (so next launch is studio, not pill)
+                            // then spawn a new instance without --pill and exit this one.
+                            let mut cfg = crate::config::load_config(app);
+                            cfg.launch_as_widget = false;
+                            crate::config::save_config(app, &cfg);
+                            if let Ok(exe) = std::env::current_exe() {
+                                let _ = std::process::Command::new(exe).spawn();
+                            }
+                            app.state::<AppFlags>()
+                                .quitting
+                                .store(true, Ordering::SeqCst);
+                            app.exit(0);
+                        }
+                        "switch_to_pill" => {
+                            // Mirror of "open_studio" but the other direction:
+                            // persist launch_as_widget=true, relaunch with --pill,
+                            // and exit the current (studio) instance.
+                            let mut cfg = crate::config::load_config(app);
+                            cfg.launch_as_widget = true;
+                            crate::config::save_config(app, &cfg);
                             if let Ok(exe) = std::env::current_exe() {
                                 let _ = std::process::Command::new(exe)
+                                    .arg("--pill")
                                     .spawn();
                             }
+                            app.state::<AppFlags>()
+                                .quitting
+                                .store(true, Ordering::SeqCst);
+                            app.exit(0);
                         }
                         "dictate" => {
                             // Toggle: if the widget is visible (recording), stop;
@@ -299,7 +366,7 @@ pub fn run() {
 
             // ── Hide the unused window per mode ──────────────────────────
             if pill_mode_setup {
-                // Pill mode: hide the main window, keep widget ready
+                // Pill mode: hide the main window
                 if let Some(main_win) = app.get_webview_window("main") {
                     let _ = main_win.hide();
                     let _ = main_win.set_skip_taskbar(true);
@@ -308,6 +375,34 @@ pub fn run() {
                 #[cfg(target_os = "macos")]
                 {
                     let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+                }
+                // PILL MODE = the widget IS the app. Show it immediately so the
+                // user has visible feedback (previously it stayed hidden until
+                // ⌘⇧Space was pressed, which made the app look launch-failed
+                // for first-time users with no global-shortcut Accessibility
+                // permission yet). Position near top-center of primary monitor.
+                match app.get_webview_window("widget") {
+                    Some(win) => {
+                        if let Ok(Some(monitor)) = win.primary_monitor() {
+                            let size = monitor.size();
+                            let scale = monitor.scale_factor();
+                            let x = ((size.width as f64 / scale) / 2.0 - 150.0) as i32;
+                            let _ = win.set_position(tauri::Position::Logical(
+                                tauri::LogicalPosition::new(x as f64, 60.0),
+                            ));
+                        } else {
+                            let _ = win.center();
+                        }
+                        match win.show() {
+                            Ok(_) => log::info!("Pill mode: widget window shown"),
+                            Err(e) => log::error!("Pill mode: widget.show() failed: {e}"),
+                        }
+                        let _ = win.set_focus();
+                    }
+                    None => log::error!(
+                        "Pill mode: widget window NOT FOUND — get_webview_window(\"widget\") \
+                         returned None. Check tauri.conf.json windows[label=\"widget\"]."
+                    ),
                 }
             } else {
                 // Studio mode: widget window stays hidden but ready for the
