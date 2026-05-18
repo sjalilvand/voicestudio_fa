@@ -535,3 +535,66 @@ class TestStreamingTTS:
             assert res.headers.get("x-audio-duration") is not None
             # Verify it's valid WAV
             assert len(res.content) > 44  # WAV header is 44 bytes minimum
+
+
+# ---------------------------------------------------------------------------
+# /system/set-env loopback-origin guard (260518-ivy security fix)
+# ---------------------------------------------------------------------------
+
+def test_set_env_rejects_non_loopback(client):
+    """Default TestClient sets request.client.host = 'testclient' (non-loopback).
+    The guard must return 403 and must NOT mutate os.environ."""
+    sentinel = "__set_env_should_not_be_set__"
+    # Ensure HF_TOKEN does not currently equal the sentinel
+    original = os.environ.get("HF_TOKEN")
+    os.environ.pop("HF_TOKEN", None)
+    try:
+        res = client.post("/system/set-env", json={"key": "HF_TOKEN", "value": sentinel})
+        assert res.status_code == 403
+        assert "loopback" in res.json().get("detail", "").lower()
+        # Guard must short-circuit before the os.environ mutation
+        assert os.environ.get("HF_TOKEN") != sentinel
+    finally:
+        if original is None:
+            os.environ.pop("HF_TOKEN", None)
+        else:
+            os.environ["HF_TOKEN"] = original
+
+
+def test_set_env_allows_loopback():
+    """A TestClient explicitly constructed with client=('127.0.0.1', ...) must pass
+    the loopback gate, mutate os.environ, and return the documented payload."""
+    from fastapi.testclient import TestClient
+    from main import app
+
+    loopback_client = TestClient(app, client=("127.0.0.1", 50000))
+    original = os.environ.get("HF_TOKEN")
+    os.environ.pop("HF_TOKEN", None)
+    try:
+        res = loopback_client.post(
+            "/system/set-env",
+            json={"key": "HF_TOKEN", "value": "hf_loopback_ok"},
+        )
+        assert res.status_code == 200
+        assert res.json() == {"key": "HF_TOKEN", "set": True}
+        assert os.environ.get("HF_TOKEN") == "hf_loopback_ok"
+    finally:
+        if original is None:
+            os.environ.pop("HF_TOKEN", None)
+        else:
+            os.environ["HF_TOKEN"] = original
+
+
+def test_set_env_loopback_still_validates_allowlist():
+    """Even on the loopback path, keys outside the allow-list must return 400 —
+    the new guard must NOT bypass the existing allow-list enforcement."""
+    from fastapi.testclient import TestClient
+    from main import app
+
+    loopback_client = TestClient(app, client=("127.0.0.1", 50000))
+    res = loopback_client.post(
+        "/system/set-env",
+        json={"key": "DISALLOWED", "value": "x"},
+    )
+    assert res.status_code == 400
+    assert "DISALLOWED" not in os.environ

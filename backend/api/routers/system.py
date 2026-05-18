@@ -4,7 +4,7 @@ import uuid
 import psutil
 import asyncio
 import logging
-from fastapi import APIRouter, File, UploadFile, HTTPException, Query
+from fastapi import APIRouter, File, UploadFile, HTTPException, Query, Request
 from api.schemas import SysinfoResponse, SystemInfoResponse, ModelStatusResponse, LogsResponse, FlushMemoryResponse
 from fastapi.responses import FileResponse, StreamingResponse
 import torch
@@ -522,7 +522,7 @@ def system_notifications():
 
 
 @router.post("/system/set-env")
-async def set_env_var(body: dict):
+async def set_env_var(request: Request, body: dict):
     """Set an environment variable at runtime.
 
     Currently supports:
@@ -532,6 +532,9 @@ async def set_env_var(body: dict):
     The value is set on os.environ for the running process.
     For persistence across restarts, users should set it in their shell profile.
     """
+    host = request.client.host if request.client else None
+    if host not in ("127.0.0.1", "::1", "localhost"):
+        raise HTTPException(status_code=403, detail="set-env requires loopback origin")
     ALLOWED_KEYS = {"HF_TOKEN", "TRANSLATE_API_KEY"}
     key = body.get("key", "")
     value = body.get("value", "")

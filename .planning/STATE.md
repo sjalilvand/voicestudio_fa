@@ -1,6 +1,6 @@
 # STATE: OmniVoice Studio v0.3.x Stabilization
 
-**Last updated:** 2026-05-16
+**Last updated:** 2026-05-18 — Completed quick task 260518-ivy: loopback origin check on /system/set-env
 
 ---
 
@@ -75,6 +75,12 @@
 ### Blockers
 
 None.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260518-ivy | Add loopback origin check to /system/set-env (security fix from PR #66 review) | 2026-05-18 | e1f08a6 | [260518-ivy-add-loopback-origin-check-to-system-set-](./quick/260518-ivy-add-loopback-origin-check-to-system-set-/) |
 
 ---
 
