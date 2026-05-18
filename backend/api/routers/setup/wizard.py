@@ -160,13 +160,18 @@ def _detect_gpu() -> dict:
             info["notes"].append("AMD GPU detected but torch not importable.")
         return info
 
-    # Fallback
+    # Fallback — no nvidia-smi/rocm-smi but torch might still see CUDA
+    # (common inside Docker containers with the NVIDIA runtime).
     try:
         import torch
         if torch.cuda.is_available():
             info["vendor"] = "unknown"
             info["backend"] = "cuda"
             info["available"] = True
+            try:
+                info["device_name"] = torch.cuda.get_device_name(0)
+            except Exception:
+                pass
             info["notes"].append(
                 "torch.cuda.is_available() is True but no nvidia-smi/rocm-smi "
                 "found — running through WSL or virtual GPU?"
@@ -349,6 +354,13 @@ def preflight():
             "https://download.pytorch.org/whl/rocm6.1` to enable. App works "
             "on CPU otherwise (slower)."
         )
+    elif gpu["available"]:
+        # Fallback: torch.cuda works but nvidia-smi/rocm-smi absent (e.g. Docker)
+        gpu_status, gpu_fix = "pass", None
+        dev = gpu.get("device_name") or "GPU"
+        gpu_detail = f"{dev} — CUDA ready (detected via PyTorch)"
+        if gpu["notes"]:
+            gpu_detail += f". {' '.join(gpu['notes'])}"
     else:
         gpu_status = "warn"
         gpu_detail = "No compatible GPU detected — running CPU-only."

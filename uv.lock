@@ -3149,7 +3149,7 @@ requires-dist = [
     { name = "requests", marker = "extra == 'ui'" },
     { name = "s3prl", marker = "extra == 'eval'" },
     { name = "scalar-fastapi" },
-    { name = "setuptools" },
+    { name = "setuptools", specifier = ">=75.0" },
     { name = "soundfile" },
     { name = "tensorboardx" },
     { name = "torch", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=2.4" },

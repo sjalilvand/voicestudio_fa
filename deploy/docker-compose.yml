@@ -20,7 +20,7 @@
 # ──────────────────────────────────────────────────────────────
 
 services:
-  # ── CPU mode (default) ──────────────────────────────────────
+  # ── CPU mode — activate with: docker compose --profile cpu up
   omnivoice:
     image: ghcr.io/debpalash/omnivoice-studio:latest
     # To build from source instead of pulling, comment out `image:` and

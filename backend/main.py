@@ -27,7 +27,7 @@ except ImportError:
 
 # ── cuDNN 8 library preload ─────────────────────────────────────────────
 # CTranslate2 (used by faster-whisper / WhisperX) requires cuDNN 8, but
-# PyTorch 2.8+ pulls cuDNN 9. scripts/setup_cudnn.py installs cuDNN 8
+# PyTorch 2.8+ pulls cuDNN 9. scripts/setup.py installs cuDNN 8
 # side-by-side into cudnn8_compat/ (survives `uv sync`). We preload all
 # cuDNN 8 libs via ctypes so CTranslate2's dlopen/LoadLibrary finds them.
 if sys.platform != "darwin":  # macOS has no CUDA

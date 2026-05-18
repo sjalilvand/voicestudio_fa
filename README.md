@@ -38,6 +38,14 @@
 > [!WARNING]
 > **OmniVoice Studio is in active beta.** Things may break between releases. For the latest features and fixes, clone the repo and run from source rather than using pre-built installers. Bug reports and PRs are very welcome — [open an issue](https://github.com/debpalash/OmniVoice-Studio/issues) or [join Discord](https://discord.gg/bzQavDfVV9).
 
+<div align="center">
+  <br/>
+  <a href="https://discord.gg/bzQavDfVV9"><img src="https://img.shields.io/badge/💬_Join_the_Community-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord" /></a>
+  <br/>
+  <sub>Get setup help · Share your dubs · Vote on the roadmap · Early access to new engines</sub>
+  <br/>
+</div>
+
 <br/>
 
 ## Features
@@ -224,24 +232,49 @@ docker run -d --name omnivoice --gpus all \
   ghcr.io/debpalash/omnivoice-studio:latest
 ```
 
-**Or use Docker Compose:**
+**Or use Docker Compose (recommended):**
 
 ```bash
-# CPU
+# CPU mode
 docker compose -f deploy/docker-compose.yml --profile cpu up -d
 
-# GPU (NVIDIA)
+# GPU mode (NVIDIA)
 docker compose -f deploy/docker-compose.yml --profile gpu up -d
 ```
 
 Open [localhost:3900](http://localhost:3900) once the health check passes. First run downloads ~4 GB of model weights — progress in `docker compose logs -f`.
 
 <details>
+<summary><b>NVIDIA GPU setup prerequisites</b></summary>
+<br/>
+
+GPU mode requires the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html):
+
+```bash
+# Arch / CachyOS
+sudo pacman -S nvidia-container-toolkit
+
+# Ubuntu / Debian
+sudo apt-get install -y nvidia-container-toolkit
+
+# Then configure and restart Docker
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+```
+
+Verify with `docker run --rm --gpus all nvidia/cuda:12.8.0-base-ubuntu22.04 nvidia-smi`.
+</details>
+
+<details>
 <summary><b>Build from source instead of pulling</b></summary>
 <br/>
 
 ```bash
-docker compose -f deploy/docker-compose.yml up --build -d
+# CPU
+docker compose -f deploy/docker-compose.yml --profile cpu up --build -d
+
+# GPU
+docker compose -f deploy/docker-compose.yml --profile gpu up --build -d
 ```
 
 </details>
@@ -345,6 +378,13 @@ ElevenLabs charges **$5–$330/mo** and processes your audio on their servers. O
 
 OmniVoice Studio gives you professional-grade AI tools without the subscription or the cloud.
 
+<div align="center">
+  <br/>
+  <b>Convinced? Come build with us.</b><br/>
+  <a href="https://discord.gg/bzQavDfVV9"><img src="https://img.shields.io/badge/Join_Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord" /></a>
+  <br/><br/>
+</div>
+
 ---
 
 ## System Requirements
@@ -424,6 +464,26 @@ OmniVoice ships a multi-engine TTS backend. The default engine (OmniVoice) is al
 - 📖 **Audiobook Editor** — chapter-aware long-form narration
 - 🌐 **Hosted Demo** — try OmniVoice without installing anything
 - 🔌 **Plugin Marketplace** — community-contributed TTS engines and effects
+
+---
+
+## Community
+
+<div align="center">
+  <a href="https://discord.gg/bzQavDfVV9"><img src="https://img.shields.io/badge/💬_Discord-Join_Community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord" /></a>
+</div>
+
+<br/>
+
+| Channel | What happens there |
+|---------|--------------------|
+| `#showcase` | Members share their dubs, clones, and voice designs |
+| `#help` | Setup issues, GPU troubleshooting, model questions |
+| `#feature-requests` | Vote on what gets built next |
+| `#dev` | Architecture discussions, PR reviews, engine integrations |
+| `#announcements` | Release notes, breaking changes, early access |
+
+**[→ Join the Discord](https://discord.gg/bzQavDfVV9)** — we respond to setup questions within hours, not days.
 
 ---
 
@@ -510,7 +570,8 @@ OmniVoice Studio is built on the shoulders of exceptional open-source work:
 <br/>
 
 If you read this far, you're our kind of person.<br/>
-**[⭐ Star this repo](https://github.com/debpalash/OmniVoice-Studio)** so others can find it too.
+**[⭐ Star this repo](https://github.com/debpalash/OmniVoice-Studio)** so others can find it too.<br/>
+**[💬 Join the Discord](https://discord.gg/bzQavDfVV9)** to share what you build.
 
 <br/>
 

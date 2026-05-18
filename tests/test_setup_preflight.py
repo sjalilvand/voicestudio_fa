@@ -147,6 +147,101 @@ def test_preflight_amd_flags_warn_when_no_rocm_torch():
         assert any("rocm" in n.lower() for n in info["notes"])
 
 
+# ── Docker / container GPU fallback ──────────────────────────────────────
+
+def test_preflight_docker_gpu_fallback_detects_cuda():
+    """When nvidia-smi is absent but torch.cuda works (Docker container),
+    vendor → 'unknown', backend → 'cuda', available → True, and
+    device_name is populated from torch.cuda.get_device_name()."""
+    import platform as _p
+    if sys.platform == "darwin" and _p.machine() == "arm64":
+        pytest.skip("apple-silicon branch returns before fallback")
+    from api.routers.setup import wizard as setup_mod
+    from types import SimpleNamespace
+
+    def fake_run_cmd(args, timeout=2.0):
+        # Neither nvidia-smi nor rocm-smi available
+        return -1, ""
+
+    fake_torch = SimpleNamespace(
+        cuda=SimpleNamespace(
+            is_available=lambda: True,
+            get_device_name=lambda idx: "NVIDIA GeForce RTX 4070 Laptop GPU",
+        ),
+        version=SimpleNamespace(hip=None),
+        backends=SimpleNamespace(mps=SimpleNamespace(is_available=lambda: False)),
+    )
+
+    with patch.object(setup_mod, "_run_cmd", side_effect=fake_run_cmd), \
+         patch.dict("sys.modules", {"torch": fake_torch}):
+        info = setup_mod._detect_gpu()
+
+    assert info["vendor"] == "unknown"
+    assert info["backend"] == "cuda"
+    assert info["available"] is True
+    assert info["device_name"] == "NVIDIA GeForce RTX 4070 Laptop GPU"
+
+
+def test_preflight_docker_gpu_fallback_shows_pass_status():
+    """The preflight GPU check should show status='pass' when the Docker
+    fallback detects CUDA, not the old 'No compatible GPU' warning."""
+    import platform as _p
+    if sys.platform == "darwin" and _p.machine() == "arm64":
+        pytest.skip("apple-silicon branch returns before fallback")
+    from api.routers.setup import wizard as setup_mod
+    from types import SimpleNamespace
+
+    def fake_run_cmd(args, timeout=2.0):
+        return -1, ""
+
+    fake_torch = SimpleNamespace(
+        cuda=SimpleNamespace(
+            is_available=lambda: True,
+            get_device_name=lambda idx: "NVIDIA GeForce RTX 4070 Laptop GPU",
+        ),
+        version=SimpleNamespace(hip=None),
+        backends=SimpleNamespace(mps=SimpleNamespace(is_available=lambda: False)),
+    )
+
+    with patch.object(setup_mod, "_run_cmd", side_effect=fake_run_cmd), \
+         patch.dict("sys.modules", {"torch": fake_torch}):
+        r = client_factory().get("/setup/preflight").json()
+
+    gpu = next(c for c in r["checks"] if c["id"] == "gpu")
+    assert gpu["status"] == "pass", f"Expected 'pass' but got '{gpu['status']}': {gpu['detail']}"
+    assert "CUDA ready" in gpu["detail"]
+    assert r["device"]["gpu_available"] is True
+    assert r["device"]["gpu_backend"] == "cuda"
+
+
+def test_preflight_no_gpu_at_all_shows_warn():
+    """When no GPU tools or torch.cuda, should warn (not fail)."""
+    import platform as _p
+    if sys.platform == "darwin" and _p.machine() == "arm64":
+        pytest.skip("apple-silicon branch returns before fallback")
+    from api.routers.setup import wizard as setup_mod
+    from types import SimpleNamespace
+
+    def fake_run_cmd(args, timeout=2.0):
+        return -1, ""
+
+    fake_torch = SimpleNamespace(
+        cuda=SimpleNamespace(
+            is_available=lambda: False,
+            get_device_name=lambda idx: "",
+        ),
+        version=SimpleNamespace(hip=None),
+        backends=SimpleNamespace(mps=SimpleNamespace(is_available=lambda: False)),
+    )
+
+    with patch.object(setup_mod, "_run_cmd", side_effect=fake_run_cmd), \
+         patch.dict("sys.modules", {"torch": fake_torch}):
+        info = setup_mod._detect_gpu()
+
+    assert info["available"] is False
+    assert info["backend"] == "cpu"
+
+
 # ── Network probe ────────────────────────────────────────────────────────
 
 def test_preflight_network_handles_offline():
