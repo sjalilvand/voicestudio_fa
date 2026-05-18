@@ -330,14 +330,33 @@ pub fn run() {
                         }
                         "dictate" => {
                             // Toggle: if the widget is visible (recording), stop;
-                            // otherwise start dictation.
+                            // otherwise start dictation. On start, show + position
+                            // + focus the widget BEFORE emitting tray-dictate
+                            // (mirrors the global-shortcut handler ~lines 184-199)
+                            // so the user sees the pill instead of silent recording.
                             if let Some(win) = app.get_webview_window("widget") {
                                 if win.is_visible().unwrap_or(false) {
                                     let _ = app.emit("tray-dictate-stop", ());
                                 } else {
+                                    if let Ok(Some(monitor)) = win.primary_monitor() {
+                                        let size = monitor.size();
+                                        let scale = monitor.scale_factor();
+                                        let x = ((size.width as f64 / scale) / 2.0 - 150.0) as i32;
+                                        let _ = win.set_position(tauri::Position::Logical(
+                                            tauri::LogicalPosition::new(x as f64, 60.0),
+                                        ));
+                                    } else {
+                                        let _ = win.center();
+                                    }
+                                    let _ = win.show();
+                                    let _ = win.set_focus();
                                     let _ = app.emit("tray-dictate", ());
                                 }
                             } else {
+                                log::warn!(
+                                    "Tray dictate: widget window not found — \
+                                     emitting tray-dictate without visible UI"
+                                );
                                 let _ = app.emit("tray-dictate", ());
                             }
                         }
@@ -376,11 +395,12 @@ pub fn run() {
                 {
                     let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
                 }
-                // PILL MODE = the widget IS the app. Show it immediately so the
-                // user has visible feedback (previously it stayed hidden until
-                // ⌘⇧Space was pressed, which made the app look launch-failed
-                // for first-time users with no global-shortcut Accessibility
-                // permission yet). Position near top-center of primary monitor.
+                // Pill mode: widget stays HIDDEN until activated by global
+                // shortcut or tray 'Start Dictation'. Pre-position it now so
+                // the first show appears at top-center without an
+                // animation/frame flicker. Trade-off accepted vs the original
+                // 'looks-launch-failed' concern: the tray icon + 'OmniVoice
+                // Dictation' tooltip provide the app-running signal.
                 match app.get_webview_window("widget") {
                     Some(win) => {
                         if let Ok(Some(monitor)) = win.primary_monitor() {
@@ -393,11 +413,7 @@ pub fn run() {
                         } else {
                             let _ = win.center();
                         }
-                        match win.show() {
-                            Ok(_) => log::info!("Pill mode: widget window shown"),
-                            Err(e) => log::error!("Pill mode: widget.show() failed: {e}"),
-                        }
-                        let _ = win.set_focus();
+                        log::info!("Pill mode: widget window pre-positioned (hidden until activated)");
                     }
                     None => log::error!(
                         "Pill mode: widget window NOT FOUND — get_webview_window(\"widget\") \

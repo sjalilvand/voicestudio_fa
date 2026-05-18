@@ -1,6 +1,6 @@
 # STATE: OmniVoice Studio v0.3.x Stabilization
 
-**Last updated:** 2026-05-18 — Completed quick task 260518-ivy: loopback origin check on /system/set-env
+**Last updated:** 2026-05-18 — Completed quick task 260518-lp7: hide dictation pill widget when idle
 
 ---
 
@@ -81,6 +81,7 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260518-ivy | Add loopback origin check to /system/set-env (security fix from PR #66 review) | 2026-05-18 | e1f08a6 | [260518-ivy-add-loopback-origin-check-to-system-set-](./quick/260518-ivy-add-loopback-origin-check-to-system-set-/) |
+| 260518-lp7 | Hide dictation pill widget when idle, show only when activated | 2026-05-18 | 001d975 | [260518-lp7-hide-dictation-pill-widget-when-idle-sho](./quick/260518-lp7-hide-dictation-pill-widget-when-idle-sho/) |
 
 ---
 
