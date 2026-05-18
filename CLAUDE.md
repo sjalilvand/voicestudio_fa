@@ -15,7 +15,7 @@ Everything else (new engines, fancy features) is downstream of "the thing instal
 - **Cross-platform parity**: Every fix must work on macOS (Apple Silicon + Intel), Windows (x64), and Linux (AppImage + deb). No platform-only regressions; the cross-platform bug bash (PR #51) is the baseline.
 - **Backward-compatible project data**: Existing `omnivoice_data/` (user voices, projects, settings) must keep working without manual migration. Any DB schema change goes through alembic with a tested upgrade path.
 - **Local-first guarantee preserved**: Auto bug reporting (new addition) must be **opt-in**, must submit only to GitHub Issues (no third-party telemetry endpoint), and the app must remain fully functional with reporting disabled. No required cloud calls, accounts, or API keys.
-- **Beta release cadence**: Ship as `v0.3.x` minor releases — small, frequent, low-risk drops. Don't gate a v1.0 on this milestone (per the "Empty the inbox" outcome — version is secondary to issue closure).
+- **Beta release cadence**: `v0.3.0` ships **once** when the complete stabilization milestone is delivered — all 7 roadmap phases done, all open install/runtime issues resolved, all community PRs reconciled, the release pipeline (`release.yml`) green end-to-end. **No incremental `v0.3.x` tags between `v0.2.7` and `v0.3.0`.** Everything merges to `main` continuously; users follow `main` for previews; users wanting stable stay on `v0.2.7`. Tag `v0.3.0` once when the milestone is complete and publish the GitHub Release with full notes. Version is secondary to issue closure ("Empty the inbox" outcome) — don't gate v1.0 on this milestone.
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:research/STACK.md -->

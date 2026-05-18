@@ -279,7 +279,7 @@ docker compose -f deploy/docker-compose.yml --profile gpu up --build -d
 
 </details>
 
-> **Network access:** the container binds to `127.0.0.1` only. To expose on your LAN, change the port mapping to `"0.0.0.0:3900:3900"`. OmniVoice ships no authentication — put it behind a reverse proxy with auth (Caddy `basic_auth`, nginx + htpasswd, Tailscale, etc.).
+> **Network access:** the host-side port mapping binds to `127.0.0.1` only, and the backend itself defaults to `OMNIVOICE_BIND_HOST=127.0.0.1` (loopback). The shipped `docker-compose.yml` sets `OMNIVOICE_BIND_HOST=0.0.0.0` *inside* the container so the host mapping can forward traffic in — the `127.0.0.1:3900:3900` mapping is what enforces loopback-only on the host. To expose on your LAN, change the host port mapping to `"0.0.0.0:3900:3900"`. Running the backend directly (not under Docker)? Set `OMNIVOICE_BIND_HOST=0.0.0.0` to listen on all interfaces. OmniVoice ships no authentication — put it behind a reverse proxy with auth (Caddy `basic_auth`, nginx + htpasswd, Tailscale, etc.).
 
 ---
 

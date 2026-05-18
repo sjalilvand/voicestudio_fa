@@ -51,9 +51,12 @@ os.environ.setdefault("OMNIVOICE_DATA_DIR", str(_FIXTURE_COPY))
 @pytest.fixture(scope="module")
 def client():
     # Lazy import — env must be set before `core.config` is touched.
+    # `client=("127.0.0.1", 50000)` makes `request.client.host` resolve to
+    # a loopback address — the system router is now gated by a router-level
+    # `require_loopback` dependency, and the smoke test hits `/system/info`.
     from fastapi.testclient import TestClient
     from main import app
-    return TestClient(app)
+    return TestClient(app, client=("127.0.0.1", 50000))
 
 
 # ── tests ──────────────────────────────────────────────────────────────────

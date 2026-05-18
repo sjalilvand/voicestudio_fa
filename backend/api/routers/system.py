@@ -4,8 +4,9 @@ import uuid
 import psutil
 import asyncio
 import logging
-from fastapi import APIRouter, File, UploadFile, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Query
 from api.schemas import SysinfoResponse, SystemInfoResponse, ModelStatusResponse, LogsResponse, FlushMemoryResponse
+from api.dependencies import require_loopback
 from fastapi.responses import FileResponse, StreamingResponse
 import torch
 import shutil
@@ -14,7 +15,17 @@ from core.config import OUTPUTS_DIR, DATA_DIR, CRASH_LOG_PATH, LOG_PATH, IDLE_TI
 from services.model_manager import get_model_status, get_best_device
 from services.ffmpeg_utils import find_ffmpeg, run_ffmpeg
 
-router = APIRouter()
+# Router-level loopback gate. Every route mounted on `router` (GET + POST,
+# present and future) is gated by `require_loopback`, which 403s any request
+# whose `client.host` is not a loopback address. This closes the same trust
+# boundary that PR #81 only patched on `/system/set-env` and that the
+# 260518-ivy deferred-items file enumerated for follow-up: /model/unload/*,
+# /system/logs/clear, /system/logs/tauri/clear, /system/flush-memory,
+# /clean-audio (POSTs) plus the read-side info-disclosure routes
+# /system/info, /system/logs, /system/logs/tauri, /system/logs/stream.
+# This router only ever serves the local Tauri shell and the dev frontend
+# at http://127.0.0.1:3901 — both are loopback origins.
+router = APIRouter(dependencies=[Depends(require_loopback)])
 logger = logging.getLogger("omnivoice.api")
 
 # Cache device checks at module load — they don't change at runtime
@@ -522,7 +533,7 @@ def system_notifications():
 
 
 @router.post("/system/set-env")
-async def set_env_var(request: Request, body: dict):
+async def set_env_var(body: dict):
     """Set an environment variable at runtime.
 
     Currently supports:
@@ -531,10 +542,12 @@ async def set_env_var(request: Request, body: dict):
 
     The value is set on os.environ for the running process.
     For persistence across restarts, users should set it in their shell profile.
+
+    The loopback-origin gate that previously lived inline here is now applied
+    at the router level via `dependencies=[Depends(require_loopback)]` on
+    `router` — see the top of this file. Every route on this router is
+    gated, including this one. The 403 body and behavior are unchanged.
     """
-    host = request.client.host if request.client else None
-    if host not in ("127.0.0.1", "::1", "localhost"):
-        raise HTTPException(status_code=403, detail="set-env requires loopback origin")
     ALLOWED_KEYS = {"HF_TOKEN", "TRANSLATE_API_KEY"}
     key = body.get("key", "")
     value = body.get("value", "")

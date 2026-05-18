@@ -493,4 +493,12 @@ if __name__ == "__main__":
 
     # Port 3900 picked to dodge common 8000 conflicts (Django/Rails/Jupyter).
     # Rust sidecar launcher in lib.rs::BACKEND_PORT must stay in sync.
-    uvicorn.run(app, host="0.0.0.0", port=3900)
+    #
+    # SECURITY: default to loopback (127.0.0.1) so the API isn't reachable
+    # from the LAN out of the box. OmniVoice ships no authentication; binding
+    # to 0.0.0.0 by default would expose every router on this process to any
+    # host on the user's network. Docker images that need to publish the port
+    # set OMNIVOICE_BIND_HOST=0.0.0.0 explicitly (see deploy/docker-compose.yml)
+    # — the host-side port mapping is what enforces 127.0.0.1-only there.
+    _bind_host = os.environ.get("OMNIVOICE_BIND_HOST", "127.0.0.1")
+    uvicorn.run(app, host=_bind_host, port=3900)
