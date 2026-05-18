@@ -4,17 +4,17 @@ import DubSegmentRow from './DubSegmentRow';
 import { Table, Select } from '../ui';
 import './DubSegmentTable.css';
 
-const BASE_ROW_HEIGHT = 28;
-const ROW_HEIGHT_WITH_ORIG = 44;
+const BASE_ROW_HEIGHT = 26;
+const ROW_HEIGHT_WITH_ORIG = 40;
 
 const COLUMNS = [
-  { key: 'time',  label: 'Time',  width: 50 },
-  { key: 'spkr',  label: 'Spkr',  width: 45 },
+  { key: 'time',  label: 'Time',  width: 46 },
+  { key: 'spkr',  label: 'Spkr',  width: 40 },
   { key: 'text',  label: 'Text',  flex: 1 },
-  { key: 'lang',  label: 'Lang',  width: 42 },
-  { key: 'voice', label: 'Voice', width: 60 },
-  { key: 'vol',   label: 'Vol',   width: 40, title: 'Volume (0–200%)' },
-  { key: 'act',   label: '',      width: 42 },
+  { key: 'lang',  label: 'Lang',  width: 38 },
+  { key: 'voice', label: 'Voice', width: 56 },
+  { key: 'vol',   label: 'Vol',   width: 36, title: 'Volume (0–200%)' },
+  { key: 'act',   label: '',      width: 38 },
 ];
 
 export default function DubSegmentTable({

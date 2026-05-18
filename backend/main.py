@@ -13,6 +13,10 @@ try:
     import dotenv
 
     dotenv.load_dotenv()
+    # Also load .env from the project root (parent of backend/)
+    _project_env = os.path.join(os.path.dirname(_backend_dir), ".env")
+    if os.path.isfile(_project_env):
+        dotenv.load_dotenv(_project_env, override=False)
     # Also load the durable per-user config so env vars set once survive
     # Tauri/Finder launches that don't inherit a shell environment.
     _user_env = os.path.expanduser("~/.config/omnivoice/env")
@@ -215,6 +219,7 @@ from api.routers import (
     openai_compat,
     tts_stream,
     marketplace,
+    sonitranslate,
 )
 from utils import hf_progress
 
@@ -426,6 +431,7 @@ app.include_router(capture_ws.router)
 app.include_router(openai_compat.router)
 app.include_router(tts_stream.router)
 app.include_router(marketplace.router)
+app.include_router(sonitranslate.router)
 
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 if os.path.exists(frontend_path):

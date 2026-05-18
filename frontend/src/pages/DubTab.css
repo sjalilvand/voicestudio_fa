@@ -8,12 +8,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 14px;
+  padding: 5px 12px;
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.015);
   border: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: var(--radius-md);
-  margin: 0 0 4px 0;
+  margin: 0 0 2px 0;
 }
 .dub-head__title     { display: flex; align-items: center; gap: var(--space-3); margin-bottom: 0; min-width: 0; flex: 1; }
 .dub-head__actions   { display: flex; gap: var(--space-2); align-items: center; flex-shrink: 0; }
@@ -155,8 +155,8 @@
 .dub-outputs-row {
   display: flex;
   align-items: center;
-  gap: var(--space-5);
-  margin-bottom: var(--space-2);
+  gap: var(--space-3);
+  margin-bottom: 2px;
   padding: 0 var(--space-2);
   font-size: var(--text-xs);
   color: var(--chrome-fg-muted);
@@ -171,9 +171,9 @@
 .dub-tracks-row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
-  padding: 4px var(--space-3);
+  gap: var(--space-2);
+  margin-bottom: 2px;
+  padding: 3px var(--space-3);
   font-size: var(--text-xs);
   color: var(--chrome-fg-muted);
   font-family: var(--font-sans);
@@ -213,7 +213,7 @@
 /* ── Utility: column flex that fills remaining height ────────── */
 .dub-col            { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .dub-panel-col      { margin-bottom: 0; overflow: hidden; display: flex; flex-direction: column; }
-.dub-split-2        { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; flex: 1; min-height: 0; }
+.dub-split-2        { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; flex: 1; min-height: 0; overflow: hidden; }
 .dub-split-1        { display: grid; grid-template-columns: 1fr; gap: 6px; flex: 1; min-height: 0; }
 
 /* ── Idle / drop-zone skeleton ───────────────────────────────── */
@@ -223,23 +223,33 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 10px;
   cursor: pointer;
   border: 2px dashed rgba(255, 255, 255, 0.06);
   border-radius: 8px;
   transition: background 0.3s, border-color 0.3s;
-  margin: 4px;
+  margin: 2px;
   background: transparent;
+}
+@keyframes dub-pulse {
+  0%, 100% { border-color: rgba(211, 134, 155, 0.3); background: rgba(211, 134, 155, 0.04); }
+  50%      { border-color: rgba(211, 134, 155, 0.6); background: rgba(211, 134, 155, 0.08); }
 }
 .dub-idle-drop.is-dragging {
   border-color: #d3869b;
   background: rgba(211, 134, 155, 0.05);
+  animation: dub-pulse 1.2s ease-in-out infinite;
 }
 .dub-idle-drop__puck {
   width: 60px; height: 60px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   background: rgba(211, 134, 155, 0.06);
   border: 1px solid rgba(211, 134, 155, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.dub-idle-drop:hover .dub-idle-drop__puck {
+  transform: scale(1.08);
+  box-shadow: 0 0 24px rgba(211, 134, 155, 0.15);
 }
 .dub-idle-drop__lines    { text-align: center; }
 .dub-idle-drop__title    { font-size: 0.9rem; color: var(--color-fg); font-weight: 500; margin-bottom: 4px; }
@@ -324,9 +334,9 @@
 .dub-settings-bar {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 6px;
-  padding: 6px 8px;
+  gap: 3px;
+  margin-bottom: 4px;
+  padding: 4px 8px;
   background: var(--chrome-bg);
   border: 1px solid var(--chrome-border);
   border-radius: var(--chrome-radius-pill);
@@ -410,14 +420,14 @@
 .dub-settings-summary {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: 4px var(--space-3);
-  margin-bottom: 4px;
+  gap: var(--space-2);
+  padding: 3px var(--space-3);
+  margin-bottom: 3px;
   background: var(--chrome-bg);
   border: 1px solid var(--chrome-border);
   border-radius: var(--chrome-radius-pill);
   font-family: var(--font-sans);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   color: var(--chrome-fg-muted);
 }
 .dub-settings-summary__trigger {
@@ -543,15 +553,15 @@
    action strip below has somewhere neutral to sit. Keep the content
    padding tight. */
 .dub-footer-panel {
-  padding: 6px var(--space-4);
+  padding: 4px var(--space-3);
   flex-shrink: 0;
   background: var(--chrome-bg) !important;
   border: 1px solid var(--chrome-border) !important;
   border-radius: 0 !important;
 }
 .dub-footer-panel::before { display: none !important; }
-.dub-footer-btns                     { display: flex; gap: 4px; }
-.dub-footer-btns--spaced             { margin-top: 4px; }
+.dub-footer-btns                     { display: flex; gap: 3px; }
+.dub-footer-btns--spaced             { margin-top: 3px; }
 
 /* Output options row value column */
 .dub-outputs-title-strong {
@@ -601,23 +611,23 @@
 .dub-skel-field--sm   { flex: 1; min-width: 80px; }
 
 /* ── Generating overlay (on top of waveform) ─────────────────── */
-.dub-gen-overlay          { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
+.dub-gen-overlay          { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; padding: 10px; backdrop-filter: blur(2px); }
 .dub-gen-overlay__head    { display: flex; align-items: center; gap: 6px; }
-.dub-gen-overlay__title   { font-weight: 500; font-size: 0.72rem; color: var(--color-fg); }
+.dub-gen-overlay__title   { font-weight: 600; font-size: 0.75rem; color: var(--color-fg); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
 .dub-gen-overlay__title.is-stopping { color: var(--color-fg-muted); }
-.dub-gen-overlay__bar     { width: 80%; max-width: 240px; }
-.dub-gen-overlay__text    { font-size: 0.65rem; color: var(--color-fg-muted); }
-.dub-gen-overlay__stats   { display: flex; gap: var(--space-5); font-size: 0.68rem; color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+.dub-gen-overlay__bar     { width: 80%; max-width: 240px; margin: 1px 0; }
+.dub-gen-overlay__text    { font-size: 0.62rem; color: var(--color-fg-muted); }
+.dub-gen-overlay__stats   { display: flex; gap: var(--space-4); font-size: 0.65rem; color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
 
 /* ── Cast / speaker-voices strip below waveform ──────────────── */
 .dub-cast {
-  margin-top: 4px;
-  padding: 4px var(--space-3);
+  margin-top: 2px;
+  padding: 3px var(--space-3);
   background: var(--chrome-bg);
   border-radius: var(--chrome-radius-pill);
   border: 1px solid var(--chrome-border);
 }
-.dub-cast__row          { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
+.dub-cast__row          { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
 .dub-cast__kicker {
   font-family: var(--chrome-font-mono);
   font-size: var(--chrome-label-size);
@@ -626,9 +636,10 @@
   text-transform: uppercase;
   font-weight: 600;
 }
-.dub-cast__pair         { display: flex; align-items: center; gap: 4px; }
-.dub-cast__label        { font-family: var(--chrome-font-mono); font-size: 0.65rem; color: var(--chrome-fg); }
-.dub-cast__select       { width: 100px; padding: 1px 4px; font-size: 0.62rem; }
+.dub-cast__pair         { display: flex; align-items: center; gap: 3px; padding: 1px 5px; border-radius: var(--radius-sm); transition: background 0.2s ease; }
+.dub-cast__pair:hover   { background: rgba(255, 255, 255, 0.03); }
+.dub-cast__label        { font-family: var(--chrome-font-mono); font-size: 0.62rem; color: var(--chrome-fg); }
+.dub-cast__select       { width: 95px; padding: 1px 3px; font-size: 0.60rem; }
 
 /* Muted placeholder cast strip shown in the idle skeleton */
 .dub-cast--muted        { background: transparent; border-color: var(--chrome-border); }
@@ -656,9 +667,9 @@
 .dub-footer-btn {
   margin-top: 0 !important;
   flex: 1;
-  padding: 6px 10px !important;
+  padding: 5px 8px !important;
   font-family: var(--font-sans) !important;
-  font-size: var(--text-sm) !important;
+  font-size: 0.72rem !important;
   letter-spacing: 0.02em !important;
   text-transform: none !important;
   background: transparent !important;
@@ -670,7 +681,7 @@
 }
 .dub-footer-btn:hover:not(:disabled) { background: var(--chrome-hover-bg) !important; }
 .dub-footer-btn:disabled             { opacity: 0.45; cursor: not-allowed; }
-.dub-footer-btn--sm { padding: 4px 8px !important; font-size: var(--text-xs) !important; }
+.dub-footer-btn--sm { padding: 3px 6px !important; font-size: 0.62rem !important; }
 
 .dub-footer-btn--idle     { color: var(--chrome-fg-muted) !important; border-color: var(--chrome-border) !important; }
 .dub-footer-btn--stopping { color: var(--chrome-fg-muted) !important; border-color: var(--chrome-border) !important; }

@@ -616,3 +616,13 @@ async def _do_clean_audio(audio, tmp_dir, clean_id):
 
     return FileResponse(final_path, media_type="audio/wav", filename=clean_filename,
                         headers={"X-Clean-Filename": clean_filename})
+
+
+@router.get("/system/asr-backends")
+def asr_backends():
+    """List all registered ASR backends and their availability."""
+    from services.asr_backend import list_backends, active_backend_id
+    return {
+        "active": active_backend_id(),
+        "backends": list_backends(),
+    }

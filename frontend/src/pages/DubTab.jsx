@@ -636,7 +636,7 @@ export default function DubTab(props) {
                     title="Edit translation settings"
                   >
                     <ChevronDown size={10} />
-                    <span><strong>{dubLang}</strong> · {dubLangCode} · {translateQuality} · {translateProvider}</span>
+                    <span><strong>{dubLang}</strong> · {dubLangCode} · {translateQuality} · <span style={{ color: activeEngineUnavailable ? '#fb4934' : '#b8bb26' }}>●</span> {translateProvider}</span>
                     {dubInstruct && <span className="dub-settings-summary__style">style: {dubInstruct}</span>}
                   </button>
                   <Button
@@ -991,7 +991,7 @@ export default function DubTab(props) {
                   label={`Stop (${dubProgress.current}/${dubProgress.total})`} />
               ) : (
                 <>
-                  <FooterBtn tone={dubSegments.length ? 'idle' : 'idle'} onClick={() => handleDubGenerate()}
+                  <FooterBtn tone={dubSegments.length ? 'pink' : 'idle'} onClick={() => handleDubGenerate()}
                     disabled={!dubSegments.length} icon={<Play size={11} />} label="Generate Dub" />
                   {dubStep === 'done' && incrementalPlan && incrementalPlan.stale?.length > 0 && (
                     <FooterBtn
