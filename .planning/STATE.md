@@ -1,6 +1,6 @@
 # STATE: OmniVoice Studio v0.3.x Stabilization
 
-**Last updated:** 2026-05-18 — Phase 1 planned (3 plans, 3 waves); ready for execute
+**Last updated:** 2026-05-20 — Phase 1 Wave 1 (Plan 01-01) complete; ready for Wave 2 (Plan 01-02)
 
 ---
 
@@ -19,8 +19,8 @@
 | Field | Value |
 |-------|-------|
 | Phase | 1 — Install + Token Persistence + Docs Scaffolding + Error UX |
-| Plan | 01-01, 01-02, 01-03 (all PLAN.md committed, awaiting execute) |
-| Status | Phase 1 planned, ready for execute |
+| Plan | 01-01 (executed, PR open), 01-02 + 01-03 awaiting execute |
+| Status | Wave 1 shipped (HF token persistence + redactor + 5 read sites); Wave 2 + 3 pending |
 | Mode | yolo (autonomous) |
 | Granularity | standard |
 | Project mode | mvp (per phase) |
@@ -29,7 +29,7 @@
 
 ```
 [ ] Phase 0  Gates (hard gate — must merge and be green before any other phase)
-[~] Phase 1  Install + Token Persistence + Docs Scaffolding + Error UX  ← planned (3 plans, 3 waves)
+[~] Phase 1  Install + Token Persistence + Docs Scaffolding + Error UX  ← Wave 1 shipped (1/3 plans)
 [ ] Phase 2  Engine Isolation (SubprocessBackend → IndexTTS + WAV-export fix)
 [ ] Phase 3  Supertonic-3 Engine + Installer Mirror Reliability
 [ ] Phase 4  Adaptive & Specialty Engines (spike-first: GGUF + Singing)
@@ -78,7 +78,8 @@
 
 ### Open TODOs
 
-- Run `/gsd:execute-phase 1` to execute the 3 Phase 1 plans (Wave 1 → Wave 2 → Wave 3).
+- Run `/gsd:execute-phase 1` for Wave 2 (Plan 01-02: docs scaffolding + error UX deeplinks + Settings → API Keys React panel). Plan 01-02 depends on Plan 01-01's resolver state endpoint (`GET /system/hf-token/state` AND `GET /api/settings/hf-token/state`) which is now live.
+- Run `/gsd:execute-phase 1` for Wave 3 (Plan 01-03: AppRun spike + AppImage WebKit launcher + .deb ffprobe + apiBase.ts + Docker LAN frontend + macOS Gatekeeper probe).
 - Run `/gsd:plan-phase 0` to decompose Phase 0 (Gates) into executable plans (Phase 0 is the hard gate; technically should land first, but Phase 1 plans don't block on its execution).
 - Confirm open PRs #51 / #53 / #61 land before Phase 0 finalizes the CI matrix.
 - Resolve Phase 2 / 3 / 5 research questions enumerated in `.planning/research/SUMMARY.md` Open Questions table.
@@ -99,7 +100,9 @@ None. Phase 1 plans are independent of Phase 0 plan creation (though Phase 0 exe
 
 ## Session Continuity
 
-**Last session ended after:** Phase 1 planning. Files written:
+**Last session ended after:** Phase 1 Wave 1 execution (Plan 01-01). Commits landed: `aa06754` (encrypted settings store + alembic migration), `f254e00` (resolver + redactor + 5 read sites), `e4e2398` (Settings API endpoints + subprocess env injection tests). 35 new tests, all green. Phase 0 smoke tests still green. PR opened against `main` from worktree branch.
+
+**Previous session:** Phase 1 planning. Files written:
 - `.planning/phases/01-install-token-persistence-docs-scaffolding-error-ux/01-01-PLAN.md` (Wave 1 — token persistence + read-side fix)
 - `.planning/phases/01-install-token-persistence-docs-scaffolding-error-ux/01-02-PLAN.md` (Wave 2 — docs scaffolding + error UX)
 - `.planning/phases/01-install-token-persistence-docs-scaffolding-error-ux/01-03-PLAN.md` (Wave 3 — installer/bundler fixes)

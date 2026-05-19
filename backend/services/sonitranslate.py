@@ -138,10 +138,16 @@ async def start() -> dict:
 
     python = str(SONI_VENV / "bin" / "python") if is_venv_ready() else sys.executable
 
-    # Pass HF token from OmniVoice environment
+    # Phase 1 AUTH-01/AUTH-04: resolve from the 3-source cascade and
+    # inject into the child env BOTH as HF_TOKEN (so huggingface_hub
+    # picks it up naturally) and as YOUR_HF_TOKEN (the variable name
+    # SoniTranslate expects). The Popen below already passes env=env.
     env = os.environ.copy()
-    hf_token = os.environ.get("HF_TOKEN", "")
+    from services import token_resolver
+    resolved = token_resolver.resolve()
+    hf_token = resolved.token if resolved else ""
     if hf_token:
+        env["HF_TOKEN"] = hf_token
         env["YOUR_HF_TOKEN"] = hf_token
 
     logger.info("Starting SoniTranslate on port %d...", SONI_PORT)
@@ -208,13 +214,20 @@ async def dub_video(
 
     client = Client(SONI_URL)
 
+    # Phase 1 AUTH-01: resolve from the 3-source cascade. Empty-string
+    # fallback preserves SoniTranslate's library-side behaviour when no
+    # token is available (it skips diarization there too).
+    from services import token_resolver
+    _resolved_for_soni = token_resolver.resolve()
+    _hf_token_for_soni = _resolved_for_soni.token if _resolved_for_soni else ""
+
     # The main function is `batch_multilingual_media_conversion`
     # which is exposed as the first API endpoint
     result = client.predict(
         handle_file(video_path),  # media_file
         "",                       # link_media
         "",                       # directory_input
-        os.environ.get("HF_TOKEN", ""),  # YOUR_HF_TOKEN
+        _hf_token_for_soni,       # YOUR_HF_TOKEN
         False,                    # preview
         "large-v3",               # transcriber_model
         4,                        # batch_size

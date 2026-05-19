@@ -94,6 +94,12 @@ dependencies = [
     # Offline translation — listed as builtin in the engine registry so the
     # "Argos (Local, Fast)" option in the Dub tab works out-of-the-box.
     "argostranslate>=1.9.0",
+    # Phase 1 AUTH-02: Fernet symmetric encryption + scrypt KDF for the
+    # at-rest HF token in the SQLite settings store. Pulled in directly so
+    # we don't depend on a transitive arrival via pyannote/huggingface_hub
+    # (Assumption A1 in RESEARCH.md was checked at execute-time and proved
+    # false — `cryptography` is not on the install path today).
+    "cryptography>=41",
 ]
 
 [project.optional-dependencies]

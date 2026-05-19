@@ -134,6 +134,14 @@ logging.basicConfig(
     format=_LOG_FMT,
 )
 
+# Phase 1 AUTH-05 / threat T-01-02: install the HF-token redactor on the
+# root logger BEFORE any handler-attaching code runs. Every handler then
+# inherits the filter, so even handler-formatted output (file, stream,
+# JSON) strips real HF tokens. Cheap (regex on each record) and
+# idempotent — extra calls are no-ops.
+from core.logging_filter import install_redaction_filter  # noqa: E402
+install_redaction_filter()
+
 class AsyncioExceptionFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         if record.levelno == logging.WARNING and "socket.send() raised exception" in record.getMessage():
@@ -172,6 +180,9 @@ if not os.environ.get("OMNIVOICE_DISABLE_FILE_LOG"):
             _JsonFormatter() if _json_logs else logging.Formatter(_LOG_FMT)
         )
         logging.getLogger().addHandler(_file_handler)
+        # Re-install the redactor so the new file handler picks up the
+        # filter too (install_redaction_filter is idempotent).
+        install_redaction_filter()
     except Exception as _e:  # disk full, permission denied, etc. — don't block startup
         logging.getLogger("omnivoice.api").warning("Runtime log file disabled: %s", _e)
 
@@ -220,6 +231,7 @@ from api.routers import (
     tts_stream,
     marketplace,
     sonitranslate,
+    settings as settings_router,  # Phase 1 AUTH-03: HF token save/clear/state
 )
 from utils import hf_progress
 
@@ -432,6 +444,7 @@ app.include_router(openai_compat.router)
 app.include_router(tts_stream.router)
 app.include_router(marketplace.router)
 app.include_router(sonitranslate.router)
+app.include_router(settings_router.router)  # Phase 1 AUTH-03 endpoints
 
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 if os.path.exists(frontend_path):

@@ -537,20 +537,34 @@ async def dub_transcribe_stream(job_id: str):
             """
             diar_pipe = get_diarization_pipeline()
             if not diar_pipe:
-                if not os.environ.get("HF_TOKEN"):
+                # Phase 1 AUTH-01: ask the resolver (App → Env → HF-CLI),
+                # not just the env var. This is the #35 fix — users who
+                # ran `huggingface-cli login` previously saw the "no
+                # HF_TOKEN" branch even though the library would have
+                # read the token. Now the cascade is honoured.
+                from services import token_resolver
+                resolved = token_resolver.resolve()
+                if not resolved:
                     reason = (
-                        "Speaker diarization is disabled because no HF_TOKEN is set. "
-                        "To detect multiple speakers, set HF_TOKEN and accept the "
-                        "pyannote/speaker-diarization-3.1 license at huggingface.co. "
-                        "Falling back to a silence-gap heuristic — turns with no audible "
-                        "pause between them will be merged into one speaker."
+                        "Speaker diarization is disabled because no HuggingFace token "
+                        "was found in any source (Settings → API Keys, the HF_TOKEN "
+                        "env var, or ~/.cache/huggingface/token from `huggingface-cli "
+                        "login`). To detect multiple speakers, set a token in one of "
+                        "those places and accept the pyannote/speaker-diarization-3.1 "
+                        "license at huggingface.co. Falling back to a silence-gap "
+                        "heuristic — turns with no audible pause between them will "
+                        "be merged into one speaker."
                     )
                 else:
+                    who = resolved.username or "(whoami suppressed)"
                     reason = (
-                        "Speaker diarization model failed to load — see backend logs for "
-                        "the underlying error (often: pyannote license not accepted on "
-                        "Hugging Face, or download blocked by network). Falling back to "
-                        "a silence-gap heuristic; rapid speaker turns may be merged."
+                        f"Speaker diarization model failed to load even though an HF "
+                        f"token was found (source={resolved.source}, user={who}). "
+                        f"Most common cause: the pyannote/speaker-diarization-3.1 "
+                        f"license has not been accepted on HuggingFace by this "
+                        f"account. See backend logs for the underlying error. "
+                        f"Falling back to a silence-gap heuristic; rapid speaker "
+                        f"turns may be merged."
                     )
                 return assign_speakers_heuristic(all_segments), reason
             try:

@@ -36,16 +36,16 @@ psutil.cpu_percent(interval=None)
 
 
 def _has_hf_token() -> bool:
-    # Prelude to AUTH-01..06 cascade. Today: env var OR canonical HF file
-    # (`~/.cache/huggingface/token`, written by `huggingface-cli login` or the
-    # app's "Save token" action). Phase 1 token_resolver.py adds the
-    # SQLite-app-store layer + on-failure fallback on top of this.
-    if os.environ.get("HF_TOKEN"):
-        return True
+    # Phase 1 AUTH-01..06 cascade. Delegates to the 3-source resolver
+    # (App → Env → HF-CLI) instead of reading env/HF-CLI directly. This
+    # closes #35: a user who only ran `huggingface-cli login` (no env
+    # var, no app-store) is now reported as having a token, and so is a
+    # user who saved one in Settings.
     try:
-        from huggingface_hub import get_token
-        return bool(get_token())
+        from services import token_resolver
+        return token_resolver.resolve() is not None
     except Exception:
+        # Resolver must never break /system/info — fall back to False.
         return False
 
 @router.get("/model/status", response_model=ModelStatusResponse)
@@ -638,4 +638,23 @@ def asr_backends():
     return {
         "active": active_backend_id(),
         "backends": list_backends(),
+    }
+
+
+# ── Phase 1 AUTH-01 / AUTH-03 — HF token resolver state ──────────────────
+
+
+@router.get("/system/hf-token/state")
+def hf_token_state():
+    """Return the 3-source HF token cascade state for the Settings UI
+    (Wave 2 React panel consumes this). Never returns the raw token —
+    only a masked preview, whoami username, and per-source validity.
+    """
+    from dataclasses import asdict
+    from services import token_resolver
+
+    s = token_resolver.state()
+    return {
+        "active": s["active"],
+        "sources": [asdict(row) for row in s["sources"]],
     }
