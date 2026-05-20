@@ -734,201 +734,33 @@ class CosyVoiceBackend(TTSBackend):
         return wav
 
 
-# ── IndexTTS2 adapter (emotion control + duration control) ──────────────────
+# ── IndexTTS2 adapter ───────────────────────────────────────────────────────
+#
+# The concrete class lives in ``backend/engines/indextts/__init__.py`` so
+# that ``services.tts_backend`` itself does NOT import
+# ``services.subprocess_backend`` at module load time. That separation
+# breaks the import cycle:
+#
+#     services.subprocess_backend  ──imports──>  services.tts_backend (TTSBackend)
+#     services.tts_backend         ──exports──>  TTSBackend + registry
+#     engines.indextts             ──imports──>  services.subprocess_backend
+#                                  ──exports──>  IndexTTS2Backend
+#
+# The registry below resolves IndexTTS2Backend lazily via the
+# ``_LAZY_REGISTRY`` indirection — see ``get_backend_class`` and
+# ``list_backends``. This was driven by Plan 02-03 (Step 3); see
+# ``engines/indextts/__init__.py`` for the actual class body.
 
 
-class IndexTTS2Backend(TTSBackend):
-    """IndexTTS2 (Bilibili) — industrial zero-shot TTS with emotion and
-    duration control.
-
-    Key differentiators vs every other engine in the registry:
-      • **Emotion decoupling** — clone timbre from one reference, apply emotion
-        from a completely separate source (audio, 8-float vector, or text).
-      • **Duration control** — first AR model to precisely target output length
-        (critical for video dubbing lip-sync).
-      • **8-float emotion vector** — [happy, angry, sad, afraid, disgusted,
-        melancholic, surprised, calm] — each 0.0–1.0.
-      • **Text-based emotion** — pass natural-language emotion descriptions
-        (e.g. "terrified and panicking") via a fine-tuned Qwen3 encoder.
-
-    Installation:
-        git clone https://github.com/index-tts/index-tts.git
-        cd index-tts && uv pip install -e .
-        hf download IndexTeam/IndexTTS-2 --local-dir=checkpoints
-
-    ⚠️  Do NOT use ``uv sync --all-extras`` — it overwrites OmniVoice's lock
-    file and replaces transformers>=5.3 with transformers<5, breaking OmniVoice.
-    Use ``uv pip install -e .`` instead to add IndexTTS without clobbering deps.
-    On Windows, ``--all-extras`` also fails because deepspeed cannot compile.
-
-    Set ``OMNIVOICE_INDEXTTS_DIR`` to the repo root (containing ``checkpoints/``).
-
-    License: Custom (Bilibili) — free for research/non-commercial. Commercial
-    use requires contacting indexspeech@bilibili.com.
-    """
-
-    id = "indextts2"
-    display_name = "IndexTTS2 (emotion control, duration control, zero-shot)"
-    supports_voice_design = False  # requires ref audio for timbre
-
-    def __init__(self):
-        self._model = None
-
-    @classmethod
-    def is_available(cls) -> tuple[bool, str]:
-        try:
-            from indextts.infer_v2 import IndexTTS2 as _Model  # noqa: F401
-            return True, "ready"
-        except ImportError as e:
-            err = str(e)
-            # Detect the transformers version conflict specifically
-            if "transformers" in err or "OffloadedCache" in err or "HiggsAudio" in err:
-                return False, (
-                    f"IndexTTS dependency conflict: {err}. "
-                    "IndexTTS requires transformers<5 but OmniVoice needs "
-                    "transformers>=5.3. Install IndexTTS in a separate venv "
-                    "and run it as a sidecar process, or use "
-                    "`uv pip install -e .` (not `uv sync --all-extras`) "
-                    "to avoid overwriting OmniVoice's lock file."
-                )
-            return False, (
-                "indextts package not installed. Clone the repo and install: "
-                "git clone https://github.com/index-tts/index-tts.git && "
-                "cd index-tts && uv pip install -e . "
-                "(Note: use `uv pip install -e .` instead of `uv sync --all-extras` "
-                "to avoid overwriting OmniVoice dependencies). Then set "
-                "OMNIVOICE_INDEXTTS_DIR to the repo root."
-            )
-        except Exception as e:
-            # Catch deeper crashes from the import chain (e.g. transformers
-            # internal ImportError that surfaces as a regular Exception)
-            return False, (
-                f"IndexTTS failed to load: {e}. This is usually caused by "
-                "a transformers version conflict (IndexTTS needs <5, OmniVoice "
-                "needs >=5.3). Consider running IndexTTS in a separate venv."
-            )
-
-    @property
-    def sample_rate(self) -> int:
-        # IndexTTS2 outputs 24 kHz by default
-        return 24000
-
-    @property
-    def supported_languages(self) -> list[str]:
-        # Primarily Chinese + English, but can handle multilingual via prompts
-        return ["zh", "en"]
-
-    def _ensure_loaded(self):
-        if self._model is not None:
-            return
-        ok, msg = self.is_available()
-        if not ok:
-            raise RuntimeError(f"IndexTTS2 unavailable: {msg}")
-        from indextts.infer_v2 import IndexTTS2  # type: ignore[import-not-found]
-        repo_dir = os.environ.get("OMNIVOICE_INDEXTTS_DIR", ".")
-        cfg_path = os.path.join(repo_dir, "checkpoints", "config.yaml")
-        model_dir = os.path.join(repo_dir, "checkpoints")
-        use_fp16 = os.environ.get("OMNIVOICE_INDEXTTS_FP16", "1") == "1"
-        logger.info(
-            "Loading IndexTTS2 from %s (fp16=%s)", model_dir, use_fp16,
-        )
-        self._model = IndexTTS2(
-            cfg_path=cfg_path,
-            model_dir=model_dir,
-            use_fp16=use_fp16,
-            use_cuda_kernel=False,
-            use_deepspeed=False,
-        )
-
-    def generate(self, text: str, **kw) -> torch.Tensor:
-        self._ensure_loaded()
-        import numpy as np
-        import tempfile
-
-        ref_audio = kw.get("ref_audio")
-        if not ref_audio:
-            raise RuntimeError(
-                "IndexTTS2 requires a reference audio for voice cloning (timbre). "
-                "Pass ref_audio= with a path to a speaker reference clip."
-            )
-
-        # ── Emotion control ────────────────────────────────────────────
-        # IndexTTS2 supports 3 emotion modalities — we check in priority order:
-        #   1. emo_vector: explicit 8-float list
-        #   2. emo_audio: separate emotion reference audio
-        #   3. emo_text / description: natural-language emotion description
-        emo_vector = kw.get("emo_vector")          # list[float] len=8
-        emo_audio = kw.get("emo_audio")             # path to emotion ref audio
-        emo_text = kw.get("emo_text")               # text emotion description
-        emo_alpha = float(kw.get("emo_alpha", 1.0)) # emotion blending strength
-        use_random = bool(kw.get("use_random", False))
-
-        # Fall back: if `description` is set (from OpenAI API / voice design),
-        # treat it as an emotion text instruction.
-        description = kw.get("description")
-        if description and not emo_text and not emo_vector and not emo_audio:
-            emo_text = description
-
-        # Build the infer kwargs
-        infer_kw: dict = {
-            "spk_audio_prompt": ref_audio,
-            "text": text,
-            "verbose": False,
-        }
-
-        # Duration control — the killer feature for video dubbing sync.
-        # When the dub pipeline passes `duration=`, we convert seconds to
-        # the token count IndexTTS2 expects. The model's codec runs at ~21 Hz.
-        duration = kw.get("duration")
-        if duration is not None:
-            # IndexTTS2 uses target_tokens for duration control.
-            # Approximate: codec frame rate ≈ 21 Hz
-            target_tokens = int(float(duration) * 21)
-            if target_tokens > 0:
-                infer_kw["target_tokens"] = target_tokens
-
-        # Apply emotion modality
-        if emo_vector and isinstance(emo_vector, (list, tuple)) and len(emo_vector) == 8:
-            infer_kw["emo_vector"] = [float(v) for v in emo_vector]
-            infer_kw["use_random"] = use_random
-            logger.info("IndexTTS2: emotion via vector %s", infer_kw["emo_vector"])
-        elif emo_audio:
-            infer_kw["emo_audio_prompt"] = emo_audio
-            infer_kw["emo_alpha"] = emo_alpha
-            logger.info("IndexTTS2: emotion via audio ref (alpha=%.2f)", emo_alpha)
-        elif emo_text:
-            infer_kw["use_emo_text"] = True
-            infer_kw["emo_text"] = emo_text
-            infer_kw["emo_alpha"] = min(emo_alpha, 0.6)  # recommended ≤0.6 for text mode
-            infer_kw["use_random"] = use_random
-            logger.info(
-                "IndexTTS2: emotion via text description: %r (alpha=%.2f)",
-                emo_text[:60], infer_kw["emo_alpha"],
-            )
-
-        # IndexTTS2.infer() writes to a file, so we use a temp path and read back.
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-            tmp_path = tmp.name
-
-        try:
-            infer_kw["output_path"] = tmp_path
-            self._model.infer(**infer_kw)
-
-            # Read back the generated audio
-            import torchaudio
-            wav, sr = torchaudio.load(tmp_path)
-            if sr != self.sample_rate:
-                wav = torchaudio.functional.resample(wav, sr, self.sample_rate)
-            if wav.ndim == 1:
-                wav = wav.unsqueeze(0)
-            elif wav.ndim == 2 and wav.shape[0] > 1:
-                wav = wav.mean(dim=0, keepdim=True)
-            return wav
-        finally:
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
+# ``IndexTTS2Backend`` is re-exported from ``backend/engines/indextts``
+# via the module-level ``__getattr__`` hook at the bottom of this file
+# (PEP 562). Callers can still write::
+#
+#     from services.tts_backend import IndexTTS2Backend
+#
+# and they receive the same class object as ``engines.indextts.IndexTTS2Backend``.
+# The deferred lookup is what breaks the
+# ``services.subprocess_backend ↔ services.tts_backend`` cycle.
 
 
 # ── GPT-SoVITS adapter (most popular voice cloning, 57k★) ──────────────────
@@ -1141,17 +973,80 @@ class SherpaOnnxBackend(TTSBackend):
 # ── Registry ────────────────────────────────────────────────────────────────
 
 
-_REGISTRY: dict[str, type[TTSBackend]] = {
+# ── Lazy registry entry for subprocess-isolated backends ──────────────────
+#
+# Backends that live in their own module (to avoid an import cycle with
+# ``services.subprocess_backend``) register here as ``(module_path,
+# attribute_name)``. ``_REGISTRY`` resolves the entry on first access via
+# the descriptor below.
+
+_LAZY_REGISTRY: dict[str, tuple[str, str]] = {
+    "indextts2": ("engines.indextts", "IndexTTS2Backend"),
+}
+
+
+class _LazyRegistry(dict):
+    """A dict that resolves selected keys via a deferred import.
+
+    Keys in ``_LAZY_REGISTRY`` are not present in ``self`` until first
+    access; ``__getitem__`` / ``__contains__`` / iteration all import
+    them on demand. Everything else behaves like a normal dict — the
+    registry-sandbox fixture in
+    ``tests/backend/services/test_tts_backend_registry.py`` still gets
+    snapshot semantics because once a lazy key is resolved it's stored
+    in self exactly like a non-lazy key.
+    """
+
+    def __contains__(self, key) -> bool:  # noqa: D401
+        return dict.__contains__(self, key) or key in _LAZY_REGISTRY
+
+    def __getitem__(self, key):
+        if dict.__contains__(self, key):
+            return dict.__getitem__(self, key)
+        if key in _LAZY_REGISTRY:
+            mod_path, attr = _LAZY_REGISTRY[key]
+            import importlib
+
+            cls = getattr(importlib.import_module(mod_path), attr)
+            self[key] = cls
+            return cls
+        raise KeyError(key)
+
+    def __iter__(self):
+        # Yield resolved keys first, then any lazy keys that haven't been
+        # resolved yet. Resolving inside __iter__ would trigger a side
+        # effect on every list_backends() call — we keep iteration light
+        # and let the caller's __getitem__ trigger the import.
+        seen: set[str] = set()
+        for k in dict.__iter__(self):
+            seen.add(k)
+            yield k
+        for k in _LAZY_REGISTRY:
+            if k not in seen:
+                yield k
+
+    def items(self):
+        for k in self:
+            yield k, self[k]
+
+    def keys(self):
+        return list(iter(self))
+
+    def values(self):
+        return [self[k] for k in self]
+
+
+_REGISTRY: dict[str, type[TTSBackend]] = _LazyRegistry({
     "omnivoice":     OmniVoiceBackend,
     "cosyvoice":     CosyVoiceBackend,
     "kittentts":     KittenTTSBackend,
     "mlx-audio":     MLXAudioBackend,
     "voxcpm2":       VoxCPM2Backend,
     "moss-tts-nano": MossTTSNanoBackend,
-    "indextts2":     IndexTTS2Backend,
+    # "indextts2": resolved lazily via _LAZY_REGISTRY -> engines.indextts
     "gpt-sovits":    GPTSoVITSBackend,
     "sherpa-onnx":   SherpaOnnxBackend,
-}
+})
 
 
 # ── ENGINE-06 last-error cache ─────────────────────────────────────────────
@@ -1263,3 +1158,18 @@ def get_active_tts_backend(*, model=None) -> TTSBackend:
     if cls is OmniVoiceBackend:
         return OmniVoiceBackend(model=model)
     return cls()
+
+
+# ── PEP 562 lazy attribute re-export ───────────────────────────────────────
+#
+# Allows ``from services.tts_backend import IndexTTS2Backend`` to keep
+# working even though the class itself lives in ``engines.indextts``.
+# Triggers the engines.indextts import on first attribute access, which
+# is after this module has finished loading — so no import cycle.
+
+def __getattr__(name: str):  # pragma: no cover - exercised via tests
+    if name in _LAZY_REGISTRY:
+        return _REGISTRY[name if name in _REGISTRY else None]
+    if name == "IndexTTS2Backend":
+        return _REGISTRY["indextts2"]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
