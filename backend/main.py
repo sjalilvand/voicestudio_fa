@@ -266,6 +266,30 @@ async def lifespan(app: FastAPI):
             logger.info("Startup: marked %d orphaned job(s) as failed.", swept)
     except Exception:
         logger.exception("Startup job-sweep failed (non-fatal).")
+    # Phase 1 Wave 3 — macOS Gatekeeper quarantine probe (#54).
+    # Detection is informational: we log a structured warning and broadcast
+    # an event so the React ErrorBoundary can render the docs deeplink. We
+    # do NOT auto-run `xattr -cr` — the app cannot clear its own quarantine
+    # state (per Anti-Pattern in 01-RESEARCH.md).
+    try:
+        from core import event_bus, gatekeeper_detect
+        status = gatekeeper_detect.quarantine_status()
+        if status.get("quarantined"):
+            logger.warning(
+                "Gatekeeper quarantine detected on app bundle %s — "
+                "users must run `xattr -cr <bundle>` once. error_class=%s",
+                status.get("bundle_path"),
+                status.get("error_class"),
+            )
+            event_bus.emit(
+                "system_error",
+                {
+                    "error_class": status.get("error_class"),
+                    "bundle_path": status.get("bundle_path"),
+                },
+            )
+    except Exception:
+        logger.exception("Gatekeeper probe failed (non-fatal).")
     idle_task = asyncio.create_task(idle_worker())
     worker_task = asyncio.create_task(task_manager.worker())
     # Warm the TTS model in the background so first /generate is instant.

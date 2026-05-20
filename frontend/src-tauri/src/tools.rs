@@ -316,11 +316,26 @@ pub fn resolve_ffmpeg<R: tauri::Runtime>(app: &tauri::AppHandle<R>, app_data: &P
     }
 }
 
-/// Resolve a usable ffprobe binary. Same cascade as ffmpeg.
+/// Resolve a usable ffprobe binary. Same cascade as ffmpeg, with one extra
+/// step on Linux: probe the relocated .deb path at
+/// `/usr/lib/omnivoice-studio/bin/ffprobe` (issue #76, see
+/// `frontend/src-tauri/debian/postinst`). The bundled sidecar lookup via
+/// `current_exe()` does not find this path because it lives outside the
+/// binary's own directory, so we probe it explicitly here.
 pub fn resolve_ffprobe<R: tauri::Runtime>(app: &tauri::AppHandle<R>, app_data: &Path) -> Option<PathBuf> {
     if let Some(p) = find_bundled_ffprobe() {
         log::info!("Using bundled ffprobe at {}", p.display());
         return Some(p);
+    }
+    // Linux .deb install path (#76 — ffprobe relocated out of /usr/bin to
+    // avoid overwriting the system binary).
+    #[cfg(target_os = "linux")]
+    {
+        let deb_path = PathBuf::from("/usr/lib/omnivoice-studio/bin/ffprobe");
+        if deb_path.is_file() {
+            log::info!("Using .deb-bundled ffprobe at {}", deb_path.display());
+            return Some(deb_path);
+        }
     }
     let tools_dir = app_data.join("tools");
     let cached = tools_dir.join(if cfg!(windows) { "ffprobe.exe" } else { "ffprobe" });
