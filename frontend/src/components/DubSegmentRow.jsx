@@ -12,8 +12,8 @@ import './DubSegmentRow.css';
 const CHAR_BUDGET_RATIO = 1.3;
 const SENTENCE_END = /[.!?。！？]/;
 
-function rowClass(isActive, isDone, selected) {
-  return `segment-row${isActive ? ' segment-active' : ''}${isDone ? ' segment-done' : ''}${selected ? ' segment-selected' : ''}`;
+function rowClass(isActive, isDone, selected, isPlaying) {
+  return `segment-row${isActive ? ' segment-active' : ''}${isDone ? ' segment-done' : ''}${selected ? ' segment-selected' : ''}${isPlaying ? ' segment-playing' : ''}`;
 }
 
 // Best split point for the Scissors menu when the user hasn't placed a cursor —
@@ -46,7 +46,7 @@ function parseTime(s) {
 }
 
 function DubSegmentRow({
-  seg, idx, style, disabled, isActive, isDone, previewLoading, selected,
+  seg, idx, style, disabled, isActive, isDone, isPlaying, previewLoading, selected,
   profiles, speakerClones, onEditField, onDelete, onRestore, onPreview, onSelect, onSplit, onMerge, canMerge,
   onDirect, onSeek,
 }) {
@@ -57,14 +57,50 @@ function DubSegmentRow({
   const lastCursorRef = useRef(null);
   const speakerOptions = speakerClones ? Object.keys(speakerClones) : [];
   const speakerListId = `seg-speakers-${seg.id}`;
-  const syncColor = seg.sync_ratio === undefined ? null
-    : (seg.sync_ratio >= 0.95 && seg.sync_ratio <= 1.05) ? '#b8bb26'
-    : seg.sync_ratio > 1.25 ? '#fb4934'
-    : '#fabd2f';
-  const SyncIcon = seg.sync_ratio === undefined ? null
-    : (seg.sync_ratio >= 0.95 && seg.sync_ratio <= 1.05) ? CheckCircle
-    : seg.sync_ratio > 1.25 ? AlertCircle
-    : Circle;
+
+  // Truthful per-segment fit badge. The backend's new fit_status object is
+  // the source of truth — describes exactly what the mix loop did:
+  //   "fits"            → audio fit cleanly inside the slot (or its gap).
+  //   "overflows"       → concise mode hard-trimmed +Ns past slot; user
+  //                       should shorten the text for a cleaner result.
+  //   "video_stretched" → stretch_video mode lengthened the source clip by
+  //                       the stretch ratio to fit natural-rate audio.
+  // We fall back to the legacy sync_ratio bucketing only when fit_status is
+  // missing (older jobs / partial-regen with no done event yet) — and even
+  // then we now display the *raw* ratio so it stops claiming 100% when the
+  // audio was actually compressed at synthesis time.
+  const fitStatus = seg.fit_status && typeof seg.fit_status === 'object' ? seg.fit_status : null;
+  let fitBadge = null;
+  if (fitStatus) {
+    if (fitStatus.status === 'fits') {
+      fitBadge = { color: '#b8bb26', Icon: CheckCircle, label: 'Fits', title: 'Natural-rate audio fit inside the slot.' };
+    } else if (fitStatus.status === 'overflows') {
+      const over = fitStatus.overflow_s || 0;
+      fitBadge = {
+        color: over > 0.5 ? '#fb4934' : '#fabd2f',
+        Icon: AlertCircle,
+        label: `Overflows +${over.toFixed(2)}s`,
+        title: `Translated text was longer than the original slot by ${over.toFixed(2)}s. The audio was hard-trimmed; shorten the text or switch Timing to "Stretch Video".`,
+      };
+    } else if (fitStatus.status === 'video_stretched') {
+      const r = fitStatus.stretch_ratio || 1.0;
+      fitBadge = {
+        color: r > 1.18 ? '#fb4934' : r > 1.05 ? '#fabd2f' : '#83a598',
+        Icon: Circle,
+        label: `Video ${r.toFixed(2)}×`,
+        title: `Stretch Video mode: this segment's video was slowed to ${r.toFixed(2)}× to fit the natural dub audio.`,
+      };
+    }
+  } else if (seg.sync_ratio !== undefined) {
+    const r = seg.sync_ratio;
+    if (r > 1.25) {
+      fitBadge = { color: '#fb4934', Icon: AlertCircle, label: `${Math.round(r * 100)}%`, title: `TTS audio is ${Math.round(r * 100)}% of the slot — heavily compressed.` };
+    } else if (r >= 0.95 && r <= 1.05) {
+      fitBadge = { color: '#b8bb26', Icon: CheckCircle, label: 'Fits', title: 'Audio fit inside the slot.' };
+    } else {
+      fitBadge = { color: '#fabd2f', Icon: Circle, label: `${Math.round(r * 100)}%`, title: `TTS audio is ${Math.round(r * 100)}% of the slot.` };
+    }
+  }
 
   const overBudget = seg.text_original
     && seg.text.length > Math.ceil(seg.text_original.length * CHAR_BUDGET_RATIO);
@@ -96,7 +132,7 @@ function DubSegmentRow({
   };
 
   return (
-    <div style={style} className={rowClass(isActive, isDone, selected)} onClick={handleRowClick}>
+    <div style={style} className={rowClass(isActive, isDone, selected, isPlaying)} onClick={handleRowClick}>
       <input
         type="checkbox"
         checked={!!selected}
@@ -142,13 +178,13 @@ function DubSegmentRow({
             </span>
           )}
         </span>
-        {SyncIcon && (
+        {fitBadge && (
           <span
             className="seg-sync-badge"
-            style={{ color: syncColor }}
-            title={`Generated audio is ${Math.round(seg.sync_ratio * 100)}% the duration of original`}
+            style={{ color: fitBadge.color }}
+            title={fitBadge.title}
           >
-            <SyncIcon size={8} /> Sync: {Math.round(seg.sync_ratio * 100)}%
+            <fitBadge.Icon size={8} /> {fitBadge.label}
           </span>
         )}
         {seg.rate_ratio != null && Math.abs(seg.rate_ratio - 1.0) > 0.03 && (
@@ -163,7 +199,7 @@ function DubSegmentRow({
       </span>
 
       <input
-        className="input-base seg-speaker-input"
+        className="seg-speaker-input"
         value={seg.speaker_id || ''}
         onChange={(e) => onEditField(seg.id, 'speaker_id', e.target.value)}
         onClick={(e) => e.stopPropagation()}
@@ -350,6 +386,7 @@ export default memo(DubSegmentRow, (prev, next) => (
   prev.disabled === next.disabled &&
   prev.isActive === next.isActive &&
   prev.isDone === next.isDone &&
+  prev.isPlaying === next.isPlaying &&
   prev.previewLoading === next.previewLoading &&
   prev.onDirect === next.onDirect &&
   prev.onSeek === next.onSeek &&

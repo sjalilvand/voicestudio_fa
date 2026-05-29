@@ -4,6 +4,7 @@ import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import MinimapPlugin from 'wavesurfer.js/dist/plugins/minimap.esm.js';
 import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js';
 import { Play, Pause, ZoomIn, ZoomOut, SkipBack, Loader, Keyboard } from 'lucide-react';
+import { useAppStore } from '../store';
 import './WaveformErrorBoundary.css';
 
 const REGION_COLORS = [
@@ -45,10 +46,42 @@ function WaveformTimeline({
 
   const [ready,       setReady]       = useState(false);
   const [loadError,   setLoadError]   = useState(false);
+  // Specifically: the source returned a non-media response (typically 404
+  // HTML). Differentiates from a generic decode failure so the error UI
+  // can tell the user the file has moved/been deleted, not just "broken".
+  const [sourceMissing, setSourceMissing] = useState(false);
   const [isPlaying,   setIsPlaying]   = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration,    setDuration]    = useState(0);
   const [zoom,        setZoom]        = useState(50);
+
+  // ── Live "current segment" signal ──────────────────────────────────────────
+  // Derive which segment contains the playhead and write the id to the store
+  // *only when it changes*. This keeps DubSegmentTable re-renders bounded to
+  // segment-crossings instead of the 4-50Hz timeupdate cadence.
+  const setDubCurrentSegId = useAppStore(s => s.setDubCurrentSegId);
+  const lastSegIdRef = useRef(null);
+  useEffect(() => {
+    if (!segments.length) {
+      if (lastSegIdRef.current != null) {
+        lastSegIdRef.current = null;
+        setDubCurrentSegId(null);
+      }
+      return;
+    }
+    // Linear scan — fine for ≤200 segments. For longer transcripts we'd
+    // switch to a binary search; keep it simple until needed.
+    let hit = null;
+    for (const s of segments) {
+      if (currentTime >= s.start && currentTime < s.end) { hit = s.id; break; }
+    }
+    if (hit !== lastSegIdRef.current) {
+      lastSegIdRef.current = hit;
+      setDubCurrentSegId(hit);
+    }
+  }, [currentTime, segments, setDubCurrentSegId]);
+  // Clear on unmount so a stale id can't outlive the editor.
+  useEffect(() => () => { setDubCurrentSegId(null); }, [setDubCurrentSegId]);
 
   // ── Core init — only re-runs when src changes ───────────────────────────────
   useEffect(() => {
@@ -56,6 +89,7 @@ function WaveformTimeline({
 
     setReady(false);
     setLoadError(false);
+    setSourceMissing(false);
     setCurrentTime(0);
     setDuration(0);
     setIsPlaying(false);
@@ -92,6 +126,23 @@ function WaveformTimeline({
       videoEl.addEventListener('loadedmetadata', showFirstFrame, { once: true });
       // Fallback if loadedmetadata already fired before listener attached (cached).
       if (videoEl.readyState >= 1) showFirstFrame();
+      // Surface media decode failures so future format issues don't
+      // present as a silent black box. MediaError codes: 1=aborted,
+      // 2=network, 3=decode, 4=src not supported. 3 = real codec/
+      // container mismatch (decoder ran but couldn't handle it); 4 =
+      // server returned a non-media response (most often a 404 HTML
+      // body when the source video moved or was deleted between
+      // project save and reload). In either case the rest of the
+      // pipeline can't do anything useful, so flip into the
+      // user-facing error fallback instead of staring at a black box.
+      videoEl.addEventListener('error', () => {
+        const code = videoEl.error?.code;
+        if (code === 3 || code === 4) {
+          console.warn('[WaveformTimeline] video element rejected source', videoSrc, 'code', code);
+          setSourceMissing(code === 4);
+          setLoadError(true);
+        }
+      }, { once: true });
       videoContainerRef.current.appendChild(videoEl);
     }
 
@@ -211,8 +262,20 @@ function WaveformTimeline({
              ws.load(undefined, [channelData], audioBuffer.duration);
           })
           .catch((decodeErr) => {
+            // HTTP 404 on the companion audio means the source file is
+            // gone (typically: project loaded after the underlying media
+            // was moved/deleted). Surface that explicitly — an empty
+            // waveform fallback would just confuse the user into thinking
+            // the file is silent. Other decode failures still fall back
+            // to empty peaks so the media element can still play.
+            const isMissing = /\bHTTP 404\b/.test(String(decodeErr?.message || decodeErr));
+            if (isMissing) {
+              console.warn('Audio source missing (HTTP 404):', audioSrc);
+              setSourceMissing(true);
+              setLoadError(true);
+              return;
+            }
             console.warn('Audio decode fallback failed, loading with empty peaks:', decodeErr);
-            // Last resort — show flat waveform but keep media element playback working
             try {
               const emptyPeaks = new Float32Array(1000).fill(0);
               ws.load(undefined, [emptyPeaks], mediaEl.duration || 60);
@@ -412,7 +475,14 @@ function WaveformTimeline({
     return (
       <div className="waveform-timeline">
         <div className="wfm-error">
-          ⚠ Could not load audio from this file
+          {sourceMissing ? (
+            <>
+              ⚠ Source media missing — this file may have moved or been deleted.
+              Re-upload the video to continue.
+            </>
+          ) : (
+            <>⚠ Could not load audio from this file</>
+          )}
         </div>
       </div>
     );

@@ -38,12 +38,14 @@ export default function useDubWorkflow({ loadProjects, loadProfiles, loadDubHist
   const dubTaskId       = useAppStore(s => s.dubTaskId);
   const setDubTaskId    = useAppStore(s => s.setDubTaskId);
   const setDubPrepStage = useAppStore(s => s.setDubPrepStage);
+  const setDubPrepProgress = useAppStore(s => s.setDubPrepProgress);
   const setSpeakerClones = useAppStore(s => s.setSpeakerClones);
   const setPreviewSegIds = useAppStore(s => s.setPreviewSegIds);
   const steps           = useAppStore(s => s.steps);
   const cfg             = useAppStore(s => s.cfg);
   const speed           = useAppStore(s => s.speed);
   const translateQuality = useAppStore(s => s.translateQuality);
+  const timingStrategy  = useAppStore(s => s.timingStrategy);
   const glossaryTerms   = useAppStore(s => s.glossaryTerms);
 
   const [translateProvider, setTranslateProvider] = useState('argos');
@@ -128,19 +130,48 @@ export default function useDubWorkflow({ loadProjects, loadProfiles, loadDubHist
       try { m = JSON.parse(e.data); } catch { return; }
       lastData = m;
       switch (m.type) {
-        case 'download_start': setDubPrepStage('download'); break;
+        case 'download_start':
+          setDubPrepStage('download');
+          setDubPrepProgress({ percent: null, speedBps: null, etaS: null, stageStartedAt: Date.now() });
+          break;
+        case 'download_progress':
+          setDubPrepProgress(prev => ({
+            ...prev,
+            percent: typeof m.percent === 'number' ? m.percent : prev.percent,
+            speedBps: typeof m.speed_bps === 'number' ? m.speed_bps : null,
+            etaS: typeof m.eta_s === 'number' ? m.eta_s : null,
+          }));
+          break;
         case 'download_done': if (m.filename) setDubFilename(m.filename); break;
-        case 'extract_start': setDubPrepStage('extract'); break;
+        case 'extract_start':
+          setDubPrepStage('extract');
+          setDubPrepProgress({ percent: null, speedBps: null, etaS: null, stageStartedAt: Date.now() });
+          break;
         case 'extract_done':
           if (m.job_id) setDubJobId(m.job_id);
           if (typeof m.duration === 'number') setDubDuration(m.duration);
           if (m.filename) setDubFilename(m.filename);
           break;
-        case 'demucs_start': setDubPrepStage('demucs'); break;
+        case 'demucs_start':
+          setDubPrepStage('demucs');
+          setDubPrepProgress({ percent: null, speedBps: null, etaS: null, stageStartedAt: Date.now() });
+          break;
+        case 'demucs_progress':
+          setDubPrepProgress(prev => ({
+            ...prev,
+            percent: typeof m.percent === 'number' ? m.percent : prev.percent,
+          }));
+          break;
         case 'demucs_done': break;
-        case 'scene_start': setDubPrepStage('scene'); break;
+        case 'scene_start':
+          setDubPrepStage('scene');
+          setDubPrepProgress({ percent: null, speedBps: null, etaS: null, stageStartedAt: Date.now() });
+          break;
         case 'scene_done': break;
-        case 'cached': setDubPrepStage('cached'); break;
+        case 'cached':
+          setDubPrepStage('cached');
+          setDubPrepProgress({ percent: 100, speedBps: null, etaS: null, stageStartedAt: Date.now() });
+          break;
         case 'ready': close(); ctrl.signal.removeEventListener('abort', onAbort); resolve(m); return;
         case 'error': {
           close(); ctrl.signal.removeEventListener('abort', onAbort);
@@ -162,12 +193,13 @@ export default function useDubWorkflow({ loadProjects, loadProfiles, loadDubHist
         else reject(new Error('prep stream closed unexpectedly'));
       }
     };
-  }), [setDubPrepStage, setDubJobId, setDubDuration, setDubFilename, setDubFailure]);
+  }), [setDubPrepStage, setDubPrepProgress, setDubJobId, setDubDuration, setDubFilename, setDubFailure]);
 
   // ── Handlers ──
   const handleDubUpload = useCallback(async (dubVideoFile) => {
     if (!dubVideoFile) return;
     setDubStep('uploading'); setDubError(''); setDubFailure(null); setDubTracks([]); setDubPrepStage('download');
+    setDubPrepProgress({ percent: null, speedBps: null, etaS: null, stageStartedAt: Date.now() });
     const ctrl = new AbortController();
     dubAbortCtrlRef.current = ctrl;
     const clientJobId = Math.random().toString(36).slice(2, 10);
@@ -199,6 +231,7 @@ export default function useDubWorkflow({ loadProjects, loadProfiles, loadDubHist
     const clean = (url || '').trim();
     if (!clean) return;
     setDubStep('uploading'); setDubError(''); setDubFailure(null); setDubTracks([]); setDubPrepStage('download');
+    setDubPrepProgress({ percent: null, speedBps: null, etaS: null, stageStartedAt: Date.now() });
     const ctrl = new AbortController();
     dubAbortCtrlRef.current = ctrl;
     const clientJobId = Math.random().toString(36).slice(2, 10);
@@ -313,7 +346,18 @@ export default function useDubWorkflow({ loadProjects, loadProfiles, loadDubHist
       setDubSegments(dubSegments.map(s => {
         const hit = translatedMap[s.id];
         if (!hit) return s;
-        return { ...s, text: (hit.text && hit.text.trim()) ? hit.text : s.text, translate_error: hit.error || undefined, translate_literal: hit.literal || undefined, translate_critique: hit.critique || undefined };
+        return {
+          ...s,
+          text: (hit.text && hit.text.trim()) ? hit.text : s.text,
+          translate_error: hit.error || undefined,
+          translate_literal: hit.literal || undefined,
+          translate_critique: hit.critique || undefined,
+          // Carry over the predicted compression ratio so the per-row
+          // badge + job-level compression warning can light up before
+          // the user clicks Generate Dub.
+          rate_ratio: hit.rate_ratio != null ? hit.rate_ratio : s.rate_ratio,
+          rate_error: hit.rate_error || s.rate_error,
+        };
       }));
       if (data.cinematic_skipped === 'no-llm-configured') {
         toast('Cinematic quality needs an LLM — set TRANSLATE_BASE_URL + TRANSLATE_API_KEY (Ollama works locally). Falling back to Fast.', { icon: 'ℹ️', duration: 7000 });
@@ -356,6 +400,7 @@ export default function useDubWorkflow({ loadProjects, loadProfiles, loadDubHist
         instruct: dubInstruct,
         num_step: steps, guidance_scale: cfg, speed,
         preview,
+        timing_strategy: timingStrategy || 'concise',
       };
       const data = await dubGenerate(dubJobId, body);
       setDubTaskId(data.task_id);
@@ -382,7 +427,17 @@ export default function useDubWorkflow({ loadProjects, loadProfiles, loadDubHist
                 sawDone = true;
                 setDubStep('done');
                 setDubTracks(evt.tracks || []);
-                if (evt.sync_scores) setDubSegments(prev => prev.map((s, idx) => ({ ...s, sync_ratio: evt.sync_scores[idx] })));
+                // Merge sync_scores (back-compat) and the new richer
+                // fit_status array onto each segment so the row badge can
+                // show truthful "Fits / Overflows +0.4s / Video stretched
+                // 1.18×" labels.
+                if (evt.sync_scores || evt.fit_status) {
+                  setDubSegments(prev => prev.map((s, idx) => ({
+                    ...s,
+                    sync_ratio: evt.sync_scores ? evt.sync_scores[idx] : s.sync_ratio,
+                    fit_status: evt.fit_status ? evt.fit_status[idx] : s.fit_status,
+                  })));
+                }
                 if (evt.seg_num_step && typeof evt.seg_num_step === 'object') {
                   const previewIds = Object.entries(evt.seg_num_step).filter(([, n]) => typeof n === 'number' && n < steps).map(([id]) => id);
                   setPreviewSegIds(previewIds);
@@ -410,7 +465,7 @@ export default function useDubWorkflow({ loadProjects, loadProfiles, loadDubHist
       setDubError(err.message); setDubStep('editing'); setDubTaskId(null);
       useAppStore.getState().errorPill(err.message);
     }
-  }, [dubJobId, dubSegments, dubLang, dubLangCode, dubInstruct, steps, cfg, speed, dubStep, setDubStep, setDubProgress, setDubError, setDubTracks, setDubSegments, setDubTaskId, setPreviewSegIds, setLastGenFingerprints, loadDubHistory, loadProjects]);
+  }, [dubJobId, dubSegments, dubLang, dubLangCode, dubInstruct, steps, cfg, speed, dubStep, timingStrategy, setDubStep, setDubProgress, setDubError, setDubTracks, setDubSegments, setDubTaskId, setPreviewSegIds, setLastGenFingerprints, loadDubHistory, loadProjects]);
 
   const handleDubStop = useCallback(async () => {
     if (!dubTaskId) return;

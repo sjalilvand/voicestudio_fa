@@ -34,6 +34,14 @@ export interface DubProgress {
   text: string;
 }
 
+/** Per-stage progress for the prep pipeline (download, demucs). */
+export interface DubPrepProgress {
+  percent: number | null;       // 0–100, or null if not known yet
+  speedBps: number | null;      // download speed in bytes/sec, when relevant
+  etaS: number | null;          // ETA in seconds, when known
+  stageStartedAt: number | null; // ms epoch; used for elapsed-time display
+}
+
 /** Segments are a loose shape — many optional fields added over time. */
 export type DubSegment = Record<string, unknown> & { id: string; text: string };
 
@@ -60,7 +68,10 @@ export interface DubSlice {
   dubStep: DubStep;
   dubTaskId: string | null;
   dubPrepStage: DubPrepStage;
+  dubPrepProgress: DubPrepProgress;
   dubProgress: DubProgress;
+  /** ID of the segment containing the current media playhead, or null. */
+  dubCurrentSegId: string | null;
   dubError: string;
   dubFailure: DubFailure | null;
   isTranslating: boolean;
@@ -108,7 +119,9 @@ export interface DubSlice {
   setDubStep: (v: Updater<DubStep>) => void;
   setDubTaskId: (v: Updater<string | null>) => void;
   setDubPrepStage: (v: Updater<DubPrepStage>) => void;
+  setDubPrepProgress: (v: Updater<DubPrepProgress>) => void;
   setDubProgress: (v: Updater<DubProgress>) => void;
+  setDubCurrentSegId: (v: Updater<string | null>) => void;
   setDubError: (v: Updater<string>) => void;
   setDubFailure: (v: Updater<DubSlice['dubFailure']>) => void;
   setIsTranslating: (v: Updater<boolean>) => void;
@@ -132,6 +145,7 @@ export interface DubSlice {
 
 const INITIAL: Omit<DubSlice,
   | 'setDubJobId' | 'setDubStep' | 'setDubTaskId' | 'setDubPrepStage'
+  | 'setDubPrepProgress' | 'setDubCurrentSegId'
   | 'setDubProgress' | 'setDubError' | 'setDubFailure' | 'setIsTranslating' | 'setDubSegments'
   | 'setDubTranscript' | 'setDubFilename' | 'setDubDuration' | 'setDubTracks'
   | 'setDubLang' | 'setDubLangCode' | 'setDubInstruct' | 'setPreserveBg'
@@ -142,7 +156,9 @@ const INITIAL: Omit<DubSlice,
   dubStep: 'idle',
   dubTaskId: null,
   dubPrepStage: null,
+  dubPrepProgress: { percent: null, speedBps: null, etaS: null, stageStartedAt: null },
   dubProgress: { current: 0, total: 0, text: '' },
+  dubCurrentSegId: null,
   dubError: '',
   dubFailure: null,
   isTranslating: false,
@@ -170,7 +186,9 @@ export const createDubSlice: StateCreator<DubSlice, [], [], DubSlice> = (set, ge
   setDubStep:      (v) => set((s) => ({ dubStep:      resolve(v, s.dubStep) })),
   setDubTaskId:    (v) => set((s) => ({ dubTaskId:    resolve(v, s.dubTaskId) })),
   setDubPrepStage: (v) => set((s) => ({ dubPrepStage: resolve(v, s.dubPrepStage) })),
+  setDubPrepProgress: (v) => set((s) => ({ dubPrepProgress: resolve(v, s.dubPrepProgress) })),
   setDubProgress:  (v) => set((s) => ({ dubProgress:  resolve(v, s.dubProgress) })),
+  setDubCurrentSegId: (v) => set((s) => ({ dubCurrentSegId: resolve(v, s.dubCurrentSegId) })),
   setDubError:     (v) => set((s) => ({ dubError:     resolve(v, s.dubError) })),
   setDubFailure:   (v) => set((s) => ({ dubFailure:   resolve(v, s.dubFailure) })),
   setIsTranslating:(v) => set((s) => ({ isTranslating:resolve(v, s.isTranslating) })),
