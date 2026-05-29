@@ -93,6 +93,7 @@ export default function DubTab(props) {
   const dubJobId          = useAppStore(s => s.dubJobId);
   const dubStep           = useAppStore(s => s.dubStep);
   const setDubStep        = useAppStore(s => s.setDubStep);
+  const setDubInputType   = useAppStore(s => s.setDubInputType);
   const dubPrepStage      = useAppStore(s => s.dubPrepStage);
   const dubPrepProgress   = useAppStore(s => s.dubPrepProgress);
   const dubFilename       = useAppStore(s => s.dubFilename);
@@ -409,8 +410,10 @@ export default function DubTab(props) {
                     e.preventDefault();
                     e.currentTarget.classList.remove('is-dragging');
                     const file = e.dataTransfer.files[0];
-                    if (file && (file.type.startsWith('video/') || file.type.startsWith('audio/') || /\.(mp3|wav|flac|m4a|ogg)$/i.test(file.name))) {
+                    if (file && (file.type.startsWith('video/') || file.type.startsWith('audio/') || /\.(mp3|wav|flac|m4a|aac|ogg|opus|wma)$/i.test(file.name))) {
                       setDubVideoFile(file);
+                      // #119: an audio file → audio-only dubbing (skip video work, output audio).
+                      setDubInputType(file.type.startsWith('audio/') || /\.(mp3|wav|flac|m4a|aac|ogg|opus|wma)$/i.test(file.name) ? 'audio' : 'video');
                       setDubStep('idle');
                       fileToMediaUrl(file, null).then(urls => setDubLocalBlobUrl(urls));
                     }
@@ -462,11 +465,13 @@ export default function DubTab(props) {
                 </>
               )}
 
-              <input type="file" accept="video/*,audio/*,.mp3,.wav,.m4a,.flac,.ogg" id="video-upload" className="dub-hidden-file"
+              <input type="file" accept="video/*,audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.opus,.wma" id="video-upload" className="dub-hidden-file"
                 onChange={e => {
                   const file = e.target.files[0];
                   if (!file) return;
                   setDubVideoFile(file);
+                  // #119: an audio file → audio-only dubbing (skip video work, output audio).
+                  setDubInputType(file.type.startsWith('audio/') || /\.(mp3|wav|flac|m4a|aac|ogg|opus|wma)$/i.test(file.name) ? 'audio' : 'video');
                   setDubStep('idle');
                   setDubLocalBlobUrl(prev => { fileToMediaUrl(file, prev).then(urls => setDubLocalBlobUrl(urls)); return prev; });
                 }} />
