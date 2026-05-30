@@ -39,11 +39,11 @@ cd "$SCRIPT_DIR"
 
 # ── Detect platform ────────────────────────────────────────────────────────
 OS="linux"
-if [ "$(uname)" = "Darwin" ]; then
-    OS="macos"
-elif grep -qi microsoft /proc/version 2>/dev/null; then
-    OS="wsl"
-fi
+case "$(uname -s)" in
+    Darwin)               OS="macos" ;;
+    MINGW*|MSYS*|CYGWIN*)  OS="windows" ;;  # Git Bash / MSYS2 — uv run works cross-platform
+    *) if grep -qi microsoft /proc/version 2>/dev/null; then OS="wsl"; fi ;;
+esac
 
 # ── PATH: ensure common shell-installed tools are available ────────────────
 export PATH="$HOME/.local/bin:$HOME/.bun/bin:$PATH"
@@ -61,8 +61,9 @@ fi
 
 # ── Log directory (platform-aware) ─────────────────────────────────────────
 case "$OS" in
-    macos) LOG_DIR="$HOME/Library/Application Support/OmniVoice" ;;
-    *)     LOG_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/OmniVoice" ;;
+    macos)   LOG_DIR="$HOME/Library/Application Support/OmniVoice" ;;
+    windows) LOG_DIR="${LOCALAPPDATA:-$HOME/AppData/Local}/OmniVoice" ;;
+    *)       LOG_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/OmniVoice" ;;
 esac
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/omnivoice-run.log"

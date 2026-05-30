@@ -69,20 +69,26 @@ trap cleanup EXIT
 # ── Detect platform ───────────────────────────────────────────────────────
 OS="$(uname -s)"
 case "$OS" in
-  Darwin) PLATFORM="macos" ;;
-  Linux)  PLATFORM="linux" ;;
-  *)      echo "❌ Unsupported platform: $OS"; exit 1 ;;
+  Darwin)              PLATFORM="macos" ;;
+  Linux)               PLATFORM="linux" ;;
+  MINGW*|MSYS*|CYGWIN*) PLATFORM="windows" ;;  # Git Bash / MSYS2 / Cygwin
+  *)                   echo "❌ Unsupported platform: $OS"; exit 1 ;;
 esac
 
 if [ "$PLATFORM" = "macos" ]; then
   APP_DATA="$HOME/Library/Application Support/${APP_ID}"
   OV_DATA="$HOME/Library/Application Support/OmniVoice"
+  HF_CACHE="${HF_HOME:-$HOME/.cache/huggingface}"
+elif [ "$PLATFORM" = "windows" ]; then
+  # Git Bash exposes Windows env vars; match backend/core/config.py paths.
+  APP_DATA="${LOCALAPPDATA}/${APP_ID}"
+  OV_DATA="${APPDATA}/OmniVoice"
+  HF_CACHE="${HF_HOME:-${LOCALAPPDATA}/OmniVoice/hf_cache}"
 else
   APP_DATA="${XDG_DATA_HOME:-$HOME/.local/share}/${APP_ID}"
   OV_DATA="${XDG_DATA_HOME:-$HOME/.local/share}/OmniVoice"
+  HF_CACHE="${HF_HOME:-$HOME/.cache/huggingface}"
 fi
-
-HF_CACHE="${HF_HOME:-$HOME/.cache/huggingface}"
 
 # ── Flags ──────────────────────────────────────────────────────────────────
 SKIP_BUILD=false
@@ -138,6 +144,7 @@ fi
 header "Phase 2: Build"
 
 BINARY="${TAURI_DIR}/target/debug/omnivoice-studio"
+[ "$PLATFORM" = "windows" ] && BINARY="${BINARY}.exe"
 
 if [ "$SKIP_BUILD" = false ]; then
     info "Building debug bundle (this takes 1-3 min)..."

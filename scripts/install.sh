@@ -103,10 +103,17 @@ open_browser() {
 
 # ── Detect platform ────────────────────────────────────────────────────────
 OS="linux"
-if [ "$(uname)" = "Darwin" ]; then
-    OS="macos"
-elif grep -qi microsoft /proc/version 2>/dev/null; then
-    OS="wsl"
+case "$(uname -s)" in
+    Darwin)               OS="macos" ;;
+    MINGW*|MSYS*|CYGWIN*)  OS="windows" ;;
+    *) if grep -qi microsoft /proc/version 2>/dev/null; then OS="wsl"; fi ;;
+esac
+
+if [ "$OS" = "windows" ]; then
+    echo "⚠  This source installer is for macOS / Linux (it installs system deps via brew/apt)."
+    echo "   On Windows: download the OmniVoice Studio installer (.msi) from the Releases page,"
+    echo "   or run this script inside WSL (Windows Subsystem for Linux)."
+    exit 0
 fi
 ARCH=$(uname -m)
 
