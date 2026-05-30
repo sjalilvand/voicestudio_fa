@@ -121,7 +121,7 @@ class TestSegmentTranscript:
             ("Same screening", 2.1, 3.0),
             ("same shortlisting", 3.0, 4.4),
             ("and again.", 4.4, 5.2),
-            ("So we built Yupc", 5.2, 6.6),
+            ("So we built Acme", 5.2, 6.6),
             ("You can create in", 6.6, 7.9),
             ("templates yourse", 7.9, 9.0),
             ("Then you", 9.0, 9.7),
@@ -133,7 +133,7 @@ class TestSegmentTranscript:
             ("stru", 15.1, 15.3),
             ("c", 15.3, 15.4),
             ("tured report with", 15.4, 16.7),
-            ("Try Yupcha if", 16.7, 17.9),
+            ("Try Acme if", 16.7, 17.9),
         )
         segs = segment_transcript(result, duration=18.0)
 
