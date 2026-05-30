@@ -11,6 +11,7 @@ export default function NetworkToggle() {
   const [st, setSt] = useState({ enabled: false });
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [qrs, setQrs] = useState({});
 
   const refresh = useCallback(async () => {
@@ -31,10 +32,11 @@ export default function NetworkToggle() {
     return () => { cancelled = true; };
   }, [st.enabled, st.pin, st.share_port, st.lan_addresses]);
 
+  // NOTE: do NOT use window.confirm here — it's a no-op in the Tauri webview
+  // (returns false), which silently swallowed the enable action.
   const enable = async () => {
-    if (!window.confirm('Share OmniVoice on your local network? Other devices will be able to reach it with the access PIN.')) return;
     setBusy(true);
-    try { setSt(await apiPost('/system/network/enable')); setOpen(true); }
+    try { setSt(await apiPost('/system/network/enable')); setConfirming(false); setOpen(true); }
     catch (e) { toast.error(`Could not enable sharing: ${e.message}`); }
     finally { setBusy(false); }
   };
@@ -51,13 +53,27 @@ export default function NetworkToggle() {
     <div className="net-toggle">
       <button
         className={`net-toggle__pill ${st.enabled ? 'net-toggle__pill--on' : ''}`}
-        onClick={st.enabled ? () => setOpen((o) => !o) : enable}
+        onClick={st.enabled ? () => setOpen((o) => !o) : () => setConfirming((c) => !c)}
         disabled={busy}
         title={st.enabled ? 'Sharing on — click for details' : 'Share on your network'}
       >
         {st.enabled ? <Wifi size={12} /> : <WifiOff size={12} />}
         <span>{busy ? 'Switching…' : st.enabled ? 'Network' : 'Local'}</span>
       </button>
+
+      {!st.enabled && confirming && (
+        <div className="net-toggle__panel net-toggle__panel--confirm">
+          <div className="net-toggle__panel-title">Share on your network?</div>
+          <p className="net-toggle__hint">
+            Other devices on your Wi-Fi/Ethernet will be able to reach OmniVoice
+            using the access PIN shown once it's on.
+          </p>
+          <div className="net-toggle__confirm-actions">
+            <button type="button" className="net-toggle__cancel" onClick={() => setConfirming(false)} disabled={busy}>Cancel</button>
+            <button type="button" className="net-toggle__enable" onClick={enable} disabled={busy}>{busy ? 'Enabling…' : 'Enable'}</button>
+          </div>
+        </div>
+      )}
 
       {st.enabled && open && (
         <div className="net-toggle__panel">
