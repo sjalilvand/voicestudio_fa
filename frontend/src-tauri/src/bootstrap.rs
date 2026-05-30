@@ -276,6 +276,26 @@ Fix: install Python 3.11+ from https://www.python.org/downloads/ (tick \"Add to 
 then relaunch — OmniVoice will use your system Python. Advanced: set \
 UV_PYTHON_INSTALL_MIRROR to a reachable mirror (see docs/install/troubleshooting.md).";
 
+/// Strip the bundled-runtime Python env vars before spawning any `uv`/venv/pip
+/// or venv-python subprocess (#144). On the Linux AppImage, the bundled runtime
+/// exports PYTHONHOME / PYTHONPATH (and sometimes LD_LIBRARY_PATH) pointing at
+/// the AppImage's *own* bundled Python. Those leak into the `uv` build
+/// subprocess, so the freshly-built managed interpreter resolves its stdlib
+/// against the wrong (AppImage) Python and dies with
+/// `ModuleNotFoundError: No module named 'encodings'` while compiling a
+/// transitive dep (e.g. dora-search/demucs) — surfacing downstream as
+/// "Backend process exited (never started)". This mirrors the same scrub the
+/// backend spawn already does in `backend.rs` before launching uvicorn.
+///
+/// Safe on every platform: these vars are normally unset on macOS/Windows, and
+/// `env_remove` on an unset var is a no-op — so there's no cross-platform
+/// divergence in default behavior.
+fn scrub_python_env(cmd: &mut Command) {
+    cmd.env_remove("PYTHONHOME")
+        .env_remove("PYTHONPATH")
+        .env_remove("LD_LIBRARY_PATH");
+}
+
 /// Longer timeouts + more retries so a slow/flaky mirror or PyPI doesn't kill
 /// the first-run install on its first hiccup (#130 step 2).
 fn apply_uv_http_env(cmd: &mut Command) {
@@ -343,7 +363,7 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
 
     if venv_py.is_file() && backend_dir.is_dir() {
         let mut uvicorn_check_cmd = Command::new(&venv_py);
-        uvicorn_check_cmd.env_remove("PYTHONHOME").env_remove("PYTHONPATH").env_remove("LD_LIBRARY_PATH");
+        scrub_python_env(&mut uvicorn_check_cmd); // #144: don't inherit AppImage's bundled Python
         let uvicorn_check = uvicorn_check_cmd
             .args(["-c", "import uvicorn"])
             .stdout(Stdio::null())
@@ -393,7 +413,7 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
             Err(e) => { fail(progress, &e); return None; }
         };
         let mut repair_cmd = Command::new(&uv_path);
-        repair_cmd.env_remove("PYTHONHOME").env_remove("PYTHONPATH").env_remove("LD_LIBRARY_PATH");
+        scrub_python_env(&mut repair_cmd); // #144: don't inherit AppImage's bundled Python
         let has_lockfile = project_dir.join("uv.lock").is_file();
         if has_lockfile {
             repair_cmd.args(["sync", "--frozen", "--no-dev", "--verbose"]);
@@ -503,7 +523,7 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
     let mut venv_ok = false;
     for (label, args, envs) in &venv_attempts {
         let mut venv_cmd = Command::new(&uv_path);
-        venv_cmd.env_remove("PYTHONHOME").env_remove("PYTHONPATH").env_remove("LD_LIBRARY_PATH");
+        scrub_python_env(&mut venv_cmd); // #144: don't inherit AppImage's bundled Python
         apply_uv_http_env(&mut venv_cmd);
         for &(k, v) in envs {
             venv_cmd.env(k, v);
@@ -525,7 +545,7 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
         set_stage(p, BootstrapStage::InstallingDeps);
     }
     let mut sync_cmd = Command::new(&uv_path);
-    sync_cmd.env_remove("PYTHONHOME").env_remove("PYTHONPATH").env_remove("LD_LIBRARY_PATH");
+    scrub_python_env(&mut sync_cmd); // #144: don't inherit AppImage's bundled Python
     apply_uv_http_env(&mut sync_cmd);
     let has_lockfile = project_dir.join("uv.lock").is_file();
     if has_lockfile {
@@ -562,7 +582,7 @@ docs/install/troubleshooting.md).",
     if let Some(rocm_url) = rocm_opt_in() {
         log::info!("OMNIVOICE_TORCH_VARIANT=rocm → reinstalling torch from {}", rocm_url);
         let mut rocm_cmd = Command::new(&uv_path);
-        rocm_cmd.env_remove("PYTHONHOME").env_remove("PYTHONPATH").env_remove("LD_LIBRARY_PATH");
+        scrub_python_env(&mut rocm_cmd); // #144: don't inherit AppImage's bundled Python
         apply_uv_http_env(&mut rocm_cmd);
         rocm_cmd.args(rocm_torch_reinstall_args(&rocm_url)).current_dir(&project_dir);
         let rocm_status = run_streaming(app, "installing_deps", &mut rocm_cmd);
@@ -583,6 +603,23 @@ See docs/install/linux.md (AMD GPU) to install the ROCm wheel manually.",
 mod tests {
     use super::*;
     use std::collections::HashMap;
+
+    #[test]
+    fn scrub_python_env_removes_bundled_runtime_vars() {
+        // #144: every uv/venv/pip subprocess must drop the AppImage's bundled
+        // Python env vars so the managed interpreter resolves its own stdlib.
+        // `env_remove` queues a removal that `get_envs()` reports as (key, None).
+        let mut cmd = Command::new("uv");
+        scrub_python_env(&mut cmd);
+        let removed: std::collections::HashSet<String> = cmd
+            .get_envs()
+            .filter(|(_, v)| v.is_none())
+            .map(|(k, _)| k.to_string_lossy().into_owned())
+            .collect();
+        assert!(removed.contains("PYTHONHOME"), "PYTHONHOME must be scrubbed");
+        assert!(removed.contains("PYTHONPATH"), "PYTHONPATH must be scrubbed");
+        assert!(removed.contains("LD_LIBRARY_PATH"), "LD_LIBRARY_PATH must be scrubbed");
+    }
 
     #[test]
     fn apply_uv_http_env_sets_timeouts_and_retries() {
