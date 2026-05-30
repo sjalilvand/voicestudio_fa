@@ -30,7 +30,10 @@ import Header from './components/Header';
 import NavRail from './components/NavRail';
 import ErrorBoundary from './components/ErrorBoundary';
 import FloatingPill from './components/FloatingPill';
-import RemoteAuthGate from './components/RemoteAuthGate';
+// RemoteAuthGate is mounted at the true outermost provider in main-app.jsx so
+// it covers all app states (setup check / wizard / bootstrap), not just the
+// main studio return below. Do not re-wrap here — double-gating renders two
+// PIN dialogs.
 
 import useRealtimeEvents from './hooks/useRealtimeEvents';
 import { BootstrapSplash, useBootstrapStage } from './components/BootstrapSplash';
@@ -822,7 +825,6 @@ function App() {
   }
 
   return (
-    <RemoteAuthGate>
     <div
       className={[
         'app-container',
@@ -1144,7 +1146,6 @@ function App() {
       </Suspense>
 
     </div>
-    </RemoteAuthGate>
   );
 }
 

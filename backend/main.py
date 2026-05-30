@@ -256,7 +256,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.datastructures import MutableHeaders
 from scalar_fastapi import get_scalar_api_reference
 import traceback
 
@@ -484,23 +484,38 @@ _LOOPBACK_CLIENTS = {"127.0.0.1", "::1"}
 _SHELL_PATHS = {"/", "/index.html", "/favicon.ico", "/health"}
 
 
-class NetworkAccessMiddleware(BaseHTTPMiddleware):
+class NetworkAccessMiddleware:
     """When a share PIN is set, require it for non-loopback clients on API
     routes. Inert when no PIN (default + docker deploys). Loopback (incl.
     Tailscale-proxied) always bypasses; the SPA shell is always served so the
-    PIN gate UI can load."""
+    PIN gate UI can load.
 
-    async def dispatch(self, request, call_next):
+    Pure ASGI (not BaseHTTPMiddleware) so it never buffers the response body.
+    BaseHTTPMiddleware collects StreamingResponse/SSE bodies before forwarding,
+    which makes PIN'd LAN clients on streaming endpoints (dictation SSE, tts
+    streaming, /system/logs/stream) laggy. As a plain ASGI app we forward
+    `send` untouched on the pass-through paths and only wrap it to inject the
+    Set-Cookie header — the body still streams chunk-by-chunk."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        from starlette.requests import Request
+
+        request = Request(scope, receive=receive)
         ns = getattr(request.app.state, "network_share", None)
         pin = getattr(ns, "pin", None) if ns else None
         if not pin:
-            return await call_next(request)
-        client = request.client.host if request.client else None
+            return await self.app(scope, receive, send)
+        client = scope["client"][0] if scope.get("client") else None
         if client in _LOOPBACK_CLIENTS:
-            return await call_next(request)
-        path = request.url.path
+            return await self.app(scope, receive, send)
+        path = scope["path"]
         if path in _SHELL_PATHS or path.startswith("/assets/") or path.startswith("/favicon"):
-            return await call_next(request)
+            return await self.app(scope, receive, send)
         supplied = (
             request.headers.get("x-omnivoice-pin")
             or request.query_params.get("pin")
@@ -508,11 +523,19 @@ class NetworkAccessMiddleware(BaseHTTPMiddleware):
             or ""
         )
         if not secrets.compare_digest(supplied, pin):
-            return JSONResponse({"detail": "PIN required"}, status_code=401)
-        response = await call_next(request)
+            resp = JSONResponse({"detail": "PIN required"}, status_code=401)
+            return await resp(scope, receive, send)
+        # Valid PIN. Set the cookie by wrapping send to inject Set-Cookie on the
+        # http.response.start message — without ever materialising the body.
         if request.cookies.get("ov_pin") != pin:
-            response.set_cookie("ov_pin", pin, samesite="lax")
-        return response
+            async def send_with_cookie(message):
+                if message["type"] == "http.response.start":
+                    headers = MutableHeaders(scope=message)
+                    headers.append("set-cookie", f"ov_pin={pin}; Path=/; SameSite=Lax")
+                await send(message)
+
+            return await self.app(scope, receive, send_with_cookie)
+        return await self.app(scope, receive, send)
 
 
 _allowed = os.environ.get(
