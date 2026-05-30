@@ -38,7 +38,7 @@ double-click to mount, drag **OmniVoice Studio.app** into `/Applications`.
 If the first launch shows "app is damaged and can't be opened", that's macOS
 Gatekeeper — see the next section.
 
-## Gatekeeper quarantine
+## App is "damaged" / can't be opened (Gatekeeper)
 
 <a id="gatekeeper-quarantine"></a>
 
@@ -46,20 +46,32 @@ If you see **"OmniVoice Studio.app" is damaged and can't be opened. You should
 move it to the Trash**, the app is **not** damaged — that misleading message is
 macOS Gatekeeper blocking an app it can't verify (issues #134, #72).
 
-**Why:** releases are only notarised when the project's Apple Developer ID
-signing pipeline is configured (see "For maintainers" below). On an unsigned
-build, macOS quarantines any copy downloaded outside the App Store.
+**Why:** the build isn't yet notarised by Apple, so macOS quarantines any copy
+downloaded from the internet outside the App Store and shows the "damaged"
+message. This is expected for open-source unsigned builds — releases are only
+notarised once the project's Apple Developer ID signing pipeline is configured
+(see "For maintainers" below). The workaround below is **safe** because you
+downloaded the app from the official repo / Releases page; if you want
+belt-and-braces, verify the SHA-256 against the `*.dmg.sha256` checksum on the
+release page first.
 
-**Fix (unsigned builds):** after dragging the app into `/Applications`, run:
+**Fix — GUI (no terminal):** in Finder, **right-click** (or Control-click) the
+app → **Open** → click **Open** again in the dialog. Or go to **System Settings
+→ Privacy & Security**, scroll to the security section, and click **"Open
+Anyway"** next to the OmniVoice Studio prompt.
+
+**Fix — Terminal:** after dragging the app into `/Applications`, run:
 
 ```bash
-xattr -cr "/Applications/OmniVoice Studio.app"
+xattr -dr com.apple.quarantine "/Applications/OmniVoice Studio.app"
 ```
 
-That clears the quarantine xattr so Gatekeeper stops blocking the launch — a
-one-time fix per install. Alternatively, right-click the app → **Open** →
-**Open** in the dialog. The app is open source; verify the SHA-256 against the
-`*.dmg.sha256` checksum on the release page first if you want belt-and-braces.
+(Adjust the path if you put the app somewhere other than `/Applications`. The
+broader `xattr -cr "/Applications/OmniVoice Studio.app"` also works — it clears
+*all* extended attributes rather than just the quarantine flag.)
+
+That clears the quarantine attribute so Gatekeeper stops blocking the launch — a
+one-time fix per install.
 
 ### For maintainers — enabling notarised builds
 
