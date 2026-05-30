@@ -5,6 +5,7 @@ import psutil
 import asyncio
 import logging
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Query
+from core.prefs import set_ as prefs_set, delete as prefs_delete
 from api.schemas import SysinfoResponse, SystemInfoResponse, ModelStatusResponse, LogsResponse, FlushMemoryResponse
 from api.dependencies import require_loopback
 from fastapi.responses import FileResponse, StreamingResponse
@@ -148,6 +149,7 @@ def system_info():
     and a 500 here blocks the entire UI from rendering system details.
     """
     try:
+        _ffmpeg = find_ffmpeg()
         return {
             "data_dir": DATA_DIR,
             "outputs_dir": OUTPUTS_DIR,
@@ -160,6 +162,9 @@ def system_info():
             "device": get_best_device(),
             "python": sys.version.split()[0],
             "platform": sys.platform,
+            "ffmpeg_ok": bool(_ffmpeg),
+            "ffmpeg_path": _ffmpeg or "",
+            "proxy_url": os.environ.get("HTTP_PROXY") or os.environ.get("http_proxy") or "",
         }
     except Exception as e:
         logger.exception("system_info failed — returning safe defaults")
@@ -175,6 +180,7 @@ def system_info():
             "device": "cpu",
             "python": sys.version.split()[0],
             "platform": sys.platform,
+            "proxy_url": "",
             "error": str(e),
         }
 
@@ -532,23 +538,32 @@ def system_notifications():
 # ── Environment variable setter ───────────────────────────────────────────
 
 
+PERSISTENT_KEYS = {
+    "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY",
+    "http_proxy", "https_proxy", "all_proxy",
+    "FFMPEG_PATH", "FFPROBE_PATH",
+    "TRANSLATE_BASE_URL", "TRANSLATE_API_KEY", "TRANSLATE_MODEL",
+    "DEEPL_API_KEY", "DEEPL_BASE_URL",
+    "MICROSOFT_API_KEY", "MICROSOFT_BASE_URL",
+}
+
+
 @router.post("/system/set-env")
 async def set_env_var(body: dict):
-    """Set an environment variable at runtime.
+    """Set an environment variable at runtime, persisted across restarts.
 
-    Currently supports:
-      - HF_TOKEN: HuggingFace access token
-      - TRANSLATE_API_KEY: Translation API key
-
-    The value is set on os.environ for the running process.
-    For persistence across restarts, users should set it in their shell profile.
+    Persistent keys (proxy, FFMPEG_PATH, translation provider keys, …) are
+    saved to ``prefs.json`` so they survive backend restarts (restored at
+    startup in ``main.py``). HF_TOKEN is persisted via
+    ``huggingface_hub.login()`` (and cleared via ``logout()``). Other keys
+    are set on ``os.environ`` for the running process.
 
     The loopback-origin gate that previously lived inline here is now applied
     at the router level via `dependencies=[Depends(require_loopback)]` on
     `router` — see the top of this file. Every route on this router is
     gated, including this one. The 403 body and behavior are unchanged.
     """
-    ALLOWED_KEYS = {"HF_TOKEN", "TRANSLATE_API_KEY"}
+    ALLOWED_KEYS = PERSISTENT_KEYS | {"HF_TOKEN", "TRANSLATE_API_KEY"}
     key = body.get("key", "")
     value = body.get("value", "")
 
@@ -559,6 +574,23 @@ async def set_env_var(body: dict):
         )
 
     if value:
+        # Validate executable paths if the user is setting them manually.
+        # Reject control characters / null bytes (defense-in-depth against
+        # path-injection), then require an existing regular file. NOTE: this
+        # endpoint is loopback-only and MUST remain so — a remote caller able
+        # to set FFMPEG_PATH/FFPROBE_PATH could point it at an arbitrary
+        # binary (RCE). Network sharing must never expose /system/set-env.
+        if key in ("FFMPEG_PATH", "FFPROBE_PATH"):
+            if any(ord(c) < 0x20 or ord(c) == 0x7F for c in value):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid path: control characters are not allowed",
+                )
+            if not os.path.isfile(value):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File not found: {value}",
+                )
         os.environ[key] = value
         logger.info("Set environment variable: %s (length=%d)", key, len(value))
 
@@ -588,6 +620,18 @@ async def set_env_var(body: dict):
                 logger.info("HF token cleared from $HF_HOME/token via logout()")
             except Exception as e:
                 logger.warning("Could not clear HF token file: %s", e)
+
+    # HF_TOKEN persistence is handled above via huggingface_hub.login()/
+    # logout() — it never touches prefs.json. Everything else in
+    # PERSISTENT_KEYS (proxy, FFMPEG_PATH, translation provider keys, …) is
+    # saved to prefs.json so it survives backend restarts (restored at
+    # startup in main.py). Non-persistent keys stay process-local.
+    if key != "HF_TOKEN" and key in PERSISTENT_KEYS:
+        prefs_key = f"env.{key}"
+        if value:
+            prefs_set(prefs_key, value)
+        else:
+            prefs_delete(prefs_key)
 
     return {"key": key, "set": bool(value)}
 

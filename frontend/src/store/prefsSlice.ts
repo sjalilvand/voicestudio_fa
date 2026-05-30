@@ -58,6 +58,9 @@ export interface PrefsSlice {
   setShowHeaderLiveStats: (on: boolean) => void;
   setTimingStrategy: (s: TimingStrategy) => void;
 
+  locale: string;
+  setLocale: (l: string) => void;
+
   theme: ThemeId;
   setTheme: (id: ThemeId) => void;
 }
@@ -78,6 +81,9 @@ export const createPrefsSlice: StateCreator<PrefsSlice, [], [], PrefsSlice> = (s
   setReviewMode:          (mode) => set({ reviewMode: mode }),
   setShowHeaderLiveStats: (on) => set({ showHeaderLiveStats: on }),
   setTimingStrategy:      (s) => set({ timingStrategy: s }),
+
+  locale: 'en',
+  setLocale: (l) => set({ locale: l }),
 
   theme: 'gruvbox',
   setTheme: (id) => {

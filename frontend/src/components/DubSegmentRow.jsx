@@ -1,4 +1,5 @@
 import React, { memo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   CheckCircle, AlertCircle, Circle, Trash2, Loader, Headphones, Scissors, Merge,
   MoreHorizontal, Sparkles,
@@ -50,6 +51,7 @@ function DubSegmentRow({
   profiles, speakerClones, onEditField, onDelete, onRestore, onPreview, onSelect, onSplit, onMerge, canMerge,
   onDirect, onSeek,
 }) {
+  const { t } = useTranslation();
   const textInputRef = useRef(null);
   // Remember where the caret was inside the text field even after it loses
   // focus — Radix's menu trigger steals focus, so by the time the Scissors
@@ -106,7 +108,6 @@ function DubSegmentRow({
     && seg.text.length > Math.ceil(seg.text_original.length * CHAR_BUDGET_RATIO);
 
   const handleTextKeyDown = (e) => {
-    // Ctrl/Cmd+D → split at cursor, Ctrl/Cmd+M → merge with next
     if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
       e.preventDefault();
       const pos = e.target.selectionStart ?? seg.text.length;
@@ -141,7 +142,7 @@ function DubSegmentRow({
         disabled={disabled}
         style={{ accentColor: '#d3869b' }}
         className="seg-check"
-        title="Select segment (shift+click for range)"
+        title={t('segment.select_title')}
       />
       <span className="segment-time seg-time">
         <span className="seg-time-row">
@@ -191,7 +192,7 @@ function DubSegmentRow({
           <span
             className="seg-rate-badge"
             style={{ color: seg.rate_ratio > 1.15 ? '#fb4934' : seg.rate_ratio < 0.85 ? '#83a598' : '#a89984' }}
-            title={`Speech-rate fit: ${seg.rate_ratio.toFixed(2)}× relative to slot${seg.rate_error ? ` (${seg.rate_error})` : ''}`}
+            title={t('segment.rate_title', { ratio: seg.rate_ratio.toFixed(2), error: seg.rate_error || '' })}
           >
             📖 {seg.rate_ratio.toFixed(2)}×
           </span>
@@ -205,10 +206,10 @@ function DubSegmentRow({
         onClick={(e) => e.stopPropagation()}
         disabled={disabled}
         list={speakerOptions.length ? speakerListId : undefined}
-        placeholder={speakerOptions.length ? 'Pick…' : ''}
+        placeholder={speakerOptions.length ? t('segment.speaker_pick') : ''}
         title={speakerOptions.length
-          ? 'Speaker — pick from detected, or type a custom name'
-          : 'Speaker — type a name (no diarization clones detected)'}
+          ? t('segment.speaker_title_detected')
+          : t('segment.speaker_title_custom')}
       />
       {speakerOptions.length > 0 && (
         <datalist id={speakerListId}>
@@ -228,10 +229,10 @@ function DubSegmentRow({
           onClick={(e) => { e.stopPropagation(); captureCursor(e); }}
           disabled={disabled}
           title={seg.translate_error
-            ? `Translation error: ${seg.translate_error}`
+            ? t('segment.translate_error_title', { error: seg.translate_error })
             : overBudget
-              ? `Text is ${Math.round((seg.text.length / seg.text_original.length) * 100)}% of original — consider higher speed or shorter phrasing`
-              : 'Ctrl+D to split at cursor · Ctrl+M to merge with next'}
+              ? t('segment.budget_title', { pct: Math.round((seg.text.length / seg.text_original.length) * 100) })
+              : t('segment.text_title')}
           style={
             overBudget ? { borderColor: 'rgba(250,189,47,0.6)', background: 'rgba(250,189,47,0.06)' }
             : seg.translate_error ? { borderColor: 'rgba(251,73,52,0.5)' }
@@ -240,7 +241,7 @@ function DubSegmentRow({
         />
         {seg.text_original && seg.text_original !== seg.text && (
           <span className="seg-orig-row">
-            <span className="seg-orig-label">orig</span>
+            <span className="seg-orig-label">{t('segment.orig_label')}</span>
             <span className="seg-orig-text" title={seg.text_original}>
               {seg.text_original}
             </span>
@@ -252,7 +253,7 @@ function DubSegmentRow({
             <button
               onClick={() => onRestore(seg.id)}
               disabled={disabled}
-              title="Restore original text"
+              title={t('segment.restore_title')}
               className="seg-restore-btn"
             >
               ↺
@@ -267,7 +268,7 @@ function DubSegmentRow({
         disabled={disabled}
         onChange={(e) => onEditField(seg.id, 'target_lang', e.target.value)}
       >
-        <option value="">(Def)</option>
+        <option value="">{t('segment.lang_default')}</option>
         {LANG_CODES.map(lc => (
           <option key={lc.code} value={lc.code}>{lc.code.toUpperCase()}</option>
         ))}
@@ -279,9 +280,9 @@ function DubSegmentRow({
         disabled={disabled}
         onChange={(e) => onEditField(seg.id, 'profile_id', e.target.value)}
       >
-        <option value="">Default</option>
+        <option value="">{t('segment.voice_default')}</option>
         {speakerClones && Object.keys(speakerClones).length > 0 && (
-          <optgroup label="From Video">
+          <optgroup label={t('segment.from_video')}>
             {Object.keys(speakerClones).map(spk => {
               const autoId = `auto:${(spk || '').toLowerCase().replace(/\s+/g, '_')}`;
               return <option key={autoId} value={autoId}>🎤 {spk}</option>;
@@ -289,12 +290,12 @@ function DubSegmentRow({
           </optgroup>
         )}
         {profiles.length > 0 && (
-          <optgroup label="Clone Profiles">
+          <optgroup label={t('segment.clone_profiles')}>
             {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </optgroup>
         )}
         {PRESETS.length > 0 && (
-          <optgroup label="Design Presets">
+          <optgroup label={t('segment.design_presets')}>
             {PRESETS.map(p => <option key={p.id} value={`preset:${p.id}`}>{p.name}</option>)}
           </optgroup>
         )}
@@ -315,7 +316,7 @@ function DubSegmentRow({
         <button
           className="segment-play"
           disabled={disabled}
-          title="Live Preview"
+          title={t('segment.preview_title')}
           onClick={(e) => onPreview(seg, e)}
         >
           {previewLoading ? <Loader className="spinner" size={9} /> : <Headphones size={9} />}
@@ -326,14 +327,14 @@ function DubSegmentRow({
           items={[
             {
               id: 'direct',
-              label: seg.direction ? 'Edit direction…' : 'Set direction…',
+              label: seg.direction ? t('segment.edit_direction') : t('segment.set_direction'),
               icon: Sparkles,
               onSelect: () => onDirect?.(seg),
             },
             'separator',
             {
               id: 'split',
-              label: 'Split at cursor',
+              label: t('segment.split_label'),
               icon: Scissors,
               shortcut: '⌘D',
               onSelect: () => {
@@ -353,7 +354,7 @@ function DubSegmentRow({
             },
             {
               id: 'merge',
-              label: 'Merge with next',
+              label: t('segment.merge_label'),
               icon: Merge,
               shortcut: '⌘M',
               disabled: !canMerge,
@@ -364,7 +365,7 @@ function DubSegmentRow({
           <button
             className={`segment-play ${seg.direction ? 'has-direction' : ''}`}
             disabled={disabled}
-            title={seg.direction ? `Direction: ${seg.direction}` : 'More actions'}
+            title={seg.direction ? t('segment.direction_title', { dir: seg.direction }) : t('segment.more_actions_title')}
           >
             {seg.direction ? <Sparkles size={9} /> : <MoreHorizontal size={9} />}
           </button>

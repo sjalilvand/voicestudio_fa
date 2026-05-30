@@ -15,15 +15,15 @@ logger = logging.getLogger("omnivoice.api")
 
 TRANSLATE_CODES = {
     "en": "en", "es": "es", "fr": "fr", "de": "de", "it": "it", "pt": "pt",
-    "ru": "ru", "ja": "ja", "ko": "ko", "zh": "zh-CN", "ar": "ar", "hi": "hi",
-    "tr": "tr", "pl": "pl", "nl": "nl", "sv": "sv", "th": "th", "vi": "vi",
-    "id": "id", "uk": "uk",
+    "ru": "ru", "ja": "ja", "ko": "ko", "zh": "zh-CN", "cmn-Hans": "zh-CN",
+    "ar": "ar", "hi": "hi", "tr": "tr", "pl": "pl", "nl": "nl", "sv": "sv",
+    "th": "th", "vi": "vi", "id": "id", "uk": "uk",
 }
 
 FLORES_CODES = {
     "en": "eng_Latn", "es": "spa_Latn", "fr": "fra_Latn", "de": "deu_Latn",
     "it": "ita_Latn", "pt": "por_Latn", "ru": "rus_Cyrl", "ja": "jpn_Jpan",
-    "ko": "kor_Hang", "zh": "zho_Hans", "zh-CN": "zho_Hans", "ar": "arb_Arab",
+    "ko": "kor_Hang", "zh": "zho_Hans", "zh-CN": "zho_Hans", "cmn-Hans": "zho_Hans", "ar": "arb_Arab",
     "hi": "hin_Deva", "tr": "tur_Latn", "pl": "pol_Latn", "nl": "nld_Latn",
     "sv": "swe_Latn", "th": "tha_Thai", "vi": "vie_Latn", "id": "ind_Latn",
     "uk": "ukr_Cyrl",
@@ -39,7 +39,7 @@ FLORES_CODES = {
 LANG_NAMES = {
     "en": "English", "es": "Spanish", "fr": "French", "de": "German",
     "it": "Italian", "pt": "Portuguese", "ru": "Russian", "ja": "Japanese",
-    "ko": "Korean", "zh": "Chinese (Simplified)", "zh-CN": "Chinese (Simplified)",
+    "ko": "Korean", "zh": "Chinese (Simplified)", "zh-CN": "Chinese (Simplified)", "cmn-Hans": "Chinese (Simplified)",
     "ar": "Arabic", "hi": "Hindi", "tr": "Turkish", "pl": "Polish",
     "nl": "Dutch", "sv": "Swedish", "th": "Thai", "vi": "Vietnamese",
     "id": "Indonesian", "uk": "Ukrainian",
@@ -303,6 +303,17 @@ async def dub_translate(req: TranslateRequest):
 
         # Offline Argos Translate
         if provider == "argos" or provider == "libretranslate":
+            try:
+                import argostranslate  # noqa: F401
+            except ImportError:
+                friendly = (
+                    f"The '{provider}' translation engine needs the optional "
+                    f"`argostranslate` Python package, which isn't installed in "
+                    f"this backend. Install it with `uv pip install argostranslate` "
+                    f"(or `pip install argostranslate`) and restart the server, or "
+                    f"switch the Engine dropdown to another provider."
+                )
+                return JSONResponse(status_code=400, content={"error": friendly})
             def _translate_argos():
                 cache_dir = os.environ.get("OMNIVOICE_CACHE_DIR")
                 if cache_dir:
@@ -363,18 +374,30 @@ async def dub_translate(req: TranslateRequest):
 
         src_arg = TRANSLATE_CODES.get(src_lang, src_lang) or "auto"
 
+        _proxies = {"http": None, "https": None}
+        _deepl_key = os.environ.get("DEEPL_API_KEY") or api_key
+        _msft_key = os.environ.get("MICROSOFT_API_KEY") or api_key
+
         def _build_translator(src, tgt):
             if provider == "deepl":
                 from deep_translator import DeeplTranslator
-                return DeeplTranslator(api_key=api_key, source=src, target=tgt)
+                tr = DeeplTranslator(api_key=_deepl_key, source=src, target=tgt, use_free_api=False)
+                _custom = os.environ.get("DEEPL_BASE_URL")
+                if _custom:
+                    tr._base_url = _custom.rstrip("/") + "/"
+                return tr
             if provider == "mymemory":
                 from deep_translator import MyMemoryTranslator
-                return MyMemoryTranslator(source=src, target=tgt)
+                return MyMemoryTranslator(source=src, target=tgt, proxies=_proxies)
             if provider == "microsoft":
                 from deep_translator import MicrosoftTranslator
-                return MicrosoftTranslator(api_key=api_key, source=src, target=tgt)
+                tr = MicrosoftTranslator(api_key=_msft_key, source=src, target=tgt, proxies=_proxies)
+                _custom = os.environ.get("MICROSOFT_BASE_URL")
+                if _custom:
+                    tr._base_url = _custom.rstrip("/") + "/translate?api-version=3.0"
+                return tr
             from deep_translator import GoogleTranslator
-            return GoogleTranslator(source=src, target=tgt)
+            return GoogleTranslator(source=src, target=tgt, proxies=_proxies)
 
         def _translate_single(seg):
             seg_lc = (

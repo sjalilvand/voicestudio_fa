@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Shield, Zap, Users, Headphones, Code, Globe,
   Building2, Mail,
@@ -7,16 +8,18 @@ import { Button } from '../ui';
 import { openExternal } from '../api/external';
 import './EnterprisePage.css';
 
-const WHY_ITEMS = [
-  { icon: Shield, label: 'Full IP ownership', desc: 'Your voices, your data, your servers. No third-party dependency.' },
-  { icon: Zap, label: 'Zero per-minute costs', desc: 'Flat licensing. Generate millions of minutes without usage caps.' },
-  { icon: Users, label: 'Team-wide access', desc: 'Share across your org. No per-seat API key management.' },
-  { icon: Headphones, label: 'Direct support', desc: 'Talk to the engineers who built it, not a helpdesk.' },
-  { icon: Code, label: 'Source-available core', desc: 'Audit the code. Fork if needed. Apache 2.0 two years after release — no vendor lock-in.' },
-  { icon: Globe, label: '646 languages', desc: 'Ship global content from one tool. No third-party locale add-ons.' },
-];
-
 export default function EnterprisePage({ onBack }) {
+  const { t } = useTranslation();
+
+  const WHY_ITEMS = [
+    { icon: Shield, label: t('enterprise.benefit_ip'), desc: t('enterprise.benefit_ip_desc') },
+    { icon: Zap, label: t('enterprise.benefit_cost'), desc: t('enterprise.benefit_cost_desc') },
+    { icon: Users, label: t('enterprise.benefit_team'), desc: t('enterprise.benefit_team_desc') },
+    { icon: Headphones, label: t('enterprise.benefit_support'), desc: t('enterprise.benefit_support_desc') },
+    { icon: Code, label: t('enterprise.benefit_source'), desc: t('enterprise.benefit_source_desc') },
+    { icon: Globe, label: t('enterprise.benefit_lang'), desc: t('enterprise.benefit_lang_desc') },
+  ];
+
   return (
     <div className="enterprise-page">
       {/* Aurora backdrop — same as Launchpad */}
@@ -33,38 +36,30 @@ export default function EnterprisePage({ onBack }) {
           onClick={onBack}
           leading={<ArrowLeft size={14} />}
         >
-          Back to Studio
+          {t('enterprise.back')}
         </Button>
       </div>
 
       <div className="enterprise-page__content">
         {/* Hero */}
         <div className="ent-hero">
-          <span className="ent-hero__kicker">Commercial License</span>
+          <span className="ent-hero__kicker">{t('enterprise.badge')}</span>
           <h2 className="ent-hero__title">
-            Ship AI voices in production
+            {t('enterprise.hero_title')}
             <span className="lp-hero__sweep" aria-hidden="true" />
           </h2>
           <p className="ent-hero__subtitle">
-            OmniVoice Studio is source-available under the{' '}
-            <button
-              type="button"
-              className="ent-cta-footer__link"
-              onClick={() => openExternal('https://fsl.software/')}
-            >
-              Functional Source License
-            </button>
-            {' '}— free for personal, educational, and non-commercial use,
-            and converts to Apache 2.0 two years after each release.
-            Building a competing product or service on top of OmniVoice?
-            <strong> Pricing tiers coming soon — get in touch in the meantime.</strong>
+            {t('enterprise.hero_desc')}
+          </p>
+          <p className="ent-hero__subtitle">
+            {t('enterprise.hero_note')}
           </p>
         </div>
 
         {/* Why Businesses Choose OmniVoice */}
         <section className="ent-why">
           <div className="ent-section-title">
-            <span>Why businesses choose OmniVoice</span>
+            <span>{t('enterprise.why_title')}</span>
           </div>
           <div className="ent-why__grid">
             {WHY_ITEMS.map(({ icon: Icon, label, desc }) => (
@@ -80,14 +75,12 @@ export default function EnterprisePage({ onBack }) {
         {/* Pricing — coming soon */}
         <section className="ent-tiers-section">
           <div className="ent-section-title">
-            <span>Pricing</span>
+            <span>{t('enterprise.pricing_title')}</span>
           </div>
           <div className="ent-coming-soon">
             <p>
-              <strong>Tiers and pricing are still being finalized.</strong>{' '}
-              Until they're public, every commercial deployment is being
-              quoted individually so we can right-size for your team and
-              workload.
+              <strong>{t('enterprise.pricing_desc')}</strong>{' '}
+              {t('enterprise.pricing_detail')}
             </p>
             <button
               type="button"
@@ -95,7 +88,7 @@ export default function EnterprisePage({ onBack }) {
               onClick={() => openExternal('mailto:OmniVoice@palash.dev?subject=OmniVoice Commercial License Inquiry&body=Hi Palash,%0A%0AI%27d like to talk about a commercial license for OmniVoice Studio.%0A%0AOrganization:%0ATeam size:%0AUse case:%0A')}
             >
               <Mail size={13} />
-              Request a quote
+              {t('enterprise.request_quote')}
             </button>
           </div>
         </section>
@@ -103,7 +96,7 @@ export default function EnterprisePage({ onBack }) {
         {/* FAQ */}
         <section className="ent-faq">
           <div className="ent-section-title">
-            <span>Common questions</span>
+            <span>{t('enterprise.faq_title')}</span>
           </div>
           <div className="ent-faq__list">
             <details className="ent-faq__item">
@@ -127,9 +120,25 @@ export default function EnterprisePage({ onBack }) {
 
         {/* CTA footer */}
         <div className="ent-cta-footer">
-          <p>Questions? Reach out at <button type="button" className="ent-cta-footer__link" onClick={() => openExternal('mailto:OmniVoice@palash.dev')}>OmniVoice@palash.dev</button></p>
+          <p>
+            <button
+              type="button"
+              className="ent-cta-footer__link"
+              onClick={() => openExternal('mailto:OmniVoice@palash.dev')}
+              title="OmniVoice@palash.dev"
+            >
+              {t('enterprise.footer_email')}
+            </button>
+          </p>
           <p className="ent-cta-footer__sub">
-            Join our <button type="button" className="ent-cta-footer__link" onClick={() => openExternal('https://discord.gg/bzQavDfVV9')}>Discord</button> for community support.
+            <button
+              type="button"
+              className="ent-cta-footer__link"
+              onClick={() => openExternal('https://discord.gg/bzQavDfVV9')}
+              title="discord.gg/bzQavDfVV9"
+            >
+              {t('enterprise.footer_discord')}
+            </button>
           </p>
         </div>
       </div>

@@ -192,6 +192,8 @@ Everything else (new engines, fancy features) is downstream of "the thing instal
 
 **Versioning (hard rule):** Everything ships on `v0.3.0`. Never mention, suggest, or label anything with a version bump — no v0.4, no RCs, no "defer to next version", no future-version labels — unless the user explicitly asks to bump. Zero unprompted version chatter.
 
+**Localization (hard rule):** No hardcoded non-English (CJK) **user-facing text** anywhere in the codebase except the translation layer (`frontend/src/i18n/`). All UI strings go through i18n (`t('...')` keys in `locales/*.json`); native language names live in `i18n/index.ts` (`LANGUAGES`). Functional CJK is allowed and tracked via the allowlist in `tests/test_no_hardcoded_cjk.py` — text-processing regexes, model/engine vocabulary & identifiers (e.g. CosyVoice speaker IDs), localized error matching, demo/eval data, and test fixtures. CI fails on any hardcoded CJK outside the allowlist; to add legitimate functional CJK, extend `_ALLOWED_FILES` there with a justification.
+
 Other conventions not yet established. Will populate as patterns emerge during development.
 <!-- GSD:conventions-end -->
 

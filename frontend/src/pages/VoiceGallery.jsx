@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Search, Download, Play, Pause, Trash2, User, Film,
   Clock, Grid, List, X, Save, Loader, Music, Sparkles,
@@ -27,6 +28,7 @@ const CATEGORY_ICONS = {
 };
 
 export default function VoiceGallery() {
+  const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -219,9 +221,9 @@ export default function VoiceGallery() {
       <div className="gallery-header">
         <div className="header-top">
           <div className="header-text">
-            <h2>Voice Gallery</h2>
+            <h2>{t('gallery.title')}</h2>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => voicesQuery.refetch()} title="Reload">
+          <Button variant="ghost" size="sm" onClick={() => voicesQuery.refetch()} title={t('common.refresh')}>
             <RotateCcw size={14} />
           </Button>
         </div>
@@ -230,7 +232,7 @@ export default function VoiceGallery() {
       <div className="gallery-search">
         <div className="search-row">
           <Input
-            placeholder="Search YouTube..."
+            placeholder={t('gallery.search_placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={onSearchKey}
@@ -251,7 +253,7 @@ export default function VoiceGallery() {
                 onClick={() => setSelectedCategory(isSelected ? null : cat.id)}
               >
                 <Icon size={12} />
-                {cat.name}
+                {t(`gallery.cat_${cat.id}`, { defaultValue: cat.name })}
               </button>
             );
           })}
@@ -261,7 +263,7 @@ export default function VoiceGallery() {
       {searchResults.length > 0 && (
         <div className="search-results-panel">
           <div className="panel-header">
-            <span>YouTube Results ({searchResults.length})</span>
+            <span>{t('gallery.youtube_results', { count: searchResults.length })}</span>
             <button className="close-btn" onClick={() => setSearchResults([])}><X size={14} /></button>
           </div>
           <div className="results-list">
@@ -272,7 +274,7 @@ export default function VoiceGallery() {
                   <span className="result-meta">{result.duration || '?'}s</span>
                 </div>
                 <Button size="sm" onClick={() => handleDownload(result)} disabled={isDownloading}>
-                  <Download size={12} /> Get
+                  <Download size={12} /> {t('gallery.download_btn')}
                 </Button>
               </div>
             ))}
@@ -283,23 +285,22 @@ export default function VoiceGallery() {
       <div className="gallery-content">
         <div className="content-header">
           <div className="content-title">
-            {selectedCategory 
-              ? categories.find(c => c.id === selectedCategory)?.name 
-              : 'All Voices'}
-            <span className="count">({voices.length})</span>
+            {selectedCategory
+              ? t(`gallery.cat_${selectedCategory}`, { defaultValue: categories.find(c => c.id === selectedCategory)?.name || '' })
+              : t('gallery.all_voices', { count: voices.length })}
           </div>
           <div className="view-toggle">
-            <button 
-              className={viewMode === 'list' ? 'active' : ''} 
+            <button
+              className={viewMode === 'list' ? 'active' : ''}
               onClick={() => setViewMode('list')}
-              title="List"
+              title={t('gallery.view_mode_list')}
             >
               <List size={14} />
             </button>
-            <button 
-              className={viewMode === 'grid' ? 'active' : ''} 
+            <button
+              className={viewMode === 'grid' ? 'active' : ''}
               onClick={() => setViewMode('grid')}
-              title="Grid"
+              title={t('gallery.view_mode_grid')}
             >
               <Grid size={14} />
             </button>
@@ -311,8 +312,8 @@ export default function VoiceGallery() {
         ) : voices.length === 0 ? (
           <div className="empty">
             <FileAudio size={24} />
-            <p>No voices yet</p>
-            <p>Search above to download clips</p>
+            <p>{t('gallery.no_voices')}</p>
+            <p>{t('gallery.download_hint')}</p>
           </div>
         ) : (
           <div className={`voice-list ${viewMode}`}>
@@ -321,7 +322,7 @@ export default function VoiceGallery() {
                 <button 
                   className="voice-play" 
                   onClick={() => playVoice(voice)}
-                  title={playingVoiceId === voice.id ? 'Pause' : 'Play'}
+                  title={playingVoiceId === voice.id ? t('common.pause') : t('common.play')}
                 >
                   {playingVoiceId === voice.id ? <Pause size={14} /> : <Play size={14} />}
                 </button>
@@ -335,21 +336,21 @@ export default function VoiceGallery() {
                   <button 
                     className="action-btn" 
                     onClick={() => handleSaveAsProfile(voice)}
-                    title="Clone profile"
+                    title={t('gallery.clone_profile')}
                   >
                     <UserPlus size={12} />
                   </button>
                   <button 
                     className="action-btn" 
                     onClick={() => handleCropClick(voice)}
-                    title="Crop audio"
+                    title={t('gallery.crop_audio')}
                   >
                     <Scissors size={12} />
                   </button>
                   <button 
                     className="action-btn danger" 
                     onClick={() => handleDeleteVoice(voice)}
-                    title="Delete"
+                    title={t('common.delete')}
                   >
                     <Trash2 size={12} />
                   </button>

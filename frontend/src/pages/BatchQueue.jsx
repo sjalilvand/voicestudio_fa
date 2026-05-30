@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Activity, RefreshCw, CheckCircle, AlertCircle, Square, Circle,
   Trash2, Download, XCircle, Film, Globe,
@@ -18,30 +19,31 @@ import './BatchQueue.css';
  * Tabs: Active · Done · Failed. Polls every 3s for active jobs.
  * Shows real-time progress (extract → transcribe → translate → generate → mix).
  */
-const TABS = [
-  { id: 'active',   label: 'Active',    icon: Activity     },
-  { id: 'done',     label: 'Completed', icon: CheckCircle },
-  { id: 'failed',   label: 'Failed',    icon: AlertCircle  },
-];
 
 const STATUS_TONE = {
-  queued:    { tone: 'neutral', icon: Circle,      label: 'queued'    },
-  running:   { tone: 'brand',   icon: Activity,    label: 'running'   },
-  done:      { tone: 'success', icon: CheckCircle, label: 'done'      },
-  failed:    { tone: 'danger',  icon: AlertCircle, label: 'failed'    },
-  cancelled: { tone: 'warn',    icon: Square,      label: 'cancelled' },
+  queued:    { tone: 'neutral', icon: Circle,      label: 'batch.status_queued'    },
+  running:   { tone: 'brand',   icon: Activity,    label: 'batch.status_running'   },
+  done:      { tone: 'success', icon: CheckCircle, label: 'batch.status_done'      },
+  failed:    { tone: 'danger',  icon: AlertCircle, label: 'batch.status_failed'    },
+  cancelled: { tone: 'warn',    icon: Square,      label: 'batch.status_cancelled' },
 };
 
 const STAGE_LABELS = {
-  extract:    '🎬 Extracting audio…',
-  transcribe: '📝 Transcribing…',
-  translate:  '🌐 Translating…',
-  generate:   '🗣️ Generating speech…',
-  mix:        '🎛️ Mixing audio…',
-  done:       '✅ Complete',
+  extract:    'batch.stage_extract',
+  transcribe: 'batch.stage_transcribe',
+  translate:  'batch.stage_translate',
+  generate:   'batch.stage_generate',
+  mix:        'batch.stage_mix',
+  done:       'batch.stage_complete',
 };
 
 export default function BatchQueue({ onBack }) {
+  const { t } = useTranslation();
+  const TABS = useMemo(() => [
+    { id: 'active',   label: t('batch.active'),    icon: Activity     },
+    { id: 'done',     label: t('batch.completed'), icon: CheckCircle },
+    { id: 'failed',   label: t('batch.failed'),    icon: AlertCircle  },
+  ], [t]);
   const [tab, setTab] = useState('active');
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -76,47 +78,47 @@ export default function BatchQueue({ onBack }) {
         await enqueueBatchJob(file, langCodes, settings.voiceId || undefined, settings.preserveBg);
         success++;
       } catch (e) {
-        toast.error(`Failed to enqueue ${file.name}: ${e.message}`);
+        toast.error(t('batch.enqueue_failed', { name: file.name, message: e.message }));
       }
     }
     if (success > 0) {
-      toast.success(`${success} video${success > 1 ? 's' : ''} added to queue`);
+      toast.success(t('batch.enqueued', { count: success }));
       setTab('active');
       reload();
     }
-  }, [reload]);
+  }, [t, reload]);
 
   const handleCancel = useCallback(async (id) => {
     try {
       await cancelBatchJob(id);
-      toast.success('Job cancelled');
+      toast.success(t('batch.job_cancelled'));
       reload();
     } catch (e) {
-      toast.error('Cancel failed: ' + e.message);
+      toast.error(t('batch.cancel_failed', { message: e.message }));
     }
-  }, [reload]);
+  }, [t, reload]);
 
   const handleDelete = useCallback(async (id) => {
     try {
       await deleteBatchJob(id);
-      toast.success('Job deleted');
+      toast.success(t('batch.job_deleted'));
       reload();
     } catch (e) {
-      toast.error('Delete failed: ' + e.message);
+      toast.error(t('batch.delete_failed', { message: e.message }));
     }
-  }, [reload]);
+  }, [t, reload]);
 
   return (
     <div className="batch-queue">
       <div className="batch-queue__bar">
-        {onBack && <Button variant="ghost" size="sm" onClick={onBack}>← Back</Button>}
-        <h1><Activity size={15} /> Batch dubbing</h1>
+        {onBack && <Button variant="ghost" size="sm" onClick={onBack}>{t('batch.back')}</Button>}
+        <h1><Activity size={15} /> {t('batch.title')}</h1>
         <div className="batch-queue__bar-spacer" />
         <Button variant="subtle" size="sm" onClick={reload} loading={loading} leading={<RefreshCw size={11} />}>
-          Refresh
+          {t('batch.refresh')}
         </Button>
         <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} leading={<PlusIcon size={11} />}>
-          Add Videos
+          {t('batch.add_videos')}
         </Button>
       </div>
 
@@ -130,9 +132,13 @@ export default function BatchQueue({ onBack }) {
       {jobs.length === 0 && !loading && (
         <Panel variant="flat" padding="lg" className="batch-queue__empty">
           <div>
-            <p>No {tab} jobs.</p>
+            <p>
+              {tab === 'active' && t('batch.no_active')}
+              {tab === 'done' && t('batch.no_completed')}
+              {tab === 'failed' && t('batch.no_failed')}
+            </p>
             <p className="batch-queue__empty-sub">
-              {tab === 'active' && 'Drop videos above to start batch dubbing.'}
+              {tab === 'active' && t('batch.drop_hint')}
               {tab === 'done' && 'Nothing has completed recently.'}
               {tab === 'failed' && 'No failed jobs — enjoy the silence.'}
             </p>
@@ -147,6 +153,7 @@ export default function BatchQueue({ onBack }) {
             job={j}
             onCancel={handleCancel}
             onDelete={handleDelete}
+            t={t}
           />
         ))}
       </div>
@@ -169,7 +176,7 @@ function PlusIcon({ size }) {
   );
 }
 
-function JobCard({ job, onCancel, onDelete }) {
+function JobCard({ job, onCancel, onDelete, t }) {
   const st = STATUS_TONE[job.status] || STATUS_TONE.queued;
   const StIcon = st.icon;
 
@@ -180,14 +187,15 @@ function JobCard({ job, onCancel, onDelete }) {
     : null;
 
   const progress = job.progress;
-  const stageLabel = progress ? (STAGE_LABELS[progress.stage] || progress.stage) : null;
+  const stageLabelKey = progress ? (STAGE_LABELS[progress.stage] || progress.stage) : null;
+  const stageLabel = stageLabelKey ? t(stageLabelKey) : null;
   const pct = progress?.percent ?? 0;
 
   return (
     <Panel variant="flat" padding="md" className={`batch-queue__card batch-queue__card--${job.status}`}>
       <div className="batch-queue__card-head">
         <Badge tone={st.tone} dot>
-          <StIcon size={10} /> {st.label}
+          <StIcon size={10} /> {t(st.label)}
         </Badge>
         <span className="batch-queue__card-filename">
           <Film size={10} /> {job.filename}
@@ -222,7 +230,7 @@ function JobCard({ job, onCancel, onDelete }) {
             )}
             {progress.current_segment != null && progress.total_segments && (
               <span className="batch-queue__progress-segs">
-                seg {progress.current_segment}/{progress.total_segments}
+                {t('batch.seg', { current: progress.current_segment, total: progress.total_segments })}
               </span>
             )}
             <span className="batch-queue__progress-pct">{pct}%</span>
@@ -233,7 +241,7 @@ function JobCard({ job, onCancel, onDelete }) {
       {/* Duration for completed jobs */}
       {duration != null && (
         <div className="batch-queue__card-meta">
-          Completed in {formatDuration(duration)}
+          {t('batch.completed_in', { duration: formatDuration(duration) })}
         </div>
       )}
 
@@ -264,12 +272,12 @@ function JobCard({ job, onCancel, onDelete }) {
       <div className="batch-queue__card-actions">
         {(job.status === 'queued' || job.status === 'running') && (
           <Button variant="ghost" size="xs" onClick={() => onCancel(job.id)} leading={<XCircle size={10} />}>
-            Cancel
+            {t('batch.cancel')}
           </Button>
         )}
         {(job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') && (
           <Button variant="ghost" size="xs" onClick={() => onDelete(job.id)} leading={<Trash2 size={10} />}>
-            Delete
+            {t('batch.delete')}
           </Button>
         )}
       </div>

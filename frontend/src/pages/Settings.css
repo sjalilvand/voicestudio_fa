@@ -454,3 +454,13 @@
   text-decoration: none;
 }
 .settings-credential__help a:hover { text-decoration: underline; }
+
+.settings-section__subtitle {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--chrome-fg-dim);
+  margin: var(--space-5) 0 var(--space-3);
+  font-family: var(--chrome-font-mono);
+}

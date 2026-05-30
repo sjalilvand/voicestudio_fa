@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Film, Volume2, FileText, Package, Music, Layers, Download,
   Check, Globe, Zap, X, Building2,
@@ -17,11 +18,11 @@ import './ExportModal.css';
  * source of truth instead of living as three separate dropdowns.
  */
 const PRESETS = {
-  youtube:  { label: 'YouTube',  tab: 'video', format: 'mp4', preserveBg: true,  burnSubs: false, defaultTrack: 'dub' },
-  archive:  { label: 'Archive',  tab: 'video', format: 'mp4', preserveBg: true,  burnSubs: false, includeAll: true },
-  web:      { label: 'Web',      tab: 'video', format: 'mp4', preserveBg: true,  burnSubs: true,  dualSubs: false },
-  podcast:  { label: 'Podcast',  tab: 'audio', audioFormat: 'mp3', mp3Bitrate: '192', preserveBg: false },
-  studyset: { label: 'Study set',tab: 'subs',  subsFormat: 'srt', subsDual: true },
+  youtube:  { labelKey: 'exportModal.preset_youtube',  tab: 'video', format: 'mp4', preserveBg: true,  burnSubs: false, defaultTrack: 'dub' },
+  archive:  { labelKey: 'exportModal.preset_archive',  tab: 'video', format: 'mp4', preserveBg: true,  burnSubs: false, includeAll: true },
+  web:      { labelKey: 'exportModal.preset_web',      tab: 'video', format: 'mp4', preserveBg: true,  burnSubs: true,  dualSubs: false },
+  podcast:  { labelKey: 'exportModal.preset_podcast',  tab: 'audio', audioFormat: 'mp3', mp3Bitrate: '192', preserveBg: false },
+  studyset: { labelKey: 'exportModal.preset_studyset', tab: 'subs',  subsFormat: 'srt', subsDual: true },
 };
 
 export default function ExportModal({
@@ -38,6 +39,7 @@ export default function ExportModal({
   segmentCount = 0,
   onEnterprise,
 }) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState('video');
 
   // ── Tab-local state (not persisted across sessions — each open is fresh).
@@ -72,10 +74,10 @@ export default function ExportModal({
   }, [open, onClose]);
 
   const allTracks = useMemo(() => {
-    const out = [{ code: 'original', label: 'Original', kind: 'original' }];
+    const out = [{ code: 'original', label: t('exportModal.original'), kind: 'original' }];
     (dubTracks || []).forEach(t => out.push({ code: t, label: t.toUpperCase(), kind: 'dub' }));
     return out;
-  }, [dubTracks]);
+  }, [dubTracks, t]);
 
   const dubOnlyTracks = useMemo(() => allTracks.filter(t => t.kind === 'dub'), [allTracks]);
   const selectedTracks = allTracks.filter(t => exportTracks[t.code] !== false);
@@ -174,35 +176,35 @@ export default function ExportModal({
   };
 
   const runMap = {
-    video: { fn: runVideo, can: canVideo, label: 'Export MP4' },
-    audio: { fn: runAudio, can: canAudio, label: audioBatch === 'each' ? `Export ${selectedDubs.length} audio file${selectedDubs.length === 1 ? '' : 's'}` : 'Export audio' },
-    subs:  { fn: runSubs,  can: canSubs,  label: 'Export subtitles' },
-    pkg:   { fn: null,     can: false,    label: 'Export' },
+    video: { fn: runVideo, can: canVideo, label: t('exportModal.export_mp4') },
+    audio: { fn: runAudio, can: canAudio, label: audioBatch === 'each' ? t('exportModal.export_n_audio', { count: selectedDubs.length }) : t('exportModal.export_audio') },
+    subs:  { fn: runSubs,  can: canSubs,  label: t('exportModal.export_subtitles') },
+    pkg:   { fn: null,     can: false,    label: t('exportModal.export') },
   };
   const active = runMap[tab];
 
   if (!open) return null;
 
   return createPortal(
-    <div className="export-drawer" role="dialog" aria-modal="false" aria-label="Export options">
+    <div className="export-drawer" role="dialog" aria-modal="false" aria-label={t('exportModal.export_options')}>
       <div className="export-drawer__sheet" ref={drawerRef}>
         <header className="export-drawer__head">
           <span className="export-drawer__handle" aria-hidden="true" />
           <span className="export-modal__title-inner">
-            <Download size={13} /> Export
+            <Download size={13} /> {t('exportModal.export')}
             {filename && <span className="export-modal__filename">· {filename}</span>}
           </span>
-          <button type="button" className="export-drawer__close" onClick={onClose} aria-label="Close export drawer">
+          <button type="button" className="export-drawer__close" onClick={onClose} aria-label={t('exportModal.close_drawer')}>
             <X size={13} />
           </button>
         </header>
         <div className="export-modal export-modal--drawer">
         {/* Preset chips */}
         <div className="export-modal__presets">
-          <span className="export-modal__kicker">PRESETS</span>
+          <span className="export-modal__kicker">{t('exportModal.presets')}</span>
           {Object.entries(PRESETS).map(([k, v]) => (
-            <button key={k} type="button" className="export-modal__preset-chip" onClick={() => applyPreset(k)} title={`Jump to ${v.tab} tab with ${v.label} defaults`}>
-              <Zap size={9} /> {v.label}
+            <button key={k} type="button" className="export-modal__preset-chip" onClick={() => applyPreset(k)} title={t('exportModal.preset_title', { tab: v.tab, label: t(v.labelKey) })}>
+              <Zap size={9} /> {t(v.labelKey)}
             </button>
           ))}
         </div>
@@ -210,13 +212,13 @@ export default function ExportModal({
         {/* Track checklist — shared across tabs */}
         <div className="export-modal__tracks">
           <div className="export-modal__section-head">
-            <span className="export-modal__kicker"><Globe size={9} /> TRACKS</span>
+            <span className="export-modal__kicker"><Globe size={9} /> {t('exportModal.tracks')}</span>
             <div className="export-modal__track-quick">
-              <button type="button" onClick={() => setAllTracks(true)}>All</button>
+              <button type="button" onClick={() => setAllTracks(true)}>{t('exportModal.track_all')}</button>
               <span>·</span>
-              <button type="button" onClick={() => setAllTracks(false)}>None</button>
+              <button type="button" onClick={() => setAllTracks(false)}>{t('exportModal.track_none')}</button>
               <span>·</span>
-              <button type="button" onClick={setDubsOnly}>Dubs only</button>
+              <button type="button" onClick={setDubsOnly}>{t('exportModal.track_dubs_only')}</button>
             </div>
           </div>
           <div className="export-modal__track-row">
@@ -226,7 +228,7 @@ export default function ExportModal({
                 <label key={t.code} className={`export-modal__track ${on ? 'is-on' : ''} ${t.kind === 'original' ? 'is-original' : 'is-dub'}`}>
                   <input type="checkbox" checked={on} onChange={() => toggleTrack(t.code)} />
                   <span className="export-modal__track-label">{t.label}</span>
-                  {t.kind === 'dub' && t.code === dubLangCode && <Badge tone="brand" size="xs">primary</Badge>}
+                  {t.kind === 'dub' && t.code === dubLangCode && <Badge tone="brand" size="xs">{t('exportModal.primary')}</Badge>}
                 </label>
               );
             })}
@@ -236,16 +238,16 @@ export default function ExportModal({
         {/* Tabs */}
         <div className="export-modal__tabs">
           <button type="button" className={`export-modal__tab ${tab === 'video' ? 'is-active' : ''}`} onClick={() => setTab('video')}>
-            <Film size={10} /> Video
+            <Film size={10} /> {t('exportModal.tab_video')}
           </button>
           <button type="button" className={`export-modal__tab ${tab === 'audio' ? 'is-active' : ''}`} onClick={() => setTab('audio')}>
-            <Volume2 size={10} /> Audio
+            <Volume2 size={10} /> {t('exportModal.tab_audio')}
           </button>
           <button type="button" className={`export-modal__tab ${tab === 'subs' ? 'is-active' : ''}`} onClick={() => setTab('subs')}>
-            <FileText size={10} /> Subtitles
+            <FileText size={10} /> {t('exportModal.tab_subs')}
           </button>
           <button type="button" className={`export-modal__tab ${tab === 'pkg' ? 'is-active' : ''}`} onClick={() => setTab('pkg')}>
-            <Package size={10} /> Package
+            <Package size={10} /> {t('exportModal.tab_pkg')}
           </button>
         </div>
 
@@ -253,34 +255,34 @@ export default function ExportModal({
         <div className="export-modal__body">
           {tab === 'video' && (
             <div className="export-modal__grid">
-              <Field label="Container">
+              <Field label={t('exportModal.container')}>
                 <Segmented size="sm" value={videoFormat} onChange={setVideoFormat} items={[
-                  { value: 'mp4', label: 'MP4 (H.264)' },
+                  { value: 'mp4', label: t('exportModal.mp4_h264') },
                 ]} />
               </Field>
-              <Field label="Default audio track" hint="Which audio stream plays by default when the viewer opens the file">
+              <Field label={t('exportModal.default_audio_track')} hint={t('exportModal.default_audio_hint')}>
                 <select className="input-base input-base--xs" value={defaultTrack} onChange={e => setDefaultTrack(e.target.value)}>
-                  {exportTracks['original'] !== false && <option value="original">Original</option>}
+                  {exportTracks['original'] !== false && <option value="original">{t('exportModal.original')}</option>}
                   {(dubTracks || []).filter(t => exportTracks[t] !== false).map(t => (
-                    <option key={t} value={t}>{t.toUpperCase()} (Dub)</option>
+                    <option key={t} value={t}>{t.toUpperCase()} {t('exportModal.dub_suffix')}</option>
                   ))}
                 </select>
               </Field>
-              <Field label="Background audio">
+              <Field label={t('exportModal.bg_audio')}>
                 <label className="export-modal__toggle">
                   <input type="checkbox" checked={preserveBg} onChange={e => setPreserveBg(e.target.checked)} />
-                  Mix music/FX under every dubbed track
+                  {t('exportModal.mix_bg_video')}
                 </label>
               </Field>
-              <Field label="Subtitles in video">
+              <Field label={t('exportModal.subs_in_video')}>
                 <label className="export-modal__toggle">
                   <input type="checkbox" checked={burnSubs} onChange={e => setBurnSubs(e.target.checked)} />
-                  Burn subtitles into picture (hardsub)
+                  {t('exportModal.hardsub')}
                 </label>
                 {burnSubs && (
                   <label className="export-modal__toggle export-modal__toggle--indent">
                     <input type="checkbox" checked={!!dualSubs} onChange={e => setDualSubs(e.target.checked)} />
-                    Dual (translated on top of italicised original)
+                    {t('exportModal.dual_subs_video')}
                   </label>
                 )}
               </Field>
@@ -289,14 +291,14 @@ export default function ExportModal({
 
           {tab === 'audio' && (
             <div className="export-modal__grid">
-              <Field label="Format">
+              <Field label={t('exportModal.format')}>
                 <Segmented size="sm" value={audioFormat} onChange={setAudioFormat} items={[
-                  { value: 'wav', label: 'WAV (lossless)' },
-                  { value: 'mp3', label: 'MP3 (compressed)' },
+                  { value: 'wav', label: t('exportModal.wav_lossless') },
+                  { value: 'mp3', label: t('exportModal.mp3_compressed') },
                 ]} />
               </Field>
               {audioFormat === 'mp3' && (
-                <Field label="Bitrate">
+                <Field label={t('exportModal.bitrate')}>
                   <Segmented size="sm" value={mp3Bitrate} onChange={setMp3Bitrate} items={[
                     { value: '128', label: '128k' },
                     { value: '192', label: '192k' },
@@ -305,10 +307,10 @@ export default function ExportModal({
                   ]} />
                 </Field>
               )}
-              <Field label="What to export">
+              <Field label={t('exportModal.what_to_export')}>
                 <Segmented size="sm" value={audioBatch} onChange={setAudioBatch} items={[
-                  { value: 'each',    label: 'Every selected dub (separate files)' },
-                  { value: 'primary', label: 'Single language' },
+                  { value: 'each',    label: t('exportModal.export_each_dub') },
+                  { value: 'primary', label: t('exportModal.export_single_lang') },
                 ]} />
                 {audioBatch === 'primary' && (
                   <select className="input-base input-base--xs export-modal__mt6"
@@ -317,10 +319,10 @@ export default function ExportModal({
                   </select>
                 )}
               </Field>
-              <Field label="Background audio">
+              <Field label={t('exportModal.bg_audio')}>
                 <label className="export-modal__toggle">
                   <input type="checkbox" checked={preserveBg} onChange={e => setPreserveBg(e.target.checked)} />
-                  Mix music/FX under the dubbed voice
+                  {t('exportModal.mix_bg_audio')}
                 </label>
               </Field>
             </div>
@@ -328,27 +330,27 @@ export default function ExportModal({
 
           {tab === 'subs' && (
             <div className="export-modal__grid">
-              <Field label="Format">
+              <Field label={t('exportModal.format')}>
                 <Segmented size="sm" value={subsFormat} onChange={setSubsFormat} items={[
                   { value: 'srt',  label: 'SRT' },
                   { value: 'vtt',  label: 'VTT' },
-                  { value: 'both', label: 'Both' },
+                  { value: 'both', label: t('exportModal.both') },
                 ]} />
               </Field>
-              <Field label="Layout">
+              <Field label={t('exportModal.layout')}>
                 <Segmented size="sm" value={subsDual ? 'dual' : 'single'} onChange={v => setSubsDual(v === 'dual')} items={[
-                  { value: 'single', label: 'Single line' },
-                  { value: 'dual',   label: 'Dual (translated + original)' },
+                  { value: 'single', label: t('exportModal.single_line') },
+                  { value: 'dual',   label: t('exportModal.dual_subs') },
                 ]} />
               </Field>
-              <Field label="Languages">
+              <Field label={t('exportModal.languages')}>
                 <Segmented size="sm" value={subsBatch} onChange={setSubsBatch} items={[
-                  { value: 'target',   label: `Current target (${dubLangCode || '—'})` },
-                  { value: 'all-dubs', label: `All selected dubs (${selectedDubs.length})` },
+                  { value: 'target',   label: t('exportModal.current_target', { code: dubLangCode || '—' }) },
+                  { value: 'all-dubs', label: t('exportModal.all_selected_dubs', { count: selectedDubs.length }) },
                 ]} />
               </Field>
               <div className="export-modal__note">
-                Subtitles are generated from segment text as-is — edit the segment table before exporting if you spotted typos.
+                {t('exportModal.subs_note')}
               </div>
             </div>
           )}
@@ -356,19 +358,19 @@ export default function ExportModal({
           {tab === 'pkg' && (
             <div className="export-modal__pkg-grid">
               <PkgCard
-                icon={<Package size={14} />} title="Per-segment clips (.zip)"
-                body="Every generated segment as a numbered WAV inside a zip — good for review, voice-over post, or dataset building."
-                onClick={runClips} cta="Export clips zip"
+                icon={<Package size={14} />} title={t('exportModal.pkg_clips_title')}
+                body={t('exportModal.pkg_clips_body')}
+                onClick={runClips} cta={t('exportModal.pkg_clips_cta')}
               />
               <PkgCard
-                icon={<Layers size={14} />} title="Stems (.zip)"
-                body="Isolated vocal track + background (music/FX) as separate WAVs. Useful for downstream audio editing."
-                onClick={runStems} cta="Export stems zip"
+                icon={<Layers size={14} />} title={t('exportModal.pkg_stems_title')}
+                body={t('exportModal.pkg_stems_body')}
+                onClick={runStems} cta={t('exportModal.pkg_stems_cta')}
               />
               <PkgCard
-                icon={<Music size={14} />} title="Audio tracks (individual files)"
-                body={`Jump to the Audio tab to export per-language dubs in WAV or MP3 (${(dubTracks || []).length} dub${(dubTracks || []).length === 1 ? '' : 's'} available).`}
-                onClick={() => setTab('audio')} cta="Open audio tab"
+                icon={<Music size={14} />} title={t('exportModal.pkg_audio_title')}
+                body={t('exportModal.pkg_audio_body', { count: (dubTracks || []).length })}
+                onClick={() => setTab('audio')} cta={t('exportModal.pkg_audio_cta')}
                 ghost
               />
             </div>
@@ -378,31 +380,31 @@ export default function ExportModal({
         {/* Commercial license notice */}
         <div className="export-modal__license-notice">
           <Building2 size={11} />
-          <span>Commercial use requires a <button type="button" className="export-modal__license-link" onClick={() => { onClose(); onEnterprise?.(); }}>license</button>.</span>
+          <span>{t('exportModal.license_text')} <button type="button" className="export-modal__license-link" onClick={() => { onClose(); onEnterprise?.(); }}>{t('exportModal.license_link')}</button>.</span>
         </div>
 
         {/* Summary footer */}
         <div className="export-modal__summary">
           <div className="export-modal__summary-left">
-            <span className="export-modal__kicker">OUTPUT</span>
+            <span className="export-modal__kicker">{t('exportModal.output')}</span>
             <code className="export-modal__summary-name" title={filenamePreview}>{filenamePreview}</code>
           </div>
           <div className="export-modal__summary-right">
             {tab !== 'pkg' && (
               <>
-                <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+                <Button variant="ghost" size="sm" onClick={onClose}>{t('common.cancel')}</Button>
                 <Button
                   variant="primary" size="sm"
                   onClick={active.fn} disabled={!active.can}
                   leading={<Download size={11} />}
-                  title={active.can ? '' : 'Nothing selected or track unavailable'}
+                  title={active.can ? '' : t('exportModal.nothing_selected')}
                 >
                   {active.label}
                 </Button>
               </>
             )}
             {tab === 'pkg' && (
-              <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
+              <Button variant="ghost" size="sm" onClick={onClose}>{t('common.close')}</Button>
             )}
           </div>
         </div>

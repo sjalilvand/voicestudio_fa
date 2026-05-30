@@ -111,8 +111,57 @@ import warnings
 import logging
 from logging.handlers import RotatingFileHandler
 
+# ── Restore persisted env vars from prefs.json ────────────────────────────
+# Settings saved via Settings UI (proxy, FFMPEG_PATH, HF_TOKEN, etc.) are
+# written to prefs.json so they survive backend restarts. Read them back
+# here — before any user code reads os.environ — so the values are available
+# from startup.
+_PERSISTED_ENV_PREFIX = "env."
+try:
+    from core.prefs import _load as _load_all_prefs
+    _prefs = _load_all_prefs()
+    for _k, _v in _prefs.items():
+        if _k.startswith(_PERSISTED_ENV_PREFIX) and _v:
+            _env_key = _k[len(_PERSISTED_ENV_PREFIX):]
+            # Do not override an explicitly-set env var (shell > prefs)
+            os.environ.setdefault(_env_key, str(_v))
+except Exception:
+    pass  # prefs.json missing or broken — fine on first run
+
 warnings.filterwarnings("ignore", category=UserWarning)
 torchaudio.set_audio_backend("soundfile")
+
+
+class _WindowsSafeRotatingFileHandler(RotatingFileHandler):
+    def doRollover(self):
+        _log = logging.getLogger("omnivoice.api")
+        try:
+            super().doRollover()
+        except PermissionError:
+            for i in range(self.backupCount - 1, 0, -1):
+                sfn = self.rotation_filename("%s.%d" % (self.baseFilename, i))
+                dfn = self.rotation_filename("%s.%d" % (self.baseFilename, i + 1))
+                if os.path.exists(sfn):
+                    try:
+                        os.replace(sfn, dfn)
+                    except OSError as e:
+                        _log.warning("log rotation rename failed: %s", e)
+            dfn = self.rotation_filename(self.baseFilename + ".1")
+            if os.path.exists(dfn):
+                try:
+                    os.remove(dfn)
+                except OSError as e:
+                    _log.warning("log rotation remove failed: %s", e)
+            try:
+                self.rotate(self.baseFilename, dfn)
+            except PermissionError:
+                _log.warning("log rotation rotate failed (PermissionError)")
+            if self.stream:
+                try:
+                    self.stream.close()
+                except Exception:
+                    pass
+                self.stream = self._open()
 
 _LOG_FMT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 
@@ -179,7 +228,7 @@ if not os.environ.get("OMNIVOICE_DISABLE_FILE_LOG"):
     )  # local import — avoids circular import at module top
 
     try:
-        _file_handler = RotatingFileHandler(
+        _file_handler = _WindowsSafeRotatingFileHandler(
             _LOG_PATH,
             maxBytes=2 * 1024 * 1024,
             backupCount=3,

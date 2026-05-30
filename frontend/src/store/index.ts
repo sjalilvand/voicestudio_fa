@@ -66,6 +66,7 @@ export const useAppStore = create<AppStore>()(
         isSidebarProjectsCollapsed: s.isSidebarProjectsCollapsed,
         sidebarTab:                 s.sidebarTab,
         uiScale:                    s.uiScale,
+        locale:                     s.locale,
         theme:                      s.theme,
         // Generate-tab prefs — users expect their synthesis knobs to stick.
         language:      s.language,

@@ -15,12 +15,15 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { openExternal } from '../api/external';
+import { Trans, useTranslation } from 'react-i18next';
 import { systemLogs, systemLogsTauri, clearSystemLogs, clearTauriLogs } from '../api/system';
-import { useSysinfo, useModelStatus, useSystemInfo } from '../api/hooks';
+import i18n, { LANGUAGES } from '../i18n';
+import { useSysinfo, useModelStatus, useSystemInfo, queryKeys } from '../api/hooks';
+import { useQueryClient } from '@tanstack/react-query';
 import { selectEngine } from '../api/engines';
 import { setupDownloadStreamUrl } from '../api/setup';
 import { getFrontendLogs, clearFrontendLogs } from '../utils/consoleBuffer';
-import { Tabs, Segmented, Button, Badge, Panel, Table, Progress } from '../ui';
+import { Tabs, Segmented, Button, Badge, Table, Progress, Select } from '../ui';
 import { useAppStore } from '../store';
 import ApiKeysPanel from '../components/settings/ApiKeysPanel';
 import PerformancePanel from '../components/settings/PerformancePanel';
@@ -31,24 +34,222 @@ import DictationDemo from '../components/DictationDemo';
 import ReportBugButton from '../components/ReportBugButton';
 import './Settings.css';
 
-const TABS = [
-  { id: 'models',      label: 'Models',      icon: Cpu,          accent: '#f3a5b6' },
-  { id: 'engines',     label: 'Engines',     icon: Plug,         accent: '#d3869b' },
-  { id: 'capture',     label: 'Capture',     icon: Keyboard,     accent: '#83a598' },
-  { id: 'credentials', label: 'Credentials', icon: KeyRound,     accent: '#fe8019' },
-  { id: 'logs',        label: 'Logs',        icon: FileText,     accent: '#fabd2f' },
-  { id: 'about',       label: 'About',       icon: Info,         accent: '#8ec07c' },
-  { id: 'privacy',     label: 'Privacy',     icon: ShieldCheck,  accent: '#b8bb26' },
+const TAB_DEFS = [
+  { id: 'general',     icon: FileText,     accent: '#83a598' },
+  { id: 'models',      icon: Cpu,          accent: '#f3a5b6' },
+  { id: 'engines',     icon: Plug,         accent: '#d3869b' },
+  { id: 'capture',     icon: Keyboard,     accent: '#83a598' },
+  { id: 'credentials', icon: KeyRound,     accent: '#fe8019' },
+  { id: 'logs',        icon: FileText,     accent: '#fabd2f' },
+  { id: 'about',       icon: Info,         accent: '#8ec07c' },
+  { id: 'privacy',     icon: ShieldCheck,  accent: '#b8bb26' },
 ];
 
-const LOG_SOURCES = [
-  { value: 'backend',  label: 'Backend' },
-  { value: 'frontend', label: 'Frontend' },
-  { value: 'tauri',    label: 'Tauri' },
+const LOG_SOURCE_DEFS = [
+  { value: 'backend',  key: 'backend' },
+  { value: 'frontend', key: 'frontend' },
+  { value: 'tauri',    key: 'tauri' },
 ];
 
 const MODEL_ROLE_ORDER = ['tts', 'asr', 'diarisation', 'diarization', 'llm'];
 const MODEL_ROLE_LABEL = { all: 'All', tts: 'TTS', asr: 'ASR', diarisation: 'Diarisation', diarization: 'Diarisation', llm: 'LLM', other: 'Other' };
+
+function GeneralTab() {
+  const { t } = useTranslation();
+  const locale = useAppStore(s => s.locale);
+  const setLocale = useAppStore(s => s.setLocale);
+  const theme = useAppStore(s => s.theme);
+  const setTheme = useAppStore(s => s.setTheme);
+  const { data: sysInfo } = useSystemInfo();
+  const [proxyUrl, setProxyUrl] = useState('');
+  const [proxySaved, setProxySaved] = useState(false);
+  const [proxySaving, setProxySaving] = useState(false);
+  const [ffmpegPath, setFfmpegPath] = useState('');
+  const [ffmpegSaving, setFfmpegSaving] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Sync inputs with persisted values from backend on load
+  useEffect(() => {
+    if (!proxyUrl && !proxySaved) setProxyUrl(sysInfo?.proxy_url || '');
+  }, [sysInfo?.proxy_url]);
+
+  useEffect(() => {
+    if (!ffmpegPath) setFfmpegPath(sysInfo?.ffmpeg_path || '');
+  }, [sysInfo?.ffmpeg_path]);
+
+  const ffmpegOk = sysInfo?.ffmpeg_ok;
+  const ffmpegCurrent = sysInfo?.ffmpeg_path;
+
+  const saveFfmpeg = async () => {
+    const value = ffmpegPath.trim();
+    setFfmpegSaving(true);
+    try {
+      const { API } = await import('../api/client');
+      const r = await fetch(`${API}/system/set-env`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'FFMPEG_PATH', value }),
+      });
+      if (r.ok) {
+        toast.success(t('settings.ffmpeg_saved'));
+        setFfmpegPath('');
+        queryClient.invalidateQueries({ queryKey: queryKeys.systemInfo });
+      } else {
+        const d = await r.json().catch(() => ({}));
+        toast.error(d.detail || t('credentials.save_failed'));
+      }
+    } catch (e) { toast.error(`Save failed: ${e.message}`); }
+    finally { setFfmpegSaving(false); }
+  };
+
+  const handleLocaleChange = (e) => {
+    const id = e.target.value;
+    setLocale(id);
+    i18n.changeLanguage(id);
+  };
+
+  const saveProxy = async () => {
+    const value = proxyUrl.trim();
+    setProxySaving(true);
+    try {
+      const { API } = await import('../api/client');
+      const setEnv = (key, val) => fetch(`${API}/system/set-env`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value: val }),
+      });
+      const r = await setEnv('HTTP_PROXY', value);
+      if (r.ok) {
+        await Promise.all([
+          setEnv('HTTPS_PROXY', value),
+          setEnv('ALL_PROXY', value),
+          setEnv('http_proxy', value),
+          setEnv('https_proxy', value),
+          setEnv('all_proxy', value),
+        ]);
+        toast.success(t('settings.proxy_saved'));
+        setProxySaved(true);
+        queryClient.invalidateQueries({ queryKey: queryKeys.systemInfo });
+      } else {
+        const d = await r.json().catch(() => ({}));
+        toast.error(d.detail || t('settings.proxy_save_failed'));
+      }
+    } catch (e) { toast.error(`Save failed: ${e.message}`); }
+    finally { setProxySaving(false); }
+  };
+
+  const clearProxy = async () => {
+    setProxySaving(true);
+    try {
+      const { API } = await import('../api/client');
+      const setEnv = (key, val) => fetch(`${API}/system/set-env`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value: val }),
+      });
+      await Promise.all([
+        setEnv('HTTP_PROXY', ''),
+        setEnv('HTTPS_PROXY', ''),
+        setEnv('ALL_PROXY', ''),
+        setEnv('http_proxy', ''),
+        setEnv('https_proxy', ''),
+        setEnv('all_proxy', ''),
+      ]);
+      setProxyUrl('');
+      setProxySaved(false);
+      toast.success(t('settings.proxy_cleared'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.systemInfo });
+    } catch (e) { toast.error(`Clear failed: ${e.message}`); }
+    finally { setProxySaving(false); }
+  };
+
+  return (
+    <section className="settings-section">
+      <h2><FileText size={16} color="#83a598" /> {t('settings.general')}</h2>
+
+      <div className="settings-row">
+        <span className="label">{t('settings.language')}</span>
+        <span className="value">
+          <Select size="sm" value={locale} onChange={handleLocaleChange}>
+            {LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>{l.label}</option>
+            ))}
+          </Select>
+        </span>
+      </div>
+
+      <div className="settings-row">
+        <span className="label">{t('settings.theme')}</span>
+        <span className="value">
+          <Select size="sm" value={theme} onChange={e => setTheme(e.target.value)}>
+            <option value="gruvbox">Gruvbox</option>
+            <option value="midnight">Midnight</option>
+            <option value="nord">Nord</option>
+            <option value="solarized">Solarized</option>
+            <option value="rose-pine">Rose Pine</option>
+            <option value="catppuccin">Catppuccin</option>
+          </Select>
+        </span>
+      </div>
+
+      <hr className="settings-divider" />
+
+      <div className="settings-credential">
+        <div className="settings-credential__header">
+          <label className="settings-credential__label">{t('settings.proxy')}</label>
+          {proxySaved && <Badge tone="success" size="xs">{t('credentials.saved')}</Badge>}
+        </div>
+        <p className="settings-credential__help">{t('settings.proxy_desc')}</p>
+        <div className="settings-credential__row">
+          <input
+            type="text"
+            className="settings-credential__input"
+            placeholder="http://127.0.0.1:7890 or socks5://127.0.0.1:7890"
+            value={proxyUrl}
+            onChange={e => setProxyUrl(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && saveProxy()}
+          />
+          <Button size="sm" variant="subtle" onClick={saveProxy} loading={proxySaving} disabled={!proxyUrl.trim()}>
+            {t('credentials.save')}
+          </Button>
+          {proxySaved && (
+            <Button size="sm" variant="ghost" onClick={clearProxy} loading={proxySaving}>
+              {t('settings.proxy_clear')}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <hr className="settings-divider" />
+
+      <div className="settings-credential">
+        <div className="settings-credential__header">
+          <label className="settings-credential__label">{t('settings.ffmpeg')}</label>
+          <Badge tone={ffmpegOk ? 'success' : 'warn'} size="xs">
+            {ffmpegOk ? t('settings.ffmpeg_found') : t('settings.ffmpeg_missing')}
+          </Badge>
+        </div>
+        <p className="settings-credential__help">
+          {ffmpegCurrent ? `${t('settings.ffmpeg_current')}: ${ffmpegCurrent}` : t('settings.ffmpeg_desc')}
+        </p>
+        <div className="settings-credential__row">
+          <input
+            type="text"
+            className="settings-credential__input"
+            placeholder="D:\ffmpeg\bin\ffmpeg.exe"
+            value={ffmpegPath}
+            onChange={e => setFfmpegPath(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && saveFfmpeg()}
+          />
+          <Button size="sm" variant="subtle" onClick={saveFfmpeg} loading={ffmpegSaving} disabled={!ffmpegPath.trim()}>
+            {t('credentials.save')}
+          </Button>
+        </div>
+      </div>
+
+    </section>
+  );
+}
 
 function Row({ label, value, mono }) {
   return (
@@ -85,6 +286,7 @@ import { useModels, useRecommendations, useInstallModel, useDeleteModel } from '
  * progress is pulled from the shared /setup/download-stream SSE.
  */
 export function ModelStoreTab({ info, modelBadge }) {
+  const { t } = useTranslation();
   const modelsQuery = useModels();
   const recoQuery = useRecommendations();
   const data = modelsQuery.data;
@@ -574,8 +776,8 @@ export function ModelStoreTab({ info, modelBadge }) {
   if (loading && !data) {
     return (
       <section className="settings-section">
-        <h2><Cpu size={16} color="#f3a5b6" /> Models</h2>
-        <div className="settings-muted">Loading…</div>
+        <h2><Cpu size={16} color="#f3a5b6" /> {t('settings.models')}</h2>
+        <div className="settings-muted">{t('common.loading')}</div>
       </section>
     );
   }
@@ -792,6 +994,7 @@ export function ModelStoreTab({ info, modelBadge }) {
 
 
 export function EnginesTab() {
+  const { t } = useTranslation();
   const reviewMode = useAppStore(s => s.reviewMode);
   const setReviewMode = useAppStore(s => s.setReviewMode);
 
@@ -817,13 +1020,13 @@ export function EnginesTab() {
             value={reviewMode}
             onChange={setReviewMode}
             items={[
-              { value: 'on',  label: 'Review' },
-              { value: 'off', label: 'Rapid-fire' },
+              { value: 'on',  label: t('engines.review_on') },
+              { value: 'off', label: t('engines.review_off') },
             ]}
           />
           <span className="models-toolbar__sep">·</span>
           <span>
-            {reviewMode === 'on' ? 'Stage banners on' : 'Stage banners off'}
+            {reviewMode === 'on' ? t('engines.banners_on') : t('engines.banners_off')}
           </span>
         </div>
       </div>
@@ -849,6 +1052,7 @@ async function askConfirm(message, title = 'Confirm') {
 }
 
 export default function Settings() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('models');
   const [logSource, setLogSource] = useState('backend');
   const [logs, setLogs] = useState([]);
@@ -1024,11 +1228,13 @@ export default function Settings() {
   return (
     <div className="settings-page">
       <Tabs
-        items={TABS}
+        items={TAB_DEFS.map(def => ({ ...def, label: t(`settings.${def.id}`) }))}
         value={activeTab}
         onChange={setActiveTab}
         className="settings-tabs-ui"
       />
+
+      {activeTab === 'general' && <GeneralTab />}
 
       {activeTab === 'models' && (
         <>
@@ -1052,7 +1258,7 @@ export default function Settings() {
         <section className="settings-section">
           <h2 className="settings-section__head-row">
             <span className="settings-section__head-left">
-              <FileText size={16} color="#fabd2f" /> Logs
+              <FileText size={16} color="#fabd2f" /> {t('settings.logs')}
             </span>
             <span className="settings-section__head-actions">
               <ReportBugButton />
@@ -1063,7 +1269,7 @@ export default function Settings() {
                 loading={loadingLogs}
                 leading={!loadingLogs && <RefreshCw size={11} />}
               >
-                Refresh
+                {t('common.refresh')}
               </Button>
               <Button
                 variant="danger"
@@ -1071,13 +1277,13 @@ export default function Settings() {
                 onClick={onClearLogs}
                 leading={<Trash2 size={11} />}
               >
-                Clear
+                {t('common.clear')}
               </Button>
             </span>
           </h2>
 
           <Segmented
-            items={LOG_SOURCES}
+            items={LOG_SOURCE_DEFS.map(d => ({ ...d, label: t(`common.${d.key}`) }))}
             value={logSource}
             onChange={setLogSource}
           />
@@ -1086,7 +1292,7 @@ export default function Settings() {
             <span>{logMeta.path || '—'}</span>
             {logSource === 'tauri' && !logMeta.exists && (
               <Badge tone="warn">
-                <AlertCircle size={11} /> No Tauri log on disk yet — launch via the desktop build to produce one
+                <AlertCircle size={11} /> {t('logs.no_tauri_log')}
               </Badge>
             )}
           </div>
@@ -1094,10 +1300,10 @@ export default function Settings() {
             {logs.length === 0
               ? <span className="settings-log__empty">
                   {logSource === 'frontend'
-                    ? 'No frontend console entries captured yet. Interact with the app — every console.* will appear here.'
+                    ? t('logs.empty_frontend')
                     : logSource === 'tauri'
-                      ? 'No Tauri log available. Runs in the desktop shell only.'
-                      : "Runtime log is empty. Activity will appear here as the backend logs it."}
+                      ? t('logs.empty_tauri')
+                      : t('logs.empty_backend')}
                 </span>
               : logs.join('')}
           </div>
@@ -1106,28 +1312,28 @@ export default function Settings() {
 
       {activeTab === 'about' && (
         <section className="settings-section">
-          <h2><Info size={16} color="#8ec07c" /> About</h2>
-          <Row label="App"             value="OmniVoice Studio" />
-          <Row label="Version"         value={appVersion || '—'} mono />
-          <Row label="Tauri runtime"   value={tauriVersion || (isTauri() ? '—' : 'web preview')} mono />
-          <Row label="Platform"        value={info?.platform || '—'} />
-          <Row label="Architecture"    value={typeof navigator !== 'undefined' ? (navigator.userAgentData?.platform || navigator.platform || '—') : '—'} mono />
-          <Row label="Python"          value={info?.python || '—'} mono />
-          <Row label="Compute device"  value={info?.device || '—'} mono />
-          <Row label="GPU active"      value={hw?.gpu_active
-            ? <Badge tone="success"><CheckCircle size={11} /> yes</Badge>
-            : <Badge tone="neutral">no</Badge>} />
-          <Row label="RAM"             value={hw ? `${hw.ram?.toFixed(2)} / ${hw.total_ram?.toFixed(2)} GB` : '—'} mono />
-          <Row label="VRAM"            value={hw ? `${hw.vram?.toFixed(2)} GB` : '—'} mono />
-          <Row label="Backend"         value={<Badge tone={status?.status === 'ready' ? 'success' : status?.status === 'loading' ? 'warn' : 'neutral'}>{status?.status || 'unknown'}</Badge>} />
-          <Row label="Active model"    value={status?.repo_id || info?.model_checkpoint || '—'} mono />
-          <Row label="ASR model"       value={info?.asr_model || '—'} mono />
-          <Row label="Translator"      value={info?.translate_provider || '—'} />
-          <Row label="HF token set"    value={info?.has_hf_token ? 'yes' : 'no'} />
-          <Row label="Data directory"  value={info?.data_dir || '—'} mono />
-          <Row label="Outputs"         value={info?.outputs_dir || '—'} mono />
-          <Row label="Crash log"       value={info?.crash_log_path || '—'} mono />
-          <Row label="Update endpoint" value="releases/latest/download/latest.json" mono />
+          <h2><Info size={16} color="#8ec07c" /> {t('settings.about')}</h2>
+          <Row label={t('about.app')}             value="OmniVoice Studio" />
+          <Row label={t('about.version')}         value={appVersion || '—'} mono />
+          <Row label={t('about.tauri_runtime')}   value={tauriVersion || (isTauri() ? '—' : t('about.web_preview'))} mono />
+          <Row label={t('about.platform')}        value={info?.platform || '—'} />
+          <Row label={t('about.architecture')}    value={typeof navigator !== 'undefined' ? (navigator.userAgentData?.platform || navigator.platform || '—') : '—'} mono />
+          <Row label={t('about.python')}          value={info?.python || '—'} mono />
+          <Row label={t('about.compute_device')}  value={info?.device || '—'} mono />
+          <Row label={t('about.gpu_active')}      value={hw?.gpu_active
+            ? <Badge tone="success"><CheckCircle size={11} /> {t('about.yes')}</Badge>
+            : <Badge tone="neutral">{t('about.no')}</Badge>} />
+          <Row label={t('about.ram')}             value={hw ? `${hw.ram?.toFixed(2)} / ${hw.total_ram?.toFixed(2)} GB` : '—'} mono />
+          <Row label={t('about.vram')}            value={hw ? `${hw.vram?.toFixed(2)} GB` : '—'} mono />
+          <Row label={t('about.backend')}         value={<Badge tone={status?.status === 'ready' ? 'success' : status?.status === 'loading' ? 'warn' : 'neutral'}>{status?.status || 'unknown'}</Badge>} />
+          <Row label={t('about.active_model')}    value={status?.repo_id || info?.model_checkpoint || '—'} mono />
+          <Row label={t('about.asr_model')}       value={info?.asr_model || '—'} mono />
+          <Row label={t('about.translator')}      value={info?.translate_provider || '—'} />
+          <Row label={t('about.hf_token')}        value={info?.has_hf_token ? t('about.yes') : t('about.no')} />
+          <Row label={t('about.data_dir')}        value={info?.data_dir || '—'} mono />
+          <Row label={t('about.outputs')}         value={info?.outputs_dir || '—'} mono />
+          <Row label={t('about.crash_log')}       value={info?.crash_log_path || '—'} mono />
+          <Row label={t('about.update_endpoint')} value="releases/latest/download/latest.json" mono />
           <div className="settings-link-row">
             <Button
               variant="primary"
@@ -1137,7 +1343,7 @@ export default function Settings() {
               loading={updateState === 'checking' || updateState === 'downloading'}
               disabled={!isTauri()}
             >
-              {updateState === 'downloading' ? 'Downloading…' : 'Check for updates'}
+              {updateState === 'downloading' ? t('about.downloading') : t('about.check_updates')}
             </Button>
             <Button
               variant="subtle"
@@ -1145,7 +1351,7 @@ export default function Settings() {
               leading={<Copy size={12} />}
               onClick={copyDiagnostics}
             >
-              Copy diagnostics
+              {t('about.copy_diagnostics')}
             </Button>
             <Button
               variant="subtle"
@@ -1153,7 +1359,7 @@ export default function Settings() {
               leading={<ExternalLink size={12} />}
               onClick={() => openExternal('https://github.com/k2-fsa/OmniVoice')}
             >
-              OmniVoice on GitHub
+              {t('about.github')}
             </Button>
             <Button
               variant="subtle"
@@ -1161,7 +1367,7 @@ export default function Settings() {
               leading={<ExternalLink size={12} />}
               onClick={() => openExternal('https://huggingface.co/k2-fsa/OmniVoice')}
             >
-              Model card
+              {t('about.model_card')}
             </Button>
             <Button
               variant="subtle"
@@ -1169,7 +1375,7 @@ export default function Settings() {
               leading={<Building2 size={12} />}
               onClick={() => { useAppStore.getState().setMode?.('enterprise'); }}
             >
-              Commercial License
+              {t('about.commercial_license')}
             </Button>
           </div>
         </section>
@@ -1177,26 +1383,24 @@ export default function Settings() {
 
       {activeTab === 'privacy' && (
         <section className="settings-section">
-          <h2><ShieldCheck size={16} color="#b8bb26" /> Privacy</h2>
+          <h2><ShieldCheck size={16} color="#b8bb26" /> {t('settings.privacy')}</h2>
           <p className="settings-prose">
-            Everything runs on <strong>this machine</strong>. Your audio, video, and transcripts
-            never leave your computer unless you explicitly use an online translator (Google, DeepL, etc.) or
-            push to HuggingFace.
+            <Trans i18nKey="privacy.desc" components={{ 1: <strong /> }} />
           </p>
-          <Row label="Uploads stored at"   value={info?.data_dir ? `${info.data_dir}/` : '—'} mono />
-          <Row label="Outputs stored at"   value={info?.outputs_dir || '—'} mono />
-          <Row label="Generation history"  value={<Badge tone="neutral">Local SQLite</Badge>} />
+          <Row label={t('privacy.uploads_at')}   value={info?.data_dir ? `${info.data_dir}/` : '—'} mono />
+          <Row label={t('privacy.outputs_at')}   value={info?.outputs_dir || '—'} mono />
+          <Row label={t('privacy.gen_history')}  value={<Badge tone="neutral">{t('privacy.local_sqlite')}</Badge>} />
           <Row
-            label="Network calls"
+            label={t('privacy.network_calls')}
             value={
               info?.translate_provider && ['google', 'deepl', 'mymemory', 'microsoft', 'openai'].includes(info.translate_provider)
-                ? <Badge tone="warn"><AlertCircle size={11} /> Translator is online: {info.translate_provider}</Badge>
-                : <Badge tone="success"><CheckCircle size={11} /> Offline translator</Badge>
+                ? <Badge tone="warn"><AlertCircle size={11} /> {t('privacy.translator_online', { provider: info.translate_provider })}</Badge>
+                : <Badge tone="success"><CheckCircle size={11} /> {t('privacy.translator_offline')}</Badge>
             }
           />
           <Row
-            label="Model telemetry"
-            value={<Badge tone="success"><CheckCircle size={11} /> None — no tracking</Badge>}
+            label={t('privacy.model_telemetry')}
+            value={<Badge tone="success"><CheckCircle size={11} /> {t('privacy.no_tracking')}</Badge>}
           />
         </section>
       )}
@@ -1206,21 +1410,28 @@ export default function Settings() {
 
 // ── Credentials Tab ───────────────────────────────────────────────────────
 
+// Flat field list rendered by CredentialsTab. HF_TOKEN is handled by
+// <ApiKeysPanel/> (3-source cascade) and filtered out of this loop; the
+// rest are session/persisted env keys set via /system/set-env. labelKey/
+// helpKey are i18n keys; placeholderKey holds a literal example value
+// (URL / token shape) rendered as-is, matching the original design.
 const CREDENTIAL_FIELDS = [
-  {
-    key: 'HF_TOKEN',
-    label: 'HuggingFace Token',
-    placeholder: 'hf_xxxxxxxxxxxx',
-    help: 'Required for speaker diarization and faster model downloads. Get yours at huggingface.co/settings/tokens.',
-    link: 'https://huggingface.co/settings/tokens',
-  },
-  {
-    key: 'TRANSLATE_API_KEY',
-    label: 'Translation API Key',
-    placeholder: 'API key',
-    help: 'Optional — for DeepL, OpenAI, or paid translation providers. Not needed for Google Translate (free tier).',
-    link: null,
-  },
+  { key: 'HF_TOKEN', labelKey: 'credentials.hf_token', placeholderKey: 'hf_xxxxxxxxxxxx',
+    helpKey: 'credentials.hf_help', link: 'https://huggingface.co/settings/tokens', isPassword: true },
+  { key: 'TRANSLATE_API_KEY', labelKey: 'credentials.translate_key', placeholderKey: 'API key',
+    helpKey: 'credentials.translate_help', isPassword: true },
+  { key: 'TRANSLATE_BASE_URL', labelKey: 'credentials.llm_base_url', placeholderKey: 'https://api.openai.com/v1',
+    helpKey: 'credentials.llm_base_url_help' },
+  { key: 'TRANSLATE_MODEL', labelKey: 'credentials.llm_model', placeholderKey: 'gpt-4o',
+    helpKey: 'credentials.llm_model_help' },
+  { key: 'DEEPL_API_KEY', labelKey: 'credentials.deepl_key', placeholderKey: 'DeepL API key',
+    helpKey: 'credentials.deepl_key', isPassword: true },
+  { key: 'DEEPL_BASE_URL', labelKey: 'credentials.deepl_base_url', placeholderKey: 'https://api.deepl.com/v2',
+    helpKey: 'credentials.deepl_base_url_help' },
+  { key: 'MICROSOFT_API_KEY', labelKey: 'credentials.microsoft_key', placeholderKey: 'Microsoft API key',
+    helpKey: 'credentials.microsoft_key', isPassword: true },
+  { key: 'MICROSOFT_BASE_URL', labelKey: 'credentials.microsoft_base_url', placeholderKey: 'https://api.cognitive.microsofttranslator.com',
+    helpKey: 'credentials.microsoft_base_url_help' },
 ];
 
 // Convert a KeyboardEvent into a tauri-plugin-global-shortcut accelerator
@@ -1250,6 +1461,7 @@ function keyEventToAccelerator(e) {
 }
 
 function HotkeyTab() {
+  const { t } = useTranslation();
   const [current, setCurrent] = useState('');
   const [recording, setRecording] = useState(false);
   const [pending, setPending] = useState('');
@@ -1329,25 +1541,23 @@ function HotkeyTab() {
 
   return (
     <section className="settings-section">
-      <h2><Keyboard size={16} color="#83a598" /> Capture & Dictation</h2>
+      <h2><Keyboard size={16} color="#83a598" /> {t('settings.capture')}</h2>
 
       {!tauri && (
         <p className="settings-prose">
-          Global hotkeys only work in the desktop app. The web UI uses an
-          in-page <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Space</kbd> shortcut
-          while the window has focus.
+          <Trans i18nKey="capture.desc" components={{ 1: <kbd /> }} />
         </p>
       )}
 
       <div className="settings-row">
-        <span className="label">Active shortcut</span>
+        <span className="label">{t('capture.active_shortcut')}</span>
         <span className="value settings-row__mono">{current || '—'}</span>
       </div>
 
       <div className="settings-row">
-        <span className="label">{recording ? 'Press a key combo…' : 'New shortcut'}</span>
+        <span className="label">{recording ? t('capture.press_key') : t('capture.new_shortcut')}</span>
         <span className="value settings-row__mono">
-          {recording ? '⌨︎ listening (Esc to cancel)' : (pending || '—')}
+          {recording ? t('capture.listening') : (pending || '—')}
         </span>
       </div>
 
@@ -1359,7 +1569,7 @@ function HotkeyTab() {
           disabled={!tauri || saving}
           leading={<Keyboard size={12} />}
         >
-          {recording ? 'Recording…' : 'Record shortcut'}
+          {recording ? t('capture.recording') : t('capture.record_shortcut')}
         </Button>
         <Button
           size="sm"
@@ -1367,7 +1577,7 @@ function HotkeyTab() {
           disabled={!tauri || !pending || pending === current}
           loading={saving}
         >
-          Save
+          {t('capture.save')}
         </Button>
         <Button
           size="sm"
@@ -1375,21 +1585,19 @@ function HotkeyTab() {
           onClick={resetDefault}
           disabled={!tauri || saving}
         >
-          Reset to default
+          {t('capture.reset_default')}
         </Button>
       </div>
 
       <p className="settings-prose" style={{ marginTop: 12 }}>
-        The hotkey works system-wide while OmniVoice is running — it focuses
-        the window and starts dictation. Avoid combos already claimed by the
-        OS (on macOS, <code>⌘+Space</code> is Spotlight and <code>⌘+⇧+Space</code>
-        cycles input sources). If registration fails, pick a different combo.
+        <Trans i18nKey="capture.desc_detail" components={{ 1: <code />, 2: <code /> }} />
       </p>
     </section>
   );
 }
 
 function CredentialsTab({ info }) {
+  const { t } = useTranslation();
   const [values, setValues] = useState({});
   const [saving, setSaving] = useState(null);
   const [saved, setSaved] = useState({});
@@ -1406,15 +1614,15 @@ function CredentialsTab({ info }) {
         body: JSON.stringify({ key, value }),
       });
       if (res.ok) {
-        toast.success(`${key} saved for this session`);
+        toast.success(t('credentials.saved_session', { key }));
         setSaved(prev => ({ ...prev, [key]: true }));
         setValues(prev => ({ ...prev, [key]: '' }));
       } else {
         const d = await res.json().catch(() => ({}));
-        toast.error(d.detail || 'Failed to save');
+        toast.error(d.detail || t('credentials.save_failed'));
       }
     } catch (e) {
-      toast.error(`Save failed: ${e.message}`);
+      toast.error(t('credentials.save_error', { message: e.message }));
     } finally {
       setSaving(null);
     }
@@ -1422,7 +1630,7 @@ function CredentialsTab({ info }) {
 
   return (
     <section className="settings-section">
-      <h2><KeyRound size={16} color="#fe8019" /> Credentials</h2>
+      <h2><KeyRound size={16} color="#fe8019" /> {t('settings.credentials')}</h2>
 
       {/* Wave 2 AUTH-03 panel — 3-source cascade with Active badge,
           encrypted-at-rest App-source storage, and live whoami status. */}
@@ -1438,25 +1646,23 @@ function CredentialsTab({ info }) {
       <AppearancePanel />
 
       <p className="settings-prose">
-        Other API keys and tokens are set <strong>for this session only</strong>.
-        For persistence across restarts, set them as environment variables in
-        your shell profile.
+        <Trans i18nKey="credentials.desc" components={{ 1: <strong /> }} />
       </p>
       {CREDENTIAL_FIELDS.filter(f => f.key !== 'HF_TOKEN').map(field => (
         <div key={field.key} className="settings-credential">
           <div className="settings-credential__header">
-            <label className="settings-credential__label">{field.label}</label>
+            <label className="settings-credential__label">{t(field.labelKey)}</label>
             {field.key === 'HF_TOKEN' && (
               <Badge tone={info?.has_hf_token || saved.HF_TOKEN ? 'success' : 'warn'} size="xs">
-                {info?.has_hf_token || saved.HF_TOKEN ? '✓ Set' : '✗ Not set'}
+                {info?.has_hf_token || saved.HF_TOKEN ? t('credentials.saved') : t('credentials.not_set')}
               </Badge>
             )}
           </div>
           <div className="settings-credential__row">
             <input
-              type="password"
+              type={field.isPassword ? 'password' : 'text'}
               className="settings-credential__input"
-              placeholder={field.placeholder}
+              placeholder={field.placeholderKey}
               value={values[field.key] || ''}
               onChange={e => setValues(prev => ({ ...prev, [field.key]: e.target.value }))}
               onKeyDown={e => e.key === 'Enter' && save(field.key)}
@@ -1468,13 +1674,13 @@ function CredentialsTab({ info }) {
               onClick={() => save(field.key)}
               disabled={!(values[field.key] || '').trim()}
             >
-              Save
+              {t('credentials.save')}
             </Button>
           </div>
           <p className="settings-credential__help">
-            {field.help}
+            {t(field.helpKey)}
             {field.link && (
-              <> <a href="#" onClick={e => { e.preventDefault(); openExternal(field.link); }}>Get token →</a></>
+              <> <a href="#" onClick={e => { e.preventDefault(); openExternal(field.link); }}>{t('credentials.get_token')}</a></>
             )}
           </p>
         </div>

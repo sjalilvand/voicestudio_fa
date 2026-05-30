@@ -729,7 +729,8 @@ async def ingest_pipeline(
                 "-ar", "16000", "-ac", "1", audio_path, "-y",
             ])
             if p.returncode != 0:
-                raise Exception(stderr.decode(errors="replace")[:500])
+                msg = (stderr.decode(errors="replace") or f"ffmpeg returned exit code {p.returncode}").strip()[:500]
+                raise Exception(msg)
         except asyncio.CancelledError:
             raise
         except Exception as e:

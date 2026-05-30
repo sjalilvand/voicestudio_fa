@@ -37,6 +37,9 @@ class SystemInfoResponse(BaseModel):
     python: str = ""
     platform: str = ""
     error: str | None = None
+    ffmpeg_ok: bool = False
+    ffmpeg_path: str = ""
+    proxy_url: str = ""
 
 
 class ModelStatusResponse(BaseModel):

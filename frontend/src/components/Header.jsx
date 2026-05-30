@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { Globe, Fingerprint, Wand2, Film, FolderOpen, RefreshCw, Settings2, ChevronRight, ChevronDown, Zap, Building2, Library, FileText, Trash2 } from 'lucide-react';
 import { Button, Badge } from '../ui';
@@ -42,6 +43,7 @@ export default function Header({
   mode, setMode, sysStats, modelStatus, doubleClickMaximize,
   activeProjectName, onFlushMemory,
 }) {
+  const { t } = useTranslation();
   // Default OFF — chrome shouldn't double as a resource monitor. Power users
   // flip this on via Settings → Performance. Idle/Ready/Loading badge +
   // Flush button stay visible regardless (action-relevant).
@@ -163,12 +165,12 @@ export default function Header({
           <Button
             variant="ghost"
             size="sm"
-            title="Force Reload UI"
+            title={t('common.reload')}
             onClick={() => window.location.reload()}
             leading={<RefreshCw size={9} />}
             className="hq-reload-btn"
           >
-            Reload
+            {t('common.reload')}
           </Button>
         )}
       </div>

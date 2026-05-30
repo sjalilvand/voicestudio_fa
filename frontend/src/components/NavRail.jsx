@@ -1,21 +1,22 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Globe, Fingerprint, Wand2, Film, FolderOpen, Settings2, ArrowLeftRight,
   Library, FileText, BookOpen,
 } from 'lucide-react';
 
-const ITEMS = [
-  { id: 'launchpad', label: 'Launchpad', Icon: Globe,       accent: '#f3a5b6' },
-  { id: 'clone',     label: 'Clone',     Icon: Fingerprint, accent: '#d3869b' },
-  { id: 'design',    label: 'Design',    Icon: Wand2,       accent: '#8ec07c' },
-  { id: 'dub',       label: 'Dub',       Icon: Film,        accent: '#fe8019' },
-  { id: 'stories',   label: 'Stories',   Icon: BookOpen,    accent: '#fabd2f' },
-  { id: 'gallery',   label: 'Gallery',   Icon: Library,     accent: '#b8bb26' },
-  { id: 'transcriptions', label: 'Transcripts', Icon: FileText, accent: '#d3869b' },
-  { id: 'projects',  label: 'OmniDrive',  Icon: FolderOpen,  accent: '#83a598' },
+const ITEM_DEFS = [
+  { id: 'launchpad',     Icon: Globe,       tKey: 'launchpad',   accent: '#f3a5b6' },
+  { id: 'clone',         Icon: Fingerprint, tKey: 'clone',       accent: '#d3869b' },
+  { id: 'design',        Icon: Wand2,       tKey: 'design',      accent: '#8ec07c' },
+  { id: 'dub',           Icon: Film,        tKey: 'dub',         accent: '#fe8019' },
+  { id: 'stories',       Icon: BookOpen,    tKey: 'stories',     accent: '#fabd2f' },
+  { id: 'gallery',       Icon: Library,     tKey: 'gallery',     accent: '#b8bb26' },
+  { id: 'transcriptions',Icon: FileText,    tKey: 'transcripts', accent: '#d3869b' },
+  { id: 'projects',      Icon: FolderOpen,  tKey: 'omnidrive',   accent: '#83a598' },
 ];
-const FOOTER_ITEMS = [
-  { id: 'settings', label: 'Settings', Icon: Settings2, accent: '#fabd2f' },
+const FOOTER_DEFS = [
+  { id: 'settings', Icon: Settings2, tKey: 'settings', accent: '#fabd2f' },
 ];
 
 function RailBtn({ active, Icon, label, accent, onClick }) {
@@ -34,15 +35,21 @@ function RailBtn({ active, Icon, label, accent, onClick }) {
 }
 
 export default function NavRail({ mode, setMode, side = 'left', onFlipSide }) {
+  const { t } = useTranslation();
+  const items = React.useMemo(() =>
+    ITEM_DEFS.map(d => ({ ...d, label: t(`nav.${d.tKey}`) })), [t]);
+  const footerItems = React.useMemo(() =>
+    FOOTER_DEFS.map(d => ({ ...d, label: t(`nav.${d.tKey}`) })), [t]);
+
   return (
     <aside className={`nav-rail rail-${side}`}>
       <div className="rail-top">
-        {ITEMS.map((it) => (
+        {items.map((it) => (
           <RailBtn key={it.id} {...it} active={mode === it.id} onClick={() => setMode(it.id)} />
         ))}
       </div>
       <div className="rail-bottom">
-        {FOOTER_ITEMS.map((it) => (
+        {footerItems.map((it) => (
           <RailBtn key={it.id} {...it} active={mode === it.id} onClick={() => setMode(it.id)} />
         ))}
         <button

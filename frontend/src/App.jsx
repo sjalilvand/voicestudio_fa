@@ -57,6 +57,7 @@ import { saveProject as apiSaveProject, loadProject as apiLoadProject, deletePro
 import { exportAction, exportReveal, exportRecord } from './api/exports';
 
 import { isTauri, doubleClickMaximize, fileToMediaUrl, playBlobAudio, playPing } from './utils/media';
+import i18n from './i18n';
 
 function App() {
   // First-run bootstrap: Rust spawns uv sync in a background thread and
@@ -72,12 +73,21 @@ function App() {
   const setUiScale = useAppStore(s => s.setUiScale);
   const theme = useAppStore(s => s.theme);
 
-  // Hydrate the theme on mount so that persisted preference takes effect.
+  const locale = useAppStore(s => s.locale);
+
+  // Hydrate the theme & locale so persisted preferences take effect after
+  // zustand persist rehydrates (async from localStorage) and when the user
+  // changes them at runtime.
   useEffect(() => {
     if (theme && theme !== 'gruvbox') {
       document.documentElement.setAttribute('data-theme', theme);
+    } else {
+      document.documentElement.removeAttribute('data-theme');
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (locale) {
+      i18n.changeLanguage(locale);
+    }
+  }, [locale, theme]);
   const mode = useAppStore(s => s.mode);
   const setMode = useAppStore(s => s.setMode);
   const [navRailSide, setNavRailSide] = useState(() => {

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Search, FolderOpen, Film, Fingerprint, Wand2, Music, Download,
   LayoutGrid, List as ListIcon, Clock, FileText, Mic,
@@ -23,15 +24,6 @@ import './Projects.css';
  * Props reuse what App.jsx already loads — no new fetchers are added so
  * this page stays in sync with the Sidebar and Launchpad automatically.
  */
-
-const FILTERS = [
-  { id: 'all',      label: 'All',            Icon: FolderOpen  },
-  { id: 'dubs',     label: 'Dub Projects',   Icon: Film        },
-  { id: 'profiles', label: 'Voice Profiles', Icon: Fingerprint },
-  { id: 'transcripts', label: 'Transcripts', Icon: Mic         },
-  { id: 'history',  label: 'History',        Icon: Music       },
-  { id: 'exports',  label: 'Exports',        Icon: Download    },
-];
 
 function fmtTime(ts) {
   if (!ts) return '';
@@ -88,6 +80,16 @@ export default function Projects({
   const [filter, setFilter]   = useState('all');
   const [query, setQuery]     = useState('');
   const [view, setView]       = useState('grid');  // grid | list
+  const { t } = useTranslation();
+
+  const FILTERS = [
+    { id: 'all',      label: t('projects.all'),            Icon: FolderOpen  },
+    { id: 'dubs',     label: t('projects.dub_projects'),   Icon: Film        },
+    { id: 'profiles', label: t('projects.voice_profiles'), Icon: Fingerprint },
+    { id: 'transcripts', label: t('projects.transcripts'), Icon: Mic         },
+    { id: 'history',  label: t('projects.history'),        Icon: Music       },
+    { id: 'exports',  label: t('projects.exports'),        Icon: Download    },
+  ];
 
   // Load transcriptions from localStorage (same source as TranscriptionsPage)
   const [transcriptions, setTranscriptions] = useState(() => {
@@ -126,7 +128,7 @@ export default function Projects({
         type: 'profiles',
         id: pr.id,
         title: pr.name || pr.id,
-        subtitle: kind === 'design' ? 'Designed voice' : 'Cloned voice',
+        subtitle: kind === 'design' ? t('projects.designed_voice') : t('projects.cloned_voice'),
         ts: (pr.updated_at || pr.created_at || 0) * 1000,
         accent: kind === 'design' ? '#8ec07c' : '#d3869b',
         Icon: kind === 'design' ? Wand2 : Fingerprint,
@@ -137,7 +139,7 @@ export default function Projects({
       list.push({
         type: 'history',
         id: h.filename || h.id || String(Math.random()),
-        title: (h.text || h.prompt || h.filename || 'Generated audio').slice(0, 80),
+        title: (h.text || h.prompt || h.filename || t('projects.generated_audio')).slice(0, 80),
         subtitle: h.language || h.voice || '',
         ts: h.timestamp || h.created_at || 0,
         accent: '#f3a5b6',
@@ -149,7 +151,7 @@ export default function Projects({
       list.push({
         type: 'exports',
         id: e.path || e.id,
-        title: e.path?.split('/').pop() || e.filename || 'Export',
+        title: e.path?.split('/').pop() || e.filename || t('projects.export'),
         subtitle: e.mode || '',
         ts: (e.created_at || 0) * 1000,
         accent: '#fabd2f',
@@ -157,17 +159,17 @@ export default function Projects({
         onClick: () => e.path && onRevealExport?.(e.path),
       });
     }
-    for (const t of transcriptions) {
+    for (const tr of transcriptions) {
       list.push({
         type: 'transcripts',
-        id: t.id || String(Math.random()),
-        title: (t.text || 'Transcription').slice(0, 120),
-        subtitle: [t.language, t.duration_s ? `${Math.round(t.duration_s)}s` : ''].filter(Boolean).join(' · '),
-        ts: t.timestamp ? Date.parse(t.timestamp) : 0,
+        id: tr.id || String(Math.random()),
+        title: (tr.text || t('projects.transcription')).slice(0, 120),
+        subtitle: [tr.language, tr.duration_s ? `${Math.round(tr.duration_s)}s` : ''].filter(Boolean).join(' · '),
+        ts: tr.timestamp ? Date.parse(tr.timestamp) : 0,
         accent: '#83a598',
         Icon: FileText,
         onClick: () => {
-          navigator.clipboard.writeText(t.text || '');
+          navigator.clipboard.writeText(tr.text || '');
         },
       });
     }
@@ -193,14 +195,14 @@ export default function Projects({
   return (
     <div className="projects">
       <div className="projects__header">
-        <h1 className="projects__title">OmniDrive</h1>
+        <h1 className="projects__title">{t('projects.title')}</h1>
         <div className="projects__toolbar">
           <div className="projects__search">
             <Search size={12} />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Search dubs, clones, transcripts, exports…"
+              placeholder={t('projects.search_placeholder')}
               spellCheck={false}
             />
           </div>
@@ -208,7 +210,7 @@ export default function Projects({
             <button
               className={view === 'grid' ? 'is-active' : ''}
               onClick={() => setView('grid')}
-              title="Card grid"
+              title={t('projects.card_grid')}
               type="button"
             >
               <LayoutGrid size={12} />
@@ -216,7 +218,7 @@ export default function Projects({
             <button
               className={view === 'list' ? 'is-active' : ''}
               onClick={() => setView('list')}
-              title="List"
+              title={t('projects.list')}
               type="button"
             >
               <ListIcon size={12} />
@@ -249,7 +251,7 @@ export default function Projects({
           {visible.length === 0 && (
             <div className="projects__empty">
               <FolderOpen size={28} />
-              <p>{query ? `No matches for “${query}”` : 'Nothing here yet. Start a dub, design a voice, or generate audio to see it appear.'}</p>
+              <p>{query ? t('projects.no_matches', { query }) : t('projects.empty_hint')}</p>
             </div>
           )}
           {visible.map(it => (

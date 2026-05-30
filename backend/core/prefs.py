@@ -46,6 +46,7 @@ def _save(data: dict) -> None:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
         os.replace(tmp, _PREFS_PATH)
+        os.chmod(_PREFS_PATH, 0o600)
     except Exception:
         try:
             os.unlink(tmp)
@@ -61,6 +62,13 @@ def get(key: str, default: Any = None) -> Any:
 def set_(key: str, value: Any) -> None:
     data = _load()
     data[key] = value
+    _save(data)
+
+
+def delete(key: str) -> None:
+    """Remove *key* from prefs.json if present."""
+    data = _load()
+    data.pop(key, None)
     _save(data)
 
 

@@ -18,7 +18,8 @@
     <a href="#why-omnivoice-studio">Why OmniVoice Studio?</a> ·
     <a href="#tts-engines">TTS Engines</a> ·
     <a href="#contributing">Contributing</a> ·
-    <a href="https://discord.gg/bzQavDfVV9">Discord</a>
+    <a href="https://discord.gg/bzQavDfVV9">Discord</a> ·
+    <a href="README_CN.md"><strong>简体中文</strong></a>
   </p>
 
   <p>

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { List } from 'react-window';
 import DubSegmentRow from './DubSegmentRow';
 import { Table, Select } from '../ui';
@@ -9,13 +10,13 @@ const BASE_ROW_HEIGHT = 26;
 const ROW_HEIGHT_WITH_ORIG = 40;
 
 const COLUMNS = [
-  { key: 'time',  label: 'Time',  width: 46 },
-  { key: 'spkr',  label: 'Spkr',  width: 40 },
-  { key: 'text',  label: 'Text',  flex: 1 },
-  { key: 'lang',  label: 'Lang',  width: 38 },
-  { key: 'voice', label: 'Voice', width: 56 },
-  { key: 'vol',   label: 'Vol',   width: 36, title: 'Volume (0–200%)' },
-  { key: 'act',   label: '',      width: 38 },
+  { key: 'time',  width: 50 },
+  { key: 'spkr',  width: 45 },
+  { key: 'text',  flex: 1 },
+  { key: 'lang',  width: 42 },
+  { key: 'voice', width: 60 },
+  { key: 'vol',   width: 40 },
+  { key: 'act',   width: 42 },
 ];
 
 export default function DubSegmentTable({
@@ -23,6 +24,7 @@ export default function DubSegmentTable({
   selectedIds, onSelect, onSelectAll, onClearSelection,
   onEditField, onDelete, onRestore, onPreview, onSplit, onMerge, onDirect, onSeek,
 }) {
+  const { t } = useTranslation();
   const disabled = dubStep === 'generating' || dubStep === 'stopping';
   const [query, setQuery] = useState('');
   const [speakerFilter, setSpeakerFilter] = useState('');
@@ -36,9 +38,12 @@ export default function DubSegmentTable({
   // below the `filtered` memo so it can depend on it without TDZ.)
   const listRef = useRef(null);
 
-  // react-window v2 needs a concrete height prop — CSS 100 % doesn't cut it.
-  // Measure the body container and pass its height explicitly so the list
-  // renders every row that fits, not just a default-sized window.
+  const columns = COLUMNS.map(c => {
+    if (c.key === 'vol') return { ...c, label: t('segment.vol'), title: t('segment.vol_title') };
+    if (c.key === 'act') return { ...c, label: '' };
+    return { ...c, label: t(`segment.${c.key}`) };
+  });
+
   const bodyRef = useRef(null);
   const [bodyHeight, setBodyHeight] = useState(0);
   useLayoutEffect(() => {
@@ -125,7 +130,7 @@ export default function DubSegmentTable({
   const meta = (
     <>
       {filtered.length}/{segments.length}
-      {selCount > 0 && <span className="dub-segment-table__sel-count"> · {selCount} sel</span>}
+      {selCount > 0 && <span className="dub-segment-table__sel-count"> · {t('segment.sel_count', { count: selCount })}</span>}
     </>
   );
 
@@ -134,7 +139,7 @@ export default function DubSegmentTable({
       <Table.Toolbar
         search={query}
         onSearch={setQuery}
-        searchPlaceholder="Search text…"
+        searchPlaceholder={t('segment.search_placeholder')}
         meta={meta}
       >
         {speakers.length > 1 && (
@@ -144,7 +149,7 @@ export default function DubSegmentTable({
             onChange={(e) => setSpeakerFilter(e.target.value)}
             className="dub-segment-table__spk-filter"
           >
-            <option value="">All speakers</option>
+            <option value="">{t('segment.all_speakers')}</option>
             {speakers.map(s => <option key={s} value={s}>{s}</option>)}
           </Select>
         )}
@@ -152,14 +157,14 @@ export default function DubSegmentTable({
 
       <Table.Header
         className="dub-segment-table__header"
-        columns={COLUMNS}
+        columns={columns}
         leading={
           <span className="dub-segment-table__select-all">
             <input
               type="checkbox"
               checked={allFilteredSelected}
               onChange={(e) => e.target.checked ? onSelectAll(filtered) : onClearSelection()}
-              title="Select all filtered"
+              title={t('segment.select_all_title')}
             />
           </span>
         }
