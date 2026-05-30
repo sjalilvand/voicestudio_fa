@@ -22,9 +22,10 @@ APP_NAME="OmniVoice Studio"
 # ── Detect platform ───────────────────────────────────────────────────────
 OS="$(uname -s)"
 case "$OS" in
-  Darwin) PLATFORM="macos" ;;
-  Linux)  PLATFORM="linux" ;;
-  *)      echo "❌ Unsupported platform: $OS"; exit 1 ;;
+  Darwin)              PLATFORM="macos" ;;
+  Linux)               PLATFORM="linux" ;;
+  MINGW*|MSYS*|CYGWIN*) PLATFORM="windows" ;;  # Git Bash / MSYS2 / Cygwin on Windows
+  *)                   echo "❌ Unsupported platform: $OS"; exit 1 ;;
 esac
 
 # ── Platform-specific paths ───────────────────────────────────────────────
@@ -41,16 +42,27 @@ if [ "$PLATFORM" = "macos" ]; then
   BACKEND_DATA="$HOME/Library/Application Support/OmniVoice"
   TAURI_LOGS="$HOME/Library/Logs/${APP_ID}"
   WEBKIT_DATA="$HOME/Library/WebKit/${APP_ID}"
+  HF_CACHE="${HF_HOME:-$HOME/.cache/huggingface}"
+elif [ "$PLATFORM" = "windows" ]; then
+  # Git Bash exposes Windows env vars. Backend writes to %APPDATA%\OmniVoice
+  # (backend/core/config.py::get_app_data_dir) and relocates the HF cache to
+  # %LOCALAPPDATA%\OmniVoice\hf_cache. Tauri keys its data by APP_ID under
+  # LOCALAPPDATA; WebView2 state lives in EBWebView. All paths are APP_ID/
+  # OmniVoice-scoped, and each rm is guarded by `[ -d ]`, so a slightly-off
+  # path is a no-op, never a wrong delete.
+  APP_DATA="${LOCALAPPDATA}/${APP_ID}"
+  BACKEND_DATA="${APPDATA}/OmniVoice"
+  TAURI_LOGS="${LOCALAPPDATA}/${APP_ID}/logs"
+  WEBKIT_DATA="${LOCALAPPDATA}/${APP_ID}/EBWebView"
+  HF_CACHE="${HF_HOME:-${LOCALAPPDATA}/OmniVoice/hf_cache}"
 else
   # Linux: backend uses ~/.omnivoice (not XDG — see backend/core/config.py).
   APP_DATA="${XDG_DATA_HOME:-$HOME/.local/share}/${APP_ID}"
   BACKEND_DATA="$HOME/.omnivoice"
   TAURI_LOGS="${XDG_DATA_HOME:-$HOME/.local/share}/${APP_ID}/logs"
   WEBKIT_DATA="${XDG_DATA_HOME:-$HOME/.local/share}/${APP_ID}/webview"
+  HF_CACHE="${HF_HOME:-$HOME/.cache/huggingface}"
 fi
-
-# HF cache — where downloaded models live
-HF_CACHE="${HF_HOME:-$HOME/.cache/huggingface}"
 
 # ── Flags ──────────────────────────────────────────────────────────────────
 SKIP_BUILD=false
@@ -203,6 +215,18 @@ if [ "$PLATFORM" = "macos" ]; then
     "$BINARY" "${LAUNCH_ARGS[@]}" &
   else
     echo "❌ No bundle or binary found. Run without --skip-build first."
+    exit 1
+  fi
+elif [ "$PLATFORM" = "windows" ]; then
+  # Windows: launch the raw debug .exe (Git Bash can exec it directly).
+  BINARY="${TAURI_DIR}/target/debug/omnivoice-studio.exe"
+  if [ -f "$BINARY" ]; then
+    echo ""
+    echo "🚀 Launching ${APP_NAME} (Windows debug .exe)..."
+    echo "   Binary: ${BINARY}"
+    "$BINARY" "${LAUNCH_ARGS[@]}" &
+  else
+    echo "❌ No .exe found at ${BINARY}. Run without --skip-build first."
     exit 1
   fi
 else
