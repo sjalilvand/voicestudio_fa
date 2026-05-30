@@ -284,6 +284,33 @@ fn apply_uv_http_env(cmd: &mut Command) {
         .env("UV_HTTP_RETRIES", "5");
 }
 
+/// Default PyTorch ROCm wheel index for the opt-in AMD path (#124). ROCm 6.2 is
+/// the current stable wheel set; overridable via OMNIVOICE_TORCH_INDEX.
+const ROCM_TORCH_INDEX: &str = "https://download.pytorch.org/whl/rocm6.2";
+
+/// `uv pip install` args that replace the default CUDA torch build with the AMD
+/// ROCm wheel (#124). Opt-in (gated on OMNIVOICE_TORCH_VARIANT=rocm by the
+/// caller); the detection side (`get_best_device`) already routes ROCm through
+/// `torch.cuda`, so installing the ROCm wheel is all that's needed.
+fn rocm_torch_reinstall_args(rocm_index_url: &str) -> Vec<String> {
+    vec![
+        "pip".into(), "install".into(), "--reinstall".into(),
+        "torch".into(), "torchaudio".into(),
+        "--index-url".into(), rocm_index_url.into(),
+    ]
+}
+
+/// Whether the user opted into the AMD ROCm torch build via
+/// OMNIVOICE_TORCH_VARIANT=rocm. Default (unset/other) → false (CUDA/CPU path
+/// unchanged). Returns the ROCm wheel index to use when enabled.
+fn rocm_opt_in() -> Option<String> {
+    let variant = std::env::var("OMNIVOICE_TORCH_VARIANT").ok()?;
+    if !variant.eq_ignore_ascii_case("rocm") {
+        return None;
+    }
+    Some(std::env::var("OMNIVOICE_TORCH_INDEX").unwrap_or_else(|_| ROCM_TORCH_INDEX.to_string()))
+}
+
 /// Prepare (and on first run, create) the Python venv that will host the
 /// backend process. Returns (venv_python, backend_source_dir).
 pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Option<&Arc<Mutex<BootstrapStage>>>) -> Option<(PathBuf, PathBuf)> {
@@ -527,6 +554,28 @@ docs/install/troubleshooting.md).",
         return None;
     }
 
+    // Opt-in AMD ROCm (#124): the default install ships the CUDA torch build,
+    // so AMD-only machines fall back to CPU. If the user set
+    // OMNIVOICE_TORCH_VARIANT=rocm, reinstall torch/torchaudio from the ROCm
+    // wheel index. Non-fatal: a failure keeps the working CUDA/CPU build rather
+    // than breaking first-run. Default (unset) leaves everything unchanged.
+    if let Some(rocm_url) = rocm_opt_in() {
+        log::info!("OMNIVOICE_TORCH_VARIANT=rocm → reinstalling torch from {}", rocm_url);
+        let mut rocm_cmd = Command::new(&uv_path);
+        rocm_cmd.env_remove("PYTHONHOME").env_remove("PYTHONPATH").env_remove("LD_LIBRARY_PATH");
+        apply_uv_http_env(&mut rocm_cmd);
+        rocm_cmd.args(rocm_torch_reinstall_args(&rocm_url)).current_dir(&project_dir);
+        let rocm_status = run_streaming(app, "installing_deps", &mut rocm_cmd);
+        if !matches!(rocm_status, Ok(ref s) if s.success()) {
+            log::warn!("ROCm torch reinstall failed ({:?}); keeping default torch build", rocm_status);
+            emit_log(
+                app, "installing_deps",
+                "ROCm torch reinstall failed — keeping the default torch build. \
+See docs/install/linux.md (AMD GPU) to install the ROCm wheel manually.",
+            );
+        }
+    }
+
     Some((venv_py, backend_dir))
 }
 
@@ -548,5 +597,38 @@ mod tests {
         assert_eq!(envs.get("UV_HTTP_TIMEOUT").map(String::as_str), Some("120"));
         assert_eq!(envs.get("UV_HTTP_CONNECT_TIMEOUT").map(String::as_str), Some("30"));
         assert_eq!(envs.get("UV_HTTP_RETRIES").map(String::as_str), Some("5"));
+    }
+
+    #[test]
+    fn rocm_reinstall_args_target_the_rocm_index() {
+        let args = rocm_torch_reinstall_args(ROCM_TORCH_INDEX);
+        assert_eq!(args[0], "pip");
+        assert_eq!(args[1], "install");
+        assert!(args.iter().any(|a| a == "--reinstall"));
+        assert!(args.iter().any(|a| a == "torch"));
+        assert!(args.iter().any(|a| a == "torchaudio"));
+        let i = args.iter().position(|a| a == "--index-url").expect("has --index-url");
+        assert!(args[i + 1].contains("rocm6.2"), "default index is the rocm6.2 wheel set");
+    }
+
+    #[test]
+    fn rocm_opt_in_gates_strictly_on_the_env_var() {
+        // This test owns OMNIVOICE_TORCH_VARIANT / _INDEX for its duration; no
+        // other test reads them.
+        std::env::remove_var("OMNIVOICE_TORCH_VARIANT");
+        std::env::remove_var("OMNIVOICE_TORCH_INDEX");
+        assert!(rocm_opt_in().is_none(), "unset → no ROCm (default CUDA/CPU path)");
+
+        std::env::set_var("OMNIVOICE_TORCH_VARIANT", "cuda");
+        assert!(rocm_opt_in().is_none(), "non-rocm value → no ROCm");
+
+        std::env::set_var("OMNIVOICE_TORCH_VARIANT", "ROCm");
+        assert_eq!(rocm_opt_in().as_deref(), Some(ROCM_TORCH_INDEX), "case-insensitive opt-in → default index");
+
+        std::env::set_var("OMNIVOICE_TORCH_INDEX", "https://example.test/rocm6.3");
+        assert_eq!(rocm_opt_in().as_deref(), Some("https://example.test/rocm6.3"), "index override honored");
+
+        std::env::remove_var("OMNIVOICE_TORCH_VARIANT");
+        std::env::remove_var("OMNIVOICE_TORCH_INDEX");
     }
 }
