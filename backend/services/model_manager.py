@@ -515,6 +515,45 @@ def _classify_diarization_error(exc: BaseException) -> str:
     return DIARIZATION_ERR_LOAD
 
 
+def _ensure_pyannote_hf_token_compat():
+    """pyannote-audio 3.x calls huggingface_hub.hf_hub_download / snapshot_download
+    with the ``use_auth_token`` kwarg, which huggingface_hub 1.x removed (only
+    ``token`` remains) — raising ``hf_hub_download() got an unexpected keyword
+    argument 'use_auth_token'`` and breaking diarization (#167).
+
+    Wrap those functions to translate the deprecated kwarg. We patch
+    huggingface_hub itself BEFORE pyannote is imported, so pyannote's
+    ``from huggingface_hub import hf_hub_download`` binds the wrapped fn; we
+    also patch any already-imported pyannote submodule that bound it directly.
+    Idempotent (guarded by an attribute marker).
+    """
+    import functools
+    import sys as _sys
+    import huggingface_hub as _hf
+
+    def _wrap(orig):
+        if orig is None or getattr(orig, "_ov_uat_shim", False):
+            return orig
+
+        @functools.wraps(orig)
+        def _wrapped(*args, **kwargs):
+            if "use_auth_token" in kwargs:
+                kwargs.setdefault("token", kwargs.pop("use_auth_token"))
+            return orig(*args, **kwargs)
+
+        _wrapped._ov_uat_shim = True
+        return _wrapped
+
+    for _name in ("hf_hub_download", "snapshot_download"):
+        if hasattr(_hf, _name):
+            setattr(_hf, _name, _wrap(getattr(_hf, _name)))
+    for _modname, _mod in list(_sys.modules.items()):
+        if _modname.startswith("pyannote.") and _mod is not None:
+            for _name in ("hf_hub_download", "snapshot_download"):
+                if hasattr(_mod, _name):
+                    setattr(_mod, _name, _wrap(getattr(_mod, _name)))
+
+
 def get_diarization_pipeline(return_error: bool = False):
     """Load (or return the cached) pyannote speaker-diarization-3.1 pipeline.
 
@@ -542,6 +581,7 @@ def get_diarization_pipeline(return_error: bool = False):
     hf_token = resolved.token
     try:
         torch = _lazy_torch()
+        _ensure_pyannote_hf_token_compat()  # #167: use_auth_token -> token
         from pyannote.audio import Pipeline
         logger.info("Loading Pyannote Diarization Pipeline...")
         _diar_pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=hf_token)
