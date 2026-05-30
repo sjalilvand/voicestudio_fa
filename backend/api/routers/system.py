@@ -38,6 +38,21 @@ _is_cuda = torch.cuda.is_available()
 psutil.cpu_percent(interval=None)
 
 
+def _ui_port() -> int:
+    """The Vite UI dev-server port, single-sourced from OMNIVOICE_UI_PORT.
+
+    Mirrors the resolver in main.py (kept local to avoid importing the app
+    module). Falls back to 3901 on a missing or malformed value.
+    """
+    raw = os.environ.get("OMNIVOICE_UI_PORT")
+    if raw is None:
+        return 3901
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return 3901
+
+
 def _has_hf_token() -> bool:
     # Phase 1 AUTH-01..06 cascade. Delegates to the 3-source resolver
     # (App → Env → HF-CLI) instead of reading env/HF-CLI directly. This
@@ -171,6 +186,9 @@ def system_info():
             "share_port": network_share.get_state().share_port,
             "lan_addresses": network_share.get_state().lan_addresses,
             "pin_required": bool(network_share.get_state().pin),
+            "backend_port": network_share.backend_port(),
+            "share_port_base": network_share.share_port_base(),
+            "ui_port": _ui_port(),
         }
     except Exception as e:
         logger.exception("system_info failed — returning safe defaults")
@@ -191,6 +209,9 @@ def system_info():
             "share_port": network_share.get_state().share_port,
             "lan_addresses": network_share.get_state().lan_addresses,
             "pin_required": bool(network_share.get_state().pin),
+            "backend_port": network_share.backend_port(),
+            "share_port_base": network_share.share_port_base(),
+            "ui_port": _ui_port(),
             "error": str(e),
         }
 
@@ -555,7 +576,15 @@ PERSISTENT_KEYS = {
     "TRANSLATE_BASE_URL", "TRANSLATE_API_KEY", "TRANSLATE_MODEL",
     "DEEPL_API_KEY", "DEEPL_BASE_URL",
     "MICROSOFT_API_KEY", "MICROSOFT_BASE_URL",
+    # User-configurable network ports. Persisted so they survive restarts;
+    # the Rust sidecar reads OMNIVOICE_PORT at startup and the backend derives
+    # the LAN-share/UI ports from the others.
+    "OMNIVOICE_PORT", "OMNIVOICE_SHARE_PORT", "OMNIVOICE_UI_PORT",
 }
+
+# Keys whose value must be a valid TCP port (1024–65535). Validated before
+# being set so a bad value never reaches uvicorn / the share listener.
+_PORT_KEYS = {"OMNIVOICE_PORT", "OMNIVOICE_SHARE_PORT", "OMNIVOICE_UI_PORT"}
 
 
 @router.post("/system/set-env")
@@ -600,6 +629,22 @@ async def set_env_var(body: dict):
                 raise HTTPException(
                     status_code=400,
                     detail=f"File not found: {value}",
+                )
+        # Port keys must be a numeric string in the unprivileged range so a
+        # typo can't drop the backend onto a privileged port (<1024) or an
+        # out-of-range value uvicorn would reject at bind time.
+        if key in _PORT_KEYS:
+            try:
+                port_n = int(value)
+            except (TypeError, ValueError):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid port for {key}: '{value}' is not a number.",
+                )
+            if not (1024 <= port_n <= 65535):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid port for {key}: must be between 1024 and 65535.",
                 )
         os.environ[key] = value
         logger.info("Set environment variable: %s (length=%d)", key, len(value))

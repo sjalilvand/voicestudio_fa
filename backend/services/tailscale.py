@@ -12,7 +12,7 @@ import json
 import shutil
 import subprocess
 
-from services.network_share import BACKEND_PORT
+from services import network_share
 
 _ADMIN_DNS = "https://login.tailscale.com/admin/dns"
 
@@ -58,7 +58,9 @@ def _run(args):
         return {"ok": False, "error": str(e)}
 
 
-def serve_enable(port: int = BACKEND_PORT) -> dict:
+def serve_enable(port: int | None = None) -> dict:
+    if port is None:
+        port = network_share.backend_port()
     cli = _cli()
     if not cli:
         return {"ok": False, "error": "Tailscale CLI not found. Install Tailscale and sign in first."}

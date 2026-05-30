@@ -26,6 +26,40 @@ def test_gen_pin_is_six_digits():
     assert pin.isdigit() and len(pin) == 6
 
 
+# ── Configurable ports (issue: user-configurable network ports) ──────────────
+
+def test_backend_port_defaults_to_3900(monkeypatch):
+    monkeypatch.delenv("OMNIVOICE_PORT", raising=False)
+    assert ns.backend_port() == 3900
+
+
+def test_backend_port_honors_env(monkeypatch):
+    monkeypatch.setenv("OMNIVOICE_PORT", "4000")
+    assert ns.backend_port() == 4000
+
+
+def test_backend_port_bad_env_falls_back(monkeypatch):
+    monkeypatch.setenv("OMNIVOICE_PORT", "not-a-number")
+    assert ns.backend_port() == 3900
+
+
+def test_share_port_base_defaults_to_backend_plus_one(monkeypatch):
+    monkeypatch.delenv("OMNIVOICE_SHARE_PORT", raising=False)
+    monkeypatch.setenv("OMNIVOICE_PORT", "4000")
+    assert ns.share_port_base() == 4001
+
+
+def test_share_port_base_honors_env(monkeypatch):
+    monkeypatch.setenv("OMNIVOICE_SHARE_PORT", "5500")
+    assert ns.share_port_base() == 5500
+
+
+def test_share_port_base_bad_env_falls_back(monkeypatch):
+    monkeypatch.delenv("OMNIVOICE_PORT", raising=False)
+    monkeypatch.setenv("OMNIVOICE_SHARE_PORT", "garbage")
+    assert ns.share_port_base() == 3901
+
+
 from fastapi.testclient import TestClient
 
 
@@ -52,3 +86,38 @@ def test_system_info_has_sharing_fields():
     body = c.get("/system/info").json()
     for k in ("share_enabled", "share_port", "lan_addresses", "pin_required"):
         assert k in body
+
+
+def test_system_info_has_port_fields():
+    c = _loopback_client()
+    body = c.get("/system/info").json()
+    for k in ("backend_port", "share_port_base", "ui_port"):
+        assert k in body
+    # Defaults when no env override is set.
+    assert isinstance(body["backend_port"], int)
+    assert isinstance(body["share_port_base"], int)
+    assert isinstance(body["ui_port"], int)
+
+
+def test_set_env_share_port_rejects_non_numeric():
+    c = _loopback_client()
+    r = c.post("/system/set-env", json={"key": "OMNIVOICE_SHARE_PORT", "value": "abc"})
+    assert r.status_code == 400
+
+
+def test_set_env_share_port_rejects_out_of_range():
+    c = _loopback_client()
+    r = c.post("/system/set-env", json={"key": "OMNIVOICE_SHARE_PORT", "value": "80"})
+    assert r.status_code == 400
+    r = c.post("/system/set-env", json={"key": "OMNIVOICE_SHARE_PORT", "value": "70000"})
+    assert r.status_code == 400
+
+
+def test_set_env_share_port_accepts_valid(monkeypatch):
+    c = _loopback_client()
+    r = c.post("/system/set-env", json={"key": "OMNIVOICE_SHARE_PORT", "value": "5050"})
+    assert r.status_code == 200
+    assert r.json()["set"] is True
+    # Clean up the process-level env mutation so other tests aren't affected.
+    import os
+    os.environ.pop("OMNIVOICE_SHARE_PORT", None)

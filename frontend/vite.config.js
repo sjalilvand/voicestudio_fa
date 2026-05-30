@@ -20,7 +20,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3901,
+    port: Number(process.env.OMNIVOICE_UI_PORT) || 3901,
     strictPort: true,
     host: false,
     watch: {

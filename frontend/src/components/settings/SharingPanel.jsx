@@ -34,6 +34,47 @@ export default function SharingPanel() {
   const [url, setUrl] = useState('');
   const [note, setNote] = useState('');
   const [qr, setQr] = useState('');
+  // Port configuration (read from /system/info; LAN-share port is editable).
+  const [ports, setPorts] = useState(null);
+  const [sharePortInput, setSharePortInput] = useState('');
+  const [savingPort, setSavingPort] = useState(false);
+
+  // Fetch the resolved port config once on mount; cancel-safe.
+  useEffect(() => {
+    const ctrl = { aborted: false };
+    (async () => {
+      try {
+        const info = await apiJson('/system/info');
+        if (ctrl.aborted) return;
+        setPorts(info);
+        if (info?.share_port_base != null) {
+          setSharePortInput(String(info.share_port_base));
+        }
+      } catch {
+        // Loopback-only; if unreachable just hide the ports subsection.
+        if (!ctrl.aborted) setPorts(null);
+      }
+    })();
+    return () => { ctrl.aborted = true; };
+  }, []);
+
+  const saveSharePort = async () => {
+    const n = Number(sharePortInput);
+    if (!Number.isInteger(n) || n < 1024 || n > 65535) {
+      toast.error('Enter a port between 1024 and 65535');
+      return;
+    }
+    setSavingPort(true);
+    try {
+      await apiPost('/system/set-env', { key: 'OMNIVOICE_SHARE_PORT', value: String(n) });
+      setPorts((p) => (p ? { ...p, share_port_base: n } : p));
+      toast.success('LAN-share port saved — applies next time you enable sharing');
+    } catch (e) {
+      toast.error(`Could not save port: ${e.message}`);
+    } finally {
+      setSavingPort(false);
+    }
+  };
 
   const refresh = useCallback(async (signal) => {
     setLoading(true);
@@ -137,6 +178,59 @@ export default function SharingPanel() {
         </p>
         <NetworkToggle />
       </div>
+
+      {/* ── Ports ────────────────────────────────────────────────────── */}
+      {ports && (
+        <div className="sharingpanel__section" data-testid="sharing-ports">
+          <h4 className="sharingpanel__subtitle">
+            <Globe size={12} /> Ports
+          </h4>
+          <p className="sharingpanel__subhelp">
+            These are set via environment variables read at startup. Change the
+            backend or UI port by setting the variable and restarting OmniVoice.
+          </p>
+
+          <div className="sharingpanel__row">
+            <span>Backend port</span>
+            <code className="sharingpanel__addr" data-testid="port-backend">{ports.backend_port}</code>
+            <code className="sharingpanel__envname">OMNIVOICE_PORT</code>
+          </div>
+
+          <div className="sharingpanel__row">
+            <span>UI port</span>
+            <code className="sharingpanel__addr" data-testid="port-ui">{ports.ui_port}</code>
+            <code className="sharingpanel__envname">OMNIVOICE_UI_PORT</code>
+          </div>
+
+          <div className="sharingpanel__row">
+            <label htmlFor="share-port-input">LAN-share port</label>
+            <input
+              id="share-port-input"
+              type="number"
+              min={1024}
+              max={65535}
+              value={sharePortInput}
+              onChange={(e) => setSharePortInput(e.target.value)}
+              className="sharingpanel__portinput"
+              data-testid="port-share-input"
+            />
+            <code className="sharingpanel__envname">OMNIVOICE_SHARE_PORT</code>
+            <button
+              type="button"
+              className="sharingpanel__btn"
+              onClick={saveSharePort}
+              disabled={savingPort}
+              data-testid="port-share-save"
+            >
+              {savingPort ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+          <p className="sharingpanel__note">
+            Backend and UI ports apply on restart. The LAN-share port applies
+            next time you enable sharing.
+          </p>
+        </div>
+      )}
 
       {/* ── Tailscale ────────────────────────────────────────────────── */}
       <div className="sharingpanel__section" data-testid="sharing-tailscale">

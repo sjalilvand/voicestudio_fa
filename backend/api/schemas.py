@@ -44,6 +44,9 @@ class SystemInfoResponse(BaseModel):
     share_port: int | None = None
     lan_addresses: list[str] = []
     pin_required: bool = False
+    backend_port: int = 3900
+    share_port_base: int = 3901
+    ui_port: int = 3901
 
 
 class ModelStatusResponse(BaseModel):

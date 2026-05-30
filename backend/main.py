@@ -538,9 +538,22 @@ class NetworkAccessMiddleware:
         return await self.app(scope, receive, send)
 
 
+# UI dev-server port — single-sourced from OMNIVOICE_UI_PORT so a user who
+# moves the Vite dev server off 3901 still gets a matching CORS allow-list.
+def _ui_port() -> int:
+    raw = os.environ.get("OMNIVOICE_UI_PORT")
+    if raw is None:
+        return 3901
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return 3901
+
+
+_ui = _ui_port()
 _allowed = os.environ.get(
     "OMNIVOICE_ALLOWED_ORIGINS",
-    "http://localhost:3901,http://127.0.0.1:3901,tauri://localhost,http://tauri.localhost",
+    f"http://localhost:{_ui},http://127.0.0.1:{_ui},tauri://localhost,http://tauri.localhost",
 ).split(",")
 
 app.add_middleware(
@@ -634,15 +647,19 @@ if __name__ == "__main__":
     )
     args, _unknown = parser.parse_known_args()
 
+    # Single-sourced from OMNIVOICE_PORT so the bare `python main.py` path and
+    # `--health-check` agree with the Rust sidecar / uvicorn-CLI `--port`.
+    _port = network_share.backend_port()
+
     if args.health_check:
-        HEALTH_URL = "http://127.0.0.1:3900/health"
+        HEALTH_URL = f"http://127.0.0.1:{_port}/health"
         TIMEOUT_S = 60
         INTERVAL_S = 5
 
         def _serve():
             # log_level="warning" silences the per-request access log spam
             # so the smoke output stays readable in GH Actions.
-            uvicorn.run(app, host="127.0.0.1", port=3900, log_level="warning")
+            uvicorn.run(app, host="127.0.0.1", port=_port, log_level="warning")
 
         t = threading.Thread(target=_serve, daemon=True)
         t.start()
@@ -675,4 +692,4 @@ if __name__ == "__main__":
     # set OMNIVOICE_BIND_HOST=0.0.0.0 explicitly (see deploy/docker-compose.yml)
     # — the host-side port mapping is what enforces 127.0.0.1-only there.
     _bind_host = os.environ.get("OMNIVOICE_BIND_HOST", "127.0.0.1")
-    uvicorn.run(app, host=_bind_host, port=3900)
+    uvicorn.run(app, host=_bind_host, port=_port)

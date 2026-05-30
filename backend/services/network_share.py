@@ -6,6 +6,7 @@ are untouched (no restart). Disabling stops it, closing the 0.0.0.0 socket.
 Loopback-only by default: nothing binds 0.0.0.0 until enable() is called.
 """
 import asyncio
+import os
 import secrets
 import socket
 from dataclasses import dataclass, field
@@ -14,7 +15,42 @@ from typing import Optional
 import psutil
 import uvicorn
 
-BACKEND_PORT = 3900  # must match backend/main.py uvicorn.run(port=...)
+_DEFAULT_BACKEND_PORT = 3900  # must match backend/main.py uvicorn.run(port=...)
+
+
+def backend_port() -> int:
+    """The port the main backend listens on.
+
+    Single source of truth is the ``OMNIVOICE_PORT`` env var (read by the Rust
+    sidecar at startup and passed through to uvicorn's ``--port``). LAN-share
+    and Tailscale derive their target ports from this so a user who runs the
+    backend on a custom port gets a consistent share/proxy port. Falls back to
+    the default on a missing or malformed value — never throws.
+    """
+    raw = os.environ.get("OMNIVOICE_PORT")
+    if raw is None:
+        return _DEFAULT_BACKEND_PORT
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return _DEFAULT_BACKEND_PORT
+
+
+def share_port_base() -> int:
+    """The first port LAN sharing tries to bind on 0.0.0.0.
+
+    Defaults to ``backend_port() + 1`` (e.g. 3901 for the default 3900), but
+    can be overridden with ``OMNIVOICE_SHARE_PORT``. ``enable()`` probes
+    upward from here for a free port. Falls back to the default on a missing
+    or malformed value — never throws.
+    """
+    raw = os.environ.get("OMNIVOICE_SHARE_PORT")
+    if raw is None:
+        return backend_port() + 1
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return backend_port() + 1
 
 
 @dataclass
@@ -67,7 +103,7 @@ async def enable(app) -> ShareState:
     global _server, _task, _state
     if _state.enabled:
         return _state
-    port = _find_free_port(BACKEND_PORT + 1)
+    port = _find_free_port(share_port_base())
     pin = _gen_pin()
     config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="warning")
     server = uvicorn.Server(config)

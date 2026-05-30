@@ -229,6 +229,11 @@ pub fn spawn_backend<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Opt
     let err_log_file = fs::File::create(&err_path).ok();
 
     let mut env: Vec<(String, String)> = vec![("PYTHONUNBUFFERED".into(), "1".into())];
+    // Pin the child's OMNIVOICE_PORT to the value Rust resolved so Python's
+    // network_share.backend_port() always agrees with the uvicorn --port we
+    // pass below — otherwise a user-set OMNIVOICE_PORT would change the
+    // LAN-share/Tailscale target while the listener stayed on the Rust port.
+    env.push(("OMNIVOICE_PORT".into(), backend_port().to_string()));
     if cfg!(target_os = "windows") {
         env.push(("TORCHDYNAMO_DISABLE".into(), "1".into()));
         env.push(("HF_HUB_DISABLE_SYMLINKS_WARNING".into(), "1".into()));

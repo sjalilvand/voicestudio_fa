@@ -81,3 +81,25 @@ def test_serve_enable_falls_back_to_http_when_https_fails():
          patch("services.tailscale.subprocess.run", side_effect=_runner(payload, https_ok=False, http_ok=True)):
         r = ts.serve_enable(3900)
     assert r["ok"] and r["scheme"] == "http"
+
+
+def test_serve_enable_proxies_configured_backend_port(monkeypatch):
+    """When OMNIVOICE_PORT is set and serve_enable() is called with no explicit
+    port, the proxy target must use the configured backend port (not 3900)."""
+    monkeypatch.setenv("OMNIVOICE_PORT", "4000")
+    payload = {**_RUNNING, "CertDomains": None}
+    captured = {}
+
+    def run(args, **kw):
+        if "status" in args and "--json" in args:
+            return MagicMock(returncode=0, stdout=json.dumps(payload))
+        if "--http=80" in args:
+            captured["target"] = args[-1]
+            return MagicMock(returncode=0, stdout="", stderr="")
+        return MagicMock(returncode=0, stdout="", stderr="")
+
+    with patch("services.tailscale.shutil.which", return_value="/usr/bin/tailscale"), \
+         patch("services.tailscale.subprocess.run", side_effect=run):
+        r = ts.serve_enable()  # no explicit port → defaults to backend_port()
+    assert r["ok"]
+    assert captured["target"] == "http://127.0.0.1:4000"
