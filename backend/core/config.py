@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 
 def get_app_data_dir():
@@ -48,6 +49,26 @@ VOICES_DIR = os.path.join(DATA_DIR, "voices")       # Reference audio for profil
 OUTPUTS_DIR = os.path.join(DATA_DIR, "outputs")      # Generated audio files
 DUB_DIR = os.path.join(DATA_DIR, "dub_jobs")
 DB_PATH = os.path.join(DATA_DIR, "omnivoice.db")
+
+
+def dub_seg_path(job_id, seg_id):
+    """Per-segment dub WAV path keyed by the STABLE segment id (not its list
+    index), so partial regeneration reuses the right audio after a
+    delete/merge/split shifts positions (#185). A numeric index `i` sanitises to
+    `seg_{i}.wav`, i.e. the legacy index-based name, so old jobs keep resolving
+    via the same helper.
+
+    Both `job_id` and `seg_id` come from the request, so the result is sanitised
+    (separators stripped) AND verified to stay inside DUB_DIR via realpath
+    containment — raises ValueError on any attempt to escape the dub directory.
+    """
+    safe_job = re.sub(r"[^A-Za-z0-9._-]", "_", str(job_id))
+    safe_seg = re.sub(r"[^A-Za-z0-9._-]", "_", str(seg_id))
+    base = os.path.realpath(DUB_DIR)
+    full = os.path.realpath(os.path.join(base, safe_job, f"seg_{safe_seg}.wav"))
+    if full != base and not full.startswith(base + os.sep):
+        raise ValueError(f"dub segment path escapes DUB_DIR: {job_id!r}/{seg_id!r}")
+    return full
 PREVIEW_DIR = os.path.join(DATA_DIR, "preview")
 CRASH_LOG_PATH = os.path.join(DATA_DIR, "crash_log.txt")   # only written on unhandled exceptions
 LOG_PATH = os.path.join(DATA_DIR, "omnivoice.log")          # rolling runtime log — what the Settings UI reads
