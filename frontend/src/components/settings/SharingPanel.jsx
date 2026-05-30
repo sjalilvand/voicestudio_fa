@@ -32,6 +32,7 @@ export default function SharingPanel() {
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [url, setUrl] = useState('');
+  const [note, setNote] = useState('');
   const [qr, setQr] = useState('');
 
   const refresh = useCallback(async (signal) => {
@@ -76,6 +77,7 @@ export default function SharingPanel() {
       const r = await apiPost('/system/tailscale/enable');
       if (r?.ok) {
         setUrl(r.url || '');
+        setNote(r.note || '');
         toast.success('Tailscale serve enabled');
         await refresh();
       } else {
@@ -96,6 +98,7 @@ export default function SharingPanel() {
         toast.error(r.error || 'Could not disable Tailscale');
       } else {
         setUrl('');
+        setNote('');
         toast.success('Tailscale serve disabled');
       }
       await refresh();
@@ -205,6 +208,7 @@ export default function SharingPanel() {
                     <ExternalLink size={12} />
                   </button>
                 </div>
+                {note && <p className="sharingpanel__note" data-testid="tailscale-note">{note}</p>}
                 {qr && (
                   <img
                     className="sharingpanel__qr"

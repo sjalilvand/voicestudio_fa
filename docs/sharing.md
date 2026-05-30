@@ -29,11 +29,13 @@ You can also drive this from **Settings → Sharing & Remote Access**.
 
 ## Tailscale (private remote access, from anywhere)
 
-If you have [Tailscale](https://tailscale.com/download) installed and signed in, you can reach OmniVoice from any of your devices over your private tailnet — encrypted (HTTPS), identity-gated, with **no open ports and no PIN** (Tailscale handles identity and TLS).
+If you have [Tailscale](https://tailscale.com/download) installed and signed in, you can reach OmniVoice from any of your devices over your private tailnet — identity-gated, with **no open ports and no PIN** (Tailscale handles identity, and the WireGuard tunnel encrypts the transport).
 
 1. **Settings → Sharing & Remote Access → Tailscale.**
 2. If Tailscale isn't detected, an **Install Tailscale** link is shown.
-3. Otherwise, **Enable** publishes this backend over your tailnet via `tailscale serve`. The panel shows your `https://<machine>.<tailnet>.ts.net` URL with copy / open / QR.
+3. Otherwise, **Enable** publishes this backend over your tailnet via `tailscale serve`. The panel shows your `<machine>.<tailnet>` URL with copy / open / QR.
+   - By default this serves over **HTTP** on the tailnet (`tailscale serve --http=80`) — which works on any tailnet, because the WireGuard tunnel already encrypts the traffic. No certificate needed.
+   - If your tailnet has **HTTPS Certificates** enabled (admin console → DNS → *HTTPS Certificates*), it serves over **HTTPS** instead and you get an `https://…ts.net` URL. (Forcing HTTPS without that feature is what produces the `error enabling https feature: 404` — so we detect it and fall back to HTTP automatically.)
 4. Open that URL from any device signed in to the same tailnet. **Disable** runs `tailscale serve reset`.
 
 Tailscale proxies the loopback backend directly, so — like LAN sharing — it never restarts the backend or drops the loaded model.
