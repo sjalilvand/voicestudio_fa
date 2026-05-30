@@ -40,6 +40,10 @@ class SystemInfoResponse(BaseModel):
     ffmpeg_ok: bool = False
     ffmpeg_path: str = ""
     proxy_url: str = ""
+    share_enabled: bool = False
+    share_port: int | None = None
+    lan_addresses: list[str] = []
+    pin_required: bool = False
 
 
 class ModelStatusResponse(BaseModel):

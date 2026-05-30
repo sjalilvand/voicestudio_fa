@@ -11,7 +11,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   Cpu, FileText, Info, ShieldCheck, RefreshCw, Trash2, ExternalLink,
   CheckCircle, AlertCircle, Plug, Download, Copy, Building2, KeyRound,
-  Keyboard,
+  Keyboard, Wifi,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { openExternal } from '../api/external';
@@ -29,6 +29,7 @@ import ApiKeysPanel from '../components/settings/ApiKeysPanel';
 import PerformancePanel from '../components/settings/PerformancePanel';
 import AppearancePanel from '../components/settings/AppearancePanel';
 import StoragePanel from '../components/settings/StoragePanel';
+import SharingPanel from '../components/settings/SharingPanel';
 import EngineCompatibilityMatrix from '../components/EngineCompatibilityMatrix';
 import DictationDemo from '../components/DictationDemo';
 import ReportBugButton from '../components/ReportBugButton';
@@ -39,6 +40,7 @@ const TAB_DEFS = [
   { id: 'models',      icon: Cpu,          accent: '#f3a5b6' },
   { id: 'engines',     icon: Plug,         accent: '#d3869b' },
   { id: 'capture',     icon: Keyboard,     accent: '#83a598' },
+  { id: 'sharing',     icon: Wifi,         accent: '#83a598' },
   { id: 'credentials', icon: KeyRound,     accent: '#fe8019' },
   { id: 'logs',        icon: FileText,     accent: '#fabd2f' },
   { id: 'about',       icon: Info,         accent: '#8ec07c' },
@@ -1251,6 +1253,8 @@ export default function Settings() {
           <HotkeyTab />
         </>
       )}
+
+      {activeTab === 'sharing' && <SharingPanel />}
 
       {activeTab === 'credentials' && <CredentialsTab info={info} />}
 

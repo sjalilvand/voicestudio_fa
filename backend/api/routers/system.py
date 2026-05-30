@@ -4,8 +4,10 @@ import uuid
 import psutil
 import asyncio
 import logging
-from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Query
+from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Query, Request
 from core.prefs import set_ as prefs_set, delete as prefs_delete
+from services import network_share
+from services import tailscale as _tailscale
 from api.schemas import SysinfoResponse, SystemInfoResponse, ModelStatusResponse, LogsResponse, FlushMemoryResponse
 from api.dependencies import require_loopback
 from fastapi.responses import FileResponse, StreamingResponse
@@ -165,6 +167,10 @@ def system_info():
             "ffmpeg_ok": bool(_ffmpeg),
             "ffmpeg_path": _ffmpeg or "",
             "proxy_url": os.environ.get("HTTP_PROXY") or os.environ.get("http_proxy") or "",
+            "share_enabled": network_share.get_state().enabled,
+            "share_port": network_share.get_state().share_port,
+            "lan_addresses": network_share.get_state().lan_addresses,
+            "pin_required": bool(network_share.get_state().pin),
         }
     except Exception as e:
         logger.exception("system_info failed — returning safe defaults")
@@ -181,6 +187,10 @@ def system_info():
             "python": sys.version.split()[0],
             "platform": sys.platform,
             "proxy_url": "",
+            "share_enabled": network_share.get_state().enabled,
+            "share_port": network_share.get_state().share_port,
+            "lan_addresses": network_share.get_state().lan_addresses,
+            "pin_required": bool(network_share.get_state().pin),
             "error": str(e),
         }
 
@@ -743,3 +753,50 @@ def quarantine_status():
     from core import gatekeeper_detect
 
     return gatekeeper_detect.quarantine_status()
+
+
+# ── Network sharing (loopback-only control surface) ──────────────────────────
+
+@router.get("/system/network/state")
+async def network_state():
+    st = network_share.get_state()
+    return {
+        "enabled": st.enabled,
+        "share_port": st.share_port,
+        "pin": st.pin,
+        "lan_addresses": st.lan_addresses,
+    }
+
+
+@router.post("/system/network/enable")
+async def network_enable(request: Request):
+    st = await network_share.enable(request.app)
+    return {
+        "enabled": st.enabled,
+        "share_port": st.share_port,
+        "pin": st.pin,
+        "lan_addresses": st.lan_addresses,
+    }
+
+
+@router.post("/system/network/disable")
+async def network_disable(request: Request):
+    st = await network_share.disable(request.app)
+    return {"enabled": st.enabled}
+
+
+# ── Tailscale (loopback-only control surface) ────────────────────────────────
+
+@router.get("/system/tailscale/status")
+async def tailscale_status():
+    return _tailscale.status()
+
+
+@router.post("/system/tailscale/enable")
+async def tailscale_enable():
+    return _tailscale.serve_enable()
+
+
+@router.post("/system/tailscale/disable")
+async def tailscale_disable():
+    return _tailscale.serve_disable()

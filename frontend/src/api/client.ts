@@ -10,6 +10,16 @@ const _host =
     : (typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1');
 export const API = viteEnv.VITE_API_URL || `http://${_host}:${_port}`;
 
+// Capture a QR-supplied PIN once on load. When LAN sharing is on, the host's
+// QR code links to `http://<lan-ip>:<port>/?pin=<pin>`; stash it in
+// sessionStorage so apiFetch attaches it to every request automatically.
+if (typeof window !== 'undefined') {
+  try {
+    const p = new URL(window.location.href).searchParams.get('pin');
+    if (p) sessionStorage.setItem('ov_pin', p);
+  } catch { /* noop */ }
+}
+
 export class ApiError extends Error {
   status?: number;
   detail?: unknown;
@@ -37,8 +47,19 @@ async function readError(res: Response): Promise<string> {
 }
 
 export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Response> {
-  const res = await fetch(apiUrl(path), opts);
+  const pin = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('ov_pin') : null;
+  // Only modify the request when a PIN is set, so the default call shape
+  // (e.g. FormData posts with no headers / no Content-Type override) is
+  // preserved exactly.
+  const finalOpts: RequestInit = pin
+    ? { ...opts, headers: { ...(opts.headers as Record<string, string> || {}), 'X-OmniVoice-Pin': pin } }
+    : opts;
+  const res = await fetch(apiUrl(path), finalOpts);
   if (!res.ok) {
+    // 401 from the LAN PIN middleware on a remote device → surface the gate.
+    if (res.status === 401 && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('ov:pin-required'));
+    }
     const detail = await readError(res);
     throw new ApiError(`${res.status} ${res.statusText}: ${detail}`, { status: res.status, detail });
   }

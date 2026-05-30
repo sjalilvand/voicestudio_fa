@@ -92,6 +92,24 @@ def _is_allowed(rel: str) -> bool:
 
 
 def _iter_source_files():
+    # Scan only git-TRACKED files: the rule governs the committed codebase,
+    # not local untracked/vendored experiments (which also never reach CI).
+    import subprocess
+    try:
+        out = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=str(_REPO), capture_output=True, text=True, timeout=30, check=True,
+        ).stdout
+        names = [n for n in out.split("\0") if n]
+        if names:
+            for n in names:
+                if os.path.splitext(n)[1].lower() in _SKIP_EXT:
+                    continue
+                yield _REPO / n
+            return
+    except Exception:
+        pass
+    # Fallback (not a git checkout): filesystem walk.
     for dirpath, dirnames, filenames in os.walk(_REPO):
         dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
         for name in filenames:

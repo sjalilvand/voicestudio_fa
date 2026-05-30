@@ -248,6 +248,7 @@ if not os.environ.get("OMNIVOICE_DISABLE_FILE_LOG"):
 logger = logging.getLogger("omnivoice.api")
 
 import asyncio
+import secrets
 import time
 import threading
 from contextlib import asynccontextmanager
@@ -255,6 +256,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from scalar_fastapi import get_scalar_api_reference
 import traceback
 
@@ -265,6 +267,7 @@ from core.config import OUTPUTS_DIR, VOICES_DIR, CRASH_LOG_PATH
 from core.tasks import task_manager
 from core import job_store
 from services.model_manager import idle_worker, preload_model
+from services import network_share
 
 from api.routers import (
     system,
@@ -310,6 +313,10 @@ def _env_flag(name: str, default: bool = False) -> bool:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    # Network sharing is loopback-only by default; the PIN middleware stays
+    # inert until enable() sets a PIN. Seed the (disabled) state so the
+    # middleware and /system/network/state always have something to read.
+    app.state.network_share = network_share.get_state()
     from api.routers.gallery import _init_gallery_db
 
     _init_gallery_db()
@@ -473,6 +480,41 @@ async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse({"detail": str(exc)}, status_code=500, headers=headers)
 
 
+_LOOPBACK_CLIENTS = {"127.0.0.1", "::1"}
+_SHELL_PATHS = {"/", "/index.html", "/favicon.ico", "/health"}
+
+
+class NetworkAccessMiddleware(BaseHTTPMiddleware):
+    """When a share PIN is set, require it for non-loopback clients on API
+    routes. Inert when no PIN (default + docker deploys). Loopback (incl.
+    Tailscale-proxied) always bypasses; the SPA shell is always served so the
+    PIN gate UI can load."""
+
+    async def dispatch(self, request, call_next):
+        ns = getattr(request.app.state, "network_share", None)
+        pin = getattr(ns, "pin", None) if ns else None
+        if not pin:
+            return await call_next(request)
+        client = request.client.host if request.client else None
+        if client in _LOOPBACK_CLIENTS:
+            return await call_next(request)
+        path = request.url.path
+        if path in _SHELL_PATHS or path.startswith("/assets/") or path.startswith("/favicon"):
+            return await call_next(request)
+        supplied = (
+            request.headers.get("x-omnivoice-pin")
+            or request.query_params.get("pin")
+            or request.cookies.get("ov_pin")
+            or ""
+        )
+        if not secrets.compare_digest(supplied, pin):
+            return JSONResponse({"detail": "PIN required"}, status_code=401)
+        response = await call_next(request)
+        if request.cookies.get("ov_pin") != pin:
+            response.set_cookie("ov_pin", pin, samesite="lax")
+        return response
+
+
 _allowed = os.environ.get(
     "OMNIVOICE_ALLOWED_ORIGINS",
     "http://localhost:3901,http://127.0.0.1:3901,tauri://localhost,http://tauri.localhost",
@@ -486,6 +528,10 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["Content-Disposition"],
 )
+
+# Registered AFTER CORS so CORS remains the outermost layer (CORS headers are
+# applied even to the 401 PIN-required responses). Inert unless a PIN is set.
+app.add_middleware(NetworkAccessMiddleware)
 
 app.mount("/audio", StaticFiles(directory=OUTPUTS_DIR), name="audio")
 app.mount("/voice_audio", StaticFiles(directory=VOICES_DIR), name="voice_audio")
