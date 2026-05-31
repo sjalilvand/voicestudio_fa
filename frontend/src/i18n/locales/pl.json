@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "clone": "Klonuj",
+    "design": "Projektuj",
+    "dub": "Dubbing",
+    "settings": "Ustawienia",
+    "stories": "Historie"
+  },
+  "settings": {
+    "general": "Ogólne",
+    "theme": "Motyw",
+    "language": "Język",
+    "language_desc": "Wybierz język interfejsu",
+    "appearance": "Wygląd",
+    "sharing": "Udostępnianie",
+    "models": "Modele",
+    "engines": "Silniki",
+    "capture": "Skróty klawiszowe",
+    "credentials": "Dane uwierzytelniające",
+    "logs": "Logi",
+    "about": "O programie",
+    "privacy": "Prywatność"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "Sprawdzanie środowiska…",
+    "downloading_uv": "Pobieranie uv (menedżera pakietów Python)…",
+    "creating_venv": "Tworzenie wirtualnego środowiska Python…",
+    "installing_deps": "Instalowanie zależności — pierwsze uruchomienie, 5–10 min.",
+    "starting_backend": "Uruchamianie backendu…",
+    "ready": "Gotowe",
+    "failed": "Konfiguracja nie powiodła się",
+    "what_to_try": "Co spróbować:",
+    "retry": "Ponów",
+    "clean_retry": "Wyczyść i ponów",
+    "clean_retry_confirm": "Spowoduje to usunięcie buforowanego środowiska Python i ponowne pobranie wszystkich zależności (~5-10 min). Kontynuować?",
+    "hide_logs": "Ukryj logi",
+    "show_logs": "Pokaż logi",
+    "lines_one": "{{count}} wiersz",
+    "lines_other": "{{count}} wierszy",
+    "copy": "Kopiuj",
+    "copied": "Skopiowano!",
+    "waiting_output": "Oczekiwanie na wyjście…",
+    "auto_detect": "Wykryj automatycznie",
+    "suggest_lang": "Przełączyć na język Polski?",
+    "select_lang": "Język:"
+  }
+}

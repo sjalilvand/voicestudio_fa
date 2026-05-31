@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "clone": "استنساخ",
+    "design": "تصميم",
+    "dub": "دبلجة",
+    "settings": "الإعدادات",
+    "stories": "قصص"
+  },
+  "settings": {
+    "general": "عام",
+    "theme": "المظهر",
+    "language": "اللغة",
+    "language_desc": "اختر لغة الواجهة",
+    "appearance": "الشكل",
+    "sharing": "المشاركة",
+    "models": "النماذج",
+    "engines": "المحركات",
+    "capture": "الاختصارات",
+    "credentials": "بيانات الاعتماد",
+    "logs": "السجلات",
+    "about": "حول",
+    "privacy": "الخصوصية"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "جاري التحقق من البيئة…",
+    "downloading_uv": "جاري تنزيل uv (مدير حزم بايثون)…",
+    "creating_venv": "جاري إنشاء بيئة بايثون الافتراضية…",
+    "installing_deps": "جاري تثبيت التبعيات — التشغيل الأول، 5-10 دقائق.",
+    "starting_backend": "جاري تشغيل الخادم الخلفي…",
+    "ready": "جاهز",
+    "failed": "فشل الإعداد",
+    "what_to_try": "ماذا تجرب:",
+    "retry": "إعادة المحاولة",
+    "clean_retry": "تنظيف وإعادة المحاولة",
+    "clean_retry_confirm": "سيؤدي هذا إلى حذف بيئة بايثون المخزنة مؤقتًا وتنزيل جميع التبعيات مجددًا (حوالي 5-10 دقائق). هل تريد الاستمرار؟",
+    "hide_logs": "إخفاء السجلات",
+    "show_logs": "عرض السجلات",
+    "lines_one": "سطر واحد",
+    "lines_other": "{{count}} أسطر",
+    "copy": "نسخ",
+    "copied": "تم النسخ!",
+    "waiting_output": "في انتظار البيانات…",
+    "auto_detect": "تحديد تلقائي",
+    "suggest_lang": "تغيير إلى اللغة العربية؟",
+    "select_lang": "اللغة:"
+  }
+}

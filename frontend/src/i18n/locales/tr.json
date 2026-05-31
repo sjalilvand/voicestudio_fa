@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "clone": "Klonla",
+    "design": "Tasarla",
+    "dub": "Dublaj",
+    "settings": "Ayarlar",
+    "stories": "Hikayeler"
+  },
+  "settings": {
+    "general": "Genel",
+    "theme": "Tema",
+    "language": "Dil",
+    "language_desc": "Arayüz dilini seçin",
+    "appearance": "Görünüm",
+    "sharing": "Paylaşım",
+    "models": "Modeller",
+    "engines": "Motorlar",
+    "capture": "Kısayollar",
+    "credentials": "Kimlik Bilgileri",
+    "logs": "Günlükler",
+    "about": "Hakkında",
+    "privacy": "Gizlilik"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "Ortam kontrol ediliyor…",
+    "downloading_uv": "uv (Python paket yöneticisi) indiriliyor…",
+    "creating_venv": "Python sanal ortamı oluşturuluyor…",
+    "installing_deps": "Bağımlılıklar yükleniyor — ilk çalıştırma, 5-10 dk.",
+    "starting_backend": "Backend başlatılıyor…",
+    "ready": "Hazır",
+    "failed": "Kurulum başarısız",
+    "what_to_try": "Ne denenebilir:",
+    "retry": "Yeniden Dene",
+    "clean_retry": "Temizle ve Yeniden Dene",
+    "clean_retry_confirm": "Bu işlem önbelleğe alınmış Python ortamını silecek ve tüm bağımlılıkları yeniden indirecektir (~5-10 dk). Devam edilsin mi?",
+    "hide_logs": "Günlükleri gizle",
+    "show_logs": "Günlükleri göster",
+    "lines_one": "{{count}} satır",
+    "lines_other": "{{count}} satır",
+    "copy": "Kopyala",
+    "copied": "Kopyalandı!",
+    "waiting_output": "Çıktı bekleniyor…",
+    "auto_detect": "Otomatik algıla",
+    "suggest_lang": "Türkçe'ye geçilsin mi?",
+    "select_lang": "Dil:"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "clone": "Klonen",
+    "design": "Ontwerpen",
+    "dub": "Dubben",
+    "settings": "Instellingen",
+    "stories": "Verhalen"
+  },
+  "settings": {
+    "general": "Algemeen",
+    "theme": "Thema",
+    "language": "Taal",
+    "language_desc": "Selecteer de interface-taal",
+    "appearance": "Uiterlijk",
+    "sharing": "Delen",
+    "models": "Modellen",
+    "engines": "Motoren",
+    "capture": "Sneltoetsen",
+    "credentials": "Inloggegevens",
+    "logs": "Logboeken",
+    "about": "Over",
+    "privacy": "Privacy"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "Omgeving controleren…",
+    "downloading_uv": "uv (Python pakketbeheerder) downloaden…",
+    "creating_venv": "Python virtuele omgeving maken…",
+    "installing_deps": "Afhankelijkheden installeren — eerste run, 5–10 min.",
+    "starting_backend": "Backend starten…",
+    "ready": "Gereed",
+    "failed": "Installatie mislukt",
+    "what_to_try": "Wat te proberen:",
+    "retry": "Opnieuw proberen",
+    "clean_retry": "Wissen & Opnieuw proberen",
+    "clean_retry_confirm": "Dit verwijdert de gecachte Python-omgeving en downloadt alle afhankelijkheden opnieuw (~5-10 min). Doorgaan?",
+    "hide_logs": "Logboeken verbergen",
+    "show_logs": "Logboeken weergeven",
+    "lines_one": "{{count}} regel",
+    "lines_other": "{{count}} regels",
+    "copy": "Kopiëren",
+    "copied": "Gekonieerd!",
+    "waiting_output": "Wachten op uitvoer…",
+    "auto_detect": "Automatisch detecteren",
+    "suggest_lang": "Overschakelen naar het Nederlands?",
+    "select_lang": "Taal:"
+  }
+}

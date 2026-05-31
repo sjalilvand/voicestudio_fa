@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "clone": "복제",
+    "design": "디자인",
+    "dub": "더빙",
+    "settings": "설정",
+    "stories": "스토리"
+  },
+  "settings": {
+    "general": "일반",
+    "theme": "테마",
+    "language": "언어",
+    "language_desc": "인터페이스 언어 선택",
+    "appearance": "화면",
+    "sharing": "공유",
+    "models": "모델",
+    "engines": "엔진",
+    "capture": "입력",
+    "credentials": "자격 증명",
+    "logs": "로그",
+    "about": "정보",
+    "privacy": "개인정보 보호"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "환경 확인 중…",
+    "downloading_uv": "uv(Python 패키지 관리자) 다운로드 중…",
+    "creating_venv": "Python 가상 환경 생성 중…",
+    "installing_deps": "종속성 설치 중 — 첫 실행 시 5~10분 소요.",
+    "starting_backend": "백엔드 시작 중…",
+    "ready": "준비 완료",
+    "failed": "설정 실패",
+    "what_to_try": "해결 방법:",
+    "retry": "재시도",
+    "clean_retry": "정리 후 재시도",
+    "clean_retry_confirm": "캐시된 Python 환경을 삭제하고 모든 종속성을 다시 다운로드합니다(~5-10분 소요). 계속하시겠습니까?",
+    "hide_logs": "로그 숨기기",
+    "show_logs": "로그 표시",
+    "lines_one": "{{count}}줄",
+    "lines_other": "{{count}}줄",
+    "copy": "복사",
+    "copied": "복사됨!",
+    "waiting_output": "출력 대기 중…",
+    "auto_detect": "자동 감지",
+    "suggest_lang": "한국어로 변경하시겠습니까?",
+    "select_lang": "언어:"
+  }
+}

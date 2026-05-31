@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "clone": "Клонировать",
+    "design": "Создать",
+    "dub": "Дублировать",
+    "settings": "Настройки",
+    "stories": "Истории"
+  },
+  "settings": {
+    "general": "Общие",
+    "theme": "Тема",
+    "language": "Язык",
+    "language_desc": "Выберите язык интерфейса",
+    "appearance": "Внешний вид",
+    "sharing": "Общий доступ",
+    "models": "Модели",
+    "engines": "Движки",
+    "capture": "Захват",
+    "credentials": "Ключи",
+    "logs": "Логи",
+    "about": "О программе",
+    "privacy": "Конфиденциальность"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "Проверка окружения…",
+    "downloading_uv": "Загрузка uv (пакетного менеджера Python)…",
+    "creating_venv": "Создание виртуального окружения Python…",
+    "installing_deps": "Установка зависимостей — первый запуск, 5–10 мин.",
+    "starting_backend": "Запуск бэкенда…",
+    "ready": "Готово",
+    "failed": "Ошибка настройки",
+    "what_to_try": "Что попробовать:",
+    "retry": "Повторить",
+    "clean_retry": "Очистить и повторить",
+    "clean_retry_confirm": "Это удалит кэшированное виртуальное окружение Python и заново загрузит все зависимости (~5-10 мин). Продолжить?",
+    "hide_logs": "Скрыть логи",
+    "show_logs": "Показать логи",
+    "lines_one": "{{count}} строка",
+    "lines_other": "{{count}} строк",
+    "copy": "Копировать",
+    "copied": "Скопировано!",
+    "waiting_output": "Ожидание вывода…",
+    "auto_detect": "Автоопределение",
+    "suggest_lang": "Переключить на Русский?",
+    "select_lang": "Язык:"
+  }
+}

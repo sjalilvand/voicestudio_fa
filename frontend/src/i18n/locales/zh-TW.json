@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "clone": "複製聲音",
+    "design": "設計聲音",
+    "dub": "影片配音",
+    "settings": "設定",
+    "stories": "劇本"
+  },
+  "settings": {
+    "general": "一般",
+    "theme": "佈景主題",
+    "language": "顯示語言",
+    "language_desc": "選擇介面顯示語言",
+    "appearance": "外觀設定",
+    "sharing": "網路共享",
+    "models": "模型管理",
+    "engines": "配音引擎",
+    "capture": "鍵盤設定",
+    "credentials": "金鑰憑證",
+    "logs": "系統日誌",
+    "about": "關於軟體",
+    "privacy": "隱私政策"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "正在檢查環境…",
+    "downloading_uv": "正在下載 uv（Python 包管理器）…",
+    "creating_venv": "正在建立 Python 虛擬環境…",
+    "installing_deps": "正在安裝依賴項 — 首次執行需 5–10 分鐘。",
+    "starting_backend": "正在啟動後端…",
+    "ready": "就緒",
+    "failed": "設定失敗",
+    "what_to_try": "嘗試以下操作：",
+    "retry": "重試",
+    "clean_retry": "清理並重試",
+    "clean_retry_confirm": "這將刪除快取的 Python 環境並重新下載所有依賴項（約需 5-10 分鐘）。是否繼續？",
+    "hide_logs": "隱藏日誌",
+    "show_logs": "顯示日誌",
+    "lines_one": "{{count}} 行",
+    "lines_other": "{{count}} 行",
+    "copy": "複製",
+    "copied": "已複製！",
+    "waiting_output": "正在等待輸出…",
+    "auto_detect": "自動偵測",
+    "suggest_lang": "切換到繁體中文？",
+    "select_lang": "語言："
+  }
+}
