@@ -112,7 +112,9 @@ export const createPrefsSlice: StateCreator<PrefsSlice, [], [], PrefsSlice> = (s
   setShowHeaderLiveStats: (on) => set({ showHeaderLiveStats: on }),
   setTimingStrategy:      (s) => set({ timingStrategy: s }),
 
-  locale: 'en',
+  locale: typeof navigator !== 'undefined' ? (
+    ['zh-CN', 'es', 'fr', 'de', 'ja'].find(code => (navigator.language || '').startsWith(code.split('-')[0])) || 'en'
+  ) : 'en',
   setLocale: (l) => set({ locale: l }),
 
   theme: 'gruvbox',

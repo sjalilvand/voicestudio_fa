@@ -877,5 +877,29 @@
     "dubbing_sync": "Synced playback",
     "dubbing_picker": "Try another language:",
     "dubbing_cta": "Run this on your own video →"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "Checking environment…",
+    "downloading_uv": "Downloading uv (Python package manager)…",
+    "creating_venv": "Creating Python virtual environment…",
+    "installing_deps": "Installing dependencies — first run, 5–10 min.",
+    "starting_backend": "Starting backend…",
+    "ready": "Ready",
+    "failed": "Setup failed",
+    "what_to_try": "What to try:",
+    "retry": "Retry",
+    "clean_retry": "Clean & Retry",
+    "clean_retry_confirm": "This will delete the cached Python environment and re-download all dependencies (~5-10 min). Continue?",
+    "hide_logs": "Hide logs",
+    "show_logs": "Show logs",
+    "lines_one": "{{count}} line",
+    "lines_other": "{{count}} lines",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "waiting_output": "Waiting for output…",
+    "auto_detect": "Auto-detect",
+    "suggest_lang": "Switch to {{lang}}?",
+    "select_lang": "Language:"
   }
 }

@@ -1,0 +1,47 @@
+{
+  "nav": {
+    "clone": "Clonar",
+    "design": "Diseñar",
+    "dub": "Doblar",
+    "settings": "Ajustes",
+    "stories": "Historias"
+  },
+  "settings": {
+    "general": "General",
+    "theme": "Tema",
+    "language": "Idioma",
+    "language_desc": "Selecciona el idioma de la interfaz",
+    "appearance": "Apariencia",
+    "sharing": "Compartir",
+    "models": "Modelos",
+    "engines": "Motores",
+    "capture": "Captura",
+    "credentials": "Credenciales",
+    "logs": "Registros",
+    "about": "Acerca de",
+    "privacy": "Privacidad"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "Comprobando el entorno…",
+    "downloading_uv": "Descargando uv (gestor de paquetes de Python)…",
+    "creating_venv": "Creando entorno virtual de Python…",
+    "installing_deps": "Instalando dependencias — primer inicio, 5–10 min.",
+    "starting_backend": "Iniciando backend…",
+    "ready": "Listo",
+    "failed": "Error de configuración",
+    "what_to_try": "Qué intentar:",
+    "retry": "Reintentar",
+    "clean_retry": "Limpiar y reintentar",
+    "clean_retry_confirm": "¿Esto eliminará el entorno de Python en caché y volverá a descargar todas las dependencias (~5-10 min). ¿Continuar?",
+    "hide_logs": "Ocultar registros",
+    "show_logs": "Mostrar registros",
+    "lines": "{{count}} líneas",
+    "copy": "Copiar",
+    "copied": "¡Copiado!",
+    "waiting_output": "Esperando salida…",
+    "auto_detect": "Detectar automáticamente",
+    "suggest_lang": "¿Cambiar al Español?",
+    "select_lang": "Idioma:"
+  }
+}

@@ -211,6 +211,8 @@
     "language_desc": "选择界面显示语言",
     "engines": "引擎",
     "capture": "捕获",
+    "sharing": "分享",
+    "appearance": "外观",
     "credentials": "凭证",
     "proxy": "代理",
     "proxy_desc": "HTTP/SOCKS5 下载代理（yt-dlp、HuggingFace）。支持 http://、https://、socks5://。后端启动后更改需重启。",
@@ -875,5 +877,29 @@
     "dubbing_sync": "同步播放",
     "dubbing_picker": "试试其他语言：",
     "dubbing_cta": "在你自己的视频上运行 →"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "正在检查环境…",
+    "downloading_uv": "正在下载 uv（Python 包管理器）…",
+    "creating_venv": "正在创建 Python 虚拟环境…",
+    "installing_deps": "正在安装依赖项 — 首次运行需 5–10 分钟。",
+    "starting_backend": "正在启动后端…",
+    "ready": "就绪",
+    "failed": "设置失败",
+    "what_to_try": "尝试以下操作：",
+    "retry": "重试",
+    "clean_retry": "清理并重试",
+    "clean_retry_confirm": "这将删除缓存的 Python 环境并重新下载所有依赖项（约需 5-10 分钟）。是否继续？",
+    "hide_logs": "隐藏日志",
+    "show_logs": "显示日志",
+    "lines_one": "{{count}} 行",
+    "lines_other": "{{count}} 行",
+    "copy": "复制",
+    "copied": "已复制！",
+    "waiting_output": "正在等待输出…",
+    "auto_detect": "自动检测",
+    "suggest_lang": "切换到中文？",
+    "select_lang": "语言："
   }
 }
