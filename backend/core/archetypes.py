@@ -82,14 +82,17 @@ _DIALECTS_SORTED = sorted(_CAT[5])                    # 12 Chinese dialects
 
 
 # ── Use-case categories (replaces the named-real-person buckets) ──────────────
+# `icon` values are lucide-react component names; the frontend maps them to SVG
+# components (see frontend/src/utils/archetypeIcons.jsx). No emoji — they render
+# inconsistently across OSes.
 USE_CASES = [
-    {"id": "narration", "name": "Narration & Story", "icon": "📖"},
-    {"id": "conversational", "name": "Conversational", "icon": "💬"},
-    {"id": "characters", "name": "Characters & Animation", "icon": "🎭"},
-    {"id": "social", "name": "Social Media", "icon": "📱"},
-    {"id": "entertainment", "name": "Entertainment & TV", "icon": "📺"},
-    {"id": "advertisement", "name": "Advertisement", "icon": "📣"},
-    {"id": "informative", "name": "Informative & Educational", "icon": "🎓"},
+    {"id": "narration", "name": "Narration & Story", "icon": "BookOpen"},
+    {"id": "conversational", "name": "Conversational", "icon": "MessagesSquare"},
+    {"id": "characters", "name": "Characters & Animation", "icon": "Drama"},
+    {"id": "social", "name": "Social Media", "icon": "Smartphone"},
+    {"id": "entertainment", "name": "Entertainment & TV", "icon": "Tv"},
+    {"id": "advertisement", "name": "Advertisement", "icon": "Megaphone"},
+    {"id": "informative", "name": "Informative & Educational", "icon": "GraduationCap"},
 ]
 _USE_ICON = {c["id"]: c["icon"] for c in USE_CASES}
 
@@ -260,36 +263,36 @@ def _build(gender, age, pitch, *, accent=None, dialect=None, whisper=False,
 # (gender, age, pitch, accent, whisper, use_case, name, icon)
 _FEATURED_SPEC = [
     # Narration & Story
-    ("female", "middle-aged", "low pitch", "british accent", False, "narration", "The Librarian", "📚"),
-    ("male", "middle-aged", "low pitch", "american accent", False, "narration", "The Documentarian", "🎙️"),
-    ("female", "middle-aged", "low pitch", None, True, "narration", "The Calm Guide", "🌙"),
-    ("male", "elderly", "low pitch", "british accent", False, "narration", "The Storyteller", "🧙"),
+    ("female", "middle-aged", "low pitch", "british accent", False, "narration", "The Librarian", "Library"),
+    ("male", "middle-aged", "low pitch", "american accent", False, "narration", "The Documentarian", "Mic"),
+    ("female", "middle-aged", "low pitch", None, True, "narration", "The Calm Guide", "Moon"),
+    ("male", "elderly", "low pitch", "british accent", False, "narration", "The Storyteller", "Wand2"),
     # Conversational
-    ("female", "young adult", "moderate pitch", "american accent", False, "conversational", "The Neighbor", "😊"),
-    ("female", "young adult", "moderate pitch", "indian accent", False, "conversational", "The Helpdesk", "🎧"),
-    ("male", "young adult", "moderate pitch", "australian accent", False, "conversational", "The Mate", "🙂"),
-    ("female", "middle-aged", "moderate pitch", "canadian accent", False, "conversational", "The Companion", "☕"),
+    ("female", "young adult", "moderate pitch", "american accent", False, "conversational", "The Neighbor", "Smile"),
+    ("female", "young adult", "moderate pitch", "indian accent", False, "conversational", "The Helpdesk", "Headphones"),
+    ("male", "young adult", "moderate pitch", "australian accent", False, "conversational", "The Mate", "MessageSquare"),
+    ("female", "middle-aged", "moderate pitch", "canadian accent", False, "conversational", "The Companion", "Coffee"),
     # Characters & Animation
-    ("male", "elderly", "very low pitch", None, False, "characters", "Captain Crusty", "☠️"),
-    (None, "teenager", "high pitch", None, False, "characters", "Junior Quacks", "🦆"),
-    ("male", "young adult", "high pitch", "american accent", False, "characters", "The Champion", "🦸"),
-    ("female", "child", "very high pitch", None, False, "characters", "The Pixie", "🧚"),
-    ("male", "middle-aged", "very low pitch", None, False, "characters", "The Ogre", "👹"),
+    ("male", "elderly", "very low pitch", None, False, "characters", "Captain Crusty", "Skull"),
+    (None, "teenager", "high pitch", None, False, "characters", "Junior Quacks", "Bird"),
+    ("male", "young adult", "high pitch", "american accent", False, "characters", "The Champion", "Shield"),
+    ("female", "child", "very high pitch", None, False, "characters", "The Pixie", "Sparkles"),
+    ("male", "middle-aged", "very low pitch", None, False, "characters", "The Ogre", "Ghost"),
     # Social Media
-    ("female", "young adult", "high pitch", "australian accent", False, "social", "The Podcaster", "🎤"),
-    ("male", "young adult", "very high pitch", "american accent", False, "social", "The Hype Host", "⚡"),
-    ("female", "young adult", "high pitch", None, False, "social", "The Vlogger", "📱"),
+    ("female", "young adult", "high pitch", "australian accent", False, "social", "The Podcaster", "Radio"),
+    ("male", "young adult", "very high pitch", "american accent", False, "social", "The Hype Host", "Zap"),
+    ("female", "young adult", "high pitch", None, False, "social", "The Vlogger", "Video"),
     # Entertainment & TV
-    ("male", "middle-aged", "moderate pitch", "american accent", False, "entertainment", "The Anchor", "📺"),
-    ("male", "middle-aged", "high pitch", "british accent", False, "entertainment", "The Commentator", "🏟️"),
-    ("male", "middle-aged", "moderate pitch", None, False, "entertainment", "The Game Host", "🎬"),
+    ("male", "middle-aged", "moderate pitch", "american accent", False, "entertainment", "The Anchor", "Tv"),
+    ("male", "middle-aged", "high pitch", "british accent", False, "entertainment", "The Commentator", "Trophy"),
+    ("male", "middle-aged", "moderate pitch", None, False, "entertainment", "The Game Host", "Clapperboard"),
     # Advertisement
-    ("male", "middle-aged", "low pitch", None, False, "advertisement", "The Promo Voice", "📣"),
-    ("female", "middle-aged", "moderate pitch", "british accent", False, "advertisement", "The Luxe", "💎"),
-    ("female", "young adult", "high pitch", "american accent", False, "advertisement", "The Upbeat", "✨"),
+    ("male", "middle-aged", "low pitch", None, False, "advertisement", "The Promo Voice", "Megaphone"),
+    ("female", "middle-aged", "moderate pitch", "british accent", False, "advertisement", "The Luxe", "Gem"),
+    ("female", "young adult", "high pitch", "american accent", False, "advertisement", "The Upbeat", "Music"),
     # Informative & Educational
-    ("female", "middle-aged", "moderate pitch", "american accent", False, "informative", "The Teacher", "👩‍🏫"),
-    ("male", "young adult", "moderate pitch", "british accent", False, "informative", "The Explainer", "💡"),
+    ("female", "middle-aged", "moderate pitch", "american accent", False, "informative", "The Teacher", "GraduationCap"),
+    ("male", "young adult", "moderate pitch", "british accent", False, "informative", "The Explainer", "Lightbulb"),
 ]
 
 

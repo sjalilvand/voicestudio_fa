@@ -8,11 +8,13 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Search, Download, Play, Pause, Trash2, X, Loader, Star,
-  Wand2, UserPlus, Sparkles, RotateCcw, Grid, List, Upload, Scissors,
+  Wand2, UserPlus, Sparkles, RotateCcw, Grid, List, Upload, Scissors, Store, Send,
 } from 'lucide-react';
 import { Button, Input } from '../ui';
-import { useArchetypeCategories, useArchetypes, useGalleryVoices } from '../api/hooks';
+import { useArchetypeCategories, useArchetypes, useGalleryVoices, useCommunityItems } from '../api/hooks';
 import { archetypePreviewUrl, useArchetypeAsProfile } from '../api/archetypes';
+import { addCommunityItem, communitySubmitUrl } from '../api/community';
+import { openExternal } from '../api/external';
 import {
   searchYoutube, downloadYoutubeClip, deleteGalleryVoice,
   saveVoiceAsProfile, uploadVoiceClip, previewVoiceUrl,
@@ -22,6 +24,7 @@ import { useAppStore } from '../store';
 import { apiUrl } from '../api/client';
 import { isTauri } from '../utils/media';
 import { askConfirm } from '../utils/dialog';
+import { ArchetypeAvatar, ArchetypeIcon, AccentFlag, NowPlaying, USE_CASE_COLOR } from '../utils/archetypeIcons';
 import './VoiceGallery.css';
 
 const BROWSE_PAGE = 60;
@@ -131,6 +134,9 @@ export default function VoiceGallery() {
             <button className={`zone-tab ${zone === 'archetypes' ? 'active' : ''}`} onClick={() => setZone('archetypes')}>
               <Sparkles size={14} /> {t('gallery.zone_archetypes', { defaultValue: 'Archetypes' })}
             </button>
+            <button className={`zone-tab ${zone === 'community' ? 'active' : ''}`} onClick={() => setZone('community')}>
+              <Store size={14} /> {t('gallery.zone_community', { defaultValue: 'Community' })}
+            </button>
             <button className={`zone-tab ${zone === 'imports' ? 'active' : ''}`} onClick={() => setZone('imports')}>
               <Upload size={14} /> {t('gallery.zone_imports', { defaultValue: 'My Imports' })}
             </button>
@@ -166,6 +172,17 @@ export default function VoiceGallery() {
             setInstruct('');
             setMode('design');
           }}
+        />
+      ) : zone === 'community' ? (
+        <CommunityZone
+          t={t}
+          playingId={playingId}
+          loadingPreviewId={loadingPreviewId}
+          favorites={favorites}
+          toggleFavorite={toggleFavorite}
+          onPlayAudio={(url, id) => playUrl(url, id)}
+          flash={flash}
+          onDesign={(instruct) => { setVdStates({ ...vdStates }); setInstruct(instruct); setMode('design'); }}
         />
       ) : (
         <ImportsZone
@@ -229,7 +246,7 @@ function ArchetypesZone({
               onClick={() => setFilter('use_case', filters.use_case === c.id ? null : c.id)}
               title={c.name}
             >
-              <span className="chip-emoji">{c.icon}</span>
+              <ArchetypeIcon name={c.icon} size={13} />
               {t(`archetypes.use_${c.id}`, { defaultValue: c.name })}
             </button>
           ))}
@@ -315,37 +332,126 @@ function ArchetypeCard({
   a, t, viewMode, isFavorite, isPlaying, isLoadingPreview,
   onPreview, onUse, onDesign, onToggleFavorite,
 }) {
-  const chips = [a.facets.gender, a.facets.age, a.facets.pitch, a.facets.accent]
-    .filter(Boolean)
-    .map((x) => facetLabel(x));
-  if (a.facets.whisper) chips.push('Whisper');
+  const color = USE_CASE_COLOR[a.use_case] || '#83a598';
+  const sub = [a.facets.gender, a.facets.age, a.facets.pitch]
+    .filter(Boolean).map(facetLabel).join(' · ');
+  const dialect = a.attrs?.ChineseDialect && a.attrs.ChineseDialect !== 'Auto' ? a.attrs.ChineseDialect : null;
+  const accentLabel = a.facets.accent
+    ? facetLabel(a.facets.accent)
+    : (dialect || (a.language === 'Chinese' ? 'Chinese' : null));
 
   return (
-    <div className={`archetype-card ${viewMode}`}>
-      <button
-        className={`fav-btn ${isFavorite ? 'on' : ''}`}
-        onClick={() => onToggleFavorite(a.id)}
-        title={t('gallery.favorite', { defaultValue: 'Favorite' })}
-      >
-        <Star size={14} fill={isFavorite ? 'currentColor' : 'none'} />
-      </button>
-      <button className="archetype-play" onClick={() => onPreview(a)} title={t('gallery.preview', { defaultValue: 'Preview' })}>
-        {isLoadingPreview ? <Loader className="spin" size={18} /> : isPlaying ? <Pause size={18} /> : <Play size={18} />}
-      </button>
-      <div className="archetype-body">
-        <div className="archetype-name"><span className="archetype-icon">{a.icon}</span>{a.name}</div>
+    <div className={`archetype-card ${viewMode} ${isPlaying ? 'playing' : ''}`} style={{ '--card-accent': color }}>
+      <div className="arch-head">
+        <ArchetypeAvatar item={a} />
+        <div className="arch-title">
+          <div className="archetype-name">{a.name}</div>
+          {sub && <div className="archetype-sub">{sub}</div>}
+        </div>
+        <button
+          className={`fav-btn ${isFavorite ? 'on' : ''}`}
+          onClick={() => onToggleFavorite(a.id)}
+          title={t('gallery.favorite', { defaultValue: 'Favorite' })}
+        >
+          <Star size={15} fill={isFavorite ? 'currentColor' : 'none'} />
+        </button>
+      </div>
+
+      {(accentLabel || a.facets.whisper) && (
         <div className="archetype-chips">
-          {chips.map((c, i) => <span key={i} className="facet-chip">{c}</span>)}
+          {accentLabel && (
+            <span className="facet-chip with-flag">
+              <AccentFlag accent={a.facets.accent} lang={a.language} size={14} />
+              {accentLabel}
+            </span>
+          )}
+          {a.facets.whisper && (
+            <span className="facet-chip">{t('archetypes.facet_whisper', { defaultValue: 'Whisper' })}</span>
+          )}
+        </div>
+      )}
+
+      <div className="arch-foot">
+        <button className="preview-btn" onClick={() => onPreview(a)} title={t('gallery.preview', { defaultValue: 'Preview' })}>
+          {isLoadingPreview ? <Loader className="spin" size={15} /> : isPlaying ? <NowPlaying color={color} /> : <Play size={15} />}
+          <span>{t('gallery.preview', { defaultValue: 'Preview' })}</span>
+        </button>
+        <button className="use-btn" onClick={() => onUse(a)}>
+          <UserPlus size={14} /> {t('gallery.use_voice', { defaultValue: 'Use voice' })}
+        </button>
+        <button className="designer-btn" onClick={() => onDesign(a)} title={t('gallery.open_designer', { defaultValue: 'Open in Designer' })}>
+          <Wand2 size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Community zone (marketplace) ─────────────────────────────────────────────
+function CommunityZone({ t, playingId, loadingPreviewId, favorites, toggleFavorite, onPlayAudio, flash, onDesign }) {
+  const itemsQ = useCommunityItems({ limit: 100 });
+  const items = itemsQ.data?.items || [];
+  const favSet = useMemo(() => new Set(favorites), [favorites]);
+
+  const submit = async (type) => {
+    try {
+      const { url } = await communitySubmitUrl(type);
+      await openExternal(url);
+    } catch {
+      flash(t('gallery.submit_failed', { defaultValue: 'Could not open the submission form.' }));
+    }
+  };
+
+  return (
+    <div className="gallery-content gallery-scroll">
+      <div className="import-explainer community-explainer">
+        <span>{t('gallery.community_explainer', { defaultValue: 'Designed presets and recorded voices shared by the community, loaded from the omnivoice-gallery.' })}</span>
+        <div className="submit-actions">
+          <button className="submit-btn" onClick={() => submit('preset')}>
+            <Send size={13} /> {t('gallery.submit_preset', { defaultValue: 'Submit a preset' })}
+          </button>
+          <button className="submit-btn" onClick={() => submit('voice')}>
+            <Send size={13} /> {t('gallery.submit_voice', { defaultValue: 'Submit a voice' })}
+          </button>
         </div>
       </div>
-      <div className="archetype-actions">
-        <Button size="sm" onClick={() => onUse(a)} title={t('gallery.use_voice', { defaultValue: 'Use voice' })}>
-          <UserPlus size={13} /> {t('gallery.use_voice', { defaultValue: 'Use voice' })}
-        </Button>
-        <Button size="sm" variant="ghost" onClick={() => onDesign(a)} title={t('gallery.open_designer', { defaultValue: 'Open in Designer' })}>
-          <Wand2 size={13} />
-        </Button>
-      </div>
+
+      {itemsQ.isLoading ? (
+        <div className="loading"><Loader className="spin" size={18} /></div>
+      ) : items.length === 0 ? (
+        <div className="empty">
+          {t('gallery.community_empty', { defaultValue: 'No community voices loaded yet — connect to the internet and reopen, or be the first to submit one.' })}
+        </div>
+      ) : (
+        <div className="archetype-grid grid">
+          {items.map((it) => (
+            <ArchetypeCard
+              key={it.id}
+              a={it}
+              t={t}
+              viewMode="grid"
+              isFavorite={favSet.has(it.id)}
+              isPlaying={playingId === it.id}
+              isLoadingPreview={loadingPreviewId === it.id}
+              onToggleFavorite={toggleFavorite}
+              onPreview={(item) => (item.audio?.url
+                ? onPlayAudio(item.audio.url, item.id)
+                : flash(t('gallery.no_preview', { defaultValue: 'No preview — add it with "Use voice" to hear it.' })))}
+              onUse={async (item) => {
+                try {
+                  const r = await addCommunityItem(item.id, item.name);
+                  flash(t('gallery.saved_as_profile', { defaultValue: 'Added "{{name}}" to your voices.', name: r.name }));
+                } catch {
+                  flash(t('gallery.use_failed', { defaultValue: 'Could not add that voice.' }));
+                }
+              }}
+              onDesign={(item) => (item.instruct
+                ? onDesign(item.instruct)
+                : flash(t('gallery.no_designer', { defaultValue: 'Recorded voice — use "Use voice" instead.' })))}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -10,7 +10,7 @@
  */
 import type { StateCreator } from 'zustand';
 
-export type GalleryZone = 'archetypes' | 'imports';
+export type GalleryZone = 'archetypes' | 'imports' | 'community';
 
 export interface ArchetypeFilterState {
   use_case: string | null;

@@ -299,6 +299,7 @@ from api.routers import (
     setup,
     gallery,
     archetypes,
+    community,
     batch,
     watermark,
     events,
@@ -626,6 +627,7 @@ app.include_router(stories.router)
 app.include_router(setup.router)
 app.include_router(gallery.router)
 app.include_router(archetypes.router)
+app.include_router(community.router)
 app.include_router(batch.router)
 app.include_router(watermark.router)
 app.include_router(events.router)

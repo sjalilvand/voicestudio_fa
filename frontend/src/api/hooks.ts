@@ -10,6 +10,8 @@ import * as setupApi from './setup';
 import * as galleryApi from './gallery';
 import * as archetypesApi from './archetypes';
 import type { ArchetypeFilters } from './archetypes';
+import * as communityApi from './community';
+import type { CommunityFilters } from './community';
 
 // ── Keys (prevents typos, enables targeted invalidation) ─────────────────
 export const queryKeys = {
@@ -26,6 +28,8 @@ export const queryKeys = {
   galleryCategories: ['gallery-categories'] as const,
   archetypeCategories: ['archetype-categories'] as const,
   archetypes:      (filters?: any) => ['archetypes', filters] as const,
+  communityItems:  (filters?: any) => ['community-items', filters] as const,
+  communityManifest: (refresh?: boolean) => ['community-manifest', !!refresh] as const,
 };
 
 // ── Polling queries (sysinfo, model status, logs) ────────────────────────
@@ -155,6 +159,24 @@ export function useArchetypes(filters: ArchetypeFilters = {}) {
     queryFn: () => archetypesApi.listArchetypes(filters),
     staleTime: 5 * 60_000,
     placeholderData: keepPreviousData, // v5: keep prior page visible while paginating
+  });
+}
+
+// ── Community gallery (marketplace) ───────────────────────────────────────
+export function useCommunityItems(filters: CommunityFilters = {}) {
+  return useQuery({
+    queryKey: queryKeys.communityItems(filters),
+    queryFn: () => communityApi.listCommunityItems(filters),
+    staleTime: 5 * 60_000,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useCommunityManifest(refresh = false) {
+  return useQuery({
+    queryKey: queryKeys.communityManifest(refresh),
+    queryFn: () => communityApi.communityManifest(refresh),
+    staleTime: 5 * 60_000,
   });
 }
 
