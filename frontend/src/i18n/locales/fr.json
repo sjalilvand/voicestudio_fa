@@ -1,0 +1,47 @@
+{
+  "nav": {
+    "clone": "Cloner",
+    "design": "Concevoir",
+    "dub": "Doubler",
+    "settings": "Paramètres",
+    "stories": "Histoires"
+  },
+  "settings": {
+    "general": "Général",
+    "theme": "Thème",
+    "language": "Langue",
+    "language_desc": "Sélectionner la langue de l'interface",
+    "appearance": "Apparence",
+    "sharing": "Partage",
+    "models": "Modèles",
+    "engines": "Moteurs",
+    "capture": "Saisie",
+    "credentials": "Identifiants",
+    "logs": "Journaux",
+    "about": "À propos",
+    "privacy": "Confidentialité"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "Vérification de l'environnement…",
+    "downloading_uv": "Téléchargement de uv (gestionnaire de paquets Python)…",
+    "creating_venv": "Création de l'environnement virtuel Python…",
+    "installing_deps": "Installation des dépendances — premier lancement, 5–10 min.",
+    "starting_backend": "Démarrage du serveur…",
+    "ready": "Prêt",
+    "failed": "Échec de l'installation",
+    "what_to_try": "Que tenter :",
+    "retry": "Réessayer",
+    "clean_retry": "Nettoyer et réessayer",
+    "clean_retry_confirm": "Cela supprimera l'environnement Python mis en cache et téléchargera à nouveau toutes les dépendances (~5-10 min). Continuer ?",
+    "hide_logs": "Masquer les journaux",
+    "show_logs": "Afficher les journaux",
+    "lines": "{{count}} lignes",
+    "copy": "Copier",
+    "copied": "Copié !",
+    "waiting_output": "En attente de sortie…",
+    "auto_detect": "Détecter automatiquement",
+    "suggest_lang": "Passer au Français ?",
+    "select_lang": "Langue :"
+  }
+}

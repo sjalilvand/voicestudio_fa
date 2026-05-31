@@ -1,0 +1,47 @@
+{
+  "nav": {
+    "clone": "Klonen",
+    "design": "Designen",
+    "dub": "Dubben",
+    "settings": "Einstellungen",
+    "stories": "Geschichten"
+  },
+  "settings": {
+    "general": "Allgemein",
+    "theme": "Theme",
+    "language": "Sprache",
+    "language_desc": "Interface-Sprache auswählen",
+    "appearance": "Aussehen",
+    "sharing": "Freigabe",
+    "models": "Modelle",
+    "engines": "Engines",
+    "capture": "Tastatur",
+    "credentials": "Anmeldedaten",
+    "logs": "Protokolle",
+    "about": "Über",
+    "privacy": "Datenschutz"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "Umgebung wird überprüft…",
+    "downloading_uv": "uv (Python Paket-Manager) wird heruntergeladen…",
+    "creating_venv": "Virtuelle Python-Umgebung wird erstellt…",
+    "installing_deps": "Abhängigkeiten werden installiert — Erstausführung, 5–10 Min.",
+    "starting_backend": "Backend wird gestartet…",
+    "ready": "Bereit",
+    "failed": "Einrichtung fehlgeschlagen",
+    "what_to_try": "Lösungsansätze:",
+    "retry": "Wiederholen",
+    "clean_retry": "Bereinigen & Wiederholen",
+    "clean_retry_confirm": "Dies löscht die zwischengespeicherte Python-Umgebung und lädt alle Abhängigkeiten neu herunter (~5-10 Min.). Fortfahren?",
+    "hide_logs": "Protokolle ausblenden",
+    "show_logs": "Protokolle einblenden",
+    "lines": "{{count}} Zeilen",
+    "copy": "Kopieren",
+    "copied": "Kopiert!",
+    "waiting_output": "Warte auf Ausgabe…",
+    "auto_detect": "Automatisch erkennen",
+    "suggest_lang": "Auf Deutsch umstellen?",
+    "select_lang": "Sprache:"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "nav": {
+    "clone": "複製",
+    "design": "デザイン",
+    "dub": "ダビング",
+    "settings": "設定",
+    "stories": "ストーリー"
+  },
+  "settings": {
+    "general": "一般",
+    "theme": "テーマ",
+    "language": "言語",
+    "language_desc": "インターフェース言語の選択",
+    "appearance": "外観",
+    "sharing": "共有",
+    "models": "モデル",
+    "engines": "エンジン",
+    "capture": "キャプチャ",
+    "credentials": "資格情報",
+    "logs": "ログ",
+    "about": "情報",
+    "privacy": "プライバシー"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "環境の確認中…",
+    "downloading_uv": "uv（Pythonパッケージマネージャー）をダウンロード中…",
+    "creating_venv": "Python仮想環境の作成中…",
+    "installing_deps": "依存関係のインストール中 — 初回起動、5〜10分かかります。",
+    "starting_backend": "バックエンドの起動中…",
+    "ready": "準備完了",
+    "failed": "セットアップ失敗",
+    "what_to_try": "対処方法:",
+    "retry": "再試行",
+    "clean_retry": "クリーンアップして再試行",
+    "clean_retry_confirm": "これにより、キャッシュされたPython環境が削除され、すべての依存関係が再ダウンロードされます（〜5-10分）。続行しますか？",
+    "hide_logs": "ログを非表示",
+    "show_logs": "ログを表示",
+    "lines": "{{count}} 行",
+    "copy": "コピー",
+    "copied": "コピーしました！",
+    "waiting_output": "出力を待機中…",
+    "auto_detect": "自動検出",
+    "suggest_lang": "日本語に切り替えますか？",
+    "select_lang": "言語:"
+  }
+}

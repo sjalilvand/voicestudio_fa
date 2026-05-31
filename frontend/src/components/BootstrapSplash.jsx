@@ -11,6 +11,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { copyText } from "../utils/copyText";
 import './BootstrapSplash.css';
+import { useTranslation } from 'react-i18next';
+import i18n, { LANGUAGES } from '../i18n';
+import { useAppStore } from '../store';
+
+const getSystemLanguage = () => {
+  if (typeof navigator === 'undefined') return 'en';
+  const navLang = navigator.language || (navigator.languages && navigator.languages[0]) || 'en';
+  if (navLang.startsWith('zh')) return 'zh-CN';
+  if (navLang.startsWith('es')) return 'es';
+  if (navLang.startsWith('fr')) return 'fr';
+  if (navLang.startsWith('de')) return 'de';
+  if (navLang.startsWith('ja')) return 'ja';
+  return 'en';
+};
 
 // Vite injects package.json version at build time.
 const APP_VERSION = __APP_VERSION__ || '0.0.0';
@@ -67,7 +81,36 @@ function formatBytes(n) {
 }
 
 export function BootstrapSplash({ stage, message }) {
-  const label = STAGE_LABEL[stage] || stage;
+  const { t } = useTranslation();
+  const locale = useAppStore(s => s.locale);
+  const setLocale = useAppStore(s => s.setLocale);
+
+  const handleLocaleChange = (id) => {
+    setLocale(id);
+    i18n.changeLanguage(id);
+  };
+
+  const systemLang = getSystemLanguage();
+  const [showSuggestion, setShowSuggestion] = useState(false);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem('dismissed_lang_suggestion');
+    if (systemLang !== locale && systemLang !== 'en' && !dismissed) {
+      setShowSuggestion(true);
+    }
+  }, [locale, systemLang]);
+
+  const acceptSuggestion = () => {
+    handleLocaleChange(systemLang);
+    setShowSuggestion(false);
+  };
+
+  const dismissSuggestion = () => {
+    localStorage.setItem('dismissed_lang_suggestion', 'true');
+    setShowSuggestion(false);
+  };
+
+  const label = t(`bootstrap.${stage}`, STAGE_LABEL[stage]);
   const stepIndex = Math.max(0, STEPS.indexOf(stage));
   const isFailed = stage === 'failed';
   const [logs, setLogs] = useState([]);
@@ -209,7 +252,7 @@ export function BootstrapSplash({ stage, message }) {
     <div className="bootstrap-splash">
       <div className="bootstrap-splash__card">
         <div className="bootstrap-splash__title-row">
-          <h1>OmniVoice Studio</h1>
+          <h1>{t('bootstrap.title', 'OmniVoice Studio')}</h1>
           <span className="bootstrap-splash__version">v{APP_VERSION}</span>
           <div className="bootstrap-splash__region">
             <select
@@ -217,30 +260,50 @@ export function BootstrapSplash({ stage, message }) {
               value={region}
               onChange={(e) => handleRegionChange(e.target.value)}
             >
-              <option value="auto">🌐 Auto-detect</option>
+              <option value="auto">🌐 {t('bootstrap.auto_detect', 'Auto-detect')}</option>
               <option value="global">🌐 Global (direct)</option>
               <option value="china">🇨🇳 China (mirror)</option>
               <option value="russia">🇷🇺 Russia (mirror)</option>
               <option value="restricted">🌍 Restricted (mirror)</option>
             </select>
           </div>
+          <div className="bootstrap-splash__lang" style={{ marginLeft: '0.5rem' }}>
+            <select
+              className="bootstrap-splash__lang-select"
+              value={locale}
+              onChange={(e) => handleLocaleChange(e.target.value)}
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>{l.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
+        {showSuggestion && (
+          <div className="bootstrap-splash__suggestion">
+            <span>🌐 {t('bootstrap.suggest_lang', { lang: LANGUAGES.find(l => l.code === systemLang)?.label || systemLang })}</span>
+            <div className="bootstrap-splash__suggestion-actions">
+              <button onClick={acceptSuggestion}>{t('common.yes', 'Yes')}</button>
+              <button onClick={dismissSuggestion}>{t('common.no', 'No')}</button>
+            </div>
+          </div>
+        )}
         <p className="bootstrap-splash__status">{label}</p>
         {isFailed ? (
           <>
             <pre className="bootstrap-splash__error">{message || 'Unknown error'}</pre>
             <div className="bootstrap-splash__hints">
-              <strong>💡 What to try:</strong>
+              <strong>💡 {t('bootstrap.what_to_try', 'What to try:')}</strong>
               <ul>
                 {detectHints(message, logs).map((h, i) => <li key={i}>{h}</li>)}
               </ul>
             </div>
             <div className="bootstrap-splash__actions">
               <button className="bootstrap-splash__retry-btn" onClick={handleRetry} disabled={retrying}>
-                {retrying ? '⏳ Retrying…' : '🔄 Retry'}
+                {retrying ? '⏳ ' + t('bootstrap.retrying', 'Retrying…') : '🔄 ' + t('bootstrap.retry', 'Retry')}
               </button>
               <button className="bootstrap-splash__retry-btn bootstrap-splash__retry-btn--danger" onClick={handleCleanRetry} disabled={retrying}>
-                🧹 Clean & Retry
+                🧹 {t('bootstrap.clean_retry', 'Clean & Retry')}
               </button>
             </div>
           </>
@@ -279,7 +342,7 @@ export function BootstrapSplash({ stage, message }) {
                     'pending'
                   }
                 >
-                  {STAGE_LABEL[s]}
+                  {t(`bootstrap.${s}`, STAGE_LABEL[s])}
                 </li>
               ))}
             </ol>
@@ -292,23 +355,23 @@ export function BootstrapSplash({ stage, message }) {
             className="bootstrap-splash__log-toggle"
             onClick={() => setLogsOpen((v) => !v)}
           >
-            {logsOpen ? '▾ Hide logs' : '▸ Show logs'}
+            {logsOpen ? '▾ ' + t('bootstrap.hide_logs', 'Hide logs') : '▸ ' + t('bootstrap.show_logs', 'Show logs')}
           </button>
           <span className="bootstrap-splash__log-count">
-            {logs.length > 0 && `${logs.length} lines`}
+            {logs.length > 0 && t('bootstrap.lines', { count: logs.length })}
           </span>
           <button
             type="button"
             className="bootstrap-splash__copy-btn"
             onClick={handleCopyLogs}
           >
-            {copied ? '✓ Copied!' : '📋 Copy'}
+            {copied ? '✓ ' + t('bootstrap.copied', 'Copied!') : '📋 ' + t('bootstrap.copy', 'Copy')}
           </button>
         </div>
         {logsOpen && (
           <pre className="bootstrap-splash__logs" ref={logRef}>
             {logs.length === 0
-              ? 'Waiting for output…'
+              ? t('bootstrap.waiting_output', 'Waiting for output…')
               : logs.map((l, i) => `[${l.stage}] ${l.line}`).join('\n')}
           </pre>
         )}

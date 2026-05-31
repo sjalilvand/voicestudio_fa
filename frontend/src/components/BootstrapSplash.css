@@ -76,6 +76,80 @@
   color: #eee;
 }
 
+.bootstrap-splash__lang {
+  display: flex;
+  align-items: center;
+}
+
+.bootstrap-splash__lang-select {
+  background: color-mix(in srgb, var(--chrome-fg, #eee) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chrome-fg, #eee) 12%, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 0.72rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.4rem center;
+  padding-right: 1.4rem;
+  transition: all 0.15s ease;
+}
+.bootstrap-splash__lang-select:hover {
+  background-color: color-mix(in srgb, var(--chrome-fg, #eee) 14%, transparent);
+}
+.bootstrap-splash__lang-select:focus {
+  outline: 1px solid var(--chrome-accent, #8ec07c);
+  outline-offset: 1px;
+}
+.bootstrap-splash__lang-select option {
+  background: #1a1a1a;
+  color: #eee;
+}
+
+.bootstrap-splash__suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: color-mix(in srgb, var(--chrome-accent, #8ec07c) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chrome-accent, #8ec07c) 20%, transparent);
+  color: #eee;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  margin-top: 0.25rem;
+  margin-bottom: 1.25rem;
+  animation: bootstrapSplashSlideDown 0.2s ease-out;
+}
+
+.bootstrap-splash__suggestion-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.bootstrap-splash__suggestion-actions button {
+  background: color-mix(in srgb, var(--chrome-accent, #8ec07c) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chrome-accent, #8ec07c) 35%, transparent);
+  color: #eee;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  transition: all 0.15s ease;
+}
+
+.bootstrap-splash__suggestion-actions button:hover {
+  background: color-mix(in srgb, var(--chrome-accent, #8ec07c) 35%, transparent);
+}
+
+@keyframes bootstrapSplashSlideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .bootstrap-splash__status {
   margin: 0 0 1.25rem;
   font-size: 0.95rem;
