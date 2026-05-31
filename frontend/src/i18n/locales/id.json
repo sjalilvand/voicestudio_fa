@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "clone": "Kloning",
+    "design": "Desain",
+    "dub": "Sulih Suara",
+    "settings": "Pengaturan",
+    "stories": "Cerita"
+  },
+  "settings": {
+    "general": "Umum",
+    "theme": "Tema",
+    "language": "Bahasa",
+    "language_desc": "Pilih bahasa antarmuka",
+    "appearance": "Tampilan",
+    "sharing": "Berbagi",
+    "models": "Model",
+    "engines": "Mesin",
+    "capture": "Pintasan",
+    "credentials": "Kredensial",
+    "logs": "Log",
+    "about": "Tentang",
+    "privacy": "Privasi"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "Memeriksa lingkungan…",
+    "downloading_uv": "Mengunduh uv (pengelola paket Python)…",
+    "creating_venv": "Membuat lingkungan virtual Python…",
+    "installing_deps": "Memasang dependensi — proses awal, 5–10 menit.",
+    "starting_backend": "Memulai backend…",
+    "ready": "Siap",
+    "failed": "Pengaturan gagal",
+    "what_to_try": "Yang bisa dicoba:",
+    "retry": "Coba Lagi",
+    "clean_retry": "Bersihkan & Coba Lagi",
+    "clean_retry_confirm": "Ini akan menghapus lingkungan virtual Python yang tersimpan dan mengunduh ulang semua dependensi (~5-10 menit). Lanjutkan?",
+    "hide_logs": "Sembunyikan log",
+    "show_logs": "Tampilkan log",
+    "lines_one": "{{count}} baris",
+    "lines_other": "{{count}} baris",
+    "copy": "Salin",
+    "copied": "Disalin!",
+    "waiting_output": "Menunggu hasil…",
+    "auto_detect": "Deteksi otomatis",
+    "suggest_lang": "Ubah ke Bahasa Indonesia?",
+    "select_lang": "Bahasa:"
+  }
+}

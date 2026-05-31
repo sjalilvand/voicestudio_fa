@@ -18,12 +18,9 @@ import { useAppStore } from '../store';
 const getSystemLanguage = () => {
   if (typeof navigator === 'undefined') return 'en';
   const navLang = navigator.language || (navigator.languages && navigator.languages[0]) || 'en';
-  if (navLang.startsWith('zh')) return 'zh-CN';
-  if (navLang.startsWith('es')) return 'es';
-  if (navLang.startsWith('fr')) return 'fr';
-  if (navLang.startsWith('de')) return 'de';
-  if (navLang.startsWith('ja')) return 'ja';
-  return 'en';
+  if (navLang.toLowerCase().includes('tw') || navLang.toLowerCase().includes('hk')) return 'zh-TW';
+  const match = ['zh-CN', 'es', 'fr', 'de', 'ja', 'pt', 'it', 'ru', 'ko', 'hi', 'tr', 'pl', 'nl', 'sv', 'th', 'vi', 'id', 'uk', 'ar'].find(code => navLang.startsWith(code.split('-')[0]));
+  return match || 'en';
 };
 
 // Vite injects package.json version at build time.

@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "clone": "क्लोन",
+    "design": "डिज़ाइन",
+    "dub": "डब",
+    "settings": "सेटिंग्स",
+    "stories": "कहानियां"
+  },
+  "settings": {
+    "general": "सामान्य",
+    "theme": "थीम",
+    "language": "भाषा",
+    "language_desc": "इंटरफ़ेस भाषा चुनें",
+    "appearance": "दिखावट",
+    "sharing": "साझाकरण",
+    "models": "मॉडल",
+    "engines": "इंजन",
+    "capture": "कैप्चर",
+    "credentials": "क्रेडेंशियल",
+    "logs": "लॉग",
+    "about": "विवरण",
+    "privacy": "गोपनीयता"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "वातावरण की जाँच हो रही है…",
+    "downloading_uv": "uv (पायथन पैकेज मैनेजर) डाउनलोड हो रहा है…",
+    "creating_venv": "पायथन वर्चुअल वातावरण बनाया जा रहा है…",
+    "installing_deps": "निर्भरताएँ स्थापित हो रही हैं — पहला रन, 5-10 मिनट।",
+    "starting_backend": "बैकएंड शुरू हो रहा है…",
+    "ready": "तैयार",
+    "failed": "सेटअप विफल",
+    "what_to_try": "क्या प्रयास करें:",
+    "retry": "पुनः प्रयास करें",
+    "clean_retry": "साफ़ करें और पुनः प्रयास करें",
+    "clean_retry_confirm": "यह कैश्ड पायथन वातावरण को हटा देगा और सभी निर्भरताओं को फिर से डाउनलोड करेगा (~5-10 मिनट)। जारी रखें?",
+    "hide_logs": "लॉग छुपाएं",
+    "show_logs": "लॉग दिखाएं",
+    "lines_one": "{{count}} पंक्ति",
+    "lines_other": "{{count}} पंक्तियाँ",
+    "copy": "कॉपी करें",
+    "copied": "कॉपी हो गया!",
+    "waiting_output": "आउटपुट की प्रतीक्षा की जा रही है…",
+    "auto_detect": "ऑटो-डिटेक्ट",
+    "suggest_lang": "हिन्दी में बदलें?",
+    "select_lang": "भाषा:"
+  }
+}

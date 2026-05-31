@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "clone": "Nhân bản",
+    "design": "Thiết kế",
+    "dub": "Lồng tiếng",
+    "settings": "Cài đặt",
+    "stories": "Kịch bản"
+  },
+  "settings": {
+    "general": "Chung",
+    "theme": "Giao diện",
+    "language": "Ngôn ngữ",
+    "language_desc": "Chọn ngôn ngữ giao diện",
+    "appearance": "Cá nhân hóa",
+    "sharing": "Chia sẻ",
+    "models": "Mô hình",
+    "engines": "Công cụ",
+    "capture": "Phím tắt",
+    "credentials": "Xác thực",
+    "logs": "Nhật ký",
+    "about": "Giới thiệu",
+    "privacy": "Bảo mật"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "Đang kiểm tra môi trường…",
+    "downloading_uv": "Đang tải xuống uv (trình quản lý gói Python)…",
+    "creating_venv": "Đang tạo môi trường ảo Python…",
+    "installing_deps": "Đang cài đặt các thư viện — chạy lần đầu, khoảng 5-10 phút.",
+    "starting_backend": "Đang khởi động dịch vụ…",
+    "ready": "Sẵn sàng",
+    "failed": "Cài đặt thất bại",
+    "what_to_try": "Hướng giải quyết:",
+    "retry": "Thử lại",
+    "clean_retry": "Dọn dẹp & Thử lại",
+    "clean_retry_confirm": "Thao tác này sẽ xóa môi trường ảo hiện tại và tải lại toàn bộ tài nguyên cần thiết (mất khoảng 5-10 phút). Tiếp tục?",
+    "hide_logs": "Ẩn nhật ký",
+    "show_logs": "Hiện nhật ký",
+    "lines_one": "{{count}} dòng",
+    "lines_other": "{{count}} dòng",
+    "copy": "Sao chép",
+    "copied": "Đã sao chép!",
+    "waiting_output": "Đang chờ dữ liệu…",
+    "auto_detect": "Tự động nhận diện",
+    "suggest_lang": "Chuyển sang Tiếng Việt?",
+    "select_lang": "Ngôn ngữ:"
+  }
+}

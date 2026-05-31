@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "clone": "Клонувати",
+    "design": "Створити",
+    "dub": "Дублювати",
+    "settings": "Налаштування",
+    "stories": "Історії"
+  },
+  "settings": {
+    "general": "Загальні",
+    "theme": "Тема",
+    "language": "Мова",
+    "language_desc": "Виберіть мову інтерфейсу",
+    "appearance": "Зовнішній вигляд",
+    "sharing": "Спільний доступ",
+    "models": "Моделі",
+    "engines": "Движки",
+    "capture": "Введення",
+    "credentials": "Ключі",
+    "logs": "Логи",
+    "about": "Про програму",
+    "privacy": "Конфіденційність"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "Перевірка оточення…",
+    "downloading_uv": "Завантаження uv (пакетного менеджера Python)…",
+    "creating_venv": "Створення віртуального оточення Python…",
+    "installing_deps": "Встановлення залежностей — перший запуск, 5–10 хв.",
+    "starting_backend": "Запуск бекенду…",
+    "ready": "Готово",
+    "failed": "Помилка налаштування",
+    "what_to_try": "Що спробувати:",
+    "retry": "Повторити",
+    "clean_retry": "Очистити і повторити",
+    "clean_retry_confirm": "Це видалить кешоване віртуальне оточення Python та заново завантажить всі залежності (~5-10 хв). Продовжити?",
+    "hide_logs": "Приховати логи",
+    "show_logs": "Показати логи",
+    "lines_one": "{{count}} рядок",
+    "lines_other": "{{count}} рядків",
+    "copy": "Копіювати",
+    "copied": "Скопійовано!",
+    "waiting_output": "Очікування виводу…",
+    "auto_detect": "Автовизначення",
+    "suggest_lang": "Переключити на Українську мову?",
+    "select_lang": "Мова:"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "clone": "Klona",
+    "design": "Designa",
+    "dub": "Dubba",
+    "settings": "Inställningar",
+    "stories": "Berättelser"
+  },
+  "settings": {
+    "general": "Allmänt",
+    "theme": "Tema",
+    "language": "Språk",
+    "language_desc": "Välj gränssnittsspråk",
+    "appearance": "Utseende",
+    "sharing": "Delning",
+    "models": "Modeller",
+    "engines": "Motorer",
+    "capture": "Genvägar",
+    "credentials": "Autentisering",
+    "logs": "Loggar",
+    "about": "Om",
+    "privacy": "Integritet"
+  },
+  "bootstrap": {
+    "title": "OmniVoice Studio",
+    "checking": "Kontrollerar miljö…",
+    "downloading_uv": "Laddar ner uv (Python-pakethanterare)…",
+    "creating_venv": "Skapar virtuell Python-miljö…",
+    "installing_deps": "Installerar beroenden — första körningen, 5–10 min.",
+    "starting_backend": "Startar backend…",
+    "ready": "Klar",
+    "failed": "Installation misslyckades",
+    "what_to_try": "Vad du kan prova:",
+    "retry": "Försök igen",
+    "clean_retry": "Rensa & Försök igen",
+    "clean_retry_confirm": "Detta raderar den cachelagrade Python-miljön och laddar ner alla beroenden igen (~5-10 min). Fortsätta?",
+    "hide_logs": "Dölj loggar",
+    "show_logs": "Visa loggar",
+    "lines_one": "{{count}} rad",
+    "lines_other": "{{count}} rader",
+    "copy": "Kopiera",
+    "copied": "Kopierad!",
+    "waiting_output": "Väntar på utdata…",
+    "auto_detect": "Identifiera automatiskt",
+    "suggest_lang": "Byta till Svenska?",
+    "select_lang": "Språk:"
+  }
+}

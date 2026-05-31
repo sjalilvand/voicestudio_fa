@@ -112,9 +112,12 @@ export const createPrefsSlice: StateCreator<PrefsSlice, [], [], PrefsSlice> = (s
   setShowHeaderLiveStats: (on) => set({ showHeaderLiveStats: on }),
   setTimingStrategy:      (s) => set({ timingStrategy: s }),
 
-  locale: typeof navigator !== 'undefined' ? (
-    ['zh-CN', 'es', 'fr', 'de', 'ja'].find(code => (navigator.language || '').startsWith(code.split('-')[0])) || 'en'
-  ) : 'en',
+  locale: typeof navigator !== 'undefined' ? (() => {
+    const nav = navigator.language || '';
+    if (nav.toLowerCase().includes('tw') || nav.toLowerCase().includes('hk')) return 'zh-TW';
+    const match = ['zh-CN', 'es', 'fr', 'de', 'ja', 'pt', 'it', 'ru', 'ko', 'hi', 'tr', 'pl', 'nl', 'sv', 'th', 'vi', 'id', 'uk', 'ar'].find(code => nav.startsWith(code.split('-')[0]));
+    return match || 'en';
+  })() : 'en',
   setLocale: (l) => set({ locale: l }),
 
   theme: 'gruvbox',
