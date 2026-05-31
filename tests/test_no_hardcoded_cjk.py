@@ -46,6 +46,7 @@ _ALLOWED_FILES = {
     "README_CN.md",                               # Chinese README (a translation)
     "docs/data_preparation.md",                   # multilingual example payloads
     "docs/voice-design.md",                       # EN/CJK attribute mapping table
+    "docs/superpowers/specs/2026-05-31-voice-gallery-design.md",  # Chinese-dialect taxonomy reference table
     "examples/README.md",                         # multilingual example payloads
     # Text-processing (CJK punctuation inside sentence/clause-splitting regexes)
     "backend/services/segmentation.py",
@@ -57,6 +58,7 @@ _ALLOWED_FILES = {
     # Model / engine vocabulary & identifiers (the model/engine requires these)
     "backend/services/tts_backend.py",            # CosyVoice speaker IDs
     "backend/core/personalities.py",              # Chinese-dialect showcase preset
+    "backend/core/archetypes.py",                 # Chinese-dialect preview sample text
     "frontend/src/utils/constants.js",            # Chinese-dialect picker names
     "omnivoice/models/omnivoice.py",              # instruct-mode vocabulary
     "omnivoice/utils/duration.py",
