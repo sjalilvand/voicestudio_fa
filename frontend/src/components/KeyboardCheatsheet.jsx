@@ -1,54 +1,57 @@
 import React from 'react';
 import { Command, X } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 import './KeyboardCheatsheet.css';
-
-const SECTIONS = [
-  {
-    title: 'Navigation',
-    items: [
-      ['?', 'Show this cheatsheet'],
-      ['Esc', 'Close modal / cancel'],
-      ['Cmd/Ctrl+S', 'Save project / commit trim'],
-    ],
-  },
-  {
-    title: 'Segment editor',
-    items: [
-      ['Cmd/Ctrl+D', 'Split segment at cursor'],
-      ['Cmd/Ctrl+M', 'Merge with next segment'],
-      ['Cmd/Ctrl+Z', 'Undo'],
-      ['Cmd/Ctrl+Shift+Z', 'Redo'],
-      ['Click row', 'Primary action'],
-      ['Shift+click row', 'Range select'],
-    ],
-  },
-  {
-    title: 'Audio trimmer',
-    items: [
-      ['Space', 'Preview play / pause'],
-      ['← / →', 'Nudge start handle'],
-      ['Ctrl+← / →', 'Nudge end handle'],
-      ['Shift+arrow', 'Fine nudge'],
-      ['Alt+arrow', 'Coarse nudge'],
-      ['+ / −', 'Zoom in / out'],
-      ['Home / End', 'Fit all / Fit selection'],
-      ['Enter', 'Confirm trim'],
-    ],
-  },
-  {
-    title: 'Dub',
-    items: [
-      ['Cmd/Ctrl+Enter', 'Generate dub'],
-      ['Cmd/Ctrl+B', 'Toggle sidebar'],
-    ],
-  },
-];
 
 function Kbd({ children }) {
   return <span className="kcs-kbd">{children}</span>;
 }
 
 export default function KeyboardCheatsheet({ open, onClose }) {
+  const { t } = useTranslation();
+
+  const SECTIONS = [
+    {
+      title: t('keyboard.nav'),
+      items: [
+        ['?', t('keyboard.nav_cheatsheet')],
+        ['Esc', t('keyboard.nav_closeModal')],
+        ['Cmd/Ctrl+S', t('keyboard.nav_save')],
+      ],
+    },
+    {
+      title: t('keyboard.segmentEditor'),
+      items: [
+        ['Cmd/Ctrl+D', t('keyboard.seg_split')],
+        ['Cmd/Ctrl+M', t('keyboard.seg_merge')],
+        ['Cmd/Ctrl+Z', t('keyboard.seg_undo')],
+        ['Cmd/Ctrl+Shift+Z', t('keyboard.seg_redo')],
+        ['Click row', t('keyboard.seg_click')],
+        ['Shift+click row', t('keyboard.seg_shiftClick')],
+      ],
+    },
+    {
+      title: t('keyboard.trimmer'),
+      items: [
+        ['Space', t('keyboard.trim_playPause')],
+        ['← / →', t('keyboard.trim_nudgeStart')],
+        ['Ctrl+← / →', t('keyboard.trim_nudgeEnd')],
+        ['Shift+arrow', t('keyboard.trim_fineNudge')],
+        ['Alt+arrow', t('keyboard.trim_coarseNudge')],
+        ['+ / −', t('keyboard.trim_zoomIn')],
+        ['Home / End', t('keyboard.trim_fitAll')],
+        ['Enter', t('keyboard.trim_confirm')],
+      ],
+    },
+    {
+      title: t('keyboard.dub'),
+      items: [
+        ['Cmd/Ctrl+Enter', t('keyboard.dub_generate')],
+        ['Cmd/Ctrl+B', t('keyboard.dub_sidebar')],
+      ],
+    },
+  ];
+
   if (!open) return null;
   return (
     <div onClick={onClose} className="kcs-overlay">
@@ -56,7 +59,7 @@ export default function KeyboardCheatsheet({ open, onClose }) {
         <div className="kcs-header">
           <div className="kcs-header__left">
             <Command size={16} color="var(--chrome-accent)" />
-            <h2 className="kcs-title">Keyboard shortcuts</h2>
+            <h2 className="kcs-title">{t('keyboard.title')}</h2>
           </div>
           <button onClick={onClose} className="kcs-close">
             <X size={16} />
@@ -77,7 +80,7 @@ export default function KeyboardCheatsheet({ open, onClose }) {
                           <span className="kcs-key-group">
                             {group.split('+').map((k) => <Kbd key={k}>{k}</Kbd>)}
                           </span>
-                          {i < arr.length - 1 && <span className="kcs-or">or</span>}
+                          {i < arr.length - 1 && <span className="kcs-or">{t('keyboard.or')}</span>}
                         </React.Fragment>
                       ))}
                     </span>
@@ -89,7 +92,9 @@ export default function KeyboardCheatsheet({ open, onClose }) {
         </div>
 
         <div className="kcs-footer">
-          Press <Kbd>?</Kbd> any time to open this.
+          <Trans i18nKey="keyboard.footer" components={{ 1: <Kbd /> }}>
+            {'Press <1>?</1> any time to open this.'}
+          </Trans>
         </div>
       </div>
     </div>

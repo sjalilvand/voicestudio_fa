@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Search, ChevronDown, Check, Star, Clock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const MAX_DISPLAY = 200;
 
@@ -32,6 +33,7 @@ export default function SearchableSelect({
   buttonClassName = 'input-base',
   size = 'md',
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
@@ -161,7 +163,7 @@ export default function SearchableSelect({
             <input
               ref={inputRef}
               className="ss-search-input"
-              placeholder="Search…"
+              placeholder={t('common.search')}
               value={query}
               onChange={e => { setQuery(e.target.value); setHighlight(0); }}
               onKeyDown={onKey}
@@ -170,12 +172,12 @@ export default function SearchableSelect({
 
           <div ref={listRef} className="ss-list">
             {flatItems.length === 0 && (
-              <div className="ss-empty">No matches</div>
+              <div className="ss-empty">{t('common.no_matches')}</div>
             )}
 
             {pinned.length > 0 && (
               <div className="ss-group-label">
-                {recents.length ? <><Clock size={9}/> Recent & Popular</> : <><Star size={9}/> Popular</>}
+                {recents.length ? <><Clock size={9}/> {t('common.recent_and_popular')}</> : <><Star size={9}/> {t('common.popular_label')}</>}
               </div>
             )}
 
@@ -204,7 +206,7 @@ export default function SearchableSelect({
             })}
 
             {!query && filtered.length > MAX_DISPLAY && (
-              <div className="ss-more">Showing {MAX_DISPLAY} of {filtered.length}. Type to search…</div>
+              <div className="ss-more">{t('common.showing_of', { shown: MAX_DISPLAY, total: filtered.length })}</div>
             )}
           </div>
         </div>

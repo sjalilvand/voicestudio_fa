@@ -342,13 +342,13 @@ export function ModelStoreTab({ info, modelBadge }) {
         body: JSON.stringify({ key: 'HF_TOKEN', value }),
       });
       if (res.ok) {
-        toast.success('HuggingFace token set — faster downloads enabled');
+        toast.success(t('models.hf_token_set_toast'));
         setHfSaved(true);
         setHfToken('');
         setHfExpanded(false);
       } else {
         const d = await res.json().catch(() => ({}));
-        toast.error(d.detail || 'Failed to save token');
+        toast.error(d.detail || t('models.hf_token_save_failed'));
       }
     } catch (e) { toast.error(`Save failed: ${e.message}`); }
     finally { setHfSaving(false); }
@@ -442,25 +442,25 @@ export function ModelStoreTab({ info, modelBadge }) {
   }, []);
 
   const onInstall = useCallback((repoId) =>
-    withBusy(repoId, () => installMutation.mutateAsync(repoId), 'Install started — progress in the row'),
+    withBusy(repoId, () => installMutation.mutateAsync(repoId), t('models.install_started')),
     [installMutation, withBusy]);
   const onDelete = useCallback(async (repoId) => {
-    if (!(await askConfirm(`Delete ${repoId}? You can reinstall it later.`, 'Delete model'))) return;
-    return withBusy(repoId, () => deleteMutation.mutateAsync(repoId), `Deleted ${repoId}`);
+    if (!(await askConfirm(t('models.delete_confirm', { repoId }), t('models.delete_confirm_title')))) return;
+    return withBusy(repoId, () => deleteMutation.mutateAsync(repoId), t('models.deleted', { repoId }));
   }, [deleteMutation, withBusy]);
   const onReinstall = useCallback(async (repoId) => {
-    if (!(await askConfirm(`Reinstall ${repoId}? This will delete the current copy and download again.`, 'Reinstall model'))) return;
+    if (!(await askConfirm(t('models.reinstall_confirm', { repoId }), t('models.reinstall_confirm_title')))) return;
     await withBusy(repoId, async () => {
       await deleteMutation.mutateAsync(repoId);
       await installMutation.mutateAsync(repoId);
-    }, 'Reinstalling');
+    }, t('models.reinstalling'));
   }, [deleteMutation, installMutation, withBusy]);
 
   const onInstallRecommended = async () => {
     if (!reco) return;
     const missing = reco.models.filter(m => !m.installed);
     if (missing.length === 0) {
-      toast.success('Recommended models are already installed.');
+      toast.success(t('models.recommended_installed'));
       return;
     }
     setInstallingReco(true);
@@ -468,9 +468,9 @@ export function ModelStoreTab({ info, modelBadge }) {
       // Parallel install — backend /models/install spawns each download on
       // its own asyncio task so ordering doesn't matter.
       await Promise.all(missing.map(m => installMutation.mutateAsync(m.repo_id)));
-      toast.success(`Started downloading ${missing.length} model${missing.length > 1 ? 's' : ''}`);
+      toast.success(t('models.started_downloading', { count: missing.length }));
     } catch (e) {
-      toast.error(`Install failed: ${e.message || e}`);
+      toast.error(t('models.install_failed', { message: e.message || e }));
     } finally {
       setInstallingReco(false);
     }
@@ -540,7 +540,7 @@ export function ModelStoreTab({ info, modelBadge }) {
     {
       id: 'name',
       accessorFn: m => `${m.label || ''} ${m.repo_id || ''}`,
-      header: 'Model',
+      header: t('models.column_model'),
       size: 260,
       meta: { className: 'models-row__name' },
       cell: ({ row }) => {
@@ -557,7 +557,7 @@ export function ModelStoreTab({ info, modelBadge }) {
                 {m.repo_id.split('/')[0].slice(0, 2).toUpperCase()}
               </span>
               {m.label}
-              {m.required && <span className="models-row__tag">required</span>}
+              {m.required && <span className="models-row__tag">{t('models.required_tag')}</span>}
             </span>
             <span className="models-row__repo">
               <code>{m.repo_id}</code>
@@ -572,16 +572,16 @@ export function ModelStoreTab({ info, modelBadge }) {
                 />
                 <span className="models-row__progresstext">
                   {(() => {
-                    if (rt.isDeleting) return 'Removing cached revisions…';
+                    if (rt.isDeleting) return t('models.removing_cached');
                     if (!rt.hasFiles) {
                       if (rt.phase === 'resolving') {
                         const dots = '.'.repeat((rt.rs?.resolvingStep || 0) % 4);
-                        return `Resolving repo metadata${dots}`;
+                        return `${t('models.resolving_metadata')}${dots}`;
                       }
                       if (rt.phase === 'install_retry') {
-                        return `Retry attempt ${rt.rs?.retryAttempt || '?'} — ${rt.rs?.error || 'reconnecting'}`;
+                        return t('models.retry_attempt', { attempt: rt.rs?.retryAttempt || '?', error: rt.rs?.error || 'reconnecting' });
                       }
-                      return 'Connecting to HuggingFace…';
+                      return t('models.connecting_hf');
                     }
 
                     // We have file events — compute speed
@@ -603,8 +603,8 @@ export function ModelStoreTab({ info, modelBadge }) {
                     if (rt.totals.total === 0 && rt.totals.downloaded === 0) {
                       const activeFile = rt.activeFilename?.split('/').pop();
                       return activeFile
-                        ? `Resolving ${rt.fileList.length} file${rt.fileList.length > 1 ? 's' : ''}… · ${activeFile}`
-                        : `Resolving ${rt.fileList.length} file${rt.fileList.length > 1 ? 's' : ''}…`;
+                        ? t('models.resolving_files_active', { count: rt.fileList.length, file: activeFile })
+                        : t('models.resolving_files', { count: rt.fileList.length });
                     }
 
                     // Build the info line
@@ -623,12 +623,12 @@ export function ModelStoreTab({ info, modelBadge }) {
                     const parts = [
                       `${dlStr} / ${totalStr}`,
                       pctStr,
-                      speedStr || (rt.totals.downloaded > 0 ? 'measuring…' : ''),
+                      speedStr || (rt.totals.downloaded > 0 ? t('models.measuring') : ''),
                       etaStr,
                     ].filter(Boolean);
 
                     const extra = [];
-                    if (rt.fileList.length > 1) extra.push(`${rt.totals.done}/${rt.fileList.length} files`);
+                    if (rt.fileList.length > 1) extra.push(t('models.files_progress', { done: rt.totals.done, total: rt.fileList.length }));
                     if (rt.activeFilename) extra.push(rt.activeFilename.split('/').pop());
 
                     return extra.length
@@ -639,7 +639,7 @@ export function ModelStoreTab({ info, modelBadge }) {
               </div>
             )}
             {rt.phase === 'install_error' && rt.rs?.error && (
-              <span className="models-row__error">Install failed: {rt.rs.error}</span>
+              <span className="models-row__error">{t('models.install_error', { error: rt.rs.error })}</span>
             )}
           </>
         );
@@ -648,7 +648,7 @@ export function ModelStoreTab({ info, modelBadge }) {
     {
       id: 'role',
       accessorFn: m => (m.role || 'other').toLowerCase(),
-      header: 'Role',
+      header: t('models.column_role'),
       size: 58,
       filterFn: (row, id, value) => !value || row.getValue(id) === value,
       cell: ({ row }) => <span className="models-row__role">{MODEL_ROLE_LABEL[row.getValue('role')] || row.original.role || 'Other'}</span>,
@@ -656,7 +656,7 @@ export function ModelStoreTab({ info, modelBadge }) {
     {
       id: 'size',
       accessorFn: m => m.installed ? (m.size_on_disk_bytes || 0) : (m.size_gb || 0) * 1024 ** 3,
-      header: 'Size',
+      header: t('models.column_size'),
       size: 68,
       meta: { align: 'right', className: 'models-row__size' },
       cell: ({ row }) => {
@@ -672,23 +672,23 @@ export function ModelStoreTab({ info, modelBadge }) {
     {
       id: 'status',
       accessorFn: m => m.installed ? 2 : (m.supported === false ? 0 : 1),
-      header: 'Status',
+      header: t('models.column_status'),
       size: 96,
       meta: { align: 'center', className: 'models-row__status' },
       cell: ({ row }) => {
         const m = row.original;
         const rt = getRowRuntime(m);
         return rt.isInstalling
-          ? <Badge tone="warn" size="xs"><Download size={10} /> {rt.aggPct != null ? `${Math.round(rt.aggPct)}%` : 'downloading'}</Badge>
+          ? <Badge tone="warn" size="xs"><Download size={10} /> {rt.aggPct != null ? `${Math.round(rt.aggPct)}%` : t('models.downloading')}</Badge>
           : rt.isDeleting
-            ? <Badge tone="warn" size="xs"><Trash2 size={10} /> deleting</Badge>
+            ? <Badge tone="warn" size="xs"><Trash2 size={10} /> {t('models.deleting')}</Badge>
             : rt.rowBusy
-              ? <Badge tone="warn" size="xs"><RefreshCw size={10} className="spinner" /> working</Badge>
+              ? <Badge tone="warn" size="xs"><RefreshCw size={10} className="spinner" /> {t('models.working')}</Badge>
               : m.installed
-                ? <Badge tone="success" size="xs">installed</Badge>
+                ? <Badge tone="success" size="xs">{t('models.installed')}</Badge>
                 : rt.unsupported
                   ? <Badge tone="neutral" size="xs">{(m.platforms || []).join(', ')}</Badge>
-                  : <Badge tone="neutral" size="xs">not installed</Badge>;
+                  : <Badge tone="neutral" size="xs">{t('models.not_installed')}</Badge>;
       },
     },
     {
@@ -705,8 +705,8 @@ export function ModelStoreTab({ info, modelBadge }) {
             <Button
               variant="icon" iconSize="sm"
               onClick={() => openExternal(`https://huggingface.co/${m.repo_id}`)}
-              title="View on HuggingFace"
-              aria-label="View on HuggingFace"
+              title={t('models.view_on_hf')}
+              aria-label={t('models.view_on_hf')}
             >
               <ExternalLink size={11} />
             </Button>
@@ -716,7 +716,7 @@ export function ModelStoreTab({ info, modelBadge }) {
                 onClick={() => onInstall(m.repo_id)}
                 leading={<Download size={11} />}
               >
-                Install
+                {t('models.install_btn')}
               </Button>
             )}
             {m.installed && !rt.rowBusy && !rt.isDeleting && (
@@ -724,16 +724,16 @@ export function ModelStoreTab({ info, modelBadge }) {
                 <Button
                   variant="icon" iconSize="sm"
                   onClick={() => onReinstall(m.repo_id)}
-                  title="Reinstall"
-                  aria-label="Reinstall"
+                  title={t('models.reinstall_btn')}
+                  aria-label={t('models.reinstall_btn')}
                 >
                   <RefreshCw size={11} />
                 </Button>
                 <Button
                   variant="icon" iconSize="sm"
                   onClick={() => onDelete(m.repo_id)}
-                  title="Delete"
-                  aria-label="Delete"
+                  title={t('models.delete_btn')}
+                  aria-label={t('models.delete_btn')}
                 >
                   <Trash2 size={11} />
                 </Button>
@@ -743,7 +743,7 @@ export function ModelStoreTab({ info, modelBadge }) {
         );
       },
     },
-  ], [getRowRuntime, onDelete, onInstall, onReinstall]);
+  ], [getRowRuntime, onDelete, onInstall, onReinstall, t]);
 
   const table = useReactTable({
     data: allModels,
@@ -804,9 +804,9 @@ export function ModelStoreTab({ info, modelBadge }) {
             <button
               className="models-toolbar__hf-btn"
               onClick={() => setHfExpanded(true)}
-              title="Set HuggingFace token for faster downloads"
+              title={t('models.hf_set_title')}
             >
-              <KeyRound size={11} /> HF Token
+              <KeyRound size={11} /> {t('models.hf_token_btn')}
             </button>
           )}
           {!hfTokenSet && hfExpanded && (
@@ -821,7 +821,7 @@ export function ModelStoreTab({ info, modelBadge }) {
                 autoFocus
               />
               <Button size="sm" variant="subtle" onClick={saveHfToken} disabled={hfSaving || !hfToken.trim()} loading={hfSaving}>
-                Save
+                {t('common.save')}
               </Button>
               <a
                 href="#"
@@ -829,7 +829,7 @@ export function ModelStoreTab({ info, modelBadge }) {
                 onClick={e => { e.preventDefault(); openExternal('https://huggingface.co/settings/tokens'); }}
                 title="Open huggingface.co/settings/tokens"
               >
-                Get token →
+                {t('models.get_token')}→
               </a>
             </div>
           )}
@@ -837,7 +837,7 @@ export function ModelStoreTab({ info, modelBadge }) {
             <span className="models-toolbar__hf-ok"><KeyRound size={10} /> ✓</span>
           )}
           <Button variant="subtle" size="sm" onClick={reload} loading={loading} leading={<RefreshCw size={11} />}>
-            Refresh
+            {t('common.refresh')}
           </Button>
         </div>
       </div>
@@ -845,14 +845,14 @@ export function ModelStoreTab({ info, modelBadge }) {
       {reco && reco.all_installed && (
         <div className="reco-banner reco-banner--ok">
           <CheckCircle size={12} color="#8ec07c" />
-          <span className="flex-1">Recommended bundle installed for <strong>{reco.device.label}</strong></span>
+          <span className="flex-1">{t('models.reco_installed_for', { device: reco.device.label })}</span>
           <span className="reco-banner__gb">{reco.total_gb} GB</span>
         </div>
       )}
       {reco && !reco.all_installed && (
         <div className="reco-banner reco-banner--pending">
           <div className="reco-banner__top">
-            <span className="reco-banner__title">Recommended for {reco.device.label}</span>
+            <span className="reco-banner__title">{t('models.reco_for', { device: reco.device.label })}</span>
             <div className="reco-banner__btns">
               {(() => {
                 const requiredMissing = reco.models.filter(m => m.required && !m.installed);
@@ -866,19 +866,19 @@ export function ModelStoreTab({ info, modelBadge }) {
                       setInstallingReco(true);
                       try {
                         await Promise.all(requiredMissing.map(m => installMutation.mutateAsync(m.repo_id)));
-                        toast.success(`Started downloading ${requiredMissing.length} required model${requiredMissing.length > 1 ? 's' : ''}`);
-                      } catch (e) { toast.error(`Install failed: ${e.message || e}`); }
+                        toast.success(t('models.started_downloading_required', { count: requiredMissing.length }));
+                      } catch (e) { toast.error(t('models.install_failed', { message: e.message || e })); }
                       finally { setInstallingReco(false); }
                     }}
                     disabled={installingReco}
                     leading={installingReco ? <RefreshCw size={12} className="spinner" /> : null}
                   >
-                    {installingReco ? 'Starting…' : `Required ~${requiredGb.toFixed(1)} GB`}
+                    {installingReco ? t('models.starting') : t('models.required_size', { size: requiredGb.toFixed(1) })}
                   </Button>
                 );
               })()}
               <Button variant="subtle" size="sm" onClick={onInstallRecommended} disabled={installingReco}>
-                {`All ~${reco.download_gb_remaining} GB`}
+                {t('models.all_size', { size: reco.download_gb_remaining })}
               </Button>
             </div>
           </div>
@@ -887,7 +887,7 @@ export function ModelStoreTab({ info, modelBadge }) {
               <span key={m.repo_id} className={`reco-banner__model ${m.installed ? 'reco-banner__model--ok' : ''}`}>
                 {m.installed ? '✓' : '○'} {m.label}
                 <span className="reco-banner__model-size">{m.size_gb}</span>
-                {m.required && <span className="reco-banner__req">req</span>}
+                {m.required && <span className="reco-banner__req">{t('models.req_tag')}</span>}
               </span>
             ))}
           </div>
@@ -917,10 +917,10 @@ export function ModelStoreTab({ info, modelBadge }) {
         <input
           type="search"
           className="models-search"
-          placeholder="Search models…"
+          placeholder={t('models.search_placeholder')}
           value={query}
           onChange={e => setQuery(e.target.value)}
-          aria-label="Search models"
+          aria-label={t('models.search_label')}
         />
       </div>
 
@@ -943,7 +943,7 @@ export function ModelStoreTab({ info, modelBadge }) {
                     style={{ width: header.column.columnDef.size, flex: header.column.id === 'name' ? '1 1 auto' : '0 0 auto' }}
                     onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
                     disabled={!canSort}
-                    title={canSort ? `Sort by ${String(header.column.columnDef.header || '')}` : undefined}
+                    title={canSort ? t('models.sort_by', { column: String(header.column.columnDef.header || '') }) : undefined}
                   >
                     {flexRender(header.column.columnDef.header, header.getContext())}
                     {header.column.getIsSorted() === 'asc' && <span className="models-table__sortmark">↑</span>}
@@ -988,7 +988,7 @@ export function ModelStoreTab({ info, modelBadge }) {
               );
             })}
             {tableRows.length === 0 && (
-              <div className="models-table__empty">No models match your filters.</div>
+              <div className="models-table__empty">{t('models.no_matches')}</div>
             )}
           </div>
         </div>
@@ -1012,7 +1012,7 @@ export function EnginesTab() {
       const r = await selectEngine(family, backendId);
       toast.success(`${family.toUpperCase()} → ${r.active}`);
     } catch (e) {
-      toast.error(e.message || 'Failed to switch engine');
+      toast.error(e.message || t('engines.switch_failed'));
     }
   }, []);
 
@@ -1139,15 +1139,15 @@ export default function Settings() {
     const text = lines.join('\n');
     try {
       await copyText(text);
-      toast.success('Diagnostics copied — paste into your issue report.');
+      toast.success(t('settings.diagnostics_copied'));
     } catch (e) {
-      toast.error('Copy failed: ' + (e?.message || e));
+      toast.error(t('settings.copy_failed', { message: e?.message || e }));
     }
-  }, [appVersion, tauriVersion, info, status, hw, updateChannel]);
+  }, [appVersion, tauriVersion, info, status, hw, updateChannel, t]);
 
   const checkForUpdates = useCallback(async () => {
     if (!isTauri()) {
-      toast('Updater only runs in the desktop app.', { icon: 'ℹ️' });
+      toast(t('settings.updater_desktop'), { icon: 'ℹ️' });
       return;
     }
     setUpdateState('checking');
@@ -1161,7 +1161,7 @@ export default function Settings() {
       const update = await invoke('check_update', { channel });
       if (!update) {
         setUpdateState('uptodate');
-        toast.success("You're on the latest version.");
+        toast.success(t('settings.latest_version'));
         return;
       }
       const proceed = await ask(
@@ -1176,9 +1176,9 @@ export default function Settings() {
       await relaunch();
     } catch (e) {
       setUpdateState('error');
-      toast.error('Update check failed: ' + (e?.message || e));
+      toast.error(t('settings.update_check_failed', { message: e?.message || e }));
     }
-  }, [updateChannel]);
+  }, [updateChannel, t]);
 
   // refreshInfo polling replaced by TanStack Query (useSystemInfo + useModelStatus)
   const refreshInfo = useCallback(() => {}, []);
@@ -1204,11 +1204,11 @@ export default function Settings() {
         setLogMeta({ path: 'in-memory (last 500)', exists: true });
       }
     } catch (e) {
-      toast.error('Failed to load logs: ' + e.message);
+      toast.error(t('settings.logs_load_failed', { message: e.message }));
     } finally {
       setLoadingLogs(false);
     }
-  }, [logSource]);
+  }, [logSource, t]);
 
   useEffect(() => {
     if (activeTab === 'logs') refreshLogs();
@@ -1216,41 +1216,41 @@ export default function Settings() {
 
   const onClearLogs = async () => {
     if (logSource === 'frontend') {
-      if (!(await askConfirm('Clear the in-memory frontend log buffer?', 'Clear logs'))) return;
+      if (!(await askConfirm(t('settings.clear_frontend_confirm'), t('settings.clear_frontend_title')))) return;
       clearFrontendLogs();
-      toast.success('Frontend logs cleared');
+      toast.success(t('settings.frontend_logs_cleared'));
       setLogs([]);
       return;
     }
     if (logSource === 'tauri') {
-      if (!(await askConfirm('Truncate the Tauri-side log files? The OS will continue to write new entries.', 'Clear Tauri logs'))) return;
+      if (!(await askConfirm(t('settings.clear_tauri_confirm'), t('settings.clear_tauri_title')))) return;
       try {
         const r = await clearTauriLogs();
         if (!r?.cleared?.length) {
-          toast('Nothing to clear — no Tauri log file on disk yet.', { icon: 'ℹ️' });
+          toast(t('settings.nothing_to_clear'), { icon: 'ℹ️' });
         } else {
-          toast.success(`Cleared ${r.cleared.length} Tauri log file(s)`);
+          toast.success(t('settings.cleared_tauri', { count: r.cleared.length }));
           setLogs([]);
         }
       } catch (e) {
-        toast.error('Failed to clear Tauri logs: ' + e.message);
+        toast.error(t('settings.clear_tauri_failed', { message: e.message }));
       }
       return;
     }
-    if (!(await askConfirm('Clear the backend runtime + crash logs? This cannot be undone.', 'Clear logs'))) return;
+    if (!(await askConfirm(t('settings.clear_backend_confirm'), t('settings.clear_backend_title')))) return;
     try {
       await clearSystemLogs();
-      toast.success('Backend logs cleared');
+      toast.success(t('settings.backend_logs_cleared'));
       setLogs([]);
     } catch (e) {
-      toast.error('Failed to clear logs');
+      toast.error(t('settings.clear_backend_failed'));
     }
   };
 
   const modelBadge =
-    status?.status === 'ready'   ? <Badge tone="success"><CheckCircle size={11} /> Ready</Badge>
-  : status?.status === 'loading' ? <Badge tone="warn"><RefreshCw size={11} className="spinner" /> Loading…</Badge>
-                                 : <Badge tone="warn">Idle</Badge>;
+    status?.status === 'ready'   ? <Badge tone="success"><CheckCircle size={11} /> {t('models.ready_badge')}</Badge>
+  : status?.status === 'loading' ? <Badge tone="warn"><RefreshCw size={11} className="spinner" /> {t('models.loading_badge')}</Badge>
+                                 : <Badge tone="warn">{t('models.idle_badge')}</Badge>;
 
   return (
     <div className="settings-page">

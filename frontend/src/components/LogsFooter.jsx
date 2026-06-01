@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { clearSystemLogs, clearTauriLogs } from '../api/system';
 import { useSystemLogs, useTauriLogs, useClearLogs, useClearTauriLogs } from '../api/hooks';
 import { getFrontendLogs, clearFrontendLogs } from '../utils/consoleBuffer';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store';
 import NetworkToggle from './NetworkToggle';
 import './LogsFooter.css';
@@ -138,6 +139,7 @@ export default function LogsFooter() {
     localStorage.removeItem('omnivoice.logs.collapsed');
   }
   const [collapsed, setCollapsed] = useState(true);
+  const { t } = useTranslation();
   const [height, setHeight] = useState(() => {
     const v = Number(localStorage.getItem(LS_HEIGHT));
     return Number.isFinite(v) && v >= MIN_H && v <= MAX_H ? v : 300;
@@ -286,9 +288,9 @@ export default function LogsFooter() {
       else if (active === 'tauri')    await clearTauriLogs();
       else if (active === 'frontend') clearFrontendLogs();
       setLines(prev => ({ ...prev, [active]: [] }));
-      toast.success(`${active} log cleared`);
+      toast.success(t('logs.log_cleared', { source: active }));
     } catch (e) {
-      toast.error(`Clear failed: ${e?.message || e}`);
+      toast.error(t('logs.clear_failed', { message: e?.message || e }));
     }
   };
 
@@ -296,9 +298,9 @@ export default function LogsFooter() {
     try {
       const raw = (lines[active] || []).join('\n');
       await copyText(raw);
-      toast.success(`Copied ${active} log`);
+      toast.success(t('logs.log_copied', { source: active }));
     } catch (e) {
-      toast.error(`Copy failed: ${e?.message || e}`);
+      toast.error(t('logs.copy_failed', { message: e?.message || e }));
     }
   };
 
@@ -322,9 +324,9 @@ export default function LogsFooter() {
     }).join('\n\n');
     try {
       await copyText(header + body);
-      toast.success('Diagnostic report copied — paste it into a GitHub issue.');
+      toast.success(t('logs.report_copied'));
     } catch (e) {
-      toast.error(`Report failed: ${e?.message || e}`);
+      toast.error(t('logs.report_failed', { message: e?.message || e }));
     }
   };
 
@@ -340,7 +342,7 @@ export default function LogsFooter() {
           ref={dragRef}
           className="logs-footer__resize"
           onMouseDown={onDragStart}
-          title="Drag to resize"
+          title={t('logs.drag_resize')}
         />
       )}
 
@@ -353,13 +355,13 @@ export default function LogsFooter() {
             type="button"
             className="logs-footer__toggle"
             onClick={() => setCollapsed(c => !c)}
-            title={collapsed ? 'Expand logs' : 'Collapse logs'}
-            aria-label={collapsed ? 'Expand logs panel' : 'Collapse logs panel'}
+            title={collapsed ? t('logs.expand') : t('logs.collapse')}
+            aria-label={collapsed ? t('logs.expand_aria') : t('logs.collapse_aria')}
             aria-expanded={!collapsed}
           >
             {collapsed ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           </button>
-          <span className="logs-footer__title">Logs</span>
+          <span className="logs-footer__title">{t('logs.title')}</span>
           {SOURCES.map(s => (
             <SourcePill
               key={s.id}
@@ -373,19 +375,19 @@ export default function LogsFooter() {
         <div className="logs-footer__right">
           {!collapsed && (
             <div className="logs-footer__actions">
-              <button className="logs-footer__icon-btn" onClick={refreshAll} disabled={loading} title="Refresh" aria-label="Refresh logs">
+              <button className="logs-footer__icon-btn" onClick={refreshAll} disabled={loading} title={t('logs.refresh')} aria-label={t('logs.refresh_aria')}>
                 <RefreshCw size={12} className={loading ? 'spinner' : ''} />
               </button>
-              <button className="logs-footer__icon-btn" onClick={onCopy} title="Copy visible log" aria-label="Copy visible log">
+              <button className="logs-footer__icon-btn" onClick={onCopy} title={t('logs.copy_visible')} aria-label={t('logs.copy_visible_aria')}>
                 <Copy size={12} />
               </button>
-              <button className="logs-footer__icon-btn" onClick={onClear} title="Clear" aria-label="Clear log">
+              <button className="logs-footer__icon-btn" onClick={onClear} title={t('logs.clear')} aria-label={t('logs.clear_aria')}>
                 <Trash2 size={12} />
               </button>
-              <button className="logs-footer__icon-btn logs-footer__icon-btn--report" onClick={onReportIssue} title="Report issue (copy diagnostic)" aria-label="Report issue">
+              <button className="logs-footer__icon-btn logs-footer__icon-btn--report" onClick={onReportIssue} title={t('logs.report_issue')} aria-label={t('logs.report_issue_aria')}>
                 <Bug size={12} />
               </button>
-              <button className="logs-footer__icon-btn" onClick={() => setCollapsed(true)} title="Close" aria-label="Close logs panel">
+              <button className="logs-footer__icon-btn" onClick={() => setCollapsed(true)} title={t('logs.close')} aria-label={t('logs.close_aria')}>
                 <X size={12} />
               </button>
             </div>
@@ -395,8 +397,8 @@ export default function LogsFooter() {
             type="button"
             className="logs-footer__discord"
             onClick={() => { import('../api/external').then(m => m.openExternal('https://discord.gg/bzQavDfVV9')); }}
-            title="Join our Discord"
-            aria-label="Join our Discord community"
+            title={t('logs.join_discord')}
+            aria-label={t('logs.join_discord_aria')}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.947 2.418-2.157 2.418z"/></svg>
           </button>
@@ -404,8 +406,8 @@ export default function LogsFooter() {
             type="button"
             className="logs-footer__donate"
             onClick={() => useAppStore.getState().setMode?.('donate')}
-            title="Support this project"
-            aria-label="Support this project"
+            title={t('logs.support_project')}
+            aria-label={t('logs.support_project_aria')}
           >
             <DonateHeart />
           </button>
@@ -416,7 +418,7 @@ export default function LogsFooter() {
         <div ref={scrollRef} className="logs-footer__body">
           {current.length === 0 && (
             <div className="logs-footer__empty">
-              {active === 'frontend' ? 'No frontend console output yet.' : 'No lines.'}
+              {active === 'frontend' ? t('logs.empty_frontend_short') : t('logs.empty_lines')}
             </div>
           )}
           {current.map((line, i) => {
@@ -435,7 +437,7 @@ export default function LogsFooter() {
         <div className="logs-footer__body logs-footer__notif-body">
           {notifications.length === 0 ? (
             <div className="logs-footer__empty">
-              ✅ All clear — no issues detected
+              {t('logs.all_clear')}
             </div>
           ) : (
             notifications.map(notif => (

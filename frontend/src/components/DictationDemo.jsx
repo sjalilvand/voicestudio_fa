@@ -30,21 +30,21 @@ import './DictationDemo.css';
 const SCRIPTS = [
   {
     id: 'en_conversational',
-    label: 'Conversational',
+    labelKey: 'demo.script_conversational',
     language: 'English',
     text: 'Schedule a meeting with Pat for Tuesday at three PM and remind me to bring the quarterly report.',
     wav: '/demo_audio/dictation/en_conversational.wav',
   },
   {
     id: 'en_technical',
-    label: 'Technical vocabulary',
+    labelKey: 'demo.script_technical',
     language: 'English',
     text: 'Patch the WebGPU shader in renderer.tsx, then bump pnpm to nine point fifteen and rerun the Vitest suite.',
     wav: '/demo_audio/dictation/en_technical.wav',
   },
   {
     id: 'fr_reservation',
-    label: 'Non-English (French)',
+    labelKey: 'demo.script_french',
     language: 'French',
     text: 'Bonjour, je voudrais réserver une table pour deux personnes à vingt heures.',
     wav: '/demo_audio/dictation/fr_reservation.wav',
@@ -218,7 +218,7 @@ export default function DictationDemo({ embedded = false }) {
             <div key={s.id} className="dictation-demo__card">
               <div className="dictation-demo__card-head">
                 <span className="dictation-demo__lang">{s.language}</span>
-                <span className="dictation-demo__card-label">{s.label}</span>
+                <span className="dictation-demo__card-label">{t(s.labelKey)}</span>
               </div>
               <blockquote className="dictation-demo__script">{s.text}</blockquote>
               <div className="dictation-demo__card-actions">
@@ -227,7 +227,7 @@ export default function DictationDemo({ embedded = false }) {
                   variant="subtle"
                   onClick={() => togglePlay(s)}
                   leading={isPlaying ? <Pause size={11} /> : <Play size={11} />}
-                  aria-label={isPlaying ? `Pause ${s.label}` : `Hear ${s.label}`}
+                  aria-label={isPlaying ? t('demo.aria_pause', { label: t(s.labelKey) }) : t('demo.aria_hear', { label: t(s.labelKey) })}
                 >
                   {isPlaying ? t('demo.dictation_stop') : t('demo.dictation_hear')}
                 </Button>
@@ -237,7 +237,7 @@ export default function DictationDemo({ embedded = false }) {
                   onClick={() => replay(s)}
                   loading={tx.state === 'loading'}
                   leading={tx.state !== 'loading' && <Mic size={11} />}
-                  aria-label={`Replay ${s.label} through transcriber`}
+                  aria-label={t('demo.aria_replay', { label: t(s.labelKey) })}
                 >
                   {tx.state === 'loading' ? t('demo.dictation_transcribing') : t('demo.dictation_replay')}
                 </Button>

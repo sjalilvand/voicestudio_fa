@@ -131,7 +131,7 @@ export function BootstrapSplash({ stage, message }) {
 
   const handleCleanRetry = async () => {
     if (retrying) return;
-    if (!confirm('This will delete the cached Python environment and re-download all dependencies (~5-10 min). Continue?')) return;
+    if (!confirm(t('bootstrap.clean_retry_confirm'))) return;
     setRetrying(true);
     try {
       const { invoke } = await import('@tauri-apps/api/core');
@@ -258,10 +258,10 @@ export function BootstrapSplash({ stage, message }) {
               onChange={(e) => handleRegionChange(e.target.value)}
             >
               <option value="auto">🌐 {t('bootstrap.auto_detect', 'Auto-detect')}</option>
-              <option value="global">🌐 Global (direct)</option>
-              <option value="china">🇨🇳 China (mirror)</option>
-              <option value="russia">🇷🇺 Russia (mirror)</option>
-              <option value="restricted">🌍 Restricted (mirror)</option>
+              <option value="global">🌐 {t('bootstrap.region_global')}</option>
+              <option value="china">🇨🇳 {t('bootstrap.region_china')}</option>
+              <option value="russia">🇷🇺 {t('bootstrap.region_russia')}</option>
+              <option value="restricted">🌍 {t('bootstrap.region_restricted')}</option>
             </select>
           </div>
           <div className="bootstrap-splash__lang" style={{ marginLeft: '0.5rem' }}>
@@ -288,7 +288,7 @@ export function BootstrapSplash({ stage, message }) {
         <p className="bootstrap-splash__status">{label}</p>
         {isFailed ? (
           <>
-            <pre className="bootstrap-splash__error">{message || 'Unknown error'}</pre>
+            <pre className="bootstrap-splash__error">{message || t('bootstrap.unknown_error')}</pre>
             <div className="bootstrap-splash__hints">
               <strong>💡 {t('bootstrap.what_to_try', 'What to try:')}</strong>
               <ul>

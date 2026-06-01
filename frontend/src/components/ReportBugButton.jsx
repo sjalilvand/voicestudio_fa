@@ -25,6 +25,7 @@ import { Bug } from 'lucide-react';
 import { Button } from '../ui';
 import { openExternal } from '../api/external';
 import { API } from '../api/client';
+import { useTranslation } from 'react-i18next';
 
 const APP_VERSION = (typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__) || 'unknown';
 
@@ -73,7 +74,9 @@ async function captureContext() {
   return lines.join('\n');
 }
 
-export default function ReportBugButton({ size = 'sm', variant = 'subtle', label = 'Report a bug' }) {
+export default function ReportBugButton({ size = 'sm', variant = 'subtle', label }) {
+  const { t } = useTranslation();
+  const displayLabel = label || t('reportBug.label');
   const [building, setBuilding] = useState(false);
 
   const handleClick = async () => {
@@ -112,9 +115,9 @@ export default function ReportBugButton({ size = 'sm', variant = 'subtle', label
       onClick={handleClick}
       loading={building}
       leading={!building && <Bug size={12} />}
-      title="Opens a prefilled GitHub Issues page in your browser. Nothing is sent until you click Submit."
+      title={t('reportBug.title')}
     >
-      {label}
+      {displayLabel}
     </Button>
   );
 }

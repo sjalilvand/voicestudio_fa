@@ -6,6 +6,8 @@ import { probeAudioDuration } from '../utils/format';
 import { CLONE_MAX_SECONDS, PRESETS } from '../utils/constants';
 import { buildDesignInstruct } from '../utils/voiceInstruct';
 import { toast } from 'react-hot-toast';
+import i18next from 'i18next';
+const t = i18next.t.bind(i18next);
 
 /**
  * Encapsulates TTS generation logic, streaming response handling,
@@ -44,7 +46,7 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
     if (dur && dur > CLONE_MAX_SECONDS) {
       setPendingTrimFile(file);
       setSelectedProfile(null);
-      toast(`Audio is ${dur.toFixed(1)}s — trim to ≤${CLONE_MAX_SECONDS}s for best cloning`);
+      toast(t('tts_errors.trim_hint', { duration: dur.toFixed(1), max: CLONE_MAX_SECONDS }));
       return;
     }
     setRefAudio(file);
@@ -65,8 +67,8 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
   }, [text, insertTag]);
 
   const handleGenerate = useCallback(async () => {
-    if (!text.trim()) return toast.error("Please enter text");
-    if (mode === 'clone' && !refAudio && !selectedProfile) return toast.error("Upload an audio or select a voice profile");
+    if (!text.trim()) return toast.error(t('tts_errors.enter_text'));
+    if (mode === 'clone' && !refAudio && !selectedProfile) return toast.error(t('tts_errors.upload_or_select'));
     setIsGenerating(true);
     setGenerationTime(0);
     const st = Date.now();
@@ -112,10 +114,10 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
         // the same category" (#114).
         const { instruct: finalInstruct, unsupported, duplicates } = buildDesignInstruct(vdStates, instruct);
         if (unsupported.length) {
-          toast(`Ignored unsupported instruct: ${unsupported.join(', ')}`, { icon: '⚠️' });
+          toast(t('tts_errors.ignored_unsupported', { items: unsupported.join(', ') }), { icon: '⚠️' });
         }
         if (duplicates.length) {
-          toast(`Ignored (category already set): ${duplicates.join(', ')}`, { icon: '⚠️' });
+          toast(t('tts_errors.ignored_duplicate', { items: duplicates.join(', ') }), { icon: '⚠️' });
         }
         if (finalInstruct) formData.append("instruct", finalInstruct);
         if (selectedProfile) {
@@ -155,8 +157,8 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
       playPing();
     } catch (err) {
       const msg = err?.name === 'AbortError'
-        ? 'Generation timed out — the model may still be downloading. Check Settings → Logs, then try again.'
-        : ("Error: " + err.message);
+        ? t('tts_errors.timeout')
+        : t('tts_errors.error_prefix', { message: err.message });
       toast.error(msg);
     } finally {
       if (abortTimer) clearTimeout(abortTimer);

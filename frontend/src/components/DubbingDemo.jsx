@@ -84,7 +84,7 @@ export default function DubbingDemo({ onDismiss }) {
   if (!manifest) {
     return (
       <div className="dubbing-demo dubbing-demo--loading">
-        Loading dubbing demo…
+        {t('demo.dubbing_loading')}
       </div>
     );
   }
@@ -115,7 +115,7 @@ export default function DubbingDemo({ onDismiss }) {
               type="button"
               className="dubbing-demo__dismiss"
               onClick={onDismiss}
-              aria-label="Dismiss dubbing demo"
+              aria-label={t('demo.dubbing_dismiss')}
             >
               <X size={13} />
             </button>
@@ -125,7 +125,7 @@ export default function DubbingDemo({ onDismiss }) {
 
       <div className="dubbing-demo__players">
         <div className="dubbing-demo__pane">
-          <div className="dubbing-demo__pane-label">{source.label} <span>· original</span></div>
+          <div className="dubbing-demo__pane-label">{source.label} <span>· {t('demo.original_tag')}</span></div>
           <video
             ref={sourceRef}
             src={`${base}/${source.video}`}
@@ -137,7 +137,7 @@ export default function DubbingDemo({ onDismiss }) {
         </div>
         <div className="dubbing-demo__pane">
           <div className="dubbing-demo__pane-label">
-            {dubbed.label} <span>· dubbed</span>
+            {dubbed.label} <span>· {t('demo.dubbed_tag')}</span>
           </div>
           <video
             ref={dubbedRef}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle, ArrowRight, X, Sparkles, Languages, Mic } from 'lucide-react';
 import { Button } from '../ui';
+import { useTranslation } from 'react-i18next';
 import './Misc.css';
 
 /**
@@ -16,62 +17,50 @@ import './Misc.css';
  * pipeline directly from the banner's CTA (translate, generate, etc).
  */
 
-const STAGE_CONFIG = {
-  asr: {
-    icon: Mic,
-    accent: '#b8bb26',
-    title: 'Transcripts ready',
-    cta: 'Translate',
-    ctaIcon: Languages,
-    hint: 'Fix any ASR errors now — tight diction saves TTS attempts later.',
-  },
-  translate: {
-    icon: Languages,
-    accent: '#83a598',
-    title: 'Translations ready',
-    cta: 'Generate dub',
-    ctaIcon: Sparkles,
-    hint: 'Skim the target text. Over-length lines get speed-boosted; you can also edit directly.',
-  },
-  done: {
-    icon: CheckCircle,
-    accent: '#8ec07c',
-    title: 'Dub complete',
-    cta: null,
-    hint: 'Review timing and sync ratios. Tweak any line and hit "Regen changed" for a fast partial redo.',
-  },
+const STAGE_ICONS = {
+  asr: { icon: Mic, accent: '#b8bb26', ctaIcon: Languages },
+  translate: { icon: Languages, accent: '#83a598', ctaIcon: Sparkles },
+  done: { icon: CheckCircle, accent: '#8ec07c' },
+};
+
+const STAGE_KEYS = {
+  asr: { title: 'checkpoint.asr_title', cta: 'checkpoint.asr_cta', hint: 'checkpoint.asr_hint' },
+  translate: { title: 'checkpoint.translate_title', cta: 'checkpoint.translate_cta', hint: 'checkpoint.translate_hint' },
+  done: { title: 'checkpoint.done_title', cta: null, hint: 'checkpoint.done_hint' },
 };
 
 export default function CheckpointBanner({ stage, count, onContinue, onDismiss, continueLoading }) {
-  const cfg = STAGE_CONFIG[stage];
-  if (!cfg) return null;
+  const { t } = useTranslation();
+  const icons = STAGE_ICONS[stage];
+  const keys = STAGE_KEYS[stage];
+  if (!icons || !keys) return null;
 
-  const Icon = cfg.icon;
-  const CtaIcon = cfg.ctaIcon;
+  const Icon = icons.icon;
+  const CtaIcon = icons.ctaIcon;
 
   return (
     <div
       className="checkpoint-banner ckpt-banner"
-      style={{ borderLeft: `2px solid ${cfg.accent}` }}
+      style={{ borderLeft: `2px solid ${icons.accent}` }}
       role="status"
     >
-      <Icon size={14} color={cfg.accent} className="ckpt-icon" />
+      <Icon size={14} color={icons.accent} className="ckpt-icon" />
       <div className="ckpt-body">
         <div className="ckpt-head">
           <span className="ckpt-title">
-            {cfg.title}
+            {t(keys.title)}
           </span>
           {typeof count === 'number' && (
             <span className="ckpt-count">
-              {count} segment{count === 1 ? '' : 's'}
+              {t('checkpoint.segment', { count })}
             </span>
           )}
         </div>
         <span className="ckpt-hint">
-          {cfg.hint}
+          {t(keys.hint)}
         </span>
       </div>
-      {cfg.cta && onContinue && (
+      {keys.cta && onContinue && (
         <Button
           variant="subtle"
           size="sm"
@@ -80,7 +69,7 @@ export default function CheckpointBanner({ stage, count, onContinue, onDismiss, 
           leading={CtaIcon ? <CtaIcon size={10} /> : null}
           trailing={<ArrowRight size={10} />}
         >
-          {cfg.cta}
+          {t(keys.cta)}
         </Button>
       )}
       {onDismiss && (
@@ -88,7 +77,7 @@ export default function CheckpointBanner({ stage, count, onContinue, onDismiss, 
           variant="ghost"
           size="sm"
           onClick={onDismiss}
-          title="Dismiss — won't reappear for this stage until reload"
+          title={t('checkpoint.dismiss_title')}
           iconSize="sm"
         >
           <X size={10} />

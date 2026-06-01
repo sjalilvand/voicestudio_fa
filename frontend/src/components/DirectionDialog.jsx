@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { Dialog, Button, Textarea, Field, Badge } from '../ui';
 import { apiPost } from '../api/client';
 import './Misc.css';
@@ -17,6 +18,7 @@ import './Misc.css';
  * always the canonical input.
  */
 export default function DirectionDialog({ open, seg, onSave, onClose }) {
+  const { t } = useTranslation();
   const [text, setText] = useState('');
   const [preview, setPreview] = useState(null);
   const [parsing, setParsing] = useState(false);
@@ -35,7 +37,7 @@ export default function DirectionDialog({ open, seg, onSave, onClose }) {
     try {
       setPreview(await apiPost('/tools/direction', { text }));
     } catch (e) {
-      toast.error(`Preview failed: ${e.message}`);
+      toast.error(t('direction.previewFailed', { message: e.message }));
     } finally {
       setParsing(false);
     }
@@ -56,7 +58,7 @@ export default function DirectionDialog({ open, seg, onSave, onClose }) {
       open
       onClose={onClose}
       size="md"
-      title={<><Sparkles size={14} /> Direction for segment #{seg?.id?.slice?.(0, 6) || ''}</>}
+      title={<><Sparkles size={14} /> {t('direction.title', { id: seg?.id?.slice?.(0, 6) || '' })}</>}
       footer={
         <>
           {seg?.direction && (
@@ -66,28 +68,26 @@ export default function DirectionDialog({ open, seg, onSave, onClose }) {
               leading={<X size={11} />}
               className="dir-clear-btn"
             >
-              Clear
+              {t('direction.clear')}
             </Button>
           )}
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" onClick={save} loading={saving}>Save direction</Button>
+          <Button variant="ghost" onClick={onClose}>{t('direction.cancel')}</Button>
+          <Button variant="primary" onClick={save} loading={saving}>{t('direction.saveDirection')}</Button>
         </>
       }
     >
       <p className="direction-dialog__desc">
-        Tell the pipeline how this line should feel. Plain English works — the system
-        maps your words onto a stable taxonomy (energy / emotion / pace / intimacy / formality),
-        then threads the taxonomy through Cinematic translation, TTS, and slot-fit.
+        {t('direction.desc')}
       </p>
 
-      <Field label="Direction" hint={
-        seg?.text ? <>Line: <em>"{seg.text.slice(0, 80)}{seg.text.length > 80 ? '…' : ''}"</em></> : null
+      <Field label={t('direction.label')} hint={
+        seg?.text ? <>{t('direction.lineHint', { text: seg.text.slice(0, 80) + (seg.text.length > 80 ? '…' : '') })}</> : null
       }>
         <Textarea
           rows={3}
           value={text}
           onChange={e => setText(e.target.value)}
-          placeholder="e.g. urgent and surprised  /  warm, hopeful  /  whispered, intimate"
+          placeholder={t('direction.placeholder')}
           autoFocus
         />
       </Field>
@@ -99,7 +99,7 @@ export default function DirectionDialog({ open, seg, onSave, onClose }) {
           loading={parsing}
           disabled={!text.trim()}
         >
-          Preview parse
+          {t('direction.previewParse')}
         </Button>
         {preview && (
           <Badge tone={preview.method === 'llm' ? 'violet' : 'neutral'} size="xs">
@@ -111,19 +111,19 @@ export default function DirectionDialog({ open, seg, onSave, onClose }) {
       {preview && (
         <div className="direction-dialog__preview">
           <div>
-            <strong>TTS instruct:</strong> <code>{preview.instruct_prompt || '— (nothing parsed)'}</code>
+            <strong>{t('direction.ttsInstruct')}</strong> <code>{preview.instruct_prompt || t('direction.nothingParsed')}</code>
           </div>
           <div>
-            <strong>Translate hint:</strong> <em>{preview.translate_hint || '—'}</em>
+            <strong>{t('direction.translateHint')}</strong> <em>{preview.translate_hint || '—'}</em>
           </div>
           <div>
-            <strong>Rate bias:</strong> <code>{preview.rate_bias?.toFixed?.(2)}</code>
-            {preview.rate_bias > 1.05 && <> · <span className="dir-rate-up">speeds up</span></>}
-            {preview.rate_bias < 0.95 && <> · <span className="dir-rate-down">slows down</span></>}
+            <strong>{t('direction.rateBias')}</strong> <code>{preview.rate_bias?.toFixed?.(2)}</code>
+            {preview.rate_bias > 1.05 && <> · <span className="dir-rate-up">{t('direction.speedsUp')}</span></>}
+            {preview.rate_bias < 0.95 && <> · <span className="dir-rate-down">{t('direction.slowsDown')}</span></>}
           </div>
           {Object.keys(preview.tokens || {}).length > 0 && (
             <details>
-              <summary>taxonomy tokens</summary>
+              <summary>{t('direction.taxonomyTokens')}</summary>
               <pre>{JSON.stringify(preview.tokens, null, 2)}</pre>
             </details>
           )}

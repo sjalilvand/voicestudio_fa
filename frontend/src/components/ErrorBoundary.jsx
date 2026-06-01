@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertCircle, BookOpen, RefreshCw } from 'lucide-react';
+import i18next from 'i18next';
 import { classifyError, openDocsFor } from '../utils/errorDocsMap';
 import './WaveformErrorBoundary.css';
 
@@ -44,10 +45,10 @@ export default class ErrorBoundary extends React.Component {
         <div className="errbnd-card">
           <AlertCircle size={32} color="var(--chrome-severity-err)" className="errbnd-icon" />
           <h2 className="errbnd-title">
-            This tab hit a snag.
+            {i18next.t('errors.title')}
           </h2>
           <p className="errbnd-desc">
-            Don't worry — the rest of the app still works. You can switch tabs, or try again below.
+            {i18next.t('errors.desc')}
           </p>
           <pre className="errbnd-trace">{msg}</pre>
           <div className="errbnd-actions">
@@ -55,15 +56,15 @@ export default class ErrorBoundary extends React.Component {
               onClick={this.reset}
               className="btn-primary errbnd-retry"
             >
-              <RefreshCw size={12} /> Try again
+              <RefreshCw size={12} /> {i18next.t('errors.tryAgain')}
             </button>
             <button
               type="button"
               onClick={this.openDocs}
               className="btn-secondary errbnd-docs"
-              title="Open the docs page for this error in your browser"
+              title={i18next.t('errors.openDocs')}
             >
-              <BookOpen size={12} /> Open docs for this error
+              <BookOpen size={12} /> {i18next.t('errors.openDocs')}
             </button>
           </div>
         </div>

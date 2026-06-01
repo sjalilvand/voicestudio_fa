@@ -48,7 +48,7 @@ import useProfiles from './hooks/useProfiles';
 import useTTS from './hooks/useTTS';
 import useDubWorkflow from './hooks/useDubWorkflow';
 
-const LazyFallback = () => <div className="app-lazy-fallback">Loading…</div>;
+const LazyFallback = () => <div className="app-lazy-fallback">{i18n.t('app.loading')}</div>;
 
 import { Toaster, toast } from 'react-hot-toast';
 import {
@@ -836,7 +836,7 @@ function App() {
               file={pendingTrimFile}
               maxSeconds={CLONE_MAX_SECONDS}
               onCancel={() => setPendingTrimFile(null)}
-              onConfirm={(trimmed) => { setPendingTrimFile(null); setRefAudio(trimmed); setSelectedProfile(null); toast.success('Trimmed audio loaded'); }}
+              onConfirm={(trimmed) => { setPendingTrimFile(null); setRefAudio(trimmed); setSelectedProfile(null); toast.success(i18n.t('app.trimmed_loaded')); }}
             />
           </Suspense>
         </ErrorBoundary>

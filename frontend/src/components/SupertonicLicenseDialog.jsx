@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import { apiPost } from '../api/client';
 import './SupertonicLicenseDialog.css';
@@ -35,6 +36,7 @@ const LICENSE_URLS = {
 };
 
 export default function SupertonicLicenseDialog({ open, onClose, onAccepted }) {
+  const { t } = useTranslation();
   const [submitting, setSubmitting] = useState(false);
 
   // Escape closes the dialog ‑‑ mirrors browser-standard modal UX.
@@ -54,16 +56,16 @@ export default function SupertonicLicenseDialog({ open, onClose, onAccepted }) {
         engine_id: 'supertonic3',
         accepted: true,
       });
-      toast.success('Supertonic-3 license accepted.');
+      toast.success(t('license.accepted_toast'));
       onAccepted?.();
       onClose?.();
     } catch (e) {
       const msg = e?.message || String(e);
-      toast.error(`Failed to record license acceptance: ${msg}`);
+      toast.error(t('license.accept_error', { message: msg }));
     } finally {
       setSubmitting(false);
     }
-  }, [onAccepted, onClose]);
+  }, [onAccepted, onClose, t]);
 
   if (!open) return null;
 
@@ -81,21 +83,18 @@ export default function SupertonicLicenseDialog({ open, onClose, onAccepted }) {
     >
       <div className="supertonic-license__card">
         <h2 id="supertonic-license-title" className="supertonic-license__title">
-          Supertonic-3 — License Acceptance
+          {t('license.title')}
         </h2>
 
         <p className="supertonic-license__intro">
-          Supertonic-3 ships under two distinct licenses. Please review
-          both before enabling the engine.
+          {t('license.intro')}
         </p>
 
         <div className="supertonic-license__sections">
           <section className="supertonic-license__section">
-            <h3>SDK Code · MIT</h3>
+            <h3>{t('license.sdk_heading')}</h3>
             <p>
-              The Python inference SDK (
-              <code>supertonic</code>
-              ) is MIT-licensed. Permissive use, including commercial.
+              {t('license.sdk_desc')}
             </p>
             <a
               href={LICENSE_URLS.code}
@@ -103,17 +102,14 @@ export default function SupertonicLicenseDialog({ open, onClose, onAccepted }) {
               rel="noopener noreferrer"
               className="supertonic-license__link"
             >
-              Read the MIT license →
+              {t('license.read_mit')}
             </a>
           </section>
 
           <section className="supertonic-license__section">
-            <h3>Model Weights · OpenRAIL-M</h3>
+            <h3>{t('license.model_heading')}</h3>
             <p>
-              The Supertonic-3 model weights are released under the
-              OpenRAIL-M license. This license restricts use to
-              non-malicious purposes ‑‑ see the linked license for the
-              full set of use-based restrictions.
+              {t('license.model_desc')}
             </p>
             <a
               href={LICENSE_URLS.model}
@@ -121,16 +117,13 @@ export default function SupertonicLicenseDialog({ open, onClose, onAccepted }) {
               rel="noopener noreferrer"
               className="supertonic-license__link"
             >
-              Read the OpenRAIL-M license →
+              {t('license.read_openrail')}
             </a>
           </section>
         </div>
 
         <p className="supertonic-license__footer">
-          Clicking Accept records your acceptance in OmniVoice&apos;s
-          local settings and enables the engine. Your acceptance is
-          stored on this machine only ‑‑ nothing is reported to
-          Supertone Inc. or any third party.
+          {t('license.footer')}
         </p>
 
         <div className="supertonic-license__actions">
@@ -140,7 +133,7 @@ export default function SupertonicLicenseDialog({ open, onClose, onAccepted }) {
             onClick={onClose}
             disabled={submitting}
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -149,10 +142,11 @@ export default function SupertonicLicenseDialog({ open, onClose, onAccepted }) {
             disabled={submitting}
             autoFocus
           >
-            {submitting ? 'Saving…' : 'Accept'}
+            {submitting ? t('license.saving') : t('license.accept')}
           </button>
         </div>
       </div>
     </div>
   );
 }
+

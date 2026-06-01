@@ -100,20 +100,20 @@ export default function EnterprisePage({ onBack }) {
           </div>
           <div className="ent-faq__list">
             <details className="ent-faq__item">
-              <summary>Do I need a license for internal tools?</summary>
-              <p>Internal use by your employees and contractors is a Permitted Purpose under the FSL — no license required. A commercial license is needed when you make OmniVoice available to others as part of a competing product or service (resale, hosted SaaS, white-label).</p>
+              <summary>{t('enterprise_faq.q_internal_tools')}</summary>
+              <p>{t('enterprise_faq.a_internal_tools')}</p>
             </details>
             <details className="ent-faq__item">
-              <summary>Can I try before committing?</summary>
-              <p>Yes. The full app is free to download and run locally for evaluation under the FSL. When you're ready to discuss a commercial deployment, email us and we'll work through the details together.</p>
+              <summary>{t('enterprise_faq.q_try_before')}</summary>
+              <p>{t('enterprise_faq.a_try_before')}</p>
             </details>
             <details className="ent-faq__item">
-              <summary>What about the watermark?</summary>
-              <p>The invisible AudioSeal watermark is embedded by default. Commercial licensees can disable it in Settings → Privacy. Free/personal use always includes the watermark.</p>
+              <summary>{t('enterprise_faq.q_watermark')}</summary>
+              <p>{t('enterprise_faq.a_watermark')}</p>
             </details>
             <details className="ent-faq__item">
-              <summary>Does the source ever become Apache 2.0?</summary>
-              <p>Yes. Each release converts automatically to the Apache License, Version 2.0 on the second anniversary of its publication. That means today's release is Apache 2.0 in two years, no action required from us — the FSL guarantees it irrevocably.</p>
+              <summary>{t('enterprise_faq.q_apache')}</summary>
+              <p>{t('enterprise_faq.a_apache')}</p>
             </details>
           </div>
         </section>

@@ -10,6 +10,7 @@ import { clearDubHistory } from '../api/dub';
 import { clearHistory as clearGenHistory } from '../api/generate';
 import { Button } from '../ui';
 import { useAppStore } from '../store';
+import { useTranslation } from 'react-i18next';
 import './Sidebar.css';
 import { askConfirm } from '../utils/dialog';
 
@@ -59,6 +60,7 @@ export default function Sidebar(props) {
   const dubStep            = useAppStore(s => s.dubStep);
   const activeProjectId    = useAppStore(s => s.activeProjectId);
 
+  const { t } = useTranslation();
   const [sbQuery, setSbQuery] = useState('');
   const qLower = sbQuery.trim().toLowerCase();
   const matchesSearch = (s) => !qLower || (s || '').toLowerCase().includes(qLower);
@@ -79,12 +81,12 @@ export default function Sidebar(props) {
   ), [exportHistory, qLower]);
 
   const handleClearHistory = async () => {
-    if (!(await askConfirm(`Clear all ${history.length + dubHistory.length} history items? This cannot be undone.`))) return;
+    if (!(await askConfirm(t('sidebar.clear_confirm', { count: history.length + dubHistory.length })))) return;
     await clearGenHistory();
     await clearDubHistory();
     await loadHistory();
     await loadDubHistory();
-    toast.success('History cleared');
+    toast.success(t('sidebar.history_cleared'));
   };
 
   const tabCount = {
@@ -92,7 +94,7 @@ export default function Sidebar(props) {
     history: history.length + dubHistory.length,
     downloads: exportHistory.length,
   };
-  const tabLabel = { projects: 'Drive', history: 'History', downloads: 'Exports' };
+  const tabLabel = { projects: t('sidebar.tab_drive'), history: t('sidebar.tab_history'), downloads: t('sidebar.tab_exports') };
 
   return (
     <div className={`glass-panel history-panel sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
@@ -158,7 +160,7 @@ export default function Sidebar(props) {
                   leading={<Save size={13} />}
                   className={`sidebar__save-btn sidebar__save-btn--full ${activeProjectId ? 'is-active-project' : ''}`}
                 >
-                  {activeProjectId ? 'Save Dub Project' : 'Save as New Dub Project'}
+                  {activeProjectId ? t('sidebar.save_project') : t('sidebar.save_new_project')}
                 </Button>
               )
             )}
@@ -168,7 +170,7 @@ export default function Sidebar(props) {
                 className="sidebar__section-title"
                 onClick={() => setIsSidebarProjectsCollapsed(!isSidebarProjectsCollapsed)}
               >
-                <span>{mode === 'dub' ? 'Dub Projects' : (mode === 'clone' ? 'Voice Clones' : 'Designed Voices')}</span>
+                <span>{mode === 'dub' ? t('sidebar.dub_projects') : (mode === 'clone' ? t('sidebar.voice_clones') : t('sidebar.designed_voices'))}</span>
                 {isSidebarProjectsCollapsed ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
               </div>
             )}
@@ -180,8 +182,8 @@ export default function Sidebar(props) {
                     {filteredProjects.length === 0 ? (
                       <EmptyState
                         icon={Film}
-                        title="No saved dub projects"
-                        hint="Upload a video and click Save to keep your work."
+                        title={t('sidebar.no_dub_projects')}
+                        hint={t('sidebar.no_dub_hint')}
                       />
                     ) : (
                       filteredProjects.map(proj => (
@@ -191,7 +193,7 @@ export default function Sidebar(props) {
                         >
                           <div className="history-row-head">
                             <span className="history-kind history-kind--audio">
-                              <Film size={9} /> Dub
+                              <Film size={9} /> {t('sidebar.dub_label')}
                             </span>
                             <span className="history-meta" title={new Date(proj.updated_at * 1000).toLocaleString()}>
                               {timeAgo(proj.updated_at * 1000)}
@@ -208,7 +210,7 @@ export default function Sidebar(props) {
                           </div>
                           <div className="history-actions">
                             <button className="history-action-btn accent" onClick={(e) => { e.stopPropagation(); loadProject(proj.id); }}>
-                              <FolderOpen size={10} /> Open
+                              <FolderOpen size={10} /> {t('sidebar.open')}
                             </button>
                             <button className="history-action-btn danger history-action-icon" onClick={(e) => { e.stopPropagation(); deleteProject(proj.id); }} title="Delete">
                               <Trash2 size={10} />
@@ -225,8 +227,8 @@ export default function Sidebar(props) {
                     {filteredProfiles.filter(p => mode === "clone" ? !p.instruct : !!p.instruct).length === 0 ? (
                       <EmptyState
                         icon={mode === 'clone' ? Fingerprint : Wand2}
-                        title={`No ${mode === 'clone' ? 'voice clones' : 'designed voices'} yet`}
-                        hint={mode === 'clone' ? 'Record or upload audio, then click Save as Voice Profile.' : 'Generate a voice and save it from History.'}
+                        title={`${mode === 'clone' ? t('sidebar.no_clones') : t('sidebar.no_designs')}`}
+                        hint={mode === 'clone' ? t('sidebar.no_clones_hint') : t('sidebar.no_designs_hint')}
                       />
                     ) : (
                       (mode === 'clone' ? filteredProfiles.filter(p => !p.instruct) : filteredProfiles.filter(p => !!p.instruct)).map(proj => {
@@ -240,9 +242,9 @@ export default function Sidebar(props) {
                           >
                             <div className="history-row-head">
                               <span className="history-kind" style={{ color: accent, borderColor: `${accent}40` }}>
-                                <KindIcon size={9} /> {proj.is_locked ? 'Locked' : (mode === 'clone' ? 'Clone' : 'Design')}
+                                <KindIcon size={9} /> {proj.is_locked ? t('sidebar.locked') : (mode === 'clone' ? t('sidebar.clone_label') : t('sidebar.design_label'))}
                               </span>
-                              {proj.is_locked ? <span className="history-meta history-meta--locked">consistent</span> : null}
+                              {proj.is_locked ? <span className="history-meta history-meta--locked">{t('sidebar.consistent')}</span> : null}
                             </div>
                             <div className="history-title">{proj.name}</div>
                             {proj.instruct ? <div className="history-subtitle history-subtitle--italic">{proj.instruct}</div> : null}
@@ -261,7 +263,7 @@ export default function Sidebar(props) {
                                 </button>
                               )}
                               <button className="history-action-btn" onClick={(e) => { e.stopPropagation(); handleSelectProfile(proj); }}>
-                                <Check size={10} /> Select
+                                <Check size={10} /> {t('sidebar.select')}
                               </button>
                               {onOpenVoicePreview && (
                                 <button
@@ -269,7 +271,7 @@ export default function Sidebar(props) {
                                   onClick={(e) => { e.stopPropagation(); onOpenVoicePreview(proj.id); }}
                                   title="Open interactive voice preview"
                                 >
-                                  <Volume2 size={10} /> Try
+                                  <Volume2 size={10} /> {t('sidebar.try_voice')}
                                 </button>
                               )}
                               {proj.is_locked ? (
@@ -320,12 +322,12 @@ export default function Sidebar(props) {
         {/* ── HISTORY TAB ── */}
         {sidebarTab === 'history' && (
           <>
-            {!isSidebarCollapsed && <div className="sidebar__subtitle">Generation history · Stored in SQLite</div>}
+            {!isSidebarCollapsed && <div className="sidebar__subtitle">{t('sidebar.history_subtitle')}</div>}
             {(history.length + dubHistory.length) === 0 ? (
               <EmptyState
                 icon={History}
-                title="No generation history"
-                hint="Synthesize audio or dub a video — results will appear here."
+                title={t('sidebar.no_history')}
+                hint={t('sidebar.no_history_hint')}
               />
             ) : (
               <>
@@ -335,7 +337,7 @@ export default function Sidebar(props) {
                   >
                     <div className="history-row-head">
                       <span className="history-kind history-kind--audio">
-                        <Film size={9} /> Dub
+                        <Film size={9} /> {t('sidebar.dub_label')}
                       </span>
                       <span className="history-meta">{item.segments_count} segs · {Math.round(item.duration || 0)}s</span>
                     </div>
@@ -345,7 +347,7 @@ export default function Sidebar(props) {
                     </div>
                     <div className="history-actions">
                       <button className="history-action-btn accent" onClick={(e) => { e.stopPropagation(); restoreDubHistory(item); }}>
-                        <FolderOpen size={10} /> Open
+                        <FolderOpen size={10} /> {t('sidebar.open')}
                       </button>
                       <button className="history-action-btn danger history-action-icon" onClick={(e) => { e.stopPropagation(); deleteHistory(item.id, 'dub'); }} title="Delete">
                         <Trash2 size={10} />
@@ -380,12 +382,12 @@ export default function Sidebar(props) {
                       {item.audio_path ? (
                         <div className="history-actions">
                           <button className="history-action-btn accent" onClick={(e) => { e.stopPropagation(); handleSaveHistoryAsProfile(item); }}>
-                            <Save size={10} /> Save
+                             <Save size={10} /> {t('sidebar.save_label')}
                           </button>
                           {item.profile_id ? (
                             <button className="history-action-btn accent history-action-icon"
                               onClick={(e) => { e.stopPropagation(); handleLockProfile(item.profile_id, item.id, item.seed); }}
-                              title="Lock voice identity">
+                              title={t('sidebar.lock_identity')}>
                               <Lock size={10} />
                             </button>
                           ) : null}
@@ -435,7 +437,7 @@ export default function Sidebar(props) {
                 leading={<Trash2 size={10} />}
                 className="sidebar__clear"
               >
-                Clear History
+                {t('sidebar.clear_history')}
               </Button>
             )}
           </>
@@ -444,12 +446,12 @@ export default function Sidebar(props) {
         {/* ── DOWNLOADS TAB ── */}
         {sidebarTab === 'downloads' && (
           <>
-            {!isSidebarCollapsed && <div className="sidebar__subtitle">Recent Exports</div>}
+            {!isSidebarCollapsed && <div className="sidebar__subtitle">{t('sidebar.recent_exports')}</div>}
             {exportHistory.length === 0 ? (
               <EmptyState
                 icon={DownloadCloud}
-                title="No downloaded outputs"
-                hint="Export a file via Tauri to see it tracked here."
+                title={t('sidebar.no_exports')}
+                hint={t('sidebar.no_exports_hint')}
               />
             ) : (
               <>
@@ -470,10 +472,10 @@ export default function Sidebar(props) {
                         <span className="history-meta">{timeAgo(item.created_at * 1000)}</span>
                       </div>
                       <div className="history-title">{item.filename}</div>
-                      <div className="history-subtitle">in {parentFolder}</div>
+                      <div className="history-subtitle">{t('sidebar.in_folder', { folder: parentFolder })}</div>
                       <div className="history-actions">
                         <button className="history-action-btn accent" onClick={(e) => { e.stopPropagation(); revealInFolder(item.destination_path); }}>
-                          <FolderOpen size={10} /> Show in folder
+                          <FolderOpen size={10} /> {t('sidebar.show_in_folder')}
                         </button>
                       </div>
                     </div>

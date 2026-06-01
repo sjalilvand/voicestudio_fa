@@ -54,8 +54,8 @@ export default function NavRail({ mode, setMode, side = 'left', onFlipSide }) {
         ))}
         <button
           onClick={onFlipSide}
-          title={`Move rail to the ${side === 'left' ? 'right' : 'left'}`}
-          aria-label="Flip rail side"
+          title={side === 'left' ? t('nav.move_rail_right') : t('nav.move_rail_left')}
+          aria-label={t('nav.flip_rail')}
           className="rail-btn rail-flip"
         >
           <ArrowLeftRight size={15} />

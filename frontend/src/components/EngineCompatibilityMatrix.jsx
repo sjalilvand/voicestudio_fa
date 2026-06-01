@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Cpu, Mic, MessageSquare, Activity, AlertTriangle, CheckCircle2, RefreshCw, Layers } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { listEngines, getEngineHealth } from '../api/engines';
 import { Badge, Button, Segmented, Table } from '../ui';
 import SupertonicLicenseDialog from './SupertonicLicenseDialog';
@@ -75,14 +76,6 @@ const GPU_LABEL = {
 
 const TEST_COOLDOWN_MS = 5000;
 
-const COLUMNS = [
-  { key: 'name',       label: 'Engine',        flex: 3 },
-  { key: 'status',     label: 'Install state', width: 130, align: 'center' },
-  { key: 'gpu',        label: 'GPU compat',    width: 170, align: 'left' },
-  { key: 'isolation',  label: 'Isolation',     width: 110, align: 'center' },
-  { key: 'action',     label: 'Actions',       width: 220, align: 'right' },
-];
-
 /** Subset of the unified engine entry the matrix actually reads. */
 function normalizeEntry(entry) {
   return {
@@ -108,6 +101,7 @@ export default function EngineCompatibilityMatrix({
   apiListEngines = listEngines,
   apiGetEngineHealth = getEngineHealth,
 }) {
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -132,11 +126,11 @@ export default function EngineCompatibilityMatrix({
     } catch (e) {
       const msg = e?.message || String(e);
       setError(msg);
-      toast.error(`Failed to load engines: ${msg}`);
+      toast.error(t('engines.loadFailed', { message: msg }));
     } finally {
       setLoading(false);
     }
-  }, [apiListEngines]);
+  }, [apiListEngines, t]);
 
   useEffect(() => { reload(); }, [reload]);
 
@@ -188,19 +182,27 @@ export default function EngineCompatibilityMatrix({
     }
   }, [apiGetEngineHealth, healthByEngine]);
 
+  const COLUMNS = [
+    { key: 'name',       label: t('engines.matrixTitle').split(' ')[0] || 'Engine', flex: 3 },
+    { key: 'status',     label: t('engines.status'),     width: 130, align: 'center' },
+    { key: 'gpu',        label: 'GPU compat',            width: 170, align: 'left' },
+    { key: 'isolation',  label: 'Isolation',             width: 110, align: 'center' },
+    { key: 'action',     label: 'Actions',               width: 220, align: 'right' },
+  ];
+
   if (loading && !data) {
     return (
       <section className="engine-matrix engine-matrix--loading" aria-busy="true">
-        <span className="engine-matrix__muted">Loading engines…</span>
+        <span className="engine-matrix__muted">{t('engines.loading')}</span>
       </section>
     );
   }
   if (error && !data) {
     return (
       <section className="engine-matrix engine-matrix--error" role="alert">
-        <AlertTriangle size={14} /> Could not load engines: {error}
+        <AlertTriangle size={14} /> {t('engines.couldNotLoad', { message: error })}
         <Button size="sm" variant="subtle" onClick={reload} leading={<RefreshCw size={11} />}>
-          Retry
+          {t('engines.retry')}
         </Button>
       </section>
     );
@@ -213,7 +215,7 @@ export default function EngineCompatibilityMatrix({
     <section className="engine-matrix">
       <header className="engine-matrix__head">
         <h3 className="engine-matrix__title">
-          <Layers size={14} /> Engine Compatibility Matrix
+          <Layers size={14} /> {t('engines.matrixTitle')}
         </h3>
         <Button
           size="sm"
@@ -222,7 +224,7 @@ export default function EngineCompatibilityMatrix({
           loading={loading}
           leading={<RefreshCw size={11} />}
         >
-          Refresh
+          {t('engines.refresh')}
         </Button>
       </header>
 
@@ -233,7 +235,7 @@ export default function EngineCompatibilityMatrix({
           onChange={setActiveFamily}
           items={families.map((f) => ({
             value: f,
-            title: `Active ${FAMILY_META[f].label}: ${data[f].active}`,
+            title: t('engines.activeEngine', { family: FAMILY_META[f].label, engine: data[f].active }),
             label: (
               <span className="engine-matrix__tab-label">
                 <span className="engine-matrix__tab-family">{FAMILY_META[f].label}</span>
@@ -244,7 +246,7 @@ export default function EngineCompatibilityMatrix({
         />
       )}
 
-      <Table className="engine-matrix__table" role="table" aria-label={`${activeFamily} engine compatibility`}>
+      <Table className="engine-matrix__table" role="table" aria-label={t('engines.engineCompatLabel', { family: activeFamily })}>
         <Table.Header columns={COLUMNS} />
         <div className="engine-matrix__body" role="rowgroup">
           {backends.map((b) => {
@@ -261,7 +263,7 @@ export default function EngineCompatibilityMatrix({
                 <div role="cell" className="engine-matrix__cell engine-matrix__cell--name" style={{ flex: 3 }}>
                   <span className="engine-matrix__name">
                     {b.display_name}
-                    {isActive && <Badge tone="brand" size="xs">active</Badge>}
+                    {isActive && <Badge tone="brand" size="xs">{t('engines.active')}</Badge>}
                   </span>
                   <code className="engine-matrix__id">{b.id}</code>
                   {/* For available rows, show install_hint inline (one line — usually
@@ -275,7 +277,7 @@ export default function EngineCompatibilityMatrix({
                   )}
                   {!b.available && (b.reason || b.install_hint || b.last_error) && (
                     <details className="engine-matrix__why">
-                      <summary className="engine-matrix__why-summary">Why unavailable?</summary>
+                      <summary className="engine-matrix__why-summary">{t('engines.whyUnavailable')}</summary>
                       <div className="engine-matrix__why-body">
                         {b.reason && (
                           <span className="engine-matrix__reason">{b.reason}</span>
@@ -285,7 +287,7 @@ export default function EngineCompatibilityMatrix({
                         )}
                         {b.last_error && b.last_error !== b.reason && (
                           <span className="engine-matrix__last-error" data-testid="last-error">
-                            Last error: {b.last_error}
+                            {t('engines.lastError', { error: b.last_error })}
                           </span>
                         )}
                       </div>
@@ -298,11 +300,11 @@ export default function EngineCompatibilityMatrix({
                   role="cell"
                   className="engine-matrix__cell engine-matrix__cell--center"
                   style={{ width: 130 }}
-                  title={b.available ? 'Installed and ready' : (b.reason || 'Not installed')}
+                  title={b.available ? t('engines.installedAndReady') : (b.reason || t('engines.notInstalled'))}
                 >
                   {b.available
-                    ? <Badge tone="success" size="xs"><CheckCircle2 size={10} /> Available</Badge>
-                    : <Badge tone="warn" size="xs"><AlertTriangle size={10} /> Unavailable</Badge>}
+                    ? <Badge tone="success" size="xs"><CheckCircle2 size={10} /> {t('engines.available')}</Badge>
+                    : <Badge tone="warn" size="xs"><AlertTriangle size={10} /> {t('engines.unavailable')}</Badge>}
                 </div>
 
                 {/* GPU compat chips */}
@@ -322,8 +324,8 @@ export default function EngineCompatibilityMatrix({
                   className="engine-matrix__cell engine-matrix__cell--center"
                   style={{ width: 110 }}
                   title={b.isolation_mode === 'subprocess'
-                    ? 'Runs in its own subprocess + venv'
-                    : 'Runs in the OmniVoice Python process'}
+                    ? t('engines.subprocessTitle')
+                    : t('engines.inProcessTitle')}
                 >
                   <Badge tone={ISOLATION_TONE[b.isolation_mode] || 'neutral'} size="xs">
                     {b.isolation_mode}
@@ -350,7 +352,7 @@ export default function EngineCompatibilityMatrix({
                       leading={!health?.inflight && <Activity size={11} />}
                       aria-label={`Test ${b.display_name}`}
                     >
-                      {health?.inflight ? 'Testing…' : 'Test engine'}
+                      {health?.inflight ? t('engines.testing') : t('engines.testEngine')}
                     </Button>
                   )}
                   {!b.available && (
@@ -363,7 +365,7 @@ export default function EngineCompatibilityMatrix({
                       leading={!health?.inflight && <RefreshCw size={11} />}
                       aria-label={`Re-check ${b.display_name}`}
                     >
-                      {health?.inflight ? 'Re-checking…' : 'Re-check'}
+                      {health?.inflight ? t('engines.rechecking') : t('engines.recheck')}
                     </Button>
                   )}
                   {health && !health.inflight && (
@@ -373,8 +375,8 @@ export default function EngineCompatibilityMatrix({
                       title={health.message}
                     >
                       {health.ok
-                        ? `${health.latency_ms} ms`
-                        : `failed`}
+                        ? t('engines.latencyMs', { ms: health.latency_ms })
+                        : t('engines.failed')}
                     </span>
                   )}
                   {onSelect && b.available && !isActive && (
@@ -384,7 +386,7 @@ export default function EngineCompatibilityMatrix({
                       onClick={() => onSelect(activeFamily, b.id)}
                       aria-label={`Use ${b.display_name}`}
                     >
-                      Use
+                      {t('engines.use')}
                     </Button>
                   )}
                   {/* TTS-05: license-acceptance entry point. Surfaced when
@@ -401,7 +403,7 @@ export default function EngineCompatibilityMatrix({
                         onClick={() => setLicenseDialogFor(b.id)}
                         aria-label={`Review and accept ${b.display_name} license`}
                       >
-                        Accept license
+                        {t('engines.acceptLicense')}
                       </Button>
                     )}
                 </div>
@@ -410,7 +412,7 @@ export default function EngineCompatibilityMatrix({
           })}
           {backends.length === 0 && (
             <div className="engine-matrix__empty" role="row">
-              <span role="cell">No backends registered.</span>
+              <span role="cell">{t('engines.noBackends')}</span>
             </div>
           )}
         </div>

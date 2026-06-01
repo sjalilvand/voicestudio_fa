@@ -305,15 +305,15 @@ export default function SetupWizard({ onReady }) {
             <DictationDemo />
           </div>
           <div className="setup-wizard__nav">
-            <Button variant="ghost" onClick={() => setStep(3)}>Back</Button>
+            <Button variant="ghost" onClick={() => setStep(3)}>{t('setup.back')}</Button>
             <div style={{ display: 'flex', gap: 8 }}>
-              <Button variant="subtle" onClick={onReady}>Skip</Button>
+              <Button variant="subtle" onClick={onReady}>{t('common.cancel')}</Button>
               <Button
                 variant="primary"
                 onClick={onReady}
                 leading={<CheckCircle size={14} />}
               >
-                Enter studio
+                {t('setup.enter_studio')}
               </Button>
             </div>
           </div>
@@ -329,7 +329,7 @@ export default function SetupWizard({ onReady }) {
       <p className="setup-wizard__footnote">
         {t('setup.footer_downloads')} <code>huggingface.co</code>
         <span style={{ margin: '0 2px' }}>·</span>
-        Cache: <code>{shortenPath(cachePath)}</code>
+        {t('setup_extra.cache_label')} <code>{shortenPath(cachePath)}</code>
         {'__TAURI_INTERNALS__' in window && cachePath && (
           <button
             className="setup-wizard__footnote-link"

@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { User, Mic, ChevronDown, Check, Shuffle, Volume2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import './CastingView.css';
 
 /**
@@ -26,6 +27,7 @@ export default function CastingView({
   onPreview,
 }) {
   const [openDropdown, setOpenDropdown] = useState(null);
+  const { t } = useTranslation();
 
   const assign = useCallback((speakerId, profileId) => {
     const next = { ...assignments, [speakerId]: profileId };
@@ -54,19 +56,19 @@ export default function CastingView({
     <div className="casting-view">
       <div className="casting-view__header">
         <h3 className="casting-view__title">
-          <User size={14} /> Speaker Casting
+          <User size={14} /> {t('casting.title')}
         </h3>
         <div className="casting-view__actions">
           <button
             className="casting-view__auto-btn"
             onClick={autoAssignAll}
-            title="Auto-assign voices from extracted speaker clones"
+            title={t('casting.auto_assign_title')}
           >
-            <Shuffle size={12} /> Auto-cast
+            <Shuffle size={12} /> {t('casting.auto_cast')}
           </button>
           {allAssigned && (
             <span className="casting-view__badge">
-              <Check size={10} /> All cast
+              <Check size={10} /> {t('casting.all_cast')}
             </span>
           )}
         </div>
@@ -82,7 +84,7 @@ export default function CastingView({
             if (match) autoName = match;
           }
           const assignedProfile = isAuto
-            ? { name: `🎤 From video (${autoName})`, type: 'clone' }
+            ? { name: t('casting.from_video', { name: autoName }), type: 'clone' }
             : profiles.find(p => p.id === currentAssignment);
 
           return (
@@ -98,7 +100,7 @@ export default function CastingView({
                 <div className="casting-row__info">
                   <span className="casting-row__name">{speaker.label || speaker.id}</span>
                   <span className="casting-row__meta">
-                    {speaker.segments_count || 0} segments
+                    {t('casting.segments_count', { count: speaker.segments_count || 0 })}
                   </span>
                 </div>
               </div>
@@ -119,7 +121,7 @@ export default function CastingView({
                     </>
                   ) : (
                     <>
-                      <span className="casting-row__unassigned">Assign voice…</span>
+                      <span className="casting-row__unassigned">{t('casting.assign_voice')}</span>
                     </>
                   )}
                   <ChevronDown size={12} />
@@ -167,9 +169,9 @@ export default function CastingView({
                     ))}
 
                     {profiles.length === 0 && !autoClones[speaker.id] && (
-                      <div className="casting-dropdown__empty">
-                        No voice profiles saved yet.
-                      </div>
+                        <div className="casting-dropdown__empty">
+                          {t('casting.no_profiles')}
+                        </div>
                     )}
                   </div>
                 )}
@@ -180,7 +182,7 @@ export default function CastingView({
                 <button
                   className="casting-row__preview"
                   onClick={() => onPreview(currentAssignment)}
-                  title="Preview voice"
+                  title={t('casting.preview_voice')}
                 >
                   <Volume2 size={12} />
                 </button>
