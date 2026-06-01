@@ -39,7 +39,13 @@ const FACETS = {
     'indian accent', 'chinese accent', 'japanese accent', 'korean accent',
     'portuguese accent', 'russian accent',
   ],
-  lang: ['English', 'Chinese'],
+  // English + Chinese come from the generated catalog; the rest are curated
+  // multilingual designed voices. Values must match the archetype `language`
+  // field (a languages.json entry) exactly — that drives the backend filter.
+  lang: [
+    'English', 'Chinese', 'Spanish', 'French', 'German', 'Italian',
+    'Portuguese', 'Russian', 'Hindi', 'Japanese', 'Korean',
+  ],
 };
 
 const titleCase = (s) => (s ? String(s).replace(/\b\w/g, (c) => c.toUpperCase()) : s);
@@ -212,9 +218,21 @@ function ArchetypesZone({
     return out;
   }, [filters]);
 
+  // The Featured strip shows only when nothing is filtered; in that case Browse
+  // excludes featured to avoid duplicating it. Once any filter is active the
+  // Featured strip is hidden (see below), so Browse must include featured too —
+  // otherwise the curated multilingual languages (Spanish/French/…), which have
+  // *only* featured archetypes, would filter down to an empty list.
+  const showFeatured = !hasActiveFilters(filters) && !favOnly;
+
   const categoriesQ = useArchetypeCategories();
   const featuredQ = useArchetypes({ featured: true, limit: 100 });
-  const browseQ = useArchetypes({ ...cleanFilters, featured: false, limit: BROWSE_PAGE, offset });
+  const browseQ = useArchetypes({
+    ...cleanFilters,
+    ...(showFeatured ? { featured: false } : {}),
+    limit: BROWSE_PAGE,
+    offset,
+  });
 
   const categories = categoriesQ.data || [];
   const featured = featuredQ.data?.items || [];
@@ -286,7 +304,7 @@ function ArchetypesZone({
         </div>
       </div>
 
-      {!hasActiveFilters(filters) && !favOnly && (
+      {showFeatured && (
         <section className="archetype-section">
           <div className="content-header"><div className="content-title">{t('archetypes.featured', { defaultValue: 'Featured' })}</div></div>
           <div className={`archetype-grid ${viewMode}`}>
