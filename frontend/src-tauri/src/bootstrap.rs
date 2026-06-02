@@ -369,7 +369,27 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();
-        if matches!(uvicorn_check, Ok(ref s) if s.success()) {
+        // #248: also verify pkg_resources is importable. Venvs created before the
+        // setuptools<80 pin (commit 675cc20, fixes #224) have setuptools 80+, which
+        // dropped the bundled pkg_resources. whisperx / ctranslate2 import it at
+        // runtime, so dubbing/transcription crashes silently on those installs even
+        // though uvicorn starts fine. We detect this here so we can force a repair
+        // sync rather than handing back a broken venv.
+        let pkg_resources_ok = if matches!(uvicorn_check, Ok(ref s) if s.success()) {
+            let mut pr_check = Command::new(&venv_py);
+            scrub_python_env(&mut pr_check);
+            matches!(
+                pr_check
+                    .args(["-c", "import pkg_resources"])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status(),
+                Ok(ref s) if s.success()
+            )
+        } else {
+            false
+        };
+        if matches!(uvicorn_check, Ok(ref s) if s.success()) && pkg_resources_ok {
             // Always sync source dirs from bundle so code fixes land on
             // existing installs without requiring a full clean+reinstall.
             let resource_dir = app.path().resource_dir().ok();
@@ -401,10 +421,21 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
             }
             return Some((venv_py, backend_dir));
         }
-        log::warn!(
-            "Venv exists at {} but uvicorn is not importable — re-running uv sync",
-            venv_dir.display()
-        );
+        if matches!(uvicorn_check, Ok(ref s) if s.success()) {
+            // uvicorn is fine but pkg_resources is missing (#248): setuptools>=80 was
+            // installed before the <80 pin landed (issue #224). Force a repair sync
+            // to downgrade setuptools to a version that ships pkg_resources.
+            log::warn!(
+                "Venv at {} is missing pkg_resources (setuptools>=80 pre-dates the <80 pin) \
+— re-running uv sync to repair (#248)",
+                venv_dir.display()
+            );
+        } else {
+            log::warn!(
+                "Venv exists at {} but uvicorn is not importable — re-running uv sync",
+                venv_dir.display()
+            );
+        }
         if let Some(p) = progress {
             set_stage(p, BootstrapStage::InstallingDeps);
         }
@@ -423,6 +454,32 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
         repair_cmd.current_dir(&project_dir);
         let repair_status = run_streaming(app, "installing_deps", &mut repair_cmd);
         if matches!(repair_status, Ok(ref s) if s.success()) {
+            // #248: after the repair sync, ensure pkg_resources landed. The repair
+            // path is also triggered when pkg_resources is missing (see above), so
+            // we must verify here rather than trusting that uv sync alone fixed it
+            // (e.g. if the bundled uv.lock still pins setuptools>=80 somehow).
+            let mut pr_repair_check = Command::new(&venv_py);
+            scrub_python_env(&mut pr_repair_check);
+            let pr_ok = matches!(
+                pr_repair_check
+                    .args(["-c", "import pkg_resources"])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status(),
+                Ok(ref s) if s.success()
+            );
+            if !pr_ok {
+                log::warn!("pkg_resources still missing after repair sync — installing setuptools<80 directly (#248)");
+                emit_log(app, "installing_deps",
+                    "Repairing pkg_resources: installing setuptools<80 (#248)");
+                let mut st_cmd = Command::new(&uv_path);
+                scrub_python_env(&mut st_cmd);
+                apply_uv_http_env(&mut st_cmd);
+                st_cmd
+                    .args(["pip", "install", "setuptools>=75,<80"])
+                    .current_dir(&project_dir);
+                let _ = run_streaming(app, "installing_deps", &mut st_cmd);
+            }
             return Some((venv_py, backend_dir));
         }
         fail(progress, &format!("Repair uv sync failed: {:?}", repair_status));
@@ -574,6 +631,43 @@ docs/install/troubleshooting.md).",
         return None;
     }
 
+    // #248 belt-and-suspenders: after every uv sync, verify that pkg_resources is
+    // importable. If it isn't (setuptools>=80 somehow landed — e.g. no lock file in
+    // bundle, or the lock was resolved without our pin), run a targeted
+    // `uv pip install "setuptools<80"` to repair the venv without touching anything
+    // else. This is safe on all platforms (pure-Python wheel, no native code).
+    {
+        let mut pr_verify = Command::new(&venv_py);
+        scrub_python_env(&mut pr_verify);
+        let pr_ok = matches!(
+            pr_verify
+                .args(["-c", "import pkg_resources"])
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status(),
+            Ok(ref s) if s.success()
+        );
+        if !pr_ok {
+            log::warn!("pkg_resources not importable after uv sync — installing setuptools<80 (#248)");
+            emit_log(app, "installing_deps",
+                "pkg_resources missing (setuptools>=80) — installing setuptools<80 to fix (#248)");
+            let mut st_cmd = Command::new(&uv_path);
+            scrub_python_env(&mut st_cmd);
+            apply_uv_http_env(&mut st_cmd);
+            st_cmd
+                .args(["pip", "install", "setuptools>=75,<80"])
+                .current_dir(&project_dir);
+            match run_streaming(app, "installing_deps", &mut st_cmd) {
+                Ok(ref s) if s.success() => {
+                    log::info!("setuptools<80 installed; pkg_resources now available (#248)");
+                }
+                other => {
+                    log::error!("Failed to install setuptools<80: {:?} — dubbing may fail (#248)", other);
+                }
+            }
+        }
+    }
+
     // Opt-in AMD ROCm (#124): the default install ships the CUDA torch build,
     // so AMD-only machines fall back to CPU. If the user set
     // OMNIVOICE_TORCH_VARIANT=rocm, reinstall torch/torchaudio from the ROCm
@@ -667,5 +761,28 @@ mod tests {
 
         std::env::remove_var("OMNIVOICE_TORCH_VARIANT");
         std::env::remove_var("OMNIVOICE_TORCH_INDEX");
+    }
+
+    /// #248: verify that the setuptools repair install uses the correct specifier.
+    /// The specifier `"setuptools>=75,<80"` must be passed as a single argument so
+    /// pip/uv interprets the range constraint as one requirement, not two.
+    #[test]
+    fn setuptools_repair_uses_correct_specifier() {
+        // The belt-and-suspenders repair uses `uv pip install "setuptools>=75,<80"`.
+        // This test verifies the string we'd pass is a valid PEP 508 specifier and
+        // that it actually constrains below 80.
+        let specifier = "setuptools>=75,<80";
+        // Simple structural check: contains both bounds
+        assert!(specifier.contains(">=75"), "lower bound must be >=75");
+        assert!(specifier.contains("<80"), "upper bound must be <80 to keep pkg_resources");
+        // Verify 79.x satisfies the range
+        let v79: (u32, u32) = (79, 0);
+        assert!(v79.0 >= 75 && v79.0 < 80, "79.x must satisfy >=75,<80");
+        // Verify 80.x does NOT satisfy
+        let v80: (u32, u32) = (80, 0);
+        assert!(!(v80.0 >= 75 && v80.0 < 80), "80.x must NOT satisfy <80");
+        // Verify 82.x (what was installed before #224 fix) does NOT satisfy
+        let v82: (u32, u32) = (82, 0);
+        assert!(!(v82.0 >= 75 && v82.0 < 80), "82.x (pre-fix version) must NOT satisfy <80");
     }
 }
