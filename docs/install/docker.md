@@ -4,6 +4,18 @@ For headless servers, dedicated GPUs, or "I want one command" deployments.
 The docker image bundles the backend; the UI is served over HTTP and you open
 it in a normal browser.
 
+> **Image ↔ version mapping**
+>
+> | Tag | What you get |
+> |-----|--------------|
+> | `:latest` | Most recent versioned release (updated on every `v*` git tag) |
+> | `:0.3.0` | Exact release version |
+> | `:0.3` | Latest patch within the 0.3 minor |
+> | `:main` | Latest commit on `main` — may be ahead of the last release |
+> | `:sha-xxxxxxx` | Specific commit (produced by manual workflow dispatch) |
+>
+> **Note on the update-channel toggle:** The update-channel UI (Settings → About → Update channel) is part of the Tauri desktop app's built-in auto-updater. It does **not** apply to the Docker image — the Docker image is the headless web-server build. To update your Docker deployment, pull the new image tag and recreate the container (`docker compose pull && docker compose up -d`).
+
 ## Pull and run (CPU)
 
 ```bash
@@ -100,6 +112,10 @@ Two paths are worth persisting across container restarts:
 
 ## Troubleshooting
 
+- **Container reports 0.2.7 but image is tagged 0.3.x:** This was a workflow bug
+  (fixes #249, #251) — the `:latest` tag was not being updated on release tag
+  pushes. Pull the image again after the fix is merged: `docker pull ghcr.io/debpalash/omnivoice-studio:latest`.
+- **Checking which version is running:** `docker exec omnivoice python -c "import importlib.metadata; print(importlib.metadata.version('omnivoice-studio'))"` or visit the `/health` endpoint which includes the version field.
 - **Media-preview 404 in LAN mode:** see the [LAN access](#lan-access) section
   above — the `window.location.host` fix shipped in v0.3.
 - **GPU not detected:** verify `docker run --rm --gpus all nvidia/cuda:12.8.0-base-ubuntu22.04 nvidia-smi` succeeds first.
