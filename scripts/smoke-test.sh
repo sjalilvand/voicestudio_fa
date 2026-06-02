@@ -333,6 +333,16 @@ check_endpoint "GET /system/quarantine-status" "${BACKEND_URL}/system/quarantine
 # #248: bootstrap now also detects pkg_resources missing in existing venvs and
 # runs a repair sync / targeted pip install to self-heal before handing the venv
 # to the backend — this test verifies the end-state of both paths is correct.
+#
+# Export restricted-network env vars so that a uv failure here reflects a real
+# bootstrap regression, not harness networking. UV_PYTHON_PREFERENCE=only-system
+# skips the python-build-standalone download (already in the venv); the timeout +
+# retry vars guard against PyPI timeouts masking import failures. Empty values
+# are preserved so callers can override them at the shell level.
+export UV_PYTHON_PREFERENCE="${UV_PYTHON_PREFERENCE:-only-system}"
+export UV_HTTP_TIMEOUT="${UV_HTTP_TIMEOUT:-120}"
+export UV_HTTP_RETRIES="${UV_HTTP_RETRIES:-5}"
+
 TESTS=$((TESTS + 1))
 if uv run python -c "import pkg_resources; import whisperx" 2>/dev/null; then
     pass "INST-01: pkg_resources + whisperx import OK (setuptools>=75,<80 pinned)"

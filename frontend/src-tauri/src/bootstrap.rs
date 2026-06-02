@@ -478,7 +478,39 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
                 st_cmd
                     .args(["pip", "install", "setuptools>=75,<80"])
                     .current_dir(&project_dir);
-                let _ = run_streaming(app, "installing_deps", &mut st_cmd);
+                match run_streaming(app, "installing_deps", &mut st_cmd) {
+                    Ok(ref s) if s.success() => {
+                        log::info!("setuptools<80 installed after repair sync; pkg_resources now available (#248)");
+                    }
+                    other => {
+                        log::error!("Failed to install setuptools<80 after repair sync: {:?} — dubbing may fail (#248)", other);
+                    }
+                }
+                // Re-verify pkg_resources is importable after the targeted install.
+                let mut pr_post_check = Command::new(&venv_py);
+                scrub_python_env(&mut pr_post_check);
+                let pr_final_ok = matches!(
+                    pr_post_check
+                        .args(["-c", "import pkg_resources"])
+                        .stdout(Stdio::null())
+                        .stderr(Stdio::null())
+                        .status(),
+                    Ok(ref s) if s.success()
+                );
+                if !pr_final_ok {
+                    // Repair could not restore pkg_resources — fail loudly instead of
+                    // handing back a venv that will crash on the first ASR/dub call. The
+                    // "pkg_resources" text routes to the PKG_RESOURCES_MISSING failure
+                    // mapping (clear, doc-linked remediation in the UI). (#248)
+                    fail(
+                        progress,
+                        "pkg_resources is missing from the backend venv and the automatic \
+                         setuptools repair did not restore it. Open a terminal and run \
+                         `uv pip install 'setuptools>=75,<80'` in the backend venv, then \
+                         restart. (#248)",
+                    );
+                    return None;
+                }
             }
             return Some((venv_py, backend_dir));
         }
@@ -768,13 +800,27 @@ mod tests {
     /// pip/uv interprets the range constraint as one requirement, not two.
     #[test]
     fn setuptools_repair_uses_correct_specifier() {
-        // The belt-and-suspenders repair uses `uv pip install "setuptools>=75,<80"`.
-        // This test verifies the string we'd pass is a valid PEP 508 specifier and
-        // that it actually constrains below 80.
-        let specifier = "setuptools>=75,<80";
-        // Simple structural check: contains both bounds
+        // Mirror the exact args slice used in both repair branches so a regression
+        // (e.g. accidentally splitting into ["setuptools>=75", ",<80"]) is caught
+        // here rather than silently installing the latest setuptools.
+        let repair_args: &[&str] = &["pip", "install", "setuptools>=75,<80"];
+
+        // The version specifier must be the third positional argument — one string,
+        // not split. This is the key property the review bot flagged: a split arg
+        // would make uv install the latest setuptools and leave pkg_resources absent.
+        assert_eq!(repair_args[0], "pip");
+        assert_eq!(repair_args[1], "install");
+        assert_eq!(repair_args[2], "setuptools>=75,<80",
+            "specifier must be a single arg; splitting it would bypass the <80 bound");
+
+        // The single-string specifier must contain both bounds.
+        let specifier = repair_args[2];
+        assert!(specifier.contains("setuptools"), "arg must name the package");
         assert!(specifier.contains(">=75"), "lower bound must be >=75");
         assert!(specifier.contains("<80"), "upper bound must be <80 to keep pkg_resources");
+        // No comma-split: the entire range is in one argument with no spaces.
+        assert!(!specifier.contains(' '), "specifier must not contain spaces (would be split by shell)");
+
         // Verify 79.x satisfies the range
         let v79: (u32, u32) = (79, 0);
         assert!(v79.0 >= 75 && v79.0 < 80, "79.x must satisfy >=75,<80");
