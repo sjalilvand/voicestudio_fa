@@ -109,6 +109,43 @@ def _seed_job(dc_module, tmp_path: Path, duration: float, scene_cuts=None) -> st
 # Tests
 # ---------------------------------------------------------------------------
 
+def test_transcribe_stream_surfaces_model_load_failure(tmp_path, monkeypatch):
+    """Regression #255: when the model fails to load, the SSE transcribe stream
+    must emit a structured `error` event carrying the real cause — not silently
+    drop the connection (the UI renders a dropped stream as a misleading generic
+    "Transcribe stream dropped … Likely ASR backend failed to load").
+
+    Drives the route's async generator directly (no TestClient/lifespan) — the
+    preflight-error path yields a single event with no executor/Queue, so it
+    stays isolated from the app event loop.
+    """
+    import asyncio
+    from api.routers import dub_core as dc
+
+    job_id = "t_modelfail"
+    dc._dub_jobs[job_id] = {"audio_path": str(tmp_path / "a.wav"), "vocals_path": None}
+
+    async def _boom():
+        raise RuntimeError("CUDA driver init failed: simulated")
+
+    monkeypatch.setattr(dc, "get_model", _boom)
+
+    async def _collect():
+        resp = await dc.dub_transcribe_stream(job_id)
+        parts = []
+        async for chunk in resp.body_iterator:
+            parts.append(chunk.decode() if isinstance(chunk, (bytes, bytearray)) else str(chunk))
+        return "".join(parts)
+
+    try:
+        body = asyncio.run(_collect())
+    finally:
+        dc._dub_jobs.pop(job_id, None)
+
+    assert "event: error" in body, body
+    assert "CUDA driver init failed: simulated" in body, body
+
+
 @pytest.mark.xfail(
     reason="dub_core._transcribe was refactored to route through "
            "services.asr_backend.get_active_asr_backend; the MagicMock fixture "
