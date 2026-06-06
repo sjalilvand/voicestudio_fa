@@ -880,8 +880,8 @@
     "back": "Back to Studio",
     "badge": "Commercial License",
     "hero_title": "Ship AI voices in production",
-    "hero_desc": "OmniVoice Studio is source-available under the Functional Source License (FSL). Most users can evaluate, prototype, and even deploy internally without a commercial agreement. You need a commercial license only if you are building a competing product or service, or if your use case falls outside the FSL’s boundaries.",
-    "hero_note": "Internal use — even at scale — is free under the FSL; a commercial license is only required to offer OmniVoice to others as a competing product or service (a hosted or pay-per-use API, a resold or white-labelled app). Pricing tiers are coming soon — get in touch in the meantime.",
+    "hero_desc": "OmniVoice Studio is free and open-source software under the GNU Affero General Public License v3 (AGPL-3.0) — free to use, including for commercial and internal business use. A commercial license is needed only if you want to embed OmniVoice Studio in a closed-source or proprietary product or service without AGPL-3.0's copyleft obligations.",
+    "hero_note": "Use, self-hosting, and commercial use are all free under the AGPL-3.0 — including at scale. AGPL is a network-copyleft license: if you modify OmniVoice and offer that modified version to others over a network, you must share your modified source under the same terms. A commercial license lifts those copyleft obligations for proprietary, closed-source deployments. Pricing tiers are coming soon — get in touch in the meantime.",
     "why_title": "Why businesses choose OmniVoice",
     "pricing_title": "Pricing",
     "faq_title": "Common questions",
@@ -1447,13 +1447,11 @@
   },
   "enterprise_faq": {
     "q_internal_tools": "Do I need a license for internal tools?",
-    "a_internal_tools": "Internal use by your employees and contractors is a Permitted Purpose under the FSL — no license required. A commercial license is needed when you make OmniVoice available to others as part of a competing product or service (resale, hosted SaaS, white-label).",
+    "a_internal_tools": "No. Use by your employees and contractors — including modifying and self-hosting internally — is free under the AGPL-3.0. A commercial license is only needed if you embed OmniVoice in a closed-source or proprietary product or service and don't want to comply with AGPL's source-sharing obligations.",
     "q_try_before": "Can I try before committing?",
-    "a_try_before": "Yes. The full app is free to download and run locally for evaluation under the FSL. When you're ready to discuss a commercial deployment, email us and we'll work through the details together.",
+    "a_try_before": "Yes. The full app is free to download, run, and self-host under the AGPL-3.0 — no agreement required. When you're ready to discuss a commercial (proprietary-use) license, email us and we'll work through the details together.",
     "q_watermark": "What about the watermark?",
-    "a_watermark": "The invisible AudioSeal watermark is embedded by default. Commercial licensees can disable it in Settings → Privacy. Free/personal use always includes the watermark.",
-    "q_apache": "Does the source ever become Apache 2.0?",
-    "a_apache": "Yes. Each release converts automatically to the Apache License, Version 2.0 on the second anniversary of its publication. That means today's release is Apache 2.0 in two years, no action required from us — the FSL guarantees it irrevocably."
+    "a_watermark": "The invisible AudioSeal watermark is embedded by default for everyone. Commercial licensees can disable it in Settings → Privacy."
   },
   "gallery_extra": {
     "save_prompt": "Enter a name for this voice profile:",

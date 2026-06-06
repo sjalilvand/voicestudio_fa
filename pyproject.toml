@@ -7,10 +7,11 @@ name = "omnivoice"
 version = "0.3.5"
 description = "OmniVoice: Towards Omnilingual Zero-Shot Text-to-Speech with Diffusion Language Models"
 readme = "README.md"
-# Source-available under FSL-1.1-ALv2 (see LICENSE); each release converts to
-# Apache-2.0 two years after publication. Declared as a PEP 639 LicenseRef
-# since FSL isn't an OSI/SPDX-listed identifier.
-license = "LicenseRef-FSL-1.1-ALv2"
+# Free and open-source under the GNU Affero General Public License v3 (see
+# LICENSE). A commercial license is available for proprietary/closed-source use
+# without AGPL obligations — contact OmniVoice@palash.dev. The bundled omnivoice/
+# TTS model by Han Zhu remains Apache-2.0 upstream (Apache-2.0 is AGPL-compatible).
+license = "AGPL-3.0-only"
 requires-python = ">=3.11"
 authors = [{name = "Han Zhu"}]
 keywords = [

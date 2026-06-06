@@ -160,10 +160,6 @@ function LicenseView() {
             <summary>{t('enterprise_faq.q_watermark')}</summary>
             <p>{t('enterprise_faq.a_watermark')}</p>
           </details>
-          <details className="ent-faq__item">
-            <summary>{t('enterprise_faq.q_apache')}</summary>
-            <p>{t('enterprise_faq.a_apache')}</p>
-          </details>
         </div>
       </section>
 

@@ -2,6 +2,7 @@
   "name": "omnivoice-studio",
   "private": true,
   "version": "0.3.5",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "vite",
