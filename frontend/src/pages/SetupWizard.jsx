@@ -1,13 +1,10 @@
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  CheckCircle, Loader, ArrowRight, AlertTriangle, XCircle,
-  RefreshCw, Monitor, Download, Cog, FolderOpen,
-} from 'lucide-react';
-import { Button } from '../ui';
+import { Loader } from 'lucide-react';
 import { useSetupStatus, usePreflight } from '../api/hooks';
-import { ModelStoreTab, EnginesTab } from './Settings';
+import WizardLibrary from '../components/WizardLibrary';
 import DictationDemo from '../components/DictationDemo';
+import '../components/FirstRunSetup.css';
 import './SetupWizard.css';
 import '../components/Misc.css';
 
@@ -39,13 +36,30 @@ async function revealPath(path) {
   } catch { /* ignore — probably web preview */ }
 }
 
-const CHECK_ICON = {
-  pass: <CheckCircle size={13} />,
-  warn: <AlertTriangle size={13} />,
-  fail: <XCircle size={13} />,
-};
+/** Whisper waveform — the journey's signature, same as setup + install. */
+function Waveform({ bars = 96 }) {
+  const heights = useMemo(
+    () => Array.from({ length: bars }, (_, i) => {
+      const t = i / bars;
+      const v = Math.abs(
+        Math.sin(t * Math.PI * 7.3) * 0.55 +
+        Math.sin(t * Math.PI * 2.1 + 1.2) * 0.3 +
+        Math.sin(t * Math.PI * 17.0 + 0.4) * 0.15
+      );
+      return 0.18 + v * 0.82;
+    }),
+    [bars],
+  );
+  return (
+    <div className="frs-wave" aria-hidden="true">
+      {heights.map((h, i) => (
+        <span key={i} className="frs-wave__bar" style={{ '--h': h, '--d': `${(i * 73) % 1400}ms` }} />
+      ))}
+    </div>
+  );
+}
 
-/* ── Preflight panel ───────────────────────────────────────────────────── */
+/* ── Preflight panel — LED check rows ──────────────────────────────────── */
 
 function PreflightPanel({ report, loading, onRecheck }) {
   const { t } = useTranslation();
@@ -58,78 +72,74 @@ function PreflightPanel({ report, loading, onRecheck }) {
   }
   if (!report) return null;
   return (
-    <div className="swiz-checklist">
-      <div className="swiz-check-header">
-        <span className="swiz-check-header__label">{t('setup.system_preflight')}</span>
-        <Button variant="ghost" size="sm" onClick={onRecheck} leading={<RefreshCw size={12} />}>
-          {t('setup.recheck')}
-        </Button>
-      </div>
+    <section className="frs-panel">
+      <h2 className="frs-panel__title">
+        {t('setup.system_preflight')}
+        <button type="button" className="frs-btn frs-btn--quiet swiz-recheck" onClick={onRecheck}>
+          ↻ {t('setup.recheck')}
+        </button>
+      </h2>
       {report.checks.map((c) => (
-        <div key={c.id} className="setup-wizard__row swiz-check-row" style={{ alignItems: 'flex-start', padding: '8px 4px' }}>
-          <span className={`swiz-check-icon swiz-check-icon--${c.status}`}>
-            {CHECK_ICON[c.status] || null}
-          </span>
-          <div className="setup-wizard__row-body">
-            <span className="setup-wizard__row-title">{c.label}</span>
-            <span className="setup-wizard__muted" style={{ whiteSpace: 'normal' }}>{c.detail}</span>
+        <div key={c.id} className={`frs-check frs-check--${c.status}`}>
+          <span className="frs-check__led" aria-hidden="true" />
+          <div className="frs-check__body">
+            <span className="frs-check__title">{c.label}</span>
+            <span className="frs-check__detail">{c.detail}</span>
             {c.fix && c.status !== 'pass' && (
-              <span className="setup-wizard__muted" style={{
-                color: c.status === 'fail' ? 'var(--color-danger)' : 'var(--color-warn, #fabd2f)',
-                marginTop: 2,
-                whiteSpace: 'normal',
-              }}>
-                → {c.fix}
-              </span>
+              <span className="frs-check__fix">→ {c.fix}</span>
             )}
           </div>
         </div>
       ))}
-    </div>
+    </section>
   );
 }
 
-/* ── Stepper nav with connectors ───────────────────────────────────────── */
+/* ── LED stepper rail ──────────────────────────────────────────────────── */
 
 function StepperNav({ step, onStep }) {
   const { t } = useTranslation();
-  const stepLabels = [t('setup.welcome'), t('setup.system_check'), t('setup.install_models'), t('setup.pick_engines'), t('setup.try_dictation')];
+  // Three steps, no welcome ceremony: the journey rail + setup page already
+  // oriented the user. Models + engines share one act (required gate +
+  // optional extras).
+  const stepLabels = [t('setup.system_check'), t('firstrun.stage_models', 'Models & engines'), t('setup.try_dictation')];
   return (
-    <div className="setup-wizard__steps" data-tauri-drag-region>
+    <nav className="frs-wsteps" data-tauri-drag-region>
       {stepLabels.map((label, i) => (
-        <React.Fragment key={label}>
-          {i > 0 && (
-            <span className={`setup-wizard__step-connector${step > i - 1 ? ' setup-wizard__step-connector--done' : ''}`} />
-          )}
-          <button
-            className={[
-              'setup-wizard__step',
-              step === i ? 'setup-wizard__step--active' : '',
-              step > i ? 'setup-wizard__step--done' : '',
-            ].filter(Boolean).join(' ')}
-            onClick={() => onStep(i)}
-            type="button"
-            aria-current={step === i ? 'step' : undefined}
-            aria-label={`Step ${i + 1}: ${label}${step > i ? ' (completed)' : ''}`}
-          >
-            {step > i ? '✓ ' : `${i + 1}. `}{label}
-          </button>
-        </React.Fragment>
+        <button
+          key={label}
+          type="button"
+          className={[
+            'frs-wstep',
+            step === i ? 'is-active' : '',
+            step > i ? 'is-done' : '',
+          ].filter(Boolean).join(' ')}
+          onClick={() => onStep(i)}
+          aria-current={step === i ? 'step' : undefined}
+          aria-label={`Step ${i + 1}: ${label}${step > i ? ' (completed)' : ''}`}
+        >
+          <span className="frs-wstep__led" aria-hidden="true" />
+          {label}
+        </button>
       ))}
-    </div>
+    </nav>
   );
 }
 
 /* ── Main wizard component ─────────────────────────────────────────────── */
 
 /**
- * First-run / "no models installed" gate.
+ * First-run / "no models installed" gate — the final act of the first-run
+ * journey (setup → install → models/engines). Rendered in the same studio
+ * console design system (frs-*) so the handoff from the install splash is
+ * seamless.
  *
  * Flow:
- *   0. Welcome    — hero + explainer + "continue"
- *   1. System     — /setup/preflight results
- *   2. Models     — ModelStoreTab, unlocks on models_ready
- *   3. Engines    — EnginesTab + "Enter studio"
+ *   0. Welcome           — what's left to do
+ *   1. System            — /setup/preflight results
+ *   2. Models & engines  — ModelStoreTab (required, gates continue) +
+ *                          EnginesTab (optional) in one act
+ *   3. Dictation         — guided demo, then "Enter studio"
  */
 export default function SetupWizard({ onReady }) {
   const { t } = useTranslation();
@@ -144,7 +154,7 @@ export default function SetupWizard({ onReady }) {
 
   // Poll setup status every 4s while on Models step
   useEffect(() => {
-    if (step !== 2) return;
+    if (step !== 1) return;
     const iv = setInterval(() => setupQuery.refetch(), 4000);
     return () => clearInterval(iv);
   }, [step, setupQuery]);
@@ -156,191 +166,153 @@ export default function SetupWizard({ onReady }) {
 
   const cachePath = status?.hf_cache_dir || '~/.cache/huggingface';
 
-  const WELCOME_CARDS = [
-    {
-      icon: <Monitor size={16} />,
-      title: t('setup.system_check'),
-      desc: t('setup.system_check_desc'),
-    },
-    {
-      icon: <Download size={16} />,
-      title: t('setup.install_models'),
-      desc: t('setup.install_models_desc'),
-    },
-    {
-      icon: <Cog size={16} />,
-      title: t('setup.pick_engines'),
-      desc: t('setup.pick_engines_desc'),
-    },
+  const STEP_SUBTITLES = [
+    t('setup.system_check_desc'),
+    t('setup.install_models_desc'),
+    t('setup.try_dictation'),
   ];
 
   return (
-    <div className="setup-wizard">
-      <StepperNav step={step} onStep={setStep} />
+    <div className="frs swiz">
+      <div className="frs__atmo" aria-hidden="true" />
+      <div className="frs__deck">
 
-      <div
-        data-tauri-drag-region
-        onDoubleClick={doubleClickMaximize}
-        className="setup-wizard__hero"
-      >
-        <img src="/favicon.svg" alt="" className="setup-wizard__logo" />
-        <div className="setup-wizard__hero-text">
-          <h1 data-tauri-drag-region>OmniVoice Studio</h1>
-          <span className="setup-wizard__sub" data-tauri-drag-region>
-            {t('setup.hero_desc')}
-          </span>
-        </div>
-      </div>
-
-      {/* 0. Welcome */}
-      {step === 0 && (
-        <div className="swiz-slide" key="step-0">
-          <div className="setup-wizard__embed">
-            <div className="setup-wizard__welcome">
-              <div className="setup-wizard__welcome-grid">
-                {WELCOME_CARDS.map((card, i) => (
-                  <div className="swiz-welcome-card" key={i}>
-                    <div className="swiz-welcome-card__icon">{card.icon}</div>
-                    <div className="swiz-welcome-card__body">
-                      <span className="swiz-welcome-card__title">{card.title}</span>
-                      <p className="swiz-welcome-card__desc">{card.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="swiz-welcome-note">
-                {t('setup.first_run')}
-              </p>
+        {/* ── Masthead: identical identity to setup + install acts ──────── */}
+        <header
+          className="frs__mast frs-rise"
+          style={{ '--rise': 0 }}
+          data-tauri-drag-region
+          onDoubleClick={doubleClickMaximize}
+        >
+          <Waveform />
+          <div className="frs__mast-row">
+            <div className="frs__mast-text">
+              <h1 className="frs__title" data-tauri-drag-region>OmniVoice Studio</h1>
+              <p className="frs__subtitle" data-tauri-drag-region>{STEP_SUBTITLES[step]}</p>
+            </div>
+            <div className="frs__mast-meta">
+              <StepperNav step={step} onStep={setStep} />
             </div>
           </div>
-          <div className="setup-wizard__nav">
-            <span />
-            <Button
-              variant="primary" size="sm"
-              onClick={() => setStep(1)}
-              trailing={<ArrowRight size={14} />}
-            >
-              {t('setup.get_started')}
-            </Button>
-          </div>
-        </div>
-      )}
+        </header>
 
-      {/* 1. System check */}
-      {step === 1 && (
-        <div className="swiz-slide" key="step-1">
-          <div className="setup-wizard__embed">
-            <PreflightPanel report={pre} loading={preLoading} onRecheck={recheckPreflight} />
-          </div>
-          <div className="setup-wizard__nav">
-            <Button variant="ghost" onClick={() => setStep(0)}>{t('setup.back')}</Button>
-            <Button
-              variant={preflightOk ? 'primary' : 'ghost'}
-              onClick={() => setStep(2)}
-              trailing={<ArrowRight size={14} />}
-              disabled={!preflightOk}
-              title={preflightOk ? '' : t('setup.resolve_blockers')}
-            >
-              {preflightOk
-                ? (pre?.has_warnings ? t('setup.continue_warn') : t('setup.continue_ok'))
-                : t('setup.continue_blocked')}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Models */}
-      {step === 2 && (
-        <div className="swiz-slide" key="step-2">
-          <div className="setup-wizard__embed">
-            <ModelStoreTab info={null} modelBadge={null} />
-            {!modelsReady && status?.missing?.length > 0 && (
-              <p className="setup-wizard__muted swiz-missing" style={{ marginTop: 8 }}>
-                {t('setup.still_needed')}{' '}
-                {status.missing.map(m => m.label).join(', ')}
-              </p>
-            )}
-          </div>
-          <div className="setup-wizard__nav">
-            <Button variant="ghost" onClick={() => setStep(1)}>{t('setup.back')}</Button>
-            <Button
-              variant={modelsReady ? 'primary' : 'ghost'}
-              onClick={() => setStep(3)}
-              trailing={<ArrowRight size={14} />}
-              disabled={!modelsReady}
-              title={modelsReady ? '' : t('setup.install_required_models')}
-            >
-              {modelsReady
-                ? t('setup.models_ready')
-                : t('setup.waiting_models')}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Engines */}
-      {step === 3 && (
-        <div className="swiz-slide" key="step-3">
-          <div className="setup-wizard__embed">
-            <EnginesTab />
-          </div>
-          <div className="setup-wizard__nav">
-            <Button variant="ghost" onClick={() => setStep(2)}>{t('setup.back')}</Button>
-            <Button
-              variant="primary"
-              onClick={() => setStep(4)}
-              leading={<CheckCircle size={14} />}
-            >
-              {t('setup.next_try_dictation')}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* 4. Dictation — guided walkthrough. Skippable (per cross-platform
-          parity rule: some users genuinely don't want dictation). */}
-      {step === 4 && (
-        <div className="swiz-slide" key="step-4">
-          <div className="setup-wizard__embed">
-            <DictationDemo />
-          </div>
-          <div className="setup-wizard__nav">
-            <Button variant="ghost" onClick={() => setStep(3)}>{t('setup.back')}</Button>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Button variant="subtle" onClick={onReady}>{t('common.cancel')}</Button>
-              <Button
-                variant="primary"
-                onClick={onReady}
-                leading={<CheckCircle size={14} />}
+        {/* 0. System check — first thing a user sees: the probe auto-runs,
+            no welcome ceremony (the journey rail + setup page already
+            oriented them). */}
+        {step === 0 && (
+          <div className="swiz-slide" key="step-0">
+            <div className="frs-rise" style={{ '--rise': 1 }}>
+              <PreflightPanel report={pre} loading={preLoading} onRecheck={recheckPreflight} />
+            </div>
+            <div className="frs-wnav frs-rise" style={{ '--rise': 2 }}>
+              <span />
+              <button
+                type="button"
+                className={`frs-btn frs-btn--primary ${preflightOk ? 'is-armed' : ''}`}
+                onClick={() => setStep(1)}
+                disabled={!preflightOk}
+                title={preflightOk ? '' : t('setup.resolve_blockers')}
               >
-                {t('setup.enter_studio')}
-              </Button>
+                <span className="frs-btn__led" aria-hidden="true" />
+                {preflightOk
+                  ? (pre?.has_warnings ? t('setup.continue_warn') : t('setup.continue_ok'))
+                  : t('setup.continue_blocked')}
+              </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {!status && step > 1 && (
-        <div className="swiz-status-loading">
-          <Loader className="spinner" size={14} /> {t('setup.checking')}
-        </div>
-      )}
-
-      <p className="setup-wizard__footnote">
-        {t('setup.footer_downloads')} <code>huggingface.co</code>
-        <span style={{ margin: '0 2px' }}>·</span>
-        {t('setup_extra.cache_label')} <code>{shortenPath(cachePath)}</code>
-        {'__TAURI_INTERNALS__' in window && cachePath && (
-          <button
-            className="setup-wizard__footnote-link"
-            onClick={() => revealPath(cachePath)}
-            title={t('setup.open_finder')}
-          >
-            <FolderOpen size={10} style={{ verticalAlign: '-1px', marginRight: 2 }} />
-            {t('setup.open')}
-          </button>
         )}
-      </p>
+
+        {/* 1. Models & engines — ONE unified list: every installable is a
+            row of the same grammar (LED · name · chip · size · action).
+            Required models gate continue; engines and the optional tail
+            ride in the same inventory. */}
+        {step === 1 && (
+          <div className="swiz-slide" key="step-1">
+            <section className="frs-panel frs-rise" style={{ '--rise': 1 }}>
+              <h2 className="frs-panel__title">{t('firstrun.stage_models', 'Models & engines')}</h2>
+              <WizardLibrary />
+              {!modelsReady && status?.missing?.length > 0 && (
+                <p className="swiz-note swiz-note--warn">
+                  {t('setup.still_needed')}{' '}
+                  {status.missing.map(m => m.label).join(', ')}
+                </p>
+              )}
+            </section>
+            <div className="frs-wnav frs-rise" style={{ '--rise': 2 }}>
+              <button type="button" className="frs-btn frs-btn--quiet" onClick={() => setStep(0)}>
+                ← {t('setup.back')}
+              </button>
+              <button
+                type="button"
+                className={`frs-btn frs-btn--primary ${modelsReady ? 'is-armed' : ''}`}
+                onClick={() => setStep(2)}
+                disabled={!modelsReady}
+                title={modelsReady ? '' : t('setup.install_required_models')}
+              >
+                <span className="frs-btn__led" aria-hidden="true" />
+                {modelsReady ? t('setup.models_ready') : t('setup.waiting_models')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 2. Dictation — guided walkthrough. Skippable (per cross-platform
+            parity rule: some users genuinely don't want dictation). */}
+        {step === 2 && (
+          <div className="swiz-slide" key="step-2">
+            <section className="frs-panel frs-rise" style={{ '--rise': 1 }}>
+              <h2 className="frs-panel__title">{t('setup.try_dictation')}</h2>
+              <div className="frs-embed">
+                <DictationDemo />
+              </div>
+            </section>
+            <div className="frs-wnav frs-rise" style={{ '--rise': 2 }}>
+              <button type="button" className="frs-btn frs-btn--quiet" onClick={() => setStep(1)}>
+                ← {t('setup.back')}
+              </button>
+              <div className="frs-wnav__group">
+                <button type="button" className="frs-btn frs-btn--quiet" onClick={onReady}>
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="button"
+                  className="frs-btn frs-btn--primary is-armed"
+                  onClick={onReady}
+                >
+                  <span className="frs-btn__led" aria-hidden="true" />
+                  {t('setup.enter_studio')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!status && step > 0 && (
+          <div className="swiz-loading">
+            <Loader className="spinner" size={14} /> {t('setup.checking')}
+          </div>
+        )}
+
+        <footer className="frs__foot">
+          <div className="frs__foot-row">
+            <span className="frs__totals">
+              {t('setup.footer_downloads')} <code>huggingface.co</code>
+              <span className="frs__totals-sep" aria-hidden="true">·</span>
+              {t('setup_extra.cache_label')} <code>{shortenPath(cachePath)}</code>
+              {'__TAURI_INTERNALS__' in window && cachePath && (
+                <button
+                  type="button"
+                  className="frs-btn frs-btn--quiet"
+                  onClick={() => revealPath(cachePath)}
+                  title={t('setup.open_finder')}
+                >
+                  {t('setup.open')}
+                </button>
+              )}
+            </span>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }

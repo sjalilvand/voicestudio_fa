@@ -19,6 +19,11 @@ use crate::{BackendState, backend_port};
 #[derive(Clone, Serialize, Debug)]
 #[serde(tag = "stage", rename_all = "snake_case")]
 pub enum BootstrapStage {
+    /// First run with nothing installed: parked on the setup screen waiting
+    /// for the user to confirm an install plan (mode, storage, mirrors).
+    /// Nothing downloads or installs in this stage — `complete_setup` is the
+    /// only way out of it.
+    AwaitingSetup,
     /// Working out whether we need to bootstrap at all.
     Checking,
     /// Fetching the standalone `uv` binary from astral-sh/uv releases.
@@ -196,12 +201,12 @@ pub fn retry_bootstrap(app: tauri::AppHandle, state: tauri::State<'_, BootstrapS
 
 #[tauri::command]
 pub fn clean_and_retry_bootstrap(app: tauri::AppHandle, state: tauri::State<'_, BootstrapState>) {
-    if let Ok(data_dir) = app.path().app_local_data_dir() {
-        let project_dir = data_dir.join("project");
-        if project_dir.is_dir() {
-            log::info!("Clean retry: removing {}", project_dir.display());
-            let _ = fs::remove_dir_all(&project_dir);
-        }
+    // env_root honors the setup-screen choice (portable / custom env dir), so
+    // clean-retry removes the venv the bootstrap actually uses.
+    let project_dir = crate::setup::env_root(&app).join("project");
+    if project_dir.is_dir() {
+        log::info!("Clean retry: removing {}", project_dir.display());
+        let _ = fs::remove_dir_all(&project_dir);
     }
     // Kill any zombie backend still occupying the port from the deleted
     // project dir, otherwise bootstrap will "attach" to the stale process.
@@ -320,11 +325,14 @@ fn rocm_torch_reinstall_args(rocm_index_url: &str) -> Vec<String> {
     ]
 }
 
-/// Whether the user opted into the AMD ROCm torch build via
-/// OMNIVOICE_TORCH_VARIANT=rocm. Default (unset/other) → false (CUDA/CPU path
-/// unchanged). Returns the ROCm wheel index to use when enabled.
-fn rocm_opt_in() -> Option<String> {
-    let variant = std::env::var("OMNIVOICE_TORCH_VARIANT").ok()?;
+/// Whether the user opted into the AMD ROCm torch build — via the
+/// OMNIVOICE_TORCH_VARIANT env var (power users, takes precedence) or the
+/// setup screen's Compute choice persisted in config (`configured_variant`).
+/// Default (unset/"auto") → None (CUDA/CPU path unchanged). Returns the ROCm
+/// wheel index to use when enabled.
+fn rocm_opt_in(configured_variant: &str) -> Option<String> {
+    let variant = std::env::var("OMNIVOICE_TORCH_VARIANT")
+        .unwrap_or_else(|_| configured_variant.to_string());
     if !variant.eq_ignore_ascii_case("rocm") {
         return None;
     }
@@ -355,7 +363,9 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
         }
     }
 
-    let app_data = app.path().app_local_data_dir().ok()?;
+    // Root chosen on the setup screen: app_local_data_dir by default, the
+    // exe-adjacent folder in portable mode, or a user-picked custom dir.
+    let app_data = crate::setup::env_root(app);
     let project_dir = app_data.join("project");
     let venv_dir = project_dir.join(".venv");
     let venv_py = venv_python_path(&venv_dir);
@@ -585,17 +595,26 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
         set_stage(p, BootstrapStage::CreatingVenv);
     }
     // plan-03 (#130): mirror cascade + system-Python fallback so first-run
-    // survives a GitHub-blocked network. Try in order: (1) default GitHub host,
+    // survives a GitHub-blocked network. Try in order: (0) the user's custom
+    // mirror from the setup screen, when set, (1) default GitHub host,
     // (2) gh-proxy mirror, (3) system Python (only if >= 3.11) — each with
     // longer timeouts/retries. Stop at the first that succeeds.
-    let mut venv_attempts: Vec<(&str, Vec<&str>, Vec<(&str, &str)>)> = vec![
-        ("default", vec!["venv", "--python", "3.11", "--managed-python"], vec![]),
-        (
-            "gh-proxy mirror",
+    let user_cfg = crate::config::load_config(app);
+    let custom_mirrors = user_cfg.mirrors.clone();
+    let mut venv_attempts: Vec<(&str, Vec<&str>, Vec<(&str, String)>)> = Vec::new();
+    if let Some(custom_py_mirror) = custom_mirrors.python_downloads.clone() {
+        venv_attempts.push((
+            "custom mirror (setup screen)",
             vec!["venv", "--python", "3.11", "--managed-python"],
-            vec![("UV_PYTHON_INSTALL_MIRROR", PY_INSTALL_MIRROR)],
-        ),
-    ];
+            vec![("UV_PYTHON_INSTALL_MIRROR", custom_py_mirror)],
+        ));
+    }
+    venv_attempts.push(("default", vec!["venv", "--python", "3.11", "--managed-python"], vec![]));
+    venv_attempts.push((
+        "gh-proxy mirror",
+        vec!["venv", "--python", "3.11", "--managed-python"],
+        vec![("UV_PYTHON_INSTALL_MIRROR", PY_INSTALL_MIRROR.to_string())],
+    ));
     // Always try the system Python as the LAST resort (mirrors blocked too).
     // No `--python 3.11` pin and no pre-gate: uv's own interpreter discovery is
     // the authority — with `only-system` + the project's `requires-python =
@@ -606,7 +625,7 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
     venv_attempts.push((
         "system-python",
         vec!["venv"],
-        vec![("UV_PYTHON_PREFERENCE", "only-system")],
+        vec![("UV_PYTHON_PREFERENCE", "only-system".to_string())],
     ));
 
     let mut venv_ok = false;
@@ -614,7 +633,7 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
         let mut venv_cmd = Command::new(&uv_path);
         scrub_python_env(&mut venv_cmd); // #144: don't inherit AppImage's bundled Python
         apply_uv_http_env(&mut venv_cmd);
-        for &(k, v) in envs {
+        for (k, v) in envs {
             venv_cmd.env(k, v);
         }
         venv_cmd.args(args.iter()).current_dir(&project_dir);
@@ -647,8 +666,10 @@ pub fn ensure_venv_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress:
             .args(["sync", "--no-dev", "--verbose"])
             .current_dir(&project_dir);
     }
-    let effective_region = get_effective_region(app);
-    if effective_region == "china" {
+    // PyPI index precedence: explicit setup-screen mirror > region preset.
+    if let Some(pypi) = custom_mirrors.pypi_index.as_deref() {
+        sync_cmd.env("UV_INDEX_URL", pypi);
+    } else if get_effective_region(app) == "china" {
         sync_cmd.env("UV_INDEX_URL", "https://mirrors.aliyun.com/pypi/simple/");
     }
     let sync_status = run_streaming(app, "installing_deps", &mut sync_cmd);
@@ -705,8 +726,8 @@ docs/install/troubleshooting.md).",
     // OMNIVOICE_TORCH_VARIANT=rocm, reinstall torch/torchaudio from the ROCm
     // wheel index. Non-fatal: a failure keeps the working CUDA/CPU build rather
     // than breaking first-run. Default (unset) leaves everything unchanged.
-    if let Some(rocm_url) = rocm_opt_in() {
-        log::info!("OMNIVOICE_TORCH_VARIANT=rocm → reinstalling torch from {}", rocm_url);
+    if let Some(rocm_url) = rocm_opt_in(&user_cfg.torch_variant) {
+        log::info!("ROCm torch variant selected → reinstalling torch from {}", rocm_url);
         let mut rocm_cmd = Command::new(&uv_path);
         scrub_python_env(&mut rocm_cmd); // #144: don't inherit AppImage's bundled Python
         apply_uv_http_env(&mut rocm_cmd);
@@ -775,21 +796,26 @@ mod tests {
     }
 
     #[test]
-    fn rocm_opt_in_gates_strictly_on_the_env_var() {
+    fn rocm_opt_in_gates_on_env_var_or_config() {
         // This test owns OMNIVOICE_TORCH_VARIANT / _INDEX for its duration; no
         // other test reads them.
         std::env::remove_var("OMNIVOICE_TORCH_VARIANT");
         std::env::remove_var("OMNIVOICE_TORCH_INDEX");
-        assert!(rocm_opt_in().is_none(), "unset → no ROCm (default CUDA/CPU path)");
+        assert!(rocm_opt_in("auto").is_none(), "unset+auto → no ROCm (default CUDA/CPU path)");
+        assert_eq!(
+            rocm_opt_in("rocm").as_deref(),
+            Some(ROCM_TORCH_INDEX),
+            "setup-screen config alone opts in"
+        );
 
         std::env::set_var("OMNIVOICE_TORCH_VARIANT", "cuda");
-        assert!(rocm_opt_in().is_none(), "non-rocm value → no ROCm");
+        assert!(rocm_opt_in("rocm").is_none(), "env var wins over config (explicit non-rocm)");
 
         std::env::set_var("OMNIVOICE_TORCH_VARIANT", "ROCm");
-        assert_eq!(rocm_opt_in().as_deref(), Some(ROCM_TORCH_INDEX), "case-insensitive opt-in → default index");
+        assert_eq!(rocm_opt_in("auto").as_deref(), Some(ROCM_TORCH_INDEX), "case-insensitive env opt-in → default index");
 
         std::env::set_var("OMNIVOICE_TORCH_INDEX", "https://example.test/rocm6.3");
-        assert_eq!(rocm_opt_in().as_deref(), Some("https://example.test/rocm6.3"), "index override honored");
+        assert_eq!(rocm_opt_in("auto").as_deref(), Some("https://example.test/rocm6.3"), "index override honored");
 
         std::env::remove_var("OMNIVOICE_TORCH_VARIANT");
         std::env::remove_var("OMNIVOICE_TORCH_INDEX");

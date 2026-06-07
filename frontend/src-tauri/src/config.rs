@@ -43,12 +43,64 @@ pub struct AppConfig {
     /// stable on every launch.
     #[serde(default = "default_update_channel")]
     pub update_channel: String,
+    /// True once the user has confirmed the first-run setup screen (or an
+    /// existing pre-setup-screen install was detected and silently migrated).
+    /// While false on a machine with no venv, the bootstrap parks in
+    /// `AwaitingSetup` and nothing downloads or installs.
+    #[serde(default)]
+    pub setup_complete: bool,
+    /// "installed" (platform dirs, default) | "portable" (everything lives in
+    /// `OmniVoiceStudio-Data/` next to the executable / AppImage).
+    #[serde(default = "default_install_mode")]
+    pub install_mode: String,
+    /// Custom root for the managed Python env (`<dir>/project/.venv`).
+    /// None → `app_local_data_dir()` (legacy behavior, byte-identical).
+    #[serde(default)]
+    pub env_dir: Option<String>,
+    /// Custom backend data dir (voices/projects/db) → OMNIVOICE_DATA_DIR.
+    /// None → backend platform default (env var not set at all).
+    #[serde(default)]
+    pub data_dir: Option<String>,
+    /// Custom model-cache dir → OMNIVOICE_CACHE_DIR (backend maps to HF_HOME,
+    /// HF_HUB_CACHE, TORCH_HOME). None → library defaults.
+    #[serde(default)]
+    pub models_dir: Option<String>,
+    /// UI locale chosen on the setup screen, mirrored here so the Rust side
+    /// (tray menus, dialogs) can localize in the future. The webview keeps its
+    /// own copy in localStorage; this field is informational.
+    #[serde(default)]
+    pub locale: Option<String>,
+    /// "auto" (CUDA/MPS/CPU autodetect, default) | "rocm" (AMD wheel reinstall
+    /// after sync). Env var OMNIVOICE_TORCH_VARIANT still wins for power users.
+    #[serde(default = "default_torch_variant")]
+    pub torch_variant: String,
+    /// Explicit mirror URLs that take precedence over region presets.
+    #[serde(default)]
+    pub mirrors: MirrorOverrides,
+}
+
+/// Per-source mirror overrides from the setup screen's Advanced section.
+/// Each empty/None field falls back to the region preset for that source.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MirrorOverrides {
+    /// PyPI simple-index URL → UV_INDEX_URL during `uv sync`.
+    #[serde(default)]
+    pub pypi_index: Option<String>,
+    /// Hugging Face endpoint → HF_ENDPOINT for the backend process.
+    #[serde(default)]
+    pub hf_endpoint: Option<String>,
+    /// python-build-standalone release base → UV_PYTHON_INSTALL_MIRROR.
+    #[serde(default)]
+    pub python_downloads: Option<String>,
 }
 
 pub fn default_region() -> String { "auto".into() }
 pub fn default_dictation_shortcut() -> String { "CmdOrCtrl+Shift+Space".into() }
 pub fn default_launch_as_widget() -> bool { false }
 pub fn default_update_channel() -> String { "stable".into() }
+pub fn default_install_mode() -> String { "installed".into() }
+pub fn default_torch_variant() -> String { "auto".into() }
 
 impl Default for AppConfig {
     fn default() -> Self {
@@ -57,12 +109,30 @@ impl Default for AppConfig {
             dictation_shortcut: default_dictation_shortcut(),
             launch_as_widget: default_launch_as_widget(),
             update_channel: default_update_channel(),
+            setup_complete: false,
+            install_mode: default_install_mode(),
+            env_dir: None,
+            data_dir: None,
+            models_dir: None,
+            locale: None,
+            torch_variant: default_torch_variant(),
+            mirrors: MirrorOverrides::default(),
         }
     }
 }
 
+/// A `config.json` inside the exe-adjacent portable folder marks (and wins
+/// over) the standard location — so a portable install keeps working when the
+/// folder is moved to another machine/disk, with zero state left behind.
+fn portable_config_file() -> Option<PathBuf> {
+    crate::setup::portable_base()
+        .map(|b| b.join("config.json"))
+        .filter(|p| p.is_file())
+}
+
 pub fn config_path<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<PathBuf> {
-    app.path().app_local_data_dir().ok().map(|d: PathBuf| d.join("config.json"))
+    portable_config_file()
+        .or_else(|| app.path().app_local_data_dir().ok().map(|d: PathBuf| d.join("config.json")))
 }
 
 pub fn load_config<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> AppConfig {
@@ -87,16 +157,24 @@ pub fn load_config_pre_app() -> AppConfig {
 const BUNDLE_IDENTIFIER: &str = "com.debpalash.omnivoice-studio";
 
 fn config_path_pre_app() -> Option<PathBuf> {
-    dirs_next::data_local_dir().map(|d| d.join(BUNDLE_IDENTIFIER).join("config.json"))
+    portable_config_file()
+        .or_else(|| dirs_next::data_local_dir().map(|d| d.join(BUNDLE_IDENTIFIER).join("config.json")))
 }
 
 pub fn save_config<R: tauri::Runtime>(app: &tauri::AppHandle<R>, cfg: &AppConfig) {
     if let Some(p) = config_path(app) {
-        if let Some(parent) = p.parent() {
-            let _ = fs::create_dir_all(parent);
-        }
-        let _ = fs::write(&p, serde_json::to_string_pretty(cfg).unwrap_or_default());
+        let _ = save_config_at(&p, cfg);
     }
+}
+
+/// Write the config to an explicit path (used by `complete_setup` to seed the
+/// portable folder before `config_path` starts resolving to it).
+pub fn save_config_at(path: &PathBuf, cfg: &AppConfig) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("mkdir {}: {e}", parent.display()))?;
+    }
+    let body = serde_json::to_string_pretty(cfg).map_err(|e| e.to_string())?;
+    fs::write(path, body).map_err(|e| format!("write {}: {e}", path.display()))
 }
 
 // ── Region helpers ────────────────────────────────────────────────────────
@@ -162,6 +240,46 @@ pub fn set_region(app: tauri::AppHandle, region: String) -> String {
     cfg.region = r.to_string();
     save_config(&app, &cfg);
     r.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A config.json written by any pre-setup-screen build must keep parsing
+    /// with all new fields at safe defaults — this is what makes the setup
+    /// gate invisible to existing installs.
+    #[test]
+    fn legacy_config_parses_with_safe_defaults() {
+        let legacy = r#"{"region":"china","dictation_shortcut":"CmdOrCtrl+Shift+Space","launch_as_widget":false,"update_channel":"preview"}"#;
+        let cfg: AppConfig = serde_json::from_str(legacy).expect("legacy config must parse");
+        assert_eq!(cfg.region, "china");
+        assert_eq!(cfg.update_channel, "preview");
+        assert!(!cfg.setup_complete, "legacy installs must default to setup_complete=false (venv detection migrates them)");
+        assert_eq!(cfg.install_mode, "installed");
+        assert_eq!(cfg.env_dir, None);
+        assert_eq!(cfg.data_dir, None);
+        assert_eq!(cfg.models_dir, None);
+        assert_eq!(cfg.torch_variant, "auto");
+        assert!(cfg.mirrors.pypi_index.is_none());
+        assert!(cfg.mirrors.hf_endpoint.is_none());
+        assert!(cfg.mirrors.python_downloads.is_none());
+    }
+
+    #[test]
+    fn config_roundtrips_new_fields() {
+        let mut cfg = AppConfig::default();
+        cfg.setup_complete = true;
+        cfg.install_mode = "portable".into();
+        cfg.models_dir = Some("/mnt/big/models".into());
+        cfg.mirrors.hf_endpoint = Some("https://hf-mirror.com".into());
+        let json = serde_json::to_string(&cfg).unwrap();
+        let back: AppConfig = serde_json::from_str(&json).unwrap();
+        assert!(back.setup_complete);
+        assert_eq!(back.install_mode, "portable");
+        assert_eq!(back.models_dir.as_deref(), Some("/mnt/big/models"));
+        assert_eq!(back.mirrors.hf_endpoint.as_deref(), Some("https://hf-mirror.com"));
+    }
 }
 
 #[tauri::command]

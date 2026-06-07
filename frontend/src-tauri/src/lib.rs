@@ -8,6 +8,7 @@
 //!   commands  – Tauri IPC commands (sysinfo, logs, HF cache, paste, tray, dictation)
 
 pub mod config;
+pub mod setup;
 pub mod bootstrap;
 pub mod tools;
 pub mod backend;
@@ -95,6 +96,9 @@ pub fn run() {
             bootstrap::get_bootstrap_logs,
             bootstrap::retry_bootstrap,
             bootstrap::clean_and_retry_bootstrap,
+            setup::get_setup_state,
+            setup::check_install_target,
+            setup::complete_setup,
             config::get_region,
             config::set_region,
             config::get_update_channel,
@@ -511,6 +515,14 @@ pub fn run() {
                     set_stage(&stage_handle, BootstrapStage::Ready);
                     return;
                 }
+                // `--setup` re-opens the install-plan screen on demand — it
+                // must win over the attach-to-healthy-backend shortcut, or a
+                // running backend would skip straight past it.
+                if std::env::args().any(|a| a == "--setup") {
+                    log::info!("--setup flag — opening the setup screen");
+                    set_stage(&stage_handle, BootstrapStage::AwaitingSetup);
+                    return;
+                }
                 if backend::backend_healthy(backend_port()) {
                     log::info!(
                         "Port {} already serving OmniVoice backend — attaching",
@@ -526,6 +538,16 @@ pub fn run() {
                     );
                     backend::kill_orphan_on_port(backend_port());
                     std::thread::sleep(Duration::from_millis(500));
+                }
+                // First-run gate: never auto-install. With nothing on disk to
+                // attach to, park on the setup screen and wait for the user to
+                // confirm an install plan — `complete_setup` restarts the
+                // bootstrap from there. Existing installs (venv present) are
+                // detected inside is_first_run and migrate straight through.
+                if setup::is_first_run(&app_handle) {
+                    log::info!("First run — awaiting setup screen confirmation before installing");
+                    set_stage(&stage_handle, BootstrapStage::AwaitingSetup);
+                    return;
                 }
                 let child = backend::spawn_backend(&app_handle, Some(&stage_handle));
                 if let Ok(mut guard) = app_handle.state::<BackendState>().process.lock() {

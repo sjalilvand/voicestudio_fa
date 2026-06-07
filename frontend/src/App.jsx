@@ -365,6 +365,13 @@ function App() {
   const [setupNeeded, setSetupNeeded] = useState(false);
   const [setupChecked, setSetupChecked] = useState(false);
   useEffect(() => {
+    // Gate the probe on the bootstrap being 'ready' — before that there is
+    // no backend to answer. Probing from mount burned the 30-attempt ceiling
+    // during the setup/installing acts (minutes long on a first run), so the
+    // wizard was silently skipped straight into the studio once the install
+    // finished. Keyed on bootstrapStage: the probe (re)runs the moment the
+    // backend becomes reachable.
+    if (bootstrapStage !== 'ready') return undefined;
     let cancelled = false;
     (async () => {
       const { setupStatus } = await import('./api/setup');
@@ -383,7 +390,7 @@ function App() {
       if (!cancelled) setSetupChecked(true);
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [bootstrapStage]);
 
   // ── Tauri auto-updater ──
   // On boot, ask GitHub Releases if a newer build is available. If yes,
@@ -765,6 +772,17 @@ function App() {
   };
 
 
+  // Install-plan screen outranks everything — both on a true first run and
+  // when explicitly requested via `--setup`. Without this, a live backend
+  // answering /setup/status would route straight to the model wizard and the
+  // awaiting_setup stage would never get to render.
+  if (bootstrapStage === 'awaiting_setup') {
+    return (
+      <div style={{ zoom: uiScale }}>
+        <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
+      </div>
+    );
+  }
   // First-run gate: if /setup/status says models aren't on disk yet, render
   // the wizard instead of the main studio. Dismisses itself once the user
   // completes the download (or clicks "Skip" if they want to limp along).
@@ -781,10 +799,13 @@ function App() {
       </div>
     );
   }
-  if (setupNeeded) {
+  if (setupNeeded && bootstrapStage === 'ready') {
     // Render outside the `app-container` grid so the wizard spans the full
     // viewport instead of getting squeezed into whatever grid cell the
-    // studio layout reserves for the main content column.
+    // studio layout reserves for the main content column. Gated on the
+    // bootstrap being 'ready': while the stage is still settling (checking /
+    // awaiting_setup racing the first poll), the wizard must not steal the
+    // mount from the install-plan screen.
     return (
       <div
         className="app-wizard-wrap"
