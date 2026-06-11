@@ -259,7 +259,6 @@
     "save": "Enregistrer",
     "cancel": "Annuler",
     "synthesize": "Synthétiser l'audio",
-    "stop_playback": "Arrêter la lecture",
     "synthesizing": "Synthèse… ({{seconds}}s)",
     "drop_audio": "Déposez l’audio ici – ou cliquez. WAV, MP3, M4A… 🎤",
     "record": "Enregistrer",
@@ -288,11 +287,6 @@
     "preset_sichuan": "🌶️ 四川话",
     "prompt_placeholder": "Que devrait dire cette voix ? ✍️",
     "design_placeholder": "Décrivez la voix, puis tapez ce qu'elle dit…",
-    "describe_label": "Décrivez votre voix",
-    "describe_placeholder": "p. ex. a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "Votre description (en anglais) règle les contrôles ci-dessous — vous pouvez encore les ajuster après.",
-    "describe_unmatched": "Impossible d'associer : {{items}}",
-    "describe_no_match": "Aucun trait vocal reconnu pour l'instant — essayez des mots comme deep, elderly ou British.",
     "speed": "Vitesse",
     "tshift": "t_shift",
     "pos_temp": "Température de position",
@@ -319,7 +313,13 @@
     "opt_high_pitch": "ton aigu",
     "opt_very_high_pitch": "ton très aigu",
     "opt_whisper": "murmurer",
-    "style_placeholder": "par ex. murmurer"
+    "style_placeholder": "par ex. murmurer",
+    "stop_playback": "Arrêter la lecture",
+    "describe_label": "Décrivez votre voix",
+    "describe_placeholder": "p. ex. a warm elderly British storyteller, slightly raspy",
+    "describe_hint": "Votre description (en anglais) règle les contrôles ci-dessous — vous pouvez encore les ajuster après.",
+    "describe_unmatched": "Impossible d'associer : {{items}}",
+    "describe_no_match": "Aucun trait vocal reconnu pour l'instant — essayez des mots comme deep, elderly ou British."
   },
   "about": {
     "app": "Application",
@@ -465,10 +465,10 @@
     "mic_hint_mac": "macOS : ouvrez Paramètres système → Confidentialité et sécurité → Microphone et activez OmniVoice.",
     "mic_hint_windows": "Windows : ouvrez Paramètres → Confidentialité et sécurité → Microphone, activez « Accès au microphone » et « Autoriser les applications de bureau à accéder à votre microphone », puis autorisez OmniVoice.",
     "mic_hint_linux": "Linux : vérifiez que votre utilisateur est dans le groupe audio et que WebView a accès au micro.",
+    "transcription_failed": "Échec de la transcription : {{message}}",
     "mic_not_found": "Aucun microphone détecté. Branchez ou activez un microphone, puis réessayez.",
     "mic_in_use": "Le microphone est occupé ou indisponible. Fermez les autres applications susceptibles de l'utiliser, puis réessayez.",
-    "mic_error_generic": "Impossible de démarrer le microphone : {{message}}",
-    "transcription_failed": "Échec de la transcription : {{message}}"
+    "mic_error_generic": "Impossible de démarrer le microphone : {{message}}"
   },
   "logs": {
     "no_tauri_log": "Pas encore de connexion Tauri sur le disque - lancez-le via la version de bureau pour en produire un",
@@ -685,6 +685,9 @@
     "copy_failed": "Échec de la copie",
     "open_docs": "Ouvrir des documents",
     "copy_diagnostic": "Copier le diagnostic",
+    "dialect_label": "Dialecte",
+    "dialect_default": "Par défaut",
+    "dialect_title": "Dialecte régional et vocabulaire pour la traduction (p. ex. Argentine → « vos sos » au lieu de « tú eres »). Appliqué par les moteurs LLM (OpenAI/Ollama) et la qualité Cinematic.",
     "num_speakers_label": "Locuteurs",
     "num_speakers_auto": "Auto",
     "num_speakers_help": "Combien de locuteurs dans cette vidéo ? Laissez vide pour la détection automatique. Indiquez un nombre si la détection fusionne plusieurs locuteurs en un seul."
@@ -1489,6 +1492,7 @@
     "segments_clean": "Segments déjà propres",
     "cleanup_failed": "Échec du nettoyage : {{message}}",
     "cinematic_no_llm": "La qualité cinématographique nécessite un LLM — définissez TRANSLATE_BASE_URL + TRANSLATE_API_KEY (Ollama fonctionne localement). Revenir à Fast.",
+    "dialect_not_applied": "Le dialecte sélectionné nécessite un LLM — passez le moteur sur OpenAI/Ollama ou choisissez la qualité Cinematic.",
     "translate_errors": "Échec du ou des segments {{errorCount}}/{{totalCount}} : {{firstError}}",
     "translated_segments": "Segment(s) {{count}} traduit(s) → {{lang}}",
     "translated_cinematic_suffix": "(Cinématique)",

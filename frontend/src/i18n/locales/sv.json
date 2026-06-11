@@ -258,7 +258,6 @@
     "save": "Spara",
     "cancel": "Avbryt",
     "synthesize": "Syntetisera ljud",
-    "stop_playback": "Stoppa uppspelning",
     "synthesizing": "Syntetiserar... ({{seconds}}s)",
     "drop_audio": "Släpp ljud här - eller klicka. WAV, MP3, M4A... 🎤",
     "record": "Spela in",
@@ -287,11 +286,6 @@
     "preset_sichuan": "🌶️ 四川话",
     "prompt_placeholder": "Vad ska den här rösten säga? ✍️",
     "design_placeholder": "Beskriv rösten och skriv sedan vad den säger...",
-    "describe_label": "Beskriv din röst",
-    "describe_placeholder": "t.ex. a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "Din beskrivning (på engelska) ställer in kontrollerna nedan — du kan finjustera dem efteråt.",
-    "describe_unmatched": "Kunde inte mappa: {{items}}",
-    "describe_no_match": "Inga röstdrag har känts igen ännu — prova ord som deep, elderly eller British.",
     "speed": "Hastighet",
     "tshift": "t_shift",
     "pos_temp": "Pos Temp",
@@ -318,7 +312,13 @@
     "opt_high_pitch": "hög tonhöjd",
     "opt_very_high_pitch": "mycket hög tonhöjd",
     "opt_whisper": "viska",
-    "style_placeholder": "t.ex. viska"
+    "style_placeholder": "t.ex. viska",
+    "stop_playback": "Stoppa uppspelning",
+    "describe_label": "Beskriv din röst",
+    "describe_placeholder": "t.ex. a warm elderly British storyteller, slightly raspy",
+    "describe_hint": "Din beskrivning (på engelska) ställer in kontrollerna nedan — du kan finjustera dem efteråt.",
+    "describe_unmatched": "Kunde inte mappa: {{items}}",
+    "describe_no_match": "Inga röstdrag har känts igen ännu — prova ord som deep, elderly eller British."
   },
   "about": {
     "app": "App",
@@ -464,10 +464,10 @@
     "mic_hint_mac": "macOS: öppna Systeminställningar → Sekretess och säkerhet → Mikrofon och aktivera OmniVoice.",
     "mic_hint_windows": "Windows: öppna Inställningar → Sekretess och säkerhet → Mikrofon, aktivera 'Mikrofonåtkomst' och 'Låt skrivbordsappar komma åt din mikrofon' och tillåt sedan OmniVoice.",
     "mic_hint_linux": "Linux: kontrollera att din användare är i ljudgruppen och att WebView har mikrofonåtkomst.",
+    "transcription_failed": "Transkription misslyckades: {{message}}",
     "mic_not_found": "Ingen mikrofon hittades. Anslut eller aktivera en mikrofon och försök igen.",
     "mic_in_use": "Mikrofonen är upptagen eller otillgänglig. Stäng andra appar som kan använda den och försök igen.",
-    "mic_error_generic": "Kunde inte starta mikrofonen: {{message}}",
-    "transcription_failed": "Transkription misslyckades: {{message}}"
+    "mic_error_generic": "Kunde inte starta mikrofonen: {{message}}"
   },
   "logs": {
     "no_tauri_log": "Ingen Tauri-inloggningsskiva än - starta via skrivbordsbygget för att skapa en",
@@ -684,6 +684,9 @@
     "copy_failed": "Kopieringen misslyckades",
     "open_docs": "Öppna dokument",
     "copy_diagnostic": "Kopiera diagnostik",
+    "dialect_label": "Dialekt",
+    "dialect_default": "Standard",
+    "dialect_title": "Regional dialekt och ordförråd för översättningen (t.ex. Argentina → ”vos sos” i stället för ”tú eres”). Tillämpas av LLM-motorer (OpenAI/Ollama) och Cinematic-kvalitet.",
     "num_speakers_label": "Talare",
     "num_speakers_auto": "Auto",
     "num_speakers_help": "Hur många talare finns i videon? Lämna tomt för automatisk identifiering. Ange ett antal om identifieringen slår ihop flera talare till en."
@@ -1488,6 +1491,7 @@
     "segments_clean": "Segmenten är redan rena",
     "cleanup_failed": "Rensa misslyckades: {{message}}",
     "cinematic_no_llm": "Filmkvalitet behöver en LLM — ställ in TRANSLATE_BASE_URL + TRANSLATE_API_KEY (Ollama fungerar lokalt). Faller tillbaka till Fast.",
+    "dialect_not_applied": "Den valda dialekten kräver en LLM — byt motor till OpenAI/Ollama eller välj Cinematic-kvalitet.",
     "translate_errors": "{{errorCount}}/{{totalCount}} segment(er) misslyckades: {{firstError}}",
     "translated_segments": "Översatta {{count}} segment(er) → {{lang}}",
     "translated_cinematic_suffix": "(Cinematic)",

@@ -258,7 +258,6 @@
     "save": "Lưu",
     "cancel": "Hủy bỏ",
     "synthesize": "Tổng hợp âm thanh",
-    "stop_playback": "Dừng phát",
     "synthesizing": "Đang tổng hợp… ({{seconds}}s)",
     "drop_audio": "Thả âm thanh vào đây — hoặc nhấp vào. WAV, MP3, M4A… 🎤",
     "record": "Ghi lại",
@@ -287,11 +286,6 @@
     "preset_sichuan": "🌶️ 四川话",
     "prompt_placeholder": "Giọng nói này nên nói gì? ✍️",
     "design_placeholder": "Mô tả giọng nói, sau đó nhập nội dung nó nói…",
-    "describe_label": "Mô tả giọng nói của bạn",
-    "describe_placeholder": "vd. a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "Mô tả của bạn (bằng tiếng Anh) sẽ thiết lập các điều khiển bên dưới — bạn vẫn có thể tinh chỉnh sau.",
-    "describe_unmatched": "Không thể ánh xạ: {{items}}",
-    "describe_no_match": "Chưa nhận ra đặc điểm giọng nói nào — hãy thử các từ như deep, elderly hoặc British.",
     "speed": "Tốc độ",
     "tshift": "t_shift",
     "pos_temp": "Nhiệt độ Pos",
@@ -318,7 +312,13 @@
     "opt_high_pitch": "cao độ",
     "opt_very_high_pitch": "âm vực rất cao",
     "opt_whisper": "thì thầm",
-    "style_placeholder": "ví dụ: thì thầm"
+    "style_placeholder": "ví dụ: thì thầm",
+    "stop_playback": "Dừng phát",
+    "describe_label": "Mô tả giọng nói của bạn",
+    "describe_placeholder": "vd. a warm elderly British storyteller, slightly raspy",
+    "describe_hint": "Mô tả của bạn (bằng tiếng Anh) sẽ thiết lập các điều khiển bên dưới — bạn vẫn có thể tinh chỉnh sau.",
+    "describe_unmatched": "Không thể ánh xạ: {{items}}",
+    "describe_no_match": "Chưa nhận ra đặc điểm giọng nói nào — hãy thử các từ như deep, elderly hoặc British."
   },
   "about": {
     "app": "ứng dụng",
@@ -464,10 +464,10 @@
     "mic_hint_mac": "macOS: mở Cài đặt hệ thống → Quyền riêng tư & bảo mật → Micrô và bật OmniVoice.",
     "mic_hint_windows": "Windows: mở Cài đặt → Quyền riêng tư & bảo mật → Micrô, bật 'Quyền truy cập micrô' và 'Cho phép ứng dụng máy tính truy cập micrô của bạn', sau đó cho phép OmniVoice.",
     "mic_hint_linux": "Linux: kiểm tra xem người dùng của bạn có thuộc nhóm âm thanh hay không và WebView có quyền truy cập micrô.",
+    "transcription_failed": "Phiên âm không thành công: {{message}}",
     "mic_not_found": "Không tìm thấy micrô. Hãy kết nối hoặc bật micrô rồi thử lại.",
     "mic_in_use": "Micrô đang bận hoặc không khả dụng. Hãy đóng các ứng dụng khác có thể đang sử dụng micrô rồi thử lại.",
-    "mic_error_generic": "Không thể khởi động micrô: {{message}}",
-    "transcription_failed": "Phiên âm không thành công: {{message}}"
+    "mic_error_generic": "Không thể khởi động micrô: {{message}}"
   },
   "logs": {
     "no_tauri_log": "Chưa có bản đăng nhập Tauri nào trên đĩa - khởi chạy thông qua bản dựng máy tính để bàn để tạo một bản ghi",
@@ -684,6 +684,9 @@
     "copy_failed": "Sao chép không thành công",
     "open_docs": "Mở tài liệu",
     "copy_diagnostic": "Sao chép chẩn đoán",
+    "dialect_label": "Phương ngữ",
+    "dialect_default": "Mặc định",
+    "dialect_title": "Phương ngữ và từ vựng vùng miền cho bản dịch (vd. Argentina → “vos sos” thay vì “tú eres”). Áp dụng bởi các engine LLM (OpenAI/Ollama) và chất lượng Cinematic.",
     "num_speakers_label": "Người nói",
     "num_speakers_auto": "Tự động",
     "num_speakers_help": "Video này có bao nhiêu người nói? Để trống để tự động phát hiện. Đặt một con số nếu tính năng tự động gộp nhiều người nói thành một."
@@ -1488,6 +1491,7 @@
     "segments_clean": "Phân khúc đã sạch",
     "cleanup_failed": "Dọn dẹp không thành công: {{message}}",
     "cinematic_no_llm": "Chất lượng điện ảnh cần có LLM — đặt TRANSLATE_BASE_URL + TRANSLATE_API_KEY (Ollama hoạt động cục bộ). Trở lại Nhanh.",
+    "dialect_not_applied": "Phương ngữ đã chọn cần LLM để áp dụng — chuyển Engine sang OpenAI/Ollama hoặc chọn chất lượng Cinematic.",
     "translate_errors": "{{errorCount}}/{{totalCount}} phân đoạn không thành công: {{firstError}}",
     "translated_segments": "Đã dịch _V_0__ phân đoạn → {{lang}}",
     "translated_cinematic_suffix": "(Điện ảnh)",

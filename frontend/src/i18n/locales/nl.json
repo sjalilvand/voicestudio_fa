@@ -258,7 +258,6 @@
     "save": "Opslaan",
     "cancel": "Annuleer",
     "synthesize": "Audio synthetiseren",
-    "stop_playback": "Afspelen stoppen",
     "synthesizing": "Synthetiseren… ({{seconds}}s)",
     "drop_audio": "Zet hier audio neer - of klik. WAV, MP3, M4A... 🎤",
     "record": "Opnemen",
@@ -287,11 +286,6 @@
     "preset_sichuan": "🌶️四川话",
     "prompt_placeholder": "Wat moet deze stem zeggen? ✍️",
     "design_placeholder": "Beschrijf de stem en typ wat er staat...",
-    "describe_label": "Beschrijf je stem",
-    "describe_placeholder": "bijv. a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "Je beschrijving (in het Engels) stelt de regelaars hieronder in — je kunt ze daarna bijstellen.",
-    "describe_unmatched": "Kon niet toewijzen: {{items}}",
-    "describe_no_match": "Nog geen stemkenmerken herkend — probeer woorden als deep, elderly of British.",
     "speed": "Snelheid",
     "tshift": "t_verschuiving",
     "pos_temp": "Pos Temp",
@@ -318,7 +312,13 @@
     "opt_high_pitch": "hoge toon",
     "opt_very_high_pitch": "zeer hoge toon",
     "opt_whisper": "fluisteren",
-    "style_placeholder": "bijv. fluisteren"
+    "style_placeholder": "bijv. fluisteren",
+    "stop_playback": "Afspelen stoppen",
+    "describe_label": "Beschrijf je stem",
+    "describe_placeholder": "bijv. a warm elderly British storyteller, slightly raspy",
+    "describe_hint": "Je beschrijving (in het Engels) stelt de regelaars hieronder in — je kunt ze daarna bijstellen.",
+    "describe_unmatched": "Kon niet toewijzen: {{items}}",
+    "describe_no_match": "Nog geen stemkenmerken herkend — probeer woorden als deep, elderly of British."
   },
   "about": {
     "app": "App",
@@ -464,10 +464,10 @@
     "mic_hint_mac": "macOS: open Systeeminstellingen → Privacy en beveiliging → Microfoon en schakel OmniVoice in.",
     "mic_hint_windows": "Windows: open Instellingen → Privacy en beveiliging → Microfoon, schakel 'Microfoontoegang' en 'Desktop-apps toegang geven tot je microfoon' in en sta OmniVoice toe.",
     "mic_hint_linux": "Linux: controleer of uw gebruiker in de audiogroep zit en of de WebView microfoontoegang heeft.",
+    "transcription_failed": "Transcriptie mislukt: {{message}}",
     "mic_not_found": "Geen microfoon gevonden. Sluit een microfoon aan of schakel er een in en probeer het opnieuw.",
     "mic_in_use": "De microfoon is bezet of niet beschikbaar. Sluit andere apps die hem mogelijk gebruiken en probeer het opnieuw.",
-    "mic_error_generic": "Kon de microfoon niet starten: {{message}}",
-    "transcription_failed": "Transcriptie mislukt: {{message}}"
+    "mic_error_generic": "Kon de microfoon niet starten: {{message}}"
   },
   "logs": {
     "no_tauri_log": "Nog geen Tauri-inlogschijf: start via de desktop-build om er een te maken",
@@ -684,6 +684,9 @@
     "copy_failed": "Kopiëren mislukt",
     "open_docs": "Documenten openen",
     "copy_diagnostic": "Diagnostiek kopiëren",
+    "dialect_label": "Dialect",
+    "dialect_default": "Standaard",
+    "dialect_title": "Regionaal dialect en vocabulaire voor de vertaling (bijv. Argentinië → “vos sos” in plaats van “tú eres”). Toegepast door LLM-engines (OpenAI/Ollama) en Cinematic-kwaliteit.",
     "num_speakers_label": "Sprekers",
     "num_speakers_auto": "Automatisch",
     "num_speakers_help": "Hoeveel sprekers zijn er in deze video? Laat leeg voor automatische detectie. Stel een aantal in als de detectie meerdere sprekers samenvoegt tot één."
@@ -1488,6 +1491,7 @@
     "segments_clean": "Segmenten zijn al schoon",
     "cleanup_failed": "Opschonen mislukt: {{message}}",
     "cinematic_no_llm": "Filmische kwaliteit heeft een LLM nodig: stel TRANSLATE_BASE_URL + TRANSLATE_API_KEY in (Ollama werkt lokaal). Terugvallend op Snel.",
+    "dialect_not_applied": "Het gekozen dialect heeft een LLM nodig — zet de engine op OpenAI/Ollama of kies Cinematic-kwaliteit.",
     "translate_errors": "{{errorCount}}/{{totalCount}} segment(en) mislukt: {{firstError}}",
     "translated_segments": "Vertaald {{count}} segment(en) → {{lang}}",
     "translated_cinematic_suffix": "(filmisch)",

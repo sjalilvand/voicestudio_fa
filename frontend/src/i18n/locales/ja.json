@@ -259,7 +259,6 @@
     "save": "保存",
     "cancel": "キャンセル",
     "synthesize": "音声を合成する",
-    "stop_playback": "再生を停止",
     "synthesizing": "合成中… ({{seconds}}s)",
     "drop_audio": "ここに音声をドロップするか、クリックします。 WAV、MP3、M4A… 🎤",
     "record": "記録",
@@ -288,11 +287,6 @@
     "preset_sichuan": "🌶️四川话",
     "prompt_placeholder": "この声は何と言えばいいのでしょうか？ ✍️",
     "design_placeholder": "音声を説明し、その内容を入力します…",
-    "describe_label": "声を言葉で説明",
-    "describe_placeholder": "例: a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "説明（英語）が下のコントロールを設定します。後から微調整もできます。",
-    "describe_unmatched": "対応付けできません: {{items}}",
-    "describe_no_match": "まだ声の特徴を認識できていません。deep、elderly、British などの単語を試してください。",
     "speed": "速度",
     "tshift": "t_シフト",
     "pos_temp": "正温度",
@@ -319,7 +313,13 @@
     "opt_high_pitch": "高音",
     "opt_very_high_pitch": "とても高いピッチ",
     "opt_whisper": "ささやき声",
-    "style_placeholder": "例:ささやき声"
+    "style_placeholder": "例:ささやき声",
+    "stop_playback": "再生を停止",
+    "describe_label": "声を言葉で説明",
+    "describe_placeholder": "例: a warm elderly British storyteller, slightly raspy",
+    "describe_hint": "説明（英語）が下のコントロールを設定します。後から微調整もできます。",
+    "describe_unmatched": "対応付けできません: {{items}}",
+    "describe_no_match": "まだ声の特徴を認識できていません。deep、elderly、British などの単語を試してください。"
   },
   "about": {
     "app": "アプリ",
@@ -465,10 +465,10 @@
     "mic_hint_mac": "macOS: [システム設定] → [プライバシーとセキュリティ] → [マイク] を開き、OmniVoice を有効にします。",
     "mic_hint_windows": "Windows: 設定 → プライバシーとセキュリティ → マイクを開き、「マイクへのアクセス」と「デスクトップ アプリがマイクにアクセスできるようにする」をオンにして、OmniVoice を許可してください。",
     "mic_hint_linux": "Linux: ユーザーがオーディオ グループに属していること、および WebView にマイク アクセスがあることを確認してください。",
+    "transcription_failed": "転写に失敗しました: {{message}}",
     "mic_not_found": "マイクが見つかりません。マイクを接続または有効にして、もう一度お試しください。",
     "mic_in_use": "マイクが使用中か利用できません。マイクを使用している可能性のある他のアプリを閉じて、もう一度お試しください。",
-    "mic_error_generic": "マイクを起動できませんでした: {{message}}",
-    "transcription_failed": "転写に失敗しました: {{message}}"
+    "mic_error_generic": "マイクを起動できませんでした: {{message}}"
   },
   "logs": {
     "no_tauri_log": "ディスク上にまだ Tauri ログがありません — デスクトップ ビルド経由で起動してログを作成します",
@@ -685,6 +685,9 @@
     "copy_failed": "コピーに失敗しました",
     "open_docs": "ドキュメントを開く",
     "copy_diagnostic": "コピー診断",
+    "dialect_label": "方言",
+    "dialect_default": "デフォルト",
+    "dialect_title": "翻訳に使う地域の方言と語彙（例: アルゼンチン → “tú eres” ではなく “vos sos”）。LLM エンジン（OpenAI/Ollama）と Cinematic 品質で適用されます。",
     "num_speakers_label": "話者",
     "num_speakers_auto": "自動",
     "num_speakers_help": "この動画の話者は何人ですか？空欄で自動検出します。自動検出が複数の話者を1人にまとめてしまう場合は人数を指定してください。"
@@ -1489,6 +1492,7 @@
     "segments_clean": "セグメントはすでにクリーンになっています",
     "cleanup_failed": "クリーンアップに失敗しました: {{message}}",
     "cinematic_no_llm": "映画のような品質には LLM が必要です — TRANSLATE_BASE_URL + TRANSLATE_API_KEY を設定します (Ollama はローカルで動作します)。 Fast に戻ります。",
+    "dialect_not_applied": "選択した方言の適用には LLM が必要です — エンジンを OpenAI/Ollama に切り替えるか、Cinematic 品質を選んでください。",
     "translate_errors": "{{errorCount}}/{{totalCount}} セグメントが失敗しました: {{firstError}}",
     "translated_segments": "{{count}} セグメント → {{lang}} を翻訳しました",
     "translated_cinematic_suffix": "(映画的)",

@@ -258,7 +258,6 @@
     "save": "حفظ",
     "cancel": "إلغاء",
     "synthesize": "توليف الصوت",
-    "stop_playback": "إيقاف التشغيل",
     "synthesizing": "Synthesizing… ({{seconds}}s)",
     "drop_audio": "قم بإسقاط الصوت هنا - أو انقر. WAV، MP3، M4A… 🎤",
     "record": "سجل",
@@ -287,11 +286,6 @@
     "preset_sichuan": "🌶️ 四川话",
     "prompt_placeholder": "ماذا يجب أن يقول هذا الصوت؟ ✍️",
     "design_placeholder": "قم بوصف الصوت، ثم اكتب ما يقوله...",
-    "describe_label": "صِف صوتك",
-    "describe_placeholder": "مثال: a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "وصفك (بالإنجليزية) يضبط عناصر التحكم أدناه — ويمكنك تعديلها يدويًا لاحقًا.",
-    "describe_unmatched": "تعذّر التعيين: {{items}}",
-    "describe_no_match": "لم يتم التعرف على سمات صوتية بعد — جرّب كلمات مثل deep أو elderly أو British.",
     "speed": "السرعة",
     "tshift": "t_shift",
     "pos_temp": "نقطة البيع درجة الحرارة",
@@ -318,7 +312,13 @@
     "opt_high_pitch": "درجة عالية",
     "opt_very_high_pitch": "درجة عالية جدًا",
     "opt_whisper": "الهمس",
-    "style_placeholder": "على سبيل المثال الهمس"
+    "style_placeholder": "على سبيل المثال الهمس",
+    "stop_playback": "إيقاف التشغيل",
+    "describe_label": "صِف صوتك",
+    "describe_placeholder": "مثال: a warm elderly British storyteller, slightly raspy",
+    "describe_hint": "وصفك (بالإنجليزية) يضبط عناصر التحكم أدناه — ويمكنك تعديلها يدويًا لاحقًا.",
+    "describe_unmatched": "تعذّر التعيين: {{items}}",
+    "describe_no_match": "لم يتم التعرف على سمات صوتية بعد — جرّب كلمات مثل deep أو elderly أو British."
   },
   "about": {
     "app": "التطبيق",
@@ -464,10 +464,10 @@
     "mic_hint_mac": "macOS: افتح إعدادات النظام ← الخصوصية والأمان ← الميكروفون وقم بتمكين OmniVoice.",
     "mic_hint_windows": "Windows: افتح الإعدادات ← الخصوصية والأمان ← الميكروفون، وفعِّل «الوصول إلى الميكروفون» و«السماح لتطبيقات سطح المكتب بالوصول إلى الميكروفون»، ثم اسمح لـ OmniVoice.",
     "mic_hint_linux": "Linux: تأكد من وجود المستخدم الخاص بك في المجموعة الصوتية وأن WebView لديه حق الوصول إلى الميكروفون.",
+    "transcription_failed": "فشل النسخ: {{message}}",
     "mic_not_found": "لم يتم العثور على ميكروفون. وصِّل ميكروفونًا أو فعِّله ثم حاول مرة أخرى.",
     "mic_in_use": "الميكروفون مشغول أو غير متاح. أغلق التطبيقات الأخرى التي قد تستخدمه ثم حاول مرة أخرى.",
-    "mic_error_generic": "تعذّر تشغيل الميكروفون: {{message}}",
-    "transcription_failed": "فشل النسخ: {{message}}"
+    "mic_error_generic": "تعذّر تشغيل الميكروفون: {{message}}"
   },
   "logs": {
     "no_tauri_log": "لم يتم تسجيل دخول Tauri على القرص حتى الآن — قم بتشغيله عبر إصدار سطح المكتب لإنتاج واحد",
@@ -684,6 +684,9 @@
     "copy_failed": "فشل النسخ",
     "open_docs": "افتح المستندات",
     "copy_diagnostic": "نسخ التشخيص",
+    "dialect_label": "اللهجة",
+    "dialect_default": "افتراضي",
+    "dialect_title": "اللهجة الإقليمية والمفردات للترجمة (مثل الأرجنتين ← “vos sos” بدلاً من “tú eres”). تُطبَّق بواسطة محركات LLM ‏(OpenAI/Ollama) وجودة Cinematic.",
     "num_speakers_label": "المتحدثون",
     "num_speakers_auto": "تلقائي",
     "num_speakers_help": "كم عدد المتحدثين في هذا الفيديو؟ اتركه فارغًا للاكتشاف التلقائي. حدّد رقمًا إذا دمج الاكتشاف التلقائي عدة متحدثين في متحدث واحد."
@@ -1488,6 +1491,7 @@
     "segments_clean": "قطاعات نظيفة بالفعل",
     "cleanup_failed": "فشل التنظيف: {{message}}",
     "cinematic_no_llm": "تحتاج الجودة السينمائية إلى شهادة LLM - قم بتعيين TRANSLATE_BASE_URL + TRANSLATE_API_KEY (تعمل Ollama محليًا). العودة إلى سريع.",
+    "dialect_not_applied": "تحتاج اللهجة المحددة إلى LLM لتطبيقها — بدّل المحرك إلى OpenAI/Ollama أو اختر جودة Cinematic.",
     "translate_errors": "{{errorCount}}/{{totalCount}} فشل المقطع (المقاطع): {{firstError}}",
     "translated_segments": "تمت ترجمة {{count}} مقطع (مقاطع) → {{lang}}",
     "translated_cinematic_suffix": "(سينمائي)",

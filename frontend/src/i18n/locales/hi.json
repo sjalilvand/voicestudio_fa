@@ -258,7 +258,6 @@
     "save": "सहेजें",
     "cancel": "रद्द करें",
     "synthesize": "ऑडियो का संश्लेषण करें",
-    "stop_playback": "प्लेबैक रोकें",
     "synthesizing": "संश्लेषण... ({{seconds}}s)",
     "drop_audio": "ऑडियो यहां छोड़ें - या क्लिक करें। WAV, MP3, M4A… 🎤",
     "record": "अभिलेख",
@@ -287,11 +286,6 @@
     "preset_sichuan": "🌶️ 四川话",
     "prompt_placeholder": "इस आवाज़ को क्या कहना चाहिए? ✍️",
     "design_placeholder": "आवाज़ का वर्णन करें, फिर वह जो कहती है उसे लिखें...",
-    "describe_label": "अपनी आवाज़ का वर्णन करें",
-    "describe_placeholder": "उदा. a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "आपका विवरण (अंग्रेज़ी में) नीचे के नियंत्रण सेट करता है — आप बाद में इन्हें बदल सकते हैं।",
-    "describe_unmatched": "मैप नहीं हो सका: {{items}}",
-    "describe_no_match": "अभी कोई आवाज़ विशेषता पहचानी नहीं गई — deep, elderly या British जैसे शब्द आज़माएँ।",
     "speed": "गति",
     "tshift": "t_shift",
     "pos_temp": "स्थिति अस्थायी",
@@ -318,7 +312,13 @@
     "opt_high_pitch": "उच्च स्वर",
     "opt_very_high_pitch": "बहुत ऊंची पिच",
     "opt_whisper": "कानाफूसी",
-    "style_placeholder": "जैसे कानाफूसी"
+    "style_placeholder": "जैसे कानाफूसी",
+    "stop_playback": "प्लेबैक रोकें",
+    "describe_label": "अपनी आवाज़ का वर्णन करें",
+    "describe_placeholder": "उदा. a warm elderly British storyteller, slightly raspy",
+    "describe_hint": "आपका विवरण (अंग्रेज़ी में) नीचे के नियंत्रण सेट करता है — आप बाद में इन्हें बदल सकते हैं।",
+    "describe_unmatched": "मैप नहीं हो सका: {{items}}",
+    "describe_no_match": "अभी कोई आवाज़ विशेषता पहचानी नहीं गई — deep, elderly या British जैसे शब्द आज़माएँ।"
   },
   "about": {
     "app": "ऐप",
@@ -464,10 +464,10 @@
     "mic_hint_mac": "macOS: सिस्टम सेटिंग्स → गोपनीयता और सुरक्षा → माइक्रोफ़ोन खोलें और ओमनीवॉइस सक्षम करें।",
     "mic_hint_windows": "Windows: सेटिंग्स → गोपनीयता और सुरक्षा → माइक्रोफ़ोन खोलें, 'माइक्रोफ़ोन एक्सेस' और 'डेस्कटॉप ऐप्स को अपने माइक्रोफ़ोन तक पहुँचने दें' चालू करें, फिर OmniVoice को अनुमति दें।",
     "mic_hint_linux": "लिनक्स: जांचें कि आपका उपयोगकर्ता ऑडियो समूह में है और वेबव्यू के पास माइक की पहुंच है।",
+    "transcription_failed": "प्रतिलेखन विफल: {{message}}",
     "mic_not_found": "कोई माइक्रोफ़ोन नहीं मिला। माइक्रोफ़ोन कनेक्ट या सक्षम करें और पुनः प्रयास करें।",
     "mic_in_use": "माइक्रोफ़ोन व्यस्त या अनुपलब्ध है। इसका उपयोग कर रहे अन्य ऐप्स बंद करें और पुनः प्रयास करें।",
-    "mic_error_generic": "माइक्रोफ़ोन शुरू नहीं हो सका: {{message}}",
-    "transcription_failed": "प्रतिलेखन विफल: {{message}}"
+    "mic_error_generic": "माइक्रोफ़ोन शुरू नहीं हो सका: {{message}}"
   },
   "logs": {
     "no_tauri_log": "अभी तक डिस्क पर कोई टौरी लॉग नहीं है - एक उत्पादन करने के लिए डेस्कटॉप बिल्ड के माध्यम से लॉन्च करें",
@@ -684,6 +684,9 @@
     "copy_failed": "प्रतिलिपि विफल",
     "open_docs": "दस्तावेज़ खोलें",
     "copy_diagnostic": "डायग्नोस्टिक कॉपी करें",
+    "dialect_label": "बोली",
+    "dialect_default": "डिफ़ॉल्ट",
+    "dialect_title": "अनुवाद के लिए क्षेत्रीय बोली और शब्दावली (जैसे अर्जेंटीना → “vos sos”, “tú eres” की जगह)। LLM इंजन (OpenAI/Ollama) और Cinematic गुणवत्ता द्वारा लागू।",
     "num_speakers_label": "वक्ता",
     "num_speakers_auto": "स्वतः",
     "num_speakers_help": "इस वीडियो में कितने वक्ता हैं? स्वतः पहचान के लिए खाली छोड़ें। यदि स्वतः पहचान कई वक्ताओं को एक में मिला देती है तो संख्या निर्धारित करें।"
@@ -1488,6 +1491,7 @@
     "segments_clean": "खंड पहले से ही साफ़ हैं",
     "cleanup_failed": "सफ़ाई विफल: {{message}}",
     "cinematic_no_llm": "सिनेमाई गुणवत्ता के लिए एलएलएम की आवश्यकता होती है - सेट TRANSLATE_BASE_URL + TRANSLATE_API_KEY (ओलामा स्थानीय स्तर पर काम करता है)। तेजी से वापस गिरना।",
+    "dialect_not_applied": "चुनी गई बोली लागू करने के लिए LLM चाहिए — इंजन को OpenAI/Ollama पर बदलें या Cinematic गुणवत्ता चुनें।",
     "translate_errors": "{{errorCount}}/{{totalCount}} खंड विफल: {{firstError}}",
     "translated_segments": "अनूदित {{count}} खंड → {{lang}}",
     "translated_cinematic_suffix": "(सिनेमाई)",

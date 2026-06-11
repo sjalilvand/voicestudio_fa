@@ -258,7 +258,6 @@
     "save": "บันทึก",
     "cancel": "ยกเลิก",
     "synthesize": "สังเคราะห์เสียง",
-    "stop_playback": "หยุดเล่น",
     "synthesizing": "กำลังสังเคราะห์… ({{seconds}}s)",
     "drop_audio": "วางเสียงที่นี่ — หรือคลิก WAV, MP3, M4A… 🎶",
     "record": "บันทึก",
@@ -287,11 +286,6 @@
     "preset_sichuan": "🌶️ 四川话",
     "prompt_placeholder": "เสียงนี้ควรจะพูดอะไร? ✍️",
     "design_placeholder": "อธิบายเสียง จากนั้นพิมพ์สิ่งที่พูด...",
-    "describe_label": "อธิบายเสียงของคุณ",
-    "describe_placeholder": "เช่น a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "คำอธิบายของคุณ (ภาษาอังกฤษ) จะตั้งค่าตัวควบคุมด้านล่าง และคุณยังปรับเองได้ภายหลัง",
-    "describe_unmatched": "จับคู่ไม่ได้: {{items}}",
-    "describe_no_match": "ยังไม่พบลักษณะเสียง ลองใช้คำอย่าง deep, elderly หรือ British",
     "speed": "ความเร็ว",
     "tshift": "t_กะ",
     "pos_temp": "ตำแหน่งโพสชั่วคราว",
@@ -318,7 +312,13 @@
     "opt_high_pitch": "เสียงสูง",
     "opt_very_high_pitch": "เสียงสูงมาก",
     "opt_whisper": "กระซิบ",
-    "style_placeholder": "เช่น กระซิบ"
+    "style_placeholder": "เช่น กระซิบ",
+    "stop_playback": "หยุดเล่น",
+    "describe_label": "อธิบายเสียงของคุณ",
+    "describe_placeholder": "เช่น a warm elderly British storyteller, slightly raspy",
+    "describe_hint": "คำอธิบายของคุณ (ภาษาอังกฤษ) จะตั้งค่าตัวควบคุมด้านล่าง และคุณยังปรับเองได้ภายหลัง",
+    "describe_unmatched": "จับคู่ไม่ได้: {{items}}",
+    "describe_no_match": "ยังไม่พบลักษณะเสียง ลองใช้คำอย่าง deep, elderly หรือ British"
   },
   "about": {
     "app": "แอพ",
@@ -464,10 +464,10 @@
     "mic_hint_mac": "macOS: เปิดการตั้งค่าระบบ → ความเป็นส่วนตัวและความปลอดภัย → ไมโครโฟน และเปิดใช้งาน OmniVoice",
     "mic_hint_windows": "Windows: เปิด การตั้งค่า → ความเป็นส่วนตัวและความปลอดภัย → ไมโครโฟน เปิดใช้งาน 'การเข้าถึงไมโครโฟน' และ 'ให้แอปเดสก์ท็อปเข้าถึงไมโครโฟนของคุณ' จากนั้นอนุญาต OmniVoice",
     "mic_hint_linux": "Linux: ตรวจสอบว่าผู้ใช้ของคุณอยู่ในกลุ่มเสียงและ WebView มีสิทธิ์เข้าถึงไมโครโฟน",
+    "transcription_failed": "การถอดเสียงล้มเหลว: {{message}}",
     "mic_not_found": "ไม่พบไมโครโฟน โปรดเชื่อมต่อหรือเปิดใช้งานไมโครโฟนแล้วลองอีกครั้ง",
     "mic_in_use": "ไมโครโฟนกำลังถูกใช้งานหรือไม่พร้อมใช้งาน โปรดปิดแอปอื่นที่อาจกำลังใช้งานอยู่แล้วลองอีกครั้ง",
-    "mic_error_generic": "ไม่สามารถเริ่มไมโครโฟนได้: {{message}}",
-    "transcription_failed": "การถอดเสียงล้มเหลว: {{message}}"
+    "mic_error_generic": "ไม่สามารถเริ่มไมโครโฟนได้: {{message}}"
   },
   "logs": {
     "no_tauri_log": "ยังไม่มีการเข้าสู่ระบบ Tauri บนดิสก์ — เปิดผ่านเดสก์ท็อปเพื่อสร้างหนึ่งรายการ",
@@ -684,6 +684,9 @@
     "copy_failed": "การคัดลอกล้มเหลว",
     "open_docs": "เปิดเอกสาร",
     "copy_diagnostic": "คัดลอกการวินิจฉัย",
+    "dialect_label": "สำเนียงถิ่น",
+    "dialect_default": "ค่าเริ่มต้น",
+    "dialect_title": "สำเนียงถิ่นและคำศัพท์เฉพาะภูมิภาคสำหรับการแปล (เช่น อาร์เจนตินา → “vos sos” แทน “tú eres”) ใช้โดยเอนจิน LLM (OpenAI/Ollama) และคุณภาพ Cinematic",
     "num_speakers_label": "ผู้พูด",
     "num_speakers_auto": "อัตโนมัติ",
     "num_speakers_help": "วิดีโอนี้มีผู้พูดกี่คน? เว้นว่างเพื่อตรวจหาอัตโนมัติ ระบุจำนวนหากการตรวจหาอัตโนมัติรวมผู้พูดหลายคนเป็นคนเดียว"
@@ -1488,6 +1491,7 @@
     "segments_clean": "ล้างกลุ่มแล้ว",
     "cleanup_failed": "การล้างข้อมูลล้มเหลว: {{message}}",
     "cinematic_no_llm": "คุณภาพระดับภาพยนตร์จำเป็นต้องมี LLM — ตั้งค่า TRANSLATE_BASE_URL + TRANSLATE_API_KEY (Ollama ทำงานในเครื่อง) ถอยกลับไปอย่างรวดเร็ว",
+    "dialect_not_applied": "สำเนียงที่เลือกต้องใช้ LLM — เปลี่ยนเอนจินเป็น OpenAI/Ollama หรือเลือกคุณภาพ Cinematic",
     "translate_errors": "{{errorCount}}/{{totalCount}} เซ็กเมนต์ล้มเหลว: {{firstError}}",
     "translated_segments": "แปล {{count}} ส่วน → {{lang}}",
     "translated_cinematic_suffix": "(ภาพยนตร์)",

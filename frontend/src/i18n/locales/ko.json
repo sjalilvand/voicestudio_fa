@@ -258,7 +258,6 @@
     "save": "저장",
     "cancel": "취소",
     "synthesize": "오디오 합성",
-    "stop_playback": "재생 중지",
     "synthesizing": "합성 중… ({{seconds}}s)",
     "drop_audio": "여기에 오디오를 놓거나 클릭하세요. WAV, MP3, M4A… 🎤",
     "record": "기록",
@@ -287,11 +286,6 @@
     "preset_sichuan": "🌶️ 4가와话",
     "prompt_placeholder": "이 목소리는 무엇을 말해야 할까요? ✍️",
     "design_placeholder": "음성을 설명하고 내용을 입력하세요.",
-    "describe_label": "목소리를 설명하세요",
-    "describe_placeholder": "예: a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "설명(영어)이 아래 컨트롤을 설정합니다. 이후에 직접 조정할 수도 있습니다.",
-    "describe_unmatched": "매핑할 수 없음: {{items}}",
-    "describe_no_match": "아직 인식된 목소리 특징이 없습니다. deep, elderly, British 같은 단어를 사용해 보세요.",
     "speed": "속도",
     "tshift": "t_shift",
     "pos_temp": "위치 온도",
@@ -318,7 +312,13 @@
     "opt_high_pitch": "높은 음조",
     "opt_very_high_pitch": "매우 높은 음조",
     "opt_whisper": "속삭임",
-    "style_placeholder": "예를 들어 속삭임"
+    "style_placeholder": "예를 들어 속삭임",
+    "stop_playback": "재생 중지",
+    "describe_label": "목소리를 설명하세요",
+    "describe_placeholder": "예: a warm elderly British storyteller, slightly raspy",
+    "describe_hint": "설명(영어)이 아래 컨트롤을 설정합니다. 이후에 직접 조정할 수도 있습니다.",
+    "describe_unmatched": "매핑할 수 없음: {{items}}",
+    "describe_no_match": "아직 인식된 목소리 특징이 없습니다. deep, elderly, British 같은 단어를 사용해 보세요."
   },
   "about": {
     "app": "앱",
@@ -464,10 +464,10 @@
     "mic_hint_mac": "macOS: 시스템 설정 → 개인 정보 보호 및 보안 → 마이크를 열고 OmniVoice를 활성화합니다.",
     "mic_hint_windows": "Windows: 설정 → 개인 정보 및 보안 → 마이크를 열고 '마이크 액세스'와 '데스크톱 앱이 마이크에 액세스하도록 허용'을 켠 다음 OmniVoice를 허용하세요.",
     "mic_hint_linux": "Linux: 사용자가 오디오 그룹에 있고 WebView에 마이크 액세스 권한이 있는지 확인하세요.",
+    "transcription_failed": "스크립트 작성 실패: {{message}}",
     "mic_not_found": "마이크를 찾을 수 없습니다. 마이크를 연결하거나 활성화한 후 다시 시도하세요.",
     "mic_in_use": "마이크가 사용 중이거나 사용할 수 없습니다. 마이크를 사용 중일 수 있는 다른 앱을 닫고 다시 시도하세요.",
-    "mic_error_generic": "마이크를 시작할 수 없습니다: {{message}}",
-    "transcription_failed": "스크립트 작성 실패: {{message}}"
+    "mic_error_generic": "마이크를 시작할 수 없습니다: {{message}}"
   },
   "logs": {
     "no_tauri_log": "아직 디스크에 Tauri 로그가 없습니다. 데스크탑 빌드를 통해 실행하여 생성하세요.",
@@ -684,6 +684,9 @@
     "copy_failed": "복사 실패",
     "open_docs": "문서 열기",
     "copy_diagnostic": "진단 복사",
+    "dialect_label": "방언",
+    "dialect_default": "기본값",
+    "dialect_title": "번역에 적용할 지역 방언과 어휘 (예: 아르헨티나 → “tú eres” 대신 “vos sos”). LLM 엔진(OpenAI/Ollama)과 Cinematic 품질에서 적용됩니다.",
     "num_speakers_label": "화자",
     "num_speakers_auto": "자동",
     "num_speakers_help": "이 영상에 화자가 몇 명인가요? 비워 두면 자동 감지합니다. 자동 감지가 여러 화자를 한 명으로 합치는 경우 숫자를 지정하세요."
@@ -1488,6 +1491,7 @@
     "segments_clean": "세그먼트가 이미 깨끗함",
     "cleanup_failed": "정리 실패: {{message}}",
     "cinematic_no_llm": "영화 품질에는 LLM이 필요합니다. TRANSLATE_BASE_URL + TRANSLATE_API_KEY를 설정하세요(Ollama는 로컬에서 작동함). Fast로 다시 돌아갑니다.",
+    "dialect_not_applied": "선택한 방언을 적용하려면 LLM이 필요합니다 — 엔진을 OpenAI/Ollama로 바꾸거나 Cinematic 품질을 선택하세요.",
     "translate_errors": "{{errorCount}}/{{totalCount}} 세그먼트 실패: {{firstError}}",
     "translated_segments": "번역된 {{count}} 세그먼트 → {{lang}}",
     "translated_cinematic_suffix": "(영화)",

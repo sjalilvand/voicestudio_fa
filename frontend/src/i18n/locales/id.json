@@ -258,7 +258,6 @@
     "save": "Simpan",
     "cancel": "Batalkan",
     "synthesize": "Sintesis Audio",
-    "stop_playback": "Hentikan pemutaran",
     "synthesizing": "Mensintesis… ({{seconds}}s)",
     "drop_audio": "Letakkan audio di sini — atau klik. WAV, MP3, M4A… 🎤",
     "record": "Rekam",
@@ -287,11 +286,6 @@
     "preset_sichuan": "🌶️ 四川话",
     "prompt_placeholder": "Apa yang seharusnya dikatakan oleh suara ini? ✍️",
     "design_placeholder": "Jelaskan suaranya, lalu ketikkan apa yang dikatakannya…",
-    "describe_label": "Deskripsikan suara Anda",
-    "describe_placeholder": "mis. a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "Deskripsi Anda (dalam bahasa Inggris) mengatur kontrol di bawah — Anda tetap bisa menyetelnya setelahnya.",
-    "describe_unmatched": "Tidak dapat dipetakan: {{items}}",
-    "describe_no_match": "Belum ada ciri suara yang dikenali — coba kata seperti deep, elderly, atau British.",
     "speed": "Kecepatan",
     "tshift": "t_shift",
     "pos_temp": "Suhu Pos",
@@ -318,7 +312,13 @@
     "opt_high_pitch": "nada tinggi",
     "opt_very_high_pitch": "nada yang sangat tinggi",
     "opt_whisper": "berbisik",
-    "style_placeholder": "misalnya berbisik"
+    "style_placeholder": "misalnya berbisik",
+    "stop_playback": "Hentikan pemutaran",
+    "describe_label": "Deskripsikan suara Anda",
+    "describe_placeholder": "mis. a warm elderly British storyteller, slightly raspy",
+    "describe_hint": "Deskripsi Anda (dalam bahasa Inggris) mengatur kontrol di bawah — Anda tetap bisa menyetelnya setelahnya.",
+    "describe_unmatched": "Tidak dapat dipetakan: {{items}}",
+    "describe_no_match": "Belum ada ciri suara yang dikenali — coba kata seperti deep, elderly, atau British."
   },
   "about": {
     "app": "Aplikasi",
@@ -464,10 +464,10 @@
     "mic_hint_mac": "macOS: buka Pengaturan Sistem → Privasi & Keamanan → Mikrofon dan aktifkan OmniVoice.",
     "mic_hint_windows": "Windows: buka Pengaturan → Privasi & keamanan → Mikrofon, aktifkan 'Akses mikrofon' dan 'Izinkan aplikasi desktop mengakses mikrofon Anda', lalu izinkan OmniVoice.",
     "mic_hint_linux": "Linux: periksa apakah pengguna Anda ada di grup audio dan WebView memiliki akses mikrofon.",
+    "transcription_failed": "Transkripsi gagal: {{message}}",
     "mic_not_found": "Mikrofon tidak ditemukan. Hubungkan atau aktifkan mikrofon, lalu coba lagi.",
     "mic_in_use": "Mikrofon sedang sibuk atau tidak tersedia. Tutup aplikasi lain yang mungkin menggunakannya, lalu coba lagi.",
-    "mic_error_generic": "Tidak dapat memulai mikrofon: {{message}}",
-    "transcription_failed": "Transkripsi gagal: {{message}}"
+    "mic_error_generic": "Tidak dapat memulai mikrofon: {{message}}"
   },
   "logs": {
     "no_tauri_log": "Belum ada Tauri yang masuk ke disk — luncurkan melalui versi desktop untuk menghasilkannya",
@@ -684,6 +684,9 @@
     "copy_failed": "Penyalinan gagal",
     "open_docs": "Buka dokumen",
     "copy_diagnostic": "Salin diagnostik",
+    "dialect_label": "Dialek",
+    "dialect_default": "Bawaan",
+    "dialect_title": "Dialek regional dan kosakata untuk terjemahan (mis. Argentina → “vos sos” alih-alih “tú eres”). Diterapkan oleh mesin LLM (OpenAI/Ollama) dan kualitas Cinematic.",
     "num_speakers_label": "Pembicara",
     "num_speakers_auto": "Otomatis",
     "num_speakers_help": "Berapa banyak pembicara dalam video ini? Biarkan kosong untuk deteksi otomatis. Tetapkan angka jika deteksi otomatis menggabungkan beberapa pembicara menjadi satu."
@@ -1488,6 +1491,7 @@
     "segments_clean": "Segmen sudah bersih",
     "cleanup_failed": "Pembersihan gagal: {{message}}",
     "cinematic_no_llm": "Kualitas sinematik memerlukan LLM — setel TRANSLATE_BASE_URL + TRANSLATE_API_KEY (Ollama berfungsi secara lokal). Kembali ke Fast.",
+    "dialect_not_applied": "Dialek terpilih memerlukan LLM — ganti Engine ke OpenAI/Ollama atau pilih kualitas Cinematic.",
     "translate_errors": "{{errorCount}}/{{totalCount}} segmen gagal: {{firstError}}",
     "translated_segments": "Diterjemahkan {{count}} segmen → {{lang}}",
     "translated_cinematic_suffix": "(Sinematik)",

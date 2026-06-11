@@ -258,7 +258,6 @@
     "save": "Zapisz",
     "cancel": "Anuluj",
     "synthesize": "Syntetyzuj dźwięk",
-    "stop_playback": "Zatrzymaj odtwarzanie",
     "synthesizing": "Syntetyzowanie… ({{seconds}}s)",
     "drop_audio": "Upuść dźwięk tutaj — lub kliknij. WAV, MP3, M4A… 🎤",
     "record": "Nagraj",
@@ -287,11 +286,6 @@
     "preset_sichuan": "🌶️ 四川话",
     "prompt_placeholder": "Co powinien powiedzieć ten głos? ✍️",
     "design_placeholder": "Opisz głos, a następnie napisz, co mówi…",
-    "describe_label": "Opisz swój głos",
-    "describe_placeholder": "np. a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "Twój opis (po angielsku) ustawia poniższe kontrolki — możesz je potem doprecyzować.",
-    "describe_unmatched": "Nie udało się dopasować: {{items}}",
-    "describe_no_match": "Nie rozpoznano jeszcze cech głosu — spróbuj słów takich jak deep, elderly lub British.",
     "speed": "Prędkość",
     "tshift": "t_przesunięcie",
     "pos_temp": "Temp. poz",
@@ -318,7 +312,13 @@
     "opt_high_pitch": "wysoki ton",
     "opt_very_high_pitch": "bardzo wysoki ton",
     "opt_whisper": "szeptać",
-    "style_placeholder": "np. szeptać"
+    "style_placeholder": "np. szeptać",
+    "stop_playback": "Zatrzymaj odtwarzanie",
+    "describe_label": "Opisz swój głos",
+    "describe_placeholder": "np. a warm elderly British storyteller, slightly raspy",
+    "describe_hint": "Twój opis (po angielsku) ustawia poniższe kontrolki — możesz je potem doprecyzować.",
+    "describe_unmatched": "Nie udało się dopasować: {{items}}",
+    "describe_no_match": "Nie rozpoznano jeszcze cech głosu — spróbuj słów takich jak deep, elderly lub British."
   },
   "about": {
     "app": "Aplikacja",
@@ -464,10 +464,10 @@
     "mic_hint_mac": "macOS: otwórz Ustawienia systemowe → Prywatność i bezpieczeństwo → Mikrofon i włącz OmniVoice.",
     "mic_hint_windows": "Windows: otwórz Ustawienia → Prywatność i zabezpieczenia → Mikrofon, włącz „Dostęp do mikrofonu” i „Zezwalaj aplikacjom klasycznym na dostęp do mikrofonu”, a następnie zezwól OmniVoice.",
     "mic_hint_linux": "Linux: sprawdź, czy użytkownik należy do grupy audio i czy WebView ma dostęp do mikrofonu.",
+    "transcription_failed": "Transkrypcja nie powiodła się: {{message}}",
     "mic_not_found": "Nie znaleziono mikrofonu. Podłącz lub włącz mikrofon i spróbuj ponownie.",
     "mic_in_use": "Mikrofon jest zajęty lub niedostępny. Zamknij inne aplikacje, które mogą go używać, i spróbuj ponownie.",
-    "mic_error_generic": "Nie można uruchomić mikrofonu: {{message}}",
-    "transcription_failed": "Transkrypcja nie powiodła się: {{message}}"
+    "mic_error_generic": "Nie można uruchomić mikrofonu: {{message}}"
   },
   "logs": {
     "no_tauri_log": "Brak jeszcze logowania Tauri na dysku — uruchom go za pomocą wersji desktopowej, aby go utworzyć",
@@ -684,6 +684,9 @@
     "copy_failed": "Kopiowanie nie powiodło się",
     "open_docs": "Otwórz dokumenty",
     "copy_diagnostic": "Kopiuj diagnostykę",
+    "dialect_label": "Dialekt",
+    "dialect_default": "Domyślny",
+    "dialect_title": "Regionalny dialekt i słownictwo tłumaczenia (np. Argentyna → „vos sos” zamiast „tú eres”). Stosowane przez silniki LLM (OpenAI/Ollama) i jakość Cinematic.",
     "num_speakers_label": "Mówcy",
     "num_speakers_auto": "Automatycznie",
     "num_speakers_help": "Ilu mówców jest w tym wideo? Pozostaw puste, aby wykryć automatycznie. Podaj liczbę, jeśli automatyczne wykrywanie łączy kilku mówców w jednego."
@@ -1488,6 +1491,7 @@
     "segments_clean": "Segmenty już czyste",
     "cleanup_failed": "Czyszczenie nie powiodło się: {{message}}",
     "cinematic_no_llm": "Jakość kinowa wymaga LLM — ustaw TRANSLATE_BASE_URL + TRANSLATE_API_KEY (Ollama działa lokalnie). Wracając do Fasta.",
+    "dialect_not_applied": "Wybrany dialekt wymaga LLM — przełącz silnik na OpenAI/Ollama lub wybierz jakość Cinematic.",
     "translate_errors": "{{errorCount}}/{{totalCount}} segment(y) nie powiodły się: {{firstError}}",
     "translated_segments": "Przetłumaczone segmenty {{count}} → {{lang}}",
     "translated_cinematic_suffix": "(Kinowy)",

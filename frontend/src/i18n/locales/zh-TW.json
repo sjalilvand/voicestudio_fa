@@ -258,7 +258,6 @@
     "save": "儲存",
     "cancel": "取消",
     "synthesize": "合成音訊",
-    "stop_playback": "停止播放",
     "synthesizing": "正在綜合... ({{seconds}}s)",
     "drop_audio": "將音訊拖放到此處 - 或單擊。 WAV、MP3、M4A…🎤",
     "record": "記錄",
@@ -287,11 +286,6 @@
     "preset_sichuan": "🌶️四川話",
     "prompt_placeholder": "這個聲音該說什麼？ ✍️",
     "design_placeholder": "描述聲音，然後輸入它所說的內容...",
-    "describe_label": "描述你想要的聲音",
-    "describe_placeholder": "例如：a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "你的描述（英文）會自動設定下方的控制項，之後仍可手動微調。",
-    "describe_unmatched": "無法辨識：{{items}}",
-    "describe_no_match": "尚未辨識出聲音特徵——試試 deep、elderly 或 British 等詞。",
     "speed": "速度",
     "tshift": "t_shift",
     "pos_temp": "後溫度",
@@ -318,7 +312,13 @@
     "opt_high_pitch": "高音",
     "opt_very_high_pitch": "非常高的音調",
     "opt_whisper": "耳語",
-    "style_placeholder": "例如耳語"
+    "style_placeholder": "例如耳語",
+    "stop_playback": "停止播放",
+    "describe_label": "描述你想要的聲音",
+    "describe_placeholder": "例如：a warm elderly British storyteller, slightly raspy",
+    "describe_hint": "你的描述（英文）會自動設定下方的控制項，之後仍可手動微調。",
+    "describe_unmatched": "無法辨識：{{items}}",
+    "describe_no_match": "尚未辨識出聲音特徵——試試 deep、elderly 或 British 等詞。"
   },
   "about": {
     "app": "應用程式",
@@ -464,10 +464,10 @@
     "mic_hint_mac": "macOS：開啟系統設定 → 隱私和安全 → 麥克風並啟用 OmniVoice。",
     "mic_hint_windows": "Windows：開啟 設定 → 隱私權與安全性 → 麥克風，開啟「麥克風存取權」和「允許桌面應用程式存取您的麥克風」，然後允許 OmniVoice。",
     "mic_hint_linux": "Linux：檢查您的使用者是否在音訊群組中且 WebView 是否具有麥克風存取權限。",
+    "transcription_failed": "轉錄失敗：{{message}}",
     "mic_not_found": "找不到麥克風。請連接或啟用麥克風後再試一次。",
     "mic_in_use": "麥克風使用中或無法使用。請關閉可能正在使用它的其他應用程式後再試一次。",
-    "mic_error_generic": "無法啟動麥克風：{{message}}",
-    "transcription_failed": "轉錄失敗：{{message}}"
+    "mic_error_generic": "無法啟動麥克風：{{message}}"
   },
   "logs": {
     "no_tauri_log": "磁碟上尚未有 Tauri 登入 — 透過桌面建置啟動以產生一個",
@@ -684,6 +684,9 @@
     "copy_failed": "複製失敗",
     "open_docs": "開啟文件",
     "copy_diagnostic": "複製診斷",
+    "dialect_label": "方言",
+    "dialect_default": "預設",
+    "dialect_title": "翻譯所用的地區方言與詞彙（例如 阿根廷 → “vos sos” 而非 “tú eres”）。由 LLM 引擎（OpenAI/Ollama）與 Cinematic 品質套用。",
     "num_speakers_label": "說話者",
     "num_speakers_auto": "自動",
     "num_speakers_help": "這段影片中有幾位說話者？留空則自動偵測。若自動偵測將多位說話者合併為一人，請手動指定人數。"
@@ -1488,6 +1491,7 @@
     "segments_clean": "段已經乾淨",
     "cleanup_failed": "清理失敗：{{message}}",
     "cinematic_no_llm": "电影质量需要 LLM — 设置 TRANSLATE_BASE_URL + TRANSLATE_API_KEY（Ollama 在本地工作）。回落到快速。",
+    "dialect_not_applied": "所選方言需要 LLM 才能套用 — 請將引擎切換為 OpenAI/Ollama，或選擇 Cinematic 品質。",
     "translate_errors": "{{errorCount}}/{{totalCount}} 段失敗：{{firstError}}",
     "translated_segments": "翻譯的 {{count}} 段 → {{lang}}",
     "translated_cinematic_suffix": "（電影）",

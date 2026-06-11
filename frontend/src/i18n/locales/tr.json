@@ -258,7 +258,6 @@
     "save": "Kaydet",
     "cancel": "İptal",
     "synthesize": "Sesi Sentezle",
-    "stop_playback": "Oynatmayı durdur",
     "synthesizing": "Sentezleniyor… ({{seconds}}s)",
     "drop_audio": "Sesi buraya bırakın veya tıklayın. WAV, MP3, M4A… 🎤",
     "record": "Kayıt",
@@ -287,11 +286,6 @@
     "preset_sichuan": "🌶️",
     "prompt_placeholder": "Bu ses ne söylemeli? ✍️",
     "design_placeholder": "Sesi tanımlayın, ardından ne dediğini yazın…",
-    "describe_label": "Sesinizi tarif edin",
-    "describe_placeholder": "örn. a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "Açıklamanız (İngilizce) aşağıdaki denetimleri ayarlar — sonradan ince ayar yapabilirsiniz.",
-    "describe_unmatched": "Eşlenemedi: {{items}}",
-    "describe_no_match": "Henüz ses özelliği tanınmadı — deep, elderly veya British gibi kelimeler deneyin.",
     "speed": "Hız",
     "tshift": "t_shift",
     "pos_temp": "Durum Sıcaklığı",
@@ -318,7 +312,13 @@
     "opt_high_pitch": "yüksek perde",
     "opt_very_high_pitch": "çok yüksek perde",
     "opt_whisper": "fısıltı",
-    "style_placeholder": "örneğin fısıltı"
+    "style_placeholder": "örneğin fısıltı",
+    "stop_playback": "Oynatmayı durdur",
+    "describe_label": "Sesinizi tarif edin",
+    "describe_placeholder": "örn. a warm elderly British storyteller, slightly raspy",
+    "describe_hint": "Açıklamanız (İngilizce) aşağıdaki denetimleri ayarlar — sonradan ince ayar yapabilirsiniz.",
+    "describe_unmatched": "Eşlenemedi: {{items}}",
+    "describe_no_match": "Henüz ses özelliği tanınmadı — deep, elderly veya British gibi kelimeler deneyin."
   },
   "about": {
     "app": "Uygulama",
@@ -464,10 +464,10 @@
     "mic_hint_mac": "macOS: Sistem Ayarları → Gizlilik ve Güvenlik → Mikrofon'u açın ve OmniVoice'u etkinleştirin.",
     "mic_hint_windows": "Windows: Ayarlar → Gizlilik ve güvenlik → Mikrofon'u açın, 'Mikrofon erişimi' ve 'Masaüstü uygulamalarının mikrofonunuza erişmesine izin ver' seçeneklerini etkinleştirin, ardından OmniVoice'a izin verin.",
     "mic_hint_linux": "Linux: Kullanıcınızın ses grubunda olduğundan ve Web Görünümünün mikrofon erişimine sahip olduğundan emin olun.",
+    "transcription_failed": "Transkripsiyon başarısız oldu: {{message}}",
     "mic_not_found": "Mikrofon bulunamadı. Bir mikrofon bağlayın veya etkinleştirin ve tekrar deneyin.",
     "mic_in_use": "Mikrofon meşgul veya kullanılamıyor. Mikrofonu kullanıyor olabilecek diğer uygulamaları kapatın ve tekrar deneyin.",
-    "mic_error_generic": "Mikrofon başlatılamadı: {{message}}",
-    "transcription_failed": "Transkripsiyon başarısız oldu: {{message}}"
+    "mic_error_generic": "Mikrofon başlatılamadı: {{message}}"
   },
   "logs": {
     "no_tauri_log": "Henüz diskte Tauri oturumu açılmadı; bir tane oluşturmak için masaüstü sürümü aracılığıyla başlatın",
@@ -684,6 +684,9 @@
     "copy_failed": "Kopyalama başarısız oldu",
     "open_docs": "Dokümanları aç",
     "copy_diagnostic": "Teşhisi kopyala",
+    "dialect_label": "Lehçe",
+    "dialect_default": "Varsayılan",
+    "dialect_title": "Çeviri için bölgesel lehçe ve söz varlığı (örn. Arjantin → “tú eres” yerine “vos sos”). LLM motorları (OpenAI/Ollama) ve Cinematic kalitesi tarafından uygulanır.",
     "num_speakers_label": "Konuşmacılar",
     "num_speakers_auto": "Otomatik",
     "num_speakers_help": "Bu videoda kaç konuşmacı var? Otomatik algılama için boş bırakın. Otomatik algılama birden çok konuşmacıyı tek kişide birleştiriyorsa bir sayı girin."
@@ -1488,6 +1491,7 @@
     "segments_clean": "Segmentler zaten temiz",
     "cleanup_failed": "Temizleme başarısız oldu: {{message}}",
     "cinematic_no_llm": "Sinematik kalitenin bir LLM'ye ihtiyacı vardır - TRANSLATE_BASE_URL + TRANSLATE_API_KEY'i ayarlayın (Ollama yerel olarak çalışır). Hızlı'ya geri dönüyorum.",
+    "dialect_not_applied": "Seçilen lehçe için LLM gerekir — motoru OpenAI/Ollama yapın veya Cinematic kalitesini seçin.",
     "translate_errors": "{{errorCount}}/{{totalCount}} segment(ler)i başarısız oldu: {{firstError}}",
     "translated_segments": "{{count}} segment(ler) çevrildi → {{lang}}",
     "translated_cinematic_suffix": "(Sinematik)",

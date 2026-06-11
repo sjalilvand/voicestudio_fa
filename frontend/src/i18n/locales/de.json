@@ -259,7 +259,6 @@
     "save": "Speichern",
     "cancel": "Abbrechen",
     "synthesize": "Audio synthetisieren",
-    "stop_playback": "Wiedergabe stoppen",
     "synthesizing": "Synthetisieren… ({{seconds}}s)",
     "drop_audio": "Fügen Sie Audio hier ein – oder klicken Sie. WAV, MP3, M4A… 🎤",
     "record": "Aufnahme",
@@ -288,11 +287,6 @@
     "preset_sichuan": "🌶️ 四川话",
     "prompt_placeholder": "Was soll diese Stimme sagen? ✍️",
     "design_placeholder": "Beschreiben Sie die Stimme und geben Sie dann ein, was sie sagt ...",
-    "describe_label": "Beschreibe deine Stimme",
-    "describe_placeholder": "z. B. a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "Deine Beschreibung (auf Englisch) stellt die Regler unten ein — du kannst sie danach weiter anpassen.",
-    "describe_unmatched": "Nicht zuordenbar: {{items}}",
-    "describe_no_match": "Noch keine Stimmmerkmale erkannt — versuche Wörter wie deep, elderly oder British.",
     "speed": "Geschwindigkeit",
     "tshift": "t_shift",
     "pos_temp": "Pos-Temp",
@@ -319,7 +313,13 @@
     "opt_high_pitch": "hohe Tonlage",
     "opt_very_high_pitch": "sehr hoher Ton",
     "opt_whisper": "flüstern",
-    "style_placeholder": "z.B. flüstern"
+    "style_placeholder": "z.B. flüstern",
+    "stop_playback": "Wiedergabe stoppen",
+    "describe_label": "Beschreibe deine Stimme",
+    "describe_placeholder": "z. B. a warm elderly British storyteller, slightly raspy",
+    "describe_hint": "Deine Beschreibung (auf Englisch) stellt die Regler unten ein — du kannst sie danach weiter anpassen.",
+    "describe_unmatched": "Nicht zuordenbar: {{items}}",
+    "describe_no_match": "Noch keine Stimmmerkmale erkannt — versuche Wörter wie deep, elderly oder British."
   },
   "about": {
     "app": "App",
@@ -465,10 +465,10 @@
     "mic_hint_mac": "macOS: Öffnen Sie Systemeinstellungen → Datenschutz und Sicherheit → Mikrofon und aktivieren Sie OmniVoice.",
     "mic_hint_windows": "Windows: Öffnen Sie Einstellungen → Datenschutz und Sicherheit → Mikrofon, aktivieren Sie 'Mikrofonzugriff' und 'Desktop-Apps den Zugriff auf Ihr Mikrofon erlauben' und erlauben Sie OmniVoice.",
     "mic_hint_linux": "Linux: Überprüfen Sie, ob sich Ihr Benutzer in der Audiogruppe befindet und WebView Zugriff auf das Mikrofon hat.",
+    "transcription_failed": "Transkription fehlgeschlagen: {{message}}",
     "mic_not_found": "Kein Mikrofon gefunden. Schließen Sie ein Mikrofon an oder aktivieren Sie eines und versuchen Sie es erneut.",
     "mic_in_use": "Das Mikrofon ist belegt oder nicht verfügbar. Schließen Sie andere Apps, die es möglicherweise verwenden, und versuchen Sie es erneut.",
-    "mic_error_generic": "Mikrofon konnte nicht gestartet werden: {{message}}",
-    "transcription_failed": "Transkription fehlgeschlagen: {{message}}"
+    "mic_error_generic": "Mikrofon konnte nicht gestartet werden: {{message}}"
   },
   "logs": {
     "no_tauri_log": "Noch kein Tauri-Log auf der Festplatte – starten Sie es über den Desktop-Build, um eines zu erstellen",
@@ -685,6 +685,9 @@
     "copy_failed": "Das Kopieren ist fehlgeschlagen",
     "open_docs": "Dokumente öffnen",
     "copy_diagnostic": "Diagnose kopieren",
+    "dialect_label": "Dialekt",
+    "dialect_default": "Standard",
+    "dialect_title": "Regionaler Dialekt und Wortschatz für die Übersetzung (z. B. Argentinien → „vos sos“ statt „tú eres“). Wird von LLM-Engines (OpenAI/Ollama) und der Cinematic-Qualität angewendet.",
     "num_speakers_label": "Sprecher",
     "num_speakers_auto": "Automatisch",
     "num_speakers_help": "Wie viele Sprecher sind in diesem Video? Leer lassen für automatische Erkennung. Eine Zahl angeben, falls die Erkennung mehrere Sprecher zu einem zusammenfasst."
@@ -1489,6 +1492,7 @@
     "segments_clean": "Segmente bereits sauber",
     "cleanup_failed": "Bereinigung fehlgeschlagen: {{message}}",
     "cinematic_no_llm": "Für filmische Qualität ist ein LLM erforderlich – setzen Sie TRANSLATE_BASE_URL + TRANSLATE_API_KEY (Ollama funktioniert lokal). Zurückgreifen auf Fast.",
+    "dialect_not_applied": "Der gewählte Dialekt benötigt ein LLM — wechsle die Engine auf OpenAI/Ollama oder wähle die Cinematic-Qualität.",
     "translate_errors": "{{errorCount}}/{{totalCount}} Segment(e) fehlgeschlagen: {{firstError}}",
     "translated_segments": "{{count}} Segment(e) → {{lang}} übersetzt",
     "translated_cinematic_suffix": "(Filmisch)",
