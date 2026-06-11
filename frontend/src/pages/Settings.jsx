@@ -36,6 +36,7 @@ import RefinementPanel from '../components/settings/RefinementPanel';
 import AppearancePanel from '../components/settings/AppearancePanel';
 import StoragePanel from '../components/settings/StoragePanel';
 import SharingPanel from '../components/settings/SharingPanel';
+import RemoteBackendPanel from '../components/settings/RemoteBackendPanel';
 import EngineCompatibilityMatrix from '../components/EngineCompatibilityMatrix';
 import DictationDemo from '../components/DictationDemo';
 import ReportBugButton from '../components/ReportBugButton';
@@ -1331,7 +1332,12 @@ export default function Settings() {
         </>
       )}
 
-      {activeTab === 'sharing' && <SharingPanel />}
+      {activeTab === 'sharing' && (
+        <>
+          <SharingPanel />
+          <RemoteBackendPanel />
+        </>
+      )}
 
       {activeTab === 'appearance' && <AppearancePanel />}
 
