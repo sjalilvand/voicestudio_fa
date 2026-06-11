@@ -682,8 +682,11 @@ pub fn run() {
                 // First-run gate: never auto-install. With nothing on disk to
                 // attach to, park on the setup screen and wait for the user to
                 // confirm an install plan — `complete_setup` restarts the
-                // bootstrap from there. Existing installs (venv present) are
-                // detected inside is_first_run and migrate straight through.
+                // bootstrap from there. Existing pre-setup-screen installs
+                // (venv present) are migrated here — the bootstrap thread is
+                // the only place that write happens — then pass straight
+                // through the read-only is_first_run check.
+                setup::migrate_existing_install_if_needed(&app_handle);
                 if setup::is_first_run(&app_handle) {
                     log::info!("First run — awaiting setup screen confirmation before installing");
                     set_stage(&stage_handle, BootstrapStage::AwaitingSetup);

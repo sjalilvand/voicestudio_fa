@@ -103,7 +103,17 @@
     "region_russia": "Nga (gương)",
     "region_restricted": "Bị hạn chế (gương)",
     "unknown_error": "Lỗi không xác định",
-    "retrying": "Đang thử lại…"
+    "retrying": "Đang thử lại…",
+    "hint_readme": "README.md bị thiếu trong gói. Lỗi này hiện được tự động sửa — thử lại sẽ hoạt động.",
+    "hint_python_mirror": "Mạng không truy cập được bản tải Python (bản phát hành github.com). Hãy đổi khu vực trong Cài đặt → Mạng (Trung Quốc / Nga / Hạn chế đi qua máy chủ gương), hoặc cài Python 3.11+ trên hệ thống để ứng dụng dùng bản đó.",
+    "hint_uv_timeout": "Hết thời gian chờ mạng khi tải uv. Kiểm tra kết nối internet hoặc thử khu vực khác trong Cài đặt → Mạng.",
+    "hint_uv_sync": "Cài đặt phụ thuộc thất bại. \"Dọn dẹp & Thử lại\" sẽ xóa venv trong bộ nhớ đệm và bắt đầu lại.",
+    "hint_build_backend": "Lỗi backend build của Python. \"Dọn dẹp & Thử lại\" sẽ xóa venv hỏng để xây dựng lại từ đầu.",
+    "hint_ffmpeg": "Tải ffmpeg thất bại. Không nghiêm trọng — thử lại hoặc tự cài ffmpeg thủ công.",
+    "hint_port": "Cổng 3900 đang được sử dụng. Hãy đóng các phiên bản OmniVoice khác hoặc ứng dụng đang dùng cổng đó.",
+    "hint_silent_crash": "Backend bị lỗi mà không có thông báo. \"Dọn dẹp & Thử lại\" thường khắc phục được sự cố venv bị hỏng.",
+    "hint_github_blocked": "Mạng của bạn có thể đang chặn GitHub. Cài Python 3.11+ từ python.org (thêm vào PATH) rồi khởi động lại, hoặc đặt UV_PYTHON_INSTALL_MIRROR — xem docs/install/troubleshooting.md.",
+    "hint_default": "Hãy thử \"Thử lại\" trước. Nếu vẫn lỗi, \"Dọn dẹp & Thử lại\" sẽ xây dựng lại môi trường từ đầu."
   },
   "stories": {
     "title": "Biên tập truyện",
@@ -343,7 +353,17 @@
     "channel_stable": "Ổn định",
     "channel_preview": "Xem trước",
     "channel_set": "Đã đặt kênh cập nhật thành {{channel}}",
-    "channel_preview_hint": "Bản xem trước theo dõi bản dựng main mới nhất — tính năng mới hơn, ít được kiểm thử hơn. Quay lại bản ổn định nếu có bản phát hành ổn định mới hơn."
+    "channel_preview_hint": "Bản xem trước theo dõi bản dựng main mới nhất — tính năng mới hơn, ít được kiểm thử hơn. Quay lại bản ổn định nếu có bản phát hành ổn định mới hơn.",
+    "self_check": "Chạy tự kiểm tra",
+    "self_check_failed": "Tự kiểm tra thất bại: {{message}}",
+    "self_check_ok": "Ổn",
+    "self_check_warn": "Cảnh báo",
+    "self_check_fail": "Thất bại",
+    "self_check_healthy": "Tất cả kiểm tra đều đạt — bản cài đặt này có vẻ ổn.",
+    "self_check_attention": "{{count}} kiểm tra thất bại — xem gợi ý ở trên.",
+    "save_bundle": "Lưu gói chẩn đoán",
+    "bundle_saved": "Đã lưu gói chẩn đoán: {{filename}}",
+    "bundle_failed": "Không thể tạo gói chẩn đoán: {{message}}"
   },
   "privacy": {
     "desc": "Mọi thứ đều chạy trên <1>máy này</1>. Âm thanh, video và bản ghi của bạn không bao giờ rời khỏi máy tính của bạn trừ khi bạn sử dụng một cách rõ ràng một trình dịch trực tuyến (Google, DeepL, v.v.) hoặc đẩy tới HuggingFace.",
@@ -663,7 +683,10 @@
     "diagnostic_copied": "Đã sao chép chẩn đoán",
     "copy_failed": "Sao chép không thành công",
     "open_docs": "Mở tài liệu",
-    "copy_diagnostic": "Sao chép chẩn đoán"
+    "copy_diagnostic": "Sao chép chẩn đoán",
+    "num_speakers_label": "Người nói",
+    "num_speakers_auto": "Tự động",
+    "num_speakers_help": "Video này có bao nhiêu người nói? Để trống để tự động phát hiện. Đặt một con số nếu tính năng tự động gộp nhiều người nói thành một."
   },
   "glossary": {
     "title": "Thuật ngữ",
@@ -965,7 +988,9 @@
     "open": "Mở",
     "install_required_models": "Cài đặt các mô hình cần thiết ở trên để tiếp tục.",
     "try_dictation": "Thử đọc chính tả",
-    "next_try_dictation": "Tiếp theo: Thử đọc chính tả"
+    "next_try_dictation": "Tiếp theo: Thử đọc chính tả",
+    "step_aria": "Bước {{num}}: {{label}}",
+    "step_completed": "đã hoàn thành"
   },
   "donate": {
     "title": "Hỗ trợ",
@@ -1132,7 +1157,10 @@
     "title": "Tab này gặp trở ngại.",
     "desc": "Đừng lo lắng — phần còn lại của ứng dụng vẫn hoạt động. Bạn có thể chuyển đổi tab hoặc thử lại bên dưới.",
     "tryAgain": "Thử lại",
-    "openDocs": "Mở tài liệu cho lỗi này"
+    "openDocs": "Mở tài liệu cho lỗi này",
+    "report": "Báo cáo lỗi này",
+    "searchIssues": "Tìm các vấn đề tương tự",
+    "unexpected": "Lỗi không mong muốn: {{message}}"
   },
   "keyboard": {
     "title": "Phím tắt",

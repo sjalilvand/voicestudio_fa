@@ -49,6 +49,8 @@ import useDubWorkflow from './hooks/useDubWorkflow';
 const LazyFallback = () => <div className="app-lazy-fallback">{i18n.t('app.loading')}</div>;
 
 import { Toaster, toast } from 'react-hot-toast';
+import { toastErrorWithReport } from './utils/errorToast';
+import { addBreadcrumb } from './utils/breadcrumbs';
 import {
   POPULAR_LANGS, POPULAR_ISO, TAGS, CATEGORIES, PRESETS, CLONE_MAX_SECONDS,
 } from './utils/constants';
@@ -102,6 +104,9 @@ function App() {
   }, [locale, theme, font]);
   const mode = useAppStore(s => s.mode);
   const setMode = useAppStore(s => s.setMode);
+  // Breadcrumb every view change — mode names are a closed set, so this is
+  // privacy-safe by construction (see utils/breadcrumbs.js).
+  useEffect(() => { addBreadcrumb(`view:${mode}`); }, [mode]);
   const [navRailSide, setNavRailSide] = useState(() => {
     try { return localStorage.getItem('omnivoice.navRailSide') || 'left'; } catch { return 'left'; }
   });
@@ -408,8 +413,7 @@ function App() {
     (async () => {
       try {
         const fd = new FormData();
-        fd.append('text', i18n.t('firstrun.first_sound_text',
-          'Welcome to your studio. Every word you hear was generated on this machine, just now.'));
+        fd.append('text', i18n.t('firstrun.first_sound_text'));
         // Functional model prompt (not user-facing copy) — keeps the demo
         // voice warm without depending on seeded profiles.
         fd.append('instruct', 'A warm, friendly narrator voice, medium pace');
@@ -418,8 +422,7 @@ function App() {
         if (!res.ok) return;
         const blob = await res.blob();
         await playBlobAudio(blob);
-        toast.success(i18n.t('firstrun.first_sound_done',
-          'That voice? Generated seconds ago, locally. Welcome in.'), { duration: 7000 });
+        toast.success(i18n.t('firstrun.first_sound_done'), { duration: 7000 });
       } catch { /* silent — see above */ }
     })();
   }, [setupChecked, setupNeeded, bootstrapStage]);
@@ -545,6 +548,7 @@ function App() {
   });
 
   const handleNativeExport = async (e, sourceIdentifier, fallbackName, mode) => {
+    addBreadcrumb('export');
     if (e) { e.preventDefault(); e.stopPropagation(); }
     // Browser / Docker web build: there is no Tauri shell, so the native save
     // dialog is unavailable — invoking it throws "Cannot read properties of
@@ -561,7 +565,7 @@ function App() {
         } catch (err) { console.warn('exportRecord (browser export path) failed:', err); }
       } catch (err) {
         console.error(err);
-        toast.error(i18n.t('app.toast_export_failed', { message: err?.message || err }));
+        toastErrorWithReport(i18n.t('app.toast_export_failed', { message: err?.message || err }), err);
       }
       return;
     }
@@ -576,7 +580,7 @@ function App() {
       loadExportHistory();
     } catch (err) {
       console.error(err);
-      toast.error(i18n.t('app.toast_export_failed', { message: err?.message || err }));
+      toastErrorWithReport(i18n.t('app.toast_export_failed', { message: err?.message || err }), err);
     }
   };
   const revealInFolder = async (filePath) => {

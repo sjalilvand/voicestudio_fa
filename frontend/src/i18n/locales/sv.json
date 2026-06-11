@@ -103,7 +103,17 @@
     "region_russia": "Ryssland (spegel)",
     "region_restricted": "Begränsad (spegel)",
     "unknown_error": "Okänt fel",
-    "retrying": "Försöker igen..."
+    "retrying": "Försöker igen...",
+    "hint_readme": "README.md saknades i paketet. Detta åtgärdas nu automatiskt — ett nytt försök bör fungera.",
+    "hint_python_mirror": "Nätverket kunde inte nå Python-nedladdningen (github.com-release). Byt region i Inställningar → Nätverk (Kina / Ryssland / Begränsad går via en spegel), eller installera Python 3.11+ systemvitt så att appen använder den.",
+    "hint_uv_timeout": "Nätverkstimeout vid nedladdning av uv. Kontrollera din internetanslutning eller prova en annan region i Inställningar → Nätverk.",
+    "hint_uv_sync": "Installation av beroenden misslyckades. \"Rensa & Försök igen\" raderar den cachade venv:n och börjar om.",
+    "hint_build_backend": "Fel i Pythons byggbackend. \"Rensa & Försök igen\" tar bort den trasiga venv:n så att den byggs om från grunden.",
+    "hint_ffmpeg": "Nedladdningen av ffmpeg misslyckades. Detta är inte kritiskt — försök igen eller installera ffmpeg manuellt.",
+    "hint_port": "Port 3900 används redan. Stäng andra OmniVoice-instanser eller appar som använder porten.",
+    "hint_silent_crash": "Backenden kraschade utan felmeddelande. \"Rensa & Försök igen\" löser ofta problem med en korrupt venv.",
+    "hint_github_blocked": "Ditt nätverk kan blockera GitHub. Installera Python 3.11+ från python.org (lägg till i PATH) och starta om, eller sätt UV_PYTHON_INSTALL_MIRROR — se docs/install/troubleshooting.md.",
+    "hint_default": "Prova \"Försök igen\" först. Misslyckas det igen bygger \"Rensa & Försök igen\" om miljön från grunden."
   },
   "stories": {
     "title": "Redaktör för berättelser",
@@ -343,7 +353,17 @@
     "channel_stable": "Stabil",
     "channel_preview": "Förhandsvisning",
     "channel_set": "Uppdateringskanal inställd på {{channel}}",
-    "channel_preview_hint": "Förhandsvisning följer det senaste main-bygget – nyare funktioner, mindre testade. Återgår till stabil om en stabil version ligger före."
+    "channel_preview_hint": "Förhandsvisning följer det senaste main-bygget – nyare funktioner, mindre testade. Återgår till stabil om en stabil version ligger före.",
+    "self_check": "Kör självtest",
+    "self_check_failed": "Självtestet misslyckades: {{message}}",
+    "self_check_ok": "OK",
+    "self_check_warn": "Varning",
+    "self_check_fail": "Misslyckades",
+    "self_check_healthy": "Alla kontroller godkända — installationen ser frisk ut.",
+    "self_check_attention": "{{count}} kontroll(er) misslyckades — se tipsen ovan.",
+    "save_bundle": "Spara diagnostikpaket",
+    "bundle_saved": "Diagnostikpaket sparat: {{filename}}",
+    "bundle_failed": "Kunde inte skapa diagnostikpaketet: {{message}}"
   },
   "privacy": {
     "desc": "Allt körs på <1>denna maskin</1>. Ditt ljud, video och transkriptioner lämnar aldrig din dator om du inte uttryckligen använder en onlineöversättare (Google, DeepL, etc.) eller trycker till HuggingFace.",
@@ -663,7 +683,10 @@
     "diagnostic_copied": "Diagnostiken kopierad",
     "copy_failed": "Kopieringen misslyckades",
     "open_docs": "Öppna dokument",
-    "copy_diagnostic": "Kopiera diagnostik"
+    "copy_diagnostic": "Kopiera diagnostik",
+    "num_speakers_label": "Talare",
+    "num_speakers_auto": "Auto",
+    "num_speakers_help": "Hur många talare finns i videon? Lämna tomt för automatisk identifiering. Ange ett antal om identifieringen slår ihop flera talare till en."
   },
   "glossary": {
     "title": "Ordlista",
@@ -965,7 +988,9 @@
     "open": "Öppna",
     "install_required_models": "Installera de modeller som krävs ovan för att fortsätta.",
     "try_dictation": "Prova diktering",
-    "next_try_dictation": "Nästa: Prova diktering"
+    "next_try_dictation": "Nästa: Prova diktering",
+    "step_aria": "Steg {{num}}: {{label}}",
+    "step_completed": "klart"
   },
   "donate": {
     "title": "Support",
@@ -1132,7 +1157,10 @@
     "title": "Den här fliken träffade en hake.",
     "desc": "Oroa dig inte – resten av appen fungerar fortfarande. Du kan byta flik eller försöka igen nedan.",
     "tryAgain": "Försök igen",
-    "openDocs": "Öppna dokument för detta fel"
+    "openDocs": "Öppna dokument för detta fel",
+    "report": "Rapportera den här buggen",
+    "searchIssues": "Sök liknande problem",
+    "unexpected": "Oväntat fel: {{message}}"
   },
   "keyboard": {
     "title": "Kortkommandon",
