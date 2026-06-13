@@ -122,3 +122,18 @@ def test_epub_strips_html_tags():
 def test_epub_bad_zip_raises_valueerror():
     with pytest.raises(ValueError):
         epub_to_chapter_script(b"not a zip at all")
+
+
+def test_epub_total_size_cap_truncates():
+    # Cap sits between one and two chapter docs (~1.1 KB uncompressed each), so
+    # the first is read and the rest skipped. Caps passed directly (no
+    # monkeypatch) so the bound holds regardless of module import path.
+    data = _make_epub([("One", "x" * 1000), ("Two", "y" * 1000), ("Three", "z" * 1000)])
+    plan = parse_audiobook_script(epub_to_chapter_script(data, max_total_bytes=1500))
+    assert 1 <= len(plan.chapters) < 3  # capped before reading all three
+
+
+def test_epub_oversize_entry_skipped():
+    data = _make_epub([("Big", "x" * 500)])
+    with pytest.raises(ValueError):  # the one entry exceeds the cap → all skipped
+        epub_to_chapter_script(data, max_entry_bytes=50)

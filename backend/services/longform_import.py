@@ -25,6 +25,10 @@ _CH_RE = re.compile(r"^(?:chapter|part|book|prologue|epilogue|section)\b", re.IG
 # Already-present Markdown H1 — if the text has any, we leave it untouched.
 _H1_RE = re.compile(r"^[ \t]*#[ \t]+\S", re.MULTILINE)
 _CHAPTER_TITLE_MAX = 60
+# Zip-bomb / OOM guards for EPUB ingestion: per-entry and cumulative caps on
+# *uncompressed* bytes read from the archive.
+_EPUB_MAX_ENTRY_BYTES = 25 * 1024 * 1024
+_EPUB_MAX_TOTAL_BYTES = 300 * 1024 * 1024
 
 
 def chapterize_plaintext(text: str) -> str:
@@ -122,12 +126,19 @@ def _opf_path(zf: zipfile.ZipFile) -> str:
     return rootfile.get("full-path")
 
 
-def epub_to_chapter_script(data: bytes) -> str:
+def epub_to_chapter_script(
+    data: bytes,
+    *,
+    max_entry_bytes: int = _EPUB_MAX_ENTRY_BYTES,
+    max_total_bytes: int = _EPUB_MAX_TOTAL_BYTES,
+) -> str:
     """Convert EPUB bytes into a ``# Chapter`` / body script in spine order.
 
     Reads the OPF manifest + spine (the publisher's reading order), extracts
     each document's title + visible text, and emits one ``# Title`` block per
-    document with renderable text. Raises ``ValueError`` on a malformed EPUB.
+    document with renderable text. ``max_entry_bytes`` / ``max_total_bytes``
+    bound the *uncompressed* bytes read (zip-bomb guard). Raises ``ValueError``
+    on a malformed EPUB.
     """
     try:
         zf = zipfile.ZipFile(io.BytesIO(data))
@@ -146,6 +157,7 @@ def epub_to_chapter_script(data: bytes) -> str:
 
     blocks: list[str] = []
     names = set(zf.namelist())
+    total = 0  # cumulative uncompressed bytes read — zip-bomb guard
     for ref in opf.findall(".//opf:spine/opf:itemref", _OPF_NS):
         href = manifest.get(ref.get("idref") or "")
         if not href:
@@ -153,11 +165,23 @@ def epub_to_chapter_script(data: bytes) -> str:
         full = posixpath.normpath(posixpath.join(base, href)) if base else href
         if full not in names:
             continue
+        # Bound decompression: skip an absurdly large entry, and stop once the
+        # cumulative uncompressed size crosses the ceiling (defends against a
+        # zip bomb / a maliciously huge chapter exhausting memory).
         try:
-            xhtml = zf.read(full).decode("utf-8", "ignore")
+            info = zf.getinfo(full)
         except KeyError:
             continue
-        title, body = _html_to_title_body(xhtml)
+        if info.file_size > max_entry_bytes:
+            continue
+        if total + info.file_size > max_total_bytes:
+            break
+        try:
+            raw = zf.read(full)
+        except KeyError:
+            continue
+        total += len(raw)
+        title, body = _html_to_title_body(raw.decode("utf-8", "ignore"))
         if not body.strip():
             continue  # nav docs, empty pages
         title = title or f"Chapter {len(blocks) + 1}"
