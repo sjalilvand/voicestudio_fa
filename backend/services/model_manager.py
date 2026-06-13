@@ -197,12 +197,23 @@ def get_best_device():
     """Detect the best available compute device.
 
     Priority: CUDA/ROCm > Intel XPU > DirectML > MPS > CPU
-    """
-    torch = _lazy_torch()
 
-    # ── NVIDIA CUDA or AMD ROCm ──────────────────────────────────────
-    # ROCm-enabled PyTorch reports through torch.cuda, so this covers both.
-    if torch.cuda.is_available():
+    The *family* decision delegates to ``core.device_caps.detect_host_caps()``
+    (the single source of truth) so the probe and this loader can never
+    disagree. This function keeps the side-effects the probe deliberately
+    avoids: the ROCm ``HSA_OVERRIDE_GFX_VERSION`` env override and the
+    DirectML device-string return (DirectML is not a torch device family, so
+    the probe reports it as ``cpu`` — we still resolve the real device string
+    here for Windows DirectML users). The string contract is unchanged:
+    ``"cuda"`` / ``"xpu"`` / a DirectML device string / ``"mps"`` / ``"cpu"``.
+    """
+    from core.device_caps import detect_host_caps
+
+    torch = _lazy_torch()
+    family = detect_host_caps().family
+
+    # ── NVIDIA CUDA or AMD ROCm (both present through torch.cuda) ─────
+    if family in ("cuda", "rocm"):
         _configure_rocm_if_needed(torch)
         compatible, warning = check_device_compatibility()
         if not compatible:
@@ -210,15 +221,23 @@ def get_best_device():
         return "cuda"
 
     # ── Intel Arc / discrete GPU via IPEX ────────────────────────────
-    try:
-        import intel_extension_for_pytorch  # noqa: F401
-        if hasattr(torch, "xpu") and torch.xpu.is_available():
+    if family == "xpu":
+        try:
             logger.info("Using Intel XPU device: %s", torch.xpu.get_device_name(0))
-            return "xpu"
-    except ImportError:
-        pass
+        except Exception:
+            logger.info("Using Intel XPU device")
+        return "xpu"
 
-    # ── DirectML — universal Windows GPU (AMD, Intel, NVIDIA fallback)
+    # ── Apple Silicon MPS ────────────────────────────────────────────
+    # Checked BEFORE DirectML to mirror the probe's family-priority order
+    # (cuda > rocm > xpu > mps; DirectML is not a torch family) so the loader
+    # and detect_host_caps() never disagree on a host that somehow exposes both.
+    if family == "mps":
+        return "mps"
+
+    # ── DirectML — universal Windows GPU (probe reports this as "cpu") ─
+    # Reached only when no torch family was detected (family == "cpu"), which is
+    # exactly the DirectML case — the probe classifies DirectML hosts as cpu.
     try:
         import torch_directml
         if torch_directml.device_count() > 0:
@@ -226,10 +245,6 @@ def get_best_device():
             return str(torch_directml.device(0))
     except ImportError:
         pass
-
-    # ── Apple Silicon MPS ────────────────────────────────────────────
-    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-        return "mps"
 
     return "cpu"
 
