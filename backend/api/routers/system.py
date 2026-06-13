@@ -107,6 +107,52 @@ def _ui_port() -> int:
         return 3901
 
 
+def _fast_download_status() -> dict:
+    """Report the download-acceleration state for the Settings UI (FDL-03).
+
+    Reports the *runtime* truth, not just whether hf_xet is importable. The app
+    currently sets ``HF_HUB_DISABLE_XET=1`` by default (main.py) — Xet's chunked
+    transfer is fast but its progress bypasses our tqdm patch, so the legacy-LFS
+    path is forced to keep accurate byte progress. So:
+
+      * ``xet_installed`` — hf_xet present
+      * ``xet_active``    — installed AND not disabled via HF_HUB_DISABLE_XET
+      * ``xet_enabled``   — alias of xet_active (what the UI badge keys off)
+
+    Must never throw: /system/info is called on every Settings load.
+    """
+    installed = False
+    version = None
+    try:
+        import hf_xet  # noqa: F401
+        installed = True
+        try:
+            from importlib.metadata import version as _ver
+            version = _ver("hf-xet")
+        except Exception:
+            version = None
+    except Exception:
+        installed = False
+    disabled = str(os.environ.get("HF_HUB_DISABLE_XET", "")).strip().lower() in {"1", "true", "yes", "on"}
+    active = installed and not disabled
+    try:
+        from core import prefs
+        high_perf = prefs.resolve(
+            "xet_high_performance", env="HF_XET_HIGH_PERFORMANCE", default=False
+        )
+        high_perf = high_perf if isinstance(high_perf, bool) else \
+            str(high_perf).strip().lower() in {"1", "true", "yes", "on"}
+    except Exception:
+        high_perf = False
+    return {
+        "xet_installed": installed,
+        "xet_active": active,
+        "xet_enabled": active,  # UI badge: only true when Xet actually runs
+        "xet_version": version,
+        "high_performance": bool(high_perf),
+    }
+
+
 def _has_hf_token() -> bool:
     # Phase 1 AUTH-01..06 cascade. Delegates to the 3-source resolver
     # (App → Env → HF-CLI) instead of reading env/HF-CLI directly. This
@@ -261,6 +307,7 @@ def system_info():
             "asr_model": os.environ.get("ASR_MODEL", "Systran/faster-whisper-large-v3"),
             "translate_provider": os.environ.get("TRANSLATE_PROVIDER", "google"),
             "has_hf_token": _has_hf_token(),
+            "fast_download": _fast_download_status(),
             "device": get_best_device(),
             "python": sys.version.split()[0],
             "platform": sys.platform,
