@@ -11,7 +11,13 @@ then mux the chapter WAVs into a chapterized **m4b** (FFMETADATA1 chapters via
 pipeline. ffmpeg-gated — without ffmpeg the job reports an error event and
 stops (the m4b is the only output format).
 
-epub/pdf ingest, ACX mastering, crash-resume and the UI remain follow-ups.
+``GET /audiobook/jobs`` + ``POST /audiobook/resume/{job_id}`` — durable
+crash-resume: an interrupted render persists its plan + params to a
+``resume.json`` manifest in the job work dir, so it can be resumed later (the
+content-addressed chapter cache makes finished chapters instant) even without
+the original script. The resume UI affordance remains a follow-up.
+
+epub/pdf ingest, ACX mastering shipped; the resume UI surface remains a follow-up.
 """
 
 import asyncio
@@ -36,6 +42,7 @@ from services.longform_render import (
     build_render_cmd,
     prune_cache_dir,
 )
+from services import longform_resume  # pure (no torch) — durable resume manifest
 
 logger = logging.getLogger("omnivoice.audiobook")
 router = APIRouter()
@@ -364,6 +371,8 @@ async def _render_longform_sse(
     metadata: dict | None = None,
     lexicon: dict | None = None,
     job_type: str = "audiobook",
+    job_id: str | None = None,
+    resume: bool = False,
 ):
     """Shared chapterized-render SSE generator for Audiobook *and* Stories.
 
@@ -377,13 +386,39 @@ async def _render_longform_sse(
     from services.ffmpeg_utils import find_ffmpeg, run_ffmpeg
     from services.model_manager import _gpu_pool
 
-    job_id = uuid.uuid4().hex[:16]
+    # Resume reuses the original job_id (continuing the same job row + cached
+    # chapters); a fresh render generates a new one. The id may arrive from the
+    # /resume/{job_id} path param, so strip it to a safe token (no path
+    # separators, no CR/LF) before it ever reaches a filesystem path or a log
+    # line — CodeQL py/path-injection + py/log-injection. Empty after the strip
+    # → a fresh id.
+    job_id = re.sub(r"[^A-Za-z0-9_-]", "", job_id or "")[:64] or uuid.uuid4().hex[:16]
     try:
         from core import job_store
-        job_store.create(job_id, type=job_type)
+        if not resume:
+            job_store.create(job_id, type=job_type)
         job_store.mark_running(job_id)
     except Exception:
         job_store = None  # job history is best-effort; never block synthesis
+
+    # Persist a durable resume manifest (plan + params) so an interrupted render
+    # can be resumed later even without the original script. Best-effort.
+    try:
+        title = (metadata or {}).get("title") or (plan.chapters[0].title if plan.chapters else "")
+        longform_resume.write_manifest(longform_resume.build_manifest(
+            job_id=job_id, job_type=job_type, title=title,
+            plan_chapters=[
+                {"title": c.title, "spans": [s.to_dict() for s in c.spans]}
+                for c in plan.chapters
+            ],
+            params={
+                "default_voice": default_voice, "fmt": fmt, "bitrate": bitrate,
+                "loudness": loudness, "cover_path": cover_path,
+                "metadata": metadata, "lexicon": lexicon,
+            },
+        ))
+    except Exception:  # resume durability is an enhancement; never block the render
+        logger.debug("[%s] resume manifest write skipped", job_id, exc_info=True)
 
     def _emit(payload: dict) -> str:
         if job_store is not None:
@@ -401,7 +436,12 @@ async def _render_longform_sse(
         yield _emit({"type": "error", "error": "ffmpeg not available; the output needs it"})
         return
 
-    work = os.path.join(OUTPUTS_DIR, f"{job_type}_{job_id}")
+    # Confined work dir (job_id is already token-sanitized above; work_dir adds
+    # the basename + realpath barrier so CodeQL sees a clean path).
+    work = longform_resume.work_dir(job_type, job_id)
+    if work is None:
+        yield _emit({"type": "error", "error": "invalid job id"})
+        return
     os.makedirs(work, exist_ok=True)
     # Chapter WAVs are content-addressed in a shared cache so a re-run (after a
     # failure or interruption) reuses what already rendered — only the
@@ -483,6 +523,9 @@ async def _render_longform_sse(
                 job_store.mark_done(job_id)
             except Exception:
                 pass  # best-effort job history
+        # The render finished — drop the resume manifest so this job is no longer
+        # offered for resume.
+        longform_resume.clear_manifest(job_type, job_id)
         total_s = sum(d for _, d in chapters_meta) / 1000.0
         done = {"type": "done", "output": out_name,
                 "chapters": len(chapter_files), "duration_s": round(total_s, 2),
@@ -572,6 +615,98 @@ async def longform_render(req: LongformRenderRequest):
             plan, default_voice=req.default_voice, fmt=req.format, bitrate=req.bitrate,
             loudness=req.loudness, cover_path=req.cover_path, metadata=req.metadata,
             lexicon=req.lexicon, job_type="story",
+        ),
+        media_type="text/event-stream",
+    )
+
+
+# ── Durable resume: interrupted longform renders ────────────────────────────
+
+
+def _chapters_done(job_id: str) -> int:
+    """Count chapters that finished rendering, from the job's persisted events.
+    Best-effort (0 if unavailable) — used only to show resume progress."""
+    try:
+        from core import job_store
+        n = 0
+        for ev in job_store.events_since(job_id, 0, limit=100_000):
+            try:
+                if json.loads(ev["payload"]).get("type") == "chapter":
+                    n += 1
+            except (ValueError, KeyError, TypeError):
+                continue
+        return n
+    except Exception:
+        return 0
+
+
+@router.get("/audiobook/jobs")
+def list_resumable_jobs() -> dict:
+    """List interrupted longform renders that can be resumed — a work dir that
+    still holds a resume manifest (a job left mid-render by a crash/quit). The
+    ids come from scanning the filesystem, so the UI can offer one-click resume."""
+    from core import job_store
+
+    out = []
+    for e in longform_resume.scan_resumable():
+        jid = e["job_id"]
+        manifest = longform_resume.load_manifest_file(e["manifest_path"]) or {}
+        job = job_store.get(jid) or {}
+        out.append({
+            "job_id": jid,
+            "type": e["job_type"],
+            "status": job.get("status", "interrupted"),
+            "title": manifest.get("title", ""),
+            "total_chapters": manifest.get("total_chapters", 0),
+            "chapters_done": _chapters_done(jid),
+            "created_at": job.get("created_at"),
+        })
+    return {"jobs": out}
+
+
+@router.post("/audiobook/resume/{job_id}")
+async def resume_longform(job_id: str):
+    """Resume an interrupted longform render from its persisted manifest. The
+    already-rendered chapters are content-addressed in the shared cache, so they
+    return instantly — only the unrendered chapters synthesize again. Streams the
+    same SSE event shape as the original render, under the original job_id."""
+    from services.audiobook import AudiobookPlan, Chapter, Span
+
+    # Find the requested job among the trusted filesystem scan (every path there
+    # is os.listdir-sourced, never request input) and read its manifest via the
+    # scan's own trusted path — the request job_id is used ONLY to *select* an
+    # entry, never to build a path. No request-controlled value reaches a file
+    # operation (CodeQL py/path-injection-safe).
+    entry = next((e for e in longform_resume.scan_resumable()
+                  if e["job_id"] == job_id), None)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="No resumable job for that id")
+    manifest = longform_resume.load_manifest_file(entry["manifest_path"])
+    if not manifest:
+        raise HTTPException(status_code=404, detail="No resume manifest for that job")
+
+    chapters = [
+        Chapter(title=c.get("title", ""),
+                spans=[Span(**s) for s in c.get("spans", [])])
+        for c in manifest["plan"]
+    ]
+    plan = AudiobookPlan(chapters=chapters)
+    p = manifest.get("params", {})
+    # Retire the interrupted job's manifest (trusted scan path) so it stops
+    # showing as resumable once we've kicked off the fresh-id resume.
+    longform_resume.discard_manifest_file(entry["manifest_path"])
+    # Resume under a FRESH job id (job_id=None → a server uuid in the renderer).
+    # The chapter cache is content-addressed (keyed by chapter content, not the
+    # job id), so the already-rendered chapters still hit instantly — only the
+    # unrendered ones synthesize. Using a fresh id means the request's job_id
+    # never names a work dir / output file (defence-in-depth path-injection).
+    return StreamingResponse(
+        _render_longform_sse(
+            plan, default_voice=p.get("default_voice"),
+            fmt=p.get("fmt", "m4b"), bitrate=p.get("bitrate", "128k"),
+            loudness=p.get("loudness"), cover_path=p.get("cover_path"),
+            metadata=p.get("metadata"), lexicon=p.get("lexicon"),
+            job_type=entry["job_type"],
         ),
         media_type="text/event-stream",
     )
