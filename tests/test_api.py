@@ -655,3 +655,36 @@ def test_system_info_rejects_non_loopback():
     res = non_loopback_client.get("/system/info")
     assert res.status_code == 403
     assert "loopback" in res.json().get("detail", "").lower()
+
+
+def test_static_audio_served_with_canonical_mime():
+    """Regression: `.wav` files served by `/audio` StaticFiles must come back
+    with the IANA-canonical `audio/wav` Content-Type, NOT Python's default
+    `audio/x-wav`.
+
+    The `x-` prefix is vendor-experimental and never IANA-registered. macOS
+    Chrome/Safari MIME-sniff leniently via CoreAudio so playback works there,
+    but Linux Chrome/Firefox (FFmpeg) and Android Chrome (ExoPlayer) strictly
+    honor the declared type and treat `audio/x-wav` as download-only — which
+    silently broke the play button in the web app on those platforms.
+    """
+    from pathlib import Path
+    from fastapi.testclient import TestClient
+    from main import app
+    from core.config import OUTPUTS_DIR
+
+    # Drop a wav into the real OUTPUTS_DIR — the mount serves from there.
+    tmp_wav = Path(OUTPUTS_DIR) / f"__mime_test_{uuid.uuid4().hex[:8]}.wav"
+    tmp_wav.write_bytes(make_wav_bytes(0.1))
+    try:
+        client = TestClient(app)
+        res = client.get(f"/audio/{tmp_wav.name}")
+        assert res.status_code == 200, res.text
+        ct = res.headers.get("content-type", "")
+        assert ct == "audio/wav", (
+            f"Expected audio/wav (IANA canonical), got {ct!r}. "
+            f"Linux/Android browsers reject audio/x-wav as download-only."
+        )
+    finally:
+        tmp_wav.unlink(missing_ok=True)
+
