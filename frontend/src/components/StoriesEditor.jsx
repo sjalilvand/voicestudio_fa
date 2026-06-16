@@ -26,7 +26,7 @@ import { exportStems } from '../utils/storyExport';
 import { storyToSpans } from '../utils/storyToSpans';
 import { consumeLongformStream } from '../utils/longformStream';
 import { reorder } from '../utils/storyReorder';
-import { effectiveProfile, castMember, nextCastColor } from '../utils/storyCast';
+import { effectiveProfile, effectiveSpeed, castMember, nextCastColor } from '../utils/storyCast';
 import './StoriesEditor.css';
 
 // Trigger a browser download for a Blob.
@@ -302,7 +302,7 @@ export default function StoriesEditor({ profiles = [] }) {
     const raw = (track.text || '').trim();
     if (!raw) return;
     const pid = effectiveProfile(track, cast);
-    const spd = track.speed || 1.0;
+    const spd = effectiveSpeed(track, globalSpeed);
     setTracks((prev) => prev.map((tk) => (tk.id === track.id ? { ...tk, generating: true } : tk)));
 
     if (!hasStoryMarkers(raw)) {
@@ -349,7 +349,7 @@ export default function StoriesEditor({ profiles = [] }) {
       console.warn('Stories chained preview failed:', err);
       setTracks((prev) => prev.map((tk) => (tk.id === track.id ? { ...tk, generating: false } : tk)));
     }
-  }, [fetchChunkAudio, cast, setTracks]);
+  }, [fetchChunkAudio, cast, globalSpeed, setTracks]);
 
   // Deliver a stitched WAV in the chosen format. MP3 routes through the backend
   // ffmpeg endpoint; if that fails (e.g. no ffmpeg), fall back to the raw WAV.
@@ -416,7 +416,7 @@ export default function StoriesEditor({ profiles = [] }) {
     try {
       const stems = await exportStems(
         usable,
-        (tk) => ({ profileId: effectiveProfile(tk, cast), speed: tk.speed || 1.0 }),
+        (tk) => ({ profileId: effectiveProfile(tk, cast), speed: effectiveSpeed(tk, globalSpeed) }),
         fetchChunkBlob,
         (d, total) => setExportPct(total ? Math.round((d / total) * 100) : 0),
       );
@@ -431,7 +431,7 @@ export default function StoriesEditor({ profiles = [] }) {
     } finally {
       setExporting(false);
     }
-  }, [tracks, cast, fetchChunkBlob, exporting, deliver, t]);
+  }, [tracks, cast, fetchChunkBlob, exporting, deliver, globalSpeed, t]);
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   const totalChars = tracks.reduce((acc, tk) => acc + tk.text.length, 0);

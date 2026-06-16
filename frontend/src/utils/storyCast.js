@@ -24,6 +24,18 @@ export function effectiveProfile(track, cast) {
   return (member && member.profileId) || null;
 }
 
+/**
+ * Resolve the reading speed a track should use: per-line override → the global
+ * Stories speed (#415) → null (the /generate engine default of 1.0×). Mirrors
+ * the span-speed resolution in storyToSpans (`tk.speed || gspeed || null`) so
+ * preview, stem export, and longform export all agree on one speed. A global
+ * of 1 counts as "at rest" → null, matching the export path.
+ */
+export function effectiveSpeed(track, globalSpeed) {
+  if (track && track.speed) return track.speed;
+  return (globalSpeed && globalSpeed !== 1) ? globalSpeed : null;
+}
+
 /** Find a cast member by id (falls back to the first member). */
 export function castMember(cast, id) {
   return (cast || []).find((c) => c.id === id) || (cast || [])[0] || null;
