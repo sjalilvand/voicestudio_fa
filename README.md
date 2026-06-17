@@ -377,7 +377,7 @@ OmniVoice Studio is built by one developer using Claude Code and AI agents — a
 
 **This month's agent bill fund**
 
-<img src="https://img.shields.io/badge/raised_%2410_of_%24200-5%25-FF5E5B?style=for-the-badge" alt="$10 / $200 raised" />
+<img src="https://img.shields.io/badge/raised_%2410_of_%24200-5%25-EAB308?style=for-the-badge" alt="$10 / $200 raised" />
 
 <br/><br/>
 

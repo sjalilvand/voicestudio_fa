@@ -30,11 +30,11 @@ export interface DonationProgress {
  * bump both — a test asserts the bundled fallback is well-formed.
  */
 export const BUNDLED_PROGRESS: DonationProgress = {
-  raised: 137.5,
+  raised: 10,
   goal: 200,
   currency: 'USD',
-  sponsorCount: 23,
-  updated: '2026-06-16',
+  sponsorCount: 1,
+  updated: '2026-06-17',
 };
 
 /** Where the runtime-refreshable copy lives (served from `public/`). */
