@@ -740,6 +740,20 @@ app.add_middleware(NetworkAccessMiddleware)
 # keyed non-loopback client must reach them.
 app.add_middleware(BearerKeyMiddleware)
 
+# Register canonical audio MIME types before any StaticFiles mount.
+# Python's `mimetypes.guess_type()` returns `audio/x-wav` for `.wav` and
+# `audio/x-flac` for `.flac` on most platforms — these are vendor-experimental
+# (x- prefix, never IANA-registered). macOS Chrome/Safari MIME-sniff leniently
+# via CoreAudio so playback works there, but Linux Chrome/Firefox (FFmpeg) and
+# Android Chrome (ExoPlayer) strictly honor the declared type and treat the
+# x- variants as download-only — manifesting as the play button silently
+# doing nothing in the browser app while working in the Tauri desktop shell.
+# `audio/wav` / `audio/flac` are the IANA-canonical types.
+# Ref: https://www.iana.org/assignments/media-types/media-types.xhtml#audio
+import mimetypes as _mimetypes
+_mimetypes.add_type("audio/wav",  ".wav")
+_mimetypes.add_type("audio/flac", ".flac")
+
 app.mount("/audio", StaticFiles(directory=OUTPUTS_DIR), name="audio")
 app.mount("/voice_audio", StaticFiles(directory=VOICES_DIR), name="voice_audio")
 
