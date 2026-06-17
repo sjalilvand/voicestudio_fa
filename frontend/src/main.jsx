@@ -6,6 +6,17 @@ if (import.meta.env.DEV && !window.__vite_plugin_react_preamble_installed__) {
   window.__vite_plugin_react_preamble_installed__ = true;
 }
 
+// AudioContext autoplay-policy unlock — MUST install before any module that
+// constructs an AudioContext (wavesurfer.js, the AEC tap, the dictation
+// capture, etc.). The side-effecting import patches `window.AudioContext`
+// to track every instance ever created; `installAudioUnlock()` then wires
+// a one-time pointerdown/keydown listener that resumes them all on the
+// first user gesture. Without this, Linux Firefox/Chrome and Android Chrome
+// leave WaveSurfer's AudioContext suspended → peaks decode hangs → `ready`
+// never fires → play button stays disabled → no /audio/ request ever fires.
+import { installAudioUnlock } from './utils/audioUnlock.js';
+installAudioUnlock();
+
 const { bootstrapApp } = await import('./main-app.jsx');
 
 bootstrapApp();

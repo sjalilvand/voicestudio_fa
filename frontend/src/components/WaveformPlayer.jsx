@@ -16,9 +16,10 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Play, Pause, Loader } from 'lucide-react';
+import { Play, Pause } from 'lucide-react';
 import { claimPlayback } from '../utils/playback';
 import { isTauri, fileToMediaUrl } from '../utils/media';
+import { unlockAudio } from '../utils/audioUnlock';
 import { useAppStore } from '../store';
 import './WaveformPlayer.css';
 
@@ -196,11 +197,19 @@ export default function WaveformPlayer({
     };
   }, [resolvedUrl, failed, height, source, onEnded]);
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
+    // Browser autoplay policy (Linux FF/Chrome, Android Chrome): WaveSurfer's
+    // AudioContext starts suspended until a user gesture. This click IS the
+    // gesture — explicitly resume so the subsequent play() succeeds. No-op
+    // on macOS where the context was never blocked.
+    try { await unlockAudio(); } catch { /* ignore — play() will surface errors */ }
     // playPause is async — a swallowed rejection here is exactly how the
     // "click does nothing" bug hid; log it so playback failures are visible.
-    Promise.resolve(wsRef.current?.playPause())
-      .catch((e) => console.warn('WaveformPlayer: play failed:', e));
+    try {
+      await wsRef.current?.playPause();
+    } catch (e) {
+      console.warn('WaveformPlayer: play failed:', e);
+    }
   };
 
   if (!resolvedUrl) return null;
@@ -240,12 +249,10 @@ export default function WaveformPlayer({
         type="button"
         className="wf-player__btn"
         onClick={togglePlay}
-        disabled={!ready}
+        disabled={!resolvedUrl}
         aria-label={isPlaying ? 'Pause' : 'Play'}
       >
-        {!ready
-          ? <Loader size={compact ? 13 : 15} className="wf-player__spin" />
-          : isPlaying ? <Pause size={compact ? 13 : 15} /> : <Play size={compact ? 13 : 15} />}
+        {isPlaying ? <Pause size={compact ? 13 : 15} /> : <Play size={compact ? 13 : 15} />}
       </button>
       <div className="wf-player__wave" ref={containerRef} style={{ height }} />
       <span className="wf-player__time">{fmt(currentTime)} / {fmt(duration)}</span>
