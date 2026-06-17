@@ -17,7 +17,7 @@
   <p>
     <a href="#quickstart">Quickstart</a> ·
     <a href="#features">Features</a> ·
-    <a href="#why-omnivoice-studio">Why OmniVoice Studio?</a> ·
+    <a href="#why-ovs">Why OVS</a> ·
     <a href="#tts-engines">TTS Engines</a> ·
     <a href="#asr-engines">ASR Engines</a> ·
     <a href="#sponsor--donate">Donate</a> ·
@@ -228,7 +228,7 @@ options, see [docs/downloading-models.md](docs/downloading-models.md).
 
 ---
 
-## Why OmniVoice Studio?
+## Why OVS?
 
 ElevenLabs charges **$5–$330/mo** and processes your audio on their servers. OmniVoice Studio runs **on your hardware, with no usage limits.**
 
