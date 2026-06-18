@@ -1,10 +1,11 @@
 # Engine venvs & disk usage
 
 Most engines run in-process in OmniVoice's main environment. A few
-(**IndexTTS2**, and any engine whose dependencies conflict with the parent's
-`torch`/`transformers` pins) run in a **dedicated sidecar venv** so their pins
-can't break the rest of the app. Those sidecars are where disk adds up — this
-page explains why, and how the on-disk cost is kept down.
+(**IndexTTS2**, **MOSS-TTS-v1.5**, **dots.tts**, and any engine whose
+dependencies conflict with the parent's `torch`/`transformers` pins) run in a
+**dedicated sidecar venv** so their pins can't break the rest of the app. Those
+sidecars are where disk adds up — this page explains why, and how the on-disk
+cost is kept down.
 
 ## Why a sidecar needs its own venv
 
@@ -47,6 +48,13 @@ biggest disk decision for a sidecar is therefore: **pin the same torch build as
 the parent whenever the engine allows it.** When it doesn't (IndexTTS2's
 `transformers<5` forces an older torch line), the second copy is the
 unavoidable price of isolation — not a bug.
+
+The opt-in #498 engines illustrate both sides: **dots.tts** pins
+`torch==2.8.0` — the **same** build the parent constrains to — so it shares
+almost all of torch with the main venv and only its `transformers==4.57` +
+model deps are new. **MOSS-TTS-v1.5** pins `torch==2.9.1+cu128`, a **different**
+build, so it pays a full extra multi-GB torch copy on CUDA hosts (the price of
+running an 8B model whose stack pins `transformers==5.0`).
 
 > On Linux, the `nvidia-*` CUDA packages are separate wheels, so even across
 > *different* torch versions any `nvidia-*` whose pinned version happens to

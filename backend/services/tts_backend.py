@@ -1151,6 +1151,13 @@ _LAZY_REGISTRY: dict[str, tuple[str, str]] = {
     # this module for TTSBackend). The class is resolved on first
     # attribute access via the LazyRegistry below.
     "supertonic3": ("engines.supertonic3", "Supertonic3Backend"),
+    # Issue #498: MOSS-TTS-v1.5 (8B) and dots.tts (2B) — both opt-in,
+    # subprocess-isolated with their own venv because each pins a
+    # transformers version that conflicts with the parent's >=5.3
+    # (MOSS == 5.0.0, dots.tts == 4.57.0). Same dedicated-venv pattern as
+    # IndexTTS2. Lazy for the same import-cycle reason as the entries above.
+    "moss-tts-v15": ("engines.moss_tts_v15", "MossTTSV15Backend"),
+    "dots-tts": ("engines.dots_tts", "DotsTTSBackend"),
 }
 
 
@@ -1244,6 +1251,8 @@ _INSTALL_HINTS: dict[str, str] = {
     "sherpa-onnx":   "pip install sherpa-onnx  (universal ONNX runtime, WASM-ready)",
     "omnivoice-gguf":"Bundled — runs the C++ omnivoice-tts binary in bin/. Quants download lazily from Serveurperso/OmniVoice-GGUF on first generate.",
     "supertonic3":   "uv sync --extra supertonic  (CPU-only ONNX, 31 langs, ~400 MB model on first use; OpenRAIL-M model license)",
+    "moss-tts-v15":  "git clone OpenMOSS/MOSS-TTS + set OMNIVOICE_MOSS_TTS_V15_DIR  (own venv, transformers==5.0; 8B, ~16 GB weights; CUDA/CPU, no MPS; Apache-2.0)",
+    "dots-tts":      "git clone rednote-hilab/dots.tts + set OMNIVOICE_DOTS_TTS_DIR  (own venv, transformers==4.57; 2B, ~9 GB weights; CUDA/CPU, Linux/macOS only — no Windows; Apache-2.0)",
 }
 
 

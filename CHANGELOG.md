@@ -8,6 +8,19 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ## [Unreleased]
 
+### Added
+
+- **Two opt-in heavyweight TTS engines: MOSS-TTS-v1.5 (8B) and dots.tts (2B).**
+  Both are zero-shot voice-cloning engines added per [#498](https://github.com/debpalash/OmniVoice-Studio/issues/498),
+  running in their own isolated subprocess venv (each pins a `transformers`
+  version that conflicts with the parent's `>=5.3` — MOSS `==5.0`, dots.tts
+  `==4.57`) via the same dedicated-venv pattern as IndexTTS-2. Point
+  `OMNIVOICE_MOSS_TTS_V15_DIR` / `OMNIVOICE_DOTS_TTS_DIR` at a local clone to
+  enable. CUDA/CPU only — neither claims Apple-Silicon MPS; dots.tts upstream
+  is Linux/macOS only (gated off on Windows). No change to the default install
+  or its lockfile. See [docs/engines/moss-tts-v15.md](docs/engines/moss-tts-v15.md)
+  and [docs/engines/dots-tts.md](docs/engines/dots-tts.md). (#498)
+
 ### Fixed
 
 - **Audio playback on Linux Firefox/Chrome and Android Chrome.** Two separate
