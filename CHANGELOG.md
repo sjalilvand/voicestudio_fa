@@ -27,6 +27,16 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
   contact — less wall-of-text, faster to act on.
 ### Fixed
 
+- **Dubbing a YouTube URL no longer dies on a transient "Broken pipe."**
+  Pasting a video link could fail outright with `download: Unable to download
+  video: [Errno 32] Broken pipe` — a broken pipe raised while the write side of
+  a pipe closes mid-stream (a killed ffmpeg merge child, a CDN reset during
+  muxing). yt-dlp's own per-fragment retries don't cover that case, so a single
+  transient blip aborted the whole ingest. The URL download now retries up to
+  twice on broken-pipe / network-drop failures, wiping the partial download
+  between attempts, and only surfaces the (already-actionable) "connection
+  dropped — just retry" hint after the retries are exhausted. Unsupported links
+  still fail fast with their own hint — no wasted retries. (#579, #598)
 - **`No module named 'omnivoice'` on installs whose venv lost its editable
   record.** An interrupted or offline `uv sync` (common during an in-place
   upgrade) could install all dependencies yet never lay the editable install of
