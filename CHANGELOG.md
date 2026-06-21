@@ -27,6 +27,17 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
   contact — less wall-of-text, faster to act on.
 ### Fixed
 
+- **An interrupted model download now self-repairs instead of dead-ending.**
+  When the OmniVoice TTS cache was missing weight shards (the usual aftermath of
+  an interrupted first download), the next synthesize failed with a 500 and a
+  "delete the model and install it again" instruction — a manual dead-end. The
+  backend now detects the truncated-cache error on load, re-fetches just the
+  missing files via `snapshot_download` (already-present blobs are skipped, so a
+  near-complete cache repairs in seconds and a healthy cache is never touched),
+  and retries the load automatically. Offline mode (`HF_HUB_OFFLINE`) is
+  respected — repair never makes a network call the user opted out of — and if
+  the re-fetch still can't fix it, the actionable delete-and-reinstall message
+  is preserved as the fallback. (#581)
 - **Dubbing a YouTube URL no longer dies on a transient "Broken pipe."**
   Pasting a video link could fail outright with `download: Unable to download
   video: [Errno 32] Broken pipe` — a broken pipe raised while the write side of
