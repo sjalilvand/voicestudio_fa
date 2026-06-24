@@ -6,21 +6,44 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 Versions track the desktop app (`tauri.conf.json` + `frontend/src-tauri/Cargo.toml`).
 The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
-## [Unreleased]
-
 ## [0.3.8] — 2026-06-24
 
-A stability-focused release that makes first-run and Windows "just work." It
-clears the wave of **"Can't reach the local backend"** reports at the source —
-the 8 GB-card OOM crash, the slow-load future-scheduling break, a Windows-only
-WhisperX load failure, and transcription stalls that *looked* like a dead backend
-are all fixed or now fail with a clear, actionable message. Downloads are faster
-out of the box (parallel segmented transfer on by default) and the Hugging Face
-token that speeds them up is front-and-center on setup. Plus first-run polish,
-faster long-form previews on Windows, multi-voice story casting, and a friendlier
-batch of error messages across dub, generate, and design.
+A stability-focused release that makes first-run and Windows "just work" — and
+ships **live, faster-than-real-time local dictation**. It clears the wave of
+**"Can't reach the local backend"** reports at the source — the 8 GB-card OOM
+crash, the slow-load future-scheduling break, a Windows-only WhisperX load
+failure, and transcription stalls that *looked* like a dead backend are all
+fixed or now fail with a clear, actionable message. Downloads are faster out of
+the box (parallel segmented transfer on by default) and the Hugging Face token
+that speeds them up is front-and-center on setup. Plus first-run polish, faster
+long-form previews on Windows, multi-voice story casting, and a friendlier batch
+of error messages across dub, generate, and design.
 
 ### Added
+
+- **Live, faster-than-real-time dictation via a new sherpa-onnx ASR engine.**
+  Pick one of seven small ONNX speech-to-text models (Parakeet TDT v3/v2,
+  streaming Zipformer EN/ZH/bilingual, streaming Paraformer, multilingual
+  Whisper Tiny) for dictation, and watch text appear *as you speak*. Streaming
+  models emit partials frame-by-frame and commit a sentence on natural silence;
+  offline models surface live partials too by re-decoding a growing buffer.
+  Runs CPU-only and identically on macOS, Windows, and Linux — no GPU, no cloud,
+  no extra setup beyond a ~75–180 MB one-time model download. Parakeet TDT v3 is
+  the recommended default; existing Whisper/MLX/NeMo dictation engines are
+  untouched and still the fallback.
+
+- **New "Voice" settings panel for live dictation.** Settings → Capture now
+  leads with a Voice card: an Enable Voice Dictation toggle (showing your real
+  registered shortcut), a Toggle/Hold mode switch, and a Speech Model dropdown
+  that lists all seven models with offline/streaming + recommended badges, size,
+  one-line descriptions, the installed checkmark, and inline download/delete —
+  reusing the model-store download progress. Picking an uninstalled model starts
+  its download and switches to it once ready. **Toggle vs Hold** is wired for
+  both the desktop global hotkey and the in-app Ctrl/Cmd+Shift+Space fallback, so
+  the behaviour is identical on macOS, Windows, and Linux. While you speak, the
+  dictation pill shows the transcript building **live**, and words type straight
+  into the focused field *as you speak* — self-correcting with backspaces as the
+  streaming recognizer refines, with clipboard-paste as an automatic fallback.
 
 - **Tagged scripts auto-cast into a multi-voice podcast/audiobook.** Paste a
   `[Alice] … [Bob] …` script into Stories and hit Auto-cast: it now recognizes
