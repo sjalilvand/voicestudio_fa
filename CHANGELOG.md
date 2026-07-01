@@ -10,6 +10,14 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
+- **Parakeet TDT transcription now works without an NVIDIA GPU.** The
+  `nemo-parakeet` ASR engine (parakeet-tdt-0.6b-v3, 25 languages, word
+  timestamps) was hard-gated behind CUDA — but a live measurement on an Apple
+  Silicon M2 shows it transcribing at ~10× realtime *on CPU*, roughly 20×
+  faster than the default whisper-large-v3 on the same machine at equal
+  accuracy. The false GPU gate is removed, so Mac and CPU-only users can now
+  pick the dramatically faster engine in Settings → Engines.
+
 - **8 GB GPUs: voice-clone/dub transcription no longer kills the backend.**
   On cards where the TTS model already held most of the VRAM (e.g. RTX
   4060 Ti 8 GB), loading whisper `large-v3` in float16 for a reference-clip
