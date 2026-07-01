@@ -177,6 +177,16 @@ across dub, generate, and design (a corrupt-binary failure no longer poses as
   Closes the whole class of GPU-job-hang reports (#851 — #850, #802, #755, #723,
   #721, and the 0.3.7 cohort, all tracked in #730).
 
+- **An unsupported GPU now falls back to CPU instead of 500-ing every generate.**
+  When the installed PyTorch build has no kernels for your GPU's compute
+  capability — a too-old card (Pascal / GTX 10-series) or a too-new one
+  (Blackwell RTX 50-series on pre-cu128 wheels) — CUDA failed at launch with the
+  cryptic `CUDA error: no kernel image is available for execution`. The backend
+  now detects that up front and runs on CPU (slower, but it works), and any raw
+  occurrence is reported as "your GPU isn't supported — switch to CPU or install a
+  matching PyTorch," not a Flush-the-memory dead end. Force the GPU anyway with
+  `OMNIVOICE_FORCE_CUDA=1`. (#756)
+
 - **The "TRANSLATION FAILED" banner now dismisses and clears itself.** The Dub
   translation-error banner used to be sticky — it survived a successful re-try and
   never went away. It now has a close (×), auto-clears on the next corrective
