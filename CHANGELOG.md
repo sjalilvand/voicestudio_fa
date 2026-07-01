@@ -10,6 +10,17 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
+- **Confucius4-TTS is now validated end-to-end — and actually loads.** The
+  opt-in engine's first live run (Apple Silicon, CPU) caught three
+  scaffold-era faults: the sidecar could never import `confuciustts` (upstream
+  ships no packaging, so the documented `pip install -e` fails — the sidecar
+  and bootstrap probe now put the clone on `sys.path`, like upstream's own
+  example), the assumed 24 kHz sample rate was wrong (confirmed **22 050 Hz**,
+  now regression-tested), and the docs demanded an Amphion/MaskGCT install
+  that doesn't exist (all weights auto-download from HuggingFace). CPU is
+  ~17× realtime, so CUDA stays the recommended path; `gpu_compat` now
+  advertises `("cuda", "cpu")`. (#590)
+
 - **Parakeet TDT transcription now works without an NVIDIA GPU.** The
   `nemo-parakeet` ASR engine (parakeet-tdt-0.6b-v3, 25 languages, word
   timestamps) was hard-gated behind CUDA — but a live measurement on an Apple
