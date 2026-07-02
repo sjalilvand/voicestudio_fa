@@ -21,8 +21,10 @@ def _req(**kw):
 
 def test_auto_extract_no_llm_points_at_llm_providers(monkeypatch):
     from api.routers import glossary
-    from services import translator
-    monkeypatch.setattr(translator, "_llm_client", lambda: None)
+    from services import llm_skills
+    # Auto-extract resolves its client through the LLM Skills registry
+    # (glossary_extract skill). None == disabled / no provider configured.
+    monkeypatch.setattr(llm_skills, "resolve_skill_client", lambda sid: None)
 
     req = _req(target_lang="es", segments=[{"text": "Hello Marcus"}])
     with pytest.raises(HTTPException) as ei:
@@ -37,7 +39,7 @@ def test_auto_extract_no_llm_points_at_llm_providers(monkeypatch):
 
 def test_auto_extract_scrubs_provider_error(monkeypatch):
     from api.routers import glossary
-    from services import translator
+    from services import llm_skills
 
     secret = "sk-LEAKLEAKLEAKLEAKLEAK12345"
     home = "/Users/alice/videos"
@@ -52,9 +54,15 @@ def test_auto_extract_scrubs_provider_error(monkeypatch):
     class _Client:
         chat = _Chat()
 
-    monkeypatch.setattr(translator, "_llm_client", lambda: _Client())
-    monkeypatch.setattr(translator, "_llm_model", lambda: "m")
-    monkeypatch.setattr(translator, "_llm_timeout", lambda: 1.0)
+    # A resolved skill client whose provider call blows up — glossary uses
+    # handle.client / handle.model / handle.timeout (llm_skills.SkillClient
+    # shape) after routing through the glossary_extract skill.
+    class _Handle:
+        client = _Client()
+        model = "m"
+        timeout = 1.0
+
+    monkeypatch.setattr(llm_skills, "resolve_skill_client", lambda sid: _Handle())
 
     req = _req(target_lang="es", segments=[{"text": "Hello Marcus"}])
     with pytest.raises(HTTPException) as ei:

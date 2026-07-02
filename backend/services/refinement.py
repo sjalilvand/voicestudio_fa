@@ -304,6 +304,19 @@ REFINEMENT_EXAMPLES: list[tuple[str, str]] = [
 # settings_store key holding the user's refinement config (plain JSON).
 _SETTINGS_KEY = "dictation_refinement"
 
+# LLM Skills registry id — Settings → LLM Skills can disable refinement's LLM
+# use or route it to a specific provider. Disabled == identical pass-through
+# (the same path as "no LLM configured").
+_SKILL_ID = "dictation_refinement"
+
+
+def _skill_llm():
+    """The skill-resolved backend (OffBackend when disabled/unconfigured)."""
+    from services import llm_skills
+    from services.llm_backend import get_active_llm_backend
+
+    return llm_skills.skill_backend(_SKILL_ID, active=get_active_llm_backend)
+
 
 def get_refinement_config() -> dict:
     """Read the persisted config: {auto, smart_cleanup, self_correction,
@@ -342,10 +355,8 @@ def refine_transcript(
     The LLM HTTP call is bounded by ``timeout_s`` (default: the refinement
     budget) so a dead/slow endpoint can't tie the call up for the client's full
     45s LLM timeout — the class of stall this whole module guards against."""
-    from services.llm_backend import get_active_llm_backend
-
     flags = flags or RefinementFlags()
-    backend = get_active_llm_backend()
+    backend = _skill_llm()
     messages = [{"role": "system", "content": build_refinement_prompt(flags)}]
     for user_turn, assistant_turn in REFINEMENT_EXAMPLES:
         messages.append({"role": "user", "content": user_turn})
@@ -372,11 +383,11 @@ def maybe_refine(transcript: str, *, timeout_s: float | None = None) -> str | No
     cfg = get_refinement_config()
     if not cfg.get("auto", True):
         return None
-    from services.llm_backend import get_active_llm_backend
-
-    backend = get_active_llm_backend()
+    backend = _skill_llm()
     if backend.id == "off":
-        # No LLM configured is not a failure — leave the last status untouched.
+        # No LLM configured — or the dictation_refinement skill is disabled /
+        # routed to an unconfigured provider — is not a failure. Leave the last
+        # status untouched (same pass-through as today).
         return None
     try:
         refined = refine_transcript(
