@@ -40,6 +40,18 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
+- **CUDA transcription now works on packaged NVIDIA installs — the cuDNN 8
+  compat libraries install automatically at launch.** The install step only
+  existed in the dev-loop `scripts/setup.py`, which isn't bundled into the
+  packaged app, so real installs never got the libs and WhisperX /
+  faster-whisper failed with `Could not locate cudnn_ops_infer64_8.dll`. The
+  Rust bootstrap now side-loads them on CUDA machines; CPU/AMD/ROCm boxes skip
+  the download and cache the result so their launches stay instant. (#827, #869)
+- **`scripts/setup.py` no longer fails with `No module named pip` when
+  installing the cuDNN 8 libs in the dev loop.** `uv venv` doesn't seed pip
+  into the venv, so `python -m pip install` always broke; the script now uses
+  `uv pip install --python` instead. (#869)
+
 - **Buttons can no longer hide under the logs footer on small windows.** The
   bottom status/logs bar was a fixed overlay that pages had to compensate for
   with padding — any view that missed it (voice-card grids in Gallery and
