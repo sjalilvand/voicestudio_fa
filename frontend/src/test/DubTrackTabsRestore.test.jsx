@@ -30,7 +30,10 @@ vi.mock('../components/dub/DubPipelineStepper', () => ({ default: () => null }))
 vi.mock('../components/dub/IdleSkeleton', () => ({ default: () => null }));
 vi.mock('../components/ExportModal', () => ({ default: () => null }));
 vi.mock('../hooks/useTimelineOnsets', () => ({ default: () => ({ onsets: [] }) }));
-vi.mock('../api/dub', () => ({ dubQc: vi.fn(), dubListTracks: vi.fn(() => new Promise(() => {})) }));
+vi.mock('../api/dub', () => ({
+  dubQc: vi.fn(),
+  dubListTracks: vi.fn(() => new Promise(() => {})),
+}));
 // Never-resolving async deps keep the render synchronous (no post-test act noise).
 vi.mock('../api/engines', () => ({
   listTranslationEngines: vi.fn(() => new Promise(() => {})),

@@ -101,9 +101,7 @@ describe('DubLeftColumn — track pill tooltips (P0.2)', () => {
     );
 
     expect(dubListTracks).toHaveBeenCalledWith('job1');
-    await waitFor(() =>
-      expect(pill).toHaveAttribute('title', 'Duration 72s · Timing Smart Fit'),
-    );
+    await waitFor(() => expect(pill).toHaveAttribute('title', 'Duration 72s · Timing Smart Fit'));
   });
 
   it('is failure-silent: a failed metadata fetch leaves the pills fully usable', async () => {
