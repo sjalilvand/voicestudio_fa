@@ -20,6 +20,11 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - **Voice Gallery errors now say what actually went wrong.** "Use voice", "Preview", search, upload, save, delete, and trim in the Gallery all showed the same hardcoded guess ("the engine may be loading") on ANY failure — a 500, a validation error, a genuinely unrelated bug — discarding the real, already-clean backend error message in the process. Every one of those now shows the actual error.
 - **Voice cloning on mlx-audio's CSM model no longer crashes with an opaque "list index out of range".** `MLXAudioBackend.generate()` read `voice`/`ref_audio`/`language`/`speed` from its kwargs but silently dropped `ref_text` — CSM only builds its cloning context when both `ref_audio` and `ref_text` are present, so cloning on this engine could never have worked as shipped. Reported with the exact root cause and a working fix. (#1012, #1013)
 - **A dub segment's free-text style tags no longer 400 the segment preview.** A validator-safe instruct builder already keeps Studio and Clone generation from round-tripping a 400 on unsupported free-text (a preset's raw attrs, an old profile's stray descriptive phrase) — but the Dub tab's segment preview, and saving a profile from a clone or from history, built their instruct strings directly and skipped it. Same guard now applies everywhere an instruct string is sent. (#1010)
+- **The dub editor's play button no longer sticks permanently disabled after an audio-decode hiccup.** When the initial WaveSurfer decode fails, the timeline falls back to loading pre-computed peaks — the waveform draws fine, but the button's enabled state only relied on the `ready` event firing again for that recovery load, which it didn't reliably do. Each fallback path now confirms readiness explicitly once it settles.
+
+### Changed
+
+- **Removed the donate heart from the nav rail.** Support OmniVoice is still one click away from Settings and the Contact page.
 
 ## [0.3.12] — 2026-07-08
 
