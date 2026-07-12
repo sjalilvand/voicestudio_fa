@@ -10,6 +10,8 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Added
 
+- **Generated speech starts playing on the first chunk, instead of after the last one.** Long text is synthesized in chunks, but you used to sit through the entire render before hearing anything. The Studio now streams the preview: audio begins the moment the first chunk is ready and the rest arrives as it renders, so a long passage is audible in about the time the first sentence takes. The take saved to your history is **byte-identical** to the non-streaming render — streaming is a delivery channel, not a different synthesis path — and if a stream fails mid-flight the app falls back to the classic whole-file flow with nothing half-written to disk. (#1088)
+
 - **A clean uninstaller + a straight answer to "where's my data?"** OmniVoice is fully local, so removing it is just deleting the folders it wrote — but until now users had to guess which ones. New `scripts/uninstall.sh` (macOS/Linux) and `scripts/uninstall.ps1` (Windows) find every OmniVoice folder — app data, the multi-GB managed Python env, config, logs, and (separately, because it's shared) the Hugging Face model cache — print each with its size as a **dry-run first**, and delete only on `--yes`. They honor your custom locations (`OMNIVOICE_DATA_DIR`, `HF_HOME`, portable mode) and never touch the app binary. The complete per-platform path list lives in the new `docs/install/uninstall.md`, linked from the README FAQ, SUPPORT, and troubleshooting. (#1089)
 
 ### Fixed
