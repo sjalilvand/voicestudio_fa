@@ -6,6 +6,8 @@ import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor, Executor
 
+from utils.containment import contain_system_exit
+
 # ── Lazy imports ─────────────────────────────────────────────────────
 # torch and OmniVoice are heavy (~2-3s import on Apple Silicon).
 # Deferring them until first use cuts cold start from ~4s to ~1.5s,
@@ -236,7 +238,7 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
     """
     loop = asyncio.get_running_loop()
     ex = executor if executor is not None else _get_gpu_pool()
-    fut = loop.run_in_executor(ex, fn)
+    fut = loop.run_in_executor(ex, contain_system_exit(fn, what))
     try:
         return await asyncio.wait_for(fut, timeout=timeout)
     except asyncio.TimeoutError:
