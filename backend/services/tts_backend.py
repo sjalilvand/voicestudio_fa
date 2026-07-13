@@ -301,19 +301,25 @@ _prompt_cache: "OrderedDict[tuple, object]" = OrderedDict()
 _prompt_cache_lock = threading.Lock()
 
 
-def _clone_prompt_key(ref_audio: str, ref_text):
+def _clone_prompt_key(ref_audio: str, ref_text, preprocess_prompt: bool = True):
     try:
         mtime = os.path.getmtime(ref_audio)
     except OSError:
         mtime = 0.0
-    return (os.path.abspath(ref_audio), mtime, ref_text or "")
+    # preprocess_prompt is part of the key: it changes the encoded prompt
+    # (silence removal + trimming + ref-text punctuation, omnivoice.py:675/722),
+    # so a False request must not be served a True-encoded prompt — or poison
+    # the cache for the True callers. /generate never sets it (always the True
+    # default); /v1/audio/speech exposes it.
+    return (os.path.abspath(ref_audio), mtime, ref_text or "", bool(preprocess_prompt))
 
 
-def _get_clone_prompt(model, ref_audio: str, ref_text):
-    """Return a cached/precomputed ``VoiceClonePrompt`` for (ref_audio, ref_text),
-    or ``None`` to fall back to the inline ref path. Never raises."""
+def _get_clone_prompt(model, ref_audio: str, ref_text, preprocess_prompt: bool = True):
+    """Return a cached/precomputed ``VoiceClonePrompt`` for
+    (ref_audio, ref_text, preprocess_prompt), or ``None`` to fall back to the
+    inline ref path. Never raises."""
     try:
-        key = _clone_prompt_key(ref_audio, ref_text)
+        key = _clone_prompt_key(ref_audio, ref_text, preprocess_prompt)
     except Exception:
         return None
     with _prompt_cache_lock:
@@ -322,9 +328,11 @@ def _get_clone_prompt(model, ref_audio: str, ref_text):
             _prompt_cache.move_to_end(key)
             return hit
     try:
-        # Encode outside the lock (slow); default preprocess matches the inline
-        # ref_audio path's preprocessing.
-        prompt = model.create_voice_clone_prompt(ref_audio, ref_text=ref_text)
+        # Encode outside the lock (slow). Mirrors exactly what generate() would
+        # do inline for this ref (omnivoice.py:964-978), so output is identical.
+        prompt = model.create_voice_clone_prompt(
+            ref_audio, ref_text=ref_text, preprocess_prompt=preprocess_prompt
+        )
     except Exception as e:  # noqa: BLE001 — fall back, never break synthesis
         logger.warning("voice-clone prompt precompute failed; using inline ref: %s", e)
         return None
@@ -336,11 +344,50 @@ def _get_clone_prompt(model, ref_audio: str, ref_text):
     return prompt
 
 
+def generate_with_cached_ref(model, *, ref_audio, ref_text, **gen_kw):
+    """``model.generate()`` with the reference clip encoded once, not once per call.
+
+    The native (non-adapter) callers of the OmniVoice model — ``/generate`` and its
+    streaming twin, and the audiobook/long-form renderer — used to pass
+    ``ref_audio=<path>`` straight through, so the codec encoder re-ran the reference
+    on **every generate call**: once per chunk, per pause-span, and per audiobook
+    segment, not merely once per request. The prompt cache below (#427/#473) existed
+    the whole time but only ``OmniVoiceBackend`` (the adapter path) ever called it,
+    and the default engine doesn't take that path.
+
+    This is the one place that knows the rule, so it can't be re-broken piecemeal:
+    ``voice_clone_prompt`` and ``ref_audio``/``ref_text`` are **mutually exclusive** —
+    pass both and the model warns and ignores the latter (omnivoice.py:957).
+
+    The cache is **best-effort, never load-bearing**: if the prompt can't be built,
+    or the model rejects the one we built, we fall back to the inline reference and
+    synthesize exactly as before. A latency optimization must never be able to turn
+    a generation that would have succeeded into an error.
+    """
+    # Stays in gen_kw too: the model needs it on the inline branch, and it is inert
+    # on the prompt branch (that prompt is already encoded).
+    preprocess_prompt = bool(gen_kw.get("preprocess_prompt", True))
+    prompt = _get_clone_prompt(model, ref_audio, ref_text, preprocess_prompt) if ref_audio else None
+    if prompt is not None:
+        try:
+            return model.generate(voice_clone_prompt=prompt, **gen_kw)
+        except Exception as e:  # noqa: BLE001 — fall back to the inline ref
+            logger.warning("voice_clone_prompt generate failed; retrying inline ref: %s", e)
+    return model.generate(ref_audio=ref_audio, ref_text=ref_text, **gen_kw)
+
+
 def clear_clone_prompt_cache() -> None:
     """Drop all cached voice-clone prompts (frees their tensors). Called on model
     unload so a flush/engine-switch doesn't strand VRAM."""
     with _prompt_cache_lock:
         _prompt_cache.clear()
+
+
+# NB: model_manager.release_tts_side_caches() calls clear_clone_prompt_cache()
+# above whenever it drops the TTS model — the prompts belong to that model
+# instance and an "unload" that leaves them behind isn't an unload (#1119). It
+# reaches this module through sys.modules rather than importing it, so there is
+# no import cycle and no import-time side effect here.
 
 
 class OmniVoiceBackend(TTSBackend):
@@ -414,22 +461,17 @@ class OmniVoiceBackend(TTSBackend):
             denoise=kw.get("denoise", True),
             postprocess_output=kw.get("postprocess_output", True),
         )
-        # #427: when cloning from a reference file, reuse a cached voice-clone
-        # prompt so the reference isn't re-encoded every call. Any failure in the
-        # prompt path falls back to the inline ref — output is identical either
-        # way (the model documents the two as equivalent); this only saves the
-        # repeated encode. The design/instruct path (no ref_audio) is untouched.
-        audios = None
-        if ref_audio:
-            prompt = _get_clone_prompt(self._model, ref_audio, ref_text)
-            if prompt is not None:
-                try:
-                    audios = self._model.generate(voice_clone_prompt=prompt, **gen_kw)
-                except Exception as e:  # noqa: BLE001 — fall back to the inline ref
-                    logger.warning("voice_clone_prompt generate failed; retrying inline ref: %s", e)
-                    audios = None
-        if audios is None:
-            audios = self._model.generate(ref_audio=ref_audio, ref_text=ref_text, **gen_kw)
+        # /v1/audio/speech exposes preprocess_prompt (openai_compat.py) and it
+        # used to be dropped on the floor here — the API accepted it and gen_kw
+        # never carried it, so it silently did nothing.
+        gen_kw["preprocess_prompt"] = bool(kw.get("preprocess_prompt", True))
+        # The cached-reference path lives in generate_with_cached_ref, shared with
+        # the native callers. Deliberately NOT a second copy: this logic living in
+        # one place here and a subtly different one there is exactly how the cache
+        # came to be wired into the adapter and nowhere else.
+        audios = generate_with_cached_ref(
+            self._model, ref_audio=ref_audio, ref_text=ref_text, **gen_kw
+        )
         return audios[0]
 
     def unload(self) -> None:
