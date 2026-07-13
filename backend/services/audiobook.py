@@ -22,8 +22,35 @@ ingestion, the streaming synth job + UI are deferred follow-ups.
 
 from __future__ import annotations
 
+import zlib
 from dataclasses import dataclass, field
 from typing import Callable, Optional
+
+
+def segment_seed(base_seed: int, text: str) -> int:
+    """Deterministic RNG seed for one longform synthesis call (#1139).
+
+    A voice profile's pinned ``seed`` (locked takes, design profiles) makes
+    ``/generate`` reproducible, but the longform path used to fetch the seed
+    and never apply it — book renders were unseeded, so a profile pinned for
+    consistency still drifted between fresh renders. Deriving the per-call
+    seed from ``base_seed`` + a CRC of the chunk text mirrors ``/generate``'s
+    per-chunk decorrelation (``used_seed + i``) while staying order- and
+    cache-independent: a partially cached chapter re-renders its missing
+    segments with the exact seeds a full render would have used. Pure —
+    torch-free — so the router's synth wrappers stay unit-testable.
+
+    Text-keyed on purpose: identical repeated lines get identical takes.
+    That is already the longform pipeline's shipped semantic — the
+    content-addressed SegmentCache (longform_render.segment_cache_key hashes
+    text + voice sig, not position) replays one WAV for every identical span
+    — and it only applies when the user pinned a seed, i.e. asked for
+    reproducibility. Position-based keys would break it: inserting one
+    paragraph would shift every later span's seed, so a partial re-render
+    after an edit would no longer match the original render.
+    """
+    return (int(base_seed) + zlib.crc32(text.encode("utf-8"))) % (2**31)
+
 
 @dataclass
 class Span:
