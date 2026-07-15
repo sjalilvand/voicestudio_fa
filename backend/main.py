@@ -1070,14 +1070,13 @@ app.include_router(_mcp_bindings_router.router)  # Wave 2.2 per-agent voice bind
 # without it never breaks startup.
 if os.environ.get("OMNIVOICE_MCP_DISABLE", "").strip().lower() not in ("1", "true", "yes", "on"):
     try:
-        from mcp_server import create_mcp_server
+        from mcp_server import mount_mcp
 
-        _mcp = create_mcp_server()
-        _mcp_app = _mcp.streamable_http_app()
-        app.state.mcp_session_manager = _mcp.session_manager
-        app.mount("/mcp", _mcp_app)
-        logging.getLogger("omnivoice.api").info("MCP app mounted at /mcp")
-    except Exception as _mcp_err:  # noqa: BLE001
+        mount_mcp(app)
+    except (Exception, SystemExit) as _mcp_err:  # noqa: BLE001
+        # SystemExit included (#1156): sys.exit from the MCP layer is a
+        # BaseException and used to escape `except Exception`, killing the
+        # backend with exit code 1 instead of degrading to "/mcp disabled".
         logging.getLogger("omnivoice.api").info(
             "MCP server not mounted (%s); /mcp disabled.", _mcp_err
         )

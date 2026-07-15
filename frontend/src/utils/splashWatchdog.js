@@ -141,3 +141,55 @@ export function startSplashWatchdog({
     },
   };
 }
+
+/**
+ * Poll GET /health until it answers OK, then fire onHealthy exactly once.
+ *
+ * Used by the splash's `failed` stage (#1156): `failed` used to be fully
+ * terminal — the IPC poll loop stopped and the successful IPC reply had
+ * already disarmed the #879 watchdog — so a backend that came back on its
+ * own (supervisor restart, completed dependency repair) could never dismiss
+ * the "Setup failed" card. This poller is that missing exit.
+ */
+export function startHealthRecoveryPoll({
+  healthUrl,
+  onHealthy,
+  fetchFn,
+  healthPollMs = HEALTH_POLL_MS,
+}) {
+  const doFetch = fetchFn || ((...args) => fetch(...args));
+  let done = false;
+  let pollTimer = null;
+
+  const poll = async () => {
+    if (done) return;
+    let healthy = false;
+    try {
+      const res = await doFetch(healthUrl, {
+        cache: 'no-store',
+        signal:
+          typeof AbortSignal !== 'undefined' && AbortSignal.timeout
+            ? AbortSignal.timeout(healthPollMs)
+            : undefined,
+      });
+      healthy = !!res && res.ok;
+    } catch {
+      healthy = false;
+    }
+    if (done) return;
+    if (healthy) {
+      done = true;
+      onHealthy();
+      return;
+    }
+    pollTimer = setTimeout(poll, healthPollMs);
+  };
+  pollTimer = setTimeout(poll, healthPollMs);
+
+  return {
+    cancel() {
+      done = true;
+      if (pollTimer) clearTimeout(pollTimer);
+    },
+  };
+}

@@ -30,17 +30,25 @@ logger = logging.getLogger("omnivoice.mcp")
 
 def _ensure_mcp():
     """Import `mcp` SDK lazily so the rest of the backend doesn't pay
-    for the import unless the MCP server is actually started."""
+    for the import unless the MCP server is actually started.
+
+    Raises ImportError (never SystemExit — #1156: a sys.exit here escaped
+    main.py's best-effort `except Exception` and killed the whole backend
+    on startup). The message carries the underlying error because the
+    import can fail with the package present — e.g. a broken pywin32
+    transitive import on Windows — and "not installed" was a misdiagnosis.
+    """
     try:
         from mcp.server.fastmcp import FastMCP  # noqa: F811
         return FastMCP
-    except ImportError:
-        logger.error(
-            "MCP SDK not installed. Install with:\n"
-            "  pip install 'mcp[cli]'\n"
-            "Then re-run this module."
+    except ImportError as e:
+        msg = (
+            f"MCP SDK import failed ({e}). The `mcp` package ships with the "
+            "app environment — the launcher's Clean & Retry (or `uv sync`) "
+            "reinstalls it. For a standalone run: pip install 'mcp[cli]'."
         )
-        sys.exit(1)
+        logger.error(msg)
+        raise ImportError(msg) from e
 
 
 def create_mcp_server():
@@ -248,6 +256,27 @@ def create_mcp_server():
     return mcp
 
 
+def mount_mcp(app) -> bool:
+    """Best-effort sub-mount of the MCP Streamable-HTTP app at /mcp.
+
+    Returns True on success, False on any failure. Contains SystemExit as
+    well as Exception (#1156): an integration dependency written as a CLI
+    can call sys.exit, and that must degrade to "/mcp disabled" — never
+    take down backend startup (same exit-containment class as the engine
+    boundary, #1143).
+    """
+    try:
+        mcp = create_mcp_server()
+        mcp_app = mcp.streamable_http_app()
+        app.state.mcp_session_manager = mcp.session_manager
+        app.mount("/mcp", mcp_app)
+        logger.info("MCP app mounted at /mcp")
+        return True
+    except (Exception, SystemExit) as err:  # noqa: BLE001
+        logger.info("MCP server not mounted (%s); /mcp disabled.", err)
+        return False
+
+
 # ── CLI entrypoint ──────────────────────────────────────────────────────
 
 def main():
@@ -262,7 +291,13 @@ def main():
     )
     args = parser.parse_args()
 
-    mcp = create_mcp_server()
+    try:
+        mcp = create_mcp_server()
+    except ImportError as e:
+        # Standalone run: a missing SDK is fatal, and a nonzero exit is the
+        # right contract for a CLI (the embedded path uses mount_mcp above).
+        logger.error("%s", e)
+        sys.exit(1)
 
     if args.sse:
         logger.info("Starting MCP server on SSE transport, port %d", args.port)

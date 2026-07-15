@@ -30,7 +30,7 @@ import { useTranslation } from 'react-i18next';
 import i18n, { LANGUAGES } from '../i18n';
 import { useAppStore } from '../store';
 import { getApiBase } from '../utils/apiBase';
-import { startSplashWatchdog } from '../utils/splashWatchdog';
+import { startSplashWatchdog, startHealthRecoveryPoll } from '../utils/splashWatchdog';
 import { Button, Progress, Select } from '../ui';
 
 // First-run only: keep the setup screen out of the main bundle so every
@@ -832,6 +832,23 @@ export function useBootstrapStage(pollMs = 1000) {
     let cancelled = false;
     let timer = null;
     let misses = 0;
+    // #1156: `failed` is terminal for the IPC poll loop, and by then the
+    // successful IPC reply has disarmed the #879 watchdog — so nothing was
+    // left to notice the backend coming back (supervisor restart, finished
+    // repair) and the "Setup failed" card trapped the user until a manual
+    // reload. On entering `failed`, poll /health over plain HTTP and
+    // auto-dismiss to the app the moment the backend answers.
+    let failedRecovery = null;
+    const startFailedRecovery = () => {
+      if (failedRecovery || cancelled) return;
+      failedRecovery = startHealthRecoveryPoll({
+        healthUrl: `${getApiBase()}/health`,
+        onHealthy: () => {
+          if (cancelled) return;
+          setState({ stage: 'ready', message: null });
+        },
+      });
+    };
     // IPC watchdog (#879): the poll loop below rides entirely on Tauri IPC.
     // After an unclean shutdown, a corrupted WebView cache can break BOTH the
     // IPC custom protocol and its postMessage fallback — `invoke()` then hangs
@@ -913,12 +930,14 @@ export function useBootstrapStage(pollMs = 1000) {
                   `Check the log below, then Retry. If you're running from source, make sure ` +
                   `\`uv sync\` completed and uv/Python are on your PATH.`,
               });
-              return; // stop polling — failed is terminal
+              startFailedRecovery();
+              return; // stop IPC polling — only /health recovery remains
             }
             setState({ stage, message });
             timer = setTimeout(tick, pollMs);
           } else {
             setState({ stage, message });
+            if (stage === 'failed') startFailedRecovery();
           }
         } catch {
           // A transient IPC hiccup (e.g. the very first poll racing webview
@@ -943,6 +962,7 @@ export function useBootstrapStage(pollMs = 1000) {
     return () => {
       cancelled = true;
       watchdog.cancel();
+      if (failedRecovery) failedRecovery.cancel();
       if (timer) clearTimeout(timer);
     };
   }, [pollMs]);

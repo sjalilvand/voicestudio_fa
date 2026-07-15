@@ -368,6 +368,24 @@ pub fn run() {
                 let _ = win.unminimize();
                 let _ = win.set_focus();
             }
+            // #1156: when the backend died at startup, relaunching the app
+            // used to just refocus the dead window — the user was stuck
+            // unless they found the Retry button (or Task Manager). A
+            // second-instance attempt IS the user asking for a restart, so
+            // in the Failed stage run the same recovery as the Retry button.
+            // (respawn_backend attaches to an already-healthy backend rather
+            // than double-spawning, so a stray double-click stays harmless.)
+            let state = app.state::<bootstrap::BootstrapState>();
+            if bootstrap::already_diagnosed(&state.stage) {
+                log::info!(
+                    "Second instance while bootstrap is Failed — retrying backend spawn (#1156)"
+                );
+                bootstrap::respawn_backend(
+                    app.clone(),
+                    state.stage.clone(),
+                    state.logs.clone(),
+                );
+            }
         }))
         .plugin(tauri_plugin_positioner::init())
         .invoke_handler(tauri::generate_handler![
