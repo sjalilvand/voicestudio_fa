@@ -348,6 +348,21 @@ pub fn spawn_backend<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Opt
         env.push(("TORCHDYNAMO_DISABLE".into(), "1".into()));
         env.push(("HF_HUB_DISABLE_SYMLINKS_WARNING".into(), "1".into()));
         env.push(("HF_HUB_DISABLE_SYMLINKS".into(), "1".into()));
+        // #1153 class: the Intel Fortran runtime in MKL (numpy/scipy) aborts
+        // the whole backend with `forrtl: error (200)` when a console
+        // CLOSE/LOGOFF event reaches the child. Belt (this env var disables
+        // that handler) and suspenders (CREATE_NO_WINDOW below means no
+        // console gets the event at all). Process env wins for power users.
+        if std::env::var("FOR_DISABLE_CONSOLE_CTRL_HANDLER").is_err() {
+            env.push(("FOR_DISABLE_CONSOLE_CTRL_HANDLER".into(), "1".into()));
+        }
+        // #1155: without UTF-8 mode the child's stdio + default file
+        // encoding is cp1252, and a library print of Vietnamese/CJK user
+        // text raised UnicodeEncodeError mid-synthesis. macOS/Linux are
+        // UTF-8 already — this brings Windows to parity.
+        if std::env::var("PYTHONUTF8").is_err() {
+            env.push(("PYTHONUTF8".into(), "1".into()));
+        }
     }
     // HF endpoint precedence: process env (power user) > setup-screen custom
     // mirror > region preset.
@@ -392,6 +407,18 @@ pub fn spawn_backend<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Opt
     cmd.env_remove("PYTHONHOME").env_remove("PYTHONPATH").env_remove("LD_LIBRARY_PATH");
     for (k, v) in &env {
         cmd.env(k, v);
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        // CREATE_NO_WINDOW (0x08000000) | CREATE_NEW_PROCESS_GROUP (0x00000200).
+        // The backend used to inherit the app's console context, so OS console
+        // CLOSE/LOGOFF events could reach it and MKL's Fortran runtime aborted
+        // the process (`forrtl: error (200)`, exit 2 / 0xC000013A — #1153
+        // class). No console + own process group = no console events, ever.
+        // stdout/stderr are piped above, so nothing is lost. Same flag the
+        // nvidia-smi probe already uses (setup.rs).
+        cmd.creation_flags(0x0800_0000 | 0x0000_0200);
     }
     let mut child = match cmd
         .args([

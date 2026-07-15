@@ -121,7 +121,11 @@ class SafeFileWrapper:
     def write(self, s):
         try:
             self.fp.write(s)
-        except OSError:
+        except (OSError, UnicodeError):
+            # OSError: EPIPE from a dead parent shell (the wrapper's original
+            # job). UnicodeError (#1155): a library print of user text hitting
+            # a non-UTF-8 stream — cp1252 stdout on Windows — must not abort
+            # the operation that printed. Logs are best-effort; work is not.
             pass
     def flush(self):
         try:

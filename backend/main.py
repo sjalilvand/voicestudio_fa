@@ -29,6 +29,16 @@ if sys.platform == "win32":
     os.environ.setdefault("TORCHDYNAMO_DISABLE", "1")
     os.environ.setdefault("TORCHINDUCTOR_DISABLE", "1")
 
+# The Intel Fortran runtime bundled with MKL (under numpy/scipy) installs a
+# console CTRL handler that aborts the whole process with `forrtl: error
+# (200): program aborting due to window-CLOSE event` when a Windows console
+# CLOSE/LOGOFF/SHUTDOWN event reaches it — seen in the wild as backend crashes
+# with exit code 2 / 0xC000013A mid-session (#1153 class). The RTL reads this
+# at DLL init, so it must be set before torch/numpy import MKL; setdefault so
+# an explicit user value wins. A no-op everywhere the Fortran RTL isn't
+# handling console events (macOS/Linux), hence unconditional (and testable).
+os.environ.setdefault("FOR_DISABLE_CONSOLE_CTRL_HANDLER", "1")
+
 # The backend's stdout/stderr are pipes owned by the desktop shell that
 # spawned it. If that shell exits while the backend survives (crash,
 # relaunch, orphan), the pipes close — and the next write raises
@@ -39,6 +49,17 @@ if sys.platform == "win32":
 # (utils.hf_progress.SafeFileWrapper — same wrapper the patched hub tqdm
 # already uses for its own fp.)
 from utils.hf_progress import SafeFileWrapper as _SafeStdio  # noqa: E402
+
+# Force UTF-8 stdio before wrapping (#1155): on Windows the spawned backend's
+# stdout defaults to cp1252, and any library that prints user text (kittentts
+# prints the full synth text on every generate) raised UnicodeEncodeError on
+# Vietnamese/CJK/…, killing the request with a bogus 400. backslashreplace
+# keeps even a non-UTF-8-able sink from ever raising.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="backslashreplace")
+    except Exception:  # noqa: BLE001 — pythonw/frozen builds may lack reconfigure
+        pass
 
 if not getattr(sys.stdout, "_is_safe_wrapper", False):
     sys.stdout = _SafeStdio(sys.stdout)
@@ -787,7 +808,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         return Response(status_code=499)
     try:
         # Serialize writes so concurrent unhandled exceptions don't interleave frames.
-        with _crash_log_lock, open(CRASH_LOG_PATH, "a") as f:
+        with _crash_log_lock, open(CRASH_LOG_PATH, "a", encoding="utf-8", errors="backslashreplace") as f:
             f.write(f"\n--- {time.strftime('%Y-%m-%dT%H:%M:%S')} ---\n")
             f.write(f"Request: {request.url}\n")
             f.write(traceback.format_exc())
