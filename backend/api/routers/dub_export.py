@@ -13,7 +13,12 @@ from fastapi.responses import FileResponse, StreamingResponse
 from core.config import DUB_DIR, dub_seg_path
 from core.tasks import task_manager
 from api.routers.dub_core import _get_job
-from services.ffmpeg_utils import bed_mix_filter, find_ffmpeg, run_ffmpeg
+from services.ffmpeg_utils import (
+    bed_mix_filter,
+    explain_ffmpeg_failure,
+    find_ffmpeg,
+    run_ffmpeg,
+)
 from services.video_retime import (
     DRIFT_TOLERANCE_S,
     RetimeError,
@@ -496,7 +501,7 @@ async def dub_download(
         except Exception as e:
             raise HTTPException(
                 status_code=500,
-                detail=f"ffmpeg failed to export dubbed audio: {e}. Verify ffmpeg is installed (`ffmpeg -version`) and the dubbed track exists.",
+                detail=explain_ffmpeg_failure(e, "export dubbed audio", cmd=cmd),
             )
         if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
             raise HTTPException(status_code=500, detail="ffmpeg audio export produced no output file")
@@ -759,7 +764,7 @@ async def dub_download(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"ffmpeg failed to combine video + dubbed audio: {e}. Verify ffmpeg is installed (`ffmpeg -version`), and check that every dubbed track file exists in the job folder.",
+            detail=explain_ffmpeg_failure(e, "combine video + dubbed audio", cmd=cmd),
         )
     finally:
         # The batched retime intermediate is a full re-encoded video — never
@@ -1604,10 +1609,12 @@ async def dub_download_mp3(job_id: str, lang: str = Query(None), preserve_bg: bo
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"ffmpeg couldn't encode MP3: {e}. Check that libmp3lame is compiled into your ffmpeg build (`ffmpeg -codecs | grep mp3`) — reinstall via homebrew if it's missing.",
-        )
+        detail = explain_ffmpeg_failure(e, "encode MP3", cmd=cmd)
+        if not isinstance(e, OSError):
+            # ffmpeg ran and failed: for MP3 the classic cause is a build
+            # without libmp3lame — keep that hint for the ran-and-failed case.
+            detail += " If the error mentions libmp3lame, your ffmpeg build lacks the MP3 encoder (`ffmpeg -codecs | grep mp3`)."
+        raise HTTPException(status_code=500, detail=detail)
 
     if not os.path.exists(mp3_path) or os.path.getsize(mp3_path) == 0:
         raise HTTPException(status_code=500, detail="MP3 encoding produced no output file")

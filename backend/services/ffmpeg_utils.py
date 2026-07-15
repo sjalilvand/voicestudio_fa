@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 
 # Leaf module (stdlib-only) — safe to import at module top, unlike
 # services.dub_pipeline which imports this module and would cycle.
@@ -519,6 +520,76 @@ async def probe_frame_rates(path: str) -> "tuple[str, str] | None":
         return None
 
 
+# Windows CreateProcess rejects command lines over 32,767 chars with
+# `[WinError 206] The filename or extension is too long`. The dub-export mux
+# argv scales with track/segment count (per-track -i/-map/-metadata plus the
+# bed-mix/apad -filter_complex graph), so a big multi-language export can hit
+# it (#1152). Externalize below this threshold — comfortably under the hard
+# limit so the remaining argv always fits.
+_WIN_ARGV_SOFT_LIMIT = 30_000
+
+
+def externalize_long_filter_complex(cmd, limit=_WIN_ARGV_SOFT_LIMIT, tmp_dir=None):
+    """If ``cmd``'s total length exceeds ``limit`` and it carries a
+    -filter_complex graph, move the graph into a temp file and switch the
+    flag to -filter_complex_script (identical semantics, reads the graph
+    from a file). Returns ``(cmd, script_path)`` — script_path is None when
+    nothing changed; the caller deletes it after the run (#1152).
+    """
+    total = sum(len(str(a)) + 1 for a in cmd)
+    if total <= limit or "-filter_complex" not in cmd:
+        return cmd, None
+    idx = cmd.index("-filter_complex")
+    if idx + 1 >= len(cmd):
+        return cmd, None
+    import tempfile
+
+    fd, script_path = tempfile.mkstemp(
+        suffix=".ffgraph", prefix="omnivoice_filter_", dir=tmp_dir
+    )
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(str(cmd[idx + 1]))
+    out = list(cmd)
+    out[idx : idx + 2] = ["-filter_complex_script", script_path]
+    logger.info(
+        "ffmpeg argv was %d chars — moved the %d-char filter graph to %s "
+        "to stay under the Windows command-line limit (#1152)",
+        total, len(str(cmd[idx + 1])), script_path,
+    )
+    return out, script_path
+
+
+def explain_ffmpeg_failure(e, what, cmd=None):
+    """Turn an export-time ffmpeg failure into an honest, actionable message.
+
+    #1152: a spawn-time `[WinError 206]` used to be concatenated with
+    "Verify ffmpeg is installed…" — the user was told their (short) filename
+    was too long AND that a working ffmpeg might be missing. Distinguish the
+    three real failure modes; never give one mode another mode's advice.
+    """
+    if isinstance(e, OSError):
+        too_long = (
+            getattr(e, "winerror", None) == 206
+            or e.errno in (errno.ENAMETOOLONG, getattr(errno, "E2BIG", None))
+            or "too long" in str(e).lower()
+        )
+        if too_long:
+            size = f" ({sum(len(str(a)) + 1 for a in cmd)} chars)" if cmd else ""
+            return (
+                f"Couldn't {what}: the assembled ffmpeg command line{size} exceeded the "
+                "Windows 32,767-character limit — this happens on exports "
+                "with very many tracks/segments, not because of your file's name. "
+                "Try exporting fewer languages per file, and please report this with "
+                "the backend log so we can shrink the command further."
+            )
+        return (
+            f"Couldn't {what}: ffmpeg could not be launched ({e}). Verify ffmpeg is "
+            "installed and runnable (`ffmpeg -version`), or set FFMPEG_PATH to a "
+            "working binary."
+        )
+    return f"Couldn't {what}: ffmpeg reported an error: {e}"
+
+
 async def run_ffmpeg(cmd, timeout: float = 1800.0, capture: bool = True,
                      job_id: "str | None" = None):
     """Run an ffmpeg subprocess with concurrency cap, timeout, and proper cleanup.
@@ -537,44 +608,57 @@ async def run_ffmpeg(cmd, timeout: float = 1800.0, capture: bool = True,
     """
     stdout = asyncio.subprocess.PIPE if capture else asyncio.subprocess.DEVNULL
     stderr = asyncio.subprocess.PIPE
-    async with _get_semaphore():
-        proc = await _spawn_with_retry(cmd, stdout=stdout, stderr=stderr)
-        if job_id:
-            try:
-                register_proc(job_id, proc)
-            except Exception as e:
-                # Newline-strip the id inline — it can originate from a path
-                # param, and the log stream must stay one-event-per-line.
-                logger.debug("register_proc failed for %s: %s",
-                             job_id.replace("\n", " ").replace("\r", " "), e)
-        try:
-            try:
-                out, err = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-            except asyncio.TimeoutError:
-                try:
-                    proc.kill()
-                except ProcessLookupError:
-                    pass
-                try:
-                    await asyncio.wait_for(proc.wait(), timeout=5.0)
-                except asyncio.TimeoutError:
-                    pass
-                raise
-            return proc.returncode, out, err
-        finally:
+    # #1152: on Windows an oversized argv (multi-track mux filter graphs)
+    # fails CreateProcess with WinError 206 before ffmpeg even starts —
+    # move a long -filter_complex into a script file first.
+    script_path = None
+    if sys.platform == "win32":
+        cmd, script_path = externalize_long_filter_complex(cmd)
+    try:
+        async with _get_semaphore():
+            proc = await _spawn_with_retry(cmd, stdout=stdout, stderr=stderr)
             if job_id:
                 try:
-                    unregister_proc(job_id, proc)
+                    register_proc(job_id, proc)
                 except Exception as e:
-                    logger.debug("unregister_proc failed for %s: %s",
+                    # Newline-strip the id inline — it can originate from a path
+                    # param, and the log stream must stay one-event-per-line.
+                    logger.debug("register_proc failed for %s: %s",
                                  job_id.replace("\n", " ").replace("\r", " "), e)
-            # Guarantee reaping — prevents zombie pileup under timeouts or errors.
-            if proc.returncode is None:
+            try:
                 try:
-                    proc.kill()
-                except ProcessLookupError:
-                    pass
-                try:
-                    await asyncio.wait_for(proc.wait(), timeout=5.0)
+                    out, err = await asyncio.wait_for(proc.communicate(), timeout=timeout)
                 except asyncio.TimeoutError:
-                    pass
+                    try:
+                        proc.kill()
+                    except ProcessLookupError:
+                        pass
+                    try:
+                        await asyncio.wait_for(proc.wait(), timeout=5.0)
+                    except asyncio.TimeoutError:
+                        pass
+                    raise
+                return proc.returncode, out, err
+            finally:
+                if job_id:
+                    try:
+                        unregister_proc(job_id, proc)
+                    except Exception as e:
+                        logger.debug("unregister_proc failed for %s: %s",
+                                     job_id.replace("\n", " ").replace("\r", " "), e)
+                # Guarantee reaping — prevents zombie pileup under timeouts or errors.
+                if proc.returncode is None:
+                    try:
+                        proc.kill()
+                    except ProcessLookupError:
+                        pass
+                    try:
+                        await asyncio.wait_for(proc.wait(), timeout=5.0)
+                    except asyncio.TimeoutError:
+                        pass
+    finally:
+        if script_path:
+            try:
+                os.remove(script_path)
+            except OSError:
+                pass
