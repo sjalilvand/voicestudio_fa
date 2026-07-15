@@ -64,6 +64,21 @@ function _apiKey(): string | null {
   }
 }
 
+/** Persist the durable remote API key (trimmed). localStorage so it survives
+ * reloads; read back by `_apiKey()` on every request. Returns false (without
+ * writing) when the value is empty-after-trim or storage is unavailable, so the
+ * caller can avoid reloading into a loop. */
+export function saveApiKey(v: string): boolean {
+  const t = v.trim();
+  if (!t) return false;
+  try {
+    localStorage.setItem(LS_API_KEY, t);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Build a ws:// or wss:// URL for a backend WebSocket endpoint.
  *
  * Scheme derives from the API base itself (NOT window.location — a Tauri
@@ -77,13 +92,58 @@ export function wsUrl(path: string): string {
   return `${url}${url.includes('?') ? '&' : '?'}api_key=${encodeURIComponent(key)}`;
 }
 
-// Capture a QR-supplied PIN once on load. When LAN sharing is on, the host's
-// QR code links to `http://<lan-ip>:<port>/?pin=<pin>`; stash it in
-// sessionStorage so apiFetch attaches it to every request automatically.
+/**
+ * Pull deep-link credentials out of a URL and return them plus a scrubbed URL.
+ * Pure (no side effects) so it's unit-testable; the on-load block below applies
+ * the effects.
+ *   • ?pin=<pin>     (query)    — LAN-share QR. Returned as `pin` (session).
+ *   • #api_key=<key> (fragment) — remote-backend deep link. Returned as `apiKey`
+ *     (durable). Read from the FRAGMENT because fragments aren't sent to the
+ *     server, so the durable secret stays out of request logs; the PIN stays in
+ *     the query since the QR flow needs the server to see it.
+ * A stray legacy ?api_key= in the query is scrubbed from `cleanUrl` but NOT
+ * returned — reading it would resend the secret to the server on reload, the
+ * very leak the fragment avoids. `scrubbed` is true when any credential param
+ * was present, so the caller knows to rewrite the address bar.
+ *
+ * Caveat: the fragment is parsed with URLSearchParams, so a key containing `+`
+ * decodes as a space — URL-encode such keys (`#api_key=a%2Bb`). Keys from the
+ * documented `secrets.token_urlsafe` / hex generators don't contain `+`.
+ */
+export function _parseDeepLinkCredentials(href: string): {
+  pin: string | null;
+  apiKey: string | null;
+  cleanUrl: string;
+  scrubbed: boolean;
+} {
+  const url = new URL(href);
+  const pin = url.searchParams.get('pin');
+  const legacyQueryKey = url.searchParams.get('api_key');
+  const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
+  const apiKey = hashParams.get('api_key');
+  if (pin) url.searchParams.delete('pin');
+  if (legacyQueryKey) url.searchParams.delete('api_key');
+  if (apiKey) {
+    hashParams.delete('api_key');
+    url.hash = hashParams.toString();
+  }
+  return {
+    pin,
+    apiKey,
+    cleanUrl: url.pathname + url.search + url.hash,
+    scrubbed: Boolean(pin || apiKey || legacyQueryKey),
+  };
+}
+
+// On load, capture deep-link credentials (?pin= from the QR query, #api_key=
+// from a remote-backend fragment) so apiFetch attaches them automatically, then
+// scrub them from the address bar (one-shot — see _parseDeepLinkCredentials).
 if (typeof window !== 'undefined') {
   try {
-    const p = new URL(window.location.href).searchParams.get('pin');
-    if (p) sessionStorage.setItem('ov_pin', p);
+    const { pin, apiKey, cleanUrl, scrubbed } = _parseDeepLinkCredentials(window.location.href);
+    if (pin) sessionStorage.setItem('ov_pin', pin);
+    if (apiKey) saveApiKey(apiKey);
+    if (scrubbed) window.history.replaceState(null, '', cleanUrl);
   } catch {
     /* noop */
   }
@@ -262,12 +322,21 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
       );
     }
     if (!res.ok) {
-      // 401 from the LAN PIN middleware on a remote device → surface the gate.
       // An HTTP error means the backend *did* respond — never retry it.
-      if (res.status === 401 && typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('ov:pin-required'));
-      }
       const detail = await readError(res);
+      // 401 on a remote device: route to the right gate by reading the detail.
+      // "API key required" (BearerKeyMiddleware, OMNIVOICE_API_KEY) vs anything
+      // else, i.e. "PIN required" (NetworkAccessMiddleware). Both are 401; the
+      // detail is the only discriminator (only two 401 sites exist backend-side).
+      if (res.status === 401 && typeof window !== 'undefined') {
+        // readError's declared `string` return isn't guaranteed at runtime —
+        // `j.detail` can be a structured object/array on a future 401. Match only
+        // real strings (avoids both a `.toLowerCase()` crash and `String()` itself
+        // throwing on a malformed object); anything else falls back to PIN.
+        const mode =
+          typeof detail === 'string' && detail.toLowerCase().includes('api key') ? 'apikey' : 'pin';
+        window.dispatchEvent(new CustomEvent('ov:auth-required', { detail: { mode } }));
+      }
       throw new ApiError(`${res.status} ${res.statusText}: ${detail}`, {
         status: res.status,
         detail,
