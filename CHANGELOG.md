@@ -6,6 +6,12 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 Versions track the desktop app (`tauri.conf.json` + `frontend/src-tauri/Cargo.toml`).
 The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
+## [Unreleased]
+
+### Fixed
+
+- **Remote-backend browsers now get an API-key prompt instead of an unpassable PIN form.** When a remote backend is protected with `OMNIVOICE_API_KEY`, a browser without the key got a 401 — and the app showed the LAN-share *PIN* form, which no input could ever satisfy. The gate now reads which credential the backend actually asked for and shows the matching form: PIN for LAN sharing, API key (stored durably for that browser) for a keyed remote. Browsers can also bootstrap the key from a one-shot `#api_key=` link — carried in the URL fragment so it never reaches the server's request logs, and scrubbed from the address bar after capture. Documented in [docs/remote-gpu.md](docs/remote-gpu.md). Thanks @paoloantinori! (#1154)
+
 ## [0.3.22] — 2026-07-14
 
 The dubbing release. Dubbed videos stop sounding like a compromise: the music keeps its stereo width and full frequency range, short lines no longer leave dead air while the mouth keeps moving, one speaker stays one voice, and the language tabs finally switch the transcript with the audio. Underneath it, the memory fixes that ended the "can't reach the local backend" era on 16 GB machines ship at last — plus a sweep of never-again hardening drawn from an audit of every bug this project has ever closed.
