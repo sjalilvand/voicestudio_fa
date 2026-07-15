@@ -130,6 +130,12 @@ marketing.md
 .claude/skills/speckit-*/
 .antigravitycli/
 
+# Locally-installed third-party skill packs (marketingskills, hallmark,
+# mattpocock/skills, …) — ignore every skill dir by default; a skill that
+# SHOULD ship with the repo must be re-negated here (like omnivoice below).
+.claude/skills/*/
+!.claude/skills/omnivoice/
+
 playwright-report/
 .last-run.json
 
