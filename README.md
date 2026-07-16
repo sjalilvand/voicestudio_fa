@@ -448,6 +448,13 @@ OmniVoice Studio is built by one developer using Claude Code and AI agents — a
 <br/>
 <sub>Every dollar goes directly to agent bills — keeping OmniVoice development continuous.</sub>
 
+<br/><br/>
+
+<sub><b>More apps from the creator of OmniVoice Studio</b> — same local-first philosophy:
+<a href="https://github.com/debpalash/Opal"><b>Opal</b> 💠</a> (play everything — the media player for the AI era) ·
+<a href="https://github.com/debpalash/memxt"><b>memxt</b> 🧠</a> (local memory for Claude Code & coding agents).
+A ⭐ on those helps too → <a href="#more-from-the-maker">details below</a>.</sub>
+
 </div>
 
 <a id="sponsors"></a>
@@ -603,14 +610,38 @@ OmniVoice Studio is built on the shoulders of exceptional open-source work:
 
 ---
 
+<a id="more-from-the-maker"></a>
+
 ## 🧰 More local open-source from the maker
 
-Like the local-first philosophy? It runs in the family:
+Like the local-first philosophy? It runs in the family — same maker, same rule: **your data stays on your machine.**
 
-| Project | What it is |
-|---------|------------|
-| [**Opal**](https://github.com/debpalash/Opal) 💠 | **Play everything.** The evolved media player for the next decades of entertainment — video, anime, comics, torrents, Jellyfin/Plex, with local AI built in. |
-| [**memxt**](https://github.com/debpalash/memxt) 🧠 | **The fastest benchmarked open-source AI memory system.** 100% local memory for AI agents, with MCP support. |
+<table>
+<tr>
+<td align="center" width="50%" valign="top">
+  <br/>
+  <a href="https://github.com/debpalash/Opal"><img src="https://raw.githubusercontent.com/debpalash/Opal/main/assets/opal_logo.png" width="96" alt="Opal logo"/></a>
+  <h3><a href="https://github.com/debpalash/Opal">Opal 💠</a></h3>
+  <p><b>Play everything.</b> The media player for the AI era.</p>
+  <p><sub>Video, anime, comics, torrents, Jellyfin & Plex — one player for all of it, with local AI memory and context built in. Written in Zig, runs on macOS & Windows.</sub></p>
+  <p>
+    <a href="https://github.com/debpalash/Opal/stargazers"><img src="https://img.shields.io/github/stars/debpalash/Opal?style=flat-square&color=f59e0b" alt="Opal stars"/></a>
+    <a href="https://palash.dev/opal"><img src="https://img.shields.io/badge/site-palash.dev%2Fopal-8b5cf6?style=flat-square" alt="Opal website"/></a>
+  </p>
+</td>
+<td align="center" width="50%" valign="top">
+  <br/>
+  <a href="https://github.com/debpalash/memxt"><img src="https://raw.githubusercontent.com/debpalash/memxt/main/assets/logo-mark.svg" width="96" alt="memxt logo"/></a>
+  <h3><a href="https://github.com/debpalash/memxt">memxt 🧠</a></h3>
+  <p><b>The fastest benchmarked open-source AI memory system.</b></p>
+  <p><sub>Local long-term memory for Claude Code and coding agents — an MCP server on SQLite + embeddings, 100% on your machine. Your agent finally remembers yesterday.</sub></p>
+  <p>
+    <a href="https://github.com/debpalash/memxt/stargazers"><img src="https://img.shields.io/github/stars/debpalash/memxt?style=flat-square&color=f59e0b" alt="memxt stars"/></a>
+    <a href="https://github.com/debpalash/memxt#readme"><img src="https://img.shields.io/badge/docs-README-10b981?style=flat-square" alt="memxt docs"/></a>
+  </p>
+</td>
+</tr>
+</table>
 
 ---
 
