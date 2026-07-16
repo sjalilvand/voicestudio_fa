@@ -1854,6 +1854,12 @@
     "stderr_title": "Last error output (stderr)",
     "no_stderr": "No error output was captured."
   },
+  "backendUnreachable": {
+    "contact_recent": "It was answering {{ago}} ago and then stopped responding — it most likely crashed or was killed mid-request.",
+    "contact_never": "It has not answered at all this session — it may never have started.",
+    "dev": "Can't reach the local OmniVoice backend. {{contact}} Check the terminal running `bun run dev` for a Python traceback or an exit banner, and the omnivoice.log file in your OmniVoice data folder for the last thing the backend logged.",
+    "server": "Can't reach the OmniVoice backend server. {{contact}} Check the server logs for the cause (e.g. `docker logs <container>` or `journalctl`) — and note that if Docker serves this page, the page itself can go down with the backend."
+  },
   "backend": {
     "restarting": "The voice backend stopped and is restarting automatically — hang tight, this takes ~15 seconds.",
     "restored": "Voice backend is back — carrying on.",

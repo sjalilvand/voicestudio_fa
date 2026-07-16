@@ -1,0 +1,121 @@
+/**
+ * backendContact — when did the backend last prove it was alive? (#1164)
+ *
+ * Every apiFetch response — success OR HTTP error, both prove the process is
+ * up and answering — records a timestamp here. When a request later dead-ends
+ * on a transport failure, that timestamp turns the vague "can't reach the
+ * backend" into one of two honest, different stories:
+ *
+ *   - it WAS answering moments ago and stopped → it almost certainly crashed
+ *     or was killed mid-request (the OOM-kill shape), vs
+ *   - it has never answered this session → it may never have started at all
+ *     (port conflict, setup failure, wrong host).
+ *
+ * The distinction is exactly what a #1164-class bug report needs and what the
+ * old one-size message erased. Kept in a module variable + sessionStorage so
+ * a page reload during the outage doesn't forget the pre-reload contact.
+ *
+ * i18n note: the phrases go through i18next when it is initialized (the app,
+ * vitest via test setup) and fall back to self-interpolated English when it
+ * isn't (the node:test harness loads api/client.ts without the app bootstrap)
+ * — a diagnostics message must never crash on the localization layer.
+ */
+import i18next from 'i18next';
+import { deploymentMode, type DeploymentMode } from './deploymentMode.ts';
+
+export const LS_LAST_CONTACT = 'ov_last_backend_contact';
+
+let lastContactMs: number | null = null;
+
+/** Note that the backend just answered (any HTTP response, any status). */
+export function recordBackendContact(now: number = Date.now()): void {
+  lastContactMs = now;
+  try {
+    sessionStorage.setItem(LS_LAST_CONTACT, String(now));
+  } catch {
+    /* storage unavailable (privacy mode / node tests) — module var suffices */
+  }
+}
+
+/** Epoch ms of the last backend response this session, or null (never). */
+export function lastBackendContact(): number | null {
+  if (lastContactMs != null) return lastContactMs;
+  try {
+    const v = sessionStorage.getItem(LS_LAST_CONTACT);
+    if (v) {
+      const n = Number(v);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+  } catch {
+    /* noop */
+  }
+  return null;
+}
+
+/** Test hook — module state is process-global. */
+export function _resetBackendContactForTests(): void {
+  lastContactMs = null;
+  try {
+    sessionStorage.removeItem(LS_LAST_CONTACT);
+  } catch {
+    /* noop */
+  }
+}
+
+/** Coarse "12 s" / "3 min" / "2 h" age — same scale as backendCrash.crashAge. */
+export function contactAge(thenMs: number, nowMs: number = Date.now()): string {
+  const s = Math.max(0, Math.round((nowMs - thenMs) / 1000));
+  if (s < 90) return `${s} s`;
+  const min = Math.round(s / 60);
+  if (min < 90) return `${min} min`;
+  return `${Math.round(min / 60)} h`;
+}
+
+// English fallbacks, kept byte-identical to en.json's backendUnreachable.*
+// values — used only when i18next has not been initialized (see module doc).
+const EN = {
+  contact_recent:
+    'It was answering {{ago}} ago and then stopped responding — it most likely crashed or was killed mid-request.',
+  contact_never: 'It has not answered at all this session — it may never have started.',
+  dev: "Can't reach the local OmniVoice backend. {{contact}} Check the terminal running `bun run dev` for a Python traceback or an exit banner, and the omnivoice.log file in your OmniVoice data folder for the last thing the backend logged.",
+  server:
+    "Can't reach the OmniVoice backend server. {{contact}} Check the server logs for the cause (e.g. `docker logs <container>` or `journalctl`) — and note that if Docker serves this page, the page itself can go down with the backend.",
+} as const;
+
+function tr(key: string, vars: Record<string, string>, fallback: string): string {
+  try {
+    if (typeof i18next.t === 'function') {
+      const out = i18next.t(key, { ...vars, defaultValue: fallback });
+      if (typeof out === 'string' && out) return out;
+    }
+  } catch {
+    /* uninitialized i18n — fall through to the English fallback */
+  }
+  return fallback.replace(/\{\{(\w+)\}\}/g, (_m, k: string) => String(vars[k] ?? ''));
+}
+
+/** The honest last-contact phrase for error messages and bug reports. */
+export function describeLastContact(nowMs: number = Date.now()): string {
+  const last = lastBackendContact();
+  if (last == null) return tr('backendUnreachable.contact_never', {}, EN.contact_never);
+  return tr(
+    'backendUnreachable.contact_recent',
+    { ago: contactAge(last, nowMs) },
+    EN.contact_recent,
+  );
+}
+
+/**
+ * Mode-aware give-up message for a transport failure (#1164). Only for
+ * non-desktop modes — the desktop copy (crash markers, lifecycle stages,
+ * Settings → Logs) stays in api/client.ts, where the shell forensics live.
+ */
+export function unreachableBackendMessage(
+  mode?: Exclude<DeploymentMode, 'desktop'> | DeploymentMode,
+  nowMs: number = Date.now(),
+): string {
+  const m = mode ?? deploymentMode();
+  const contact = describeLastContact(nowMs);
+  if (m === 'dev') return tr('backendUnreachable.dev', { contact }, EN.dev);
+  return tr('backendUnreachable.server', { contact }, EN.server);
+}

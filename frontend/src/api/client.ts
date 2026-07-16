@@ -18,6 +18,12 @@ import {
   type BackendCrashMarker,
 } from '../utils/backendCrash.ts';
 import { backendLifecycleStage } from '../utils/backendLifecycle.ts';
+import { deploymentMode } from '../utils/deploymentMode.ts';
+import {
+  lastBackendContact,
+  recordBackendContact,
+  unreachableBackendMessage,
+} from '../utils/backendContact.ts';
 
 const viteEnv = import.meta.env ?? {};
 // Remote-backend settings (Wave 2.3): user-configured in Settings → Sharing.
@@ -236,6 +242,11 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
     let res: Response;
     try {
       res = await fetch(apiUrl(path), finalOpts);
+      // Any response — success or HTTP error alike — proves the backend
+      // process is alive and answering. Recording it lets a LATER transport
+      // failure say "it was answering Xs ago and stopped" instead of the
+      // one-size "can't reach" (#1164).
+      recordBackendContact();
     } catch (e) {
       // A thrown fetch (TypeError "Failed to fetch" / "NetworkError") means the
       // request never reached the backend — it's still starting up, crashed, or
@@ -277,8 +288,20 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
           continue;
         }
       }
-      // #941: if the desktop shell recorded an unacknowledged backend crash,
-      // tell the honest story instead of the vague "can't reach" — and let
+      // Diagnostics that ride on every give-up ApiError (#1164): the bug
+      // report builder reads these to say WHICH deployment failed, whether
+      // the backend ever answered this session, and how long we retried.
+      const mode = deploymentMode();
+      const failureDetail = {
+        transport: lastDetail,
+        mode,
+        lastContactMs: lastBackendContact(),
+        firstFailureTs: startedAt,
+        attempts: attempt + 1,
+      };
+      // #941: if a backend crash was recorded — by the desktop shell's death
+      // watcher, or (browser/dev/Docker) by the backend's own run sentinel —
+      // tell the honest story instead of the vague "can't reach" and let
       // BackendCrashNotice raise its "View crash details" affordance.
       let crash: BackendCrashMarker | null = null;
       try {
@@ -296,7 +319,7 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
           `The local OmniVoice backend crashed (${describeCrashExit(crash)}) ${crashAge(crash)} ago ` +
             'and is being restarted — this request could not reach it. ' +
             'Open the crash notice for the error output, or check Settings → Logs → Backend.',
-          { status: 0, detail: lastDetail },
+          { status: 0, detail: failureDetail },
         );
       }
       // #1113: no crash was recorded AND the shell still reports the backend as
@@ -312,13 +335,24 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
             'too heavy for the available memory on this machine. Check Settings → Logs → Backend ' +
             'for the last thing it was doing; a smaller model or engine (Settings → Models) is ' +
             'the usual fix. Restarting the app clears it for now.',
-          { status: 0, detail: lastDetail },
+          { status: 0, detail: failureDetail },
         );
+      }
+      // #1164: outside the desktop shell there is no supervisor and no
+      // "restart the app" — the old desktop-shaped copy sent dev/Docker
+      // users chasing advice that doesn't exist in their deployment. Say
+      // where THEIR forensics live, and whether the backend ever answered
+      // this session (crashed mid-session vs never started).
+      if (mode !== 'desktop') {
+        throw new ApiError(unreachableBackendMessage(mode), {
+          status: 0,
+          detail: failureDetail,
+        });
       }
       throw new ApiError(
         "Can't reach the local OmniVoice backend — it may still be starting up, or it stopped. " +
           'Wait a few seconds and try again; if it persists, restart the app (or check Settings → Logs → Backend).',
-        { status: 0, detail: lastDetail },
+        { status: 0, detail: failureDetail },
       );
     }
     if (!res.ok) {

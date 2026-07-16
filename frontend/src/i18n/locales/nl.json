@@ -1,4 +1,10 @@
 {
+  "backendUnreachable": {
+    "contact_recent": "Het reageerde {{ago}} geleden nog en stopte toen met reageren — waarschijnlijk is het midden in een verzoek gecrasht of beëindigd.",
+    "contact_never": "Het heeft deze sessie helemaal niet gereageerd — mogelijk is het nooit gestart.",
+    "dev": "Kan de lokale OmniVoice-backend niet bereiken. {{contact}} Controleer de terminal met `bun run dev` op een Python-traceback of exit-banner, en het bestand omnivoice.log in je OmniVoice-gegevensmap voor de laatste logregel van de backend.",
+    "server": "Kan de OmniVoice-backendserver niet bereiken. {{contact}} Controleer de serverlogs voor de oorzaak (bijv. `docker logs <container>` of `journalctl`) — en let op: als Docker deze pagina serveert, kan de pagina zelf samen met de backend uitvallen."
+  },
   "nav": {
     "clone": "Klonen",
     "design": "Ontwerpen",

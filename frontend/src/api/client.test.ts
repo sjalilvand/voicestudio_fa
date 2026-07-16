@@ -48,7 +48,10 @@ describe('apiFetch PIN header', () => {
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(0); // transport failure, not HTTP
     expect(String(err.message)).toMatch(/reach the local OmniVoice backend/i);
-    expect(String(err.detail)).toMatch(/Failed to fetch/);
+    // #1164: the detail is now structured diagnostics — the transport cause
+    // is preserved, plus mode/last-contact for the bug-report prefill.
+    expect(String(err.detail.transport)).toMatch(/Failed to fetch/);
+    expect(err.detail).toMatchObject({ mode: 'dev', attempts: 4 });
   });
 });
 

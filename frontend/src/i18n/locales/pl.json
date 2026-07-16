@@ -1,4 +1,10 @@
 {
+  "backendUnreachable": {
+    "contact_recent": "Jeszcze {{ago}} temu odpowiadał, a potem przestał — najprawdopodobniej uległ awarii lub został zakończony w trakcie żądania.",
+    "contact_never": "W tej sesji nie odpowiedział ani razu — możliwe, że w ogóle się nie uruchomił.",
+    "dev": "Nie można połączyć się z lokalnym backendem OmniVoice. {{contact}} Sprawdź terminal z `bun run dev` pod kątem tracebacku Pythona lub banera wyjścia oraz plik omnivoice.log w folderze danych OmniVoice, aby zobaczyć ostatni wpis backendu.",
+    "server": "Nie można połączyć się z serwerem backendu OmniVoice. {{contact}} Sprawdź logi serwera, aby znaleźć przyczynę (np. `docker logs <kontener>` lub `journalctl`) — pamiętaj też, że jeśli Docker serwuje tę stronę, sama strona może przestać działać razem z backendem."
+  },
   "nav": {
     "clone": "Klonuj",
     "design": "Projektuj",
