@@ -1,5 +1,5 @@
-# Guards against accidental endpoint removal/rename (tests/test_api_route_inventory.py).
 # OmniVoice backend API route snapshot — regenerate with scripts/dump_api_routes.py
+# Guards against accidental endpoint removal/rename (tests/test_api_route_inventory.py).
 DELETE /api/mcp/bindings/{client_id}
 DELETE /api/settings/hf-token
 DELETE /batch/jobs/{job_id}
@@ -120,6 +120,7 @@ GET /system/diagnose
 GET /system/errors/recent
 GET /system/hf-token/state
 GET /system/info
+GET /system/last-run-crash
 GET /system/logs
 GET /system/logs/stream
 GET /system/logs/tauri
@@ -215,6 +216,7 @@ POST /stories/encode
 POST /system/crash/ack
 POST /system/diagnostic-bundle
 POST /system/flush-memory
+POST /system/last-run-crash/ack
 POST /system/logs/clear
 POST /system/logs/tauri/clear
 POST /system/network/disable
