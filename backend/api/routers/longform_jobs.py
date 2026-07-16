@@ -21,6 +21,8 @@ from typing import Callable, Optional
 
 from fastapi import APIRouter, Query
 
+from core import job_store
+
 logger = logging.getLogger("omnivoice.longform_jobs")
 router = APIRouter()
 
@@ -88,7 +90,13 @@ def build_longform_library(
         # so ask for more rows than the caller's limit to still fill the page.
         rows = list_jobs(status="done", limit=limit * 4)
     except Exception:
-        logger.warning("longform library: list_jobs failed", exc_info=True)
+        # The route deliberately never 500s, but an unreadable job store is a
+        # real failure, not an empty library — log it loudly (error + stack),
+        # never silently.
+        logger.exception(
+            "longform library: list_jobs failed — returning an empty library "
+            "even though finished renders may exist"
+        )
         return []
 
     out: list[dict] = []
@@ -149,9 +157,22 @@ def longform_jobs(limit: int = Query(50, ge=1, le=500)) -> dict:
 
     Each item's ``output`` is served at ``/audio/<output>``. Never 500s — on any
     backend hiccup it returns an empty list rather than an error.
-    """
-    from core import job_store
 
+    ``job_store`` is bound at module import (top of file), NOT re-imported
+    here at call time. A call-time ``from core import job_store`` re-resolves
+    through ``sys.modules`` on every request — and several test suites purge
+    and re-import the whole ``core``/``services`` namespace under a
+    temporary OMNIVOICE_DATA_DIR (the ``isolated_db`` pattern,
+    tests/smoke/test_boot_smoke.py, …) without restoring the old module
+    tree. After one of those ran, the call-time import resolved a stale
+    module world whose DB_PATH pointed at a different SQLite file than the
+    one the test seeded through its collection-time bindings, so the library
+    came back without the seeded jobs (the order-dependent
+    test_route_handler_returns_jobs_envelope full-suite flake). The
+    module-level binding keeps this route in the same world as whoever
+    imported this module. Regression:
+    tests/test_longform_jobs.py::test_route_survives_leaked_module_world_purge.
+    """
     jobs = build_longform_library(
         job_store.list_jobs, job_store.events_since, limit=limit,
     )

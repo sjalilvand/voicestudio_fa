@@ -174,3 +174,37 @@ def test_route_handler_returns_jobs_envelope():
     resp = longform_jobs(limit=50)
     assert "jobs" in resp
     assert jid in {it["job_id"] for it in resp["jobs"]}
+
+
+def test_route_survives_leaked_module_world_purge(monkeypatch):
+    """Full-suite flake regression: some suites purge and re-import the whole
+    ``core``/``services`` module tree under a temporary OMNIVOICE_DATA_DIR
+    without restoring the previous modules. The route used to run
+    ``from core import job_store`` at CALL time, re-resolving through
+    ``sys.modules`` into that leaked stale world — whose DB_PATH was a
+    different SQLite file — so the library came back empty despite seeded
+    jobs (the order-dependent ``test_route_handler_returns_jobs_envelope``
+    failure). The route must keep using the world it was imported into."""
+    import sys
+    import types
+
+    jid = _uid("purge")
+    _seed_done(jid, type="audiobook",
+               done_payload={"type": "done", "output": f"{jid}.m4b",
+                             "chapters": 1, "duration_s": 3.0})
+
+    # Simulate the leaked world: sys.modules and the ``core`` package now hold
+    # a foreign core.job_store whose store is empty (exactly what a call-time
+    # import would resolve after a purge-and-reimport under another data dir).
+    stale = types.ModuleType("core.job_store")
+    stale.list_jobs = lambda **kw: []
+    stale.events_since = lambda *a, **k: []
+    monkeypatch.setitem(sys.modules, "core.job_store", stale)
+    import core as core_pkg
+    monkeypatch.setattr(core_pkg, "job_store", stale, raising=False)
+
+    resp = longform_jobs(limit=50)
+    assert jid in {it["job_id"] for it in resp["jobs"]}, (
+        "route resolved job_store through the leaked module world instead of "
+        "its import-time binding"
+    )
