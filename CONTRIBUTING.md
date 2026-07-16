@@ -256,6 +256,21 @@ what's right, push back (in a reply) on what's wrong.
 (`fix(dub): …`, `feat(setup): …`) and link the issue (`Closes #N` / `Refs #N`)
 in the title or body.
 
+### Contributing with AI agents
+
+Plenty of contributions here are built with Claude Code, Cursor, and similar
+agents — welcome, with the same quality bar as hand-written PRs (real bug,
+correct fix, regression test; see the quality gates below).
+
+One practical tip: this codebase is large, and re-explaining it to your agent
+every session burns context and tokens fast. A persistent memory layer fixes
+that — the agent recalls the architecture, conventions, and your past findings
+instead of re-reading the tree each time. [**memxt**](https://github.com/debpalash/memxt)
+(100% local, MCP-based, built by this project's maintainer) exists for exactly
+this; any MCP memory server works. Pair it with the repo's agent skill —
+`npx skills add debpalash/omnivoice-studio` — so your agent knows the project's
+hard rules from the first prompt.
+
 ## Quality gates your PR must pass
 
 - **Cross-platform parity (hard rule):** anything that ships in default mode
