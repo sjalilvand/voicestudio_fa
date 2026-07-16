@@ -77,6 +77,16 @@ async def sonitranslate_dub(body: DubRequest):
 
     Transcribes, translates, generates TTS, and mixes audio.
     Returns the path to the dubbed output video.
+
+    KNOWN PROVENANCE GAP (#1169, documented — not silently ignored): the
+    dubbed audio is synthesized and muxed entirely inside the external
+    SoniTranslate sidecar (its own venv + gradio pipeline, Edge-TTS voices),
+    which hands back a finished video file. OmniVoice's tensor-stage
+    mark_synthetic chokepoint never sees that audio; marking it would require
+    a demux → embed → re-mux post-pass on the sidecar's output, which is a
+    lossy re-encode of a pipeline we don't control. This opt-in engine
+    (explicit install + start) is therefore NOT covered by the invisible
+    AudioSeal provenance mark that every built-in synthesis path carries.
     """
     try:
         result = await soni.dub_video(

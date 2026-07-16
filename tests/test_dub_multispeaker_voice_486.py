@@ -175,7 +175,7 @@ def patched_generate(monkeypatch, tmp_path):
         lambda job_id, seg_id: str(job_dir / f"seg_{seg_id}.wav"),
     )
     monkeypatch.setattr(dg, "rvc_is_enabled", lambda: False)
-    monkeypatch.setattr(dg, "embed_watermark", lambda wav, sr: wav)
+    monkeypatch.setattr(dg, "mark_synthetic", lambda wav, sr, **kw: wav)
     monkeypatch.setattr(dg, "apply_mastering", lambda a, sample_rate=None: a)
     monkeypatch.setattr(dg, "get_effect_chain", lambda preset: None)
     monkeypatch.setattr(dg, "apply_effects_chain", lambda a, **k: a)

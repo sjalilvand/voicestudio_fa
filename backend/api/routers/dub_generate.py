@@ -28,7 +28,7 @@ from services.ffmpeg_utils import (
 from services.rvc import apply_rvc, is_enabled as rvc_is_enabled
 from services.incremental import segment_fingerprint, fit_fingerprint
 from services.fit_planner import UNDERRUN_TOLERANCE, FitParams, plan_fit
-from services.watermark import embed_watermark
+from services.watermark import mark_synthetic
 from api.routers.dub_core import _get_job, _save_job
 from omnivoice.utils.voice_design import heal_design_instruct
 
@@ -900,7 +900,8 @@ async def dub_generate(job_id: str, req: DubRequest):
                 # no double-mark. Cached-reuse audio is already marked;
                 # silence/zero slots carry no speech to mark, so neither is
                 # re-watermarked.
-                audio_tensor = embed_watermark(audio_tensor, backend.sample_rate)
+                audio_tensor = mark_synthetic(audio_tensor, backend.sample_rate,
+                                              context="dub_generate.segment")
 
                 seg_wav_path = _seg_lang_path(seg_id)
                 try:
@@ -1422,7 +1423,9 @@ async def preview_segment(job_id: str, req: SegmentPreviewRequest):
     """Generate TTS for a single segment and return WAV bytes.
 
     This is the fast path for interactive editing — 8 diffusion steps,
-    no disk write, no watermark, no mix. Just raw audio preview.
+    no disk write, no mix. The preview IS synthetic audio leaving the app,
+    so it carries the same invisible provenance mark as every other
+    producer (#1169 — "no watermark" here used to be an exemption).
     """
     job = _get_job(job_id)
     if not job:
@@ -1487,7 +1490,12 @@ async def preview_segment(job_id: str, req: SegmentPreviewRequest):
         )
         if not getattr(backend, "applies_own_mastering", False):
             audio_out = apply_mastering(audio_out, sample_rate=backend.sample_rate)
-        return normalize_audio(audio_out, target_dBFS=-2.0)
+        audio_out = normalize_audio(audio_out, target_dBFS=-2.0)
+        # Invisible provenance mark before the WAV encode (#1169); pref-gated,
+        # never raises, and short-preview embedding runs in this same
+        # GPU-pool job.
+        return mark_synthetic(audio_out, backend.sample_rate,
+                              context="dub_generate.preview_segment")
 
     # Bounded + pool-reset on hang so a wedged preview generate can't starve the
     # GPU pool and brick the backend (#730 class).

@@ -101,6 +101,15 @@ def is_enabled() -> bool:
     return resolve("watermark.invisible", default=True) is not False
 
 
+def will_mark() -> bool:
+    """True when :func:`mark_synthetic` would actually embed right now —
+    the user pref is on AND AudioSeal is importable. Producers that cache
+    rendered audio fold this into their cache keys so a clip rendered while
+    marking was off/unavailable can never be served for a request made while
+    marking is on (see audiobook.py's chapter cache, #1169)."""
+    return is_enabled() and _check_available()
+
+
 def is_visible_audio_enabled() -> bool:
     """Check if audible branding tone is enabled for exports."""
     return resolve("watermark.visible_audio", default=False) is True
@@ -112,6 +121,54 @@ def is_visible_video_enabled() -> bool:
 
 
 # ── Invisible Watermark ───────────────────────────────────────────────────
+
+
+def mark_synthetic(
+    waveform: torch.Tensor,
+    sample_rate: int,
+    *,
+    context: str,
+    force: bool = False,
+) -> torch.Tensor:
+    """THE provenance chokepoint for synthetic audio (#1169).
+
+    Every path that produces synthetic speech routes its output through this
+    call at the tensor stage, right before the audio leaves the app (HTTP
+    response, WebSocket/SSE frame, or a file the app saves/serves/exports).
+    EU AI Act Art. 50(2) — applicable 2026-08-02, expressly carved out of the
+    open-source exemption (Art. 2(12)) — requires synthetic audio to carry a
+    machine-readable mark; the invisible AudioSeal watermark is that mark.
+
+    Coverage used to grow call-site-by-call-site (three separate
+    ``embed_watermark`` calls) and a fourth producer shipped unmarked
+    (#1169: ``/v1/audio/speech``). Producers now share this single named seam,
+    and ``tests/test_watermark_route_coverage.py`` structurally asserts every
+    synthesis call site references it — a new audio route can't silently ship
+    without provenance marking again.
+
+    Semantics are exactly :func:`embed_watermark`'s (named delegation, not new
+    policy): gated on the user's ``watermark.invisible`` pref unless
+    ``force=True``, a no-op when AudioSeal isn't installed, and it NEVER
+    raises — on any failure the original audio passes through unchanged, so
+    marking can never break generation (the same degrade-don't-block contract
+    generation.py has always had).
+
+    Args:
+        waveform: Audio tensor, any shape embed_watermark accepts.
+        sample_rate: Sample rate of the audio.
+        context: Names the producing route/service (e.g.
+            ``"openai_compat.speech"``) for debug logs and the coverage test.
+        force: Bypass the user pref (persona bundles mandate a mark).
+
+    Returns:
+        The watermarked waveform (same shape), or the input unchanged when
+        marking is off/unavailable/failed.
+    """
+    marked = embed_watermark(waveform, sample_rate, force=force)
+    if marked is not waveform:
+        logger.debug("synthetic audio provenance-marked (%s)", context)
+    return marked
+
 
 @torch.no_grad()
 def embed_watermark(

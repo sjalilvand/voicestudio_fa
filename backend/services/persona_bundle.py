@@ -229,9 +229,12 @@ def _generate_preview(profile: dict, embed_fn) -> tuple[bytes, bool, float]:
 
 
 def _default_embed(wav, sample_rate):
-    """Default preview watermarker: services.watermark.embed_watermark(force=True)."""
-    from services.watermark import embed_watermark
-    return embed_watermark(wav, sample_rate, force=True)
+    """Default preview watermarker — routes through the mark_synthetic
+    chokepoint (#1169) with force=True: a persona bundle's preview mandates a
+    mark at package time regardless of the user's watermark pref."""
+    from services.watermark import mark_synthetic
+    return mark_synthetic(wav, sample_rate, force=True,
+                          context="persona_bundle.preview")
 
 
 def build_persona_bundle(

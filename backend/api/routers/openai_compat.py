@@ -13,7 +13,8 @@ Endpoints
 
 The router delegates to the active TTS/ASR backends via the same adapter
 protocol used by the rest of OmniVoice, so engine selection, GPU offloading,
-and model loading all work identically.
+model loading, and invisible provenance watermarking (services.watermark,
+#1169) all work identically.
 
 Reference: https://platform.openai.com/docs/api-reference/audio
 """
@@ -250,6 +251,7 @@ def _encode_audio(wav_tensor, sample_rate: int, fmt: str) -> tuple[bytes, str, s
 def _run_tts(backend, text: str, kw: dict):
     """Run TTS inference in the GPU thread pool."""
     from services.audio_dsp import apply_mastering, normalize_audio
+    from services.watermark import mark_synthetic
     wav = backend.generate(text, **kw)
     sr = backend.sample_rate
     # Engines that already emit mastered, studio-grade audio (e.g. VoxCPM2's
@@ -261,6 +263,12 @@ def _run_tts(backend, text: str, kw: dict):
     if not getattr(backend, "applies_own_mastering", False):
         wav = apply_mastering(wav, sample_rate=sr)
     wav = normalize_audio(wav, target_dBFS=-2.0)
+    # Invisible AudioSeal provenance mark at the tensor stage, before any
+    # container encoding (#1169 — this route used to return unmarked audio
+    # while /generate marked the same text). Same failure semantics as
+    # /generate: pref-gated, no-op without AudioSeal, passes audio through
+    # unchanged on any failure — never blocks the response.
+    wav = mark_synthetic(wav, sr, context="openai_compat.speech")
     return wav, sr
 
 

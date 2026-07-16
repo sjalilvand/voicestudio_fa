@@ -652,13 +652,16 @@ async def _finalize_generation(
     loop = asyncio.get_running_loop()
     # Invisible AudioSeal provenance watermark on the final audio. Embedding
     # was previously only wired into the dub pipeline (dub_generate.py), so
-    # plain TTS came out unmarked despite the setting being on. embed_watermark
-    # self-gates on the user's watermark setting + AudioSeal availability and
-    # passes the audio through unchanged on any failure, so it never breaks
-    # generation.
-    from services.watermark import embed_watermark
+    # plain TTS came out unmarked despite the setting being on — and the same
+    # class of gap later bit /v1/audio/speech (#1169), which is why ALL
+    # producers now share the mark_synthetic chokepoint. It self-gates on the
+    # user's watermark setting + AudioSeal availability and passes the audio
+    # through unchanged on any failure, so it never breaks generation.
+    from services.watermark import mark_synthetic
     audio_tensor = await loop.run_in_executor(
-        _gpu_pool, embed_watermark, audio_tensor, sample_rate
+        _gpu_pool,
+        functools.partial(mark_synthetic, audio_tensor, sample_rate,
+                          context="generate.finalize"),
     )
     gen_time = round(time.time() - start_time, 2)
 
@@ -1136,6 +1139,14 @@ async def generate_speech(
                     sr = _model.sampling_rate if hasattr(_model, "sampling_rate") else 24000
                     skip = False
                 preview = _apply_effect_chain(raw, sr, effect_preset, skip_mastering=skip)
+                # Provenance-mark the STREAMED copy only (#1169): the preview
+                # PCM leaves the app the moment it's yielded, before
+                # _finalize_generation marks the assembled take, so it needs
+                # its own mark. `raw` stays unmarked — the saved artifact gets
+                # exactly one whole-take mark in the finalize path (no
+                # double-embed on the file users keep).
+                from services.watermark import mark_synthetic
+                preview = mark_synthetic(preview, sr, context="generate.stream_preview")
                 return raw, preview, sr
             except ValueError:
                 raise
@@ -1196,7 +1207,18 @@ async def generate_speech(
                         "format": "pcm16", "total_chunks": 1, "crossfade_ms": 0,
                         "seed": used_seed,
                     })
-                    yield _line({"type": "chunk", "seq": 0, "pcm": _pcm16_b64(audio_tensor)})
+                    # Provenance-mark the streamed copy (#1169): these PCM
+                    # bytes leave the app before _finalize_generation marks
+                    # the saved take. Marking a copy keeps the artifact's
+                    # single whole-take mark (embed_watermark returns a new
+                    # tensor; audio_tensor itself is untouched).
+                    from services.watermark import mark_synthetic
+                    _preview = await asyncio.get_running_loop().run_in_executor(
+                        _gpu_pool,
+                        functools.partial(mark_synthetic, audio_tensor, sample_rate,
+                                          context="generate.stream_preview"),
+                    )
+                    yield _line({"type": "chunk", "seq": 0, "pcm": _pcm16_b64(_preview)})
                 else:
                     parts = []
                     sample_rate = None

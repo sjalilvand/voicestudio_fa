@@ -183,6 +183,22 @@ async def _render_archetype_wav(a: dict, out_path: Path) -> None:
     if _is_unusable_audio(audio_tensor):
         raise RuntimeError("the voice engine returned no audible audio for this archetype")
 
+    # Invisible provenance mark (#1169), tensor stage, before the WAV is
+    # persisted: this one site covers BOTH archetype outputs — the served
+    # preview clip (GET /archetypes/{id}/preview) and the synthetic reference
+    # WAV a materialized profile keeps in VOICES_DIR (played back via the
+    # profile preview route). Runs in the GPU pool like generate's finalize;
+    # never raises (degrades to unmarked on failure). User-uploaded/recorded
+    # reference audio is human speech and is never marked — this only touches
+    # audio the engine synthesized.
+    from services.watermark import mark_synthetic
+    import functools
+    audio_tensor = await run_on_gpu_pool_guarded(
+        functools.partial(mark_synthetic, audio_tensor, model.sampling_rate,
+                          context="archetypes.render"),
+        what="Archetype watermark",
+    )
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
     _safe_torchaudio_save(str(out_path), audio_tensor, model.sampling_rate)
 

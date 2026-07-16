@@ -360,6 +360,21 @@ async def _run_batch_pipeline(job_id: str, job: dict):
                 logger.warning("Batch TTS seg %d failed: %s", i, e)
 
         # ── 3c. Save dubbed audio track ───────────────────────────────
+        # Invisible provenance mark on the assembled track (#1169), tensor
+        # stage, before the WAV write / aac mux — batch dubs used to ship
+        # unmarked while the interactive dub pipeline marked every segment.
+        # One whole-track embed (chunked internally, #1045) is equivalent to
+        # dub_generate's per-segment marks: the 16-bit message repeats
+        # throughout. Runs in the GPU pool like generate's finalize; never
+        # raises (degrades to unmarked on failure, same as every producer).
+        from services.watermark import mark_synthetic
+        import functools
+        full_audio = await loop.run_in_executor(
+            _gpu_pool,
+            functools.partial(mark_synthetic, full_audio, sr,
+                              context="batch.dub_track"),
+        )
+
         # Same assembly pattern as dub_generate.py:390 — `full_audio` is a
         # zero-init tensor that gets +='d from torch.cat-style slices, so
         # it can land non-contiguous + out-of-range. Go through the

@@ -105,7 +105,7 @@ def patched_generate(monkeypatch, tmp_path):
         lambda job_id, seg_id: str(job_dir / f"seg_{seg_id}.wav"),
     )
     monkeypatch.setattr(dg, "rvc_is_enabled", lambda: False)
-    monkeypatch.setattr(dg, "embed_watermark", lambda wav, sr: wav)
+    monkeypatch.setattr(dg, "mark_synthetic", lambda wav, sr, **kw: wav)
     monkeypatch.setattr(dg, "apply_mastering", lambda a, sample_rate=None: a)
     monkeypatch.setattr(dg, "get_effect_chain", lambda preset: None)
     monkeypatch.setattr(dg, "apply_effects_chain", lambda a, **k: a)
@@ -200,7 +200,7 @@ def test_final_dub_track_and_seg_wav_are_watermarked(patched_generate, monkeypat
     mark_back_off = 80_000
     mark_len = 256
 
-    def fake_embed(wav, sr):
+    def fake_embed(wav, sr, **kw):
         watermark_calls.append(int(wav.shape[-1]))
         out = wav.clone()
         n = out.shape[-1]
@@ -213,7 +213,7 @@ def test_final_dub_track_and_seg_wav_are_watermarked(patched_generate, monkeypat
         hit = bool(torch.any(torch.isclose(wav, mark, atol=2e-3)))
         return {"is_watermarked": hit, "confidence": 1.0 if hit else 0.0}
 
-    monkeypatch.setattr(dg, "embed_watermark", fake_embed)
+    monkeypatch.setattr(dg, "mark_synthetic", fake_embed)
     monkeypatch.setattr(watermark, "detect_watermark", fake_detect)
 
     job["duration"] = 35.0

@@ -369,8 +369,11 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
       :func:`chapter_cache_key` over the chapter's spans + sample rate +
       engine + each voice's resolved signature (+ the lexicon, so a lexicon
       edit re-renders). A fully-unchanged chapter hits here and never touches
-      segment files; the key derivation is unchanged, so chapter caches
-      written by released versions keep hitting. ``seg_stats`` is ``None``.
+      segment files. With invisible watermarking active the key also carries a
+      watermark tag (#1169) — pre-#1169 chapter caches (unmarked audio)
+      deliberately miss once and re-render marked; with watermarking off the
+      derivation is unchanged and released-version caches keep hitting.
+      ``seg_stats`` is ``None``.
     * Inner — on a chapter miss, each spoken span goes through the
       :class:`services.longform_render.SegmentCache` under
       ``cache_dir/segments``: cached segments load from disk, only the
@@ -393,6 +396,7 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
     from services.longform_render import SegmentCache, chapter_cache_key
     from services.pronunciation import normalize_lexicon
     from services.text_normalization import normalize_for_tts
+    from services.watermark import mark_synthetic, will_mark
 
     spans = [Span(voice_id=s.voice_id, text=normalize_for_tts(s.text, language),
                   pause_ms_after=s.pause_ms_after, speed=getattr(s, "speed", None))
@@ -412,6 +416,16 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
         # invalidates cached chapters (reserved key can't collide with a voice id).
         lex_sig = json.dumps(normalize_lexicon(lexicon), sort_keys=True)
         sig["\x00lexicon"] = lex_sig
+    if will_mark():
+        # Provenance-marked chapters cache under their own key (#1169): a
+        # chapter WAV rendered while watermarking was off/unavailable —
+        # including every cache entry written before marking existed — must
+        # never satisfy a request made while it's on. Deliberately one-time
+        # invalidates pre-#1169 chapter caches (the SEGMENT cache underneath
+        # is untouched, so re-rendering is assembly + one embed, not re-TTS);
+        # with marking off the key is byte-identical to the released
+        # derivation, so those caches keep hitting.
+        sig["\x00watermark"] = "1"
     key = chapter_cache_key(spans_tuples, sample_rate=sr, engine_id=engine_id, voice_sig=sig)
     wav_path = os.path.join(cache_dir, f"{key}.wav")
 
@@ -427,6 +441,16 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
                              voice_sig=voice_sigs, extra_sig=lex_sig)
     audio, dur = synthesize_chapter(spans, synth, sr, lexicon=lexicon,
                                     segment_cache=seg_cache)
+    # Invisible provenance mark on the assembled chapter (#1169), tensor stage,
+    # before the WAV lands in the cache — this single site covers every
+    # longform front door (/audiobook, /longform/render [Stories],
+    # /audiobook/preview, /audiobook/resume/{id}): the m4b/mp3 mux only
+    # concatenates these WAVs, and AudioSeal survives the lossy encode.
+    # Segments in the segment cache stay unmarked by design — they're
+    # intermediate assembly inputs, re-marked here on every chapter render.
+    # Already runs in the GPU-pool executor; never raises (degrades to
+    # unmarked on failure).
+    audio = mark_synthetic(audio, sr, context="longform.chapter")
     atomic_save_wav(wav_path, audio, sr)
     return wav_path, dur, False, {"total": seg_cache.hits + seg_cache.misses,
                                   "cached": seg_cache.hits}
