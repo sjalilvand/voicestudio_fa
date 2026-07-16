@@ -1160,6 +1160,11 @@ async def get_model():
 
     async with _model_lock:
         if model is None:
+            # Crash forensics (#1164): a cold TTS model load is where memory
+            # exhaustion (OS OOM kill) most often lands — record that one
+            # started so an unclean death is attributable by the next run.
+            from core.run_sentinel import touch_activity
+            touch_activity("model_load", "omnivoice-tts")
             model = await _load_model_with_timeout()
     return model
 

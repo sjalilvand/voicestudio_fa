@@ -672,6 +672,41 @@ def system_notifications():
             "action": None,
         })
 
+    # 5a. The previous backend RUN died without a clean shutdown (#1164) —
+    #     the run-sentinel record is the browser/dev/Docker equivalent of the
+    #     desktop shell's crash marker. The id embeds detected_at so a NEW
+    #     unclean death re-notifies even after an older one was dismissed.
+    #     Coexists with the crash-last-session note below (that one covers
+    #     caught unhandled exceptions; this one covers process death).
+    try:
+        from core import run_sentinel
+
+        rec = run_sentinel.newest_record()
+        if rec is not None and not rec[1]:
+            record = rec[0]
+            last = record.get("last_activity") or {}
+            doing = f" Last activity: {last.get('kind')}." if last.get("kind") else ""
+            notes.append({
+                # ms resolution: two deaths in the same second must still get
+                # distinct ids, or the second one stays invisible post-ack.
+                "id": f"last-run-crash-{int((record.get('detected_at') or 0) * 1000)}",
+                "level": "error",
+                "title": "The backend did not shut down cleanly last run",
+                "message": (
+                    "The previous backend process ended without a clean "
+                    "shutdown — it likely crashed or was killed (for example "
+                    "by the OS running out of memory)." + doing +
+                    " A log tail was captured for bug reports."
+                ),
+                "action": {
+                    "label": "View logs",
+                    "type": "navigate",
+                    "target": "settings",
+                },
+            })
+    except Exception:
+        pass
+
     # 5. A previous session logged a crash the user never saw.
     #    crash_log grew past the last acknowledged size AND predates this
     #    process — i.e. it happened last run, not just now (errors from the
@@ -724,6 +759,33 @@ def _crashed_last_session() -> bool:
         if size <= int(prefs_get("crash_log_acked_size", 0) or 0):
             return False
     return mtime < _PROCESS_START_TS
+
+
+@router.get("/system/last-run-crash")
+async def get_last_run_crash():
+    """Newest unclean-shutdown record from the previous backend run (#1164)
+    — the deployment-agnostic twin of the desktop shell's crash marker
+    (`get_last_backend_crash`), for browser/dev/Docker frontends that have no
+    shell to ask. Version-gated like the shell's markers: records from a
+    different release than the running build are ignored (kept on disk)."""
+    from core import run_sentinel
+
+    rec = run_sentinel.newest_record()
+    if rec is None:
+        return {"record": None, "acknowledged": True}
+    record, acked = rec
+    return {"record": record, "acknowledged": acked}
+
+
+@router.post("/system/last-run-crash/ack")
+async def ack_last_run_crash():
+    """Mark the newest unclean-shutdown record as seen. Watermark semantics
+    (like the shell's ack): the record itself is retained so bug reports can
+    still attach the evidence; a NEWER death re-arms the notice."""
+    from core import run_sentinel
+
+    run_sentinel.acknowledge()
+    return {"ok": True}
 
 
 @router.post("/system/crash/ack")

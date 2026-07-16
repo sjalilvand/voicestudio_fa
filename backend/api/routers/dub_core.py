@@ -427,6 +427,12 @@ async def dub_transcribe_stream(
     # query string can never break the diarization call. None → auto-detect.
     num_speakers = _clamp_num_speakers(num_speakers)
 
+    # Crash forensics (#1164): transcription is a prime OOM-kill site (ASR
+    # model loading on top of a resident TTS model). Record that one started
+    # so an unclean death is attributable. Kind only — never media content.
+    from core.run_sentinel import touch_activity
+    touch_activity("transcribe", "dub")
+
     job = _get_job(job_id)
 
     preflight_error: Optional[str] = None

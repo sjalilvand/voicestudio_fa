@@ -589,6 +589,17 @@ async def lifespan(app: FastAPI):
     except Exception:
         pass
 
+    # Run-sentinel forensics (#1164): detect an uncleanly-ended previous run
+    # (OOM kill, hard crash — anything that skipped the shutdown block) and
+    # write the crash record BEFORE any heavy init, so even a crash later in
+    # THIS startup is attributed by the next run. Best-effort by contract.
+    from core import run_sentinel
+    try:
+        run_sentinel.detect_unclean_shutdown()
+        run_sentinel.write_sentinel()
+    except Exception:
+        logger.exception("Run-sentinel startup failed (non-fatal).")
+
     init_db()
     # Network sharing is loopback-only by default; the PIN middleware stays
     # inert until enable() sets a PIN. Seed the (disabled) state so the
@@ -764,6 +775,14 @@ async def lifespan(app: FastAPI):
     except Exception:
         pass
     logger.info("Shutdown: done.")
+    # Last thing on a clean shutdown: retire the run sentinel so the next
+    # startup doesn't misread this exit as a crash (#1164). After "Shutdown:
+    # done." on purpose — if anything above dies, the sentinel survives and
+    # the death still gets reported.
+    try:
+        run_sentinel.clear_sentinel()
+    except Exception:
+        pass
 
 
 from core.version import APP_VERSION  # single source of truth (pyproject metadata)

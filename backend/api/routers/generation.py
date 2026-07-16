@@ -811,6 +811,12 @@ async def generate_speech(
             ),
         )
 
+    # Crash forensics (#1164): a generate is exactly the kind of work an OOM
+    # kill lands on — record it (engine id only, never the text) so an
+    # unclean death is attributable by the next run. Throttled + never raises.
+    from core.run_sentinel import touch_activity
+    touch_activity("generate", engine_id)
+
     # Single-active-engine memory discipline: hand back any OTHER resident TTS
     # engine's model before loading this one, so switching engines (or a
     # per-request engine= override, which bypasses /engines/select entirely)
