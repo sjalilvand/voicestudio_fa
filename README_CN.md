@@ -373,7 +373,7 @@ print(result.text)
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/debpalash/OmniVoice-Studio/blob/main/notebooks/OmniVoice_Studio_Colab.ipynb)
 
-没有本地 GPU？官方笔记本（[notebooks/OmniVoice_Studio_Colab.ipynb](notebooks/OmniVoice_Studio_Colab.ipynb)）可在免费的 Colab T4 上启动完整应用（包含 Web 界面）：在笔记本内直接构建前端，用 uv 安装后端（复用 Colab 预装的 CUDA PyTorch），并通过 Colab 内置端口代理打开界面。无需第三方隧道，也无需任何 API 密钥；还有一个冒烟测试单元格，可直接在笔记本中生成并播放第一段语音。
+没有本地 GPU？官方笔记本（[notebooks/OmniVoice_Studio_Colab.ipynb](notebooks/OmniVoice_Studio_Colab.ipynb)）可在免费的 Colab T4 上启动完整应用（包含 Web 界面）：在笔记本内直接构建前端，用 uv 安装后端（复用 Colab 预装的 CUDA PyTorch），并通过 Colab 内置端口代理打开界面。无需第三方隧道，也无需任何 API 密钥。随后还有一套覆盖全部主要功能的 API 导览，全部可在笔记本内直接播放：多语言 TTS、声音克隆与声音设计、已保存的声音档案、语音转写、AI 水印检测、OpenAI 兼容 API、多角色故事、带章节的 m4b 有声书，以及一个附带人声分离音轨的迷你视频配音。
 
 ### 🤝 智能体技能（Agent Skills）
 

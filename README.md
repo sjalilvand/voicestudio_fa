@@ -379,7 +379,7 @@ Want the whole surface (100+ endpoints)? The full REST API reference is embedded
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/debpalash/OmniVoice-Studio/blob/main/notebooks/OmniVoice_Studio_Colab.ipynb)
 
-No local GPU? The official notebook ([notebooks/OmniVoice_Studio_Colab.ipynb](notebooks/OmniVoice_Studio_Colab.ipynb)) boots the full app — web UI included — on a free Colab T4: it builds the frontend in-notebook, installs the backend with uv (reusing Colab's preinstalled CUDA PyTorch), and opens the UI through Colab's built-in port proxy. No third-party tunnels, no API keys; a smoke-test cell generates and plays a first line of speech right in the notebook.
+No local GPU? The official notebook ([notebooks/OmniVoice_Studio_Colab.ipynb](notebooks/OmniVoice_Studio_Colab.ipynb)) boots the full app — web UI included — on a free Colab T4: it builds the frontend in-notebook, installs the backend with uv (reusing Colab's preinstalled CUDA PyTorch), and opens the UI through Colab's built-in port proxy. No third-party tunnels, no API keys. It then walks the whole feature surface as a guided API tour with inline playback: multilingual TTS, voice cloning and design, saved voice profiles, transcription, AI-watermark detection, the OpenAI-compatible API, a multi-voice story, a chaptered m4b audiobook, and a miniature video dub with vocal-isolation stems.
 
 ### 🤝 Agent Skills
 
