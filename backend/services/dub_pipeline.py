@@ -231,8 +231,8 @@ def save_job(job_id: str, job: dict, filename: str = "", duration: float = 0.0, 
                  len(segments), job.get("language", ""), job.get("language_code", ""),
                  json.dumps(tracks), json.dumps(job, default=str), content_hash or "", time.time()),
             )
-    except Exception as e:
-        logger.error("Failed to persist dub job %s: %s", job_id, e)
+    except Exception:
+        logger.exception("Failed to persist dub job %s", job_id)
         return
     event_bus.emit("dub_history", {"action": "saved", "id": job_id})
 
