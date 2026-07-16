@@ -122,30 +122,42 @@ export default function useAppData() {
   }, [modelStatus, modelSubStage, modelDetail, modelError, modelProgress]);
 
   // ── Data loading callbacks ──
+  // Failures keep the previous list (better than blanking the UI), but are
+  // logged so "my voices/history vanished" reports carry a cause (#1158).
   const loadProfiles = useCallback(async () => {
     try {
       setProfiles(await listProfiles());
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Failed to load voice profiles:', e);
+    }
   }, []);
   const loadHistory = useCallback(async () => {
     try {
       setHistory(await listHistory());
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Failed to load generation history:', e);
+    }
   }, []);
   const loadDubHistory = useCallback(async () => {
     try {
       setDubHistory(await listDubHistory());
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Failed to load dub history:', e);
+    }
   }, []);
   const loadProjects = useCallback(async () => {
     try {
       setStudioProjects(await listProjects());
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Failed to load projects:', e);
+    }
   }, []);
   const loadExportHistory = useCallback(async () => {
     try {
       setExportHistory(await listExportHistory());
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Failed to load export history:', e);
+    }
   }, []);
 
   // ── WebSocket real-time updates ──
