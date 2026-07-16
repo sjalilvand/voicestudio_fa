@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Loader, RotateCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSetupStatus, usePreflight } from '../api/hooks';
+import { apiJson } from '../api/client';
+import AnalyticsConsentCard from '../components/AnalyticsConsentCard';
 import WizardLibrary from '../components/WizardLibrary';
 import MediaEngineCard from '../components/MediaEngineCard';
 import MirrorRescue from '../components/MirrorRescue';
@@ -138,16 +140,8 @@ function PreflightPanel({ report, loading, onRecheck }) {
 
 /* ── LED stepper rail ──────────────────────────────────────────────────── */
 
-function StepperNav({ step, maxUnlockedStep, onStep }) {
+function StepperNav({ step, maxUnlockedStep, onStep, stepLabels }) {
   const { t } = useTranslation();
-  // Three steps, no welcome ceremony: the journey rail + setup page already
-  // oriented the user. Models + engines share one act (required gate +
-  // optional extras).
-  const stepLabels = [
-    t('setup.system_check'),
-    t('firstrun.stage_models', 'Models & engines'),
-    t('setup.try_dictation'),
-  ];
   return (
     <nav className="flex flex-wrap items-center gap-x-4 gap-y-2" data-tauri-drag-region>
       {stepLabels.map((label, i) => {
@@ -165,8 +159,11 @@ function StepperNav({ step, maxUnlockedStep, onStep }) {
             onClick={() => !locked && onStep(i)}
             aria-current={isActive ? 'step' : undefined}
             aria-label={
-              t('setup.step_aria', { num: i + 1, label, defaultValue: 'Step {{num}}: {{label}}' }) +
-              (isDone ? ` (${t('setup.step_completed', 'completed')})` : '')
+              t('setup.step_aria', {
+                num: i + 1,
+                label,
+                defaultValue: 'Step {{num}}: {{label}}',
+              }) + (isDone ? ` (${t('setup.step_completed', 'completed')})` : '')
             }
             className={cn(
               'inline-flex appearance-none items-center gap-1.5 border-0 bg-transparent p-0 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.14em] transition-colors',
@@ -214,15 +211,45 @@ function SectionHead({ children }) {
  * journey (setup → install → models/engines). Rendered in the same shadcn
  * design system as the install splash so the handoff is seamless.
  *
- * Flow:
- *   0. System            — /setup/preflight results
- *   1. Models & engines  — required models (gates continue) + engines +
- *                          the optional tail in one act
- *   2. Dictation         — guided demo, then "Enter studio"
+ * Flow (step ids — the consent step only exists when this build ships an
+ * analytics destination AND the user has never been asked):
+ *   system     — /setup/preflight results
+ *   models     — required models (gates continue) + engines + the optional
+ *                tail in one act
+ *   consent    — first-run analytics ask: two equal-weight Yes/No buttons.
+ *                Never defaults to yes; skipping the wizard (or jumping past
+ *                via the rail) = not prompted = analytics stays OFF.
+ *   dictation  — guided demo, then "Enter studio"
  */
 export default function SetupWizard({ onReady }) {
   const { t } = useTranslation();
   const [step, setStep] = useState(0);
+
+  // Whether to insert the analytics consent step. Resolved once at mount
+  // (the user is on step 0 when this lands, so indices never shift underfoot):
+  // only when the build CAN send (token baked in) and the user was never
+  // asked. Source builds have no destination — asking would be dishonest.
+  const [askConsent, setAskConsent] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    apiJson('/api/settings/analytics')
+      .then((s) => {
+        if (!cancelled && s?.available && !s?.prompted && !s?.opted_in) setAskConsent(true);
+      })
+      .catch(() => {
+        /* backend unreachable → no consent step; the one-time banner asks later */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const stepIds = useMemo(
+    () =>
+      askConsent ? ['system', 'models', 'consent', 'dictation'] : ['system', 'models', 'dictation'],
+    [askConsent],
+  );
+  const stepId = stepIds[Math.min(step, stepIds.length - 1)];
 
   // TanStack Query — shared cache, auto-refetch on step 2 (models)
   const setupQuery = useSetupStatus();
@@ -233,10 +260,10 @@ export default function SetupWizard({ onReady }) {
 
   // Poll setup status every 4s while on Models step
   useEffect(() => {
-    if (step !== 1) return;
+    if (stepId !== 'models') return;
     const iv = setInterval(() => setupQuery.refetch(), 4000);
     return () => clearInterval(iv);
-  }, [step, setupQuery]);
+  }, [stepId, setupQuery]);
 
   const recheckPreflight = useCallback(() => {
     preQuery.refetch();
@@ -251,11 +278,18 @@ export default function SetupWizard({ onReady }) {
 
   const cachePath = status?.hf_cache_dir || '~/.cache/huggingface';
 
-  const STEP_SUBTITLES = [
-    t('setup.system_check_desc'),
-    t('setup.install_models_desc'),
-    t('setup.try_dictation'),
-  ];
+  const STEP_SUBTITLES = {
+    system: t('setup.system_check_desc'),
+    models: t('setup.install_models_desc'),
+    consent: t('consent.title', 'Help improve OmniVoice?'),
+    dictation: t('setup.try_dictation'),
+  };
+  const STEP_LABELS = {
+    system: t('setup.system_check'),
+    models: t('firstrun.stage_models', 'Models & engines'),
+    consent: t('consent.step_label', 'Improve OmniVoice'),
+    dictation: t('setup.try_dictation'),
+  };
 
   return (
     <div className="fixed inset-0 flex flex-col items-center overflow-hidden bg-bg px-6 pt-12 font-sans text-fg">
@@ -286,21 +320,22 @@ export default function SetupWizard({ onReady }) {
                 </span>
               </div>
               <p className="mt-1.5 text-sm leading-snug text-fg-muted" data-tauri-drag-region>
-                {STEP_SUBTITLES[step]}
+                {STEP_SUBTITLES[stepId]}
               </p>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-2">
               <StepperNav
                 step={step}
-                maxUnlockedStep={preflightOk ? (modelsReady ? 2 : 1) : 0}
+                maxUnlockedStep={preflightOk ? (modelsReady ? stepIds.length - 1 : 1) : 0}
                 onStep={setStep}
+                stepLabels={stepIds.map((id) => STEP_LABELS[id])}
               />
             </div>
           </div>
         </header>
 
-        {/* 0. System check — first thing a user sees: the probe auto-runs. */}
-        {step === 0 && (
+        {/* System check — first thing a user sees: the probe auto-runs. */}
+        {stepId === 'system' && (
           <div className="flex min-h-0 flex-auto flex-col gap-3" key="step-0">
             <div className="fr-rise min-h-0 flex-1 overflow-y-auto" style={{ '--rise': 1 }}>
               <PreflightPanel report={pre} loading={preLoading} onRecheck={recheckPreflight} />
@@ -331,9 +366,9 @@ export default function SetupWizard({ onReady }) {
           </div>
         )}
 
-        {/* 1. Models & engines — ONE unified list: every installable is a
+        {/* Models & engines — ONE unified list: every installable is a
             row of the same grammar (LED · name · chip · size · action). */}
-        {step === 1 && (
+        {stepId === 'models' && (
           <div className="flex min-h-0 flex-auto flex-col gap-3" key="step-1">
             <section
               className="fr-rise flex min-h-0 flex-1 flex-col gap-2.5"
@@ -360,7 +395,7 @@ export default function SetupWizard({ onReady }) {
               </Button>
               <Button
                 variant="primary"
-                onClick={() => setStep(2)}
+                onClick={() => setStep(step + 1)}
                 disabled={!modelsReady}
                 title={modelsReady ? '' : t('setup.install_required_models')}
               >
@@ -370,8 +405,34 @@ export default function SetupWizard({ onReady }) {
           </div>
         )}
 
-        {/* 2. Dictation — guided walkthrough. Skippable. */}
-        {step === 2 && (
+        {/* Analytics consent — asked exactly once, only in builds that ship a
+            destination. Both buttons advance; there is no "yes by default",
+            and jumping past via the rail (skipping) leaves analytics OFF. */}
+        {stepId === 'consent' && (
+          <div className="flex min-h-0 flex-auto flex-col gap-3" key="step-consent">
+            <section
+              className="fr-rise flex min-h-0 flex-1 flex-col gap-2.5"
+              style={{ '--rise': 1 }}
+            >
+              <SectionHead>{t('consent.title', 'Help improve OmniVoice?')}</SectionHead>
+              <div className="min-h-0 flex-1 overflow-y-auto pt-2">
+                <AnalyticsConsentCard onDone={() => setStep(step + 1)} />
+              </div>
+            </section>
+            <div
+              className="fr-rise flex shrink-0 items-center justify-between gap-4 border-t border-border pt-3"
+              style={{ '--rise': 2 }}
+            >
+              <Button variant="ghost" size="sm" onClick={() => setStep(step - 1)}>
+                ← {t('setup.back')}
+              </Button>
+              <span />
+            </div>
+          </div>
+        )}
+
+        {/* Dictation — guided walkthrough. Skippable. */}
+        {stepId === 'dictation' && (
           <div className="flex min-h-0 flex-auto flex-col gap-3" key="step-2">
             <section
               className="fr-rise flex min-h-0 flex-1 flex-col gap-2.5"
@@ -386,7 +447,7 @@ export default function SetupWizard({ onReady }) {
               className="fr-rise flex shrink-0 items-center justify-between gap-4 border-t border-border pt-3"
               style={{ '--rise': 2 }}
             >
-              <Button variant="ghost" size="sm" onClick={() => setStep(1)}>
+              <Button variant="ghost" size="sm" onClick={() => setStep(step - 1)}>
                 ← {t('setup.back')}
               </Button>
               <div className="flex items-center gap-2">

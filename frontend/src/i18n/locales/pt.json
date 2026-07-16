@@ -494,6 +494,15 @@
     "translator_offline": "Tradutor off-line",
     "no_tracking": "Nenhum – sem rastreamento"
   },
+  "consent": {
+    "title": "Ajudar a melhorar o OmniVoice?",
+    "step_label": "Melhorar o OmniVoice",
+    "body": "Estatísticas de uso anônimas e sem conteúdo: quais mecanismos são usados, quanto tempo as gerações levam e o tipo de erros. Nunca o seu texto, o seu áudio, os seus arquivos ou qualquer coisa que o identifique. Nada é enviado a menos que você aceite, e você pode mudar de ideia a qualquer momento em Configurações → Privacidade.",
+    "learn_more": "O que exatamente é enviado?",
+    "yes": "Sim, compartilhar estatísticas anônimas",
+    "no": "Não, obrigado",
+    "dismiss": "Dispensar (a análise continua desativada)"
+  },
   "credentials": {
     "title": "Credenciais",
     "desc": "As chaves e tokens de API são definidos <1>apenas para esta sessão</1>. Para persistência entre reinicializações, defina-as como variáveis ​​de ambiente em seu perfil de shell.",

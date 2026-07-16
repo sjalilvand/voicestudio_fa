@@ -44,6 +44,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import FloatingPill from './components/FloatingPill';
 import GlobalAudioPlayer from './components/GlobalAudioPlayer';
 import BackendCrashNotice from './components/BackendCrashNotice';
+import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
 import { initAnalyticsFromConsent } from './utils/analytics';
 import BackendRestartBanner from './components/BackendRestartBanner';
 // RemoteAuthGate is mounted at the true outermost provider in main-app.jsx so
@@ -502,7 +503,12 @@ function App() {
     handleCleanupSegments,
     handleTranslateAll,
     handleDubImportSrt,
-  } = useDubWorkflow({ loadProjects, loadProfiles, loadDubHistory, setLastGenFingerprints });
+  } = useDubWorkflow({
+    loadProjects,
+    loadProfiles,
+    loadDubHistory,
+    setLastGenFingerprints,
+  });
 
   const [dubVideoFile, setDubVideoFile] = useState(null);
   const [dubLocalBlobUrl, setDubLocalBlobUrl] = useState(null);
@@ -605,7 +611,10 @@ function App() {
         // voice warm without depending on seeded profiles.
         fd.append('instruct', 'A warm, friendly narrator voice, medium pace');
         fd.append('num_step', '16');
-        const res = await apiFetch(`${API}/generate`, { method: 'POST', body: fd });
+        const res = await apiFetch(`${API}/generate`, {
+          method: 'POST',
+          body: fd,
+        });
         const blob = await res.blob();
         await playBlobAudio(blob, { label: i18n.t('player.generated_audio') });
         toast.success(i18n.t('firstrun.first_sound_done'), { duration: 7000 });
@@ -776,7 +785,11 @@ function App() {
       });
       if (!destPath) return; // User cancelled
 
-      await exportAction({ source_filename: sourceIdentifier, destination_path: destPath, mode });
+      await exportAction({
+        source_filename: sourceIdentifier,
+        destination_path: destPath,
+        mode,
+      });
       toast.success(i18n.t('app.toast_exported', { name: fallbackName }));
       recordValueMoment('export'); // success-only donation moment
       loadExportHistory();
@@ -812,10 +825,17 @@ function App() {
         const { save } = await import('@tauri-apps/plugin-dialog');
         const destPath = await save({
           defaultPath: fallbackName,
-          filters: [{ name: modeGuess === 'video' ? 'Video' : 'Audio', extensions: [extGuess] }],
+          filters: [
+            {
+              name: modeGuess === 'video' ? 'Video' : 'Audio',
+              extensions: [extGuess],
+            },
+          ],
         });
         if (!destPath) return; // user cancelled
-        toast.loading(i18n.t('app.toast_saving', { name: fallbackName }), { id: fallbackName });
+        toast.loading(i18n.t('app.toast_saving', { name: fallbackName }), {
+          id: fallbackName,
+        });
 
         // Subtitles are small text bodies: fetch them raw and write from this
         // (trusted) process via the save_text_file command — the user's dialog
@@ -826,7 +846,9 @@ function App() {
           const text = await res.text();
           const { invoke } = await import('@tauri-apps/api/core');
           await invoke('save_text_file', { path: destPath, contents: text });
-          toast.success(i18n.t('app.toast_saved', { path: destPath }), { id: fallbackName });
+          toast.success(i18n.t('app.toast_saved', { path: destPath }), {
+            id: fallbackName,
+          });
           recordValueMoment('export'); // success-only donation moment
           try {
             await exportRecord({
@@ -853,7 +875,9 @@ function App() {
           );
         }
         const data = await res.json();
-        toast.success(i18n.t('app.toast_saved', { path: data.path }), { id: fallbackName });
+        toast.success(i18n.t('app.toast_saved', { path: data.path }), {
+          id: fallbackName,
+        });
         recordValueMoment('export'); // success-only donation moment
         try {
           await exportRecord({
@@ -867,16 +891,22 @@ function App() {
         }
       } catch (err) {
         console.error(err);
-        toast.error(i18n.t('app.toast_save_error', { message: err.message }), { id: fallbackName });
+        toast.error(i18n.t('app.toast_save_error', { message: err.message }), {
+          id: fallbackName,
+        });
       }
       return;
     }
 
     // Browser path: standard blob download.
     try {
-      toast.loading(i18n.t('app.toast_processing', { name: fallbackName }), { id: fallbackName });
+      toast.loading(i18n.t('app.toast_processing', { name: fallbackName }), {
+        id: fallbackName,
+      });
       const finalName = await browserDownload(url, fallbackName);
-      toast.success(i18n.t('app.toast_downloaded', { name: finalName }), { id: fallbackName });
+      toast.success(i18n.t('app.toast_downloaded', { name: finalName }), {
+        id: fallbackName,
+      });
       recordValueMoment('export'); // success-only donation moment
       try {
         await exportRecord({
@@ -1342,6 +1372,11 @@ function App() {
       {/* #941: honest surfacing of backend process crashes (exit code +
           stderr tail from the shell's crash marker), with ack-on-view. */}
       <BackendCrashNotice />
+
+      {/* One-time analytics consent ask for installs that predate the
+          first-run consent step. Renders nothing once any choice was made
+          (or in source builds, which have no analytics destination). */}
+      <AnalyticsConsentBanner />
 
       {/* #567's visible half: while the shell auto-restarts a dead backend
           (10–20 s), say so once — instead of every request surfacing its own

@@ -494,6 +494,15 @@
     "translator_offline": "Çevrimdışı çevirmen",
     "no_tracking": "Yok — izleme yok"
   },
+  "consent": {
+    "title": "OmniVoice'un gelişmesine yardım eder misiniz?",
+    "step_label": "OmniVoice'u geliştir",
+    "body": "Anonim, içerik barındırmayan kullanım istatistikleri: hangi motorların kullanıldığı, üretimlerin ne kadar sürdüğü ve hata türleri. Asla metniniz, sesiniz, dosyalarınız veya sizi tanımlayan hiçbir şey gönderilmez. Evet demedikçe hiçbir şey gönderilmez ve kararınızı istediğiniz zaman Ayarlar → Gizlilik'ten değiştirebilirsiniz.",
+    "learn_more": "Tam olarak ne gönderiliyor?",
+    "yes": "Evet, anonim istatistikleri paylaş",
+    "no": "Hayır, teşekkürler",
+    "dismiss": "Kapat (analitik kapalı kalır)"
+  },
   "credentials": {
     "title": "Kimlik bilgileri",
     "desc": "API anahtarları ve belirteçleri <1>yalnızca bu oturum için</1> olarak ayarlandı. Yeniden başlatmalarda kalıcılık sağlamak için bunları kabuk profilinizde ortam değişkenleri olarak ayarlayın.",

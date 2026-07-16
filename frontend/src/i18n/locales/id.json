@@ -494,6 +494,15 @@
     "translator_offline": "Penerjemah luring",
     "no_tracking": "Tidak ada — tidak ada pelacakan"
   },
+  "consent": {
+    "title": "Bantu meningkatkan OmniVoice?",
+    "step_label": "Tingkatkan OmniVoice",
+    "body": "Statistik penggunaan anonim tanpa konten: mesin mana yang digunakan, berapa lama proses pembuatan, dan jenis kesalahan. Tidak pernah teks Anda, audio Anda, file Anda, atau apa pun yang mengidentifikasi Anda. Tidak ada yang dikirim kecuali Anda setuju, dan Anda dapat berubah pikiran kapan saja di Pengaturan → Privasi.",
+    "learn_more": "Apa saja yang sebenarnya dikirim?",
+    "yes": "Ya, bagikan statistik anonim",
+    "no": "Tidak, terima kasih",
+    "dismiss": "Tutup (analitik tetap mati)"
+  },
   "credentials": {
     "title": "Kredensial",
     "desc": "Kunci dan token API disetel <1>hanya untuk sesi ini</1>. Untuk kegigihan saat memulai ulang, tetapkan variabel tersebut sebagai variabel lingkungan di profil shell Anda.",

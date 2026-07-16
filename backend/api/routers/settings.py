@@ -1023,6 +1023,10 @@ def get_analytics():
         # False for source builds / any build with no token: analytics can never
         # run, so the UI can say so instead of offering a toggle that does nothing.
         "available": analytics.token_configured(),
+        # Whether the user has ever been explicitly asked (first-run consent step
+        # or the one-time banner). The UI uses this to ask exactly once — it never
+        # enables anything by itself.
+        "prompted": analytics.user_prompted(),
     }
 
 

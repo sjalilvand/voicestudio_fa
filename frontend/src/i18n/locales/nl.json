@@ -494,6 +494,15 @@
     "translator_offline": "Offline vertaler",
     "no_tracking": "Geen — geen tracking"
   },
+  "consent": {
+    "title": "Helpen OmniVoice te verbeteren?",
+    "step_label": "OmniVoice verbeteren",
+    "body": "Anonieme gebruiksstatistieken zonder inhoud: welke engines worden gebruikt, hoelang generaties duren en het type fouten. Nooit je tekst, je audio, je bestanden of iets dat jou identificeert. Er wordt niets verzonden tenzij je ja zegt, en je kunt je keuze altijd wijzigen in Instellingen → Privacy.",
+    "learn_more": "Wat wordt er precies verzonden?",
+    "yes": "Ja, deel anonieme statistieken",
+    "no": "Nee, bedankt",
+    "dismiss": "Sluiten (analytics blijft uit)"
+  },
   "credentials": {
     "title": "Referenties",
     "desc": "API-sleutels en tokens zijn <1>alleen voor deze sessie ingesteld</1>. Voor persistentie bij opnieuw opstarten stelt u ze in als omgevingsvariabelen in uw shell-profiel.",

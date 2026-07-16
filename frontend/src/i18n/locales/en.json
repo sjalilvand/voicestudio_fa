@@ -765,6 +765,15 @@
     "analytics_on": "Thanks — anonymous usage stats are on.",
     "analytics_off": "Analytics off. Nothing is sent."
   },
+  "consent": {
+    "title": "Help improve OmniVoice?",
+    "step_label": "Improve OmniVoice",
+    "body": "Anonymous, content-free usage stats: which engines are used, how long generations take, and the type of errors. Never your text, your audio, your files, or anything identifying you. Nothing is sent unless you say yes, and you can change your mind anytime in Settings → Privacy.",
+    "learn_more": "What exactly is sent?",
+    "yes": "Yes, share anonymous stats",
+    "no": "No thanks",
+    "dismiss": "Dismiss (keeps analytics off)"
+  },
   "credentials": {
     "title": "Credentials",
     "desc": "API keys and tokens are set <1>for this session only</1>. For persistence across restarts, set them as environment variables in your shell profile.",

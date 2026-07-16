@@ -494,6 +494,15 @@
     "translator_offline": "Offline-Übersetzer",
     "no_tracking": "Keine – keine Nachverfolgung"
   },
+  "consent": {
+    "title": "OmniVoice verbessern helfen?",
+    "step_label": "OmniVoice verbessern",
+    "body": "Anonyme, inhaltsfreie Nutzungsstatistiken: welche Engines verwendet werden, wie lange Generierungen dauern und die Art von Fehlern. Niemals Ihr Text, Ihr Audio, Ihre Dateien oder etwas, das Sie identifiziert. Es wird nichts gesendet, solange Sie nicht zustimmen — und Sie können Ihre Entscheidung jederzeit unter Einstellungen → Datenschutz ändern.",
+    "learn_more": "Was genau wird gesendet?",
+    "yes": "Ja, anonyme Statistiken teilen",
+    "no": "Nein, danke",
+    "dismiss": "Schließen (Analytik bleibt aus)"
+  },
   "credentials": {
     "title": "Anmeldeinformationen",
     "desc": "API-Schlüssel und Token werden <1>nur für diese Sitzung</1> festgelegt. Um die Persistenz über Neustarts hinweg zu gewährleisten, legen Sie sie als Umgebungsvariablen in Ihrem Shell-Profil fest.",

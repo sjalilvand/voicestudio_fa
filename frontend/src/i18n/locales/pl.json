@@ -494,6 +494,15 @@
     "translator_offline": "Tłumacz offline",
     "no_tracking": "Brak — brak śledzenia"
   },
+  "consent": {
+    "title": "Pomóc ulepszyć OmniVoice?",
+    "step_label": "Ulepsz OmniVoice",
+    "body": "Anonimowe statystyki użycia bez treści: które silniki są używane, jak długo trwa generowanie i jaki jest typ błędów. Nigdy Twój tekst, dźwięk, pliki ani nic, co Cię identyfikuje. Nic nie jest wysyłane, dopóki nie wyrazisz zgody, a decyzję możesz zmienić w każdej chwili w Ustawienia → Prywatność.",
+    "learn_more": "Co dokładnie jest wysyłane?",
+    "yes": "Tak, udostępniaj anonimowe statystyki",
+    "no": "Nie, dziękuję",
+    "dismiss": "Zamknij (analityka pozostaje wyłączona)"
+  },
   "credentials": {
     "title": "Poświadczenia",
     "desc": "Klucze i tokeny API są ustawione <1>tylko dla tej sesji</1>. Aby zachować trwałość po ponownym uruchomieniu, ustaw je jako zmienne środowiskowe w profilu powłoki.",

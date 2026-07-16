@@ -494,6 +494,15 @@
     "translator_offline": "Offlineöversättare",
     "no_tracking": "Ingen – ingen spårning"
   },
+  "consent": {
+    "title": "Hjälpa till att förbättra OmniVoice?",
+    "step_label": "Förbättra OmniVoice",
+    "body": "Anonym användningsstatistik utan innehåll: vilka motorer som används, hur lång tid genereringar tar och typen av fel. Aldrig din text, ditt ljud, dina filer eller något som identifierar dig. Inget skickas om du inte säger ja, och du kan ändra dig när som helst i Inställningar → Integritet.",
+    "learn_more": "Vad skickas egentligen?",
+    "yes": "Ja, dela anonym statistik",
+    "no": "Nej tack",
+    "dismiss": "Stäng (analys förblir av)"
+  },
   "credentials": {
     "title": "Inloggningsuppgifter",
     "desc": "API-nycklar och tokens är inställda <1>endast för denna session</1>. För beständighet över omstarter, ställ in dem som miljövariabler i din skalprofil.",

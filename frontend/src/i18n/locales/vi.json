@@ -494,6 +494,15 @@
     "translator_offline": "Trình dịch ngoại tuyến",
     "no_tracking": "Không có - không theo dõi"
   },
+  "consent": {
+    "title": "Giúp cải thiện OmniVoice?",
+    "step_label": "Cải thiện OmniVoice",
+    "body": "Thống kê sử dụng ẩn danh, không chứa nội dung: engine nào được dùng, thời gian tạo mất bao lâu và loại lỗi. Không bao giờ gửi văn bản, âm thanh, tệp của bạn hay bất cứ thứ gì nhận dạng bạn. Không có gì được gửi trừ khi bạn đồng ý, và bạn có thể đổi ý bất cứ lúc nào trong Cài đặt → Quyền riêng tư.",
+    "learn_more": "Chính xác thì những gì được gửi?",
+    "yes": "Có, chia sẻ thống kê ẩn danh",
+    "no": "Không, cảm ơn",
+    "dismiss": "Đóng (phân tích vẫn tắt)"
+  },
   "credentials": {
     "title": "Thông tin xác thực",
     "desc": "Khóa API và mã thông báo chỉ được đặt <1>cho phiên này</1>. Để duy trì sự kiên trì trong quá trình khởi động lại, hãy đặt chúng làm biến môi trường trong cấu hình shell của bạn.",

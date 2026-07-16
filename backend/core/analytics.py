@@ -85,12 +85,31 @@ def user_opted_in() -> bool:
 
 def set_opted_in(enabled: bool) -> None:
     """Persist the user's choice and rebuild/tear down the client immediately, so
-    the toggle takes effect without a restart."""
+    the toggle takes effect without a restart.
+
+    Every call is an EXPLICIT user choice (Settings toggle, first-run consent
+    step, or the one-time banner) — so it also marks the user as prompted:
+    the ask is never shown again once any choice has been made."""
     from core import prefs
 
     prefs.set_("analytics_enabled", bool(enabled))
+    prefs.set_("analytics_prompted", True)
     if not enabled:
         shutdown()
+
+
+def user_prompted() -> bool:
+    """Whether the user has ever been explicitly ASKED for consent (first-run
+    wizard step or the one-time banner). Controls showing the question exactly
+    once — it never enables anything by itself. Default False; a broken prefs
+    file reads as "not asked yet", which can only re-show the question, never
+    turn tracking on."""
+    try:
+        from core import prefs
+
+        return bool(prefs.get("analytics_prompted", False))
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def token_configured() -> bool:

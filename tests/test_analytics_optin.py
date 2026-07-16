@@ -86,6 +86,50 @@ def test_a_broken_prefs_file_does_not_enable_tracking(monkeypatch):
     assert analytics.user_opted_in() is False  # fails CLOSED
 
 
+# ── First-run consent prompt: asked exactly once, never defaulted ────────────
+
+
+def test_not_prompted_by_default():
+    """A fresh install has never been asked — the UI may show the ask, but
+    analytics itself stays OFF (silence is not consent)."""
+    assert analytics.user_prompted() is False
+    assert analytics.user_opted_in() is False
+
+
+def test_any_explicit_choice_marks_prompted():
+    """Saying YES marks prompted; saying NO marks prompted too — the question
+    is asked exactly once, whatever the answer."""
+    analytics.set_opted_in(False)
+    assert analytics.user_prompted() is True
+    assert analytics.user_opted_in() is False  # "no" really means no
+
+    analytics.set_opted_in(True)
+    assert analytics.user_prompted() is True
+    assert analytics.user_opted_in() is True
+
+
+def test_prompted_never_enables_anything(monkeypatch):
+    """`prompted` is bookkeeping for the ask, not a consent bit."""
+    from core import prefs
+
+    prefs.set_("analytics_prompted", True)
+    monkeypatch.setenv("POSTHOG_PROJECT_TOKEN", "phc_test")
+    assert analytics.user_opted_in() is False
+    assert analytics.enabled() is False
+
+
+def test_a_broken_prefs_file_reads_as_not_prompted(monkeypatch):
+    """Fails OPEN for the question (it may be re-asked) but never for consent."""
+    from core import prefs
+
+    def boom(*a, **k):
+        raise RuntimeError("prefs corrupt")
+
+    monkeypatch.setattr(prefs, "get", boom)
+    assert analytics.user_prompted() is False
+    assert analytics.user_opted_in() is False
+
+
 # ── Rule 3: metadata only, enforced by allowlist ────────────────────────────
 
 
