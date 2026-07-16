@@ -14,6 +14,12 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
+- **The "Setup failed" screen no longer crashes instead of appearing.** A variable-ordering bug in the splash screen threw a JavaScript error exactly (and only) when first-run setup failed — replacing the one screen whose job is to explain the failure with a blank crash. Fixed, and the failed card is now covered by a rendering test so it can't silently break again. Thanks @bultodepapas! (#1159)
+
+- **Backend errors keep their stack traces in the log.** When persisting a dub job failed, the log recorded only a one-line summary — the traceback that says *why* was discarded, making reports undiagnosable. Fixed there (thanks @bultodepapas!), and the same fix was swept across 19 more error logs backend-wide: diarization and transcription crashes, dubbing audio-mix and Smart Fit fallbacks, dictation failures, and more now log the full trace. (#1160)
+
+- **Sidebar data that fails to load now says so in the console.** If fetching your voices, history, dub history, projects, or exports failed, the app silently showed the previous (or an empty) list — indistinguishable from actually having nothing. Each of those failures is now logged with which fetch broke, so "my voices vanished" reports carry a cause. Thanks @bultodepapas! (#1158)
+
 - **A missing (or broken) MCP dependency can no longer kill the whole backend at startup.** One Windows user's backend loaded all 32 models and then died with exit code 1 because the `mcp` package couldn't be imported — the MCP integration called "exit the program" and a technicality (`SystemExit` isn't an `Exception`) let it slip past the guard meant to make MCP optional. The MCP layer now degrades to "/mcp disabled" on any import failure, the error names what actually failed (the package can be present but broken — e.g. pywin32 on Windows — and "not installed" was a misdiagnosis), and the exit-containment now covers this whole class. (#1156)
 
 - **The "Setup failed" screen dismisses itself when the backend comes back — and relaunching the app is now a retry, not a dead end.** If the backend died at startup, reopening the app just refocused the dead window, and even when the backend recovered on its own the failed card stayed up until you manually reloaded. Now: launching the app again while setup is failed re-runs the same recovery as the Retry button, and the failed screen quietly polls the backend and jumps into the app the moment it answers. (#1156)
