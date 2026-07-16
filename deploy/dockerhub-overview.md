@@ -10,6 +10,8 @@ cloning, and cinematic video dubbing — fully local, no API keys, no accounts.
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](https://github.com/debpalash/OmniVoice-Studio/blob/main/LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/bzQavDfVV9)
 
+[![debpalash/OmniVoice-Studio on Trendshift](https://trendshift.io/api/badge/trendshift/repositories/28176/daily?language=Python)](https://trendshift.io/repositories/28176?utm_source=trendshift-badge&utm_medium=badge&utm_campaign=badge-trendshift-28176)
+
 ![OmniVoice Studio — the open-source ElevenLabs alternative](https://raw.githubusercontent.com/debpalash/OmniVoice-Studio/main/.github/assets/social-preview.png)
 
 OmniVoice runs entirely on your own hardware (CUDA / MPS / ROCm / CPU
