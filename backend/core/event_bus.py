@@ -72,7 +72,12 @@ async def _broadcast(event_str: str) -> None:
             try:
                 q.put_nowait(event_str)
             except asyncio.QueueFull:
-                # Slow consumer — drop oldest, then push
+                # Slow consumer — drop oldest, then push. Not a race (#1163):
+                # every queue op runs on the single event loop, and there is
+                # no await between the QueueFull and this get_nowait/put_nowait
+                # pair — no consumer can interleave, so get_nowait cannot raise
+                # QueueEmpty here. emit() from a foreign thread drops the event
+                # before ever touching a queue (see the RuntimeError branch).
                 try:
                     q.get_nowait()
                     q.put_nowait(event_str)
