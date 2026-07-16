@@ -72,6 +72,13 @@ powershell -ExecutionPolicy Bypass -File scripts\uninstall.ps1
 powershell -ExecutionPolicy Bypass -File scripts\uninstall.ps1 -Yes
 ```
 
+**If you opted in to anonymous analytics** (and only then), the delete run
+sends one last content-free `app_uninstalled` ping before removing your data —
+app version, OS name, and the random per-install id, nothing else — and says
+so on the console. Best-effort with a 2-second timeout: a dead network never
+blocks the uninstall. If you never opted in (the default), nothing is sent and
+nothing is printed; the dry-run never sends anything either way.
+
 The script honors your custom locations: if you set `OMNIVOICE_DATA_DIR`,
 `OMNIVOICE_CACHE_DIR`, `HF_HOME`, or `HF_HUB_CACHE` (or picked custom
 data/model folders during setup), export the same variables before running it
