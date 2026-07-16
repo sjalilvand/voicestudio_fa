@@ -11,17 +11,17 @@ and [`palashdeb/omnivoice-studio` on Docker Hub](https://hub.docker.com/r/palash
 >
 > | Tag | What you get |
 > |-----|--------------|
-> | `:latest` | **Rolling preview** — latest commit on `main` (always one patch ahead of the last release). This is the preview channel; pin `:stable` for production. |
+> | `:latest` | **Rolling preview** — latest commit on `main`, at or ahead of the last release. This is the preview channel; pin `:stable` for production. |
 > | `:stable` | Most recent versioned release (updated on every `v*` git tag) |
-> | `:0.3.17` | Exact release version |
+> | `:0.3.22` | Exact release version |
 > | `:0.3` | Latest patch within the 0.3 minor |
 > | `:main` | Alias of the same rolling `main` build as `:latest` |
 > | `:sha-xxxxxxx` | Specific commit (produced by manual workflow dispatch) |
 > | `:rocm` | **AMD GPU (ROCm) build** of the rolling preview — the ROCm analogue of `:latest` |
-> | `:stable-rocm`, `:0.3.17-rocm`, `:0.3-rocm`, `:sha-xxxxxxx-rocm` | ROCm builds of the corresponding CUDA tags above |
+> | `:stable-rocm`, `:0.3.22-rocm`, `:0.3-rocm`, `:sha-xxxxxxx-rocm` | ROCm builds of the corresponding CUDA tags above |
 >
-> Versioning rule: `main` always carries *last release + 1 patch*, so `:latest`
-> (preview) version-sorts above `:stable` — upgrades flow naturally.
+> Versioning rule: preview builds always come from `main` and never
+> version-sort below `:stable` — upgrades flow naturally.
 >
 > **Note on the update-channel toggle:** The update-channel UI (Settings → About → Update channel) is part of the Tauri desktop app's built-in auto-updater. It does **not** apply to the Docker image — the Docker image is the headless web-server build. To update your Docker deployment, pull the new image tag and recreate the container (`docker compose pull && docker compose up -d`).
 
