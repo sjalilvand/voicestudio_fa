@@ -375,9 +375,11 @@ print(result.text)
 
 Want the whole surface (100+ endpoints)? The full REST API reference is embedded in the app — **Settings → OpenAPI Reference** (Scalar-powered), or the `{}` button in the footer.
 
-### 📓 Run on Google Colab (community)
+### 📓 Run on Google Colab
 
-No local GPU? A community member ([@shakib30](https://github.com/shakib30)) maintains a working Colab notebook: [shakib30/OmniVoice-Studio-google-colab](https://github.com/shakib30/OmniVoice-Studio-google-colab). Community-maintained — issues with the notebook go there; issues with OmniVoice itself come here.
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/debpalash/OmniVoice-Studio/blob/main/notebooks/OmniVoice_Studio_Colab.ipynb)
+
+No local GPU? The official notebook ([notebooks/OmniVoice_Studio_Colab.ipynb](notebooks/OmniVoice_Studio_Colab.ipynb)) boots the full app — web UI included — on a free Colab T4: it builds the frontend in-notebook, installs the backend with uv (reusing Colab's preinstalled CUDA PyTorch), and opens the UI through Colab's built-in port proxy. No third-party tunnels, no API keys; a smoke-test cell generates and plays a first line of speech right in the notebook.
 
 ### 🤝 Agent Skills
 

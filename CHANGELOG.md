@@ -10,6 +10,8 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Added
 
+- **An official "Run on Google Colab" notebook — try OmniVoice without a local GPU.** `notebooks/OmniVoice_Studio_Colab.ipynb` boots the full app (web UI included) on a free Colab T4: it builds the frontend in-notebook with bun, installs the backend with uv while reusing Colab's preinstalled CUDA PyTorch, and opens the UI through Colab's built-in port proxy — no third-party tunnels, no API keys. An optional Colab-Secrets cell enables gated diarization models, and a smoke-test cell generates and plays a first line of speech inline. The Open-in-Colab badge lives in the README.
+
 - **A Docker image for AMD GPUs: `ghcr.io/debpalash/omnivoice-studio:rocm`.** The Docker image was CUDA-only, so AMD cards (an RX 7900 XTX under Podman, say) silently ran on CPU. Every preview and release now also ships a ROCm variant — `:rocm` is the rolling preview, with `:stable-rocm` / `:X.Y.Z-rocm` mirroring the release tags on GHCR and Docker Hub alike. Pass the GPU through with `--device /dev/kfd --device /dev/dri` (works for Docker and Podman/Quadlet; no container toolkit needed) and it's auto-detected; a new `rocm` profile in the Compose file does the same. (#1165)
 
 ### Fixed

@@ -369,9 +369,11 @@ print(result.text)
 
 想要完整的接口（100+ 端点）？完整的 REST API 参考已内嵌在应用中——**设置 → OpenAPI 参考**（由 Scalar 驱动），或点击页脚的 `{}` 按钮。
 
-### 📓 在 Google Colab 上运行（社区维护）
+### 📓 在 Google Colab 上运行
 
-没有本地 GPU？一位社区成员（[@shakib30](https://github.com/shakib30)）维护着一个可用的 Colab 笔记本：[shakib30/OmniVoice-Studio-google-colab](https://github.com/shakib30/OmniVoice-Studio-google-colab)。由社区维护——笔记本相关的问题请提交到那边；OmniVoice 本身的问题请提交到这里。
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/debpalash/OmniVoice-Studio/blob/main/notebooks/OmniVoice_Studio_Colab.ipynb)
+
+没有本地 GPU？官方笔记本（[notebooks/OmniVoice_Studio_Colab.ipynb](notebooks/OmniVoice_Studio_Colab.ipynb)）可在免费的 Colab T4 上启动完整应用（包含 Web 界面）：在笔记本内直接构建前端，用 uv 安装后端（复用 Colab 预装的 CUDA PyTorch），并通过 Colab 内置端口代理打开界面。无需第三方隧道，也无需任何 API 密钥；还有一个冒烟测试单元格，可直接在笔记本中生成并播放第一段语音。
 
 ### 🤝 智能体技能（Agent Skills）
 
