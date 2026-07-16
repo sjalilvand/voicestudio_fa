@@ -49,7 +49,7 @@ async def detect_audio_watermark(file: UploadFile = File(...)):
         return result
 
     except Exception as e:
-        logger.error("Watermark detection failed: %s", e)
+        logger.exception("Watermark detection failed")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         try:

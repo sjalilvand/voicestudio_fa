@@ -338,7 +338,7 @@ async def ws_transcribe(websocket: WebSocket):
             if not await _safe_send({"type": "final", **result}):
                 logger.debug("Skipped final send — client already disconnected")
         except Exception as e:
-            logger.error("Final transcription failed: %s", e)
+            logger.exception("Final transcription failed")
             await _safe_send({"type": "error", "message": str(e),
                               "kind": "transcribe", "detail": str(e)})
     else:
@@ -467,7 +467,7 @@ async def _sherpa_load_with_status(websocket: WebSocket, backend, spec) -> bool:
     try:
         await asyncio.to_thread(backend.ensure_loaded)
     except Exception as e:
-        logger.error("sherpa dictation load failed (%s): %s", spec.id, e)
+        logger.exception("sherpa dictation load failed (%s)", spec.id)
         try:
             await websocket.send_json({"type": "error", "message": str(e),
                                        "kind": "load", "detail": str(e)})
@@ -738,8 +738,8 @@ async def _run_sherpa_offline(websocket: WebSocket, spec):
     # Drain the trailing (un-committed) utterance on EOF.
     try:
         tail = await asyncio.to_thread(_decode_window, bytes(buf))
-    except Exception as e:
-        logger.error("sherpa offline final failed: %s", e)
+    except Exception:
+        logger.exception("sherpa offline final failed")
         tail = ""
     tail = polish_text(tail)
     if tail:

@@ -919,7 +919,7 @@ async def dub_transcribe_stream(
                 # word boundary (single-speaker segments pass through unchanged).
                 return resplit_segments_by_diarization(assigned, all_words, diar), None, "pyannote"
             except Exception as e:
-                logger.error(f"Diarization failed: {e}")
+                logger.exception("Diarization failed")
                 # Inline ASR turns beat the silence-gap heuristic as a crash
                 # fallback (this path is reachable with turns present since a
                 # set num_speakers routes turns-jobs through pyannote).
@@ -1208,7 +1208,7 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
                 result = _asr.transcribe(asr_audio_target, word_timestamps=True)
                 detected_lang = result.get("language")
             except Exception as e:
-                logger.error("ASR backend %s failed: %s", _asr.id, e)
+                logger.exception("ASR backend %s failed", _asr.id)
                 if getattr(_model, "_asr_pipe", None) is None:
                     raise RuntimeError(
                         f"ASR backend {_asr.id} failed and PyTorch Whisper fallback is not preloaded: {e}"
@@ -1258,8 +1258,8 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
                 else:
                     diarization = diar_pipe(diar_target)
                 segments = assign_speakers_from_diarization(segments, diarization)
-            except Exception as e:
-                logger.error(f"Pyannote diarization failed during inference: {e}. Falling back to heuristic.")
+            except Exception:
+                logger.exception("Pyannote diarization failed during inference. Falling back to heuristic.")
                 segments = assign_speakers_heuristic(segments, num_speakers)
         else:
             segments = assign_speakers_heuristic(segments, num_speakers)

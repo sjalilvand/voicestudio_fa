@@ -204,7 +204,7 @@ async def search_youtube(
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="yt-dlp not installed")
     except Exception as e:
-        logger.error(f"YouTube search error: {e}")
+        logger.exception("YouTube search error")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -298,7 +298,7 @@ async def download_youtube_clip(
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="yt-dlp not installed")
     except Exception as e:
-        logger.error(f"Download error: {e}")
+        logger.exception("Download error")
         raise HTTPException(status_code=500, detail=str(e))
 
 

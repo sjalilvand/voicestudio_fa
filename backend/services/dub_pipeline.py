@@ -183,11 +183,11 @@ def get_job(job_id: str) -> Optional[dict]:
             with _dub_jobs_lock:
                 _dub_jobs[job_id] = job
             return job
-        except json.JSONDecodeError as e:
+        except json.JSONDecodeError:
             # job_id arrives from request paths — strip newlines so a crafted
             # id can't forge extra log lines (py/log-injection).
             safe_id = str(job_id).replace("\r", "").replace("\n", "")
-            logger.error("Failed to decode dub_history.job_data for %s: %s", safe_id, e)
+            logger.exception("Failed to decode dub_history.job_data for %s", safe_id)
     return None
 
 

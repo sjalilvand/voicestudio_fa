@@ -596,10 +596,10 @@ async def dub_download(
             from core.failure import build_failure
             retime_warning = build_failure(e, stage="video-retime", include_diagnostic=False)
             job["last_export_warning"] = {"type": "video_retime_fallback", **retime_warning}
-            logger.error(
+            logger.exception(
                 "Smart Fit video retime failed for job %s — exporting "
-                "without per-segment retime: %s",
-                job_id.replace("\n", " ").replace("\r", " "), e,
+                "without per-segment retime",
+                job_id.replace("\n", " ").replace("\r", " "),
             )
 
     cmd = [ffmpeg, "-i", video_path]
@@ -957,10 +957,10 @@ async def dub_preview_video(
                 # rather than a black player. The export path surfaces the
                 # structured warning; here we just log.
                 retime_decision = None
-                logger.error(
+                logger.exception(
                     "Smart Fit preview retime failed for job %s — previewing "
-                    "without per-segment retime: %s",
-                    job_id.replace("\n", " ").replace("\r", " "), e,
+                    "without per-segment retime",
+                    job_id.replace("\n", " ").replace("\r", " "),
                 )
 
         cmd = [ffmpeg, "-i", video_path]
@@ -1362,8 +1362,8 @@ async def dub_download_audio(job_id: str, lang: str = Query(None), preserve_bg: 
                 raise Exception("ffmpeg mix produced no output file")
             wav_path = final_audio_path
             logger.info("Dub audio mix wrote %s (%d bytes)", final_audio_path, os.path.getsize(final_audio_path))
-        except Exception as e:
-            logger.error(f"Failed to mix audio: {str(e)}")
+        except Exception:
+            logger.exception("Failed to mix audio")
 
     base_name = os.path.splitext(job.get('filename', 'audio'))[0]
     safe_name = ''.join(c for c in base_name if c.isalnum() or c in '-_ ').strip() or 'audio'
@@ -1587,8 +1587,8 @@ async def dub_download_mp3(job_id: str, lang: str = Query(None), preserve_bg: bo
             rc, _, _ = await run_ffmpeg(cmd_mix, timeout=900.0)
             if rc == 0 and os.path.exists(mixed_path) and os.path.getsize(mixed_path) > 0:
                 source_path = mixed_path
-        except Exception as e:
-            logger.error(f"Failed to mix audio for MP3: {e}")
+        except Exception:
+            logger.exception("Failed to mix audio for MP3")
 
     mp3_path = os.path.join(exports_dir, f"dubbed_{lang_label}_{stamp}.mp3")
     # Accept '128', '192k' etc. — normalize to ffmpeg's 'Nk' form and clamp

@@ -1625,7 +1625,7 @@ def get_diarization_pipeline(return_error: bool = False):
         return (_diar_pipeline, None) if return_error else _diar_pipeline
     except Exception as e:
         err_class = _classify_diarization_error(e)
-        logger.error(
-            "Failed to load Pyannote pipeline (class=%s): %s", err_class, e,
+        logger.exception(
+            "Failed to load Pyannote pipeline (class=%s)", err_class,
         )
         return (None, err_class) if return_error else None

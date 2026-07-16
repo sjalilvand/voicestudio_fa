@@ -41,8 +41,8 @@ def _load_models_from_yaml() -> list[dict]:
     except FileNotFoundError:
         logger.warning("models.yaml not found at %s — using empty catalog", _YAML_PATH)
         return []
-    except Exception as e:
-        logger.error("Failed to load models.yaml: %s — using empty catalog", e)
+    except Exception:
+        logger.exception("Failed to load models.yaml — using empty catalog")
         return []
 
 

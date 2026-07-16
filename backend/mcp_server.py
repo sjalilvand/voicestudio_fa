@@ -296,7 +296,7 @@ def main():
     except ImportError as e:
         # Standalone run: a missing SDK is fatal, and a nonzero exit is the
         # right contract for a CLI (the embedded path uses mount_mcp above).
-        logger.error("%s", e)
+        logger.exception("%s", e)
         sys.exit(1)
 
     if args.sse:
