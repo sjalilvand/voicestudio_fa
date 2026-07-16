@@ -445,6 +445,9 @@ call.
 > `backend_crash_markers.json`. Markers are per-version: after you update the
 > app, notices recorded by the previous version are cleaned up rather than
 > resurfacing — the update may well have fixed that crash.
+>
+> Outside the desktop app (browser dev, Docker, LAN share) the same notice is
+> raised by the **backend itself** on its next start — see **section 14c**.
 
 ## 14b. "Can't reach the local OmniVoice backend" flashing during startup or an automatic restart
 
@@ -467,6 +470,47 @@ shell's own restart budget) instead of erroring, and show a single pinned
 up, or you're not running the desktop app) still errors promptly. If you see
 the error persistently on a current build, that's section **14** (a wedged GPU
 job) or the crash notice above — not this window.
+
+## 14c. "Can't reach the backend" in a browser — `bun run dev`, Docker, or LAN share
+
+**Symptom:** you're using OmniVoice **outside the desktop app** — the dev
+stack (`bun run dev`), a Docker deployment, or a shared/remote backend — and
+requests fail with a "can't reach the backend" error.
+
+These deployments have no desktop shell to supervise the backend, so newer
+builds make the backend **self-forensicate** instead:
+
+- **The error tells you what it knows.** It now says whether the backend *was
+  answering and stopped* ("it was answering 12 s ago … likely crashed or was
+  killed mid-request") or *never answered this session* ("it may never have
+  started" — a port conflict or failed setup), and points at the right logs
+  for **your** deployment: the `bun run dev` terminal + `omnivoice.log` in
+  dev, `docker logs <container>` / `journalctl` on a server. (If Docker
+  serves the page itself, the page can go down together with the backend —
+  check the container first.)
+- **Dev exit banner.** `bun run dev`'s backend runs through
+  `scripts/dev-backend.mjs`: when uvicorn dies with a non-zero exit, a boxed
+  banner prints the exit code/signal, the last 20 lines of `omnivoice.log`,
+  and an OOM-check hint (`journalctl -k | grep -i oom` on Linux) before
+  `concurrently` tears the stack down.
+- **Crash notice on the next start.** The backend keeps a **run sentinel**
+  (`run_sentinel.json` in its data folder) while running and clears it on a
+  clean shutdown. If a start finds a stale sentinel whose process is gone,
+  the previous run died uncleanly: a record is written to
+  `last_run_crash.json` (death window, last activity — e.g. "generate" or
+  "transcribe" — and a scrubbed tail of `omnivoice.log`), the UI shows the
+  same crash notice the desktop app shows (**View crash details** → the log
+  tail; **Report this bug** → the evidence rides along in the prefilled
+  GitHub issue), and `GET /system/last-run-crash` exposes it to scripts.
+  Records are capped at the last 3, survive being dismissed (bug reports
+  still need them), and are per-version like the desktop markers — after an
+  update, notices from the previous version don't resurface.
+
+Where the forensics live: `omnivoice.log`, `run_sentinel.json`, and
+`last_run_crash.json` are all in the backend's data folder
+(`~/Library/Application Support/OmniVoice` on macOS, `%APPDATA%\OmniVoice` on
+Windows, `~/.omnivoice` on Linux, or `$OMNIVOICE_DATA_DIR` — the Docker image
+mounts it as the `omnivoice_data` volume).
 
 ## 15. Stuck at "preparing" forever after a crash / BSOD (Windows)
 

@@ -40,6 +40,14 @@ This starts both services:
 | **Backend** | `localhost:3900` | FastAPI server — TTS, ASR, diarization, dubbing pipeline |
 | **Frontend** | `localhost:3901` | React + Vite UI |
 
+The backend runs through `scripts/dev-backend.mjs` (the `dev:api` script): the
+uvicorn command is unchanged, but if the backend **dies** (OOM kill, hard
+crash), the wrapper prints a boxed exit banner with the exit code/signal and
+the last 20 lines of `omnivoice.log` before the dev stack shuts down — so the
+cause doesn't scroll away with the terminal. The same death is also reported
+as a crash notice in the UI the next time the backend starts (see
+[docs/install/troubleshooting.md §14c](docs/install/troubleshooting.md)).
+
 ### Desktop App (Tauri)
 
 ```bash
