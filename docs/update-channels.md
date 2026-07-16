@@ -60,9 +60,11 @@ Preview builds come from **`main`**, two ways:
   `preview` prerelease from `main` — but only when `main` actually moved in the
   last day, so idle days cost nothing. Preview is never more than ~24h behind
   `main`.
-- **On demand.** **Actions → Desktop Release → Run workflow**, pick a branch
-  (usually `main`), set **publish_preview = true**. Useful to cut a preview off
-  a feature branch, or to refresh immediately without waiting for the nightly.
+- **On demand.** **Actions → Desktop Release → Run workflow** on `main`, set
+  **publish_preview = true**. Useful to refresh immediately without waiting
+  for the nightly. Previews build from `main` **only** (hard rule, owner-set
+  2026-07-16) — the preview-gate refuses any other branch; to preview a fix,
+  merge it to `main` first.
 
 Either way it builds the matrix and publishes/updates a single rolling
 `preview` **prerelease** — always flagged prerelease, and carrying the same

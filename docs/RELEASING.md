@@ -39,26 +39,36 @@ Failures (no network, 404, signature mismatch) are silent — the app continues 
 
 ## 4. Version bumps
 
-Two files must agree before you tag a release:
+`frontend/package.json` is the **single source of truth** for the app version
+(hard rule, owner-set 2026-06-16 — full rationale in CLAUDE.md → Conventions →
+Versioning). Vite injects `__APP_VERSION__` from it, and
+`frontend/src-tauri/tauri.conf.json` derives its bundle version from it
+(`"version": "../package.json"` — never hand-edit a literal back in). Three
+toolchain-required mirrors are bumped in lockstep:
 
-- `frontend/src-tauri/tauri.conf.json` → `"version": "0.2.0"`
-- `frontend/src-tauri/Cargo.toml` → `version = "0.2.0"`
+- `frontend/src-tauri/Cargo.toml`
+- `pyproject.toml`
+- `backend/core/version.py` (`_FALLBACK_VERSION`)
 
-(Not `frontend/package.json` — Tauri ignores it.)
-
-Keep bumps monotonic. Tauri updater uses semver comparison, so `v0.2.0` does not update clients already on `v0.2.1`.
+Lockstep is guarded by `tests/test_app_version.py`. With `AUTO_VERSION_BUMP`
+off (the current owner setting), `main` holds at the released version between
+releases; the post-release bump to `X.Y.(Z+1)` happens only when the owner
+asks. Keep bumps monotonic — the updater uses semver comparison, so `v0.2.0`
+does not update clients already on `v0.2.1`.
 
 ## 5. Cutting a release
 
-```bash
-# 1. Bump versions in the two files above, commit.
-git add frontend/src-tauri/tauri.conf.json frontend/src-tauri/Cargo.toml
-git commit -m "release: v0.2.0"
+1. **CHANGELOG first (hard rule):** make sure `CHANGELOG.md` has a complete,
+   user-facing `## [X.Y.Z] — DATE` section (rename `## [Unreleased]`).
+   `release.yml` extracts that section verbatim as the GitHub Release body —
+   a missing section ships a bare release.
+2. Verify the version files match the tag you're about to cut:
+   `uv run pytest tests/test_app_version.py -q`.
+3. Tag and push:
 
-# 2. Tag and push.
-git tag v0.2.0
-git push origin main
-git push origin v0.2.0
+```bash
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
 The `Desktop Release` workflow fires on tag push. It builds four targets in parallel on GitHub Actions runners:
@@ -76,6 +86,29 @@ Workflow runtime: **~20-40 minutes** (PyInstaller + four platform builds). Follo
 `https://github.com/debpalash/OmniVoice-Studio/actions`
 
 When it finishes, the draft release needs manual publishing — GitHub → Releases → **Edit** the draft → **Publish release**. Once published, existing clients detect the update on their next launch.
+
+## 5b. Deployment channels — all must ship (hard rule, owner-set 2026-07-16)
+
+A version bump is not "released" until **every** channel below carries it.
+Verify each one after the workflows finish — a missing channel is a release
+bug to fix immediately, not backlog.
+
+| Channel | Source | Produced by | How to verify |
+|---|---|---|---|
+| GitHub Release: installers + signed `latest.json` (**Stable** updater channel) | the `vX.Y.Z` tag | `release.yml` on tag push | Release page has dmg (arm+intel), msi/exe, AppImage/deb, `latest.json`; body = the CHANGELOG section, not the auto-generated fallback |
+| **Preview** updater channel (rolling `preview` prerelease) | **`main` only** | `release.yml` nightly cron / manual dispatch | preview `latest.json` stamps `X.Y.Z-N` and semver-sorts above stable |
+| GHCR CUDA image: `:X.Y.Z`, `:X.Y`, `:stable` | the tag | `docker.yml` on tag push | `docker manifest inspect ghcr.io/debpalash/omnivoice-studio:X.Y.Z` |
+| GHCR ROCm image: `:X.Y.Z-rocm`, `:X.Y-rocm`, `:stable-rocm` | the tag | `docker.yml` on tag push | same, with `-rocm` suffix |
+| Docker Hub mirror of **all** the above tags | the tag | `docker.yml` (gated on `DOCKERHUB_*` secrets) | tag list at hub.docker.com/r/palashdeb/omnivoice-studio/tags |
+| Docker Hub **overview page** | `deploy/dockerhub-overview.md` @ main | `docker.yml` on main pushes | **read the step log, not the job status** — the step is `continue-on-error` and 403s silently when `DOCKERHUB_TOKEN` lacks description-edit scope |
+| Rolling Docker previews: `:latest`, `:main`, `:rocm` | **`main` only** | `docker.yml` on every main push | tag timestamps move with main |
+
+**Preview/RC policy:** there are no RC tags (beta cadence — see CLAUDE.md).
+The preview channel *is* the release candidate, and it **always builds from
+`main`** — the preview-gate in `release.yml` refuses `publish_preview` from
+any other branch, and the rolling Docker tags track `main` by construction.
+To get users testing a fix: merge to `main`, then cut a preview. Never a
+side-branch build.
 
 ## 6. Expect-to-fail-first-time on Windows and Linux
 
