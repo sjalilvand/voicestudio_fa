@@ -570,9 +570,9 @@ Yes. Subclass <code>TTSBackend</code> in <code>backend/services/tts_backend.py</
 <details>
 <summary><b>Does OmniVoice collect any data about me?</b></summary>
 <br/>
-<b>Not unless you switch it on.</b> Out of the box OmniVoice sends nothing — no analytics, no telemetry, no accounts, no phone-home. Your text, audio, voices, and projects never leave your machine.
+<b>Not unless you explicitly say yes.</b> On first run the app <i>asks</i> — one screen, two equal-weight buttons, no pre-ticked box — and until you answer yes, OmniVoice sends nothing: no analytics, no telemetry, no accounts, no phone-home. Skipping the question means no. Your text, audio, voices, and projects never leave your machine either way.
 
-One <b>opt-in, off-by-default</b> toggle exists (<b>Settings → Privacy → "Help improve OmniVoice"</b>): anonymous usage stats only — engine, language, generation time, character <i>count</i>, error <i>type</i>. Never your text, audio, file names, or anything identifying — enforced in code by a property allowlist (<code>backend/core/analytics.py</code>), not just a promise. Source builds have no analytics destination at all. Your own numbers live in <b>Settings → Usage</b>, computed locally, sent nowhere.
+If you do opt in (also togglable anytime under <b>Settings → Privacy → "Help improve OmniVoice"</b>), what's sent is anonymous, content-free usage stats: generations (engine, language, generation time, character <i>count</i>, error <i>type</i>), plus app lifecycle — an install ping, updates (version-to-version), crashes (error class and a <i>bucketed</i> uptime, never logs), error <i>types</i> (capped, deduplicated), and a single uninstall ping if you remove it. Never your text, audio, file names, or anything identifying — enforced in code by a property allowlist (<code>backend/core/analytics.py</code>), not just a promise. Source builds have no analytics destination at all, so they never even ask. Your own numbers live in <b>Settings → Usage</b>, computed locally, sent nowhere.
 </details>
 
 <details>

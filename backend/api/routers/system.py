@@ -1145,14 +1145,15 @@ async def tailscale_disable():
     return _tailscale.serve_disable()
 
 
-# ── Local-only usage insights (the alternative to cloud analytics) ──────────
-# PostHog was proposed and rejected (PR #1110): a third-party telemetry endpoint
-# breaks the product's headline promise — nothing leaves your machine. This
-# answers the same question ("how am I using this?") by aggregating the history
-# the app has ALREADY written to the user's own database. It collects nothing
-# new, stores nothing new, and transmits nothing anywhere: the only consumer is
-# the user's own UI over loopback. Read-only, content-free (counts and totals,
-# never the text of a take).
+# ── Local-only usage insights (the user's own numbers, never transmitted) ───
+# This answers "how am I using this?" for the USER by aggregating the history
+# the app has ALREADY written to their own database. It collects nothing new,
+# stores nothing new, and transmits nothing anywhere: the only consumer is the
+# user's own UI over loopback. Read-only, content-free (counts and totals,
+# never the text of a take). Product analytics for the PROJECT is a separate,
+# consent-gated path (core/analytics.py: opt-in PostHog behind the first-run
+# prompt, allowlisted content-free metadata only) — this endpoint stays local
+# regardless of that consent.
 @router.get("/stats/usage")
 def stats_usage():
     from services.local_stats import usage_summary
