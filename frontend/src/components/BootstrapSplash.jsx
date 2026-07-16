@@ -380,9 +380,9 @@ export function BootstrapSplash({ stage, message }) {
   const label = t(`bootstrap.${stage}`, STAGE_LABEL[stage]);
   const stepIndex = Math.max(0, STEPS.indexOf(stage));
   const isFailed = stage === 'failed';
+  const [logs, setLogs] = useState([]);
   // Retrying an Intel-Mac install can never succeed — don't offer the dead end.
   const isUnrecoverable = isFailed && isUnrecoverableFailure(message, logs);
-  const [logs, setLogs] = useState([]);
   const [logsOpen, setLogsOpen] = useState(true);
   const [copied, setCopied] = useState(false);
   const [progress, setProgress] = useState(null);
