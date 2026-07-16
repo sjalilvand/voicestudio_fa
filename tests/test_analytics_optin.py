@@ -24,12 +24,37 @@ from core import analytics
 
 @pytest.fixture(autouse=True)
 def _isolate(monkeypatch, tmp_path):
-    """Fresh prefs + no token + no kill switch, per test."""
-    from core import prefs
+    """Fresh prefs + isolated DATA_DIR + no token + no kill switch, per test.
+
+    Also pre-installs an inert fake `posthog` module: set_opted_in(True) now
+    fires the one-shot install ping (lifecycle events), which builds the client
+    eagerly — tests must never construct the real SDK (background queue threads
+    + network attempts). Tests that inspect client construction install their
+    own fake BEFORE opting in."""
+    import sys
+    import types
+
+    from core import config, prefs
 
     monkeypatch.setattr(prefs, "_PREFS_PATH", str(tmp_path / "prefs.json"))
+    monkeypatch.setattr(config, "DATA_DIR", str(tmp_path))
     monkeypatch.delenv("POSTHOG_PROJECT_TOKEN", raising=False)
     monkeypatch.delenv("OMNIVOICE_ANALYTICS_DISABLED", raising=False)
+
+    class _InertPosthog:
+        def __init__(self, *a, **k):
+            pass
+
+        def capture(self, *a, **k):
+            pass
+
+        def shutdown(self):
+            pass
+
+    fake = types.ModuleType("posthog")
+    fake.Posthog = _InertPosthog
+    monkeypatch.setitem(sys.modules, "posthog", fake)
+
     analytics.shutdown()
     yield
     analytics.shutdown()
@@ -178,6 +203,25 @@ def test_sanitize_handles_none_and_empty():
     assert analytics.sanitize_properties({}) == {}
 
 
+def test_frontend_allowlist_mirrors_backend():
+    """LOCKED: the frontend ALLOWED_PROPS (utils/analytics.ts) and the backend
+    _ALLOWED_PROPS must be the SAME set — otherwise one side can send what the
+    other promised to drop. Extending either list means extending both, and
+    re-answering "could this ever hold something the user typed, recorded, or
+    named?" for the new key."""
+    import re
+
+    ts_path = os.path.join(
+        os.path.dirname(__file__), "..", "frontend", "src", "utils", "analytics.ts"
+    )
+    with open(ts_path, encoding="utf-8") as f:
+        src = f.read()
+    m = re.search(r"ALLOWED_PROPS\s*=\s*new Set\(\[(.*?)\]\)", src, re.S)
+    assert m, "ALLOWED_PROPS Set not found in frontend/src/utils/analytics.ts"
+    frontend = set(re.findall(r"'([a-z_]+)'", m.group(1)))
+    assert frontend == set(analytics._ALLOWED_PROPS)
+
+
 # ── Rule 2: no exception autocapture ────────────────────────────────────────
 
 
@@ -185,9 +229,6 @@ def test_client_is_built_with_exception_autocapture_OFF(monkeypatch):
     """The SDK's own default ships raw tracebacks — home paths, and in this
     codebase HF tokens out of exception messages — bypassing the redaction in
     core.failure.sanitize(). It must be explicitly disabled."""
-    monkeypatch.setenv("POSTHOG_PROJECT_TOKEN", "phc_test")
-    analytics.set_opted_in(True)
-
     captured_kwargs = {}
 
     class FakePosthog:
@@ -205,17 +246,18 @@ def test_client_is_built_with_exception_autocapture_OFF(monkeypatch):
 
     fake_mod = types.ModuleType("posthog")
     fake_mod.Posthog = FakePosthog
+    # Installed BEFORE opting in: set_opted_in(True) builds the client eagerly
+    # (one-shot install ping), and that construction is what's under test.
     monkeypatch.setitem(sys.modules, "posthog", fake_mod)
 
+    monkeypatch.setenv("POSTHOG_PROJECT_TOKEN", "phc_test")
+    analytics.set_opted_in(True)
     analytics.capture("speech_generated", {"engine_id": "omnivoice"})
 
     assert captured_kwargs.get("enable_exception_autocapture") is False
 
 
 def test_capture_never_raises_even_if_the_sdk_explodes(monkeypatch):
-    monkeypatch.setenv("POSTHOG_PROJECT_TOKEN", "phc_test")
-    analytics.set_opted_in(True)
-
     class Boom:
         def __init__(self, *a, **k):
             raise RuntimeError("network on fire")
@@ -227,6 +269,8 @@ def test_capture_never_raises_even_if_the_sdk_explodes(monkeypatch):
     fake_mod.Posthog = Boom
     monkeypatch.setitem(sys.modules, "posthog", fake_mod)
 
+    monkeypatch.setenv("POSTHOG_PROJECT_TOKEN", "phc_test")
+    analytics.set_opted_in(True)  # builds the client eagerly — must not raise
     analytics.capture("speech_generated", {"engine_id": "omnivoice"})  # must not raise
 
 

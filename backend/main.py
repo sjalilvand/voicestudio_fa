@@ -594,11 +594,22 @@ async def lifespan(app: FastAPI):
     # write the crash record BEFORE any heavy init, so even a crash later in
     # THIS startup is attributed by the next run. Best-effort by contract.
     from core import run_sentinel
+    _crash_record = None
     try:
-        run_sentinel.detect_unclean_shutdown()
+        _crash_record = run_sentinel.detect_unclean_shutdown()
         run_sentinel.write_sentinel()
     except Exception:
         logger.exception("Run-sentinel startup failed (non-fatal).")
+    # Opt-in lifecycle analytics (core/analytics.py): install/update/crash
+    # events. A no-op without the user's explicit consent AND a build token.
+    # The run-sentinel record above is the ONE authoritative crash source —
+    # the desktop shell's markers cover the same deaths, so the frontend
+    # never emits a crash event (no double-count).
+    try:
+        from core import analytics
+        analytics.record_startup_lifecycle(_crash_record)
+    except Exception:
+        logger.exception("Analytics startup lifecycle failed (non-fatal).")
 
     init_db()
     # Network sharing is loopback-only by default; the PIN middleware stays

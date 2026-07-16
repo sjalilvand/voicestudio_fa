@@ -62,6 +62,14 @@ _ALLOWED_PROPS: frozenset[str] = frozenset({
     "stream",
     "app_version",
     "platform",
+    # Lifecycle events (owner-sanctioned 2026-07-16). All values are from
+    # closed sets or version strings — never messages, paths, or filenames.
+    "from_version",     # app_updated: semver we upgraded from
+    "to_version",       # app_updated: semver we upgraded to
+    "exit_kind",        # app_crashed: closed-set label (e.g. "unclean_exit")
+    "uptime_bucket",    # app_crashed: BUCKETED prior-run uptime, never raw seconds
+    "error_class",      # error_occurred/app_crashed: locked taxonomy key (GPU_OOM, …)
+    "stage",            # error_occurred: coarse pipeline stage / route head only
 })
 
 #: A string property longer than this is refused outright — a belt-and-braces
@@ -96,6 +104,16 @@ def set_opted_in(enabled: bool) -> None:
     prefs.set_("analytics_prompted", True)
     if not enabled:
         shutdown()
+    else:
+        # Consent often lands AFTER the first boot (the wizard runs mid-first-
+        # run), so the one-shot install event fires here rather than being
+        # permanently swallowed by a pre-consent startup.
+        try:
+            _maybe_send_installed()
+        except Exception:  # noqa: BLE001
+            logger.debug("install event on opt-in failed (non-fatal)", exc_info=True)
+    # The uninstall-ping info file mirrors the consent state (present ⇔ enabled).
+    sync_uninstall_ping_info()
 
 
 def user_prompted() -> bool:
@@ -214,3 +232,199 @@ def capture(event: str, properties: Optional[dict] = None) -> None:
         )
     except Exception as e:  # noqa: BLE001 — analytics may never break a feature
         logger.debug("analytics capture failed (%s): %s", event, e)
+
+
+# ── Lifecycle events (owner-sanctioned 2026-07-16) ──────────────────────────
+# install / update / crash / error events, all behind the same dual gate
+# (token AND explicit consent) and the same allowlist as everything else.
+# Content-free by construction: version strings, closed-set labels, buckets.
+
+#: Prefs markers. `analytics_install_recorded` is only set once app_installed
+#: was actually SENT (consent may arrive after the first boot — the wizard runs
+#: mid-first-run — so setting it earlier would permanently swallow the event).
+#: `analytics_last_version` is updated on EVERY startup, consented or not, so a
+#: user who consents later never emits stale historical updates.
+_INSTALL_MARKER = "analytics_install_recorded"
+_LAST_VERSION_MARKER = "analytics_last_version"
+
+#: error_occurred budget: at most this many per backend session, deduped by
+#: journal fingerprint — a crash-loop must not turn into an event firehose.
+_ERROR_EVENT_CAP = 10
+_error_fingerprints_sent: set[str] = set()
+
+#: Written next to prefs.json when (and only when) analytics is enabled, so the
+#: uninstall scripts can send a single best-effort `app_uninstalled` ping with
+#: the SAME consent gate — the scripts are generic and have no baked token.
+#: Removed the moment consent is withdrawn (or the token disappears).
+UNINSTALL_PING_INFO_BASENAME = "analytics_info.json"
+
+
+def _app_version() -> str:
+    try:
+        from core.version import APP_VERSION
+
+        return str(APP_VERSION)
+    except Exception:  # noqa: BLE001
+        return "unknown"
+
+
+def _platform() -> str:
+    import platform as _pl
+
+    return {"darwin": "macos"}.get(_pl.system().lower(), _pl.system().lower() or "unknown")
+
+
+def _common_props() -> dict:
+    return {"app_version": _app_version(), "platform": _platform()}
+
+
+def uptime_bucket(seconds: Optional[float]) -> str:
+    """Coarse bucket for how long the previous run lived — never raw seconds
+    (a precise duration is a fingerprinting vector; a bucket answers the only
+    question that matters: instant crash vs. died mid-session)."""
+    if seconds is None:
+        return "unknown"
+    try:
+        s = float(seconds)
+    except (TypeError, ValueError):
+        return "unknown"
+    if s < 10:
+        return "lt_10s"
+    if s < 60:
+        return "lt_1m"
+    if s < 600:
+        return "lt_10m"
+    if s < 3600:
+        return "lt_1h"
+    if s < 86400:
+        return "lt_1d"
+    return "ge_1d"
+
+
+def _maybe_send_installed() -> bool:
+    """Fire `app_installed` exactly once per installation — the first time this
+    install is BOTH consented and configured. Returns True when sent."""
+    from core import prefs
+
+    if not enabled():
+        return False
+    if prefs.get(_INSTALL_MARKER):
+        return False
+    capture("app_installed", _common_props())
+    prefs.set_(_INSTALL_MARKER, True)
+    return True
+
+
+def record_startup_lifecycle(crash_record: Optional[dict] = None) -> None:
+    """Called once from the FastAPI lifespan at startup.
+
+    `crash_record` is run_sentinel.detect_unclean_shutdown()'s return — the
+    ONE authoritative crash source for `app_crashed`. (The desktop shell's
+    crash markers cover the same deaths: its watcher restarts the backend,
+    whose next startup finds the sentinel. Firing from both would double-count,
+    so the frontend never emits a crash event.)
+
+    Never raises; a no-op without consent AND token (the dual gate lives in
+    capture()/enabled()). Version bookkeeping still runs while un-consented so
+    a later opt-in can never emit stale historical events.
+    """
+    try:
+        from core import prefs
+
+        installed_now = _maybe_send_installed()
+
+        current = _app_version()
+        last = prefs.get(_LAST_VERSION_MARKER)
+        if enabled() and not installed_now and last and str(last) != current:
+            capture(
+                "app_updated",
+                {"from_version": str(last), "to_version": current, **_common_props()},
+            )
+        if str(last or "") != current:
+            # Always advance the marker — consented or not — so consenting
+            # later never replays an update that predates the consent.
+            prefs.set_(_LAST_VERSION_MARKER, current)
+
+        if crash_record and enabled():
+            last_activity = crash_record.get("last_activity") or {}
+            capture(
+                "app_crashed",
+                {
+                    "exit_kind": "unclean_exit",
+                    "stage": str(last_activity.get("kind") or "idle")[:40],
+                    "uptime_bucket": uptime_bucket(crash_record.get("uptime_hint_s")),
+                    **_common_props(),
+                },
+            )
+
+        sync_uninstall_ping_info()
+    except Exception:  # noqa: BLE001 — lifecycle telemetry must never break startup
+        logger.debug("analytics startup lifecycle failed (non-fatal)", exc_info=True)
+
+
+def record_error_event(error_class: str, fingerprint: str, stage: str = "") -> None:
+    """`error_occurred` — fired from core.error_journal.record with the error
+    CLASS and a coarse stage only (never messages, paths, or filenames; the
+    allowlist would drop them anyway). Hard-capped at _ERROR_EVENT_CAP per
+    session and deduped by journal fingerprint. Never raises."""
+    try:
+        if not enabled():
+            return
+        fp = str(fingerprint or "")
+        if fp in _error_fingerprints_sent:
+            return
+        if len(_error_fingerprints_sent) >= _ERROR_EVENT_CAP:
+            return
+        _error_fingerprints_sent.add(fp)
+        capture(
+            "error_occurred",
+            {
+                "error_class": str(error_class or "UNKNOWN")[:40],
+                "stage": str(stage or "")[:40],
+                **_common_props(),
+            },
+        )
+    except Exception:  # noqa: BLE001
+        logger.debug("analytics error event failed (non-fatal)", exc_info=True)
+
+
+def _reset_error_events_for_tests() -> None:
+    _error_fingerprints_sent.clear()
+
+
+def sync_uninstall_ping_info() -> None:
+    """Keep DATA_DIR/analytics_info.json in lockstep with the consent state.
+
+    Present  ⇔ analytics is enabled (token AND consent AND not kill-switched).
+    The uninstall scripts read it (plus the consent pref itself, belt and
+    braces) to send one best-effort `app_uninstalled` ping before deleting the
+    data. The token is PostHog's publishable write-only client key — the same
+    one baked into every release binary — so this file grants nothing new.
+    Never raises."""
+    import json
+
+    try:
+        from core.config import DATA_DIR
+
+        path = os.path.join(DATA_DIR, UNINSTALL_PING_INFO_BASENAME)
+        if not enabled():
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                pass
+            return
+        payload = {
+            "token": os.environ["POSTHOG_PROJECT_TOKEN"].strip(),
+            "host": (os.environ.get("POSTHOG_HOST") or "https://eu.i.posthog.com").strip(),
+            "distinct_id": installation_id(),
+            "app_version": _app_version(),
+            "platform": _platform(),
+        }
+        os.makedirs(DATA_DIR, exist_ok=True)
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2)
+        os.replace(tmp, path)
+        os.chmod(path, 0o600)
+    except Exception:  # noqa: BLE001
+        logger.debug("analytics_info sync failed (non-fatal)", exc_info=True)

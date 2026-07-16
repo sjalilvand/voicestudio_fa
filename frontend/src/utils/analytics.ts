@@ -65,6 +65,14 @@ const ALLOWED_PROPS = new Set([
   'stream',
   'app_version',
   'platform',
+  // Lifecycle events (backend-emitted; mirrored here so the lists stay equal —
+  // pinned by tests/test_analytics_optin.py::test_frontend_allowlist_mirrors_backend).
+  'from_version',
+  'to_version',
+  'exit_kind',
+  'uptime_bucket',
+  'error_class',
+  'stage',
 ]);
 
 /** A string longer than this is refused outright, so free text can't ride in on
