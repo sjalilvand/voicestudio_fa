@@ -115,8 +115,14 @@ describe('apiFetch — lifecycle-aware restart wait', () => {
     const assertion = expect(p).rejects.toMatchObject({ status: 0 });
     await vi.advanceTimersByTimeAsync(CASCADE_MS + 100);
     await assertion;
-    // Exactly the short cascade — no lifecycle-extended retries.
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    // Exactly the short cascade — no lifecycle-extended retries. Count only
+    // the transport attempts against the requested path: the give-up branch
+    // additionally probes the crash-forensics endpoint in browser mode
+    // (#1164), which is diagnostics, not a retry.
+    const transportCalls = fetchMock.mock.calls.filter((c) =>
+      String(c[0]).endsWith('/model/status'),
+    );
+    expect(transportCalls).toHaveLength(4);
   });
 });
 

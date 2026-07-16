@@ -32,8 +32,16 @@ export const PREF_KEYS = [
  *  - 'ov_backend_url' / 'ov_api_key': remote-backend connection + credential —
  *    wiping them would sever a LAN-connected instance from its backend.
  *  - 'omni_transcriptions': dictation history — user DATA, not a preference.
+ *  - 'ov_last_backend_contact': crash diagnostics (#1164) — sessionStorage
+ *    timestamp of the backend's last response; not a preference, and wiping
+ *    it would erase the "was it ever answering?" evidence mid-incident.
  */
-export const PRESERVED_KEYS = ['ov_backend_url', 'ov_api_key', 'omni_transcriptions'];
+export const PRESERVED_KEYS = [
+  'ov_backend_url',
+  'ov_api_key',
+  'omni_transcriptions',
+  'ov_last_backend_contact',
+];
 
 /** True when `key` is a resettable in-app preference. */
 export function isPrefKey(key) {
