@@ -16,6 +16,8 @@
 import { API } from '../api/client';
 import { formatBreadcrumbs } from './breadcrumbs';
 import { crashAge, describeCrashExit, getLastBackendCrash } from './backendCrash';
+import { contactAge, lastBackendContact } from './backendContact';
+import { deploymentMode } from './deploymentMode';
 
 /** Canonical project repository — every GitHub link in the app derives from
  * this single constant so a fork/rename can never leave stale links behind. */
@@ -180,6 +182,45 @@ async function captureCrashSection() {
   ];
 }
 
+/** "## Backend reachability" section (#1164): which deployment this is, and
+ * whether/when the backend last answered — the two facts that split every
+ * "can't reach the backend" report into diagnosable halves (crashed
+ * mid-session vs never started). When the report is built from a transport
+ * ApiError, its structured detail (mode at failure time, first failure,
+ * retry attempts) rides along too. All values are mode ids, timestamps, and
+ * counts — nothing user-generated — but scrubbed anyway as belt-and-braces. */
+function captureReachabilitySection(error) {
+  const lines = ['## Backend reachability', ''];
+  try {
+    lines.push(`**Deployment mode:** \`${deploymentMode()}\``);
+    const last = lastBackendContact();
+    lines.push(
+      last != null
+        ? `**Last backend response:** ${contactAge(last)} before this report`
+        : '**Last backend response:** none this session — it may never have started',
+    );
+    const d = error?.detail;
+    if (d && typeof d === 'object' && !Array.isArray(d)) {
+      if (typeof d.firstFailureTs === 'number' && d.firstFailureTs > 0) {
+        lines.push(`**First failure:** ${new Date(d.firstFailureTs).toISOString()}`);
+      }
+      if (typeof d.attempts === 'number') {
+        lines.push(`**Attempts before giving up:** ${d.attempts}`);
+      }
+      if (typeof d.mode === 'string' && d.mode) {
+        lines.push(`**Mode at failure time:** \`${scrubText(d.mode)}\``);
+      }
+      if (typeof d.transport === 'string' && d.transport) {
+        lines.push(`**Transport error:** \`${scrubText(d.transport).slice(0, 200)}\``);
+      }
+    }
+  } catch {
+    /* reachability context is best-effort — never block the report */
+  }
+  lines.push('');
+  return lines;
+}
+
 /**
  * Build the prefilled GitHub Issues URL.
  *
@@ -191,7 +232,13 @@ async function captureCrashSection() {
  */
 export async function buildBugReportUrl({ title = '[Bug] ', error } = {}) {
   const ctx = await captureContext();
+  // getLastBackendCrash inside captureCrashSection covers every deployment:
+  // the desktop shell's marker, or (browser/dev/Docker) the backend's
+  // run-sentinel record via its HTTP fallback — usually unfetchable while
+  // the backend is still down, which is why the reachability section below
+  // reports the CACHED last-contact data regardless.
   const crashSection = await captureCrashSection();
+  const reachabilitySection = captureReachabilitySection(error);
 
   const errorSection = [];
   if (error) {
@@ -236,6 +283,7 @@ export async function buildBugReportUrl({ title = '[Bug] ', error } = {}) {
     '',
     ctx,
     '',
+    ...reachabilitySection,
     ...crashSection,
     ...crumbSection,
     '## What I was doing',

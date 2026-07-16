@@ -165,6 +165,55 @@ describe('buildBugReportUrl — crash-marker enrichment (#941)', () => {
   });
 });
 
+describe('buildBugReportUrl — backend reachability section (#1164)', () => {
+  beforeEach(async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')));
+    getLastBackendCrash.mockResolvedValue(null);
+    const { _resetBackendContactForTests } = await import('./backendContact');
+    _resetBackendContactForTests();
+  });
+
+  it('reports deployment mode and "never answered" when there was no contact', async () => {
+    const body = decodeURIComponent(await buildBugReportUrl());
+    expect(body).toContain('## Backend reachability');
+    expect(body).toContain('**Deployment mode:** `dev`'); // vitest = DEV, no Tauri
+    expect(body).toContain('none this session');
+  });
+
+  it('reports the cached last contact even while the backend is down', async () => {
+    const { recordBackendContact } = await import('./backendContact');
+    recordBackendContact(Date.now() - 4000);
+    const body = decodeURIComponent(await buildBugReportUrl());
+    expect(body).toMatch(/\*\*Last backend response:\*\* \d+ s before this report/);
+  });
+
+  it('includes the transport ApiError diagnostics when the report is built from one', async () => {
+    const err = new Error("Can't reach the local OmniVoice backend");
+    err.detail = {
+      transport: 'Failed to fetch /Users/alice/x',
+      mode: 'server',
+      lastContactMs: null,
+      firstFailureTs: 1_700_000_000_000,
+      attempts: 4,
+    };
+    const body = decodeURIComponent(await buildBugReportUrl({ error: err }));
+    expect(body).toContain('**Attempts before giving up:** 4');
+    expect(body).toContain('**Mode at failure time:** `server`');
+    expect(body).toContain('**First failure:** 2023-11-14');
+    // Scrubbed like every other section.
+    expect(body).toContain('~/x');
+    expect(body).not.toContain('/Users/alice');
+  });
+
+  it('stays under the URL ceiling with the extra section', async () => {
+    const err = new Error('boom');
+    err.stack = 'at frame\n'.repeat(5000);
+    err.detail = { transport: 'x'.repeat(5000), mode: 'dev', attempts: 4 };
+    const url = await buildBugReportUrl({ error: err });
+    expect(url.length).toBeLessThan(8000);
+  });
+});
+
 describe('buildIssueSearchUrl', () => {
   it('builds a scrubbed, noise-free search query', async () => {
     const { buildIssueSearchUrl } = await import('./bugReport');

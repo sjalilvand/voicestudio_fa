@@ -10,8 +10,12 @@
  *   - components/BackendCrashNotice.jsx can offer "View crash details",
  *   - utils/bugReport.js can attach the evidence to the GitHub-issue prefill.
  *
- * Outside the Tauri shell (browser dev, Docker, LAN share) every getter
- * resolves to null — there is no local process to forensicate.
+ * Outside the Tauri shell (browser dev, Docker, LAN share) the getters fall
+ * back to the BACKEND's own run-sentinel forensics (#1164,
+ * backend/core/run_sentinel.py): GET /system/last-run-crash reports a
+ * previous run that died without a clean shutdown, adapted here to the same
+ * CrashMarker shape — so BackendCrashNotice, the apiFetch crash branch, and
+ * the bug-report prefill light up in every deployment, not just desktop.
  */
 
 export interface BackendCrashMarker {
@@ -35,9 +39,107 @@ function inTauri(): boolean {
   return typeof window !== 'undefined' && !!(w?.__TAURI__ || w?.__TAURI_INTERNALS__);
 }
 
-/** Newest crash marker the shell knows about, or null (also null outside Tauri). */
+// ── Browser/Docker fallback: the backend's run-sentinel record (#1164) ─────
+
+/** Shape of GET /system/last-run-crash's `record` (backend/core/run_sentinel.py). */
+export interface LastRunCrashRecord {
+  detected_at: number;
+  started_at: number | null;
+  ended_between: [number, number];
+  uptime_hint_s: number | null;
+  version: string;
+  last_activity: { ts: number | null; kind: string; detail: string | null } | null;
+  log_tail: string[];
+}
+
+/** Adapt a run-sentinel record to the CrashMarker shape the whole crash UI
+ * already speaks. A sentinel can't know an exit code (the process died out
+ * from under it), so exit_code/signal are null and exit_desc carries the
+ * story; describeCrashExit() falls through to exit_desc for exactly this
+ * shape. Exported for unit tests. */
+export function _adaptLastRunCrash(
+  record: LastRunCrashRecord,
+  acknowledged: boolean,
+): BackendCrashMarker {
+  const activity = record.last_activity;
+  const activityLine = activity?.kind
+    ? [
+        `last activity before the death: ${activity.kind}${activity.detail ? ` (${activity.detail})` : ''}`,
+        '',
+      ]
+    : [];
+  return {
+    ts: Math.round(record.detected_at || 0),
+    exit_code: null,
+    signal: null,
+    exit_desc: 'process ended uncleanly (previous run)',
+    backend_version: record.version || '',
+    uptime_s: Math.max(0, Math.round(record.uptime_hint_s ?? 0)),
+    last_stderr: [...activityLine, ...(Array.isArray(record.log_tail) ? record.log_tail : [])]
+      .join('\n')
+      .trim(),
+    acknowledged,
+  };
+}
+
+const HTTP_FALLBACK_TIMEOUT_MS = 2500;
+
+/** Auth headers a non-desktop deployment may need (LAN-share PIN, remote API
+ * key) — mirrors apiFetch's injection. We deliberately do NOT call apiFetch:
+ * its give-up path calls back into this module, and its retry cascade would
+ * stall the very error message this fallback exists to enrich. */
+function _fallbackHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  try {
+    const pin = sessionStorage.getItem('ov_pin');
+    if (pin) headers['X-OmniVoice-Pin'] = pin;
+  } catch {
+    /* noop */
+  }
+  try {
+    const key = localStorage.getItem('ov_api_key');
+    if (key) headers['Authorization'] = `Bearer ${key}`;
+  } catch {
+    /* noop */
+  }
+  return headers;
+}
+
+/** Best-effort fetch of the backend's own crash record. Fast timeout, every
+ * error swallowed to null — when the backend is DOWN this fails instantly
+ * and the caller's mode-aware message stands; the record becomes fetchable
+ * once the backend is back (next dev restart / Docker restart policy). */
+async function fetchLastRunCrash(): Promise<BackendCrashMarker | null> {
+  try {
+    // Dynamic import: api/client.ts statically imports this module, so a
+    // static import back would be a cycle. apiUrl is only needed at call time.
+    const { apiUrl } = await import('../api/client.ts');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), HTTP_FALLBACK_TIMEOUT_MS);
+    try {
+      const res = await fetch(apiUrl('/system/last-run-crash'), {
+        signal: controller.signal,
+        headers: _fallbackHeaders(),
+      });
+      if (!res.ok) return null;
+      const body = (await res.json()) as {
+        record: LastRunCrashRecord | null;
+        acknowledged: boolean;
+      } | null;
+      if (!body?.record) return null;
+      return _adaptLastRunCrash(body.record, !!body.acknowledged);
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    return null;
+  }
+}
+
+/** Newest crash marker: the shell's (desktop) or the backend run-sentinel's
+ * (browser/dev/Docker), or null when nothing ever crashed / nothing answers. */
 export async function getLastBackendCrash(): Promise<BackendCrashMarker | null> {
-  if (!inTauri()) return null;
+  if (!inTauri()) return fetchLastRunCrash();
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     return ((await invoke('get_last_backend_crash')) as BackendCrashMarker | null) ?? null;
@@ -54,7 +156,19 @@ export async function getUnacknowledgedBackendCrash(): Promise<BackendCrashMarke
 
 /** Mark the newest crash as seen (the marker itself is retained for reports). */
 export async function acknowledgeBackendCrash(): Promise<void> {
-  if (!inTauri()) return;
+  if (!inTauri()) {
+    // Browser/dev/Docker: watermark the backend's run-sentinel record.
+    try {
+      const { apiUrl } = await import('../api/client.ts');
+      await fetch(apiUrl('/system/last-run-crash/ack'), {
+        method: 'POST',
+        headers: _fallbackHeaders(),
+      });
+    } catch {
+      /* backend unreachable — the notice will simply resurface, which is honest */
+    }
+    return;
+  }
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     await invoke('acknowledge_backend_crash');
@@ -148,8 +262,10 @@ export async function streamDropError(
       return new Error(fallbackMessage); // forensics unavailable — don't mask the caller
     }
     if (crash) break;
-    // Outside the Tauri shell there is no marker to wait for, ever — don't
-    // stall a browser/Docker user for 8 s to learn nothing.
+    // Outside the Tauri shell there is no death watcher to wait for — the
+    // run-sentinel record (#1164) only appears after the backend RESTARTS,
+    // so one immediate ask is all the information there is; don't stall a
+    // browser/Docker user for 8 s to learn nothing more.
     if (!inTauri()) break;
     if (Date.now() >= deadline) break;
     await sleep(intervalMs);
