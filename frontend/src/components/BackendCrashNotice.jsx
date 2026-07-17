@@ -71,7 +71,12 @@ export default function BackendCrashNotice() {
     <>
       <div
         role="alert"
-        className="fixed left-1/2 top-[var(--space-4)] z-[70] flex w-[min(600px,92vw)] -translate-x-1/2 items-center gap-[var(--space-3)] rounded-lg border border-border bg-bg-elev-1 px-[var(--space-4)] py-[var(--space-3)] shadow-lg backdrop-blur-md"
+        /* Sits BELOW the top navbar (.header-area is ~2rem tall and z-index:100).
+           Anchoring at top-[var(--space-4)] with z-[70] tucked the banner — and
+           its "View crash details" button — UNDER the navbar, which paints over
+           it. Clear the header height and rise above its stacking level so the
+           whole alert (and its actions) is always visible and clickable. */
+        className="fixed left-1/2 top-[calc(var(--space-4)_+_2.25rem)] z-[110] flex w-[min(600px,92vw)] -translate-x-1/2 items-center gap-[var(--space-3)] rounded-lg border border-border bg-bg-elev-1 px-[var(--space-4)] py-[var(--space-3)] shadow-lg backdrop-blur-md"
       >
         <AlertTriangle size={16} className="shrink-0 text-danger" aria-hidden />
         <span className="flex-1 text-[length:var(--text-sm)] text-fg">
