@@ -79,6 +79,20 @@ async def transcribe_audio(
 
         use_accurate = (mode or "").strip().lower() == "accurate"
 
+        # TTS-only install: no ASR model on disk → typed 409 with a download
+        # CTA, BEFORE any backend is constructed (the whisper backends
+        # auto-download multi-GB weights from HF on first load).
+        from services.asr_backend import asr_model_missing_detail, asr_model_missing_error
+        missing = await asyncio.to_thread(
+            asr_model_missing_error,
+            purpose="transcribe" if use_accurate else "dictation",
+        )
+        if missing is not None:
+            raise HTTPException(
+                status_code=409,
+                detail={**missing, "message": asr_model_missing_detail(missing)},
+            )
+
         def _run():
             if use_accurate:
                 # Accurate mode: full WhisperX with forced alignment —

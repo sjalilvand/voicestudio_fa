@@ -54,7 +54,9 @@ describe('#695 — every dub handler resets on a stale job (regression of #660)'
     for (const fn of ['handleDubUpload', 'handleDubIngestUrl']) {
       const start = src.indexOf(`const ${fn} =`);
       expect(start, `${fn} should exist`).toBeGreaterThan(-1);
-      const body = src.slice(start, start + 2500);
+      // Window sized to span the whole catch chain (grew with the
+      // asr_model_missing branch — keep it comfortably ahead of the handlers).
+      const body = src.slice(start, start + 4000);
       const guardIdx = body.indexOf('isExpiredDubJobError(err)');
       const reportIdx = body.indexOf('toastErrorWithReport');
       expect(guardIdx, `${fn} must handle a stale job`).toBeGreaterThan(-1);

@@ -39,6 +39,18 @@ def _symlink_or_skip(target: str, link: str) -> None:
         pytest.skip("symlinks not supported in this environment")
 
 
+@pytest.fixture(autouse=True)
+def _no_ambient_offline_mode(monkeypatch):
+    """All network in this file is mocked, but `repair_repo_cache` itself
+    deliberately refuses to delete anything while HF offline mode is set
+    ("don't delete what we can't restore"). An ambient HF_HUB_OFFLINE=1 —
+    offline CI, air-gapped dev shell — must not silently flip these tests
+    onto that skip path. `test_repair_offline_deletes_nothing` opts back in
+    explicitly via monkeypatch.setenv."""
+    monkeypatch.delenv("HF_HUB_OFFLINE", raising=False)
+    monkeypatch.delenv("TRANSFORMERS_OFFLINE", raising=False)
+
+
 def _mk_repo_cache(tmp_path, repo_id: str = "test/checkpoint"):
     """The canonical HF cache layout for ``repo_id``, with one healthy blob,
     one healthy snapshot link, one healthy regular file — and no breakage yet.

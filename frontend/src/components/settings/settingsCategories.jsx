@@ -29,6 +29,7 @@ import {
   Wifi,
   Share2,
   KeyRound,
+  LockKeyhole,
   Sparkles,
   ArrowDownToLine,
   ShieldCheck,
@@ -224,6 +225,26 @@ export const GROUPS = [
           'clear logs',
         ],
         keywordKeys: ['settings.storage_usage', 'settings.reset', 'settings.uninstall'],
+      },
+      {
+        id: 'permissions',
+        // Lives in the permissions.* i18n namespace (not settings.*) so the
+        // whole feature's strings ship as one additive block per locale.
+        labelKey: 'permissions.title',
+        defaultLabel: 'Permissions',
+        icon: LockKeyhole,
+        keywords: [
+          'permission',
+          'permissions',
+          'microphone access',
+          'mic access',
+          'accessibility',
+          'privacy & security',
+          'os permissions',
+          'grant',
+          'tcc',
+        ],
+        keywordKeys: ['permissions.microphone', 'permissions.accessibility'],
       },
       {
         id: 'network',

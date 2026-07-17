@@ -21,6 +21,12 @@ import pytest
 os.environ.setdefault("OMNIVOICE_MODEL", "test")
 os.environ.setdefault("OMNIVOICE_DISABLE_FILE_LOG", "1")
 
+# These tests exercise the endpoint's wiring with a stubbed backend and assume
+# ASR weights are installed — neutralize the no-ASR preflight (which otherwise
+# answers a typed 409 asr_model_missing in the hermetic no-HF-cache test env;
+# the preflight has its own suite: tests/test_asr_model_missing.py).
+pytestmark = pytest.mark.usefixtures("asr_model_installed")
+
 
 class _StubBackend:
     id = "stub"

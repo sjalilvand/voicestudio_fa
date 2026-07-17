@@ -20,6 +20,7 @@ import { streamDropError } from '../utils/backendCrash';
 import { playPing } from '../utils/media';
 import { toast } from 'react-hot-toast';
 import { toastErrorWithReport } from '../utils/errorToast';
+import { asrMissingPayload, toastAsrModelMissing } from '../utils/asrModelMissing';
 import { addBreadcrumb } from '../utils/breadcrumbs';
 import { recordValueMoment } from '../utils/donationMoments';
 import i18next from 'i18next';
@@ -239,7 +240,12 @@ export default function useDubWorkflow({
             if (m && m.detail) {
               lastErrorDetail = m.detail;
               close();
-              reject(new Error(m.detail));
+              // Typed "no ASR model installed" preflight (TTS-only install):
+              // tag the rejection so the catch sites can render the one-click
+              // download CTA instead of the generic report toast.
+              const err = new Error(m.detail);
+              if (m.error === 'asr_model_missing') err.asrModelMissing = m;
+              reject(err);
               return;
             }
           } catch {
@@ -482,6 +488,12 @@ export default function useDubWorkflow({
           useAppStore.getState().dismissPill();
         } else if (isExpiredDubJobError(err)) {
           _resetStaleDubSession();
+        } else if (asrMissingPayload(err)) {
+          // Typed preflight: no ASR model installed → download CTA, not a report.
+          setDubError(t('asr_missing.message'));
+          setDubStep('idle');
+          toastAsrModelMissing(asrMissingPayload(err));
+          useAppStore.getState().errorPill(t('asr_missing.message'));
         } else {
           setDubError(err.message);
           setDubStep('idle');
@@ -569,6 +581,11 @@ export default function useDubWorkflow({
           useAppStore.getState().dismissPill();
         } else if (isExpiredDubJobError(err)) {
           _resetStaleDubSession();
+        } else if (asrMissingPayload(err)) {
+          setDubError(t('asr_missing.message'));
+          setDubStep('idle');
+          toastAsrModelMissing(asrMissingPayload(err));
+          useAppStore.getState().errorPill(t('asr_missing.message'));
         } else {
           setDubError(err.message);
           setDubStep('idle');
@@ -623,6 +640,10 @@ export default function useDubWorkflow({
         setDubStep('idle');
       } else if (isExpiredDubJobError(err)) {
         _resetStaleDubSession();
+      } else if (asrMissingPayload(err)) {
+        setDubError(t('asr_missing.message'));
+        setDubStep('idle');
+        toastAsrModelMissing(asrMissingPayload(err));
       } else {
         setDubError(err.message);
         setDubStep('idle');

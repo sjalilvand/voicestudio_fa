@@ -31,6 +31,15 @@ if not os.environ.get("OMNIVOICE_ENV_FILE"):
     os.environ["OMNIVOICE_ENV_FILE"] = os.path.join(
         os.environ["OMNIVOICE_DATA_DIR"], "user-env"
     )
+# The TTS checkpoint sentinel, suite-wide. Individual modules used to opt in
+# (`OMNIVOICE_MODEL=test`), but any module that boots the real app lifespan
+# (`with TestClient(main.app)`) without it lets `preload_model()` resolve the
+# real k2-fsa/OmniVoice checkpoint — on a networked machine with an empty HF
+# cache that meant a silent multi-GB background download mid-suite. The
+# sentinel is honored verbatim by `resolve_omnivoice_checkpoint()` (never
+# self-healed to the real default), so no test can trigger a real model
+# download/load without explicitly overriding OMNIVOICE_MODEL.
+os.environ.setdefault("OMNIVOICE_MODEL", "test")
 
 
 # ── Test fixtures ──────────────────────────────────────────────────────────
@@ -138,6 +147,59 @@ def _torch_default_dtype_guard(request):
     # The test itself may have been the first to import torch.
     _install_torch_dtype_recorder()
     _drain_leaked_dtype(request.node.nodeid)
+
+
+@pytest.fixture
+def asr_model_installed(monkeypatch, request):
+    """Neutralize the no-ASR-installed preflight (asr_model_missing_error →
+    None) for tests that exercise batch/dub/dictation/clone-ref *mechanics*
+    and assume ASR weights are present. The hermetic test env has no HF model
+    cache, so without this every ASR consumer answers the typed 409/SSE/WS
+    ``asr_model_missing`` payload before the code under test even runs. The
+    preflight itself has its own suite (tests/test_asr_model_missing.py).
+    Every consumer resolves the helper off ``services.asr_backend`` at call
+    time, so patching the module covers them all. Opt in per module with
+    ``pytestmark = pytest.mark.usefixtures("asr_model_installed")``.
+
+    Patches BOTH the freshly imported module and any module-typed alias the
+    test module itself holds (``import services.asr_backend as ab`` at top
+    level): in a full-suite run an earlier test can purge ``services.*`` from
+    sys.modules, leaving the test module's alias pointing at a STALE pre-purge
+    module object — code invoked through that alias resolves the preflight in
+    the stale module's globals, which a single sys.modules-based setattr would
+    miss (the CI-only empty-HF-cache failure mode). Never patch by name
+    string alone here. (Same fixture exists in backend/tests/conftest.py.)"""
+    import types
+
+    from services import asr_backend
+
+    targets = {id(asr_backend): asr_backend}
+    test_module = getattr(request, "module", None)
+    if test_module is not None:
+        for val in vars(test_module).values():
+            if (isinstance(val, types.ModuleType)
+                    and getattr(val, "__name__", "") == "services.asr_backend"):
+                targets[id(val)] = val
+    for mod in targets.values():
+        monkeypatch.setattr(mod, "asr_model_missing_error", lambda **_kw: None)
+
+
+@pytest.fixture(autouse=True)
+def _clear_asr_installed_memo():
+    """The ASR preflight memoizes installed-POSITIVE repos process-wide
+    (services.asr_backend._INSTALLED_REPO_MEMO) so dictation stops paying a
+    scan_cache_dir walk per utterance. Tests stub ``is_cached`` both ways, so
+    a positive memoized under one test's stub (or from a dev machine's real
+    HF cache) must never leak into the next test's 'missing' expectations.
+    Touches the memo only when the module is already imported — never forces
+    the import. (Same guard exists in backend/tests/conftest.py.)"""
+    mod = sys.modules.get("services.asr_backend")
+    if mod is not None:
+        getattr(mod, "_INSTALLED_REPO_MEMO", set()).clear()
+    yield
+    mod = sys.modules.get("services.asr_backend")
+    if mod is not None:
+        getattr(mod, "_INSTALLED_REPO_MEMO", set()).clear()
 
 
 @pytest.fixture

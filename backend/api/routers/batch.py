@@ -76,8 +76,16 @@ async def _worker():
                     job_id, job["finished_at"] - job["started_at"],
                 )
         except asyncio.CancelledError:
+            # Task cancellation always means SHUTDOWN: the job-level cancel
+            # endpoint only flips job["status"] — nothing ever cancels this
+            # task to abort a single job. Swallowing the CancelledError here
+            # made the worker unkillable (the while-loop re-entered
+            # _queue.get() and event-loop teardown hung forever in
+            # _cancel_all_tasks waiting on a task that never finishes). Mark
+            # the in-flight job, then let the cancellation propagate.
             job["status"] = "cancelled"
             job["finished_at"] = time.time()
+            raise
         except Exception as e:
             job["status"] = "failed"
             # plan-04 (#131): guaranteed non-empty, structured reason.
@@ -447,6 +455,14 @@ async def enqueue_batch_job(
     lang_list = [l.strip() for l in langs.split(",") if l.strip()]
     if not lang_list:
         raise HTTPException(400, "At least one target language is required")
+
+    # TTS-only install: no ASR model on disk → typed 409 with a download CTA
+    # now, instead of accepting the job and having the transcribe stage
+    # silently auto-download multi-GB whisper weights (or fail) in the worker.
+    from services.asr_backend import asr_model_missing_detail, asr_model_missing_error
+    missing = await asyncio.to_thread(asr_model_missing_error)
+    if missing is not None:
+        raise HTTPException(409, {**missing, "message": asr_model_missing_detail(missing)})
 
     # Save the uploaded video
     batch_dir = os.path.join(DATA_DIR, "batch")

@@ -66,6 +66,8 @@ internally — you can write in English, Chinese, or a mix of both.
 |---------|---------|
 | whisper | 耳语 |
 
+> `whisper` is the only delivery style the base model accepts — emotion tags like `[happy]`/`[sad]` are not part of this taxonomy. For everything expressive (breaths, laughter, pauses, emotion, and which engines support what), see [expressive-speech.md](expressive-speech.md).
+
 ### English Accent
 
 Only effective when the synthesis text is in English.

@@ -309,6 +309,198 @@ pub fn open_accessibility_settings() {
     }
 }
 
+// ── OS permission probes (microphone / input monitoring) ─────────────────
+//
+// Cross-platform-honest: these never guess a grant state they can't know.
+// `check_microphone` returns one of "granted" | "denied" | "prompt" |
+// "unknown" — "unknown" means the OS gives us no readable answer (Linux has
+// no per-app mic TCC; older Windows lacks the ConsentStore key), and the JS
+// side must not treat it as either granted or denied.
+
+/// macOS microphone grant via `[AVCaptureDevice authorizationStatusForMediaType:
+/// AVMediaTypeAudio]`. Hand-rolled ObjC-runtime FFI, same spirit as
+/// `accessibility_trusted()` above: three runtime symbols + one framework
+/// constant, not worth a crate.
+#[cfg(target_os = "macos")]
+fn microphone_auth_status() -> &'static str {
+    use std::os::raw::{c_char, c_void};
+
+    #[link(name = "objc")]
+    extern "C" {
+        fn objc_getClass(name: *const c_char) -> *mut c_void;
+        fn sel_registerName(name: *const c_char) -> *mut c_void;
+        // Deliberately signature-less: objc_msgSend is variadic-by-convention
+        // and must be cast to the concrete fn type per call site.
+        fn objc_msgSend();
+    }
+    // Linking AVFoundation is what makes the AVCaptureDevice class and the
+    // AVMediaTypeAudio NSString constant exist at runtime.
+    #[link(name = "AVFoundation", kind = "framework")]
+    extern "C" {
+        #[allow(non_upper_case_globals)]
+        static AVMediaTypeAudio: *mut c_void;
+    }
+
+    unsafe {
+        let cls = objc_getClass(c"AVCaptureDevice".as_ptr());
+        if cls.is_null() {
+            return "unknown";
+        }
+        let sel = sel_registerName(c"authorizationStatusForMediaType:".as_ptr());
+        let msg_send: extern "C" fn(*mut c_void, *mut c_void, *mut c_void) -> isize =
+            std::mem::transmute(objc_msgSend as unsafe extern "C" fn());
+        // AVAuthorizationStatus: 0 notDetermined, 1 restricted, 2 denied,
+        // 3 authorized. Anything newer/unexpected is honestly "unknown".
+        match msg_send(cls, sel, AVMediaTypeAudio) {
+            0 => "prompt",
+            1 | 2 => "denied",
+            3 => "granted",
+            _ => "unknown",
+        }
+    }
+}
+
+/// Windows microphone consent from the CapabilityAccessManager ConsentStore.
+/// A desktop (unpackaged) app's getUserMedia is gated by TWO per-user (HKCU)
+/// toggles: the master "Microphone access" switch (the ConsentStore key
+/// itself) AND "Let desktop apps access your microphone" (the `NonPackaged`
+/// subkey). Reading only the master used to report "granted" while the
+/// desktop-app toggle silently blocked capture — so the probe reads the whole
+/// effective chain: denied if EITHER is Deny, granted only when BOTH read
+/// Allow, otherwise honestly "unknown" (key missing on older builds, or an
+/// unexpected value).
+#[cfg(target_os = "windows")]
+fn microphone_consent_from_registry() -> &'static str {
+    use windows::core::{w, PCWSTR};
+    use windows::Win32::Foundation::ERROR_SUCCESS;
+    use windows::Win32::System::Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_SZ};
+
+    // "Allow" / "Deny" / "Prompt" — 16 UTF-16 units is plenty; RegGetValueW
+    // writes a NUL-terminated string and `size` is in bytes. None = key or
+    // value missing / unreadable.
+    fn read_consent(subkey: PCWSTR) -> Option<String> {
+        let mut buf = [0u16; 16];
+        let mut size = (buf.len() * std::mem::size_of::<u16>()) as u32;
+        let status = unsafe {
+            RegGetValueW(
+                HKEY_CURRENT_USER,
+                subkey,
+                w!("Value"),
+                RRF_RT_REG_SZ,
+                None,
+                Some(buf.as_mut_ptr().cast()),
+                Some(&mut size),
+            )
+        };
+        if status != ERROR_SUCCESS {
+            return None;
+        }
+        let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
+        Some(String::from_utf16_lossy(&buf[..len]))
+    }
+
+    let master = read_consent(w!(
+        r"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone"
+    ));
+    let non_packaged = read_consent(w!(
+        r"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged"
+    ));
+
+    let is_deny = |v: &Option<String>| matches!(v.as_deref(), Some("Deny"));
+    let is_allow = |v: &Option<String>| matches!(v.as_deref(), Some("Allow"));
+    if is_deny(&master) || is_deny(&non_packaged) {
+        return "denied";
+    }
+    if is_allow(&master) && is_allow(&non_packaged) {
+        return "granted";
+    }
+    // Either toggle missing (older Windows builds) or an unexpected value —
+    // don't guess.
+    "unknown"
+}
+
+/// Microphone permission state: "granted" | "denied" | "prompt" | "unknown".
+/// macOS reads the TCC grant via AVFoundation; Windows reads the per-user
+/// ConsentStore toggle; Linux is always "unknown" (PulseAudio/PipeWire has no
+/// per-app mic permission and we don't use the portal).
+#[tauri::command]
+pub fn check_microphone() -> String {
+    #[cfg(target_os = "macos")]
+    {
+        microphone_auth_status().to_string()
+    }
+    #[cfg(target_os = "windows")]
+    {
+        microphone_consent_from_registry().to_string()
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        "unknown".to_string()
+    }
+}
+
+/// Deep-link into the OS microphone-privacy pane. Errors use the same
+/// `kind:detail` convention as the paste commands ("settings:" kind) so the
+/// JS side can switch on `err.split(':')[0]`.
+#[tauri::command]
+pub fn open_microphone_settings() -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| kind_err("settings", format!("failed to open microphone settings: {e}")))
+    }
+    #[cfg(target_os = "windows")]
+    {
+        // `start` is a cmd builtin — there's no ms-settings executable to
+        // spawn directly. CREATE_NO_WINDOW stops the cmd console flash
+        // (same pattern as the nvidia-smi probe in setup.rs).
+        use std::os::windows::process::CommandExt;
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "ms-settings:privacy-microphone"])
+            .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| kind_err("settings", format!("failed to open microphone settings: {e}")))
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        // No per-app mic permission pane exists on Linux — an xdg-open target
+        // would be a guess that varies by desktop. Err so the JS side can show
+        // "open your system sound settings" instead of pretending we did.
+        Err(kind_err(
+            "settings",
+            "no microphone permission pane on this OS; open your system sound settings",
+        ))
+    }
+}
+
+/// Deep-link into macOS Privacy → Input Monitoring (the grant global-shortcut
+/// key listening needs on newer macOS). macOS-only: no such pane exists
+/// elsewhere, so other OSes get a "settings:" Err rather than a silent no-op.
+#[tauri::command]
+pub fn open_input_monitoring_settings() -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| {
+                kind_err("settings", format!("failed to open input monitoring settings: {e}"))
+            })
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        Err(kind_err(
+            "settings",
+            "input monitoring settings are macOS-only",
+        ))
+    }
+}
+
 #[tauri::command]
 pub fn simulate_paste(text: Option<String>) -> Result<(), String> {
     // macOS: fail loud BEFORE touching the clipboard if Accessibility isn't

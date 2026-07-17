@@ -157,6 +157,26 @@ async def ws_transcribe(websocket: WebSocket):
     # run the dedicated low-latency handler. Otherwise fall through to the
     # legacy Whisper/WebM path, byte-for-byte unchanged.
     spec = _select_sherpa_spec(websocket)
+
+    # TTS-only install: no ASR model on disk for this session's selection →
+    # typed error frame + close, BEFORE any recognizer is built (both the
+    # sherpa loader and the whisper backends auto-download weights on first
+    # load). The client renders a one-click download CTA from the payload.
+    from services.asr_backend import asr_model_missing_detail, asr_model_missing_error
+    missing = await asyncio.to_thread(
+        asr_model_missing_error, purpose="dictation",
+        sherpa_model_id=spec.id if spec is not None else None,
+    )
+    if missing is not None:
+        try:
+            await websocket.send_json({
+                "type": "error", "kind": "asr_model_missing",
+                "message": asr_model_missing_detail(missing), **missing,
+            })
+            await websocket.close()
+        except Exception:  # noqa: BLE001 — client may already be gone
+            pass
+        return
     if spec is not None:
         from services.asr_backend import SherpaDictationBackend, capture_lease
         ok, _reason = SherpaDictationBackend.is_available()

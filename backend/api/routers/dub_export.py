@@ -1259,6 +1259,16 @@ async def dub_qc_pass(job_id: str, lang: str = Query(None), drift_threshold: flo
     if not segments:
         raise HTTPException(status_code=400, detail="Job has no segments")
 
+    # TTS-only install: no ASR model on disk → typed 409 with a download CTA,
+    # BEFORE any backend load could silently auto-download whisper weights.
+    from services.asr_backend import asr_model_missing_detail, asr_model_missing_error
+    missing = await asyncio.to_thread(asr_model_missing_error)
+    if missing is not None:
+        raise HTTPException(
+            status_code=409,
+            detail={**missing, "message": asr_model_missing_detail(missing)},
+        )
+
     def _recognize():
         from services.asr_backend import get_active_asr_backend
         backend = get_active_asr_backend()

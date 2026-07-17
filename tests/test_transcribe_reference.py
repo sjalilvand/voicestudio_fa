@@ -17,6 +17,11 @@ import pytest
 
 from services import asr_backend as ab
 
+# These tests exercise the transcript cache / backend-routing mechanics and
+# assume ASR weights are installed — neutralize the no-ASR preflight (which
+# has its own suite: tests/test_asr_model_missing.py).
+pytestmark = pytest.mark.usefixtures("asr_model_installed")
+
 
 class _FakeBackend(ab.ASRBackend):
     id = "fake"

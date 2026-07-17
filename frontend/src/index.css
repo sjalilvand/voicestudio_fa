@@ -4710,6 +4710,14 @@ body:has(.capture-pill) {
   border-radius: var(--chrome-radius-pill);
   background: color-mix(in srgb, #d3869b 8%, transparent);
 }
+/* Curated "recommended for this machine" pick — green sibling of the pink
+   required tag (same green the RecoBanner's installed state uses). */
+.models-row__tag--rec {
+  color: #8ec07c;
+  border-color: color-mix(in srgb, #8ec07c 40%, transparent);
+  background: color-mix(in srgb, #8ec07c 8%, transparent);
+  cursor: help;
+}
 
 /* ── Models tab: table (virtualised) ─────────────────────────────
    The toolbar / role tabs / search chrome and the recommendation

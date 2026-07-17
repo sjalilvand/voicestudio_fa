@@ -10,6 +10,7 @@ import MediaEngineCard from '../components/MediaEngineCard';
 import MirrorRescue from '../components/MirrorRescue';
 import HfTokenCard from '../components/HfTokenCard';
 import DictationDemo from '../components/DictationDemo';
+import PermissionChecks from '../components/PermissionChecks';
 import { APP_VERSION } from '../utils/appVersion';
 import { Button } from '../ui';
 
@@ -339,6 +340,9 @@ export default function SetupWizard({ onReady }) {
           <div className="flex min-h-0 flex-auto flex-col gap-3" key="step-0">
             <div className="fr-rise min-h-0 flex-1 overflow-y-auto" style={{ '--rise': 1 }}>
               <PreflightPanel report={pre} loading={preLoading} onRecheck={recheckPreflight} />
+              {/* OS permissions (mic + macOS Accessibility) — advisory rows
+                  that never gate Continue; renders nothing outside Tauri. */}
+              <PermissionChecks />
               {/* Invisible when the media engine is ready; a quiet progress
                   line while the backend fetches its own bundled build; an
                   actionable card only on failure. */}

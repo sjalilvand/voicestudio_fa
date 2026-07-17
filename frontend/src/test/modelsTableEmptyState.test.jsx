@@ -103,3 +103,42 @@ describe('RecoBanner — disk context near the download actions', () => {
     expect(screen.queryByTestId('reco-low-disk')).not.toBeInTheDocument();
   });
 });
+
+// ── RecoBanner — "For your system": rationale caption + one-click installs ──
+
+describe('RecoBanner — rationale caption and per-row install', () => {
+  it('shows the backend preset rationale as a caption under the device title', () => {
+    renderBanner({ reco: { ...RECO, rationale: 'Apple Silicon preset: Metal-native picks.' } });
+    expect(screen.getByTestId('reco-rationale')).toHaveTextContent(
+      'Apple Silicon preset: Metal-native picks.',
+    );
+  });
+
+  it('renders no caption for a legacy payload without a rationale', () => {
+    renderBanner();
+    expect(screen.queryByTestId('reco-rationale')).not.toBeInTheDocument();
+  });
+
+  it('offers a one-click install per missing pick that fires onInstall(repo_id)', () => {
+    const onInstall = vi.fn();
+    renderBanner({ onInstall });
+    fireEvent.click(screen.getByTestId('reco-install-b/nice'));
+    expect(onInstall).toHaveBeenCalledWith('b/nice');
+  });
+
+  it('shows a busy spinner instead of the install button while the row downloads', () => {
+    const onInstall = vi.fn();
+    renderBanner({
+      onInstall,
+      getRowRuntime: (m) => ({ showBar: m.repo_id === 'b/nice' }),
+    });
+    expect(screen.queryByTestId('reco-install-b/nice')).not.toBeInTheDocument();
+    // The other missing pick still gets its button.
+    expect(screen.getByTestId('reco-install-a/required')).toBeInTheDocument();
+  });
+
+  it('renders no per-row action for legacy callers without onInstall', () => {
+    renderBanner();
+    expect(screen.queryByTestId('reco-install-b/nice')).not.toBeInTheDocument();
+  });
+});

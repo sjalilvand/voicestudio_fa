@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import sys
 from types import SimpleNamespace
 
@@ -75,3 +76,62 @@ def test_load_model_can_preload_pytorch_whisper_when_requested(model_manager, mo
     model_manager._load_model_sync()
 
     assert calls[0][1]["load_asr"] is True
+
+
+def test_resolve_checkpoint_honors_test_sentinel(model_manager, monkeypatch):
+    """`OMNIVOICE_MODEL=test` (the suite-wide sentinel from tests/conftest.py)
+    must pass through verbatim — the #693 bare-token self-heal mapping it to
+    the real k2-fsa/OmniVoice checkpoint is what let app-booting tests kick
+    off a real multi-GB model download."""
+    monkeypatch.setenv("OMNIVOICE_MODEL", "test")
+    assert model_manager.resolve_omnivoice_checkpoint() == "test"
+
+    # The #693 self-heal itself must keep working for actual engine-id leaks.
+    monkeypatch.setenv("OMNIVOICE_MODEL", "omnivoice")
+    assert (
+        model_manager.resolve_omnivoice_checkpoint()
+        == model_manager._DEFAULT_OMNIVOICE_CHECKPOINT
+    )
+
+
+def test_preload_never_loads_uninstalled_checkpoint(model_manager, monkeypatch):
+    """Networked machine, repo exists on the Hub, model NOT installed locally:
+    preload must skip. The old `model_info()` probe treated Hub reachability
+    as "installed" and silently downloaded the full checkpoint in a
+    background thread on every boot with an empty cache."""
+    import huggingface_hub
+
+    monkeypatch.setenv("OMNIVOICE_MODEL", "k2-fsa/OmniVoice")
+    # Old-code determinism: make the Hub probe "succeed" without network.
+    monkeypatch.setattr(
+        huggingface_hub, "model_info", lambda *a, **k: object(), raising=False
+    )
+    monkeypatch.setattr(model_manager, "_checkpoint_in_local_cache", lambda c: False)
+
+    loads = []
+
+    async def _record_load():
+        loads.append(True)
+        return SimpleNamespace(llm=object())
+
+    monkeypatch.setattr(model_manager, "_load_model_with_timeout", _record_load)
+    asyncio.run(model_manager.preload_model())
+
+    assert loads == [], "preload must never load/download an uninstalled checkpoint"
+    assert model_manager.model is None
+
+
+def test_preload_warms_up_locally_installed_checkpoint(model_manager, monkeypatch):
+    """The counterpart guard: a locally present checkpoint must still warm up
+    (skipping it would make the first /generate eat the full weight load)."""
+    monkeypatch.setattr(model_manager, "_checkpoint_in_local_cache", lambda c: True)
+
+    loaded = SimpleNamespace(llm=object())
+
+    async def _fake_load():
+        return loaded
+
+    monkeypatch.setattr(model_manager, "_load_model_with_timeout", _fake_load)
+    asyncio.run(model_manager.preload_model())
+
+    assert model_manager.model is loaded

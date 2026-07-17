@@ -7,7 +7,10 @@ import { useTranslation } from 'react-i18next';
 
 import { wsUrl as buildWsUrl, apiFetch } from '../api/client';
 import { addTranscription } from '../pages/Transcriptions';
-import { micErrorMessage } from '../utils/micError';
+import { describeMicError, detectPlatform, micErrorMessage, micHintKey } from '../utils/micError';
+import { checkMicrophone, openMicrophoneSettings } from '../utils/permissions';
+import { showMicDeniedGuide } from '../utils/micDeniedToast';
+import { asrMissingPayload, toastAsrModelMissing } from '../utils/asrModelMissing';
 import { createWaveform } from './captureWaveform';
 
 // True inside the Tauri shell (desktop app / widget window); false in the
@@ -688,6 +691,23 @@ export default function CaptureWidget({ onDismiss }) {
   }, []);
 
   const startRecording = useCallback(async () => {
+    // Pre-flight: when the OS itself reports the mic grant as DENIED,
+    // getUserMedia can only throw an opaque NotAllowedError — skip it and
+    // show the guided path (per-OS hint + Open Settings deep-link) instead.
+    // 'prompt'/'granted'/'unknown' proceed exactly as before (getUserMedia
+    // raises the OS prompt; micError.js stays the reactive fallback), and
+    // outside Tauri checkMicrophone() is always 'unknown' → unchanged.
+    if ((await checkMicrophone()) === 'denied') {
+      showMicDeniedGuide(t);
+      setTrayRecording(false);
+      setErrorInfo({
+        kind: 'mic',
+        message: t(micHintKey(detectPlatform())),
+        deniedByOs: true,
+      });
+      setState('error');
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 },
@@ -876,7 +896,18 @@ export default function CaptureWidget({ onDismiss }) {
             }
             ws.close();
             wsRef.current = null;
-            if (sherpaModeRef.current || aecModeRef.current) {
+            if (asrMissingPayload(msg)) {
+              // Typed preflight: no ASR model installed. The POST fallback
+              // would hit the same 409, so don't re-send — render the
+              // download CTA and resolve the pill into its error state.
+              wsHadFinalRef.current = true;
+              stopCaptureGraph();
+              setTrayRecording(false);
+              setModelStatus(null);
+              toastAsrModelMissing(asrMissingPayload(msg));
+              setErrorInfo({ kind: 'transcription', message: t('asr_missing.message') });
+              setState('error');
+            } else if (sherpaModeRef.current || aecModeRef.current) {
               // Raw-PCM paths have no WebM blob to re-POST — surface the
               // backend's error instead of leaving the pill wedged in
               // "Transcribing…" forever.
@@ -1010,6 +1041,17 @@ export default function CaptureWidget({ onDismiss }) {
         recorder.start(250);
         mediaRecorderRef.current = recorder;
       }
+      // The session may already have RESOLVED while the mic graph was being
+      // set up (the awaits above): a connect-time WS error frame (e.g. the
+      // typed asr_model_missing preflight) or an Esc-cancel sets
+      // wsHadFinalRef and renders the truthful terminal state. Entering
+      // 'recording' now would clobber that state and — with the socket gone —
+      // strand the next Stop on "Transcribing…" forever. Release the capture
+      // inputs and leave the pill alone.
+      if (wsHadFinalRef.current) {
+        stopCaptureGraph();
+        return;
+      }
       startTimeRef.current = Date.now();
       setTrayRecording(true);
       setWaveOn(pcmMode);
@@ -1026,7 +1068,13 @@ export default function CaptureWidget({ onDismiss }) {
       // "no device" / "device busy" / anything else (#323).
       toast.error(micErrorMessage(t, err), { duration: 6000 });
       setTrayRecording(false);
-      setErrorInfo({ kind: 'mic', message: String(err?.message || err) });
+      setErrorInfo({
+        kind: 'mic',
+        message: String(err?.message || err),
+        // Permission-denied errors (describeMicError sets a hintKey only for
+        // those) get the pill's Open-Settings action inside Tauri.
+        deniedByOs: !!describeMicError(err).hintKey,
+      });
       setState('error');
     }
   }, [applyResult, finalizeSession, liveType, stopCaptureGraph, t]);
@@ -1089,6 +1137,15 @@ export default function CaptureWidget({ onDismiss }) {
       await applyResult(data);
     } catch (err) {
       if (wsHadFinalRef.current) return;
+      const missing = asrMissingPayload(err);
+      if (missing) {
+        // Typed 409: no ASR model installed → download CTA, not a dead end.
+        toastAsrModelMissing(missing);
+        setErrorInfo({ kind: 'transcription', message: t('asr_missing.message') });
+        setState('error');
+        setTranscript('');
+        return;
+      }
       toast.error(t('capture.transcription_failed', { message: err.message }));
       setErrorInfo({ kind: 'transcription', message: err.message });
       setState('error');
@@ -1138,6 +1195,10 @@ export default function CaptureWidget({ onDismiss }) {
   }
 
   const showA11yAction = state === 'setup' || (state === 'error' && errorInfo?.kind === 'a11y');
+  // OS-level mic denial gets its own Open-Settings deep-link (Tauri only —
+  // a browser denial has no OS pane we can open).
+  const showMicAction =
+    state === 'error' && errorInfo?.kind === 'mic' && errorInfo?.deniedByOs && inTauri();
 
   return (
     <div className={`capture-pill capture-pill--${state}`} role="status" aria-live="polite">
@@ -1185,6 +1246,21 @@ export default function CaptureWidget({ onDismiss }) {
           onClick={openA11ySettings}
         >
           {t('capture.open_a11y_settings')}
+        </button>
+      )}
+
+      {/* Microphone action — OS-denied mic errors deep-link the mic pane */}
+      {showMicAction && (
+        <button
+          className="shrink-0 cursor-pointer whitespace-nowrap rounded-full border-0 bg-white/[0.1] px-2.5 py-1 text-[11px] font-medium text-white/90 transition-[background] duration-[0.15s] hover:bg-white/[0.18]"
+          onClick={async () => {
+            if (!(await openMicrophoneSettings())) {
+              // Linux: no mic-privacy pane — point at system sound settings.
+              toast(t('capture.mic_hint_linux'), { icon: 'ℹ️', duration: 8000 });
+            }
+          }}
+        >
+          {t('permissions.open_settings')}
         </button>
       )}
 

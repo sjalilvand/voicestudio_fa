@@ -32,8 +32,21 @@ interface KnownModel {
   required: boolean;
   note?: string;
   installed: boolean;
+  /** Truncated download on disk (config landed, weight shard didn't). */
+  incomplete?: boolean;
   size_on_disk_bytes: number;
   nb_files: number;
+  /** False when the model can't run on this host (`platforms` in models.yaml). */
+  supported?: boolean;
+  /** Curated "best for your system" pick (`curated_on` in models.yaml) —
+   *  drives the recommended badge in the wizard and Settings model store. */
+  curated?: boolean;
+  platforms?: string[];
+  /** Dictation runtime marker (`engine: sherpa-onnx` in models.yaml). */
+  engine?: string;
+  dictation_id?: string;
+  /** Dictation mode: 'offline' | 'streaming'. */
+  tag?: string;
 }
 
 export interface ModelList {
@@ -43,6 +56,8 @@ export interface ModelList {
   /** Free space on the cache volume — surfaced in the Model Store header so an
    *  "Install all" can't silently overrun the disk. */
   disk_free_gb?: number;
+  /** Host platform tags (e.g. ['darwin', 'darwin-arm64']). */
+  platform_tags?: string[];
 }
 
 export async function listModels(): Promise<ModelList> {

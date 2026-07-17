@@ -22,6 +22,13 @@ os.environ.setdefault("OMNIVOICE_DISABLE_FILE_LOG", "1")
 os.environ["OMNIVOICE_STREAM_INTERVAL"] = "0.1"
 os.environ["OMNIVOICE_STREAM_SILENCE"] = "0.2"
 
+# These tests exercise the WS protocol with stubbed transcription and assume
+# ASR weights are installed — neutralize the no-ASR preflight (which otherwise
+# closes the socket with a typed asr_model_missing error frame in the hermetic
+# no-HF-cache test env; the preflight has its own suite:
+# tests/test_asr_model_missing.py).
+pytestmark = pytest.mark.usefixtures("asr_model_installed")
+
 
 @pytest.fixture
 def client(monkeypatch):

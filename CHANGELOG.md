@@ -8,39 +8,52 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ## [Unreleased]
 
+**Highlights**
+
+- First run is ~2.4 GB, not ~5 GB — only the TTS model is required
+- Settings → Models redesigned: grouped, platform-aware, one-click "for your system" picks
+- Guided mic + Accessibility permissions with Open Settings deep-links
+- Parakeet TDT v3 on Apple Silicon (`parakeet-mlx`)
+- No more silent multi-GB Whisper downloads — a download prompt instead
+- First-run analytics consent question, Colab notebook, ROCm Docker image
+- New docs: expressive speech, Flush/Unload, clone-length FAQ
+
+### Changed
+
+- Settings → Models: grouped catalog (TTS / ASR / Dictation / Diarisation), "recommended for this machine" chips, incompatible models collapsed behind a toggle
+- Only the TTS model (~2.4 GB) is required on first run; ASR picks are curated per platform via `curated_on` in `models.yaml` (MLX on Apple Silicon, CT2+Turbo on CUDA, PyTorch on ROCm, int8 on CPU)
+
 ### Added
 
-- **OmniVoice now asks — once — whether you'd like to share anonymous usage stats.** The opt-in analytics toggle existed but was buried in Settings, so almost nobody ever saw it. New installs now get one honest question in the first-run wizard (two equal-weight Yes/No buttons, nothing pre-ticked); existing installs see a one-time dismissible banner, where dismissing counts as no. The privacy promise is unchanged: nothing is sent without an explicit yes, skipping means no, and source builds (which ship no analytics destination) never even ask. Saying yes shares content-free product signals — an install ping, version updates, crashes (error class + bucketed uptime, never logs), error *types* (capped and deduplicated), and a single farewell ping if you uninstall via the scripts — all enforced by the same code-level property allowlist as before: never your text, audio, file names, or anything identifying. Change your mind anytime in Settings → Privacy.
+- Settings → Permissions + wizard System Check: live OS mic/Accessibility grant state, per-OS guidance, Open Settings deep-links; dictation pre-flights the mic grant
+- `parakeet-mlx` engine: Parakeet TDT v3 on Apple Silicon (25 EU languages, word timestamps, ~2 GB); never auto-downloads
+- First-run consent question for the existing opt-in analytics (two equal buttons, skip = no; source builds never ask)
+- Official Google Colab notebook (`notebooks/OmniVoice_Studio_Colab.ipynb`) — full app + API feature tour on a free T4
+- ROCm Docker image `ghcr.io/debpalash/omnivoice-studio:rocm` (+ `:stable-rocm`, `:X.Y.Z-rocm`) (#1165)
 
-- **An official "Run on Google Colab" notebook — try OmniVoice without a local GPU.** `notebooks/OmniVoice_Studio_Colab.ipynb` boots the full app (web UI included) on a free Colab T4: it builds the frontend in-notebook with bun, installs the backend with uv while reusing Colab's preinstalled CUDA PyTorch, and opens the UI through Colab's built-in port proxy — no third-party tunnels, no API keys. An optional Colab-Secrets cell enables gated diarization models, and a smoke-test cell generates and plays a first line of speech inline. It then tours the whole feature surface through the backend API, one self-contained cell per feature with inline playback and honest runtime notes: multilingual TTS, zero-shot voice cloning, voice design from a plain-English description, saved voice profiles, a TTS→ASR transcription round trip, AI-watermark detection (generated vs. plain audio), the OpenAI-compatible `/v1` API via the official `openai` client, a two-voice story, a chaptered m4b audiobook, and an optional miniature video dub (English→Spanish) with vocal-isolation stems. The Open-in-Colab badge lives in the README.
+### Docs
 
-- **A Docker image for AMD GPUs: `ghcr.io/debpalash/omnivoice-studio:rocm`.** The Docker image was CUDA-only, so AMD cards (an RX 7900 XTX under Podman, say) silently ran on CPU. Every preview and release now also ships a ROCm variant — `:rocm` is the rolling preview, with `:stable-rocm` / `:X.Y.Z-rocm` mirroring the release tags on GHCR and Docker Hub alike. Pass the GPU through with `--device /dev/kfd --device /dev/dri` (works for Docker and Podman/Quadlet; no container toolkit needed) and it's auto-detected; a new `rocm` profile in the Compose file does the same. (#1165)
+- `docs/expressive-speech.md`: per-engine breaths/laughter/emotion control, incl. the default engine's 13 native reaction tags
+- Flush caches / Unload documented in the performance guide, incl. `POST /system/flush-memory` for scripts
+- README FAQ: why a longer reference clip doesn't clone better (zero-shot 15 s cap; fine-tuning is the audiobook-grade path)
 
 ### Fixed
 
-- **FunASR/SenseVoice transcription no longer crashes or swaps speaker identities across 30-second chunks when inline diarization is enabled.** The pinned FunASR 1.3.1 release defaults CAM++ to a punctuation-dependent segmentation mode, while OmniVoice intentionally does not load a second punctuation model — so the first transcription failed inside FunASR before returning any text. Separately, CAM++ cluster IDs are local to each `generate()` call, so externally chunking a long recording could reuse the same label for different people. The backend now uses VAD speaker segments, requests SenseVoice timestamps, accepts the release's `sentence` output field, and lets FunASR's internal VAD process the complete recording in one bounded call so dubbing receives globally consistent timed speaker turns. (#182)
-
-- **Every synthetic-audio output now carries the invisible provenance watermark — no matter which door it leaves through.** The OpenAI-compatible `/v1/audio/speech` endpoint returned unwatermarked audio while `/generate` marked the same text, and an audit found the same gap in streaming TTS, batch dubs, audiobooks/stories, dub segment previews, and archetype previews — a real compliance problem with EU AI Act Art. 50(2) (machine-readable marking of synthetic audio) applying from 2 August 2026. All producers now route through one `mark_synthetic` chokepoint at the tensor stage, guarded by per-route detection tests plus a structural test so a future audio route can't ship unmarked; the Settings toggle behaves exactly as before, and audio rendered while the toggle was off is never passed off as marked. The opt-in SoniTranslate sidecar synthesizes and muxes outside this pipeline and remains a documented exception. (#1169)
-
-- **"Can't reach the local OmniVoice backend" finally tells the real story outside the desktop app.** Backend deaths (out-of-memory kills, hard crashes) were only diagnosable through the desktop shell's crash markers — a `bun run dev` browser session, a Docker deployment, or a LAN-share client got the same vague error with zero evidence. The backend now keeps a run sentinel and, on its next start, reports an unclean death as the same crash notice desktop users get (with the death window, what it was doing, and a scrubbed log tail — attached automatically to bug reports). The error itself is now honest about your deployment: it says whether the backend *was answering and stopped* or *never answered at all*, and points at the `bun run dev` terminal / `omnivoice.log` in dev or `docker logs`/`journalctl` on a server instead of "restart the app". Dev runs also print a loud exit banner (exit code, log tail, OOM hint) the moment uvicorn dies. (#1164)
-
-- **The "Setup failed" screen no longer crashes instead of appearing.** A variable-ordering bug in the splash screen threw a JavaScript error exactly (and only) when first-run setup failed — replacing the one screen whose job is to explain the failure with a blank crash. Fixed, and the failed card is now covered by a rendering test so it can't silently break again. Thanks @bultodepapas! (#1159)
-
-- **Backend errors keep their stack traces in the log.** When persisting a dub job failed, the log recorded only a one-line summary — the traceback that says *why* was discarded, making reports undiagnosable. Fixed there (thanks @bultodepapas!), and the same fix was swept across 19 more error logs backend-wide: diarization and transcription crashes, dubbing audio-mix and Smart Fit fallbacks, dictation failures, and more now log the full trace. (#1160)
-
-- **A stuck audio probe can no longer freeze reference-clip uploads.** Picking a reference clip for voice cloning reads its duration through the browser's media element — and a media element that never answers left the upload hanging forever. The probe now times out after 10 seconds, and clips whose codec the app's webview can't decode are still accepted as before (the backend decodes them with ffmpeg), now locked in by tests. Thanks @bultodepapas! (#1162)
-
-- **A malformed EPUB chapter now imports partially instead of vanishing.** If parsing a chapter's HTML failed midway, the failure was silent; the proposed fix would have silently dropped the whole chapter from the audiobook instead. Now the import keeps every word extracted before the failure and logs exactly which entry broke — a truncated chapter you can spot beats a missing one you can't. Thanks @bultodepapas! (#1161)
-
-- **Sidebar data that fails to load now says so in the console.** If fetching your voices, history, dub history, projects, or exports failed, the app silently showed the previous (or an empty) list — indistinguishable from actually having nothing. Each of those failures is now logged with which fetch broke, so "my voices vanished" reports carry a cause. Thanks @bultodepapas! (#1158)
-
-- **A missing (or broken) MCP dependency can no longer kill the whole backend at startup.** One Windows user's backend loaded all 32 models and then died with exit code 1 because the `mcp` package couldn't be imported — the MCP integration called "exit the program" and a technicality (`SystemExit` isn't an `Exception`) let it slip past the guard meant to make MCP optional. The MCP layer now degrades to "/mcp disabled" on any import failure, the error names what actually failed (the package can be present but broken — e.g. pywin32 on Windows — and "not installed" was a misdiagnosis), and the exit-containment now covers this whole class. (#1156)
-
-- **The "Setup failed" screen dismisses itself when the backend comes back — and relaunching the app is now a retry, not a dead end.** If the backend died at startup, reopening the app just refocused the dead window, and even when the backend recovered on its own the failed card stayed up until you manually reloaded. Now: launching the app again while setup is failed re-runs the same recovery as the Retry button, and the failed screen quietly polls the backend and jumps into the app the moment it answers. (#1156)
-
-- **Ended the `forrtl: error (200)` mid-session backend crashes on Windows.** Several crash reports shared one cryptic signature: the backend aborted with exit code 2 during normal work (transcribing, downloading models). The culprit is a console handler inside the math runtime that torch/numpy ship — when Windows delivered a console close/logoff event to the backend, that handler killed the process on the spot. The backend now runs with no console attached at all, plus the runtime's handler is disabled outright, in the app and in from-source runs alike. (#1153)
-
-- **Non-Latin text can't crash synthesis on Windows anymore.** Generating with text like Vietnamese `ả` failed with `400 Bad Request: 'charmap' codec can't encode character…` — a voice engine prints the text it's synthesizing, and the backend's Windows console encoding (cp1252) couldn't represent it. The backend's output streams are now forced to UTF-8, the print-guard swallows encoding errors (logs are best-effort; your audio is not), and the desktop app runs the backend in UTF-8 mode across the board. (#1155)
+- TTS-only installs get a one-click ASR download prompt instead of silent 1.6–3 GB Whisper pulls (dub, batch, dictation, clone-ref, `/v1` STT, boot warm-up)
+- FunASR/SenseVoice: no more crash or speaker-identity swaps across 30 s chunks with inline diarization (#182)
+- Provenance watermark now applied on every synthetic-audio route (`/v1/audio/speech`, streaming, batch dubs, audiobooks, previews) via one chokepoint (#1169)
+- "Can't reach the local backend" now reports unclean backend deaths with evidence, in dev/Docker/LAN too (#1164)
+- "Setup failed" screen renders instead of crashing — thanks @bultodepapas! (#1159)
+- Backend error logs keep stack traces (swept across 20 sites) — thanks @bultodepapas! (#1160)
+- Reference-clip uploads can't hang on a stuck audio probe (10 s timeout) — thanks @bultodepapas! (#1162)
+- Malformed EPUB chapters import partially instead of vanishing — thanks @bultodepapas! (#1161)
+- Failed sidebar fetches are logged instead of silently showing stale/empty lists — thanks @bultodepapas! (#1158)
+- A missing/broken `mcp` package degrades to "/mcp disabled" instead of killing the backend at startup (#1156)
+- "Setup failed" auto-dismisses when the backend recovers; relaunching the app retries instead of refocusing a dead window (#1156)
+- Fixed `forrtl: error (200)` mid-session backend crashes on Windows (console-handler kill in the bundled math runtime) (#1153)
+- Non-Latin text can't crash synthesis on Windows (backend forced to UTF-8) (#1155)
+- App boot no longer silently downloads the ~2.3 GB TTS model when it isn't installed — warm-up loads from the local cache only, and startup makes no Hugging Face calls
+- Quitting with a batch dub in flight can't hang shutdown anymore (the batch worker now honors cancellation)
 
 - **Video export errors now tell you what actually went wrong.** A failed export could claim your "filename is too long" (it was `F:\video.mp4`) and suggest checking whether FFmpeg is installed (it was, and had worked before). The real cause — the assembled ffmpeg command exceeding Windows' 32,767-character command-line limit on exports with many tracks/segments — is now both diagnosed honestly and largely avoided: oversized filter graphs are handed to ffmpeg via a script file instead of the command line. Each failure mode (command too long / ffmpeg missing / ffmpeg reported an error) now gets its own advice instead of everyone getting all of it. (#1152)
 

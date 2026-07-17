@@ -20,6 +20,9 @@ _EXPECTED = {
     "mlx-whisper": ("mps", "cpu"),
     "pytorch-whisper": ("cuda", "mps", "cpu"),
     "nemo-parakeet": ("cuda", "cpu"),
+    # MLX runs on Apple Silicon's unified-memory GPU only; is_available
+    # hard-gates on mlx_supported(), so claiming cpu would be false.
+    "parakeet-mlx": ("mps",),
     "moonshine": ("cpu",),
     "funasr": ("cuda", "cpu"),
     # Crash-isolated sidecar wraps the same CTranslate2 engine as
@@ -27,8 +30,9 @@ _EXPECTED = {
     "faster-whisper-isolated": ("cuda", "cpu"),
 }
 
-# Engines that legitimately have NO cpu path (hard GPU gate in is_available).
-_GPU_ONLY: set[str] = set()
+# Engines that legitimately have NO cpu path (hard platform/GPU gate in
+# is_available — e.g. parakeet-mlx gates on Apple Silicon via mlx_supported()).
+_GPU_ONLY: set[str] = {"parakeet-mlx"}
 
 _VALID = {"cuda", "rocm", "mps", "xpu", "cpu"}
 

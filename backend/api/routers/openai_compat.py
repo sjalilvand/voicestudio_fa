@@ -20,6 +20,7 @@ Reference: https://platform.openai.com/docs/api-reference/audio
 """
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
 import os
@@ -440,7 +441,18 @@ async def create_transcription(
     ),
 ):
     """Transcribe audio to text. Compatible with OpenAI's POST /v1/audio/transcriptions."""
-    from services.asr_backend import get_active_asr_backend
+    from services.asr_backend import (
+        asr_model_missing_detail,
+        asr_model_missing_error,
+        get_active_asr_backend,
+    )
+
+    # TTS-only install: no ASR model on disk → actionable 409 (string detail —
+    # OpenAI-compat clients expect plain messages), BEFORE any backend load
+    # could silently auto-download multi-GB whisper weights.
+    missing = await asyncio.to_thread(asr_model_missing_error)
+    if missing is not None:
+        raise HTTPException(status_code=409, detail=asr_model_missing_detail(missing))
 
     # Write uploaded file to a temp location
     suffix = os.path.splitext(file.filename or "audio.wav")[1] or ".wav"

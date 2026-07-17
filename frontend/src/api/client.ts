@@ -371,7 +371,14 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
           typeof detail === 'string' && detail.toLowerCase().includes('api key') ? 'apikey' : 'pin';
         window.dispatchEvent(new CustomEvent('ov:auth-required', { detail: { mode } }));
       }
-      throw new ApiError(`${res.status} ${res.statusText}: ${detail}`, {
+      // Structured details (e.g. the typed asr_model_missing 409) carry a
+      // human-readable `message` — use it for the Error message instead of
+      // letting the object stringify to "[object Object]".
+      const msg =
+        typeof detail === 'string'
+          ? detail
+          : ((detail as { message?: string })?.message ?? JSON.stringify(detail));
+      throw new ApiError(`${res.status} ${res.statusText}: ${msg}`, {
         status: res.status,
         detail,
       });

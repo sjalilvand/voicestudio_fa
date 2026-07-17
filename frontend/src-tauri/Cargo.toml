@@ -77,7 +77,9 @@ windows-core = "0.61"
 # Version pinned to match what `tauri` itself already resolves to (0.61.x) so
 # `WebviewWindow::hwnd()`'s return type and our syscalls share the exact same
 # `HWND` type — no second copy of the crate enters the dependency graph.
-windows = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+# Win32_System_Registry: check_microphone reads the CapabilityAccessManager
+# ConsentStore mic toggle (RegGetValueW) for the permissions UX.
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_Registry"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

@@ -28,6 +28,7 @@ import RemoteBackendPanel from '../components/settings/RemoteBackendPanel';
 import MCPBindingsPanel from '../components/settings/MCPBindingsPanel';
 import OpenApiPanel from '../components/settings/OpenApiPanel';
 import PronunciationPanel from '../components/settings/PronunciationPanel';
+import PermissionsPanel from '../components/settings/PermissionsPanel';
 import DictationDemo from '../components/DictationDemo';
 import UpdatesPanel from '../components/UpdatesPanel';
 import GeneralTab from '../components/settings/GeneralTab';
@@ -407,6 +408,8 @@ export default function Settings() {
             <StorageTab />
           </>
         );
+      case 'permissions':
+        return <PermissionsPanel />;
       case 'network':
         return <NetworkTab />;
       case 'audio-tools':

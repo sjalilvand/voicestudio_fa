@@ -18,7 +18,7 @@ Stack: Tauri v2 + FastAPI sidecar + PyInstaller. Target: ~500 MB signed + notari
 | Optional engine packs (VoxCPM2 CUDA, pyannote, MOSS-TTS) | Separate `.tar.gz` via GitHub Releases manifest | **No — first-run download if user opts in** |
 
 Target DMG size: **~500 MB**.
-First-run model download: **~5 GB** one-time.
+First-run model download: **~2.4 GB** one-time (the TTS model is the only required download; ASR/transcription models are optional per-platform curated picks installed on demand from the wizard or Settings).
 
 ---
 

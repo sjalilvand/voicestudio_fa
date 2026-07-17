@@ -24,6 +24,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Play, Pause, Keyboard, Mic, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { API, apiFetch } from '../api/client';
+import { asrMissingPayload, toastAsrModelMissing } from '../utils/asrModelMissing';
 import { Button } from '../ui';
 
 // Shared status-pill base; per-state color/bg/border appended below. The gruvbox
@@ -180,9 +181,18 @@ export default function DictationDemo({ embedded = false }) {
         [script.id]: { state: 'ok', text: json.text || '', error: '' },
       }));
     } catch (e) {
+      // Typed 409 on a TTS-only install: no ASR model on disk. Render the
+      // human message + the one-click download CTA instead of the raw
+      // "409 Conflict: …" string.
+      const missing = asrMissingPayload(e);
+      if (missing) toastAsrModelMissing(missing);
       setTranscripts((prev) => ({
         ...prev,
-        [script.id]: { state: 'fail', text: '', error: e?.message || String(e) },
+        [script.id]: {
+          state: 'fail',
+          text: '',
+          error: missing ? t('asr_missing.message') : e?.message || String(e),
+        },
       }));
     }
   };
