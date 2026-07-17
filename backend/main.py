@@ -9,6 +9,16 @@ _backend_dir = os.path.dirname(os.path.abspath(__file__))
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
+# Windows: run every child process (ffmpeg, engine sidecars, yt-dlp, demucs, …)
+# WITHOUT popping a console window. The backend itself is spawned console-less by
+# the Tauri shell, so on Windows each console subprocess it launches would
+# otherwise get a brand-new cmd window flashed on screen. Patch subprocess.Popen
+# once, before anything spawns, so our 70+ call sites AND third-party libraries
+# (imageio-ffmpeg, yt-dlp) are all covered. No-op off Windows. (#1178)
+from core.win_subprocess import install as _install_no_window  # noqa: E402
+
+_install_no_window()
+
 # #564: also make the project's OWN `omnivoice` package importable from source
 # when the venv's editable install is missing/broken (interrupted/offline
 # `uv sync`, antivirus-quarantined `_editable_impl_omnivoice.pth`, …). Without
