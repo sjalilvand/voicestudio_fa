@@ -174,7 +174,9 @@ pub fn kill_orphan_on_port(port: u16) {
 pub fn kill_orphan_on_port(port: u16) {
     // `netstat -ano` lists listening sockets with their owning PID.
     // Parse the output to find the process listening on exactly `port`.
-    let out = match Command::new("netstat").args(["-ano", "-p", "TCP"]).output() {
+    // no_window: this orphan-kill probe runs on every launch; without it a
+    // netstat console window flashes each time the app starts.
+    let out = match crate::tools::no_window(Command::new("netstat").args(["-ano", "-p", "TCP"])).output() {
         Ok(o) => o,
         Err(_) => return,
     };
@@ -196,9 +198,10 @@ pub fn kill_orphan_on_port(port: u16) {
         if let Some(pid_str) = parts.last() {
             if let Ok(pid) = pid_str.parse::<u32>() {
                 log::warn!("Killing orphan process {} on port {} (Windows)", pid, port);
-                let _ = Command::new("taskkill")
-                    .args(["/PID", &pid.to_string(), "/F"])
-                    .output();
+                let _ = crate::tools::no_window(
+                    Command::new("taskkill").args(["/PID", &pid.to_string(), "/F"]),
+                )
+                .output();
             }
         }
     }

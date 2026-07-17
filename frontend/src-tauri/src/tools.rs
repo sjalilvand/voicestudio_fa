@@ -12,6 +12,37 @@ use crate::config::get_effective_region;
 use crate::config::resolve_github_url;
 use crate::bootstrap::{BootstrapStage, set_stage};
 
+/// Windows: run a child process with **no console window**.
+///
+/// A GUI app (no attached console) that spawns a console subprocess makes
+/// Windows allocate a fresh console for it — a black `cmd`-style window that
+/// flashes on screen for the child's lifetime. During first-run bootstrap we
+/// spawn *dozens* of them (`uv venv`, `uv sync`, and a string of short
+/// `python -c` capability probes), so the user sees a storm of terminal
+/// windows popping up while dependencies install. `CREATE_NO_WINDOW`
+/// (0x08000000) runs the child with no console at all; every caller already
+/// pipes/among nulls stdout+stderr, so nothing visible or logged is lost.
+///
+/// This is the single chokepoint every bootstrap/tools spawn routes through,
+/// mirroring the flag the backend spawn (`backend.rs`) and the `nvidia-smi`
+/// probe (`setup.rs`) already set inline. No-op on macOS/Linux — there is no
+/// per-process console to hide there, so behaviour is unchanged on those
+/// platforms (default-parity rule: the *visible* default is now identical —
+/// no stray windows — across all three).
+///
+/// Returns the same `&mut Command` so it chains inline:
+/// `no_window(Command::new(p).args([..])).output()`.
+#[inline]
+pub fn no_window(cmd: &mut Command) -> &mut Command {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd
+}
+
 // Version of the Astral `uv` binary we download at first run when no system
 // uv is on PATH. Pinned for reproducibility — bump alongside the uv.lock
 // when the toolchain needs a newer uv.
@@ -286,7 +317,7 @@ pub fn resolve_ffmpeg<R: tauri::Runtime>(app: &tauri::AppHandle<R>, app_data: &P
         log::info!("Using cached ffmpeg at {}", cached.display());
         return Some(cached);
     }
-    if Command::new("ffmpeg").arg("-version").stdout(Stdio::null()).stderr(Stdio::null()).status().map(|s| s.success()).unwrap_or(false) {
+    if no_window(Command::new("ffmpeg").arg("-version").stdout(Stdio::null()).stderr(Stdio::null())).status().map(|s| s.success()).unwrap_or(false) {
         log::info!("Using system ffmpeg from PATH");
         return Some(PathBuf::from("ffmpeg"));
     }
@@ -303,7 +334,7 @@ pub fn resolve_ffmpeg<R: tauri::Runtime>(app: &tauri::AppHandle<R>, app_data: &P
                     return Some(PathBuf::from(p));
                 }
             }
-            if Command::new("ffmpeg").arg("-version").stdout(Stdio::null()).stderr(Stdio::null()).status().map(|s| s.success()).unwrap_or(false) {
+            if no_window(Command::new("ffmpeg").arg("-version").stdout(Stdio::null()).stderr(Stdio::null())).status().map(|s| s.success()).unwrap_or(false) {
                 return Some(PathBuf::from("ffmpeg"));
             }
             log::warn!("ffmpeg install completed but binary not found");
@@ -343,7 +374,7 @@ pub fn resolve_ffprobe<R: tauri::Runtime>(app: &tauri::AppHandle<R>, app_data: &
         log::info!("Using cached ffprobe at {}", cached.display());
         return Some(cached);
     }
-    if Command::new("ffprobe").arg("-version").stdout(Stdio::null()).stderr(Stdio::null()).status().map(|s| s.success()).unwrap_or(false) {
+    if no_window(Command::new("ffprobe").arg("-version").stdout(Stdio::null()).stderr(Stdio::null())).status().map(|s| s.success()).unwrap_or(false) {
         log::info!("Using system ffprobe from PATH");
         return Some(PathBuf::from("ffprobe"));
     }
@@ -358,7 +389,7 @@ pub fn resolve_ffprobe<R: tauri::Runtime>(app: &tauri::AppHandle<R>, app_data: &
                 return Some(PathBuf::from(p));
             }
         }
-        if Command::new("ffprobe").arg("-version").stdout(Stdio::null()).stderr(Stdio::null()).status().map(|s| s.success()).unwrap_or(false) {
+        if no_window(Command::new("ffprobe").arg("-version").stdout(Stdio::null()).stderr(Stdio::null())).status().map(|s| s.success()).unwrap_or(false) {
             return Some(PathBuf::from("ffprobe"));
         }
     }
@@ -379,7 +410,7 @@ pub fn resolve_uv<R: tauri::Runtime>(
         log::info!("Using bundled uv at {}", p.display());
         return Ok(p);
     }
-    if Command::new("uv").arg("--version").output().is_ok() {
+    if no_window(Command::new("uv").arg("--version")).output().is_ok() {
         log::info!("Using system uv from PATH");
         return Ok(PathBuf::from("uv"));
     }
@@ -438,16 +469,21 @@ fn install_uv_standalone(dest: &Path, _region: &str) -> io::Result<PathBuf> {
             "irm https://astral.sh/uv/{}/install.ps1 | iex",
             UV_VERSION
         );
-        let status = Command::new("powershell")
-            .args(["-ExecutionPolicy", "ByPass", "-c", &script])
-            .env("UV_INSTALL_DIR", dest)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .status()
-            .map_err(|e| io::Error::new(
-                io::ErrorKind::Other,
-                format!("uv PowerShell installer failed: {}", e),
-            ))?;
+        // Windows: `CREATE_NO_WINDOW` so the uv installer's PowerShell doesn't
+        // flash a console window during first-run bootstrap. stdout/stderr are
+        // piped, so nothing is lost.
+        let status = no_window(
+            Command::new("powershell")
+                .args(["-ExecutionPolicy", "ByPass", "-c", &script])
+                .env("UV_INSTALL_DIR", dest)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped()),
+        )
+        .status()
+        .map_err(|e| io::Error::new(
+            io::ErrorKind::Other,
+            format!("uv PowerShell installer failed: {}", e),
+        ))?;
         if !status.success() {
             return Err(io::Error::new(
                 io::ErrorKind::Other,

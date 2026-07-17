@@ -377,12 +377,22 @@ export function BootstrapSplash({ stage, message }) {
     setShowSuggestion(false);
   };
 
-  const label = t(`bootstrap.${stage}`, STAGE_LABEL[stage]);
-  const stepIndex = Math.max(0, STEPS.indexOf(stage));
-  const isFailed = stage === 'failed';
+  // ── Hooks FIRST, derived values AFTER ──────────────────────────────────
+  // Every useState/useRef must be declared before any plain `const` that
+  // reads its result. When a derived const (e.g. `isUnrecoverable`, which
+  // reads `logs`) sits *between* two hook calls, the production minifier
+  // (esbuild) merges the declarations into one comma-list and can hoist the
+  // derived const ahead of the `useState` binding it depends on — emitting
+  // `isUnrecoverable = isFailed && f(message, logs), [logs] = useState([])`.
+  // That is a temporal-dead-zone access ("Cannot access 'logs' before
+  // initialization"): it throws during render, React unmounts to an empty
+  // #root, and the whole app is a black screen. Dev/unminified builds
+  // short-circuit on `isFailed` so they never trip it — it only bites the
+  // minified release bundle (shipped in v0.3.22). Keeping all hooks above all
+  // derived reads makes the class impossible regardless of how the minifier
+  // reorders. (Guarded by tests/frontend that no derived const is interleaved
+  // among hooks.)
   const [logs, setLogs] = useState([]);
-  // Retrying an Intel-Mac install can never succeed — don't offer the dead end.
-  const isUnrecoverable = isFailed && isUnrecoverableFailure(message, logs);
   const [logsOpen, setLogsOpen] = useState(true);
   const [copied, setCopied] = useState(false);
   const [progress, setProgress] = useState(null);
@@ -391,6 +401,12 @@ export function BootstrapSplash({ stage, message }) {
   const logRef = useRef(null);
   const prevProgRef = useRef(null); // {bytes, t} — last progress event
   const rateRef = useRef(0); // EMA bytes/sec across events
+
+  const label = t(`bootstrap.${stage}`, STAGE_LABEL[stage]);
+  const stepIndex = Math.max(0, STEPS.indexOf(stage));
+  const isFailed = stage === 'failed';
+  // Retrying an Intel-Mac install can never succeed — don't offer the dead end.
+  const isUnrecoverable = isFailed && isUnrecoverableFailure(message, logs);
 
   const handleRetry = async () => {
     if (retrying) return;
