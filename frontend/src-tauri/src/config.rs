@@ -195,23 +195,59 @@ pub fn resolve_github_url(raw_github_url: &str, region: &str) -> String {
     }
 }
 
-/// Probe github.com reachability with a fast HEAD request.
-/// Returns the effective region: "global" if reachable, "restricted" if not.
-pub fn auto_detect_region() -> String {
-    log::info!("Auto-detecting region (probing github.com)...");
-    let agent = ureq::AgentBuilder::new()
-        .timeout(Duration::from_secs(4))
-        .build();
-    match agent.request("HEAD", "https://github.com").call() {
-        Ok(resp) if resp.status() < 400 => {
-            log::info!("github.com reachable — using global region");
-            "global".to_string()
-        }
-        _ => {
-            log::info!("github.com unreachable — using restricted region (ghproxy mirror)");
-            "restricted".to_string()
-        }
+/// Time a HEAD request to `url`, returning the round-trip latency when it
+/// answers with a non-error status inside `timeout`. `None` = unreachable, too
+/// slow, or an error status. This is the "ping the mirror" primitive.
+fn probe_latency(url: &str, timeout: Duration) -> Option<std::time::Duration> {
+    let agent = ureq::AgentBuilder::new().timeout(timeout).build();
+    let start = std::time::Instant::now();
+    match agent.request("HEAD", url).call() {
+        Ok(resp) if resp.status() < 400 => Some(start.elapsed()),
+        _ => None,
     }
+}
+
+/// Decide the effective region from the two probe latencies. Pure so it can be
+/// unit-tested without a network. The direct path is preferred unless the
+/// mirror is clearly faster (≥20% quicker): a marginal direct-path win isn't
+/// worth routing every download through a third-party proxy, but a throttled or
+/// blocked GitHub (slow or no answer) should hand off to the mirror.
+fn pick_region(direct: Option<std::time::Duration>, mirror: Option<std::time::Duration>) -> &'static str {
+    match (direct, mirror) {
+        // Both answered: keep the direct path unless the mirror is ≥20% faster
+        // (mirror_ms * 5 <= direct_ms * 4  ⟺  mirror <= 0.8 * direct).
+        (Some(d), Some(m)) if m.as_millis().saturating_mul(5) <= d.as_millis().saturating_mul(4) => "restricted",
+        (Some(_), _) => "global",
+        (None, Some(_)) => "restricted",
+        // Neither answered: the proxy is the more-likely-to-work path on a
+        // censored/degraded network, and matches the historical fallback.
+        (None, None) => "restricted",
+    }
+}
+
+/// Auto-detect the download region by **racing the direct GitHub path against
+/// the ghproxy mirror and using whichever is fastest** — the "ping the mirrors
+/// first, pick the fastest" step. On an unthrottled network GitHub itself wins
+/// and we stay direct ("global", no proxy hop); on a throttled/blocked network
+/// the mirror answers first (or GitHub times out) and we switch ("restricted").
+/// Both probes run in parallel, so the check costs one timeout, not two.
+pub fn auto_detect_region() -> String {
+    log::info!("Auto-detecting region (racing github.com vs ghproxy mirror)...");
+    const PROBE_TIMEOUT: Duration = Duration::from_secs(4);
+    // Probe the SAME resource through both paths so the latencies compare fairly.
+    let direct_h = std::thread::spawn(|| probe_latency("https://github.com", PROBE_TIMEOUT));
+    let mirror_h =
+        std::thread::spawn(|| probe_latency("https://ghproxy.net/https://github.com", PROBE_TIMEOUT));
+    let direct = direct_h.join().ok().flatten();
+    let mirror = mirror_h.join().ok().flatten();
+    let region = pick_region(direct, mirror);
+    log::info!(
+        "Region auto-detected: {} (github={:?}, ghproxy={:?})",
+        region,
+        direct,
+        mirror
+    );
+    region.to_string()
 }
 
 /// Get the effective region string, resolving "auto" to a concrete region.
@@ -281,6 +317,28 @@ mod tests {
         assert_eq!(back.install_mode, "portable");
         assert_eq!(back.models_dir.as_deref(), Some("/mnt/big/models"));
         assert_eq!(back.mirrors.hf_endpoint.as_deref(), Some("https://hf-mirror.com"));
+    }
+
+    use std::time::Duration as D;
+
+    #[test]
+    fn pick_region_prefers_direct_when_github_is_fast() {
+        // Normal network: GitHub answers quickly → stay direct, no proxy hop.
+        assert_eq!(pick_region(Some(D::from_millis(120)), Some(D::from_millis(300))), "global");
+        // A marginal mirror win (<20%) is not worth the proxy.
+        assert_eq!(pick_region(Some(D::from_millis(300)), Some(D::from_millis(280))), "global");
+    }
+
+    #[test]
+    fn pick_region_uses_mirror_when_clearly_faster_or_github_down() {
+        // Throttled GitHub, snappy mirror (≥20% faster) → use the mirror.
+        assert_eq!(pick_region(Some(D::from_millis(2000)), Some(D::from_millis(400))), "restricted");
+        // GitHub unreachable but mirror answers → mirror.
+        assert_eq!(pick_region(None, Some(D::from_millis(500))), "restricted");
+        // GitHub answers, mirror doesn't → direct.
+        assert_eq!(pick_region(Some(D::from_millis(800)), None), "global");
+        // Neither answers → proxy is the safer bet (matches the old fallback).
+        assert_eq!(pick_region(None, None), "restricted");
     }
 }
 

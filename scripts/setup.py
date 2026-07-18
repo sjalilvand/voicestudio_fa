@@ -22,6 +22,21 @@ import sys
 import subprocess
 import glob
 
+# On Windows, when this script's stdout is a *pipe* (redirected, captured by a
+# parent process such as `bun run setup:api`, or CI) rather than an interactive
+# console, Python defaults to the locale codepage (cp1252), which can't encode
+# the ✓/⚙ status glyphs printed below — the script then dies with
+# UnicodeEncodeError *before finishing setup*, taking `bun desktop` down with it.
+# It only "works" in an interactive terminal by luck of the console's encoding.
+# Force UTF-8 on our own streams so output is identical whether run interactively
+# or piped. No-op where the streams already speak UTF-8 (macOS/Linux, modern
+# Windows Terminal) or can't be reconfigured.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 
 # ── Windows: VC++ Redistributable ─────────────────────────────────────────
 

@@ -95,6 +95,10 @@ pub fn run_streaming<R: tauri::Runtime>(
     cmd: &mut Command,
 ) -> io::Result<std::process::ExitStatus> {
     cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
+    // Windows: no flashing console window for uv/python subprocesses (#first-run
+    // terminal-window storm). No-op on macOS/Linux. stdout/stderr are piped
+    // above, so the splash log still receives every line.
+    crate::tools::no_window(cmd);
     let mut child = cmd.spawn()?;
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
@@ -946,6 +950,7 @@ pub fn venv_rebuild_justified(
 fn venv_interpreter_probe(venv_py: &Path) -> Option<bool> {
     let mut cmd = Command::new(venv_py);
     scrub_python_env(&mut cmd);
+    crate::tools::no_window(&mut cmd); // Windows: no flashing console for the probe
     cmd.args(["-c", "import encodings"])
         .stdout(Stdio::null())
         .stderr(Stdio::null());
@@ -1108,6 +1113,7 @@ fn ensure_cudnn8_compat<R: tauri::Runtime>(
 
     let mut cuda_check = Command::new(venv_py);
     scrub_python_env(&mut cuda_check);
+    crate::tools::no_window(&mut cuda_check); // Windows: no flashing console for the probe
     let verdict = cuda_check
         .args(["-c", CUDNN8_CUDA_PROBE_PY])
         .output()
@@ -1226,6 +1232,7 @@ manually, then relaunch.",
     if venv_py.is_file() && backend_dir.is_dir() {
         let mut uvicorn_check_cmd = Command::new(&venv_py);
         scrub_python_env(&mut uvicorn_check_cmd); // #144: don't inherit AppImage's bundled Python
+        crate::tools::no_window(&mut uvicorn_check_cmd); // Windows: no flashing console
         let uvicorn_check = uvicorn_check_cmd
             .args(["-c", "import uvicorn"])
             .stdout(Stdio::null())
@@ -1240,6 +1247,7 @@ manually, then relaunch.",
         let pkg_resources_ok = if matches!(uvicorn_check, Ok(ref s) if s.success()) {
             let mut pr_check = Command::new(&venv_py);
             scrub_python_env(&mut pr_check);
+            crate::tools::no_window(&mut pr_check); // Windows: no flashing console
             matches!(
                 pr_check
                     .args(["-c", "import pkg_resources"])
@@ -1263,6 +1271,7 @@ manually, then relaunch.",
         let omnivoice_ok = if matches!(uvicorn_check, Ok(ref s) if s.success()) {
             let mut ov_check = Command::new(&venv_py);
             scrub_python_env(&mut ov_check);
+            crate::tools::no_window(&mut ov_check); // Windows: no flashing console
             matches!(
                 ov_check
                     .args([
@@ -1427,6 +1436,7 @@ the existing venv; newly added dependencies may be missing (#307)",
             // (e.g. if the bundled uv.lock still pins setuptools>=80 somehow).
             let mut pr_repair_check = Command::new(&venv_py);
             scrub_python_env(&mut pr_repair_check);
+            crate::tools::no_window(&mut pr_repair_check); // Windows: no flashing console
             let pr_ok = matches!(
                 pr_repair_check
                     .args(["-c", "import pkg_resources"])
@@ -1460,6 +1470,7 @@ the existing venv; newly added dependencies may be missing (#307)",
                 // Re-verify pkg_resources is importable after the targeted install.
                 let mut pr_post_check = Command::new(&venv_py);
                 scrub_python_env(&mut pr_post_check);
+                crate::tools::no_window(&mut pr_post_check); // Windows: no flashing console
                 let pr_final_ok = matches!(
                     pr_post_check
                         .args(["-c", "import pkg_resources"])
@@ -1720,6 +1731,7 @@ mirror in Settings → region/mirrors (see docs/install/troubleshooting.md).".to
     {
         let mut pr_verify = Command::new(&venv_py);
         scrub_python_env(&mut pr_verify);
+        crate::tools::no_window(&mut pr_verify); // Windows: no flashing console
         let pr_ok = matches!(
             pr_verify
                 .args(["-c", "import pkg_resources"])
