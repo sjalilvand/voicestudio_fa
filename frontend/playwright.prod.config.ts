@@ -17,15 +17,14 @@ const PORT = Number(process.env.E2E_PROD_PORT || 4173);
 // (CI); else undefined, which lets Playwright use its bundled browser.
 const SYSTEM_CHROMIUM = '/usr/bin/chromium';
 const browserPath =
-  process.env.PLAYWRIGHT_CHROMIUM ||
-  (existsSync(SYSTEM_CHROMIUM) ? SYSTEM_CHROMIUM : undefined);
+  process.env.PLAYWRIGHT_CHROMIUM || (existsSync(SYSTEM_CHROMIUM) ? SYSTEM_CHROMIUM : undefined);
 
 export default defineConfig({
   testDir: './e2e-prod',
-  timeout: 120_000,        // includes the production build
+  timeout: 120_000, // includes the production build
   expect: { timeout: 15_000 },
   fullyParallel: false,
-  retries: 0,              // a blank screen must never be "flaky-passed" away
+  retries: 0, // a blank screen must never be "flaky-passed" away
   reporter: [['list']],
   use: {
     baseURL: `http://localhost:${PORT}`,

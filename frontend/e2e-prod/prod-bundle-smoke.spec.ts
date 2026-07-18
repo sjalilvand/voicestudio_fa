@@ -17,10 +17,10 @@ import { test, expect } from '@playwright/test';
 // Errors that are expected in a bundle served without a backend / Tauri host.
 // Keep this list TIGHT: every entry is a hole in the gate.
 const IGNORABLE = [
-  /Failed to load resource/i,          // no backend on :3900 in this harness
-  /net::ERR_/i,                        // ditto — network fetches to the API
+  /Failed to load resource/i, // no backend on :3900 in this harness
+  /net::ERR_/i, // ditto — network fetches to the API
   /ERR_CONNECTION_REFUSED/i,
-  /__TAURI__/i,                        // not running inside the Tauri shell
+  /__TAURI__/i, // not running inside the Tauri shell
   /favicon/i,
 ];
 
@@ -61,9 +61,12 @@ test('production bundle renders visible content, not an empty shell', async ({ p
   // Guards the degenerate pass where #root gets a child that paints nothing.
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect
-    .poll(() => page.locator('#root').evaluate((el) => (el as HTMLElement).innerText.trim().length), {
-      message: 'production bundle mounted an element tree with no visible text',
-      timeout: 20_000,
-    })
+    .poll(
+      () => page.locator('#root').evaluate((el) => (el as HTMLElement).innerText.trim().length),
+      {
+        message: 'production bundle mounted an element tree with no visible text',
+        timeout: 20_000,
+      },
+    )
     .toBeGreaterThan(0);
 });
