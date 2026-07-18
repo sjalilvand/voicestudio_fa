@@ -28,6 +28,11 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+# These tests exercise ASR-consumer mechanics and assume ASR weights are
+# installed - neutralize the no-ASR preflight (its own suite:
+# tests/test_asr_model_missing.py).
+pytestmark = pytest.mark.usefixtures("asr_model_installed")
+
 
 from api.routers import dub_core as dc
 

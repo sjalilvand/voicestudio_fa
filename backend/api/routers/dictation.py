@@ -114,7 +114,13 @@ def set_dictation_prefs(req: DictationPrefsUpdate):
                 detail=f"unknown dictation model_id {req.model_id!r}",
             )
         # Normalise to the canonical dictation id (accept repo_id too).
-        prefs.set_(PREF_MODEL_ID, sd.get_spec(req.model_id).id)
+        canonical = sd.get_spec(req.model_id).id
+        prefs.set_(PREF_MODEL_ID, canonical)
+        # Explicitly choosing a model clears any auto-demotion: the user is in
+        # charge, and a sherpa upgrade may well have fixed the decoder that
+        # produced no text last time. Without this, a demoted model could never
+        # be re-selected from the UI.
+        sd.clear_demotion(canonical)
     if req.enabled is not None:
         prefs.set_(PREF_ENABLED, bool(req.enabled))
     # Rebuild the cached capture singleton so the change takes effect at once.

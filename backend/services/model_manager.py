@@ -889,6 +889,14 @@ def resolve_omnivoice_checkpoint() -> str:
     checkpoint = os.environ.get("OMNIVOICE_MODEL", _DEFAULT_OMNIVOICE_CHECKPOINT).strip()
     if not checkpoint:
         return _DEFAULT_OMNIVOICE_CHECKPOINT
+    if checkpoint == "test":
+        # Test-suite sentinel (tests/conftest.py sets OMNIVOICE_MODEL=test):
+        # return it verbatim. Self-healing it to the real default — "test"
+        # is a bare token like the #693 engine-id leak — would hand every
+        # app-booting test the real 2.3 GB k2-fsa/OmniVoice checkpoint,
+        # which is exactly the download the sentinel exists to prevent. A
+        # real load against "test" fails fast with a clear HF error instead.
+        return checkpoint
     # Honor a HF repo id (org/repo) or an EXPLICIT local path (absolute, or with
     # a path separator). A bare token like "omnivoice" must NOT be treated as a
     # local dir even if a cwd-relative folder happens to share its name — that
@@ -1267,36 +1275,27 @@ async def preload_model():
     if model is not None:
         return  # already loaded
     try:
-        # Check if the required model checkpoint exists before attempting
-        # a heavy load that would fail and pollute startup logs. Use the same
-        # resolver as the load path (#693) so a leaked engine id in
-        # OMNIVOICE_MODEL can't make this model_info() probe fail and silently
-        # disable warm-up (then the first /generate eats the full load).
+        # Warm-up is gated on LOCAL availability only — never a Hub API
+        # probe. The old `model_info(checkpoint)` probe proved the repo
+        # exists on huggingface.co, NOT that this machine has it installed,
+        # so on any networked machine with an uninstalled model (fresh
+        # install, empty-cache CI/test run) every app boot silently pulled
+        # the multi-GB checkpoint in a background thread the moment lifespan
+        # started — violating this function's "if models aren't installed
+        # yet, silently exits" contract. The cache-only check also never
+        # constructs an HTTP session, so the #959 class (broken
+        # ALL_PROXY/HTTPS_PROXY=socks5:// env raising at client
+        # construction) can't false-negative it, and startup stays free of
+        # network calls (local-first). Uses the same resolver as the load
+        # path (#693) so a leaked engine id can't skew the probe.
         checkpoint = resolve_omnivoice_checkpoint()
-        try:
-            from huggingface_hub import model_info
-            model_info(checkpoint, timeout=5)
-        except Exception as probe_err:
-            # The probe failing does NOT mean the model isn't installed — it
-            # means the Hub API wasn't reachable from this process. The #959
-            # class: under ALL_PROXY/HTTPS_PROXY=socks5:// without socksio,
-            # hf_hub's get_session() raises ImportError AT CLIENT CONSTRUCTION;
-            # same story for offline mode, DNS, or firewall failures. Fall back
-            # to a cache-only probe (no HTTP session involved) and warm up
-            # anyway when the model is locally present, instead of silently
-            # skipping and letting the first /generate eat the full load.
-            if not _checkpoint_in_local_cache(checkpoint):
-                logger.info(
-                    "Preload skipped: %s not available locally (network probe "
-                    "failed: %s: %s).",
-                    checkpoint, type(probe_err).__name__, probe_err,
-                )
-                return
-            logger.warning(
-                "Network probe for %s failed (%s: %s) — model found in the "
-                "local cache; warming up from cache.",
-                checkpoint, type(probe_err).__name__, probe_err,
+        if not _checkpoint_in_local_cache(checkpoint):
+            logger.info(
+                "Preload skipped: %s is not installed locally — the model "
+                "will load (and download if requested) on first use.",
+                checkpoint,
             )
+            return
 
         logger.info("Preloading TTS model in background…")
         _last_used = time.time()

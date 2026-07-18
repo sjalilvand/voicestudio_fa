@@ -85,6 +85,11 @@ if IS_MAC_ARM:
     # do NOT collect_all() mlx because that double-registers mlx.core with
     # nanobind and the binary aborts on the first mlx.core touch.
     hiddenimports.append('mlx_whisper')
+    # Parakeet TDT v3 ASR (services.asr_backend.ParakeetMLXBackend) — imported
+    # lazily at is_available()/transcribe time, so the tracer misses it. Same
+    # rule as mlx_whisper: list the package, never collect_all() anything that
+    # touches nanobind-registered mlx.core.
+    hiddenimports.append('parakeet_mlx')
     # mlx-audio engine multiplexer — Kokoro / CSM / Dia / Qwen3-TTS /
     # Chatterbox / MeloTTS / OuteTTS / … — gives mac-ARM users a rich
     # engine picker. Like mlx_whisper it's mac-ARM-only; also like

@@ -68,6 +68,8 @@ asr_engines:
     readme: PyTorch Whisper
   - id: nemo-parakeet
     readme: Parakeet TDT
+  - id: parakeet-mlx
+    readme: Parakeet TDT v3 (MLX)
   - id: moonshine
     readme: Moonshine
   - id: funasr

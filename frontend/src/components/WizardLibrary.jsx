@@ -64,6 +64,21 @@ export function isPlatformPick(model, platformTags) {
   );
 }
 
+/**
+ * A model is "recommended" for this host when the backend marks it curated
+ * (`curated_on` in models.yaml — the same signal GET /setup/recommendations
+ * and the Settings model store use), so the wizard and the store can never
+ * disagree about what "recommended" means. Falls back to the platform-tag
+ * heuristic for older backends whose /models rows carry no `curated` flag.
+ * Required models are excluded — they already wear the stronger chip.
+ * Pure + exported for unit tests.
+ */
+export function isRecommendedPick(model, platformTags) {
+  if (!model || model.required) return false;
+  if (typeof model.curated === 'boolean') return model.curated;
+  return isPlatformPick(model, platformTags);
+}
+
 /** Overall progress from the backend's authoritative `aggregate` SSE event.
  * This is the TRUSTWORTHY source: under parallel/segmented fetch the per-file
  * tqdm events are unreliable (big weight shards may report total/rate as 0),
@@ -193,7 +208,7 @@ const LED_TONE = {
 // Chip Badge tone per chip category.
 const CHIP_TONE = { req: 'brand', rec: 'success', eng: 'neutral', opt: 'neutral' };
 
-function Row({ led, name, chip, chipTone, size, action, sub }) {
+function Row({ led, name, chip, chipTone, chipTitle, size, action, sub }) {
   return (
     <div className="flex items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-bg-elev-3">
       <span
@@ -204,7 +219,7 @@ function Row({ led, name, chip, chipTone, size, action, sub }) {
         <span className="flex items-center gap-2 text-sm font-semibold">
           {name}
           {chip && (
-            <Badge tone={CHIP_TONE[chipTone] || 'neutral'} size="xs">
+            <Badge tone={CHIP_TONE[chipTone] || 'neutral'} size="xs" title={chipTitle}>
               {chip}
             </Badge>
           )}
@@ -310,12 +325,13 @@ export default function WizardLibrary() {
   const supported = models.filter((m) => m.supported !== false);
   const required = supported.filter((m) => m.required);
   const optionalAll = supported.filter((m) => !m.required);
-  // Platform-tuned optionals lead (shown by default); the universal long tail
-  // still folds behind a quiet count.
-  const platformPicks = optionalAll.filter((m) => isPlatformPick(m, platformTags));
-  const tail = optionalAll.filter((m) => !isPlatformPick(m, platformTags));
+  // Curated "best for your system" optionals lead (shown by default with the
+  // recommended chip — same `curated` signal the Settings model store badges);
+  // the universal long tail still folds behind a quiet count.
+  const platformPicks = optionalAll.filter((m) => isRecommendedPick(m, platformTags));
+  const tail = optionalAll.filter((m) => !isRecommendedPick(m, platformTags));
 
-  const modelRow = (m, chip, chipTone, note) => {
+  const modelRow = (m, chip, chipTone, note, chipTitle) => {
     const p = progress[m.repo_id];
     // A failed install PERSISTS (P1-A): show the mirror-aware reason + a Retry
     // instead of the row silently vanishing.
@@ -346,6 +362,7 @@ export default function WizardLibrary() {
         name={m.label}
         chip={chip}
         chipTone={chipTone}
+        chipTitle={chipTitle}
         size={fmtGB(m.size_gb)}
         sub={
           errored ? (
@@ -393,10 +410,17 @@ export default function WizardLibrary() {
     <div className="flex max-h-[min(56vh,620px)] flex-col gap-1 overflow-y-auto">
       {required.map((m) => modelRow(m, t('firstrun.chip_required', 'required'), 'req'))}
 
-      {/* Optional models tuned for THIS machine — shown by default with the
-          catalog note explaining why (e.g. "5× faster on Apple Silicon"). */}
+      {/* Curated optionals for THIS machine — shown by default with the
+          catalog note explaining why (e.g. "5× faster on Apple Silicon").
+          The chip tooltip spells out that these are optional. */}
       {platformPicks.map((m) =>
-        modelRow(m, t('firstrun.chip_recommended', 'recommended'), 'rec', m.note),
+        modelRow(
+          m,
+          t('firstrun.chip_recommended', 'recommended'),
+          'rec',
+          m.note,
+          t('firstrun.chip_recommended_title', 'Recommended for this machine — optional'),
+        ),
       )}
 
       {(engines?.backends ?? []).map((b) => (

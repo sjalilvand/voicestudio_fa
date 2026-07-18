@@ -15,6 +15,11 @@ import sys
 import types
 
 import pytest
+# These tests exercise ASR-consumer mechanics and assume ASR weights are
+# installed - neutralize the no-ASR preflight (its own suite:
+# tests/test_asr_model_missing.py).
+pytestmark = pytest.mark.usefixtures("asr_model_installed")
+
 
 os.environ.setdefault("OMNIVOICE_MODEL", "test")
 os.environ.setdefault("OMNIVOICE_DISABLE_FILE_LOG", "1")

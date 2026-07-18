@@ -8,7 +8,26 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ## [Unreleased]
 
+**Highlights**
+
+- First run is ~2.4 GB, not ~5 GB — only the TTS model is required
+- Settings → Models redesigned: grouped, platform-aware, one-click "for your system" picks
+- Guided mic + Accessibility permissions with Open Settings deep-links
+- Parakeet TDT v3 on Apple Silicon (`parakeet-mlx`)
+- No more silent multi-GB Whisper downloads — a download prompt instead
+- First-run analytics consent question, Colab notebook, ROCm Docker image
+- New docs: expressive speech, Flush/Unload, clone-length FAQ
+
+### Changed
+
+- Settings → Models: grouped catalog (TTS / ASR / Dictation / Diarisation), "recommended for this machine" chips, incompatible models collapsed behind a toggle
+- Only the TTS model (~2.4 GB) is required on first run; ASR picks are curated per platform via `curated_on` in `models.yaml` (MLX on Apple Silicon, CT2+Turbo on CUDA, PyTorch on ROCm, int8 on CPU)
+
 ### Added
+
+- **Guided OS permissions for microphone and Accessibility, with Open Settings deep-links.** Settings → Permissions and the first-run System Check now show live per-OS mic/Accessibility grant state with platform-specific guidance and one-tap deep-links into the right system-settings pane; dictation pre-flights the mic grant so a missing permission fails with a fix instead of a silent no-op. (#1175)
+
+- **Parakeet TDT v3 on Apple Silicon via the new `parakeet-mlx` engine.** A fast on-device ASR option for Apple Silicon — 25 EU languages, word-level timestamps, ~2 GB — that never auto-downloads; you opt in from Settings → Models. (#1175)
 
 - **First run now picks the fastest download path automatically instead of a fixed one.** The `auto` region setting used to just check whether `github.com` answered *at all* — so a slow-but-reachable GitHub still pulled the managed-Python runtime and ffmpeg over the direct path even when the mirror would have been far quicker. It now **pings the direct GitHub path and the `ghproxy` mirror in parallel and uses whichever is fastest**: unthrottled networks stay direct (no proxy hop), while a throttled or blocked GitHub hands off to the mirror. Both probes race concurrently, so the check still costs one timeout, and explicit region choices (China/Russia/restricted) are unchanged. (#1179)
 
@@ -19,7 +38,19 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - **A Docker image for AMD GPUs: `ghcr.io/debpalash/omnivoice-studio:rocm`.** The Docker image was CUDA-only, so AMD cards (an RX 7900 XTX under Podman, say) silently ran on CPU. Every preview and release now also ships a ROCm variant — `:rocm` is the rolling preview, with `:stable-rocm` / `:X.Y.Z-rocm` mirroring the release tags on GHCR and Docker Hub alike. Pass the GPU through with `--device /dev/kfd --device /dev/dri` (works for Docker and Podman/Quadlet; no container toolkit needed) and it's auto-detected; a new `rocm` profile in the Compose file does the same. (#1165)
 - **Trust a local network or reverse proxy with `OMNIVOICE_TRUSTED_NETWORKS`.** Self-hosting behind a reverse proxy or on a LAN used to force a blunt choice: `OMNIVOICE_SERVER_MODE` (trust *every* non-loopback source) or the API-key/PIN gates — which a proxy that strips the `Authorization` header breaks for browser clients entirely. Now you can name comma-separated CIDRs (e.g. `OMNIVOICE_TRUSTED_NETWORKS=192.168.1.0/24,10.0.0.0/8`) whose addresses are treated as trusted by the **consumption** auth gates (share PIN, API key, dictation WebSocket) — admin routes stay true-loopback-only (use `OMNIVOICE_SERVER_MODE` for headless admin). A trusted LAN/proxy is exempted from consumption gates while admin routes and truly-remote traffic stay gated. Opt-in, default off (zero behavior change). The granular companion to server-mode (#261). (#1170)
 
+### Docs
+
+- `docs/expressive-speech.md`: per-engine breaths/laughter/emotion control, incl. the default engine's 13 native reaction tags
+- Flush caches / Unload documented in the performance guide, incl. `POST /system/flush-memory` for scripts
+- README FAQ: why a longer reference clip doesn't clone better (zero-shot 15 s cap; fine-tuning is the audiobook-grade path)
+
 ### Fixed
+
+- **A TTS-only first run no longer triggers a silent multi-GB Whisper download.** With only the TTS model required on first run, the first time you reached for anything that needs speech recognition — dubbing, batch transcription, dictation, cloning from a reference clip, the `/v1` STT endpoint, or boot warm-up — OmniVoice quietly pulled 1.6–3 GB of Whisper with no warning. It now surfaces a one-click ASR download prompt instead, so the multi-GB fetch is always an explicit choice. (#1175)
+
+- **App boot no longer silently downloads the TTS model, and makes no Hugging Face calls at startup.** Warm-up now loads the model from the local cache only; when it isn't installed, boot stays offline and defers to first-run setup instead of pulling ~2.3 GB unprompted. (#1175)
+
+- **Quitting with a batch dub in flight no longer hangs shutdown.** The batch-dub worker now honours cancellation, so closing the app mid-batch tears down cleanly instead of blocking on the in-progress job. (#1175)
 
 - **Dubbing no longer crashes at the vocal-separation step on Windows dev runs.** When the backend ran on an event loop without native async-subprocess support — the Windows `SelectorEventLoop` that uvicorn forces under `--reload` (`bun desktop`) — the demucs stems step died with `TypeError: An asyncio.Future, a coroutine or an awaitable is required`. On that loop OmniVoice falls back to a thread-backed subprocess whose stderr is a plain synchronous pipe, but the streaming reader tried to `await` a read on it. The reader now detects that fallback and runs the process to completion via its async `communicate()`, replaying stderr as the same progress events (no live progress bar on that degraded loop, but the separation actually runs). Native async loops — every release build, macOS, and Linux — are unchanged, and a regression test pins both paths. (#1184)
 

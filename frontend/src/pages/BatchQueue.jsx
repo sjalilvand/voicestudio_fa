@@ -25,6 +25,7 @@ import { API } from '../api/client';
 import BatchAddDialog from '../components/BatchAddDialog';
 import toast from 'react-hot-toast';
 import { toastErrorWithReport } from '../utils/errorToast';
+import { asrMissingPayload, toastAsrModelMissing } from '../utils/asrModelMissing';
 import { recordValueMoment } from '../utils/donationMoments';
 import { absoluteTime, timeAgo } from '../utils/relativeTime';
 
@@ -134,6 +135,13 @@ export default function BatchQueue({ onBack }) {
           );
           success++;
         } catch (e) {
+          const missing = asrMissingPayload(e);
+          if (missing) {
+            // Typed 409: no ASR model installed → one download CTA, then stop
+            // (every remaining file would fail the same preflight).
+            toastAsrModelMissing(missing);
+            break;
+          }
           toastErrorWithReport(
             t('batch.enqueue_failed', { name: file.name, message: e.message }),
             e,

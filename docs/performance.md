@@ -10,18 +10,39 @@ Silicon M2 — your hardware will differ, but the *ratios* hold.
 Before touching any knob, check these — they account for most slowness reports:
 
 1. **A voice profile with an empty Transcript field.** Cloning needs the
-   reference clip's transcript. If the profile doesn't have one, the app
-   transcribes the clip — since v0.3.15 that happens **once** and is saved onto
-   the profile, but a profile that somehow keeps an empty transcript (e.g.
-   imported data) pays an ASR pass per generation. Open the voice's editor and
-   confirm the Transcript box shows text.
+   reference clip's transcript. If the profile doesn't have one, the app runs a
+   full Whisper transcription of the clip — and before v0.3.15 it did that on
+   **every single generate** (the "TTS got much slower after updating, CPU
+   pegged at 100%" regression, #1032). Since v0.3.15 the auto-transcription
+   runs once and is saved onto the profile, but a profile that still has an
+   empty transcript (e.g. imported or hand-edited data) keeps paying an ASR
+   pass per generation. **Fix:** open the voice's editor and check the
+   Transcript box — if it's empty, type or paste what the reference clip says
+   (or just generate once on v0.3.15+ and confirm the box filled itself in).
 2. **The first generation after a (re)start is always the slowest.** Model
    weights load lazily (~8 s), CUDA builds torch.compile kernels, Apple Silicon
    warms Metal kernels. Judge speed from the *second* generation onward.
 3. **Memory pressure.** On a 16 GB unified-memory machine, a browser with 40
    tabs next to a dub means the OS pages the model in and out — or kills the
    backend outright ("Can't reach the local backend"). Check Settings →
-   Models for what's resident, and Settings → Performance for free RAM.
+   Models for what's resident, and Settings → Performance for free RAM. See
+   [Flush caches / Unload resident model](#flush-caches--unload-resident-model)
+   for freeing memory without a restart.
+4. **You're generating on CPU without realizing it.** A driver update, a
+   CUDA/torch mismatch, or simply running on hardware with no supported GPU
+   path silently drops you to CPU — everything works, just several times
+   slower. Three places tell you the truth:
+   - **Settings → Performance → Device & compute** shows the live compute
+     device (`cuda` / `mps` / `cpu`), a "GPU active" badge, and RAM/VRAM
+     readouts.
+   - **Settings → About → Run self-check** (the `/system/diagnose` endpoint)
+     warns explicitly: *"cpu (no GPU acceleration detected)"* with a hint
+     about drivers.
+   - **Settings → Engines** shows a routing badge per engine — "GPU active",
+     "CPU fallback", or "CPU" — with the *reason* shown as small text under
+     the badge (full text on hover).
+   Note: **GPU acceleration on Windows is NVIDIA/CUDA-only** — AMD and Intel
+   GPUs run CPU-only there (see [Windows install notes](install/windows.md)).
 
 ## What a generation actually spends time on
 
@@ -67,6 +88,70 @@ The one user-facing control is Settings → Performance → "Disable
 torch.compile" (shown on Windows), for the rare setup where a partial Triton
 install makes the probe pass but the compile attempt itself crash — see
 [Windows install notes](install/windows.md).
+
+## Flush caches / Unload resident model
+
+This is the feature the VRAM-starved timeout error ("TTS generate exceeded
+300s … Flush caches / Unload the resident model") points at. It frees
+RAM/VRAM **without restarting the app**, and it never loses data — an
+unloaded model simply reloads lazily (~8 s) on the next generation.
+
+**Where it lives:**
+
+- **Top toolbar → Flush** (the button next to the model-status badge). The
+  dropdown lists every model currently in memory — the TTS model, its
+  co-loaded ASR, the diarization pipeline, and any resident engines or
+  sidecars — with its device and VRAM use, and a per-model **Unload** button
+  where unloading is possible (WhisperX is released together with the TTS
+  model, so it has no button of its own). An engine left resident after you
+  switched away from it is marked *"not active — safe to unload"*. Below the
+  list are the two bulk actions:
+  - **Flush caches** — runs a multi-pass garbage collection and releases the
+    accelerator's cached memory (CUDA/MPS/XPU `empty_cache`). Models stay
+    loaded, so there's no reload cost; this recovers cache/fragmentation
+    memory only.
+  - **Unload all + flush** — the above **plus** fully unloads the resident
+    TTS model. Frees the most memory; the next generation pays the ~8 s
+    reload.
+- **Settings → Models** — rows whose weights are resident right now show an
+  "In memory" badge with the same per-model **Unload** button.
+
+**From a script** (the local API on port 3900), the same operations:
+
+```bash
+curl -X POST "http://127.0.0.1:3900/system/flush-memory"                    # flush caches
+curl -X POST "http://127.0.0.1:3900/system/flush-memory?unload_model=true"  # + unload TTS model
+curl "http://127.0.0.1:3900/model/loaded"                                   # what's resident
+# unload one model — ids: tts | diarization | sidecar:<id> | sidecars
+curl -X POST "http://127.0.0.1:3900/model/unload/tts"
+```
+
+**When to use it:**
+
+- **After a VRAM-starved 503 timeout** — a resident model and your generate
+  were contending for GPU memory. Unload all + flush, then retry.
+- **Before a dub on a tight-memory machine** — transcription needs room the
+  resident TTS model is holding (on Apple Silicon the app does this
+  automatically, see `OMNIVOICE_UNIFIED_OFFLOAD_HEADROOM_GB` above).
+- **After switching engines** — with `OMNIVOICE_SINGLE_ENGINE_RESIDENT=0`,
+  or for sidecar engines, the previous engine can stay in memory; the
+  dropdown shows it and marks it safe to unload.
+- **Mid batch-run on a small GPU** — an occasional
+  `POST /system/flush-memory` between jobs keeps cache growth from
+  starving later generations.
+
+**When it won't help:** many generate errors are *not* memory problems, and
+their messages say so explicitly ("the Flush button won't help here") —
+missing env vars, network failures during a model download, a broken native
+component. Believe the message; Flush only fixes memory contention. Also
+note the app already frees memory on its own when idle
+(`OMNIVOICE_IDLE_TIMEOUT_S`) — Flush is for when you need the memory *now*,
+between jobs.
+
+If the timeout error keeps recurring even right after an unload, see
+[troubleshooting §14](install/troubleshooting.md#14-cant-reach-the-local-backend-during-generation--transcription--dubbing)
+— the same starvation class has more remedies there (smaller ASR model,
+CPU ASR, the crash-isolated ASR engine).
 
 ## Platform notes
 

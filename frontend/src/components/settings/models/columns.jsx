@@ -51,6 +51,17 @@ export function makeModelColumns({
               </span>
               {m.label}
               {m.required && <span className="models-row__tag">{t('models.required_tag')}</span>}
+              {/* Curated "best for your system" pick (curated_on in models.yaml).
+                  Required rows already carry the stronger "required" tag. */}
+              {!m.required && m.curated && (
+                <span
+                  className="models-row__tag models-row__tag--rec"
+                  title={t('models.recommended_title')}
+                  data-testid={`model-recommended-${m.repo_id}`}
+                >
+                  {t('voicePanel.badge_recommended')}
+                </span>
+              )}
             </span>
             <span
               className="models-row__repo"

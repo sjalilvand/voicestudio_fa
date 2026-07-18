@@ -1,11 +1,4 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import {
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { Cpu, RefreshCw, KeyRound } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -13,22 +6,23 @@ import { openExternal } from '../../api/external';
 import { setupDownloadStreamUrl } from '../../api/setup';
 import { listLoadedModels, unloadLoadedModel } from '../../api/system';
 import { useModels, useRecommendations, useInstallModel, useDeleteModel } from '../../api/hooks';
-import { Button, Segmented } from '../../ui';
+import { Button } from '../../ui';
 import { SettingsSection, SettingsInput, SETTINGS_SECTION_SURFACE } from './primitives';
 import { askConfirm } from './native';
 import { fmtBytes } from './models/format';
 import { computeRowRuntime } from './models/runtime';
 import { reduceModelDownloadEvent, isAutoPurgeTerminal } from './models/downloadReducer';
 import { makeModelColumns } from './models/columns';
+import { groupModels } from './models/sections';
 import RecoBanner from './models/RecoBanner';
-import ModelsTable from './models/ModelsTable';
-
-const MODEL_ROLE_ORDER = ['tts', 'asr', 'diarisation', 'diarization', 'llm'];
+import ModelSection from './models/ModelSection';
 
 /**
- * Model store — list every known HF model, show install state, let the
- * user install / reinstall / delete individual models. Per-model download
- * progress is pulled from the shared /setup/download-stream SSE.
+ * Model store — every known HF model, grouped by capability (TTS / ASR /
+ * Dictation / Diarisation), with install state and install / reinstall /
+ * delete per row. The curated "for your system" preset leads (RecoBanner);
+ * platform-incompatible rows collapse behind a per-section toggle. Per-model
+ * download progress is pulled from the shared /setup/download-stream SSE.
  */
 export default function ModelStoreTab({ info, modelBadge }) {
   const { t } = useTranslation();
@@ -61,11 +55,7 @@ export default function ModelStoreTab({ info, modelBadge }) {
   const [rowState, setRowState] = useState({});
   const [query, setQuery] = useState('');
   const [installingReco, setInstallingReco] = useState(false);
-  const [activeRole, setActiveRole] = useState(null);
-  const [sorting, setSorting] = useState([]);
-  const [columnFilters, setColumnFilters] = useState([]);
   const esRef = React.useRef(null);
-  const tableBodyRef = React.useRef(null);
   // Track download speed per repo: { [repo_id]: { lastBytes, lastTime, speed } }
   const speedRef = React.useRef({});
   // Tick counter — forces re-render every second while a download is active
@@ -316,25 +306,20 @@ export default function ModelStoreTab({ info, modelBadge }) {
   };
 
   const allModels = React.useMemo(() => data?.models || [], [data]);
-  const groups = allModels.reduce((acc, m) => {
-    const k = (m.role || 'other').toLowerCase();
-    (acc[k] = acc[k] || []).push(m);
-    return acc;
-  }, {});
-  const roles = Object.keys(groups).sort((a, b) => {
-    const ai = MODEL_ROLE_ORDER.indexOf(a),
-      bi = MODEL_ROLE_ORDER.indexOf(b);
-    return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
-  });
-  // 'all' is a virtual role — shows every model regardless of category.
-  const currentRole =
-    activeRole === 'all' ? 'all' : activeRole && groups[activeRole] ? activeRole : 'all';
-
-  const allInstalled = allModels.filter((m) => m.installed).length;
-
-  useEffect(() => {
-    setColumnFilters(currentRole === 'all' ? [] : [{ id: 'role', value: currentRole }]);
-  }, [currentRole]);
+  // Grouped catalog: TTS / ASR (offline transcription) / Dictation (streaming)
+  // / Diarisation, with the search query applied per-section (pure helper —
+  // matches the same fields the old global filter did).
+  const sections = React.useMemo(() => groupModels(allModels, query), [allModels, query]);
+  const MODEL_SECTION_LABEL = useMemo(
+    () => ({
+      tts: t('models.section_tts'),
+      asr: t('models.section_asr'),
+      dictation: t('models.section_dictation'),
+      diarisation: t('models.section_diarisation'),
+      other: t('models.section_other'),
+    }),
+    [t],
+  );
 
   const getRowRuntime = React.useCallback(
     (m) => computeRowRuntime(m, rowState, busy),
@@ -369,43 +354,6 @@ export default function ModelStoreTab({ info, modelBadge }) {
       t,
     ],
   );
-
-  const table = useReactTable({
-    data: allModels,
-    columns,
-    getRowId: (row) => row.repo_id,
-    state: {
-      sorting,
-      globalFilter: query,
-      columnFilters,
-    },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setQuery,
-    onColumnFiltersChange: setColumnFilters,
-    globalFilterFn: (row, _columnId, value) => {
-      const q = String(value || '')
-        .trim()
-        .toLowerCase();
-      if (!q) return true;
-      const m = row.original;
-      return [m.repo_id, m.label, m.note, m.role]
-        .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(q));
-    },
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
-
-  const tableRows = table.getRowModel().rows;
-  const rowVirtualizer = useVirtualizer({
-    count: tableRows.length,
-    getScrollElement: () => tableBodyRef.current,
-    // Matches the compact two-line .models-row min-height (52px) — rows with
-    // a live progress/error block re-measure and grow past this.
-    estimateSize: () => 54,
-    overscan: 8,
-  });
 
   if (loading && !data) {
     return (
@@ -531,29 +479,12 @@ export default function ModelStoreTab({ info, modelBadge }) {
         installingReco={installingReco}
         setInstallingReco={setInstallingReco}
         onInstallRecommended={onInstallRecommended}
+        onInstall={onInstall}
+        getRowRuntime={getRowRuntime}
         diskFreeGb={data.disk_free_gb}
       />
 
       <div className="my-[var(--space-2)] flex items-center gap-[var(--space-2)] max-[580px]:flex-col max-[580px]:items-stretch">
-        <Segmented
-          size="sm"
-          value={currentRole}
-          onChange={setActiveRole}
-          className="mb-[6px] mt-[4px]"
-          items={[
-            {
-              value: 'all',
-              label: `All ${allInstalled}/${allModels.length}`,
-            },
-            ...roles.map((r) => {
-              const installed = groups[r].filter((m) => m.installed).length;
-              return {
-                value: r,
-                label: `${MODEL_ROLE_LABEL[r] || r.toUpperCase()} ${installed}/${groups[r].length}`,
-              };
-            }),
-          ]}
-        />
         <SettingsInput
           type="search"
           className="max-w-none flex-1 text-[length:var(--text-xs)] min-w-[120px]"
@@ -564,18 +495,33 @@ export default function ModelStoreTab({ info, modelBadge }) {
         />
       </div>
 
-      <ModelsTable
-        table={table}
-        tableRows={tableRows}
-        rowVirtualizer={rowVirtualizer}
-        tableBodyRef={tableBodyRef}
-        getRowRuntime={getRowRuntime}
-        t={t}
-        onClearFilters={() => {
-          setQuery('');
-          setActiveRole('all');
-        }}
-      />
+      {sections.map((group) => (
+        <ModelSection
+          key={group.key}
+          sectionKey={group.key}
+          title={MODEL_SECTION_LABEL[group.key] || group.key}
+          group={group}
+          columns={columns}
+          getRowRuntime={getRowRuntime}
+          t={t}
+        />
+      ))}
+      {/* Global empty state — every section filtered out. Same actionable
+          "Clear filters" affordance the table-level empty state used to carry. */}
+      {sections.length === 0 && allModels.length > 0 && (
+        <div className="models-table__empty">
+          <span>{t('models.no_matches')}</span>
+          <Button
+            size="sm"
+            variant="subtle"
+            className="ml-[8px]"
+            onClick={() => setQuery('')}
+            data-testid="models-clear-filters"
+          >
+            {t('models.clear_filters')}
+          </Button>
+        </div>
+      )}
     </section>
   );
 }

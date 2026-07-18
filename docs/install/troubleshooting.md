@@ -409,7 +409,9 @@ did was `generate:start (audio)`, a dub, or a dictation.
    faster-whisper **medium** or **small**, instead of large-v3. Biggest win on
    low-VRAM GPUs.
 2. **Free VRAM**: **Flush the TTS model** before dubbing so ASR isn't competing
-   for memory, or
+   for memory (top toolbar → Flush → "Unload all + flush", or per-model from
+   Settings → Models — see [Flush caches / Unload resident model](../performance.md#flush-caches--unload-resident-model)
+   for exactly what it frees and the API equivalents for scripts), or
 3. **Run ASR on CPU** (slower but reliable) if your GPU is small.
 4. **Test with a 10-second clip** first — if that returns quickly, it confirms a
    compute/VRAM limit rather than a true hang.
@@ -579,6 +581,11 @@ OmniVoice instead of using live recording — upload-based cloning is
 unaffected and works normally.
 
 **Linked issue:** [#1013](https://github.com/debpalash/OmniVoice-Studio/issues/1013)
+
+> **Tip:** current builds surface the live OS grant state in-app — **Settings →
+> Permissions** shows whether the microphone (and, on macOS, Accessibility) is
+> granted, denied, or not asked yet, with an **Open Settings** button that
+> deep-links the exact OS pane described above.
 
 ## Dub: "translation engine needs the optional … package"
 

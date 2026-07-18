@@ -1377,6 +1377,140 @@ class NeMoASRBackend(ASRBackend):
             pass
 
 
+# ── Parakeet TDT v3 via MLX (Apple Silicon — the mac Parakeet tier) ─────────
+
+# Default model for the parakeet-mlx backend. ~1.2 GB download, ~2 GB unified
+# memory at runtime, 25 European languages, TDT token/word timestamps.
+_PARAKEET_MLX_DEFAULT = "mlx-community/parakeet-tdt-0.6b-v3"
+
+
+class ParakeetMLXBackend(ASRBackend):
+    """NVIDIA Parakeet TDT v3 on Apple Silicon via MLX (senstella/parakeet-mlx).
+
+    Gives macs the Parakeet tier that CUDA/CPU users already have through
+    sherpa-onnx / NeMo: 25 European languages, TDT token timestamps (so word
+    timing comes from the decoder itself — no wav2vec2 alignment pass needed),
+    ~2 GB unified memory, dictation-grade speed on the GPU. Unlike the
+    nemo-parakeet backend it needs no nemo_toolkit (whose transformers pin
+    conflicts with ours) — parakeet-mlx is a small pure-Python package on top
+    of mlx, installed by default on Apple Silicon source installs.
+    """
+    id = "parakeet-mlx"
+    display_name = "Parakeet TDT v3 (MLX — Apple Silicon, 25 langs)"
+    # MLX runs on the unified-memory GPU only; there is no meaningful CPU tier
+    # (is_available hard-gates on Apple Silicon via mlx_supported()).
+    gpu_compat = ("mps",)
+
+    def __init__(self, model_name: str | None = None):
+        self._model_name = model_name or os.environ.get(
+            "ASR_MODEL_PARAKEET_MLX", _PARAKEET_MLX_DEFAULT,
+        )
+        self._model = None
+
+    @classmethod
+    def is_available(cls) -> tuple[bool, str]:
+        # Shared platform gate FIRST — one rule for every MLX engine (#390).
+        # Returns False on Linux/Windows/mac-Intel before any package import.
+        from core.device_caps import mlx_supported
+        ok, why = mlx_supported()
+        if not ok:
+            return False, why
+        try:
+            import parakeet_mlx  # noqa: F401
+            return True, "ready"
+        # OSError/RuntimeError too, not just ImportError: in a PyInstaller
+        # bundle mlx's native dylib/metallib can fail to load even when the
+        # package imports (same guard as MLXWhisperBackend).
+        except (ImportError, OSError, RuntimeError) as e:
+            return False, f"parakeet-mlx unavailable: {e}"
+
+    def _ensure_model(self):
+        if self._model is not None:
+            return
+        import parakeet_mlx
+        logger.info("parakeet-mlx loading %s", self._model_name)
+        self._model = parakeet_mlx.from_pretrained(self._model_name)
+
+    def ensure_loaded(self) -> None:
+        self._ensure_model()
+
+    @staticmethod
+    def _tokens_to_words(tokens) -> list[dict]:
+        """Merge parakeet-mlx AlignedTokens (subword pieces; a leading space
+        marks a word start) into whisper-shaped word dicts."""
+        words: list[dict] = []
+        for tok in tokens:
+            text = tok.text or ""
+            if not text.strip():
+                continue
+            if text.startswith(" ") or not words:
+                words.append({
+                    "word": text,
+                    "start": float(tok.start),
+                    "end": float(tok.end),
+                })
+            else:
+                words[-1]["word"] += text
+                words[-1]["end"] = float(tok.end)
+        for w in words:
+            w["word"] = w["word"].strip()
+        return words
+
+    def transcribe(self, audio_path: str, *, word_timestamps: bool = True,
+                   language: str | None = None) -> dict:
+        self._ensure_model()
+        logger.info(
+            "parakeet-mlx transcribing %s (model=%s, word_timestamps=%s)",
+            audio_path, self._model_name, word_timestamps,
+        )
+        # chunk_duration bounds unified-memory use on long files (the
+        # upstream-recommended long-audio setting); short capture buffers and
+        # bounded dub chunks are unaffected.
+        result = self._model.transcribe(audio_path, chunk_duration=120.0)
+
+        # Map AlignedResult (sentences → subword tokens with start/end) to the
+        # repo's standard shape: segments/words dicts + `chunks`, like the
+        # other backends.
+        segments_out = []
+        for sent in result.sentences:
+            text = (sent.text or "").strip()
+            if not text:
+                continue
+            seg = {
+                "text": text,
+                "start": float(sent.start),
+                "end": float(sent.end),
+                "words": self._tokens_to_words(sent.tokens) if word_timestamps else [],
+            }
+            segments_out.append(seg)
+
+        chunks = [
+            {"text": seg["text"], "timestamp": (seg["start"], seg["end"])}
+            for seg in segments_out
+        ]
+        return {
+            "text": (result.text or "").strip(),
+            "chunks": chunks,
+            "segments": segments_out,
+            # Parakeet v3 auto-detects among its 25 languages but does not
+            # expose the pick — report the caller's requested language when
+            # given, else None. Never hardcode 'en': consumers treat this
+            # value as detected truth (aligner pick, UI badge), and this
+            # backend serves 25 languages, not one.
+            "language": language,
+        }
+
+    def unload(self) -> None:
+        self._model = None
+        import gc
+        gc.collect()
+        try:
+            import mlx.core as mx
+            mx.clear_cache()  # release MLX's unified-memory buffer cache
+        except Exception:  # noqa: BLE001 — best-effort; absent on older mlx
+            pass
+
+
 # ── Moonshine (edge-optimized, variable-length — from ASR Leaderboard) ─────
 
 
@@ -2074,6 +2208,7 @@ _REGISTRY: dict[str, type[ASRBackend]] = _LazyASRRegistry({
     "mlx-whisper":     MLXWhisperBackend,
     "pytorch-whisper": PyTorchWhisperBackend,
     "nemo-parakeet":   NeMoASRBackend,
+    "parakeet-mlx":    ParakeetMLXBackend,
     "moonshine":       MoonshineASRBackend,
     "funasr":          FunASRBackend,
     "sherpa-onnx-asr": SherpaDictationBackend,
@@ -2098,6 +2233,11 @@ _INSTALL_HINTS: dict[str, str] = {
         "up in a separate/dedicated Python environment — not the one "
         "OmniVoice manages; in-app isolation for this engine is tracked "
         "separately."
+    ),
+    "parakeet-mlx":    (
+        "uv add parakeet-mlx  (Apple Silicon only — installed by default on "
+        "mac-ARM source installs since 0.3.22. Parakeet TDT v3 on the GPU via "
+        "MLX: 25 European languages, word timestamps, ~2 GB unified memory.)"
     ),
     "moonshine":       "pip install useful-moonshine  (edge/CPU-optimized ASR)",
     "funasr":          "pip install funasr  (SenseVoiceSmall + FSMN-VAD; CUDA or CPU)",
@@ -2326,6 +2466,13 @@ def transcribe_reference(audio_path: str) -> str | None:
             if cached is not None:
                 _ref_transcript_cache.move_to_end(fingerprint)
                 return cached
+    # No ASR model installed (TTS-only install): skip quietly instead of
+    # letting the backend auto-download multi-GB weights mid-/generate — this
+    # path is best-effort by contract (the engine's built-in fallback applies).
+    if asr_model_missing_error() is not None:
+        logger.info("transcribe_reference: no ASR model installed — skipping "
+                    "reference auto-transcription (no silent download).")
+        return None
     try:
         backend = get_active_asr_backend()
     except Exception as e:  # noqa: BLE001 — never let ASR break generation
@@ -2474,8 +2621,96 @@ def dictation_model_id() -> str | None:
         mid = prefs.get("dictation.model_id")
     except Exception:
         return None
-    from services.sherpa_dictation import is_sherpa_model
-    return mid if is_sherpa_model(mid) else None
+    from services.sherpa_dictation import is_demoted, is_sherpa_model
+    if not is_sherpa_model(mid):
+        return None
+    if is_demoted(mid):
+        # This model was observed decoding nothing on this machine (see
+        # sherpa_dictation.demote_model). Returning None routes dictation to
+        # the capture ASR engine, which works — silently degrading to a slower
+        # engine beats confidently selecting one that returns no text at all.
+        logger.warning(
+            "dictation model %s is demoted (produced no text on this machine) "
+            "— using the capture ASR engine instead", mid,
+        )
+        return None
+    return mid
+
+
+def _parakeet_mlx_installed() -> bool:
+    """True only when the parakeet-mlx model weights are ALREADY on disk.
+
+    The capture picker prefers Parakeet TDT v3 on Apple Silicon, but only when
+    it costs nothing: like every whisper-family backend, parakeet-mlx
+    auto-downloads from HF on first load, and the capture path must never
+    trigger a surprise multi-GB download (the asr_model_missing contract).
+    Installed state comes from the same HF-cache helpers the model store uses
+    (positive results memoized — see :func:`_repo_installed`), so the answer
+    matches the Settings → Models install badges. Never raises.
+    """
+    try:
+        repo = os.environ.get("ASR_MODEL_PARAKEET_MLX", _PARAKEET_MLX_DEFAULT)
+        return _repo_installed(repo)
+    except Exception:  # noqa: BLE001 — a broken check must not break the picker
+        logger.warning("parakeet-mlx installed-check failed", exc_info=True)
+        return False
+
+
+#: The 25 (European) languages Parakeet TDT 0.6B v3 supports (NVIDIA model
+#: card). Everything else — CJK, Arabic, Hindi, … — is whisper-only.
+_PARAKEET_MLX_LANGS = frozenset({
+    "bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "hr", "hu",
+    "it", "lt", "lv", "mt", "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sv",
+    "uk",
+})
+
+
+def _locale_language() -> str | None:
+    """Primary language subtag of the process locale (``de_DE.UTF-8`` → ``de``),
+    or None when no usable locale is set (C/POSIX, empty — e.g. a launchd GUI
+    environment). Same stdlib-only signal endpoint_race's probe-order hint
+    uses. Never raises."""
+    cands: list[str] = []
+    for key in ("LC_ALL", "LC_MESSAGES", "LANG"):
+        v = os.environ.get(key)
+        if v:
+            cands.append(v)
+    try:
+        import locale as _locale
+        cands.extend(x for x in _locale.getlocale() if x)
+    except Exception:  # noqa: BLE001 — locale probing is best-effort
+        pass
+    for cand in cands:
+        lang = re.split(r"[_\-.@]", cand.strip().lower(), maxsplit=1)[0]
+        if lang and lang not in ("c", "posix"):
+            return lang
+    return None
+
+
+def _capture_prefers_parakeet() -> bool:
+    """Whether the capture picker should auto-prefer parakeet-mlx right now.
+
+    Three gates, cheapest first: the backend is available (Apple Silicon +
+    package), the user's language is covered, and the weights are already on
+    disk (never a surprise download).
+
+    Language-parity rule (smallest honest rule — there is no explicit
+    dictation-language setting, the REST ``language`` field is an unused
+    hint): Parakeet TDT v3 knows exactly 25 (European) languages, while the
+    mlx-whisper tier it replaces covers ~100 — so auto-prefer Parakeet only
+    when the OS locale (the one signal we have) names a covered language.
+    No usable locale, or a non-covered one (CJK, Arabic, …) → keep whisper:
+    installing a 25-language engine must never silently break dictation that
+    worked yesterday. Pinning ``ASR_MODEL_PARAKEET_MLX`` explicitly bypasses
+    the language gate (the user chose the engine; trust them).
+    """
+    ok, _ = ParakeetMLXBackend.is_available()
+    if not ok:
+        return False
+    if not os.environ.get("ASR_MODEL_PARAKEET_MLX") \
+            and _locale_language() not in _PARAKEET_MLX_LANGS:
+        return False
+    return _parakeet_mlx_installed()
 
 
 def get_capture_asr_backend() -> ASRBackend:
@@ -2485,10 +2720,18 @@ def get_capture_asr_backend() -> ASRBackend:
 
       0. sherpa-onnx dictation — when ``dictation.model_id`` names one of the
          seven sherpa models (live/CPU; the new live-dictation path).
-      1. mlx-whisper Turbo     — Apple Silicon, ~5× faster than large-v3
-      2. mlx-whisper large     — still native Metal, faster than CPU int8
-      3. faster-whisper        — cross-platform CTranslate2 fallback
-      4. pytorch-whisper       — last resort
+      1. parakeet-mlx          — Apple Silicon, only when the model is ALREADY
+                                 installed (never a surprise download) AND the
+                                 OS-locale language is one of Parakeet's 25
+                                 (European) languages — see
+                                 :func:`_capture_prefers_parakeet`; a CJK/etc
+                                 locale keeps the multilingual whisper tier
+                                 below (language parity). TDT decoding is
+                                 dictation-grade fast on the GPU.
+      2. mlx-whisper Turbo     — Apple Silicon, ~5× faster than large-v3
+      3. mlx-whisper large     — still native Metal, faster than CPU int8
+      4. faster-whisper        — cross-platform CTranslate2 fallback
+      5. pytorch-whisper       — last resort
 
     The caller should also pass ``word_timestamps=False`` to the returned
     backend to skip per-word timing and shave another ~30% latency.
@@ -2527,24 +2770,267 @@ def get_capture_asr_backend() -> ASRBackend:
                     "falling back to Whisper capture engine", sherpa_id,
                 )
 
-        if _capture_backend is not None and _capture_backend_key is None:
+        # Prefer an already-installed Parakeet TDT v3 on Apple Silicon (when
+        # the language gate allows it — see _capture_prefers_parakeet). Gated
+        # on the weights being on disk so this NEVER triggers a download —
+        # users opt in by installing the model from Settings → Models. The
+        # gate's answer is part of the warm-singleton key so installing
+        # parakeet mid-session rebuilds the singleton instead of serving the
+        # stale whisper pick until restart (the memo in _repo_installed keeps
+        # the repeated check cheap once it turns positive).
+        prefer_parakeet = _capture_prefers_parakeet()
+        auto_key = f"auto:parakeet={int(prefer_parakeet)}"
+        if _capture_backend is not None and _capture_backend_key == auto_key:
+            return _capture_backend
+
+        if prefer_parakeet:
+            _capture_backend = ParakeetMLXBackend()
+            _capture_backend_key = auto_key
             return _capture_backend
 
         # Prefer MLX Turbo on Apple Silicon
         ok, _ = MLXWhisperBackend.is_available()
         if ok:
             _capture_backend = MLXWhisperBackend(model_name=_MLX_MODEL_TURBO)
-            _capture_backend_key = None
+            _capture_backend_key = auto_key
             return _capture_backend
 
         # Fall back to faster-whisper (CPU int8 on non-Apple)
         ok, _ = FasterWhisperBackend.is_available()
         if ok:
             _capture_backend = FasterWhisperBackend()
-            _capture_backend_key = None
+            _capture_backend_key = auto_key
             return _capture_backend
 
         # Last resort
         _capture_backend = PyTorchWhisperBackend()
-        _capture_backend_key = None
+        _capture_backend_key = auto_key
         return _capture_backend
+
+
+# ── No-ASR-installed preflight (TTS-only installs) ──────────────────────────
+#
+# Only the TTS model is required (models.yaml): a fresh install legitimately
+# has NO ASR model on disk. Every whisper-family backend above happily
+# *auto-downloads* its weights from HF on first load (faster_whisper's
+# WhisperModel, mlx_whisper, whisperx and the transformers pipeline all
+# default to download-on-miss), so an ASR-less install that hit dub / batch /
+# dictation either silently pulled a multi-GB model or died with an opaque
+# error offline. Consumers call :func:`asr_model_missing_error` BEFORE any
+# backend is constructed or loaded and turn the typed payload into an
+# actionable 409 / SSE / WS error carrying a one-click download CTA.
+
+#: Machine-readable error id — the frontend keys its download-CTA UI on this.
+ASR_MODEL_MISSING = "asr_model_missing"
+
+_PYTORCH_ASR_DEFAULT = "openai/whisper-large-v3-turbo"
+_FASTER_WHISPER_DEFAULT = "Systran/faster-whisper-large-v3"
+
+# faster-whisper / WhisperX short model aliases → the HF repo they download.
+# Covers our own defaults plus the documented size aliases; an unrecognized
+# alias returns None and the preflight stays out of the way (never blocks).
+_FW_ALIAS_REPOS = {
+    "tiny": "Systran/faster-whisper-tiny",
+    "base": "Systran/faster-whisper-base",
+    "small": "Systran/faster-whisper-small",
+    "medium": "Systran/faster-whisper-medium",
+    "large-v2": "Systran/faster-whisper-large-v2",
+    "large-v3": "Systran/faster-whisper-large-v3",
+    "distil-large-v3": "Systran/faster-distil-whisper-large-v3",
+}
+
+
+def _fw_repo(name: str) -> str | None:
+    """HF repo for a faster-whisper/WhisperX model name (alias or repo id)."""
+    name = (name or "").strip()
+    return name if "/" in name else _FW_ALIAS_REPOS.get(name.lower())
+
+
+def _offline_asr_repo() -> str | None:
+    """The HF repo the active *offline* (dub/batch) ASR backend would download
+    on first load, or None when the selection can't be preflighted (FunASR /
+    NeMo / Moonshine / OpenAI-compat are explicit opt-ins — stay out of the
+    way there)."""
+    bid = active_backend_id()
+    if bid == "whisperx":
+        return _fw_repo(os.environ.get("ASR_MODEL_WHISPERX", "large-v3"))
+    if bid in ("faster-whisper", "faster-whisper-isolated"):
+        # The crash-isolated sidecar loads the SAME CT2 weights as in-process
+        # faster-whisper (it reuses the ASR_MODEL_FASTER selection).
+        return _fw_repo(os.environ.get("ASR_MODEL_FASTER", _FASTER_WHISPER_DEFAULT))
+    if bid == "mlx-whisper":
+        return os.environ.get("ASR_MODEL", _MLX_MODEL_DEFAULT)
+    if bid == "parakeet-mlx":
+        return os.environ.get("ASR_MODEL_PARAKEET_MLX", _PARAKEET_MLX_DEFAULT)
+    if bid == "sherpa-onnx-asr":
+        # The offline sherpa backend loads the configured dictation model
+        # (same resolution as SherpaDictationBackend.__init__ with no args).
+        # Unknown/none → fail open.
+        try:
+            from services import sherpa_dictation as _sd
+            spec = _sd.get_spec(
+                os.environ.get("OMNIVOICE_SHERPA_ASR_MODEL", _sd.DEFAULT_MODEL_ID)
+            )
+            return spec.repo_id if spec is not None else None
+        except Exception:  # noqa: BLE001 — preflight must stay best-effort
+            return None
+    if bid == "pytorch-whisper":
+        return os.environ.get("OMNIVOICE_PYTORCH_ASR_MODEL", _PYTORCH_ASR_DEFAULT)
+    return None
+
+
+def _capture_whisper_repo() -> str | None:
+    """The HF repo :func:`get_capture_asr_backend`'s non-sherpa fallback chain
+    would download — same order, but WITHOUT constructing a backend. ``None``
+    means the selection can't be preflighted (the caller fails open)."""
+    # Mirrors the picker's parakeet-mlx step exactly (availability + installed
+    # weights + the language gate): because that step is gated on the weights
+    # being installed, when it wins the preflight is trivially satisfied
+    # (installed state is what the gate checked).
+    if _capture_prefers_parakeet():
+        return os.environ.get("ASR_MODEL_PARAKEET_MLX", _PARAKEET_MLX_DEFAULT)
+    ok, _ = MLXWhisperBackend.is_available()
+    if ok:
+        return _MLX_MODEL_TURBO
+    ok, _ = FasterWhisperBackend.is_available()
+    if ok:
+        # An unrecognized-but-valid alias (a name faster_whisper itself can
+        # resolve but our alias table doesn't know) yields None here — FAIL
+        # OPEN rather than coerce to the default repo and demand a download
+        # of a model the user never picked.
+        return _fw_repo(os.environ.get("ASR_MODEL_FASTER", _FASTER_WHISPER_DEFAULT))
+    return os.environ.get("OMNIVOICE_PYTORCH_ASR_MODEL", _PYTORCH_ASR_DEFAULT)
+
+
+def _recommended_asr_model(purpose: str, missing_repo: str | None) -> dict | None:
+    """The catalog entry to offer in the download CTA.
+
+    Offline: the missing repo itself when it's in the catalog (guarantees
+    download → retry succeeds), else the first curated + host-supported
+    non-sherpa ASR pick. Dictation: the curated sherpa dictation entry (the
+    payload's ``dictation_id`` lets the client also set ``dictation.model_id``
+    so a retry picks it up); when sherpa-onnx isn't importable the Whisper
+    fallback repo is recommended instead.
+    """
+    from api.routers.setup.models import KNOWN_MODELS, _model_curated, _model_supported
+
+    def _shape(m: dict) -> dict:
+        rec = {"repo_id": m["repo_id"], "label": m["label"], "size_gb": m["size_gb"]}
+        if m.get("dictation_id"):
+            rec["dictation_id"] = m["dictation_id"]
+        return rec
+
+    by_id = {m["repo_id"]: m for m in KNOWN_MODELS}
+    exact = by_id.get(missing_repo) if missing_repo else None
+    want_sherpa = False
+    if purpose == "dictation":
+        if exact is not None and exact.get("engine") == "sherpa-onnx":
+            return _shape(exact)
+        ok, _ = SherpaDictationBackend.is_available()
+        want_sherpa = ok
+    if not want_sherpa and exact is not None and _model_supported(exact):
+        return _shape(exact)
+    for m in KNOWN_MODELS:
+        if m.get("role") != "ASR":
+            continue
+        if (m.get("engine") == "sherpa-onnx") != want_sherpa:
+            continue
+        if _model_curated(m) and _model_supported(m):
+            return _shape(m)
+    return None
+
+
+#: Repos confirmed installed this session (positive-only memo). Installs only
+#: ADD models, so no invalidation is needed — and dictation utterances /
+#: generates stop paying a full ``scan_cache_dir`` walk on every call once a
+#: repo has been confirmed once. (A user deleting a model mid-session degrades
+#: to the pre-preflight behaviour for that repo: fail open, auto-download on
+#: next use.) Test fixtures that stub ``is_cached`` clear this between tests.
+_INSTALLED_REPO_MEMO: set[str] = set()
+
+
+def _repo_installed(repo: str) -> bool:
+    """``is_cached`` + ``cache_is_complete`` with a positive-only session memo.
+
+    Installed state comes from the same HF-cache helpers the model store uses,
+    so the answer matches the Settings → Models install badges."""
+    if repo in _INSTALLED_REPO_MEMO:
+        return True
+    from api.routers.setup.models import cache_is_complete, get_model_catalog, is_cached
+    meta = get_model_catalog().get(repo) or {"repo_id": repo}
+    if is_cached(repo) and cache_is_complete(meta):
+        _INSTALLED_REPO_MEMO.add(repo)
+        return True
+    return False
+
+
+def asr_model_missing_error(*, purpose: str = "transcribe",
+                            sherpa_model_id: str | None = None) -> dict | None:
+    """None when the active ASR selection can transcribe without downloading
+    anything; otherwise the typed ``{"error": "asr_model_missing", ...}``
+    payload for a 409 / SSE / WS error with a download CTA.
+
+    ``purpose="dictation"`` mirrors the capture selection order (sherpa pref →
+    parakeet-mlx → MLX turbo → faster-whisper → pytorch); anything else uses
+    the offline dub/batch selection (:func:`active_backend_id`).
+    ``sherpa_model_id`` lets the live-dictation WS pass its per-session
+    ``?model=`` override. Installed state comes from the same HF-cache helpers
+    the model store uses (see :func:`_repo_installed`), so the answer matches
+    the Settings → Models install badges.
+
+    FAIL-OPEN rule: a repo the model catalog doesn't know (a custom
+    ``ASR_MODEL_*`` pin, pytorch-whisper's default repo, an unrecognized
+    alias) returns None — the download CTA can only install catalog entries,
+    so a payload here would trap the user in an un-installable CTA loop; the
+    previous auto-download behaviour is the honest fallback. Never raises —
+    a broken preflight must degrade to the old behaviour, not block ASR.
+    """
+    try:
+        if purpose == "dictation":
+            sid = sherpa_model_id or dictation_model_id()
+            if sid:
+                ok, _ = SherpaDictationBackend.is_available()
+                if ok:
+                    from services import sherpa_dictation as _sd
+                    spec = _sd.get_spec(sid)
+                    if spec is not None:
+                        if _sd.is_installed(spec):
+                            return None
+                        return {
+                            "error": ASR_MODEL_MISSING,
+                            "missing_repo_id": spec.repo_id,
+                            "recommended": _recommended_asr_model(purpose, spec.repo_id),
+                        }
+            repo = _capture_whisper_repo()
+        else:
+            repo = _offline_asr_repo()
+        if repo is None:
+            return None  # explicit opt-in engine — can't (and shouldn't) preflight
+        from api.routers.setup.models import get_model_catalog
+        if get_model_catalog().get(repo) is None:
+            return None  # not installable from the CTA — fail open (see docstring)
+        if _repo_installed(repo):
+            return None
+        return {
+            "error": ASR_MODEL_MISSING,
+            "missing_repo_id": repo,
+            "recommended": _recommended_asr_model(purpose, repo),
+        }
+    except Exception:  # noqa: BLE001 — preflight is best-effort, never a blocker
+        logger.warning("ASR install preflight failed — proceeding without it",
+                       exc_info=True)
+        return None
+
+
+def asr_model_missing_detail(payload: dict) -> str:
+    """Human-readable (English) fallback message for the typed payload —
+    what legacy clients / logs see; the frontend renders its own i18n copy."""
+    rec = payload.get("recommended") or {}
+    if rec.get("label"):
+        return (
+            "No speech-to-text model is installed. Download "
+            f"{rec['label']} ({rec['size_gb']} GB) from Settings → Models, "
+            "then retry."
+        )
+    return ("No speech-to-text model is installed. Download one from "
+            "Settings → Models, then retry.")

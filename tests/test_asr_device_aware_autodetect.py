@@ -148,3 +148,249 @@ def test_alignment_failure_never_loses_the_transcript(monkeypatch):
 
 def test_empty_segments_short_circuit(monkeypatch):
     assert ab.forced_align([], object(), "en") == []
+
+
+# ── parakeet-mlx (Apple Silicon Parakeet TDT v3) ────────────────────────────
+
+
+@pytest.fixture()
+def _fresh_capture_singleton(monkeypatch):
+    """Isolate the capture-backend singleton and pin a deterministic
+    environment: no sherpa pref, MLX whisper + faster-whisper available."""
+    monkeypatch.setattr(ab, "_capture_backend", None)
+    monkeypatch.setattr(ab, "_capture_backend_key", None)
+    monkeypatch.setattr(ab, "dictation_model_id", lambda: None)
+    monkeypatch.setattr(ab.MLXWhisperBackend, "is_available",
+                        classmethod(lambda cls: (True, "ready")))
+    monkeypatch.setattr(ab.FasterWhisperBackend, "is_available",
+                        classmethod(lambda cls: (True, "ready")))
+    yield
+
+
+def test_parakeet_mlx_is_registered_with_hint_and_mps_compat():
+    assert "parakeet-mlx" in ab._REGISTRY
+    assert ab._REGISTRY["parakeet-mlx"] is ab.ParakeetMLXBackend
+    assert ab.ParakeetMLXBackend.gpu_compat == ("mps",)
+    assert ab._INSTALL_HINTS.get("parakeet-mlx")
+
+
+def test_capture_prefers_installed_parakeet_mlx(_fresh_capture_singleton, monkeypatch):
+    """On Apple Silicon with the Parakeet weights ON DISK and a covered
+    (European) locale language, dictation/capture picks parakeet-mlx over
+    mlx-whisper turbo."""
+    monkeypatch.setattr(ab.ParakeetMLXBackend, "is_available",
+                        classmethod(lambda cls: (True, "ready")))
+    monkeypatch.setattr(ab, "_parakeet_mlx_installed", lambda: True)
+    monkeypatch.setattr(ab, "_locale_language", lambda: "en")
+    backend = ab.get_capture_asr_backend()
+    assert isinstance(backend, ab.ParakeetMLXBackend)
+    # The dictation preflight mirror agrees: the repo it would check is the
+    # installed parakeet model, so no asr_model_missing 409 can fire.
+    assert ab._capture_whisper_repo() == ab._PARAKEET_MLX_DEFAULT
+
+
+def test_capture_keeps_whisper_for_uncovered_language(_fresh_capture_singleton, monkeypatch):
+    """Language parity: parakeet-mlx knows exactly 25 European languages —
+    a CJK/etc locale must keep the ~100-language whisper tier even with the
+    parakeet weights installed. Installing a model must never silently break
+    dictation that worked yesterday."""
+    monkeypatch.setattr(ab.ParakeetMLXBackend, "is_available",
+                        classmethod(lambda cls: (True, "ready")))
+    monkeypatch.setattr(ab, "_parakeet_mlx_installed", lambda: True)
+    monkeypatch.setattr(ab, "_locale_language", lambda: "ja")
+    backend = ab.get_capture_asr_backend()
+    assert isinstance(backend, ab.MLXWhisperBackend)
+    # Preflight mirror stays in lock-step with the picker.
+    assert ab._capture_whisper_repo() == ab._MLX_MODEL_TURBO
+
+
+def test_capture_keeps_whisper_without_locale_signal(_fresh_capture_singleton, monkeypatch):
+    """No usable locale (C/POSIX, empty launchd GUI env) → no evidence the
+    user's language is covered → keep whisper (never regress on a guess)."""
+    monkeypatch.setattr(ab.ParakeetMLXBackend, "is_available",
+                        classmethod(lambda cls: (True, "ready")))
+    monkeypatch.setattr(ab, "_parakeet_mlx_installed", lambda: True)
+    monkeypatch.setattr(ab, "_locale_language", lambda: None)
+    backend = ab.get_capture_asr_backend()
+    assert isinstance(backend, ab.MLXWhisperBackend)
+
+
+def test_env_pinned_parakeet_model_bypasses_language_gate(_fresh_capture_singleton, monkeypatch):
+    """ASR_MODEL_PARAKEET_MLX is an explicit engine choice — trust it over
+    the locale heuristic."""
+    monkeypatch.setattr(ab.ParakeetMLXBackend, "is_available",
+                        classmethod(lambda cls: (True, "ready")))
+    monkeypatch.setattr(ab, "_parakeet_mlx_installed", lambda: True)
+    monkeypatch.setattr(ab, "_locale_language", lambda: "ja")
+    monkeypatch.setenv("ASR_MODEL_PARAKEET_MLX", ab._PARAKEET_MLX_DEFAULT)
+    backend = ab.get_capture_asr_backend()
+    assert isinstance(backend, ab.ParakeetMLXBackend)
+
+
+def test_installing_parakeet_mid_session_rebuilds_capture_singleton(
+        _fresh_capture_singleton, monkeypatch):
+    """The warm-singleton cache key includes the parakeet gate, so installing
+    the model from Settings → Models takes effect on the next utterance —
+    not after an app restart (the stale-singleton regression)."""
+    monkeypatch.setattr(ab.ParakeetMLXBackend, "is_available",
+                        classmethod(lambda cls: (True, "ready")))
+    monkeypatch.setattr(ab, "_locale_language", lambda: "en")
+    installed = {"v": False}
+    monkeypatch.setattr(ab, "_parakeet_mlx_installed", lambda: installed["v"])
+    b1 = ab.get_capture_asr_backend()
+    assert isinstance(b1, ab.MLXWhisperBackend)
+    # Warm reuse while nothing changed.
+    assert ab.get_capture_asr_backend() is b1
+    installed["v"] = True  # user installs parakeet from Settings → Models
+    b2 = ab.get_capture_asr_backend()
+    assert isinstance(b2, ab.ParakeetMLXBackend)
+
+
+def test_locale_language_parses_env_and_skips_posix(monkeypatch):
+    import locale as _locale
+    for var in ("LC_ALL", "LC_MESSAGES", "LANG"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setattr(_locale, "getlocale", lambda: (None, None))
+    assert ab._locale_language() is None
+    monkeypatch.setenv("LANG", "C.UTF-8")
+    assert ab._locale_language() is None  # POSIX default is not a language
+    monkeypatch.setenv("LANG", "de_DE.UTF-8")
+    assert ab._locale_language() == "de"
+    monkeypatch.setenv("LC_ALL", "uk_UA.UTF-8")  # LC_ALL outranks LANG
+    assert ab._locale_language() == "uk"
+
+
+def test_parakeet_transcribe_never_claims_english(monkeypatch):
+    """The backend serves 25 languages and cannot see the model's detected
+    pick — it must report the caller's requested language (or None), never a
+    hardcoded 'en' that downstream consumers would treat as detected truth."""
+    class _Sent:
+        text, start, end, tokens = "hallo welt", 0.0, 1.0, []
+
+    class _Res:
+        text, sentences = "hallo welt", [_Sent()]
+
+    class _Model:
+        def transcribe(self, path, **kw):
+            return _Res()
+
+    backend = ab.ParakeetMLXBackend()
+    monkeypatch.setattr(backend, "_ensure_model", lambda: None)
+    backend._model = _Model()
+    assert backend.transcribe("a.wav")["language"] is None
+    assert backend.transcribe("a.wav", language="de")["language"] == "de"
+
+
+def test_capture_never_auto_downloads_parakeet_mlx(_fresh_capture_singleton, monkeypatch):
+    """Package installed but weights NOT cached → the picker must skip
+    parakeet-mlx (no surprise ~1.2 GB download) and keep MLX turbo. Exercises
+    the REAL _parakeet_mlx_installed via the model store's is_cached."""
+    from api.routers.setup import models as setup_models
+    monkeypatch.setattr(ab.ParakeetMLXBackend, "is_available",
+                        classmethod(lambda cls: (True, "ready")))
+    monkeypatch.setattr(ab, "_locale_language", lambda: "en")  # pass the language gate
+    monkeypatch.setattr(setup_models, "is_cached", lambda repo_id: False)
+    monkeypatch.setattr(setup_models, "cache_is_complete", lambda meta: True)
+    backend = ab.get_capture_asr_backend()
+    assert isinstance(backend, ab.MLXWhisperBackend)
+    assert not isinstance(backend, ab.ParakeetMLXBackend)
+
+
+def test_capture_skips_parakeet_mlx_when_package_unavailable(_fresh_capture_singleton, monkeypatch):
+    """Not Apple Silicon / package missing → unchanged pre-existing behavior."""
+    monkeypatch.setattr(ab.ParakeetMLXBackend, "is_available",
+                        classmethod(lambda cls: (False, "requires Apple Silicon")))
+    monkeypatch.setattr(
+        ab, "_parakeet_mlx_installed",
+        lambda: pytest.fail("installed-check must not run when unavailable"),
+    )
+    backend = ab.get_capture_asr_backend()
+    assert isinstance(backend, ab.MLXWhisperBackend)
+
+
+def test_offline_auto_detect_never_picks_parakeet_mlx(monkeypatch):
+    """Language-coverage parity: the whisper family stays the universal
+    offline (dub/batch) default — 25 EU languages is not 99."""
+    monkeypatch.setattr(ab, "_mps_available", lambda: True)
+    monkeypatch.setattr(
+        ab, "_probe_available",
+        _probe({"parakeet-mlx", "mlx-whisper", "whisperx", "faster-whisper"}),
+    )
+    assert ab._auto_detect() == "mlx-whisper"
+
+
+def test_pinned_parakeet_mlx_is_preflighted_not_silently_downloaded(monkeypatch):
+    """A user who PINS parakeet-mlx as the offline engine with no weights on
+    disk gets the typed asr_model_missing payload (download CTA), never a
+    silent first-load download."""
+    from api.routers.setup import models as setup_models
+    monkeypatch.setattr(ab, "active_backend_id", lambda: "parakeet-mlx")
+    monkeypatch.setattr(setup_models, "is_cached", lambda repo_id: False)
+    monkeypatch.setattr(setup_models, "cache_is_complete", lambda meta: True)
+    # The catalog entry is darwin-arm64-only; make the host check deterministic
+    # so the recommended-pick assertion holds on Linux CI too.
+    monkeypatch.setattr(setup_models, "_model_supported", lambda m: True)
+    payload = ab.asr_model_missing_error()
+    assert payload is not None
+    assert payload["error"] == "asr_model_missing"
+    assert payload["missing_repo_id"] == ab._PARAKEET_MLX_DEFAULT
+    # The catalog carries the model, so the CTA recommends exactly it.
+    assert payload["recommended"]["repo_id"] == ab._PARAKEET_MLX_DEFAULT
+
+
+def test_parakeet_mlx_token_to_word_mapping():
+    """Subword tokens (leading space = word start) merge into whisper-shaped
+    word dicts with the span's start/end."""
+    class Tok:
+        def __init__(self, text, start, end):
+            self.text, self.start, self.end = text, start, end
+
+    words = ab.ParakeetMLXBackend._tokens_to_words([
+        Tok(" Hel", 0.10, 0.20), Tok("lo", 0.20, 0.30),
+        Tok(" wor", 0.40, 0.55), Tok("ld", 0.55, 0.70), Tok(".", 0.70, 0.75),
+    ])
+    assert words == [
+        {"word": "Hello", "start": 0.10, "end": 0.30},
+        {"word": "world.", "start": 0.40, "end": 0.75},
+    ]
+
+
+# Real-weights smoke — opt-in like the supertonic smoke tests: downloads
+# ~460 MB (the tiny 110M TDT-CTC model, NOT the 1.2 GB v3), so CI never runs
+# it. Locally: OMNIVOICE_SMOKE=1 pytest tests/test_asr_device_aware_autodetect.py
+_PARAKEET_MLX_TINY = "mlx-community/parakeet-tdt_ctc-110m"
+
+
+@pytest.mark.skipif(
+    os.environ.get("OMNIVOICE_SMOKE") != "1",
+    reason="network test (~460 MB weights); set OMNIVOICE_SMOKE=1 to run",
+)
+def test_parakeet_mlx_real_transcribe_smoke(tmp_path):
+    """End-to-end on real weights (Apple Silicon only): load, transcribe a
+    generated WAV, and verify the standard return shape survives the trip."""
+    ok, why = ab.ParakeetMLXBackend.is_available()
+    if not ok:
+        pytest.skip(f"parakeet-mlx unavailable on this host: {why}")
+    import numpy as np
+    import soundfile as sf
+    sr = 16000
+    t = np.linspace(0, 1.0, sr, endpoint=False)
+    wav = (0.1 * np.sin(2 * np.pi * 220 * t)).astype("float32")
+    path = tmp_path / "tone.wav"
+    sf.write(path, wav, sr)
+
+    backend = ab.ParakeetMLXBackend(model_name=_PARAKEET_MLX_TINY)
+    backend.ensure_loaded()
+    try:
+        out = backend.transcribe(str(path), word_timestamps=True)
+    finally:
+        backend.unload()
+    assert set(out) >= {"text", "chunks", "segments", "language"}
+    assert isinstance(out["text"], str)
+    for seg in out["segments"]:
+        assert isinstance(seg["text"], str) and seg["text"].strip()
+        assert seg["start"] <= seg["end"]
+        for w in seg["words"]:
+            assert w["word"] and w["start"] <= w["end"]
+    for chunk in out["chunks"]:
+        assert chunk["text"] and len(chunk["timestamp"]) == 2

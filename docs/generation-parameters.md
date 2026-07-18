@@ -30,6 +30,8 @@ audio = model.generate(text="Hello world", generation_config=config)
 | `class_temperature` | float | 0.0 | Temperature for token sampling at each step. 0 = greedy (deterministic). Higher values increase randomness. |
 | `layer_penalty_factor` | float | 5.0 | Penalty applied to deeper codebook layers, encouraging earlier (lower) layers to unmask first. |
 
+> Using temperature (and seed pinning) to elicit expressive delivery — breaths, laughter, sighs — is covered in [expressive-speech.md](expressive-speech.md), including the tradeoffs.
+
 ## Duration & Speed
 
 These accept a single value applied to all items, or a per-item list (useful in batch mode):

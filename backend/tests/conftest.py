@@ -39,3 +39,59 @@ if not os.environ.get("OMNIVOICE_ENV_FILE"):
     os.environ["OMNIVOICE_ENV_FILE"] = os.path.join(
         os.environ["OMNIVOICE_DATA_DIR"], "user-env"
     )
+# TTS checkpoint sentinel — mirrors tests/conftest.py (whichever loads first
+# wins via setdefault). Without it, any test booting the real app lifespan
+# resolves the real k2-fsa/OmniVoice checkpoint and `preload_model()` could
+# kick off a multi-GB background download on a networked machine.
+os.environ.setdefault("OMNIVOICE_MODEL", "test")
+
+
+import pytest
+
+
+@pytest.fixture
+def asr_model_installed(monkeypatch, request):
+    """Neutralize the no-ASR-installed preflight (asr_model_missing_error →
+    None) for tests that exercise ASR-consumer *mechanics* (batch/dub/
+    dictation) and assume ASR weights are present — the hermetic test env has
+    no HF model cache, so the consumers would otherwise answer the typed
+    ``asr_model_missing`` 409 before the code under test even runs. The
+    preflight has its own suite (tests/test_asr_model_missing.py). Opt in per
+    module with ``pytestmark = pytest.mark.usefixtures("asr_model_installed")``.
+
+    Patches BOTH the freshly imported module and any module-typed alias the
+    test module itself holds (``import services.asr_backend as ab``): in a
+    full-suite run an earlier test can purge ``services.*`` from sys.modules,
+    leaving the alias pointing at a STALE pre-purge module object whose
+    globals a single sys.modules-based setattr would miss.
+    (Mirror of the fixture in tests/conftest.py — conftests don't cross the
+    tests/ ↔ backend/tests/ directory boundary.)"""
+    import types
+
+    from services import asr_backend
+
+    targets = {id(asr_backend): asr_backend}
+    test_module = getattr(request, "module", None)
+    if test_module is not None:
+        for val in vars(test_module).values():
+            if (isinstance(val, types.ModuleType)
+                    and getattr(val, "__name__", "") == "services.asr_backend"):
+                targets[id(val)] = val
+    for mod in targets.values():
+        monkeypatch.setattr(mod, "asr_model_missing_error", lambda **_kw: None)
+
+
+@pytest.fixture(autouse=True)
+def _clear_asr_installed_memo():
+    """The ASR preflight memoizes installed-POSITIVE repos process-wide
+    (services.asr_backend._INSTALLED_REPO_MEMO). Tests stub ``is_cached`` both
+    ways, so a memoized positive must never leak between tests. Touches the
+    memo only when the module is already imported. (Mirror of the guard in
+    tests/conftest.py.)"""
+    mod = sys.modules.get("services.asr_backend")
+    if mod is not None:
+        getattr(mod, "_INSTALLED_REPO_MEMO", set()).clear()
+    yield
+    mod = sys.modules.get("services.asr_backend")
+    if mod is not None:
+        getattr(mod, "_INSTALLED_REPO_MEMO", set()).clear()

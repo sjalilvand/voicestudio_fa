@@ -180,6 +180,8 @@ Pick your OS and follow the guide end-to-end:
 
 Feels slow? [docs/performance.md](docs/performance.md) covers where generation time actually goes, the tuning knobs, and the three classic causes of "it got slow".
 
+Want breaths, laughter, pauses, whispering, or emotion in the output? [docs/expressive-speech.md](docs/expressive-speech.md) covers exactly what each engine can do today — and what's spec'd but not shipped yet.
+
 > Coming from **[CorentinJ/Real-Time-Voice-Cloning](https://github.com/CorentinJ/Real-Time-Voice-Cloning)** (now archived)? There's a dedicated migration guide: [docs/migration/real-time-voice-cloning.md](docs/migration/real-time-voice-cloning.md).
 
 <details>
@@ -301,10 +303,10 @@ Professional-grade voice AI, minus the subscription and the cloud.
 
 ### 🎧 ASR Engines
 
-**10 engines** — they power dictation, video dubbing, and subtitles. **WhisperX** is the cross-platform default (~100 languages, word-level timing); the rest are opt-in and auto-detected. Switch in **Settings → Engines**. Nine run fully on-device; the tenth (OpenAI-compatible) is an optional remote client for Qwen3-ASR or any compatible server.
+**11 engines** — they power dictation, video dubbing, and subtitles. **WhisperX** is the cross-platform default (~100 languages, word-level timing); the rest are opt-in and auto-detected. Switch in **Settings → Engines**. Ten run fully on-device; the eleventh (OpenAI-compatible) is an optional remote client for Qwen3-ASR or any compatible server.
 
 <details>
-<summary><b>📊 The full lineup</b> — 10 engines, what each is best at, and compute-type notes</summary>
+<summary><b>📊 The full lineup</b> — 11 engines, what each is best at, and compute-type notes</summary>
 
 <br/>
 
@@ -316,6 +318,7 @@ Professional-grade voice AI, minus the subscription and the cloud.
 | **MLX Whisper** | `mlx-whisper` | ~100 | Native Apple Silicon speed (Apple MLX / Metal) |
 | **PyTorch Whisper** | `pytorch-whisper` | ~100 | CUDA / CPU fallback via 🤗 Transformers (no cuDNN 8 needed) |
 | **Parakeet TDT** | `nemo-parakeet` | English + 25 EU | SOTA accuracy at ~10× realtime even on CPU, auto language detection (NVIDIA NeMo, CUDA/CPU) |
+| **Parakeet TDT v3 (MLX)** | `parakeet-mlx` | 25 EU | The Parakeet tier for Apple Silicon — TDT word timestamps, ~2 GB unified memory, dictation-grade speed on the GPU via MLX. Install the model from **Settings → Models** and dictation prefers it automatically when your system language is one of its 25 (European) languages; other languages (CJK, Arabic, …) keep the multilingual Whisper engine so dictation coverage never regresses. |
 | **Moonshine** | `moonshine` | English | Edge / low-latency, ONNX |
 | **FunASR** | `funasr` | 50+ | All-in-one multilingual — built-in VAD + inline speaker diarization (SenseVoice) |
 | **sherpa-onnx** (live dictation) | `sherpa-onnx-asr` | 25 EU + 90+ | Live, faster-than-real-time dictation — small streaming/offline ONNX models (Parakeet TDT v3/v2, streaming Zipformer & Paraformer, Whisper Tiny), CPU, identical on macOS / Windows / Linux. Picked per-model in **Settings → Voice**. |
@@ -416,7 +419,7 @@ Ships two [skills](https://skills.sh): **`omnivoice`** — speak and transcribe 
 | **Audio** | Demucs vocal isolation, per-segment gain, selective track export, stem/SRT/VTT/MP3 export, unlimited-length TTS via sentence-chunked generation |
 | **Multi-Lang** | Multi-language batch picker, batch dubbing queue with sequential GPU execution |
 | **Diarization** | Pyannote ML diarization, auto speaker clone extraction, per-speaker voice assignment |
-| **ASR** | 9 engines (WhisperX, Faster-Whisper, isolated Faster-Whisper, MLX Whisper, PyTorch Whisper, Parakeet TDT, Moonshine, FunASR/SenseVoice, sherpa-onnx live dictation), crash-isolated subprocess backend |
+| **ASR** | 10 engines (WhisperX, Faster-Whisper, isolated Faster-Whisper, MLX Whisper, PyTorch Whisper, Parakeet TDT, Parakeet TDT v3 MLX, Moonshine, FunASR/SenseVoice, sherpa-onnx live dictation), crash-isolated subprocess backend |
 | **TTS** | 14 engines (OmniVoice, CosyVoice 3, GPT-SoVITS, VoxCPM2, MOSS-TTS-Nano, KittenTTS, MLX-Audio, Sherpa-ONNX, + lazy: IndexTTS 2, OmniVoice GGUF, Supertonic 3, MOSS-TTS-v1.5, dots.tts, Confucius4-TTS), engine routing with GPU preflight |
 | **Infra** | Docker deployment, CUDA/MPS/ROCm auto-detect, cuDNN 8 compat, VRAM-aware model offloading, engine routing (no silent CPU fallback), diagnostics suite & error journal, restricted-network mirror support |
 | **AI Provenance** | AudioSeal invisible watermarking (SynthID-like), video logo overlay, watermark detection API |
@@ -529,13 +532,23 @@ Yes please — bug fixes, new TTS engine adapters, UI improvements, docs, transl
 <br/>
 Honest answer: <b>it depends on what you're doing.</b>
 
-<b>Where OmniVoice is genuinely competitive:</b> voice cloning from a clean reference clip (state-of-the-art open diffusion TTS), language coverage (646 languages vs. their 32), and everything structural — no per-character billing, no usage caps, no audio leaving your machine, full pipeline customizability (14 TTS engines, 10 ASR engines, your choice of translation).
+<b>Where OmniVoice is genuinely competitive:</b> voice cloning from a clean reference clip (state-of-the-art open diffusion TTS), language coverage (646 languages vs. their 32), and everything structural — no per-character billing, no usage caps, no audio leaving your machine, full pipeline customizability (14 TTS engines, 11 ASR engines, your choice of translation).
 
 <b>Where ElevenLabs still wins:</b> out-of-the-box consistency and polish, especially for English TTS. Their one model is heavily tuned; our quality depends on which engine you pick, your hardware, and — for cloning — the reference audio (a dry, close-mic clip clones dramatically better than a noisy or echoey one).
 
 <b>For dubbing specifically:</b> a dub is a chain — transcription → translation → cloning → synthesis — only as good as its weakest link on <i>your</i> source material. If parts come out incoherent, check the segment table's <i>original</i> text first: when the transcription is already wrong, switch the ASR engine or use cleaner source audio — that's usually the fix, not the voice.
 
 Try it on your real material — it's free and takes one download. Many users replace ElevenLabs outright; some keep both. Both outcomes are fine with us.
+</details>
+
+<details>
+<summary><b>Why doesn't a longer reference clip sound more like me?</b></summary>
+<br/>
+Because OmniVoice's cloning is <b>zero-shot</b>: your clip is a <i>prompt</i> the model conditions on at generation time — it is never trained on. Feeding it 2 hours doesn't teach it your voice; past a short window the extra audio is simply not used. The dubbing pipeline's reference builder targets ~8 s and hard-caps at 15 s (<code>backend/services/speaker_clone.py</code>), and engines cap the prompt themselves (VoxCPM2 trims references to 30 s). This is different from ElevenLabs <i>Professional</i> Voice Cloning, which fine-tunes a model on hours of your audio — that's a training job, not a bigger prompt.
+
+<b>What actually moves clone quality is the clip, not its length.</b> Zero-shot cloning mirrors the acoustics and delivery of the prompt, so: record 5–15 seconds (~8 s is the sweet spot) of continuous natural speech, close to the mic, in a quiet room with no reverb or music — an echoey clip clones echoey. One speaker only, and read in the tone and pace you want the output to have, because the clone copies your delivery, not just your timbre. Recording a few candidate clips and comparing results beats any amount of extra footage.
+
+<b>Want audiobook-grade, trained-on-your-voice fidelity?</b> That path exists, but it's offline fine-tuning, not an in-app button: prepare a dataset of your recordings (<a href="docs/data_preparation.md">docs/data_preparation.md</a>) and fine-tune the bundled checkpoint via <code>init_from_checkpoint</code> (<a href="docs/training.md">docs/training.md</a>). Fair warning — it's a technical, command-line workflow that needs a capable GPU and hours of transcribed audio. In-app fine-tuning / long-reference "professional" cloning is on the <a href="docs/ROADMAP.md">roadmap</a> as research only; no promised date.
 </details>
 
 <details>

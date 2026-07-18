@@ -124,6 +124,14 @@ plainly):
   diarization can separate them — but a clean solo clip is still the
   best input.
 
+If a great clip still isn't close enough and you have *hours* of
+recordings, the step up isn't a longer reference — zero-shot
+conditioning stops using audio past a short window — it's offline
+fine-tuning of the bundled model on your own dataset: see
+[training / fine-tuning](../training.md) and
+[data preparation](../data_preparation.md). Technical, command-line,
+GPU-required — but it's the trained-on-your-voice path.
+
 ## Your first clone
 
 1. Launch the app and pick the **Voice Clone** card on the Launchpad

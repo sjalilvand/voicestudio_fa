@@ -441,6 +441,9 @@ async def dub_transcribe_stream(
     job = _get_job(job_id)
 
     preflight_error: Optional[str] = None
+    # Extra machine-readable fields merged into the preflight `error` SSE event
+    # (e.g. the typed asr_model_missing payload → download-CTA in the UI).
+    preflight_payload: Optional[dict] = None
     asr_audio_target: Optional[str] = None
     _asr_backend = None
     scene_cuts: list = []
@@ -486,31 +489,57 @@ async def dub_transcribe_stream(
             if not asr_audio_target or not os.path.exists(asr_audio_target):
                 preflight_error = "No audio available for transcription."
             else:
-                from services.asr_backend import get_active_asr_backend
-                try:
-                    # The PyTorch-Whisper backend lazily builds its own pipeline
-                    # when no preloaded `_asr_pipe` is present (issue #255), so it
-                    # no longer needs OMNIVOICE_PRELOAD_TTS_ASR=1.
-                    _asr_backend = get_active_asr_backend(asr_pipe=getattr(_model, "_asr_pipe", None))
-                    # Eagerly load the model HERE so a real load failure (e.g.
-                    # WhisperX: missing weights, CTranslate2/cuDNN mismatch, the
-                    # torch-2.6 weights-only VAD regression) surfaces once, with
-                    # its actual cause, as a clean preflight `error` event —
-                    # instead of being buried in N cryptic per-chunk failures
-                    # and retried on every chunk (#578). Run in a thread so the
-                    # (blocking) load doesn't stall the event loop.
-                    _ensure_loaded = getattr(_asr_backend, "ensure_loaded", None)
-                    if callable(_ensure_loaded):
-                        await asyncio.get_running_loop().run_in_executor(
-                            _gpu_pool, _ensure_loaded
-                        )
-                except Exception as e:
-                    logger.exception("transcribe preflight: ASR load failed (job=%s)", job_id)
-                    from core.failure import build_failure
-                    f = build_failure(e, stage="transcribe-preflight", include_diagnostic=False)
-                    preflight_error = "ASR backend initialization failed: " + f["reason"] + (
-                        f" — {f['hint']}" if f.get("hint") else ""
+                from services.asr_backend import (
+                    active_backend_id,
+                    asr_model_missing_detail,
+                    asr_model_missing_error,
+                    get_active_asr_backend,
+                )
+                # TTS-only install: no ASR model on disk. Bail BEFORE any
+                # backend is constructed/loaded — the whisper backends would
+                # otherwise silently auto-download multi-GB weights from HF.
+                # Typed payload → the UI renders a one-click download CTA.
+                # A preloaded `_asr_pipe` only substitutes for the
+                # *pytorch-whisper* backend (its sole consumer) — any other
+                # active backend still loads its own weights, so the preflight
+                # must run for them even when the pipe is present.
+                _missing = None
+                _skip_preflight = (
+                    getattr(_model, "_asr_pipe", None) is not None
+                    and active_backend_id() == "pytorch-whisper"
+                )
+                if not _skip_preflight:
+                    _missing = await asyncio.get_running_loop().run_in_executor(
+                        None, asr_model_missing_error
                     )
+                if _missing is not None:
+                    preflight_error = asr_model_missing_detail(_missing)
+                    preflight_payload = _missing
+                if _missing is None:
+                    try:
+                        # The PyTorch-Whisper backend lazily builds its own pipeline
+                        # when no preloaded `_asr_pipe` is present (issue #255), so it
+                        # no longer needs OMNIVOICE_PRELOAD_TTS_ASR=1.
+                        _asr_backend = get_active_asr_backend(asr_pipe=getattr(_model, "_asr_pipe", None))
+                        # Eagerly load the model HERE so a real load failure (e.g.
+                        # WhisperX: missing weights, CTranslate2/cuDNN mismatch, the
+                        # torch-2.6 weights-only VAD regression) surfaces once, with
+                        # its actual cause, as a clean preflight `error` event —
+                        # instead of being buried in N cryptic per-chunk failures
+                        # and retried on every chunk (#578). Run in a thread so the
+                        # (blocking) load doesn't stall the event loop.
+                        _ensure_loaded = getattr(_asr_backend, "ensure_loaded", None)
+                        if callable(_ensure_loaded):
+                            await asyncio.get_running_loop().run_in_executor(
+                                _gpu_pool, _ensure_loaded
+                            )
+                    except Exception as e:
+                        logger.exception("transcribe preflight: ASR load failed (job=%s)", job_id)
+                        from core.failure import build_failure
+                        f = build_failure(e, stage="transcribe-preflight", include_diagnostic=False)
+                        preflight_error = "ASR backend initialization failed: " + f["reason"] + (
+                            f" — {f['hint']}" if f.get("hint") else ""
+                        )
                 scene_cuts = job.get("scene_cuts") or []
 
     async def _gen_body():
@@ -521,7 +550,8 @@ async def dub_transcribe_stream(
             # `data`); if that native error wins, the client falls back to the
             # misleading generic "stream dropped … ASR backend failed" message
             # and the real cause (in `detail`) is lost (#578).
-            yield _sse_event("error", {"detail": preflight_error, "retryable": True})
+            yield _sse_event("error", {"detail": preflight_error, "retryable": True,
+                                       **(preflight_payload or {})})
             yield _sse_event("done", {})
             return
         import math
@@ -1223,6 +1253,25 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
     # is not preloaded" anyway. Loading ~3 GB to reach a None attribute (and then
     # having offload_tts_for_asr free it) was pure cost.
     _model = await get_model() if should_preload_tts_asr() else None
+
+    # TTS-only install: no ASR model on disk → typed 409 with a download CTA,
+    # BEFORE any backend is constructed (the whisper backends auto-download
+    # multi-GB weights from HF on first load). Same gate as the SSE preflight:
+    # a preloaded `_asr_pipe` only substitutes for the *pytorch-whisper*
+    # backend (its sole consumer), so it only skips the preflight there.
+    from services.asr_backend import (
+        active_backend_id,
+        asr_model_missing_detail,
+        asr_model_missing_error,
+    )
+    if not (getattr(_model, "_asr_pipe", None) is not None
+            and active_backend_id() == "pytorch-whisper"):
+        missing = await asyncio.to_thread(asr_model_missing_error)
+        if missing is not None:
+            raise HTTPException(
+                status_code=409,
+                detail={**missing, "message": asr_model_missing_detail(missing)},
+            )
 
     def _transcribe():
 

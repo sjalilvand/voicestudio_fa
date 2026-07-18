@@ -8,6 +8,8 @@ import { toast } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { cleanAudio as apiCleanAudio } from '../api/system';
 import { micErrorMessage } from '../utils/micError';
+import { checkMicrophone } from '../utils/permissions';
+import { showMicDeniedGuide } from '../utils/micDeniedToast';
 
 export default function useRecording(ingestRefAudio) {
   const { t } = useTranslation();
@@ -19,6 +21,14 @@ export default function useRecording(ingestRefAudio) {
   const recordingTimerRef = useRef(null);
 
   const startRecording = async () => {
+    // Pre-flight: an OS-denied mic grant means getUserMedia can only throw an
+    // opaque NotAllowedError — skip it and show the guided path (per-OS hint
+    // + Open Settings) instead. 'prompt'/'granted'/'unknown' proceed as today
+    // (outside Tauri checkMicrophone() is always 'unknown' → unchanged).
+    if ((await checkMicrophone()) === 'denied') {
+      showMicDeniedGuide(t);
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });

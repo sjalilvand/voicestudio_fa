@@ -26,6 +26,17 @@ from core import run_sentinel
 @pytest.fixture()
 def sentinel_env(monkeypatch, tmp_path):
     """Redirect every on-disk artifact into tmp_path and reset module state."""
+    # Re-resolve the module at TEST time and heal this file's global: earlier
+    # suite members (tests/smoke/test_boot_smoke.py) purge ``core.*`` from
+    # sys.modules, so the collection-time import above goes STALE in a
+    # combined `pytest tests/ backend/tests/` run — the endpoint under test
+    # (freshly imported by the `client` fixture) then reads the REAL
+    # CRASH_RECORD_PATH while this fixture patches the stale twin, and the
+    # ack/notification roundtrips fail. CI runs the two trees in isolated
+    # invocations and never sees this; local combined runs do.
+    global run_sentinel
+    import core.run_sentinel as _fresh_run_sentinel
+    run_sentinel = _fresh_run_sentinel
     monkeypatch.setattr(run_sentinel, "SENTINEL_PATH", str(tmp_path / "run_sentinel.json"))
     monkeypatch.setattr(
         run_sentinel, "CRASH_RECORD_PATH", str(tmp_path / "last_run_crash.json")

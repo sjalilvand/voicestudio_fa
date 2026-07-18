@@ -59,7 +59,14 @@ def test_omnivoice_model_is_only_read_through_the_resolver():
     import pathlib
 
     backend = pathlib.Path(__file__).resolve().parents[1] / "backend"
-    allowed = {"services/model_manager.py", "api/routers/personas.py"}
+    allowed = {
+        "services/model_manager.py",
+        "api/routers/personas.py",
+        # Suite-wide sentinel SETTER (os.environ.setdefault("OMNIVOICE_MODEL",
+        # "test")) — a write, not a raw read; the value is still only ever
+        # read through the resolver.
+        "tests/conftest.py",
+    }
     offenders = []
     for py in backend.rglob("*.py"):
         if "__pycache__" in py.parts:

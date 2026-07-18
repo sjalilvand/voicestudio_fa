@@ -693,7 +693,18 @@ async def lifespan(app: FastAPI):
                 prev_loading_detail = dict(loading_detail)
                 loop = asyncio.get_running_loop()
                 def _warm():
-                    from services.asr_backend import get_capture_asr_backend
+                    from services.asr_backend import (
+                        asr_model_missing_error,
+                        get_capture_asr_backend,
+                    )
+                    # TTS-only install: no dictation ASR model on disk. Warming
+                    # would silently auto-download weights at boot — skip; the
+                    # first dictation prompts for the download instead.
+                    if asr_model_missing_error(purpose="dictation") is not None:
+                        logger.info(
+                            "Capture ASR preload skipped: no ASR model installed; "
+                            "dictation will offer a download on first use.")
+                        return
                     loading_detail["sub_stage"] = "loading_asr"
                     loading_detail["detail"] = "Warming up ASR engine…"
                     backend = get_capture_asr_backend()
