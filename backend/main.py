@@ -385,6 +385,8 @@ from core import job_store
 from services.model_manager import idle_worker, preload_model
 from services import network_share
 
+from api.dependencies import is_local_host  # loopback + OMNIVOICE_TRUSTED_NETWORKS
+
 from api.routers import (
     system,
     profiles,
@@ -887,7 +889,6 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-_LOOPBACK_CLIENTS = {"127.0.0.1", "::1"}
 _SHELL_PATHS = {"/", "/index.html", "/favicon.ico", "/health"}
 
 
@@ -918,7 +919,7 @@ class NetworkAccessMiddleware:
         if not pin:
             return await self.app(scope, receive, send)
         client = scope["client"][0] if scope.get("client") else None
-        if client in _LOOPBACK_CLIENTS:
+        if is_local_host(client):
             return await self.app(scope, receive, send)
         path = scope["path"]
         if path in _SHELL_PATHS or path.startswith("/assets/") or path.startswith("/favicon"):
@@ -969,7 +970,7 @@ class BearerKeyMiddleware:
         if not key:
             return await self.app(scope, receive, send)
         client = scope["client"][0] if scope.get("client") else None
-        if client in _LOOPBACK_CLIENTS:
+        if is_local_host(client):
             return await self.app(scope, receive, send)
         path = scope.get("path", "")
         if scope["type"] == "http" and (
