@@ -30,8 +30,15 @@ in-process `OmniVoiceBackend`.
 
 ## Placeholder note
 
-Until the CI matrix produces real binaries, this directory may contain
-zero-byte placeholders. `OmniVoiceGGUFBackend.is_available()` returns
-`(False, "...binary missing...")` in that case so the engine reports
-honestly through the Engine Compatibility Matrix and the default
-selection falls back to the in-process `OmniVoiceBackend`.
+Until the CI matrix produces real binaries, this directory contains
+zero-byte placeholders — a plain `git clone` always gets those (real
+binaries ship via the installers / CI artifacts, and are never committed
+here). `OmniVoiceGGUFBackend.is_available()` validates the file before
+trusting it (`services/binary_preflight.py`: non-empty + a real
+Mach-O/ELF/PE magic, #1172) and returns `(False, "...not a usable
+executable...")` for a placeholder, so the engine reports honestly
+through the Engine Compatibility Matrix and the default selection falls
+back to the in-process `OmniVoiceBackend`. Selecting the engine anyway
+(e.g. `model: "omnivoice-gguf"` on `/v1/audio/speech`) yields an
+actionable 400/503 naming `scripts/build-omnivoice-tts.sh`, never a raw
+"Exec format error".

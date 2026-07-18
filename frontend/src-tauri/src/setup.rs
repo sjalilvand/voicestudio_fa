@@ -199,6 +199,58 @@ pub fn resolved_models_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Opti
     cfg.models_dir.as_deref().filter(|s| !s.is_empty()).map(PathBuf::from)
 }
 
+// ── uv volume co-location ─────────────────────────────────────────────────
+
+/// Env overrides for every `uv` invocation so its heavy state (wheel cache,
+/// managed Python) lives on the **same volume as the managed env**.
+///
+/// uv's defaults put both under the OS cache/data roots on the system drive
+/// (`%LOCALAPPDATA%\uv\…`, `~/.cache/uv`, `~/.local/share/uv`). When the user
+/// roots the install on another drive (custom env dir or portable mode on
+/// D:), every wheel — torch alone is multi-GB — is downloaded and unpacked
+/// on the SYSTEM drive first and then cross-volume **copied** (hardlinks
+/// can't cross volumes) into the venv: the system drive silently needs as
+/// much space as the whole install and fills up even though the user chose
+/// D: precisely because C: was tight (Discord report, tarbol6457).
+///
+/// Rules:
+/// - only fires when the env root's volume differs from the OS cache root's
+///   volume (the proxy for uv's default cache location) — default installs
+///   are byte-identical;
+/// - an explicit `UV_CACHE_DIR` / `UV_PYTHON_INSTALL_DIR` from the user's
+///   environment always wins (we never override either).
+///
+/// The dirs live under the env root (`<env_root>/uv-cache`, `uv-python`), so
+/// they survive Clean & Retry (which only removes `project/`) and are removed
+/// with the install.
+pub fn uv_env_overrides_for(env_root: &Path) -> Vec<(&'static str, PathBuf)> {
+    let same_volume = match dirs_next::cache_dir() {
+        Some(cache_root) => match (disk::fs_key(env_root), disk::fs_key(&cache_root)) {
+            (Some(a), Some(b)) => a == b,
+            // Can't identify one of the volumes — keep uv's state with the
+            // env root; co-locating is always correct, just possibly redundant.
+            _ => false,
+        },
+        None => false,
+    };
+    if same_volume {
+        return Vec::new();
+    }
+    let mut out = Vec::new();
+    if std::env::var_os("UV_CACHE_DIR").is_none() {
+        out.push(("UV_CACHE_DIR", env_root.join("uv-cache")));
+    }
+    if std::env::var_os("UV_PYTHON_INSTALL_DIR").is_none() {
+        out.push(("UV_PYTHON_INSTALL_DIR", env_root.join("uv-python")));
+    }
+    out
+}
+
+/// [`uv_env_overrides_for`] with the env root resolved from the live config.
+pub fn uv_env_overrides<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Vec<(&'static str, PathBuf)> {
+    uv_env_overrides_for(&env_root(app))
+}
+
 // ── First-run detection ───────────────────────────────────────────────────
 
 /// True only when there is nothing to attach to and the user has never
@@ -726,6 +778,52 @@ pub fn complete_setup(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// D:-install class (tarbol6457): one test fn (not several) because it
+    /// mutates process env vars and Rust tests run in parallel.
+    #[test]
+    fn uv_env_overrides_colocate_only_across_volumes_and_respect_user_env() {
+        // Same volume as uv's default cache root → no overrides: default
+        // installs must stay byte-identical.
+        let cache_root = dirs_next::cache_dir().expect("cache dir");
+        assert!(
+            uv_env_overrides_for(&cache_root).is_empty(),
+            "env root on the default-cache volume must not be redirected"
+        );
+
+        // A root whose volume can't match anything real. On Windows an
+        // unmapped drive letter is a different volume by fs_key; on Unix,
+        // fs_key(nonexistent-with-no-real-ancestor) still resolves via
+        // nearest_existing to `/` — so instead simulate by comparing keys.
+        let env_root = PathBuf::from(if cfg!(windows) {
+            "Q:\\omnivoice-test-fake-root" // unmapped drive letter → distinct volume key
+        } else {
+            "/omnivoice-test-fake-root" // resolves to `/` — a different device than
+                                        // the user cache root on macOS (sealed system
+                                        // volume) and on split-partition Linux
+        });
+        let keys_differ = disk::fs_key(&env_root) != disk::fs_key(&cache_root);
+        let overrides = uv_env_overrides_for(&env_root);
+        if keys_differ {
+            assert!(
+                overrides.iter().any(|(k, v)| *k == "UV_CACHE_DIR" && v.starts_with(&env_root)),
+                "cross-volume env root must pin UV_CACHE_DIR under the env root, got {overrides:?}"
+            );
+            assert!(
+                overrides.iter().any(|(k, v)| *k == "UV_PYTHON_INSTALL_DIR" && v.starts_with(&env_root)),
+                "cross-volume env root must pin UV_PYTHON_INSTALL_DIR under the env root"
+            );
+
+            // An explicit user UV_CACHE_DIR always wins — never overridden.
+            std::env::set_var("UV_CACHE_DIR", cache_root.join("user-pinned"));
+            let with_user = uv_env_overrides_for(&env_root);
+            assert!(
+                !with_user.iter().any(|(k, _)| *k == "UV_CACHE_DIR"),
+                "user-pinned UV_CACHE_DIR must be respected"
+            );
+            std::env::remove_var("UV_CACHE_DIR");
+        }
+    }
 
     #[test]
     fn nearest_existing_walks_up_to_a_real_dir() {

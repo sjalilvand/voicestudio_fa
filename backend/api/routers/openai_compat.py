@@ -249,6 +249,26 @@ def _encode_audio(wav_tensor, sample_rate: int, fmt: str) -> tuple[bytes, str, s
     return buf.getvalue(), "audio/wav", "wav"
 
 
+def _typed_speech_http_error(e: Exception) -> Optional[HTTPException]:
+    """Map typed synthesis failures to actionable HTTP errors (#1172/#1173).
+
+    - TTSInputError (bad caller input, e.g. nothing speakable) → 400,
+      matching /generate's ValueError→400 mapping.
+    - InvalidBinaryError (managed engine binary is a placeholder / corrupt /
+      refused by the OS) → 503 with the repair hint, instead of the bare
+      "[Errno 8] Exec format error" 500.
+    Returns None for anything else (caller falls through to the generic 500).
+    """
+    from services.binary_preflight import InvalidBinaryError
+    from services.tts_backend import TTSInputError
+
+    if isinstance(e, TTSInputError):
+        return HTTPException(status_code=400, detail=str(e))
+    if isinstance(e, InvalidBinaryError):
+        return HTTPException(status_code=503, detail=str(e))
+    return None
+
+
 def _run_tts(backend, text: str, kw: dict):
     """Run TTS inference in the GPU thread pool."""
     from services.audio_dsp import apply_mastering, normalize_audio
@@ -381,6 +401,14 @@ async def create_speech(req: SpeechRequest):
                 f"shows as installed."
             ),
         ) from e
+    except Exception as e:
+        # A sidecar engine's load can also hit the #1172 class (broken venv
+        # interpreter / placeholder binary) — surface the typed 503 here too.
+        http = _typed_speech_http_error(e)
+        if http is None:
+            raise
+        logger.warning("OpenAI TTS engine load failed: %s", e)
+        raise http from e
 
     try:
         # Bounded + pool-reset on hang so a wedged TTS request can't starve the
@@ -388,6 +416,13 @@ async def create_speech(req: SpeechRequest):
         wav, sr = await run_on_gpu_pool_guarded(
             lambda: _run_tts(backend, text, kw), what="OpenAI TTS generate")
     except Exception as e:
+        # #1172/#1173: typed failures get their real status + actionable
+        # message (400 bad input / 503 broken engine binary) instead of a
+        # generic 500 wrapping an errno or an ONNX abort.
+        http = _typed_speech_http_error(e)
+        if http is not None:
+            logger.warning("OpenAI TTS failed (typed): %s", e)
+            raise http from e
         logger.exception("OpenAI TTS failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 

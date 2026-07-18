@@ -743,6 +743,21 @@ fn apply_uv_http_env(cmd: &mut Command) {
         .env("UV_HTTP_RETRIES", "5");
 }
 
+/// The one env applicator every `uv` invocation must go through: HTTP
+/// resilience (above) + volume co-location. The latter pins UV_CACHE_DIR /
+/// UV_PYTHON_INSTALL_DIR under the env root when the install is rooted on a
+/// different volume than uv's default cache (D:-drive installs / portable
+/// mode) — otherwise every wheel is downloaded+unpacked on the system drive
+/// and then cross-volume *copied* into the venv, silently requiring the full
+/// install size on C: and ENOSPC-ing installs the user deliberately pointed
+/// at another drive. See `setup::uv_env_overrides_for` for the exact rules.
+fn apply_uv_env<R: tauri::Runtime>(app: &tauri::AppHandle<R>, cmd: &mut Command) {
+    apply_uv_http_env(cmd);
+    for (k, v) in crate::setup::uv_env_overrides(app) {
+        cmd.env(k, v);
+    }
+}
+
 /// `<env_root>/wheels` — a local wheel-drop dir uv installs from via
 /// `--find-links`. When a huge wheel can't be pulled on a restricted network
 /// (the ~2.5 GB cu128 torch wheel from download.pytorch.org — #569), the user
@@ -1141,7 +1156,7 @@ fn ensure_cudnn8_compat<R: tauri::Runtime>(
     emit_log(app, "installing_deps", "Installing cuDNN 8 compatibility libraries for CUDA transcription…");
     let mut cmd = Command::new(uv_path);
     scrub_python_env(&mut cmd);
-    apply_uv_http_env(&mut cmd);
+    apply_uv_env(app, &mut cmd);
     cmd.arg("pip")
         .arg("install")
         .arg("--no-deps")
@@ -1336,7 +1351,7 @@ manually, then relaunch.",
                         Ok(uv_path) => {
                             let mut drift_cmd = Command::new(&uv_path);
                             scrub_python_env(&mut drift_cmd); // #144
-                            apply_uv_http_env(&mut drift_cmd);
+                            apply_uv_env(app, &mut drift_cmd);
                             let user_cfg = crate::config::load_config(app);
                             if let Some(pypi) = user_cfg.mirrors.pypi_index.as_deref() {
                                 drift_cmd.env("UV_INDEX_URL", pypi);
@@ -1416,7 +1431,7 @@ the existing venv; newly added dependencies may be missing (#307)",
         }
         let mut repair_cmd = Command::new(&uv_path);
         scrub_python_env(&mut repair_cmd); // #144: don't inherit AppImage's bundled Python
-        apply_uv_http_env(&mut repair_cmd);
+        apply_uv_env(app, &mut repair_cmd);
         let has_lockfile = project_dir.join("uv.lock").is_file();
         if has_lockfile {
             repair_cmd.args(REPAIR_SYNC_ARGS_LOCKED);
@@ -1451,7 +1466,7 @@ the existing venv; newly added dependencies may be missing (#307)",
                     "Repairing pkg_resources: force-reinstalling setuptools<80 (#248)");
                 let mut st_cmd = Command::new(&uv_path);
                 scrub_python_env(&mut st_cmd);
-                apply_uv_http_env(&mut st_cmd);
+                apply_uv_env(app, &mut st_cmd);
                 st_cmd
                     // --reinstall: when the venv has setuptools's *metadata* but its
                 // pkg_resources files were removed (antivirus quarantine, partial
@@ -1623,7 +1638,7 @@ the existing venv; newly added dependencies may be missing (#307)",
     for (label, args, envs) in &venv_attempts {
         let mut venv_cmd = Command::new(&uv_path);
         scrub_python_env(&mut venv_cmd); // #144: don't inherit AppImage's bundled Python
-        apply_uv_http_env(&mut venv_cmd);
+        apply_uv_env(app, &mut venv_cmd);
         for (k, v) in envs {
             venv_cmd.env(k, v);
         }
@@ -1646,7 +1661,7 @@ the existing venv; newly added dependencies may be missing (#307)",
     let wheels_dir = wheels_drop_dir(app);
     let mut sync_cmd = Command::new(&uv_path);
     scrub_python_env(&mut sync_cmd); // #144: don't inherit AppImage's bundled Python
-    apply_uv_http_env(&mut sync_cmd);
+    apply_uv_env(app, &mut sync_cmd);
     // #569: let uv install from locally-dropped wheels. (--frozen ignores
     // find-links, but the non-frozen torch-recovery retry below honors it.)
     sync_cmd.env("UV_FIND_LINKS", &wheels_dir);
@@ -1689,7 +1704,7 @@ the existing venv; newly added dependencies may be missing (#307)",
             emit_log(app, "installing_deps", "Retrying the install with the wheels you provided locally…");
             let mut retry = Command::new(&uv_path);
             scrub_python_env(&mut retry);
-            apply_uv_http_env(&mut retry);
+            apply_uv_env(app, &mut retry);
             retry.env("UV_FIND_LINKS", &wheels_dir);
             if let Some(pypi) = custom_mirrors.pypi_index.as_deref() {
                 retry.env("UV_INDEX_URL", pypi);
@@ -1746,7 +1761,7 @@ mirror in Settings → region/mirrors (see docs/install/troubleshooting.md).".to
                 "pkg_resources missing — force-reinstalling setuptools<80 to fix (#248)");
             let mut st_cmd = Command::new(&uv_path);
             scrub_python_env(&mut st_cmd);
-            apply_uv_http_env(&mut st_cmd);
+            apply_uv_env(app, &mut st_cmd);
             st_cmd
                 // --reinstall: when the venv has setuptools's *metadata* but its
                 // pkg_resources files were removed (antivirus quarantine, partial
@@ -1779,7 +1794,7 @@ mirror in Settings → region/mirrors (see docs/install/troubleshooting.md).".to
         log::info!("ROCm torch variant selected → reinstalling torch from {}", rocm_url);
         let mut rocm_cmd = Command::new(&uv_path);
         scrub_python_env(&mut rocm_cmd); // #144: don't inherit AppImage's bundled Python
-        apply_uv_http_env(&mut rocm_cmd);
+        apply_uv_env(app, &mut rocm_cmd);
         rocm_cmd.args(rocm_torch_reinstall_args(&rocm_url)).current_dir(&project_dir);
         let rocm_status = run_streaming(app, "installing_deps", &mut rocm_cmd);
         if matches!(rocm_status, Ok(ref s) if s.success()) {

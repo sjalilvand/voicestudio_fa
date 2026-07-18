@@ -132,6 +132,14 @@ def _retry_once_with_fresh_hf_client(loader, what: str):
 # ── Protocol ────────────────────────────────────────────────────────────────
 
 
+class TTSInputError(ValueError):
+    """The caller-supplied text can't be synthesized by the selected engine
+    (empty / nothing speakable after cleanup). Subclasses ValueError so the
+    native /generate route's existing ValueError→400 mapping applies;
+    /v1/audio/speech maps it to 400 explicitly (#1173 class — these used to
+    surface as opaque 500s like "need at least one array to concatenate")."""
+
+
 class TTSBackend(ABC):
     """Every TTS engine exposes the same surface, regardless of vendor."""
 
@@ -960,6 +968,17 @@ class KittenTTSBackend(TTSBackend):
             lambda: KittenTTS(checkpoint), what="KittenTTS"
         )
 
+    # #1173: the shipped ONNX graph's BERT front-end has a hard 512-token
+    # positional cap (measured against kitten-tts-mini-0.8; exceeding it
+    # aborts inference inside onnxruntime with the opaque
+    # "Expand node … invalid expand shape" InvalidArgument). Upstream's
+    # chunker caps chunks at 400 *text characters*, but token count is the
+    # length of the *phonemized* string — espeak expands digits (and other
+    # verbalized tokens) massively, so 110 chars of digits already
+    # phonemize to ~1150 tokens. We pre-measure every chunk with the
+    # model's own tokenizer and split oversized ones at word boundaries.
+    _MAX_ONNX_TOKENS = 512
+
     def generate(self, text: str, **kw) -> torch.Tensor:
         import numpy as np
         self._ensure_loaded()
@@ -981,7 +1000,7 @@ class KittenTTSBackend(TTSBackend):
             voice = self.DEFAULT_VOICE
 
         speed = float(kw.get("speed", 1.0))
-        wav_np = self._model.generate(text, voice=voice, speed=speed)
+        wav_np = self._synthesize(text, voice, speed)
         if not isinstance(wav_np, np.ndarray):
             wav_np = np.asarray(wav_np)
         wav = torch.from_numpy(wav_np).float()
@@ -990,6 +1009,82 @@ class KittenTTSBackend(TTSBackend):
         elif wav.ndim == 2 and wav.shape[0] > 1:
             wav = wav.mean(dim=0, keepdim=True)
         return wav
+
+    # ── #1173 input-shape hardening ────────────────────────────────────────
+    #
+    # KittenTTS.generate() defaults clean_text=False, so the engine's own
+    # number-verbalizing preprocessor never ran through this adapter — and
+    # the openai-compat route typically has no `language`, so the app-level
+    # normalize_for_tts() skips numbers→words there too. Raw digits then
+    # reached espeak, whose verbalization exploded past the ONNX graph's
+    # 512-token cap ("invalid expand shape" 500). Empty / unspeakable input
+    # crashed differently (np.concatenate on zero chunks). Both classes are
+    # handled here, in the adapter, so every route benefits.
+
+    def _synthesize(self, text: str, voice: str, speed: float):
+        """Chunk-and-generate with the engine's own cleanup + a token-budget
+        preflight per chunk. Falls back to the plain upstream call if the
+        kittentts internals this relies on ever change shape."""
+        import numpy as np
+
+        onnx = getattr(self._model, "model", None)
+        if not (
+            onnx is not None
+            and callable(getattr(onnx, "generate_single_chunk", None))
+            and callable(getattr(onnx, "_prepare_inputs", None))
+        ):  # pragma: no cover — future upstream refactor
+            return self._model.generate(text, voice=voice, speed=speed,
+                                        clean_text=True)
+
+        from kittentts.onnx_model import chunk_text
+
+        cleaned = text
+        preprocessor = getattr(onnx, "preprocessor", None)
+        if callable(preprocessor):
+            # The engine's own cleaner (numbers→words etc.) — same pass
+            # upstream applies with clean_text=True.
+            cleaned = preprocessor(text)
+
+        chunks: list[str] = []
+        for chunk in chunk_text(cleaned):
+            chunks.extend(self._split_to_token_budget(onnx, chunk, voice, speed))
+        if not chunks:
+            raise TTSInputError(
+                "KittenTTS: the input contains no speakable text (empty or "
+                "punctuation-only after cleanup) — send at least one word."
+            )
+        outs = [onnx.generate_single_chunk(c, voice, speed) for c in chunks]
+        return np.concatenate(outs, axis=-1)
+
+    def _split_to_token_budget(self, onnx, chunk: str, voice: str,
+                               speed: float) -> list[str]:
+        """Split ``chunk`` (at word boundaries, then mid-word as a last
+        resort) until each piece phonemizes to ≤ _MAX_ONNX_TOKENS tokens,
+        measured with the model's own tokenizer. Never raises — an
+        unmeasurable chunk is passed through unchanged."""
+        chunk = chunk.strip()
+        if not chunk:
+            return []
+        try:
+            n_tokens = onnx._prepare_inputs(chunk, voice, speed)[
+                "input_ids"].shape[1]
+        except Exception:  # pragma: no cover — measurement is best-effort
+            return [chunk]
+        if n_tokens <= self._MAX_ONNX_TOKENS:
+            return [chunk]
+        words = chunk.split()
+        if len(words) > 1:
+            mid = len(words) // 2
+            left, right = " ".join(words[:mid]), " ".join(words[mid:])
+        else:
+            # Single monster token (e.g. a 500-digit number pre-cleanup) —
+            # bisect the raw string; degraded prosody beats an ONNX abort.
+            mid = max(1, len(chunk) // 2)
+            left, right = chunk[:mid], chunk[mid:]
+            if not left or not right:  # 1-char chunk that still overflows
+                return [chunk]  # pragma: no cover — impossible in practice
+        return (self._split_to_token_budget(onnx, left, voice, speed)
+                + self._split_to_token_budget(onnx, right, voice, speed))
 
 
 # ── MLX-Audio (mac-ARM engine multiplexer) ──────────────────────────────────

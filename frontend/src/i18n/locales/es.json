@@ -1796,7 +1796,8 @@
     "timeout": "Se agotó el tiempo de generación: es posible que el modelo aún se esté descargando. Verifique Configuración → Registros y vuelva a intentarlo.",
     "error_prefix": "Error: {{message}}",
     "ignored_unsupported": "Instrucción no admitida ignorada: {{items}}",
-    "ignored_duplicate": "Ignorado (categoría ya establecida): {{items}}"
+    "ignored_duplicate": "Ignorado (categoría ya establecida): {{items}}",
+    "ref_audio_unusable": "No se detectó voz en el audio de referencia: el clip está en silencio o casi en silencio, así que no hay voz que clonar. Graba de nuevo más cerca del micrófono (comprueba que está seleccionado el dispositivo de entrada correcto y que el nivel se mueve) o elige otro clip."
   },
   "sharing": {
     "title": "Compartir y acceso remoto",

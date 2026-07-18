@@ -22,6 +22,7 @@ from services.model_manager import (
     get_model, _gpu_pool, run_on_gpu_pool_guarded, GpuJobTimeoutError,
 )
 from services.audio_io import _safe_torchaudio_save
+from services.binary_preflight import InvalidBinaryError
 from core import event_bus
 from omnivoice.utils.voice_design import heal_design_instruct
 
@@ -1377,6 +1378,12 @@ async def generate_speech(
         # (#730 class). Report the actionable timeout instead of the misleading
         # "can't reach backend" the frontend shows when the pool starves.
         logger.error("Generate timed out: %s", e)
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except InvalidBinaryError as e:
+        # #1172 class: a managed engine binary is a placeholder / corrupt /
+        # refused by the OS. The message carries the repair hint — surface it
+        # as 503 (engine unavailable), not a generic 500.
+        logger.error("Engine binary preflight failed: %s", e)
         raise HTTPException(status_code=503, detail=str(e)) from e
     except ValueError as e:
         logger.error("Validation failed: %s", e)

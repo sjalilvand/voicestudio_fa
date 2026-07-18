@@ -11,8 +11,24 @@ import i18next from 'i18next';
 import { openExternal } from '../api/external';
 import { buildBugReportUrl } from './bugReport';
 
+// #1188: backend errors that carry a machine-readable "[code]" marker are
+// user-fixable input problems, not bugs — show localized guidance (what
+// happened + the concrete fix) instead of the raw English detail, and skip
+// the "Report" action. Markers are emitted by the backend (the
+// [clone_ref_unusable] one in omnivoice/utils/audio.py) — keep in sync.
+const USER_FIXABLE_MARKERS = {
+  '[clone_ref_unusable]': 'tts_errors.ref_audio_unusable',
+};
+
 export function toastErrorWithReport(message, error) {
   const err = error instanceof Error ? error : new Error(String(error ?? message));
+  const raw = `${err.message ?? ''} ${message ?? ''}`;
+  for (const [marker, i18nKey] of Object.entries(USER_FIXABLE_MARKERS)) {
+    if (raw.includes(marker)) {
+      toast.error(i18next.t(i18nKey), { duration: 8000 });
+      return;
+    }
+  }
   toast.error(
     (tst) => (
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

@@ -361,11 +361,26 @@ class SubprocessBackend(TTSBackend):
 
         python_path = str(self.venv_python())
         script_path = str(self.sidecar_script())
+        # #1172 class: validate the interpreter before exec so a broken /
+        # half-installed engine venv (0-byte or truncated python, dangling
+        # symlink) surfaces as a typed, actionable error instead of an
+        # OSError "[Errno 8] Exec format error" at spawn time.
+        from services.binary_preflight import InvalidBinaryError, validate_executable
+        _venv_hint = (
+            f"the '{self.id}' engine's private environment is broken — "
+            f"reinstall the engine from Settings → Engines"
+        )
+        validate_executable(python_path, hint=_venv_hint)
         logger.info(
             "[%s] spawning sidecar: %s %s",
             self.id, python_path, script_path,
         )
-        self._proc = subprocess.Popen([python_path, script_path], **kwargs)
+        try:
+            self._proc = subprocess.Popen([python_path, script_path], **kwargs)
+        except OSError as exc:
+            raise InvalidBinaryError(
+                python_path, f"the OS refused to execute it ({exc})", _venv_hint,
+            ) from exc
 
         # Drain stderr in a background thread so the sidecar can't block on
         # a full pipe. Lines flow into the root logger; AUTH-05's

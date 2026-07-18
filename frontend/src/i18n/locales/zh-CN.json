@@ -1803,7 +1803,8 @@
     "timeout": "生成超时 - 模型可能仍在下载。检查设置 → 日志，然后重试。",
     "error_prefix": "错误：{{message}}",
     "ignored_unsupported": "忽略不支持的指令：{{items}}",
-    "ignored_duplicate": "忽略（类别已设置）：{{items}}"
+    "ignored_duplicate": "忽略（类别已设置）：{{items}}",
+    "ref_audio_unusable": "参考音频中听不到任何语音——片段是静音或几乎静音的，因此没有可克隆的声音。请靠近麦克风重新录制（检查是否选择了正确的输入设备、电平是否有跳动），或换一段其他音频。"
   },
   "sharing": {
     "title": "共享和远程访问",

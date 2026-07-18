@@ -1796,7 +1796,8 @@
     "timeout": "Đã hết thời gian tạo - mô hình có thể vẫn đang được tải xuống. Kiểm tra Cài đặt → Nhật ký, sau đó thử lại.",
     "error_prefix": "Lỗi: {{message}}",
     "ignored_unsupported": "Đã bỏ qua hướng dẫn không được hỗ trợ: {{items}}",
-    "ignored_duplicate": "Đã bỏ qua (danh mục đã được đặt): {{items}}"
+    "ignored_duplicate": "Đã bỏ qua (danh mục đã được đặt): {{items}}",
+    "ref_audio_unusable": "Không nghe thấy giọng nói trong âm thanh tham chiếu — đoạn clip im lặng hoặc gần như im lặng nên không có giọng để nhân bản. Hãy thu âm lại gần micro hơn (kiểm tra đã chọn đúng thiết bị đầu vào và mức âm có dao động) hoặc chọn một clip khác."
   },
   "sharing": {
     "title": "Chia sẻ & Truy cập từ xa",

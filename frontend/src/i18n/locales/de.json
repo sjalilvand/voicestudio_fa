@@ -1796,7 +1796,8 @@
     "timeout": "Zeitüberschreitung bei der Generierung – das Modell wird möglicherweise noch heruntergeladen. Überprüfen Sie Einstellungen → Protokolle und versuchen Sie es dann erneut.",
     "error_prefix": "Fehler: {{message}}",
     "ignored_unsupported": "Nicht unterstützte Anweisung ignoriert: {{items}}",
-    "ignored_duplicate": "Ignoriert (Kategorie bereits festgelegt): {{items}}"
+    "ignored_duplicate": "Ignoriert (Kategorie bereits festgelegt): {{items}}",
+    "ref_audio_unusable": "Im Referenz-Audio war keine Sprache zu hören — der Clip ist still oder fast still, es gibt also keine Stimme zum Klonen. Nimm näher am Mikrofon neu auf (prüfe, ob das richtige Eingabegerät gewählt ist und der Pegel ausschlägt) oder wähle einen anderen Clip."
   },
   "sharing": {
     "title": "Teilen und Fernzugriff",

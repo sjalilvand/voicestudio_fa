@@ -1796,7 +1796,8 @@
     "timeout": "Oluşturma zaman aşımına uğradı; model hâlâ indiriliyor olabilir. Ayarlar → Günlükler'i kontrol edin ve tekrar deneyin.",
     "error_prefix": "Hata: {{message}}",
     "ignored_unsupported": "Desteklenmeyen talimat göz ardı edildi: {{items}}",
-    "ignored_duplicate": "Yoksayıldı (kategori zaten ayarlandı): {{items}}"
+    "ignored_duplicate": "Yoksayıldı (kategori zaten ayarlandı): {{items}}",
+    "ref_audio_unusable": "Referans seste konuşma duyulamadı — klip sessiz ya da neredeyse sessiz, bu yüzden klonlanacak bir ses yok. Mikrofona daha yakın şekilde yeniden kayıt yapın (doğru giriş aygıtının seçili olduğundan ve seviyenin hareket ettiğinden emin olun) veya başka bir klip seçin."
   },
   "sharing": {
     "title": "Paylaşım ve Uzaktan Erişim",

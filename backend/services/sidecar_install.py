@@ -187,6 +187,82 @@ def _locate_uv() -> Optional[str]:
     return shutil.which("uv")
 
 
+# ── uv volume co-location ──────────────────────────────────────────────────
+#
+# uv keeps its wheel cache (and managed Pythons) under the OS cache/data
+# roots on the SYSTEM drive (%LOCALAPPDATA%\uv\cache, ~/.cache/uv, …). When a
+# sidecar venv lives on a different volume — DATA_DIR on D:, portable mode —
+# every wheel (the sidecar's own multi-GB torch included) is downloaded and
+# unpacked on the system drive first and then cross-volume *copied* into the
+# venv (hardlinks can't cross volumes): the system drive silently needs as
+# much space as the whole install and fills up even though the user pointed
+# the install at another drive precisely because C: was tight (Discord
+# report, tarbol6457 — same class as the Tauri bootstrap fix in
+# frontend/src-tauri/src/setup.rs::uv_env_overrides_for).
+
+
+def _nearest_existing(path: Path) -> Path:
+    """Deepest existing ancestor of *path* (the target may not exist yet)."""
+    p = Path(path).absolute()
+    while not p.exists():
+        parent = p.parent
+        if parent == p:
+            break
+        p = parent
+    return p
+
+
+def _same_volume(a: Path, b: Path) -> bool:
+    """True when *a* and *b* live on the same filesystem/volume.
+
+    Windows drive letters, POSIX mount points, and not-yet-created targets
+    (compared via their nearest existing ancestor) are all handled by
+    ``st_dev``. Errs on ``True`` (→ no env override) when it can't tell, so a
+    probe failure can never change behavior for default installs.
+    """
+    try:
+        return os.stat(_nearest_existing(a)).st_dev == os.stat(_nearest_existing(b)).st_dev
+    except OSError:
+        return True
+
+
+def _default_uv_cache_root() -> Path:
+    """Volume anchor of uv's default cache (mirrors uv's platform defaults).
+
+    Only the VOLUME matters — the exact subpath never has to match uv's."""
+    if sys.platform == "win32":
+        return Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local") / "uv"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Caches" / "uv"
+    return Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "uv"
+
+
+def uv_subprocess_env(cache_parent: Path) -> "dict[str, str] | None":
+    """Environment for ``uv`` subprocesses that install into *cache_parent*'s volume.
+
+    Returns ``None`` (inherit the parent environment untouched) when uv's
+    default cache already shares a volume with *cache_parent* or the user
+    pinned ``UV_CACHE_DIR`` themselves. Otherwise returns a copy of
+    ``os.environ`` with ``UV_CACHE_DIR`` (and ``UV_PYTHON_INSTALL_DIR``,
+    unless user-pinned) placed inside *cache_parent*, so downloads, the
+    unpacked wheel cache, and the venv all stay on the target volume — and
+    same-volume hardlink installs work again.
+
+    Canonical helper for every sidecar/engine bootstrap (like ``_locate_uv``):
+    pass the directory that should hold the shared ``.uv-cache`` — typically
+    the common parent of the engine venvs on that volume.
+    """
+    if os.environ.get("UV_CACHE_DIR"):
+        return None  # explicit user choice always wins
+    if _same_volume(cache_parent, _default_uv_cache_root()):
+        return None
+    env = dict(os.environ)
+    env["UV_CACHE_DIR"] = str(Path(cache_parent) / ".uv-cache")
+    if not env.get("UV_PYTHON_INSTALL_DIR"):
+        env["UV_PYTHON_INSTALL_DIR"] = str(Path(cache_parent) / ".uv-python")
+    return env
+
+
 # ── Disk preflight ─────────────────────────────────────────────────────────
 
 
@@ -635,7 +711,12 @@ def _step_create_venv(spec: SidecarSpec, job: dict) -> None:
         return
     uv = _locate_uv()
     _log(job, f"Creating venv at {venv_dir} …")
-    rc = _run_logged(job, [uv, "venv", str(venv_dir)], timeout=_UV_VENV_TIMEOUT_S)
+    # Keep uv's cache on the engines volume (D:-install class) — see
+    # uv_subprocess_env. The cache parent is the shared engines root, so
+    # every sidecar engine reuses one cache.
+    uv_env = uv_subprocess_env(Path(DATA_DIR) / "engines")
+    rc = _run_logged(job, [uv, "venv", str(venv_dir)], timeout=_UV_VENV_TIMEOUT_S,
+                     env=uv_env)
     if rc != 0 or not py.is_file():
         raise _StepError(
             f"uv venv failed (exit {rc}) at {venv_dir}.",
@@ -661,6 +742,7 @@ def _step_install_deps(spec: SidecarSpec, job: dict) -> None:
         job,
         [uv, "pip", "install", "--python", str(py), "-e", str(checkout)],
         timeout=_UV_PIP_INSTALL_TIMEOUT_S,
+        env=uv_subprocess_env(Path(DATA_DIR) / "engines"),
     )
     if rc != 0:
         raise _StepError(
@@ -825,12 +907,13 @@ def _step_persist(spec: SidecarSpec, job: dict) -> None:
 # ── Subprocess runner with live log capture ────────────────────────────────
 
 
-def _run_logged(job: dict, argv: list[str], *, timeout: float) -> int:
+def _run_logged(job: dict, argv: list[str], *, timeout: float,
+                env: "dict[str, str] | None" = None) -> int:
     """Run *argv*, streaming combined stdout+stderr lines into the job log.
 
     Returns the exit code; -1 on timeout (process tree killed) or spawn
     failure. argv-list only — never a shell string — so paths with spaces
-    are safe on every platform.
+    are safe on every platform. ``env=None`` inherits the parent environment.
 
     The stdout drain runs on its own daemon thread and the main flow blocks
     on ``proc.wait(timeout=…)``. That bounds the step even when a grandchild
@@ -851,6 +934,7 @@ def _run_logged(job: dict, argv: list[str], *, timeout: float) -> int:
             text=True,
             encoding="utf-8",
             errors="replace",
+            env=env,
             **popen_kwargs,
         )
     except OSError as exc:

@@ -104,9 +104,11 @@ def test_is_available_when_sha_mismatch(monkeypatch, tmp_path):
 
     cls = gguf_backend._make_backend_class()
 
-    # Create a fake binary on disk with known contents.
+    # Create a fake binary on disk with known contents (valid ELF magic so
+    # the #1172 executable preflight passes and the checksum check is what
+    # gets exercised).
     fake_bin = tmp_path / "omnivoice-tts-linux-x86_64"
-    fake_bin.write_bytes(b"hello world")
+    fake_bin.write_bytes(b"\x7fELFhello world")
     monkeypatch.setattr(gguf_backend, "_binary_path", lambda slug=None: fake_bin)
 
     # Force the manifest loader to return a WRONG checksum.
@@ -133,7 +135,7 @@ def test_is_available_passes_when_manifest_absent(monkeypatch, tmp_path):
     cls = gguf_backend._make_backend_class()
 
     fake_bin = tmp_path / "omnivoice-tts-linux-x86_64"
-    fake_bin.write_bytes(b"placeholder")
+    fake_bin.write_bytes(b"\x7fELF-real-enough")
     monkeypatch.setattr(gguf_backend, "_binary_path", lambda slug=None: fake_bin)
     monkeypatch.setattr(gguf_backend, "_load_checksum_manifest", lambda: {})
     monkeypatch.setattr(gguf_backend, "_is_macos_quarantined", lambda p: False)
@@ -149,7 +151,7 @@ def test_probe_load_timeout(monkeypatch, tmp_path):
     cls = gguf_backend._make_backend_class()
 
     fake_bin = tmp_path / "omnivoice-tts-linux-x86_64"
-    fake_bin.write_bytes(b"placeholder")
+    fake_bin.write_bytes(b"\x7fELF-real-enough")
     monkeypatch.setattr(gguf_backend, "_binary_path", lambda slug=None: fake_bin)
     monkeypatch.setattr(gguf_backend, "_load_checksum_manifest", lambda: {})
     monkeypatch.setattr(gguf_backend, "_is_macos_quarantined", lambda p: False)
@@ -217,9 +219,11 @@ def test_generate_returns_tensor_from_stub_wav(monkeypatch, tmp_path):
     )
 
     # Stub the binary path itself — we won't spawn anything.
-    monkeypatch.setattr(
-        gguf_backend, "_binary_path", lambda slug=None: tmp_path / "fake-omnivoice-tts",
-    )
+    # The #1172 pre-exec preflight reads the binary, so the stub must exist
+    # on disk with a real executable magic.
+    fake_tts = tmp_path / "fake-omnivoice-tts"
+    fake_tts.write_bytes(b"\x7fELF-real-enough")
+    monkeypatch.setattr(gguf_backend, "_binary_path", lambda slug=None: fake_tts)
 
     # Stub subprocess.run: extract the `-o` arg from argv, write a real
     # 3-second WAV to it, return success.
@@ -269,9 +273,11 @@ def test_generate_forwards_control_arguments(monkeypatch, tmp_path):
         lambda: (fake_base, fake_tok, {"base": "omnivoice-base-Q8_0.gguf",
                                        "tokenizer": "omnivoice-tokenizer-Q8_0.gguf"}),
     )
-    monkeypatch.setattr(
-        gguf_backend, "_binary_path", lambda slug=None: tmp_path / "fake-omnivoice-tts",
-    )
+    # The #1172 pre-exec preflight reads the binary, so the stub must exist
+    # on disk with a real executable magic.
+    fake_tts = tmp_path / "fake-omnivoice-tts"
+    fake_tts.write_bytes(b"\x7fELF-real-enough")
+    monkeypatch.setattr(gguf_backend, "_binary_path", lambda slug=None: fake_tts)
 
     captured: dict = {}
 
@@ -324,9 +330,11 @@ def test_generate_passes_ref_text_as_temporary_file(monkeypatch, tmp_path):
         lambda: (fake_base, fake_tok, {"base": fake_base.name,
                                        "tokenizer": fake_tok.name}),
     )
-    monkeypatch.setattr(
-        gguf_backend, "_binary_path", lambda slug=None: tmp_path / "fake-omnivoice-tts",
-    )
+    # The #1172 pre-exec preflight reads the binary, so the stub must exist
+    # on disk with a real executable magic.
+    fake_tts = tmp_path / "fake-omnivoice-tts"
+    fake_tts.write_bytes(b"\x7fELF-real-enough")
+    monkeypatch.setattr(gguf_backend, "_binary_path", lambda slug=None: fake_tts)
 
     captured: dict = {}
 
@@ -468,3 +476,159 @@ def test_no_shell_true_in_engine_code():
                 )
             prev_name = None
             prev_op = None
+
+
+# ── #1172: zero-byte placeholder / invalid binary preflight ────────────────
+
+
+def test_is_available_rejects_zero_byte_placeholder(monkeypatch, tmp_path):
+    """#1172 — a source checkout ships 0-byte placeholders in bin/ and no
+    checksums.sha256; is_available() used to bless them as (True, "ready")
+    and the request died at spawn with '[Errno 8] Exec format error'."""
+    from engines.omnivoice_gguf import backend as gguf_backend
+
+    cls = gguf_backend._make_backend_class()
+
+    placeholder = tmp_path / "omnivoice-tts-darwin-arm64"
+    placeholder.write_bytes(b"")
+    placeholder.chmod(0o755)  # mode of the shipped placeholder in the report
+    monkeypatch.setattr(gguf_backend, "_binary_path", lambda slug=None: placeholder)
+    monkeypatch.setattr(gguf_backend, "_load_checksum_manifest", lambda: {})
+    monkeypatch.setattr(gguf_backend, "_is_macos_quarantined", lambda p: False)
+
+    ok, reason = cls.is_available()
+    assert ok is False
+    # Actionable: names the build script and the placeholder cause.
+    assert "build-omnivoice-tts.sh" in reason
+    assert "placeholder" in reason.lower() or "empty" in reason.lower()
+
+
+def test_is_available_rejects_garbage_binary(monkeypatch, tmp_path):
+    """#1172 class — non-empty but not a real executable (truncated
+    download / HTML error page / text file) must also be rejected."""
+    from engines.omnivoice_gguf import backend as gguf_backend
+
+    cls = gguf_backend._make_backend_class()
+
+    fake_bin = tmp_path / "omnivoice-tts-linux-x86_64"
+    fake_bin.write_bytes(b"<html>503 Service Unavailable</html>")
+    monkeypatch.setattr(gguf_backend, "_binary_path", lambda slug=None: fake_bin)
+    monkeypatch.setattr(gguf_backend, "_load_checksum_manifest", lambda: {})
+    monkeypatch.setattr(gguf_backend, "_is_macos_quarantined", lambda p: False)
+
+    ok, reason = cls.is_available()
+    assert ok is False
+    assert "not a usable executable" in reason
+
+
+def test_is_available_does_not_chmod_placeholder(monkeypatch, tmp_path):
+    """The #437 exec-bit self-heal must never bless a placeholder: with no
+    manifest present, no SHA check confirmed the file, so chmod +x on an
+    invalid binary just converts a clean skip into an exec-time crash."""
+    from engines.omnivoice_gguf import backend as gguf_backend
+
+    cls = gguf_backend._make_backend_class()
+
+    placeholder = tmp_path / "omnivoice-tts-linux-x86_64"
+    placeholder.write_bytes(b"")
+    placeholder.chmod(0o644)
+    monkeypatch.setattr(gguf_backend, "_binary_path", lambda slug=None: placeholder)
+    monkeypatch.setattr(gguf_backend, "_load_checksum_manifest", lambda: {})
+    monkeypatch.setattr(gguf_backend, "_is_macos_quarantined", lambda p: False)
+
+    ok, _reason = cls.is_available()
+    assert ok is False
+    assert not os.access(placeholder, os.X_OK), (
+        "is_available() chmod +x'd an invalid placeholder binary"
+    )
+
+
+def test_generate_zero_byte_binary_raises_typed_actionable_error(
+    monkeypatch, tmp_path
+):
+    """#1172 end-to-end at the engine layer: generate() against a 0-byte
+    binary raises InvalidBinaryError (typed, actionable) BEFORE exec —
+    never the raw OSError '[Errno 8] Exec format error'."""
+    from engines.omnivoice_gguf import backend as gguf_backend
+    from services.binary_preflight import InvalidBinaryError
+
+    cls = gguf_backend._make_backend_class()
+    backend = cls()
+
+    fake_base = tmp_path / "omnivoice-base-Q8_0.gguf"
+    fake_tok = tmp_path / "omnivoice-tokenizer-Q8_0.gguf"
+    fake_base.write_bytes(b"x")
+    fake_tok.write_bytes(b"x")
+    monkeypatch.setattr(
+        backend,
+        "_resolve_quant_paths",
+        lambda: (fake_base, fake_tok, {"base": fake_base.name,
+                                       "tokenizer": fake_tok.name}),
+    )
+    placeholder = tmp_path / "omnivoice-tts-darwin-arm64"
+    placeholder.write_bytes(b"")
+    placeholder.chmod(0o755)
+    monkeypatch.setattr(gguf_backend, "_binary_path", lambda slug=None: placeholder)
+
+    def _explode(*a, **kw):
+        raise AssertionError("subprocess.run must not be called for a placeholder")
+
+    monkeypatch.setattr(subprocess, "run", _explode)
+
+    with pytest.raises(InvalidBinaryError) as exc_info:
+        backend.generate("hello")
+    msg = str(exc_info.value)
+    assert "Exec format error" not in msg
+    assert "build-omnivoice-tts.sh" in msg
+
+
+def test_generate_enoexec_at_spawn_becomes_typed_error(monkeypatch, tmp_path):
+    """#1172 TOCTOU leg: the file passes preflight but the OS still refuses
+    to exec it (wrong arch) — the OSError is converted to the same typed,
+    actionable InvalidBinaryError."""
+    import errno
+
+    from engines.omnivoice_gguf import backend as gguf_backend
+    from services.binary_preflight import InvalidBinaryError
+
+    cls = gguf_backend._make_backend_class()
+    backend = cls()
+
+    fake_base = tmp_path / "omnivoice-base-Q8_0.gguf"
+    fake_tok = tmp_path / "omnivoice-tokenizer-Q8_0.gguf"
+    fake_base.write_bytes(b"x")
+    fake_tok.write_bytes(b"x")
+    monkeypatch.setattr(
+        backend,
+        "_resolve_quant_paths",
+        lambda: (fake_base, fake_tok, {"base": fake_base.name,
+                                       "tokenizer": fake_tok.name}),
+    )
+    fake_tts = tmp_path / "omnivoice-tts-linux-x86_64"
+    fake_tts.write_bytes(b"\x7fELF-wrong-arch")
+    monkeypatch.setattr(gguf_backend, "_binary_path", lambda slug=None: fake_tts)
+
+    def _enoexec(argv, **kw):
+        raise OSError(errno.ENOEXEC, "Exec format error", argv[0])
+
+    monkeypatch.setattr(subprocess, "run", _enoexec)
+
+    with pytest.raises(InvalidBinaryError) as exc_info:
+        backend.generate("hello")
+    assert "build-omnivoice-tts.sh" in str(exc_info.value)
+
+
+def test_select_default_falls_back_on_zero_byte_placeholder(monkeypatch, tmp_path):
+    """#1172 integration — with the real is_available() logic and a 0-byte
+    placeholder, the default-engine resolver must pick the in-process
+    fallback (and never raise)."""
+    from engines.omnivoice_gguf import backend as gguf_backend
+
+    placeholder = tmp_path / "omnivoice-tts-darwin-arm64"
+    placeholder.write_bytes(b"")
+    placeholder.chmod(0o755)
+    monkeypatch.setattr(gguf_backend, "_binary_path", lambda slug=None: placeholder)
+    monkeypatch.setattr(gguf_backend, "_load_checksum_manifest", lambda: {})
+    monkeypatch.setattr(gguf_backend, "_is_macos_quarantined", lambda p: False)
+
+    assert gguf_backend.select_default_engine() == "omnivoice"

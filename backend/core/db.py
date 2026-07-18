@@ -412,6 +412,16 @@ def _run_alembic_upgrade() -> None:
             return
         cfg = Config(ini)
         cfg.set_main_option("sqlalchemy.url", f"sqlite:///{DB_PATH}")
+        # In-app run: alembic.ini's logging section must not touch the live
+        # app's logging. env.py's fileConfig() — even with
+        # disable_existing_loggers=False — replaces the root logger's handlers
+        # and applies [logger_root] level=WARN, so every boot that actually
+        # migrated (first run, upgrades) lost the omnivoice.log file handler
+        # and all INFO logging for the rest of the process — including the
+        # graceful-shutdown trace, making a SIGTERM'd clean quit look like a
+        # silent crash (#1174). env.py checks this attribute; the standalone
+        # `alembic` CLI (which doesn't set it) keeps its logging config.
+        cfg.attributes["configure_logger"] = False
     except Exception as exc:  # noqa: BLE001 — alembic not importable / bad ini
         logger.warning("alembic upgrade head skipped: %s", exc)
         _reconcile_after_alembic_skip()

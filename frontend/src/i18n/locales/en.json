@@ -2422,7 +2422,8 @@
     "timeout": "Generation timed out — the model may still be downloading. Check Settings → Logs, then try again.",
     "error_prefix": "Error: {{message}}",
     "ignored_unsupported": "Ignored unsupported instruct: {{items}}",
-    "ignored_duplicate": "Ignored (category already set): {{items}}"
+    "ignored_duplicate": "Ignored (category already set): {{items}}",
+    "ref_audio_unusable": "No speech could be heard in the reference audio — the clip is silent or nearly silent, so there is no voice to clone. Record again closer to the microphone (check that the right input device is selected and its level moves while you speak), or choose a different clip."
   },
   "tts": {
     "routingFallback": "Running on CPU — this engine has no GPU path on your machine, so generation will be slower. {{reason}}",

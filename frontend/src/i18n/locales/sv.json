@@ -1796,7 +1796,8 @@
     "timeout": "Tidsgränsen för generationen gick ut – modellen kanske fortfarande laddas ned. Kontrollera Inställningar → Loggar och försök sedan igen.",
     "error_prefix": "Fel: {{message}}",
     "ignored_unsupported": "Ignorerad instruktion som inte stöds: {{items}}",
-    "ignored_duplicate": "Ignorerad (kategori redan inställd): {{items}}"
+    "ignored_duplicate": "Ignorerad (kategori redan inställd): {{items}}",
+    "ref_audio_unusable": "Inget tal kunde höras i referensljudet — klippet är tyst eller nästan tyst, så det finns ingen röst att klona. Spela in igen närmare mikrofonen (kontrollera att rätt ingångsenhet är vald och att nivån rör sig) eller välj ett annat klipp."
   },
   "sharing": {
     "title": "Delning och fjärråtkomst",

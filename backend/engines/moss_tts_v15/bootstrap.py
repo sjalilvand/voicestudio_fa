@@ -48,6 +48,16 @@ MOSS_TTS_V15_SIDECAR_SCRIPT: Path = Path(__file__).parent / "main.py"
 #: is installed into this venv via ``uv pip install -e``.
 _ENGINES_VENV_DIR: Path = Path(__file__).parent / ".venv"
 
+
+def _uv_env() -> "dict[str, str] | None":
+    """uv cache co-location for installs on a non-system volume (D:-drive /
+    portable installs): without it uv stages every wheel on the system drive
+    and cross-volume COPIES it into the venv. Canonical logic lives in
+    services.sidecar_install.uv_subprocess_env (lazy import, like _locate_uv).
+    """
+    from services.sidecar_install import uv_subprocess_env
+    return uv_subprocess_env(_ENGINES_VENV_DIR.parent.parent)
+
 #: Env var pointing at the user's MOSS-TTS clone root.
 _CLONE_DIR_ENV: str = "OMNIVOICE_MOSS_TTS_V15_DIR"
 
@@ -225,6 +235,7 @@ def _bootstrap_engines_venv(clone_dir: Path) -> Path:
             check=True,
             timeout=_UV_VENV_TIMEOUT_S,
             capture_output=True,
+            env=_uv_env(),
         )
     except subprocess.CalledProcessError as exc:
         raise RuntimeError(
@@ -243,6 +254,7 @@ def _bootstrap_engines_venv(clone_dir: Path) -> Path:
             check=True,
             timeout=_UV_PIP_INSTALL_TIMEOUT_S,
             capture_output=True,
+            env=_uv_env(),
         )
     except subprocess.CalledProcessError as exc:
         raise RuntimeError(

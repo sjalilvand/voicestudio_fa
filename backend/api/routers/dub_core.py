@@ -493,7 +493,7 @@ async def dub_transcribe_stream(
                     active_backend_id,
                     asr_model_missing_detail,
                     asr_model_missing_error,
-                    get_active_asr_backend,
+                    load_active_asr_backend,
                 )
                 # TTS-only install: no ASR model on disk. Bail BEFORE any
                 # backend is constructed/loaded — the whisper backends would
@@ -520,19 +520,27 @@ async def dub_transcribe_stream(
                         # The PyTorch-Whisper backend lazily builds its own pipeline
                         # when no preloaded `_asr_pipe` is present (issue #255), so it
                         # no longer needs OMNIVOICE_PRELOAD_TTS_ASR=1.
-                        _asr_backend = get_active_asr_backend(asr_pipe=getattr(_model, "_asr_pipe", None))
-                        # Eagerly load the model HERE so a real load failure (e.g.
-                        # WhisperX: missing weights, CTranslate2/cuDNN mismatch, the
-                        # torch-2.6 weights-only VAD regression) surfaces once, with
-                        # its actual cause, as a clean preflight `error` event —
-                        # instead of being buried in N cryptic per-chunk failures
-                        # and retried on every chunk (#578). Run in a thread so the
-                        # (blocking) load doesn't stall the event loop.
-                        _ensure_loaded = getattr(_asr_backend, "ensure_loaded", None)
-                        if callable(_ensure_loaded):
-                            await asyncio.get_running_loop().run_in_executor(
-                                _gpu_pool, _ensure_loaded
-                            )
+                        #
+                        # Select + eagerly load in ONE call so a real load failure
+                        # (e.g. WhisperX: missing weights, CTranslate2/cuDNN
+                        # mismatch, the torch-2.6 weights-only VAD regression)
+                        # surfaces once, with its actual cause, as a clean preflight
+                        # `error` event — instead of being buried in N cryptic
+                        # per-chunk failures and retried on every chunk (#578) —
+                        # and so a backend whose deep import chain is rotted (e.g.
+                        # `No module named 'lightning_fabric'` from a partial
+                        # install, #1185) is marked unavailable and skipped in
+                        # favor of the next engine instead of failing ASR init
+                        # wholesale. Run in a thread so the (blocking) load
+                        # doesn't stall the event loop.
+                        import functools
+                        _asr_backend = await asyncio.get_running_loop().run_in_executor(
+                            _gpu_pool,
+                            functools.partial(
+                                load_active_asr_backend,
+                                asr_pipe=getattr(_model, "_asr_pipe", None),
+                            ),
+                        )
                     except Exception as e:
                         logger.exception("transcribe preflight: ASR load failed (job=%s)", job_id)
                         from core.failure import build_failure

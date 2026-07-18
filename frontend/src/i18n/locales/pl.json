@@ -1796,7 +1796,8 @@
     "timeout": "Upłynął limit czasu generacji — model może nadal być pobierany. Sprawdź Ustawienia → Dzienniki i spróbuj ponownie.",
     "error_prefix": "Błąd: {{message}}",
     "ignored_unsupported": "Ignorowana nieobsługiwana instrukcja: {{items}}",
-    "ignored_duplicate": "Ignorowane (kategoria już ustawiona): {{items}}"
+    "ignored_duplicate": "Ignorowane (kategoria już ustawiona): {{items}}",
+    "ref_audio_unusable": "W nagraniu referencyjnym nie wykryto mowy — klip jest cichy lub prawie cichy, więc nie ma głosu do sklonowania. Nagraj ponownie bliżej mikrofonu (sprawdź, czy wybrano właściwe urządzenie wejściowe i czy poziom się porusza) albo wybierz inny klip."
   },
   "sharing": {
     "title": "Udostępnianie i dostęp zdalny",
