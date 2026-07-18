@@ -281,4 +281,60 @@ describe('CaptureWidget', () => {
       expect(Math.max(...heights)).toBeGreaterThan(12); // above the silence floor
     });
   });
+
+  // ── The pill must never strand ─────────────────────────────────────────
+  // Errors deliberately do not auto-dismiss, so a failed paste keeps the
+  // transcript on screen for the user to copy. But the mic / model-missing /
+  // server / connection paths have NO transcript to rescue, and those left the
+  // widget parked on top of everything until the app was restarted — reported
+  // as "the dictation bubble is permanently sticking when it's not used".
+  // The distinction is the whole fix, so both halves are pinned here.
+
+  it('an error with nothing to rescue dismisses itself', async () => {
+    // Start the session on REAL timers — startSession() awaits, and fake
+    // timers would stall those awaits forever.
+    const { container } = render(withI18n(<CaptureWidget />));
+    const ws = await startSession();
+
+    vi.useFakeTimers();
+    try {
+      // A server-side failure carrying no transcript.
+      act(() => ws.msg({ type: 'error', kind: 'server', message: 'backend went away' }));
+      expect(container.querySelector('.capture-pill')).not.toBeNull();
+
+      // Long enough to read, then gone — without the user touching anything.
+      await act(async () => {
+        vi.advanceTimersByTime(9000);
+      });
+      expect(container.querySelector('.capture-pill')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("an error holding a transcript stays up — that text is the user's to copy", async () => {
+    mocks.holder.paste = async () => {
+      throw 'a11y: process is not trusted';
+    };
+    const { container } = render(withI18n(<CaptureWidget />));
+    const ws = await startSession();
+
+    // Drive to the error state on real timers so the paste rejection settles.
+    act(() => ws.msg({ type: 'final', text: 'hello world' }));
+    act(() => ws.msg({ type: 'final', text: 'hello world' }));
+    await screen.findByText(/Accessibility access needed/);
+
+    vi.useFakeTimers();
+    try {
+      // Well past the no-transcript dismissal window.
+      await act(async () => {
+        vi.advanceTimersByTime(30000);
+      });
+      // Still there: auto-dismissing would silently discard the only copy of
+      // what the user just said.
+      expect(container.querySelector('.capture-pill')).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
