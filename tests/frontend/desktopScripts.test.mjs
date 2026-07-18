@@ -17,6 +17,7 @@ import {
   STRIPPED_ENV_VARS,
   UPDATER_ARTIFACTS_OFF,
   hiddenFrom,
+  isDevAppProcess,
   isAppScoped,
   macosFreshTraces,
   sanitizedEnv,
@@ -160,4 +161,33 @@ test('STRIPPED_PATH_ENTRIES are exactly the intended dev prefixes', () => {
     '/opt/homebrew/sbin',
     '/usr/local/bin',
   ]);
+});
+
+// ── Dev-launcher stale-instance guard ──────────────────────────────────────
+// `bun desktop` clears a leftover dev app before starting: two instances fight
+// over the dev server, and the loser's Vite exits while its window stays open —
+// a BLANK app with nothing to explain it (reproduced deterministically). The
+// cleanup kills by process name, so the safety boundary is that it matches the
+// cargo dev binary ONLY. Killing a user's installed app would be far worse than
+// the bug being fixed.
+
+test('stale-instance cleanup matches the dev binary', () => {
+  assert.equal(isDevAppProcess('omnivoice-studio'), true);
+  assert.equal(isDevAppProcess('omnivoice-studio.exe'), true);
+  assert.equal(isDevAppProcess('omnivoice-studio.EXE'), true);
+});
+
+test('stale-instance cleanup NEVER matches the installed release app', () => {
+  // The release app is "OmniVoice Studio" — different spacing and case.
+  assert.equal(isDevAppProcess('OmniVoice Studio'), false);
+  assert.equal(isDevAppProcess('OmniVoice Studio.exe'), false);
+  assert.equal(isDevAppProcess('OmniVoice-Studio.exe'), false);
+});
+
+test('stale-instance cleanup ignores unrelated or empty process names', () => {
+  for (const name of ['', '   ', 'node', 'chrome.exe', 'omnivoice', 'my-omnivoice-studio']) {
+    assert.equal(isDevAppProcess(name), false, `should not match ${name}`);
+  }
+  assert.equal(isDevAppProcess(undefined), false);
+  assert.equal(isDevAppProcess(null), false);
 });

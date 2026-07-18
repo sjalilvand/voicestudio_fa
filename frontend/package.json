@@ -22,6 +22,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "e2e": "playwright test",
+    "test:prod-bundle": "playwright test --config=playwright.prod.config.ts",
     "test:visual": "playwright test --config=playwright.visual.config.ts",
     "test:visual:update": "playwright test --config=playwright.visual.config.ts --update-snapshots"
   },

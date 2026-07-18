@@ -17,6 +17,7 @@ pub mod crash;
 pub mod reset;
 pub mod uninstall;
 pub mod updater_channel;
+pub mod blank_guard;
 
 use std::process::Child;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -427,8 +428,14 @@ pub fn run() {
             uninstall::uninstall_purge,
             reset::reset_scan,
             reset::reset_purge,
+            blank_guard::report_render_state,
         ])
         .setup(move |app| {
+            // Blank-window guard: watch the main window and, if nothing ever
+            // renders, reload and finally paint a built-in explanation rather
+            // than leaving the user with a dark rectangle (#1178 class).
+            blank_guard::arm(app.handle());
+
             app.handle().plugin(tauri_plugin_dialog::init())?;
             app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
             app.handle().plugin(tauri_plugin_process::init())?;
