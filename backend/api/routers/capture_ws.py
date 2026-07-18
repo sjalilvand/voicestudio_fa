@@ -399,6 +399,21 @@ SHERPA_OFFLINE_SILENCE_S = float(os.environ.get("OMNIVOICE_SHERPA_OFFLINE_SILENC
 SHERPA_OFFLINE_RMS_FLOOR = float(os.environ.get("OMNIVOICE_SHERPA_OFFLINE_RMS", "0.01"))
 
 
+def is_model_silent(text: str, heard_speech: bool, pcm_bytes: int) -> bool:
+    """True when the dictation model produced NO text despite real speech.
+
+    Distinguishes "the user said nothing" (fine — stay quiet) from "the model
+    is broken" (fall back + warn). A sherpa model can load cleanly and still
+    decode nothing: the NeMo-TDT path does exactly this on some builds, where
+    parakeet-tdt v2/v3 return an empty token list for clear speech while
+    whisper/zipformer transcribe the same bytes. Without this, dictation just
+    silently produces nothing and looks dead.
+    """
+    return bool(not (text or "").strip()
+                and heard_speech
+                and pcm_bytes > MIN_FINAL_BUFFER_BYTES)
+
+
 def _pcm16_to_f32(pcm: bytes):
     """int16 little-endian mono PCM bytes → float32 numpy in [-1, 1]."""
     import numpy as np
@@ -651,6 +666,14 @@ async def _run_sherpa_offline(websocket: WebSocket, spec):
     buf = bytearray()             # live (uncommitted) PCM only
     committed: list[str] = []     # polished utterances already flushed
     last_partial = ""
+    # Silent-model guard (#1175 follow-up): a sherpa model can load cleanly and
+    # still decode NOTHING — the NeMo-TDT path does exactly this on some builds
+    # (parakeet-tdt v2/v3 return an empty token list for clear speech, while
+    # whisper/zipformer transcribe the same bytes). Keep the whole session's
+    # audio and whether any of it was speech-level, so the finaliser can tell
+    # "user said nothing" (fine) from "model produced nothing" (broken).
+    session_pcm = bytearray()
+    heard_speech = False
     running = True
     client_disconnected = False
     last_audio = time.monotonic()
@@ -681,7 +704,7 @@ async def _run_sherpa_offline(websocket: WebSocket, spec):
         return backend._decode_offline(samples, pcm_sr)
 
     async def receive():
-        nonlocal running, client_disconnected, last_audio
+        nonlocal running, client_disconnected, last_audio, heard_speech
         try:
             while running:
                 kind, pcm = await _recv_pcm_frame(websocket, aec)
@@ -691,6 +714,9 @@ async def _run_sherpa_offline(websocket: WebSocket, spec):
                 if kind == "skip":
                     continue
                 buf.extend(pcm)
+                session_pcm.extend(pcm)
+                if not heard_speech and _rms(pcm) >= SHERPA_OFFLINE_RMS_FLOOR:
+                    heard_speech = True
                 last_audio = time.monotonic()
         except WebSocketDisconnect:
             client_disconnected = True
@@ -767,9 +793,43 @@ async def _run_sherpa_offline(websocket: WebSocket, spec):
     # Pieces are already polished; the join is too (polish is idempotent).
     full = " ".join(committed).strip()
     segments = [{"start": 0.0, "end": None, "text": t} for t in committed]
+
+    # Silent-model fallback: we heard speech-level audio but the selected
+    # sherpa model returned nothing at all. That is a broken engine, not a
+    # quiet user — hand the session to the capture ASR backend so the user
+    # still gets their words, and say which model let them down. Bounded to
+    # this session; the pref is left alone so the user stays in control.
+    model_silent = is_model_silent(full, heard_speech, len(session_pcm))
+    if model_silent:
+        logger.warning(
+            "dictation model %s decoded NOTHING from %.1fs of speech-level audio "
+            "— falling back to the capture ASR engine for this session",
+            spec.id, len(session_pcm) / float(max(1, pcm_sr) * 2),
+        )
+        try:
+            result = await _transcribe_buffer_full([bytes(session_pcm)], pcm_sr=pcm_sr)
+            fb_text = polish_text((result or {}).get("text", "") or "")
+            if fb_text:
+                full = fb_text
+                segments = (result or {}).get("segments") or [
+                    {"start": 0.0, "end": None, "text": fb_text}
+                ]
+        except Exception:
+            logger.exception("dictation silent-model fallback failed")
+
     if not client_disconnected:
         payload = {"type": "final", "text": full, "segments": segments,
                    "language": "auto", "engine": backend.id}
+        if model_silent:
+            # The client surfaces this so a silently-broken model can't look
+            # like "dictation is just broken" ever again.
+            payload["engine"] = "capture-asr-fallback" if full else backend.id
+            payload["model_silent"] = spec.id
+            payload["warning"] = (
+                f"The selected dictation model ({spec.id}) produced no text from your "
+                "speech. Switched to the fallback engine for this session — pick a "
+                "different model in Settings → Dictation."
+            )
         if full:
             # Hard-bounded refinement (~4s) — never delays the `final`.
             try:
@@ -919,4 +979,5 @@ def _chunks_to_wav(chunks: list[bytes]) -> str | None:
         # WhisperX) can decode WebM/Opus containers natively.
         logger.debug("Falling back to raw WebM input for ASR")
         return tmp_in.name
+
 

@@ -80,6 +80,11 @@ const LS_LIVE_TYPING = 'omni_capture_live_typing';
 // How many waveform bars the pill draws while recording.
 const WAVE_BARS = 12;
 
+// How long an error pill that has NO transcript to rescue stays up before it
+// dismisses itself. Long enough to read the message, short enough that a
+// failed session can't leave the widget parked on screen indefinitely.
+const ERROR_AUTO_DISMISS_MS = 8000;
+
 // A dictation model id is a sherpa-onnx live model when it carries the
 // `sherpa-` prefix the backend assigns (see services/sherpa_dictation.py). Only
 // then do we open the low-latency raw-PCM streaming path; anything else (or no
@@ -582,6 +587,19 @@ export default function CaptureWidget({ onDismiss }) {
     window.addEventListener('keydown', onEsc);
     return () => window.removeEventListener('keydown', onEsc);
   }, [state, cancelSession, dismiss]);
+
+  // Safety net: an error pill with nothing to rescue must never strand on the
+  // user's screen. Delivery failures deliberately stay up — they hold the
+  // transcript the user may still need to copy — but a mic / model-missing /
+  // server / connection failure has no text to preserve, and those paths used
+  // to leave the widget visible forever (reported as "the dictation bubble is
+  // permanently sticking when it's not used"). One effect covers every error
+  // path, including any added later, so no single call site can reintroduce it.
+  useEffect(() => {
+    if (state !== 'error' || transcript) return;
+    const t = setTimeout(() => dismiss(), ERROR_AUTO_DISMISS_MS);
+    return () => clearTimeout(t);
+  }, [state, transcript, dismiss]);
 
   // Apply transcription result → deliver (paste/copy) → show the TRUE outcome
   // → auto-dismiss on success. A failed delivery is an error state (with the
