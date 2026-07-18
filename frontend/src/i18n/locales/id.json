@@ -1796,7 +1796,8 @@
     "timeout": "Waktu pembuatan habis — model mungkin masih diunduh. Periksa Pengaturan → Log, lalu coba lagi.",
     "error_prefix": "Kesalahan: {{message}}",
     "ignored_unsupported": "Mengabaikan instruksi yang tidak didukung: {{items}}",
-    "ignored_duplicate": "Diabaikan (kategori sudah ditetapkan): {{items}}"
+    "ignored_duplicate": "Diabaikan (kategori sudah ditetapkan): {{items}}",
+    "ref_audio_unusable": "Tidak ada suara yang terdengar di audio referensi — klipnya senyap atau hampir senyap, jadi tidak ada suara untuk dikloning. Rekam ulang lebih dekat ke mikrofon (pastikan perangkat input yang benar dipilih dan meterannya bergerak), atau pilih klip lain."
   },
   "sharing": {
     "title": "Berbagi & Akses Jarak Jauh",

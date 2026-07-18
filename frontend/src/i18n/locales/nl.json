@@ -1796,7 +1796,8 @@
     "timeout": "Er is een time-out voor het genereren opgetreden. Mogelijk wordt het model nog gedownload. Controleer Instellingen → Logboeken en probeer het opnieuw.",
     "error_prefix": "Fout: {{message}}",
     "ignored_unsupported": "Genegeerde niet-ondersteunde instructie: {{items}}",
-    "ignored_duplicate": "Genegeerd (categorie al ingesteld): {{items}}"
+    "ignored_duplicate": "Genegeerd (categorie al ingesteld): {{items}}",
+    "ref_audio_unusable": "Er is geen spraak gehoord in de referentie-audio — de clip is stil of bijna stil, dus er is geen stem om te klonen. Neem opnieuw op dichter bij de microfoon (controleer of het juiste invoerapparaat is geselecteerd en het niveau beweegt) of kies een andere clip."
   },
   "sharing": {
     "title": "Delen en externe toegang",

@@ -2261,6 +2261,35 @@ _INSTALL_HINTS: dict[str, str] = {
 # Settings refreshes (parity with tts_backend._LAST_ERRORS).
 _LAST_ERRORS: dict[str, str] = {}
 
+# Backends whose *deep* import chain proved broken at load time (#1185).
+# ``is_available()`` is deliberately shallow — ``import whisperx`` succeeds
+# even when a transitive dep of ``whisperx.load_model()`` is missing (the
+# reported case: whisperx → pyannote.audio → pytorch_lightning →
+# ``lightning_fabric``, which ships *inside* the pytorch_lightning wheel and
+# only imports at load time). A module missing that deep is env rot — a
+# partial/broken install (interrupted sync, antivirus quarantine): every
+# uv.lock we ever shipped resolves it — so it can't be repaired from inside
+# the process. Record it here so probes report the backend unavailable (with
+# the repair hint) and selection falls through to the next engine instead of
+# failing ASR wholesale. Per-process by design: repairing the env requires a
+# reinstall / ``uv sync`` and an app restart anyway.
+_DEEP_IMPORT_BROKEN: dict[str, str] = {}
+
+
+def _deep_import_reason(cls: type["ASRBackend"], exc: ImportError) -> str:
+    """User-facing reason for a load-time import failure: names the missing
+    module and the repair command (the ``install_hint`` contract of #1185)."""
+    missing = getattr(exc, "name", None)
+    what = (
+        f"its Python dependency {missing!r} is missing"
+        if missing else f"a Python dependency is broken ({exc})"
+    )
+    return (
+        f"{cls.display_name} failed to load: {what}. The app environment "
+        "looks partially installed — reinstall OmniVoice Studio (or run "
+        "`uv sync` on a source checkout) to repair it."
+    )
+
 
 def list_backends() -> list[dict]:
     """Enumerate every ASR backend with the **same 11-key shape as TTS** so the
@@ -2278,15 +2307,22 @@ def list_backends() -> list[dict]:
 
     out: list[dict] = []
     for bid, cls in _REGISTRY.items():
-        try:
-            ok, msg = cls.is_available()
-        except Exception as exc:
-            ok = False
-            msg = f"{type(exc).__name__}: {exc}"
-            logger.warning(
-                "asr list_backends: %s.is_available() raised — degrading "
-                "gracefully so the picker still renders: %s", bid, msg,
-            )
+        broken = _DEEP_IMPORT_BROKEN.get(bid)
+        if broken is not None:
+            # Loading this backend already proved a missing transitive module
+            # (#1185) — the shallow probe below would wrongly report "ready",
+            # so surface the recorded truth (which carries the repair hint).
+            ok, msg = False, broken
+        else:
+            try:
+                ok, msg = cls.is_available()
+            except Exception as exc:
+                ok = False
+                msg = f"{type(exc).__name__}: {exc}"
+                logger.warning(
+                    "asr list_backends: %s.is_available() raised — degrading "
+                    "gracefully so the picker still renders: %s", bid, msg,
+                )
         if ok:
             _LAST_ERRORS.pop(bid, None)
         else:
@@ -2314,6 +2350,11 @@ def _probe_available(cls) -> bool:
     lib that refuses to load — CTranslate2's exec-stack rejection, #692) means the
     engine is unusable on this host, so treat it as unavailable and fall through
     to the next candidate rather than crash engine selection."""
+    if getattr(cls, "id", None) in _DEEP_IMPORT_BROKEN:
+        # A previous load proved this backend's deep import chain is broken
+        # (#1185) — the shallow probe would succeed, so consult the record
+        # and let auto-detect fall through to the next engine.
+        return False
     try:
         ok, _ = cls.is_available()
         return bool(ok)
@@ -2411,6 +2452,62 @@ def get_active_asr_backend(*, asr_pipe=None) -> ASRBackend:
             _ISOLATED_INSTANCES[bid] = inst
         return inst
     return cls()
+
+
+def _asr_backend_pinned() -> bool:
+    """True when the user explicitly pinned an ASR engine (env var or pref) —
+    a pinned engine is honored, never silently swapped (see _auto_detect)."""
+    if os.environ.get("OMNIVOICE_ASR_BACKEND"):
+        return True
+    from core import prefs
+    return bool(prefs.get("asr_backend"))
+
+
+def load_active_asr_backend(*, asr_pipe=None) -> ASRBackend:
+    """:func:`get_active_asr_backend` + eager ``ensure_loaded()``, degrading
+    past backends whose deep import chain is broken (#1185).
+
+    ``is_available()`` is a shallow probe (``import whisperx`` succeeds even
+    with broken transitive deps, because pyannote/pytorch_lightning only
+    import inside ``load_model``), so auto-detect can pick a backend that then
+    dies at load with ``No module named 'lightning_fabric'`` — which used to
+    fail ASR init wholesale even though the next engine in line works fine.
+    Instead: record the backend as broken (Settings → Engines shows why),
+    re-select, and load the next candidate — mirroring how
+    :func:`_probe_available` already swallows broken natives at probe time.
+
+    An *explicitly pinned* backend (``OMNIVOICE_ASR_BACKEND`` / the
+    ``asr_backend`` pref) is never silently swapped: the enriched error —
+    naming the missing module and the repair command — is raised instead.
+    """
+    from core.scrub import scrub_text
+    tried: set[str] = set()
+    while True:
+        backend = get_active_asr_backend(asr_pipe=asr_pipe)
+        bid = getattr(backend, "id", "?")
+        try:
+            backend.ensure_loaded()
+            return backend
+        except ImportError as e:
+            # ModuleNotFoundError and its ImportError parent ("cannot import
+            # name X" version skew) are the same env-rot class: the backend
+            # cannot work in this process, but siblings with independent
+            # import chains can. Record it either way so Settings → Engines
+            # reports the truth (unavailable + why + how to repair).
+            reason = _deep_import_reason(type(backend), e)
+            _DEEP_IMPORT_BROKEN[bid] = scrub_text(reason)
+            _LAST_ERRORS[bid] = _DEEP_IMPORT_BROKEN[bid]
+            if _asr_backend_pinned() or bid in tried:
+                # Pinned engine (never silently swapped), or auto-detect has
+                # no fresh candidate left (its last resort repeats) —
+                # surface the actionable cause instead of looping.
+                raise RuntimeError(reason) from e
+            tried.add(bid)
+            logger.warning(
+                "ASR backend %r failed to load with a broken import chain "
+                "(%s) — marking it unavailable and falling through to the "
+                "next engine (#1185)", bid, e,
+            )
 
 
 # ── Reference-transcript cache (#1032) ──────────────────────────────────────

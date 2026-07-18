@@ -119,6 +119,21 @@ def _binary_path(slug: Optional[str] = None) -> Path:
     return _REPO_ROOT / "bin" / name
 
 
+def _binary_repair_hint() -> str:
+    """One actionable sentence for a broken/placeholder GGUF binary (#1172).
+
+    Appended to every InvalidBinaryError this engine raises so the user
+    always learns what to do, whether the failure surfaced from preflight
+    or from the OS at exec time.
+    """
+    return (
+        f"the bundled GGUF runtime is not usable on this machine — build it "
+        f"with `scripts/build-omnivoice-tts.sh --platform {_platform_slug()}`, "
+        f"reinstall OmniVoice Studio, or switch to the default in-process "
+        f"OmniVoice engine (Settings → Engines)"
+    )
+
+
 def _load_quant_map() -> dict:
     """Read and validate ``quant_map.json``.
 
@@ -332,6 +347,26 @@ def _make_backend_class():
                         f"this build does not bundle the runtime for "
                         f"{_platform_slug()}. Fall back to OmniVoice in-process."
                     )
+                # #1172: a source checkout ships zero-byte placeholders in
+                # bin/ (real binaries come from CI / the installer), and the
+                # checksum manifest is absent there — so without this check a
+                # placeholder passed as "ready", got chmod +x'd by the #437
+                # self-heal below, and died at spawn time with a bare
+                # "[Errno 8] Exec format error" 500. Validate BEFORE the
+                # checksum/quarantine/exec-bit steps so we never bless (or
+                # chmod) a file that isn't a real executable.
+                from services.binary_preflight import looks_like_executable
+                bin_ok, bin_why = looks_like_executable(bin_path)
+                if not bin_ok:
+                    return False, (
+                        f"GGUF binary {bin_path.name} is not a usable "
+                        f"executable: {bin_why}. Source checkouts ship "
+                        f"zero-byte placeholders until a real binary is "
+                        f"built — run `scripts/build-omnivoice-tts.sh "
+                        f"--platform {_platform_slug()}`, reinstall "
+                        f"OmniVoice Studio, or use the default in-process "
+                        f"OmniVoice engine (Settings → Engines)."
+                    )
                 # Manifest-based SHA-256 verification (T-04-01).
                 manifest = _load_checksum_manifest()
                 expected = manifest.get(bin_path.name)
@@ -488,6 +523,16 @@ def _make_backend_class():
                 raise
             except subprocess.TimeoutExpired:
                 raise
+            except OSError as exc:
+                # ENOEXEC / EACCES etc. — the file exists but the OS refused
+                # to exec it (#1172 class: placeholder or wrong-arch binary
+                # that slipped past preflight). Typed + actionable, never a
+                # bare errno.
+                from services.binary_preflight import InvalidBinaryError
+                raise InvalidBinaryError(
+                    bin_path, f"the OS refused to execute it ({exc})",
+                    _binary_repair_hint(),
+                ) from exc
             # `--help` typically exits 0 or 1 (some CLIs use 1 to signal
             # "help shown, no work done"). We accept both as long as the
             # binary actually emitted something.
@@ -663,6 +708,16 @@ def _make_backend_class():
             Never uses ``shell=True``. Stderr is captured and HF-token-redacted
             before being logged at warning level.
             """
+            # #1172 class: validate the binary immediately before exec (the
+            # engine may have been selected explicitly, bypassing
+            # is_available; or the file changed since the last probe). A
+            # placeholder/corrupt binary raises the typed, actionable
+            # InvalidBinaryError instead of "[Errno 8] Exec format error".
+            from services.binary_preflight import (
+                InvalidBinaryError,
+                validate_executable,
+            )
+            validate_executable(Path(argv[0]), hint=_binary_repair_hint())
             try:
                 proc = subprocess.run(
                     argv,
@@ -676,6 +731,11 @@ def _make_backend_class():
                 raise RuntimeError(
                     f"GGUF subprocess timed out after "
                     f"{self._GENERATE_TIMEOUT_S:.0f}s (T-04-06)"
+                ) from exc
+            except OSError as exc:
+                raise InvalidBinaryError(
+                    argv[0], f"the OS refused to execute it ({exc})",
+                    _binary_repair_hint(),
                 ) from exc
 
             if proc.returncode != 0:

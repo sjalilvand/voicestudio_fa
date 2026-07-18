@@ -67,7 +67,7 @@ import zipfile
 
 from core.config import DATA_DIR
 from core import prefs
-from services.ffmpeg_utils import _binary_runs, _BINARY_OK
+from services.ffmpeg_utils import _binary_runs, _BINARY_OK, windows_tool_candidates as _windows_tool_candidates
 
 logger = logging.getLogger("omnivoice.media_tools")
 
@@ -478,8 +478,7 @@ def _detect_system(tool: str) -> str | None:
         f"/opt/homebrew/bin/{tool}",
         f"/usr/local/bin/{tool}",
         f"/usr/bin/{tool}",
-        f"C:\\ffmpeg\\bin\\{tool}.exe",
-        f"C:\\Program Files\\ffmpeg\\bin\\{tool}.exe",
+        *_windows_tool_candidates(tool),
         tool,
     ]
     for c in candidates:

@@ -1796,7 +1796,8 @@
     "timeout": "Generazione scaduta: il modello potrebbe essere ancora in fase di download. Controlla Impostazioni → Registri, quindi riprova.",
     "error_prefix": "Errore: {{message}}",
     "ignored_unsupported": "Istruzione non supportata ignorata: {{items}}",
-    "ignored_duplicate": "Ignorato (categoria già impostata): {{items}}"
+    "ignored_duplicate": "Ignorato (categoria già impostata): {{items}}",
+    "ref_audio_unusable": "Nessuna voce rilevata nell'audio di riferimento: la clip è silenziosa o quasi, quindi non c'è alcuna voce da clonare. Registra di nuovo più vicino al microfono (verifica che sia selezionato il dispositivo di ingresso corretto e che il livello si muova) oppure scegli un'altra clip."
   },
   "sharing": {
     "title": "Condivisione e accesso remoto",

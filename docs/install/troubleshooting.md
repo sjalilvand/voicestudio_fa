@@ -84,6 +84,31 @@ Or, as a quick workaround, switch ASR to **faster-whisper** in
 antivirus exclusions (see §1). Newer builds classify this error and show the
 reinstall hint directly instead of a bare path + "try restarting".
 
+### 1b. Dubbing: `ASR backend initialization failed: No module named 'lightning_fabric'`
+
+**Symptom:** transcription/dubbing fails at the start with
+`ASR backend initialization failed: No module named 'lightning_fabric'`.
+
+**Cause:** same class as §1 — a **partial/broken install**. `lightning_fabric`
+ships *inside* the `pytorch-lightning` wheel (WhisperX needs it via
+pyannote-audio), and an interrupted install or antivirus quarantine can strip
+it while the package's metadata stays intact — so a plain install no-ops and
+never restores the files.
+
+**Fix:** force-reinstall pytorch-lightning in the backend venv, then restart:
+
+```
+uv pip install --reinstall pytorch-lightning
+```
+
+If it recurs, add the backend **`.venv`** to your antivirus exclusions (see
+§1). Since this fix landed the app also degrades gracefully: WhisperX is
+marked unavailable (Settings → Engines shows why, with this repair command)
+and dubbing automatically falls through to **faster-whisper** instead of
+failing outright.
+
+**Linked issue:** [#1185](https://github.com/debpalash/OmniVoice-Studio/issues/1185)
+
 ## 2. HF 401 / pyannote license not accepted
 
 **Symptom:** dubbing fails with `HfHubHTTPError: 401 Client Error: Unauthorized

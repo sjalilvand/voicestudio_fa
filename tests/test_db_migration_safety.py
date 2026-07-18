@@ -157,3 +157,38 @@ def test_midflight_failure_without_backup_says_so(tmp_path, monkeypatch):
     assert "No pre-migration backup was written" in str(excinfo.value)
     assert db_backup.list_backups(str(db)) == []
     assert _profile_names(db) == ["Alice"]
+
+
+def test_startup_migration_leaves_app_logging_intact(tmp_path, monkeypatch):
+    """The in-app `alembic upgrade head` must NOT reconfigure the app's
+    logging (#1174): env.py's fileConfig — even with
+    disable_existing_loggers=False — used to replace the root logger's
+    handlers with alembic.ini's console handler and apply its
+    `[logger_root] level=WARN`. Every boot that actually migrated (every
+    FIRST RUN, every upgrade) then lost the omnivoice.log file handler and
+    all INFO logging for the rest of the process — including the entire
+    graceful-shutdown trace, so a SIGTERM'd clean quit read as a silent
+    crash. Fail-before/pass-after."""
+    import logging
+
+    db = tmp_path / "omnivoice.db"
+    _seed_user_db(db)
+    monkeypatch.setattr(db_module, "DB_PATH", str(db))
+
+    root = logging.getLogger()
+    marker = logging.NullHandler()
+    marker.set_name("app-file-log-marker")
+    root.addHandler(marker)
+    prev_level = root.level
+    root.setLevel(logging.INFO)
+    try:
+        _run_alembic_upgrade()  # migrations actually execute (fresh stamp)
+        assert marker in root.handlers, (
+            "alembic's fileConfig stripped the app's root handlers"
+        )
+        assert root.level == logging.INFO, (
+            "alembic's [logger_root] level leaked into the live app"
+        )
+    finally:
+        root.removeHandler(marker)
+        root.setLevel(prev_level)

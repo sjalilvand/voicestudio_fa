@@ -57,8 +57,9 @@ from omnivoice.utils.audio import (
     cross_fade_chunks,
     fade_and_pad_audio,
     load_audio,
-    remove_silence,
+    remove_silence_safe,
     trim_long_audio,
+    validate_clone_reference,
 )
 from omnivoice.utils.duration import RuleDurationEstimator
 from omnivoice.utils.lang_map import LANG_IDS, LANG_NAMES
@@ -272,9 +273,19 @@ class OmniVoice(PreTrainedModel):
         load_asr = kwargs.pop("load_asr", False)
         asr_model_name = kwargs.pop("asr_model_name", "openai/whisper-large-v3-turbo")
 
-        # Suppress noisy INFO logs from transformers/huggingface_hub during loading
-        _prev_disable = logging.root.manager.disable
-        logging.disable(logging.INFO)
+        # Suppress noisy INFO logs from transformers/huggingface_hub during
+        # loading. Scoped to those two logger trees — NOT logging.disable(),
+        # which is process-global and only restored when this call returns: a
+        # SIGTERM mid-load ran the entire app shutdown with INFO logging still
+        # disabled, blacking out every "Shutting down"/"Shutdown: done." line
+        # and making a clean quit look like a silent crash (#1174).
+        _quiet_loggers = [
+            logging.getLogger("transformers"),
+            logging.getLogger("huggingface_hub"),
+        ]
+        _prev_levels = [(lg, lg.level) for lg in _quiet_loggers]
+        for _lg in _quiet_loggers:
+            _lg.setLevel(logging.WARNING)
 
         # Disable tqdm on non-TTY (e.g., Tauri backend) to prevent OSError on Windows
         _prev_tqdm = os.environ.get("TQDM_DISABLE")
@@ -321,7 +332,8 @@ class OmniVoice(PreTrainedModel):
                 if load_asr:
                     model.load_asr_model(model_name=asr_model_name)
         finally:
-            logging.disable(_prev_disable)
+            for _lg, _lvl in _prev_levels:
+                _lg.setLevel(_lvl)
             # Restore TQDM_DISABLE state
             if _prev_tqdm is None:
                 os.environ.pop("TQDM_DISABLE", None)
@@ -669,6 +681,11 @@ class OmniVoice(PreTrainedModel):
             ref_wav = waveform
 
         ref_rms = torch.sqrt(torch.mean(torch.square(ref_wav))).item()
+        # #1188: fail fast — and actionably — when the clip has no audio at
+        # all (empty / digitally silent / NaN samples). Everything quieter
+        # than the trim thresholds but real is recovered below, so this is
+        # the only remaining hard failure for a reference clip.
+        validate_clone_reference(ref_wav, ref_rms)
         if 0 < ref_rms < 0.1:
             ref_wav = ref_wav * 0.1 / ref_rms
 
@@ -680,18 +697,18 @@ class OmniVoice(PreTrainedModel):
                 ref_wav = trim_long_audio(
                     ref_wav, self.sampling_rate, trim_threshold=20.0
                 )
-            ref_wav = remove_silence(
+            # #1188: the fixed -50 dBFS silence threshold used to consume a
+            # quiet-but-real recording wholesale and dead-end with
+            # "Reference audio is empty after silence removal". The safe
+            # variant retries with gentler thresholds and, as a last resort,
+            # skips trimming — a quiet real clip must clone, not 400.
+            ref_wav = remove_silence_safe(
                 ref_wav,
                 self.sampling_rate,
                 mid_sil=200,
                 lead_sil=100,
                 trail_sil=200,
             )
-            if ref_wav.size(-1) == 0:
-                raise ValueError(
-                    "Reference audio is empty after silence removal. "
-                    "Try setting preprocess_prompt=False."
-                )
 
         ref_duration = ref_wav.size(-1) / self.sampling_rate
         if ref_duration > 20.0:
@@ -781,7 +798,12 @@ class OmniVoice(PreTrainedModel):
             Processed audio tensor of shape (1, T).
         """
         if postprocess_output:
-            generated_audio = remove_silence(
+            # #1188 (same class as the reference-clip bug): quiet generated
+            # audio below the -50 dBFS silence threshold would be removed
+            # wholesale here, producing an empty/near-empty WAV that fails
+            # downstream decoding. The safe variant degrades to no trimming
+            # instead of destroying the take.
+            generated_audio = remove_silence_safe(
                 generated_audio,
                 self.sampling_rate,
                 mid_sil=500,

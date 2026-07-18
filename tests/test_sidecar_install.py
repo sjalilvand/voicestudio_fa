@@ -72,7 +72,7 @@ def _mk_spec(**over) -> si.SidecarSpec:
 def _fake_run_logged(created: list):
     """A _run_logged stand-in that fabricates git/uv side effects on disk."""
 
-    def run(job, argv, *, timeout):
+    def run(job, argv, *, timeout, env=None):
         created.append(argv)
         prog = os.path.basename(argv[0])
         if prog.startswith("git"):

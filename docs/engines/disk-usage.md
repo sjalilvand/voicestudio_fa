@@ -64,7 +64,12 @@ running an 8B model whose stack pins `transformers==5.0`).
 ## Practical guidance
 
 - Keep `UV_CACHE_DIR` and the engine venvs on one filesystem (the default —
-  both under your home dir — already satisfies this).
+  both under your home dir — already satisfies this). **The app enforces this
+  automatically**: when the app env or the engine venvs live on a different
+  volume than uv's default cache (D:-drive install, portable mode), every
+  managed `uv` invocation gets `UV_CACHE_DIR` pointed at a cache next to the
+  venvs (`<env root>/uv-cache`, `<data dir>/engines/.uv-cache`). An explicit
+  `UV_CACHE_DIR` you set yourself always wins.
 - On Linux ext4 (no reflink), `export UV_LINK_MODE=hardlink` guarantees dedup
   on any single filesystem; the default `clone` only dedupes on
   reflink-capable filesystems (XFS-with-reflink, btrfs, APFS).

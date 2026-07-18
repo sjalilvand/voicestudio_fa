@@ -911,30 +911,107 @@ def resolve_omnivoice_checkpoint() -> str:
     return _DEFAULT_OMNIVOICE_CHECKPOINT
 
 
-def _is_interpreter_shutdown_error(exc: "BaseException | None") -> bool:
-    """True when `exc` (or anything in its cause/context chain) is the
-    ``RuntimeError`` a ``ThreadPoolExecutor`` raises once Python has begun
-    interpreter shutdown — i.e. the operation was interrupted by the process
-    exiting, not by a real fault.
+#: CPython's exact executor-rejection message once interpreter shutdown began
+#: (concurrent/futures/thread.py). The "interpreter" word is what separates a
+#: process teardown from an ordinary single-pool reset ("…after shutdown").
+_INTERPRETER_SHUTDOWN_MSG = "cannot schedule new futures after interpreter shutdown"
+#: Prefix shared by BOTH executor-rejection variants (interpreter + plain pool).
+_SCHEDULE_AFTER_SHUTDOWN_MSG = "cannot schedule new futures after"
 
-    CPython's message is exactly ``"cannot schedule new futures after
-    interpreter shutdown"`` (vs. plain ``"…after shutdown"`` when only a single
-    pool was shut down), so matching ``"interpreter shutdown"`` distinguishes a
-    process teardown from an ordinary pool reset. Walks ``__cause__`` /
-    ``__context__`` because transformers' lazy-import + materialization
-    machinery wraps the original error several layers deep.
+
+class ModelLoadInterruptedByShutdown(RuntimeError):
+    """A model load cut short because the backend is shutting down (#1174).
+
+    Benign by definition — the load didn't *fail*, the process is exiting.
+    ``_load_model_sync`` raises this instead of the raw executor error so no
+    caller (preload task, request handler, log formatter) can dress an
+    expected teardown up as a crash: no ERROR log, no ``/model/status``
+    phantom error, no exit-code-poisoning traceback.
     """
+
+
+# Flipped by main.py's lifespan: set the moment graceful shutdown starts,
+# cleared on startup (in-process relaunches: TestClient boots, the
+# --health-check thread). While set, executor-rejection errors during a load
+# — including the plain single-pool "…after shutdown" variant our own
+# _reset_gpu_pool() causes — are classified as a benign cancelled-load
+# instead of the #589-class real fault.
+_shutting_down = threading.Event()
+
+
+def begin_shutdown() -> None:
+    """Graceful shutdown started: in-flight/queued model loads are now benign
+    cancellations, and new loads must not start (#1174)."""
+    _shutting_down.set()
+
+
+def reset_shutdown_flag() -> None:
+    """New run starting — arm model loads again (lifespan startup)."""
+    _shutting_down.clear()
+
+
+def is_shutting_down() -> bool:
+    return _shutting_down.is_set()
+
+
+def _exception_chain(exc: "BaseException | None"):
+    """Yield ``exc`` and every ``__cause__``/``__context__`` ancestor once
+    (cycle-safe). transformers' lazy-import + materialization machinery wraps
+    the original error several layers deep."""
     seen: set[int] = set()
     while exc is not None and id(exc) not in seen:
         seen.add(id(exc))
-        if isinstance(exc, RuntimeError) and "interpreter shutdown" in str(exc):
-            return True
+        yield exc
         exc = exc.__cause__ or exc.__context__
+
+
+def _is_interpreter_shutdown_error(exc: "BaseException | None") -> bool:
+    """True when `exc` (or anything in its cause/context chain) is — or
+    carries the text of — the ``RuntimeError`` a ``ThreadPoolExecutor`` raises
+    once Python has begun interpreter shutdown, i.e. the operation was
+    interrupted by the process exiting, not by a real fault.
+
+    Two match modes, both required:
+
+    - the live exception object: ``RuntimeError`` whose message mentions
+      ``interpreter shutdown`` anywhere in the chain;
+    - the *stringified* form: transformers ≥5 aggregates materializer-worker
+      errors into NEW exceptions whose message embeds the original traceback
+      as text (``log_conversion_errors`` formats it into
+      ``loading_info.conversion_errors`` → ``SkipParameters`` → summary
+      raise), which changes the type AND severs the cause chain — the exact
+      miss behind the "Model loading failed: cannot schedule new futures
+      after interpreter shutdown" ERROR logged during pytest teardown
+      (#1174). Matching the full CPython phrase inside any message keeps
+      that conclusive without loosening the plain-pool case.
+    """
+    for e in _exception_chain(exc):
+        if isinstance(e, RuntimeError) and "interpreter shutdown" in str(e):
+            return True
+        if _INTERPRETER_SHUTDOWN_MSG in str(e):
+            return True
     return False
+
+
+def _is_schedule_after_shutdown_error(exc: "BaseException | None") -> bool:
+    """Any executor 'cannot schedule new futures after …' rejection, either
+    variant, live or stringified. Only consulted while ``_shutting_down`` is
+    set: during app shutdown even the plain single-pool variant is benign
+    (our own ``_reset_gpu_pool()``/executor teardown caused it). Outside
+    shutdown the plain variant stays the #589-class real fault and must NOT
+    be silenced."""
+    return any(_SCHEDULE_AFTER_SHUTDOWN_MSG in str(e) for e in _exception_chain(exc))
 
 
 def _load_model_sync():
     global model
+    if _shutting_down.is_set():
+        # The graceful shutdown began before this queued load got a worker
+        # (e.g. 1-worker MPS pool with a capture-ASR warmup ahead of it).
+        # Don't start a multi-GB import/load the process is about to abandon
+        # — bail before torch is even imported (#1174).
+        logger.info("Model load skipped: backend is shutting down.")
+        raise ModelLoadInterruptedByShutdown("model load skipped: backend shutting down")
     from utils.hf_progress import register_listener, unregister_listener
 
     # Register a listener that updates _loading_detail with real-time
@@ -1102,21 +1179,30 @@ def _load_model_sync():
         _set_loading("ready", "Model ready", progress=100)
         logger.info("OmniVoice model loaded successfully.")
         return _model
+    except ModelLoadInterruptedByShutdown:
+        raise
     except Exception as exc:
         # A model load interrupted by *interpreter/process shutdown* is not a
         # real fault — the backend is on its way out (uvicorn stopping, a failed
         # port bind, or the user closing the app mid-load). transformers
         # materializes weights in its OWN thread pool, which raises "cannot
         # schedule new futures after interpreter shutdown" on the way down.
-        # Log that calmly instead of dressing an expected teardown up as a crash:
-        # otherwise the backend-crash report fills with a scary traceback for
-        # what is a normal shutdown, and /model/status flips to a phantom error.
-        if _is_interpreter_shutdown_error(exc):
+        # Likewise once main.py's lifespan flipped `begin_shutdown()`, even the
+        # plain single-pool rejection is benign — our own _reset_gpu_pool()
+        # caused it. Convert those to ModelLoadInterruptedByShutdown (logged
+        # calmly at INFO) instead of dressing an expected teardown up as a
+        # crash: otherwise the backend-crash report fills with a scary
+        # traceback for what is a normal shutdown, /model/status flips to a
+        # phantom error, and on some shutdown paths the escaping RuntimeError
+        # poisons the process exit code (#1174: SIGTERM mid-load → exit 1 →
+        # the desktop shell toasts "the backend crashed").
+        if _is_interpreter_shutdown_error(exc) or (
+            _shutting_down.is_set() and _is_schedule_after_shutdown_error(exc)
+        ):
             logger.info(
-                "Model load aborted because the backend is shutting down "
-                "(interpreter teardown) — benign, not a failure."
+                "Model load aborted: shutdown during load — benign, not a failure."
             )
-            raise
+            raise ModelLoadInterruptedByShutdown("shutdown during load") from exc
         # Surface an ACTIONABLE, sanitized error in /model/status (it's shown in
         # the first-run System Check). build_failure classifies the cause and
         # attaches a fix hint — e.g. a corrupted transformers install
@@ -1303,6 +1389,12 @@ async def preload_model():
             if model is None:
                 model = await _load_model_with_timeout()
         logger.info("Preload complete — model ready.")
+    except ModelLoadInterruptedByShutdown:
+        # Expected teardown (#1174): the backend was shut down while the
+        # preload was still loading weights. Info, no traceback — a WARNING
+        # with a stack here is exactly the crash-shaped noise the
+        # classification exists to prevent.
+        logger.info("Model preload stopped: shutdown during load — benign.")
     except Exception as e:
         # See the matching exc_info note on the _load_model_sync handler above
         # (#1000 class) — the full chain, not just str(e), is what actually

@@ -75,6 +75,48 @@ def test_get_shape(env):
     assert "effective" in res and "default" in res
 
 
+def test_path_with_spaces_survives_the_full_persistence_chain(env, tmp_path, monkeypatch):
+    """#1186 class: the wizard/Settings dirs regularly contain spaces
+    ('D:\\Program Data\\OmniVoice\\Model Cache'). The durable env file stores
+    the value as an UNQUOTED dotenv line and main.py re-reads it through
+    python-dotenv, so a writer/parser quoting regression would truncate at the
+    first space and silently redirect every model download while Settings
+    still shows the chosen folder. Pin the whole chain byte-for-byte:
+    endpoint → env file → load_into_environ → os.environ → GET."""
+    target = str(tmp_path / "Program Data" / "OmniVoice" / "Model Cache")
+    res = s.set_models_dir(s._ModelsDirBody(path=target))
+    abs_target = os.path.abspath(target)
+    assert res["configured"] == abs_target
+    assert user_env.get_user_env("OMNIVOICE_CACHE_DIR") == abs_target
+
+    # A launcher-injected (stale) value must lose to the durable file (#480),
+    # and the loaded value must be byte-identical — spaces intact.
+    monkeypatch.setenv("OMNIVOICE_CACHE_DIR", "/stale/launcher/value")
+    assert user_env.load_into_environ() is True
+    assert os.environ["OMNIVOICE_CACHE_DIR"] == abs_target
+    assert s.get_models_dir()["configured"] == abs_target
+
+
+def test_windows_drive_paths_with_spaces_round_trip_verbatim(env):
+    """#1186 class, non-system-drive half: 'D:\\…' paths with spaces (and '&')
+    must survive persist → read-back → the exact dotenv parse that
+    load_into_environ feeds os.environ from, with backslashes, the drive
+    prefix, and interior spaces untouched. (Path *usability* dropping is
+    platform-dependent and covered elsewhere; this pins the string layer that
+    is identical on every OS.)"""
+    import dotenv
+
+    cache = r"D:\Program Data\OmniVoice\Model Cache"
+    data = r"D:\Program Data\OmniVoice\Voice data & projects"
+    user_env.set_user_env("OMNIVOICE_CACHE_DIR", cache)
+    user_env.set_user_env("OMNIVOICE_DATA_DIR", data)
+    assert user_env.get_user_env("OMNIVOICE_CACHE_DIR") == cache
+    assert user_env.get_user_env("OMNIVOICE_DATA_DIR") == data
+    parsed = dotenv.dotenv_values(env)
+    assert parsed["OMNIVOICE_CACHE_DIR"] == cache
+    assert parsed["OMNIVOICE_DATA_DIR"] == data
+
+
 def test_default_is_xdg_aware(env, monkeypatch, tmp_path):
     # huggingface_hub's default cache root honors XDG_CACHE_HOME on Linux.
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg"))

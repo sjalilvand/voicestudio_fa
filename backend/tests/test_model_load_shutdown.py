@@ -1,15 +1,48 @@
-"""A model load interrupted by interpreter shutdown must be recognised as a
-benign teardown, not logged as a crash.
+"""A model load interrupted by interpreter/app shutdown must be recognised as
+a benign teardown, not logged as a crash (#1174).
 
-When the backend is torn down mid-load (uvicorn stopping, a failed port bind,
-or the user closing the app while the model loads), transformers' materializer
-raises ``RuntimeError: cannot schedule new futures after interpreter shutdown``
-from its own thread pool. That used to surface as a scary "Model loading
-failed" error + full traceback in the crash report. `_is_interpreter_shutdown_error`
-classifies it so the loader can log it calmly instead. See model_manager.py.
+When the backend is torn down mid-load (SIGTERM from the desktop shell,
+uvicorn stopping, a failed port bind, or the user closing the app while the
+model loads), transformers' materializer raises ``RuntimeError: cannot
+schedule new futures after interpreter shutdown`` from its own thread pool.
+That used to surface as a scary "Model loading failed" error + full traceback
+in the crash report — and on shutdown paths where the error escapes the serve
+stack, a nonzero exit code that the desktop shell toasts as "the backend
+crashed". `_is_interpreter_shutdown_error` classifies it so the loader
+converts it to :class:`ModelLoadInterruptedByShutdown` (INFO, no traceback)
+instead. See model_manager.py and main.py's lifespan wiring
+(``begin_shutdown``/``reset_shutdown_flag``).
 """
+import asyncio
+import logging
+import os
+import threading
+import types
 
-from services.model_manager import _is_interpreter_shutdown_error
+import pytest
+
+import services.model_manager as mm
+from services.model_manager import (
+    ModelLoadInterruptedByShutdown,
+    _is_interpreter_shutdown_error,
+)
+
+
+@pytest.fixture(autouse=True)
+def _fresh_shutdown_flag():
+    """The shutting-down flag is process-global; never leak it across tests."""
+    mm.reset_shutdown_flag()
+    yield
+    mm.reset_shutdown_flag()
+
+
+@pytest.fixture
+def _loading_detail_guard():
+    """Snapshot/restore the module-global loading-detail dict."""
+    before = dict(mm._loading_detail)
+    yield mm._loading_detail
+    mm._loading_detail.clear()
+    mm._loading_detail.update(before)
 
 
 def test_direct_interpreter_shutdown_runtimeerror():
@@ -59,3 +92,242 @@ def test_cause_cycle_terminates():
     a.__cause__ = b
     b.__cause__ = a
     assert _is_interpreter_shutdown_error(a) is False
+
+
+def test_stringified_interpreter_shutdown_matches():
+    """transformers ≥5 aggregates materializer-worker errors into NEW
+    exceptions whose message embeds the original traceback as TEXT
+    (log_conversion_errors → SkipParameters → summary raise): the type
+    changes and the cause chain is severed. This was the classifier miss
+    behind 'Model loading failed: cannot schedule new futures after
+    interpreter shutdown' being logged as an ERROR during teardown (#1174)."""
+    exc = ValueError(
+        "Loading weights failed:\n"
+        "Traceback (most recent call last):\n"
+        '  File "core_model_loading.py", line 803, in spawn_materialize\n'
+        "    return thread_pool.submit(_job)\n"
+        "RuntimeError: cannot schedule new futures after interpreter shutdown\n"
+        "Error: on tensors destined for llm.layers.0"
+    )
+    assert _is_interpreter_shutdown_error(exc) is True
+
+
+def test_stringified_plain_pool_shutdown_still_not_matched():
+    # The stringified match must not loosen the plain-pool case (#589 class).
+    exc = ValueError("... RuntimeError: cannot schedule new futures after shutdown ...")
+    assert _is_interpreter_shutdown_error(exc) is False
+
+
+# ── _load_model_sync: benign cancelled-load conversion (#1174) ─────────────
+
+
+def _stub_load(monkeypatch, error):
+    """Wire _load_model_sync's collaborators so `_load()` raises `error`
+    without importing torch or touching the network."""
+    fake_torch = types.SimpleNamespace(float16="f16")
+
+    class _FakeOV:
+        @staticmethod
+        def from_pretrained(*a, **k):
+            raise error
+
+    monkeypatch.setattr(mm, "_lazy_torch", lambda: fake_torch)
+    monkeypatch.setattr(mm, "_lazy_omnivoice", lambda: _FakeOV)
+    monkeypatch.setattr(mm, "get_best_device", lambda: "cpu")
+    monkeypatch.setattr(mm, "should_preload_tts_asr", lambda: False)
+
+
+def test_load_sync_converts_interpreter_shutdown_to_benign(
+    monkeypatch, caplog, _loading_detail_guard
+):
+    """Fail-before/pass-after (#1174): the raw RuntimeError used to escape
+    _load_model_sync (re-raised), reaching whichever teardown machinery ran
+    next — traceback noise and, on some shutdown paths, a nonzero exit."""
+    _stub_load(
+        monkeypatch,
+        RuntimeError("cannot schedule new futures after interpreter shutdown"),
+    )
+    with caplog.at_level(logging.INFO, logger="omnivoice.model"):
+        with pytest.raises(ModelLoadInterruptedByShutdown):
+            mm._load_model_sync()
+    # Benign: no ERROR record, no /model/status phantom error.
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert mm._loading_detail.get("error") is None
+
+
+def test_load_sync_converts_wrapped_stringified_error(
+    monkeypatch, caplog, _loading_detail_guard
+):
+    """The transformers-5 aggregated form (severed chain, non-RuntimeError)."""
+    _stub_load(
+        monkeypatch,
+        OSError(
+            "weights conversion failed: RuntimeError: cannot schedule new "
+            "futures after interpreter shutdown"
+        ),
+    )
+    with caplog.at_level(logging.INFO, logger="omnivoice.model"):
+        with pytest.raises(ModelLoadInterruptedByShutdown):
+            mm._load_model_sync()
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert mm._loading_detail.get("error") is None
+
+
+def test_load_sync_plain_pool_shutdown_benign_only_during_app_shutdown(
+    monkeypatch, caplog, _loading_detail_guard
+):
+    """Once the lifespan flipped begin_shutdown(), even the plain single-pool
+    rejection is benign — our own _reset_gpu_pool() caused it."""
+    _stub_load(monkeypatch, RuntimeError("cannot schedule new futures after shutdown"))
+    mm.begin_shutdown()
+    with caplog.at_level(logging.INFO, logger="omnivoice.model"):
+        with pytest.raises(ModelLoadInterruptedByShutdown):
+            mm._load_model_sync()
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert mm._loading_detail.get("error") is None
+
+
+def test_load_sync_plain_pool_shutdown_stays_loud_outside_shutdown(
+    monkeypatch, caplog, _loading_detail_guard
+):
+    """Outside app shutdown the plain-pool rejection is the #589-class real
+    fault: it must keep the ERROR log + /model/status error."""
+    _stub_load(monkeypatch, RuntimeError("cannot schedule new futures after shutdown"))
+    with caplog.at_level(logging.INFO, logger="omnivoice.model"):
+        with pytest.raises(RuntimeError):
+            mm._load_model_sync()
+    assert [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert mm._loading_detail.get("error")
+
+
+def test_load_sync_real_failure_stays_loud(monkeypatch, caplog, _loading_detail_guard):
+    _stub_load(monkeypatch, ValueError("boom"))
+    with caplog.at_level(logging.INFO, logger="omnivoice.model"):
+        with pytest.raises(ValueError):
+            mm._load_model_sync()
+    assert [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert mm._loading_detail.get("error")
+
+
+def test_load_sync_bails_before_torch_when_already_shutting_down(monkeypatch):
+    """A load that reaches the pool AFTER shutdown began (queued behind a
+    warmup on a 1-worker pool) must not start a multi-GB import/load."""
+
+    def _must_not_import():
+        raise AssertionError("torch must not be imported during shutdown")
+
+    monkeypatch.setattr(mm, "_lazy_torch", _must_not_import)
+    mm.begin_shutdown()
+    with pytest.raises(ModelLoadInterruptedByShutdown):
+        mm._load_model_sync()
+
+
+# ── preload_model: shutdown-interrupted preload is INFO, not WARNING ──────
+
+
+def test_preload_interrupted_by_shutdown_logs_info_only(monkeypatch, caplog):
+    async def _boom():
+        raise ModelLoadInterruptedByShutdown("shutdown during load")
+
+    monkeypatch.setattr(mm, "model", None)
+    monkeypatch.setattr(mm, "_model_lock", asyncio.Lock())
+    monkeypatch.setattr(mm, "_checkpoint_in_local_cache", lambda c: True)
+    monkeypatch.setattr(mm, "_load_model_with_timeout", _boom)
+    with caplog.at_level(logging.INFO, logger="omnivoice.model"):
+        asyncio.run(mm.preload_model())
+    assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
+    assert any("shutdown during load" in r.getMessage() for r in caplog.records)
+    assert mm.model is None
+
+
+# ── lifespan shutdown ordering + run-sentinel interaction (#1174/#1164) ────
+
+
+def test_cancel_and_await_tasks_swallows_task_errors():
+    """A background task dying with a real error during teardown must not
+    abort the lifespan shutdown: uvicorn would mark the application shutdown
+    failed and the process exits crash-shaped for a deliberate SIGTERM."""
+    import main as main_mod
+
+    async def scenario():
+        async def boom():
+            try:
+                await asyncio.sleep(60)
+            except asyncio.CancelledError:
+                raise RuntimeError("cannot schedule new futures after shutdown")
+
+        t = asyncio.create_task(boom())
+        await asyncio.sleep(0)  # let it start
+        await main_mod._cancel_and_await_tasks(t, None, timeout=2.0)
+
+    asyncio.run(scenario())  # must not raise
+
+
+def test_lifespan_shutdown_mid_load_is_clean_and_clears_sentinel(
+    monkeypatch, tmp_path
+):
+    """SIGTERM (lifespan shutdown) while a model load is in flight on a
+    GPU-pool thread: the shutdown must complete, flip the model_manager into
+    shutdown mode, and clear the run sentinel — a deliberate quit mid-load
+    must NEVER be recorded as an unclean crash by the next startup (#1164
+    interaction the #1174 fix has to preserve)."""
+    from fastapi import FastAPI
+
+    import main as main_mod
+    from core import run_sentinel
+
+    monkeypatch.setattr(run_sentinel, "SENTINEL_PATH", str(tmp_path / "run_sentinel.json"))
+    monkeypatch.setattr(run_sentinel, "CRASH_RECORD_PATH", str(tmp_path / "last_run_crash.json"))
+    monkeypatch.setattr(run_sentinel, "LOG_PATH", str(tmp_path / "omnivoice.log"))
+    run_sentinel._reset_for_tests()
+
+    fake_torch = types.SimpleNamespace(
+        float16="f16",
+        cuda=types.SimpleNamespace(is_available=lambda: False),
+        backends=types.SimpleNamespace(),
+    )
+    monkeypatch.setattr(mm, "_lazy_torch", lambda: fake_torch)
+    monkeypatch.setattr(mm, "model", None)
+    monkeypatch.setattr(mm, "_model_lock", asyncio.Lock())
+    monkeypatch.setattr(mm, "_checkpoint_in_local_cache", lambda c: True)
+    monkeypatch.setenv("OMNIVOICE_PRELOAD_CAPTURE_ASR", "0")
+
+    started = threading.Event()
+    release = threading.Event()
+
+    def _wedged_load():
+        started.set()
+        release.wait(30)
+        raise RuntimeError("cannot schedule new futures after interpreter shutdown")
+
+    async def _fake_load_with_timeout():
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(mm._get_gpu_pool(), _wedged_load)
+
+    monkeypatch.setattr(mm, "_load_model_with_timeout", _fake_load_with_timeout)
+
+    async def scenario():
+        app = FastAPI()
+        async with main_mod.lifespan(app):
+            # The preload's load really is in flight on a pool thread. Poll
+            # asynchronously — a blocking Event.wait would starve the loop the
+            # preload task needs to reach run_in_executor.
+            for _ in range(200):
+                if started.is_set():
+                    break
+                await asyncio.sleep(0.05)
+            assert started.is_set()
+        # Lifespan shutdown completed while that thread was still wedged.
+
+    try:
+        asyncio.run(scenario())
+        # The clean shutdown retired the sentinel…
+        assert not os.path.exists(run_sentinel.SENTINEL_PATH)
+        # …so the next startup must NOT see a crash.
+        assert run_sentinel.detect_unclean_shutdown() is None
+        # And the model_manager was flipped into shutdown mode first, so the
+        # wedged load classifies executor rejections as benign.
+        assert mm.is_shutting_down() is True
+    finally:
+        release.set()
+        run_sentinel._reset_for_tests()

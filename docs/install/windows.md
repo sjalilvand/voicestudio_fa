@@ -94,6 +94,16 @@ drive (D:, E:, …). Two caveats:
   in-app, or `OMNIVOICE_DATA_DIR` / [Portable mode](#portable-install) for
   the whole data tree.
 
+When the Python **environment folder** (first-run setup → Advanced, or
+portable mode) is on a different drive than Windows, the installer keeps
+uv's package cache and managed Python **inside the environment folder**
+(`uv-cache/`, `uv-python/`) instead of `%LOCALAPPDATA%\uv`. Without that,
+every wheel (PyTorch alone is several GB) would be staged on `C:` and then
+copied across drives — filling the system drive you were trying to spare.
+The same applies to engine sidecar installs when the data directory is on
+another drive (`engines\.uv-cache`). An explicit `UV_CACHE_DIR` /
+`UV_PYTHON_INSTALL_DIR` you set yourself always wins.
+
 If an install to a local non-C: drive fails anyway, capture a log with
 `msiexec /i OmniVoice*.msi /L*V install.log` and
 [open an issue](https://github.com/debpalash/OmniVoice-Studio/issues) with it

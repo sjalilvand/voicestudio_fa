@@ -134,6 +134,29 @@ def _get_semaphore() -> asyncio.Semaphore:
     return _FFMPEG_SEMAPHORE
 
 
+def windows_tool_candidates(tool: str) -> "list[str]":
+    """Well-known Windows install locations for *tool* (ffmpeg/ffprobe).
+
+    Derived from the environment instead of hardcoding ``C:\\`` so machines
+    whose Windows/Program Files live on another drive still resolve (the
+    non-system-drive class): ``%ProgramFiles%``/``%ProgramW6432%`` for the
+    relocatable Program Files, ``%SystemDrive%``+D: for the conventional
+    ``<drive>:\\ffmpeg\\bin`` layout. Empty on non-Windows."""
+    if os.name != "nt":
+        return []
+    out: list[str] = []
+    drives = {os.environ.get("SystemDrive", "C:"), "C:", "D:"}
+    for drive in sorted(drives):
+        out.append(f"{drive}\\ffmpeg\\bin\\{tool}.exe")
+    pf_dirs = {
+        os.environ.get("ProgramFiles", "C:\\Program Files"),
+        os.environ.get("ProgramW6432", "C:\\Program Files"),
+    }
+    for pf in sorted(pf_dirs):
+        out.append(os.path.join(pf, "ffmpeg", "bin", f"{tool}.exe"))
+    return out
+
+
 # Candidate paths that exist but won't run (validated once per process).
 # Windows users hit this as `[WinError 193] %1 is not a valid Win32
 # application` (#360/#361/#362): a corrupt/wrong-arch imageio-ffmpeg
@@ -203,9 +226,7 @@ def find_ffmpeg():
     common = [
         "/opt/homebrew/bin/ffmpeg",
         "/usr/local/bin/ffmpeg",
-        "C:\\ffmpeg\\bin\\ffmpeg.exe",
-        "C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe",
-        "D:\\ffmpeg\\bin\\ffmpeg.exe",
+        *windows_tool_candidates("ffmpeg"),
         "ffmpeg",
     ]
     for path in common:

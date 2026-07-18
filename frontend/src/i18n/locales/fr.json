@@ -1796,7 +1796,8 @@
     "timeout": "Le délai de génération a expiré : le téléchargement du modèle est peut-être encore en cours. Vérifiez Paramètres → Journaux, puis réessayez.",
     "error_prefix": "Erreur : {{message}}",
     "ignored_unsupported": "Instruction non prise en charge ignorée : {{items}}",
-    "ignored_duplicate": "Ignoré (catégorie déjà définie) : {{items}}"
+    "ignored_duplicate": "Ignoré (catégorie déjà définie) : {{items}}",
+    "ref_audio_unusable": "Aucune voix n'a été détectée dans l'audio de référence — le clip est silencieux ou presque, il n'y a donc aucune voix à cloner. Réenregistrez plus près du micro (vérifiez que le bon périphérique d'entrée est sélectionné et que le niveau bouge) ou choisissez un autre clip."
   },
   "sharing": {
     "title": "Partage et accès à distance",

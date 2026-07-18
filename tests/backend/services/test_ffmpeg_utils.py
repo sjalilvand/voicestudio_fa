@@ -143,3 +143,31 @@ class _ShutilStub:
 
     def which(self, name):
         return self._which(name)
+
+
+# ── windows_tool_candidates: no hardcoded system-drive assumptions ─────────
+
+
+def test_windows_tool_candidates_empty_off_windows(monkeypatch):
+    from services import ffmpeg_utils
+
+    monkeypatch.setattr(ffmpeg_utils.os, "name", "posix")
+    assert ffmpeg_utils.windows_tool_candidates("ffmpeg") == []
+
+
+def test_windows_tool_candidates_derive_from_environment(monkeypatch):
+    """Program Files / the system drive can live on a non-C: drive — the
+    probe list must follow the environment instead of assuming C: (the
+    cross-drive install class)."""
+    from services import ffmpeg_utils
+
+    monkeypatch.setattr(ffmpeg_utils.os, "name", "nt")
+    monkeypatch.setenv("SystemDrive", "E:")
+    monkeypatch.setenv("ProgramFiles", "E:\\Program Files")
+    monkeypatch.setenv("ProgramW6432", "E:\\Program Files")
+
+    got = ffmpeg_utils.windows_tool_candidates("ffprobe")
+    assert "E:\\ffmpeg\\bin\\ffprobe.exe" in got            # relocated system drive
+    assert any(p.startswith("E:\\Program Files") for p in got)  # env-derived Program Files
+    assert "C:\\ffmpeg\\bin\\ffprobe.exe" in got            # conventional fallbacks kept
+    assert "D:\\ffmpeg\\bin\\ffprobe.exe" in got

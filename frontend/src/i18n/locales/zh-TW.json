@@ -1796,7 +1796,8 @@
     "timeout": "產生超時 - 模型可能仍在下載。檢查設定 → 日誌，然後重試。",
     "error_prefix": "錯誤：{{message}}",
     "ignored_unsupported": "忽略不支援的指令：{{items}}",
-    "ignored_duplicate": "忽略（類別已設定）：{{items}}"
+    "ignored_duplicate": "忽略（類別已設定）：{{items}}",
+    "ref_audio_unusable": "參考音訊中聽不到任何語音——片段為靜音或幾乎靜音，因此沒有可複製的聲音。請靠近麥克風重新錄製（檢查是否選擇了正確的輸入裝置、音量電平是否有跳動），或改用其他片段。"
   },
   "sharing": {
     "title": "共享和遠端存取",

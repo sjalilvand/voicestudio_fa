@@ -382,7 +382,12 @@ from core.db import init_db
 from core.config import OUTPUTS_DIR, VOICES_DIR, CRASH_LOG_PATH
 from core.tasks import task_manager
 from core import job_store
-from services.model_manager import idle_worker, preload_model
+from services.model_manager import (
+    begin_shutdown as model_loads_begin_shutdown,
+    idle_worker,
+    preload_model,
+    reset_shutdown_flag as model_loads_reset_shutdown,
+)
 from services import network_share
 
 from api.dependencies import is_local_host  # loopback + OMNIVOICE_TRUSTED_NETWORKS
@@ -578,6 +583,17 @@ async def _cancel_and_await_tasks(*tasks, timeout: float = 3.0) -> None:
             await asyncio.wait_for(t, timeout=timeout)
         except (asyncio.CancelledError, asyncio.TimeoutError):
             pass
+        except Exception:
+            # A background task that dies with a real error during teardown
+            # must not abort the lifespan shutdown (#1174 class): uvicorn
+            # would mark the whole application shutdown failed, skip the rest
+            # of this cleanup (sentinel clear included), and the process exits
+            # crash-shaped for what was a deliberate SIGTERM. The task's own
+            # code already logged its failure.
+            logger.warning(
+                "Background task %r raised during shutdown (ignored)",
+                t.get_name(), exc_info=True,
+            )
 
 
 @asynccontextmanager
@@ -667,6 +683,10 @@ async def lifespan(app: FastAPI):
             )
     except Exception:
         logger.exception("Gatekeeper probe failed (non-fatal).")
+    # #1174: arm model loads for THIS run — an in-process relaunch (TestClient
+    # boot, the --health-check thread) may carry a stale shutting-down flag
+    # from a previous lifespan, which would silently skip every load.
+    model_loads_reset_shutdown()
     idle_task = asyncio.create_task(idle_worker())
     worker_task = asyncio.create_task(task_manager.worker())
     # Warm the TTS model in the background so first /generate is instant.
@@ -746,6 +766,13 @@ async def lifespan(app: FastAPI):
     yield
     # ── Graceful shutdown (SIGTERM from Tauri, Ctrl+C, etc.) ────────────
     logger.info("Shutdown: cleaning up…")
+    # FIRST: flip model_manager into shutdown mode, so a model load that is
+    # in flight (or still queued) on a GPU-pool thread classifies executor
+    # rejections as a benign cancelled-load instead of a crash-shaped
+    # failure, and a not-yet-started load bails before importing torch
+    # (#1174: SIGTERM mid-weight-load → "cannot schedule new futures after
+    # interpreter shutdown" → ERROR traceback + nonzero exit).
+    model_loads_begin_shutdown()
     # Stop MCP first — signal its task to exit its own anyio context (correct
     # task-affinity), then bound the wait so a wedged manager can't hang exit.
     mcp_stop.set()
