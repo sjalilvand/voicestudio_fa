@@ -332,3 +332,73 @@ def build_online_recognizer(spec: SherpaModelSpec, *, download: bool = True):
             rule3_min_utterance_length=20,
         )
     raise ValueError(f"{spec.id} is not a streaming model (kind={spec.kind})")
+
+
+# ── Silent-model demotion ────────────────────────────────────────────────────
+# A sherpa model can install cleanly, load without error, and still decode
+# NOTHING. The NeMo-TDT path does exactly this on some builds: parakeet-tdt
+# v2/v3 return an empty token list for clear speech (both int8 and fp32, both
+# decoding methods, sherpa-onnx 1.13.3 and 1.13.4) while whisper and zipformer
+# transcribe the same bytes. It is a defect inside sherpa-onnx that the app
+# cannot fix by configuration.
+#
+# The curated default therefore cannot be trusted to WORK just because it is
+# installed — and which platforms are affected is not knowable up front, so
+# hard-coding a different default per OS would only be a guess. Instead the app
+# learns from what it observes: when a session hears real speech and the model
+# returns nothing, that model is demoted on THIS machine and stops being
+# selected. Self-correcting wherever the breakage actually is, and a no-op
+# everywhere it isn't.
+
+#: prefs key holding the list of model ids demoted on this machine.
+PREF_SILENT_MODELS = "dictation.silent_models"
+
+
+def demoted_models() -> list[str]:
+    """Model ids observed to decode nothing on this machine."""
+    try:
+        from core import prefs
+        v = prefs.get(PREF_SILENT_MODELS, [])
+    except Exception:
+        return []
+    return [str(x) for x in v] if isinstance(v, list) else []
+
+
+def is_demoted(model_id: str | None) -> bool:
+    return bool(model_id) and model_id in demoted_models()
+
+
+def demote_model(model_id: str) -> bool:
+    """Record that `model_id` produced no text despite real speech.
+
+    Returns True when this is a new demotion. Idempotent, and never raises —
+    failing to persist must not break the dictation session that noticed.
+    """
+    if not model_id:
+        return False
+    try:
+        from core import prefs
+        current = demoted_models()
+        if model_id in current:
+            return False
+        prefs.set_(PREF_SILENT_MODELS, [*current, model_id])
+        return True
+    except Exception:
+        logger.exception("could not persist silent-model demotion for %s", model_id)
+        return False
+
+
+def clear_demotion(model_id: str | None = None) -> None:
+    """Forget demotions — one model, or all when `model_id` is None.
+
+    The user stays in charge: a sherpa upgrade may fix the decoder, and picking
+    the model again in Settings should give it a fresh chance.
+    """
+    try:
+        from core import prefs
+        if model_id is None:
+            prefs.set_(PREF_SILENT_MODELS, [])
+        else:
+            prefs.set_(PREF_SILENT_MODELS, [m for m in demoted_models() if m != model_id])
+    except Exception:
+        logger.exception("could not clear silent-model demotion")

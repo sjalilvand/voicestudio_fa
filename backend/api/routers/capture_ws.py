@@ -806,6 +806,19 @@ async def _run_sherpa_offline(websocket: WebSocket, spec):
             "— falling back to the capture ASR engine for this session",
             spec.id, len(session_pcm) / float(max(1, pcm_sr) * 2),
         )
+        # Demote it so the NEXT session doesn't repeat this round trip. The
+        # curated default can be broken on a platform we never tested (the
+        # NeMo-TDT decoder is, on Windows), and observing it beats guessing.
+        try:
+            from services.sherpa_dictation import demote_model
+            if demote_model(spec.id):
+                logger.error(
+                    "dictation model %s demoted on this machine — it will no longer be "
+                    "auto-selected. Pick it again in Settings to give it another chance.",
+                    spec.id,
+                )
+        except Exception:
+            logger.exception("silent-model demotion failed")
         try:
             result = await _transcribe_buffer_full([bytes(session_pcm)], pcm_sr=pcm_sr)
             fb_text = polish_text((result or {}).get("text", "") or "")

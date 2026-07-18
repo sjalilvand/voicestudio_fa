@@ -2621,8 +2621,20 @@ def dictation_model_id() -> str | None:
         mid = prefs.get("dictation.model_id")
     except Exception:
         return None
-    from services.sherpa_dictation import is_sherpa_model
-    return mid if is_sherpa_model(mid) else None
+    from services.sherpa_dictation import is_demoted, is_sherpa_model
+    if not is_sherpa_model(mid):
+        return None
+    if is_demoted(mid):
+        # This model was observed decoding nothing on this machine (see
+        # sherpa_dictation.demote_model). Returning None routes dictation to
+        # the capture ASR engine, which works — silently degrading to a slower
+        # engine beats confidently selecting one that returns no text at all.
+        logger.warning(
+            "dictation model %s is demoted (produced no text on this machine) "
+            "— using the capture ASR engine instead", mid,
+        )
+        return None
+    return mid
 
 
 def _parakeet_mlx_installed() -> bool:
