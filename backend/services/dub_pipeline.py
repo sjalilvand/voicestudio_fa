@@ -309,10 +309,24 @@ async def run_proc_streaming_stderr(
         stderr_parts: list[bytes] = []
         rc: int = -1
         try:
-            buf = b""
-            start = time.monotonic()
-            while True:
-                if time.monotonic() - start > timeout:
+            if getattr(p, "uses_sync_pipes", False):
+                # Fallback loops (the Windows SelectorEventLoop uvicorn forces
+                # under --reload) hand back a thread-backed proc whose .stderr is
+                # a plain SYNC pipe, not an asyncio StreamReader — `await
+                # p.stderr.read()` there raises "a coroutine or an awaitable is
+                # required" and crashed the demucs step. We can't stream that
+                # pipe incrementally without leaking blocked executor threads on
+                # every 1s poll, so run to completion via the wrapper's async
+                # communicate() and replay stderr as the same line events. No
+                # live progress on that degraded loop, but the subprocess still
+                # runs and the emitted event sequence is identical. The native
+                # async path (Proactor/posix — every release build) is the
+                # unchanged `else` below.
+                try:
+                    _out, err_bytes = await asyncio.wait_for(
+                        p.communicate(), timeout=timeout
+                    )
+                except asyncio.TimeoutError:
                     try:
                         p.kill()
                     except ProcessLookupError:
@@ -321,31 +335,50 @@ async def run_proc_streaming_stderr(
                         status_code=504,
                         detail=f"subprocess timed out after {timeout}s",
                     )
-                try:
-                    chunk = await asyncio.wait_for(p.stderr.read(256), timeout=1.0)
-                except asyncio.TimeoutError:
-                    if p.returncode is not None:
-                        break
-                    continue
-                if not chunk:
-                    break
-                stderr_parts.append(chunk)
-                buf += chunk
+                err_bytes = err_bytes or b""
+                stderr_parts.append(err_bytes)
+                for _line in re.split(rb"[\r\n]", err_bytes):
+                    _text = _line.decode(errors="replace")
+                    if _text.strip():
+                        yield ("stderr", _text)
+            else:
+                buf = b""
+                start = time.monotonic()
                 while True:
-                    idx_r = buf.find(b"\r")
-                    idx_n = buf.find(b"\n")
-                    if idx_r < 0 and idx_n < 0:
+                    if time.monotonic() - start > timeout:
+                        try:
+                            p.kill()
+                        except ProcessLookupError:
+                            pass
+                        raise HTTPException(
+                            status_code=504,
+                            detail=f"subprocess timed out after {timeout}s",
+                        )
+                    try:
+                        chunk = await asyncio.wait_for(p.stderr.read(256), timeout=1.0)
+                    except asyncio.TimeoutError:
+                        if p.returncode is not None:
+                            break
+                        continue
+                    if not chunk:
                         break
-                    if idx_r < 0:
-                        idx = idx_n
-                    elif idx_n < 0:
-                        idx = idx_r
-                    else:
-                        idx = min(idx_r, idx_n)
-                    line = buf[:idx].decode(errors="replace")
-                    buf = buf[idx + 1:]
-                    if line.strip():
-                        yield ("stderr", line)
+                    stderr_parts.append(chunk)
+                    buf += chunk
+                    while True:
+                        idx_r = buf.find(b"\r")
+                        idx_n = buf.find(b"\n")
+                        if idx_r < 0 and idx_n < 0:
+                            break
+                        if idx_r < 0:
+                            idx = idx_n
+                        elif idx_n < 0:
+                            idx = idx_r
+                        else:
+                            idx = min(idx_r, idx_n)
+                        line = buf[:idx].decode(errors="replace")
+                        buf = buf[idx + 1:]
+                        if line.strip():
+                            yield ("stderr", line)
             rc = await p.wait()
         finally:
             unregister_proc(job_id, p)
