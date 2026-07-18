@@ -329,6 +329,14 @@ async def _spawn_thread_fallback(cmd, **kwargs):
             self.stdout = popen.stdout
             self.stderr = popen.stderr
             self.pid = popen.pid
+            # These are plain SYNC pipes (io.BufferedReader), NOT asyncio
+            # StreamReaders — so callers must not `await proc.stderr.read()` on
+            # this wrapper. `communicate()`/`wait()` below are the only async
+            # entry points. run_proc_streaming_stderr checks this flag and
+            # degrades to communicate() on the fallback loop instead of awaiting
+            # the sync pipe (which raised "a coroutine or an awaitable is
+            # required" and crashed the demucs step under uvicorn --reload).
+            self.uses_sync_pipes = True
 
         async def communicate(self, input=None):
             out, err = await loop.run_in_executor(None, self._popen.communicate, input)
