@@ -163,3 +163,32 @@ export function hiddenFrom(env) {
     .filter((e) => STRIPPED_PATH_ENTRIES.includes(norm(e)));
   return { vars, pathEntries };
 }
+
+/**
+ * Process name of the *dev* desktop binary (the cargo package name, built to
+ * `frontend/src-tauri/target/debug/`). The installed release app is
+ * "OmniVoice Studio" — a different name on purpose, so the dev launcher's
+ * stale-instance cleanup can never take down a user's real app.
+ */
+export const DEV_APP_PROCESS_NAME = "omnivoice-studio";
+
+/**
+ * True only for the cargo-built DEV binary, never the installed release app.
+ *
+ * `bun desktop` clears a leftover dev instance before starting (two instances
+ * fight over the dev server and leave one window blank). That cleanup kills by
+ * process name, so this predicate is the safety boundary: it must reject
+ * "OmniVoice Studio(.exe)" — killing a user's installed app would be a far
+ * worse bug than the one the cleanup fixes.
+ *
+ * @param {string} name process name, with or without a .exe suffix
+ * @returns {boolean}
+ */
+export function isDevAppProcess(name) {
+  const base = String(name ?? "")
+    .trim()
+    .replace(/\.exe$/i, "");
+  // Exact match only. The release app ("OmniVoice Studio") differs by both
+  // spacing and case, so a loose/normalised compare would wrongly match it.
+  return base === DEV_APP_PROCESS_NAME;
+}

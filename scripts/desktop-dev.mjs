@@ -22,6 +22,7 @@ import { existsSync } from "node:fs";
 import { join, delimiter } from "node:path";
 import { homedir } from "node:os";
 import process from "node:process";
+import { DEV_APP_PROCESS_NAME } from "./desktop-common.mjs";
 
 /** The env's PATH key — Windows uses "Path", others "PATH"; match case-insensitively. */
 function pathKeyOf(env) {
@@ -39,6 +40,47 @@ function cargoResolvable(env) {
       : spawnSync("sh", ["-c", "command -v cargo"], { env, stdio: "ignore" });
   return probe.status === 0;
 }
+
+/**
+ * Take down a leftover dev app before starting a new one.
+ *
+ * Launching a second `bun desktop` while one is already running does NOT just
+ * fail politely — it cascades into a BLANK WINDOW. Reproduced deterministically:
+ * the new launch's port grab makes the running instance's `dev:api` exit, and
+ * `concurrently --kill-others-on-fail` then tears down that instance's whole
+ * stack *including its Vite server* — leaving its window open, pointed at a
+ * dev URL that no longer answers, with an empty #root. The user sees a black
+ * app and nothing explains why.
+ *
+ * So: clear the previous dev instance first, loudly. Deliberately matches ONLY
+ * the cargo-built dev binary (`omnivoice-studio`); the installed release app is
+ * `OmniVoice Studio` and is never touched.
+ */
+function killStaleDevApp() {
+  const NAME = DEV_APP_PROCESS_NAME;
+  try {
+    if (process.platform === "win32") {
+      const list = spawnSync("tasklist", ["/FI", `IMAGENAME eq ${NAME}.exe`, "/NH"], {
+        encoding: "utf8",
+      });
+      if (!list.stdout || !list.stdout.toLowerCase().includes(`${NAME}.exe`)) return;
+      spawnSync("taskkill", ["/F", "/T", "/IM", `${NAME}.exe`], { stdio: "ignore" });
+    } else {
+      // -f matches the full path so we hit target/debug/omnivoice-studio only.
+      const found = spawnSync("pgrep", ["-f", `${NAME}$`], { encoding: "utf8" });
+      if (found.status !== 0) return;
+      spawnSync("pkill", ["-f", `${NAME}$`], { stdio: "ignore" });
+    }
+    console.log(
+      "[desktop-dev] closed a previous dev app instance - two instances fight over the " +
+        "dev server and leave one window blank. Starting a clean one.",
+    );
+  } catch {
+    // Best-effort: never block a launch because cleanup failed.
+  }
+}
+
+killStaleDevApp();
 
 // Start from the real environment; heal a stale PATH into a *copy* (mutating
 // process.env doesn't reliably propagate to children under Bun).
