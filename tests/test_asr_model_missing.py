@@ -297,9 +297,12 @@ class TestEndpoints:
         assert "No speech-to-text model is installed" in r.json()["detail"]
 
     def test_capture_ws_sends_typed_error_frame(self, client):
-        from api.routers import capture_ws
-        with patch.object(capture_ws, "_LOOPBACK_HOSTS",
-                          set(capture_ws._LOOPBACK_HOSTS) | {"testclient"}), \
+        # The WS loopback guard moved to the shared is_local_host() helper
+        # (#1170), which reads _LOOPBACK_HOSTS from api.dependencies — so
+        # whitelist Starlette's "testclient" host there, not on capture_ws.
+        from api import dependencies as _deps
+        with patch.object(_deps, "_LOOPBACK_HOSTS",
+                          frozenset(_deps._LOOPBACK_HOSTS) | {"testclient"}), \
              _dictation_whisper_missing():
             with client.websocket_connect("/ws/transcribe") as ws:
                 msg = ws.receive_json()
