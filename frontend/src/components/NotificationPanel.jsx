@@ -4,12 +4,13 @@
  */
 import React from 'react';
 import { Bell } from 'lucide-react';
-import { useNotifications } from '../api/hooks';
+import { useVisibleNotifications } from '../api/hooks';
 
 export default function NotificationPanel() {
-  // Shared TanStack Query cache entry with LogsFooter — one 30s poll.
-  const { data } = useNotifications();
-  const notifs = data?.notifications || [];
+  // Shared TanStack Query cache entry with LogsFooter — one 30s poll,
+  // minus the notes the user has dismissed (the badge must agree with
+  // what the footer tab actually shows).
+  const { notifications: notifs } = useVisibleNotifications();
   const count = notifs.length;
   const hasErrors = notifs.some((n) => n.level === 'error');
   const hasWarns = notifs.some((n) => n.level === 'warn');

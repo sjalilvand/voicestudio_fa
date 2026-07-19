@@ -5,6 +5,7 @@
 // network request and one cache entry.
 
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useAppStore } from '../store';
 import * as systemApi from './system';
 import * as setupApi from './setup';
 import * as galleryApi from './gallery';
@@ -76,6 +77,28 @@ export function useNotifications(enabled = true) {
     retryDelay: 1_500,
     enabled,
   });
+}
+
+/** A system notification the user may hide: info/warn describe standing facts
+ * (CPU-only box, low disk) that can be acknowledged; errors describe broken
+ * things that stay visible until actually fixed. */
+export function isDismissibleNotification(n: { level?: string }): boolean {
+  return n?.level === 'info' || n?.level === 'warn';
+}
+
+// The bell and the footer tab must agree on what is visible, so the
+// dismissed-ids filter lives here, next to the query they share. Dismissals
+// persist in the app store (prefsSlice.dismissedNotificationIds); the backend
+// keeps re-emitting the note every poll, which is exactly why filtering is
+// client-side — see the slice doc for the id-stability contract.
+export function useVisibleNotifications(enabled = true) {
+  const query = useNotifications(enabled);
+  const dismissed = useAppStore((s) => s.dismissedNotificationIds);
+  const all = query.data?.notifications || [];
+  const notifications = all.filter(
+    (n: { id?: string }) => !n.id || !dismissed.includes(n.id),
+  );
+  return { ...query, notifications };
 }
 
 export function useSystemLogs(tail = 300, enabled = true, refetchInterval = 10_000) {

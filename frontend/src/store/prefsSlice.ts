@@ -139,6 +139,18 @@ export interface PrefsSlice {
   setWhatsNewSeenVersion: (v: string | null) => void;
 
   /**
+   * System-notification ids the user has dismissed (bell + footer tab).
+   * Only info/warn notes are dismissible — errors describe conditions that
+   * need fixing and stay visible until the condition clears. Ids are stable
+   * per condition (e.g. `gpu-unavailable` on a CPU-only box), so a dismissal
+   * is durable across sessions; notes whose id encodes an occurrence (the
+   * `last-run-crash-<ts>` family) naturally re-notify as a fresh id when
+   * they recur. Capped so the list can't grow unbounded.
+   */
+  dismissedNotificationIds: string[];
+  dismissNotification: (id: string) => void;
+
+  /**
    * LLM dub engine — auto-glossary. One up-front LLM pass over the whole
    * transcript extracts a theme summary + terminology map, merged with the
    * manual glossary (manual entries always win) and injected into every
@@ -254,6 +266,7 @@ export const createPrefsSlice: StateCreator<PrefsSlice, [], [], PrefsSlice> = (s
   fitOptions: null,
   voiceMatch: 'per_line',
   whatsNewSeenVersion: null,
+  dismissedNotificationIds: [],
   aecEnabled: false,
   autoPlayPreview: true,
 
@@ -277,6 +290,15 @@ export const createPrefsSlice: StateCreator<PrefsSlice, [], [], PrefsSlice> = (s
   setFitOptions: (o) => set({ fitOptions: o }),
   setVoiceMatch: (m) => set({ voiceMatch: m }),
   setWhatsNewSeenVersion: (v) => set({ whatsNewSeenVersion: v }),
+  dismissNotification: (id) =>
+    set((s) => ({
+      // Dedupe + keep the newest 50: stable ids make re-dismissal a no-op,
+      // and occurrence-stamped ids (last-run-crash-<ts>) age out the oldest.
+      dismissedNotificationIds: [
+        ...s.dismissedNotificationIds.filter((x) => x !== id),
+        id,
+      ].slice(-50),
+    })),
   setAecEnabled: (on) => set({ aecEnabled: on }),
   setAutoPlayPreview: (on) => set({ autoPlayPreview: on }),
 
