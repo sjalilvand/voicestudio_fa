@@ -20,8 +20,8 @@ def test_server_builds_with_expected_tools():
 
     server = create_mcp_server()
     names = {t.name for t in asyncio.run(server.list_tools())}
-    # v1 surface: speak, transcribe, and the read-only listers.
-    assert {"generate_speech", "transcribe", "list_voices", "list_personalities",
+    # v1 surface: speak, clone, transcribe, and the read-only listers.
+    assert {"generate_speech", "clone_voice", "transcribe", "list_voices", "list_personalities",
             "list_languages", "check_health"} <= names
 
 
