@@ -336,6 +336,15 @@ def test_openai_compat_maps_timeouts_to_retryable_503(mm):
         "busy", retry_after=42)).headers["Retry-After"] == "42"
 
 
+def test_job_label_cannot_forge_log_lines(mm):
+    """`what` embeds request-derived data (engine ids), and it reaches the
+    timeout/saturation log lines — CodeQL py/log-injection."""
+    forged = "TTS engine 'x\r\nERROR forged log line' model load"
+    safe = mm._log_safe(forged)
+    assert "\n" not in safe and "\r" not in safe
+    assert len(mm._log_safe("y" * 500)) <= 120
+
+
 def _register_engine(monkeypatch, engine_id, *, sleep_s=0.0):
     import importlib
     import torch

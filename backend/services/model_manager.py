@@ -397,13 +397,21 @@ def check_gpu_admission(*, what: str = "GPU job", executor=None) -> None:
     )
 
 
+def _log_safe(what: str) -> str:
+    """`what` is caller-supplied and can embed request data (engine ids reach
+    it via f-strings), so strip CR/LF and clamp the length before it lands in a
+    log line — a request must not be able to forge extra log entries
+    (CodeQL py/log-injection)."""
+    return str(what).replace("\r", " ").replace("\n", " ")[:120]
+
+
 def _swallow_abandoned(fut) -> None:
     """Consume the result of a future we stopped awaiting, so an abandoned
     wedged job can't emit "Future exception was never retrieved" noise."""
     try:
         if not fut.cancelled():
             fut.exception()
-    except BaseException:  # noqa: BLE001 — best-effort cleanup only
+    except (asyncio.CancelledError, Exception):  # noqa: BLE001 — cleanup only
         pass
 
 
@@ -481,7 +489,8 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
         logger.warning(
             "%s waited %.0fs for a free GPU worker and was never started "
             "(%d queued / %d running) — reporting pool saturation (#1190).",
-            what, queue_timeout, stats.get("queued", 0), stats.get("running", 0),
+            _log_safe(what), queue_timeout,
+            stats.get("queued", 0), stats.get("running", 0),
         )
         raise GpuPoolBusyError(
             f"{what} waited {queue_timeout:.0f}s for a free GPU worker and "
@@ -507,10 +516,11 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
                     "%s exceeded %.0fs of EXECUTION time — abandoned the "
                     "GPU-pool worker; it keeps running (and holding the "
                     "device) until it finishes on its own (#730/#1190).",
-                    what, timeout,
+                    _log_safe(what), timeout,
                 )
             except Exception:
-                logger.exception("GPU pool reset after %s timeout failed", what)
+                logger.exception("GPU pool reset after %s timeout failed",
+                                 _log_safe(what))
         raise GpuJobTimeoutError(_timeout_guidance(what, timeout))
 
 
