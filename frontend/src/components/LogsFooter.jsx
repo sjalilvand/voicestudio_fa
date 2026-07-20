@@ -21,7 +21,12 @@ import {
 
 import toast from 'react-hot-toast';
 import { clearSystemLogs, clearTauriLogs } from '../api/system';
-import { useSystemLogs, useTauriLogs, useNotifications } from '../api/hooks';
+import {
+  useSystemLogs,
+  useTauriLogs,
+  useVisibleNotifications,
+  isDismissibleNotification,
+} from '../api/hooks';
 import { getFrontendLogs, clearFrontendLogs } from '../utils/consoleBuffer';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store';
@@ -323,8 +328,9 @@ export default function LogsFooter() {
   }, [pullFrontend, collapsed]);
 
   // ── Notifications (shared TanStack Query cache with the header bell) ────
-  const notifQuery = useNotifications();
-  const notifications = notifQuery.data?.notifications || [];
+  // Already filtered to what the user hasn't dismissed — badge and tab agree.
+  const { notifications } = useVisibleNotifications();
+  const dismissNotification = useAppStore((s) => s.dismissNotification);
 
   // ── Donation moment popover (see utils/donationMoments.js) ─────────────
   // The eligibility engine dispatches DONATION_MOMENT_EVENT after a rare,
@@ -795,6 +801,16 @@ export default function LogsFooter() {
                         .then(({ apiFetch }) => apiFetch('/system/crash/ack', { method: 'POST' }))
                         .catch(() => {});
                     }
+                    // Same contract for the run-sentinel notice (#1164):
+                    // acting on it watermarks the record server-side, so it
+                    // stops re-firing — a NEW unclean death re-arms (its id
+                    // carries a fresh detected_at).
+                    if (notif.id?.startsWith('last-run-crash-')) {
+                      import('../api/client')
+                        .then(({ apiFetch }) =>
+                          apiFetch('/system/last-run-crash/ack', { method: 'POST' }))
+                        .catch(() => {});
+                    }
                     if (notif.action.type === 'navigate') {
                       useAppStore.getState().setMode?.(notif.action.target);
                       setCollapsed(true);
@@ -819,6 +835,20 @@ export default function LogsFooter() {
                     <span className="shrink-0 text-[11px] font-semibold text-brand whitespace-nowrap">
                       {notif.action.label} →
                     </span>
+                  )}
+                  {isDismissibleNotification(notif) && notif.id && (
+                    <button
+                      className="shrink-0 flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded border-0 bg-transparent p-0 text-fg-muted transition-colors hover:text-fg hover:[background:rgba(255,255,255,0.08)]"
+                      onClick={(e) => {
+                        // The row itself may navigate; hiding must not.
+                        e.stopPropagation();
+                        dismissNotification(notif.id);
+                      }}
+                      aria-label={t('common.dismiss')}
+                      title={t('common.dismiss')}
+                    >
+                      <X size={11} />
+                    </button>
                   )}
                 </div>
               );

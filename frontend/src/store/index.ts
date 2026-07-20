@@ -97,6 +97,9 @@ export const useAppStore = create<AppStore>()(
         // "What's new" affordance (feat/safe-updates) — remembering which
         // version's notes were seen only works if it survives restarts.
         whatsNewSeenVersion: s.whatsNewSeenVersion,
+        // Dismissed system-notification ids — a dismissal only means anything
+        // if it survives restarts (the notes are re-emitted on every poll).
+        dismissedNotificationIds: s.dismissedNotificationIds,
         autoPlayPreview: s.autoPlayPreview,
         mode: s.mode,
         defineMethod: s.defineMethod,

@@ -11,6 +11,8 @@ vi.mock('../api/hooks', () => ({
   useSystemLogs: () => ({ data: null, refetch: vi.fn() }),
   useTauriLogs: () => ({ data: null, refetch: vi.fn() }),
   useNotifications: () => ({ data: null }),
+  useVisibleNotifications: () => ({ data: null, notifications: [] }),
+  isDismissibleNotification: () => false,
 }));
 vi.mock('../api/system', () => ({
   clearSystemLogs: vi.fn(),
