@@ -12,7 +12,7 @@ const CHIP =
   'text-[0.65rem] bg-black/35 px-[5px] py-px rounded-[3px] [border:1px_solid_rgba(255,255,255,0.04)] [font-variant-numeric:tabular-nums]';
 
 /**
- * Production Overrides for the Audiobook tab (#1210) — the same sampling surface
+ * Production Overrides for the Audiobook tab (#1208) — the same sampling surface
  * as the Voice page's ActionBar panel, plus a cache opt-out and (engine-gated)
  * IndexTTS2 emotion. Every control is optional: an untouched panel leaves the
  * store defaults (all null/false), which reproduce today's exact render.

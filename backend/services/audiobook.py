@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 
-#: Mix constant for the per-occurrence seed nonce (#1210) — a large odd
+#: Mix constant for the per-occurrence seed nonce (#1208) — a large odd
 #: multiplier (Knuth) so occurrence 0/1/2 land in well-separated regions of the
 #: 2**31 seed space instead of adjacent integers.
 _NONCE_MIX = 2654435761
@@ -57,7 +57,7 @@ def segment_seed(base_seed: int, text: str, nonce: int = 0) -> int:
     after an edit would no longer match the original render.
 
     ``nonce`` (default 0 — the shipped text-keyed behaviour, byte-identical)
-    is the cache opt-out lever (#1210): when the user asks to *vary repeated
+    is the cache opt-out lever (#1208): when the user asks to *vary repeated
     lines*, the synth wrapper feeds a per-occurrence nonce so each repeat of an
     identical pinned-seed line gets a distinct-but-deterministic seed instead
     of replaying one take.
@@ -67,7 +67,7 @@ def segment_seed(base_seed: int, text: str, nonce: int = 0) -> int:
 
 @dataclass(frozen=True)
 class ExpressiveOptions:
-    """Optional expressive/quality knobs for a longform render (#1210).
+    """Optional expressive/quality knobs for a longform render (#1208).
 
     Every field is ``None``/``False`` by default, and a default instance means
     *reproduce today's bytes exactly*: the audiobook/longform path renders at
@@ -102,7 +102,7 @@ class ExpressiveOptions:
 
     def cache_signature(self) -> str:
         """Deterministic content string folded into every cache key. Empty for a
-        default instance (so unset → byte-identical keys to pre-#1210). Includes
+        default instance (so unset → byte-identical keys to pre-#1208). Includes
         EVERY field, so a future forgotten knob still perturbs the key (the
         regression test loops over the fields asserting each changes this)."""
         if self.is_default:
@@ -258,9 +258,9 @@ def synthesize_chapter(
     from services.pronunciation import apply_lexicon
 
     items: list = []  # ("a", tensor) for audio, ("s", n_samples) for silence
-    # Per-occurrence index for identical spans (#1210 cache opt-out). The
+    # Per-occurrence index for identical spans (#1208 cache opt-out). The
     # segment cache folds it into its key ONLY when vary_repeats is on (else
-    # the key is byte-identical to pre-#1210), so a repeated identical line
+    # the key is byte-identical to pre-#1208), so a repeated identical line
     # gets a distinct cache slot — and therefore a distinct take — instead of
     # replaying one WAV. Always computed (cheap); inert when the cache ignores it.
     occ_counts: dict = {}

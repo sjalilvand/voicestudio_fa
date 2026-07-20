@@ -38,7 +38,7 @@ export interface AudiobookPreview {
 
 /**
  * Expressive/quality knobs shared by the audiobook synth + per-chapter preview
- * (#1210). All optional — an omitted field reproduces today's exact render on
+ * (#1208). All optional — an omitted field reproduces today's exact render on
  * the backend. Preview MUST carry the same fields as the full render so a
  * previewed chapter warms exactly the cache slot the render reuses.
  */
@@ -86,7 +86,7 @@ interface AudiobookMetadata {
 export interface AudiobookGenerateBody extends ExpressiveRequestFields {
   text: string;
   default_voice?: string | null;
-  // #1210 / #505: the backend AudiobookRequest has always accepted `language`,
+  // #1208 / #505: the backend AudiobookRequest has always accepted `language`,
   // but this body omitted it, so an audiobook language pick could never reach
   // the backend. Now threaded through ('Auto' → the profile's language).
   language?: string | null;

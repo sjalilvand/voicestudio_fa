@@ -1,4 +1,4 @@
-"""Audiobook Expressive Maturity (#1210).
+"""Audiobook Expressive Maturity (#1208).
 
 Covers the v0.3.23 headline: Production Overrides + IndexTTS2 graded emotion +
 the cache opt-out threaded through the shared longform render, plus the
@@ -38,7 +38,7 @@ _ALL_FIELDS = {
 # ── ExpressiveOptions.cache_signature: the CRITICAL TRAP guard ───────────────
 
 def test_default_options_have_empty_signature():
-    # A default render must be byte-identical to pre-#1210: no signature, so no
+    # A default render must be byte-identical to pre-#1208: no signature, so no
     # perturbation of any cache key.
     assert ExpressiveOptions().is_default
     assert ExpressiveOptions().cache_signature() == ""
@@ -64,7 +64,7 @@ def test_every_expressive_field_perturbs_the_cache_signature_distinctly():
 # ── segment_seed nonce (cache opt-out determinism) ──────────────────────────
 
 def test_segment_seed_nonce_zero_is_backward_compatible():
-    # nonce defaulting to 0 must reproduce the pre-#1210 value exactly.
+    # nonce defaulting to 0 must reproduce the pre-#1208 value exactly.
     assert segment_seed(1234, "hi") == segment_seed(1234, "hi", 0)
 
 
@@ -175,7 +175,7 @@ def test_omnivoice_default_opts_reproduce_todays_synth_args(monkeypatch):
     kw = gen_calls[0]
     assert kw["num_step"] == 32 and kw["guidance_scale"] == 2.0
     # No temperature / postprocess kwargs on the default path — the model keeps
-    # its own defaults, exactly as before #1210.
+    # its own defaults, exactly as before #1208.
     for k in ("position_temperature", "class_temperature", "postprocess_output",
               "emo_vector", "emo_text"):
         assert k not in kw
@@ -269,7 +269,7 @@ def test_generic_default_opts_pass_no_extra_kwargs(monkeypatch):
     _text, kw = calls[0]
     for k in ("num_step", "guidance_scale", "position_temperature",
               "class_temperature", "postprocess_output", "emo_vector", "emo_text"):
-        assert k not in kw  # byte-identical to the pre-#1210 generic call
+        assert k not in kw  # byte-identical to the pre-#1208 generic call
 
 
 def test_generic_emotion_and_overrides_reach_a_naive_backend(monkeypatch):

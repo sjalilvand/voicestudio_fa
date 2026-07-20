@@ -37,7 +37,7 @@ interface EngineBackend {
   // when model-dependent (mlx-audio's curated models differ). Only badge on
   // an explicit true.
   supports_cloning?: boolean | null;
-  // Graded-emotion capability (#1210) — the Audiobook expressive panel shows
+  // Graded-emotion capability (#1208) — the Audiobook expressive panel shows
   // emotion controls only when the active engine sets this. Absent on legacy
   // payloads (treated as false).
   supports_emotion?: boolean;

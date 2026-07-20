@@ -55,7 +55,7 @@ export default function AudiobookTab({ profiles = [] }) {
   const setLexiconStore = useAppStore((s) => s.setLexicon);
   const storeLexicon = useAppStore((s) => s.lexicon);
   const setDefaultVoice = (v) => setOutputPrefs({ defaultVoice: v || null });
-  // Language pick + expressive overrides (#1210) — store-backed so a book's
+  // Language pick + expressive overrides (#1208) — store-backed so a book's
   // tuning survives a tab switch / reload (same persistence as the lexicon).
   const language = useAppStore((s) => s.language) ?? 'Auto';
   const setLanguage = (v) => setOutputPrefs({ language: v || 'Auto' });
@@ -207,7 +207,7 @@ export default function AudiobookTab({ profiles = [] }) {
           default_voice: defaultVoice || null,
           lexicon: Object.keys(lexicon).length ? lexicon : null,
           // Same expressive fields as the full render so a preview warms the
-          // exact cache slot the render reuses (preview/render parity, #1210).
+          // exact cache slot the render reuses (preview/render parity, #1208).
           ...overridesToRequest(overrides, language),
         });
         setChapterPrev((p) => ({ ...p, [i]: { url: audioUrl(r.output), loading: false } }));
@@ -242,7 +242,7 @@ export default function AudiobookTab({ profiles = [] }) {
         cover_path,
         metadata: Object.keys(metadata).length ? metadata : null,
         lexicon: Object.keys(lexicon).length ? lexicon : null,
-        // language pick + expressive/quality overrides + cache opt-out (#1210).
+        // language pick + expressive/quality overrides + cache opt-out (#1208).
         // Only non-default values are emitted, so an untouched panel keeps the
         // request byte-identical to before.
         ...overridesToRequest(overrides, language),

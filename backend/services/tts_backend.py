@@ -174,7 +174,7 @@ class TTSBackend(ABC):
     #: Whether this engine understands the graded-emotion generate kwargs
     #: (``emo_vector`` / ``emo_text`` + ``use_emo_text`` / ``emo_alpha``).
     #: Surfaced via ``list_backends()`` so UI surfaces (the Audiobook expressive
-    #: panel, #1210) can show emotion controls ONLY for engines that apply them
+    #: panel, #1208) can show emotion controls ONLY for engines that apply them
     #: — no dead controls. Default False; IndexTTS2 overrides to True. Engines
     #: that don't set it still ignore the kwargs (every generate() takes **kw),
     #: so this is a discoverability hint, not an enforcement gate.
@@ -2006,7 +2006,7 @@ def list_backends() -> list[dict]:
             # upgrade hint). None unless ok and the message carries advice.
             "hint": _available_hint(msg) if ok else None,
             "supports_cloning": _clone if isinstance(_clone, bool) else None,
-            # Graded-emotion capability (#1210) — drives the Audiobook emotion
+            # Graded-emotion capability (#1208) — drives the Audiobook emotion
             # panel's engine gate. Class attr, defaults False.
             "supports_emotion": bool(getattr(cls, "supports_emotion", False)),
             "install_hint": _INSTALL_HINTS.get(bid),

@@ -48,7 +48,7 @@ export interface LongformMeta {
   description?: string;
 }
 
-/** Expressive/quality overrides for a longform render (#1210). Every field is
+/** Expressive/quality overrides for a longform render (#1208). Every field is
  *  null/''/false by default — an untouched panel reproduces today's exact
  *  render on the backend (num_step 32, guidance 2.0, model-default temps,
  *  postprocess on, no emotion, content-addressed caching). Only non-null values
@@ -122,11 +122,11 @@ export interface LongformSlice {
   outputFormat: 'm4b' | 'mp3';
   loudness: 'off' | 'acx' | 'podcast';
   defaultVoice: string | null;
-  // Longform render language (#1210 / #505): 'Auto' → the profile's language,
+  // Longform render language (#1208 / #505): 'Auto' → the profile's language,
   // else an explicit pick that reaches the backend (fixes the AudiobookGenerate
   // body that used to omit `language` entirely).
   language: string;
-  // Expressive/quality overrides + cache opt-out (#1210). Persisted like the
+  // Expressive/quality overrides + cache opt-out (#1208). Persisted like the
   // lexicon so a book's tuning survives a tab switch / reload.
   overrides: LongformOverrides;
   // Last finished render's server filename (#1139): the Audiobook tab's

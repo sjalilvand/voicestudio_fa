@@ -1,4 +1,4 @@
-// Audiobook Expressive Maturity — frontend surface (#1210).
+// Audiobook Expressive Maturity — frontend surface (#1208).
 //
 // Covers the four things a WebUI regression would silently break: the markup
 // reference lists the reaction tags; the overrides panel renders + labels its
@@ -18,7 +18,7 @@ import AudiobookOverrides, { overridesToRequest } from '../components/audiobook/
 
 const withI18n = (node) => <I18nextProvider i18n={i18n}>{node}</I18nextProvider>;
 
-describe('audiobook markup reference lists the reaction tags (#1210 D1)', () => {
+describe('audiobook markup reference lists the reaction tags (#1208 D1)', () => {
   it('markup_hint advertises the OmniVoice reaction tags', () => {
     const hint = en.audiobook.markup_hint;
     for (const tag of ['[laughter]', '[sigh]', '[question-en]', '[dissatisfaction-hnn]']) {
@@ -27,7 +27,7 @@ describe('audiobook markup reference lists the reaction tags (#1210 D1)', () => 
   });
 });
 
-describe('overridesToRequest — only touched values reach the wire (#1210 D2/D3/D5)', () => {
+describe('overridesToRequest — only touched values reach the wire (#1208 D2/D3/D5)', () => {
   it('an untouched panel + Auto language emits an empty body (today, byte-identical)', () => {
     expect(overridesToRequest(DEFAULT_OVERRIDES, 'Auto')).toEqual({});
   });
@@ -76,7 +76,7 @@ describe('overridesToRequest — only touched values reach the wire (#1210 D2/D3
   });
 });
 
-describe('AudiobookOverrides panel — renders, labels, persists (#1210 D2)', () => {
+describe('AudiobookOverrides panel — renders, labels, persists (#1208 D2)', () => {
   const open = (props = {}) => {
     const onChange = vi.fn();
     render(

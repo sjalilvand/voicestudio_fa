@@ -82,7 +82,7 @@ def _safe_cover_path(cover_path: str | None) -> str | None:
 
 class ExpressiveMixin(BaseModel):
     """Optional expressive/quality knobs shared by every longform front door
-    (#1210). All optional — an omitted field reproduces today's exact render.
+    (#1208). All optional — an omitted field reproduces today's exact render.
 
     * Sampling: ``num_step`` / ``guidance_scale`` / ``position_temperature`` /
       ``class_temperature`` / ``postprocess_output`` — the same surface the
@@ -336,12 +336,12 @@ def _base_seed(opts: ExpressiveOptions, voice: dict):
 
 
 def _make_occ_counter(opts: ExpressiveOptions):
-    """Per-closure occurrence counter for the cache opt-out (#1210).
+    """Per-closure occurrence counter for the cache opt-out (#1208).
 
     When ``vary_repeats`` is on, every synth call gets a monotonically rising
     nonce so a pinned-seed line that repeats is seeded distinctly per take (the
     segment cache is defeated per-occurrence in parallel). Off → always 0, so
-    the seed derivation is byte-identical to pre-#1210."""
+    the seed derivation is byte-identical to pre-#1208."""
     state = {"n": 0}
 
     def next_nonce() -> int:
@@ -376,7 +376,7 @@ def _omnivoice_sampling_kwargs(opts: ExpressiveOptions) -> dict:
 
 def _generic_extra_kwargs(opts: ExpressiveOptions) -> dict:
     """Extra generate kwargs for a non-OmniVoice engine. UNSET → empty dict →
-    byte-identical to the pre-#1210 generic call. Only present knobs are added,
+    byte-identical to the pre-#1208 generic call. Only present knobs are added,
     and every shipped backend's ``generate(self, text, **kw)`` ignores the ones
     it doesn't understand (never TypeError) — the engine-options contract. The
     emotion trio reaches IndexTTS2's arbitration; other engines drop it."""
@@ -419,7 +419,7 @@ def _build_synth(
     language instead of re-autodetecting per chunk (#505 B2). ``None`` keeps the
     engine's autodetect behavior unchanged.
 
-    ``opts`` (#1210) carries the expressive/quality knobs + cache opt-out. A
+    ``opts`` (#1208) carries the expressive/quality knobs + cache opt-out. A
     default instance reproduces today's exact synth call and caching.
     """
     from services.tts_backend import OmniVoiceBackend, active_backend_id, get_backend_class
@@ -464,7 +464,7 @@ async def _prepare_synth(
     """Resolve :func:`_build_synth` into ``(synth, sample_rate, resolve,
     engine_id)`` — awaiting the OmniVoice model load when needed. Shared by the
     full job and the per-chapter preview. ``language`` is threaded into every
-    chunk so a non-English clone holds its language (#505 B2). ``opts`` (#1210)
+    chunk so a non-English clone holds its language (#505 B2). ``opts`` (#1208)
     carries the expressive knobs; a default instance reproduces today exactly."""
     opts = opts or ExpressiveOptions()
     info = _build_synth(default_voice, language=language, opts=opts)
@@ -554,10 +554,10 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
         # invalidates cached chapters (reserved key can't collide with a voice id).
         lex_sig = json.dumps(normalize_lexicon(lexicon), sort_keys=True)
         sig["\x00lexicon"] = lex_sig
-    # Fold the #1210 expressive signature into BOTH cache layers so changing any
+    # Fold the #1208 expressive signature into BOTH cache layers so changing any
     # new knob (sampling, emotion, seed, cache opt-out) re-renders instead of
     # replaying stale audio (the CRITICAL TRAP). Empty for a default render, so
-    # the derivation stays byte-identical to pre-#1210 and released caches hit.
+    # the derivation stays byte-identical to pre-#1208 and released caches hit.
     expr_sig = opts.cache_signature()
     if expr_sig:
         sig["\x00expressive"] = expr_sig
@@ -711,7 +711,7 @@ async def _render_longform_sse(
                 "fmt": fmt, "bitrate": bitrate,
                 "loudness": loudness, "cover_path": cover_path,
                 "metadata": metadata, "lexicon": lexicon,
-                # #1210: persist the expressive knobs so a resumed render is
+                # #1208: persist the expressive knobs so a resumed render is
                 # byte-consistent with the interrupted one (same cache keys).
                 "expressive": opts.to_manifest(),
             },

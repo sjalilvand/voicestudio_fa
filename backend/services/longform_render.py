@@ -164,10 +164,10 @@ def segment_cache_key(
     pauses (pauses are synthesized silence — never cached): text, voice
     identity (id + resolved signature), speed, sample rate, engine, plus
     ``extra_sig`` for anything else that changes the rendered audio (the
-    pronunciation lexicon + the #1210 expressive signature). Any change → new
+    pronunciation lexicon + the #1208 expressive signature). Any change → new
     key → re-synthesize just this segment.
 
-    ``nonce`` (default 0 — omitted from the key, so pre-#1210 caches keep
+    ``nonce`` (default 0 — omitted from the key, so pre-#1208 caches keep
     hitting) is the per-occurrence disambiguator the cache opt-out feeds so a
     repeated identical line gets a distinct segment instead of replaying one.
     """
@@ -181,7 +181,7 @@ def segment_cache_key(
         "extra": extra_sig or "",
     }
     if nonce:
-        # Absent when 0 so the derivation is byte-identical to pre-#1210 for
+        # Absent when 0 so the derivation is byte-identical to pre-#1208 for
         # every normal (non-vary_repeats) render.
         payload["nonce"] = int(nonce)
     raw = json.dumps(payload, sort_keys=True, ensure_ascii=False)
@@ -222,9 +222,9 @@ class SegmentCache:
         self.engine_id = engine_id or ""
         self.voice_sig = dict(voice_sig or {})
         self.extra_sig = extra_sig or ""
-        # Cache opt-out (#1210): when on, a per-occurrence nonce enters the key
+        # Cache opt-out (#1208): when on, a per-occurrence nonce enters the key
         # so identical repeated lines no longer share one WAV. Off → the nonce
-        # is dropped and keys are byte-identical to pre-#1210 (default render).
+        # is dropped and keys are byte-identical to pre-#1208 (default render).
         self.vary_repeats = bool(vary_repeats)
         self.hits = 0
         self.misses = 0
