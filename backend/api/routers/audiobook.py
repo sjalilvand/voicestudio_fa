@@ -29,7 +29,7 @@ import uuid
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from services.audiobook import (
     ExpressiveOptions,
@@ -97,15 +97,19 @@ class ExpressiveMixin(BaseModel):
       takes instead of replaying one recording (default off = today).
     """
 
-    num_step: int | None = None
-    guidance_scale: float | None = None
-    position_temperature: float | None = None
-    class_temperature: float | None = None
+    # Bounds so a loopback POST (reachable by a browser-tab CSRF) can't pin a
+    # GPU-pool worker with an absurd step count or otherwise feed the sampler
+    # nonsense. Ranges are generous supersets of the Voice-page controls; unset
+    # (None) still means "use the longform default", unchanged. (#1208)
+    num_step: int | None = Field(default=None, ge=1, le=512)
+    guidance_scale: float | None = Field(default=None, ge=0.0, le=20.0)
+    position_temperature: float | None = Field(default=None, ge=0.0, le=100.0)
+    class_temperature: float | None = Field(default=None, ge=0.0, le=100.0)
     postprocess_output: bool | None = None
-    seed: int | None = None
-    emo_vector: list[float] | None = None
-    emo_text: str | None = None
-    emo_alpha: float | None = None
+    seed: int | None = Field(default=None, ge=0, le=2**32 - 1)
+    emo_vector: list[float] | None = Field(default=None, min_length=8, max_length=8)
+    emo_text: str | None = Field(default=None, max_length=500)
+    emo_alpha: float | None = Field(default=None, ge=0.0, le=1.0)
     vary_repeats: bool = False
 
 

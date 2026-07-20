@@ -2108,7 +2108,7 @@
     "lex_add": "Woord toevoegen",
     "lex_remove": "Verwijderen",
     "markup_help": "Opmaakreferentie",
-    "markup_hint": "# Hoofdstuktitel · [stem:NAAM] wisselstem · [pauze 500 ms] / [pauze 1s] · [langzaam]…[/langzaam] · [snel]…[/snel] · [nadruk]…[/nadruk] · [spell]…[/spell] · Reacties (OmniVoice): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "markup_hint": "# Hoofdstuktitel · [voice:NAME] wisselstem · [pause 500ms] / [pause 1s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · Reacties (OmniVoice): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
     "language": "Taal",
     "expressive": "Productie-overrides",
     "reset": "Opnieuw instellen",

@@ -135,6 +135,35 @@ def test_preview_and_render_derive_identical_opts_and_keys(tmp_path):
     assert _render_key(tmp_path, render_opts) == _render_key(tmp_path, preview_opts)
 
 
+# ── input bounds: a loopback POST can't feed the sampler abuse values ────────
+
+def test_expressive_knobs_reject_out_of_range_values():
+    """CodeRabbit #1208: the expressive knobs are a loopback POST body (reachable
+    by a browser-tab CSRF), so an absurd num_step could pin a GPU-pool worker.
+    Each knob must be bounds-checked at the model boundary."""
+    import pytest
+    from pydantic import ValidationError
+
+    from api.routers.audiobook import AudiobookRequest
+
+    base = dict(text="# A\nhello")
+    for bad in (
+        dict(num_step=100_000),      # would tie up a worker
+        dict(num_step=0),            # non-positive step count
+        dict(guidance_scale=-1.0),
+        dict(position_temperature=1e9),
+        dict(class_temperature=-0.5),
+        dict(emo_alpha=2.0),         # alpha is a 0..1 blend
+        dict(emo_vector=[0.1, 0.2]),  # must be the 8-emotion vector
+    ):
+        with pytest.raises(ValidationError):
+            AudiobookRequest(**base, **bad)
+
+    # In-range values still construct fine (defaults/None unaffected).
+    AudiobookRequest(**base, num_step=32, guidance_scale=2.0, emo_alpha=0.6,
+                     emo_vector=[0.0] * 8)
+
+
 # ── backward compat: default request → today's exact synth args ─────────────
 
 def _record_manual_seed(monkeypatch):

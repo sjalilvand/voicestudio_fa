@@ -2108,7 +2108,7 @@
     "lex_add": "単語を追加",
     "lex_remove": "削除",
     "markup_help": "マークアップリファレンス",
-    "markup_hint": "# 章タイトル · [voice:NAME] 音声切り替え · [500ms 一時停止] / [1 秒一時停止] · [遅い]…[/遅い] · [速い]…[/速い] · [強調]…[/強調] · [呪文]…[/呪文] · リアクション (OmniVoice): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "markup_hint": "# 章タイトル · [voice:NAME] 音声切り替え · [pause 500ms] / [pause 1s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · リアクション (OmniVoice): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
     "language": "言語",
     "expressive": "プロダクションオーバーライド",
     "reset": "リセット",

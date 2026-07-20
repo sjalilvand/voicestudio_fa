@@ -2108,7 +2108,7 @@
     "lex_add": "Aggiungi parola",
     "lex_remove": "Rimuovi",
     "markup_help": "Riferimento al markup",
-    "markup_hint": "# Titolo del capitolo · [voce:NOME] cambia voce · [pausa 500 ms] / [pausa 1 s] · [lento]…[/lento] · [veloce]…[/veloce] · [enfasi]…[/emphasis] · [incantesimo]…[/incantesimo] · Reazioni (OmniVoice): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "markup_hint": "# Titolo del capitolo · [voice:NAME] cambia voce · [pause 500ms] / [pause 1s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · Reazioni (OmniVoice): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
     "language": "Lingua",
     "expressive": "Sovrapposizioni di produzione",
     "reset": "Ripristina",

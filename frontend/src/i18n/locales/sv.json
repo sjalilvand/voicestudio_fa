@@ -2108,7 +2108,7 @@
     "lex_add": "Lägg till ord",
     "lex_remove": "Ta bort",
     "markup_help": "Markeringsreferens",
-    "markup_hint": "# Kapiteltitel · [röst:NAMN] byt röst · [paus 500ms] / [paus 1s] · [långsam]…[/långsam] · [snabb]…[/snabb] · [betoning]...[/betoning] · [stavning]...[/stavning] · Reaktioner (OmniVoice): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "markup_hint": "# Kapiteltitel · [voice:NAME] byt röst · [pause 500ms] / [pause 1s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · Reaktioner (OmniVoice): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
     "language": "Språk",
     "expressive": "Produktionsåsidosättanden",
     "reset": "Återställ",
