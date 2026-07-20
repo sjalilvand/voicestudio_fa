@@ -288,7 +288,12 @@ def test_aborted_transcribe_still_restores_the_tts_model(transcribe_job):
 
     assert "event: aborted" in body, body
     assert calls["offload"] == 1, "precondition: the stream must have offloaded"
-    assert calls["restored"].wait(timeout=10), (
+    # The restore is dispatched fire-and-forget to a thread pool from the stream's
+    # `finally` (dub_core: run_in_executor(_cpu_pool, restore_tts_after_asr)), so we
+    # wait on the Event rather than assume it's done on return. The wait returns the
+    # instant restore fires; the generous timeout only matters on a genuine
+    # never-restored regression, and keeps a slow/loaded CI runner from flaking.
+    assert calls["restored"].wait(timeout=60), (
         "an aborted transcribe left the TTS model stranded on CPU (#1191)"
     )
     assert calls["restore"] == 1
@@ -309,7 +314,9 @@ def test_crashed_transcribe_still_restores_the_tts_model(transcribe_job, monkeyp
 
     assert "event: error" in body, body
     assert calls["offload"] == 1
-    assert calls["restored"].wait(timeout=10), (
+    # Same fire-and-forget restore dispatch as the aborted case — wait generously
+    # so a loaded CI runner can't flake, while a real never-restored bug still fails.
+    assert calls["restored"].wait(timeout=60), (
         "a crashed transcribe left the TTS model stranded on CPU (#1191)"
     )
 
