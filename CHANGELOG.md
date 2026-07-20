@@ -50,10 +50,14 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - Flush caches / Unload documented in the performance guide, incl. `POST /system/flush-memory` for scripts
 - README FAQ: why a longer reference clip doesn't clone better (zero-shot 15 s cap; fine-tuning is the audiobook-grade path)
 - `docs/expressive-speech.md` corrected so every recipe it names (breaths, temperature) is reachable in the surface it points to, including the Audiobook tab (#1208)
+- New `docs/api-auth.md` — one place for authenticating the local API: share PIN, API key, dictation WebSocket, and trusted networks, with curl/SDK examples and what `401`/`403`/`429` mean (#1212)
 
 ### Fixed
 
+- Security (server mode): the admin routes (`/system/*`, `/api/settings/*` — RCE-class) now require the API key or genuine loopback — with an API key set and `OMNIVOICE_TRUSTED_NETWORKS` configured, a trusted-network client could previously reach them with no credential; the short share PIN no longer gates admin either (#1213)
+- A render error no longer blanks the whole window — a recoverable error card (Reload / Report) appears instead, and CI now builds the real production bundle so a pre-mount crash can't ship (#1209)
 - Voice-clone trimmer: the preview now plays exactly the selected region on variable-bitrate clips (it had drifted off on VBR/mis-reported-duration files by playing the original file on a different timeline) (#1210)
+- Screen readers now announce the hidden file-picker buttons (batch add, gallery import, stories import) (#1211)
 - Audiobook language selection now reaches the backend — the client had dropped the `language` field, and the tab's Markup reference now lists the reaction tags (`[laughter]`, `[sigh]`, …) that already work there (#1208)
 - A backend that fails to start now says why — exit code and error output, with actionable hints and a one-click report — instead of the evidence-free "Can't reach the local OmniVoice backend" (#1177)
 - Generation no longer crawls on CPU after a cancelled or failed dub: the TTS model is moved back to the GPU on every exit path, and each generation now verifies its own placement (#1191)
