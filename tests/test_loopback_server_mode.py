@@ -134,6 +134,93 @@ def test_require_local_rejects_untrusted_non_loopback(monkeypatch):
     assert exc.value.status_code == 403
 
 
+def _req_full(host, *, headers=None, query=None, cookies=None, pin=None):
+    """Richer stub carrying the channels the admin-credential check reads:
+    headers, query params, cookies, and app.state.network_share.pin."""
+    ns = SimpleNamespace(pin=pin) if pin is not None else None
+    app = SimpleNamespace(state=SimpleNamespace(network_share=ns))
+    return SimpleNamespace(
+        client=SimpleNamespace(host=host) if host else None,
+        headers=headers or {},
+        query_params=query or {},
+        cookies=cookies or {},
+        app=app,
+    )
+
+
+# Server mode + trusted network + credential — issue #1213.
+# Regression for the two-tier collapse: with OMNIVOICE_SERVER_MODE=1 the
+# loopback origin is unenforceable, so admin can't require true loopback. But a
+# configured credential (API key / PIN) must still gate admin — a trusted-network
+# client that presents NO credential must NOT reach /system/* or /api/settings/*
+# just because is_local_host exempts it from the consumption middleware.
+
+
+def test_server_mode_trusted_network_no_credential_reaches_admin(monkeypatch):
+    # No credential configured → admin stays open in server mode (the #261
+    # Docker flow: operator reaches /system/* off the bridge gateway).
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_TRUSTED_NETWORKS", "10.0.0.0/8")
+    monkeypatch.delenv("OMNIVOICE_API_KEY", raising=False)
+    require_loopback(_req_full("10.1.2.3"))  # must not raise
+
+
+def test_server_mode_trusted_network_blocked_when_api_key_set(monkeypatch):
+    # THE FIX: API key set to lock the backend + trusted CIDR for consumption.
+    # A trusted-network client with NO key must be 403'd on the admin surface —
+    # trusted-network membership is a consumption exemption, never admin.
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_TRUSTED_NETWORKS", "10.0.0.0/8")
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")
+    with pytest.raises(HTTPException) as exc:
+        require_loopback(_req_full("10.1.2.3"))
+    assert exc.value.status_code == 403
+    # ...but consumption stays exempt for that same trusted client.
+    require_local(_req_full("10.1.2.3"))  # must not raise
+
+
+def test_server_mode_admin_allowed_with_api_key_header(monkeypatch):
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")
+    require_loopback(
+        _req_full("172.17.0.1", headers={"authorization": "Bearer s3cret"})
+    )  # must not raise
+
+
+def test_server_mode_admin_allowed_with_api_key_cookie_or_query(monkeypatch):
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")
+    require_loopback(_req_full("172.17.0.1", cookies={"ov_key": "s3cret"}))
+    require_loopback(_req_full("172.17.0.1", query={"api_key": "s3cret"}))
+
+
+def test_server_mode_admin_rejects_wrong_api_key(monkeypatch):
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")
+    with pytest.raises(HTTPException) as exc:
+        require_loopback(_req_full("172.17.0.1", headers={"authorization": "Bearer nope"}))
+    assert exc.value.status_code == 403
+
+
+def test_server_mode_pin_gates_admin_and_is_accepted(monkeypatch):
+    # A share PIN (no API key) also counts as the operator credential in server
+    # mode: a trusted client without it is blocked; presenting it is accepted.
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_TRUSTED_NETWORKS", "10.0.0.0/8")
+    monkeypatch.delenv("OMNIVOICE_API_KEY", raising=False)
+    with pytest.raises(HTTPException):
+        require_loopback(_req_full("10.1.2.3", pin="1234"))
+    require_loopback(_req_full("10.1.2.3", pin="1234", headers={"x-omnivoice-pin": "1234"}))
+
+
+def test_server_mode_loopback_admin_never_needs_credential(monkeypatch):
+    # The local operator on the Docker host (loopback) reaches admin with no
+    # credential even when one is configured — the desktop shell path.
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")
+    require_loopback(_req_full("127.0.0.1"))  # must not raise
+
+
 def test_is_local_host_unwraps_ipv4_mapped_ipv6(monkeypatch):
     # Dual-stack proxies (Caddy, Node.js) pass ::ffff:192.168.1.5 — should
     # match an IPv4 CIDR after unwrapping the mapped address.

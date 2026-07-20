@@ -94,6 +94,60 @@ def _server_mode() -> bool:
     return os.environ.get("OMNIVOICE_SERVER_MODE", "").strip().lower() in _TRUTHY
 
 
+def _configured_pin(request) -> str | None:
+    """The active share PIN (``app.state.network_share.pin``) or None. Read via
+    getattr so a bare Request stub (or a request that hit before lifespan set
+    the state) never raises — a missing PIN just means 'no PIN gate'."""
+    app = getattr(request, "app", None)
+    state = getattr(app, "state", None) if app is not None else None
+    ns = getattr(state, "network_share", None) if state is not None else None
+    return getattr(ns, "pin", None) if ns is not None else None
+
+
+def _admin_credential_configured(request) -> bool:
+    """Whether the operator has set ANY credential gate — the remote API key or
+    a share PIN. When neither is set, server mode leaves admin open (the Docker
+    issue #261 flow the image depends on)."""
+    if os.environ.get("OMNIVOICE_API_KEY"):
+        return True
+    return bool(_configured_pin(request))
+
+
+def _request_presents_admin_credential(request) -> bool:
+    """Whether the request carries a valid API key or share PIN via the same
+    channels the middleware accepts (``Authorization: Bearer`` / ``?api_key`` /
+    ``ov_key`` cookie; ``x-omnivoice-pin`` / ``?pin`` / ``ov_pin`` cookie).
+
+    Used only by the admin gate under server mode so that trusted-network
+    membership — a *consumption* exemption (``is_local_host``) that bypasses the
+    middleware — can never by itself unlock the RCE-class admin surface. All
+    lookups are getattr-defensive so a minimal Request stub never raises."""
+    headers = getattr(request, "headers", None) or {}
+    query = getattr(request, "query_params", None) or {}
+    cookies = getattr(request, "cookies", None) or {}
+
+    api_key = os.environ.get("OMNIVOICE_API_KEY") or ""
+    if api_key:
+        auth = headers.get("authorization", "")
+        supplied = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
+        if not supplied:
+            supplied = query.get("api_key") or cookies.get("ov_key") or ""
+        if supplied and secrets.compare_digest(supplied, api_key):
+            return True
+
+    pin = _configured_pin(request)
+    if pin:
+        supplied = (
+            headers.get("x-omnivoice-pin")
+            or query.get("pin")
+            or cookies.get("ov_pin")
+            or ""
+        )
+        if supplied and secrets.compare_digest(supplied, pin):
+            return True
+    return False
+
+
 def require_loopback(request: Request) -> None:
     """Reject any request whose `client.host` is not a loopback address.
 
@@ -110,15 +164,29 @@ def require_loopback(request: Request) -> None:
     on rejection — the response body is `{"detail": "loopback origin required"}`
     so existing tests for `/system/set-env` keep passing without modification.
 
-    In server mode (Docker, see `_server_mode`) the gate is a no-op: the
-    loopback origin is unenforceable there and exposure is governed by the
-    deployment's port mapping + the optional share PIN instead.
+    In server mode (Docker, see `_server_mode`) the loopback origin is
+    unenforceable, so the gate can't require true loopback. It then applies the
+    admin-credential rule instead:
+
+    - No credential configured (no API key, no PIN) → open, matching the #261
+      Docker flow where the operator reaches ``/system/*`` off the bridge
+      gateway with nothing set.
+    - A credential IS configured → the request must present it. This keeps the
+      two-tier privilege model intact under server mode: ``OMNIVOICE_TRUSTED_NETWORKS``
+      is a *consumption* exemption (``is_local_host``) that bypasses the PIN /
+      API-key middleware, and it must NEVER by itself unlock the admin surface
+      (``/system/set-env`` — RCE-class — and ``/api/settings/*``). A LAN client
+      in a trusted CIDR that presents no credential gets 403 here even though it
+      sails through the consumption gates. See docs/api-auth.md (#1213).
     """
     host = request.client.host if request.client else None
     if is_loopback(host):
         return
     if _server_mode():
-        return
+        if not _admin_credential_configured(request):
+            return
+        if _request_presents_admin_credential(request):
+            return
     raise HTTPException(status_code=403, detail="loopback origin required")
 
 
