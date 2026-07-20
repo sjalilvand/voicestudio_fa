@@ -4,6 +4,11 @@ Run the OmniVoice backend on one machine (a GPU box, a home server) and drive
 it from the desktop app or a browser on another — over your tailnet, with the
 inference staying on the powerful machine.
 
+> Calling the API from your own scripts rather than the desktop app? See
+> [docs/api-auth.md](api-auth.md) for a consumer-focused reference of every auth
+> gate (share PIN, API key, dictation WebSocket, trusted networks) with the exact
+> headers, params, and `401`/`403`/`429` meanings.
+
 This is opt-in and off by default: with no API key set, the backend stays
 loopback-only exactly as before.
 
