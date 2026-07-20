@@ -61,8 +61,23 @@ pub struct BootstrapState {
 static LAST_FAILURE: Mutex<Option<String>> = Mutex::new(None);
 
 pub fn set_stage(state: &Arc<Mutex<BootstrapStage>>, stage: BootstrapStage) {
+    set_stage_into(state, &LAST_FAILURE, stage)
+}
+
+/// The retention logic itself, with the storage slot as a parameter.
+///
+/// `set_stage` is a one-line delegate that passes the process-global slot.
+/// Splitting it this way keeps the behaviour testable against a caller-owned
+/// slot: a test that wrote through the global would mutate shared state with no
+/// teardown, and `cargo test` runs the tests in a binary in PARALLEL, so it
+/// would race any future test asserting on `last_failure_message()`.
+fn set_stage_into(
+    state: &Arc<Mutex<BootstrapStage>>,
+    last_failure: &Mutex<Option<String>>,
+    stage: BootstrapStage,
+) {
     if let BootstrapStage::Failed { message } = &stage {
-        if let Ok(mut last) = LAST_FAILURE.lock() {
+        if let Ok(mut last) = last_failure.lock() {
             *last = Some(message.clone());
         }
     }
@@ -2371,21 +2386,59 @@ mod failure_preservation_tests {
     /// when a request finally gives up, which is routinely AFTER one of those
     /// transitions; without retention it finds nothing and the user is back to
     /// an evidence-free "can't reach the backend".
+    ///
+    /// Drives a test-owned retention slot via `set_stage_into` rather than the
+    /// process-global one: `cargo test` runs this binary's tests in parallel,
+    /// so mutating the global here would race any future test that asserts on
+    /// `last_failure_message()`, and would leak a value with no teardown.
     #[test]
     fn a_failed_diagnosis_survives_later_stage_transitions() {
         let s = stage(BootstrapStage::Checking);
-        set_stage(&s, BootstrapStage::Failed { message: "uv sync failed: no wheel".into() });
-        assert_eq!(last_failure_message().as_deref(), Some("uv sync failed: no wheel"));
+        let slot: Mutex<Option<String>> = Mutex::new(None);
+        let retained = || slot.lock().unwrap().clone();
+
+        set_stage_into(&s, &slot, BootstrapStage::Failed { message: "uv sync failed".into() });
+        assert_eq!(retained().as_deref(), Some("uv sync failed"));
 
         // The supervisor moves on to a respawn — the stage stops being Failed…
-        set_stage(&s, BootstrapStage::StartingBackend);
+        set_stage_into(&s, &slot, BootstrapStage::StartingBackend);
         assert!(!already_diagnosed(&s));
         // …but the reason is still retrievable.
-        assert_eq!(last_failure_message().as_deref(), Some("uv sync failed: no wheel"));
+        assert_eq!(retained().as_deref(), Some("uv sync failed"));
 
         // A newer failure replaces the older one (the newest is the actionable
         // one; a stale reason would misdiagnose the current state).
-        set_stage(&s, BootstrapStage::Failed { message: INTEL_MAC_UNSUPPORTED_MSG.to_string() });
-        assert_eq!(last_failure_message().as_deref(), Some(INTEL_MAC_UNSUPPORTED_MSG));
+        let intel = BootstrapStage::Failed { message: INTEL_MAC_UNSUPPORTED_MSG.to_string() };
+        set_stage_into(&s, &slot, intel);
+        assert_eq!(retained().as_deref(), Some(INTEL_MAC_UNSUPPORTED_MSG));
+    }
+
+    /// A non-failed stage must never write the retention slot — otherwise a
+    /// healthy transition would erase the diagnosis the slot exists to keep.
+    #[test]
+    fn a_non_failed_stage_never_touches_the_retention_slot() {
+        let s = stage(BootstrapStage::Checking);
+        let slot: Mutex<Option<String>> = Mutex::new(Some("earlier reason".into()));
+        for st in [BootstrapStage::Checking, BootstrapStage::StartingBackend, BootstrapStage::Ready]
+        {
+            set_stage_into(&s, &slot, st);
+        }
+        assert_eq!(slot.lock().unwrap().as_deref(), Some("earlier reason"));
+    }
+
+    /// Wiring check: the public `set_stage` must write the SAME global slot
+    /// that `last_failure_message()` (and the `last_bootstrap_failure` command)
+    /// reads back, or the frontend asks the shell and always gets `None`.
+    ///
+    /// The only test that touches the process-global slot. It asserts a value
+    /// it wrote itself and never asserts absence, so a parallel test writing a
+    /// different message cannot make it flake. Any FUTURE test asserting on the
+    /// global must use `set_stage_into` with its own slot instead.
+    #[test]
+    fn set_stage_wires_the_global_slot_to_the_public_reader() {
+        let s = stage(BootstrapStage::Checking);
+        let unique = format!("wiring probe {:?}", std::thread::current().id());
+        set_stage(&s, BootstrapStage::Failed { message: unique.clone() });
+        assert_eq!(last_failure_message().as_deref(), Some(unique.as_str()));
     }
 }
