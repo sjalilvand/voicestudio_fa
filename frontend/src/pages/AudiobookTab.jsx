@@ -105,6 +105,18 @@ export default function AudiobookTab({ profiles = [] }) {
   const abortRef = useRef(false);
   const abortControllerRef = useRef(null); // per-generation fetch AbortController
 
+  // Abort an in-flight generation when the tab unmounts. Without this, leaving
+  // mid-render keeps the stream (and the backend job) running, and a late
+  // done/error event could clobber the store's output from a generation the
+  // user started after coming back. Mirrors the manual Stop.
+  useEffect(
+    () => () => {
+      abortRef.current = true;
+      abortControllerRef.current?.abort();
+    },
+    [],
+  );
+
   // Output prefs + metadata (embedded in the file; players show these) — now
   // store-backed. `meta` is default-filled so every controlled input gets a
   // defined string (an empty store record never flips a controlled→uncontrolled).

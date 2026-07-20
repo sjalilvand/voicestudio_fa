@@ -53,6 +53,12 @@ vi.mock('../api/audiobook', () => ({
                 ),
               });
             return new Promise((_, reject) => {
+              // If the signal already aborted before this read() (a real race),
+              // the 'abort' event has passed — reject now instead of hanging.
+              if (gen.capturedSignal.aborted) {
+                reject(new DOMException('Aborted', 'AbortError'));
+                return;
+              }
               gen.capturedSignal.addEventListener('abort', () =>
                 reject(new DOMException('Aborted', 'AbortError')),
               );

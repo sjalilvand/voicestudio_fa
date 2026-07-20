@@ -823,7 +823,10 @@ async def _render_longform_sse(
                         job_id, len(chapter_files), total)
             if job_store is not None:
                 try:
-                    job_store.mark_failed(job_id, "client disconnected")
+                    # A client disconnect here is a user-initiated Stop, not a
+                    # failure — record it as cancelled so job history reads right
+                    # and the resumable state isn't mistaken for a broken render.
+                    job_store.mark_cancelled(job_id)
                 except Exception:
                     pass  # best-effort job history
             # Deliberately DO NOT clear the resume manifest: the rendered chapters
