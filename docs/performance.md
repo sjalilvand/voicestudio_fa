@@ -5,7 +5,7 @@ should leave alone. Everything here applies to the current release; numbers
 marked "measured" come from `scripts/bench_pipeline.py` on a 16 GB Apple
 Silicon M2 — your hardware will differ, but the *ratios* hold.
 
-## First: the three classic causes of "it got slow"
+## First: the classic causes of "it got slow"
 
 Before touching any knob, check these — they account for most slowness reports:
 
@@ -43,6 +43,17 @@ Before touching any knob, check these — they account for most slowness reports
      the badge (full text on hover).
    Note: **GPU acceleration on Windows is NVIDIA/CUDA-only** — AMD and Intel
    GPUs run CPU-only there (see [Windows install notes](install/windows.md)).
+5. **You aborted a dub earlier (fixed in v0.3.23).** Dubbing moves the TTS
+   model to CPU to free VRAM for the ASR model, then moves it back when the
+   transcription finishes. Before v0.3.23 that move-back only ran on the fully
+   successful path, so cancelling a dub, hitting a dub error, or closing the
+   tab mid-transcription left the TTS model stranded on CPU — and **every**
+   later generation ran there, 10-50x slower with the CPU pegged, until the
+   ~15-minute idle unload happened to fire. Restarting the backend cleared it,
+   which made it look random or time-of-day related (#1191). Since v0.3.23 the
+   move-back runs on every exit path, *and* each generation verifies the model
+   is on the expected device and moves it back itself — so no future code path
+   can strand it again. If you are on an older build, restart the backend.
 
 ## What a generation actually spends time on
 
