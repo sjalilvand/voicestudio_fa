@@ -1,4 +1,9 @@
-# The Lighthouse at Wits' End
+// A ready-to-run demo script for the Audiobook tab — click "Load sample" to drop
+// it straight into the editor and hear every capability in one generate: `#`
+// chapters, per-character `[voice:…]`, `[pause …]`, the SSML-lite tags
+// (`[slow]`/`[fast]`/`[emphasis]`/`[spell]`), and reaction tags. Written as a
+// real short story so it sounds good generated AND documents the syntax when read.
+export const SAMPLE_AUDIOBOOK_SCRIPT = `# The Lighthouse at Wits' End
 
 [voice:Narrator] The storm had been building for three days, and Mara knew — the way you know your own heartbeat — that tonight the old lamp would be tested. [pause 700ms] She climbed the spiral stair, counting each step out of habit. [slow]One hundred and one. One hundred and two.[/slow] [pause 500ms] At the top, the wind found her.
 
@@ -19,3 +24,4 @@
 [voice:Mara] You don't need to see the shore. [pause 600ms] You need to see me. [pause 800ms] Look for the light.
 
 [voice:Narrator] And out beyond the black water, a small boat turned — [pause 500ms] slowly, then surely — toward a single, patient beam. [sigh] [pause 400ms] Some nights, that is the whole of the job: to be the thing that does not go out.
+`;

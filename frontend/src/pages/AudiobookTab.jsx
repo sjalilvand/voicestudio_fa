@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   BookMarked,
-  Loader,
+  BookOpen,
   Download,
+  Loader,
   Image as ImageIcon,
   X,
   Play,
@@ -25,6 +26,7 @@ import { useAppStore } from '../store';
 import VoiceSelector from '../components/VoiceSelector';
 import SearchableSelect from '../components/SearchableSelect';
 import AudiobookOverrides, { overridesToRequest } from '../components/audiobook/AudiobookOverrides';
+import { SAMPLE_AUDIOBOOK_SCRIPT } from '../data/sampleAudiobook';
 import ALL_LANGUAGES from '../languages.json';
 import { POPULAR_LANGS } from '../utils/constants';
 import { Button } from '../ui';
@@ -195,6 +197,16 @@ export default function AudiobookTab({ profiles = [] }) {
     [t],
   );
 
+  // Drop the demo story straight into the editor so a first-timer can hit
+  // Preview/Create immediately and hear every markup capability. Guard against
+  // clobbering real work — only prompt when there's existing script content.
+  const loadSample = useCallback(() => {
+    if (text.trim() && !window.confirm(t('audiobook.load_sample_confirm'))) return;
+    setText(SAMPLE_AUDIOBOOK_SCRIPT);
+    setPlan(null);
+    setError('');
+  }, [text, t, setText]);
+
   const onPreviewChapter = useCallback(
     async (i) => {
       setError('');
@@ -315,15 +327,14 @@ export default function AudiobookTab({ profiles = [] }) {
               style={{ display: 'none' }}
             />
           </label>
-          <a
-            className={buttonVariants({ variant: 'subtle', size: 'omniMd' })}
-            href="/sample-audiobook.md"
-            download="sample-audiobook.md"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-            title={t('audiobook.download_sample_hint')}
+          <Button
+            variant="subtle"
+            onClick={loadSample}
+            disabled={busy}
+            title={t('audiobook.load_sample_hint')}
           >
-            <Download size={14} /> {t('audiobook.download_sample')}
-          </a>
+            <BookOpen size={14} /> {t('audiobook.load_sample')}
+          </Button>
           <Button variant="subtle" onClick={onPreview} disabled={!canRun}>
             {planLoading ? <Loader size={14} className="spin" /> : null}{' '}
             {t('audiobook.preview_plan')}

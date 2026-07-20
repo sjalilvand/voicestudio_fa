@@ -39,7 +39,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - `clone_voice` MCP tool — AI agents can clone a new voice from a base64 reference audio sample; returns a `profile_id` immediately usable with `generate_speech` — thanks @paoloantinori! (#1194)
 - Dub tab: **Paste Translation** — paste a translation made elsewhere (ChatGPT, DeepL, a human) as subtitles, numbered lines, or plain lines; it maps onto the existing segments with a before→after preview, keeping timings and the source transcript intact (#1203)
 - Audiobook tab: **Production Overrides** (position/class temperature, steps, guidance, postprocess, seed) for expressive narration, plus IndexTTS2 emotion controls and a "vary repeated lines" toggle — defaults reproduce today's renders exactly (#1208)
-- Audiobook tab: a **Sample script** download — a ready-to-import demo (`.md`) showing chapters, per-character `[voice:]`, `[pause]`, `[slow]`/`[fast]`/`[emphasis]`/`[spell]`, and reaction tags, so first-timers can hear every capability in one generate (#1214)
+- Audiobook tab: a **Load sample** button that fills the editor with a demo story — chapters, per-character `[voice:]`, `[pause]`, `[slow]`/`[fast]`/`[emphasis]`/`[spell]`, and reaction tags — so first-timers can hit Create and hear every capability before their real work (#1214)
 
 ### CI
 
