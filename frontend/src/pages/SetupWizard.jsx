@@ -380,7 +380,12 @@ export default function SetupWizard({ onReady }) {
               style={{ '--rise': 1 }}
             >
               <SectionHead>{t('firstrun.stage_models', 'Models & engines')}</SectionHead>
-              <WizardLibrary />
+              {/* The list scrolls; the Continue footer below stays pinned —
+                  same pattern as the System step. Without this clamp the
+                  curated rows push the footer below the viewport. */}
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <WizardLibrary />
+              </div>
               {!modelsReady && status?.missing?.length > 0 && (
                 <p className="m-0 text-xs leading-snug text-warn">
                   {t('setup.still_needed')} {status.missing.map((m) => m.label).join(', ')}
