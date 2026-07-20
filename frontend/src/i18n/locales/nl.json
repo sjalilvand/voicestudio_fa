@@ -2067,6 +2067,7 @@
     "export_error": "Kan het woordenboek niet exporteren."
   },
   "audiobook": {
+    "output": "Uitvoer",
     "title": "Audioboek",
     "subtitle": "Verander een door hoofdstukken gescheiden script in een m4b-audioboek in hoofdstukken.",
     "script": "Script",

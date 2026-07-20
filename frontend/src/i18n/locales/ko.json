@@ -2067,6 +2067,7 @@
     "export_error": "사전을 내보낼 수 없습니다."
   },
   "audiobook": {
+    "output": "출력",
     "title": "Audiobook",
     "subtitle": "장으로 구분된 스크립트를 장으로 구분된 m4b 오디오북으로 바꿔보세요.",
     "script": "스크립트",

@@ -2067,6 +2067,7 @@
     "export_error": "Không thể xuất từ điển."
   },
   "audiobook": {
+    "output": "Đầu ra",
     "title": "Sách nói",
     "subtitle": "Biến tập lệnh được phân cách theo chương thành sách nói m4b được chia theo chương.",
     "script": "kịch bản",

@@ -2067,6 +2067,7 @@
     "export_error": "Kamus tidak dapat diekspor."
   },
   "audiobook": {
+    "output": "Keluaran",
     "title": "Buku Audio",
     "subtitle": "Ubah skrip yang dibatasi bab menjadi buku audio m4b yang diberi bab.",
     "script": "naskah",

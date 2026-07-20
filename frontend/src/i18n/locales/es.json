@@ -2067,6 +2067,7 @@
     "export_error": "No se pudo exportar el diccionario."
   },
   "audiobook": {
+    "output": "Salida",
     "title": "Audiolibro",
     "subtitle": "Convierta un guión delimitado por capítulos en un audiolibro m4b dividido en capítulos.",
     "script": "Guión",

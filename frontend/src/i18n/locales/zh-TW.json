@@ -2067,6 +2067,7 @@
     "export_error": "無法匯出字典。"
   },
   "audiobook": {
+    "output": "輸出",
     "title": "有聲書",
     "subtitle": "將章節分隔的腳本轉換為章節化的 m4b 有聲書。",
     "script": "腳本",

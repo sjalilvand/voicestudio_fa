@@ -2067,6 +2067,7 @@
     "export_error": "Kunde inte exportera ordboken."
   },
   "audiobook": {
+    "output": "Utdata",
     "title": "Ljudbok",
     "subtitle": "Förvandla ett kapitelavgränsat manus till en kapitelinställd m4b-ljudbok.",
     "script": "Manus",

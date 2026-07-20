@@ -3,13 +3,14 @@ import { useTranslation } from 'react-i18next';
 import {
   BookMarked,
   BookOpen,
+  BookText,
+  Code,
   Download,
   Loader,
-  Image as ImageIcon,
-  X,
   Play,
+  SlidersHorizontal,
+  SpellCheck,
   Upload,
-  Plus,
 } from 'lucide-react';
 
 import {
@@ -26,6 +27,9 @@ import { useAppStore } from '../store';
 import VoiceSelector from '../components/VoiceSelector';
 import SearchableSelect from '../components/SearchableSelect';
 import AudiobookOverrides, { overridesToRequest } from '../components/audiobook/AudiobookOverrides';
+import Section from '../components/audiobook/Section';
+import BookDetails from '../components/audiobook/BookDetails';
+import LexiconEditor from '../components/audiobook/LexiconEditor';
 import { SAMPLE_AUDIOBOOK_SCRIPT } from '../data/sampleAudiobook';
 import ALL_LANGUAGES from '../languages.json';
 import { POPULAR_LANGS } from '../utils/constants';
@@ -388,187 +392,67 @@ export default function AudiobookTab({ profiles = [] }) {
             emotionSupported={emotionSupported}
           />
 
-          <div className="audiobook-tab__duo grid grid-cols-[1fr_1fr] gap-[8px]">
-            <div className="audiobook-tab__field flex flex-col gap-[4px]">
-              <label className={FIELD_LABEL}>{t('audiobook.format')}</label>
-              <select
-                className="input-base"
-                value={format}
-                onChange={(e) => setFormat(e.target.value)}
-                aria-label={t('audiobook.format')}
-              >
-                <option value="m4b">{t('audiobook.format_m4b')}</option>
-                <option value="mp3">{t('audiobook.format_mp3')}</option>
-              </select>
-            </div>
-            <div className="audiobook-tab__field flex flex-col gap-[4px]">
-              <label className={FIELD_LABEL}>{t('audiobook.loudness')}</label>
-              <select
-                className="input-base"
-                value={loudness}
-                onChange={(e) => setLoudness(e.target.value)}
-                aria-label={t('audiobook.loudness')}
-              >
-                <option value="off">{t('audiobook.loudness_off')}</option>
-                <option value="acx">{t('audiobook.loudness_acx')}</option>
-                <option value="podcast">{t('audiobook.loudness_podcast')}</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Cover + metadata */}
-          <div className="audiobook-tab__field flex flex-col gap-[4px]">
-            <label className={FIELD_LABEL}>{t('audiobook.details')}</label>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-              <div style={{ position: 'relative', width: 96, height: 96, flexShrink: 0 }}>
-                {coverPreview ? (
-                  <>
-                    <img
-                      src={coverPreview}
-                      alt={t('audiobook.cover')}
-                      style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 6 }}
-                    />
-                    <Button
-                      variant="icon"
-                      iconSize="sm"
-                      onClick={clearCover}
-                      aria-label={t('audiobook.cover_remove')}
-                      style={{ position: 'absolute', top: 4, right: 4 }}
-                    >
-                      <X size={14} />
-                    </Button>
-                  </>
-                ) : (
-                  <label
-                    className={buttonVariants({ variant: 'subtle', size: 'omniMd' })}
-                    style={{
-                      width: 96,
-                      height: 96,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 4,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <ImageIcon size={20} />
-                    <span style={{ fontSize: '0.65rem' }}>{t('audiobook.cover_add')}</span>
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg"
-                      onChange={onCoverPick}
-                      style={{ display: 'none' }}
-                    />
-                  </label>
-                )}
-              </div>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 8,
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                <input
+          {/* Output — format + loudness. Open by default so a first-timer sees a
+              tangible setting next to the always-on voice/language above. */}
+          <Section title={t('audiobook.output')} icon={<SlidersHorizontal size={13} />} defaultOpen>
+            <div className="grid grid-cols-[1fr_1fr] gap-[8px]">
+              <div className="flex flex-col gap-[4px]">
+                <label className={FIELD_LABEL}>{t('audiobook.format')}</label>
+                <select
                   className="input-base"
-                  placeholder={t('audiobook.meta_title')}
-                  value={meta.title}
-                  onChange={setMetaField('title')}
-                  aria-label={t('audiobook.meta_title')}
-                />
-                <input
-                  className="input-base"
-                  placeholder={t('audiobook.meta_author')}
-                  value={meta.author}
-                  onChange={setMetaField('author')}
-                  aria-label={t('audiobook.meta_author')}
-                />
-                <input
-                  className="input-base"
-                  placeholder={t('audiobook.meta_narrator')}
-                  value={meta.narrator}
-                  onChange={setMetaField('narrator')}
-                  aria-label={t('audiobook.meta_narrator')}
-                />
-                <input
-                  className="input-base"
-                  placeholder={t('audiobook.meta_year')}
-                  value={meta.year}
-                  onChange={setMetaField('year')}
-                  aria-label={t('audiobook.meta_year')}
-                />
-                <input
-                  className="input-base"
-                  placeholder={t('audiobook.meta_genre')}
-                  value={meta.genre}
-                  onChange={setMetaField('genre')}
-                  aria-label={t('audiobook.meta_genre')}
-                />
-                <input
-                  className="input-base"
-                  placeholder={t('audiobook.meta_description')}
-                  value={meta.description}
-                  onChange={setMetaField('description')}
-                  aria-label={t('audiobook.meta_description')}
-                  style={{ gridColumn: '1 / -1' }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Pronunciation lexicon */}
-          <div className="audiobook-tab__field flex flex-col gap-[4px]">
-            <label className={FIELD_LABEL}>{t('audiobook.lexicon')}</label>
-            {lex.map((row, i) => (
-              <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                <input
-                  className="input-base"
-                  placeholder={t('audiobook.lex_word')}
-                  value={row.word}
-                  onChange={setLexRow(i, 'word')}
-                  aria-label={t('audiobook.lex_word')}
-                  style={{ flex: 1, minWidth: 0 }}
-                />
-                <input
-                  className="input-base"
-                  placeholder={t('audiobook.lex_say')}
-                  value={row.say}
-                  onChange={setLexRow(i, 'say')}
-                  aria-label={t('audiobook.lex_say')}
-                  style={{ flex: 1, minWidth: 0 }}
-                />
-                <Button
-                  variant="icon"
-                  iconSize="sm"
-                  onClick={() => removeLexRow(i)}
-                  aria-label={t('audiobook.lex_remove')}
+                  value={format}
+                  onChange={(e) => setFormat(e.target.value)}
+                  aria-label={t('audiobook.format')}
                 >
-                  <X size={14} />
-                </Button>
+                  <option value="m4b">{t('audiobook.format_m4b')}</option>
+                  <option value="mp3">{t('audiobook.format_mp3')}</option>
+                </select>
               </div>
-            ))}
-            <Button
-              variant="subtle"
-              onClick={addLexRow}
-              leading={<Plus size={14} />}
-              style={{ alignSelf: 'flex-start' }}
-            >
-              {t('audiobook.lex_add')}
-            </Button>
-          </div>
+              <div className="flex flex-col gap-[4px]">
+                <label className={FIELD_LABEL}>{t('audiobook.loudness')}</label>
+                <select
+                  className="input-base"
+                  value={loudness}
+                  onChange={(e) => setLoudness(e.target.value)}
+                  aria-label={t('audiobook.loudness')}
+                >
+                  <option value="off">{t('audiobook.loudness_off')}</option>
+                  <option value="acx">{t('audiobook.loudness_acx')}</option>
+                  <option value="podcast">{t('audiobook.loudness_podcast')}</option>
+                </select>
+              </div>
+            </div>
+          </Section>
 
-          {/* Markup quick reference */}
-          <details className="audiobook-tab__field flex flex-col gap-[4px]">
-            <summary className={FIELD_LABEL} style={{ cursor: 'pointer' }}>
-              {t('audiobook.markup_help')}
-            </summary>
-            <p className="muted" style={{ fontSize: '0.72rem', lineHeight: 1.6, marginTop: 6 }}>
+          {/* Book details — cover + embedded metadata. Collapsed by default. */}
+          <Section title={t('audiobook.details')} icon={<BookText size={13} />}>
+            <BookDetails
+              t={t}
+              coverPreview={coverPreview}
+              onCoverPick={onCoverPick}
+              clearCover={clearCover}
+              meta={meta}
+              setMetaField={setMetaField}
+            />
+          </Section>
+
+          {/* Pronunciation lexicon — collapsed by default. */}
+          <Section title={t('audiobook.lexicon')} icon={<SpellCheck size={13} />}>
+            <LexiconEditor
+              t={t}
+              lex={lex}
+              setLexRow={setLexRow}
+              addLexRow={addLexRow}
+              removeLexRow={removeLexRow}
+            />
+          </Section>
+
+          {/* Markup quick reference — collapsed by default. */}
+          <Section title={t('audiobook.markup_help')} icon={<Code size={13} />}>
+            <p className="muted" style={{ fontSize: '0.72rem', lineHeight: 1.6 }}>
               {t('audiobook.markup_hint')}
             </p>
-          </details>
+          </Section>
 
           {error && (
             <div className="error-banner" role="alert">

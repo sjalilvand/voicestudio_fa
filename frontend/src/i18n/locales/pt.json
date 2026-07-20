@@ -2067,6 +2067,7 @@
     "export_error": "Não foi possível exportar o dicionário."
   },
   "audiobook": {
+    "output": "Saída",
     "title": "Audiolivro",
     "subtitle": "Transforme um script delimitado por capítulos em um audiolivro m4b com capítulos.",
     "script": "Roteiro",

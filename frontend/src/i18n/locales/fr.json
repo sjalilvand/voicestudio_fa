@@ -2067,6 +2067,7 @@
     "export_error": "Impossible d'exporter le dictionnaire."
   },
   "audiobook": {
+    "output": "Sortie",
     "title": "Livre audio",
     "subtitle": "Transformez un script délimité par des chapitres en un livre audio m4b chapitré.",
     "script": "Scénario",

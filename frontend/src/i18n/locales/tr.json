@@ -2067,6 +2067,7 @@
     "export_error": "Sözlük dışa aktarılamadı."
   },
   "audiobook": {
+    "output": "Çıktı",
     "title": "Sesli kitap",
     "subtitle": "Bölümle ayrılmış bir komut dosyasını bölümlere ayrılmış bir m4b sesli kitaba dönüştürün.",
     "script": "Senaryo",

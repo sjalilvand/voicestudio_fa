@@ -2067,6 +2067,7 @@
     "export_error": "Nie udało się wyeksportować słownika."
   },
   "audiobook": {
+    "output": "Wyjście",
     "title": "Książka audio",
     "subtitle": "Zamień skrypt podzielony na rozdziały w audiobook m4b podzielony na rozdziały.",
     "script": "Skrypt",

@@ -2074,6 +2074,7 @@
     "export_error": "无法导出词典。"
   },
   "audiobook": {
+    "output": "输出",
     "title": "有声读物",
     "subtitle": "将章节分隔的脚本转换为章节化的 m4b 有声读物。",
     "script": "脚本",

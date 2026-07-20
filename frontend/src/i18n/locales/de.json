@@ -2067,6 +2067,7 @@
     "export_error": "Das Wörterbuch konnte nicht exportiert werden."
   },
   "audiobook": {
+    "output": "Ausgabe",
     "title": "Hörbuch",
     "subtitle": "Verwandeln Sie ein durch Kapitel getrenntes Skript in ein in Kapitel unterteiltes m4b-Hörbuch.",
     "script": "Skript",

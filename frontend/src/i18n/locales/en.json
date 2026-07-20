@@ -155,6 +155,7 @@
     "flip_rail": "Flip rail side"
   },
   "audiobook": {
+    "output": "Output",
     "title": "Audiobook",
     "subtitle": "Turn a chapter-delimited script into a chapterized m4b audiobook.",
     "script": "Script",
