@@ -12,6 +12,8 @@ import {
   zoomAtCursor,
   zoomCenter,
   sliceToMono,
+  selectionPlayhead,
+  loopWindow,
   decodeToMonoLowRate,
   DEFAULT_PEAK_BUCKETS,
 } from '../utils/audioTrim.js';
@@ -38,7 +40,11 @@ export default function AudioTrimmer({ file, maxSeconds = 15, onConfirm, onCance
   const { t } = useTranslation();
   const waveRef = useRef(null);
   const rulerRef = useRef(null);
-  const audioRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const sourceRef = useRef(null);
+  const playClockRef = useRef(null);
+  const playRafRef = useRef(0);
+  const loopRef = useRef(true);
   const containerRef = useRef(null);
   const bufferRef = useRef(null);
   const peaksRef = useRef(null);
@@ -125,26 +131,11 @@ export default function AudioTrimmer({ file, maxSeconds = 15, onConfirm, onCance
     };
   }, [file, maxSeconds]);
 
-  // Bind audio src
+  // Keep the latest loop preference readable from the rAF playhead loop and the
+  // live-bounds effect without re-subscribing them.
   useEffect(() => {
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    const a = audioRef.current;
-    if (a) {
-      a.src = url;
-      a.load();
-    }
-    return () => {
-      if (a) {
-        try {
-          a.pause();
-          a.removeAttribute('src');
-          a.load();
-        } catch {}
-      }
-      URL.revokeObjectURL(url);
-    };
-  }, [file]);
+    loopRef.current = loop;
+  }, [loop]);
 
   const sizeCanvas = useCallback((canvas) => {
     if (!canvas) return null;
@@ -452,12 +443,6 @@ export default function AudioTrimmer({ file, maxSeconds = 15, onConfirm, onCance
       setStart(t);
       setEnd(t);
       setCursor(t);
-      const a = audioRef.current;
-      if (a) {
-        try {
-          a.currentTime = t;
-        } catch {}
-      }
       dragStateRef.current = { mode: 'new', anchorT: t };
     }
     pointerRef.current = { clientX: e.clientX };
@@ -530,83 +515,116 @@ export default function AudioTrimmer({ file, maxSeconds = 15, onConfirm, onCance
     setViewEnd(nve);
   };
 
+  // Preview plays the SAME decoded buffer the waveform is drawn from and the
+  // confirmed clip is sliced from — never the original file on a second media
+  // element. Seeking a media element treats the selection's buffer-seconds as
+  // container-seconds, which drift apart for VBR / mis-reported-duration files
+  // (#1210): the preview then plays a different region than the one selected
+  // and exported. One buffer, one timeline, guarantees they match.
+  const stopPlayback = useCallback(() => {
+    if (playRafRef.current) {
+      cancelAnimationFrame(playRafRef.current);
+      playRafRef.current = 0;
+    }
+    const src = sourceRef.current;
+    sourceRef.current = null;
+    playClockRef.current = null;
+    if (src) {
+      try {
+        src.onended = null;
+        src.stop();
+      } catch {}
+    }
+    setPlaying(false);
+  }, []);
+
+  const startPlayhead = useCallback(() => {
+    const tick = () => {
+      const ctx = audioCtxRef.current;
+      const clock = playClockRef.current;
+      if (!ctx || !clock || !sourceRef.current) {
+        playRafRef.current = 0;
+        return;
+      }
+      const { start: s, end: e } = stateRef.current;
+      const elapsed = ctx.currentTime - clock.t0;
+      setCursor(selectionPlayhead(s, e, elapsed, loopRef.current));
+      if (!loopRef.current && elapsed >= Math.max(1e-6, e - s)) {
+        stopPlayback();
+        return;
+      }
+      playRafRef.current = requestAnimationFrame(tick);
+    };
+    if (!playRafRef.current) playRafRef.current = requestAnimationFrame(tick);
+  }, [stopPlayback]);
+
   const togglePlay = () => {
-    const a = audioRef.current;
-    if (!a) return;
+    const buffer = bufferRef.current;
+    if (!buffer) return;
     if (playing) {
-      a.pause();
-      setPlaying(false);
+      stopPlayback();
       return;
     }
-    const s = stateRef.current.start;
-    const doPlay = () => {
-      try {
-        a.currentTime = s;
-      } catch (err) {
-        console.warn('currentTime set failed', err);
+    try {
+      let ctx = audioCtxRef.current;
+      if (!ctx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        ctx = new Ctx();
+        audioCtxRef.current = ctx;
       }
-      a.play()
-        .then(() => setPlaying(true))
-        .catch((err) => {
-          setError(t('trimmer.playback_failed', { message: err.message || err }));
-        });
-    };
-    // HAVE_METADATA = 1 is enough to set currentTime on most browsers.
-    if (a.readyState >= 1) {
-      doPlay();
-    } else {
-      a.addEventListener('loadedmetadata', doPlay, { once: true });
-      a.addEventListener('error', () => setError(t('trimmer.audio_load_failed')), { once: true });
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      const { start: s, end: e } = stateRef.current;
+      // loopWindow floors a zero-width/inverted selection so the loop range can
+      // never collapse and fall back to looping the whole buffer (#1210).
+      const { loopStart, loopEnd, seg } = loopWindow(s, e, buffer.duration);
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(ctx.destination);
+      if (loopRef.current) {
+        src.loop = true;
+        src.loopStart = loopStart;
+        src.loopEnd = loopEnd;
+        src.start(0, loopStart);
+      } else {
+        src.start(0, loopStart, seg);
+        src.onended = () => {
+          if (sourceRef.current === src) stopPlayback();
+        };
+      }
+      sourceRef.current = src;
+      playClockRef.current = { t0: ctx.currentTime };
+      setPlaying(true);
+      startPlayhead();
+    } catch (err) {
+      setError(t('trimmer.playback_failed', { message: err.message || err }));
     }
   };
 
+  // Editing the selection mid-preview retargets the live loop window so what
+  // you hear keeps matching the (moving) selection.
   useEffect(() => {
-    const a = audioRef.current;
-    if (!a) return;
-    let raf = null;
-    const tick = () => {
-      if (a.paused) {
-        raf = null;
-        return;
+    const src = sourceRef.current;
+    if (!src || !src.loop) return;
+    if (end > start) {
+      src.loopStart = start;
+      src.loopEnd = end;
+    }
+  }, [start, end]);
+
+  // Tear playback down on unmount so the AudioContext and its rAF never leak.
+  useEffect(
+    () => () => {
+      stopPlayback();
+      const ctx = audioCtxRef.current;
+      audioCtxRef.current = null;
+      if (ctx) {
+        try {
+          ctx.close();
+        } catch {}
       }
-      setCursor(a.currentTime);
-      const { start: s, end: e } = stateRef.current;
-      if (a.currentTime >= e) {
-        if (loop) {
-          try {
-            a.currentTime = s;
-          } catch {}
-        } else {
-          a.pause();
-          setPlaying(false);
-          raf = null;
-          return;
-        }
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    // Only run the playhead loop while audio is actually playing — a
-    // free-running rAF would tick at ~60fps for the trimmer's whole life.
-    const startLoop = () => {
-      if (raf == null) raf = requestAnimationFrame(tick);
-    };
-    const stopLoop = () => {
-      if (raf != null) {
-        cancelAnimationFrame(raf);
-        raf = null;
-      }
-    };
-    a.addEventListener('play', startLoop);
-    a.addEventListener('pause', stopLoop);
-    a.addEventListener('ended', stopLoop);
-    if (!a.paused) startLoop(); // effect re-ran (loop toggled) mid-playback
-    return () => {
-      a.removeEventListener('play', startLoop);
-      a.removeEventListener('pause', stopLoop);
-      a.removeEventListener('ended', stopLoop);
-      stopLoop();
-    };
-  }, [loop]);
+    },
+    [stopPlayback],
+  );
 
   const duration = end - start;
   const tooLong = duration > maxSeconds;
@@ -881,8 +899,6 @@ export default function AudioTrimmer({ file, maxSeconds = 15, onConfirm, onCance
             </Button>
           </div>
         </div>
-
-        <audio ref={audioRef} preload="auto" onEnded={() => setPlaying(false)} className="hidden" />
       </div>
     </Dialog>
   );
