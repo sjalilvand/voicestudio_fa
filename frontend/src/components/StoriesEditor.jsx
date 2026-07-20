@@ -55,6 +55,7 @@ import { parseScript } from '../utils/parseScript';
 import { importToText } from '../utils/importStory';
 import { generateSpeech, audioUrl } from '../api/generate';
 import { playBlobAudio } from '../utils/media';
+import { downloadMedia } from '../utils/mediaDownload';
 import { encodeAudio } from '../api/stories';
 import { longformRender } from '../api/audiobook';
 import { exportStems } from '../utils/storyExport';
@@ -88,16 +89,6 @@ function download(blob, filename) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
-}
-
-// Trigger a browser download for a same-origin URL (server-rendered file).
-function downloadUrl(url, filename) {
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
 }
 
 // A chapter line is any track whose text is a markdown heading (`# …`). It
@@ -558,11 +549,19 @@ export default function StoriesEditor({ profiles = [] }) {
       });
       if (streamErr) throw new Error(streamErr);
       if (!output) throw new Error('no output produced');
-      downloadUrl(audioUrl(output), output.split('/').pop());
-      toast.success(t('stories.exportDone'));
-      // Success-only donation moment — a finished audiobook export is a real
-      // deliverable. Stays out of the catch/error branch below.
-      recordValueMoment('audiobook');
+      // Route through the shared save util (#1218): the story mix is a file in
+      // OUTPUTS_DIR served at /audio/<output>, so a raw `<a href download>`
+      // navigates the Tauri webview to the m4b and hijacks the app. Pass
+      // `sourceFilename` so the Tauri copy uses the /export server-side copy.
+      const mixName = output.split('/').pop();
+      // downloadMedia owns all user-facing toasts (loading → saved/error) and
+      // fires onValueMoment only on a real save — so no success toast here (it
+      // would fire even when the native save dialog is cancelled) and the
+      // donation moment goes through the callback instead of unconditionally.
+      await downloadMedia(audioUrl(output), mixName, {
+        sourceFilename: mixName,
+        onValueMoment: () => recordValueMoment('audiobook'),
+      });
     } catch (err) {
       console.warn('Story render failed:', err);
       toast.error(t('stories.exportFailed'));

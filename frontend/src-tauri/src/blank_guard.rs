@@ -26,7 +26,7 @@
 //! otherwise trip this on every launch.
 
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use tauri::{AppHandle, Manager, Runtime};
@@ -69,7 +69,17 @@ fn probe_script() -> String {
         var invoke =
           (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) ||
           (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke);
-        if (invoke) { invoke('report_render_state', { rootChildren: n }); }
+        if (invoke) {
+          // The invoke returns a promise. If the webview has navigated to a
+          // page where this command isn't registered (e.g. a media file WebKit
+          // decided to play), the promise REJECTS — and an unhandled rejection
+          // surfaces to the user as a console error ("report_render_state not
+          // allowed. Plugin not found"). Swallow it: a probe that reports
+          // nothing is already handled by the PROBE_TIMEOUT path, and a probe
+          // must never be the thing that emits an error.
+          var p = invoke('report_render_state', { rootChildren: n });
+          if (p && typeof p.catch === 'function') { p.catch(function () {}); }
+        }
       } catch (e) { /* a throwing probe must never be the thing that breaks us */ }
     })();
     "#
@@ -81,7 +91,18 @@ fn probe_script() -> String {
 /// app cannot also break the explanation of what broke. Styling is intentionally
 /// plain for the same reason (no external fonts or stylesheets).
 ///
-/// "Retry" reloads; if that fails the guard runs again and lands back here.
+/// This is the ONE way the fallback is shown (`show_fallback`). We deliberately
+/// do not navigate the top frame to a `data:` URL: WKWebView (macOS), WebView2
+/// (Windows), and WebKitGTK (Linux) all refuse top-frame navigation to a `data:`
+/// URL as a security policy — it both fails to show the page and logs a console
+/// error ("Not allowed to navigate top frame to data URL"). Injection runs in
+/// the current document and works identically on all three platforms.
+///
+/// "Reload" invokes `recover_main_window`, which re-navigates the main webview
+/// to the app's own entry URL — so it recovers the real app even if the webview
+/// had wandered off (e.g. to a media file). If the IPC bridge is unavailable it
+/// falls back to `location.reload()`; either way the guard re-runs and, if still
+/// blank, lands back here.
 fn fallback_html(detail: &str) -> String {
     format!(
         r##"
@@ -106,7 +127,25 @@ fn fallback_html(detail: &str) -> String {
           'margin-top:.5rem;">{detail}</pre>' +
           '</div></body>';
         var b = document.getElementById('ov-retry');
-        if (b) {{ b.onclick = function () {{ location.reload(); }}; }}
+        if (b) {{
+          b.onclick = function () {{
+            // Recover the actual app, not location.reload() of whatever page the
+            // webview is currently on (it may have wandered off to a media file
+            // or an error page). recover_main_window re-navigates the main
+            // webview to the app's entry URL from the Rust side.
+            try {{
+              var invoke =
+                (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) ||
+                (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke);
+              if (invoke) {{
+                var p = invoke('recover_main_window');
+                if (p && typeof p.catch === 'function') {{ p.catch(function () {{ location.reload(); }}); }}
+                return;
+              }}
+            }} catch (e) {{ /* no IPC bridge here — fall through to a plain reload */ }}
+            location.reload();
+          }};
+        }}
       }} catch (e) {{ /* nothing left to fall back to */ }}
     }})();
     "##,
@@ -133,6 +172,11 @@ pub struct BlankGuardState {
     /// probing and compares after `PROBE_TIMEOUT`; an unchanged value means
     /// the page never answered.
     healthy_seq: AtomicU32,
+    /// The app's own entry URL, captured at `arm()` before anything can wander
+    /// off it. The fallback's Reload button re-navigates the main window here
+    /// (via `recover_main_window`) so it returns to the real app even if the
+    /// webview had already navigated away — e.g. to a media file it played.
+    app_url: Mutex<Option<String>>,
 }
 
 /// Reported by the injected probe. Not a public API — the frontend never calls
@@ -192,61 +236,49 @@ fn handle_blank<R: Runtime>(app: AppHandle<R>, root_children: i32) {
     }
 }
 
-/// Put the built-in failure page on screen.
+/// Put the built-in failure page on screen by injecting it into the current
+/// document.
 ///
-/// Navigates to a `data:` URL rather than injecting HTML with `eval`. Injection
-/// only works if scripts run in the current document — and when the webview is
-/// parked on an internal error page they do not, which is exactly the situation
-/// this page exists to explain. Navigation works regardless of what the current
-/// document is. Falls back to injection if navigation is refused.
+/// We inject rather than navigate the top frame to a `data:` URL: every engine
+/// we ship on (WKWebView on macOS, WebView2 on Windows, WebKitGTK on Linux)
+/// refuses top-frame navigation to a `data:` URL as a hard security policy. On
+/// macOS that path did not just fail — it logged a console error ("Not allowed
+/// to navigate top frame to data URL") and left the Reload button unable to
+/// recover. Injection runs in the current document and works identically on all
+/// three platforms, so it is the one reliable way to guarantee something paints.
 fn show_fallback<R: Runtime>(window: &tauri::WebviewWindow<R>, detail: &str) {
-    let url = format!(
-        "data:text/html;charset=utf-8,{}",
-        urlencoding_minimal(&fallback_page(detail))
-    );
-    match url.parse() {
-        Ok(parsed) => {
-            if window.navigate(parsed).is_err() {
-                let _ = window.eval(&fallback_html(detail));
+    let _ = window.eval(&fallback_html(detail));
+}
+
+/// Re-navigate the main webview back to the app's own entry URL.
+///
+/// Invoked by the fallback page's Reload button. Unlike `location.reload()` —
+/// which reloads whatever page the webview happens to be on — this returns to
+/// the real app URL captured at `arm()`, so recovery works even after the
+/// webview navigated away (e.g. to a media file it decided to play, #1218).
+#[tauri::command]
+pub fn recover_main_window<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    let Some(window) = app.get_webview_window("main") else {
+        return Ok(());
+    };
+    // A manual recovery is a fresh start: clear the reload budget so the healed
+    // app gets its full allowance again, and keep the heartbeat alive.
+    if let Some(state) = app.try_state::<Arc<BlankGuardState>>() {
+        state.reloads.store(0, Ordering::Relaxed);
+        let target = state.app_url.lock().ok().and_then(|u| u.clone());
+        if let Some(url) = target {
+            if let Ok(parsed) = url.parse() {
+                if window.navigate(parsed).is_ok() {
+                    schedule_check(app.clone(), RETRY_BASE_DELAY);
+                    return Ok(());
+                }
             }
         }
-        Err(_) => {
-            let _ = window.eval(&fallback_html(detail));
-        }
     }
-}
-
-/// Percent-encode just enough for a `data:` URL to survive parsing.
-fn urlencoding_minimal(s: &str) -> String {
-    let mut out = String::with_capacity(s.len() * 2);
-    for b in s.bytes() {
-        match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'!' | b'~' | b'*'
-            | b'\'' | b'(' | b')' => out.push(b as char),
-            b' ' => out.push_str("%20"),
-            _ => out.push_str(&format!("%{b:02X}")),
-        }
-    }
-    out
-}
-
-/// Standalone HTML for the `data:` URL fallback — a complete document, since
-/// navigation replaces everything. Same content as the injected variant.
-fn fallback_page(detail: &str) -> String {
-    format!(
-        r#"<!doctype html><html><head><meta charset="utf-8"><title>OmniVoice Studio</title></head>
-<body style="margin:0;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#14161a;color:#e8eaed;display:flex;align-items:center;justify-content:center;height:100vh;">
-<div style="max-width:32rem;padding:2rem;text-align:center;">
-<div style="font-size:2.5rem;line-height:1;margin-bottom:1rem;">&#9888;&#65039;</div>
-<h1 style="font-size:1.25rem;margin:0 0 .75rem;">OmniVoice could not display its interface</h1>
-<p style="opacity:.8;line-height:1.5;margin:0 0 1.5rem;">The app started, but the window stayed empty.
-Your projects and voices are safe &mdash; this is a display problem, not data loss.</p>
-<button onclick="location.reload()" style="background:#4f7cff;color:#fff;border:0;border-radius:.5rem;padding:.6rem 1.4rem;font-size:.95rem;cursor:pointer;">Reload</button>
-<p style="opacity:.55;font-size:.8rem;margin-top:1.5rem;">If reloading does not help, restart the app. Still stuck? Report it with the detail below.</p>
-<pre style="opacity:.5;font-size:.7rem;text-align:left;white-space:pre-wrap;margin-top:.5rem;">{detail}</pre>
-</div></body></html>"#,
-        detail = detail.replace('<', "&lt;").replace('>', "&gt;")
-    )
+    // No captured URL (or navigation refused) — reload the current page as a
+    // last resort. Still better than a dead button.
+    let _ = window.eval("location.reload();");
+    Ok(())
 }
 
 /// Queue a render check `after` from now, and treat no answer as a blank.
@@ -283,7 +315,18 @@ pub fn schedule_check<R: Runtime>(app: AppHandle<R>, after: Duration) {
 
 /// Arm the guard. Call once from `setup`.
 pub fn arm<R: Runtime>(app: &AppHandle<R>) {
-    app.manage(Arc::new(BlankGuardState::default()));
+    let state = BlankGuardState::default();
+    // Capture the app's entry URL now, before anything can navigate away from
+    // it, so `recover_main_window` can always send the webview back to the real
+    // app rather than reloading whatever page it later wandered onto.
+    if let Some(window) = app.get_webview_window("main") {
+        if let Ok(url) = window.url() {
+            if let Ok(mut slot) = state.app_url.lock() {
+                *slot = Some(url.to_string());
+            }
+        }
+    }
+    app.manage(Arc::new(state));
     schedule_check(app.clone(), FIRST_CHECK_DELAY);
 }
 
@@ -301,6 +344,20 @@ mod tests {
         for forbidden in ["React", "window.app", "import(", "require("] {
             assert!(!js.contains(forbidden), "probe must not depend on {forbidden}");
         }
+    }
+
+    #[test]
+    fn probe_swallows_a_rejected_invoke() {
+        // If the webview has navigated away (e.g. to a media file it decided to
+        // play), `report_render_state` isn't registered and the invoke promise
+        // rejects. Without a `.catch` that becomes an *unhandled* rejection the
+        // user sees in the console (#1218). The probe must guard the promise.
+        let js = probe_script();
+        assert!(js.contains(".catch"), "probe must catch a rejected invoke");
+        assert!(
+            js.contains("typeof p.catch === 'function'"),
+            "the .catch must be guarded so a non-promise return can't throw",
+        );
     }
 
     #[test]
@@ -335,45 +392,36 @@ mod tests {
     fn fallback_reassures_about_data() {
         // A blank window reads like data loss. Say plainly that it isn't.
         assert!(fallback_html("x").contains("safe"));
-        assert!(fallback_page("x").contains("safe"));
     }
 
     #[test]
-    fn navigable_fallback_is_a_complete_document() {
-        // It is reached by NAVIGATION, which replaces the whole document, so a
-        // fragment would render as bare text.
-        let page = fallback_page("d");
-        assert!(page.starts_with("<!doctype html>"));
-        assert!(page.contains("</html>"));
-        assert!(page.contains("location.reload()"));
+    fn fallback_is_shown_by_injection_not_data_url_navigation() {
+        // WKWebView (macOS), WebView2, and WebKitGTK all refuse top-frame
+        // navigation to a `data:` URL, which both failed to show the page and
+        // logged a console error (#1218). The guard must therefore never build a
+        // top-frame `data:` HTML navigation for the fallback — injection is the
+        // only path. Scan the whole source so a future edit can't quietly bring
+        // it back. The needle is assembled at runtime so this file (scanned via
+        // include_str!) doesn't itself contain the literal it forbids.
+        let needle = format!("{}{}", "data:text/", "html");
+        let src = include_str!("blank_guard.rs");
+        assert!(
+            !src.contains(&needle),
+            "the fallback must not depend on top-frame data: navigation",
+        );
     }
 
     #[test]
-    fn navigable_fallback_needs_no_network() {
-        let page = fallback_page("d");
-        for forbidden in ["http://", "https://", "<script src", "@import"] {
-            assert!(!page.contains(forbidden), "fallback must not reference {forbidden}");
-        }
-    }
-
-    #[test]
-    fn fallback_detail_cannot_inject_markup() {
-        // The detail is interpolated into HTML; angle brackets must not be
-        // able to close a tag and wreck the one page that has to render.
-        let page = fallback_page("<script>bad()</script>");
-        assert!(!page.contains("<script>bad()"));
-        assert!(page.contains("&lt;script&gt;"));
-    }
-
-    #[test]
-    fn data_url_encoding_survives_the_characters_html_actually_uses() {
-        // '#' would truncate the URL at a fragment and '%' would corrupt other
-        // escapes — both would leave the window blank, defeating the purpose.
-        let enc = urlencoding_minimal("<html># 100% \"quoted\"");
-        assert!(!enc.contains('#'));
-        assert!(!enc.contains('<'));
-        assert!(!enc.contains('"'));
-        assert!(enc.contains("%20"), "spaces must be encoded");
-        assert_eq!(urlencoding_minimal("abcXYZ019-_.!~*'()"), "abcXYZ019-_.!~*'()");
+    fn fallback_reload_recovers_the_app_not_the_current_page() {
+        // The Reload button must return to the real app (recover_main_window
+        // re-navigates the main webview to the captured app URL), not
+        // location.reload() whatever page the webview wandered onto (#1218).
+        let html = fallback_html("x");
+        assert!(
+            html.contains("recover_main_window"),
+            "Reload must invoke the recover command",
+        );
+        // …with a plain reload only as the no-IPC-bridge fallback.
+        assert!(html.contains("location.reload()"));
     }
 }

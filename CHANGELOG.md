@@ -59,6 +59,8 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
+- Downloading a finished audiobook (or story mix) no longer hijacks the app: in the desktop WebView a plain download link to the media file made WebKit navigate the whole window to it and play it fullscreen (then the blank-window guard misfired) — downloads now go through the native Save dialog + a server-side copy instead (#1218)
+- The blank-window guard's fallback page is shown by injection rather than a `data:` URL the desktop WebViews refuse to navigate to, and its Reload button now returns to the app even if the window had navigated away (#1218)
 - Security (server mode): the admin routes (`/system/*`, `/api/settings/*` — RCE-class) now require the API key or genuine loopback — with an API key set and `OMNIVOICE_TRUSTED_NETWORKS` configured, a trusted-network client could previously reach them with no credential; the short share PIN no longer gates admin either (#1213)
 - A render error no longer blanks the whole window — a recoverable error card (Reload / Report) appears instead, and CI now builds the real production bundle so a pre-mount crash can't ship (#1209)
 - Voice-clone trimmer: the preview now plays exactly the selected region on variable-bitrate clips (it had drifted off on VBR/mis-reported-duration files by playing the original file on a different timeline) (#1210)
