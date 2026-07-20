@@ -29,7 +29,7 @@
  * Outside the Tauri shell (browser / Docker) there is no local install to clear,
  * so only the preferences tier is offered.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   RotateCcw,
@@ -146,6 +146,11 @@ export default function ResetPanel({ _forceAdvanced = false } = {}) {
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
+  // Post-reset page reload runs on a short timer; hold its id so unmount can
+  // clear it — a dangling reload timer that fires after the component is gone
+  // (e.g. a test env torn down before 400ms) throws from `window.location`.
+  const reloadTimerRef = useRef(null);
+  useEffect(() => () => clearTimeout(reloadTimerRef.current), []);
 
   const CONFIRM_WORD = t('settings.reset_confirm_word', { defaultValue: 'DELETE' });
 
@@ -208,7 +213,7 @@ export default function ResetPanel({ _forceAdvanced = false } = {}) {
       // The backend is coming back up behind us; the bootstrap splash and the
       // reconnecting banner (#1094) own that wait, so all this has to do is get
       // the UI back to a clean slate.
-      setTimeout(() => window.location.reload(), 400);
+      reloadTimerRef.current = setTimeout(() => window.location.reload(), 400);
     } catch (e) {
       setBusy(false);
       toast.error(
