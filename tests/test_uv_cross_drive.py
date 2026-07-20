@@ -99,8 +99,22 @@ def test_uv_env_colocates_cache_on_a_foreign_volume(tmp_path, monkeypatch):
 
 def test_uv_env_respects_user_pinned_cache_dir(tmp_path, monkeypatch):
     """An explicit UV_CACHE_DIR is the user's call — never overridden, even
-    cross-volume."""
+    cross-volume. But the variables are independent (#1189 review): pinning
+    the cache must not leave uv's managed-Python downloads on the system
+    drive, so the unset UV_PYTHON_INSTALL_DIR is still co-located."""
     monkeypatch.setenv("UV_CACHE_DIR", str(tmp_path / "my-cache"))
+    monkeypatch.delenv("UV_PYTHON_INSTALL_DIR", raising=False)
+    monkeypatch.setattr(si, "_same_volume", lambda a, b: False)
+    env = si.uv_subprocess_env(tmp_path / "engines")
+    assert env is not None
+    assert env["UV_CACHE_DIR"] == str(tmp_path / "my-cache")
+    assert env["UV_PYTHON_INSTALL_DIR"] == str(tmp_path / "engines" / ".uv-python")
+
+
+def test_uv_env_is_none_when_both_vars_pinned(tmp_path, monkeypatch):
+    """Both pinned → nothing left to override → inherit env untouched."""
+    monkeypatch.setenv("UV_CACHE_DIR", str(tmp_path / "my-cache"))
+    monkeypatch.setenv("UV_PYTHON_INSTALL_DIR", str(tmp_path / "my-pythons"))
     monkeypatch.setattr(si, "_same_volume", lambda a, b: False)
     assert si.uv_subprocess_env(tmp_path / "engines") is None
 

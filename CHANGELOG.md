@@ -36,6 +36,10 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - Info/warn system notifications are dismissible and stay dismissed across restarts; error-level notices can't be dismissed, and the unclean-shutdown notice is now acknowledged server-side — thanks @agudmund! (#1192)
 - `clone_voice` MCP tool — AI agents can clone a new voice from a base64 reference audio sample; returns a `profile_id` immediately usable with `generate_speech` — thanks @paoloantinori! (#1194)
 
+### CI
+
+- The quiet changelog style and 21-locale key/placeholder parity are now enforced by plain pytest checks; CodeRabbit/Greptile carry the house rules via `.coderabbit.yaml`/`greptile.json`
+
 ### Docs
 
 - `docs/expressive-speech.md`: per-engine breaths/laughter/emotion control, incl. the default engine's 13 native reaction tags
@@ -44,6 +48,15 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
+- A broken ASR engine's fallback could silently auto-download multi-GB weights — every fallback now passes the same no-download preflight and shows the download CTA instead (#1189)
+- Dub transcription releases the ASR model from VRAM on every exit — crashes, early errors, and client disconnects included (#1175)
+- An invalid dictation model override could bypass the missing-model check for the Whisper fallback (#1175)
+- The OpenAI-compatible transcription route's 409 now carries the same typed download-CTA payload as every other route (#1175)
+- Cross-drive installs with a user-pinned `UV_CACHE_DIR` still keep uv's managed Python off the system drive (#1189)
+- MCP `clone_voice` accepts data-URI base64, stores the clip under its real container extension, and returns backend validation errors as structured JSON (#1195)
+- Sidecar launch errors no longer embed the user's home directory in logs or error messages (#1189)
+- KittenTTS degrades gracefully if a future upstream update moves its text chunker (#1189)
+- Restored 151 broken locale strings: mangled `{{placeholders}}` (vi/ar showed literal `_V_0__`) and gallery errors that dropped their detail in all 20 translations
 - Voice cloning no longer fails on quiet recordings — silence removal retries with gentler thresholds (then skips), and a truly silent clip gets a localized, actionable message instead of a dead-end 400 (#1188)
 - Custom install folders on another drive are honored end-to-end — uv's wheel cache and Python download now follow the chosen environment folder instead of filling C: (#1186)
 - Dubbing no longer fails outright when an ASR engine's dependencies are broken ("No module named 'lightning_fabric'") — the engine is marked unavailable with a repair hint and the next one is used automatically (#1185)

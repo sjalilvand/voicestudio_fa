@@ -242,25 +242,31 @@ def uv_subprocess_env(cache_parent: Path) -> "dict[str, str] | None":
 
     Returns ``None`` (inherit the parent environment untouched) when uv's
     default cache already shares a volume with *cache_parent* or the user
-    pinned ``UV_CACHE_DIR`` themselves. Otherwise returns a copy of
-    ``os.environ`` with ``UV_CACHE_DIR`` (and ``UV_PYTHON_INSTALL_DIR``,
-    unless user-pinned) placed inside *cache_parent*, so downloads, the
-    unpacked wheel cache, and the venv all stay on the target volume — and
-    same-volume hardlink installs work again.
+    pinned both variables themselves. Otherwise returns a copy of
+    ``os.environ`` with the *unset* one(s) of ``UV_CACHE_DIR`` /
+    ``UV_PYTHON_INSTALL_DIR`` placed inside *cache_parent*, so downloads, the
+    unpacked wheel cache, managed Pythons, and the venv all stay on the
+    target volume — and same-volume hardlink installs work again. The two
+    variables are independent (mirrors ``uv_env_overrides_for`` in
+    ``frontend/src-tauri/src/setup.rs``): a user-pinned value is never
+    overridden, but pinning one must not leave the other's multi-GB state on
+    the system drive.
 
     Canonical helper for every sidecar/engine bootstrap (like ``_locate_uv``):
     pass the directory that should hold the shared ``.uv-cache`` — typically
     the common parent of the engine venvs on that volume.
     """
-    if os.environ.get("UV_CACHE_DIR"):
-        return None  # explicit user choice always wins
     if _same_volume(cache_parent, _default_uv_cache_root()):
         return None
     env = dict(os.environ)
-    env["UV_CACHE_DIR"] = str(Path(cache_parent) / ".uv-cache")
+    overrode = False
+    if not env.get("UV_CACHE_DIR"):  # explicit user choice always wins
+        env["UV_CACHE_DIR"] = str(Path(cache_parent) / ".uv-cache")
+        overrode = True
     if not env.get("UV_PYTHON_INSTALL_DIR"):
         env["UV_PYTHON_INSTALL_DIR"] = str(Path(cache_parent) / ".uv-python")
-    return env
+        overrode = True
+    return env if overrode else None
 
 
 # ── Disk preflight ─────────────────────────────────────────────────────────

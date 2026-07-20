@@ -113,6 +113,24 @@ reviews:
       instructions: >-
         Pin actions to a major version tag at minimum. Flag any workflow that
         grants write permissions it does not need.
+    - path: "CHANGELOG.md"
+      instructions: >-
+        Hard rule (owner-restyled 2026-07-17): the Unreleased section is a
+        short **Highlights** bullet list followed by ### Changed/Added/Docs/
+        Fixed sections whose entries are each a SINGLE one-liner ending with
+        the (#NNN) ref and, for community contributions, a "— thanks @user!"
+        credit. Flag multi-line or bold-lead paragraph entries, missing refs,
+        and missing credits.
+    - path: "frontend/package.json"
+      instructions: >-
+        This is a bun workspace monorepo: any dependency change here requires
+        regenerating the repo-root bun.lock in the same PR —
+        deploy/Dockerfile runs `bun install --frozen-lockfile`, so CI-green
+        does not imply Docker-green. Flag package.json dependency changes
+        without a matching root bun.lock diff. Also: this file is the single
+        source of truth for the app version — flag any version change not
+        mirrored in pyproject.toml, frontend/src-tauri/Cargo.toml and
+        backend/core/version.py in lockstep.
 
   # Non-gating pre-merge audits of the project's hard rules (warning mode —
   # the human owner is the gate, these make the checklist visible per-PR).

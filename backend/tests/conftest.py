@@ -39,11 +39,14 @@ if not os.environ.get("OMNIVOICE_ENV_FILE"):
     os.environ["OMNIVOICE_ENV_FILE"] = os.path.join(
         os.environ["OMNIVOICE_DATA_DIR"], "user-env"
     )
-# TTS checkpoint sentinel — mirrors tests/conftest.py (whichever loads first
-# wins via setdefault). Without it, any test booting the real app lifespan
-# resolves the real k2-fsa/OmniVoice checkpoint and `preload_model()` could
-# kick off a multi-GB background download on a networked machine.
-os.environ.setdefault("OMNIVOICE_MODEL", "test")
+# TTS checkpoint sentinel — mirrors tests/conftest.py (both assign the same
+# value, so load order doesn't matter). Unconditional on purpose (#1175
+# review): an ambient OMNIVOICE_MODEL from the dev's shell (set for running
+# the real app) must not leak in — a `setdefault` preserved it, letting
+# app-startup tests resolve a real checkpoint and `preload_model()` kick off
+# a multi-GB background download on a networked machine. Tests that need a
+# different value monkeypatch it explicitly.
+os.environ["OMNIVOICE_MODEL"] = "test"
 
 
 import pytest
@@ -82,16 +85,27 @@ def asr_model_installed(monkeypatch, request):
 
 
 @pytest.fixture(autouse=True)
-def _clear_asr_installed_memo():
+def _clear_asr_installed_memo(request):
     """The ASR preflight memoizes installed-POSITIVE repos process-wide
     (services.asr_backend._INSTALLED_REPO_MEMO). Tests stub ``is_cached`` both
-    ways, so a memoized positive must never leak between tests. Touches the
+    ways, so a memoized positive must never leak between tests. Clears the
+    canonical module AND any module-typed alias the test module holds — the
+    same stale-alias class ``asr_model_installed`` above handles. Touches the
     memo only when the module is already imported. (Mirror of the guard in
     tests/conftest.py.)"""
-    mod = sys.modules.get("services.asr_backend")
-    if mod is not None:
-        getattr(mod, "_INSTALLED_REPO_MEMO", set()).clear()
+    def _clear_all():
+        import types
+        mod = sys.modules.get("services.asr_backend")
+        targets = {} if mod is None else {id(mod): mod}
+        test_module = getattr(request, "module", None)
+        if test_module is not None:
+            for val in vars(test_module).values():
+                if (isinstance(val, types.ModuleType)
+                        and getattr(val, "__name__", "") == "services.asr_backend"):
+                    targets[id(val)] = val
+        for m in targets.values():
+            getattr(m, "_INSTALLED_REPO_MEMO", set()).clear()
+
+    _clear_all()
     yield
-    mod = sys.modules.get("services.asr_backend")
-    if mod is not None:
-        getattr(mod, "_INSTALLED_REPO_MEMO", set()).clear()
+    _clear_all()

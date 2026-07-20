@@ -482,12 +482,18 @@ async def create_transcription(
         get_active_asr_backend,
     )
 
-    # TTS-only install: no ASR model on disk → actionable 409 (string detail —
-    # OpenAI-compat clients expect plain messages), BEFORE any backend load
-    # could silently auto-download multi-GB whisper weights.
+    # TTS-only install: no ASR model on disk → actionable 409, BEFORE any
+    # backend load could silently auto-download multi-GB whisper weights.
+    # Same typed detail shape as /transcribe (capture.py): the machine fields
+    # (`error`, `missing_repo_id`, `recommended`) let OmniVoice-aware clients
+    # render the one-click download CTA, while `message` keeps a human-readable
+    # line for generic OpenAI-compat clients.
     missing = await asyncio.to_thread(asr_model_missing_error)
     if missing is not None:
-        raise HTTPException(status_code=409, detail=asr_model_missing_detail(missing))
+        raise HTTPException(
+            status_code=409,
+            detail={**missing, "message": asr_model_missing_detail(missing)},
+        )
 
     # Write uploaded file to a temp location
     suffix = os.path.splitext(file.filename or "audio.wav")[1] or ".wav"

@@ -97,7 +97,7 @@ never restores the files.
 
 **Fix:** force-reinstall pytorch-lightning in the backend venv, then restart:
 
-```
+```shell
 uv pip install --reinstall pytorch-lightning
 ```
 

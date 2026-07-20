@@ -2272,7 +2272,7 @@ _LAST_ERRORS: dict[str, str] = {}
 # the process. Record it here so probes report the backend unavailable (with
 # the repair hint) and selection falls through to the next engine instead of
 # failing ASR wholesale. Per-process by design: repairing the env requires a
-# reinstall / ``uv sync`` and an app restart anyway.
+# reinstall / ``uv sync --reinstall`` and an app restart anyway.
 _DEEP_IMPORT_BROKEN: dict[str, str] = {}
 
 
@@ -2287,7 +2287,9 @@ def _deep_import_reason(cls: type["ASRBackend"], exc: ImportError) -> str:
     return (
         f"{cls.display_name} failed to load: {what}. The app environment "
         "looks partially installed — reinstall OmniVoice Studio (or run "
-        "`uv sync` on a source checkout) to repair it."
+        "`uv sync --reinstall` on a source checkout; plain `uv sync` "
+        "trusts the intact package metadata and skips the broken files) "
+        "to repair it."
     )
 
 
@@ -2463,6 +2465,20 @@ def _asr_backend_pinned() -> bool:
     return bool(prefs.get("asr_backend"))
 
 
+class ASRModelMissingError(RuntimeError):
+    """A fallback ASR selection has no installed weights (see
+    :func:`load_active_asr_backend`). Carries the typed ``asr_model_missing``
+    ``payload`` so consumers render the same one-click download CTA as the
+    initial preflight instead of a generic load failure — and, critically, so
+    ``ensure_loaded()`` is never reached for that candidate (loading would
+    silently auto-download multi-GB weights, violating the local-first
+    no-download-without-consent guarantee)."""
+
+    def __init__(self, payload: dict):
+        self.payload = payload
+        super().__init__(asr_model_missing_detail(payload))
+
+
 def load_active_asr_backend(*, asr_pipe=None) -> ASRBackend:
     """:func:`get_active_asr_backend` + eager ``ensure_loaded()``, degrading
     past backends whose deep import chain is broken (#1185).
@@ -2479,12 +2495,23 @@ def load_active_asr_backend(*, asr_pipe=None) -> ASRBackend:
     An *explicitly pinned* backend (``OMNIVOICE_ASR_BACKEND`` / the
     ``asr_backend`` pref) is never silently swapped: the enriched error —
     naming the missing module and the repair command — is raised instead.
+
+    Callers run the no-download :func:`asr_model_missing_error` preflight for
+    the *initial* selection only, so every re-selected fallback gets the same
+    preflight here, BEFORE its ``ensure_loaded()`` — otherwise a broken
+    primary would let the fallback silently auto-download multi-GB weights.
+    A fallback without installed weights raises :class:`ASRModelMissingError`
+    (typed payload → the caller's download CTA).
     """
     from core.scrub import scrub_text
     tried: set[str] = set()
     while True:
         backend = get_active_asr_backend(asr_pipe=asr_pipe)
         bid = getattr(backend, "id", "?")
+        if tried:
+            missing = asr_model_missing_error()
+            if missing is not None:
+                raise ASRModelMissingError(missing)
         try:
             backend.ensure_loaded()
             return backend

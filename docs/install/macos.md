@@ -120,9 +120,7 @@ one-time confirmation per install; afterwards it launches by double-click.
 xattr -dr com.apple.quarantine "/Applications/OmniVoice Studio.app"
 ```
 
-(Adjust the path if you put the app somewhere other than `/Applications`. The
-broader `xattr -cr "/Applications/OmniVoice Studio.app"` also works — it clears
-*all* extended attributes rather than just the quarantine flag.)
+(Adjust the path if you put the app somewhere other than `/Applications`.)
 
 That clears the quarantine attribute so Gatekeeper stops blocking the launch — a
 one-time fix per install.

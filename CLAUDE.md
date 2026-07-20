@@ -73,6 +73,10 @@ No project skills found. Add skills to any of: `.claude/skills/`, `.agents/skill
 ## Workflow
 
 Direct repo edits are authorized (owner decision, 2026-07-08). The GSD command gate that used to live here referenced `/gsd-quick` / `/gsd-debug` / `/gsd-execute-phase` skills that are not installed in this environment; the owner chose to keep working directly rather than restore them. The working conventions that matter are in **Conventions** above — versioning, docs-sync, changelog, localization, fix quality, keep-main-green — plus: gate every merge on the "Tests (backend + frontend)" check passing and the PR being MERGEABLE, and check the open-PR queue before implementing any community-reported fix (contributors may have already submitted one).
+
+**Harvest bot reviews before merging (rule, 2026-07-20):** CodeRabbit and Greptile auto-review every PR (tuned via `.coderabbit.yaml` / `greptile.json`, both fed CLAUDE.md as context). Before merging ANY PR — including your own — read their inline comments (`gh api repos/<owner>/<repo>/pulls/<N>/comments` filtered by bot login) and triage: fix real findings, ignore noise, never merge with an unread Critical/P1. They are the free first review pass; reserve deep agent-driven review for what they can't judge (architecture, cross-file semantics, product intent). Mechanical rules belong in deterministic CI tests, not in any AI reviewer.
+
+**Never accept a PR as-is (owner directive, 2026-07-20):** review findings — bot, agent, or human — get FIXED on the PR branch before merge (maintainer commits are fine and credit the contributor in the changelog); do not merge with known issues, do not merge-then-fix, do not leave findings as comments for someone else. Also merge current `main` into stale community branches before judging their CI, so the PR runs today's workflow gates (PR-green under an old workflow ≠ main-green).
 <!-- GSD:workflow-end -->
 
 

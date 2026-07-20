@@ -71,3 +71,35 @@ def test_mcp_disable_env_skips_mount(monkeypatch):
         # Restore the default app so other tests see /mcp mounted again.
         monkeypatch.delenv("OMNIVOICE_MCP_DISABLE", raising=False)
         importlib.reload(_main)
+
+
+# ── clone_voice input helpers (#1195 review) ────────────────────────────────
+# Pure helpers, no MCP SDK needed: agents commonly prepend data URIs, and the
+# stored ref clip's extension must match the actual container.
+
+def test_decode_ref_audio_strips_data_uri_prefix():
+    import base64 as b64
+    from mcp_server import _decode_ref_audio
+    body = b64.b64encode(b"RIFFxxxxWAVE").decode()
+    assert _decode_ref_audio(f"data:audio/wav;base64,{body}") == b"RIFFxxxxWAVE"
+    assert _decode_ref_audio(body) == b"RIFFxxxxWAVE"
+
+
+def test_decode_ref_audio_rejects_garbage_without_raising():
+    from mcp_server import _decode_ref_audio
+    assert _decode_ref_audio("not!!valid@@base64") is None
+    assert _decode_ref_audio("data:audio/wav;base64,%%%") is None
+
+
+@pytest.mark.parametrize("raw,ext", [
+    (b"RIFFxxxxWAVEfmt ", ".wav"),
+    (b"fLaC\x00\x00\x00\x22", ".flac"),
+    (b"ID3\x04rest-of-mp3", ".mp3"),
+    (b"\xff\xfb\x90\x00mp3-frame", ".mp3"),
+    (b"OggS\x00vorbis", ".ogg"),
+    (b"\x00\x00\x00 ftypM4A ", ".m4a"),
+    (b"???unknown-container", ".wav"),  # documented default
+])
+def test_sniff_audio_ext_matches_magic_bytes(raw, ext):
+    from mcp_server import _sniff_audio_ext
+    assert _sniff_audio_ext(raw) == ext

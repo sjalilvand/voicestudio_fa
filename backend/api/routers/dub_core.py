@@ -438,6 +438,14 @@ async def dub_transcribe_stream(
     # query string can never break the diarization call. None → auto-detect.
     num_speakers = _clamp_num_speakers(num_speakers)
 
+    # VRAM guard: _gen_body unloads the ASR backend on its normal completion
+    # path only — a crash mid-stream, an early `return` (e.g. "audio load
+    # failed"), or a client disconnect (GeneratorExit) used to skip that
+    # unload and retain the model in VRAM for the rest of the process.
+    # _gen_body parks the loaded backend here; the normal unload clears it;
+    # gen()'s `finally` unloads whatever is still parked, on EVERY exit.
+    _loaded_asr: dict = {"backend": None}
+
     async def _gen_body():
         # ── Preflight — run INSIDE the stream, never before it (#1196) ──
         # This whole block used to run in the endpoint body, before the
@@ -513,7 +521,7 @@ async def dub_transcribe_stream(
                         yield b": tts-load keepalive\n\n"
                     _model = _model_task.result()
                 except Exception as e:
-                    logger.exception("transcribe preflight: model load failed (job=%s)", job_id)
+                    logger.exception("transcribe preflight: model load failed (job=%r)", job_id)
                     from core.failure import build_failure
                     f = build_failure(e, stage="transcribe-preflight", include_diagnostic=False)
                     preflight_error = f["reason"] + (f" — {f['hint']}" if f.get("hint") else "")
@@ -531,6 +539,7 @@ async def dub_transcribe_stream(
                     preflight_error = "No audio available for transcription."
                 else:
                     from services.asr_backend import (
+                        ASRModelMissingError,
                         active_backend_id,
                         asr_model_missing_detail,
                         asr_model_missing_error,
@@ -607,8 +616,15 @@ async def dub_transcribe_stream(
                                     break
                                 yield b": asr-load keepalive\n\n"
                             _asr_backend = _load_fut.result()
+                            _loaded_asr["backend"] = _asr_backend
+                        except ASRModelMissingError as e:
+                            # A broken primary fell through to a fallback whose
+                            # weights aren't installed — same typed payload
+                            # (and download CTA) as the initial preflight.
+                            preflight_error = asr_model_missing_detail(e.payload)
+                            preflight_payload = e.payload
                         except Exception as e:
-                            logger.exception("transcribe preflight: ASR load failed (job=%s)", job_id)
+                            logger.exception("transcribe preflight: ASR load failed (job=%r)", job_id)
                             from core.failure import build_failure
                             f = build_failure(e, stage="transcribe-preflight", include_diagnostic=False)
                             preflight_error = "ASR backend initialization failed: " + f["reason"] + (
@@ -1264,6 +1280,8 @@ async def dub_transcribe_stream(
                 _asr_backend.unload()
             except Exception as e:
                 logger.warning("Failed to unload ASR backend: %s", e)
+            # Unload attempted once — don't retry from gen()'s finally.
+            _loaded_asr["backend"] = None
 
         await loop.run_in_executor(_cpu_pool, restore_tts_after_asr)
 
@@ -1297,12 +1315,23 @@ async def dub_transcribe_stream(
             async for ev in _gen_body():
                 yield ev
         except Exception as e:  # noqa: BLE001 — last-resort stream finalizer
-            logger.exception("transcribe stream crashed (job=%s)", job_id)
+            logger.exception("transcribe stream crashed (job=%r)", job_id)
             from core.failure import build_failure
             f = build_failure(e, stage="transcribe", include_diagnostic=False)
             detail = f["reason"] + (f" — {f['hint']}" if f.get("hint") else "")
             yield _sse_event("error", {"detail": detail, "retryable": True})
             yield _sse_event("done", {})
+        finally:
+            # Last-resort VRAM release (see _loaded_asr above): covers crashes,
+            # early terminal-error returns, and client disconnects
+            # (GeneratorExit bypasses the except, never this finally).
+            _b = _loaded_asr.get("backend")
+            _loaded_asr["backend"] = None
+            if _b is not None:
+                try:
+                    _b.unload()
+                except Exception as e:
+                    logger.warning("Failed to unload ASR backend: %s", e)
 
     return StreamingResponse(
         gen(),
