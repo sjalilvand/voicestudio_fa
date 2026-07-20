@@ -2084,7 +2084,7 @@
     "insert_emphasis": "Betoning",
     "insert_spell": "Stava",
     "insert_reactions": "Reaktioner",
-    "stats": "{{chapters}} kapitel · ~{{words}} ord · ~{{runtime}} uppskattad speltid",
+    "stats": "{{chapters}} kapitel · {{words}} ord · {{runtime}} uppskattad speltid",
     "warnings_title": "Innan du skapar",
     "warn_unknown_voice": "Okänd röst ‘{{name}}’ — standardrösten används",
     "warn_empty_chapter": "Kapitlet ”{{title}}” saknar uppläst text",

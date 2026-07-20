@@ -167,7 +167,7 @@
     "insert_emphasis": "Emphasis",
     "insert_spell": "Spell",
     "insert_reactions": "Reactions",
-    "stats": "{{chapters}} chapters · ~{{words}} words · ~{{runtime}} est. runtime",
+    "stats": "{{chapters}} chapters · {{words}} words · {{runtime}} est. runtime",
     "warnings_title": "Before you create",
     "warn_unknown_voice": "Unknown voice ‘{{name}}’ — will use the default",
     "warn_empty_chapter": "Chapter “{{title}}” has no spoken text",

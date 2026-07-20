@@ -2084,7 +2084,7 @@
     "insert_emphasis": "Nadruk",
     "insert_spell": "Spellen",
     "insert_reactions": "Reacties",
-    "stats": "{{chapters}} hoofdstukken · ~{{words}} woorden · ~{{runtime}} geschatte speelduur",
+    "stats": "{{chapters}} hoofdstukken · {{words}} woorden · {{runtime}} geschatte speelduur",
     "warnings_title": "Voordat je aanmaakt",
     "warn_unknown_voice": "Onbekende stem ‘{{name}}’ — de standaardstem wordt gebruikt",
     "warn_empty_chapter": "Hoofdstuk “{{title}}” bevat geen gesproken tekst",

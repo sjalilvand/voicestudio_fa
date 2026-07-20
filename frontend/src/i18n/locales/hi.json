@@ -2084,7 +2084,7 @@
     "insert_emphasis": "ज़ोर",
     "insert_spell": "वर्तनी",
     "insert_reactions": "प्रतिक्रियाएँ",
-    "stats": "{{chapters}} अध्याय · ~{{words}} शब्द · ~{{runtime}} अनुमानित अवधि",
+    "stats": "{{chapters}} अध्याय · {{words}} शब्द · {{runtime}} अनुमानित अवधि",
     "warnings_title": "बनाने से पहले",
     "warn_unknown_voice": "अज्ञात आवाज़ ‘{{name}}’ — डिफ़ॉल्ट का उपयोग होगा",
     "warn_empty_chapter": "अध्याय “{{title}}” में बोलने योग्य कोई पाठ नहीं है",

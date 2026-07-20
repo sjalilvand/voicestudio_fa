@@ -2084,7 +2084,7 @@
     "insert_emphasis": "Énfasis",
     "insert_spell": "Deletrear",
     "insert_reactions": "Reacciones",
-    "stats": "{{chapters}} capítulos · ~{{words}} palabras · ~{{runtime}} de duración est.",
+    "stats": "{{chapters}} capítulos · {{words}} palabras · {{runtime}} de duración est.",
     "warnings_title": "Antes de crear",
     "warn_unknown_voice": "Voz desconocida «{{name}}»: se usará la predeterminada",
     "warn_empty_chapter": "El capítulo «{{title}}» no tiene texto hablado",

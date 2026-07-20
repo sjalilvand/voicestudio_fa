@@ -2084,7 +2084,7 @@
     "insert_emphasis": "เน้นเสียง",
     "insert_spell": "สะกด",
     "insert_reactions": "ปฏิกิริยา",
-    "stats": "{{chapters}} บท · ~{{words}} คำ · ~{{runtime}} เวลาโดยประมาณ",
+    "stats": "{{chapters}} บท · {{words}} คำ · {{runtime}} เวลาโดยประมาณ",
     "warnings_title": "ก่อนสร้าง",
     "warn_unknown_voice": "เสียงที่ไม่รู้จัก ‘{{name}}’ — จะใช้เสียงเริ่มต้น",
     "warn_empty_chapter": "บท “{{title}}” ไม่มีข้อความสำหรับอ่าน",

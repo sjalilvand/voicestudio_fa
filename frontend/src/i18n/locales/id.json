@@ -2084,7 +2084,7 @@
     "insert_emphasis": "Penekanan",
     "insert_spell": "Eja",
     "insert_reactions": "Reaksi",
-    "stats": "{{chapters}} bab · ~{{words}} kata · ~{{runtime}} perkiraan durasi",
+    "stats": "{{chapters}} bab · {{words}} kata · {{runtime}} perkiraan durasi",
     "warnings_title": "Sebelum membuat",
     "warn_unknown_voice": "Suara tidak dikenal ‘{{name}}’ — akan memakai default",
     "warn_empty_chapter": "Bab “{{title}}” tidak memiliki teks untuk dibacakan",

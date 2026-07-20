@@ -2084,7 +2084,7 @@
     "insert_emphasis": "Enfasi",
     "insert_spell": "Compita",
     "insert_reactions": "Reazioni",
-    "stats": "{{chapters}} capitoli · ~{{words}} parole · ~{{runtime}} durata stim.",
+    "stats": "{{chapters}} capitoli · {{words}} parole · {{runtime}} durata stim.",
     "warnings_title": "Prima di creare",
     "warn_unknown_voice": "Voce sconosciuta «{{name}}» — verrà usata quella predefinita",
     "warn_empty_chapter": "Il capitolo «{{title}}» non contiene testo parlato",

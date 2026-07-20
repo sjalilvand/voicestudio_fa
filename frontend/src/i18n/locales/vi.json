@@ -2084,7 +2084,7 @@
     "insert_emphasis": "Nhấn mạnh",
     "insert_spell": "Đánh vần",
     "insert_reactions": "Phản ứng",
-    "stats": "{{chapters}} chương · ~{{words}} từ · ~{{runtime}} thời lượng ước tính",
+    "stats": "{{chapters}} chương · {{words}} từ · {{runtime}} thời lượng ước tính",
     "warnings_title": "Trước khi tạo",
     "warn_unknown_voice": "Giọng không xác định ‘{{name}}’ — sẽ dùng giọng mặc định",
     "warn_empty_chapter": "Chương “{{title}}” không có nội dung để đọc",

@@ -2084,7 +2084,7 @@
     "insert_emphasis": "Nacisk",
     "insert_spell": "Przeliteruj",
     "insert_reactions": "Reakcje",
-    "stats": "{{chapters}} rozdz. · ~{{words}} słów · ~{{runtime}} szac. czasu",
+    "stats": "{{chapters}} rozdz. · {{words}} słów · {{runtime}} szac. czasu",
     "warnings_title": "Przed utworzeniem",
     "warn_unknown_voice": "Nieznany głos „{{name}}” — zostanie użyty domyślny",
     "warn_empty_chapter": "Rozdział „{{title}}” nie zawiera tekstu do przeczytania",

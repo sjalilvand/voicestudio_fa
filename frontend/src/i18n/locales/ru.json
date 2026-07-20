@@ -2084,7 +2084,7 @@
     "insert_emphasis": "Акцент",
     "insert_spell": "По буквам",
     "insert_reactions": "Реакции",
-    "stats": "{{chapters}} глав · ~{{words}} слов · ~{{runtime}} прибл. длительность",
+    "stats": "{{chapters}} глав · {{words}} слов · {{runtime}} прибл. длительность",
     "warnings_title": "Перед созданием",
     "warn_unknown_voice": "Неизвестный голос «{{name}}» — будет использован голос по умолчанию",
     "warn_empty_chapter": "В главе «{{title}}» нет произносимого текста",

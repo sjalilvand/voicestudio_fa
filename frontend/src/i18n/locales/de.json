@@ -2084,7 +2084,7 @@
     "insert_emphasis": "Betonung",
     "insert_spell": "Buchstabieren",
     "insert_reactions": "Reaktionen",
-    "stats": "{{chapters}} Kapitel · ~{{words}} Wörter · ~{{runtime}} geschätzte Laufzeit",
+    "stats": "{{chapters}} Kapitel · {{words}} Wörter · {{runtime}} geschätzte Laufzeit",
     "warnings_title": "Vor dem Erstellen",
     "warn_unknown_voice": "Unbekannte Stimme „{{name}}“ – die Standardstimme wird verwendet",
     "warn_empty_chapter": "Kapitel „{{title}}“ enthält keinen gesprochenen Text",

@@ -2084,7 +2084,7 @@
     "insert_emphasis": "Акцент",
     "insert_spell": "По літерах",
     "insert_reactions": "Реакції",
-    "stats": "{{chapters}} розділів · ~{{words}} слів · ~{{runtime}} приблизна тривалість",
+    "stats": "{{chapters}} розділів · {{words}} слів · {{runtime}} приблизна тривалість",
     "warnings_title": "Перед створенням",
     "warn_unknown_voice": "Невідомий голос «{{name}}» — буде використано голос за замовчуванням",
     "warn_empty_chapter": "У розділі «{{title}}» немає тексту для озвучення",

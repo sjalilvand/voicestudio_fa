@@ -2084,7 +2084,7 @@
     "insert_emphasis": "تأكيد",
     "insert_spell": "تهجئة",
     "insert_reactions": "تفاعلات",
-    "stats": "{{chapters}} فصول · ~{{words}} كلمة · ~{{runtime}} مدة تقديرية",
+    "stats": "{{chapters}} فصول · {{words}} كلمة · {{runtime}} مدة تقديرية",
     "warnings_title": "قبل الإنشاء",
     "warn_unknown_voice": "صوت غير معروف ‘{{name}}’ — سيتم استخدام الافتراضي",
     "warn_empty_chapter": "الفصل “{{title}}” لا يحتوي على نص منطوق",

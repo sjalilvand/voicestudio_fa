@@ -2084,7 +2084,7 @@
     "insert_emphasis": "Vurgu",
     "insert_spell": "Hecele",
     "insert_reactions": "Tepkiler",
-    "stats": "{{chapters}} bölüm · ~{{words}} kelime · ~{{runtime}} tahmini süre",
+    "stats": "{{chapters}} bölüm · {{words}} kelime · {{runtime}} tahmini süre",
     "warnings_title": "Oluşturmadan önce",
     "warn_unknown_voice": "Bilinmeyen ses ‘{{name}}’ — varsayılan kullanılacak",
     "warn_empty_chapter": "“{{title}}” bölümünde seslendirilecek metin yok",
