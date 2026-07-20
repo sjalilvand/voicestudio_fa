@@ -837,7 +837,22 @@
     "qc_running": "检查配音时间...",
     "qc_result": "{{flagged}} 行（共 {{total}} 行）可能需要重新收听",
     "qc_clean": "所有 {{total}} 行都与脚本匹配",
-    "qc_failed": "计时检查失败：{{message}}"
+    "qc_failed": "计时检查失败：{{message}}",
+    "paste_translation_btn": "粘贴译文",
+    "paste_translation_title": "粘贴译文",
+    "paste_translation_desc": "粘贴你在别处完成的译文（ChatGPT、DeepL 或人工译者）。它会映射到已有的片段上——时间轴和原始转写保持不变。",
+    "paste_translation_placeholder": "粘贴字幕（SRT/VTT）、带编号的行（1. …），或每个片段一行译文——也可以把 .srt/.vtt 文件拖到这里。",
+    "paste_translation_load_file": "载入 .srt / .vtt 文件",
+    "paste_translation_mode_timestamped": "带时间戳（SRT/VTT）",
+    "paste_translation_mode_numbered": "带编号的行",
+    "paste_translation_mode_plain": "纯文本行",
+    "paste_translation_counts": "{{segments}} 个片段 · {{lines}} 行 · {{unmatched}} 个未匹配",
+    "paste_translation_unused": "有 {{count}} 行粘贴内容未被使用",
+    "paste_translation_none_matched": "没有任何匹配。请检查粘贴的文本是否与下方片段对应。",
+    "paste_translation_row_unmatched": "无匹配——保持不变",
+    "paste_translation_apply": "应用到 {{count}} 个片段",
+    "paste_translation_cancel": "取消",
+    "paste_translation_more_rows": "还有 {{count}} 行"
   },
   "glossary": {
     "title": "术语表",

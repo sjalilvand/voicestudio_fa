@@ -878,7 +878,22 @@
     "qc_running": "ダビングのタイミングを確認中…",
     "qc_result": "{{total}} 行中 {{flagged}} 行は再試行が必要な可能性があります",
     "qc_clean": "すべての {{total}} 行がスクリプトと一致します",
-    "qc_failed": "タイミング チェックに失敗しました: {{message}}"
+    "qc_failed": "タイミング チェックに失敗しました: {{message}}",
+    "paste_translation_btn": "翻訳を貼り付け",
+    "paste_translation_title": "翻訳を貼り付け",
+    "paste_translation_desc": "他所で用意した翻訳（ChatGPT、DeepL、人間の翻訳者）を貼り付けます。既存のセグメントに割り当てられ、タイミングと元の文字起こしはそのまま残ります。",
+    "paste_translation_placeholder": "字幕（SRT/VTT）、番号付きの行（1. …）、またはセグメントごとに1行の翻訳を貼り付けてください。.srt/.vtt ファイルをここにドロップすることもできます。",
+    "paste_translation_load_file": ".srt / .vtt ファイルを読み込む",
+    "paste_translation_mode_timestamped": "タイムスタンプ付き（SRT/VTT）",
+    "paste_translation_mode_numbered": "番号付きの行",
+    "paste_translation_mode_plain": "通常の行",
+    "paste_translation_counts": "{{segments}} セグメント · {{lines}} 行 · 未対応 {{unmatched}}",
+    "paste_translation_unused": "貼り付けた行のうち {{count}} 行が未使用です",
+    "paste_translation_none_matched": "一致するものがありません。貼り付けたテキストが下のセグメントと対応しているか確認してください。",
+    "paste_translation_row_unmatched": "一致なし — 変更しません",
+    "paste_translation_apply": "{{count}} セグメントに適用",
+    "paste_translation_cancel": "キャンセル",
+    "paste_translation_more_rows": "他 {{count}} 行"
   },
   "glossary": {
     "title": "用語集",

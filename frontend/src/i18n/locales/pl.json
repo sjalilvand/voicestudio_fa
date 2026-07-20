@@ -878,7 +878,22 @@
     "qc_running": "Sprawdzam synchronizację dubbingu…",
     "qc_result": "{{flagged}} z {{total}} wierszy może wymagać ponownego przesłuchania",
     "qc_clean": "Wszystkie linie {{total}} odpowiadają skryptowi",
-    "qc_failed": "Kontrola czasu nie powiodła się: {{message}}"
+    "qc_failed": "Kontrola czasu nie powiodła się: {{message}}",
+    "paste_translation_btn": "Wklej tłumaczenie",
+    "paste_translation_title": "Wklej tłumaczenie",
+    "paste_translation_desc": "Wklej tłumaczenie przygotowane gdzie indziej (ChatGPT, DeepL, tłumacz). Zostanie dopasowane do istniejących segmentów — czasy i oryginalna transkrypcja pozostają bez zmian.",
+    "paste_translation_placeholder": "Wklej napisy (SRT/VTT), numerowane wiersze (1. …) albo jeden przetłumaczony wiersz na segment — lub upuść tutaj plik .srt/.vtt.",
+    "paste_translation_load_file": "Wczytaj plik .srt / .vtt",
+    "paste_translation_mode_timestamped": "Ze znacznikami czasu (SRT/VTT)",
+    "paste_translation_mode_numbered": "Numerowane wiersze",
+    "paste_translation_mode_plain": "Zwykłe wiersze",
+    "paste_translation_counts": "{{segments}} segmentów · {{lines}} wierszy · {{unmatched}} bez dopasowania",
+    "paste_translation_unused": "Niewykorzystane wklejone wiersze: {{count}}",
+    "paste_translation_none_matched": "Nic nie zostało dopasowane. Sprawdź, czy wklejony tekst odpowiada segmentom poniżej.",
+    "paste_translation_row_unmatched": "brak dopasowania — bez zmian",
+    "paste_translation_apply": "Zastosuj do {{count}} segmentów",
+    "paste_translation_cancel": "Anuluj",
+    "paste_translation_more_rows": "+ jeszcze {{count}} wierszy"
   },
   "glossary": {
     "title": "Glosariusz",

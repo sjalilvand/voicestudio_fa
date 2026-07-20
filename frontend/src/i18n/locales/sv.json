@@ -878,7 +878,22 @@
     "qc_running": "Kontrollerar dubbningstid...",
     "qc_result": "{{flagged}} av {{total}} rader kan behöva lyssnas om",
     "qc_clean": "Alla {{total}} rader matchar skriptet",
-    "qc_failed": "Tidskontroll misslyckades: {{message}}"
+    "qc_failed": "Tidskontroll misslyckades: {{message}}",
+    "paste_translation_btn": "Klistra in översättning",
+    "paste_translation_title": "Klistra in en översättning",
+    "paste_translation_desc": "Klistra in en översättning som gjorts någon annanstans (ChatGPT, DeepL, en mänsklig översättare). Den mappas mot segmenten du redan har — tidkoder och originaltranskriptet rörs inte.",
+    "paste_translation_placeholder": "Klistra in undertexter (SRT/VTT), numrerade rader (1. …) eller en översatt rad per segment — eller släpp en .srt/.vtt-fil här.",
+    "paste_translation_load_file": "Läs in .srt-/.vtt-fil",
+    "paste_translation_mode_timestamped": "Med tidkoder (SRT/VTT)",
+    "paste_translation_mode_numbered": "Numrerade rader",
+    "paste_translation_mode_plain": "Vanliga rader",
+    "paste_translation_counts": "{{segments}} segment · {{lines}} rader · {{unmatched}} utan träff",
+    "paste_translation_unused": "{{count}} inklistrad(e) rad(er) användes inte",
+    "paste_translation_none_matched": "Inget matchade. Kontrollera att den inklistrade texten stämmer med segmenten nedan.",
+    "paste_translation_row_unmatched": "ingen träff — oförändrad",
+    "paste_translation_apply": "Använd på {{count}} segment",
+    "paste_translation_cancel": "Avbryt",
+    "paste_translation_more_rows": "+ {{count}} rader till"
   },
   "glossary": {
     "title": "Ordlista",

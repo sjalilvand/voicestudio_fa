@@ -160,6 +160,7 @@ POST /dub/cleanup-segments/{job_id}
 POST /dub/generate/{job_id}
 POST /dub/import-srt/{job_id}
 POST /dub/ingest-url
+POST /dub/parse-subtitle-text
 POST /dub/preview-segment/{job_id}
 POST /dub/qc/{job_id}
 POST /dub/transcribe/{job_id}

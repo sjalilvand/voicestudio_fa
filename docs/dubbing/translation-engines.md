@@ -21,6 +21,35 @@ backend returns a single, actionable error telling you exactly what to install
 (the install command is single-sourced, so the button and the error never
 disagree).
 
+## Bring your own translation (Paste Translation)
+
+You don't have to use any of these engines. If you already translated the
+transcript somewhere else — ChatGPT, DeepL's website, a human translator — click
+**Paste Translation** above the segment table and paste the result. It maps onto
+the segments you already have: **no re-transcription, no timing loss**, and the
+original transcript (`text_original`) is left alone so a later *Translate All*
+still works from the source text.
+
+Three input shapes are auto-detected:
+
+| Shape | Looks like | Mapped by |
+|-------|-----------|-----------|
+| **Timestamped** | a full `.srt` / `.vtt` | time overlap with your segments |
+| **Numbered lines** | `1. …` / `2) …` / `[3] …` | the line number (falls back to order if a model renumbers) |
+| **Plain lines** | one translated line per segment | position; blank lines are separators, never empty translations |
+
+You can also drop (or pick) a `.srt`/`.vtt` file straight into the dialog.
+
+Nothing is applied until you confirm: the dialog previews every row as
+before → after, flags rows nothing matched, and counts how many pasted lines
+went unused. **Apply** is disabled only when *nothing* matched, unmatched rows
+are left exactly as they were, and the whole paste is a single undo step. The
+rows you changed are marked stale for regeneration automatically, so a
+**Regen N changed** pass re-speaks just those lines.
+
+This writes only the **currently selected** target language, so you can paste a
+different external translation per language tab without disturbing the others.
+
 ## Installing optional translation engines (from-source vs packaged build)
 
 How you add an engine depends on **how you installed OmniVoice**.

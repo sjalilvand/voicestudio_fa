@@ -878,7 +878,22 @@
     "qc_running": "Проверка синхронизации дубляжа…",
     "qc_result": "{{flagged}} из {{total}} строк может потребоваться повторное прослушивание",
     "qc_clean": "Все строки {{total}} соответствуют сценарию",
-    "qc_failed": "Проверка времени не удалась: {{message}}"
+    "qc_failed": "Проверка времени не удалась: {{message}}",
+    "paste_translation_btn": "Вставить перевод",
+    "paste_translation_title": "Вставить перевод",
+    "paste_translation_desc": "Вставьте перевод, сделанный в другом месте (ChatGPT, DeepL, живой переводчик). Он ляжет на уже имеющиеся сегменты — тайминги и исходная расшифровка не изменятся.",
+    "paste_translation_placeholder": "Вставьте субтитры (SRT/VTT), нумерованные строки (1. …) или по одной переведённой строке на сегмент — либо перетащите сюда файл .srt/.vtt.",
+    "paste_translation_load_file": "Загрузить файл .srt / .vtt",
+    "paste_translation_mode_timestamped": "С таймкодами (SRT/VTT)",
+    "paste_translation_mode_numbered": "Нумерованные строки",
+    "paste_translation_mode_plain": "Обычные строки",
+    "paste_translation_counts": "{{segments}} сегментов · {{lines}} строк · {{unmatched}} без совпадения",
+    "paste_translation_unused": "Не использовано вставленных строк: {{count}}",
+    "paste_translation_none_matched": "Совпадений нет. Проверьте, что вставленный текст соответствует сегментам ниже.",
+    "paste_translation_row_unmatched": "нет совпадения — без изменений",
+    "paste_translation_apply": "Применить к {{count}} сегментам",
+    "paste_translation_cancel": "Отмена",
+    "paste_translation_more_rows": "+ ещё {{count}} строк"
   },
   "glossary": {
     "title": "Глоссарий",

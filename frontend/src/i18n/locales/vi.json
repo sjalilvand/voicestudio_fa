@@ -878,7 +878,22 @@
     "qc_running": "Đang kiểm tra thời gian lồng tiếng…",
     "qc_result": "{{flagged}} trong số {{total}} dòng có thể cần nghe lại",
     "qc_clean": "Tất cả các dòng {{total}} đều khớp với tập lệnh",
-    "qc_failed": "Kiểm tra thời gian không thành công: {{message}}"
+    "qc_failed": "Kiểm tra thời gian không thành công: {{message}}",
+    "paste_translation_btn": "Dán bản dịch",
+    "paste_translation_title": "Dán một bản dịch",
+    "paste_translation_desc": "Dán bản dịch bạn đã làm ở nơi khác (ChatGPT, DeepL, người dịch). Nó sẽ được ánh xạ vào các phân đoạn sẵn có — thời điểm và bản ghi gốc giữ nguyên.",
+    "paste_translation_placeholder": "Dán phụ đề (SRT/VTT), các dòng đánh số (1. …), hoặc mỗi phân đoạn một dòng đã dịch — hoặc thả tệp .srt/.vtt vào đây.",
+    "paste_translation_load_file": "Tải tệp .srt / .vtt",
+    "paste_translation_mode_timestamped": "Có dấu thời gian (SRT/VTT)",
+    "paste_translation_mode_numbered": "Dòng đánh số",
+    "paste_translation_mode_plain": "Dòng thuần",
+    "paste_translation_counts": "{{segments}} phân đoạn · {{lines}} dòng · {{unmatched}} không khớp",
+    "paste_translation_unused": "{{count}} dòng đã dán không được dùng",
+    "paste_translation_none_matched": "Không có gì khớp. Hãy kiểm tra xem văn bản đã dán có tương ứng với các phân đoạn bên dưới không.",
+    "paste_translation_row_unmatched": "không khớp — giữ nguyên",
+    "paste_translation_apply": "Áp dụng cho {{count}} phân đoạn",
+    "paste_translation_cancel": "Hủy",
+    "paste_translation_more_rows": "+ {{count}} dòng nữa"
   },
   "glossary": {
     "title": "Thuật ngữ",

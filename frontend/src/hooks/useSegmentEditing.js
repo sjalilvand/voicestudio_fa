@@ -10,6 +10,7 @@ import { askConfirm } from '../utils/dialog';
 import { apiPost } from '../api/client';
 import { segmentGenInputs } from '../utils/segments';
 import { commitMoveResize } from '../utils/timeline';
+import { buildPastePlan } from '../utils/pasteTranslations';
 
 // Stable empty map so `lastGenFingerprints` keeps a constant identity for a
 // language with no stored hashes (avoids effect/callback churn).
@@ -130,6 +131,46 @@ export default function useSegmentEditing() {
           };
         }),
       );
+    },
+    [dubSegments],
+  );
+
+  // Paste a translation produced outside the app (ChatGPT / DeepL / a human)
+  // onto the EXISTING segments. Same three duties as `segmentEditField`, run
+  // across every matched row in one undo step:
+  //   1. push undo   2. write `text` AND `translations[lang]` in lock-step
+  //   3. clear the machine-translation badges the new words invalidate
+  // and the same two prohibitions: `text_original` is never touched (it is
+  // `handleTranslateAll`'s translate source — overwriting it would poison
+  // every later re-translate), and no language other than the ACTIVE
+  // `dubLangCode` is written. Changed `text` alone marks those segments
+  // stale for regeneration via the existing per-language fingerprints
+  // (services/incremental.py) — no extra flag needed.
+  //
+  // Mapping lives in utils/pasteTranslations so the preview dialog and this
+  // applier derive an identical plan; unmatched rows are left exactly as
+  // they were.
+  const pasteTranslations = useCallback(
+    (text, opts = {}) => {
+      const plan = buildPastePlan(text, dubSegments, opts);
+      const byId = new Map(plan.rows.filter((r) => r.matched).map((r) => [String(r.id), r.after]));
+      if (!byId.size) return plan;
+      pushUndo(dubSegments);
+      const lang = useAppStore.getState().dubLangCode;
+      setDubSegments((prev) =>
+        prev.map((s) => {
+          const next = byId.get(String(s.id));
+          if (next === undefined) return s;
+          return {
+            ...s,
+            text: next,
+            ...(lang ? { translations: { ...s.translations, [lang]: next } } : {}),
+            translate_error: undefined,
+            translate_degraded: undefined,
+          };
+        }),
+      );
+      return plan;
     },
     [dubSegments],
   );
@@ -335,6 +376,7 @@ export default function useSegmentEditing() {
     segmentEditField,
     segmentDelete,
     segmentRestoreOriginal,
+    pasteTranslations,
     segmentSplit,
     segmentMerge,
     segmentMoveResize,

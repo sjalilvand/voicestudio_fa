@@ -1131,7 +1131,22 @@
     "pipeline": "Dubbing pipeline",
     "preview_language": "Preview language",
     "target_language": "Dub into",
-    "transcript_after_extract": "Transcript appears after extraction."
+    "transcript_after_extract": "Transcript appears after extraction.",
+    "paste_translation_btn": "Paste Translation",
+    "paste_translation_title": "Paste a translation",
+    "paste_translation_desc": "Paste a translation you produced elsewhere (ChatGPT, DeepL, a human translator). It maps onto the segments you already have — timings and the original transcript stay untouched.",
+    "paste_translation_placeholder": "Paste subtitles (SRT/VTT), numbered lines (1. …), or one translated line per segment — or drop a .srt/.vtt file here.",
+    "paste_translation_load_file": "Load .srt / .vtt file",
+    "paste_translation_mode_timestamped": "Timestamped (SRT/VTT)",
+    "paste_translation_mode_numbered": "Numbered lines",
+    "paste_translation_mode_plain": "Plain lines",
+    "paste_translation_counts": "{{segments}} segments · {{lines}} lines · {{unmatched}} unmatched",
+    "paste_translation_unused": "{{count}} pasted line(s) went unused",
+    "paste_translation_none_matched": "Nothing matched. Check that the pasted text lines up with the segments below.",
+    "paste_translation_row_unmatched": "no match — left unchanged",
+    "paste_translation_apply": "Apply to {{count}} segments",
+    "paste_translation_cancel": "Cancel",
+    "paste_translation_more_rows": "+ {{count}} more rows"
   },
   "glossary": {
     "title": "Glossary",

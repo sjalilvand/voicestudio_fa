@@ -878,7 +878,22 @@
     "qc_running": "Dub-Timing wird überprüft…",
     "qc_result": "{{flagged}} von {{total}} Zeilen müssen möglicherweise erneut abgehört werden",
     "qc_clean": "Alle {{total}}-Zeilen stimmen mit dem Skript überein",
-    "qc_failed": "Zeitprüfung fehlgeschlagen: {{message}}"
+    "qc_failed": "Zeitprüfung fehlgeschlagen: {{message}}",
+    "paste_translation_btn": "Übersetzung einfügen",
+    "paste_translation_title": "Übersetzung einfügen",
+    "paste_translation_desc": "Füge eine anderswo erstellte Übersetzung ein (ChatGPT, DeepL, ein menschlicher Übersetzer). Sie wird den vorhandenen Segmenten zugeordnet — Timings und Originaltranskript bleiben unverändert.",
+    "paste_translation_placeholder": "Untertitel (SRT/VTT), nummerierte Zeilen (1. …) oder eine übersetzte Zeile pro Segment einfügen — oder eine .srt/.vtt-Datei hier ablegen.",
+    "paste_translation_load_file": ".srt-/.vtt-Datei laden",
+    "paste_translation_mode_timestamped": "Mit Zeitstempeln (SRT/VTT)",
+    "paste_translation_mode_numbered": "Nummerierte Zeilen",
+    "paste_translation_mode_plain": "Einfache Zeilen",
+    "paste_translation_counts": "{{segments}} Segmente · {{lines}} Zeilen · {{unmatched}} ohne Zuordnung",
+    "paste_translation_unused": "{{count}} eingefügte Zeile(n) blieben ungenutzt",
+    "paste_translation_none_matched": "Keine Zuordnung gefunden. Prüfe, ob der eingefügte Text zu den Segmenten unten passt.",
+    "paste_translation_row_unmatched": "keine Zuordnung — unverändert",
+    "paste_translation_apply": "Auf {{count}} Segmente anwenden",
+    "paste_translation_cancel": "Abbrechen",
+    "paste_translation_more_rows": "+ {{count}} weitere Zeilen"
   },
   "glossary": {
     "title": "Glossar",

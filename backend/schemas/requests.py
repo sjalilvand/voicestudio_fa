@@ -175,6 +175,18 @@ class TranslateRequest(BaseModel):
     # No LLM configured / LLM failure → silently no suggestion.
     condense: Optional[bool] = False
 
+class ParseSubtitleTextRequest(BaseModel):
+    """Raw pasted subtitle text (SRT/VTT-ish) to be parsed into timed cues.
+
+    Used by the "paste translation from an external source" flow: the user
+    pastes what ChatGPT/DeepL/a human gave them and the client needs the
+    SAME lenient cue parsing the .srt import path uses — parsing it here
+    keeps `services.srt_parser` the single source of truth instead of
+    growing a second, subtly-different implementation in JavaScript.
+    """
+    text: str
+
+
 class DubIngestUrlRequest(BaseModel):
     url: str
     job_id: Optional[str] = None
