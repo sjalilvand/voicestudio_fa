@@ -2108,7 +2108,18 @@
     "lex_add": "أضف كلمة",
     "lex_remove": "إزالة",
     "markup_help": "مرجع العلامات",
-    "markup_hint": "# عنوان الفصل · [صوت: الاسم] تبديل الصوت · [إيقاف مؤقت 500 مللي ثانية] / [إيقاف مؤقت 1 ثانية] · [بطيء]…[/slow] · [سريع]…[/سريع] · [التشديد]…[/التشديد] · [تهجئة]…[/تهجئة]"
+    "markup_hint": "# عنوان الفصل · [صوت: الاسم] تبديل الصوت · [إيقاف مؤقت 500 مللي ثانية] / [إيقاف مؤقت 1 ثانية] · [بطيء]…[/slow] · [سريع]…[/سريع] · [التشديد]…[/التشديد] · [تهجئة]…[/تهجئة] · الردود (OmniVoice): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "language": "لغة",
+    "expressive": "تجاوزات الإنتاج",
+    "reset": "إعادة تعيين",
+    "seed": "بذرة",
+    "seed_ph": "تلقائي",
+    "vary_repeats": "تنويع الأسطر المكررة",
+    "vary_repeats_help": "امنح الأسطر المتطابقة لقطات مختلفة بدلاً من إعادة استخدام تسجيل واحد.",
+    "emotion_help": "عاطفة متدرجة — يتم تطبيقها فقط من خلال محرك IndexTTS2.",
+    "emotion_text": "وصف العاطفة",
+    "emotion_text_ph": "على سبيل المثال يبدو متعباً وحزيناً",
+    "emotion_alpha": "قوة العاطفة"
   },
   "voicePanel": {
     "title": "صوت",

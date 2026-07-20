@@ -36,13 +36,35 @@ export interface AudiobookPreview {
   title: string;
 }
 
+/**
+ * Expressive/quality knobs shared by the audiobook synth + per-chapter preview
+ * (#1210). All optional — an omitted field reproduces today's exact render on
+ * the backend. Preview MUST carry the same fields as the full render so a
+ * previewed chapter warms exactly the cache slot the render reuses.
+ */
+export interface ExpressiveRequestFields {
+  num_step?: number | null;
+  guidance_scale?: number | null;
+  position_temperature?: number | null;
+  class_temperature?: number | null;
+  postprocess_output?: boolean | null;
+  seed?: number | null;
+  emo_vector?: number[] | null;
+  emo_text?: string | null;
+  emo_alpha?: number | null;
+  vary_repeats?: boolean;
+}
+
 /** Render a single chapter to audition it (also warms the resume cache). */
-export async function audiobookPreviewChapter(body: {
-  text: string;
-  chapter_index: number;
-  default_voice?: string | null;
-  lexicon?: Record<string, string> | null;
-}): Promise<AudiobookPreview> {
+export async function audiobookPreviewChapter(
+  body: {
+    text: string;
+    chapter_index: number;
+    default_voice?: string | null;
+    language?: string | null;
+    lexicon?: Record<string, string> | null;
+  } & ExpressiveRequestFields,
+): Promise<AudiobookPreview> {
   const res = await apiFetch('/audiobook/preview', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -61,9 +83,13 @@ interface AudiobookMetadata {
   description?: string;
 }
 
-export interface AudiobookGenerateBody {
+export interface AudiobookGenerateBody extends ExpressiveRequestFields {
   text: string;
   default_voice?: string | null;
+  // #1210 / #505: the backend AudiobookRequest has always accepted `language`,
+  // but this body omitted it, so an audiobook language pick could never reach
+  // the backend. Now threaded through ('Auto' → the profile's language).
+  language?: string | null;
   bitrate?: string;
   format?: 'm4b' | 'mp3';
   loudness?: 'off' | 'acx' | 'podcast' | null;
@@ -101,7 +127,7 @@ export async function audiobookImport(file: File): Promise<{ text: string; chapt
   return res.json();
 }
 
-export interface LongformRenderBody {
+export interface LongformRenderBody extends ExpressiveRequestFields {
   chapters: Array<{
     title?: string;
     spans: Array<{
@@ -112,6 +138,7 @@ export interface LongformRenderBody {
     }>;
   }>;
   default_voice?: string | null;
+  language?: string | null;
   bitrate?: string;
   format?: 'm4b' | 'mp3';
   loudness?: 'off' | 'acx' | 'podcast' | null;

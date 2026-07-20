@@ -78,6 +78,7 @@ class IndexTTS2Backend(SubprocessBackend):
     id = "indextts2"
     display_name = "IndexTTS2 (emotion control, duration control, zero-shot)"
     supports_voice_design = False  # requires ref audio for timbre
+    supports_emotion = True  # graded emo_vector / emo_text / emo_alpha (#1210)
     _DEFAULT_SAMPLE_RATE = 24000
     # Explicit so IndexTTS2 stops advertising the inherited CPU-only default:
     # the sidecar runs the IndexTTS PyTorch model on CUDA when present, else

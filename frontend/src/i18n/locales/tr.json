@@ -2108,7 +2108,18 @@
     "lex_add": "Kelime ekle",
     "lex_remove": "Kaldır",
     "markup_help": "İşaretleme referansı",
-    "markup_hint": "# Bölüm başlığı · [ses:NAME] sesi değiştir · [500 ms duraklat] / [1 saniye duraklat] · [yavaş]…[/yavaş] · [hızlı]…[/hızlı] · [vurgu]…[/vurgu] · [büyü]…[/büyü]"
+    "markup_hint": "# Bölüm başlığı · [ses:NAME] sesi değiştir · [500 ms duraklat] / [1 saniye duraklat] · [yavaş]…[/yavaş] · [hızlı]…[/hızlı] · [vurgu]…[/vurgu] · [büyü]…[/büyü] · Tepkiler (OmniVoice): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "language": "Dil",
+    "expressive": "Prodüksiyon geçersiz kılmalar",
+    "reset": "Sıfırla",
+    "seed": "Tohum",
+    "seed_ph": "Otomatik",
+    "vary_repeats": "Tekrarlanan satırları değiştirin",
+    "vary_repeats_help": "Özdeş satırlara bir kaydı yeniden kullanmak yerine farklı çekişler verin.",
+    "emotion_help": "Dereceli duygu — yalnızca IndexTTS2 motoru tarafından uygulanır.",
+    "emotion_text": "Duygu açıklaması",
+    "emotion_text_ph": "örn. tükenmiş ve üzgün geliyor",
+    "emotion_alpha": "Duygu gücü"
   },
   "voicePanel": {
     "title": "Ses",

@@ -19,9 +19,14 @@ import {
   audiobookImport,
 } from '../api/audiobook';
 import { audioUrl } from '../api/generate';
+import { listEngines } from '../api/engines';
 import { consumeLongformStream } from '../utils/longformStream';
 import { useAppStore } from '../store';
 import VoiceSelector from '../components/VoiceSelector';
+import SearchableSelect from '../components/SearchableSelect';
+import AudiobookOverrides, { overridesToRequest } from '../components/audiobook/AudiobookOverrides';
+import ALL_LANGUAGES from '../languages.json';
+import { POPULAR_LANGS } from '../utils/constants';
 import { Button } from '../ui';
 import { buttonVariants } from '@/components/ui/button.tsx';
 
@@ -50,6 +55,29 @@ export default function AudiobookTab({ profiles = [] }) {
   const setLexiconStore = useAppStore((s) => s.setLexicon);
   const storeLexicon = useAppStore((s) => s.lexicon);
   const setDefaultVoice = (v) => setOutputPrefs({ defaultVoice: v || null });
+  // Language pick + expressive overrides (#1210) — store-backed so a book's
+  // tuning survives a tab switch / reload (same persistence as the lexicon).
+  const language = useAppStore((s) => s.language) ?? 'Auto';
+  const setLanguage = (v) => setOutputPrefs({ language: v || 'Auto' });
+  const overrides = useAppStore((s) => s.overrides);
+  const setLongformOverrides = useAppStore((s) => s.setLongformOverrides);
+  // Show emotion controls only when the active engine understands them
+  // (IndexTTS2). Fetched once on mount; degrades to hidden if the probe fails.
+  const [emotionSupported, setEmotionSupported] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    listEngines()
+      .then((r) => {
+        if (!alive) return;
+        const active = r?.tts?.active;
+        const b = (r?.tts?.backends || []).find((x) => x.id === active);
+        setEmotionSupported(!!b?.supports_emotion);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [plan, setPlan] = useState(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -178,6 +206,9 @@ export default function AudiobookTab({ profiles = [] }) {
           chapter_index: i,
           default_voice: defaultVoice || null,
           lexicon: Object.keys(lexicon).length ? lexicon : null,
+          // Same expressive fields as the full render so a preview warms the
+          // exact cache slot the render reuses (preview/render parity, #1210).
+          ...overridesToRequest(overrides, language),
         });
         setChapterPrev((p) => ({ ...p, [i]: { url: audioUrl(r.output), loading: false } }));
       } catch (e) {
@@ -185,7 +216,7 @@ export default function AudiobookTab({ profiles = [] }) {
         setError(e?.message || String(e));
       }
     },
-    [text, defaultVoice, lex],
+    [text, defaultVoice, lex, overrides, language],
   );
 
   const onCreate = useCallback(async () => {
@@ -211,6 +242,10 @@ export default function AudiobookTab({ profiles = [] }) {
         cover_path,
         metadata: Object.keys(metadata).length ? metadata : null,
         lexicon: Object.keys(lexicon).length ? lexicon : null,
+        // language pick + expressive/quality overrides + cache opt-out (#1210).
+        // Only non-default values are emitted, so an untouched panel keeps the
+        // request byte-identical to before.
+        ...overridesToRequest(overrides, language),
       });
       await consumeLongformStream(
         res,
@@ -240,7 +275,7 @@ export default function AudiobookTab({ profiles = [] }) {
     } finally {
       setGenerating(false);
     }
-  }, [text, defaultVoice, format, loudness, coverFile, meta, lex]);
+  }, [text, defaultVoice, format, loudness, coverFile, meta, lex, overrides, language]);
 
   const busy = planLoading || generating || importing;
   const canRun = text.trim().length > 0 && !busy;
@@ -314,6 +349,24 @@ export default function AudiobookTab({ profiles = [] }) {
               defaultLabel={t('audiobook.engine_default')}
             />
           </div>
+
+          <div className="audiobook-tab__field flex flex-col gap-[4px]">
+            <label className={FIELD_LABEL}>{t('audiobook.language')}</label>
+            <SearchableSelect
+              value={language}
+              options={ALL_LANGUAGES}
+              popular={POPULAR_LANGS}
+              recentsKey="omnivoice.recents.audiobookLang"
+              onChange={setLanguage}
+            />
+          </div>
+
+          <AudiobookOverrides
+            t={t}
+            overrides={overrides}
+            onChange={setLongformOverrides}
+            emotionSupported={emotionSupported}
+          />
 
           <div className="audiobook-tab__duo grid grid-cols-[1fr_1fr] gap-[8px]">
             <div className="audiobook-tab__field flex flex-col gap-[4px]">

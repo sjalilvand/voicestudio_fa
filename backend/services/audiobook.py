@@ -22,12 +22,19 @@ ingestion, the streaming synth job + UI are deferred follow-ups.
 
 from __future__ import annotations
 
+import json
 import zlib
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 
-def segment_seed(base_seed: int, text: str) -> int:
+#: Mix constant for the per-occurrence seed nonce (#1210) — a large odd
+#: multiplier (Knuth) so occurrence 0/1/2 land in well-separated regions of the
+#: 2**31 seed space instead of adjacent integers.
+_NONCE_MIX = 2654435761
+
+
+def segment_seed(base_seed: int, text: str, nonce: int = 0) -> int:
     """Deterministic RNG seed for one longform synthesis call (#1139).
 
     A voice profile's pinned ``seed`` (locked takes, design profiles) makes
@@ -48,8 +55,105 @@ def segment_seed(base_seed: int, text: str) -> int:
     reproducibility. Position-based keys would break it: inserting one
     paragraph would shift every later span's seed, so a partial re-render
     after an edit would no longer match the original render.
+
+    ``nonce`` (default 0 — the shipped text-keyed behaviour, byte-identical)
+    is the cache opt-out lever (#1210): when the user asks to *vary repeated
+    lines*, the synth wrapper feeds a per-occurrence nonce so each repeat of an
+    identical pinned-seed line gets a distinct-but-deterministic seed instead
+    of replaying one take.
     """
-    return (int(base_seed) + zlib.crc32(text.encode("utf-8"))) % (2**31)
+    return (int(base_seed) + zlib.crc32(text.encode("utf-8")) + int(nonce) * _NONCE_MIX) % (2**31)
+
+
+@dataclass(frozen=True)
+class ExpressiveOptions:
+    """Optional expressive/quality knobs for a longform render (#1210).
+
+    Every field is ``None``/``False`` by default, and a default instance means
+    *reproduce today's bytes exactly*: the audiobook/longform path renders at
+    its documented quality preset (num_step 32, guidance 2.0, model-default
+    temperatures, postprocess on) with no emotion and the shipped
+    content-addressed caching. Any non-default field is folded into every cache
+    signature via :meth:`cache_signature` (chapter cache, segment cache, and the
+    preview cache all consume it) so a changed setting can never silently replay
+    stale audio — the whole point of the CRITICAL TRAP guard.
+
+    ``emo_*`` reach only engines that understand them (IndexTTS2) through the
+    generic synth closure; the OmniVoice model rejects unknown config kwargs, so
+    the omnivoice path forwards only the sampling knobs. ``vary_repeats`` is the
+    cache opt-out: identical lines get distinct takes.
+    """
+
+    num_step: Optional[int] = None
+    guidance_scale: Optional[float] = None
+    position_temperature: Optional[float] = None
+    class_temperature: Optional[float] = None
+    postprocess_output: Optional[bool] = None
+    seed: Optional[int] = None
+    emo_vector: Optional[tuple] = None
+    emo_text: Optional[str] = None
+    emo_alpha: Optional[float] = None
+    vary_repeats: bool = False
+
+    @property
+    def is_default(self) -> bool:
+        """True when every knob is untouched → today's exact render + caching."""
+        return self == ExpressiveOptions()
+
+    def cache_signature(self) -> str:
+        """Deterministic content string folded into every cache key. Empty for a
+        default instance (so unset → byte-identical keys to pre-#1210). Includes
+        EVERY field, so a future forgotten knob still perturbs the key (the
+        regression test loops over the fields asserting each changes this)."""
+        if self.is_default:
+            return ""
+        payload = {
+            "num_step": self.num_step,
+            "guidance_scale": self.guidance_scale,
+            "position_temperature": self.position_temperature,
+            "class_temperature": self.class_temperature,
+            "postprocess_output": self.postprocess_output,
+            "seed": self.seed,
+            "emo_vector": list(self.emo_vector) if self.emo_vector else None,
+            "emo_text": self.emo_text,
+            "emo_alpha": self.emo_alpha,
+            "vary_repeats": self.vary_repeats,
+        }
+        return json.dumps(payload, sort_keys=True, ensure_ascii=False)
+
+    def to_manifest(self) -> dict:
+        """JSON-safe dict for the durable resume manifest (emo_vector → list)."""
+        return {
+            "num_step": self.num_step,
+            "guidance_scale": self.guidance_scale,
+            "position_temperature": self.position_temperature,
+            "class_temperature": self.class_temperature,
+            "postprocess_output": self.postprocess_output,
+            "seed": self.seed,
+            "emo_vector": list(self.emo_vector) if self.emo_vector else None,
+            "emo_text": self.emo_text,
+            "emo_alpha": self.emo_alpha,
+            "vary_repeats": self.vary_repeats,
+        }
+
+    @classmethod
+    def from_manifest(cls, data: Optional[dict]) -> "ExpressiveOptions":
+        """Rebuild from a resume manifest dict (unknown keys ignored)."""
+        if not data:
+            return cls()
+        ev = data.get("emo_vector")
+        return cls(
+            num_step=data.get("num_step"),
+            guidance_scale=data.get("guidance_scale"),
+            position_temperature=data.get("position_temperature"),
+            class_temperature=data.get("class_temperature"),
+            postprocess_output=data.get("postprocess_output"),
+            seed=data.get("seed"),
+            emo_vector=tuple(ev) if ev else None,
+            emo_text=data.get("emo_text"),
+            emo_alpha=data.get("emo_alpha"),
+            vary_repeats=bool(data.get("vary_repeats", False)),
+        )
 
 
 @dataclass
@@ -154,9 +258,18 @@ def synthesize_chapter(
     from services.pronunciation import apply_lexicon
 
     items: list = []  # ("a", tensor) for audio, ("s", n_samples) for silence
+    # Per-occurrence index for identical spans (#1210 cache opt-out). The
+    # segment cache folds it into its key ONLY when vary_repeats is on (else
+    # the key is byte-identical to pre-#1210), so a repeated identical line
+    # gets a distinct cache slot — and therefore a distinct take — instead of
+    # replaying one WAV. Always computed (cheap); inert when the cache ignores it.
+    occ_counts: dict = {}
     for span in spans:
         if span.text:
-            audio = segment_cache.load(span) if segment_cache is not None else None
+            occ_key = (span.voice_id, span.text, getattr(span, "speed", None))
+            occ = occ_counts.get(occ_key, 0)
+            occ_counts[occ_key] = occ + 1
+            audio = segment_cache.load(span, nonce=occ) if segment_cache is not None else None
             if audio is None:
                 chunks = split_text_into_chunks(apply_lexicon(span.text, lexicon))
                 rendered = [synth(c, span.voice_id, span.speed) for c in chunks]
@@ -166,7 +279,7 @@ def synthesize_chapter(
                 elif rendered:
                     audio = concatenate_audio_chunks(rendered, sample_rate, crossfade_ms=crossfade_ms)
                 if audio is not None and segment_cache is not None:
-                    segment_cache.store(span, audio)
+                    segment_cache.store(span, audio, nonce=occ)
             if audio is not None:
                 items.append(("a", audio))
         if span.pause_ms_after > 0:

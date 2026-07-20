@@ -2108,7 +2108,18 @@
     "lex_add": "Lägg till ord",
     "lex_remove": "Ta bort",
     "markup_help": "Markeringsreferens",
-    "markup_hint": "# Kapiteltitel · [röst:NAMN] byt röst · [paus 500ms] / [paus 1s] · [långsam]…[/långsam] · [snabb]…[/snabb] · [betoning]...[/betoning] · [stavning]...[/stavning]"
+    "markup_hint": "# Kapiteltitel · [röst:NAMN] byt röst · [paus 500ms] / [paus 1s] · [långsam]…[/långsam] · [snabb]…[/snabb] · [betoning]...[/betoning] · [stavning]...[/stavning] · Reaktioner (OmniVoice): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "language": "Språk",
+    "expressive": "Produktionsåsidosättanden",
+    "reset": "Återställ",
+    "seed": "Frö",
+    "seed_ph": "Auto",
+    "vary_repeats": "Variera upprepade rader",
+    "vary_repeats_help": "Ge identiska rader distinkta tagningar i stället för att återanvända en inspelning.",
+    "emotion_help": "Graderad emotion — endast tillämpas av IndexTTS2-motorn.",
+    "emotion_text": "Emotionsbeskrivning",
+    "emotion_text_ph": "t.ex. låter uttömd och ledsen",
+    "emotion_alpha": "Emotionsstyrka"
   },
   "voicePanel": {
     "title": "Röst",

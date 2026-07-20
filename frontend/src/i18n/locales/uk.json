@@ -2108,7 +2108,18 @@
     "lex_add": "Додайте слово",
     "lex_remove": "видалити",
     "markup_help": "Посилання на розмітку",
-    "markup_hint": "# Назва розділу · [голос:ІМ’Я] змінити голос · [пауза 500 мс] / [пауза 1 с] · [повільно]…[/slow] · [швидко]…[/швидко] · [наголос]…[/наголос] · [заклинання]…[/spell]"
+    "markup_hint": "# Назва розділу · [голос:ІМ’Я] змінити голос · [пауза 500 мс] / [пауза 1 с] · [повільно]…[/slow] · [швидко]…[/швидко] · [наголос]…[/наголос] · [заклинання]…[/spell] · Реакції (OmniVoice): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "language": "Мова",
+    "expressive": "Перевизначення продакшену",
+    "reset": "Скинути",
+    "seed": "Насіння",
+    "seed_ph": "Авто",
+    "vary_repeats": "Варіювати повторювані рядки",
+    "vary_repeats_help": "Надайте окремі версії однаковим рядкам замість повторного використання однієї записи.",
+    "emotion_help": "Градуйована емоція — застосовується тільки механізмом IndexTTS2.",
+    "emotion_text": "Опис емоції",
+    "emotion_text_ph": "напр. звучить виснажено і сумно",
+    "emotion_alpha": "Інтенсивність емоції"
   },
   "voicePanel": {
     "title": "Голос",

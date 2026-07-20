@@ -162,6 +162,9 @@ def test_list_backends_shape(registry_sandbox):
         # Cloning capability: bool from the class attr, None when
         # model-dependent (a property, e.g. mlx-audio).
         "supports_cloning",
+        # Graded-emotion capability (#1210): bool from the class attr; drives
+        # the Audiobook expressive panel's emotion gate.
+        "supports_emotion",
         # True when services.sidecar_install can provision the engine in-app
         # (the Settings Install button keys off this).
         "one_click_install",
@@ -174,6 +177,8 @@ def test_list_backends_shape(registry_sandbox):
             f"missing {expected - entry.keys()}, "
             f"extra {entry.keys() - expected}"
         )
+        # #1210: supports_emotion is always a concrete bool (never a descriptor).
+        assert isinstance(entry["supports_emotion"], bool)
 
 
 def test_mlx_audio_curated_models_roster(registry_sandbox):

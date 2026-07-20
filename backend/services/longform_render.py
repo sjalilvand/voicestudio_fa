@@ -157,14 +157,19 @@ def segment_cache_key(
     voice_sig: str = "",
     speed: Optional[float] = None,
     extra_sig: str = "",
+    nonce: int = 0,
 ) -> str:
     """Deterministic content hash for ONE rendered segment (a single spoken
     span). Same dimensions as :func:`chapter_cache_key` minus span order and
     pauses (pauses are synthesized silence — never cached): text, voice
     identity (id + resolved signature), speed, sample rate, engine, plus
     ``extra_sig`` for anything else that changes the rendered audio (the
-    pronunciation lexicon today). Any change → new key → re-synthesize just
-    this segment.
+    pronunciation lexicon + the #1210 expressive signature). Any change → new
+    key → re-synthesize just this segment.
+
+    ``nonce`` (default 0 — omitted from the key, so pre-#1210 caches keep
+    hitting) is the per-occurrence disambiguator the cache opt-out feeds so a
+    repeated identical line gets a distinct segment instead of replaying one.
     """
     payload = {
         "sr": int(sample_rate),
@@ -175,6 +180,10 @@ def segment_cache_key(
         "voice_sig": voice_sig or "",
         "extra": extra_sig or "",
     }
+    if nonce:
+        # Absent when 0 so the derivation is byte-identical to pre-#1210 for
+        # every normal (non-vary_repeats) render.
+        payload["nonce"] = int(nonce)
     raw = json.dumps(payload, sort_keys=True, ensure_ascii=False)
     # Content-addressing only — not a security digest (see chapter_cache_key).
     return hashlib.sha1(raw.encode("utf-8"), usedforsecurity=False).hexdigest()[:20]
@@ -206,16 +215,21 @@ class SegmentCache:
         engine_id: str,
         voice_sig: Optional[dict] = None,
         extra_sig: str = "",
+        vary_repeats: bool = False,
     ) -> None:
         self.dir = os.path.join(cache_dir, SEGMENT_SUBDIR)
         self.sample_rate = int(sample_rate)
         self.engine_id = engine_id or ""
         self.voice_sig = dict(voice_sig or {})
         self.extra_sig = extra_sig or ""
+        # Cache opt-out (#1210): when on, a per-occurrence nonce enters the key
+        # so identical repeated lines no longer share one WAV. Off → the nonce
+        # is dropped and keys are byte-identical to pre-#1210 (default render).
+        self.vary_repeats = bool(vary_repeats)
         self.hits = 0
         self.misses = 0
 
-    def _path(self, span) -> str:
+    def _path(self, span, nonce: int = 0) -> str:
         key = segment_cache_key(
             span.text,
             sample_rate=self.sample_rate,
@@ -224,13 +238,16 @@ class SegmentCache:
             voice_sig=self.voice_sig.get(span.voice_id or "", ""),
             speed=getattr(span, "speed", None),
             extra_sig=self.extra_sig,
+            nonce=nonce if self.vary_repeats else 0,
         )
         return os.path.join(self.dir, f"{key}.wav")
 
-    def load(self, span):
+    def load(self, span, nonce: int = 0):
         """Cached audio tensor for ``span``, or ``None`` (miss). A hit bumps
-        the file's mtime so LRU eviction sees the segment as recently used."""
-        path = self._path(span)
+        the file's mtime so LRU eviction sees the segment as recently used.
+        ``nonce`` disambiguates repeated identical lines under the cache
+        opt-out (inert otherwise)."""
+        path = self._path(span, nonce)
         if not os.path.isfile(path):
             self.misses += 1
             return None
@@ -250,13 +267,14 @@ class SegmentCache:
         self.hits += 1
         return audio
 
-    def store(self, span, audio) -> None:
+    def store(self, span, audio, nonce: int = 0) -> None:
         """Persist a freshly rendered segment. Best-effort — a full disk or
-        unwritable cache dir must never fail the chapter render."""
+        unwritable cache dir must never fail the chapter render. ``nonce``
+        matches :meth:`load` so a varied repeat lands in its own slot."""
         try:
             from services.audio_io import atomic_save_wav
             os.makedirs(self.dir, exist_ok=True)
-            atomic_save_wav(self._path(span), audio, self.sample_rate)
+            atomic_save_wav(self._path(span, nonce), audio, self.sample_rate)
         except Exception:
             pass
 

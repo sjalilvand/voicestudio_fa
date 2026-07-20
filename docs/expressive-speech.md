@@ -15,7 +15,7 @@ ignores.
 | Laughter or a sigh | ⊕ Insert → `[laughter]` / `[sigh]` | Default engine (OmniVoice) |
 | An audible breath **on demand** | `[breath]` in the text | CosyVoice 3 only (opt-in) — see [Breaths](#breaths-specifically) |
 | Whispering | Style → `whisper` (the voice-design/style field) | Default engine |
-| Emotion ("excited", "sad", graded intensity) | IndexTTS2's emotion controls (API), or CosyVoice 3 instruct | Opt-in engines only |
+| Emotion ("excited", "sad", graded intensity) | IndexTTS2's emotion controls — Audiobook tab's Production Overrides, or the `/ws/tts` API — or CosyVoice 3 instruct | Opt-in engines only |
 | The same take again | Pin the seed / lock the profile | Default engine |
 
 ## Why bracket tags work at all (and when they don't)
@@ -75,21 +75,27 @@ accepts (the taxonomy is Gender / Age / Pitch / Style / Accent / Dialect —
 see [voice-design.md](voice-design.md)). `[happy]` / `[sad]`-style emotion
 direction is **not** something the base model takes.
 
-**Sampling knobs + seed.** The Voice workspace's Production Overrides panel
-exposes the full sampling surface (defaults in parentheses; details in
-[generation-parameters.md](generation-parameters.md)):
+**Sampling knobs + seed.** The Voice workspace **and the Audiobook tab** each
+carry a Production Overrides panel exposing the sampling surface (defaults in
+parentheses; details in [generation-parameters.md](generation-parameters.md)):
 
 - `position_temperature` (5.0) and `class_temperature` (0.0) — 0 is greedy;
   higher is more random, which means more expressive variation *and* more
   artifacts.
-- `num_step` — the Voice page defaults to 16 (fast); Audiobook renders use 32
-  (cleaner). Fewer steps = rougher, occasionally more "human-sounding" edges.
+- `num_step` — the Voice page defaults to 16 (fast); Audiobook renders default
+  to 32 (cleaner), overridable in the Audiobook panel. Fewer steps = rougher,
+  occasionally more "human-sounding" edges.
 - **Seed** — unpinned by default, so every render differs. The history rail
   shows the seed each take used; "Keep this seed" (Design tab) or locking a
   profile from history pins reference + seed, making the voice
-  bit-reproducible.
+  bit-reproducible. The Audiobook panel also takes a book-level seed directly.
 - `postprocess_output` (on) — removes long silences from the output. Turn it
   off when the silence *is* the performance.
+
+The Audiobook panel adds two longform-only controls on top of that surface:
+IndexTTS2 emotion (see below), and **Vary repeated lines** — a cache opt-out
+that gives every identical line its own take instead of replaying one recording
+(off by default, so books stay byte-reproducible unless you ask for variety).
 
 **Longform-only tags.** Audiobook and Stories additionally parse SSML-lite —
 `[slow]…[/slow]`, `[fast]…[/fast]`, `[emphasis]…[/emphasis]`, `[spell]` —
@@ -132,10 +138,14 @@ guidance, not a guarantee — adherence varies by voice and language.
 The only engine with **graded** emotion control: an 8-value emotion vector
 (happy, angry, sad, afraid, disgusted, melancholic, surprised, calm), an
 emotion *reference clip* whose delivery is mimicked (with a blend strength),
-or a natural-language emotion description. Today these are exposed on the
-streaming WebSocket API (`/ws/tts` — `emo_vector`, `emo_audio`, `emo_alpha`,
-`emo_text` fields; `backend/api/routers/tts_stream.py`), **not** in the
-Studio UI yet.
+or a natural-language emotion description. The **Audiobook tab's Production
+Overrides** expose the natural-language path — an *Emotion description* field
+plus an *Emotion strength* slider (`emo_alpha`), shown only when IndexTTS2 is
+the active engine so there are no dead controls. The full surface (the 8-float
+`emo_vector`, an `emo_audio` reference clip) is on the streaming WebSocket API
+(`/ws/tts` — `emo_vector`, `emo_audio`, `emo_alpha`, `emo_text` fields;
+`backend/api/routers/tts_stream.py`). The single-shot Voice page does not carry
+emotion controls yet.
 
 ## Breaths, specifically
 
@@ -159,14 +169,19 @@ exactly what v0.3.9 was doing by accident. Roughly in order of effectiveness:
    clone mirrors the delivery. This alone gets most of the way there.
 2. **Write for it.** Short gasping fragments with pauses:
    `I can't… [pause 300ms] I can't keep… [pause 200ms] keep running.`
-3. **Turn off `postprocess_output`** (Production Overrides) so the silences —
-   where breath artifacts live — aren't trimmed away.
+3. **Turn off `postprocess_output`** (Production Overrides — Voice tab *or*
+   Audiobook tab) so the silences — where breath artifacts live — aren't
+   trimmed away.
 4. **Add randomness, then farm takes.** Raise `class_temperature` to 0.3–0.7
-   (default is 0, fully greedy), keep `num_step` at 16, and regenerate a few
-   times — the seed is unpinned, so each take differs.
+   (default is 0, fully greedy) and regenerate a few times — the seed is
+   unpinned, so each take differs. Both controls live in the same Production
+   Overrides panel, so this whole recipe now works for an audiobook chapter
+   (audition it with the per-chapter Preview button), not just a single Voice
+   render. In a book, the **Vary repeated lines** toggle farms takes across
+   repeated lines automatically.
 5. **Keep the winner.** When a take breathes right, its seed is on the
-   history entry — lock the profile from there and every future generation
-   uses the same reference + seed.
+   history entry — lock the profile from there (or set the Audiobook panel's
+   book-level seed) and every future generation uses the same reference + seed.
 
 Tradeoffs, stated plainly: temperature cuts both ways (the same randomness
 that produces a great gasp produces slurred words and timbre drift), takes
@@ -202,7 +217,10 @@ than something that happens to you.
 engine-agnostic tag surface (`[excited]`, `[whispers]`, reaction tags like
 `[breath]`) that lowers to whatever the active engine can really do and
 **visibly degrades** where it can't, plus an Expression panel (emotion
-dropdown + intensity + emotion-reference clip) in the UI. The pronunciation
-phases have shipped (dictionary + `[[…]]` overrides); the inline
-emotion/reaction tag grammar and the Expression panel have not. No promised
-date — when it lands, this page gets updated in the same PR.
+dropdown + intensity + emotion-reference clip) everywhere in the UI. The
+pronunciation phases have shipped (dictionary + `[[…]]` overrides), and the
+Audiobook tab now carries a first Expression surface — IndexTTS2 emotion
+description + strength, engine-gated. Still spec'd, not shipped: the
+engine-agnostic inline emotion/reaction tag grammar, the emotion-reference
+clip picker, and the Expression panel on the single-shot Voice page. No
+promised date — when each lands, this page gets updated in the same PR.

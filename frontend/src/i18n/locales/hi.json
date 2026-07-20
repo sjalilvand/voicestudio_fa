@@ -2108,7 +2108,18 @@
     "lex_add": "शब्द जोड़ें",
     "lex_remove": "हटाओ",
     "markup_help": "मार्कअप संदर्भ",
-    "markup_hint": "# अध्याय का शीर्षक · [आवाज:नाम] आवाज बदलें · [500 एमएस रोकें] / [1 सेकंड रोकें] · [धीमा]…[/धीमा] · [तेज]…[/तेज] · [जोर]…[/जोर] · [वर्तनी]…[/वर्तनी]"
+    "markup_hint": "# अध्याय का शीर्षक · [आवाज:नाम] आवाज बदलें · [500 एमएस रोकें] / [1 सेकंड रोकें] · [धीमा]…[/धीमा] · [तेज]…[/तेज] · [जोर]…[/जोर] · [वर्तनी]…[/वर्तनी] · प्रतिक्रियाएं (OmniVoice): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "language": "भाषा",
+    "expressive": "उत्पादन ओवरराइड",
+    "reset": "रीसेट करें",
+    "seed": "बीज",
+    "seed_ph": "स्वचालित",
+    "vary_repeats": "दोहराई गई पंक्तियों को अलग करें",
+    "vary_repeats_help": "एक रिकॉर्डिंग का पुनः उपयोग करने के बजाय समान पंक्तियों को अलग-अलग टेक दें।",
+    "emotion_help": "क्रमिक भावना — केवल IndexTTS2 इंजन द्वारा लागू किया गया।",
+    "emotion_text": "भावना विवरण",
+    "emotion_text_ph": "जैसे। थका हुआ और उदास लगता है",
+    "emotion_alpha": "भावना की शक्ति"
   },
   "voicePanel": {
     "title": "आवाज",

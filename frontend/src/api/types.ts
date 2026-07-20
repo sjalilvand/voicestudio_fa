@@ -37,6 +37,10 @@ interface EngineBackend {
   // when model-dependent (mlx-audio's curated models differ). Only badge on
   // an explicit true.
   supports_cloning?: boolean | null;
+  // Graded-emotion capability (#1210) — the Audiobook expressive panel shows
+  // emotion controls only when the active engine sets this. Absent on legacy
+  // payloads (treated as false).
+  supports_emotion?: boolean;
   install_hint?: string | null;
   // Copy-paste-ready `export VAR=...` line for a path-gated opt-in engine
   // (IndexTTS / MOSS-v1.5 / dots.tts / Confucius4), else null/absent.

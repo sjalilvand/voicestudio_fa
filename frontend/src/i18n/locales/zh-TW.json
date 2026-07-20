@@ -2108,7 +2108,18 @@
     "lex_add": "添加單字",
     "lex_remove": "刪除",
     "markup_help": "標記參考",
-    "markup_hint": "# 章節標題 · [語音:NAME] 切換語音 · [暫停 500 毫秒] / [暫停 1 秒] · [慢]…[/慢] · [快]…[/快] · [強調]…[/強調] · [拼字]…[/拼字]"
+    "markup_hint": "# 章節標題 · [語音:NAME] 切換語音 · [暫停 500 毫秒] / [暫停 1 秒] · [慢]…[/慢] · [快]…[/快] · [強調]…[/強調] · [拼字]…[/拼字] · 反應 (OmniVoice)： [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "language": "語言",
+    "expressive": "製作覆蓋",
+    "reset": "重置",
+    "seed": "種子",
+    "seed_ph": "自動",
+    "vary_repeats": "改變重複的行",
+    "vary_repeats_help": "為相同的行提供不同的 take，而不是重複使用一條錄音。",
+    "emotion_help": "分層情感 — 僅由 IndexTTS2 引擎應用。",
+    "emotion_text": "情感描述",
+    "emotion_text_ph": "例如 聽起來很疲勞和悲傷",
+    "emotion_alpha": "情感強度"
   },
   "voicePanel": {
     "title": "語音",
