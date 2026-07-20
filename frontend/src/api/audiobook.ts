@@ -63,6 +63,8 @@ export async function audiobookPreviewChapter(
     default_voice?: string | null;
     language?: string | null;
     lexicon?: Record<string, string> | null;
+    // Cast map {[voice:NAME] → profile id} — must match the render's (#1217).
+    voice_map?: Record<string, string> | null;
   } & ExpressiveRequestFields,
 ): Promise<AudiobookPreview> {
   const res = await apiFetch('/audiobook/preview', {
@@ -96,6 +98,9 @@ export interface AudiobookGenerateBody extends ExpressiveRequestFields {
   cover_path?: string | null;
   metadata?: AudiobookMetadata | null;
   lexicon?: Record<string, string> | null;
+  // Multi-voice cast map {[voice:NAME] → profile id} (#1217). Absent/empty
+  // reproduces today's single-voice render + cache keys.
+  voice_map?: Record<string, string> | null;
 }
 
 /**
@@ -153,6 +158,7 @@ export interface LongformRenderBody extends ExpressiveRequestFields {
   loudness?: 'off' | 'acx' | 'podcast' | null;
   cover_path?: string | null;
   metadata?: AudiobookMetadata | null;
+  voice_map?: Record<string, string> | null;
 }
 
 /**

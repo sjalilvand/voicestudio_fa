@@ -226,6 +226,9 @@ class AudiobookRequest(ExpressiveMixin):
     metadata: dict | None = None
     # Optional pronunciation lexicon {word: respelling} applied before synthesis.
     lexicon: dict | None = None
+    # Optional cast map {[voice:NAME] → profile id} for multi-voice books (#1217).
+    # Absent/empty reproduces today's exact render + cache keys.
+    voice_map: dict[str, str] | None = None
 
 
 def _resolve_voice(profile_id: str | None) -> dict:
@@ -266,6 +269,55 @@ def _resolve_voice(profile_id: str | None) -> dict:
     except (KeyError, IndexError):
         pass
     return out
+
+
+def _voice_profile_exists(profile_id: str | None) -> bool:
+    """True iff ``profile_id`` names a real voice profile (#1217).
+
+    Used to distinguish an exact profile id (a UUID someone passed as a span
+    voice) from a bare ``[voice:NAME]`` name that has no cast mapping — the
+    former resolves as-is, the latter falls back to the book default instead of
+    silently missing and dropping to the engine default."""
+    if not profile_id:
+        return False
+    from core.db import db_conn
+
+    with db_conn() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM voice_profiles WHERE id=? LIMIT 1", (profile_id,)
+        ).fetchone()
+    return row is not None
+
+
+def _map_span_voice(
+    voice_id: str | None, default_voice: str | None, voice_map: dict | None
+) -> str | None:
+    """Translate a span's voice token to the profile id to synthesize with (#1217).
+
+    A span's ``voice_id`` is whatever the longform parser captured from
+    ``[voice:NAME]`` — the raw human NAME, never a profile id. Resolve it:
+
+      * ``None``/empty (a run with no ``[voice:]``) → ``default_voice``.
+      * a NAME present in ``voice_map`` → its mapped profile id. THIS is the
+        multi-voice cast fix: before it, a NAME was handed straight to
+        ``_resolve_voice`` as if it were a profile id, always missed (profile
+        ids are UUIDs), and every ``[voice:…]`` silently rendered in the engine
+        default — so ``[voice:Mara]``/``[voice:Cole]`` sounded identical.
+      * an unmapped token that IS a real profile id (someone passed an exact id)
+        → itself, unchanged (exact-id back-compat, e.g. Stories spans).
+      * an unmapped token that is NOT a real profile id (a NAME with no cast
+        entry) → ``default_voice`` (fixes the silent-default bug for unmapped
+        names: no longer treated as a literal id).
+    """
+    if not voice_id:
+        return default_voice
+    if voice_map:
+        mapped = voice_map.get(voice_id)
+        if mapped:
+            return mapped
+    if _voice_profile_exists(voice_id):
+        return voice_id
+    return default_voice
 
 
 def _resolve_default_language(language: str | None, default_voice: str | None) -> str | None:
@@ -411,6 +463,7 @@ def _build_synth(
     default_voice: str | None,
     language: str | None = None,
     opts: ExpressiveOptions | None = None,
+    voice_map: dict | None = None,
 ) -> dict:
     """Describe how to synthesize for the active TTS engine.
 
@@ -432,9 +485,16 @@ def _build_synth(
 
     opts = opts or ExpressiveOptions()
     cache: dict = {}
+    token_cache: dict = {}
 
     def resolve(voice_id):
-        key = voice_id or default_voice
+        # Translate the span token ([voice:NAME] / exact id / None) to a profile
+        # id first (#1217) — the cast fix lives here, not in the parser, so the
+        # parser stays a pure text→plan and exact ids keep working. Cache the
+        # translation so a book of hundreds of same-name spans does one DB check.
+        if voice_id not in token_cache:
+            token_cache[voice_id] = _map_span_voice(voice_id, default_voice, voice_map)
+        key = token_cache[voice_id]
         if key not in cache:
             cache[key] = _resolve_voice(key)
         return cache[key]
@@ -466,6 +526,7 @@ async def _prepare_synth(
     default_voice: str | None,
     language: str | None = None,
     opts: ExpressiveOptions | None = None,
+    voice_map: dict | None = None,
 ):
     """Resolve :func:`_build_synth` into ``(synth, sample_rate, resolve,
     engine_id)`` — awaiting the OmniVoice model load when needed. Shared by the
@@ -473,7 +534,7 @@ async def _prepare_synth(
     chunk so a non-English clone holds its language (#505 B2). ``opts`` (#1208)
     carries the expressive knobs; a default instance reproduces today exactly."""
     opts = opts or ExpressiveOptions()
-    info = _build_synth(default_voice, language=language, opts=opts)
+    info = _build_synth(default_voice, language=language, opts=opts, voice_map=voice_map)
     resolve, engine_id = info["resolve"], info["engine_id"]
     if info["mode"] == "omnivoice":
         lang = info["language"]
@@ -501,7 +562,7 @@ async def _prepare_synth(
 
 
 def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, lexicon=None,
-                           language=None, opts=None):
+                           language=None, opts=None, voice_map=None):
     """Render one chapter, content-addressed so a re-run reuses it (resume).
 
     Returns ``(wav_path, duration_s, was_cached, seg_stats)``. Two cache
@@ -534,7 +595,7 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
     import wave
 
     from services.audio_io import atomic_save_wav
-    from services.audiobook import ExpressiveOptions, Span
+    from services.audiobook import ExpressiveOptions, Span, voice_map_signature
     from services.longform_render import SegmentCache, chapter_cache_key
     from services.pronunciation import normalize_lexicon
     from services.text_normalization import normalize_for_tts
@@ -567,7 +628,18 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
     expr_sig = opts.cache_signature()
     if expr_sig:
         sig["\x00expressive"] = expr_sig
+    # Fold the #1217 voice map into BOTH cache layers, exactly like the
+    # expressive signature: remapping a [voice:NAME] must re-render, while an
+    # empty/absent map keeps the key byte-identical to pre-#1217 (existing books
+    # never re-render). The resolved voice_sigs above already reflect a mapping
+    # when synthesis actually resolves it, but folding the raw map in makes the
+    # invalidation robust even where resolution is short-circuited/stubbed.
+    vmap_sig = voice_map_signature(voice_map)
+    if vmap_sig:
+        sig["\x00voicemap"] = vmap_sig
     seg_extra_sig = f"{lex_sig}\x00{expr_sig}" if expr_sig else lex_sig
+    if vmap_sig:
+        seg_extra_sig = f"{seg_extra_sig}\x00{vmap_sig}"
     if will_mark():
         # Provenance-marked chapters cache under their own key (#1169): a
         # chapter WAV rendered while watermarking was off/unavailable —
@@ -615,6 +687,9 @@ class AudiobookPreviewRequest(ExpressiveMixin):
     default_voice: str | None = None
     language: str | None = None   # None/"Auto" → profile language, else autodetect
     lexicon: dict | None = None
+    # Cast map {[voice:NAME] → profile id} — MUST match the full render's so a
+    # preview warms exactly the cache slot the render reuses (#1217).
+    voice_map: dict[str, str] | None = None
 
 
 @router.post("/audiobook/preview")
@@ -643,11 +718,12 @@ async def audiobook_preview(req: AudiobookPreviewRequest) -> dict:
         req.default_voice,
         language=resolved_lang,
         opts=opts,
+        voice_map=req.voice_map,
     )
     loop = asyncio.get_running_loop()
     wav_path, dur, was_cached, _seg_stats = await loop.run_in_executor(
         _gpu_pool, _render_chapter_cached, chapter, synth, sr, engine_id, resolve, cache_dir,
-        req.lexicon, resolved_lang, opts,
+        req.lexicon, resolved_lang, opts, req.voice_map,
     )
     return {
         "output": os.path.relpath(wav_path, OUTPUTS_DIR),  # served via /audio
@@ -669,6 +745,7 @@ async def _render_longform_sse(
     metadata: dict | None = None,
     lexicon: dict | None = None,
     opts: ExpressiveOptions | None = None,
+    voice_map: dict | None = None,
     job_type: str = "audiobook",
     job_id: str | None = None,
     resume: bool = False,
@@ -721,6 +798,9 @@ async def _render_longform_sse(
                 # #1208: persist the expressive knobs so a resumed render is
                 # byte-consistent with the interrupted one (same cache keys).
                 "expressive": opts.to_manifest(),
+                # #1217: persist the cast map so a resumed render resolves and
+                # caches every [voice:NAME] identically to the interrupted one.
+                "voice_map": voice_map,
             },
         ))
     except Exception:  # resume durability is an enhancement; never block the render
@@ -761,7 +841,7 @@ async def _render_longform_sse(
     try:
         resolved_lang = _resolve_default_language(language, default_voice)
         synth, sr, resolve, engine_id = await _prepare_synth(
-            default_voice, language=resolved_lang, opts=opts
+            default_voice, language=resolved_lang, opts=opts, voice_map=voice_map
         )
 
         total = len(plan.chapters)
@@ -796,7 +876,7 @@ async def _render_longform_sse(
                 wav_path, dur, was_cached, seg_stats = await loop.run_in_executor(
                     _gpu_pool, _render_chapter_cached,
                     chapter, synth, sr, engine_id, resolve, cache_dir, lexicon,
-                    resolved_lang, opts,
+                    resolved_lang, opts, voice_map,
                 )
             except Exception:  # isolate a bad chapter — keep going
                 logger.warning("[%s] chapter %d (%s) failed to render",
@@ -920,7 +1000,8 @@ async def audiobook_synthesize(req: AudiobookRequest, request: Request = None):
             plan, default_voice=req.default_voice, language=req.language,
             fmt=req.format, bitrate=req.bitrate,
             loudness=req.loudness, cover_path=req.cover_path, metadata=req.metadata,
-            lexicon=req.lexicon, opts=_expressive_opts(req), job_type="audiobook",
+            lexicon=req.lexicon, opts=_expressive_opts(req), voice_map=req.voice_map,
+            job_type="audiobook",
             is_disconnected=request.is_disconnected if request is not None else None,
         ),
         media_type="text/event-stream",
@@ -951,6 +1032,8 @@ class LongformRenderRequest(ExpressiveMixin):
     cover_path: str | None = None
     metadata: dict | None = None
     lexicon: dict | None = None
+    # Cast map {[voice:NAME] → profile id} (#1217); absent/empty = today's render.
+    voice_map: dict[str, str] | None = None
 
 
 @router.post("/longform/render")
@@ -978,7 +1061,8 @@ async def longform_render(req: LongformRenderRequest, request: Request = None):
             plan, default_voice=req.default_voice, language=req.language,
             fmt=req.format, bitrate=req.bitrate,
             loudness=req.loudness, cover_path=req.cover_path, metadata=req.metadata,
-            lexicon=req.lexicon, opts=_expressive_opts(req), job_type="story",
+            lexicon=req.lexicon, opts=_expressive_opts(req), voice_map=req.voice_map,
+            job_type="story",
             is_disconnected=request.is_disconnected if request is not None else None,
         ),
         media_type="text/event-stream",
@@ -1072,6 +1156,7 @@ async def resume_longform(job_id: str, request: Request = None):
             loudness=p.get("loudness"), cover_path=p.get("cover_path"),
             metadata=p.get("metadata"), lexicon=p.get("lexicon"),
             opts=ExpressiveOptions.from_manifest(p.get("expressive")),
+            voice_map=p.get("voice_map"),
             job_type=entry["job_type"],
             is_disconnected=request.is_disconnected if request is not None else None,
         ),

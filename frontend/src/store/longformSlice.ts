@@ -105,6 +105,9 @@ interface LongformProject {
   defaultVoice: string | null;
   language: string;
   overrides: LongformOverrides;
+  // Audiobook multi-voice cast (#1217): [voice:NAME] → profile id. Empty for a
+  // single-voice book; an absent field on an old record default-fills to {}.
+  voiceCast: Record<string, string>;
   updatedAt: number;
 }
 
@@ -129,6 +132,9 @@ export interface LongformSlice {
   // Expressive/quality overrides + cache opt-out (#1208). Persisted like the
   // lexicon so a book's tuning survives a tab switch / reload.
   overrides: LongformOverrides;
+  // Audiobook cast map (#1217): [voice:NAME] → profile id. Persisted like the
+  // lexicon so a book's voice assignments survive a tab switch / reload.
+  voiceCast: Record<string, string>;
   // Last finished render's server filename (#1139): the Audiobook tab's
   // player + Download link used to live in component useState, so a finished
   // book's export affordance evaporated on the first tab switch and users
@@ -149,6 +155,7 @@ export interface LongformSlice {
   setScript: (script: string) => void;
   setProjectMeta: (patch: Partial<LongformMeta>) => void; // merge (I1)
   setLexicon: (lexicon: Record<string, string>) => void; // replace (I3)
+  setVoiceCast: (name: string, profileId: string | null) => void; // merge/remove
   setOutputPrefs: (patch: {
     outputFormat?: 'm4b' | 'mp3';
     loudness?: 'off' | 'acx' | 'podcast';
@@ -183,6 +190,7 @@ export const SLICE_DEFAULTS = {
   defaultVoice: null as string | null,
   language: 'Auto' as string,
   overrides: DEFAULT_OVERRIDES as LongformOverrides,
+  voiceCast: {} as Record<string, string>,
   lastOutput: '' as string,
   projectMode: 'stories' as LongformMode,
 } as const;
@@ -215,6 +223,7 @@ export const createLongformSlice: StateCreator<LongformSlice, [], [], LongformSl
   meta: { ...SLICE_DEFAULTS.meta },
   lexicon: { ...SLICE_DEFAULTS.lexicon },
   overrides: { ...SLICE_DEFAULTS.overrides },
+  voiceCast: { ...SLICE_DEFAULTS.voiceCast },
 
   setStoryTracks: (storyTracks) => set({ storyTracks }),
   setCast: (cast) => set({ cast }),
@@ -233,6 +242,13 @@ export const createLongformSlice: StateCreator<LongformSlice, [], [], LongformSl
   setScript: (script) => set({ script }),
   setProjectMeta: (patch) => set((s) => ({ meta: { ...s.meta, ...patch } })), // I1 merge
   setLexicon: (lexicon) => set({ lexicon: { ...lexicon } }), // I3 replace
+  setVoiceCast: (name, profileId) =>
+    set((s) => {
+      const next = { ...s.voiceCast };
+      if (profileId) next[name] = profileId;
+      else delete next[name]; // clearing a mapping removes it (→ default voice)
+      return { voiceCast: next };
+    }),
   setOutputPrefs: (patch) =>
     set((s) => ({
       // I2 merge
@@ -275,6 +291,7 @@ export const createLongformSlice: StateCreator<LongformSlice, [], [], LongformSl
         defaultVoice: s.defaultVoice,
         language: s.language,
         overrides: { ...s.overrides },
+        voiceCast: { ...s.voiceCast },
         updatedAt: ts,
       };
       const exists = s.storyProjects.some((p) => p.id === id);
@@ -301,6 +318,7 @@ export const createLongformSlice: StateCreator<LongformSlice, [], [], LongformSl
       defaultVoice: p.defaultVoice ?? SLICE_DEFAULTS.defaultVoice,
       language: p.language ?? SLICE_DEFAULTS.language,
       overrides: { ...SLICE_DEFAULTS.overrides, ...p.overrides },
+      voiceCast: { ...(p.voiceCast ?? SLICE_DEFAULTS.voiceCast) },
       // A render belongs to the project it was made in — loading another
       // project must not present A's finished file as B's output (#1139).
       lastOutput: SLICE_DEFAULTS.lastOutput,
@@ -317,6 +335,7 @@ export const createLongformSlice: StateCreator<LongformSlice, [], [], LongformSl
       meta: { ...SLICE_DEFAULTS.meta },
       lexicon: { ...SLICE_DEFAULTS.lexicon },
       overrides: { ...SLICE_DEFAULTS.overrides },
+      voiceCast: { ...SLICE_DEFAULTS.voiceCast },
       projectMode: mode === 'audiobook' ? 'audiobook' : 'stories',
       currentProjectId: null,
     }),

@@ -156,6 +156,20 @@ class ExpressiveOptions:
         )
 
 
+def voice_map_signature(voice_map: Optional[dict]) -> str:
+    """Deterministic cache-key fragment for a name→profile voice map (#1217).
+
+    A longform render can carry a ``voice_map`` (``[voice:NAME]`` → profile id);
+    remapping a name must re-render, so the map is folded into every cache key
+    exactly like :meth:`ExpressiveOptions.cache_signature`. Empty for
+    ``None``/``{}`` (so an absent map keeps today's byte-identical keys and
+    existing books never re-render); else canonical JSON over string keys."""
+    if not voice_map:
+        return ""
+    return json.dumps({str(k): v for k, v in voice_map.items()},
+                      sort_keys=True, ensure_ascii=False)
+
+
 @dataclass
 class Span:
     """One contiguous run of text in a single voice, plus trailing silence.

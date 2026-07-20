@@ -149,6 +149,7 @@ export const useAppStore = create<AppStore>()(
         script: s.script,
         meta: s.meta,
         lexicon: s.lexicon,
+        voiceCast: s.voiceCast,
         coverRef: s.coverRef,
         outputFormat: s.outputFormat,
         loudness: s.loudness,
@@ -204,6 +205,7 @@ export const useAppStore = create<AppStore>()(
               outputFormat: 'm4b',
               loudness: 'off',
               defaultVoice: null,
+              voiceCast: {},
               updatedAt: 0,
               ...sp,
             }));

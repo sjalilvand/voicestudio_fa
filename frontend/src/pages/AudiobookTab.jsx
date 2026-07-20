@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   BookMarked,
@@ -10,6 +10,7 @@ import {
   SpellCheck,
   Square,
   Upload,
+  Users,
 } from 'lucide-react';
 
 import {
@@ -32,6 +33,12 @@ import LexiconEditor from '../components/audiobook/LexiconEditor';
 import GenerationProgress from '../components/audiobook/GenerationProgress';
 import PlanList from '../components/audiobook/PlanList';
 import AudiobookResult from '../components/audiobook/AudiobookResult';
+import CastPanel from '../components/audiobook/CastPanel';
+import MarkupToolbar from '../components/audiobook/MarkupToolbar';
+import StatsBar from '../components/audiobook/StatsBar';
+import ValidationWarnings from '../components/audiobook/ValidationWarnings';
+import { useAudiobookLexicon } from '../hooks/useAudiobookLexicon';
+import { parseCastNames, validateScript } from '../utils/audiobookScript';
 import { SAMPLE_AUDIOBOOK_SCRIPT } from '../data/sampleAudiobook';
 import ALL_LANGUAGES from '../languages.json';
 import { POPULAR_LANGS } from '../utils/constants';
@@ -40,6 +47,10 @@ import { buttonVariants } from '@/components/ui/button.tsx';
 
 // Chrome-mono uppercase form label (was the scoped `.audiobook-tab .field-label`
 // rule; `.field-label` has no global styling, so it's reproduced as utilities).
+// Stable empty-cast fallback: a literal `?? {}` mints a new object every render,
+// which defeats the useMemos keyed on voiceCast (they'd recompute every render).
+const EMPTY_CAST = Object.freeze({});
+
 const FIELD_LABEL =
   '[font-family:var(--chrome-font-mono)] [font-size:var(--chrome-label-size)] font-semibold [letter-spacing:var(--chrome-label-track)] uppercase [color:var(--chrome-fg-muted)]';
 
@@ -60,9 +71,11 @@ export default function AudiobookTab({ profiles = [] }) {
   const defaultVoice = useAppStore((s) => s.defaultVoice) ?? ''; // select coerces null→''
   const setOutputPrefs = useAppStore((s) => s.setOutputPrefs);
   const setProjectMeta = useAppStore((s) => s.setProjectMeta);
-  const setLexiconStore = useAppStore((s) => s.setLexicon);
-  const storeLexicon = useAppStore((s) => s.lexicon);
   const setDefaultVoice = (v) => setOutputPrefs({ defaultVoice: v || null });
+  // Multi-voice cast map (#1217): [voice:NAME] → profile id, store-backed so a
+  // book's voice assignments survive a tab switch / reload.
+  const voiceCast = useAppStore((s) => s.voiceCast) ?? EMPTY_CAST;
+  const setVoiceCast = useAppStore((s) => s.setVoiceCast);
   // Language pick + expressive overrides (#1208) — store-backed so a book's
   // tuning survives a tab switch / reload (same persistence as the lexicon).
   const language = useAppStore((s) => s.language) ?? 'Auto';
@@ -141,30 +154,27 @@ export default function AudiobookTab({ profiles = [] }) {
   const [coverFile, setCoverFile] = useState(null);
   const [coverPreview, setCoverPreview] = useState('');
 
-  // Pronunciation lexicon: editable {word → respelling} rows. Rows stay LOCAL
-  // (half-typed rows aren't junk-persisted); the filtered dict flushes to the
-  // store so it survives a reload, and hydrates back into rows on mount.
-  const [lex, setLex] = useState([]); // [{ word, say }]
-  const lexHydrated = useRef(false);
-  useEffect(() => {
-    if (lexHydrated.current) return;
-    lexHydrated.current = true;
-    const rows = Object.entries(storeLexicon || {}).map(([word, say]) => ({ word, say }));
-    if (rows.length) setLex(rows);
-  }, [storeLexicon]);
-  const lexDict = () =>
-    Object.fromEntries(
-      lex.filter((r) => r.word.trim() && r.say.trim()).map((r) => [r.word.trim(), r.say.trim()]),
-    );
-  // Flush the filtered dict to the store whenever rows change (after hydration).
-  useEffect(() => {
-    if (!lexHydrated.current) return;
-    setLexiconStore(lexDict());
-  }, [lex]); // eslint-disable-line react-hooks/exhaustive-deps
-  const setLexRow = (i, k) => (e) =>
-    setLex((rows) => rows.map((r, j) => (j === i ? { ...r, [k]: e.target.value } : r)));
-  const addLexRow = () => setLex((rows) => [...rows, { word: '', say: '' }]);
-  const removeLexRow = (i) => setLex((rows) => rows.filter((_, j) => j !== i));
+  // Pronunciation lexicon: editable {word → respelling} rows (extracted to a
+  // hook so this page stays under the max-lines lint, #1217).
+  const { lex, lexDict, setLexRow, addLexRow, removeLexRow } = useAudiobookLexicon();
+
+  // Cast + validation derive purely from the script (#1217). castNames drives
+  // the Cast panel; voiceMap is the minimal name→profile map actually present in
+  // the script (stray store mappings are excluded so the cache key stays stable
+  // and an absent map keeps today's render). Warnings are non-blocking hints.
+  const textareaRef = useRef(null);
+  const [warningsDismissed, setWarningsDismissed] = useState(false);
+  const castNames = useMemo(() => parseCastNames(text), [text]);
+  const voiceMap = useMemo(() => {
+    const m = {};
+    for (const name of castNames) if (voiceCast[name]) m[name] = voiceCast[name];
+    return m;
+  }, [castNames, voiceCast]);
+  const voiceMapArg = Object.keys(voiceMap).length ? voiceMap : null;
+  const warnings = useMemo(() => {
+    const mappedNames = Object.keys(voiceCast).filter((n) => voiceCast[n]);
+    return validateScript(text, { mappedNames, profileIds: profiles.map((p) => p.id) });
+  }, [text, voiceCast, profiles]);
 
   const onCoverPick = useCallback((e) => {
     const f = e.target.files?.[0];
@@ -241,6 +251,9 @@ export default function AudiobookTab({ profiles = [] }) {
           chapter_index: i,
           default_voice: defaultVoice || null,
           lexicon: Object.keys(lexicon).length ? lexicon : null,
+          // Cast map MUST match the full render's so a preview warms the exact
+          // cache slot the render reuses (preview/render parity, #1217).
+          voice_map: voiceMapArg,
           // Same expressive fields as the full render so a preview warms the
           // exact cache slot the render reuses (preview/render parity, #1208).
           ...overridesToRequest(overrides, language),
@@ -251,7 +264,7 @@ export default function AudiobookTab({ profiles = [] }) {
         setError(e?.message || String(e));
       }
     },
-    [text, defaultVoice, lex, overrides, language],
+    [text, defaultVoice, lex, overrides, language, voiceMapArg],
   );
 
   const onCreate = useCallback(async () => {
@@ -284,6 +297,9 @@ export default function AudiobookTab({ profiles = [] }) {
           cover_path,
           metadata: Object.keys(metadata).length ? metadata : null,
           lexicon: Object.keys(lexicon).length ? lexicon : null,
+          // Multi-voice cast map (#1217): [voice:NAME] → profile id. Absent when
+          // empty, so a single-voice book stays byte-identical to before.
+          voice_map: voiceMapArg,
           // language pick + expressive/quality overrides + cache opt-out (#1208).
           // Only non-default values are emitted, so an untouched panel keeps the
           // request byte-identical to before.
@@ -352,7 +368,18 @@ export default function AudiobookTab({ profiles = [] }) {
       setAssembling(false);
       abortControllerRef.current = null;
     }
-  }, [text, defaultVoice, format, loudness, coverFile, meta, lex, overrides, language]);
+  }, [
+    text,
+    defaultVoice,
+    format,
+    loudness,
+    coverFile,
+    meta,
+    lex,
+    overrides,
+    language,
+    voiceMapArg,
+  ]);
 
   // Stop = abort the fetch (cancels the request → backend disconnect) AND flip
   // the isAborted flag the stream consumer polls, so the read loop releases too.
@@ -391,17 +418,16 @@ export default function AudiobookTab({ profiles = [] }) {
           </p>
         </div>
         <div className="audiobook-tab__actions flex flex-wrap items-center gap-[8px]">
+          {/* All four use the one shadcn button layout (icon in the leading slot,
+              text in a leading-none span) so the row lines up. Import is a <label>
+              (it wraps the file input) styled the same way — the old inline
+              flex/gap override is what made it ragged. */}
           <label
             className={buttonVariants({ variant: 'subtle', size: 'omniMd' })}
-            style={{
-              cursor: busy ? 'default' : 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
+            style={{ cursor: busy ? 'default' : 'pointer' }}
           >
-            {importing ? <Loader size={14} className="spin" /> : <Upload size={14} />}{' '}
-            {t('audiobook.import')}
+            {importing ? <Loader size={14} className="spin" /> : <Upload size={14} />}
+            <span className="leading-none">{t('audiobook.import')}</span>
             <input
               type="file"
               accept=".txt,.md,.epub,.pdf"
@@ -415,16 +441,16 @@ export default function AudiobookTab({ profiles = [] }) {
             onClick={loadSample}
             disabled={busy}
             title={t('audiobook.load_sample_hint')}
+            leading={<BookOpen size={14} />}
           >
-            <BookOpen size={14} /> {t('audiobook.load_sample')}
+            {t('audiobook.load_sample')}
           </Button>
-          <Button variant="subtle" onClick={onPreview} disabled={!canRun}>
-            {planLoading ? <Loader size={14} className="spin" /> : null}{' '}
+          <Button variant="subtle" onClick={onPreview} disabled={!canRun} loading={planLoading}>
             {t('audiobook.preview_plan')}
           </Button>
           {generating ? (
-            <Button variant="danger" onClick={onStop}>
-              <Square size={14} /> {t('audiobook.stop')}
+            <Button variant="danger" onClick={onStop} leading={<Square size={14} />}>
+              {t('audiobook.stop')}
             </Button>
           ) : (
             <Button variant="primary" onClick={onCreate} disabled={!canRun}>
@@ -438,15 +464,22 @@ export default function AudiobookTab({ profiles = [] }) {
         {/* Left: script editor fills the height */}
         <div className="audiobook-tab__script flex flex-col min-h-0 gap-[6px]">
           <label className={FIELD_LABEL}>{t('audiobook.script')}</label>
+          <MarkupToolbar t={t} textareaRef={textareaRef} text={text} setText={setText} />
           <textarea
+            ref={textareaRef}
             className="input-base"
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              if (warningsDismissed) setWarningsDismissed(false);
+            }}
             onKeyDown={onScriptKeyDown}
             placeholder={t('audiobook.script_placeholder')}
             aria-label={t('audiobook.script')}
           />
-          {!text.trim() && (
+          {text.trim() ? (
+            <StatsBar t={t} text={text} />
+          ) : (
             <p className="muted text-[var(--text-sm)] text-fg-muted m-0">
               {t('audiobook.empty_hint')}
             </p>
@@ -475,6 +508,21 @@ export default function AudiobookTab({ profiles = [] }) {
               onChange={setLanguage}
             />
           </div>
+
+          {/* Cast — one row per distinct [voice:NAME] in the script (#1217).
+              Open by default so the multi-voice mapping is discoverable the
+              moment a script uses [voice:…]; hidden entirely when it doesn't. */}
+          {castNames.length > 0 && (
+            <Section title={t('audiobook.cast')} icon={<Users size={13} />} defaultOpen>
+              <CastPanel
+                t={t}
+                castNames={castNames}
+                voiceCast={voiceCast}
+                setVoiceCast={setVoiceCast}
+                profiles={profiles}
+              />
+            </Section>
+          )}
 
           <AudiobookOverrides
             t={t}
@@ -544,6 +592,14 @@ export default function AudiobookTab({ profiles = [] }) {
               {t('audiobook.markup_hint')}
             </p>
           </Section>
+
+          {!warningsDismissed && !generating && (
+            <ValidationWarnings
+              t={t}
+              warnings={warnings}
+              onDismiss={() => setWarningsDismissed(true)}
+            />
+          )}
 
           {error && (
             <div className="error-banner" role="alert">
