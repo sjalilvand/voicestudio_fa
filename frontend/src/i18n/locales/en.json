@@ -197,7 +197,18 @@
     "lex_add": "Add word",
     "lex_remove": "Remove",
     "markup_help": "Markup reference",
-    "markup_hint": "# Chapter title · [voice:NAME] switch voice · [pause 500ms] / [pause 1s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell]"
+    "markup_hint": "# Chapter title · [voice:NAME] switch voice · [pause 500ms] / [pause 1s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · Reactions (OmniVoice): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "language": "Language",
+    "expressive": "Production overrides",
+    "reset": "Reset",
+    "seed": "Seed",
+    "seed_ph": "Auto",
+    "vary_repeats": "Vary repeated lines",
+    "vary_repeats_help": "Give identical lines distinct takes instead of reusing one recording.",
+    "emotion_help": "Graded emotion — applied by the IndexTTS2 engine only.",
+    "emotion_text": "Emotion description",
+    "emotion_text_ph": "e.g. sounds exhausted and sad",
+    "emotion_alpha": "Emotion strength"
   },
   "launchpad": {
     "greeting": "hello there",

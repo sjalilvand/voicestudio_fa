@@ -38,6 +38,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - Info/warn system notifications are dismissible and stay dismissed across restarts; error-level notices can't be dismissed, and the unclean-shutdown notice is now acknowledged server-side — thanks @agudmund! (#1192)
 - `clone_voice` MCP tool — AI agents can clone a new voice from a base64 reference audio sample; returns a `profile_id` immediately usable with `generate_speech` — thanks @paoloantinori! (#1194)
 - Dub tab: **Paste Translation** — paste a translation made elsewhere (ChatGPT, DeepL, a human) as subtitles, numbered lines, or plain lines; it maps onto the existing segments with a before→after preview, keeping timings and the source transcript intact (#1203)
+- Audiobook tab: **Production Overrides** (position/class temperature, steps, guidance, postprocess, seed) for expressive narration, plus IndexTTS2 emotion controls and a "vary repeated lines" toggle — defaults reproduce today's renders exactly (#1208)
 
 ### CI
 
@@ -48,10 +49,12 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - `docs/expressive-speech.md`: per-engine breaths/laughter/emotion control, incl. the default engine's 13 native reaction tags
 - Flush caches / Unload documented in the performance guide, incl. `POST /system/flush-memory` for scripts
 - README FAQ: why a longer reference clip doesn't clone better (zero-shot 15 s cap; fine-tuning is the audiobook-grade path)
+- `docs/expressive-speech.md` corrected so every recipe it names (breaths, temperature) is reachable in the surface it points to, including the Audiobook tab (#1208)
 
 ### Fixed
 
 - Voice-clone trimmer: the preview now plays exactly the selected region on variable-bitrate clips (it had drifted off on VBR/mis-reported-duration files by playing the original file on a different timeline) (#1210)
+- Audiobook language selection now reaches the backend — the client had dropped the `language` field, and the tab's Markup reference now lists the reaction tags (`[laughter]`, `[sigh]`, …) that already work there (#1208)
 - A backend that fails to start now says why — exit code and error output, with actionable hints and a one-click report — instead of the evidence-free "Can't reach the local OmniVoice backend" (#1177)
 - Generation no longer crawls on CPU after a cancelled or failed dub: the TTS model is moved back to the GPU on every exit path, and each generation now verifies its own placement (#1191)
 - A generation queued behind a busy one no longer spends its timeout waiting: the budget starts when a GPU worker picks the job up, so a queued request can't be failed as "too heavy for the available compute" without having run (#1190)
