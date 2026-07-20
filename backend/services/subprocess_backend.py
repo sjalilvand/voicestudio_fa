@@ -60,6 +60,17 @@ from services.tts_backend import TTSBackend
 logger = logging.getLogger("omnivoice.subprocess_backend")
 
 
+def _os_exec_refusal(exc: OSError) -> str:
+    """User-facing cause for a spawn-time OSError, built from errno/strerror
+    only — ``str(exc)`` commonly embeds ``exc.filename`` (the interpreter's
+    absolute path, i.e. the user's home directory), and this string flows
+    into a 503 detail and the UI log viewer / pasted bug reports."""
+    cause = exc.strerror or "execution failed"
+    if exc.errno is not None:
+        cause = f"[Errno {exc.errno}] {cause}"
+    return cause
+
+
 # ── Wire protocol constants ────────────────────────────────────────────────
 
 #: Hard cap per frame body. Defeats length-prefix DoS where a malicious or
@@ -371,15 +382,19 @@ class SubprocessBackend(TTSBackend):
             f"reinstall the engine from Settings → Engines"
         )
         validate_executable(python_path, hint=_venv_hint)
+        # Basenames only — absolute paths embed the user's home directory,
+        # and these lines flow into the UI log viewer / pasted bug reports.
         logger.info(
             "[%s] spawning sidecar: %s %s",
-            self.id, python_path, script_path,
+            self.id, Path(python_path).name, Path(script_path).name,
         )
         try:
             self._proc = subprocess.Popen([python_path, script_path], **kwargs)
         except OSError as exc:
             raise InvalidBinaryError(
-                python_path, f"the OS refused to execute it ({exc})", _venv_hint,
+                python_path,
+                f"the OS refused to execute it ({_os_exec_refusal(exc)})",
+                _venv_hint,
             ) from exc
 
         # Drain stderr in a background thread so the sidecar can't block on

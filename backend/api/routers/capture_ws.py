@@ -162,10 +162,19 @@ async def ws_transcribe(websocket: WebSocket):
     # typed error frame + close, BEFORE any recognizer is built (both the
     # sherpa loader and the whisper backends auto-download weights on first
     # load). The client renders a one-click download CTA from the payload.
+    # Pass the RAW ?model= override, not just the resolved spec: an invalid
+    # override resolves spec to None, and a bare None would make the preflight
+    # consult the persisted sherpa pref (possibly installed → preflight
+    # passes) while execution falls through to the Whisper path (weights
+    # possibly missing → silent auto-download). The raw string keeps the
+    # preflight on the same selection execution will use.
     from services.asr_backend import asr_model_missing_detail, asr_model_missing_error
+    _requested_model = websocket.query_params.get("model")
     missing = await asyncio.to_thread(
         asr_model_missing_error, purpose="dictation",
-        sherpa_model_id=spec.id if spec is not None else None,
+        sherpa_model_id=(
+            spec.id if spec is not None else _requested_model
+        ),
     )
     if missing is not None:
         try:

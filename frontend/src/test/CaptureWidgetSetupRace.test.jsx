@@ -45,17 +45,20 @@ vi.mock('../utils/asrModelMissing', () => ({
   toastAsrModelMissing: toastAsrMock,
 }));
 
-// Deferred startMicCapture so the test controls WHEN the mic graph finishes
-// setting up relative to the WS error frame.
-const { micDeferred, micStop } = vi.hoisted(() => {
-  let resolve;
-  const promise = new Promise((r) => {
-    resolve = r;
-  });
-  return { micDeferred: { promise, resolve }, micStop: vi.fn(async () => {}) };
-});
+// Deferred startMicCapture so each test controls WHEN (and HOW — resolve or
+// reject) the mic graph finishes setting up relative to the WS error frame.
+const { micControl, micStop } = vi.hoisted(() => ({
+  micControl: { resolve: null, reject: null },
+  micStop: vi.fn(async () => {}),
+}));
 vi.mock('../utils/aec/micCapture', () => ({
-  startMicCapture: vi.fn(() => micDeferred.promise),
+  startMicCapture: vi.fn(
+    () =>
+      new Promise((resolve, reject) => {
+        micControl.resolve = resolve;
+        micControl.reject = reject;
+      }),
+  ),
 }));
 vi.mock('../utils/aec/pcm', () => ({
   frameFromFloat: vi.fn(),
@@ -161,11 +164,43 @@ describe('CaptureWidget — connect-time asr_model_missing during mic setup', ()
 
     // Mic graph setup completes AFTER the error — the tail must abort:
     // release the worklet, keep the error state, never flip the tray on.
-    micDeferred.resolve(micStop);
+    micControl.resolve(micStop);
     await waitFor(() => expect(micStop).toHaveBeenCalled());
 
     expect(screen.getByText(/No speech-to-text model/)).toBeInTheDocument();
     expect(screen.queryByText(/Listening/)).not.toBeInTheDocument();
+    expect(invokeMock).not.toHaveBeenCalledWith('set_tray_recording', { recording: true });
+  });
+
+  it('setup REJECTION after the terminal frame must not clobber it with a mic error', async () => {
+    // #1175 review: the guard used to live only on the success path — a
+    // startMicCapture rejection after the typed asr_model_missing frame
+    // overwrote the truthful terminal state with a generic microphone error.
+    toastMock.error.mockClear();
+    render(<CaptureWidget />);
+    pressShortcut();
+
+    await waitFor(() => expect(FakeWS.instances.length).toBe(1));
+    const ws = FakeWS.instances[0];
+    ws.onmessage({
+      data: JSON.stringify({
+        type: 'error',
+        kind: 'asr_model_missing',
+        error: 'asr_model_missing',
+        message: 'no ASR model installed',
+        recommended: { repo_id: 'x/y', label: 'Y', size_gb: 1 },
+      }),
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/No speech-to-text model/)).toBeInTheDocument();
+    });
+
+    micControl.reject(Object.assign(new Error('mic exploded'), { name: 'NotReadableError' }));
+    // Let the rejection propagate through startRecording's catch.
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(screen.getByText(/No speech-to-text model/)).toBeInTheDocument();
+    expect(toastMock.error).not.toHaveBeenCalled();
     expect(invokeMock).not.toHaveBeenCalledWith('set_tray_recording', { recording: true });
   });
 });

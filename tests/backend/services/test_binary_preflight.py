@@ -91,3 +91,27 @@ def test_validate_executable_passes_valid_binary(tmp_path):
     p = tmp_path / "ok-bin"
     p.write_bytes(b"\x7fELFxxxx")
     validate_executable(p)  # must not raise
+
+
+# ── Spawn-time OSError sanitization (#1189 review) ─────────────────────────
+# str(OSError) embeds exc.filename — the interpreter's ABSOLUTE path (the
+# user's home dir) — and the reason flows into a user-visible 503 + the UI
+# log viewer. The reason must be built from errno/strerror only.
+
+@pytest.mark.parametrize("home_path", [
+    "/Users/someone/Library/Application Support/OmniVoice/engines/x/bin/python",
+    r"C:\Users\someone\AppData\Roaming\OmniVoice\engines\x\Scripts\python.exe",
+])
+def test_os_exec_refusal_never_leaks_absolute_paths(home_path):
+    from services.subprocess_backend import _os_exec_refusal
+    exc = OSError(8, "Exec format error")
+    exc.filename = home_path
+    assert "someone" in str(exc)  # fail-before: str(exc) leaks the home dir
+    reason = _os_exec_refusal(exc)
+    assert reason == "[Errno 8] Exec format error"
+    assert "someone" not in reason
+
+
+def test_os_exec_refusal_survives_empty_oserror():
+    from services.subprocess_backend import _os_exec_refusal
+    assert _os_exec_refusal(OSError()) == "execution failed"

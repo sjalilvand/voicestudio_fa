@@ -38,8 +38,12 @@ if not os.environ.get("OMNIVOICE_ENV_FILE"):
 # cache that meant a silent multi-GB background download mid-suite. The
 # sentinel is honored verbatim by `resolve_omnivoice_checkpoint()` (never
 # self-healed to the real default), so no test can trigger a real model
-# download/load without explicitly overriding OMNIVOICE_MODEL.
-os.environ.setdefault("OMNIVOICE_MODEL", "test")
+# download/load without explicitly overriding OMNIVOICE_MODEL. Unconditional
+# on purpose (#1175 review): a `setdefault` preserved an ambient
+# OMNIVOICE_MODEL from the dev's shell, silently re-enabling exactly the
+# real-checkpoint resolution this sentinel exists to prevent; tests that
+# need a different value monkeypatch it explicitly.
+os.environ["OMNIVOICE_MODEL"] = "test"
 
 
 # ── Test fixtures ──────────────────────────────────────────────────────────
@@ -185,21 +189,33 @@ def asr_model_installed(monkeypatch, request):
 
 
 @pytest.fixture(autouse=True)
-def _clear_asr_installed_memo():
+def _clear_asr_installed_memo(request):
     """The ASR preflight memoizes installed-POSITIVE repos process-wide
     (services.asr_backend._INSTALLED_REPO_MEMO) so dictation stops paying a
     scan_cache_dir walk per utterance. Tests stub ``is_cached`` both ways, so
     a positive memoized under one test's stub (or from a dev machine's real
     HF cache) must never leak into the next test's 'missing' expectations.
-    Touches the memo only when the module is already imported — never forces
-    the import. (Same guard exists in backend/tests/conftest.py.)"""
-    mod = sys.modules.get("services.asr_backend")
-    if mod is not None:
-        getattr(mod, "_INSTALLED_REPO_MEMO", set()).clear()
+    Clears the canonical module AND any module-typed alias the test module
+    holds (``import services.asr_backend as ab``): after a sys.modules purge
+    the alias points at a STALE module object with its own memo. Touches the
+    memo only when the module is already imported — never forces the import.
+    (Same guard exists in backend/tests/conftest.py.)"""
+    def _clear_all():
+        import types
+        mod = sys.modules.get("services.asr_backend")
+        targets = {} if mod is None else {id(mod): mod}
+        test_module = getattr(request, "module", None)
+        if test_module is not None:
+            for val in vars(test_module).values():
+                if (isinstance(val, types.ModuleType)
+                        and getattr(val, "__name__", "") == "services.asr_backend"):
+                    targets[id(val)] = val
+        for m in targets.values():
+            getattr(m, "_INSTALLED_REPO_MEMO", set()).clear()
+
+    _clear_all()
     yield
-    mod = sys.modules.get("services.asr_backend")
-    if mod is not None:
-        getattr(mod, "_INSTALLED_REPO_MEMO", set()).clear()
+    _clear_all()
 
 
 @pytest.fixture

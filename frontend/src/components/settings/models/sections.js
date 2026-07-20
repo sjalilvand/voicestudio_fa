@@ -14,10 +14,18 @@ export const MODEL_SECTION_ORDER = ['tts', 'asr', 'dictation', 'diarisation', 'o
  * consumes — split out so "offline transcription" and "live dictation" read
  * as the two distinct capabilities they are.
  */
+/** The documented dictation `tag` contract (models.yaml) — an allowlist, so
+ *  unrelated future metadata tags (`multilingual`, `recommended`, …) can't
+ *  silently reroute an offline-transcription model into Dictation. */
+const DICTATION_TAGS = new Set(['offline', 'streaming']);
+
 export function modelSectionKey(m) {
   const role = (m?.role || '').toLowerCase();
   if (role === 'tts') return 'tts';
-  if (role === 'asr') return m?.engine === 'sherpa-onnx' || m?.tag ? 'dictation' : 'asr';
+  if (role === 'asr') {
+    const tag = String(m?.tag || '').toLowerCase();
+    return m?.engine === 'sherpa-onnx' || DICTATION_TAGS.has(tag) ? 'dictation' : 'asr';
+  }
   if (role === 'diarisation' || role === 'diarization') return 'diarisation';
   return 'other';
 }

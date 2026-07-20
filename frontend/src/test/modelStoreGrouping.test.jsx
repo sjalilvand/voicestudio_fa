@@ -34,12 +34,16 @@ describe('modelSectionKey — role → catalog section', () => {
     expect(modelSectionKey({ role: 'diarization' })).toBe('diarisation'); // spelling alias
   });
 
-  it('splits streaming/dictation ASR (engine sherpa-onnx OR a tag) out of ASR', () => {
+  it('splits streaming/dictation ASR (engine sherpa-onnx OR a dictation tag) out of ASR', () => {
     expect(modelSectionKey({ role: 'ASR', engine: 'sherpa-onnx', tag: 'offline' })).toBe(
       'dictation',
     );
     expect(modelSectionKey({ role: 'ASR', tag: 'streaming' })).toBe('dictation');
     expect(modelSectionKey({ role: 'ASR' })).toBe('asr');
+    // Only the documented dictation tags reroute (#1175 review): an unrelated
+    // metadata tag must keep an offline-transcription model in ASR.
+    expect(modelSectionKey({ role: 'ASR', tag: 'multilingual' })).toBe('asr');
+    expect(modelSectionKey({ role: 'ASR', tag: 'recommended' })).toBe('asr');
   });
 
   it('routes unknown roles to "other" and never throws on malformed rows', () => {

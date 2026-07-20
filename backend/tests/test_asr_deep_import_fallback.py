@@ -19,6 +19,10 @@ from __future__ import annotations
 
 import pytest
 
+# Fall-through mechanics assume ASR weights are present; the no-download
+# fallback preflight (#1198 harvest) has its own dedicated tests.
+pytestmark = pytest.mark.usefixtures("asr_model_installed")
+
 from services import asr_backend as ab
 
 

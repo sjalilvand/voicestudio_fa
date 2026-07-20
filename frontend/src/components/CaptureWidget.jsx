@@ -1082,6 +1082,15 @@ export default function CaptureWidget({ onDismiss }) {
       setDoneKind(null);
       setDuration(0);
     } catch (err) {
+      // Same guard as the success path above (#1175 review): the session may
+      // already have RESOLVED while setup was failing — a connect-time WS
+      // error frame (e.g. the typed asr_model_missing preflight) or an
+      // Esc-cancel set wsHadFinalRef and rendered the truthful terminal
+      // state. A late mic error must not clobber it.
+      if (wsHadFinalRef.current) {
+        stopCaptureGraph();
+        return;
+      }
       // Distinguish "permission denied" (→ per-OS settings hint) from
       // "no device" / "device busy" / anything else (#323).
       toast.error(micErrorMessage(t, err), { duration: 6000 });

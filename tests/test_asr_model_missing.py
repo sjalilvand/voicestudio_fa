@@ -288,13 +288,14 @@ class TestEndpoints:
         assert '"recommended"' in r.text
 
     def test_openai_compat_transcriptions_409(self, client):
+        # #1175 review: the shared typed contract, not a string-only detail —
+        # clients must be able to render the download CTA from the payload.
         with _offline_asr_missing(cached=False):
             r = client.post(
                 "/v1/audio/transcriptions",
                 files={"file": ("t.wav", b"RIFF0000WAVE", "audio/wav")},
             )
-        assert r.status_code == 409, r.text
-        assert "No speech-to-text model is installed" in r.json()["detail"]
+        _assert_409(r)
 
     def test_capture_ws_sends_typed_error_frame(self, client):
         # The WS loopback guard moved to the shared is_local_host() helper
@@ -310,3 +311,123 @@ class TestEndpoints:
         assert msg["kind"] == "asr_model_missing"
         assert msg["error"] == "asr_model_missing"
         assert msg["recommended"]["repo_id"]
+
+    def test_capture_ws_invalid_override_still_preflights_whisper(self, client):
+        """#1175 review: an invalid ``?model=`` resolves to no sherpa spec, so
+        the session falls through to the Whisper path — the preflight must
+        follow it there instead of green-lighting the (installed) persisted
+        sherpa pref while Whisper weights are missing."""
+        import types
+
+        from api import dependencies as _deps
+        from api.routers.setup import models as setup_models
+        from services import asr_backend, sherpa_dictation
+
+        persisted = types.SimpleNamespace(id="persisted", repo_id="k2/persisted")
+        with patch.object(_deps, "_LOOPBACK_HOSTS",
+                          frozenset(_deps._LOOPBACK_HOSTS) | {"testclient"}), \
+             patch.object(sherpa_dictation, "get_spec",
+                          lambda mid: persisted if mid == "persisted" else None), \
+             patch.object(sherpa_dictation, "is_installed", lambda spec: True), \
+             patch.object(asr_backend, "dictation_model_id",
+                          return_value="persisted"), \
+             patch.object(asr_backend.SherpaDictationBackend, "is_available",
+                          return_value=(True, "ok")), \
+             patch.object(asr_backend, "_capture_prefers_parakeet",
+                          return_value=False), \
+             patch.object(asr_backend.MLXWhisperBackend, "is_available",
+                          return_value=(False, "not apple silicon")), \
+             patch.object(asr_backend.FasterWhisperBackend, "is_available",
+                          return_value=(True, "ready")), \
+             patch.object(setup_models, "is_cached", return_value=False), \
+             patch.object(setup_models, "cache_is_complete", return_value=True):
+            with client.websocket_connect("/ws/transcribe?model=not-a-model") as ws:
+                msg = ws.receive_json()
+        assert msg["type"] == "error"
+        assert msg["kind"] == "asr_model_missing"
+
+    def test_dub_stream_unloads_asr_on_early_terminal_error(self, client, tmp_path):
+        """#1175 review: a terminal error AFTER the ASR backend loaded (here:
+        undecodable audio) must still unload it — the unload used to live only
+        on the normal completion path, retaining VRAM on every early exit."""
+        from unittest.mock import MagicMock
+
+        from api.routers import dub_core
+        from services import asr_backend
+
+        wav = tmp_path / "audio.wav"
+        wav.write_bytes(b"RIFF0000WAVE")  # sf.read raises on this stub
+        job = {"id": "j4", "audio_path": str(wav)}
+        backend = MagicMock()
+        backend.id = "fake-asr"
+        with patch.object(dub_core, "_get_job", return_value=job), \
+             patch.object(asr_backend, "load_active_asr_backend",
+                          return_value=backend), \
+             _offline_asr_missing(cached=True):
+            r = client.get("/dub/transcribe-stream/j4")
+        assert r.status_code == 200
+        assert "audio load failed" in r.text
+        backend.unload.assert_called_once()
+
+
+class TestFallbackPreflight:
+    """#1189 review: load_active_asr_backend re-selects after a broken import
+    chain — the fallback candidate must pass the same no-download preflight
+    before ensure_loaded() can auto-download multi-GB weights."""
+
+    class _Broken:
+        display_name = "WhisperX"
+        id = "whisperx"
+
+        def ensure_loaded(self):
+            raise ImportError("No module named 'lightning_fabric'",
+                              name="lightning_fabric")
+
+    def _payload(self):
+        return {"error": "asr_model_missing", "missing_repo_id": "x/y",
+                "recommended": {"repo_id": "x/y", "label": "L", "size_gb": 1}}
+
+    def test_uncached_fallback_raises_typed_error_before_load(self):
+        from services import asr_backend as ab
+
+        class _Fallback:
+            display_name = "Faster-Whisper"
+            id = "faster-whisper"
+
+            def ensure_loaded(self):
+                raise AssertionError(
+                    "fallback must not load (= auto-download) before its "
+                    "own preflight")
+
+        payload = self._payload()
+        with patch.dict(ab._DEEP_IMPORT_BROKEN, clear=True), \
+             patch.dict(ab._LAST_ERRORS, clear=True), \
+             patch.object(ab, "get_active_asr_backend",
+                          side_effect=[self._Broken(), _Fallback()]), \
+             patch.object(ab, "_asr_backend_pinned", return_value=False), \
+             patch.object(ab, "asr_model_missing_error", return_value=payload):
+            with pytest.raises(ab.ASRModelMissingError) as ei:
+                ab.load_active_asr_backend()
+        assert ei.value.payload == payload
+
+    def test_cached_fallback_still_loads(self):
+        from services import asr_backend as ab
+
+        loaded = []
+
+        class _Fallback:
+            display_name = "Faster-Whisper"
+            id = "faster-whisper"
+
+            def ensure_loaded(self):
+                loaded.append(True)
+
+        with patch.dict(ab._DEEP_IMPORT_BROKEN, clear=True), \
+             patch.dict(ab._LAST_ERRORS, clear=True), \
+             patch.object(ab, "get_active_asr_backend",
+                          side_effect=[self._Broken(), _Fallback()]), \
+             patch.object(ab, "_asr_backend_pinned", return_value=False), \
+             patch.object(ab, "asr_model_missing_error", return_value=None):
+            backend = ab.load_active_asr_backend()
+        assert loaded == [True]
+        assert backend.id == "faster-whisper"

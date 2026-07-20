@@ -1036,7 +1036,13 @@ class KittenTTSBackend(TTSBackend):
             return self._model.generate(text, voice=voice, speed=speed,
                                         clean_text=True)
 
-        from kittentts.onnx_model import chunk_text
+        try:
+            from kittentts.onnx_model import chunk_text
+        except ImportError:  # pragma: no cover — future upstream refactor
+            # Same contract as the attribute guard above: if upstream moves
+            # chunk_text, degrade to the plain call instead of a 500.
+            return self._model.generate(text, voice=voice, speed=speed,
+                                        clean_text=True)
 
         cleaned = text
         preprocessor = getattr(onnx, "preprocessor", None)

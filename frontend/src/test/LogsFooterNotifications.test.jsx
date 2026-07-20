@@ -25,6 +25,15 @@ const NOTES = [
     message: 'ffmpeg is missing.',
     action: { label: 'Open Audio tools', type: 'settings-tab', target: 'audio-tools' },
   },
+  {
+    // Dismissible AND carrying a real action — the case stopPropagation
+    // actually protects (a note with action: null never navigates anyway).
+    id: 'vram-low',
+    level: 'warn',
+    title: 'Low VRAM',
+    message: 'Close other GPU apps.',
+    action: { label: 'Open Engines', type: 'settings-tab', target: 'engines' },
+  },
 ];
 
 vi.mock('../api/hooks', async (importOriginal) => {
@@ -95,13 +104,16 @@ describe('LogsFooter notifications tab — dismissals', () => {
   });
 
   it('dismiss does not fire the row action (stopPropagation)', async () => {
+    // #1192 review: click ✕ on a note that HAS a real action — without
+    // stopPropagation the row's own onClick would navigate.
     const openSettingsTab = vi.fn();
     useAppStore.setState({ openSettingsTab });
     renderFooter();
     openNotificationsTab();
 
-    await screen.findByText('Running on CPU');
-    fireEvent.click(dismissBtnIn(rowOf('Running on CPU')));
+    await screen.findByText('Low VRAM');
+    fireEvent.click(dismissBtnIn(rowOf('Low VRAM')));
     expect(openSettingsTab).not.toHaveBeenCalled();
+    expect(screen.queryByText('Low VRAM')).toBeNull();
   });
 });

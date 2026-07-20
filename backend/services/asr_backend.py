@@ -2272,7 +2272,7 @@ _LAST_ERRORS: dict[str, str] = {}
 # the process. Record it here so probes report the backend unavailable (with
 # the repair hint) and selection falls through to the next engine instead of
 # failing ASR wholesale. Per-process by design: repairing the env requires a
-# reinstall / ``uv sync`` and an app restart anyway.
+# reinstall / ``uv sync --reinstall`` and an app restart anyway.
 _DEEP_IMPORT_BROKEN: dict[str, str] = {}
 
 
@@ -2287,7 +2287,9 @@ def _deep_import_reason(cls: type["ASRBackend"], exc: ImportError) -> str:
     return (
         f"{cls.display_name} failed to load: {what}. The app environment "
         "looks partially installed — reinstall OmniVoice Studio (or run "
-        "`uv sync` on a source checkout) to repair it."
+        "`uv sync --reinstall` on a source checkout; plain `uv sync` "
+        "trusts the intact package metadata and skips the broken files) "
+        "to repair it."
     )
 
 
@@ -2463,6 +2465,20 @@ def _asr_backend_pinned() -> bool:
     return bool(prefs.get("asr_backend"))
 
 
+class ASRModelMissingError(RuntimeError):
+    """A fallback ASR selection has no installed weights (see
+    :func:`load_active_asr_backend`). Carries the typed ``asr_model_missing``
+    ``payload`` so consumers render the same one-click download CTA as the
+    initial preflight instead of a generic load failure — and, critically, so
+    ``ensure_loaded()`` is never reached for that candidate (loading would
+    silently auto-download multi-GB weights, violating the local-first
+    no-download-without-consent guarantee)."""
+
+    def __init__(self, payload: dict):
+        self.payload = payload
+        super().__init__(asr_model_missing_detail(payload))
+
+
 def load_active_asr_backend(*, asr_pipe=None) -> ASRBackend:
     """:func:`get_active_asr_backend` + eager ``ensure_loaded()``, degrading
     past backends whose deep import chain is broken (#1185).
@@ -2479,12 +2495,26 @@ def load_active_asr_backend(*, asr_pipe=None) -> ASRBackend:
     An *explicitly pinned* backend (``OMNIVOICE_ASR_BACKEND`` / the
     ``asr_backend`` pref) is never silently swapped: the enriched error —
     naming the missing module and the repair command — is raised instead.
+
+    Callers run the no-download :func:`asr_model_missing_error` preflight for
+    the *initial* selection only, so every re-selected fallback gets the same
+    preflight here, BEFORE its ``ensure_loaded()`` — otherwise a broken
+    primary would let the fallback silently auto-download multi-GB weights.
+    A fallback without installed weights raises :class:`ASRModelMissingError`
+    (typed payload → the caller's download CTA).
     """
     from core.scrub import scrub_text
     tried: set[str] = set()
     while True:
         backend = get_active_asr_backend(asr_pipe=asr_pipe)
         bid = getattr(backend, "id", "?")
+        if tried:
+            # Preflight the SPECIFIC candidate about to load — not the global
+            # selection, which can disagree when an asr_pipe steers
+            # get_active_asr_backend (Greptile review, #1198).
+            missing = asr_model_missing_error(backend_id=bid)
+            if missing is not None:
+                raise ASRModelMissingError(missing)
         try:
             backend.ensure_loaded()
             return backend
@@ -2943,12 +2973,15 @@ def _fw_repo(name: str) -> str | None:
     return name if "/" in name else _FW_ALIAS_REPOS.get(name.lower())
 
 
-def _offline_asr_repo() -> str | None:
+def _offline_asr_repo(backend_id: str | None = None) -> str | None:
     """The HF repo the active *offline* (dub/batch) ASR backend would download
     on first load, or None when the selection can't be preflighted (FunASR /
     NeMo / Moonshine / OpenAI-compat are explicit opt-ins — stay out of the
-    way there)."""
-    bid = active_backend_id()
+    way there). ``backend_id`` pins the check to a specific backend — the
+    fallback loop in :func:`load_active_asr_backend` passes the candidate it
+    is actually about to load, which can differ from ``active_backend_id()``
+    when a preloaded ``asr_pipe`` steers selection (Greptile review, #1198)."""
+    bid = backend_id or active_backend_id()
     if bid == "whisperx":
         return _fw_repo(os.environ.get("ASR_MODEL_WHISPERX", "large-v3"))
     if bid in ("faster-whisper", "faster-whisper-isolated"):
@@ -3062,7 +3095,8 @@ def _repo_installed(repo: str) -> bool:
 
 
 def asr_model_missing_error(*, purpose: str = "transcribe",
-                            sherpa_model_id: str | None = None) -> dict | None:
+                            sherpa_model_id: str | None = None,
+                            backend_id: str | None = None) -> dict | None:
     """None when the active ASR selection can transcribe without downloading
     anything; otherwise the typed ``{"error": "asr_model_missing", ...}``
     payload for a 409 / SSE / WS error with a download CTA.
@@ -3100,7 +3134,7 @@ def asr_model_missing_error(*, purpose: str = "transcribe",
                         }
             repo = _capture_whisper_repo()
         else:
-            repo = _offline_asr_repo()
+            repo = _offline_asr_repo(backend_id)
         if repo is None:
             return None  # explicit opt-in engine — can't (and shouldn't) preflight
         from api.routers.setup.models import get_model_catalog

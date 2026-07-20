@@ -4,6 +4,7 @@
 // Deduplication is automatic — two components using useSysinfo() share one
 // network request and one cache entry.
 
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAppStore } from '../store';
 import * as systemApi from './system';
@@ -94,14 +95,24 @@ export function isDismissibleNotification(n: { level?: string }): boolean {
 export function useVisibleNotifications(enabled = true) {
   const query = useNotifications(enabled);
   const dismissed = useAppStore((s) => s.dismissedNotificationIds);
-  const all = query.data?.notifications || [];
+  const all = query.data?.notifications;
+  // Memoized so the array reference is stable across re-renders while the
+  // inputs are unchanged (downstream effect/memo deps stay quiet).
   // A note is hidden only while it is *currently* dismissible: if a stable id
   // ever escalates to error level, an old info/warn dismissal must not hide it.
-  const notifications = all.filter(
-    (n: { id?: string; level?: string }) =>
-      !n.id || !isDismissibleNotification(n) || !dismissed.includes(n.id),
+  const notifications = useMemo(
+    () =>
+      (all || []).filter(
+        (n: { id?: string; level?: string }) =>
+          !n.id || !isDismissibleNotification(n) || !dismissed.includes(n.id),
+      ),
+    [all, dismissed],
   );
-  return { ...query, notifications };
+  // Omit `data` from the returned query: `data.notifications` is the raw
+  // UNFILTERED list, and any consumer reaching for it would silently bypass
+  // the dismiss filter. (No consumer uses `data` today.)
+  const { data: _data, ...rest } = query;
+  return { ...rest, notifications };
 }
 
 export function useSystemLogs(tail = 300, enabled = true, refetchInterval = 10_000) {
