@@ -1714,18 +1714,30 @@ def ensure_tts_on_device() -> bool:
 async def _heal_tts_placement() -> None:
     """Async wrapper for :func:`ensure_tts_on_device` used by ``get_model()``.
 
-    The cheap mismatch probe runs inline; only the rare actual move is handed
-    to the CPU pool (the same pool the offload/restore pair uses), because a
-    multi-GB host-to-device copy would otherwise stall the event loop.
+    The cheap mismatch probe runs inline; the rare actual move is dispatched to
+    the **GPU pool** so it serializes against in-flight inference — moving a
+    shared model's weights underneath a running ``generate()`` is the one way
+    this could make things worse than the bug it fixes. The pool that can
+    strand a model is always 1-worker (``offload_tts_for_asr`` only fires below
+    8 GB free VRAM, and ``_workers_for_free_vram`` gives such a host a single
+    worker), so occupying a slot is genuine mutual exclusion there.
     """
     if _stranded_tts_target() is None:
+        return
+    if threading.current_thread().name.startswith("gpu-pool"):
+        # Reached from a GPU-pool thread — OmniVoiceBackend._ensure_loaded()
+        # bootstraps a fresh loop with asyncio.run(get_model()) from inside
+        # generate(). We already hold the GPU slot, so we already have the
+        # exclusion the move needs; awaiting our own pool (or the model lock
+        # held by the loop that is waiting on us) would deadlock. Move inline.
+        ensure_tts_on_device()
         return
     async with _model_lock:
         if _stranded_tts_target() is None:
             return  # another caller healed it while we waited
         try:
             await asyncio.get_running_loop().run_in_executor(
-                _cpu_pool, ensure_tts_on_device
+                _get_gpu_pool(), ensure_tts_on_device
             )
         except Exception as e:  # noqa: BLE001
             logger.warning("TTS placement self-heal could not run: %s", e)

@@ -36,8 +36,6 @@ os.environ.setdefault("OMNIVOICE_DISABLE_FILE_LOG", "1")
 
 import pytest
 
-import services.model_manager as mm
-
 
 # ── Fakes: no real weights, no real torch ─────────────────────────────────
 class _FakeDev:
@@ -75,7 +73,15 @@ class _FakeTTS:
 
 
 @pytest.fixture
-def gpu_host(monkeypatch):
+def mm():
+    """Resolve the app module at run time — a module-level import goes stale
+    under the sys.modules pollution other test modules introduce."""
+    import services.model_manager as _mm
+    return _mm
+
+
+@pytest.fixture
+def gpu_host(mm, monkeypatch):
     """A dedicated-VRAM host (CUDA) with a loaded TTS model."""
     monkeypatch.setattr(mm, "_has_dedicated_vram", lambda: True)
     monkeypatch.setattr(mm, "get_best_device", lambda: "cuda")
@@ -90,19 +96,19 @@ def gpu_host(monkeypatch):
 
 
 # ── 1. The placement probe ────────────────────────────────────────────────
-def test_model_on_the_accelerator_is_not_stranded(gpu_host):
+def test_model_on_the_accelerator_is_not_stranded(mm, gpu_host):
     """The hot path must be a no-op: a healthy model costs one parameter probe."""
     gpu_host("cuda")
     assert mm._stranded_tts_target() is None
 
 
-def test_model_left_on_cpu_is_reported_stranded(gpu_host):
+def test_model_left_on_cpu_is_reported_stranded(mm, gpu_host):
     """CPU-resident weights on a CUDA box is the #1191 state."""
     gpu_host("cpu")
     assert mm._stranded_tts_target() == "cuda"
 
 
-def test_unified_memory_is_never_treated_as_stranded(gpu_host, monkeypatch):
+def test_unified_memory_is_never_treated_as_stranded(mm, gpu_host, monkeypatch):
     """On Apple Silicon / CPU-only the offload RELEASES the model rather than
     moving it, and CPU is the legitimate home — healing there would be wrong."""
     gpu_host("cpu")
@@ -110,7 +116,7 @@ def test_unified_memory_is_never_treated_as_stranded(gpu_host, monkeypatch):
     assert mm._stranded_tts_target() is None
 
 
-def test_probe_tolerates_a_model_without_parameters(gpu_host, monkeypatch):
+def test_probe_tolerates_a_model_without_parameters(mm, gpu_host, monkeypatch):
     """An engine wrapper we can't introspect must not break generation."""
     monkeypatch.setattr(mm, "model", object(), raising=False)
     monkeypatch.setattr(mm, "_lazy_torch", lambda: (_ for _ in ()).throw(RuntimeError("no torch")))
@@ -118,20 +124,20 @@ def test_probe_tolerates_a_model_without_parameters(gpu_host, monkeypatch):
 
 
 # ── 2. The self-heal ──────────────────────────────────────────────────────
-def test_ensure_tts_on_device_moves_a_stranded_model_back(gpu_host):
+def test_ensure_tts_on_device_moves_a_stranded_model_back(mm, gpu_host):
     fake = gpu_host("cpu")
     assert mm.ensure_tts_on_device() is True
     assert fake.moves == ["cuda"]
     assert fake.device_type == "cuda"
 
 
-def test_ensure_tts_on_device_is_a_noop_when_already_placed(gpu_host):
+def test_ensure_tts_on_device_is_a_noop_when_already_placed(mm, gpu_host):
     fake = gpu_host("cuda")
     assert mm.ensure_tts_on_device() is False
     assert fake.moves == []
 
 
-def test_self_heal_failure_degrades_to_cpu_never_raises(gpu_host, monkeypatch):
+def test_self_heal_failure_degrades_to_cpu_never_raises(mm, gpu_host, monkeypatch):
     """An OOM while moving back must leave the pre-fix behaviour (slow), not a
     failed generation."""
     fake = gpu_host("cpu")
@@ -143,7 +149,7 @@ def test_self_heal_failure_degrades_to_cpu_never_raises(gpu_host, monkeypatch):
     assert mm.ensure_tts_on_device() is False  # no exception escapes
 
 
-def test_get_model_heals_placement_before_returning(gpu_host):
+def test_get_model_heals_placement_before_returning(mm, gpu_host):
     """THE CLASS FIX. Fail-before: get_model() returned the CPU-resident model
     untouched, so every generation after a stranded offload ran on CPU."""
     fake = gpu_host("cpu")
@@ -155,7 +161,29 @@ def test_get_model_heals_placement_before_returning(gpu_host):
     assert fake.device_type == "cuda"
 
 
-def test_get_model_does_not_move_a_healthy_model(gpu_host):
+def test_self_heal_from_a_gpu_pool_thread_does_not_deadlock(mm, gpu_host):
+    """The move is normally dispatched to the GPU pool so it serializes against
+    in-flight inference. But ``OmniVoiceBackend._ensure_loaded()`` reaches
+    ``get_model()`` through ``asyncio.run()`` from inside ``generate()`` — i.e.
+    already on a GPU-pool worker. Dispatching back into that (1-worker) pool,
+    or blocking on the model lock held by the loop that is waiting on us, would
+    deadlock. That case must heal inline instead."""
+    fake = gpu_host("cpu")
+    result = {}
+
+    def _worker():
+        result["model"] = asyncio.run(mm.get_model())
+
+    t = threading.Thread(target=_worker, name="gpu-pool_0")
+    t.start()
+    t.join(timeout=15)
+
+    assert not t.is_alive(), "get_model() deadlocked on a GPU-pool thread"
+    assert result["model"] is fake
+    assert fake.moves == ["cuda"]
+
+
+def test_get_model_does_not_move_a_healthy_model(mm, gpu_host):
     """The self-heal must be free on the hot path — no spurious device moves."""
     fake = gpu_host("cuda")
     assert asyncio.run(mm.get_model()) is fake
