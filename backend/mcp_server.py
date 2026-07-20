@@ -7,9 +7,12 @@ Run standalone:
 
 Tools exposed:
     generate_speech   — text → WAV audio (voice clone or design)
+    clone_voice       — base64 reference audio → new voice profile
+    transcribe        — base64 audio → text
     list_voices       — enumerate saved voice profiles
     list_languages    — available TTS languages
     list_personalities — voice personality presets
+    check_health      — backend status + active GPU device
 
 Resources exposed:
     voice://{profile_id}  — voice profile metadata
@@ -19,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import json
 import logging
 import os
 import sys
@@ -252,6 +256,56 @@ def create_mcp_server():
         """Get the 20 most recent generation history items."""
         history = await _api_get("/history")
         return str(history[:20])
+
+    @mcp.tool()
+    async def clone_voice(
+        name: str,
+        ref_audio_base64: str,
+        ref_text: str = "",
+        instruct: str = "",
+        language: str = "Auto",
+    ) -> str:
+        """Clone a new voice profile from a reference audio sample.
+
+        The new voice is immediately available for use with generate_speech
+        (pass the returned profile_id as the profile_id argument).
+
+        Args:
+            name: A human-friendly name for the cloned voice.
+            ref_audio_base64: Base64-encoded audio (WAV, MP3, FLAC, etc.) of
+                the reference voice — 5-30 seconds of clean single-speaker
+                speech.
+            ref_text: Optional transcript of the reference audio (improves
+                quality for some engines).
+            instruct: Optional style instruction (e.g. 'whisper', 'excited').
+            language: Language of the reference audio (ISO code or 'Auto').
+
+        Returns:
+            JSON with the new profile's id, name, and kind.
+        """
+        # Reject oversized inputs before decoding (base64 is always larger
+        # than raw, so this is a safe lower bound on the decoded size).
+        if len(ref_audio_base64) > 200 * 1024 * 1024:
+            return '{"error":"reference audio exceeds 200 MB limit"}'
+        try:
+            raw = base64.b64decode(ref_audio_base64, validate=True)
+        except Exception:
+            return '{"error":"ref_audio_base64 is not valid base64"}'
+        if not raw:
+            return '{"error":"ref_audio_base64 is empty"}'
+        r = await _api_post_form(
+            "/profiles",
+            data={
+                "name": name,
+                "kind": "clone",
+                "ref_text": ref_text,
+                "instruct": instruct,
+                "language": language,
+            },
+            files={"ref_audio": ("ref_audio.wav", raw, "application/octet-stream")},
+        )
+        p = r.json()
+        return json.dumps({"profile_id": p["id"], "name": p["name"], "kind": p["kind"]})
 
     return mcp
 

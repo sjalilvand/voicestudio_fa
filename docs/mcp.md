@@ -1,8 +1,8 @@
 # MCP server — let agents speak in your voice
 
 OmniVoice ships an [MCP](https://modelcontextprotocol.io/) server so AI agents
-(Claude Code, Cursor, …) can synthesize speech, transcribe audio, and list
-your voices — locally, in a voice you choose per agent. The server is
+(Claude Code, Cursor, …) can synthesize speech, clone voices, transcribe audio,
+and list your voices — locally, in a voice you choose per agent. The server is
 **mounted on the running backend** at `/mcp`, so there's nothing extra to
 start once OmniVoice is open.
 
@@ -11,6 +11,7 @@ start once OmniVoice is open.
 | Tool | What it does |
 |---|---|
 | `generate_speech` | text → WAV (base64). Uses the agent's bound voice unless a `profile_id` is passed. |
+| `clone_voice` | base64 audio → new voice profile. Returns a `profile_id` for use with `generate_speech`. |
 | `transcribe` | base64 audio → text (646 languages). |
 | `list_voices` / `list_personalities` / `list_languages` | enumerate what's available. |
 | `check_health` | backend status + active GPU device. |

@@ -34,6 +34,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - ROCm Docker image `ghcr.io/debpalash/omnivoice-studio:rocm` (+ `:stable-rocm`, `:X.Y.Z-rocm`) (#1165)
 - `OMNIVOICE_TRUSTED_NETWORKS` — comma-separated CIDRs exempted from the consumption auth gates (share PIN / API key / dictation WS); admin routes stay loopback-only (#1170)
 - Info/warn system notifications are dismissible and stay dismissed across restarts; error-level notices can't be dismissed, and the unclean-shutdown notice is now acknowledged server-side — thanks @agudmund! (#1192)
+- `clone_voice` MCP tool — AI agents can clone a new voice from a base64 reference audio sample; returns a `profile_id` immediately usable with `generate_speech` — thanks @paoloantinori! (#1194)
 
 ### Docs
 
