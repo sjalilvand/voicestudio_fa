@@ -1077,6 +1077,7 @@
     "back": "← 返回",
     "refresh": "重新整理",
     "add_videos": "新增影片",
+    "file_input_label": "選擇影片檔案",
     "cancel": "取消",
     "delete": "刪除",
     "no_active": "沒有活躍的工作。",

@@ -626,6 +626,7 @@ export default function StoriesEditor({ profiles = [] }) {
             type="file"
             accept=".txt,.srt,text/plain"
             onChange={onImportFile}
+            aria-label={t('stories.import')}
             hidden
           />
 

@@ -284,6 +284,7 @@ export default function ImportsZone({ t, playingId, loadingPreviewId, onPlayGall
             type="file"
             accept="audio/*,video/*"
             hidden
+            aria-label={t('gallery.upload', { defaultValue: 'Upload file' })}
             onChange={handleUpload}
           />
           <Button
@@ -299,6 +300,9 @@ export default function ImportsZone({ t, playingId, loadingPreviewId, onPlayGall
             type="file"
             accept=".ovsvoice,.omnivoice"
             hidden
+            aria-label={t('gallery.import_persona', {
+              defaultValue: 'Import a .ovsvoice persona bundle',
+            })}
             onChange={handlePersonaImport}
           />
           <Button

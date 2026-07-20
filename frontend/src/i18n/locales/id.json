@@ -1077,6 +1077,7 @@
     "back": "← Kembali",
     "refresh": "Segarkan",
     "add_videos": "Tambahkan Video",
+    "file_input_label": "Pilih file video",
     "cancel": "Batalkan",
     "delete": "Hapus",
     "no_active": "Tidak ada pekerjaan aktif.",
