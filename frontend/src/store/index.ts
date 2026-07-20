@@ -108,6 +108,10 @@ export const useAppStore = create<AppStore>()(
         sidebarTab: s.sidebarTab,
         uiScale: s.uiScale,
         locale: s.locale,
+        // Explicit-choice + first-run-offer flags must survive restarts, or the
+        // one-time "Switch to English?" offer would re-nag on every launch.
+        localeChosen: s.localeChosen,
+        langPromptSeen: s.langPromptSeen,
         theme: s.theme,
         font: s.font,
         // Generate-tab prefs — users expect their synthesis knobs to stick.

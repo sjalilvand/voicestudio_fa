@@ -503,6 +503,11 @@
     "no": "Nein, danke",
     "dismiss": "Schließen (Analytik bleibt aus)"
   },
+  "langPrompt": {
+    "offer": "OmniVoice wurde auf {{language}} geöffnet. Lieber Englisch?",
+    "switch": "Zu Englisch wechseln",
+    "keep": "Bei {{language}} bleiben"
+  },
   "credentials": {
     "title": "Anmeldeinformationen",
     "desc": "API-Schlüssel und Token werden <1>nur für diese Sitzung</1> festgelegt. Um die Persistenz über Neustarts hinweg zu gewährleisten, legen Sie sie als Umgebungsvariablen in Ihrem Shell-Profil fest.",

@@ -503,6 +503,11 @@
     "no": "Không, cảm ơn",
     "dismiss": "Đóng (phân tích vẫn tắt)"
   },
+  "langPrompt": {
+    "offer": "OmniVoice đã mở bằng {{language}}. Bạn muốn dùng tiếng Anh?",
+    "switch": "Chuyển sang tiếng Anh",
+    "keep": "Giữ {{language}}"
+  },
   "credentials": {
     "title": "Thông tin xác thực",
     "desc": "Khóa API và mã thông báo chỉ được đặt <1>cho phiên này</1>. Để duy trì sự kiên trì trong quá trình khởi động lại, hãy đặt chúng làm biến môi trường trong cấu hình shell của bạn.",

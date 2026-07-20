@@ -503,6 +503,11 @@
     "no": "Não, obrigado",
     "dismiss": "Dispensar (a análise continua desativada)"
   },
+  "langPrompt": {
+    "offer": "O OmniVoice abriu em {{language}}. Prefere inglês?",
+    "switch": "Mudar para inglês",
+    "keep": "Manter {{language}}"
+  },
   "credentials": {
     "title": "Credenciais",
     "desc": "As chaves e tokens de API são definidos <1>apenas para esta sessão</1>. Para persistência entre reinicializações, defina-as como variáveis ​​de ambiente em seu perfil de shell.",

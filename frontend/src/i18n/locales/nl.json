@@ -503,6 +503,11 @@
     "no": "Nee, bedankt",
     "dismiss": "Sluiten (analytics blijft uit)"
   },
+  "langPrompt": {
+    "offer": "OmniVoice is geopend in het {{language}}. Liever Engels?",
+    "switch": "Overschakelen naar Engels",
+    "keep": "{{language}} behouden"
+  },
   "credentials": {
     "title": "Referenties",
     "desc": "API-sleutels en tokens zijn <1>alleen voor deze sessie ingesteld</1>. Voor persistentie bij opnieuw opstarten stelt u ze in als omgevingsvariabelen in uw shell-profiel.",

@@ -46,6 +46,7 @@ import GlobalAudioPlayer from './components/GlobalAudioPlayer';
 import BackendCrashNotice from './components/BackendCrashNotice';
 import BackendStartFailureNotice from './components/BackendStartFailureNotice';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
+import LanguageSwitchPrompt from './components/LanguageSwitchPrompt';
 import { initAnalyticsFromConsent } from './utils/analytics';
 import BackendRestartBanner from './components/BackendRestartBanner';
 // RemoteAuthGate is mounted at the true outermost provider in main-app.jsx so
@@ -1384,6 +1385,11 @@ function App() {
           first-run consent step. Renders nothing once any choice was made.
           Source builds get it too since #1193 (in-repo default token). */}
       <AnalyticsConsentBanner />
+
+      {/* First-run-only offer to switch the UI to English (#1215). Shows only
+          when the auto-detected language isn't English AND the user hasn't
+          chosen a language — renders nothing otherwise. UI convenience only. */}
+      <LanguageSwitchPrompt />
 
       {/* #567's visible half: while the shell auto-restarts a dead backend
           (10–20 s), say so once — instead of every request surfacing its own

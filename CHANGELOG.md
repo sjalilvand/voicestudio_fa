@@ -31,6 +31,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - `parakeet-mlx` engine: Parakeet TDT v3 on Apple Silicon — 25 EU languages, word timestamps, ~2 GB, opt-in from Settings → Models, never auto-downloads (#1175)
 - First-run downloads race the direct GitHub path against the mirror and use whichever answers fastest (#1179)
 - First-run consent question for the existing opt-in analytics (two equal buttons, skip = no)
+- First run: when the app auto-opens in a non-English system language, a one-time, dismissible banner offers to switch the UI to English — shown only until you pick a language, never for English systems (#1215)
 - Source builds carry the publishable analytics token and get the same first-run consent ask as installers; opt-in events now note the install channel (installer / docker / source) — thanks @agudmund! (#1193)
 - Official Google Colab notebook (`notebooks/OmniVoice_Studio_Colab.ipynb`) — full app + API feature tour on a free T4
 - ROCm Docker image `ghcr.io/debpalash/omnivoice-studio:rocm` (+ `:stable-rocm`, `:X.Y.Z-rocm`) (#1165)

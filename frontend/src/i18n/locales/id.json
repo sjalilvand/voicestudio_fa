@@ -503,6 +503,11 @@
     "no": "Tidak, terima kasih",
     "dismiss": "Tutup (analitik tetap mati)"
   },
+  "langPrompt": {
+    "offer": "OmniVoice terbuka dalam {{language}}. Lebih suka bahasa Inggris?",
+    "switch": "Beralih ke bahasa Inggris",
+    "keep": "Tetap {{language}}"
+  },
   "credentials": {
     "title": "Kredensial",
     "desc": "Kunci dan token API disetel <1>hanya untuk sesi ini</1>. Untuk kegigihan saat memulai ulang, tetapkan variabel tersebut sebagai variabel lingkungan di profil shell Anda.",

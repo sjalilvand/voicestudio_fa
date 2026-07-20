@@ -503,6 +503,11 @@
     "no": "Non merci",
     "dismiss": "Fermer (l'analyse reste désactivée)"
   },
+  "langPrompt": {
+    "offer": "OmniVoice s'est ouvert en {{language}}. Vous préférez l'anglais ?",
+    "switch": "Passer à l'anglais",
+    "keep": "Garder {{language}}"
+  },
   "credentials": {
     "title": "Informations d'identification",
     "desc": "Les clés et jetons API sont définis <1>pour cette session uniquement</1>. Pour la persistance après les redémarrages, définissez-les comme variables d'environnement dans votre profil shell.",
