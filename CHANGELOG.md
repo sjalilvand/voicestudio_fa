@@ -52,6 +52,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 ### Fixed
 
 - A backend that fails to start now says why — exit code and error output, with actionable hints and a one-click report — instead of the evidence-free "Can't reach the local OmniVoice backend" (#1177)
+- Generation no longer crawls on CPU after a cancelled or failed dub: the TTS model is moved back to the GPU on every exit path, and each generation now verifies its own placement (#1191)
 - A generation queued behind a busy one no longer spends its timeout waiting: the budget starts when a GPU worker picks the job up, so a queued request can't be failed as "too heavy for the available compute" without having run (#1190)
 - One request's timeout no longer cancels unrelated jobs already waiting in the GPU queue (#1190)
 - Timeout messages stopped claiming capacity was restored automatically — the abandoned job keeps the device until it finishes, and the guidance now says to let it drain (#1190)

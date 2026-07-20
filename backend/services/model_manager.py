@@ -1594,6 +1594,14 @@ async def get_model():
     global model, _last_used
     _last_used = time.time()
     if model is not None:
+        # Placement self-heal (#1191). The ASR offload/restore pair below is a
+        # *balanced-call* contract, and any unbalanced path (abort, terminal
+        # error, client disconnect) used to leave the TTS model resident on CPU
+        # — where it stayed for EVERY later generation until the idle unload
+        # fired, at 10-50x the latency. Verifying placement here makes the
+        # contract unnecessary: a future unbalanced offload can no longer
+        # strand the model, because the next generation moves it back.
+        await _heal_tts_placement()
         return model
 
     async with _model_lock:
@@ -1935,6 +1943,112 @@ def restore_tts_after_asr():
             free_vram()
     except Exception as e:
         logger.warning("TTS restore to %s failed: %s", get_best_device(), e)
+
+
+def _first_param_device(obj):
+    """Device the weights of ``obj`` actually live on, or None if undeterminable.
+
+    The TTS runtime is a wrapper object, not necessarily an ``nn.Module``, so
+    fall back to the first sub-module that owns parameters. Never raises.
+    """
+    try:
+        params = getattr(obj, "parameters", None)
+        if callable(params):
+            for p in params():
+                return p.device
+    except Exception:  # noqa: BLE001 — a probe must never break generation
+        pass
+    try:
+        torch = _lazy_torch()
+        for v in vars(obj).values():
+            if isinstance(v, torch.nn.Module):
+                for p in v.parameters():
+                    return p.device
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
+def _stranded_tts_target():
+    """Target device string when the loaded TTS model is stranded off it, else None.
+
+    Ordered cheapest-first so the hot path (model already on the accelerator)
+    costs a single parameter probe: anything not sitting on CPU is by
+    definition not stranded, because the only thing that moves the model is
+    ``offload_tts_for_asr()`` and it only ever moves it to CPU.
+    """
+    m = model
+    if m is None:
+        return None
+    dev = _first_param_device(m)
+    if dev is None or getattr(dev, "type", None) != "cpu":
+        return None
+    if not _has_dedicated_vram():
+        # Unified memory / CPU-only: the offload RELEASES the model rather than
+        # moving it, and CPU is the legitimate home here. Nothing to heal.
+        return None
+    try:
+        target = get_best_device()
+    except Exception:  # noqa: BLE001
+        return None
+    return target if target in ("cuda", "xpu") else None
+
+
+def ensure_tts_on_device() -> bool:
+    """Move the TTS model back onto its target device if it was stranded on CPU.
+
+    Returns True when a move actually happened. Never raises — a failed move
+    just leaves the model on CPU, which is exactly the pre-fix behaviour
+    (slow), never a failed generation.
+    """
+    target = _stranded_tts_target()
+    m = model
+    if target is None or m is None:
+        return False
+    try:
+        logger.warning(
+            "TTS model found stranded on CPU (an ASR offload was never restored) — "
+            "moving it back to %s; generation would otherwise run 10-50x slower (#1191).",
+            target,
+        )
+        m.to(target)
+        free_vram()
+        return True
+    except Exception as e:  # noqa: BLE001
+        logger.warning("TTS placement self-heal to %s failed (staying on CPU): %s", target, e)
+        return False
+
+
+async def _heal_tts_placement() -> None:
+    """Async wrapper for :func:`ensure_tts_on_device` used by ``get_model()``.
+
+    The cheap mismatch probe runs inline; the rare actual move is dispatched to
+    the **GPU pool** so it serializes against in-flight inference — moving a
+    shared model's weights underneath a running ``generate()`` is the one way
+    this could make things worse than the bug it fixes. The pool that can
+    strand a model is always 1-worker (``offload_tts_for_asr`` only fires below
+    8 GB free VRAM, and ``_workers_for_free_vram`` gives such a host a single
+    worker), so occupying a slot is genuine mutual exclusion there.
+    """
+    if _stranded_tts_target() is None:
+        return
+    if threading.current_thread().name.startswith("gpu-pool"):
+        # Reached from a GPU-pool thread — OmniVoiceBackend._ensure_loaded()
+        # bootstraps a fresh loop with asyncio.run(get_model()) from inside
+        # generate(). We already hold the GPU slot, so we already have the
+        # exclusion the move needs; awaiting our own pool (or the model lock
+        # held by the loop that is waiting on us) would deadlock. Move inline.
+        ensure_tts_on_device()
+        return
+    async with _model_lock:
+        if _stranded_tts_target() is None:
+            return  # another caller healed it while we waited
+        try:
+            await asyncio.get_running_loop().run_in_executor(
+                _get_gpu_pool(), ensure_tts_on_device
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.warning("TTS placement self-heal could not run: %s", e)
 
 _diar_pipeline = None
 
