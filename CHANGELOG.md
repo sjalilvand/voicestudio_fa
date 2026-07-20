@@ -33,7 +33,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - Official Google Colab notebook (`notebooks/OmniVoice_Studio_Colab.ipynb`) — full app + API feature tour on a free T4
 - ROCm Docker image `ghcr.io/debpalash/omnivoice-studio:rocm` (+ `:stable-rocm`, `:X.Y.Z-rocm`) (#1165)
 - `OMNIVOICE_TRUSTED_NETWORKS` — comma-separated CIDRs exempted from the consumption auth gates (share PIN / API key / dictation WS); admin routes stay loopback-only (#1170)
-- Info/warn system notifications are dismissible (✕ on the note; persists across restarts). Errors stay until fixed, and a note that recurs with a new occurrence id — an unclean-shutdown record, say — re-notifies. Acting on the unclean-shutdown notice now acknowledges it server-side, like the crash notice always did
+- Info/warn system notifications are dismissible and stay dismissed across restarts; error-level notices can't be dismissed, and the unclean-shutdown notice is now acknowledged server-side — thanks @agudmund! (#1192)
 
 ### Docs
 

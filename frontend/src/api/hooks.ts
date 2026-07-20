@@ -95,8 +95,11 @@ export function useVisibleNotifications(enabled = true) {
   const query = useNotifications(enabled);
   const dismissed = useAppStore((s) => s.dismissedNotificationIds);
   const all = query.data?.notifications || [];
+  // A note is hidden only while it is *currently* dismissible: if a stable id
+  // ever escalates to error level, an old info/warn dismissal must not hide it.
   const notifications = all.filter(
-    (n: { id?: string }) => !n.id || !dismissed.includes(n.id),
+    (n: { id?: string; level?: string }) =>
+      !n.id || !isDismissibleNotification(n) || !dismissed.includes(n.id),
   );
   return { ...query, notifications };
 }
