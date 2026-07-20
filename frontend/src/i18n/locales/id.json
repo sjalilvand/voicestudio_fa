@@ -1430,6 +1430,7 @@
     "tryAgain": "Coba lagi",
     "openDocs": "Buka dokumen untuk kesalahan ini",
     "report": "Laporkan bug ini",
+    "report_failed": "Tidak dapat membuka laporan bug. Coba lagi, atau salin detail di atas ke isu baru.",
     "searchIssues": "Cari masalah serupa",
     "unexpected": "Kesalahan tak terduga: {{message}}"
   },

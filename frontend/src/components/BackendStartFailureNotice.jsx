@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Button, Dialog } from '../ui';
 import { openExternal } from '../api/external';
 import { buildBugReportUrl } from '../utils/bugReport';
@@ -107,7 +108,11 @@ export default function BackendStartFailureNotice() {
                     }),
                   );
                 } catch (e) {
+                  // Never fail silently: the user clicked Report and must be
+                  // told it didn't open, plus the fallback that still works
+                  // (the diagnosis is on screen above, ready to copy).
                   console.warn('[BackendStartFailureNotice] report action failed', e);
+                  toast.error(t('errors.report_failed'));
                 }
               }}
             >

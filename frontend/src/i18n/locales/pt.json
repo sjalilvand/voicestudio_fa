@@ -1430,6 +1430,7 @@
     "tryAgain": "Tente novamente",
     "openDocs": "Abra documentos para este erro",
     "report": "Relatar este bug",
+    "report_failed": "Não foi possível abrir o relatório de bug. Tente novamente ou copie os detalhes acima para uma nova issue.",
     "searchIssues": "Pesquisar problemas semelhantes",
     "unexpected": "Erro inesperado: {{message}}"
   },

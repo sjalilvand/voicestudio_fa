@@ -1430,6 +1430,7 @@
     "tryAgain": "Réessayez",
     "openDocs": "Ouvrir la documentation pour cette erreur",
     "report": "Signaler ce bogue",
+    "report_failed": "Impossible d'ouvrir le rapport de bug. Réessayez, ou copiez les détails ci-dessus dans un nouveau ticket.",
     "searchIssues": "Rechercher des problèmes similaires",
     "unexpected": "Erreur inattendue : {{message}}"
   },

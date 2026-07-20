@@ -1430,6 +1430,7 @@
     "tryAgain": "Riprova",
     "openDocs": "Apri i documenti per questo errore",
     "report": "Segnala questo bug",
+    "report_failed": "Impossibile aprire la segnalazione. Riprova oppure copia i dettagli qui sopra in una nuova issue.",
     "searchIssues": "Cerca problemi simili",
     "unexpected": "Errore imprevisto: {{message}}"
   },

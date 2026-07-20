@@ -1430,6 +1430,7 @@
     "tryAgain": "再試一次",
     "openDocs": "開啟此錯誤的文檔",
     "report": "回報此錯誤",
+    "report_failed": "無法開啟錯誤回報。請重試，或將上方的詳細資訊複製到新的 issue 中。",
     "searchIssues": "搜尋類似問題",
     "unexpected": "未預期的錯誤：{{message}}"
   },

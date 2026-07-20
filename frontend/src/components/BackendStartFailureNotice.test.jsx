@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import BackendStartFailureNotice from './BackendStartFailureNotice';
 import { buildBugReportUrl } from '../utils/bugReport';
 import { openExternal } from '../api/external';
+import toast from 'react-hot-toast';
 
 // #1177: the shell's `Failed { message }` diagnosis must reach the user AFTER
 // the bootstrap splash is gone — the window in which a start failure used to
@@ -12,6 +13,9 @@ vi.mock('../utils/bugReport', () => ({
 }));
 vi.mock('../api/external', () => ({
   openExternal: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('react-hot-toast', () => ({
+  default: { error: vi.fn(), success: vi.fn() },
 }));
 
 const DIAGNOSIS =
@@ -70,6 +74,21 @@ describe('BackendStartFailureNotice', () => {
     // The evidence rides along on the report, not just on screen.
     expect(buildBugReportUrl.mock.calls[0][0].error.message).toContain('ModuleNotFoundError');
     expect(openExternal).toHaveBeenCalledWith('https://example.test/issues/new');
+  });
+
+  // A Report click that silently does nothing reads as a broken button — the
+  // user is left with no idea whether anything was sent.
+  it('tells the user when the report cannot be opened', async () => {
+    buildBugReportUrl.mockRejectedValueOnce(new Error('no browser'));
+    render(<BackendStartFailureNotice />);
+    emit(DIAGNOSIS);
+    fireEvent.click(await screen.findByRole('button', { name: /see why/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /report/i }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    // …and the diagnosis stays on screen, so the fallback (copy it manually)
+    // the message points at is actually available.
+    expect((await screen.findByRole('dialog')).textContent).toContain('ModuleNotFoundError');
   });
 
   it('ignores an empty diagnosis', () => {

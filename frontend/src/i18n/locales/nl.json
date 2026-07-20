@@ -1430,6 +1430,7 @@
     "tryAgain": "Probeer het opnieuw",
     "openDocs": "Open documenten voor deze fout",
     "report": "Deze bug melden",
+    "report_failed": "Kon het bugrapport niet openen. Probeer het opnieuw of kopieer de details hierboven naar een nieuwe issue.",
     "searchIssues": "Vergelijkbare problemen zoeken",
     "unexpected": "Onverwachte fout: {{message}}"
   },

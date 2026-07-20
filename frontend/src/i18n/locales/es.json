@@ -1430,6 +1430,7 @@
     "tryAgain": "Inténtalo de nuevo",
     "openDocs": "Abrir documentos para este error",
     "report": "Informar de este error",
+    "report_failed": "No se pudo abrir el informe de error. Inténtalo de nuevo o copia los detalles anteriores en una incidencia nueva.",
     "searchIssues": "Buscar problemas similares",
     "unexpected": "Error inesperado: {{message}}"
   },

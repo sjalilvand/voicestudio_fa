@@ -1436,6 +1436,7 @@
     "tryAgain": "再试一次",
     "openDocs": "打开此错误的文档",
     "report": "报告此错误",
+    "report_failed": "无法打开错误报告。请重试，或将上面的详细信息复制到新的 issue 中。",
     "searchIssues": "搜索类似问题",
     "unexpected": "意外错误：{{message}}"
   },

@@ -1861,6 +1861,7 @@
     "tryAgain": "Try again",
     "openDocs": "Open docs for this error",
     "report": "Report this bug",
+    "report_failed": "Couldn't open the bug report. Please try again, or copy the details above into a new issue.",
     "searchIssues": "Search similar issues",
     "unexpected": "Unexpected error: {{message}}"
   },

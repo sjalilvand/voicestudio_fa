@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Button, Dialog } from '../ui';
 import {
   acknowledgeBackendCrash,
@@ -117,7 +118,10 @@ export default function BackendCrashNotice() {
                     await buildBugReportUrl({ title: `[Crash] Backend died (${exit})` }),
                   );
                 } catch (e) {
+                  // Same class as BackendStartFailureNotice (#1177): a Report
+                  // click that silently does nothing reads as a broken button.
                   console.warn('[BackendCrashNotice] report action failed', e);
+                  toast.error(t('errors.report_failed'));
                 }
               }}
             >

@@ -1430,6 +1430,7 @@
     "tryAgain": "Tekrar dene",
     "openDocs": "Bu hata için dokümanları açın",
     "report": "Bu hatayı bildir",
+    "report_failed": "Hata raporu açılamadı. Tekrar deneyin veya yukarıdaki ayrıntıları yeni bir konuya kopyalayın.",
     "searchIssues": "Benzer sorunları ara",
     "unexpected": "Beklenmeyen hata: {{message}}"
   },

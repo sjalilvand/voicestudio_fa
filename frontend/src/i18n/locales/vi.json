@@ -1430,6 +1430,7 @@
     "tryAgain": "Thử lại",
     "openDocs": "Mở tài liệu cho lỗi này",
     "report": "Báo cáo lỗi này",
+    "report_failed": "Không mở được báo cáo lỗi. Vui lòng thử lại, hoặc sao chép chi tiết ở trên vào một issue mới.",
     "searchIssues": "Tìm các vấn đề tương tự",
     "unexpected": "Lỗi không mong muốn: {{message}}"
   },

@@ -141,8 +141,10 @@ if (status !== 0 && status !== 130) {
       "   even when the window never appears:",
       "     • the cargo/tauri output above (a Rust panic or a webview error)",
       "     • omnivoice.log and backend_err.log in your OmniVoice data folder",
+      // Paths mirror resolveDataDir() in dev-backend.mjs, itself a mirror of
+      // backend/core/config.py::get_app_data_dir — keep all three in step.
       "       (macOS: ~/Library/Application Support/OmniVoice,",
-      "        Linux: ~/.local/share/OmniVoice,",
+      "        Linux: ~/.omnivoice,",
       "        Windows: %APPDATA%\\OmniVoice)",
       "",
       "   Common causes and fixes: docs/install/troubleshooting.md",
