@@ -228,8 +228,9 @@ export default function SetupWizard({ onReady }) {
 
   // Whether to insert the analytics consent step. Resolved once at mount
   // (the user is on step 0 when this lands, so indices never shift underfoot):
-  // only when the build CAN send (token baked in) and the user was never
-  // asked. Source builds have no destination — asking would be dishonest.
+  // only when the build CAN send and the user was never asked. Since #1193
+  // every build has a destination (in-repo default token), so source builds
+  // get this same ask; skipping the wizard still means analytics stays off.
   const [askConsent, setAskConsent] = useState(false);
   useEffect(() => {
     let cancelled = false;
@@ -379,7 +380,12 @@ export default function SetupWizard({ onReady }) {
               style={{ '--rise': 1 }}
             >
               <SectionHead>{t('firstrun.stage_models', 'Models & engines')}</SectionHead>
-              <WizardLibrary />
+              {/* The list scrolls; the Continue footer below stays pinned —
+                  same pattern as the System step. Without this clamp the
+                  curated rows push the footer below the viewport. */}
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <WizardLibrary />
+              </div>
               {!modelsReady && status?.missing?.length > 0 && (
                 <p className="m-0 text-xs leading-snug text-warn">
                   {t('setup.still_needed')} {status.missing.map((m) => m.label).join(', ')}
