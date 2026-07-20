@@ -17,9 +17,26 @@
  * Outside the Tauri shell (browser dev, Docker, LAN share) there is no shell
  * to ask — the stage is 'unknown' and callers keep today's short-retry
  * behavior.
+ *
+ * #1177: the shell's `BootstrapStage::Failed { message }` carries the WHOLE
+ * diagnosis — exit code plus a ~30-line stderr tail, or the precise reason
+ * `ensure_venv_ready` refused (Intel Mac, a failed `uv sync`, a blocked
+ * GitHub). This module used to return only the stage tag and throw that
+ * message away, so every backend-start failure collapsed into apiFetch's
+ * evidence-free "Can't reach the local OmniVoice backend" — the shell knew
+ * exactly what went wrong and the frontend structurally could not read it.
+ * The stage probe now returns `{ stage, message }` and callers surface it.
  */
 
 export type BackendLifecycleStage = 'ready' | 'starting' | 'failed' | 'unknown';
+
+/** The shell's lifecycle answer: the coarse stage plus, for `failed`, the
+ * shell's full diagnosis (exit code + stderr tail, or the venv-bootstrap
+ * reason). `message` is null for every non-failed stage. */
+export interface BackendLifecycle {
+  stage: BackendLifecycleStage;
+  message: string | null;
+}
 
 function inTauri(): boolean {
   const w = window as unknown as Record<string, unknown> | undefined;
@@ -38,15 +55,43 @@ export function classifyBootstrapStage(stage: string | null | undefined): Backen
   return 'starting';
 }
 
-/** The shell's current backend stage, or 'unknown' outside Tauri / on IPC
- * failure. Never throws. */
-export async function backendLifecycleStage(): Promise<BackendLifecycleStage> {
-  if (!inTauri()) return 'unknown';
+/** Normalize the shell's `bootstrap_status` payload into a BackendLifecycle.
+ * Only a `failed` stage keeps a message — a stray message on any other stage
+ * would be stale evidence attached to a healthy backend. Pure + exported for
+ * unit tests. */
+export function _toLifecycle(res: { stage?: string; message?: unknown } | null): BackendLifecycle {
+  const stage = classifyBootstrapStage(res?.stage);
+  if (stage !== 'failed') return { stage, message: null };
+  const message = typeof res?.message === 'string' ? res.message.trim() : '';
+  return { stage, message: message || null };
+}
+
+/** The shell's current backend lifecycle, or `{ stage: 'unknown' }` outside
+ * Tauri / on IPC failure. Never throws.
+ *
+ * When the shell reports `failed` without a message — the stage was set by a
+ * path that had no diagnosis, or a later transition already moved past the
+ * Failed that did — fall back to the shell's RETAINED last failure
+ * (`last_bootstrap_failure`, #1177). A precise diagnosis outranks silence,
+ * and the retained copy is the only place it still exists. */
+export async function backendLifecycleStage(): Promise<BackendLifecycle> {
+  if (!inTauri()) return { stage: 'unknown', message: null };
   try {
     const { invoke } = await import('@tauri-apps/api/core');
-    const res = (await invoke('bootstrap_status')) as { stage?: string } | null;
-    return classifyBootstrapStage(res?.stage);
+    const res = (await invoke('bootstrap_status')) as { stage?: string; message?: unknown } | null;
+    const lifecycle = _toLifecycle(res);
+    if (lifecycle.stage === 'failed' && !lifecycle.message) {
+      try {
+        const retained = (await invoke('last_bootstrap_failure')) as string | null;
+        if (typeof retained === 'string' && retained.trim()) {
+          return { stage: 'failed', message: retained.trim() };
+        }
+      } catch {
+        /* older shell / IPC gone — the stage alone still ends the retry loop */
+      }
+    }
+    return lifecycle;
   } catch {
-    return 'unknown';
+    return { stage: 'unknown', message: null };
   }
 }

@@ -391,6 +391,7 @@ pub fn run() {
         .plugin(tauri_plugin_positioner::init())
         .invoke_handler(tauri::generate_handler![
             bootstrap::bootstrap_status,
+            bootstrap::last_bootstrap_failure,
             bootstrap::get_bootstrap_logs,
             bootstrap::retry_bootstrap,
             bootstrap::clean_and_retry_bootstrap,

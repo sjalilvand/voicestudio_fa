@@ -12,12 +12,17 @@ vi.mock('../utils/backendLifecycle', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../utils/backendLifecycle')>();
   return {
     ...actual,
-    backendLifecycleStage: vi.fn().mockResolvedValue('unknown'),
+    backendLifecycleStage: vi.fn().mockResolvedValue({ stage: 'unknown', message: null }),
   };
 });
 
 const stageMock = vi.mocked(backendLifecycleStage);
 const CASCADE_MS = 400 + 900 + 1600;
+
+/** The lifecycle probe answers `{ stage, message }` since #1177 — `message`
+ * carries the shell's diagnosis and is null for every non-failed stage. */
+const lc = (stage: string, message: string | null = null) =>
+  ({ stage, message }) as Awaited<ReturnType<typeof backendLifecycleStage>>;
 
 describe('apiFetch — lifecycle-aware restart wait', () => {
   afterEach(() => {
@@ -25,7 +30,7 @@ describe('apiFetch — lifecycle-aware restart wait', () => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     stageMock.mockReset();
-    stageMock.mockResolvedValue('unknown');
+    stageMock.mockResolvedValue(lc('unknown'));
   });
 
   it('keeps retrying while the shell says the backend is starting, then succeeds', async () => {
@@ -40,7 +45,7 @@ describe('apiFetch — lifecycle-aware restart wait', () => {
       .mockRejectedValueOnce(new TypeError('Failed to fetch'))
       .mockResolvedValue(new Response('ok', { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
-    stageMock.mockResolvedValue('starting');
+    stageMock.mockResolvedValue(lc('starting'));
 
     const p = apiFetch('/model/status');
     const assertion = expect(p).resolves.toMatchObject({ status: 200 });
@@ -53,7 +58,7 @@ describe('apiFetch — lifecycle-aware restart wait', () => {
   it('fails promptly when the shell says the backend start failed', async () => {
     vi.useFakeTimers();
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
-    stageMock.mockResolvedValue('failed');
+    stageMock.mockResolvedValue(lc('failed'));
 
     const p = apiFetch('/model/status');
     const assertion = expect(p).rejects.toMatchObject({
@@ -77,9 +82,9 @@ describe('apiFetch — lifecycle-aware restart wait', () => {
     // The supervisor hasn't ticked yet: still 'ready' for the first few polls,
     // then it notices the death and flips to 'starting'.
     stageMock
-      .mockResolvedValueOnce('ready')
-      .mockResolvedValueOnce('ready')
-      .mockResolvedValue('starting');
+      .mockResolvedValueOnce(lc('ready'))
+      .mockResolvedValueOnce(lc('ready'))
+      .mockResolvedValue(lc('starting'));
 
     const p = apiFetch('/generate');
     // Never settles into the generic error — it keeps waiting.
@@ -97,7 +102,7 @@ describe('apiFetch — lifecycle-aware restart wait', () => {
   it('still gives up when a "ready" backend stays unreachable past the reconcile window', async () => {
     vi.useFakeTimers();
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
-    stageMock.mockResolvedValue('ready'); // shell insists it's fine; it never recovers
+    stageMock.mockResolvedValue(lc('ready')); // shell insists it's fine; it never recovers
 
     const p = apiFetch('/model/status');
     const assertion = expect(p).rejects.toMatchObject({ status: 0 });
@@ -109,7 +114,7 @@ describe('apiFetch — lifecycle-aware restart wait', () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
     vi.stubGlobal('fetch', fetchMock);
-    stageMock.mockResolvedValue('unknown');
+    stageMock.mockResolvedValue(lc('unknown'));
 
     const p = apiFetch('/model/status');
     const assertion = expect(p).rejects.toMatchObject({ status: 0 });
@@ -157,13 +162,13 @@ describe('apiFetch — an alive-but-unresponsive backend says so (#1113)', () =>
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     stageMock.mockReset();
-    stageMock.mockResolvedValue('unknown');
+    stageMock.mockResolvedValue(lc('unknown'));
   });
 
   it('names the wedged-job case instead of claiming it stopped', async () => {
     vi.useFakeTimers();
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
-    stageMock.mockResolvedValue('ready'); // the shell KNOWS the process is alive
+    stageMock.mockResolvedValue(lc('ready')); // the shell KNOWS the process is alive
 
     const p = apiFetch('/generate');
     const assertion = expect(p).rejects.toMatchObject({
@@ -177,7 +182,7 @@ describe('apiFetch — an alive-but-unresponsive backend says so (#1113)', () =>
   it('still says "starting up or stopped" when the shell has no idea (no shell)', async () => {
     vi.useFakeTimers();
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
-    stageMock.mockResolvedValue('unknown');
+    stageMock.mockResolvedValue(lc('unknown'));
 
     const p = apiFetch('/model/status');
     const assertion = expect(p).rejects.toMatchObject({
