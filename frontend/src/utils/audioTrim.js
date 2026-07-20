@@ -206,6 +206,18 @@ export async function decodeToMonoLowRate(file, targetSR = 22050) {
   return buf;
 }
 
+// Playhead position for a selection [startSec, endSec] that has been playing
+// for `elapsedSec`, measured on the SAME decoded-buffer timeline the waveform
+// and the exported slice use. Kept pure so the preview and the export can never
+// drift onto different timelines again (#1210). Looping wraps within the
+// selection; non-looping clamps at the selection end.
+export function selectionPlayhead(startSec, endSec, elapsedSec, loop) {
+  const seg = Math.max(1e-6, endSec - startSec);
+  const e = Math.max(0, elapsedSec);
+  if (loop) return startSec + (e % seg);
+  return Math.min(endSec, startSec + e);
+}
+
 export function sliceToMono(buffer, startSec, endSec) {
   const sr = buffer.sampleRate;
   const s0 = Math.floor(startSec * sr);
