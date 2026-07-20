@@ -462,6 +462,12 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
             {waiter, fut}, timeout=queue_timeout,
             return_when=asyncio.FIRST_COMPLETED,
         )
+    except asyncio.CancelledError:
+        # Caller went away (client disconnect). We stop awaiting the job, so
+        # make sure its eventual result/exception is consumed rather than
+        # logged as "Future exception was never retrieved".
+        fut.add_done_callback(_swallow_abandoned)
+        raise
     finally:
         waiter.cancel()
 
@@ -470,7 +476,7 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
         # concurrent future cancels cleanly) and report saturation, NOT a
         # too-heavy job.
         fut.cancel()
-        _swallow_abandoned(fut)
+        fut.add_done_callback(_swallow_abandoned)
         stats = gpu_pool_stats(ex)
         logger.warning(
             "%s waited %.0fs for a free GPU worker and was never started "
@@ -490,7 +496,9 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
     try:
         return await asyncio.wait_for(fut, timeout=timeout)
     except asyncio.TimeoutError:
-        _swallow_abandoned(fut)
+        # wait_for already cancelled the asyncio wrapper; the worker thread
+        # keeps going regardless. Consume whatever it eventually produces.
+        fut.add_done_callback(_swallow_abandoned)
         _reset = getattr(ex, "reset", None)
         if callable(_reset):
             try:
