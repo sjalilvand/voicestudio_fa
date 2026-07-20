@@ -33,14 +33,27 @@ export default function GenerationProgress({ t, chapters = [], assembling = fals
   ).length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  // Elapsed off a mount-time ref; a 1 s tick re-renders so the clock ticks.
+  // Elapsed off a mount-time ref; a 1 s tick re-renders so the clock ticks —
+  // but only while work remains. Once every chapter is terminal and nothing is
+  // assembling, freeze the clock at the finish time and stop the interval, so a
+  // still-mounted panel doesn't keep counting past the real elapsed. (The parent
+  // also unmounts this on cancel/fail, which clears the interval either way.)
+  const terminal = total > 0 && completed === total && !assembling;
   const startRef = useRef(performance.now());
+  const frozenRef = useRef(null);
   const [, setTick] = useState(0);
   useEffect(() => {
+    if (terminal) {
+      if (frozenRef.current == null) frozenRef.current = performance.now();
+      return undefined;
+    }
+    frozenRef.current = null; // resumed (e.g. a re-render that adds chapters)
     const id = setInterval(() => setTick((n) => n + 1), 1000);
     return () => clearInterval(id);
-  }, []);
-  const elapsed = (performance.now() - startRef.current) / 1000;
+  }, [terminal]);
+  const elapsed =
+    ((terminal ? (frozenRef.current ?? performance.now()) : performance.now()) - startRef.current) /
+    1000;
   // ETA = average time per completed chapter × chapters remaining. Only once at
   // least one chapter has finished and some remain (else it's meaningless).
   const eta =
