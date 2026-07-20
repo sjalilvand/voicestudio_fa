@@ -2103,6 +2103,8 @@
     "failed_note": "{{count}} capitoli non riusciti: fai di nuovo clic su Crea per riprovare solo quelli.",
     "import": "Importa",
     "import_failed": "Importazione non riuscita: {{message}}",
+    "download_sample": "Script di esempio",
+    "download_sample_hint": "Scarica uno script dimostrativo con capitoli, voci per personaggio, pause e tag espressivi",
     "lexicon": "Pronuncia",
     "lex_word": "Parola",
     "lex_say": "Dillo come...",

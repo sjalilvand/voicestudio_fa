@@ -2103,6 +2103,8 @@
     "failed_note": "{{count}} hoofdstuk(ken) mislukt — klik nogmaals op Maken om alleen die hoofdstukken opnieuw te proberen.",
     "import": "Importeren",
     "import_failed": "Importeren mislukt: {{message}}",
+    "download_sample": "Voorbeeldscript",
+    "download_sample_hint": "Download een demoscript met hoofdstukken, stemmen per personage, pauzes en expressieve tags",
     "lexicon": "Uitspraak",
     "lex_word": "Woord",
     "lex_say": "Zeg het als...",

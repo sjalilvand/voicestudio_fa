@@ -2103,6 +2103,8 @@
     "failed_note": "{{count}} capítulo(s) falhou — clique em Criar novamente para tentar novamente apenas aqueles.",
     "import": "Importar",
     "import_failed": "Falha na importação: {{message}}",
+    "download_sample": "Script de exemplo",
+    "download_sample_hint": "Baixe um script de demonstração com capítulos, vozes por personagem, pausas e tags expressivas",
     "lexicon": "Pronúncia",
     "lex_word": "Palavra",
     "lex_say": "Diga como…",

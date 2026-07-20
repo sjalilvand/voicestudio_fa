@@ -315,6 +315,15 @@ export default function AudiobookTab({ profiles = [] }) {
               style={{ display: 'none' }}
             />
           </label>
+          <a
+            className={buttonVariants({ variant: 'subtle', size: 'omniMd' })}
+            href="/sample-audiobook.md"
+            download="sample-audiobook.md"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            title={t('audiobook.download_sample_hint')}
+          >
+            <Download size={14} /> {t('audiobook.download_sample')}
+          </a>
           <Button variant="subtle" onClick={onPreview} disabled={!canRun}>
             {planLoading ? <Loader size={14} className="spin" /> : null}{' '}
             {t('audiobook.preview_plan')}

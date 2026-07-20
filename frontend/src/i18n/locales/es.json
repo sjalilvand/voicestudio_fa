@@ -2103,6 +2103,8 @@
     "failed_note": "{{count}} capítulo(s) fallaron: haga clic en Crear nuevamente para volver a intentarlo solo con esos.",
     "import": "Importar",
     "import_failed": "Error de importación: {{message}}",
+    "download_sample": "Guion de ejemplo",
+    "download_sample_hint": "Descarga un guion de demostración con capítulos, voces por personaje, pausas y etiquetas expresivas",
     "lexicon": "Pronunciación",
     "lex_word": "palabra",
     "lex_say": "Dígalo como...",

@@ -191,6 +191,8 @@
     "failed_note": "{{count}} chapter(s) failed — click Create again to retry just those.",
     "import": "Import",
     "import_failed": "Import failed: {{message}}",
+    "download_sample": "Sample script",
+    "download_sample_hint": "Download a demo script that shows chapters, per-character voices, pauses, and expressive tags",
     "lexicon": "Pronunciation",
     "lex_word": "Word",
     "lex_say": "Say it as…",

@@ -2103,6 +2103,8 @@
     "failed_note": "{{count}} 章が失敗しました — [作成] をもう一度クリックして、それらの章だけを再試行します。",
     "import": "インポート",
     "import_failed": "インポートに失敗しました: {{message}}",
+    "download_sample": "サンプルスクリプト",
+    "download_sample_hint": "章、キャラクターごとの音声、間、表現タグを示すデモ用スクリプトをダウンロードします",
     "lexicon": "発音",
     "lex_word": "言葉",
     "lex_say": "こう言ってください…",

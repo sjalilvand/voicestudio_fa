@@ -2103,6 +2103,8 @@
     "failed_note": "{{count}} 챕터 실패 — 해당 챕터만 다시 시도하려면 생성을 다시 클릭하세요.",
     "import": "가져오기",
     "import_failed": "가져오기 실패: {{message}}",
+    "download_sample": "샘플 스크립트",
+    "download_sample_hint": "챕터, 캐릭터별 음성, 일시정지, 표현 태그를 보여주는 데모 스크립트를 다운로드합니다",
     "lexicon": "발음",
     "lex_word": "말씀",
     "lex_say": "다음과 같이 말하세요…",

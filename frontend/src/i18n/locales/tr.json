@@ -2103,6 +2103,8 @@
     "failed_note": "{{count}} bölüm başarısız oldu — yalnızca bunları yeniden denemek için tekrar Oluştur'a tıklayın.",
     "import": "İthalat",
     "import_failed": "İçe aktarma başarısız oldu: {{message}}",
+    "download_sample": "Örnek betik",
+    "download_sample_hint": "Bölümleri, karakter başına sesleri, duraklamaları ve ifade etiketlerini gösteren bir demo betiği indirin",
     "lexicon": "Telaffuz",
     "lex_word": "kelime",
     "lex_say": "Şöyle söyle…",
