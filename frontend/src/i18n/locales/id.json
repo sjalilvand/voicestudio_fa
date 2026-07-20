@@ -2072,6 +2072,7 @@
     "export_error": "Kamus tidak dapat diekspor."
   },
   "audiobook": {
+    "output": "Keluaran",
     "title": "Buku Audio",
     "subtitle": "Ubah skrip yang dibatasi bab menjadi buku audio m4b yang diberi bab.",
     "script": "naskah",
@@ -2108,6 +2109,9 @@
     "failed_note": "{{count}} bab gagal — klik Buat lagi untuk mencoba lagi bab tersebut.",
     "import": "Impor",
     "import_failed": "Impor gagal: {{message}}",
+    "load_sample": "Muat contoh",
+    "load_sample_hint": "Isi editor dengan skrip demo yang menampilkan bab, suara per karakter, jeda, dan tag ekspresif — coba sebelum kerja sungguhan",
+    "load_sample_confirm": "Ganti skrip saat ini dengan contoh?",
     "lexicon": "Pengucapan",
     "lex_word": "Kata",
     "lex_say": "Katakan sebagai…",

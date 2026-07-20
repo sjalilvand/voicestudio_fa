@@ -2072,6 +2072,7 @@
     "export_error": "Kunde inte exportera ordboken."
   },
   "audiobook": {
+    "output": "Utdata",
     "title": "Ljudbok",
     "subtitle": "Förvandla ett kapitelavgränsat manus till en kapitelinställd m4b-ljudbok.",
     "script": "Manus",
@@ -2108,6 +2109,9 @@
     "failed_note": "{{count}} kapitel misslyckades — klicka på Skapa igen för att försöka igen.",
     "import": "Importera",
     "import_failed": "Import misslyckades: {{message}}",
+    "load_sample": "Ladda exempel",
+    "load_sample_hint": "Fyll editorn med ett demoskript som visar kapitel, röster per karaktär, pauser och uttrycksfulla taggar — testa före ditt riktiga arbete",
+    "load_sample_confirm": "Ersätta det aktuella skriptet med exemplet?",
     "lexicon": "Uttal",
     "lex_word": "Ord",
     "lex_say": "Säg det som...",

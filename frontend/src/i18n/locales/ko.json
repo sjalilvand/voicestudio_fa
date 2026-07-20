@@ -2072,6 +2072,7 @@
     "export_error": "사전을 내보낼 수 없습니다."
   },
   "audiobook": {
+    "output": "출력",
     "title": "Audiobook",
     "subtitle": "장으로 구분된 스크립트를 장으로 구분된 m4b 오디오북으로 바꿔보세요.",
     "script": "스크립트",
@@ -2108,6 +2109,9 @@
     "failed_note": "{{count}} 챕터 실패 — 해당 챕터만 다시 시도하려면 생성을 다시 클릭하세요.",
     "import": "가져오기",
     "import_failed": "가져오기 실패: {{message}}",
+    "load_sample": "샘플 불러오기",
+    "load_sample_hint": "챕터, 캐릭터별 음성, 일시정지, 표현 태그를 보여주는 데모 스크립트를 편집기에 채웁니다 — 실제 작업 전에 사용해 보세요",
+    "load_sample_confirm": "현재 스크립트를 샘플로 바꿀까요?",
     "lexicon": "발음",
     "lex_word": "말씀",
     "lex_say": "다음과 같이 말하세요…",

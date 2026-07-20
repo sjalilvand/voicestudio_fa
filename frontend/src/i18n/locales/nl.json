@@ -2072,6 +2072,7 @@
     "export_error": "Kan het woordenboek niet exporteren."
   },
   "audiobook": {
+    "output": "Uitvoer",
     "title": "Audioboek",
     "subtitle": "Verander een door hoofdstukken gescheiden script in een m4b-audioboek in hoofdstukken.",
     "script": "Script",
@@ -2108,6 +2109,9 @@
     "failed_note": "{{count}} hoofdstuk(ken) mislukt — klik nogmaals op Maken om alleen die hoofdstukken opnieuw te proberen.",
     "import": "Importeren",
     "import_failed": "Importeren mislukt: {{message}}",
+    "load_sample": "Voorbeeld laden",
+    "load_sample_hint": "Vul de editor met een demoscript dat hoofdstukken, stemmen per personage, pauzes en expressieve tags toont — probeer het vóór je echte werk",
+    "load_sample_confirm": "Huidig script vervangen door het voorbeeld?",
     "lexicon": "Uitspraak",
     "lex_word": "Woord",
     "lex_say": "Zeg het als...",

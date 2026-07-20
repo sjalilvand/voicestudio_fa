@@ -2072,6 +2072,7 @@
     "export_error": "Sözlük dışa aktarılamadı."
   },
   "audiobook": {
+    "output": "Çıktı",
     "title": "Sesli kitap",
     "subtitle": "Bölümle ayrılmış bir komut dosyasını bölümlere ayrılmış bir m4b sesli kitaba dönüştürün.",
     "script": "Senaryo",
@@ -2108,6 +2109,9 @@
     "failed_note": "{{count}} bölüm başarısız oldu — yalnızca bunları yeniden denemek için tekrar Oluştur'a tıklayın.",
     "import": "İthalat",
     "import_failed": "İçe aktarma başarısız oldu: {{message}}",
+    "load_sample": "Örneği yükle",
+    "load_sample_hint": "Düzenleyiciyi bölümleri, karakter başına sesleri, duraklamaları ve ifade etiketlerini gösteren bir demo betiğiyle doldurun — gerçek işinizden önce deneyin",
+    "load_sample_confirm": "Mevcut betik örnekle değiştirilsin mi?",
     "lexicon": "Telaffuz",
     "lex_word": "kelime",
     "lex_say": "Şöyle söyle…",

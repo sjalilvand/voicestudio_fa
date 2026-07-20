@@ -2072,6 +2072,7 @@
     "export_error": "Das Wörterbuch konnte nicht exportiert werden."
   },
   "audiobook": {
+    "output": "Ausgabe",
     "title": "Hörbuch",
     "subtitle": "Verwandeln Sie ein durch Kapitel getrenntes Skript in ein in Kapitel unterteiltes m4b-Hörbuch.",
     "script": "Skript",
@@ -2108,6 +2109,9 @@
     "failed_note": "{{count}} Kapitel sind fehlgeschlagen – klicken Sie erneut auf „Erstellen“, um nur diese erneut zu versuchen.",
     "import": "Importieren",
     "import_failed": "Import fehlgeschlagen: {{message}}",
+    "load_sample": "Beispiel laden",
+    "load_sample_hint": "Fülle den Editor mit einem Demo-Skript, das Kapitel, Stimmen pro Figur, Pausen und Ausdruckstags zeigt — vor der echten Arbeit ausprobieren",
+    "load_sample_confirm": "Aktuelles Skript durch das Beispiel ersetzen?",
     "lexicon": "Aussprache",
     "lex_word": "Wort",
     "lex_say": "Sagen Sie es als…",

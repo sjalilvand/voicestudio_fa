@@ -2079,6 +2079,7 @@
     "export_error": "无法导出词典。"
   },
   "audiobook": {
+    "output": "输出",
     "title": "有声读物",
     "subtitle": "将章节分隔的脚本转换为章节化的 m4b 有声读物。",
     "script": "脚本",
@@ -2115,6 +2116,9 @@
     "failed_note": "{{count}} 章节失败 - 再次单击“创建”以重试这些章节。",
     "import": "进口",
     "import_failed": "导入失败：{{message}}",
+    "load_sample": "载入示例",
+    "load_sample_hint": "用演示脚本填充编辑器，展示章节、各角色语音、停顿和表现标签——正式工作前先试试",
+    "load_sample_confirm": "用示例替换当前脚本吗？",
     "lexicon": "发音",
     "lex_word": "词",
     "lex_say": "说成...",

@@ -2072,6 +2072,7 @@
     "export_error": "無法匯出字典。"
   },
   "audiobook": {
+    "output": "輸出",
     "title": "有聲書",
     "subtitle": "將章節分隔的腳本轉換為章節化的 m4b 有聲書。",
     "script": "腳本",
@@ -2108,6 +2109,9 @@
     "failed_note": "{{count}} 章節失敗 - 再次按一下「建立」以重試這些章節。",
     "import": "進口",
     "import_failed": "導入失敗：{{message}}",
+    "load_sample": "載入範例",
+    "load_sample_hint": "以示範腳本填入編輯器，展示章節、各角色語音、停頓與表現標籤——正式工作前先試試",
+    "load_sample_confirm": "以範例取代目前的腳本嗎？",
     "lexicon": "發音",
     "lex_word": "字",
     "lex_say": "說成...",

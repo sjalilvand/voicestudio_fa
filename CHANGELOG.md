@@ -24,6 +24,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 - Settings → Models: grouped catalog (TTS / ASR / Dictation / Diarisation), "recommended for this machine" chips, incompatible models collapsed behind a toggle
 - Only the TTS model (~2.4 GB) is required on first run; ASR picks are curated per platform via `curated_on` in `models.yaml` (MLX on Apple Silicon, CT2+Turbo on CUDA, PyTorch on ROCm, int8 on CPU)
+- Audiobook tab tidied up: the settings column is now grouped into compact collapsible sections (Output / Book details / Pronunciation / Markup), so script + voice + Create sit up top instead of a long scroll — same controls, denser layout (#1214)
 
 ### Added
 
@@ -40,6 +41,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - `clone_voice` MCP tool — AI agents can clone a new voice from a base64 reference audio sample; returns a `profile_id` immediately usable with `generate_speech` — thanks @paoloantinori! (#1194)
 - Dub tab: **Paste Translation** — paste a translation made elsewhere (ChatGPT, DeepL, a human) as subtitles, numbered lines, or plain lines; it maps onto the existing segments with a before→after preview, keeping timings and the source transcript intact (#1203)
 - Audiobook tab: **Production Overrides** (position/class temperature, steps, guidance, postprocess, seed) for expressive narration, plus IndexTTS2 emotion controls and a "vary repeated lines" toggle — defaults reproduce today's renders exactly (#1208)
+- Audiobook tab: a **Load sample** button that fills the editor with a demo story — chapters, per-character `[voice:]`, `[pause]`, `[slow]`/`[fast]`/`[emphasis]`/`[spell]`, and reaction tags — so first-timers can hit Create and hear every capability before their real work (#1214)
 
 ### CI
 

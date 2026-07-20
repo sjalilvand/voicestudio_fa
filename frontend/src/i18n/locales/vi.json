@@ -2072,6 +2072,7 @@
     "export_error": "Không thể xuất từ điển."
   },
   "audiobook": {
+    "output": "Đầu ra",
     "title": "Sách nói",
     "subtitle": "Biến tập lệnh được phân cách theo chương thành sách nói m4b được chia theo chương.",
     "script": "kịch bản",
@@ -2108,6 +2109,9 @@
     "failed_note": "{{count}} chương không thành công — hãy nhấp vào Tạo lại để thử lại những chương đó.",
     "import": "Nhập khẩu",
     "import_failed": "Nhập không thành công: {{message}}",
+    "load_sample": "Tải mẫu",
+    "load_sample_hint": "Điền vào trình soạn thảo một kịch bản demo minh họa các chương, giọng theo nhân vật, khoảng dừng và thẻ biểu cảm — thử trước khi làm thật",
+    "load_sample_confirm": "Thay kịch bản hiện tại bằng mẫu?",
     "lexicon": "phát âm",
     "lex_word": "từ",
     "lex_say": "Nói như…",

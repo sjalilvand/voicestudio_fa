@@ -2072,6 +2072,7 @@
     "export_error": "Impossible d'exporter le dictionnaire."
   },
   "audiobook": {
+    "output": "Sortie",
     "title": "Livre audio",
     "subtitle": "Transformez un script délimité par des chapitres en un livre audio m4b chapitré.",
     "script": "Scénario",
@@ -2108,6 +2109,9 @@
     "failed_note": "Échec de {{count}} chapitre(s) : cliquez à nouveau sur Créer pour réessayer uniquement ceux-là.",
     "import": "Importer",
     "import_failed": "Échec de l'importation : {{message}}",
+    "load_sample": "Charger l'exemple",
+    "load_sample_hint": "Remplissez l'éditeur avec un script de démonstration montrant chapitres, voix par personnage, pauses et balises expressives — à essayer avant votre vrai travail",
+    "load_sample_confirm": "Remplacer le script actuel par l'exemple ?",
     "lexicon": "Prononciation",
     "lex_word": "Mot",
     "lex_say": "Dites-le comme…",

@@ -2072,6 +2072,7 @@
     "export_error": "Impossibile esportare il dizionario."
   },
   "audiobook": {
+    "output": "Uscita",
     "title": "Audiolibro",
     "subtitle": "Trasforma uno script delimitato da capitoli in un audiolibro m4b suddiviso in capitoli.",
     "script": "Copione",
@@ -2108,6 +2109,9 @@
     "failed_note": "{{count}} capitoli non riusciti: fai di nuovo clic su Crea per riprovare solo quelli.",
     "import": "Importa",
     "import_failed": "Importazione non riuscita: {{message}}",
+    "load_sample": "Carica esempio",
+    "load_sample_hint": "Riempi l'editor con uno script dimostrativo che mostra capitoli, voci per personaggio, pause e tag espressivi — provalo prima del lavoro vero",
+    "load_sample_confirm": "Sostituire lo script attuale con l'esempio?",
     "lexicon": "Pronuncia",
     "lex_word": "Parola",
     "lex_say": "Dillo come...",

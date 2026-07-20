@@ -2072,6 +2072,7 @@
     "export_error": "Nie udało się wyeksportować słownika."
   },
   "audiobook": {
+    "output": "Wyjście",
     "title": "Książka audio",
     "subtitle": "Zamień skrypt podzielony na rozdziały w audiobook m4b podzielony na rozdziały.",
     "script": "Skrypt",
@@ -2108,6 +2109,9 @@
     "failed_note": "{{count}} rozdziały nie powiodły się — kliknij Utwórz ponownie, aby ponowić tylko te rozdziały.",
     "import": "Importuj",
     "import_failed": "Import nie powiódł się: {{message}}",
+    "load_sample": "Wczytaj przykład",
+    "load_sample_hint": "Wypełnij edytor przykładowym skryptem pokazującym rozdziały, głosy postaci, pauzy i znaczniki ekspresji — wypróbuj przed właściwą pracą",
+    "load_sample_confirm": "Zastąpić bieżący skrypt przykładem?",
     "lexicon": "Wymowa",
     "lex_word": "Słowo",
     "lex_say": "Powiedz to jako…",

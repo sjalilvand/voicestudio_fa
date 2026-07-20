@@ -2072,6 +2072,7 @@
     "export_error": "No se pudo exportar el diccionario."
   },
   "audiobook": {
+    "output": "Salida",
     "title": "Audiolibro",
     "subtitle": "Convierta un guión delimitado por capítulos en un audiolibro m4b dividido en capítulos.",
     "script": "Guión",
@@ -2108,6 +2109,9 @@
     "failed_note": "{{count}} capítulo(s) fallaron: haga clic en Crear nuevamente para volver a intentarlo solo con esos.",
     "import": "Importar",
     "import_failed": "Error de importación: {{message}}",
+    "load_sample": "Cargar ejemplo",
+    "load_sample_hint": "Rellena el editor con un guion de demostración que muestra capítulos, voces por personaje, pausas y etiquetas expresivas — pruébalo antes de tu trabajo real",
+    "load_sample_confirm": "¿Reemplazar el guion actual por el ejemplo?",
     "lexicon": "Pronunciación",
     "lex_word": "palabra",
     "lex_say": "Dígalo como...",
