@@ -496,7 +496,8 @@ shell's own restart budget) instead of erroring, and show a single pinned
 "backend is back" confirmation. A backend that is *truly* dead (the shell gave
 up, or you're not running the desktop app) still errors promptly. If you see
 the error persistently on a current build, that's section **14** (a wedged GPU
-job) or the crash notice above — not this window.
+job), section **14d** (the backend never started), or the crash notice above —
+not this window.
 
 ## 14c. "Can't reach the backend" in a browser — `bun run dev`, Docker, or LAN share
 
@@ -538,6 +539,44 @@ Where the forensics live: `omnivoice.log`, `run_sentinel.json`, and
 (`~/Library/Application Support/OmniVoice` on macOS, `%APPDATA%\OmniVoice` on
 Windows, `~/.omnivoice` on Linux, or `$OMNIVOICE_DATA_DIR` — the Docker image
 mounts it as the `omnivoice_data` volume).
+
+## 14d. "Can't reach the local OmniVoice backend" when the backend never started
+
+**Symptom (older builds):** the app opened, but every action failed with
+**"Can't reach the local OmniVoice backend — it may still be starting up, or it
+stopped."** Waiting and retrying never helped, and the message gave you nothing
+to act on or to put in a bug report.
+
+**Cause:** the message was wrong *and* evidence-free. The backend was not
+starting up and had not merely stopped — it had **failed to start**, and the
+desktop shell knew exactly why: it holds the exit code plus a ~30-line tail of
+the backend's stderr, or the specific reason setup refused (an Intel Mac, a
+failed `uv sync`, a network blocking GitHub). The UI could not read that
+diagnosis, so every distinct failure collapsed into the same generic sentence.
+
+**Fixed:** the app now surfaces the shell's own diagnosis. When a request fails
+because the backend could not start, you get:
+
+- **"The backend couldn't start"** instead of "it may still be starting up" —
+  it names what happened rather than guessing.
+- **A "See why" notice** whose details dialog shows the exit code and the
+  captured stderr tail verbatim, plus the same actionable hints the setup
+  screen gives (broken venv, blocked GitHub, port in use, unsupported Intel
+  Mac — where retrying can never help, no Retry is suggested).
+- **A "Report" button** that opens a prefilled GitHub issue with that output
+  already attached, with your home directory path replaced by `~` and any
+  credential-shaped strings redacted before anything leaves the machine.
+
+The reason is also **retained** across a Retry or an automatic respawn, so a
+later attempt can't erase the diagnosis of the first one.
+
+**From source (`bun desktop`)?** If the app builds but the window never comes
+up, the shell now prints the exit code and where to look (the cargo/tauri
+output above it, plus `omnivoice.log` and `backend_err.log` in your OmniVoice
+data folder) instead of exiting silently.
+
+**Still stuck?** Open the details, copy the output, and file it with **Report**
+— that output is the thing that makes the failure diagnosable.
 
 ## 15. Stuck at "preparing" forever after a crash / BSOD (Windows)
 

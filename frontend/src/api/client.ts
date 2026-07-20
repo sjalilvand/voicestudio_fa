@@ -17,7 +17,8 @@ import {
   crashAge,
   type BackendCrashMarker,
 } from '../utils/backendCrash.ts';
-import { backendLifecycleStage } from '../utils/backendLifecycle.ts';
+import { backendLifecycleStage, type BackendLifecycle } from '../utils/backendLifecycle.ts';
+import { scrubText } from '../utils/scrub.js';
 import { deploymentMode } from '../utils/deploymentMode.ts';
 import {
   lastBackendContact,
@@ -235,7 +236,10 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
   // exhausted the reconcile window, the process is demonstrably ALIVE and simply
   // not answering — a different failure from "it stopped", and it deserves a
   // different sentence (#1113).
-  let lastStage = 'unknown';
+  // #1177: `.message` carries the shell's full diagnosis for a `failed` stage
+  // (exit code + stderr tail, or the venv-bootstrap reason) — the evidence the
+  // generic "can't reach" message used to throw away.
+  let lastStage: BackendLifecycle = { stage: 'unknown', message: null };
   const startedAt = Date.now();
   for (let attempt = 0; ; attempt++) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -272,7 +276,7 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
         } catch {
           /* never let the lifecycle probe mask the real transport error */
         }
-        const stage = lastStage;
+        const stage = lastStage.stage;
         if (stage === 'starting') {
           await new Promise((r) => setTimeout(r, RESTART_WAIT_INTERVAL_MS));
           continue;
@@ -328,7 +332,7 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
       // false, and it sends them to restart the app when the real cause is a
       // wedged job holding the worker (a heavy generate/transcribe on a small
       // GPU). Name what actually happened and point at the thing that fixes it.
-      if (lastStage === 'ready') {
+      if (lastStage.stage === 'ready') {
         throw new ApiError(
           'The local OmniVoice backend is running but stopped responding. This usually means a ' +
             'job (a generation or a transcription) is stuck holding the engine — often a model ' +
@@ -336,6 +340,37 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
             'for the last thing it was doing; a smaller model or engine (Settings → Models) is ' +
             'the usual fix. Restarting the app clears it for now.',
           { status: 0, detail: failureDetail },
+        );
+      }
+      // #1177: the shell says the backend START FAILED — and it knows exactly
+      // why. `BootstrapStage::Failed { message }` carries the exit code plus a
+      // ~30-line stderr tail, or the precise reason `ensure_venv_ready`
+      // refused (Intel Mac unsupported, a failed `uv sync`, a blocked GitHub).
+      // That diagnosis used to die inside the shell: the lifecycle probe
+      // returned only the stage tag, so EVERY start-failure mode collapsed
+      // into the evidence-free "may still be starting up, or it stopped" —
+      // which is also simply wrong (it is not starting, and it will not come
+      // back on its own). Surface the real reason, and raise the notice so the
+      // full output is one click from the "report" affordance.
+      //
+      // Scrubbed here rather than at the report boundary: this string is the
+      // Error message, and it flows into breadcrumbs, logs and any future
+      // telemetry — the home path must be gone before it is anywhere but the
+      // shell (buildBugReportUrl scrubs again; belt and braces).
+      if (lastStage.stage === 'failed' && lastStage.message) {
+        const diagnosis = scrubText(lastStage.message).trim();
+        try {
+          window.dispatchEvent(
+            new CustomEvent('ov:backend-start-failed', { detail: { message: diagnosis } }),
+          );
+        } catch {
+          /* no window (tests) — the ApiError below still carries the diagnosis */
+        }
+        throw new ApiError(
+          'The local OmniVoice backend could not start, so this request had nowhere to go. ' +
+            `The app reported:\n\n${diagnosis}\n\n` +
+            'Open the details for the full output, or use Retry / Clean & Retry in Settings → Logs → Backend.',
+          { status: 0, detail: { ...failureDetail, startFailure: diagnosis } },
         );
       }
       // #1164: outside the desktop shell there is no supervisor and no

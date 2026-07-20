@@ -2218,5 +2218,13 @@
     "download": "Télécharger {{label}} ({{size}} Go)",
     "started": "Téléchargement de {{label}} — suivez la progression dans Réglages → Modèles, puis réessayez.",
     "install_failed": "Impossible de démarrer le téléchargement : {{message}}"
+  },
+  "backend_start_failure": {
+    "notice": "Le backend d'OmniVoice n'a pas pu démarrer — rien ne fonctionnera tant qu'il ne démarre pas.",
+    "view": "Voir pourquoi",
+    "title": "Le backend n'a pas pu démarrer",
+    "intro": "L'application a enregistré ceci en tentant de démarrer le backend. Joindre cette sortie à un rapport nous aide à corriger le problème.",
+    "output_title": "Ce que l'application a signalé",
+    "retry_hint": "Essayez « Réessayer » dans Paramètres → Journaux → Backend. En cas de nouvel échec, « Nettoyer et réessayer » reconstruit l'environnement de zéro."
   }
 }

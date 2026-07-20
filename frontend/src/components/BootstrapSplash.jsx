@@ -121,8 +121,12 @@ const MAX_LOG_LINES = 200;
 
 /** Scan logs + error message for known failure patterns and return i18n keys
  *  for actionable hints (resolved with `t(...)` at render — English defaults
- *  live in locales/en.json under `bootstrap.hint_*`). */
-function detectHints(message, logs) {
+ *  live in locales/en.json under `bootstrap.hint_*`).
+ *
+ *  Exported (#1177) so BackendStartFailureNotice — which surfaces the SAME
+ *  `BootstrapStage::Failed { message }` after the splash is gone — offers the
+ *  same actionable next steps instead of re-deriving a second, drifting set. */
+export function detectHints(message, logs = []) {
   const hints = [];
   const all = (message || '') + '\n' + logs.map((l) => l.line).join('\n');
   if (/README\.md/i.test(all)) hints.push('bootstrap.hint_readme');

@@ -2218,5 +2218,13 @@
     "download": "{{label}} indir ({{size}} GB)",
     "started": "{{label}} indiriliyor — ilerlemeyi Ayarlar → Modeller'den izleyin, sonra yeniden deneyin.",
     "install_failed": "İndirme başlatılamadı: {{message}}"
+  },
+  "backend_start_failure": {
+    "notice": "OmniVoice arka ucu başlatılamadı — başlayana kadar hiçbir şey çalışmaz.",
+    "view": "Nedenini gör",
+    "title": "Arka uç başlatılamadı",
+    "intro": "Uygulama bunu arka ucu başlatmaya çalışırken kaydetti. Bu çıktıyı bir raporla göndermeniz sorunu düzeltmemize yardımcı olur.",
+    "output_title": "Uygulamanın bildirdiği",
+    "retry_hint": "Ayarlar → Günlükler → Arka uç bölümünden \"Yeniden dene\"yi deneyin. Yine başarısız olursa \"Temizle ve yeniden dene\" ortamı sıfırdan kurar."
   }
 }

@@ -2218,5 +2218,13 @@
     "download": "下載 {{label}}（{{size}} GB）",
     "started": "正在下載 {{label}} — 請在 設定 → 模型 中查看進度，完成後再試一次。",
     "install_failed": "無法開始下載：{{message}}"
+  },
+  "backend_start_failure": {
+    "notice": "OmniVoice 後端無法啟動 — 在它啟動之前無法執行任何功能。",
+    "view": "查看原因",
+    "title": "後端無法啟動",
+    "intro": "這是應用程式嘗試啟動後端時記錄的內容。在回報中附上這段輸出有助於我們修正問題。",
+    "output_title": "應用程式回報的內容",
+    "retry_hint": "請在 設定 → 記錄 → 後端 中嘗試「重試」。若再次失敗，「清理並重試」會從頭重建執行環境。"
   }
 }

@@ -2218,5 +2218,13 @@
     "download": "Tải xuống {{label}} ({{size}} GB)",
     "started": "Đang tải {{label}} — theo dõi tiến trình trong Cài đặt → Mô hình, sau đó thử lại.",
     "install_failed": "Không thể bắt đầu tải xuống: {{message}}"
+  },
+  "backend_start_failure": {
+    "notice": "Backend của OmniVoice không khởi động được — sẽ không có gì chạy cho đến khi nó khởi động.",
+    "view": "Xem lý do",
+    "title": "Backend không khởi động được",
+    "intro": "Ứng dụng đã ghi lại điều này khi cố khởi động backend. Gửi kèm kết quả này trong báo cáo sẽ giúp chúng tôi khắc phục.",
+    "output_title": "Nội dung ứng dụng báo về",
+    "retry_hint": "Hãy thử \"Thử lại\" trong Cài đặt → Nhật ký → Backend. Nếu vẫn lỗi, \"Dọn dẹp & Thử lại\" sẽ dựng lại môi trường từ đầu."
   }
 }

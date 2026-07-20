@@ -48,10 +48,38 @@ pub struct BootstrapState {
     pub logs: Arc<Mutex<Vec<LogPayload>>>,
 }
 
+/// The last `Failed { message }` diagnosis this session, retained after the
+/// stage itself has moved on (#1177).
+///
+/// A `Failed` stage is not durable: a Retry sets `Checking`, the supervisor
+/// sets `StartingBackend` before a respawn, and either overwrite the only copy
+/// of the reason the previous start failed. When a later attempt then fails
+/// with a vaguer message — or the frontend asks after the transition — that
+/// diagnosis is simply gone, and the user is back to an evidence-free "can't
+/// reach the backend". Keeping the last one costs a string and is the
+/// difference between a diagnosable report and an unactionable one.
+static LAST_FAILURE: Mutex<Option<String>> = Mutex::new(None);
+
 pub fn set_stage(state: &Arc<Mutex<BootstrapStage>>, stage: BootstrapStage) {
+    if let BootstrapStage::Failed { message } = &stage {
+        if let Ok(mut last) = LAST_FAILURE.lock() {
+            *last = Some(message.clone());
+        }
+    }
     if let Ok(mut guard) = state.lock() {
         *guard = stage;
     }
+}
+
+/// The retained diagnosis, for a frontend that reached a `failed` stage whose
+/// own message is already gone. `None` when nothing has failed this session.
+pub fn last_failure_message() -> Option<String> {
+    LAST_FAILURE.lock().ok().and_then(|g| g.clone())
+}
+
+#[tauri::command]
+pub fn last_bootstrap_failure() -> Option<String> {
+    last_failure_message()
 }
 
 /// True when the stage already carries a `Failed` diagnosis.
@@ -2333,5 +2361,31 @@ mod failure_preservation_tests {
     #[test]
     fn intel_mac_message_matches_what_the_ui_hint_matcher_greps_for() {
         assert!(INTEL_MAC_UNSUPPORTED_MSG.contains("Intel Macs can't run the local AI backend"));
+    }
+
+    /// #1177: a `Failed` diagnosis must outlive the stage that carried it.
+    ///
+    /// `Failed` is not durable — a Retry sets `Checking` and the supervisor
+    /// sets `StartingBackend` before every respawn, each overwriting the only
+    /// copy of why the last start failed. The frontend asks for the diagnosis
+    /// when a request finally gives up, which is routinely AFTER one of those
+    /// transitions; without retention it finds nothing and the user is back to
+    /// an evidence-free "can't reach the backend".
+    #[test]
+    fn a_failed_diagnosis_survives_later_stage_transitions() {
+        let s = stage(BootstrapStage::Checking);
+        set_stage(&s, BootstrapStage::Failed { message: "uv sync failed: no wheel".into() });
+        assert_eq!(last_failure_message().as_deref(), Some("uv sync failed: no wheel"));
+
+        // The supervisor moves on to a respawn — the stage stops being Failed…
+        set_stage(&s, BootstrapStage::StartingBackend);
+        assert!(!already_diagnosed(&s));
+        // …but the reason is still retrievable.
+        assert_eq!(last_failure_message().as_deref(), Some("uv sync failed: no wheel"));
+
+        // A newer failure replaces the older one (the newest is the actionable
+        // one; a stale reason would misdiagnose the current state).
+        set_stage(&s, BootstrapStage::Failed { message: INTEL_MAC_UNSUPPORTED_MSG.to_string() });
+        assert_eq!(last_failure_message().as_deref(), Some(INTEL_MAC_UNSUPPORTED_MSG));
     }
 }

@@ -2218,5 +2218,13 @@
     "download": "{{label}} downloaden ({{size}} GB)",
     "started": "{{label}} wordt gedownload — volg de voortgang in Instellingen → Modellen en probeer het daarna opnieuw.",
     "install_failed": "Kon de download niet starten: {{message}}"
+  },
+  "backend_start_failure": {
+    "notice": "De OmniVoice-backend kon niet starten — tot die tijd werkt er niets.",
+    "view": "Bekijk waarom",
+    "title": "De backend kon niet starten",
+    "intro": "De app legde dit vast tijdens het starten van de backend. Deze uitvoer meesturen in een melding helpt ons het op te lossen.",
+    "output_title": "Wat de app meldde",
+    "retry_hint": "Probeer \"Opnieuw\" in Instellingen → Logboeken → Backend. Mislukt het weer, dan bouwt \"Opschonen en opnieuw\" de omgeving helemaal opnieuw op."
   }
 }

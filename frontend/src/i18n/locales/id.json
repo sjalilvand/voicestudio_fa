@@ -2218,5 +2218,13 @@
     "download": "Unduh {{label}} ({{size}} GB)",
     "started": "Mengunduh {{label}} — pantau progresnya di Pengaturan → Model, lalu coba lagi.",
     "install_failed": "Tidak dapat memulai unduhan: {{message}}"
+  },
+  "backend_start_failure": {
+    "notice": "Backend OmniVoice gagal dijalankan — tidak ada yang bisa berjalan sampai backend hidup.",
+    "view": "Lihat alasannya",
+    "title": "Backend gagal dijalankan",
+    "intro": "Aplikasi merekam ini saat mencoba menjalankan backend. Menyertakan keluaran ini dalam laporan membantu kami memperbaikinya.",
+    "output_title": "Yang dilaporkan aplikasi",
+    "retry_hint": "Coba \"Coba lagi\" di Pengaturan → Log → Backend. Jika gagal lagi, \"Bersihkan & Coba lagi\" akan membangun ulang lingkungan dari awal."
   }
 }

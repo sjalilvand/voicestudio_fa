@@ -50,6 +50,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
+- A backend that fails to start now says why — exit code and error output, with actionable hints and a one-click report — instead of the evidence-free "Can't reach the local OmniVoice backend" (#1177)
 - Subtitle parsing no longer stalls on a blank-line-heavy `.srt`: the timing-line regex backtracked across newlines, so a mis-saved export could pin an import for hours (#1203)
 - A broken ASR engine's fallback could silently auto-download multi-GB weights — every fallback now passes the same no-download preflight and shows the download CTA instead (#1189)
 - Dub transcription releases the ASR model from VRAM on every exit — crashes, early errors, and client disconnects included (#1175)

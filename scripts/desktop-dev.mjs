@@ -124,4 +124,30 @@ if (res.error) {
   console.error(`❌ failed to launch tauri dev: ${res.error.message}`);
   process.exit(1);
 }
-process.exit(res.status ?? 1);
+// #1177: "builds but won't launch" (reported on Discord) is the from-source
+// twin of the packaged app's evidence-free "Can't reach the local OmniVoice
+// backend": cargo compiles fine, the shell exits non-zero, and this script
+// used to forward the bare status and say NOTHING — leaving the user with a
+// silent exit code and nowhere to look. Point at the two places that actually
+// hold the reason. A clean exit (Ctrl-C / closing the window) stays silent.
+const status = res.status ?? 1;
+if (status !== 0 && status !== 130) {
+  console.error(
+    [
+      "",
+      `❌ the desktop shell exited with code ${status}.`,
+      "",
+      "   The reason is in one of these — the shell logs the backend's failure",
+      "   even when the window never appears:",
+      "     • the cargo/tauri output above (a Rust panic or a webview error)",
+      "     • omnivoice.log and backend_err.log in your OmniVoice data folder",
+      "       (macOS: ~/Library/Application Support/OmniVoice,",
+      "        Linux: ~/.local/share/OmniVoice,",
+      "        Windows: %APPDATA%\\OmniVoice)",
+      "",
+      "   Common causes and fixes: docs/install/troubleshooting.md",
+      "",
+    ].join("\n"),
+  );
+}
+process.exit(status);

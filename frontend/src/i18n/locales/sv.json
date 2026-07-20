@@ -2218,5 +2218,13 @@
     "download": "Ladda ner {{label}} ({{size}} GB)",
     "started": "Laddar ner {{label}} — följ förloppet i Inställningar → Modeller och försök sedan igen.",
     "install_failed": "Kunde inte starta nedladdningen: {{message}}"
+  },
+  "backend_start_failure": {
+    "notice": "OmniVoices backend kunde inte starta — inget fungerar förrän den gör det.",
+    "view": "Se varför",
+    "title": "Backend kunde inte starta",
+    "intro": "Appen fångade detta när den försökte starta backend. Att bifoga utdatan i en rapport hjälper oss att åtgärda felet.",
+    "output_title": "Vad appen rapporterade",
+    "retry_hint": "Prova \"Försök igen\" under Inställningar → Loggar → Backend. Misslyckas det igen bygger \"Rensa och försök igen\" om miljön från grunden."
   }
 }

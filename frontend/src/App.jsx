@@ -44,6 +44,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import FloatingPill from './components/FloatingPill';
 import GlobalAudioPlayer from './components/GlobalAudioPlayer';
 import BackendCrashNotice from './components/BackendCrashNotice';
+import BackendStartFailureNotice from './components/BackendStartFailureNotice';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
 import { initAnalyticsFromConsent } from './utils/analytics';
 import BackendRestartBanner from './components/BackendRestartBanner';
@@ -1373,6 +1374,11 @@ function App() {
       {/* #941: honest surfacing of backend process crashes (exit code +
           stderr tail from the shell's crash marker), with ack-on-view. */}
       <BackendCrashNotice />
+
+      {/* #1177: the shell's `Failed { message }` diagnosis for a backend that
+          could not START, surfaced after the splash is gone — the case that
+          used to collapse into the evidence-free "can't reach the backend". */}
+      <BackendStartFailureNotice />
 
       {/* One-time analytics consent ask for installs that predate the
           first-run consent step. Renders nothing once any choice was made.

@@ -1878,6 +1878,14 @@
     "stderr_title": "Last error output (stderr)",
     "no_stderr": "No error output was captured."
   },
+  "backend_start_failure": {
+    "notice": "OmniVoice's backend couldn't start — nothing can run until it does.",
+    "view": "See why",
+    "title": "The backend couldn't start",
+    "intro": "The app captured this while trying to start the backend. Including this output in a report helps us fix it.",
+    "output_title": "What the app reported",
+    "retry_hint": "Try \"Retry\" in Settings → Logs → Backend. If it fails again, \"Clean & Retry\" rebuilds the environment from scratch."
+  },
   "backendUnreachable": {
     "contact_recent": "It was answering {{ago}} ago and then stopped responding — it most likely crashed or was killed mid-request.",
     "contact_never": "It has not answered at all this session — it may never have started.",
