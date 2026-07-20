@@ -116,6 +116,7 @@ export default function BatchAddDialog({
           accept="video/*"
           multiple
           className="hidden"
+          aria-label={t('batch.file_input_label')}
           onChange={(e) => {
             const added = Array.from(e.target.files);
             if (added.length) setFiles((prev) => [...prev, ...added]);

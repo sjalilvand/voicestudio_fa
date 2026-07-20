@@ -1036,6 +1036,7 @@
     "back": "← 返回",
     "refresh": "刷新",
     "add_videos": "添加视频",
+    "file_input_label": "选择视频文件",
     "cancel": "取消",
     "delete": "删除",
     "no_active": "暂无进行中的任务。",

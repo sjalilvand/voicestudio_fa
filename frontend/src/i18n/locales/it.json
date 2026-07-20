@@ -1077,6 +1077,7 @@
     "back": "← Indietro",
     "refresh": "Aggiorna",
     "add_videos": "Aggiungi video",
+    "file_input_label": "Scegli file video",
     "cancel": "Annulla",
     "delete": "Elimina",
     "no_active": "Nessun lavoro attivo.",

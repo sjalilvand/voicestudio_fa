@@ -1336,6 +1336,7 @@
     "back": "← Back",
     "refresh": "Refresh",
     "add_videos": "Add Videos",
+    "file_input_label": "Choose video files",
     "cancel": "Cancel",
     "delete": "Delete",
     "no_active": "No active jobs.",
