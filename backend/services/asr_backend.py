@@ -2509,7 +2509,10 @@ def load_active_asr_backend(*, asr_pipe=None) -> ASRBackend:
         backend = get_active_asr_backend(asr_pipe=asr_pipe)
         bid = getattr(backend, "id", "?")
         if tried:
-            missing = asr_model_missing_error()
+            # Preflight the SPECIFIC candidate about to load — not the global
+            # selection, which can disagree when an asr_pipe steers
+            # get_active_asr_backend (Greptile review, #1198).
+            missing = asr_model_missing_error(backend_id=bid)
             if missing is not None:
                 raise ASRModelMissingError(missing)
         try:
@@ -2970,12 +2973,15 @@ def _fw_repo(name: str) -> str | None:
     return name if "/" in name else _FW_ALIAS_REPOS.get(name.lower())
 
 
-def _offline_asr_repo() -> str | None:
+def _offline_asr_repo(backend_id: str | None = None) -> str | None:
     """The HF repo the active *offline* (dub/batch) ASR backend would download
     on first load, or None when the selection can't be preflighted (FunASR /
     NeMo / Moonshine / OpenAI-compat are explicit opt-ins — stay out of the
-    way there)."""
-    bid = active_backend_id()
+    way there). ``backend_id`` pins the check to a specific backend — the
+    fallback loop in :func:`load_active_asr_backend` passes the candidate it
+    is actually about to load, which can differ from ``active_backend_id()``
+    when a preloaded ``asr_pipe`` steers selection (Greptile review, #1198)."""
+    bid = backend_id or active_backend_id()
     if bid == "whisperx":
         return _fw_repo(os.environ.get("ASR_MODEL_WHISPERX", "large-v3"))
     if bid in ("faster-whisper", "faster-whisper-isolated"):
@@ -3089,7 +3095,8 @@ def _repo_installed(repo: str) -> bool:
 
 
 def asr_model_missing_error(*, purpose: str = "transcribe",
-                            sherpa_model_id: str | None = None) -> dict | None:
+                            sherpa_model_id: str | None = None,
+                            backend_id: str | None = None) -> dict | None:
     """None when the active ASR selection can transcribe without downloading
     anything; otherwise the typed ``{"error": "asr_model_missing", ...}``
     payload for a 409 / SSE / WS error with a download CTA.
@@ -3127,7 +3134,7 @@ def asr_model_missing_error(*, purpose: str = "transcribe",
                         }
             repo = _capture_whisper_repo()
         else:
-            repo = _offline_asr_repo()
+            repo = _offline_asr_repo(backend_id)
         if repo is None:
             return None  # explicit opt-in engine — can't (and shouldn't) preflight
         from api.routers.setup.models import get_model_catalog

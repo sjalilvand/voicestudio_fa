@@ -22,6 +22,7 @@ is exactly the house rule this test automates.
 import json
 import os
 import re
+import warnings
 
 import pytest
 
@@ -132,10 +133,13 @@ def test_missing_keys_ratchet(locale):
         f"Newly missing keys include: {missing[:20]}"
     )
     if len(missing) < allowed:
-        pytest.fail(
+        # An improvement must never fail CI (CodeRabbit review, #1198) — but
+        # the gain should be locked in, so nudge loudly without blocking.
+        warnings.warn(
             f"{locale}.json now misses only {len(missing)} keys (baseline "
-            f"{allowed}) — nice; tighten _MISSING_BASELINE['{locale}'] to "
-            f"{len(missing)} so the ratchet holds the gain."
+            f"{allowed}) — tighten _MISSING_BASELINE['{locale}'] to "
+            f"{len(missing)} so the ratchet holds the gain.",
+            stacklevel=1,
         )
 
 

@@ -82,8 +82,8 @@ def lint_changelog(text):
 
     for heading, _, body in sections:
         subsection = None  # current "### X" title, None = section preamble
-        has_subsections = any(l.startswith("### ") for _, l in body)
-        has_highlights = any(l.strip() == "**Highlights**" for _, l in body)
+        has_subsections = any(ln.startswith("### ") for _, ln in body)
+        has_highlights = any(ln.strip() == "**Highlights**" for _, ln in body)
         if has_subsections and not has_highlights:
             violations.append(
                 f"{heading}: entry subsections exist but no `**Highlights**` "

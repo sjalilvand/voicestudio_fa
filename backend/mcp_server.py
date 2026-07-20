@@ -61,6 +61,10 @@ def _sniff_audio_ext(raw: bytes) -> str:
     if raw.startswith(b"OggS"):
         return ".ogg"
     if raw[4:8] == b"ftyp":
+        # ISO-BMFF requires the first box's size at bytes 0-3 and type at 4-7;
+        # a leading non-ftyp box (rare, spec-legal) falls through to the .wav
+        # default, which downstream decoders sniff by content anyway — the
+        # extension is a storage nicety, not a correctness gate (CR, #1198).
         return ".m4a"
     return ".wav"
 

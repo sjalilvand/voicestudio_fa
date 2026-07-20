@@ -1328,10 +1328,26 @@ async def dub_transcribe_stream(
             _b = _loaded_asr.get("backend")
             _loaded_asr["backend"] = None
             if _b is not None:
+                # unload() blocks (gc.collect + CUDA cache drop can take
+                # seconds) and this finally also runs under GeneratorExit,
+                # where awaiting is illegal — so hand it to the GPU pool
+                # fire-and-forget and retrieve the eventual exception
+                # (CodeRabbit review, #1198).
                 try:
-                    _b.unload()
-                except Exception as e:
-                    logger.warning("Failed to unload ASR backend: %s", e)
+                    _fut = asyncio.get_running_loop().run_in_executor(
+                        _gpu_pool, _b.unload
+                    )
+                    _fut.add_done_callback(
+                        lambda f: f.cancelled()
+                        or (f.exception() and logger.warning(
+                            "Failed to unload ASR backend: %s", f.exception()))
+                    )
+                except RuntimeError:
+                    # No running loop (interpreter teardown) — best effort.
+                    try:
+                        _b.unload()
+                    except Exception as e:
+                        logger.warning("Failed to unload ASR backend: %s", e)
 
     return StreamingResponse(
         gen(),
