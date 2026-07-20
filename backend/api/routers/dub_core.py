@@ -501,6 +501,34 @@ async def dub_transcribe_stream(
     # cleared by the normal restore, honoured by gen()'s `finally` on EVERY exit.
     _tts_offloaded: dict = {"v": False}
 
+    def _log_bg_failure(f, what):
+        """Retrieve a fire-and-forget future's exception so it isn't swallowed."""
+        if not f.cancelled() and f.exception():
+            logger.warning("%s failed: %s", what, f.exception())
+
+    def _restore_tts_bg():
+        """Move the TTS model back to the GPU without awaiting (#1191).
+
+        Defined out here rather than inside gen()'s `finally` on purpose: the
+        restore has to be dispatchable from a `finally` that also runs under
+        GeneratorExit (where awaiting is illegal), and keeping the control flow
+        out of the finally itself keeps that block free of the return/break
+        pattern that silently swallows in-flight exceptions.
+        """
+        try:
+            _r = asyncio.get_running_loop().run_in_executor(
+                _cpu_pool, restore_tts_after_asr
+            )
+            _r.add_done_callback(
+                lambda f: _log_bg_failure(f, "restore_tts_after_asr")
+            )
+        except RuntimeError:
+            # No running loop (interpreter teardown) — best effort, inline.
+            try:
+                restore_tts_after_asr()
+            except Exception as e:
+                logger.warning("restore_tts_after_asr failed: %s", e)
+
     async def _gen_body():
         # ── Preflight — run INSIDE the stream, never before it (#1196) ──
         # This whole block used to run in the endpoint body, before the
@@ -1396,25 +1424,11 @@ async def dub_transcribe_stream(
             _restore_tts = _tts_offloaded["v"]
             _tts_offloaded["v"] = False
 
-            def _log_bg(f, what):
-                if not f.cancelled() and f.exception():
-                    logger.warning("%s failed: %s", what, f.exception())
-
             def _submit_tts_restore(_f=None):
                 if _f is not None:
-                    _log_bg(_f, "Unloading ASR backend")
-                if not _restore_tts:
-                    return
-                try:
-                    _r = asyncio.get_running_loop().run_in_executor(
-                        _cpu_pool, restore_tts_after_asr
-                    )
-                    _r.add_done_callback(lambda f: _log_bg(f, "restore_tts_after_asr"))
-                except RuntimeError:
-                    try:
-                        restore_tts_after_asr()
-                    except Exception as e:
-                        logger.warning("restore_tts_after_asr failed: %s", e)
+                    _log_bg_failure(_f, "Unloading ASR backend")
+                if _restore_tts:
+                    _restore_tts_bg()
 
             if _b is not None:
                 # unload() blocks (gc.collect + CUDA cache drop can take
