@@ -503,6 +503,11 @@
     "no": "아니요",
     "dismiss": "닫기 (분석은 꺼진 상태 유지)"
   },
+  "langPrompt": {
+    "offer": "OmniVoice가 {{language}}(으)로 열렸습니다. 영어를 사용하시겠어요?",
+    "switch": "영어로 전환",
+    "keep": "{{language}} 유지"
+  },
   "credentials": {
     "title": "자격 증명",
     "desc": "API 키와 토큰은 <1>이 세션에 대해서만</1> 설정됩니다. 다시 시작해도 지속성을 유지하려면 셸 프로필에서 환경 변수로 설정하세요.",

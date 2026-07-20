@@ -503,6 +503,11 @@
     "no": "Nie, dziękuję",
     "dismiss": "Zamknij (analityka pozostaje wyłączona)"
   },
+  "langPrompt": {
+    "offer": "OmniVoice otworzył się w języku {{language}}. Wolisz angielski?",
+    "switch": "Przełącz na angielski",
+    "keep": "Zostaw {{language}}"
+  },
   "credentials": {
     "title": "Poświadczenia",
     "desc": "Klucze i tokeny API są ustawione <1>tylko dla tej sesji</1>. Aby zachować trwałość po ponownym uruchomieniu, ustaw je jako zmienne środowiskowe w profilu powłoki.",

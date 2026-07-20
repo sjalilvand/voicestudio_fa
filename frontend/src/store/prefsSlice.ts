@@ -232,6 +232,24 @@ export interface PrefsSlice {
   locale: string;
   setLocale: (l: string) => void;
 
+  /**
+   * True once the user has made an EXPLICIT UI-language choice — via the
+   * Settings → General picker or the first-run "Switch to English?" offer.
+   * The `locale` field always has a value (navigator-derived on a fresh
+   * install), so it can't distinguish "detected" from "chosen"; this flag can.
+   * Gates the first-run English offer so it never shows once a user has ever
+   * picked a language. Default false; set true by `setLocale`.
+   */
+  localeChosen: boolean;
+
+  /**
+   * True once the first-run "Switch to English?" offer has been shown and
+   * acted on or dismissed. One-time: guarantees the offer never reappears
+   * after the user answered it (or kept their language) once.
+   */
+  langPromptSeen: boolean;
+  setLangPromptSeen: (seen: boolean) => void;
+
   theme: ThemeId;
   setTheme: (id: ThemeId) => void;
 
@@ -369,7 +387,14 @@ export const createPrefsSlice: StateCreator<PrefsSlice, [], [], PrefsSlice> = (s
           return match || 'en';
         })()
       : 'en',
-  setLocale: (l) => set({ locale: l }),
+  // Any setLocale call is a deliberate user choice (the only callers are the
+  // Settings picker and the first-run English offer), so record it as such —
+  // this is what tells the first-run offer "the user already decided".
+  setLocale: (l) => set({ locale: l, localeChosen: true }),
+
+  localeChosen: false,
+  langPromptSeen: false,
+  setLangPromptSeen: (seen) => set({ langPromptSeen: seen }),
 
   theme: 'gruvbox',
   setTheme: (id) => {

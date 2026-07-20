@@ -503,6 +503,11 @@
     "no": "不用了，謝謝",
     "dismiss": "關閉（分析保持關閉）"
   },
+  "langPrompt": {
+    "offer": "OmniVoice 以{{language}}開啟。想改用英文嗎？",
+    "switch": "切換到英文",
+    "keep": "保留{{language}}"
+  },
   "credentials": {
     "title": "憑證",
     "desc": "API 金鑰和令牌僅針對此會話設定 <1></1>。為了在重新啟動後保持持久性，請將它們設定為 shell 設定檔中的環境變數。",

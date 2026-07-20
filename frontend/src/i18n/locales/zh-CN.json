@@ -460,6 +460,11 @@
     "no": "不用了，谢谢",
     "dismiss": "关闭（分析保持关闭）"
   },
+  "langPrompt": {
+    "offer": "OmniVoice 以{{language}}打开。更想用英语吗？",
+    "switch": "切换到英语",
+    "keep": "保留{{language}}"
+  },
   "credentials": {
     "title": "凭证",
     "desc": "API 密钥和令牌<1>仅在此会话中</1>有效。如需跨重启持久化，请在 shell 配置文件中设置环境变量。",

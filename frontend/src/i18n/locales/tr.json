@@ -503,6 +503,11 @@
     "no": "Hayır, teşekkürler",
     "dismiss": "Kapat (analitik kapalı kalır)"
   },
+  "langPrompt": {
+    "offer": "OmniVoice {{language}} dilinde açıldı. İngilizceyi mi tercih edersiniz?",
+    "switch": "İngilizceye geç",
+    "keep": "{{language}} kalsın"
+  },
   "credentials": {
     "title": "Kimlik bilgileri",
     "desc": "API anahtarları ve belirteçleri <1>yalnızca bu oturum için</1> olarak ayarlandı. Yeniden başlatmalarda kalıcılık sağlamak için bunları kabuk profilinizde ortam değişkenleri olarak ayarlayın.",

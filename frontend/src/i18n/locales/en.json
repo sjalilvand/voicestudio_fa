@@ -785,6 +785,11 @@
     "no": "No thanks",
     "dismiss": "Dismiss (keeps analytics off)"
   },
+  "langPrompt": {
+    "offer": "OmniVoice opened in {{language}}. Prefer English?",
+    "switch": "Switch to English",
+    "keep": "Keep {{language}}"
+  },
   "credentials": {
     "title": "Credentials",
     "desc": "API keys and tokens are set <1>for this session only</1>. For persistence across restarts, set them as environment variables in your shell profile.",

@@ -503,6 +503,11 @@
     "no": "Nej tack",
     "dismiss": "Stäng (analys förblir av)"
   },
+  "langPrompt": {
+    "offer": "OmniVoice öppnades på {{language}}. Föredrar du engelska?",
+    "switch": "Byt till engelska",
+    "keep": "Behåll {{language}}"
+  },
   "credentials": {
     "title": "Inloggningsuppgifter",
     "desc": "API-nycklar och tokens är inställda <1>endast för denna session</1>. För beständighet över omstarter, ställ in dem som miljövariabler i din skalprofil.",
