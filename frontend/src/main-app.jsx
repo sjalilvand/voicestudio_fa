@@ -16,6 +16,7 @@ import './ui';
 // styles) consolidated in, so this one import pulls in the whole app's CSS.
 import './index.css';
 import App from './App.jsx';
+import ErrorBoundary from './components/ErrorBoundary';
 import RemoteAuthGate from './components/RemoteAuthGate';
 import { installConsoleCapture } from './utils/consoleBuffer.js';
 import { installGlobalErrorHandlers } from './utils/globalErrorHandlers.js';
@@ -59,45 +60,57 @@ export async function bootstrapApp() {
 
   createRoot(document.getElementById('root')).render(
     <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        {/* RemoteAuthGate is the TRUE outermost wrap so a remote device that
+      {/* Root error boundary — the missing layer between App's own render and
+          the shell's blank_guard (frontend/src-tauri/src/blank_guard.rs). App
+          and RemoteAuthGate render a large tree of hooks/store access BEFORE any
+          of App's per-tab <ErrorBoundary> wraps take effect; a throw up there
+          used to escape every boundary and leave #root empty (children === 0),
+          which the shell could only react to by reloading three times and then
+          painting a dead-end failure page (#1178-class blank window). Catching it
+          here turns "blank window, restart the app" into an in-app, recoverable
+          error card with Reload / Report — data untouched. The shell guard stays
+          as the last resort for the rarer case where even this can't render. */}
+      <ErrorBoundary name="app-root">
+        <QueryClientProvider client={queryClient}>
+          {/* RemoteAuthGate is the TRUE outermost wrap so a remote device that
             loads a bare URL (no ?pin=) during first-run setup states —
             setup-status check, SetupWizard, BootstrapSplash — still gets the
             PIN dialog instead of a silent 401. Loopback / QR users are
             unaffected (the gate only shows on an ov:auth-required event). */}
-        <RemoteAuthGate>
-          {isWidget ? (
-            <Suspense
-              fallback={
-                <div
-                  style={{
-                    position: 'fixed',
-                    inset: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'rgba(18, 18, 22, 0.88)',
-                    backdropFilter: 'blur(24px) saturate(180%)',
-                    WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '100px',
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    fontFamily: '"Inter Variable", "Inter", -apple-system, sans-serif',
-                    fontSize: 13,
-                    userSelect: 'none',
-                  }}
-                >
-                  Loading dictation…
-                </div>
-              }
-            >
-              <CaptureWidget />
-            </Suspense>
-          ) : (
-            <App />
-          )}
-        </RemoteAuthGate>
-      </QueryClientProvider>
+          <RemoteAuthGate>
+            {isWidget ? (
+              <Suspense
+                fallback={
+                  <div
+                    style={{
+                      position: 'fixed',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'rgba(18, 18, 22, 0.88)',
+                      backdropFilter: 'blur(24px) saturate(180%)',
+                      WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '100px',
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      fontFamily: '"Inter Variable", "Inter", -apple-system, sans-serif',
+                      fontSize: 13,
+                      userSelect: 'none',
+                    }}
+                  >
+                    Loading dictation…
+                  </div>
+                }
+              >
+                <CaptureWidget />
+              </Suspense>
+            ) : (
+              <App />
+            )}
+          </RemoteAuthGate>
+        </QueryClientProvider>
+      </ErrorBoundary>
     </StrictMode>,
   );
 }
