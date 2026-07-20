@@ -47,6 +47,10 @@ import { buttonVariants } from '@/components/ui/button.tsx';
 
 // Chrome-mono uppercase form label (was the scoped `.audiobook-tab .field-label`
 // rule; `.field-label` has no global styling, so it's reproduced as utilities).
+// Stable empty-cast fallback: a literal `?? {}` mints a new object every render,
+// which defeats the useMemos keyed on voiceCast (they'd recompute every render).
+const EMPTY_CAST = Object.freeze({});
+
 const FIELD_LABEL =
   '[font-family:var(--chrome-font-mono)] [font-size:var(--chrome-label-size)] font-semibold [letter-spacing:var(--chrome-label-track)] uppercase [color:var(--chrome-fg-muted)]';
 
@@ -70,7 +74,7 @@ export default function AudiobookTab({ profiles = [] }) {
   const setDefaultVoice = (v) => setOutputPrefs({ defaultVoice: v || null });
   // Multi-voice cast map (#1217): [voice:NAME] → profile id, store-backed so a
   // book's voice assignments survive a tab switch / reload.
-  const voiceCast = useAppStore((s) => s.voiceCast) ?? {};
+  const voiceCast = useAppStore((s) => s.voiceCast) ?? EMPTY_CAST;
   const setVoiceCast = useAppStore((s) => s.setVoiceCast);
   // Language pick + expressive overrides (#1208) — store-backed so a book's
   // tuning survives a tab switch / reload (same persistence as the lexicon).
@@ -414,17 +418,16 @@ export default function AudiobookTab({ profiles = [] }) {
           </p>
         </div>
         <div className="audiobook-tab__actions flex flex-wrap items-center gap-[8px]">
+          {/* All four use the one shadcn button layout (icon in the leading slot,
+              text in a leading-none span) so the row lines up. Import is a <label>
+              (it wraps the file input) styled the same way — the old inline
+              flex/gap override is what made it ragged. */}
           <label
             className={buttonVariants({ variant: 'subtle', size: 'omniMd' })}
-            style={{
-              cursor: busy ? 'default' : 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
+            style={{ cursor: busy ? 'default' : 'pointer' }}
           >
-            {importing ? <Loader size={14} className="spin" /> : <Upload size={14} />}{' '}
-            {t('audiobook.import')}
+            {importing ? <Loader size={14} className="spin" /> : <Upload size={14} />}
+            <span className="leading-none">{t('audiobook.import')}</span>
             <input
               type="file"
               accept=".txt,.md,.epub,.pdf"
@@ -438,16 +441,16 @@ export default function AudiobookTab({ profiles = [] }) {
             onClick={loadSample}
             disabled={busy}
             title={t('audiobook.load_sample_hint')}
+            leading={<BookOpen size={14} />}
           >
-            <BookOpen size={14} /> {t('audiobook.load_sample')}
+            {t('audiobook.load_sample')}
           </Button>
-          <Button variant="subtle" onClick={onPreview} disabled={!canRun}>
-            {planLoading ? <Loader size={14} className="spin" /> : null}{' '}
+          <Button variant="subtle" onClick={onPreview} disabled={!canRun} loading={planLoading}>
             {t('audiobook.preview_plan')}
           </Button>
           {generating ? (
-            <Button variant="danger" onClick={onStop}>
-              <Square size={14} /> {t('audiobook.stop')}
+            <Button variant="danger" onClick={onStop} leading={<Square size={14} />}>
+              {t('audiobook.stop')}
             </Button>
           ) : (
             <Button variant="primary" onClick={onCreate} disabled={!canRun}>
