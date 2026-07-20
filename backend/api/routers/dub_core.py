@@ -494,6 +494,12 @@ async def dub_transcribe_stream(
     # _gen_body parks the loaded backend here; the normal unload clears it;
     # gen()'s `finally` unloads whatever is still parked, on EVERY exit.
     _loaded_asr: dict = {"backend": None}
+    # Same shape, same reason, for the TTS offload (#1191): offload_tts_for_asr()
+    # moves the TTS model to CPU, and only _gen_body's success path moved it
+    # back — so an abort/error/disconnect stranded it there, silently making
+    # every subsequent /generate run on CPU. Set on a successful offload,
+    # cleared by the normal restore, honoured by gen()'s `finally` on EVERY exit.
+    _tts_offloaded: dict = {"v": False}
 
     async def _gen_body():
         # ── Preflight — run INSIDE the stream, never before it (#1196) ──
@@ -750,6 +756,8 @@ async def dub_transcribe_stream(
         # transcription can still proceed (it just has less headroom).
         try:
             await loop.run_in_executor(_cpu_pool, offload_tts_for_asr)
+            # Restore is now owed on every exit path, not just success (#1191).
+            _tts_offloaded["v"] = True
         except Exception as e:
             logger.warning("offload_tts_for_asr failed (continuing): %s", e)
 
@@ -1337,6 +1345,8 @@ async def dub_transcribe_stream(
             _loaded_asr["backend"] = None
 
         await loop.run_in_executor(_cpu_pool, restore_tts_after_asr)
+        # Debt paid — don't make gen()'s finally repeat it.
+        _tts_offloaded["v"] = False
 
         if torch.backends.mps.is_available():
             try: torch.mps.empty_cache()
@@ -1380,6 +1390,32 @@ async def dub_transcribe_stream(
             # (GeneratorExit bypasses the except, never this finally).
             _b = _loaded_asr.get("backend")
             _loaded_asr["backend"] = None
+            # Pay the TTS-restore debt on every exit path (#1191). Leaving it
+            # unpaid is what stranded the TTS model on CPU after an abort or a
+            # disconnect, degrading every later generation by 10-50x.
+            _restore_tts = _tts_offloaded["v"]
+            _tts_offloaded["v"] = False
+
+            def _log_bg(f, what):
+                if not f.cancelled() and f.exception():
+                    logger.warning("%s failed: %s", what, f.exception())
+
+            def _submit_tts_restore(_f=None):
+                if _f is not None:
+                    _log_bg(_f, "Unloading ASR backend")
+                if not _restore_tts:
+                    return
+                try:
+                    _r = asyncio.get_running_loop().run_in_executor(
+                        _cpu_pool, restore_tts_after_asr
+                    )
+                    _r.add_done_callback(lambda f: _log_bg(f, "restore_tts_after_asr"))
+                except RuntimeError:
+                    try:
+                        restore_tts_after_asr()
+                    except Exception as e:
+                        logger.warning("restore_tts_after_asr failed: %s", e)
+
             if _b is not None:
                 # unload() blocks (gc.collect + CUDA cache drop can take
                 # seconds) and this finally also runs under GeneratorExit,
@@ -1390,17 +1426,19 @@ async def dub_transcribe_stream(
                     _fut = asyncio.get_running_loop().run_in_executor(
                         _gpu_pool, _b.unload
                     )
-                    _fut.add_done_callback(
-                        lambda f: f.cancelled()
-                        or (f.exception() and logger.warning(
-                            "Failed to unload ASR backend: %s", f.exception()))
-                    )
+                    # Restore the TTS model only AFTER the ASR weights are
+                    # freed — the same ordering the success path enforces, so
+                    # the two never contend for VRAM.
+                    _fut.add_done_callback(_submit_tts_restore)
                 except RuntimeError:
                     # No running loop (interpreter teardown) — best effort.
                     try:
                         _b.unload()
                     except Exception as e:
                         logger.warning("Failed to unload ASR backend: %s", e)
+                    _submit_tts_restore()
+            else:
+                _submit_tts_restore()
 
     return StreamingResponse(
         gen(),
