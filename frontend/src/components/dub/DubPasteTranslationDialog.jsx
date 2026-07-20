@@ -150,11 +150,17 @@ export default function DubPasteTranslationDialog({ open, segments = [], onApply
           className="flex items-center gap-[6px] px-[10px] py-[4px] rounded-[6px] cursor-pointer text-[length:var(--text-xs)] text-fg-muted bg-[rgba(255,255,255,0.05)] [border:1px_solid_rgba(255,255,255,0.1)]"
         >
           <FileText size={11} /> {t('dub.paste_translation_load_file')}
+          {/* `sr-only`, never `hidden`: a bare <label> isn't in the tab order,
+              and `hidden` drops the input from both the tab order and the
+              accessibility tree — together they leave keyboard-only users with
+              no way to reach the file picker at all. Visually hidden but
+              focusable keeps the pointer affordance and restores the keyboard
+              path (focus the input, Enter/Space opens the picker). */}
           <input
             id="paste-translation-file"
             type="file"
             accept=".srt,.vtt,.txt,text/plain"
-            hidden
+            className="sr-only"
             onChange={(e) => {
               readFile(e.target.files?.[0]);
               e.target.value = '';

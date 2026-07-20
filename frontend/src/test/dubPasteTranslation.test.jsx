@@ -369,6 +369,21 @@ describe('DubPasteTranslationDialog', () => {
     expect(screen.getByRole('button', { name: /Apply/i })).toBeDisabled();
   });
 
+  it('keeps the file picker reachable by keyboard (not `hidden`)', () => {
+    // A bare <label> is not focusable and `hidden` removes the input from the
+    // tab order AND the accessibility tree — together they leave keyboard-only
+    // users with no path to the file picker at all.
+    render(
+      <DubPasteTranslationDialog open segments={SEGMENTS} onApply={vi.fn()} onClose={vi.fn()} />,
+    );
+    // The dialog renders through a portal, so query the document, not the
+    // render container.
+    const input = document.querySelector('input[type="file"]');
+    expect(input).not.toBeNull();
+    expect(input.hidden).toBe(false);
+    expect(input.className).toContain('sr-only');
+  });
+
   it('sends a timestamped paste to the backend parser and previews the cues', async () => {
     dubApi.dubParseSubtitleText.mockResolvedValue({
       segments: [
