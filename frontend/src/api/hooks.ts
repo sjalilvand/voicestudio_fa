@@ -197,12 +197,16 @@ export function useArchetypeCategories() {
   });
 }
 
-export function useArchetypes(filters: ArchetypeFilters = {}) {
+// `enabled` lets a shared consumer (VoiceSelector) defer the fetch until its
+// dropdown actually opens — many pickers can mount (e.g. the Audiobook cast
+// list) without any of them hitting the network until used.
+export function useArchetypes(filters: ArchetypeFilters = {}, enabled = true) {
   return useQuery({
     queryKey: queryKeys.archetypes(filters),
     queryFn: () => archetypesApi.listArchetypes(filters),
     staleTime: 5 * 60_000,
     placeholderData: keepPreviousData, // v5: keep prior page visible while paginating
+    enabled,
   });
 }
 

@@ -225,6 +225,7 @@ def list_categories():
 
 @router.get("/archetypes")
 def list_archetypes_endpoint(
+    q: Optional[str] = None,
     use_case: Optional[str] = None,
     gender: Optional[str] = None,
     age: Optional[str] = None,
@@ -236,9 +237,15 @@ def list_archetypes_endpoint(
     limit: int = Query(60, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
-    """Filtered, paginated view over the archetype catalog."""
+    """Filtered, paginated view over the archetype catalog.
+
+    ``q`` is a free-text substring match over the archetype name/instruct so a
+    voice picker can search the *entire* several-hundred-voice catalog by typing
+    (the facet filters alone can't reach a specific voice by name). Content-free
+    and local — it just narrows the in-memory catalog.
+    """
     items = archetypes.list_archetypes(
-        use_case=use_case, gender=gender, age=age, pitch=pitch,
+        q=q, use_case=use_case, gender=gender, age=age, pitch=pitch,
         accent=accent, whisper=whisper, lang=lang, featured=featured,
     )
     total = len(items)
@@ -300,6 +307,20 @@ async def use_archetype(archetype_id: str, name: Optional[str] = Query(None)):
 
     from core import event_bus
     from core.db import db_conn
+
+    # Idempotent (dedup): an archetype materializes to exactly ONE voice profile.
+    # Picking the same gallery voice again — from any picker (Gallery grid,
+    # VoiceSelector, …) — must reuse that one row instead of rendering + inserting
+    # a fresh duplicate every time. The `personality` column already carries the
+    # source archetype id (stamped by the INSERT below), so it's the natural
+    # dedup key; the expensive render + INSERT only run on first use.
+    with db_conn() as conn:
+        existing = conn.execute(
+            "SELECT id, name FROM voice_profiles WHERE personality = ? LIMIT 1",
+            (a["id"],),
+        ).fetchone()
+    if existing is not None:
+        return {"profile_id": existing["id"], "name": existing["name"]}
 
     profile_id = str(uuid.uuid4())[:8]
     audio_filename = f"{profile_id}.wav"

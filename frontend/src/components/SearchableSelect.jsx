@@ -49,6 +49,12 @@ export default function SearchableSelect({
   // (back-compat). VoiceSelector passes a guard so sentinel values
   // ('' / preset: / auto:) never pollute the recents list. (#22)
   isRecentable = () => true,
+  // Lift the internal search text / open state so a parent can drive an async,
+  // server-backed option source (VoiceSelector's gallery search fetches
+  // /archetypes as you type, and only when the dropdown is open). Both default
+  // to no-ops so the pre-existing call sites are unaffected. (#1219)
+  onQueryChange,
+  onOpenChange,
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -144,6 +150,15 @@ export default function SearchableSelect({
     const el = listRef.current.querySelector(`[data-idx="${highlight}"]`);
     if (el) el.scrollIntoView({ block: 'nearest' });
   }, [highlight, open]);
+
+  // Surface open/query state to an optional parent driver (#1219). Kept in
+  // effects (not inline in handlers) so the reset-on-close above is included.
+  useEffect(() => {
+    onOpenChange?.(open);
+  }, [open, onOpenChange]);
+  useEffect(() => {
+    onQueryChange?.(query);
+  }, [query, onQueryChange]);
 
   const commit = (o) => {
     const v = getVal(o);
