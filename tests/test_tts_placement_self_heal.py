@@ -199,7 +199,7 @@ def _make_wav(path, seconds=1.0, rate=16000):
         w.writeframes(struct.pack("<%dh" % int(rate * seconds), *([0] * int(rate * seconds))))
 
 
-def _run_transcribe_stream(job_id):
+def _run_transcribe_stream(job_id, restored=None):
     from api.routers import dub_core as dc
 
     async def _collect():
@@ -207,10 +207,18 @@ def _run_transcribe_stream(job_id):
         parts = []
         async for chunk in resp.body_iterator:
             parts.append(chunk.decode() if isinstance(chunk, (bytes, bytearray)) else str(chunk))
-        # gen()'s finally hands the restore to the CPU pool fire-and-forget
-        # (it also runs under GeneratorExit, where awaiting is illegal), so
-        # give the loop a turn to run the done-callback chain.
-        await asyncio.sleep(0)
+        # gen()'s finally hands the restore to the CPU pool fire-and-forget (it
+        # runs under GeneratorExit, where awaiting is illegal). If we just
+        # `asyncio.run()` and return, the loop can close before the pool thread
+        # lands the restore — asyncio.run doesn't shut down our custom _cpu_pool,
+        # but the timing race made the assertion flaky under CI load. Block
+        # WITHIN this loop until the restore Event is set (on the default
+        # executor, while _cpu_pool runs the restore) so the caller sees a
+        # settled state — deterministic, no fire-and-forget race.
+        if restored is not None:
+            await asyncio.get_event_loop().run_in_executor(None, lambda: restored.wait(10))
+        else:
+            await asyncio.sleep(0)
         return "".join(parts)
 
     return asyncio.run(_collect())
@@ -284,7 +292,7 @@ def test_aborted_transcribe_still_restores_the_tts_model(transcribe_job):
     job_id, job, calls = transcribe_job
     job["aborted"] = True
 
-    body = _run_transcribe_stream(job_id)
+    body = _run_transcribe_stream(job_id, calls["restored"])
 
     assert "event: aborted" in body, body
     assert calls["offload"] == 1, "precondition: the stream must have offloaded"
@@ -310,7 +318,7 @@ def test_crashed_transcribe_still_restores_the_tts_model(transcribe_job, monkeyp
 
     monkeypatch.setattr(dc, "segment_transcript", _boom)
 
-    body = _run_transcribe_stream(job_id)
+    body = _run_transcribe_stream(job_id, calls["restored"])
 
     assert "event: error" in body, body
     assert calls["offload"] == 1
@@ -325,7 +333,7 @@ def test_successful_transcribe_restores_exactly_once(transcribe_job):
     """The finally must not double-restore what the success path already paid."""
     job_id, _job, calls = transcribe_job
 
-    body = _run_transcribe_stream(job_id)
+    body = _run_transcribe_stream(job_id, calls["restored"])
 
     assert "event: final" in body, body  # the real success path, not an error exit
     assert calls["offload"] == 1
