@@ -7,9 +7,12 @@ Run standalone:
 
 Tools exposed:
     generate_speech   — text → WAV audio (voice clone or design)
+    clone_voice       — base64 reference audio → new voice profile
+    transcribe        — base64 audio → text
     list_voices       — enumerate saved voice profiles
     list_languages    — available TTS languages
     list_personalities — voice personality presets
+    check_health      — backend status + active GPU device
 
 Resources exposed:
     voice://{profile_id}  — voice profile metadata
