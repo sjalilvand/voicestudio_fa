@@ -430,6 +430,7 @@ pub fn run() {
             reset::reset_scan,
             reset::reset_purge,
             blank_guard::report_render_state,
+            blank_guard::recover_main_window,
         ])
         .setup(move |app| {
             // Blank-window guard: watch the main window and, if nothing ever

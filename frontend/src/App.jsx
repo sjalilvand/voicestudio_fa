@@ -98,6 +98,7 @@ import { clearDubHistory as apiClearDubHistory } from './api/dub';
 
 import { isTauri, doubleClickMaximize, fileToMediaUrl, playBlobAudio } from './utils/media';
 import { browserDownload } from './utils/download';
+import { downloadMedia } from './utils/mediaDownload';
 import { checkForUpdate, fetchAppVersion } from './utils/updater';
 import { syncChannel } from './utils/channelControl';
 import i18n from './i18n';
@@ -811,123 +812,16 @@ function App() {
       toast.error(i18n.t('app.toast_open_folder_failed', { message: err.message }));
     }
   };
-  const triggerDownload = async (url, fallbackName) => {
-    const extGuess = (
-      fallbackName.includes('.') ? fallbackName.split('.').pop() : 'bin'
-    ).toLowerCase();
-    const modeGuess = ['mp4', 'mov', 'mkv', 'webm'].includes(extGuess)
-      ? 'video'
-      : ['wav', 'mp3', 'flac'].includes(extGuess)
-        ? 'audio'
-        : 'file';
-
-    // In Tauri, WebKit silently drops blob downloads. Use native save dialog
-    // + server-side copy so the file actually lands on disk at a known path.
-    if (isTauri) {
-      try {
-        const { save } = await import('@tauri-apps/plugin-dialog');
-        const destPath = await save({
-          defaultPath: fallbackName,
-          filters: [
-            {
-              name: modeGuess === 'video' ? 'Video' : 'Audio',
-              extensions: [extGuess],
-            },
-          ],
-        });
-        if (!destPath) return; // user cancelled
-        toast.loading(i18n.t('app.toast_saving', { name: fallbackName }), {
-          id: fallbackName,
-        });
-
-        // Subtitles are small text bodies: fetch them raw and write from this
-        // (trusted) process via the save_text_file command — the user's dialog
-        // pick is the write authorization, and the backend never handles a
-        // destination path (#309).
-        if (['srt', 'vtt'].includes(extGuess)) {
-          const res = await apiFetch(url);
-          const text = await res.text();
-          const { invoke } = await import('@tauri-apps/api/core');
-          await invoke('save_text_file', { path: destPath, contents: text });
-          toast.success(i18n.t('app.toast_saved', { path: destPath }), {
-            id: fallbackName,
-          });
-          recordValueMoment('export'); // success-only donation moment
-          try {
-            await exportRecord({
-              filename: fallbackName,
-              destination_path: destPath,
-              mode: modeGuess,
-            });
-            loadExportHistory();
-          } catch (err) {
-            console.warn('exportRecord (subtitle save) failed:', err);
-          }
-          return;
-        }
-
-        const sep = url.includes('?') ? '&' : '?';
-        const res = await apiFetch(`${url}${sep}save_path=${encodeURIComponent(destPath)}`);
-        // Every save_path-aware endpoint returns a JSON envelope. Guard the
-        // content-type so a raw-body response surfaces as a clear error
-        // instead of a cryptic JSON.parse failure (#309).
-        const ctype = res.headers.get('content-type') || '';
-        if (!ctype.includes('application/json')) {
-          throw new Error(
-            `Server returned ${ctype || 'an unknown content type'} instead of a JSON save confirmation`,
-          );
-        }
-        const data = await res.json();
-        toast.success(i18n.t('app.toast_saved', { path: data.path }), {
-          id: fallbackName,
-        });
-        recordValueMoment('export'); // success-only donation moment
-        try {
-          await exportRecord({
-            filename: data.display_name || fallbackName,
-            destination_path: data.path,
-            mode: modeGuess,
-          });
-          loadExportHistory();
-        } catch (err) {
-          console.warn('exportRecord (Tauri save path) failed:', err);
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error(i18n.t('app.toast_save_error', { message: err.message }), {
-          id: fallbackName,
-        });
-      }
-      return;
-    }
-
-    // Browser path: standard blob download.
-    try {
-      toast.loading(i18n.t('app.toast_processing', { name: fallbackName }), {
-        id: fallbackName,
-      });
-      const finalName = await browserDownload(url, fallbackName);
-      toast.success(i18n.t('app.toast_downloaded', { name: finalName }), {
-        id: fallbackName,
-      });
-      recordValueMoment('export'); // success-only donation moment
-      try {
-        await exportRecord({
-          filename: finalName,
-          destination_path: `~/Downloads/${finalName}`,
-          mode: modeGuess,
-        });
-        loadExportHistory();
-      } catch (err) {
-        console.warn('exportRecord (browser download path) failed:', err);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(i18n.t('app.toast_download_error', { message: err.message }), {
-        id: fallbackName,
-      });
-    }
-  };
+  // Save a dynamic (save_path-aware) export — dub video/audio/subtitles — to
+  // disk. The parity-safe dialog + server-side copy vs browser-blob branch now
+  // lives in the shared `downloadMedia` util (#1218) so audiobook/story exports
+  // reuse the exact same path and never fall back to a webview-hijacking
+  // `<a href download>`. App-specific niceties are passed as callbacks.
+  const triggerDownload = (url, fallbackName) =>
+    downloadMedia(url, fallbackName, {
+      onValueMoment: () => recordValueMoment('export'), // success-only donation
+      onHistoryChanged: loadExportHistory,
+    });
   // Pre-flight for audio/video exports. If any segments are at preview
   // quality (num_step=8, from a "Regen changed" click), re-render those at
   // full quality first so the user's exported file isn't carrying preview

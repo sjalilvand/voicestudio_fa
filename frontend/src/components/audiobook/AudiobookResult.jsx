@@ -1,14 +1,22 @@
 import React from 'react';
 import { Download } from 'lucide-react';
 import { audioUrl } from '../../api/generate';
-import { buttonVariants } from '@/components/ui/button.tsx';
+import { Button } from '@/components/ui/button.tsx';
+import { downloadMedia } from '../../utils/mediaDownload';
 
 /**
  * The finished-render result: the "ready" note (with cached/failed chapter
- * summaries), the player, and the Download link. Extracted from AudiobookTab to
- * keep that page under the line lint; behaviour is unchanged.
+ * summaries), the player, and the Download button. Extracted from AudiobookTab
+ * to keep that page under the line lint; behaviour is unchanged.
+ *
+ * Download goes through the shared `downloadMedia` util (#1218), NOT a raw
+ * `<a href={audioUrl(output)} download>`. In the Tauri WebView that anchor does
+ * not download an m4b the engine can play — WebKit navigates the whole webview
+ * to the file and plays it fullscreen, hijacking the app. `downloadMedia` uses
+ * the native save dialog + a server-side copy from OUTPUTS_DIR instead.
  */
 export default function AudiobookResult({ t, output, done }) {
+  const filename = output.split('/').pop();
   return (
     <div className="audiobook-done">
       <div style={{ marginBottom: 8 }}>✅ {t('audiobook.ready')}</div>
@@ -24,13 +32,13 @@ export default function AudiobookResult({ t, output, done }) {
       )}
       <audio controls src={audioUrl(output)} style={{ width: '100%' }} />
       <div style={{ marginTop: 8 }}>
-        <a
-          className={buttonVariants({ variant: 'subtle', size: 'omniMd' })}
-          href={audioUrl(output)}
-          download={output}
+        <Button
+          variant="subtle"
+          size="omniMd"
+          onClick={() => downloadMedia(audioUrl(output), filename, { sourceFilename: filename })}
         >
           <Download size={14} /> {t('audiobook.download')}
-        </a>
+        </Button>
       </div>
     </div>
   );
