@@ -878,7 +878,22 @@
     "qc_running": "Controllo dei tempi di duplicazione…",
     "qc_result": "{{flagged}} delle righe {{total}} potrebbe richiedere un nuovo ascolto",
     "qc_clean": "Tutte le righe {{total}} corrispondono allo script",
-    "qc_failed": "Controllo cronometraggio fallito: {{message}}"
+    "qc_failed": "Controllo cronometraggio fallito: {{message}}",
+    "paste_translation_btn": "Incolla traduzione",
+    "paste_translation_title": "Incolla una traduzione",
+    "paste_translation_desc": "Incolla una traduzione prodotta altrove (ChatGPT, DeepL, un traduttore umano). Viene mappata sui segmenti che hai già: tempi e trascrizione originale restano invariati.",
+    "paste_translation_placeholder": "Incolla sottotitoli (SRT/VTT), righe numerate (1. …) o una riga tradotta per segmento — oppure trascina qui un file .srt/.vtt.",
+    "paste_translation_load_file": "Carica file .srt / .vtt",
+    "paste_translation_mode_timestamped": "Con timecode (SRT/VTT)",
+    "paste_translation_mode_numbered": "Righe numerate",
+    "paste_translation_mode_plain": "Righe semplici",
+    "paste_translation_counts": "{{segments}} segmenti · {{lines}} righe · {{unmatched}} senza corrispondenza",
+    "paste_translation_unused": "{{count}} riga/e incollata/e non utilizzata/e",
+    "paste_translation_none_matched": "Nessuna corrispondenza. Verifica che il testo incollato corrisponda ai segmenti qui sotto.",
+    "paste_translation_row_unmatched": "nessuna corrispondenza — invariato",
+    "paste_translation_apply": "Applica a {{count}} segmenti",
+    "paste_translation_cancel": "Annulla",
+    "paste_translation_more_rows": "+ altre {{count}} righe"
   },
   "glossary": {
     "title": "Glossario",

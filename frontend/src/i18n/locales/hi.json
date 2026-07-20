@@ -878,7 +878,22 @@
     "qc_running": "डब समय की जाँच की जा रही है...",
     "qc_result": "{{total}} पंक्तियों में से {{flagged}} को दोबारा सुनने की आवश्यकता हो सकती है",
     "qc_clean": "सभी {{total}} पंक्तियाँ स्क्रिप्ट से मेल खाती हैं",
-    "qc_failed": "समय की जाँच विफल: {{message}}"
+    "qc_failed": "समय की जाँच विफल: {{message}}",
+    "paste_translation_btn": "अनुवाद चिपकाएँ",
+    "paste_translation_title": "अनुवाद चिपकाएँ",
+    "paste_translation_desc": "कहीं और तैयार किया गया अनुवाद चिपकाएँ (ChatGPT, DeepL, कोई मानव अनुवादक)। यह आपके मौजूदा सेगमेंट पर लागू होगा — टाइमिंग और मूल ट्रांसक्रिप्ट अछूते रहते हैं।",
+    "paste_translation_placeholder": "सबटाइटल (SRT/VTT), क्रमांकित पंक्तियाँ (1. …), या प्रति सेगमेंट एक अनुवादित पंक्ति चिपकाएँ — या यहाँ .srt/.vtt फ़ाइल छोड़ें।",
+    "paste_translation_load_file": ".srt / .vtt फ़ाइल लोड करें",
+    "paste_translation_mode_timestamped": "टाइमस्टैम्प सहित (SRT/VTT)",
+    "paste_translation_mode_numbered": "क्रमांकित पंक्तियाँ",
+    "paste_translation_mode_plain": "सादी पंक्तियाँ",
+    "paste_translation_counts": "{{segments}} सेगमेंट · {{lines}} पंक्तियाँ · {{unmatched}} बिना मिलान",
+    "paste_translation_unused": "{{count}} चिपकाई गई पंक्तियाँ अप्रयुक्त रहीं",
+    "paste_translation_none_matched": "कुछ भी मेल नहीं खाया। जाँचें कि चिपकाया गया टेक्स्ट नीचे के सेगमेंट से मेल खाता है।",
+    "paste_translation_row_unmatched": "कोई मिलान नहीं — अपरिवर्तित",
+    "paste_translation_apply": "{{count}} सेगमेंट पर लागू करें",
+    "paste_translation_cancel": "रद्द करें",
+    "paste_translation_more_rows": "+ {{count}} और पंक्तियाँ"
   },
   "glossary": {
     "title": "शब्दावली",

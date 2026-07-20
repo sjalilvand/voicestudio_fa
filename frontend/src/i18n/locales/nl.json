@@ -878,7 +878,22 @@
     "qc_running": "De dubtiming controleren...",
     "qc_result": "{{flagged}} van {{total}} regels moeten mogelijk opnieuw worden beluisterd",
     "qc_clean": "Alle {{total}} regels komen overeen met het script",
-    "qc_failed": "Timingcontrole mislukt: {{message}}"
+    "qc_failed": "Timingcontrole mislukt: {{message}}",
+    "paste_translation_btn": "Vertaling plakken",
+    "paste_translation_title": "Een vertaling plakken",
+    "paste_translation_desc": "Plak een elders gemaakte vertaling (ChatGPT, DeepL, een menselijke vertaler). Die wordt op je bestaande segmenten toegepast — timings en het originele transcript blijven ongewijzigd.",
+    "paste_translation_placeholder": "Plak ondertitels (SRT/VTT), genummerde regels (1. …) of één vertaalde regel per segment — of sleep hier een .srt/.vtt-bestand naartoe.",
+    "paste_translation_load_file": ".srt-/.vtt-bestand laden",
+    "paste_translation_mode_timestamped": "Met tijdcodes (SRT/VTT)",
+    "paste_translation_mode_numbered": "Genummerde regels",
+    "paste_translation_mode_plain": "Gewone regels",
+    "paste_translation_counts": "{{segments}} segmenten · {{lines}} regels · {{unmatched}} zonder match",
+    "paste_translation_unused": "{{count}} geplakte regel(s) ongebruikt",
+    "paste_translation_none_matched": "Niets kwam overeen. Controleer of de geplakte tekst aansluit op de segmenten hieronder.",
+    "paste_translation_row_unmatched": "geen match — ongewijzigd",
+    "paste_translation_apply": "Toepassen op {{count}} segmenten",
+    "paste_translation_cancel": "Annuleren",
+    "paste_translation_more_rows": "+ nog {{count}} rijen"
   },
   "glossary": {
     "title": "Woordenlijst",

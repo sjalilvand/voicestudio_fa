@@ -14,7 +14,7 @@ from core.db import db_conn
 from core.config import PREVIEW_DIR
 from core.tasks import task_manager
 from core import event_bus
-from schemas.requests import DubIngestUrlRequest
+from schemas.requests import DubIngestUrlRequest, ParseSubtitleTextRequest
 from services.model_manager import get_model, _gpu_pool, _cpu_pool, get_diarization_pipeline, offload_tts_for_asr, restore_tts_after_asr, should_preload_tts_asr
 from services.asr_backend import (
     ASR_TRANSCRIBE_TIMEOUT_S,
@@ -62,6 +62,55 @@ _unregister_proc   = dub_pipeline.unregister_proc
 _kill_job_procs    = dub_pipeline.kill_job_procs
 _get_job           = dub_pipeline.get_job
 _save_job          = dub_pipeline.save_job
+
+# Pasted subtitle text is a transcript, not a media file: a feature-length
+# film's .srt is ~150 KB. 2 MB of characters is ~13x the worst realistic case
+# and still cheap to regex — past that we refuse rather than let a stray
+# paste (or a mis-aimed binary) burn CPU in the parser.
+_MAX_SUBTITLE_PASTE_CHARS = 2_000_000
+
+
+@router.post("/dub/parse-subtitle-text")
+def dub_parse_subtitle_text(req: ParseSubtitleTextRequest):
+    """Parse pasted subtitle text into timed cues. Stateless — no job, no I/O.
+
+    A thin wrapper over `services.srt_parser.parse_srt` so the client's
+    "paste a translation" flow reuses the exact lenient parser the .srt
+    import path uses (BOM / CRLF / `.`-vs-`,` ms / missing indices, plus
+    de-overlapping). Unlike `/dub/import-srt/{job_id}` this mutates
+    nothing: the caller maps these cues onto the segments it already has,
+    keeping the existing timings and `text_original`.
+    """
+    text = req.text or ""
+    if len(text) > _MAX_SUBTITLE_PASTE_CHARS:
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                f"Pasted text is too large ({len(text)} characters). "
+                f"Limit is {_MAX_SUBTITLE_PASTE_CHARS} characters."
+            ),
+        )
+
+    from services.srt_parser import parse_srt
+    result = parse_srt(text)
+    if not result.segments:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "No timed cues found in the pasted text. "
+                f"Skipped {result.skipped_cues} malformed cue(s). "
+                "Expected timestamp lines like '00:00:01,000 --> 00:00:04,500'."
+            ),
+        )
+    return {
+        "segments": [
+            {"start": s["start"], "end": s["end"], "text": s["text"]}
+            for s in result.segments
+        ],
+        "skipped_cues": result.skipped_cues,
+        "dropped_overlaps": result.dropped_overlaps,
+    }
+
 
 @router.post("/dub/import-srt/{job_id}")
 async def dub_import_srt(job_id: str, file: UploadFile = File(...)):

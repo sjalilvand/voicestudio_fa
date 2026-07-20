@@ -878,7 +878,22 @@
     "qc_running": "Перевірка часу дубляжу…",
     "qc_result": "{{flagged}} з {{total}} рядків може знадобитися переслухати",
     "qc_clean": "Усі {{total}} рядки відповідають сценарію",
-    "qc_failed": "Помилка перевірки часу: {{message}}"
+    "qc_failed": "Помилка перевірки часу: {{message}}",
+    "paste_translation_btn": "Вставити переклад",
+    "paste_translation_title": "Вставити переклад",
+    "paste_translation_desc": "Вставте переклад, зроблений деінде (ChatGPT, DeepL, живий перекладач). Він накладеться на наявні сегменти — таймінги й початкова транскрипція лишаться незмінними.",
+    "paste_translation_placeholder": "Вставте субтитри (SRT/VTT), нумеровані рядки (1. …) або по одному перекладеному рядку на сегмент — чи перетягніть сюди файл .srt/.vtt.",
+    "paste_translation_load_file": "Завантажити файл .srt / .vtt",
+    "paste_translation_mode_timestamped": "З таймкодами (SRT/VTT)",
+    "paste_translation_mode_numbered": "Нумеровані рядки",
+    "paste_translation_mode_plain": "Звичайні рядки",
+    "paste_translation_counts": "{{segments}} сегментів · {{lines}} рядків · {{unmatched}} без відповідності",
+    "paste_translation_unused": "Невикористаних вставлених рядків: {{count}}",
+    "paste_translation_none_matched": "Нічого не збіглося. Перевірте, чи вставлений текст відповідає сегментам нижче.",
+    "paste_translation_row_unmatched": "немає відповідності — без змін",
+    "paste_translation_apply": "Застосувати до {{count}} сегментів",
+    "paste_translation_cancel": "Скасувати",
+    "paste_translation_more_rows": "+ ще {{count}} рядків"
   },
   "glossary": {
     "title": "Глосарій",

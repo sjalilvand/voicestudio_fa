@@ -1,11 +1,12 @@
-import { Suspense, lazy } from 'react';
-import { ChevronUp, ChevronDown, FileText } from 'lucide-react';
+import { Suspense, lazy, useState } from 'react';
+import { ChevronUp, ChevronDown, FileText, ClipboardPaste } from 'lucide-react';
 import { Button, Segmented } from '../../ui';
 import GlossaryPanel from '../GlossaryPanel';
 import CheckpointBanner from '../CheckpointBanner';
 import { LANG_CODES } from '../../utils/languages';
 
 const DubSegmentTable = lazy(() => import('../DubSegmentTable'));
+const DubPasteTranslationDialog = lazy(() => import('./DubPasteTranslationDialog'));
 
 const LazyFallback = () => <div className="p-[12px] text-[#6b6657] text-[0.7rem]">Loading…</div>;
 
@@ -71,7 +72,9 @@ export default function DubRightColumn({
   timelineSelSegId,
   dubStep,
   dubProgress,
+  pasteTranslations,
 }) {
+  const [pasteOpen, setPasteOpen] = useState(false);
   return (
     <div className="studio-panel dub-panel-col">
       {/* Output options + timing — moved to the top of the right section. */}
@@ -323,6 +326,34 @@ export default function DubRightColumn({
           onDismiss={onCheckpointDismiss}
           continueLoading={isTranslating}
         />
+      )}
+
+      {/* Segment-table toolbar. "Paste translation" is the manual counterpart
+          to Translate All: the user translated elsewhere (ChatGPT/DeepL/a
+          human) and pastes the result onto the timing we already have. */}
+      {pasteTranslations && (
+        <div className="flex items-center justify-end mb-[4px]">
+          <Button
+            variant="subtle"
+            size="sm"
+            onClick={() => setPasteOpen(true)}
+            disabled={!dubSegments.length}
+            title={t('dub.paste_translation_title')}
+            leading={<ClipboardPaste size={10} />}
+          >
+            {t('dub.paste_translation_btn')}
+          </Button>
+        </div>
+      )}
+      {pasteOpen && (
+        <Suspense fallback={null}>
+          <DubPasteTranslationDialog
+            open
+            segments={dubSegments}
+            onApply={pasteTranslations}
+            onClose={() => setPasteOpen(false)}
+          />
+        </Suspense>
       )}
 
       <Suspense fallback={<LazyFallback />}>

@@ -878,7 +878,22 @@
     "qc_running": "Comprobando el tiempo de doblaje...",
     "qc_result": "Es posible que sea necesario volver a escuchar {{flagged}} de {{total}} líneas",
     "qc_clean": "Todas las líneas {{total}} coinciden con el guión.",
-    "qc_failed": "Error en la verificación de tiempo: {{message}}"
+    "qc_failed": "Error en la verificación de tiempo: {{message}}",
+    "paste_translation_btn": "Pegar traducción",
+    "paste_translation_title": "Pegar una traducción",
+    "paste_translation_desc": "Pega una traducción hecha en otro sitio (ChatGPT, DeepL, un traductor humano). Se asigna a los segmentos que ya tienes: los tiempos y la transcripción original no cambian.",
+    "paste_translation_placeholder": "Pega subtítulos (SRT/VTT), líneas numeradas (1. …) o una línea traducida por segmento — o suelta aquí un archivo .srt/.vtt.",
+    "paste_translation_load_file": "Cargar archivo .srt / .vtt",
+    "paste_translation_mode_timestamped": "Con marcas de tiempo (SRT/VTT)",
+    "paste_translation_mode_numbered": "Líneas numeradas",
+    "paste_translation_mode_plain": "Líneas simples",
+    "paste_translation_counts": "{{segments}} segmentos · {{lines}} líneas · {{unmatched}} sin coincidencia",
+    "paste_translation_unused": "{{count}} línea(s) pegada(s) sin usar",
+    "paste_translation_none_matched": "No hubo ninguna coincidencia. Comprueba que el texto pegado se corresponda con los segmentos de abajo.",
+    "paste_translation_row_unmatched": "sin coincidencia — sin cambios",
+    "paste_translation_apply": "Aplicar a {{count}} segmentos",
+    "paste_translation_cancel": "Cancelar",
+    "paste_translation_more_rows": "+ {{count}} filas más"
   },
   "glossary": {
     "title": "Glosario",

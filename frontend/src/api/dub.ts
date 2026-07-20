@@ -87,6 +87,29 @@ export async function dubImportSrt(
   return apiPost<DubImportSrtResponse>(`/dub/import-srt/${jobId}`, fd);
 }
 
+export interface ParsedSubtitleCue {
+  start: number;
+  end: number;
+  text: string;
+}
+
+export interface ParseSubtitleTextResponse {
+  segments: ParsedSubtitleCue[];
+  skipped_cues: number;
+  dropped_overlaps: number;
+}
+
+/**
+ * Parse pasted subtitle text (SRT/VTT-ish) into timed cues.
+ *
+ * Stateless: unlike `dubImportSrt` this touches no job and replaces no
+ * segments — it exists so the "paste a translation" flow reuses the
+ * backend's lenient cue parser instead of reimplementing it in JS.
+ */
+export async function dubParseSubtitleText(text: string): Promise<ParseSubtitleTextResponse> {
+  return apiPost<ParseSubtitleTextResponse>('/dub/parse-subtitle-text', { text });
+}
+
 export async function dubTranslate(body: Record<string, unknown>): Promise<DubTranslateResponse> {
   return apiPost<DubTranslateResponse>('/dub/translate', body);
 }

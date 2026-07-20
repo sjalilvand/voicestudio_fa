@@ -878,7 +878,22 @@
     "qc_running": "กำลังตรวจสอบเวลาพากย์...",
     "qc_result": "{{flagged}} จาก {{total}} บรรทัดอาจต้องฟังซ้ำ",
     "qc_clean": "{{total}} บรรทัดทั้งหมดตรงกับสคริปต์",
-    "qc_failed": "การตรวจสอบเวลาล้มเหลว: {{message}}"
+    "qc_failed": "การตรวจสอบเวลาล้มเหลว: {{message}}",
+    "paste_translation_btn": "วางคำแปล",
+    "paste_translation_title": "วางคำแปล",
+    "paste_translation_desc": "วางคำแปลที่คุณทำไว้จากที่อื่น (ChatGPT, DeepL หรือผู้แปลที่เป็นคน) ระบบจะจับคู่กับเซกเมนต์ที่มีอยู่แล้ว โดยเวลาและถอดความต้นฉบับยังคงเดิม",
+    "paste_translation_placeholder": "วางคำบรรยาย (SRT/VTT) บรรทัดที่มีหมายเลข (1. …) หรือหนึ่งบรรทัดต่อหนึ่งเซกเมนต์ — หรือวางไฟล์ .srt/.vtt ที่นี่",
+    "paste_translation_load_file": "โหลดไฟล์ .srt / .vtt",
+    "paste_translation_mode_timestamped": "มีเวลากำกับ (SRT/VTT)",
+    "paste_translation_mode_numbered": "บรรทัดมีหมายเลข",
+    "paste_translation_mode_plain": "บรรทัดธรรมดา",
+    "paste_translation_counts": "{{segments}} เซกเมนต์ · {{lines}} บรรทัด · {{unmatched}} ไม่จับคู่",
+    "paste_translation_unused": "มี {{count}} บรรทัดที่วางแล้วไม่ได้ใช้",
+    "paste_translation_none_matched": "ไม่มีอะไรจับคู่ได้ ตรวจสอบว่าข้อความที่วางตรงกับเซกเมนต์ด้านล่าง",
+    "paste_translation_row_unmatched": "ไม่จับคู่ — คงเดิม",
+    "paste_translation_apply": "ใช้กับ {{count}} เซกเมนต์",
+    "paste_translation_cancel": "ยกเลิก",
+    "paste_translation_more_rows": "+ อีก {{count}} แถว"
   },
   "glossary": {
     "title": "อภิธานศัพท์",

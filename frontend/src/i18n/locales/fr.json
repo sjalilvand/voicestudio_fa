@@ -878,7 +878,22 @@
     "qc_running": "Vérification du timing de doublage…",
     "qc_result": "{{flagged}} lignes sur {{total}} peuvent nécessiter une réécoute",
     "qc_clean": "Toutes les lignes {{total}} correspondent au script",
-    "qc_failed": "Échec de la vérification du timing : {{message}}"
+    "qc_failed": "Échec de la vérification du timing : {{message}}",
+    "paste_translation_btn": "Coller une traduction",
+    "paste_translation_title": "Coller une traduction",
+    "paste_translation_desc": "Collez une traduction réalisée ailleurs (ChatGPT, DeepL, un traducteur humain). Elle est appliquée aux segments existants — les timings et la transcription d'origine restent intacts.",
+    "paste_translation_placeholder": "Collez des sous-titres (SRT/VTT), des lignes numérotées (1. …) ou une ligne traduite par segment — ou déposez un fichier .srt/.vtt ici.",
+    "paste_translation_load_file": "Charger un fichier .srt / .vtt",
+    "paste_translation_mode_timestamped": "Horodaté (SRT/VTT)",
+    "paste_translation_mode_numbered": "Lignes numérotées",
+    "paste_translation_mode_plain": "Lignes simples",
+    "paste_translation_counts": "{{segments}} segments · {{lines}} lignes · {{unmatched}} sans correspondance",
+    "paste_translation_unused": "{{count}} ligne(s) collée(s) inutilisée(s)",
+    "paste_translation_none_matched": "Aucune correspondance. Vérifiez que le texte collé correspond aux segments ci-dessous.",
+    "paste_translation_row_unmatched": "aucune correspondance — inchangé",
+    "paste_translation_apply": "Appliquer à {{count}} segments",
+    "paste_translation_cancel": "Annuler",
+    "paste_translation_more_rows": "+ {{count}} lignes supplémentaires"
   },
   "glossary": {
     "title": "Glossaire",

@@ -878,7 +878,22 @@
     "qc_running": "Dub zamanlaması kontrol ediliyor…",
     "qc_result": "{{flagged}} / {{total}} satırların yeniden dinlenmesi gerekebilir",
     "qc_clean": "Tüm {{total}} satırları komut dosyasıyla eşleşiyor",
-    "qc_failed": "Zamanlama kontrolü başarısız oldu: {{message}}"
+    "qc_failed": "Zamanlama kontrolü başarısız oldu: {{message}}",
+    "paste_translation_btn": "Çeviriyi yapıştır",
+    "paste_translation_title": "Bir çeviri yapıştır",
+    "paste_translation_desc": "Başka bir yerde hazırladığın çeviriyi yapıştır (ChatGPT, DeepL, bir insan çevirmen). Mevcut segmentlere eşlenir — zamanlamalar ve özgün döküm olduğu gibi kalır.",
+    "paste_translation_placeholder": "Altyazı (SRT/VTT), numaralı satırlar (1. …) veya segment başına bir çeviri satırı yapıştır — ya da buraya bir .srt/.vtt dosyası bırak.",
+    "paste_translation_load_file": ".srt / .vtt dosyası yükle",
+    "paste_translation_mode_timestamped": "Zaman damgalı (SRT/VTT)",
+    "paste_translation_mode_numbered": "Numaralı satırlar",
+    "paste_translation_mode_plain": "Düz satırlar",
+    "paste_translation_counts": "{{segments}} segment · {{lines}} satır · {{unmatched}} eşleşmeyen",
+    "paste_translation_unused": "{{count}} yapıştırılan satır kullanılmadı",
+    "paste_translation_none_matched": "Hiçbir şey eşleşmedi. Yapıştırdığın metnin aşağıdaki segmentlerle örtüştüğünü kontrol et.",
+    "paste_translation_row_unmatched": "eşleşme yok — değişmedi",
+    "paste_translation_apply": "{{count}} segmente uygula",
+    "paste_translation_cancel": "İptal",
+    "paste_translation_more_rows": "+ {{count}} satır daha"
   },
   "glossary": {
     "title": "Sözlük",

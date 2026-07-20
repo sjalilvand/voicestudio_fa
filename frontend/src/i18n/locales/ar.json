@@ -878,7 +878,22 @@
     "qc_running": "جارٍ التحقق من توقيت الدبلجة…",
     "qc_result": "{{flagged}} من {{total}} قد تحتاج الأسطر إلى إعادة الاستماع",
     "qc_clean": "جميع أسطر {{total}} تتطابق مع النص",
-    "qc_failed": "فشل التحقق من التوقيت: {{message}}"
+    "qc_failed": "فشل التحقق من التوقيت: {{message}}",
+    "paste_translation_btn": "لصق ترجمة",
+    "paste_translation_title": "لصق ترجمة",
+    "paste_translation_desc": "الصق ترجمة أعددتها في مكان آخر (ChatGPT أو DeepL أو مترجم بشري). ستُطابَق مع المقاطع الموجودة لديك — تبقى التوقيتات والنص الأصلي دون تغيير.",
+    "paste_translation_placeholder": "الصق ترجمات (SRT/VTT) أو أسطرًا مرقّمة (1. …) أو سطرًا مترجمًا لكل مقطع — أو أفلت ملف ‎.srt/.vtt هنا.",
+    "paste_translation_load_file": "تحميل ملف ‎.srt / .vtt",
+    "paste_translation_mode_timestamped": "بتوقيتات (SRT/VTT)",
+    "paste_translation_mode_numbered": "أسطر مرقّمة",
+    "paste_translation_mode_plain": "أسطر عادية",
+    "paste_translation_counts": "{{segments}} مقاطع · {{lines}} أسطر · {{unmatched}} بلا مطابقة",
+    "paste_translation_unused": "عدد الأسطر الملصقة غير المستخدمة: {{count}}",
+    "paste_translation_none_matched": "لا توجد أي مطابقة. تحقّق من أن النص الملصوق يوافق المقاطع أدناه.",
+    "paste_translation_row_unmatched": "لا مطابقة — دون تغيير",
+    "paste_translation_apply": "تطبيق على {{count}} مقاطع",
+    "paste_translation_cancel": "إلغاء",
+    "paste_translation_more_rows": "+ {{count}} صفوف إضافية"
   },
   "glossary": {
     "title": "مسرد",

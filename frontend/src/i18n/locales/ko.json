@@ -878,7 +878,22 @@
     "qc_running": "더빙 타이밍 확인 중…",
     "qc_result": "{{total}} 줄 중 {{flagged}} 줄을 다시 들어야 할 수 있습니다.",
     "qc_clean": "모든 {{total}} 줄은 스크립트와 일치합니다.",
-    "qc_failed": "타이밍 확인 실패: {{message}}"
+    "qc_failed": "타이밍 확인 실패: {{message}}",
+    "paste_translation_btn": "번역 붙여넣기",
+    "paste_translation_title": "번역 붙여넣기",
+    "paste_translation_desc": "다른 곳에서 만든 번역(ChatGPT, DeepL, 사람 번역가)을 붙여넣으세요. 이미 있는 세그먼트에 매핑되며 타이밍과 원본 전사는 그대로 유지됩니다.",
+    "paste_translation_placeholder": "자막(SRT/VTT), 번호가 매겨진 줄(1. …), 또는 세그먼트당 한 줄의 번역을 붙여넣으세요 — .srt/.vtt 파일을 여기에 놓아도 됩니다.",
+    "paste_translation_load_file": ".srt / .vtt 파일 불러오기",
+    "paste_translation_mode_timestamped": "타임스탬프 포함(SRT/VTT)",
+    "paste_translation_mode_numbered": "번호 매긴 줄",
+    "paste_translation_mode_plain": "일반 줄",
+    "paste_translation_counts": "{{segments}}개 세그먼트 · {{lines}}줄 · 미매칭 {{unmatched}}개",
+    "paste_translation_unused": "붙여넣은 줄 중 {{count}}줄이 사용되지 않았습니다",
+    "paste_translation_none_matched": "일치하는 항목이 없습니다. 붙여넣은 텍스트가 아래 세그먼트와 맞는지 확인하세요.",
+    "paste_translation_row_unmatched": "일치 없음 — 변경 안 함",
+    "paste_translation_apply": "{{count}}개 세그먼트에 적용",
+    "paste_translation_cancel": "취소",
+    "paste_translation_more_rows": "+ {{count}}개 행 더"
   },
   "glossary": {
     "title": "용어집",

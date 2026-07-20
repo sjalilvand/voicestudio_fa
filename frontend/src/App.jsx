@@ -460,6 +460,7 @@ function App() {
     segmentEditField,
     segmentDelete,
     segmentRestoreOriginal,
+    pasteTranslations,
     segmentSplit,
     segmentMerge,
     segmentMoveResize,
@@ -1575,6 +1576,7 @@ function App() {
                     segmentEditField={segmentEditField}
                     segmentDelete={segmentDelete}
                     segmentRestoreOriginal={segmentRestoreOriginal}
+                    pasteTranslations={pasteTranslations}
                     segmentSplit={segmentSplit}
                     segmentMerge={segmentMerge}
                     segmentMoveResize={segmentMoveResize}

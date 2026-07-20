@@ -58,6 +58,7 @@ export default function DubTab(props) {
     segmentEditField,
     segmentDelete,
     segmentRestoreOriginal,
+    pasteTranslations,
     segmentSplit,
     segmentMerge,
     segmentMoveResize,
@@ -693,6 +694,7 @@ export default function DubTab(props) {
               segmentEditField={segmentEditField}
               segmentDelete={segmentDelete}
               segmentRestoreOriginal={segmentRestoreOriginal}
+              pasteTranslations={pasteTranslations}
               handleSegmentPreview={handleSegmentPreview}
               onDirectSegment={onDirectSegment}
               segmentSplit={segmentSplit}

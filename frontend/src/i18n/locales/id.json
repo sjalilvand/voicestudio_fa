@@ -878,7 +878,22 @@
     "qc_running": "Memeriksa waktu sulih suara…",
     "qc_result": "{{flagged}} dari {{total}} baris mungkin perlu didengarkan ulang",
     "qc_clean": "Semua baris {{total}} cocok dengan skrip",
-    "qc_failed": "Pemeriksaan waktu gagal: {{message}}"
+    "qc_failed": "Pemeriksaan waktu gagal: {{message}}",
+    "paste_translation_btn": "Tempel terjemahan",
+    "paste_translation_title": "Tempel terjemahan",
+    "paste_translation_desc": "Tempel terjemahan yang kamu buat di tempat lain (ChatGPT, DeepL, penerjemah manusia). Terjemahan itu dipetakan ke segmen yang sudah ada — pewaktuan dan transkrip asli tidak diubah.",
+    "paste_translation_placeholder": "Tempel subtitle (SRT/VTT), baris bernomor (1. …), atau satu baris terjemahan per segmen — atau jatuhkan berkas .srt/.vtt di sini.",
+    "paste_translation_load_file": "Muat berkas .srt / .vtt",
+    "paste_translation_mode_timestamped": "Bertanda waktu (SRT/VTT)",
+    "paste_translation_mode_numbered": "Baris bernomor",
+    "paste_translation_mode_plain": "Baris biasa",
+    "paste_translation_counts": "{{segments}} segmen · {{lines}} baris · {{unmatched}} tanpa kecocokan",
+    "paste_translation_unused": "{{count}} baris tempelan tidak terpakai",
+    "paste_translation_none_matched": "Tidak ada yang cocok. Periksa apakah teks yang ditempel sejalan dengan segmen di bawah.",
+    "paste_translation_row_unmatched": "tidak cocok — tidak diubah",
+    "paste_translation_apply": "Terapkan ke {{count}} segmen",
+    "paste_translation_cancel": "Batal",
+    "paste_translation_more_rows": "+ {{count}} baris lagi"
   },
   "glossary": {
     "title": "Glosarium",
