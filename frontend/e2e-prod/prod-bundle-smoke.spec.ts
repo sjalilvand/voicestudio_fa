@@ -22,6 +22,12 @@ const IGNORABLE = [
   /ERR_CONNECTION_REFUSED/i,
   /__TAURI__/i, // not running inside the Tauri shell
   /favicon/i,
+  // The app opens ws://…/ws/events at startup. With no backend, the static
+  // preview server answers every path with the SPA's 200, so the WebSocket
+  // upgrade is refused ("Unexpected response code: 200"). That's the absent
+  // backend, not a render crash — the same class as the ERR_ entries above.
+  /WebSocket connection to .* failed/i,
+  /\/ws\//i,
 ];
 
 function isIgnorable(text: string): boolean {
