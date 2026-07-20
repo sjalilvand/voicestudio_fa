@@ -375,6 +375,12 @@ TRANSCRIBE_CHUNK_TIMEOUT_S = float(os.environ.get("OMNIVOICE_TRANSCRIBE_CHUNK_TI
 #: shouldn't silently drop that whole window — retry once on a fresh pool so the
 #: transcript doesn't come back "missing the beginning".
 _CHUNK_TRANSCRIBE_ATTEMPTS = max(1, int(os.environ.get("OMNIVOICE_TRANSCRIBE_CHUNK_ATTEMPTS", "2")))
+#: Seconds between SSE keepalive comments while the transcribe preflight loads
+#: the ASR backend (#1196). A first-run load can download multi-GB weights —
+#: minutes with zero bytes on the wire — and byte-silent streams get severed
+#: by Chrome's ~5 min no-response cap and by reverse-proxy idle timeouts,
+#: which the UI can only report as the generic "stream dropped" guess.
+ASR_LOAD_KEEPALIVE_S = float(os.environ.get("OMNIVOICE_ASR_LOAD_KEEPALIVE_S", "15.0"))
 
 
 _sse_event = dub_pipeline.sse_event
@@ -432,125 +438,184 @@ async def dub_transcribe_stream(
     # query string can never break the diarization call. None → auto-detect.
     num_speakers = _clamp_num_speakers(num_speakers)
 
-    # Crash forensics (#1164): transcription is a prime OOM-kill site (ASR
-    # model loading on top of a resident TTS model). Record that one started
-    # so an unclean death is attributable. Kind only — never media content.
-    from core.run_sentinel import touch_activity
-    touch_activity("transcribe", "dub")
-
-    job = _get_job(job_id)
-
-    preflight_error: Optional[str] = None
-    # Extra machine-readable fields merged into the preflight `error` SSE event
-    # (e.g. the typed asr_model_missing payload → download-CTA in the UI).
-    preflight_payload: Optional[dict] = None
-    asr_audio_target: Optional[str] = None
-    _asr_backend = None
-    scene_cuts: list = []
-    # Defaulted here, not just inside the preflight block below: it is read from
-    # _gen_body (separated_vocals=), so a preflight that bails early would
-    # otherwise leave it unbound and raise NameError instead of the real error.
-    asr_on_vocals = False
-
-    if not job:
-        preflight_error = "Job not found. It may have been cleaned up or was never created."
-    else:
-        # The TTS core model is loaded here for exactly one reason: to harvest a
-        # preloaded `_asr_pipe` off it (passed to get_active_asr_backend below).
-        # That attribute is only ever set by OmniVoice.from_pretrained under
-        # OMNIVOICE_PRELOAD_TTS_ASR, which is off by default — so in the default
-        # config this loaded ~3 GB, harvested None, and then offload_tts_for_asr()
-        # freed it again 60 lines below. On unified memory that offload is a full
-        # UNLOAD (#1119), so dub_generate later cold-reloaded the same model (~8s).
-        # Every dub paid load → unload → reload for an attribute that was always
-        # None. Load it only when there is actually something to harvest.
-        _model = None
-        if should_preload_tts_asr():
-            # Guard the model load: if it raises, the SSE stream would otherwise die
-            # before emitting any event, and the UI shows a misleading generic
-            # "stream dropped" message instead of the real cause (issue #255).
-            try:
-                _model = await get_model()
-            except Exception as e:
-                logger.exception("transcribe preflight: model load failed (job=%s)", job_id)
-                from core.failure import build_failure
-                f = build_failure(e, stage="transcribe-preflight", include_diagnostic=False)
-                preflight_error = f["reason"] + (f" — {f['hint']}" if f.get("hint") else "")
-                _model = None
-        if preflight_error is None:
-            asr_audio_target = job.get("vocals_path")
-            if not asr_audio_target or not os.path.exists(asr_audio_target):
-                asr_audio_target = job.get("audio_path")
-            # #963: onset snapping is only trustworthy on the Demucs vocals
-            # track. When separation failed/was skipped, dub_pipeline sets
-            # vocals_path to the mixed audio_path — so compare paths instead
-            # of trusting the key's presence.
-            asr_on_vocals = bool(asr_audio_target) and asr_audio_target != job.get("audio_path")
-            if not asr_audio_target or not os.path.exists(asr_audio_target):
-                preflight_error = "No audio available for transcription."
-            else:
-                from services.asr_backend import (
-                    active_backend_id,
-                    asr_model_missing_detail,
-                    asr_model_missing_error,
-                    load_active_asr_backend,
-                )
-                # TTS-only install: no ASR model on disk. Bail BEFORE any
-                # backend is constructed/loaded — the whisper backends would
-                # otherwise silently auto-download multi-GB weights from HF.
-                # Typed payload → the UI renders a one-click download CTA.
-                # A preloaded `_asr_pipe` only substitutes for the
-                # *pytorch-whisper* backend (its sole consumer) — any other
-                # active backend still loads its own weights, so the preflight
-                # must run for them even when the pipe is present.
-                _missing = None
-                _skip_preflight = (
-                    getattr(_model, "_asr_pipe", None) is not None
-                    and active_backend_id() == "pytorch-whisper"
-                )
-                if not _skip_preflight:
-                    _missing = await asyncio.get_running_loop().run_in_executor(
-                        None, asr_model_missing_error
-                    )
-                if _missing is not None:
-                    preflight_error = asr_model_missing_detail(_missing)
-                    preflight_payload = _missing
-                if _missing is None:
-                    try:
-                        # The PyTorch-Whisper backend lazily builds its own pipeline
-                        # when no preloaded `_asr_pipe` is present (issue #255), so it
-                        # no longer needs OMNIVOICE_PRELOAD_TTS_ASR=1.
-                        #
-                        # Select + eagerly load in ONE call so a real load failure
-                        # (e.g. WhisperX: missing weights, CTranslate2/cuDNN
-                        # mismatch, the torch-2.6 weights-only VAD regression)
-                        # surfaces once, with its actual cause, as a clean preflight
-                        # `error` event — instead of being buried in N cryptic
-                        # per-chunk failures and retried on every chunk (#578) —
-                        # and so a backend whose deep import chain is rotted (e.g.
-                        # `No module named 'lightning_fabric'` from a partial
-                        # install, #1185) is marked unavailable and skipped in
-                        # favor of the next engine instead of failing ASR init
-                        # wholesale. Run in a thread so the (blocking) load
-                        # doesn't stall the event loop.
-                        import functools
-                        _asr_backend = await asyncio.get_running_loop().run_in_executor(
-                            _gpu_pool,
-                            functools.partial(
-                                load_active_asr_backend,
-                                asr_pipe=getattr(_model, "_asr_pipe", None),
-                            ),
-                        )
-                    except Exception as e:
-                        logger.exception("transcribe preflight: ASR load failed (job=%s)", job_id)
-                        from core.failure import build_failure
-                        f = build_failure(e, stage="transcribe-preflight", include_diagnostic=False)
-                        preflight_error = "ASR backend initialization failed: " + f["reason"] + (
-                            f" — {f['hint']}" if f.get("hint") else ""
-                        )
-                scene_cuts = job.get("scene_cuts") or []
-
     async def _gen_body():
+        # ── Preflight — run INSIDE the stream, never before it (#1196) ──
+        # This whole block used to run in the endpoint body, before the
+        # StreamingResponse existed — i.e. OUTSIDE the stream's terminal-event
+        # contract (#516). Two real-world consequences (issue #1196):
+        #   * an exception on any unguarded line became an HTTP 500, whose
+        #     body EventSource cannot read — the UI could only show the
+        #     generic "Transcribe stream dropped … likely ASR backend failed"
+        #     guess while a perfectly alive backend knew the real cause;
+        #   * not a single byte (not even response headers) went out until
+        #     the ASR load finished — a first-run weight download can mean
+        #     minutes of total silence, tripping Chrome's hard ~5 min
+        #     no-response timeout (and any reverse-proxy timeout in front of
+        #     a Docker install), severing the stream with that same generic
+        #     message.
+        # In here, headers + a first comment go out immediately, keepalive
+        # comments flow while the ASR backend loads, and ANY preflight crash
+        # lands in gen()'s last-resort finalizer as a structured `error` +
+        # terminal `done`.
+        # Crash forensics (#1164): transcription is a prime OOM-kill site (ASR
+        # model loading on top of a resident TTS model). Record that one started
+        # so an unclean death is attributable. Kind only — never media content.
+        from core.run_sentinel import touch_activity
+        touch_activity("transcribe", "dub")
+
+        job = _get_job(job_id)
+
+        preflight_error: Optional[str] = None
+        # Extra machine-readable fields merged into the preflight `error` SSE event
+        # (e.g. the typed asr_model_missing payload → download-CTA in the UI).
+        preflight_payload: Optional[dict] = None
+        asr_audio_target: Optional[str] = None
+        _asr_backend = None
+        scene_cuts: list = []
+        # Defaulted here, not just inside the preflight block below: it is read from
+        # _gen_body (separated_vocals=), so a preflight that bails early would
+        # otherwise leave it unbound and raise NameError instead of the real error.
+        asr_on_vocals = False
+
+        if not job:
+            preflight_error = "Job not found. It may have been cleaned up or was never created."
+        else:
+            # The TTS core model is loaded here for exactly one reason: to harvest a
+            # preloaded `_asr_pipe` off it (passed to get_active_asr_backend below).
+            # That attribute is only ever set by OmniVoice.from_pretrained under
+            # OMNIVOICE_PRELOAD_TTS_ASR, which is off by default — so in the default
+            # config this loaded ~3 GB, harvested None, and then offload_tts_for_asr()
+            # freed it again 60 lines below. On unified memory that offload is a full
+            # UNLOAD (#1119), so dub_generate later cold-reloaded the same model (~8s).
+            # Every dub paid load → unload → reload for an attribute that was always
+            # None. Load it only when there is actually something to harvest.
+            _model = None
+            if should_preload_tts_asr():
+                # Guard the model load: if it raises, the SSE stream would otherwise die
+                # before emitting any event, and the UI shows a misleading generic
+                # "stream dropped" message instead of the real cause (issue #255).
+                try:
+                    # Same keepalive treatment as the ASR load below: a cold
+                    # TTS load can outlast a reverse proxy's per-read idle
+                    # timeout (~60-120 s nginx/Caddy defaults) — the initial
+                    # open comment stops the browser's no-response clock but
+                    # does not reset a proxy's idle timer.
+                    _model_task = asyncio.ensure_future(get_model())
+                    _model_task.add_done_callback(
+                        lambda f: f.cancelled() or f.exception()
+                    )
+                    while True:
+                        _done, _ = await asyncio.wait(
+                            {_model_task}, timeout=ASR_LOAD_KEEPALIVE_S
+                        )
+                        if _done:
+                            break
+                        yield b": tts-load keepalive\n\n"
+                    _model = _model_task.result()
+                except Exception as e:
+                    logger.exception("transcribe preflight: model load failed (job=%s)", job_id)
+                    from core.failure import build_failure
+                    f = build_failure(e, stage="transcribe-preflight", include_diagnostic=False)
+                    preflight_error = f["reason"] + (f" — {f['hint']}" if f.get("hint") else "")
+                    _model = None
+            if preflight_error is None:
+                asr_audio_target = job.get("vocals_path")
+                if not asr_audio_target or not os.path.exists(asr_audio_target):
+                    asr_audio_target = job.get("audio_path")
+                # #963: onset snapping is only trustworthy on the Demucs vocals
+                # track. When separation failed/was skipped, dub_pipeline sets
+                # vocals_path to the mixed audio_path — so compare paths instead
+                # of trusting the key's presence.
+                asr_on_vocals = bool(asr_audio_target) and asr_audio_target != job.get("audio_path")
+                if not asr_audio_target or not os.path.exists(asr_audio_target):
+                    preflight_error = "No audio available for transcription."
+                else:
+                    from services.asr_backend import (
+                        active_backend_id,
+                        asr_model_missing_detail,
+                        asr_model_missing_error,
+                        load_active_asr_backend,
+                    )
+                    # TTS-only install: no ASR model on disk. Bail BEFORE any
+                    # backend is constructed/loaded — the whisper backends would
+                    # otherwise silently auto-download multi-GB weights from HF.
+                    # Typed payload → the UI renders a one-click download CTA.
+                    # A preloaded `_asr_pipe` only substitutes for the
+                    # *pytorch-whisper* backend (its sole consumer) — any other
+                    # active backend still loads its own weights, so the preflight
+                    # must run for them even when the pipe is present.
+                    _missing = None
+                    _skip_preflight = (
+                        getattr(_model, "_asr_pipe", None) is not None
+                        and active_backend_id() == "pytorch-whisper"
+                    )
+                    if not _skip_preflight:
+                        _missing = await asyncio.get_running_loop().run_in_executor(
+                            None, asr_model_missing_error
+                        )
+                    if _missing is not None:
+                        preflight_error = asr_model_missing_detail(_missing)
+                        preflight_payload = _missing
+                    if _missing is None:
+                        try:
+                            # The PyTorch-Whisper backend lazily builds its own pipeline
+                            # when no preloaded `_asr_pipe` is present (issue #255), so it
+                            # no longer needs OMNIVOICE_PRELOAD_TTS_ASR=1.
+                            #
+                            # Select + eagerly load in ONE call so a real load failure
+                            # (e.g. WhisperX: missing weights, CTranslate2/cuDNN
+                            # mismatch, the torch-2.6 weights-only VAD regression)
+                            # surfaces once, with its actual cause, as a clean preflight
+                            # `error` event — instead of being buried in N cryptic
+                            # per-chunk failures and retried on every chunk (#578) —
+                            # and so a backend whose deep import chain is rotted (e.g.
+                            # `No module named 'lightning_fabric'` from a partial
+                            # install, #1185) is marked unavailable and skipped in
+                            # favor of the next engine instead of failing ASR init
+                            # wholesale. Run in a thread so the (blocking) load
+                            # doesn't stall the event loop.
+                            import functools
+                            _load_fut = asyncio.get_running_loop().run_in_executor(
+                                _gpu_pool,
+                                functools.partial(
+                                    load_active_asr_backend,
+                                    asr_pipe=getattr(_model, "_asr_pipe", None),
+                                ),
+                            )
+                            # On client disconnect the ASGI server cancels this
+                            # generator mid-wait; the executor load keeps
+                            # running (and still caches its result). Retrieve
+                            # its eventual exception so asyncio never logs
+                            # "Task exception was never retrieved" into the
+                            # crash forensics log.
+                            _load_fut.add_done_callback(
+                                lambda f: f.cancelled() or f.exception()
+                            )
+                            # Keepalive while the load runs (#1196): a first-run
+                            # load may download weights for minutes, and a
+                            # byte-silent stream gets severed by Chrome's
+                            # ~5 min no-response cap or a reverse proxy's idle
+                            # timeout — which the UI can only render as the
+                            # generic "stream dropped" guess. SSE comment
+                            # lines are invisible to EventSource, so no client
+                            # changes are needed.
+                            while True:
+                                _done, _ = await asyncio.wait(
+                                    {_load_fut}, timeout=ASR_LOAD_KEEPALIVE_S
+                                )
+                                if _done:
+                                    break
+                                yield b": asr-load keepalive\n\n"
+                            _asr_backend = _load_fut.result()
+                        except Exception as e:
+                            logger.exception("transcribe preflight: ASR load failed (job=%s)", job_id)
+                            from core.failure import build_failure
+                            f = build_failure(e, stage="transcribe-preflight", include_diagnostic=False)
+                            preflight_error = "ASR backend initialization failed: " + f["reason"] + (
+                                f" — {f['hint']}" if f.get("hint") else ""
+                            )
+                    scene_cuts = job.get("scene_cuts") or []
+
         if preflight_error:
             # Always follow a terminal `error` with `done` so the stream closes
             # via a named event, not a raw connection drop. A bare error+close
@@ -1215,6 +1280,12 @@ async def dub_transcribe_stream(
         yield _sse_event("done", {})
 
     async def gen():
+        # First byte out the moment the stream starts (#1196): the browser's
+        # no-response clock stops, buffering middlemen flush the headers, and
+        # EventSource reports the stream open — all BEFORE the preflight
+        # (which may load models for minutes) runs inside _gen_body. A
+        # comment line is invisible to client event handlers.
+        yield b": transcribe-stream open\n\n"
         # Terminal-event guard (#516): the SSE stream must NEVER close without a
         # terminal event. Any unanticipated exception in the body (e.g. an ASR
         # load that escapes the per-chunk handler) previously dropped the

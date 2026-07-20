@@ -301,6 +301,112 @@ def test_transcribe_stream_surfaces_asr_load_failure_at_preflight(tmp_path, monk
     assert done_idx > err_idx >= 0, f"error must be followed by terminal done: {body}"
 
 
+def test_transcribe_stream_preflight_crash_is_a_structured_error(monkeypatch):
+    """Regression #1196: the whole preflight used to run in the endpoint body,
+    BEFORE the StreamingResponse existed. An exception on any line without its
+    own guard (the job-store lookup, the backend-id resolution, the
+    `services.asr_backend` import, …) became an HTTP 500 — whose body
+    EventSource cannot read — so the UI showed the generic "Transcribe stream
+    dropped … likely ASR backend failed to load" guess while a perfectly alive
+    backend knew the real cause. The preflight now runs INSIDE the stream, so
+    any such crash lands in the terminal-event guard (#516) as a structured
+    `error` + `done`.
+
+    `_get_job` stands in for the class: any raise, anywhere in the preflight,
+    must reach the client as a structured SSE error — never a non-2xx."""
+    import asyncio
+    from api.routers import dub_core as dc
+
+    def _boom_get_job(job_id):
+        raise RuntimeError("job store exploded: simulated")
+
+    monkeypatch.setattr(dc, "_get_job", _boom_get_job)
+
+    async def _collect():
+        resp = await dc.dub_transcribe_stream("t_preflightcrash")
+        parts = []
+        async for chunk in resp.body_iterator:
+            parts.append(chunk.decode() if isinstance(chunk, (bytes, bytearray)) else str(chunk))
+        return "".join(parts)
+
+    # Before the fix this raised straight out of the endpoint coroutine
+    # (→ HTTP 500 through the app); it must instead stream a terminal error.
+    body = asyncio.run(_collect())
+
+    assert "event: error" in body, body
+    assert "job store exploded: simulated" in body, body
+    err_idx = body.rfind("event: error")
+    done_idx = body.rfind("event: done")
+    assert done_idx > err_idx >= 0, f"error must precede the terminal done: {body}"
+
+
+def test_transcribe_stream_sends_bytes_while_asr_loads(tmp_path, monkeypatch):
+    """Regression #1196 (silent-load drop class): the old endpoint-body
+    preflight sent NOT ONE byte — not even response headers — until the ASR
+    backend finished loading. A first-run load downloads multi-GB weights, so
+    minutes of byte-silence tripped Chrome's ~5 min no-response timeout (and
+    reverse-proxy timeouts in front of Docker installs), severing the stream
+    with the generic "stream dropped" message even though the backend was
+    healthy and still working.
+
+    The stream must now (a) open with an immediate comment byte before the
+    preflight runs, and (b) emit keepalive comments while the load is in
+    flight — both invisible to EventSource handlers, so no client changes."""
+    import asyncio
+    import time
+    from api.routers import dub_core as dc
+
+    job_id = "t_slowload"
+    audio = tmp_path / "a.wav"
+    _make_wav(audio, seconds=1.0)
+    dc._dub_jobs[job_id] = {
+        "audio_path": str(audio), "vocals_path": None, "scene_cuts": [],
+    }
+
+    fake_model = MagicMock()
+    fake_model._asr_pipe = None
+
+    async def _ok_model():
+        return fake_model
+
+    def _slow_boom(**_kw):
+        time.sleep(0.15)  # long enough for several keepalive intervals below
+        raise RuntimeError("weights download interrupted: simulated")
+
+    monkeypatch.setattr(dc, "get_model", _ok_model)
+    monkeypatch.setattr(
+        "services.asr_backend.load_active_asr_backend", _slow_boom
+    )
+    monkeypatch.setattr(dc, "ASR_LOAD_KEEPALIVE_S", 0.02)
+
+    async def _collect():
+        resp = await dc.dub_transcribe_stream(job_id)
+        parts = []
+        async for chunk in resp.body_iterator:
+            parts.append(chunk.decode() if isinstance(chunk, (bytes, bytearray)) else str(chunk))
+        return parts
+
+    try:
+        parts = asyncio.run(_collect())
+    finally:
+        dc._dub_jobs.pop(job_id, None)
+
+    body = "".join(parts)
+    # (a) The very first bytes are the stream-open comment — before any model
+    # work. This is what stops the browser/proxy no-response clocks.
+    assert parts[0].startswith(": transcribe-stream open"), parts[0]
+    # (b) Keepalives flowed during the slow load, before the terminal error.
+    assert ": asr-load keepalive" in body, body
+    assert body.index(": asr-load keepalive") < body.index("event: error"), body
+    # And the slow load's real failure still surfaces as the structured
+    # preflight error, followed by the terminal done.
+    assert "ASR backend initialization failed" in body, body
+    assert "weights download interrupted: simulated" in body, body
+    err_idx = body.find("event: error")
+    done_idx = body.find("event: done")
+    assert done_idx > err_idx >= 0, f"error must be followed by terminal done: {body}"
+
+
 def test_reset_pool_on_wedge_resets_resilient_pool():
     """#730: a chunk transcribe that times out wedges its GPU-pool worker. The
     chunked stream must abandon the pool so the next chunk / a concurrent TTS
