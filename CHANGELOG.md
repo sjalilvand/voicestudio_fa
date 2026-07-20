@@ -36,7 +36,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - `OMNIVOICE_TRUSTED_NETWORKS` — comma-separated CIDRs exempted from the consumption auth gates (share PIN / API key / dictation WS); admin routes stay loopback-only (#1170)
 - Info/warn system notifications are dismissible and stay dismissed across restarts; error-level notices can't be dismissed, and the unclean-shutdown notice is now acknowledged server-side — thanks @agudmund! (#1192)
 - `clone_voice` MCP tool — AI agents can clone a new voice from a base64 reference audio sample; returns a `profile_id` immediately usable with `generate_speech` — thanks @paoloantinori! (#1194)
-- Dub tab: **Paste Translation** — paste a translation made elsewhere (ChatGPT, DeepL, a human) as subtitles, numbered lines, or plain lines; it maps onto the existing segments with a before→after preview, keeping timings and the source transcript intact (#1202)
+- Dub tab: **Paste Translation** — paste a translation made elsewhere (ChatGPT, DeepL, a human) as subtitles, numbered lines, or plain lines; it maps onto the existing segments with a before→after preview, keeping timings and the source transcript intact (#1203)
 
 ### CI
 
@@ -50,7 +50,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
-- Subtitle parsing no longer stalls on a blank-line-heavy `.srt`: the timing-line regex backtracked across newlines, so a mis-saved export could pin an import for hours (#1202)
+- Subtitle parsing no longer stalls on a blank-line-heavy `.srt`: the timing-line regex backtracked across newlines, so a mis-saved export could pin an import for hours (#1203)
 - A broken ASR engine's fallback could silently auto-download multi-GB weights — every fallback now passes the same no-download preflight and shows the download CTA instead (#1189)
 - Dub transcription releases the ASR model from VRAM on every exit — crashes, early errors, and client disconnects included (#1175)
 - An invalid dictation model override could bypass the missing-model check for the Whisper fallback (#1175)
