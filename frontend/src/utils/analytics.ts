@@ -42,8 +42,7 @@ import type { PostHog } from 'posthog-js';
  * live in exactly this file and backend/core/analytics.py.
  */
 const PUBLIC_PROJECT_TOKEN = 'phc_v5wMjnYMPMaEcRNLRKQsTYCzPaYWh7wcHPhXNkNajVf9'; // gitleaks:allow — publishable write-only key (#1193)
-const POSTHOG_TOKEN: string =
-  (import.meta.env?.VITE_POSTHOG_KEY as string) || PUBLIC_PROJECT_TOKEN;
+const POSTHOG_TOKEN: string = (import.meta.env?.VITE_POSTHOG_KEY as string) || PUBLIC_PROJECT_TOKEN;
 const POSTHOG_HOST: string =
   (import.meta.env?.VITE_POSTHOG_HOST as string) || 'https://eu.i.posthog.com';
 

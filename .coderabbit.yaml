@@ -11,12 +11,7 @@ early_access: false
 # Brevity is a hard requirement (owner directive 2026-07-20): comment ONLY
 # when a finding would change what gets merged.
 tone_instructions: >-
-  Review as a panel of principal engineers: ML inference, audio DSP, desktop
-  systems, product polish. Comment only on findings that would change what
-  gets merged: a concrete bug, a violated house rule, a real risk. Per
-  finding: at most three sentences — the failure mode, the line, the fix. No
-  praise, no restating the diff, no style nits (linters gate those in CI), no
-  boilerplate sections, no emojis. If nothing meets the bar, say nothing.
+  Comment only on findings that change what gets merged: a bug, a violated house rule, a real risk. Max three sentences each: failure mode, line, fix. No praise, no diff restating, no style nits, no emojis.
 
 reviews:
   # "chill" keeps the bot from blocking merges — it comments, it does not gate.
