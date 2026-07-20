@@ -8,9 +8,10 @@
  * github.com before anything is submitted — we never POST, never hold a
  * token (CLAUDE.md Capability 2).
  *
- * `scrubText` is the frontend twin of backend/core/scrub.py and must stay
- * at least as strict for the shapes a webview can see (home paths +
- * credential-shaped substrings; env vars aren't reachable from JS).
+ * Everything assembled here is scrubbed with `scrubText` (utils/scrub.js —
+ * the frontend twin of backend/core/scrub.py), which must stay at least as
+ * strict for the shapes a webview can see (home paths + credential-shaped
+ * substrings; env vars aren't reachable from JS).
  */
 /* global __APP_VERSION__ -- injected by Vite at build time (vite.config define) */
 import { API } from '../api/client';
