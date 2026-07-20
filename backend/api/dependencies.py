@@ -114,38 +114,31 @@ def _admin_credential_configured(request) -> bool:
 
 
 def _request_presents_admin_credential(request) -> bool:
-    """Whether the request carries a valid API key or share PIN via the same
-    channels the middleware accepts (``Authorization: Bearer`` / ``?api_key`` /
-    ``ov_key`` cookie; ``x-omnivoice-pin`` / ``?pin`` / ``ov_pin`` cookie).
+    """Whether the request carries a valid **API key** via the channels the
+    middleware accepts (``Authorization: Bearer`` / ``?api_key`` / ``ov_key``
+    cookie).
 
-    Used only by the admin gate under server mode so that trusted-network
-    membership — a *consumption* exemption (``is_local_host``) that bypasses the
-    middleware — can never by itself unlock the RCE-class admin surface. All
-    lookups are getattr-defensive so a minimal Request stub never raises."""
+    Admin is RCE-class (``/system/set-env`` + ``/api/settings/*``), so only the
+    API key — a long operator-chosen secret — unlocks it. The 6-digit share PIN
+    is deliberately NOT accepted here: it is a *consumption* credential for LAN
+    playback and is short enough to brute-force (10^6, no lockout), so it must
+    never gate the admin surface (CodeRabbit #1213). A trusted-network CIDR
+    (``is_local_host`` — also a consumption exemption) likewise never unlocks
+    admin. Net: remote admin in server mode requires the API key; a PIN-only
+    deployment keeps admin loopback-only. getattr-defensive so a minimal Request
+    stub never raises."""
+    api_key = os.environ.get("OMNIVOICE_API_KEY") or ""
+    if not api_key:
+        return False
     headers = getattr(request, "headers", None) or {}
     query = getattr(request, "query_params", None) or {}
     cookies = getattr(request, "cookies", None) or {}
 
-    api_key = os.environ.get("OMNIVOICE_API_KEY") or ""
-    if api_key:
-        auth = headers.get("authorization", "")
-        supplied = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
-        if not supplied:
-            supplied = query.get("api_key") or cookies.get("ov_key") or ""
-        if supplied and secrets.compare_digest(supplied, api_key):
-            return True
-
-    pin = _configured_pin(request)
-    if pin:
-        supplied = (
-            headers.get("x-omnivoice-pin")
-            or query.get("pin")
-            or cookies.get("ov_pin")
-            or ""
-        )
-        if supplied and secrets.compare_digest(supplied, pin):
-            return True
-    return False
+    auth = headers.get("authorization", "")
+    supplied = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
+    if not supplied:
+        supplied = query.get("api_key") or cookies.get("ov_key") or ""
+    return bool(supplied and secrets.compare_digest(supplied, api_key))
 
 
 def require_loopback(request: Request) -> None:
@@ -171,12 +164,15 @@ def require_loopback(request: Request) -> None:
     - No credential configured (no API key, no PIN) → open, matching the #261
       Docker flow where the operator reaches ``/system/*`` off the bridge
       gateway with nothing set.
-    - A credential IS configured → the request must present it. This keeps the
-      two-tier privilege model intact under server mode: ``OMNIVOICE_TRUSTED_NETWORKS``
-      is a *consumption* exemption (``is_local_host``) that bypasses the PIN /
-      API-key middleware, and it must NEVER by itself unlock the admin surface
-      (``/system/set-env`` — RCE-class — and ``/api/settings/*``). A LAN client
-      in a trusted CIDR that presents no credential gets 403 here even though it
+    - A credential IS configured → the request must present the **API key**.
+      This keeps the two-tier privilege model intact under server mode:
+      ``OMNIVOICE_TRUSTED_NETWORKS`` is a *consumption* exemption
+      (``is_local_host``) that bypasses the PIN / API-key middleware, and it must
+      NEVER by itself unlock the admin surface (``/system/set-env`` — RCE-class —
+      and ``/api/settings/*``). The 6-digit share PIN is a consumption credential
+      too and does not gate admin, so a PIN-only deployment keeps admin
+      loopback-only; remote admin requires the (long) API key. A LAN client in a
+      trusted CIDR — or one holding only the PIN — gets 403 here even though it
       sails through the consumption gates. See docs/api-auth.md (#1213).
     """
     host = request.client.host if request.client else None

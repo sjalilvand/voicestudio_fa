@@ -45,8 +45,9 @@ Comma-separated CIDRs (`192.168.1.0/24,10.0.0.0/8`) that are treated as
 loopback-trusted **for consumption only**. Set it so LAN clients or a reverse
 proxy can hit TTS/dictation without the PIN/API key. It **never** exempts the
 admin surface — a trusted-network client still gets `403` on `/system/*` and
-`/api/settings/*` unless it is genuine loopback or (in server mode) presents a
-credential.
+`/api/settings/*` unless it is genuine loopback or (in server mode) presents the
+**API key** — and only when a credential is configured at all (a bare
+no-credential deployment leaves admin open; see Server mode below).
 
 ## Server mode (`OMNIVOICE_SERVER_MODE=1`, the Docker image)
 
@@ -60,11 +61,16 @@ It does **not** drop the credential requirement. Under server mode the admin
 gate applies this rule (see `require_loopback` in
 `backend/api/dependencies.py`):
 
-- **No credential configured** (no API key, no PIN) → admin is open. This is the
+- **No credential configured** (no API key, no PIN) → admin is open (`403` never fires). This is the
   #261 flow: a bare Docker deployment where the operator reaches `/system/*` off
   the bridge gateway with nothing set. Exposure rests on the port mapping.
-- **A credential IS configured** → the request must present it (API key or PIN,
-  via any accepted channel). Loopback still passes with no credential.
+- **A credential IS configured** (API key and/or PIN) → the request must present
+  the **API key** (`Authorization: Bearer` / `?api_key` / `ov_key` cookie).
+  Loopback still passes with no credential. The 6-digit share PIN is a
+  *consumption* credential and is **not** accepted for admin — it is short enough
+  to brute-force, so it must never gate `/system/set-env` (RCE-class). A PIN-only
+  deployment therefore keeps admin **loopback-only**; remote admin requires the
+  (long) API key.
 
 ### Why the credential re-check exists (#1213)
 
@@ -81,12 +87,12 @@ A client at `10.1.2.3` (in the trusted CIDR) could then `POST /system/set-env`
 *consumption* exemption, silently unlocked full admin (read the masked HF-token
 preview, install engines, set arbitrary env, clear logs, …).
 
-The fix keeps the admin gate independent: in server mode a configured credential
-gates admin, and trusted-network membership alone never satisfies it. The trusted
-client keeps its consumption exemption (TTS/dictation still work without the key)
-but is `403`'d on the admin surface until it presents the credential. A
-deployment that sets **no** credential is unchanged, and the loopback operator
-path is unchanged.
+The fix keeps the admin gate independent: in server mode admin requires the API
+key (or loopback), and neither trusted-network membership nor the share PIN
+satisfies it. The trusted client keeps its consumption exemption (TTS/dictation
+still work without the key) but is `403`'d on the admin surface until it presents
+the API key. A deployment that sets **no** credential is unchanged (admin open,
+#261), and the loopback operator path is unchanged.
 
 ## Quick reference — who reaches admin (`/system/*`, `/api/settings/*`)?
 

@@ -112,8 +112,9 @@ remote key — is what's gating access.
   casual share session, the key is the durable remote credential. Either can
   be active; both are checked when set.
 - Admin routes (`/system/*`, `/api/settings/*`) stay loopback-gated unless
-  `OMNIVOICE_SERVER_MODE=1` is set on the box; in server mode the key (or PIN)
-  is the access control for those too — see the credential rule below.
+  `OMNIVOICE_SERVER_MODE=1` is set on the box; in server mode the **API key** is
+  the access control for those too (the short share PIN is consumption-only and
+  does not gate admin) — see the credential rule below.
 - **Trust a LAN or reverse proxy with `OMNIVOICE_TRUSTED_NETWORKS`.** If you run
   OmniVoice behind a reverse proxy (nginx, Caddy, NPM) or only expose it on a
   trusted LAN/Tailnet, set `OMNIVOICE_TRUSTED_NETWORKS` to a comma-separated list
@@ -128,7 +129,8 @@ remote key — is what's gating access.
   *consumption* exemption only — it never unlocks admin by itself, even in
   server mode (#1213).** When combined with `OMNIVOICE_SERVER_MODE=1`, a
   trusted-network client that presents no credential still gets `403` on the
-  admin routes; if a key/PIN is set, it must present it to reach admin, exactly
-  like any other non-loopback client. See [`api-auth.md`](api-auth.md) for the
-  full two-tier model.
+  admin routes (unless no credential is configured at all, the bare-Docker #261
+  flow, where admin is open); if a credential is set, only the **API key** — not
+  the share PIN — reaches admin. See [`api-auth.md`](api-auth.md) for the full
+  two-tier model.
 - The key is compared in constant time and never logged.
