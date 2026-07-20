@@ -1,8 +1,8 @@
 {
   "$comment": "Greptile per-repo config — https://www.greptile.com/docs/code-review-bot/greptile-json. The Greptile GitHub App is installed; this file tunes its reviews. Dashboard settings are the org-wide fallback. Greptile also learns from 👍/👎 reactions on its comments — react to train it.",
-  "instructions": "Review as a panel of passionate senior domain experts (ML inference, audio DSP, desktop systems, product polish): cite exact lines, name the concrete failure mode, propose the fix — no filler praise. OmniVoice is a fully-local desktop app (no cloud, no API keys, no telemetry): flag any new outbound network call that is not GitHub Issues or a HuggingFace model download. In every review summary, make the change visual: if the PR touches UI (JSX/TSX/CSS or Tauri window config), include a compact ASCII before/after mockup of the affected layout or component; if it changes behavior or data flow, include a sequence/flow diagram of the new mechanism. Keep diagrams small and strictly faithful to the diff.",
-  "commentTypes": ["logic", "syntax", "info"],
-  "strictness": 2,
+  "instructions": "Review as a panel of senior domain experts (ML inference, audio DSP, desktop systems). Comment ONLY on findings that would change what gets merged: a concrete bug, a violated house rule from CLAUDE.md, a real security/data risk. Per finding: at most three sentences — failure mode, line, fix. No praise, no restating the diff, no diagrams or mockups, no style commentary (CI linters gate style), no info-level observations. If nothing meets the bar, leave no comments. OmniVoice is a fully-local desktop app (no cloud, no API keys, no telemetry): flag any new outbound network call that is not GitHub Issues or a HuggingFace model download.",
+  "commentTypes": ["logic"],
+  "strictness": 3,
   "customContext": {
     "files": ["CLAUDE.md"],
     "rules": [
@@ -24,13 +24,14 @@
   "statusCheck": true,
   "ignorePatterns": "bun.lock\nuv.lock\nfrontend/src-tauri/target/**\ntests/fixtures/**\n*.svg\n*.png\n*.wav\n*.onnx",
   "sequenceDiagramSection": {
-    "included": true,
-    "collapsible": true,
-    "defaultOpen": true
+    "included": false
+  },
+  "confidenceScoreSection": {
+    "included": false
   },
   "summarySection": {
     "included": true,
     "collapsible": true,
-    "defaultOpen": true
+    "defaultOpen": false
   }
 }

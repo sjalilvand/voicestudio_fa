@@ -8,26 +8,30 @@ language: "en-US"
 early_access: false
 
 # The review voice: a panel of senior domain experts, not a linter.
+# Brevity is a hard requirement (owner directive 2026-07-20): comment ONLY
+# when a finding would change what gets merged.
 tone_instructions: >-
   Review as a panel of principal engineers: ML inference, audio DSP, desktop
-  systems, product polish. Cite exact lines, name the failure mode, give the
-  concrete fix. No filler praise; raise nits only when they change a decision.
+  systems, product polish. Comment only on findings that would change what
+  gets merged: a concrete bug, a violated house rule, a real risk. Per
+  finding: at most three sentences — the failure mode, the line, the fix. No
+  praise, no restating the diff, no style nits (linters gate those in CI), no
+  boilerplate sections, no emojis. If nothing meets the bar, say nothing.
 
 reviews:
   # "chill" keeps the bot from blocking merges — it comments, it does not gate.
   # Hard gating lives in CI (security.yml) and the constitution's human bar.
   profile: chill
   request_changes_workflow: false
+  # Keep the walkthrough minimal: a short summary, no diagrams, no per-push
+  # status chatter, collapsed by default (owner: no fluff on PRs).
   high_level_summary: true
-  # Every walkthrough gets a visual: mermaid sequence diagrams for the
-  # mechanics, plus (via the summary instructions) an ASCII before/after
-  # sketch when the PR touches UI — so each PR is reviewable at a glance.
-  sequence_diagrams: true
   high_level_summary_instructions: >-
-    If the PR changes UI (JSX/TSX/CSS/Tauri windows), include a compact ASCII
-    before/after sketch of the affected layout or component. If it changes
-    behavior, include a short mermaid flowchart of the new mechanism.
-  review_status: true
+    Three sentences maximum: what changed, why, and any risk worth a human
+    look. No diagrams, no sketches, no file-by-file narration.
+  sequence_diagrams: false
+  collapse_walkthrough: true
+  review_status: false
   poem: false
 
   auto_review:
@@ -176,9 +180,9 @@ reviews:
 
   finishing_touches:
     docstrings:
-      enabled: true
+      enabled: false
     unit_tests:
-      enabled: true
+      enabled: false
 
 # Feed the bot the project constitution and docs, and let it accumulate
 # learnings from review conversations ("@coderabbitai always/never …").
