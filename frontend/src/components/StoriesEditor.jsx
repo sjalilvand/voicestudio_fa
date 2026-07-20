@@ -554,11 +554,14 @@ export default function StoriesEditor({ profiles = [] }) {
       // navigates the Tauri webview to the m4b and hijacks the app. Pass
       // `sourceFilename` so the Tauri copy uses the /export server-side copy.
       const mixName = output.split('/').pop();
-      await downloadMedia(audioUrl(output), mixName, { sourceFilename: mixName });
-      toast.success(t('stories.exportDone'));
-      // Success-only donation moment — a finished audiobook export is a real
-      // deliverable. Stays out of the catch/error branch below.
-      recordValueMoment('audiobook');
+      // downloadMedia owns all user-facing toasts (loading → saved/error) and
+      // fires onValueMoment only on a real save — so no success toast here (it
+      // would fire even when the native save dialog is cancelled) and the
+      // donation moment goes through the callback instead of unconditionally.
+      await downloadMedia(audioUrl(output), mixName, {
+        sourceFilename: mixName,
+        onValueMoment: () => recordValueMoment('audiobook'),
+      });
     } catch (err) {
       console.warn('Story render failed:', err);
       toast.error(t('stories.exportFailed'));

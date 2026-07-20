@@ -101,6 +101,7 @@ describe('downloadMedia — Tauri branch (isTauri=true)', () => {
     const downloadMedia = await loadDownloadMedia({ tauri: true });
     save.mockResolvedValueOnce('/Users/me/Movies/dubbed_video.mp4');
     apiFetch.mockResolvedValueOnce({
+      ok: true,
       headers: { get: () => 'application/json' },
       json: async () => ({
         path: '/Users/me/Movies/dubbed_video.mp4',

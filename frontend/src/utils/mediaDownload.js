@@ -110,6 +110,7 @@ export async function downloadMedia(url, fallbackName, opts = {}) {
       // process — the backend never handles the destination path (#309).
       if (['srt', 'vtt'].includes(extGuess)) {
         const res = await apiFetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`); // don't write an error body to disk
         const text = await res.text();
         const { invoke } = await import('@tauri-apps/api/core');
         await invoke('save_text_file', { path: destPath, contents: text });
@@ -124,6 +125,7 @@ export async function downloadMedia(url, fallbackName, opts = {}) {
       // raw-body response surfaces a clear error, not a JSON.parse crash (#309).
       const sep = url.includes('?') ? '&' : '?';
       const res = await apiFetch(`${url}${sep}save_path=${encodeURIComponent(destPath)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`); // a 4xx/5xx isn't a successful save
       const ctype = res.headers.get('content-type') || '';
       if (!ctype.includes('application/json')) {
         throw new Error(
