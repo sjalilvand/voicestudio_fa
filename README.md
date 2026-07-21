@@ -68,7 +68,7 @@
     <td align="center">
       <img src="docs/screenshot-gallery.png" alt="Voice Gallery" width="100%"/>
       <br/><b>Voice Gallery</b><br/>
-      <sub>Browse ready-made archetype voices with language filters — or build your own library.</sub>
+      <sub>Browse ready-made archetype voices with language filters, or build your own — then pick any of them in Studio, Audiobook, Stories, and Dubbing.</sub>
     </td>
     <td align="center">
       <img src="docs/screenshot-dub.png" alt="Video Dubbing" width="100%"/>
@@ -110,11 +110,11 @@ The eight headliners — and twelve more waiting under the fold.
   </td>
   <td align="center" width="25%">
     <h3>🎬 Video Dubbing</h3>
-    <p>YouTube URL or file → transcribe →<br/>translate → re-voice → <b>MP4</b>.</p>
+    <p>URL or file → transcribe → translate<br/>(or <b>paste your own</b>) → re-voice → MP4.</p>
   </td>
   <td align="center" width="25%">
     <h3>📖 Audiobook Editor</h3>
-    <p>Import text, EPUB, or PDF. Auto-chapter,<br/>loudnorm, metadata. Export <b>.m4b</b>.</p>
+    <p>Text, EPUB, or PDF → chaptered <b>.m4b</b>.<br/>Multi-voice cast, expressive, live progress.</p>
   </td>
 </tr>
 <tr>
@@ -227,7 +227,7 @@ ElevenLabs charges **$5–$330/mo** and processes your audio on their servers. O
 | **GPU Support** | N/A (cloud) | CUDA · Apple Silicon · ROCm (Linux) · CPU |
 | **Desktop App** | ❌ | ✅ macOS · Windows · Linux |
 | **TTS Engines** | 1 | **14** — [full matrix](#tts-engines) |
-| **ASR Engines** | 1 | **10** — [full lineup](#asr-engines) |
+| **ASR Engines** | 1 | **11** — [full lineup](#asr-engines) |
 | **MCP Server** | ❌ | ✅ Use from Claude, Cursor, any MCP client |
 | **Self-check** | ❌ | ✅ Diagnostics suite, error journal, scrubbed debug bundles |
 | **Customizable** | ❌ Closed | ✅ Fork it, extend it, ship it |
@@ -415,13 +415,13 @@ Ships two [skills](https://skills.sh): **`omnivoice`** — speak and transcribe 
 
 | Category | Features |
 |----------|----------|
-| **Longform** | Audiobook editor (text/EPUB/PDF → chaptered .m4b), Stories multi-voice editor, two-pass loudnorm mastering, crash-resume for interrupted renders, pronunciation control + SSML-lite prosody |
+| **Longform** | Audiobook editor (text/EPUB/PDF → chaptered .m4b) with multi-voice cast, expressive controls, live per-chapter progress + Stop, and a one-click sample; Stories multi-voice editor, two-pass loudnorm mastering, crash-resume for interrupted renders, pronunciation control + SSML-lite prosody |
 | **Dubbing** | Full pipeline (transcribe→translate→synthesize→mux), scene-aware splitting, lip-sync scoring, streaming TTS, per-speaker voice assignment, Smart Fit timing + second-pass QC, paste-in translations from any external tool, dedicated Dub home |
-| **Voice** | Zero-shot cloning, voice design, A/B comparison, voice preview widget, gallery with favorites/tags, portable persona bundles (`.ovsvoice`), voice console workspace |
+| **Voice** | Zero-shot cloning, voice design, A/B comparison, voice preview widget, gallery with favorites/tags (its voices selectable in every picker — Studio, Audiobook, Stories, Dubbing), portable persona bundles (`.ovsvoice`), voice console workspace |
 | **Audio** | Demucs vocal isolation, per-segment gain, selective track export, stem/SRT/VTT/MP3 export, unlimited-length TTS via sentence-chunked generation |
 | **Multi-Lang** | Multi-language batch picker, batch dubbing queue with sequential GPU execution |
 | **Diarization** | Pyannote ML diarization, auto speaker clone extraction, per-speaker voice assignment |
-| **ASR** | 10 engines (WhisperX, Faster-Whisper, isolated Faster-Whisper, MLX Whisper, PyTorch Whisper, Parakeet TDT, Parakeet TDT v3 MLX, Moonshine, FunASR/SenseVoice, sherpa-onnx live dictation), crash-isolated subprocess backend |
+| **ASR** | 11 engines (WhisperX, Faster-Whisper, isolated Faster-Whisper, MLX Whisper, PyTorch Whisper, Parakeet TDT, Parakeet TDT v3 MLX, Moonshine, FunASR/SenseVoice, sherpa-onnx live dictation, OpenAI-compatible remote), crash-isolated subprocess backend |
 | **TTS** | 14 engines (OmniVoice, CosyVoice 3, GPT-SoVITS, VoxCPM2, MOSS-TTS-Nano, KittenTTS, MLX-Audio, Sherpa-ONNX, + lazy: IndexTTS 2, OmniVoice GGUF, Supertonic 3, MOSS-TTS-v1.5, dots.tts, Confucius4-TTS), engine routing with GPU preflight |
 | **Infra** | Docker deployment, CUDA/MPS/ROCm auto-detect, cuDNN 8 compat, VRAM-aware model offloading, engine routing (no silent CPU fallback), diagnostics suite & error journal, restricted-network mirror support |
 | **AI Provenance** | AudioSeal invisible watermarking (SynthID-like), video logo overlay, watermark detection API |
