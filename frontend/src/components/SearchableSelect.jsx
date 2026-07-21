@@ -161,7 +161,21 @@ export default function SearchableSelect({
       // push the min-220px menu off-screen and force a horizontal scrollbar.
       const width = Math.max(r.width, 220);
       const left = Math.min(r.left, Math.max(8, window.innerWidth - width - 8));
-      setMenuPos({ top: r.bottom + 4, left, width: r.width });
+      // Flip above the trigger when there isn't enough room below (e.g. the last
+      // dub segment row, near the viewport bottom) — otherwise a below-anchored
+      // fixed menu runs off-screen and scrolling just re-pins it there. Also cap
+      // the list to the available space so the chosen side always fits.
+      const GAP = 4;
+      const vh = window.innerHeight;
+      const below = vh - r.bottom - GAP;
+      const above = r.top - GAP;
+      const openUp = below < 220 && above > below;
+      const listMax = Math.max(120, Math.floor(Math.min(280, openUp ? above : below)));
+      setMenuPos(
+        openUp
+          ? { bottom: vh - r.top + GAP, left, width: r.width, listMax }
+          : { top: r.bottom + GAP, left, width: r.width, listMax },
+      );
     };
     place();
     window.addEventListener('scroll', place, true);
@@ -262,7 +276,11 @@ export default function SearchableSelect({
             }`}
             style={
               menuPortal && menuPos
-                ? { top: menuPos.top, left: menuPos.left, width: menuPos.width }
+                ? {
+                    left: menuPos.left,
+                    width: menuPos.width,
+                    ...(menuPos.bottom != null ? { bottom: menuPos.bottom } : { top: menuPos.top }),
+                  }
                 : undefined
             }
             role="listbox"
@@ -288,6 +306,7 @@ export default function SearchableSelect({
             <div
               ref={listRef}
               className="max-h-[280px] overflow-y-auto py-[2px] [&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar-thumb]:bg-[rgba(255,255,255,0.1)] [&::-webkit-scrollbar-thumb]:rounded-[3px]"
+              style={menuPortal && menuPos ? { maxHeight: menuPos.listMax } : undefined}
             >
               {flatItems.length === 0 && (
                 <div className="py-[8px] px-[10px] text-[0.65rem] text-[color:var(--text-secondary)] italic text-center">
