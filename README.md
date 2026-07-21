@@ -7,7 +7,7 @@
   <p>
     <a href="#quickstart">Quickstart</a> ·
     <a href="#features">Features</a> ·
-    <a href="#why-ovs">Why OVS</a> ·
+    <a href="#why-ovs">vs Others</a> ·
     <a href="#tts-engines">Engines</a> ·
     <a href="#openai-api">API</a> ·
     <a href="#sponsor--donate">Donate</a> ·
@@ -171,38 +171,18 @@ The eight headliners — and twelve more waiting under the fold.
   <sub><b>macOS:</b> first launch needs a one-time approval — right-click → <b>Open</b> (or System Settings → Privacy &amp; Security → <b>"Open Anyway"</b> on macOS 15). No Terminal needed. <a href="docs/install/macos.md#gatekeeper-quarantine">Why?</a> · <b>Intel Macs:</b> local backend unsupported (<a href="https://github.com/debpalash/OmniVoice-Studio/issues/889">#889</a>) — <a href="docs/install/macos.md">details</a>.</sub>
 </div>
 
-Pick your OS and follow the guide end-to-end:
-
-- 🍎 **macOS** — [docs/install/macos.md](docs/install/macos.md)
-- 🪟 **Windows** — [docs/install/windows.md](docs/install/windows.md)
-- 🐧 **Linux** — [docs/install/linux.md](docs/install/linux.md)
-- 🐳 **Docker** — [docs/install/docker.md](docs/install/docker.md) · [Docker Hub: `palashdeb/omnivoice-studio`](https://hub.docker.com/r/palashdeb/omnivoice-studio)
-
-Feels slow? [docs/performance.md](docs/performance.md) covers where generation time actually goes, the tuning knobs, and the three classic causes of "it got slow".
-
-Want breaths, laughter, pauses, whispering, or emotion in the output? [docs/expressive-speech.md](docs/expressive-speech.md) covers exactly what each engine can do today — and what's spec'd but not shipped yet.
-
-> Coming from **[CorentinJ/Real-Time-Voice-Cloning](https://github.com/CorentinJ/Real-Time-Voice-Cloning)** (now archived)? There's a dedicated migration guide: [docs/migration/real-time-voice-cloning.md](docs/migration/real-time-voice-cloning.md).
+**Install guide:** [🍎 macOS](docs/install/macos.md) · [🪟 Windows](docs/install/windows.md) · [🐧 Linux](docs/install/linux.md) · [🐳 Docker](docs/install/docker.md)
 
 <details>
-<summary><b>🧰 Stuck? Self-checks, tokens &amp; restricted networks</b></summary>
+<summary><b>🧰 Troubleshooting · slow generation · HF tokens · restricted networks</b></summary>
 
 <br/>
 
-Run the built-in self-check first — **Settings → About → "Run
-self-check"** in the app, or `uv run python backend/main.py --diagnose` from
-a checkout (`--deep` also test-loads the active engine). Then see
-[docs/install/troubleshooting.md](docs/install/troubleshooting.md) for the
-top 10 install errors. The in-app error UI deeplinks to those entries when
-something breaks at runtime, and **Settings → About → "Save diagnostic
-bundle"** packages scrubbed logs + the self-check report for bug reports.
-
-For Hugging Face token setup, see
-[docs/setup/huggingface-token.md](docs/setup/huggingface-token.md). For
-diarization-specific gating, see
-[docs/features/diarization.md](docs/features/diarization.md). For download
-speed, the ⚡ fast-download (Xet) status, and restricted-network / mirror
-options, see [docs/downloading-models.md](docs/downloading-models.md).
+- **Something broke?** Run the self-check — **Settings → About → "Run self-check"** (or `uv run python backend/main.py --diagnose --deep`) — then the [top 10 install errors](docs/install/troubleshooting.md). **"Save diagnostic bundle"** packages scrubbed logs for a bug report.
+- **Feels slow?** [docs/performance.md](docs/performance.md) — where the time goes and how to tune it.
+- **Want breaths, laughter, emotion?** [docs/expressive-speech.md](docs/expressive-speech.md) — what each engine can do today.
+- **HF tokens · diarization · download speed / mirrors:** [tokens](docs/setup/huggingface-token.md) · [diarization](docs/features/diarization.md) · [downloads](docs/downloading-models.md).
+- **Coming from [Real-Time-Voice-Cloning](https://github.com/CorentinJ/Real-Time-Voice-Cloning)?** [Migration guide](docs/migration/real-time-voice-cloning.md).
 
 </details>
 
@@ -210,7 +190,7 @@ options, see [docs/downloading-models.md](docs/downloading-models.md).
 
 <a id="why-ovs"></a>
 
-## 💡 Why OmniVoice?
+## ⚖️ vs Others
 
 ElevenLabs charges **$5–$330/mo** and processes your audio on their servers. OmniVoice Studio runs **on your hardware, with no usage limits.**
 
@@ -254,14 +234,8 @@ Professional-grade voice AI, minus the subscription and the cloud.
 | **Python** | 3.10+ (managed by `uv`) | 3.11–3.12 |
 | **GPU** | Optional — CPU works | NVIDIA CUDA · Apple Silicon MPS · AMD ROCm (Linux only) |
 
-> [!TIP]
-> On GPUs with **≤8 GB VRAM**, OmniVoice automatically offloads TTS to CPU during transcription — no config needed. A dedicated GPU is not required; the entire pipeline runs on CPU (just slower).
-
 > [!NOTE]
-> **AMD GPUs:** ROCm acceleration is **Linux-only and opt-in** — pick **"AMD GPU (ROCm)"** on the first-run setup screen or set `OMNIVOICE_TORCH_VARIANT=rocm` ([docs/install/linux.md](docs/install/linux.md#amd-gpu-rocm)). In **Docker/Podman**, pull the dedicated ROCm image instead: `ghcr.io/debpalash/omnivoice-studio:rocm` ([docs/install/docker.md](docs/install/docker.md#pull-and-run-amd-gpu--rocm)). **On Windows, AMD GPUs (incl. Ryzen AI iGPUs) run CPU-only**: PyTorch has no Windows ROCm wheels, so Windows GPU acceleration is NVIDIA/CUDA-only ([docs/install/windows.md](docs/install/windows.md#gpu-support)).
-
-> [!IMPORTANT]
-> **macOS Intel (x86_64) is unsupported for the local backend:** the app UI installs, but the Python backend cannot run because PyTorch no longer ships Intel-Mac wheels ([#889](https://github.com/debpalash/OmniVoice-Studio/issues/889)). Intel-Mac users can still point the UI at a remote backend on another machine — see [docs/install/macos.md](docs/install/macos.md).
+> **A GPU is optional** — the whole pipeline runs on CPU (just slower), and on ≤8 GB VRAM, TTS auto-offloads to CPU. Caveats: **AMD ROCm** is Linux-only + opt-in ([Linux](docs/install/linux.md#amd-gpu-rocm)) — Windows AMD/Ryzen AI is CPU-only ([Windows](docs/install/windows.md#gpu-support)); **macOS Intel** can't run the local backend, so point it at a remote one ([#889](https://github.com/debpalash/OmniVoice-Studio/issues/889) · [macOS](docs/install/macos.md)).
 
 <a id="tts-engines"></a>
 
@@ -334,27 +308,54 @@ Professional-grade voice AI, minus the subscription and the cloud.
 
 ## 🏗️ Architecture
 
+A **Tauri v2** desktop shell (Rust) wraps a **React** UI and a bundled **Python/FastAPI** backend that runs as a local sidecar on `localhost:3900`. Nothing external — every layer is on your machine.
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Frontend (React)                          │
-│  DubTab · VoiceConsole · Stories · Audiobook · Gallery     │
-│  Dictation · BatchQueue · Diagnostics · MCP Client          │
-├─────────────────────────────────────────────────────────────┤
-│                  Backend (FastAPI)                           │
-│  100+ API endpoints · SSE+WSS streaming · SQLite            │
-├──────────┬──────────┬──────────┬──────────┬────────────────┤
-│ WhisperX │  Demucs  │OmniVoice │ Pyannote │ Engine Routing  │
-│  (+7 ASR │  Source  │  (+10    │ Diariz-  │ ↳ GPU preflight │
-│ engines) │  Sep.    │  TTS)    │ ation    │ ↳ No silent CPU │
-└──────────┴──────────┴──────────┴──────────┴────────────────┘
-         CUDA / MPS / ROCm / CPU (auto-detected + routed)
+┌────────────────────────────────────────────────────────────────────┐
+│  Tauri v2 shell — Rust                                             │
+│  window state · global dictation hotkey · system tray ·           │
+│  signed auto-updater (stable/preview) · single-instance ·         │
+│  first-run bootstrap (installs uv + Python venv) · blank guard    │
+├────────────────────────────────────────────────────────────────────┤
+│  Frontend — React + Vite                                          │
+│  Studio · Dub · Stories · Audiobook · Gallery · Dictation ·       │
+│  Batch · Diagnostics · MCP client    —   Zustand store · WS bus   │
+│                          ▲  IPC  /  HTTP + WS                      │
+├──────────────────────────┼─────────────────────────────────────────┤
+│  Backend — FastAPI sidecar @ localhost:3900                       │
+│  100+ REST endpoints · SSE + WebSocket streaming ·               │
+│  SQLite + Alembic (omnivoice_data/) · OpenAI-compatible API       │
+├───────────┬───────────┬───────────┬───────────┬────────────────────┤
+│  TTS ×14  │  ASR ×11  │  Demucs   │ Pyannote  │  AudioSeal         │
+│  clone /  │  WhisperX │  vocal    │  speaker  │  watermark         │
+│  design   │  +10 more │  isolation│  diariz.  │  embed / detect    │
+├───────────┴───────────┴───────────┴───────────┴────────────────────┤
+│  Engine routing — per-engine GPU preflight, no silent CPU fallback │
+│  Hardware:  CUDA · MPS · ROCm (Linux) · CPU   (auto-detected)      │
+└────────────────────────────────────────────────────────────────────┘
 ```
+
+- **Shell (Rust)** — native OS integration: the system-wide dictation hotkey, tray, signed auto-updater (stable + preview channels), single-instance lock, and the first-run bootstrap that installs `uv` and a Python 3.11 venv.
+- **Frontend (React)** — every workspace tab over a Zustand store, with a WebSocket event bus that live-refreshes the UI when backend data changes.
+- **Backend (FastAPI)** — the bundled Python sidecar: 100+ endpoints, SSE/WSS streaming, a SQLite DB migrated by Alembic, and the OpenAI-compatible API surface.
+- **Engines** — 14 TTS + 11 ASR, plus Demucs (isolation), Pyannote (diarization), and AudioSeal (watermark), all behind routing that GPU-preflights each engine and refuses to silently fall back to CPU.
 
 <a id="openai-api"></a>
 
 ## 🔌 OpenAI-compatible API
 
-Point any tool that speaks OpenAI's audio API at `http://localhost:3900/v1` — **no key, no code changes.** Swap the base URL and your existing scripts, agents, and OpenAI/ElevenLabs SDK calls run locally on whatever engine you have active. What the cloud can't do: `voice` takes **your own cloned-voice profile IDs**, and `model` can pin a **specific engine** per request.
+<div align="center">
+
+**Drop-in replacement for OpenAI / ElevenLabs audio.** One line — no key, no code changes:
+
+```diff
+- base_url="https://api.openai.com/v1"
++ base_url="http://localhost:3900/v1"
+```
+
+</div>
+
+Your existing scripts, agents, and OpenAI/ElevenLabs SDK calls now run **locally** on whatever engine you have active. What the cloud can't do: `voice` takes **your own cloned-voice profile IDs**, and `model` can pin a **specific engine** per request.
 
 | Endpoint | What it does |
 |---|---|
@@ -396,17 +397,20 @@ Calling the backend from **another machine** (LAN, Tailscale, behind a proxy)? I
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/debpalash/OmniVoice-Studio/blob/main/notebooks/OmniVoice_Studio_Colab.ipynb)
 
-No local GPU? The official notebook ([notebooks/OmniVoice_Studio_Colab.ipynb](notebooks/OmniVoice_Studio_Colab.ipynb)) boots the full app — web UI included — on a free Colab T4: it builds the frontend in-notebook, installs the backend with uv (reusing Colab's preinstalled CUDA PyTorch), and opens the UI through Colab's built-in port proxy. No third-party tunnels, no API keys. It then walks the whole feature surface as a guided API tour with inline playback: multilingual TTS, voice cloning and design, saved voice profiles, transcription, AI-watermark detection, the OpenAI-compatible API, a multi-voice story, a chaptered m4b audiobook, and a miniature video dub with vocal-isolation stems.
+No local GPU? The [official notebook](notebooks/OmniVoice_Studio_Colab.ipynb) boots the full app — web UI included — on a free Colab T4, then walks the whole feature surface (TTS, cloning, design, transcription, dubbing, audiobook, watermarking, the OpenAI-compatible API) as a guided tour with inline playback. No tunnels, no API keys.
 
 ### 🤝 Agent Skills
 
-Teach your AI agent (Claude Code, Cursor, Codex, …) to use OmniVoice with one command:
+Teach your coding agent to speak and listen through your local OmniVoice — one command, works with **Claude Code, Codex, Cursor, Grok, Kimi, opencode**, and any [skills.sh](https://skills.sh)-compatible agent:
 
 ```sh
 npx skills add debpalash/omnivoice-studio
 ```
 
-Ships two [skills](https://skills.sh): **`omnivoice`** — speak and transcribe through your local install (including your cloned voices) from any agent, free and offline; and **`oss-maintainer`** — the maintainer methodology this project is run with, for anyone running their own OSS project with an agent.
+Ships two [skills](https://skills.sh):
+
+- **`omnivoice`** — generate speech (including your cloned voices) and transcribe audio from any agent, free and fully offline via your local install.
+- **`oss-maintainer`** — the maintainer methodology this project is run with, for anyone running their own OSS project with an agent.
 
 ---
 
@@ -454,13 +458,11 @@ Ships two [skills](https://skills.sh): **`omnivoice`** — speak and transcribe 
 
 ## 💜 Sponsor / Donate
 
-OmniVoice Studio is built by one developer using Claude Code and AI agents — and the agent bills are real (thousands of dollars over the last three months). If OmniVoice has created value for you, covering a slice of those bills keeps development full-time.
+One developer, real AI-agent bills. If OmniVoice is useful to you, chipping in keeps development full-time — every dollar goes straight to the bills.
 
 <div align="center">
 
-**This month's agent bill fund**
-
-<img src="https://img.shields.io/badge/raised_%2410_of_%24200-5%25-EAB308?style=for-the-badge" alt="$10 / $200 raised" />
+<img src="https://img.shields.io/badge/raised_%2410_of_%24200-5%25-EAB308?style=for-the-badge" alt="This month's agent-bill fund: $10 / $200" />
 
 <br/><br/>
 
@@ -468,15 +470,9 @@ OmniVoice Studio is built by one developer using Claude Code and AI agents — a
 &nbsp;&nbsp;
 <a href="https://paypal.me/palashCoder"><img src="https://img.shields.io/badge/PayPal-Donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal" /></a>
 
-<br/>
-<sub>Every dollar goes directly to agent bills — keeping OmniVoice development continuous.</sub>
-
 <br/><br/>
 
-<sub><b>More apps from the creator of OmniVoice Studio</b> — same local-first philosophy:
-<a href="https://github.com/debpalash/Opal"><b>Opal</b> 💠</a> (play everything — the media player for the AI era) ·
-<a href="https://github.com/debpalash/memxt"><b>memxt</b> 🧠</a> (local memory for Claude Code & coding agents).
-A ⭐ on those helps too → <a href="#more-from-the-maker">details below</a>.</sub>
+<sub>Also from the maker: <a href="https://github.com/debpalash/Opal"><b>Opal</b> 💠</a> · <a href="https://github.com/debpalash/memxt"><b>memxt</b> 🧠</a> — a ⭐ helps too.</sub>
 
 </div>
 
