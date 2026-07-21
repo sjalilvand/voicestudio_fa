@@ -6,25 +6,29 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 Versions track the desktop app (`tauri.conf.json` + `frontend/src-tauri/Cargo.toml`).
 The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
-## [Unreleased]
+## [0.4.0] — 2026-07-21
 
 **Highlights**
 
-- First run is ~2.4 GB, not ~5 GB — only the TTS model is required
-- Settings → Models redesigned: grouped, platform-aware, one-click "for your system" picks
-- Guided mic + Accessibility permissions with Open Settings deep-links
-- Parakeet TDT v3 on Apple Silicon (`parakeet-mlx`)
-- No silent multi-GB downloads anywhere — explicit, one-click prompts instead
-- Windows: custom install drives honored, no console-window storms, no black-screen boot
-- Quiet recordings clone; broken engine deps repair-hint and fall back
-- Queued and long generations stop failing with a bogus "too heavy for your hardware"
-- First-run analytics consent, Colab notebook, ROCm Docker image, trusted-network CIDRs
+- Audiobooks, end to end — a real **Stop** with live per-chapter progress, a **multi-voice cast**, expressive controls, a markup toolbar, live stats, and a one-click sample
+- Pick a designed voice from the **Gallery** anywhere you choose a voice — audiobook, Stories, and Dubbing
+- Dub **Paste Translation** — drop in a translation or `.srt` and it maps straight onto your segments, timings intact
+- Downloading a finished audiobook no longer hijacks the app — it just saves
+- First run is ~2.4 GB, not ~5 GB — only the TTS model is required; ASR picks are curated per platform
+- Guided mic + Accessibility permissions with Open Settings deep-links; **Parakeet TDT v3** on Apple Silicon
+- Opens in your system language, with a one-tap switch back to English
+- Security: server-mode admin routes can't be reached by a trusted-network client without the API key
+- A render error shows a recoverable card instead of a blank window; queued and long generations stop failing with a bogus "too heavy for your hardware"
 
 ### Changed
 
 - Settings → Models: grouped catalog (TTS / ASR / Dictation / Diarisation), "recommended for this machine" chips, incompatible models collapsed behind a toggle
 - Only the TTS model (~2.4 GB) is required on first run; ASR picks are curated per platform via `curated_on` in `models.yaml` (MLX on Apple Silicon, CT2+Turbo on CUDA, PyTorch on ROCm, int8 on CPU)
 - Audiobook tab tidied up: the settings column is now grouped into compact collapsible sections (Output / Book details / Pronunciation / Markup), so script + voice + Create sit up top instead of a long scroll — same controls, denser layout (#1214)
+
+### Removed
+
+- The Dubbing per-segment picker's hardcoded design-presets group — superseded by the richer designed-voice Gallery; already-saved `preset:` picks still generate identically (#1220)
 
 ### Added
 
