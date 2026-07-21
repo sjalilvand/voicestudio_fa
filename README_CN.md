@@ -509,7 +509,7 @@ OmniVoice **免费**且采用 **AGPL-3.0** 许可——没有付费版，没有 
 
 非常欢迎——Bug 修复、新的 TTS 引擎适配器、UI 改进、文档、翻译。统统欢迎。
 
-- 📖 阅读 **[贡献指南](CONTRIBUTING.md)** 了解环境搭建、代码风格和 PR 工作流
+- 📖 阅读 **[贡献指南](.github/CONTRIBUTING.md)** 了解环境搭建、代码风格和 PR 工作流
 - 🐛 浏览 [good first issues](https://github.com/debpalash/OmniVoice-Studio/labels/good%20first%20issue)
 - 💬 加入我们的 [Discord](https://discord.gg/bzQavDfVV9) 讨论想法或寻求帮助
 

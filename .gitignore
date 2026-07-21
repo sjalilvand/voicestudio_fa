@@ -36,6 +36,11 @@ frontend/src-tauri/target/
 .DS_Store
 Thumbs.db
 
+# Local agent-memory DB (memxt) — per-machine state, never committed
+memxt.db
+memxt.db-shm
+memxt.db-wal
+
 # ─────────────────────────────────────────────────────────────────────────
 #  Editor / tool caches
 # ─────────────────────────────────────────────────────────────────────────

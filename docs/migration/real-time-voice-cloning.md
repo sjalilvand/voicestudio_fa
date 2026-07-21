@@ -170,5 +170,5 @@ Setup questions get answered in
 [Discord](https://discord.gg/bzQavDfVV9) (usually within hours), bugs
 go to
 [GitHub Issues](https://github.com/debpalash/OmniVoice-Studio/issues)
-— see [SUPPORT.md](../../SUPPORT.md) for what to include. Welcome
+— see [SUPPORT.md](../../.github/SUPPORT.md) for what to include. Welcome
 over.
