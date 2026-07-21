@@ -115,7 +115,7 @@ Three flagships, five more headliners, and a dozen under the fold.
 <tr>
   <td align="center" width="20%">📖<br/><b>Audiobook</b><br/><sub>EPUB/PDF → .m4b, multi-voice cast</sub></td>
   <td align="center" width="20%">🎭<br/><b>Stories</b><br/><sub>Multi-voice script editor</sub></td>
-  <td align="center" width="20%">⌨️<br/><b>Dictation</b><br/><sub><kbd>⌘⇧Space</kbd> in any app</sub></td>
+  <td align="center" width="20%">⌨️<br/><b>Dictation Widget</b><br/><sub><kbd>⌘⇧Space</kbd> in any app</sub></td>
   <td align="center" width="20%">🔐<br/><b>100% Local</b><br/><sub>No keys, no cloud, no accounts</sub></td>
   <td align="center" width="20%">🤖<br/><b>MCP Server</b><br/><sub>Use from Claude, Cursor, …</sub></td>
 </tr>
