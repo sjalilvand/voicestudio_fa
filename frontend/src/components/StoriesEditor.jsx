@@ -43,6 +43,7 @@ import {
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { Button, Menu } from '../ui';
+import VoiceSelector from './VoiceSelector';
 import { useAppStore } from '../store';
 import { recordValueMoment } from '../utils/donationMoments';
 import {
@@ -838,19 +839,19 @@ export default function StoriesEditor({ profiles = [] }) {
                 onChange={(e) => upsertCastMember({ ...c, name: e.target.value })}
                 aria-label={t('stories.characterName')}
               />
-              <select
-                className={`${SELECT_CHROME} flex-1`}
-                value={c.profileId || ''}
-                onChange={(e) => setCharacterVoice(c.id, e.target.value || null)}
-                aria-label={`${c.name} ${t('stories.voice')}`}
-              >
-                <option value="">{t('stories.defaultVoice')}</option>
-                {profiles.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+              {/* Shared gallery-enabled picker (#1220): a gallery pick
+                  materializes to a real profile id, stored exactly like a
+                  clone/designed voice. `|| null` preserves the store's existing
+                  "no voice = null" shape (backward-compatible projects). */}
+              <span className="flex-1 min-w-0">
+                <VoiceSelector
+                  value={c.profileId || ''}
+                  onChange={(v) => setCharacterVoice(c.id, v || null)}
+                  profiles={profiles}
+                  menuPortal
+                  defaultLabel={t('stories.defaultVoice')}
+                />
+              </span>
               <button
                 type="button"
                 className={DEL_BTN}
@@ -1075,21 +1076,21 @@ export default function StoriesEditor({ profiles = [] }) {
                   </select>
                 </div>
 
-                <select
-                  className="[font-size:var(--text-xs)] text-fg-muted bg-bg-elev-2 border border-border [border-radius:var(--radius-pill)] px-[8px] py-[2px] text-center max-w-[100px] overflow-hidden text-ellipsis whitespace-nowrap [color-scheme:dark]"
-                  value={track.profileId || ''}
-                  onChange={(e) => updateTrack(track.id, 'profileId', e.target.value || null)}
-                  aria-label={t('stories.voice')}
-                >
-                  <option value="">
-                    {inheritedName ? `↳ ${inheritedName}` : t('stories.defaultVoice')}
-                  </option>
-                  {profiles.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+                {/* Per-line voice override → shared gallery-enabled picker
+                    (#1220). '' inherits the character's cast voice (label shows
+                    "↳ <name>"); any pick stores a real profile id (gallery picks
+                    materialize first). `|| null` keeps the store's null-default
+                    shape so existing projects load unchanged. */}
+                <span className="min-w-0" onClick={(e) => e.stopPropagation()}>
+                  <VoiceSelector
+                    value={track.profileId || ''}
+                    onChange={(v) => updateTrack(track.id, 'profileId', v || null)}
+                    profiles={profiles}
+                    size="sm"
+                    menuPortal
+                    defaultLabel={inheritedName ? `↳ ${inheritedName}` : t('stories.defaultVoice')}
+                  />
+                </span>
 
                 <div
                   className={`flex gap-[4px] [transition:opacity_0.12s_ease] ${

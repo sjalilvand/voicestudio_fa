@@ -29,6 +29,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 ### Added
 
 - Voice picker: the designed-voice **Gallery** is now selectable anywhere a voice is chosen — the audiobook default voice and each Cast row can pick a gallery archetype (searchable, favourites first), and it's materialised into a real profile on pick so it just works everywhere (#1219)
+- The Stories editor and the Dubbing per-segment voice pickers now use the same gallery-enabled picker, so designed-voice archetypes are selectable there too; the dub picker drops its redundant hardcoded presets group in favour of the richer Gallery (existing picks unchanged) (#1220)
 - Audiobook tab: a Cast panel maps each `[voice:NAME]` in the script to a profile so multi-voice renders correctly (it previously fell back to a single voice), plus a markup insert toolbar, live stats (chapters · words · est. runtime), and pre-flight validation for unknown voices and empty chapters (#1217)
 - Audiobook tab: a **Stop** button that truly cancels a running generation (not just the UI) and live per-chapter progress — a bar, elapsed + ETA, and each chapter's status (rendering / done / cached / failed); finished chapters stay cached so Create again resumes. `Cmd/Ctrl+Enter` starts a render (#1216)
 - Settings → Permissions + wizard System Check: live mic/Accessibility grant state, per-OS guidance, Open Settings deep-links; dictation pre-flights the mic grant (#1175)
