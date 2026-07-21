@@ -2229,7 +2229,7 @@
     "createVoice": "Створіть новий голос",
     "gallery": "Галерея",
     "addingVoice": "Додавання голосу…",
-    "addVoiceFailed": "Не вдалося додати цей голос: {{message}}"
+    "addVoiceFailed": "Не вдалося додати цей голос"
   },
   "remote_gate": {
     "title": "Введіть PIN-код доступу",

@@ -2229,7 +2229,7 @@
     "createVoice": "Creëer een nieuwe stem",
     "gallery": "Galerij",
     "addingVoice": "Stem toevoegen…",
-    "addVoiceFailed": "Kon die stem niet toevoegen: {{message}}"
+    "addVoiceFailed": "Kon die stem niet toevoegen"
   },
   "remote_gate": {
     "title": "Voer de toegangspincode in",

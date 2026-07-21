@@ -2236,7 +2236,7 @@
     "createVoice": "创建新声音",
     "gallery": "画廊",
     "addingVoice": "正在添加声音…",
-    "addVoiceFailed": "无法添加该声音：{{message}}"
+    "addVoiceFailed": "无法添加该声音"
   },
   "remote_gate": {
     "title": "输入访问 PIN 码",

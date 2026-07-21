@@ -2229,7 +2229,7 @@
     "createVoice": "एक नई आवाज बनाएं",
     "gallery": "गैलरी",
     "addingVoice": "आवाज़ जोड़ी जा रही है…",
-    "addVoiceFailed": "वह आवाज़ नहीं जोड़ी जा सकी: {{message}}"
+    "addVoiceFailed": "वह आवाज़ नहीं जोड़ी जा सकी"
   },
   "remote_gate": {
     "title": "एक्सेस पिन दर्ज करें",

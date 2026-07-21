@@ -2229,7 +2229,7 @@
     "createVoice": "Skapa en ny röst",
     "gallery": "Galleri",
     "addingVoice": "Lägger till röst…",
-    "addVoiceFailed": "Kunde inte lägga till den rösten: {{message}}"
+    "addVoiceFailed": "Kunde inte lägga till den rösten"
   },
   "remote_gate": {
     "title": "Ange åtkomst-PIN",

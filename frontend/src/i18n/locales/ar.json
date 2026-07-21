@@ -2229,7 +2229,7 @@
     "createVoice": "إنشاء صوت جديد",
     "gallery": "المعرض",
     "addingVoice": "جارٍ إضافة الصوت…",
-    "addVoiceFailed": "تعذّرت إضافة هذا الصوت: {{message}}"
+    "addVoiceFailed": "تعذّرت إضافة هذا الصوت"
   },
   "remote_gate": {
     "title": "أدخل رقم التعريف الشخصي للوصول",

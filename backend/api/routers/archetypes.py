@@ -341,6 +341,21 @@ async def use_archetype(archetype_id: str, name: Optional[str] = Query(None)):
     profile_name = (name or a["name"]).strip() or a["name"]
     try:
         with db_conn() as conn:
+            # Re-check under the write connection right before inserting: a
+            # concurrent /use for the same archetype may have inserted while we
+            # were rendering (the pre-render SELECT above raced). Reuse that row
+            # and drop our just-rendered sample instead of creating a duplicate.
+            # (personality is NOT globally unique — marketplace/persona imports
+            # reuse the column — so a UNIQUE index isn't an option; this closes
+            # the realistic window for the single-user desktop app.)
+            dup = conn.execute(
+                "SELECT id, name FROM voice_profiles WHERE personality = ? LIMIT 1",
+                (a["id"],),
+            ).fetchone()
+            if dup is not None:
+                with __import__("contextlib").suppress(OSError):
+                    os.remove(audio_path)
+                return {"profile_id": dup["id"], "name": dup["name"]}
             conn.execute(
                 "INSERT INTO voice_profiles "
                 "(id, name, ref_audio_path, ref_text, instruct, language, seed, personality, created_at) "

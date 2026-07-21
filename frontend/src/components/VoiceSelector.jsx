@@ -252,8 +252,10 @@ export default function VoiceSelector({
         setJustMaterialized({ id: r.profile_id, name: r.name });
         onChange?.(r.profile_id);
       } catch (e) {
-        // Keep the previous value; just tell the user it didn't take.
-        toast.error(t('voiceSelector.addVoiceFailed', { message: e?.message || String(e) }));
+        // Keep the previous value; tell the user it didn't take with an
+        // actionable, non-technical message (the raw error goes to the console).
+        console.error('[VoiceSelector] failed to add gallery voice', e);
+        toast.error(t('voiceSelector.addVoiceFailed'));
       } finally {
         setMaterializing(false);
       }

@@ -2513,7 +2513,7 @@
     "createVoice": "Create a new voice",
     "gallery": "Gallery",
     "addingVoice": "Adding voice…",
-    "addVoiceFailed": "Couldn't add that voice: {{message}}"
+    "addVoiceFailed": "Couldn't add that voice — please try again."
   },
   "sharing": {
     "title": "Sharing & Remote Access",

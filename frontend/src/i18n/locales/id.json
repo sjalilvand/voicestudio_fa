@@ -2229,7 +2229,7 @@
     "createVoice": "Ciptakan suara baru",
     "gallery": "Galeri",
     "addingVoice": "Menambahkan suara…",
-    "addVoiceFailed": "Tidak dapat menambahkan suara itu: {{message}}"
+    "addVoiceFailed": "Tidak dapat menambahkan suara itu"
   },
   "remote_gate": {
     "title": "Masukkan PIN akses",

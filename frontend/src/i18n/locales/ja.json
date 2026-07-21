@@ -2229,7 +2229,7 @@
     "createVoice": "新しい音声を作成する",
     "gallery": "ギャラリー",
     "addingVoice": "音声を追加中…",
-    "addVoiceFailed": "その音声を追加できませんでした: {{message}}"
+    "addVoiceFailed": "その音声を追加できませんでした"
   },
   "remote_gate": {
     "title": "アクセスPINを入力してください",

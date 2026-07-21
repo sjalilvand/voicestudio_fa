@@ -2229,7 +2229,7 @@
     "createVoice": "Crea una nuova voce",
     "gallery": "Galleria",
     "addingVoice": "Aggiunta voce…",
-    "addVoiceFailed": "Impossibile aggiungere quella voce: {{message}}"
+    "addVoiceFailed": "Impossibile aggiungere quella voce"
   },
   "remote_gate": {
     "title": "Inserisci il PIN di accesso",

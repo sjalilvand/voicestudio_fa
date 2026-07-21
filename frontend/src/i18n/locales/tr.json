@@ -2229,7 +2229,7 @@
     "createVoice": "Yeni bir ses oluştur",
     "gallery": "Galeri",
     "addingVoice": "Ses ekleniyor…",
-    "addVoiceFailed": "Bu ses eklenemedi: {{message}}"
+    "addVoiceFailed": "Bu ses eklenemedi"
   },
   "remote_gate": {
     "title": "Erişim PIN'ini girin",
