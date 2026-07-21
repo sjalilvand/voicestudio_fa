@@ -2226,7 +2226,10 @@
     "missingVoice": "ไม่พบเสียง (เลือกใหม่)",
     "preview": "ดูตัวอย่างเสียง",
     "openGallery": "เปิดในแกลเลอรีเสียง",
-    "createVoice": "สร้างเสียงใหม่"
+    "createVoice": "สร้างเสียงใหม่",
+    "gallery": "แกลเลอรี",
+    "addingVoice": "กำลังเพิ่มเสียง…",
+    "addVoiceFailed": "ไม่สามารถเพิ่มเสียงนั้นได้"
   },
   "remote_gate": {
     "title": "ป้อน PIN การเข้าถึง",

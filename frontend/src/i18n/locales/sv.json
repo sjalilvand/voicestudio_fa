@@ -2226,7 +2226,10 @@
     "missingVoice": "Rösten hittades inte (välj om)",
     "preview": "Förhandsgranska röst",
     "openGallery": "Öppna i Voice Gallery",
-    "createVoice": "Skapa en ny röst"
+    "createVoice": "Skapa en ny röst",
+    "gallery": "Galleri",
+    "addingVoice": "Lägger till röst…",
+    "addVoiceFailed": "Kunde inte lägga till den rösten"
   },
   "remote_gate": {
     "title": "Ange åtkomst-PIN",

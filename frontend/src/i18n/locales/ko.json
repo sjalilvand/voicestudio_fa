@@ -2226,7 +2226,10 @@
     "missingVoice": "음성을 찾을 수 없음(다시 선택)",
     "preview": "음성 미리보기",
     "openGallery": "음성 갤러리에서 열기",
-    "createVoice": "새 목소리 만들기"
+    "createVoice": "새 목소리 만들기",
+    "gallery": "갤러리",
+    "addingVoice": "음성 추가 중…",
+    "addVoiceFailed": "해당 음성을 추가할 수 없습니다"
   },
   "remote_gate": {
     "title": "액세스 PIN을 입력하세요.",

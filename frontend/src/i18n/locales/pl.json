@@ -2226,7 +2226,10 @@
     "missingVoice": "Nie znaleziono głosu (wybierz ponownie)",
     "preview": "Podgląd głosu",
     "openGallery": "Otwórz w Galerii Voice",
-    "createVoice": "Utwórz nowy głos"
+    "createVoice": "Utwórz nowy głos",
+    "gallery": "Galeria",
+    "addingVoice": "Dodawanie głosu…",
+    "addVoiceFailed": "Nie udało się dodać tego głosu"
   },
   "remote_gate": {
     "title": "Wprowadź PIN dostępu",

@@ -2510,7 +2510,10 @@
     "missingVoice": "Voice not found (re-pick)",
     "preview": "Preview voice",
     "openGallery": "Open in Voice Gallery",
-    "createVoice": "Create a new voice"
+    "createVoice": "Create a new voice",
+    "gallery": "Gallery",
+    "addingVoice": "Adding voice…",
+    "addVoiceFailed": "Couldn't add that voice — please try again."
   },
   "sharing": {
     "title": "Sharing & Remote Access",

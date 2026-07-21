@@ -436,10 +436,22 @@ _BY_ID = {a["id"]: a for a in _ALL}
 
 
 # ── Public query API ──────────────────────────────────────────────────────────
-def list_archetypes(use_case=None, gender=None, age=None, pitch=None, accent=None,
+def list_archetypes(q=None, use_case=None, gender=None, age=None, pitch=None, accent=None,
                     whisper=None, lang=None, featured=None, limit=None, offset=0):
-    """Filtered view over the full catalog (featured + generated)."""
+    """Filtered view over the full catalog (featured + generated).
+
+    ``q`` is a case-insensitive substring match over each archetype's name and
+    instruct string, so a picker can reach any voice by typing (e.g. "british",
+    "librarian", "whisper") rather than only via the exact facet enums.
+    """
     items = _ALL
+    if q:
+        needle = q.strip().lower()
+        if needle:
+            items = [
+                a for a in items
+                if needle in a["name"].lower() or needle in a["instruct"].lower()
+            ]
     if featured is not None:
         items = [a for a in items if a["is_featured"] is featured]
     if use_case:

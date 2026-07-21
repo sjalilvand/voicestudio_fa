@@ -44,6 +44,8 @@ export interface ArchetypePage {
 }
 
 export interface ArchetypeFilters {
+  /** Free-text substring match over name/instruct — the picker search box. */
+  q?: string | null;
   use_case?: string | null;
   gender?: string | null;
   age?: string | null;

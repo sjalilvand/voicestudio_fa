@@ -2226,7 +2226,10 @@
     "missingVoice": "找不到語音（重新選擇）",
     "preview": "預覽語音",
     "openGallery": "在語音庫中打開",
-    "createVoice": "創造新聲音"
+    "createVoice": "創造新聲音",
+    "gallery": "圖庫",
+    "addingVoice": "正在新增聲音…",
+    "addVoiceFailed": "無法新增該聲音"
   },
   "remote_gate": {
     "title": "輸入訪問 PIN 碼",

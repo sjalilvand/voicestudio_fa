@@ -2226,7 +2226,10 @@
     "missingVoice": "Không tìm thấy giọng nói (chọn lại)",
     "preview": "Xem trước giọng nói",
     "openGallery": "Mở trong Thư viện giọng nói",
-    "createVoice": "Tạo một giọng nói mới"
+    "createVoice": "Tạo một giọng nói mới",
+    "gallery": "Thư viện",
+    "addingVoice": "Đang thêm giọng nói…",
+    "addVoiceFailed": "Không thể thêm giọng nói đó"
   },
   "remote_gate": {
     "title": "Nhập mã PIN truy cập",

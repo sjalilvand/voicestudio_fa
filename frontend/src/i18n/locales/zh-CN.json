@@ -2233,7 +2233,10 @@
     "missingVoice": "找不到语音（重新选择）",
     "preview": "预览语音",
     "openGallery": "在语音库中打开",
-    "createVoice": "创建新声音"
+    "createVoice": "创建新声音",
+    "gallery": "画廊",
+    "addingVoice": "正在添加声音…",
+    "addVoiceFailed": "无法添加该声音"
   },
   "remote_gate": {
     "title": "输入访问 PIN 码",
