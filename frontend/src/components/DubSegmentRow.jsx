@@ -14,8 +14,8 @@ import {
 } from 'lucide-react';
 import { formatTime } from '../utils/format';
 import { LANG_CODES } from '../utils/languages';
-import { PRESETS } from '../utils/constants';
 import { Menu, Button, Badge } from '../ui';
+import VoiceSelector from './VoiceSelector';
 
 const CHAR_BUDGET_RATIO = 1.3;
 const SENTENCE_END = /[.!?。！？]/;
@@ -420,44 +420,25 @@ function DubSegmentRow({
         ))}
       </select>
 
-      <select
-        className="input-base seg-profile-select"
-        value={seg.profile_id || ''}
-        disabled={disabled}
-        onChange={(e) => onEditField(seg.id, 'profile_id', e.target.value)}
-      >
-        <option value="">{t('segment.voice_default')}</option>
-        {speakerClones && Object.keys(speakerClones).length > 0 && (
-          <optgroup label={t('segment.from_video')}>
-            {Object.keys(speakerClones).map((spk) => {
-              const autoId = `auto:${(spk || '').toLowerCase().replace(/\s+/g, '_')}`;
-              return (
-                <option key={autoId} value={autoId}>
-                  🎤 {spk}
-                </option>
-              );
-            })}
-          </optgroup>
-        )}
-        {profiles.length > 0 && (
-          <optgroup label={t('segment.clone_profiles')}>
-            {profiles.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </optgroup>
-        )}
-        {PRESETS.length > 0 && (
-          <optgroup label={t('segment.design_presets')}>
-            {PRESETS.map((p) => (
-              <option key={p.id} value={`preset:${p.id}`}>
-                {p.name}
-              </option>
-            ))}
-          </optgroup>
-        )}
-      </select>
+      {/* Shared gallery-enabled picker (#1220). `data-noseek` + stopPropagation
+          keep a voice pick from also seeking the player (handleRowClick). The
+          dropdown portals to <body> so it isn't clipped by the react-window
+          virtualized row's overflow. The from-video `auto:<slug>` options come
+          through `speakerClones`; the legacy hardcoded design PRESETS group is
+          intentionally dropped — the Gallery supersedes it (see #1220). */}
+      <span className="seg-voice-col min-w-0" data-noseek onClick={(e) => e.stopPropagation()}>
+        <VoiceSelector
+          value={seg.profile_id || ''}
+          onChange={(v) => onEditField(seg.id, 'profile_id', v)}
+          profiles={profiles}
+          speakerClones={speakerClones}
+          disabled={disabled}
+          size="sm"
+          menuPortal
+          buttonClassName="input-base seg-profile-select"
+          defaultLabel={t('segment.voice_default')}
+        />
+      </span>
 
       <input
         type="range"

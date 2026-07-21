@@ -3362,6 +3362,10 @@ body:has(.capture-pill) {
   width: 100%; min-width: 0; font-size: 0.6rem; padding: 1px 4px;
   overflow: hidden; text-overflow: ellipsis;
 }
+/* Voice column now hosts the shared <VoiceSelector> (#1220). The grid cell must
+   let the picker shrink to the (narrow) track instead of forcing overflow. */
+.seg-voice-col { display: flex; min-width: 0; width: 100%; }
+.seg-voice-col .voice-selector { width: 100%; min-width: 0; }
 /* Range slider — overrides the unlayered input[type=range] base. */
 .seg-gain-slider {
   width: 100%; min-width: 0; padding: 0; margin: 0;

@@ -8,6 +8,12 @@ import '../i18n';
 // the row must warn on tight/impossible BEFORE any GPU time is spent, stay
 // silent on fits, and let the user apply a suggested rewrite in one click.
 
+// The row now embeds the shared VoiceSelector, which reads /archetypes and
+// materializes gallery picks. Mock both so this badge-focused test needs no
+// react-query provider or backend (the dropdown stays closed → no fetch anyway).
+vi.mock('../api/hooks', () => ({ useArchetypes: vi.fn(() => ({ data: undefined })) }));
+vi.mock('../api/archetypes', () => ({ useArchetypeAsProfile: vi.fn() }));
+
 import DubSegmentRow from '../components/DubSegmentRow';
 
 function makeProps(plan, over = {}) {

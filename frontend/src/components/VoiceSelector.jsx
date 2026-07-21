@@ -47,6 +47,8 @@ import { useAppStore } from '../store';
  * @param {()=>void} [onCreateVoice]  render an inline "create voice" button
  * @param {string}   [recentsKey='']  persist recents under this key (real ids only)
  * @param {string}   [placeholder]    trigger placeholder when nothing resolves
+ * @param {boolean}  [menuPortal=false] portal the dropdown to <body> (needed
+ *   inside clipping ancestors: overflow:auto panels / react-window rows — #1220)
  */
 // Adornment icon-button (preview / gallery / create). Layout + reset as
 // utilities; :hover/:disabled states stay in VoiceSelector.css.
@@ -84,6 +86,7 @@ export default function VoiceSelector({
   disabled = false,
   size = 'md',
   buttonClassName,
+  menuPortal = false,
 }) {
   const { t } = useTranslation();
 
@@ -296,6 +299,7 @@ export default function VoiceSelector({
         disabled={disabled || materializing}
         size={size}
         buttonClassName={buttonClassName}
+        menuPortal={menuPortal}
         onOpenChange={setOpen}
         onQueryChange={setRawQuery}
       />
