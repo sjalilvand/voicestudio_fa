@@ -13,12 +13,12 @@ and [`palashdeb/omnivoice-studio` on Docker Hub](https://hub.docker.com/r/palash
 > |-----|--------------|
 > | `:latest` | **Rolling preview** — latest commit on `main`, at or ahead of the last release. This is the preview channel; pin `:stable` for production. |
 > | `:stable` | Most recent versioned release (updated on every `v*` git tag) |
-> | `:0.3.22` | Exact release version |
-> | `:0.3` | Latest patch within the 0.3 minor |
+> | `:0.4.0` | Exact release version |
+> | `:0.4` | Latest patch within the 0.4 minor |
 > | `:main` | Alias of the same rolling `main` build as `:latest` |
 > | `:sha-xxxxxxx` | Specific commit (produced by manual workflow dispatch) |
 > | `:rocm` | **AMD GPU (ROCm) build** of the rolling preview — the ROCm analogue of `:latest` |
-> | `:stable-rocm`, `:0.3.22-rocm`, `:0.3-rocm`, `:sha-xxxxxxx-rocm` | ROCm builds of the corresponding CUDA tags above |
+> | `:stable-rocm`, `:0.4.0-rocm`, `:0.4-rocm`, `:sha-xxxxxxx-rocm` | ROCm builds of the corresponding CUDA tags above |
 >
 > Versioning rule: preview builds always come from `main` and never
 > version-sort below `:stable` — upgrades flow naturally.
@@ -89,7 +89,7 @@ PublishPort=127.0.0.1:3900:3900
 Volume=omnivoice-data:/app/omnivoice_data
 ```
 
-Release pins exist too: `:stable-rocm`, `:0.3.22-rocm`, `:0.3-rocm` mirror
+Release pins exist too: `:stable-rocm`, `:0.4.0-rocm`, `:0.4-rocm` mirror
 the CUDA tags exactly.
 
 > **RDNA3 consumer cards (RX 7900 XTX/XT, gfx1100):** the backend auto-sets
