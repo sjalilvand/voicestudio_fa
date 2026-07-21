@@ -96,44 +96,28 @@
 
 ## ✨ Features
 
-The eight headliners — and twelve more waiting under the fold.
+Three flagships, five more headliners, and a dozen under the fold.
 
 <table>
 <tr>
-  <td align="center" width="25%">
-    <h3>🎙️ Voice Cloning</h3>
-    <p>3-second clip → mirror any voice.<br/><b>646 languages</b>, zero-shot.</p>
-  </td>
-  <td align="center" width="25%">
-    <h3>🎨 Voice Design</h3>
-    <p>Gender, age, accent, pitch, speed,<br/>emotion, dialect — <b>dial it in</b>.</p>
-  </td>
-  <td align="center" width="25%">
-    <h3>🎬 Video Dubbing</h3>
-    <p>URL or file → transcribe → translate<br/>(or <b>paste your own</b>) → re-voice → MP4.</p>
-  </td>
-  <td align="center" width="25%">
-    <h3>📖 Audiobook Editor</h3>
-    <p>Text, EPUB, or PDF → chaptered <b>.m4b</b>.<br/>Multi-voice cast, expressive, live progress.</p>
-  </td>
+  <td width="33%"><img src="docs/features/clone.png" alt="Voice Cloning" width="100%"/></td>
+  <td width="33%"><img src="docs/features/design.png" alt="Voice Design" width="100%"/></td>
+  <td width="33%"><img src="docs/features/dub.png" alt="Video Dubbing" width="100%"/></td>
 </tr>
 <tr>
-  <td align="center" valign="top">
-    <h3>🎭 Stories</h3>
-    <p>Multi-voice editor. Assign voices<br/>per-line, preview, <b>export full cast</b>.</p>
-  </td>
-  <td align="center" valign="top">
-    <h3>⌨️ Dictation Widget</h3>
-    <p><kbd>⌘</kbd>+<kbd>⇧</kbd>+<kbd>Space</kbd> from <b>any app</b>.<br/>Transcribes, auto-pastes, disappears.</p>
-  </td>
-  <td align="center" valign="top">
-    <h3>🔐 100% Local</h3>
-    <p>No keys, no cloud, no accounts.<br/><b>Your machine only</b>.</p>
-  </td>
-  <td align="center" valign="top">
-    <h3>🤖 MCP Server</h3>
-    <p>Use OmniVoice from <b>Claude</b>,<br/>Cursor, or any MCP client.</p>
-  </td>
+  <td align="center">🎙️ <b>Voice Cloning</b><br/><sub>3-sec clip → any voice · 646 languages · zero-shot</sub></td>
+  <td align="center">🎨 <b>Voice Design</b><br/><sub>Describe it — gender, age, accent, emotion</sub></td>
+  <td align="center">🎬 <b>Video Dubbing</b><br/><sub>Transcribe → translate → re-voice → MP4</sub></td>
+</tr>
+</table>
+
+<table>
+<tr>
+  <td align="center" width="20%">📖<br/><b>Audiobook</b><br/><sub>EPUB/PDF → .m4b, multi-voice cast</sub></td>
+  <td align="center" width="20%">🎭<br/><b>Stories</b><br/><sub>Multi-voice script editor</sub></td>
+  <td align="center" width="20%">⌨️<br/><b>Dictation</b><br/><sub><kbd>⌘⇧Space</kbd> in any app</sub></td>
+  <td align="center" width="20%">🔐<br/><b>100% Local</b><br/><sub>No keys, no cloud, no accounts</sub></td>
+  <td align="center" width="20%">🤖<br/><b>MCP Server</b><br/><sub>Use from Claude, Cursor, …</sub></td>
 </tr>
 </table>
 
