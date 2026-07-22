@@ -90,6 +90,20 @@ async def ws_tts(websocket: WebSocket):
                     get_backend_class,
                 )
                 engine_id = data.get("engine")
+                # #1224: leave a breadcrumb when memory is already tight before
+                # a heavy load. /generate has done this since the 16 GB-Mac
+                # reports, but the streaming path — which the desktop UI tries
+                # FIRST — never did, so the load most likely to tip the machine
+                # into an OS OOM kill was the one load with no trail. The
+                # captured stderr tail is what a SIGKILL report has to go on.
+                # Advisory only: the OS can reclaim cache, and refusing here
+                # would brick loads that would actually have coped.
+                try:
+                    from services.memory_budget import log_if_low
+
+                    log_if_low(f"TTS stream load ({engine_id or 'active engine'})")
+                except Exception:
+                    pass
                 if engine_id:
                     cls = get_backend_class(engine_id)
                     backend = cls()

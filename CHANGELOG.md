@@ -6,6 +6,18 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 Versions track the desktop app (`tauri.conf.json` + `frontend/src-tauri/Cargo.toml`).
 The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
+## [Unreleased]
+
+**Highlights**
+
+- A model download that dies at 90% now resumes instead of failing the install
+
+### Fixed
+
+- A truncated model download (`peer closed connection without sending complete message body`) is now retried and resumed; it arrives as a transport error that isn't an `OSError`, so it escaped the installer's retry loop entirely and aborted multi-GB installs near the end (#1224) — thanks @Reaksa-Cambodia!
+- Engine first-use downloads (VoxCPM2, MOSS-TTS-Nano) retry transient network failures instead of failing the load outright (#1224)
+- The streaming synth path now logs the low-memory advisory before loading a model, so a backend killed by the OS leaves a trail in the crash report — only the non-streaming path did (#1224)
+
 ## [0.4.0] — 2026-07-21
 
 **Highlights**

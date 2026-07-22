@@ -19,6 +19,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from core import prefs
+from core.failure import is_hf_connectivity_error
 from utils import hf_progress
 from utils import download_aggregator
 # Weight-floor scan (MM2-07 / #352) lives in ``models.py`` — the lowest module in
@@ -492,8 +493,25 @@ async def install_model(req: InstallModelRequest):
                         _snapshot_path = snapshot_download(**dl_kwargs)
                     _validate_snapshot_has_weights(req.repo_id, _snapshot_path)
                     break
-                except (HfHubHTTPError, LocalEntryNotFoundError, OSError) as net_err:
-                    if _attempt >= _max_attempts:
+                except Exception as net_err:
+                    # #1224: a truncated body ("peer closed connection without
+                    # sending complete message body") arrives as
+                    # httpx.RemoteProtocolError, which inherits from Exception
+                    # — NOT OSError — so it escaped the old
+                    # (HfHubHTTPError, LocalEntryNotFoundError, OSError) tuple
+                    # and aborted a 4.6 GB install at 4.0 GB with no retry.
+                    # Widen to Exception and decide by CLASSIFICATION:
+                    # is_hf_connectivity_error is already the single source of
+                    # truth for "transient download failure" and now knows the
+                    # truncation signatures. Anything unrecognised (a cancel, a
+                    # validation failure, a bug) propagates untouched, exactly
+                    # as before.
+                    if isinstance(net_err, _InstallCancelled):
+                        raise
+                    _retryable = isinstance(
+                        net_err, (HfHubHTTPError, LocalEntryNotFoundError, OSError)
+                    ) or is_hf_connectivity_error(str(net_err))
+                    if _attempt >= _max_attempts or not _retryable:
                         raise
                     _backoff = min(30, 2 ** _attempt)
                     logger.info(

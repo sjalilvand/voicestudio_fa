@@ -84,6 +84,18 @@ _HF_CONNECTIVITY_SIGNATURES = (
     "timed out",
     "an error happened while trying to locate the file on the hub",  # LocalEntryNotFoundError
     "we cannot find the requested files",                            # LocalEntryNotFoundError
+    # #1224: a TRUNCATED download — the server closed mid-body, so the client
+    # got fewer bytes than Content-Length promised. httpx words it "peer closed
+    # connection without sending complete message body"; urllib3/http.client
+    # raise IncompleteRead. This is as transient as a refused connection and
+    # must retry — a 4.6 GB model that dies at 4.0 GB used to abort the whole
+    # install (and, on the reporter's 16 GB Mac, take the process with it).
+    "peer closed connection",
+    "incomplete message body",
+    "incompleteread",
+    "incomplete read",
+    "connection broken",               # urllib3 ProtocolError wrapper
+    "response ended prematurely",
 )
 
 # The failure must also be Hugging-Face-shaped — the configured endpoint/host
