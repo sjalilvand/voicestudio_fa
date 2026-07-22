@@ -13,6 +13,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - AMD GPUs are used again — every ROCm host was silently running on the CPU
 - Two synth failures that used to say "an error OmniVoice doesn't recognize" now say what actually went wrong
 - A dub URL ingest that fails on a disk problem now says which folder and why
+- A broken audio dependency no longer takes the whole backend down at startup
 
 ### Docs
 
@@ -27,6 +28,9 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - A failed audio write (`LibsndfileError: System error.`) now names the target file, its folder's writability and the drive's free space — thanks @morozov28061995-boop! (#1221)
 - Dub URL ingest: a disk error now names the job folder, its writability and the drive's free space, instead of pointing at the system TEMP folder it never used — thanks @dustmaker124-ui! (#1225)
 - Dub URL ingest fails immediately when the job folder is missing or unwritable, instead of starting a download that can only fail (#1225)
+- The backend no longer dies at startup when transformers can't resolve its audio tokenizer (a missing or mismatched torchaudio, common on Google Colab) — it starts, and the error arrives with a repair hint — thanks @Navdeep-Chauhan-777! (#1229)
+- Importing `omnivoice.utils.*` no longer drags in torch, torchaudio, transformers and the full model definition — thanks @Navdeep-Chauhan-777! (#1229)
+- Colab notebook: the install cell now catches a broken environment with the real error, instead of a 5-minute health timeout two cells later — thanks @Navdeep-Chauhan-777! (#1229)
 
 ## [0.4.0] — 2026-07-21
 
