@@ -870,7 +870,10 @@ async def generate_speech(
     # /engines/select gate, so this is the only place it's enforced for synth).
     from core.device_caps import detect_host_caps
     from services.engine_routing import resolve_routing, routing_notice
-    _routing = resolve_routing(getattr(backend_cls, "gpu_compat", ("cpu",)), detect_host_caps())
+    _routing = resolve_routing(
+        getattr(backend_cls, "gpu_compat", ("cpu",)), detect_host_caps(),
+        getattr(backend_cls, "min_vram_gb", 0.0),
+    )
     if _routing["routing_status"] == "unavailable":
         # The engine needs an accelerator this host lacks and has no CPU path.
         raise HTTPException(status_code=400, detail=_routing["routing_reason"])

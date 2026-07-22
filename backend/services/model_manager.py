@@ -538,9 +538,12 @@ def _timeout_guidance(what: str, timeout: float) -> str:
     callers something to do about it.
     """
     family = "cuda"  # conservative default: GPU wording if the probe fails
+    device_name, vram_gb = "", 0.0
     try:
         from core.device_caps import detect_host_caps
-        family = detect_host_caps().family
+        _caps = detect_host_caps()
+        family = _caps.family
+        device_name, vram_gb = _caps.device_name, _caps.vram_gb
     except Exception:  # noqa: BLE001 — guidance must never mask the timeout
         pass
     common = (
@@ -558,6 +561,24 @@ def _timeout_guidance(what: str, timeout: float) -> str:
             "engine (OmniVoice GGUF and Supertonic-3 are CPU-tuned). If you "
             "expect very long single generations, raise "
             "OMNIVOICE_GENERATE_TIMEOUT_S."
+        )
+    # #1226/#1222: two users on 4 GB cards were told, generically, that the GPU
+    # "is VRAM-starved" — true, but it read as a transient contention problem
+    # they could flush their way out of, when their card was simply too small
+    # for the engine they had selected. When we can see the card and its VRAM,
+    # say so and lead with the advice that actually applies.
+    _SMALL_VRAM_GB = 6.0
+    if vram_gb and vram_gb < _SMALL_VRAM_GB:
+        return common + (
+            f"{device_name or 'this GPU'} has {vram_gb:.1f} GB of VRAM, which "
+            f"is below what the heavier engines want — generations here are "
+            f"slow enough to hit this limit even with nothing else loaded. "
+            f"The durable fix is a lighter engine (OmniVoice GGUF and "
+            f"Supertonic-3 are tuned for small/no GPU) or shorter text; "
+            f"Flush caches / Unload the resident model (top toolbar or "
+            f"Settings → Models) frees what little headroom there is. (Raise "
+            f"OMNIVOICE_GENERATE_TIMEOUT_S if you'd rather let long "
+            f"generations run.)"
         )
     return common + (
         "most often the GPU is VRAM-starved (a resident model and this job "

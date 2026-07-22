@@ -6,6 +6,17 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 Versions track the desktop app (`tauri.conf.json` + `frontend/src-tauri/Cargo.toml`).
 The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
+## [Unreleased]
+
+**Highlights**
+
+- A GPU too small for the chosen engine now says so up front, not after a five-minute wait
+
+### Fixed
+
+- Engines can declare the VRAM they need, and a card below that gets a caveat in Settings → Engines before you generate — a 4 GB card previously showed a clean green "accelerated" until the job timed out, because only GPU family was ever checked (#1226, #1222) — thanks @AdityaHemantBhat and @beingavais!
+- The generation-timeout message now names your actual card and its VRAM instead of blaming generic "VRAM starvation", and recommends a lighter engine rather than reading as transient contention you can flush away (#1226, #1222)
+
 ## [0.4.0] — 2026-07-21
 
 **Highlights**
