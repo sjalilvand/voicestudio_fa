@@ -86,10 +86,33 @@ def test_rocm_genuine_mismatch_still_detected():
 
 def test_rocm_gpu_we_can_remap_is_not_a_mismatch():
     """gfx1102 is absent from this build but _configure_rocm_if_needed() remaps
-    it to gfx1100 before any kernel launches."""
+    it to gfx1100, which this build DOES ship."""
     torch = _torch(hip="6.2", capability=(11, 2), gcn_arch="gfx1102",
                    arch_list=["gfx1030", "gfx1100"])
     assert device_caps.arch_unsupported(torch) is None
+
+
+def test_a_remap_target_the_build_lacks_is_still_a_mismatch():
+    """Review finding (#1230): being IN the override map was treated as proof
+    of compatibility. If the wheel ships neither the native arch nor the remap
+    target, the override only changes which kernel is missing — the host must
+    still fall back to CPU rather than launch into a guaranteed failure."""
+    torch = _torch(hip="6.2", capability=(11, 5), gcn_arch="gfx1151",
+                   arch_list=["gfx900", "gfx1030"])  # no gfx1100
+    assert device_caps.arch_unsupported(torch) == ("gfx1151", ("gfx900", "gfx1030"))
+
+
+def test_hsa_override_string_is_derived_from_the_target():
+    assert device_caps.hsa_override_for("gfx1100") == "11.0.0"
+    assert device_caps.hsa_override_for("gfx1030") == "10.3.0"
+    assert device_caps.hsa_override_for("gfx906") == "9.0.6"
+    assert device_caps.hsa_override_for("gfx900") == "9.0.0"
+
+
+def test_every_override_target_has_a_valid_hsa_form():
+    for source, target in device_caps.ROCM_GFX_OVERRIDES.items():
+        assert target.startswith("gfx"), source
+        device_caps.hsa_override_for(target)  # must not raise
 
 
 def test_rocm_user_hsa_override_is_trusted(monkeypatch):
@@ -188,6 +211,37 @@ def test_override_applied_when_build_lacks_the_arch(monkeypatch):
                arch_list=["gfx1030", "gfx1100"])
     )
     assert os.environ.get("HSA_OVERRIDE_GFX_VERSION") == "11.0.0"
+
+
+def test_no_override_when_the_target_is_also_missing():
+    """Review finding (#1230): pointing HSA_OVERRIDE_GFX_VERSION at an arch the
+    build doesn't ship is not a fix. Leave it unset so the compatibility check
+    reports the real mismatch and the CPU fallback engages."""
+    import os
+
+    import services.model_manager as mm
+
+    mm._configure_rocm_if_needed(
+        _torch(hip="6.2", capability=(11, 5), gcn_arch="gfx1151",
+               device_name="AMD Radeon 8060S", arch_list=["gfx900", "gfx1030"])
+    )
+    assert "HSA_OVERRIDE_GFX_VERSION" not in os.environ
+
+
+def test_unknown_arch_metadata_never_triggers_a_remap():
+    """Review finding (#1230): an EMPTY arch list means the build's metadata is
+    unavailable, not that the GPU is unsupported. Treating unknown as a
+    confirmed mismatch would push a natively-supported gfx1151 onto foreign
+    gfx1100 kernels. Fail open."""
+    import os
+
+    import services.model_manager as mm
+
+    mm._configure_rocm_if_needed(
+        _torch(hip="7.2.4", capability=(11, 5), gcn_arch="gfx1151",
+               device_name="AMD Radeon 8060S", arch_list=[])
+    )
+    assert "HSA_OVERRIDE_GFX_VERSION" not in os.environ
 
 
 def test_nvidia_never_gets_an_hsa_override():

@@ -59,16 +59,35 @@ DIRECTML_MARKER = "DirectML device present"
 # ``HSA_OVERRIDE_GFX_VERSION`` runs them on the closest supported architecture.
 # Applied (with side effects) by ``model_manager._configure_rocm_if_needed``;
 # read here so ``arch_unsupported()`` doesn't flag a GPU we know how to remap.
+#
+# Values are the TARGET gfx name, not the HSA version string, so callers can
+# check whether the installed wheel actually contains that target before
+# treating the remap as a solution (``hsa_override_for`` derives the env-var
+# form). Remapping onto an architecture the build doesn't ship is not a fix —
+# it just moves the failure from "no kernel for gfx1151" to "no kernel for
+# gfx1100".
 ROCM_GFX_OVERRIDES = {
     # RDNA 3.5 (Strix Point / Strix Halo APUs) — override to gfx1100
-    "gfx1150": "11.0.0", "gfx1151": "11.0.0",
+    "gfx1150": "gfx1100", "gfx1151": "gfx1100",
     # RDNA 3 (RX 7000 series) — override to gfx1100
-    "gfx1101": "11.0.0", "gfx1102": "11.0.0", "gfx1103": "11.0.0",
+    "gfx1101": "gfx1100", "gfx1102": "gfx1100", "gfx1103": "gfx1100",
     # RDNA 2 (RX 6000 series) — override to gfx1030
-    "gfx1031": "10.3.0", "gfx1032": "10.3.0", "gfx1034": "10.3.0",
-    # Vega (RX Vega / Radeon VII) — override to gfx900
-    "gfx902": "9.0.0", "gfx906": "9.0.6",
+    "gfx1031": "gfx1030", "gfx1032": "gfx1030", "gfx1034": "gfx1030",
+    # Vega (RX Vega / Radeon VII) — override to gfx900 / gfx906
+    "gfx902": "gfx900", "gfx906": "gfx906",
 }
+
+
+def hsa_override_for(target_gfx: str) -> str:
+    """``"gfx1100"`` → ``"11.0.0"``, the form HSA_OVERRIDE_GFX_VERSION wants.
+
+    The digits are major / minor / step, with the last two characters always
+    one digit each: gfx1100 → 11.0.0, gfx1030 → 10.3.0, gfx906 → 9.0.6.
+    """
+    digits = _normalize_arch(target_gfx).removeprefix("gfx")
+    if len(digits) < 3 or not digits.isdigit():
+        raise ValueError(f"not a gfx architecture name: {target_gfx!r}")
+    return f"{digits[:-2]}.{digits[-2]}.{digits[-1]}"
 
 
 def _normalize_arch(tag: str) -> str:
@@ -126,11 +145,15 @@ def arch_unsupported(torch) -> tuple[str, tuple[str, ...]] | None:
             gfx = _normalize_arch(getattr(props, "gcnArchName", "") or "")
             if not gfx:
                 return None
-            if gfx in ROCM_GFX_OVERRIDES:
-                # _configure_rocm_if_needed() remaps this GPU onto a supported
-                # target before any kernel launches — not a mismatch.
+            build = {_normalize_arch(a) for a in arch_list}
+            if gfx in build:
                 return None
-            if gfx in {_normalize_arch(a) for a in arch_list}:
+            # _configure_rocm_if_needed() can remap this GPU onto a supported
+            # target before any kernel launches — but only counts as a fix if
+            # the build actually SHIPS that target. Remapping gfx1151 onto
+            # gfx1100 in a wheel that has neither just relocates the failure.
+            target = ROCM_GFX_OVERRIDES.get(gfx)
+            if target and _normalize_arch(target) in build:
                 return None
             return gfx, tuple(arch_list)
 

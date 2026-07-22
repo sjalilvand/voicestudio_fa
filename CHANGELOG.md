@@ -14,13 +14,13 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
-- AMD/ROCm: the GPU compatibility gate compared a CUDA `sm_` tag against a ROCm build's `gfx` architecture list, so it never matched and every ROCm host was force-routed to the CPU while `torch.cuda.is_available()` reported `True` (#1228) — thanks @simmessa!
+- AMD/ROCm: every ROCm host was silently force-routed to the CPU — the compatibility gate compared a CUDA `sm_` tag against a ROCm build's `gfx` list, which can never match — thanks @simmessa! (#1228)
 - AMD/ROCm: `torch.compile` was disabled on all AMD hosts by the same mismatched comparison (#1228)
-- AMD/ROCm: `HSA_OVERRIDE_GFX_VERSION` is auto-set only when your GPU's GFX ID is genuinely absent from the installed ROCm build, instead of remapping natively-supported cards; gfx1150/gfx1151 (Strix Point/Halo) added to the fallback map (#1228)
+- AMD/ROCm: `HSA_OVERRIDE_GFX_VERSION` is auto-set only when your card genuinely needs it and the remap target exists in your build; gfx1150/gfx1151 (Strix Point/Halo) added to the map (#1228)
 
 ### Docs
 
-- Docker: ROCm section explains that `torch.cuda.is_available() == True` isn't proof the app is on the GPU, and notes the `--group-add` needed for `/dev/kfd` on rootless hosts
+- Docker: ROCm section explains that `torch.cuda.is_available() == True` isn't proof the app is on the GPU, and notes the `--group-add` needed for `/dev/kfd` on rootless hosts (#1228)
 
 ## [0.4.0] — 2026-07-21
 

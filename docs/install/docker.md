@@ -101,7 +101,7 @@ the CUDA tags exactly.
 > (user-set on the container — it is deliberately **not** baked into the
 > image, because the right value depends on your card); a value you set is
 > always respected as-is.
-
+>
 > **Rootless / non-root hosts:** if `/dev/kfd` is group-owned, the container
 > user needs those groups too — add `--group-add` for your host's `render` and
 > `video` GIDs (`getent group render video`).
