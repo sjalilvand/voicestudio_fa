@@ -158,4 +158,36 @@ def test_save_reraises_with_the_target_named(tmp_path, monkeypatch):
         audio_io._safe_torchaudio_save(str(target), torch.zeros(1, 100), 24000)
 
     assert str(target) in str(excinfo.value)
-    assert classify(str(excinfo.value)) in ("AUDIO_IO_FAILED", "")
+    # Review finding (#1233): this used to allow "" as a pass, which hid the
+    # fact that the ENRICHED message no longer contains the word "libsndfile"
+    # and so classified as nothing — leaving bug reports and docs links
+    # unclassified for exactly the failure this PR is about.
+    assert classify(str(excinfo.value)) == "AUDIO_IO_FAILED"
+
+
+def test_unrelated_open_failures_keep_their_own_guidance(reraise):
+    """Review finding (#1233): matching the generic phrase "error opening"
+    handed the audio-file remedy to ANY failure that mentioned it — a model,
+    archive or config file that won't open. Classification keys off a marker
+    audio_io emits, not on wording other subsystems share."""
+    raw = "Error opening model archive: /models/x/config.json is corrupt"
+    assert classify(raw) != "AUDIO_IO_FAILED"
+
+    with pytest.raises(RuntimeError) as excinfo:
+        reraise(RuntimeError(raw))
+    msg = str(excinfo.value)
+    assert "libsndfile" not in msg
+    assert "antivirus" not in msg
+
+
+def test_the_marker_is_shared_not_duplicated():
+    """core/ cannot import services/, so the marker lives in audio_io and
+    failure.py matches its lowercased text. Pin them together — a reworded
+    marker on one side silently un-classifies every enriched write failure."""
+    from services.audio_io import AUDIO_WRITE_FAILED_MARKER
+
+    import inspect
+
+    from core import failure as failure_mod
+
+    assert AUDIO_WRITE_FAILED_MARKER.lower() in inspect.getsource(failure_mod)

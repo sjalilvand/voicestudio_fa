@@ -208,6 +208,13 @@ def _safe_torchaudio_save(
         raise _describe_write_failure(e, path_or_buf) from e
 
 
+#: Stable, language-independent marker prefixed onto every enriched audio-write
+#: failure. ``core.failure.classify`` matches on THIS rather than on generic
+#: wording like "error opening", which also appears when a model, archive or
+#: config file fails to open and would hand those failures the audio remedy.
+AUDIO_WRITE_FAILED_MARKER = "Writing the audio file failed"
+
+
 def _describe_write_failure(e: Exception, path_or_buf: PathOrBuf) -> Exception:
     """``e`` re-raised as a RuntimeError that names the write target, or ``e``
     itself when there is nothing to add.
@@ -237,7 +244,7 @@ def _describe_write_failure(e: Exception, path_or_buf: PathOrBuf) -> Exception:
             except OSError:
                 facts.append("free space could not be read")
         return RuntimeError(
-            f"Writing the audio file failed: {type(e).__name__}: {e} — target "
+            f"{AUDIO_WRITE_FAILED_MARKER}: {type(e).__name__}: {e} — target "
             f"{path} ({'; '.join(facts)}). An audio write failing at the OS "
             f"level is usually a full drive, a read-only or removed folder, or "
             f"antivirus/OneDrive locking the file; add an OmniVoice exclusion "

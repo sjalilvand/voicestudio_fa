@@ -386,7 +386,7 @@ def _oom_friendly_reraise(e):
     # already names the target for the WRITE path; this covers every other
     # libsndfile surface (reading a reference clip, a decode) with the causes
     # that actually produce an OS-level audio I/O failure.
-    if "libsndfile" in _low or "error opening" in _low:
+    if "libsndfile" in _low or "writing the audio file failed" in _low:
         raise RuntimeError(
             f"An audio file couldn't be read or written (libsndfile failed at "
             f"the OS level). This is a file/disk problem, not a memory one: "

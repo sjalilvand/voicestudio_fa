@@ -14,8 +14,8 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
-- Windows Smart App Control / WDAC / AppLocker blocking an engine file is now named, with the exact setting to change, instead of surfacing as an unrecognized error (#1227) — thanks @AdityaHemantBhat!
-- A failed audio read/write (`LibsndfileError: System error.`) now names the target file, its folder's writability and the drive's free space, and points at the usual causes — full disk, locked folder, antivirus (#1221) — thanks @morozov28061995-boop!
+- Windows Smart App Control / WDAC blocking an engine file is now named, with the setting to change — thanks @AdityaHemantBhat! (#1227)
+- A failed audio write (`LibsndfileError: System error.`) now names the target file, its folder's writability and the drive's free space — thanks @morozov28061995-boop! (#1221)
 
 ## [0.4.0] — 2026-07-21
 

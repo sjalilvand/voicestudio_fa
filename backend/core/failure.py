@@ -340,7 +340,12 @@ def classify(reason: str) -> str:
     # #1221: libsndfile failed an OS-level audio read/write. Its own wording is
     # a bare "System error.", so match the library name — audio_io already
     # prefixes the target path and free space onto the write-path failures.
-    if "libsndfile" in low:
+    # ``audio_io.AUDIO_WRITE_FAILED_MARKER`` (kept as a literal — core must not
+    # import services). Matching the marker instead of generic wording like
+    # "error opening" keeps a failed MODEL/config/archive open from being handed
+    # the audio remedy, while still classifying the enriched write failures that
+    # no longer carry the word "libsndfile" verbatim.
+    if "libsndfile" in low or "writing the audio file failed" in low:
         return "AUDIO_IO_FAILED"
     # A relocated/corrupted venv whose interpreter can't bootstrap its stdlib —
     # the Rust self-heal rebuilds it; this names the class for the toast.
