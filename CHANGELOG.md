@@ -14,9 +14,14 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - Two synth failures that used to say "an error OmniVoice doesn't recognize" now say what actually went wrong
 - A dub URL ingest that fails on a disk problem now says which folder and why
 - A broken audio dependency no longer takes the whole backend down at startup
+- A GPU too small for the chosen engine now says so up front, not after a five-minute wait
+
 ### Docs
+
 - Docker: ROCm section explains that `torch.cuda.is_available() == True` isn't proof the app is on the GPU, and notes the `--group-add` needed for `/dev/kfd` on rootless hosts (#1228)
+
 ### Fixed
+
 - AMD/ROCm: every ROCm host was silently force-routed to the CPU — the compatibility gate compared a CUDA `sm_` tag against a ROCm build's `gfx` list, which can never match — thanks @simmessa! (#1228)
 - AMD/ROCm: `torch.compile` was disabled on all AMD hosts by the same mismatched comparison (#1228)
 - AMD/ROCm: `HSA_OVERRIDE_GFX_VERSION` is auto-set only when your card genuinely needs it and the remap target exists in your build; gfx1150/gfx1151 (Strix Point/Halo) added to the map (#1228)
@@ -27,7 +32,6 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - The backend no longer dies at startup when transformers can't resolve its audio tokenizer (a missing or mismatched torchaudio, common on Google Colab) — it starts, and the error arrives with a repair hint — thanks @Navdeep-Chauhan-777! (#1229)
 - Importing `omnivoice.utils.*` no longer drags in torch, torchaudio, transformers and the full model definition — thanks @Navdeep-Chauhan-777! (#1229)
 - Colab notebook: the install cell now catches a broken environment with the real error, instead of a 5-minute health timeout two cells later — thanks @Navdeep-Chauhan-777! (#1229)
-- A GPU too small for the chosen engine now says so up front, not after a five-minute wait
 - A GPU with less VRAM than the chosen engine needs is flagged in Settings → Engines before you generate, instead of showing a clean green "accelerated" until the job times out — thanks @AdityaHemantBhat and @beingavais! (#1226, #1222)
 - A generation timeout now names your actual card and its VRAM and recommends a lighter engine (#1226, #1222)
 
@@ -350,7 +354,6 @@ The quality release. Three long-standing frictions got structural fixes: **regen
 ## [0.3.15] — 2026-07-10
 
 The cold-start release. Three "why is this broken on my machine" mysteries got solved at their roots: **first generations stop dying at 300 seconds** (the timeout was counting the model download as generation time — @moduvoice measured it on a Tesla T4: 0% GPU for the full window), **updates stop deleting engines you installed yourself** (the updater's dependency sync removed anything not in the app's lockfile — including things our own UI told you to install), and **the "slower than v0.3.5" regression is found and fixed** (clone profiles without a transcript were silently re-running a full Whisper transcription on every single generate). Also: Clear History is back, auto-played audio is finally stoppable, @stronghamjji hardened the dub pipeline against wedged transcribes, and @shakib30's community Colab notebook is now the linked no-GPU path. Thank you all.
-
 
 ### Added
 
@@ -700,6 +703,7 @@ across dub, generate, and design (a corrupt-binary failure no longer poses as
   above Continue, framed around what it actually buys you — authenticated, faster,
   more reliable downloads (higher rate limits, fewer stalls) — with a one-click
   "get a free token" link. (#657, #669)
+
 ### Fixed
 
 - **Bug reports redact more secrets and every Windows username casing.** The
