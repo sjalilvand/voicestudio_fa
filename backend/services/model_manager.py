@@ -511,7 +511,7 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
     # Phase 2 — execution. The clock starts here: this job owns a worker.
     try:
         return await asyncio.wait_for(fut, timeout=timeout)
-    except asyncio.TimeoutError:
+    except asyncio.TimeoutError as timeout_exc:
         # wait_for already cancelled the asyncio wrapper; the worker thread
         # keeps going regardless. Consume whatever it eventually produces.
         fut.add_done_callback(_swallow_abandoned)
@@ -528,7 +528,9 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
             except Exception:
                 logger.exception("GPU pool reset after %s timeout failed",
                                  _log_safe(what))
-        raise GpuJobTimeoutError(_timeout_guidance(what, timeout, min_vram_gb))
+        raise GpuJobTimeoutError(
+            _timeout_guidance(what, timeout, min_vram_gb)
+        ) from timeout_exc
 
 
 def _timeout_guidance(what: str, timeout: float, min_vram_gb: float = 0.0) -> str:
