@@ -80,3 +80,32 @@ describe('crashCauseHint — port conflict is not a memory problem (#1223)', () 
     expect(crashCauseHint({ exit_code: 1, signal: null })).toMatch(/VRAM/);
   });
 });
+
+describe('the Rust failure messages reach the localised hint (#1223)', () => {
+  // These are the two BootstrapStage::Failed messages bootstrap.rs emits when
+  // it cannot free the port. They are English (as every Rust-side failure
+  // message is), but they only need to be MATCHABLE: detectHints turns them
+  // into `bootstrap.hint_port`, which IS localised. If either message is
+  // reworded so the matcher misses it, the user loses the translated guidance
+  // — which is exactly the #1223 failure mode, one layer up.
+  it.each([
+    [
+      'take-ownership',
+      'Port 3900 is already in use by another application, and OmniVoice could not free it. ' +
+        'Quit whatever is using that port (another copy of OmniVoice, or an app that claimed it) ' +
+        'and try again.',
+    ],
+    [
+      'respawn',
+      'Port 3900 is still in use by another application and OmniVoice could not free it, so the ' +
+        "backend can't restart. Quit whatever is using that port and relaunch.",
+    ],
+    [
+      'early-exit',
+      'Port 3900 is already in use, so the backend could not start. Another copy of OmniVoice — ' +
+        'or an app that claimed that port — is holding it.',
+    ],
+  ])('%s message maps to the localised port hint', (_which, message) => {
+    expect(detectHints(message)).toContain('bootstrap.hint_port');
+  });
+});

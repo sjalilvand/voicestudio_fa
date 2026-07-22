@@ -620,10 +620,17 @@ fn supervise_backend(app: &tauri::AppHandle, stage_handle: &Arc<Mutex<BootstrapS
             set_stage(
                 stage_handle,
                 BootstrapStage::Failed {
+                    // Wording note: every one of these must contain a phrase
+                    // `BootstrapSplash.detectHints` matches ("port … in use"),
+                    // because that is what turns an English Rust message into
+                    // the LOCALISED `bootstrap.hint_port` the user actually
+                    // reads. Pinned in frontend/src/test/portInUseHint.test.js
+                    // — an earlier draft of this one said "is held by" and
+                    // silently lost the translated guidance.
                     message: format!(
-                        "Port {} is held by another application and OmniVoice \
-                         could not free it, so the backend can't restart. Quit \
-                         whatever is using that port and relaunch.",
+                        "Port {} is still in use by another application and \
+                         OmniVoice could not free it, so the backend can't \
+                         restart. Quit whatever is using that port and relaunch.",
                         backend_port()
                     ),
                 },

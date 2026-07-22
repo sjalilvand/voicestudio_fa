@@ -56,41 +56,119 @@ def test_every_platforms_eaddrinuse_is_recognised(errno):
     the errno rather than the message is the whole point — the message is
     translated by the OS."""
     src = _read("backend", "main.py")
-    match = re.search(r"if e\.errno in \(([\d, ]+)\)", src)
+    match = re.search(r"errno in \(([\d, ]+)\)", src)
     assert match, "errno guard missing from main.py"
     assert str(errno) in {p.strip() for p in match.group(1).split(",")}
 
 
-def test_real_bind_conflict_exits_with_the_dedicated_code(tmp_path):
-    """End-to-end: hold a port, then run the same guard shape against it and
-    confirm the process exits 78 rather than 1.
+def test_uvicorn_swallows_the_bind_error_into_systemexit(tmp_path):
+    """The assumption the first version of this fix got wrong.
 
-    Runs the guard standalone rather than booting the whole backend (a real
-    boot downloads models); what's under test is the exception handling, and
-    the OSError comes from a genuine bind conflict, not a mock."""
+    `except OSError` around `uvicorn.run()` looks obviously right and is
+    inert: uvicorn catches the bind failure inside its own startup, logs the
+    raw errno, and raises `SystemExit(1)`. Nothing propagates. This test
+    documents that behaviour against the real installed uvicorn, so a future
+    refactor back to the "obvious" shape fails here instead of silently
+    restoring "Backend died (exit code 1)".
+    """
     holder = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     holder.bind(("127.0.0.1", 0))
     holder.listen(1)
     port = holder.getsockname()[1]
     try:
-        script = tmp_path / "bind.py"
+        script = tmp_path / "naive.py"
+        script.write_text(
+            "import sys\n"
+            "import uvicorn\n"
+            "from fastapi import FastAPI\n"
+            "try:\n"
+            f"    uvicorn.run(FastAPI(), host='127.0.0.1', port={port}, "
+            "log_level='critical')\n"
+            "except OSError:\n"
+            "    print('OSERROR', file=sys.stderr); sys.exit(78)\n",
+            encoding="utf-8",
+        )
+        proc = subprocess.run(
+            [sys.executable, str(script)], capture_output=True, text=True
+        )
+        assert "OSERROR" not in proc.stderr, (
+            "uvicorn now propagates the bind OSError — the pre-probe in "
+            "main.py can be simplified, but verify before doing so"
+        )
+        assert proc.returncode == 1
+    finally:
+        holder.close()
+
+
+def test_real_bind_conflict_exits_with_the_dedicated_code(tmp_path):
+    """End-to-end against the REAL uvicorn: hold a port, run main.py's guard
+    shape against it, and confirm the process exits 78 with an actionable
+    message — not uvicorn's bare exit 1.
+
+    Reproduces the guard rather than booting the whole backend (a real boot
+    downloads models), but drives genuine `uvicorn.run` so the swallowed-
+    SystemExit trap above cannot silently reappear.
+    """
+    holder = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    holder.bind(("127.0.0.1", 0))
+    holder.listen(1)
+    port = holder.getsockname()[1]
+    try:
+        guard = _read("backend", "main.py")
+        start = guard.index("    def _port_taken(")
+        end = guard.index("    # #1223: uvicorn does NOT")
+        body = "\n".join(line[4:] for line in guard[start:end].splitlines())
+
+        script = tmp_path / "guarded.py"
         script.write_text(
             "import socket, sys\n"
-            "_EXIT_PORT_IN_USE = 78\n"
+            "import uvicorn\n"
+            "from fastapi import FastAPI\n"
+            f"_EXIT_PORT_IN_USE = {_EXPECTED_EXIT}\n"
+            f"_port = {port}\n"
+            "app = FastAPI()\n"
+            + body
+            + "\n"
+            "if (_e := _port_taken('127.0.0.1', _port)) is not None:\n"
+            "    _fail_port_in_use(_e)\n"
             "try:\n"
-            "    s = socket.socket()\n"
-            f"    s.bind(('127.0.0.1', {port}))\n"
-            "except OSError as e:\n"
-            "    if e.errno in (48, 98, 10048) or getattr(e, 'winerror', None) == 10048:\n"
-            "        print(f'FATAL: port is already in use: {e}', file=sys.stderr)\n"
-            "        sys.exit(_EXIT_PORT_IN_USE)\n"
+            "    uvicorn.run(app, host='127.0.0.1', port=_port, log_level='critical')\n"
+            "except SystemExit:\n"
+            "    if _port_taken('127.0.0.1', _port) is not None:\n"
+            "        _fail_port_in_use(None)\n"
             "    raise\n",
             encoding="utf-8",
         )
         proc = subprocess.run(
             [sys.executable, str(script)], capture_output=True, text=True
         )
-        assert proc.returncode == _EXPECTED_EXIT, proc.stderr
+        assert proc.returncode == _EXPECTED_EXIT, (
+            f"expected exit {_EXPECTED_EXIT}, got {proc.returncode}\n{proc.stderr}"
+        )
         assert "already in use" in proc.stderr
     finally:
         holder.close()
+
+
+def test_the_probe_does_not_false_positive_on_a_free_port(tmp_path):
+    """A free port must start normally. The probe uses uvicorn's own socket
+    options (SO_REUSEADDR off Windows) precisely so a TIME_WAIT socket uvicorn
+    could bind isn't reported as taken."""
+    guard = _read("backend", "main.py")
+    start = guard.index("    def _port_taken(")
+    end = guard.index("    def _fail_port_in_use(")
+    body = "\n".join(line[4:] for line in guard[start:end].splitlines())
+
+    free = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    free.bind(("127.0.0.1", 0))
+    port = free.getsockname()[1]
+    free.close()  # now free (possibly TIME_WAIT)
+
+    script = tmp_path / "probe.py"
+    script.write_text(
+        "import socket, sys\n" + body + "\n"
+        f"print('TAKEN' if _port_taken('127.0.0.1', {port}) is not None else 'FREE')\n",
+        encoding="utf-8",
+    )
+    proc = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+    assert proc.stdout.strip() == "FREE", proc.stderr

@@ -14,9 +14,8 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
-- Port 3900 already in use is now reported as a port conflict with the fix, on every platform and in every language: the backend exits with a dedicated code and the shell keys off that plus the raw errno, since Windows translates the socket error into the user's locale (#1223) — thanks @xipb14!
-- The shell now verifies it actually freed the port before starting the backend, instead of killing, waiting a fixed moment and spawning into a port it may not have reclaimed (#1223)
-- The crash details dialog now explains what the exit actually means — it had the explanation available and showed only the bare exit code (#1223)
+- A busy port 3900 now reports a port conflict instead of "Backend died (exit code 1)", in every language — thanks @xipb14! (#1223)
+- The app verifies it actually freed the port before starting the backend, rather than assuming the kill worked (#1223)
 
 ## [0.4.0] — 2026-07-21
 
