@@ -11,16 +11,19 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 **Highlights**
 
 - AMD GPUs are used again — every ROCm host was silently running on the CPU
+- Two synth failures that used to say "an error OmniVoice doesn't recognize" now say what actually went wrong
+
+### Docs
+
+- Docker: ROCm section explains that `torch.cuda.is_available() == True` isn't proof the app is on the GPU, and notes the `--group-add` needed for `/dev/kfd` on rootless hosts (#1228)
 
 ### Fixed
 
 - AMD/ROCm: every ROCm host was silently force-routed to the CPU — the compatibility gate compared a CUDA `sm_` tag against a ROCm build's `gfx` list, which can never match — thanks @simmessa! (#1228)
 - AMD/ROCm: `torch.compile` was disabled on all AMD hosts by the same mismatched comparison (#1228)
 - AMD/ROCm: `HSA_OVERRIDE_GFX_VERSION` is auto-set only when your card genuinely needs it and the remap target exists in your build; gfx1150/gfx1151 (Strix Point/Halo) added to the map (#1228)
-
-### Docs
-
-- Docker: ROCm section explains that `torch.cuda.is_available() == True` isn't proof the app is on the GPU, and notes the `--group-add` needed for `/dev/kfd` on rootless hosts (#1228)
+- Windows blocking an engine file (Smart App Control, WDAC, or AppLocker) is now named, with the fix for personal and managed PCs — thanks @AdityaHemantBhat! (#1227)
+- A failed audio write (`LibsndfileError: System error.`) now names the target file, its folder's writability and the drive's free space — thanks @morozov28061995-boop! (#1221)
 
 ## [0.4.0] — 2026-07-21
 
