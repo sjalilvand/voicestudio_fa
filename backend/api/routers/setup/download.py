@@ -341,7 +341,17 @@ def _is_retryable_download_error(exc: BaseException) -> bool:
 
     if isinstance(exc, _InstallCancelled):
         return False
-    if isinstance(exc, (HfHubHTTPError, LocalEntryNotFoundError, OSError)):
+    if isinstance(exc, HfHubHTTPError):
+        # An auth / not-found / gone answer from the Hub is a settled verdict:
+        # the token is wrong, the repo is gated, or it isn't there. Retrying
+        # five times with backoff just delays the same message and postpones
+        # the install cooldown. (Pre-existing behaviour — the type-based tuple
+        # this replaced retried every HfHubHTTPError; surfaced in #1224 review.)
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        if status in (401, 403, 404, 410):
+            return False
+        return True
+    if isinstance(exc, (LocalEntryNotFoundError, OSError)):
         return True
     return is_hf_connectivity_error(str(exc))
 

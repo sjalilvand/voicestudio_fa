@@ -240,6 +240,38 @@ def test_installer_does_not_retry_a_cancel_or_a_real_error():
     assert not _is_retryable_download_error(RuntimeError("401 Unauthorized"))
 
 
+@pytest.mark.parametrize("status", [401, 403, 404, 410])
+def test_installer_does_not_retry_a_settled_hub_verdict(status):
+    """Review finding (#1224): every HfHubHTTPError was retried, so a wrong
+    token or a gated repo burned all five attempts with backoff before showing
+    the user the same message. The verdict is settled — fail fast."""
+    import httpx
+    from huggingface_hub.utils import HfHubHTTPError
+
+    from api.routers.setup.download import _is_retryable_download_error
+
+    response = httpx.Response(status, request=httpx.Request("GET", "https://hf.co/x"))
+    assert not _is_retryable_download_error(
+        HfHubHTTPError(f"{status} Client Error", response=response)
+    )
+
+
+def test_installer_still_retries_a_server_side_hub_error():
+    """A 5xx (or a rate-limit) is transient and must keep retrying."""
+    import httpx
+    from huggingface_hub.utils import HfHubHTTPError
+
+    from api.routers.setup.download import _is_retryable_download_error
+
+    for status in (429, 500, 503):
+        response = httpx.Response(
+            status, request=httpx.Request("GET", "https://hf.co/x")
+        )
+        assert _is_retryable_download_error(
+            HfHubHTTPError(f"{status} Error", response=response)
+        ), status
+
+
 def test_installer_still_retries_the_original_type_based_cases():
     """Widening to classification must not drop what the old tuple caught."""
     from huggingface_hub.utils import LocalEntryNotFoundError
