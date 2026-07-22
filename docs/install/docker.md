@@ -92,12 +92,19 @@ Volume=omnivoice-data:/app/omnivoice_data
 Release pins exist too: `:stable-rocm`, `:0.4.0-rocm`, `:0.4-rocm` mirror
 the CUDA tags exactly.
 
-> **RDNA3 consumer cards (RX 7900 XTX/XT, gfx1100):** the backend auto-sets
-> `HSA_OVERRIDE_GFX_VERSION` for consumer GFX IDs missing from ROCm's official
-> support matrix, so try without any override first. If the GPU still isn't
-> detected, force it explicitly with `-e HSA_OVERRIDE_GFX_VERSION=11.0.0`
+> **Consumer cards and APUs (RX 6000/7000, Strix Point/Halo):** the backend
+> auto-sets `HSA_OVERRIDE_GFX_VERSION` when — and only when — your card's GFX
+> ID is missing from the shipped ROCm build's architecture list, so try
+> without any override first. Overriding a natively-supported GPU (gfx1151 on
+> ROCm 7.x, for example) only forces it onto foreign kernels. If the GPU still
+> isn't used, force it explicitly with `-e HSA_OVERRIDE_GFX_VERSION=11.0.0`
 > (user-set on the container — it is deliberately **not** baked into the
-> image, because the right value depends on your card).
+> image, because the right value depends on your card); a value you set is
+> always respected as-is.
+>
+> **Rootless / non-root hosts:** if `/dev/kfd` is group-owned, the container
+> user needs those groups too — add `--group-add` for your host's `render` and
+> `video` GIDs (`getent group render video`).
 
 Verify the container sees the GPU:
 
@@ -107,8 +114,10 @@ docker exec omnivoice python3 -c \
 ```
 
 (ROCm-built PyTorch reports through `torch.cuda.*` — `True` plus your card's
-name means GPU acceleration is active. The Settings → System panel shows the
-same device.)
+name means torch can see the GPU.) That check alone isn't proof the app is
+using it: **Settings → System** shows the device OmniVoice actually resolved.
+If it reads `cpu` while the command above prints `True`, the backend log line
+starting `Falling back to CPU:` names the architecture mismatch it hit.
 
 ## Docker Compose (recommended)
 

@@ -28,6 +28,7 @@ out of this backend-only slice.)
 from __future__ import annotations
 
 import functools
+import os
 import platform as _platform
 import sys
 from dataclasses import dataclass
@@ -51,6 +52,146 @@ DIRECTML_MARKER = "DirectML device present"
 # would put a subprocess on the cold-start probe path. That check stays in
 # ``wizard._detect_gpu`` (preflight), which already runs it. The probe only
 # emits the torch-visible SM-arch caveat (cheap, metadata-only).
+
+# ── ROCm GFX version overrides ───────────────────────────────────────────
+# AMD GPUs on ROCm present through ``torch.cuda`` but some consumer parts have
+# GFX IDs the installed ROCm build wasn't compiled for. Setting
+# ``HSA_OVERRIDE_GFX_VERSION`` runs them on the closest supported architecture.
+# Applied (with side effects) by ``model_manager._configure_rocm_if_needed``;
+# read here so ``arch_unsupported()`` doesn't flag a GPU we know how to remap.
+#
+# Values are the TARGET gfx name, not the HSA version string, so callers can
+# check whether the installed wheel actually contains that target before
+# treating the remap as a solution (``hsa_override_for`` derives the env-var
+# form). Remapping onto an architecture the build doesn't ship is not a fix —
+# it just moves the failure from "no kernel for gfx1151" to "no kernel for
+# gfx1100".
+ROCM_GFX_OVERRIDES = {
+    # RDNA 3.5 (Strix Point / Strix Halo APUs) — override to gfx1100
+    "gfx1150": "gfx1100", "gfx1151": "gfx1100",
+    # RDNA 3 (RX 7000 series) — override to gfx1100
+    "gfx1101": "gfx1100", "gfx1102": "gfx1100", "gfx1103": "gfx1100",
+    # RDNA 2 (RX 6000 series) — override to gfx1030
+    "gfx1031": "gfx1030", "gfx1032": "gfx1030", "gfx1034": "gfx1030",
+    # Vega (RX Vega / Radeon VII) — override to gfx900 / gfx906
+    "gfx902": "gfx900", "gfx906": "gfx906",
+}
+
+
+def hsa_override_for(target_gfx: str) -> str:
+    """``"gfx1100"`` → ``"11.0.0"``, the form HSA_OVERRIDE_GFX_VERSION wants.
+
+    The digits are major / minor / step, with the last two characters always
+    one digit each: gfx1100 → 11.0.0, gfx1030 → 10.3.0, gfx906 → 9.0.6.
+    """
+    digits = _normalize_arch(target_gfx).removeprefix("gfx")
+    if len(digits) < 3 or not digits.isdigit():
+        raise ValueError(f"not a gfx architecture name: {target_gfx!r}")
+    return f"{digits[:-2]}.{digits[-2]}.{digits[-1]}"
+
+
+def _normalize_arch(tag: str) -> str:
+    """``"gfx90a:xnack+"`` → ``"gfx90a"``. Feature flags dropped, lowercased."""
+    return str(tag).split(":")[0].strip().lower()
+
+
+def build_arch_list(torch) -> list[str]:
+    """This torch build's compiled architecture list, or ``[]`` if unknown.
+
+    Prefers the public ``get_arch_list`` and falls back to the private
+    ``_get_arch_list`` (older wheels only expose the latter).
+    """
+    for name in ("get_arch_list", "_get_arch_list"):
+        fn = getattr(torch.cuda, name, None)
+        if callable(fn):
+            try:
+                return [str(a) for a in (fn() or [])]
+            except Exception:
+                return []
+    return []
+
+
+def gfx_for_hsa_override(value: str) -> str | None:
+    """``"11.0.0"`` → ``"gfx1100"``. The inverse of :func:`hsa_override_for`.
+
+    ``None`` for anything that isn't a three-part numeric version — the user
+    set something we don't understand, and a guess is worse than leaving it be.
+    """
+    parts = str(value).strip().split(".")
+    if len(parts) != 3 or not all(p.isdigit() for p in parts):
+        return None
+    major, minor, step = parts
+    if len(minor) != 1 or len(step) != 1:
+        return None
+    return f"gfx{int(major)}{minor}{step}"
+
+
+def arch_unsupported(torch) -> tuple[str, tuple[str, ...]] | None:
+    """``(device_arch, build_archs)`` when device 0's architecture is absent
+    from this torch build's compiled arch list — i.e. kernels cannot launch
+    ("no kernel image is available for execution"). ``None`` means supported,
+    unknown, or not applicable.
+
+    **CUDA and ROCm name architectures in different namespaces.** A CUDA build
+    reports ``sm_89`` / ``compute_89``; a ROCm build reports ``gfx1100``. The
+    check must therefore branch on the build — comparing a CUDA ``sm_`` tag
+    against a ROCm ``gfx`` list can never match, which made *every* ROCm host
+    look unsupported and silently force-routed it to CPU (#1228). Callers must
+    get the verdict from here rather than re-deriving a tag.
+
+    Never raises: any missing/odd metadata degrades to ``None`` (compatible),
+    matching the pre-existing fail-open contract.
+    """
+    try:
+        if not torch.cuda.is_available():
+            return None
+        arch_list = build_arch_list(torch)
+        if not arch_list:
+            return None
+
+        if getattr(getattr(torch, "version", None), "hip", None) is not None:
+            # ── ROCm / HIP: arch_list holds gfx names ─────────────────────
+            override = os.environ.get("HSA_OVERRIDE_GFX_VERSION")
+            if override:
+                # An override remaps the device onto some other gfx target, so
+                # the native gfx name no longer describes what will run — but
+                # the remap is only valid if this build SHIPS that target. A
+                # stale or copy-pasted value (the #1228 reporter had set
+                # 11.0.0 on a card that no longer needs it) must not buy a free
+                # pass into kernels that don't exist. Unparseable values are
+                # left alone: the user asked for something we don't understand,
+                # and guessing would be worse than trusting them.
+                target = gfx_for_hsa_override(override)
+                if target is None or _normalize_arch(target) in {
+                    _normalize_arch(a) for a in arch_list
+                }:
+                    return None
+                return f"{target} (HSA_OVERRIDE_GFX_VERSION={override})", tuple(arch_list)
+            props = torch.cuda.get_device_properties(0)
+            gfx = _normalize_arch(getattr(props, "gcnArchName", "") or "")
+            if not gfx:
+                return None
+            build = {_normalize_arch(a) for a in arch_list}
+            if gfx in build:
+                return None
+            # _configure_rocm_if_needed() can remap this GPU onto a supported
+            # target before any kernel launches — but only counts as a fix if
+            # the build actually SHIPS that target. Remapping gfx1151 onto
+            # gfx1100 in a wheel that has neither just relocates the failure.
+            target = ROCM_GFX_OVERRIDES.get(gfx)
+            if target and _normalize_arch(target) in build:
+                return None
+            return gfx, tuple(arch_list)
+
+        # ── CUDA: arch_list holds sm_/compute_ tags ──────────────────────
+        major, minor = torch.cuda.get_device_capability(0)
+        sm_tag = f"sm_{major}{minor}"
+        if sm_tag in arch_list or f"compute_{major}{minor}" in arch_list:
+            return None
+        return sm_tag, tuple(arch_list)
+    except Exception:
+        # Arch metadata unavailable on this torch build — treat as compatible.
+        return None
 
 
 @dataclass(frozen=True)
@@ -135,23 +276,16 @@ def _probe() -> HostCaps:
                 vram_gb = float(total) / (1024 ** 3)
             except Exception:
                 notes.append("VRAM query failed")
-            # SM-arch mismatch (mirrors model_manager.check_device_compatibility).
-            try:
-                major, minor = torch.cuda.get_device_capability(0)
-                arch_list = getattr(torch.cuda, "_get_arch_list", lambda: [])()
-                if arch_list:
-                    sm_tag = f"sm_{major}{minor}"
-                    compute_tag = f"compute_{major}{minor}"
-                    if sm_tag not in arch_list and compute_tag not in arch_list:
-                        notes.append(
-                            f"{device_name or 'GPU'} ({sm_tag}) not in this torch "
-                            f"build's archs ({', '.join(arch_list)}) — "
-                            f"{KERNEL_RISK_MARKER}"
-                        )
-            except Exception:
-                # Arch metadata unavailable on this torch build — skip the check
-                # (treated as compatible, exactly as check_device_compatibility).
-                pass
+            # Arch mismatch — sm_ tags on CUDA, gfx names on ROCm. Shared with
+            # model_manager.check_device_compatibility() so probe and loader
+            # can never disagree (they used to, on every ROCm host — #1228).
+            mismatch = arch_unsupported(torch)
+            if mismatch is not None:
+                device_arch, archs = mismatch
+                notes.append(
+                    f"{device_name or 'GPU'} ({device_arch}) not in this torch "
+                    f"build's archs ({', '.join(archs)}) — {KERNEL_RISK_MARKER}"
+                )
 
     # ── Intel XPU via IPEX ───────────────────────────────────────────────
     try:
@@ -274,6 +408,11 @@ __all__ = [
     "detect_host_caps",
     "refresh",
     "mlx_supported",
+    "arch_unsupported",
+    "gfx_for_hsa_override",
+    "hsa_override_for",
+    "build_arch_list",
+    "ROCM_GFX_OVERRIDES",
     "KERNEL_RISK_MARKER",
     "DIRECTML_MARKER",
 ]
