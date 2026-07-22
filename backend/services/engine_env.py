@@ -58,14 +58,16 @@ def _force_compile_requested() -> bool:
 
 
 def _cuda_arch_supported_for_compile() -> "tuple[bool, str]":
-    """Check the GPU's compute capability against this torch build's arch list.
+    """Check the GPU's architecture against this torch build's arch list.
 
     New GPU architectures (e.g. Blackwell sm_120, issue #278) routinely break
     torch.compile/Triton before upstream support lands: the eager model runs
     via PTX forward-compat, but Inductor/Triton kernel compilation targets the
-    new arch directly and fails mid-generation. If the device's ``sm_XY`` tag
-    is absent from ``torch.cuda.get_arch_list()`` we treat compile as
-    unsupported and use eager.
+    new arch directly and fails mid-generation. If the device's arch tag is
+    absent from this build's arch list we treat compile as unsupported and use
+    eager. The comparison is delegated to ``core.device_caps.arch_unsupported``
+    so it stays CUDA/ROCm-aware — a ROCm build lists ``gfx…`` names, and the
+    old ``sm_`` comparison here disabled compile on every AMD host (#1228).
 
     Returns ``(supported, reason)``. Fails open — any probe error returns
     ``(True, "")`` so a weird torch build never silently loses the
@@ -75,22 +77,21 @@ def _cuda_arch_supported_for_compile() -> "tuple[bool, str]":
     try:
         import torch
 
+        from core.device_caps import arch_unsupported
+
         if not torch.cuda.is_available():
             return True, ""
-        major, minor = torch.cuda.get_device_capability(0)
-        arch_list = list(getattr(torch.cuda, "get_arch_list", lambda: [])() or [])
-        if not arch_list:
+        mismatch = arch_unsupported(torch)
+        if mismatch is None:
             return True, ""
-        sm_tag = f"sm_{major}{minor}"
-        if sm_tag in arch_list or f"compute_{major}{minor}" in arch_list:
-            return True, ""
+        device_arch, arch_list = mismatch
         try:
             device_name = torch.cuda.get_device_name(0)
         except Exception:
             device_name = "GPU"
         return False, (
-            f"{device_name} (compute capability {major}.{minor} / {sm_tag}) is not "
-            f"in this PyTorch build's supported arch list ({', '.join(arch_list)})"
+            f"{device_name} ({device_arch}) is not in this PyTorch build's "
+            f"supported arch list ({', '.join(arch_list)})"
         )
     except Exception:
         logger.debug("CUDA arch probe for torch.compile failed; assuming supported", exc_info=True)
