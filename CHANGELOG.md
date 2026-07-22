@@ -6,6 +6,17 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 Versions track the desktop app (`tauri.conf.json` + `frontend/src-tauri/Cargo.toml`).
 The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
+## [Unreleased]
+
+**Highlights**
+
+- A dub URL ingest that fails on a disk problem now says which folder and why
+
+### Fixed
+
+- Dub URL ingest: `[Errno 22] Invalid argument` was classified as the transcribe path's temp-file error, so the hint told users to check their system TEMP folder while the real failure was the job folder under the OmniVoice data directory; it now names that folder, its writability and the drive's free space, and says retrying the same link won't help (#1225) — thanks @dustmaker124-ui!
+- Dub URL ingest fails immediately with a clear message when the job folder is missing or unwritable, instead of starting a download that can only fail (#1225)
+
 ## [0.4.0] — 2026-07-21
 
 **Highlights**

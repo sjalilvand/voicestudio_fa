@@ -502,6 +502,40 @@ def _ensure_browser_playable_mp4(video_path: str) -> str:
 _YT_DOWNLOAD_RETRIES = 2  # total attempts = 1 + retries = 3
 
 
+def _with_target_facts(exc: BaseException, job_dir: str) -> BaseException:
+    """``exc`` with the download destination described, when the failure looks
+    like the OS refusing a file operation (#1225).
+
+    Returns ``exc`` untouched for network/format failures — their message is
+    already about the remote side, and appending disk facts would just be
+    noise. Never raises."""
+    try:
+        low = str(exc).lower()
+        if not any(sig in low for sig in (
+            "errno 22", "invalid argument", "errno 13", "permission denied",
+            "errno 28", "no space left", "unable to open for writing",
+            "unable to rename file",
+        )):
+            return exc
+        facts = failure.describe_path_target(os.path.join(job_dir, "original.mp4"))
+        if not facts:
+            return exc
+        msg = (
+            f"{exc} — saving to {job_dir} ({facts}). The OS refused the write, "
+            f"so retrying the same link won't help: check the drive isn't full, "
+            f"the folder is writable, and antivirus or a cloud-sync client "
+            f"(OneDrive, Dropbox) isn't locking it."
+        )
+        try:
+            return type(exc)(msg)
+        except Exception:
+            # Not every exception class takes a plain message (soundfile's
+            # LibsndfileError wants an int code). Keep the text, drop the type.
+            return RuntimeError(msg)
+    except Exception:
+        return exc
+
+
 def _is_transient_download_error(exc: BaseException) -> bool:
     """True when a download failure is worth retrying (broken pipe / net drop).
 
@@ -568,6 +602,19 @@ def yt_download_sync(
     import glob
     import yt_dlp
     outtmpl = os.path.join(job_dir, "original.%(ext)s")
+    # #1225: yt-dlp surfaces an OS write rejection as a bare
+    # "Unable to download video: [Errno 22] Invalid argument" — no path, no
+    # reason, and three manual retries all fail identically because nothing
+    # about it is transient. Fail here instead, naming the directory, when we
+    # can already see it won't work.
+    _target_facts = failure.describe_path_target(outtmpl)
+    if "not writable" in _target_facts or "does not exist" in _target_facts:
+        raise OSError(
+            f"Can't save the download: {job_dir} ({_target_facts}). The video "
+            f"downloads into this job folder under your OmniVoice data "
+            f"directory — check it exists, is writable, and isn't locked by "
+            f"antivirus or a cloud-sync client."
+        )
     ydl_opts: dict = {
         "outtmpl": outtmpl,
         # Prefer h264+aac streams so the merged mp4 is natively decodable
@@ -658,7 +705,15 @@ def yt_download_sync(
                 )
                 time.sleep(2 * transient_used)  # brief, increasing backoff
                 continue
-            raise
+            # #1225: an OS-level rejection (errno 22 / EACCES / ENOSPC) tells
+            # the user nothing on its own. Attach what we can observe about
+            # the destination so the message identifies a full drive, a
+            # removed folder, or an antivirus/cloud-sync lock. Wording keeps
+            # the yt-dlp text so classify() still sees the download context.
+            described = _with_target_facts(exc, job_dir)
+            if described is exc:
+                raise
+            raise described from exc
     root, _ = os.path.splitext(path)
     mp4 = root + ".mp4"
     if os.path.exists(mp4):
