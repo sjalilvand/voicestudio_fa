@@ -46,7 +46,6 @@ from transformers import (
     AutoFeatureExtractor,
     AutoModel,
     AutoTokenizer,
-    HiggsAudioV2TokenizerModel,
     PretrainedConfig,
     PreTrainedModel,
 )
@@ -181,6 +180,40 @@ class OmniVoiceConfig(PretrainedConfig):
         if audio_codebook_weights is None:
             audio_codebook_weights = [8, 8, 6, 6, 4, 4, 2, 2]
         self.audio_codebook_weights = audio_codebook_weights
+
+
+def _audio_tokenizer_cls():
+    """Resolve ``transformers.HiggsAudioV2TokenizerModel`` at the point of use.
+
+    transformers exposes this class through its lazy module and gates it on the
+    ``torchaudio`` backend, so the *attribute access* — not the `transformers`
+    import — is what raises when torchaudio is missing, ABI-mismatched with
+    torch, or installed without discoverable distribution metadata (Colab's
+    system Python, an interrupted `uv pip install`). Resolving it at module
+    scope made that a fatal import error for the WHOLE backend: `backend/main.py`
+    imports the profiles router → `omnivoice` → this module, so one optional
+    audio tokenizer took down TTS, dubbing, ASR and Settings alike, before
+    FastAPI existed to classify it. The user saw only uvicorn's traceback and a
+    "Backend did not become healthy within 5 minutes" timeout (#1229).
+
+    Deferred here, the failure lands inside a request instead, where
+    ``core.failure.classify()`` maps it to ``TRANSFORMERS_IMPORT`` and attaches
+    a repair hint — and every feature that doesn't need this tokenizer keeps
+    working.
+    """
+    try:
+        from transformers import HiggsAudioV2TokenizerModel
+    except Exception as e:
+        raise ImportError(
+            "Could not import module 'HiggsAudioV2TokenizerModel' — OmniVoice's "
+            "audio tokenizer. transformers gates it on torchaudio, so this is "
+            "almost always a torchaudio that is missing, broken, or mismatched "
+            "with the installed torch/transformers. Reinstall them together "
+            "(`uv pip install --reinstall torch torchaudio transformers`; add "
+            "--system on Colab), then restart the backend. Underlying error: "
+            f"{type(e).__name__}: {e}"
+        ) from e
+    return HiggsAudioV2TokenizerModel
 
 
 def _resolve_snapshot_dir(checkpoint) -> str:
@@ -318,7 +351,7 @@ class OmniVoice(PreTrainedModel):
                 tokenizer_device = (
                     "cpu" if str(model.device).startswith("mps") else model.device
                 )
-                model.audio_tokenizer = HiggsAudioV2TokenizerModel.from_pretrained(
+                model.audio_tokenizer = _audio_tokenizer_cls().from_pretrained(
                     audio_tokenizer_path, device_map=tokenizer_device
                 )
                 model.feature_extractor = AutoFeatureExtractor.from_pretrained(

@@ -10,10 +10,24 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 **Highlights**
 
-- A port conflict now says so, instead of "Backend died (exit code 1)"
-
+- AMD GPUs are used again — every ROCm host was silently running on the CPU
+- Two synth failures that used to say "an error OmniVoice doesn't recognize" now say what actually went wrong
+- A dub URL ingest that fails on a disk problem now says which folder and why
+- A broken audio dependency no longer takes the whole backend down at startup
+### Docs
+- Docker: ROCm section explains that `torch.cuda.is_available() == True` isn't proof the app is on the GPU, and notes the `--group-add` needed for `/dev/kfd` on rootless hosts (#1228)
 ### Fixed
-
+- AMD/ROCm: every ROCm host was silently force-routed to the CPU — the compatibility gate compared a CUDA `sm_` tag against a ROCm build's `gfx` list, which can never match — thanks @simmessa! (#1228)
+- AMD/ROCm: `torch.compile` was disabled on all AMD hosts by the same mismatched comparison (#1228)
+- AMD/ROCm: `HSA_OVERRIDE_GFX_VERSION` is auto-set only when your card genuinely needs it and the remap target exists in your build; gfx1150/gfx1151 (Strix Point/Halo) added to the map (#1228)
+- Windows blocking an engine file (Smart App Control, WDAC, or AppLocker) is now named, with the fix for personal and managed PCs — thanks @AdityaHemantBhat! (#1227)
+- A failed audio write (`LibsndfileError: System error.`) now names the target file, its folder's writability and the drive's free space — thanks @morozov28061995-boop! (#1221)
+- Dub URL ingest: a disk error now names the job folder, its writability and the drive's free space, instead of pointing at the system TEMP folder it never used — thanks @dustmaker124-ui! (#1225)
+- Dub URL ingest fails immediately when the job folder is missing or unwritable, instead of starting a download that can only fail (#1225)
+- The backend no longer dies at startup when transformers can't resolve its audio tokenizer (a missing or mismatched torchaudio, common on Google Colab) — it starts, and the error arrives with a repair hint — thanks @Navdeep-Chauhan-777! (#1229)
+- Importing `omnivoice.utils.*` no longer drags in torch, torchaudio, transformers and the full model definition — thanks @Navdeep-Chauhan-777! (#1229)
+- Colab notebook: the install cell now catches a broken environment with the real error, instead of a 5-minute health timeout two cells later — thanks @Navdeep-Chauhan-777! (#1229)
+- A port conflict now says so, instead of "Backend died (exit code 1)"
 - A busy port 3900 now reports a port conflict instead of "Backend died (exit code 1)", in every language — thanks @xipb14! (#1223)
 - The app verifies it actually freed the port before starting the backend, rather than assuming the kill worked (#1223)
 
