@@ -222,6 +222,22 @@ class TTSBackend(ABC):
     #: not enforced — actual device selection lives in the engine's loader.
     gpu_compat: tuple[str, ...] = ("cpu",)
 
+    #: Approximate VRAM (GB) the engine needs to render comfortably on a
+    #: dedicated GPU. Metadata, like ``gpu_compat`` — never enforced, because a
+    #: hard refuse would block hosts that would actually cope (drivers page to
+    #: system RAM, and a short input can fit where a long one won't).
+    #:
+    #: What it IS for: telling the user BEFORE they wait (#1226/#1222). Two
+    #: users on 4 GB cards (GTX 1650 Ti, Quadro P2000) ran the `omnivoice`
+    #: engine, waited out the full compute budget, and were told the job "was
+    #: too heavy for the available compute" — after the fact, with no hint
+    #: that their card was under-provisioned for the engine they'd picked.
+    #: Routing showed a clean green "accelerated" the whole time, because
+    #: family membership was the only thing anything checked.
+    #:
+    #: 0 means "no meaningful floor" (CPU-class engines) and never warns.
+    min_vram_gb: float = 0.0
+
     @abstractmethod
     def generate(
         self,
@@ -439,6 +455,15 @@ class OmniVoiceBackend(TTSBackend):
     id = "omnivoice"
     display_name = "OmniVoice (600 languages, zero-shot)"
     gpu_compat = ("cuda", "mps", "cpu")
+    # Derived from the pool's own per-job budget (_GPU_VRAM_PER_JOB_GB = 5.0 in
+    # model_manager, itself measured from the ~1.6 GB forward + autoregressive
+    # decode and the co-loaded WhisperX on the clone path), plus room for the
+    # resident weights. Below this the driver pages to system RAM and a render
+    # that should take seconds runs for minutes — which is precisely what the
+    # 4 GB reporters in #1226/#1222 hit. Deliberately the only engine with a
+    # floor: the rest have no measured figure, and inventing one would put a
+    # confident number in the UI that nothing backs.
+    min_vram_gb = 6.0
 
     def __init__(self, model=None):
         # The live OmniVoice instance. Reuses the singleton owned by
@@ -2020,7 +2045,10 @@ def list_backends() -> list[dict]:
             "isolation_mode": isolation,
             "gpu_compat": list(gpu_compat),
             # effective_device / routing_status / routing_reason (scrubbed):
-            **routing_fields(gpu_compat, caps),
+            "min_vram_gb": getattr(cls, "min_vram_gb", 0.0) or None,
+            # effective_device / routing_status / routing_reason (scrubbed);
+            # the reason now also carries the under-provisioned-GPU caveat.
+            **routing_fields(gpu_compat, caps, getattr(cls, "min_vram_gb", 0.0)),
         })
         # #981: mlx-audio multiplexes 7+ curated models behind one backend id
         # — surface the roster + the currently-active pick so Settings can
@@ -2266,7 +2294,10 @@ async def resolve_generation_backend(
 
     from core.device_caps import detect_host_caps
     from services.engine_routing import resolve_routing
-    routing = resolve_routing(getattr(backend_cls, "gpu_compat", ("cpu",)), detect_host_caps())
+    routing = resolve_routing(
+        getattr(backend_cls, "gpu_compat", ("cpu",)), detect_host_caps(),
+        getattr(backend_cls, "min_vram_gb", 0.0),
+    )
     if routing["routing_status"] == "unavailable":
         raise ValueError(routing["routing_reason"])
 
