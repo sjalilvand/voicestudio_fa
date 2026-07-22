@@ -612,27 +612,22 @@ _loading_detail: dict = {
     "progress": None,    # 0-100 percentage (None = indeterminate)
 }
 
-# ── ROCm GFX version overrides ───────────────────────────────────────
-# AMD GPUs on ROCm report through torch.cuda but may need
-# HSA_OVERRIDE_GFX_VERSION for unsupported GFX IDs.
-_ROCM_GFX_OVERRIDES = {
-    # RDNA 3 (RX 7000 series) — override to gfx1100
-    "gfx1101": "11.0.0", "gfx1102": "11.0.0", "gfx1103": "11.0.0",
-    # RDNA 2 (RX 6000 series) — override to gfx1030
-    "gfx1031": "10.3.0", "gfx1032": "10.3.0", "gfx1034": "10.3.0",
-    # Vega (RX Vega / Radeon VII) — override to gfx900
-    "gfx902": "9.0.0", "gfx906": "9.0.6",
-}
-
-
 def _configure_rocm_if_needed(torch):
     """Auto-set HSA_OVERRIDE_GFX_VERSION for AMD GPUs on ROCm.
 
     ROCm-enabled PyTorch reports `torch.cuda.is_available() == True` but
-    some consumer AMD GPUs have GFX IDs not in the official support matrix.
-    Setting HSA_OVERRIDE_GFX_VERSION lets them run with the closest
+    some consumer AMD GPUs have GFX IDs the installed build wasn't compiled
+    for. Setting HSA_OVERRIDE_GFX_VERSION lets them run with the closest
     supported architecture.
+
+    The override is applied **only when the native gfx is genuinely absent
+    from this build's arch list**. Newer ROCm wheels support parts that used
+    to need remapping (gfx1151/Strix Halo is native from ROCm 7.x), and
+    overriding a natively-supported GPU forces it onto foreign kernels for no
+    reason — so the map is a fallback, not an unconditional rewrite.
     """
+    from core.device_caps import ROCM_GFX_OVERRIDES, build_arch_list
+
     if os.environ.get("HSA_OVERRIDE_GFX_VERSION"):
         return  # User already set it manually
     try:
@@ -644,41 +639,56 @@ def _configure_rocm_if_needed(torch):
         props = torch.cuda.get_device_properties(0)
         gcn_arch = getattr(props, "gcnArchName", "") or ""
         gfx_id = gcn_arch.split(":")[0].strip().lower()
-        if gfx_id in _ROCM_GFX_OVERRIDES:
-            override = _ROCM_GFX_OVERRIDES[gfx_id]
-            os.environ["HSA_OVERRIDE_GFX_VERSION"] = override
-            logger.info("ROCm: auto-set HSA_OVERRIDE_GFX_VERSION=%s for %s (%s)",
-                        override, device_name, gfx_id)
+        if gfx_id not in ROCM_GFX_OVERRIDES:
+            return
+        arch_list = {a.split(":")[0].strip().lower() for a in build_arch_list(torch)}
+        if gfx_id in arch_list:
+            logger.info("ROCm: %s (%s) is natively supported by this build; "
+                        "no HSA_OVERRIDE_GFX_VERSION needed", device_name, gfx_id)
+            return
+        override = ROCM_GFX_OVERRIDES[gfx_id]
+        os.environ["HSA_OVERRIDE_GFX_VERSION"] = override
+        logger.info("ROCm: auto-set HSA_OVERRIDE_GFX_VERSION=%s for %s (%s)",
+                    override, device_name, gfx_id)
     except Exception as e:
         logger.debug("ROCm GFX auto-config skipped: %s", e)
 
 
 def check_device_compatibility():
-    """Check if PyTorch supports the current GPU's compute capability.
+    """Check if PyTorch supports the current GPU's architecture.
 
     Returns (compatible, warning_message). Compatible is True if OK or
-    no discrete GPU is present.
+    no discrete GPU is present. The arch comparison itself lives in
+    ``core.device_caps.arch_unsupported()`` — shared with the probe, and
+    CUDA/ROCm-aware (a ROCm build lists ``gfx…``, not ``sm_…`` — #1228).
     """
+    from core.device_caps import arch_unsupported
+
     torch = _lazy_torch()
     if not torch.cuda.is_available():
         return True, None
+    mismatch = arch_unsupported(torch)
+    if mismatch is None:
+        return True, None
+    device_arch, arch_list = mismatch
     try:
-        major, minor = torch.cuda.get_device_capability(0)
         device_name = torch.cuda.get_device_name(0)
-        sm_tag = f"sm_{major}{minor}"
-        arch_list = getattr(torch.cuda, "_get_arch_list", lambda: [])()
-        if arch_list:
-            compute_tag = f"compute_{major}{minor}"
-            if sm_tag not in arch_list and compute_tag not in arch_list:
-                return False, (
-                    f"{device_name} (compute capability {major}.{minor} / {sm_tag}) "
-                    f"is not supported by this PyTorch build. "
-                    f"Supported architectures: {', '.join(arch_list)}. "
-                    f"Try: pip install torch --index-url https://download.pytorch.org/whl/nightly/cu128"
-                )
     except Exception:
-        pass
-    return True, None
+        device_name = "GPU"
+    if getattr(getattr(torch, "version", None), "hip", None) is not None:
+        return False, (
+            f"{device_name} ({device_arch}) is not supported by this ROCm "
+            f"PyTorch build. Supported architectures: {', '.join(arch_list)}. "
+            f"Set HSA_OVERRIDE_GFX_VERSION to the closest supported target "
+            f"(e.g. 11.0.0 for a gfx11xx card) or install a ROCm build that "
+            f"lists {device_arch}."
+        )
+    return False, (
+        f"{device_name} ({device_arch}) is not supported by this PyTorch build. "
+        f"Supported architectures: {', '.join(arch_list)}. "
+        f"Try: pip install torch --index-url "
+        f"https://download.pytorch.org/whl/nightly/cu128"
+    )
 
 
 def get_best_device():
