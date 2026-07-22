@@ -510,12 +510,10 @@ def _with_target_facts(exc: BaseException, job_dir: str) -> BaseException:
     already about the remote side, and appending disk facts would just be
     noise. Never raises."""
     try:
-        low = str(exc).lower()
-        if not any(sig in low for sig in (
-            "errno 22", "invalid argument", "errno 13", "permission denied",
-            "errno 28", "no space left", "unable to open for writing",
-            "unable to rename file",
-        )):
+        # Shared with failure.classify() so the "is this a disk problem?"
+        # answer can't differ between the class we assign and whether we
+        # bother naming the folder (#1225 review).
+        if not failure.is_os_write_refusal(str(exc)):
             return exc
         facts = failure.describe_path_target(os.path.join(job_dir, "original.mp4"))
         if not facts:
@@ -609,11 +607,14 @@ def yt_download_sync(
     # can already see it won't work.
     _target_facts = failure.describe_path_target(outtmpl)
     if "not writable" in _target_facts or "does not exist" in _target_facts:
+        # Worded so classify() places it in the download path: it must carry
+        # both an OS-refusal signature and download context, or the user gets
+        # no hint at all — the failure this PR exists to fix (#1225 review).
         raise OSError(
-            f"Can't save the download: {job_dir} ({_target_facts}). The video "
-            f"downloads into this job folder under your OmniVoice data "
-            f"directory — check it exists, is writable, and isn't locked by "
-            f"antivirus or a cloud-sync client."
+            f"Unable to download video: unable to open for writing in "
+            f"{job_dir} ({_target_facts}). The video downloads into this job "
+            f"folder under your OmniVoice data directory — check it exists, is "
+            f"writable, and isn't locked by antivirus or a cloud-sync client."
         )
     ydl_opts: dict = {
         "outtmpl": outtmpl,

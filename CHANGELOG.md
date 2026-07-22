@@ -14,8 +14,8 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
-- Dub URL ingest: `[Errno 22] Invalid argument` was classified as the transcribe path's temp-file error, so the hint told users to check their system TEMP folder while the real failure was the job folder under the OmniVoice data directory; it now names that folder, its writability and the drive's free space, and says retrying the same link won't help (#1225) — thanks @dustmaker124-ui!
-- Dub URL ingest fails immediately with a clear message when the job folder is missing or unwritable, instead of starting a download that can only fail (#1225)
+- Dub URL ingest: a disk error now names the job folder, its writability and the drive's free space, instead of pointing at the system TEMP folder it never used — thanks @dustmaker124-ui! (#1225)
+- Dub URL ingest fails immediately when the job folder is missing or unwritable, instead of starting a download that can only fail (#1225)
 
 ## [0.4.0] — 2026-07-21
 

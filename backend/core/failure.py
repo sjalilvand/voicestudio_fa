@@ -254,17 +254,8 @@ def classify(reason: str) -> str:
     # under the OmniVoice data dir, not the system temp dir. Checked first so
     # a download's errno 22 stops being handed the transcribe path's
     # "check your TEMP folder" hint, which sends the user to the wrong place.
-    if any(sig in low for sig in (
-        "errno 22", "invalid argument",
-        "errno 13", "permission denied",
-        "errno 28", "no space left",
-        "errno 2", "no such file or directory",
-    )) and (
-        "unable to download video" in low
-        or "unable to open for writing" in low
-        or "unable to rename file" in low
-        or "yt_dlp" in low
-        or "yt-dlp" in low
+    if is_os_write_refusal(reason) and any(
+        marker in low for marker in _DOWNLOAD_CONTEXT_MARKERS
     ):
         return "VIDEO_DOWNLOAD_OS_ERROR"
     if "errno 22" in low:
@@ -429,6 +420,39 @@ def diagnostic(*, reason: str, error_class: str, stage: str) -> str:
         f"{_env_summary()}\n"
     )
     return sanitize(block)
+
+
+# Signatures of the OS refusing a file operation. One list, because two
+# consumers must agree: ``classify`` (which picks the class + hint) and
+# ``dub_pipeline._with_target_facts`` (which decides whether to attach the
+# destination). When they drifted, an ENOENT download classified as a disk
+# problem but never got the folder named — the one fact that would have made
+# the message actionable (#1225 review).
+_OS_WRITE_REFUSAL_SIGNATURES = (
+    "errno 22", "invalid argument",
+    "errno 13", "permission denied",
+    "errno 28", "no space left",
+    "errno 2", "no such file or directory",
+    "unable to open for writing",
+    "unable to rename file",
+)
+
+# Wording that places a failure in the video-download path specifically.
+_DOWNLOAD_CONTEXT_MARKERS = (
+    "unable to download video",
+    "unable to open for writing",
+    "unable to rename file",
+    "yt_dlp",
+    "yt-dlp",
+)
+
+
+def is_os_write_refusal(reason: Optional[str]) -> bool:
+    """True when *reason* looks like the OS refusing a file operation (a full
+    or removed drive, a read-only folder, an antivirus/cloud-sync lock) rather
+    than a network or format failure. Signature match only; never raises."""
+    low = (reason or "").lower()
+    return any(sig in low for sig in _OS_WRITE_REFUSAL_SIGNATURES)
 
 
 def describe_path_target(path: str) -> str:

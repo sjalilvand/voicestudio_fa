@@ -125,6 +125,33 @@ def test_exception_types_that_reject_a_message_still_get_the_text(tmp_path):
     assert isinstance(str(described), str)
 
 
+def test_enoent_download_failure_also_gets_the_destination_facts(tmp_path):
+    """Review finding (#1225): classify() covered ENOENT but the enrichment
+    gate did not, so a job folder that vanished after preflight produced a
+    disk-classified error that never named the folder — the one fact that
+    makes it actionable. Both now read the same signature list."""
+    exc = OSError("Unable to download video: [Errno 2] No such file or directory")
+    described = dub_pipeline._with_target_facts(exc, str(tmp_path))
+    assert str(tmp_path) in str(described)
+    assert classify(str(described)) == "VIDEO_DOWNLOAD_OS_ERROR"
+
+
+def test_the_two_consumers_share_one_signature_list():
+    """A drift between "is this a disk problem?" (classify) and "should we name
+    the folder?" (_with_target_facts) is what produced the finding above."""
+    from core.failure import is_os_write_refusal
+
+    for reason in (
+        "Unable to download video: [Errno 2] No such file or directory",
+        "Unable to download video: [Errno 22] Invalid argument",
+        "ERROR: unable to open for writing: [Errno 13] Permission denied",
+        "Unable to download video: [Errno 28] No space left on device",
+    ):
+        assert is_os_write_refusal(reason), reason
+        assert classify(reason) == "VIDEO_DOWNLOAD_OS_ERROR", reason
+    assert not is_os_write_refusal("Unable to download video: Connection reset by peer")
+
+
 def test_unwritable_destination_fails_before_yt_dlp_runs(tmp_path, monkeypatch):
     """The preflight: don't start a download into a folder we can already see
     won't take the file."""
@@ -145,7 +172,11 @@ def test_unwritable_destination_fails_before_yt_dlp_runs(tmp_path, monkeypatch):
     msg = str(excinfo.value)
     assert str(job_dir) in msg
     assert "not writable" in msg
-    assert classify(msg) != "OS_INVALID_ARGUMENT"
+    # Review finding (#1225): the preflight message classified as NOTHING, so
+    # the user got no hint at all — the very failure mode this PR fixes. It
+    # must carry both an OS-refusal signature and download context.
+    assert classify(msg) == "VIDEO_DOWNLOAD_OS_ERROR"
+    assert "data directory" in build_failure(excinfo.value, stage="download")["hint"]
 
 
 def test_preflight_lets_a_healthy_folder_through(tmp_path, monkeypatch):
