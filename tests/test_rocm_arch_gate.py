@@ -115,11 +115,44 @@ def test_every_override_target_has_a_valid_hsa_form():
         device_caps.hsa_override_for(target)  # must not raise
 
 
-def test_rocm_user_hsa_override_is_trusted(monkeypatch):
+def test_rocm_user_hsa_override_is_trusted_when_the_build_has_the_target(monkeypatch):
     monkeypatch.setenv("HSA_OVERRIDE_GFX_VERSION", "11.0.0")
     torch = _torch(hip="6.2", capability=(10, 1), gcn_arch="gfx1010",
                    arch_list=["gfx1030", "gfx1100"])
     assert device_caps.arch_unsupported(torch) is None
+
+
+def test_a_stale_hsa_override_does_not_buy_a_free_pass(monkeypatch):
+    """Review finding (#1228): ANY override was treated as proof of
+    compatibility. The reporter had HSA_OVERRIDE_GFX_VERSION=11.0.0 set from
+    older advice — if the installed build ships no gfx1100, honouring that
+    blindly routes them into kernels that don't exist instead of falling back
+    to CPU."""
+    monkeypatch.setenv("HSA_OVERRIDE_GFX_VERSION", "11.0.0")
+    torch = _torch(hip="6.2", capability=(11, 5), gcn_arch="gfx1151",
+                   arch_list=["gfx900", "gfx1030"])  # no gfx1100
+    result = device_caps.arch_unsupported(torch)
+    assert result is not None
+    assert "gfx1100" in result[0]
+    assert "HSA_OVERRIDE_GFX_VERSION=11.0.0" in result[0]
+
+
+def test_an_unparseable_hsa_override_is_left_alone(monkeypatch):
+    """The user asked for something we don't understand; guessing is worse
+    than trusting them."""
+    monkeypatch.setenv("HSA_OVERRIDE_GFX_VERSION", "something-custom")
+    torch = _torch(hip="6.2", capability=(11, 5), gcn_arch="gfx1151",
+                   arch_list=["gfx900"])
+    assert device_caps.arch_unsupported(torch) is None
+
+
+def test_hsa_override_parsing_round_trips():
+    for target in ("gfx1100", "gfx1030", "gfx906", "gfx900"):
+        assert device_caps.gfx_for_hsa_override(
+            device_caps.hsa_override_for(target)
+        ) == target
+    for junk in ("garbage", "11.0", "", "11.0.0.0", "a.b.c"):
+        assert device_caps.gfx_for_hsa_override(junk) is None
 
 
 def test_cuda_path_unchanged():

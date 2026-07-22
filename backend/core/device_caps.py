@@ -111,6 +111,21 @@ def build_arch_list(torch) -> list[str]:
     return []
 
 
+def gfx_for_hsa_override(value: str) -> str | None:
+    """``"11.0.0"`` → ``"gfx1100"``. The inverse of :func:`hsa_override_for`.
+
+    ``None`` for anything that isn't a three-part numeric version — the user
+    set something we don't understand, and a guess is worse than leaving it be.
+    """
+    parts = str(value).strip().split(".")
+    if len(parts) != 3 or not all(p.isdigit() for p in parts):
+        return None
+    major, minor, step = parts
+    if len(minor) != 1 or len(step) != 1:
+        return None
+    return f"gfx{int(major)}{minor}{step}"
+
+
 def arch_unsupported(torch) -> tuple[str, tuple[str, ...]] | None:
     """``(device_arch, build_archs)`` when device 0's architecture is absent
     from this torch build's compiled arch list — i.e. kernels cannot launch
@@ -136,11 +151,22 @@ def arch_unsupported(torch) -> tuple[str, tuple[str, ...]] | None:
 
         if getattr(getattr(torch, "version", None), "hip", None) is not None:
             # ── ROCm / HIP: arch_list holds gfx names ─────────────────────
-            if os.environ.get("HSA_OVERRIDE_GFX_VERSION"):
-                # The override remaps the device onto a supported gfx target,
-                # so the native gfx name no longer describes what actually
-                # runs. Trust the user's (or our own) remap.
-                return None
+            override = os.environ.get("HSA_OVERRIDE_GFX_VERSION")
+            if override:
+                # An override remaps the device onto some other gfx target, so
+                # the native gfx name no longer describes what will run — but
+                # the remap is only valid if this build SHIPS that target. A
+                # stale or copy-pasted value (the #1228 reporter had set
+                # 11.0.0 on a card that no longer needs it) must not buy a free
+                # pass into kernels that don't exist. Unparseable values are
+                # left alone: the user asked for something we don't understand,
+                # and guessing would be worse than trusting them.
+                target = gfx_for_hsa_override(override)
+                if target is None or _normalize_arch(target) in {
+                    _normalize_arch(a) for a in arch_list
+                }:
+                    return None
+                return f"{target} (HSA_OVERRIDE_GFX_VERSION={override})", tuple(arch_list)
             props = torch.cuda.get_device_properties(0)
             gfx = _normalize_arch(getattr(props, "gcnArchName", "") or "")
             if not gfx:
@@ -383,6 +409,8 @@ __all__ = [
     "refresh",
     "mlx_supported",
     "arch_unsupported",
+    "gfx_for_hsa_override",
+    "hsa_override_for",
     "build_arch_list",
     "ROCM_GFX_OVERRIDES",
     "KERNEL_RISK_MARKER",
