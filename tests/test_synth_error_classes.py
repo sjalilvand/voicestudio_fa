@@ -182,12 +182,10 @@ def test_unrelated_open_failures_keep_their_own_guidance(reraise):
 
 def test_the_marker_is_shared_not_duplicated():
     """core/ cannot import services/, so the marker lives in audio_io and
-    failure.py matches its lowercased text. Pin them together — a reworded
-    marker on one side silently un-classifies every enriched write failure."""
+    failure.py matches its lowercased text. Pinned through classify() itself,
+    not through getsource — the literal could survive in a comment while the
+    classifier stopped using it (#1221 review)."""
     from services.audio_io import AUDIO_WRITE_FAILED_MARKER
 
-    import inspect
-
-    from core import failure as failure_mod
-
-    assert AUDIO_WRITE_FAILED_MARKER.lower() in inspect.getsource(failure_mod)
+    assert classify(AUDIO_WRITE_FAILED_MARKER) == "AUDIO_IO_FAILED"
+    assert classify(AUDIO_WRITE_FAILED_MARKER.upper()) == "AUDIO_IO_FAILED"
