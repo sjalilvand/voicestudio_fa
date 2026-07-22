@@ -321,6 +321,31 @@ class InstallModelRequest(BaseModel):
     repo_id: str
 
 
+
+def _is_retryable_download_error(exc: BaseException) -> bool:
+    """Whether a failed download attempt is worth retrying.
+
+    Decides by CLASSIFICATION, not by exception type. The type-based tuple this
+    replaced — ``(HfHubHTTPError, LocalEntryNotFoundError, OSError)`` — silently
+    excluded ``httpx.RemoteProtocolError``, which inherits ``Exception``: a
+    4.6 GB model truncated at 4.0 GB escaped all five attempts and aborted the
+    install (#1224). Any future transport error with a novel base class would
+    have reopened the same hole.
+
+    A user cancel is never retryable, and neither is anything
+    ``is_hf_connectivity_error`` does not recognise.
+    """
+    # Imported here, not at module scope, for the same reason the worker does:
+    # huggingface_hub is heavy and this module is on the setup import path.
+    from huggingface_hub.utils import HfHubHTTPError, LocalEntryNotFoundError
+
+    if isinstance(exc, _InstallCancelled):
+        return False
+    if isinstance(exc, (HfHubHTTPError, LocalEntryNotFoundError, OSError)):
+        return True
+    return is_hf_connectivity_error(str(exc))
+
+
 @router.post("/models/install")
 async def install_model(req: InstallModelRequest):
     """Download one HF repo snapshot; progress goes through the shared
@@ -506,12 +531,9 @@ async def install_model(req: InstallModelRequest):
                     # truncation signatures. Anything unrecognised (a cancel, a
                     # validation failure, a bug) propagates untouched, exactly
                     # as before.
-                    if isinstance(net_err, _InstallCancelled):
-                        raise
-                    _retryable = isinstance(
-                        net_err, (HfHubHTTPError, LocalEntryNotFoundError, OSError)
-                    ) or is_hf_connectivity_error(str(net_err))
-                    if _attempt >= _max_attempts or not _retryable:
+                    if _attempt >= _max_attempts or not _is_retryable_download_error(
+                        net_err
+                    ):
                         raise
                     _backoff = min(30, 2 ** _attempt)
                     logger.info(

@@ -132,7 +132,6 @@ def _retry_once_with_fresh_hf_client(loader, what: str):
     client_reset_used = False
     attempt = 0
     while True:
-        attempt += 1
         try:
             return loader()
         except Exception as e:
@@ -152,7 +151,12 @@ def _retry_once_with_fresh_hf_client(loader, what: str):
                         "%s: couldn't reset the HF Hub client; retrying anyway.",
                         what,
                     )
+                # Deliberately does NOT consume a download attempt: the two
+                # budgets are independent, and letting the session reset eat
+                # one left a resumable multi-GB download a retry short of its
+                # configured budget (#1224 review).
                 continue  # immediate — nothing to back off from
+            attempt += 1
             if not is_hf_connectivity_error(str(e)) or attempt >= attempts:
                 raise
             logger.warning(
@@ -174,9 +178,15 @@ def _int_env(name: str, default: int) -> int:
 
 def _float_env(name: str, default: float) -> float:
     try:
-        return float(os.environ.get(name, default))
+        value = float(os.environ.get(name, default))
     except (TypeError, ValueError):
         return default
+    # inf/nan parse fine and then poison the caller: `sleep(inf)` raises
+    # OverflowError, turning a retryable download failure into an unrelated
+    # crash that hides the original error (#1224 review).
+    if value != value or value in (float("inf"), float("-inf")):
+        return default
+    return value
 
 
 # ── Protocol ────────────────────────────────────────────────────────────────

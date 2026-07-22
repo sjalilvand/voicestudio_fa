@@ -14,9 +14,9 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
-- A truncated model download (`peer closed connection without sending complete message body`) is now retried and resumed; it arrives as a transport error that isn't an `OSError`, so it escaped the installer's retry loop entirely and aborted multi-GB installs near the end (#1224) — thanks @Reaksa-Cambodia!
+- A model download truncated near the end is now retried and resumed instead of aborting the whole install — thanks @Reaksa-Cambodia! (#1224)
 - Engine first-use downloads (VoxCPM2, MOSS-TTS-Nano) retry transient network failures instead of failing the load outright (#1224)
-- The streaming synth path now logs the low-memory advisory before loading a model, so a backend killed by the OS leaves a trail in the crash report — only the non-streaming path did (#1224)
+- A backend killed by the OS mid-stream now leaves a low-memory trail in the crash report (#1224)
 
 ## [0.4.0] — 2026-07-21
 
