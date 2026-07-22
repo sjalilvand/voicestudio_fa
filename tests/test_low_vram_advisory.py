@@ -73,6 +73,31 @@ def test_an_engine_with_no_declared_floor_never_warns():
     assert r["routing_reason"] is None
 
 
+def test_mps_is_not_judged_by_a_cuda_measured_floor():
+    """On MPS, HostCaps.vram_gb is a heuristic (system RAM / 2) for a UNIFIED
+    memory pool. An 8 GB Mac therefore reports 4.0 "VRAM" — comparing that to a
+    floor measured on discrete CUDA hardware would warn every small Mac about
+    an engine that runs fine there. Different memory model, unmeasured floor."""
+    caps = HostCaps(
+        family="mps",
+        available_families=("mps", "cpu"),
+        device_name="Apple Silicon (MPS)",
+        vram_gb=4.0,  # an 8 GB Mac
+    )
+    r = resolve_routing(("cuda", "mps", "cpu"), caps, OmniVoiceBackend.min_vram_gb)
+    assert r["routing_status"] == "accelerated"
+    assert r["routing_reason"] is None
+
+
+def test_mps_timeout_message_is_not_a_vram_verdict(monkeypatch):
+    caps = HostCaps(
+        family="mps", available_families=("mps", "cpu"),
+        device_name="Apple Silicon (MPS)", vram_gb=4.0,
+    )
+    msg = _guidance(monkeypatch, caps)
+    assert "Apple Silicon" not in msg
+
+
 def test_a_failed_vram_probe_does_not_guess():
     """vram_gb == 0 means the probe failed, not that the card has no memory."""
     r = resolve_routing(("cuda", "cpu"), _gpu(0.0), 6.0)
@@ -98,9 +123,10 @@ def test_the_matrix_payload_carries_the_floor():
 # ── the after-the-fact message names the actual card ─────────────────────
 
 
-def _guidance(monkeypatch, caps):
+def _guidance(monkeypatch, caps, min_vram_gb=OmniVoiceBackend.min_vram_gb,
+              what="TTS generate"):
     monkeypatch.setattr("core.device_caps.detect_host_caps", lambda: caps)
-    return model_manager._timeout_guidance("TTS generate", 300.0)
+    return model_manager._timeout_guidance(what, 300.0, min_vram_gb)
 
 
 def test_timeout_message_names_the_small_card(monkeypatch):
@@ -115,6 +141,33 @@ def test_timeout_message_unchanged_on_a_large_card(monkeypatch):
     msg = _guidance(monkeypatch, _gpu(24.0, "NVIDIA RTX 4090"))
     assert "VRAM-starved" in msg
     assert "RTX 4090" not in msg
+
+
+def test_a_job_with_no_declared_floor_is_never_diagnosed_as_under_provisioned(
+    monkeypatch,
+):
+    """`_timeout_guidance` serves EVERY job on the GPU pool — reference
+    transcribe, stream assemble, watermarking, dub steps, and CPU-only engines
+    running on a GPU host. Applying a VRAM verdict without knowing whose job it
+    is would confidently misdiagnose most of them, so the caller must opt in by
+    passing the engine's measured floor."""
+    msg = _guidance(monkeypatch, _gpu(4.0), min_vram_gb=0.0,
+                    what="Reference transcribe")
+    assert "GTX 1650 Ti" not in msg
+    assert "VRAM-starved" in msg  # the pre-existing generic GPU wording
+
+
+def test_the_generate_call_sites_pass_the_engines_floor():
+    """...and the TTS generate dispatches DO opt in — otherwise the branch
+    above is unreachable in production."""
+    import inspect
+
+    from api.routers import generation
+
+    src = inspect.getsource(generation)
+    assert src.count("min_vram_gb=_engine_min_vram_gb") == src.count(
+        'what="TTS generate",'
+    ), "every TTS generate dispatch must pass the engine's floor"
 
 
 def test_timeout_message_unchanged_on_cpu(monkeypatch):

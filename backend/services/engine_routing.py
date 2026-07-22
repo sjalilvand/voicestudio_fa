@@ -51,7 +51,16 @@ def _caveat(caps: HostCaps, min_vram_gb: float = 0.0) -> str | None:
     for note in caps.notes:
         if KERNEL_RISK_MARKER in note:
             return f"{caps.family.upper()} selected, but: {note}"
-    if min_vram_gb > 0 and caps.vram_gb > 0 and caps.vram_gb < min_vram_gb:
+    # Dedicated-VRAM families ONLY. On MPS, HostCaps.vram_gb is a heuristic
+    # (system RAM / 2, see device_caps) for a UNIFIED memory pool — comparing
+    # it against a floor measured on discrete CUDA hardware would tell every
+    # 8 GB Mac its 4 GB "VRAM" is too small for an engine that runs fine there.
+    # Different memory model, different (unmeasured) floor; don't guess.
+    if (
+        caps.family in ("cuda", "rocm")
+        and min_vram_gb > 0
+        and 0 < caps.vram_gb < min_vram_gb
+    ):
         device = caps.device_name or caps.family.upper()
         return (
             f"{device} has {caps.vram_gb:.1f} GB VRAM; this engine wants about "
