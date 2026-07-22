@@ -14,9 +14,9 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
-- The backend no longer dies at import when transformers can't resolve its audio tokenizer (a missing or mismatched torchaudio, common on Google Colab); the import is deferred to the model load that needs it, so the app starts and the error arrives with a repair hint instead of a 5-minute health timeout (#1229) — thanks @Navdeep-Chauhan-777!
-- Importing `omnivoice.utils.*` no longer pulls in torch, torchaudio, transformers and the full model definition — three backend routers were paying for the whole model stack to get two regex helpers (#1229)
-- Colab notebook: the install cell's sanity check now imports the backend's model stack, so a broken environment fails there with the real error instead of during backend launch (#1229)
+- The backend no longer dies at startup when transformers can't resolve its audio tokenizer (a missing or mismatched torchaudio, common on Google Colab) — it starts, and the error arrives with a repair hint — thanks @Navdeep-Chauhan-777! (#1229)
+- Importing `omnivoice.utils.*` no longer drags in torch, torchaudio, transformers and the full model definition — thanks @Navdeep-Chauhan-777! (#1229)
+- Colab notebook: the install cell now catches a broken environment with the real error, instead of a 5-minute health timeout two cells later — thanks @Navdeep-Chauhan-777! (#1229)
 
 ## [0.4.0] — 2026-07-21
 
