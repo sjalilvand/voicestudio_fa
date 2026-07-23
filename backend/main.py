@@ -1295,6 +1295,12 @@ if __name__ == "__main__":
         )
         sys.exit(1)
 
+    # Distinct exit code for "the port was already taken" (#1223), so the
+    # desktop shell can tell that apart from a crash without parsing an
+    # OS-translated error string. Kept out of the 0-2 range the interpreter
+    # itself uses, and mirrored in frontend/src-tauri/src/backend.rs.
+    _EXIT_PORT_IN_USE = 78  # EX_CONFIG, sysexits.h
+
     # Port 3900 picked to dodge common 8000 conflicts (Django/Rails/Jupyter).
     # Rust sidecar launcher in lib.rs::BACKEND_PORT must stay in sync.
     #
@@ -1305,4 +1311,59 @@ if __name__ == "__main__":
     # set OMNIVOICE_BIND_HOST=0.0.0.0 explicitly (see deploy/docker-compose.yml)
     # — the host-side port mapping is what enforces 127.0.0.1-only there.
     _bind_host = os.environ.get("OMNIVOICE_BIND_HOST", "127.0.0.1")
-    uvicorn.run(app, host=_bind_host, port=_port)
+
+    def _port_taken(host: str, port: int) -> "OSError | None":
+        """The EADDRINUSE error a bind would raise, or None if the port is free.
+
+        Mirrors uvicorn's own socket options — notably SO_REUSEADDR off
+        Windows — so this can't report "taken" for a TIME_WAIT socket uvicorn
+        would happily bind. Any non-EADDRINUSE failure returns None: this is a
+        diagnostic, and uvicorn must remain the authority on whether the real
+        bind succeeds.
+        """
+        import socket
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            if sys.platform != "win32":
+                probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                probe.bind((host, port))
+            except OSError as exc:
+                in_use = exc.errno in (48, 98, 10048) or getattr(
+                    exc, "winerror", None
+                ) == 10048
+                return exc if in_use else None
+        return None
+
+    def _fail_port_in_use(exc: "OSError | None") -> None:
+        print(
+            f"FATAL: port {_port} is already in use — another OmniVoice "
+            f"backend (or another app) is listening on it. Quit the other "
+            f"instance and relaunch; if nothing is visibly running, an "
+            f"orphaned backend from a previous session is still holding the "
+            f"port." + (f" Underlying error: {exc}" if exc else ""),
+            file=sys.stderr,
+            flush=True,
+        )
+        sys.exit(_EXIT_PORT_IN_USE)
+
+    # #1223: uvicorn does NOT let a bind failure reach the caller — it logs the
+    # raw errno and raises SystemExit(1) from inside its startup, so an
+    # `except OSError` around uvicorn.run() never fires (verified, not assumed).
+    # And the message it logs is useless to match on: the Windows wording
+    # ("only one usage of each socket address is normally permitted") is
+    # OS-translated into the user's locale. So probe the port ourselves first —
+    # errno is locale-independent (EADDRINUSE = 48 macOS/BSD, 98 Linux, 10048
+    # Windows) — and exit with a code the shell can recognise.
+    if (_bind_err := _port_taken(_bind_host, _port)) is not None:
+        _fail_port_in_use(_bind_err)
+    try:
+        uvicorn.run(app, host=_bind_host, port=_port)
+    except SystemExit:
+        # Lost the race between the probe above and uvicorn's own bind (a
+        # competing process grabbed the port in between). Re-probe: if the port
+        # is taken now, that is what killed us, whatever exit code uvicorn
+        # chose.
+        if _port_taken(_bind_host, _port) is not None:
+            _fail_port_in_use(None)
+        raise

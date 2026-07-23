@@ -15,6 +15,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - A dub URL ingest that fails on a disk problem now says which folder and why
 - A broken audio dependency no longer takes the whole backend down at startup
 - A GPU too small for the chosen engine now says so up front, not after a five-minute wait
+- A port conflict now says so, instead of "Backend died (exit code 1)"
 - A model download that dies at 90% now resumes instead of failing the install
 
 ### Docs
@@ -35,6 +36,8 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - Colab notebook: the install cell now catches a broken environment with the real error, instead of a 5-minute health timeout two cells later — thanks @Navdeep-Chauhan-777! (#1229)
 - A GPU with less VRAM than the chosen engine needs is flagged in Settings → Engines before you generate, instead of showing a clean green "accelerated" until the job times out — thanks @AdityaHemantBhat and @beingavais! (#1226, #1222)
 - A generation timeout now names your actual card and its VRAM and recommends a lighter engine (#1226, #1222)
+- A busy port 3900 now reports a port conflict instead of "Backend died (exit code 1)", in every language — thanks @xipb14! (#1223)
+- The app verifies it actually freed the port before starting the backend, rather than assuming the kill worked (#1223)
 - A model download truncated near the end is now retried and resumed instead of aborting the whole install — thanks @Reaksa-Cambodia! (#1224)
 - Engine first-use downloads (VoxCPM2, MOSS-TTS-Nano) retry transient network failures instead of failing the load outright (#1224)
 - A backend killed by the OS mid-stream now leaves a low-memory trail in the crash report (#1224)
