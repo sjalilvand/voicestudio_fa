@@ -106,27 +106,87 @@ def _is_closed_client_error(e) -> bool:
 
 def _retry_once_with_fresh_hf_client(loader, what: str):
     """Run ``loader()`` — a model constructor that may download from the HF
-    Hub on first use. On the specific closed-client failure above, reset the
-    hub's shared client and retry exactly ONCE. Any other failure (and a
-    repeat closed-client failure) propagates untouched, where the generation
-    error classifier labels it as a network problem (#880)."""
-    try:
-        return loader()
-    except Exception as e:
-        if not _is_closed_client_error(e):
-            raise
-        logger.warning(
-            "%s: HF Hub httpx client was closed mid-download (%s); "
-            "retrying once with a fresh client.", what, e,
-        )
+    Hub on first use — retrying transient download failures.
+
+    Two failure shapes are retried, with deliberately different budgets:
+
+    * the httpx **closed-client** lifecycle error (#880) — retried exactly
+      ONCE, after resetting the hub's shared session. It's a client-state bug,
+      not a network condition: if a fresh session hits it again, repeating
+      won't help, and #880 chose to surface it rather than loop.
+    * any **transient download** failure ``core.failure
+      .is_hf_connectivity_error`` recognises — refused/reset connections, DNS,
+      timeouts, and (#1224) a truncated body ("peer closed connection without
+      sending complete message body"). A multi-GB model that dies at 90% is
+      the single most retry-worthy failure in the path, so this gets the full
+      bounded budget. The HF cache is resumable (correctly-sized blobs are
+      skipped by hash), so each retry continues rather than restarting.
+
+    Anything unrecognised propagates untouched, where the generation error
+    classifier labels it.
+    """
+    from core.failure import is_hf_connectivity_error
+
+    attempts = max(1, _int_env("OMNIVOICE_MODEL_LOAD_RETRIES", 3))
+    backoff = max(0.0, _float_env("OMNIVOICE_MODEL_LOAD_BACKOFF_S", 2.0))
+    client_reset_used = False
+    attempt = 0
+    while True:
         try:
-            from huggingface_hub.utils import close_session
-            close_session()
-        except Exception:  # pragma: no cover — hub too old / API renamed
+            return loader()
+        except Exception as e:
+            if _is_closed_client_error(e):
+                if client_reset_used:
+                    raise  # #880: single-shot — a second one is not transient
+                client_reset_used = True
+                logger.warning(
+                    "%s: HF Hub httpx client was closed mid-download (%s); "
+                    "retrying once with a fresh client.", what, e,
+                )
+                try:
+                    from huggingface_hub.utils import close_session
+                    close_session()
+                except Exception:  # pragma: no cover — hub too old / renamed
+                    logger.warning(
+                        "%s: couldn't reset the HF Hub client; retrying anyway.",
+                        what,
+                    )
+                # Deliberately does NOT consume a download attempt: the two
+                # budgets are independent, and letting the session reset eat
+                # one left a resumable multi-GB download a retry short of its
+                # configured budget (#1224 review).
+                continue  # immediate — nothing to back off from
+            attempt += 1
+            if not is_hf_connectivity_error(str(e)) or attempt >= attempts:
+                raise
             logger.warning(
-                "%s: couldn't reset the HF Hub client; retrying anyway.", what,
+                "%s: model download failed (%s); retrying (attempt %d/%d). "
+                "Already-downloaded files are reused.",
+                what, e, attempt, attempts,
             )
-        return loader()
+            if backoff:
+                import time as _time
+                _time.sleep(backoff * attempt)
+
+
+def _int_env(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return default
+
+
+def _float_env(name: str, default: float) -> float:
+    try:
+        value = float(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return default
+    # inf/nan parse fine and then poison the caller: `sleep(inf)` raises
+    # OverflowError, turning a retryable download failure into an unrelated
+    # crash that hides the original error (#1224 review).
+    if value != value or value in (float("inf"), float("-inf")):
+        return default
+    return value
 
 
 # ── Protocol ────────────────────────────────────────────────────────────────
@@ -774,7 +834,12 @@ class VoxCPM2Backend(TTSBackend):
         from voxcpm import VoxCPM  # type: ignore[import-not-found]
         checkpoint = os.environ.get("OMNIVOICE_VOXCPM_MODEL", "openbmb/VoxCPM2")
         logger.info("Loading VoxCPM2 from %s", checkpoint)
-        self._model = VoxCPM.from_pretrained(checkpoint, load_denoiser=False)
+        # #1224: this first-use download is multi-GB. Unretried, a truncated
+        # body at 90% aborted the load outright.
+        self._model = _retry_once_with_fresh_hf_client(
+            lambda: VoxCPM.from_pretrained(checkpoint, load_denoiser=False),
+            "VoxCPM2",
+        )
 
     def generate(self, text, **kw) -> torch.Tensor:
         self._ensure_loaded()
@@ -909,7 +974,10 @@ class MossTTSNanoBackend(TTSBackend):
             "OMNIVOICE_MOSS_TTS_MODEL", "OpenMOSS-Team/MOSS-TTS-Nano"
         )
         logger.info("Loading MOSS-TTS-Nano from %s", checkpoint)
-        self._model = MossTTSNano.from_pretrained(checkpoint, trust_remote_code=True)
+        self._model = _retry_once_with_fresh_hf_client(
+            lambda: MossTTSNano.from_pretrained(checkpoint, trust_remote_code=True),
+            "MOSS-TTS-Nano",
+        )
 
     def generate(self, text, **kw) -> torch.Tensor:
         self._ensure_loaded()

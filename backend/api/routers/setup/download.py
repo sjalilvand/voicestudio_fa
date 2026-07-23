@@ -19,6 +19,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from core import prefs
+from core.failure import is_hf_connectivity_error
 from utils import hf_progress
 from utils import download_aggregator
 # Weight-floor scan (MM2-07 / #352) lives in ``models.py`` — the lowest module in
@@ -320,6 +321,41 @@ class InstallModelRequest(BaseModel):
     repo_id: str
 
 
+
+def _is_retryable_download_error(exc: BaseException) -> bool:
+    """Whether a failed download attempt is worth retrying.
+
+    Decides by CLASSIFICATION, not by exception type. The type-based tuple this
+    replaced — ``(HfHubHTTPError, LocalEntryNotFoundError, OSError)`` — silently
+    excluded ``httpx.RemoteProtocolError``, which inherits ``Exception``: a
+    4.6 GB model truncated at 4.0 GB escaped all five attempts and aborted the
+    install (#1224). Any future transport error with a novel base class would
+    have reopened the same hole.
+
+    A user cancel is never retryable, and neither is anything
+    ``is_hf_connectivity_error`` does not recognise.
+    """
+    # Imported here, not at module scope, for the same reason the worker does:
+    # huggingface_hub is heavy and this module is on the setup import path.
+    from huggingface_hub.utils import HfHubHTTPError, LocalEntryNotFoundError
+
+    if isinstance(exc, _InstallCancelled):
+        return False
+    if isinstance(exc, HfHubHTTPError):
+        # An auth / not-found / gone answer from the Hub is a settled verdict:
+        # the token is wrong, the repo is gated, or it isn't there. Retrying
+        # five times with backoff just delays the same message and postpones
+        # the install cooldown. (Pre-existing behaviour — the type-based tuple
+        # this replaced retried every HfHubHTTPError; surfaced in #1224 review.)
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        if status in (401, 403, 404, 410):
+            return False
+        return True
+    if isinstance(exc, (LocalEntryNotFoundError, OSError)):
+        return True
+    return is_hf_connectivity_error(str(exc))
+
+
 @router.post("/models/install")
 async def install_model(req: InstallModelRequest):
     """Download one HF repo snapshot; progress goes through the shared
@@ -492,8 +528,22 @@ async def install_model(req: InstallModelRequest):
                         _snapshot_path = snapshot_download(**dl_kwargs)
                     _validate_snapshot_has_weights(req.repo_id, _snapshot_path)
                     break
-                except (HfHubHTTPError, LocalEntryNotFoundError, OSError) as net_err:
-                    if _attempt >= _max_attempts:
+                except Exception as net_err:
+                    # #1224: a truncated body ("peer closed connection without
+                    # sending complete message body") arrives as
+                    # httpx.RemoteProtocolError, which inherits from Exception
+                    # — NOT OSError — so it escaped the old
+                    # (HfHubHTTPError, LocalEntryNotFoundError, OSError) tuple
+                    # and aborted a 4.6 GB install at 4.0 GB with no retry.
+                    # Widen to Exception and decide by CLASSIFICATION:
+                    # is_hf_connectivity_error is already the single source of
+                    # truth for "transient download failure" and now knows the
+                    # truncation signatures. Anything unrecognised (a cancel, a
+                    # validation failure, a bug) propagates untouched, exactly
+                    # as before.
+                    if _attempt >= _max_attempts or not _is_retryable_download_error(
+                        net_err
+                    ):
                         raise
                     _backoff = min(30, 2 ** _attempt)
                     logger.info(
