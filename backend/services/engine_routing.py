@@ -31,19 +31,57 @@ class RoutingResult(TypedDict):
     routing_reason: str | None     # raw, pre-scrub
 
 
-def _caveat(caps: HostCaps) -> str | None:
-    """A kernel-risk caveat string for an otherwise-accelerated host, or None.
-    Advisory notes (multi-GPU, VRAM-query-failed, DirectML) never qualify."""
+def _caveat(caps: HostCaps, min_vram_gb: float = 0.0) -> str | None:
+    """A caveat string for an otherwise-accelerated host, or None.
+
+    Two kinds, kernel risk first (it's the more severe):
+
+    * a driver/arch mismatch that may fail at kernel launch;
+    * (#1226/#1222) a GPU that will run, but has less VRAM than the engine
+      declares it needs. Two users on 4 GB cards ran the ``omnivoice`` engine
+      and only learned their hardware was under-provisioned AFTER waiting out
+      the full compute budget and being told the job "was too heavy". Routing
+      showed a clean green "accelerated" throughout, because family membership
+      was the only thing checked. Advisory, not blocking — the driver can page
+      to system RAM, and short inputs fit where long ones don't.
+
+    Advisory probe notes (multi-GPU, VRAM-query-failed, DirectML) never
+    qualify. A VRAM figure of 0 means the probe failed; don't guess from it.
+    """
     for note in caps.notes:
         if KERNEL_RISK_MARKER in note:
             return f"{caps.family.upper()} selected, but: {note}"
+    # Dedicated-VRAM families ONLY. On MPS, HostCaps.vram_gb is a heuristic
+    # (system RAM / 2, see device_caps) for a UNIFIED memory pool — comparing
+    # it against a floor measured on discrete CUDA hardware would tell every
+    # 8 GB Mac its 4 GB "VRAM" is too small for an engine that runs fine there.
+    # Different memory model, different (unmeasured) floor; don't guess.
+    if (
+        caps.family in ("cuda", "rocm")
+        and min_vram_gb > 0
+        and 0 < caps.vram_gb < min_vram_gb
+    ):
+        device = caps.device_name or caps.family.upper()
+        return (
+            f"{device} has {caps.vram_gb:.1f} GB VRAM; this engine wants about "
+            f"{min_vram_gb:.0f} GB. It will run, but expect slow generations "
+            f"that may time out. Unload other models before generating, keep "
+            f"the text short, or pick a lighter engine."
+        )
     return None
 
 
-def resolve_routing(gpu_compat: tuple[str, ...], caps: HostCaps) -> RoutingResult:
+def resolve_routing(
+    gpu_compat: tuple[str, ...],
+    caps: HostCaps,
+    min_vram_gb: float = 0.0,
+) -> RoutingResult:
     """Resolve the effective device + status for an engine on this host.
 
-    Rules are evaluated in order; the first match wins (see spec §2)."""
+    Rules are evaluated in order; the first match wins (see spec §2).
+    ``min_vram_gb`` is the engine's declared VRAM floor (``TTSBackend
+    .min_vram_gb``); 0 disables the under-provisioned-GPU caveat. Optional so
+    every existing caller keeps its exact behaviour."""
     targets = tuple(gpu_compat or ())
     fam = caps.family
 
@@ -60,7 +98,7 @@ def resolve_routing(gpu_compat: tuple[str, ...], caps: HostCaps) -> RoutingResul
         return {
             "effective_device": fam,
             "routing_status": "accelerated",
-            "routing_reason": _caveat(caps),
+            "routing_reason": _caveat(caps, min_vram_gb),
         }
 
     # 3. CPU-native engine (declares ONLY cpu) has nothing to fall back FROM,
@@ -143,7 +181,11 @@ def header_safe_reason(reason: str | None) -> str | None:
     return cleaned[:256] or None
 
 
-def routing_fields(gpu_compat: tuple[str, ...], caps: HostCaps) -> dict:
+def routing_fields(
+    gpu_compat: tuple[str, ...],
+    caps: HostCaps,
+    min_vram_gb: float = 0.0,
+) -> dict:
     """The three serialization-ready routing keys for a ``list_backends`` entry.
 
     Resolves routing and applies the redaction contract: ``routing_reason`` is
@@ -155,7 +197,7 @@ def routing_fields(gpu_compat: tuple[str, ...], caps: HostCaps) -> dict:
     """
     from core.scrub import scrub_text
 
-    r = resolve_routing(tuple(gpu_compat or ()), caps)
+    r = resolve_routing(tuple(gpu_compat or ()), caps, min_vram_gb)
     reason = r["routing_reason"]
     return {
         "effective_device": r["effective_device"],
