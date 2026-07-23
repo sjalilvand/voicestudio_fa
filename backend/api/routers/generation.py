@@ -903,7 +903,15 @@ async def generate_speech(
     # /engines/select gate, so this is the only place it's enforced for synth).
     from core.device_caps import detect_host_caps
     from services.engine_routing import resolve_routing, routing_notice
-    _routing = resolve_routing(getattr(backend_cls, "gpu_compat", ("cpu",)), detect_host_caps())
+    # The engine's declared VRAM floor (#1226) — used by the routing gate and,
+    # below, to let a generate TIMEOUT name the same shortfall. Resolved once:
+    # every other job on this GPU pool (reference transcribe, assemble) leaves
+    # it at 0, so only TTS generates can get the under-provisioned wording.
+    _engine_min_vram_gb = getattr(backend_cls, "min_vram_gb", 0.0)
+    _routing = resolve_routing(
+        getattr(backend_cls, "gpu_compat", ("cpu",)), detect_host_caps(),
+        _engine_min_vram_gb,
+    )
     if _routing["routing_status"] == "unavailable":
         # The engine needs an accelerator this host lacks and has no CPU path.
         raise HTTPException(status_code=400, detail=_routing["routing_reason"])
@@ -1228,6 +1236,7 @@ async def generate_speech(
                                 max_chunk_chars, crossfade_ms,
                             ),
                             what="TTS generate",
+                            min_vram_gb=_engine_min_vram_gb,
                             timeout=_generate_timeout_s(text),
                         )
                         sample_rate = _backend.sample_rate
@@ -1243,6 +1252,7 @@ async def generate_speech(
                                 max_chunk_chars, crossfade_ms,
                             ),
                             what="TTS generate",
+                            min_vram_gb=_engine_min_vram_gb,
                             timeout=_generate_timeout_s(text),
                         )
                         sample_rate = _model.sampling_rate
@@ -1277,6 +1287,7 @@ async def generate_speech(
                         raw, preview, sample_rate = await run_on_gpu_pool_guarded(
                             functools.partial(_render_stream_chunk, i, chunk_text),
                             what="TTS generate",
+                            min_vram_gb=_engine_min_vram_gb,
                             # Budget scaled to THIS chunk (#1190) — the flat
                             # 300s here is what made long streamed renders fail
                             # even after the v0.3.22 scaled budget shipped.
@@ -1377,6 +1388,7 @@ async def generate_speech(
                     max_chunk_chars, crossfade_ms,
                 ),
                 what="TTS generate",
+                min_vram_gb=_engine_min_vram_gb,
                 timeout=_generate_timeout_s(text),
             )
             # Read after generation: engines with lazy model loading report
@@ -1393,6 +1405,7 @@ async def generate_speech(
                     max_chunk_chars, crossfade_ms,
                 ),
                 what="TTS generate",
+                min_vram_gb=_engine_min_vram_gb,
                 timeout=_generate_timeout_s(text),
             )
             sample_rate = _model.sampling_rate

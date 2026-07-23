@@ -106,7 +106,8 @@ async def ws_tts(websocket: WebSocket):
                 from services.engine_routing import resolve_routing, routing_notice
                 from core.scrub import scrub_text
                 _routing = resolve_routing(
-                    getattr(backend, "gpu_compat", ("cpu",)), detect_host_caps())
+                    getattr(backend, "gpu_compat", ("cpu",)), detect_host_caps(),
+                    getattr(backend, "min_vram_gb", 0.0))
                 if _routing["routing_status"] == "unavailable":
                     await websocket.send_json({
                         "type": "error",

@@ -168,6 +168,11 @@ def test_list_backends_shape(registry_sandbox):
         # True when services.sidecar_install can provision the engine in-app
         # (the Settings Install button keys off this).
         "one_click_install",
+        # Approximate VRAM (GB) the engine wants on a dedicated GPU, or None
+        # when it declares no measured floor (#1226). Advisory metadata: a host
+        # below the floor gets a caveat in `routing_reason` BEFORE it spends
+        # the full compute budget finding out its card is too small.
+        "min_vram_gb",
     }
     mlx_audio_extra = {"curated_models", "active_model_id"}
     for entry in out:

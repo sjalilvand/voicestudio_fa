@@ -52,6 +52,11 @@ interface EngineBackend {
   last_error?: string | null;
   isolation_mode?: 'in-process' | 'subprocess';
   gpu_compat?: GPUTarget[];
+  // Approximate VRAM (GB) the engine wants on a dedicated GPU; null when the
+  // engine declares no meaningful floor (#1226). Advisory metadata — when the
+  // host has less, `routing_reason` carries the caveat and the matrix renders
+  // it under an otherwise-accelerated row.
+  min_vram_gb?: number | null;
   // Routing (#21) — the device this engine uses on this machine + why.
   effective_device?: EffectiveDevice;
   routing_status?: RoutingStatus;

@@ -418,7 +418,8 @@ def _swallow_abandoned(fut) -> None:
 async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
                                   timeout: "float | None" = None,
                                   executor=None,
-                                  queue_timeout: "float | None" = None):
+                                  queue_timeout: "float | None" = None,
+                                  min_vram_gb: float = 0.0):
     """Run blocking ``fn`` on the GPU pool, bounding **execution** — not the
     wait for a free worker.
 
@@ -440,6 +441,12 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
     ``fn`` must be a zero-arg callable — wrap args with ``functools.partial``.
     Executors without ``reset`` (a plain ThreadPoolExecutor in tests) still get
     both bounds; only the reset step is skipped.
+
+    ``min_vram_gb`` is the declared VRAM floor of the engine this job belongs
+    to (``TTSBackend.min_vram_gb``); it only shapes the timeout MESSAGE. Left
+    at 0 — the default, and correct for every non-TTS job on this pool
+    (reference transcribe, watermarking, dub steps) — the under-provisioned-GPU
+    wording is never used, because nothing measured says it applies (#1226).
     """
     loop = asyncio.get_running_loop()
     ex = executor if executor is not None else _get_gpu_pool()
@@ -504,7 +511,7 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
     # Phase 2 — execution. The clock starts here: this job owns a worker.
     try:
         return await asyncio.wait_for(fut, timeout=timeout)
-    except asyncio.TimeoutError:
+    except asyncio.TimeoutError as timeout_exc:
         # wait_for already cancelled the asyncio wrapper; the worker thread
         # keeps going regardless. Consume whatever it eventually produces.
         fut.add_done_callback(_swallow_abandoned)
@@ -521,10 +528,12 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
             except Exception:
                 logger.exception("GPU pool reset after %s timeout failed",
                                  _log_safe(what))
-        raise GpuJobTimeoutError(_timeout_guidance(what, timeout))
+        raise GpuJobTimeoutError(
+            _timeout_guidance(what, timeout, min_vram_gb)
+        ) from timeout_exc
 
 
-def _timeout_guidance(what: str, timeout: float) -> str:
+def _timeout_guidance(what: str, timeout: float, min_vram_gb: float = 0.0) -> str:
     """Device-aware timeout message (#896): a CPU-only host must never be told
     to "set the engine to CPU" or blamed on VRAM — on CPU the job is simply
     compute-bound. GPU hosts keep the VRAM-contention guidance.
@@ -538,9 +547,12 @@ def _timeout_guidance(what: str, timeout: float) -> str:
     callers something to do about it.
     """
     family = "cuda"  # conservative default: GPU wording if the probe fails
+    device_name, vram_gb = "", 0.0
     try:
         from core.device_caps import detect_host_caps
-        family = detect_host_caps().family
+        _caps = detect_host_caps()
+        family = _caps.family
+        device_name, vram_gb = _caps.device_name, _caps.vram_gb
     except Exception:  # noqa: BLE001 — guidance must never mask the timeout
         pass
     common = (
@@ -558,6 +570,32 @@ def _timeout_guidance(what: str, timeout: float) -> str:
             "engine (OmniVoice GGUF and Supertonic-3 are CPU-tuned). If you "
             "expect very long single generations, raise "
             "OMNIVOICE_GENERATE_TIMEOUT_S."
+        )
+    # #1226/#1222: two users on 4 GB cards were told, generically, that the GPU
+    # "is VRAM-starved" — true, but it read as a transient contention problem
+    # they could flush their way out of, when their card was simply too small
+    # for the engine they had selected. Say so instead — but ONLY when the
+    # caller passed the engine's measured floor and the host is a dedicated-
+    # VRAM family below it. This function serves every GPU-pool job (reference
+    # transcribe, watermarking, dub steps, CPU-only engines on a GPU host), so
+    # a threshold applied without knowing whose job it is would confidently
+    # misdiagnose most of them. And on MPS `vram_gb` is a unified-memory
+    # heuristic (RAM/2), not a dedicated pool to compare against.
+    if (
+        min_vram_gb > 0
+        and family in ("cuda", "rocm")
+        and 0 < vram_gb < min_vram_gb
+    ):
+        return common + (
+            f"{device_name or 'this GPU'} has {vram_gb:.1f} GB of VRAM and "
+            f"this engine wants about {min_vram_gb:.0f} GB — generations here "
+            f"are slow enough to hit the limit even with nothing else loaded. "
+            f"The durable fix is a lighter engine (OmniVoice GGUF and "
+            f"Supertonic-3 are tuned for small/no GPU) or shorter text; "
+            f"Flush caches / Unload the resident model (top toolbar or "
+            f"Settings → Models) frees what little headroom there is. (Raise "
+            f"OMNIVOICE_GENERATE_TIMEOUT_S if you'd rather let long "
+            f"generations run.)"
         )
     return common + (
         "most often the GPU is VRAM-starved (a resident model and this job "
