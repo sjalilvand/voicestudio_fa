@@ -1891,11 +1891,15 @@
     "install_hint": "Download de update en start opnieuw op in de nieuwe versie",
     "downloading": "Bijwerken… {{pct}}%",
     "restart": "Opnieuw opstarten om bij te werken",
-    "busy": "Voltooi eerst je nasynchronisatie — installeer daarna de update.",
+    "busy": "Wacht tot het lopende werk klaar is — installeer daarna de update.",
     "whats_new": "Wat is er nieuw",
     "failed": "Update mislukt",
     "retry": "Opnieuw proberen",
-    "dismiss": "Negeren"
+    "dismiss": "Negeren",
+    "toast_available": "OmniVoice Studio {{version}} is beschikbaar",
+    "toast_install": "Installeren en herstarten",
+    "toast_whats_new": "Wat is er nieuw",
+    "toast_later": "Later"
   },
   "archetypes": {
     "featured": "Uitgelicht",

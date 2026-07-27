@@ -1891,11 +1891,15 @@
     "install_hint": "Güncellemeyi indir ve yeni sürümle yeniden başlat",
     "downloading": "Güncelleniyor… %{{pct}}",
     "restart": "Güncellemek için yeniden başlat",
-    "busy": "Önce dublajını bitir — sonra güncellemeyi yükle.",
+    "busy": "Devam eden işlem bitene kadar bekle — sonra güncellemeyi yükle.",
     "whats_new": "Yenilikler",
     "failed": "Güncelleme başarısız oldu",
     "retry": "Yeniden dene",
-    "dismiss": "Reddet"
+    "dismiss": "Reddet",
+    "toast_available": "OmniVoice Studio {{version}} kullanılabilir",
+    "toast_install": "Yükle ve yeniden başlat",
+    "toast_whats_new": "Yenilikler",
+    "toast_later": "Daha sonra"
   },
   "archetypes": {
     "featured": "Öne Çıkanlar",

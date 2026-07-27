@@ -1891,11 +1891,15 @@
     "install_hint": "Tải bản cập nhật và khởi động lại vào phiên bản mới",
     "downloading": "Đang cập nhật… {{pct}}%",
     "restart": "Khởi động lại để cập nhật",
-    "busy": "Hoàn tất lồng tiếng của bạn trước — rồi cài đặt bản cập nhật.",
+    "busy": "Chờ công việc đang chạy hoàn tất — rồi cài đặt bản cập nhật.",
     "whats_new": "Có gì mới",
     "failed": "Cập nhật không thành công",
     "retry": "Thử lại",
-    "dismiss": "Loại bỏ"
+    "dismiss": "Loại bỏ",
+    "toast_available": "OmniVoice Studio {{version}} đã có",
+    "toast_install": "Cài đặt và khởi động lại",
+    "toast_whats_new": "Có gì mới",
+    "toast_later": "Để sau"
   },
   "archetypes": {
     "featured": "Nổi bật",

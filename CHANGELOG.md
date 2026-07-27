@@ -6,6 +6,24 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 Versions track the desktop app (`tauri.conf.json` + `frontend/src-tauri/Cargo.toml`).
 The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
+## [Unreleased]
+
+**Highlights**
+
+- The update prompt is a small toast with buttons, not a screenful of release notes
+
+### Changed
+
+- An available update now announces itself as a toast with **Install and restart**, **What's new** and **Later**, instead of only a dot beside the version number. The release notes stay in Settings → Updates, where there is room for them — a version's notes are the whole changelog section, and rendering them inline is what made the old prompt fill the screen (#1272)
+
+### Fixed
+
+- A half-downloaded model now repairs itself instead of failing with a raw 500. The automatic repair recognised only one of the two ways the loader reports missing weights, so an interrupted download whose subfolder failed to load got neither the repair nor a hint about what to do (#1273)
+- Quitting the app with a generate queued reported "500 Internal Server Error: model load skipped: backend shutting down" and offered to file a bug for it. A shutdown is not a fault: the backend now answers 503 with what to do, and no error toast offers a bug report for a 503 (#1276)
+- Installing an update no longer relaunches the app while work is running. The check only knew about dub synthesis, so a restart could silently discard an upload, a transcription, a translation, an export or a standalone synth (#1272)
+- Dub history: clearing a large history while a render was running could still resurrect the deleted job — which markers survived depended on the process hash seed, and an oversized purge could discard a live one (#1252)
+- German, Japanese, Russian and both Chinese locales rendered "Dismiss" as the employment sense — "terminate an employee" — on close buttons (#1272)
+
 ## [0.4.1] — 2026-07-27
 
 **Highlights**

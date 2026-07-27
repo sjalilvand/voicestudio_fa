@@ -43,11 +43,15 @@
     "install_hint": "Download the update and restart into the new version",
     "downloading": "Updating… {{pct}}%",
     "restart": "Restart to update",
-    "busy": "Finish your dub first — then install the update.",
+    "busy": "Wait for the work in progress to finish — then install the update.",
     "whats_new": "What's new",
     "failed": "Update failed",
     "retry": "Retry",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "toast_available": "OmniVoice Studio {{version}} is available",
+    "toast_install": "Install and restart",
+    "toast_whats_new": "What's new",
+    "toast_later": "Later"
   },
   "updates": {
     "tab": "Updates",

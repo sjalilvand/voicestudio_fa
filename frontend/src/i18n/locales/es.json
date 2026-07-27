@@ -1891,11 +1891,15 @@
     "install_hint": "Descarga la actualización y reinicia en la nueva versión",
     "downloading": "Actualizando… {{pct}}%",
     "restart": "Reiniciar para actualizar",
-    "busy": "Termina tu doblaje primero — luego instala la actualización.",
+    "busy": "Espera a que termine el trabajo en curso — luego instala la actualización.",
     "whats_new": "¿Qué hay de nuevo?",
     "failed": "La actualización falló",
     "retry": "Reintentar",
-    "dismiss": "Descartar"
+    "dismiss": "Descartar",
+    "toast_available": "OmniVoice Studio {{version}} está disponible",
+    "toast_install": "Instalar y reiniciar",
+    "toast_whats_new": "Novedades",
+    "toast_later": "Más tarde"
   },
   "archetypes": {
     "featured": "Destacado",

@@ -309,7 +309,7 @@
     "tauri": "Taureau",
     "cancelOp": "Annuler l'opération",
     "dismiss": "Rejeter",
-    "dismissStatus": "Statut de rejet",
+    "dismissStatus": "Ignorer le statut",
     "search": "Rechercher…",
     "no_matches": "Aucune correspondance",
     "recent_and_popular": "Récents et populaires",
@@ -1891,11 +1891,15 @@
     "install_hint": "Télécharger la mise à jour et redémarrer dans la nouvelle version",
     "downloading": "Mise à jour… {{pct}} %",
     "restart": "Redémarrer pour mettre à jour",
-    "busy": "Terminez d'abord votre doublage, puis installez la mise à jour.",
+    "busy": "Attendez la fin du travail en cours, puis installez la mise à jour.",
     "whats_new": "Quoi de neuf",
     "failed": "La mise à jour a échoué",
     "retry": "Réessayer",
-    "dismiss": "Rejeter"
+    "dismiss": "Rejeter",
+    "toast_available": "OmniVoice Studio {{version}} est disponible",
+    "toast_install": "Installer et redémarrer",
+    "toast_whats_new": "Nouveautés",
+    "toast_later": "Plus tard"
   },
   "archetypes": {
     "featured": "En vedette",
