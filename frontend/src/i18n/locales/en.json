@@ -809,7 +809,12 @@
     "analytics_never": "Never sent: the text you type, your audio, your file names, your voice names, or anything identifying you. Not your name, not your email, not your IP.",
     "analytics_off_anytime": "You can turn this off again at any time, and nothing further is sent.",
     "analytics_on": "Thanks — anonymous usage stats are on.",
-    "analytics_off": "Analytics off. Nothing is sent."
+    "analytics_off": "Analytics off. Nothing is sent.",
+    "watermark_title": "Invisible watermark",
+    "watermark_subtitle": "On by default. Marks generated audio as AI-made so it can be identified later. Only affects audio generated from now on.",
+    "watermark_on_toast": "Invisible watermark enabled for new audio.",
+    "watermark_off_toast": "Invisible watermark disabled for new audio.",
+    "watermark_failed": "Could not change the watermark setting."
   },
   "consent": {
     "title": "Help improve OmniVoice?",
@@ -2437,7 +2442,7 @@
     "q_try_before": "Can I try before committing?",
     "a_try_before": "Yes. The full app is free to download, run, and self-host under the AGPL-3.0 — no agreement required. When you're ready to discuss a commercial (proprietary-use) license, email us and we'll work through the details together.",
     "q_watermark": "What about the watermark?",
-    "a_watermark": "The invisible AudioSeal watermark is embedded by default for everyone. Commercial licensees can disable it in Settings → Privacy."
+    "a_watermark": "The invisible AudioSeal watermark is embedded by default for everyone. You can turn it off in Settings → Privacy; it only affects audio generated after the change."
   },
   "gallery_extra": {
     "save_prompt": "Enter a name for this voice profile:",

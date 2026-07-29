@@ -492,7 +492,12 @@
     "local_sqlite": "Lokale SQLite",
     "translator_online": "Vertaler is online: {{provider}}",
     "translator_offline": "Offline vertaler",
-    "no_tracking": "Geen — geen tracking"
+    "no_tracking": "Geen — geen tracking",
+    "watermark_title": "Onzichtbaar watermerk",
+    "watermark_subtitle": "Standaard aan. Markeert gegenereerde audio als AI-gemaakt zodat het later herkend kan worden. Geldt alleen voor audio die vanaf nu wordt gegenereerd.",
+    "watermark_on_toast": "Onzichtbaar watermerk aan voor nieuwe audio.",
+    "watermark_off_toast": "Onzichtbaar watermerk uit voor nieuwe audio.",
+    "watermark_failed": "Kon de watermerkinstelling niet wijzigen."
   },
   "consent": {
     "title": "Helpen OmniVoice te verbeteren?",
@@ -1758,7 +1763,7 @@
     "q_try_before": "Kan ik het proberen voordat ik me vastleg?",
     "a_try_before": "Ja. De volledige app is gratis te downloaden, draaien en zelf te hosten onder de AGPL-3.0 — geen overeenkomst nodig. Wil je een commerciële licentie (propriëtair gebruik) bespreken, mail ons dan en we werken de details samen uit.",
     "q_watermark": "Hoe zit het met het watermerk?",
-    "a_watermark": "Het onzichtbare AudioSeal-watermerk is standaard voor iedereen ingesloten. Commerciële licentiehouders kunnen dit uitschakelen via Instellingen → Privacy."
+    "a_watermark": "Het onzichtbare AudioSeal-watermerk wordt standaard voor iedereen ingesloten. U kunt het uitschakelen bij Instellingen → Privacy; het geldt alleen voor audio die na de wijziging wordt gegenereerd."
   },
   "gallery_extra": {
     "save_prompt": "Voer een naam in voor dit stemprofiel:",

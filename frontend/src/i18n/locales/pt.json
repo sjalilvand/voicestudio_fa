@@ -492,7 +492,12 @@
     "local_sqlite": "SQLite local",
     "translator_online": "O tradutor está online: {{provider}}",
     "translator_offline": "Tradutor off-line",
-    "no_tracking": "Nenhum – sem rastreamento"
+    "no_tracking": "Nenhum – sem rastreamento",
+    "watermark_title": "Marca de água invisível",
+    "watermark_subtitle": "Ativada por predefinição. Marca o áudio gerado como criado por IA para poder ser identificado mais tarde. Afeta apenas o áudio gerado a partir de agora.",
+    "watermark_on_toast": "Marca de água invisível ativada para novo áudio.",
+    "watermark_off_toast": "Marca de água invisível desativada para novo áudio.",
+    "watermark_failed": "Não foi possível alterar a definição da marca de água."
   },
   "consent": {
     "title": "Ajudar a melhorar o OmniVoice?",
@@ -1758,7 +1763,7 @@
     "q_try_before": "Posso tentar antes de me comprometer?",
     "a_try_before": "Sim. O aplicativo completo é gratuito para baixar, executar e auto-hospedar sob a AGPL-3.0 — nenhum acordo necessário. Quando quiser discutir uma licença comercial (uso proprietário), envie um e-mail e resolveremos os detalhes juntos.",
     "q_watermark": "E a marca d’água?",
-    "a_watermark": "A marca d'água invisível AudioSeal é incorporada por padrão para todos. Licenciados comerciais podem desativá-la em Configurações → Privacidade."
+    "a_watermark": "A marca de água invisível AudioSeal é incorporada por predefinição para todos. Pode desativá-la em Definições → Privacidade; afeta apenas o áudio gerado após a alteração."
   },
   "gallery_extra": {
     "save_prompt": "Digite um nome para este perfil de voz:",

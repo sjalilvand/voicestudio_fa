@@ -449,7 +449,12 @@
     "local_sqlite": "本地 SQLite",
     "translator_online": "翻译引擎在线：{{provider}}",
     "translator_offline": "离线翻译",
-    "no_tracking": "无 — 不追踪"
+    "no_tracking": "无 — 不追踪",
+    "watermark_title": "不可见水印",
+    "watermark_subtitle": "默认开启。将生成的音频标记为 AI 制作，以便日后识别。仅影响从现在起生成的音频。",
+    "watermark_on_toast": "已为新音频启用不可见水印。",
+    "watermark_off_toast": "已为新音频停用不可见水印。",
+    "watermark_failed": "无法更改水印设置。"
   },
   "consent": {
     "title": "帮助改进 OmniVoice？",
@@ -1765,7 +1770,7 @@
     "q_try_before": "我可以在提交之前尝试一下吗？",
     "a_try_before": "可以。完整应用可在 AGPL-3.0 下免费下载、运行和自托管——无需任何协议。当您准备讨论商业（专有用途）许可证时，请发邮件联系我们，我们将一起敲定细节。",
     "q_watermark": "水印呢？",
-    "a_watermark": "默认情况下为所有人嵌入不可见的 AudioSeal 水印。商业许可持有者可以在“设置”→“隐私”中禁用它。"
+    "a_watermark": "不可见的 AudioSeal 水印默认为所有人嵌入。你可以在设置 → 隐私中关闭它；该设置仅影响更改之后生成的音频。"
   },
   "gallery_extra": {
     "save_prompt": "输入此语音配置文件的名称：",

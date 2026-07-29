@@ -492,7 +492,12 @@
     "local_sqlite": "Lokalny SQLite",
     "translator_online": "Tłumacz jest online: {{provider}}",
     "translator_offline": "Tłumacz offline",
-    "no_tracking": "Brak — brak śledzenia"
+    "no_tracking": "Brak — brak śledzenia",
+    "watermark_title": "Niewidoczny znak wodny",
+    "watermark_subtitle": "Domyślnie włączony. Oznacza wygenerowany dźwięk jako utworzony przez AI, aby można go było później rozpoznać. Dotyczy tylko dźwięku wygenerowanego od teraz.",
+    "watermark_on_toast": "Niewidoczny znak wodny włączony dla nowego dźwięku.",
+    "watermark_off_toast": "Niewidoczny znak wodny wyłączony dla nowego dźwięku.",
+    "watermark_failed": "Nie udało się zmienić ustawienia znaku wodnego."
   },
   "consent": {
     "title": "Pomóc ulepszyć OmniVoice?",
@@ -1758,7 +1763,7 @@
     "q_try_before": "Czy mogę spróbować przed zatwierdzeniem?",
     "a_try_before": "Tak. Pełną aplikację można bezpłatnie pobrać, uruchomić i hostować samodzielnie na licencji AGPL-3.0 — bez żadnej umowy. Gdy zechcesz porozmawiać o licencji komercyjnej (użycie własnościowe), napisz do nas, a wspólnie ustalimy szczegóły.",
     "q_watermark": "A co ze znakiem wodnym?",
-    "a_watermark": "Niewidoczny znak wodny AudioSeal jest domyślnie osadzany dla wszystkich. Licencjobiorcy komercyjni mogą go wyłączyć w Ustawieniach → Prywatność."
+    "a_watermark": "Niewidoczny znak wodny AudioSeal jest domyślnie osadzany u wszystkich. Możesz go wyłączyć w Ustawieniach → Prywatność; dotyczy tylko dźwięku wygenerowanego po zmianie."
   },
   "gallery_extra": {
     "save_prompt": "Wprowadź nazwę tego profilu głosowego:",
