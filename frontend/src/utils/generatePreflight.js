@@ -72,11 +72,53 @@ export function _resetPreflight() {
   warned.clear();
 }
 
+// Mirrors the backend's own definition of "past short": generate_timeout_for()
+// in services/model_manager.py gives the first 1200 characters the flat budget
+// and only then starts extending it. Below this the job is inside the budget
+// the backend considers generous; above it, on a CPU-class host, it is the
+// shape that times out. Keep the two in sync.
+const LONG_TEXT_CHARS = 1200;
+
+// The engines the backend's own timeout message names as CPU-tuned
+// (model_manager.py: "OmniVoice GGUF and Supertonic-3 are CPU-tuned"). Telling
+// someone already running one of these to "try a CPU-tuned engine" is advice
+// to switch to what they are using (Greptile P1) — they get the same warning
+// without the self-referential suggestion.
+const CPU_TUNED_ENGINES = new Set(['omnivoice-gguf', 'supertonic3']);
+
+/**
+ * A CPU-only host is a BENIGN routing verdict — nothing is misconfigured, so
+ * routingNotice() correctly stays silent. But "nothing is wrong" and "this will
+ * finish in time" are different claims: #1299 and #1260 are CPU hosts that hit
+ * the 300s budget on long text and got no warning at all, because the
+ * under-provisioned-GPU check does not apply to them.
+ *
+ * Only fires past the backend's own long-text threshold, so ordinary sentences
+ * on a CPU laptop stay quiet.
+ */
+function warnIfLongTextOnCpu(active, entry, text) {
+  const onCpu = entry?.routing_status === 'cpu_only' || entry?.effective_device === 'cpu';
+  if (!onCpu || (text || '').length <= LONG_TEXT_CHARS) return;
+
+  const key = `${active}|cpu-long-text`;
+  if (warned.has(key)) return;
+  warned.add(key);
+
+  const i18nKey = CPU_TUNED_ENGINES.has(active)
+    ? 'engines.cpuLongTextTuned'
+    : 'engines.cpuLongText';
+  toast(i18next.t(i18nKey, { engine: active }), {
+    id: `cpu-long-text-${active}`,
+    icon: '⏳',
+    duration: 12000,
+  });
+}
+
 /**
  * Fire-and-forget. Never throws, never blocks the synth: an engine list we
  * could not fetch is a reason to stay quiet, not a reason to fail a generate.
  */
-export async function warnIfEngineUnderProvisioned() {
+export async function warnIfEngineUnderProvisioned(text = '') {
   try {
     const data = await enginesCached();
     const tts = data?.tts;
@@ -84,7 +126,10 @@ export async function warnIfEngineUnderProvisioned() {
     if (!active) return;
     const entry = (tts.backends || []).find((b) => b.id === active);
     const notice = routingNotice(entry);
-    if (!notice) return;
+    if (!notice) {
+      warnIfLongTextOnCpu(active, entry, text);
+      return;
+    }
 
     const key = `${active}|${notice.reason}`;
     if (warned.has(key)) return;

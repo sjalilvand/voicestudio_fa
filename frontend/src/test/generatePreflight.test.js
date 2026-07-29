@@ -198,3 +198,106 @@ describe('preflight cache invalidation', () => {
     expect(toastFn).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('CPU-only host with long text', () => {
+  beforeEach(() => {
+    toastFn.mockClear();
+    listEnginesMock.mockReset();
+    _resetPreflight();
+  });
+
+  const LONG = 'a'.repeat(1500);
+  const SHORT = 'a'.repeat(200);
+  const cpuHost = () =>
+    engines('omnivoice', [{ id: 'omnivoice', routing_status: 'cpu_only', routing_reason: null }]);
+
+  // #1299 / #1260: a CPU-only host is a BENIGN routing verdict, so the
+  // under-provisioned-GPU check correctly stays silent — and these users got
+  // no warning at all before burning the whole 300s budget.
+  it('warns on long text when the host runs on CPU', async () => {
+    listEnginesMock.mockResolvedValue(cpuHost());
+    await warnIfEngineUnderProvisioned(LONG);
+
+    expect(toastFn).toHaveBeenCalledTimes(1);
+    expect(toastFn.mock.calls[0][0]).toContain('engines.cpuLongText');
+    expect(toastFn.mock.calls[0][0]).toContain('omnivoice');
+  });
+
+  it('stays quiet for ordinary short text on the same CPU host', async () => {
+    listEnginesMock.mockResolvedValue(cpuHost());
+    await warnIfEngineUnderProvisioned(SHORT);
+    expect(toastFn).not.toHaveBeenCalled();
+  });
+
+  it('stays quiet for long text on an accelerated host', async () => {
+    listEnginesMock.mockResolvedValue(
+      engines('omnivoice', [
+        { id: 'omnivoice', routing_status: 'accelerated', routing_reason: null },
+      ]),
+    );
+    await warnIfEngineUnderProvisioned(LONG);
+    expect(toastFn).not.toHaveBeenCalled();
+  });
+
+  it('warns once, not on every long synth', async () => {
+    listEnginesMock.mockResolvedValue(cpuHost());
+    await warnIfEngineUnderProvisioned(LONG);
+    await warnIfEngineUnderProvisioned(LONG);
+    expect(toastFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('prefers the hardware caveat when there is one', async () => {
+    listEnginesMock.mockResolvedValue(
+      engines('indextts2', [
+        {
+          id: 'indextts2',
+          routing_status: 'cpu_fallback',
+          routing_reason: 'engine has no CUDA path; running on CPU',
+        },
+      ]),
+    );
+    await warnIfEngineUnderProvisioned(LONG);
+
+    // The hardware caveat wins: one toast, and it names the routing reason
+    // rather than the generic "long text on CPU" advice.
+    expect(toastFn).toHaveBeenCalledTimes(1);
+    expect(toastFn.mock.calls[0][0]).toContain('engines.generateCaveat');
+    expect(toastFn.mock.calls[0][0]).toContain('no CUDA path');
+    expect(toastFn.mock.calls[0][0]).not.toContain('cpuLongText');
+  });
+});
+
+describe('CPU-tuned engines do not recommend themselves', () => {
+  beforeEach(() => {
+    toastFn.mockClear();
+    listEnginesMock.mockReset();
+    _resetPreflight();
+  });
+
+  const LONG = 'a'.repeat(1500);
+  const onCpu = (id) => engines(id, [{ id, routing_status: 'cpu_only', routing_reason: null }]);
+
+  // Greptile P1: the generic advice is "try a CPU-tuned engine (OmniVoice
+  // GGUF, Supertonic-3)". Showing that to someone already running one of them
+  // is advice to switch to what they are using.
+  it.each(['omnivoice-gguf', 'supertonic3'])(
+    'drops the self-referential suggestion on %s',
+    async (id) => {
+      listEnginesMock.mockResolvedValue(onCpu(id));
+      await warnIfEngineUnderProvisioned(LONG);
+
+      expect(toastFn).toHaveBeenCalledTimes(1);
+      const msg = toastFn.mock.calls[0][0];
+      expect(msg).toContain('engines.cpuLongTextTuned');
+      expect(msg).not.toContain('engines.cpuLongText:');
+    },
+  );
+
+  it('still suggests a CPU-tuned engine to everyone else', async () => {
+    listEnginesMock.mockResolvedValue(onCpu('omnivoice'));
+    await warnIfEngineUnderProvisioned(LONG);
+
+    expect(toastFn).toHaveBeenCalledTimes(1);
+    expect(toastFn.mock.calls[0][0]).toContain('engines.cpuLongText');
+  });
+});
