@@ -6,6 +6,17 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 Versions track the desktop app (`tauri.conf.json` + `frontend/src-tauri/Cargo.toml`).
 The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
+## [Unreleased]
+
+**Highlights**
+
+- Linux AppImage: a blank white window on rolling distros (Mesa 26.1+) now starts normally
+
+### Fixed
+
+- Linux AppImage: a permanently blank window on Mesa 26.1+ hosts (Arch/CachyOS and other rolling distros) — the bundled WebKit ran against a newer system Mesa than it was built for, and no environment variable could help because the failure precedes every rendering flag; the launcher now lets a newer system WebKitGTK take precedence — thanks @rvasilev and @HannaLovvold! (#1258, #1244)
+- Linux AppImage: `OMNIVOICE_PREFER_SYSTEM_WEBKIT=1` forces your own WebKitGTK for hosts where its version can't be read automatically (no `pkg-config`), and `=0` forces the bundled one (#1258)
+
 ## [0.4.2] — 2026-07-28
 
 **Highlights**
@@ -57,6 +68,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Docs
 
+- Linux install: a new section for the Mesa 26.1+ blank window, stating plainly that no environment variable works and why (#1258)
 - Docker: ROCm section explains that `torch.cuda.is_available() == True` isn't proof the app is on the GPU, and notes the `--group-add` needed for `/dev/kfd` on rootless hosts (#1228)
 
 ### Fixed
@@ -87,6 +99,10 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - A model download truncated near the end is now retried and resumed instead of aborting the whole install — thanks @Reaksa-Cambodia! (#1224)
 - Engine first-use downloads (VoxCPM2, MOSS-TTS-Nano) retry transient network failures instead of failing the load outright (#1224)
 - A backend killed by the OS mid-stream now leaves a low-memory trail in the crash report (#1224)
+
+### CI
+
+- The AppImage launcher's unit tests now run in CI — they existed but nothing executed them (#1258)
 
 ## [0.4.0] — 2026-07-21
 
