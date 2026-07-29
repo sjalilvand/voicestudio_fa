@@ -280,6 +280,15 @@ class SubprocessBackend(TTSBackend):
     # Default sample rate; subclasses override.
     _DEFAULT_SAMPLE_RATE = 24000
 
+    # Per-engine recv timeout for generate(): how long the parent waits for the
+    # sidecar's audio frame before the watchdog hard-kills the child and reclaims
+    # its VRAM/device. Default is the conservative RECV_TIMEOUT_S (60s). A
+    # subclass whose legitimate generates run longer overrides it (or exposes it
+    # as a property) so a slow-but-valid synth is not falsely killed, while a
+    # genuinely wedged one is still reclaimed. health_check() keeps using
+    # RECV_TIMEOUT_S directly, since a ping must stay fast.
+    recv_timeout_s: float = RECV_TIMEOUT_S
+
     # ── instance state (initialised in __init__) ───────────────────────────
 
     def __init__(self) -> None:
@@ -520,18 +529,22 @@ class SubprocessBackend(TTSBackend):
         """
         # Lazy-import the GPU pool so importing this module doesn't pull in
         # the entire model_manager + torch ecosystem at registry-listing time.
-        from services.model_manager import _get_gpu_pool
-
-        # Acquire a GPU pool worker for the duration of this generate. The
-        # try/finally guarantees the slot is released even if the sidecar
-        # dies mid-frame (T-02-02 / Pitfall 7).
-        pool = _get_gpu_pool()
-        slot_future = pool.submit(lambda: None)
-        try:
-            slot_future.result(timeout=10)  # wait for our turn
-        except Exception:
-            slot_future.cancel()
-            raise
+        # The HTTP routes, audiobook, dub, and batch all dispatch generate() via
+        # run_on_gpu_pool_guarded, i.e. already on a gpu-pool worker. On a
+        # 1-worker pool (MPS) a second slot submit would queue behind this very
+        # job and self-deadlock (.result(timeout=10) fires, no sidecar spawns),
+        # so skip the slot when already on the pool. The off-pool callers (the
+        # engine self-test and the diagnostic probe) still take a slot as a
+        # queue wait, so they yield to an in-flight pool job instead of racing.
+        if not threading.current_thread().name.startswith("gpu-pool"):
+            from services.model_manager import _get_gpu_pool
+            pool = _get_gpu_pool()
+            slot_future = pool.submit(lambda: None)
+            try:
+                slot_future.result(timeout=10)  # wait for our turn
+            except Exception:
+                slot_future.cancel()
+                raise
 
         try:
             with self._lock:
@@ -544,7 +557,13 @@ class SubprocessBackend(TTSBackend):
                     if _is_jsonable(v):
                         msg[k] = v
                 self._send(msg)
-                reply = self._recv_with_timeout(RECV_TIMEOUT_S)
+                reply = self._recv_with_timeout(self.recv_timeout_s)
+                # A cold sidecar may emit non-terminal {"op": "progress"} frames
+                # (during a model load, etc.) before the terminal audio frame.
+                # Each recv re-arms the watchdog, so a long-but-active load
+                # survives while a silent wedge is still killed at the deadline.
+                while reply is not None and reply.get("op") == "progress":
+                    reply = self._recv_with_timeout(self.recv_timeout_s)
             if not reply:
                 raise RuntimeError(f"{self.id} sidecar closed pipe mid-generate")
             if reply.get("op") == "error":
