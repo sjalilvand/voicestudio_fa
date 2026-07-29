@@ -104,7 +104,7 @@
     "update_check_failed": "Pemeriksaan pembaruan gagal: {{message}}",
     "save_failed": "Gagal menyimpan: {{message}}",
     "clear_failed": "Hapus gagal: {{message}}",
-    "engine_switched": "{{family}} → {{engine}}",
+    "engine_switched": "{{family}} dialihkan ke {{engine}}",
     "channel_set_failed": "Gagal menyetel saluran: {{message}}",
     "updater_downloading": "Mengunduh {{version}}…",
     "updater_installed": "Dipasang — diluncurkan kembali.",
@@ -578,7 +578,12 @@
     "routingRemote": "Terpencil",
     "routingUnknown": "Tidak diketahui",
     "routingEffectiveChip": "Berjalan pada {{device}} di mesin ini",
-    "routingCaveatTitle": "GPU dipilih, tetapi: {{reason}}"
+    "routingCaveatTitle": "GPU dipilih, tetapi: {{reason}}",
+    "selectCpuFallback": "{{engine}}: berjalan di CPU — {{reason}}",
+    "selectWithCaveat": "Beralih ke {{engine}} — {{reason}}",
+    "generateCaveat": "{{engine}} mungkin lambat di komputer ini — {{reason}}",
+    "cpuLongText": "{{engine}} berjalan di CPU di sini dan teks ini panjang — proses mungkin melampaui batas waktu. Teks lebih pendek atau mesin yang dioptimalkan untuk CPU (OmniVoice GGUF, Supertonic-3) akan jauh lebih cepat.",
+    "cpuLongTextTuned": "{{engine}} berjalan di CPU di sini dan teks ini panjang — proses mungkin melampaui batas waktu. Teks lebih pendek, atau membaginya menjadi beberapa bagian, akan jauh lebih cepat."
   },
   "capture": {
     "desc": "Tombol pintas global hanya berfungsi di aplikasi desktop. UI web menggunakan pintasan <1>Ctrl+Shift+Space</1> dalam halaman saat jendela memiliki fokus.",
@@ -1435,6 +1440,9 @@
     "desc": "Jangan khawatir — aplikasi lainnya masih berfungsi. Anda dapat berpindah tab, atau coba lagi di bawah.",
     "tryAgain": "Coba lagi",
     "openDocs": "Buka dokumen untuk kesalahan ini",
+    "crash_port_in_use": "Backend tidak dapat dijalankan karena port 3900 sudah digunakan — salinan OmniVoice lain (atau aplikasi yang mengklaim port itu) sedang menahannya. Tutup instance lain lalu jalankan ulang; jika tidak ada yang terlihat berjalan, backend yatim dari sesi sebelumnya masih menahan port tersebut.",
+    "crash_oom_kill": "Proses dihentikan paksa (sinyal 9), yang biasanya berarti sistem operasi kehabisan memori (RAM). Tutup aplikasi yang boros memori, pilih model ASR yang lebih kecil di Pengaturan → Model, atau bongkar model TTS sebelum mentranskripsi.",
+    "crash_native_fault": "Proses mogok di dalam tumpukan komputasi, bukan karena kehabisan memori — itu menunjuk pada driver GPU yang tidak cocok dengan runtime CUDA bawaan, atau berkas model yang terunduh tidak lengkap. Perbarui driver GPU Anda, lalu unduh ulang model dari Pengaturan → Model (unduhan parsial diperbaiki di tempat). Jika terus terjadi, beralihlah ke mesin terisolasi di Pengaturan → Mesin — \"OmniVoice (subprocess)\" untuk sintesis, \"Faster-Whisper (crash-isolated subprocess)\" untuk transkripsi. Keduanya menjalankan model di proses terpisah, sehingga kerusakan seperti ini menjatuhkan proses itu saja, bukan seluruh backend.",
     "report": "Laporkan bug ini",
     "report_failed": "Tidak dapat membuka laporan bug. Coba lagi, atau salin detail di atas ke isu baru.",
     "searchIssues": "Cari masalah serupa",

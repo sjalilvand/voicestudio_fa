@@ -104,7 +104,7 @@
     "update_check_failed": "Updatecontrole mislukt: {{message}}",
     "save_failed": "Opslaan mislukt: {{message}}",
     "clear_failed": "Wissen mislukt: {{message}}",
-    "engine_switched": "{{family}} → {{engine}}",
+    "engine_switched": "{{family}} overgeschakeld naar {{engine}}",
     "channel_set_failed": "Kan kanaal niet instellen: {{message}}",
     "updater_downloading": "{{version}} downloaden…",
     "updater_installed": "Geïnstalleerd - opnieuw gestart.",
@@ -578,7 +578,12 @@
     "routingRemote": "Op afstand",
     "routingUnknown": "Onbekend",
     "routingEffectiveChip": "Draait op {{device}} op deze machine",
-    "routingCaveatTitle": "GPU geselecteerd, maar: {{reason}}"
+    "routingCaveatTitle": "GPU geselecteerd, maar: {{reason}}",
+    "selectCpuFallback": "{{engine}}: draait op de CPU — {{reason}}",
+    "selectWithCaveat": "Overgeschakeld naar {{engine}} — {{reason}}",
+    "generateCaveat": "{{engine}} kan traag zijn op deze machine — {{reason}}",
+    "cpuLongText": "{{engine}} draait hier op de CPU en deze tekst is lang — de generatie overschrijdt mogelijk het tijdsbudget. Kortere tekst of een CPU-geoptimaliseerde engine (OmniVoice GGUF, Supertonic-3) is veel sneller.",
+    "cpuLongTextTuned": "{{engine}} draait hier op de CPU en deze tekst is lang — de generatie overschrijdt mogelijk het tijdsbudget. Kortere tekst, of opsplitsen in meerdere takes, is veel sneller."
   },
   "capture": {
     "desc": "Globale sneltoetsen werken alleen in de desktop-app. De webinterface gebruikt een sneltoets <1>Ctrl+Shift+Spatie</1> op de pagina terwijl het venster focus heeft.",
@@ -1435,6 +1440,9 @@
     "desc": "Maak je geen zorgen: de rest van de app werkt nog steeds. U kunt van tabblad wisselen of het hieronder opnieuw proberen.",
     "tryAgain": "Probeer het opnieuw",
     "openDocs": "Open documenten voor deze fout",
+    "crash_port_in_use": "De backend kon niet starten omdat poort 3900 al in gebruik is — een andere kopie van OmniVoice (of een app die die poort claimde) houdt hem bezet. Sluit de andere instantie en start opnieuw; als er niets zichtbaar draait, houdt een verweesde backend uit een eerdere sessie de poort nog vast.",
+    "crash_oom_kill": "Het proces werd geforceerd afgesloten (signaal 9), wat meestal betekent dat het besturingssysteem geen geheugen (RAM) meer had. Sluit geheugenintensieve apps, kies een kleiner ASR-model bij Instellingen → Modellen, of ontlaad het TTS-model vóór het transcriberen.",
+    "crash_native_fault": "Het crashte binnen de compute-stack in plaats van door geheugengebrek — dat wijst op een GPU-stuurprogramma dat niet overeenkomt met de meegeleverde CUDA-runtime, of op een modelbestand dat onvolledig is gedownload. Werk uw GPU-stuurprogramma bij en download het model opnieuw via Instellingen → Modellen (een gedeeltelijke download wordt ter plekke hersteld). Blijft het gebeuren, schakel dan in Instellingen → Engines over op een crash-geïsoleerde engine — \"OmniVoice (subprocess)\" voor synthese, \"Faster-Whisper (crash-isolated subprocess)\" voor transcriptie. Die draaien het model in een apart proces, zodat zo'n crash dat proces neerhaalt in plaats van de hele backend.",
     "report": "Deze bug melden",
     "report_failed": "Kon het bugrapport niet openen. Probeer het opnieuw of kopieer de details hierboven naar een nieuwe issue.",
     "searchIssues": "Vergelijkbare problemen zoeken",

@@ -104,7 +104,7 @@
     "update_check_failed": "更新チェックに失敗しました: {{message}}",
     "save_failed": "保存に失敗しました: {{message}}",
     "clear_failed": "クリアに失敗しました: {{message}}",
-    "engine_switched": "{{family}} → {{engine}}",
+    "engine_switched": "{{family}} を {{engine}} に切り替えました",
     "channel_set_failed": "チャネルの設定に失敗しました: {{message}}",
     "updater_downloading": "{{version}} をダウンロード中…",
     "updater_installed": "インストール済み — 再起動中。",
@@ -578,7 +578,12 @@
     "routingRemote": "リモート",
     "routingUnknown": "不明",
     "routingEffectiveChip": "このマシンの {{device}} で実行されます",
-    "routingCaveatTitle": "GPU が選択されましたが: {{reason}}"
+    "routingCaveatTitle": "GPU が選択されましたが: {{reason}}",
+    "selectCpuFallback": "{{engine}}: CPU で実行中 — {{reason}}",
+    "selectWithCaveat": "{{engine}} に切り替えました — {{reason}}",
+    "generateCaveat": "このマシンでは {{engine}} の生成が遅くなる可能性があります — {{reason}}",
+    "cpuLongText": "ここでは {{engine}} が CPU で実行され、このテキストは長いため、生成が時間制限を超える可能性があります。短いテキスト、または CPU 向けエンジン（OmniVoice GGUF、Supertonic-3）のほうが大幅に高速です。",
+    "cpuLongTextTuned": "ここでは {{engine}} が CPU で実行され、このテキストは長いため、生成が時間制限を超える可能性があります。テキストを短くするか、数回に分けたほうが大幅に高速です。"
   },
   "capture": {
     "desc": "グローバル ホットキーはデスクトップ アプリでのみ機能します。 Web UI は、ウィンドウにフォーカスがある間、ページ内 <1>Ctrl+Shift+Space</1> ショートカットを使用します。",
@@ -1435,6 +1440,9 @@
     "desc": "心配しないでください。アプリの残りの部分は引き続き動作します。タブを切り替えるか、以下でもう一度お試しください。",
     "tryAgain": "もう一度試してください",
     "openDocs": "このエラーのドキュメントを開く",
+    "crash_port_in_use": "ポート 3900 がすでに使用されているため、バックエンドを起動できませんでした。別の OmniVoice（またはそのポートを取得したアプリ）が保持しています。もう一方を終了して再起動してください。見えている実行中のものがない場合は、前のセッションの取り残されたバックエンドがポートを保持しています。",
+    "crash_oom_kill": "強制終了されました（シグナル 9）。通常はオペレーティングシステムのメモリ（RAM）が不足して停止したことを意味します。メモリを多く使うアプリを閉じ、設定 → モデルでより小さい ASR モデルを選ぶか、文字起こしの前に TTS モデルをアンロードしてください。",
+    "crash_native_fault": "メモリ不足ではなく、計算スタックの内部でクラッシュしました。同梱の CUDA ランタイムと一致しない GPU ドライバー、またはダウンロードが不完全なモデルファイルが原因と考えられます。GPU ドライバーを更新し、設定 → モデルからモデルを再ダウンロードしてください（不完全なダウンロードはその場で修復されます）。繰り返す場合は、設定 → エンジンでクラッシュ分離エンジンに切り替えてください — 音声合成には「OmniVoice (subprocess)」、文字起こしには「Faster-Whisper (crash-isolated subprocess)」。これらはモデルを別プロセスで実行するため、このようなクラッシュはバックエンド全体ではなくそのプロセスだけを停止させます。",
     "report": "このバグを報告",
     "report_failed": "バグレポートを開けませんでした。もう一度お試しいただくか、上記の内容を新しい Issue にコピーしてください。",
     "searchIssues": "類似の問題を検索",

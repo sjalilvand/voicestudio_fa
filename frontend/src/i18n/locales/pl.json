@@ -104,7 +104,7 @@
     "update_check_failed": "Sprawdzanie aktualizacji nie powiodło się: {{message}}",
     "save_failed": "Zapis nie powiódł się: {{message}}",
     "clear_failed": "Wyczyszczenie nie powiodło się: {{message}}",
-    "engine_switched": "{{family}} → {{engine}}",
+    "engine_switched": "Przełączono {{family}} na {{engine}}",
     "channel_set_failed": "Nie udało się ustawić kanału: {{message}}",
     "updater_downloading": "Pobieranie {{version}}…",
     "updater_installed": "Zainstalowano — uruchamiam ponownie.",
@@ -578,7 +578,12 @@
     "routingRemote": "Zdalny",
     "routingUnknown": "Nieznany",
     "routingEffectiveChip": "Działa na {{device}} na tym komputerze",
-    "routingCaveatTitle": "Wybrano procesor graficzny, ale: {{reason}}"
+    "routingCaveatTitle": "Wybrano procesor graficzny, ale: {{reason}}",
+    "selectCpuFallback": "{{engine}}: działa na CPU — {{reason}}",
+    "selectWithCaveat": "Przełączono na {{engine}} — {{reason}}",
+    "generateCaveat": "{{engine}} może działać wolno na tym komputerze — {{reason}}",
+    "cpuLongText": "{{engine}} działa tutaj na CPU, a ten tekst jest długi — generowanie może przekroczyć limit czasu. Krótszy tekst lub silnik zoptymalizowany pod CPU (OmniVoice GGUF, Supertonic-3) będzie znacznie szybszy.",
+    "cpuLongTextTuned": "{{engine}} działa tutaj na CPU, a ten tekst jest długi — generowanie może przekroczyć limit czasu. Krótszy tekst lub podzielenie go na kilka części będzie znacznie szybsze."
   },
   "capture": {
     "desc": "Globalne skróty klawiszowe działają tylko w aplikacji komputerowej. Interfejs WWW korzysta ze skrótu <1>Ctrl+Shift+Spacja</1> znajdującego się na stronie, gdy okno jest aktywne.",
@@ -1435,6 +1440,9 @@
     "desc": "Nie martw się — reszta aplikacji nadal działa. Możesz przełączyć karty lub spróbować ponownie poniżej.",
     "tryAgain": "Spróbuj ponownie",
     "openDocs": "Otwórz dokumenty dotyczące tego błędu",
+    "crash_port_in_use": "Nie udało się uruchomić backendu, ponieważ port 3900 jest już zajęty — trzyma go inna kopia OmniVoice (lub aplikacja, która przejęła ten port). Zamknij drugą instancję i uruchom ponownie; jeśli nic widocznie nie działa, port nadal blokuje osierocony backend z poprzedniej sesji.",
+    "crash_oom_kill": "Proces został zabity (sygnał 9), co zwykle oznacza, że systemowi zabrakło pamięci (RAM). Zamknij aplikacje zużywające dużo pamięci, wybierz mniejszy model ASR w Ustawieniach → Modele albo zwolnij model TTS przed transkrypcją.",
+    "crash_native_fault": "Awaria nastąpiła wewnątrz stosu obliczeniowego, a nie z powodu braku pamięci — wskazuje to na sterownik GPU niezgodny z dołączonym środowiskiem CUDA albo na niekompletnie pobrany plik modelu. Zaktualizuj sterownik GPU, a następnie pobierz model ponownie w Ustawieniach → Modele (naprawia częściowe pobranie w miejscu). Jeśli problem się powtarza, przełącz się na silnik izolowany w Ustawieniach → Silniki — „OmniVoice (subprocess)” do syntezy, „Faster-Whisper (crash-isolated subprocess)” do transkrypcji. Uruchamiają one model w osobnym procesie, więc taka awaria kończy ten proces zamiast całego backendu.",
     "report": "Zgłoś ten błąd",
     "report_failed": "Nie udało się otworzyć zgłoszenia błędu. Spróbuj ponownie lub skopiuj powyższe szczegóły do nowego zgłoszenia.",
     "searchIssues": "Szukaj podobnych problemów",

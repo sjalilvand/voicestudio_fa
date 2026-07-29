@@ -325,7 +325,7 @@
     "update_check_failed": "更新检查失败：{{message}}",
     "save_failed": "保存失败：{{message}}",
     "clear_failed": "清除失败：{{message}}",
-    "engine_switched": "{{family}} → {{engine}}",
+    "engine_switched": "已将 {{family}} 切换到 {{engine}}",
     "channel_set_failed": "无法设置频道：{{message}}",
     "updater_downloading": "正在下载 {{version}}...",
     "updater_installed": "已安装 - 重新启动。",
@@ -537,7 +537,12 @@
     "routingEffectiveChip": "在此机器上的 {{device}} 上运行",
     "routingCaveatTitle": "已选择 GPU，但是：{{reason}}",
     "curatedModelLabel": "模型",
-    "curatedModelAria": "{{engine}} 的模型"
+    "curatedModelAria": "{{engine}} 的模型",
+    "selectCpuFallback": "{{engine}}：正在 CPU 上运行 — {{reason}}",
+    "selectWithCaveat": "已切换到 {{engine}} — {{reason}}",
+    "generateCaveat": "{{engine}} 在这台机器上可能较慢 — {{reason}}",
+    "cpuLongText": "{{engine}} 在此机器上使用 CPU 运行，而这段文本较长 — 生成可能超出时间预算。缩短文本或改用面向 CPU 优化的引擎（OmniVoice GGUF、Supertonic-3）会快得多。",
+    "cpuLongTextTuned": "{{engine}} 在此机器上使用 CPU 运行，而这段文本较长 — 生成可能超出时间预算。缩短文本或分成几次生成会快得多。"
   },
   "capture": {
     "desc": "全局热键仅在桌面应用中有效。网页界面使用页面内快捷键 <1>Ctrl+Shift+Space</1>（窗口聚焦时可用）。",
@@ -1441,6 +1446,9 @@
     "desc": "别担心——应用程序的其余部分仍然有效。您可以切换选项卡，或在下面重试。",
     "tryAgain": "再试一次",
     "openDocs": "打开此错误的文档",
+    "crash_port_in_use": "后端无法启动，因为端口 3900 已被占用 — 另一个 OmniVoice 实例（或占用该端口的应用）正持有它。请退出另一个实例后重新启动；如果看不到任何正在运行的程序，则是上一次会话遗留的后端仍占用该端口。",
+    "crash_oom_kill": "进程被强制终止（信号 9），通常表示操作系统内存（RAM）不足而将其停止。请关闭占用内存较大的应用，在设置 → 模型中选择更小的 ASR 模型，或在转写前卸载 TTS 模型。",
+    "crash_native_fault": "它是在计算栈内部崩溃的，而不是内存耗尽 — 这通常指向与内置 CUDA 运行时不匹配的 GPU 驱动，或未完整下载的模型文件。请更新 GPU 驱动，然后在设置 → 模型中重新下载该模型（可就地修复未完成的下载）。如果反复出现，请在设置 → 引擎中切换到崩溃隔离引擎 — 合成用「OmniVoice (subprocess)」，转写用「Faster-Whisper (crash-isolated subprocess)」。它们在独立进程中运行模型，因此这类崩溃只会终止该进程，而不是整个后端。",
     "report": "报告此错误",
     "report_failed": "无法打开错误报告。请重试，或将上面的详细信息复制到新的 issue 中。",
     "searchIssues": "搜索类似问题",
