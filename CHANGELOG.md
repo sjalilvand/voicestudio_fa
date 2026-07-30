@@ -10,12 +10,46 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 **Highlights**
 
+- RTX 40-series GPUs are used again instead of being sent to the CPU
+- A warning before a slow generation, rather than after a five-minute wait
+- The watermark can be turned off in Settings, as the docs always said
+- macOS support now matches what the app actually delivers
 - Linux AppImage: a blank white window on rolling distros (Mesa 26.1+) now starts normally
+
+### Changed
+
+- macOS floor raised to 13.3 (Ventura) — the frontend has required Safari 16.4 for some time, so macOS 12 was a promise the stack could not keep (#1268)
+
+### Added
+
+- Settings → Privacy now has an **Invisible watermark** toggle. On by default, available to everyone, and it only affects audio generated after the change. (#1308)
+- A new opt-in crash-isolated TTS engine, so a native crash takes down the sidecar instead of the whole backend — thanks @paoloantinori! (#1292, #1298, #1304)
 
 ### Fixed
 
+- Every RTX 40-series card (4060–4090) was declared unsupported and silently run on the CPU. The compatibility gate demanded an exact `sm_89` match, but PyTorch ships `sm_86` kernels that already cover Ada. (#1285)
+- Under-provisioned hardware is now flagged **before** a synthesis starts instead of after the full compute budget expires. (#1240, #1246, #1248, #1277, #1283, #1284)
+- Long text on a CPU-only machine gets the same warning up front. (#1260, #1299)
+- A crash inside the compute stack no longer blames VRAM: a segfault or Windows access violation now points at the GPU driver or an incomplete model download. (#1275, #1293)
+- ffmpeg failures report the failure instead of ffmpeg's build configuration. (#1309)
+- A cut TLS connection is explained in words rather than as `_ssl.c:1016`. (#1301)
+- `torch.compile` is skipped when the torch library path contains a space, instead of failing in the linker on every load. (#1266)
+- macOS Preview updates work again — the updater bundle had been colliding with itself since early July. (#1281)
+- A dub whose transcription stream is cut by a reverse proxy now says so, instead of blaming the ASR model. (#1317)
+- The dev backend going quiet under `--reload` is named as auto-reload rather than reported as a crash. (#1261)
 - Linux AppImage: a permanently blank window on Mesa 26.1+ hosts (Arch/CachyOS and other rolling distros) — the bundled WebKit ran against a newer system Mesa than it was built for, and no environment variable could help because the failure precedes every rendering flag; the launcher now lets a newer system WebKitGTK take precedence — thanks @rvasilev and @HannaLovvold! (#1258, #1244)
 - Linux AppImage: `OMNIVOICE_PREFER_SYSTEM_WEBKIT=1` forces your own WebKitGTK for hosts where its version can't be read automatically (no `pkg-config`), and `=0` forces the bundled one (#1258)
+
+### Docs
+
+- Engine acceptance: new `docs/engine-acceptance.md` documents the job map, the bar a new engine must clear, and the out-of-tree path (#1306)
+- macOS install notes and the README support table now state the real floor (#1268)
+- Contact: the project X account is listed alongside Discord (#1313)
+
+### CI
+
+- Windows smoke tests stopped silently passing a broken ffmpeg install, and every smoke leg is now budgeted for a cold dependency install. (#1290)
+- Test suites no longer leak config paths into one another, which had been failing unrelated pull requests. (#1269)
 
 ## [0.4.2] — 2026-07-28
 
