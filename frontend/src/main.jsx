@@ -6,8 +6,9 @@ if (import.meta.env.DEV && !window.__vite_plugin_react_preamble_installed__) {
   window.__vite_plugin_react_preamble_installed__ = true;
 }
 
-// Web-platform gap fills for the oldest WebView we support (macOS 12 ships
-// WKWebView 15.6). MUST be first: these are touched during the first React
+// Web-platform gap fills for the oldest WebView we support (macOS 13.3 ships
+// WKWebView 16.4; Linux takes whatever WebKitGTK the distro has, which is the
+// version we cannot pin). MUST be first: these are touched during the first React
 // render, so a missing one throws mid-render and leaves a dead window rather
 // than a degraded feature (#1245).
 import './utils/webCompat.js';
