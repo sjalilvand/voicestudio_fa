@@ -109,3 +109,42 @@ def _clear_asr_installed_memo(request):
     _clear_all()
     yield
     _clear_all()
+
+
+@pytest.fixture(autouse=True)
+def _clean_model_manager_shutdown_state():
+    """Start every test with the model manager NOT in shutdown mode (#1269).
+
+    ``model_manager._shutting_down`` is a module-global Event and the GPU pool is
+    a module-global executor. Any test that runs the app lifespan flips both on
+    the way out — ``begin_shutdown()`` plus ``_reset_gpu_pool()`` — and nothing
+    puts them back, because in production that state is correct: the process is
+    ending.
+
+    Across a combined ``pytest tests/ backend/tests/`` session it is not
+    correct, and it is not a cosmetic leak. A test that arrives with the flag set
+    finds a shut-down executor, so its very first ``run_in_executor`` raises
+    "cannot schedule new futures after shutdown" — which the preload path
+    classifies as a benign shutdown and swallows. The symptom is a load that
+    silently never starts: ``test_lifespan_shutdown_mid_load_is_clean_and_clears
+    _sentinel`` failed on ``assert started.is_set()`` for exactly this reason,
+    while passing alone.
+
+    Reset before AND after: before so an inherited flag cannot decide this test,
+    after so a test that legitimately shuts down does not hand the state on.
+    """
+    import services.model_manager as _mm
+
+    def _clean():
+        # Deliberately NOT wrapped in try/except. A reset that fails silently
+        # leaves the next test with stale shutdown or executor state, which is
+        # precisely the order-dependent failure this fixture exists to remove —
+        # swallowing the error would defeat the fixture while looking like it
+        # worked (CodeRabbit). If either of these can raise, that is a real
+        # problem in model_manager and it should be loud.
+        _mm.reset_shutdown_flag()
+        _mm._reset_gpu_pool()
+
+    _clean()
+    yield
+    _clean()
