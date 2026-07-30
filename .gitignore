@@ -150,3 +150,6 @@ playwright-report/
 
 # probe — generated HTML reports
 tests/probe/reports/
+
+# local Backlog.md task tracker; never tracked upstream
+backlog/
