@@ -580,6 +580,10 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
         # wait_for already cancelled the asyncio wrapper; the worker thread
         # keeps going regardless. Consume whatever it eventually produces.
         fut.add_done_callback(_swallow_abandoned)
+        # Capture the stacks BEFORE reset(): reset() replaces the executor, and
+        # once the wedged thread is no longer a pool worker we can no longer
+        # tell it apart from any other thread in the process.
+        log_gpu_pool_worker_stacks(what, timeout, executor=ex)
         _reset = getattr(ex, "reset", None)
         if callable(_reset):
             try:
@@ -596,6 +600,115 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
         raise GpuJobTimeoutError(
             _timeout_guidance(what, timeout, min_vram_gb)
         ) from timeout_exc
+
+
+#: Frames to keep per wedged worker. Deep enough to cross the engine adapter
+#: into the model's own call stack, shallow enough that a 1-worker and an
+#: 8-worker host both produce a log a human will actually read.
+_WEDGE_STACK_DEPTH = 25
+
+
+def _live_pool_thread_idents(executor) -> "set | None":
+    """Thread idents belonging to ``executor``'s CURRENT inner pool, or None
+    when they can't be established.
+
+    Needed because a wedged worker survives ``reset()`` — it cannot be
+    cancelled, so it keeps running under the same ``gpu-pool`` name the
+    replacement pool also uses. Without this, the second timeout in a session
+    logs the stale thread alongside the live one with nothing to tell them
+    apart, and the stale stack is the more misleading of the two: it names an
+    operation that is no longer the one that just failed (greptile).
+
+    ``ThreadPoolExecutor._threads`` is private but has been the storage for its
+    worker set since 3.2 and is stable across every version we support; None
+    here is a soft degrade to "label nothing", never an error.
+    """
+    pool = getattr(executor, "_pool", executor)  # unwrap _ResilientGpuPool
+    threads = getattr(pool, "_threads", None)
+    if not threads:
+        return None
+    try:
+        return {t.ident for t in threads if t.ident is not None}
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def log_gpu_pool_worker_stacks(what: str, timeout: float, executor=None) -> str:
+    """Log where every GPU-pool worker is currently executing. Never raises.
+
+    The gap this closes (#1338/#1329/#1348): when a job overran its execution
+    budget we logged *that* it had, reset the pool, and returned a message
+    about the machine being too slow — with no record of what the abandoned
+    thread was actually doing. So every report of this class arrived
+    undiagnosable, and the only way forward was to ask the user to reproduce it
+    under a debugger. On an RTX 3060 rendering one sentence, "too heavy for the
+    available compute" is almost certainly the wrong story, and nothing in the
+    log could contradict it.
+
+    ``sys._current_frames()`` reads the frame of every live thread, including
+    one wedged inside a C call — which is exactly the case here, since the
+    worker cannot be cancelled and keeps running after we abandon it. Filtered
+    to gpu-pool workers so the log names the stuck job, not the web server.
+
+    Returns the formatted text (also for tests); empty when nothing matched.
+    """
+    try:
+        import sys as _sys
+        import threading as _threading
+        import traceback as _traceback
+
+        names = {
+            t.ident: t.name for t in _threading.enumerate()
+            if t.ident is not None and t.name.startswith(_GPU_POOL_THREAD_PREFIX)
+        }
+        if not names:
+            return ""
+        live = _live_pool_thread_idents(executor) if executor is not None else None
+        frames = _sys._current_frames()
+        blocks = []
+        for ident, name in sorted(names.items(), key=lambda kv: kv[1]):
+            frame = frames.get(ident)
+            if frame is None:
+                continue
+            if live is None:
+                label = name
+            elif ident in live:
+                label = f"{name} (current pool)"
+            else:
+                label = (
+                    f"{name} (STALE — a worker abandoned by an earlier timeout, "
+                    f"still running; not the job that just failed)"
+                )
+            stack = "".join(_traceback.format_stack(frame, limit=_WEDGE_STACK_DEPTH))
+            blocks.append(f"--- {label} ---\n{stack.rstrip()}")
+        if not blocks:
+            return ""
+        # Stack frames carry absolute source paths, and on a user's machine
+        # those start with their home directory — i.e. their account name. This
+        # log lands in backend.log, which goes into diagnostic bundles and
+        # prefilled bug reports, so it must be sanitized like every other
+        # surfaced text (CWE-532; CodeRabbit). core.failure.sanitize also
+        # redacts HF tokens and *TOKEN*/*KEY*/*SECRET* env values, which a
+        # frame's local-variable-free repr should never contain — but "should
+        # never" is not a reason to log it unredacted.
+        try:
+            from core.failure import sanitize as _sanitize
+            text = _sanitize("\n".join(blocks))
+        except Exception:  # noqa: BLE001 — never lose the diagnostic to this
+            logger.exception("Could not sanitize GPU-pool worker stacks; "
+                             "omitting them rather than logging raw paths")
+            return ""
+        logger.warning(
+            "%s exceeded %.0fs — stack of every GPU-pool worker at the moment "
+            "it was abandoned. The deepest frame is where it is stuck; if that "
+            "is inside the model rather than a data copy, this is a hang and "
+            "not an under-provisioned machine (#1338):\n%s",
+            _log_safe(what), timeout, text,
+        )
+        return text
+    except Exception:  # noqa: BLE001 — diagnostics must never mask the timeout
+        logger.exception("Could not capture GPU-pool worker stacks")
+        return ""
 
 
 def _timeout_guidance(what: str, timeout: float, min_vram_gb: float = 0.0) -> str:
