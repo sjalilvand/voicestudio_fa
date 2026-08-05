@@ -84,6 +84,35 @@ Or, as a quick workaround, switch ASR to **faster-whisper** in
 antivirus exclusions (see §1). Newer builds classify this error and show the
 reinstall hint directly instead of a bare path + "try restarting".
 
+### 1a-bis. Same wording, different cause: torch ↔ torchvision mismatch
+
+**Symptom:** identical `Could not import module 'AutoFeatureExtractor'` /
+`'GenerationMixin'` errors — but reinstalling transformers alone changes
+nothing.
+
+**Cause:** transformers' lazy importer wraps whatever really failed in that
+generic message. When the real failure is
+`RuntimeError: operator torchvision::nms does not exist`, the problem is a
+**torch/torchvision version mismatch** (one was upgraded without the other),
+and transformers itself is fine.
+
+**Fix:** reinstall the trio **together, at the pinned versions** — a plain
+unpinned reinstall can itself resolve a drifted pair
+([#1357](https://github.com/debpalash/OmniVoice-Studio/issues/1357)):
+
+```
+uv pip install --python .venv --reinstall torch==2.8.0 torchaudio==2.8.0 torchvision==0.23.0 transformers
+```
+
+run in the project folder. The versions mirror `deploy/torch-constraints.txt`
+(source checkouts can pass `--constraint deploy/torch-constraints.txt` instead;
+desktop installs don't ship that file, which is why the literal pins are shown).
+They carry no `+cu128`/`+rocm` suffix on purpose — vendor GPU builds match the
+pins rather than being replaced.
+
+**Linked issues:** [#1357](https://github.com/debpalash/OmniVoice-Studio/issues/1357),
+[#1376](https://github.com/debpalash/OmniVoice-Studio/issues/1376)
+
 ### 1b. Dubbing: `ASR backend initialization failed: No module named 'lightning_fabric'`
 
 **Symptom:** transcription/dubbing fails at the start with
