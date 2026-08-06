@@ -23,7 +23,7 @@ const STABLE_MANIFEST: &str =
 const PREVIEW_MANIFEST: &str =
     "https://github.com/debpalash/VoiceStudio/releases/download/preview/latest.json";
 
-/// Cross-channel ordering of OmniVoice build versions (#326).
+/// Cross-channel ordering of VoiceStudio build versions (#326).
 ///
 /// Preview builds are published as `X.Y.Z-N` (e.g. `0.3.5-41`): base `X.Y.Z`
 /// is the latest stable tag at build time and `-N` counts `main` builds

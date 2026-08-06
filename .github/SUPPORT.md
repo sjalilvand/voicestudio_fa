@@ -11,15 +11,15 @@
 
 ## Uninstalling / removing all data
 
-OmniVoice is fully local — there's nothing to deactivate, just folders to
+VoiceStudio is fully local — there's nothing to deactivate, just folders to
 delete. `scripts/uninstall.sh` (macOS/Linux) or `scripts\uninstall.ps1`
-(Windows) lists every OmniVoice folder with its size (dry-run first) and
+(Windows) lists every VoiceStudio folder with its size (dry-run first) and
 removes them on `--yes`. The complete per-platform path list is in
 [docs/install/uninstall.md](docs/install/uninstall.md).
 
 ## Model sources we support
 
-OmniVoice is built on the idea that everything it runs is **open and available
+VoiceStudio is built on the idea that everything it runs is **open and available
 to everyone**: free, public models with verifiable sources and licenses
 (Hugging Face repos, official project releases), so the whole community can
 use, test, and debug the same thing.

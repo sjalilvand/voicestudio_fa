@@ -1,7 +1,7 @@
 /**
  * Settings → Sharing → Remote backend panel (parity program Wave 2.3).
  *
- * Point this app at an OmniVoice backend running elsewhere (a GPU box over
+ * Point this app at a VoiceStudio backend running elsewhere (a GPU box over
  * Tailscale, a Docker deployment). Stores the URL + API key in localStorage
  * — they are CLIENT-side settings — and reloads the app so api/client.ts
  * re-resolves the base. "Test" hits {url}/health (with the key) and shows

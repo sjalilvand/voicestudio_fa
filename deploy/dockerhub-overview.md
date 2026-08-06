@@ -1,4 +1,4 @@
-# OmniVoice Studio
+# VoiceStudio
 
 **The open-source ElevenLabs alternative.** Real-time dictation, zero-shot voice
 cloning, and cinematic video dubbing — fully local, no API keys, no accounts.
@@ -12,9 +12,9 @@ cloning, and cinematic video dubbing — fully local, no API keys, no accounts.
 
 [![debpalash/VoiceStudio on Trendshift](https://trendshift.io/api/badge/trendshift/repositories/28176/daily?language=Python)](https://trendshift.io/repositories/28176?utm_source=trendshift-badge&utm_medium=badge&utm_campaign=badge-trendshift-28176)
 
-![OmniVoice Studio — the open-source ElevenLabs alternative](https://raw.githubusercontent.com/debpalash/VoiceStudio/main/.github/assets/social-preview.png)
+![VoiceStudio — the open-source ElevenLabs alternative](https://raw.githubusercontent.com/debpalash/VoiceStudio/main/.github/assets/social-preview.png)
 
-OmniVoice runs entirely on your own hardware (CUDA / MPS / ROCm / CPU
+VoiceStudio runs entirely on your own hardware (CUDA / MPS / ROCm / CPU
 auto-detect) — nothing is sent to the cloud. This image is the **headless
 web-server build**: a FastAPI backend serving a pre-built React UI over HTTP, so
 you can run it on a homelab box, a GPU server, or anywhere Docker runs and open
@@ -113,7 +113,7 @@ are mirrored on GHCR at
 - **🔊 Vocal Isolation** — Demucs splits speech from music and keeps the background.
 - **👥 Speaker Diarization** — Pyannote + WhisperX auto-identify who said what.
 - **📦 Batch Queue** — drop 50 videos and walk away; per-job progress.
-- **🤖 MCP Server** — drive OmniVoice from Claude, Cursor, or any MCP client.
+- **🤖 MCP Server** — drive VoiceStudio from Claude, Cursor, or any MCP client.
 - **🛡️ AI Watermark** — invisible AudioSeal (Meta) marking that survives compression.
 - **⚡ GPU Auto-Detect** — CUDA · MPS · ROCm · CPU, with auto-offload on ≤8 GB cards.
 - **🧩 Extensible** — subclass `TTSBackend` to add any engine in ~50 lines.
@@ -144,7 +144,7 @@ more), auto-detected and selectable in Settings.
   loopback-origin gate so the admin UI works through Docker's NAT. Set it to `0`
   if you front the container with your own loopback auth proxy.
 
-> **Security:** OmniVoice ships **no authentication**. Anything that can reach the
+> **Security:** VoiceStudio ships **no authentication**. Anything that can reach the
 > URL can use the app. Before exposing it beyond localhost, put it behind a
 > reverse proxy with auth (Caddy `basic_auth`, nginx + htpasswd) or a private
 > overlay (Tailscale, ZeroTier).
@@ -158,4 +158,4 @@ more), auto-detected and selectable in Settings.
 - **Troubleshooting:** <https://github.com/debpalash/VoiceStudio/blob/main/docs/install/troubleshooting.md>
 - **Community / support:** [Discord](https://discord.gg/bzQavDfVV9)
 
-OmniVoice Studio is in active beta and licensed under AGPL-3.0.
+VoiceStudio is in active beta and licensed under AGPL-3.0.

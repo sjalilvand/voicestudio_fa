@@ -1,6 +1,6 @@
-# OmniVoice Studio — CosyVoice Engine
+# VoiceStudio — CosyVoice Engine
 
-CosyVoice is one of the multilingual TTS engines OmniVoice can drive. It does
+CosyVoice is one of the multilingual TTS engines VoiceStudio can drive. It does
 zero-shot voice cloning across 9+ languages with separate models for "base",
 "instruct", and "SFT" use cases.
 

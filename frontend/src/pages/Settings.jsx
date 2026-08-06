@@ -190,7 +190,7 @@ export default function Settings() {
     })();
     const fmtGB = (v) => (typeof v === 'number' ? `${v.toFixed(2)} GB` : '—');
     const lines = [
-      '### OmniVoice Studio diagnostics',
+      '### VoiceStudio diagnostics',
       '',
       `- **App version:** ${resolveAboutVersion(appVersion, info)}`,
       `- **Tauri runtime:** ${tauriVersion || (isTauri() ? '—' : 'web preview')}`,

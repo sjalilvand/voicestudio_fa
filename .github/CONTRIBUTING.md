@@ -1,6 +1,6 @@
-# Contributing to OmniVoice Studio
+# Contributing to VoiceStudio
 
-Thanks for your interest in improving OmniVoice Studio! This guide covers everything you need to get started.
+Thanks for your interest in improving VoiceStudio! This guide covers everything you need to get started.
 
 ## Quick Links
 
@@ -34,7 +34,7 @@ Read it before opening a proposal; the licence check in particular ends most of 
 
 ```bash
 git clone https://github.com/debpalash/VoiceStudio.git
-cd OmniVoice-Studio
+cd VoiceStudio
 bun install
 bun run dev
 ```
@@ -78,7 +78,7 @@ The most common from-source cause is `uv` or Python not being on your PATH.
 ## Project Structure
 
 ```
-OmniVoice-Studio/
+VoiceStudio/
 ├── backend/                 # Python FastAPI server
 │   ├── api/                 # Route handlers
 │   ├── core/                # Config, prefs, constants
@@ -126,7 +126,7 @@ Open an [issue](https://github.com/debpalash/VoiceStudio/issues/new) with:
 
 ### Adding a New TTS Engine
 
-OmniVoice's TTS backend is a plugin registry. Adding a new engine takes ~50 lines:
+VoiceStudio's TTS backend is a plugin registry. Adding a new engine takes ~50 lines:
 
 1. Open `backend/services/tts_backend.py`
 2. Create a class extending `TTSBackend`:
@@ -174,7 +174,7 @@ class MyEngineBackend(TTSBackend):
 
 - **Components**: Functional components with hooks
 - **State**: Zustand stores in `src/stores/`, organized by slice
-- **CSS**: **Utilities-first + shadcn/ui, one stylesheet.** UI is built on the shadcn/ui primitives in `src/components/ui/` (wrapped by the `src/ui/` barrel, themed to the OmniVoice palette), composed with Tailwind v4 utility classes. **All styling now lives in a single file — `src/index.css`**: the `@theme` / `[data-theme]` token foundation plus the irreducible set utilities can't express (`@keyframes`, glassmorphism/`backdrop-filter`, pseudo-elements, `:has()`, unlayered cascade overrides, and styling hooks on library-generated DOM like virtualized rows / WaveSurfer). The per-component `.css` files were eliminated in the CSS→Tailwind/shadcn migration — **do not create new ones.** Reach for shadcn primitives + utilities; if a rule is genuinely irreducible, add it to `src/index.css` with a provenance comment. (The only other `.css` is the test-only visual harness. See `docs/shadcn-migration.md`.)
+- **CSS**: **Utilities-first + shadcn/ui, one stylesheet.** UI is built on the shadcn/ui primitives in `src/components/ui/` (wrapped by the `src/ui/` barrel, themed to the VoiceStudio palette), composed with Tailwind v4 utility classes. **All styling now lives in a single file — `src/index.css`**: the `@theme` / `[data-theme]` token foundation plus the irreducible set utilities can't express (`@keyframes`, glassmorphism/`backdrop-filter`, pseudo-elements, `:has()`, unlayered cascade overrides, and styling hooks on library-generated DOM like virtualized rows / WaveSurfer). The per-component `.css` files were eliminated in the CSS→Tailwind/shadcn migration — **do not create new ones.** Reach for shadcn primitives + utilities; if a rule is genuinely irreducible, add it to `src/index.css` with a provenance comment. (The only other `.css` is the test-only visual harness. See `docs/shadcn-migration.md`.)
 - **Naming**: `PascalCase` for components, `camelCase` for hooks and utils
 
 ### Rust (Tauri)
@@ -303,7 +303,7 @@ hard rules from the first prompt.
 
 ## Contribution licensing
 
-OmniVoice Studio is **AGPL-3.0-only**, and the maintainer also offers a
+VoiceStudio is **AGPL-3.0-only**, and the maintainer also offers a
 **commercial license** (see [LICENSE](LICENSE)). By submitting a contribution
 you agree that:
 

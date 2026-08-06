@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────────────────
-# OmniVoice Studio — Wave 2: Deep SEO Backlink Submission
+# VoiceStudio — Wave 2: Deep SEO Backlink Submission
 # Extended list: code mirrors, package indexes, wiki crawlers, forum pings,
 # RSS aggregators, and 100+ additional directories
 # ──────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
 SITE_URL="https://github.com/debpalash/VoiceStudio"
-SITE_NAME="OmniVoice Studio"
+SITE_NAME="VoiceStudio"
 SITE_DESC="Open-source ElevenLabs alternative — cinematic audio dubbing, voice cloning and TTS in 646 languages"
 RSS_URL="https://github.com/debpalash/VoiceStudio/releases.atom"
 GITHUB_USER="debpalash"
@@ -56,7 +56,7 @@ ED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$SITE_DESC', saf
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════════╗"
-echo "║  OmniVoice Studio — Wave 2: Deep SEO Backlink Engine           ║"
+echo "║  VoiceStudio — Wave 2: Deep SEO Backlink Engine           ║"
 echo "╚══════════════════════════════════════════════════════════════════╝"
 echo ""
 

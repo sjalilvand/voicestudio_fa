@@ -125,7 +125,7 @@ export default function MCPBindingsPanel() {
         <InfoHint learnMoreHref={MCP_DOCS_URL}>
           {t('settings.mcp_hint', {
             defaultValue:
-              'Agents reach OmniVoice at /mcp and identify themselves with a client id (e.g. claude-code). Bind that id to a voice so the agent always speaks in that profile.',
+              'Agents reach VoiceStudio at /mcp and identify themselves with a client id (e.g. claude-code). Bind that id to a voice so the agent always speaks in that profile.',
           })}
         </InfoHint>
       }

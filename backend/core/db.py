@@ -470,7 +470,7 @@ def _run_alembic_upgrade() -> None:
         )
         msg = (
             f"Database migration failed while running: {exc}. "
-            f"OmniVoice stopped instead of running on a partially migrated database, "
+            f"VoiceStudio stopped instead of running on a partially migrated database, "
             f"and nothing was auto-restored (your database at {DB_PATH} was left "
             f"exactly as the failed migration left it). "
             f"{backup_note}. "
