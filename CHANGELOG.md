@@ -32,6 +32,10 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - A new opt-in crash-isolated TTS engine, so a native crash takes down the sidecar instead of the whole backend — thanks @paoloantinori! (#1292, #1298, #1304)
 - **PocketTTS** (Kyutai), an opt-in CPU-only engine for fast, low-latency renders in six languages (en/fr/de/pt/it/es) with zero-shot cloning from a reference clip. Enable in Settings → Engines — thanks @paoloantinori! (#1306, #1328)
 
+### CI
+
+- The stdio wire protocol every engine sidecar speaks is now tested once across all nine of them, instead of against a single engine — a bug in any one sidecar's copy gets caught — thanks @paoloantinori! (#1408)
+
 ### Fixed
 
 - The voice-design model on Apple Silicon works again. Its description was being dropped before it reached the engine, so every generation failed with a raw 400 no matter what you typed. (#1405)
