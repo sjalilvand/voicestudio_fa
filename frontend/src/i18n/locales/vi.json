@@ -1969,6 +1969,8 @@
     "storage_title": "Lưu trữ",
     "portable_folder": "Thư mục di động",
     "portable_folder_desc": "Môi trường, mô hình và dữ liệu giọng nói của bạn — một thư mục, di chuyển trọn vẹn.",
+    "portable_moved": "Được ghi bên cạnh ứng dụng dưới dạng đường dẫn tương đối, nên di chuyển ứng dụng và thư mục này cùng nhau — kể cả sang máy khác hay ký tự ổ đĩa khác — vẫn giữ bản cài đặt hoạt động.",
+    "portable_moved_machine_bound": "Vị trí chính xác này được ghi nhớ trên máy này. Nếu ứng dụng hoặc thư mục này bị di chuyển, hoặc bạn dùng máy khác, bạn sẽ phải trỏ lại cho ứng dụng.",
     "env_dir": "Môi trường ứng dụng",
     "env_dir_desc": "Python runtime và các thư viện AI.",
     "data_dir": "Dữ liệu giọng nói & dự án",

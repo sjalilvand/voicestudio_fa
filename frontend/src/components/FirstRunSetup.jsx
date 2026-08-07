@@ -286,6 +286,10 @@ export default function FirstRunSetup() {
           envDir: s.defaults.envDir,
           dataDir: s.defaults.dataDir,
           modelsDir: s.defaults.modelsDir,
+          // Where a portable install would go. Seeded from whatever the app
+          // currently resolves (default beside the app, or an earlier
+          // relocation) so the row shows a real path, never "(default)".
+          portableDir: s.portable.baseDir || '',
           region: s.defaults.region,
           updateChannel: s.defaults.updateChannel,
           // Pre-select ROCm only when Rust verified the ROCm userspace is
@@ -307,7 +311,19 @@ export default function FirstRunSetup() {
   const combinedNeed = req ? req.envBytes + req.modelsBytes + req.dataBytes : 0;
 
   // Live target probes — in portable mode only the anchor folder matters.
-  const portableBase = setup?.portable?.baseDir || '';
+  const portableBase = plan?.portableDir || setup?.portable?.baseDir || '';
+  const portableDefault = setup?.portable?.defaultDir || '';
+  const portableRelocated = Boolean(
+    portableBase && portableDefault && portableBase !== portableDefault,
+  );
+  const portableAnchor = setup?.portable?.anchorDir || '';
+  // A folder INSIDE the app's own directory is recorded as a RELATIVE path, so
+  // app + folder move as a unit and the mount path may change. Anywhere else
+  // only an absolute path can be stored, and the cross-machine promise does not
+  // hold — say so rather than imply it (CodeRabbit, #1404).
+  const portableTravelsWithApp =
+    Boolean(portableAnchor) &&
+    portableBase.startsWith(portableAnchor.endsWith('/') ? portableAnchor : `${portableAnchor}/`);
   const envCheck = useTargetCheck(portable ? null : plan?.envDir);
   const dataCheck = useTargetCheck(portable ? null : plan?.dataDir);
   const modelsCheck = useTargetCheck(portable ? null : plan?.modelsDir);
@@ -377,6 +393,7 @@ export default function FirstRunSetup() {
       await invoke('complete_setup', {
         plan: {
           installMode: plan.installMode,
+          portableDir: clean(plan.portableDir),
           envDir: clean(plan.envDir),
           dataDir: clean(plan.dataDir),
           modelsDir: clean(plan.modelsDir),
@@ -602,16 +619,34 @@ export default function FirstRunSetup() {
 
               <Section title={t('firstrun.storage_title', 'Storage')} delay={2}>
                 {portable ? (
-                  <StorageRow
-                    label={t('firstrun.portable_folder', 'Portable folder')}
-                    desc={t(
-                      'firstrun.portable_folder_desc',
-                      'App environment, models, and your voice data — one folder, fully movable.',
+                  <>
+                    <StorageRow
+                      label={t('firstrun.portable_folder', 'Portable folder')}
+                      desc={t(
+                        'firstrun.portable_folder_desc',
+                        'App environment, models, and your voice data — one folder, fully movable.',
+                      )}
+                      path={portableBase}
+                      need={combinedNeed}
+                      check={portableCheck}
+                      onPick={() => pickDir('portableDir')}
+                    />
+                    {portableRelocated && (
+                      <GroupCaption
+                        text={
+                          setup.portable.anchorWritable && portableTravelsWithApp
+                            ? t(
+                                'firstrun.portable_moved',
+                                'Recorded beside the app as a relative path, so moving the app and this folder together — even to another machine or drive letter — keeps the install working.',
+                              )
+                            : t(
+                                'firstrun.portable_moved_machine_bound',
+                                'This exact location is remembered on this machine. If the app or this folder moves, or you use another machine, you will have to point the app at it again.',
+                              )
+                        }
+                      />
                     )}
-                    path={portableBase}
-                    need={combinedNeed}
-                    check={portableCheck}
-                  />
+                  </>
                 ) : (
                   <>
                     <StorageRow

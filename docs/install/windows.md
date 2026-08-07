@@ -115,25 +115,47 @@ If an install to a local non-C: drive fails anyway, capture a log with
 
 VoiceStudio has a **Portable** mode: instead of scattering data across
 `%APPDATA%` and `%LOCALAPPDATA%`, the whole install — Python env, model
-weights, voices, projects, settings — lives in a single
-`OmniVoiceStudio-Data` folder created **next to the executable**. Moving or
-copying the app folder (exe + that data folder together) relocates the entire
-install, USB-stick style.
+weights, voices, projects, settings — lives in a single folder. By **default**
+that is `OmniVoiceStudio-Data` next to the executable; you can put it anywhere
+writable from the setup screen (see below). Moving or copying the app folder
+(exe + that data folder together) relocates the entire install, USB-stick
+style.
 
-The first-run setup screen offers Portable whenever the folder next to
-`VoiceStudio.exe` is writable. A default MSI install goes to
-`C:\Program Files`, which is *not* user-writable — that's why Portable shows
-as greyed out after a default install
-([#766](https://github.com/debpalash/VoiceStudio/issues/766)). To enable
-it, install to a user-writable folder instead:
+The first-run setup screen offers Portable, and the folder is **yours to
+choose** — press **Change…** on the Portable folder row and point it at any
+writable location (an external SSD, a second drive, a USB stick).
+
+Where the folder lives decides how far it travels, and the setup screen tells
+you which of these you're getting:
+
+- **Inside the app's own folder** (e.g. `D:\Apps\VoiceStudio\MyData`, with the
+  exe in `D:\Apps\VoiceStudio`) — the `portable.path` marker records it as a
+  **relative** path. Move the app folder as a unit, to another machine or a
+  different drive letter, and the install still finds itself. This is the
+  USB-stick case Portable exists for.
+- **Somewhere else, app folder writable** (e.g. exe in `D:\Apps`, data on
+  `E:\VoiceStudio`) — the marker can only record an **absolute** path, so the
+  install is tied to that exact path. Change the drive letter or the mount
+  point and you'll have to point the app at it again.
+- **App folder read-only** (a default `C:\Program Files` MSI install) — no
+  marker can be written at all, so the location is remembered for **your user
+  account only** on this machine.
+
+That second case used to be a hard block: Portable was greyed out entirely
+after a default install
+([#766](https://github.com/debpalash/VoiceStudio/issues/766)). It no longer
+is — you just get the machine-bound variant unless the app itself sits
+somewhere writable.
+
+If you want the fully-portable version, install to a user-writable folder:
 
 - Re-run the MSI and choose a custom destination folder in the setup wizard
   (e.g. `D:\Apps\VoiceStudio`), or
 - From a terminal:
   `msiexec /i VoiceStudio.Studio_<version>_x64_en-US.msi INSTALLDIR="D:\Apps\VoiceStudio"`
 
-On the next launch, pick **Portable** on the first-run setup screen. What
-lives next to the exe afterwards:
+On the next launch, pick **Portable** on the first-run setup screen. With the
+default folder, what lives next to the exe afterwards:
 
 <!-- validate: skip -->
 ```
