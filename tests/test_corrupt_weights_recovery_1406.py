@@ -41,7 +41,7 @@ CORRUPT_WORDINGS = [
     "safetensors_rust.SafetensorError: MetadataIncompleteBuffer",
     "InvalidHeaderDeserialization",
     "UnpicklingError: invalid load key, '<'.",
-    "RuntimeError: unexpected end of file",
+    "RuntimeError: unexpected end of file while loading model.safetensors",
 ]
 
 
@@ -76,6 +76,9 @@ def test_the_two_halves_stay_distinct():
         "CUDA out of memory",
         "No such file or directory",
         "",
+        # Generic enough that zipfile, tarfile, gzip and a JSON parser all say
+        # it — on its own it must NOT trigger a multi-GB re-download.
+        "BadZipFile: unexpected end of file",
     ],
 )
 def test_unrelated_failures_are_not_swallowed(text):

@@ -738,9 +738,16 @@ _CORRUPT_WEIGHTS_PHRASES = (
     "metadataincompletebuffer",
     "invalidheaderdeserialization",
     "deserializing header",
-    # torch.load on a truncated / non-pickle .bin shard.
+    # torch.load on a truncated / non-pickle .bin shard. "invalid load key" is
+    # unambiguous — only the pickle reader says it. "unexpected end of file" is
+    # not: zipfile, tarfile, gzip and several parsers share the wording, and any
+    # of them can surface inside a model-load chain, where a false positive
+    # would force a multi-GB re-download of an undamaged cache (CodeRabbit). It
+    # therefore needs a weight-file co-marker, like the entry below.
     "invalid load key",
-    "unexpected end of file",
+    ("unexpected end of file", "safetensors"),
+    ("unexpected end of file", "pytorch_model"),
+    ("unexpected end of file", "checkpoint"),
     ("failed to load", "checkpoint", "corrupt"),
 )
 
