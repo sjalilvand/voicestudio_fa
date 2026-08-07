@@ -40,7 +40,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
-- A model file damaged by an interrupted download now repairs itself instead of failing every generation with "Error while deserializing header: header too large". Only *missing* files were repaired before; one that arrived corrupt dead-ended as a raw 500. (#1406) — thanks @overrunau!
+- A model file damaged by an interrupted download now repairs itself instead of failing every generation with "Error while deserializing header: header too large". Only *missing* files were repaired before; one that arrived corrupt dead-ended as a raw 500. — thanks @overrunau! (#1406)
 - Generating with the default engine works again on everything built from `main` since the rename — source checkouts, preview builds and Docker `:latest` all run the same backend, whose model import had been rewritten to a class name the library doesn't export, failing every generation with "cannot import name 'VoiceStudio'". The class keeps its library name, and a guard test now pins it. (#1420)
 - Running from source no longer dies at startup when a database migration is pending. Alembic resolved the migrations folder relative to wherever the app was launched from — fine from the repo root, fatal from the desktop shell (`tauri dev`), which reported "Path doesn't exist: backend/migrations" and stopped. The path is now anchored to the repo, wherever you start it. (#1420)
 - The voice-design model on Apple Silicon works again. Its description was being dropped before it reached the engine, so every generation failed with a raw 400 no matter what you typed. (#1405)

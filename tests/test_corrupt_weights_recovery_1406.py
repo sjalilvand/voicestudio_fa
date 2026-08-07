@@ -24,11 +24,13 @@ from __future__ import annotations
 
 import pytest
 
-from core.failure import (
-    classify,
-    is_corrupt_weights_message,
-    is_incomplete_cache_message,
-)
+@pytest.fixture(autouse=True)
+def failure():
+    """Resolved at run time: other suites reset `sys.modules` for app modules,
+    and a module-level binding here could assert against a stale phrase table."""
+    import core.failure as _failure
+
+    return _failure
 
 
 # ── classification ─────────────────────────────────────────────────────────
@@ -46,27 +48,27 @@ CORRUPT_WORDINGS = [
 
 
 @pytest.mark.parametrize("text", CORRUPT_WORDINGS)
-def test_corrupt_wordings_are_recognised(text):
-    assert is_corrupt_weights_message(text)
+def test_corrupt_wordings_are_recognised(failure, text):
+    assert failure.is_corrupt_weights_message(text)
 
 
 @pytest.mark.parametrize("text", CORRUPT_WORDINGS)
-def test_corrupt_wordings_classify_as_a_damaged_cache(text):
+def test_corrupt_wordings_classify_as_a_damaged_cache(failure, text):
     """Same taxonomy class as the missing-shard half: same cause, same remedy,
     same docs deeplink. Before the fix these classified as "" and shipped with
     no hint and no docs link."""
-    assert classify(text) == "MODEL_CACHE_CORRUPT"
+    assert failure.classify(text) == "MODEL_CACHE_CORRUPT"
 
 
-def test_the_two_halves_stay_distinct():
+def test_the_two_halves_stay_distinct(failure):
     """They are one class to the user and two repairs to the code — a resume
     for the missing half, a forced re-download for the damaged half. If these
     ever start matching each other's wording, the wrong repair runs."""
     missing = "repo does not appear to have a file named model.safetensors"
-    assert is_incomplete_cache_message(missing)
-    assert not is_corrupt_weights_message(missing)
-    assert is_corrupt_weights_message(REPORTED)
-    assert not is_incomplete_cache_message(REPORTED)
+    assert failure.is_incomplete_cache_message(missing)
+    assert not failure.is_corrupt_weights_message(missing)
+    assert failure.is_corrupt_weights_message(REPORTED)
+    assert not failure.is_incomplete_cache_message(REPORTED)
 
 
 @pytest.mark.parametrize(
@@ -81,10 +83,10 @@ def test_the_two_halves_stay_distinct():
         "BadZipFile: unexpected end of file",
     ],
 )
-def test_unrelated_failures_are_not_swallowed(text):
+def test_unrelated_failures_are_not_swallowed(failure, text):
     """The load's new clause is `except Exception`, so a false positive here
     would divert an unrelated failure into a multi-GB re-download."""
-    assert not is_corrupt_weights_message(text)
+    assert not failure.is_corrupt_weights_message(text)
 
 
 # ── the load path ──────────────────────────────────────────────────────────
@@ -101,6 +103,8 @@ def mm(monkeypatch):
     monkeypatch.setattr(mm, "_set_loading", lambda *a, **kw: None)
     monkeypatch.setattr(mm, "_manual_cache_delete_hint", lambda *a, **kw: "")
     monkeypatch.setattr(mm, "_repair_failure_detail", lambda *a, **kw: "")
+    # Per-process guards must not leak between cases.
+    monkeypatch.setattr(mm, "_FORCED_REDOWNLOAD_ATTEMPTED", set(), raising=False)
     return mm
 
 
@@ -174,3 +178,48 @@ def test_an_unrelated_exception_still_propagates(mm, monkeypatch):
     _drive_load(mm, monkeypatch, ValueError("something else entirely"))
     with pytest.raises(ValueError, match="something else entirely"):
         mm._load_model_sync()
+
+
+def test_a_second_failure_does_not_re_download_again(mm, monkeypatch):
+    """One bad shard must not turn into a full re-download per generate
+    request. After one forced re-fetch that did not help, say so and stop
+    (CodeRabbit)."""
+    calls = _drive_load(mm, monkeypatch, _SafetensorError(REPORTED))
+
+    # First attempt: repair runs, but the reloaded weights are still bad.
+    def _always_bad(*a, **kw):
+        calls["load"] += 1
+        raise _SafetensorError(REPORTED)
+
+    monkeypatch.setattr(mm, "_lazy_omnivoice", lambda: type(
+        "C", (), {"from_pretrained": staticmethod(_always_bad)}
+    ))
+    with pytest.raises(RuntimeError, match="still damaged"):
+        mm._load_model_sync()
+    assert calls["repair"] == [True]
+
+    # Second attempt: no further download, straight to the manual remedy.
+    with pytest.raises(RuntimeError, match="did not fix them"):
+        mm._load_model_sync()
+    assert calls["repair"] == [True], "the model was re-downloaded a second time"
+
+
+def test_a_damaged_asr_shard_does_not_re_download_the_tts_model(mm, monkeypatch):
+    """With OMNIVOICE_PRELOAD_TTS_ASR on, `_load()` also pulls the Whisper
+    checkpoint — a different repo. Blaming (and re-downloading) the TTS model
+    for its damage is gigabytes that fix nothing (CodeRabbit)."""
+    calls = _drive_load(mm, monkeypatch, _SafetensorError(REPORTED))
+    monkeypatch.setattr(mm, "should_preload_tts_asr", lambda: True)
+
+    def _fails_only_with_asr(*a, **kw):
+        calls["load"] += 1
+        if kw.get("load_asr"):
+            raise _SafetensorError(REPORTED)
+        return object()
+
+    monkeypatch.setattr(mm, "_lazy_omnivoice", lambda: type(
+        "C", (), {"from_pretrained": staticmethod(_fails_only_with_asr)}
+    ))
+    with pytest.raises(RuntimeError, match="transcription model"):
+        mm._load_model_sync()
+    assert calls["repair"] == [], "the TTS checkpoint was re-downloaded for an ASR fault"

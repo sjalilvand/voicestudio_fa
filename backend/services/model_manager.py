@@ -1406,6 +1406,13 @@ def _hf_offline() -> bool:
 # stays broken can't loop repair↔retry.
 _LINK_REPAIR_ATTEMPTED: set[str] = set()
 
+#: Repos whose weights we have already force-re-downloaded this process
+#: (#1406). Without it, a shard that stays unparseable after a full re-fetch
+#: would pull the whole model again on EVERY generate request — one bad file
+#: turning into unbounded traffic. Same once-per-repo-per-process contract as
+#: the snapshot-link repair above (CodeRabbit).
+_FORCED_REDOWNLOAD_ATTEMPTED: set[str] = set()
+
 
 def _selfheal_broken_snapshot_links(checkpoint: str) -> bool:
     """Rung 0 of cache recovery: delete-and-restore broken snapshot entries.
@@ -1784,6 +1791,39 @@ def _load_model_sync():
             below: a resume trusts a blob that is already the expected size
             and would never re-fetch the one that is actually wrong.
             """
+            if preload_asr:
+                # `_load()` also pulls the Whisper ASR checkpoint — a DIFFERENT
+                # repo. An unparseable shard there would arrive here looking
+                # identical, and re-downloading `checkpoint` would pull
+                # gigabytes, fix nothing, and blame the wrong model
+                # (CodeRabbit). One local load without ASR settles it: if the
+                # TTS weights read fine, they were never the problem.
+                try:
+                    VoiceStudio.from_pretrained(
+                        checkpoint, device_map=device, dtype=torch.float16,
+                        load_asr=False,
+                    )
+                except Exception:
+                    pass  # TTS weights are bad too — fall through and repair
+                else:
+                    raise RuntimeError(
+                        "The transcription model's files are damaged — the "
+                        "TTS model itself reads fine. Open Settings → Models, "
+                        "delete the transcription (ASR) model, and install it "
+                        "again; or set OMNIVOICE_PRELOAD_TTS_ASR=0 to stop "
+                        "loading it alongside TTS."
+                    ) from exc
+            if checkpoint in _FORCED_REDOWNLOAD_ATTEMPTED:
+                # Already re-fetched this repo once this process and it is
+                # still unparseable. Re-downloading again would be the same
+                # gigabytes for the same result, once per generate request.
+                raise RuntimeError(
+                    f"The TTS model files for {checkpoint} are damaged and a "
+                    "re-download did not fix them. Open Settings → Models, "
+                    "delete the VoiceStudio TTS model, and install it again."
+                    f"{_manual_cache_delete_hint(checkpoint)}"
+                ) from exc
+            _FORCED_REDOWNLOAD_ATTEMPTED.add(checkpoint)
             logger.warning(
                 "TTS weights for %s are present but unparseable (%s) — a "
                 "download that stopped mid-file, or a file altered on disk "
