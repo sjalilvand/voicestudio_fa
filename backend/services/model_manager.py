@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import time
 import asyncio
@@ -763,7 +764,7 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
         # Capture the stacks BEFORE reset(): reset() replaces the executor, and
         # once the wedged thread is no longer a pool worker we can no longer
         # tell it apart from any other thread in the process.
-        log_gpu_pool_worker_stacks(what, timeout, executor=ex)
+        stacks = log_gpu_pool_worker_stacks(what, timeout, executor=ex)
         _reset = getattr(ex, "reset", None)
         if callable(_reset):
             try:
@@ -778,7 +779,9 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
                 logger.exception("GPU pool reset after %s timeout failed",
                                  _log_safe(what))
         raise GpuJobTimeoutError(
-            _timeout_guidance(what, timeout, min_vram_gb)
+            _timeout_guidance(
+                what, timeout, min_vram_gb, wedged=_stack_shows_a_wedge(stacks),
+            )
         ) from timeout_exc
 
 
@@ -891,7 +894,73 @@ def log_gpu_pool_worker_stacks(what: str, timeout: float, executor=None) -> str:
         return ""
 
 
-def _timeout_guidance(what: str, timeout: float, min_vram_gb: float = 0.0) -> str:
+#: Standard-library modules whose blocking primitives a wedged worker parks in.
+#: Matched on the *file* of the deepest frame, so a user function that happens
+#: to be named ``wait`` or ``result`` cannot be mistaken for one of these.
+_WEDGE_STDLIB_FILES = (
+    "/threading.py", "\\threading.py",
+    "/asyncio/locks.py", "\\asyncio\\locks.py",
+    "/concurrent/futures/_base.py", "\\concurrent\\futures\\_base.py",
+    "/queue.py", "\\queue.py",
+)
+
+#: Blocking entry points within those modules. A thread sitting in one of these
+#: is waiting on another thread, by definition — there is no slow-but-working
+#: interpretation of it.
+_WEDGE_FUNCTIONS = frozenset({
+    "acquire", "wait", "result", "get", "join", "_wait_for_tstate_lock",
+})
+
+_FRAME_HEAD = re.compile(r'^\s*File "(?P<file>.+)", line \d+, in (?P<func>\S+)\s*$')
+
+
+def _stack_shows_a_wedge(stacks: "str | None") -> bool:
+    """True when the abandoned worker's DEEPEST frame is a blocking wait.
+
+    The message this feeds is the one users actually read, and for years it
+    said the same thing whatever happened: "too heavy for the available
+    compute". That is a specific, testable claim, and when the worker is
+    parked on a lock it is simply false — nothing was computed, so nothing was
+    too heavy. #1416 and #1419 both arrived as "my machine is too slow"
+    reports from people whose jobs never ran at all (a cold load waiting on a
+    lock owned by another event loop, #1417), and #1329 is the same wedge seen
+    from the dub loop. Every one of them was sent to look at their hardware.
+
+    Only the last frame counts, and it must be a blocking primitive in a
+    standard-library module. Both halves matter (CodeRabbit): a compute job's
+    *callers* routinely include a lock it has already left, so scanning the
+    whole stack would flag nearly everything; and an application function
+    named ``wait`` or ``result`` is not evidence of anything, so the function
+    name alone is not enough either.
+
+    Reads the text :func:`log_gpu_pool_worker_stacks` already captured — no
+    second stack walk, and no cost at all on the healthy path.
+
+    Conservative: unknown or unparseable stacks return False and keep the old
+    wording. Claiming a hang we cannot see would be the same mistake pointing
+    the other way.
+    """
+    if not stacks:
+        return False
+    deepest = None
+    for line in str(stacks).splitlines():
+        m = _FRAME_HEAD.match(line)
+        if m:
+            deepest = m
+    if deepest is None:
+        return False
+    func = deepest.group("func")
+    if func not in _WEDGE_FUNCTIONS:
+        return False
+    path = deepest.group("file").replace("\\", "/")
+    return any(
+        path.endswith(tail.replace("\\", "/")) for tail in _WEDGE_STDLIB_FILES
+    )
+
+
+def _timeout_guidance(
+    what: str, timeout: float, min_vram_gb: float = 0.0, *, wedged: bool = False,
+) -> str:
     """Device-aware timeout message (#896): a CPU-only host must never be told
     to "set the engine to CPU" or blamed on VRAM — on CPU the job is simply
     compute-bound. GPU hosts keep the VRAM-contention guidance.
@@ -913,6 +982,20 @@ def _timeout_guidance(what: str, timeout: float, min_vram_gb: float = 0.0) -> st
         device_name, vram_gb = _caps.device_name, _caps.vram_gb
     except Exception:  # noqa: BLE001 — guidance must never mask the timeout
         pass
+    if wedged:
+        # The worker spent the whole budget parked on a lock. None of the
+        # hardware advice below applies — shorter text and a lighter engine
+        # cannot speed up a job that never started (#1416/#1419/#1329).
+        return (
+            f"{what} was abandoned after {timeout:.0f}s without doing any "
+            "work — it spent the whole time waiting on an internal lock, not "
+            "computing. This is a bug in VoiceStudio, not a limit of your "
+            "machine, so shorter text or a lighter engine won't help. "
+            "Restart the backend to clear it (Settings → Logs → Backend has "
+            "the stack trace that was captured), and please report it with "
+            "that log at https://github.com/debpalash/VoiceStudio/issues — "
+            "the trace names exactly where it stopped."
+        )
     common = (
         f"{what} ran for more than {timeout:.0f}s of actual compute time and "
         "was abandoned — the backend is running, but this job was too heavy "
