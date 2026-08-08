@@ -40,6 +40,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
+- The first generation on an engine that still has to install itself no longer gives up part-way. The install reports progress now, so the generation waits for it instead of hitting its own five-minute limit. (#1414)
 - Generating with the default engine works again on everything built from `main` since the rename — source checkouts, preview builds and Docker `:latest` all run the same backend, whose model import had been rewritten to a class name the library doesn't export, failing every generation with "cannot import name 'VoiceStudio'". The class keeps its library name, and a guard test now pins it. (#1420)
 - Running from source no longer dies at startup when a database migration is pending. Alembic resolved the migrations folder relative to wherever the app was launched from — fine from the repo root, fatal from the desktop shell (`tauri dev`), which reported "Path doesn't exist: backend/migrations" and stopped. The path is now anchored to the repo, wherever you start it. (#1420)
 - The first generation after startup no longer stalls or 500s while the model is still loading. A cold load reached from a worker thread waited on a lock owned by a different event loop, which either errored outright or deadlocked until the job was abandoned. (#1417)
