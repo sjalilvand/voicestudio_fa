@@ -29,6 +29,11 @@ from core.logging_filter import REDACTED, _HF_TOKEN_RE
 
 # Env vars whose *name* implies a credential — their values are redacted.
 _SECRET_NAME_RE = re.compile(r"(TOKEN|KEY|SECRET)", re.IGNORECASE)
+
+#: An HTTP 401, not any number that contains 401. Bounded by non-digits on
+#: both sides so `pytest-401`, `4012`, `1401` and `x401y` don't match while
+#: `401`, `(401)`, `status 401:` and `HTTP/1.1 401` do.
+_HTTP_401 = re.compile(r"(?<!\d)401(?!\d)")
 _REDACTED_VALUE = "***REDACTED***"
 
 # One-line "what to do" per docs-taxonomy key. Keys mirror error_docs_map's
@@ -404,8 +409,22 @@ def classify(reason: str) -> str:
         or "sslcertverificationerror" in low
     ):
         return "SSL_HANDSHAKE_FAILURE"
-    if ("huggingface" in low or "hf_token" in low or "401" in low or "unauthorized" in low) and (
-        "token" in low or "auth" in low or "401" in low or "unauthorized" in low
+    # `401` must be a standalone token, not a substring of some longer number.
+    # A bare `"401" in low` matched any path, byte count, duration or id that
+    # happened to contain those digits — and did, in CI, where pytest's
+    # numbered temp directory reached `pytest-401` and turned an audio-save
+    # failure into "set a valid HF_TOKEN". Both halves of the rule used it, so
+    # one stray number satisfied the whole condition on its own.
+    # A bare 401 is no longer sufficient evidence on its own. It used to
+    # satisfy BOTH halves of this condition, so any message containing those
+    # three digits — a path, a byte count, an id — classified as an auth
+    # failure. CI hit it when pytest's numbered temp directory reached
+    # `pytest-401` and an audio-save error came back as "set a valid
+    # HF_TOKEN". A real 401 always arrives with the word Unauthorized or an
+    # HF URL beside it, so requiring that costs nothing and closes the class.
+    has_401 = _HTTP_401.search(low) is not None
+    if ("huggingface" in low or "hf_token" in low or "unauthorized" in low) and (
+        "token" in low or "auth" in low or has_401 or "unauthorized" in low
     ):
         return "HF_AUTH_FAILED"
     # #874: a model download that failed because the CONFIGURED HF mirror is
