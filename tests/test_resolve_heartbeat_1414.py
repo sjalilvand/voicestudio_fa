@@ -160,3 +160,55 @@ def test_spawn_wraps_the_resolution(sb):
     assert "self.venv_python()" in body.split("script_path")[0], (
         "venv_python() is resolved outside the heartbeat block"
     )
+
+
+def test_no_heartbeat_write_escapes_the_context(sb, mm, monkeypatch):
+    """The late-write race (CodeRabbit, #1426).
+
+    `_beat()` can be past its `stop.wait()` and already committed to a write
+    at the moment the context exits. Signalling the stop flag without joining
+    lets that write land afterwards — and `_run_on_gpu_pool`'s `_job` pops
+    this ident right after, precisely so a stale beat cannot vouch for a later
+    job on the same (reused) worker ident. A write that arrives after the pop
+    resurrects the entry, and the next job inherits a heartbeat it never sent:
+    the wedge detector reads it as progress and keeps extending a stuck job.
+
+    The interleaving is forced rather than waited for. A patched writer parks
+    inside the write until the test releases it, so the exit path must be the
+    thing that waits — if it only signals, the write lands after the context
+    and the assertion catches it deterministically, on every run and every
+    scheduler.
+    """
+    monkeypatch.setattr(sb, "_RESOLVE_HEARTBEAT_S", 0.01)
+    monkeypatch.setattr(mm, "running_on_gpu_pool", lambda: True)
+    ident = threading.get_ident()
+    mm._MODEL_LOAD_ACTIVITY.pop(ident, None)
+
+    in_write = threading.Event()
+    release = threading.Event()
+    wrote_late = []
+
+    class _ParkingMap(dict):
+        """Stalls the heartbeat mid-write so the exit path has to wait."""
+
+        def __setitem__(self, key, value):
+            if key == ident:
+                in_write.set()
+                release.wait(5)
+                wrote_late.append(context_exited.is_set())
+            super().__setitem__(key, value)
+
+    context_exited = threading.Event()
+    monkeypatch.setattr(mm, "_MODEL_LOAD_ACTIVITY", _ParkingMap())
+
+    with sb._heartbeat_while_resolving("indextts2"):
+        assert in_write.wait(5), "the heartbeat thread never attempted a write"
+        release.set()
+    context_exited.set()
+
+    assert wrote_late, "no heartbeat write was observed"
+    assert not any(wrote_late), (
+        "a heartbeat write landed after the resolve context exited — it can "
+        "outlive the ident pop and vouch for the next job on this worker"
+    )
+    mm._MODEL_LOAD_ACTIVITY.pop(ident, None)

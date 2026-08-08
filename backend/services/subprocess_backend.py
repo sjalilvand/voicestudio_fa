@@ -328,6 +328,22 @@ def _heartbeat_while_resolving(engine_id: str):
         yield
     finally:
         stop.set()
+        # Join, don't just signal. `_beat()` can be past its `stop.wait()` and
+        # already committed to a write at the moment the flag is set, so
+        # signalling alone lets that write land at an arbitrary later point.
+        #
+        # That matters because of what runs next: `_run_on_gpu_pool`'s `_job`
+        # pops this ident from `_MODEL_LOAD_ACTIVITY` in its `finally`
+        # (model_manager.py) precisely so a stale beat cannot vouch for a
+        # future job — GPU-pool idents are reused. A write arriving after that
+        # pop resurrects the entry, and the next job scheduled onto this
+        # worker inherits a heartbeat it never emitted: the wedge detector
+        # reads it as live progress and keeps extending a job that is stuck.
+        #
+        # Joining orders the last write BEFORE the pop, so the pop clears it.
+        # Bounded, so a wedged writer degrades to the old behaviour rather
+        # than blocking the caller forever.
+        t.join(timeout=_RESOLVE_HEARTBEAT_S)
 
 
 class SubprocessBackend(TTSBackend):
