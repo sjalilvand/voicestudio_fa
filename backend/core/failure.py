@@ -30,10 +30,23 @@ from core.logging_filter import REDACTED, _HF_TOKEN_RE
 # Env vars whose *name* implies a credential — their values are redacted.
 _SECRET_NAME_RE = re.compile(r"(TOKEN|KEY|SECRET)", re.IGNORECASE)
 
-#: An HTTP 401, not any number that contains 401. Bounded by non-digits on
-#: both sides so `pytest-401`, `4012`, `1401` and `x401y` don't match while
-#: `401`, `(401)`, `status 401:` and `HTTP/1.1 401` do.
-_HTTP_401 = re.compile(r"(?<!\d)401(?!\d)")
+#: An HTTP 401, not any number or identifier that contains 401.
+#:
+#: Digit-only boundaries are not enough: they reject `4012` and `1401` but
+#: still accept `pytest-401`, `x401y` and `401.0`, so an error that mentions
+#: Hugging Face anywhere and carries one of those elsewhere still classified
+#: as an auth failure (CodeRabbit, #1427).
+#:
+#: The three guards, each for a family the others let through:
+#:   `(?<![\w.-])`  identifier / path / dotted-version prefixes — `x401y`,
+#:                  `pytest-401`, `v1.401`
+#:   `(?![\w-])`    identifier and hyphen suffixes — `401k`, `401-retry`
+#:   `(?!\.\d)`     dotted numerics — `401.0`, `401.25` (a trailing sentence
+#:                  full stop is still fine: `status 401.`)
+#:
+#: Matches what a real status code looks like: `401`, `(401)`, `status 401:`,
+#: `HTTP/1.1 401`.
+_HTTP_401 = re.compile(r"(?<![\w.-])401(?![\w-])(?!\.\d)")
 _REDACTED_VALUE = "***REDACTED***"
 
 # One-line "what to do" per docs-taxonomy key. Keys mirror error_docs_map's
@@ -409,19 +422,14 @@ def classify(reason: str) -> str:
         or "sslcertverificationerror" in low
     ):
         return "SSL_HANDSHAKE_FAILURE"
-    # `401` must be a standalone token, not a substring of some longer number.
-    # A bare `"401" in low` matched any path, byte count, duration or id that
-    # happened to contain those digits — and did, in CI, where pytest's
-    # numbered temp directory reached `pytest-401` and turned an audio-save
-    # failure into "set a valid HF_TOKEN". Both halves of the rule used it, so
-    # one stray number satisfied the whole condition on its own.
     # A bare 401 is no longer sufficient evidence on its own. It used to
-    # satisfy BOTH halves of this condition, so any message containing those
-    # three digits — a path, a byte count, an id — classified as an auth
-    # failure. CI hit it when pytest's numbered temp directory reached
-    # `pytest-401` and an audio-save error came back as "set a valid
-    # HF_TOKEN". A real 401 always arrives with the word Unauthorized or an
-    # HF URL beside it, so requiring that costs nothing and closes the class.
+    # satisfy BOTH halves of this condition, which made the `and` vacuous, so
+    # any message containing those three digits — a path, a byte count, an id
+    # — classified as an auth failure by itself. CI hit it when pytest's
+    # numbered temp directory reached `pytest-401` and an audio-save error
+    # came back as "set a valid HF_TOKEN". A real 401 always arrives with the
+    # word Unauthorized or an HF URL beside it, so requiring that costs
+    # nothing and closes the class.
     has_401 = _HTTP_401.search(low) is not None
     if ("huggingface" in low or "hf_token" in low or "unauthorized" in low) and (
         "token" in low or "auth" in low or has_401 or "unauthorized" in low

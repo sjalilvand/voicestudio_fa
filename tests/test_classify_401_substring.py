@@ -80,9 +80,42 @@ def test_a_real_auth_failure_still_classifies(classify, text):
         ("huggingface.co status 1401", False),
         ("huggingface.co (401)", True),
         ("huggingface.co HTTP/1.1 401", True),
+        # A trailing sentence full stop is punctuation, not a decimal point.
+        ("huggingface.co status 401.", True),
+        # Digit-only boundaries accepted all of these (CodeRabbit, #1427).
+        # Each is a different family, and each needs its own guard:
+        # identifier context, hyphenated context, and dotted numerics.
+        ("huggingface.co x401y", False),
+        ("huggingface.co pytest-401", False),
+        ("huggingface.co 401.0", False),
+        ("huggingface.co 401.25", False),
+        ("huggingface.co v1.401", False),
+        ("huggingface.co 401k", False),
+        ("huggingface.co run-401-retry", False),
+        ("huggingface.co /tmp/pytest-of-runner/pytest-401/speech.wav", False),
+        ("huggingface.co clip401.wav", False),
     ],
 )
 def test_401_is_matched_as_a_whole_number(text, expected):
     from core.failure import _HTTP_401
 
     assert bool(_HTTP_401.search(text)) is expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # The residual the digit-only boundary left open: an HF marker in the
+        # same message meant any of these still reached HF_AUTH_FAILED, because
+        # the subject half was satisfied by "huggingface" and the symptom half
+        # by the stray digits.
+        "huggingface.co upload failed writing /tmp/pytest-401/chunk.bin",
+        "huggingface.co cache entry clip401.wav could not be opened",
+        "huggingface.co model v1.401 is not available",
+    ],
+)
+def test_an_hf_marker_does_not_make_stray_digits_an_auth_failure(classify, text):
+    assert classify(text) != "HF_AUTH_FAILED", (
+        "a message that merely mentions Hugging Face and happens to contain "
+        "401 elsewhere was given the 'set a valid HF_TOKEN' remedy"
+    )
