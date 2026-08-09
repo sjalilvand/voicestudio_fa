@@ -272,12 +272,15 @@ def test_no_heartbeat_write_escapes_the_context(sb, mm, monkeypatch):
 
     runner = real_thread(target=_run_context)
     runner.start()
-    assert in_write.wait(5), "heartbeat never reached the parked write"
-    assert joined.wait(2), "context exit did not wait for the heartbeat helper"
-    assert not context_exited.is_set(), "context exited before the write finished"
-    release.set()
-    assert write_finished.wait(2), "parked heartbeat write did not finish"
-    runner.join(2)
+    try:
+        assert in_write.wait(5), "heartbeat never reached the parked write"
+        assert joined.wait(2), "context exit did not wait for the heartbeat helper"
+        assert not context_exited.is_set(), "context exited before the write finished"
+    finally:
+        release.set()
+        runner.join(5)
+
+    assert write_finished.is_set(), "parked heartbeat write did not finish"
     assert not runner.is_alive(), "resolve context did not exit after the write"
     assert context_exited.is_set()
     mm._MODEL_LOAD_ACTIVITY.pop(ident, None)
