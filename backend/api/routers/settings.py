@@ -1,11 +1,10 @@
 """Settings API — HF token save/clear/state endpoints (Phase 1 AUTH-03 backend half).
 
 These endpoints are the backend half of the Wave 2 Settings → API Keys
-panel. Threat T-01-03 mitigation: every write endpoint is gated by the
-router-level `require_loopback` dep, so non-loopback origins get 403
-before the handler runs. Reads are loopback-gated too — the masked
-token preview is useful telemetry that we still don't want exposed on
-the LAN.
+panel. Threat T-01-03 mitigation: the router-level `require_admin` dependency
+keeps desktop callers loopback-only and requires the long API key for every
+remote server-mode mutation. Read-only bare-Docker discovery remains available
+until an API key is configured; once configured, reads require it too.
 
 The state endpoint duplicates `/system/hf-token/state` (which lives on
 `system.py` for legacy-router compatibility); both return the same shape.
@@ -20,14 +19,14 @@ from dataclasses import asdict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from api.dependencies import require_loopback
+from api.dependencies import require_admin
 
 logger = logging.getLogger("omnivoice.api.settings")
 
 router = APIRouter(
     prefix="/api/settings",
     tags=["settings"],
-    dependencies=[Depends(require_loopback)],
+    dependencies=[Depends(require_admin)],
 )
 
 

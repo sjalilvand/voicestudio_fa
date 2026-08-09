@@ -600,6 +600,30 @@ def test_set_env_allows_loopback():
             os.environ["HF_TOKEN"] = original
 
 
+def test_server_mode_remote_without_api_key_cannot_set_executable_path(monkeypatch, tmp_path):
+    """GHAS #506: bare Docker exposure must not become an executable setter."""
+    from fastapi.testclient import TestClient
+    from main import app
+
+    executable = tmp_path / "ffmpeg"
+    executable.write_bytes(b"not actually executable")
+    original = os.environ.get("FFMPEG_PATH")
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.delenv("OMNIVOICE_API_KEY", raising=False)
+    try:
+        response = TestClient(app, client=("172.17.0.1", 50000)).post(
+            "/system/set-env",
+            json={"key": "FFMPEG_PATH", "value": str(executable)},
+        )
+        assert response.status_code == 403
+        assert os.environ.get("FFMPEG_PATH") == original
+    finally:
+        if original is None:
+            os.environ.pop("FFMPEG_PATH", None)
+        else:
+            os.environ["FFMPEG_PATH"] = original
+
+
 def test_set_env_loopback_still_validates_allowlist():
     """Even on the loopback path, keys outside the allow-list must return 400 —
     the new guard must NOT bypass the existing allow-list enforcement."""
@@ -686,4 +710,3 @@ def test_static_audio_served_with_canonical_mime():
         )
     finally:
         tmp_wav.unlink(missing_ok=True)
-

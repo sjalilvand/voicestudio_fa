@@ -206,8 +206,9 @@ origin is unenforceable — NAT rewrites the source and even a
 requirement is dropped (issue #261, else the operator is 403'd out of their own
 `/system/*`). It is replaced by a **credential rule**, not removed:
 
-- **No credential configured** (no API key, no PIN) → admin is open. The bare
-  Docker flow; exposure rests entirely on your port mapping / firewall.
+- **No API key configured** → read-only admin discovery remains available for
+  the bare Docker bootstrap flow, but `POST`/`PUT`/`PATCH`/`DELETE` requests are
+  denied. Set `OMNIVOICE_API_KEY` before changing settings remotely.
 - **A credential is configured** → admin requires the **API key** (`Authorization:
   Bearer` / `?api_key` / `ov_key` cookie), or genuine loopback. The **6-digit
   share PIN does not gate admin** (it is brute-forceable), and trusted-network

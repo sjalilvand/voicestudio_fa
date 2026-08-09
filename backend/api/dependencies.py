@@ -186,6 +186,32 @@ def require_loopback(request: Request) -> None:
     raise HTTPException(status_code=403, detail="loopback origin required")
 
 
+def require_admin(request: Request) -> None:
+    """Gate RCE/filesystem-capable admin routers.
+
+    Desktop callers keep the loopback-only contract. Docker cannot reliably
+    observe the host operator as loopback, so authenticated remote admin stays
+    available there, but every state-changing request must present the long API
+    key. An unconfigured server must never expose executable-path or filesystem
+    settings to every client that can reach its published port.
+
+    Read-only requests retain the bare-Docker bootstrap behaviour until an API
+    key is configured. Share PINs and trusted CIDRs are consumption credentials;
+    neither authorizes this gate.
+    """
+    host = request.client.host if request.client else None
+    if is_loopback(host):
+        return
+    if _server_mode():
+        method = str(getattr(request, "method", "GET")).upper()
+        read_only = method in {"GET", "HEAD", "OPTIONS"}
+        if read_only and not _admin_credential_configured(request):
+            return
+        if _request_presents_admin_credential(request):
+            return
+    raise HTTPException(status_code=403, detail="loopback origin or admin API key required")
+
+
 def require_local(request: Request) -> None:
     """Reject any request whose client.host is not loopback OR on a configured
     trusted network. The consumption-tier companion to :func:`require_loopback`:

@@ -11,7 +11,7 @@ from core.prefs import set_ as prefs_set, delete as prefs_delete
 from services import network_share
 from services import tailscale as _tailscale
 from api.schemas import SysinfoResponse, SystemInfoResponse, ModelStatusResponse
-from api.dependencies import require_loopback
+from api.dependencies import require_admin
 from fastapi.responses import FileResponse, StreamingResponse
 import torch
 import shutil
@@ -21,17 +21,16 @@ from core.version import APP_VERSION
 from services.model_manager import get_model_status, get_best_device, resolve_omnivoice_checkpoint
 from services.ffmpeg_utils import find_ffmpeg, run_ffmpeg
 
-# Router-level loopback gate. Every route mounted on `router` (GET + POST,
-# present and future) is gated by `require_loopback`, which 403s any request
-# whose `client.host` is not a loopback address. This closes the same trust
+# Router-level admin gate. Every route mounted on `router` (GET + POST,
+# present and future) is gated by `require_admin`: desktop requests must be
+# loopback; server-mode mutations require the long API key. This closes the trust
 # boundary that PR #81 only patched on `/system/set-env` and that the
 # 260518-ivy deferred-items file enumerated for follow-up: /model/unload/*,
 # /system/logs/clear, /system/logs/tauri/clear, /system/flush-memory,
 # /clean-audio (POSTs) plus the read-side info-disclosure routes
 # /system/info, /system/logs, /system/logs/tauri, /system/logs/stream.
-# This router only ever serves the local Tauri shell and the dev frontend
-# at http://127.0.0.1:3901 — both are loopback origins.
-router = APIRouter(dependencies=[Depends(require_loopback)])
+# Native Tauri/dev callers remain loopback and need no credential.
+router = APIRouter(dependencies=[Depends(require_admin)])
 logger = logging.getLogger("omnivoice.api")
 
 # Cache device checks at module load — they don't change at runtime
@@ -843,7 +842,7 @@ async def set_env_var(body: dict):
     are set on ``os.environ`` for the running process.
 
     The loopback-origin gate that previously lived inline here is now applied
-    at the router level via `dependencies=[Depends(require_loopback)]` on
+    at the router level via `dependencies=[Depends(require_admin)]` on
     `router` — see the top of this file. Every route on this router is
     gated, including this one. The 403 body and behavior are unchanged.
     """
