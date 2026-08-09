@@ -46,12 +46,17 @@ def test_a_number_containing_401_is_not_an_auth_failure(classify, text):
 
 
 def test_the_ci_failure_keeps_its_own_class(classify):
-    """Not merely 'not HF_AUTH_FAILED' — it must still classify correctly, or
-    the fix would trade one wrong answer for no answer."""
-    assert classify(
-        "Error opening '/tmp/pytest-of-runner/pytest-401/t0/speech.wav': "
-        "System error."
-    ) in ("", "AUDIO_IO_FAILED")
+    """The scratch counter must not steal the exact audio-write class."""
+    ordinary = (
+        "Writing the audio file failed: RuntimeError: System error. — target "
+        "/tmp/pytest-of-runner/pytest-3/t0/speech.wav"
+    )
+    unlucky = (
+        "Writing the audio file failed: RuntimeError: System error. — target "
+        "/tmp/pytest-of-runner/pytest-401/t0/speech.wav"
+    )
+    assert classify(ordinary) == "AUDIO_IO_FAILED"
+    assert classify(unlucky) == "AUDIO_IO_FAILED"
 
 
 # ── real auth failures still classify ─────────────────────────────────────
