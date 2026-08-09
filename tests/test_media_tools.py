@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 import os
 import zipfile
 from unittest.mock import patch
@@ -27,6 +28,9 @@ def mt(monkeypatch, tmp_path):
 
     monkeypatch.setattr(prefs, "_PREFS_PATH", str(tmp_path / "prefs.json"))
     monkeypatch.setattr(mt_mod, "media_tools_dir", lambda: str(tmp_path / "media_tools"))
+    auth_dir = tmp_path / "path-authorizations"
+    auth_dir.mkdir()
+    monkeypatch.setenv("OMNIVOICE_PATH_AUTH_DIR", str(auth_dir))
     for op in mt_mod._ops.values():
         op.update(state="idle", progress=0.0, error=None)
     mt_mod._version_cache.clear()
@@ -382,11 +386,27 @@ def test_router_status_and_acquire_endpoints(mt, monkeypatch):
     assert r.json()["state"] == "running"
 
 
-def test_router_custom_path_maps_validation_to_400(mt):
+def test_router_custom_path_rejects_raw_http_path(mt):
     c = _client()
     r = c.post("/media-tools/ffmpeg/custom-path", json={"path": "/no/such/binary"})
-    assert r.status_code == 400
-    assert "not found" in r.json()["detail"].lower()
+    assert r.status_code == 422
+
+
+def test_router_custom_path_consumes_native_authorization(mt, monkeypatch, tmp_path):
+    binary = tmp_path / "ffmpeg"
+    binary.write_bytes(b"native-authorized")
+    monkeypatch.setattr(mt, "_binary_runs", lambda _path: True)
+    token = "b" * 64
+    auth_file = os.path.join(os.environ["OMNIVOICE_PATH_AUTH_DIR"], f"{token}.json")
+    with open(auth_file, "w", encoding="utf-8") as handle:
+        json.dump({"kind": "ffmpeg", "path": str(binary)}, handle)
+    c = _client()
+    response = c.post(
+        "/media-tools/ffmpeg/custom-path", json={"authorization": token}
+    )
+    assert response.status_code == 200
+    assert os.environ["FFMPEG_PATH"] == str(binary)
+    assert not os.path.exists(auth_file)
 
 
 def test_router_use_system_maps_lookup_to_404(mt, monkeypatch):

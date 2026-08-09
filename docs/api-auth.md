@@ -213,13 +213,15 @@ requirement is dropped (issue #261, else the operator is 403'd out of their own
 - **A credential is configured** → admin requires the **API key** (`Authorization:
   Bearer` / `?api_key` / `ov_key` cookie), or genuine loopback. The **6-digit
   share PIN does not gate admin** (it is brute-forceable), and trusted-network
-  membership never does either. So a **PIN-only** server-mode deployment keeps
-  admin loopback-only; remote admin requires the long API key.
+  membership never does either. A **PIN-only** server-mode deployment therefore
+  allows remote read-only discovery but blocks remote mutations; remote writes
+  require the long API key.
 
-Two host-path capabilities are never remote: `/system/set-env` and
-`PUT /api/settings/storage/models-dir`. They can select executable or writable
-filesystem paths, so only a genuine loopback desktop caller may use them;
-server mode and an API key do not weaken that boundary.
+Host paths are never selected through HTTP. The native Tauri process validates
+model-cache destinations and custom FFmpeg/FFprobe binaries, writes a private
+one-shot capability, and only that opaque authorization reaches the backend.
+`/system/set-env` does not accept executable-path keys at all. Server mode and
+an API key do not weaken that native boundary.
 
 This is the fix for a real escalation (#1213): before it, server mode made the
 admin gate a no-op, so with an API key set *and* a trusted CIDR configured, a LAN

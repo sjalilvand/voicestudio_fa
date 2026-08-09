@@ -10,14 +10,36 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 
-from api.dependencies import (
-    is_loopback,
-    is_local_host,
-    require_admin,
-    require_desktop,
-    require_local,
-    require_loopback,
-)
+def _dependency(name):
+    # Resolve at test execution time: other suites intentionally replace
+    # ``api.*`` modules in sys.modules while probing cold-start behavior.
+    from api import dependencies
+
+    return getattr(dependencies, name)
+
+
+def is_loopback(*args, **kwargs):
+    return _dependency("is_loopback")(*args, **kwargs)
+
+
+def is_local_host(*args, **kwargs):
+    return _dependency("is_local_host")(*args, **kwargs)
+
+
+def require_admin(*args, **kwargs):
+    return _dependency("require_admin")(*args, **kwargs)
+
+
+def require_desktop(*args, **kwargs):
+    return _dependency("require_desktop")(*args, **kwargs)
+
+
+def require_local(*args, **kwargs):
+    return _dependency("require_local")(*args, **kwargs)
+
+
+def require_loopback(*args, **kwargs):
+    return _dependency("require_loopback")(*args, **kwargs)
 
 
 def _req(host):

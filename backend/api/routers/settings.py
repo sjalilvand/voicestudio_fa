@@ -19,7 +19,7 @@ from dataclasses import asdict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from api.dependencies import require_admin, require_desktop
+from api.dependencies import require_admin
 
 logger = logging.getLogger("omnivoice.api.settings")
 
@@ -684,7 +684,7 @@ def _effective_models_dir() -> str:
 
 
 class _ModelsDirBody(BaseModel):
-    path: str = Field(default="", description="Absolute directory; empty clears → default cache")
+    authorization: str = Field(description="One-shot native desktop authorization")
 
 
 @router.get("/storage/models-dir")
@@ -703,7 +703,7 @@ def get_models_dir():
     }
 
 
-@router.put("/storage/models-dir", dependencies=[Depends(require_desktop)])
+@router.put("/storage/models-dir")
 def set_models_dir(body: _ModelsDirBody):
     """Set (or clear, with an empty path) the models download directory.
 
@@ -713,17 +713,18 @@ def set_models_dir(body: _ModelsDirBody):
     saved. Returns restart_required=True.
     """
     from core import user_env
+    from core.path_authorization import PathAuthorizationError, consume
 
-    raw = (body.path or "").strip()
+    try:
+        raw = consume(body.authorization, "models_dir").strip()
+    except PathAuthorizationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     if not raw:
         user_env.unset_user_env(_MODELS_DIR_ENV)
         return {"configured": None, "default": _default_models_dir(), "restart_required": True}
 
-    # Reject control characters / NUL before touching the filesystem: an
-    # embedded NUL makes os.makedirs raise ValueError (→ 500). This is also
-    # the input-validation barrier for the path before it reaches any fs call
-    # (the dir is user-chosen by design — this is a loopback-gated, same-user
-    # local file picker, not a cross-privilege boundary).
+    # Tauri already validates this before issuing the capability. Keep the
+    # backend checks as defense in depth against a corrupt capability file.
     if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in raw):
         raise HTTPException(status_code=400, detail="Path contains invalid control characters")
 

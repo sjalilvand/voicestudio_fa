@@ -11,7 +11,7 @@ from core.prefs import set_ as prefs_set, delete as prefs_delete
 from services import network_share
 from services import tailscale as _tailscale
 from api.schemas import SysinfoResponse, SystemInfoResponse, ModelStatusResponse
-from api.dependencies import require_admin, require_desktop
+from api.dependencies import require_admin
 from fastapi.responses import FileResponse, StreamingResponse
 import torch
 import shutil
@@ -805,7 +805,6 @@ async def ack_crash():
 PERSISTENT_KEYS = {
     "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY",
     "http_proxy", "https_proxy", "all_proxy",
-    "FFMPEG_PATH", "FFPROBE_PATH",
     "TRANSLATE_BASE_URL", "TRANSLATE_API_KEY", "TRANSLATE_MODEL",
     "DEEPL_API_KEY", "DEEPL_BASE_URL",
     "MICROSOFT_API_KEY", "MICROSOFT_BASE_URL",
@@ -831,7 +830,7 @@ except Exception:  # pragma: no cover — defensive: env panel > installer wirin
 _PORT_KEYS = {"OMNIVOICE_PORT", "OMNIVOICE_SHARE_PORT", "OMNIVOICE_UI_PORT"}
 
 
-@router.post("/system/set-env", dependencies=[Depends(require_desktop)])
+@router.post("/system/set-env")
 async def set_env_var(body: dict):
     """Set an environment variable at runtime, persisted across restarts.
 
@@ -857,23 +856,6 @@ async def set_env_var(body: dict):
         )
 
     if value:
-        # Validate executable paths if the user is setting them manually.
-        # Reject control characters / null bytes (defense-in-depth against
-        # path-injection), then require an existing regular file. NOTE: this
-        # endpoint is loopback-only and MUST remain so — a remote caller able
-        # to set FFMPEG_PATH/FFPROBE_PATH could point it at an arbitrary
-        # binary (RCE). Network sharing must never expose /system/set-env.
-        if key in ("FFMPEG_PATH", "FFPROBE_PATH"):
-            if any(ord(c) < 0x20 or ord(c) == 0x7F for c in value):
-                raise HTTPException(
-                    status_code=400,
-                    detail="Invalid path: control characters are not allowed",
-                )
-            if not os.path.isfile(value):
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"File not found: {value}",
-                )
         # Port keys must be a numeric string in the unprivileged range so a
         # typo can't drop the backend onto a privileged port (<1024) or an
         # out-of-range value uvicorn would reject at bind time.

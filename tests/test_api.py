@@ -624,8 +624,8 @@ def test_server_mode_remote_without_api_key_cannot_set_executable_path(monkeypat
             os.environ["FFMPEG_PATH"] = original
 
 
-def test_server_mode_remote_api_key_cannot_set_executable_path(monkeypatch, tmp_path):
-    """An admin key does not grant the desktop file-picker capability."""
+def test_set_env_never_accepts_executable_path_even_with_admin_key(monkeypatch, tmp_path):
+    """Executable selection exists only behind native IPC, never this API."""
     from fastapi.testclient import TestClient
     from main import app
 
@@ -640,7 +640,7 @@ def test_server_mode_remote_api_key_cannot_set_executable_path(monkeypatch, tmp_
             headers={"authorization": "Bearer s3cret"},
             json={"key": "FFMPEG_PATH", "value": str(executable)},
         )
-        assert response.status_code == 403
+        assert response.status_code == 400
         assert os.environ.get("FFMPEG_PATH") == original
     finally:
         if original is None:
