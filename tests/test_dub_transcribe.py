@@ -235,6 +235,68 @@ def test_transcribe_stream_never_closes_without_terminal_event(
     assert done_idx > err_idx >= 0, f"error must precede the terminal done: {body}"
 
 
+def test_transcribe_chunk_failure_uses_stable_public_metadata(
+    tmp_path, monkeypatch, caplog
+):
+    """Inner ASR failures must not serialize provider secrets or local paths."""
+    import asyncio
+    from api.routers import dub_core as dc
+
+    job_id = "t_chunk_secret"
+    audio = tmp_path / "a.wav"
+    _make_wav(audio, seconds=1.0)
+    dc._dub_jobs[job_id] = {
+        "audio_path": str(audio), "vocals_path": None, "scene_cuts": [],
+    }
+
+    fake_model = MagicMock()
+    fake_model._asr_pipe = MagicMock()
+
+    async def _ok_model():
+        return fake_model
+
+    class _FailingASR:
+        id = "fake"
+
+        def ensure_loaded(self):
+            pass
+
+        def transcribe(self, path, *, word_timestamps=True):
+            raise RuntimeError("TOKEN=chunk-secret /home/alice/private-audio.wav")
+
+        def unload(self):
+            pass
+
+    monkeypatch.setattr(dc, "get_model", _ok_model)
+    monkeypatch.setattr(dc, "_CHUNK_TRANSCRIBE_ATTEMPTS", 1)
+    monkeypatch.setattr(dc, "offload_tts_for_asr", lambda *a, **k: None)
+    monkeypatch.setattr(
+        "services.asr_backend.get_active_asr_backend",
+        lambda *a, **k: _FailingASR(),
+    )
+
+    async def _collect():
+        resp = await dc.dub_transcribe_stream(job_id)
+        parts = []
+        async for chunk in resp.body_iterator:
+            parts.append(
+                chunk.decode() if isinstance(chunk, (bytes, bytearray)) else str(chunk)
+            )
+        return "".join(parts)
+
+    try:
+        body = asyncio.run(_collect())
+    finally:
+        dc._dub_jobs.pop(job_id, None)
+
+    assert "transcription_failed" in body, body
+    assert "Transcription failed. Check the selected ASR engine and try again." in body
+    assert "chunk-secret" not in body
+    assert "/home/alice/private-audio.wav" not in body
+    assert "chunk-secret" not in caplog.text
+    assert "/home/alice/private-audio.wav" not in caplog.text
+
+
 def test_transcribe_stream_surfaces_asr_load_failure_at_preflight(tmp_path, monkeypatch):
     """Regression #578: the reported failure mode is the *ASR model* failing to
     load (WhisperX: faster-whisper weights / CTranslate2-cuDNN mismatch / the

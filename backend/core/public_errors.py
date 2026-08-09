@@ -40,6 +40,14 @@ def stream_failure(code: str) -> dict[str, object]:
             "detail": "Transcription failed. Check the selected ASR engine and try again.",
             "retryable": True,
         },
+        "transcription_timeout": {
+            "code": "transcription_timeout",
+            "detail": (
+                "Transcription timed out while the backend is running. Increase "
+                "OMNIVOICE_TRANSCRIBE_CHUNK_TIMEOUT_S or select the "
+                "faster-whisper-isolated engine, then try again."
+            ),
+            "retryable": True,
+        },
     }
     return dict(failures.get(code, failures["generation_failed"]))
-
