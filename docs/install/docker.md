@@ -119,6 +119,15 @@ using it: **Settings → System** shows the device VoiceStudio actually resolved
 If it reads `cpu` while the command above prints `True`, the backend log line
 starting `Falling back to CPU:` names the architecture mismatch it hit.
 
+If the command prints `False`, **Settings → System** now says why, and the
+three answers need different fixes:
+
+| What it says | What to do |
+|---|---|
+| `/dev/kfd is not present` | The container was started without `--device /dev/kfd --device /dev/dri`, or the host's `amdgpu` driver isn't loaded. |
+| `this process cannot open it` | A group problem. Run `ls -l /dev/kfd /dev/dri/render*` **on the host**, and pass those GIDs with `--group-add`. The numbers differ between machines — a `--group-add 39` copied from someone else's command grants nothing. |
+| `no GPU was enumerated` | The device nodes are fine and the runtime still found nothing — usually a card newer than the image's ROCm. Check `rocminfo` on the host, and see the `HSA_OVERRIDE_GFX_VERSION` note above. |
+
 ## Docker Compose (recommended)
 
 ```bash
@@ -210,7 +219,10 @@ Two paths are worth persisting across container restarts:
 - **GPU not detected (AMD):** make sure you pulled the `:rocm` tag (the default
   image is CUDA-only) and passed `--device /dev/kfd --device /dev/dri`. Check
   the container sees the card with
-  `docker exec omnivoice rocminfo | grep -i gfx`; on RDNA3 consumer cards try
-  `-e HSA_OVERRIDE_GFX_VERSION=11.0.0` — see
-  [Pull and run (AMD GPU / ROCm)](#pull-and-run-amd-gpu--rocm) above.
+  `docker exec omnivoice rocminfo | grep -i gfx`. On consumer cards, run
+  **without** any `HSA_OVERRIDE_GFX_VERSION` first — the backend sets it
+  itself when your card needs it, and overriding a natively-supported GPU
+  only forces it onto foreign kernels. See
+  [Pull and run (AMD GPU / ROCm)](#pull-and-run-amd-gpu--rocm) above for when
+  to set one by hand.
 - More entries: [docs/install/troubleshooting.md](troubleshooting.md).
