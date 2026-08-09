@@ -13,7 +13,6 @@
  */
 import { useEffect, useRef, useCallback } from 'react';
 import { wsUrl, apiUrl } from '../api/client';
-import { logSafe } from '../utils/logSafe';
 
 const WS_EVENTS_URL = wsUrl('/ws/events');
 
@@ -102,8 +101,10 @@ export default function useRealtimeEvents(handlers) {
           if (handler) {
             handler(event);
           }
-        } catch (err) {
-          console.warn('[ws/events] bad message:', logSafe(e.data), logSafe(err));
+        } catch {
+          // The frame and parser exception are remote-controlled. Keep the
+          // warning useful without placing either value in browser logs.
+          console.warn('[ws/events] malformed message ignored');
         }
       };
 

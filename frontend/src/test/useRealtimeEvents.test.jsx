@@ -69,6 +69,20 @@ describe('useRealtimeEvents cold-start health probe', () => {
     expect(FakeWebSocket.instances[0].url).toContain('/ws/events');
   });
 
+  it('does not log remote-controlled malformed frames or parser details', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    render(<Harness />);
+    await waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
+
+    const privateFrame = 'token=private-value\nFORGED';
+    FakeWebSocket.instances[0].onmessage({ data: privateFrame });
+
+    expect(warn).toHaveBeenCalledWith('[ws/events] malformed message ignored');
+    expect(JSON.stringify(warn.mock.calls)).not.toContain(privateFrame);
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('SyntaxError');
+  });
+
   it('does NOT open the WebSocket while the backend is unreachable', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'));
     vi.stubGlobal('fetch', fetchMock);

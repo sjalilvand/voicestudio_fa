@@ -149,18 +149,18 @@ def get_secret(name: str) -> Optional[str]:
         try:
             from cryptography.fernet import InvalidToken
         except ImportError:  # pragma: no cover — dep should always be present
-            logger.error("cryptography unavailable; cannot decrypt secret %s", log_safe(name))
+            logger.error("cryptography unavailable; encrypted setting cannot be decrypted")
             return None
         try:
             return _fernet().decrypt(row[0].encode("ascii")).decode("utf-8")
         except InvalidToken:
             logger.warning(
-                "Stored secret %r failed to decrypt (install moved across "
-                "machines or salt tampered) — falling back to env/default.", name,
+                "Stored encrypted setting failed to decrypt (install moved across "
+                "machines or salt tampered) — falling back to env/default."
             )
             return None
     except Exception:
-        logger.exception("settings_store.get_secret(%s): SQLite read failed", log_safe(name))
+        logger.exception("settings_store.get_secret: SQLite read failed")
         return None
 
 

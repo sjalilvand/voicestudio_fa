@@ -133,6 +133,24 @@ def test_invalid_token_returns_none_with_warning(isolated_db, caplog):
     assert result is None
 
 
+def test_secret_failure_logs_omit_secret_identifier(isolated_db, caplog):
+    from services import settings_store
+
+    private_name = "llm_key.private_provider"
+    with sqlite3.connect(str(isolated_db)) as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
+            (f"secret.{private_name}", "not-a-valid-fernet-blob", time.time()),
+        )
+        conn.commit()
+
+    caplog.clear()
+    assert settings_store.get_secret(private_name) is None
+    assert private_name not in caplog.text
+    assert "private_provider" not in caplog.text
+    assert "Stored encrypted setting failed to decrypt" in caplog.text
+
+
 def test_concurrent_reads_consistent(isolated_db):
     """Two threads reading at the same time get the same value (sqlite WAL on)."""
     from services import settings_store
