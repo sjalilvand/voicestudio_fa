@@ -174,6 +174,25 @@ def test_get_spec_accepts_repo_id():
     assert not sd.is_sherpa_model(None)
 
 
+def test_model_resolution_pins_offline_probe_and_download(monkeypatch):
+    from services import hf_revisions, sherpa_dictation as sd
+    import huggingface_hub
+
+    spec = sd.get_spec("sherpa-whisper-tiny")
+    calls = []
+
+    def fake_snapshot(**kwargs):
+        calls.append(kwargs)
+        if kwargs.get("local_files_only"):
+            raise FileNotFoundError("not cached")
+        return "/cache/pinned"
+
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", fake_snapshot)
+    assert sd._resolve_model_dir(spec) == "/cache/pinned"
+    assert len(calls) == 2
+    assert all(call["revision"] == hf_revisions.revision_for(spec.repo_id) for call in calls)
+
+
 # ── The 4 recognizer kinds construct + transcribe ───────────────────────────
 
 

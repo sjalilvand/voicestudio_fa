@@ -23,6 +23,7 @@ def model_manager(monkeypatch):
             sys.modules.pop(mod_name, None)
 
     import services.model_manager as mm
+    from services import hf_revisions
 
     monkeypatch.setattr(mm, "_torch", None)
     monkeypatch.setattr(mm, "_OmniVoice", None)
@@ -33,6 +34,7 @@ def model_manager(monkeypatch):
     monkeypatch.delenv("TRANSFORMERS_OFFLINE", raising=False)
     monkeypatch.setattr(mm, "_lazy_torch", lambda: SimpleNamespace(float16="float16"))
     monkeypatch.setattr(mm, "get_best_device", lambda: "cpu")
+    monkeypatch.setitem(hf_revisions.CURATED_REVISIONS, "test/checkpoint", "a" * 40)
     return mm
 
 
@@ -202,6 +204,7 @@ def test_repair_invokes_snapshot_download(model_manager, monkeypatch):
 
     assert model_manager._repair_model_cache("test/checkpoint") is True
     assert calls and calls[0]["repo_id"] == "test/checkpoint"
+    assert calls[0]["revision"] == "a" * 40
 
 
 def test_repair_returns_false_when_download_fails(model_manager, monkeypatch):

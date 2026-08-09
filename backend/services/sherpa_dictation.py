@@ -272,11 +272,14 @@ def _resolve_model_dir(spec: SherpaModelSpec, *, download: bool = True) -> str:
     so we never pull the bundled fp32 weights or test wavs.
     """
     from huggingface_hub import snapshot_download
+    from services.hf_revisions import revision_for
 
     wanted = list(spec.files.values())
+    revision = revision_for(spec.repo_id)
     try:
         return snapshot_download(
             repo_id=spec.repo_id,
+            revision=revision,
             local_files_only=True,
             allow_patterns=wanted,
         )
@@ -284,7 +287,11 @@ def _resolve_model_dir(spec: SherpaModelSpec, *, download: bool = True) -> str:
         if not download:
             raise
     logger.info("sherpa dictation: downloading %s on first use", spec.repo_id)
-    return snapshot_download(repo_id=spec.repo_id, allow_patterns=wanted)
+    return snapshot_download(
+        repo_id=spec.repo_id,
+        revision=revision,
+        allow_patterns=wanted,
+    )
 
 
 def is_installed(spec: SherpaModelSpec) -> bool:
