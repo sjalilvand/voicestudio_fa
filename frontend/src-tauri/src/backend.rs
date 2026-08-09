@@ -387,10 +387,6 @@ pub fn spawn_backend<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Opt
     // pass below — otherwise a user-set OMNIVOICE_PORT would change the
     // LAN-share/Tailscale target while the listener stayed on the Rust port.
     env.push(("OMNIVOICE_PORT".into(), backend_port().to_string()));
-    env.push((
-        "OMNIVOICE_PATH_AUTH_DIR".into(),
-        crate::commands::path_authorization_dir(app).to_string_lossy().into(),
-    ));
     if cfg!(target_os = "windows") {
         env.push(("TORCHDYNAMO_DISABLE".into(), "1".into()));
         env.push(("HF_HUB_DISABLE_SYMLINKS_WARNING".into(), "1".into()));

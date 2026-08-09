@@ -7,7 +7,6 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tauri::image::Image;
-use tauri::Manager;
 
 use crate::{AppFlags, TrayHandle, DictationShortcutState};
 use crate::{TRAY_ICON_DEFAULT, TRAY_ICON_RECORDING};
@@ -17,15 +16,15 @@ use crate::config::{load_config, save_config};
 
 #[derive(Serialize, Deserialize)]
 struct AuthorizedHostPath {
+    token: String,
     kind: String,
     path: String,
 }
 
 pub fn path_authorization_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> PathBuf {
-    app.path()
-        .app_local_data_dir()
-        .unwrap_or_default()
-        .join("path-authorizations")
+    crate::setup::resolved_data_dir(app)
+        .unwrap_or_else(crate::setup::default_data_dir)
+        .join(".path-authorizations")
 }
 
 fn validate_host_path(kind: &str, raw: &str) -> Result<PathBuf, String> {
@@ -86,6 +85,7 @@ pub fn authorize_host_path(
     }
     let target = dir.join(format!("{token}.json"));
     let payload = AuthorizedHostPath {
+        token: token.clone(),
         kind,
         path: validated.to_string_lossy().into_owned(),
     };

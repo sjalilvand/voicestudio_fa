@@ -27,15 +27,17 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setenv("OMNIVOICE_ENV_FILE", envfile)
     auth_dir = tmp_path / "authorizations"
     auth_dir.mkdir()
-    monkeypatch.setenv("OMNIVOICE_PATH_AUTH_DIR", str(auth_dir))
+    from core import path_authorization
+    monkeypatch.setattr(path_authorization, "_AUTH_DIR", str(auth_dir))
     return envfile
 
 
 def _body(path, kind="models_dir"):
-    auth_dir = os.environ["OMNIVOICE_PATH_AUTH_DIR"]
+    from core import path_authorization
+    auth_dir = path_authorization._AUTH_DIR
     token = "a" * 64
     with open(os.path.join(auth_dir, f"{token}.json"), "w", encoding="utf-8") as f:
-        json.dump({"kind": kind, "path": path}, f)
+        json.dump({"token": token, "kind": kind, "path": path}, f)
     return s._ModelsDirBody(authorization=token)
 
 
