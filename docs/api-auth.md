@@ -215,7 +215,8 @@ requirement is dropped (issue #261, else the operator is 403'd out of their own
   share PIN does not gate admin** (it is brute-forceable), and trusted-network
   membership never does either. A **PIN-only** server-mode deployment therefore
   allows remote read-only discovery but blocks remote mutations; remote writes
-  require the long API key.
+  require the long API key. Discovery never returns the share PIN itself; only
+  loopback or a caller already authenticated with the API key can read it.
 
 Host paths are never selected through HTTP. The native Tauri process validates
 model-cache destinations and custom FFmpeg/FFprobe binaries, writes a private

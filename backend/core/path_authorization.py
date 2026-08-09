@@ -78,7 +78,7 @@ def consume(token: str, expected_kind: str) -> str:
         try:
             os.unlink(claimed)
         except OSError:
-            pass
+            pass  # Best-effort cleanup; the random claimed name cannot be reused.
     if not isinstance(payload, dict):
         raise PathAuthorizationError("Invalid desktop authorization")
     if not secrets.compare_digest(str(payload.get("token", "")), token):

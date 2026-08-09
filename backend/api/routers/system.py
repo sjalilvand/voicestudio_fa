@@ -11,7 +11,7 @@ from core.prefs import set_ as prefs_set, delete as prefs_delete
 from services import network_share
 from services import tailscale as _tailscale
 from api.schemas import SysinfoResponse, SystemInfoResponse, ModelStatusResponse
-from api.dependencies import require_admin
+from api.dependencies import is_loopback, require_admin
 from fastapi.responses import FileResponse, StreamingResponse
 import torch
 import shutil
@@ -1082,12 +1082,21 @@ def quarantine_status():
 # ── Network sharing (loopback-only control surface) ──────────────────────────
 
 @router.get("/system/network/state")
-async def network_state():
+async def network_state(request: Request):
     st = network_share.get_state()
+    # PIN-only server mode permits unauthenticated read-only discovery, but the
+    # PIN is itself a consumption credential. Reveal it only to the native
+    # loopback UI or to a remote caller that already passed the configured
+    # long API-key gate. The boolean lets headless dashboards remain useful.
+    host = request.client.host if request.client else None
+    may_reveal_pin = is_loopback(host) or bool(
+        os.environ.get("OMNIVOICE_API_KEY", "").strip()
+    )
     return {
         "enabled": st.enabled,
         "share_port": st.share_port,
-        "pin": st.pin,
+        "pin": st.pin if may_reveal_pin else None,
+        "pin_required": bool(st.pin),
         "lan_addresses": st.lan_addresses,
     }
 
