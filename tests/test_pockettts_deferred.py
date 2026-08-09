@@ -62,8 +62,17 @@ def test_pockettts_is_a_pinned_optional_extra():
         (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text("utf-8")
     )
     assert project["project"]["optional-dependencies"]["pockettts"] == [
-        "pocket-tts==2.1.0"
+        "pocket-tts==2.1.0 ; sys_platform != 'darwin' or platform_machine != 'x86_64'"
     ]
+
+
+def test_pockettts_reports_the_intel_mac_wheel_gap(monkeypatch):
+    monkeypatch.setattr("engines.pockettts.sys.platform", "darwin")
+    monkeypatch.setattr("engines.pockettts.platform.machine", lambda: "x86_64")
+    ok, reason = PocketTTSBackend.is_available()
+    assert ok is False
+    assert "Intel Macs" in reason
+    assert "PyTorch" in reason
 
 
 @pytest.mark.parametrize(

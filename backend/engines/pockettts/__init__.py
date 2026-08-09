@@ -39,6 +39,7 @@ from __future__ import annotations
 import logging
 import math
 import os
+import platform
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -64,6 +65,11 @@ class PocketTTSBackend(SubprocessBackend):
 
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
+        if sys.platform == "darwin" and platform.machine().lower() == "x86_64":
+            return False, (
+                "PocketTTS is unavailable on Intel Macs because its required "
+                "PyTorch version has no macOS x86_64 wheel."
+            )
         # Optional-dep gate: the pocket-tts wheel is installed only when the user
         # opted in. The interpreter is the parent's own (sys.executable), so
         # there is no separate venv to validate.

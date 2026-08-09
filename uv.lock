@@ -3310,7 +3310,7 @@ eval = [
     { name = "zhon" },
 ]
 pockettts = [
-    { name = "pocket-tts" },
+    { name = "pocket-tts", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
 ]
 supertonic = [
     { name = "supertonic" },
@@ -3359,7 +3359,7 @@ requires-dist = [
     { name = "parakeet-mlx", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'", specifier = ">=0.5.2" },
     { name = "pedalboard", specifier = ">=0.9.14" },
     { name = "pip", specifier = ">=26.1.2" },
-    { name = "pocket-tts", marker = "extra == 'pockettts'", specifier = "==2.1.0" },
+    { name = "pocket-tts", marker = "(platform_machine != 'x86_64' and extra == 'pockettts') or (sys_platform != 'darwin' and extra == 'pockettts')", specifier = "==2.1.0" },
     { name = "posthog", specifier = ">=3.7" },
     { name = "psutil", specifier = ">=7.2.2" },
     { name = "pyannote-audio", specifier = ">=3.3.2,<4.0" },
