@@ -119,6 +119,12 @@ using it: **Settings → System** shows the device VoiceStudio actually resolved
 If it reads `cpu` while the command above prints `True`, the backend log line
 starting `Falling back to CPU:` names the architecture mismatch it hit.
 
+The image installs and launches VoiceStudio through that same `python3`
+interpreter. To verify this invariant on an older or custom image, compare
+`docker exec omnivoice python3 -c "import sys, torch; print(sys.executable,
+torch.version.hip)"` with `docker exec omnivoice sh -c 'tr "\\0" " "
+</proc/1/cmdline'`; PID 1 must begin with `python3 -m uvicorn`.
+
 If the command prints `False`, **Settings → System** now says why, and the
 three answers need different fixes:
 
