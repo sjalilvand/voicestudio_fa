@@ -75,6 +75,18 @@ def test_pockettts_reports_the_intel_mac_wheel_gap(monkeypatch):
     assert "PyTorch" in reason
 
 
+def test_ci_verifies_intel_mac_as_the_documented_remote_only_host():
+    from pathlib import Path
+
+    workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/ci.yml").read_text(
+        "utf-8"
+    )
+    assert "label: macOS Intel\n            backend_supported: false" in workflow
+    assert "name: Verify the documented Intel Mac contract" in workflow
+    assert "if: matrix.backend_supported\n        run: uv sync --extra pockettts" in workflow
+    assert "if: matrix.backend_supported\n        run: uv run pytest tests/smoke/" in workflow
+
+
 @pytest.mark.parametrize(
     "reason",
     [
