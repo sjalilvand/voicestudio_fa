@@ -1447,12 +1447,10 @@ async def dub_transcribe_stream(
         try:
             async for ev in _gen_body():
                 yield ev
-        except Exception as e:  # noqa: BLE001 — last-resort stream finalizer
+        except Exception:  # noqa: BLE001 — last-resort stream finalizer
             logger.exception("transcribe stream crashed (job=%r)", job_id)
-            from core.failure import build_failure
-            f = build_failure(e, stage="transcribe", include_diagnostic=False)
-            detail = f["reason"] + (f" — {f['hint']}" if f.get("hint") else "")
-            yield _sse_event("error", {"detail": detail, "retryable": True})
+            from core.public_errors import stream_failure
+            yield _sse_event("error", stream_failure("transcription_failed"))
             yield _sse_event("done", {})
         finally:
             # Last-resort VRAM release (see _loaded_asr above): covers crashes,

@@ -222,7 +222,10 @@ def test_transcribe_stream_never_closes_without_terminal_event(tmp_path, monkeyp
 
     # The stream must end with a terminal error followed by done.
     assert "event: error" in body, body
-    assert "segmentation exploded: simulated" in body, body
+    assert "transcription_failed" in body, body
+    assert "Transcription failed. Check the selected ASR engine and try again." in body, body
+    assert "segmentation exploded: simulated" not in body, body
+    assert "Traceback" not in body, body
     err_idx = body.rfind("event: error")
     done_idx = body.rfind("event: done")
     assert done_idx > err_idx >= 0, f"error must precede the terminal done: {body}"
@@ -334,7 +337,10 @@ def test_transcribe_stream_preflight_crash_is_a_structured_error(monkeypatch):
     body = asyncio.run(_collect())
 
     assert "event: error" in body, body
-    assert "job store exploded: simulated" in body, body
+    assert "transcription_failed" in body, body
+    assert "Transcription failed. Check the selected ASR engine and try again." in body, body
+    assert "job store exploded: simulated" not in body, body
+    assert "Traceback" not in body, body
     err_idx = body.rfind("event: error")
     done_idx = body.rfind("event: done")
     assert done_idx > err_idx >= 0, f"error must precede the terminal done: {body}"

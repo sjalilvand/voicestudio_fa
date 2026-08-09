@@ -294,7 +294,11 @@ def test_stream_midstream_error_yields_error_event(client, monkeypatch,
     assert "chunk" in types            # chunk 0 was delivered before the crash
     assert types[-1] == "error"
     assert "done" not in types
-    assert events[-1][0]["detail"]     # actionable message for the fallback log
+    error = events[-1][0]
+    assert error["code"] == "generation_failed"
+    assert error["detail"] == "Generation failed. Check the selected engine and try again."
+    assert "engine exploded" not in repr(error)
+    assert "Traceback" not in repr(error)
 
     after_ids = {h["id"] for h in client.get("/history").json()}
     assert after_ids == before_ids     # nothing was recorded for the failure
