@@ -76,6 +76,24 @@ def test_server_mode_remote_without_api_key_cannot_create_models_dir(env, monkey
     assert not target.exists()
 
 
+def test_server_mode_remote_api_key_cannot_create_models_dir(env, monkeypatch, tmp_path):
+    """An admin key does not grant the desktop file-picker capability."""
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")
+    target = tmp_path / "must-not-exist"
+    app = fastapi.FastAPI()
+    app.include_router(s.router)
+    response = TestClient(app, client=("172.17.0.1", 50000)).put(
+        "/api/settings/storage/models-dir",
+        headers={"authorization": "Bearer s3cret"},
+        json={"path": str(target)},
+    )
+    assert response.status_code == 403
+    assert not target.exists()
+
+
 def test_clear_reverts_to_default(env):
     user_env.set_user_env("OMNIVOICE_CACHE_DIR", "/old")
     res = s.set_models_dir(s._ModelsDirBody(path=""))

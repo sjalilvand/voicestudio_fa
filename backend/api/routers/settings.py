@@ -19,7 +19,7 @@ from dataclasses import asdict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from api.dependencies import require_admin
+from api.dependencies import require_admin, require_desktop
 
 logger = logging.getLogger("omnivoice.api.settings")
 
@@ -703,7 +703,7 @@ def get_models_dir():
     }
 
 
-@router.put("/storage/models-dir")
+@router.put("/storage/models-dir", dependencies=[Depends(require_desktop)])
 def set_models_dir(body: _ModelsDirBody):
     """Set (or clear, with an empty path) the models download directory.
 

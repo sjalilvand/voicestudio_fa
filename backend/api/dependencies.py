@@ -205,11 +205,24 @@ def require_admin(request: Request) -> None:
     if _server_mode():
         method = str(getattr(request, "method", "GET")).upper()
         read_only = method in {"GET", "HEAD", "OPTIONS"}
-        if read_only and not _admin_credential_configured(request):
+        if read_only and not os.environ.get("OMNIVOICE_API_KEY", "").strip():
             return
         if _request_presents_admin_credential(request):
             return
     raise HTTPException(status_code=403, detail="loopback origin or admin API key required")
+
+
+def require_desktop(request: Request) -> None:
+    """Gate capabilities that may select or execute host filesystem paths.
+
+    An API key authorizes remote administration, not access to the desktop
+    shell's native file-picker boundary.  These capabilities therefore remain
+    strictly loopback-only even when server mode is enabled.
+    """
+    host = request.client.host if request.client else None
+    if is_loopback(host):
+        return
+    raise HTTPException(status_code=403, detail="desktop origin required")
 
 
 def require_local(request: Request) -> None:

@@ -14,6 +14,7 @@ from api.dependencies import (
     is_loopback,
     is_local_host,
     require_admin,
+    require_desktop,
     require_local,
     require_loopback,
 )
@@ -258,6 +259,13 @@ def test_server_mode_admin_read_keeps_bare_docker_bootstrap(monkeypatch):
     require_admin(_req_full("172.17.0.1", method="GET"))
 
 
+def test_server_mode_admin_read_keeps_pin_only_discovery(monkeypatch):
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.delenv("OMNIVOICE_API_KEY", raising=False)
+    monkeypatch.setenv("OMNIVOICE_SHARE_PIN", "123456")
+    require_admin(_req_full("172.17.0.1", method="GET"))
+
+
 def test_server_mode_admin_mutation_allows_api_key(monkeypatch):
     monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
     monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")
@@ -266,6 +274,18 @@ def test_server_mode_admin_mutation_allows_api_key(monkeypatch):
         method="POST",
         headers={"authorization": "Bearer s3cret"},
     ))
+
+
+def test_server_mode_desktop_capability_rejects_remote_api_key(monkeypatch):
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")
+    with pytest.raises(HTTPException) as exc:
+        require_desktop(_req_full(
+            "172.17.0.1",
+            method="POST",
+            headers={"authorization": "Bearer s3cret"},
+        ))
+    assert exc.value.status_code == 403
 
 
 @pytest.mark.parametrize("method", ["GET", "POST", "PUT", "DELETE"])

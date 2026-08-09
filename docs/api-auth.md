@@ -21,7 +21,8 @@ tools keep working unchanged whichever gate is set.
 > VoiceStudio separates **consumption** (TTS, dictation, voices) from
 > **administration** (`/system/*`, `/api/settings/*` — RCE-class). The PIN and
 > trusted networks are *consumption* credentials; the **admin surface is only
-> ever reached from loopback or with the API key** (see [Admin routes](#admin-routes-and-server-mode)).
+> ever reached from loopback or with the API key**. Host-path capabilities stay
+> desktop-only even with a key (see [Admin routes](#admin-routes-and-server-mode)).
 
 > Both gates can be active at once. The PIN and the API key are independent; when
 > both are set, each is checked on the paths it covers.
@@ -214,6 +215,11 @@ requirement is dropped (issue #261, else the operator is 403'd out of their own
   share PIN does not gate admin** (it is brute-forceable), and trusted-network
   membership never does either. So a **PIN-only** server-mode deployment keeps
   admin loopback-only; remote admin requires the long API key.
+
+Two host-path capabilities are never remote: `/system/set-env` and
+`PUT /api/settings/storage/models-dir`. They can select executable or writable
+filesystem paths, so only a genuine loopback desktop caller may use them;
+server mode and an API key do not weaken that boundary.
 
 This is the fix for a real escalation (#1213): before it, server mode made the
 admin gate a no-op, so with an API key set *and* a trusted CIDR configured, a LAN

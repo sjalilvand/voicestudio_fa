@@ -11,7 +11,7 @@ from core.prefs import set_ as prefs_set, delete as prefs_delete
 from services import network_share
 from services import tailscale as _tailscale
 from api.schemas import SysinfoResponse, SystemInfoResponse, ModelStatusResponse
-from api.dependencies import require_admin
+from api.dependencies import require_admin, require_desktop
 from fastapi.responses import FileResponse, StreamingResponse
 import torch
 import shutil
@@ -831,7 +831,7 @@ except Exception:  # pragma: no cover — defensive: env panel > installer wirin
 _PORT_KEYS = {"OMNIVOICE_PORT", "OMNIVOICE_SHARE_PORT", "OMNIVOICE_UI_PORT"}
 
 
-@router.post("/system/set-env")
+@router.post("/system/set-env", dependencies=[Depends(require_desktop)])
 async def set_env_var(body: dict):
     """Set an environment variable at runtime, persisted across restarts.
 
