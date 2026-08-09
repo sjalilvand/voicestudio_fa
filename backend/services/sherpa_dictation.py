@@ -271,15 +271,20 @@ def _resolve_model_dir(spec: SherpaModelSpec, *, download: bool = True) -> str:
     Restricts the fetch to the exact int8 assets we pin via ``allow_patterns``
     so we never pull the bundled fp32 weights or test wavs.
     """
+    from huggingface_hub import constants as hf_constants
     from huggingface_hub import snapshot_download
-    from services.hf_revisions import revision_for
+    from services.hf_revisions import installed_revision, revision_for
 
     wanted = list(spec.files.values())
-    revision = revision_for(spec.repo_id)
+    # Probe the revision an existing installation actually resolved.  Older
+    # releases followed ``main`` and may therefore have a different snapshot;
+    # retaining it preserves offline upgrades.  Any network fetch still uses
+    # the reviewed immutable pin.
+    installed = installed_revision(spec.repo_id, hf_constants.HF_HUB_CACHE)
     try:
         return snapshot_download(
             repo_id=spec.repo_id,
-            revision=revision,
+            revision=installed,
             local_files_only=True,
             allow_patterns=wanted,
         )
@@ -289,7 +294,7 @@ def _resolve_model_dir(spec: SherpaModelSpec, *, download: bool = True) -> str:
     logger.info("sherpa dictation: downloading %s on first use", spec.repo_id)
     return snapshot_download(
         repo_id=spec.repo_id,
-        revision=revision,
+        revision=revision_for(spec.repo_id),
         allow_patterns=wanted,
     )
 

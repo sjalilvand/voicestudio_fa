@@ -44,6 +44,10 @@ def test_existing_hub_main_ref_is_preserved_for_upgrade_repair(tmp_path):
 
 
 def test_unknown_repo_cannot_start_a_network_repair(tmp_path):
+    repo_dir = tmp_path / "models--attacker--unreviewed"
+    for marker in (repo_dir / "voicestudio-revision", repo_dir / "refs" / "main"):
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text("a" * 40 + "\n", encoding="ascii")
     try:
         hf_revisions.installed_revision("attacker/unreviewed", str(tmp_path))
     except ValueError as exc:

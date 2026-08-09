@@ -76,6 +76,10 @@ def remember_revision(repo_id: str, revision: str, cache_dir: str) -> None:
 
 def installed_revision(repo_id: str, cache_dir: str) -> str:
     """Return VoiceStudio's recorded revision, falling back to the curated pin."""
+    # Authenticate the repository before consulting attacker-writable cache
+    # metadata.  A syntactically valid marker must never authorize repair of a
+    # repository outside VoiceStudio's reviewed catalog.
+    curated_revision = revision_for(repo_id)
     repo_dir = _repo_dir(repo_id, cache_dir)
     # New installs write the first marker. ``refs/main`` preserves the commit
     # resolved by older VoiceStudio/huggingface_hub installs, so upgrades repair
@@ -87,4 +91,4 @@ def installed_revision(repo_id: str, cache_dir: str) -> str:
             continue
         if _SHA.fullmatch(revision):
             return revision
-    return revision_for(repo_id)
+    return curated_revision
