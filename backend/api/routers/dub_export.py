@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from core.config import DUB_DIR, dub_seg_path
 from core.tasks import task_manager
 from core.http_headers import content_disposition
+from core.logging_utils import log_safe
 from api.routers.dub_core import _get_job
 from services.ffmpeg_utils import (
     bed_mix_filter,
@@ -56,7 +57,7 @@ def _native_save(source: str, destination: str, display_name: str, media_type: s
         raise HTTPException(status_code=500, detail=f"Copy failed: {e}")
     if not os.path.exists(dest) or os.path.getsize(dest) == 0:
         raise HTTPException(status_code=500, detail="Copy produced empty file at destination")
-    logger.info("Native save wrote %s (%d bytes)", dest, os.path.getsize(dest))
+    logger.info("Native save wrote %s (%d bytes)", log_safe(dest), os.path.getsize(dest))
     return {
         "saved": True,
         "path": dest,
@@ -541,7 +542,7 @@ async def dub_download(
         logger.warning(
             "stretch_video + burn_subs is not supported in one pass; "
             "skipping subtitle burn for job %s. Export the SRT/VTT separately.",
-            job_id,
+            log_safe(job_id),
         )
         burn_subs = False
 
@@ -600,7 +601,7 @@ async def dub_download(
             logger.exception(
                 "Smart Fit video retime failed for job %s — exporting "
                 "without per-segment retime",
-                job_id.replace("\n", " ").replace("\r", " "),
+                log_safe(job_id),
             )
 
     cmd = [ffmpeg, "-i", video_path]
@@ -778,7 +779,7 @@ async def dub_download(
 
     if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
         raise HTTPException(status_code=500, detail="ffmpeg mux produced no output file")
-    logger.info("Dub mux wrote %s (%d bytes)", output_path, os.path.getsize(output_path))
+    logger.info("Dub mux wrote %s (%d bytes)", log_safe(output_path), os.path.getsize(output_path))
 
     base_name = os.path.splitext(job.get('filename', 'output'))[0]
     safe_name = ''.join(c for c in base_name if c.isalnum() or c in '-_ ').strip() or 'output'
@@ -961,7 +962,7 @@ async def dub_preview_video(
                 logger.exception(
                     "Smart Fit preview retime failed for job %s — previewing "
                     "without per-segment retime",
-                    job_id.replace("\n", " ").replace("\r", " "),
+                    log_safe(job_id),
                 )
 
         cmd = [ffmpeg, "-i", video_path]
@@ -1160,7 +1161,7 @@ async def dub_get_onsets(job_id: str):
             json.dump(payload, f)
         os.replace(tmp_path, cache_path)
     except OSError as e:
-        logger.warning("onsets cache write failed for %s: %s", job_id, e)
+        logger.warning("onsets cache write failed for %s: %s", log_safe(job_id), log_safe(e))
     return payload
 
 
@@ -1284,10 +1285,10 @@ async def dub_qc_pass(job_id: str, lang: str = Query(None), drift_threshold: flo
         )
     except ASRTimeoutError as e:
         # Backend is alive; ASR just couldn't finish in time. 504, not 500/connection.
-        logger.warning("dub QC ASR pass timed out for %s: %s", job_id, e)
+        logger.warning("dub QC ASR pass timed out for %s: %s", log_safe(job_id), log_safe(e))
         raise HTTPException(status_code=504, detail=str(e))
     except Exception as e:
-        logger.exception("dub QC ASR pass failed for %s", job_id)
+        logger.error("dub QC ASR pass failed for %s: %s", log_safe(job_id), log_safe(e))
         raise HTTPException(status_code=500, detail=f"QC transcription failed: {e}")
 
     seg_ids = job.get("seg_order") or [s.get("id", i) for i, s in enumerate(segments)]
@@ -1372,7 +1373,7 @@ async def dub_download_audio(job_id: str, lang: str = Query(None), preserve_bg: 
             if not os.path.exists(final_audio_path) or os.path.getsize(final_audio_path) == 0:
                 raise Exception("ffmpeg mix produced no output file")
             wav_path = final_audio_path
-            logger.info("Dub audio mix wrote %s (%d bytes)", final_audio_path, os.path.getsize(final_audio_path))
+            logger.info("Dub audio mix wrote %s (%d bytes)", log_safe(final_audio_path), os.path.getsize(final_audio_path))
         except Exception:
             logger.exception("Failed to mix audio")
 
@@ -1629,7 +1630,7 @@ async def dub_download_mp3(job_id: str, lang: str = Query(None), preserve_bg: bo
 
     if not os.path.exists(mp3_path) or os.path.getsize(mp3_path) == 0:
         raise HTTPException(status_code=500, detail="MP3 encoding produced no output file")
-    logger.info("Dub MP3 encoded %s (%d bytes)", mp3_path, os.path.getsize(mp3_path))
+    logger.info("Dub MP3 encoded %s (%d bytes)", log_safe(mp3_path), os.path.getsize(mp3_path))
 
     base_name = os.path.splitext(job.get('filename', 'audio'))[0]
     safe_name = ''.join(c for c in base_name if c.isalnum() or c in '-_ ').strip() or 'audio'

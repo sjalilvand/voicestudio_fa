@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 import time
 from typing import Optional
+from core.logging_utils import log_safe
 
 logger = logging.getLogger("omnivoice.settings_store")
 
@@ -148,7 +149,7 @@ def get_secret(name: str) -> Optional[str]:
         try:
             from cryptography.fernet import InvalidToken
         except ImportError:  # pragma: no cover — dep should always be present
-            logger.error("cryptography unavailable; cannot decrypt secret %s", name)
+            logger.error("cryptography unavailable; cannot decrypt secret %s", log_safe(name))
             return None
         try:
             return _fernet().decrypt(row[0].encode("ascii")).decode("utf-8")
@@ -159,7 +160,7 @@ def get_secret(name: str) -> Optional[str]:
             )
             return None
     except Exception:
-        logger.exception("settings_store.get_secret(%s): SQLite read failed", name)
+        logger.exception("settings_store.get_secret(%s): SQLite read failed", log_safe(name))
         return None
 
 
@@ -242,8 +243,11 @@ def get_text(key: str, default: Optional[str] = None) -> Optional[str]:
         if row is None or row[0] is None:
             return default
         return str(row[0])
-    except Exception:
-        logger.exception("settings_store.get_text(%s): SQLite read failed", key)
+    except Exception as exc:
+        logger.error(
+            "settings_store.get_text(%s): SQLite read failed: %s",
+            log_safe(key), log_safe(exc),
+        )
         return default
 
 

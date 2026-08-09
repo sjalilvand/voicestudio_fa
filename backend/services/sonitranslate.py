@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Optional
 
 from services.ffmpeg_utils import spawn_subprocess
+from core.logging_utils import log_safe
 
 logger = logging.getLogger("omnivoice.sonitranslate")
 
@@ -227,7 +228,7 @@ async def dub_video(
             "gradio_client not installed. Run: pip install gradio_client"
         )
 
-    logger.info("Submitting dub job to SoniTranslate: %s → %s", video_path, target_language)
+    logger.info("Submitting dub job to SoniTranslate: %s → %s", log_safe(video_path), log_safe(target_language))
 
     client = Client(SONI_URL)
 
@@ -312,7 +313,7 @@ async def dub_video(
         shutil.copy2(output_file, dest)
         output_file = dest
 
-    logger.info("SoniTranslate dub complete: %s", output_file)
+    logger.info("SoniTranslate dub complete: %s", log_safe(output_file))
     return {
         "output_file": output_file,
         "target_language": target_language,

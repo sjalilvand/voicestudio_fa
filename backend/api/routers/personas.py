@@ -28,6 +28,7 @@ from core import event_bus
 from core.config import VOICES_DIR  # noqa: F401 — re-exported for tests/monkeypatch
 from core.db import db_conn
 from core.version import APP_VERSION
+from core.logging_utils import log_safe
 from core.http_headers import content_disposition
 from services import persona_bundle as pb
 
@@ -88,8 +89,8 @@ async def export_persona(
             detail="This profile has no readable reference or locked audio to "
                    "build a preview from — re-create or re-import it.",
         )
-    except Exception:
-        logger.exception("persona export failed for %s", profile_id)
+    except Exception as exc:
+        logger.error("persona export failed for %s: %s", log_safe(profile_id), log_safe(exc))
         raise HTTPException(
             status_code=503,
             detail="Could not build the persona bundle — see Settings → Logs.",
@@ -244,7 +245,7 @@ async def import_persona(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail="Import failed; no files were kept.")
 
     event_bus.emit("profiles", {"action": "created", "id": profile_id})
-    logger.info("Imported persona %r as %s (verified=%s)", persona.get("name"), profile_id, verified)
+    logger.info("Imported persona %s as %s (verified=%s)", log_safe(persona.get("name")), log_safe(profile_id), verified)
 
     return {
         "success": True,

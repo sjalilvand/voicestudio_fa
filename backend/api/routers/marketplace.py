@@ -40,6 +40,7 @@ from core.db import db_conn
 from core import event_bus
 from core.version import APP_VERSION
 from core.http_headers import content_disposition
+from core.logging_utils import log_safe
 
 logger = logging.getLogger("omnivoice.marketplace")
 
@@ -295,7 +296,7 @@ def publish_to_marketplace(
                 ext = os.path.splitext(locked_path)[1] or ".wav"
                 zf.write(full_locked, f"locked_audio{ext}")
 
-    logger.info("Published voice %r to marketplace: %s", profile.get("name"), bundle_path)
+    logger.info("Published voice %s to marketplace: %s", log_safe(profile.get("name")), log_safe(bundle_path))
     return {
         "success": True,
         "profile_id": profile_id,
@@ -345,7 +346,7 @@ def browse_marketplace(
                     ),
                 })
         except Exception as e:
-            logger.warning("Skipping invalid bundle %s: %s", path.name, e)
+            logger.warning("Skipping invalid bundle %s: %s", log_safe(path.name), log_safe(e))
 
     return {"bundles": bundles, "total": len(bundles), "directory": str(MARKETPLACE_DIR)}
 

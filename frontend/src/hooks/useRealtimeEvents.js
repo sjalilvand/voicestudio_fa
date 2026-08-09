@@ -13,6 +13,7 @@
  */
 import { useEffect, useRef, useCallback } from 'react';
 import { wsUrl, apiUrl } from '../api/client';
+import { logSafe } from '../utils/logSafe';
 
 const WS_EVENTS_URL = wsUrl('/ws/events');
 
@@ -102,7 +103,7 @@ export default function useRealtimeEvents(handlers) {
             handler(event);
           }
         } catch (err) {
-          console.warn('[ws/events] bad message:', e.data, err);
+          console.warn('[ws/events] bad message:', logSafe(e.data), logSafe(err));
         }
       };
 

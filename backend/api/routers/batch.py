@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 from core.config import DATA_DIR
 from core import failure
+from core.logging_utils import log_safe
 
 router = APIRouter()
 logger = logging.getLogger("omnivoice.batch")
@@ -531,7 +532,10 @@ async def enqueue_batch_job(
     _jobs[job_id] = job
     await _queue.put(job_id)
 
-    logger.info("Batch job %s enqueued: %s → %s", job_id, video.filename, lang_list)
+    logger.info(
+        "Batch job %s enqueued: %s → %s",
+        log_safe(job_id), log_safe(video.filename), log_safe(lang_list),
+    )
     return {"job_id": job_id, "status": "queued", "queue_position": _queue.qsize()}
 
 

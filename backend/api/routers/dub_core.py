@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from core.db import db_conn
 from core.config import PREVIEW_DIR
 from core.tasks import task_manager
+from core.logging_utils import log_safe
 from core import event_bus
 from schemas.requests import DubIngestUrlRequest, ParseSubtitleTextRequest
 from services.model_manager import get_model, _gpu_pool, _cpu_pool, get_diarization_pipeline, offload_tts_for_asr, restore_tts_after_asr, should_preload_tts_asr
@@ -176,7 +177,7 @@ async def dub_import_srt(job_id: str, file: UploadFile = File(...)):
     _save_job(job_id, job)
     logger.info(
         "Imported %d cue(s) from .srt for job %s (skipped=%d, overlap_shifted=%d, clamped=%d)",
-        len(segments), job_id, result.skipped_cues, result.dropped_overlaps, clamped,
+        len(segments), log_safe(job_id), result.skipped_cues, result.dropped_overlaps, clamped,
     )
     return {
         "segments": segments,
@@ -268,7 +269,7 @@ def delete_single_dub_history(history_id: str):
         # disappears from history either way.
         logger.info(
             "dub delete %s: history row removed but directory kept — still "
-            "referenced by job(s) %s (#1331)", history_id, ", ".join(holders),
+            "referenced by job(s) %s (#1331)", log_safe(history_id), log_safe(", ".join(holders)),
         )
     elif safe and os.path.isdir(safe):
         shutil.rmtree(safe, ignore_errors=True)
@@ -300,7 +301,7 @@ async def preview_upload(video: UploadFile = File(...)):
             )
             has_audio = True
         except Exception as e:
-            logger.warning(f"FFmpeg extraction failed: {e}")
+            logger.warning("FFmpeg extraction failed: %s", log_safe(e))
             pass
 
     return {
@@ -631,7 +632,10 @@ async def dub_transcribe_stream(
                         yield b": tts-load keepalive\n\n"
                     _model = _model_task.result()
                 except Exception as e:
-                    logger.exception("transcribe preflight: model load failed (job=%r)", job_id)
+                    logger.error(
+                        "transcribe preflight: model load failed (job=%s): %s",
+                        log_safe(job_id), log_safe(e),
+                    )
                     from core.failure import build_failure
                     f = build_failure(e, stage="transcribe-preflight", include_diagnostic=False)
                     preflight_error = f["reason"] + (f" — {f['hint']}" if f.get("hint") else "")
@@ -734,7 +738,10 @@ async def dub_transcribe_stream(
                             preflight_error = asr_model_missing_detail(e.payload)
                             preflight_payload = e.payload
                         except Exception as e:
-                            logger.exception("transcribe preflight: ASR load failed (job=%r)", job_id)
+                            logger.error(
+                                "transcribe preflight: ASR load failed (job=%s): %s",
+                                log_safe(job_id), log_safe(e),
+                            )
                             from core.failure import build_failure
                             f = build_failure(e, stage="transcribe-preflight", include_diagnostic=False)
                             preflight_error = "ASR backend initialization failed: " + f["reason"] + (
@@ -908,7 +915,7 @@ async def dub_transcribe_stream(
                     logger.error(
                         "Transcribe chunk %d/%d timed out after %.0fs (attempt %d/%d, job=%s)",
                         i + 1, chunks_n, transcribe_timeout_s, _attempt,
-                        _CHUNK_TRANSCRIBE_ATTEMPTS, job_id,
+                        _CHUNK_TRANSCRIBE_ATTEMPTS, log_safe(job_id),
                     )
                     part = {"chunks": [], "language": None, "error": str(e)}
                 # Success → keep it. Failure/timeout → retry once on a fresh
@@ -919,14 +926,14 @@ async def dub_transcribe_stream(
                 if _attempt < _CHUNK_TRANSCRIBE_ATTEMPTS:
                     logger.warning(
                         "Retrying transcribe chunk %d/%d after failure/timeout (next attempt %d/%d, job=%s)",
-                        i + 1, chunks_n, _attempt + 1, _CHUNK_TRANSCRIBE_ATTEMPTS, job_id,
+                        i + 1, chunks_n, _attempt + 1, _CHUNK_TRANSCRIBE_ATTEMPTS, log_safe(job_id),
                     )
                     if not pool_reset_by_guard:
                         reset_pool_after_wedge(
                             _gpu_pool, what=f"Dub chunk {i + 1}/{chunks_n}")
             if part.get("error"):
                 chunk_errors.append(part["error"])
-                logger.warning("Chunk %d/%d error: %s", i + 1, chunks_n, part["error"])
+                logger.warning("Chunk %d/%d error: %s", i + 1, chunks_n, log_safe(part["error"]))
             if detected_lang is None and part.get("language"):
                 detected_lang = part["language"]
             asr_speaker_turns.extend(part.get("speaker_turns") or [])
@@ -1001,7 +1008,7 @@ async def dub_transcribe_stream(
                     "too short, or in an unsupported format. Try re-uploading or "
                     "check that the source has an audible speech track."
                 )
-            logger.error("transcribe yielded 0 segments (job=%s): %s", job_id, detail)
+            logger.error("transcribe yielded 0 segments (job=%s): %s", log_safe(job_id), log_safe(detail))
             yield _sse_event("error", {"detail": detail, "retryable": True})
             yield _sse_event("done", {})
             return
@@ -1273,7 +1280,7 @@ async def dub_transcribe_stream(
                 # warning to the user.)
                 logger.info(
                     "auto speaker clones skipped (labels_source=heuristic, job=%s)",
-                    job_id,
+                    log_safe(job_id),
                 )
                 yield _sse_event("warning", {
                     "detail": CLONE_SKIP_HEURISTIC_MSG,
@@ -1448,7 +1455,10 @@ async def dub_transcribe_stream(
             async for ev in _gen_body():
                 yield ev
         except Exception as e:  # noqa: BLE001 — last-resort stream finalizer
-            logger.exception("transcribe stream crashed (job=%r)", job_id)
+            logger.error(
+                "transcribe stream crashed (job=%s): %s",
+                log_safe(job_id), log_safe(e),
+            )
             from core.failure import build_failure
             f = build_failure(e, stage="transcribe", include_diagnostic=False)
             detail = f["reason"] + (f" — {f['hint']}" if f.get("hint") else "")
