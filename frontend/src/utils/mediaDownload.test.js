@@ -97,7 +97,7 @@ describe('downloadMedia — Tauri branch (isTauri=true)', () => {
     expect(toast.error).not.toHaveBeenCalled();
   });
 
-  it('dynamic endpoint (no sourceFilename): appends ?save_path= and records history', async () => {
+  it('dynamic endpoint uses a one-shot native path authorization and records history', async () => {
     const downloadMedia = await loadDownloadMedia({ tauri: true });
     save.mockResolvedValueOnce('/Users/me/Movies/dubbed_video.mp4');
     apiFetch.mockResolvedValueOnce({
@@ -108,15 +108,22 @@ describe('downloadMedia — Tauri branch (isTauri=true)', () => {
         display_name: 'dubbed_video.mp4',
       }),
     });
+    invoke.mockResolvedValueOnce('a'.repeat(64));
 
     await downloadMedia(
       'http://x/dub/download/job/dubbed_video.mp4?preserve_bg=1',
       'dubbed_video.mp4',
     );
 
-    const fetchedUrl = apiFetch.mock.calls[0][0];
-    expect(fetchedUrl).toContain('save_path=');
-    expect(fetchedUrl).toContain(encodeURIComponent('/Users/me/Movies/dubbed_video.mp4'));
+    expect(invoke).toHaveBeenCalledWith('authorize_host_path', {
+      kind: 'dub_export',
+      path: '/Users/me/Movies/dubbed_video.mp4',
+    });
+    expect(apiFetch).toHaveBeenCalledWith(
+      'http://x/dub/download/job/dubbed_video.mp4?preserve_bg=1',
+      { headers: { 'X-VoiceStudio-Path-Authorization': 'a'.repeat(64) } },
+    );
+    expect(apiFetch.mock.calls[0][0]).not.toContain('save_path=');
     expect(exportAction).not.toHaveBeenCalled(); // dynamic endpoint copies itself
     expect(exportRecord).toHaveBeenCalledWith(
       expect.objectContaining({ filename: 'dubbed_video.mp4', mode: 'video' }),

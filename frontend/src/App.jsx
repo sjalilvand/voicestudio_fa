@@ -839,7 +839,7 @@ function App() {
       toast.error(i18n.t('app.toast_open_folder_failed', { message: err.message }));
     }
   };
-  // Save a dynamic (save_path-aware) export — dub video/audio/subtitles — to
+  // Save a dynamic export — dub video/audio/subtitles — to
   // disk. The parity-safe dialog + server-side copy vs browser-blob branch now
   // lives in the shared `downloadMedia` util (#1218) so audiobook/story exports
   // reuse the exact same path and never fall back to a webview-hijacking

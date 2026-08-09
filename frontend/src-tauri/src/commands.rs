@@ -28,7 +28,7 @@ pub fn path_authorization_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> P
 }
 
 fn validate_host_path(kind: &str, raw: &str) -> Result<PathBuf, String> {
-    if !matches!(kind, "models_dir" | "ffmpeg" | "ffprobe") {
+    if !matches!(kind, "models_dir" | "ffmpeg" | "ffprobe" | "dub_export") {
         return Err("Unsupported host-path capability".into());
     }
     if raw.chars().any(|c| c.is_control()) {
@@ -46,6 +46,13 @@ fn validate_host_path(kind: &str, raw: &str) -> Result<PathBuf, String> {
         let probe = path.join(".voicestudio-write-test");
         fs::write(&probe, b"ok").map_err(|e| format!("Directory is not writable: {e}"))?;
         let _ = fs::remove_file(probe);
+    } else if kind == "dub_export" {
+        let parent = path
+            .parent()
+            .ok_or_else(|| "Save destination must have a parent directory".to_string())?;
+        if !parent.is_dir() {
+            return Err("Save destination directory does not exist".into());
+        }
     } else {
         if !path.is_file() {
             return Err("Selected media tool is not a file".into());
@@ -115,6 +122,22 @@ mod host_path_authorization_tests {
     #[test]
     fn empty_models_path_is_the_authorized_default_reset() {
         assert_eq!(validate_host_path("models_dir", "").unwrap(), PathBuf::new());
+    }
+
+    #[test]
+    fn dub_export_accepts_only_absolute_paths_in_existing_directories() {
+        let parent = std::env::temp_dir();
+        let destination = parent.join("voicestudio-authorized-export.wav");
+        assert_eq!(
+            validate_host_path("dub_export", destination.to_str().unwrap()).unwrap(),
+            destination,
+        );
+        assert!(validate_host_path("dub_export", "relative/export.wav").is_err());
+        assert!(validate_host_path(
+            "dub_export",
+            parent.join("missing-directory/export.wav").to_str().unwrap(),
+        )
+        .is_err());
     }
 }
 

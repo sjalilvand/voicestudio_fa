@@ -22,8 +22,8 @@
 //       to the destination. The /audio mount is a StaticFiles mount with no
 //       ?save_path= support, so this is the only server-side copy that works
 //       for those files.
-//   (b) no `sourceFilename` → a dynamic, save_path-aware endpoint (dub exports):
-//       append ?save_path= and let that endpoint render + copy, returning JSON.
+//   (b) no `sourceFilename` → a dynamic dub endpoint: Tauri authorizes the
+//       chosen path once and only the capability token crosses loopback HTTP.
 //   Subtitles (srt/vtt) are small text bodies fetched raw and written via the
 //   trusted `save_text_file` command — the backend never handles their dest
 //   path (#309).
@@ -50,7 +50,7 @@ function guessMode(ext) {
  * as the App's own export flow. Never creates an `<a href={httpUrl} download>`.
  *
  * @param {string} url            HTTP URL of the file (also the source for the
- *                                browser blob download + dynamic save_path copy).
+ *                                browser blob download + authorized dynamic copy).
  * @param {string} fallbackName   Suggested filename in the save dialog / for the
  *                                download.
  * @param {object} [opts]
@@ -70,7 +70,7 @@ export async function downloadMedia(url, fallbackName, opts = {}) {
   const modeGuess = guessMode(extGuess);
 
   // exportRecord writes the history row for paths the backend didn't already
-  // record (browser download, save_path, subtitle). Non-fatal: a failed record
+  // record (browser download, authorized dub save, subtitle). Non-fatal: a failed record
   // must not turn a successful save into an error toast.
   const recordHistory = async (filename, destinationPath) => {
     try {
@@ -120,11 +120,17 @@ export async function downloadMedia(url, fallbackName, opts = {}) {
         return;
       }
 
-      // (c) Dynamic save_path-aware endpoint (dub exports): the endpoint copies
-      // to destPath and returns a JSON envelope. Guard the content-type so a
+      // (c) Dynamic dub endpoint: bind the native picker result to a one-shot
+      // capability. The host path never enters an HTTP query or body. Guard the content-type so a
       // raw-body response surfaces a clear error, not a JSON.parse crash (#309).
-      const sep = url.includes('?') ? '&' : '?';
-      const res = await apiFetch(`${url}${sep}save_path=${encodeURIComponent(destPath)}`);
+      const { invoke } = await import('@tauri-apps/api/core');
+      const authorization = await invoke('authorize_host_path', {
+        kind: 'dub_export',
+        path: destPath,
+      });
+      const res = await apiFetch(url, {
+        headers: { 'X-VoiceStudio-Path-Authorization': authorization },
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`); // a 4xx/5xx isn't a successful save
       const ctype = res.headers.get('content-type') || '';
       if (!ctype.includes('application/json')) {

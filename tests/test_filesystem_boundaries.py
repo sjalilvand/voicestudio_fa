@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
+import json
 from contextlib import contextmanager
 from types import SimpleNamespace
 
 import pytest
-from fastapi import HTTPException
-
 from api.dependencies import require_native_access
 from core.path_security import UnsafePath, resolve_within, safe_filename
+from fastapi import HTTPException
 
 
 def _request(host: str | None):
@@ -140,11 +141,73 @@ def test_dub_artifact_rejects_db_path_and_symlink_escapes(tmp_path, monkeypatch)
         assert exc.value.status_code == 400
 
 
-def test_native_save_guard_runs_only_for_host_path_mode(monkeypatch):
+def test_dub_artifact_rebases_trusted_path_after_data_relocation(tmp_path, monkeypatch):
     from api.routers import dub_export
 
-    remote = _request("10.0.0.8")
-    dub_export._guard_native_save(remote, "")
+    current = tmp_path / "new-data" / "dub_jobs"
+    artifact = current / "job_123" / "tracks" / "voice.wav"
+    artifact.parent.mkdir(parents=True)
+    artifact.write_bytes(b"voice")
+    monkeypatch.setattr(dub_export, "DUB_DIR", str(current))
+
+    old_posix = tmp_path / "old-data" / "dub_jobs" / "job_123" / "tracks" / "voice.wav"
+    old_windows = r"D:\Old VoiceStudio\dub_jobs\job_123\tracks\voice.wav"
+    assert dub_export._dub_artifact(old_posix) == str(artifact.resolve())
+    assert dub_export._dub_artifact(old_windows) == str(artifact.resolve())
+
+
+def test_dub_artifact_rebase_rejects_unanchored_traversal_and_symlink(tmp_path, monkeypatch):
+    from api.routers import dub_export
+
+    current = tmp_path / "new-data" / "dub_jobs"
+    outside = tmp_path / "outside"
+    current.mkdir(parents=True)
+    outside.mkdir()
+    (outside / "secret.wav").write_bytes(b"secret")
+    (current / "job_123").symlink_to(outside, target_is_directory=True)
+    monkeypatch.setattr(dub_export, "DUB_DIR", str(current))
+
+    rejected = [
+        tmp_path / "old-data" / "other" / "job_123" / "secret.wav",
+        str(tmp_path / "old-data" / "dub_jobs" / ".." / "secret.wav"),
+        tmp_path / "old-data" / "dub_jobs" / "job_123" / "secret.wav",
+        r"D:\old\dub_jobs\..\secret.wav",
+    ]
+    for value in rejected:
+        with pytest.raises(HTTPException) as exc:
+            dub_export._dub_artifact(value)
+        assert exc.value.status_code == 400
+
+
+def test_dub_native_save_requires_one_shot_tauri_authorization(tmp_path, monkeypatch):
+    from api.routers import dub_export
+    from core import path_authorization
+
+    auth_dir = tmp_path / "authorizations"
+    auth_dir.mkdir()
+    monkeypatch.setattr(path_authorization, "_AUTH_DIR", str(auth_dir))
+    token = "a" * 64
+    destination = str(tmp_path / "export.wav")
+    (auth_dir / f"{token}.json").write_text(
+        json.dumps({"token": token, "kind": "dub_export", "path": destination}),
+        encoding="utf-8",
+    )
+
+    assert dub_export._consume_native_save("") is None
+    assert dub_export._consume_native_save(token) == destination
     with pytest.raises(HTTPException) as exc:
-        dub_export._guard_native_save(remote, "/tmp/export.wav")
+        dub_export._consume_native_save(token)
     assert exc.value.status_code == 403
+
+
+def test_dub_routes_never_accept_an_http_destination_path():
+    from api.routers import dub_export
+
+    for route in (
+        dub_export.dub_download,
+        dub_export.dub_download_audio,
+        dub_export.dub_download_mp3,
+    ):
+        parameters = inspect.signature(route).parameters
+        assert "save_path" not in parameters
+        assert "save_authorization" in parameters

@@ -1,21 +1,21 @@
-import os
+import asyncio
 import io
-import re
 import json
+import logging
+import ntpath
+import os
+import re
 import time
 import uuid
-import asyncio
-import logging
+from pathlib import Path, PureWindowsPath
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Query, Request, Response
-from fastapi.responses import FileResponse, StreamingResponse
 
 from core.config import DUB_DIR, dub_seg_path
-from core.tasks import task_manager
 from core.http_headers import content_disposition
-from api.routers.dub_core import _get_job
-from api.dependencies import require_native_access
 from core.path_security import UnsafePath, resolve_within
+from core.tasks import task_manager
+from fastapi import APIRouter, Header, HTTPException, Query, Response
+from fastapi.responses import FileResponse, StreamingResponse
 from services.ffmpeg_utils import (
     bed_mix_filter,
     explain_ffmpeg_failure,
@@ -29,6 +29,8 @@ from services.video_retime import (
     expand_retime_chunks,
     prepare_smart_fit_video,
 )
+
+from api.routers.dub_core import _get_job
 
 router = APIRouter()
 logger = logging.getLogger("omnivoice.api")
@@ -51,10 +53,45 @@ def _job_dir_or_400(job_id: str) -> str:
         raise HTTPException(status_code=400, detail="Invalid job id") from exc
 
 
+def _resolve_dub_artifact(value: object) -> Path:
+    """Resolve current or safely rebased pre-relocation dub artifact paths."""
+    raw = str(value or "")
+    try:
+        return resolve_within(DUB_DIR, raw)
+    except UnsafePath:
+        # Older job rows store absolute paths. After the user relocates the
+        # data directory, preserve only the suffix rooted at the exact
+        # ``dub_jobs`` boundary; never touch the old host path itself.
+        if ntpath.isabs(raw):
+            parts = PureWindowsPath(raw).parts
+        elif os.path.isabs(raw):
+            parts = Path(raw).parts
+        else:
+            raise
+        anchor = Path(DUB_DIR).name
+        positions = [index for index, part in enumerate(parts) if part == anchor]
+        if not positions:
+            raise
+        relative_parts = parts[positions[-1] + 1:]
+        if (
+            not relative_parts
+            or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", relative_parts[0])
+            or any(
+                part in {"", ".", ".."}
+                or "/" in part
+                or "\\" in part
+                or ":" in part
+                for part in relative_parts
+            )
+        ):
+            raise
+        return resolve_within(DUB_DIR, Path(*relative_parts))
+
+
 def _dub_artifact(value: object, *, missing_detail: str = "File not found") -> str:
     """Resolve a persisted job artifact inside the global dub-data boundary."""
     try:
-        path = resolve_within(DUB_DIR, str(value or ""))
+        path = _resolve_dub_artifact(value)
     except UnsafePath as exc:
         raise HTTPException(status_code=400, detail="Invalid job artifact path") from exc
     if not path.is_file():
@@ -66,7 +103,7 @@ def _optional_dub_artifact(value: object) -> str | None:
     if not value:
         return None
     try:
-        path = resolve_within(DUB_DIR, str(value))
+        path = _resolve_dub_artifact(value)
     except UnsafePath as exc:
         raise HTTPException(status_code=400, detail="Invalid job artifact path") from exc
     return str(path) if path.is_file() else None
@@ -78,9 +115,15 @@ def _safe_lang_or_400(lang: str | None) -> str | None:
     return lang
 
 
-def _guard_native_save(request: Request, save_path: str) -> None:
-    if save_path:
-        require_native_access(request)
+def _consume_native_save(authorization: str) -> str | None:
+    if not authorization:
+        return None
+    from core.path_authorization import PathAuthorizationError, consume
+
+    try:
+        return consume(authorization, "dub_export")
+    except PathAuthorizationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
 
 
 def _native_save(source: str, destination: str, display_name: str, media_type: str):
@@ -472,11 +515,10 @@ def _build_audio_export_cmd(
 @router.get("/dub/download/{job_id}/{filename}")
 async def dub_download(
     job_id: str,
-    request: Request,
     preserve_bg: bool = Query(True, description="Mix background noise into dubbed tracks"),
     default_track: str = Query("original"),
     include_tracks: str = Query("", description="Comma-separated list of tracks to include (e.g. 'original,de,es'). Empty = include all."),
-    save_path: str = Query("", description="Absolute destination path. If set, mux output is copied there and JSON returned instead of FileResponse."),
+    save_authorization: str = Header("", alias="X-VoiceStudio-Path-Authorization"),
     burn_subs: bool = Query(False, description="Burn subtitles into the video stream (forces re-encode). Uses dual-subtitle layout when dual=1."),
     dual: bool = Query(False, description="When burn_subs=1, render translated on top of italicised original."),
     out_format: str = Query("m4a", description="Audio-only jobs (#119): output container — wav, m4a, mp3, or flac. Ignored for video jobs."),
@@ -485,7 +527,7 @@ async def dub_download(
     # path or ffmpeg argv (export dir, retime work path, slice paths). Real
     # job ids are short uuid slices — alnum/hyphen/underscore only.
     job_dir = _job_dir_or_400(job_id)
-    _guard_native_save(request, save_path)
+    save_path = _consume_native_save(save_authorization)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -1323,8 +1365,8 @@ async def dub_qc_pass(job_id: str, lang: str = Query(None), drift_threshold: flo
         return result.get("segments", []), backend.id
 
     try:
-        from services.model_manager import _get_gpu_pool
         from services.asr_backend import ASRTimeoutError, run_transcribe_guarded
+        from services.model_manager import _get_gpu_pool
         recognized, engine_id = await run_transcribe_guarded(
             _get_gpu_pool(), _recognize, what="QC",
         )
@@ -1383,13 +1425,12 @@ async def dub_qc_pass(job_id: str, lang: str = Query(None), drift_threshold: flo
 @router.get("/dub/download-audio/{job_id}/{filename}")
 async def dub_download_audio(
     job_id: str,
-    request: Request,
     lang: str = Query(None),
     preserve_bg: bool = Query(True),
-    save_path: str = Query(""),
+    save_authorization: str = Header("", alias="X-VoiceStudio-Path-Authorization"),
 ):
     job_dir = _job_dir_or_400(job_id)
-    _guard_native_save(request, save_path)
+    save_path = _consume_native_save(save_authorization)
     lang = _safe_lang_or_400(lang)
     job = _get_job(job_id)
     if not job:
@@ -1624,14 +1665,13 @@ async def dub_export_segments_zip(job_id: str, lang: str = Query(None)):
 @router.get("/dub/download-mp3/{job_id}/{filename}")
 async def dub_download_mp3(
     job_id: str,
-    request: Request,
     lang: str = Query(None),
     preserve_bg: bool = Query(True),
-    save_path: str = Query(""),
+    save_authorization: str = Header("", alias="X-VoiceStudio-Path-Authorization"),
     bitrate: str = Query("192k"),
 ):
     job_dir = _job_dir_or_400(job_id)
-    _guard_native_save(request, save_path)
+    save_path = _consume_native_save(save_authorization)
     lang = _safe_lang_or_400(lang)
     job = _get_job(job_id)
     if not job:
