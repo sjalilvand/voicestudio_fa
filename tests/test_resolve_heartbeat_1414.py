@@ -18,7 +18,8 @@ The sidecar's own cold model load already heartbeats for exactly this reason
 from __future__ import annotations
 
 import threading
-import time
+from contextlib import contextmanager
+from pathlib import Path
 
 import pytest
 
@@ -41,15 +42,21 @@ def mm():
 def test_a_slow_resolution_extends_the_deadline(sb, mm, monkeypatch):
     """The whole point: a resolution that outlives one heartbeat interval
     leaves proof of life on the execution clock."""
-    monkeypatch.setattr(sb, "_RESOLVE_HEARTBEAT_S", 0.01)
+    monkeypatch.setattr(sb, "_RESOLVE_HEARTBEAT_S", 0)
     monkeypatch.setattr(mm, "running_on_gpu_pool", lambda: True)
     ident = threading.get_ident()
     mm._MODEL_LOAD_ACTIVITY.pop(ident, None)
 
+    wrote = threading.Event()
+
+    class _SignallingMap(dict):
+        def __setitem__(self, key, value):
+            super().__setitem__(key, value)
+            wrote.set()
+
+    monkeypatch.setattr(mm, "_MODEL_LOAD_ACTIVITY", _SignallingMap())
     with sb._heartbeat_while_resolving("indextts2"):
-        deadline = time.monotonic() + 2.0
-        while ident not in mm._MODEL_LOAD_ACTIVITY and time.monotonic() < deadline:
-            time.sleep(0.01)
+        assert wrote.wait(2), "the heartbeat thread never reported progress"
 
     assert ident in mm._MODEL_LOAD_ACTIVITY, (
         "a slow venv resolution reported no progress — the generate budget "
@@ -68,11 +75,19 @@ def test_it_credits_the_resolving_thread_not_the_beater(sb, mm, monkeypatch):
     the activity map: other tests in the suite have live pool workers, so the
     diff is not this test's to own.
     """
-    monkeypatch.setattr(sb, "_RESOLVE_HEARTBEAT_S", 0.01)
+    monkeypatch.setattr(sb, "_RESOLVE_HEARTBEAT_S", 0)
     monkeypatch.setattr(mm, "running_on_gpu_pool", lambda: True)
     ident = threading.get_ident()
     mm._MODEL_LOAD_ACTIVITY.pop(ident, None)
     beater_idents: set[int] = set()
+    wrote = threading.Event()
+
+    class _SignallingMap(dict):
+        def __setitem__(self, key, value):
+            super().__setitem__(key, value)
+            wrote.set()
+
+    monkeypatch.setattr(mm, "_MODEL_LOAD_ACTIVITY", _SignallingMap())
 
     real_thread = threading.Thread
 
@@ -84,9 +99,7 @@ def test_it_credits_the_resolving_thread_not_the_beater(sb, mm, monkeypatch):
     monkeypatch.setattr(sb.threading, "Thread", _Recording)
 
     with sb._heartbeat_while_resolving("indextts2"):
-        deadline = time.monotonic() + 2.0
-        while ident not in mm._MODEL_LOAD_ACTIVITY and time.monotonic() < deadline:
-            time.sleep(0.01)
+        assert wrote.wait(2), "the heartbeat thread never reported progress"
 
     assert ident in mm._MODEL_LOAD_ACTIVITY, "the caller's job was never credited"
     assert beater_idents, "no heartbeat thread ran"
@@ -100,34 +113,41 @@ def test_it_credits_the_resolving_thread_not_the_beater(sb, mm, monkeypatch):
 def test_an_off_pool_caller_never_heartbeats(sb, mm, monkeypatch):
     """#1379's lesson: an off-pool thread's ident is not tracked by the clock,
     and a pool worker that later reuses it would inherit unearned extension."""
-    monkeypatch.setattr(sb, "_RESOLVE_HEARTBEAT_S", 0.01)
     monkeypatch.setattr(mm, "running_on_gpu_pool", lambda: False)
     ident = threading.get_ident()
     mm._MODEL_LOAD_ACTIVITY.pop(ident, None)
 
+    class _UnexpectedThread:
+        def __init__(self, *args, **kwargs):
+            raise AssertionError("an off-pool call started a heartbeat helper")
+
+    monkeypatch.setattr(sb.threading, "Thread", _UnexpectedThread)
     with sb._heartbeat_while_resolving("indextts2"):
-        time.sleep(0.05)
+        pass
 
     assert ident not in mm._MODEL_LOAD_ACTIVITY
 
 
 def test_the_beater_stops_when_resolution_finishes(sb, mm, monkeypatch):
     """A thread per spawn that never exits would accumulate one per generate."""
-    monkeypatch.setattr(sb, "_RESOLVE_HEARTBEAT_S", 0.01)
+    monkeypatch.setattr(sb, "_RESOLVE_HEARTBEAT_S", 0)
     monkeypatch.setattr(mm, "running_on_gpu_pool", lambda: True)
-    before = {t.name for t in threading.enumerate()}
+    exited = threading.Event()
+    real_thread = threading.Thread
+
+    class _Recording(real_thread):
+        def run(self):
+            try:
+                super().run()
+            finally:
+                exited.set()
+
+    monkeypatch.setattr(sb.threading, "Thread", _Recording)
 
     with sb._heartbeat_while_resolving("indextts2"):
-        time.sleep(0.05)
+        pass
 
-    deadline = time.monotonic() + 2.0
-    while time.monotonic() < deadline:
-        live = {t.name for t in threading.enumerate()} - before
-        if not any("resolve-heartbeat" in n for n in live):
-            break
-        time.sleep(0.01)
-    live = {t.name for t in threading.enumerate()} - before
-    assert not any("resolve-heartbeat" in n for n in live), live
+    assert exited.wait(2), "heartbeat helper survived context exit"
     mm._MODEL_LOAD_ACTIVITY.pop(threading.get_ident(), None)
 
 
@@ -146,20 +166,55 @@ def test_a_broken_heartbeat_does_not_break_the_spawn(sb, monkeypatch):
         pass  # the point is that this block is reached and exits cleanly
 
 
-def test_spawn_wraps_the_resolution(sb):
+def test_spawn_wraps_the_resolution(sb, monkeypatch):
     """A guard against the wrapper being dropped in a later refactor: the
     heartbeat is worthless if `venv_python()` is called outside it."""
-    import inspect
+    active = False
+    resolved_inside = threading.Event()
 
-    src = inspect.getsource(sb.SubprocessBackend._spawn)
-    assert "_heartbeat_while_resolving" in src, (
-        "venv_python() is no longer resolved under a heartbeat — a cold "
-        "bootstrap will blow the generate budget again (#1414)"
-    )
-    body = src.split("_heartbeat_while_resolving", 1)[1]
-    assert "self.venv_python()" in body.split("script_path")[0], (
-        "venv_python() is resolved outside the heartbeat block"
-    )
+    @contextmanager
+    def _recording_heartbeat(_engine_id):
+        nonlocal active
+        active = True
+        try:
+            yield
+        finally:
+            active = False
+
+    class _StopAfterResolution(RuntimeError):
+        pass
+
+    class _Backend(sb.SubprocessBackend):
+        id = "test"
+
+        @property
+        def sample_rate(self):
+            return 24_000
+
+        @property
+        def supported_languages(self):
+            return ["en"]
+
+        @classmethod
+        def is_available(cls):
+            return True, "ready"
+
+        @classmethod
+        def venv_python(cls):
+            assert active, "venv_python() ran outside the heartbeat context"
+            resolved_inside.set()
+            return Path("python")
+
+        @classmethod
+        def sidecar_script(cls):
+            raise _StopAfterResolution
+
+    monkeypatch.setattr(sb, "_heartbeat_while_resolving", _recording_heartbeat)
+    backend = _Backend.__new__(_Backend)
+    backend._proc = None
+    with pytest.raises(_StopAfterResolution):
+        backend._spawn()
+    assert resolved_inside.is_set()
 
 
 def test_no_heartbeat_write_escapes_the_context(sb, mm, monkeypatch):
@@ -179,36 +234,50 @@ def test_no_heartbeat_write_escapes_the_context(sb, mm, monkeypatch):
     and the assertion catches it deterministically, on every run and every
     scheduler.
     """
-    monkeypatch.setattr(sb, "_RESOLVE_HEARTBEAT_S", 0.01)
+    monkeypatch.setattr(sb, "_RESOLVE_HEARTBEAT_S", 0)
     monkeypatch.setattr(mm, "running_on_gpu_pool", lambda: True)
     ident = threading.get_ident()
     mm._MODEL_LOAD_ACTIVITY.pop(ident, None)
 
     in_write = threading.Event()
     release = threading.Event()
-    wrote_late = []
+    write_finished = threading.Event()
 
     class _ParkingMap(dict):
         """Stalls the heartbeat mid-write so the exit path has to wait."""
 
         def __setitem__(self, key, value):
-            if key == ident:
-                in_write.set()
-                release.wait(5)
-                wrote_late.append(context_exited.is_set())
+            in_write.set()
+            assert release.wait(5), "test did not release the parked write"
             super().__setitem__(key, value)
+            write_finished.set()
 
     context_exited = threading.Event()
     monkeypatch.setattr(mm, "_MODEL_LOAD_ACTIVITY", _ParkingMap())
 
-    with sb._heartbeat_while_resolving("indextts2"):
-        assert in_write.wait(5), "the heartbeat thread never attempted a write"
-        release.set()
-    context_exited.set()
+    joined = threading.Event()
+    real_thread = threading.Thread
 
-    assert wrote_late, "no heartbeat write was observed"
-    assert not any(wrote_late), (
-        "a heartbeat write landed after the resolve context exited — it can "
-        "outlive the ident pop and vouch for the next job on this worker"
-    )
+    class _JoinRecordingThread(real_thread):
+        def join(self, *args, **kwargs):
+            joined.set()
+            return super().join(*args, **kwargs)
+
+    monkeypatch.setattr(sb.threading, "Thread", _JoinRecordingThread)
+
+    def _run_context():
+        with sb._heartbeat_while_resolving("indextts2"):
+            assert in_write.wait(5), "heartbeat never attempted a write"
+        context_exited.set()
+
+    runner = real_thread(target=_run_context)
+    runner.start()
+    assert in_write.wait(5), "heartbeat never reached the parked write"
+    assert joined.wait(2), "context exit did not wait for the heartbeat helper"
+    assert not context_exited.is_set(), "context exited before the write finished"
+    release.set()
+    assert write_finished.wait(2), "parked heartbeat write did not finish"
+    runner.join(2)
+    assert not runner.is_alive(), "resolve context did not exit after the write"
+    assert context_exited.is_set()
     mm._MODEL_LOAD_ACTIVITY.pop(ident, None)

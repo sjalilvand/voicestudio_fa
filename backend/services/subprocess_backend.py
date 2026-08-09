@@ -341,9 +341,12 @@ def _heartbeat_while_resolving(engine_id: str):
         # reads it as live progress and keeps extending a job that is stuck.
         #
         # Joining orders the last write BEFORE the pop, so the pop clears it.
-        # Bounded, so a wedged writer degrades to the old behaviour rather
-        # than blocking the caller forever.
-        t.join(timeout=_RESOLVE_HEARTBEAT_S)
+        # This must not be bounded: returning while the helper is still alive
+        # would recreate the late-write race this join closes.  The helper's
+        # only work after ``wait`` is an in-memory mapping assignment guarded
+        # by its own broad exception handler, so there is no blocking external
+        # operation to time out here.
+        t.join()
 
 
 class SubprocessBackend(TTSBackend):
