@@ -421,6 +421,18 @@ def test_select_mlx_audio_raw_repo_id_accepted(fresh_app, monkeypatch):
     assert _prefs.get("mlx_audio_model_id") == "mlx-community/Some-Other-Model-4bit"
 
 
+def test_select_mlx_audio_repo_id_accepts_underscore_prefixes(fresh_app, monkeypatch):
+    _make_mlx_audio_available(monkeypatch)
+    r = _client(fresh_app).post(
+        "/engines/select",
+        json={
+            "family": "tts", "backend_id": "mlx-audio",
+            "model_id": "_owner/_repo",
+        },
+    )
+    assert r.status_code == 200, r.text
+
+
 @pytest.mark.parametrize(
     "model_id",
     [

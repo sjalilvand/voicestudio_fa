@@ -37,7 +37,7 @@ _FAMILIES = {
     "llm": (llm_backend, "llm_backend"),
 }
 
-_HF_REPO_COMPONENT = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,95}\Z")
+_HF_REPO_COMPONENT = re.compile(r"[A-Za-z0-9_][A-Za-z0-9._-]{0,95}\Z")
 
 
 def _is_hf_repo_id(value: str) -> bool:
