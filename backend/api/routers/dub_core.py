@@ -1448,7 +1448,7 @@ async def dub_transcribe_stream(
             async for ev in _gen_body():
                 yield ev
         except Exception:  # noqa: BLE001 — last-resort stream finalizer
-            logger.exception("transcribe stream crashed (job=%r)", job_id)
+            logger.error("Transcription stream failed unexpectedly")
             from core.public_errors import stream_failure
             yield _sse_event("error", stream_failure("transcription_failed"))
             yield _sse_event("done", {})

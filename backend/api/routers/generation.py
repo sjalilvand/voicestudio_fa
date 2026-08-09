@@ -1548,7 +1548,7 @@ async def generate_speech(
                 from core.public_errors import stream_failure
                 yield _line({"type": "error", **stream_failure("invalid_request")})
             except Exception:
-                logger.exception("Streaming generation failed")
+                logger.error("Streaming generation failed unexpectedly")
                 from core.public_errors import stream_failure
                 yield _line({"type": "error", **stream_failure("generation_failed")})
             finally:
