@@ -5,11 +5,12 @@ SoniTranslate sidecar integration.
 """
 
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
 from services import sonitranslate as soni
+from api.dependencies import require_native_access
 
 router = APIRouter(prefix="/engines/sonitranslate", tags=["SoniTranslate"])
 logger = logging.getLogger("omnivoice.api")
@@ -71,7 +72,7 @@ class DubRequest(BaseModel):
     output_dir: Optional[str] = None
 
 
-@router.post("/dub")
+@router.post("/dub", dependencies=[Depends(require_native_access)])
 async def sonitranslate_dub(body: DubRequest):
     """Run full dubbing pipeline via SoniTranslate.
 

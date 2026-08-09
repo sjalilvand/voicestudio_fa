@@ -7,13 +7,15 @@ import uuid
 import asyncio
 import logging
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
 
 from core.config import DUB_DIR, dub_seg_path
 from core.tasks import task_manager
 from core.http_headers import content_disposition
 from api.routers.dub_core import _get_job
+from api.dependencies import require_native_access
+from core.path_security import UnsafePath, resolve_within
 from services.ffmpeg_utils import (
     bed_mix_filter,
     explain_ffmpeg_failure,
@@ -38,6 +40,47 @@ def _unique_stamp() -> str:
 
 
 _SAFE_LANG = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
+
+
+def _job_dir_or_400(job_id: str) -> str:
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", job_id or ""):
+        raise HTTPException(status_code=400, detail="Invalid job id")
+    try:
+        return str(resolve_within(DUB_DIR, job_id))
+    except UnsafePath as exc:
+        raise HTTPException(status_code=400, detail="Invalid job id") from exc
+
+
+def _dub_artifact(value: object, *, missing_detail: str = "File not found") -> str:
+    """Resolve a persisted job artifact inside the global dub-data boundary."""
+    try:
+        path = resolve_within(DUB_DIR, str(value or ""))
+    except UnsafePath as exc:
+        raise HTTPException(status_code=400, detail="Invalid job artifact path") from exc
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail=missing_detail)
+    return str(path)
+
+
+def _optional_dub_artifact(value: object) -> str | None:
+    if not value:
+        return None
+    try:
+        path = resolve_within(DUB_DIR, str(value))
+    except UnsafePath as exc:
+        raise HTTPException(status_code=400, detail="Invalid job artifact path") from exc
+    return str(path) if path.is_file() else None
+
+
+def _safe_lang_or_400(lang: str | None) -> str | None:
+    if lang is not None and not _SAFE_LANG.fullmatch(lang):
+        raise HTTPException(status_code=400, detail="Invalid language code")
+    return lang
+
+
+def _guard_native_save(request: Request, save_path: str) -> None:
+    if save_path:
+        require_native_access(request)
 
 
 def _native_save(source: str, destination: str, display_name: str, media_type: str):
@@ -429,6 +472,7 @@ def _build_audio_export_cmd(
 @router.get("/dub/download/{job_id}/{filename}")
 async def dub_download(
     job_id: str,
+    request: Request,
     preserve_bg: bool = Query(True, description="Mix background noise into dubbed tracks"),
     default_track: str = Query("original"),
     include_tracks: str = Query("", description="Comma-separated list of tracks to include (e.g. 'original,de,es'). Empty = include all."),
@@ -440,8 +484,8 @@ async def dub_download(
     # Strict allowlist on the path param BEFORE it reaches any filesystem
     # path or ffmpeg argv (export dir, retime work path, slice paths). Real
     # job ids are short uuid slices — alnum/hyphen/underscore only.
-    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", job_id):
-        raise HTTPException(status_code=400, detail="Invalid job id")
+    job_dir = _job_dir_or_400(job_id)
+    _guard_native_save(request, save_path)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -458,12 +502,20 @@ async def dub_download(
     else:
         filtered_tracks = dict(tracks)
 
+    filtered_tracks = {
+        key: {
+            **value,
+            "path": _dub_artifact(value.get("path"), missing_detail="Dubbed track not found"),
+        }
+        for key, value in filtered_tracks.items()
+    }
+
     if not filtered_tracks and not include_original:
         raise HTTPException(status_code=400, detail="No tracks selected for export")
 
-    video_path = job["video_path"]
+    video_path = _dub_artifact(job["video_path"], missing_detail="Source video not found")
     stamp = _unique_stamp()
-    exports_dir = os.path.join(DUB_DIR, job_id, "exports")
+    exports_dir = os.path.join(job_dir, "exports")
     os.makedirs(exports_dir, exist_ok=True)
     output_path = os.path.join(exports_dir, f"dubbed_video_{stamp}.mp4")
     ffmpeg = find_ffmpeg()
@@ -488,8 +540,7 @@ async def dub_download(
         # safe_name below).
         safe_lang = "".join(c for c in lang_code if c.isalnum() or c in "-_") or "track"
         out_path = os.path.join(exports_dir, f"dubbed_audio_{safe_lang}_{stamp}.{fmt}")
-        bg = job.get("no_vocals_path") if preserve_bg else None
-        bg = bg if (bg and os.path.exists(bg)) else None
+        bg = _optional_dub_artifact(job.get("no_vocals_path")) if preserve_bg else None
         cmd = _build_audio_export_cmd(ffmpeg, track_info["path"], bg, out_path, fmt)
         try:
             rc, _, stderr = await run_ffmpeg(cmd, timeout=1800.0)
@@ -612,9 +663,9 @@ async def dub_download(
         retimed_idx = input_idx
         input_idx += 1
 
-    bg_audio = job.get("no_vocals_path") if preserve_bg else None
+    bg_audio = _optional_dub_artifact(job.get("no_vocals_path")) if preserve_bg else None
     bg_idx = None
-    if bg_audio and os.path.exists(bg_audio) and filtered_tracks:
+    if bg_audio and filtered_tracks:
         cmd += ["-i", bg_audio]
         bg_idx = input_idx
         input_idx += 1
@@ -819,12 +870,11 @@ _MEDIA_TYPES = {
 
 @router.get("/dub/media/{job_id}")
 async def dub_get_media(job_id: str):
+    _job_dir_or_400(job_id)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    video_path = job["video_path"]
-    if not os.path.exists(video_path):
-        raise HTTPException(status_code=404, detail="Media file not found")
+    video_path = _dub_artifact(job["video_path"], missing_detail="Media file not found")
     # Pass an explicit media_type. Without this Starlette falls back to
     # mimetypes.guess_type, which on some platforms returns the wrong
     # MIME (e.g. "application/octet-stream" for .mkv), and the Tauri
@@ -863,8 +913,8 @@ async def dub_preview_video(
     # Strict allowlist on the path param BEFORE it reaches any filesystem
     # path or ffmpeg argv (exports dir, preview/retime work paths) — same
     # boundary check as dub_download.
-    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", job_id):
-        raise HTTPException(status_code=400, detail="Invalid job id")
+    job_dir = _job_dir_or_400(job_id)
+    lang = _safe_lang_or_400(lang)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -874,25 +924,19 @@ async def dub_preview_video(
     if not track_info:
         raise HTTPException(status_code=404, detail=f"No dubbed track for lang={lang}")
 
-    track_path = track_info.get("path")
-    if not track_path or not os.path.exists(track_path):
-        raise HTTPException(status_code=404, detail="Dubbed track file missing")
+    track_path = _dub_artifact(track_info.get("path"), missing_detail="Dubbed track file missing")
 
-    video_path = job.get("video_path")
-    if not video_path or not os.path.exists(video_path):
-        raise HTTPException(status_code=404, detail="Source video missing")
+    video_path = _dub_artifact(job.get("video_path"), missing_detail="Source video missing")
 
-    bg_audio = job.get("no_vocals_path") if preserve_bg else None
-    has_bg = bool(bg_audio and os.path.exists(bg_audio))
+    bg_audio = _optional_dub_artifact(job.get("no_vocals_path")) if preserve_bg else None
+    has_bg = bool(bg_audio)
 
-    if not _SAFE_LANG.match(lang):
-        raise HTTPException(status_code=400, detail="Invalid lang")
     # realpath-normalised + containment-checked inline BEFORE any filesystem
     # access so the guard dominates every sink (the file's established
     # pattern — see dub_preview_segment; CodeQL does not track the guard
     # through a helper's return value).
     _base = os.path.realpath(DUB_DIR)
-    exports_dir = os.path.realpath(os.path.join(_base, job_id, "exports"))
+    exports_dir = os.path.realpath(os.path.join(job_dir, "exports"))
     if not exports_dir.startswith(_base + os.sep):
         raise HTTPException(status_code=400, detail="Invalid job id")
     os.makedirs(exports_dir, exist_ok=True)
@@ -1113,15 +1157,16 @@ async def dub_get_onsets(job_id: str):
     newer than the cache (e.g. re-ingest into the same job dir).
     """
     import json
+    job_dir = _job_dir_or_400(job_id)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    vocals = job.get("vocals_path")
-    mix = job.get("audio_path")
-    if vocals and os.path.exists(vocals):
+    vocals = _optional_dub_artifact(job.get("vocals_path"))
+    mix = _optional_dub_artifact(job.get("audio_path"))
+    if vocals:
         src_path, source = vocals, "vocals"
-    elif mix and os.path.exists(mix):
+    elif mix:
         src_path, source = mix, "mix"
     else:
         raise HTTPException(status_code=404, detail="No audio track available for onset analysis")
@@ -1129,7 +1174,7 @@ async def dub_get_onsets(job_id: str):
     # Containment inlined (not via _safe_job_path): CodeQL can't track the
     # sanitizer through a helper's return — the file's established idiom.
     base = os.path.realpath(DUB_DIR)
-    cache_path = os.path.realpath(os.path.join(base, job_id, "onsets.json"))
+    cache_path = os.path.realpath(os.path.join(job_dir, "onsets.json"))
     if not cache_path.startswith(base + os.sep):
         raise HTTPException(status_code=400, detail="Invalid job id")
     try:
@@ -1167,23 +1212,23 @@ async def dub_get_onsets(job_id: str):
 @router.get("/dub/thumb/{job_id}")
 async def dub_get_thumb(job_id: str):
     """Serve the extracted dub video thumbnail (jpg). 404 if not generated."""
+    job_dir = _job_dir_or_400(job_id)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     # Resolve under DUB_DIR to prevent traversal.
-    thumb = os.path.join(DUB_DIR, job_id, "thumb.jpg")
+    thumb = os.path.join(job_dir, "thumb.jpg")
     if not os.path.exists(thumb):
         raise HTTPException(status_code=404, detail="Thumbnail not available")
     return FileResponse(thumb, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=3600"})
 
 @router.get("/dub/audio/{job_id}")
 async def dub_get_audio(job_id: str):
+    _job_dir_or_400(job_id)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    audio = job.get("audio_path")
-    if not audio or not os.path.exists(audio):
-        raise HTTPException(status_code=404, detail="Audio file not found")
+    audio = _dub_artifact(job.get("audio_path"), missing_detail="Audio file not found")
     return FileResponse(audio, media_type="audio/wav")
 
 def _seg_wav_candidates(job: dict, lang: "str | None", seg_keys: tuple) -> list:
@@ -1207,6 +1252,8 @@ def _seg_wav_candidates(job: dict, lang: "str | None", seg_keys: tuple) -> list:
 
 @router.get("/dub/preview/{job_id}/{segment_index}")
 async def dub_preview_segment(job_id: str, segment_index: int, lang: str = Query(None)):
+    _job_dir_or_400(job_id)
+    lang = _safe_lang_or_400(lang)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -1243,19 +1290,18 @@ async def dub_qc_pass(job_id: str, lang: str = Query(None), drift_threshold: flo
     from services import dub_qc
     from services.dub_pipeline import put_job, save_job
 
+    _job_dir_or_400(job_id)
+    lang = _safe_lang_or_400(lang)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     tracks = job.get("dubbed_tracks", {})
     if lang and lang in tracks:
-        wav_path = tracks[lang]["path"]
+        wav_path = _dub_artifact(tracks[lang].get("path"), missing_detail="Dubbed audio file not found")
     elif tracks:
-        wav_path = list(tracks.values())[0]["path"]
+        wav_path = _dub_artifact(list(tracks.values())[0].get("path"), missing_detail="Dubbed audio file not found")
     else:
         raise HTTPException(status_code=400, detail="No dubbed audio track generated yet")
-    if not os.path.exists(wav_path):
-        raise HTTPException(status_code=404, detail="Dubbed audio file not found")
-
     segments = job.get("segments") or []
     if not segments:
         raise HTTPException(status_code=400, detail="Job has no segments")
@@ -1335,29 +1381,36 @@ async def dub_qc_pass(job_id: str, lang: str = Query(None), drift_threshold: flo
 
 @router.get("/dub/download-audio/{job_id}")
 @router.get("/dub/download-audio/{job_id}/{filename}")
-async def dub_download_audio(job_id: str, lang: str = Query(None), preserve_bg: bool = Query(True), save_path: str = Query("")):
+async def dub_download_audio(
+    job_id: str,
+    request: Request,
+    lang: str = Query(None),
+    preserve_bg: bool = Query(True),
+    save_path: str = Query(""),
+):
+    job_dir = _job_dir_or_400(job_id)
+    _guard_native_save(request, save_path)
+    lang = _safe_lang_or_400(lang)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
     tracks = job.get("dubbed_tracks", {})
     if lang and lang in tracks:
-        wav_path = tracks[lang]["path"]
+        wav_path = _dub_artifact(tracks[lang].get("path"), missing_detail="Audio file not found")
     elif tracks:
-        wav_path = list(tracks.values())[0]["path"]
+        wav_path = _dub_artifact(list(tracks.values())[0].get("path"), missing_detail="Audio file not found")
     else:
         raise HTTPException(status_code=400, detail="No dubbed audio track generated yet")
 
-    if not os.path.exists(wav_path):
-        raise HTTPException(status_code=404, detail="Audio file not found")
-
     lang_label = lang or list(tracks.keys())[0]
+    _safe_lang_or_400(lang_label)
     stamp = _unique_stamp()
-    exports_dir = os.path.join(DUB_DIR, job_id, "exports")
+    exports_dir = os.path.join(job_dir, "exports")
     os.makedirs(exports_dir, exist_ok=True)
 
-    bg_audio = job.get("no_vocals_path") if preserve_bg else None
-    if bg_audio and os.path.exists(bg_audio):
+    bg_audio = _optional_dub_artifact(job.get("no_vocals_path")) if preserve_bg else None
+    if bg_audio:
         ffmpeg = find_ffmpeg()
         final_audio_path = os.path.join(exports_dir, f"mixed_dub_{lang_label}_{stamp}.wav")
         cmd = [
@@ -1435,6 +1488,8 @@ async def dub_export_srt(
     dual: bool = False,
     lang: str = Query(None, description="Track language code. Emits that track's text (segments_i18n) when the job carries it; when that track was generated under Smart Fit or stretch_video, cue times come from the fitted timeline."),
 ):
+    _job_dir_or_400(job_id)
+    lang = _safe_lang_or_400(lang)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -1487,6 +1542,8 @@ async def dub_export_vtt(
     dual: bool = False,
     lang: str = Query(None, description="Track language code. Emits that track's text (segments_i18n) when the job carries it; when that track was generated under Smart Fit or stretch_video, cue times come from the fitted timeline."),
 ):
+    _job_dir_or_400(job_id)
+    lang = _safe_lang_or_400(lang)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -1524,6 +1581,8 @@ async def dub_export_vtt(
 @router.get("/dub/export-segments/{job_id}")
 async def dub_export_segments_zip(job_id: str, lang: str = Query(None)):
     import zipfile
+    _job_dir_or_400(job_id)
+    lang = _safe_lang_or_400(lang)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -1563,31 +1622,39 @@ async def dub_export_segments_zip(job_id: str, lang: str = Query(None)):
 
 @router.get("/dub/download-mp3/{job_id}")
 @router.get("/dub/download-mp3/{job_id}/{filename}")
-async def dub_download_mp3(job_id: str, lang: str = Query(None), preserve_bg: bool = Query(True), save_path: str = Query(""), bitrate: str = Query("192k")):
+async def dub_download_mp3(
+    job_id: str,
+    request: Request,
+    lang: str = Query(None),
+    preserve_bg: bool = Query(True),
+    save_path: str = Query(""),
+    bitrate: str = Query("192k"),
+):
+    job_dir = _job_dir_or_400(job_id)
+    _guard_native_save(request, save_path)
+    lang = _safe_lang_or_400(lang)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
     tracks = job.get("dubbed_tracks", {})
     if lang and lang in tracks:
-        wav_path = tracks[lang]["path"]
+        wav_path = _dub_artifact(tracks[lang].get("path"), missing_detail="Audio file not found")
     elif tracks:
-        wav_path = list(tracks.values())[0]["path"]
+        wav_path = _dub_artifact(list(tracks.values())[0].get("path"), missing_detail="Audio file not found")
     else:
         raise HTTPException(status_code=400, detail="No dubbed audio track generated yet")
 
-    if not os.path.exists(wav_path):
-        raise HTTPException(status_code=404, detail="Audio file not found")
-
     lang_label = lang or list(tracks.keys())[0]
+    _safe_lang_or_400(lang_label)
     ffmpeg = find_ffmpeg()
     stamp = _unique_stamp()
-    exports_dir = os.path.join(DUB_DIR, job_id, "exports")
+    exports_dir = os.path.join(job_dir, "exports")
     os.makedirs(exports_dir, exist_ok=True)
 
     source_path = wav_path
-    bg_audio = job.get("no_vocals_path") if preserve_bg else None
-    if bg_audio and os.path.exists(bg_audio):
+    bg_audio = _optional_dub_artifact(job.get("no_vocals_path")) if preserve_bg else None
+    if bg_audio:
         mixed_path = os.path.join(exports_dir, f"mixed_mp3_{lang_label}_{stamp}.wav")
         cmd_mix = [
             ffmpeg, "-i", bg_audio, "-i", wav_path,
@@ -1644,6 +1711,8 @@ async def dub_download_mp3(job_id: str, lang: str = Query(None), preserve_bg: bo
 @router.get("/dub/export-stems/{job_id}")
 async def dub_export_stems(job_id: str, lang: str = Query(None)):
     import zipfile
+    _job_dir_or_400(job_id)
+    lang = _safe_lang_or_400(lang)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -1653,22 +1722,22 @@ async def dub_export_stems(job_id: str, lang: str = Query(None)):
         raise HTTPException(status_code=400, detail="No dubbed tracks generated yet")
 
     if lang and lang in tracks:
-        vocals_path = tracks[lang]["path"]
+        vocals_path = _dub_artifact(tracks[lang].get("path"), missing_detail="Dubbed audio file not found")
         lang_label = lang
     elif tracks:
         first_key = list(tracks.keys())[0]
-        vocals_path = tracks[first_key]["path"]
+        _safe_lang_or_400(first_key)
+        vocals_path = _dub_artifact(tracks[first_key].get("path"), missing_detail="Dubbed audio file not found")
         lang_label = first_key
     else:
         raise HTTPException(status_code=400, detail="No dubbed audio track")
 
-    bg_path = job.get("no_vocals_path")
+    bg_path = _optional_dub_artifact(job.get("no_vocals_path"))
 
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        if os.path.exists(vocals_path):
-            zf.write(vocals_path, f"vocals_dubbed_{lang_label}.wav")
-        if bg_path and os.path.exists(bg_path):
+        zf.write(vocals_path, f"vocals_dubbed_{lang_label}.wav")
+        if bg_path:
             zf.write(bg_path, "background_original.wav")
 
     zip_buffer.seek(0)
