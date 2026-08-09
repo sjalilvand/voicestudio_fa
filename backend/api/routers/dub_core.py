@@ -4,6 +4,7 @@ import asyncio
 import logging
 import shutil
 import subprocess
+import tempfile
 import soundfile as sf
 import torch
 from typing import Optional
@@ -39,6 +40,50 @@ from services import dub_pipeline
 
 router = APIRouter()
 logger = logging.getLogger("omnivoice.api")
+
+_MAX_COOKIE_EXPORT_BYTES = 1024 * 1024
+
+
+def _stage_cookie_export(contents: str | None) -> str | None:
+    """Write an explicitly supplied cookies.txt export to a private temp file."""
+    if contents is None:
+        return None
+    cookie_bytes = contents.encode("utf-8")
+    if len(cookie_bytes) > _MAX_COOKIE_EXPORT_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Cookie file is too large (maximum 1 MB). Export cookies in "
+                "Netscape cookies.txt format and try again."
+            ),
+        )
+    first_line = contents.lstrip("\ufeff\r\n ").splitlines()[0] if contents.strip() else ""
+    if not first_line.startswith(("# Netscape HTTP Cookie File", "# HTTP Cookie File")):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "This is not a Netscape cookies.txt export. Export cookies as "
+                "cookies.txt from your browser, then choose that file."
+            ),
+        )
+    fd, cookie_path = tempfile.mkstemp(
+        prefix="voicestudio-ytdlp-", suffix=".cookies.txt",
+    )
+    try:
+        os.chmod(cookie_path, 0o600)
+        with os.fdopen(fd, "wb") as cookie_handle:
+            cookie_handle.write(cookie_bytes)
+    except Exception:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        try:
+            os.unlink(cookie_path)
+        except OSError:
+            pass
+        raise
+    return cookie_path
 
 
 # ── Legacy-name aliases to services/dub_pipeline.py ────────────────────────
@@ -424,6 +469,7 @@ async def dub_ingest_url(req: DubIngestUrlRequest):
             status_code=400,
             detail="Invalid job_id. Must be alphanumeric + hyphens/underscores only, ≤64 chars. Generate a fresh job_id or omit it to auto-create one.",
         )
+    cookie_path = _stage_cookie_export(req.cookie_file)
     os.makedirs(job_dir, exist_ok=True)
 
     task_id = f"prep_{job_id}"
@@ -432,12 +478,21 @@ async def dub_ingest_url(req: DubIngestUrlRequest):
         "url": url,
         "fetch_subs": bool(req.fetch_subs),
         "sub_langs": req.sub_langs or None,
+        "cookie_file": cookie_path,
     }
-    await task_manager.add_task(
-        task_id, "prep",
-        _ingest_gen, job_id, job_dir,
-        source, None,
-    )
+    try:
+        await task_manager.add_task(
+            task_id, "prep",
+            _ingest_gen, job_id, job_dir,
+            source, None,
+        )
+    except Exception:
+        if cookie_path:
+            try:
+                os.unlink(cookie_path)
+            except OSError:
+                pass
+        raise
     return JSONResponse(
         status_code=202,
         content={"job_id": job_id, "task_id": task_id, "filename": ""},

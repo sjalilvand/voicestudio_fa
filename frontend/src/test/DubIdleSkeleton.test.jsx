@@ -53,6 +53,8 @@ function baseProps(overrides = {}) {
     onIngestUrl: noop,
     fetchYtSubs: false,
     setFetchYtSubs: noop,
+    youtubeCookieFile: null,
+    setYoutubeCookieFile: noop,
     dubLangCode: 'en',
     setDubLangCode: noop,
     setDubLang: noop,
@@ -78,6 +80,7 @@ describe('IdleSkeleton — pipeline-stage vs idle dropzone', () => {
     expect(container.querySelector('.dub-idle-drop')).not.toBeNull();
     expect(screen.getByText(DROP_HINT)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(URL_PLACEHOLDER)).toBeInTheDocument();
+    expect(screen.getByLabelText('Choose a cookies.txt export')).toBeInTheDocument();
   });
 
   it('does NOT show the idle dropzone while transcribing a URL-ingested job', () => {

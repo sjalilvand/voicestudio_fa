@@ -19,6 +19,8 @@ export interface IngestUrlOptions {
   fetchSubs?: boolean;
   /** Limit caption fetch to specific lang codes; defaults to all available. */
   subLangs?: string[];
+  /** Explicit cookies.txt export used only for this import. */
+  cookieFile?: File;
 }
 
 export async function dubIngestUrl(
@@ -26,7 +28,8 @@ export async function dubIngestUrl(
   jobId: string,
   opts: IngestUrlOptions = {},
 ): Promise<unknown> {
-  const { signal, fetchSubs, subLangs } = opts;
+  const { signal, fetchSubs, subLangs, cookieFile } = opts;
+  const cookieText = cookieFile ? await cookieFile.text() : undefined;
   return apiPost(
     '/dub/ingest-url',
     {
@@ -34,6 +37,7 @@ export async function dubIngestUrl(
       job_id: jobId,
       fetch_subs: fetchSubs || undefined,
       sub_langs: subLangs && subLangs.length ? subLangs : undefined,
+      cookie_file: cookieText,
     },
     { signal },
   );

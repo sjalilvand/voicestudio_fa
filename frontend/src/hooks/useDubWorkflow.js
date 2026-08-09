@@ -553,6 +553,7 @@ export default function useDubWorkflow({
           signal: ctrl.signal,
           fetchSubs: !!opts.fetchSubs,
           subLangs: opts.subLangs,
+          cookieFile: opts.cookieFile,
         });
         setDubJobId(data.job_id);
         setDubTaskId(data.task_id);
