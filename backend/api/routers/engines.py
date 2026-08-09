@@ -37,6 +37,16 @@ _FAMILIES = {
     "llm": (llm_backend, "llm_backend"),
 }
 
+_HF_REPO_COMPONENT = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,95}\Z")
+
+
+def _is_hf_repo_id(value: str) -> bool:
+    """Validate ``owner/repo`` in bounded, linear time."""
+    if len(value) > 193 or value.count("/") != 1:
+        return False
+    owner, repo = value.split("/", 1)
+    return bool(_HF_REPO_COMPONENT.fullmatch(owner) and _HF_REPO_COMPONENT.fullmatch(repo))
+
 
 @router.get("/engines")
 def list_all_engines():
@@ -579,7 +589,7 @@ def select_engine(req: SelectEngineRequest):
         # Anything else (typo'd key, malformed id) is rejected outright
         # rather than silently persisted as a "custom repo" that then fails
         # to resolve at load time.
-        if req.model_id not in known_keys and not re.fullmatch(r"[\w.-]+/[\w.-]+", req.model_id):
+        if req.model_id not in known_keys and not _is_hf_repo_id(req.model_id):
             raise HTTPException(
                 400,
                 f"Unknown mlx-audio model: {req.model_id!r}. Expected one of "

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import re
 import sys
+from time import perf_counter
 
 import pytest
 
@@ -418,6 +419,27 @@ def test_select_mlx_audio_raw_repo_id_accepted(fresh_app, monkeypatch):
     )
     assert r.status_code == 200, r.text
     assert _prefs.get("mlx_audio_model_id") == "mlx-community/Some-Other-Model-4bit"
+
+
+@pytest.mark.parametrize(
+    "model_id",
+    [
+        "owner/repo/extra",
+        "-owner/repo",
+        "owner/.repo",
+        f"owner/{'a' * 97}",
+        "-" * 100_000,
+    ],
+)
+def test_select_mlx_audio_rejects_malformed_repo_ids(fresh_app, monkeypatch, model_id):
+    _make_mlx_audio_available(monkeypatch)
+    started = perf_counter()
+    r = _client(fresh_app).post(
+        "/engines/select",
+        json={"family": "tts", "backend_id": "mlx-audio", "model_id": model_id},
+    )
+    assert r.status_code == 400
+    assert perf_counter() - started < 0.5
 
 
 def test_select_mlx_audio_without_model_id_does_not_touch_pref(fresh_app, monkeypatch):

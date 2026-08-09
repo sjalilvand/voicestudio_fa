@@ -7,6 +7,7 @@ strip poison ("[object Object]", freeform prose) down to whitelist tags,
 recovering a design from ``vd_states`` when the stored value is unusable.
 """
 import json
+import time
 
 import pytest
 
@@ -55,6 +56,13 @@ def test_sanitize_normalises_case_and_blank_items():
 @pytest.mark.parametrize("bad", [None, "", "   ", "[object Object]"])
 def test_sanitize_handles_empty_and_poison(bad):
     assert sanitize_instruct(bad) == ""
+
+
+def test_sanitize_long_whitespace_run_is_linear_time():
+    poisoned = "female" + (" " * 10_000) + "not-a-tag"
+    started = time.perf_counter()
+    assert sanitize_instruct(poisoned) == ""
+    assert time.perf_counter() - started < 0.1
 
 
 def test_instruct_from_vd_states_dict_drops_auto():
