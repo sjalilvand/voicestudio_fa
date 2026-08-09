@@ -1491,8 +1491,8 @@ def _is_incomplete_cache_error(exc: BaseException) -> bool:
     return is_incomplete_cache_message(str(exc))
 
 
-def _is_corrupt_weights_error(exc: BaseException) -> bool:
-    """True when the weight file is present but its bytes cannot be parsed.
+def _is_corrupt_model_file_error(exc: BaseException) -> bool:
+    """True when a model weight or config file cannot be parsed.
 
     The other half of the interrupted-download class (#1406). transformers
     only raises the "does not appear to have a file named …" signature when
@@ -1510,9 +1510,14 @@ def _is_corrupt_weights_error(exc: BaseException) -> bool:
     The whole exception chain is checked, not just the outermost message:
     transformers wraps the tensor library's error in its own before it gets
     here, and matching only the surface would miss every wrapped case."""
-    from core.failure import is_corrupt_weights_message
+    from core.failure import is_corrupt_model_file_message
 
-    return any(is_corrupt_weights_message(str(e)) for e in _exception_chain(exc))
+    return any(is_corrupt_model_file_message(str(e)) for e in _exception_chain(exc))
+
+
+def _is_corrupt_weights_error(exc: BaseException) -> bool:
+    """Backward-compatible wrapper for the original #1406 helper name."""
+    return _is_corrupt_model_file_error(exc)
 
 
 def _hf_offline() -> bool:
@@ -1910,12 +1915,12 @@ def _load_model_sync():
         logger.info("Loading VoiceStudio model on device: %s", device)
         preload_asr = should_preload_tts_asr()
         if preload_asr:
-            logger.info("Preloading PyTorch Whisper with TTS model.")
+            logger.info("Preloading PyTorch Whisper after TTS model load.")
         else:
             logger.info("Skipping PyTorch Whisper preload; ASR will load on demand.")
         def _load():
             return VoiceStudio.from_pretrained(
-                checkpoint, device_map=device, dtype=torch.float16, load_asr=preload_asr,
+                checkpoint, device_map=device, dtype=torch.float16, load_asr=False,
             )
 
         def _recover_corrupt_weights(exc: BaseException):
@@ -1925,28 +1930,6 @@ def _load_model_sync():
             below: a resume trusts a blob that is already the expected size
             and would never re-fetch the one that is actually wrong.
             """
-            if preload_asr:
-                # `_load()` also pulls the Whisper ASR checkpoint — a DIFFERENT
-                # repo. An unparseable shard there would arrive here looking
-                # identical, and re-downloading `checkpoint` would pull
-                # gigabytes, fix nothing, and blame the wrong model
-                # (CodeRabbit). One local load without ASR settles it: if the
-                # TTS weights read fine, they were never the problem.
-                try:
-                    VoiceStudio.from_pretrained(
-                        checkpoint, device_map=device, dtype=torch.float16,
-                        load_asr=False,
-                    )
-                except Exception:
-                    pass  # TTS weights are bad too — fall through and repair
-                else:
-                    raise RuntimeError(
-                        "The transcription model's files are damaged — the "
-                        "TTS model itself reads fine. Open Settings → Models, "
-                        "delete the transcription (ASR) model, and install it "
-                        "again; or set OMNIVOICE_PRELOAD_TTS_ASR=0 to stop "
-                        "loading it alongside TTS."
-                    ) from exc
             if checkpoint in _FORCED_REDOWNLOAD_ATTEMPTED:
                 # Already re-fetched this repo once this process and it is
                 # still unparseable. Re-downloading again would be the same
@@ -2086,6 +2069,22 @@ def _load_model_sync():
             if not _is_corrupt_weights_error(e_corrupt):
                 raise
             _model = _recover_corrupt_weights(e_corrupt)
+
+        if preload_asr:
+            # Keep ASR outside `from_pretrained`: if its separate HF cache is
+            # corrupt, it must never be mistaken for the TTS checkpoint and
+            # trigger a second multi-GB TTS load/re-download (CodeRabbit).
+            try:
+                _model.load_asr_model()
+            except Exception as asr_exc:
+                if not _is_corrupt_model_file_error(asr_exc):
+                    raise
+                raise RuntimeError(
+                    "The transcription model's files are damaged. Open "
+                    "Settings → Models, delete the transcription (ASR) model, "
+                    "and install it again; or set OMNIVOICE_PRELOAD_TTS_ASR=0 "
+                    "to stop preloading it alongside TTS."
+                ) from asr_exc
 
         try:
             # plan-02 (#65): gate on Triton availability (+ user setting), not

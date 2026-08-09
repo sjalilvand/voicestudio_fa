@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import pytest
 
+
 @pytest.fixture(autouse=True)
 def failure():
     """Resolved at run time: other suites reset `sys.modules` for app modules,
@@ -44,6 +45,8 @@ CORRUPT_WORDINGS = [
     "InvalidHeaderDeserialization",
     "UnpicklingError: invalid load key, '<'.",
     "RuntimeError: unexpected end of file while loading model.safetensors",
+    "It looks like the config file at 'models/snapshots/rev/config.json' "
+    "is not a valid JSON file.",
 ]
 
 
@@ -211,15 +214,35 @@ def test_a_damaged_asr_shard_does_not_re_download_the_tts_model(mm, monkeypatch)
     calls = _drive_load(mm, monkeypatch, _SafetensorError(REPORTED))
     monkeypatch.setattr(mm, "should_preload_tts_asr", lambda: True)
 
-    def _fails_only_with_asr(*a, **kw):
-        calls["load"] += 1
-        if kw.get("load_asr"):
+    loaded = object()
+
+    class _Model:
+        llm = loaded
+
+        def load_asr_model(self):
             raise _SafetensorError(REPORTED)
-        return object()
+
+    def _load_tts_once(*a, **kw):
+        calls["load"] += 1
+        assert kw.get("load_asr") is False
+        return _Model()
 
     monkeypatch.setattr(mm, "_lazy_omnivoice", lambda: type(
-        "C", (), {"from_pretrained": staticmethod(_fails_only_with_asr)}
+        "C", (), {"from_pretrained": staticmethod(_load_tts_once)}
     ))
     with pytest.raises(RuntimeError, match="transcription model"):
         mm._load_model_sync()
+    assert calls["load"] == 1, "ASR diagnosis loaded the multi-GB TTS model twice"
     assert calls["repair"] == [], "the TTS checkpoint was re-downloaded for an ASR fault"
+
+
+def test_a_corrupt_config_is_force_repaired_and_retried(mm, monkeypatch):
+    """#1437: a truncated config.json is the same corrupt-cache class."""
+    error = OSError(
+        "It looks like the config file at 'models/snapshots/rev/config.json' "
+        "is not a valid JSON file."
+    )
+    calls = _drive_load(mm, monkeypatch, error)
+    mm._load_model_sync()
+    assert calls["load"] == 2
+    assert calls["repair"] == [True]

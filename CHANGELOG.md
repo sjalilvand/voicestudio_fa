@@ -40,7 +40,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
-- A model file damaged by an interrupted download now repairs itself instead of failing every generation with "Error while deserializing header: header too large". Only *missing* files were repaired before; one that arrived corrupt dead-ended as a raw 500. — thanks @overrunau! (#1406)
+- Model files damaged by an interrupted download now repair themselves instead of failing every generation, including invalid `config.json` files and corrupt weight headers. — thanks @overrunau and @zherunh! (#1406, #1437)
 - A slow machine is no longer told its IndexTTS-2 install isn't there. The check that confirms an engine's virtualenv gave up after 10 seconds and counted that as a broken install, so a cold first run 500'd; it now waits longer and treats slow as unproven, not broken. — thanks @OracleNightmare! (#1414)
 - A generation abandoned while stuck on an internal lock now says so, instead of blaming your hardware and suggesting shorter text. Nothing had been computed, so none of that advice applied. (#1416, #1419)
 - A machine with a GPU that ends up on CPU now says why — a missing device node, a permissions problem, a card newer than the installed ROCm, an `HSA_OVERRIDE_GFX_VERSION` that is doing more harm than good, or an NVIDIA driver the container can't reach each read differently. Before, all of them looked identical to having no GPU at all. (#1274, #1228)

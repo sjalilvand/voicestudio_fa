@@ -730,7 +730,7 @@ def is_incomplete_cache_message(text: str) -> bool:
 #: ``SafetensorError`` from a Rust extension, torch raises ``UnpicklingError``
 #: or a bare ``RuntimeError`` for the same condition in a ``.bin``, and none of
 #: them are ``OSError`` — the type is the least stable thing about this class.
-_CORRUPT_WEIGHTS_PHRASES = (
+_CORRUPT_MODEL_FILE_PHRASES = (
     # safetensors (Rust): header length prefix is larger than the file, or the
     # declared metadata runs past the end of the buffer.
     "error while deserializing header",
@@ -749,11 +749,14 @@ _CORRUPT_WEIGHTS_PHRASES = (
     ("unexpected end of file", "pytorch_model"),
     ("unexpected end of file", "checkpoint"),
     ("failed to load", "checkpoint", "corrupt"),
+    # transformers wraps a JSONDecodeError from a truncated/HTML config file
+    # with this stable, path-bearing message (#1437).
+    ("config file", "not a valid json file"),
 )
 
 
-def is_corrupt_weights_message(text: str) -> bool:
-    """True when *text* is a tensor library refusing to parse a weight file.
+def is_corrupt_model_file_message(text: str) -> bool:
+    """True when a downloaded model weight or config file cannot be parsed.
 
     Distinct from :func:`is_incomplete_cache_message`, which means the file is
     absent. Here it exists and its bytes are wrong — a different repair (force
@@ -762,13 +765,18 @@ def is_corrupt_weights_message(text: str) -> bool:
     the healer and the message can never disagree.
     """
     low = str(text).lower()
-    for phrase in _CORRUPT_WEIGHTS_PHRASES:
+    for phrase in _CORRUPT_MODEL_FILE_PHRASES:
         if isinstance(phrase, tuple):
             if all(part in low for part in phrase):
                 return True
         elif phrase in low:
             return True
     return False
+
+
+def is_corrupt_weights_message(text: str) -> bool:
+    """Backward-compatible name for :func:`is_corrupt_model_file_message`."""
+    return is_corrupt_model_file_message(text)
 
 
 def is_os_write_refusal(reason: Optional[str]) -> bool:
