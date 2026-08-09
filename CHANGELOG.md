@@ -42,6 +42,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 ### Fixed
 
 - Remote backends can no longer probe or overwrite arbitrary host files through native-only tools, and imported or persisted paths cannot escape their VoiceStudio data folders. (#1455)
+- Server-mode settings mutations require the admin API key, while host destinations and executable paths can only be selected through the native desktop app. (#1448)
 - Automatic model-mirror checks now reject untrusted URLs before opening a network connection. (#1447)
 - Sidecar engines no longer break when a library they load prints to the console. Those bytes landed in the middle of the engine's data stream, failing the generation and leaving the connection scrambled for every request after it. (#1428) — thanks @1335-Group!
 - A generation abandoned while stuck on an internal lock now says so, instead of blaming your hardware and suggesting shorter text. Nothing had been computed, so none of that advice applied. (#1416, #1419)
