@@ -476,7 +476,12 @@ async def clear_tauri_logs():
                 cleared.append(p)
             except OSError:
                 failed += 1
-    return {"cleared": cleared, "failed": failed}
+    if failed:
+        raise HTTPException(
+            status_code=500,
+            detail="One or more desktop log files could not be cleared. Close any app using them and retry.",
+        )
+    return {"cleared": cleared, "failed": 0}
 
 @router.get("/sysinfo", response_model=SysinfoResponse)
 def get_sys_info():

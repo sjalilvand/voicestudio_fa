@@ -104,7 +104,8 @@ async def test_tauri_log_clear_reports_truncate_failure(monkeypatch, tmp_path):
         lambda _path: (_ for _ in ()).throw(PermissionError("locked")),
     )
 
-    result = await system.clear_tauri_logs()
+    with pytest.raises(HTTPException) as caught:
+        await system.clear_tauri_logs()
 
-    assert result == {"cleared": [], "failed": 1}
-    assert str(log) not in str(result)
+    assert caught.value.status_code == 500
+    assert str(log) not in caught.value.detail
