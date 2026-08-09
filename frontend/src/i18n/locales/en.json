@@ -2093,8 +2093,10 @@
     "pockettts_model_desc": "The PocketTTS model weights are released under CC-BY-4.0. Commercial use is permitted with attribution.",
     "read_cc_by": "Read the CC-BY-4.0 license",
     "gate_heading": "Gated Access",
-    "gate_desc": "The weights are gated on HuggingFace. You need a free HF account and must accept the access agreement before the first download.",
-    "pockettts_footer": "Clicking Accept records your acceptance in VoiceStudio's local settings and enables the engine. Nothing is reported to Kyutai or any third party.",
+    "gate_desc": "The weights are gated on Hugging Face. You need a free HF account, must share your contact information, and must accept the access conditions before the first download.",
+    "pockettts_conditions_desc": "The access conditions prohibit illegal, harmful, deceptive, fraudulent, unauthorized, or non-consensual voice use. Review the full conditions before continuing.",
+    "review_access_conditions": "Review the access conditions",
+    "pockettts_footer": "Clicking Accept records your acknowledgement of these licenses and access conditions in VoiceStudio's local settings and enables the engine. Nothing is reported by VoiceStudio to Kyutai or any third party.",
     "pockettts_accepted_toast": "PocketTTS license accepted."
   },
   "voicePreview": {

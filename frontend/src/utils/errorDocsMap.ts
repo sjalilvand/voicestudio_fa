@@ -23,6 +23,7 @@ export const ERROR_DOCS: Record<string, string> = {
   // Issue #78 — pyannote gated-model license not accepted on HF.
   // Distinct from HF_AUTH_FAILED (which is a missing/invalid token).
   PYANNOTE_LICENSE_REQUIRED: `${BASE}/docs/features/diarization.md#license-acceptance-flow`,
+  POCKETTTS_GATED_WEIGHTS: `${BASE}/docs/install/troubleshooting.md#pockettts-gated-weights`,
 };
 
 export const DEFAULT_DOCS = `${BASE}/docs/install/troubleshooting.md`;
@@ -40,6 +41,7 @@ export const ERROR_CLASS_KEYS = [
   'PKG_RESOURCES_MISSING',
   'HF_AUTH_FAILED',
   'PYANNOTE_LICENSE_REQUIRED',
+  'POCKETTTS_GATED_WEIGHTS',
 ] as const;
 
 export type ErrorClass = (typeof ERROR_CLASS_KEYS)[number];
@@ -53,6 +55,9 @@ export function classifyError(error: unknown): ErrorClass | null {
     (error as { message?: string } | null | undefined)?.message ?? String(error ?? '');
   const lower = message.toLowerCase();
   if (/pkg_resources/.test(lower)) return 'PKG_RESOURCES_MISSING';
+  if (/pocket(?:tts|[-_ ]tts)|kyutai/.test(lower) && /gated|share your contact|access (?:agreement|conditions)/.test(lower)) {
+    return 'POCKETTTS_GATED_WEIGHTS';
+  }
   // Issue #78 — pyannote license + diarization are diagnosed separately
   // from generic HF auth, since the fix instructions are different (click
   // "Agree" on the model page vs. set/refresh the token). Check this BEFORE

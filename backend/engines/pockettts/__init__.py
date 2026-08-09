@@ -36,6 +36,7 @@ the PR.
 """
 from __future__ import annotations
 
+import logging
 import math
 import os
 import sys
@@ -43,6 +44,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from services.subprocess_backend import SubprocessBackend
+
+logger = logging.getLogger("omnivoice.engines.pockettts")
 
 if TYPE_CHECKING:
     import torch  # noqa: F401
@@ -70,6 +73,26 @@ class PocketTTSBackend(SubprocessBackend):
             return False, (
                 f"pocket_tts package not installed or failed to import ({e}). "
                 f"Enable in Settings -> Engines (pip install pocket-tts)."
+            )
+
+        # The model repository has an additional gated-access agreement and
+        # prohibited-use conditions beyond its CC-BY-4.0 license. Keep first
+        # use behind an explicit local acknowledgement, matching the dialog.
+        try:
+            from services import settings_store
+            accepted = settings_store.get_license_accepted(cls.id)
+        except Exception as exc:
+            logger.warning(
+                "pockettts: settings_store.get_license_accepted raised %s — "
+                "treating as not-accepted",
+                exc,
+            )
+            accepted = False
+        if not accepted:
+            return False, (
+                "PocketTTS license not accepted. Open Settings → Engines → "
+                "PocketTTS and review the MIT code license, CC-BY-4.0 model "
+                "license, and gated-access conditions before enabling it."
             )
         return True, "ready (CPU-only)"
 

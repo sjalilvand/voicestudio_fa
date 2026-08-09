@@ -22,6 +22,7 @@ import { Dialog, Button } from '../ui';
 const LICENSE_URLS = {
   code: 'https://github.com/kyutai-labs/pocket-tts/blob/main/LICENSE',
   model: 'https://huggingface.co/kyutai/pocket-tts',
+  conditions: 'https://huggingface.co/kyutai/pocket-tts',
 };
 
 const LINK_CLS =
@@ -109,6 +110,15 @@ export default function PocketTTSLicenseDialog({ open, onClose, onAccepted }) {
         <section className={SECTION_CLS}>
           <h3 className={SECTION_H_CLS}>{t('license.gate_heading')}</h3>
           <p className={SECTION_P_CLS}>{t('license.gate_desc')}</p>
+          <p className={SECTION_P_CLS}>{t('license.pockettts_conditions_desc')}</p>
+          <a
+            href={LICENSE_URLS.conditions}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={LINK_CLS}
+          >
+            {t('license.review_access_conditions')}
+          </a>
         </section>
       </div>
 

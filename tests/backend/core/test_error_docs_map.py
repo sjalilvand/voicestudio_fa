@@ -48,6 +48,7 @@ def test_all_keys_match_taxonomy():
         "PKG_RESOURCES_MISSING",
         "HF_AUTH_FAILED",
         "PYANNOTE_LICENSE_REQUIRED",
+        "POCKETTTS_GATED_WEIGHTS",
     }
     assert set(error_docs_map.ERROR_DOCS.keys()) == expected
 
@@ -62,3 +63,10 @@ def test_pyannote_license_class_points_at_diarization_docs():
     url = error_docs_map.lookup("PYANNOTE_LICENSE_REQUIRED")
     assert "docs/features/diarization.md" in url
     assert "license-acceptance-flow" in url
+
+
+def test_pockettts_gate_points_at_pockettts_instructions():
+    from core import error_docs_map
+    url = error_docs_map.lookup("POCKETTTS_GATED_WEIGHTS")
+    assert "docs/install/troubleshooting.md" in url
+    assert "pockettts-gated-weights" in url
