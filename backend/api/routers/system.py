@@ -705,7 +705,7 @@ def system_notifications():
                 },
             })
     except Exception:
-        pass
+        logger.warning("Previous-run crash record could not be checked")
 
     # 5. A previous session logged a crash the user never saw.
     #    crash_log grew past the last acknowledged size AND predates this
@@ -728,7 +728,7 @@ def system_notifications():
                 },
             })
     except Exception:
-        pass
+        logger.warning("Previous-session crash log could not be checked")
 
     return {"notifications": notes, "count": len(notes)}
 
