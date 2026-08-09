@@ -41,7 +41,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
-- Linux releases now verify that the AppImage actually contains the compatibility launcher, instead of silently shipping Tauri's stock launcher and opening as a blank window on newer Mesa systems.
+- Linux releases now verify that the AppImage actually contains the compatibility launcher, instead of silently shipping Tauri's stock launcher and opening as a blank window on newer Mesa systems. (#1464)
 - Server-mode settings mutations require the admin API key, while host destinations and executable paths can only be selected through the native desktop app. (#1448)
 - Automatic model-mirror checks now reject untrusted URLs before opening a network connection. (#1447)
 - Sidecar engines no longer break when a library they load prints to the console. Those bytes landed in the middle of the engine's data stream, failing the generation and leaving the connection scrambled for every request after it. (#1428) — thanks @1335-Group!
