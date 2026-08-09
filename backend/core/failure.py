@@ -280,7 +280,12 @@ def classify(reason: str) -> str:
         return "GATEKEEPER_QUARANTINE"
     if "webkit" in low or "white screen" in low or "dmabuf" in low or "appimage" in low:
         return "APPIMAGE_WEBKIT_WHITESCREEN"
-    if ("gated" in low or "share your contact" in low) and ("pocket" in low or "kyutai" in low):
+    if (
+        "gated" in low
+        or "share your contact" in low
+        or "access agreement" in low
+        or "access conditions" in low
+    ) and ("pocket" in low or "kyutai" in low):
         return "POCKETTTS_GATED_WEIGHTS"
     if "pyannote" in low or ("gated" in low and "model" in low) or "accept the" in low:
         return "PYANNOTE_LICENSE_REQUIRED"

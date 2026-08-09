@@ -54,6 +54,42 @@ def test_license_gate_fails_closed_then_allows_engine(monkeypatch, mock_settings
     assert PocketTTSBackend.is_available() == (True, "ready (CPU-only)")
 
 
+def test_pockettts_is_a_pinned_optional_extra():
+    import tomllib
+    from pathlib import Path
+
+    project = tomllib.loads(
+        (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text("utf-8")
+    )
+    assert project["project"]["optional-dependencies"]["pockettts"] == [
+        "pocket-tts==2.1.0"
+    ]
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "Cannot access gated repo for model kyutai/pocket-tts",
+        "PocketTTS requires you to share your contact information",
+        "Kyutai Pocket TTS access agreement has not been accepted",
+    ],
+)
+def test_gated_weight_failures_are_typed_and_actionable(reason):
+    from core.failure import build_failure, classify
+
+    assert classify(reason) == "POCKETTTS_GATED_WEIGHTS"
+    failure = build_failure(reason, stage="model_load", include_diagnostic=False)
+    assert failure["docs_topic"] == "POCKETTTS_GATED_WEIGHTS"
+    assert "huggingface.co/kyutai/pocket-tts" in failure["hint"]
+    assert "HF_TOKEN" in failure["hint"]
+
+
+def test_generic_gated_model_still_uses_existing_pyannote_class():
+    from core.failure import classify
+
+    assert classify("gated model license not accepted") == "PYANNOTE_LICENSE_REQUIRED"
+
+
 def test_license_gate_fails_closed_when_settings_read_fails(monkeypatch):
     monkeypatch.setitem(sys.modules, "pocket_tts", types.ModuleType("pocket_tts"))
     from services import settings_store

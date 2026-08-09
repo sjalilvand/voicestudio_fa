@@ -78,7 +78,9 @@ export default function PocketTTSLicenseDialog({ open, onClose, onAccepted }) {
         </>
       }
     >
-      <p className="m-0 mb-4 text-[0.9rem] leading-[1.5] opacity-85">{t('license.pockettts_intro')}</p>
+      <p className="m-0 mb-4 text-[0.9rem] leading-[1.5] opacity-85">
+        {t('license.pockettts_intro')}
+      </p>
 
       <div className="mb-1 grid gap-[0.85rem]">
         <section className={SECTION_CLS}>
@@ -122,7 +124,9 @@ export default function PocketTTSLicenseDialog({ open, onClose, onAccepted }) {
         </section>
       </div>
 
-      <p className="m-0 mt-3 text-[0.78rem] leading-[1.5] opacity-70">{t('license.pockettts_footer')}</p>
+      <p className="m-0 mt-3 text-[0.78rem] leading-[1.5] opacity-70">
+        {t('license.pockettts_footer')}
+      </p>
     </Dialog>
   );
 }

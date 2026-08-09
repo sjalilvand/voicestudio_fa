@@ -20,6 +20,7 @@ silent-by-construction and would regress without a test:
 from __future__ import annotations
 
 import base64
+import builtins
 import importlib.util
 import io
 import os
@@ -355,12 +356,19 @@ def test_recv_timeout_honours_a_sane_override(backend, monkeypatch):
     assert backend().recv_timeout_s == 900.0
 
 
-def test_is_available_reports_why_the_import_failed(backend):
+def test_is_available_reports_why_the_import_failed(backend, monkeypatch):
     """"not installed" sends a user with a torch ABI mismatch or a half-written
     wheel to reinstall a package they already have (CodeRabbit)."""
+    real_import = builtins.__import__
+
+    def fail_pocket_import(name, *args, **kwargs):
+        if name == "pocket_tts" or name.startswith("pocket_tts."):
+            raise ImportError("simulated broken pocket_tts install")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fail_pocket_import)
     ok, msg = backend.is_available()
-    if ok:
-        pytest.skip("pocket-tts is installed in this environment")
+    assert ok is False
     assert "pocket_tts" in msg
     # The bare message would end after the install hint; the cause has to be in it.
     assert "(" in msg and ")" in msg

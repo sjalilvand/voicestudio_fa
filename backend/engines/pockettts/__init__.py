@@ -72,7 +72,7 @@ class PocketTTSBackend(SubprocessBackend):
         except Exception as e:
             return False, (
                 f"pocket_tts package not installed or failed to import ({e}). "
-                f"Enable in Settings -> Engines (pip install pocket-tts)."
+                f"Enable in Settings -> Engines (uv sync --extra pockettts)."
             )
 
         # The model repository has an additional gated-access agreement and

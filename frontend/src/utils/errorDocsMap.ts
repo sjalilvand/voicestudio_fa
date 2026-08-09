@@ -1,6 +1,6 @@
 // MIRROR OF backend/core/error_docs_map.py — keep in sync.
 // The Python test_keys_match_python_map / test_keys_match_taxonomy guards
-// the 4-class taxonomy on the backend; the `_KEYS` array below is the
+// the taxonomy on the backend; the `_KEYS` array below is the
 // TS-side anchor (the keys-sync test imports it and asserts equality).
 //
 // This `BASE` constant is the SECOND hardcoded URL drift site: the
@@ -33,7 +33,7 @@ export const DEFAULT_DOCS = `${BASE}/docs/install/troubleshooting.md`;
 export const TRANSLATION_ENGINES_DOCS = `${BASE}/docs/dubbing/translation-engines.md#installing-optional-translation-engines-from-source-vs-packaged-build`;
 
 // Locked taxonomy keys — Phase 5 bug reporter consumes this exact set.
-// Adding a 6th class is a contract change; update the Python map at the
+// Adding a class is a contract change; update the Python map at the
 // same time (`backend/core/error_docs_map.py`).
 export const ERROR_CLASS_KEYS = [
   'GATEKEEPER_QUARANTINE',
@@ -55,7 +55,10 @@ export function classifyError(error: unknown): ErrorClass | null {
     (error as { message?: string } | null | undefined)?.message ?? String(error ?? '');
   const lower = message.toLowerCase();
   if (/pkg_resources/.test(lower)) return 'PKG_RESOURCES_MISSING';
-  if (/pocket(?:tts|[-_ ]tts)|kyutai/.test(lower) && /gated|share your contact|access (?:agreement|conditions)/.test(lower)) {
+  if (
+    /pocket(?:tts|[-_ ]tts)|kyutai/.test(lower) &&
+    /gated|share your contact|access (?:agreement|conditions)/.test(lower)
+  ) {
     return 'POCKETTTS_GATED_WEIGHTS';
   }
   // Issue #78 — pyannote license + diarization are diagnosed separately

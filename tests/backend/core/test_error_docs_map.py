@@ -1,6 +1,6 @@
 """Tests for backend/core/error_docs_map.py — error → docs URL taxonomy.
 
-The 5-class taxonomy is the contract Phase 5's bug reporter consumes and
+The locked taxonomy is the contract Phase 5's bug reporter consumes and
 the TS-side `frontend/src/utils/errorDocsMap.ts` mirrors. These tests pin
 both the keys and that every URL points back to the project repo.
 """
@@ -33,7 +33,7 @@ def test_all_urls_resolve_to_repo():
 
 
 def test_all_keys_match_taxonomy():
-    """The 5-class taxonomy is locked here. Adding a 6th class is a contract
+    """The taxonomy is locked here. Adding a class is a contract
     change — bump this set + the TS mirror's keys-sync test in lockstep.
 
     PYANNOTE_LICENSE_REQUIRED was added for issue #78 (speaker detection
