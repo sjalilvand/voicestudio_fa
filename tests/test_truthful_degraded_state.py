@@ -134,9 +134,9 @@ async def test_network_disable_retains_enabled_state_when_listener_does_not_stop
     server = SimpleNamespace(should_exit=False)
     state = network_share.ShareState(True, 3901, "123456", ["192.0.2.1"])
     app = SimpleNamespace(state=SimpleNamespace(network_share=state))
-    monkeypatch.setattr(network_share, "_server", server)
-    monkeypatch.setattr(network_share, "_task", task)
-    monkeypatch.setattr(network_share, "_state", state)
+    monkeypatch.setattr(network_share._runtime, "server", server)
+    monkeypatch.setattr(network_share._runtime, "task", task)
+    monkeypatch.setattr(network_share._runtime, "state", state)
 
     with pytest.raises(RuntimeError) as caught:
         await network_share.disable(app)
@@ -239,7 +239,36 @@ async def test_terminal_network_start_failure_resets_state(monkeypatch):
         await network_share.enable(app)
     assert "secret" not in str(caught.value)
     assert network_share.get_state().enabled is False
-    assert network_share._task is None
+    assert network_share._runtime.task is None
+
+
+@pytest.mark.asyncio
+async def test_live_network_start_cleanup_can_be_retried_by_disable(monkeypatch):
+    network_share = importlib.import_module("services.network_share")
+    task = asyncio.get_running_loop().create_future()
+    server = SimpleNamespace(started=False, should_exit=False, serve=lambda: None)
+    monkeypatch.setattr(network_share, "_find_free_port", lambda _base: 3901)
+    monkeypatch.setattr(network_share, "_gen_pin", lambda: "123456")
+    monkeypatch.setattr(network_share, "lan_ipv4_addresses", lambda: [])
+    monkeypatch.setattr(network_share.uvicorn, "Server", lambda _config: server)
+    monkeypatch.setattr(network_share.asyncio, "create_task", lambda _coro: task)
+    async def no_sleep(_seconds):
+        return None
+    monkeypatch.setattr(network_share.asyncio, "sleep", no_sleep)
+    calls = 0
+    async def retryable_wait(_awaitable, timeout):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise asyncio.TimeoutError
+        return None
+    monkeypatch.setattr(network_share.asyncio, "wait_for", retryable_wait)
+    app = SimpleNamespace(state=SimpleNamespace())
+    with pytest.raises(RuntimeError):
+        await network_share.enable(app)
+    assert network_share.get_state().enabled is True
+    await network_share.disable(app)
+    assert network_share.get_state().enabled is False
 
 
 def test_dub_abort_false_result_stays_retryable(monkeypatch):

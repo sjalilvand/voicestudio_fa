@@ -63,9 +63,14 @@ class ShareState:
     lan_addresses: list = field(default_factory=list)
 
 
-_state = ShareState()
-_server: Optional["uvicorn.Server"] = None
-_task: Optional["asyncio.Task"] = None
+@dataclass
+class _ShareRuntime:
+    state: ShareState = field(default_factory=ShareState)
+    server: Optional["uvicorn.Server"] = None
+    task: Optional["asyncio.Task"] = None
+
+
+_runtime = _ShareRuntime()
 
 
 def lan_ipv4_addresses() -> list:
@@ -98,19 +103,18 @@ def _find_free_port(base: int, tries: int = 20) -> int:
 
 
 def get_state() -> ShareState:
-    return _state
+    return _runtime.state
 
 
 async def enable(app) -> ShareState:
-    global _server, _task, _state
-    if _state.enabled:
-        return _state
+    if _runtime.state.enabled:
+        return _runtime.state
     port = _find_free_port(share_port_base())
     pin = _gen_pin()
     config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="warning")
     server = uvicorn.Server(config)
     server.install_signal_handlers = lambda: None  # never hijack signals in-process
-    _task = asyncio.create_task(server.serve())
+    _runtime.task = asyncio.create_task(server.serve())
     for _ in range(100):  # ~5s for the socket to bind
         if getattr(server, "started", False):
             break
@@ -121,46 +125,45 @@ async def enable(app) -> ShareState:
         # with a listener that isn't actually up (spec §7).
         server.should_exit = True
         try:
-            await asyncio.wait_for(asyncio.shield(_task), timeout=2)
+            await asyncio.wait_for(asyncio.shield(_runtime.task), timeout=2)
         except asyncio.CancelledError:
-            _server = server
-            _state = ShareState(True, port, pin, lan_ipv4_addresses())
-            app.state.network_share = _state
+            _runtime.server = server
+            _runtime.state = ShareState(True, port, pin, lan_ipv4_addresses())
+            app.state.network_share = _runtime.state
             raise
         except Exception as exc:
-            if _task.done():
-                _server = _task = None
-                _state = ShareState()
-                app.state.network_share = _state
+            if _runtime.task.done():
+                _runtime.server = _runtime.task = None
+                _runtime.state = ShareState()
+                app.state.network_share = _runtime.state
                 raise RuntimeError("share listener failed to start") from exc
-            _server = server
-            _state = ShareState(True, port, pin, lan_ipv4_addresses())
-            app.state.network_share = _state
+            _runtime.server = server
+            _runtime.state = ShareState(True, port, pin, lan_ipv4_addresses())
+            app.state.network_share = _runtime.state
             logger.warning("Failed LAN listener startup could not be cleaned up")
             raise RuntimeError(
                 "LAN share listener could not be stopped. Retry Disable before enabling again."
             ) from exc
-        _server = _task = None
+        _runtime.server = _runtime.task = None
         raise RuntimeError("share listener failed to start")
-    _server = server
-    _state = ShareState(True, port, pin, lan_ipv4_addresses())
-    app.state.network_share = _state
-    return _state
+    _runtime.server = server
+    _runtime.state = ShareState(True, port, pin, lan_ipv4_addresses())
+    app.state.network_share = _runtime.state
+    return _runtime.state
 
 
 async def disable(app) -> ShareState:
-    global _server, _task, _state
-    if _server is not None:
-        _server.should_exit = True
-        if _task is not None:
+    if _runtime.server is not None:
+        _runtime.server.should_exit = True
+        if _runtime.task is not None:
             try:
-                await asyncio.wait_for(asyncio.shield(_task), timeout=5)
+                await asyncio.wait_for(asyncio.shield(_runtime.task), timeout=5)
             except Exception as exc:
                 logger.warning("LAN share listener did not stop; retaining enabled state")
                 raise RuntimeError(
                     "LAN sharing could not be disabled. Retry after active connections close."
                 ) from exc
-    _server = _task = None
-    _state = ShareState()
-    app.state.network_share = _state
-    return _state
+    _runtime.server = _runtime.task = None
+    _runtime.state = ShareState()
+    app.state.network_share = _runtime.state
+    return _runtime.state
