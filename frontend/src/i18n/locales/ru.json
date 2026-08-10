@@ -25,6 +25,7 @@
     "workspaces": "Рабочие пространства"
   },
   "settings": {
+    "openapi": "API VoiceStudio",
     "general": "Общие",
     "theme": "Тема",
     "language": "Язык",
@@ -307,6 +308,9 @@
     "clear": "Прозрачный",
     "refresh": "Обновить",
     "close": "Закрывать",
+    "minimize_window": "Свернуть окно",
+    "maximize_restore_window": "Развернуть или восстановить окно",
+    "close_window": "Закрыть окно",
     "back": "Назад",
     "play": "Играть",
     "pause": "Пауза",
@@ -2073,10 +2077,33 @@
     "filter_starred": "Избранные",
     "load_take_failed": "Не удалось загрузить дубль: {{message}}"
   },
+  "openapi": {
+    "title": "API VoiceStudio",
+    "loading": "Загрузка спецификации API…",
+    "unreachable_title": "Спецификация бэкенда недоступна",
+    "unreachable_body": "Не удалось получить спецификацию OpenAPI локального бэкенда по адресу {{url}}. Убедитесь, что бэкенд запущен, и повторите попытку.",
+    "retry": "Повторить",
+    "copy_url": "Копировать URL спецификации",
+    "copy_url_aria": "Копировать URL /openapi.json",
+    "copied": "URL спецификации скопирован",
+    "copy_failed": "Не удалось скопировать — выделите и скопируйте URL выше вручную.",
+    "open_raw": "Открыть исходную спецификацию",
+    "open_raw_aria": "Открыть исходный JSON OpenAPI в браузере"
+  },
   "recording": {
     "cleaned_loaded": "Запись очищена и загружена!",
     "loaded_raw": "Запись загружена (без обработки — шумоподавление недоступно)",
-    "too_short": "Запись слишком короткая"
+    "too_short": "Запись слишком короткая",
+    "input_device": "Устройство ввода",
+    "default_input": "Системное по умолчанию",
+    "microphone_number": "Микрофон {{number}}",
+    "channels": "Каналы",
+    "channels_auto": "Автоматически",
+    "channels_mono": "Моно",
+    "channels_stereo": "Стерео",
+    "input_level": "Уровень входа микрофона",
+    "input_detected": "Сигнал обнаружен",
+    "no_input_detected": "Сигнал не обнаружен"
   },
   "pronunciation": {
     "title": "Словарь произношения",

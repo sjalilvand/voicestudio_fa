@@ -25,6 +25,7 @@
     "workspaces": "Arbetsytor"
   },
   "settings": {
+    "openapi": "VoiceStudio API",
     "general": "Allmänt",
     "theme": "Tema",
     "language": "Språk",
@@ -307,6 +308,9 @@
     "clear": "Rensa",
     "refresh": "Uppdatera",
     "close": "Stäng",
+    "minimize_window": "Minimera fönstret",
+    "maximize_restore_window": "Maximera eller återställ fönstret",
+    "close_window": "Stäng fönstret",
     "back": "Tillbaka",
     "play": "Spela",
     "pause": "Pausa",
@@ -2073,10 +2077,33 @@
     "filter_starred": "Stjärnmärkta",
     "load_take_failed": "Kunde inte läsa in tagningen: {{message}}"
   },
+  "openapi": {
+    "title": "VoiceStudio API",
+    "loading": "Läser in API-specifikationen…",
+    "unreachable_title": "Backend-specifikationen är inte tillgänglig",
+    "unreachable_body": "Det gick inte att nå den lokala backendens OpenAPI-specifikation på {{url}}. Kontrollera att backenden körs och försök igen.",
+    "retry": "Försök igen",
+    "copy_url": "Kopiera specifikations-URL",
+    "copy_url_aria": "Kopiera URL:en till /openapi.json",
+    "copied": "Specifikations-URL kopierad",
+    "copy_failed": "Kopieringen misslyckades — markera och kopiera URL:en ovan manuellt.",
+    "open_raw": "Öppna rå specifikation",
+    "open_raw_aria": "Öppna rå OpenAPI-JSON i webbläsaren"
+  },
   "recording": {
     "cleaned_loaded": "Inspelningen rensad och laddad!",
     "loaded_raw": "Inspelningen laddad (rå — brusreducering otillgänglig)",
-    "too_short": "Inspelningen är för kort"
+    "too_short": "Inspelningen är för kort",
+    "input_device": "Inmatningsenhet",
+    "default_input": "Systemstandard",
+    "microphone_number": "Mikrofon {{number}}",
+    "channels": "Kanaler",
+    "channels_auto": "Automatiskt",
+    "channels_mono": "Mono",
+    "channels_stereo": "Stereo",
+    "input_level": "Mikrofonens ingångsnivå",
+    "input_detected": "Ingång upptäckt",
+    "no_input_detected": "Ingen ingång upptäckt"
   },
   "pronunciation": {
     "title": "Uttalsordbok",

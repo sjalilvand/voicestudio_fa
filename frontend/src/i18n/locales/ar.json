@@ -25,6 +25,7 @@
     "workspaces": "مساحات العمل"
   },
   "settings": {
+    "openapi": "واجهة برمجة تطبيقات VoiceStudio",
     "general": "عام",
     "theme": "المظهر",
     "language": "اللغة",
@@ -307,6 +308,9 @@
     "clear": "واضح",
     "refresh": "تحديث",
     "close": "إغلاق",
+    "minimize_window": "تصغير النافذة",
+    "maximize_restore_window": "تكبير النافذة أو استعادتها",
+    "close_window": "إغلاق النافذة",
     "back": "العودة",
     "play": "العب",
     "pause": "وقفة",
@@ -2073,10 +2077,33 @@
     "filter_starred": "المميزة بنجمة",
     "load_take_failed": "تعذر تحميل تلك اللقطة: {{message}}"
   },
+  "openapi": {
+    "title": "واجهة برمجة تطبيقات VoiceStudio",
+    "loading": "جارٍ تحميل مواصفات الواجهة…",
+    "unreachable_title": "مواصفات الخادم غير متاحة",
+    "unreachable_body": "تعذّر الوصول إلى مواصفات OpenAPI للخادم المحلي على {{url}}. تأكد من تشغيل الخادم، ثم أعد المحاولة.",
+    "retry": "إعادة المحاولة",
+    "copy_url": "نسخ رابط المواصفات",
+    "copy_url_aria": "نسخ رابط /openapi.json",
+    "copied": "تم نسخ رابط المواصفات",
+    "copy_failed": "فشل النسخ — حدّد الرابط أعلاه وانسخه يدويًا.",
+    "open_raw": "فتح المواصفات الخام",
+    "open_raw_aria": "فتح ملف OpenAPI JSON الخام في المتصفح"
+  },
   "recording": {
     "cleaned_loaded": "تم تنظيف التسجيل وتحميله!",
     "loaded_raw": "تم تحميل التسجيل (خام — إزالة الضوضاء غير متاحة)",
-    "too_short": "التسجيل قصير جدًا"
+    "too_short": "التسجيل قصير جدًا",
+    "input_device": "جهاز الإدخال",
+    "default_input": "إعداد النظام الافتراضي",
+    "microphone_number": "الميكروفون {{number}}",
+    "channels": "القنوات",
+    "channels_auto": "تلقائي",
+    "channels_mono": "أحادي",
+    "channels_stereo": "ستيريو",
+    "input_level": "مستوى إدخال الميكروفون",
+    "input_detected": "تم اكتشاف صوت",
+    "no_input_detected": "لم يتم اكتشاف صوت"
   },
   "pronunciation": {
     "title": "قاموس النطق",

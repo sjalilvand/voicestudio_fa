@@ -25,6 +25,7 @@
     "workspaces": "Aree di lavoro"
   },
   "settings": {
+    "openapi": "API VoiceStudio",
     "general": "Generale",
     "theme": "Tema",
     "language": "Lingua",
@@ -307,6 +308,9 @@
     "clear": "Chiaro",
     "refresh": "Aggiorna",
     "close": "Chiudi",
+    "minimize_window": "Riduci finestra",
+    "maximize_restore_window": "Ingrandisci o ripristina finestra",
+    "close_window": "Chiudi finestra",
     "back": "Indietro",
     "play": "Gioca",
     "pause": "Pausa",
@@ -2073,10 +2077,33 @@
     "filter_starred": "Con stella",
     "load_take_failed": "Impossibile caricare il take: {{message}}"
   },
+  "openapi": {
+    "title": "API VoiceStudio",
+    "loading": "Caricamento della specifica API…",
+    "unreachable_title": "Specifica del backend non disponibile",
+    "unreachable_body": "Impossibile raggiungere la specifica OpenAPI del backend locale all’indirizzo {{url}}. Verifica che il backend sia in esecuzione, quindi riprova.",
+    "retry": "Riprova",
+    "copy_url": "Copia URL della specifica",
+    "copy_url_aria": "Copia l’URL /openapi.json",
+    "copied": "URL della specifica copiato",
+    "copy_failed": "Copia non riuscita — seleziona e copia manualmente l’URL qui sopra.",
+    "open_raw": "Apri specifica grezza",
+    "open_raw_aria": "Apri il JSON OpenAPI grezzo nel browser"
+  },
   "recording": {
     "cleaned_loaded": "Registrazione pulita e caricata!",
     "loaded_raw": "Registrazione caricata (grezza — eliminazione del rumore non disponibile)",
-    "too_short": "Registrazione troppo breve"
+    "too_short": "Registrazione troppo breve",
+    "input_device": "Dispositivo di ingresso",
+    "default_input": "Predefinito di sistema",
+    "microphone_number": "Microfono {{number}}",
+    "channels": "Canali",
+    "channels_auto": "Automatico",
+    "channels_mono": "Mono",
+    "channels_stereo": "Stereo",
+    "input_level": "Livello di ingresso del microfono",
+    "input_detected": "Ingresso rilevato",
+    "no_input_detected": "Nessun ingresso rilevato"
   },
   "pronunciation": {
     "title": "Dizionario di pronuncia",

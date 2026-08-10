@@ -25,6 +25,7 @@
     "workspaces": "Espacios de trabajo"
   },
   "settings": {
+    "openapi": "API de VoiceStudio",
     "general": "General",
     "theme": "Tema",
     "language": "Idioma",
@@ -307,6 +308,9 @@
     "clear": "Borrar",
     "refresh": "Actualizar",
     "close": "Cerrar",
+    "minimize_window": "Minimizar ventana",
+    "maximize_restore_window": "Maximizar o restaurar ventana",
+    "close_window": "Cerrar ventana",
     "back": "Atrás",
     "play": "Jugar",
     "pause": "Pausa",
@@ -2073,10 +2077,33 @@
     "filter_starred": "Destacadas",
     "load_take_failed": "No se pudo cargar esa toma: {{message}}"
   },
+  "openapi": {
+    "title": "API de VoiceStudio",
+    "loading": "Cargando la especificación de la API…",
+    "unreachable_title": "La especificación del backend no está disponible",
+    "unreachable_body": "No se pudo acceder a la especificación OpenAPI del backend local en {{url}}. Comprueba que el backend esté en ejecución y vuelve a intentarlo.",
+    "retry": "Reintentar",
+    "copy_url": "Copiar URL de la especificación",
+    "copy_url_aria": "Copiar la URL de /openapi.json",
+    "copied": "URL de la especificación copiada",
+    "copy_failed": "No se pudo copiar — selecciona y copia manualmente la URL de arriba.",
+    "open_raw": "Abrir especificación sin formato",
+    "open_raw_aria": "Abrir el JSON de OpenAPI sin formato en el navegador"
+  },
   "recording": {
     "cleaned_loaded": "¡Grabación limpiada y cargada!",
     "loaded_raw": "Grabación cargada (sin procesar — eliminación de ruido no disponible)",
-    "too_short": "Grabación demasiado corta"
+    "too_short": "Grabación demasiado corta",
+    "input_device": "Dispositivo de entrada",
+    "default_input": "Predeterminado del sistema",
+    "microphone_number": "Micrófono {{number}}",
+    "channels": "Canales",
+    "channels_auto": "Automático",
+    "channels_mono": "Mono",
+    "channels_stereo": "Estéreo",
+    "input_level": "Nivel de entrada del micrófono",
+    "input_detected": "Entrada detectada",
+    "no_input_detected": "No se detecta entrada"
   },
   "pronunciation": {
     "title": "Diccionario de pronunciación",

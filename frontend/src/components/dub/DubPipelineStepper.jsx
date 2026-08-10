@@ -24,6 +24,7 @@ const DUB_PIPELINE = [
 const DUB_PHASE_BY_STEP = {
   idle: 0,
   uploading: 1,
+  'installing-asr': 2,
   transcribing: 2,
   editing: 3,
   generating: 4,
@@ -31,11 +32,12 @@ const DUB_PHASE_BY_STEP = {
   done: 5,
 };
 
-function DubPipelineStepper({ dubStep, inline = false }) {
+function DubPipelineStepper({ dubStep, inline = false, selectableSteps = [], onStepSelect }) {
   const { t } = useTranslation();
   const current = DUB_PHASE_BY_STEP[dubStep] ?? 0;
   const busy =
     dubStep === 'uploading' ||
+    dubStep === 'installing-asr' ||
     dubStep === 'transcribing' ||
     dubStep === 'generating' ||
     dubStep === 'stopping';
@@ -50,6 +52,16 @@ function DubPipelineStepper({ dubStep, inline = false }) {
         const active = i === current;
         const spinning = active && busy;
         const Icon = done ? Check : spinning ? Loader : p.Icon;
+        const label = t(p.key, { defaultValue: p.fallback });
+        const selectable = !active && selectableSteps.includes(p.id) && onStepSelect;
+        const content = (
+          <>
+            <span className="dub-stepper__icon">
+              <Icon size={13} className={spinning ? 'dub-stepper__spin' : ''} aria-hidden="true" />
+            </span>
+            <span className="dub-stepper__label">{label}</span>
+          </>
+        );
         return (
           <div
             key={p.id}
@@ -63,10 +75,20 @@ function DubPipelineStepper({ dubStep, inline = false }) {
               .filter(Boolean)
               .join(' ')}
           >
-            <span className="dub-stepper__icon">
-              <Icon size={13} className={spinning ? 'dub-stepper__spin' : ''} />
-            </span>
-            <span className="dub-stepper__label">{t(p.key, { defaultValue: p.fallback })}</span>
+            {selectable ? (
+              <button
+                type="button"
+                className="dub-stepper__action"
+                onClick={() => onStepSelect(p.id)}
+                title={label}
+              >
+                {content}
+              </button>
+            ) : (
+              <span className="dub-stepper__action" aria-current={active ? 'step' : undefined}>
+                {content}
+              </span>
+            )}
           </div>
         );
       })}

@@ -25,6 +25,7 @@
     "workspaces": "Arbeitsbereiche"
   },
   "settings": {
+    "openapi": "VoiceStudio-API",
     "general": "Allgemein",
     "theme": "Theme",
     "language": "Sprache",
@@ -307,6 +308,9 @@
     "clear": "Klar",
     "refresh": "Aktualisieren",
     "close": "Schließen",
+    "minimize_window": "Fenster minimieren",
+    "maximize_restore_window": "Fenster maximieren oder wiederherstellen",
+    "close_window": "Fenster schließen",
     "back": "Zurück",
     "play": "Spielen",
     "pause": "Pause",
@@ -2073,10 +2077,33 @@
     "filter_starred": "Markiert",
     "load_take_failed": "Take konnte nicht geladen werden: {{message}}"
   },
+  "openapi": {
+    "title": "VoiceStudio-API",
+    "loading": "API-Spezifikation wird geladen…",
+    "unreachable_title": "Backend-Spezifikation nicht verfügbar",
+    "unreachable_body": "Die OpenAPI-Spezifikation des lokalen Backends unter {{url}} ist nicht erreichbar. Stelle sicher, dass das Backend läuft, und versuche es erneut.",
+    "retry": "Erneut versuchen",
+    "copy_url": "Spezifikations-URL kopieren",
+    "copy_url_aria": "URL zu /openapi.json kopieren",
+    "copied": "Spezifikations-URL kopiert",
+    "copy_failed": "Kopieren fehlgeschlagen — wähle die URL oben aus und kopiere sie manuell.",
+    "open_raw": "Rohspezifikation öffnen",
+    "open_raw_aria": "OpenAPI-Rohdaten im JSON-Format im Browser öffnen"
+  },
   "recording": {
     "cleaned_loaded": "Aufnahme bereinigt & geladen!",
     "loaded_raw": "Aufnahme geladen (roh — Entrauschen nicht verfügbar)",
-    "too_short": "Aufnahme zu kurz"
+    "too_short": "Aufnahme zu kurz",
+    "input_device": "Eingabegerät",
+    "default_input": "Systemstandard",
+    "microphone_number": "Mikrofon {{number}}",
+    "channels": "Kanäle",
+    "channels_auto": "Automatisch",
+    "channels_mono": "Mono",
+    "channels_stereo": "Stereo",
+    "input_level": "Mikrofonpegel",
+    "input_detected": "Eingang erkannt",
+    "no_input_detected": "Kein Eingang erkannt"
   },
   "pronunciation": {
     "title": "Aussprachewörterbuch",

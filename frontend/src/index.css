@@ -748,6 +748,14 @@ html[data-zoom-layout='off'] .app-container {
   height: 100vh;
   zoom: 1;
 }
+/* Tauri applies UI scale to the webview itself. Keep the document shell at a
+   true viewport size there; combining native zoom with this CSS zoom contract
+   would double-scale and recreate the right/bottom dead bands. */
+html[data-ui-scale-engine='native'] .app-container {
+  width: 100vw;
+  height: 100vh;
+  zoom: 1;
+}
 /* No padding-bottom footer reservation here anymore: the LogsFooter occupies
    grid row 3 (see grid-template-rows above), so row-2 content stops at its
    top edge by construction. The footer still writes --logs-footer-height for
@@ -865,7 +873,7 @@ html[data-zoom-layout='off'] .app-container {
   /* Matches the LogsFooter's chrome: flat bg, hairline bottom border,
      no radial glow, no blur, no decorative SVG ribbon. The pulsing
      accent dot + italic logo still carry the brand. */
-  padding: 3px 16px 3px 64px;
+  padding: 3px 8px 3px 16px;
   background: var(--chrome-bg);
   border-bottom: 1px solid var(--chrome-border);
   user-select: none;
@@ -874,7 +882,6 @@ html[data-zoom-layout='off'] .app-container {
   grid-column: 1 / -1;
   grid-row: 1;
   cursor: default;
-  padding-right: 8px;
 }
 
 @keyframes flush-slide {
@@ -2766,6 +2773,21 @@ html[data-zoom-layout='off'] .app-wizard-wrap {
   height: 100vh;
   zoom: 1;
 }
+html[data-ui-scale-engine='native'] .app-wizard-wrap {
+  width: 100vw;
+  height: 100vh;
+  zoom: 1;
+}
+.app-bootstrap-scale {
+  width: calc(100vw / var(--ui-scale, 1));
+  height: calc(100vh / var(--ui-scale, 1));
+  zoom: var(--ui-scale, 1);
+}
+html[data-ui-scale-engine='native'] .app-bootstrap-scale {
+  width: 100vw;
+  height: 100vh;
+  zoom: 1;
+}
 .app-wizard-dragstrip {
   position: fixed; top: 0; left: 0; right: 0;
   height: 28px; z-index: 10;
@@ -3833,6 +3855,29 @@ body:has(.capture-pill) {
   font-weight: 500;
   white-space: nowrap;
   color: var(--chrome-fg-dim, #665c54);
+}
+.dub-stepper__action {
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+  padding: 2px;
+  border: 0;
+  border-radius: 6px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+}
+button.dub-stepper__action {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button.dub-stepper__action:hover {
+  color: var(--chrome-fg);
+  background: var(--chrome-hover-bg, rgba(255, 255, 255, 0.06));
+}
+button.dub-stepper__action:focus-visible {
+  outline: 2px solid var(--chrome-accent, #d3869b);
+  outline-offset: 2px;
 }
 .dub-stepper__step:not(:first-child)::before {
   content: '';

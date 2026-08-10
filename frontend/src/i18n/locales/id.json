@@ -25,6 +25,7 @@
     "workspaces": "Ruang kerja"
   },
   "settings": {
+    "openapi": "API VoiceStudio",
     "general": "Umum",
     "theme": "Tema",
     "language": "Bahasa",
@@ -307,6 +308,9 @@
     "clear": "Jelas",
     "refresh": "Segarkan",
     "close": "Tutup",
+    "minimize_window": "Minimalkan jendela",
+    "maximize_restore_window": "Maksimalkan atau pulihkan jendela",
+    "close_window": "Tutup jendela",
     "back": "Kembali",
     "play": "Mainkan",
     "pause": "Jeda",
@@ -2073,10 +2077,33 @@
     "filter_starred": "Berbintang",
     "load_take_failed": "Tidak dapat memuat take itu: {{message}}"
   },
+  "openapi": {
+    "title": "API VoiceStudio",
+    "loading": "Memuat spesifikasi API…",
+    "unreachable_title": "Spesifikasi backend tidak tersedia",
+    "unreachable_body": "Tidak dapat menjangkau spesifikasi OpenAPI backend lokal di {{url}}. Pastikan backend berjalan, lalu coba lagi.",
+    "retry": "Coba lagi",
+    "copy_url": "Salin URL spesifikasi",
+    "copy_url_aria": "Salin URL /openapi.json",
+    "copied": "URL spesifikasi disalin",
+    "copy_failed": "Gagal menyalin — pilih dan salin URL di atas secara manual.",
+    "open_raw": "Buka spesifikasi mentah",
+    "open_raw_aria": "Buka JSON OpenAPI mentah di browser"
+  },
   "recording": {
     "cleaned_loaded": "Rekaman dibersihkan & dimuat!",
     "loaded_raw": "Rekaman dimuat (mentah — penghilang derau tidak tersedia)",
-    "too_short": "Rekaman terlalu pendek"
+    "too_short": "Rekaman terlalu pendek",
+    "input_device": "Perangkat masukan",
+    "default_input": "Bawaan sistem",
+    "microphone_number": "Mikrofon {{number}}",
+    "channels": "Kanal",
+    "channels_auto": "Otomatis",
+    "channels_mono": "Mono",
+    "channels_stereo": "Stereo",
+    "input_level": "Tingkat masukan mikrofon",
+    "input_detected": "Masukan terdeteksi",
+    "no_input_detected": "Tidak ada masukan terdeteksi"
   },
   "pronunciation": {
     "title": "Kamus pengucapan",

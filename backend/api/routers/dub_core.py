@@ -769,6 +769,16 @@ async def dub_transcribe_stream(
                         preflight_payload = _missing
                     if _missing is None:
                         try:
+                            # Free recoverable TTS VRAM before ASR chooses its
+                            # device. Probing first falsely routed Whisper to
+                            # CPU even when this offload made CUDA viable.
+                            try:
+                                await asyncio.get_running_loop().run_in_executor(
+                                    _cpu_pool, offload_tts_for_asr
+                                )
+                                _tts_offloaded["v"] = True
+                            except Exception as e:
+                                logger.warning("offload_tts_for_asr failed (continuing): %s", e)
                             # The PyTorch-Whisper backend lazily builds its own pipeline
                             # when no preloaded `_asr_pipe` is present (issue #255), so it
                             # no longer needs OMNIVOICE_PRELOAD_TTS_ASR=1.
@@ -898,17 +908,6 @@ async def dub_transcribe_stream(
             "chunk_s": transcribe_chunk_s,
         })
 
-        # Free VRAM: move TTS model to CPU so WhisperX + VAD can fit.
-        # Only offloads when free GPU memory is < 4 GB (e.g. laptop GPUs).
-        # Non-fatal: an offload failure must not drop the stream (#255) —
-        # transcription can still proceed (it just has less headroom).
-        try:
-            await loop.run_in_executor(_cpu_pool, offload_tts_for_asr)
-            # Restore is now owed on every exit path, not just success (#1191).
-            _tts_offloaded["v"] = True
-        except Exception as e:
-            logger.warning("offload_tts_for_asr failed (continuing): %s", e)
-
         all_segments: list[dict] = []
         # Words (global-timeline) retained so diarization can re-split a segment
         # that spans two speakers' turns at the word boundary (#486).
@@ -916,6 +915,7 @@ async def dub_transcribe_stream(
         detected_lang = None
         next_seg_id = 0
         chunk_errors: list[str] = []
+        chunk_error_codes: list[str] = []
         # Speaker turns from an ASR backend that diarizes inline (FunASR cam++).
         # When present, _diarize() uses them and skips pyannote (Phase 2, #182).
         asr_speaker_turns: list[dict] = []
@@ -960,10 +960,20 @@ async def dub_transcribe_stream(
                             continue
                         turns.append({"start": s0 + offset, "end": s1 + offset, "speaker": spk})
                     return {"chunks": shifted, "language": r.get("language"), "speaker_turns": turns}
-                except Exception:
-                    logger.error("Chunk transcription failed (backend=%s)", _asr_backend.id)
+                except Exception as exc:
+                    # Keep diagnostics local and fixed-shape. In particular,
+                    # CUDA OOM is a distinct, actionable recovery class rather
+                    # than the generic "no segments" dead end.
+                    is_memory = isinstance(exc, torch.OutOfMemoryError)
+                    logger.error(
+                        "Chunk transcription failed (backend=%s; class=%s; details withheld)",
+                        _asr_backend.id,
+                        type(exc).__name__,
+                    )
                     from core.public_errors import stream_failure
-                    failure = stream_failure("transcription_failed")
+                    failure = stream_failure(
+                        "transcription_memory" if is_memory else "transcription_failed"
+                    )
                     return {
                         "chunks": [],
                         "language": None,
@@ -986,7 +996,6 @@ async def dub_transcribe_stream(
                 # worker, and raises the actionable ASRTimeoutError. Run it as
                 # a task and poll so we can keep yielding pings — the
                 # EventSource connection drops without them.
-                pool_reset_by_guard = False
                 task = asyncio.ensure_future(run_transcribe_guarded(
                     _gpu_pool, _transcribe_chunk,
                     what=f"Dub chunk {i + 1}/{chunks_n}",
@@ -1004,7 +1013,6 @@ async def dub_transcribe_stream(
                     # The guard already reset the pool; keep the actionable
                     # message (it names the durable fixes, and — after repeated
                     # timeouts — the crash-isolated engine escape hatch).
-                    pool_reset_by_guard = True
                     logger.error(
                         "Transcribe chunk %d/%d timed out after %.0fs (attempt %d/%d, job=%s)",
                         i + 1, chunks_n, transcribe_timeout_s, _attempt,
@@ -1028,11 +1036,14 @@ async def dub_transcribe_stream(
                         "Retrying transcribe chunk %d/%d after failure/timeout (next attempt %d/%d, job=%s)",
                         i + 1, chunks_n, _attempt + 1, _CHUNK_TRANSCRIBE_ATTEMPTS, log_safe(job_id),
                     )
-                    if not pool_reset_by_guard:
-                        reset_pool_after_wedge(
-                            _gpu_pool, what=f"Dub chunk {i + 1}/{chunks_n}")
+                    # A completed exception did not wedge the worker. Resetting
+                    # the pool here leaked a healthy executor on every ordinary
+                    # decode failure; run_transcribe_guarded already resets the
+                    # pool on the only case that needs it: a real timeout.
             if part.get("error"):
                 chunk_errors.append(part["error"])
+                if part.get("error_code"):
+                    chunk_error_codes.append(part["error_code"])
                 logger.warning("Chunk %d/%d error: %s", i + 1, chunks_n, log_safe(part["error"]))
             if detected_lang is None and part.get("language"):
                 detected_lang = part["language"]
@@ -1097,7 +1108,9 @@ async def dub_transcribe_stream(
                     seen.add(s)
                     uniq.append(s)
             if uniq:
-                detail = "Transcription produced no segments. " + " | ".join(uniq[:3])
+                # Chunk failures already carry a complete recovery message.
+                # Do not prepend another generic sentence to it.
+                detail = " | ".join(uniq[:3])
                 # Add the actionable hint for a recognized failure class
                 # (e.g. pkg_resources missing → install setuptools).
                 hint = build_failure(" ".join(uniq), stage="transcribe", include_diagnostic=False).get("hint")
@@ -1110,7 +1123,10 @@ async def dub_transcribe_stream(
                     "check that the source has an audible speech track."
                 )
             logger.error("transcribe yielded 0 segments (job=%s): %s", log_safe(job_id), log_safe(detail))
-            yield _sse_event("error", {"detail": detail, "retryable": True})
+            payload = {"detail": detail, "retryable": True}
+            if chunk_error_codes:
+                payload["code"] = chunk_error_codes[0]
+            yield _sse_event("error", payload)
             yield _sse_event("done", {})
             return
 

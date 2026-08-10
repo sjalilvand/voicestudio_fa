@@ -16,6 +16,9 @@ import {
   Library,
   FileText,
   Trash2,
+  Minus,
+  Square,
+  X,
 } from 'lucide-react';
 import { Button, Badge } from '../ui';
 import NotificationPanel from './NotificationPanel';
@@ -112,6 +115,18 @@ function WaveBars({ color = '#f3a5b6', active }) {
   );
 }
 
+async function runWindowAction(action) {
+  try {
+    const { getCurrentWindow } = await import('@tauri-apps/api/window');
+    const appWindow = getCurrentWindow();
+    if (action === 'minimize') await appWindow.minimize();
+    else if (action === 'maximize') await appWindow.toggleMaximize();
+    else if (action === 'close') await appWindow.close();
+  } catch {
+    console.warn('Window control action failed');
+  }
+}
+
 export default function Header({
   mode,
   setMode,
@@ -125,6 +140,7 @@ export default function Header({
   // breadcrumb + wordmark normally sit — the tabs already say where you are,
   // and two answers to that question in one bar is one too many.
   const tabsInTitlebar = navStyle === 'tabs';
+  const showWindowControls = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
   const { t } = useTranslation();
   // Sysinfo is subscribed here (not in App via useAppData) so the 5s poll
   // only re-renders the header chrome, not the whole App tree.
@@ -233,7 +249,6 @@ export default function Header({
       ) : (
         /* Left: view title + breadcrumb */
         <div className="flex items-center gap-[14px] justify-self-start min-w-0">
-          <div className="min-w-[80px] shrink-0" />
           <div className="inline-flex items-center gap-[6px] h-[var(--chrome-pill-h)] [font-family:var(--font-sans)] max-[961px]:gap-[5px]">
             <span
               className="w-[7px] h-[7px] rounded-full shrink-0 [animation:hqPulse_2.4s_ease-in-out_infinite] max-[821px]:hidden"
@@ -281,24 +296,22 @@ export default function Header({
       {!tabsInTitlebar && (
         <div className="flex items-center gap-2 justify-self-center pointer-events-none whitespace-nowrap">
           <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
+            viewBox="0 0 32 32"
             fill="none"
-            stroke="#f3a5b6"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            aria-hidden="true"
+            data-testid="voice-studio-logo"
+            className="size-6 overflow-visible"
           >
-            <circle cx="12" cy="12" r="10" opacity="0.18" fill="#f3a5b6" />
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 6v12" />
-            <path d="M8 9v6" />
-            <path d="M16 9v6" />
+            <path
+              d="M2 16c2.2 0 2.5-4 4.2-4 2.1 0 2.2 8 4.1 8 2.1 0 2.2-16 4.3-16 2.3 0 2.1 24 4.3 24 2.1 0 2.2-19 4.2-19 2.2 0 2.1 12 4 12 1.7 0 2-5 3.9-5"
+              stroke="var(--chrome-accent)"
+              strokeWidth="2.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
           <span className="text-[0.92rem] font-semibold text-[var(--chrome-fg)] tracking-[0.02em] [font-family:var(--font-sans)] not-italic">
-            Omni<span className="text-[var(--chrome-accent)]">Voice</span>
+            Voice<span className="text-[var(--chrome-accent)]">Studio</span>
           </span>
         </div>
       )}
@@ -453,6 +466,37 @@ export default function Header({
                   )}
               </div>
             )}
+          </div>
+        )}
+        {showWindowControls && (
+          <div className="ml-1 flex h-full shrink-0 items-stretch" data-testid="window-controls">
+            <button
+              type="button"
+              className="flex h-7 w-9 items-center justify-center border-0 bg-transparent text-[var(--chrome-fg-muted)] hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--chrome-fg)]"
+              aria-label={t('common.minimize_window')}
+              title={t('common.minimize_window')}
+              onClick={() => void runWindowAction('minimize')}
+            >
+              <Minus size={13} />
+            </button>
+            <button
+              type="button"
+              className="flex h-7 w-9 items-center justify-center border-0 bg-transparent text-[var(--chrome-fg-muted)] hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--chrome-fg)]"
+              aria-label={t('common.maximize_restore_window')}
+              title={t('common.maximize_restore_window')}
+              onClick={() => void runWindowAction('maximize')}
+            >
+              <Square size={10} />
+            </button>
+            <button
+              type="button"
+              className="flex h-7 w-9 items-center justify-center border-0 bg-transparent text-[var(--chrome-fg-muted)] hover:bg-[#c42b1c] hover:text-white"
+              aria-label={t('common.close_window')}
+              title={t('common.close_window')}
+              onClick={() => void runWindowAction('close')}
+            >
+              <X size={13} />
+            </button>
           </div>
         )}
       </div>

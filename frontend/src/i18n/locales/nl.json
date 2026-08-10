@@ -25,6 +25,7 @@
     "workspaces": "Werkruimtes"
   },
   "settings": {
+    "openapi": "VoiceStudio-API",
     "general": "Algemeen",
     "theme": "Thema",
     "language": "Taal",
@@ -307,6 +308,9 @@
     "clear": "Duidelijk",
     "refresh": "Vernieuwen",
     "close": "Sluiten",
+    "minimize_window": "Venster minimaliseren",
+    "maximize_restore_window": "Venster maximaliseren of herstellen",
+    "close_window": "Venster sluiten",
     "back": "Terug",
     "play": "Spelen",
     "pause": "Pauze",
@@ -2073,10 +2077,33 @@
     "filter_starred": "Met ster",
     "load_take_failed": "Kon die take niet laden: {{message}}"
   },
+  "openapi": {
+    "title": "VoiceStudio-API",
+    "loading": "API-specificatie laden…",
+    "unreachable_title": "Backendspecificatie niet beschikbaar",
+    "unreachable_body": "De OpenAPI-specificatie van de lokale backend op {{url}} is niet bereikbaar. Controleer of de backend actief is en probeer het opnieuw.",
+    "retry": "Opnieuw proberen",
+    "copy_url": "Specificatie-URL kopiëren",
+    "copy_url_aria": "De URL van /openapi.json kopiëren",
+    "copied": "Specificatie-URL gekopieerd",
+    "copy_failed": "Kopiëren mislukt — selecteer en kopieer de URL hierboven handmatig.",
+    "open_raw": "Ruwe specificatie openen",
+    "open_raw_aria": "De ruwe OpenAPI-JSON in de browser openen"
+  },
   "recording": {
     "cleaned_loaded": "Opname opgeschoond en geladen!",
     "loaded_raw": "Opname geladen (ruw — ruisonderdrukking niet beschikbaar)",
-    "too_short": "Opname te kort"
+    "too_short": "Opname te kort",
+    "input_device": "Invoerapparaat",
+    "default_input": "Systeemstandaard",
+    "microphone_number": "Microfoon {{number}}",
+    "channels": "Kanalen",
+    "channels_auto": "Automatisch",
+    "channels_mono": "Mono",
+    "channels_stereo": "Stereo",
+    "input_level": "Microfooningangsniveau",
+    "input_detected": "Invoer gedetecteerd",
+    "no_input_detected": "Geen invoer gedetecteerd"
   },
   "pronunciation": {
     "title": "Uitspraakwoordenboek",
