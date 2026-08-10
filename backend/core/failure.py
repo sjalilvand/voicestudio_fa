@@ -109,6 +109,16 @@ _HINTS: dict[str, str] = {
 
 _OFFICIAL_HF_ENDPOINTS = {"https://huggingface.co", "https://hf.co"}
 
+
+def public_hint_for_topic(topic: str) -> str:
+    """Data-independent response guidance for a stable failure topic."""
+    if topic == "HF_MIRROR_UNREACHABLE":
+        return (
+            "Check Settings → Models → Hugging Face mirror, restore the official "
+            "endpoint, and retry."
+        )
+    return _HINTS.get(topic, "")
+
 # Connectivity signatures across the layers an HF download failure surfaces
 # from: transformers' wording, huggingface_hub errors, requests/urllib3, and
 # raw socket/DNS failures (Linux/macOS/Windows variants).
@@ -351,15 +361,18 @@ def classify(reason: str) -> str:
     # load surface can leak them) and VoiceStudio's own repair messages, so the
     # user-facing error and the auto bug report name the class and its
     # automatic repair.
-    # Same class, both halves of it: a shard that is MISSING and a shard that
-    # is PRESENT but unparseable are the same problem (an interrupted or
-    # mangled download) with the same remedy, and only the first half was ever
-    # matched — so "Error while deserializing header: header too large" fell
-    # through to "" and shipped as a raw 500 with no repair (#1406).
     if (
         is_incomplete_cache_message(low)
         or is_corrupt_weights_message(low)
         or "broken file link" in low
+        or (
+            "the tts model cache for" in low
+            and "is incomplete" in low
+            and (
+                "could not be auto-repaired" in low
+                or "weights missing" in low
+            )
+        )
     ):
         return "MODEL_CACHE_CORRUPT"
     # #1347: an import that failed because its DOWNLOAD died is a network
