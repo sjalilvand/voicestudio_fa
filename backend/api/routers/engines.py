@@ -15,6 +15,7 @@ Environment variables (`OMNIVOICE_TTS_BACKEND`, `OMNIVOICE_ASR_BACKEND`,
 `OMNIVOICE_LLM_BACKEND`) still win over the UI choice so power-users can pin
 a backend without Settings silently undoing it.
 """
+import logging
 import os
 import threading
 from time import perf_counter
@@ -32,6 +33,7 @@ from api.schemas import EffectPresetsResponse
 from api.public_engine_metadata import public_backends, public_unavailability
 
 router = APIRouter()
+logger = logging.getLogger("omnivoice.engines_api")
 
 _FAMILIES = {
     "tts": (tts_backend, "tts_backend"),
@@ -324,10 +326,10 @@ def engine_health(engine_id: str):
     Returns:
         { id, ok, message, latency_ms }
 
-    Never raises through to a 500: if the backend's check throws, the
-    exception is captured into the response body as ``ok=False`` /
-    ``message="ExcType: ..."`` so the UI can render a per-row failure
-    without crashing the panel. Unknown engine ids return 404.
+        Never raises through to a 500: backend diagnostics stay in the local
+        log and the response carries a fixed failure message, so the UI can
+        render a per-row failure without exposing private data. Unknown engine
+        ids return 404.
     """
     cls = _resolve_engine_class(engine_id)
     if cls is None:
@@ -356,16 +358,17 @@ def engine_health(engine_id: str):
         except Exception as exc:
             ok, msg = False, f"{type(exc).__name__}: {exc}"
 
-    # Mask any HF token the engine accidentally leaked into the message
-    # so the response body matches the same redaction guarantee as
-    # ``list_backends()``.
-    from services.tts_backend import _mask_hf_tokens
+    # Engine-owned output can contain much more than shaped HF tokens: local
+    # paths, arbitrary credentials, source lines, or a nested traceback.
+    from core.public_errors import public_engine_health
 
     latency_ms = (perf_counter() - t0) * 1000.0
+    if not ok:
+        logger.warning("Engine health check failed; details withheld")
     return {
         "id": engine_id,
         "ok": bool(ok),
-        "message": _mask_hf_tokens(msg) if isinstance(msg, str) else str(msg),
+        "message": public_engine_health(bool(ok), msg),
         "latency_ms": latency_ms,
     }
 
