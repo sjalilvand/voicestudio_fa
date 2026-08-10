@@ -439,6 +439,10 @@ def test_select_mlx_audio_repo_id_accepts_underscore_prefixes(fresh_app, monkeyp
         "owner/repo/extra",
         "-owner/repo",
         "owner/.repo",
+        "owner/repo--name",
+        "owner/repo..name",
+        "owner/repo.",
+        "owner/repo.git",
         f"owner/{'a' * 97}",
         "-" * 100_000,
     ],
@@ -452,6 +456,8 @@ def test_select_mlx_audio_rejects_malformed_repo_ids(fresh_app, monkeypatch, mod
     )
     assert r.status_code == 400
     assert perf_counter() - started < 0.5
+    assert len(r.content) < 256
+    assert model_id[:100] not in r.text
 
 
 def test_select_mlx_audio_without_model_id_does_not_touch_pref(fresh_app, monkeypatch):

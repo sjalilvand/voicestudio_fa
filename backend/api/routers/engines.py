@@ -16,11 +16,12 @@ Environment variables (`OMNIVOICE_TTS_BACKEND`, `OMNIVOICE_ASR_BACKEND`,
 a backend without Settings silently undoing it.
 """
 import os
-import re
 import threading
 from time import perf_counter
 
 from fastapi import APIRouter, Depends, HTTPException
+from huggingface_hub import utils as hf_utils
+from huggingface_hub.errors import HFValidationError
 from pydantic import BaseModel
 
 from api.dependencies import require_loopback
@@ -37,15 +38,15 @@ _FAMILIES = {
     "llm": (llm_backend, "llm_backend"),
 }
 
-_HF_REPO_COMPONENT = re.compile(r"[A-Za-z0-9_][A-Za-z0-9._-]{0,95}\Z")
-
-
 def _is_hf_repo_id(value: str) -> bool:
-    """Validate ``owner/repo`` in bounded, linear time."""
-    if len(value) > 193 or value.count("/") != 1:
+    """Validate the route's ``owner/repo`` contract in bounded time."""
+    if not isinstance(value, str) or len(value) > 96 or value.count("/") != 1:
         return False
-    owner, repo = value.split("/", 1)
-    return bool(_HF_REPO_COMPONENT.fullmatch(owner) and _HF_REPO_COMPONENT.fullmatch(repo))
+    try:
+        hf_utils.validate_repo_id(value)
+    except (HFValidationError, TypeError):
+        return False
+    return True
 
 
 @router.get("/engines")
@@ -592,8 +593,8 @@ def select_engine(req: SelectEngineRequest):
         if req.model_id not in known_keys and not _is_hf_repo_id(req.model_id):
             raise HTTPException(
                 400,
-                f"Unknown mlx-audio model: {req.model_id!r}. Expected one of "
-                f"{sorted(known_keys)} or a HF repo id like 'owner/name'.",
+                "Unknown mlx-audio model. Expected a curated model key or a "
+                "Hugging Face repo ID like 'owner/name'.",
             )
         prefs.set_("mlx_audio_model_id", req.model_id)
     prefs.set_(pref_key, req.backend_id)
