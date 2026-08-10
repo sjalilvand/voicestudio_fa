@@ -391,13 +391,18 @@ async def stream_logs(
     if not path or not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"Log file not found for source={source}")
 
+    try:
+        initial_position = os.path.getsize(path)
+    except OSError as exc:
+        logger.warning("Log stream could not determine its starting position")
+        raise HTTPException(
+            status_code=503,
+            detail="The log stream could not be started. Retry after checking file permissions.",
+        ) from exc
+
     async def _generate():
         """Yield SSE events whenever new lines appear in the log file."""
-        last_pos = 0
-        try:
-            last_pos = os.path.getsize(path)
-        except Exception:
-            pass
+        last_pos = initial_position
         while True:
             await asyncio.sleep(interval)
             try:
@@ -452,8 +457,12 @@ async def clear_system_logs():
         for key in ("crash_log_acked", "crash_log_acked_size"):
             try:
                 prefs_delete(key)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Cleared logs but could not reset crash acknowledgement state")
+                raise HTTPException(
+                    status_code=500,
+                    detail="Logs were cleared, but notification state could not be reset. Retry the clear operation.",
+                ) from exc
     return {"cleared": cleared_any}
 
 

@@ -243,7 +243,8 @@ def clear() -> bool:
         try:
             os.remove(JOURNAL_PATH)
         except FileNotFoundError:
-            pass
+            # Idempotent clear: an already-absent durable mirror is success.
+            logger.debug("Error journal mirror already absent during clear")
         except OSError:
             logger.warning("Error journal could not be cleared; keeping entries available for retry")
             return False

@@ -6,6 +6,7 @@ are untouched (no restart). Disabling stops it, closing the 0.0.0.0 socket.
 Loopback-only by default: nothing binds 0.0.0.0 until enable() is called.
 """
 import asyncio
+import logging
 import os
 import secrets
 import socket
@@ -16,6 +17,7 @@ import psutil
 import uvicorn
 
 _DEFAULT_BACKEND_PORT = 3900  # must match backend/main.py uvicorn.run(port=...)
+logger = logging.getLogger("omnivoice.network_share")
 
 
 def backend_port() -> int:
@@ -136,9 +138,12 @@ async def disable(app) -> ShareState:
         _server.should_exit = True
         if _task is not None:
             try:
-                await asyncio.wait_for(_task, timeout=5)
-            except Exception:
-                pass
+                await asyncio.wait_for(asyncio.shield(_task), timeout=5)
+            except Exception as exc:
+                logger.warning("LAN share listener did not stop; retaining enabled state")
+                raise RuntimeError(
+                    "LAN sharing could not be disabled. Retry after active connections close."
+                ) from exc
     _server = _task = None
     _state = ShareState()
     app.state.network_share = _state

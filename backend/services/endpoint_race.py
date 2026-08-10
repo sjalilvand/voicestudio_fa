@@ -299,7 +299,9 @@ def mode() -> str:
         if str(prefs.get(_MODE_PREF, "") or "").strip().lower() == "manual":
             return "manual"
     except Exception:
-        pass
+        # A failed preference read must not opt the user into network racing.
+        logger.warning("Endpoint mode preference could not be read; using manual mode")
+        return "manual"
     return "auto"
 
 

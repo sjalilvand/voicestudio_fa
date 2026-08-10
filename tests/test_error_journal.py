@@ -121,3 +121,10 @@ def test_clear_failure_keeps_entries_retryable(monkeypatch, caplog):
         assert error_journal.clear() is False
     assert entry in recent()
     assert "keeping entries available for retry" in caplog.text
+
+
+def test_clear_is_idempotent_when_durable_mirror_is_already_absent(tmp_path, monkeypatch):
+    monkeypatch.setattr(error_journal, "JOURNAL_PATH", str(tmp_path / "absent.jsonl"))
+    error_journal._entries["entry"] = {"fingerprint": "entry"}
+    assert error_journal.clear() is True
+    assert recent() == []
