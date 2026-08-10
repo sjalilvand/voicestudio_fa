@@ -40,7 +40,27 @@ def _paths() -> dict[str, str]:
 
     locations = paths()
     locations["pinned_cert"] = os.path.join(locations["root"], "control-plane.pinned.crt")
+    # The server-assigned id, remembered so a restarted worker can prove who it
+    # is. The challenge signature binds to this id, so a worker that forgets it
+    # cannot authenticate with the key it already enrolled.
+    locations["worker_id"] = os.path.join(locations["root"], "worker-id")
     return locations
+
+
+def load_worker_id(path: str) -> str:
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return fh.read().strip()
+    except (FileNotFoundError, PermissionError):
+        return ""
+
+
+def save_worker_id(path: str, worker_id: str) -> None:
+    if not worker_id:
+        return
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(worker_id)
 
 
 def fetch_server_certificate(endpoint: str, *, timeout: float = 10.0) -> bytes:
@@ -152,6 +172,7 @@ class WorkerAgent:
             cert_fingerprint="",
             certificate_pem=certificate,
             keypair=keypair,
+            worker_id=load_worker_id(locations["worker_id"]),
             enrollment_token=token_text,
             max_concurrent_tasks=capabilities.max_concurrent_tasks(discovered),
             capabilities=discovered,
@@ -165,6 +186,7 @@ class WorkerAgent:
             # the last connection is reported honestly rather than from a
             # snapshot taken at startup.
             capability_probe=capabilities.discover,
+            on_registered=lambda wid: save_worker_id(locations["worker_id"], wid),
         )
         self._task = asyncio.create_task(self._client.run_forever(), name="worker-agent")
         logger.info(

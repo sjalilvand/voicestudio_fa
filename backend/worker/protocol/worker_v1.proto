@@ -249,6 +249,14 @@ message TaskCancelAck { TaskRef ref = 1; Envelope envelope = 2; }
 
 // Sent before a clean shutdown so the server can drain rather than treat the
 // disconnect as a failure.
+// Reply to a server Ping. The server times the round trip on its own clock,
+// so no worker timestamp is trusted — and the nonce ties the reply to the
+// ping it answers, so a late pong cannot report a falsely low latency.
+message Pong {
+  Envelope envelope = 1;
+  uint64 nonce = 2;
+}
+
 message WorkerGoodbye {
   Envelope envelope = 1;
   string reason = 2;
@@ -273,6 +281,7 @@ message WorkerMessage {
     TaskCancelAck cancel_ack = 9;
     CapabilityUpdate capabilities = 10;
     WorkerGoodbye goodbye = 11;
+    Pong pong = 12;
   }
 }
 

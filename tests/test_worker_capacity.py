@@ -7,6 +7,8 @@ clone jobs → sticky CUDA abort), and the un-killable GPU thread that made
 """
 from __future__ import annotations
 
+import pytest
+
 from worker.capacity import ModelSlot, WorkerCapacity, derive_concurrency
 
 GB = 1024**3
@@ -122,3 +124,64 @@ def test_release_never_underflows():
     cap.reap_zombie("indextts", "IndexTTS-2")
     assert cap.active_tasks == 0
     assert cap.zombie_tasks == 0
+
+
+# ── Latency measurement ────────────────────────────────────────────────────
+
+
+def _pool_with_worker():
+    import time
+
+    from worker.identity import WorkerKeypair, issue_session
+    from worker.pool import WorkerPool
+    from worker.registry import RemoteWorker
+
+    record = RemoteWorker(
+        id="w1", name="w1", key_id="k1", public_key=b"\x00" * 32, created_at=time.time()
+    )
+    pool = WorkerPool()
+    pool.connect(
+        record,
+        session=issue_session(worker_id="w1", key_id="k1", epoch=1, now=time.time()),
+        epoch=1,
+        now=time.time(),
+    )
+    return pool
+
+
+def test_a_single_sample_is_not_published():
+    """The first round trip after connect lands while the worker is still
+    importing torch — publishing it shows a wildly wrong number."""
+    pool = _pool_with_worker()
+    pool.record_latency("w1", 139.4)
+    assert pool.get("w1").latency_ms == 0.0
+
+
+def test_a_startup_outlier_does_not_dominate():
+    pool = _pool_with_worker()
+    for sample in (139.4, 4.0, 3.8, 4.2, 3.9):
+        pool.record_latency("w1", sample)
+    # A running average would still be carrying the 139; a median ignores it.
+    assert pool.get("w1").latency_ms < 10
+
+
+def test_the_window_is_bounded():
+    pool = _pool_with_worker()
+    for sample in range(50):
+        pool.record_latency("w1", float(sample))
+    assert len(pool.get("w1").latency_samples) <= 5
+
+
+def test_latency_tracks_a_link_that_degrades():
+    pool = _pool_with_worker()
+    for _ in range(5):
+        pool.record_latency("w1", 4.0)
+    assert pool.get("w1").latency_ms == pytest.approx(4.0)
+
+    for _ in range(5):
+        pool.record_latency("w1", 120.0)
+    assert pool.get("w1").latency_ms == pytest.approx(120.0)
+
+
+def test_latency_for_an_unknown_worker_is_ignored():
+    _pool_with_worker().record_latency("nosuch", 5.0)

@@ -205,7 +205,8 @@
     "workers_enable_one": "Włącz",
     "workers_remove": "Usuń",
     "workers_remove_title": "Usunąć workera?",
-    "workers_remove_confirm": "Usunąć {{name}}? Jego klucz zostanie unieważniony, więc nie połączy się ponownie bez nowego tokena."
+    "workers_remove_confirm": "Usunąć {{name}}? Jego klucz zostanie unieważniony, więc nie połączy się ponownie bez nowego tokena.",
+    "workers_rename": "Zmień nazwę workera"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2349,5 +2350,10 @@
     "notice_unclean": "Poprzednia sesja zakończyła się bez poprawnego zamknięcia {{ago}} temu. To często niegroźne — komputer uśpiono, wymuszono zamknięcie aplikacji albo zatrzymano VM/kontener.",
     "details_intro_unclean": "Znacznik zamknięcia poprzedniego uruchomienia nigdy nie został wyczyszczony, {{ago}} temu. VoiceStudio nie potrafi stwierdzić, czy to była awaria, czy tylko przerwanie — uśpienie, wymuszone zamknięcie lub zatrzymanie VM/kontenera zostawia ten sam ślad. Jeśli teraz wszystko działa, nic nie trzeba robić.",
     "report_needs_log": "Dla tego zdarzenia nie przechwycono żadnych błędów, więc raport jednym kliknięciem byłby pusty. Jeśli coś naprawdę nie działa, dołącz ostatnie linie z Ustawienia → Dzienniki → Backend do nowego zgłoszenia."
+  },
+  "gpu": {
+    "local": "Lokalnie",
+    "picker": "Gdzie wykonywane są zadania",
+    "tasks": "zadania"
   }
 }

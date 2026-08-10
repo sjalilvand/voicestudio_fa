@@ -774,7 +774,8 @@
     "workers_enable_one": "Enable",
     "workers_remove": "Remove",
     "workers_remove_title": "Remove worker?",
-    "workers_remove_confirm": "Remove {{name}}? Its key is revoked, so it cannot reconnect without a new token."
+    "workers_remove_confirm": "Remove {{name}}? Its key is revoked, so it cannot reconnect without a new token.",
+    "workers_rename": "Rename worker"
   },
   "about": {
     "app": "App",
@@ -2876,5 +2877,10 @@
     "download": "Download {{label}} ({{size}} GB)",
     "started": "Downloading {{label}} — watch progress in Settings → Models, then try again.",
     "install_failed": "Couldn't start the download: {{message}}"
+  },
+  "gpu": {
+    "local": "Local",
+    "picker": "Where jobs run",
+    "tasks": "tasks"
   }
 }

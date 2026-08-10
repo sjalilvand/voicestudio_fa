@@ -22,7 +22,7 @@
  * there is no way to display it again — that is the point, not a limitation.
  */
 import React, { useState } from 'react';
-import { Cpu, Copy, Check, Trash2, PlayCircle } from 'lucide-react';
+import { Cpu, Copy, Check, Trash2, PlayCircle, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -141,6 +141,19 @@ export default function WorkersPanel() {
     }
   };
 
+  const renameWorker = async (worker, name) => {
+    const trimmed = (name || '').trim();
+    // An empty name would leave the row labelled by its key id, which is not
+    // something a user can recognise — treat it as "keep the current name".
+    if (!trimmed || trimmed === worker.name) return;
+    try {
+      await request(`/workers/${worker.id}`, { method: 'PATCH', body: { name: trimmed } });
+      refresh();
+    } catch (e) {
+      toast.error(e?.message || String(e));
+    }
+  };
+
   const toggleWorker = async (worker) => {
     try {
       await request(`/workers/${worker.id}`, {
@@ -236,6 +249,7 @@ export default function WorkersPanel() {
                   onRemove={() => removeWorker(w)}
                   onResume={() => resumeWorker(w)}
                   onToggle={() => toggleWorker(w)}
+                  onRename={(name) => renameWorker(w, name)}
                 />
               ))}
             </ul>
@@ -246,9 +260,16 @@ export default function WorkersPanel() {
   );
 }
 
-export function WorkerRow({ worker, onRemove, onResume, onToggle }) {
+export function WorkerRow({ worker, onRemove, onResume, onToggle, onRename = () => {} }) {
   const { t } = useTranslation();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(worker.name);
   const paused = (worker.breakers || []).length > 0;
+
+  const commit = () => {
+    setEditing(false);
+    onRename(draft);
+  };
   const status = !worker.enabled
     ? t('settings.workers_status_disabled', { defaultValue: 'Disabled' })
     : paused
@@ -261,7 +282,39 @@ export function WorkerRow({ worker, onRemove, onResume, onToggle }) {
     <li className="flex flex-wrap items-center gap-3 py-3">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="truncate font-medium">{worker.name}</span>
+          {editing ? (
+            <input
+              autoFocus
+              aria-label={t('settings.workers_rename', { defaultValue: 'Rename worker' })}
+              className="min-w-0 flex-1 rounded bg-black/20 px-2 py-0.5 text-sm"
+              value={draft}
+              maxLength={120}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commit();
+                if (e.key === 'Escape') {
+                  setDraft(worker.name);
+                  setEditing(false);
+                }
+              }}
+            />
+          ) : (
+            <>
+              <span className="truncate font-medium">{worker.name}</span>
+              <button
+                type="button"
+                className="opacity-60 hover:opacity-100"
+                aria-label={t('settings.workers_rename', { defaultValue: 'Rename worker' })}
+                onClick={() => {
+                  setDraft(worker.name);
+                  setEditing(true);
+                }}
+              >
+                <Pencil size={12} />
+              </button>
+            </>
+          )}
           <Badge tone={worker.connected && worker.enabled && !paused ? 'success' : 'neutral'}>
             {status}
           </Badge>

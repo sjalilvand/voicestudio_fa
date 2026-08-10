@@ -426,7 +426,8 @@
     "workers_enable_one": "启用",
     "workers_remove": "移除",
     "workers_remove_title": "移除工作机？",
-    "workers_remove_confirm": "移除 {{name}}？其密钥将被吊销，没有新令牌将无法重新连接。"
+    "workers_remove_confirm": "移除 {{name}}？其密钥将被吊销，没有新令牌将无法重新连接。",
+    "workers_rename": "重命名工作机"
   },
   "about": {
     "app": "应用",
@@ -2356,5 +2357,10 @@
     "notice_unclean": "上一个会话在 {{ago}}前未正常关闭就结束了。这通常无害 —— 电脑进入了睡眠、应用被强制退出，或某个虚拟机/容器停止了。",
     "details_intro_unclean": "上次运行的关闭标记在 {{ago}}前一直未被清除。VoiceStudio 无法判断那是崩溃还是仅仅被中断 —— 睡眠、强制退出或停止虚拟机/容器都会留下相同的痕迹。如果现在一切正常，则无需处理。",
     "report_needs_log": "此事件没有捕获到任何错误输出，因此一键报告将是空的。如果确实有问题，请将 设置 → 日志 → 后端 的最后几行附加到新的 issue 中。"
+  },
+  "gpu": {
+    "local": "本机",
+    "picker": "任务运行位置",
+    "tasks": "任务"
   }
 }

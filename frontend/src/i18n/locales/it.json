@@ -205,7 +205,8 @@
     "workers_enable_one": "Attiva",
     "workers_remove": "Rimuovi",
     "workers_remove_title": "Rimuovere il worker?",
-    "workers_remove_confirm": "Rimuovere {{name}}? La sua chiave viene revocata, quindi non potrà riconnettersi senza un nuovo token."
+    "workers_remove_confirm": "Rimuovere {{name}}? La sua chiave viene revocata, quindi non potrà riconnettersi senza un nuovo token.",
+    "workers_rename": "Rinomina worker"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2349,5 +2350,10 @@
     "notice_unclean": "La sessione precedente è terminata senza una chiusura pulita {{ago}} fa. Spesso è innocuo: il computer è andato in sospensione, l'app è stata chiusa forzatamente o una VM/container si è fermata.",
     "details_intro_unclean": "Il marcatore di chiusura dell'esecuzione precedente non è mai stato rimosso, {{ago}} fa. VoiceStudio non può sapere se si è trattato di un crash o di una semplice interruzione: sospensione, chiusura forzata o arresto di una VM/container lasciano la stessa traccia. Se ora funziona tutto, non serve fare nulla.",
     "report_needs_log": "Per questo evento non è stato catturato alcun output di errore, quindi una segnalazione con un clic sarebbe vuota. Se qualcosa non va davvero, allega le ultime righe di Impostazioni → Log → Backend a una nuova issue."
+  },
+  "gpu": {
+    "local": "Locale",
+    "picker": "Dove vengono eseguiti i lavori",
+    "tasks": "attività"
   }
 }

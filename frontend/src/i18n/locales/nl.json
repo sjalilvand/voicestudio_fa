@@ -205,7 +205,8 @@
     "workers_enable_one": "Inschakelen",
     "workers_remove": "Verwijderen",
     "workers_remove_title": "Worker verwijderen?",
-    "workers_remove_confirm": "{{name}} verwijderen? De sleutel wordt ingetrokken, dus opnieuw verbinden kan niet zonder nieuw token."
+    "workers_remove_confirm": "{{name}} verwijderen? De sleutel wordt ingetrokken, dus opnieuw verbinden kan niet zonder nieuw token.",
+    "workers_rename": "Worker hernoemen"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2349,5 +2350,10 @@
     "notice_unclean": "De vorige sessie is {{ago}} geleden zonder nette afsluiting geëindigd. Dit is vaak onschuldig — de machine sliep, de app werd geforceerd gesloten of een VM/container stopte.",
     "details_intro_unclean": "De afsluitmarkering van de vorige run is {{ago}} geleden nooit gewist. VoiceStudio kan niet zien of het een crash of slechts een onderbreking was — slapen, geforceerd afsluiten of het stoppen van een VM/container laat hetzelfde spoor achter. Als alles nu werkt, hoeft er niets te gebeuren.",
     "report_needs_log": "Er is voor deze gebeurtenis geen foutuitvoer vastgelegd, dus een één-klik-rapport zou leeg zijn. Als er echt iets mis is, voeg dan de laatste regels van Instellingen → Logboeken → Backend toe aan een nieuw issue."
+  },
+  "gpu": {
+    "local": "Lokaal",
+    "picker": "Waar taken draaien",
+    "tasks": "taken"
   }
 }

@@ -23,7 +23,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from api.dependencies import require_loopback
-from worker import registry, service
+from worker import registry, routing, service
 
 logger = logging.getLogger("omnivoice.worker")
 
@@ -42,6 +42,12 @@ class EnrollRequest(BaseModel):
     ttl_seconds: int = Field(900, ge=60, le=24 * 3600)
 
 
+class TargetRequest(BaseModel):
+    """`local`, or the id of an enrolled worker."""
+
+    target: str = Field(..., max_length=64)
+
+
 class WorkerUpdate(BaseModel):
     name: str | None = Field(None, max_length=120)
     enabled: bool | None = None
@@ -52,6 +58,28 @@ class WorkerUpdate(BaseModel):
 def list_workers() -> dict:
     """Everything the workers panel renders, in one call."""
     return service.control_plane.snapshot()
+
+
+@router.get("/target")
+def get_target() -> dict:
+    """What the GPU picker shows: the choice, the resolved answer, the options.
+
+    `active` is the same answer the generation path uses, so the badge cannot
+    claim work goes somewhere the router will not send it.
+    """
+    return routing.status()
+
+
+@router.post("/target")
+def set_target(request: TargetRequest) -> dict:
+    """Choose where work runs. Exactly one target is active at a time."""
+    chosen = request.target.strip() or routing.LOCAL
+    if chosen != routing.LOCAL:
+        worker = registry.get(chosen)
+        if worker is None or worker.revoked:
+            raise HTTPException(status_code=404, detail="No such worker.")
+    routing.set_target_id(chosen)
+    return routing.status()
 
 
 @router.post("/enabled")
@@ -105,6 +133,10 @@ def update_worker(worker_id: str, request: WorkerUpdate) -> dict:
     if request.priority is not None:
         registry.set_priority(worker_id, request.priority)
     updated = registry.get(worker_id)
+    # Keep the live copy in step, so the scheduler and its logs do not go on
+    # using the name or priority this worker had when it connected.
+    if updated is not None and service.control_plane.running:
+        service.control_plane.pool.refresh_record(updated)
     return updated.to_dict() if updated else {}
 
 

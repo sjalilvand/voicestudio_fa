@@ -115,11 +115,17 @@ class WorkerClient:
         execute: Callable[[pb.TaskAssignment], Awaitable[dict]],
         cancel: Optional[Callable[[str], Awaitable[None]]] = None,
         capability_probe: Optional[Callable[[], list[dict]]] = None,
+        on_registered: Optional[Callable[[str], None]] = None,
     ) -> None:
         self.config = config
         self._execute = execute
         self._cancel = cancel
         self._capability_probe = capability_probe
+        # Lets the agent persist the server-assigned id. Without it a restarted
+        # worker signs its challenge with an empty worker_id, the signature
+        # never matches, and reconnecting needs a fresh enrollment token —
+        # which would make key-based identity pointless.
+        self._on_registered = on_registered
         self._outbox: asyncio.Queue[pb.WorkerMessage] = asyncio.Queue()
         self._pending: dict[str, PendingResult] = {}
         self._running: dict[str, asyncio.Task] = {}
@@ -181,6 +187,11 @@ class WorkerClient:
             self.config.worker_id = response.worker_id
             # The token is spent; every later connection proves key possession.
             self.config.enrollment_token = ""
+            if self._on_registered is not None:
+                try:
+                    self._on_registered(response.worker_id)
+                except Exception:
+                    logger.warning("Could not persist the worker id", exc_info=True)
 
             authoritative = {ref.attempt_id for ref in response.authoritative_in_flight}
             await self._cancel_zombies(authoritative)
@@ -313,7 +324,8 @@ class WorkerClient:
             if message.config.max_concurrent_tasks:
                 self.config.max_concurrent_tasks = message.config.max_concurrent_tasks
         elif kind == "ping":
-            pass
+            # Answer immediately; the server times the round trip.
+            await self._send(pb.WorkerMessage(pong=pb.Pong(nonce=message.ping.nonce)))
         elif kind == "drain":
             self._stop.set()
         elif kind == "shutdown":

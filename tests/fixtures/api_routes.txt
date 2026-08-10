@@ -135,6 +135,7 @@ GET /tools/plugins
 GET /v1/audio/voices
 GET /watermark/status
 GET /workers
+GET /workers/target
 GET /workers/tasks
 PATCH /gallery/voices/{voice_id}
 PATCH /projects/{project_id}
@@ -242,6 +243,7 @@ POST /watermark/detect
 POST /watermark/settings
 POST /workers/enabled
 POST /workers/enrollments
+POST /workers/target
 POST /workers/tasks/{task_id}/cancel
 POST /workers/{worker_id}/consent
 POST /workers/{worker_id}/resume

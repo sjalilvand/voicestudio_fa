@@ -205,7 +205,8 @@
     "workers_enable_one": "Aktivieren",
     "workers_remove": "Entfernen",
     "workers_remove_title": "Worker entfernen?",
-    "workers_remove_confirm": "{{name}} entfernen? Der Schlüssel wird widerrufen, eine Neuverbindung ist ohne neues Token nicht möglich."
+    "workers_remove_confirm": "{{name}} entfernen? Der Schlüssel wird widerrufen, eine Neuverbindung ist ohne neues Token nicht möglich.",
+    "workers_rename": "Worker umbenennen"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2349,5 +2350,10 @@
     "notice_unclean": "Die vorherige Sitzung wurde vor {{ago}} nicht sauber beendet. Das ist oft harmlos — Ruhezustand, erzwungenes Beenden oder eine gestoppte VM/Container.",
     "details_intro_unclean": "Die Abschlussmarkierung des vorherigen Laufs wurde vor {{ago}} nicht gelöscht. VoiceStudio kann nicht erkennen, ob es ein Absturz oder nur eine Unterbrechung war — Ruhezustand, erzwungenes Beenden oder das Stoppen einer VM/eines Containers hinterlassen dieselbe Spur. Wenn jetzt alles funktioniert, ist nichts zu tun.",
     "report_needs_log": "Für dieses Ereignis wurde keine Fehlerausgabe erfasst, ein Ein-Klick-Report wäre leer. Falls wirklich etwas nicht stimmt, hängen Sie bitte die letzten Zeilen aus Einstellungen → Protokolle → Backend an ein neues Issue an."
+  },
+  "gpu": {
+    "local": "Lokal",
+    "picker": "Wo Aufträge laufen",
+    "tasks": "Aufgaben"
   }
 }

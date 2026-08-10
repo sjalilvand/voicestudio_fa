@@ -534,3 +534,53 @@ def test_explicit_hostnames_are_not_second_guessed(tmp_path, monkeypatch):
     first = tls.load_or_create(cert, key, hostnames=["localhost"])
     second = tls.load_or_create(cert, key, hostnames=["localhost"])
     assert first.fingerprint == second.fingerprint
+
+
+@pytest.mark.asyncio
+async def test_a_restarted_worker_reconnects_without_a_new_token(harness, tmp_path):
+    """Key-based identity is pointless if a restart needs a fresh token.
+
+    The challenge signature binds to the worker id, so a worker that does not
+    remember its own id signs something the server cannot verify — and every
+    reconnect fails AUTH_FAILED. Found by restarting a real worker, not by a
+    unit test: every earlier test enrolled fresh with a token.
+    """
+    from worker import agent as worker_agent
+
+    root = tmp_path / "worker-state"
+    root.mkdir()
+    monkey_paths = {
+        "root": str(root),
+        "worker_key": str(root / "worker.key"),
+        "pinned_cert": str(root / "pinned.crt"),
+        "worker_id": str(root / "worker-id"),
+    }
+    original_paths = worker_agent._paths
+    worker_agent._paths = lambda: monkey_paths
+    try:
+        # First run: enroll with a token, exactly as a new machine would.
+        token = registry.create_enrollment(
+            endpoint=f"127.0.0.1:{harness.port}", cert_fingerprint=harness.creds.fingerprint
+        )
+        agent = worker_agent.WorkerAgent()
+        await agent.start(token_text=token.encode())
+        await harness._await_connection()
+        first_id = registry.list_workers()[0].id
+        assert worker_agent.load_worker_id(monkey_paths["worker_id"]) == first_id
+
+        # The process goes away.
+        await agent.stop()
+        harness.pool.disconnect(first_id)
+        harness.servicer._sessions.clear()
+        harness.servicer._by_token.clear()
+
+        # Second run: no token, only the key and the remembered id.
+        revived = worker_agent.WorkerAgent()
+        await revived.start(endpoint=f"127.0.0.1:{harness.port}")
+        await harness._await_connection()
+
+        assert len(registry.list_workers()) == 1, "a reconnect must not enroll a second worker"
+        assert harness.pool.get(first_id) is not None
+        await revived.stop()
+    finally:
+        worker_agent._paths = original_paths

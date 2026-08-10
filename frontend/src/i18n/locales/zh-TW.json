@@ -205,7 +205,8 @@
     "workers_enable_one": "啟用",
     "workers_remove": "移除",
     "workers_remove_title": "移除工作機？",
-    "workers_remove_confirm": "移除 {{name}}？其金鑰將被撤銷，沒有新權杖將無法重新連線。"
+    "workers_remove_confirm": "移除 {{name}}？其金鑰將被撤銷，沒有新權杖將無法重新連線。",
+    "workers_rename": "重新命名工作機"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2349,5 +2350,10 @@
     "notice_unclean": "上一個工作階段在 {{ago}}前未正常關閉就結束了。這通常無害 —— 電腦進入了睡眠、應用程式被強制結束，或某個虛擬機/容器停止了。",
     "details_intro_unclean": "上次執行的關閉標記在 {{ago}}前一直未被清除。VoiceStudio 無法判斷那是當機還是僅僅被中斷 —— 睡眠、強制結束或停止虛擬機/容器都會留下相同的痕跡。如果現在一切正常，則無需處理。",
     "report_needs_log": "此事件沒有擷取到任何錯誤輸出，因此一鍵回報將是空的。如果確實有問題，請將 設定 → 記錄 → 後端 的最後幾行附加到新的 issue 中。"
+  },
+  "gpu": {
+    "local": "本機",
+    "picker": "工作執行位置",
+    "tasks": "工作"
   }
 }

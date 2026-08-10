@@ -205,7 +205,8 @@
     "workers_enable_one": "Aktifkan",
     "workers_remove": "Hapus",
     "workers_remove_title": "Hapus pekerja?",
-    "workers_remove_confirm": "Hapus {{name}}? Kuncinya dicabut, jadi tidak dapat terhubung kembali tanpa token baru."
+    "workers_remove_confirm": "Hapus {{name}}? Kuncinya dicabut, jadi tidak dapat terhubung kembali tanpa token baru.",
+    "workers_rename": "Ganti nama pekerja"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2349,5 +2350,10 @@
     "notice_unclean": "Sesi sebelumnya berakhir tanpa penutupan yang bersih {{ago}} yang lalu. Ini sering tidak berbahaya — mesin tertidur, aplikasi ditutup paksa, atau VM/kontainer berhenti.",
     "details_intro_unclean": "Penanda penutupan dari sesi sebelumnya tidak pernah dibersihkan, {{ago}} yang lalu. VoiceStudio tidak dapat mengetahui apakah itu crash atau sekadar interupsi — tidur, penutupan paksa, atau menghentikan VM/kontainer meninggalkan jejak yang sama. Jika sekarang semuanya berfungsi, tidak ada yang perlu dilakukan.",
     "report_needs_log": "Tidak ada keluaran kesalahan yang tertangkap untuk peristiwa ini, jadi laporan sekali klik akan kosong. Jika memang ada masalah, lampirkan baris terakhir dari Pengaturan → Log → Backend ke issue baru."
+  },
+  "gpu": {
+    "local": "Lokal",
+    "picker": "Tempat pekerjaan dijalankan",
+    "tasks": "tugas"
   }
 }

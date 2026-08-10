@@ -311,6 +311,14 @@ class TaskCancelAck(_message.Message):
     envelope: Envelope
     def __init__(self, ref: _Optional[_Union[TaskRef, _Mapping]] = ..., envelope: _Optional[_Union[Envelope, _Mapping]] = ...) -> None: ...
 
+class Pong(_message.Message):
+    __slots__ = ("envelope", "nonce")
+    ENVELOPE_FIELD_NUMBER: _ClassVar[int]
+    NONCE_FIELD_NUMBER: _ClassVar[int]
+    envelope: Envelope
+    nonce: int
+    def __init__(self, envelope: _Optional[_Union[Envelope, _Mapping]] = ..., nonce: _Optional[int] = ...) -> None: ...
+
 class WorkerGoodbye(_message.Message):
     __slots__ = ("envelope", "reason", "abandoning")
     ENVELOPE_FIELD_NUMBER: _ClassVar[int]
@@ -330,7 +338,7 @@ class CapabilityUpdate(_message.Message):
     def __init__(self, envelope: _Optional[_Union[Envelope, _Mapping]] = ..., capabilities: _Optional[_Iterable[_Union[ModelCapability, _Mapping]]] = ...) -> None: ...
 
 class WorkerMessage(_message.Message):
-    __slots__ = ("heartbeat", "accepted", "rejected", "model_loading", "started", "progress", "result", "failed", "cancel_ack", "capabilities", "goodbye")
+    __slots__ = ("heartbeat", "accepted", "rejected", "model_loading", "started", "progress", "result", "failed", "cancel_ack", "capabilities", "goodbye", "pong")
     HEARTBEAT_FIELD_NUMBER: _ClassVar[int]
     ACCEPTED_FIELD_NUMBER: _ClassVar[int]
     REJECTED_FIELD_NUMBER: _ClassVar[int]
@@ -342,6 +350,7 @@ class WorkerMessage(_message.Message):
     CANCEL_ACK_FIELD_NUMBER: _ClassVar[int]
     CAPABILITIES_FIELD_NUMBER: _ClassVar[int]
     GOODBYE_FIELD_NUMBER: _ClassVar[int]
+    PONG_FIELD_NUMBER: _ClassVar[int]
     heartbeat: Heartbeat
     accepted: TaskAccepted
     rejected: TaskRejected
@@ -353,7 +362,8 @@ class WorkerMessage(_message.Message):
     cancel_ack: TaskCancelAck
     capabilities: CapabilityUpdate
     goodbye: WorkerGoodbye
-    def __init__(self, heartbeat: _Optional[_Union[Heartbeat, _Mapping]] = ..., accepted: _Optional[_Union[TaskAccepted, _Mapping]] = ..., rejected: _Optional[_Union[TaskRejected, _Mapping]] = ..., model_loading: _Optional[_Union[TaskModelLoading, _Mapping]] = ..., started: _Optional[_Union[TaskStarted, _Mapping]] = ..., progress: _Optional[_Union[TaskProgress, _Mapping]] = ..., result: _Optional[_Union[TaskResult, _Mapping]] = ..., failed: _Optional[_Union[TaskFailed, _Mapping]] = ..., cancel_ack: _Optional[_Union[TaskCancelAck, _Mapping]] = ..., capabilities: _Optional[_Union[CapabilityUpdate, _Mapping]] = ..., goodbye: _Optional[_Union[WorkerGoodbye, _Mapping]] = ...) -> None: ...
+    pong: Pong
+    def __init__(self, heartbeat: _Optional[_Union[Heartbeat, _Mapping]] = ..., accepted: _Optional[_Union[TaskAccepted, _Mapping]] = ..., rejected: _Optional[_Union[TaskRejected, _Mapping]] = ..., model_loading: _Optional[_Union[TaskModelLoading, _Mapping]] = ..., started: _Optional[_Union[TaskStarted, _Mapping]] = ..., progress: _Optional[_Union[TaskProgress, _Mapping]] = ..., result: _Optional[_Union[TaskResult, _Mapping]] = ..., failed: _Optional[_Union[TaskFailed, _Mapping]] = ..., cancel_ack: _Optional[_Union[TaskCancelAck, _Mapping]] = ..., capabilities: _Optional[_Union[CapabilityUpdate, _Mapping]] = ..., goodbye: _Optional[_Union[WorkerGoodbye, _Mapping]] = ..., pong: _Optional[_Union[Pong, _Mapping]] = ...) -> None: ...
 
 class Deadlines(_message.Message):
     __slots__ = ("accept_seconds", "model_load_seconds", "execution_seconds", "progress_lease_seconds", "result_delivery_seconds")

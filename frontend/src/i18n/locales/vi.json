@@ -205,7 +205,8 @@
     "workers_enable_one": "Bật",
     "workers_remove": "Xóa",
     "workers_remove_title": "Xóa máy phụ?",
-    "workers_remove_confirm": "Xóa {{name}}? Khóa của nó bị thu hồi, nên không thể kết nối lại nếu không có mã mới."
+    "workers_remove_confirm": "Xóa {{name}}? Khóa của nó bị thu hồi, nên không thể kết nối lại nếu không có mã mới.",
+    "workers_rename": "Đổi tên máy phụ"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2349,5 +2350,10 @@
     "notice_unclean": "Phiên trước đã kết thúc mà không tắt đúng cách {{ago}} trước. Điều này thường vô hại — máy ngủ, ứng dụng bị buộc đóng, hoặc VM/container bị dừng.",
     "details_intro_unclean": "Dấu tắt của lần chạy trước không bao giờ được xóa, {{ago}} trước. VoiceStudio không thể biết đó là sự cố hay chỉ là gián đoạn — ngủ máy, buộc đóng hoặc dừng VM/container đều để lại dấu vết giống nhau. Nếu hiện tại mọi thứ hoạt động bình thường thì không cần làm gì.",
     "report_needs_log": "Không có đầu ra lỗi nào được ghi lại cho sự kiện này, nên báo cáo một cú nhấp sẽ trống. Nếu thực sự có vấn đề, hãy đính kèm những dòng cuối của Cài đặt → Nhật ký → Backend vào issue mới."
+  },
+  "gpu": {
+    "local": "Cục bộ",
+    "picker": "Nơi tác vụ chạy",
+    "tasks": "tác vụ"
   }
 }

@@ -24,6 +24,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 from typing import Optional
 
 import grpc
@@ -52,6 +53,9 @@ SESSION_METADATA_KEY = "x-omnivoice-session"
 INLINE_RESULT_THRESHOLD = 256 * 1024
 
 _HEARTBEAT_INTERVAL_SECONDS = 20
+# How often the control plane times a round trip to each worker. Frequent
+# enough that the latency shown in the UI is current, rare enough to be free.
+_PING_INTERVAL_SECONDS = 5.0
 
 
 class _Session:
@@ -63,6 +67,9 @@ class _Session:
         self.session = session
         self.outbox: asyncio.Queue[pb.ServerMessage] = asyncio.Queue()
         self.stream_open = False
+        # nonce → monotonic send time, for the outstanding ping.
+        self.pending_pings: dict[int, float] = {}
+        self.next_nonce = 1
 
     async def send(self, message: pb.ServerMessage) -> None:
         await self.outbox.put(message)
@@ -128,6 +135,9 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
 
         backend = host["gpus"][0].get("backend", "") if host.get("gpus") else ""
         claimed = {ref.attempt_id for ref in request.in_flight}
+        # The address the worker actually reached us from — what the UI shows
+        # as ip:port. Self-reported endpoints would be guesses; this is fact.
+        address = _peer_address(context)
 
         # Replace any previous session for this worker. Two live sessions is
         # the race that delivers two accepts for one assignment.
@@ -142,6 +152,7 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
             max_concurrent_tasks=request.max_concurrent_tasks or 1,
             backend=backend,
             in_flight=claimed,
+            address=address,
         )
         self.pool.apply_capabilities(worker.id, capabilities)
         live = _Session(worker.id, epoch, session)
@@ -243,9 +254,10 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         session.stream_open = True
         writer = asyncio.create_task(self._write_loop(session, context))
         reader = asyncio.create_task(self._read_loop(session, request_iterator))
+        pinger = asyncio.create_task(self._ping_loop(session))
         try:
             done, pending = await asyncio.wait(
-                {reader, writer}, return_when=asyncio.FIRST_COMPLETED
+                {reader, writer, pinger}, return_when=asyncio.FIRST_COMPLETED
             )
             for task in pending:
                 task.cancel()
@@ -255,7 +267,7 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
                     logger.debug("Control stream ended for %s: %s", session.worker_id, exc)
         finally:
             session.stream_open = False
-            for task in (reader, writer):
+            for task in (reader, writer, pinger):
                 task.cancel()
             # A dropped stream starts grace windows; it fails nothing. The
             # worker may be seconds away from delivering a finished result.
@@ -276,6 +288,21 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
     async def _read_loop(self, session: _Session, request_iterator) -> None:
         async for message in request_iterator:
             await self._handle(session, message)
+
+    async def _ping_loop(self, session: _Session) -> None:
+        """Time a round trip periodically so the UI can show real latency."""
+        while True:
+            await asyncio.sleep(_PING_INTERVAL_SECONDS)
+            nonce = session.next_nonce
+            session.next_nonce += 1
+            # Monotonic: a wall-clock jump (NTP, sleep/wake) must not turn into
+            # a nonsense latency reading.
+            session.pending_pings[nonce] = time.monotonic()
+            # Never let unanswered pings accumulate on a wedged worker.
+            if len(session.pending_pings) > 20:
+                for stale in sorted(session.pending_pings)[:-5]:
+                    session.pending_pings.pop(stale, None)
+            await session.send(pb.ServerMessage(ping=pb.Ping(nonce=nonce)))
 
     async def _write_loop(self, session: _Session, context) -> None:
         while True:
@@ -310,6 +337,14 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
             worker = self.pool.get(session.worker_id)
             if worker is not None:
                 worker.draining = True
+            return
+
+        if kind == "pong":
+            sent_at = session.pending_pings.pop(message.pong.nonce, None)
+            if sent_at is not None:
+                self.pool.record_latency(
+                    session.worker_id, (time.monotonic() - sent_at) * 1000.0
+                )
             return
 
         if kind == "cancel_ack":
@@ -560,6 +595,23 @@ async def serve(
     await server.start()
     logger.info("Worker control plane listening on %s:%d (TLS)", host, port)
     return server
+
+
+def _peer_address(context) -> str:
+    """Turn gRPC's peer string into a plain ip:port.
+
+    gRPC reports "ipv4:192.168.0.5:54321" or "ipv6:[::1]:54321"; neither is
+    something to show a user.
+    """
+    try:
+        peer = context.peer() or ""
+    except Exception:
+        return ""
+    if peer.startswith("ipv4:"):
+        return peer[5:]
+    if peer.startswith("ipv6:"):
+        return peer[5:]
+    return peer
 
 
 __all__ = [

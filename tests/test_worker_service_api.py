@@ -420,3 +420,123 @@ def registry_enroll(name: str):
     from worker.identity import WorkerKeypair
 
     return registry.enroll_worker(name=name, public_key=WorkerKeypair.generate().public_bytes())
+
+
+# ── GPU target picker ──────────────────────────────────────────────────────
+
+
+def test_target_defaults_to_local(client, monkeypatch):
+    store: dict[str, str] = {}
+    monkeypatch.setattr("services.settings_store.get_text", lambda k, d=None: store.get(k, d))
+    body = client.get("/workers/target").json()
+    assert body["target"] == "local"
+    assert body["active"]["remote"] is False
+    assert body["targets"][0]["id"] == "local"
+
+
+def test_choosing_an_unknown_worker_is_refused(client):
+    """Otherwise a typo silently parks generation on a target that will never
+    resolve, and every job quietly runs locally with no explanation."""
+    assert client.post("/workers/target", json={"target": "nosuch"}).status_code == 404
+
+
+def test_choosing_a_worker_persists_and_is_reflected(client, db, monkeypatch):
+    from worker.identity import WorkerKeypair
+
+    store: dict[str, str] = {}
+    monkeypatch.setattr("services.settings_store.get_text", lambda k, d=None: store.get(k, d))
+    monkeypatch.setattr("services.settings_store.set_text", lambda k, v: store.__setitem__(k, v))
+
+    worker = registry_enroll("desktop-4090")
+    response = client.post("/workers/target", json={"target": worker.id})
+
+    assert response.status_code == 200
+    assert response.json()["target"] == worker.id
+    assert store["worker_target"] == worker.id
+    # Not connected, so the ACTIVE answer is still local — and says why.
+    assert response.json()["active"]["remote"] is False
+
+
+def test_target_can_be_set_back_to_local(client, monkeypatch):
+    store: dict[str, str] = {"worker_target": "something"}
+    monkeypatch.setattr("services.settings_store.get_text", lambda k, d=None: store.get(k, d))
+    monkeypatch.setattr("services.settings_store.set_text", lambda k, v: store.__setitem__(k, v))
+
+    assert client.post("/workers/target", json={"target": "local"}).status_code == 200
+    assert store["worker_target"] == "local"
+
+
+# ── Config is read from the database, not from the pool's stale copy ───────
+
+
+def _plane_with_connected_worker(monkeypatch, tmp_path, name="desktop-4090"):
+    import time as _time
+
+    from worker import registry
+    from worker.identity import WorkerKeypair, issue_session
+    from worker.pool import WorkerPool
+
+    worker = registry.enroll_worker(name=name, public_key=WorkerKeypair.generate().public_bytes())
+    pool = WorkerPool()
+    pool.connect(
+        worker,
+        session=issue_session(worker_id=worker.id, key_id=worker.key_id, epoch=1, now=_time.time()),
+        epoch=1,
+        now=_time.time(),
+    )
+    class _Sched:
+        queue_depth = 0
+
+    monkeypatch.setattr(service.control_plane, "pool", pool)
+    monkeypatch.setattr(service.control_plane, "scheduler", _Sched())
+    monkeypatch.setattr(type(service.control_plane), "running", property(lambda self: True))
+    return worker, pool
+
+
+def test_renaming_a_connected_worker_shows_immediately(client, db, monkeypatch, tmp_path):
+    """The pool caches the row from connect time. Reading the name from there
+    meant a rename only appeared after the worker reconnected."""
+    worker, _pool = _plane_with_connected_worker(monkeypatch, tmp_path)
+
+    assert client.patch(f"/workers/{worker.id}", json={"name": "Studio 4090"}).status_code == 200
+
+    listed = client.get("/workers").json()["workers"]
+    entry = next(w for w in listed if w["id"] == worker.id)
+    assert entry["name"] == "Studio 4090"
+    assert entry["connected"] is True, "liveness must survive the fix"
+
+
+def test_priority_change_on_a_connected_worker_shows_immediately(client, db, monkeypatch, tmp_path):
+    worker, _pool = _plane_with_connected_worker(monkeypatch, tmp_path)
+
+    client.patch(f"/workers/{worker.id}", json={"priority": 90})
+
+    entry = next(w for w in client.get("/workers").json()["workers"] if w["id"] == worker.id)
+    assert entry["priority"] == 90
+
+
+def test_disabling_a_connected_worker_shows_immediately(client, db, monkeypatch, tmp_path):
+    worker, _pool = _plane_with_connected_worker(monkeypatch, tmp_path)
+
+    client.patch(f"/workers/{worker.id}", json={"enabled": False})
+
+    entry = next(w for w in client.get("/workers").json()["workers"] if w["id"] == worker.id)
+    assert entry["enabled"] is False
+
+
+def test_the_pool_copy_is_refreshed_too(client, db, monkeypatch, tmp_path):
+    """Otherwise the scheduler's logs keep naming the worker by its old name."""
+    worker, pool = _plane_with_connected_worker(monkeypatch, tmp_path)
+
+    client.patch(f"/workers/{worker.id}", json={"name": "Studio 4090"})
+
+    assert pool.get(worker.id).name == "Studio 4090"
+
+
+def test_live_fields_still_come_from_the_pool(client, db, monkeypatch, tmp_path):
+    worker, pool = _plane_with_connected_worker(monkeypatch, tmp_path)
+    pool.get(worker.id).capacity.reserve("e", "m")
+
+    entry = next(w for w in client.get("/workers").json()["workers"] if w["id"] == worker.id)
+    assert entry["active_tasks"] == 1
+    assert "available_slots" in entry

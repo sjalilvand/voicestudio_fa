@@ -205,7 +205,8 @@
     "workers_enable_one": "Aktivera",
     "workers_remove": "Ta bort",
     "workers_remove_title": "Ta bort arbetare?",
-    "workers_remove_confirm": "Ta bort {{name}}? Nyckeln återkallas, så den kan inte återansluta utan en ny token."
+    "workers_remove_confirm": "Ta bort {{name}}? Nyckeln återkallas, så den kan inte återansluta utan en ny token.",
+    "workers_rename": "Byt namn på arbetare"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2349,5 +2350,10 @@
     "notice_unclean": "Föregående session avslutades utan en ren avstängning för {{ago}} sedan. Det är ofta ofarligt — datorn sov, appen tvångsavslutades eller en VM/container stoppades.",
     "details_intro_unclean": "Föregående körnings avstängningsmarkör rensades aldrig, för {{ago}} sedan. VoiceStudio kan inte avgöra om det var en krasch eller bara ett avbrott — vila, tvångsavslut eller att stoppa en VM/container lämnar samma spår. Om allt fungerar nu behöver inget göras.",
     "report_needs_log": "Ingen felutdata fångades för denna händelse, så en ett-klicks-rapport vore tom. Om något faktiskt är fel, bifoga de sista raderna från Inställningar → Loggar → Backend i ett nytt ärende."
+  },
+  "gpu": {
+    "local": "Lokalt",
+    "picker": "Var jobben körs",
+    "tasks": "uppgifter"
   }
 }

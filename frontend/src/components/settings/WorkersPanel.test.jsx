@@ -194,6 +194,50 @@ describe('WorkersPanel', () => {
       expect(toast.error).toHaveBeenCalledWith('Remote workers are turned off.'),
     );
   });
+
+  it('renames a worker through the API', async () => {
+    respondWith(() => respond({ enabled: true, running: true, workers: [WORKER] }));
+    renderPanel();
+
+    fireEvent.click(await screen.findByLabelText(/rename worker/i));
+    const field = await screen.findByRole('textbox');
+    fireEvent.change(field, { target: { value: 'Studio 4090' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+
+    await waitFor(() => {
+      const call = apiFetch.mock.calls.find(([p, o]) => p === '/workers/w1' && o?.method === 'PATCH');
+      expect(call).toBeTruthy();
+      expect(JSON.parse(call[1].body)).toEqual({ name: 'Studio 4090' });
+    });
+  });
+
+  it('does not send an empty rename', async () => {
+    // An empty name would leave the row labelled by its key id, which is not
+    // something a user can recognise.
+    respondWith(() => respond({ enabled: true, running: true, workers: [WORKER] }));
+    renderPanel();
+
+    fireEvent.click(await screen.findByLabelText(/rename worker/i));
+    const field = await screen.findByRole('textbox');
+    fireEvent.change(field, { target: { value: '   ' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+
+    await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument());
+    expect(apiFetch.mock.calls.some(([, o]) => o?.method === 'PATCH')).toBe(false);
+  });
+
+  it('escape cancels a rename', async () => {
+    respondWith(() => respond({ enabled: true, running: true, workers: [WORKER] }));
+    renderPanel();
+
+    fireEvent.click(await screen.findByLabelText(/rename worker/i));
+    const field = await screen.findByRole('textbox');
+    fireEvent.change(field, { target: { value: 'nope' } });
+    fireEvent.keyDown(field, { key: 'Escape' });
+
+    await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument());
+    expect(apiFetch.mock.calls.some(([, o]) => o?.method === 'PATCH')).toBe(false);
+  });
 });
 
 describe('WorkerRow', () => {

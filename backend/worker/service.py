@@ -237,14 +237,36 @@ class ControlPlane:
     def snapshot(self, *, now: Optional[float] = None) -> dict:
         """Everything the workers UI needs in one call."""
         stamp = resolve(now)
-        if not self._started:
+        if not self.running:
             return {"enabled": False, "running": False, "workers": [], "queue_depth": 0}
-        connected = {w["id"]: w for w in self.pool.snapshot(now=stamp)}
         from worker import registry  # noqa: PLC0415
 
+        # Config comes from the DATABASE, liveness from the pool — never the
+        # other way round. The pool holds the RemoteWorker it was handed when
+        # the worker connected, so reading a name or a priority from there
+        # serves whatever was true at connect time: rename a connected worker
+        # and the UI would show the old name until it reconnected.
+        connected = {w.worker_id: w for w in self.pool}
         workers = []
         for record in registry.list_workers():
-            entry = connected.get(record.id) or {**record.to_dict(), "connected": False}
+            entry = record.to_dict()
+            live = connected.get(record.id)
+            if live is None:
+                entry["connected"] = False
+            else:
+                entry.update(
+                    {
+                        "connected": True,
+                        "draining": live.draining,
+                        "latency_ms": round(live.latency_ms, 1),
+                        "address": live.address,
+                        "status": live.status,
+                        "active_tasks": live.capacity.active_tasks,
+                        "available_slots": live.capacity.available_slots,
+                        "resident_models": sorted(live.capacity.resident_models),
+                        "stale": live.stale(now=stamp),
+                    }
+                )
             entry["breakers"] = [
                 b.to_dict(now=stamp) for b in self.pool.breakers.open_breakers(record.id, now=stamp)
             ]

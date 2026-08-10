@@ -29,6 +29,11 @@ logger = logging.getLogger("omnivoice.worker")
 # mapping looks identical to a healthy idle connection until you ask.
 _HEARTBEAT_MISS_SECONDS = 90.0
 
+# How many round-trip samples the median is taken over. Five at a five-second
+# ping is a ~25-second view: current enough to notice a link degrading, long
+# enough that one slow answer cannot move it.
+_LATENCY_WINDOW = 5
+
 
 @dataclass
 class ConnectedWorker:
@@ -41,6 +46,14 @@ class ConnectedWorker:
     connected_at: float
     last_heartbeat_at: float
     latency_ms: float = 0.0
+    # Recent round-trip samples. A median over these rather than a running
+    # average, because the first sample after connect is routinely an outlier
+    # — the worker is still importing torch and loading models, so its event
+    # loop answers the ping late. One 139 ms startup spike would otherwise
+    # dominate an average for a minute and read as a broken link.
+    latency_samples: list[float] = field(default_factory=list)
+    # The address this worker connected FROM, as the control plane saw it.
+    address: str = ""
     draining: bool = False
     # Attempt ids this worker claims to be running. Rebuilt on every reconnect
     # from its own report, never inferred.
@@ -56,6 +69,19 @@ class ConnectedWorker:
 
     def stale(self, *, now: Optional[float] = None) -> bool:
         return resolve(now) - self.last_heartbeat_at > _HEARTBEAT_MISS_SECONDS
+
+    @property
+    def status(self) -> str:
+        """What the UI colours on: ready, busy, or gone.
+
+        Draining counts as busy rather than offline — it is still finishing
+        work, and calling it offline would imply the results are lost.
+        """
+        if self.stale():
+            return "offline"
+        if self.draining or self.capacity.available_slots <= 0:
+            return "busy"
+        return "ready"
 
     def supports(self, engine: str, model_id: str, operation: str) -> bool:
         """Can this worker run this work at all?
@@ -83,6 +109,8 @@ class ConnectedWorker:
             "connected": True,
             "draining": self.draining,
             "latency_ms": round(self.latency_ms, 1),
+            "address": self.address,
+            "status": self.status,
             "active_tasks": self.capacity.active_tasks,
             "available_slots": self.capacity.available_slots,
             "resident_models": sorted(self.capacity.resident_models),
@@ -108,6 +136,7 @@ class WorkerPool:
         max_concurrent_tasks: int = 1,
         backend: str = "",
         in_flight: Optional[set[str]] = None,
+        address: str = "",
         now: Optional[float] = None,
     ) -> ConnectedWorker:
         """Register a live session, replacing any previous one.
@@ -133,6 +162,7 @@ class WorkerPool:
             ),
             connected_at=stamp,
             last_heartbeat_at=stamp,
+            address=address,
             in_flight=set(in_flight or set()),
         )
         self._connected[record.id] = worker
@@ -140,6 +170,45 @@ class WorkerPool:
         if previous is not None:
             logger.info("Worker %s reconnected (epoch %d → %d)", record.name, previous.epoch, epoch)
         return worker
+
+    def record_latency(self, worker_id: str, latency_ms: float) -> None:
+        """Record a measured round trip and republish the median.
+
+        Median, not mean: a consumer link jitters, and a worker busy loading a
+        model answers late. Both produce outliers that an average carries for
+        a long time and a median ignores outright.
+
+        Nothing is published until a second sample arrives, so the startup
+        outlier is never shown — the UI treats 0 as "not measured yet" and
+        simply omits the figure.
+        """
+        live = self._connected.get(worker_id)
+        if live is None:
+            return
+        samples = live.latency_samples
+        samples.append(latency_ms)
+        del samples[:-_LATENCY_WINDOW]
+        if len(samples) < 2:
+            return
+        ordered = sorted(samples)
+        middle = len(ordered) // 2
+        live.latency_ms = (
+            ordered[middle]
+            if len(ordered) % 2
+            else (ordered[middle - 1] + ordered[middle]) / 2
+        )
+
+    def refresh_record(self, record: RemoteWorker) -> None:
+        """Adopt an updated database row for a live worker.
+
+        The pool caches the RemoteWorker it was handed at connect time. Every
+        registry write — rename, priority, enable — makes that copy wrong until
+        the worker reconnects, so writers refresh it here rather than leaving
+        two disagreeing answers in memory.
+        """
+        live = self._connected.get(record.id)
+        if live is not None:
+            live.record = record
 
     def disconnect(self, worker_id: str) -> Optional[ConnectedWorker]:
         return self._connected.pop(worker_id, None)
