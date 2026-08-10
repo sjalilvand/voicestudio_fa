@@ -847,7 +847,7 @@ def _delete_cookie_export(cookie_file: str | None) -> bool:
     try:
         os.unlink(cookie_file)
     except OSError:
-        pass  # Best effort: cleanup must never replace the download result.
+        # Best effort: cleanup must never replace the download result.
         return False
     return True
 

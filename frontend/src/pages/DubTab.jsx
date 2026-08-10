@@ -416,6 +416,10 @@ export default function DubTab(props) {
   // prefs with what's really a per-ingest choice.
   const [fetchYtSubs, setFetchYtSubs] = useState(false);
   const [youtubeCookieFile, setYoutubeCookieFile] = useState(null);
+  const resetDubAndCredentials = useCallback(() => {
+    setYoutubeCookieFile(null);
+    resetDub?.();
+  }, [resetDub]);
   const onIngestUrl = () => {
     if (!ingestUrl.trim() || !handleDubIngestUrl) return;
     handleDubIngestUrl(ingestUrl.trim(), {
@@ -583,7 +587,7 @@ export default function DubTab(props) {
             dubSegments={dubSegments}
             activeProjectName={activeProjectName}
             saveProject={saveProject}
-            resetDub={resetDub}
+            resetDub={resetDubAndCredentials}
             dubStep={dubStep}
             handleDubStop={handleDubStop}
             dubProgress={dubProgress}
