@@ -20,8 +20,12 @@ def test_pillow_runtime_floor_is_declared():
     )
     requirements = [Requirement(item) for item in project["project"]["dependencies"]]
     pillow = next(req for req in requirements if req.name.lower() == "pillow")
+    assert any(
+        spec.operator == ">=" and spec.version == "12.1.0"
+        for spec in pillow.specifier
+    )
     assert pillow.specifier.contains("12.1.0")
-    assert not pillow.specifier.contains("12.0.0")
+    assert not pillow.specifier.contains("12.0.99")
 
 
 def _save_jpeg(tmp_path, name: str, image: Image.Image):
