@@ -82,3 +82,4 @@ def test_sensitive_logging_sites_emit_metadata_not_paths_keys_or_tracebacks():
         "SoniTranslate dub complete: %s",
     ):
         assert unsafe_shape not in combined
+    assert 'logger.error("settings_store.get_secret: SQLite read failed")' in combined
