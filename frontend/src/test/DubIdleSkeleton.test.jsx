@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '../i18n';
 
@@ -81,6 +81,23 @@ describe('IdleSkeleton — pipeline-stage vs idle dropzone', () => {
     expect(screen.getByText(DROP_HINT)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(URL_PLACEHOLDER)).toBeInTheDocument();
     expect(screen.getByLabelText('Choose a cookies.txt export')).toBeInTheDocument();
+  });
+
+  it('clears the native cookie picker when the selection is removed', () => {
+    const selected = new File(['# Netscape HTTP Cookie File\n'], 'cookies.txt', {
+      type: 'text/plain',
+    });
+    const { rerender } = renderIdle({ youtubeCookieFile: selected });
+    const input = screen.getByLabelText('Choose a cookies.txt export');
+    fireEvent.change(input, { target: { files: [selected] } });
+    expect(input.files).toHaveLength(1);
+
+    rerender(
+      <I18nextProvider i18n={i18n}>
+        <IdleSkeleton {...baseProps({ youtubeCookieFile: null })} />
+      </I18nextProvider>,
+    );
+    expect(input.value).toBe('');
   });
 
   it('does NOT show the idle dropzone while transcribing a URL-ingested job', () => {

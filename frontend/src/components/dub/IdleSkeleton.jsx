@@ -19,6 +19,7 @@ import {
   Download,
 } from 'lucide-react';
 import { Button, Badge } from '../../ui';
+import { useEffect, useRef } from 'react';
 import WaveformTimeline from '../WaveformTimeline';
 import DubbingDemo from '../DubbingDemo';
 import DubFailureNotice from './DubFailureNotice';
@@ -72,6 +73,12 @@ export default function IdleSkeleton({
   dubInstruct,
   setDubInstruct,
 }) {
+  const youtubeCookieInputRef = useRef(null);
+  useEffect(() => {
+    if (!youtubeCookieFile && youtubeCookieInputRef.current) {
+      youtubeCookieInputRef.current.value = '';
+    }
+  }, [youtubeCookieFile]);
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Header bar */}
@@ -226,6 +233,7 @@ export default function IdleSkeleton({
                 >
                   <Users size={13} /> {t('dub.num_speakers_label')}
                   <input
+                    ref={youtubeCookieInputRef}
                     type="number"
                     min={1}
                     max={20}

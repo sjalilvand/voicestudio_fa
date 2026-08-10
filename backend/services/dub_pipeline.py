@@ -847,7 +847,7 @@ def _delete_cookie_export(cookie_file: str | None) -> None:
     try:
         os.unlink(cookie_file)
     except OSError:
-        pass
+        pass  # Best effort: cleanup must never replace the download result.
 
 
 def yt_download_sync(
