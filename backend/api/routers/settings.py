@@ -19,6 +19,7 @@ from dataclasses import asdict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from core.logging_utils import log_safe
 from api.dependencies import require_admin
 
 logger = logging.getLogger("omnivoice.api.settings")
@@ -603,8 +604,8 @@ def post_license_acceptance(body: _LicenseAcceptBody) -> dict:
     from services import settings_store
     try:
         settings_store.set_license_accepted(eid, body.accepted)
-    except Exception:
-        logger.exception("set_license_accepted failed for %s", eid)
+    except Exception as exc:
+        logger.error("set_license_accepted failed for %s: %s", log_safe(eid), log_safe(exc))
         raise HTTPException(status_code=500, detail="Failed to persist license acceptance")
     return {"ok": True, "engine_id": eid, "accepted": bool(body.accepted)}
 
@@ -629,8 +630,8 @@ def get_license_acceptance(engine_id: str) -> dict:
     from services import settings_store
     try:
         accepted = settings_store.get_license_accepted(eid)
-    except Exception:
-        logger.exception("get_license_accepted failed for %s", eid)
+    except Exception as exc:
+        logger.error("get_license_accepted failed for %s: %s", log_safe(eid), log_safe(exc))
         raise HTTPException(status_code=500, detail="Failed to read license acceptance")
     return {"engine_id": eid, "accepted": bool(accepted)}
 

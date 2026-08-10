@@ -25,6 +25,7 @@ from services.model_manager import (
 from services.audio_io import _safe_torchaudio_save
 from services.binary_preflight import InvalidBinaryError
 from core import event_bus
+from core.logging_utils import log_safe
 from omnivoice.utils.voice_design import heal_design_instruct
 
 router = APIRouter()
@@ -843,7 +844,7 @@ def _persist_profile_ref_text(profile_id: str, ref_text: str) -> None:
     except Exception as e:  # noqa: BLE001 — cache write must not break generate
         logger.warning(
             "could not persist auto-transcribed ref_text onto profile %s: %s",
-            profile_id, e,
+            log_safe(profile_id), log_safe(e),
         )
 
 

@@ -18,6 +18,7 @@ import shutil
 
 from core.config import OUTPUTS_DIR, DATA_DIR, CRASH_LOG_PATH, LOG_PATH, IDLE_TIMEOUT_SECONDS
 from core.version import APP_VERSION
+from core.logging_utils import log_safe
 from core.public_errors import public_failure
 from services.model_manager import get_model_status, get_best_device, resolve_omnivoice_checkpoint
 from services.ffmpeg_utils import find_ffmpeg, run_ffmpeg
@@ -896,7 +897,7 @@ async def set_env_var(body: dict):
                     detail=f"Invalid port for {key}: must be between 1024 and 65535.",
                 )
         os.environ[key] = value
-        logger.info("Set environment variable: %s (length=%d)", key, len(value))
+        logger.info("Environment variable set (length=%d)", len(value))
 
         # Capability 1 / issue #35: HF_TOKEN persists across restarts via
         # huggingface_hub.login() — writes the token to $HF_HOME/token so
@@ -911,10 +912,10 @@ async def set_env_var(body: dict):
                 # Non-fatal — the runtime env var is still set, so the
                 # current process will still see the token. We just lose
                 # persistence across restarts.
-                logger.warning("Could not persist HF token to disk: %s", e)
+                logger.warning("Could not persist HF token to disk: %s", log_safe(e))
     else:
         os.environ.pop(key, None)
-        logger.info("Cleared environment variable: %s", key)
+        logger.info("Environment variable cleared")
 
         # Mirror the persistence on clear — wipe the saved token file too.
         if key == "HF_TOKEN":
