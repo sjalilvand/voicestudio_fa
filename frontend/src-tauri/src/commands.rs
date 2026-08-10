@@ -34,6 +34,56 @@ pub fn path_authorization_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> P
         .join(".path-authorizations")
 }
 
+fn remember_reveal_path<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    path: &Path,
+) -> Result<(), String> {
+    let dir = path_authorization_dir(app);
+    fs::create_dir_all(&dir).map_err(|e| format!("Could not create authorization store: {e}"))?;
+    let ledger = dir.join("revealed-paths");
+    let selected = path.to_string_lossy().into_owned();
+    let mut paths: Vec<String> = fs::read_to_string(&ledger)
+        .unwrap_or_default()
+        .lines()
+        .map(str::to_owned)
+        .collect();
+    paths.retain(|item| item != &selected);
+    paths.push(selected);
+    if paths.len() > 1024 {
+        paths.drain(..paths.len() - 1024);
+    }
+    fs::write(&ledger, format!("{}\n", paths.join("\n")))
+        .map_err(|e| format!("Could not remember selected path: {e}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&ledger, fs::Permissions::from_mode(0o600))
+            .map_err(|e| format!("Could not protect selected paths: {e}"))?;
+    }
+    Ok(())
+}
+
+fn reveal_path_is_authorized<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    target: &Path,
+) -> bool {
+    if let Ok(data_root) = fs::canonicalize(
+        crate::setup::resolved_data_dir(app).unwrap_or_else(crate::setup::default_data_dir),
+    ) {
+        if target.starts_with(data_root) {
+            return true;
+        }
+    }
+    let Ok(ledger) = fs::read_to_string(path_authorization_dir(app).join("revealed-paths")) else {
+        return false;
+    };
+    ledger.lines().any(|selected| {
+        fs::canonicalize(selected)
+            .map(|remembered| remembered == target)
+            .unwrap_or(false)
+    })
+}
+
 fn validate_host_path(kind: &str, path: PathBuf) -> Result<PathBuf, String> {
     if !matches!(
         kind,
@@ -171,6 +221,9 @@ pub async fn authorize_host_path(
         use std::os::unix::fs::PermissionsExt;
         fs::set_permissions(&target, fs::Permissions::from_mode(0o600))
             .map_err(|e| format!("Could not protect authorization: {e}"))?;
+    }
+    if payload.kind == "dub_export" {
+        remember_reveal_path(&app, &validated)?;
     }
     Ok(Some(AuthorizedPathSelection {
         authorization: token,
@@ -927,12 +980,15 @@ pub fn save_text_file(path: String, contents: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn reveal_host_path(path: String) -> Result<(), String> {
+pub fn reveal_host_path(app: tauri::AppHandle, path: String) -> Result<(), String> {
     // Revealing is a native-shell action, never a loopback HTTP authority.
     // Canonicalization rejects missing paths and removes traversal/symlinks;
     // argv-only spawning avoids shell interpretation on every platform.
     let target = std::fs::canonicalize(&path)
         .map_err(|_| "That file or folder is no longer on disk".to_string())?;
+    if !reveal_path_is_authorized(&app, &target) {
+        return Err("That path was not selected by VoiceStudio".into());
+    }
     let folder = if target.is_dir() {
         target.clone()
     } else {
