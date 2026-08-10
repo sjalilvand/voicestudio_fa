@@ -64,6 +64,15 @@ class PocketTTSBackend(SubprocessBackend):
     supports_cloning = True  # zero-shot clone from a reference clip
 
     @classmethod
+    def _platform_error(cls) -> str | None:
+        if sys.platform == "darwin" and platform.machine().lower() == "x86_64":
+            return (
+                "PocketTTS is unavailable on Intel Macs because its required "
+                "PyTorch version has no macOS x86_64 wheel."
+            )
+        return None
+
+    @classmethod
     def _license_accepted(cls) -> bool:
         """Read acknowledgement fail-closed at every construction path."""
         try:
@@ -81,6 +90,8 @@ class PocketTTSBackend(SubprocessBackend):
         # Availability probes are advisory. Construction is the shared
         # authorization boundary for HTTP, WebSocket, audiobook, and direct
         # backend selection, so none can reach gated weights before consent.
+        if platform_error := self._platform_error():
+            raise RuntimeError(platform_error)
         if not self._license_accepted():
             raise RuntimeError(
                 "PocketTTS license not accepted. Review it in Settings → Engines."
@@ -108,11 +119,8 @@ class PocketTTSBackend(SubprocessBackend):
 
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
-        if sys.platform == "darwin" and platform.machine().lower() == "x86_64":
-            return False, (
-                "PocketTTS is unavailable on Intel Macs because its required "
-                "PyTorch version has no macOS x86_64 wheel."
-            )
+        if platform_error := cls._platform_error():
+            return False, platform_error
         # Optional-dep gate: the pocket-tts wheel is installed only when the user
         # opted in. The interpreter is the parent's own (sys.executable), so
         # there is no separate venv to validate.

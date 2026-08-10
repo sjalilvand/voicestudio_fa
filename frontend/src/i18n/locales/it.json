@@ -1556,7 +1556,7 @@
     "gate_desc": "I pesi sono limitati su Hugging Face. Prima del primo download devi avere un account gratuito, condividere i tuoi recapiti e accettare le condizioni di accesso.",
     "pockettts_conditions_desc": "Le condizioni vietano usi vocali illegali, dannosi, ingannevoli, fraudolenti, non autorizzati o senza consenso. Leggi le condizioni complete prima di continuare.",
     "review_access_conditions": "Consulta le condizioni di accesso",
-    "pockettts_footer": "Facendo clic su Accetta, VoiceStudio registra localmente la tua presa visione delle licenze e condizioni e attiva il motore. VoiceStudio non invia nulla a Kyutai o a terzi.",
+    "pockettts_footer": "Facendo clic su Accetta, la tua presa visione viene salvata solo nelle impostazioni locali di VoiceStudio e il motore viene attivato. L’accesso e il download del modello usano Hugging Face, che riceve i normali dati della richiesta e dell’account.",
     "pockettts_accepted_toast": "Condizioni di PocketTTS accettate."
   },
   "voicePreview": {

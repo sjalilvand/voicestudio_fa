@@ -1556,7 +1556,7 @@
     "gate_desc": "Trọng số bị hạn chế trên Hugging Face. Trước lần tải đầu tiên, bạn cần tài khoản miễn phí, phải chia sẻ thông tin liên hệ và chấp nhận điều kiện truy cập.",
     "pockettts_conditions_desc": "Điều kiện cấm sử dụng giọng nói bất hợp pháp, gây hại, lừa dối, gian lận, trái phép hoặc không có sự đồng thuận. Hãy đọc đầy đủ điều kiện trước khi tiếp tục.",
     "review_access_conditions": "Xem điều kiện truy cập",
-    "pockettts_footer": "Khi bấm Chấp nhận, xác nhận của bạn về các giấy phép và điều kiện này chỉ được lưu trong cài đặt cục bộ của VoiceStudio và bộ máy được bật. VoiceStudio không gửi gì cho Kyutai hoặc bên thứ ba.",
+    "pockettts_footer": "Khi bấm Chấp nhận, xác nhận của bạn chỉ được lưu trong cài đặt cục bộ của VoiceStudio và bộ máy được bật. Việc truy cập và tải mô hình dùng Hugging Face, nơi nhận thông tin yêu cầu và tài khoản thông thường.",
     "pockettts_accepted_toast": "Đã chấp nhận điều kiện PocketTTS."
   },
   "voicePreview": {

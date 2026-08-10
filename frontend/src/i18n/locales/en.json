@@ -2101,7 +2101,7 @@
     "gate_desc": "The weights are gated on Hugging Face. You need a free HF account, must share your contact information, and must accept the access conditions before the first download.",
     "pockettts_conditions_desc": "The access conditions prohibit illegal, harmful, deceptive, fraudulent, unauthorized, or non-consensual voice use. Review the full conditions before continuing.",
     "review_access_conditions": "Review the access conditions",
-    "pockettts_footer": "Clicking Accept records your acknowledgement of these licenses and access conditions in VoiceStudio's local settings and enables the engine. Nothing is reported by VoiceStudio to Kyutai or any third party.",
+    "pockettts_footer": "Clicking Accept stores your acknowledgement only in VoiceStudio's local settings and enables the engine. Model access and downloads use Hugging Face, which receives the normal request and account information.",
     "pockettts_accepted_toast": "PocketTTS license accepted."
   },
   "voicePreview": {

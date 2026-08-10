@@ -1556,7 +1556,7 @@
     "gate_desc": "Dostęp do wag w Hugging Face jest ograniczony. Przed pierwszym pobraniem musisz mieć bezpłatne konto, udostępnić dane kontaktowe i zaakceptować warunki dostępu.",
     "pockettts_conditions_desc": "Warunki zabraniają nielegalnego, szkodliwego, zwodniczego, oszukańczego, nieuprawnionego lub niekonsensualnego używania głosu. Przed kontynuowaniem przeczytaj pełne warunki.",
     "review_access_conditions": "Przejrzyj warunki dostępu",
-    "pockettts_footer": "Kliknięcie Akceptuj zapisuje potwierdzenie tych licencji i warunków tylko w lokalnych ustawieniach VoiceStudio oraz włącza silnik. VoiceStudio nie wysyła niczego do Kyutai ani stron trzecich.",
+    "pockettts_footer": "Kliknięcie Akceptuj zapisuje potwierdzenie tylko w lokalnych ustawieniach VoiceStudio i włącza silnik. Dostęp do modelu i pobieranie odbywają się przez Hugging Face, które otrzymuje standardowe dane żądania i konta.",
     "pockettts_accepted_toast": "Warunki PocketTTS zaakceptowane."
   },
   "voicePreview": {

@@ -1556,7 +1556,7 @@
     "gate_desc": "Ağırlıklar Hugging Face'te kısıtlıdır. İlk indirmeden önce ücretsiz bir hesap açmalı, iletişim bilgilerinizi paylaşmalı ve erişim koşullarını kabul etmelisiniz.",
     "pockettts_conditions_desc": "Erişim koşulları yasa dışı, zararlı, aldatıcı, hileli, yetkisiz veya rızasız ses kullanımını yasaklar. Devam etmeden önce koşulların tamamını inceleyin.",
     "review_access_conditions": "Erişim koşullarını inceleyin",
-    "pockettts_footer": "Kabul Et'e tıklamak, bu lisansları ve erişim koşullarını onayladığınızı yalnızca VoiceStudio'nun yerel ayarlarına kaydeder ve motoru etkinleştirir. VoiceStudio, Kyutai'ye veya üçüncü taraflara hiçbir şey bildirmez.",
+    "pockettts_footer": "Kabul Et'e tıklamak, onayınızı yalnızca VoiceStudio'nun yerel ayarlarına kaydeder ve motoru etkinleştirir. Model erişimi ve indirmeleri Hugging Face üzerinden yapılır; olağan istek ve hesap bilgileri bu hizmete iletilir.",
     "pockettts_accepted_toast": "PocketTTS koşulları kabul edildi."
   },
   "voicePreview": {

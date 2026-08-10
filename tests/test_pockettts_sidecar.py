@@ -365,6 +365,7 @@ def test_recv_timeout_honours_a_sane_override(backend, monkeypatch):
 def test_is_available_reports_why_the_import_failed(backend, monkeypatch):
     """"not installed" sends a user with a torch ABI mismatch or a half-written
     wheel to reinstall a package they already have (CodeRabbit)."""
+    monkeypatch.setattr("engines.pockettts.sys.platform", "linux")
     real_import = builtins.__import__
 
     def fail_pocket_import(name, *args, **kwargs):

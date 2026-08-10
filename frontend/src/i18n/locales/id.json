@@ -1556,7 +1556,7 @@
     "gate_desc": "Bobot dibatasi di Hugging Face. Anda memerlukan akun gratis, harus membagikan informasi kontak, dan menerima ketentuan akses sebelum unduhan pertama.",
     "pockettts_conditions_desc": "Ketentuan akses melarang penggunaan suara yang ilegal, merugikan, menipu, curang, tanpa izin, atau tanpa persetujuan. Tinjau ketentuan lengkap sebelum melanjutkan.",
     "review_access_conditions": "Tinjau ketentuan akses",
-    "pockettts_footer": "Menekan Terima menyimpan pengakuan Anda atas lisensi dan ketentuan ini hanya di pengaturan lokal VoiceStudio lalu mengaktifkan mesin. VoiceStudio tidak melaporkan apa pun kepada Kyutai atau pihak ketiga.",
+    "pockettts_footer": "Menekan Terima hanya menyimpan pengakuan Anda di pengaturan lokal VoiceStudio lalu mengaktifkan mesin. Akses dan unduhan model menggunakan Hugging Face, yang menerima informasi permintaan dan akun seperti biasa.",
     "pockettts_accepted_toast": "Ketentuan PocketTTS diterima."
   },
   "voicePreview": {

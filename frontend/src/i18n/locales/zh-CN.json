@@ -1562,7 +1562,7 @@
     "gate_desc": "权重在 Hugging Face 上受限。首次下载前，你需要免费账户、分享联系信息并接受访问条件。",
     "pockettts_conditions_desc": "访问条件禁止非法、有害、欺骗、欺诈、未经授权或未经同意的声音使用。继续前请查看完整条件。",
     "review_access_conditions": "查看访问条件",
-    "pockettts_footer": "点击“接受”会将你对这些许可证和访问条件的确认仅保存在 VoiceStudio 本地设置中并启用引擎。VoiceStudio 不会向 Kyutai 或任何第三方发送信息。",
+    "pockettts_footer": "点击“接受”只会将你的确认保存在 VoiceStudio 本地设置中并启用引擎。模型访问和下载使用 Hugging Face，该服务会收到常规请求和账户信息。",
     "pockettts_accepted_toast": "已接受 PocketTTS 条件。"
   },
   "voicePreview": {

@@ -1556,7 +1556,7 @@
     "gate_desc": "De gewichten zijn afgeschermd op Hugging Face. Voor de eerste download heb je een gratis account nodig, moet je contactgegevens delen en de toegangsvoorwaarden accepteren.",
     "pockettts_conditions_desc": "De voorwaarden verbieden illegaal, schadelijk, misleidend, frauduleus, onbevoegd of niet-consensueel stemgebruik. Lees de volledige voorwaarden voordat je doorgaat.",
     "review_access_conditions": "Toegangsvoorwaarden bekijken",
-    "pockettts_footer": "Met Accepteren wordt je bevestiging van deze licenties en voorwaarden alleen lokaal in VoiceStudio opgeslagen en de engine ingeschakeld. VoiceStudio meldt niets aan Kyutai of derden.",
+    "pockettts_footer": "Met Accepteren wordt je bevestiging alleen in de lokale instellingen van VoiceStudio opgeslagen en de engine ingeschakeld. Modeltoegang en downloads verlopen via Hugging Face, dat de gebruikelijke aanvraag- en accountgegevens ontvangt.",
     "pockettts_accepted_toast": "Voorwaarden van PocketTTS geaccepteerd."
   },
   "voicePreview": {

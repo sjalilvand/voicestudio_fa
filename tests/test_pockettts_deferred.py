@@ -5,7 +5,13 @@ import sys
 import types
 
 import pytest
-from engines.pockettts import PocketTTSBackend
+
+
+def _backend_cls():
+    """Resolve app code at test runtime; sys.modules-isolating tests may reload it."""
+    from engines.pockettts import PocketTTSBackend
+
+    return PocketTTSBackend
 
 
 STUB_SIDECAR = r'''
@@ -45,13 +51,13 @@ def test_license_gate_fails_closed_then_allows_engine(monkeypatch, mock_settings
     monkeypatch.setitem(sys.modules, "pocket_tts", types.ModuleType("pocket_tts"))
     mock_settings_store.pop("pockettts", None)
 
-    ok, reason = PocketTTSBackend.is_available()
+    ok, reason = _backend_cls().is_available()
     assert ok is False
     assert "license not accepted" in reason.lower()
     assert "Settings" in reason and "Engines" in reason
 
     mock_settings_store["pockettts"] = True
-    assert PocketTTSBackend.is_available() == (True, "ready (CPU-only)")
+    assert _backend_cls().is_available() == (True, "ready (CPU-only)")
 
 
 def test_pockettts_is_a_pinned_optional_extra():
@@ -69,10 +75,19 @@ def test_pockettts_is_a_pinned_optional_extra():
 def test_pockettts_reports_the_intel_mac_wheel_gap(monkeypatch):
     monkeypatch.setattr("engines.pockettts.sys.platform", "darwin")
     monkeypatch.setattr("engines.pockettts.platform.machine", lambda: "x86_64")
-    ok, reason = PocketTTSBackend.is_available()
+    ok, reason = _backend_cls().is_available()
     assert ok is False
     assert "Intel Macs" in reason
     assert "PyTorch" in reason
+
+
+def test_direct_construction_rejects_intel_mac(monkeypatch, mock_settings_store):
+    mock_settings_store["pockettts"] = True
+    monkeypatch.setattr("engines.pockettts.sys.platform", "darwin")
+    monkeypatch.setattr("engines.pockettts.platform.machine", lambda: "x86_64")
+
+    with pytest.raises(RuntimeError, match="Intel Macs"):
+        _backend_cls()()
 
 
 def test_ci_verifies_intel_mac_as_the_documented_remote_only_host():
@@ -85,6 +100,29 @@ def test_ci_verifies_intel_mac_as_the_documented_remote_only_host():
     assert "name: Verify the documented Intel Mac contract" in workflow
     assert "if: matrix.backend_supported\n        run: uv sync --extra pockettts" in workflow
     assert "if: matrix.backend_supported\n        run: uv run pytest tests/smoke/" in workflow
+    assert "HF_HUB_CACHE: ${{ runner.temp }}/pockettts-empty-hf-cache" in workflow
+
+
+def test_cache_apt_action_is_pinned_in_every_workflow():
+    from pathlib import Path
+
+    workflows = Path(__file__).resolve().parents[1] / ".github/workflows"
+    for path in workflows.glob("*.yml"):
+        text = path.read_text("utf-8")
+        assert "cache-apt-pkgs-action@latest" not in text, path
+
+
+def test_every_locale_discloses_hugging_face_model_access():
+    import json
+    from pathlib import Path
+
+    locales = Path(__file__).resolve().parents[1] / "frontend/src/i18n/locales"
+    paths = sorted(locales.glob("*.json"))
+    assert len(paths) == 21
+    for path in paths:
+        strings = json.loads(path.read_text("utf-8"))
+        footer = strings["license"]["pockettts_footer"]
+        assert "Hugging Face" in footer, path
 
 
 @pytest.mark.parametrize(
@@ -115,18 +153,18 @@ def test_license_gate_fails_closed_when_settings_read_fails(monkeypatch):
     monkeypatch.setitem(sys.modules, "pocket_tts", types.ModuleType("pocket_tts"))
     from services import settings_store
     monkeypatch.setattr(settings_store, "get_license_accepted", lambda _eid: (_ for _ in ()).throw(OSError("db unavailable")))
-    assert PocketTTSBackend.is_available()[0] is False
+    assert _backend_cls().is_available()[0] is False
 
 
 def test_direct_backend_construction_cannot_bypass_license(mock_settings_store):
     mock_settings_store.pop("pockettts", None)
     with pytest.raises(RuntimeError, match="license not accepted"):
-        PocketTTSBackend()
+        _backend_cls()()
 
 
 def test_cached_backend_stops_synthesis_after_license_revocation(mock_settings_store):
     mock_settings_store["pockettts"] = True
-    backend = PocketTTSBackend()
+    backend = _backend_cls()()
     try:
         mock_settings_store["pockettts"] = False
         with pytest.raises(RuntimeError, match="license not accepted"):
@@ -139,7 +177,7 @@ def test_queued_synthesis_rechecks_license_after_acquiring_lock(
     monkeypatch, mock_settings_store
 ):
     mock_settings_store["pockettts"] = True
-    backend = PocketTTSBackend()
+    backend = _backend_cls()()
 
     class RevokingLock:
         def __enter__(self):
@@ -166,11 +204,12 @@ def test_stub_sidecar_roundtrip_is_model_free_and_forwards_voice_inputs(
     mock_settings_store["pockettts"] = True
     stub = tmp_path / "pockettts_stub.py"
     stub.write_text(STUB_SIDECAR, encoding="utf-8")
-    monkeypatch.setattr(PocketTTSBackend, "sidecar_script", classmethod(lambda cls: stub))
+    backend_cls = _backend_cls()
+    monkeypatch.setattr(backend_cls, "sidecar_script", classmethod(lambda cls: stub))
     # Use this interpreter while retaining the engine's real override surface.
-    monkeypatch.setattr(PocketTTSBackend, "venv_python", classmethod(lambda cls: __import__("pathlib").Path(sys.executable)))
+    monkeypatch.setattr(backend_cls, "venv_python", classmethod(lambda cls: __import__("pathlib").Path(sys.executable)))
 
-    backend = PocketTTSBackend()
+    backend = backend_cls()
     try:
         audio = backend.generate(
             "bonjour", language="fr", ref_audio="/tmp/reference.wav"

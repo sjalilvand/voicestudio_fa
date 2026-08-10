@@ -1556,7 +1556,7 @@
     "gate_desc": "Vikterna är begränsade på Hugging Face. Före den första hämtningen behöver du ett kostnadsfritt konto, dela dina kontaktuppgifter och godkänna åtkomstvillkoren.",
     "pockettts_conditions_desc": "Villkoren förbjuder olaglig, skadlig, vilseledande, bedräglig, obehörig eller icke-samtyckt röstanvändning. Läs de fullständiga villkoren innan du fortsätter.",
     "review_access_conditions": "Granska åtkomstvillkoren",
-    "pockettts_footer": "När du klickar på Godkänn sparas din bekräftelse av licenserna och villkoren endast lokalt i VoiceStudio och motorn aktiveras. VoiceStudio rapporterar inget till Kyutai eller tredje part.",
+    "pockettts_footer": "När du klickar på Godkänn sparas din bekräftelse endast i VoiceStudios lokala inställningar och motorn aktiveras. Modellåtkomst och hämtningar går via Hugging Face, som tar emot vanliga begärande- och kontouppgifter.",
     "pockettts_accepted_toast": "PocketTTS-villkoren har godkänts."
   },
   "voicePreview": {

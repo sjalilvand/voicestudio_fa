@@ -1556,7 +1556,7 @@
     "gate_desc": "重みは Hugging Face でアクセスが制限されています。初回ダウンロード前に無料アカウントを作成し、連絡先情報を共有してアクセス条件に同意する必要があります。",
     "pockettts_conditions_desc": "アクセス条件は、違法、有害、欺瞞的、詐欺的、無許可、または同意のない音声利用を禁止しています。続行する前に全文を確認してください。",
     "review_access_conditions": "アクセス条件を確認",
-    "pockettts_footer": "［同意する］を押すと、これらのライセンスとアクセス条件を確認した記録が VoiceStudio のローカル設定にのみ保存され、エンジンが有効になります。VoiceStudio から Kyutai や第三者へ情報は送信されません。",
+    "pockettts_footer": "［同意する］を押すと、確認した記録は VoiceStudio のローカル設定にのみ保存され、エンジンが有効になります。モデルへのアクセスとダウンロードには Hugging Face を使用し、通常のリクエスト情報とアカウント情報が同社に送信されます。",
     "pockettts_accepted_toast": "PocketTTS の条件に同意しました。"
   },
   "voicePreview": {
