@@ -42,6 +42,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 ### Fixed
 
 - Patched dependency releases now cover 35 Python and Rust security advisories without weakening VoiceStudio's GPU or offline-runtime compatibility. (#1456, #1472, #1473, #1474, #1475, #1476, #1477)
+- First-run source builds no longer stop after uv was successfully downloaded just because its installer failed during a later shell-profile step; app-private uv installs no longer touch shell profiles at all. (#1438) — thanks @AdrianoCahete!
 - An error whose text merely contained the digits 401 — a file path, a byte count, a job id — no longer tells you to fix your Hugging Face token. (#1427)
 - Custom MLX model IDs and saved voice instructions are now validated in bounded time, so malformed input cannot stall the backend. (#1446)
 - Streaming and provider failures now return stable recovery guidance without exposing exception details. (#1462)
