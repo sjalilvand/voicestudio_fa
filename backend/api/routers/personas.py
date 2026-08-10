@@ -236,12 +236,15 @@ async def import_persona(file: UploadFile = File(...)):
             _insert(profile_id)
 
     except HTTPException:
-        _cleanup(written)
+        if not _cleanup(written):
+            raise HTTPException(status_code=500, detail="Import failed, and temporary files could not be removed. Close any app using them and retry cleanup.")
         raise
     except Exception:
-        _cleanup(written)
+        cleaned = _cleanup(written)
         logger.exception("persona import failed")
-        raise HTTPException(status_code=500, detail="Import failed; no files were kept.")
+        detail = ("Import failed; no files were kept." if cleaned else
+                  "Import failed, and temporary files could not be removed. Close any app using them and retry cleanup.")
+        raise HTTPException(status_code=500, detail=detail)
 
     event_bus.emit("profiles", {"action": "created", "id": profile_id})
     logger.info("Imported persona %r as %s (verified=%s)", persona.get("name"), profile_id, verified)
@@ -260,13 +263,16 @@ async def import_persona(file: UploadFile = File(...)):
     }
 
 
-def _cleanup(paths: list[str]) -> None:
+def _cleanup(paths: list[str]) -> bool:
+    complete = True
     for p in paths:
         try:
             if p and os.path.exists(p):
                 os.remove(p)
         except OSError:
-            pass
+            complete = False
+            logger.warning("Persona import temporary-file cleanup did not complete")
+    return complete
 
 
 def _rename_for_new_id(written: list[str], new_id: str) -> list[str]:

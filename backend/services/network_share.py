@@ -121,10 +121,16 @@ async def enable(app) -> ShareState:
         # with a listener that isn't actually up (spec §7).
         server.should_exit = True
         try:
-            await asyncio.wait_for(_task, timeout=2)
-        except Exception:
-            pass
-        _task = None
+            await asyncio.wait_for(asyncio.shield(_task), timeout=2)
+        except Exception as exc:
+            _server = server
+            _state = ShareState(True, port, pin, lan_ipv4_addresses())
+            app.state.network_share = _state
+            logger.warning("Failed LAN listener startup could not be cleaned up")
+            raise RuntimeError(
+                "LAN share listener could not be stopped. Retry Disable before enabling again."
+            ) from exc
+        _server = _task = None
         raise RuntimeError("share listener failed to start")
     _server = server
     _state = ShareState(True, port, pin, lan_ipv4_addresses())

@@ -173,3 +173,65 @@ def test_run_sentinel_clear_failure_retains_ownership(monkeypatch):
     )
     assert sentinel.clear_sentinel() is False
     assert sentinel._state["owns"] is True
+
+
+def test_loaded_model_inventory_reports_degraded_source(monkeypatch, caplog):
+    lifecycle = importlib.import_module("services.model_lifecycle")
+    sidecars = importlib.import_module("services.subprocess_backend")
+    monkeypatch.setattr(sidecars, "list_live_sidecars", lambda: (_ for _ in ()).throw(RuntimeError("/secret/model")))
+    result = lifecycle.list_loaded()
+    assert "sidecars" in result["degraded_sources"]
+    assert "/secret/model" not in caplog.text
+
+
+def test_configured_endpoint_failure_never_probes_official_host(monkeypatch):
+    wizard = importlib.import_module("api.routers.setup.wizard")
+    failure = importlib.import_module("core.failure")
+    endpoint_race = importlib.import_module("services.endpoint_race")
+    monkeypatch.setattr(endpoint_race, "mode", lambda: "manual")
+    monkeypatch.setattr(failure, "configured_hf_mirror", lambda: (_ for _ in ()).throw(RuntimeError("/secret/config")))
+    monkeypatch.setattr(wizard, "_probe_network", lambda *_a, **_k: pytest.fail("must not probe a fallback host"))
+    result = wizard._network_check()
+    assert result["status"] == "warn"
+    assert "secret" not in result["detail"]
+
+
+def test_persona_cleanup_reports_failure_without_path(monkeypatch, caplog):
+    personas = importlib.import_module("api.routers.personas")
+    monkeypatch.setattr(personas.os.path, "exists", lambda _p: True)
+    monkeypatch.setattr(personas.os, "remove", lambda _p: (_ for _ in ()).throw(PermissionError("/secret/persona")))
+    assert personas._cleanup(["/secret/persona"]) is False
+    assert "/secret/persona" not in caplog.text
+
+
+def test_shared_voice_unload_failure_is_stable(monkeypatch):
+    tts = importlib.import_module("services.tts_backend")
+    manager = importlib.import_module("services.model_manager")
+    backend = object.__new__(tts.OmniVoiceBackend)
+    backend._model = object()
+    monkeypatch.setattr(tts, "clear_clone_prompt_cache", lambda: None)
+    monkeypatch.setattr(manager, "model", object())
+    monkeypatch.setattr(manager, "free_vram", lambda: (_ for _ in ()).throw(RuntimeError("/secret/gpu")))
+    with pytest.raises(RuntimeError) as caught:
+        backend.unload()
+    assert str(caught.value) == "The shared voice model could not be unloaded. Retry after the current generation finishes."
+
+
+@pytest.mark.asyncio
+async def test_network_start_failure_retains_listener_for_disable(monkeypatch):
+    network_share = importlib.import_module("services.network_share")
+    task = asyncio.get_running_loop().create_future()
+    task.set_exception(RuntimeError("/secret/listener"))
+    server = SimpleNamespace(started=False, should_exit=False, serve=lambda: None)
+    monkeypatch.setattr(network_share, "_find_free_port", lambda _base: 3901)
+    monkeypatch.setattr(network_share, "_gen_pin", lambda: "123456")
+    monkeypatch.setattr(network_share.uvicorn, "Server", lambda _config: server)
+    monkeypatch.setattr(network_share.asyncio, "create_task", lambda _coro: task)
+    async def no_sleep(_seconds):
+        return None
+    monkeypatch.setattr(network_share.asyncio, "sleep", no_sleep)
+    app = SimpleNamespace(state=SimpleNamespace())
+    with pytest.raises(RuntimeError) as caught:
+        await network_share.enable(app)
+    assert "secret" not in str(caught.value)
+    assert network_share.get_state().enabled is True

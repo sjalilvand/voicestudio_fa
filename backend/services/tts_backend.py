@@ -614,8 +614,11 @@ class OmniVoiceBackend(TTSBackend):
             if mm.model is not None:
                 mm.model = None
                 mm.free_vram()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Shared voice model unload did not complete")
+            raise RuntimeError(
+                "The shared voice model could not be unloaded. Retry after the current generation finishes."
+            ) from exc
 
 
 # ── VoxCPM2 adapter (optional, scaffolded) ──────────────────────────────────

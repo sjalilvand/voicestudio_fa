@@ -975,18 +975,24 @@ async def _do_clean_audio(audio, tmp_dir, clean_id):
     clean_filename = f"mic_{clean_id}.wav"
     final_path = os.path.join(OUTPUTS_DIR, clean_filename)
 
+    conversion_fallback = False
     try:
-        await run_ffmpeg(
+        rc, _, _ = await run_ffmpeg(
             [ffmpeg, "-y", "-i", clean_path, "-ar", "24000", "-ac", "1", final_path],
             timeout=120.0,
         )
+        conversion_fallback = rc != 0
     except asyncio.TimeoutError:
-        pass
+        conversion_fallback = True
+        logger.warning("Final clean-audio conversion timed out; returning the cleaned source format")
     if not os.path.exists(final_path):
         shutil.copy2(clean_path, final_path)
 
+    headers = {"X-Clean-Filename": clean_filename}
+    if conversion_fallback:
+        headers["X-Clean-Conversion"] = "fallback"
     return FileResponse(final_path, media_type="audio/wav", filename=clean_filename,
-                        headers={"X-Clean-Filename": clean_filename})
+                        headers=headers)
 
 
 @router.get("/system/asr-backends")
