@@ -112,14 +112,18 @@ def test_docker_install_and_runtime_use_the_guarded_python():
     """#1274: ROCm's `python3` had HIP torch, while `--system` installed and
     bare `uvicorn` launched through `/usr/bin/python` with CUDA torch."""
     text = _DOCKERFILE.read_text(encoding="utf-8")
-    assert '--python "$(command -v python3)"' in text
-    assert "uv pip install --system" not in text
+    install_start = text.index("RUN uv pip install")
+    install_end = text.index("\n\n", install_start)
+    install = text[install_start:install_end]
+    assert '--python "$(command -v python3)"' in install
+    assert "--system" not in install
     assert 'ENTRYPOINT ["python3", "-m", "uvicorn"' in text
 
 
 def test_docker_docs_do_not_assume_the_run_name_for_compose():
     docs = (_ROOT / "docs" / "install" / "docker.md").read_text(encoding="utf-8")
     assert "docker exec <container> python3" in docs
+    assert "torch.cuda.get_device_name(0) if ok else 'unavailable'" in docs
     for compose_name in ("omnivoice-studio", "omnivoice-studio-gpu", "omnivoice-studio-rocm"):
         assert compose_name in docs
 

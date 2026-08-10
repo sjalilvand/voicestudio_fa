@@ -110,7 +110,7 @@ Verify the container sees the GPU:
 
 ```bash
 docker exec <container> python3 -c \
-  "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+  "import torch; ok = torch.cuda.is_available(); print(ok, torch.cuda.get_device_name(0) if ok else 'unavailable')"
 ```
 
 Use `omnivoice` for the `docker run` examples above. Docker Compose names the
