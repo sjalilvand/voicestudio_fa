@@ -18,6 +18,25 @@ def test_every_catalog_repo_has_an_immutable_revision():
     assert all(int(revision, 16) >= 0 for revision in hf_revisions.CURATED_REVISIONS.values())
 
 
+def test_nllb_components_use_the_reviewed_revision():
+    from api.routers import dub_translate
+
+    calls = []
+
+    class FakeFactory:
+        @classmethod
+        def from_pretrained(cls, repo_id, **kwargs):
+            calls.append((repo_id, kwargs))
+            return object()
+
+    dub_translate._load_nllb_component(FakeFactory)
+
+    repo_id = "facebook/nllb-200-distilled-600M"
+    assert calls == [
+        (repo_id, {"revision": hf_revisions.revision_for(repo_id)})
+    ]
+
+
 def test_installed_revision_round_trips_for_repair(tmp_path):
     repo_id = "k2-fsa/OmniVoice"
     installed = "f" * 40
