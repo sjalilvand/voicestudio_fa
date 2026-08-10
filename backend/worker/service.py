@@ -93,6 +93,10 @@ class ControlPlane:
         self._server = None
         self._tasks: list[asyncio.Task] = []
         self._started = False
+        # The port we actually bound, which is not necessarily the configured
+        # one — an enrollment token carries this, so advertising the config
+        # value instead hands workers an endpoint nothing is listening on.
+        self._port: Optional[int] = None
 
     @property
     def running(self) -> bool:
@@ -129,9 +133,10 @@ class ControlPlane:
             artifact_dir=locations["artifacts"],
             cert_fingerprint=self.credentials.fingerprint,
         )
+        self._port = port or control_port()
         self._server = await serve(
             self.servicer,
-            port=port or control_port(),
+            port=self._port,
             certificate_pem=self.credentials.certificate_pem,
             private_key_pem=self.credentials.private_key_pem,
         )
@@ -140,7 +145,7 @@ class ControlPlane:
             asyncio.create_task(self._dispatch_loop(), name="worker-dispatch"),
         ]
         self._started = True
-        logger.info("Remote worker control plane started on port %d", port or control_port())
+        logger.info("Remote worker control plane started on port %d", self._port)
 
     async def stop(self) -> None:
         for task in self._tasks:
@@ -153,6 +158,7 @@ class ControlPlane:
             # would delay app shutdown for work that survives anyway.
             await self._server.stop(grace=2.0)
             self._server = None
+        self._port = None
         self._started = False
 
     async def _sweep_loop(self) -> None:
@@ -226,7 +232,7 @@ class ControlPlane:
             or tls.primary_ip()
             or "127.0.0.1"
         )
-        return f"{host}:{control_port()}"
+        return f"{host}:{self._port or control_port()}"
 
     def snapshot(self, *, now: Optional[float] = None) -> dict:
         """Everything the workers UI needs in one call."""

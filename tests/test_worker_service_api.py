@@ -301,3 +301,37 @@ def test_consent_is_recorded_explicitly(client, db):
 def test_task_listing_is_empty_when_stopped(client):
     body = client.get("/workers/tasks").json()
     assert body == {"tasks": [], "queue_depth": 0}
+
+
+@pytest.mark.asyncio
+async def test_enrollment_advertises_the_port_actually_bound(db, monkeypatch, tmp_path):
+    """A token carries the endpoint a worker will dial. Advertising the
+    configured port while listening on another hands workers an address
+    nothing answers on — found by running the thing on a non-default port.
+    """
+    monkeypatch.setattr(
+        service,
+        "paths",
+        lambda: {
+            "root": str(tmp_path),
+            "certificate": str(tmp_path / "cp.crt"),
+            "private_key": str(tmp_path / "cp.key"),
+            "worker_key": str(tmp_path / "w.key"),
+            "artifacts": str(tmp_path / "artifacts"),
+        },
+    )
+    monkeypatch.delenv("OMNIVOICE_WORKER_PORT", raising=False)
+    monkeypatch.delenv("OMNIVOICE_WORKER_ENDPOINT_HOST", raising=False)
+
+    plane = service.ControlPlane()
+    await plane.start(port=7601)
+    try:
+        assert plane.default_endpoint().endswith(":7601")
+        assert plane.create_enrollment().endpoint.endswith(":7601")
+    finally:
+        await plane.stop()
+
+
+def test_endpoint_falls_back_to_the_configured_port_when_stopped(monkeypatch):
+    monkeypatch.delenv("OMNIVOICE_WORKER_PORT", raising=False)
+    assert service.ControlPlane().default_endpoint().endswith(f":{service.DEFAULT_PORT}")
