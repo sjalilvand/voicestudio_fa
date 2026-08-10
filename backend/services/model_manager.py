@@ -1665,12 +1665,17 @@ def _repair_model_cache(checkpoint: str, *, force: bool = False) -> bool:
     try:
         from services.hf_cache_repair import hf_cache_home
         from services.hf_revisions import installed_revision
-        revision = installed_revision(checkpoint, hf_cache_home())
+        cache_root = hf_cache_home()
+        revision = installed_revision(checkpoint, cache_root)
     except (OSError, ValueError) as revision_err:
         _last_repair_error = str(revision_err)
         logger.warning("Refusing unpinned model repair for %s: %s", checkpoint, revision_err)
         return False
-    dl_kwargs: dict = {"repo_id": checkpoint, "revision": revision}
+    dl_kwargs: dict = {
+        "repo_id": checkpoint,
+        "revision": revision,
+        "cache_dir": cache_root,
+    }
     # Explicit endpoint (HF_ENDPOINT / pref) wins; otherwise the automatic
     # endpoint selection's cached pick applies (services.endpoint_race).
     try:

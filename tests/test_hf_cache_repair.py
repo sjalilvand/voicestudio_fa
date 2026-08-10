@@ -148,11 +148,11 @@ def test_repair_removes_only_broken_and_redownloads(tmp_path, monkeypatch):
     _symlink_or_skip(os.path.join("..", "..", "blobs", "MISSING"),
                      str(snap / "model.safetensors"))
     calls = []
+    monkeypatch.setenv("HF_HUB_CACHE", str(cache))
     monkeypatch.setattr(huggingface_hub, "snapshot_download",
                         lambda **k: calls.append(k))
 
-    summary = hf_cache_repair.repair_repo_cache("test/checkpoint",
-                                                cache_dir=str(cache))
+    summary = hf_cache_repair.repair_repo_cache("test/checkpoint")
     assert summary["found"] == 1
     assert summary["removed"] == 1
     assert summary["restored"] is True

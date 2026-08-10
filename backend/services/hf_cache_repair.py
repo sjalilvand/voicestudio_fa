@@ -238,9 +238,11 @@ def repair_repo_cache(repo_id: str, cache_dir: str | None = None) -> dict:
 
         from huggingface_hub import snapshot_download
 
-        dl_kwargs: dict = {"repo_id": repo_id, "revision": revision}
-        if cache_dir:
-            dl_kwargs["cache_dir"] = cache_dir
+        dl_kwargs: dict = {
+            "repo_id": repo_id,
+            "revision": revision,
+            "cache_dir": cache_root,
+        }
         endpoint = os.environ.get("HF_ENDPOINT")
         if endpoint:
             dl_kwargs["endpoint"] = endpoint
