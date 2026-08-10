@@ -47,6 +47,7 @@ CURATED_REVISIONS: dict[str, str] = {
     "mlx-community/Chatterbox-TTS-4bit": "a3c8ded2d711d6395410d645b3a97c79fd563a13",
     "mlx-community/MeloTTS-English-v3-MLX": "837d15fd72bc35a15033234ce5ea242367ca1960",
     "OpenMOSS-Team/MOSS-TTS-v1.5": "cdd3b911b1585e3f2dbc7775ef10f9926f58850a",
+    "eustlb/higgs-audio-v2-tokenizer": "528e871c2a26c4f0f7773b9754e2e1acae20899d",
 }
 
 
