@@ -491,8 +491,8 @@ def batch_delete_voices(body: dict):
                 if audio_path:
                     try:
                         unlink_if_present(audio_path)
-                    except FileCleanupError as exc:
-                        logger.warning("Voice audio cleanup failed for gallery item %s: %s", vid, exc)
+                    except FileCleanupError:
+                        logger.warning("Voice audio cleanup failed for a gallery item")
                         failed += 1
                         continue
                 conn.execute("DELETE FROM voice_gallery WHERE id = ?", (vid,))
