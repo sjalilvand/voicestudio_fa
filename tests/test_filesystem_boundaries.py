@@ -6,6 +6,7 @@ import asyncio
 import inspect
 import json
 from contextlib import contextmanager
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -89,6 +90,13 @@ def test_duration_probe_rejects_absolute_traversal_and_symlink_escapes(tmp_path,
     secret = outside / "secret.mp4"
     secret.write_bytes(b"not media")
     monkeypatch.setattr(ffmpeg_utils, "find_ffprobe", lambda: "/should/not/run")
+    spawned = []
+
+    async def forbidden_spawn(*args, **kwargs):
+        spawned.append((args, kwargs))
+        raise AssertionError("rejected media path reached ffprobe")
+
+    monkeypatch.setattr(ffmpeg_utils, "spawn_subprocess", forbidden_spawn)
     for value in (secret, "../outside/secret.mp4", r"..\outside\secret.mp4"):
         assert asyncio.run(ffmpeg_utils.probe_duration(str(value), allowed_root=str(root))) is None
     try:
@@ -98,6 +106,17 @@ def test_duration_probe_rejects_absolute_traversal_and_symlink_escapes(tmp_path,
     assert asyncio.run(
         ffmpeg_utils.probe_duration(str(root / "link" / "secret.mp4"), allowed_root=str(root))
     ) is None
+    assert spawned == []
+
+
+def test_native_reveal_reaps_the_opener_child():
+    source = Path("frontend/src-tauri/src/commands.rs").read_text(encoding="utf-8")
+    reveal = source.split("pub fn reveal_host_path", 1)[1].split(
+        "// ── WebView cache repair", 1
+    )[0]
+    assert "let mut child = crate::tools::no_window(&mut command)" in reveal
+    assert "std::thread::spawn(move ||" in reveal
+    assert "child.wait()" in reveal
 
 
 def test_marketplace_filename_cannot_escape_store(tmp_path, monkeypatch):

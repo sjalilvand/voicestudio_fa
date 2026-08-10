@@ -961,9 +961,12 @@ pub fn reveal_host_path(path: String) -> Result<(), String> {
         command.arg(&folder);
         command
     };
-    crate::tools::no_window(&mut command)
+    let mut child = crate::tools::no_window(&mut command)
         .spawn()
         .map_err(|e| format!("Could not open the containing folder: {e}"))?;
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
     Ok(())
 }
 
