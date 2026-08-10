@@ -219,8 +219,11 @@ requirement is dropped (issue #261, else the operator is 403'd out of their own
   loopback or a caller already authenticated with the API key can read it.
 
 Host paths are never selected through HTTP. The native Tauri process validates
-model-cache destinations and custom FFmpeg/FFprobe binaries, writes a private
-one-shot capability, and only that opaque authorization reaches the backend.
+model-cache and export destinations plus custom FFmpeg/FFprobe binaries, writes
+a private one-shot capability, and only that opaque authorization reaches the
+backend. `/export` therefore accepts an `authorization` token, never a
+`destination_path`; revealing an arbitrary exported path runs in the native
+process, while the HTTP fallback is limited to the server-owned data root.
 `/system/set-env` does not accept executable-path keys at all. Server mode and
 an API key do not weaken that native boundary.
 

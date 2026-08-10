@@ -111,12 +111,12 @@ export async function downloadMedia(url, fallbackName, opts = {}) {
         await recordHistory(data.display_name || fallbackName, data.path);
         return;
       }
-      const { save } = await import('@tauri-apps/plugin-dialog');
-      const destPath = await save({
-        defaultPath: fallbackName,
-        filters: [{ name: modeGuess === 'video' ? 'Video' : 'Audio', extensions: [extGuess] }],
+      const { invoke } = await import('@tauri-apps/api/core');
+      const selection = await invoke('authorize_host_path', {
+        kind: 'dub_export',
+        suggestedName: fallbackName,
       });
-      if (!destPath) return; // user cancelled
+      if (!selection) return; // user cancelled
       toast.loading(i18n.t('app.toast_saving', { name: fallbackName }), { id: fallbackName });
 
       // (a) File already in OUTPUTS_DIR — copy by source filename via /export.
@@ -124,10 +124,10 @@ export async function downloadMedia(url, fallbackName, opts = {}) {
       if (sourceFilename) {
         await exportAction({
           source_filename: sourceFilename,
-          destination_path: destPath,
+          authorization: selection.authorization,
           mode: modeGuess,
         });
-        toast.success(i18n.t('app.toast_saved', { path: destPath }), { id: fallbackName });
+        toast.success(i18n.t('app.toast_saved', { path: selection.path }), { id: fallbackName });
         onValueMoment?.();
         onHistoryChanged?.();
         return;
@@ -139,11 +139,10 @@ export async function downloadMedia(url, fallbackName, opts = {}) {
         const res = await apiFetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`); // don't write an error body to disk
         const text = await res.text();
-        const { invoke } = await import('@tauri-apps/api/core');
-        await invoke('save_text_file', { path: destPath, contents: text });
-        toast.success(i18n.t('app.toast_saved', { path: destPath }), { id: fallbackName });
+        await invoke('save_text_file', { path: selection.path, contents: text });
+        toast.success(i18n.t('app.toast_saved', { path: selection.path }), { id: fallbackName });
         onValueMoment?.();
-        await recordHistory(fallbackName, destPath);
+        await recordHistory(fallbackName, selection.path);
         return;
       }
     } catch (err) {

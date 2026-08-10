@@ -61,7 +61,10 @@ describe('downloadMedia — browser branch (isTauri=false)', () => {
 describe('downloadMedia — Tauri branch (isTauri=true)', () => {
   it('OUTPUTS_DIR file: opens the save dialog + copies via exportAction, no blob download, no <a>', async () => {
     const downloadMedia = await loadDownloadMedia({ tauri: true });
-    save.mockResolvedValueOnce('/Users/me/Books/foo.m4b');
+    invoke.mockResolvedValueOnce({
+      authorization: 'a'.repeat(64),
+      path: '/Users/me/Books/foo.m4b',
+    });
     const createElement = vi.spyOn(document, 'createElement');
     const onValueMoment = vi.fn();
 
@@ -70,10 +73,13 @@ describe('downloadMedia — Tauri branch (isTauri=true)', () => {
       onValueMoment,
     });
 
-    expect(save).toHaveBeenCalledOnce();
+    expect(invoke).toHaveBeenCalledWith('authorize_host_path', {
+      kind: 'dub_export',
+      suggestedName: 'foo.m4b',
+    });
     expect(exportAction).toHaveBeenCalledWith({
       source_filename: 'foo.m4b',
-      destination_path: '/Users/me/Books/foo.m4b',
+      authorization: 'a'.repeat(64),
       mode: 'audio',
     });
     // The webview-hijack bug was a raw `<a href={httpUrl} download>`; the util
@@ -89,7 +95,7 @@ describe('downloadMedia — Tauri branch (isTauri=true)', () => {
 
   it('cancelled save dialog is a no-op (no copy, no error)', async () => {
     const downloadMedia = await loadDownloadMedia({ tauri: true });
-    save.mockResolvedValueOnce(null); // user cancelled
+    invoke.mockResolvedValueOnce(null); // user cancelled
 
     await downloadMedia('http://x/audio/foo.m4b', 'foo.m4b', { sourceFilename: 'foo.m4b' });
 

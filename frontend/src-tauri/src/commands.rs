@@ -926,6 +926,47 @@ pub fn save_text_file(path: String, contents: String) -> Result<(), String> {
     std::fs::write(p, contents).map_err(|e| format!("write: {e}"))
 }
 
+#[tauri::command]
+pub fn reveal_host_path(path: String) -> Result<(), String> {
+    // Revealing is a native-shell action, never a loopback HTTP authority.
+    // Canonicalization rejects missing paths and removes traversal/symlinks;
+    // argv-only spawning avoids shell interpretation on every platform.
+    let target = std::fs::canonicalize(&path)
+        .map_err(|_| "That file or folder is no longer on disk".to_string())?;
+    let folder = if target.is_dir() {
+        target.clone()
+    } else {
+        target.parent()
+            .ok_or_else(|| "That path has no containing folder".to_string())?
+            .to_path_buf()
+    };
+    let mut command = if cfg!(target_os = "macos") {
+        let mut command = std::process::Command::new("open");
+        if target.is_file() {
+            command.arg("-R").arg(&target);
+        } else {
+            command.arg(&folder);
+        }
+        command
+    } else if cfg!(target_os = "windows") {
+        let mut command = std::process::Command::new("explorer");
+        if target.is_file() {
+            command.arg("/select,").arg(&target);
+        } else {
+            command.arg(&folder);
+        }
+        command
+    } else {
+        let mut command = std::process::Command::new("xdg-open");
+        command.arg(&folder);
+        command
+    };
+    crate::tools::no_window(&mut command)
+        .spawn()
+        .map_err(|e| format!("Could not open the containing folder: {e}"))?;
+    Ok(())
+}
+
 // ── WebView cache repair (issue #879) ─────────────────────────────────────
 //
 // After an unclean shutdown (e.g. a Windows BSOD), WebView2's profile cache

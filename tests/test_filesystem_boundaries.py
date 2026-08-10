@@ -79,6 +79,27 @@ def test_resolve_within_rejects_symlink_escape(tmp_path):
         resolve_within(root, "link/secret.wav")
 
 
+def test_duration_probe_rejects_absolute_traversal_and_symlink_escapes(tmp_path, monkeypatch):
+    from services import ffmpeg_utils
+
+    root = tmp_path / "dub"
+    outside = tmp_path / "outside"
+    root.mkdir()
+    outside.mkdir()
+    secret = outside / "secret.mp4"
+    secret.write_bytes(b"not media")
+    monkeypatch.setattr(ffmpeg_utils, "find_ffprobe", lambda: "/should/not/run")
+    for value in (secret, "../outside/secret.mp4", r"..\outside\secret.mp4"):
+        assert asyncio.run(ffmpeg_utils.probe_duration(str(value), allowed_root=str(root))) is None
+    try:
+        (root / "link").symlink_to(outside, target_is_directory=True)
+    except OSError:
+        return
+    assert asyncio.run(
+        ffmpeg_utils.probe_duration(str(root / "link" / "secret.mp4"), allowed_root=str(root))
+    ) is None
+
+
 def test_marketplace_filename_cannot_escape_store(tmp_path, monkeypatch):
     from api.routers import marketplace
 
