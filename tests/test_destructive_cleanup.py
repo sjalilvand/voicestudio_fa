@@ -1,11 +1,23 @@
 """Destructive endpoints must not report success when file cleanup fails."""
 from contextlib import contextmanager
+import importlib
+from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
 
-from api.routers import batch, gallery, system
-from core.file_cleanup import FileCleanupError, unlink_if_present
+
+@pytest.fixture
+def app_modules():
+    """Resolve application modules at test time to avoid stale import state."""
+    file_cleanup = importlib.import_module("core.file_cleanup")
+    return SimpleNamespace(
+        batch=importlib.import_module("api.routers.batch"),
+        gallery=importlib.import_module("api.routers.gallery"),
+        system=importlib.import_module("api.routers.system"),
+        FileCleanupError=file_cleanup.FileCleanupError,
+        unlink_if_present=file_cleanup.unlink_if_present,
+    )
 
 
 class _Result:
@@ -29,11 +41,12 @@ class _Connection:
         return _Result()
 
 
-def test_unlink_missing_file_is_idempotent(tmp_path):
-    assert unlink_if_present(tmp_path / "already-gone.wav") is False
+def test_unlink_missing_file_is_idempotent(tmp_path, app_modules):
+    assert app_modules.unlink_if_present(tmp_path / "already-gone.wav") is False
 
 
-def test_gallery_delete_keeps_record_when_audio_cannot_be_removed(monkeypatch):
+def test_gallery_delete_keeps_record_when_audio_cannot_be_removed(monkeypatch, app_modules):
+    gallery = app_modules.gallery
     conn = _Connection("locked.wav")
 
     @contextmanager
@@ -44,7 +57,7 @@ def test_gallery_delete_keeps_record_when_audio_cannot_be_removed(monkeypatch):
     monkeypatch.setattr(
         gallery,
         "unlink_if_present",
-        lambda _path: (_ for _ in ()).throw(FileCleanupError("locked")),
+        lambda _path: (_ for _ in ()).throw(app_modules.FileCleanupError("locked")),
     )
 
     with pytest.raises(HTTPException) as caught:
@@ -55,13 +68,14 @@ def test_gallery_delete_keeps_record_when_audio_cannot_be_removed(monkeypatch):
     assert "locked.wav" not in caught.value.detail
 
 
-def test_batch_delete_keeps_job_when_video_cannot_be_removed(monkeypatch):
+def test_batch_delete_keeps_job_when_video_cannot_be_removed(monkeypatch, app_modules):
+    batch = app_modules.batch
     job = {"video_path": "locked.mp4"}
     monkeypatch.setitem(batch._jobs, "job-1", job)
     monkeypatch.setattr(
         batch,
         "unlink_if_present",
-        lambda _path: (_ for _ in ()).throw(FileCleanupError("locked")),
+        lambda _path: (_ for _ in ()).throw(app_modules.FileCleanupError("locked")),
     )
 
     with pytest.raises(HTTPException) as caught:
@@ -72,7 +86,8 @@ def test_batch_delete_keeps_job_when_video_cannot_be_removed(monkeypatch):
     assert "locked.mp4" not in caught.value.detail
 
 
-def test_gallery_batch_delete_reports_failure_and_keeps_failed_record(monkeypatch):
+def test_gallery_batch_delete_reports_failure_and_keeps_failed_record(monkeypatch, app_modules):
+    gallery = app_modules.gallery
     conn = _Connection("locked.wav")
 
     @contextmanager
@@ -83,7 +98,7 @@ def test_gallery_batch_delete_reports_failure_and_keeps_failed_record(monkeypatc
     monkeypatch.setattr(
         gallery,
         "unlink_if_present",
-        lambda _path: (_ for _ in ()).throw(FileCleanupError("locked")),
+        lambda _path: (_ for _ in ()).throw(app_modules.FileCleanupError("locked")),
     )
 
     assert gallery.batch_delete_voices({"ids": ["voice-1"]}) == {
@@ -94,7 +109,8 @@ def test_gallery_batch_delete_reports_failure_and_keeps_failed_record(monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_tauri_log_clear_reports_truncate_failure(monkeypatch, tmp_path):
+async def test_tauri_log_clear_reports_truncate_failure(monkeypatch, tmp_path, app_modules):
+    system = app_modules.system
     log = tmp_path / "webview.log"
     log.write_text("data", encoding="utf-8")
     monkeypatch.setattr(system, "_tauri_log_candidates", lambda: [str(log)])
