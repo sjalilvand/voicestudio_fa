@@ -45,17 +45,18 @@ def test_cookie_export_accepts_a_bom_and_rejects_empty_or_oversized_files():
 
 
 @pytest.mark.parametrize(
-    ("scheme", "host", "allowed"),
+    ("scheme", "host", "origin", "allowed"),
     [
-        ("http", "127.0.0.1", True),
-        ("http", "::1", True),
-        ("https", "192.0.2.20", True),
-        ("http", "192.0.2.20", False),
-        ("http", "", False),
+        ("http", "127.0.0.1", "http://tauri.localhost", True),
+        ("http", "::1", "http://localhost:3901", True),
+        ("https", "192.0.2.20", "https://studio.example", True),
+        ("http", "192.0.2.20", "http://localhost", False),
+        ("http", "127.0.0.1", "http://studio.example", False),
+        ("http", "127.0.0.1", None, False),
     ],
 )
-def test_cookie_credentials_only_cross_https_or_loopback(scheme, host, allowed):
-    assert dub_core._cookie_transport_allowed(scheme, host) is allowed
+def test_cookie_credentials_only_cross_https_or_local_ui(scheme, host, origin, allowed):
+    assert dub_core._cookie_transport_allowed(scheme, host, origin) is allowed
 
 
 def test_cookie_export_is_forwarded_to_ytdlp(tmp_path, monkeypatch):
@@ -161,7 +162,8 @@ def test_enqueue_failure_deletes_staged_cookie(tmp_path, monkeypatch):
     monkeypatch.setattr(dub_core.task_manager, "add_task", fail_add)
     request = Request(
         {"type": "http", "scheme": "http", "server": ("127.0.0.1", 80),
-         "client": ("127.0.0.1", 1234), "path": "/dub/ingest-url", "headers": []}
+         "client": ("127.0.0.1", 1234), "path": "/dub/ingest-url",
+         "headers": [(b"origin", b"http://tauri.localhost")]}
     )
     with pytest.raises(RuntimeError, match="queue closed"):
         asyncio.run(

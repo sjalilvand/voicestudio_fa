@@ -233,7 +233,6 @@ export default function IdleSkeleton({
                 >
                   <Users size={13} /> {t('dub.num_speakers_label')}
                   <input
-                    ref={youtubeCookieInputRef}
                     type="number"
                     min={1}
                     max={20}
@@ -395,6 +394,7 @@ export default function IdleSkeleton({
                 >
                   <span>{t('dub.youtube_auth')}</span>
                   <input
+                    ref={youtubeCookieInputRef}
                     type="file"
                     accept=".txt,text/plain"
                     aria-label={t('dub.youtube_cookie_file')}

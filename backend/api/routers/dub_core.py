@@ -5,6 +5,7 @@ import logging
 import shutil
 import subprocess
 import tempfile
+from urllib.parse import urlsplit
 import soundfile as sf
 import torch
 from typing import Optional
@@ -45,11 +46,21 @@ logger = logging.getLogger("omnivoice.api")
 _MAX_COOKIE_EXPORT_BYTES = 1024 * 1024
 
 
-def _cookie_transport_allowed(scheme: str, client_host: str | None) -> bool:
-    """Credentials may cross HTTP only on the local desktop loopback hop."""
+def _cookie_transport_allowed(
+    scheme: str, client_host: str | None, origin: str | None
+) -> bool:
+    """Credentials may cross HTTP only from a local UI to a loopback peer."""
     from api.dependencies import is_local_host
 
-    return scheme == "https" or is_local_host(client_host or "")
+    if scheme == "https":
+        return True
+    try:
+        origin_host = urlsplit(origin or "").hostname or ""
+    except ValueError:
+        return False
+    return is_local_host(client_host or "") and (
+        is_local_host(origin_host) or origin_host == "tauri.localhost"
+    )
 
 
 def _stage_cookie_export(contents: str | None) -> str | None:
@@ -478,7 +489,9 @@ async def dub_ingest_url(req: DubIngestUrlRequest, request: Request):
             detail="Invalid job_id. Must be alphanumeric + hyphens/underscores only, ≤64 chars. Generate a fresh job_id or omit it to auto-create one.",
         )
     if req.cookie_file and not _cookie_transport_allowed(
-        request.url.scheme, request.client.host if request.client else None
+        request.url.scheme,
+        request.client.host if request.client else None,
+        request.headers.get("origin"),
     ):
         raise HTTPException(
             status_code=403,
