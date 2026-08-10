@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import unicodedata
+from pathlib import Path
 
 import pytest
 
@@ -17,6 +18,8 @@ from core.logging_utils import DEFAULT_LOG_VALUE_LIMIT, log_safe
         ("x\rFORGED", r"\rFORGED"),
         ("x\x1b[31mFORGED", r"\x1b[31mFORGED"),
         ("x\x00FORGED", r"\x00FORGED"),
+        ("x\u2028FORGED", r"\u2028FORGED"),
+        ("x\u2029FORGED", r"\u2029FORGED"),
     ],
 )
 def test_log_safe_renders_controls_without_losing_forensic_text(value, marker):
@@ -49,3 +52,33 @@ def test_formatted_record_stays_on_one_bounded_line(caplog):
     message = caplog.records[-1].getMessage()
     assert "\r" not in message and "\n" not in message and "\x1b" not in message
     assert len(message) <= len("uploaded filename=") + DEFAULT_LOG_VALUE_LIMIT
+
+
+def test_sensitive_logging_sites_emit_metadata_not_paths_keys_or_tracebacks():
+    sources = {
+        path: Path(path).read_text(encoding="utf-8")
+        for path in (
+            "backend/api/routers/dub_export.py",
+            "backend/api/routers/batch.py",
+            "backend/api/routers/marketplace.py",
+            "backend/api/routers/system.py",
+            "backend/services/dub_pipeline.py",
+            "backend/services/settings_store.py",
+            "backend/services/sonitranslate.py",
+        )
+    }
+    combined = "\n".join(sources.values())
+    for unsafe_shape in (
+        "Native save wrote %s",
+        "Dub mux wrote %s",
+        "Published voice %s to marketplace: %s",
+        "Set environment variable: %s",
+        "Cleared environment variable: %s",
+        'logger.exception("Download failed',
+        'logger.exception("Extract failed',
+        'logger.exception("Ingest pipeline failed',
+        'logger.exception("settings_store.get_secret',
+        "Submitting dub job to SoniTranslate: %s",
+        "SoniTranslate dub complete: %s",
+    ):
+        assert unsafe_shape not in combined

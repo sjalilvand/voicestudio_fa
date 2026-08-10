@@ -92,19 +92,22 @@ export default function useRealtimeEvents(handlers) {
       };
 
       ws.onmessage = (e) => {
+        let event;
         try {
-          const event = JSON.parse(e.data);
-          const kind = event.kind;
-          if (kind === 'ping') return; // keepalive, ignore
-
-          const handler = handlersRef.current?.[kind];
-          if (handler) {
-            handler(event);
-          }
+          event = JSON.parse(e.data);
+          if (!event || typeof event !== 'object' || Array.isArray(event)) throw new TypeError();
         } catch {
           // The frame and parser exception are remote-controlled. Keep the
           // warning useful without placing either value in browser logs.
           console.warn('[ws/events] malformed message ignored');
+          return;
+        }
+        const kind = event.kind;
+        if (kind === 'ping') return; // keepalive, ignore
+
+        const handler = handlersRef.current?.[kind];
+        if (handler) {
+          handler(event);
         }
       };
 

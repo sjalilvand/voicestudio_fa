@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { logSafe } from './logSafe';
 
 describe('logSafe', () => {
-  it.each(['x\nFORGED', 'x\rFORGED', 'x\x1b[31mFORGED'])('escapes controls in %j', (value) => {
+  it.each([
+    'x\nFORGED',
+    'x\rFORGED',
+    'x\x1b[31mFORGED',
+    'x\u2028FORGED',
+    'x\u2029FORGED',
+    'x\u202eFORGED',
+  ])('escapes controls in %j', (value) => {
     const safe = logSafe(value);
     expect(
       [...safe].every((char) => {
@@ -11,6 +18,7 @@ describe('logSafe', () => {
       }),
     ).toBe(true);
     expect(safe).toContain('FORGED');
+    expect(safe).not.toContain(value.slice(1, 2));
   });
 
   it('bounds oversized values', () => {

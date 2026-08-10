@@ -880,7 +880,7 @@ async def set_env_var(body: dict):
                     detail=f"Invalid port for {key}: must be between 1024 and 65535.",
                 )
         os.environ[key] = value
-        logger.info("Set environment variable: %s (length=%d)", log_safe(key), len(value))
+        logger.info("Environment variable set (length=%d)", len(value))
 
         # Capability 1 / issue #35: HF_TOKEN persists across restarts via
         # huggingface_hub.login() — writes the token to $HF_HOME/token so
@@ -898,7 +898,7 @@ async def set_env_var(body: dict):
                 logger.warning("Could not persist HF token to disk: %s", log_safe(e))
     else:
         os.environ.pop(key, None)
-        logger.info("Cleared environment variable: %s", log_safe(key))
+        logger.info("Environment variable cleared")
 
         # Mirror the persistence on clear — wipe the saved token file too.
         if key == "HF_TOKEN":

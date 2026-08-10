@@ -229,7 +229,7 @@ async def dub_video(
             "gradio_client not installed. Run: pip install gradio_client"
         )
 
-    logger.info("Submitting dub job to SoniTranslate: %s → %s", log_safe(video_path), log_safe(target_language))
+    logger.info("Submitting dub job to SoniTranslate (target=%s)", log_safe(target_language))
 
     client = Client(SONI_URL)
 
@@ -321,7 +321,7 @@ async def dub_video(
         shutil.copy2(output_file, str(dest))
         output_file = str(dest)
 
-    logger.info("SoniTranslate dub complete: %s", log_safe(output_file))
+    logger.info("SoniTranslate dub completed")
     return {
         "output_file": output_file,
         "target_language": target_language,

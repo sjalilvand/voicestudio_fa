@@ -321,7 +321,7 @@ def publish_to_marketplace(
                 ext = os.path.splitext(locked_path)[1] or ".wav"
                 zf.write(str(full_locked), f"locked_audio{ext}")
 
-    logger.info("Published voice %s to marketplace: %s", log_safe(profile.get("name")), log_safe(bundle_path))
+    logger.info("Voice published to marketplace")
     return {
         "success": True,
         "profile_id": profile_id,

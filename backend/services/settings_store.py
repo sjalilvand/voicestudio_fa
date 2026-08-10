@@ -159,8 +159,8 @@ def get_secret(name: str) -> Optional[str]:
                 "machines or salt tampered) — falling back to env/default."
             )
             return None
-    except Exception:
-        logger.exception("settings_store.get_secret: SQLite read failed")
+    except Exception as exc:
+        logger.error("settings_store.get_secret: SQLite read failed: %s", log_safe(exc))
         return None
 
 

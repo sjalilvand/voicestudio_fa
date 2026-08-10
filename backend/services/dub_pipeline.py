@@ -1169,7 +1169,7 @@ async def ingest_pipeline(
                     yield prep_event("download_progress", **payload)
                 video_path, title, sub_files = await dl_task
             except Exception as e:
-                logger.exception("Download failed for job %s", log_safe(job_id))
+                logger.error("Download failed for job %s: %s", log_safe(job_id), log_safe(e))
                 if not dl_task.done():
                     dl_task.cancel()
                 yield prep_event("error", **failure.build_failure(e, stage="download"))
@@ -1240,12 +1240,12 @@ async def ingest_pipeline(
                     )
                     audio_hq_path = None
             except Exception as e_hq:  # noqa: BLE001 — quality upgrade, never fatal
-                logger.warning("HQ audio extraction errored (%s) — falling back", e_hq)
+                logger.warning("HQ audio extraction errored (%s) — falling back", log_safe(e_hq))
                 audio_hq_path = None
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            logger.exception("Extract failed for job %s", log_safe(job_id))
+            logger.error("Extract failed for job %s: %s", log_safe(job_id), log_safe(e))
             yield prep_event("error", **failure.build_failure(e, stage="extract"))
             return
 
@@ -1457,7 +1457,7 @@ async def ingest_pipeline(
         # plan-04 (#131): no unhandled ingest failure may be silent. Log the
         # real traceback and surface a structured, non-empty reason with stage
         # context instead of letting it bubble up as a bare task error.
-        logger.exception("Ingest pipeline failed for job %s", log_safe(job_id))
+        logger.error("Ingest pipeline failed for job %s: %s", log_safe(job_id), log_safe(e))
         yield prep_event("error", **failure.build_failure(e, stage="ingest"))
         return
     finally:

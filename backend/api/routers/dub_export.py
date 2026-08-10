@@ -198,7 +198,7 @@ def _native_save(source: str, destination: str, display_name: str, media_type: s
         raise HTTPException(status_code=500, detail=f"Copy failed: {e}")
     if not os.path.exists(dest) or os.path.getsize(dest) == 0:
         raise HTTPException(status_code=500, detail="Copy produced empty file at destination")
-    logger.info("Native save wrote %s (%d bytes)", log_safe(dest), os.path.getsize(dest))
+    logger.info("Native save completed (%d bytes)", os.path.getsize(dest))
     return {
         "saved": True,
         "path": dest,
@@ -927,7 +927,7 @@ async def dub_download(
 
     if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
         raise HTTPException(status_code=500, detail="ffmpeg mux produced no output file")
-    logger.info("Dub mux wrote %s (%d bytes)", log_safe(output_path), os.path.getsize(output_path))
+    logger.info("Dub mux completed (%d bytes)", os.path.getsize(output_path))
 
     base_name = os.path.splitext(job.get('filename', 'output'))[0]
     safe_name = ''.join(c for c in base_name if c.isalnum() or c in '-_ ').strip() or 'output'

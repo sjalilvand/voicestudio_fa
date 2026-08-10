@@ -34,7 +34,7 @@ def log_safe(value: object, *, limit: int = DEFAULT_LOG_VALUE_LIMIT) -> str:
         code = ord(char)
         if char == "\t":
             rendered = r"\t"
-        elif unicodedata.category(char).startswith("C"):
+        elif unicodedata.category(char).startswith("C") or char in {"\u2028", "\u2029"}:
             rendered = f"\\x{code:02x}" if code <= 0xFF else f"\\u{code:04x}"
         else:
             rendered = char

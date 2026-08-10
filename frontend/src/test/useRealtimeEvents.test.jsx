@@ -26,8 +26,8 @@ class FakeWebSocket {
   }
 }
 
-function Harness() {
-  useRealtimeEvents({});
+function Harness({ handlers = {} }) {
+  useRealtimeEvents(handlers);
   return null;
 }
 
@@ -78,9 +78,22 @@ describe('useRealtimeEvents cold-start health probe', () => {
     const privateFrame = 'token=private-value\nFORGED';
     FakeWebSocket.instances[0].onmessage({ data: privateFrame });
 
+    expect(warn).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith('[ws/events] malformed message ignored');
-    expect(JSON.stringify(warn.mock.calls)).not.toContain(privateFrame);
-    expect(JSON.stringify(warn.mock.calls)).not.toContain('SyntaxError');
+    const warningArguments = warn.mock.calls.flat();
+    expect(warningArguments).not.toContain(privateFrame);
+    expect(warningArguments.every((argument) => !String(argument).includes('SyntaxError'))).toBe(true);
+  });
+
+  it('does not misclassify or swallow event-handler failures', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const failure = new Error('handler failed');
+    render(<Harness handlers={{ failed: () => { throw failure; } }} />);
+    await waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
+
+    expect(() => FakeWebSocket.instances[0].onmessage({ data: '{"kind":"failed"}' })).toThrow(failure);
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('does NOT open the WebSocket while the backend is unreachable', async () => {
