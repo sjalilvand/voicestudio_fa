@@ -271,6 +271,27 @@ async def test_live_network_start_cleanup_can_be_retried_by_disable(monkeypatch)
     assert network_share.get_state().enabled is False
 
 
+@pytest.mark.asyncio
+async def test_cancelled_terminal_network_start_resets_state(monkeypatch):
+    network_share = importlib.import_module("services.network_share")
+    task = asyncio.get_running_loop().create_future()
+    task.cancel()
+    server = SimpleNamespace(started=False, should_exit=False, serve=lambda: None)
+    monkeypatch.setattr(network_share, "_find_free_port", lambda _base: 3901)
+    monkeypatch.setattr(network_share.uvicorn, "Server", lambda _config: server)
+    monkeypatch.setattr(network_share.asyncio, "create_task", lambda _coro: task)
+    async def no_sleep(_seconds):
+        return None
+    monkeypatch.setattr(network_share.asyncio, "sleep", no_sleep)
+    app = SimpleNamespace(state=SimpleNamespace())
+    with pytest.raises(asyncio.CancelledError):
+        await network_share.enable(app)
+    assert network_share.get_state().enabled is False
+    assert network_share._runtime.server is None
+    assert network_share._runtime.task is None
+    assert app.state.network_share.enabled is False
+
+
 def test_dub_abort_false_result_stays_retryable(monkeypatch):
     dub_core = importlib.import_module("api.routers.dub_core")
     job = {"id": "job-false"}

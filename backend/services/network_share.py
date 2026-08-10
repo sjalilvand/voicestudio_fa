@@ -127,8 +127,12 @@ async def enable(app) -> ShareState:
         try:
             await asyncio.wait_for(asyncio.shield(_runtime.task), timeout=2)
         except asyncio.CancelledError:
-            _runtime.server = server
-            _runtime.state = ShareState(True, port, pin, lan_ipv4_addresses())
+            if _runtime.task.done():
+                _runtime.server = _runtime.task = None
+                _runtime.state = ShareState()
+            else:
+                _runtime.server = server
+                _runtime.state = ShareState(True, port, pin, lan_ipv4_addresses())
             app.state.network_share = _runtime.state
             raise
         except Exception as exc:
