@@ -2,13 +2,26 @@
 from __future__ import annotations
 
 import importlib
+import tomllib
+from pathlib import Path
 
+from packaging.requirements import Requirement
 from PIL import Image
 
 
 def _analyse(frame_path):
     module = importlib.import_module("services.video_context")
     return module._analyse_frame_basic(str(frame_path))
+
+
+def test_pillow_runtime_floor_is_declared():
+    project = tomllib.loads(
+        (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text()
+    )
+    requirements = [Requirement(item) for item in project["project"]["dependencies"]]
+    pillow = next(req for req in requirements if req.name.lower() == "pillow")
+    assert pillow.specifier.contains("12.1.0")
+    assert not pillow.specifier.contains("12.0.0")
 
 
 def _save_jpeg(tmp_path, name: str, image: Image.Image):
