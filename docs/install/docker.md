@@ -109,9 +109,13 @@ the CUDA tags exactly.
 Verify the container sees the GPU:
 
 ```bash
-docker exec omnivoice python3 -c \
+docker exec <container> python3 -c \
   "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
 ```
+
+Use `omnivoice` for the `docker run` examples above. Docker Compose names the
+ROCm container `omnivoice-studio-rocm` (CPU: `omnivoice-studio`, NVIDIA:
+`omnivoice-studio-gpu`); `docker compose ps` shows the exact active name.
 
 (ROCm-built PyTorch reports through `torch.cuda.*` — `True` plus your card's
 name means torch can see the GPU.) That check alone isn't proof the app is
@@ -121,8 +125,8 @@ starting `Falling back to CPU:` names the architecture mismatch it hit.
 
 The image installs and launches VoiceStudio through that same `python3`
 interpreter. To verify this invariant on an older or custom image, compare
-`docker exec omnivoice python3 -c "import sys, torch; print(sys.executable,
-torch.version.hip)"` with `docker exec omnivoice sh -c 'tr "\\0" " "
+`docker exec <container> python3 -c "import sys, torch; print(sys.executable,
+torch.version.hip)"` with `docker exec <container> sh -c 'tr "\\0" " "
 </proc/1/cmdline'`; PID 1 must begin with `python3 -m uvicorn`.
 
 If the command prints `False`, **Settings → System** now says why, and the
@@ -209,7 +213,7 @@ Two paths are worth persisting across container restarts:
   pushes. Pull the image again after the fix is merged: `docker pull ghcr.io/debpalash/omnivoice-studio:latest`.
   The running version is now shown in **Settings → About → Version** (read live
   from the backend), so the web UI no longer displays a dash in Docker.
-- **Checking which version is running:** `docker exec omnivoice python -c "import importlib.metadata; print(importlib.metadata.version('omnivoice'))"`, or hit the `/health` endpoint — it returns `{"status": "ok", "device": ..., "version": "0.3.x"}`.
+- **Checking which version is running:** `docker exec <container> python3 -c "import importlib.metadata; print(importlib.metadata.version('omnivoice'))"`, or hit the `/health` endpoint — it returns `{"status": "ok", "device": ..., "version": "0.3.x"}`. Use the container name listed by `docker compose ps` (or `omnivoice` for the `docker run` examples).
 - **"Loopback origin required" errors (and a blank version):** the desktop
   build restricts the `/system/*` and `/api/settings/*` routes to a loopback
   origin, but Docker's NAT makes every request look non-loopback, so the gate

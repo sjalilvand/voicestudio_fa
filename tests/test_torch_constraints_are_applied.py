@@ -117,6 +117,13 @@ def test_docker_install_and_runtime_use_the_guarded_python():
     assert 'ENTRYPOINT ["python3", "-m", "uvicorn"' in text
 
 
+def test_docker_docs_do_not_assume_the_run_name_for_compose():
+    docs = (_ROOT / "docs" / "install" / "docker.md").read_text(encoding="utf-8")
+    assert "docker exec <container> python3" in docs
+    for compose_name in ("omnivoice-studio", "omnivoice-studio-gpu", "omnivoice-studio-rocm"):
+        assert compose_name in docs
+
+
 def test_the_dockerfile_copies_the_constraints_file():
     """A --constraint pointing at a path the build context never copied fails
     the build, but only once someone rebuilds — pin it here instead."""
