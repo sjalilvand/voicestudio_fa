@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tauri::image::Image;
+use tauri_plugin_dialog::DialogExt;
 
 use crate::{AppFlags, TrayHandle, DictationShortcutState};
 use crate::{TRAY_ICON_DEFAULT, TRAY_ICON_RECORDING};
@@ -21,27 +22,40 @@ struct AuthorizedHostPath {
     path: String,
 }
 
+#[derive(Serialize)]
+pub struct AuthorizedPathSelection {
+    authorization: String,
+    path: String,
+}
+
 pub fn path_authorization_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> PathBuf {
     crate::setup::resolved_data_dir(app)
         .unwrap_or_else(crate::setup::default_data_dir)
         .join(".path-authorizations")
 }
 
-fn validate_host_path(kind: &str, raw: &str) -> Result<PathBuf, String> {
-    if !matches!(kind, "models_dir" | "ffmpeg" | "ffprobe" | "dub_export") {
+fn validate_host_path(kind: &str, path: PathBuf) -> Result<PathBuf, String> {
+    if !matches!(
+        kind,
+        "models_dir"
+            | "ffmpeg"
+            | "ffprobe"
+            | "dub_export"
+            | "soni_input"
+            | "soni_output_dir"
+    ) {
         return Err("Unsupported host-path capability".into());
     }
-    if raw.chars().any(|c| c.is_control()) {
+    if path.to_string_lossy().chars().any(|c| c.is_control()) {
         return Err("Path contains invalid control characters".into());
     }
-    if kind == "models_dir" && raw.is_empty() {
+    if kind == "models_dir" && path.as_os_str().is_empty() {
         return Ok(PathBuf::new()); // explicit reset to the platform default
     }
-    let path = PathBuf::from(raw);
     if !path.is_absolute() {
         return Err("Path must be absolute".into());
     }
-    if kind == "models_dir" {
+    if matches!(kind, "models_dir" | "soni_output_dir") {
         fs::create_dir_all(&path).map_err(|e| format!("Directory is not writable: {e}"))?;
         let probe = path.join(".voicestudio-write-test");
         fs::write(&probe, b"ok").map_err(|e| format!("Directory is not writable: {e}"))?;
@@ -53,19 +67,29 @@ fn validate_host_path(kind: &str, raw: &str) -> Result<PathBuf, String> {
         if !parent.is_dir() {
             return Err("Save destination directory does not exist".into());
         }
+    } else if kind == "soni_input" {
+        if !path.is_file() {
+            return Err("Selected media input is not a file".into());
+        }
     } else {
         if !path.is_file() {
             return Err("Selected media tool is not a file".into());
         }
-        let status = crate::tools::no_window(
+        let output = crate::tools::no_window(
             std::process::Command::new(&path)
                 .arg("-version")
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null()),
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped()),
         )
-        .status()
+        .output()
         .map_err(|e| format!("Selected media tool could not run: {e}"))?;
-        if !status.success() {
+        let version_text = format!(
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        )
+        .to_ascii_lowercase();
+        if !output.status.success() || !version_text.contains(kind) {
             return Err("Selected media tool failed its version check".into());
         }
     }
@@ -73,12 +97,34 @@ fn validate_host_path(kind: &str, raw: &str) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
-pub fn authorize_host_path(
+pub async fn authorize_host_path(
     app: tauri::AppHandle,
     kind: String,
-    path: String,
-) -> Result<String, String> {
-    let validated = validate_host_path(&kind, path.trim())?;
+    suggested_name: Option<String>,
+    reset: Option<bool>,
+) -> Result<Option<AuthorizedPathSelection>, String> {
+    let selected = if kind == "models_dir" && reset.unwrap_or(false) {
+        Some(PathBuf::new())
+    } else {
+        let dialog = app.dialog().file();
+        let picked = match kind.as_str() {
+            "models_dir" | "soni_output_dir" => dialog.blocking_pick_folder(),
+            "ffmpeg" | "ffprobe" | "soni_input" => dialog.blocking_pick_file(),
+            "dub_export" => {
+                let mut save = app.dialog().file();
+                if let Some(name) = suggested_name.as_deref() {
+                    save = save.set_file_name(name);
+                }
+                save.blocking_save_file()
+            }
+            _ => return Err("Unsupported host-path capability".into()),
+        };
+        picked.and_then(|value| value.into_path().ok())
+    };
+    let Some(selected) = selected else {
+        return Ok(None);
+    };
+    let validated = validate_host_path(&kind, selected)?;
     let mut random = [0_u8; 32];
     getrandom::fill(&mut random).map_err(|e| format!("Secure randomness unavailable: {e}"))?;
     let token: String = random.iter().map(|b| format!("{b:02x}")).collect();
@@ -104,7 +150,10 @@ pub fn authorize_host_path(
         fs::set_permissions(&target, fs::Permissions::from_mode(0o600))
             .map_err(|e| format!("Could not protect authorization: {e}"))?;
     }
-    Ok(token)
+    Ok(Some(AuthorizedPathSelection {
+        authorization: token,
+        path: validated.to_string_lossy().into_owned(),
+    }))
 }
 
 #[cfg(test)]
@@ -114,14 +163,14 @@ mod host_path_authorization_tests {
 
     #[test]
     fn rejects_unknown_relative_and_control_character_paths() {
-        assert!(validate_host_path("shell", "/tmp/tool").is_err());
-        assert!(validate_host_path("models_dir", "relative/models").is_err());
-        assert!(validate_host_path("models_dir", "/tmp/bad\npath").is_err());
+        assert!(validate_host_path("shell", PathBuf::from("/tmp/tool")).is_err());
+        assert!(validate_host_path("models_dir", PathBuf::from("relative/models")).is_err());
+        assert!(validate_host_path("models_dir", PathBuf::from("/tmp/bad\npath")).is_err());
     }
 
     #[test]
     fn empty_models_path_is_the_authorized_default_reset() {
-        assert_eq!(validate_host_path("models_dir", "").unwrap(), PathBuf::new());
+        assert_eq!(validate_host_path("models_dir", PathBuf::new()).unwrap(), PathBuf::new());
     }
 
     #[test]
@@ -129,13 +178,13 @@ mod host_path_authorization_tests {
         let parent = std::env::temp_dir();
         let destination = parent.join("voicestudio-authorized-export.wav");
         assert_eq!(
-            validate_host_path("dub_export", destination.to_str().unwrap()).unwrap(),
+            validate_host_path("dub_export", destination.clone()).unwrap(),
             destination,
         );
-        assert!(validate_host_path("dub_export", "relative/export.wav").is_err());
+        assert!(validate_host_path("dub_export", PathBuf::from("relative/export.wav")).is_err());
         assert!(validate_host_path(
             "dub_export",
-            parent.join("missing-directory/export.wav").to_str().unwrap(),
+            parent.join("missing-directory/export.wav"),
         )
         .is_err());
     }

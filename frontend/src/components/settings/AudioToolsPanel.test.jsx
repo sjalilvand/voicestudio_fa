@@ -59,7 +59,7 @@ describe('AudioToolsPanel — power-user surface for the media tools', () => {
     vi.clearAllMocks();
     apiJson.mockResolvedValue(JSON.parse(JSON.stringify(STATUS)));
     apiFetch.mockResolvedValue(okResponse);
-    invoke.mockResolvedValue('c'.repeat(64));
+    invoke.mockResolvedValue({ authorization: 'c'.repeat(64), path: '/opt/tools/ffmpeg' });
   });
 
   it('renders one row per tool with version, path, and origin badge', async () => {
@@ -98,7 +98,6 @@ describe('AudioToolsPanel — power-user surface for the media tools', () => {
     await waitFor(() =>
       expect(invoke).toHaveBeenCalledWith('authorize_host_path', {
         kind: 'ffmpeg',
-        path: '/opt/tools/ffmpeg',
       }),
     );
     expect(apiFetch).toHaveBeenCalledWith(

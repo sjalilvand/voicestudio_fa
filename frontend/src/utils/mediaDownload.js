@@ -84,6 +84,33 @@ export async function downloadMedia(url, fallbackName, opts = {}) {
   // ── Tauri: native save dialog + server-side copy ────────────────────────
   if (isTauri) {
     try {
+      // Dynamic dub saves are selected inside the native command. A webview
+      // path is never treated as filesystem authority.
+      if (!sourceFilename && !['srt', 'vtt'].includes(extGuess)) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const selection = await invoke('authorize_host_path', {
+          kind: 'dub_export',
+          suggestedName: fallbackName,
+        });
+        if (!selection) return;
+        toast.loading(i18n.t('app.toast_saving', { name: fallbackName }), { id: fallbackName });
+        const res = await apiFetch(url, {
+          headers: { 'X-VoiceStudio-Path-Authorization': selection.authorization },
+          retryTransport: false,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const ctype = res.headers.get('content-type') || '';
+        if (!ctype.includes('application/json')) {
+          throw new Error(
+            `Server returned ${ctype || 'an unknown content type'} instead of a JSON save confirmation`,
+          );
+        }
+        const data = await res.json();
+        toast.success(i18n.t('app.toast_saved', { path: data.path }), { id: fallbackName });
+        onValueMoment?.();
+        await recordHistory(data.display_name || fallbackName, data.path);
+        return;
+      }
       const { save } = await import('@tauri-apps/plugin-dialog');
       const destPath = await save({
         defaultPath: fallbackName,
@@ -120,28 +147,6 @@ export async function downloadMedia(url, fallbackName, opts = {}) {
         return;
       }
 
-      // (c) Dynamic dub endpoint: bind the native picker result to a one-shot
-      // capability. The host path never enters an HTTP query or body. Guard the content-type so a
-      // raw-body response surfaces a clear error, not a JSON.parse crash (#309).
-      const { invoke } = await import('@tauri-apps/api/core');
-      const authorization = await invoke('authorize_host_path', {
-        kind: 'dub_export',
-        path: destPath,
-      });
-      const res = await apiFetch(url, {
-        headers: { 'X-VoiceStudio-Path-Authorization': authorization },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`); // a 4xx/5xx isn't a successful save
-      const ctype = res.headers.get('content-type') || '';
-      if (!ctype.includes('application/json')) {
-        throw new Error(
-          `Server returned ${ctype || 'an unknown content type'} instead of a JSON save confirmation`,
-        );
-      }
-      const data = await res.json();
-      toast.success(i18n.t('app.toast_saved', { path: data.path }), { id: fallbackName });
-      onValueMoment?.();
-      await recordHistory(data.display_name || fallbackName, data.path);
     } catch (err) {
       console.error(err);
       toast.error(i18n.t('app.toast_save_error', { message: err.message }), { id: fallbackName });

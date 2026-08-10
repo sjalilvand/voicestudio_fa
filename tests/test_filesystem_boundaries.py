@@ -9,8 +9,6 @@ from contextlib import contextmanager
 from types import SimpleNamespace
 
 import pytest
-from api.dependencies import require_native_access
-from core.path_security import UnsafePath, resolve_within, safe_filename
 from fastapi import HTTPException
 
 
@@ -20,11 +18,13 @@ def _request(host: str | None):
 
 @pytest.mark.parametrize("host", ["127.0.0.1", "::1", "localhost"])
 def test_native_filesystem_capabilities_allow_true_loopback(host):
+    from api.dependencies import require_native_access
     require_native_access(_request(host))
 
 
 @pytest.mark.parametrize("host", ["172.17.0.1", "192.168.1.4", None])
 def test_native_filesystem_capabilities_reject_remote_even_in_server_mode(monkeypatch, host):
+    from api.dependencies import require_native_access
     monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
     monkeypatch.setenv("OMNIVOICE_API_KEY", "operator-secret")
     with pytest.raises(HTTPException) as exc:
@@ -37,11 +37,13 @@ def test_native_filesystem_capabilities_reject_remote_even_in_server_mode(monkey
     ["../secret.wav", "folder/voice.wav", r"folder\voice.wav", r"C:\secret.wav", ".", "..", ""],
 )
 def test_safe_filename_rejects_posix_and_windows_escapes(name):
+    from core.path_security import UnsafePath, safe_filename
     with pytest.raises(UnsafePath):
         safe_filename(name)
 
 
 def test_resolve_within_accepts_relative_and_existing_absolute_paths(tmp_path):
+    from core.path_security import resolve_within
     root = tmp_path / "root"
     root.mkdir()
     item = root / "voice.wav"
@@ -50,6 +52,7 @@ def test_resolve_within_accepts_relative_and_existing_absolute_paths(tmp_path):
 
 
 def test_resolve_within_rejects_parent_and_absolute_escape(tmp_path):
+    from core.path_security import UnsafePath, resolve_within
     root = tmp_path / "root"
     root.mkdir()
     with pytest.raises(UnsafePath):
@@ -63,11 +66,15 @@ def test_resolve_within_rejects_parent_and_absolute_escape(tmp_path):
 
 
 def test_resolve_within_rejects_symlink_escape(tmp_path):
+    from core.path_security import UnsafePath, resolve_within
     root = tmp_path / "root"
     outside = tmp_path / "outside"
     root.mkdir()
     outside.mkdir()
-    (root / "link").symlink_to(outside, target_is_directory=True)
+    try:
+        (root / "link").symlink_to(outside, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlink creation is unavailable on this host")
     with pytest.raises(UnsafePath):
         resolve_within(root, "link/secret.wav")
 
@@ -90,7 +97,9 @@ def test_marketplace_db_asset_cannot_escape_voices(tmp_path, monkeypatch):
     secret = tmp_path / "secret.wav"
     secret.write_bytes(b"secret")
     monkeypatch.setattr(marketplace, "VOICES_DIR", str(voices))
-    assert marketplace._voice_asset(secret) is None
+    with pytest.raises(HTTPException) as exc:
+        marketplace._voice_asset(secret)
+    assert exc.value.status_code == 400
 
 
 def test_profile_lock_rejects_history_path_outside_outputs(tmp_path, monkeypatch):
@@ -132,7 +141,10 @@ def test_dub_artifact_rejects_db_path_and_symlink_escapes(tmp_path, monkeypatch)
     root.mkdir()
     outside.mkdir()
     (outside / "secret.wav").write_bytes(b"secret")
-    (root / "link").symlink_to(outside, target_is_directory=True)
+    try:
+        (root / "link").symlink_to(outside, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlink creation is unavailable on this host")
     monkeypatch.setattr(dub_export, "DUB_DIR", str(root))
 
     for value in (outside / "secret.wav", root / "link" / "secret.wav"):
@@ -164,7 +176,10 @@ def test_dub_artifact_rebase_rejects_unanchored_traversal_and_symlink(tmp_path, 
     current.mkdir(parents=True)
     outside.mkdir()
     (outside / "secret.wav").write_bytes(b"secret")
-    (current / "job_123").symlink_to(outside, target_is_directory=True)
+    try:
+        (current / "job_123").symlink_to(outside, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlink creation is unavailable on this host")
     monkeypatch.setattr(dub_export, "DUB_DIR", str(current))
 
     rejected = [
@@ -211,3 +226,65 @@ def test_dub_routes_never_accept_an_http_destination_path():
         parameters = inspect.signature(route).parameters
         assert "save_path" not in parameters
         assert "save_authorization" in parameters
+
+
+def test_dub_authorization_survives_validation_failure(tmp_path, monkeypatch):
+    """A one-shot save token is consumed only when an artifact is ready to write."""
+    from api.routers import dub_export
+    from core import path_authorization
+    from fastapi.testclient import TestClient
+    from main import app
+
+    auth_dir = tmp_path / "authorizations"
+    auth_dir.mkdir()
+    monkeypatch.setattr(path_authorization, "_AUTH_DIR", str(auth_dir))
+    monkeypatch.setattr(dub_export, "_get_job", lambda _job_id: None)
+    token = "b" * 64
+    capability = auth_dir / f"{token}.json"
+    capability.write_text(
+        json.dumps({"token": token, "kind": "dub_export", "path": str(tmp_path / "out.wav")}),
+        encoding="utf-8",
+    )
+    response = TestClient(app, client=("127.0.0.1", 50000)).get(
+        "/dub/download/missing-job",
+        headers={"X-VoiceStudio-Path-Authorization": token},
+    )
+    assert response.status_code == 404
+    assert capability.is_file()
+
+
+def test_soni_dub_accepts_capabilities_not_raw_paths(monkeypatch):
+    from api.routers import sonitranslate
+    from core import path_authorization
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        sonitranslate.DubRequest(video_path="/tmp/input.mp4")
+
+    consumed = []
+    monkeypatch.setattr(
+        path_authorization,
+        "consume",
+        lambda token, kind: consumed.append((token, kind)) or f"/authorized/{kind}",
+    )
+    monkeypatch.setattr(
+        sonitranslate.soni,
+        "dub_video",
+        lambda **_kwargs: None,
+    )
+
+    async def fake_dub_video(**kwargs):
+        return kwargs
+
+    monkeypatch.setattr(sonitranslate.soni, "dub_video", fake_dub_video)
+    body = sonitranslate.DubRequest(
+        video_authorization="c" * 64,
+        output_authorization="d" * 64,
+    )
+    result = asyncio.run(sonitranslate.sonitranslate_dub(body))
+    assert result["video_path"] == "/authorized/soni_input"
+    assert result["output_dir"] == "/authorized/soni_output_dir"
+    assert consumed == [
+        ("c" * 64, "soni_input"),
+        ("d" * 64, "soni_output_dir"),
+    ]

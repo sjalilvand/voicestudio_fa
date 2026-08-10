@@ -527,7 +527,6 @@ async def dub_download(
     # path or ffmpeg argv (export dir, retime work path, slice paths). Real
     # job ids are short uuid slices — alnum/hyphen/underscore only.
     job_dir = _job_dir_or_400(job_id)
-    save_path = _consume_native_save(save_authorization)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -605,6 +604,7 @@ async def dub_download(
         safe_name = "".join(c for c in base_name if c.isalnum() or c in "-_ ").strip() or "output"
         dl_name = f"dubbed_{safe_name}_{safe_lang}_{stamp}.{fmt}"
         media_type = _MEDIA_TYPES.get(f".{fmt}", "audio/mp4")
+        save_path = _consume_native_save(save_authorization)
         if save_path:
             return _native_save(out_path, save_path, dl_name, media_type=media_type)
         return FileResponse(
@@ -884,6 +884,7 @@ async def dub_download(
     if retime_warning is not None:
         extra_headers["X-Dub-Export-Warning"] = "video-retime-fallback"
 
+    save_path = _consume_native_save(save_authorization)
     if save_path:
         result = _native_save(output_path, save_path, dl_name, media_type="video/mp4")
         if retime_warning is not None:
@@ -1430,7 +1431,6 @@ async def dub_download_audio(
     save_authorization: str = Header("", alias="X-VoiceStudio-Path-Authorization"),
 ):
     job_dir = _job_dir_or_400(job_id)
-    save_path = _consume_native_save(save_authorization)
     lang = _safe_lang_or_400(lang)
     job = _get_job(job_id)
     if not job:
@@ -1473,6 +1473,7 @@ async def dub_download_audio(
     base_name = os.path.splitext(job.get('filename', 'audio'))[0]
     safe_name = ''.join(c for c in base_name if c.isalnum() or c in '-_ ').strip() or 'audio'
     dl_name = f"dubbed_audio_{lang_label}_{safe_name}_{stamp}.wav"
+    save_path = _consume_native_save(save_authorization)
     if save_path:
         return _native_save(wav_path, save_path, dl_name, media_type="audio/wav")
     return FileResponse(
@@ -1671,7 +1672,6 @@ async def dub_download_mp3(
     bitrate: str = Query("192k"),
 ):
     job_dir = _job_dir_or_400(job_id)
-    save_path = _consume_native_save(save_authorization)
     lang = _safe_lang_or_400(lang)
     job = _get_job(job_id)
     if not job:
@@ -1741,6 +1741,7 @@ async def dub_download_mp3(
     base_name = os.path.splitext(job.get('filename', 'audio'))[0]
     safe_name = ''.join(c for c in base_name if c.isalnum() or c in '-_ ').strip() or 'audio'
     dl_name = f"dubbed_{lang_label}_{safe_name}_{stamp}.mp3"
+    save_path = _consume_native_save(save_authorization)
     if save_path:
         return _native_save(mp3_path, save_path, dl_name, media_type="audio/mpeg")
     return FileResponse(

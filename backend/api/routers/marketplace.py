@@ -69,10 +69,12 @@ def _voice_asset(value) -> Path | None:
     if not value:
         return None
     try:
-        return resolve_within(VOICES_DIR, value)
-    except UnsafePath:
-        logger.warning("Ignoring voice asset outside the voices directory")
-        return None
+        resolved = resolve_within(VOICES_DIR, value)
+    except UnsafePath as exc:
+        raise HTTPException(status_code=400, detail="Voice profile contains an invalid asset path") from exc
+    if not resolved.is_file():
+        raise HTTPException(status_code=400, detail="Voice profile reference audio is missing")
+    return resolved
 
 
 # ── Export ──────────────────────────────────────────────────────────────────

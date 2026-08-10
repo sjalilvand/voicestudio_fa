@@ -272,11 +272,9 @@ export default function AudioToolsPanel() {
         try {
           const { invoke } = await import('@tauri-apps/api/core');
           const tool = path.includes('/ffprobe/') ? 'ffprobe' : 'ffmpeg';
-          const authorization = await invoke('authorize_host_path', {
-            kind: tool,
-            path: body?.path || '',
-          });
-          requestBody = { authorization };
+          const selection = await invoke('authorize_host_path', { kind: tool });
+          if (!selection) return;
+          requestBody = { authorization: selection.authorization };
         } catch (e) {
           toast.error(
             t('settings.audio_tools_path_failed', {
