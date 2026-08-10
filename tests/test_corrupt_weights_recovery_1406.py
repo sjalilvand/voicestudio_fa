@@ -158,6 +158,85 @@ def test_the_same_shape_wrapped_in_an_oserror_is_also_repaired(mm, monkeypatch):
     assert calls["repair"] == [True]
 
 
+def test_corrupt_fallback_tokenizer_repairs_its_own_repository(mm, monkeypatch):
+    """A nested tokenizer failure must not re-download the TTS checkpoint."""
+    from omnivoice.models.omnivoice import OmniVoiceModelAssetError
+
+    corrupt = _SafetensorError(REPORTED)
+    nested = OmniVoiceModelAssetError("eustlb/higgs-audio-v2-tokenizer")
+    nested.__cause__ = corrupt
+    calls = _drive_load(mm, monkeypatch, nested)
+
+    repaired = []
+
+    def _repair(repository_id, force=False):
+        repaired.append((repository_id, force))
+        return True
+
+    monkeypatch.setattr(mm, "_repair_model_cache", _repair)
+    mm._load_model_sync()
+
+    assert calls["load"] == 2
+    assert repaired == [("eustlb/higgs-audio-v2-tokenizer", True)]
+
+
+def test_unrecognized_nested_repository_cannot_redirect_repair(mm, monkeypatch):
+    from omnivoice.models.omnivoice import OmniVoiceModelAssetError
+
+    nested = OmniVoiceModelAssetError("attacker/unreviewed")
+    nested.__cause__ = _SafetensorError(REPORTED)
+    calls = _drive_load(mm, monkeypatch, nested)
+    repaired = []
+    monkeypatch.setattr(
+        mm,
+        "_repair_model_cache",
+        lambda repository_id, force=False: repaired.append(
+            (repository_id, force)
+        ) or True,
+    )
+
+    mm._load_model_sync()
+
+    assert calls["load"] == 2
+    assert repaired == [("org/model", True)]
+
+
+def test_fallback_tokenizer_failure_identifies_its_repository(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+
+    from omnivoice.models import omnivoice as model_module
+
+    model = SimpleNamespace(device="cpu")
+    monkeypatch.setattr(
+        model_module.PreTrainedModel,
+        "from_pretrained",
+        classmethod(lambda cls, *args, **kwargs: model),
+    )
+    monkeypatch.setattr(
+        model_module.AutoTokenizer,
+        "from_pretrained",
+        lambda *args, **kwargs: object(),
+    )
+    monkeypatch.setattr(
+        model_module,
+        "_resolve_snapshot_dir",
+        lambda _checkpoint: str(tmp_path),
+    )
+
+    class BrokenTokenizer:
+        @classmethod
+        def from_pretrained(cls, *args, **kwargs):
+            raise _SafetensorError(REPORTED)
+
+    monkeypatch.setattr(model_module, "_audio_tokenizer_cls", lambda: BrokenTokenizer)
+
+    with pytest.raises(model_module.OmniVoiceModelAssetError) as exc_info:
+        model_module.OmniVoice.from_pretrained("org/model")
+
+    assert exc_info.value.repository_id == "eustlb/higgs-audio-v2-tokenizer"
+    assert isinstance(exc_info.value.__cause__, _SafetensorError)
+
+
 def test_resume_that_exposes_corruption_switches_to_forced_repair(mm, monkeypatch):
     """A missing shard can mask a corrupt one until resume fills the gap."""
     calls = _drive_load(

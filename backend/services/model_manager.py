@@ -1930,31 +1930,45 @@ def _load_model_sync():
             below: a resume trusts a blob that is already the expected size
             and would never re-fetch the one that is actually wrong.
             """
-            if checkpoint in _FORCED_REDOWNLOAD_ATTEMPTED:
+            repair_checkpoint = checkpoint
+            for nested_exc in _exception_chain(exc):
+                repository_id = getattr(nested_exc, "repository_id", None)
+                if repository_id == "eustlb/higgs-audio-v2-tokenizer":
+                    repair_checkpoint = repository_id
+                    break
+            asset_label = (
+                "audio tokenizer"
+                if repair_checkpoint != checkpoint
+                else "TTS model"
+            )
+            if repair_checkpoint in _FORCED_REDOWNLOAD_ATTEMPTED:
                 # Already re-fetched this repo once this process and it is
                 # still unparseable. Re-downloading again would be the same
                 # gigabytes for the same result, once per generate request.
                 raise RuntimeError(
-                    f"The TTS model files for {checkpoint} are damaged and a "
+                    f"The {asset_label} files for {repair_checkpoint} are damaged and a "
                     "re-download did not fix them. Open Settings → Models, "
                     "delete the VoiceStudio TTS model, and install it again."
-                    f"{_manual_cache_delete_hint(checkpoint)}"
+                    f"{_manual_cache_delete_hint(repair_checkpoint)}"
                 ) from exc
-            _FORCED_REDOWNLOAD_ATTEMPTED.add(checkpoint)
+            _FORCED_REDOWNLOAD_ATTEMPTED.add(repair_checkpoint)
             logger.warning(
-                "TTS weights for %s are present but unparseable (%s) — a "
+                "%s files for %s are present but unparseable (%s) — a "
                 "download that stopped mid-file, or a file altered on disk "
-                "after it arrived. Re-fetching them.", checkpoint, exc,
+                "after it arrived. Re-fetching them.",
+                asset_label,
+                repair_checkpoint,
+                exc,
             )
             _set_loading("loading_weights", "Model files are damaged — re-downloading…")
-            if not _repair_model_cache(checkpoint, force=True):
+            if not _repair_model_cache(repair_checkpoint, force=True):
                 raise RuntimeError(
-                    f"The TTS model files for {checkpoint} are damaged — a "
+                    f"The {asset_label} files for {repair_checkpoint} are damaged — a "
                     "download that stopped part-way, or a file changed on "
                     "disk after it arrived — and could not be re-downloaded "
                     f"automatically.{_repair_failure_detail()} Open Settings "
                     "→ Models, delete the VoiceStudio TTS model, and install "
-                    f"it again.{_manual_cache_delete_hint(checkpoint)}"
+                    f"it again.{_manual_cache_delete_hint(repair_checkpoint)}"
                 ) from exc
             _set_loading("loading_weights", f"Loading TTS weights on {device}…")
             try:
@@ -1963,10 +1977,10 @@ def _load_model_sync():
                 if not _is_corrupt_weights_error(exc2):
                     raise
                 raise RuntimeError(
-                    f"The TTS model files for {checkpoint} are still damaged "
+                    f"The {asset_label} files for {repair_checkpoint} are still damaged "
                     "after being re-downloaded. Open Settings → Models, "
                     "delete the VoiceStudio TTS model, and install it again."
-                    f"{_manual_cache_delete_hint(checkpoint)}"
+                    f"{_manual_cache_delete_hint(repair_checkpoint)}"
                 ) from exc2
 
         try:
