@@ -96,6 +96,18 @@ describe('useRealtimeEvents cold-start health probe', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
+  it('dispatches only explicitly registered own handlers', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+    const inherited = vi.fn();
+    const handlers = Object.create({ inherited });
+    render(<Harness handlers={handlers} />);
+    await waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
+
+    FakeWebSocket.instances[0].onmessage({ data: '{"kind":"inherited"}' });
+    FakeWebSocket.instances[0].onmessage({ data: '{"kind":"toString"}' });
+    expect(inherited).not.toHaveBeenCalled();
+  });
+
   it('does NOT open the WebSocket while the backend is unreachable', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'));
     vi.stubGlobal('fetch', fetchMock);

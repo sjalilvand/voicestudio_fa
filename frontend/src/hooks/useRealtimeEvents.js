@@ -104,9 +104,12 @@ export default function useRealtimeEvents(handlers) {
         }
         const kind = event.kind;
         if (kind === 'ping') return; // keepalive, ignore
+        if (typeof kind !== 'string') return;
 
-        const handler = handlersRef.current?.[kind];
-        if (handler) {
+        const handler = Object.entries(handlersRef.current ?? {}).find(
+          ([registeredKind]) => registeredKind === kind,
+        )?.[1];
+        if (typeof handler === 'function') {
           handler(event);
         }
       };
