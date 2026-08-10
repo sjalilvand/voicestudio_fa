@@ -639,6 +639,83 @@ mod uv_tests {
         assert_eq!(result.unwrap(), uv_bin);
     }
 
+    #[test]
+    fn successful_installer_without_usable_uv_is_rejected() {
+        let dest = Path::new("private-tools");
+        let uv_bin = dest.join(if cfg!(windows) { "uv.exe" } else { "uv" });
+        let output = Output {
+            status: success_status(),
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+        };
+
+        let error = finish_uv_install_with_probe(dest, &uv_bin, output, |_| false)
+            .expect_err("installer success is insufficient without a usable binary");
+
+        assert!(error.to_string().contains("no usable binary was found"));
+    }
+
+    #[test]
+    fn failed_installer_with_unusable_uv_reports_captured_error() {
+        let dest = Path::new("private-tools");
+        let uv_bin = dest.join(if cfg!(windows) { "uv.exe" } else { "uv" });
+        let output = Output {
+            status: failure_status(),
+            stdout: Vec::new(),
+            stderr: b"downloaded executable was corrupt".to_vec(),
+        };
+
+        let error = finish_uv_install_with_probe(dest, &uv_bin, output, |_| false)
+            .expect_err("an unusable download must not be accepted");
+
+        assert!(error.to_string().contains("downloaded executable was corrupt"));
+    }
+
+    #[test]
+    fn usable_legacy_bin_location_is_relocated() {
+        let unique = format!(
+            "voicestudio-uv-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        );
+        let dest = std::env::temp_dir().join(unique);
+        let uv_bin = dest.join(if cfg!(windows) { "uv.exe" } else { "uv" });
+        let legacy = dest
+            .join("bin")
+            .join(if cfg!(windows) { "uv.exe" } else { "uv" });
+        fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+        fs::write(&legacy, b"verified test executable").unwrap();
+        let output = Output {
+            status: success_status(),
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+        };
+
+        let result = finish_uv_install_with_probe(&dest, &uv_bin, output, |candidate| {
+            candidate.is_file()
+        });
+
+        assert_eq!(result.unwrap(), uv_bin);
+        assert!(uv_bin.is_file());
+        assert!(!legacy.exists());
+        fs::remove_dir_all(dest).unwrap();
+    }
+
+    #[cfg(unix)]
+    fn success_status() -> std::process::ExitStatus {
+        use std::os::unix::process::ExitStatusExt;
+        std::process::ExitStatus::from_raw(0)
+    }
+
+    #[cfg(windows)]
+    fn success_status() -> std::process::ExitStatus {
+        use std::os::windows::process::ExitStatusExt;
+        std::process::ExitStatus::from_raw(0)
+    }
+
     #[cfg(unix)]
     fn failure_status() -> std::process::ExitStatus {
         use std::os::unix::process::ExitStatusExt;
