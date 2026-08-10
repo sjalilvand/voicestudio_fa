@@ -124,6 +124,17 @@ def test_direct_backend_construction_cannot_bypass_license(mock_settings_store):
         PocketTTSBackend()
 
 
+def test_cached_backend_stops_synthesis_after_license_revocation(mock_settings_store):
+    mock_settings_store["pockettts"] = True
+    backend = PocketTTSBackend()
+    try:
+        mock_settings_store["pockettts"] = False
+        with pytest.raises(RuntimeError, match="license not accepted"):
+            backend.generate("must not reach the sidecar")
+    finally:
+        backend.shutdown()
+
+
 def test_stub_sidecar_roundtrip_is_model_free_and_forwards_voice_inputs(
     tmp_path, monkeypatch, mock_settings_store
 ):

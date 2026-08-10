@@ -87,6 +87,16 @@ class PocketTTSBackend(SubprocessBackend):
             )
         super().__init__()
 
+    def generate(self, *args, **kwargs):
+        # Active backends are cached. Recheck at the synthesis chokepoint so a
+        # later revocation takes effect without requiring process restart or
+        # relying on every caller to evict its cached instance.
+        if not self._license_accepted():
+            raise RuntimeError(
+                "PocketTTS license not accepted. Review it in Settings → Engines."
+            )
+        return super().generate(*args, **kwargs)
+
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
         if sys.platform == "darwin" and platform.machine().lower() == "x86_64":
