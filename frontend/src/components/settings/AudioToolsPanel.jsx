@@ -90,15 +90,17 @@ function BinaryRow({ tool, info, onAction, busy }) {
           >
             {t('settings.audio_tools_use_system', { defaultValue: 'Use system copy' })}
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={busy}
-            onClick={chooseFile}
-            aria-label={`${label}: ${t('settings.audio_tools_choose_file')}`}
-          >
-            {t('settings.audio_tools_choose_file', { defaultValue: 'Choose file…' })}
-          </Button>
+          {'__TAURI_INTERNALS__' in window && (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={busy}
+              onClick={chooseFile}
+              aria-label={`${label}: ${t('settings.audio_tools_choose_file')}`}
+            >
+              {t('settings.audio_tools_choose_file', { defaultValue: 'Choose file…' })}
+            </Button>
+          )}
           <Button
             size="sm"
             variant="ghost"
@@ -219,6 +221,7 @@ export default function AudioToolsPanel() {
   const onToolAction = useCallback(
     async (path, body) => {
       let requestBody = body;
+      let selectedPath = body?.path;
       if (path.endsWith('/custom-path')) {
         try {
           const { invoke } = await import('@tauri-apps/api/core');
@@ -226,6 +229,7 @@ export default function AudioToolsPanel() {
           const selection = await invoke('authorize_host_path', { kind: tool });
           if (!selection) return;
           requestBody = { authorization: selection.authorization };
+          selectedPath = selection.path;
         } catch (e) {
           toast.error(
             t('settings.audio_tools_path_failed', {
@@ -241,7 +245,8 @@ export default function AudioToolsPanel() {
         toast.success(
           t('settings.audio_tools_path_set', {
             tool: path.includes('ffprobe') ? 'FFprobe' : 'FFmpeg',
-            path: body?.path || t('settings.audio_tools_origin_system', { defaultValue: 'System' }),
+            path:
+              selectedPath || t('settings.audio_tools_origin_system', { defaultValue: 'System' }),
             defaultValue: '{{tool}} now uses {{path}}',
           }),
         );

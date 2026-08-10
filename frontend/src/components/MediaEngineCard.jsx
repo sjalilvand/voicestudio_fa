@@ -93,6 +93,8 @@ export default function MediaEngineCard() {
     }
   };
 
+  const isDesktop = '__TAURI_INTERNALS__' in window;
+
   if (!status || status.ready) return null; // the ideal outcome: nothing.
 
   const op = status.ops?.acquire || {};
@@ -150,9 +152,11 @@ export default function MediaEngineCard() {
         >
           {t('setup.media_engine_use_system', { defaultValue: 'Use a system copy' })}
         </Button>
-        <Button variant="ghost" size="sm" disabled={busy} onClick={chooseFile}>
-          {t('setup.media_engine_choose_file', { defaultValue: 'Choose file…' })}
-        </Button>
+        {isDesktop && (
+          <Button variant="ghost" size="sm" disabled={busy} onClick={chooseFile}>
+            {t('setup.media_engine_choose_file', { defaultValue: 'Choose file…' })}
+          </Button>
+        )}
       </div>
     </div>
   );

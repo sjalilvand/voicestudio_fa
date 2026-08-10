@@ -3,7 +3,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use tauri::image::Image;
@@ -75,14 +75,36 @@ fn validate_host_path(kind: &str, path: PathBuf) -> Result<PathBuf, String> {
         if !path.is_file() {
             return Err("Selected media tool is not a file".into());
         }
-        let output = crate::tools::no_window(
+        let mut child = crate::tools::no_window(
             std::process::Command::new(&path)
                 .arg("-version")
                 .stdout(std::process::Stdio::piped())
                 .stderr(std::process::Stdio::piped()),
         )
-        .output()
+        .spawn()
         .map_err(|e| format!("Selected media tool could not run: {e}"))?;
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            match child.try_wait() {
+                Ok(Some(_)) => break,
+                Ok(None) if Instant::now() < deadline => {
+                    std::thread::sleep(Duration::from_millis(25));
+                }
+                Ok(None) => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return Err("Selected media tool did not respond within 5 seconds".into());
+                }
+                Err(e) => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return Err(format!("Selected media tool could not be checked: {e}"));
+                }
+            }
+        }
+        let output = child
+            .wait_with_output()
+            .map_err(|e| format!("Selected media tool output could not be read: {e}"))?;
         let version_text = format!(
             "{}{}",
             String::from_utf8_lossy(&output.stdout),

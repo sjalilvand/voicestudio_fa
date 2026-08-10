@@ -103,4 +103,11 @@ describe('MediaEngineCard — invisible-by-default media engine', () => {
     );
     expect(apiFetch.mock.calls.flat().join(' ')).not.toContain('/usr/local/bin/ffmpeg');
   });
+
+  it('does not offer native file selection in a browser', async () => {
+    apiJson.mockResolvedValue(statusWith(false, { state: 'error', error: 'boom' }));
+    render(<MediaEngineCard />);
+    await screen.findByTestId('media-engine-card');
+    expect(screen.queryByText('Choose file…')).not.toBeInTheDocument();
+  });
 });
