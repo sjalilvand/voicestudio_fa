@@ -55,8 +55,9 @@ def test_formatted_record_stays_on_one_bounded_line(caplog):
 
 
 def test_sensitive_logging_sites_emit_metadata_not_paths_keys_or_tracebacks():
+    repository_root = Path(__file__).resolve().parents[1]
     sources = {
-        path: Path(path).read_text(encoding="utf-8")
+        path: (repository_root / path).read_text(encoding="utf-8")
         for path in (
             "backend/api/routers/dub_export.py",
             "backend/api/routers/batch.py",

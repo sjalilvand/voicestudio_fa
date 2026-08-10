@@ -13,6 +13,7 @@ Public API (consumed by `token_resolver.py`):
 from __future__ import annotations
 
 import logging
+import sqlite3
 import time
 from typing import Optional
 from core.logging_utils import log_safe
@@ -159,7 +160,7 @@ def get_secret(name: str) -> Optional[str]:
                 "machines or salt tampered) — falling back to env/default."
             )
             return None
-    except Exception:
+    except sqlite3.Error:
         # This path may hold plaintext/ciphertext secret values in locals.
         # Keep the record fixed-shape; never attach exception state or traceback.
         logger.error("settings_store.get_secret: SQLite read failed")

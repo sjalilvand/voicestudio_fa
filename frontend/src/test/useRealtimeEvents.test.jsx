@@ -111,13 +111,15 @@ describe('useRealtimeEvents cold-start health probe', () => {
   it('dispatches only explicitly registered own handlers', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
     const inherited = vi.fn();
-    const handlers = Object.create({ inherited });
+    const inheritedToString = vi.fn();
+    const handlers = Object.create({ inherited, toString: inheritedToString });
     render(<Harness handlers={handlers} />);
     await waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
 
     FakeWebSocket.instances[0].onmessage({ data: '{"kind":"inherited"}' });
     FakeWebSocket.instances[0].onmessage({ data: '{"kind":"toString"}' });
     expect(inherited).not.toHaveBeenCalled();
+    expect(inheritedToString).not.toHaveBeenCalled();
   });
 
   it('does NOT open the WebSocket while the backend is unreachable', async () => {
