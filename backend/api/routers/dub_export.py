@@ -53,6 +53,18 @@ def _job_dir_or_400(job_id: str) -> str:
         raise HTTPException(status_code=400, detail="Invalid job id") from exc
 
 
+def _existing_job_dir_or_404(job_id: str) -> str:
+    """Discover a real job directory without passing request data to a path sink."""
+    _job_dir_or_400(job_id)
+    try:
+        for entry in os.scandir(DUB_DIR):
+            if entry.name == job_id and not entry.is_symlink() and entry.is_dir(follow_symlinks=False):
+                return entry.path
+    except OSError as exc:
+        raise HTTPException(status_code=404, detail="Job directory not found") from exc
+    raise HTTPException(status_code=404, detail="Job directory not found")
+
+
 def _resolve_dub_artifact(value: object, job_id: str) -> Path:
     """Resolve current or safely rebased pre-relocation dub artifact paths."""
     raw = str(value or "")
@@ -99,7 +111,7 @@ def _discover_job_artifact(path: Path, job_id: str) -> Path | None:
     returned path comes from ``os.scandir`` beneath the validated job root,
     and symlinks are rejected so a post-validation swap cannot escape.
     """
-    job_root = Path(_job_dir_or_400(job_id)).resolve()
+    job_root = Path(_existing_job_dir_or_404(job_id)).resolve()
     try:
         parts = path.relative_to(job_root).parts
     except ValueError:
@@ -1337,7 +1349,7 @@ def _seg_wav_candidates(job: dict, lang: "str | None", seg_keys: tuple) -> list:
 
 def _existing_segment_artifact(job_id: str, candidate_ids: list) -> str | None:
     """Discover an existing, non-symlink segment WAV inside one job root."""
-    job_root = Path(_job_dir_or_400(job_id))
+    job_root = Path(_existing_job_dir_or_404(job_id))
     wanted: list[str] = []
     for value in candidate_ids:
         safe = re.sub(r"[^A-Za-z0-9._-]", "_", str(value))
@@ -1491,7 +1503,7 @@ async def dub_download_audio(
     preserve_bg: bool = Query(True),
     save_authorization: str = Header("", alias="X-VoiceStudio-Path-Authorization"),
 ):
-    job_dir = _job_dir_or_400(job_id)
+    job_dir = _existing_job_dir_or_404(job_id)
     lang = _safe_lang_or_400(lang)
     job = _get_job(job_id)
     if not job:
@@ -1514,7 +1526,7 @@ async def dub_download_audio(
     bg_audio = _optional_dub_artifact(job.get("no_vocals_path"), job_id) if preserve_bg else None
     if bg_audio:
         ffmpeg = find_ffmpeg()
-        final_audio_path = os.path.join(exports_dir, f"mixed_dub_{lang_label}_{stamp}.wav")
+        final_audio_path = os.path.join(exports_dir, f"mixed_dub_{stamp}.wav")
         cmd = [
             ffmpeg, "-i", bg_audio, "-i", wav_path,
             "-filter_complex", bed_mix_filter("0:a", "1:a"),
@@ -1527,7 +1539,7 @@ async def dub_download_audio(
             if not os.path.exists(final_audio_path) or os.path.getsize(final_audio_path) == 0:
                 raise Exception("ffmpeg mix produced no output file")
             wav_path = final_audio_path
-            logger.info("Dub audio mix wrote %s (%d bytes)", final_audio_path, os.path.getsize(final_audio_path))
+            logger.info("Dub audio mix completed")
         except Exception:
             logger.exception("Failed to mix audio")
 
@@ -1728,7 +1740,7 @@ async def dub_download_mp3(
     save_authorization: str = Header("", alias="X-VoiceStudio-Path-Authorization"),
     bitrate: str = Query("192k"),
 ):
-    job_dir = _job_dir_or_400(job_id)
+    job_dir = _existing_job_dir_or_404(job_id)
     lang = _safe_lang_or_400(lang)
     job = _get_job(job_id)
     if not job:
@@ -1752,7 +1764,7 @@ async def dub_download_mp3(
     source_path = wav_path
     bg_audio = _optional_dub_artifact(job.get("no_vocals_path"), job_id) if preserve_bg else None
     if bg_audio:
-        mixed_path = os.path.join(exports_dir, f"mixed_mp3_{lang_label}_{stamp}.wav")
+        mixed_path = os.path.join(exports_dir, f"mixed_mp3_{stamp}.wav")
         cmd_mix = [
             ffmpeg, "-i", bg_audio, "-i", wav_path,
             "-filter_complex", bed_mix_filter("0:a", "1:a"),
@@ -1765,7 +1777,7 @@ async def dub_download_mp3(
         except Exception:
             logger.exception("Failed to mix audio for MP3")
 
-    mp3_path = os.path.join(exports_dir, f"dubbed_{lang_label}_{stamp}.mp3")
+    mp3_path = os.path.join(exports_dir, f"dubbed_{stamp}.mp3")
     # Accept '128', '192k' etc. — normalize to ffmpeg's 'Nk' form and clamp
     # to a sensible range so a malformed value can't stall encoding.
     _br = str(bitrate or "192k").lower().rstrip("k") or "192"
@@ -1793,7 +1805,7 @@ async def dub_download_mp3(
 
     if not os.path.exists(mp3_path) or os.path.getsize(mp3_path) == 0:
         raise HTTPException(status_code=500, detail="MP3 encoding produced no output file")
-    logger.info("Dub MP3 encoded %s (%d bytes)", mp3_path, os.path.getsize(mp3_path))
+    logger.info("Dub MP3 encoding completed")
 
     base_name = os.path.splitext(job.get('filename', 'audio'))[0]
     safe_name = ''.join(c for c in base_name if c.isalnum() or c in '-_ ').strip() or 'audio'

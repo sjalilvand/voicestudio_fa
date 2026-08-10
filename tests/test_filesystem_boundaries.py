@@ -272,6 +272,8 @@ def test_dub_export_security_logs_have_fixed_message_shapes():
     assert 'logger.warning("dub QC ASR pass timed out")' in source
     assert 'logger.exception("dub QC ASR pass failed")' in source
     assert 'logger.debug("QC event append failed")' in source
+    assert 'logger.info("Dub audio mix completed")' in source
+    assert 'logger.info("Dub MP3 encoding completed")' in source
     assert 'timed out for %s' not in source
     assert 'onsets cache write failed for %s' not in source
 
