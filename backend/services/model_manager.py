@@ -2033,7 +2033,12 @@ def _load_model_sync():
                         # resume trusts it and never re-fetches it (#739). Force a full
                         # re-download (replaces corrupt blobs) and retry once more before
                         # falling back to the manual delete-and-reinstall message.
-                        if _is_incomplete_cache_error(e2):
+                        if _is_corrupt_weights_error(e2):
+                            # The resume filled the missing files, then exposed a
+                            # present-but-damaged blob. A second resume would trust
+                            # that blob, so switch to the forced corruption repair.
+                            _model = _recover_corrupt_weights(e2)
+                        elif _is_incomplete_cache_error(e2):
                             _set_loading("loading_weights", "Re-downloading model files…")
                             if _repair_model_cache(checkpoint, force=True):
                                 try:

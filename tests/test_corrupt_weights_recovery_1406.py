@@ -158,6 +158,32 @@ def test_the_same_shape_wrapped_in_an_oserror_is_also_repaired(mm, monkeypatch):
     assert calls["repair"] == [True]
 
 
+def test_resume_that_exposes_corruption_switches_to_forced_repair(mm, monkeypatch):
+    """A missing shard can mask a corrupt one until resume fills the gap."""
+    calls = _drive_load(
+        mm,
+        monkeypatch,
+        OSError("repo does not appear to have a file named model.safetensors"),
+    )
+
+    def _load_sequence(*a, **kw):
+        calls["load"] += 1
+        if calls["load"] == 1:
+            raise OSError("repo does not appear to have a file named model.safetensors")
+        if calls["load"] == 2:
+            raise OSError(f"Unable to load weights: {REPORTED}")
+        return object()
+
+    monkeypatch.setattr(mm, "_lazy_omnivoice", lambda: type(
+        "C", (), {"from_pretrained": staticmethod(_load_sequence)}
+    ))
+
+    mm._load_model_sync()
+
+    assert calls["load"] == 3
+    assert calls["repair"] == [False, True]
+
+
 def test_the_cause_is_matched_through_the_exception_chain(mm, monkeypatch):
     """transformers re-raises with the tensor error as __cause__; matching only
     the outermost message would miss every wrapped case."""
