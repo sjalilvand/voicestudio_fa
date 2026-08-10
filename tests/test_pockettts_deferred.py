@@ -118,7 +118,16 @@ def test_license_gate_fails_closed_when_settings_read_fails(monkeypatch):
     assert PocketTTSBackend.is_available()[0] is False
 
 
-def test_stub_sidecar_roundtrip_is_model_free_and_forwards_voice_inputs(tmp_path, monkeypatch):
+def test_direct_backend_construction_cannot_bypass_license(mock_settings_store):
+    mock_settings_store.pop("pockettts", None)
+    with pytest.raises(RuntimeError, match="license not accepted"):
+        PocketTTSBackend()
+
+
+def test_stub_sidecar_roundtrip_is_model_free_and_forwards_voice_inputs(
+    tmp_path, monkeypatch, mock_settings_store
+):
+    mock_settings_store["pockettts"] = True
     stub = tmp_path / "pockettts_stub.py"
     stub.write_text(STUB_SIDECAR, encoding="utf-8")
     monkeypatch.setattr(PocketTTSBackend, "sidecar_script", classmethod(lambda cls: stub))

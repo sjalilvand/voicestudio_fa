@@ -329,7 +329,13 @@ def backend():
     import sys as _sys
     _sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "backend"))
     from engines.pockettts import PocketTTSBackend
-    return PocketTTSBackend
+
+    class AcceptedPocketTTSBackend(PocketTTSBackend):
+        @classmethod
+        def _license_accepted(cls):
+            return True
+
+    return AcceptedPocketTTSBackend
 
 
 def test_recv_timeout_rejects_non_finite_values(backend, monkeypatch):

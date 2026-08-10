@@ -64,6 +64,30 @@ class PocketTTSBackend(SubprocessBackend):
     supports_cloning = True  # zero-shot clone from a reference clip
 
     @classmethod
+    def _license_accepted(cls) -> bool:
+        """Read acknowledgement fail-closed at every construction path."""
+        try:
+            from services import settings_store
+
+            return bool(settings_store.get_license_accepted(cls.id))
+        except Exception:
+            logger.warning(
+                "pockettts: license acknowledgement could not be read; "
+                "treating as not accepted"
+            )
+            return False
+
+    def __init__(self) -> None:
+        # Availability probes are advisory. Construction is the shared
+        # authorization boundary for HTTP, WebSocket, audiobook, and direct
+        # backend selection, so none can reach gated weights before consent.
+        if not self._license_accepted():
+            raise RuntimeError(
+                "PocketTTS license not accepted. Review it in Settings → Engines."
+            )
+        super().__init__()
+
+    @classmethod
     def is_available(cls) -> tuple[bool, str]:
         if sys.platform == "darwin" and platform.machine().lower() == "x86_64":
             return False, (
@@ -84,17 +108,7 @@ class PocketTTSBackend(SubprocessBackend):
         # The model repository has an additional gated-access agreement and
         # prohibited-use conditions beyond its CC-BY-4.0 license. Keep first
         # use behind an explicit local acknowledgement, matching the dialog.
-        try:
-            from services import settings_store
-            accepted = settings_store.get_license_accepted(cls.id)
-        except Exception as exc:
-            logger.warning(
-                "pockettts: settings_store.get_license_accepted raised %s — "
-                "treating as not-accepted",
-                exc,
-            )
-            accepted = False
-        if not accepted:
+        if not cls._license_accepted():
             return False, (
                 "PocketTTS license not accepted. Open Settings → Engines → "
                 "PocketTTS and review the MIT code license, CC-BY-4.0 model "
