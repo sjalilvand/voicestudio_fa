@@ -97,6 +97,15 @@ class PocketTTSBackend(SubprocessBackend):
             )
         return super().generate(*args, **kwargs)
 
+    def _validate_generate_authorization(self) -> None:
+        # The preflight above rejects immediately when possible. This second
+        # check runs under SubprocessBackend._lock, after any queued synthesis,
+        # so revocation while waiting cannot reach the sidecar or return audio.
+        if not self._license_accepted():
+            raise RuntimeError(
+                "PocketTTS license not accepted. Review it in Settings → Engines."
+            )
+
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
         if sys.platform == "darwin" and platform.machine().lower() == "x86_64":

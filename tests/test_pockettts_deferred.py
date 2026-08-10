@@ -135,6 +135,31 @@ def test_cached_backend_stops_synthesis_after_license_revocation(mock_settings_s
         backend.shutdown()
 
 
+def test_queued_synthesis_rechecks_license_after_acquiring_lock(
+    monkeypatch, mock_settings_store
+):
+    mock_settings_store["pockettts"] = True
+    backend = PocketTTSBackend()
+
+    class RevokingLock:
+        def __enter__(self):
+            mock_settings_store["pockettts"] = False
+
+        def __exit__(self, *_args):
+            return False
+
+    backend._lock = RevokingLock()
+    monkeypatch.setattr(
+        "services.model_manager.running_on_gpu_pool", lambda: True
+    )
+    monkeypatch.setattr(
+        backend, "_spawn", lambda: pytest.fail("revoked request reached sidecar")
+    )
+
+    with pytest.raises(RuntimeError, match="license not accepted"):
+        backend.generate("queued before revocation")
+
+
 def test_stub_sidecar_roundtrip_is_model_free_and_forwards_voice_inputs(
     tmp_path, monkeypatch, mock_settings_store
 ):
