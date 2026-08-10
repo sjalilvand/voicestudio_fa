@@ -1,4 +1,4 @@
-# OmniVoice backend API route snapshot — regenerate with scripts/dump_api_routes.py
+# VoiceStudio backend API route snapshot — regenerate with scripts/dump_api_routes.py
 # Guards against accidental endpoint removal/rename (tests/test_api_route_inventory.py).
 DELETE /api/mcp/bindings/{client_id}
 DELETE /api/settings/hf-token
@@ -18,6 +18,7 @@ DELETE /profiles/{profile_id}
 DELETE /profiles/{profile_id}/consent
 DELETE /projects/{project_id}
 DELETE /pronunciation/{entry_id}
+DELETE /workers/{worker_id}
 GET /api/mcp/bindings
 GET /api/settings/analytics
 GET /api/settings/asr-openai-compat
@@ -133,8 +134,11 @@ GET /tools/effects
 GET /tools/plugins
 GET /v1/audio/voices
 GET /watermark/status
+GET /workers
+GET /workers/tasks
 PATCH /gallery/voices/{voice_id}
 PATCH /projects/{project_id}
+PATCH /workers/{worker_id}
 POST /api/settings/asr-openai-compat/test
 POST /api/settings/hf-mirror/test
 POST /api/settings/hf-token
@@ -236,6 +240,11 @@ POST /v1/audio/speech
 POST /v1/audio/transcriptions
 POST /watermark/detect
 POST /watermark/settings
+POST /workers/enabled
+POST /workers/enrollments
+POST /workers/tasks/{task_id}/cancel
+POST /workers/{worker_id}/consent
+POST /workers/{worker_id}/resume
 PUT /api/mcp/bindings
 PUT /api/settings/analytics
 PUT /api/settings/asr-openai-compat

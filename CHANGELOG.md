@@ -13,6 +13,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - RTX 40-series GPUs are used again instead of being sent to the CPU
 - A warning before a slow generation, rather than after a five-minute wait
 - The watermark can be turned off in Settings, as the docs always said
+- Your other GPU can take the work now — send individual jobs to a second machine, opt-in
 - Workspace tabs in the title bar, if you prefer them to the icon rail (#1412)
 - macOS support now matches what the app actually delivers
 - Linux AppImage: a blank white window on rolling distros (Mesa 26.1+) now starts normally
@@ -28,6 +29,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Added
 
+- Settings → Sharing → **Remote workers** sends individual jobs to GPUs on your other machines while everything else stays here. Off by default; each machine is added with a single-use token and approved before any audio reaches it. See [docs/remote-workers.md](docs/remote-workers.md).
 - Settings → Appearance → **Navigation style** switches the workspace switcher between the icon rail down the window edge and browser-style tabs across the title bar. Both offer the same workspaces; the choice sticks across launches, and the rail stays the default. Tab labels fold down to icons when the title bar runs out of room — the workspace you're in keeps its name. (#1412)
 - Portable mode lets you choose the folder — press **Change…** on the first-run setup screen and put the whole install on an external drive. It also stops being greyed out after a default Program Files install. (#766)
 - Settings → Privacy now has an **Invisible watermark** toggle. On by default, available to everyone, and it only affects audio generated after the change. (#1308)

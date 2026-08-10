@@ -752,6 +752,23 @@ async def lifespan(app: FastAPI):
     )
     if mcp_mounted:
         logger.info("MCP server mounted at /mcp")
+    # Remote GPU workers (opt-in). Starts nothing — no socket, no certificate,
+    # no background loop — unless the user turned the feature on, so an install
+    # that never touches it is byte-for-byte the app it was before.
+    try:
+        from worker import service as worker_service
+        await worker_service.start_if_enabled()
+    except Exception:
+        logger.exception("Remote worker startup failed (continuing without it)")
+
+    # The other side of the same feature: on a machine running in worker mode,
+    # connect out to its control plane and start taking work.
+    try:
+        from worker import agent as worker_agent
+        await worker_agent.start_if_worker_mode()
+    except Exception:
+        logger.exception("Worker agent startup failed (continuing without it)")
+
     # Startup finished — disarm the hang watchdog before serving (#632).
     if _watchdog_armed:
         try:
@@ -760,6 +777,19 @@ async def lifespan(app: FastAPI):
         except Exception:
             pass
     yield
+    # Stop accepting remote work early in shutdown: a worker that reconnects
+    # to a half-torn-down control plane is worse than one that simply finds it
+    # gone and backs off.
+    try:
+        from worker import agent as worker_agent
+        await worker_agent.stop()
+    except Exception:
+        logger.exception("Worker agent shutdown failed")
+    try:
+        from worker import service as worker_service
+        await worker_service.stop()
+    except Exception:
+        logger.exception("Remote worker shutdown failed")
     # ── Graceful shutdown (SIGTERM from Tauri, Ctrl+C, etc.) ────────────
     logger.info("Shutdown: cleaning up…")
     # FIRST: flip model_manager into shutdown mode, so a model load that is
@@ -1263,7 +1293,9 @@ app.include_router(pronunciation.router)  # Expressive-TTS Spec 01: pronunciatio
 app.include_router(settings_router.router)  # Phase 1 AUTH-03 endpoints
 app.include_router(media_tools_router.router)  # Settings → Audio tools + wizard media-engine self-heal
 from api.routers import mcp_bindings as _mcp_bindings_router  # noqa: E402
+from api.routers import workers as workers_router  # noqa: E402
 app.include_router(_mcp_bindings_router.router)  # Wave 2.2 per-agent voice bindings
+app.include_router(workers_router.router)  # Remote GPU workers (opt-in)
 
 # ── Mount the MCP server (Wave 2.2) ───────────────────────────────────────
 # FastMCP's Streamable-HTTP app is sub-mounted at /mcp; its session manager is
