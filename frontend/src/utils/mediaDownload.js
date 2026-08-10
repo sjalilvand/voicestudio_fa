@@ -146,7 +146,6 @@ export async function downloadMedia(url, fallbackName, opts = {}) {
         await recordHistory(fallbackName, destPath);
         return;
       }
-
     } catch (err) {
       console.error(err);
       toast.error(i18n.t('app.toast_save_error', { message: err.message }), { id: fallbackName });

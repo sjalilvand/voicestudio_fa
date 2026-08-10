@@ -91,9 +91,6 @@ describe('AudioToolsPanel — power-user surface for the media tools', () => {
   it('sends only a native one-shot authorization for a custom executable', async () => {
     render(<AudioToolsPanel />);
     fireEvent.click(await screen.findByLabelText('FFmpeg: Choose file…'));
-    const input = await screen.findByLabelText('FFmpeg binary path');
-    fireEvent.change(input, { target: { value: '/opt/tools/ffmpeg' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() =>
       expect(invoke).toHaveBeenCalledWith('authorize_host_path', {
