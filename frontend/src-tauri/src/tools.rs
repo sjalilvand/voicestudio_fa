@@ -585,9 +585,14 @@ fn installer_output_detail(output: &Output) -> String {
         &output.stderr
     };
     let text = String::from_utf8_lossy(bytes);
-    let text = text.trim();
+    let mut text = text.trim().to_string();
     if text.is_empty() {
         return String::new();
+    }
+    for key in ["USERPROFILE", "HOME"] {
+        if let Some(home) = std::env::var_os(key).and_then(|value| value.into_string().ok()) {
+            text = redact_home_prefix(&text, &home);
+        }
     }
     let start = text
         .char_indices()
@@ -596,6 +601,22 @@ fn installer_output_detail(output: &Output) -> String {
         .map(|(index, _)| index)
         .unwrap_or(0);
     format!(": {}", &text[start..])
+}
+
+fn redact_home_prefix(text: &str, home: &str) -> String {
+    if home.len() < 3 {
+        return text.to_string();
+    }
+    let mut redacted = text.replace(home, "~");
+    let forward = home.replace('\\', "/");
+    let backward = home.replace('/', "\\");
+    if forward != home {
+        redacted = redacted.replace(&forward, "~");
+    }
+    if backward != home {
+        redacted = redacted.replace(&backward, "~");
+    }
+    redacted
 }
 
 #[cfg(test)]
@@ -639,6 +660,31 @@ mod uv_tests {
             stderr: b"profile update denied".to_vec(),
         };
         assert_eq!(installer_output_detail(&output), ": profile update denied");
+    }
+
+    #[test]
+    fn installer_error_redacts_unix_and_windows_home_paths() {
+        assert_eq!(
+            redact_home_prefix(
+                "installed into /Users/alice/.local/bin",
+                "/Users/alice"
+            ),
+            "installed into ~/.local/bin"
+        );
+        assert_eq!(
+            redact_home_prefix(
+                r"installed into C:\Users\alice\.local\bin",
+                r"C:\Users\alice"
+            ),
+            r"installed into ~\.local\bin"
+        );
+        assert_eq!(
+            redact_home_prefix(
+                "installed into C:/Users/alice/.local/bin",
+                r"C:\Users\alice"
+            ),
+            "installed into ~/.local/bin"
+        );
     }
 
     #[test]
