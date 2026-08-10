@@ -511,12 +511,20 @@ fn uv_is_usable(path: &Path) -> bool {
     no_window(
         Command::new(path)
             .arg("--version")
-            .stdout(Stdio::null())
+            .stdout(Stdio::piped())
             .stderr(Stdio::null()),
     )
-    .status()
-    .map(|status| status.success())
+    .output()
+    .map(|output| output.status.success() && uv_version_matches(&output.stdout))
     .unwrap_or(false)
+}
+
+fn uv_version_matches(output: &[u8]) -> bool {
+    let Ok(text) = std::str::from_utf8(output) else {
+        return false;
+    };
+    let mut fields = text.split_whitespace();
+    fields.next() == Some("uv") && fields.next() == Some(UV_VERSION)
 }
 
 fn finish_uv_install(dest: &Path, uv_bin: &Path, output: Output) -> io::Result<PathBuf> {
@@ -610,6 +618,17 @@ mod uv_tests {
             envs.get(OsStr::new("UV_NO_MODIFY_PATH")).and_then(|value| *value),
             Some(OsStr::new("1"))
         );
+    }
+
+    #[test]
+    fn uv_version_probe_requires_the_pinned_version() {
+        assert!(uv_version_matches(
+            format!("uv {} (build-id)\n", UV_VERSION).as_bytes()
+        ));
+        assert!(!uv_version_matches(b"uv 0.10.0 (older)\n"));
+        assert!(!uv_version_matches(b"not-uv 0.11.7\n"));
+        assert!(!uv_version_matches(b"uv\n"));
+        assert!(!uv_version_matches(&[0xff, 0xfe]));
     }
 
     #[test]
