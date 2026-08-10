@@ -861,15 +861,17 @@ async def lifespan(app: FastAPI):
         await close_http_client()
     except Exception:
         pass
-    logger.info("Shutdown: done.")
     # Last thing on a clean shutdown: retire the run sentinel so the next
-    # startup doesn't misread this exit as a crash (#1164). After "Shutdown:
-    # done." on purpose — if anything above dies, the sentinel survives and
-    # the death still gets reported.
+    # startup doesn't misread this exit as a crash (#1164). If clearing fails,
+    # retain the sentinel and report a degraded shutdown truthfully.
     try:
-        run_sentinel.clear_sentinel()
+        sentinel_cleared = run_sentinel.clear_sentinel()
     except Exception:
-        pass
+        sentinel_cleared = False
+    if sentinel_cleared:
+        logger.info("Shutdown: done.")
+    else:
+        logger.warning("Shutdown completed, but the run sentinel could not be cleared")
 
 
 from core.version import APP_VERSION  # single source of truth (pyproject metadata)
@@ -996,9 +998,15 @@ async def global_exception_handler(request: Request, exc: Exception):
     # Appending the shared hints HERE covers every route that can leak a
     # model-load/download error (generate, dub, archetypes, …), not just TTS
     # generate. append_hint is a no-op for every other error and never raises.
-    from core.failure import append_hint
+    from core.public_errors import public_exception_response
+
+    content = public_exception_response(
+        exc,
+        fallback="VoiceStudio hit an internal error; check the backend log for details.",
+    )
+    content["error_class"] = _entry.get("error_class")
     return JSONResponse(
-        {"detail": append_hint(str(exc)), "error_class": _entry.get("error_class")},
+        content,
         status_code=500,
         headers=headers,
     )

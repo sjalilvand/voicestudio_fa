@@ -15,6 +15,7 @@ Environment variables (`OMNIVOICE_TTS_BACKEND`, `OMNIVOICE_ASR_BACKEND`,
 `OMNIVOICE_LLM_BACKEND`) still win over the UI choice so power-users can pin
 a backend without Settings silently undoing it.
 """
+import logging
 import os
 import threading
 from time import perf_counter
@@ -29,8 +30,10 @@ from core import prefs
 from services import tts_backend, asr_backend, llm_backend, translation_engines
 from services.audio_dsp import list_effect_presets
 from api.schemas import EffectPresetsResponse
+from api.public_engine_metadata import public_backends, public_unavailability
 
 router = APIRouter()
+logger = logging.getLogger("omnivoice.engines_api")
 
 _FAMILIES = {
     "tts": (tts_backend, "tts_backend"),
@@ -54,32 +57,32 @@ def list_all_engines():
     return {
         "tts": {
             "active": tts_backend.active_backend_id(),
-            "backends": tts_backend.list_backends(),
+            "backends": public_backends(tts_backend.list_backends()),
         },
         "asr": {
             "active": asr_backend.active_backend_id(),
-            "backends": asr_backend.list_backends(),
+            "backends": public_backends(asr_backend.list_backends()),
         },
         "llm": {
             "active": llm_backend.active_backend_id(),
-            "backends": llm_backend.list_backends(),
+            "backends": public_backends(llm_backend.list_backends()),
         },
     }
 
 
 @router.get("/engines/tts")
 def list_tts_backends():
-    return {"active": tts_backend.active_backend_id(), "backends": tts_backend.list_backends()}
+    return {"active": tts_backend.active_backend_id(), "backends": public_backends(tts_backend.list_backends())}
 
 
 @router.get("/engines/asr")
 def list_asr_backends():
-    return {"active": asr_backend.active_backend_id(), "backends": asr_backend.list_backends()}
+    return {"active": asr_backend.active_backend_id(), "backends": public_backends(asr_backend.list_backends())}
 
 
 @router.get("/engines/llm")
 def list_llm_backends():
-    return {"active": llm_backend.active_backend_id(), "backends": llm_backend.list_backends()}
+    return {"active": llm_backend.active_backend_id(), "backends": public_backends(llm_backend.list_backends())}
 
 
 @router.get("/engines/effects/presets", response_model=EffectPresetsResponse)
@@ -102,7 +105,10 @@ def list_translation_engines():
     an engine whose Python dependency isn't importable yet.
     """
     return {
-        "engines": translation_engines.list_engines(),
+        "engines": [
+            {**entry, "availability_reason": public_unavailability(entry.get("availability_reason"))}
+            for entry in translation_engines.list_engines()
+        ],
         "sandboxed": translation_engines.is_frozen(),
     }
 
@@ -320,10 +326,10 @@ def engine_health(engine_id: str):
     Returns:
         { id, ok, message, latency_ms }
 
-    Never raises through to a 500: if the backend's check throws, the
-    exception is captured into the response body as ``ok=False`` /
-    ``message="ExcType: ..."`` so the UI can render a per-row failure
-    without crashing the panel. Unknown engine ids return 404.
+        Never raises through to a 500: backend diagnostics stay in the local
+        log and the response carries a fixed failure message, so the UI can
+        render a per-row failure without exposing private data. Unknown engine
+        ids return 404.
     """
     cls = _resolve_engine_class(engine_id)
     if cls is None:
@@ -352,16 +358,17 @@ def engine_health(engine_id: str):
         except Exception as exc:
             ok, msg = False, f"{type(exc).__name__}: {exc}"
 
-    # Mask any HF token the engine accidentally leaked into the message
-    # so the response body matches the same redaction guarantee as
-    # ``list_backends()``.
-    from services.tts_backend import _mask_hf_tokens
+    # Engine-owned output can contain much more than shaped HF tokens: local
+    # paths, arbitrary credentials, source lines, or a nested traceback.
+    from core.public_errors import public_engine_health
 
     latency_ms = (perf_counter() - t0) * 1000.0
+    if not ok:
+        logger.warning("Engine health check failed; details withheld")
     return {
         "id": engine_id,
         "ok": bool(ok),
-        "message": _mask_hf_tokens(msg) if isinstance(msg, str) else str(msg),
+        "message": public_engine_health(bool(ok), msg),
         "latency_ms": latency_ms,
     }
 

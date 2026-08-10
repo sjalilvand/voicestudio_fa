@@ -612,10 +612,13 @@ class OmniVoiceBackend(TTSBackend):
         try:
             import services.model_manager as mm
             if mm.model is not None:
-                mm.model = None
                 mm.free_vram()
-        except Exception:
-            pass
+                mm.model = None
+        except Exception as exc:
+            logger.warning("Shared voice model unload did not complete")
+            raise RuntimeError(
+                "The shared voice model could not be unloaded. Retry after the current generation finishes."
+            ) from exc
 
 
 # ── VoxCPM2 adapter (optional, scaffolded) ──────────────────────────────────
@@ -1695,11 +1698,11 @@ class GPTSoVITSBackend(TTSBackend):
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
         # GPT-SoVITS runs as an external API server — check if it's reachable.
-        import urllib.request
+        from services.outbound_http import open_trusted_endpoint
         url = os.environ.get("OMNIVOICE_GPTSOVITS_URL", "http://127.0.0.1:9880")
         try:
-            req = urllib.request.Request(f"{url}/", method="GET")
-            urllib.request.urlopen(req, timeout=2)
+            with open_trusted_endpoint(url, method="GET", timeout=2):
+                pass
             return True, "ready (server reachable)"
         except Exception:
             return False, (
@@ -1717,8 +1720,8 @@ class GPTSoVITSBackend(TTSBackend):
         return ["zh", "en", "ja", "yue", "ko"]
 
     def generate(self, text: str, **kw) -> torch.Tensor:
-        import urllib.request
         import urllib.parse
+        from services.outbound_http import open_trusted_endpoint
 
         ref_audio = kw.get("ref_audio")
         ref_text = kw.get("ref_text", "")
@@ -1746,11 +1749,10 @@ class GPTSoVITSBackend(TTSBackend):
             params["speed_factor"] = str(speed)
 
         query = urllib.parse.urlencode(params)
-        url = f"{self._url}/?{query}"
-
         try:
-            req = urllib.request.Request(url, method="POST")
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with open_trusted_endpoint(
+                self._url, method="POST", query=query, timeout=120
+            ) as resp:
                 audio_bytes = resp.read()
         except Exception as e:
             raise RuntimeError(
@@ -2042,7 +2044,7 @@ _INSTALL_HINTS: dict[str, str] = {
     "sherpa-onnx":   "pip install sherpa-onnx  (universal ONNX runtime, WASM-ready)",
     "omnivoice-gguf":"Bundled — runs the C++ omnivoice-tts binary in bin/. Quants download lazily from Serveurperso/OmniVoice-GGUF on first generate.",
     "supertonic3":   "uv sync --extra supertonic  (CPU-only ONNX, 31 langs, ~400 MB model on first use; OpenRAIL-M model license)",
-    "pockettts":     "pip install pocket-tts  (Kyutai, CPU-only, ~100 MB model on first use; MIT code + CC-BY-4.0 weights; weights are HF-gated, set HF_TOKEN)",
+    "pockettts":     "uv sync --extra pockettts  (Kyutai, CPU-only, ~100 MB model on first use; MIT code + CC-BY-4.0 weights; HF-gated, review terms and set HF_TOKEN)",
     "moss-tts-v15":  "git clone OpenMOSS/MOSS-TTS + set OMNIVOICE_MOSS_TTS_V15_DIR  (own venv, transformers==5.0; 8B, ~16 GB weights; CUDA/CPU, no MPS; Apache-2.0)",
     "dots-tts":      "git clone rednote-hilab/dots.tts + set OMNIVOICE_DOTS_TTS_DIR  (own venv, transformers==4.57; 2B, ~9 GB weights; CUDA/CPU, Linux/macOS only — no Windows; Apache-2.0)",
     "confucius4-tts":"git clone netease-youdao/Confucius4-TTS + set OMNIVOICE_CONFUCIUS4_TTS_DIR  (own Python 3.10 venv; 14-lang cross-lingual zero-shot clone; ~5 GB weights auto-download; CUDA/CPU, no MPS; Apache-2.0)",
@@ -2152,14 +2154,10 @@ def list_backends() -> list[dict]:
     for bid, cls in _REGISTRY.items():
         try:
             ok, msg = cls.is_available()
-        except Exception as exc:
+        except Exception:
             ok = False
-            msg = f"{type(exc).__name__}: {exc}"
-            logger.warning(
-                "list_backends: %s.is_available() raised — degrading "
-                "gracefully so the picker still renders: %s",
-                bid, msg,
-            )
+            msg = "Availability probe failed; check the backend log."
+            logger.warning("list_backends: availability probe failed for registered backend %s", bid)
         if ok:
             _LAST_ERRORS.pop(bid, None)
         else:

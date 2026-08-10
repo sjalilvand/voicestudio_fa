@@ -20,6 +20,8 @@ from pydantic import BaseModel
 
 from core.config import DATA_DIR
 from core import failure
+from core.logging_utils import log_safe
+from core.file_cleanup import FileCleanupError, unlink_if_present
 
 router = APIRouter()
 logger = logging.getLogger("omnivoice.batch")
@@ -531,7 +533,10 @@ async def enqueue_batch_job(
     _jobs[job_id] = job
     await _queue.put(job_id)
 
-    logger.info("Batch job %s enqueued: %s → %s", job_id, video.filename, lang_list)
+    logger.info(
+        "Batch job %s enqueued (%d target languages)",
+        log_safe(job_id), len(lang_list),
+    )
     return {"job_id": job_id, "status": "queued", "queue_position": _queue.qsize()}
 
 
@@ -573,14 +578,18 @@ def cancel_batch_job(job_id: str):
 @router.delete("/batch/jobs/{job_id}")
 def delete_batch_job(job_id: str):
     """Delete a batch job record and its video file."""
-    job = _jobs.pop(job_id, None)
+    job = _jobs.get(job_id)
     if not job:
         raise HTTPException(404, "Job not found")
-    if job.get("video_path") and os.path.exists(job["video_path"]):
+    if job.get("video_path"):
         try:
-            os.remove(job["video_path"])
-        except Exception:
-            pass
+            unlink_if_present(job["video_path"])
+        except FileCleanupError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail="Could not delete the batch video file. Close any app using it and retry.",
+            ) from exc
+    _jobs.pop(job_id, None)
     return {"deleted": True}
 
 

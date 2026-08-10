@@ -57,6 +57,7 @@ _HINTS: dict[str, str] = {
     "APPIMAGE_WEBKIT_WHITESCREEN": "Launch with WEBKIT_DISABLE_DMABUF_RENDERER=1 set.",
     "HF_AUTH_FAILED": "Set a valid HF_TOKEN in Settings → Hugging Face and retry.",
     "PYANNOTE_LICENSE_REQUIRED": "Accept the pyannote model licenses on Hugging Face, then retry.",
+    "POCKETTTS_GATED_WEIGHTS": "PocketTTS weights are gated on HuggingFace. Accept the access agreement at huggingface.co/kyutai/pocket-tts, then set HF_TOKEN in Settings → Hugging Face and retry.",
     "COMPUTE_TYPE_UNSUPPORTED": "Your GPU doesn't support float16 — VoiceStudio retried on int8. If transcription still fails, set OMNIVOICE/ASR_COMPUTE_TYPE=int8 or use CPU.",
     # Literal versions, not `--constraint deploy/torch-constraints.txt`:
     # desktop installs don't ship deploy/ (tauri.conf.json bundles only
@@ -108,6 +109,16 @@ _HINTS: dict[str, str] = {
 # (setup/download.py).
 
 _OFFICIAL_HF_ENDPOINTS = {"https://huggingface.co", "https://hf.co"}
+
+
+def public_hint_for_topic(topic: str) -> str:
+    """Data-independent response guidance for a stable failure topic."""
+    if topic == "HF_MIRROR_UNREACHABLE":
+        return (
+            "Check Settings → Models → Hugging Face mirror, restore the official "
+            "endpoint, and retry."
+        )
+    return _HINTS.get(topic, "")
 
 # Connectivity signatures across the layers an HF download failure surfaces
 # from: transformers' wording, huggingface_hub errors, requests/urllib3, and
@@ -297,6 +308,13 @@ def classify(reason: str) -> str:
         return "GATEKEEPER_QUARANTINE"
     if "webkit" in low or "white screen" in low or "dmabuf" in low or "appimage" in low:
         return "APPIMAGE_WEBKIT_WHITESCREEN"
+    if (
+        "gated" in low
+        or "share your contact" in low
+        or "access agreement" in low
+        or "access conditions" in low
+    ) and ("pocket" in low or "kyutai" in low):
+        return "POCKETTTS_GATED_WEIGHTS"
     if "pyannote" in low or ("gated" in low and "model" in low) or "accept the" in low:
         return "PYANNOTE_LICENSE_REQUIRED"
     # ASR robustness (#551 / #549): name the class so the no-segments toast is
@@ -351,15 +369,18 @@ def classify(reason: str) -> str:
     # load surface can leak them) and VoiceStudio's own repair messages, so the
     # user-facing error and the auto bug report name the class and its
     # automatic repair.
-    # Same class, both halves of it: a shard that is MISSING and a shard that
-    # is PRESENT but unparseable are the same problem (an interrupted or
-    # mangled download) with the same remedy, and only the first half was ever
-    # matched — so "Error while deserializing header: header too large" fell
-    # through to "" and shipped as a raw 500 with no repair (#1406).
     if (
         is_incomplete_cache_message(low)
         or is_corrupt_weights_message(low)
         or "broken file link" in low
+        or (
+            "the tts model cache for" in low
+            and "is incomplete" in low
+            and (
+                "could not be auto-repaired" in low
+                or "weights missing" in low
+            )
+        )
     ):
         return "MODEL_CACHE_CORRUPT"
     # #1347: an import that failed because its DOWNLOAD died is a network
