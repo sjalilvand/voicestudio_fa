@@ -574,7 +574,7 @@ def set_llm_skill(skill_id: str, body: _LLMSkillBody):
 #: Engines that have an in-tree acceptance dialog. Adding a new engine
 #: here means adding a corresponding frontend dialog + a license URLs
 #: dict in its constants module. Until that, the API refuses the write.
-_LICENSE_ALLOWED_ENGINES: frozenset[str] = frozenset({"supertonic3"})
+_LICENSE_ALLOWED_ENGINES: frozenset[str] = frozenset({"supertonic3", "pockettts"})
 
 
 class _LicenseAcceptBody(BaseModel):
