@@ -15,6 +15,10 @@ def _backend_cls():
     return PocketTTSBackend
 
 
+def _workflow_paths(workflows):
+    return sorted((*workflows.glob("*.yml"), *workflows.glob("*.yaml")))
+
+
 STUB_SIDECAR = r'''
 import base64, json, struct, sys
 
@@ -126,7 +130,9 @@ def test_cache_apt_action_is_pinned_in_every_workflow():
     from pathlib import Path
 
     workflows = Path(__file__).resolve().parents[1] / ".github/workflows"
-    for path in workflows.glob("*.yml"):
+    paths = _workflow_paths(workflows)
+    assert paths
+    for path in paths:
         text = path.read_text("utf-8")
         refs = re.findall(r"awalsh128/cache-apt-pkgs-action@([^\s#]+)", text)
         for ref in refs:
@@ -134,6 +140,12 @@ def test_cache_apt_action_is_pinned_in_every_workflow():
                 path,
                 ref,
             )
+
+
+def test_workflow_pin_scan_includes_both_yaml_extensions(tmp_path):
+    (tmp_path / "one.yml").touch()
+    (tmp_path / "two.yaml").touch()
+    assert [path.name for path in _workflow_paths(tmp_path)] == ["one.yml", "two.yaml"]
 
 
 def test_every_locale_discloses_hugging_face_model_access():
