@@ -273,13 +273,18 @@ def dub_abort(job_id: str):
     with _active_procs_lock:
         had_procs = bool(_active_procs.get(job_id))
     _kill_job_procs(job_id)
+    try:
+        if task_manager.cancel_task(job_id) is False:
+            raise RuntimeError("task cancellation was declined")
+    except Exception as exc:
+        logger.warning("Dub task cancellation failed")
+        raise HTTPException(
+            status_code=503,
+            detail="The dub could not be fully aborted. Retry the abort operation.",
+        ) from exc
     job = _dub_jobs.get(job_id)
     if job is not None:
         job["aborted"] = True
-    try:
-        task_manager.cancel_task(job_id)
-    except Exception:
-        pass
     return {"aborted": True, "had_active_procs": had_procs}
 
 

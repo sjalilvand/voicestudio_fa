@@ -831,14 +831,17 @@ def _cleanup_partial_download(job_dir: str) -> None:
 
     A partial download left on disk would otherwise be picked up as a "finished"
     file by the post-download codec probe, or collide with the next attempt's
-    output. Best-effort — never raises on the failure path.
+    output. Raises a stable error instead of retrying against unsafe stale data.
     """
     import glob
     for stale in glob.glob(os.path.join(job_dir, "original.*")):
         try:
             os.remove(stale)
-        except OSError:
-            pass
+        except OSError as exc:
+            logger.warning("Partial video download cleanup failed")
+            raise RuntimeError(
+                "Could not prepare the video download retry. Close any app using its temporary files and retry."
+            ) from exc
 
 
 def _delete_cookie_export(cookie_file: str | None) -> bool:

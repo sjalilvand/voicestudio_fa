@@ -400,13 +400,18 @@ async def stream_logs(
     if not path or not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"Log file not found for source={source}")
 
+    try:
+        initial_position = os.path.getsize(path)
+    except OSError as exc:
+        logger.warning("Log stream could not determine its starting position")
+        raise HTTPException(
+            status_code=503,
+            detail="The log stream could not be started. Retry after checking file permissions.",
+        ) from exc
+
     async def _generate():
         """Yield SSE events whenever new lines appear in the log file."""
-        last_pos = 0
-        try:
-            last_pos = os.path.getsize(path)
-        except Exception:
-            pass
+        last_pos = initial_position
         while True:
             await asyncio.sleep(interval)
             try:
@@ -461,8 +466,12 @@ async def clear_system_logs():
         for key in ("crash_log_acked", "crash_log_acked_size"):
             try:
                 prefs_delete(key)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Cleared logs but could not reset crash acknowledgement state")
+                raise HTTPException(
+                    status_code=500,
+                    detail="Logs were cleared, but notification state could not be reset. Retry the clear operation.",
+                ) from exc
     return {"cleared": cleared_any}
 
 
@@ -719,7 +728,7 @@ def system_notifications():
                 },
             })
     except Exception:
-        pass
+        logger.warning("Previous-run crash record could not be checked")
 
     # 5. A previous session logged a crash the user never saw.
     #    crash_log grew past the last acknowledged size AND predates this
@@ -742,7 +751,7 @@ def system_notifications():
                 },
             })
     except Exception:
-        pass
+        logger.warning("Previous-session crash log could not be checked")
 
     return {"notifications": notes, "count": len(notes)}
 
@@ -981,18 +990,26 @@ async def _do_clean_audio(audio, tmp_dir, clean_id):
     clean_filename = f"mic_{clean_id}.wav"
     final_path = os.path.join(OUTPUTS_DIR, clean_filename)
 
+    conversion_fallback = False
     try:
-        await run_ffmpeg(
+        rc, _, _ = await run_ffmpeg(
             [ffmpeg, "-y", "-i", clean_path, "-ar", "24000", "-ac", "1", final_path],
             timeout=120.0,
         )
+        conversion_fallback = rc != 0
     except asyncio.TimeoutError:
-        pass
-    if not os.path.exists(final_path):
+        conversion_fallback = True
+        logger.warning("Final clean-audio conversion timed out; returning the cleaned source format")
+    if conversion_fallback:
+        shutil.copy2(clean_path, final_path)
+    elif not os.path.exists(final_path):
         shutil.copy2(clean_path, final_path)
 
+    headers = {"X-Clean-Filename": clean_filename}
+    if conversion_fallback:
+        headers["X-Clean-Conversion"] = "fallback"
     return FileResponse(final_path, media_type="audio/wav", filename=clean_filename,
-                        headers={"X-Clean-Filename": clean_filename})
+                        headers=headers)
 
 
 @router.get("/system/asr-backends")

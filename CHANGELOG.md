@@ -42,6 +42,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 ### Fixed
 
 - Filenames and other outside data can no longer forge extra lines or terminal commands in backend and frontend diagnostic logs. (#1457)
+- Backend journal, dictation reset, voice-catalog, and crash-notification failures are now visible and retryable instead of being silently ignored. (#1459)
 - Backend failures keep raw tracebacks, local paths and credentials in the local log instead of returning them in API responses. (#1454)
 - GPT-SoVITS connections now stay on loopback or explicitly trusted networks and cannot escape through redirects or DNS rebinding. (#1463)
 - Engine discovery no longer exposes probe exceptions, local paths or credentials in API responses and logs. (#1460)
