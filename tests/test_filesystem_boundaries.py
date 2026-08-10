@@ -149,7 +149,7 @@ def test_dub_artifact_rejects_db_path_and_symlink_escapes(tmp_path, monkeypatch)
 
     for value in (outside / "secret.wav", root / "link" / "secret.wav"):
         with pytest.raises(HTTPException) as exc:
-            dub_export._dub_artifact(value)
+            dub_export._dub_artifact(value, "job_123")
         assert exc.value.status_code == 400
 
 
@@ -164,8 +164,28 @@ def test_dub_artifact_rebases_trusted_path_after_data_relocation(tmp_path, monke
 
     old_posix = tmp_path / "old-data" / "dub_jobs" / "job_123" / "tracks" / "voice.wav"
     old_windows = r"D:\Old VoiceStudio\dub_jobs\job_123\tracks\voice.wav"
-    assert dub_export._dub_artifact(old_posix) == str(artifact.resolve())
-    assert dub_export._dub_artifact(old_windows) == str(artifact.resolve())
+    assert dub_export._dub_artifact(old_posix, "job_123") == str(artifact.resolve())
+    assert dub_export._dub_artifact(old_windows, "job_123") == str(artifact.resolve())
+
+
+def test_dub_artifact_rebase_cannot_cross_job_boundary(tmp_path, monkeypatch):
+    from api.routers import dub_export
+
+    current = tmp_path / "new-data" / "dub_jobs"
+    other = current / "job_other" / "voice.wav"
+    other.parent.mkdir(parents=True)
+    other.write_bytes(b"secret")
+    monkeypatch.setattr(dub_export, "DUB_DIR", str(current))
+
+    values = [
+        other,
+        tmp_path / "old-data" / "dub_jobs" / "job_other" / "voice.wav",
+        r"D:\Old VoiceStudio\dub_jobs\job_other\voice.wav",
+    ]
+    for value in values:
+        with pytest.raises(HTTPException) as exc:
+            dub_export._dub_artifact(value, "job_123")
+        assert exc.value.status_code == 400
 
 
 def test_dub_artifact_rebase_rejects_unanchored_traversal_and_symlink(tmp_path, monkeypatch):
@@ -190,7 +210,7 @@ def test_dub_artifact_rebase_rejects_unanchored_traversal_and_symlink(tmp_path, 
     ]
     for value in rejected:
         with pytest.raises(HTTPException) as exc:
-            dub_export._dub_artifact(value)
+            dub_export._dub_artifact(value, "job_123")
         assert exc.value.status_code == 400
 
 

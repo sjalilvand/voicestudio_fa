@@ -53,11 +53,15 @@ def _job_dir_or_400(job_id: str) -> str:
         raise HTTPException(status_code=400, detail="Invalid job id") from exc
 
 
-def _resolve_dub_artifact(value: object) -> Path:
+def _resolve_dub_artifact(value: object, job_id: str) -> Path:
     """Resolve current or safely rebased pre-relocation dub artifact paths."""
     raw = str(value or "")
     try:
-        return resolve_within(DUB_DIR, raw)
+        resolved = resolve_within(DUB_DIR, raw)
+        relative = resolved.relative_to(Path(DUB_DIR).resolve())
+        if not relative.parts or relative.parts[0] != job_id:
+            raise UnsafePath("Artifact does not belong to the requested job")
+        return resolved
     except UnsafePath:
         # Older job rows store absolute paths. After the user relocates the
         # data directory, preserve only the suffix rooted at the exact
@@ -75,7 +79,7 @@ def _resolve_dub_artifact(value: object) -> Path:
         relative_parts = parts[positions[-1] + 1:]
         if (
             not relative_parts
-            or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", relative_parts[0])
+            or relative_parts[0] != job_id
             or any(
                 part in {"", ".", ".."}
                 or "/" in part
@@ -88,10 +92,10 @@ def _resolve_dub_artifact(value: object) -> Path:
         return resolve_within(DUB_DIR, Path(*relative_parts))
 
 
-def _dub_artifact(value: object, *, missing_detail: str = "File not found") -> str:
+def _dub_artifact(value: object, job_id: str, *, missing_detail: str = "File not found") -> str:
     """Resolve a persisted job artifact inside the global dub-data boundary."""
     try:
-        path = _resolve_dub_artifact(value)
+        path = _resolve_dub_artifact(value, job_id)
     except UnsafePath as exc:
         raise HTTPException(status_code=400, detail="Invalid job artifact path") from exc
     if not path.is_file():
@@ -99,11 +103,11 @@ def _dub_artifact(value: object, *, missing_detail: str = "File not found") -> s
     return str(path)
 
 
-def _optional_dub_artifact(value: object) -> str | None:
+def _optional_dub_artifact(value: object, job_id: str) -> str | None:
     if not value:
         return None
     try:
-        path = _resolve_dub_artifact(value)
+        path = _resolve_dub_artifact(value, job_id)
     except UnsafePath as exc:
         raise HTTPException(status_code=400, detail="Invalid job artifact path") from exc
     return str(path) if path.is_file() else None
@@ -546,7 +550,7 @@ async def dub_download(
     filtered_tracks = {
         key: {
             **value,
-            "path": _dub_artifact(value.get("path"), missing_detail="Dubbed track not found"),
+            "path": _dub_artifact(value.get("path"), job_id, missing_detail="Dubbed track not found"),
         }
         for key, value in filtered_tracks.items()
     }
@@ -554,7 +558,7 @@ async def dub_download(
     if not filtered_tracks and not include_original:
         raise HTTPException(status_code=400, detail="No tracks selected for export")
 
-    video_path = _dub_artifact(job["video_path"], missing_detail="Source video not found")
+    video_path = _dub_artifact(job["video_path"], job_id, missing_detail="Source video not found")
     stamp = _unique_stamp()
     exports_dir = os.path.join(job_dir, "exports")
     os.makedirs(exports_dir, exist_ok=True)
@@ -581,7 +585,7 @@ async def dub_download(
         # safe_name below).
         safe_lang = "".join(c for c in lang_code if c.isalnum() or c in "-_") or "track"
         out_path = os.path.join(exports_dir, f"dubbed_audio_{safe_lang}_{stamp}.{fmt}")
-        bg = _optional_dub_artifact(job.get("no_vocals_path")) if preserve_bg else None
+        bg = _optional_dub_artifact(job.get("no_vocals_path"), job_id) if preserve_bg else None
         cmd = _build_audio_export_cmd(ffmpeg, track_info["path"], bg, out_path, fmt)
         try:
             rc, _, stderr = await run_ffmpeg(cmd, timeout=1800.0)
@@ -705,7 +709,7 @@ async def dub_download(
         retimed_idx = input_idx
         input_idx += 1
 
-    bg_audio = _optional_dub_artifact(job.get("no_vocals_path")) if preserve_bg else None
+    bg_audio = _optional_dub_artifact(job.get("no_vocals_path"), job_id) if preserve_bg else None
     bg_idx = None
     if bg_audio and filtered_tracks:
         cmd += ["-i", bg_audio]
@@ -917,7 +921,7 @@ async def dub_get_media(job_id: str):
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    video_path = _dub_artifact(job["video_path"], missing_detail="Media file not found")
+    video_path = _dub_artifact(job["video_path"], job_id, missing_detail="Media file not found")
     # Pass an explicit media_type. Without this Starlette falls back to
     # mimetypes.guess_type, which on some platforms returns the wrong
     # MIME (e.g. "application/octet-stream" for .mkv), and the Tauri
@@ -967,11 +971,11 @@ async def dub_preview_video(
     if not track_info:
         raise HTTPException(status_code=404, detail=f"No dubbed track for lang={lang}")
 
-    track_path = _dub_artifact(track_info.get("path"), missing_detail="Dubbed track file missing")
+    track_path = _dub_artifact(track_info.get("path"), job_id, missing_detail="Dubbed track file missing")
 
-    video_path = _dub_artifact(job.get("video_path"), missing_detail="Source video missing")
+    video_path = _dub_artifact(job.get("video_path"), job_id, missing_detail="Source video missing")
 
-    bg_audio = _optional_dub_artifact(job.get("no_vocals_path")) if preserve_bg else None
+    bg_audio = _optional_dub_artifact(job.get("no_vocals_path"), job_id) if preserve_bg else None
     has_bg = bool(bg_audio)
 
     # realpath-normalised + containment-checked inline BEFORE any filesystem
@@ -1205,8 +1209,8 @@ async def dub_get_onsets(job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    vocals = _optional_dub_artifact(job.get("vocals_path"))
-    mix = _optional_dub_artifact(job.get("audio_path"))
+    vocals = _optional_dub_artifact(job.get("vocals_path"), job_id)
+    mix = _optional_dub_artifact(job.get("audio_path"), job_id)
     if vocals:
         src_path, source = vocals, "vocals"
     elif mix:
@@ -1271,7 +1275,7 @@ async def dub_get_audio(job_id: str):
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    audio = _dub_artifact(job.get("audio_path"), missing_detail="Audio file not found")
+    audio = _dub_artifact(job.get("audio_path"), job_id, missing_detail="Audio file not found")
     return FileResponse(audio, media_type="audio/wav")
 
 def _seg_wav_candidates(job: dict, lang: "str | None", seg_keys: tuple) -> list:
@@ -1340,9 +1344,9 @@ async def dub_qc_pass(job_id: str, lang: str = Query(None), drift_threshold: flo
         raise HTTPException(status_code=404, detail="Job not found")
     tracks = job.get("dubbed_tracks", {})
     if lang and lang in tracks:
-        wav_path = _dub_artifact(tracks[lang].get("path"), missing_detail="Dubbed audio file not found")
+        wav_path = _dub_artifact(tracks[lang].get("path"), job_id, missing_detail="Dubbed audio file not found")
     elif tracks:
-        wav_path = _dub_artifact(list(tracks.values())[0].get("path"), missing_detail="Dubbed audio file not found")
+        wav_path = _dub_artifact(list(tracks.values())[0].get("path"), job_id, missing_detail="Dubbed audio file not found")
     else:
         raise HTTPException(status_code=400, detail="No dubbed audio track generated yet")
     segments = job.get("segments") or []
@@ -1438,9 +1442,9 @@ async def dub_download_audio(
 
     tracks = job.get("dubbed_tracks", {})
     if lang and lang in tracks:
-        wav_path = _dub_artifact(tracks[lang].get("path"), missing_detail="Audio file not found")
+        wav_path = _dub_artifact(tracks[lang].get("path"), job_id, missing_detail="Audio file not found")
     elif tracks:
-        wav_path = _dub_artifact(list(tracks.values())[0].get("path"), missing_detail="Audio file not found")
+        wav_path = _dub_artifact(list(tracks.values())[0].get("path"), job_id, missing_detail="Audio file not found")
     else:
         raise HTTPException(status_code=400, detail="No dubbed audio track generated yet")
 
@@ -1450,7 +1454,7 @@ async def dub_download_audio(
     exports_dir = os.path.join(job_dir, "exports")
     os.makedirs(exports_dir, exist_ok=True)
 
-    bg_audio = _optional_dub_artifact(job.get("no_vocals_path")) if preserve_bg else None
+    bg_audio = _optional_dub_artifact(job.get("no_vocals_path"), job_id) if preserve_bg else None
     if bg_audio:
         ffmpeg = find_ffmpeg()
         final_audio_path = os.path.join(exports_dir, f"mixed_dub_{lang_label}_{stamp}.wav")
@@ -1679,9 +1683,9 @@ async def dub_download_mp3(
 
     tracks = job.get("dubbed_tracks", {})
     if lang and lang in tracks:
-        wav_path = _dub_artifact(tracks[lang].get("path"), missing_detail="Audio file not found")
+        wav_path = _dub_artifact(tracks[lang].get("path"), job_id, missing_detail="Audio file not found")
     elif tracks:
-        wav_path = _dub_artifact(list(tracks.values())[0].get("path"), missing_detail="Audio file not found")
+        wav_path = _dub_artifact(list(tracks.values())[0].get("path"), job_id, missing_detail="Audio file not found")
     else:
         raise HTTPException(status_code=400, detail="No dubbed audio track generated yet")
 
@@ -1693,7 +1697,7 @@ async def dub_download_mp3(
     os.makedirs(exports_dir, exist_ok=True)
 
     source_path = wav_path
-    bg_audio = _optional_dub_artifact(job.get("no_vocals_path")) if preserve_bg else None
+    bg_audio = _optional_dub_artifact(job.get("no_vocals_path"), job_id) if preserve_bg else None
     if bg_audio:
         mixed_path = os.path.join(exports_dir, f"mixed_mp3_{lang_label}_{stamp}.wav")
         cmd_mix = [
@@ -1763,17 +1767,17 @@ async def dub_export_stems(job_id: str, lang: str = Query(None)):
         raise HTTPException(status_code=400, detail="No dubbed tracks generated yet")
 
     if lang and lang in tracks:
-        vocals_path = _dub_artifact(tracks[lang].get("path"), missing_detail="Dubbed audio file not found")
+        vocals_path = _dub_artifact(tracks[lang].get("path"), job_id, missing_detail="Dubbed audio file not found")
         lang_label = lang
     elif tracks:
         first_key = list(tracks.keys())[0]
         _safe_lang_or_400(first_key)
-        vocals_path = _dub_artifact(tracks[first_key].get("path"), missing_detail="Dubbed audio file not found")
+        vocals_path = _dub_artifact(tracks[first_key].get("path"), job_id, missing_detail="Dubbed audio file not found")
         lang_label = first_key
     else:
         raise HTTPException(status_code=400, detail="No dubbed audio track")
 
-    bg_path = _optional_dub_artifact(job.get("no_vocals_path"))
+    bg_path = _optional_dub_artifact(job.get("no_vocals_path"), job_id)
 
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
