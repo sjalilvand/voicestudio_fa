@@ -69,6 +69,13 @@ def test_default_model_source_is_pinned(monkeypatch):
     assert main._model_source() == (main._DEFAULT_REPO, main._DEFAULT_REVISION)
 
 
+def test_default_model_revision_matches_the_central_reviewed_pin():
+    from engines.moss_tts_v15 import main
+    from services.hf_revisions import revision_for
+
+    assert main._DEFAULT_REVISION == revision_for(main._DEFAULT_REPO)
+
+
 def test_custom_remote_code_is_rejected_without_explicit_opt_in(monkeypatch):
     from engines.moss_tts_v15 import main
     monkeypatch.setenv("OMNIVOICE_MOSS_TTS_V15_MODEL", "someone/custom-model")
