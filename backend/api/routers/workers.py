@@ -79,7 +79,7 @@ def create_enrollment(request: EnrollRequest) -> dict:
     if not service.control_plane.running:
         raise HTTPException(
             status_code=409,
-            detail="Remote workers are turned off. Enable them in Settings → Workers first.",
+            detail="Remote workers are turned off. Enable them in Settings → System → Remote workers first.",
         )
     token = service.control_plane.create_enrollment(
         endpoint=request.endpoint, label=request.label, ttl_seconds=request.ttl_seconds

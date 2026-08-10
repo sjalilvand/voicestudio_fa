@@ -7,5 +7,5 @@ network I/O and imports no gRPC: every rule in here is unit-testable without a
 socket, and the transport layer (added later) is a thin adapter over it.
 
 The wire contract lives in ``protocol/worker_v1.proto`` and is the only artifact
-shared with the future Go control plane. See ``remote/goal_v2.md`` Part A.
+shared with the future Go control plane. See ``docs/remote-workers.md``.
 """

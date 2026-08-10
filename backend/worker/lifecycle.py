@@ -203,7 +203,7 @@ class Attempt:
     finished_at: Optional[float] = None
     # Progress lease: renewed by every progress/model-loading message. Liveness
     # is "is it still moving", not "has the clock run out" — a 40-minute dub is
-    # not a hung task (goal_v2.md A8).
+    # not a hung task (docs/remote-workers.md).
     lease_expires_at: Optional[float] = None
     # Set when the worker's stream drops. The attempt is NOT failed yet.
     disconnected_at: Optional[float] = None

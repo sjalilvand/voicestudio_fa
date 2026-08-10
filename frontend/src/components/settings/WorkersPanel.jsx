@@ -1,10 +1,14 @@
 /**
- * Settings → Sharing → Remote workers.
+ * Settings → System → Remote workers.
  *
- * Run inference on your other machines. Distinct from the Remote backend panel
- * above it: that one points THIS app at a backend running elsewhere, so the
- * work and the data both live there. This one keeps the app here and hands
- * individual tasks out to GPUs you own, with the results coming back.
+ * Run inference on your other machines. Its own System entry rather than a
+ * section under Sharing, because the direction is opposite: everything in
+ * Sharing is about letting something else reach THIS machine, while this
+ * sends work OUT to machines you own and brings the results back.
+ *
+ * Also distinct from the Remote backend panel under Sharing: that one points
+ * this app at a backend running elsewhere, so the work and the data both live
+ * there. This keeps the app here and hands out individual tasks.
  *
  * Two rules the UI must not soften, because they are the feature's contract:
  *

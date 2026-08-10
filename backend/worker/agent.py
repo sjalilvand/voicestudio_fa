@@ -133,7 +133,7 @@ class WorkerAgent:
             except (FileNotFoundError, PermissionError) as exc:
                 raise RuntimeError(
                     "This machine has not been enrolled yet. Generate a token on the "
-                    "control plane (Settings → Sharing → Remote workers) and start with "
+                    "control plane (Settings → System → Remote workers) and start with "
                     "OMNIVOICE_WORKER_TOKEN set."
                 ) from exc
             endpoint = endpoint or (os.environ.get("OMNIVOICE_WORKER_ENDPOINT") or "").strip()

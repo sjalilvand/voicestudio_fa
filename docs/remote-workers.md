@@ -30,7 +30,7 @@ exactly as it did before.
 
 **1. On this machine (the one you work on):**
 
-Settings → Sharing → Remote workers → turn on **Use remote workers**.
+Settings → System → Remote workers → turn on **Use remote workers**.
 
 The panel shows the address workers should connect to, and a **Generate token**
 button.
@@ -128,7 +128,7 @@ worker and never implicit.
 
 ## Turning it off
 
-Settings → Sharing → Remote workers → toggle off. The listening socket closes
+Settings → System → Remote workers → toggle off. The listening socket closes
 and the background loops stop. Your enrolled workers and their settings are
 kept, so turning it back on does not mean setting everything up again.
 

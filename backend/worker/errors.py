@@ -53,7 +53,7 @@ class ErrorClass(str, enum.Enum):
 
         Capability and capacity failures must not: penalising a worker for
         correctly declining work it cannot do is how a healthy fleet
-        quarantines itself (goal_v2.md A11).
+        quarantines itself (docs/remote-workers.md).
         """
         return self in _CHARGEABLE
 
@@ -158,7 +158,7 @@ def from_reason(reason: str, *, code: Optional[str] = None) -> WorkerError:
 
     ``reason`` is sanitized through ``core.failure`` before it leaves the
     machine — HF tokens, ``*KEY*``/``*SECRET*`` env values and home paths must
-    never ride the wire (goal_v2.md A6), and the worker is a remote machine
+    never ride the wire (docs/remote-workers.md), and the worker is a remote machine
     whose logs the user may never see.
     """
     safe = failure.sanitize(reason) or reason.__class__.__name__

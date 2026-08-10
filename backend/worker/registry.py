@@ -1,6 +1,6 @@
 """Persistence for remote workers and their enrollment tokens.
 
-What is durable and what is not is a deliberate split (goal_v2.md A4):
+What is durable and what is not is a deliberate split (docs/remote-workers.md):
 
   **Persisted** — worker identities and their public keys, revocations,
   per-worker configuration, and enrollment tokens. These must survive a restart

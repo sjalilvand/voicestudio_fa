@@ -420,10 +420,11 @@ export default function Settings() {
           <>
             <SharingPanel />
             <RemoteBackendPanel />
-            <WorkersPanel />
             <MCPBindingsPanel />
           </>
         );
+      case 'workers':
+        return <WorkersPanel />;
       case 'openapi':
         return <OpenApiPanel />;
       case 'credentials':

@@ -111,7 +111,7 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
             return self._refuse(
                 "AUTH_FAILED",
                 "This worker could not be authenticated. Generate a new enrollment "
-                "token in Settings → Workers and add the worker again.",
+                "token in Settings → System → Remote workers and add the worker again.",
             )
 
         epoch = registry.begin_session(worker.id)

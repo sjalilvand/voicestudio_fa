@@ -177,7 +177,7 @@ _BASE_SCHEMA = """
     );
     CREATE INDEX IF NOT EXISTS idx_pron_lang ON pronunciation_entries(language);
 
-    -- Remote GPU workers (goal_v2.md Part A). Opt-in: an install with no
+    -- Remote GPU workers (docs/remote-workers.md). Opt-in: an install with no
     -- remote workers never writes a row here and behaves exactly as before.
     --
     -- `public_key` is the worker's identity — a server-assigned id is a name,
