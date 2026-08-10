@@ -10,7 +10,7 @@ import uuid
 from pathlib import Path, PureWindowsPath
 from typing import Optional
 
-from core.config import DUB_DIR, dub_seg_path
+from core.config import DUB_DIR
 from core.http_headers import content_disposition
 from core.path_security import UnsafePath, resolve_within
 from core.tasks import task_manager
@@ -92,13 +92,51 @@ def _resolve_dub_artifact(value: object, job_id: str) -> Path:
         return resolve_within(DUB_DIR, Path(*relative_parts))
 
 
+def _discover_job_artifact(path: Path, job_id: str) -> Path | None:
+    """Return an existing artifact by walking the validated job directory.
+
+    Persisted paths select names but never reach a filesystem sink. Each
+    returned path comes from ``os.scandir`` beneath the validated job root,
+    and symlinks are rejected so a post-validation swap cannot escape.
+    """
+    job_root = Path(_job_dir_or_400(job_id)).resolve()
+    try:
+        parts = path.relative_to(job_root).parts
+    except ValueError:
+        return None
+    if not parts:
+        return None
+    current = job_root
+    for index, requested in enumerate(parts):
+        if os.path.basename(requested) != requested or requested in {"", ".", ".."}:
+            return None
+        try:
+            entry = next(
+                (
+                    item
+                    for item in os.scandir(current)
+                    if item.name == requested and not item.is_symlink()
+                ),
+                None,
+            )
+        except OSError:
+            return None
+        if entry is None:
+            return None
+        if index < len(parts) - 1 and not entry.is_dir(follow_symlinks=False):
+            return None
+        current = Path(entry.path)
+    return current if current.is_file() else None
+
+
 def _dub_artifact(value: object, job_id: str, *, missing_detail: str = "File not found") -> str:
     """Resolve a persisted job artifact inside the global dub-data boundary."""
     try:
-        path = _resolve_dub_artifact(value, job_id)
+        resolved = _resolve_dub_artifact(value, job_id)
     except UnsafePath as exc:
         raise HTTPException(status_code=400, detail="Invalid job artifact path") from exc
-    if not path.is_file():
+    path = _discover_job_artifact(resolved, job_id)
+    if path is None:
         raise HTTPException(status_code=404, detail=missing_detail)
     return str(path)
 
@@ -107,10 +145,11 @@ def _optional_dub_artifact(value: object, job_id: str) -> str | None:
     if not value:
         return None
     try:
-        path = _resolve_dub_artifact(value, job_id)
+        resolved = _resolve_dub_artifact(value, job_id)
     except UnsafePath as exc:
         raise HTTPException(status_code=400, detail="Invalid job artifact path") from exc
-    return str(path) if path.is_file() else None
+    path = _discover_job_artifact(resolved, job_id)
+    return str(path) if path is not None else None
 
 
 def _safe_lang_or_400(lang: str | None) -> str | None:
@@ -1203,7 +1242,6 @@ async def dub_get_onsets(job_id: str):
     ``onsets.json`` in the job directory; recomputed if the source audio is
     newer than the cache (e.g. re-ingest into the same job dir).
     """
-    import json
     job_dir = _job_dir_or_400(job_id)
     job = _get_job(job_id)
     if not job:
@@ -1251,8 +1289,8 @@ async def dub_get_onsets(job_id: str):
         with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(payload, f)
         os.replace(tmp_path, cache_path)
-    except OSError as e:
-        logger.warning("onsets cache write failed for %s: %s", job_id, e)
+    except OSError:
+        logger.warning("onsets cache write failed")
     return payload
 
 
@@ -1297,6 +1335,29 @@ def _seg_wav_candidates(job: dict, lang: "str | None", seg_keys: tuple) -> list:
     return keys
 
 
+def _existing_segment_artifact(job_id: str, candidate_ids: list) -> str | None:
+    """Discover an existing, non-symlink segment WAV inside one job root."""
+    job_root = Path(_job_dir_or_400(job_id))
+    wanted: list[str] = []
+    for value in candidate_ids:
+        safe = re.sub(r"[^A-Za-z0-9._-]", "_", str(value))
+        if safe:
+            wanted.append(f"seg_{safe}.wav")
+    try:
+        entries = {
+            entry.name: entry
+            for entry in os.scandir(job_root)
+            if not entry.is_symlink() and entry.is_file(follow_symlinks=False)
+        }
+    except OSError:
+        return None
+    for name in wanted:
+        entry = entries.get(name)
+        if entry is not None:
+            return entry.path
+    return None
+
+
 @router.get("/dub/preview/{job_id}/{segment_index}")
 async def dub_preview_segment(job_id: str, segment_index: int, lang: str = Query(None)):
     _job_dir_or_400(job_id)
@@ -1308,16 +1369,12 @@ async def dub_preview_segment(job_id: str, segment_index: int, lang: str = Query
     # name first (P1.3), then the legacy id/index names for jobs rendered
     # before per-language (and before id-based, #185) naming. Each candidate
     # is realpath-normalised and containment-checked BEFORE any filesystem
-    # access, so the guard dominates every path sink.
+    # access, and discovery returns only a non-symlink entry from that root.
     order = job.get("seg_order") or []
     seg_id = order[segment_index] if 0 <= segment_index < len(order) else segment_index
-    base = os.path.realpath(DUB_DIR)
-    seg_path = None
-    for _sid in _seg_wav_candidates(job, lang, (seg_id, segment_index)):
-        cand = os.path.realpath(dub_seg_path(job_id, _sid))
-        if cand.startswith(base + os.sep) and os.path.exists(cand):
-            seg_path = cand
-            break
+    seg_path = _existing_segment_artifact(
+        job_id, _seg_wav_candidates(job, lang, (seg_id, segment_index))
+    )
     if not seg_path:
         raise HTTPException(status_code=404, detail="Segment not generated yet")
     return FileResponse(seg_path, media_type="audio/wav")
@@ -1377,10 +1434,10 @@ async def dub_qc_pass(job_id: str, lang: str = Query(None), drift_threshold: flo
         )
     except ASRTimeoutError as e:
         # Backend is alive; ASR just couldn't finish in time. 504, not 500/connection.
-        logger.warning("dub QC ASR pass timed out for %s: %s", job_id, e)
+        logger.warning("dub QC ASR pass timed out")
         raise HTTPException(status_code=504, detail=str(e))
     except Exception as e:
-        logger.exception("dub QC ASR pass failed for %s", job_id)
+        logger.exception("dub QC ASR pass failed")
         raise HTTPException(status_code=500, detail=f"QC transcription failed: {e}")
 
     seg_ids = job.get("seg_order") or [s.get("id", i) for i, s in enumerate(segments)]
@@ -1408,9 +1465,9 @@ async def dub_qc_pass(job_id: str, lang: str = Query(None), drift_threshold: flo
     try:
         from core import job_store
         job_store.append_event(job_id, f"data: {payload}\n\n")
-    except Exception as e:
+    except Exception:
         # QC event fan-out is best-effort; the scores are already in the response.
-        logger.debug("QC event append failed: %s", e)
+        logger.debug("QC event append failed")
 
     return {
         "engine": engine_id,
@@ -1639,17 +1696,13 @@ async def dub_export_segments_zip(job_id: str, lang: str = Query(None)):
 
     zip_buffer = io.BytesIO()
     order = job.get("seg_order") or []
-    base = os.path.realpath(DUB_DIR)
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         for i, seg in enumerate(segments):
             seg_id = order[i] if i < len(order) else i
-            # realpath + containment guard before any filesystem access.
-            seg_path = None
-            for _sid in _seg_wav_candidates(job, lang, (seg_id, i)):
-                cand = os.path.realpath(dub_seg_path(job_id, _sid))
-                if cand.startswith(base + os.sep) and os.path.exists(cand):
-                    seg_path = cand
-                    break
+            # Discovery returns only a non-symlink entry from the validated job root.
+            seg_path = _existing_segment_artifact(
+                job_id, _seg_wav_candidates(job, lang, (seg_id, i))
+            )
             if seg_path:
                 speaker = seg.get("speaker_id", "Speaker1").replace(" ", "")
                 start_str = f"{seg['start']:.2f}"

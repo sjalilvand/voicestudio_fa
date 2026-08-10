@@ -242,6 +242,40 @@ def test_dub_artifact_rebase_cannot_cross_job_boundary(tmp_path, monkeypatch):
         assert exc.value.status_code == 400
 
 
+def test_segment_artifact_discovery_rejects_traversal_and_symlinks(tmp_path, monkeypatch):
+    from api.routers import dub_export
+
+    root = tmp_path / "dub"
+    job = root / "job_123"
+    outside = tmp_path / "outside"
+    job.mkdir(parents=True)
+    outside.mkdir()
+    good = job / "seg_en_7.wav"
+    good.write_bytes(b"RIFF")
+    secret = outside / "secret.wav"
+    secret.write_bytes(b"secret")
+    monkeypatch.setattr(dub_export, "DUB_DIR", str(root))
+
+    assert dub_export._existing_segment_artifact("job_123", ["en_7"]) == str(good)
+    assert dub_export._existing_segment_artifact("job_123", ["../../secret"]) is None
+    link = job / "seg_link.wav"
+    try:
+        link.symlink_to(secret)
+    except OSError:
+        return
+    assert dub_export._existing_segment_artifact("job_123", ["link"]) is None
+
+
+def test_dub_export_security_logs_have_fixed_message_shapes():
+    source = Path("backend/api/routers/dub_export.py").read_text(encoding="utf-8")
+    assert 'logger.warning("onsets cache write failed")' in source
+    assert 'logger.warning("dub QC ASR pass timed out")' in source
+    assert 'logger.exception("dub QC ASR pass failed")' in source
+    assert 'logger.debug("QC event append failed")' in source
+    assert 'timed out for %s' not in source
+    assert 'onsets cache write failed for %s' not in source
+
+
 def test_dub_artifact_rebase_rejects_unanchored_traversal_and_symlink(tmp_path, monkeypatch):
     from api.routers import dub_export
 
