@@ -182,7 +182,14 @@ def test_get_secret_sqlite_failure_uses_fixed_shape_fallback(
     monkeypatch.setattr(db, "db_conn", fail_db_conn)
     caplog.clear()
     assert settings_store.get_secret("llm_key.private_provider") is None
-    assert "settings_store.get_secret: SQLite read failed" in caplog.text
+    records = [
+        record
+        for record in caplog.records
+        if record.getMessage() == "settings_store.get_secret: SQLite read failed"
+    ]
+    assert len(records) == 1
+    assert records[0].exc_info is None
+    assert records[0].exc_text is None
     assert "private database detail" not in caplog.text
     assert "private_provider" not in caplog.text
 
