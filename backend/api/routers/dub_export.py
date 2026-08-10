@@ -1302,8 +1302,8 @@ async def dub_get_onsets(job_id: str):
         with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(payload, f)
         os.replace(tmp_path, cache_path)
-    except OSError as e:
-        logger.warning("onsets cache write failed for %s: %s", log_safe(job_id), log_safe(e))
+    except OSError:
+        logger.warning("onsets cache write failed")
     return payload
 
 
@@ -1447,10 +1447,10 @@ async def dub_qc_pass(job_id: str, lang: str = Query(None), drift_threshold: flo
         )
     except ASRTimeoutError as e:
         # Backend is alive; ASR just couldn't finish in time. 504, not 500/connection.
-        logger.warning("dub QC ASR pass timed out for %s: %s", log_safe(job_id), log_safe(e))
+        logger.warning("dub QC ASR pass timed out")
         raise HTTPException(status_code=504, detail=str(e))
     except Exception as e:
-        logger.error("dub QC ASR pass failed for %s: %s", log_safe(job_id), log_safe(e))
+        logger.exception("dub QC ASR pass failed")
         raise HTTPException(status_code=500, detail=f"QC transcription failed: {e}")
 
     seg_ids = job.get("seg_order") or [s.get("id", i) for i, s in enumerate(segments)]
@@ -1540,7 +1540,7 @@ async def dub_download_audio(
             if not os.path.exists(final_audio_path) or os.path.getsize(final_audio_path) == 0:
                 raise Exception("ffmpeg mix produced no output file")
             wav_path = final_audio_path
-            logger.info("Dub audio mix wrote %s (%d bytes)", log_safe(final_audio_path), os.path.getsize(final_audio_path))
+            logger.info("Dub audio mix completed")
         except Exception:
             logger.exception("Failed to mix audio")
 
@@ -1806,7 +1806,7 @@ async def dub_download_mp3(
 
     if not os.path.exists(mp3_path) or os.path.getsize(mp3_path) == 0:
         raise HTTPException(status_code=500, detail="MP3 encoding produced no output file")
-    logger.info("Dub MP3 encoded %s (%d bytes)", log_safe(mp3_path), os.path.getsize(mp3_path))
+    logger.info("Dub MP3 encoding completed")
 
     base_name = os.path.splitext(job.get('filename', 'audio'))[0]
     safe_name = ''.join(c for c in base_name if c.isalnum() or c in '-_ ').strip() or 'audio'
