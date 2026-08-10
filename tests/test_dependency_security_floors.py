@@ -8,13 +8,17 @@ from packaging.version import Version
 
 
 PYTHON_FLOORS = {
+    "aiohttp": "3.14.3",
+    "cryptography": "50.0.0",
     "gradio": "6.15.1",
     "mako": "1.3.12",
     "mcp": "1.28.1",
     "msgpack": "1.2.1",
+    "nltk": "3.10.0",
     "pillow": "12.3.0",
     "pydantic-settings": "2.14.2",
     "pygments": "2.20.0",
+    "pypdf": "6.15.0",
     "python-multipart": "0.0.31",
     "starlette": "1.3.1",
     "transformers": "5.5.0",
