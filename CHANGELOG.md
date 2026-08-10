@@ -42,6 +42,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 ### Fixed
 
 - Remote backends can no longer probe or overwrite arbitrary host files through native-only tools, and imported or persisted paths cannot escape their VoiceStudio data folders. (#1455)
+- YouTube imports that require a signed-in session can now use an explicitly selected `cookies.txt` export for one import; VoiceStudio never reads browser cookies silently and makes two best-effort attempts to delete its temporary copy. (#1429, #1432) — thanks @dongqing1968-sudo and @phamvandu9595-tech!
 - First-run source builds no longer stop after uv was successfully downloaded just because its installer failed during a later shell-profile step; app-private uv installs no longer touch shell profiles at all. (#1438) — thanks @AdrianoCahete!
 - An error whose text merely contained the digits 401 — a file path, a byte count, a job id — no longer tells you to fix your Hugging Face token. (#1427)
 - Custom MLX model IDs and saved voice instructions are now validated in bounded time, so malformed input cannot stall the backend. (#1446)
