@@ -185,7 +185,6 @@ async def analyse_video_context(job_id: str):
         raise HTTPException(status_code=400, detail="Invalid job id") from exc
     job = _get_job(job_id)
     if not job:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Job not found")
 
     video_path = resolve_within(DUB_DIR, job_dir / "source.mp4")

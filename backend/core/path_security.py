@@ -41,7 +41,7 @@ def resolve_within(root: os.PathLike[str] | str, value: os.PathLike[str] | str) 
     mixture of relative filenames and absolute job-artifact paths.
     """
     raw = os.fspath(value) if value is not None else ""
-    if not raw:
+    if not isinstance(raw, str) or not raw:
         raise UnsafePath("path is empty")
     # Treat both separator families as structural on every host. Otherwise a
     # Windows traversal string is an innocent-looking filename when validated
@@ -49,9 +49,25 @@ def resolve_within(root: os.PathLike[str] | str, value: os.PathLike[str] | str) 
     if os.sep != "\\" and ("\\" in raw or bool(ntpath.splitdrive(raw)[0])):
         raise UnsafePath("path uses a foreign separator or drive")
     root_path = Path(root).expanduser().resolve(strict=False)
-    candidate = Path(raw).expanduser()
-    if not candidate.is_absolute():
-        candidate = root_path / candidate
+    root_text = str(root_path)
+    if os.path.isabs(raw):
+        prefix = root_text.rstrip(os.sep) + os.sep
+        if not os.path.normcase(raw).startswith(os.path.normcase(prefix)):
+            raise UnsafePath("path escapes its allowed root")
+        raw = raw[len(prefix):]
+
+    # Rebuild from individually sanitized basenames. Besides making the
+    # containment proof explicit to static analysis, this rejects empty,
+    # dot, parent, drive, and separator-bearing components before Path sees
+    # any persisted/request-derived string.
+    parts = raw.split(os.sep)
+    clean_parts: list[str] = []
+    for part in parts:
+        clean = os.path.basename(part)
+        if not clean or clean in {".", ".."} or clean != part:
+            raise UnsafePath("path contains an unsafe component")
+        clean_parts.append(clean)
+    candidate = root_path.joinpath(*clean_parts)
     resolved = candidate.resolve(strict=False)
     try:
         if os.path.commonpath((str(root_path), str(resolved))) != str(root_path):
