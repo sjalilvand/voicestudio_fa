@@ -10,9 +10,22 @@ vi.mock('react-hot-toast', () => ({
 const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }));
 vi.mock('../../api/client', () => ({ apiFetch }));
 
+/**
+ * apiFetch resolves to a raw Response — it does not parse JSON and does not
+ * throw on 4xx. Mocking it as if it returned parsed data is what let the panel
+ * ship calling it wrong: the tests agreed with the mock, not with the client.
+ */
+const respond = (body, { ok = true, status = 200 } = {}) => ({
+  ok,
+  status,
+  json: async () => body,
+});
+const respondWith = (fn) => apiFetch.mockImplementation((...args) => Promise.resolve(fn(...args)));
+
 const { askConfirm } = vi.hoisted(() => ({ askConfirm: vi.fn() }));
 vi.mock('../../utils/dialog', () => ({ askConfirm }));
 
+import toast from 'react-hot-toast';
 import WorkersPanel, { WorkerRow } from './WorkersPanel';
 
 function renderPanel() {
@@ -42,10 +55,10 @@ beforeEach(() => {
 
 describe('WorkersPanel', () => {
   it('shows nothing beyond the toggle while the feature is off', async () => {
-    apiFetch.mockResolvedValue({ enabled: false, running: false, workers: [] });
+    apiFetch.mockResolvedValue(respond({ enabled: false, running: false, workers: [] }));
     renderPanel();
 
-    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/workers'));
+    await waitFor(() => expect(apiFetch.mock.calls[0][0]).toBe('/workers'));
     // The endpoint, the token button, and the worker list are all consequences
     // of enabling — an off feature must not advertise its surface.
     expect(screen.queryByText(/Generate token/i)).not.toBeInTheDocument();
@@ -53,12 +66,9 @@ describe('WorkersPanel', () => {
   });
 
   it('reveals the endpoint and add flow once enabled', async () => {
-    apiFetch.mockResolvedValue({
-      enabled: true,
-      running: true,
-      endpoint: 'my-mac:7443',
-      workers: [],
-    });
+    apiFetch.mockResolvedValue(
+      respond({ enabled: true, running: true, endpoint: 'my-mac:7443', workers: [] }),
+    );
     renderPanel();
 
     expect(await screen.findByText('my-mac:7443')).toBeInTheDocument();
@@ -67,12 +77,11 @@ describe('WorkersPanel', () => {
   });
 
   it('shows the token once, with its shown-once warning', async () => {
-    apiFetch.mockImplementation((path) => {
-      if (path === '/workers') {
-        return Promise.resolve({ enabled: true, running: true, workers: [] });
-      }
-      return Promise.resolve({ token: 'ovw_abc123', expires_at: 1 });
-    });
+    respondWith((path) =>
+      path === '/workers'
+        ? respond({ enabled: true, running: true, workers: [] })
+        : respond({ token: 'ovw_abc123', expires_at: 1 }),
+    );
     renderPanel();
 
     fireEvent.click(await screen.findByText(/Generate token/i));
@@ -82,11 +91,7 @@ describe('WorkersPanel', () => {
   });
 
   it('confirms before removing, because removal revokes the key', async () => {
-    apiFetch.mockResolvedValue({
-      enabled: true,
-      running: true,
-      workers: [WORKER],
-    });
+    apiFetch.mockResolvedValue(respond({ enabled: true, running: true, workers: [WORKER] }));
     renderPanel();
 
     fireEvent.click(await screen.findByText(/Remove/i));
@@ -94,19 +99,100 @@ describe('WorkersPanel', () => {
     await waitFor(() => expect(askConfirm).toHaveBeenCalled());
     expect(askConfirm.mock.calls[0][0]).toMatch(/revoked/i);
     await waitFor(() =>
-      expect(apiFetch).toHaveBeenCalledWith('/workers/w1', { method: 'DELETE' }),
+      expect(
+        apiFetch.mock.calls.some(([p, o]) => p === '/workers/w1' && o?.method === 'DELETE'),
+      ).toBe(true),
     );
   });
 
   it('does not remove when the confirmation is declined', async () => {
     askConfirm.mockResolvedValue(false);
-    apiFetch.mockResolvedValue({ enabled: true, running: true, workers: [WORKER] });
+    apiFetch.mockResolvedValue(respond({ enabled: true, running: true, workers: [WORKER] }));
     renderPanel();
 
     fireEvent.click(await screen.findByText(/Remove/i));
 
     await waitFor(() => expect(askConfirm).toHaveBeenCalled());
-    expect(apiFetch).not.toHaveBeenCalledWith('/workers/w1', { method: 'DELETE' });
+    expect(apiFetch.mock.calls.some(([, o]) => o?.method === 'DELETE')).toBe(false);
+  });
+
+  // ── The calls themselves ────────────────────────────────────────────────
+  //
+  // apiFetch sets no Content-Type and does not parse JSON. These assert the
+  // wire shape rather than "a call happened", because the panel shipped a 422
+  // by sending a JSON string with no content type — which a was-it-called
+  // assertion cannot see.
+
+  const jsonCall = (path) => apiFetch.mock.calls.find(([p]) => p === path)?.[1] || {};
+
+  it('sends the enable toggle as real JSON', async () => {
+    respondWith(() => respond({ enabled: false, running: false, workers: [] }));
+    renderPanel();
+
+    fireEvent.click(await screen.findByRole('switch'));
+
+    await waitFor(() => expect(jsonCall('/workers/enabled').method).toBe('POST'));
+    const opts = jsonCall('/workers/enabled');
+    expect(opts.headers['Content-Type']).toBe('application/json');
+    expect(JSON.parse(opts.body)).toEqual({ enabled: true });
+  });
+
+  it('sends the enrollment request as real JSON', async () => {
+    respondWith((path) =>
+      path === '/workers'
+        ? respond({ enabled: true, running: true, workers: [] })
+        : respond({ token: 'ovw_x' }),
+    );
+    renderPanel();
+
+    fireEvent.click(await screen.findByText(/Generate token/i));
+
+    await waitFor(() => expect(jsonCall('/workers/enrollments').method).toBe('POST'));
+    const opts = jsonCall('/workers/enrollments');
+    expect(opts.headers['Content-Type']).toBe('application/json');
+    expect(JSON.parse(opts.body)).toEqual({ ttl_seconds: 900 });
+  });
+
+  it('sends the per-worker enable toggle as real JSON', async () => {
+    respondWith(() => respond({ enabled: true, running: true, workers: [WORKER] }));
+    renderPanel();
+
+    fireEvent.click(await screen.findByText('Disable'));
+
+    await waitFor(() => expect(jsonCall('/workers/w1').method).toBe('PATCH'));
+    const opts = jsonCall('/workers/w1');
+    expect(opts.headers['Content-Type']).toBe('application/json');
+    expect(JSON.parse(opts.body)).toEqual({ enabled: false });
+  });
+
+  it('clears a breaker through the resume endpoint', async () => {
+    respondWith(() =>
+      respond({
+        enabled: true,
+        running: true,
+        workers: [{ ...WORKER, breakers: [{ summary: 'Paused ...' }] }],
+      }),
+    );
+    renderPanel();
+
+    fireEvent.click(await screen.findByText(/Resume/));
+
+    await waitFor(() => expect(jsonCall('/workers/w1/resume').method).toBe('POST'));
+  });
+
+  it('surfaces the server reason instead of a bare status', async () => {
+    respondWith((path) =>
+      path === '/workers'
+        ? respond({ enabled: true, running: true, workers: [] })
+        : respond({ detail: 'Remote workers are turned off.' }, { ok: false, status: 409 }),
+    );
+    renderPanel();
+
+    fireEvent.click(await screen.findByText(/Generate token/i));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('Remote workers are turned off.'),
+    );
   });
 });
 

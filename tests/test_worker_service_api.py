@@ -335,3 +335,88 @@ async def test_enrollment_advertises_the_port_actually_bound(db, monkeypatch, tm
 def test_endpoint_falls_back_to_the_configured_port_when_stopped(monkeypatch):
     monkeypatch.delenv("OMNIVOICE_WORKER_PORT", raising=False)
     assert service.ControlPlane().default_endpoint().endswith(f":{service.DEFAULT_PORT}")
+
+
+# ── Endpoints that had no coverage until a 422 in the UI made the point ─────
+
+
+def test_enable_endpoint_rejects_a_non_object_body(client):
+    """The exact failure the panel shipped: a JSON *string* posted without a
+    content type. FastAPI is right to refuse it; the test exists so the shape
+    is pinned rather than rediscovered in the UI."""
+    response = client.post(
+        "/workers/enabled", content='{"enabled":true}', headers={"Content-Type": "text/plain"}
+    )
+    assert response.status_code == 422
+
+
+def test_enable_endpoint_requires_the_field(client):
+    assert client.post("/workers/enabled", json={}).status_code == 422
+
+
+def test_enable_endpoint_persists_the_setting(client, monkeypatch):
+    """Toggling must survive a restart, so it goes through settings_store —
+    and turning it off must actually stop the control plane."""
+    stored: dict[str, str] = {}
+    monkeypatch.setattr(
+        "services.settings_store.set_text", lambda k, v: stored.__setitem__(k, v)
+    )
+    stopped: list[bool] = []
+
+    async def _stop():
+        stopped.append(True)
+
+    monkeypatch.setattr(service.control_plane, "stop", _stop)
+
+    assert client.post("/workers/enabled", json={"enabled": False}).status_code == 200
+    assert stored["remote_workers_enabled"] == "false"
+    assert stopped == [True]
+
+
+def test_resume_requires_the_feature_to_be_running(client):
+    assert client.post("/workers/anything/resume").status_code == 409
+
+
+def test_cancel_requires_the_feature_to_be_running(client):
+    assert client.post("/workers/tasks/abc/cancel").status_code == 409
+
+
+def test_resume_clears_open_breakers(client, db, monkeypatch):
+    """The manual escape hatch: the user fixed the machine and knows it."""
+    from worker.errors import ErrorClass, WorkerError
+    from worker.pool import WorkerPool
+
+    worker = registry_enroll("box")
+    pool = WorkerPool()
+    pool.breakers.note_worker(worker.id)
+    for _ in range(3):
+        pool.breakers.record_failure(
+            worker.id,
+            "e:m",
+            WorkerError(error_class=ErrorClass.TRANSIENT, code="X", message="x"),
+            now=1000.0,
+        )
+    assert pool.breakers.allows(worker.id, "e:m", now=1000.0) is False
+
+    monkeypatch.setattr(service.control_plane, "pool", pool)
+    monkeypatch.setattr(type(service.control_plane), "running", property(lambda self: True))
+
+    assert client.post(f"/workers/{worker.id}/resume").status_code == 200
+    assert pool.breakers.allows(worker.id, "e:m", now=1000.0) is True
+
+
+def test_cancel_reports_an_unknown_task(client, monkeypatch):
+    class _Sched:
+        def cancel(self, *a, **k):
+            return False
+
+    monkeypatch.setattr(type(service.control_plane), "running", property(lambda self: True))
+    monkeypatch.setattr(service.control_plane, "scheduler", _Sched())
+    assert client.post("/workers/tasks/nope/cancel").status_code == 404
+
+
+def registry_enroll(name: str):
+    from worker import registry
+    from worker.identity import WorkerKeypair
+
+    return registry.enroll_worker(name=name, public_key=WorkerKeypair.generate().public_bytes())

@@ -33,6 +33,32 @@ import { Button, Badge } from '../../ui';
 
 const REFRESH_MS = 5000;
 
+/**
+ * `apiFetch` deliberately returns the raw Response and sets no Content-Type —
+ * it preserves the call shape so FormData posts keep working. Every JSON
+ * caller therefore has to say so itself and parse the body, and a non-2xx is
+ * NOT an exception, so an unchecked call fails silently.
+ *
+ * This wrapper does all three in one place, and surfaces FastAPI's `detail`
+ * so the user sees "Remote workers are turned off…" instead of "500".
+ */
+async function request(path, { body, ...opts } = {}) {
+  const res = await apiFetch(path, {
+    ...opts,
+    ...(body === undefined
+      ? {}
+      : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+  });
+  const payload = await res.json().catch(() => null);
+  if (!res.ok) {
+    const detail = payload?.detail;
+    throw new Error(
+      typeof detail === 'string' ? detail : detail ? JSON.stringify(detail) : `HTTP ${res.status}`,
+    );
+  }
+  return payload;
+}
+
 export default function WorkersPanel() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -42,7 +68,7 @@ export default function WorkersPanel() {
 
   const { data } = useQuery({
     queryKey: ['workers'],
-    queryFn: () => apiFetch('/workers'),
+    queryFn: () => request('/workers'),
     // Only poll once the feature is on: a disabled panel should not generate
     // background traffic every five seconds forever.
     refetchInterval: (query) => (query.state?.data?.running ? REFRESH_MS : false),
@@ -57,10 +83,7 @@ export default function WorkersPanel() {
   const setEnabled = async (next) => {
     setBusy(true);
     try {
-      await apiFetch('/workers/enabled', {
-        method: 'POST',
-        body: JSON.stringify({ enabled: next }),
-      });
+      await request('/workers/enabled', { method: 'POST', body: { enabled: next } });
       if (!next) setToken(null);
       refresh();
     } catch (e) {
@@ -74,11 +97,7 @@ export default function WorkersPanel() {
     setBusy(true);
     setCopied(false);
     try {
-      const res = await apiFetch('/workers/enrollments', {
-        method: 'POST',
-        body: JSON.stringify({ ttl_seconds: 900 }),
-      });
-      setToken(res);
+      setToken(await request('/workers/enrollments', { method: 'POST', body: { ttl_seconds: 900 } }));
     } catch (e) {
       toast.error(e?.message || String(e));
     } finally {
@@ -105,21 +124,33 @@ export default function WorkersPanel() {
       t('settings.workers_remove_title', { defaultValue: 'Remove worker?' }),
     );
     if (!ok) return;
-    await apiFetch(`/workers/${worker.id}`, { method: 'DELETE' });
-    refresh();
+    try {
+      await request(`/workers/${worker.id}`, { method: 'DELETE' });
+      refresh();
+    } catch (e) {
+      toast.error(e?.message || String(e));
+    }
   };
 
   const resumeWorker = async (worker) => {
-    await apiFetch(`/workers/${worker.id}/resume`, { method: 'POST' });
-    refresh();
+    try {
+      await request(`/workers/${worker.id}/resume`, { method: 'POST' });
+      refresh();
+    } catch (e) {
+      toast.error(e?.message || String(e));
+    }
   };
 
   const toggleWorker = async (worker) => {
-    await apiFetch(`/workers/${worker.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ enabled: !worker.enabled }),
-    });
-    refresh();
+    try {
+      await request(`/workers/${worker.id}`, {
+        method: 'PATCH',
+        body: { enabled: !worker.enabled },
+      });
+      refresh();
+    } catch (e) {
+      toast.error(e?.message || String(e));
+    }
   };
 
   return (
