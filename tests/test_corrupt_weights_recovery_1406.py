@@ -223,10 +223,12 @@ def test_fallback_tokenizer_failure_identifies_its_repository(monkeypatch, tmp_p
         lambda _checkpoint: str(tmp_path),
     )
 
+    corrupt = _SafetensorError(REPORTED)
+
     class BrokenTokenizer:
         @classmethod
         def from_pretrained(cls, *args, **kwargs):
-            raise _SafetensorError(REPORTED)
+            raise corrupt
 
     monkeypatch.setattr(model_module, "_audio_tokenizer_cls", lambda: BrokenTokenizer)
 
@@ -234,7 +236,7 @@ def test_fallback_tokenizer_failure_identifies_its_repository(monkeypatch, tmp_p
         model_module.OmniVoice.from_pretrained("org/model")
 
     assert exc_info.value.repository_id == "eustlb/higgs-audio-v2-tokenizer"
-    assert isinstance(exc_info.value.__cause__, _SafetensorError)
+    assert exc_info.value.__cause__ is corrupt
 
 
 def test_resume_that_exposes_corruption_switches_to_forced_repair(mm, monkeypatch):
