@@ -1,6 +1,7 @@
 """PocketTTS first-use gate and model-free sidecar integration (#1442)."""
 from __future__ import annotations
 
+import re
 import sys
 import types
 
@@ -103,13 +104,36 @@ def test_ci_verifies_intel_mac_as_the_documented_remote_only_host():
     assert "HF_HUB_CACHE: ${{ runner.temp }}/pockettts-empty-hf-cache" in workflow
 
 
+@pytest.mark.parametrize(
+    ("ref", "valid"),
+    [
+        ("v1", True),
+        ("v1.6.3", True),
+        ("0123456789abcdef0123456789abcdef01234567", True),
+        ("latest", False),
+        ("main", False),
+        ("release", False),
+        ("v1-beta", False),
+        ("0123456", False),
+    ],
+)
+def test_cache_apt_action_pin_policy(ref, valid):
+    pattern = r"(?:v\d+(?:\.\d+){0,2}|[0-9a-f]{40})"
+    assert (re.fullmatch(pattern, ref) is not None) is valid
+
+
 def test_cache_apt_action_is_pinned_in_every_workflow():
     from pathlib import Path
 
     workflows = Path(__file__).resolve().parents[1] / ".github/workflows"
     for path in workflows.glob("*.yml"):
         text = path.read_text("utf-8")
-        assert "cache-apt-pkgs-action@latest" not in text, path
+        refs = re.findall(r"awalsh128/cache-apt-pkgs-action@([^\s#]+)", text)
+        for ref in refs:
+            assert re.fullmatch(r"v\d+(?:\.\d+){0,2}|[0-9a-f]{40}", ref), (
+                path,
+                ref,
+            )
 
 
 def test_every_locale_discloses_hugging_face_model_access():
