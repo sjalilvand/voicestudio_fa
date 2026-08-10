@@ -840,14 +840,16 @@ def _cleanup_partial_download(job_dir: str) -> None:
             pass
 
 
-def _delete_cookie_export(cookie_file: str | None) -> None:
+def _delete_cookie_export(cookie_file: str | None) -> bool:
     """Best-effort removal of the per-import authentication export."""
     if not cookie_file:
-        return
+        return True
     try:
         os.unlink(cookie_file)
     except OSError:
         pass  # Best effort: cleanup must never replace the download result.
+        return False
+    return True
 
 
 def yt_download_sync(
@@ -1174,8 +1176,8 @@ async def ingest_pipeline(
                 return
             # yt-dlp (including its optional subtitle pass) is finished. Drop
             # the login credential before the much longer audio-prep stages.
-            _delete_cookie_export(cookie_file)
-            source["cookie_file"] = None
+            if _delete_cookie_export(cookie_file):
+                source["cookie_file"] = None
             filename = title or os.path.basename(video_path)
             try:
                 size = os.path.getsize(video_path)

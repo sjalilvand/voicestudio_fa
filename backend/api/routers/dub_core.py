@@ -497,8 +497,8 @@ async def dub_ingest_url(req: DubIngestUrlRequest, request: Request):
             status_code=403,
             detail="Cookie exports require HTTPS or the local desktop app.",
         )
-    cookie_path = _stage_cookie_export(req.cookie_file)
     os.makedirs(job_dir, exist_ok=True)
+    cookie_path = _stage_cookie_export(req.cookie_file)
 
     task_id = f"prep_{job_id}"
     source = {

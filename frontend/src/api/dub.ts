@@ -23,6 +23,14 @@ export interface IngestUrlOptions {
   cookieFile?: File;
 }
 
+export const DUB_COOKIE_TRANSPORT_ERROR = 'DUB_COOKIE_TRANSPORT';
+export const DUB_COOKIE_SIZE_ERROR = 'DUB_COOKIE_TOO_LARGE';
+export const MAX_COOKIE_EXPORT_BYTES = 1024 * 1024;
+
+function cookieSelectionError(code: string): Error & { code: string } {
+  return Object.assign(new Error(code), { code });
+}
+
 export function _cookieTransportAllowed(apiBase: string): boolean {
   const endpoint = new URL(apiBase, window.location.href);
   return (
@@ -40,7 +48,10 @@ export async function dubIngestUrl(
 ): Promise<unknown> {
   const { signal, fetchSubs, subLangs, cookieFile } = opts;
   if (cookieFile && !_cookieTransportAllowed(API)) {
-    throw new Error('Cookie exports require HTTPS or the local desktop app.');
+    throw cookieSelectionError(DUB_COOKIE_TRANSPORT_ERROR);
+  }
+  if (cookieFile && cookieFile.size > MAX_COOKIE_EXPORT_BYTES) {
+    throw cookieSelectionError(DUB_COOKIE_SIZE_ERROR);
   }
   const cookieText = cookieFile ? await cookieFile.text() : undefined;
   return apiPost(
