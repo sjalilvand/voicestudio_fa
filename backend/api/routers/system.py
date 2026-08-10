@@ -985,7 +985,9 @@ async def _do_clean_audio(audio, tmp_dir, clean_id):
     except asyncio.TimeoutError:
         conversion_fallback = True
         logger.warning("Final clean-audio conversion timed out; returning the cleaned source format")
-    if not os.path.exists(final_path):
+    if conversion_fallback:
+        shutil.copy2(clean_path, final_path)
+    elif not os.path.exists(final_path):
         shutil.copy2(clean_path, final_path)
 
     headers = {"X-Clean-Filename": clean_filename}

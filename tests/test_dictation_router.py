@@ -3,7 +3,7 @@ Tests for the dictation router (GET /dictation/models, GET/POST /dictation/prefs
 — the exact contract the frontend dictation UI binds to.
 """
 import os
-import services
+import importlib
 
 import pytest
 
@@ -82,6 +82,7 @@ def test_set_prefs_accepts_repo_id_and_normalizes(client):
 
 
 def test_reset_failure_does_not_persist_new_preferences(monkeypatch):
+    services = importlib.import_module("services")
     from api.routers import dictation as dr
 
     store = {dr.PREF_MODE: "toggle"}

@@ -241,7 +241,7 @@ async def import_persona(file: UploadFile = File(...)):
         raise
     except Exception:
         cleaned = _cleanup(written)
-        logger.exception("persona import failed")
+        logger.warning("Persona import failed")
         detail = ("Import failed; no files were kept." if cleaned else
                   "Import failed, and temporary files could not be removed. Close any app using them and retry cleanup.")
         raise HTTPException(status_code=500, detail=detail)

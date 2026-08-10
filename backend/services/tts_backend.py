@@ -612,8 +612,8 @@ class OmniVoiceBackend(TTSBackend):
         try:
             import services.model_manager as mm
             if mm.model is not None:
-                mm.model = None
                 mm.free_vram()
+                mm.model = None
         except Exception as exc:
             logger.warning("Shared voice model unload did not complete")
             raise RuntimeError(

@@ -122,7 +122,17 @@ async def enable(app) -> ShareState:
         server.should_exit = True
         try:
             await asyncio.wait_for(asyncio.shield(_task), timeout=2)
+        except asyncio.CancelledError:
+            _server = server
+            _state = ShareState(True, port, pin, lan_ipv4_addresses())
+            app.state.network_share = _state
+            raise
         except Exception as exc:
+            if _task.done():
+                _server = _task = None
+                _state = ShareState()
+                app.state.network_share = _state
+                raise RuntimeError("share listener failed to start") from exc
             _server = server
             _state = ShareState(True, port, pin, lan_ipv4_addresses())
             app.state.network_share = _state

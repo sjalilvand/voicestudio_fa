@@ -215,10 +215,14 @@ def test_shared_voice_unload_failure_is_stable(monkeypatch):
     with pytest.raises(RuntimeError) as caught:
         backend.unload()
     assert str(caught.value) == "The shared voice model could not be unloaded. Retry after the current generation finishes."
+    assert manager.model is not None
+    monkeypatch.setattr(manager, "free_vram", lambda: None)
+    backend.unload()
+    assert manager.model is None
 
 
 @pytest.mark.asyncio
-async def test_network_start_failure_retains_listener_for_disable(monkeypatch):
+async def test_terminal_network_start_failure_resets_state(monkeypatch):
     network_share = importlib.import_module("services.network_share")
     task = asyncio.get_running_loop().create_future()
     task.set_exception(RuntimeError("/secret/listener"))
@@ -234,4 +238,31 @@ async def test_network_start_failure_retains_listener_for_disable(monkeypatch):
     with pytest.raises(RuntimeError) as caught:
         await network_share.enable(app)
     assert "secret" not in str(caught.value)
-    assert network_share.get_state().enabled is True
+    assert network_share.get_state().enabled is False
+    assert network_share._task is None
+
+
+def test_dub_abort_false_result_stays_retryable(monkeypatch):
+    dub_core = importlib.import_module("api.routers.dub_core")
+    job = {"id": "job-false"}
+    monkeypatch.setitem(dub_core._dub_jobs, "job-false", job)
+    monkeypatch.setattr(dub_core, "_kill_job_procs", lambda _job_id: None)
+    monkeypatch.setattr(dub_core.task_manager, "cancel_task", lambda _job_id: False)
+    with pytest.raises(HTTPException) as caught:
+        dub_core.dub_abort("job-false")
+    assert caught.value.status_code == 503
+    assert "aborted" not in job
+
+
+def test_endpoint_pref_read_failure_keeps_manual_mode(monkeypatch):
+    endpoint_race = importlib.import_module("services.endpoint_race")
+    prefs = importlib.import_module("core.prefs")
+    calls = iter([OSError("/secret/pref"), "auto"])
+    def read(_key, _default=""):
+        value = next(calls)
+        if isinstance(value, Exception):
+            raise value
+        return value
+    monkeypatch.delenv("HF_ENDPOINT", raising=False)
+    monkeypatch.setattr(prefs, "get", read)
+    assert endpoint_race.mode() == "manual"

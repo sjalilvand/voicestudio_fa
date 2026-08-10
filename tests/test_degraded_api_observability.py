@@ -1,11 +1,11 @@
 """Optional API data may degrade, but the failure must remain observable."""
 from contextlib import contextmanager
-
-from api.routers import openai_compat, system
-from core import db, run_sentinel
+import importlib
 
 
 def test_voice_catalog_db_failure_keeps_shape_and_warns(monkeypatch, caplog):
+    openai_compat = importlib.import_module("api.routers.openai_compat")
+    db = importlib.import_module("core.db")
     @contextmanager
     def broken_db():
         raise OSError("database unavailable")
@@ -22,6 +22,8 @@ def test_voice_catalog_db_failure_keeps_shape_and_warns(monkeypatch, caplog):
 
 
 def test_notification_probe_failures_keep_shape_and_warn(monkeypatch, caplog):
+    system = importlib.import_module("api.routers.system")
+    run_sentinel = importlib.import_module("core.run_sentinel")
     monkeypatch.setattr(
         run_sentinel,
         "newest_record",
@@ -32,7 +34,7 @@ def test_notification_probe_failures_keep_shape_and_warn(monkeypatch, caplog):
         "_crashed_last_session",
         lambda: (_ for _ in ()).throw(OSError("log unavailable")),
     )
-    with caplog.at_level("WARNING", logger="omnivoice.system"):
+    with caplog.at_level("WARNING"):
         result = system.system_notifications()
 
     assert set(result) == {"notifications", "count"}

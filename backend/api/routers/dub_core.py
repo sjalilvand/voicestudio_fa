@@ -273,7 +273,8 @@ def dub_abort(job_id: str):
         had_procs = bool(_active_procs.get(job_id))
     _kill_job_procs(job_id)
     try:
-        task_manager.cancel_task(job_id)
+        if task_manager.cancel_task(job_id) is False:
+            raise RuntimeError("task cancellation was declined")
     except Exception as exc:
         logger.warning("Dub task cancellation failed")
         raise HTTPException(
