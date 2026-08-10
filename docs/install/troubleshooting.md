@@ -258,6 +258,8 @@ Cookie exports are login credentials. VoiceStudio never reads a browser's
 cookie database automatically, never saves the export in your project, and
 never uploads it anywhere except to your own VoiceStudio backend. Use an export
 limited to YouTube where your browser extension supports domain filtering.
+For a backend on another machine, the picker is enabled only over HTTPS; plain
+HTTP is accepted solely on the desktop app's loopback connection.
 
 ## 8. Docker LAN access — media preview 404
 

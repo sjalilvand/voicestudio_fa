@@ -23,12 +23,25 @@ export interface IngestUrlOptions {
   cookieFile?: File;
 }
 
+export function _cookieTransportAllowed(apiBase: string): boolean {
+  const endpoint = new URL(apiBase, window.location.href);
+  return (
+    endpoint.protocol === 'https:' ||
+    endpoint.hostname === 'localhost' ||
+    endpoint.hostname === '127.0.0.1' ||
+    endpoint.hostname === '[::1]'
+  );
+}
+
 export async function dubIngestUrl(
   url: string,
   jobId: string,
   opts: IngestUrlOptions = {},
 ): Promise<unknown> {
   const { signal, fetchSubs, subLangs, cookieFile } = opts;
+  if (cookieFile && !_cookieTransportAllowed(API)) {
+    throw new Error('Cookie exports require HTTPS or the local desktop app.');
+  }
   const cookieText = cookieFile ? await cookieFile.text() : undefined;
   return apiPost(
     '/dub/ingest-url',

@@ -5,6 +5,7 @@ import { I18nextProvider } from 'react-i18next';
 import i18n from '../i18n';
 
 import IdleSkeleton from '../components/dub/IdleSkeleton';
+import { _cookieTransportAllowed } from '../api/dub';
 
 // Regression guard for the Dub "transcribe-idle-desync" bug: on the
 // URL-ingest (and restored-job) path there is no local `dubVideoFile`, so the
@@ -75,6 +76,11 @@ function renderIdle(overrides) {
 }
 
 describe('IdleSkeleton — pipeline-stage vs idle dropzone', () => {
+  it('never sends cookie credentials over remote plaintext HTTP', () => {
+    expect(_cookieTransportAllowed('http://127.0.0.1:3900')).toBe(true);
+    expect(_cookieTransportAllowed('https://studio.example.test')).toBe(true);
+    expect(_cookieTransportAllowed('http://studio.example.test')).toBe(false);
+  });
   it('shows the idle dropzone only when the pipeline is truly idle (no job)', () => {
     const { container } = renderIdle({ dubStep: 'idle', dubJobId: null });
     expect(container.querySelector('.dub-idle-drop')).not.toBeNull();
