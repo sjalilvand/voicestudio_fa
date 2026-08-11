@@ -50,6 +50,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Linux production test launches now stop their own extracted AppImage before resetting SQLite and logs. (#1494)
 - Restored the pre-release version to 0.4.2 while the next release remains in preparation. (#1488)
 - Large multi-language dubbing batches now use compact searchable language and track managers instead of overflowing the editor. (#1492)
 - Multi-language dubbing now translates, edits, generates, retains, and exports every selected language, and its language picker stays visible at viewport edges. (#1486)
