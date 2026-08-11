@@ -98,7 +98,7 @@ class OpenAICompatBackend(LLMBackend):
         if p is None:
             return False, (
                 "No LLM configured. Add a provider key in Settings → LLM Providers "
-                "(OpenAI/OpenRouter/Groq/… or a local Ollama), or set "
+                "(OpenAI/OpenRouter/OrcaRouter/Groq/… or a local Ollama), or set "
                 "TRANSLATE_BASE_URL (+ TRANSLATE_API_KEY)."
             )
         if not llm_providers.resolve_base_url(p):
