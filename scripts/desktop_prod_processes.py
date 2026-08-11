@@ -54,13 +54,21 @@ def open_owned_processes(
             continue
         try:
             raw = (process_dir / "environ").read_bytes()
-            if appimage_belongs_to_build(raw, build_root):
-                owned.append((pid, pidfd))
-                continue
         except (OSError, PermissionError):
-            pass
+            os.close(pidfd)
+            continue
+        if appimage_belongs_to_build(raw, build_root):
+            owned.append((pid, pidfd))
+            continue
         os.close(pidfd)
     return owned
+
+
+def _signal_process(pidfd: int, sig: signal.Signals) -> None:
+    try:
+        signal.pidfd_send_signal(pidfd, sig)
+    except ProcessLookupError:
+        return
 
 
 def stop_owned_processes(build_root: Path, timeout_s: float = 5.0) -> list[int]:
@@ -72,10 +80,7 @@ def stop_owned_processes(build_root: Path, timeout_s: float = 5.0) -> list[int]:
     poller = select.poll()
     for _, pidfd in owned:
         poller.register(pidfd, select.POLLIN)
-        try:
-            signal.pidfd_send_signal(pidfd, signal.SIGTERM)
-        except ProcessLookupError:
-            pass
+        _signal_process(pidfd, signal.SIGTERM)
 
     deadline = time.monotonic() + timeout_s
     exited: set[int] = set()
@@ -85,10 +90,7 @@ def stop_owned_processes(build_root: Path, timeout_s: float = 5.0) -> list[int]:
 
     for _, pidfd in owned:
         if pidfd not in exited:
-            try:
-                signal.pidfd_send_signal(pidfd, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+            _signal_process(pidfd, signal.SIGKILL)
         os.close(pidfd)
     return [pid for pid, _ in owned]
 
