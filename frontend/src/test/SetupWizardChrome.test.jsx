@@ -207,7 +207,7 @@ describe('studio chrome does not appear before the studio', () => {
       const app = readSrc('App.jsx');
       const mount = app.slice(app.indexOf('className="app-wizard-wrap"'));
       const tag = mount.slice(0, mount.indexOf('>'));
-      expect(tag).toContain("'--ui-scale': uiScale");
+      expect(tag).toContain("'--ui-scale': effectiveUiScale");
       // An inline `zoom:` on top of the CSS contract double-applies the
       // scale — the CSS zooms once, this would zoom again.
       expect(tag).not.toMatch(/zoom:\s*uiScale/);

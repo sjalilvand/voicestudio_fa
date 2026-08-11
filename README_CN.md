@@ -373,7 +373,7 @@ npx skills add debpalash/omnivoice-studio
 | **TTS** | 14 个引擎（VoiceStudio、CosyVoice 3、GPT-SoVITS、VoxCPM2、MOSS-TTS-Nano、KittenTTS、MLX-Audio、Sherpa-ONNX，+ 延迟安装：IndexTTS 2.5、OmniVoice GGUF、Supertonic 3、MOSS-TTS-v1.5、dots.tts、Confucius4-TTS）、带 GPU 预检的引擎路由 |
 | **基础设施** | Docker 部署、CUDA/MPS/ROCm 自动检测、cuDNN 8 兼容、显存感知模型卸载、引擎路由（绝不静默回退 CPU）、诊断套件与错误日志、受限网络镜像支持 |
 | **AI 溯源** | AudioSeal 不可见水印（类似 SynthID）、视频徽标叠加、水印检测 API |
-| **用户体验** | 撤销/重做、键盘快捷键、拖放、会话持久化、毛玻璃设计系统、Linux/WebKitGTK 的 UI 缩放修复 |
+| **用户体验** | 撤销/重做、键盘快捷键、拖放、会话持久化、首次启动按屏幕推荐界面缩放，以及原生 WebKitGTK 缩放 |
 | **实时事件** | WebSocket 事件总线——数据变更时即时刷新侧边栏、指数退避重连 |
 | **状态管理** | Zustand 状态迁移——`uiSlice`、`pillSlice`、`dubSlice`、`generateSlice`、`prefsSlice`、`glossarySlice` |
 | **桌面** | 跨平台 Tauri 安装程序（macOS DMG——Apple Silicon；Intel 不支持本地后端，#889——Windows MSI、Linux deb/AppImage）、自动更新基础设施、单实例约束、关闭最小化到托盘、macOS Gatekeeper 修复 |
