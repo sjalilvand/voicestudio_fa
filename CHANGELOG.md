@@ -18,6 +18,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - A warning before a slow generation, rather than after a five-minute wait
 - The watermark can be turned off in Settings, as the docs always said
 - Your other GPU can take the work now — send individual jobs to a second machine, opt-in
+- More than one person can share one GPU machine, without shell access to it or taking turns
 - Workspace tabs in the title bar, if you prefer them to the icon rail (#1412)
 - macOS support now matches what the app actually delivers
 - Linux AppImage: a blank white window on rolling distros (Mesa 26.1+) now starts normally
@@ -37,6 +38,8 @@ the frozen-backend fallback mirror it for their toolchains.
 - Dictation no longer shows a floating pill. The hotkey records, transcribes and pastes with nothing on screen; the tray icon still marks recording, and anything needing your attention (Accessibility, microphone, a failed transcription) now arrives as a notification in the main window.
 
 ### Added
+
+- Remote GPU machines can now accept connections instead of dialling out, so several people can use the same box at once — each gets their own connection string, revocable on its own, with a live list of who is connected and a disconnect button. Unencrypted by design and meant for a network you trust; the dial-out setup stays the default and stays TLS. (#1496)
 
 - Remote GPU model downloads now use the normal Models install flow and show per-worker progress. (#1478)
 - Settings → System → **Remote workers** sends individual jobs to GPUs on your other machines while everything else stays here. Off by default; each machine is added with a single-use token and approved before any audio reaches it. See [docs/remote-workers.md](docs/remote-workers.md).

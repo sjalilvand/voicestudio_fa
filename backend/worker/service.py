@@ -323,6 +323,8 @@ control_plane = ControlPlane()
 
 async def start_if_enabled() -> None:
     """Called from the app lifespan. A no-op unless the user opted in."""
+    await _start_inbound_node_if_enabled()
+
     if not remote_workers_enabled():
         logger.debug("Remote workers are disabled; not starting the control plane.")
         return
@@ -333,9 +335,42 @@ async def start_if_enabled() -> None:
         # local workflow does not depend on this feature existing.
         control_plane.startup_error = str(exc)
         logger.exception("Remote worker control plane failed to start")
+        return
+
+    # Redial saved nodes only once the control plane is up: the connector hands
+    # frames to its servicer, which does not exist until then.
+    try:
+        from worker.inbound import service as inbound  # noqa: PLC0415
+
+        await inbound.outbound.start_all(control_plane.servicer)
+    except Exception:
+        logger.exception("Could not reconnect saved GPU machines")
+
+
+async def _start_inbound_node_if_enabled() -> None:
+    """Accepting connections is independent of running a control plane.
+
+    A machine can lend its GPU without driving any jobs of its own, and the
+    import is deferred so one that does neither pays nothing for either.
+    """
+    try:
+        from worker.inbound import service as inbound  # noqa: PLC0415
+
+        if not inbound.enabled():
+            return
+        await inbound.node.start()
+    except Exception:
+        logger.exception("Inbound node listener failed to start")
 
 
 async def stop() -> None:
+    try:
+        from worker.inbound import service as inbound  # noqa: PLC0415
+
+        await inbound.outbound.stop()
+        await inbound.node.stop()
+    except Exception:
+        logger.exception("Inbound node failed to stop cleanly")
     try:
         await control_plane.stop()
     except Exception:

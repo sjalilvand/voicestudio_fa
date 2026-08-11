@@ -30,6 +30,7 @@ import { apiFetch } from '../../api/client';
 import { askConfirm } from '../../utils/dialog';
 import { SettingsSection, SettingRow, SettingsToggle } from './primitives';
 import { Button, Badge } from '../../ui';
+import InboundNodePanel from './InboundNodePanel';
 
 const REFRESH_MS = 5000;
 
@@ -167,6 +168,7 @@ export default function WorkersPanel() {
   };
 
   return (
+    <>
     <SettingsSection
       icon={Cpu}
       title={t('settings.workers_title', { defaultValue: 'Remote workers' })}
@@ -266,6 +268,15 @@ export default function WorkersPanel() {
         </>
       )}
     </SettingsSection>
+    {/* The other direction: this machine accepting connections, and the
+        machines this one dials. Kept in the same System entry because a user
+        looking for "use my other GPU" should find both ways in one place, and
+        behind the same master toggle because "off means off" is this feature's
+        contract — a second switch that stayed live under it would be exactly
+        the surprise that promise exists to prevent. Headless nodes that only
+        lend a GPU set OMNIVOICE_INBOUND_NODE and never see this panel. */}
+    {enabled && <InboundNodePanel request={request} />}
+    </>
   );
 }
 

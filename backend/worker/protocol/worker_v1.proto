@@ -39,6 +39,42 @@ service WorkerService {
   rpc DownloadArtifact(ArtifactRef) returns (stream ArtifactChunk);
 }
 
+// Hosted by the NODE, dialled by the CONTROL PLANE — the mirror image of
+// WorkerService above, for the deployment where the node cannot dial out (or
+// where several panels share one GPU box; see docs/adr/inbound-node-mode.md).
+//
+// TRANSPORT roles invert here. MESSAGE roles do NOT: the node still sends
+// WorkerMessage (heartbeats, capabilities, progress, results) and the control
+// plane still sends ServerMessage (assignments, cancels, acks). Every state
+// machine on both sides is therefore unchanged, and that is the whole point of
+// mirroring the service instead of inventing a second protocol. Read the field
+// names as "what this side says", never as "who called whom".
+//
+// This service is for LAN / self-hosted use only and is never a fleet
+// transport: goal_v2.md B2/B5.2 require hosted workers to dial out, and nothing
+// here relaxes that.
+service NodeService {
+  // The control plane opens this; the node answers. Carries the same frames
+  // Control does, plus Register folded in as the first exchange — a node being
+  // dialled cannot also expose a unary Register the way a control plane does,
+  // and a separate round trip would leave the stream ambiguous until it
+  // finished.
+  //
+  // The node's first frame MUST be `register` and the panel's first frame MUST
+  // be `registered`. Note that the node still speaks first despite the panel
+  // having opened the call: it is still the side with capabilities to declare.
+  rpc Attach(stream ServerMessage) returns (stream WorkerMessage);
+
+  // Artifact out, pulled instead of pushed: mirrors UploadResult. The node has
+  // no way to call the panel, so the panel fetches a finished result once the
+  // node reports it. Resumable via ArtifactRef-scoped offsets, same as
+  // UploadResult.
+  rpc FetchResult(ArtifactRef) returns (stream ResultChunk);
+
+  // Artifact in, pushed instead of pulled: mirrors DownloadArtifact.
+  rpc PushInput(stream ArtifactChunk) returns (ArtifactAck);
+}
+
 // ── Common ─────────────────────────────────────────────────────────────────
 
 // Stamped on every task-scoped message so superseded work can be fenced.
@@ -310,6 +346,16 @@ message WorkerMessage {
     WorkerGoodbye goodbye = 11;
     Pong pong = 12;
     DownloadProgress download_progress = 13;
+    // Inbound mode only (NodeService.Attach): the node's opening frame, sent
+    // as soon as the panel's call is authenticated. Reuses RegisterRequest
+    // verbatim rather than defining a parallel message, so version
+    // negotiation, capability reporting and in-flight recovery behave
+    // identically in both modes — a second shape here would be a second thing
+    // to keep in step forever.
+    //
+    // Note the direction: the node describes ITSELF, exactly as it does when
+    // it dials out. Only who opened the TCP connection changed.
+    RegisterRequest register = 15;
   }
   reserved 14;  // future streaming frame
 }
@@ -391,6 +437,14 @@ message ServerMessage {
     Drain drain = 6;
     Shutdown shutdown = 7;
     PrewarmRequest prewarm = 8;
+    // Inbound mode only (NodeService.Attach): the panel's answer to the node's
+    // `register` frame, carrying the session token and epoch. See
+    // `WorkerMessage.register` for why RegisterResponse is reused as-is.
+    //
+    // The API key authenticating the panel travels in the call's metadata,
+    // never in a frame: a credential in the stream would be copied into every
+    // protocol trace and every debug log that dumps one.
+    RegisterResponse registered = 9;
   }
 }
 
@@ -423,6 +477,16 @@ message ResultChunk {
 }
 
 message ResultAck {
+  string artifact_id = 1;
+  uint64 bytes_received = 2;
+  bool committed = 3;
+  Error error = 4;
+}
+
+// NodeService.PushInput's reply. Deliberately the same shape as ResultAck so
+// the resume logic on either side reads identically regardless of which
+// direction the bytes were travelling.
+message ArtifactAck {
   string artifact_id = 1;
   uint64 bytes_received = 2;
   bool committed = 3;

@@ -1,0 +1,367 @@
+/**
+ * Settings → System → Remote workers → the "other direction" half.
+ *
+ * The default setup has the GPU machine dial this app, which is right when the
+ * machine is yours alone — but it connects to exactly one app, so sharing a GPU
+ * means editing its settings, restarting, and disconnecting whoever had it.
+ * This is the arrangement where the GPU machine listens instead and several
+ * people connect to it at once.
+ *
+ * Two things here are the feature's contract and must not be softened:
+ *
+ *   • The connection string is shown exactly once. Only its hash is stored,
+ *     so it cannot be displayed again — that is the point, not a limitation.
+ *   • This mode is not encrypted. Wherever the UI could leave someone thinking
+ *     otherwise, it says so — loudest at the moment they widen the bind beyond
+ *     this machine, which is when the credential starts crossing a network.
+ */
+import React, { useState } from 'react';
+import { Check, Copy, Link2, LogOut, Trash2, Wifi } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { askConfirm } from '../../utils/dialog';
+import { SettingRow, SettingsSection, SettingsToggle } from './primitives';
+import { Badge, Button } from '../../ui';
+
+const REFRESH_MS = 5000;
+
+function relative(seconds, t) {
+  if (!seconds) return '';
+  const mins = Math.max(0, Math.round((Date.now() / 1000 - seconds) / 60));
+  if (mins < 1) return t('settings.inbound_just_now', { defaultValue: 'just now' });
+  if (mins < 60) return t('settings.inbound_minutes_ago', { defaultValue: '{{count}}m ago', count: mins });
+  return t('settings.inbound_hours_ago', {
+    defaultValue: '{{count}}h ago',
+    count: Math.round(mins / 60),
+  });
+}
+
+export default function InboundNodePanel({ request }) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [issued, setIssued] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [paste, setPaste] = useState('');
+  const [label, setLabel] = useState('');
+  const [bind, setBind] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const { data } = useQuery({
+    queryKey: ['workers', 'inbound'],
+    queryFn: () => request('/workers/inbound'),
+    refetchInterval: REFRESH_MS,
+  });
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['workers'] });
+  const keys = (data?.keys || []).filter((k) => !k.revoked);
+  const sessions = data?.sessions || [];
+  const connections = data?.connections || [];
+
+  const guarded = async (fn) => {
+    setBusy(true);
+    try {
+      await fn();
+      refresh();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggle = (next) =>
+    guarded(async () => {
+      await request('/workers/inbound/enabled', {
+        method: 'POST',
+        body: { enabled: next, bind: bind || undefined },
+      });
+      if (!next) setIssued(null);
+    });
+
+  const issue = () =>
+    guarded(async () => {
+      const result = await request('/workers/inbound/keys', {
+        method: 'POST',
+        body: { label: label.trim() },
+      });
+      setIssued(result);
+      setLabel('');
+      setCopied(false);
+    });
+
+  const revoke = (key) =>
+    guarded(async () => {
+      const ok = await askConfirm(
+        t('settings.inbound_revoke_confirm', {
+          defaultValue:
+            'Remove access for {{label}}? Their connection string stops working immediately. Everyone else stays connected.',
+          label: key.label,
+        }),
+        t('settings.inbound_revoke_title', { defaultValue: 'Remove access?' }),
+      );
+      if (!ok) return;
+      await request(`/workers/inbound/keys/${key.key_id}`, { method: 'DELETE' });
+    });
+
+  const disconnect = (session) =>
+    guarded(() =>
+      request(`/workers/inbound/sessions/${session.session_id}/disconnect`, { method: 'POST' }),
+    );
+
+  const connect = () =>
+    guarded(async () => {
+      await request('/workers/inbound/connections', {
+        method: 'POST',
+        body: { connection_string: paste.trim() },
+      });
+      setPaste('');
+    });
+
+  const forget = (row) =>
+    guarded(() =>
+      request(`/workers/inbound/connections/${encodeURIComponent(row.endpoint)}`, {
+        method: 'DELETE',
+      }),
+    );
+
+  const copy = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error(t('settings.workers_copy_failed', { defaultValue: 'Could not copy.' }));
+    }
+  };
+
+  return (
+    <>
+      <SettingsSection
+        icon={Wifi}
+        title={t('settings.inbound_title', { defaultValue: 'Share this GPU with other people' })}
+        description={t('settings.inbound_desc', {
+          defaultValue:
+            'Let other machines connect to this one, so more than one person can use its GPU at the same time. Leave this off if only you use it — the setup above is encrypted and this is not.',
+        })}
+      >
+        <SettingRow
+          title={t('settings.inbound_enable', { defaultValue: 'Accept connections' })}
+          subtitle={t('settings.inbound_enable_hint', {
+            defaultValue:
+              'Other people connect to this machine instead of it connecting to them. Nobody gets in without a connection string you create.',
+          })}
+          control={
+            <SettingsToggle checked={!!data?.enabled} disabled={busy} onChange={toggle} />
+          }
+        />
+
+        {data?.startup_error ? (
+          <p className="text-sm text-red-500">{data.startup_error}</p>
+        ) : null}
+
+        {data?.enabled ? (
+          <>
+            <SettingRow
+              title={t('settings.inbound_bind', { defaultValue: 'Reachable from' })}
+              subtitle={
+                data?.exposed
+                  ? t('settings.inbound_bind_exposed', {
+                      defaultValue:
+                        'Anyone who can reach {{address}} on your network can use this GPU if they have a connection string. Because this mode is not encrypted, someone watching the network could copy one. Use it only on a network you trust.',
+                      address: `${data?.bind}:${data?.port}`,
+                    })
+                  : t('settings.inbound_bind_local', {
+                      defaultValue:
+                        'Only this machine can reach it. Enter your network address to let other machines connect.',
+                    })
+              }
+              control={
+              <div className="flex items-center gap-2">
+                <input
+                  className="input w-44"
+                  value={bind}
+                  placeholder={data?.bind || '127.0.0.1'}
+                  onChange={(e) => setBind(e.target.value)}
+                  aria-label={t('settings.inbound_bind', { defaultValue: 'Reachable from' })}
+                />
+                <Button size="sm" variant="secondary" disabled={busy || !bind} onClick={() => toggle(true)}>
+                  {t('settings.inbound_bind_apply', { defaultValue: 'Apply' })}
+                </Button>
+                {data?.exposed ? (
+                  <Badge variant="warning">
+                    {t('settings.inbound_exposed_badge', { defaultValue: 'On your network' })}
+                  </Badge>
+                ) : null}
+              </div>
+              }
+            />
+
+            <SettingRow
+              title={t('settings.inbound_add_person', { defaultValue: 'Add a person' })}
+              subtitle={t('settings.inbound_add_person_hint', {
+                defaultValue:
+                  'Creates a connection string for one person. Give each person their own, so removing one does not disconnect everybody.',
+              })}
+              control={
+              <div className="flex items-center gap-2">
+                <input
+                  className="input w-44"
+                  value={label}
+                  placeholder={t('settings.inbound_label_placeholder', {
+                    defaultValue: "Alice's laptop",
+                  })}
+                  onChange={(e) => setLabel(e.target.value)}
+                  aria-label={t('settings.inbound_label', { defaultValue: 'Name' })}
+                />
+                <Button size="sm" disabled={busy} onClick={issue}>
+                  {t('settings.inbound_create', { defaultValue: 'Create' })}
+                </Button>
+              </div>
+              }
+            />
+
+            {issued ? (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 space-y-2">
+                <p className="text-sm">
+                  {t('settings.inbound_shown_once', {
+                    defaultValue:
+                      'Copy this now — it is not shown again. Give it only to {{label}}.',
+                    label: issued.label,
+                  })}
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 truncate text-xs">{issued.connection_string}</code>
+                  <Button size="sm" variant="secondary" onClick={() => copy(issued.connection_string)}>
+                    {copied ? <Check size={14} /> : <Copy size={14} />}
+                    {copied
+                      ? t('settings.workers_copied', { defaultValue: 'Copied' })
+                      : t('settings.workers_copy', { defaultValue: 'Copy' })}
+                  </Button>
+                </div>
+                <p className="text-xs opacity-70">
+                  {t('settings.inbound_shown_once_warning', {
+                    defaultValue:
+                      'Treat it like a password. It is not encrypted in transit, so send it over something private and only use it on a network you trust.',
+                  })}
+                </p>
+              </div>
+            ) : null}
+
+            {keys.length ? (
+              <div className="space-y-1">
+                <p className="text-xs uppercase opacity-60">
+                  {t('settings.inbound_people', { defaultValue: 'People with access' })}
+                </p>
+                {keys.map((key) => (
+                  <div key={key.key_id} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="truncate">
+                      {key.label}
+                      {key.last_seen_at ? (
+                        <span className="opacity-60">
+                          {' · '}
+                          {t('settings.inbound_last_seen', {
+                            defaultValue: 'last used {{when}}',
+                            when: relative(key.last_seen_at, t),
+                          })}
+                        </span>
+                      ) : null}
+                    </span>
+                    <Button size="sm" variant="ghost" disabled={busy} onClick={() => revoke(key)}>
+                      <Trash2 size={14} />
+                      {t('settings.inbound_revoke', { defaultValue: 'Remove' })}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="space-y-1">
+              <p className="text-xs uppercase opacity-60">
+                {t('settings.inbound_connected_now', { defaultValue: 'Connected right now' })}
+              </p>
+              {sessions.length === 0 ? (
+                <p className="text-sm opacity-60">
+                  {t('settings.inbound_nobody', { defaultValue: 'Nobody is connected.' })}
+                </p>
+              ) : (
+                sessions.map((session) => (
+                  <div
+                    key={session.session_id}
+                    className="flex items-center justify-between gap-2 text-sm"
+                  >
+                    <span className="truncate">
+                      {session.label}
+                      <span className="opacity-60">
+                        {' · '}
+                        {session.peer}
+                        {' · '}
+                        {t('settings.inbound_jobs_run', {
+                          defaultValue: '{{count}} jobs',
+                          count: session.tasks_run,
+                        })}
+                      </span>
+                    </span>
+                    <Button size="sm" variant="ghost" disabled={busy} onClick={() => disconnect(session)}>
+                      <LogOut size={14} />
+                      {t('settings.inbound_disconnect', { defaultValue: 'Disconnect' })}
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        ) : null}
+      </SettingsSection>
+
+      <SettingsSection
+        icon={Link2}
+        title={t('settings.inbound_connect_title', { defaultValue: 'Connect to a GPU machine' })}
+        description={t('settings.inbound_connect_desc', {
+          defaultValue:
+            'Paste the connection string someone gave you. The machine has to be accepting connections for this to work.',
+        })}
+      >
+        <SettingRow
+          title={t('settings.inbound_connect_row', { defaultValue: 'Connection string' })}
+          subtitle={t('settings.inbound_connect_hint', {
+            defaultValue: 'Starts with ovnode:// and includes the key, the address and the port.',
+          })}
+          control={
+          <div className="flex items-center gap-2">
+            <input
+              className="input w-72"
+              value={paste}
+              placeholder="ovnode://…@192.168.0.110:7444"
+              onChange={(e) => setPaste(e.target.value)}
+              aria-label={t('settings.inbound_connect_row', { defaultValue: 'Connection string' })}
+            />
+            <Button size="sm" disabled={busy || !paste.trim()} onClick={connect}>
+              {t('settings.inbound_connect', { defaultValue: 'Connect' })}
+            </Button>
+          </div>
+          }
+        />
+
+        {connections.map((row) => (
+          <div key={row.endpoint} className="flex items-center justify-between gap-2 text-sm">
+            <span className="truncate">
+              {row.endpoint}
+              <span className="opacity-60">
+                {' · '}
+                {row.connected
+                  ? t('settings.inbound_connected', { defaultValue: 'connected' })
+                  : row.last_error ||
+                    t('settings.inbound_connecting', { defaultValue: 'connecting…' })}
+              </span>
+            </span>
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => forget(row)}>
+              <Trash2 size={14} />
+              {t('settings.inbound_forget', { defaultValue: 'Remove' })}
+            </Button>
+          </div>
+        ))}
+      </SettingsSection>
+    </>
+  );
+}

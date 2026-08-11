@@ -234,3 +234,217 @@ class WorkerService:
             timeout,
             metadata,
             _registered_method=True)
+
+
+class NodeServiceStub:
+    """Hosted by the NODE, dialled by the CONTROL PLANE — the mirror image of
+    WorkerService above, for the deployment where the node cannot dial out (or
+    where several panels share one GPU box; see docs/adr/inbound-node-mode.md).
+
+    TRANSPORT roles invert here. MESSAGE roles do NOT: the node still sends
+    WorkerMessage (heartbeats, capabilities, progress, results) and the control
+    plane still sends ServerMessage (assignments, cancels, acks). Every state
+    machine on both sides is therefore unchanged, and that is the whole point of
+    mirroring the service instead of inventing a second protocol. Read the field
+    names as "what this side says", never as "who called whom".
+
+    This service is for LAN / self-hosted use only and is never a fleet
+    transport: goal_v2.md B2/B5.2 require hosted workers to dial out, and nothing
+    here relaxes that.
+    """
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.Attach = channel.stream_stream(
+                '/omnivoice.worker.v1.NodeService/Attach',
+                request_serializer=worker__v1__pb2.ServerMessage.SerializeToString,
+                response_deserializer=worker__v1__pb2.WorkerMessage.FromString,
+                _registered_method=True)
+        self.FetchResult = channel.unary_stream(
+                '/omnivoice.worker.v1.NodeService/FetchResult',
+                request_serializer=worker__v1__pb2.ArtifactRef.SerializeToString,
+                response_deserializer=worker__v1__pb2.ResultChunk.FromString,
+                _registered_method=True)
+        self.PushInput = channel.stream_unary(
+                '/omnivoice.worker.v1.NodeService/PushInput',
+                request_serializer=worker__v1__pb2.ArtifactChunk.SerializeToString,
+                response_deserializer=worker__v1__pb2.ArtifactAck.FromString,
+                _registered_method=True)
+
+
+class NodeServiceServicer:
+    """Hosted by the NODE, dialled by the CONTROL PLANE — the mirror image of
+    WorkerService above, for the deployment where the node cannot dial out (or
+    where several panels share one GPU box; see docs/adr/inbound-node-mode.md).
+
+    TRANSPORT roles invert here. MESSAGE roles do NOT: the node still sends
+    WorkerMessage (heartbeats, capabilities, progress, results) and the control
+    plane still sends ServerMessage (assignments, cancels, acks). Every state
+    machine on both sides is therefore unchanged, and that is the whole point of
+    mirroring the service instead of inventing a second protocol. Read the field
+    names as "what this side says", never as "who called whom".
+
+    This service is for LAN / self-hosted use only and is never a fleet
+    transport: goal_v2.md B2/B5.2 require hosted workers to dial out, and nothing
+    here relaxes that.
+    """
+
+    def Attach(self, request_iterator, context):
+        """The control plane opens this; the node answers. Carries the same frames
+        Control does, plus Register folded in as the first exchange — a node being
+        dialled cannot also expose a unary Register the way a control plane does,
+        and a separate round trip would leave the stream ambiguous until it
+        finished.
+
+        The node's first frame MUST be `register` and the panel's first frame MUST
+        be `registered`. Note that the node still speaks first despite the panel
+        having opened the call: it is still the side with capabilities to declare.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def FetchResult(self, request, context):
+        """Artifact out, pulled instead of pushed: mirrors UploadResult. The node has
+        no way to call the panel, so the panel fetches a finished result once the
+        node reports it. Resumable via ArtifactRef-scoped offsets, same as
+        UploadResult.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def PushInput(self, request_iterator, context):
+        """Artifact in, pushed instead of pulled: mirrors DownloadArtifact.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_NodeServiceServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'Attach': grpc.stream_stream_rpc_method_handler(
+                    servicer.Attach,
+                    request_deserializer=worker__v1__pb2.ServerMessage.FromString,
+                    response_serializer=worker__v1__pb2.WorkerMessage.SerializeToString,
+            ),
+            'FetchResult': grpc.unary_stream_rpc_method_handler(
+                    servicer.FetchResult,
+                    request_deserializer=worker__v1__pb2.ArtifactRef.FromString,
+                    response_serializer=worker__v1__pb2.ResultChunk.SerializeToString,
+            ),
+            'PushInput': grpc.stream_unary_rpc_method_handler(
+                    servicer.PushInput,
+                    request_deserializer=worker__v1__pb2.ArtifactChunk.FromString,
+                    response_serializer=worker__v1__pb2.ArtifactAck.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'omnivoice.worker.v1.NodeService', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+    server.add_registered_method_handlers('omnivoice.worker.v1.NodeService', rpc_method_handlers)
+
+
+ # This class is part of an EXPERIMENTAL API.
+class NodeService:
+    """Hosted by the NODE, dialled by the CONTROL PLANE — the mirror image of
+    WorkerService above, for the deployment where the node cannot dial out (or
+    where several panels share one GPU box; see docs/adr/inbound-node-mode.md).
+
+    TRANSPORT roles invert here. MESSAGE roles do NOT: the node still sends
+    WorkerMessage (heartbeats, capabilities, progress, results) and the control
+    plane still sends ServerMessage (assignments, cancels, acks). Every state
+    machine on both sides is therefore unchanged, and that is the whole point of
+    mirroring the service instead of inventing a second protocol. Read the field
+    names as "what this side says", never as "who called whom".
+
+    This service is for LAN / self-hosted use only and is never a fleet
+    transport: goal_v2.md B2/B5.2 require hosted workers to dial out, and nothing
+    here relaxes that.
+    """
+
+    @staticmethod
+    def Attach(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_stream(
+            request_iterator,
+            target,
+            '/omnivoice.worker.v1.NodeService/Attach',
+            worker__v1__pb2.ServerMessage.SerializeToString,
+            worker__v1__pb2.WorkerMessage.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def FetchResult(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/omnivoice.worker.v1.NodeService/FetchResult',
+            worker__v1__pb2.ArtifactRef.SerializeToString,
+            worker__v1__pb2.ResultChunk.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def PushInput(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_unary(
+            request_iterator,
+            target,
+            '/omnivoice.worker.v1.NodeService/PushInput',
+            worker__v1__pb2.ArtifactChunk.SerializeToString,
+            worker__v1__pb2.ArtifactAck.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)

@@ -264,6 +264,10 @@ class _Session:
         self.session = session
         self.outbox: asyncio.Queue[pb.ServerMessage] = asyncio.Queue()
         self.stream_open = False
+        # Set only in inbound mode, where artifacts move over RPCs this side
+        # initiates. None means outbound, where the worker calls UploadResult
+        # and DownloadArtifact itself and there is nothing to hold here.
+        self.connection = None
         # nonce → monotonic send time, for the outstanding ping.
         self.pending_pings: dict[int, float] = {}
         self.next_nonce = 1
@@ -330,6 +334,22 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
                 "token in Settings → System → Remote workers and add the worker again.",
             )
 
+        # The address the worker actually reached us from — what the UI shows
+        # as ip:port. Self-reported endpoints would be guesses; this is fact.
+        return self.establish_session(worker, request, address=_peer_address(context))
+
+    def establish_session(
+        self, worker: registry.RemoteWorker, request: pb.RegisterRequest, *, address: str
+    ) -> pb.RegisterResponse:
+        """Everything registration does once the worker is known to be genuine.
+
+        Split out because inbound mode (NodeService.Attach) reaches this point
+        by a different road — the panel dialled, and admission was an API key
+        rather than an enrollment token — but must arrive in exactly the same
+        state. A second copy of session issue, capability application and
+        in-flight reconciliation is a second thing to keep in step forever, and
+        the half that gets forgotten is always the reconciliation.
+        """
         epoch = registry.begin_session(worker.id)
         session = identity.issue_session(worker_id=worker.id, key_id=worker.key_id, epoch=epoch)
         capabilities = [codec.capability_from_pb(c) for c in request.capabilities]
@@ -349,9 +369,6 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         # the worker does not claim (lifecycle.reconcile), so leaving these out
         # marks a completed render LOST moments before it is redelivered.
         unacked = {ref.attempt_id for ref in request.completed_unacked}
-        # The address the worker actually reached us from — what the UI shows
-        # as ip:port. Self-reported endpoints would be guesses; this is fact.
-        address = _peer_address(context)
 
         # Replace any previous session for this worker. Two live sessions is
         # the race that delivers two accepts for one assignment.
@@ -504,6 +521,94 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
             self._sessions.pop(session.worker_id, None)
             self._by_token.pop(session.session.token, None)
             logger.info("Worker %s disconnected", session.worker_id)
+
+    # ── Inbound mode ──────────────────────────────────────────────────────
+    #
+    # The panel dialled the node instead of the other way round. Admission was
+    # an API key rather than an enrollment token, and the frames arrive on a
+    # client stream rather than a servicer context — but this is still the
+    # control plane, so everything between those two edges is the same code.
+
+    def session_for(self, worker_id: str) -> Optional[_Session]:
+        return self._sessions.get(worker_id)
+
+    def register_inbound(
+        self, worker: registry.RemoteWorker, request: pb.RegisterRequest, *, address: str
+    ) -> pb.RegisterResponse:
+        """Register a node this panel dialled.
+
+        The version and feature gates run here too. Skipping them for inbound
+        would let an out-of-date node register cleanly and then ignore task
+        inputs — the failure that returned a clone with no reference audio,
+        reported as success.
+        """
+        if request.protocol_version_max < MIN_SUPPORTED_VERSION:
+            return self._refuse(
+                "UPGRADE_REQUIRED",
+                "That GPU machine speaks an older protocol than this app supports. "
+                "Update VoiceStudio there, then reconnect.",
+            )
+        if request.protocol_version_min > PROTOCOL_VERSION:
+            return self._refuse(
+                "UPGRADE_REQUIRED",
+                "That GPU machine is newer than this app. Update VoiceStudio here, "
+                "then reconnect.",
+            )
+        missing_features = sorted(REQUIRED_FEATURES.difference(request.features))
+        if missing_features:
+            return self._refuse(
+                "UPGRADE_REQUIRED",
+                "That GPU machine is missing required protocol features "
+                f"({', '.join(missing_features)}). Update VoiceStudio there, then "
+                "reconnect; no task was run.",
+            )
+        return self.establish_session(worker, request, address=address)
+
+    async def run_inbound_stream(self, session: _Session, frames, connection) -> None:
+        """Drive one dialled session until it ends.
+
+        Mirrors ``Control``'s task set minus the writer: outbound writes to a
+        servicer context, while here the connector drains the same outbox onto
+        its request generator. The teardown is deliberately identical — a
+        dropped stream starts grace windows and fails nothing, because the node
+        may be seconds away from delivering a finished result.
+        """
+        session.stream_open = True
+        session.connection = connection
+        from worker.executor import INLINE_LIMIT_BYTES  # noqa: PLC0415
+
+        await session.send(
+            pb.ServerMessage(
+                config=pb.ConfigUpdate(
+                    heartbeat_interval_seconds=_HEARTBEAT_INTERVAL_SECONDS,
+                    max_concurrent_tasks=max(
+                        1, self.pool.get(session.worker_id).capacity.max_concurrent_tasks
+                    ),
+                    inline_result_threshold_bytes=INLINE_LIMIT_BYTES,
+                )
+            )
+        )
+        reader = asyncio.create_task(self._read_loop(session, frames))
+        pinger = asyncio.create_task(self._ping_loop(session))
+        try:
+            done, pending = await asyncio.wait(
+                {reader, pinger}, return_when=asyncio.FIRST_COMPLETED
+            )
+            for task in pending:
+                task.cancel()
+            for task in done:
+                exc = task.exception()
+                if exc is not None and not isinstance(exc, asyncio.CancelledError):
+                    logger.debug("Inbound stream ended for %s: %s", session.worker_id, exc)
+        finally:
+            session.stream_open = False
+            session.connection = None
+            for task in (reader, pinger):
+                task.cancel()
+            self.scheduler.on_disconnected(session.worker_id)
+            self._sessions.pop(session.worker_id, None)
+            self._by_token.pop(session.session.token, None)
+            logger.info("GPU machine %s disconnected", session.worker_id)
 
     def _session_from_metadata(self, context) -> Optional[_Session]:
         for key, value in context.invocation_metadata() or ():
@@ -725,7 +830,18 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
 
         artifact = None
         if result.artifacts:
-            artifact = self._contained_artifact(result.artifacts[0].artifact_id)
+            if session.connection is not None:
+                # Inbound: the node cannot call us, so a result it "delivered"
+                # is only staged on its own disk until we pull it. Without this
+                # the task commits with an artifact path that was never
+                # written, and the job fails with "finished the job but its
+                # audio did not arrive" — which is exactly what it did on
+                # hardware before this existed.
+                artifact = await self._fetch_inbound_artifact(
+                    session, attempt, result.artifacts[0]
+                )
+            else:
+                artifact = self._contained_artifact(result.artifacts[0].artifact_id)
         # No attempt record, no place to put it: the payload of a task we
         # cannot identify has nothing to be attached to, and the worker keeps
         # its copy because nothing below will acknowledge it.
@@ -811,6 +927,34 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         path.parent.mkdir(parents=True, exist_ok=True)
         return str(path)
 
+    async def _fetch_inbound_artifact(
+        self, session: _Session, attempt: Optional[Attempt], ref: pb.ArtifactRef
+    ) -> Optional[str]:
+        """Pull a staged result down from a node this control plane dialled.
+
+        Returns the local path, or None — and None is not a silent loss: the
+        commit below records no artifact, the task fails with a message naming
+        the machine, and the node keeps its copy because nothing acknowledges
+        a result we could not fetch.
+        """
+        if attempt is None:
+            return None
+        path = self._artifact_path(attempt.task_id, attempt.attempt_id)
+        if path is None:
+            return None
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            await session.connection.fetch_result(ref, path)
+        except Exception as exc:
+            logger.warning(
+                "Could not fetch the result for task %s from %s: %s",
+                attempt.task_id,
+                session.worker_id,
+                exc,
+            )
+            return None
+        return path
+
     def _contained_artifact(self, artifact_id: str) -> Optional[str]:
         """An artifact the worker names is only ever a reference into our own
         store, and is resolved as one."""
@@ -838,17 +982,35 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         session = self._sessions.get(assignment.worker.worker_id)
         if session is None:
             return False
-        await session.send(
-            pb.ServerMessage(
-                assignment=codec.assignment_to_pb(
-                    assignment.task,
-                    assignment.attempt,
-                    assignment.deadlines,
-                    artifact_root=self.artifact_dir,
-                )
-            )
+        message = codec.assignment_to_pb(
+            assignment.task,
+            assignment.attempt,
+            assignment.deadlines,
+            artifact_root=self.artifact_dir,
         )
+        if session.connection is not None and message.inputs:
+            # Inbound: the node cannot pull, so its inputs have to be here
+            # BEFORE the assignment is. The executor asks for them as soon as
+            # it starts, and an assignment that overtakes its own reference
+            # audio fails on a file that is merely late.
+            try:
+                await self._push_inbound_inputs(session, message)
+            except Exception as exc:
+                logger.warning(
+                    "Could not send task inputs to %s: %s", session.worker_id, exc
+                )
+                return False
+        await session.send(pb.ServerMessage(assignment=message))
         return True
+
+    async def _push_inbound_inputs(self, session: _Session, message) -> None:
+        """Upload every declared input, replacing each ref with what landed."""
+        pushed = []
+        for ref in message.inputs:
+            local = self._contained_artifact(ref.artifact_id) or ref.artifact_id
+            pushed.append(await session.connection.push_input(ref, local))
+        del message.inputs[:]
+        message.inputs.extend(pushed)
 
     async def cancel(self, worker_id: str, task_id: str, attempt_id: str, epoch: int) -> bool:
         session = self._sessions.get(worker_id)

@@ -60,6 +60,57 @@ reference voices, and text to be sent there — consent is recorded per worker,
 because agreeing to use your own desktop is not agreeing to use whatever gets
 added later.
 
+## Sharing one GPU machine with other people
+
+The setup above has the GPU machine dial this app. That is the default and the
+right choice for a machine only you use — but it connects to exactly one app.
+Pointing it somewhere else means editing its settings and restarting, which
+disconnects whoever had it.
+
+If more than one person needs the same GPU box, turn it around: let the box
+**accept connections** instead.
+
+**On the GPU machine:** Settings → System → Remote workers → **Accept
+connections**. It listens on `127.0.0.1:7444` to begin with, which only that
+machine can reach — set **Reachable from** to your network address to let other
+machines in.
+
+Then **Add a person** for each panel that should have access. You get a
+connection string:
+
+```
+ovnode://ovnode_xxxxxxxx@192.168.0.110:7444
+```
+
+Copy it once — it is not shown again. Give a separate one to each person.
+
+**On each person's machine:** Settings → System → Remote workers → **Connect to
+a GPU machine**, paste the string. That is the whole flow: no shell access to
+the GPU box, no restart, and everyone stays connected at the same time. If two
+people send work at once, the second job waits for a free slot rather than
+failing.
+
+**Removing someone** revokes only their connection string. Everyone else keeps
+working, which is why each person gets their own.
+
+**Who is using it** is on the GPU machine, under Accept connections: every
+panel currently attached, where it connected from, how many jobs it has run,
+and a **Disconnect** button.
+
+**Disconnect and Remove do different things.** Disconnect ends the session now
+and keeps that person out for a minute — use it to get someone off the card
+immediately. Their app reconnects by itself after that, because their
+connection string is still valid. To stop someone for good, remove their
+connection string instead.
+
+> **This mode is not encrypted.** The connection string is a password that
+> travels in the clear, so anyone who can watch that network can copy it and
+> use your GPU — and your reference audio and rendered speech cross the network
+> unencrypted too. Use it on a network you trust, such as your own home or
+> office LAN, and not on shared or public Wi-Fi. The dial-out setup above is
+> fully encrypted and is the better choice whenever one machine is enough.
+> The reasoning is recorded in [the decision record](adr/inbound-node-mode.md).
+
 ## What you can change
 
 | Control | What it does |
@@ -152,6 +203,17 @@ with a blank hint.
 
 ## Security
 
+The guarantees below describe the **default** setup, where the GPU machine
+dials this app. "Accept connections" mode trades several of them away
+deliberately — see the warning in
+[Sharing one GPU machine](#sharing-one-gpu-machine-with-other-people) and
+[the decision record](adr/inbound-node-mode.md). In that mode there is no
+encryption and no server verification; the connection string is the whole of
+admission, and it is only as private as the network it crosses. Everything else
+below still holds: identity is still a key the GPU machine never sends,
+revoking still survives a restart, and engines are still named from a fixed
+registry.
+
 * **All traffic is TLS.** There is no way to disable verification.
 * This machine generates its own certificate. The enrollment token carries that
   certificate's fingerprint, and the worker pins it — so a machine on the same
@@ -182,6 +244,9 @@ kept, so turning it back on does not mean setting everything up again.
 | `OMNIVOICE_REMOTE_WORKERS` | `1`/`0` — enable without the UI (headless, Docker) |
 | `OMNIVOICE_WORKER_PORT` | Control-plane port (default `7443`) |
 | `OMNIVOICE_WORKER_ENDPOINT_HOST` | Override the address shown to workers |
+| `OMNIVOICE_INBOUND_NODE` | `1`/`0` — accept connections from other panels |
+| `OMNIVOICE_INBOUND_BIND` | Address to accept them on (default `127.0.0.1`) |
+| `OMNIVOICE_INBOUND_PORT` | Port to accept them on (default `7444`) |
 | `OMNIVOICE_WORKER_MODE` | `1` on the worker machine |
 | `OMNIVOICE_WORKER_TOKEN` | Enrollment token, first run only |
 

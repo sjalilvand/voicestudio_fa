@@ -210,7 +210,7 @@ describe('WorkersPanel', () => {
     renderPanel();
 
     fireEvent.click(await screen.findByLabelText(/rename worker/i));
-    const field = await screen.findByRole('textbox');
+    const field = await screen.findByRole('textbox', { name: 'Rename worker' });
     fireEvent.change(field, { target: { value: 'Studio 4090' } });
     fireEvent.keyDown(field, { key: 'Enter' });
 
@@ -228,11 +228,11 @@ describe('WorkersPanel', () => {
     renderPanel();
 
     fireEvent.click(await screen.findByLabelText(/rename worker/i));
-    const field = await screen.findByRole('textbox');
+    const field = await screen.findByRole('textbox', { name: 'Rename worker' });
     fireEvent.change(field, { target: { value: '   ' } });
     fireEvent.keyDown(field, { key: 'Enter' });
 
-    await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Rename worker' })).not.toBeInTheDocument());
     expect(apiFetch.mock.calls.some(([, o]) => o?.method === 'PATCH')).toBe(false);
   });
 
@@ -241,11 +241,11 @@ describe('WorkersPanel', () => {
     renderPanel();
 
     fireEvent.click(await screen.findByLabelText(/rename worker/i));
-    const field = await screen.findByRole('textbox');
+    const field = await screen.findByRole('textbox', { name: 'Rename worker' });
     fireEvent.change(field, { target: { value: 'nope' } });
     fireEvent.keyDown(field, { key: 'Escape' });
 
-    await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Rename worker' })).not.toBeInTheDocument());
     expect(apiFetch.mock.calls.some(([, o]) => o?.method === 'PATCH')).toBe(false);
   });
 });
