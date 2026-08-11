@@ -47,11 +47,22 @@ describe('reduceModelDownloadEvent — install_error persistence (P1-A)', () => 
 });
 
 it('keeps simultaneous local and remote downloads of one repo separate', () => {
-  let s = reduceModelDownloadEvent({}, {
-    target: 'local', repo_id: REPO, phase: 'aggregate', bytes_done: 1, total_bytes: 10,
-  });
+  let s = reduceModelDownloadEvent(
+    {},
+    {
+      target: 'local',
+      repo_id: REPO,
+      phase: 'aggregate',
+      bytes_done: 1,
+      total_bytes: 10,
+    },
+  );
   s = reduceModelDownloadEvent(s, {
-    target: 'gpu2', repo_id: REPO, phase: 'aggregate', bytes_done: 7, total_bytes: 10,
+    target: 'gpu2',
+    repo_id: REPO,
+    phase: 'aggregate',
+    bytes_done: 7,
+    total_bytes: 10,
   });
   expect(s[downloadKey('local', REPO)].agg.bytes_done).toBe(1);
   expect(s[downloadKey('gpu2', REPO)].agg.bytes_done).toBe(7);

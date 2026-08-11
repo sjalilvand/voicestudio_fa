@@ -11,7 +11,12 @@ import { SettingsSection, SettingsInput, SETTINGS_SECTION_SURFACE } from './prim
 import { askConfirm } from './native';
 import { fmtBytes } from './models/format';
 import { computeRowRuntime } from './models/runtime';
-import { downloadKey, progressForRepo, reduceModelDownloadEvent, isAutoPurgeTerminal } from './models/downloadReducer';
+import {
+  downloadKey,
+  progressForRepo,
+  reduceModelDownloadEvent,
+  isAutoPurgeTerminal,
+} from './models/downloadReducer';
 import { makeModelColumns } from './models/columns';
 import { groupModels } from './models/sections';
 import RecoBanner from './models/RecoBanner';

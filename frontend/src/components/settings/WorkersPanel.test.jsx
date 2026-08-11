@@ -78,7 +78,12 @@ describe('WorkersPanel', () => {
 
   it('explains an occupied control-plane port without exposing inactive controls', async () => {
     apiFetch.mockResolvedValue(
-      respond({ enabled: true, running: false, startup_error: 'CONTROL_PLANE_PORT_IN_USE', workers: [] }),
+      respond({
+        enabled: true,
+        running: false,
+        startup_error: 'CONTROL_PLANE_PORT_IN_USE',
+        workers: [],
+      }),
     );
     renderPanel();
 
@@ -200,9 +205,7 @@ describe('WorkersPanel', () => {
 
     fireEvent.click(await screen.findByText(/Generate token/i));
 
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith('Remote workers are turned off.'),
-    );
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Remote workers are turned off.'));
   });
 
   it('renames a worker through the API', async () => {
@@ -215,7 +218,9 @@ describe('WorkersPanel', () => {
     fireEvent.keyDown(field, { key: 'Enter' });
 
     await waitFor(() => {
-      const call = apiFetch.mock.calls.find(([p, o]) => p === '/workers/w1' && o?.method === 'PATCH');
+      const call = apiFetch.mock.calls.find(
+        ([p, o]) => p === '/workers/w1' && o?.method === 'PATCH',
+      );
       expect(call).toBeTruthy();
       expect(JSON.parse(call[1].body)).toEqual({ name: 'Studio 4090' });
     });
@@ -232,7 +237,9 @@ describe('WorkersPanel', () => {
     fireEvent.change(field, { target: { value: '   ' } });
     fireEvent.keyDown(field, { key: 'Enter' });
 
-    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Rename worker' })).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByRole('textbox', { name: 'Rename worker' })).not.toBeInTheDocument(),
+    );
     expect(apiFetch.mock.calls.some(([, o]) => o?.method === 'PATCH')).toBe(false);
   });
 
@@ -245,7 +252,9 @@ describe('WorkersPanel', () => {
     fireEvent.change(field, { target: { value: 'nope' } });
     fireEvent.keyDown(field, { key: 'Escape' });
 
-    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Rename worker' })).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByRole('textbox', { name: 'Rename worker' })).not.toBeInTheDocument(),
+    );
     expect(apiFetch.mock.calls.some(([, o]) => o?.method === 'PATCH')).toBe(false);
   });
 });

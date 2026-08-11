@@ -172,9 +172,9 @@ export default function GpuTarget() {
     ? op === 'dictation'
       ? t('gpu.dictationLocal', { defaultValue: 'Dictation always runs on this machine' })
       : t('gpu.opLocal', {
-        op: opLabel(op),
-        defaultValue: 'Local — {{op}} does not run remotely yet',
-      })
+          op: opLabel(op),
+          defaultValue: 'Local — {{op}} does not run remotely yet',
+        })
     : active?.reason || '';
   const fellBack = !active?.remote && chosen !== 'local' && !opIsLocalOnly;
   // When the chosen worker is unreachable the work runs here, but the DOT must
@@ -226,69 +226,70 @@ export default function GpuTarget() {
             <div
               data-slot="gpu-target-menu"
               style={{ top: anchor.top, right: anchor.right }}
-              className="fixed z-[9999] min-w-[240px] rounded-lg border border-transparent bg-[var(--chrome-bg)] p-1 shadow-lg" >
-            {targets.map((target) => (
-              // Any enrolled worker is selectable, including an offline one:
-              // you pick your desktop and then go and switch it on. Routing
-              // already falls back locally with a reason until it answers, so
-              // forbidding the choice would only prevent setting it up.
-              <button
-                key={target.id}
-                type="button"
-                onClick={() => choose(target.id)}
-                className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-white/5 ${
-                  target.available ? '' : 'opacity-60'
-                }`}
-              >
-                <span className="w-3">{target.id === chosen ? <Check size={12} /> : null}</span>
-                {target.is_local ? (
-                  <span className="w-[6px]" />
-                ) : (
-                  <StatusDot status={target.status} />
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="truncate">{target.label}</span>
-                    {latencyLabel(target) && (
-                      <span className="shrink-0 opacity-60">{latencyLabel(target)}</span>
-                    )}
-                  </span>
-                  {/* The address disambiguates two machines a user named
+              className="fixed z-[9999] min-w-[240px] rounded-lg border border-transparent bg-[var(--chrome-bg)] p-1 shadow-lg"
+            >
+              {targets.map((target) => (
+                // Any enrolled worker is selectable, including an offline one:
+                // you pick your desktop and then go and switch it on. Routing
+                // already falls back locally with a reason until it answers, so
+                // forbidding the choice would only prevent setting it up.
+                <button
+                  key={target.id}
+                  type="button"
+                  onClick={() => choose(target.id)}
+                  className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-white/5 ${
+                    target.available ? '' : 'opacity-60'
+                  }`}
+                >
+                  <span className="w-3">{target.id === chosen ? <Check size={12} /> : null}</span>
+                  {target.is_local ? (
+                    <span className="w-[6px]" />
+                  ) : (
+                    <StatusDot status={target.status} />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="truncate">{target.label}</span>
+                      {latencyLabel(target) && (
+                        <span className="shrink-0 opacity-60">{latencyLabel(target)}</span>
+                      )}
+                    </span>
+                    {/* The address disambiguates two machines a user named
                       similarly; the detail says why one cannot be picked; the
                       task count is what makes "busy" mean something; the
                       coverage is what stops the entry from implying the
                       machine takes everything. Coverage is dropped while the
                       worker is unusable — "offline · TTS only" answers a
                       question the user is not asking yet. */}
-                  {!target.is_local && (
-                    <span className="block truncate opacity-60">
-                      {target.detail
-                        ? target.detail
-                        : [
-                            target.active_tasks > 0
-                              ? `${target.endpoint} · ${target.active_tasks}/${target.max_tasks} ${t(
-                                  'gpu.tasks',
-                                  { defaultValue: 'tasks' },
-                                )}`
-                              : target.endpoint,
-                            coverage,
-                          ]
-                            .filter(Boolean)
-                            .join(' · ')}
-                    </span>
-                  )}
-                </span>
-              </button>
-            ))}
-            {reason && (fellBack || opIsLocalOnly) && (
-              <p
-                className={`m-0 px-2 py-1 text-[11px] ${
-                  fellBack ? 'text-amber-400' : 'opacity-60'
-                }`}
-              >
-                {reason}
-              </p>
-            )}
+                    {!target.is_local && (
+                      <span className="block truncate opacity-60">
+                        {target.detail
+                          ? target.detail
+                          : [
+                              target.active_tasks > 0
+                                ? `${target.endpoint} · ${target.active_tasks}/${target.max_tasks} ${t(
+                                    'gpu.tasks',
+                                    { defaultValue: 'tasks' },
+                                  )}`
+                                : target.endpoint,
+                              coverage,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              ))}
+              {reason && (fellBack || opIsLocalOnly) && (
+                <p
+                  className={`m-0 px-2 py-1 text-[11px] ${
+                    fellBack ? 'text-amber-400' : 'opacity-60'
+                  }`}
+                >
+                  {reason}
+                </p>
+              )}
             </div>
           </>,
           document.body,

@@ -16,12 +16,21 @@ vi.mock('../api/client', () => ({ apiUrl: (url) => url }));
 vi.mock('../store', () => ({
   useAppStore: (selector) =>
     selector({
-      galleryZone: 'archetypes', setGalleryZone: vi.fn(), archetypeFilters: {},
-      setArchetypeFilter: vi.fn(), resetArchetypeFilters: vi.fn(),
-      favoriteArchetypeIds: [], toggleFavoriteArchetype: vi.fn(),
-      galleryViewMode: 'grid', setGalleryViewMode: vi.fn(), setMode: vi.fn(),
-      setDefineMethod: vi.fn(), setPendingProfileId: vi.fn(), setInstruct: vi.fn(),
-      setVdStates: vi.fn(), vdStates: {},
+      galleryZone: 'archetypes',
+      setGalleryZone: vi.fn(),
+      archetypeFilters: {},
+      setArchetypeFilter: vi.fn(),
+      resetArchetypeFilters: vi.fn(),
+      favoriteArchetypeIds: [],
+      toggleFavoriteArchetype: vi.fn(),
+      galleryViewMode: 'grid',
+      setGalleryViewMode: vi.fn(),
+      setMode: vi.fn(),
+      setDefineMethod: vi.fn(),
+      setPendingProfileId: vi.fn(),
+      setInstruct: vi.fn(),
+      setVdStates: vi.fn(),
+      vdStates: {},
     }),
 }));
 vi.mock('../components/gallery/ArchetypesZone', () => ({

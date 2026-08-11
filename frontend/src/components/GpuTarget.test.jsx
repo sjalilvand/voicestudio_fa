@@ -9,7 +9,11 @@ const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }));
 vi.mock('../api/client', () => ({ apiFetch }));
 
 // apiFetch resolves to a raw Response and does not throw on 4xx.
-const respond = (body, { ok = true, status = 200 } = {}) => ({ ok, status, json: async () => body });
+const respond = (body, { ok = true, status = 200 } = {}) => ({
+  ok,
+  status,
+  json: async () => body,
+});
 
 import toast from 'react-hot-toast';
 import GpuTarget from './GpuTarget';
@@ -79,7 +83,11 @@ describe('GpuTarget', () => {
     apiFetch.mockResolvedValue(
       respond({
         target: 'w1',
-        active: { remote: false, label: 'Local', reason: 'desktop-4090 is offline — running locally' },
+        active: {
+          remote: false,
+          label: 'Local',
+          reason: 'desktop-4090 is offline — running locally',
+        },
         targets: [LOCAL, { ...DESKTOP, available: false, connected: false, detail: 'offline' }],
       }),
     );
@@ -130,7 +138,10 @@ describe('GpuTarget', () => {
       respond({
         target: 'local',
         active: { remote: false },
-        targets: [LOCAL, { ...DESKTOP, available: false, detail: 'paused after repeated failures' }],
+        targets: [
+          LOCAL,
+          { ...DESKTOP, available: false, detail: 'paused after repeated failures' },
+        ],
       }),
     );
     renderPicker();
