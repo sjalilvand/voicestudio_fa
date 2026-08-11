@@ -89,9 +89,7 @@ export default function StoragePanel() {
       actions={
         <>
           <RestartBadge />
-          <InfoHint label={t('firstrun.models_dir')}>
-            {t('settings.models_dir_help')}
-          </InfoHint>
+          <InfoHint label={t('firstrun.models_dir')}>{t('settings.models_dir_help')}</InfoHint>
         </>
       }
     >

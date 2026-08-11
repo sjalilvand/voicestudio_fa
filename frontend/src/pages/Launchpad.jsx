@@ -262,7 +262,9 @@ export default function Launchpad({
       {/* Demo profile callout */}
       {demoProfile && profiles.length === 1 && studioProjects.length === 0 && (
         <div className="flex flex-wrap items-center gap-[10px] py-[10px] px-[18px] mt-[8px] mx-[44px] @max-[900px]/launchpad:mx-[20px] @max-[640px]/launchpad:mx-[12px] mb-0 bg-[color-mix(in_srgb,var(--chrome-accent)_8%,var(--chrome-bg))] border border-solid border-[var(--chrome-accent-border)] rounded-[var(--chrome-radius-pill)] text-[0.76rem] text-[color:var(--chrome-fg)] relative z-[1] animate-[lpFadeUp_0.5s_cubic-bezier(0.4,0,0.2,1)_both]">
-          <span className="text-[1.1rem]" aria-hidden="true">👋</span>
+          <span className="text-[1.1rem]" aria-hidden="true">
+            👋
+          </span>
           <span>{t('launchpad.demo_callout')}</span>
           <button
             type="button"

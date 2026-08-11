@@ -8,8 +8,7 @@ import ProfileDetails from './ProfileDetails';
 const t = i18n.t.bind(i18n);
 const profile = {
   language: 'English',
-  instruct:
-    'Warm and precise with a restrained cinematic cadence that must remain fully readable.',
+  instruct: 'Warm and precise with a restrained cinematic cadence that must remain fully readable.',
   ref_text: 'This is the reference transcript.',
   is_locked: false,
   verified_own_voice: false,

@@ -482,37 +482,37 @@ export default function Settings() {
     // at the wrong logical width when WebKitGTK/Tauri zoom is active.
     <div className="h-full min-h-0 w-full [container-type:inline-size] [container-name:settings-shell]">
       <div className="flex h-full min-h-0 w-full box-border flex-1 flex-col overflow-y-auto bg-[var(--chrome-bg)] p-[var(--space-5)_var(--space-7)_var(--space-7)] font-sans @min-[760px]/settings-shell:grid @min-[760px]/settings-shell:overflow-hidden @min-[760px]/settings-shell:[grid-template-columns:var(--settings-rail)_minmax(0,1fr)] @min-[760px]/settings-shell:[grid-template-rows:minmax(0,1fr)] @min-[760px]/settings-shell:gap-[var(--space-5)]">
-      <aside className="mb-[var(--space-4)] @min-[760px]/settings-shell:mb-0 @min-[760px]/settings-shell:flex @min-[760px]/settings-shell:h-full @min-[760px]/settings-shell:min-h-0 @min-[760px]/settings-shell:flex-col @min-[760px]/settings-shell:overflow-hidden">
-        <SettingsSearch value={query} onChange={setQuery} />
-        <SettingsSidebar
-          visibleIds={visibleSet}
-          active={active}
-          onSelect={setActive}
-          query={query}
-          onClearSearch={() => setQuery('')}
-        />
-      </aside>
+        <aside className="mb-[var(--space-4)] @min-[760px]/settings-shell:mb-0 @min-[760px]/settings-shell:flex @min-[760px]/settings-shell:h-full @min-[760px]/settings-shell:min-h-0 @min-[760px]/settings-shell:flex-col @min-[760px]/settings-shell:overflow-hidden">
+          <SettingsSearch value={query} onChange={setQuery} />
+          <SettingsSidebar
+            visibleIds={visibleSet}
+            active={active}
+            onSelect={setActive}
+            query={query}
+            onClearSearch={() => setQuery('')}
+          />
+        </aside>
 
-      <div className="min-w-0 w-full max-w-[1100px] mx-auto flex-auto self-start [container-type:inline-size] [container-name:settings] @min-[760px]/settings-shell:flex @min-[760px]/settings-shell:h-full @min-[760px]/settings-shell:min-h-0 @min-[760px]/settings-shell:flex-col @min-[760px]/settings-shell:overflow-hidden @min-[760px]/settings-shell:pr-[var(--space-2)]">
-        <header className="z-10 mb-[var(--space-5)] flex shrink-0 items-center gap-[var(--space-3)] border-b border-[color-mix(in_srgb,var(--chrome-fg)_7%,transparent)] bg-[var(--chrome-bg)] pb-[var(--space-4)]">
-          {CatIcon && (
-            <span
-              className="inline-flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[var(--chrome-radius-pill)] border border-transparent bg-[color-mix(in_srgb,var(--chrome-accent)_12%,var(--chrome-bg))] text-[color:var(--chrome-accent)]"
-              aria-hidden="true"
-            >
-              <CatIcon size={16} />
-            </span>
-          )}
-          <h1 className="m-0 flex-auto [font-family:var(--font-sans)] text-[length:var(--text-xl)] font-bold tracking-[-0.02em] text-[color:var(--chrome-fg)]">
-            {t(cat.labelKey, { defaultValue: cat.defaultLabel })}
-          </h1>
-          {cat.restart && <RestartBadge />}
-        </header>
+        <div className="min-w-0 w-full max-w-[1100px] mx-auto flex-auto self-start [container-type:inline-size] [container-name:settings] @min-[760px]/settings-shell:flex @min-[760px]/settings-shell:h-full @min-[760px]/settings-shell:min-h-0 @min-[760px]/settings-shell:flex-col @min-[760px]/settings-shell:overflow-hidden @min-[760px]/settings-shell:pr-[var(--space-2)]">
+          <header className="z-10 mb-[var(--space-5)] flex shrink-0 items-center gap-[var(--space-3)] border-b border-[color-mix(in_srgb,var(--chrome-fg)_7%,transparent)] bg-[var(--chrome-bg)] pb-[var(--space-4)]">
+            {CatIcon && (
+              <span
+                className="inline-flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[var(--chrome-radius-pill)] border border-transparent bg-[color-mix(in_srgb,var(--chrome-accent)_12%,var(--chrome-bg))] text-[color:var(--chrome-accent)]"
+                aria-hidden="true"
+              >
+                <CatIcon size={16} />
+              </span>
+            )}
+            <h1 className="m-0 flex-auto [font-family:var(--font-sans)] text-[length:var(--text-xl)] font-bold tracking-[-0.02em] text-[color:var(--chrome-fg)]">
+              {t(cat.labelKey, { defaultValue: cat.defaultLabel })}
+            </h1>
+            {cat.restart && <RestartBadge />}
+          </header>
 
-        <div className="[&>*:first-child]:mt-0 @min-[760px]/settings-shell:min-h-0 @min-[760px]/settings-shell:flex-1 @min-[760px]/settings-shell:overflow-y-auto @min-[760px]/settings-shell:overscroll-contain">
-          {renderCategory(active)}
+          <div className="[&>*:first-child]:mt-0 @min-[760px]/settings-shell:min-h-0 @min-[760px]/settings-shell:flex-1 @min-[760px]/settings-shell:overflow-y-auto @min-[760px]/settings-shell:overscroll-contain">
+            {renderCategory(active)}
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );

@@ -176,10 +176,7 @@ export default function WorkspaceHistory({
               const inputType = dubInputType(item);
               const MediaIcon = inputType === 'audio' ? AudioWaveform : Film;
               return (
-                <div
-                  key={`dub-${item.id}`}
-                  className="history-item history-item--dub"
-                >
+                <div key={`dub-${item.id}`} className="history-item history-item--dub">
                   <div className="flex min-w-0 gap-[8px]">
                     <DubMediaPreview item={item} inputType={inputType} />
                     <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
@@ -297,7 +294,9 @@ export default function WorkspaceHistory({
                   title={item.text}
                   onClick={() => setExpanded((e) => (e === item.id ? null : item.id))}
                   aria-expanded={expanded === item.id}
-                  aria-label={t(expanded === item.id ? 'history.collapse_text' : 'history.expand_text')}
+                  aria-label={t(
+                    expanded === item.id ? 'history.collapse_text' : 'history.expand_text',
+                  )}
                 >
                   {displayTitle(item.text)}
                 </button>
@@ -338,7 +337,11 @@ export default function WorkspaceHistory({
                             : t('history.star_take', { defaultValue: 'Star — keep this take' })
                         }
                       >
-                        <Star size={10} fill={item.starred ? 'currentColor' : 'none'} aria-hidden="true" />
+                        <Star
+                          size={10}
+                          fill={item.starred ? 'currentColor' : 'none'}
+                          aria-hidden="true"
+                        />
                       </button>
                     ) : null}
                     {playTakeAsOutput ? (

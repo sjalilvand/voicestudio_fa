@@ -82,9 +82,7 @@ describe('Launchpad feature cards (full-width grid)', () => {
     expect(grid.querySelectorAll(':scope > .lp-action-card')).toHaveLength(7);
     // The grid's responsive column floor is wired (auto-fit minmax reads it).
     expect(cardMin(container)).toBe('200px');
-    expect(container.querySelector('.launchpad').className).toContain(
-      '[container-name:launchpad]',
-    );
+    expect(container.querySelector('.launchpad').className).toContain('[container-name:launchpad]');
   });
 
   it('uses a wider card floor on narrow shells — responsive columns, same 7 cards', () => {

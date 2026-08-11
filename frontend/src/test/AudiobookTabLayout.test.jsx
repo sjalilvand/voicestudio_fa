@@ -56,7 +56,9 @@ describe('AudiobookTab — compact grouped layout (#1214)', () => {
     expect(screen.getByText(en.audiobook.create)).toBeTruthy();
     expect(screen.getByRole('heading', { level: 2, name: en.audiobook.title })).toBeTruthy();
     expect(container.querySelector('[class*="container-name:audiobook-inspector"]')).toBeTruthy();
-    expect(container.querySelector('[class*="@min-[360px]/audiobook-inspector:grid-cols-2"]')).toBeTruthy();
+    expect(
+      container.querySelector('[class*="@min-[360px]/audiobook-inspector:grid-cols-2"]'),
+    ).toBeTruthy();
   });
 
   it('groups optional controls into an icon-led tool strip', () => {

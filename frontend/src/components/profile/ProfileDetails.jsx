@@ -69,14 +69,10 @@ export default function ProfileDetails({
           <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-[var(--space-6)] gap-y-[var(--space-3)] text-[var(--text-md)]">
             <dt className="text-fg-subtle">{t('voice_profile.style_instruct')}</dt>
             <dd className="m-0 max-w-[42ch] whitespace-pre-wrap break-words text-right text-fg">
-              {profile.instruct || (
-                <em className="italic text-fg-subtle">{t('common.not_set')}</em>
-              )}
+              {profile.instruct || <em className="italic text-fg-subtle">{t('common.not_set')}</em>}
             </dd>
             <dt className="text-fg-subtle">{t('voice_profile.language')}</dt>
-            <dd className="m-0 text-right text-fg">
-              {profile.language || t('clone.auto')}
-            </dd>
+            <dd className="m-0 text-right text-fg">{profile.language || t('clone.auto')}</dd>
           </dl>
         )}
         {editing ? (

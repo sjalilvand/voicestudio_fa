@@ -27,9 +27,7 @@ export default function AudiobookHero({
           >
             <BookMarked size={15} strokeWidth={1.8} />
           </div>
-          <h2
-            className="m-0 [font-family:var(--font-serif)] text-[var(--text-lg)] font-semibold text-fg"
-          >
+          <h2 className="m-0 [font-family:var(--font-serif)] text-[var(--text-lg)] font-semibold text-fg">
             {t('audiobook.title')}
           </h2>
         </div>
