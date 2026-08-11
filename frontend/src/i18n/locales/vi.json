@@ -2071,6 +2071,7 @@
     "hf_token_get_short": "Nhận một cái miễn phí →"
   },
   "history": {
+    "dub_meta": "{{segments}} phân đoạn · {{duration}} giây",
     "dub_title": "Lịch sử lồng tiếng",
     "empty": "Chưa có gì ở đây — các bản tạo của bạn sẽ xuất hiện ở bên phải.",
     "empty_dub": "Các bản lồng tiếng của bạn sẽ xuất hiện tại đây.",

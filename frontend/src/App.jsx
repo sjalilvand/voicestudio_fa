@@ -1467,7 +1467,7 @@ function App() {
                 <WorkspaceProjects
                   projects={studioProjects}
                   activeProjectId={activeProjectId}
-                  canSave={dubStep !== 'idle' || !!dubVideoFile}
+                  canSave={false}
                   saveProject={saveProject}
                   loadProject={loadProject}
                   deleteProject={deleteProject}

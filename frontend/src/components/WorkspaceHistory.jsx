@@ -75,6 +75,8 @@ function DubMediaPreview({ item, inputType }) {
       <img
         src={`${API}/dub/thumb/${encodeURIComponent(item.id)}`}
         alt=""
+        width="88"
+        height="54"
         loading="lazy"
         decoding="async"
         className="absolute inset-0 h-full w-full object-cover"
@@ -184,39 +186,45 @@ export default function WorkspaceHistory({
                     <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
                       <div className="flex items-center justify-between gap-2 min-w-0">
                         <span className="history-kind history-kind--audio">
-                          <MediaIcon size={9} /> {t('sidebar.dub_label')}
+                          <MediaIcon size={9} aria-hidden="true" /> {t('sidebar.dub_label')}
                         </span>
                         <span className="history-meta">
-                          {item.segments_count} segs · {Math.round(item.duration || 0)}s
+                          {t('history.dub_meta', {
+                            segments: item.segments_count,
+                            duration: Math.round(item.duration || 0),
+                          })}
                         </span>
                       </div>
                       <div className="history-title">{item.filename}</div>
                       <div className="history-subtitle">
                         {[item.language, item.language_code]
                           .filter((v) => v && v !== 'und' && v !== 'Auto')
-                          .join(' · ') || 'Auto'}
+                          .join(' · ') || t('dub.auto')}
                       </div>
                     </div>
                   </div>
                   <div className="history-actions">
                     <button
+                      type="button"
                       className="history-action-btn accent"
                       onClick={(e) => {
                         e.stopPropagation();
                         restoreDubHistory(item);
                       }}
                     >
-                      <FolderOpen size={10} /> {t('sidebar.open')}
+                      <FolderOpen size={10} aria-hidden="true" /> {t('sidebar.open')}
                     </button>
                     <button
+                      type="button"
                       className="history-action-btn danger history-action-icon"
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteHistory(item.id, 'dub');
                       }}
-                      title="Delete"
+                      title={t('common.delete')}
+                      aria-label={t('common.delete')}
                     >
-                      <Trash2 size={10} />
+                      <Trash2 size={10} aria-hidden="true" />
                     </button>
                   </div>
                 </div>

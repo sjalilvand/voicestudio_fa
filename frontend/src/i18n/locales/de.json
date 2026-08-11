@@ -2071,6 +2071,7 @@
     "hf_token_get_short": "Holen Sie sich eins gratis →"
   },
   "history": {
+    "dub_meta": "{{segments}} Segmente · {{duration}} s",
     "dub_title": "Dub-Verlauf",
     "empty": "Hier ist noch nichts — Ihre Generierungen erscheinen rechts.",
     "empty_dub": "Ihre Dubs erscheinen hier.",

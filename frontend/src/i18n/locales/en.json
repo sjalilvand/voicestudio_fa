@@ -2808,6 +2808,7 @@
     "hf_token_get_short": "Get one free →"
   },
   "history": {
+    "dub_meta": "{{segments}} segs · {{duration}}s",
     "dub_title": "Dub history",
     "empty": "Nothing here yet — your generations will appear on the right.",
     "empty_dub": "Your dubs will appear here.",

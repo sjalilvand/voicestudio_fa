@@ -2071,6 +2071,7 @@
     "hf_token_get_short": "Obtenez-en un gratuitement →"
   },
   "history": {
+    "dub_meta": "{{segments}} segments · {{duration}} s",
     "dub_title": "Historique des doublages",
     "empty": "Rien ici pour l'instant — vos générations apparaîtront à droite.",
     "empty_dub": "Vos doublages apparaîtront ici.",

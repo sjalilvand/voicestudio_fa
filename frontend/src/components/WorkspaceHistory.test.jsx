@@ -1,8 +1,10 @@
 // Generation takes: the Studio history rail's star / load-as-output actions.
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { I18nextProvider } from 'react-i18next';
 import React from 'react';
 
+import i18n from '../i18n';
 import WorkspaceHistory from './WorkspaceHistory';
 
 beforeAll(() => {
@@ -35,6 +37,10 @@ const takes = [
 ];
 
 const noop = () => {};
+
+afterEach(async () => {
+  await i18n.changeLanguage('en');
+});
 
 function renderRail(overrides = {}) {
   return render(
@@ -157,5 +163,31 @@ describe('WorkspaceHistory dub media previews', () => {
     ]);
 
     expect(screen.getByTestId('dub-thumbnail-legacy-job')).toBeInTheDocument();
+  });
+
+  it('localizes Dub row metadata and icon actions', async () => {
+    await i18n.changeLanguage('es');
+    render(
+      <I18nextProvider i18n={i18n}>
+        <WorkspaceHistory
+          variant="dub"
+          dubHistory={[
+            {
+              id: 'localized-job',
+              filename: 'pelicula.mp4',
+              segments_count: 2,
+              duration: 5,
+              job_data: JSON.stringify({ input_type: 'video' }),
+            },
+          ]}
+          restoreDubHistory={noop}
+          deleteHistory={noop}
+        />
+      </I18nextProvider>,
+    );
+
+    expect(screen.getByText(/2 segmentos/)).toBeInTheDocument();
+    expect(screen.getByText('Automático')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Eliminar' })).toBeInTheDocument();
   });
 });

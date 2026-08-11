@@ -2078,6 +2078,7 @@
     "hf_token_get_short": "免费获得一份 →"
   },
   "history": {
+    "dub_meta": "{{segments}} 个片段 · {{duration}} 秒",
     "dub_title": "配音历史",
     "empty": "这里还没有内容——你的生成结果将显示在右侧。",
     "empty_dub": "你的配音将显示在这里。",

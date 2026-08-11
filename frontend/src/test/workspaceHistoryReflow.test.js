@@ -51,4 +51,10 @@ describe('workspace narrow-shell reflow (#476 CTA-clipping guard)', () => {
     expect(css).toMatch(/\.studio-projects\s*\{[^}]*flex:\s*0 0 240px/s);
     expect(css).toMatch(/\.studio-right\s*\{[^}]*flex:\s*0 0 340px/s);
   });
+
+  it('keeps Save unavailable in the idle-only Projects rail', () => {
+    expect(app).toMatch(
+      /dubStep === 'idle'[\s\S]*?className="studio-projects"[\s\S]*?canSave=\{false\}/,
+    );
+  });
 });

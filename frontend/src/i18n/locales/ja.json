@@ -2071,6 +2071,7 @@
     "hf_token_get_short": "1 つ無料で入手 →"
   },
   "history": {
+    "dub_meta": "{{segments}} セグメント · {{duration}} 秒",
     "dub_title": "ダブ履歴",
     "empty": "まだ何もありません — 生成結果が右側に表示されます。",
     "empty_dub": "ダブはここに表示されます。",

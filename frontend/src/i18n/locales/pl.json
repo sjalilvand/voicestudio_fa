@@ -2071,6 +2071,7 @@
     "hf_token_get_short": "Zdobądź jeden za darmo →"
   },
   "history": {
+    "dub_meta": "{{segments}} segmentów · {{duration}} s",
     "dub_title": "Historia dubbingu",
     "empty": "Nic tu jeszcze nie ma — Twoje generacje pojawią się po prawej stronie.",
     "empty_dub": "Tutaj pojawią się Twoje dubbingi.",

@@ -2071,6 +2071,7 @@
     "hf_token_get_short": "Ücretsiz bir tane alın →"
   },
   "history": {
+    "dub_meta": "{{segments}} segment · {{duration}} sn",
     "dub_title": "Dublaj geçmişi",
     "empty": "Burada henüz bir şey yok — oluşturduklarınız sağda görünecek.",
     "empty_dub": "Dublajlarınız burada görünecek.",
