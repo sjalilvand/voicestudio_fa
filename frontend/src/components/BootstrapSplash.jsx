@@ -32,6 +32,7 @@ import { useAppStore } from '../store';
 import { getApiBase } from '../utils/apiBase';
 import { startSplashWatchdog, startHealthRecoveryPoll } from '../utils/splashWatchdog';
 import { Button, Progress, Select } from '../ui';
+import UiScaleControl from './UiScaleControl';
 
 // First-run only: keep the setup screen out of the main bundle so every
 // regular launch pays nothing for it.
@@ -589,14 +590,14 @@ export function BootstrapSplash({ stage, message }) {
   // the hook order stable.)
   if (stage === 'awaiting_setup') {
     return (
-      <Suspense fallback={<div className="fixed inset-0 z-[9999] bg-bg" />}>
+      <Suspense fallback={<div className="absolute inset-0 z-[9999] bg-bg" />}>
         <FirstRunSetup />
       </Suspense>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center overflow-hidden bg-bg px-6 pt-12 font-sans text-fg">
+    <div className="absolute inset-0 z-[9999] flex flex-col items-center overflow-hidden bg-bg px-6 pt-12 font-sans text-fg">
       <div className="flex w-full max-w-[760px] flex-1 flex-col gap-4 overflow-y-auto pb-6">
         {/* ── Masthead: same identity as the setup screen ─────────────────── */}
         <header
@@ -624,6 +625,7 @@ export function BootstrapSplash({ stage, message }) {
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              <UiScaleControl />
               <Select
                 size="sm"
                 value={locale}

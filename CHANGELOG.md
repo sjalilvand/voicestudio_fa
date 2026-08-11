@@ -47,6 +47,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Remote GPU model downloads now use the normal Models install flow and show per-worker progress. (#1478)
 - Settings → System → **Remote workers** sends individual jobs to GPUs on your other machines while everything else stays here. Off by default; each machine is added with a single-use token and approved before any audio reaches it. See [docs/remote-workers.md](docs/remote-workers.md).
+- First-run setup now recommends a screen-aware interface scale, with compact controls available throughout setup. (#1502)
 - OrcaRouter is now available as a named OpenAI-compatible LLM provider — thanks @Marc-oss-hub! (#1499)
 - IndexTTS 2.5 is available as a pinned one-click sidecar with five-language dubbing, expressive cloning, and backward-compatible IndexTTS-2 support. (#1482) — thanks @marwanlhabti5-coder!
 - Voice recording now offers microphone and channel selection with a live input-level meter on every desktop platform. (#1481)
