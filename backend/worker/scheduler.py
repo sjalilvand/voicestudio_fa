@@ -799,11 +799,21 @@ class Scheduler:
         written off, which it must stop burning a GPU on.
         """
         stamp = resolve(now)
-        zombies: list[str] = []
+        known = {
+            attempt.attempt_id: attempt
+            for task in self._tasks.values()
+            for attempt in task.attempts
+            if attempt.worker_id == worker_id
+        }
+        zombies = [
+            attempt_id
+            for attempt_id in in_flight
+            if attempt_id not in known or known[attempt_id].state.terminal
+        ]
         for task in list(self._tasks.values()):
             if task.state.terminal:
                 continue
-            action = reconcile(
+            reconcile(
                 task,
                 worker_id=worker_id,
                 worker_in_flight=in_flight,
@@ -813,10 +823,6 @@ class Scheduler:
                 resume_lease_seconds=self._budget_for(task).progress_lease_seconds,
                 now=stamp,
             )
-            if action == "cancel_zombie":
-                zombies.extend(
-                    a for a in in_flight if (k := task.get_attempt(a)) and k.state.terminal
-                )
             self._save(task, now=stamp)
         return zombies
 

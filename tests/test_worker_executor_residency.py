@@ -247,6 +247,27 @@ def test_concurrent_jobs_each_hold_the_engine(engine_cache):
     assert tts_backend.release_idle_engines(600.0, now=9_000.0) == ["fake-engine"]
 
 
+def test_concurrent_cache_misses_construct_one_engine(engine_cache):
+    import concurrent.futures
+    import time
+
+    created = 0
+
+    class _Slow(_FakeBackend):
+        id = "slow-engine"
+
+        def __init__(self):
+            nonlocal created
+            time.sleep(0.01)
+            created += 1
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        instances = list(pool.map(lambda _n: tts_backend.get_engine_instance(_Slow), range(8)))
+
+    assert created == 1
+    assert len({id(instance) for instance in instances}) == 1
+
+
 def test_a_failing_job_releases_its_hold(engine_cache):
     instance = tts_backend.get_engine_instance(_FakeBackend, now=0.0)
 

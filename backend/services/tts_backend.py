@@ -2427,6 +2427,7 @@ def get_active_tts_backend(*, model=None) -> TTSBackend:
 # transiently; ``get_engine_instance_for`` resolves an id through
 # ``get_backend_class`` so callers can key by id without the cache doing so.
 _ENGINE_INSTANCES: dict[type, object] = {}
+_ENGINE_CACHE_LOCK = threading.RLock()
 
 # Last use, on the monotonic clock — a wall clock would make an NTP step or a
 # laptop resume look like a ten-minute idle and unload a model mid-job.
@@ -2477,16 +2478,18 @@ def engine_in_use(instance, *, now: Optional[float] = None):
     ten-minute window measures what it claims to.
     """
     cls = type(instance)
-    _ENGINE_IN_USE[cls] = _ENGINE_IN_USE.get(cls, 0) + 1
+    with _ENGINE_CACHE_LOCK:
+        _ENGINE_IN_USE[cls] = _ENGINE_IN_USE.get(cls, 0) + 1
     try:
         yield instance
     finally:
-        remaining = _ENGINE_IN_USE.get(cls, 1) - 1
-        if remaining > 0:
-            _ENGINE_IN_USE[cls] = remaining
-        else:
-            _ENGINE_IN_USE.pop(cls, None)
-        _ENGINE_LAST_USED[cls] = time.monotonic() if now is None else float(now)
+        with _ENGINE_CACHE_LOCK:
+            remaining = _ENGINE_IN_USE.get(cls, 1) - 1
+            if remaining > 0:
+                _ENGINE_IN_USE[cls] = remaining
+            else:
+                _ENGINE_IN_USE.pop(cls, None)
+            _ENGINE_LAST_USED[cls] = time.monotonic() if now is None else float(now)
 
 
 def get_engine_instance(cls, *, now: Optional[float] = None):
@@ -2497,12 +2500,13 @@ def get_engine_instance(cls, *, now: Optional[float] = None):
     an extra sidecar process the first time the lock is acquired. One instance
     per process is the right move.
     """
-    inst = _ENGINE_INSTANCES.get(cls)
-    if inst is None:
-        inst = cls()
-        _ENGINE_INSTANCES[cls] = inst
-    _ENGINE_LAST_USED[cls] = time.monotonic() if now is None else float(now)
-    return inst
+    with _ENGINE_CACHE_LOCK:
+        inst = _ENGINE_INSTANCES.get(cls)
+        if inst is None:
+            inst = cls()
+            _ENGINE_INSTANCES[cls] = inst
+        _ENGINE_LAST_USED[cls] = time.monotonic() if now is None else float(now)
+        return inst
 
 
 def get_engine_instance_for(engine_id: str, *, now: Optional[float] = None):
@@ -2529,27 +2533,33 @@ def release_idle_engines(
     take down the loop that called it. Returns the engine ids released.
     """
     stamp = time.monotonic() if now is None else float(now)
-    # Entries other consumers popped straight out of the cache (engine_memory's
-    # eviction, model_lifecycle's unload) would otherwise pin a stale class.
-    for cls in [c for c in _ENGINE_LAST_USED if c not in _ENGINE_INSTANCES]:
-        _ENGINE_LAST_USED.pop(cls, None)
+    pending: list[tuple[str, object]] = []
+    with _ENGINE_CACHE_LOCK:
+        # Entries other consumers popped straight out of the cache
+        # (engine_memory's eviction, model_lifecycle's unload) would otherwise
+        # pin a stale class.
+        for cls in [c for c in _ENGINE_LAST_USED if c not in _ENGINE_INSTANCES]:
+            _ENGINE_LAST_USED.pop(cls, None)
+        coldest_first = sorted(
+            _ENGINE_INSTANCES, key=lambda c: _ENGINE_LAST_USED.get(c, 0.0)
+        )
+        for cls in coldest_first:
+            if _ENGINE_IN_USE.get(cls):
+                continue
+            # An instance put here by some other path has no timestamp; start
+            # its clock now rather than leaving it resident forever.
+            last_used = _ENGINE_LAST_USED.setdefault(cls, stamp)
+            if stamp - last_used < idle_seconds:
+                continue
+            inst = _ENGINE_INSTANCES.pop(cls, None)
+            _ENGINE_LAST_USED.pop(cls, None)
+            if inst is not None:
+                pending.append((getattr(cls, "id", cls.__name__), inst))
 
     released: list[str] = []
-    coldest_first = sorted(_ENGINE_INSTANCES, key=lambda c: _ENGINE_LAST_USED.get(c, 0.0))
-    for cls in coldest_first:
-        if _ENGINE_IN_USE.get(cls):
-            continue
-        # An instance put here by some other path has no timestamp; start its
-        # clock now rather than leaving it resident forever.
-        last_used = _ENGINE_LAST_USED.setdefault(cls, stamp)
-        if stamp - last_used < idle_seconds:
-            continue
-        inst = _ENGINE_INSTANCES.pop(cls, None)
-        _ENGINE_LAST_USED.pop(cls, None)
-        engine_id = getattr(cls, "id", cls.__name__)
+    for engine_id, inst in pending:
         try:
-            if inst is not None:
-                inst.unload()
+            inst.unload()
         except Exception as exc:  # noqa: BLE001
             logger.warning("idle unload: %s.unload() raised: %s", engine_id, exc)
         released.append(engine_id)

@@ -484,24 +484,32 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
             )
             return
 
-        session.stream_open = True
         from worker.executor import INLINE_LIMIT_BYTES  # noqa: PLC0415
 
-        await session.send(
-            pb.ServerMessage(
-                config=pb.ConfigUpdate(
-                    heartbeat_interval_seconds=_HEARTBEAT_INTERVAL_SECONDS,
-                    max_concurrent_tasks=max(
-                        1, self.pool.get(session.worker_id).capacity.max_concurrent_tasks
-                    ),
-                    inline_result_threshold_bytes=INLINE_LIMIT_BYTES,
+        worker = self.pool.get(session.worker_id)
+        if worker is None:
+            await context.abort(
+                grpc.StatusCode.FAILED_PRECONDITION,
+                "This worker is no longer connected; register again.",
+            )
+            return
+        reader = writer = pinger = None
+        session.stream_open = True
+        try:
+            await session.send(
+                pb.ServerMessage(
+                    config=pb.ConfigUpdate(
+                        heartbeat_interval_seconds=_HEARTBEAT_INTERVAL_SECONDS,
+                        max_concurrent_tasks=max(
+                            1, worker.capacity.max_concurrent_tasks
+                        ),
+                        inline_result_threshold_bytes=INLINE_LIMIT_BYTES,
+                    )
                 )
             )
-        )
-        writer = asyncio.create_task(self._write_loop(session, context))
-        reader = asyncio.create_task(self._read_loop(session, request_iterator))
-        pinger = asyncio.create_task(self._ping_loop(session))
-        try:
+            writer = asyncio.create_task(self._write_loop(session, context))
+            reader = asyncio.create_task(self._read_loop(session, request_iterator))
+            pinger = asyncio.create_task(self._ping_loop(session))
             done, pending = await asyncio.wait(
                 {reader, writer, pinger}, return_when=asyncio.FIRST_COMPLETED
             )
@@ -514,6 +522,8 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         finally:
             session.stream_open = False
             for task in (reader, writer, pinger):
+                if task is None:
+                    continue
                 task.cancel()
             # A dropped stream starts grace windows; it fails nothing. The
             # worker may be seconds away from delivering a finished result.

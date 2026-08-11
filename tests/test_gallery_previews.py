@@ -703,3 +703,23 @@ def test_publish_script_and_client_agree_on_the_schema():
         and getattr(node.targets[0], "id", "") == "SCHEMA_VERSION"
     )
     assert schema == gallery.SCHEMA_VERSION
+
+
+def test_featured_tarball_is_byte_deterministic(tmp_path):
+    spec = importlib.util.spec_from_file_location(
+        "render_gallery_determinism", _REPO / "scripts" / "render_gallery.py"
+    )
+    assert spec and spec.loader
+    publish = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(publish)
+    previews = tmp_path / "previews"
+    previews.mkdir()
+    (previews / "voice.mp3").write_bytes(b"same audio")
+    manifest = {"voice": {"featured": True}}
+
+    first = publish._write_featured_tarball(tmp_path, manifest)
+    first_bytes = (tmp_path / "featured.tar.gz").read_bytes()
+    second = publish._write_featured_tarball(tmp_path, manifest)
+
+    assert (tmp_path / "featured.tar.gz").read_bytes() == first_bytes
+    assert second["sha256"] == first["sha256"]

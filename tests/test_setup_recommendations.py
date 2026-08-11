@@ -46,6 +46,26 @@ def test_platform_tags_follow_selected_worker_not_control_plane(monkeypatch):
     assert setup_models._current_platform_tags() == ["linux", "linux-x86_64", "cuda"]
 
 
+def test_recommendations_use_selected_worker_install_state(monkeypatch):
+    from api.routers.setup import models as setup_models
+
+    monkeypatch.setattr(
+        setup_models,
+        "_target_repo_inventory",
+        lambda: ("gpu2", {"k2-fsa/OmniVoice"}),
+    )
+    monkeypatch.setattr(
+        setup_models,
+        "_current_platform_tags",
+        lambda: ["linux", "linux-x86_64", "cuda"],
+    )
+
+    payload = setup_models.recommendations()
+
+    required = next(row for row in payload["models"] if row["repo_id"] == "k2-fsa/OmniVoice")
+    assert required["installed"] is True
+
+
 def test_mac_arm_curates_mlx_whisper_not_ct2(client):
     ids = _ids(_recommend(client, ["darwin", "darwin-arm64"]))
     assert "k2-fsa/OmniVoice" in ids

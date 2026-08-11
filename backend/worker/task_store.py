@@ -301,6 +301,35 @@ def ensure_staged(
     return entries
 
 
+def _durable_params(params: dict) -> dict:
+    """Parameters safe to persist after inputs have been staged.
+
+    The live task keeps original paths for a possible local fallback, but the
+    durable row needs only content-addressed artifact ids. In particular, it
+    must never retain a user's home path in either the operation parameters or
+    the staging metadata.
+    """
+    durable = json.loads(json.dumps(params))
+    entries = durable.get(INPUTS_PARAM_KEY)
+    if not isinstance(entries, list):
+        return durable
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        key = entry.get("key")
+        index = entry.get("index")
+        artifact_id = entry.get("artifact_id")
+        if isinstance(key, str) and isinstance(artifact_id, str):
+            if index is None:
+                durable[key] = artifact_id
+            elif isinstance(durable.get(key), list) and isinstance(index, int):
+                if 0 <= index < len(durable[key]):
+                    durable[key][index] = artifact_id
+        entry.pop("source", None)
+        entry.pop("path", None)
+    return durable
+
+
 def _referenced_artifacts(conn) -> set[str]:
     """Every staged input still named by a surviving task row."""
     referenced: set[str] = set()
@@ -401,7 +430,7 @@ def create(task: Task, *, project_id: Optional[str] = None, now: Optional[float]
                 task.operation,
                 task.engine,
                 task.model_id,
-                json.dumps(task.params),
+                json.dumps(_durable_params(task.params)),
                 int(task.priority),
                 task.state.value,
                 task.max_attempts,

@@ -129,6 +129,22 @@ def test_feed_without_start_is_noop():
     da.feed("never/started", "k", "B", 1, 1, False)  # must not raise
 
 
+def test_implicit_progress_target_does_not_cross_worker_streams():
+    da.start("r/shared", target="local", total_bytes=100)
+    da.start("r/shared", target="gpu-2", total_bytes=100)
+    token = hf_progress.current_target.set("gpu-2")
+    try:
+        da.feed("r/shared", "chunk", "B", 40, 100, False)
+        da.add_bytes("r/shared", "segmented", 10)
+
+        assert da._get("r/shared", "gpu-2").snapshot()["bytes_done"] == 50
+        assert da._get("r/shared", "local").snapshot()["bytes_done"] == 0
+    finally:
+        hf_progress.current_target.reset(token)
+        da.finish("r/shared", target="gpu-2")
+        da.finish("r/shared", target="local")
+
+
 def test_complete_sets_total_not_double_after_segmented_bytes():
     # The segmented path accumulates real bytes via add(); complete() must land
     # on exactly total, not add another full total on top (was a 2x bug).

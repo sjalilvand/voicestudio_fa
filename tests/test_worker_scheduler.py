@@ -578,6 +578,34 @@ def test_reconnect_flags_zombies_for_cancellation():
     assert a.attempt.attempt_id in zombies
 
 
+def test_reconnect_cancels_an_attempt_unknown_to_the_control_plane():
+    pool = _pool(_record("w1"))
+    sched = _scheduler(pool)
+    _submit(sched)
+
+    zombies = sched.on_reconnected("w1", in_flight={"unknown-attempt"}, now=2000.0)
+
+    assert zombies == ["unknown-attempt"]
+
+
+def test_reconnect_does_not_mistake_another_live_task_for_a_zombie():
+    pool = _pool(_record("w1"), slots=2)
+    sched = _scheduler(pool)
+    tasks = [_submit(sched), _submit(sched)]
+    attempts = [
+        task.assign(worker_id="w1", session_epoch=1, now=1000.0)
+        for task in tasks
+    ]
+    for task, attempt in zip(tasks, attempts):
+        task.accept(attempt.attempt_id, now=1001.0)
+        task.start(attempt.attempt_id, now=1002.0)
+    sched.on_disconnected("w1", now=1003.0)
+    claimed = {attempt.attempt_id for attempt in attempts}
+
+    assert sched.on_reconnected("w1", in_flight=claimed, now=1010.0) == []
+    assert all(task.state is TaskState.RUNNING for task in tasks)
+
+
 # ── Sweeper ────────────────────────────────────────────────────────────────
 
 

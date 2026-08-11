@@ -277,6 +277,29 @@ def test_list_models_downgrades_truncated_cache(tmp_path, monkeypatch):
     assert row["incomplete"] is True
     models.invalidate_cache()
 
+
+def test_list_models_uses_selected_worker_inventory_not_local_cache(monkeypatch):
+    monkeypatch.setattr(
+        models,
+        "_target_repo_inventory",
+        lambda: ("gpu2", {"k2-fsa/OmniVoice"}),
+    )
+    monkeypatch.setattr(
+        models,
+        "_current_platform_tags",
+        lambda: ["linux", "linux-x86_64", "cuda"],
+    )
+    models.invalidate_cache()
+
+    out = models.list_models()
+
+    row = next(m for m in out["models"] if m["repo_id"] == "k2-fsa/OmniVoice")
+    assert row["installed"] is True
+    assert row["incomplete"] is False
+    assert out["hf_cache_dir"] == ""
+    assert out["disk_free_gb"] is None
+    models.invalidate_cache()
+
 # ── The unload ordering (#1495) ─────────────────────────────────────────────
 #
 # Dropping the shared reference has to happen BEFORE the allocator caches are

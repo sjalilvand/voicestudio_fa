@@ -38,6 +38,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import hashlib
+import gzip
 import json
 import sys
 import tarfile
@@ -152,7 +153,9 @@ def _write_featured_tarball(out: Path, previews: dict) -> dict:
     # mtime/uid/gid pinned so re-running with unchanged audio produces the same
     # archive bytes — the client diffs on sha256, and a timestamp would make
     # every rebuild look like a change worth re-downloading.
-    with tarfile.open(archive, "w:gz") as tar:
+    with archive.open("wb") as raw, gzip.GzipFile(
+        filename="", mode="wb", fileobj=raw, mtime=0
+    ) as compressed, tarfile.open(fileobj=compressed, mode="w") as tar:
         for key in featured:
             path = out / "previews" / f"{key}.mp3"
             info = tar.gettarinfo(str(path), arcname=f"previews/{key}.mp3")

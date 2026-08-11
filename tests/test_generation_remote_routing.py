@@ -422,6 +422,44 @@ def test_midjob_remote_failure_is_reported_not_silently_redone(client, monkeypat
     assert r.headers.get("X-OmniVoice-Routing") == "remote_failed"
 
 
+def test_remote_stream_preserves_missing_model_download_fields(client, monkeypatch):
+    from services.gpu_gateway import ModelNotDownloaded
+
+    gateway = FakeGateway(raises=ModelNotDownloaded(
+        engine="cosyvoice",
+        repo_ids=["FunAudioLLM/Fun-CosyVoice3-0.5B-2512"],
+        target="gpu2",
+        target_label="gpu2",
+    ))
+    _install(monkeypatch, gateway, _remote_decision("gpu2"))
+
+    _headers, events = _stream_events(client)
+
+    failure = events[-1]
+    assert failure["type"] == "error"
+    assert failure["engine"] == "cosyvoice"
+    assert failure["repo_ids"] == ["FunAudioLLM/Fun-CosyVoice3-0.5B-2512"]
+    assert failure["target"] == "gpu2"
+    assert failure["target_label"] == "gpu2"
+    assert failure["downloadable"] is True
+
+
+def test_remote_stream_preserves_retryable_midjob_guidance(client, monkeypatch):
+    from services.gpu_gateway import RemoteJobFailed
+
+    gateway = FakeGateway(raises=RemoteJobFailed(
+        "worker stopped", worker_label="gpu2", hint="Run it locally.",
+    ))
+    _install(monkeypatch, gateway, _remote_decision("gpu2"))
+
+    _headers, events = _stream_events(client)
+
+    assert events[-1]["type"] == "error"
+    assert events[-1]["retryable"] is True
+    assert events[-1]["target_label"] == "gpu2"
+    assert events[-1]["hint"] == "Run it locally."
+
+
 def test_legacy_worker_missing_weights_returns_typed_409_before_submit(
     client, monkeypatch
 ):

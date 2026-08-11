@@ -23,6 +23,7 @@ import logging
 import os
 import io
 import zipfile
+import uuid
 from typing import Any, Awaitable, Callable, Optional
 
 from worker.errors import ErrorClass, WorkerError
@@ -387,7 +388,7 @@ class TaskExecutor:
             _touch(destination)
             return destination
 
-        partial = f"{destination}.part"
+        partial = f"{destination}.{uuid.uuid4().hex}.part"
         try:
             await fetch(ref, partial)
         except TaskFailure:
@@ -704,7 +705,7 @@ def _prune_input_cache(directory: str, limit_bytes: int = INPUT_CACHE_LIMIT_BYTE
         total = 0
         for name in os.listdir(directory):
             path = os.path.join(directory, name)
-            if not os.path.isfile(path):
+            if name.endswith(".part") or not os.path.isfile(path):
                 continue
             stat = os.stat(path)
             entries.append((stat.st_mtime, stat.st_size, path))

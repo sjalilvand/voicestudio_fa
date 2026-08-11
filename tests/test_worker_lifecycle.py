@@ -323,7 +323,7 @@ def test_reconcile_resumes_a_task_the_worker_still_holds():
         now=1030.0,
     )
 
-    assert action == "resume"
+    assert action == ("resume", attempt.attempt_id)
     assert attempt.disconnected_at is None
     assert task.state is TaskState.RUNNING
 
@@ -381,7 +381,7 @@ def test_reconcile_flags_a_zombie_the_server_wrote_off():
         resume_lease_seconds=120,
     )
 
-    assert action == "cancel_zombie"
+    assert action == ("cancel_zombie", attempt.attempt_id)
 
 
 # ── Lease ceilings and phase anchors ───────────────────────────────────────

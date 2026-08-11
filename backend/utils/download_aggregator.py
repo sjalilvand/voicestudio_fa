@@ -191,14 +191,14 @@ def _get(repo_id: str, target: str = "local") -> Optional[DownloadAggregator]:
         return _aggregators.get((target, repo_id))
 
 
-def feed(repo_id, key, unit, downloaded, total, complete) -> None:
+def feed(repo_id, key, unit, downloaded, total, complete, *, target: Optional[str] = None) -> None:
     """Sink target for a per-bar tqdm update (from utils.hf_progress).
 
     Distinguishes byte bars (unit 'B') from the file-count bar and routes
     accordingly. A download with no preflight (start() never called) is ignored
     here — the per-file events still flow for the detail view.
     """
-    agg = _get(repo_id)
+    agg = _get(repo_id, target or hf_progress.current_target.get())
     if agg is None:
         return
     if _is_bytes_unit(unit):
@@ -212,9 +212,11 @@ def feed(repo_id, key, unit, downloaded, total, complete) -> None:
     _maybe_emit(agg)
 
 
-def add_bytes(repo_id: str, key: object, delta: int) -> None:
+def add_bytes(
+    repo_id: str, key: object, delta: int, *, target: Optional[str] = None
+) -> None:
     """Direct byte increment for the opt-in segmented downloader (FDL-08/09)."""
-    agg = _get(repo_id)
+    agg = _get(repo_id, target or hf_progress.current_target.get())
     if agg is None:
         return
     agg.add(key, delta)

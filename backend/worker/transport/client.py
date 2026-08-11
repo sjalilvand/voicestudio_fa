@@ -62,6 +62,9 @@ logger = logging.getLogger("omnivoice.worker")
 _BASE_BACKOFF_SECONDS = 1.0
 _MAX_BACKOFF_SECONDS = 60.0
 _HEARTBEAT_SECONDS = 20.0
+# A malformed/legacy installer may return without emitting a terminal progress
+# frame. Never park the worker's prewarm task forever in that state.
+_FALLBACK_MODEL_LOAD_SECONDS = 1800.0
 
 # The gRPC frame ceiling, matched by the server's receive limit. A result that
 # does not fit in one frame cannot be delivered on the control stream at all —
@@ -606,13 +609,17 @@ class WorkerClient:
             )
             if event.get("phase") in {
                 "install_done", "install_error", "install_cancelled",
-            } and not terminal.done():
-                loop.call_soon_threadsafe(terminal.set_result, event)
+            }:
+                def _finish(result=event) -> None:
+                    if not terminal.done():
+                        terminal.set_result(result)
+
+                loop.call_soon_threadsafe(_finish)
 
         listener_id = hf_progress.register_listener(listener)
         try:
             await install_model(InstallModelRequest(repo_id=repo_id, target="local"))
-            event = await terminal
+            event = await asyncio.wait_for(terminal, timeout=_FALLBACK_MODEL_LOAD_SECONDS)
             if event.get("phase") != "install_done":
                 raise RuntimeError(event.get("error") or "model install did not complete")
         finally:

@@ -1640,6 +1640,28 @@ async def generate_speech(
                 logger.error("Remote generation request rejected")
                 from core.public_errors import stream_failure
                 yield _line({"type": "error", **stream_failure("invalid_request")})
+            except gpu_gateway.ModelNotDownloaded as e:
+                logger.warning("Remote model missing on %s", _target_label)
+                from core.public_errors import stream_failure
+                yield _line({
+                    "type": "error",
+                    **stream_failure("model_not_downloaded"),
+                    "engine": e.engine,
+                    "repo_ids": e.repo_ids,
+                    "target": e.target,
+                    "target_label": e.target_label,
+                    "downloadable": e.downloadable,
+                })
+            except gpu_gateway.RemoteJobFailed as e:
+                logger.error("Remote generate failed on %s", _target_label)
+                from core.public_errors import stream_failure
+                yield _line({
+                    "type": "error",
+                    **stream_failure("generation_failed"),
+                    "retryable": True,
+                    "target_label": e.worker_label or _target_label,
+                    "hint": e.hint,
+                })
             except Exception:
                 # Mid-job remote failure is NOT quietly redone here: the client
                 # treats a retryable error as "surface it", so the user decides

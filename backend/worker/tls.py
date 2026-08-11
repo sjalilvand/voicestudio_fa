@@ -232,7 +232,9 @@ def _load(cert_path: str, key_path: str) -> Optional[ServerCredentials]:
 def _expiring_soon(credentials: ServerCredentials, *, now: Optional[_dt.datetime] = None) -> bool:
     certificate = x509.load_der_x509_certificate(credentials.certificate_der)
     stamp = now or _dt.datetime.now(_dt.timezone.utc)
-    expires = certificate.not_valid_after_utc
+    expires = getattr(certificate, "not_valid_after_utc", None)
+    if expires is None:  # cryptography 41 and older
+        expires = certificate.not_valid_after.replace(tzinfo=_dt.timezone.utc)
     return (expires - stamp) < _dt.timedelta(days=_RENEW_WITHIN_DAYS)
 
 

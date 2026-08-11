@@ -398,7 +398,9 @@ async def install_model(req: InstallModelRequest):
         from worker import routing  # noqa: PLC0415
 
         decision = routing.decide()
-        if target and (not decision.remote or decision.worker_id != target):
+        if target and target != "local" and (
+            not decision.remote or decision.worker_id != target
+        ):
             raise HTTPException(status_code=409, detail="The selected GPU target changed; try again.")
         if decision.remote:
             try:
@@ -522,6 +524,7 @@ async def install_model(req: InstallModelRequest):
                     return
                 download_aggregator.start(
                     req.repo_id,
+                    target=target or "local",
                     total_bytes=_summary["to_download_bytes"],
                     files_total=max(0, _summary["n_files"] - _summary["n_cached"]),
                 )
@@ -535,7 +538,7 @@ async def install_model(req: InstallModelRequest):
                 # No preflight (older/gated repo, mirror without dry-run, etc.):
                 # fall back to today's fill-in-as-files-appear behaviour.
                 logger.info("model install %s: preflight unavailable (%s)", req.repo_id, _pf_err)
-                download_aggregator.start(req.repo_id)
+                download_aggregator.start(req.repo_id, target=target or "local")
                 hf_progress.emit({
                     "repo_id": req.repo_id,
                     "filename": req.repo_id,
@@ -635,7 +638,7 @@ async def install_model(req: InstallModelRequest):
             # Flush the overall bar to 100% with the true byte total (FDL-06):
             # under Xet the per-file byte bars don't surface completion, so the
             # aggregator can sit below 100% even though every file landed.
-            download_aggregator.complete(req.repo_id)
+            download_aggregator.complete(req.repo_id, target=target or "local")
             logger.info("model install done: %s", req.repo_id)
             hf_progress.emit({
                 "repo_id": req.repo_id,
@@ -679,7 +682,7 @@ async def install_model(req: InstallModelRequest):
             })
         finally:
             _cancelled.discard(req.repo_id)
-            download_aggregator.finish(req.repo_id)
+            download_aggregator.finish(req.repo_id, target=target or "local")
             hf_progress.current_repo_id.reset(token)
             hf_progress.current_target.reset(target_token)
             with _active_installs_lock:

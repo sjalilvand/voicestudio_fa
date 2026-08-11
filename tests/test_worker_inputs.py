@@ -24,6 +24,8 @@ and every staged reference clip behind, forever.
 """
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import json
 import os
 import shutil
@@ -338,6 +340,36 @@ async def test_the_second_clone_of_a_voice_transfers_nothing(
 
 
 @pytest.mark.asyncio
+async def test_concurrent_fetches_use_distinct_partial_files(tmp_path):
+    payload = b"same artifact" * 64
+    ref = pb.ArtifactRef(
+        artifact_id="inputs/same.wav",
+        filename="same.wav",
+        size_bytes=len(payload),
+        sha256=hashlib.sha256(payload).hexdigest(),
+    )
+    destinations: list[str] = []
+
+    async def fetch(_ref, destination):
+        destinations.append(destination)
+        await asyncio.sleep(0.01)
+        with open(destination, "wb") as handle:
+            handle.write(payload)
+
+    worker = TaskExecutor(input_dir=str(tmp_path / "inputs"))
+    first, second = await asyncio.gather(
+        worker._fetch_one(ref, fetch),
+        worker._fetch_one(ref, fetch),
+    )
+
+    assert first == second
+    assert len(set(destinations)) == 2
+    assert all(path.endswith(".part") for path in destinations)
+    assert open(first, "rb").read() == payload
+    assert not list((tmp_path / "inputs").glob("*.part"))
+
+
+@pytest.mark.asyncio
 async def test_a_damaged_transfer_is_refused(artifacts, voice, engine, tmp_path):
     """A truncated clip does not fail — it clones silence."""
     cache = tmp_path / "worker-inputs"
@@ -416,6 +448,19 @@ def test_the_worker_input_cache_has_a_ceiling(tmp_path):
 
     survivors = sorted(p.name for p in directory.iterdir())
     assert survivors == ["3.bin", "4.bin"], "the cache must evict oldest-first"
+
+
+def test_cache_pruner_never_removes_in_flight_partial_files(tmp_path):
+    directory = tmp_path / "cache"
+    directory.mkdir()
+    partial = directory / "artifact.unique.part"
+    partial.write_bytes(b"x" * 500)
+    (directory / "complete.bin").write_bytes(b"x" * 100)
+
+    executor_module._prune_input_cache(str(directory), limit_bytes=0)
+
+    assert partial.read_bytes() == b"x" * 500
+    assert not (directory / "complete.bin").exists()
 
 
 # ── The disk ───────────────────────────────────────────────────────────────

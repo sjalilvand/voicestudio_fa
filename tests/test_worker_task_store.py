@@ -63,6 +63,25 @@ def test_task_round_trips(db):
     assert loaded.pinned_worker_id == "gpu-bedroom"
 
 
+def test_persisted_input_params_do_not_contain_user_home_paths(db, tmp_path, monkeypatch):
+    root = tmp_path / "artifacts"
+    (root / task_store.INPUTS_DIRNAME).mkdir(parents=True)
+    monkeypatch.setattr(task_store, "artifact_root", lambda **_kw: str(root))
+    voice = tmp_path / "Users" / "alice" / "voice.wav"
+    voice.parent.mkdir(parents=True)
+    voice.write_bytes(b"voice")
+
+    task_store.create(_task(params={"text": "hello", "ref_audio": str(voice)}), now=1000.0)
+
+    with sqlite3.connect(db) as conn:
+        stored = conn.execute(
+            "SELECT params_json FROM remote_tasks WHERE id='t1'"
+        ).fetchone()[0]
+    assert str(voice) not in stored
+    assert str(tmp_path) not in stored
+    assert "inputs/" in stored
+
+
 def test_attempts_round_trip(db):
     task = _task()
     task_store.create(task, now=1000.0)

@@ -634,7 +634,7 @@ def reconcile(
     worker_in_flight: Iterable[str],
     resume_lease_seconds: float,
     now: Optional[float] = None,
-) -> Optional[str]:
+) -> Optional[tuple[str, str]]:
     """Reconcile one task against what a reconnecting worker claims to hold.
 
     Returns an action for the caller: ``"resume"`` (worker is still validly
@@ -657,15 +657,15 @@ def reconcile(
         if attempt.attempt_id in claimed:
             # renew_lease clears disconnected_at/grace_expires_at itself.
             attempt.renew_lease(resume_lease_seconds, now=now)
-            return "resume"
+            return ("resume", attempt.attempt_id)
         # We think it is running; the worker says otherwise. The worker is the
         # source of truth for what is executing on it.
         task.lose_attempt(attempt.attempt_id, now=now)
         return None
     for attempt_id in claimed:
         known = task.get_attempt(attempt_id)
-        if known is None or known.state.terminal:
-            return "cancel_zombie"
+        if known is not None and known.state.terminal:
+            return ("cancel_zombie", attempt_id)
     return None
 
 

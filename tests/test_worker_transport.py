@@ -88,6 +88,24 @@ def test_certificate_is_persisted_and_reused(tmp_path):
     assert first.fingerprint == second.fingerprint
 
 
+def test_expiry_check_supports_cryptography_41_certificate_api(monkeypatch):
+    import datetime as dt
+
+    credentials = tls.generate_self_signed(
+        hostnames=["localhost"], now=dt.datetime(2026, 1, 1, tzinfo=dt.timezone.utc)
+    )
+    certificate = type(
+        "LegacyCertificate",
+        (),
+        {"not_valid_after": dt.datetime(2026, 6, 1)},
+    )()
+    monkeypatch.setattr(tls.x509, "load_der_x509_certificate", lambda _der: certificate)
+
+    assert tls._expiring_soon(
+        credentials, now=dt.datetime(2026, 1, 1, tzinfo=dt.timezone.utc)
+    ) is False
+
+
 def test_hostname_suffix_is_not_doubled(monkeypatch):
     """macOS already reports the hostname with .local, and 'host.local.local'
     is in nobody's certificate."""
@@ -533,6 +551,57 @@ async def test_control_stream_requires_a_session(harness):
             async for _ in stub.Control(_messages()):
                 pass
         assert exc.value.code() == grpc.StatusCode.UNAUTHENTICATED
+
+
+@pytest.mark.asyncio
+async def test_control_stream_missing_worker_does_not_leak_open_flag():
+    session = type(
+        "Session",
+        (),
+        {"stream_open": False, "worker_id": "gone", "send": None},
+    )()
+    servicer = object.__new__(WorkerServicer)
+    servicer.pool = type("Pool", (), {"get": lambda _self, _worker_id: None})()
+    servicer._session_from_metadata = lambda _context: session
+
+    class Context:
+        async def abort(self, code, message):
+            assert code == grpc.StatusCode.FAILED_PRECONDITION
+            raise RuntimeError(message)
+
+    with pytest.raises(RuntimeError, match="no longer connected"):
+        await servicer.Control(None, Context())
+    assert session.stream_open is False
+
+
+@pytest.mark.asyncio
+async def test_control_stream_setup_failure_clears_open_flag():
+    class Session:
+        stream_open = False
+        worker_id = "w1"
+        session = type("Token", (), {"token": "session-token"})()
+
+        async def send(self, _message):
+            raise RuntimeError("queue closed")
+
+    session = Session()
+    worker = type(
+        "Worker",
+        (),
+        {"capacity": type("Capacity", (), {"max_concurrent_tasks": 1})()},
+    )()
+    servicer = object.__new__(WorkerServicer)
+    servicer.pool = type("Pool", (), {"get": lambda _self, _worker_id: worker})()
+    servicer.scheduler = type(
+        "Scheduler", (), {"on_disconnected": lambda _self, _worker_id: None}
+    )()
+    servicer._sessions = {"w1": session}
+    servicer._by_token = {"session-token": session}
+    servicer._session_from_metadata = lambda _context: session
+
+    with pytest.raises(RuntimeError, match="queue closed"):
+        await servicer.Control(None, object())
+    assert session.stream_open is False
 
 
 @pytest.mark.asyncio

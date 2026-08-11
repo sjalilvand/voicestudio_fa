@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import pytest
@@ -53,6 +54,7 @@ async def test_prewarm_resolves_catalog_repo_and_refreshes(monkeypatch):
 async def test_remote_download_reuses_installer_and_pipes_fake_progress(monkeypatch):
     """Offline producer: no Hub access, while exercising the real listener path."""
     from api.routers.setup import download as setup_download
+    from utils import download_aggregator
     from utils import hf_progress
 
     calls = []
@@ -67,26 +69,42 @@ async def test_remote_download_reuses_installer_and_pipes_fake_progress(monkeypa
         return {"status": "install_started"}
 
     monkeypatch.setattr(setup_download, "install_model", fake_install)
-    monkeypatch.setattr(
-        "worker.executor.TaskExecutor._load_backend", lambda _engine: None
-    )
-    client = _client(lambda: [{
-        "engine": "omnivoice", "model_id": "omnivoice:default",
-        "operations": ["tts"], "supported": True, "installed": True,
-        "downloaded": False, "repo_ids": ["k2-fsa/OmniVoice"],
-    }])
-    client.config.capabilities = client._capability_probe()
+    monkeypatch.setattr(hf_progress, "install", lambda: None)
+    monkeypatch.setattr(download_aggregator, "install", lambda: None)
+    client = _client(list)
 
-    await client._on_prewarm(pb.PrewarmRequest(
-        model_id="omnivoice:default", download_if_missing=True,
-    ))
+    await asyncio.wait_for(
+        client._install_catalog_repo("k2-fsa/OmniVoice"), timeout=1.0
+    )
 
     assert calls == [("k2-fsa/OmniVoice", "local")]
-    first = await client._outbox.get()
-    second = await client._outbox.get()
+    first = await asyncio.wait_for(client._outbox.get(), timeout=1.0)
+    second = await asyncio.wait_for(client._outbox.get(), timeout=1.0)
     assert first.WhichOneof("payload") == "download_progress"
     assert '"phase":"aggregate"' in first.download_progress.event_json
     assert second.WhichOneof("payload") == "download_progress"
+
+
+@pytest.mark.asyncio
+async def test_remote_download_without_terminal_progress_times_out(monkeypatch):
+    from api.routers.setup import download as setup_download
+    from utils import download_aggregator, hf_progress
+
+    async def fake_install(_req):
+        return {"status": "install_started"}
+
+    monkeypatch.setattr(setup_download, "install_model", fake_install)
+    monkeypatch.setattr(hf_progress, "install", lambda: None)
+    monkeypatch.setattr(download_aggregator, "install", lambda: None)
+    client = _client(lambda: [])
+    monkeypatch.setitem(
+        client._install_catalog_repo.__func__.__globals__,
+        "_FALLBACK_MODEL_LOAD_SECONDS",
+        0.01,
+    )
+
+    with pytest.raises(TimeoutError):
+        await client._install_catalog_repo("k2-fsa/OmniVoice")
 
 
 @pytest.mark.asyncio

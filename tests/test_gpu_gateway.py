@@ -110,12 +110,22 @@ class FakePool:
 
 class CapabilityWorker:
     class Record:
-        capabilities = [{
-            "engine": "indextts", "model_id": "indextts:default",
-            "supported": True, "installed": True, "downloaded": False,
-            "repo_ids": ["IndexTeam/IndexTTS-2"], "operations": ["tts"],
-        }]
-    record = Record()
+        def __init__(self):
+            self.capabilities = [{
+                "engine": "indextts", "model_id": "indextts:default",
+                "supported": True, "installed": True, "downloaded": False,
+                "repo_ids": ["IndexTeam/IndexTTS-2"], "operations": ["tts"],
+            }]
+
+    def __init__(self):
+        self.record = self.Record()
+
+
+def test_capability_workers_do_not_share_mutable_records():
+    first = CapabilityWorker()
+    second = CapabilityWorker()
+    first.record.capabilities.clear()
+    assert second.record.capabilities
 
 
 def local_call(value="local", *, boom=None):
