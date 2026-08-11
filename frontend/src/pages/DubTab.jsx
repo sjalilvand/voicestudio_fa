@@ -230,8 +230,7 @@ export default function DubTab(props) {
       multiBatchRunningRef.current = true;
       setMultiBatchBusy(true);
       const skipped = [];
-      const primaryLanguage = dubLang;
-      const primaryCode = dubLangCode;
+      const { lang: primaryLanguage, code: primaryCode } = primaryTargetRef.current;
       try {
         for (let i = 0; i < batchTargets.length; i++) {
           const l = batchTargets[i];
@@ -300,8 +299,6 @@ export default function DubTab(props) {
   }, [
     multiLangMode,
     batchTargets,
-    dubLang,
-    dubLangCode,
     handleTranslateAll,
     handleDubGenerate,
     setDubLang,
@@ -318,8 +315,7 @@ export default function DubTab(props) {
     if (multiBatchRunningRef.current) return false;
     multiBatchRunningRef.current = true;
     setMultiBatchBusy(true);
-    const primaryLanguage = dubLang;
-    const primaryCode = dubLangCode;
+    const { lang: primaryLanguage, code: primaryCode } = primaryTargetRef.current;
     let allOk = true;
     try {
       for (const target of batchTargets) {
@@ -335,15 +331,7 @@ export default function DubTab(props) {
       setMultiBatchBusy(false);
     }
     return allOk;
-  }, [
-    multiLangMode,
-    batchTargets,
-    dubLang,
-    dubLangCode,
-    handleTranslateAll,
-    setDubLang,
-    switchDubLangCode,
-  ]);
+  }, [multiLangMode, batchTargets, handleTranslateAll, setDubLang, switchDubLangCode]);
 
   // Live ETA while generating — elapsed ticks each second; remaining is
   // extrapolated from the current/total rate so it's only meaningful once

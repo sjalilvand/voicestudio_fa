@@ -235,6 +235,10 @@ describe('multi-language workflow integration', () => {
   it('translates primary + 4 chips, generates their own texts/tracks, and exposes all to export', async () => {
     render(<Harness />);
 
+    act(() => {
+      captured.right.at(-1).setDubLang('Spanish');
+      captured.right.at(-1).setDubLangCode('es');
+    });
     await act(async () => {
       await captured.left.at(-1).handleTranslateAll();
     });
@@ -285,7 +289,7 @@ describe('multi-language workflow integration', () => {
     }
     state = useAppStore.getState();
     expect(state.dubTracks).toEqual(EXPECTED_CODES);
-    expect(state.dubLangCode).toBe('es');
+    expect(state.dubLangCode).toBe('bn');
 
     const exported = [];
     render(

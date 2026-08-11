@@ -1121,8 +1121,6 @@
     "all_languages": "All languages",
     "add_language": "Add language",
     "search_languages": "Search languages…",
-    "languages_selected_one": "{{count}} language selected",
-    "languages_selected_other": "{{count}} languages selected",
     "more_to_narrow": "+{{count}} more — type to narrow",
     "no_matches": "No matches",
     "engine_label": "Engine",
@@ -1213,7 +1211,9 @@
     "paste_translation_apply": "Apply to {{count}} segments",
     "paste_translation_cancel": "Cancel",
     "paste_translation_more_rows": "+ {{count}} more rows",
-    "languages_selected": "{{count}} languages selected"
+    "languages_selected": "Languages selected: {{count}}",
+    "languages_selected_one": "{{count}} language selected",
+    "languages_selected_other": "{{count}} languages selected"
   },
   "glossary": {
     "title": "Glossary",
