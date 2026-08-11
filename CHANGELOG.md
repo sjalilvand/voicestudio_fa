@@ -3,13 +3,17 @@
 All notable changes to VoiceStudio.
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
-Versions track the desktop app (`tauri.conf.json` + `frontend/src-tauri/Cargo.toml`).
-The bundled TTS model package (`pyproject.toml`) is versioned independently.
+`frontend/package.json` is the app-version source of truth; Cargo, Python, and
+the frozen-backend fallback mirror it for their toolchains.
 
 ## [Unreleased]
 
 **Highlights**
 
+- VoiceStudio now gives the app, desktop chrome, documentation, and package metadata one clear identity
+- A local-first creative studio: voice cloning, design, dubbing, dictation, stories, audiobooks, and transcription without a subscription meter
+- Reliability first: automatic cache repair, truthful hardware routing, safer sidecars, and actionable recovery instead of mystery failures
+- Security boundaries now match the product: native file access stays native, untrusted network destinations fail closed, and public errors keep private diagnostics local
 - RTX 40-series GPUs are used again instead of being sent to the CPU
 - A warning before a slow generation, rather than after a five-minute wait
 - The watermark can be turned off in Settings, as the docs always said
@@ -21,6 +25,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Changed
 
+- VoiceStudio now uses one waveform-and-spark mark across the title bar, About screen, README, browser favicon, and every desktop/platform icon. (#1487)
 - PocketTTS now asks you to review its code license, model license and gated-access conditions before first use, and explains how to unlock the model instead of showing a raw download failure — thanks @paoloantinori! (#1442)
 - The repository moved to github.com/debpalash/VoiceStudio. Every link in the app, docs and scripts now points there; GitHub redirects the old URLs, and the Docker image paths, the app bundle identifier and your data folder are all deliberately unchanged. (#1394)
 - The app is now **VoiceStudio** (previously OmniVoice-Studio). Only the name you see changes — your data folder, settings and the Docker image paths stay put, so upgrading needs nothing from you. On Linux the .deb is now `voicestudio`; remove the old `omnivoice-studio` package once.
@@ -44,7 +49,9 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
-- Multi-language dubbing now translates, edits, generates, retains, and exports every selected language; large batches use compact searchable language and track managers instead of overflowing the editor. (#1486)
+- Restored the pre-release version to 0.4.2 while the next release remains in preparation. (#1488)
+- Large multi-language dubbing batches now use compact searchable language and track managers instead of overflowing the editor. (#1492)
+- Multi-language dubbing now translates, edits, generates, retains, and exports every selected language, and its language picker stays visible at viewport edges. (#1486)
 - Dubbing's **From video** cast now uses available source-audio samples for every speaker and short line, including jobs without a pooled diarization clone. (#1484)
 - Basic Dubbing translation remains available without an LLM; Cinematic and Autofit now degrade through the existing Fast translation path instead of blocking the quality choice. (#1481)
 - Linux microphone recording now falls back to WAV when WebKit cannot encode MediaRecorder audio, and desktop scaling/titlebar controls remain responsive at every UI scale. (#1481)
