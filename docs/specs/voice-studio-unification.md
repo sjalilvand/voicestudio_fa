@@ -98,14 +98,14 @@ Constraints honored (from `CLAUDE.md`): existing `voice_profiles` / `generation_
 
 Today `CloneDesignTab` (`frontend/src/pages/CloneDesignTab.jsx:217`) renders `.clone-split-grid` as **two side-by-side columns**:
 
-```
+```text
 [ App sidebar: Proj | Hist(58) ] [ PROMPT        ] [ VOICE SOURCE   ]
                                  [ lang | steps  ] [ overrides/synth]
 ```
 
 Implemented target: a **voice-library rail**, one **definition column** (Prompt stacked over Voice Source), and one **generation-history rail**:
 
-```
+```text
 [ ACTIVE VOICE    ] [ PROMPT                  ] [ GENERATION HISTORY      ]
 [ Saved voices    ] [ ........(textarea)..... ] [ [All][Clone][Design]    ]
 [  • Maya         ] [ tags / [CMU]            ] [  ▸ plain    0:01  ◀ play ]

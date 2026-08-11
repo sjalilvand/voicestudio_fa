@@ -100,6 +100,8 @@ describe('StoriesEditor voice pickers (#1220)', () => {
     useAppStore.setState({ storyTracks: [], storyProjects: [], currentProjectId: null });
     renderEditor();
     await waitFor(() => expect(useAppStore.getState().storyTracks).toHaveLength(11));
+    const sampleMemberIds = useAppStore.getState().cast.map((member) => member.id);
+    expect(sampleMemberIds).toEqual(['narrator', 'mara', 'cole']);
 
     act(() => {
       useAppStore
@@ -108,7 +110,9 @@ describe('StoriesEditor voice pickers (#1220)', () => {
     });
     await act(async () => {});
 
-    expect(useAppStore.getState().cast.every((member) => member.profileId === null)).toBe(true);
+    const settledCast = useAppStore.getState().cast;
+    expect(settledCast.map((member) => member.id)).toEqual(sampleMemberIds);
+    expect(settledCast.every((member) => member.profileId === null)).toBe(true);
   });
 
   it('makes only the drag handle draggable so text remains selectable', () => {
