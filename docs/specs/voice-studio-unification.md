@@ -103,14 +103,13 @@ Today `CloneDesignTab` (`frontend/src/pages/CloneDesignTab.jsx:217`) renders `.c
                                  [ lang | steps  ] [ overrides/synth]
 ```
 
-Target: one **definition column** (Prompt stacked over Voice Source) and one **history column**:
+Implemented target: a **voice-library rail**, one **definition column** (Prompt stacked over Voice Source), and one **generation-history rail**:
 
 ```
-[ Sidebar:        ] [ PROMPT                  ] [ GENERATION HISTORY      ]
-[  Projects       ] [ ........(textarea)..... ] [ (this workspace)        ]
-[  Downloads      ] [ tags / [CMU]            ] [ [All][Clone][Design]    ]
-[                 ] [ VOICE SOURCE            ] [  ▸ plain    0:01  ◀ play ]
-[                 ] [  • saved profiles       ] [  ▸ studio   0:01        ]
+[ ACTIVE VOICE    ] [ PROMPT                  ] [ GENERATION HISTORY      ]
+[ Saved voices    ] [ ........(textarea)..... ] [ [All][Clone][Design]    ]
+[  • Maya         ] [ tags / [CMU]            ] [  ▸ plain    0:01  ◀ play ]
+[  • Storyteller  ] [ VOICE SOURCE            ] [  ▸ studio   0:01        ]
 [                 ] [  • from audio / design  ] [  ▸ Hello…   0:02        ]
 [                 ] [ language | steps        ] [  …                      ]
 [                 ] [ ▸ Production overrides   ] [                         ]
@@ -118,9 +117,9 @@ Target: one **definition column** (Prompt stacked over Voice Source) and one **h
 ```
 
 Concretely:
-- Rename the grid to `.studio-grid` with **two** columns: `definition` (flex, scrolls) and `history` (fixed ~320px). Mobile/narrow (`<900px`): history collapses below.
+- `.studio-with-history` has three columns: voices (fixed 280px), definition (flex), and history (fixed 340px). Narrow shells stack the definition first, then voices and history.
 - Move the existing PROMPT panel (`CloneDesignTab.jsx:221-284`) and VOICE SOURCE panel (`:313-532`) into the **same** `definition` column, prompt first. Language/steps and Production Overrides + Synthesize stay at the bottom of that column.
-- The right column (`.studio-right`) stacks **`<WorkspaceVoices>`** (saved voices, top) over **`<WorkspaceHistory>`** (this workspace's generations, bottom) — §4.
+- The left library rail (`.studio-voices`) contains **`<WorkspaceVoices>`**; the right column (`.studio-right`) gives **`<WorkspaceHistory>`** the full height — §4.
 - **Left sidebar dissolved** for the Voice workspace (`hideSidebar` includes `clone`/`design`). The saved-profile list that lived in the sidebar's Projects tab moved into `<WorkspaceVoices>`; downloads remain reachable via OmniDrive. Dub keeps its sidebar until §5 extends the right-panel pattern.
 
 No backend involved in this section.
@@ -203,7 +202,7 @@ GET /history?mode=clone|design&limit=50
 
 ### Saved voices panel (`frontend/src/components/WorkspaceVoices.jsx`, built)
 
-- Relocates the sidebar's saved-profile list (clone → reference profiles, design → designed profiles) into the top of `.studio-right`. Same card markup/actions (select, preview, open, try-voice, unlock, delete) + local search.
+- Relocates the sidebar's saved-profile list (clone → reference profiles, design → designed profiles) into the full-height `.studio-voices` left rail. Same card markup/actions (select, preview, open, try-voice, unlock, delete) + local search.
 - Clicking a card runs `handleSelectProfile` (loads it into the definition form). The center Voice Source's old inline profile block is removed (single source of truth).
 
 ### Sidebar cleanup (`frontend/src/components/Sidebar.jsx`)
