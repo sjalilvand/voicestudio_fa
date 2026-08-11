@@ -30,6 +30,7 @@ const raw = indexRaw.slice(startIdx, endIdx);
 // Strip /* … */ comments so the guard checks real declarations, not the
 // warning comment that quotes the forbidden `@media (max-width)` pattern.
 const css = raw.replace(/\/\*[\s\S]*?\*\//g, '');
+const app = readFileSync(resolve(process.cwd(), 'src/App.jsx'), 'utf8');
 
 describe('workspace narrow-shell reflow (#476 CTA-clipping guard)', () => {
   it('does NOT use a raw viewport @media (max-width) query', () => {
@@ -43,5 +44,11 @@ describe('workspace narrow-shell reflow (#476 CTA-clipping guard)', () => {
 
   it('pins the action bar (Synthesize CTA) sticky so it stays on-screen', () => {
     expect(css).toMatch(/\.studio-action-bar\s*\{[^}]*position:\s*sticky/s);
+  });
+
+  it('gives Dub Projects its own narrower rail than Dub History', () => {
+    expect(app).toMatch(/className="studio-projects">\s*<WorkspaceProjects/);
+    expect(css).toMatch(/\.studio-projects\s*\{[^}]*flex:\s*0 0 240px/s);
+    expect(css).toMatch(/\.studio-right\s*\{[^}]*flex:\s*0 0 340px/s);
   });
 });

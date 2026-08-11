@@ -8,6 +8,14 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ## [Unreleased]
 
+**Highlights**
+
+- A faster, cleaner Dub workspace for multilingual production
+
+### Changed
+
+- The Dub workspace now has a compact production command bar, responsive flag-based language cards, media previews in Dub History, and a narrower Projects rail.
+
 ## [5.0.0] — 2026-08-11
 
 **Highlights**

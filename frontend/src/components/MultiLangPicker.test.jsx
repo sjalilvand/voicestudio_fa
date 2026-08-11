@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, within } from '@testing-library/react';
 import '../i18n';
 import MultiLangPicker from './MultiLangPicker';
+import { LANGUAGE_FLAGS } from './LanguageFlag';
+import { LANG_CODES } from '../utils/languages';
 
 const rect = (overrides = {}) => ({
   x: 40,
@@ -62,5 +64,36 @@ describe('MultiLangPicker viewport-safe menu', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog', { name: 'Add language' })).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
+  });
+});
+
+describe('MultiLangPicker responsive language cards', () => {
+  it('maps every supported language to a representative flag', () => {
+    expect(Object.keys(LANGUAGE_FLAGS).sort()).toEqual(LANG_CODES.map(({ code }) => code).sort());
+  });
+
+  it('shows selected languages with flags in a responsive grid', () => {
+    render(
+      <MultiLangPicker
+        selected={[
+          { lang: 'Spanish', code: 'es' },
+          { lang: 'Japanese', code: 'ja' },
+        ]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const grid = screen.getByTestId('multi-lang-selected-grid');
+    expect(grid).toHaveClass('grid');
+    expect(within(grid).getByTestId('language-flag-es')).toBeInTheDocument();
+    expect(within(grid).getByTestId('language-flag-ja')).toBeInTheDocument();
+  });
+
+  it('shows flags in the searchable result grid', () => {
+    render(<MultiLangPicker selected={[]} onChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add language' }));
+    const results = screen.getByTestId('multi-lang-all-grid');
+    expect(results).toHaveClass('grid');
+    expect(within(results).getByTestId('language-flag-af')).toBeInTheDocument();
   });
 });
