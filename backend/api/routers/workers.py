@@ -384,13 +384,21 @@ def inbound_status() -> dict:
 async def set_inbound_enabled(request: InboundEnableRequest) -> dict:
     from worker.inbound import service as inbound_service  # noqa: PLC0415
 
+    if inbound_service.enabled_override() is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Accept connections is controlled by OMNIVOICE_INBOUND_NODE on this "
+                "machine. Change that environment setting and restart VoiceStudio."
+            ),
+        )
     if request.bind:
         inbound_service.set_bind_host(request.bind)
     if request.port:
         inbound_service.set_bind_port(request.port)
     inbound_service.set_enabled(request.enabled)
 
-    if request.enabled:
+    if inbound_service.enabled():
         await inbound_service.node.start()
         if inbound_service.node.startup_error:
             raise HTTPException(status_code=409, detail=inbound_service.node.startup_error)

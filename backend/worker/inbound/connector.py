@@ -282,7 +282,9 @@ class NodeConnection:
             )
         return declared
 
-    async def fetch_result(self, ref: pb.ArtifactRef, destination: str) -> None:
+    async def fetch_result(
+        self, ref: pb.ArtifactRef, destination: str, *, max_bytes: Optional[int] = None
+    ) -> None:
         """Pull a finished result down, verifying it against its declared hash."""
         stub = self._stub
         if stub is None:
@@ -301,6 +303,10 @@ class NodeConnection:
                     if int(chunk.offset) != offset:
                         raise RuntimeError(
                             f"result offset {chunk.offset} did not match {offset} bytes received"
+                        )
+                    if max_bytes is not None and offset + len(chunk.data) > max_bytes:
+                        raise RuntimeError(
+                            "the result is larger than the control plane accepts"
                         )
                     handle.write(chunk.data)
                     digest.update(chunk.data)

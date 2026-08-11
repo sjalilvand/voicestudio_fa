@@ -10,6 +10,8 @@ normal use and would fail silently if it regressed.
 from __future__ import annotations
 
 import json
+import os
+import stat
 
 import pytest
 
@@ -85,6 +87,25 @@ def test_a_locked_out_peer_is_refused_even_with_the_right_key(store):
     assert store.authenticate(good.secret, peer="10.0.0.9") is None
 
 
+def test_failed_key_throttle_ignores_ephemeral_source_ports(store):
+    """Reconnects from one host must contribute to the same lockout."""
+    store.issue("Alice")
+
+    for port in range(41000, 41000 + keys_module._MAX_FAILURES):
+        store.authenticate("ovnode_wrong", peer=f"10.0.0.9:{port}")
+
+    assert store.locked_out("10.0.0.9:49999") is True
+
+
+def test_failed_key_throttle_normalises_bracketed_ipv6_ports(store):
+    store.issue("Alice")
+
+    for port in range(41000, 41000 + keys_module._MAX_FAILURES):
+        store.authenticate("ovnode_wrong", peer=f"[fd00::9]:{port}")
+
+    assert store.locked_out("[fd00::9]:49999") is True
+
+
 def test_an_empty_key_never_authenticates(store):
     """A missing metadata header arrives as "" and must not match a key whose
     hash happens to be falsy-adjacent."""
@@ -98,6 +119,41 @@ def test_keys_survive_a_restart(store, tmp_path):
     reopened = KeyStore(str(tmp_path / "inbound-keys.json"))
 
     assert reopened.authenticate(issued.secret, peer="10.0.0.1") is not None
+
+
+def test_pasted_connection_secrets_use_the_protected_key_file(store, tmp_path):
+    secret = KEY_PREFIX + "s" * 40
+    store.remember_connection_secret("10.0.0.2:7444", secret)
+
+    reopened = KeyStore(str(tmp_path / "inbound-keys.json"))
+
+    assert reopened.connection_secret("10.0.0.2:7444") == secret
+    if os.name != "nt":
+        assert stat.S_IMODE((tmp_path / "inbound-keys.json").stat().st_mode) == 0o600
+
+
+def test_legacy_saved_connection_is_migrated_out_of_settings(store, monkeypatch):
+    from worker.inbound import service as inbound_service
+
+    secret = KEY_PREFIX + "s" * 40
+    legacy = format_connection(host="10.0.0.2", port=7444, secret=secret)
+    settings = {inbound_service._SAVED_KEY: legacy}
+    monkeypatch.setattr(
+        inbound_service,
+        "_setting",
+        lambda name, default="": settings.get(name, default),
+    )
+    monkeypatch.setattr(
+        inbound_service,
+        "_set_setting",
+        lambda name, value: settings.__setitem__(name, value),
+    )
+
+    outbound = inbound_service.OutboundNodes(store)
+
+    assert outbound.saved() == ["10.0.0.2:7444"]
+    assert secret not in settings[inbound_service._SAVED_KEY]
+    assert store.connection_secret("10.0.0.2:7444") == secret
 
 
 def test_a_corrupt_key_file_is_reported_rather_than_read_as_no_keys(tmp_path, caplog):
@@ -218,6 +274,27 @@ def test_inbound_is_off_unless_it_was_turned_on(monkeypatch):
     monkeypatch.setattr(inbound_service, "_setting", lambda name, default="": default)
 
     assert inbound_service.enabled() is False
+
+
+@pytest.mark.asyncio
+async def test_environment_override_rejects_ui_enablement_changes(monkeypatch):
+    from fastapi import HTTPException
+
+    from api.routers import workers as workers_router
+    from worker.inbound import service as inbound_service
+
+    monkeypatch.setenv("OMNIVOICE_INBOUND_NODE", "true")
+    changed = []
+    monkeypatch.setattr(inbound_service, "set_enabled", lambda value: changed.append(value))
+
+    with pytest.raises(HTTPException) as excinfo:
+        await workers_router.set_inbound_enabled(
+            workers_router.InboundEnableRequest(enabled=False)
+        )
+
+    assert excinfo.value.status_code == 409
+    assert changed == []
+    assert inbound_service.enabled() is True
 
 
 def test_a_wildcard_bind_never_reaches_the_connection_string(monkeypatch):

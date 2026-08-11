@@ -6,9 +6,11 @@ in practice nobody revokes and the credential outlives the reason it was
 issued. Per-key costs nothing extra at issue time and is painful to retrofit,
 because a shared key leaves no record of who used it.
 
-Keys are stored hashed. The plaintext exists exactly once, in the response to
-the issuing call, and is unrecoverable afterwards — the node cannot show a key
-again later, only replace it.
+Keys issued by this node are stored hashed. The plaintext exists exactly once,
+in the response to the issuing call, and is unrecoverable afterwards — the node
+cannot show a key again later, only replace it. Keys pasted into this panel for
+outbound reconnection live in the same machine-local 0600 file, never in the UI
+settings store.
 """
 
 from __future__ import annotations
@@ -76,6 +78,17 @@ class _Failures:
     locked_until: float = 0.0
 
 
+def _peer_host(peer: str) -> str:
+    """Strip the ephemeral source port used by gRPC from a peer address."""
+    if peer.startswith("["):
+        closing = peer.find("]")
+        if closing != -1:
+            return peer[: closing + 1]
+    if peer.count(":") == 1:
+        return peer.rsplit(":", 1)[0]
+    return peer
+
+
 @dataclass
 class IssuedKey:
     """The one and only time the plaintext exists outside the caller's hands."""
@@ -97,6 +110,7 @@ class KeyStore:
         self._now = now or time.time
         self._lock = threading.Lock()
         self._keys: dict[str, PanelKey] = {}
+        self._connection_secrets: dict[str, str] = {}
         self._failures: dict[str, _Failures] = {}
         self._load()
 
@@ -124,12 +138,23 @@ class KeyStore:
             except TypeError:
                 continue
             self._keys[key.key_id] = key
+        connections = raw.get("connection_secrets", {})
+        if isinstance(connections, dict):
+            self._connection_secrets = {
+                str(endpoint): str(secret)
+                for endpoint, secret in connections.items()
+                if endpoint and secret
+            }
 
     def _save_locked(self) -> None:
         directory = os.path.dirname(os.path.abspath(self._path))
         os.makedirs(directory, exist_ok=True)
         payload = json.dumps(
-            {"keys": [asdict(k) for k in self._keys.values()]}, indent=2
+            {
+                "keys": [asdict(k) for k in self._keys.values()],
+                "connection_secrets": self._connection_secrets,
+            },
+            indent=2,
         ).encode("utf-8")
         tmp = f"{self._path}.tmp"
         # 0600 from creation, never a world-readable moment — the same idiom
@@ -200,9 +225,27 @@ class KeyStore:
         with self._lock:
             return any(not k.revoked for k in self._keys.values())
 
+    # ── Panel-side connection credentials ───────────────────────────────
+
+    def remember_connection_secret(self, endpoint: str, secret: str) -> None:
+        """Persist a pasted node secret outside the UI-readable settings store."""
+        with self._lock:
+            self._connection_secrets[endpoint] = secret
+            self._save_locked()
+
+    def connection_secret(self, endpoint: str) -> str:
+        with self._lock:
+            return self._connection_secrets.get(endpoint, "")
+
+    def forget_connection_secret(self, endpoint: str) -> None:
+        with self._lock:
+            if self._connection_secrets.pop(endpoint, None) is not None:
+                self._save_locked()
+
     # ── Authentication ────────────────────────────────────────────────────
 
     def locked_out(self, peer: str) -> bool:
+        peer = _peer_host(peer)
         with self._lock:
             record = self._failures.get(peer)
             return record is not None and record.locked_until > self._now()
@@ -216,8 +259,9 @@ class KeyStore:
         but an oracle.
         """
         now = self._now()
+        peer_host = _peer_host(peer)
         with self._lock:
-            record = self._failures.get(peer)
+            record = self._failures.get(peer_host)
             if record is not None and record.locked_until > now:
                 return None
 
@@ -230,16 +274,17 @@ class KeyStore:
                     matched = key
 
             if matched is None:
-                self._record_failure_locked(peer, now)
+                self._record_failure_locked(peer_host, now)
                 return None
 
-            self._failures.pop(peer, None)
+            self._failures.pop(peer_host, None)
             matched.last_seen_at = now
             matched.last_seen_peer = peer
             self._save_locked()
             return matched
 
     def _record_failure_locked(self, peer: str, now: float) -> None:
+        peer = _peer_host(peer)
         record = self._failures.get(peer)
         if record is None or now - record.first_at > _FAILURE_WINDOW_SECONDS:
             record = _Failures(count=0, first_at=now)

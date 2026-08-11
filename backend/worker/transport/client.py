@@ -44,7 +44,7 @@ import random
 import socket
 import sys
 from dataclasses import dataclass, field
-from typing import Awaitable, Callable, Optional
+from typing import Awaitable, Callable, Optional, Protocol
 
 import grpc
 
@@ -92,6 +92,16 @@ _MAX_UPLOAD_RESUMES = 8
 # RESULT_UPLOADING (and its much longer delivery budget) off this, so it is a
 # wire constant, not a cosmetic label.
 UPLOAD_STAGE = "uploading"
+
+
+class ArtifactTransport(Protocol):
+    """Inbound node staging operations used by a worker client."""
+
+    async def publish(
+        self, ref: pb.TaskRef, payload: bytes, meta: dict
+    ) -> pb.ArtifactRef: ...
+
+    async def stage_in(self, ref: pb.ArtifactRef, destination: str) -> None: ...
 
 # Used when an assignment carries no lease (an older control plane, or a test).
 # Mirrors deadlines.py's _HEARTBEAT_GRACE_S * 4.

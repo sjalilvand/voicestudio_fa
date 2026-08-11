@@ -17,8 +17,9 @@ import asyncio
 import logging
 import os
 from typing import Optional
+from urllib.parse import urlsplit
 
-from worker.inbound.artifacts import ArtifactStore
+from worker.inbound.artifacts import ArtifactStore, KeyedArtifactTransport
 from worker.inbound.connection_log import ConnectionLog
 from worker.inbound.connection_string import (
     Connection,
@@ -52,17 +53,25 @@ def _set_setting(name: str, value: str) -> None:
     settings_store.set_text(name, value)
 
 
+def enabled_override() -> Optional[bool]:
+    """A headless environment override, or None when the UI owns the switch."""
+    env = (os.environ.get("OMNIVOICE_INBOUND_NODE") or "").strip().lower()
+    if env in ("1", "true", "yes", "on"):
+        return True
+    if env in ("0", "false", "no", "off"):
+        return False
+    return None
+
+
 def enabled() -> bool:
     """Whether this machine accepts inbound connections. Off unless asked.
 
     Environment first so a headless node can be brought up without a UI, then
     settings for the desktop case — the same precedence remote workers uses.
     """
-    env = (os.environ.get("OMNIVOICE_INBOUND_NODE") or "").strip().lower()
-    if env in ("1", "true", "yes", "on"):
-        return True
-    if env in ("0", "false", "no", "off"):
-        return False
+    override = enabled_override()
+    if override is not None:
+        return override
     return _setting(_ENABLED_KEY).lower() in ("1", "true", "yes", "on")
 
 
@@ -182,7 +191,7 @@ class InboundNode:
     def port(self) -> int:
         return self._listener.port if self._listener else 0
 
-    def _client_factory(self, artifacts: ArtifactStore, key_id: str):
+    def _client_factory(self, artifacts: KeyedArtifactTransport, key_id: str):
         # Imported here so a machine that never accepts connections does not
         # pay for the executor or grpc at startup.
         from worker import capabilities  # noqa: PLC0415
@@ -289,13 +298,40 @@ class InboundNode:
 class OutboundNodes:
     """Nodes this panel dials. One connection per saved entry."""
 
-    def __init__(self) -> None:
+    def __init__(self, credentials: Optional[KeyStore] = None) -> None:
         self._connections: dict[str, object] = {}
         self._tasks: dict[str, asyncio.Task] = {}
+        self._credentials = credentials
+
+    @property
+    def credentials(self) -> KeyStore:
+        # The module singleton shares the node's protected store. Tests and
+        # embedded callers can inject an isolated one explicitly.
+        return self._credentials or node.keys
 
     def saved(self) -> list[str]:
         raw = _setting(_SAVED_KEY)
-        return [line for line in raw.splitlines() if line.strip()]
+        entries = [line.strip() for line in raw.splitlines() if line.strip()]
+        endpoints: list[str] = []
+        migrated = False
+        for entry in entries:
+            if entry.startswith("ovnode://"):
+                try:
+                    connection = parse_connection(entry)
+                except InvalidConnectionString:
+                    logger.warning("Dropping a saved inbound connection that no longer parses")
+                    migrated = True
+                    continue
+                self.credentials.remember_connection_secret(
+                    connection.endpoint, connection.secret
+                )
+                endpoints.append(connection.endpoint)
+                migrated = True
+            else:
+                endpoints.append(entry)
+        if migrated:
+            self._save(endpoints)
+        return endpoints
 
     def _save(self, entries: list[str]) -> None:
         _set_setting(_SAVED_KEY, "\n".join(entries))
@@ -307,7 +343,8 @@ class OutboundNodes:
         # Keyed by endpoint: re-pasting a rotated key for the same machine
         # replaces it rather than leaving a dead entry that retries forever.
         entries = [e for e in entries if _endpoint_of(e) != connection.endpoint]
-        entries.append(text.strip())
+        entries.append(connection.endpoint)
+        self.credentials.remember_connection_secret(connection.endpoint, connection.secret)
         self._save(entries)
 
         # Tear down any live session to this machine BEFORE dialling. Without
@@ -331,6 +368,7 @@ class OutboundNodes:
     async def remove(self, endpoint: str) -> bool:
         entries = [e for e in self.saved() if _endpoint_of(e) != endpoint]
         self._save(entries)
+        self.credentials.forget_connection_secret(endpoint)
         existed = endpoint in self._connections
         await self._drop(endpoint)
         return existed
@@ -338,7 +376,7 @@ class OutboundNodes:
     async def start_all(self, servicer) -> None:
         for entry in self.saved():
             try:
-                await self._dial(parse_connection(entry), servicer)
+                await self._dial(self._connection_for(entry), servicer)
             except InvalidConnectionString as exc:
                 logger.warning("Ignoring a saved connection that no longer parses: %s", exc)
 
@@ -376,8 +414,23 @@ class OutboundNodes:
             )
         return rows
 
+    def _connection_for(self, endpoint: str) -> Connection:
+        try:
+            parsed = urlsplit(f"//{endpoint}")
+            host, port = parsed.hostname, parsed.port
+        except ValueError as exc:
+            raise InvalidConnectionString("That saved node address is not valid.") from exc
+        secret = self.credentials.connection_secret(endpoint)
+        if not host or not port or not secret:
+            raise InvalidConnectionString(
+                "That saved GPU connection has no protected key. Paste its connection string again."
+            )
+        return Connection(host=host, port=port, secret=secret)
+
 
 def _endpoint_of(entry: str) -> str:
+    if "://" not in entry:
+        return entry.strip()
     try:
         return parse_connection(entry).endpoint
     except InvalidConnectionString:

@@ -90,6 +90,7 @@ class _InboundHarness:
         )
         self.connection = None
         self.connector_task = None
+        self.panel_key_id = ""
         self.port = 0
 
     def _client(self, artifacts, key_id):
@@ -120,7 +121,13 @@ class _InboundHarness:
 
     async def connect_panel(self, secret=None, *, wait=True):
         if secret is None:
-            secret = self.keys.issue("Test panel").secret
+            issued = self.keys.issue("Test panel")
+            secret = issued.secret
+            self.panel_key_id = issued.key.key_id
+        else:
+            from worker.identity import hash_secret
+
+            self.panel_key_id = hash_secret(secret)[:12]
         connection = parse_connection(f"ovnode://{secret}@127.0.0.1:{self.port}")
         self.connection = NodeConnection(self.servicer, connection)
         self.connector_task = asyncio.create_task(self.connection.run_forever())
@@ -220,6 +227,55 @@ async def test_a_panel_with_no_key_never_reaches_the_worker_pool(inbound):
 
 
 @pytest.mark.asyncio
+async def test_attach_ends_when_its_incoming_reader_stops(tmp_path, monkeypatch):
+    """A dead reader must not leave a node advertising a healthy session."""
+    from worker.protocol.gen import worker_v1_pb2 as pb
+
+    class FakeClient:
+        def build_register_request(self):
+            return pb.RegisterRequest()
+
+        async def accept_registration(self, _response):
+            pass
+
+        def start_heartbeat(self, _response):
+            return asyncio.create_task(asyncio.sleep(60))
+
+        async def next_outbound(self):
+            await asyncio.Event().wait()
+
+        async def stop(self):
+            pass
+
+    class Context:
+        def peer(self):
+            return "ipv4:10.0.0.2:45000"
+
+        def invocation_metadata(self):
+            return ()
+
+        async def abort(self, code, message):
+            raise AssertionError(f"unexpected abort: {code}: {message}")
+
+    servicer = NodeListener(
+        keys=KeyStore(str(tmp_path / "keys.json")),
+        log=ConnectionLog(),
+        artifacts=ArtifactStore(str(tmp_path / "staged")),
+        client_factory=lambda _artifacts, _key_id: FakeClient(),
+    )._servicer
+    monkeypatch.setattr(servicer, "_authenticate", lambda _context: ("panel-a", "A"))
+
+    async def frames():
+        yield pb.ServerMessage(registered=pb.RegisterResponse())
+
+    stream = servicer.Attach(frames(), Context())
+    first = await anext(stream)
+    assert first.WhichOneof("payload") == "register"
+    with pytest.raises(StopAsyncIteration):
+        await asyncio.wait_for(anext(stream), timeout=2)
+
+
+@pytest.mark.asyncio
 async def test_a_revoked_key_stops_working_without_disturbing_the_others(inbound):
     alice = inbound.keys.issue("Alice")
     inbound.keys.revoke(alice.key.key_id)
@@ -271,7 +327,9 @@ async def test_an_input_pushed_before_the_assignment_is_there_when_the_task_asks
 
     assert declared.sha256
     destination = tmp_path / "staged-copy.wav"
-    await inbound.artifacts.stage_in(declared, str(destination))
+    await inbound.artifacts.stage_in(
+        declared, str(destination), key_id=inbound.panel_key_id
+    )
     assert destination.read_bytes() == b"reference audio bytes"
 
 
@@ -299,6 +357,61 @@ async def test_a_pushed_input_that_does_not_match_its_checksum_is_refused(
         # push_input recomputes the hash, so drive PushInput directly with a
         # ref whose declared hash cannot match.
         await _push_with_declared_hash(inbound, ref, str(source))
+
+
+@pytest.mark.asyncio
+async def test_an_offset_mismatch_removes_the_partial_input(inbound):
+    from worker.inbound.listener import KEY_METADATA_KEY
+    from worker.protocol.gen import worker_v1_pb2 as pb
+
+    await inbound.connect_panel()
+    ref = pb.ArtifactRef(artifact_id="offset-mismatch", filename="reference.wav")
+
+    async def chunks():
+        yield pb.ArtifactChunk(ref=ref, offset=0, data=b"first", last=False)
+        yield pb.ArtifactChunk(ref=ref, offset=99, data=b"second", last=True)
+
+    ack = await inbound.connection._stub.PushInput(
+        chunks(),
+        metadata=((KEY_METADATA_KEY, inbound.connection._connection.secret),),
+    )
+
+    assert ack.error.code == "OFFSET_MISMATCH"
+    assert not any(files for _root, _dirs, files in os.walk(inbound.artifacts._root))
+
+
+@pytest.mark.asyncio
+async def test_staged_artifacts_are_isolated_by_panel_key(tmp_path):
+    from worker.protocol.gen import worker_v1_pb2 as pb
+
+    store = ArtifactStore(str(tmp_path / "staged"))
+    result = await store.publish(
+        pb.TaskRef(task_id="t1", attempt_id="a1"),
+        b"alice audio",
+        {"filename": "out.wav"},
+        key_id="alice",
+    )
+
+    assert store.open_result(result.artifact_id, key_id="bob") is None
+    store.result_fetched(result.artifact_id, key_id="bob")
+    assert store.open_result(result.artifact_id, key_id="alice") is not None
+
+    incoming = pb.ArtifactRef(artifact_id="shared-id", filename="ref.wav")
+    path = store.begin_input(incoming, key_id="alice")
+    with open(path, "wb") as handle:
+        handle.write(b"alice reference")
+    store.commit_input(
+        incoming,
+        path,
+        "digest",
+        len(b"alice reference"),
+        key_id="alice",
+    )
+    with pytest.raises(RuntimeError, match="did not send input"):
+        await store.stage_in(incoming, str(tmp_path / "bob.wav"), key_id="bob")
+
+    await store.stage_in(incoming, str(tmp_path / "alice.wav"), key_id="alice")
+    assert (tmp_path / "alice.wav").read_bytes() == b"alice reference"
 
 
 async def _push_with_declared_hash(inbound, ref, path):
@@ -420,7 +533,10 @@ async def test_a_staged_result_comes_back_whole_when_its_ref_declares_a_size(
     payload = b"rendered audio bytes" * 1000
 
     ref = await inbound.artifacts.publish(
-        pb.TaskRef(task_id="t1", attempt_id="a1"), payload, {"filename": "out.wav"}
+        pb.TaskRef(task_id="t1", attempt_id="a1"),
+        payload,
+        {"filename": "out.wav"},
+        key_id=inbound.panel_key_id,
     )
     assert ref.size_bytes == len(payload), "the ref must declare the real size"
 
@@ -428,6 +544,29 @@ async def test_a_staged_result_comes_back_whole_when_its_ref_declares_a_size(
     await inbound.connection.fetch_result(ref, str(destination))
 
     assert destination.read_bytes() == payload
+
+
+@pytest.mark.asyncio
+async def test_result_pull_stops_at_its_runtime_byte_cap(tmp_path):
+    from worker.inbound.connection_string import Connection
+    from worker.protocol.gen import worker_v1_pb2 as pb
+
+    connection = NodeConnection(
+        object(), Connection(host="127.0.0.1", port=7444, secret="ovnode_" + "s" * 40)
+    )
+
+    class Stub:
+        async def FetchResult(self, _request, metadata=()):
+            yield pb.ResultChunk(offset=0, data=b"too large", last=True)
+
+    connection._stub = Stub()
+    destination = tmp_path / "partial.wav"
+
+    with pytest.raises(RuntimeError, match="larger than"):
+        await connection.fetch_result(
+            pb.ArtifactRef(artifact_id="a1"), str(destination), max_bytes=4
+        )
+    assert not destination.exists()
 
 
 @pytest.mark.asyncio
@@ -443,7 +582,7 @@ async def test_repasting_a_key_for_a_connected_machine_redials_it(inbound, monke
     from worker.inbound import service as inbound_service
 
     await inbound.connect_panel()
-    outbound = inbound_service.OutboundNodes()
+    outbound = inbound_service.OutboundNodes(inbound.keys)
     saved = []
     monkeypatch.setattr(outbound, "saved", lambda: list(saved))
     monkeypatch.setattr(outbound, "_save", lambda entries: saved.clear() or saved.extend(entries))
@@ -455,11 +594,36 @@ async def test_repasting_a_key_for_a_connected_machine_redials_it(inbound, monke
     second = f"ovnode://{inbound.keys.issue('Two').secret}@127.0.0.1:{inbound.port}"
     await outbound.add(second, inbound.servicer)
 
-    assert saved == [second], "the newly pasted string must be the saved one"
+    endpoint = f"127.0.0.1:{inbound.port}"
+    assert saved == [endpoint], "settings must persist only the non-secret endpoint"
+    assert inbound.keys.connection_secret(endpoint) == parse_connection(second).secret
     assert outbound._connections[f"127.0.0.1:{inbound.port}"] is not original, (
         "the old session must be replaced, not reused"
     )
     await outbound.stop()
+
+
+@pytest.mark.asyncio
+async def test_saved_endpoint_reloads_its_key_from_protected_storage(tmp_path, monkeypatch):
+    from worker.inbound import service as inbound_service
+
+    store = KeyStore(str(tmp_path / "keys.json"))
+    endpoint = "10.0.0.2:7444"
+    secret = "ovnode_" + "s" * 40
+    store.remember_connection_secret(endpoint, secret)
+    outbound = inbound_service.OutboundNodes(store)
+    monkeypatch.setattr(outbound, "saved", lambda: [endpoint])
+    dialled = []
+
+    async def capture(connection, _servicer):
+        dialled.append(connection)
+
+    monkeypatch.setattr(outbound, "_dial", capture)
+    await outbound.start_all(object())
+
+    assert len(dialled) == 1
+    assert dialled[0].endpoint == endpoint
+    assert dialled[0].secret == secret
 
 
 @pytest.mark.asyncio
@@ -519,7 +683,9 @@ async def test_a_nested_input_id_is_accepted_the_way_staging_really_writes_it(
     declared = await inbound.connection.push_input(nested, str(source))
 
     destination = tmp_path / "staged.wav"
-    await inbound.artifacts.stage_in(declared, str(destination))
+    await inbound.artifacts.stage_in(
+        declared, str(destination), key_id=inbound.panel_key_id
+    )
     assert destination.read_bytes() == b"reference audio bytes"
 
 

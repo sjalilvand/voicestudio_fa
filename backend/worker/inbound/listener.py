@@ -28,7 +28,7 @@ from worker.inbound.connection_log import ConnectionLog
 from worker.inbound.keys import KeyStore
 from worker.protocol.gen import worker_v1_pb2 as pb
 from worker.protocol.gen import worker_v1_pb2_grpc as pb_grpc
-from worker.transport.client import MAX_MESSAGE_BYTES, WorkerClient
+from worker.transport.client import ArtifactTransport, MAX_MESSAGE_BYTES, WorkerClient
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
         keys: KeyStore,
         log: ConnectionLog,
         artifacts: ArtifactStore,
-        client_factory: Callable[[ArtifactStore, str], WorkerClient],
+        client_factory: Callable[[ArtifactTransport, str], WorkerClient],
     ) -> None:
         self._keys = keys
         self._log = log
@@ -120,7 +120,7 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
         # the same machine has a different worker id to each of them, and the
         # node signs its challenge over that id. Handing every panel the same
         # client would make the signature match at most one of them.
-        client = self._client_factory(self._artifacts, key_id)
+        client = self._client_factory(self._artifacts.for_key(key_id), key_id)
         self._clients.add(client)
         reader: Optional[asyncio.Task] = None
         heartbeat: Optional[asyncio.Task] = None
@@ -150,6 +150,9 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
                             reason="The owner of this GPU machine ended the session."
                         )
                     )
+                    return
+                if reader.done():
+                    reader.result()
                     return
                 # Bounded so a kick lands within a second even on an idle
                 # session, where nothing else would wake this loop.
@@ -189,13 +192,15 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
     # ── Artifacts ─────────────────────────────────────────────────────────
 
     async def FetchResult(self, request, context):
-        if self._authenticate(context) is None:
+        admitted = self._authenticate(context)
+        if admitted is None:
             await context.abort(
                 grpc.StatusCode.UNAUTHENTICATED,
                 "This GPU machine did not recognise that key.",
             )
             return
-        staged = self._artifacts.open_result(request.artifact_id)
+        key_id, _label = admitted
+        staged = self._artifacts.open_result(request.artifact_id, key_id=key_id)
         if staged is None:
             await context.abort(
                 grpc.StatusCode.NOT_FOUND, "That result is no longer on this machine."
@@ -236,15 +241,17 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
         # Dropped only after the last chunk left this process. A panel that
         # dies mid-fetch can ask again; the stale sweep is what eventually
         # reclaims it.
-        self._artifacts.result_fetched(request.artifact_id)
+        self._artifacts.result_fetched(request.artifact_id, key_id=key_id)
 
     async def PushInput(self, request_iterator, context):
-        if self._authenticate(context) is None:
+        admitted = self._authenticate(context)
+        if admitted is None:
             await context.abort(
                 grpc.StatusCode.UNAUTHENTICATED,
                 "This GPU machine did not recognise that key.",
             )
             return pb.ArtifactAck()
+        key_id, _label = admitted
 
         ref: Optional[pb.ArtifactRef] = None
         path = ""
@@ -256,9 +263,15 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
             async for chunk in request_iterator:
                 if ref is None:
                     ref = chunk.ref
-                    path = self._artifacts.begin_input(ref)
+                    path = self._artifacts.begin_input(ref, key_id=key_id)
                     handle = open(path, "wb")
                 if int(chunk.offset) != received:
+                    if handle is not None:
+                        handle.close()
+                        handle = None
+                    if path:
+                        with contextlib.suppress(OSError):
+                            os.remove(path)
                     return pb.ArtifactAck(
                         artifact_id=ref.artifact_id if ref else "",
                         bytes_received=received,
@@ -311,7 +324,7 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
                 ),
             )
 
-        self._artifacts.commit_input(ref, path, actual, received)
+        self._artifacts.commit_input(ref, path, actual, received, key_id=key_id)
         return pb.ArtifactAck(
             artifact_id=ref.artifact_id, bytes_received=received, committed=True
         )
@@ -333,7 +346,7 @@ class NodeListener:
         keys: KeyStore,
         log: ConnectionLog,
         artifacts: ArtifactStore,
-        client_factory: Callable[[ArtifactStore, str], WorkerClient],
+        client_factory: Callable[[ArtifactTransport, str], WorkerClient],
     ) -> None:
         self._servicer = NodeServicer(
             keys=keys, log=log, artifacts=artifacts, client_factory=client_factory

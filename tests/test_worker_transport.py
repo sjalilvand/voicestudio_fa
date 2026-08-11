@@ -602,6 +602,94 @@ async def test_control_stream_setup_failure_clears_open_flag():
     with pytest.raises(RuntimeError, match="queue closed"):
         await servicer.Control(None, object())
     assert session.stream_open is False
+async def test_stream_start_refuses_a_worker_removed_after_registration(tmp_path):
+    """Both stream directions must leave a raced session reusable/closed."""
+    from worker.transport.server import SESSION_METADATA_KEY, _Session
+
+    pool = WorkerPool()
+    scheduler = Scheduler(pool, persist=False)
+    servicer = WorkerServicer(scheduler, pool, artifact_dir=str(tmp_path / "artifacts"))
+    issued = identity.issue_session(worker_id="gone", key_id="key", epoch=1)
+    session = _Session("gone", 1, issued)
+    servicer._sessions["gone"] = session
+    servicer._by_token[issued.token] = session
+    aborted = []
+
+    class Context:
+        def invocation_metadata(self):
+            return ((SESSION_METADATA_KEY, issued.token),)
+
+        async def abort(self, code, message):
+            aborted.append((code, message))
+
+    async def no_messages():
+        if False:
+            yield None
+
+    await servicer.Control(no_messages(), Context())
+
+    assert aborted and aborted[0][0] == grpc.StatusCode.FAILED_PRECONDITION
+    assert session.stream_open is False
+
+    connection = object()
+    await servicer.run_inbound_stream(session, no_messages(), connection)
+    assert session.stream_open is False
+    assert session.connection is None
+
+
+@pytest.mark.asyncio
+async def test_inbound_result_pull_honours_artifact_and_task_caps(tmp_path):
+    from types import SimpleNamespace
+
+    from worker.transport.server import (
+        MAX_ARTIFACT_BYTES,
+        MAX_TASK_ARTIFACT_BYTES,
+    )
+
+    pool = WorkerPool()
+    servicer = WorkerServicer(
+        Scheduler(pool, persist=False), pool, artifact_dir=str(tmp_path / "artifacts")
+    )
+    calls = []
+
+    class Connection:
+        async def fetch_result(self, *_args, **_kwargs):
+            calls.append((_args, _kwargs))
+
+    session = SimpleNamespace(worker_id="worker", connection=Connection())
+    attempt = SimpleNamespace(task_id="task", attempt_id="attempt")
+
+    oversized = pb.ArtifactRef(size_bytes=MAX_ARTIFACT_BYTES + 1)
+    assert await servicer._fetch_inbound_artifact(session, attempt, oversized) is None
+
+    servicer._artifact_bytes_spent = lambda _task_id: MAX_TASK_ARTIFACT_BYTES - 10
+    over_budget = pb.ArtifactRef(size_bytes=11)
+    assert await servicer._fetch_inbound_artifact(session, attempt, over_budget) is None
+    assert calls == []
+
+
+@pytest.mark.asyncio
+async def test_inbound_input_containment_failure_never_reaches_connector(tmp_path):
+    from types import SimpleNamespace
+
+    pool = WorkerPool()
+    servicer = WorkerServicer(
+        Scheduler(pool, persist=False), pool, artifact_dir=str(tmp_path / "artifacts")
+    )
+    calls = []
+
+    class Connection:
+        async def push_input(self, ref, local):
+            calls.append((ref, local))
+
+    message = pb.TaskAssignment()
+    message.inputs.add(artifact_id="../../outside.wav", filename="outside.wav")
+
+    with pytest.raises(ValueError, match="artifact directory"):
+        await servicer._push_inbound_inputs(
+            SimpleNamespace(connection=Connection()), message
+        )
+    assert calls == []
 
 
 @pytest.mark.asyncio

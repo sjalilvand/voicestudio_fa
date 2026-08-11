@@ -42,6 +42,7 @@ _STALE_SECONDS = 24 * 60 * 60
 
 @dataclass
 class _Staged:
+    key_id: str
     path: str
     sha256: str
     size_bytes: int
@@ -54,9 +55,12 @@ class ArtifactStore:
     def __init__(self, root: str) -> None:
         self._root = os.path.abspath(root)
         self._lock = threading.Lock()
-        self._out: dict[str, _Staged] = {}
-        self._in: dict[str, _Staged] = {}
+        self._out: dict[tuple[str, str], _Staged] = {}
+        self._in: dict[tuple[str, str], _Staged] = {}
         os.makedirs(self._root, exist_ok=True)
+
+    def for_key(self, key_id: str) -> "KeyedArtifactTransport":
+        return KeyedArtifactTransport(self, key_id)
 
     # ── Placement ─────────────────────────────────────────────────────────
 
@@ -77,16 +81,16 @@ class ArtifactStore:
 
     def _sweep_locked(self, now: float) -> None:
         for index in (self._out, self._in):
-            for artifact_id, staged in list(index.items()):
+            for artifact_key, staged in list(index.items()):
                 if now - staged.created_at <= _STALE_SECONDS:
                     continue
-                index.pop(artifact_id, None)
+                index.pop(artifact_key, None)
                 _remove_quietly(staged.path)
 
     # ── Results: node writes, panel fetches ───────────────────────────────
 
     async def publish(
-        self, ref: pb.TaskRef, payload: bytes, meta: dict
+        self, ref: pb.TaskRef, payload: bytes, meta: dict, *, key_id: str
     ) -> pb.ArtifactRef:
         """Stage a finished result and return the ref that names it."""
         artifact_id = uuid.uuid4().hex
@@ -103,8 +107,12 @@ class ArtifactStore:
         now = time.time()
         with self._lock:
             self._sweep_locked(now)
-            self._out[artifact_id] = _Staged(
-                path=path, sha256=digest, size_bytes=len(payload), created_at=now
+            self._out[(key_id, artifact_id)] = _Staged(
+                key_id=key_id,
+                path=path,
+                sha256=digest,
+                size_bytes=len(payload),
+                created_at=now,
             )
         return pb.ArtifactRef(
             artifact_id=artifact_id,
@@ -116,21 +124,21 @@ class ArtifactStore:
             sha256=digest,
         )
 
-    def open_result(self, artifact_id: str) -> Optional[_Staged]:
+    def open_result(self, artifact_id: str, *, key_id: str) -> Optional[_Staged]:
         with self._lock:
-            return self._out.get(artifact_id)
+            return self._out.get((key_id, artifact_id))
 
-    def result_fetched(self, artifact_id: str) -> None:
+    def result_fetched(self, artifact_id: str, *, key_id: str) -> None:
         """Drop a result once the panel has it. The panel's ack is the commit
         point, so nothing is deleted on a partial read."""
         with self._lock:
-            staged = self._out.pop(artifact_id, None)
+            staged = self._out.pop((key_id, artifact_id), None)
         if staged is not None:
             _remove_quietly(staged.path)
 
     # ── Inputs: panel pushes, node reads ──────────────────────────────────
 
-    def begin_input(self, ref: pb.ArtifactRef) -> str:
+    def begin_input(self, ref: pb.ArtifactRef, *, key_id: str) -> str:
         """Reserve a staging path for an incoming push. Returns the path.
 
         The wire id is HASHED into a directory name rather than used as one.
@@ -142,21 +150,29 @@ class ArtifactStore:
         entirely ours to decide, which is the property that actually matters.
         """
         key = hashlib.sha256(
-            (ref.artifact_id or uuid.uuid4().hex).encode("utf-8")
+            f"{key_id}\0{ref.artifact_id or uuid.uuid4().hex}".encode("utf-8")
         ).hexdigest()[:32]
         path = self._place("in", key, ref.filename)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         return path
 
-    def commit_input(self, ref: pb.ArtifactRef, path: str, digest: str, size: int) -> None:
+    def commit_input(
+        self, ref: pb.ArtifactRef, path: str, digest: str, size: int, *, key_id: str
+    ) -> None:
         now = time.time()
         with self._lock:
             self._sweep_locked(now)
-            self._in[ref.artifact_id] = _Staged(
-                path=path, sha256=digest, size_bytes=size, created_at=now
+            self._in[(key_id, ref.artifact_id)] = _Staged(
+                key_id=key_id,
+                path=path,
+                sha256=digest,
+                size_bytes=size,
+                created_at=now,
             )
 
-    async def stage_in(self, ref: pb.ArtifactRef, destination: str) -> None:
+    async def stage_in(
+        self, ref: pb.ArtifactRef, destination: str, *, key_id: str
+    ) -> None:
         """Hand a previously pushed input to the executor.
 
         Copied rather than moved: an attempt that is retried asks for the same
@@ -164,7 +180,7 @@ class ArtifactStore:
         missing file that no log explains.
         """
         with self._lock:
-            staged = self._in.get(ref.artifact_id)
+            staged = self._in.get((key_id, ref.artifact_id))
         if staged is None:
             raise RuntimeError(
                 f"the control plane did not send input {ref.artifact_id or '(unnamed)'} "
@@ -172,9 +188,9 @@ class ArtifactStore:
             )
         await asyncio.to_thread(shutil.copyfile, staged.path, destination)
 
-    def forget_input(self, artifact_id: str) -> None:
+    def forget_input(self, artifact_id: str, *, key_id: str) -> None:
         with self._lock:
-            staged = self._in.pop(artifact_id, None)
+            staged = self._in.pop((key_id, artifact_id), None)
         if staged is not None:
             _remove_quietly(staged.path)
 
@@ -188,6 +204,22 @@ class ArtifactStore:
             _remove_quietly(item.path)
 
 
+class KeyedArtifactTransport:
+    """The artifact view one authenticated panel's worker client receives."""
+
+    def __init__(self, store: ArtifactStore, key_id: str) -> None:
+        self._store = store
+        self._key_id = key_id
+
+    async def publish(
+        self, ref: pb.TaskRef, payload: bytes, meta: dict
+    ) -> pb.ArtifactRef:
+        return await self._store.publish(ref, payload, meta, key_id=self._key_id)
+
+    async def stage_in(self, ref: pb.ArtifactRef, destination: str) -> None:
+        await self._store.stage_in(ref, destination, key_id=self._key_id)
+
+
 def _remove_quietly(path: str) -> None:
     try:
         os.remove(path)
@@ -195,4 +227,4 @@ def _remove_quietly(path: str) -> None:
         pass
 
 
-__all__ = ["ArtifactStore", "UnsafePath"]
+__all__ = ["ArtifactStore", "KeyedArtifactTransport", "UnsafePath"]

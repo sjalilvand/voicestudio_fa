@@ -583,24 +583,28 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         dropped stream starts grace windows and fails nothing, because the node
         may be seconds away from delivering a finished result.
         """
-        session.stream_open = True
-        session.connection = connection
+        worker = self.pool.get(session.worker_id)
+        if worker is None:
+            return
         from worker.executor import INLINE_LIMIT_BYTES  # noqa: PLC0415
 
-        await session.send(
-            pb.ServerMessage(
-                config=pb.ConfigUpdate(
-                    heartbeat_interval_seconds=_HEARTBEAT_INTERVAL_SECONDS,
-                    max_concurrent_tasks=max(
-                        1, self.pool.get(session.worker_id).capacity.max_concurrent_tasks
-                    ),
-                    inline_result_threshold_bytes=INLINE_LIMIT_BYTES,
+        reader = pinger = None
+        try:
+            session.stream_open = True
+            session.connection = connection
+            await session.send(
+                pb.ServerMessage(
+                    config=pb.ConfigUpdate(
+                        heartbeat_interval_seconds=_HEARTBEAT_INTERVAL_SECONDS,
+                        max_concurrent_tasks=max(
+                            1, worker.capacity.max_concurrent_tasks
+                        ),
+                        inline_result_threshold_bytes=INLINE_LIMIT_BYTES,
+                    )
                 )
             )
-        )
-        reader = asyncio.create_task(self._read_loop(session, frames))
-        pinger = asyncio.create_task(self._ping_loop(session))
-        try:
+            reader = asyncio.create_task(self._read_loop(session, frames))
+            pinger = asyncio.create_task(self._ping_loop(session))
             done, pending = await asyncio.wait(
                 {reader, pinger}, return_when=asyncio.FIRST_COMPLETED
             )
@@ -614,7 +618,8 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
             session.stream_open = False
             session.connection = None
             for task in (reader, pinger):
-                task.cancel()
+                if task is not None:
+                    task.cancel()
             self.scheduler.on_disconnected(session.worker_id)
             self._sessions.pop(session.worker_id, None)
             self._by_token.pop(session.session.token, None)
@@ -952,10 +957,33 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         path = self._artifact_path(attempt.task_id, attempt.attempt_id)
         if path is None:
             return None
+        declared = int(ref.size_bytes)
+        prior = self._artifact_bytes.get(attempt.task_id, {}).get(
+            attempt.attempt_id, 0
+        )
+        spent = max(0, self._artifact_bytes_spent(attempt.task_id) - prior)
+        remaining = MAX_TASK_ARTIFACT_BYTES - spent
+        if declared > MAX_ARTIFACT_BYTES or declared > remaining or remaining <= 0:
+            logger.warning(
+                "Refusing an oversized result for task %s from %s",
+                attempt.task_id,
+                session.worker_id,
+            )
+            return None
+        limit = min(MAX_ARTIFACT_BYTES, remaining)
         try:
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            await session.connection.fetch_result(ref, path)
+            await session.connection.fetch_result(ref, path, max_bytes=limit)
+            received = os.path.getsize(path)
+            if declared and received != declared:
+                raise RuntimeError(
+                    f"the result contained {received} bytes, expected {declared}"
+                )
         except Exception as exc:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
             logger.warning(
                 "Could not fetch the result for task %s from %s: %s",
                 attempt.task_id,
@@ -963,6 +991,7 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
                 exc,
             )
             return None
+        self._record_artifact_bytes(attempt, received)
         return path
 
     def _contained_artifact(self, artifact_id: str) -> Optional[str]:
@@ -1017,7 +1046,9 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         """Upload every declared input, replacing each ref with what landed."""
         pushed = []
         for ref in message.inputs:
-            local = self._contained_artifact(ref.artifact_id) or ref.artifact_id
+            local = self._contained_artifact(ref.artifact_id)
+            if local is None:
+                raise ValueError("task input is not inside the artifact directory")
             pushed.append(await session.connection.push_input(ref, local))
         del message.inputs[:]
         message.inputs.extend(pushed)
