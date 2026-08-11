@@ -180,7 +180,35 @@
     "history_retention_cap_hint": "Take berbintang tidak pernah dihitung dalam pembersihan · 0 = tanpa batas",
     "history_retention_saved": "Batas penyimpanan disimpan",
     "history_retention_save_failed": "Tidak dapat menyimpan",
-    "history_retention_invalid": "Masukkan 0 atau lebih"
+    "history_retention_invalid": "Masukkan 0 atau lebih",
+    "workers_title": "Pekerja jarak jauh",
+    "workers_desc": "Kirim pekerjaan satu per satu ke GPU di mesin Anda yang lain. Hasilnya kembali ke sini. Tidak ada yang dikirim sampai Anda menambahkan pekerja dan menyetujuinya.",
+    "workers_enable": "Gunakan pekerja jarak jauh",
+    "workers_enable_hint": "Selama ini mati, tidak ada koneksi yang diterima dan tidak ada yang meninggalkan mesin ini.",
+    "workers_port_conflict": "Worker jarak jauh tidak tersedia karena instans VoiceStudio lain sudah menerimanya di port ini. Tutup instans lain, atau atur OMNIVOICE_WORKER_PORT ke port berbeda lalu mulai ulang VoiceStudio.",
+    "workers_endpoint": "Pekerja terhubung ke",
+    "workers_endpoint_hint": "Pekerja harus dapat menjangkau alamat ini. Di jaringan berbeda, VPN seperti Tailscale adalah cara yang andal.",
+    "workers_add": "Tambahkan pekerja",
+    "workers_add_hint": "Buat token, lalu tempelkan ke OmniVoice di mesin yang lain.",
+    "workers_new_token": "Buat token",
+    "workers_token_once": "Salin sekarang — hanya ditampilkan sekali, hanya berfungsi sekali, dan kedaluwarsa dalam 15 menit.",
+    "workers_copy": "Salin",
+    "workers_copied": "Tersalin",
+    "workers_copy_failed": "Tidak dapat menyalin.",
+    "workers_none": "Belum ada pekerja. Buat token untuk menambahkan yang pertama.",
+    "workers_load": "Tugas {{active}} / {{slots}}",
+    "workers_needs_consent": "Belum disetujui",
+    "workers_status_online": "Daring",
+    "workers_status_offline": "Luring",
+    "workers_status_paused": "Dijeda",
+    "workers_status_disabled": "Dinonaktifkan",
+    "workers_resume": "Lanjutkan",
+    "workers_disable": "Nonaktifkan",
+    "workers_enable_one": "Aktifkan",
+    "workers_remove": "Hapus",
+    "workers_remove_title": "Hapus pekerja?",
+    "workers_remove_confirm": "Hapus {{name}}? Kuncinya dicabut, jadi tidak dapat terhubung kembali tanpa token baru.",
+    "workers_rename": "Ganti nama pekerja"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1791,7 +1819,16 @@
     "to_download": "untuk mengunduh",
     "cached": "di-cache",
     "fast_download_badge": "unduh cepat",
-    "fast_download_title": "Pengunduhan cepat melalui Xet {{version}} — transfer potongan paralel"
+    "fast_download_title": "Pengunduhan cepat melalui Xet {{version}} — transfer potongan paralel",
+    "voice_previews": "Pratinjau suara",
+    "voice_previews_desc": "Unduh pratinjau yang sudah dirender lebih dulu agar suara langsung diputar — bahkan sebelum model suara selesai diunduh. Tidak ada yang diunduh sampai Anda mengaktifkan ini.",
+    "voice_previews_off": "Nonaktif — pratinjau dirender di perangkat ini",
+    "voice_previews_ready": "Set unggulan tersimpan",
+    "voice_previews_partial": "{{cached}} dari {{total}} pratinjau unggulan tersimpan",
+    "voice_previews_checked": "diperiksa {{when}}",
+    "voice_previews_never": "belum diperiksa",
+    "voice_previews_check": "Periksa sekarang",
+    "voice_previews_rejected": "Pembaruan galeri suara ditolak: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Apakah saya memerlukan lisensi untuk alat internal?",
@@ -2298,7 +2335,8 @@
     "droppedChunks_one": "Perhatian: {{count}} bagian teks Anda tidak menghasilkan audio, jadi hasil ini kehilangan bagian tersebut. Coba hasilkan ulang — seed yang berbeda biasanya memperbaikinya.",
     "droppedChunks_other": "Perhatian: {{count}} bagian teks Anda tidak menghasilkan audio, jadi hasil ini kehilangan bagian-bagian tersebut. Coba hasilkan ulang — seed yang berbeda biasanya memperbaikinya.",
     "droppedChunksWithText_one": "Perhatian: {{count}} bagian teks Anda tidak menghasilkan audio dan hilang dari hasil ini — “{{text}}”. Coba hasilkan ulang; seed yang berbeda biasanya memperbaikinya.",
-    "droppedChunksWithText_other": "Perhatian: {{count}} bagian teks Anda tidak menghasilkan audio dan hilang dari hasil ini — “{{text}}”. Coba hasilkan ulang; seed yang berbeda biasanya memperbaikinya."
+    "droppedChunksWithText_other": "Perhatian: {{count}} bagian teks Anda tidak menghasilkan audio dan hilang dari hasil ini — “{{text}}”. Coba hasilkan ulang; seed yang berbeda biasanya memperbaikinya.",
+    "streamingOffRemote": "Pratinjau progresif dimatikan selama {{label}} merender — hasil akhirnya diputar begitu tiba."
   },
   "voiceSelector": {
     "engineDefault": "Default mesin",
@@ -2357,6 +2395,7 @@
     "started": "Mengunduh {{label}} — pantau progresnya di Pengaturan → Model, lalu coba lagi.",
     "install_failed": "Tidak dapat memulai unduhan: {{message}}"
   },
+  "model_missing": {"message":"Model ini belum diunduh di {{target}}.","download":"Unduh model","download_size":"Unduh ({{size}})","started":"Mengunduh di {{target}} — coba Buat lagi setelah selesai.","failed":"Tidak dapat memulai unduhan: {{message}}","manual_worker":"Instal mesin ini langsung di {{target}}."},
   "backend_start_failure": {
     "notice": "Backend VoiceStudio gagal dijalankan — tidak ada yang bisa berjalan sampai backend hidup.",
     "view": "Lihat alasannya",
@@ -2369,5 +2408,21 @@
     "notice_unclean": "Sesi sebelumnya berakhir tanpa penutupan yang bersih {{ago}} yang lalu. Ini sering tidak berbahaya — mesin tertidur, aplikasi ditutup paksa, atau VM/kontainer berhenti.",
     "details_intro_unclean": "Penanda penutupan dari sesi sebelumnya tidak pernah dibersihkan, {{ago}} yang lalu. VoiceStudio tidak dapat mengetahui apakah itu crash atau sekadar interupsi — tidur, penutupan paksa, atau menghentikan VM/kontainer meninggalkan jejak yang sama. Jika sekarang semuanya berfungsi, tidak ada yang perlu dilakukan.",
     "report_needs_log": "Tidak ada keluaran kesalahan yang tertangkap untuk peristiwa ini, jadi laporan sekali klik akan kosong. Jika memang ada masalah, lampirkan baris terakhir dari Pengaturan → Log → Backend ke issue baru."
+  },
+  "gpu": {
+    "local": "Lokal",
+    "picker": "Tempat pekerjaan dijalankan",
+    "tasks": "tugas",
+    "coverage": "hanya {{ops}}",
+    "opLocal": "Lokal — {{op}} belum berjalan dari jarak jauh",
+    "dictationLocal": "Dikte selalu berjalan di mesin ini",
+    "ops": {
+      "tts": "TTS",
+      "clone": "kloning suara",
+      "dub": "sulih suara",
+      "audiobook": "render buku audio",
+      "longform": "narasi cerita",
+      "asr": "transkripsi"
+    }
   }
 }

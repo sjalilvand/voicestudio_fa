@@ -180,7 +180,35 @@
     "history_retention_cap_hint": "スター付きテイクは整理の対象外 · 0 = 無制限",
     "history_retention_saved": "保持上限を保存しました",
     "history_retention_save_failed": "保存できませんでした",
-    "history_retention_invalid": "0以上を入力してください"
+    "history_retention_invalid": "0以上を入力してください",
+    "workers_title": "リモートワーカー",
+    "workers_desc": "個々のジョブを他のマシンの GPU に送ります。結果はここに戻ります。ワーカーを追加して承認するまで、何も送信されません。",
+    "workers_enable": "リモートワーカーを使う",
+    "workers_enable_hint": "これがオフの間は接続を受け付けず、このマシンから何も出ていきません。",
+    "workers_port_conflict": "別のVoiceStudioインスタンスがこのポートですでにリモートワーカーを受け付けているため、利用できません。もう一方のインスタンスを閉じるか、OMNIVOICE_WORKER_PORTを別のポートに設定してVoiceStudioを再起動してください。",
+    "workers_endpoint": "ワーカーの接続先",
+    "workers_endpoint_hint": "ワーカーがこのアドレスに到達できる必要があります。別のネットワークでは、Tailscale などの VPN が確実な方法です。",
+    "workers_add": "ワーカーを追加",
+    "workers_add_hint": "トークンを生成し、もう一方のマシンの OmniVoice に貼り付けます。",
+    "workers_new_token": "トークンを生成",
+    "workers_token_once": "今すぐコピーしてください。表示は一度きり、使用も一度きりで、15 分で失効します。",
+    "workers_copy": "コピー",
+    "workers_copied": "コピーしました",
+    "workers_copy_failed": "コピーできませんでした。",
+    "workers_none": "ワーカーはまだありません。トークンを生成して最初の 1 台を追加してください。",
+    "workers_load": "タスク {{active}} / {{slots}}",
+    "workers_needs_consent": "未承認",
+    "workers_status_online": "オンライン",
+    "workers_status_offline": "オフライン",
+    "workers_status_paused": "一時停止中",
+    "workers_status_disabled": "無効",
+    "workers_resume": "再開",
+    "workers_disable": "無効にする",
+    "workers_enable_one": "有効にする",
+    "workers_remove": "削除",
+    "workers_remove_title": "ワーカーを削除しますか？",
+    "workers_remove_confirm": "{{name}} を削除しますか？キーが失効するため、新しいトークンなしでは再接続できません。",
+    "workers_rename": "ワーカー名を変更"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1791,7 +1819,16 @@
     "to_download": "ダウンロードする",
     "cached": "キャッシュされた",
     "fast_download_badge": "高速ダウンロード",
-    "fast_download_title": "Xet {{version}} による高速ダウンロード — 並列チャンク転送"
+    "fast_download_title": "Xet {{version}} による高速ダウンロード — 並列チャンク転送",
+    "voice_previews": "ボイスプレビュー",
+    "voice_previews_desc": "事前にレンダリングされたプレビューをダウンロードすると、音声モデルのダウンロードが終わる前でも声をすぐに再生できます。オンにするまで何もダウンロードされません。",
+    "voice_previews_off": "オフ — プレビューはこの端末で生成されます",
+    "voice_previews_ready": "おすすめセットをキャッシュ済み",
+    "voice_previews_partial": "おすすめプレビュー {{total}} 件中 {{cached}} 件をキャッシュ済み",
+    "voice_previews_checked": "{{when}}に確認",
+    "voice_previews_never": "未確認",
+    "voice_previews_check": "今すぐ確認",
+    "voice_previews_rejected": "ボイスギャラリーの更新を拒否しました: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "内部ツールにはライセンスが必要ですか?",
@@ -2298,7 +2335,8 @@
     "droppedChunks_one": "ご注意: テキストのうち {{count}} 箇所が音声になりませんでした。このテイクにはその部分がありません。生成し直してください — 別のシードで解決することがほとんどです。",
     "droppedChunks_other": "ご注意: テキストのうち {{count}} 箇所が音声になりませんでした。このテイクにはそれらの部分がありません。生成し直してください — 別のシードで解決することがほとんどです。",
     "droppedChunksWithText_one": "ご注意: テキストのうち {{count}} 箇所が音声にならず、このテイクから欠けています —「{{text}}」。生成し直してください。別のシードで解決することがほとんどです。",
-    "droppedChunksWithText_other": "ご注意: テキストのうち {{count}} 箇所が音声にならず、このテイクから欠けています —「{{text}}」。生成し直してください。別のシードで解決することがほとんどです。"
+    "droppedChunksWithText_other": "ご注意: テキストのうち {{count}} 箇所が音声にならず、このテイクから欠けています —「{{text}}」。生成し直してください。別のシードで解決することがほとんどです。",
+    "streamingOffRemote": "{{label}} がレンダリング中はプログレッシブ再生を無効にします。完成した音声は届き次第再生されます。"
   },
   "voiceSelector": {
     "engineDefault": "エンジンのデフォルト",
@@ -2357,6 +2395,7 @@
     "started": "{{label}} をダウンロード中 — 設定 → モデルで進行状況を確認し、完了後にもう一度お試しください。",
     "install_failed": "ダウンロードを開始できませんでした: {{message}}"
   },
+  "model_missing": {"message":"このモデルは {{target}} にダウンロードされていません。","download":"モデルをダウンロード","download_size":"ダウンロード（{{size}}）","started":"{{target}} でダウンロード中です。完了後にもう一度生成してください。","failed":"ダウンロードを開始できませんでした：{{message}}","manual_worker":"このエンジンを {{target}} に直接インストールしてください。"},
   "backend_start_failure": {
     "notice": "VoiceStudio のバックエンドを起動できませんでした。起動するまで何も実行できません。",
     "view": "理由を見る",
@@ -2369,5 +2408,21 @@
     "notice_unclean": "前回のセッションは {{ago}}前に正常終了せずに終わりました。多くの場合は無害です — スリープ、強制終了、または VM/コンテナの停止が原因です。",
     "details_intro_unclean": "前回実行の終了マーカーが {{ago}}前にクリアされないまま残っていました。VoiceStudio にはクラッシュか単なる中断かを判別できません — スリープ、強制終了、VM/コンテナの停止はいずれも同じ痕跡を残します。現在問題なく動作しているなら対応は不要です。",
     "report_needs_log": "このイベントのエラー出力は記録されていないため、ワンクリック報告は空になります。実際に問題がある場合は、設定 → ログ → バックエンド の最後の行を新しい issue に添付してください。"
+  },
+  "gpu": {
+    "local": "ローカル",
+    "picker": "ジョブの実行場所",
+    "tasks": "タスク",
+    "coverage": "{{ops}} のみ",
+    "opLocal": "ローカル — {{op}}はまだリモートで実行できません",
+    "dictationLocal": "音声入力は常にこのマシンで実行されます",
+    "ops": {
+      "tts": "TTS",
+      "clone": "音声クローン",
+      "dub": "吹き替え",
+      "audiobook": "オーディオブック生成",
+      "longform": "ストーリー朗読",
+      "asr": "文字起こし"
+    }
   }
 }

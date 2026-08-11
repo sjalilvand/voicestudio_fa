@@ -180,7 +180,35 @@
     "history_retention_cap_hint": "Yıldızlı kayıtlar temizlikte sayılmaz · 0 = sınırsız",
     "history_retention_saved": "Saklama sınırı kaydedildi",
     "history_retention_save_failed": "Kaydedilemedi",
-    "history_retention_invalid": "0 veya daha büyük bir değer girin"
+    "history_retention_invalid": "0 veya daha büyük bir değer girin",
+    "workers_title": "Uzak işçiler",
+    "workers_desc": "Tek tek işleri diğer makinelerinizdeki GPU'lara gönderin. Sonuçlar buraya döner. Bir işçi ekleyip onaylayana kadar hiçbir şey gönderilmez.",
+    "workers_enable": "Uzak işçileri kullan",
+    "workers_enable_hint": "Bu kapalıyken hiçbir bağlantı kabul edilmez ve bu makineden hiçbir şey çıkmaz.",
+    "workers_port_conflict": "Başka bir VoiceStudio örneği bu bağlantı noktasında uzak çalışanları zaten kabul ettiği için uzak çalışanlar kullanılamıyor. Diğer örneği kapatın veya OMNIVOICE_WORKER_PORT değerini farklı bir bağlantı noktası yapıp VoiceStudio'yu yeniden başlatın.",
+    "workers_endpoint": "İşçilerin bağlanacağı adres",
+    "workers_endpoint_hint": "Bir işçinin bu adrese erişebilmesi gerekir. Farklı ağlarda Tailscale gibi bir VPN güvenilir yoldur.",
+    "workers_add": "İşçi ekle",
+    "workers_add_hint": "Bir belirteç oluşturun ve diğer makinedeki OmniVoice'a yapıştırın.",
+    "workers_new_token": "Belirteç oluştur",
+    "workers_token_once": "Şimdi kopyalayın — yalnızca bir kez gösterilir, yalnızca bir kez çalışır ve 15 dakika içinde sona erer.",
+    "workers_copy": "Kopyala",
+    "workers_copied": "Kopyalandı",
+    "workers_copy_failed": "Kopyalanamadı.",
+    "workers_none": "Henüz işçi yok. İlkini eklemek için bir belirteç oluşturun.",
+    "workers_load": "Görevler {{active}} / {{slots}}",
+    "workers_needs_consent": "Onaylanmadı",
+    "workers_status_online": "Çevrimiçi",
+    "workers_status_offline": "Çevrimdışı",
+    "workers_status_paused": "Duraklatıldı",
+    "workers_status_disabled": "Devre dışı",
+    "workers_resume": "Sürdür",
+    "workers_disable": "Devre dışı bırak",
+    "workers_enable_one": "Etkinleştir",
+    "workers_remove": "Kaldır",
+    "workers_remove_title": "İşçi kaldırılsın mı?",
+    "workers_remove_confirm": "{{name}} kaldırılsın mı? Anahtarı iptal edilir, bu yüzden yeni bir belirteç olmadan yeniden bağlanamaz.",
+    "workers_rename": "İşçiyi yeniden adlandır"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1791,7 +1819,16 @@
     "to_download": "indirmek için",
     "cached": "önbelleğe alınmış",
     "fast_download_badge": "hızlı indirme",
-    "fast_download_title": "Xet {{version}} aracılığıyla hızlı indirmeler — paralel yığın halinde aktarım"
+    "fast_download_title": "Xet {{version}} aracılığıyla hızlı indirmeler — paralel yığın halinde aktarım",
+    "voice_previews": "Ses önizlemeleri",
+    "voice_previews_desc": "Önceden oluşturulmuş önizlemeleri indirin; böylece sesler, bir ses modeli inmeyi bitirmeden önce bile anında çalar. Bunu açana kadar hiçbir şey indirilmez.",
+    "voice_previews_off": "Kapalı — önizlemeler bu cihazda oluşturulur",
+    "voice_previews_ready": "Öne çıkan set önbellekte",
+    "voice_previews_partial": "{{total}} öne çıkan önizlemeden {{cached}} tanesi önbellekte",
+    "voice_previews_checked": "{{when}} kontrol edildi",
+    "voice_previews_never": "henüz kontrol edilmedi",
+    "voice_previews_check": "Şimdi kontrol et",
+    "voice_previews_rejected": "Ses galerisi güncellemesi reddedildi: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Dahili araçlar için lisansa ihtiyacım var mı?",
@@ -2298,7 +2335,8 @@
     "droppedChunks_one": "Dikkat: Metninizin {{count}} bölümü ses üretmedi, bu nedenle bu kayıtta eksik. Yeniden oluşturmayı deneyin — genellikle farklı bir tohum sorunu çözer.",
     "droppedChunks_other": "Dikkat: Metninizin {{count}} bölümü ses üretmedi, bu nedenle bu kayıtta eksikler. Yeniden oluşturmayı deneyin — genellikle farklı bir tohum sorunu çözer.",
     "droppedChunksWithText_one": "Dikkat: Metninizin {{count}} bölümü ses üretmedi ve bu kayıtta eksik — “{{text}}”. Yeniden oluşturmayı deneyin; genellikle farklı bir tohum sorunu çözer.",
-    "droppedChunksWithText_other": "Dikkat: Metninizin {{count}} bölümü ses üretmedi ve bu kayıtta eksikler — “{{text}}”. Yeniden oluşturmayı deneyin; genellikle farklı bir tohum sorunu çözer."
+    "droppedChunksWithText_other": "Dikkat: Metninizin {{count}} bölümü ses üretmedi ve bu kayıtta eksikler — “{{text}}”. Yeniden oluşturmayı deneyin; genellikle farklı bir tohum sorunu çözer.",
+    "streamingOffRemote": "{{label}} işlerken aşamalı önizleme kapalıdır — tamamlanan kayıt geldiği anda çalınır."
   },
   "voiceSelector": {
     "engineDefault": "Motor varsayılanı",
@@ -2357,6 +2395,7 @@
     "started": "{{label}} indiriliyor — ilerlemeyi Ayarlar → Modeller'den izleyin, sonra yeniden deneyin.",
     "install_failed": "İndirme başlatılamadı: {{message}}"
   },
+  "model_missing": {"message":"Bu model {{target}} üzerine indirilmemiş.","download":"Modeli indir","download_size":"İndir ({{size}})","started":"{{target}} üzerine indiriliyor — bitince yeniden Oluştur'a basın.","failed":"İndirme başlatılamadı: {{message}}","manual_worker":"Bu motoru doğrudan {{target}} üzerine kurun."},
   "backend_start_failure": {
     "notice": "VoiceStudio arka ucu başlatılamadı — başlayana kadar hiçbir şey çalışmaz.",
     "view": "Nedenini gör",
@@ -2369,5 +2408,21 @@
     "notice_unclean": "Önceki oturum {{ago}} önce düzgün kapanmadan sona erdi. Bu çoğu zaman zararsızdır — makine uykuya geçti, uygulama zorla kapatıldı veya bir VM/kapsayıcı durduruldu.",
     "details_intro_unclean": "Önceki çalıştırmanın kapanış işareti {{ago}} önce hiç temizlenmedi. VoiceStudio bunun bir çökme mi yoksa yalnızca bir kesinti mi olduğunu bilemez — uyku, zorla kapatma veya bir VM/kapsayıcıyı durdurma aynı izi bırakır. Şu anda her şey çalışıyorsa yapılacak bir şey yok.",
     "report_needs_log": "Bu olay için hata çıktısı yakalanmadı; tek tıkla rapor boş olurdu. Gerçekten bir sorun varsa lütfen Ayarlar → Günlükler → Arka uç'in son satırlarını yeni bir issue'ya ekleyin."
+  },
+  "gpu": {
+    "local": "Yerel",
+    "picker": "İşlerin çalıştığı yer",
+    "tasks": "görev",
+    "coverage": "yalnızca {{ops}}",
+    "opLocal": "Yerel — {{op}} henüz uzaktan çalışmıyor",
+    "dictationLocal": "Dikte her zaman bu makinede çalışır",
+    "ops": {
+      "tts": "TTS",
+      "clone": "ses klonlama",
+      "dub": "dublaj",
+      "audiobook": "sesli kitap işleme",
+      "longform": "hikâye seslendirme",
+      "asr": "deşifre"
+    }
   }
 }

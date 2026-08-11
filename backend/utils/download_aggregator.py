@@ -46,10 +46,12 @@ class DownloadAggregator:
         self,
         repo_id: str,
         *,
+        target: str = "local",
         total_bytes: Optional[int] = None,
         files_total: Optional[int] = None,
     ) -> None:
         self.repo_id = repo_id
+        self.target = target
         self.total_bytes = total_bytes
         # byte bars keyed by an opaque per-bar key (id of the tqdm instance):
         #   key -> (downloaded, total)
@@ -117,6 +119,7 @@ class DownloadAggregator:
                 eta = (total - bytes_done) / rate
             return {
                 "repo_id": self.repo_id,
+                "target": self.target,
                 "phase": "aggregate",
                 "bytes_done": bytes_done,
                 "total_bytes": total,
@@ -128,7 +131,7 @@ class DownloadAggregator:
 
 
 # ── registry of active per-repo aggregators ────────────────────────────────
-_aggregators: dict[str, DownloadAggregator] = {}
+_aggregators: dict[tuple[str, str], DownloadAggregator] = {}
 _registry_lock = threading.Lock()
 _sink_installed = False
 
@@ -136,23 +139,26 @@ _sink_installed = False
 def start(
     repo_id: str,
     *,
+    target: str = "local",
     total_bytes: Optional[int] = None,
     files_total: Optional[int] = None,
 ) -> DownloadAggregator:
     """Begin (or reset) aggregation for a repo. Called by the preflight."""
-    agg = DownloadAggregator(repo_id, total_bytes=total_bytes, files_total=files_total)
+    agg = DownloadAggregator(
+        repo_id, target=target, total_bytes=total_bytes, files_total=files_total
+    )
     with _registry_lock:
-        _aggregators[repo_id] = agg
+        _aggregators[(target, repo_id)] = agg
     return agg
 
 
-def complete(repo_id: str) -> None:
+def complete(repo_id: str, *, target: str = "local") -> None:
     """Flush a finished download to 100% (FDL-06). Under Xet the per-file byte
     bars never increment `n` or close through our tqdm, so byte-level progress
     is unobservable mid-download; this credits the full preflight total on
     success so the overall bar lands exactly on done. Emits one final
     un-throttled aggregate event."""
-    agg = _get(repo_id)
+    agg = _get(repo_id, target)
     if agg is None:
         return
     with agg._lock:
@@ -175,14 +181,14 @@ def complete(repo_id: str) -> None:
         pass
 
 
-def finish(repo_id: str) -> None:
+def finish(repo_id: str, *, target: str = "local") -> None:
     with _registry_lock:
-        _aggregators.pop(repo_id, None)
+        _aggregators.pop((target, repo_id), None)
 
 
-def _get(repo_id: str) -> Optional[DownloadAggregator]:
+def _get(repo_id: str, target: str = "local") -> Optional[DownloadAggregator]:
     with _registry_lock:
-        return _aggregators.get(repo_id)
+        return _aggregators.get((target, repo_id))
 
 
 def feed(repo_id, key, unit, downloaded, total, complete) -> None:

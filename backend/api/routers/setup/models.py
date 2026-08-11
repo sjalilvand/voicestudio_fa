@@ -90,6 +90,19 @@ def get_model_catalog() -> ModelCatalog:
 
 # ── Platform Detection ─────────────────────────────────────────────────────
 
+def _target_host() -> dict | None:
+    """Selected remote worker host, or None when the catalog targets local."""
+    try:
+        from worker import routing, service  # noqa: PLC0415
+
+        decision = routing.decide()
+        plane = service.control_plane
+        live = plane.pool.get(decision.worker_id) if decision.remote and plane.pool else None
+        return dict(live.record.host or {}) if live is not None else None
+    except Exception:
+        return None
+
+
 def _current_platform_tags() -> list[str]:
     """Return platform tags that the current host supports.
 
@@ -100,6 +113,25 @@ def _current_platform_tags() -> list[str]:
     ``rocm`` (AMD HIP builds), and ``cpu`` (no GPU acceleration at all —
     Apple Silicon is NOT tagged cpu; it curates via ``darwin-arm64``).
     """
+    target = _target_host()
+    if target is not None:
+        target_os = {"windows": "win32", "darwin": "darwin"}.get(
+            str(target.get("os") or "").lower(), "linux"
+        )
+        arch = str(target.get("arch") or "").lower()
+        arch = {"amd64": "x86_64", "aarch64": "arm64"}.get(arch, arch)
+        tags = [target_os, f"{target_os}-{arch}"]
+        backend = ""
+        if target.get("gpus"):
+            backend = str(target["gpus"][0].get("backend") or "").lower()
+        if backend:
+            tags.append(backend)
+            if backend == "rocm":
+                tags.append("cuda")
+        if not backend and not (target_os == "darwin" and arch == "arm64"):
+            tags.append("cpu")
+        return tags
+
     tags = [sys.platform]
     arch = _platform.machine()
     tags.append(f"{sys.platform}-{arch}")
@@ -455,7 +487,9 @@ def list_models():
     Uses a 10 s response cache to avoid repeated ``scan_cache_dir()`` disk
     walks when the frontend polls.
     """
-    cached_response = _cached("models")
+    platform_tags = _current_platform_tags()
+    cache_key = "models:" + ",".join(sorted(platform_tags))
+    cached_response = _cached(cache_key)
     if cached_response is not None:
         return cached_response
 
@@ -476,7 +510,7 @@ def list_models():
         cached_by_repo = _scan_cache_on_disk()
 
     out = []
-    host_tags = set(_current_platform_tags())
+    host_tags = set(platform_tags)
     for m in KNOWN_MODELS:
         cached = cached_by_repo.get(m["repo_id"])
         on_disk = cached is not None and cached["size_on_disk"] > 0
@@ -503,9 +537,9 @@ def list_models():
         # BEFORE an "Install all" overruns the disk (pairs with the per-install
         # disk_space_error guard in setup/download.py).
         "disk_free_gb": round(disk_free_bytes() / _GIB, 1),
-        "platform_tags": _current_platform_tags(),
+        "platform_tags": platform_tags,
     }
-    _set_cache("models", response)
+    _set_cache(cache_key, response)
     return response
 
 
@@ -518,18 +552,19 @@ def recommendations():
     TTS model is required; the ASR picks here are the optional "best for your
     system" set the wizard and Settings surface for on-demand install.
     """
-    is_mac_arm = sys.platform == "darwin" and _platform.machine() == "arm64"
-    is_mac_intel = sys.platform == "darwin" and _platform.machine() == "x86_64"
-    is_linux = sys.platform.startswith("linux")
-    is_windows = sys.platform == "win32"
-
     tags = set(_current_platform_tags())
+    target_os = "darwin" if "darwin" in tags else "win32" if "win32" in tags else "linux"
+    target_arch = next((tag.split("-", 1)[1] for tag in tags if tag.startswith(target_os + "-")), _platform.machine())
+    is_mac_arm = target_os == "darwin" and target_arch == "arm64"
+    is_mac_intel = target_os == "darwin" and target_arch == "x86_64"
+    is_linux = target_os == "linux"
+    is_windows = target_os == "win32"
     has_cuda = "cuda" in tags and "rocm" not in tags
     has_rocm = "rocm" in tags
 
     # Device label — used as the card title.
     if is_mac_arm:
-        device_label = f"Apple Silicon ({_platform.machine()})"
+        device_label = f"Apple Silicon ({target_arch})"
     elif is_mac_intel:
         device_label = "macOS Intel (x86_64)"
     elif is_windows:
@@ -537,7 +572,7 @@ def recommendations():
     elif is_linux:
         device_label = "Linux x64" + (" + CUDA" if has_cuda else " + ROCm" if has_rocm else "")
     else:
-        device_label = f"{sys.platform} / {_platform.machine()}"
+        device_label = f"{target_os} / {target_arch}"
 
     # Curated preset for this host, in catalog order (required entries lead).
     curated = [
@@ -607,8 +642,8 @@ def recommendations():
 
     return {
         "device": {
-            "os": sys.platform,
-            "arch": _platform.machine(),
+            "os": target_os,
+            "arch": target_arch,
             "is_mac_arm": is_mac_arm,
             "is_mac_intel": is_mac_intel,
             "is_linux": is_linux,

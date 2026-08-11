@@ -180,7 +180,35 @@
     "history_retention_cap_hint": "Markierte Takes zählen nie zum Aufräumen · 0 = unbegrenzt",
     "history_retention_saved": "Aufbewahrungslimit gespeichert",
     "history_retention_save_failed": "Speichern fehlgeschlagen",
-    "history_retention_invalid": "0 oder mehr eingeben"
+    "history_retention_invalid": "0 oder mehr eingeben",
+    "workers_title": "Remote-Worker",
+    "workers_desc": "Einzelne Aufträge an GPUs auf Ihren anderen Rechnern senden. Die Ergebnisse kommen hierher zurück. Es wird nichts gesendet, bevor Sie einen Worker hinzufügen und freigeben.",
+    "workers_enable": "Remote-Worker verwenden",
+    "workers_enable_hint": "Solange dies aus ist, wird keine Verbindung angenommen und nichts verlässt diesen Rechner.",
+    "workers_port_conflict": "Remote-Worker sind nicht verfügbar, weil eine andere VoiceStudio-Instanz sie bereits an diesem Port annimmt. Schließen Sie die andere Instanz oder setzen Sie OMNIVOICE_WORKER_PORT auf einen anderen Port und starten Sie VoiceStudio neu.",
+    "workers_endpoint": "Worker verbinden sich mit",
+    "workers_endpoint_hint": "Ein Worker muss diese Adresse erreichen können. In anderen Netzwerken ist ein VPN wie Tailscale der zuverlässige Weg.",
+    "workers_add": "Worker hinzufügen",
+    "workers_add_hint": "Token erzeugen und dann in OmniVoice auf dem anderen Rechner einfügen.",
+    "workers_new_token": "Token erzeugen",
+    "workers_token_once": "Jetzt kopieren — es wird nur einmal angezeigt, funktioniert nur einmal und läuft in 15 Minuten ab.",
+    "workers_copy": "Kopieren",
+    "workers_copied": "Kopiert",
+    "workers_copy_failed": "Kopieren nicht möglich.",
+    "workers_none": "Noch keine Worker. Erzeugen Sie ein Token, um den ersten hinzuzufügen.",
+    "workers_load": "Aufgaben {{active}} / {{slots}}",
+    "workers_needs_consent": "Nicht freigegeben",
+    "workers_status_online": "Online",
+    "workers_status_offline": "Offline",
+    "workers_status_paused": "Pausiert",
+    "workers_status_disabled": "Deaktiviert",
+    "workers_resume": "Fortsetzen",
+    "workers_disable": "Deaktivieren",
+    "workers_enable_one": "Aktivieren",
+    "workers_remove": "Entfernen",
+    "workers_remove_title": "Worker entfernen?",
+    "workers_remove_confirm": "{{name}} entfernen? Der Schlüssel wird widerrufen, eine Neuverbindung ist ohne neues Token nicht möglich.",
+    "workers_rename": "Worker umbenennen"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1791,7 +1819,16 @@
     "to_download": "zum Herunterladen",
     "cached": "zwischengespeichert",
     "fast_download_badge": "schneller Download",
-    "fast_download_title": "Schnelle Downloads über Xet {{version}} – parallele Chunk-Übertragung"
+    "fast_download_title": "Schnelle Downloads über Xet {{version}} – parallele Chunk-Übertragung",
+    "voice_previews": "Stimmvorschauen",
+    "voice_previews_desc": "Lade vorab gerenderte Vorschauen herunter, damit Stimmen sofort abspielen – schon bevor ein Sprachmodell fertig geladen ist. Es wird nichts heruntergeladen, bis du dies aktivierst.",
+    "voice_previews_off": "Aus – Vorschauen werden auf diesem Gerät gerendert",
+    "voice_previews_ready": "Empfohlener Satz zwischengespeichert",
+    "voice_previews_partial": "{{cached}} von {{total}} empfohlenen Vorschauen zwischengespeichert",
+    "voice_previews_checked": "geprüft {{when}}",
+    "voice_previews_never": "noch nicht geprüft",
+    "voice_previews_check": "Jetzt prüfen",
+    "voice_previews_rejected": "Aktualisierung der Stimmgalerie abgelehnt: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Benötige ich eine Lizenz für interne Tools?",
@@ -2298,7 +2335,8 @@
     "droppedChunks_one": "Hinweis: {{count}} Teil deines Textes hat kein Audio erzeugt, in dieser Aufnahme fehlt er also. Generiere es neu — ein anderer Seed behebt das meistens.",
     "droppedChunks_other": "Hinweis: {{count}} Teile deines Textes haben kein Audio erzeugt, in dieser Aufnahme fehlen sie also. Generiere es neu — ein anderer Seed behebt das meistens.",
     "droppedChunksWithText_one": "Hinweis: {{count}} Teil deines Textes hat kein Audio erzeugt und fehlt in dieser Aufnahme — „{{text}}“. Generiere es neu; ein anderer Seed behebt das meistens.",
-    "droppedChunksWithText_other": "Hinweis: {{count}} Teile deines Textes haben kein Audio erzeugt und fehlen in dieser Aufnahme — „{{text}}“. Generiere es neu; ein anderer Seed behebt das meistens."
+    "droppedChunksWithText_other": "Hinweis: {{count}} Teile deines Textes haben kein Audio erzeugt und fehlen in dieser Aufnahme — „{{text}}“. Generiere es neu; ein anderer Seed behebt das meistens.",
+    "streamingOffRemote": "Die progressive Vorschau ist deaktiviert, während {{label}} rendert — die fertige Aufnahme wird abgespielt, sobald sie eintrifft."
   },
   "voiceSelector": {
     "engineDefault": "Motorstandard",
@@ -2357,6 +2395,7 @@
     "started": "{{label}} wird heruntergeladen — Fortschritt unter Einstellungen → Modelle, danach erneut versuchen.",
     "install_failed": "Download konnte nicht gestartet werden: {{message}}"
   },
+  "model_missing": {"message":"Dieses Modell wurde auf {{target}} nicht heruntergeladen.","download":"Modell herunterladen","download_size":"Herunterladen ({{size}})","started":"Download auf {{target}} gestartet — versuchen Sie danach erneut Generieren.","failed":"Download konnte nicht gestartet werden: {{message}}","manual_worker":"Installieren Sie diese Engine direkt auf {{target}}."},
   "backend_start_failure": {
     "notice": "Das VoiceStudio-Backend konnte nicht starten — bis dahin funktioniert nichts.",
     "view": "Ursache anzeigen",
@@ -2369,5 +2408,21 @@
     "notice_unclean": "Die vorherige Sitzung wurde vor {{ago}} nicht sauber beendet. Das ist oft harmlos — Ruhezustand, erzwungenes Beenden oder eine gestoppte VM/Container.",
     "details_intro_unclean": "Die Abschlussmarkierung des vorherigen Laufs wurde vor {{ago}} nicht gelöscht. VoiceStudio kann nicht erkennen, ob es ein Absturz oder nur eine Unterbrechung war — Ruhezustand, erzwungenes Beenden oder das Stoppen einer VM/eines Containers hinterlassen dieselbe Spur. Wenn jetzt alles funktioniert, ist nichts zu tun.",
     "report_needs_log": "Für dieses Ereignis wurde keine Fehlerausgabe erfasst, ein Ein-Klick-Report wäre leer. Falls wirklich etwas nicht stimmt, hängen Sie bitte die letzten Zeilen aus Einstellungen → Protokolle → Backend an ein neues Issue an."
+  },
+  "gpu": {
+    "local": "Lokal",
+    "picker": "Wo Aufträge laufen",
+    "tasks": "Aufgaben",
+    "coverage": "nur {{ops}}",
+    "opLocal": "Lokal — {{op}} läuft noch nicht auf Remote-Workern",
+    "dictationLocal": "Diktat läuft immer auf diesem Gerät",
+    "ops": {
+      "tts": "TTS",
+      "clone": "Stimmklonen",
+      "dub": "Synchronisation",
+      "audiobook": "Hörbuch-Rendering",
+      "longform": "Story-Vertonung",
+      "asr": "Transkription"
+    }
   }
 }

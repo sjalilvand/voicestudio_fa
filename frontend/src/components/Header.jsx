@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import GpuTarget from './GpuTarget';
 import { createPortal } from 'react-dom';
 import {
   Globe,
@@ -342,6 +343,10 @@ export default function Header({
                 </span>
               </>
             )}
+            {/* Where the next job runs. Renders nothing until at least one
+                remote worker is enrolled, so a user who never opts in sees
+                no change to the header at all. */}
+            <GpuTarget />
             <span className="[border-left:1px_solid_var(--chrome-border)] pl-[6px] flex items-center gap-1">
               <Badge
                 tone={

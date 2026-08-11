@@ -129,15 +129,16 @@ function formatEta(seconds) {
  */
 export function reduceWizardDownloadEvent(prev, ev) {
   if (!ev || !ev.repo_id) return prev;
-  const cur = prev[ev.repo_id] || { phase: 'active', files: {} };
+  const key = `${ev.target || 'local'}\u0000${ev.repo_id}`;
+  const cur = prev[key] || { phase: 'active', files: {} };
   // Lifecycle markers gate reset; a file-level 'done' must NOT clear the repo.
   if (ev.phase === 'install_start') {
-    return { ...prev, [ev.repo_id]: { phase: 'active', files: {} } };
+    return { ...prev, [key]: { phase: 'active', files: {} } };
   }
   // Success terminal → drop the transient row.
   if (ev.phase === 'install_done') {
     const next = { ...prev };
-    delete next[ev.repo_id];
+    delete next[key];
     return next;
   }
   // Error terminal → KEEP the row + its message so it renders with a Retry.
@@ -147,7 +148,7 @@ export function reduceWizardDownloadEvent(prev, ev) {
   if (ev.phase === 'install_error') {
     return {
       ...prev,
-      [ev.repo_id]: {
+      [key]: {
         ...cur,
         phase: 'install_error',
         error: ev.error,
@@ -159,7 +160,7 @@ export function reduceWizardDownloadEvent(prev, ev) {
   if (ev.phase === 'aggregate') {
     return {
       ...prev,
-      [ev.repo_id]: {
+      [key]: {
         ...cur,
         agg: {
           bytesDone: ev.bytes_done || 0,
@@ -181,7 +182,7 @@ export function reduceWizardDownloadEvent(prev, ev) {
       rate: ev.rate || 0,
     },
   };
-  return { ...prev, [ev.repo_id]: { ...cur, files } };
+  return { ...prev, [key]: { ...cur, files } };
 }
 
 /**
@@ -194,7 +195,7 @@ export function reduceWizardDownloadEvent(prev, ev) {
 export function mirrorBlockedRepos(progress) {
   return Object.entries(progress || {})
     .filter(([, p]) => p?.phase === 'install_error' && p?.docsTopic === 'HF_MIRROR_UNREACHABLE')
-    .map(([repoId]) => repoId);
+    .map(([key]) => key.split('\u0000').at(-1));
 }
 
 // LED dot tone per row state.
@@ -294,13 +295,14 @@ export default function WizardLibrary() {
   }, []);
 
   const install = (repoId) => {
-    setProgress((p) => ({ ...p, [repoId]: { phase: 'active', files: {} } }));
+    const key = `local\u0000${repoId}`;
+    setProgress((p) => ({ ...p, [key]: { phase: 'active', files: {} } }));
     installMutation.mutate(repoId, {
       onError: (e) => {
         toast.error(e?.message || 'install failed');
         setProgress((p) => {
           const n = { ...p };
-          delete n[repoId];
+          delete n[key];
           return n;
         });
       },
@@ -332,7 +334,7 @@ export default function WizardLibrary() {
   const tail = optionalAll.filter((m) => !isRecommendedPick(m, platformTags));
 
   const modelRow = (m, chip, chipTone, note, chipTitle) => {
-    const p = progress[m.repo_id];
+    const p = Object.entries(progress).find(([key]) => key.endsWith(`\u0000${m.repo_id}`))?.[1];
     // A failed install PERSISTS (P1-A): show the mirror-aware reason + a Retry
     // instead of the row silently vanishing.
     const errored = p?.phase === 'install_error';

@@ -180,7 +180,35 @@
     "history_retention_cap_hint": "Takes met ster tellen nooit mee voor opruimen · 0 = onbeperkt",
     "history_retention_saved": "Bewaarlimiet opgeslagen",
     "history_retention_save_failed": "Opslaan mislukt",
-    "history_retention_invalid": "Voer 0 of meer in"
+    "history_retention_invalid": "Voer 0 of meer in",
+    "workers_title": "Externe workers",
+    "workers_desc": "Stuur losse taken naar de GPU's van je andere machines. De resultaten komen hier terug. Er wordt niets verstuurd totdat je een worker toevoegt en goedkeurt.",
+    "workers_enable": "Externe workers gebruiken",
+    "workers_enable_hint": "Zolang dit uit staat, wordt er geen verbinding geaccepteerd en verlaat er niets deze machine.",
+    "workers_port_conflict": "Externe workers zijn niet beschikbaar omdat een andere VoiceStudio-instantie ze al op deze poort accepteert. Sluit de andere instantie, of stel OMNIVOICE_WORKER_PORT in op een andere poort en start VoiceStudio opnieuw.",
+    "workers_endpoint": "Workers verbinden met",
+    "workers_endpoint_hint": "Een worker moet dit adres kunnen bereiken. Op andere netwerken is een VPN zoals Tailscale de betrouwbare manier.",
+    "workers_add": "Worker toevoegen",
+    "workers_add_hint": "Genereer een token en plak die in OmniVoice op de andere machine.",
+    "workers_new_token": "Token genereren",
+    "workers_token_once": "Kopieer dit nu — het wordt maar één keer getoond, werkt maar één keer en verloopt over 15 minuten.",
+    "workers_copy": "Kopiëren",
+    "workers_copied": "Gekopieerd",
+    "workers_copy_failed": "Kopiëren mislukt.",
+    "workers_none": "Nog geen workers. Genereer een token om je eerste toe te voegen.",
+    "workers_load": "Taken {{active}} / {{slots}}",
+    "workers_needs_consent": "Niet goedgekeurd",
+    "workers_status_online": "Online",
+    "workers_status_offline": "Offline",
+    "workers_status_paused": "Gepauzeerd",
+    "workers_status_disabled": "Uitgeschakeld",
+    "workers_resume": "Hervatten",
+    "workers_disable": "Uitschakelen",
+    "workers_enable_one": "Inschakelen",
+    "workers_remove": "Verwijderen",
+    "workers_remove_title": "Worker verwijderen?",
+    "workers_remove_confirm": "{{name}} verwijderen? De sleutel wordt ingetrokken, dus opnieuw verbinden kan niet zonder nieuw token.",
+    "workers_rename": "Worker hernoemen"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1791,7 +1819,16 @@
     "to_download": "downloaden",
     "cached": "in de cache opgeslagen",
     "fast_download_badge": "snel downloaden",
-    "fast_download_title": "Snelle downloads via Xet {{version}} — parallelle gefragmenteerde overdracht"
+    "fast_download_title": "Snelle downloads via Xet {{version}} — parallelle gefragmenteerde overdracht",
+    "voice_previews": "Stemvoorbeelden",
+    "voice_previews_desc": "Download vooraf gerenderde voorbeelden zodat stemmen meteen afspelen, zelfs voordat een spraakmodel klaar is met downloaden. Er wordt niets gedownload totdat je dit inschakelt.",
+    "voice_previews_off": "Uit — voorbeelden worden op dit apparaat gerenderd",
+    "voice_previews_ready": "Uitgelichte set in cache",
+    "voice_previews_partial": "{{cached}} van {{total}} uitgelichte voorbeelden in cache",
+    "voice_previews_checked": "gecontroleerd {{when}}",
+    "voice_previews_never": "nog niet gecontroleerd",
+    "voice_previews_check": "Nu controleren",
+    "voice_previews_rejected": "Update van de stemgalerij geweigerd: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Heb ik een licentie nodig voor interne tools?",
@@ -2298,7 +2335,8 @@
     "droppedChunks_one": "Let op: {{count}} deel van je tekst leverde geen audio op en ontbreekt dus in deze opname. Genereer opnieuw — een andere seed lost dit meestal op.",
     "droppedChunks_other": "Let op: {{count}} delen van je tekst leverden geen audio op en ontbreken dus in deze opname. Genereer opnieuw — een andere seed lost dit meestal op.",
     "droppedChunksWithText_one": "Let op: {{count}} deel van je tekst leverde geen audio op en ontbreekt in deze opname — “{{text}}”. Genereer opnieuw; een andere seed lost dit meestal op.",
-    "droppedChunksWithText_other": "Let op: {{count}} delen van je tekst leverden geen audio op en ontbreken in deze opname — “{{text}}”. Genereer opnieuw; een andere seed lost dit meestal op."
+    "droppedChunksWithText_other": "Let op: {{count}} delen van je tekst leverden geen audio op en ontbreken in deze opname — “{{text}}”. Genereer opnieuw; een andere seed lost dit meestal op.",
+    "streamingOffRemote": "De progressieve preview staat uit terwijl {{label}} rendert — de voltooide opname speelt zodra die binnen is."
   },
   "voiceSelector": {
     "engineDefault": "Standaard motor",
@@ -2357,6 +2395,7 @@
     "started": "{{label}} wordt gedownload — volg de voortgang in Instellingen → Modellen en probeer het daarna opnieuw.",
     "install_failed": "Kon de download niet starten: {{message}}"
   },
+  "model_missing": {"message":"Dit model is niet gedownload op {{target}}.","download":"Model downloaden","download_size":"Downloaden ({{size}})","started":"Downloaden op {{target}} — probeer Genereren opnieuw wanneer dit klaar is.","failed":"Download kon niet worden gestart: {{message}}","manual_worker":"Installeer deze engine rechtstreeks op {{target}}."},
   "backend_start_failure": {
     "notice": "De VoiceStudio-backend kon niet starten — tot die tijd werkt er niets.",
     "view": "Bekijk waarom",
@@ -2369,5 +2408,21 @@
     "notice_unclean": "De vorige sessie is {{ago}} geleden zonder nette afsluiting geëindigd. Dit is vaak onschuldig — de machine sliep, de app werd geforceerd gesloten of een VM/container stopte.",
     "details_intro_unclean": "De afsluitmarkering van de vorige run is {{ago}} geleden nooit gewist. VoiceStudio kan niet zien of het een crash of slechts een onderbreking was — slapen, geforceerd afsluiten of het stoppen van een VM/container laat hetzelfde spoor achter. Als alles nu werkt, hoeft er niets te gebeuren.",
     "report_needs_log": "Er is voor deze gebeurtenis geen foutuitvoer vastgelegd, dus een één-klik-rapport zou leeg zijn. Als er echt iets mis is, voeg dan de laatste regels van Instellingen → Logboeken → Backend toe aan een nieuw issue."
+  },
+  "gpu": {
+    "local": "Lokaal",
+    "picker": "Waar taken draaien",
+    "tasks": "taken",
+    "coverage": "alleen {{ops}}",
+    "opLocal": "Lokaal — {{op}} draait nog niet op afstand",
+    "dictationLocal": "Dicteren wordt altijd op deze machine uitgevoerd",
+    "ops": {
+      "tts": "TTS",
+      "clone": "stemklonen",
+      "dub": "nasynchronisatie",
+      "audiobook": "audioboeken renderen",
+      "longform": "verhaalvertelling",
+      "asr": "transcriptie"
+    }
   }
 }

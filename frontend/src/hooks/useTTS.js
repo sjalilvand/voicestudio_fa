@@ -5,6 +5,7 @@ import { pickDesignSeed } from '../utils/seed';
 import { playBlobAudio, playPing } from '../utils/media';
 import {
   StreamingPreviewError,
+  resolveRemoteTtsTarget,
   streamGenerateSpeech,
   supportsStreamingPreview,
 } from '../utils/streamingTts';
@@ -13,6 +14,7 @@ import { CLONE_MAX_SECONDS, PRESETS } from '../utils/constants';
 import { buildDesignInstruct, designModeProfileId } from '../utils/voiceInstruct';
 import { toast } from 'react-hot-toast';
 import { toastErrorWithReport } from '../utils/errorToast';
+import { modelNotDownloadedPayload, toastModelNotDownloaded } from '../utils/modelNotDownloaded';
 import { addBreadcrumb } from '../utils/breadcrumbs';
 import i18next from 'i18next';
 const t = i18next.t.bind(i18next);
@@ -21,6 +23,11 @@ const t = i18next.t.bind(i18next);
 // shouldn't fire one toast per request. Tracks the last status surfaced this
 // session (module scope, no localStorage); resets on full reload.
 let _lastRoutingStatus = null;
+
+// Same de-dup, for "progressive playback is off because your GPU is the one
+// across the room". Keyed by worker so switching machines re-announces, while
+// ten renders in a row on the same worker say it once.
+let _lastStreamingOffWorker = null;
 
 /**
  * Encapsulates TTS generation logic, streaming response handling,
@@ -268,8 +275,26 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
       // Any MID-stream failure falls back to the classic whole-file flow with
       // no user-visible difference beyond the old wait; pre-stream HTTP errors
       // (ApiError) throw straight to the shared catch, exactly like before.
+      //
+      // Remote GPU is the one case where it must NOT run: the stream is
+      // rendered by this process, so taking it would silently ignore the
+      // worker the user picked — a local render dressed as a remote one. The
+      // classic path below is the one that goes remote, so it wins, and the
+      // user is told why their progressive playback stopped rather than left
+      // to conclude the app got slower.
       let streamed = false;
-      if (useAppStore.getState().autoPlayPreview && supportsStreamingPreview()) {
+      const wantsStreaming = useAppStore.getState().autoPlayPreview && supportsStreamingPreview();
+      const remoteTarget = wantsStreaming
+        ? await resolveRemoteTtsTarget({ signal: ac.signal })
+        : null;
+      if (remoteTarget) {
+        const who = remoteTarget.label || remoteTarget.workerId || '';
+        if (who !== _lastStreamingOffWorker) {
+          _lastStreamingOffWorker = who;
+          toast(t('tts.streamingOffRemote', { label: who }), { icon: '🖥️', duration: 6000 });
+        }
+      }
+      if (wantsStreaming && !remoteTarget) {
         try {
           await streamGenerateSpeech(formData, {
             signal: ac.signal,
@@ -345,6 +370,8 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
       // Real generation failures get the "Report this bug" action.
       if (err?.name === 'AbortError') {
         toast.error(t('tts_errors.timeout'));
+      } else if (modelNotDownloadedPayload(err)) {
+        toastModelNotDownloaded(modelNotDownloadedPayload(err));
       } else {
         toastErrorWithReport(t('tts_errors.error_prefix', { message: err.message }), err);
       }

@@ -17,6 +17,15 @@
  */
 const AUTO_PURGE_TERMINALS = new Set(['install_done', 'delete_done', 'install_cancelled']);
 
+export function downloadKey(target, repoId) {
+  return `${target || 'local'}\u0000${repoId}`;
+}
+
+export function progressForRepo(progress, repoId, target = null) {
+  if (target) return progress?.[downloadKey(target, repoId)];
+  return Object.entries(progress || {}).find(([key]) => key.endsWith(`\u0000${repoId}`))?.[1];
+}
+
 export function isAutoPurgeTerminal(phase) {
   return AUTO_PURGE_TERMINALS.has(phase);
 }
@@ -32,45 +41,46 @@ export function isTerminalPhase(phase) {
  */
 export function reduceModelDownloadEvent(prev, ev) {
   if (!ev || !ev.repo_id) return prev;
-  const cur = prev[ev.repo_id] || { phase: 'active', files: {} };
+  const key = downloadKey(ev.target, ev.repo_id);
+  const cur = prev[key] || { phase: 'active', files: {} };
 
   // Lifecycle events flip the row's phase without touching per-file accounting.
   if (ev.phase === 'install_start' || ev.phase === 'delete_start') {
-    return { ...prev, [ev.repo_id]: { phase: ev.phase, files: {}, error: null } };
+    return { ...prev, [key]: { phase: ev.phase, files: {}, error: null } };
   }
   // Heartbeat from backend while resolving repo metadata.
   if (ev.phase === 'resolving') {
     return {
       ...prev,
-      [ev.repo_id]: { ...cur, phase: 'resolving', resolvingStep: ev.step || 0 },
+      [key]: { ...cur, phase: 'resolving', resolvingStep: ev.step || 0 },
     };
   }
   if (ev.phase === 'install_retry') {
     return {
       ...prev,
-      [ev.repo_id]: { ...cur, phase: 'install_retry', retryAttempt: ev.attempt, error: ev.error },
+      [key]: { ...cur, phase: 'install_retry', retryAttempt: ev.attempt, error: ev.error },
     };
   }
   if (ev.phase === 'install_done') {
-    return { ...prev, [ev.repo_id]: { ...cur, phase: 'install_done' } };
+    return { ...prev, [key]: { ...cur, phase: 'install_done' } };
   }
   if (ev.phase === 'delete_done') {
-    return { ...prev, [ev.repo_id]: { ...cur, phase: 'delete_done' } };
+    return { ...prev, [key]: { ...cur, phase: 'delete_done' } };
   }
   // Errors carry the mirror-aware failure text (#890 core/failure.py). Keep it
   // on the row — the purge effect must NOT auto-clear it (P1-A).
   if (ev.phase === 'install_error') {
-    return { ...prev, [ev.repo_id]: { ...cur, phase: 'install_error', error: ev.error } };
+    return { ...prev, [key]: { ...cur, phase: 'install_error', error: ev.error } };
   }
   if (ev.phase === 'install_cancelled') {
-    return { ...prev, [ev.repo_id]: { ...cur, phase: 'install_cancelled' } };
+    return { ...prev, [key]: { ...cur, phase: 'install_cancelled' } };
   }
   // Pre-flight plan (FDL-05): accurate total/cached/remaining BEFORE bytes flow.
   // Keep the current phase (usually resolving) — the plan is metadata.
   if (ev.phase === 'install_plan') {
     return {
       ...prev,
-      [ev.repo_id]: {
+      [key]: {
         ...cur,
         plan: {
           total_bytes: ev.total_bytes ?? null,
@@ -86,7 +96,7 @@ export function reduceModelDownloadEvent(prev, ev) {
   if (ev.phase === 'aggregate') {
     return {
       ...prev,
-      [ev.repo_id]: {
+      [key]: {
         ...cur,
         phase: 'active',
         agg: {
@@ -111,5 +121,5 @@ export function reduceModelDownloadEvent(prev, ev) {
       rate: ev.rate || 0,
     },
   };
-  return { ...prev, [ev.repo_id]: { ...cur, phase: 'active', files } };
+  return { ...prev, [key]: { ...cur, phase: 'active', files } };
 }

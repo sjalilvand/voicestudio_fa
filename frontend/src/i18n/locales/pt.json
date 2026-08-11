@@ -180,7 +180,35 @@
     "history_retention_cap_hint": "Takes com estrela nunca contam para a limpeza · 0 = ilimitado",
     "history_retention_saved": "Limite de retenção salvo",
     "history_retention_save_failed": "Não foi possível salvar",
-    "history_retention_invalid": "Digite 0 ou mais"
+    "history_retention_invalid": "Digite 0 ou mais",
+    "workers_title": "Workers remotos",
+    "workers_desc": "Envie trabalhos individuais para as GPUs das suas outras máquinas. Os resultados voltam para aqui. Nada é enviado até adicionar um worker e aprová-lo.",
+    "workers_enable": "Usar workers remotos",
+    "workers_enable_hint": "Enquanto isto estiver desligado, nenhuma ligação é aceite e nada sai desta máquina.",
+    "workers_port_conflict": "Os workers remotos não estão disponíveis porque outra instância do VoiceStudio já os aceita nesta porta. Feche a outra instância ou defina OMNIVOICE_WORKER_PORT para uma porta diferente e reinicie o VoiceStudio.",
+    "workers_endpoint": "Os workers ligam-se a",
+    "workers_endpoint_hint": "Um worker tem de conseguir alcançar este endereço. Em redes diferentes, uma VPN como o Tailscale é a forma fiável.",
+    "workers_add": "Adicionar um worker",
+    "workers_add_hint": "Gere um token e cole-o no OmniVoice na outra máquina.",
+    "workers_new_token": "Gerar token",
+    "workers_token_once": "Copie agora — é mostrado apenas uma vez, funciona apenas uma vez e expira em 15 minutos.",
+    "workers_copy": "Copiar",
+    "workers_copied": "Copiado",
+    "workers_copy_failed": "Não foi possível copiar.",
+    "workers_none": "Ainda não há workers. Gere um token para adicionar o primeiro.",
+    "workers_load": "Tarefas {{active}} / {{slots}}",
+    "workers_needs_consent": "Não aprovado",
+    "workers_status_online": "Online",
+    "workers_status_offline": "Offline",
+    "workers_status_paused": "Em pausa",
+    "workers_status_disabled": "Desativado",
+    "workers_resume": "Retomar",
+    "workers_disable": "Desativar",
+    "workers_enable_one": "Ativar",
+    "workers_remove": "Remover",
+    "workers_remove_title": "Remover o worker?",
+    "workers_remove_confirm": "Remover {{name}}? A sua chave é revogada, por isso não poderá voltar a ligar-se sem um novo token.",
+    "workers_rename": "Renomear worker"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1791,7 +1819,16 @@
     "to_download": "baixar",
     "cached": "armazenado em cache",
     "fast_download_badge": "download rápido",
-    "fast_download_title": "Downloads rápidos via Xet {{version}} — transferência paralela em partes"
+    "fast_download_title": "Downloads rápidos via Xet {{version}} — transferência paralela em partes",
+    "voice_previews": "Prévias de voz",
+    "voice_previews_desc": "Baixe prévias renderizadas com antecedência para que as vozes toquem na hora, mesmo antes de um modelo de voz terminar de baixar. Nada é baixado até você ativar isto.",
+    "voice_previews_off": "Desativado — as prévias são geradas neste dispositivo",
+    "voice_previews_ready": "Conjunto em destaque em cache",
+    "voice_previews_partial": "{{cached}} de {{total}} prévias em destaque em cache",
+    "voice_previews_checked": "verificado {{when}}",
+    "voice_previews_never": "ainda não verificado",
+    "voice_previews_check": "Verificar agora",
+    "voice_previews_rejected": "Atualização da galeria de vozes rejeitada: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Preciso de uma licença para ferramentas internas?",
@@ -2298,7 +2335,8 @@
     "droppedChunks_one": "Atenção: {{count}} parte do seu texto não gerou áudio, então falta nesta gravação. Tente gerar de novo — outra semente costuma resolver.",
     "droppedChunks_other": "Atenção: {{count}} partes do seu texto não geraram áudio, então faltam nesta gravação. Tente gerar de novo — outra semente costuma resolver.",
     "droppedChunksWithText_one": "Atenção: {{count}} parte do seu texto não gerou áudio e falta nesta gravação — “{{text}}”. Tente gerar de novo; outra semente costuma resolver.",
-    "droppedChunksWithText_other": "Atenção: {{count}} partes do seu texto não geraram áudio e faltam nesta gravação — “{{text}}”. Tente gerar de novo; outra semente costuma resolver."
+    "droppedChunksWithText_other": "Atenção: {{count}} partes do seu texto não geraram áudio e faltam nesta gravação — “{{text}}”. Tente gerar de novo; outra semente costuma resolver.",
+    "streamingOffRemote": "A pré-visualização progressiva está desativada enquanto {{label}} renderiza — a gravação final será reproduzida assim que chegar."
   },
   "voiceSelector": {
     "engineDefault": "Padrão do mecanismo",
@@ -2357,6 +2395,7 @@
     "started": "Baixando {{label}} — acompanhe o progresso em Configurações → Modelos e tente novamente.",
     "install_failed": "Não foi possível iniciar o download: {{message}}"
   },
+  "model_missing": {"message":"Este modelo não foi baixado em {{target}}.","download":"Baixar modelo","download_size":"Baixar ({{size}})","started":"Baixando em {{target}} — tente Gerar novamente ao terminar.","failed":"Não foi possível iniciar o download: {{message}}","manual_worker":"Instale este mecanismo diretamente em {{target}}."},
   "backend_start_failure": {
     "notice": "O backend do VoiceStudio não conseguiu iniciar — nada funcionará até que ele inicie.",
     "view": "Ver o motivo",
@@ -2369,5 +2408,21 @@
     "notice_unclean": "A sessão anterior terminou sem um encerramento limpo há {{ago}}. Muitas vezes é inofensivo — o computador dormiu, o app foi encerrado à força ou uma VM/contêiner parou.",
     "details_intro_unclean": "O marcador de encerramento da execução anterior nunca foi limpo, há {{ago}}. O VoiceStudio não consegue saber se foi uma falha ou apenas uma interrupção — suspender, forçar o encerramento ou parar uma VM/contêiner deixa o mesmo rastro. Se tudo funciona agora, não há nada a fazer.",
     "report_needs_log": "Nenhuma saída de erro foi capturada para este evento, então um relatório de um clique ficaria vazio. Se algo estiver mesmo errado, anexe as últimas linhas de Configurações → Logs → Backend a uma nova issue."
+  },
+  "gpu": {
+    "local": "Local",
+    "picker": "Onde os trabalhos são executados",
+    "tasks": "tarefas",
+    "coverage": "apenas {{ops}}",
+    "opLocal": "Local — {{op}} ainda não é executado remotamente",
+    "dictationLocal": "O ditado é sempre executado nesta máquina",
+    "ops": {
+      "tts": "TTS",
+      "clone": "clonagem de voz",
+      "dub": "dublagem",
+      "audiobook": "renderização de audiolivros",
+      "longform": "narração de histórias",
+      "asr": "transcrição"
+    }
   }
 }

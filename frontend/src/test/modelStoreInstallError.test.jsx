@@ -6,11 +6,13 @@ import {
   reduceModelDownloadEvent,
   isAutoPurgeTerminal,
   isTerminalPhase,
+  downloadKey,
 } from '../components/settings/models/downloadReducer';
 import { makeModelColumns } from '../components/settings/models/columns';
 
 const t = i18n.t.bind(i18n);
 const REPO = 'org/model';
+const KEY = downloadKey('local', REPO);
 
 // ── P1-A: async install errors must be visible, not silently purged ─────────
 
@@ -20,8 +22,8 @@ describe('reduceModelDownloadEvent — install_error persistence (P1-A)', () => 
       {},
       { repo_id: REPO, phase: 'install_error', error: 'boom — mirror hf-mirror.com unreachable' },
     );
-    expect(s[REPO].phase).toBe('install_error');
-    expect(s[REPO].error).toBe('boom — mirror hf-mirror.com unreachable');
+    expect(s[KEY].phase).toBe('install_error');
+    expect(s[KEY].error).toBe('boom — mirror hf-mirror.com unreachable');
   });
 
   it('the error survives later unrelated events (never gets wiped)', () => {
@@ -34,14 +36,25 @@ describe('reduceModelDownloadEvent — install_error persistence (P1-A)', () => 
       bytes_done: 1,
       total_bytes: 2,
     });
-    expect(s[REPO].phase).toBe('install_error');
-    expect(s[REPO].error).toBe('disk full');
+    expect(s[KEY].phase).toBe('install_error');
+    expect(s[KEY].error).toBe('disk full');
   });
 
   it('ignores keepalive events without a repo_id', () => {
     const prev = { [REPO]: { phase: 'install_error', error: 'x' } };
     expect(reduceModelDownloadEvent(prev, {})).toBe(prev);
   });
+});
+
+it('keeps simultaneous local and remote downloads of one repo separate', () => {
+  let s = reduceModelDownloadEvent({}, {
+    target: 'local', repo_id: REPO, phase: 'aggregate', bytes_done: 1, total_bytes: 10,
+  });
+  s = reduceModelDownloadEvent(s, {
+    target: 'gpu2', repo_id: REPO, phase: 'aggregate', bytes_done: 7, total_bytes: 10,
+  });
+  expect(s[downloadKey('local', REPO)].agg.bytes_done).toBe(1);
+  expect(s[downloadKey('gpu2', REPO)].agg.bytes_done).toBe(7);
 });
 
 describe('isAutoPurgeTerminal — only success terminals auto-purge (P1-A)', () => {

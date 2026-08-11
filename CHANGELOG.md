@@ -17,6 +17,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - RTX 40-series GPUs are used again instead of being sent to the CPU
 - A warning before a slow generation, rather than after a five-minute wait
 - The watermark can be turned off in Settings, as the docs always said
+- Your other GPU can take the work now — send individual jobs to a second machine, opt-in
 - Workspace tabs in the title bar, if you prefer them to the icon rail (#1412)
 - macOS support now matches what the app actually delivers
 - Linux AppImage: a blank white window on rolling distros (Mesa 26.1+) now starts normally
@@ -25,6 +26,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Changed
 
+- Remote GPU workers render audiobooks chapter by chapter, with automatic per-chapter local fallback and one combined notice if the worker drops out. (#1478)
+- Remote GPU workers can now run a job to completion: long renders no longer die at two minutes, a worker that drops and reconnects mid-render keeps its work, and a timed-out job no longer takes the worker offline for good. Placing a job still needs the development-only `POST /workers/tasks`; wiring the app's own Synthesize button to it comes next.
 - VoiceStudio now uses one waveform-and-spark mark across the title bar, About screen, README, browser favicon, and every desktop/platform icon. (#1487)
 - PocketTTS now asks you to review its code license, model license and gated-access conditions before first use, and explains how to unlock the model instead of showing a raw download failure — thanks @paoloantinori! (#1442)
 - The repository moved to github.com/debpalash/VoiceStudio. Every link in the app, docs and scripts now points there; GitHub redirects the old URLs, and the Docker image paths, the app bundle identifier and your data folder are all deliberately unchanged. (#1394)
@@ -35,6 +38,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Added
 
+- Remote GPU model downloads now use the normal Models install flow and show per-worker progress. (#1478)
+- Settings → System → **Remote workers** sends individual jobs to GPUs on your other machines while everything else stays here. Off by default; each machine is added with a single-use token and approved before any audio reaches it. See [docs/remote-workers.md](docs/remote-workers.md).
 - IndexTTS 2.5 is available as a pinned one-click sidecar with five-language dubbing, expressive cloning, and backward-compatible IndexTTS-2 support. (#1482) — thanks @marwanlhabti5-coder!
 - Voice recording now offers microphone and channel selection with a live input-level meter on every desktop platform. (#1481)
 - Settings → Appearance → **Navigation style** switches the workspace switcher between the icon rail down the window edge and browser-style tabs across the title bar. Both offer the same workspaces; the choice sticks across launches, and the rail stays the default. Tab labels fold down to icons when the title bar runs out of room — the workspace you're in keeps its name. (#1412)
@@ -49,6 +54,13 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Remote workers that lack required task inputs, progress leases, or model-download commands are now refused visibly instead of returning wrong audio or hanging. (#1478)
+- Remote GPU workers now synthesize a dub's fresh segments as one coarse job with live progress and cancellation; fitting, assembly and RVC remain local. (#1478)
+- Gallery voice previews now fall back to a local render when a downloaded clip cannot be decoded, instead of failing silently. (#1478)
+- A second VoiceStudio instance can no longer silently share the remote-worker port; it keeps running locally and explains how to resolve the conflict. (#1478)
+- Remote GPU jobs stay pinned to the selected worker across retries and restarts, stop when their caller leaves, and cannot return from cancellation as completed. (#1478)
+- Remote GPU model labels now survive registration, legacy blank model IDs share one capacity slot, long jobs retain bounded leases, and idle cleanup cannot evict a live local render. (#1478)
+- Remote GPU jobs now stop before dispatch when that worker lacks the model, offer the download there, and refresh scheduling as soon as it finishes. (#1478)
 - Restored the pre-release version to 0.4.2 while the next release remains in preparation. (#1488)
 - Large multi-language dubbing batches now use compact searchable language and track managers instead of overflowing the editor. (#1492)
 - Multi-language dubbing now translates, edits, generates, retains, and exports every selected language, and its language picker stays visible at viewport edges. (#1486)

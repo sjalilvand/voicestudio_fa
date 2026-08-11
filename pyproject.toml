@@ -190,6 +190,17 @@ dependencies = [
     # resolve a bare name from PyPI, where spaCy models don't exist. Same form
     # as kittentts above.
     "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+    # Remote GPU workers (backend/worker/). A core dependency rather than an
+    # extra even though the feature is opt-in: an installer user who enables a
+    # remote worker in Settings cannot run `uv pip install` inside a frozen
+    # app bundle, so shipping the transport separately would make the feature
+    # source-installs-only — a platform/packaging split the parity rule does
+    # not allow. Ships prebuilt wheels for every target we build (cp311
+    # macOS arm64/x86_64, Windows x64, manylinux) and PyInstaller has a
+    # first-party hook, so the frozen build needs no spec changes beyond the
+    # protobuf runtime already present transitively.
+    "grpcio>=1.60",
+    "protobuf>=4.25",
 ]
 
 [project.optional-dependencies]
@@ -301,6 +312,10 @@ dev = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=6.0",
+    # Regenerates backend/worker/protocol/gen/ from worker_v1.proto. Dev-only:
+    # the generated stubs are committed, so neither the installer nor Docker
+    # needs protoc. tests/test_worker_protocol_gen.py fails if the two drift.
+    "grpcio-tools>=1.60",
 ]
 
 [tool.pytest.ini_options]

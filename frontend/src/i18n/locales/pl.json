@@ -180,7 +180,35 @@
     "history_retention_cap_hint": "Nagrania z gwiazdką nigdy nie liczą się do czyszczenia · 0 = bez limitu",
     "history_retention_saved": "Limit przechowywania zapisany",
     "history_retention_save_failed": "Nie udało się zapisać",
-    "history_retention_invalid": "Wpisz 0 lub więcej"
+    "history_retention_invalid": "Wpisz 0 lub więcej",
+    "workers_title": "Zdalne workery",
+    "workers_desc": "Wysyłaj pojedyncze zadania do GPU na innych swoich komputerach. Wyniki wracają tutaj. Nic nie zostanie wysłane, dopóki nie dodasz workera i go nie zatwierdzisz.",
+    "workers_enable": "Używaj zdalnych workerów",
+    "workers_enable_hint": "Gdy ta opcja jest wyłączona, żadne połączenie nie jest przyjmowane i nic nie opuszcza tego komputera.",
+    "workers_port_conflict": "Zdalne workery są niedostępne, ponieważ inna instancja VoiceStudio już przyjmuje je na tym porcie. Zamknij drugą instancję albo ustaw OMNIVOICE_WORKER_PORT na inny port i uruchom VoiceStudio ponownie.",
+    "workers_endpoint": "Workery łączą się z",
+    "workers_endpoint_hint": "Worker musi móc osiągnąć ten adres. W różnych sieciach niezawodnym sposobem jest VPN, np. Tailscale.",
+    "workers_add": "Dodaj workera",
+    "workers_add_hint": "Wygeneruj token, a następnie wklej go w OmniVoice na drugim komputerze.",
+    "workers_new_token": "Wygeneruj token",
+    "workers_token_once": "Skopiuj teraz — pokazujemy go tylko raz, działa tylko raz i wygasa po 15 minutach.",
+    "workers_copy": "Kopiuj",
+    "workers_copied": "Skopiowano",
+    "workers_copy_failed": "Nie udało się skopiować.",
+    "workers_none": "Brak workerów. Wygeneruj token, aby dodać pierwszego.",
+    "workers_load": "Zadania {{active}} / {{slots}}",
+    "workers_needs_consent": "Niezatwierdzony",
+    "workers_status_online": "Online",
+    "workers_status_offline": "Offline",
+    "workers_status_paused": "Wstrzymany",
+    "workers_status_disabled": "Wyłączony",
+    "workers_resume": "Wznów",
+    "workers_disable": "Wyłącz",
+    "workers_enable_one": "Włącz",
+    "workers_remove": "Usuń",
+    "workers_remove_title": "Usunąć workera?",
+    "workers_remove_confirm": "Usunąć {{name}}? Jego klucz zostanie unieważniony, więc nie połączy się ponownie bez nowego tokena.",
+    "workers_rename": "Zmień nazwę workera"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1791,7 +1819,16 @@
     "to_download": "pobrać",
     "cached": "buforowane",
     "fast_download_badge": "szybkie pobieranie",
-    "fast_download_title": "Szybkie pobieranie poprzez Xet {{version}} — równoległy transfer fragmentaryczny"
+    "fast_download_title": "Szybkie pobieranie poprzez Xet {{version}} — równoległy transfer fragmentaryczny",
+    "voice_previews": "Podglądy głosów",
+    "voice_previews_desc": "Pobierz wcześniej wygenerowane podglądy, aby głosy odtwarzały się od razu — jeszcze zanim model głosu skończy się pobierać. Nic nie jest pobierane, dopóki tego nie włączysz.",
+    "voice_previews_off": "Wyłączone — podglądy są generowane na tym urządzeniu",
+    "voice_previews_ready": "Zestaw polecanych w pamięci podręcznej",
+    "voice_previews_partial": "{{cached}} z {{total}} polecanych podglądów w pamięci podręcznej",
+    "voice_previews_checked": "sprawdzono {{when}}",
+    "voice_previews_never": "jeszcze nie sprawdzono",
+    "voice_previews_check": "Sprawdź teraz",
+    "voice_previews_rejected": "Odrzucono aktualizację galerii głosów: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Czy potrzebuję licencji na narzędzia wewnętrzne?",
@@ -2298,7 +2335,8 @@
     "droppedChunks_one": "Uwaga: {{count}} fragment tekstu nie wygenerował dźwięku, więc brakuje go w tym nagraniu. Wygeneruj ponownie — inne ziarno zwykle rozwiązuje problem.",
     "droppedChunks_other": "Uwaga: fragmenty tekstu ({{count}}) nie wygenerowały dźwięku, więc brakuje ich w tym nagraniu. Wygeneruj ponownie — inne ziarno zwykle rozwiązuje problem.",
     "droppedChunksWithText_one": "Uwaga: {{count}} fragment tekstu nie wygenerował dźwięku i brakuje go w tym nagraniu — „{{text}}”. Wygeneruj ponownie; inne ziarno zwykle rozwiązuje problem.",
-    "droppedChunksWithText_other": "Uwaga: fragmenty tekstu ({{count}}) nie wygenerowały dźwięku i brakuje ich w tym nagraniu — „{{text}}”. Wygeneruj ponownie; inne ziarno zwykle rozwiązuje problem."
+    "droppedChunksWithText_other": "Uwaga: fragmenty tekstu ({{count}}) nie wygenerowały dźwięku i brakuje ich w tym nagraniu — „{{text}}”. Wygeneruj ponownie; inne ziarno zwykle rozwiązuje problem.",
+    "streamingOffRemote": "Podgląd progresywny jest wyłączony, gdy renderuje {{label}} — gotowe nagranie odtworzy się zaraz po nadejściu."
   },
   "voiceSelector": {
     "engineDefault": "Domyślne ustawienie silnika",
@@ -2357,6 +2395,7 @@
     "started": "Pobieranie {{label}} — postęp znajdziesz w Ustawienia → Modele, potem spróbuj ponownie.",
     "install_failed": "Nie udało się rozpocząć pobierania: {{message}}"
   },
+  "model_missing": {"message":"Ten model nie został pobrany na {{target}}.","download":"Pobierz model","download_size":"Pobierz ({{size}})","started":"Pobieranie na {{target}} — po zakończeniu ponów generowanie.","failed":"Nie udało się rozpocząć pobierania: {{message}}","manual_worker":"Zainstaluj ten silnik bezpośrednio na {{target}}."},
   "backend_start_failure": {
     "notice": "Backend VoiceStudio nie mógł się uruchomić — nic nie zadziała, dopóki nie wystartuje.",
     "view": "Zobacz dlaczego",
@@ -2369,5 +2408,21 @@
     "notice_unclean": "Poprzednia sesja zakończyła się bez poprawnego zamknięcia {{ago}} temu. To często niegroźne — komputer uśpiono, wymuszono zamknięcie aplikacji albo zatrzymano VM/kontener.",
     "details_intro_unclean": "Znacznik zamknięcia poprzedniego uruchomienia nigdy nie został wyczyszczony, {{ago}} temu. VoiceStudio nie potrafi stwierdzić, czy to była awaria, czy tylko przerwanie — uśpienie, wymuszone zamknięcie lub zatrzymanie VM/kontenera zostawia ten sam ślad. Jeśli teraz wszystko działa, nic nie trzeba robić.",
     "report_needs_log": "Dla tego zdarzenia nie przechwycono żadnych błędów, więc raport jednym kliknięciem byłby pusty. Jeśli coś naprawdę nie działa, dołącz ostatnie linie z Ustawienia → Dzienniki → Backend do nowego zgłoszenia."
+  },
+  "gpu": {
+    "local": "Lokalnie",
+    "picker": "Gdzie wykonywane są zadania",
+    "tasks": "zadania",
+    "coverage": "tylko {{ops}}",
+    "opLocal": "Lokalnie — {{op}} nie działa jeszcze zdalnie",
+    "dictationLocal": "Dyktowanie zawsze działa na tym komputerze",
+    "ops": {
+      "tts": "TTS",
+      "clone": "klonowanie głosu",
+      "dub": "dubbing",
+      "audiobook": "renderowanie audiobooków",
+      "longform": "narracja opowiadań",
+      "asr": "transkrypcja"
+    }
   }
 }

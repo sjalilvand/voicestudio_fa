@@ -154,3 +154,7 @@ playwright-report/
 
 # probe — generated HTML reports
 tests/probe/reports/
+
+# Local architecture/planning scratch (goal docs, review briefs, council
+# reports). Working notes for whoever is driving a change, not a repo artifact.
+remote/

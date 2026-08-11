@@ -180,7 +180,35 @@
     "history_retention_cap_hint": "I take con stella non contano mai per la pulizia · 0 = illimitato",
     "history_retention_saved": "Limite di conservazione salvato",
     "history_retention_save_failed": "Salvataggio non riuscito",
-    "history_retention_invalid": "Inserisci 0 o più"
+    "history_retention_invalid": "Inserisci 0 o più",
+    "workers_title": "Worker remoti",
+    "workers_desc": "Invia singoli lavori alle GPU dei tuoi altri computer. I risultati tornano qui. Non viene inviato nulla finché non aggiungi un worker e lo approvi.",
+    "workers_enable": "Usa worker remoti",
+    "workers_enable_hint": "Finché questa opzione è disattivata, non viene accettata alcuna connessione e nulla lascia questo computer.",
+    "workers_port_conflict": "I worker remoti non sono disponibili perché un'altra istanza di VoiceStudio li sta già accettando su questa porta. Chiudi l'altra istanza oppure imposta OMNIVOICE_WORKER_PORT su una porta diversa e riavvia VoiceStudio.",
+    "workers_endpoint": "I worker si connettono a",
+    "workers_endpoint_hint": "Un worker deve poter raggiungere questo indirizzo. Su reti diverse, una VPN come Tailscale è la via affidabile.",
+    "workers_add": "Aggiungi un worker",
+    "workers_add_hint": "Genera un token e incollalo in OmniVoice sull'altro computer.",
+    "workers_new_token": "Genera token",
+    "workers_token_once": "Copialo ora: viene mostrato una sola volta, funziona una sola volta e scade tra 15 minuti.",
+    "workers_copy": "Copia",
+    "workers_copied": "Copiato",
+    "workers_copy_failed": "Impossibile copiare.",
+    "workers_none": "Nessun worker. Genera un token per aggiungere il primo.",
+    "workers_load": "Attività {{active}} / {{slots}}",
+    "workers_needs_consent": "Non approvato",
+    "workers_status_online": "Online",
+    "workers_status_offline": "Offline",
+    "workers_status_paused": "In pausa",
+    "workers_status_disabled": "Disattivato",
+    "workers_resume": "Riprendi",
+    "workers_disable": "Disattiva",
+    "workers_enable_one": "Attiva",
+    "workers_remove": "Rimuovi",
+    "workers_remove_title": "Rimuovere il worker?",
+    "workers_remove_confirm": "Rimuovere {{name}}? La sua chiave viene revocata, quindi non potrà riconnettersi senza un nuovo token.",
+    "workers_rename": "Rinomina worker"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1791,7 +1819,16 @@
     "to_download": "da scaricare",
     "cached": "memorizzato nella cache",
     "fast_download_badge": "download veloce",
-    "fast_download_title": "Download veloci tramite Xet {{version}}: trasferimento parallelo in blocchi"
+    "fast_download_title": "Download veloci tramite Xet {{version}}: trasferimento parallelo in blocchi",
+    "voice_previews": "Anteprime vocali",
+    "voice_previews_desc": "Scarica anteprime già generate così le voci si ascoltano subito, anche prima che un modello vocale finisca di scaricarsi. Non viene scaricato nulla finché non attivi questa opzione.",
+    "voice_previews_off": "Disattivato — le anteprime vengono generate su questo dispositivo",
+    "voice_previews_ready": "Set in evidenza in cache",
+    "voice_previews_partial": "{{cached}} di {{total}} anteprime in evidenza in cache",
+    "voice_previews_checked": "verificato {{when}}",
+    "voice_previews_never": "non ancora verificato",
+    "voice_previews_check": "Verifica ora",
+    "voice_previews_rejected": "Aggiornamento della galleria vocale rifiutato: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Ho bisogno di una licenza per gli strumenti interni?",
@@ -2298,7 +2335,8 @@
     "droppedChunks_one": "Attenzione: {{count}} parte del testo non ha prodotto audio, quindi manca in questa registrazione. Riprova a generare: di solito basta un seed diverso.",
     "droppedChunks_other": "Attenzione: {{count}} parti del testo non hanno prodotto audio, quindi mancano in questa registrazione. Riprova a generare: di solito basta un seed diverso.",
     "droppedChunksWithText_one": "Attenzione: {{count}} parte del testo non ha prodotto audio e manca in questa registrazione — «{{text}}». Riprova a generare; di solito basta un seed diverso.",
-    "droppedChunksWithText_other": "Attenzione: {{count}} parti del testo non hanno prodotto audio e mancano in questa registrazione — «{{text}}». Riprova a generare; di solito basta un seed diverso."
+    "droppedChunksWithText_other": "Attenzione: {{count}} parti del testo non hanno prodotto audio e mancano in questa registrazione — «{{text}}». Riprova a generare; di solito basta un seed diverso.",
+    "streamingOffRemote": "L'anteprima progressiva è disattivata mentre {{label}} esegue il rendering: la traccia finale verrà riprodotta appena arriva."
   },
   "voiceSelector": {
     "engineDefault": "Motore difettoso",
@@ -2357,6 +2395,7 @@
     "started": "Download di {{label}} in corso — segui l'avanzamento in Impostazioni → Modelli, poi riprova.",
     "install_failed": "Impossibile avviare il download: {{message}}"
   },
+  "model_missing": {"message":"Questo modello non è stato scaricato su {{target}}.","download":"Scarica modello","download_size":"Scarica ({{size}})","started":"Download avviato su {{target}} — riprova Genera al termine.","failed":"Impossibile avviare il download: {{message}}","manual_worker":"Installa questo motore direttamente su {{target}}."},
   "backend_start_failure": {
     "notice": "Il backend di VoiceStudio non è riuscito ad avviarsi: nulla funzionerà finché non parte.",
     "view": "Vedi perché",
@@ -2369,5 +2408,21 @@
     "notice_unclean": "La sessione precedente è terminata senza una chiusura pulita {{ago}} fa. Spesso è innocuo: il computer è andato in sospensione, l'app è stata chiusa forzatamente o una VM/container si è fermata.",
     "details_intro_unclean": "Il marcatore di chiusura dell'esecuzione precedente non è mai stato rimosso, {{ago}} fa. VoiceStudio non può sapere se si è trattato di un crash o di una semplice interruzione: sospensione, chiusura forzata o arresto di una VM/container lasciano la stessa traccia. Se ora funziona tutto, non serve fare nulla.",
     "report_needs_log": "Per questo evento non è stato catturato alcun output di errore, quindi una segnalazione con un clic sarebbe vuota. Se qualcosa non va davvero, allega le ultime righe di Impostazioni → Log → Backend a una nuova issue."
+  },
+  "gpu": {
+    "local": "Locale",
+    "picker": "Dove vengono eseguiti i lavori",
+    "tasks": "attività",
+    "coverage": "solo {{ops}}",
+    "opLocal": "Locale — {{op}} non viene ancora eseguito da remoto",
+    "dictationLocal": "La dettatura viene sempre eseguita su questo computer",
+    "ops": {
+      "tts": "TTS",
+      "clone": "clonazione vocale",
+      "dub": "doppiaggio",
+      "audiobook": "rendering di audiolibri",
+      "longform": "narrazione di storie",
+      "asr": "trascrizione"
+    }
   }
 }

@@ -748,7 +748,35 @@
     "storage_clear_temp_failed": "Could not clear temporary files",
     "storage_temp_cleared": "Temporary files cleared — {{freed}} freed",
     "data_dir_at": "App data stored at",
-    "history_retention_load_failed": "Could not load the current retention limit"
+    "history_retention_load_failed": "Could not load the current retention limit",
+    "workers_title": "Remote workers",
+    "workers_desc": "Send individual jobs to GPUs on your other machines. Results come back here. Nothing is sent until you add a worker and approve it.",
+    "workers_enable": "Use remote workers",
+    "workers_enable_hint": "While this is off, no connection is accepted and nothing leaves this machine.",
+    "workers_port_conflict": "Remote workers are unavailable because another VoiceStudio instance is already accepting them on this port. Close the other instance, or set OMNIVOICE_WORKER_PORT to a different port and restart VoiceStudio.",
+    "workers_endpoint": "Workers connect to",
+    "workers_endpoint_hint": "A worker has to be able to reach this address. On different networks, a VPN such as Tailscale is the reliable way.",
+    "workers_add": "Add a worker",
+    "workers_add_hint": "Generate a token, then paste it into OmniVoice on the other machine.",
+    "workers_new_token": "Generate token",
+    "workers_token_once": "Copy this now — it is shown only once, works only once, and expires in 15 minutes.",
+    "workers_copy": "Copy",
+    "workers_copied": "Copied",
+    "workers_copy_failed": "Could not copy.",
+    "workers_none": "No workers yet. Generate a token to add your first one.",
+    "workers_load": "Tasks {{active}} / {{slots}}",
+    "workers_needs_consent": "Not approved",
+    "workers_status_online": "Online",
+    "workers_status_offline": "Offline",
+    "workers_status_paused": "Paused",
+    "workers_status_disabled": "Disabled",
+    "workers_resume": "Resume",
+    "workers_disable": "Disable",
+    "workers_enable_one": "Enable",
+    "workers_remove": "Remove",
+    "workers_remove_title": "Remove worker?",
+    "workers_remove_confirm": "Remove {{name}}? Its key is revoked, so it cannot reconnect without a new token.",
+    "workers_rename": "Rename worker"
   },
   "about": {
     "app": "App",
@@ -2470,7 +2498,16 @@
     "asrOpenAICompatTestUnreachable": "Could not connect — check the URL and that the server is running",
     "asrOpenAICompatTestNotConfigured": "Enter a server URL first",
     "asrOpenAICompatTestInvalidUrl": "The server URL must start with http:// or https://",
-    "asrOpenAICompatTestFailed": "Connection test failed"
+    "asrOpenAICompatTestFailed": "Connection test failed",
+    "voice_previews": "Voice previews",
+    "voice_previews_desc": "Download previews that were rendered ahead of time, so voices play instantly — even before a voice model finishes downloading. Nothing is downloaded until you turn this on.",
+    "voice_previews_off": "Off — previews render on this machine",
+    "voice_previews_ready": "Featured set cached",
+    "voice_previews_partial": "{{cached}} of {{total}} featured previews cached",
+    "voice_previews_checked": "checked {{when}}",
+    "voice_previews_never": "not checked yet",
+    "voice_previews_check": "Check now",
+    "voice_previews_rejected": "Voice gallery update rejected: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Do I need a license for internal tools?",
@@ -2556,7 +2593,8 @@
     "droppedChunks_one": "Heads up: {{count}} part of your text produced no audio, so this take is missing it. Try re-generating — a different seed usually fixes it.",
     "droppedChunks_other": "Heads up: {{count}} parts of your text produced no audio, so this take is missing them. Try re-generating — a different seed usually fixes it.",
     "droppedChunksWithText_one": "Heads up: {{count}} part of your text produced no audio, so this take is missing it — “{{text}}”. Try re-generating; a different seed usually fixes it.",
-    "droppedChunksWithText_other": "Heads up: {{count}} parts of your text produced no audio, so this take is missing them — “{{text}}”. Try re-generating; a different seed usually fixes it."
+    "droppedChunksWithText_other": "Heads up: {{count}} parts of your text produced no audio, so this take is missing them — “{{text}}”. Try re-generating; a different seed usually fixes it.",
+    "streamingOffRemote": "Progressive preview is off while {{label}} renders this — the finished take plays as soon as it lands."
   },
   "voiceSelector": {
     "engineDefault": "Engine default",
@@ -2879,5 +2917,22 @@
     "download": "Download {{label}} ({{size}} GB)",
     "started": "Downloading {{label}} — watch progress in Settings → Models, then try again.",
     "install_failed": "Couldn't start the download: {{message}}"
+  },
+  "model_missing": {"message":"This model is not downloaded on {{target}}.","download":"Download model","download_size":"Download ({{size}})","started":"Downloading on {{target}} — try Generate again when it finishes.","failed":"Couldn't start the download: {{message}}","manual_worker":"Install this engine directly on {{target}}."},
+  "gpu": {
+    "local": "Local",
+    "picker": "Where jobs run",
+    "tasks": "tasks",
+    "coverage": "{{ops}} only",
+    "opLocal": "Local — {{op}} does not run remotely yet",
+    "dictationLocal": "Dictation always runs on this machine",
+    "ops": {
+      "tts": "TTS",
+      "clone": "voice cloning",
+      "dub": "dubbing",
+      "audiobook": "audiobook rendering",
+      "longform": "story narration",
+      "asr": "transcription"
+    }
   }
 }

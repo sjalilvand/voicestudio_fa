@@ -180,7 +180,35 @@
     "history_retention_cap_hint": "Les prises étoilées ne comptent jamais pour le nettoyage · 0 = illimité",
     "history_retention_saved": "Limite de rétention enregistrée",
     "history_retention_save_failed": "Enregistrement impossible",
-    "history_retention_invalid": "Saisissez 0 ou plus"
+    "history_retention_invalid": "Saisissez 0 ou plus",
+    "workers_title": "Workers distants",
+    "workers_desc": "Envoyez des tâches individuelles aux GPU de vos autres machines. Les résultats reviennent ici. Rien n'est envoyé tant que vous n'avez pas ajouté et approuvé un worker.",
+    "workers_enable": "Utiliser des workers distants",
+    "workers_enable_hint": "Tant que ceci est désactivé, aucune connexion n'est acceptée et rien ne quitte cette machine.",
+    "workers_port_conflict": "Les workers distants sont indisponibles, car une autre instance de VoiceStudio les accepte déjà sur ce port. Fermez l’autre instance, ou définissez OMNIVOICE_WORKER_PORT sur un autre port puis redémarrez VoiceStudio.",
+    "workers_endpoint": "Les workers se connectent à",
+    "workers_endpoint_hint": "Un worker doit pouvoir joindre cette adresse. Sur des réseaux différents, un VPN comme Tailscale est la méthode fiable.",
+    "workers_add": "Ajouter un worker",
+    "workers_add_hint": "Générez un jeton, puis collez-le dans OmniVoice sur l'autre machine.",
+    "workers_new_token": "Générer un jeton",
+    "workers_token_once": "Copiez-le maintenant : il n'est affiché qu'une fois, ne fonctionne qu'une fois et expire dans 15 minutes.",
+    "workers_copy": "Copier",
+    "workers_copied": "Copié",
+    "workers_copy_failed": "Copie impossible.",
+    "workers_none": "Aucun worker pour l'instant. Générez un jeton pour ajouter le premier.",
+    "workers_load": "Tâches {{active}} / {{slots}}",
+    "workers_needs_consent": "Non approuvé",
+    "workers_status_online": "En ligne",
+    "workers_status_offline": "Hors ligne",
+    "workers_status_paused": "En pause",
+    "workers_status_disabled": "Désactivé",
+    "workers_resume": "Reprendre",
+    "workers_disable": "Désactiver",
+    "workers_enable_one": "Activer",
+    "workers_remove": "Supprimer",
+    "workers_remove_title": "Supprimer le worker ?",
+    "workers_remove_confirm": "Supprimer {{name}} ? Sa clé est révoquée, il ne pourra pas se reconnecter sans un nouveau jeton.",
+    "workers_rename": "Renommer le worker"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1791,7 +1819,16 @@
     "to_download": "télécharger",
     "cached": "mis en cache",
     "fast_download_badge": "téléchargement rapide",
-    "fast_download_title": "Téléchargements rapides via Xet {{version}} — transfert fragmenté parallèle"
+    "fast_download_title": "Téléchargements rapides via Xet {{version}} — transfert fragmenté parallèle",
+    "voice_previews": "Aperçus de voix",
+    "voice_previews_desc": "Téléchargez des aperçus pré-rendus pour que les voix se lisent instantanément, même avant la fin du téléchargement d'un modèle vocal. Rien n'est téléchargé tant que vous n'activez pas cette option.",
+    "voice_previews_off": "Désactivé — les aperçus sont générés sur cet appareil",
+    "voice_previews_ready": "Sélection en cache",
+    "voice_previews_partial": "{{cached}} aperçus en vedette sur {{total}} en cache",
+    "voice_previews_checked": "vérifié {{when}}",
+    "voice_previews_never": "pas encore vérifié",
+    "voice_previews_check": "Vérifier maintenant",
+    "voice_previews_rejected": "Mise à jour de la galerie de voix refusée : {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Ai-je besoin d’une licence pour les outils internes ?",
@@ -2298,7 +2335,8 @@
     "droppedChunks_one": "Attention : {{count}} partie de votre texte n'a produit aucun audio, elle manque donc dans cette prise. Relancez la génération — une autre graine suffit généralement.",
     "droppedChunks_other": "Attention : {{count}} parties de votre texte n'ont produit aucun audio, elles manquent donc dans cette prise. Relancez la génération — une autre graine suffit généralement.",
     "droppedChunksWithText_one": "Attention : {{count}} partie de votre texte n'a produit aucun audio et manque dans cette prise — « {{text}} ». Relancez la génération ; une autre graine suffit généralement.",
-    "droppedChunksWithText_other": "Attention : {{count}} parties de votre texte n'ont produit aucun audio et manquent dans cette prise — « {{text}} ». Relancez la génération ; une autre graine suffit généralement."
+    "droppedChunksWithText_other": "Attention : {{count}} parties de votre texte n'ont produit aucun audio et manquent dans cette prise — « {{text}} ». Relancez la génération ; une autre graine suffit généralement.",
+    "streamingOffRemote": "L'aperçu progressif est désactivé pendant que {{label}} effectue le rendu — la prise finale sera lue dès son arrivée."
   },
   "voiceSelector": {
     "engineDefault": "Moteur par défaut",
@@ -2357,6 +2395,7 @@
     "started": "Téléchargement de {{label}} — suivez la progression dans Réglages → Modèles, puis réessayez.",
     "install_failed": "Impossible de démarrer le téléchargement : {{message}}"
   },
+  "model_missing": {"message":"Ce modèle n’est pas téléchargé sur {{target}}.","download":"Télécharger le modèle","download_size":"Télécharger ({{size}})","started":"Téléchargement sur {{target}} — relancez Générer une fois terminé.","failed":"Impossible de lancer le téléchargement : {{message}}","manual_worker":"Installez ce moteur directement sur {{target}}."},
   "backend_start_failure": {
     "notice": "Le backend d'VoiceStudio n'a pas pu démarrer — rien ne fonctionnera tant qu'il ne démarre pas.",
     "view": "Voir pourquoi",
@@ -2369,5 +2408,21 @@
     "notice_unclean": "La session précédente s'est terminée sans arrêt propre il y a {{ago}}. C'est souvent bénin : mise en veille, fermeture forcée ou arrêt d'une VM/d'un conteneur.",
     "details_intro_unclean": "Le marqueur d'arrêt de l'exécution précédente n'a jamais été effacé, il y a {{ago}}. VoiceStudio ne peut pas savoir s'il s'agit d'un plantage ou d'une simple interruption — mise en veille, fermeture forcée ou arrêt d'une VM/d'un conteneur laissent la même trace. Si tout fonctionne maintenant, il n'y a rien à faire.",
     "report_needs_log": "Aucune sortie d'erreur n'a été capturée pour cet événement ; un rapport en un clic serait vide. Si quelque chose ne va vraiment pas, joignez les dernières lignes de Paramètres → Journaux → Backend à un nouveau ticket."
+  },
+  "gpu": {
+    "local": "Local",
+    "picker": "Où les tâches s'exécutent",
+    "tasks": "tâches",
+    "coverage": "{{ops}} uniquement",
+    "opLocal": "Local — {{op}} ne s'exécute pas encore à distance",
+    "dictationLocal": "La dictée s'exécute toujours sur cette machine",
+    "ops": {
+      "tts": "TTS",
+      "clone": "clonage vocal",
+      "dub": "doublage",
+      "audiobook": "rendu de livre audio",
+      "longform": "narration d'histoires",
+      "asr": "transcription"
+    }
   }
 }

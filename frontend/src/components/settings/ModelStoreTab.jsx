@@ -11,11 +11,12 @@ import { SettingsSection, SettingsInput, SETTINGS_SECTION_SURFACE } from './prim
 import { askConfirm } from './native';
 import { fmtBytes } from './models/format';
 import { computeRowRuntime } from './models/runtime';
-import { reduceModelDownloadEvent, isAutoPurgeTerminal } from './models/downloadReducer';
+import { downloadKey, progressForRepo, reduceModelDownloadEvent, isAutoPurgeTerminal } from './models/downloadReducer';
 import { makeModelColumns } from './models/columns';
 import { groupModels } from './models/sections';
 import RecoBanner from './models/RecoBanner';
 import ModelSection from './models/ModelSection';
+import VoicePreviewsPanel from './VoicePreviewsPanel';
 
 /**
  * Model store — every known HF model, grouped by capability (TTS / ASR /
@@ -262,7 +263,10 @@ export default function ModelStoreTab({ info, modelBadge }) {
       await cancelInstallModel(repoId);
       setRowState((prev) => ({
         ...prev,
-        [repoId]: { ...(prev[repoId] || { files: {} }), phase: 'install_cancelled' },
+        [downloadKey('local', repoId)]: {
+          ...(prev[downloadKey('local', repoId)] || { files: {} }),
+          phase: 'install_cancelled',
+        },
       }));
     } catch (e) {
       toast.error(e.message || String(e));
@@ -275,7 +279,9 @@ export default function ModelStoreTab({ info, modelBadge }) {
     (repoId) => {
       setRowState((prev) => {
         const next = { ...prev };
-        delete next[repoId];
+        for (const key of Object.keys(next)) {
+          if (key.endsWith(`\u0000${repoId}`)) delete next[key];
+        }
         return next;
       });
       delete speedRef.current[repoId];
@@ -322,7 +328,7 @@ export default function ModelStoreTab({ info, modelBadge }) {
   );
 
   const getRowRuntime = React.useCallback(
-    (m) => computeRowRuntime(m, rowState, busy),
+    (m) => computeRowRuntime(m, { [m.repo_id]: progressForRepo(rowState, m.repo_id) }, busy),
     [busy, rowState],
   );
 
@@ -367,161 +373,166 @@ export default function ModelStoreTab({ info, modelBadge }) {
   if (!data) return null;
 
   return (
-    <section className={SETTINGS_SECTION_SURFACE} data-slot="settings-section">
-      <div className="flex flex-wrap items-center justify-between gap-[var(--space-3)] px-[2px] pb-[6px] pt-[2px] font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-xs)] text-[var(--chrome-fg-muted)] max-[580px]:flex-col max-[580px]:items-start">
-        <div className="inline-flex flex-wrap items-center gap-[var(--space-2)]">
-          <span>
-            <strong className="font-semibold text-[var(--chrome-fg)]">
-              {fmtBytes(data.total_installed_bytes)}
-            </strong>
-          </span>
-          {data.disk_free_gb != null && (
-            <>
-              <span className="text-[var(--chrome-fg-dim)]">·</span>
-              <span title={t('models.disk_free_title')}>
-                {t('models.disk_free', { size: `${data.disk_free_gb} GB` })}
-              </span>
-            </>
-          )}
-          <span className="text-[var(--chrome-fg-dim)]">·</span>
-          <span title={data.hf_cache_dir}>
-            <code className="font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-xs)] text-[var(--chrome-fg)]">
-              {data.hf_cache_dir?.replace(/^\/Users\/[^/]+/, '~')}
-            </code>
-          </span>
-          {info && <span className="text-[var(--chrome-fg-dim)]">·</span>}
-          {info && <span>{modelBadge}</span>}
-          {info?.fast_download?.xet_enabled && (
-            <>
-              <span className="text-[var(--chrome-fg-dim)]">·</span>
-              <span
-                className="text-[var(--chrome-accent)]"
-                title={
-                  t('models.fast_download_title', {
-                    version: info.fast_download.xet_version || 'Xet',
-                  }) ||
-                  `Fast downloads via Xet ${info.fast_download.xet_version || ''} — parallel chunked transfer`
-                }
-              >
-                ⚡ {t('models.fast_download_badge') || 'fast download'}
-              </span>
-            </>
-          )}
-        </div>
-        <div className="inline-flex items-center gap-[var(--space-2)]">
-          {/* Compact HF token inline */}
-          {!hfTokenSet && !hfExpanded && (
-            <button
-              className="inline-flex cursor-pointer items-center gap-1 rounded-[var(--chrome-radius-pill)] [border:1px_solid_var(--chrome-border)] bg-transparent px-[var(--space-2)] py-[2px] text-[var(--chrome-fg-muted)] hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--chrome-fg)]"
-              onClick={() => setHfExpanded(true)}
-              title={t('models.hf_set_title')}
-            >
-              <KeyRound size={11} /> {t('models.hf_token_btn')}
-            </button>
-          )}
-          {!hfTokenSet && hfExpanded && (
-            <div className="inline-flex items-center gap-[var(--space-2)]">
-              <input
-                type="password"
-                className="min-w-0 rounded-[var(--chrome-radius-pill)] [border:1px_solid_var(--chrome-border)] bg-[var(--chrome-hover-bg)] px-[var(--space-2)] py-[2px] font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-xs)] text-[var(--chrome-fg)] placeholder:text-[var(--chrome-fg-dim)] focus-visible:border-[var(--chrome-accent)] focus-visible:shadow-[var(--focus-ring)] focus-visible:outline-none"
-                placeholder="hf_xxxxxxxxxxxx"
-                value={hfToken}
-                onChange={(e) => setHfToken(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveHfToken();
-                  if (e.key === 'Escape') setHfExpanded(false);
-                }}
-                autoFocus
-              />
-              <Button
-                size="sm"
-                variant="subtle"
-                onClick={saveHfToken}
-                disabled={hfSaving || !hfToken.trim()}
-                loading={hfSaving}
-              >
-                {t('common.save')}
-              </Button>
-              <a
-                href="#"
-                className="text-[var(--chrome-accent)] no-underline hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  openExternal('https://huggingface.co/settings/tokens');
-                }}
-                title="Open huggingface.co/settings/tokens"
-              >
-                {t('models.get_token')}→
-              </a>
-            </div>
-          )}
-          {hfTokenSet && (
-            <span className="inline-flex items-center gap-1 text-[var(--chrome-severity-ok)]">
-              <KeyRound size={10} /> ✓
+    <>
+      <section className={SETTINGS_SECTION_SURFACE} data-slot="settings-section">
+        <div className="flex flex-wrap items-center justify-between gap-[var(--space-3)] px-[2px] pb-[6px] pt-[2px] font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-xs)] text-[var(--chrome-fg-muted)] max-[580px]:flex-col max-[580px]:items-start">
+          <div className="inline-flex flex-wrap items-center gap-[var(--space-2)]">
+            <span>
+              <strong className="font-semibold text-[var(--chrome-fg)]">
+                {fmtBytes(data.total_installed_bytes)}
+              </strong>
             </span>
-          )}
-          <Button
-            variant="subtle"
-            size="sm"
-            onClick={reload}
-            loading={loading}
-            leading={<RefreshCw size={11} />}
-          >
-            {t('common.refresh')}
-          </Button>
+            {data.disk_free_gb != null && (
+              <>
+                <span className="text-[var(--chrome-fg-dim)]">·</span>
+                <span title={t('models.disk_free_title')}>
+                  {t('models.disk_free', { size: `${data.disk_free_gb} GB` })}
+                </span>
+              </>
+            )}
+            <span className="text-[var(--chrome-fg-dim)]">·</span>
+            <span title={data.hf_cache_dir}>
+              <code className="font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-xs)] text-[var(--chrome-fg)]">
+                {data.hf_cache_dir?.replace(/^\/Users\/[^/]+/, '~')}
+              </code>
+            </span>
+            {info && <span className="text-[var(--chrome-fg-dim)]">·</span>}
+            {info && <span>{modelBadge}</span>}
+            {info?.fast_download?.xet_enabled && (
+              <>
+                <span className="text-[var(--chrome-fg-dim)]">·</span>
+                <span
+                  className="text-[var(--chrome-accent)]"
+                  title={
+                    t('models.fast_download_title', {
+                      version: info.fast_download.xet_version || 'Xet',
+                    }) ||
+                    `Fast downloads via Xet ${info.fast_download.xet_version || ''} — parallel chunked transfer`
+                  }
+                >
+                  ⚡ {t('models.fast_download_badge') || 'fast download'}
+                </span>
+              </>
+            )}
+          </div>
+          <div className="inline-flex items-center gap-[var(--space-2)]">
+            {/* Compact HF token inline */}
+            {!hfTokenSet && !hfExpanded && (
+              <button
+                className="inline-flex cursor-pointer items-center gap-1 rounded-[var(--chrome-radius-pill)] [border:1px_solid_var(--chrome-border)] bg-transparent px-[var(--space-2)] py-[2px] text-[var(--chrome-fg-muted)] hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--chrome-fg)]"
+                onClick={() => setHfExpanded(true)}
+                title={t('models.hf_set_title')}
+              >
+                <KeyRound size={11} /> {t('models.hf_token_btn')}
+              </button>
+            )}
+            {!hfTokenSet && hfExpanded && (
+              <div className="inline-flex items-center gap-[var(--space-2)]">
+                <input
+                  type="password"
+                  className="min-w-0 rounded-[var(--chrome-radius-pill)] [border:1px_solid_var(--chrome-border)] bg-[var(--chrome-hover-bg)] px-[var(--space-2)] py-[2px] font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-xs)] text-[var(--chrome-fg)] placeholder:text-[var(--chrome-fg-dim)] focus-visible:border-[var(--chrome-accent)] focus-visible:shadow-[var(--focus-ring)] focus-visible:outline-none"
+                  placeholder="hf_xxxxxxxxxxxx"
+                  value={hfToken}
+                  onChange={(e) => setHfToken(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveHfToken();
+                    if (e.key === 'Escape') setHfExpanded(false);
+                  }}
+                  autoFocus
+                />
+                <Button
+                  size="sm"
+                  variant="subtle"
+                  onClick={saveHfToken}
+                  disabled={hfSaving || !hfToken.trim()}
+                  loading={hfSaving}
+                >
+                  {t('common.save')}
+                </Button>
+                <a
+                  href="#"
+                  className="text-[var(--chrome-accent)] no-underline hover:underline"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openExternal('https://huggingface.co/settings/tokens');
+                  }}
+                  title="Open huggingface.co/settings/tokens"
+                >
+                  {t('models.get_token')}→
+                </a>
+              </div>
+            )}
+            {hfTokenSet && (
+              <span className="inline-flex items-center gap-1 text-[var(--chrome-severity-ok)]">
+                <KeyRound size={10} /> ✓
+              </span>
+            )}
+            <Button
+              variant="subtle"
+              size="sm"
+              onClick={reload}
+              loading={loading}
+              leading={<RefreshCw size={11} />}
+            >
+              {t('common.refresh')}
+            </Button>
+          </div>
         </div>
-      </div>
 
-      <RecoBanner
-        reco={reco}
-        t={t}
-        installMutation={installMutation}
-        installingReco={installingReco}
-        setInstallingReco={setInstallingReco}
-        onInstallRecommended={onInstallRecommended}
-        onInstall={onInstall}
-        getRowRuntime={getRowRuntime}
-        diskFreeGb={data.disk_free_gb}
-      />
-
-      <div className="my-[var(--space-2)] flex items-center gap-[var(--space-2)] max-[580px]:flex-col max-[580px]:items-stretch">
-        <SettingsInput
-          type="search"
-          className="max-w-none flex-1 text-[length:var(--text-xs)] min-w-[120px]"
-          placeholder={t('models.search_placeholder')}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          aria-label={t('models.search_label')}
-        />
-      </div>
-
-      {sections.map((group) => (
-        <ModelSection
-          key={group.key}
-          sectionKey={group.key}
-          title={MODEL_SECTION_LABEL[group.key] || group.key}
-          group={group}
-          columns={columns}
-          getRowRuntime={getRowRuntime}
+        <RecoBanner
+          reco={reco}
           t={t}
+          installMutation={installMutation}
+          installingReco={installingReco}
+          setInstallingReco={setInstallingReco}
+          onInstallRecommended={onInstallRecommended}
+          onInstall={onInstall}
+          getRowRuntime={getRowRuntime}
+          diskFreeGb={data.disk_free_gb}
         />
-      ))}
-      {/* Global empty state — every section filtered out. Same actionable
-          "Clear filters" affordance the table-level empty state used to carry. */}
-      {sections.length === 0 && allModels.length > 0 && (
-        <div className="models-table__empty">
-          <span>{t('models.no_matches')}</span>
-          <Button
-            size="sm"
-            variant="subtle"
-            className="ml-[8px]"
-            onClick={() => setQuery('')}
-            data-testid="models-clear-filters"
-          >
-            {t('models.clear_filters')}
-          </Button>
+
+        <div className="my-[var(--space-2)] flex items-center gap-[var(--space-2)] max-[580px]:flex-col max-[580px]:items-stretch">
+          <SettingsInput
+            type="search"
+            className="max-w-none flex-1 text-[length:var(--text-xs)] min-w-[120px]"
+            placeholder={t('models.search_placeholder')}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label={t('models.search_label')}
+          />
         </div>
-      )}
-    </section>
+
+        {sections.map((group) => (
+          <ModelSection
+            key={group.key}
+            sectionKey={group.key}
+            title={MODEL_SECTION_LABEL[group.key] || group.key}
+            group={group}
+            columns={columns}
+            getRowRuntime={getRowRuntime}
+            t={t}
+          />
+        ))}
+        {/* Global empty state — every section filtered out. Same actionable
+          "Clear filters" affordance the table-level empty state used to carry. */}
+        {sections.length === 0 && allModels.length > 0 && (
+          <div className="models-table__empty">
+            <span>{t('models.no_matches')}</span>
+            <Button
+              size="sm"
+              variant="subtle"
+              className="ml-[8px]"
+              onClick={() => setQuery('')}
+              data-testid="models-clear-filters"
+            >
+              {t('models.clear_filters')}
+            </Button>
+          </div>
+        )}
+      </section>
+      {/* Downloaded previews belong next to downloaded models: same question
+        ("what has this install fetched?"), same tab. */}
+      <VoicePreviewsPanel />
+    </>
   );
 }
