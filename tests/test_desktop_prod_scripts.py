@@ -19,6 +19,7 @@ import importlib.util
 import json
 import os
 import subprocess
+import sys
 
 import pytest
 
@@ -210,7 +211,7 @@ def test_linux_extracted_appimage_and_backend_are_stopped_before_wipe(tmp_path):
     assert [pid for pid, _ in opened] == [101, 102, 201, 202, 203]
 
 
-
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux AppImage process contract")
 def test_linux_process_stop_executes_before_data_wipe(tmp_path):
     """Execute the shell with controlled commands and record the true order."""
     fake_bin = tmp_path / "bin"
@@ -245,7 +246,7 @@ def test_linux_process_stop_executes_before_data_wipe(tmp_path):
         }
     )
     result = subprocess.run(
-        ["bash", _SH, "--skip-build"],
+        ["/bin/bash", _SH, "--skip-build"],  # noqa: S603
         cwd=_ROOT,
         env=env,
         capture_output=True,
