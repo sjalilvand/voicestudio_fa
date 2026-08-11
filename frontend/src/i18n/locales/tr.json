@@ -907,6 +907,7 @@
     "target_language": "Dublaj dili",
     "transcript_after_extract": "Transkript, çıkarma işleminden sonra görünür.",
     "qc_btn": "Dub zamanlamasını doğrulayın (ikinci geçiş kontrolü)",
+    "verify": "Doğrula",
     "qc_running": "Dub zamanlaması kontrol ediliyor…",
     "qc_result": "{{flagged}} / {{total}} satırların yeniden dinlenmesi gerekebilir",
     "qc_clean": "Tüm {{total}} satırları komut dosyasıyla eşleşiyor",
@@ -2076,6 +2077,13 @@
     "hf_token_get_short": "Ücretsiz bir tane alın →"
   },
   "history": {
+    "dub_meta": "{{segments}} segment · {{duration}} sn",
+    "dub_meta_zero": "{{count}} segment · {{duration}} sn",
+    "dub_meta_one": "{{count}} segment · {{duration}} sn",
+    "dub_meta_two": "{{count}} segment · {{duration}} sn",
+    "dub_meta_few": "{{count}} segment · {{duration}} sn",
+    "dub_meta_many": "{{count}} segment · {{duration}} sn",
+    "dub_meta_other": "{{count}} segment · {{duration}} sn",
     "dub_title": "Dublaj geçmişi",
     "empty": "Burada henüz bir şey yok — oluşturduklarınız sağda görünecek.",
     "empty_dub": "Dublajlarınız burada görünecek.",

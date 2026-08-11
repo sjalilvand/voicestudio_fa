@@ -907,6 +907,7 @@
     "target_language": "الدبلجة إلى",
     "transcript_after_extract": "يظهر النص بعد الاستخراج.",
     "qc_btn": "التحقق من توقيت الدبلجة (فحص المرور الثاني)",
+    "verify": "تحقق",
     "qc_running": "جارٍ التحقق من توقيت الدبلجة…",
     "qc_result": "{{flagged}} من {{total}} قد تحتاج الأسطر إلى إعادة الاستماع",
     "qc_clean": "جميع أسطر {{total}} تتطابق مع النص",
@@ -2076,6 +2077,13 @@
     "hf_token_get_short": "احصل على واحدة مجانًا →"
   },
   "history": {
+    "dub_meta": "{{segments}} مقطعًا · {{duration}} ث",
+    "dub_meta_zero": "{{count}} مقاطع · {{duration}} ث",
+    "dub_meta_one": "{{count}} مقطع · {{duration}} ث",
+    "dub_meta_two": "{{count}} مقطعان · {{duration}} ث",
+    "dub_meta_few": "{{count}} مقاطع · {{duration}} ث",
+    "dub_meta_many": "{{count}} مقطعًا · {{duration}} ث",
+    "dub_meta_other": "{{count}} مقطع · {{duration}} ث",
     "dub_title": "سجل الدبلجة",
     "empty": "لا شيء هنا بعد — ستظهر مخرجاتك على اليمين.",
     "empty_dub": "ستظهر دبلجاتك هنا.",

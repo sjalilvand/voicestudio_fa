@@ -907,6 +907,7 @@
     "target_language": "吹き替え先",
     "transcript_after_extract": "文字起こしは抽出後に表示されます。",
     "qc_btn": "ダビングタイミングの検証（2パス目チェック）",
+    "verify": "検証",
     "qc_running": "ダビングのタイミングを確認中…",
     "qc_result": "{{total}} 行中 {{flagged}} 行は再試行が必要な可能性があります",
     "qc_clean": "すべての {{total}} 行がスクリプトと一致します",
@@ -2076,6 +2077,13 @@
     "hf_token_get_short": "1 つ無料で入手 →"
   },
   "history": {
+    "dub_meta": "{{segments}} セグメント · {{duration}} 秒",
+    "dub_meta_zero": "{{count}} セグメント · {{duration}} 秒",
+    "dub_meta_one": "{{count}} セグメント · {{duration}} 秒",
+    "dub_meta_two": "{{count}} セグメント · {{duration}} 秒",
+    "dub_meta_few": "{{count}} セグメント · {{duration}} 秒",
+    "dub_meta_many": "{{count}} セグメント · {{duration}} 秒",
+    "dub_meta_other": "{{count}} セグメント · {{duration}} 秒",
     "dub_title": "ダブ履歴",
     "empty": "まだ何もありません — 生成結果が右側に表示されます。",
     "empty_dub": "ダブはここに表示されます。",

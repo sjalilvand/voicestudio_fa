@@ -907,6 +907,7 @@
     "target_language": "พากย์เป็น",
     "transcript_after_extract": "ทรานสคริปต์จะปรากฏหลังการแยกเสียง",
     "qc_btn": "ตรวจสอบระยะเวลาการพากย์ (ตรวจสอบรอบที่สอง)",
+    "verify": "ตรวจสอบ",
     "qc_running": "กำลังตรวจสอบเวลาพากย์...",
     "qc_result": "{{flagged}} จาก {{total}} บรรทัดอาจต้องฟังซ้ำ",
     "qc_clean": "{{total}} บรรทัดทั้งหมดตรงกับสคริปต์",
@@ -2076,6 +2077,13 @@
     "hf_token_get_short": "รับฟรีหนึ่งรายการ →"
   },
   "history": {
+    "dub_meta": "{{segments}} เซกเมนต์ · {{duration}} วินาที",
+    "dub_meta_zero": "{{count}} เซกเมนต์ · {{duration}} วินาที",
+    "dub_meta_one": "{{count}} เซกเมนต์ · {{duration}} วินาที",
+    "dub_meta_two": "{{count}} เซกเมนต์ · {{duration}} วินาที",
+    "dub_meta_few": "{{count}} เซกเมนต์ · {{duration}} วินาที",
+    "dub_meta_many": "{{count}} เซกเมนต์ · {{duration}} วินาที",
+    "dub_meta_other": "{{count}} เซกเมนต์ · {{duration}} วินาที",
     "dub_title": "ประวัติการพากย์",
     "empty": "ยังไม่มีอะไรที่นี่ — ผลงานที่สร้างจะปรากฏทางด้านขวา",
     "empty_dub": "เสียงพากย์ของคุณจะปรากฏที่นี่",

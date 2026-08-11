@@ -907,6 +907,7 @@
     "target_language": "Lồng tiếng sang",
     "transcript_after_extract": "Bản chép lời sẽ xuất hiện sau khi trích xuất.",
     "qc_btn": "Xác minh thời gian lồng tiếng (kiểm tra lần thứ hai)",
+    "verify": "Xác minh",
     "qc_running": "Đang kiểm tra thời gian lồng tiếng…",
     "qc_result": "{{flagged}} trong số {{total}} dòng có thể cần nghe lại",
     "qc_clean": "Tất cả các dòng {{total}} đều khớp với tập lệnh",
@@ -2076,6 +2077,13 @@
     "hf_token_get_short": "Nhận một cái miễn phí →"
   },
   "history": {
+    "dub_meta": "{{segments}} phân đoạn · {{duration}} giây",
+    "dub_meta_zero": "{{count}} phân đoạn · {{duration}} giây",
+    "dub_meta_one": "{{count}} phân đoạn · {{duration}} giây",
+    "dub_meta_two": "{{count}} phân đoạn · {{duration}} giây",
+    "dub_meta_few": "{{count}} phân đoạn · {{duration}} giây",
+    "dub_meta_many": "{{count}} phân đoạn · {{duration}} giây",
+    "dub_meta_other": "{{count}} phân đoạn · {{duration}} giây",
     "dub_title": "Lịch sử lồng tiếng",
     "empty": "Chưa có gì ở đây — các bản tạo của bạn sẽ xuất hiện ở bên phải.",
     "empty_dub": "Các bản lồng tiếng của bạn sẽ xuất hiện tại đây.",

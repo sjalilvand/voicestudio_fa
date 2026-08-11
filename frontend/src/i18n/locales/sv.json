@@ -907,6 +907,7 @@
     "target_language": "Dubba till",
     "transcript_after_extract": "Avskriften visas efter extraktionen.",
     "qc_btn": "Verifiera dubbningstid (second-pass check)",
+    "verify": "Verifiera",
     "qc_running": "Kontrollerar dubbningstid...",
     "qc_result": "{{flagged}} av {{total}} rader kan behöva lyssnas om",
     "qc_clean": "Alla {{total}} rader matchar skriptet",
@@ -2076,6 +2077,13 @@
     "hf_token_get_short": "Få en gratis →"
   },
   "history": {
+    "dub_meta": "{{segments}} segment · {{duration}} s",
+    "dub_meta_zero": "{{count}} segment · {{duration}} s",
+    "dub_meta_one": "{{count}} segment · {{duration}} s",
+    "dub_meta_two": "{{count}} segment · {{duration}} s",
+    "dub_meta_few": "{{count}} segment · {{duration}} s",
+    "dub_meta_many": "{{count}} segment · {{duration}} s",
+    "dub_meta_other": "{{count}} segment · {{duration}} s",
     "dub_title": "Dubbhistorik",
     "empty": "Inget här ännu — dina generationer visas till höger.",
     "empty_dub": "Dina dubbar visas här.",
