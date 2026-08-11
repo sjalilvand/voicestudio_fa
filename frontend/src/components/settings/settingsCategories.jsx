@@ -320,6 +320,7 @@ export const GROUPS = [
           'api key',
           'openai',
           'openrouter',
+          'orcarouter',
           'groq',
           'ollama',
           'gemini',

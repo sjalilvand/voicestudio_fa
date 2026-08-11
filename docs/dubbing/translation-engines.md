@@ -159,7 +159,7 @@ and with no LLM configured (or on any LLM error) it simply does nothing.
 
 **Settings → System → LLM Providers** is the one place to set up the LLM. Pick a
 provider, paste its API key, choose a model, **Test** it, and "use for
-translation." Supported: OpenAI, OpenRouter, Groq, Cerebras, Google AI (Gemini),
+translation." Supported: OpenAI, OpenRouter, OrcaRouter, Groq, Cerebras, Google AI (Gemini),
 Mistral, Cohere, NVIDIA, GitHub Models, Cloudflare, Hugging Face, SambaNova,
 SiliconFlow, **local Ollama / LM Studio** (offline, no key), and a **Custom**
 OpenAI-compatible endpoint.
@@ -180,7 +180,7 @@ shared machine — set the `LLM_DEFAULT_PROVIDER` environment variable to a
 provider id before launching the backend:
 
 ```
-LLM_DEFAULT_PROVIDER=groq        # or openai, openrouter, cerebras, ollama, custom, …
+LLM_DEFAULT_PROVIDER=groq        # or openai, openrouter, orcarouter, cerebras, ollama, custom, …
 ```
 
 Resolution order for the active provider is: `LLM_DEFAULT_PROVIDER` (env) →
