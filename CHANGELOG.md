@@ -10,17 +10,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
-- A faster, cleaner Dub workspace for multilingual production
-
-### Changed
-
-- The Dub workspace now has a compact production command bar, responsive flag-based language cards, media previews in Dub History, and a narrower Projects rail.
-
-## [5.0.0] — 2026-08-11
-
-**Highlights**
-
-- VoiceStudio 5.0.0 gives the app, desktop chrome, documentation, and package metadata one clear identity
+- A faster, cleaner Dub workspace for multilingual production (#1489)
+- VoiceStudio now gives the app, desktop chrome, documentation, and package metadata one clear identity
 - A local-first creative studio: voice cloning, design, dubbing, dictation, stories, audiobooks, and transcription without a subscription meter
 - Reliability first: automatic cache repair, truthful hardware routing, safer sidecars, and actionable recovery instead of mystery failures
 - Security boundaries now match the product: native file access stays native, untrusted network destinations fail closed, and public errors keep private diagnostics local
@@ -35,6 +26,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Changed
 
+- The Dub workspace now has a compact production command bar, responsive flag-based language cards, media previews in Dub History, and a narrower Projects rail. (#1489)
 - VoiceStudio now uses one waveform-and-spark mark across the title bar, About screen, README, browser favicon, and every desktop/platform icon. (#1487)
 - PocketTTS now asks you to review its code license, model license and gated-access conditions before first use, and explains how to unlock the model instead of showing a raw download failure — thanks @paoloantinori! (#1442)
 - The repository moved to github.com/debpalash/VoiceStudio. Every link in the app, docs and scripts now points there; GitHub redirects the old URLs, and the Docker image paths, the app bundle identifier and your data folder are all deliberately unchanged. (#1394)
@@ -59,6 +51,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Restored the pre-release version to 0.4.2 while the next release remains in preparation. (#1488)
 - Multi-language dubbing now translates, edits, generates, retains, and exports every selected language, and its language picker stays visible at viewport edges. (#1486)
 - Dubbing's **From video** cast now uses available source-audio samples for every speaker and short line, including jobs without a pooled diarization clone. (#1484)
 - Basic Dubbing translation remains available without an LLM; Cinematic and Autofit now degrade through the existing Fast translation path instead of blocking the quality choice. (#1481)
