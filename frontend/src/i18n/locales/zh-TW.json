@@ -2074,6 +2074,13 @@
     "hf_token_get_short": "免費獲得一份 →"
   },
   "history": {
+    "dub_meta": "{{segments}} 個片段 · {{duration}} 秒",
+    "dub_meta_zero": "{{count}} 個片段 · {{duration}} 秒",
+    "dub_meta_one": "{{count}} 個片段 · {{duration}} 秒",
+    "dub_meta_two": "{{count}} 個片段 · {{duration}} 秒",
+    "dub_meta_few": "{{count}} 個片段 · {{duration}} 秒",
+    "dub_meta_many": "{{count}} 個片段 · {{duration}} 秒",
+    "dub_meta_other": "{{count}} 個片段 · {{duration}} 秒",
     "dub_title": "配音歷史",
     "empty": "這裡還沒有任何內容 — 你的生成結果將顯示在右側。",
     "empty_dub": "你的配音將顯示在這裡。",

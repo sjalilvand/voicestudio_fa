@@ -2074,6 +2074,13 @@
     "hf_token_get_short": "Ontvang er één gratis →"
   },
   "history": {
+    "dub_meta": "{{segments}} segmenten · {{duration}} s",
+    "dub_meta_zero": "{{count}} segmenten · {{duration}} s",
+    "dub_meta_one": "{{count}} segment · {{duration}} s",
+    "dub_meta_two": "{{count}} segmenten · {{duration}} s",
+    "dub_meta_few": "{{count}} segmenten · {{duration}} s",
+    "dub_meta_many": "{{count}} segmenten · {{duration}} s",
+    "dub_meta_other": "{{count}} segmenten · {{duration}} s",
     "dub_title": "Dubgeschiedenis",
     "empty": "Hier is nog niets — je generaties verschijnen rechts.",
     "empty_dub": "Je dubs verschijnen hier.",

@@ -36,32 +36,61 @@ export default function DubHeader({
   pipelineSteps,
   onPipelineStep,
 }) {
+  const generateLabel =
+    multiLangMode && multiLangs.length > 1
+      ? t('dub.generate_dub_multi', {
+          count: multiLangs.length,
+          defaultValue: 'Generate {{count}} dubs',
+        })
+      : t('dub.generate_dub');
+
   return (
-    <div className="flex flex-col gap-[2px] min-w-0 px-[10px] py-[4px] shrink-0 bg-[var(--color-bg-elev-1)] rounded-md mb-[2px]">
-      {/* Row 1: project title (left) + actions (right). Row 2: the pipeline
-          spine (Upload → … → Export) sits directly under the title with a
-          tight 2px gap — title-first, owner-requested order. */}
-      <div className="flex flex-wrap justify-between items-center gap-x-[var(--space-2)] gap-y-[4px] min-w-0">
-        <div className="label-row dub-head__title !gap-[6px]">
-          <FileText className="label-icon" size={11} />
-          <span className="font-medium text-[0.78rem] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-fg normal-case">
+    <div
+      className="dub-command-bar"
+      data-testid="dub-command-bar"
+      role="toolbar"
+      aria-label={t('dub.video_dubbing_studio')}
+    >
+      <div className="dub-command-bar__identity">
+        <span className="dub-command-bar__file" aria-hidden="true">
+          <FileText size={13} />
+        </span>
+        <div className="min-w-0">
+          <div className="dub-command-bar__title" title={dubFilename}>
             {dubFilename}
-          </span>
-          <span className="text-fg-muted font-normal whitespace-nowrap text-[0.68rem] normal-case shrink-0">
-            · {formatTime(dubDuration)} · {dubSegments.length} {t('dub.segs')}
-          </span>
-          {activeProjectName && activeProjectName !== dubFilename && (
-            <span className="text-[#b8bb26] ml-[var(--space-2)] whitespace-nowrap text-[0.68rem] normal-case overflow-hidden text-ellipsis min-w-0">
-              — {activeProjectName}
+          </div>
+          <div className="dub-command-bar__meta">
+            <span>{formatTime(dubDuration)}</span>
+            <span aria-hidden="true">·</span>
+            <span>
+              {dubSegments.length} {t('dub.segs')}
             </span>
-          )}
+            {activeProjectName && activeProjectName !== dubFilename && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="dub-command-bar__project" title={activeProjectName}>
+                  {activeProjectName}
+                </span>
+              </>
+            )}
+          </div>
         </div>
-        <div className="flex gap-[6px] items-center shrink-0">
-          {/* Icon-only secondary actions (tooltips carry the labels);
-                  Generate Dub keeps its label as the primary verb. */}
+      </div>
+
+      <DubPipelineStepper
+        dubStep={dubStep}
+        inline
+        variant="command"
+        selectableSteps={pipelineSteps}
+        onStepSelect={onPipelineStep}
+      />
+
+      <div className="dub-command-bar__actions">
+        <div className="dub-command-bar__utilities">
           <Button
             variant="subtle"
             size="sm"
+            className="!size-[26px] !p-0"
             onClick={saveProject}
             title={t('dub.save')}
             aria-label={t('dub.save')}
@@ -71,99 +100,85 @@ export default function DubHeader({
           <Button
             variant="danger"
             size="sm"
+            className="!size-[26px] !p-0"
             onClick={resetDub}
             title={t('dub.reset')}
             aria-label={t('dub.reset')}
           >
             <RotateCcw size={12} />
           </Button>
-          {/* Primary actions live on the header bar (compact) — moved up from the footer. */}
-          <div className="flex gap-[6px] items-center pl-[var(--space-2)] ml-[2px]">
-            {dubStep === 'stopping' ? (
-              <FooterBtn
-                sm
-                tone="stopping"
-                disabled
-                icon={<Loader className="spinner" size={9} />}
-                label={t('dub.stopping')}
-              />
-            ) : dubStep === 'generating' ? (
-              <FooterBtn
-                sm
-                tone="danger"
-                onClick={handleDubStop}
-                icon={<Square size={9} />}
-                label={t('dub.stop_progress', {
-                  current: dubProgress.current,
-                  total: dubProgress.total,
-                })}
-              />
-            ) : (
-              <>
-                <FooterBtn
-                  sm
-                  tone={dubSegments.length && !isTranslating ? 'pink' : 'idle'}
-                  onClick={onGenerateClick}
-                  // The multi-language batch translates between generates while
-                  // dubStep briefly sits back at 'editing' — keep the CTA inert
-                  // during that phase so a re-click can't start a second batch.
-                  disabled={!dubSegments.length || isTranslating}
-                  icon={<Play size={11} />}
-                  label={
-                    multiLangMode && multiLangs.length > 1
-                      ? t('dub.generate_dub_multi', {
-                          count: multiLangs.length,
-                          defaultValue: 'Generate {{count}} dubs',
-                        })
-                      : t('dub.generate_dub')
-                  }
-                />
-                {dubStep === 'done' && incrementalPlan && incrementalPlan.stale?.length > 0 && (
-                  <FooterBtn
-                    sm
-                    tone="pink"
-                    onClick={() =>
-                      handleDubGenerate({ regenOnly: incrementalPlan.stale, preview: true })
-                    }
-                    icon={<Play size={11} />}
-                    label={t('dub.regen_changed', { count: incrementalPlan.stale.length })}
-                  />
-                )}
-              </>
-            )}
-            {dubStep === 'done' && (
-              <FooterBtn
-                sm
-                tone="idle"
-                disabled={qcRunning || !dubSegments.length}
-                onClick={handleDubQc}
-                icon={
-                  qcRunning ? <Loader className="spinner" size={11} /> : <ShieldCheck size={11} />
-                }
-                title={t('dub.qc_btn', { defaultValue: 'Verify dub timing (second-pass check)' })}
-                aria-label={t('dub.qc_btn', {
-                  defaultValue: 'Verify dub timing (second-pass check)',
-                })}
-              />
-            )}
+        </div>
+
+        {dubStep === 'stopping' ? (
+          <FooterBtn
+            sm
+            tone="stopping"
+            disabled
+            className="dub-command-bar__primary"
+            icon={<Loader className="spinner" size={10} />}
+            label={t('dub.stopping')}
+          />
+        ) : dubStep === 'generating' ? (
+          <FooterBtn
+            sm
+            tone="danger"
+            className="dub-command-bar__primary"
+            onClick={handleDubStop}
+            icon={<Square size={9} />}
+            label={t('dub.stop_progress', {
+              current: dubProgress.current,
+              total: dubProgress.total,
+            })}
+          />
+        ) : (
+          <>
             <FooterBtn
               sm
-              tone={dubStep === 'done' ? 'green' : 'idle'}
-              disabled={dubStep !== 'done' && !dubSegments.length}
-              onClick={() => setExportOpen(true)}
-              icon={<Download size={12} />}
-              title={t('dub.export_btn')}
-              aria-label={t('dub.export_btn')}
+              tone={dubSegments.length && !isTranslating ? 'pink' : 'idle'}
+              className="dub-command-bar__primary"
+              onClick={onGenerateClick}
+              disabled={!dubSegments.length || isTranslating}
+              icon={<Play size={11} />}
+              label={generateLabel}
+              aria-label={generateLabel}
             />
-          </div>
-        </div>
+            {dubStep === 'done' && incrementalPlan && incrementalPlan.stale?.length > 0 && (
+              <FooterBtn
+                sm
+                tone="pink"
+                onClick={() =>
+                  handleDubGenerate({ regenOnly: incrementalPlan.stale, preview: true })
+                }
+                icon={<Play size={11} />}
+                label={t('dub.regen_changed', { count: incrementalPlan.stale.length })}
+              />
+            )}
+          </>
+        )}
+
+        {dubStep === 'done' && (
+          <FooterBtn
+            sm
+            tone="idle"
+            disabled={qcRunning || !dubSegments.length}
+            onClick={handleDubQc}
+            icon={qcRunning ? <Loader className="spinner" size={11} /> : <ShieldCheck size={11} />}
+            title={t('dub.qc_btn', { defaultValue: 'Verify dub timing (second-pass check)' })}
+            aria-label={t('dub.qc_btn', {
+              defaultValue: 'Verify dub timing (second-pass check)',
+            })}
+          />
+        )}
+        <FooterBtn
+          sm
+          tone={dubStep === 'done' ? 'green' : 'idle'}
+          disabled={dubStep !== 'done' && !dubSegments.length}
+          onClick={() => setExportOpen(true)}
+          icon={<Download size={12} />}
+          title={t('dub.export_btn')}
+          aria-label={t('dub.export_btn')}
+        />
       </div>
-      <DubPipelineStepper
-        dubStep={dubStep}
-        inline
-        selectableSteps={pipelineSteps}
-        onStepSelect={onPipelineStep}
-      />
     </div>
   );
 }
