@@ -1,4 +1,4 @@
-"""VoiceStudio 0.5.0 release-brand and source-launch contracts."""
+"""VoiceStudio release-brand and source-launch contracts."""
 
 from __future__ import annotations
 
@@ -8,12 +8,12 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_VERSION = "0.5.0"
+CURRENT_VERSION = "0.4.2"
 
 
-def test_release_version_is_0_5_0_everywhere() -> None:
+def test_current_version_is_in_lockstep_everywhere() -> None:
     package = json.loads((ROOT / "frontend/package.json").read_text())
-    assert package["version"] == RELEASE_VERSION
+    assert package["version"] == CURRENT_VERSION
 
     mirrors = {
         "pyproject.toml": r'(?m)^version = "([^"]+)"',
@@ -22,7 +22,7 @@ def test_release_version_is_0_5_0_everywhere() -> None:
     }
     for path, pattern in mirrors.items():
         match = re.search(pattern, (ROOT / path).read_text())
-        assert match and match.group(1) == RELEASE_VERSION, path
+        assert match and match.group(1) == CURRENT_VERSION, path
 
     lock_contracts = {
         "bun.lock": r'"name": "omnivoice-studio",\s+"version": "([^"]+)"',
@@ -33,7 +33,7 @@ def test_release_version_is_0_5_0_everywhere() -> None:
     }
     for path, pattern in lock_contracts.items():
         match = re.search(pattern, (ROOT / path).read_text())
-        assert match and match.group(1) == RELEASE_VERSION, path
+        assert match and match.group(1) == CURRENT_VERSION, path
 
 
 def test_visible_brand_surfaces_say_voicestudio() -> None:
