@@ -88,9 +88,18 @@ describe('EnginesTab', () => {
     expect(document.querySelectorAll('[data-slot="settings-section"]').length).toBe(1);
     // The tab strip offers all three families (with the active engine caption).
     expect(document.querySelectorAll('.engine-matrix__tab-family').length).toBe(3);
+    expect(document.querySelector('.engine-matrix__tabs')).toHaveClass('w-full');
+    expect(screen.getByTestId('engine-list-scroll')).toHaveClass('overflow-y-auto');
+    expect(screen.getByTestId('engine-list-scroll')).toHaveClass('overscroll-contain');
+    expect(screen.getByTestId('engine-list-scroll')).toHaveClass('flex-1');
+    expect(screen.getByTestId('engine-list-scroll')).toHaveClass('gap-[var(--space-2)]');
+    expect(screen.getByTestId('engine-list-scroll')).not.toHaveClass(
+      'max-h-[clamp(260px,58dvh,560px)]',
+    );
     // Only the selected family's engines are on screen.
     expect(screen.queryByText('WhisperX (test)')).not.toBeInTheDocument();
     expect(screen.queryByText('Off (test)')).not.toBeInTheDocument();
+    expect(screen.getByTestId('family-capability-omnivoice')).toHaveTextContent('TTS');
   });
 
   it('switching to the ASR tab shows ASR engines without refetching /engines', async () => {

@@ -253,7 +253,16 @@
     "inbound_revoke_title": "Cabut akses?",
     "inbound_shown_once": "Salin sekarang — ini tidak ditampilkan lagi. Berikan hanya kepada {{label}}.",
     "inbound_shown_once_warning": "Perlakukan seperti kata sandi. Ini tidak terenkripsi saat dikirim, jadi kirimkan lewat kanal pribadi dan gunakan hanya di jaringan yang Anda percayai.",
-    "inbound_title": "Bagikan GPU ini dengan orang lain"
+    "inbound_title": "Bagikan GPU ini dengan orang lain",
+    "history_retention_load_failed": "Tidak dapat memuat batas penyimpanan saat ini",
+    "models_dir_help": "Lokasi penyimpanan bobot model. Pilih drive yang lebih besar atau cepat bila perlu; perubahan berlaku setelah mulai ulang.",
+    "models_dir_saved": "Folder model disimpan — mulai ulang untuk menerapkan",
+    "models_dir_reverted": "Folder bawaan dipulihkan — mulai ulang untuk menerapkan",
+    "models_dir_reset_hint": "Kembalikan ke lokasi cache bawaan",
+    "models_dir_effective": "Sedang digunakan",
+    "models_dir_configured": "Dikonfigurasi",
+    "models_dir_default": "Menggunakan bawaan",
+    "models_dir_restart": "↻ Mulai ulang VoiceStudio untuk memakai lokasi baru."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -368,7 +377,8 @@
     "exportDone": "Buku audio diunduh",
     "exportFailed": "Ekspor gagal — periksa apakah backend sedang berjalan.",
     "global_speed": "Kecepatan",
-    "global_speed_hint": "Kecepatan membaca untuk semua lini tanpa mengesampingkan kecepatannya sendiri"
+    "global_speed_hint": "Kecepatan membaca untuk semua lini tanpa mengesampingkan kecepatannya sendiri",
+    "deleteProjectConfirm": "Hapus proyek ini secara permanen?"
   },
   "common": {
     "open": "Buka",
@@ -404,7 +414,8 @@
     "more_info": "Informasi lebih lanjut",
     "learn_more": "Pelajari lebih lanjut",
     "saving": "Menyimpan…",
-    "remove": "Hapus {{term}}"
+    "remove": "Hapus {{term}}",
+    "not_set": "Belum diatur"
   },
   "launchpad": {
     "greeting": "halo",
@@ -673,7 +684,11 @@
     "selectWithCaveat": "Beralih ke {{engine}} — {{reason}}",
     "generateCaveat": "{{engine}} mungkin lambat di komputer ini — {{reason}}",
     "cpuLongText": "{{engine}} berjalan di CPU di sini dan teks ini panjang — proses mungkin melampaui batas waktu. Teks lebih pendek atau mesin yang dioptimalkan untuk CPU (OmniVoice GGUF, Supertonic-3) akan jauh lebih cepat.",
-    "cpuLongTextTuned": "{{engine}} berjalan di CPU di sini dan teks ini panjang — proses mungkin melampaui batas waktu. Teks lebih pendek, atau membaginya menjadi beberapa bagian, akan jauh lebih cepat."
+    "cpuLongTextTuned": "{{engine}} berjalan di CPU di sini dan teks ini panjang — proses mungkin melampaui batas waktu. Teks lebih pendek, atau membaginya menjadi beberapa bagian, akan jauh lebih cepat.",
+    "familyMatrixTitle": "Mesin {{family}}",
+    "familyDesc_tts": "Mengubah naskah menjadi suara. Studio, Dubbing, dan Batch menggunakan mesin yang aktif.",
+    "familyDesc_asr": "Mengubah audio menjadi teks untuk transkripsi, sulih suara, teks layar, dan dikte.",
+    "familyDesc_llm": "Pembantu teks opsional untuk terjemahan dan penulisan ulang. “Nonaktif” akan melewati langkah tersebut."
   },
   "capture": {
     "desc": "Tombol pintas global hanya berfungsi di aplikasi desktop. UI web menggunakan pintasan <1>Ctrl+Shift+Space</1> dalam halaman saat jendela memiliki fokus.",
@@ -1288,7 +1303,8 @@
     "persona_imported": "Mengimpor \"{{name}}\"{{unverified}}.",
     "persona_unverified_suffix": "(belum diverifikasi)",
     "persona_too_large": "Paket tersebut terlalu besar (maks 100 MB).",
-    "persona_import_failed": "Tidak dapat mengimpor paket persona tersebut."
+    "persona_import_failed": "Tidak dapat mengimpor paket persona tersebut.",
+    "filters": "Filter"
   },
   "transcriptions": {
     "title": "Transkripsi",
@@ -2174,7 +2190,15 @@
     "unstar_take": "Hapus bintang — izinkan pembersihan",
     "play_take": "Muat sebagai keluaran aktif",
     "filter_starred": "Berbintang",
-    "load_take_failed": "Tidak dapat memuat take itu: {{message}}"
+    "load_take_failed": "Tidak dapat memuat take itu: {{message}}",
+    "mode_clone": "Klon",
+    "mode_synth": "Sintesis",
+    "generation_seconds": "{{duration}} dtk",
+    "expand_text": "Perluas teks",
+    "collapse_text": "Ciutkan teks",
+    "seed": "Seed {{seed}}",
+    "load_config": "Muat pengaturan",
+    "delete_confirm": "Hapus item riwayat ini?"
   },
   "openapi": {
     "title": "API VoiceStudio",
@@ -2264,7 +2288,7 @@
     "dismiss": "Tutup",
     "output": "Keluaran",
     "title": "Buku Audio",
-    "subtitle": "Ubah skrip yang dibatasi bab menjadi buku audio m4b yang diberi bab.",
+    "subtitle": "Tulis atau impor cerita Anda, pilih suara untuk setiap peran, lalu ekspor buku audio rapi dengan bab sungguhan.",
     "script": "naskah",
     "script_placeholder": "# Bab Satu\nSuatu ketika… [pause 500ms] berakhir.\n\n# Bab Dua\n[suara: narator] Dan hal itu berlanjut.",
     "default_voice": "Suara bawaan",

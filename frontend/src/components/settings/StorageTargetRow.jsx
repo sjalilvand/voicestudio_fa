@@ -55,11 +55,13 @@ export default function StorageTargetRow({
       // so the id lands on the row itself. Either way `testId` addresses the thing
       // a test would actually interact with.
       data-testid={selectable ? undefined : testId}
-      className={`flex items-start gap-[var(--space-3)] rounded-[var(--radius-md)] p-[var(--space-3)] ${
+      className={`flex items-start gap-[var(--space-3)] rounded-[var(--chrome-radius-pill)] border p-[var(--space-4)] transition-colors ${
         selectable && !disabled ? 'cursor-pointer' : ''
-      } ${checked ? 'bg-[var(--chrome-accent-bg)]' : 'bg-[var(--chrome-hover-bg)]'} ${
-        disabled ? 'opacity-50' : ''
-      }`}
+      } ${
+        checked
+          ? 'border-[color-mix(in_srgb,var(--chrome-accent)_32%,transparent)] bg-[var(--chrome-accent-bg)] shadow-[inset_2px_0_0_var(--chrome-accent)]'
+          : 'border-[color-mix(in_srgb,var(--chrome-fg)_7%,transparent)] bg-[var(--chrome-bg)] hover:bg-[var(--chrome-hover-bg)]'
+      } ${disabled ? 'opacity-50' : ''}`}
     >
       {selectable && (
         <input
@@ -73,7 +75,7 @@ export default function StorageTargetRow({
       )}
 
       <span
-        className={`mt-[1px] flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-sm)] ${
+        className={`mt-[1px] flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--chrome-radius-pill)] bg-[color-mix(in_srgb,var(--chrome-accent)_9%,transparent)] ${
           checked ? 'text-[var(--chrome-accent)]' : 'text-[var(--chrome-fg-muted)]'
         }`}
         aria-hidden="true"

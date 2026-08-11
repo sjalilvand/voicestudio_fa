@@ -15,6 +15,8 @@ export default function LexiconEditor({ t, lex, setLexRow, addLexRow, removeLexR
         <div key={i} className="flex gap-[6px]">
           <input
             className="input-base"
+            name={`lexicon-word-${i}`}
+            autoComplete="off"
             placeholder={t('audiobook.lex_word')}
             value={row.word}
             onChange={setLexRow(i, 'word')}
@@ -23,6 +25,8 @@ export default function LexiconEditor({ t, lex, setLexRow, addLexRow, removeLexR
           />
           <input
             className="input-base"
+            name={`lexicon-pronunciation-${i}`}
+            autoComplete="off"
             placeholder={t('audiobook.lex_say')}
             value={row.say}
             onChange={setLexRow(i, 'say')}

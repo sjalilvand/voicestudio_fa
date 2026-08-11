@@ -140,7 +140,8 @@
     "minutes": "~{{count}} min",
     "chars": "{{count}} chars",
     "exportDone": "Audiobook downloaded",
-    "exportFailed": "Export failed — check the backend is running."
+    "exportFailed": "Export failed — check the backend is running.",
+    "deleteProjectConfirm": "Delete this project permanently?"
   },
   "nav": {
     "launchpad": "Launchpad",
@@ -181,7 +182,7 @@
     "dismiss": "Dismiss",
     "output": "Output",
     "title": "Audiobook",
-    "subtitle": "Turn a chapter-delimited script into a chapterized m4b audiobook.",
+    "subtitle": "Write or import your story, cast every voice, then export a polished audiobook with real chapters.",
     "script": "Script",
     "script_placeholder": "# Chapter One\nOnce upon a time… [pause 500ms] the end.\n\n# Chapter Two\n[voice:narrator] And so it continued.",
     "default_voice": "Default voice",
@@ -821,7 +822,15 @@
     "inbound_connect": "Connect",
     "inbound_connected": "connected",
     "inbound_connecting": "connecting…",
-    "inbound_forget": "Remove"
+    "inbound_forget": "Remove",
+    "models_dir_help": "Where model weights are stored. Choose a larger or faster drive when needed; changes apply after restart.",
+    "models_dir_saved": "Models directory saved — restart to apply",
+    "models_dir_reverted": "Default directory restored — restart to apply",
+    "models_dir_reset_hint": "Revert to the default cache location",
+    "models_dir_effective": "Effective now",
+    "models_dir_configured": "Configured",
+    "models_dir_default": "Using default",
+    "models_dir_restart": "↻ Restart VoiceStudio to use the new location."
   },
   "about": {
     "app": "App",
@@ -1580,7 +1589,8 @@
     "submit_failed": "Could not open the submission form.",
     "submit_preset": "Submit a preset",
     "submit_voice": "Submit a voice",
-    "zone_community": "Community"
+    "zone_community": "Community",
+    "filters": "Filters"
   },
   "archetypes": {
     "featured": "Featured",
@@ -2094,7 +2104,8 @@
     "learn_more": "Learn more",
     "saving": "Saving…",
     "unknown": "unknown",
-    "remove": "Remove {{term}}"
+    "remove": "Remove {{term}}",
+    "not_set": "Not set"
   },
   "keyboard": {
     "title": "Keyboard shortcuts",
@@ -2912,7 +2923,15 @@
     "unstar_take": "Unstar — allow cleanup",
     "play_take": "Load as active output",
     "filter_starred": "Starred",
-    "load_take_failed": "Couldn't load that take: {{message}}"
+    "load_take_failed": "Couldn't load that take: {{message}}",
+    "mode_clone": "Clone",
+    "mode_synth": "Synthesis",
+    "generation_seconds": "{{duration}}s",
+    "expand_text": "Expand text",
+    "collapse_text": "Collapse text",
+    "seed": "Seed {{seed}}",
+    "load_config": "Load settings",
+    "delete_confirm": "Delete this history item?"
   },
   "recording": {
     "cleaned_loaded": "Recording cleaned & loaded!",

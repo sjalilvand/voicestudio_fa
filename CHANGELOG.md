@@ -30,6 +30,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Remote GPU workers render audiobooks chapter by chapter, with automatic per-chapter local fallback and one combined notice if the worker drops out. (#1478)
 - Remote GPU workers can now run a job to completion: long renders no longer die at two minutes, a worker that drops and reconnects mid-render keeps its work, and a timed-out job no longer takes the worker offline for good. Placing a job still needs the development-only `POST /workers/tasks`; wiring the app's own Synthesize button to it comes next.
+- Voice, Stories, Audiobook, Gallery, Settings, profiles, and Launchpad now use compact, responsive layouts with accessible controls. (#1491)
 - Dubbing's Generate Dub, Verify, and Export actions now use a compact hierarchy with visible labels, responsive reflow, and motion-safe feedback. (#1493)
 - The Dub workspace now has a compact production command bar, responsive flag-based language cards, media previews in Dub History, and a narrower Projects rail. (#1489)
 - VoiceStudio now uses one waveform-and-spark mark across the title bar, About screen, README, browser favicon, and every desktop/platform icon. (#1487)

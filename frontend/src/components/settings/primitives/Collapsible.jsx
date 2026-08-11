@@ -22,13 +22,13 @@ export default function Collapsible({ title, icon: Icon, defaultOpen = false, ba
   return (
     <div
       className={cn(
-        'border border-transparent rounded-[var(--chrome-radius-pill)] mt-[var(--space-4)] overflow-hidden',
+        'mt-[var(--space-4)] overflow-hidden rounded-[var(--chrome-radius-pill)] border border-[color-mix(in_srgb,var(--chrome-fg)_7%,transparent)] bg-[var(--chrome-bg)]',
         open && 'is-open',
       )}
     >
       <button
         type="button"
-        className="flex items-center gap-[var(--space-3)] w-full px-[var(--space-4)] py-[var(--space-3)] border-0 bg-transparent text-[color:var(--chrome-fg-muted)] [font-family:var(--font-sans)] text-[length:var(--text-sm)] font-semibold cursor-pointer transition-[background,color] duration-[120ms] hover:bg-[var(--chrome-hover-bg)] hover:text-[color:var(--chrome-fg)] focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]"
+        className="flex w-full cursor-pointer items-center gap-[var(--space-3)] border-0 bg-transparent px-[var(--space-4)] py-[var(--space-4)] [font-family:var(--font-sans)] text-[length:var(--text-sm)] font-semibold text-[color:var(--chrome-fg-muted)] transition-[background,color] duration-[120ms] hover:bg-[var(--chrome-hover-bg)] hover:text-[color:var(--chrome-fg)] focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
@@ -38,7 +38,10 @@ export default function Collapsible({ title, icon: Icon, defaultOpen = false, ba
           aria-hidden="true"
         />
         {Icon && (
-          <span className="inline-flex text-[color:var(--chrome-fg-dim)]" aria-hidden="true">
+          <span
+            className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-[var(--chrome-radius-pill)] bg-[color-mix(in_srgb,var(--chrome-accent)_9%,transparent)] text-[color:var(--chrome-accent)]"
+            aria-hidden="true"
+          >
             <Icon size={14} />
           </span>
         )}
@@ -50,7 +53,7 @@ export default function Collapsible({ title, icon: Icon, defaultOpen = false, ba
         )}
       </button>
       {open && (
-        <div className="px-[var(--space-5)] pt-[var(--space-2)] pb-[var(--space-4)] border-t border-transparent [&>[data-slot=setting-row]:last-child]:pb-0">
+        <div className="border-t border-[color-mix(in_srgb,var(--chrome-fg)_7%,transparent)] px-[var(--space-5)] pb-[var(--space-4)] pt-[var(--space-2)] [&>[data-slot=setting-row]:last-child]:pb-0">
           {children}
         </div>
       )}

@@ -253,7 +253,16 @@
     "inbound_revoke_title": "移除存取權？",
     "inbound_shown_once": "請立即複製——不會再次顯示。只交給 {{label}}。",
     "inbound_shown_once_warning": "請像對待密碼一樣對待它。傳輸過程未加密，請透過私密管道傳送，並且只在你信任的網路中使用。",
-    "inbound_title": "與他人共享這張 GPU"
+    "inbound_title": "與他人共享這張 GPU",
+    "history_retention_load_failed": "無法載入目前的保留上限",
+    "models_dir_help": "模型權重的儲存位置。需要時可選擇容量更大或速度更快的磁碟；變更將在重新啟動後生效。",
+    "models_dir_saved": "模型資料夾已儲存 — 重新啟動後生效",
+    "models_dir_reverted": "已還原預設資料夾 — 重新啟動後生效",
+    "models_dir_reset_hint": "還原預設快取位置",
+    "models_dir_effective": "目前使用",
+    "models_dir_configured": "已設定",
+    "models_dir_default": "使用預設值",
+    "models_dir_restart": "↻ 重新啟動 VoiceStudio 以使用新位置。"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -368,7 +377,8 @@
     "exportDone": "有聲書已下載",
     "exportFailed": "匯出失敗 — 檢查後端是否正在運作。",
     "global_speed": "速度",
-    "global_speed_hint": "所有線路的讀取速度，沒有自己的速度覆蓋"
+    "global_speed_hint": "所有線路的讀取速度，沒有自己的速度覆蓋",
+    "deleteProjectConfirm": "要永久刪除此專案嗎？"
   },
   "common": {
     "open": "打開",
@@ -404,7 +414,8 @@
     "more_info": "更多資訊",
     "learn_more": "了解更多",
     "saving": "儲存中…",
-    "remove": "刪除 {{term}}"
+    "remove": "刪除 {{term}}",
+    "not_set": "未設定"
   },
   "launchpad": {
     "greeting": "你好",
@@ -673,7 +684,11 @@
     "selectWithCaveat": "已切換至 {{engine}} — {{reason}}",
     "generateCaveat": "{{engine}} 在這台機器上可能較慢 — {{reason}}",
     "cpuLongText": "{{engine}} 在此機器上使用 CPU 執行，而這段文字較長 — 生成可能超出時間預算。縮短文字或改用針對 CPU 最佳化的引擎（OmniVoice GGUF、Supertonic-3）會快得多。",
-    "cpuLongTextTuned": "{{engine}} 在此機器上使用 CPU 執行，而這段文字較長 — 生成可能超出時間預算。縮短文字或分成幾次生成會快得多。"
+    "cpuLongTextTuned": "{{engine}} 在此機器上使用 CPU 執行，而這段文字較長 — 生成可能超出時間預算。縮短文字或分成幾次生成會快得多。",
+    "familyMatrixTitle": "{{family}} 引擎",
+    "familyDesc_tts": "將腳本轉換為語音。標示為啟用的引擎供工作室、配音和批次處理使用。",
+    "familyDesc_asr": "將音訊轉換為文字，用於轉錄、配音、字幕和聽寫。",
+    "familyDesc_llm": "用於翻譯和改寫的選用文字助理。「關閉」會略過這些步驟。"
   },
   "capture": {
     "desc": "全域熱鍵僅適用於桌面應用程式。當視窗具有焦點時，Web UI 使用頁內 <1>Ctrl+Shift+Space</1> 快速鍵。",
@@ -1288,7 +1303,8 @@
     "persona_imported": "導入“{{name}}”{{unverified}}。",
     "persona_unverified_suffix": "（未經驗證）",
     "persona_too_large": "該捆綁包太大（最大 100 MB）。",
-    "persona_import_failed": "無法匯入該角色包。"
+    "persona_import_failed": "無法匯入該角色包。",
+    "filters": "篩選條件"
   },
   "transcriptions": {
     "title": "轉錄",
@@ -2174,7 +2190,15 @@
     "unstar_take": "取消加星 — 允許清理",
     "play_take": "載入為目前輸出",
     "filter_starred": "已加星",
-    "load_take_failed": "無法載入該次生成:{{message}}"
+    "load_take_failed": "無法載入該次生成:{{message}}",
+    "mode_clone": "複製",
+    "mode_synth": "合成",
+    "generation_seconds": "{{duration}} 秒",
+    "expand_text": "展開文字",
+    "collapse_text": "收合文字",
+    "seed": "種子 {{seed}}",
+    "load_config": "載入設定",
+    "delete_confirm": "刪除此歷史記錄嗎？"
   },
   "openapi": {
     "title": "VoiceStudio API",
@@ -2264,7 +2288,7 @@
     "dismiss": "關閉",
     "output": "輸出",
     "title": "有聲書",
-    "subtitle": "將章節分隔的腳本轉換為章節化的 m4b 有聲書。",
+    "subtitle": "撰寫或匯入故事，為每個角色分配聲音，再匯出具備真實章節的精緻有聲書。",
     "script": "腳本",
     "script_placeholder": "#第一章\n從前…[停頓 500 毫秒]結束。\n\n# 第二章\n[聲音：旁白] 就這樣繼續下去。",
     "default_voice": "預設語音",

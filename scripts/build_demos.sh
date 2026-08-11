@@ -102,7 +102,7 @@ echo "── Voice cloning demo (24kHz mono 16-bit) ─────────�
 # Voice: Samantha (en_US adult female, the macOS default — clean, neutral,
 # warm). Reference text from the cloning spec.
 render "Samantha" \
-  "Hi, I'm the VoiceStudio demo voice. Everything you hear me say from now on was synthesized on your own machine. No cloud, no account, just you and the model." \
+  "Hey. I'm the VoiceStudio demo voice. I was made right here, on your machine: private, local, and ready whenever you are." \
   "${SAMPLES_DIR}/demo_voice.wav" 24000
 
 # Pre-rendered clone output — same voice, different text. Used when the user

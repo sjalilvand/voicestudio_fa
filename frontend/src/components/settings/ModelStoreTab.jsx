@@ -374,7 +374,11 @@ export default function ModelStoreTab({ info, modelBadge }) {
 
   return (
     <>
-      <section className={SETTINGS_SECTION_SURFACE} data-slot="settings-section">
+      <section
+        className={`${SETTINGS_SECTION_SURFACE} flex min-h-[95%] flex-col`}
+        data-slot="settings-section"
+        data-testid="model-list-panel"
+      >
         <div className="flex flex-wrap items-center justify-between gap-[var(--space-3)] px-[2px] pb-[6px] pt-[2px] font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-xs)] text-[var(--chrome-fg-muted)] max-[580px]:flex-col max-[580px]:items-start">
           <div className="inline-flex flex-wrap items-center gap-[var(--space-2)]">
             <span>
@@ -502,17 +506,19 @@ export default function ModelStoreTab({ info, modelBadge }) {
           />
         </div>
 
-        {sections.map((group) => (
-          <ModelSection
-            key={group.key}
-            sectionKey={group.key}
-            title={MODEL_SECTION_LABEL[group.key] || group.key}
-            group={group}
-            columns={columns}
-            getRowRuntime={getRowRuntime}
-            t={t}
-          />
-        ))}
+        <div className="min-h-0 flex-1" data-testid="model-list-area">
+          {sections.map((group) => (
+            <ModelSection
+              key={group.key}
+              sectionKey={group.key}
+              title={MODEL_SECTION_LABEL[group.key] || group.key}
+              group={group}
+              columns={columns}
+              getRowRuntime={getRowRuntime}
+              t={t}
+            />
+          ))}
+        </div>
         {/* Global empty state — every section filtered out. Same actionable
           "Clear filters" affordance the table-level empty state used to carry. */}
         {sections.length === 0 && allModels.length > 0 && (

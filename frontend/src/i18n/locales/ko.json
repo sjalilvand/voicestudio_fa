@@ -253,7 +253,16 @@
     "inbound_revoke_title": "접근 권한을 제거할까요?",
     "inbound_shown_once": "지금 복사하세요. 다시 표시되지 않습니다. {{label}} 에게만 전달하세요.",
     "inbound_shown_once_warning": "비밀번호처럼 다루세요. 전송 중 암호화되지 않으므로 비공개 수단으로 전달하고 신뢰하는 네트워크에서만 사용하세요.",
-    "inbound_title": "이 GPU를 다른 사람과 공유"
+    "inbound_title": "이 GPU를 다른 사람과 공유",
+    "history_retention_load_failed": "현재 보존 한도를 불러올 수 없습니다",
+    "models_dir_help": "모델 가중치가 저장되는 위치입니다. 필요하면 더 크거나 빠른 드라이브를 선택하세요. 변경 사항은 다시 시작한 후 적용됩니다.",
+    "models_dir_saved": "모델 폴더 저장됨 — 적용하려면 다시 시작하세요",
+    "models_dir_reverted": "기본 폴더 복원됨 — 적용하려면 다시 시작하세요",
+    "models_dir_reset_hint": "기본 캐시 위치로 되돌리기",
+    "models_dir_effective": "현재 사용 중",
+    "models_dir_configured": "설정됨",
+    "models_dir_default": "기본값 사용",
+    "models_dir_restart": "↻ 새 위치를 사용하려면 VoiceStudio를 다시 시작하세요."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -368,7 +377,8 @@
     "exportDone": "오디오북 다운로드됨",
     "exportFailed": "내보내기 실패 - 백엔드가 실행 중인지 확인하세요.",
     "global_speed": "속도",
-    "global_speed_hint": "자체 속도 재정의 없이 모든 라인에 대한 읽기 속도"
+    "global_speed_hint": "자체 속도 재정의 없이 모든 라인에 대한 읽기 속도",
+    "deleteProjectConfirm": "이 프로젝트를 영구적으로 삭제할까요?"
   },
   "common": {
     "open": "열기",
@@ -404,7 +414,8 @@
     "more_info": "추가 정보",
     "learn_more": "자세히 알아보기",
     "saving": "저장 중…",
-    "remove": "{{term}} 삭제"
+    "remove": "{{term}} 삭제",
+    "not_set": "설정되지 않음"
   },
   "launchpad": {
     "greeting": "안녕하세요",
@@ -673,7 +684,11 @@
     "selectWithCaveat": "{{engine}}(으)로 전환했습니다 — {{reason}}",
     "generateCaveat": "이 컴퓨터에서는 {{engine}}이(가) 느릴 수 있습니다 — {{reason}}",
     "cpuLongText": "여기서는 {{engine}}이(가) CPU에서 실행되며 이 텍스트는 길어 생성이 시간 제한을 초과할 수 있습니다. 더 짧은 텍스트나 CPU에 최적화된 엔진(OmniVoice GGUF, Supertonic-3)이 훨씬 빠릅니다.",
-    "cpuLongTextTuned": "여기서는 {{engine}}이(가) CPU에서 실행되며 이 텍스트는 길어 생성이 시간 제한을 초과할 수 있습니다. 텍스트를 줄이거나 여러 번에 나누면 훨씬 빠릅니다."
+    "cpuLongTextTuned": "여기서는 {{engine}}이(가) CPU에서 실행되며 이 텍스트는 길어 생성이 시간 제한을 초과할 수 있습니다. 텍스트를 줄이거나 여러 번에 나누면 훨씬 빠릅니다.",
+    "familyMatrixTitle": "{{family}} 엔진",
+    "familyDesc_tts": "스크립트를 음성으로 변환합니다. 활성으로 표시된 엔진을 스튜디오, 더빙, 일괄 작업에서 사용합니다.",
+    "familyDesc_asr": "오디오를 텍스트로 변환하여 더빙, 자막, 받아쓰기에 사용합니다.",
+    "familyDesc_llm": "번역과 다시 쓰기를 위한 선택적 텍스트 도우미입니다. “끔”이면 해당 단계를 건너뜁니다."
   },
   "capture": {
     "desc": "전역 단축키는 데스크톱 앱에서만 작동합니다. 웹 UI는 창에 포커스가 있는 동안 페이지 내 <1>Ctrl+Shift+Space</1> 단축키를 사용합니다.",
@@ -1288,7 +1303,8 @@
     "persona_imported": "\"{{name}}\"{{unverified}}을(를) 가져왔습니다.",
     "persona_unverified_suffix": "(확인되지 않음)",
     "persona_too_large": "번들이 너무 큽니다(최대 100MB).",
-    "persona_import_failed": "해당 페르소나 번들을 가져올 수 없습니다."
+    "persona_import_failed": "해당 페르소나 번들을 가져올 수 없습니다.",
+    "filters": "필터"
   },
   "transcriptions": {
     "title": "전사",
@@ -2174,7 +2190,15 @@
     "unstar_take": "별표 해제 — 정리 허용",
     "play_take": "활성 출력으로 불러오기",
     "filter_starred": "별표됨",
-    "load_take_failed": "테이크를 불러오지 못했습니다: {{message}}"
+    "load_take_failed": "테이크를 불러오지 못했습니다: {{message}}",
+    "mode_clone": "복제",
+    "mode_synth": "합성",
+    "generation_seconds": "{{duration}}초",
+    "expand_text": "텍스트 펼치기",
+    "collapse_text": "텍스트 접기",
+    "seed": "시드 {{seed}}",
+    "load_config": "설정 불러오기",
+    "delete_confirm": "이 기록 항목을 삭제할까요?"
   },
   "openapi": {
     "title": "VoiceStudio API",
@@ -2264,7 +2288,7 @@
     "dismiss": "닫기",
     "output": "출력",
     "title": "Audiobook",
-    "subtitle": "장으로 구분된 스크립트를 장으로 구분된 m4b 오디오북으로 바꿔보세요.",
+    "subtitle": "이야기를 쓰거나 가져오고, 각 배역의 목소리를 정한 다음 실제 챕터가 있는 완성도 높은 오디오북으로 내보내세요.",
     "script": "스크립트",
     "script_placeholder": "# Chapter One\nOnce upon a time… [pause 500ms] the end.\n\n# Chapter Two\n[voice:narrator] And so it continued.",
     "default_voice": "Default voice",

@@ -1,10 +1,19 @@
 import React, { useState } from 'react';
-import { ChevronDown, Smile } from 'lucide-react';
+import {
+  AudioLines,
+  Bold,
+  ChevronDown,
+  ChevronsLeft,
+  ChevronsRight,
+  Pause,
+  Smile,
+  SpellCheck,
+} from 'lucide-react';
 import { TAGS } from '../../utils/constants';
 
 // Compact chrome pill button — same visual language as the clone Insert menu.
 const PILL =
-  'inline-flex items-center gap-[4px] border border-transparent bg-[var(--chrome-bg)] text-[var(--chrome-fg-muted)] px-[8px] py-[3px] rounded-[var(--chrome-radius-pill)] [font-family:var(--chrome-font-mono)] text-[0.66rem] whitespace-nowrap cursor-pointer transition-colors duration-[120ms] hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--chrome-fg)] focus-visible:[outline:2px_solid_var(--chrome-accent)] focus-visible:[outline-offset:1px]';
+  'inline-flex h-[26px] items-center justify-center gap-[4px] border border-transparent bg-[var(--chrome-bg)] text-[var(--chrome-fg-muted)] px-[7px] py-0 rounded-[var(--chrome-radius-pill)] [font-family:var(--chrome-font-mono)] text-[0.62rem] whitespace-nowrap cursor-pointer transition-colors duration-[120ms] hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--chrome-fg)] focus-visible:[outline:2px_solid_var(--chrome-accent)] focus-visible:[outline-offset:1px]';
 const TAG_BTN =
   'border border-transparent bg-transparent text-[var(--chrome-fg-muted)] px-[9px] py-[3px] rounded-[var(--chrome-radius-pill)] [font-family:var(--chrome-font-mono)] font-medium text-[0.66rem] whitespace-nowrap cursor-pointer transition-colors duration-[120ms] hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--chrome-fg)]';
 
@@ -78,39 +87,82 @@ export default function MarkupToolbar({ t, textareaRef, text, setText }) {
 
   return (
     <div
-      className="flex flex-wrap items-center gap-[6px] relative"
+      className="relative flex flex-wrap items-center gap-[4px]"
       role="toolbar"
       aria-label={t('audiobook.markup_toolbar')}
     >
-      <button type="button" className={PILL} onClick={() => insert('[pause 500ms]')}>
-        {t('audiobook.insert_pause')}
+      <button
+        type="button"
+        className={PILL}
+        onClick={() => insert('[pause 500ms]')}
+        aria-label={t('audiobook.insert_pause')}
+        title={t('audiobook.insert_pause')}
+      >
+        <Pause size={11} /> {t('audiobook.insert_pause')}
       </button>
-      <button type="button" className={PILL} onClick={insertVoice}>
-        {t('audiobook.insert_voice')}
+      <button
+        type="button"
+        className={PILL}
+        onClick={insertVoice}
+        aria-label={t('audiobook.insert_voice')}
+        title={t('audiobook.insert_voice')}
+      >
+        <AudioLines size={11} /> {t('audiobook.insert_voice')}
       </button>
-      <button type="button" className={PILL} onClick={() => wrap('[slow]', '[/slow]')}>
-        {t('audiobook.insert_slow')}
+      <button
+        type="button"
+        className={PILL}
+        onClick={() => wrap('[slow]', '[/slow]')}
+        aria-label={t('audiobook.insert_slow')}
+        title={t('audiobook.insert_slow')}
+      >
+        <ChevronsLeft size={11} /> {t('audiobook.insert_slow')}
       </button>
-      <button type="button" className={PILL} onClick={() => wrap('[fast]', '[/fast]')}>
-        {t('audiobook.insert_fast')}
+      <button
+        type="button"
+        className={PILL}
+        onClick={() => wrap('[fast]', '[/fast]')}
+        aria-label={t('audiobook.insert_fast')}
+        title={t('audiobook.insert_fast')}
+      >
+        <ChevronsRight size={11} /> {t('audiobook.insert_fast')}
       </button>
-      <button type="button" className={PILL} onClick={() => wrap('[emphasis]', '[/emphasis]')}>
-        {t('audiobook.insert_emphasis')}
+      <button
+        type="button"
+        className={PILL}
+        onClick={() => wrap('[emphasis]', '[/emphasis]')}
+        aria-label={t('audiobook.insert_emphasis')}
+        title={t('audiobook.insert_emphasis')}
+      >
+        <Bold size={11} /> {t('audiobook.insert_emphasis')}
       </button>
-      <button type="button" className={PILL} onClick={() => wrap('[spell]', '[/spell]')}>
-        {t('audiobook.insert_spell')}
+      <button
+        type="button"
+        className={PILL}
+        onClick={() => wrap('[spell]', '[/spell]')}
+        aria-label={t('audiobook.insert_spell')}
+        title={t('audiobook.insert_spell')}
+      >
+        <SpellCheck size={11} /> {t('audiobook.insert_spell')}
       </button>
       <button
         type="button"
         className={PILL}
         onClick={() => setReactionsOpen((o) => !o)}
         aria-expanded={reactionsOpen}
+        aria-label={t('audiobook.insert_reactions')}
+        title={t('audiobook.insert_reactions')}
       >
-        <Smile size={11} /> {t('audiobook.insert_reactions')} <ChevronDown size={10} />
+        <Smile size={11} /> {t('audiobook.insert_reactions')} <ChevronDown size={8} />
       </button>
       {reactionsOpen && (
         <>
-          <div className="fixed inset-0 z-[19]" onClick={() => setReactionsOpen(false)} />
+          <button
+            type="button"
+            className="fixed inset-0 z-[19] cursor-default border-0 bg-transparent p-0"
+            onClick={() => setReactionsOpen(false)}
+            aria-label={t('common.close')}
+          />
           <div
             className="absolute left-0 top-[calc(100%+6px)] z-20 flex flex-wrap gap-1 max-w-[min(360px,calc(100vw-16px))] max-h-[min(280px,calc(100vh-120px))] overflow-y-auto overscroll-contain p-2 bg-[var(--chrome-bg)] border border-transparent rounded-[10px] shadow-[0_8px_24px_rgba(0,0,0,0.45)]"
             role="menu"

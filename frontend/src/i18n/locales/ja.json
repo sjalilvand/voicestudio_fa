@@ -253,7 +253,16 @@
     "inbound_revoke_title": "アクセスを削除しますか？",
     "inbound_shown_once": "今すぐコピーしてください。再表示はされません。{{label}} にのみ渡してください。",
     "inbound_shown_once_warning": "パスワードと同じように扱ってください。通信は暗号化されないため、プライベートな手段で渡し、信頼できるネットワークでのみ使用してください。",
-    "inbound_title": "この GPU を他の人と共有"
+    "inbound_title": "この GPU を他の人と共有",
+    "history_retention_load_failed": "現在の保持上限を読み込めませんでした",
+    "models_dir_help": "モデルの重みを保存する場所です。必要に応じて容量が大きい、または高速なドライブを選択してください。変更は再起動後に適用されます。",
+    "models_dir_saved": "モデルフォルダーを保存しました — 適用するには再起動してください",
+    "models_dir_reverted": "既定のフォルダーに戻しました — 適用するには再起動してください",
+    "models_dir_reset_hint": "既定のキャッシュ場所に戻す",
+    "models_dir_effective": "現在使用中",
+    "models_dir_configured": "設定済み",
+    "models_dir_default": "既定値を使用",
+    "models_dir_restart": "↻ 新しい場所を使用するには VoiceStudio を再起動してください。"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -368,7 +377,8 @@
     "exportDone": "オーディオブックをダウンロードしました",
     "exportFailed": "エクスポートに失敗しました — バックエンドが実行中であることを確認してください。",
     "global_speed": "速度",
-    "global_speed_hint": "独自の速度オーバーライドを行わないすべての行の読み取り速度"
+    "global_speed_hint": "独自の速度オーバーライドを行わないすべての行の読み取り速度",
+    "deleteProjectConfirm": "このプロジェクトを完全に削除しますか？"
   },
   "common": {
     "open": "開く",
@@ -404,7 +414,8 @@
     "more_info": "詳細情報",
     "learn_more": "さらに詳しく",
     "saving": "保存中…",
-    "remove": "{{term}} を削除"
+    "remove": "{{term}} を削除",
+    "not_set": "未設定"
   },
   "launchpad": {
     "greeting": "こんにちは。",
@@ -673,7 +684,11 @@
     "selectWithCaveat": "{{engine}} に切り替えました — {{reason}}",
     "generateCaveat": "このマシンでは {{engine}} の生成が遅くなる可能性があります — {{reason}}",
     "cpuLongText": "ここでは {{engine}} が CPU で実行され、このテキストは長いため、生成が時間制限を超える可能性があります。短いテキスト、または CPU 向けエンジン（OmniVoice GGUF、Supertonic-3）のほうが大幅に高速です。",
-    "cpuLongTextTuned": "ここでは {{engine}} が CPU で実行され、このテキストは長いため、生成が時間制限を超える可能性があります。テキストを短くするか、数回に分けたほうが大幅に高速です。"
+    "cpuLongTextTuned": "ここでは {{engine}} が CPU で実行され、このテキストは長いため、生成が時間制限を超える可能性があります。テキストを短くするか、数回に分けたほうが大幅に高速です。",
+    "familyMatrixTitle": "{{family}} エンジン",
+    "familyDesc_tts": "スクリプトを音声に変換します。有効と表示されたエンジンがスタジオ、ダビング、バッチで使用されます。",
+    "familyDesc_asr": "音声をテキストに変換し、ダビング、字幕、音声入力の文字起こしに使用します。",
+    "familyDesc_llm": "翻訳や書き換え用の任意のテキスト補助です。「オフ」にするとこれらの手順を省略します。"
   },
   "capture": {
     "desc": "グローバル ホットキーはデスクトップ アプリでのみ機能します。 Web UI は、ウィンドウにフォーカスがある間、ページ内 <1>Ctrl+Shift+Space</1> ショートカットを使用します。",
@@ -1288,7 +1303,8 @@
     "persona_imported": "「{{name}}」{{unverified}} をインポートしました。",
     "persona_unverified_suffix": "(未確認)",
     "persona_too_large": "そのバンドルは大きすぎます (最大 100 MB)。",
-    "persona_import_failed": "そのペルソナ バンドルをインポートできませんでした。"
+    "persona_import_failed": "そのペルソナ バンドルをインポートできませんでした。",
+    "filters": "フィルター"
   },
   "transcriptions": {
     "title": "転写",
@@ -2174,7 +2190,15 @@
     "unstar_take": "スター解除 — クリーンアップを許可",
     "play_take": "アクティブな出力として読み込む",
     "filter_starred": "スター付き",
-    "load_take_failed": "テイクを読み込めませんでした: {{message}}"
+    "load_take_failed": "テイクを読み込めませんでした: {{message}}",
+    "mode_clone": "クローン",
+    "mode_synth": "音声合成",
+    "generation_seconds": "{{duration}}秒",
+    "expand_text": "テキストを展開",
+    "collapse_text": "テキストを折りたたむ",
+    "seed": "シード {{seed}}",
+    "load_config": "設定を読み込む",
+    "delete_confirm": "この履歴項目を削除しますか？"
   },
   "openapi": {
     "title": "VoiceStudio API",
@@ -2264,7 +2288,7 @@
     "dismiss": "閉じる",
     "output": "出力",
     "title": "オーディオブック",
-    "subtitle": "チャプター区切りのスクリプトをチャプター化された m4b オーディオブックに変換します。",
+    "subtitle": "物語を書いたり読み込んだり、声を配役して、本格的な章付きオーディオブックを書き出せます。",
     "script": "スクリプト",
     "script_placeholder": "# 第一章\nむかしむかし… [500 ミリ秒停止] 終了。\n\n# 第二章\n[音声:ナレーター] そして、それは続きました。",
     "default_voice": "デフォルトボイス",

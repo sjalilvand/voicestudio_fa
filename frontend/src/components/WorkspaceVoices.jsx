@@ -1,8 +1,8 @@
 /**
- * WorkspaceVoices — the right-side "Saved voices" panel.
+ * WorkspaceVoices — the left-side "Saved voices" panel.
  *
  * Relocates the saved-profile list that used to live in the left Sidebar
- * (the "Designed voices" / "Voice clones" section) to the right column, so
+ * (the "Designed voices" / "Voice clones" section) to the workspace rail, so
  * the Voice workspace can dissolve the left sidebar entirely. Profiles are
  * scoped by define-method: 'audio' shows reference-audio profiles
  * (no instruct), 'design' shows designed profiles (have instruct).

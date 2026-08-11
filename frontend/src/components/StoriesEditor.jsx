@@ -9,7 +9,7 @@
  *
  * Spec: docs/superpowers/specs/2026-05-30-stories-editor-studio-design.md
  */
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   Plus,
   Play,
@@ -64,21 +64,21 @@ import { storyToSpans } from '../utils/storyToSpans';
 import { consumeLongformStream } from '../utils/longformStream';
 import { reorder } from '../utils/storyReorder';
 import { effectiveProfile, effectiveSpeed, castMember, nextCastColor } from '../utils/storyCast';
+import { askConfirm } from '../utils/dialog';
+import { SAMPLE_STORY_CAST, SAMPLE_STORY_LINES, SAMPLE_STORY_NAME } from '../data/sampleStory';
 
 // ── Shared class strings (replacing the old stories-* BEM chrome) ─────────
-const ADD_BTN =
-  'inline-flex items-center gap-[4px] bg-transparent border border-border text-fg [font-size:var(--text-xs)] px-[8px] py-[3px] rounded-sm cursor-pointer hover:text-accent';
 const NAME_INPUT =
   'bg-bg-elev-2 border border-border rounded-sm text-fg [font-size:var(--text-xs)] px-[8px] py-[4px]';
 const SELECT_CHROME =
   'bg-bg-elev-2 border border-border rounded-md text-fg [font-size:var(--text-xs)] px-[6px] py-[4px] [font-family:var(--font-sans)] [color-scheme:dark]';
 const DEL_BTN =
-  'bg-transparent text-fg-subtle cursor-pointer w-[22px] h-[22px] flex items-center justify-center rounded-sm hover:enabled:text-danger hover:enabled:bg-white/[0.06] disabled:opacity-35 disabled:cursor-not-allowed';
+  'bg-transparent text-fg-subtle cursor-pointer w-[26px] h-[26px] flex items-center justify-center rounded-md hover:enabled:text-danger hover:enabled:bg-white/[0.06] focus-visible:[box-shadow:var(--focus-ring)] disabled:opacity-35 disabled:cursor-not-allowed';
 const RESET_BTN =
   'bg-transparent border border-border text-fg-subtle [font-size:var(--text-xs)] px-[8px] py-[2px] rounded-sm cursor-pointer hover:text-fg';
 const SPEED_RANGE = 'w-[120px]';
 const TRACK_BTN =
-  'w-[20px] h-[20px] flex items-center justify-center bg-transparent text-fg-subtle cursor-pointer rounded-sm [transition:color_0.15s,background_0.15s] p-0 hover:bg-white/[0.06]';
+  'w-[26px] h-[26px] flex items-center justify-center bg-transparent text-fg-subtle cursor-pointer rounded-md [transition:color_0.15s,background_0.15s,opacity_0.15s] p-0 hover:bg-white/[0.06] focus-visible:[box-shadow:var(--focus-ring)]';
 
 // Trigger a browser download for a Blob.
 function download(blob, filename) {
@@ -170,6 +170,8 @@ const STORY_TONES = [
   { tag: '[dissatisfaction-hnn]', icon: Annoyed, key: 'dissatisfaction' },
 ];
 
+const DEFAULT_SAMPLE_KEY = 'ov_stories_default_sample_v2';
+
 export default function StoriesEditor({ profiles = [] }) {
   const { t } = useTranslation();
 
@@ -205,7 +207,7 @@ export default function StoriesEditor({ profiles = [] }) {
   }, []);
 
   const [activeTrack, setActiveTrack] = useState(null);
-  const [castOpen, setCastOpen] = useState(false);
+  const [castOpen, setCastOpen] = useState(true);
   const [splitOpen, setSplitOpen] = useState(false);
   const [splitText, setSplitText] = useState('');
   const [splitMax, setSplitMax] = useState(180);
@@ -215,6 +217,9 @@ export default function StoriesEditor({ profiles = [] }) {
   const [projectsOpen, setProjectsOpen] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [exportFormat, setExportFormat] = useState('m4b');
+  const toggleProjects = useCallback(() => setProjectsOpen((open) => !open), []);
+  const toggleCast = useCallback(() => setCastOpen((open) => !open), []);
+  const toggleSplit = useCallback(() => setSplitOpen((open) => !open), []);
   // Global reading speed (#415): one speed for every line without its own
   // per-track override. UI preference → persisted in localStorage (survives
   // restarts; not part of the project state, so no slice migration).
@@ -237,6 +242,8 @@ export default function StoriesEditor({ profiles = [] }) {
   const trackTextRefs = useRef(new Map());
   const fileInputRef = useRef(null);
   const dragId = useRef(null);
+  const sampleBootstrapRef = useRef(false);
+  const sampleVoicesBackfilledRef = useRef(false);
   const [dragOver, setDragOver] = useState(null);
 
   // ── Cast ────────────────────────────────────────────────────────────────
@@ -332,12 +339,79 @@ export default function StoriesEditor({ profiles = [] }) {
     newProject();
     setProjectName('');
   }, [newProject]);
+  const createSampleStory = useCallback(() => {
+    newProject();
+    sampleVoicesBackfilledRef.current = profiles.length > 0;
+    setCast(
+      SAMPLE_STORY_CAST.map((member, index) => ({
+        ...member,
+        profileId: profiles.length ? profiles[index % profiles.length].id : null,
+      })),
+    );
+    setStoryTracks(SAMPLE_STORY_LINES.map((line) => makeTrack(line.character, line.text)));
+    setProjectName(SAMPLE_STORY_NAME);
+    saveProject(SAMPLE_STORY_NAME);
+    setProjectsOpen(false);
+    setCastOpen(true);
+    setSplitOpen(false);
+  }, [newProject, profiles, saveProject, setCast, setStoryTracks]);
+  const loadSampleStory = useCallback(async () => {
+    if (
+      tracks.some((track) => track.text.trim()) &&
+      !(await askConfirm(t('audiobook.load_sample_confirm'), t('audiobook.load_sample')))
+    ) {
+      return;
+    }
+
+    createSampleStory();
+    toast.success(t('stories.projectSaved'));
+  }, [createSampleStory, t, tracks]);
+
+  useEffect(() => {
+    if (sampleBootstrapRef.current) return;
+    if (currentProjectId || storyProjects.length || tracks.some((track) => track.text.trim()))
+      return;
+    sampleBootstrapRef.current = true;
+    try {
+      if (localStorage.getItem(DEFAULT_SAMPLE_KEY)) return;
+      localStorage.setItem(DEFAULT_SAMPLE_KEY, '1');
+    } catch {
+      // Storage can be unavailable in privacy modes; the pristine-state guard
+      // still prevents duplicate projects during this mounted session.
+    }
+    createSampleStory();
+  }, [createSampleStory, currentProjectId, storyProjects.length, tracks]);
+  useEffect(() => {
+    if (
+      sampleVoicesBackfilledRef.current ||
+      currentProject?.name !== SAMPLE_STORY_NAME ||
+      !profiles.length ||
+      cast.some((member) => member.profileId)
+    ) {
+      return;
+    }
+    sampleVoicesBackfilledRef.current = true;
+    setCast(
+      cast.map((member, index) => ({
+        ...member,
+        profileId: profiles[index % profiles.length].id,
+      })),
+    );
+  }, [cast, currentProject?.name, profiles, setCast]);
   const openProject = useCallback(
     (id) => {
       loadProject(id);
       setProjectsOpen(false);
     },
     [loadProject],
+  );
+  const confirmDeleteProject = useCallback(
+    async (id) => {
+      if (await askConfirm(t('stories.deleteProjectConfirm'), t('stories.deleteProject'))) {
+        deleteProject(id);
+      }
+    },
+    [deleteProject, t],
   );
 
   const addChapter = useCallback(() => {
@@ -600,655 +674,710 @@ export default function StoriesEditor({ profiles = [] }) {
   }, [tracks, cast, fetchChunkBlob, exporting, deliver, globalSpeed, t]);
 
   // ── Stats ─────────────────────────────────────────────────────────────────
-  const totalChars = tracks.reduce((acc, tk) => acc + tk.text.length, 0);
-  const usedCharacters = new Set(tracks.map((tk) => tk.character)).size;
-  const estMinutes = Math.ceil(totalChars / 800);
-
-  const profileName = (id) => (profiles.find((p) => p.id === id) || {}).name;
+  const { totalChars, usedCharacters, estMinutes } = useMemo(() => {
+    let chars = 0;
+    const characters = new Set();
+    for (const track of tracks) {
+      chars += track.text.length;
+      characters.add(track.character);
+    }
+    return {
+      totalChars: chars,
+      usedCharacters: characters.size,
+      estMinutes: chars ? Math.ceil(chars / 800) : 0,
+    };
+  }, [tracks]);
+  const profileNames = useMemo(
+    () => new Map(profiles.map((profile) => [profile.id, profile.name])),
+    [profiles],
+  );
+  const profileName = useCallback((id) => profileNames.get(id), [profileNames]);
 
   return (
     <div
-      className="flex flex-col h-full w-full gap-[12px] p-[16px] font-sans"
+      className="stories-editor flex flex-col h-full w-full min-h-0 font-sans"
       role="region"
-      aria-label="Stories editor"
+      aria-label={t('stories.title')}
     >
-      {/* Header / toolbar */}
-      <div className="flex items-center justify-between gap-[12px]">
-        <div>
-          <h2 className="font-serif [font-size:var(--text-xl)] [font-weight:var(--weight-semibold)] text-fg m-0 flex items-center gap-[8px]">
-            <BookOpen size={18} /> {t('stories.title')}
-          </h2>
-          <p className="text-fg-muted [font-size:var(--text-sm)]">{t('stories.subtitle')}</p>
+      {/* Production header */}
+      <header className="stories-header flex items-center justify-between gap-[12px]">
+        <div className="stories-identity flex items-center gap-[9px] min-w-0">
+          <span className="stories-title__icon" aria-hidden="true">
+            <BookOpen size={15} />
+          </span>
+          <div className="min-w-0">
+            <span className="stories-kicker">{t('stories.title')}</span>
+            <h1 className="stories-title font-serif text-fg m-0 truncate text-balance">
+              {currentProject ? currentProject.name : t('stories.untitled')}
+            </h1>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-[6px]">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".txt,.srt,text/plain"
-            onChange={onImportFile}
-            aria-label={t('stories.import')}
-            hidden
-          />
+        <div className="stories-header-output flex items-center gap-[5px]">
+          <span className="stories-header-stat">
+            {t('stories.lines', { count: tracks.length })} ·{' '}
+            {t('stories.minutes', { count: estMinutes })}
+          </span>
+          <select
+            className="input-base w-auto [font-size:var(--text-xs)] px-[6px] py-[3px]"
+            value={exportFormat}
+            onChange={(e) => setExportFormat(e.target.value)}
+            aria-label={t('stories.format')}
+            title={t('stories.format')}
+            name="story-export-format"
+          >
+            <option value="m4b">M4B</option>
+            <option value="mp3">MP3</option>
+          </select>
+          <Button size="sm" onClick={generateAll} disabled={tracks.length === 0 || exporting}>
+            <Download size={13} aria-hidden="true" />{' '}
+            {exporting ? `${exportPct}%` : t('stories.generateAll')}
+          </Button>
+        </div>
+      </header>
 
-          {/* Project */}
-          <div className="inline-flex items-center gap-[4px]">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setProjectsOpen((v) => !v)}
-              aria-label={t('stories.projects')}
-            >
-              <Folder size={13} /> {currentProject ? currentProject.name : t('stories.projects')}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setCastOpen((v) => !v)}
-              aria-label={t('stories.cast')}
-            >
-              <Users size={13} /> {t('stories.cast')}
-            </Button>
-          </div>
-
-          <span
-            className="self-stretch w-px min-h-[18px] mx-[4px] bg-border opacity-70"
-            aria-hidden="true"
-          />
-
-          {/* Content */}
-          <div className="inline-flex items-center gap-[4px]">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => fileInputRef.current && fileInputRef.current.click()}
-              aria-label={t('stories.import')}
-            >
-              <Upload size={13} /> {t('stories.import')}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSplitOpen((v) => !v)}
-              aria-label={t('stories.pasteSplit')}
-            >
-              <Scissors size={13} /> {t('stories.pasteSplit')}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={addTrack} aria-label={t('stories.addLine')}>
-              <Plus size={13} /> {t('stories.addLine')}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={addChapter}
-              aria-label={t('stories.addChapter')}
-            >
-              <Bookmark size={13} /> {t('stories.addChapter')}
-            </Button>
-          </div>
-
-          <span
-            className="self-stretch w-px min-h-[18px] mx-[4px] bg-border opacity-70"
-            aria-hidden="true"
-          />
-
-          {/* Global reading speed (#415) — one speed for every line that has no
-              per-line override. */}
-          <div className="inline-flex items-center gap-[4px]">
-            <label
-              className="inline-flex items-center gap-[8px] [font-size:var(--text-xs)] text-fg-subtle"
-              title={t('stories.global_speed_hint', {
-                defaultValue: 'Reading speed for all lines without their own speed override',
-              })}
-            >
-              <span>{t('stories.global_speed', { defaultValue: 'Speed' })}</span>
+      <div className="stories-workspace min-h-0 flex-1">
+        <aside className="stories-sidebar" aria-label={t('stories.title')}>
+          <section className="stories-rail-section">
+            <div className="stories-rail-heading">
+              <button
+                type="button"
+                className="stories-section-toggle"
+                onClick={toggleProjects}
+                aria-expanded={projectsOpen}
+              >
+                <Folder size={13} aria-hidden="true" />
+                <span>{t('stories.projects')}</span>
+                <span className="stories-section-count">{storyProjects.length}</span>
+              </button>
+              <div className="flex items-center gap-[2px]">
+                <Button
+                  variant="icon"
+                  iconSize="sm"
+                  onClick={loadSampleStory}
+                  title={t('audiobook.load_sample_hint')}
+                  aria-label={t('audiobook.load_sample')}
+                >
+                  <Sparkles size={12} aria-hidden="true" />
+                </Button>
+                <Button
+                  variant="icon"
+                  iconSize="sm"
+                  onClick={newStory}
+                  title={t('stories.newStory')}
+                  aria-label={t('stories.newStory')}
+                >
+                  <Plus size={12} aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
+            <div className="stories-project-editor">
               <input
-                type="range"
-                min="0.5"
-                max="2"
-                step="0.05"
-                value={globalSpeed}
-                onChange={(e) => setGlobalSpeed(parseFloat(e.target.value))}
-                aria-label={t('stories.global_speed', { defaultValue: 'Global reading speed' })}
-                className={SPEED_RANGE}
+                className={`${NAME_INPUT} min-w-0 flex-1`}
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                placeholder={t('stories.untitled')}
+                aria-label={t('stories.projectName')}
+                name="story-project-name"
+                autoComplete="off"
               />
-              <span className="[font-family:var(--font-mono)] text-fg min-w-[44px]">
-                {globalSpeed.toFixed(2)}×
-              </span>
-              {globalSpeed !== 1 && (
-                <button type="button" className={RESET_BTN} onClick={() => setGlobalSpeed(1)}>
-                  {t('stories.reset')}
-                </button>
-              )}
-            </label>
-          </div>
+              <Button size="sm" onClick={saveCurrent}>
+                {t('stories.save')}
+              </Button>
+            </div>
+            {projectsOpen && (
+              <div className="stories-project-list">
+                {storyProjects.map((project) => (
+                  <div
+                    key={project.id}
+                    className={`stories-project-row ${project.id === currentProjectId ? 'stories-project-row--active' : ''}`}
+                  >
+                    <button type="button" onClick={() => openProject(project.id)}>
+                      <span className="truncate">{project.name}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={DEL_BTN}
+                      onClick={() => confirmDeleteProject(project.id)}
+                      aria-label={t('stories.deleteProject')}
+                    >
+                      <X size={12} aria-hidden="true" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
-          <span
-            className="self-stretch w-px min-h-[18px] mx-[4px] bg-border opacity-70"
-            aria-hidden="true"
-          />
+          <section className="stories-rail-section stories-cast-rail">
+            <div className="stories-rail-heading">
+              <button
+                type="button"
+                className="stories-section-toggle"
+                onClick={toggleCast}
+                aria-expanded={castOpen}
+              >
+                <Users size={13} aria-hidden="true" />
+                <span>{t('stories.cast')}</span>
+                <span className="stories-section-count">{cast.length}</span>
+              </button>
+              <Button
+                variant="icon"
+                iconSize="sm"
+                onClick={addCharacter}
+                title={t('stories.addCharacter')}
+                aria-label={t('stories.addCharacter')}
+              >
+                <Plus size={12} aria-hidden="true" />
+              </Button>
+            </div>
+            {castOpen && (
+              <div className="stories-cast-grid">
+                {cast.map((member) => (
+                  <div key={member.id} className="stories-cast-member min-w-0">
+                    <span
+                      className="stories-cast-swatch"
+                      style={{ background: member.color }}
+                      aria-hidden="true"
+                    />
+                    <input
+                      className={NAME_INPUT}
+                      value={member.name}
+                      onChange={(e) => upsertCastMember({ ...member, name: e.target.value })}
+                      aria-label={t('stories.characterName')}
+                      name={`story-character-${member.id}`}
+                      autoComplete="off"
+                    />
+                    <span className="min-w-0">
+                      <VoiceSelector
+                        value={member.profileId || ''}
+                        onChange={(value) => setCharacterVoice(member.id, value || null)}
+                        profiles={profiles}
+                        size="sm"
+                        menuPortal
+                        defaultLabel={t('stories.defaultVoice')}
+                      />
+                    </span>
+                    <button
+                      type="button"
+                      className={DEL_BTN}
+                      onClick={() => deleteCharacter(member.id)}
+                      disabled={member.id === 'narrator'}
+                      title={
+                        member.id === 'narrator'
+                          ? t('stories.narratorLocked')
+                          : t('stories.removeCharacter')
+                      }
+                      aria-label={t('stories.removeCharacter')}
+                    >
+                      <X size={12} aria-hidden="true" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
-          {/* Output */}
-          <div className="inline-flex items-center gap-[4px]">
+          <section className="stories-rail-section stories-output-rail">
+            <div className="stories-rail-label">
+              <Timer size={12} aria-hidden="true" />
+              <span>{t('stories.global_speed')}</span>
+              <span className="stories-speed-value">{globalSpeed.toFixed(1)}×</span>
+            </div>
+            <input
+              type="range"
+              min="0.5"
+              max="2"
+              step="0.05"
+              value={globalSpeed}
+              onChange={(e) => setGlobalSpeed(parseFloat(e.target.value))}
+              aria-label={t('stories.global_speed')}
+              name="story-global-speed"
+              className="w-full"
+            />
             <Button
               size="sm"
               variant="ghost"
               onClick={exportStemsAll}
               disabled={tracks.length === 0 || exporting}
-              aria-label={t('stories.stems')}
             >
-              <Layers size={13} /> {t('stories.stems')}
+              <Layers size={13} aria-hidden="true" /> {t('stories.stems')}
             </Button>
-            <select
-              className="input-base w-auto [font-size:var(--text-xs)] px-[6px] py-[3px]"
-              value={exportFormat}
-              onChange={(e) => setExportFormat(e.target.value)}
-              aria-label={t('stories.format')}
-              title={t('stories.format')}
-            >
-              <option value="m4b">M4B</option>
-              <option value="mp3">MP3</option>
-            </select>
-            <Button size="sm" onClick={generateAll} disabled={tracks.length === 0 || exporting}>
-              <Download size={13} /> {exporting ? `${exportPct}%` : t('stories.generateAll')}
-            </Button>
-          </div>
-        </div>
-      </div>
+          </section>
+        </aside>
 
-      {/* Projects panel */}
-      {projectsOpen && (
-        <div
-          className="flex flex-col gap-[8px] p-[12px] bg-bg-elev-2 [border:1px_solid_var(--color-border)] rounded-sm"
-          role="region"
-          aria-label={t('stories.projects')}
-        >
-          <div className="flex items-center justify-between">
-            <span className="[font-size:var(--text-xs)] font-semibold uppercase tracking-[0.06em] text-accent">
-              {t('stories.projects')}
-            </span>
-            <button type="button" className={ADD_BTN} onClick={newStory}>
-              <Plus size={12} /> {t('stories.newStory')}
-            </button>
+        <main className="stories-manuscript min-w-0 min-h-0">
+          <div className="stories-manuscript-toolbar">
+            <div className="stories-manuscript-heading">
+              <FileText size={14} aria-hidden="true" />
+              <span>{t('audiobook.script')}</span>
+            </div>
+            <div className="flex items-center gap-[4px]">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.srt,text/plain"
+                onChange={onImportFile}
+                aria-label={t('stories.import')}
+                name="story-import-file"
+                hidden
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => fileInputRef.current && fileInputRef.current.click()}
+              >
+                <Upload size={13} aria-hidden="true" /> {t('stories.import')}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={toggleSplit}>
+                <Scissors size={13} aria-hidden="true" /> {t('stories.pasteSplit')}
+              </Button>
+              <Button
+                variant="icon"
+                iconSize="md"
+                onClick={addTrack}
+                aria-label={t('stories.addLine')}
+                title={t('stories.addLine')}
+              >
+                <Plus size={14} aria-hidden="true" />
+              </Button>
+              <Button
+                variant="icon"
+                iconSize="md"
+                onClick={addChapter}
+                aria-label={t('stories.addChapter')}
+                title={t('stories.addChapter')}
+              >
+                <Bookmark size={13} aria-hidden="true" />
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-[8px]">
-            <input
-              className={`${NAME_INPUT} flex-1`}
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              placeholder={t('stories.untitled')}
-              aria-label={t('stories.projectName')}
-            />
-            <Button size="sm" onClick={saveCurrent}>
-              {t('stories.save')}
-            </Button>
-          </div>
-          {storyProjects.map((p) => (
+
+          {/* Paste & split */}
+          {splitOpen && (
             <div
-              key={p.id}
-              className={`flex items-center gap-[8px] ${p.id === currentProjectId ? 'bg-[rgba(184,187,38,0.08)] rounded-sm' : ''}`}
+              className="stories-panel stories-split-panel flex flex-col gap-[10px]"
+              role="region"
+              aria-label={t('stories.pasteSplit')}
             >
-              <button
-                type="button"
-                className="flex-1 inline-flex items-center gap-[6px] bg-transparent text-fg [font-size:var(--text-xs)] text-left cursor-pointer px-[2px] py-[4px] hover:text-accent"
-                onClick={() => openProject(p.id)}
-              >
-                <Folder size={12} /> {p.name}
-              </button>
-              <button
-                type="button"
-                className={DEL_BTN}
-                onClick={() => deleteProject(p.id)}
-                aria-label={t('stories.deleteProject')}
-              >
-                <X size={12} />
-              </button>
-            </div>
-          ))}
-          {storyProjects.length === 0 && (
-            <p className="m-0 [font-size:var(--text-xs)] text-fg-subtle">
-              {t('stories.noProjects')}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Cast panel */}
-      {castOpen && (
-        <div
-          className="flex flex-col gap-[8px] p-[12px] bg-bg-elev-2 [border:1px_solid_var(--color-border)] rounded-sm"
-          role="region"
-          aria-label={t('stories.castTitle')}
-        >
-          <div className="flex items-center justify-between">
-            <span className="[font-size:var(--text-xs)] font-semibold uppercase tracking-[0.06em] text-accent">
-              {t('stories.castTitle')}
-            </span>
-            <button type="button" className={ADD_BTN} onClick={addCharacter}>
-              <Plus size={12} /> {t('stories.addCharacter')}
-            </button>
-          </div>
-          {cast.map((c) => (
-            <div key={c.id} className="flex items-center gap-[8px]">
-              <span
-                className="w-[10px] h-[10px] rounded-full shrink-0"
-                style={{ background: c.color }}
+              <textarea
+                className="w-full min-h-[96px] px-[10px] py-[8px] bg-bg-elev-2 border border-border rounded-sm text-fg [font-family:var(--font-sans)] [font-size:var(--text-sm)] resize-y"
+                placeholder={t('stories.splitPlaceholder')}
+                value={splitText}
+                onChange={(e) => setSplitText(e.target.value)}
+                rows={6}
+                aria-label={t('stories.splitPlaceholder')}
+                name="story-import-text"
+                autoComplete="off"
               />
-              <input
-                className={`${NAME_INPUT} flex-[0_0_140px]`}
-                value={c.name}
-                onChange={(e) => upsertCastMember({ ...c, name: e.target.value })}
-                aria-label={t('stories.characterName')}
-              />
-              {/* Shared gallery-enabled picker (#1220): a gallery pick
-                  materializes to a real profile id, stored exactly like a
-                  clone/designed voice. `|| null` preserves the store's existing
-                  "no voice = null" shape (backward-compatible projects). */}
-              <span className="flex-1 min-w-0">
-                <VoiceSelector
-                  value={c.profileId || ''}
-                  onChange={(v) => setCharacterVoice(c.id, v || null)}
-                  profiles={profiles}
-                  menuPortal
-                  defaultLabel={t('stories.defaultVoice')}
-                />
-              </span>
-              <button
-                type="button"
-                className={DEL_BTN}
-                onClick={() => deleteCharacter(c.id)}
-                disabled={c.id === 'narrator'}
-                title={
-                  c.id === 'narrator' ? t('stories.narratorLocked') : t('stories.removeCharacter')
-                }
-                aria-label={t('stories.removeCharacter')}
-              >
-                <X size={12} />
-              </button>
-            </div>
-          ))}
-          {profiles.length === 0 && (
-            <p className="m-0 [font-size:var(--text-xs)] text-fg-subtle">
-              {t('stories.noProfiles')}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Paste & split */}
-      {splitOpen && (
-        <div
-          className="flex flex-col gap-[8px] p-[12px] my-[8px] [border:1px_solid_var(--color-border)] rounded-md [background:rgba(255,255,255,0.02)]"
-          role="region"
-          aria-label={t('stories.pasteSplit')}
-        >
-          <textarea
-            className="w-full min-h-[96px] px-[10px] py-[8px] bg-bg-elev-2 border border-border rounded-sm text-fg [font-family:var(--font-sans)] [font-size:var(--text-sm)] resize-y"
-            placeholder={t('stories.splitPlaceholder')}
-            value={splitText}
-            onChange={(e) => setSplitText(e.target.value)}
-            rows={6}
-            aria-label={t('stories.splitPlaceholder')}
-          />
-          <div className="flex items-center gap-[12px] flex-wrap">
-            <label className="flex items-center gap-[6px] [font-size:var(--text-xs)] text-fg-muted">
-              {t('stories.maxChars')}
-              <input
-                type="number"
-                min={60}
-                max={1000}
-                step={10}
-                value={splitMax}
-                onChange={(e) => setSplitMax(parseInt(e.target.value, 10) || 180)}
-                className="w-[64px] px-[6px] py-[4px] bg-bg-elev-2 border border-border rounded-sm text-fg [font-family:var(--font-mono)] [font-size:var(--text-xs)]"
-              />
-            </label>
-            <span className="flex-1 [font-size:var(--text-xs)] text-fg-subtle">
-              {splitText
-                ? t('stories.segmentsHint', {
-                    count: splitIntoChunks(splitText, splitMax).length,
-                    max: splitMax,
-                  })
-                : t('stories.pasteAbove')}
-            </span>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setSplitText('');
-                setSplitOpen(false);
-              }}
-            >
-              {t('stories.cancel')}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={applySplit} disabled={!splitText.trim()}>
-              <Scissors size={13} /> {t('stories.splitIntoTracks')}
-            </Button>
-            <Button
-              size="sm"
-              onClick={autoCast}
-              disabled={!splitText.trim()}
-              title={t('stories.autocastHint')}
-            >
-              <Sparkles size={13} /> {t('stories.autocast')}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Tracks */}
-      {tracks.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-[12px] text-fg-muted text-center">
-          <BookOpen size={32} className="text-[2rem] opacity-40" aria-hidden="true" />
-          <p className="[font-size:var(--text-sm)] max-w-[320px] leading-[1.6]">
-            {t('stories.emptyText')}
-          </p>
-          <Button size="sm" onClick={addTrack}>
-            <Plus size={13} /> {t('stories.addFirst')}
-          </Button>
-        </div>
-      ) : (
-        <div className="flex-1 flex flex-col gap-[6px] overflow-y-auto pr-[4px]" role="list">
-          {tracks.map((track) => {
-            const dragProps = {
-              draggable: true,
-              onDragStart: (e) => {
-                dragId.current = track.id;
-                e.dataTransfer.effectAllowed = 'move';
-              },
-              onDragOver: (e) => {
-                e.preventDefault();
-                if (dragOver !== track.id) setDragOver(track.id);
-              },
-              onDragLeave: () => setDragOver((d) => (d === track.id ? null : d)),
-              onDrop: (e) => {
-                e.preventDefault();
-                if (dragId.current != null && dragId.current !== track.id) {
-                  setTracks((prev) => reorder(prev, dragId.current, track.id));
-                }
-                dragId.current = null;
-                setDragOver(null);
-              },
-            };
-
-            // Chapters render as a section bar — no voice / tune / preview.
-            if (isChapterText(track.text)) {
-              const title = track.text.replace(/^#{1,6}\s*/, '');
-              return (
-                <div
-                  key={track.id}
-                  role="listitem"
-                  className={[
-                    'group flex items-center gap-[8px] mt-[16px] mb-[4px] px-[10px] py-[7px] rounded-md [border-left:3px_solid_var(--color-accent)] bg-bg-elev-2',
-                    dragOver === track.id
-                      ? '[outline:1px_dashed_var(--color-accent)] outline-offset-[2px]'
-                      : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  {...dragProps}
-                >
-                  <div
-                    className="flex text-fg-subtle cursor-grab opacity-40 group-hover:opacity-100"
-                    aria-hidden="true"
-                  >
-                    <GripVertical size={14} />
-                  </div>
-                  <Bookmark size={15} className="flex-none text-accent" aria-hidden="true" />
+              <div className="flex items-center gap-[12px] flex-wrap">
+                <label className="flex items-center gap-[6px] [font-size:var(--text-xs)] text-fg-muted">
+                  {t('stories.maxChars')}
                   <input
-                    className="flex-1 min-w-0 bg-transparent border-none outline-none [font-family:inherit] [font-size:0.95rem] font-bold [letter-spacing:0.01em] text-fg px-0 py-[2px] placeholder:text-fg-subtle placeholder:font-semibold"
-                    value={title}
-                    onChange={(e) => updateTrack(track.id, 'text', `# ${e.target.value}`)}
-                    placeholder={t('stories.addChapter')}
-                    aria-label={t('stories.addChapter')}
+                    type="number"
+                    min={60}
+                    max={1000}
+                    step={10}
+                    value={splitMax}
+                    onChange={(e) => setSplitMax(parseInt(e.target.value, 10) || 180)}
+                    name="story-segment-length"
+                    inputMode="numeric"
+                    className="w-[64px] px-[6px] py-[4px] bg-bg-elev-2 border border-border rounded-sm text-fg [font-family:var(--font-mono)] [font-size:var(--text-xs)]"
                   />
-                  <button
-                    type="button"
-                    className="flex-none flex p-[4px] rounded-[6px] bg-transparent border-none text-fg-subtle cursor-pointer opacity-0 group-hover:opacity-70 hover:opacity-100 hover:text-danger"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeTrack(track.id);
-                    }}
-                    title={t('stories.removeLine')}
-                    aria-label={t('stories.removeLine')}
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              );
-            }
-
-            const member = castMember(cast, track.character);
-            const inheritedId = member && member.profileId;
-            const inheritedName = inheritedId ? profileName(inheritedId) : null;
-            return (
-              <div
-                key={track.id}
-                role="listitem"
-                className={[
-                  'group grid [grid-template-columns:32px_1fr_160px_100px_44px] gap-[8px] items-center px-[10px] py-[8px] bg-bg-elev-1 border border-border rounded-lg [transition:border-color_0.15s,box-shadow_0.15s] cursor-grab flex-wrap hover:border-border-strong hover:[box-shadow:var(--shadow-sm)]',
-                  activeTrack === track.id ? 'bg-primary/[0.12]' : '',
-                  track.character === 'narrator'
-                    ? '[border-left:3px_solid_var(--color-accent)]'
-                    : '',
-                  dragOver === track.id ? '[box-shadow:inset_0_2px_0_0_var(--color-accent)]' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                onClick={() => setActiveTrack(track.id)}
-                {...dragProps}
-              >
-                <div
-                  className="flex items-center justify-center text-fg-subtle cursor-grab active:cursor-grabbing"
-                  aria-hidden="true"
-                >
-                  <GripVertical size={14} />
-                </div>
-
-                <textarea
-                  className="w-full bg-bg-elev-2 border border-transparent rounded-md text-fg [font-family:var(--font-sans)] [font-size:var(--text-sm)] px-[8px] py-[6px] resize-none min-h-[36px] leading-[1.5] [transition:border-color_0.15s] focus:border-brand focus:outline-none"
-                  ref={(el) => {
-                    if (el) trackTextRefs.current.set(track.id, el);
-                    else trackTextRefs.current.delete(track.id);
+                </label>
+                <span className="flex-1 [font-size:var(--text-xs)] text-fg-subtle">
+                  {splitText
+                    ? t('stories.segmentsHint', {
+                        count: splitIntoChunks(splitText, splitMax).length,
+                        max: splitMax,
+                      })
+                    : t('stories.pasteAbove')}
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setSplitText('');
+                    setSplitOpen(false);
                   }}
-                  value={track.text}
-                  onChange={(e) => updateTrack(track.id, 'text', e.target.value)}
-                  placeholder={t('stories.linePlaceholder')}
-                  rows={1}
-                  aria-label={`${member ? member.name : ''} ${t('stories.text')}`}
-                />
+                >
+                  {t('stories.cancel')}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={applySplit} disabled={!splitText.trim()}>
+                  <Scissors size={13} /> {t('stories.splitIntoTracks')}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={autoCast}
+                  disabled={!splitText.trim()}
+                  title={t('stories.autocastHint')}
+                >
+                  <Sparkles size={13} /> {t('stories.autocast')}
+                </Button>
+              </div>
+            </div>
+          )}
 
-                <div className="flex items-center gap-[6px]">
-                  <span
-                    className="w-[10px] h-[10px] rounded-full shrink-0"
-                    style={{ background: member ? member.color : '#a89984' }}
-                  />
-                  <select
-                    className={`${SELECT_CHROME} flex-1`}
-                    value={track.character}
-                    onChange={(e) => updateTrack(track.id, 'character', e.target.value)}
-                    aria-label={t('stories.character')}
+          {/* Tracks */}
+          {tracks.length === 0 ? (
+            <div className="stories-empty flex-1 flex flex-col items-center justify-center gap-[10px] text-fg-muted text-center">
+              <span className="stories-empty__icon" aria-hidden="true">
+                <BookOpen size={26} />
+              </span>
+              <p className="[font-size:var(--text-sm)] max-w-[360px] leading-[1.55] text-pretty">
+                {t('stories.emptyText')}
+              </p>
+              <div className="flex items-center gap-[6px]">
+                <Button size="sm" onClick={loadSampleStory} title={t('audiobook.load_sample_hint')}>
+                  <Sparkles size={13} aria-hidden="true" /> {t('audiobook.load_sample')}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={addTrack}>
+                  <Plus size={13} aria-hidden="true" /> {t('stories.addFirst')}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="stories-track-list flex-1 flex flex-col gap-[10px] overflow-y-auto"
+              role="list"
+            >
+              {tracks.map((track, index) => {
+                const dragHandleProps = {
+                  draggable: true,
+                  onDragStart: (e) => {
+                    dragId.current = track.id;
+                    e.dataTransfer.effectAllowed = 'move';
+                  },
+                };
+                const dropProps = {
+                  onDragOver: (e) => {
+                    e.preventDefault();
+                    if (dragOver !== track.id) setDragOver(track.id);
+                  },
+                  onDragLeave: () => setDragOver((d) => (d === track.id ? null : d)),
+                  onDrop: (e) => {
+                    e.preventDefault();
+                    if (dragId.current != null && dragId.current !== track.id) {
+                      setTracks((prev) => reorder(prev, dragId.current, track.id));
+                    }
+                    dragId.current = null;
+                    setDragOver(null);
+                  },
+                };
+
+                // Chapters render as a section bar — no voice / tune / preview.
+                if (isChapterText(track.text)) {
+                  const title = track.text.replace(/^#{1,6}\s*/, '');
+                  return (
+                    <div
+                      key={track.id}
+                      role="listitem"
+                      className={[
+                        'stories-chapter group flex items-center gap-[10px] mt-[18px] mb-[2px]',
+                        dragOver === track.id
+                          ? '[outline:1px_dashed_var(--color-accent)] outline-offset-[2px]'
+                          : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      {...dropProps}
+                    >
+                      <div
+                        className="stories-line-number flex items-center justify-center text-fg-subtle cursor-grab"
+                        aria-hidden="true"
+                        {...dragHandleProps}
+                      >
+                        {String(index + 1).padStart(2, '0')}
+                      </div>
+                      <Bookmark size={15} className="flex-none text-accent" aria-hidden="true" />
+                      <input
+                        className="stories-chapter__input flex-1 min-w-0 bg-transparent border-none [font-family:inherit] text-fg px-0 py-[4px] placeholder:text-fg-subtle placeholder:font-semibold focus-visible:outline-none"
+                        value={title}
+                        onChange={(e) => updateTrack(track.id, 'text', `# ${e.target.value}`)}
+                        placeholder={t('stories.addChapter')}
+                        aria-label={t('stories.addChapter')}
+                        name={`story-chapter-${track.id}`}
+                        autoComplete="off"
+                      />
+                      <button
+                        type="button"
+                        className="stories-icon-button flex-none flex p-[6px] bg-transparent border-none text-fg-subtle cursor-pointer opacity-0 group-hover:opacity-70 group-focus-within:opacity-70 hover:!opacity-100 hover:text-danger focus-visible:!opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeTrack(track.id);
+                        }}
+                        title={t('stories.removeLine')}
+                        aria-label={t('stories.removeLine')}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  );
+                }
+
+                const member = castMember(cast, track.character);
+                const inheritedId = member && member.profileId;
+                const inheritedName = inheritedId ? profileName(inheritedId) : null;
+                return (
+                  <div
+                    key={track.id}
+                    role="listitem"
+                    className={[
+                      'stories-line group grid items-center cursor-grab',
+                      activeTrack === track.id ? 'stories-line--active' : '',
+                      track.character === 'narrator'
+                        ? '[border-left:3px_solid_var(--color-accent)]'
+                        : '',
+                      dragOver === track.id
+                        ? '[box-shadow:inset_0_2px_0_0_var(--color-accent)]'
+                        : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    onFocusCapture={() => setActiveTrack(track.id)}
+                    onBlurCapture={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget)) setActiveTrack(null);
+                    }}
+                    {...dropProps}
                   >
-                    {cast.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <div
+                      className="stories-line__drag flex flex-col items-center justify-center gap-[2px] text-fg-subtle cursor-grab active:cursor-grabbing"
+                      aria-hidden="true"
+                      {...dragHandleProps}
+                    >
+                      <span className="stories-line-number">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <GripVertical size={14} />
+                    </div>
 
-                {/* Per-line voice override → shared gallery-enabled picker
+                    <textarea
+                      className="stories-line__text w-full bg-transparent border border-transparent text-fg [font-family:var(--font-sans)] resize-y leading-[1.65] focus-visible:outline-none"
+                      ref={(el) => {
+                        if (el) trackTextRefs.current.set(track.id, el);
+                        else trackTextRefs.current.delete(track.id);
+                      }}
+                      value={track.text}
+                      onChange={(e) => updateTrack(track.id, 'text', e.target.value)}
+                      placeholder={t('stories.linePlaceholder')}
+                      rows={1}
+                      aria-label={`${member ? member.name : ''} ${t('stories.text')}`}
+                      name={`story-line-${track.id}`}
+                      autoComplete="off"
+                    />
+
+                    <div className="stories-line__character flex items-center gap-[7px] min-w-0">
+                      <span
+                        className="w-[10px] h-[10px] rounded-full shrink-0"
+                        style={{ background: member ? member.color : '#a89984' }}
+                      />
+                      <select
+                        className={`${SELECT_CHROME} flex-1`}
+                        value={track.character}
+                        onChange={(e) => updateTrack(track.id, 'character', e.target.value)}
+                        aria-label={t('stories.character')}
+                        name={`story-character-for-line-${track.id}`}
+                      >
+                        {cast.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Per-line voice override → shared gallery-enabled picker
                     (#1220). '' inherits the character's cast voice (label shows
                     "↳ <name>"); any pick stores a real profile id (gallery picks
                     materialize first). `|| null` keeps the store's null-default
                     shape so existing projects load unchanged. */}
-                <span className="min-w-0" onClick={(e) => e.stopPropagation()}>
-                  <VoiceSelector
-                    value={track.profileId || ''}
-                    onChange={(v) => updateTrack(track.id, 'profileId', v || null)}
-                    profiles={profiles}
-                    size="sm"
-                    menuPortal
-                    defaultLabel={inheritedName ? `↳ ${inheritedName}` : t('stories.defaultVoice')}
-                  />
-                </span>
-
-                <div
-                  className={`flex gap-[4px] [transition:opacity_0.12s_ease] ${
-                    activeTrack === track.id ? 'opacity-100' : 'opacity-50 group-hover:opacity-100'
-                  }`}
-                >
-                  <Menu
-                    placement="bottom-end"
-                    items={[
-                      ...(profiles.length === 0
-                        ? [{ id: 'noprof', label: t('stories.noProfiles'), disabled: true }]
-                        : profiles.map((p) => ({
-                            id: `voice-${p.id}`,
-                            label: p.name,
-                            onSelect: () => setVoiceForSelection(track.id, p.id),
-                          }))),
-                      'separator',
-                      {
-                        id: 'voice-default',
-                        label: t('stories.resetInlineVoice'),
-                        onSelect: () => setVoiceForSelection(track.id, 'default'),
-                      },
-                    ]}
-                  >
-                    <button
-                      className={`${TRACK_BTN} hover:text-fg`}
-                      onClick={(e) => e.stopPropagation()}
-                      title={t('stories.inlineVoiceHint')}
-                      aria-label={t('stories.inlineVoice')}
-                    >
-                      <Users size={12} />
-                    </button>
-                  </Menu>
-                  <button
-                    className={`${TRACK_BTN} hover:text-fg ${expandedLine === track.id ? 'text-accent bg-white/[0.06]' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setExpandedLine((id) => (id === track.id ? null : track.id));
-                    }}
-                    title={t('stories.tune')}
-                    aria-label={t('stories.tune')}
-                  >
-                    <SlidersHorizontal size={12} />
-                  </button>
-                  <button
-                    className={`${TRACK_BTN} hover:text-fg`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      insertPauseInto(track.id);
-                    }}
-                    title={t('stories.insertPause')}
-                    aria-label={t('stories.insertPause')}
-                  >
-                    <PauseIcon size={12} />
-                  </button>
-                  <button
-                    className={`${TRACK_BTN} hover:text-fg`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      previewTrack(track);
-                    }}
-                    disabled={track.generating || !track.text.trim()}
-                    title={t('stories.preview')}
-                    aria-label={t('stories.preview')}
-                  >
-                    {track.generating ? <Mic size={12} className="spinner" /> : <Play size={12} />}
-                  </button>
-                  <button
-                    className={`${TRACK_BTN} hover:text-danger`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeTrack(track.id);
-                    }}
-                    title={t('stories.removeLine')}
-                    aria-label={t('stories.removeLine')}
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-
-                {expandedLine === track.id && (
-                  <div
-                    className="basis-full flex flex-wrap items-center gap-[12px] mt-[8px] pt-[8px] [border-top:1px_solid_var(--color-border)]"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex flex-wrap gap-[4px]">
-                      {STORY_TONES.map((tn) => (
-                        <button
-                          key={tn.tag}
-                          type="button"
-                          className="inline-flex items-center gap-[4px] bg-bg-elev-2 border border-border rounded-full text-fg [font-size:var(--text-xs)] px-[9px] py-[3px] cursor-pointer hover:text-accent"
-                          onClick={() => insertTokenInto(track.id, tn.tag)}
-                          title={tn.tag}
-                        >
-                          <tn.icon size={12} aria-hidden="true" /> {t(`stories.tones.${tn.key}`)}
-                        </button>
-                      ))}
-                    </div>
-                    <label className="inline-flex items-center gap-[8px] [font-size:var(--text-xs)] text-fg-subtle">
-                      <span>{t('stories.speed')}</span>
-                      <input
-                        type="range"
-                        min="0.5"
-                        max="2"
-                        step="0.05"
-                        value={track.speed || 1}
-                        onChange={(e) => updateTrack(track.id, 'speed', parseFloat(e.target.value))}
-                        aria-label={t('stories.speed')}
-                        className={SPEED_RANGE}
+                    <span className="stories-line__voice min-w-0">
+                      <VoiceSelector
+                        value={track.profileId || ''}
+                        onChange={(v) => updateTrack(track.id, 'profileId', v || null)}
+                        profiles={profiles}
+                        size="sm"
+                        menuPortal
+                        defaultLabel={
+                          inheritedName ? `↳ ${inheritedName}` : t('stories.defaultVoice')
+                        }
                       />
-                      <span className="[font-family:var(--font-mono)] text-fg min-w-[44px]">
-                        {(track.speed || 1).toFixed(2)}×
-                      </span>
-                      {track.speed != null && (
+                    </span>
+
+                    <div
+                      className={`stories-line__actions flex gap-[4px] [transition:opacity_0.12s_ease] ${
+                        activeTrack === track.id
+                          ? 'opacity-100'
+                          : 'opacity-45 group-hover:opacity-100 group-focus-within:opacity-100'
+                      }`}
+                    >
+                      <Menu
+                        placement="bottom-end"
+                        items={[
+                          ...(profiles.length === 0
+                            ? [{ id: 'noprof', label: t('stories.noProfiles'), disabled: true }]
+                            : profiles.map((p) => ({
+                                id: `voice-${p.id}`,
+                                label: p.name,
+                                onSelect: () => setVoiceForSelection(track.id, p.id),
+                              }))),
+                          'separator',
+                          {
+                            id: 'voice-default',
+                            label: t('stories.resetInlineVoice'),
+                            onSelect: () => setVoiceForSelection(track.id, 'default'),
+                          },
+                        ]}
+                      >
                         <button
                           type="button"
-                          className={RESET_BTN}
-                          onClick={() => updateTrack(track.id, 'speed', null)}
+                          className={`${TRACK_BTN} hover:text-fg`}
+                          onClick={(e) => e.stopPropagation()}
+                          title={t('stories.inlineVoiceHint')}
+                          aria-label={t('stories.inlineVoice')}
                         >
-                          {t('stories.reset')}
+                          <Users size={12} />
                         </button>
-                      )}
-                    </label>
+                      </Menu>
+                      <button
+                        type="button"
+                        className={`${TRACK_BTN} hover:text-fg ${expandedLine === track.id ? 'text-accent bg-white/[0.06]' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedLine((id) => (id === track.id ? null : track.id));
+                        }}
+                        title={t('stories.tune')}
+                        aria-label={t('stories.tune')}
+                      >
+                        <SlidersHorizontal size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        className={`${TRACK_BTN} hover:text-fg`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          insertPauseInto(track.id);
+                        }}
+                        title={t('stories.insertPause')}
+                        aria-label={t('stories.insertPause')}
+                      >
+                        <PauseIcon size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        className={`${TRACK_BTN} hover:text-fg`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          previewTrack(track);
+                        }}
+                        disabled={track.generating || !track.text.trim()}
+                        title={t('stories.preview')}
+                        aria-label={t('stories.preview')}
+                      >
+                        {track.generating ? (
+                          <Mic size={12} className="spinner" />
+                        ) : (
+                          <Play size={12} />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className={`${TRACK_BTN} hover:text-danger`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeTrack(track.id);
+                        }}
+                        title={t('stories.removeLine')}
+                        aria-label={t('stories.removeLine')}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+
+                    {expandedLine === track.id && (
+                      <div
+                        className="stories-line__drawer basis-full flex flex-wrap items-center gap-[12px]"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex flex-wrap gap-[4px]">
+                          {STORY_TONES.map((tn) => (
+                            <button
+                              key={tn.tag}
+                              type="button"
+                              className="inline-flex items-center gap-[4px] bg-bg-elev-2 border border-border rounded-full text-fg [font-size:var(--text-xs)] px-[9px] py-[3px] cursor-pointer hover:text-accent"
+                              onClick={() => insertTokenInto(track.id, tn.tag)}
+                              title={tn.tag}
+                            >
+                              <tn.icon size={12} aria-hidden="true" />{' '}
+                              {t(`stories.tones.${tn.key}`)}
+                            </button>
+                          ))}
+                        </div>
+                        <label className="inline-flex items-center gap-[8px] [font-size:var(--text-xs)] text-fg-subtle">
+                          <span>{t('stories.speed')}</span>
+                          <input
+                            type="range"
+                            min="0.5"
+                            max="2"
+                            step="0.05"
+                            value={track.speed || 1}
+                            onChange={(e) =>
+                              updateTrack(track.id, 'speed', parseFloat(e.target.value))
+                            }
+                            aria-label={t('stories.speed')}
+                            name={`story-speed-${track.id}`}
+                            className={SPEED_RANGE}
+                          />
+                          <span className="[font-family:var(--font-mono)] text-fg min-w-[44px]">
+                            {(track.speed || 1).toFixed(2)}×
+                          </span>
+                          {track.speed != null && (
+                            <button
+                              type="button"
+                              className={RESET_BTN}
+                              onClick={() => updateTrack(track.id, 'speed', null)}
+                            >
+                              {t('stories.reset')}
+                            </button>
+                          )}
+                        </label>
+                      </div>
+                    )}
                   </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Footer stats */}
+          {tracks.length > 0 && (
+            <footer className="stories-statusbar flex items-center justify-between">
+              <div className="[font-size:var(--text-xs)] text-fg-subtle flex flex-wrap gap-[14px]">
+                <span className="flex items-center gap-[4px]">
+                  <FileText size={12} aria-hidden="true" />{' '}
+                  {t('stories.lines', { count: tracks.length })}
+                </span>
+                <span className="flex items-center gap-[4px]">
+                  <Drama size={12} aria-hidden="true" />{' '}
+                  {t('stories.characters', { count: usedCharacters })}
+                </span>
+                <span className="flex items-center gap-[4px]">
+                  <Timer size={12} aria-hidden="true" />{' '}
+                  {t('stories.minutes', { count: estMinutes })}
+                </span>
+                <span className="flex items-center gap-[4px]">
+                  <ChartColumn size={12} aria-hidden="true" />{' '}
+                  {t('stories.chars', { count: totalChars })}
+                </span>
+                {exporting && (
+                  <span className="flex items-center gap-[4px] text-accent" aria-live="polite">
+                    <Hourglass size={12} aria-hidden="true" /> {exportPct}%
+                  </span>
                 )}
               </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Footer stats */}
-      {tracks.length > 0 && (
-        <div className="flex items-center justify-between pt-[8px] [border-top:1px_solid_var(--color-border)]">
-          <div className="[font-size:var(--text-xs)] text-fg-subtle flex gap-[12px]">
-            <span className="flex items-center gap-[4px]">
-              <FileText size={12} aria-hidden="true" />{' '}
-              {t('stories.lines', { count: tracks.length })}
-            </span>
-            <span className="flex items-center gap-[4px]">
-              <Drama size={12} aria-hidden="true" />{' '}
-              {t('stories.characters', { count: usedCharacters })}
-            </span>
-            <span className="flex items-center gap-[4px]">
-              <Timer size={12} aria-hidden="true" /> {t('stories.minutes', { count: estMinutes })}
-            </span>
-            <span className="flex items-center gap-[4px]">
-              <ChartColumn size={12} aria-hidden="true" />{' '}
-              {t('stories.chars', { count: totalChars })}
-            </span>
-            {exporting && (
-              <span className="flex items-center gap-[4px]">
-                <Hourglass size={12} aria-hidden="true" /> {exportPct}%
-              </span>
-            )}
-          </div>
-        </div>
-      )}
+            </footer>
+          )}
+        </main>
+      </div>
     </div>
   );
 }

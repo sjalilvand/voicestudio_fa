@@ -20,6 +20,23 @@ The editor must feel **no-brain** at the surface and **studio-grade** underneath
 
 Nothing studio-grade is on the default surface; everything is one click away.
 
+### Calm production-desk refinement (2026-08-11)
+
+- A restrained production header keeps only story identity and delivery controls visible; project, cast, and pacing setup live in a persistent left rail.
+- The manuscript is the visual center: dense editable line cards, persistent line numbers, quieter metadata, and studio controls that strengthen only on hover or keyboard focus.
+- Cast, project, and import surfaces use bounded scrolling so large productions keep the manuscript and export controls reachable.
+- Long scripts use `content-visibility` on line cards, while narrow shells reflow each line into text, casting, and action rows without horizontal overflow.
+- The bottom status dock remains calm and persistent: lines, used characters, estimated duration, character count, and live render progress.
+
+### Full-height pro workflow (2026-08-11)
+
+1. **Start working immediately:** on a pristine install, Stories creates and opens **The Lighthouse at Wits' End** as a normal saved project. Its 2 chapters, 3-character cast, pauses, expressive tags, and voice assignments exercise the real preview, stems, and Generate paths—not a visual mock.
+2. **Set up on the left:** a persistent production rail owns project naming/saving, saved projects, cast-to-voice mapping, global pacing, and stems. Sections collapse independently without covering the manuscript.
+3. **Write in the center:** the full-height manuscript canvas owns import, paste/auto-cast, line and chapter creation, editing, reorder, preview, and per-line direction. Long stories stay fast through `content-visibility`.
+4. **Deliver from the header:** story length, runtime, format, progress, and Generate stay reachable while the manuscript scrolls.
+
+The hierarchy is spatial instead of label-heavy: setup rail → manuscript → output header. The default sample is authored content stored through the same project actions as user work, automatically adopts installed voice profiles, and remains fully editable or deletable.
+
 ## 3. Interaction model (chosen: line cards)
 
 Each **line** is a card: `[character ▾] [voice ▾]  <editable text>  ▶ ⏸ ⋯ 🗑`, draggable to reorder. A line expands (click `⋯` / the card) to reveal its **studio drawer**: emotion chips, speed, pause-insert, inline-voice, regenerate. A **Cast panel** maps each character → a voice once (lines inherit their character's voice unless overridden). A sticky **toolbar** holds the primary actions: Paste & Auto-cast, Add Line, Generate. A **footer** shows live stats (lines, characters, est. duration, total chars) and export progress.

@@ -21,11 +21,12 @@ export default function ProfileDetails({
   t,
 }) {
   return (
-    <>
+    <div className="flex min-w-0 flex-col gap-[var(--space-4)]">
       {/* Editable details */}
       <Panel
         variant="flat"
         padding="md"
+        className="!bg-transparent !shadow-none"
         title={<>{t('voice_profile.details')}</>}
         actions={
           editing ? (
@@ -46,49 +47,53 @@ export default function ProfileDetails({
           ) : null
         }
       >
-        <div className="grid grid-cols-[1fr] gap-[var(--space-5)] min-[700px]:grid-cols-[1fr_1fr]">
-          <Field label={t('voice_profile.style_instruct')}>
-            {editing ? (
+        {editing ? (
+          <div className="grid grid-cols-[1fr] gap-[var(--space-5)] @min-[700px]/voice-profile:grid-cols-[1fr_1fr]">
+            <Field label={t('voice_profile.style_instruct')}>
               <Textarea
                 rows={2}
                 value={draft.instruct}
                 onChange={(e) => setDraft({ ...draft, instruct: e.target.value })}
                 placeholder={t('voice_profile.style_placeholder')}
               />
-            ) : (
-              <div className="min-h-[1.4em] rounded-[var(--radius-md)] border border-border bg-bg-elev-2 px-[var(--space-4)] py-[var(--space-3)] text-fg [font-size:var(--text-md)]">
-                {profile.instruct || <em className="italic text-fg-subtle">— none —</em>}
-              </div>
-            )}
-          </Field>
-          <Field label={t('voice_profile.language')}>
-            {editing ? (
+            </Field>
+            <Field label={t('voice_profile.language')}>
               <Input
                 value={draft.language}
                 onChange={(e) => setDraft({ ...draft, language: e.target.value })}
                 placeholder={t('clone.auto')}
               />
-            ) : (
-              <div className="min-h-[1.4em] rounded-[var(--radius-md)] border border-border bg-bg-elev-2 px-[var(--space-4)] py-[var(--space-3)] text-fg [font-size:var(--text-md)]">
-                {profile.language || 'Auto'}
-              </div>
-            )}
-          </Field>
-        </div>
-        <Field label={t('voice_profile.ref_transcript')} hint={t('voice_profile.ref_help')}>
-          {editing ? (
+            </Field>
+          </div>
+        ) : (
+          <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-[var(--space-6)] gap-y-[var(--space-3)] text-[var(--text-md)]">
+            <dt className="text-fg-subtle">{t('voice_profile.style_instruct')}</dt>
+            <dd className="m-0 max-w-[42ch] whitespace-pre-wrap break-words text-right text-fg">
+              {profile.instruct || <em className="italic text-fg-subtle">{t('common.not_set')}</em>}
+            </dd>
+            <dt className="text-fg-subtle">{t('voice_profile.language')}</dt>
+            <dd className="m-0 text-right text-fg">{profile.language || t('clone.auto')}</dd>
+          </dl>
+        )}
+        {editing ? (
+          <Field label={t('voice_profile.ref_transcript')} hint={t('voice_profile.ref_help')}>
             <Textarea
               rows={2}
               value={draft.ref_text}
               onChange={(e) => setDraft({ ...draft, ref_text: e.target.value })}
               placeholder={t('clone.optional')}
             />
-          ) : (
-            <div className="min-h-[1.4em] rounded-[var(--radius-md)] border border-border bg-bg-elev-2 px-[var(--space-4)] py-[var(--space-3)] text-fg [font-size:var(--text-md)] leading-[1.5]">
-              {profile.ref_text || <em className="italic text-fg-subtle">— none —</em>}
-            </div>
-          )}
-        </Field>
+          </Field>
+        ) : profile.ref_text ? (
+          <details className="mt-[var(--space-4)] rounded-[var(--radius-md)] bg-[var(--chrome-hover-bg)] p-[var(--space-3)]">
+            <summary className="cursor-pointer text-[var(--text-sm)] font-medium text-fg-muted marker:text-fg-subtle">
+              {t('voice_profile.ref_transcript')}
+            </summary>
+            <p className="mb-0 mt-[var(--space-3)] whitespace-pre-wrap break-words text-[var(--text-sm)] leading-[1.55] text-fg-muted">
+              {profile.ref_text}
+            </p>
+          </details>
+        ) : null}
         {profile.is_locked && !editing && (
           <div className="mt-[var(--space-4)] flex flex-wrap items-center gap-[var(--space-4)] rounded-[var(--radius-md)] border border-transparent bg-[rgba(250,189,47,0.06)] px-[var(--space-4)] py-[var(--space-3)]">
             <Badge tone="warn" dot>
@@ -108,6 +113,7 @@ export default function ProfileDetails({
       <Panel
         variant="flat"
         padding="md"
+        className="!bg-transparent !shadow-none"
         title={
           <>
             <ShieldCheck size={12} /> {t('voice_profile.consent_title')}
@@ -132,12 +138,17 @@ export default function ProfileDetails({
           </div>
         ) : (
           <>
-            <p className="min-h-[1.4em] rounded-[var(--radius-md)] border border-border bg-bg-elev-2 px-[var(--space-4)] py-[var(--space-3)] text-fg [font-size:var(--text-md)]">
+            <p className="m-0 text-[var(--text-sm)] leading-[1.5] text-fg-muted">
               {t('voice_profile.consent_explain')}
             </p>
-            <blockquote className="min-h-[1.4em] rounded-[var(--radius-md)] border border-border bg-bg-elev-2 px-[var(--space-4)] py-[var(--space-3)] text-fg [font-size:var(--text-md)] leading-[1.5]">
-              “{consentStatement}”
-            </blockquote>
+            <details className="text-[var(--text-sm)] text-fg-muted">
+              <summary className="cursor-pointer font-medium">
+                {t('voice_profile.consent_record')}
+              </summary>
+              <blockquote className="mb-0 mt-[var(--space-3)] border-l-2 border-[var(--color-brand)] pl-[var(--space-3)] leading-[1.55]">
+                “{consentStatement}”
+              </blockquote>
+            </details>
             {consentRec.isRecording ? (
               <Button
                 variant="danger"
@@ -161,6 +172,6 @@ export default function ProfileDetails({
           </>
         )}
       </Panel>
-    </>
+    </div>
   );
 }

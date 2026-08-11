@@ -253,7 +253,16 @@
     "inbound_revoke_title": "Zugriff entfernen?",
     "inbound_shown_once": "Jetzt kopieren — sie wird nicht erneut angezeigt. Geben Sie sie nur an {{label}}.",
     "inbound_shown_once_warning": "Behandeln Sie sie wie ein Passwort. Sie wird unverschlüsselt übertragen — senden Sie sie über einen privaten Kanal und nutzen Sie sie nur in einem Netzwerk, dem Sie vertrauen.",
-    "inbound_title": "Diese GPU mit anderen teilen"
+    "inbound_title": "Diese GPU mit anderen teilen",
+    "history_retention_load_failed": "Das aktuelle Aufbewahrungslimit konnte nicht geladen werden",
+    "models_dir_help": "Hier werden Modellgewichte gespeichert. Wähle bei Bedarf ein größeres oder schnelleres Laufwerk; Änderungen gelten nach einem Neustart.",
+    "models_dir_saved": "Modellordner gespeichert — zum Anwenden neu starten",
+    "models_dir_reverted": "Standardordner wiederhergestellt — zum Anwenden neu starten",
+    "models_dir_reset_hint": "Zum standardmäßigen Cache-Speicherort zurückkehren",
+    "models_dir_effective": "Derzeit verwendet",
+    "models_dir_configured": "Konfiguriert",
+    "models_dir_default": "Standard wird verwendet",
+    "models_dir_restart": "↻ Starte VoiceStudio neu, um den neuen Speicherort zu verwenden."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -368,7 +377,8 @@
     "exportDone": "Hörbuch heruntergeladen",
     "exportFailed": "Der Export ist fehlgeschlagen. Überprüfen Sie, ob das Backend ausgeführt wird.",
     "global_speed": "Geschwindigkeit",
-    "global_speed_hint": "Lesegeschwindigkeit für alle Zeilen ohne eigene Geschwindigkeitsüberschreibung"
+    "global_speed_hint": "Lesegeschwindigkeit für alle Zeilen ohne eigene Geschwindigkeitsüberschreibung",
+    "deleteProjectConfirm": "Dieses Projekt dauerhaft löschen?"
   },
   "common": {
     "open": "Offen",
@@ -404,7 +414,8 @@
     "more_info": "Weitere Informationen",
     "learn_more": "Erfahren Sie mehr",
     "saving": "Speichern…",
-    "remove": "{{term}} entfernen"
+    "remove": "{{term}} entfernen",
+    "not_set": "Nicht festgelegt"
   },
   "launchpad": {
     "greeting": "Hallo",
@@ -673,7 +684,11 @@
     "selectWithCaveat": "Zu {{engine}} gewechselt — {{reason}}",
     "generateCaveat": "{{engine}} ist auf diesem Rechner möglicherweise langsam — {{reason}}",
     "cpuLongText": "{{engine}} läuft hier auf der CPU und dieser Text ist lang — die Generierung überschreitet möglicherweise das Zeitbudget. Kürzerer Text oder eine CPU-optimierte Engine (OmniVoice GGUF, Supertonic-3) ist deutlich schneller.",
-    "cpuLongTextTuned": "{{engine}} läuft hier auf der CPU und dieser Text ist lang — die Generierung überschreitet möglicherweise das Zeitbudget. Kürzerer Text oder eine Aufteilung in mehrere Takes ist deutlich schneller."
+    "cpuLongTextTuned": "{{engine}} läuft hier auf der CPU und dieser Text ist lang — die Generierung überschreitet möglicherweise das Zeitbudget. Kürzerer Text oder eine Aufteilung in mehrere Takes ist deutlich schneller.",
+    "familyMatrixTitle": "{{family}}-Engines",
+    "familyDesc_tts": "Wandelt Ihr Skript in Sprache um. Studio, Synchronisation und Stapelverarbeitung verwenden den aktiven Engine.",
+    "familyDesc_asr": "Transkribiert Audio für Synchronisation, Untertitel und Diktat.",
+    "familyDesc_llm": "Optionaler Texthelfer für Übersetzungen und Überarbeitungen. „Aus“ überspringt diese Schritte."
   },
   "capture": {
     "desc": "Globale Hotkeys funktionieren nur in der Desktop-App. Die Web-Benutzeroberfläche verwendet eine In-Page-Verknüpfung <1>Strg+Umschalt+Leertaste</1>, während das Fenster den Fokus hat.",
@@ -1288,7 +1303,8 @@
     "persona_imported": "Importiert „{{name}}“{{unverified}}.",
     "persona_unverified_suffix": "(nicht bestätigt)",
     "persona_too_large": "Dieses Paket ist zu groß (maximal 100 MB).",
-    "persona_import_failed": "Dieses Persona-Bundle konnte nicht importiert werden."
+    "persona_import_failed": "Dieses Persona-Bundle konnte nicht importiert werden.",
+    "filters": "Filter"
   },
   "transcriptions": {
     "title": "Transkriptionen",
@@ -2174,7 +2190,15 @@
     "unstar_take": "Markierung entfernen — Aufräumen erlauben",
     "play_take": "Als aktive Ausgabe laden",
     "filter_starred": "Markiert",
-    "load_take_failed": "Take konnte nicht geladen werden: {{message}}"
+    "load_take_failed": "Take konnte nicht geladen werden: {{message}}",
+    "mode_clone": "Klon",
+    "mode_synth": "Synthese",
+    "generation_seconds": "{{duration}} s",
+    "expand_text": "Text erweitern",
+    "collapse_text": "Text einklappen",
+    "seed": "Seed {{seed}}",
+    "load_config": "Konfiguration laden",
+    "delete_confirm": "Diesen Verlaufseintrag löschen?"
   },
   "openapi": {
     "title": "VoiceStudio-API",
@@ -2264,7 +2288,7 @@
     "dismiss": "Verwerfen",
     "output": "Ausgabe",
     "title": "Hörbuch",
-    "subtitle": "Verwandeln Sie ein durch Kapitel getrenntes Skript in ein in Kapitel unterteiltes m4b-Hörbuch.",
+    "subtitle": "Schreiben oder importieren Sie Ihre Geschichte, weisen Sie jeder Rolle eine Stimme zu und exportieren Sie ein fertiges Hörbuch mit echten Kapiteln.",
     "script": "Skript",
     "script_placeholder": "# Kapitel eins\nEs war einmal… [Pause 500 ms] das Ende.\n\n# Kapitel Zwei\n[Stimme:Erzähler] Und so ging es weiter.",
     "default_voice": "Standardstimme",

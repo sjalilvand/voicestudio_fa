@@ -253,7 +253,16 @@
     "inbound_revoke_title": "Toegang intrekken?",
     "inbound_shown_once": "Kopieer dit nu — het wordt niet opnieuw getoond. Geef het alleen aan {{label}}.",
     "inbound_shown_once_warning": "Behandel het als een wachtwoord. Het gaat onversleuteld over de lijn, dus stuur het via iets privés en gebruik het alleen op een netwerk dat u vertrouwt.",
-    "inbound_title": "Deze GPU met anderen delen"
+    "inbound_title": "Deze GPU met anderen delen",
+    "history_retention_load_failed": "De huidige bewaarlimiet kon niet worden geladen",
+    "models_dir_help": "Hier worden modelgewichten opgeslagen. Kies indien nodig een grotere of snellere schijf; wijzigingen gelden na opnieuw starten.",
+    "models_dir_saved": "Modelmap opgeslagen — start opnieuw om toe te passen",
+    "models_dir_reverted": "Standaardmap hersteld — start opnieuw om toe te passen",
+    "models_dir_reset_hint": "Terugzetten naar de standaard cachelocatie",
+    "models_dir_effective": "Nu in gebruik",
+    "models_dir_configured": "Geconfigureerd",
+    "models_dir_default": "Standaard wordt gebruikt",
+    "models_dir_restart": "↻ Start VoiceStudio opnieuw om de nieuwe locatie te gebruiken."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -368,7 +377,8 @@
     "exportDone": "Audioboek gedownload",
     "exportFailed": "Exporteren mislukt. Controleer of de backend actief is.",
     "global_speed": "Snelheid",
-    "global_speed_hint": "Leessnelheid voor alle lijnen zonder hun eigen snelheidsoverschrijving"
+    "global_speed_hint": "Leessnelheid voor alle lijnen zonder hun eigen snelheidsoverschrijving",
+    "deleteProjectConfirm": "Dit project permanent verwijderen?"
   },
   "common": {
     "open": "Openen",
@@ -404,7 +414,8 @@
     "more_info": "Meer informatie",
     "learn_more": "Meer informatie",
     "saving": "Opslaan…",
-    "remove": "{{term}} verwijderen"
+    "remove": "{{term}} verwijderen",
+    "not_set": "Niet ingesteld"
   },
   "launchpad": {
     "greeting": "Hallo daar",
@@ -673,7 +684,11 @@
     "selectWithCaveat": "Overgeschakeld naar {{engine}} — {{reason}}",
     "generateCaveat": "{{engine}} kan traag zijn op deze machine — {{reason}}",
     "cpuLongText": "{{engine}} draait hier op de CPU en deze tekst is lang — de generatie overschrijdt mogelijk het tijdsbudget. Kortere tekst of een CPU-geoptimaliseerde engine (OmniVoice GGUF, Supertonic-3) is veel sneller.",
-    "cpuLongTextTuned": "{{engine}} draait hier op de CPU en deze tekst is lang — de generatie overschrijdt mogelijk het tijdsbudget. Kortere tekst, of opsplitsen in meerdere takes, is veel sneller."
+    "cpuLongTextTuned": "{{engine}} draait hier op de CPU en deze tekst is lang — de generatie overschrijdt mogelijk het tijdsbudget. Kortere tekst, of opsplitsen in meerdere takes, is veel sneller.",
+    "familyMatrixTitle": "{{family}}-engines",
+    "familyDesc_tts": "Zet je script om in spraak. Studio, Nasynchronisatie en Batch gebruiken de actieve engine.",
+    "familyDesc_asr": "Zet audio om in tekst voor transcriptie, nasynchronisatie, ondertiteling en dicteren.",
+    "familyDesc_llm": "Optionele teksthulp voor vertalen en herschrijven. ‘Uit’ slaat deze stappen over."
   },
   "capture": {
     "desc": "Globale sneltoetsen werken alleen in de desktop-app. De webinterface gebruikt een sneltoets <1>Ctrl+Shift+Spatie</1> op de pagina terwijl het venster focus heeft.",
@@ -1288,7 +1303,8 @@
     "persona_imported": "Geïmporteerd \"{{name}}\"{{unverified}}.",
     "persona_unverified_suffix": "(niet geverifieerd)",
     "persona_too_large": "Die bundel is te groot (max 100 MB).",
-    "persona_import_failed": "Kan die personabundel niet importeren."
+    "persona_import_failed": "Kan die personabundel niet importeren.",
+    "filters": "Filters"
   },
   "transcriptions": {
     "title": "Transcripties",
@@ -2174,7 +2190,15 @@
     "unstar_take": "Ster verwijderen — opruimen toestaan",
     "play_take": "Laden als actieve uitvoer",
     "filter_starred": "Met ster",
-    "load_take_failed": "Kon die take niet laden: {{message}}"
+    "load_take_failed": "Kon die take niet laden: {{message}}",
+    "mode_clone": "Kloon",
+    "mode_synth": "Synthese",
+    "generation_seconds": "{{duration}} s",
+    "expand_text": "Tekst uitvouwen",
+    "collapse_text": "Tekst invouwen",
+    "seed": "Seed {{seed}}",
+    "load_config": "Instellingen laden",
+    "delete_confirm": "Dit geschiedenisitem verwijderen?"
   },
   "openapi": {
     "title": "VoiceStudio-API",
@@ -2264,7 +2288,7 @@
     "dismiss": "Sluiten",
     "output": "Uitvoer",
     "title": "Audioboek",
-    "subtitle": "Verander een door hoofdstukken gescheiden script in een m4b-audioboek in hoofdstukken.",
+    "subtitle": "Schrijf of importeer je verhaal, wijs elke stem toe en exporteer een verzorgd luisterboek met echte hoofdstukken.",
     "script": "Script",
     "script_placeholder": "# Hoofdstuk één\nEr was eens… [pauze 500 ms] het einde.\n\n# Hoofdstuk twee\n[stem:verteller] En zo ging het verder.",
     "default_voice": "Standaardstem",

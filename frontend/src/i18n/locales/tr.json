@@ -253,7 +253,16 @@
     "inbound_revoke_title": "Erişim kaldırılsın mı?",
     "inbound_shown_once": "Şimdi kopyalayın — bir daha gösterilmez. Yalnızca {{label}} kişisine verin.",
     "inbound_shown_once_warning": "Bunu bir parola gibi görün. Aktarım sırasında şifrelenmez; özel bir kanaldan gönderin ve yalnızca güvendiğiniz bir ağda kullanın.",
-    "inbound_title": "Bu GPU'yu başkalarıyla paylaş"
+    "inbound_title": "Bu GPU'yu başkalarıyla paylaş",
+    "history_retention_load_failed": "Mevcut saklama sınırı yüklenemedi",
+    "models_dir_help": "Model ağırlıklarının saklandığı yer. Gerektiğinde daha büyük veya hızlı bir sürücü seçin; değişiklikler yeniden başlatınca uygulanır.",
+    "models_dir_saved": "Model klasörü kaydedildi — uygulamak için yeniden başlatın",
+    "models_dir_reverted": "Varsayılan klasör geri yüklendi — uygulamak için yeniden başlatın",
+    "models_dir_reset_hint": "Varsayılan önbellek konumuna dön",
+    "models_dir_effective": "Şu anda kullanılan",
+    "models_dir_configured": "Yapılandırılan",
+    "models_dir_default": "Varsayılan kullanılıyor",
+    "models_dir_restart": "↻ Yeni konumu kullanmak için VoiceStudio’yu yeniden başlatın."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -368,7 +377,8 @@
     "exportDone": "Sesli kitap indirildi",
     "exportFailed": "Dışa aktarma başarısız oldu — arka ucun çalıştığını kontrol edin.",
     "global_speed": "Hız",
-    "global_speed_hint": "Kendi hız geçersiz kılma özelliği olmadan tüm satırlar için okuma hızı"
+    "global_speed_hint": "Kendi hız geçersiz kılma özelliği olmadan tüm satırlar için okuma hızı",
+    "deleteProjectConfirm": "Bu proje kalıcı olarak silinsin mi?"
   },
   "common": {
     "open": "Açık",
@@ -404,7 +414,8 @@
     "more_info": "Daha fazla bilgi",
     "learn_more": "Daha fazla bilgi edinin",
     "saving": "Kaydediliyor…",
-    "remove": "{{term}} öğesini kaldır"
+    "remove": "{{term}} öğesini kaldır",
+    "not_set": "Ayarlanmadı"
   },
   "launchpad": {
     "greeting": "merhaba orada",
@@ -673,7 +684,11 @@
     "selectWithCaveat": "{{engine}} motoruna geçildi — {{reason}}",
     "generateCaveat": "{{engine}} bu bilgisayarda yavaş çalışabilir — {{reason}}",
     "cpuLongText": "{{engine}} burada CPU üzerinde çalışıyor ve bu metin uzun — üretim süre bütçesini aşabilir. Daha kısa bir metin ya da CPU için ayarlanmış bir motor (OmniVoice GGUF, Supertonic-3) çok daha hızlı olacaktır.",
-    "cpuLongTextTuned": "{{engine}} burada CPU üzerinde çalışıyor ve bu metin uzun — üretim süre bütçesini aşabilir. Daha kısa bir metin ya da birkaç parçaya bölmek çok daha hızlı olacaktır."
+    "cpuLongTextTuned": "{{engine}} burada CPU üzerinde çalışıyor ve bu metin uzun — üretim süre bütçesini aşabilir. Daha kısa bir metin ya da birkaç parçaya bölmek çok daha hızlı olacaktır.",
+    "familyMatrixTitle": "{{family}} Motorları",
+    "familyDesc_tts": "Metni konuşmaya dönüştürür. Stüdyo, Dublaj ve Toplu İşlem etkin motoru kullanır.",
+    "familyDesc_asr": "Sesi; transkripsiyon, dublaj, altyazı ve dikte için metne dönüştürür.",
+    "familyDesc_llm": "Çeviri ve yeniden yazma için isteğe bağlı metin yardımcısıdır. “Kapalı” bu adımları atlar."
   },
   "capture": {
     "desc": "Genel kısayol tuşları yalnızca masaüstü uygulamasında çalışır. Web kullanıcı arayüzü, pencere odaktayken sayfa içi <1>Ctrl+Shift+Space</1> kısayolunu kullanır.",
@@ -1288,7 +1303,8 @@
     "persona_imported": "\"{{name}}\"{{unverified}} içe aktarıldı.",
     "persona_unverified_suffix": "(doğrulanmadı)",
     "persona_too_large": "Bu paket çok büyük (en fazla 100 MB).",
-    "persona_import_failed": "Bu kişisel paket içe aktarılamadı."
+    "persona_import_failed": "Bu kişisel paket içe aktarılamadı.",
+    "filters": "Filtreler"
   },
   "transcriptions": {
     "title": "Transkripsiyonlar",
@@ -2174,7 +2190,15 @@
     "unstar_take": "Yıldızı kaldır — temizliğe izin ver",
     "play_take": "Etkin çıktı olarak yükle",
     "filter_starred": "Yıldızlı",
-    "load_take_failed": "Kayıt yüklenemedi: {{message}}"
+    "load_take_failed": "Kayıt yüklenemedi: {{message}}",
+    "mode_clone": "Klonlama",
+    "mode_synth": "Sentez",
+    "generation_seconds": "{{duration}} sn",
+    "expand_text": "Metni genişlet",
+    "collapse_text": "Metni daralt",
+    "seed": "Seed {{seed}}",
+    "load_config": "Ayarları yükle",
+    "delete_confirm": "Bu geçmiş öğesi silinsin mi?"
   },
   "openapi": {
     "title": "VoiceStudio API",
@@ -2264,7 +2288,7 @@
     "dismiss": "Kapat",
     "output": "Çıktı",
     "title": "Sesli kitap",
-    "subtitle": "Bölümle ayrılmış bir komut dosyasını bölümlere ayrılmış bir m4b sesli kitaba dönüştürün.",
+    "subtitle": "Hikâyenizi yazın veya içe aktarın, her rolü seslendirin ve gerçek bölümleri olan tamamlanmış bir sesli kitap dışa aktarın.",
     "script": "Senaryo",
     "script_placeholder": "# Birinci Bölüm\nBir varmış bir yokmuş… [500ms durakla] son.\n\n# İkinci Bölüm\n[ses:anlatıcı] Ve böyle devam etti.",
     "default_voice": "Varsayılan ses",

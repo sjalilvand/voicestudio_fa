@@ -253,7 +253,16 @@
     "inbound_revoke_title": "Ta bort åtkomst?",
     "inbound_shown_once": "Kopiera nu — den visas inte igen. Ge den bara till {{label}}.",
     "inbound_shown_once_warning": "Behandla den som ett lösenord. Den är inte krypterad under överföring, så skicka den via något privat och använd den bara i ett nätverk du litar på.",
-    "inbound_title": "Dela denna GPU med andra"
+    "inbound_title": "Dela denna GPU med andra",
+    "history_retention_load_failed": "Det gick inte att läsa in den aktuella lagringsgränsen",
+    "models_dir_help": "Här lagras modellvikter. Välj en större eller snabbare enhet vid behov; ändringar gäller efter omstart.",
+    "models_dir_saved": "Modellmappen sparades — starta om för att tillämpa",
+    "models_dir_reverted": "Standardmappen återställdes — starta om för att tillämpa",
+    "models_dir_reset_hint": "Återgå till standardplatsen för cache",
+    "models_dir_effective": "Används nu",
+    "models_dir_configured": "Konfigurerad",
+    "models_dir_default": "Använder standard",
+    "models_dir_restart": "↻ Starta om VoiceStudio för att använda den nya platsen."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -368,7 +377,8 @@
     "exportDone": "Ljudbok nedladdad",
     "exportFailed": "Exporten misslyckades – kontrollera att backend körs.",
     "global_speed": "Hastighet",
-    "global_speed_hint": "Läshastighet för alla linjer utan egen hastighetsöverstyrning"
+    "global_speed_hint": "Läshastighet för alla linjer utan egen hastighetsöverstyrning",
+    "deleteProjectConfirm": "Ta bort projektet permanent?"
   },
   "common": {
     "open": "Öppna",
@@ -404,7 +414,8 @@
     "more_info": "Mer info",
     "learn_more": "Läs mer",
     "saving": "Sparar…",
-    "remove": "Ta bort {{term}}"
+    "remove": "Ta bort {{term}}",
+    "not_set": "Inte inställt"
   },
   "launchpad": {
     "greeting": "hej då",
@@ -673,7 +684,11 @@
     "selectWithCaveat": "Bytte till {{engine}} — {{reason}}",
     "generateCaveat": "{{engine}} kan vara långsam på den här datorn — {{reason}}",
     "cpuLongText": "{{engine}} körs på CPU här och den här texten är lång — genereringen kan överskrida tidsbudgeten. Kortare text eller en CPU-optimerad motor (OmniVoice GGUF, Supertonic-3) går betydligt snabbare.",
-    "cpuLongTextTuned": "{{engine}} körs på CPU här och den här texten är lång — genereringen kan överskrida tidsbudgeten. Kortare text, eller uppdelad i flera tagningar, går betydligt snabbare."
+    "cpuLongTextTuned": "{{engine}} körs på CPU här och den här texten är lång — genereringen kan överskrida tidsbudgeten. Kortare text, eller uppdelad i flera tagningar, går betydligt snabbare.",
+    "familyMatrixTitle": "{{family}}-motorer",
+    "familyDesc_tts": "Gör om manus till tal. Studio, Dubbning och Batch använder den aktiva motorn.",
+    "familyDesc_asr": "Gör om ljud till text för transkribering, dubbning, undertexter och diktering.",
+    "familyDesc_llm": "Valfri texthjälp för översättning och omskrivning. ”Av” hoppar över dessa steg."
   },
   "capture": {
     "desc": "Globala snabbtangenter fungerar bara i skrivbordsappen. Webbgränssnittet använder en genväg <1>Ctrl+Skift+Mellanslag</1> på sidan medan fönstret har fokus.",
@@ -1288,7 +1303,8 @@
     "persona_imported": "Importerade \"{{name}}\"{{unverified}}.",
     "persona_unverified_suffix": "(overifierad)",
     "persona_too_large": "Det paketet är för stort (max 100 MB).",
-    "persona_import_failed": "Det gick inte att importera det personpaketet."
+    "persona_import_failed": "Det gick inte att importera det personpaketet.",
+    "filters": "Filter"
   },
   "transcriptions": {
     "title": "Transkriptioner",
@@ -2174,7 +2190,15 @@
     "unstar_take": "Ta bort stjärna — tillåt rensning",
     "play_take": "Läs in som aktiv utmatning",
     "filter_starred": "Stjärnmärkta",
-    "load_take_failed": "Kunde inte läsa in tagningen: {{message}}"
+    "load_take_failed": "Kunde inte läsa in tagningen: {{message}}",
+    "mode_clone": "Kloning",
+    "mode_synth": "Syntes",
+    "generation_seconds": "{{duration}} s",
+    "expand_text": "Expandera text",
+    "collapse_text": "Fäll ihop text",
+    "seed": "Seed {{seed}}",
+    "load_config": "Läs in inställningar",
+    "delete_confirm": "Ta bort det här historikobjektet?"
   },
   "openapi": {
     "title": "VoiceStudio API",
@@ -2264,7 +2288,7 @@
     "dismiss": "Avfärda",
     "output": "Utdata",
     "title": "Ljudbok",
-    "subtitle": "Förvandla ett kapitelavgränsat manus till en kapitelinställd m4b-ljudbok.",
+    "subtitle": "Skriv eller importera din berättelse, tilldela varje roll en röst och exportera en finslipad ljudbok med riktiga kapitel.",
     "script": "Manus",
     "script_placeholder": "# Kapitel ett\nDet var en gång... [paus 500ms] slutet.\n\n# Kapitel två\n[voice:berättare] Och så fortsatte det.",
     "default_voice": "Standardröst",

@@ -58,8 +58,12 @@ export default function EnginesTab() {
   );
 
   return (
-    <>
-      <section className={SETTINGS_SECTION_SURFACE} data-slot="settings-section">
+    <div className="flex h-full min-h-0 flex-col">
+      <section
+        className={`${SETTINGS_SECTION_SURFACE} flex min-h-[500px] flex-1 flex-col`}
+        data-slot="settings-section"
+        aria-label={t('settings.engines')}
+      >
         <EngineCompatibilityMatrix
           family="tts"
           onSelect={onSelect}
@@ -68,6 +72,6 @@ export default function EnginesTab() {
         />
       </section>
       {family === 'asr' && <AsrOpenAICompatPanel onSaved={onAsrConfigSaved} />}
-    </>
+    </div>
   );
 }

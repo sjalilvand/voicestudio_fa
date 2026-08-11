@@ -253,7 +253,16 @@
     "inbound_revoke_title": "Odebrać dostęp?",
     "inbound_shown_once": "Skopiuj teraz — nie zostanie pokazany ponownie. Przekaż go tylko osobie {{label}}.",
     "inbound_shown_once_warning": "Traktuj go jak hasło. Nie jest szyfrowany w tranzycie, więc przekaż go prywatnym kanałem i używaj tylko w sieci, której ufasz.",
-    "inbound_title": "Udostępnij to GPU innym osobom"
+    "inbound_title": "Udostępnij to GPU innym osobom",
+    "history_retention_load_failed": "Nie udało się wczytać bieżącego limitu przechowywania",
+    "models_dir_help": "Miejsce przechowywania wag modeli. W razie potrzeby wybierz większy lub szybszy dysk; zmiany zaczną działać po ponownym uruchomieniu.",
+    "models_dir_saved": "Folder modeli zapisany — uruchom ponownie, aby zastosować",
+    "models_dir_reverted": "Przywrócono folder domyślny — uruchom ponownie, aby zastosować",
+    "models_dir_reset_hint": "Przywróć domyślną lokalizację pamięci podręcznej",
+    "models_dir_effective": "Używane teraz",
+    "models_dir_configured": "Skonfigurowano",
+    "models_dir_default": "Używana domyślna",
+    "models_dir_restart": "↻ Uruchom ponownie VoiceStudio, aby użyć nowej lokalizacji."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -368,7 +377,8 @@
     "exportDone": "Pobrano audiobooka",
     "exportFailed": "Eksport nie powiódł się — sprawdź, czy backend działa.",
     "global_speed": "Prędkość",
-    "global_speed_hint": "Prędkość odczytu dla wszystkich linii bez własnego sterowania prędkością"
+    "global_speed_hint": "Prędkość odczytu dla wszystkich linii bez własnego sterowania prędkością",
+    "deleteProjectConfirm": "Usunąć ten projekt na stałe?"
   },
   "common": {
     "open": "Otwórz",
@@ -404,7 +414,8 @@
     "more_info": "Więcej informacji",
     "learn_more": "Dowiedz się więcej",
     "saving": "Zapisywanie…",
-    "remove": "Usuń {{term}}"
+    "remove": "Usuń {{term}}",
+    "not_set": "Nie ustawiono"
   },
   "launchpad": {
     "greeting": "cześć",
@@ -673,7 +684,11 @@
     "selectWithCaveat": "Przełączono na {{engine}} — {{reason}}",
     "generateCaveat": "{{engine}} może działać wolno na tym komputerze — {{reason}}",
     "cpuLongText": "{{engine}} działa tutaj na CPU, a ten tekst jest długi — generowanie może przekroczyć limit czasu. Krótszy tekst lub silnik zoptymalizowany pod CPU (OmniVoice GGUF, Supertonic-3) będzie znacznie szybszy.",
-    "cpuLongTextTuned": "{{engine}} działa tutaj na CPU, a ten tekst jest długi — generowanie może przekroczyć limit czasu. Krótszy tekst lub podzielenie go na kilka części będzie znacznie szybsze."
+    "cpuLongTextTuned": "{{engine}} działa tutaj na CPU, a ten tekst jest długi — generowanie może przekroczyć limit czasu. Krótszy tekst lub podzielenie go na kilka części będzie znacznie szybsze.",
+    "familyMatrixTitle": "Silniki {{family}}",
+    "familyDesc_tts": "Zamienia skrypt na mowę. Studio, Dubbing i Przetwarzanie wsadowe używają aktywnego silnika.",
+    "familyDesc_asr": "Zamienia dźwięk na tekst do transkrypcji, dubbingu, napisów i dyktowania.",
+    "familyDesc_llm": "Opcjonalny pomocnik tekstowy do tłumaczeń i przeredagowywania. „Wył.” pomija te kroki."
   },
   "capture": {
     "desc": "Globalne skróty klawiszowe działają tylko w aplikacji komputerowej. Interfejs WWW korzysta ze skrótu <1>Ctrl+Shift+Spacja</1> znajdującego się na stronie, gdy okno jest aktywne.",
@@ -1288,7 +1303,8 @@
     "persona_imported": "Zaimportowano „{{name}}”{{unverified}}.",
     "persona_unverified_suffix": "(niezweryfikowany)",
     "persona_too_large": "Ten pakiet jest za duży (maks. 100 MB).",
-    "persona_import_failed": "Nie można zaimportować tego pakietu osób."
+    "persona_import_failed": "Nie można zaimportować tego pakietu osób.",
+    "filters": "Filtry"
   },
   "transcriptions": {
     "title": "Transkrypcje",
@@ -2174,7 +2190,15 @@
     "unstar_take": "Usuń gwiazdkę — pozwól na czyszczenie",
     "play_take": "Wczytaj jako aktywne wyjście",
     "filter_starred": "Z gwiazdką",
-    "load_take_failed": "Nie udało się wczytać nagrania: {{message}}"
+    "load_take_failed": "Nie udało się wczytać nagrania: {{message}}",
+    "mode_clone": "Klonowanie",
+    "mode_synth": "Synteza",
+    "generation_seconds": "{{duration}} s",
+    "expand_text": "Rozwiń tekst",
+    "collapse_text": "Zwiń tekst",
+    "seed": "Ziarno {{seed}}",
+    "load_config": "Wczytaj ustawienia",
+    "delete_confirm": "Usunąć ten element historii?"
   },
   "openapi": {
     "title": "API VoiceStudio",
@@ -2264,7 +2288,7 @@
     "dismiss": "Odrzuć",
     "output": "Wyjście",
     "title": "Książka audio",
-    "subtitle": "Zamień skrypt podzielony na rozdziały w audiobook m4b podzielony na rozdziały.",
+    "subtitle": "Napisz lub zaimportuj historię, obsadź każdy głos, a następnie wyeksportuj dopracowany audiobook z prawdziwymi rozdziałami.",
     "script": "Skrypt",
     "script_placeholder": "#Rozdział pierwszy\nDawno, dawno temu… [pauza 500 ms] koniec.\n\n#Rozdział drugi\n[głos:narrator] I tak to trwało.",
     "default_voice": "Domyślny głos",

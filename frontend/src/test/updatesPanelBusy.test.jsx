@@ -85,6 +85,11 @@ describe('UpdatesPanel install button', () => {
     expect(screen.getByRole('button', { name: /update\.restart/ })).toBeDisabled();
   });
 
+  it('disables retry after an update error while work is running', () => {
+    renderWith({ updateStatus: 'error', updateError: 'failed', ttsInflight: 1 });
+    expect(screen.getByRole('button', { name: /update\.retry/ })).toBeDisabled();
+  });
+
   it('an open transcript does not block updating', () => {
     // 'editing' waits on the user; treating it as busy would make the app
     // un-updatable for as long as a dub tab stays open.

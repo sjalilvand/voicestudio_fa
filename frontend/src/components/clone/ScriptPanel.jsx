@@ -71,7 +71,7 @@ export default function ScriptPanel({
         <div className="relative flex-1 flex flex-col min-h-0">
           <textarea
             ref={textAreaRef}
-            className="input-base flex-[0_1_auto] resize-y min-h-[160px] mb-[6px]"
+            className="input-base studio-script-input flex-[0_1_auto] resize-y mb-[6px]"
             placeholder={
               defineMethod === 'audio'
                 ? t('clone.prompt_placeholder')

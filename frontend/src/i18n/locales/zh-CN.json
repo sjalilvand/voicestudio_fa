@@ -77,7 +77,8 @@
     "exportDone": "有声书已下载",
     "exportFailed": "导出失败 — 请检查后端是否运行。",
     "global_speed": "速度",
-    "global_speed_hint": "所有线路的读取速度，没有自己的速度覆盖"
+    "global_speed_hint": "所有线路的读取速度，没有自己的速度覆盖",
+    "deleteProjectConfirm": "永久删除此项目？"
   },
   "common": {
     "open": "打开",
@@ -113,7 +114,8 @@
     "more_info": "更多信息",
     "learn_more": "了解更多",
     "saving": "保存中…",
-    "remove": "删除 {{term}}"
+    "remove": "删除 {{term}}",
+    "not_set": "未设置"
   },
   "nav": {
     "launchpad": "工作台",
@@ -478,7 +480,16 @@
     "inbound_revoke_title": "移除访问权限？",
     "inbound_shown_once": "请立即复制——不会再次显示。只交给 {{label}}。",
     "inbound_shown_once_warning": "请像对待密码一样对待它。传输过程不加密，请通过私密渠道发送，并且只在你信任的网络中使用。",
-    "inbound_title": "与他人共享这块 GPU"
+    "inbound_title": "与他人共享这块 GPU",
+    "history_retention_load_failed": "无法加载当前保留上限",
+    "models_dir_help": "模型权重的存储位置。需要时可选择容量更大或速度更快的驱动器；更改将在重启后生效。",
+    "models_dir_saved": "模型文件夹已保存 — 重启后生效",
+    "models_dir_reverted": "已恢复默认文件夹 — 重启后生效",
+    "models_dir_reset_hint": "恢复默认缓存位置",
+    "models_dir_effective": "当前使用",
+    "models_dir_configured": "已配置",
+    "models_dir_default": "使用默认值",
+    "models_dir_restart": "↻ 重启 VoiceStudio 以使用新位置。"
   },
   "about": {
     "app": "应用",
@@ -632,7 +643,11 @@
     "selectWithCaveat": "已切换到 {{engine}} — {{reason}}",
     "generateCaveat": "{{engine}} 在这台机器上可能较慢 — {{reason}}",
     "cpuLongText": "{{engine}} 在此机器上使用 CPU 运行，而这段文本较长 — 生成可能超出时间预算。缩短文本或改用面向 CPU 优化的引擎（OmniVoice GGUF、Supertonic-3）会快得多。",
-    "cpuLongTextTuned": "{{engine}} 在此机器上使用 CPU 运行，而这段文本较长 — 生成可能超出时间预算。缩短文本或分成几次生成会快得多。"
+    "cpuLongTextTuned": "{{engine}} 在此机器上使用 CPU 运行，而这段文本较长 — 生成可能超出时间预算。缩短文本或分成几次生成会快得多。",
+    "familyMatrixTitle": "{{family}} 引擎",
+    "familyDesc_tts": "将脚本转换为语音。标记为启用的引擎供工作室、配音和批处理使用。",
+    "familyDesc_asr": "将音频转换为文本，用于转录、配音、字幕和听写。",
+    "familyDesc_llm": "用于翻译和改写的可选文本助手。“关闭”会跳过这些步骤。"
   },
   "capture": {
     "desc": "全局热键仅在桌面应用中有效。网页界面使用页面内快捷键 <1>Ctrl+Shift+Space</1>（窗口聚焦时可用）。",
@@ -1247,7 +1262,8 @@
     "persona_imported": "导入“{{name}}”{{unverified}}。",
     "persona_unverified_suffix": "（未经验证）",
     "persona_too_large": "该捆绑包太大（最大 100 MB）。",
-    "persona_import_failed": "无法导入该角色包。"
+    "persona_import_failed": "无法导入该角色包。",
+    "filters": "筛选"
   },
   "transcriptions": {
     "title": "转录记录",
@@ -2181,7 +2197,15 @@
     "unstar_take": "取消加星 — 允许清理",
     "play_take": "载入为当前输出",
     "filter_starred": "已加星",
-    "load_take_failed": "无法加载该条生成:{{message}}"
+    "load_take_failed": "无法加载该条生成:{{message}}",
+    "mode_clone": "克隆",
+    "mode_synth": "合成",
+    "generation_seconds": "{{duration}} 秒",
+    "expand_text": "展开文本",
+    "collapse_text": "收起文本",
+    "seed": "种子 {{seed}}",
+    "load_config": "加载设置",
+    "delete_confirm": "删除此历史记录吗？"
   },
   "openapi": {
     "title": "VoiceStudio API",
@@ -2271,7 +2295,7 @@
     "dismiss": "关闭",
     "output": "输出",
     "title": "有声读物",
-    "subtitle": "将章节分隔的脚本转换为章节化的 m4b 有声读物。",
+    "subtitle": "编写或导入故事，为每个角色分配声音，再导出带有真实章节的精致有声书。",
     "script": "脚本",
     "script_placeholder": "#第一章\n从前……[停顿 500 毫秒]结束。\n\n# 第二章\n[声音：旁白] 就这样继续下去。",
     "default_voice": "默认语音",

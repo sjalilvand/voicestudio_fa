@@ -6,7 +6,7 @@
 // 1fr))`, never a viewport @media. The grid renders at EVERY shell width (no
 // deck-vs-fallback split); `useShellNarrow` only widens the card floor
 // (`--lp-card-min`) so narrow shells pack fewer, comfier columns. Each card
-// keeps #904's character: hue accent, count badge, animated waveform, and a
+// keeps #904's character: hue accent, count badge, open affordance, and a
 // hover/focus-forward raise (class-driven from React state so pointer and
 // keyboard share one path). These tests pin: card count + order, that the cards
 // fill width via the grid (not a fixed deck), the narrow-vs-wide responsive
@@ -82,6 +82,7 @@ describe('Launchpad feature cards (full-width grid)', () => {
     expect(grid.querySelectorAll(':scope > .lp-action-card')).toHaveLength(7);
     // The grid's responsive column floor is wired (auto-fit minmax reads it).
     expect(cardMin(container)).toBe('200px');
+    expect(container.querySelector('.launchpad').className).toContain('[container-name:launchpad]');
   });
 
   it('uses a wider card floor on narrow shells — responsive columns, same 7 cards', () => {
@@ -167,13 +168,13 @@ describe('Launchpad feature cards (full-width grid)', () => {
     expect(container.querySelector('.lp-action-card--raised')).toBeNull();
   });
 
-  it('waveform strips are decorative only (aria-hidden, 7 bars each)', () => {
+  it('keeps a compact decorative open affordance on every feature', () => {
     const { container } = renderShell(makeProps());
     for (const card of cardEls(container)) {
-      const wave = card.querySelector('.lp-card-wave');
-      expect(wave).not.toBeNull();
-      expect(wave.getAttribute('aria-hidden')).toBe('true');
-      expect(wave.querySelectorAll('.lp-card-wave__bar')).toHaveLength(7);
+      expect(card.querySelector('[data-testid="launchpad-card-open"]')).toHaveAttribute(
+        'aria-hidden',
+        'true',
+      );
     }
   });
 

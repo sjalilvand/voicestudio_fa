@@ -253,7 +253,16 @@
     "inbound_revoke_title": "Retirer l'accès ?",
     "inbound_shown_once": "Copiez-la maintenant — elle ne sera plus affichée. Ne la donnez qu'à {{label}}.",
     "inbound_shown_once_warning": "Traitez-la comme un mot de passe. Elle n'est pas chiffrée en transit : transmettez-la par un canal privé et ne l'utilisez que sur un réseau de confiance.",
-    "inbound_title": "Partager ce GPU avec d'autres personnes"
+    "inbound_title": "Partager ce GPU avec d'autres personnes",
+    "history_retention_load_failed": "Impossible de charger la limite de rétention actuelle",
+    "models_dir_help": "Emplacement des poids de modèles. Choisissez si besoin un disque plus grand ou plus rapide ; les changements s’appliquent après redémarrage.",
+    "models_dir_saved": "Dossier des modèles enregistré — redémarrez pour appliquer",
+    "models_dir_reverted": "Dossier par défaut restauré — redémarrez pour appliquer",
+    "models_dir_reset_hint": "Rétablir l’emplacement du cache par défaut",
+    "models_dir_effective": "Utilisé actuellement",
+    "models_dir_configured": "Configuré",
+    "models_dir_default": "Valeur par défaut",
+    "models_dir_restart": "↻ Redémarrez VoiceStudio pour utiliser le nouvel emplacement."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -368,7 +377,8 @@
     "exportDone": "Livre audio téléchargé",
     "exportFailed": "Échec de l'exportation : vérifiez que le backend est en cours d'exécution.",
     "global_speed": "Vitesse",
-    "global_speed_hint": "Vitesse de lecture pour toutes les lignes sans leur propre priorité de vitesse"
+    "global_speed_hint": "Vitesse de lecture pour toutes les lignes sans leur propre priorité de vitesse",
+    "deleteProjectConfirm": "Supprimer définitivement ce projet ?"
   },
   "common": {
     "open": "Ouvert",
@@ -404,7 +414,8 @@
     "more_info": "Plus d'informations",
     "learn_more": "En savoir plus",
     "saving": "Enregistrement…",
-    "remove": "Supprimer {{term}}"
+    "remove": "Supprimer {{term}}",
+    "not_set": "Non défini"
   },
   "launchpad": {
     "greeting": "bonjour",
@@ -673,7 +684,11 @@
     "selectWithCaveat": "Basculé vers {{engine}} — {{reason}}",
     "generateCaveat": "{{engine}} risque d'être lent sur cette machine — {{reason}}",
     "cpuLongText": "{{engine}} fonctionne ici sur le processeur et ce texte est long — la génération risque de dépasser le budget de temps. Un texte plus court ou un moteur optimisé CPU (OmniVoice GGUF, Supertonic-3) sera bien plus rapide.",
-    "cpuLongTextTuned": "{{engine}} fonctionne ici sur le processeur et ce texte est long — la génération risque de dépasser le budget de temps. Un texte plus court, ou découpé en plusieurs prises, sera bien plus rapide."
+    "cpuLongTextTuned": "{{engine}} fonctionne ici sur le processeur et ce texte est long — la génération risque de dépasser le budget de temps. Un texte plus court, ou découpé en plusieurs prises, sera bien plus rapide.",
+    "familyMatrixTitle": "Moteurs {{family}}",
+    "familyDesc_tts": "Transforme votre script en voix. Studio, Doublage et Traitement par lots utilisent le moteur actif.",
+    "familyDesc_asr": "Transforme l’audio en texte pour la transcription, le doublage, les sous-titres et la dictée.",
+    "familyDesc_llm": "Assistant textuel facultatif pour la traduction et la réécriture. « Désactivé » ignore ces étapes."
   },
   "capture": {
     "desc": "Les raccourcis clavier globaux ne fonctionnent que dans l'application de bureau. L'interface utilisateur Web utilise un raccourci <1>Ctrl+Shift+Espace</1> sur la page lorsque la fenêtre a le focus.",
@@ -1288,7 +1303,8 @@
     "persona_imported": "Importé \"{{name}}\"{{unverified}}.",
     "persona_unverified_suffix": "(non vérifié)",
     "persona_too_large": "Ce bundle est trop volumineux (max 100 Mo).",
-    "persona_import_failed": "Impossible d'importer cet ensemble de personnages."
+    "persona_import_failed": "Impossible d'importer cet ensemble de personnages.",
+    "filters": "Filtres"
   },
   "transcriptions": {
     "title": "Transcriptions",
@@ -2174,7 +2190,15 @@
     "unstar_take": "Retirer l'étoile — autoriser le nettoyage",
     "play_take": "Charger comme sortie active",
     "filter_starred": "Étoilées",
-    "load_take_failed": "Impossible de charger cette prise : {{message}}"
+    "load_take_failed": "Impossible de charger cette prise : {{message}}",
+    "mode_clone": "Clonage",
+    "mode_synth": "Synthèse",
+    "generation_seconds": "{{duration}} s",
+    "expand_text": "Développer le texte",
+    "collapse_text": "Réduire le texte",
+    "seed": "Graine {{seed}}",
+    "load_config": "Charger les réglages",
+    "delete_confirm": "Supprimer cet élément de l’historique ?"
   },
   "openapi": {
     "title": "API VoiceStudio",
@@ -2264,7 +2288,7 @@
     "dismiss": "Ignorer",
     "output": "Sortie",
     "title": "Livre audio",
-    "subtitle": "Transformez un script délimité par des chapitres en un livre audio m4b chapitré.",
+    "subtitle": "Écrivez ou importez votre histoire, attribuez chaque voix, puis exportez un livre audio soigné avec de vrais chapitres.",
     "script": "Scénario",
     "script_placeholder": "# Chapitre un\nIl était une fois… [pause 500ms] la fin.\n\n# Chapitre deux\n[voix:narrateur] Et ainsi de suite.",
     "default_voice": "Voix par défaut",

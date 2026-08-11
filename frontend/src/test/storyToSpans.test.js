@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { storyToSpans } from '../utils/storyToSpans';
+import { SAMPLE_STORY_CAST, SAMPLE_STORY_LINES } from '../data/sampleStory';
 
 const CAST = [
   { id: 'narrator', name: 'Narrator', profileId: 'p_narr' },
@@ -7,6 +8,23 @@ const CAST = [
 ];
 
 describe('storyToSpans', () => {
+  it('compiles the bundled Stories demo through the real render plan', () => {
+    const cast = SAMPLE_STORY_CAST.map((member) => ({
+      ...member,
+      profileId: `profile-${member.id}`,
+    }));
+    const chapters = storyToSpans(SAMPLE_STORY_LINES, cast);
+    const spans = chapters.flatMap((chapter) => chapter.spans);
+
+    expect(chapters.map((chapter) => chapter.title)).toEqual(['The Lamp', 'The Radio']);
+    expect(spans.length).toBeGreaterThan(9);
+    expect(spans.every((span) => span.text.trim())).toBe(true);
+    expect(new Set(spans.map((span) => span.voice_id))).toEqual(
+      new Set(['profile-narrator', 'profile-mara', 'profile-cole']),
+    );
+    expect(spans.some((span) => span.pause_ms_after > 0)).toBe(true);
+  });
+
   it('resolves each line to its cast voice', () => {
     const tracks = [
       { character: 'narrator', text: 'Once upon a time.' },

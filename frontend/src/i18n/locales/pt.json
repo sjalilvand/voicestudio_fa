@@ -253,7 +253,16 @@
     "inbound_revoke_title": "Remover o acesso?",
     "inbound_shown_once": "Copie agora — não será mostrada novamente. Dê-a apenas a {{label}}.",
     "inbound_shown_once_warning": "Trate-a como uma palavra-passe. Não é encriptada em trânsito, por isso envie-a por um canal privado e use-a apenas numa rede em que confie.",
-    "inbound_title": "Partilhar esta GPU com outras pessoas"
+    "inbound_title": "Partilhar esta GPU com outras pessoas",
+    "history_retention_load_failed": "Não foi possível carregar o limite de retenção atual",
+    "models_dir_help": "Onde os pesos dos modelos são armazenados. Escolha uma unidade maior ou mais rápida quando necessário; as alterações são aplicadas após reiniciar.",
+    "models_dir_saved": "Pasta de modelos salva — reinicie para aplicar",
+    "models_dir_reverted": "Pasta padrão restaurada — reinicie para aplicar",
+    "models_dir_reset_hint": "Voltar ao local padrão do cache",
+    "models_dir_effective": "Em uso agora",
+    "models_dir_configured": "Configurado",
+    "models_dir_default": "Usando o padrão",
+    "models_dir_restart": "↻ Reinicie o VoiceStudio para usar o novo local."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -368,7 +377,8 @@
     "exportDone": "Audiolivro baixado",
     "exportFailed": "Falha na exportação – verifique se o back-end está em execução.",
     "global_speed": "Velocidade",
-    "global_speed_hint": "Velocidade de leitura para todas as linhas sem sua própria substituição de velocidade"
+    "global_speed_hint": "Velocidade de leitura para todas as linhas sem sua própria substituição de velocidade",
+    "deleteProjectConfirm": "Excluir este projeto permanentemente?"
   },
   "common": {
     "open": "Abrir",
@@ -404,7 +414,8 @@
     "more_info": "Mais informações",
     "learn_more": "Saiba mais",
     "saving": "Salvando…",
-    "remove": "Remover {{term}}"
+    "remove": "Remover {{term}}",
+    "not_set": "Não definido"
   },
   "launchpad": {
     "greeting": "Olá",
@@ -673,7 +684,11 @@
     "selectWithCaveat": "Alterado para {{engine}} — {{reason}}",
     "generateCaveat": "{{engine}} pode ficar lento nesta máquina — {{reason}}",
     "cpuLongText": "{{engine}} é executado na CPU aqui e este texto é longo — a geração pode ultrapassar o limite de tempo. Um texto mais curto ou um motor otimizado para CPU (OmniVoice GGUF, Supertonic-3) será bem mais rápido.",
-    "cpuLongTextTuned": "{{engine}} é executado na CPU aqui e este texto é longo — a geração pode ultrapassar o limite de tempo. Um texto mais curto, ou dividido em algumas partes, será bem mais rápido."
+    "cpuLongTextTuned": "{{engine}} é executado na CPU aqui e este texto é longo — a geração pode ultrapassar o limite de tempo. Um texto mais curto, ou dividido em algumas partes, será bem mais rápido.",
+    "familyMatrixTitle": "Motores {{family}}",
+    "familyDesc_tts": "Transforma o roteiro em fala. Estúdio, Dublagem e Lote usam o motor ativo.",
+    "familyDesc_asr": "Transforma áudio em texto para transcrição, dublagem, legendas e ditado.",
+    "familyDesc_llm": "Assistente de texto opcional para tradução e reescrita. “Desativado” ignora essas etapas."
   },
   "capture": {
     "desc": "As teclas de atalho globais funcionam apenas no aplicativo de desktop. A IU da web usa um atalho <1>Ctrl+Shift+Space</1> na página enquanto a janela está em foco.",
@@ -1288,7 +1303,8 @@
     "persona_imported": "Importado \"{{name}}\"{{unverified}}.",
     "persona_unverified_suffix": "(não verificado)",
     "persona_too_large": "Esse pacote é muito grande (máximo de 100 MB).",
-    "persona_import_failed": "Não foi possível importar esse pacote pessoal."
+    "persona_import_failed": "Não foi possível importar esse pacote pessoal.",
+    "filters": "Filtros"
   },
   "transcriptions": {
     "title": "Transcrições",
@@ -2174,7 +2190,15 @@
     "unstar_take": "Desmarcar — permitir limpeza",
     "play_take": "Carregar como saída ativa",
     "filter_starred": "Marcadas",
-    "load_take_failed": "Não foi possível carregar essa take: {{message}}"
+    "load_take_failed": "Não foi possível carregar essa take: {{message}}",
+    "mode_clone": "Clonagem",
+    "mode_synth": "Síntese",
+    "generation_seconds": "{{duration}} s",
+    "expand_text": "Expandir texto",
+    "collapse_text": "Recolher texto",
+    "seed": "Seed {{seed}}",
+    "load_config": "Carregar configurações",
+    "delete_confirm": "Excluir este item do histórico?"
   },
   "openapi": {
     "title": "API do VoiceStudio",
@@ -2264,7 +2288,7 @@
     "dismiss": "Dispensar",
     "output": "Saída",
     "title": "Audiolivro",
-    "subtitle": "Transforme um script delimitado por capítulos em um audiolivro m4b com capítulos.",
+    "subtitle": "Escreva ou importe sua história, escolha cada voz e exporte um audiolivro bem-acabado com capítulos de verdade.",
     "script": "Roteiro",
     "script_placeholder": "# Capítulo Um\nEra uma vez… [pausa de 500ms] o fim.\n\n# Capítulo Dois\n[voz: narrador] E assim continuou.",
     "default_voice": "Voz padrão",

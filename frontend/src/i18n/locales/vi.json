@@ -253,7 +253,16 @@
     "inbound_revoke_title": "Thu hồi quyền truy cập?",
     "inbound_shown_once": "Hãy sao chép ngay — chuỗi này sẽ không hiển thị lại. Chỉ đưa cho {{label}}.",
     "inbound_shown_once_warning": "Hãy coi nó như một mật khẩu. Nó không được mã hóa khi truyền đi, vì vậy hãy gửi qua kênh riêng tư và chỉ dùng trên mạng mà bạn tin tưởng.",
-    "inbound_title": "Chia sẻ GPU này với người khác"
+    "inbound_title": "Chia sẻ GPU này với người khác",
+    "history_retention_load_failed": "Không thể tải giới hạn lưu trữ hiện tại",
+    "models_dir_help": "Nơi lưu trọng số mô hình. Chọn ổ đĩa lớn hơn hoặc nhanh hơn khi cần; thay đổi có hiệu lực sau khi khởi động lại.",
+    "models_dir_saved": "Đã lưu thư mục mô hình — khởi động lại để áp dụng",
+    "models_dir_reverted": "Đã khôi phục thư mục mặc định — khởi động lại để áp dụng",
+    "models_dir_reset_hint": "Trở về vị trí bộ nhớ đệm mặc định",
+    "models_dir_effective": "Đang sử dụng",
+    "models_dir_configured": "Đã cấu hình",
+    "models_dir_default": "Dùng mặc định",
+    "models_dir_restart": "↻ Khởi động lại VoiceStudio để dùng vị trí mới."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -368,7 +377,8 @@
     "exportDone": "Đã tải sách nói xuống",
     "exportFailed": "Xuất không thành công - kiểm tra xem chương trình phụ trợ có đang chạy không.",
     "global_speed": "Tốc độ",
-    "global_speed_hint": "Tốc độ đọc cho tất cả các dòng mà không cần ghi đè tốc độ riêng"
+    "global_speed_hint": "Tốc độ đọc cho tất cả các dòng mà không cần ghi đè tốc độ riêng",
+    "deleteProjectConfirm": "Xóa vĩnh viễn dự án này?"
   },
   "common": {
     "open": "Mở",
@@ -404,7 +414,8 @@
     "more_info": "Thêm thông tin",
     "learn_more": "Tìm hiểu thêm",
     "saving": "Đang lưu…",
-    "remove": "Xóa {{term}}"
+    "remove": "Xóa {{term}}",
+    "not_set": "Chưa đặt"
   },
   "launchpad": {
     "greeting": "xin chào ở đó",
@@ -673,7 +684,11 @@
     "selectWithCaveat": "Đã chuyển sang {{engine}} — {{reason}}",
     "generateCaveat": "{{engine}} có thể chạy chậm trên máy này — {{reason}}",
     "cpuLongText": "{{engine}} chạy trên CPU ở đây và văn bản này dài — quá trình tạo có thể vượt quá giới hạn thời gian. Văn bản ngắn hơn hoặc một engine tối ưu cho CPU (OmniVoice GGUF, Supertonic-3) sẽ nhanh hơn nhiều.",
-    "cpuLongTextTuned": "{{engine}} chạy trên CPU ở đây và văn bản này dài — quá trình tạo có thể vượt quá giới hạn thời gian. Văn bản ngắn hơn, hoặc chia thành vài phần, sẽ nhanh hơn nhiều."
+    "cpuLongTextTuned": "{{engine}} chạy trên CPU ở đây và văn bản này dài — quá trình tạo có thể vượt quá giới hạn thời gian. Văn bản ngắn hơn, hoặc chia thành vài phần, sẽ nhanh hơn nhiều.",
+    "familyMatrixTitle": "Công cụ {{family}}",
+    "familyDesc_tts": "Chuyển kịch bản thành giọng nói. Studio, Lồng tiếng và Hàng loạt dùng công cụ đang hoạt động.",
+    "familyDesc_asr": "Chuyển âm thanh thành văn bản để phiên âm, lồng tiếng, tạo phụ đề và đọc chính tả.",
+    "familyDesc_llm": "Trợ lý văn bản tùy chọn cho dịch thuật và viết lại. “Tắt” sẽ bỏ qua các bước này."
   },
   "capture": {
     "desc": "Phím nóng chung chỉ hoạt động trong ứng dụng máy tính để bàn. Giao diện người dùng web sử dụng phím tắt <1>Ctrl+Shift+Space</1> trong trang trong khi cửa sổ đang có tiêu điểm.",
@@ -1288,7 +1303,8 @@
     "persona_imported": "Đã nhập \"{{name}}\"{{unverified}}.",
     "persona_unverified_suffix": "(chưa được xác minh)",
     "persona_too_large": "Gói đó quá lớn (tối đa 100 MB).",
-    "persona_import_failed": "Không thể nhập gói cá nhân đó."
+    "persona_import_failed": "Không thể nhập gói cá nhân đó.",
+    "filters": "Bộ lọc"
   },
   "transcriptions": {
     "title": "Phiên âm",
@@ -2174,7 +2190,15 @@
     "unstar_take": "Bỏ sao — cho phép dọn dẹp",
     "play_take": "Tải làm đầu ra hiện tại",
     "filter_starred": "Đã gắn sao",
-    "load_take_failed": "Không thể tải bản thu đó: {{message}}"
+    "load_take_failed": "Không thể tải bản thu đó: {{message}}",
+    "mode_clone": "Nhân bản",
+    "mode_synth": "Tổng hợp",
+    "generation_seconds": "{{duration}} giây",
+    "expand_text": "Mở rộng văn bản",
+    "collapse_text": "Thu gọn văn bản",
+    "seed": "Seed {{seed}}",
+    "load_config": "Tải cài đặt",
+    "delete_confirm": "Xóa mục lịch sử này?"
   },
   "openapi": {
     "title": "API VoiceStudio",
@@ -2264,7 +2288,7 @@
     "dismiss": "Bỏ qua",
     "output": "Đầu ra",
     "title": "Sách nói",
-    "subtitle": "Biến tập lệnh được phân cách theo chương thành sách nói m4b được chia theo chương.",
+    "subtitle": "Viết hoặc nhập câu chuyện, chọn giọng cho từng vai, rồi xuất sách nói hoàn chỉnh với các chương thực sự.",
     "script": "kịch bản",
     "script_placeholder": "# Chương Một\nNgày xửa ngày xưa… [tạm dừng 500ms] đoạn cuối.\n\n# Chương hai\n[giọng:người kể chuyện] Và cứ thế mọi chuyện tiếp tục.",
     "default_voice": "Giọng nói mặc định",

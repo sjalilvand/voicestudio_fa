@@ -51,14 +51,19 @@ sys.path.insert(0, str(BACKEND_DIR))
 # Cloning demo — must match scripts/build_demos.sh exactly so the manifest
 # stays in sync with what the bootstrap script produced.
 CLONE_REF_TEXT = (
-    "Hi, I'm the VoiceStudio demo voice. Everything you hear me say from now on "
-    "was synthesized on your own machine. No cloud, no account, just you and "
-    "the model."
+    "Hey. I'm the VoiceStudio demo voice. I was made right here, on your "
+    "machine: private, local, and ready whenever you are."
 )
 CLONE_OUTPUT_TEXT = (
     "Welcome aboard. I was just a three-second clip a moment ago. Now I can "
     "say anything you'd like, in your voice or mine."
 )
+
+# Original demo identity: a warm, smoky cinematic alto expressed only through
+# OmniVoice's supported taxonomy. It is deliberately not based on, trained on,
+# or named after a real performer.
+CLONE_VOICE_INSTRUCT = "female, young adult, low pitch, american accent"
+CLONE_RENDER_STEPS = 48
 
 
 def _git_sha() -> str:
@@ -103,17 +108,19 @@ def render_cloning(model, args):
     """
     print("── Cloning demo ─────────────────────────────────────")
     sr = getattr(model, "sampling_rate", 24000)
+    from omnivoice.utils.common import fix_random_seed
 
-    # 1) Reference clip — synthesized with a "neutral female narrator"
-    #    instruct so the timbre is the same across re-renders.
+    # 1) Reference clip — synthesized as an original cinematic alto so the
+    #    timbre is distinctive while remaining reproducible and rights-safe.
     out_ref = SAMPLES_DIR / "demo_voice.wav"
     if args.skip_existing and out_ref.exists():
         print(f"  · skip (exists): {out_ref.name}")
     else:
+        fix_random_seed(42)
         audios = model.generate(
             text=CLONE_REF_TEXT,
-            instruct="female, middle-aged, moderate pitch, american accent",
-            num_step=24,
+            instruct=CLONE_VOICE_INSTRUCT,
+            num_step=CLONE_RENDER_STEPS,
         )
         _save_wav(audios[0], sr, out_ref)
         print(f"  ✓ {out_ref.name} ({sr} Hz, omnivoice)")
@@ -125,11 +132,12 @@ def render_cloning(model, args):
     if args.skip_existing and out_clone.exists():
         print(f"  · skip (exists): {out_clone.name}")
     else:
+        fix_random_seed(42)
         audios = model.generate(
             text=CLONE_OUTPUT_TEXT,
             ref_audio=str(out_ref),
             ref_text=CLONE_REF_TEXT,
-            num_step=24,
+            num_step=CLONE_RENDER_STEPS,
         )
         _save_wav(audios[0], sr, out_clone)
         print(f"  ✓ {out_clone.name} ({sr} Hz, cloned)")

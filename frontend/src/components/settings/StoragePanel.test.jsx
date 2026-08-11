@@ -25,6 +25,13 @@ describe('StoragePanel native path boundary', () => {
     render(<StoragePanel />);
 
     await screen.findByTestId('models-dir-input');
+    expect(screen.getByRole('heading', { name: 'Model cache' }).closest('section')).toHaveClass(
+      'models-settings-compact',
+      '!py-[9px]',
+    );
+    expect(screen.getByTestId('models-dir-input').closest('[data-slot="setting-row"]')).toHaveClass(
+      '!py-[5px]',
+    );
     fireEvent.click(screen.getByTestId('models-dir-save'));
 
     await waitFor(() =>
