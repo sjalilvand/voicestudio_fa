@@ -16,10 +16,17 @@ reconnects instantly and in lockstep with its siblings turns a thirty-second
 outage into a thundering herd, so the delay grows and is jittered. Crucially
 the worker keeps any unacknowledged result across the reconnect and redelivers
 it: that is the half of at-least-once delivery that lives on this side.
+
+**Liveness is this side's job.** The control plane fails an attempt that goes
+silent for a progress lease, and the longest silence in a task's life — the
+cold model load — happens *after* the worker says it started. So every running
+task carries a timer that renews the lease, marked ``keepalive`` so the server
+can tell "still working" from "still ticking" and bound it by the phase budget.
 """
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
 import os
@@ -34,7 +41,7 @@ import grpc
 
 from worker import errors as worker_errors
 from worker import identity
-from worker.errors import WorkerError
+from worker.errors import ErrorClass, WorkerError
 from worker.identity import EnrollmentToken, WorkerKeypair
 from worker.protocol.gen import worker_v1_pb2 as pb
 from worker.protocol.gen import worker_v1_pb2_grpc as pb_grpc
@@ -46,6 +53,51 @@ logger = logging.getLogger("omnivoice.worker")
 _BASE_BACKOFF_SECONDS = 1.0
 _MAX_BACKOFF_SECONDS = 60.0
 _HEARTBEAT_SECONDS = 20.0
+
+# The gRPC frame ceiling, matched by the server's receive limit. A result that
+# does not fit in one frame cannot be delivered on the control stream at all —
+# see _oversized_result_error for why that has to be a failure and not a retry.
+MAX_MESSAGE_BYTES = 8 * 1024 * 1024
+
+# Used when an assignment carries no lease (an older control plane, or a test).
+# Mirrors deadlines.py's _HEARTBEAT_GRACE_S * 4.
+_DEFAULT_PROGRESS_LEASE_SECONDS = 120.0
+
+# Purely a busy-loop guard against a malformed lease, not a policy: a server
+# that asks for a 0.001s lease should not spin this process.
+_MIN_KEEPALIVE_INTERVAL_SECONDS = 0.05
+
+# Reporter keywords the client offers the executor, per task.
+_REPORTER_KWARGS = frozenset({"on_progress", "on_model_loading"})
+
+
+def keepalive_interval(lease_seconds: float) -> float:
+    """How often a running task must renew its progress lease.
+
+    A third of the lease, so two consecutive frames can be lost — to a stalled
+    outbox, a reconnect, or a GIL-bound moment — before the attempt expires.
+    """
+    lease = float(lease_seconds or 0.0)
+    if lease <= 0:
+        lease = _DEFAULT_PROGRESS_LEASE_SECONDS
+    return max(lease / 3.0, _MIN_KEEPALIVE_INTERVAL_SECONDS)
+
+
+def _accepted_reporter_kwargs(execute: Callable) -> frozenset[str]:
+    """Which reporter keywords the injected executor will accept.
+
+    Probed once rather than assumed. The executor is injected and the transport
+    tests pass a bare ``async def (assignment)``; a client that always passed
+    the reporters would raise TypeError inside _run, where the generic handler
+    would report a transport mismatch as a failed generation.
+    """
+    try:
+        parameters = inspect.signature(execute).parameters
+    except (TypeError, ValueError):  # C-implemented or otherwise unintrospectable
+        return frozenset()
+    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
+        return _REPORTER_KWARGS
+    return frozenset(name for name in _REPORTER_KWARGS if name in parameters)
 
 
 def backoff_delay(attempt: int, *, jitter: Optional[Callable[[], float]] = None) -> float:
@@ -126,9 +178,11 @@ class WorkerClient:
         # never matches, and reconnecting needs a fresh enrollment token —
         # which would make key-based identity pointless.
         self._on_registered = on_registered
+        self._reporter_kwargs = _accepted_reporter_kwargs(execute)
         self._outbox: asyncio.Queue[pb.WorkerMessage] = asyncio.Queue()
         self._pending: dict[str, PendingResult] = {}
         self._running: dict[str, asyncio.Task] = {}
+        self._keepalives: dict[str, asyncio.Task] = {}
         self._epoch = 0
         self._session_token = ""
         self._stop = asyncio.Event()
@@ -142,8 +196,8 @@ class WorkerClient:
             self.config.endpoint,
             credentials,
             options=[
-                ("grpc.max_receive_message_length", 8 * 1024 * 1024),
-                ("grpc.max_send_message_length", 8 * 1024 * 1024),
+                ("grpc.max_receive_message_length", MAX_MESSAGE_BYTES),
+                ("grpc.max_send_message_length", MAX_MESSAGE_BYTES),
                 ("grpc.keepalive_time_ms", 25_000),
                 ("grpc.keepalive_timeout_ms", 10_000),
                 ("grpc.keepalive_permit_without_calls", 1),
@@ -281,15 +335,7 @@ class WorkerClient:
         """Re-send anything the server never acknowledged."""
         for pending in list(self._pending.values()):
             logger.info("Redelivering unacknowledged result for task %s", pending.ref.task_id)
-            await self._send(
-                pb.WorkerMessage(
-                    result=pb.TaskResult(
-                        ref=pending.ref,
-                        result_json=pending.result_json,
-                        inline_payload=pending.inline_payload,
-                    )
-                )
-            )
+            await self._send(_result_message(pending))
 
     async def _cancel_zombies(self, authoritative: set[str]) -> None:
         """Stop work the control plane no longer believes in."""
@@ -300,6 +346,11 @@ class WorkerClient:
                 await self._abandon(key)
 
     async def _abandon(self, key: str) -> None:
+        # Silenced here as well as in _run's finally: cancelling a task does
+        # not run its finally until the loop next schedules it, and one more
+        # keepalive for an attempt the server has disowned is exactly the
+        # frame that resurrects a cancelled task.
+        self._stop_keepalive(key)
         task = self._running.pop(key, None)
         if task is not None:
             task.cancel()
@@ -360,27 +411,48 @@ class WorkerClient:
         key = self._key(assignment.ref)
         try:
             await self._send(pb.WorkerMessage(started=pb.TaskStarted(ref=assignment.ref)))
-            result = await self._execute(assignment)
+            # Armed before the executor is called, not after it reports its
+            # first progress: the cold model load sits between the two and is
+            # the single longest silence a task ever has.
+            self._keepalives[key] = asyncio.create_task(
+                self._keepalive_loop(
+                    assignment.ref,
+                    keepalive_interval(assignment.deadlines.progress_lease_seconds),
+                ),
+                name=f"worker-keepalive-{assignment.ref.attempt_id}",
+            )
+            result = await self._execute(assignment, **self._reporters(assignment))
+            # Stopped before the terminal frame so no keepalive can arrive
+            # claiming an attempt the server has already settled.
+            self._stop_keepalive(key)
+
             pending = PendingResult(
                 ref=assignment.ref,
                 result_json=json.dumps(result.get("meta", {})),
                 inline_payload=result.get("payload", b"") or b"",
             )
+            oversized = _oversized_result_error(pending)
+            if oversized is not None:
+                # Deliberately NOT recorded in _pending. An over-cap frame is
+                # rejected identically on every reconnect, so remembering it
+                # would redeliver a payload that can never be accepted and
+                # tear the session down each time (#B9) — taking every other
+                # task on this worker with it.
+                logger.warning(
+                    "Result for task %s is too large to deliver inline; failing it",
+                    assignment.ref.task_id,
+                )
+                await self._fail(assignment.ref, oversized)
+                return
+
             # Recorded BEFORE sending: if the connection dies mid-send we must
             # still know to redeliver.
             self._pending[key] = pending
-            await self._send(
-                pb.WorkerMessage(
-                    result=pb.TaskResult(
-                        ref=pending.ref,
-                        result_json=pending.result_json,
-                        inline_payload=pending.inline_payload,
-                    )
-                )
-            )
+            await self._send(_result_message(pending))
         except asyncio.CancelledError:
             raise
         except Exception as exc:
+            self._stop_keepalive(key)
             # An executor that already classified the failure knows more than
             # a generic exception sniff can recover — keep its verdict, so a
             # "this input is bad" does not get retried around the whole fleet.
@@ -389,15 +461,121 @@ class WorkerClient:
             failure: WorkerError = (
                 exc.error if isinstance(exc, TaskFailure) else worker_errors.from_exception(exc)
             )
+            await self._fail(assignment.ref, failure)
+        finally:
+            # Also covers the abnormal exits — cancellation, a crash between
+            # the two _stop_keepalive calls above — so the timer can never
+            # outlive the task that owns it.
+            self._stop_keepalive(key)
+            self._running.pop(key, None)
+
+    async def _fail(self, ref: pb.TaskRef, error: WorkerError) -> None:
+        await self._send(
+            pb.WorkerMessage(failed=pb.TaskFailed(ref=ref, error=codec.error_to_pb(error)))
+        )
+
+    # ── Liveness ──────────────────────────────────────────────────────────
+
+    async def _keepalive_loop(self, ref: pb.TaskRef, interval: float) -> None:
+        """Renew one task's progress lease until it is cancelled.
+
+        ``keepalive=True`` is the whole point: this frame proves the worker
+        process is alive, not that the GPU is making headway, so the server
+        must renew on it only up to the phase's absolute budget.
+        """
+        while True:
+            await asyncio.sleep(interval)
+            await self._send(
+                pb.WorkerMessage(progress=pb.TaskProgress(ref=ref, keepalive=True))
+            )
+
+    def _stop_keepalive(self, key: str) -> None:
+        timer = self._keepalives.pop(key, None)
+        if timer is not None:
+            timer.cancel()
+
+    def _reporters(self, assignment: pb.TaskAssignment) -> dict[str, Callable]:
+        """Per-task progress callbacks for the executor.
+
+        Bound to this assignment's ref rather than installed on the executor
+        once, because a worker with more than one slot has no other way to say
+        which task a progress fraction belongs to.
+        """
+        ref = assignment.ref
+
+        async def on_progress(fraction: float, stage: str = "", detail: str = "") -> None:
             await self._send(
                 pb.WorkerMessage(
-                    failed=pb.TaskFailed(
-                        ref=assignment.ref, error=codec.error_to_pb(failure)
+                    progress=pb.TaskProgress(
+                        ref=ref,
+                        progress=float(fraction),
+                        stage=stage,
+                        detail=detail,
+                        keepalive=False,
                     )
                 )
             )
-        finally:
-            self._running.pop(key, None)
+
+        async def on_model_loading(fraction: float, detail: str = "") -> None:
+            await self._send(
+                pb.WorkerMessage(
+                    model_loading=pb.TaskModelLoading(
+                        ref=ref,
+                        engine=assignment.engine,
+                        progress=float(fraction),
+                        detail=detail,
+                    )
+                )
+            )
+
+        available = {"on_progress": on_progress, "on_model_loading": on_model_loading}
+        return {k: v for k, v in available.items() if k in self._reporter_kwargs}
+
+
+def _result_message(pending: PendingResult) -> pb.WorkerMessage:
+    """The one spelling of a result frame.
+
+    First delivery and redelivery build it here so they cannot diverge — the
+    size check below is only trustworthy if it measures the frame that is
+    actually sent, on both paths.
+    """
+    return pb.WorkerMessage(
+        result=pb.TaskResult(
+            ref=pending.ref,
+            result_json=pending.result_json,
+            inline_payload=pending.inline_payload,
+        )
+    )
+
+
+def _oversized_result_error(pending: PendingResult) -> Optional[WorkerError]:
+    """Refuse a result that cannot fit in a control-stream frame.
+
+    Measured on the serialized frame rather than on the payload alone, so a
+    modest waveform under a large ``result_json`` is caught by the same gate.
+
+    TERMINAL, not TRANSIENT: the size is a property of the output, so every
+    worker in the fleet would produce the same frame and be rejected the same
+    way. Retrying it burns the whole fleet's slots to arrive back here.
+
+    The executor also flags ``meta["inline"]`` against its own, much smaller
+    preference — that flag selects the Phase 3 upload path and is deliberately
+    not a failure condition, because everything between the two thresholds
+    delivers correctly today.
+    """
+    size = _result_message(pending).ByteSize()
+    if size <= MAX_MESSAGE_BYTES:
+        return None
+    return WorkerError(
+        error_class=ErrorClass.TERMINAL,
+        code="RESULT_TOO_LARGE",
+        message=(
+            f"The result is {size / (1024 * 1024):.1f} MiB, over the "
+            f"{MAX_MESSAGE_BYTES // (1024 * 1024)} MiB limit for a result "
+            "delivered on the control stream."
+        ),
+        hint="Split this into shorter jobs, or run it locally.",
+    )
 
 
 def verify_pin(certificate_pem: bytes, expected_fingerprint: str) -> bool:
@@ -440,11 +618,13 @@ def config_from_token(
 
 
 __all__ = [
+    "MAX_MESSAGE_BYTES",
     "PendingResult",
     "WorkerClient",
     "WorkerConfig",
     "backoff_delay",
     "config_from_token",
     "describe_host",
+    "keepalive_interval",
     "verify_pin",
 ]

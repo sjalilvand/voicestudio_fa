@@ -1807,7 +1807,16 @@
     "to_download": "để tải xuống",
     "cached": "được lưu vào bộ nhớ đệm",
     "fast_download_badge": "tải xuống nhanh",
-    "fast_download_title": "Tải xuống nhanh qua Xet {{version}} — truyền tải song song"
+    "fast_download_title": "Tải xuống nhanh qua Xet {{version}} — truyền tải song song",
+    "voice_previews": "Bản nghe thử giọng",
+    "voice_previews_desc": "Tải các bản nghe thử đã dựng sẵn để giọng phát ngay lập tức — ngay cả trước khi mô hình giọng nói tải xong. Không có gì được tải về cho đến khi bạn bật tùy chọn này.",
+    "voice_previews_off": "Tắt — bản nghe thử được dựng trên máy này",
+    "voice_previews_ready": "Đã lưu bộ nổi bật",
+    "voice_previews_partial": "Đã lưu {{cached}} trong {{total}} bản nghe thử nổi bật",
+    "voice_previews_checked": "đã kiểm tra {{when}}",
+    "voice_previews_never": "chưa kiểm tra",
+    "voice_previews_check": "Kiểm tra ngay",
+    "voice_previews_rejected": "Bản cập nhật thư viện giọng bị từ chối: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Tôi có cần giấy phép cho các công cụ nội bộ không?",

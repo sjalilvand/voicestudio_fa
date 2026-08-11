@@ -1807,7 +1807,16 @@
     "to_download": "下載",
     "cached": "快取的",
     "fast_download_badge": "快速下載",
-    "fast_download_title": "透過 Xet {{version}} 進行快速下載 — 平行分塊傳輸"
+    "fast_download_title": "透過 Xet {{version}} 進行快速下載 — 平行分塊傳輸",
+    "voice_previews": "語音試聽",
+    "voice_previews_desc": "下載預先算好的試聽片段，讓聲音立即播放——甚至在語音模型下載完成之前。在你開啟此項之前不會下載任何內容。",
+    "voice_previews_off": "已關閉 — 試聽在本機算繪",
+    "voice_previews_ready": "精選集已快取",
+    "voice_previews_partial": "已快取 {{total}} 個精選試聽中的 {{cached}} 個",
+    "voice_previews_checked": "{{when}}檢查",
+    "voice_previews_never": "尚未檢查",
+    "voice_previews_check": "立即檢查",
+    "voice_previews_rejected": "語音庫更新遭拒：{{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "我需要內部工具的授權嗎？",

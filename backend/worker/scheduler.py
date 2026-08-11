@@ -26,6 +26,7 @@ be minutes.
 """
 from __future__ import annotations
 
+import asyncio
 import enum
 import logging
 import uuid
@@ -46,6 +47,21 @@ logger = logging.getLogger("omnivoice.worker")
 # Bounded queue. Past this, submission is refused at the door with an
 # actionable error rather than accepted and quietly timed out later.
 _MAX_QUEUE_DEPTH = 200
+
+# How often a progress report is written through to disk. Every frame would be
+# a database write per second of a forty-minute dub; never writing leaves the
+# persisted lease frozen at the one on_started stamped, so a restart mid-render
+# reloads an attempt that expires on the next sweep. Ten seconds against a
+# 120-second lease keeps the recovered value inside its own window.
+_PROGRESS_PERSIST_SECONDS = 10.0
+
+# What a restored attempt's lease is re-armed to. The clock we recover with is
+# meaningless — it was ticking while we were not listening — and the worker
+# cannot renew it before it reconnects, which its own backoff allows up to 60s
+# for (`transport/client.py:_MAX_BACKOFF_SECONDS`). Anything shorter fails
+# every healthy in-flight task on restart; anything much longer delays the
+# honest verdict for work whose worker is genuinely gone.
+_RESTART_REARM_SECONDS = 90.0
 
 
 class Strategy(str, enum.Enum):
@@ -73,6 +89,15 @@ class NoEligibleWorker(RuntimeError):
     def __init__(self, message: str, *, retryable: bool) -> None:
         super().__init__(message)
         self.retryable = retryable
+
+
+class SchedulerStopped(RuntimeError):
+    """The control plane shut down while a caller was awaiting a task.
+
+    Named, not a bare cancellation: the work may well still be running on the
+    worker, so the caller has to be able to say that rather than report a
+    failure that never happened.
+    """
 
 
 @dataclass(frozen=True)
@@ -103,6 +128,15 @@ class Scheduler:
         # Central queue: task_id → Task, insertion-ordered.
         self._tasks: dict[str, Task] = {}
         self._listeners: list[Callable[[str, Task], None]] = []
+        # Callers blocked in `wait`, task_id → their futures. Deliberately not
+        # built on `on_change`: that list has no unregister, so one listener
+        # per await would leak for the life of the process. One future per
+        # waiter rather than one shared per task, so a waiter that times out
+        # cancels only its own.
+        self._waiters: dict[str, list[asyncio.Future]] = {}
+        # task_id → when its progress was last written through. Cleared with
+        # the task, so it cannot outlive what it describes.
+        self._progress_saved_at: dict[str, float] = {}
 
     # ── Persistence seam ──────────────────────────────────────────────────
 
@@ -120,6 +154,73 @@ class Scheduler:
                 callback(event, task)
             except Exception:
                 logger.exception("Task listener failed for %s", event)
+        if task.state.terminal:
+            # The one funnel. Every terminal path already announces itself
+            # here, so hanging the await on this makes it impossible to add a
+            # new ending that forgets to wake the caller waiting on it.
+            self._resolve(task)
+
+    # ── Awaiting a result ─────────────────────────────────────────────────
+
+    async def wait(self, task_id: str, timeout: Optional[float] = None) -> Task:
+        """Block until ``task_id`` reaches a terminal state, and return it.
+
+        Raises ``KeyError`` for a task this scheduler does not hold,
+        ``TimeoutError`` when ``timeout`` elapses first (the task keeps
+        running — the worker was never told anything), and ``SchedulerStopped``
+        if the control plane shuts down first.
+        """
+        task = self._tasks.get(task_id)
+        if task is None:
+            raise KeyError(task_id)
+        # Checked before registering, not after: `submit` returns an existing
+        # task on an idempotency-key hit and `restore` adopts tasks from disk,
+        # so the task may have finished before anyone thought to wait for it —
+        # and nothing will ever emit a second terminal event for it.
+        if task.state.terminal:
+            return task
+
+        future: asyncio.Future = asyncio.get_running_loop().create_future()
+        self._waiters.setdefault(task_id, []).append(future)
+        try:
+            return await asyncio.wait_for(future, timeout)
+        finally:
+            waiters = self._waiters.get(task_id)
+            if waiters is not None:
+                if future in waiters:
+                    waiters.remove(future)
+                if not waiters:
+                    self._waiters.pop(task_id, None)
+
+    def _resolve(self, task: Task) -> None:
+        """Hand a finished task to everyone awaiting it, at most once.
+
+        Idempotent by construction. `on_failed` used to run its whole body even
+        when the attempt was already terminal, so one task could announce
+        "failed" after it had completed — and a second `set_result` on a
+        settled future raises `InvalidStateError` inside the read loop, which
+        is a torn-down worker session for a message that changed nothing.
+        """
+        self._progress_saved_at.pop(task.task_id, None)
+        for future in self._waiters.pop(task.task_id, []):
+            if not future.done():
+                future.set_result(task)
+
+    def abort_waiters(self, reason: str = "The control plane stopped.") -> int:
+        """Fail every outstanding waiter. Called from ``ControlPlane.stop``.
+
+        Without it, a shutdown leaves each awaiting request hanging on a future
+        nothing will ever complete, and the app cannot finish quitting.
+        """
+        pending = self._waiters
+        self._waiters = {}
+        count = 0
+        for futures in pending.values():
+            for future in futures:
+                if not future.done():
+                    future.set_exception(SchedulerStopped(reason))
+                    count += 1
+        return count
 
     # ── Submission ────────────────────────────────────────────────────────
 
@@ -183,7 +284,7 @@ class Scheduler:
         """Take ownership of a task loaded from disk after a restart."""
         self._tasks[task.task_id] = task
 
-    def restore(self) -> int:
+    def restore(self, *, now: Optional[float] = None) -> int:
         """Reload tasks that were live when the control plane stopped.
 
         They are NOT failed on the way in — unlike local jobs, the machine
@@ -192,9 +293,17 @@ class Scheduler:
         """
         if not self._persist:
             return 0
+        stamp = resolve(now)
         restored = task_store.load_unfinished()
         for task in restored:
             self._tasks.setdefault(task.task_id, task)
+            attempt = task.active_attempt
+            if attempt is not None:
+                # A lease that expired while the app was closed says nothing
+                # about the worker: nobody was listening for the renewals. Give
+                # it a reconnect window instead, or the first sweep after
+                # startup kills every healthy in-flight task at once.
+                attempt.renew_lease(_RESTART_REARM_SECONDS, now=stamp)
         if restored:
             logger.info("Recovered %d in-flight remote task(s) after restart", len(restored))
         return len(restored)
@@ -434,19 +543,82 @@ class Scheduler:
         *,
         progress: float,
         stage: str = "",
+        keepalive: bool = False,
         epoch: Optional[int] = None,
         now: Optional[float] = None,
     ) -> Optional[Task]:
+        """Renew an attempt's lease from a progress frame.
+
+        The single entry point for the lease, ceiling included — the transport
+        passes the flag off the wire and never computes an expiry of its own,
+        so there is one place where "how long may this task stay alive" is
+        decided.
+
+        ``keepalive`` frames are the worker's timer, not its work: they say the
+        process is still there while a single uninterruptible call runs. They
+        renew the lease but leave ``progress``/``stage`` alone, because
+        overwriting a real 60% with a timer's zero is a UI that goes backwards.
+        """
         task = self._fenced(task_id, attempt_id, epoch)
         if task is None:
             return None
         stamp = resolve(now)
         attempt = task.get_attempt(attempt_id)
+        budget = self._budget_for(task)
+        if keepalive:
+            attempt.renew_lease(
+                budget.progress_lease_seconds,
+                not_after=self._phase_ceiling(task, attempt, budget),
+                now=stamp,
+            )
+            self._persist_progress(task, now=stamp)
+            return task
         attempt.progress = max(0.0, min(1.0, progress))
         attempt.stage = stage or attempt.stage
-        attempt.renew_lease(self._budget_for(task).progress_lease_seconds, now=stamp)
+        # Evidence of actual work: renewed without a ceiling, because a task
+        # that keeps producing output is not wedged however long it takes.
+        attempt.renew_lease(budget.progress_lease_seconds, now=stamp)
+        self._persist_progress(task, now=stamp)
         self._emit("progress", task)
         return task
+
+    @staticmethod
+    def _phase_budget(task: Task, budget: deadline_policy.Deadlines) -> int:
+        """How long the task's current phase is allowed to take in total."""
+        if task.state is TaskState.MODEL_LOADING:
+            return budget.model_load_seconds
+        if task.state is TaskState.RESULT_UPLOADING:
+            return budget.result_delivery_seconds
+        return budget.execution_seconds
+
+    def _phase_ceiling(
+        self, task: Task, attempt: Attempt, budget: deadline_policy.Deadlines
+    ) -> float:
+        """The absolute time a keepalive may not renew past.
+
+        Bounds the keepalive by the budget of the phase it is keeping alive.
+        Without this the keepalive would delete the last enforced bound in the
+        system: `Deadlines.total_seconds` has no callers, `execution_seconds`
+        is put on the wire and read by nobody, and a RUNNING attempt past its
+        task deadline is never swept — the progress lease is all there is.
+        """
+        return attempt.phase_anchor + self._phase_budget(task, budget)
+
+    def _persist_progress(self, task: Task, *, now: float) -> None:
+        """Write a progress report through to disk, at most every few seconds.
+
+        The persisted lease used to be whichever one `on_started` stamped, so a
+        restart mid-render restored an attempt whose lease had expired minutes
+        ago and the first sweep failed it — the healthiest task in the system
+        killed by the recovery meant to save it.
+        """
+        if not self._persist:
+            return
+        last = self._progress_saved_at.get(task.task_id)
+        if last is not None and now - last < _PROGRESS_PERSIST_SECONDS:
+            return
+        self._progress_saved_at[task.task_id] = now
+        self._save(task, now=now)
 
     def on_result(
         self,
@@ -484,16 +656,14 @@ class Scheduler:
         committed, attempt = task.commit_result(
             attempt_id, result_ref=result_ref, session_epoch=epoch, now=stamp
         )
+        self._release_slot(task, attempt, now=stamp)
         worker = self.pool.get(attempt.worker_id)
-        if worker is not None:
-            worker.in_flight.discard(attempt_id)
-            worker.capacity.release(task.engine, task.model_id)
-            if committed:
-                self.pool.breakers.record_success(
-                    worker.worker_id,
-                    WorkerCapacity.slot_key(task.engine, task.model_id),
-                    now=stamp,
-                )
+        if worker is not None and committed:
+            self.pool.breakers.record_success(
+                worker.worker_id,
+                WorkerCapacity.slot_key(task.engine, task.model_id),
+                now=stamp,
+            )
         if committed and self._persist:
             task_store.commit_result(task, result_json=result, now=stamp)
         elif self._persist:
@@ -515,17 +685,30 @@ class Scheduler:
             return None
         stamp = resolve(now)
         attempt = task.get_attempt(attempt_id)
+        if attempt.state.terminal:
+            # Already settled — a redelivered failure, or one the sweeper got
+            # to first. `fail_attempt` ignores it, so running the rest of this
+            # body would charge the breaker twice for one failure and announce
+            # "failed" for a task that may have completed since.
+            return task
         worker = self.pool.get(attempt.worker_id)
         model_key = WorkerCapacity.slot_key(task.engine, task.model_id)
+        # Computed before the attempt is settled, while it is still the active
+        # one the budget is derived from.
+        budget = self._budget_for(task)
 
         task.fail_attempt(attempt_id, error, session_epoch=epoch, now=stamp)
 
         if worker is not None:
-            worker.in_flight.discard(attempt_id)
             # A timeout leaves a GPU thread that cannot be killed, so its slot
-            # is parked rather than returned (#730/#1190).
-            worker.capacity.release(
-                task.engine, task.model_id, zombie=error.error_class is ErrorClass.TIMEOUT
+            # is parked rather than returned (#730/#1190) — for as long as that
+            # thread's own budget could still be running it.
+            self._release_slot(
+                task,
+                attempt,
+                zombie=error.error_class is ErrorClass.TIMEOUT,
+                zombie_ttl_seconds=budget.execution_seconds,
+                now=stamp,
             )
             attribution, opened = self.pool.breakers.record_failure(
                 worker.worker_id, model_key, error, now=stamp
@@ -576,7 +759,16 @@ class Scheduler:
         for task in list(self._tasks.values()):
             if task.state.terminal:
                 continue
-            action = reconcile(task, worker_id=worker_id, worker_in_flight=in_flight, now=stamp)
+            action = reconcile(
+                task,
+                worker_id=worker_id,
+                worker_in_flight=in_flight,
+                # A resumed attempt has been silent for the whole outage; the
+                # lease it carries was stamped before it. Give it a fresh one
+                # or the next sweep fails the task we just recovered.
+                resume_lease_seconds=self._budget_for(task).progress_lease_seconds,
+                now=stamp,
+            )
             if action == "cancel_zombie":
                 zombies.extend(
                     a for a in in_flight if (k := task.get_attempt(a)) and k.state.terminal
@@ -592,10 +784,7 @@ class Scheduler:
         attempt = task.active_attempt
         task.cancel(reason=reason, now=stamp)
         if attempt is not None:
-            worker = self.pool.get(attempt.worker_id)
-            if worker is not None:
-                worker.in_flight.discard(attempt.attempt_id)
-                worker.capacity.release(task.engine, task.model_id)
+            self._release_slot(task, attempt, now=stamp)
         self._save(task, now=stamp)
         self._emit("cancelled", task)
         return True
@@ -616,6 +805,13 @@ class Scheduler:
             logger.info("Worker %s missed its heartbeats — treating as disconnected", worker.name)
             changed.extend(self.on_disconnected(worker.worker_id, now=stamp))
 
+        for worker in self.pool:
+            # The park's TTL is enforced here rather than only on a heartbeat:
+            # the sweeper is the one loop with an injectable clock, and a
+            # worker whose last slot is parked is exactly the worker whose
+            # heartbeats we may have stopped believing.
+            worker.capacity.expire_zombies(now=stamp)
+
         for task in list(self._tasks.values()):
             if task.state.terminal:
                 continue
@@ -623,7 +819,16 @@ class Scheduler:
 
             if attempt is not None and attempt.grace_expired(now=stamp):
                 task.lose_attempt(attempt.attempt_id, now=stamp)
-                self._release(task, attempt)
+                # Parked, not returned: we never learned whether the worker's
+                # GPU thread stopped, and it is the same un-killable thread the
+                # timeout path parks for.
+                self._release_slot(
+                    task,
+                    attempt,
+                    zombie=True,
+                    zombie_ttl_seconds=self._budget_for(task).execution_seconds,
+                    now=stamp,
+                )
                 changed.append(task)
                 self._save(task, now=stamp)
                 self._emit("attempt_lost", task)
@@ -649,30 +854,71 @@ class Scheduler:
         return changed
 
     def _expire(self, task: Task, attempt: Attempt, *, now: float) -> None:
-        """A live attempt stopped reporting. Silence, not slowness, fails."""
+        """A live attempt stopped reporting — or never stopped and never finished.
+
+        Silence is the usual failure signal, but a keepalive-driven lease can
+        also simply reach its phase ceiling, and the two are different stories
+        for the user: one machine went quiet, the other is still working on
+        something that has run past every budget we gave it. Naming them the
+        same way sends the second one to a "check the worker is online" hint
+        for a worker that is demonstrably online.
+        """
+        # ASSIGNED is excluded: it has no phase of its own to overrun, only an
+        # accept window, and silence is the only thing that can end it.
+        exhausted = task.state is not TaskState.ASSIGNED and now >= self._phase_ceiling(
+            task, attempt, self._budget_for(task)
+        )
         code = {
             TaskState.ASSIGNED: "ACCEPT_TIMEOUT",
             TaskState.MODEL_LOADING: "MODEL_LOAD_TIMEOUT",
             TaskState.RESULT_UPLOADING: "RESULT_DELIVERY_TIMEOUT",
-        }.get(task.state, "PROGRESS_LEASE_EXPIRED")
+        }.get(task.state, "EXECUTION_TIMEOUT" if exhausted else "PROGRESS_LEASE_EXPIRED")
         self.on_failed(
             task.task_id,
             attempt.attempt_id,
             WorkerError(
                 error_class=ErrorClass.TIMEOUT,
                 code=code,
-                message="The worker stopped reporting progress.",
+                message=(
+                    "The task ran past the time budgeted for this stage."
+                    if exhausted
+                    else "The worker stopped reporting progress."
+                ),
                 hint="It will be retried on another worker if one is available.",
             ),
             epoch=attempt.session_epoch,
             now=now,
         )
 
-    def _release(self, task: Task, attempt: Attempt) -> None:
+    def _release_slot(
+        self,
+        task: Task,
+        attempt: Attempt,
+        *,
+        zombie: bool = False,
+        zombie_ttl_seconds: Optional[float] = None,
+        now: Optional[float] = None,
+    ) -> bool:
+        """Return one attempt's slot to its worker, at most once.
+
+        ``in_flight`` is the record of whether this attempt still holds a slot,
+        and every release goes through this guard: `capacity.release` protects
+        its per-model counter but the worker-wide one is a plain decrement, so
+        two paths ending the same attempt — a result racing the sweeper, a
+        cancel racing a late failure — would hand back capacity that was never
+        taken and overcommit the machine.
+        """
         worker = self.pool.get(attempt.worker_id)
-        if worker is not None:
-            worker.in_flight.discard(attempt.attempt_id)
-            worker.capacity.release(task.engine, task.model_id)
+        if worker is None or attempt.attempt_id not in worker.in_flight:
+            return False
+        worker.in_flight.discard(attempt.attempt_id)
+        return worker.capacity.release(
+            task.engine,
+            task.model_id,
+            zombie=zombie,
+            zombie_ttl_seconds=zombie_ttl_seconds,
+            now=now,
+        )
 
     def _fail(self, task: Task, error: WorkerError, *, now: float) -> None:
         task.error = error

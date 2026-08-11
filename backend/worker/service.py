@@ -153,6 +153,12 @@ class ControlPlane:
         if self._tasks:
             await asyncio.gather(*self._tasks, return_exceptions=True)
         self._tasks = []
+        if self.scheduler is not None:
+            # Anyone awaiting a task is waiting on a future only this scheduler
+            # will ever complete, and the sweeper that would have timed it out
+            # has just been cancelled — so a shutdown would otherwise hang the
+            # request, and with it the app's own quit.
+            self.scheduler.abort_waiters()
         if self._server is not None:
             # A short grace so in-flight acknowledgements land; anything longer
             # would delay app shutdown for work that survives anyway.

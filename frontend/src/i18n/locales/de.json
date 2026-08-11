@@ -1807,7 +1807,16 @@
     "to_download": "zum Herunterladen",
     "cached": "zwischengespeichert",
     "fast_download_badge": "schneller Download",
-    "fast_download_title": "Schnelle Downloads über Xet {{version}} – parallele Chunk-Übertragung"
+    "fast_download_title": "Schnelle Downloads über Xet {{version}} – parallele Chunk-Übertragung",
+    "voice_previews": "Stimmvorschauen",
+    "voice_previews_desc": "Lade vorab gerenderte Vorschauen herunter, damit Stimmen sofort abspielen – schon bevor ein Sprachmodell fertig geladen ist. Es wird nichts heruntergeladen, bis du dies aktivierst.",
+    "voice_previews_off": "Aus – Vorschauen werden auf diesem Gerät gerendert",
+    "voice_previews_ready": "Empfohlener Satz zwischengespeichert",
+    "voice_previews_partial": "{{cached}} von {{total}} empfohlenen Vorschauen zwischengespeichert",
+    "voice_previews_checked": "geprüft {{when}}",
+    "voice_previews_never": "noch nicht geprüft",
+    "voice_previews_check": "Jetzt prüfen",
+    "voice_previews_rejected": "Aktualisierung der Stimmgalerie abgelehnt: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Benötige ich eine Lizenz für interne Tools?",

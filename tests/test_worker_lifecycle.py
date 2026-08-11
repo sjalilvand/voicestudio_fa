@@ -315,11 +315,40 @@ def test_reconcile_resumes_a_task_the_worker_still_holds():
     task.start(attempt.attempt_id)
     task.mark_disconnected(attempt.attempt_id, grace_seconds=45, now=1000.0)
 
-    action = reconcile(task, worker_id="w1", worker_in_flight=[attempt.attempt_id])
+    action = reconcile(
+        task,
+        worker_id="w1",
+        worker_in_flight=[attempt.attempt_id],
+        resume_lease_seconds=120,
+        now=1030.0,
+    )
 
     assert action == "resume"
     assert attempt.disconnected_at is None
     assert task.state is TaskState.RUNNING
+
+
+def test_reconcile_renews_the_lease_of_the_attempt_it_resumes():
+    """A resume that only cleared the disconnect left the attempt carrying an
+    expiry stamped before the outage — so the next sweep failed the task the
+    reconnect had just recovered."""
+    task = _task()
+    attempt = task.assign(worker_id="w1", session_epoch=1, now=1000.0)
+    task.accept(attempt.attempt_id, now=1001.0)
+    task.start(attempt.attempt_id, now=1002.0)
+    attempt.renew_lease(120, now=1002.0)
+    task.mark_disconnected(attempt.attempt_id, grace_seconds=45, now=1010.0)
+
+    reconcile(
+        task,
+        worker_id="w1",
+        worker_in_flight=[attempt.attempt_id],
+        resume_lease_seconds=120,
+        now=1200.0,
+    )
+
+    assert attempt.lease_expired(now=1201.0) is False
+    assert attempt.lease_expires_at == 1320.0
 
 
 def test_reconcile_loses_a_task_the_worker_no_longer_has():
@@ -329,7 +358,9 @@ def test_reconcile_loses_a_task_the_worker_no_longer_has():
     task.accept(attempt.attempt_id)
     task.start(attempt.attempt_id)
 
-    action = reconcile(task, worker_id="w1", worker_in_flight=[])
+    action = reconcile(
+        task, worker_id="w1", worker_in_flight=[], resume_lease_seconds=120
+    )
 
     assert action is None
     assert attempt.state is AttemptState.LOST
@@ -343,9 +374,86 @@ def test_reconcile_flags_a_zombie_the_server_wrote_off():
     task.start(attempt.attempt_id)
     task.lose_attempt(attempt.attempt_id, now=1046.0)
 
-    action = reconcile(task, worker_id="w1", worker_in_flight=[attempt.attempt_id])
+    action = reconcile(
+        task,
+        worker_id="w1",
+        worker_in_flight=[attempt.attempt_id],
+        resume_lease_seconds=120,
+    )
 
     assert action == "cancel_zombie"
+
+
+# ── Lease ceilings and phase anchors ───────────────────────────────────────
+
+
+def test_a_bounded_renewal_never_pushes_past_the_ceiling():
+    """The keepalive's whole safety property: it may keep an attempt alive,
+    but never past the budget of the phase it is keeping alive."""
+    task = _task()
+    attempt = task.assign(worker_id="w1", session_epoch=1, now=1000.0)
+    task.accept(attempt.attempt_id, now=1001.0)
+    task.start(attempt.attempt_id, now=1002.0)
+
+    attempt.renew_lease(120, not_after=1302.0, now=1250.0)
+
+    assert attempt.lease_expires_at == 1302.0
+    assert attempt.lease_expired(now=1303.0) is True
+
+
+def test_an_unbounded_renewal_is_unchanged():
+    task = _task()
+    attempt = task.assign(worker_id="w1", session_epoch=1, now=1000.0)
+    attempt.renew_lease(120, now=1250.0)
+    assert attempt.lease_expires_at == 1370.0
+
+
+def test_the_phase_anchor_survives_a_pinned_zero_clock():
+    """`0.0` is a legitimate timestamp — an `or` chain would skip it and
+    silently anchor the ceiling to the wrong phase (worker/clock.py)."""
+    task = _task()
+    attempt = task.assign(worker_id="w1", session_epoch=1, now=0.0)
+    task.accept(attempt.attempt_id, now=0.0)
+    task.start(attempt.attempt_id, now=0.0)
+    attempt.phase_started_at = 0.0
+
+    assert attempt.phase_anchor == 0.0
+
+
+def test_the_phase_anchor_moves_with_each_phase():
+    task = _task()
+    attempt = task.assign(worker_id="w1", session_epoch=1, now=1000.0)
+    task.accept(attempt.attempt_id, now=1001.0)
+    assert attempt.phase_anchor == 1001.0
+    task.model_loading(attempt.attempt_id, now=1002.0)
+    assert attempt.phase_anchor == 1002.0
+    task.start(attempt.attempt_id, now=1300.0)
+    assert attempt.phase_anchor == 1300.0
+
+
+def test_a_restored_attempt_still_has_an_anchor():
+    """`phase_started_at` is not persisted, so recovery falls back to the
+    phase timestamps that are."""
+    task = _task()
+    attempt = task.assign(worker_id="w1", session_epoch=1, now=1000.0)
+    task.accept(attempt.attempt_id, now=1001.0)
+    task.start(attempt.attempt_id, now=1002.0)
+    attempt.phase_started_at = None
+
+    assert attempt.phase_anchor == 1002.0
+
+
+def test_model_loading_after_started_is_legal():
+    """An out-of-order frame, or an engine loading a second model mid-run.
+    Raising here ended the read loop and tore down a healthy session (B12)."""
+    task = _task()
+    attempt = task.assign(worker_id="w1", session_epoch=1)
+    task.accept(attempt.attempt_id)
+    task.start(attempt.attempt_id)
+
+    task.model_loading(attempt.attempt_id)
+
+    assert task.state is TaskState.MODEL_LOADING
 
 
 def test_priority_classes_are_two_not_four():

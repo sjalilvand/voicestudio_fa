@@ -1807,7 +1807,16 @@
     "to_download": "da scaricare",
     "cached": "memorizzato nella cache",
     "fast_download_badge": "download veloce",
-    "fast_download_title": "Download veloci tramite Xet {{version}}: trasferimento parallelo in blocchi"
+    "fast_download_title": "Download veloci tramite Xet {{version}}: trasferimento parallelo in blocchi",
+    "voice_previews": "Anteprime vocali",
+    "voice_previews_desc": "Scarica anteprime già generate così le voci si ascoltano subito, anche prima che un modello vocale finisca di scaricarsi. Non viene scaricato nulla finché non attivi questa opzione.",
+    "voice_previews_off": "Disattivato — le anteprime vengono generate su questo dispositivo",
+    "voice_previews_ready": "Set in evidenza in cache",
+    "voice_previews_partial": "{{cached}} di {{total}} anteprime in evidenza in cache",
+    "voice_previews_checked": "verificato {{when}}",
+    "voice_previews_never": "non ancora verificato",
+    "voice_previews_check": "Verifica ora",
+    "voice_previews_rejected": "Aggiornamento della galleria vocale rifiutato: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Ho bisogno di una licenza per gli strumenti interni?",

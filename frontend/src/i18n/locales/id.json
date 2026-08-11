@@ -1807,7 +1807,16 @@
     "to_download": "untuk mengunduh",
     "cached": "di-cache",
     "fast_download_badge": "unduh cepat",
-    "fast_download_title": "Pengunduhan cepat melalui Xet {{version}} — transfer potongan paralel"
+    "fast_download_title": "Pengunduhan cepat melalui Xet {{version}} — transfer potongan paralel",
+    "voice_previews": "Pratinjau suara",
+    "voice_previews_desc": "Unduh pratinjau yang sudah dirender lebih dulu agar suara langsung diputar — bahkan sebelum model suara selesai diunduh. Tidak ada yang diunduh sampai Anda mengaktifkan ini.",
+    "voice_previews_off": "Nonaktif — pratinjau dirender di perangkat ini",
+    "voice_previews_ready": "Set unggulan tersimpan",
+    "voice_previews_partial": "{{cached}} dari {{total}} pratinjau unggulan tersimpan",
+    "voice_previews_checked": "diperiksa {{when}}",
+    "voice_previews_never": "belum diperiksa",
+    "voice_previews_check": "Periksa sekarang",
+    "voice_previews_rejected": "Pembaruan galeri suara ditolak: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Apakah saya memerlukan lisensi untuk alat internal?",

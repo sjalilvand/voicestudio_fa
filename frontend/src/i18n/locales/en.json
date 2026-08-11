@@ -2489,7 +2489,16 @@
     "asrOpenAICompatTestUnreachable": "Could not connect — check the URL and that the server is running",
     "asrOpenAICompatTestNotConfigured": "Enter a server URL first",
     "asrOpenAICompatTestInvalidUrl": "The server URL must start with http:// or https://",
-    "asrOpenAICompatTestFailed": "Connection test failed"
+    "asrOpenAICompatTestFailed": "Connection test failed",
+    "voice_previews": "Voice previews",
+    "voice_previews_desc": "Download previews that were rendered ahead of time, so voices play instantly — even before a voice model finishes downloading. Nothing is downloaded until you turn this on.",
+    "voice_previews_off": "Off — previews render on this machine",
+    "voice_previews_ready": "Featured set cached",
+    "voice_previews_partial": "{{cached}} of {{total}} featured previews cached",
+    "voice_previews_checked": "checked {{when}}",
+    "voice_previews_never": "not checked yet",
+    "voice_previews_check": "Check now",
+    "voice_previews_rejected": "Voice gallery update rejected: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Do I need a license for internal tools?",

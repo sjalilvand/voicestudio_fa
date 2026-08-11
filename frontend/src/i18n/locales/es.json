@@ -1807,7 +1807,16 @@
     "to_download": "para descargar",
     "cached": "almacenado en caché",
     "fast_download_badge": "descarga rápida",
-    "fast_download_title": "Descargas rápidas a través de Xet {{version}}: transferencia fragmentada paralela"
+    "fast_download_title": "Descargas rápidas a través de Xet {{version}}: transferencia fragmentada paralela",
+    "voice_previews": "Vistas previas de voz",
+    "voice_previews_desc": "Descarga vistas previas renderizadas de antemano para que las voces suenen al instante, incluso antes de que termine de descargarse un modelo de voz. No se descarga nada hasta que actives esta opción.",
+    "voice_previews_off": "Desactivado: las vistas previas se generan en este equipo",
+    "voice_previews_ready": "Conjunto destacado en caché",
+    "voice_previews_partial": "{{cached}} de {{total}} vistas previas destacadas en caché",
+    "voice_previews_checked": "comprobado {{when}}",
+    "voice_previews_never": "sin comprobar aún",
+    "voice_previews_check": "Comprobar ahora",
+    "voice_previews_rejected": "Actualización de la galería de voces rechazada: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "¿Necesito una licencia para herramientas internas?",

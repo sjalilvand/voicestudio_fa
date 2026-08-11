@@ -177,3 +177,128 @@ async def test_starting_without_enrollment_explains_what_to_do(monkeypatch, tmp_
 
     with pytest.raises(RuntimeError, match="has not been enrolled"):
         await agent.WorkerAgent().start()
+
+
+# ── What the agent hands the client ────────────────────────────────────────
+
+
+class _FakeClient:
+    """Stands in for WorkerClient; records what the agent constructed it with."""
+
+    last = None
+
+    def __init__(self, config, **hooks):
+        type(self).last = self
+        self.config = config
+        self.hooks = hooks
+        self.stopped = False
+
+    async def run_forever(self):
+        await asyncio.Event().wait()
+
+    async def stop(self):
+        self.stopped = True
+
+
+@pytest.fixture
+def enrolled(monkeypatch, tmp_path):
+    """An already-enrolled worker whose client is a stand-in."""
+    from worker.transport import client as transport
+
+    (tmp_path / "control-plane.pinned.crt").write_bytes(b"-----BEGIN CERTIFICATE-----\n")
+    monkeypatch.setenv("OMNIVOICE_WORKER_ENDPOINT", "127.0.0.1:1")
+    monkeypatch.delenv("OMNIVOICE_WORKER_TOKEN", raising=False)
+    monkeypatch.setattr(
+        agent,
+        "_paths",
+        lambda: {
+            "root": str(tmp_path),
+            "worker_key": str(tmp_path / "worker.key"),
+            "pinned_cert": str(tmp_path / "control-plane.pinned.crt"),
+            "worker_id": str(tmp_path / "worker-id"),
+        },
+    )
+    monkeypatch.setattr(transport, "WorkerClient", _FakeClient)
+    _FakeClient.last = None
+    return _FakeClient
+
+
+@pytest.mark.asyncio
+async def test_engines_present_but_not_downloaded_are_still_advertised(
+    monkeypatch, enrolled
+):
+    """Otherwise "this worker has no such engine" and "it has it but the weights
+    are missing" are the same silence, and the control plane can never offer
+    the download that would unblock the job."""
+    from worker import capabilities
+
+    seen = []
+    monkeypatch.setattr(
+        capabilities,
+        "discover",
+        lambda **kwargs: seen.append(kwargs) or [{"engine": "indextts"}],
+    )
+
+    instance = agent.WorkerAgent()
+    try:
+        await instance.start()
+        # The reconnect probe must ask the same question as the first one, or a
+        # reconnect quietly drops every not-yet-downloaded engine.
+        enrolled.last.hooks["capability_probe"]()
+    finally:
+        await instance.stop()
+
+    assert seen == [{"include_unavailable": True}, {"include_unavailable": True}]
+
+
+@pytest.mark.asyncio
+async def test_the_worker_releases_engines_it_has_stopped_using(monkeypatch, enrolled):
+    """Requirement 6. A machine lending its GPU is usually not the one its owner
+    is sitting at — holding several GB against a task that may never come is
+    pure cost."""
+    from services import tts_backend
+    from worker import capabilities
+
+    monkeypatch.setattr(capabilities, "discover", lambda **_: [])
+    monkeypatch.setattr(agent, "IDLE_SWEEP_INTERVAL_SECONDS", 0.01)
+    swept = asyncio.Event()
+    monkeypatch.setattr(
+        tts_backend, "release_idle_engines", lambda *a, **k: swept.set() or []
+    )
+
+    instance = agent.WorkerAgent()
+    try:
+        await instance.start()
+        await asyncio.wait_for(swept.wait(), timeout=2)
+        sweep = instance._idle_sweep
+    finally:
+        await instance.stop()
+
+    assert sweep.cancelled() or sweep.done(), "the sweep outlives the agent"
+
+
+@pytest.mark.asyncio
+async def test_a_failing_sweep_never_takes_the_worker_down(monkeypatch, enrolled):
+    """The agent's standing promise: a machine that cannot do the extra thing is
+    still a perfectly good worker."""
+    from services import tts_backend
+    from worker import capabilities
+
+    monkeypatch.setattr(capabilities, "discover", lambda **_: [])
+    monkeypatch.setattr(agent, "IDLE_SWEEP_INTERVAL_SECONDS", 0.01)
+    calls = []
+
+    def _boom(*args, **kwargs):
+        calls.append(1)
+        raise RuntimeError("driver wedged")
+
+    monkeypatch.setattr(tts_backend, "release_idle_engines", _boom)
+
+    instance = agent.WorkerAgent()
+    try:
+        await instance.start()
+        while len(calls) < 2:
+            await asyncio.sleep(0.01)
+        assert not instance._idle_sweep.done()
+    finally:
+        await instance.stop()

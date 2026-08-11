@@ -116,6 +116,11 @@ _PROTOCOL_CODES: dict[str, ErrorClass] = {
     "AUTH_FAILED": ErrorClass.PROTOCOL,
     "INVALID_TASK_PARAMS": ErrorClass.TERMINAL,
     "MODEL_REF_REJECTED": ErrorClass.TERMINAL,
+    # Terminal, not transient: the render succeeded but is bigger than the
+    # stream can carry, so retrying re-renders the same oversized audio. Left
+    # unclassified it fell through to TRANSIENT and the task retried until it
+    # ran out of attempts, each one paying the full generation again.
+    "RESULT_TOO_LARGE": ErrorClass.TERMINAL,
 }
 
 

@@ -83,6 +83,115 @@ def test_timeout_parks_a_zombie_slot_instead_of_returning_it():
     assert cap.available_slots == 2
 
 
+# ── Getting a parked slot back (B2) ────────────────────────────────────────
+
+
+def test_a_parked_slot_is_reclaimed_when_its_ttl_runs_out():
+    """B2: `reap_zombie` had no caller and the protocol has no message that
+    would trigger one, so a single lease expiry at max_concurrent_tasks=1 made
+    a worker unschedulable forever — while it heartbeated active=0, free=1
+    every twenty seconds."""
+    cap = _cap(max_concurrent_tasks=1)
+    cap.reserve("indextts", "IndexTTS-2")
+    cap.release("indextts", "IndexTTS-2", zombie=True, zombie_ttl_seconds=300, now=1000.0)
+    assert cap.available_slots == 0
+
+    assert cap.expire_zombies(now=1299.0) == 0
+    assert cap.available_slots == 0, "the thread's own budget has not run out yet"
+
+    assert cap.expire_zombies(now=1301.0) == 1
+    assert cap.available_slots == 1
+
+
+def test_a_busy_heartbeat_does_not_reclaim_a_park():
+    """The inverse of the tempting heuristic, and the reason it is wrong.
+
+    Reconciling parks against the worker's reported load reads as sensible —
+    "it is already at its ceiling, the headroom is spent" — but at a ceiling of
+    one the ONLY task such a worker can report is the wedged one itself. So
+    "busy" would drop the park, and the very next idle heartbeat would hand the
+    slot out with the GPU thread still alive: the overcommit-into-OOM of
+    #730/#1190. Parks come back on a timer or on a restart, never on a report.
+    """
+    cap = _cap(max_concurrent_tasks=1)
+    cap.reserve("indextts", "IndexTTS-2")
+    cap.release("indextts", "IndexTTS-2", zombie=True, zombie_ttl_seconds=300, now=1000.0)
+
+    cap.apply_snapshot(active_tasks=1, available_slots=0, now=1001.0)
+    assert cap.zombie_tasks == 1
+
+    # …and the follow-up heartbeat that used to collect the freed slot.
+    cap.apply_snapshot(active_tasks=0, available_slots=1, now=1002.0)
+    assert cap.zombie_tasks == 1, "a park survived one report only to die on the next"
+
+    # The TTL remains the way out, so a timeout still cannot cost the worker
+    # permanently.
+    cap.apply_snapshot(active_tasks=0, available_slots=1, now=1400.0)
+    assert cap.zombie_tasks == 0
+
+
+def test_an_idle_worker_keeps_its_park():
+    """The worker counts asyncio tasks, not GPU threads — its "I am free" is
+    exactly the claim the park exists to disbelieve (#730/#1190)."""
+    cap = _cap(max_concurrent_tasks=1)
+    cap.reserve("indextts", "IndexTTS-2")
+    cap.release("indextts", "IndexTTS-2", zombie=True, zombie_ttl_seconds=300, now=1000.0)
+
+    cap.apply_snapshot(active_tasks=0, available_slots=1, now=1010.0)
+
+    assert cap.zombie_tasks == 1
+    assert cap.available_slots == 0
+
+
+def test_a_ttl_is_clamped_to_something_survivable():
+    cap = _cap()
+    cap.reserve("a", "m")
+    cap.release("a", "m", zombie=True, zombie_ttl_seconds=1, now=1000.0)
+    assert cap.expire_zombies(now=1030.0) == 0, "a park that short means nothing"
+
+    cap.expire_zombies(now=1_000_000.0)
+    cap.reserve("a", "m")
+    cap.release("a", "m", zombie=True, zombie_ttl_seconds=10**9, now=1000.0)
+    assert cap.expire_zombies(now=1000.0 + 3601) == 1, "one timeout cannot cost a session"
+
+
+def test_a_double_release_cannot_invent_capacity():
+    """`release` guarded its per-model slot but decremented the worker-wide
+    count regardless, so two paths ending one attempt overcommitted the
+    machine by a slot."""
+    cap = _cap()
+    cap.reserve("indextts", "IndexTTS-2")
+
+    assert cap.release("indextts", "IndexTTS-2") is True
+    assert cap.release("indextts", "IndexTTS-2") is False
+    assert cap.active_tasks == 0
+    assert cap.available_slots == 2
+
+
+def test_a_double_release_cannot_invent_a_zombie():
+    """A worker-wide zombie counter kept beside the per-slot ones could be
+    incremented for a slot that owned nothing — leaving a park no reap could
+    ever find."""
+    cap = _cap()
+    cap.reserve("indextts", "IndexTTS-2")
+    cap.release("indextts", "IndexTTS-2", zombie=True, now=1000.0)
+    cap.release("indextts", "IndexTTS-2", zombie=True, now=1000.0)
+
+    assert cap.zombie_tasks == 1
+
+
+def test_the_ceiling_follows_the_worker_down_as_well_as_up():
+    """The worker computes active+available as its own max_concurrent_tasks.
+    A ceiling we refuse to lower is one we keep dispatching against after the
+    worker has said it can no longer honour it."""
+    cap = _cap(max_concurrent_tasks=1)
+    cap.apply_snapshot(active_tasks=0, available_slots=4, now=1000.0)
+    assert cap.max_concurrent_tasks == 4
+
+    cap.apply_snapshot(active_tasks=0, available_slots=1, now=1010.0)
+    assert cap.max_concurrent_tasks == 1
+
+
 def test_worker_wide_cap_binds_before_per_model_cap():
     """Per-model concurrencies are not independent — they share one VRAM pool."""
     cap = _cap(max_concurrent_tasks=1)

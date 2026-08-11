@@ -1807,7 +1807,16 @@
     "to_download": "เพื่อดาวน์โหลด",
     "cached": "แคชไว้",
     "fast_download_badge": "ดาวน์โหลดอย่างรวดเร็ว",
-    "fast_download_title": "ดาวน์โหลดอย่างรวดเร็วผ่าน Xet {{version}} — การถ่ายโอนแบบขนาน"
+    "fast_download_title": "ดาวน์โหลดอย่างรวดเร็วผ่าน Xet {{version}} — การถ่ายโอนแบบขนาน",
+    "voice_previews": "ตัวอย่างเสียง",
+    "voice_previews_desc": "ดาวน์โหลดตัวอย่างที่เรนเดอร์ไว้ล่วงหน้า เพื่อให้เสียงเล่นได้ทันที แม้ก่อนที่โมเดลเสียงจะดาวน์โหลดเสร็จ จะไม่มีการดาวน์โหลดใด ๆ จนกว่าคุณจะเปิดใช้งาน",
+    "voice_previews_off": "ปิด — ตัวอย่างจะถูกเรนเดอร์บนเครื่องนี้",
+    "voice_previews_ready": "แคชชุดแนะนำแล้ว",
+    "voice_previews_partial": "แคชตัวอย่างแนะนำแล้ว {{cached}} จาก {{total}}",
+    "voice_previews_checked": "ตรวจสอบเมื่อ {{when}}",
+    "voice_previews_never": "ยังไม่ได้ตรวจสอบ",
+    "voice_previews_check": "ตรวจสอบตอนนี้",
+    "voice_previews_rejected": "ปฏิเสธการอัปเดตคลังเสียง: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "ฉันจำเป็นต้องมีใบอนุญาตสำหรับเครื่องมือภายในหรือไม่?",

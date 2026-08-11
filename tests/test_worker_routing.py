@@ -248,6 +248,74 @@ def test_a_revoked_choice_falls_back(db, settings):
     assert routing.decide(plane).remote is False
 
 
+# ── Per-operation coverage ─────────────────────────────────────────────────
+
+
+def test_a_ported_operation_still_runs_remotely(db, settings):
+    plane = _Plane()
+    worker = _enroll("desktop-4090")
+    _connect(plane, worker)
+    routing.set_target_id(worker.id)
+
+    assert routing.decide(plane, op="tts").remote is True
+
+
+def test_an_unported_operation_never_claims_the_remote_target(db, settings):
+    """Otherwise the badge reads "gpu2 ● ready" on the Dub tab while every
+    second of that work runs here."""
+    plane = _Plane()
+    worker = _enroll("desktop-4090")
+    _connect(plane, worker)
+    routing.set_target_id(worker.id)
+
+    decision = routing.decide(plane, op="dub")
+
+    assert decision.remote is False
+    assert decision.worker_id is None
+    assert "dubbing" in decision.reason
+
+
+def test_coverage_is_decided_before_reachability(db, settings):
+    """A sleeping 4090 is beside the point for work nothing would send it."""
+    plane = _Plane()
+    worker = _enroll("desktop-4090")
+    routing.set_target_id(worker.id)
+
+    assert "does not run remotely yet" in routing.decide(plane, op="dub").reason
+
+
+def test_omitting_the_operation_answers_for_the_target(db, settings):
+    """The picker's own menu asks about the machine, not about one job."""
+    plane = _Plane()
+    worker = _enroll("desktop-4090")
+    _connect(plane, worker)
+    routing.set_target_id(worker.id)
+
+    assert routing.decide(plane).remote is True
+    assert routing.supports_operation(None) is True
+
+
+def test_unknown_operations_are_not_remote(db, settings):
+    assert routing.supports_operation("tts") is True
+    assert routing.supports_operation("dictation") is False
+    assert routing.supports_operation("something-new") is False
+
+
+def test_status_answers_for_the_operation_it_was_asked_about(db, settings):
+    plane = _Plane()
+    worker = _enroll("desktop-4090")
+    _connect(plane, worker)
+    routing.set_target_id(worker.id)
+
+    payload = routing.status(plane, op="dub")
+
+    assert payload["op"] == "dub"
+    assert payload["target"] == worker.id, "the user's choice is not lost"
+    assert payload["active"]["remote"] is False
+    # What the menu needs to say "gpu2 · TTS only".
+    assert payload["remote_operations"] == ["tts"]
+
+
 # ── The badge cannot lie ───────────────────────────────────────────────────
 
 

@@ -212,6 +212,16 @@ message TaskProgress {
   double progress = 3;
   string stage = 4;
   string detail = 5;
+  // True when this frame exists only to renew the lease, emitted by a timer
+  // rather than by the work itself. It must never overwrite progress/stage.
+  //
+  // Without this flag "slow" and "wedged" are indistinguishable: a timer on
+  // the event loop keeps ticking while the GPU thread is wedged (#567's
+  // sticky CUDA abort), so an unmarked keepalive would renew the lease of a
+  // task that will never finish. The server bounds a keepalive-renewed lease
+  // by the phase's absolute budget; a real progress frame is evidence of work
+  // and is not bounded that way.
+  bool keepalive = 6;
 }
 
 // Usage accounting rides the result from v1. Billing cannot launch behind a

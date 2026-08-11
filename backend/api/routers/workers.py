@@ -14,18 +14,30 @@ Two things here are not conveniences and must not be softened:
     is no global "trust all workers".
   * **A token is shown exactly once.** Only its hash is stored, so it cannot be
     re-displayed — which is the point.
+
+One endpoint here is not part of that surface: `POST /workers/tasks` submits a
+single task and waits for it, and exists only because the scheduler otherwise
+has no caller at all outside the tests. It is marked dev-only everywhere it
+appears and is replaced by the GPU gateway.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from api.dependencies import require_loopback
 from worker import registry, routing, service
 
 logger = logging.getLogger("omnivoice.worker")
+
+# How often an awaiting request checks whether its caller is still there.
+# Starlette does not cancel a handler when the client hangs up, so polling is
+# the only way the "cancel what nobody is waiting for" rule can fire before
+# the task's own deadline does.
+_DISCONNECT_POLL_SECONDS = 1.0
 
 # Management is loopback-only: these endpoints mint join tokens and revoke
 # machines, so they follow the same rule as the app's other privileged routes.
@@ -54,6 +66,29 @@ class WorkerUpdate(BaseModel):
     priority: int | None = Field(None, ge=0, le=100)
 
 
+class SubmitTaskRequest(BaseModel):
+    """One unit of work for a remote worker. **Dev only** — see `submit_task`."""
+
+    engine: str = Field(..., max_length=64)
+    operation: str = Field("tts", max_length=32)
+    model_id: str = Field("", max_length=128)
+    params: dict = Field(default_factory=dict)
+    # Mandatory, and deliberately without a default: the sweeper fails a task
+    # on its deadline only while it is QUEUED, so one submitted without a
+    # deadline while no worker is online waits forever with nothing left in
+    # the system that would ever time it out.
+    deadline_seconds: float = Field(..., gt=0, le=6 * 3600)
+    idempotency_key: str | None = Field(None, max_length=128)
+
+
+class _ClientGone(Exception):
+    """The caller hung up while its task was still running."""
+
+
+class _WaitExpired(Exception):
+    """The task did not reach a terminal state inside its deadline."""
+
+
 @router.get("")
 def list_workers() -> dict:
     """Everything the workers panel renders, in one call."""
@@ -61,13 +96,15 @@ def list_workers() -> dict:
 
 
 @router.get("/target")
-def get_target() -> dict:
+def get_target(op: str = "") -> dict:
     """What the GPU picker shows: the choice, the resolved answer, the options.
 
     `active` is the same answer the generation path uses, so the badge cannot
-    claim work goes somewhere the router will not send it.
+    claim work goes somewhere the router will not send it. Pass `op` for the
+    surface being rendered — omitting it answers for the target as a whole,
+    which is what the picker's own menu asks.
     """
-    return routing.status()
+    return routing.status(op=op.strip() or None)
 
 
 @router.post("/target")
@@ -192,6 +229,105 @@ def list_tasks(limit: int = 50) -> dict:
         "queue_depth": service.control_plane.scheduler.queue_depth,
         "tasks": [t.to_dict() for t in task_store.list_tasks(limit=min(200, max(1, limit)))],
     }
+
+
+@router.post("/tasks")
+async def submit_task(request: Request, body: SubmitTaskRequest) -> dict:
+    """Run one task on a remote worker and wait for it. **DEV ONLY.**
+
+    This is the producer the remote pipeline never had: until it existed the
+    scheduler had no caller outside the test suite, so picking a remote GPU
+    changed the badge and nothing else — every job still ran locally. It is
+    the smallest thing that makes remote execution observable end to end, not
+    the shipping surface: the GPU gateway takes over routing real generation
+    and this endpoint goes with it.
+
+    Loopback-only and behind the same opt-in as the rest of the feature, so a
+    user who never enabled remote workers cannot reach it at all.
+    """
+    from worker.lifecycle import TaskState  # noqa: PLC0415
+    from worker.scheduler import QueueFull, SchedulerStopped  # noqa: PLC0415
+
+    if not service.remote_workers_enabled() or not service.control_plane.running:
+        raise HTTPException(status_code=409, detail="Remote workers are turned off.")
+    if not routing.supports_operation(body.operation):
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{body.operation}' does not run on a remote worker yet.",
+        )
+
+    scheduler = service.control_plane.scheduler
+    try:
+        task = scheduler.submit(
+            operation=body.operation,
+            engine=body.engine,
+            model_id=body.model_id,
+            params=body.params,
+            idempotency_key=body.idempotency_key or None,
+            deadline_seconds=body.deadline_seconds,
+        )
+    except QueueFull as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+
+    settled = None
+    reason = "the request was interrupted"
+    try:
+        settled = await _await_terminal(
+            request, scheduler, task.task_id, timeout=body.deadline_seconds
+        )
+    except _ClientGone:
+        reason = "the client disconnected"
+        raise HTTPException(status_code=499, detail="The client stopped waiting.") from None
+    except _WaitExpired:
+        reason = "the task passed its deadline"
+        raise HTTPException(
+            status_code=504,
+            detail=f"The task did not finish within {body.deadline_seconds:g}s.",
+        ) from None
+    except SchedulerStopped as exc:
+        # Deliberately no cancel: the worker was never told to stop and may
+        # still be rendering, so claiming the task is cancelled would be a
+        # statement about someone else's GPU that we cannot make.
+        reason = None
+        raise HTTPException(status_code=503, detail=str(exc)) from None
+    finally:
+        # Nothing else will stop it: a worker holds its slot — often its only
+        # one — until the control plane says otherwise, and the sweeper only
+        # enforces deadlines on tasks that are still queued. Swallowed because
+        # a failure here would replace the caller's real error with a 500.
+        if settled is None and reason is not None:
+            try:
+                scheduler.cancel(task.task_id, reason=reason)
+            except Exception:
+                logger.exception("Could not cancel abandoned remote task %s", task.task_id)
+
+    payload = settled.to_dict()
+    if settled.state is TaskState.COMPLETED:
+        return payload
+    # A failure that answered 200 would be indistinguishable from success to
+    # anything that does not read `state` — which is the whole point of this
+    # endpoint existing before the gateway does.
+    raise HTTPException(
+        status_code=409 if settled.state is TaskState.CANCELLED else 502, detail=payload
+    )
+
+
+async def _await_terminal(request: Request, scheduler, task_id: str, *, timeout: float):
+    """Wait for a terminal task, giving up if the caller does first."""
+    waiter = asyncio.ensure_future(scheduler.wait(task_id, timeout=timeout))
+    while True:
+        done, _pending = await asyncio.wait({waiter}, timeout=_DISCONNECT_POLL_SECONDS)
+        if done:
+            try:
+                settled = waiter.result()
+            except (asyncio.TimeoutError, TimeoutError) as exc:
+                raise _WaitExpired() from exc
+            if settled is None or not settled.state.terminal:
+                raise _WaitExpired()
+            return settled
+        if await request.is_disconnected():
+            waiter.cancel()
+            raise _ClientGone()
 
 
 @router.post("/tasks/{task_id}/cancel")

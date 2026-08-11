@@ -24,11 +24,30 @@ killed. The thread keeps the device until it finishes on its own
 the slot; the slot stays occupied by a zombie until the worker confirms the
 thread exited. Returning it early is how a worker gets overcommitted into an
 OOM.
+
+But a park with no way out is just as wrong as no park at all: a worker whose
+only slot is parked never gets another assignment, so it never produces the
+confirmation that would release it, and it heartbeats "idle, 1 free" forever
+while the scheduler considers it full. Two bounded exits, neither of which
+trusts the worker's own accounting (which counts asyncio tasks, not GPU
+threads, and so reports a parked slot as free the moment the task object is
+gone):
+
+  * a **TTL** sized from the budget the stuck job was given — past that, its
+    thread is either finished or wedged beyond anything we can wait out;
+  * **reconciliation** against the worker's reported ceiling — if the worker
+    is running as many tasks as it says it can hold, the park is protecting
+    nothing, because the overcommit it exists to prevent has already happened.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Optional
+
+from worker.clock import resolve
+
+logger = logging.getLogger("omnivoice.worker")
 
 # Per-job VRAM budget. Mirrors the figure model_manager uses when sizing its
 # GPU worker pool; deliberately conservative because exceeding it does not
@@ -44,6 +63,21 @@ _ALWAYS_SERIAL = frozenset({"mps", "mlx", "cpu", ""})
 # the bottleneck stops being VRAM and starts being scheduler overhead and
 # host-side I/O contention.
 _MAX_DERIVED = 4
+
+# Bounds on how long a parked slot is held. The caller passes the timed-out
+# job's own execution budget — the longest its thread can still legitimately be
+# running — and these clamp a nonsensical one: never so short that the park
+# stops meaning anything, never so long that a single timeout costs the user a
+# worker for the rest of the session.
+_MIN_ZOMBIE_TTL_SECONDS = 60.0
+_MAX_ZOMBIE_TTL_SECONDS = 3600.0
+_DEFAULT_ZOMBIE_TTL_SECONDS = 600.0
+
+
+def _bounded_ttl(seconds: Optional[float]) -> float:
+    if not seconds or seconds <= 0:
+        return _DEFAULT_ZOMBIE_TTL_SECONDS
+    return min(_MAX_ZOMBIE_TTL_SECONDS, max(_MIN_ZOMBIE_TTL_SECONDS, float(seconds)))
 
 
 def derive_concurrency(
@@ -83,8 +117,15 @@ class ModelSlot:
     active: int = 0
     # Slots held by jobs that timed out but whose GPU thread has not exited.
     # Not available, not counted as active work, not returnable until the
-    # worker says the thread is gone.
-    zombie: int = 0
+    # worker says the thread is gone or the park times out. Stored as the
+    # absolute reclaim time of each park rather than a bare count: a count has
+    # no way to answer "has this one waited long enough", and a count kept
+    # beside a list of deadlines is two records of one fact that drift.
+    zombie_expiries: list[float] = field(default_factory=list)
+
+    @property
+    def zombie(self) -> int:
+        return len(self.zombie_expiries)
 
     @property
     def available(self) -> int:
@@ -103,7 +144,6 @@ class WorkerCapacity:
     worker_id: str
     max_concurrent_tasks: int = 1
     active_tasks: int = 0
-    zombie_tasks: int = 0
     free_memory_bytes: int = 0
     backend: str = ""
     resident_models: set[str] = field(default_factory=set)
@@ -112,6 +152,13 @@ class WorkerCapacity:
     @staticmethod
     def slot_key(engine: str, model_id: str) -> str:
         return f"{engine}:{model_id}"
+
+    @property
+    def zombie_tasks(self) -> int:
+        """Derived from the slots, never counted separately: a worker-wide
+        counter maintained alongside per-slot ones is how a double release used
+        to invent a zombie that no slot owned and nothing could ever reap."""
+        return sum(slot.zombie for slot in self.slots.values())
 
     @property
     def available_slots(self) -> int:
@@ -144,26 +191,63 @@ class WorkerCapacity:
         )
         slot.active += 1
 
-    def release(self, engine: str, model_id: str, *, zombie: bool = False) -> None:
+    def release(
+        self,
+        engine: str,
+        model_id: str,
+        *,
+        zombie: bool = False,
+        zombie_ttl_seconds: Optional[float] = None,
+        now: Optional[float] = None,
+    ) -> bool:
         """Return a slot. ``zombie=True`` parks it instead: the task is over
-        but the GPU thread is not, so the capacity is still gone."""
+        but the GPU thread is not, so the capacity is still gone.
+
+        Returns whether a slot was actually returned. A release for a slot that
+        holds nothing is a bug in the caller (a double release), and answering
+        it with a decrement would invent worker-wide capacity out of nothing —
+        so it is refused and reported rather than absorbed.
+        """
         slot = self.slots.get(self.slot_key(engine, model_id))
-        if slot is not None and slot.active > 0:
-            slot.active -= 1
-            if zombie:
-                slot.zombie += 1
+        if slot is None or slot.active <= 0:
+            return False
+        slot.active -= 1
         if self.active_tasks > 0:
             self.active_tasks -= 1
         if zombie:
-            self.zombie_tasks += 1
+            slot.zombie_expiries.append(resolve(now) + _bounded_ttl(zombie_ttl_seconds))
+        return True
 
     def reap_zombie(self, engine: str, model_id: str) -> None:
         """The worker confirmed the stuck thread exited. Capacity returns."""
         slot = self.slots.get(self.slot_key(engine, model_id))
-        if slot is not None and slot.zombie > 0:
-            slot.zombie -= 1
-        if self.zombie_tasks > 0:
-            self.zombie_tasks -= 1
+        if slot is not None and slot.zombie_expiries:
+            # Oldest first: parks are indistinguishable, so releasing the one
+            # that has waited longest is the only ordering that cannot starve.
+            slot.zombie_expiries.pop(0)
+
+    def expire_zombies(self, *, now: Optional[float] = None) -> int:
+        """Reclaim parks whose TTL ran out. Returns how many came back.
+
+        The backstop that keeps a timeout from costing a worker permanently:
+        the confirmation ``reap_zombie`` waits for is a message the current
+        protocol has no way to send, so without this the only exit is a
+        reconnect.
+        """
+        stamp = resolve(now)
+        reaped = 0
+        for slot in self.slots.values():
+            keep = [t for t in slot.zombie_expiries if t > stamp]
+            reaped += len(slot.zombie_expiries) - len(keep)
+            slot.zombie_expiries = keep
+        if reaped:
+            logger.info(
+                "Reclaimed %d parked slot(s) on worker %s — the stuck thread's own "
+                "budget has run out",
+                reaped,
+                self.worker_id,
+            )
+        return reaped
 
     def apply_snapshot(
         self,
@@ -172,17 +256,36 @@ class WorkerCapacity:
         available_slots: int,
         resident_models: Optional[set[str]] = None,
         free_memory_bytes: Optional[int] = None,
+        now: Optional[float] = None,
     ) -> None:
         """Adopt a heartbeat snapshot. The worker is the source of truth for
         what it is actually running."""
         self.active_tasks = max(0, active_tasks)
-        self.max_concurrent_tasks = max(
-            self.max_concurrent_tasks, active_tasks + max(0, available_slots)
-        )
+        reported_ceiling = self.active_tasks + max(0, available_slots)
+        if reported_ceiling > 0:
+            # Adopted, not merely grown. The worker computes this as its own
+            # ``max_concurrent_tasks``, so a ceiling we refuse to lower is one
+            # we keep dispatching against after the worker has told us it can
+            # no longer honour it — the overcommit this module exists to avoid.
+            self.max_concurrent_tasks = reported_ceiling
         if resident_models is not None:
             self.resident_models = set(resident_models)
         if free_memory_bytes is not None:
             self.free_memory_bytes = free_memory_bytes
+        # Parks are released on a timer, and by the worker restarting — never
+        # by the worker's own load report.
+        #
+        # Reconciling them against ``active_tasks`` looks reasonable and is
+        # exactly backwards: a park exists because a timed-out GPU thread
+        # cannot be killed and the worker therefore cannot account for it. At
+        # ``max_concurrent_tasks == 1`` the only task such a worker can report
+        # IS the wedged one, so "busy" would drop the park and the next idle
+        # heartbeat would hand the slot out with the thread still running —
+        # the overcommit-into-OOM this module exists to prevent (#730/#1190).
+        # The two safe signals are already covered: ``expire_zombies`` above
+        # bounds the park by TTL, and a reconnect builds a fresh capacity
+        # record (pool.py), because a restarted process has no live threads.
+        self.expire_zombies(now=now)
 
     def to_dict(self) -> dict:
         return {

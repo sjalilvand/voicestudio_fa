@@ -1807,7 +1807,16 @@
     "to_download": "indirmek için",
     "cached": "önbelleğe alınmış",
     "fast_download_badge": "hızlı indirme",
-    "fast_download_title": "Xet {{version}} aracılığıyla hızlı indirmeler — paralel yığın halinde aktarım"
+    "fast_download_title": "Xet {{version}} aracılığıyla hızlı indirmeler — paralel yığın halinde aktarım",
+    "voice_previews": "Ses önizlemeleri",
+    "voice_previews_desc": "Önceden oluşturulmuş önizlemeleri indirin; böylece sesler, bir ses modeli inmeyi bitirmeden önce bile anında çalar. Bunu açana kadar hiçbir şey indirilmez.",
+    "voice_previews_off": "Kapalı — önizlemeler bu cihazda oluşturulur",
+    "voice_previews_ready": "Öne çıkan set önbellekte",
+    "voice_previews_partial": "{{total}} öne çıkan önizlemeden {{cached}} tanesi önbellekte",
+    "voice_previews_checked": "{{when}} kontrol edildi",
+    "voice_previews_never": "henüz kontrol edilmedi",
+    "voice_previews_check": "Şimdi kontrol et",
+    "voice_previews_rejected": "Ses galerisi güncellemesi reddedildi: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Dahili araçlar için lisansa ihtiyacım var mı?",

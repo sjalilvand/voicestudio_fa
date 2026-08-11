@@ -7,6 +7,7 @@ network", it is that a user who never opts in has an app that is unchanged.
 """
 from __future__ import annotations
 
+import asyncio
 import sqlite3
 
 import pytest
@@ -332,6 +333,26 @@ async def test_enrollment_advertises_the_port_actually_bound(db, monkeypatch, tm
         await plane.stop()
 
 
+@pytest.mark.asyncio
+async def test_stopping_releases_everyone_awaiting_a_task():
+    """Otherwise quitting hangs on a future nothing will ever complete: the
+    sweeper that would have timed the wait out is cancelled first."""
+    from worker.lifecycle import Task
+    from worker.pool import WorkerPool
+    from worker.scheduler import Scheduler, SchedulerStopped
+
+    plane = service.ControlPlane()
+    plane.scheduler = Scheduler(WorkerPool(), persist=False)
+    plane.scheduler.adopt(Task(task_id="t1", operation="tts", engine="e", model_id="m"))
+    waiter = asyncio.ensure_future(plane.scheduler.wait("t1"))
+    await asyncio.sleep(0)
+
+    await plane.stop()
+
+    with pytest.raises(SchedulerStopped):
+        await waiter
+
+
 def test_endpoint_falls_back_to_the_configured_port_when_stopped(monkeypatch):
     monkeypatch.delenv("OMNIVOICE_WORKER_PORT", raising=False)
     assert service.ControlPlane().default_endpoint().endswith(f":{service.DEFAULT_PORT}")
@@ -464,6 +485,207 @@ def test_target_can_be_set_back_to_local(client, monkeypatch):
 
     assert client.post("/workers/target", json={"target": "local"}).status_code == 200
     assert store["worker_target"] == "local"
+
+
+# ── The submit path (dev-only) ─────────────────────────────────────────────
+#
+# The defect this covers is not a wrong answer, it is an absence: the scheduler
+# had no caller outside the test suite, so choosing a remote GPU repainted the
+# badge and every job still ran on this machine.
+
+
+def _queued_task():
+    from worker.lifecycle import Task
+
+    return Task(task_id="t1", operation="tts", engine="indextts", model_id="m")
+
+
+def _settled_task(state):
+    task = _queued_task()
+    task.state = state
+    return task
+
+
+class _Scheduler:
+    """The endpoint's whole contract with the scheduler: submit, wait, cancel."""
+
+    queue_depth = 0
+
+    def __init__(self, *, settle=None, wait_error=None, hang=False, submit_error=None):
+        self.submitted: list[dict] = []
+        self.cancelled: list[tuple[str, str]] = []
+        self.waited: tuple[str, float] | None = None
+        self._settle = settle
+        self._wait_error = wait_error
+        self._hang = hang
+        self._submit_error = submit_error
+
+    def submit(self, **kwargs):
+        if self._submit_error is not None:
+            raise self._submit_error
+        self.submitted.append(kwargs)
+        return _queued_task()
+
+    async def wait(self, task_id, *, timeout):
+        self.waited = (task_id, timeout)
+        if self._hang:
+            await asyncio.sleep(3600)
+        if self._wait_error is not None:
+            raise self._wait_error
+        return self._settle
+
+    def cancel(self, task_id, *, reason="cancelled"):
+        self.cancelled.append((task_id, reason))
+        return True
+
+
+def _running(monkeypatch, scheduler):
+    monkeypatch.setattr(service, "remote_workers_enabled", lambda: True)
+    monkeypatch.setattr(type(service.control_plane), "running", property(lambda self: True))
+    monkeypatch.setattr(service.control_plane, "scheduler", scheduler)
+    return scheduler
+
+
+_BODY = {"engine": "indextts", "operation": "tts", "params": {"text": "hi"}, "deadline_seconds": 60}
+
+
+def test_the_scheduler_finally_has_a_producer(client, monkeypatch):
+    """B0: before this route existed, nothing in the app ever called submit."""
+    from worker.lifecycle import TaskState
+
+    scheduler = _running(monkeypatch, _Scheduler(settle=_settled_task(TaskState.COMPLETED)))
+
+    response = client.post("/workers/tasks", json=_BODY)
+
+    assert response.status_code == 200
+    assert response.json()["state"] == "completed"
+    assert scheduler.submitted[0]["operation"] == "tts"
+    assert scheduler.submitted[0]["engine"] == "indextts"
+    assert scheduler.waited == ("t1", 60.0)
+
+
+def test_submit_requires_the_feature_to_be_running(client, monkeypatch):
+    monkeypatch.setattr(service, "remote_workers_enabled", lambda: True)
+    assert client.post("/workers/tasks", json=_BODY).status_code == 409
+
+
+def test_submit_is_unreachable_when_the_feature_is_off(client, monkeypatch):
+    """Opt-in means opt-in: a running control plane is not consent by itself."""
+    monkeypatch.setattr(service, "remote_workers_enabled", lambda: False)
+    monkeypatch.setattr(type(service.control_plane), "running", property(lambda self: True))
+    assert client.post("/workers/tasks", json=_BODY).status_code == 409
+
+
+def test_submit_demands_a_deadline(client):
+    """Without one the task is never stamped with `deadline_at`, and the
+    sweeper's only deadline rule then has nothing to enforce — a task queued
+    with no worker online would wait for the heat death of the universe."""
+    body = {k: v for k, v in _BODY.items() if k != "deadline_seconds"}
+    assert client.post("/workers/tasks", json=body).status_code == 422
+    assert client.post("/workers/tasks", json={**_BODY, "deadline_seconds": 0}).status_code == 422
+
+
+def test_submit_refuses_an_operation_with_no_remote_path(client, monkeypatch):
+    _running(monkeypatch, _Scheduler())
+    response = client.post("/workers/tasks", json={**_BODY, "operation": "dub"})
+    assert response.status_code == 400
+    assert "dub" in response.json()["detail"]
+
+
+def test_a_full_queue_is_refused_at_the_door(client, monkeypatch):
+    from worker.scheduler import QueueFull
+
+    _running(monkeypatch, _Scheduler(submit_error=QueueFull("full")))
+    assert client.post("/workers/tasks", json=_BODY).status_code == 429
+
+
+def test_a_failed_task_is_not_reported_as_success(client, monkeypatch):
+    from worker.lifecycle import TaskState
+
+    _running(monkeypatch, _Scheduler(settle=_settled_task(TaskState.FAILED)))
+
+    response = client.post("/workers/tasks", json=_BODY)
+
+    assert response.status_code == 502
+    assert response.json()["detail"]["state"] == "failed"
+
+
+def test_a_cancelled_task_is_not_a_server_error(client, monkeypatch):
+    from worker.lifecycle import TaskState
+
+    _running(monkeypatch, _Scheduler(settle=_settled_task(TaskState.CANCELLED)))
+    assert client.post("/workers/tasks", json=_BODY).status_code == 409
+
+
+def test_an_expired_wait_cancels_the_task_it_gave_up_on(client, monkeypatch):
+    scheduler = _running(monkeypatch, _Scheduler(wait_error=asyncio.TimeoutError()))
+
+    response = client.post("/workers/tasks", json=_BODY)
+
+    assert response.status_code == 504
+    assert scheduler.cancelled == [("t1", "the task passed its deadline")]
+
+
+def test_a_shutdown_mid_wait_does_not_claim_the_task_was_cancelled(client, monkeypatch):
+    """The worker was never told to stop, so it may still be rendering."""
+    from worker.scheduler import SchedulerStopped
+
+    scheduler = _running(monkeypatch, _Scheduler(wait_error=SchedulerStopped("stopped")))
+
+    assert client.post("/workers/tasks", json=_BODY).status_code == 503
+    assert scheduler.cancelled == []
+
+
+def test_the_real_scheduler_agrees_with_how_the_endpoint_drives_it(client, monkeypatch):
+    """The stubs above pin this endpoint's behaviour; this pins the seam. With
+    no worker connected the task simply waits, so the request's own deadline is
+    what ends it — and the queued task must not be left behind."""
+    from worker.lifecycle import TaskState
+    from worker.pool import WorkerPool
+    from worker.scheduler import Scheduler
+
+    scheduler = _running(monkeypatch, Scheduler(WorkerPool(), persist=False))
+
+    response = client.post("/workers/tasks", json={**_BODY, "deadline_seconds": 0.5})
+
+    assert response.status_code == 504
+    submitted = next(iter(scheduler._tasks.values()))
+    assert submitted.state is TaskState.CANCELLED
+
+
+def test_a_disconnecting_client_cancels_the_task(client, monkeypatch):
+    """Otherwise the tab closes, the request is abandoned, and the 4090 keeps
+    rendering — holding its only slot — for something nobody will collect."""
+    from api.routers import workers as workers_router
+
+    async def _gone(self):
+        return True
+
+    monkeypatch.setattr("starlette.requests.Request.is_disconnected", _gone)
+    monkeypatch.setattr(workers_router, "_DISCONNECT_POLL_SECONDS", 0.01)
+    scheduler = _running(monkeypatch, _Scheduler(hang=True))
+
+    response = client.post("/workers/tasks", json=_BODY)
+
+    assert response.status_code == 499
+    assert scheduler.cancelled == [("t1", "the client disconnected")]
+
+
+def test_the_target_endpoint_answers_per_operation(client, monkeypatch, db):
+    """The badge on a tab whose work is entirely local must say so — and say
+    why, in the words of that tab rather than the machine's."""
+    worker = registry_enroll("desktop-4090")
+    store = {"worker_target": worker.id}
+    monkeypatch.setattr("services.settings_store.get_text", lambda k, d=None: store.get(k, d))
+
+    scoped = client.get("/workers/target", params={"op": "dub"}).json()
+    assert scoped["op"] == "dub"
+    assert scoped["active"]["remote"] is False
+    assert "does not run remotely yet" in scoped["active"]["reason"]
+
+    whole = client.get("/workers/target").json()
+    assert whole["op"] == ""
+    assert whole["remote_operations"] == ["tts"]
 
 
 # ── Config is read from the database, not from the pool's stale copy ───────

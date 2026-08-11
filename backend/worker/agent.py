@@ -25,6 +25,11 @@ from typing import Optional
 
 logger = logging.getLogger("omnivoice.worker")
 
+# How often the idle-engine sweep runs. Well under the ten-minute idle
+# threshold it enforces, so a model is released promptly after it goes cold
+# rather than up to a full interval later.
+IDLE_SWEEP_INTERVAL_SECONDS = 60.0
+
 
 def worker_mode_enabled() -> bool:
     return (os.environ.get("OMNIVOICE_WORKER_MODE") or "").strip().lower() in (
@@ -117,6 +122,7 @@ class WorkerAgent:
 
     def __init__(self) -> None:
         self._task: Optional[asyncio.Task] = None
+        self._idle_sweep: Optional[asyncio.Task] = None
         self._client = None
 
     @property
@@ -163,7 +169,11 @@ class WorkerAgent:
                     "start with a fresh OMNIVOICE_WORKER_TOKEN."
                 )
 
-        discovered = capabilities.discover()
+        # Unavailable engines are reported too, so the control plane can tell
+        # "this worker has no such engine" from "it has it but the weights
+        # aren't downloaded" — a row that never arrives can only look like the
+        # former, and the download-first flow has nothing to offer.
+        discovered = capabilities.discover(include_unavailable=True)
         host = describe_host()
         host["gpus"] = capabilities.describe_gpus()
 
@@ -178,6 +188,11 @@ class WorkerAgent:
             capabilities=discovered,
             host=host,
         )
+        # No reporters here on purpose: the client injects a pair bound to each
+        # assignment's ref (``execute(assignment, on_progress=…,
+        # on_model_loading=…)``), which is the only way a multi-slot worker can
+        # say which task a progress fraction belongs to. Those reports are what
+        # renews the server's progress lease.
         executor = TaskExecutor()
         self._client = WorkerClient(
             config,
@@ -185,21 +200,49 @@ class WorkerAgent:
             # Re-probed on every reconnect so a model loaded (or evicted) since
             # the last connection is reported honestly rather than from a
             # snapshot taken at startup.
-            capability_probe=capabilities.discover,
+            capability_probe=lambda: capabilities.discover(include_unavailable=True),
             on_registered=lambda wid: save_worker_id(locations["worker_id"], wid),
         )
         self._task = asyncio.create_task(self._client.run_forever(), name="worker-agent")
+        self._idle_sweep = asyncio.create_task(
+            self._unload_idle_engines(), name="worker-idle-unload"
+        )
         logger.info(
             "Worker agent connecting to %s with %d engine(s)", endpoint, len(discovered)
         )
 
+    # ── Idle unloading ────────────────────────────────────────────────────
+
+    async def _unload_idle_engines(self) -> None:
+        """Hand back engines this worker has not used for ten minutes.
+
+        Only in worker mode: a machine lending its GPU is usually not the one
+        its owner is sitting at, so holding several GB of weights against a
+        task that may never come is pure cost. Local behaviour is unchanged —
+        nothing sweeps the cache unless this agent is running.
+        """
+        from services import tts_backend  # noqa: PLC0415
+
+        while True:
+            await asyncio.sleep(IDLE_SWEEP_INTERVAL_SECONDS)
+            try:
+                # unload() frees device caches and reaps sidecars — blocking,
+                # so it must not run on the loop that answers heartbeats.
+                await asyncio.to_thread(tts_backend.release_idle_engines)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Idle engine sweep failed (the worker continues)")
+
     async def stop(self) -> None:
         if self._client is not None:
             await self._client.stop()
-        if self._task is not None:
-            self._task.cancel()
-            await asyncio.gather(self._task, return_exceptions=True)
-            self._task = None
+        for attribute in ("_task", "_idle_sweep"):
+            task = getattr(self, attribute)
+            if task is not None:
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+                setattr(self, attribute, None)
         self._client = None
 
 

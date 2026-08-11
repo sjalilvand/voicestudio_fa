@@ -1807,7 +1807,16 @@
     "to_download": "att ladda ner",
     "cached": "cachad",
     "fast_download_badge": "snabb nedladdning",
-    "fast_download_title": "Snabba nedladdningar via Xet {{version}} — parallell överföring i bitar"
+    "fast_download_title": "Snabba nedladdningar via Xet {{version}} — parallell överföring i bitar",
+    "voice_previews": "Röstförhandsvisningar",
+    "voice_previews_desc": "Ladda ner förrenderade förhandsvisningar så att röster spelas upp direkt – redan innan en röstmodell har laddats ner. Inget laddas ner förrän du slår på det här.",
+    "voice_previews_off": "Av – förhandsvisningar renderas på den här datorn",
+    "voice_previews_ready": "Utvalda uppsättningen cachad",
+    "voice_previews_partial": "{{cached}} av {{total}} utvalda förhandsvisningar cachade",
+    "voice_previews_checked": "kontrollerat {{when}}",
+    "voice_previews_never": "inte kontrollerat än",
+    "voice_previews_check": "Kontrollera nu",
+    "voice_previews_rejected": "Uppdatering av röstgalleriet avvisades: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Behöver jag en licens för interna verktyg?",

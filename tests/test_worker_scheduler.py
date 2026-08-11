@@ -7,6 +7,8 @@ or paused.
 """
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from worker.capacity import ModelSlot
@@ -15,7 +17,13 @@ from worker.identity import issue_session
 from worker.lifecycle import PriorityClass, TaskState
 from worker.pool import WorkerPool
 from worker.registry import RemoteWorker
-from worker.scheduler import NoEligibleWorker, QueueFull, Scheduler, Strategy
+from worker.scheduler import (
+    NoEligibleWorker,
+    QueueFull,
+    Scheduler,
+    SchedulerStopped,
+    Strategy,
+)
 
 ENGINE, MODEL, OP = "indextts", "IndexTTS-2", "tts"
 MODEL_KEY = f"{ENGINE}:{MODEL}"
@@ -594,3 +602,416 @@ def test_a_broken_listener_cannot_break_scheduling():
     sched.on_change(lambda *_: 1 / 0)
     _submit(sched)
     assert sched.next_assignment(now=1000.0) is not None
+
+
+# ── Awaiting a result ──────────────────────────────────────────────────────
+
+
+def _run_to_completion(sched: Scheduler, a, *, result_ref: str = "out.wav") -> None:
+    sched.on_accepted(a.task.task_id, a.attempt.attempt_id, epoch=1, now=1001.0)
+    sched.on_started(a.task.task_id, a.attempt.attempt_id, epoch=1, now=1002.0)
+    sched.on_result(
+        a.task.task_id, a.attempt.attempt_id, result_ref=result_ref, epoch=1, now=1003.0
+    )
+
+
+@pytest.mark.asyncio
+async def test_wait_returns_the_completed_task():
+    sched = _scheduler(_pool(_record("w1")))
+    task = _submit(sched)
+    a = sched.next_assignment(now=1000.0)
+
+    waiter = asyncio.ensure_future(sched.wait(task.task_id, timeout=5))
+    await asyncio.sleep(0)
+    _run_to_completion(sched, a)
+
+    finished = await waiter
+    assert finished.state is TaskState.COMPLETED
+    assert finished.result_ref == "out.wav"
+
+
+@pytest.mark.asyncio
+async def test_wait_returns_a_task_that_finished_before_anyone_asked():
+    """`submit` hands back an existing task on an idempotency-key hit and
+    `restore` adopts finished ones from disk, so the terminal check has to come
+    before registering — nothing will emit a second ending."""
+    sched = _scheduler(_pool(_record("w1")))
+    task = _submit(sched)
+    _run_to_completion(sched, sched.next_assignment(now=1000.0))
+
+    assert (await sched.wait(task.task_id, timeout=0.05)).state is TaskState.COMPLETED
+
+
+@pytest.mark.asyncio
+async def test_waiting_does_not_leak_a_listener_per_call():
+    """`on_change` has no unregister, so building the await on it would leak a
+    listener for the life of the process on every awaited job."""
+    sched = _scheduler(_pool(_record("w1")))
+    before = len(sched._listeners)
+    for _ in range(5):
+        task = _submit(sched)
+        _run_to_completion(sched, sched.next_assignment(now=1000.0))
+        await sched.wait(task.task_id, timeout=0.05)
+
+    assert len(sched._listeners) == before
+    assert sched._waiters == {}
+
+
+@pytest.mark.asyncio
+async def test_a_failed_task_wakes_its_waiter():
+    sched = _scheduler(_pool(_record("w1")))
+    task = _submit(sched, max_attempts=1)
+    a = sched.next_assignment(now=1000.0)
+
+    waiter = asyncio.ensure_future(sched.wait(task.task_id, timeout=5))
+    await asyncio.sleep(0)
+    sched.on_failed(
+        a.task.task_id,
+        a.attempt.attempt_id,
+        WorkerError(error_class=ErrorClass.TERMINAL, code="BAD_INPUT", message="no"),
+        epoch=1,
+        now=1001.0,
+    )
+
+    assert (await waiter).state is TaskState.FAILED
+
+
+@pytest.mark.asyncio
+async def test_a_cancelled_task_wakes_its_waiter():
+    sched = _scheduler(_pool(_record("w1")))
+    task = _submit(sched)
+    sched.next_assignment(now=1000.0)
+
+    waiter = asyncio.ensure_future(sched.wait(task.task_id, timeout=5))
+    await asyncio.sleep(0)
+    sched.cancel(task.task_id, now=1001.0)
+
+    assert (await waiter).state is TaskState.CANCELLED
+
+
+@pytest.mark.asyncio
+async def test_a_task_with_no_capable_worker_wakes_its_waiter():
+    """The dead-end path fails the task inside `next_assignment` rather than
+    through any worker callback — a funnel that missed it would hang the
+    caller until its own timeout for a verdict already reached."""
+    sched = _scheduler(_pool(_record("w1")))
+    task = _submit(sched, engine="nope")
+
+    waiter = asyncio.ensure_future(sched.wait(task.task_id, timeout=5))
+    await asyncio.sleep(0)
+    sched.next_assignment(now=1000.0)
+
+    assert (await waiter).state is TaskState.FAILED
+
+
+@pytest.mark.asyncio
+async def test_a_late_failure_after_a_result_does_not_explode():
+    """`on_failed` used to run its whole body even when the attempt was
+    already settled, emitting "failed" for a completed task — and a second
+    resolution of one waiter raises InvalidStateError inside the read loop,
+    killing a healthy worker session over a message that changed nothing."""
+    pool = _pool(_record("w1"))
+    sched = _scheduler(pool)
+    task = _submit(sched)
+    a = sched.next_assignment(now=1000.0)
+    _run_to_completion(sched, a)
+    await sched.wait(task.task_id, timeout=0.05)
+
+    seen: list[str] = []
+    sched.on_change(lambda event, _t: seen.append(event))
+    sched.on_failed(
+        a.task.task_id,
+        a.attempt.attempt_id,
+        WorkerError(error_class=ErrorClass.TIMEOUT, code="EXECUTION_TIMEOUT", message="slow"),
+        epoch=1,
+        now=1004.0,
+    )
+
+    assert task.state is TaskState.COMPLETED
+    assert seen == []
+    assert pool.breakers.allows("w1", MODEL_KEY, now=1004.0) is True
+
+
+@pytest.mark.asyncio
+async def test_wait_times_out_without_disturbing_the_task():
+    """A caller giving up says nothing to the worker, which is still rendering."""
+    sched = _scheduler(_pool(_record("w1")))
+    task = _submit(sched)
+    sched.next_assignment(now=1000.0)
+
+    with pytest.raises(TimeoutError):
+        await sched.wait(task.task_id, timeout=0.01)
+
+    assert task.state is TaskState.ASSIGNED
+    assert sched._waiters == {}
+
+
+@pytest.mark.asyncio
+async def test_one_waiter_timing_out_does_not_cancel_the_others():
+    sched = _scheduler(_pool(_record("w1")))
+    task = _submit(sched)
+    a = sched.next_assignment(now=1000.0)
+
+    patient = asyncio.ensure_future(sched.wait(task.task_id, timeout=5))
+    await asyncio.sleep(0)
+    with pytest.raises(TimeoutError):
+        await sched.wait(task.task_id, timeout=0.01)
+
+    _run_to_completion(sched, a)
+    assert (await patient).state is TaskState.COMPLETED
+
+
+@pytest.mark.asyncio
+async def test_shutdown_fails_outstanding_waiters_by_name():
+    """Not a bare cancellation: the work may still be running on the worker,
+    and the caller has to be able to say so."""
+    sched = _scheduler(_pool(_record("w1")))
+    task = _submit(sched)
+    sched.next_assignment(now=1000.0)
+
+    waiter = asyncio.ensure_future(sched.wait(task.task_id, timeout=5))
+    await asyncio.sleep(0)
+    assert sched.abort_waiters() == 1
+
+    with pytest.raises(SchedulerStopped):
+        await waiter
+
+
+@pytest.mark.asyncio
+async def test_waiting_on_an_unknown_task_is_an_error_not_a_hang():
+    sched = _scheduler(_pool(_record("w1")))
+    with pytest.raises(KeyError):
+        await sched.wait("nosuch", timeout=0.01)
+
+
+# ── Keepalives and the lease ceiling ───────────────────────────────────────
+
+
+def _running(sched: Scheduler, *, now: float = 1000.0):
+    a = sched.next_assignment(now=now)
+    sched.on_accepted(a.task.task_id, a.attempt.attempt_id, epoch=1, now=now + 1)
+    sched.on_started(a.task.task_id, a.attempt.attempt_id, epoch=1, now=now + 2)
+    return a
+
+
+def test_a_keepalive_does_not_overwrite_real_progress():
+    """The keepalive is the worker's timer, not its work. Letting it write
+    would walk the user's progress bar backwards to zero every 40 seconds."""
+    sched = _scheduler(_pool(_record("w1")))
+    _submit(sched)
+    a = _running(sched)
+    sched.on_progress(
+        a.task.task_id, a.attempt.attempt_id, progress=0.6, stage="generating", epoch=1, now=1010.0
+    )
+
+    sched.on_progress(
+        a.task.task_id, a.attempt.attempt_id, progress=0.0, keepalive=True, epoch=1, now=1050.0
+    )
+
+    assert a.attempt.progress == pytest.approx(0.6)
+    assert a.attempt.stage == "generating"
+    assert a.attempt.lease_expires_at > 1050.0
+
+
+def test_a_keepalive_cannot_outlive_the_execution_budget():
+    """The keepalive would otherwise remove the only enforced bound in the
+    system: nothing reads `execution_seconds`, `Deadlines.total_seconds` has no
+    callers, and a RUNNING attempt past its deadline is never swept."""
+    sched = _scheduler(_pool(_record("w1")))
+    _submit(sched)
+    a = _running(sched)
+    budget = a.deadlines.execution_seconds
+
+    clock = 1002.0
+    for _ in range(200):
+        clock += 40.0
+        sched.on_progress(
+            a.task.task_id, a.attempt.attempt_id, progress=0.0, keepalive=True, epoch=1, now=clock
+        )
+        sched.sweep(now=clock)
+        if a.task.state.terminal or a.task.state is TaskState.QUEUED:
+            break
+
+    assert clock <= 1002.0 + budget + 60, "the keepalive kept a wedged task alive past its budget"
+    assert a.attempt.error.code == "EXECUTION_TIMEOUT"
+
+
+def test_real_progress_renews_without_a_ceiling():
+    """Slow is not wedged: a task that keeps producing output keeps its lease
+    however long it takes (a 40-minute dub is not a hung task)."""
+    pool = _pool(_record("w1", operations=["dub"]))
+    sched = _scheduler(pool)
+    _submit(sched, operation="dub")
+    a = _running(sched)
+
+    clock = 1002.0
+    for step in range(200):
+        clock += 60.0
+        sched.on_progress(
+            a.task.task_id,
+            a.attempt.attempt_id,
+            progress=step / 200,
+            epoch=1,
+            now=clock,
+        )
+        sched.sweep(now=clock)
+
+    assert a.task.state is TaskState.RUNNING
+
+
+def test_a_keepalive_is_bounded_by_the_model_load_budget_while_loading():
+    sched = _scheduler(_pool(_record("w1")))
+    _submit(sched)
+    a = sched.next_assignment(now=1000.0)
+    sched.on_accepted(a.task.task_id, a.attempt.attempt_id, epoch=1, now=1001.0)
+    sched.on_model_loading(a.task.task_id, a.attempt.attempt_id, epoch=1, now=1002.0)
+    ceiling = 1002.0 + a.deadlines.model_load_seconds
+
+    sched.on_progress(
+        a.task.task_id,
+        a.attempt.attempt_id,
+        progress=0.0,
+        keepalive=True,
+        epoch=1,
+        now=ceiling - 10,
+    )
+
+    assert a.attempt.lease_expires_at == pytest.approx(ceiling)
+
+
+def test_a_keepalive_for_a_stale_epoch_is_dropped():
+    sched = _scheduler(_pool(_record("w1")))
+    _submit(sched)
+    a = _running(sched)
+    before = a.attempt.lease_expires_at
+
+    assert (
+        sched.on_progress(
+            a.task.task_id, a.attempt.attempt_id, progress=0.0, keepalive=True, epoch=99, now=1050.0
+        )
+        is None
+    )
+    assert a.attempt.lease_expires_at == before
+
+
+# ── Persistence of progress ────────────────────────────────────────────────
+
+
+def test_progress_is_written_through_but_throttled(monkeypatch):
+    """Without this the persisted lease is whichever one `on_started` stamped,
+    so a restart mid-render restores an attempt that the first sweep kills.
+    Writing every frame would be a database write per second of a long dub."""
+    from worker import task_store
+
+    saves: list[float] = []
+    monkeypatch.setattr(task_store, "create", lambda task, **kw: task)
+    monkeypatch.setattr(task_store, "save", lambda task, now=None: saves.append(now))
+    monkeypatch.setattr(task_store, "commit_result", lambda task, **kw: None)
+    monkeypatch.setattr(task_store, "get_by_idempotency_key", lambda key: None)
+
+    sched = Scheduler(_pool(_record("w1")))
+    _submit(sched)
+    a = _running(sched)
+    saves.clear()
+
+    clock = 1002.0
+    for _ in range(10):
+        clock += 1.0
+        sched.on_progress(a.task.task_id, a.attempt.attempt_id, progress=0.5, epoch=1, now=clock)
+
+    assert saves, "the lease on disk would otherwise never move"
+    assert len(saves) < 10, "a write per frame is a write per second of a 40-minute dub"
+
+
+def test_restore_rearms_the_lease_of_a_recovered_attempt(monkeypatch):
+    """The recovered lease was ticking while the app was closed and nobody was
+    listening for renewals. Enforcing it fails every healthy in-flight task at
+    once, before its worker's own backoff can even reconnect it."""
+    from worker import task_store
+
+    pool = _pool(_record("w1"))
+    donor = _scheduler(pool)
+    _submit(donor)
+    a = _running(donor)
+    monkeypatch.setattr(task_store, "load_unfinished", lambda: [a.task])
+    monkeypatch.setattr(task_store, "save", lambda task, now=None: None)
+
+    sched = Scheduler(pool)
+    assert sched.restore(now=99_000.0) == 1
+    pool.get("w1").last_heartbeat_at = 99_000.0  # its worker reconnected
+
+    assert sched.sweep(now=99_001.0) == []
+    assert a.task.state is TaskState.RUNNING
+
+
+# ── Zombie slots (B2) ──────────────────────────────────────────────────────
+
+
+def test_a_parked_slot_does_not_strand_the_worker_forever():
+    """B2: with `max_concurrent_tasks=1`, one lease expiry made the worker
+    permanently unschedulable — `reap_zombie` had no caller and nothing else
+    ever looked at `zombie_tasks` again."""
+    pool = _pool(_record("w1"), slots=1)
+    sched = _scheduler(pool)
+    _submit(sched)
+    a = _running(sched)
+
+    sched.on_failed(
+        a.task.task_id,
+        a.attempt.attempt_id,
+        WorkerError(error_class=ErrorClass.TIMEOUT, code="EXECUTION_TIMEOUT", message="slow"),
+        epoch=1,
+        now=1010.0,
+    )
+    assert pool.get("w1").capacity.available_slots == 0
+
+    later = 1010.0 + 3600 + 1
+    pool.get("w1").last_heartbeat_at = later  # it never stopped heartbeating
+    sched.sweep(now=later)
+
+    assert pool.get("w1").capacity.zombie_tasks == 0
+    assert pool.get("w1").capacity.available_slots == 1
+
+
+def test_a_lost_attempt_parks_its_slot_rather_than_returning_it():
+    """A grace expiry is an unknown outcome, so the GPU thread may well still
+    be running — the same un-killable thread the timeout path parks for
+    (#730/#1190). Marked lost without dropping the session, because
+    `on_disconnected` takes the whole capacity record with it."""
+    pool = _pool(_record("w1"), _record("w2"))
+    sched = _scheduler(pool)
+    _submit(sched)
+    a = _running(sched)
+    a.task.mark_disconnected(a.attempt.attempt_id, grace_seconds=45, now=1010.0)
+
+    pool.get("w1").last_heartbeat_at = 1060.0
+    sched.sweep(now=1060.0)
+
+    assert a.task.state is TaskState.QUEUED
+    assert pool.get("w1").capacity.zombie_tasks == 1
+    assert a.attempt.attempt_id not in pool.get("w1").in_flight
+
+
+def test_a_result_racing_the_sweeper_cannot_double_release():
+    """Two paths ending one attempt: `capacity.release` guards its per-model
+    slot but decrements the worker-wide count regardless, so the second one
+    invents a slot the machine does not have."""
+    pool = _pool(_record("w1"), slots=2)
+    pool.get("w1").capacity.slots[MODEL_KEY] = ModelSlot(
+        engine=ENGINE, model_id=MODEL, derived_concurrency=2
+    )
+    sched = _scheduler(pool)
+    _submit(sched)
+    _submit(sched)
+    first = _running(sched)
+    second = _running(sched, now=1005.0)
+    assert pool.get("w1").capacity.active_tasks == 2
+
+    for stamp in (1010.0, 1011.0):
+        sched.on_result(
+            first.task.task_id, first.attempt.attempt_id, result_ref="out.wav", epoch=1, now=stamp
+        )
+
+    assert second.task.state is TaskState.RUNNING
+    assert pool.get("w1").capacity.active_tasks == 1, "the second job is still on the GPU"
+    assert pool.get("w1").capacity.available_slots == 1

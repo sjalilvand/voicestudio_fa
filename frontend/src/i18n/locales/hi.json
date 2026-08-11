@@ -1807,7 +1807,16 @@
     "to_download": "डाउनलोड करने के लिए",
     "cached": "कैश्ड",
     "fast_download_badge": "तेजी से डाउनलोड",
-    "fast_download_title": "Xet {{version}} के माध्यम से तेज़ डाउनलोड - समानांतर खंडित स्थानांतरण"
+    "fast_download_title": "Xet {{version}} के माध्यम से तेज़ डाउनलोड - समानांतर खंडित स्थानांतरण",
+    "voice_previews": "आवाज़ के नमूने",
+    "voice_previews_desc": "पहले से तैयार नमूने डाउनलोड करें ताकि आवाज़ें तुरंत चलें — तब भी जब कोई वॉइस मॉडल डाउनलोड हो रहा हो। जब तक आप इसे चालू नहीं करते, कुछ भी डाउनलोड नहीं होता।",
+    "voice_previews_off": "बंद — नमूने इसी डिवाइस पर तैयार होते हैं",
+    "voice_previews_ready": "चुनिंदा सेट कैश में है",
+    "voice_previews_partial": "{{total}} में से {{cached}} चुनिंदा नमूने कैश में हैं",
+    "voice_previews_checked": "{{when}} जाँचा गया",
+    "voice_previews_never": "अभी तक जाँचा नहीं गया",
+    "voice_previews_check": "अभी जाँचें",
+    "voice_previews_rejected": "वॉइस गैलरी अपडेट अस्वीकृत: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "क्या मुझे आंतरिक उपकरणों के लिए लाइसेंस की आवश्यकता है?",

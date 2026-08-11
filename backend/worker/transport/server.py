@@ -29,8 +29,10 @@ from typing import Optional
 
 import grpc
 
-from worker import identity, registry
+from core.path_security import UnsafePath, resolve_within, safe_filename
+from worker import identity, registry, task_store
 from worker.errors import ErrorClass, WorkerError
+from worker.lifecycle import Attempt, Task
 from worker.pool import WorkerPool
 from worker.protocol.gen import worker_v1_pb2 as pb
 from worker.protocol.gen import worker_v1_pb2_grpc as pb_grpc
@@ -135,6 +137,11 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
 
         backend = host["gpus"][0].get("backend", "") if host.get("gpus") else ""
         claimed = {ref.attempt_id for ref in request.in_flight}
+        # A finished result the worker never had acknowledged is work it is
+        # still holding the only copy of. Reconciliation writes off anything
+        # the worker does not claim (lifecycle.reconcile), so leaving these out
+        # marks a completed render LOST moments before it is redelivered.
+        unacked = {ref.attempt_id for ref in request.completed_unacked}
         # The address the worker actually reached us from — what the UI shows
         # as ip:port. Self-reported endpoints would be guesses; this is fact.
         address = _peer_address(context)
@@ -160,8 +167,10 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         self._by_token[session.token] = live
 
         # Reconcile before any new work is dispatched: the worker may be
-        # holding tasks this control plane forgot across a restart.
-        self.scheduler.on_reconnected(worker.id, in_flight=claimed)
+        # holding tasks this control plane forgot across a restart. Unacked
+        # results count as held here but not as occupied slots above — the work
+        # is done, only its delivery is outstanding.
+        self.scheduler.on_reconnected(worker.id, in_flight=claimed | unacked)
 
         logger.info("Worker %s registered on epoch %d", worker.name, epoch)
         return pb.RegisterResponse(
@@ -287,7 +296,19 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
 
     async def _read_loop(self, session: _Session, request_iterator) -> None:
         async for message in request_iterator:
-            await self._handle(session, message)
+            try:
+                await self._handle(session, message)
+            except Exception:
+                # One unusable frame is not a broken session. A late or
+                # out-of-order message raises LifecycleError from the domain,
+                # and letting that end the reader would win the asyncio.wait in
+                # Control() and disconnect a worker that is mid-render.
+                logger.warning(
+                    "Dropping unusable %s frame from worker %s",
+                    message.WhichOneof("payload"),
+                    session.worker_id,
+                    exc_info=True,
+                )
 
     async def _ping_loop(self, session: _Session) -> None:
         """Time a round trip periodically so the UI can show real latency."""
@@ -350,8 +371,17 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         if kind == "cancel_ack":
             return
 
+        if kind == "result":
+            # Deliberately ahead of the epoch fence. A result is a statement
+            # about a *past* epoch by construction — the work was assigned in
+            # the session the reconnect just replaced — so fencing it on the
+            # live epoch drops finished renders. Ownership is checked against
+            # the attempt's recorded epoch instead, inside _on_result.
+            await self._on_result(session, message.result)
+            return
+
         ref = getattr(message, kind).ref
-        if not self._fence(session, ref):
+        if not self._owns(session, ref):
             return
 
         if kind == "accepted":
@@ -374,15 +404,17 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         elif kind == "started":
             self.scheduler.on_started(ref.task_id, ref.attempt_id, epoch=ref.session_epoch)
         elif kind == "progress":
+            # The lease arithmetic lives in the scheduler, which owns the
+            # phase budgets; the transport only reports what arrived. A
+            # keepalive frame renews without claiming any work was done.
             self.scheduler.on_progress(
                 ref.task_id,
                 ref.attempt_id,
                 progress=message.progress.progress,
                 stage=message.progress.stage,
+                keepalive=message.progress.keepalive,
                 epoch=ref.session_epoch,
             )
-        elif kind == "result":
-            await self._on_result(session, message.result)
         elif kind == "failed":
             error = codec.error_from_pb(message.failed.error) or WorkerError(
                 error_class=ErrorClass.TRANSIENT,
@@ -391,25 +423,59 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
             )
             self.scheduler.on_failed(ref.task_id, ref.attempt_id, error, epoch=ref.session_epoch)
 
-    def _fence(self, session: _Session, ref: pb.TaskRef) -> bool:
-        """Drop anything from a session we have already replaced."""
-        if ref.session_epoch != session.epoch:
-            logger.debug(
-                "Dropping %s from stale epoch %d (current %d)",
-                ref.task_id,
-                ref.session_epoch,
-                session.epoch,
+    def _owns(self, session: _Session, ref: pb.TaskRef) -> bool:
+        """May this session speak for the attempt the frame names?
+
+        Ownership, deliberately not an epoch comparison. ``ref.session_epoch``
+        is stamped once at dispatch and echoed verbatim by the worker for the
+        life of the task, while ``registry.begin_session`` bumps the session
+        epoch on every reconnect. Fencing task frames against the *live* epoch
+        therefore discarded every liveness frame from a worker that dropped and
+        resumed — so the control plane expired a task whose GPU was still
+        rendering it, and swallowed the failure report when it went wrong.
+
+        Staleness is still fenced, one layer down and per attempt:
+        ``Scheduler._fenced`` compares the frame's epoch against the epoch the
+        *attempt* was assigned under, which is the question that actually
+        matters. What only this layer can check is that the session on the
+        stream is the worker the attempt was handed to.
+        """
+        attempt, foreign = self._attempt_and_owner(session, ref)
+        if foreign:
+            # Not a routine race: unguessable ids and no listing RPC mean a
+            # worker should never see another's attempt id.
+            logger.warning(
+                "Worker %s sent a frame for an attempt owned by another worker; dropping",
+                session.worker_id,
             )
+            return False
+        if attempt is None:
+            logger.debug("Dropping frame for unknown attempt on task %s", ref.task_id)
             return False
         return True
 
     async def _on_result(self, session: _Session, result: pb.TaskResult) -> None:
         """Commit, then acknowledge — never the other way round.
 
-        A duplicate still gets its acknowledgement: without one the worker
-        redelivers forever, and its redelivery is not wrong, it just lost.
+        The acknowledgement is the worker's licence to forget a finished
+        render, so it is sent only once this control plane holds a durable
+        verdict. Acking a frame we could not place — an attempt we have no
+        record of, a task still being restored — silently destroys the only
+        copy of work that succeeded.
         """
         ref = result.ref
+        attempt, foreign = self._attempt_and_owner(session, ref)
+        if foreign:
+            # Committing here would mark the task done with no artifact, and
+            # the owning worker's real delivery would then arrive as a
+            # duplicate and be discarded — losing the render this whole
+            # redelivery path exists to protect. No ack either: nothing was
+            # placed, so nothing has earned the licence to forget.
+            logger.warning(
+                "Worker %s reported a result for an attempt owned by another worker; dropping",
+                session.worker_id,
+            )
+            return
         payload = None
         if result.result_json:
             try:
@@ -417,30 +483,110 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
             except ValueError:
                 payload = {"raw": result.result_json}
 
-        artifact = result.artifacts[0].artifact_id if result.artifacts else None
-        if result.inline_payload:
-            artifact = self._store_inline(ref, bytes(result.inline_payload))
+        artifact = None
+        if result.artifacts:
+            artifact = self._contained_artifact(result.artifacts[0].artifact_id)
+        # No attempt record, no place to put it: the payload of a task we
+        # cannot identify has nothing to be attached to, and the worker keeps
+        # its copy because nothing below will acknowledge it.
+        if result.inline_payload and attempt is not None:
+            artifact = self._store_inline(attempt, bytes(result.inline_payload))
 
         # Returns only after the commit is durable, which is what makes the
-        # acknowledgement below safe to send.
-        self.scheduler.on_result(
+        # acknowledgement below safe to send. The epoch on the wire is the one
+        # the attempt was assigned under, and that is what the scheduler
+        # compares against — not whichever session happens to be live now.
+        committed, task = self.scheduler.on_result(
             ref.task_id,
             ref.attempt_id,
             result_ref=artifact,
             result=payload,
             epoch=ref.session_epoch,
         )
-        await session.send(pb.ServerMessage(result_ack=pb.ResultAckMessage(ref=ref)))
+        if self._settled(committed, task, ref.task_id):
+            await session.send(pb.ServerMessage(result_ack=pb.ResultAckMessage(ref=ref)))
 
-    def _store_inline(self, ref: pb.TaskRef, payload: bytes) -> str:
-        """Write a small inline result to attempt-scoped storage.
+    def _settled(self, committed: bool, task: Optional[Task], task_id: str) -> bool:
+        """May the worker drop its copy of this result?
+
+        Only against a durable verdict: this commit, an earlier one that won
+        the race, or — after a restart that never reloaded the task — the fact
+        of completion on disk. Anything else is redelivered, which costs one
+        frame per reconnect and is the only thing standing between a dropped
+        message and a lost render.
+        """
+        if committed:
+            return True
+        if task is not None:
+            return task.state.terminal
+        try:
+            return task_store.is_committed(task_id)
+        except Exception:
+            logger.debug("Could not check the committed state of %s", task_id, exc_info=True)
+            return False
+
+    def _attempt_for(self, session: _Session, ref) -> Optional[Attempt]:
+        """This control plane's own record of the attempt a frame names.
+
+        Every artifact path is minted from what this returns rather than from
+        the frame, because the ids on the wire are remote input: ``os.path.join``
+        silently discards its prefix the moment one of them is absolute.
+        """
+        attempt, _foreign = self._attempt_and_owner(session, ref)
+        return attempt
+
+    def _attempt_and_owner(self, session: _Session, ref) -> tuple[Optional[Attempt], bool]:
+        """``(attempt, foreign)`` — the attempt, and whether another worker owns it.
+
+        The two None cases must not be collapsed. "No record" is ordinary and
+        recoverable: a task not yet restored after a restart still has a
+        durable verdict on disk, so a result naming it is redelivered rather
+        than lost. "Another worker's attempt" is neither — accepting it lets a
+        frame from the wrong worker commit the task, after which the owning
+        worker's real delivery arrives as a duplicate and its audio is
+        discarded. Returning one None for both is how that got through.
+        """
+        task = self.scheduler.get(ref.task_id)
+        if task is None:
+            return None, False
+        attempt = task.get_attempt(ref.attempt_id)
+        if attempt is None:
+            return None, False
+        if attempt.worker_id != session.worker_id:
+            return None, True
+        return attempt, False
+
+    def _artifact_path(self, task_id: str, attempt_id: str) -> Optional[str]:
+        """Attempt-scoped storage for one result.
 
         Attempt-scoped, not task-scoped: two attempts of one task must never
         share a path, or a superseded straggler overwrites the result that won.
         """
-        directory = os.path.join(self.artifact_dir, ref.task_id)
-        os.makedirs(directory, exist_ok=True)
-        path = os.path.join(directory, f"{ref.attempt_id}.bin")
+        try:
+            relative = os.path.join(safe_filename(task_id), f"{safe_filename(attempt_id)}.bin")
+            path = resolve_within(self.artifact_dir, relative)
+        except UnsafePath:
+            logger.warning("Refusing to store a result outside the artifact directory")
+            return None
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return str(path)
+
+    def _contained_artifact(self, artifact_id: str) -> Optional[str]:
+        """An artifact the worker names is only ever a reference into our own
+        store, and is resolved as one."""
+        if not artifact_id:
+            return None
+        try:
+            return str(resolve_within(self.artifact_dir, artifact_id))
+        except UnsafePath:
+            logger.warning("Refusing an artifact reference outside the artifact directory")
+            return None
+
+    def _store_inline(self, attempt: Attempt, payload: bytes) -> Optional[str]:
+        """Write a small inline result to attempt-scoped storage."""
+        path = self._artifact_path(attempt.task_id, attempt.attempt_id)
+        if path is None:
+            return None
         with open(path, "wb") as fh:
             fh.write(payload)
         return path
@@ -500,15 +646,28 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
             async for chunk in request_iterator:
                 if handle is None:
                     ref = chunk.ref
-                    if not self._authorized(context, ref):
+                    session = self._session_for(context, ref)
+                    if session is None:
                         await context.abort(
                             grpc.StatusCode.UNAUTHENTICATED, "Unknown or expired session."
                         )
                         return pb.ResultAck(committed=False)
-                    artifact_id = ref.artifact_id or f"{ref.task_id}-{ref.attempt_id}"
-                    directory = os.path.join(self.artifact_dir, ref.task_id or "misc")
-                    os.makedirs(directory, exist_ok=True)
-                    final = os.path.join(directory, f"{ref.attempt_id or artifact_id}.bin")
+                    # Same rule as an inline result: the destination is minted
+                    # from our own attempt record, never assembled from the ids
+                    # in the request.
+                    attempt = self._attempt_for(session, ref)
+                    final = (
+                        self._artifact_path(attempt.task_id, attempt.attempt_id)
+                        if attempt is not None
+                        else None
+                    )
+                    if final is None:
+                        await context.abort(
+                            grpc.StatusCode.PERMISSION_DENIED,
+                            "No such attempt is running for this worker.",
+                        )
+                        return pb.ResultAck(committed=False)
+                    artifact_id = final
                     path = f"{final}.part"
                     # Resume where a previous transfer stopped.
                     mode = "ab" if chunk.offset and os.path.exists(path) else "wb"
@@ -545,27 +704,28 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
                 offset += len(data)
         yield pb.ArtifactChunk(ref=request, offset=offset, data=b"", last=True)
 
-    def _authorized(self, context, ref) -> bool:
+    def _session_for(self, context, ref) -> Optional[_Session]:
+        """The live session a transfer belongs to, by ref token or by metadata."""
         token = getattr(ref, "session_token", "") or ""
         if token and token in self._by_token:
-            return not self._by_token[token].session.expired()
-        return self._session_from_metadata(context) is not None
+            session = self._by_token[token]
+            return None if session.session.expired() else session
+        return self._session_from_metadata(context)
+
+    def _authorized(self, context, ref) -> bool:
+        return self._session_for(context, ref) is not None
 
     def _resolve_input(self, artifact_id: str) -> Optional[str]:
         """Resolve an input reference to a path inside the artifact directory.
 
         Containment is enforced rather than assumed: a worker is a remote peer,
         and an artifact id is attacker-controlled input, so ``../`` must not be
-        able to read arbitrary files off the control plane.
+        able to read arbitrary files off the control plane. One containment
+        implementation for the whole file — a second, hand-rolled one is how
+        the two directions came to disagree in the first place.
         """
-        if not artifact_id:
-            return None
-        root = os.path.realpath(self.artifact_dir)
-        candidate = os.path.realpath(os.path.join(root, artifact_id))
-        if os.path.commonpath([root, candidate]) != root:
-            logger.warning("Refusing artifact request outside the artifact directory")
-            return None
-        return candidate if os.path.isfile(candidate) else None
+        path = self._contained_artifact(artifact_id)
+        return path if path and os.path.isfile(path) else None
 
 
 async def serve(

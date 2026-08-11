@@ -74,6 +74,23 @@ weights, and no per-model concurrency setting: concurrency is measured from
 free VRAM at runtime because a configured value silently corrupts output on
 compiled models and crashes small cards.
 
+## What runs remotely
+
+**Speech synthesis, and nothing else yet.** Dubbing, audiobook rendering,
+transcription and dictation run on this machine whichever worker you pick —
+dictation deliberately and permanently, because there latency *is* the feature.
+The rest are being ported one operation at a time.
+
+The picker knows this. It resolves against the surface you are on, so a chosen
+worker reads **Local** on a tab whose work has no remote path yet and names the
+reason, instead of showing a green dot next to a GPU that receives nothing.
+
+While the port is in progress, the only way to place a task by hand is
+`POST /workers/tasks` — a **development-only** endpoint. It is loopback-only,
+sits behind the same opt-in as everything else here, takes a mandatory
+deadline, submits one task and waits for it. It is not a stable API and goes
+away once generation routes itself.
+
 ## How work is placed
 
 A task goes to a worker that is connected, approved, enabled, has the engine,

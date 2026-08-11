@@ -1807,7 +1807,16 @@
     "to_download": "ダウンロードする",
     "cached": "キャッシュされた",
     "fast_download_badge": "高速ダウンロード",
-    "fast_download_title": "Xet {{version}} による高速ダウンロード — 並列チャンク転送"
+    "fast_download_title": "Xet {{version}} による高速ダウンロード — 並列チャンク転送",
+    "voice_previews": "ボイスプレビュー",
+    "voice_previews_desc": "事前にレンダリングされたプレビューをダウンロードすると、音声モデルのダウンロードが終わる前でも声をすぐに再生できます。オンにするまで何もダウンロードされません。",
+    "voice_previews_off": "オフ — プレビューはこの端末で生成されます",
+    "voice_previews_ready": "おすすめセットをキャッシュ済み",
+    "voice_previews_partial": "おすすめプレビュー {{total}} 件中 {{cached}} 件をキャッシュ済み",
+    "voice_previews_checked": "{{when}}に確認",
+    "voice_previews_never": "未確認",
+    "voice_previews_check": "今すぐ確認",
+    "voice_previews_rejected": "ボイスギャラリーの更新を拒否しました: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "内部ツールにはライセンスが必要ですか?",

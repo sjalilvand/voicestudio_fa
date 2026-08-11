@@ -1807,7 +1807,16 @@
     "to_download": "downloaden",
     "cached": "in de cache opgeslagen",
     "fast_download_badge": "snel downloaden",
-    "fast_download_title": "Snelle downloads via Xet {{version}} — parallelle gefragmenteerde overdracht"
+    "fast_download_title": "Snelle downloads via Xet {{version}} — parallelle gefragmenteerde overdracht",
+    "voice_previews": "Stemvoorbeelden",
+    "voice_previews_desc": "Download vooraf gerenderde voorbeelden zodat stemmen meteen afspelen, zelfs voordat een spraakmodel klaar is met downloaden. Er wordt niets gedownload totdat je dit inschakelt.",
+    "voice_previews_off": "Uit — voorbeelden worden op dit apparaat gerenderd",
+    "voice_previews_ready": "Uitgelichte set in cache",
+    "voice_previews_partial": "{{cached}} van {{total}} uitgelichte voorbeelden in cache",
+    "voice_previews_checked": "gecontroleerd {{when}}",
+    "voice_previews_never": "nog niet gecontroleerd",
+    "voice_previews_check": "Nu controleren",
+    "voice_previews_rejected": "Update van de stemgalerij geweigerd: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Heb ik een licentie nodig voor interne tools?",

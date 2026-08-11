@@ -18,9 +18,29 @@ locally" is a sentence; "least-busy ranking picked another node" is not.
 Exactly one target is active at a time. Other enrolled workers may be
 connected — they simply receive nothing, which is what standby means.
 
-Fallback is deliberate and quiet: if the chosen worker cannot take the job,
-the work runs locally rather than failing. A user whose remote GPU went to
-sleep should get their audio, not an error about infrastructure.
+Fallback is not one rule but three, because "it ran locally instead" is a
+kindness in the first case and a lie in the others:
+
+  1. **Before dispatch** — the chosen worker is offline, disabled, paused, or
+     gone — the work runs here, quietly, with the named reason this module
+     produces. A user who picks their desktop and then walks over to switch it
+     on should get their audio, not an error about infrastructure.
+  2. **Mid-job, single-shot interactive work** raises instead. Silently
+     redoing minutes of remote work on the wrong machine is not a fallback;
+     the error carries a "run locally instead" that resubmits.
+  3. **Multi-unit jobs** (audiobook chapters, batches) fall back per unit
+     after N consecutive remote failures, with one aggregated notice — a 4090
+     that goes to sleep at chapter 40 must not turn a working book into 160
+     identical error rows.
+
+Only rule 1 lives here; rules 2 and 3 belong to the job surfaces that own the
+work, because only they know whether a unit has already started.
+
+Targeting is also per operation. The scheduler will place anything a worker
+advertises, but a job only reaches the scheduler where this side has a
+producer for it — so ``decide(op=...)`` answers for the surface the user is
+looking at rather than for the machine, and the badge cannot read
+"gpu2 ● ready" on a tab whose work is 100% local.
 """
 from __future__ import annotations
 
@@ -33,6 +53,22 @@ logger = logging.getLogger("omnivoice.worker")
 # Sentinel for "run on this machine". Not a worker id, and never confusable
 # with one: worker ids are 12 hex characters.
 LOCAL = "local"
+
+# Operations with a remote producer today. Ports land one at a time (dubbing
+# and dictation are explicitly not here), and this set is what keeps the
+# picker honest about it.
+REMOTE_OPERATIONS = frozenset({"tts"})
+
+# Only for the sentence the user reads; an unknown op falls back to its id
+# rather than inventing a name for it.
+_OP_LABELS = {
+    "tts": "speech synthesis",
+    "clone": "voice cloning",
+    "dub": "dubbing",
+    "audiobook": "audiobook rendering",
+    "dictation": "dictation",
+    "asr": "transcription",
+}
 
 _SETTING_KEY = "worker_target"
 
@@ -202,16 +238,39 @@ class Decision:
         }
 
 
-def decide(control_plane=None) -> Decision:
+def supports_operation(op: Optional[str]) -> bool:
+    """Does this kind of work have a remote path at all?
+
+    ``None`` means "asking about the target itself, not about one job", which
+    is what the picker's own menu wants.
+    """
+    return op is None or op in REMOTE_OPERATIONS
+
+
+def _op_label(op: str) -> str:
+    return _OP_LABELS.get(op, op)
+
+
+def decide(control_plane=None, *, op: Optional[str] = None) -> Decision:
     """Resolve the user's choice against what is actually reachable.
 
     This is the single answer to "where does the next job run", used both by
     the generation path and by the header badge — so the badge cannot claim
     something the router will not do.
+
+    ``op`` narrows it to one kind of work. An unported operation is answered
+    before reachability is even consulted: whether the 4090 is awake is beside
+    the point when nothing on this side would send it a dub.
     """
     target_id = get_target_id()
     if target_id == LOCAL:
         return Decision(remote=False, reason="chosen")
+
+    if not supports_operation(op):
+        return Decision(
+            remote=False,
+            reason=f"{_op_label(op)} does not run remotely yet — running locally",
+        )
 
     if control_plane is None:
         from worker.service import control_plane as default_plane  # noqa: PLC0415
@@ -240,18 +299,26 @@ def decide(control_plane=None) -> Decision:
     return Decision(remote=False, reason="the chosen worker no longer exists — running locally")
 
 
-def status(control_plane=None) -> dict:
-    """Everything the GPU picker needs, in one call."""
-    decision = decide(control_plane)
+def status(control_plane=None, *, op: Optional[str] = None) -> dict:
+    """Everything the GPU picker needs, in one call.
+
+    ``op`` is echoed back so a caller that switched tabs mid-request can tell
+    which surface the answer describes, and ``remote_operations`` is what lets
+    the menu say "gpu2 · TTS only" instead of implying it takes everything.
+    """
+    decision = decide(control_plane, op=op)
     return {
         "target": get_target_id(),
+        "op": op or "",
         "active": decision.to_dict(),
+        "remote_operations": sorted(REMOTE_OPERATIONS),
         "targets": [t.to_dict() for t in list_targets(control_plane)],
     }
 
 
 __all__ = [
     "LOCAL",
+    "REMOTE_OPERATIONS",
     "Decision",
     "Target",
     "decide",
@@ -260,4 +327,5 @@ __all__ = [
     "local_target",
     "set_target_id",
     "status",
+    "supports_operation",
 ]

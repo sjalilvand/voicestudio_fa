@@ -75,9 +75,10 @@ def discover(*, include_unavailable: bool = False) -> list[dict]:
         discovered.append(
             {
                 "engine": engine_id,
-                # One model per engine today. The field exists so a worker can
-                # later advertise several without a protocol change.
-                "model_id": entry.get("display_name") or engine_id,
+                "model_id": model_id_for(entry),
+                # The human label, kept OUT of model_id. Free to change with
+                # any UI copy edit; nothing keys off it.
+                "display_name": entry.get("display_name") or engine_id,
                 "operations": _operations_for(entry),
                 "supported": available,
                 # A subprocess engine is only usable once its venv exists, and
@@ -98,6 +99,35 @@ def discover(*, include_unavailable: bool = False) -> list[dict]:
             }
         )
     return discovered
+
+
+def model_id_for(entry: dict) -> str:
+    """The stable, opaque, engine-scoped identifier for a backend's model.
+
+    ``<engine_id>:<model_key>`` — ``indextts:default``, ``mlx-audio:kokoro``.
+
+    Three things it deliberately is not:
+
+      * **Not a display name.** It was one, and it keys circuit breakers,
+        per-model slots and residency (``capacity.py``) and is persisted in
+        ``capabilities_json`` and on the task row. A UI copy edit renaming
+        "IndexTTS 2" would have orphaned that history.
+      * **Not a HuggingFace repo id or any path.** The wire carries ``engine``
+        plus this closed identifier and never a repo path, so the worker
+        resolves weights from its own catalog and there is nothing to validate
+        on arrival.
+      * **Not engine-global.** The engine prefix keeps it unique fleet-wide,
+        so a breaker or slot keyed on ``model_id`` alone cannot collide across
+        two engines that both call their model "base".
+
+    ``default`` covers the one-model-per-engine case. mlx-audio multiplexes
+    curated models behind one id (#981) and ``list_backends`` already reports
+    which one is configured, so its key rides here — a different curated model
+    genuinely is a different model to schedule and to keep resident.
+    """
+    engine_id = entry.get("id") or ""
+    model_key = entry.get("active_model_id") or "default"
+    return f"{engine_id}:{model_key}"
 
 
 def _operations_for(entry: dict) -> list[str]:
@@ -186,4 +216,4 @@ def max_concurrent_tasks(capabilities: Optional[list[dict]] = None) -> int:
     return min(positive) if positive else 1
 
 
-__all__ = ["describe_gpus", "discover", "max_concurrent_tasks"]
+__all__ = ["describe_gpus", "discover", "max_concurrent_tasks", "model_id_for"]

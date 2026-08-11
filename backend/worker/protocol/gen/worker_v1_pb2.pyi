@@ -242,18 +242,20 @@ class TaskStarted(_message.Message):
     def __init__(self, ref: _Optional[_Union[TaskRef, _Mapping]] = ..., envelope: _Optional[_Union[Envelope, _Mapping]] = ...) -> None: ...
 
 class TaskProgress(_message.Message):
-    __slots__ = ("ref", "envelope", "progress", "stage", "detail")
+    __slots__ = ("ref", "envelope", "progress", "stage", "detail", "keepalive")
     REF_FIELD_NUMBER: _ClassVar[int]
     ENVELOPE_FIELD_NUMBER: _ClassVar[int]
     PROGRESS_FIELD_NUMBER: _ClassVar[int]
     STAGE_FIELD_NUMBER: _ClassVar[int]
     DETAIL_FIELD_NUMBER: _ClassVar[int]
+    KEEPALIVE_FIELD_NUMBER: _ClassVar[int]
     ref: TaskRef
     envelope: Envelope
     progress: float
     stage: str
     detail: str
-    def __init__(self, ref: _Optional[_Union[TaskRef, _Mapping]] = ..., envelope: _Optional[_Union[Envelope, _Mapping]] = ..., progress: _Optional[float] = ..., stage: _Optional[str] = ..., detail: _Optional[str] = ...) -> None: ...
+    keepalive: bool
+    def __init__(self, ref: _Optional[_Union[TaskRef, _Mapping]] = ..., envelope: _Optional[_Union[Envelope, _Mapping]] = ..., progress: _Optional[float] = ..., stage: _Optional[str] = ..., detail: _Optional[str] = ..., keepalive: _Optional[bool] = ...) -> None: ...
 
 class UsageReport(_message.Message):
     __slots__ = ("audio_seconds_in", "audio_seconds_out", "characters_in", "wall_seconds", "gpu_seconds", "model_load_seconds", "engine", "model_id")

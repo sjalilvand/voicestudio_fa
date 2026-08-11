@@ -1807,7 +1807,16 @@
     "to_download": "скачать",
     "cached": "кэшированный",
     "fast_download_badge": "быстрая загрузка",
-    "fast_download_title": "Быстрая загрузка через Xet {{version}} — параллельная поблочная передача"
+    "fast_download_title": "Быстрая загрузка через Xet {{version}} — параллельная поблочная передача",
+    "voice_previews": "Превью голосов",
+    "voice_previews_desc": "Загрузите заранее подготовленные превью, чтобы голоса воспроизводились мгновенно — даже до того, как голосовая модель закончит загружаться. Ничего не загружается, пока вы это не включите.",
+    "voice_previews_off": "Выключено — превью создаются на этом устройстве",
+    "voice_previews_ready": "Избранный набор в кэше",
+    "voice_previews_partial": "В кэше {{cached}} из {{total}} избранных превью",
+    "voice_previews_checked": "проверено {{when}}",
+    "voice_previews_never": "ещё не проверялось",
+    "voice_previews_check": "Проверить сейчас",
+    "voice_previews_rejected": "Обновление галереи голосов отклонено: {{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "Нужна ли мне лицензия на внутренние инструменты?",

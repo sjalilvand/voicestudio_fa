@@ -94,6 +94,12 @@ _TASK_TRANSITIONS: dict[TaskState, frozenset[TaskState]] = {
     ),
     TaskState.RUNNING: frozenset(
         {
+            # Back to MODEL_LOADING: a running attempt that loads a second
+            # model reports it, and a model_loading frame can simply arrive
+            # after the started frame that overtook it. Neither is a
+            # disagreement about who owns the task, and raising here killed the
+            # whole session because the read loop had nothing to catch it.
+            TaskState.MODEL_LOADING,
             TaskState.RESULT_UPLOADING,
             TaskState.COMPLETED,
             TaskState.QUEUED,
@@ -201,6 +207,12 @@ class Attempt:
     accepted_at: Optional[float] = None
     started_at: Optional[float] = None
     finished_at: Optional[float] = None
+    # When this attempt entered its current phase. The anchor a keepalive is
+    # measured against: a lease renewal that says only "still alive" may not
+    # push past the phase's own budget, or the budget stops existing. Not
+    # persisted — after a restart the phase timestamps above stand in for it,
+    # and a phase we cannot date is one we should not be enforcing a ceiling on.
+    phase_started_at: Optional[float] = None
     # Progress lease: renewed by every progress/model-loading message. Liveness
     # is "is it still moving", not "has the clock run out" — a 40-minute dub is
     # not a hung task (docs/remote-workers.md).
@@ -218,12 +230,37 @@ class Attempt:
             return True
         return session_epoch == self.session_epoch
 
-    def renew_lease(self, seconds: float, *, now: Optional[float] = None) -> None:
-        self.lease_expires_at = resolve(now) + seconds
+    def renew_lease(
+        self, seconds: float, *, not_after: Optional[float] = None, now: Optional[float] = None
+    ) -> None:
+        """Extend the lease by ``seconds``, never past ``not_after``.
+
+        The ceiling is what separates "still alive" from "still working": a
+        keepalive renewal is capped at the phase's absolute budget, so a wedged
+        worker whose timer keeps firing still runs out, while a frame carrying
+        real progress renews without one.
+        """
+        expiry = resolve(now) + seconds
+        if not_after is not None:
+            expiry = min(expiry, not_after)
+        self.lease_expires_at = expiry
         # Progress proves the worker is alive, which clears any pending
         # disconnect bookkeeping from a reconnect mid-task.
         self.disconnected_at = None
         self.grace_expires_at = None
+
+    @property
+    def phase_anchor(self) -> float:
+        """When the current phase began, as well as we can date it.
+
+        Explicit ``is not None`` at every step: these are wall-clock stamps and
+        ``0.0`` is a legitimate one (``clock.resolve`` exists for the same
+        reason), so an ``or`` chain would skip a pinned test clock.
+        """
+        for stamp in (self.phase_started_at, self.started_at, self.accepted_at):
+            if stamp is not None:
+                return stamp
+        return self.created_at
 
     def lease_expired(self, *, now: Optional[float] = None) -> bool:
         if self.lease_expires_at is None:
@@ -349,6 +386,8 @@ class Task:
             raise LifecycleError("stale session epoch")
         if attempt.state.terminal:
             raise LifecycleError(f"attempt {attempt_id} already terminal ({attempt.state.value})")
+        if new is not attempt.state:
+            attempt.phase_started_at = resolve(now)
         attempt.state = new
         implied = _ATTEMPT_TO_TASK.get(new)
         if implied is not None:
@@ -559,6 +598,7 @@ def reconcile(
     *,
     worker_id: str,
     worker_in_flight: Iterable[str],
+    resume_lease_seconds: float,
     now: Optional[float] = None,
 ) -> Optional[str]:
     """Reconcile one task against what a reconnecting worker claims to hold.
@@ -570,13 +610,19 @@ def reconcile(
     Without this, a control-plane restart orphans every live task: the server
     forgets, the worker keeps burning GPU, and the user sees a spinner that
     never resolves.
+
+    ``resume_lease_seconds`` is required rather than defaulted because deadline
+    policy belongs to the caller — and because a resume that cleared the
+    disconnect bookkeeping without renewing the lease left the attempt holding
+    an expiry stamped before the outage, so the very next sweep failed the task
+    it had just recovered.
     """
     claimed = set(worker_in_flight)
     attempt = task.active_attempt
     if attempt is not None and attempt.worker_id == worker_id:
         if attempt.attempt_id in claimed:
-            attempt.disconnected_at = None
-            attempt.grace_expires_at = None
+            # renew_lease clears disconnected_at/grace_expires_at itself.
+            attempt.renew_lease(resume_lease_seconds, now=now)
             return "resume"
         # We think it is running; the worker says otherwise. The worker is the
         # source of truth for what is executing on it.

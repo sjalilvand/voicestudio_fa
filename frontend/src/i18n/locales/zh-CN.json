@@ -1814,7 +1814,16 @@
     "to_download": "下载",
     "cached": "缓存的",
     "fast_download_badge": "快速下载",
-    "fast_download_title": "通过 Xet {{version}} 进行快速下载 — 并行分块传输"
+    "fast_download_title": "通过 Xet {{version}} 进行快速下载 — 并行分块传输",
+    "voice_previews": "语音试听",
+    "voice_previews_desc": "下载预先渲染的试听片段，让声音立即播放——甚至在语音模型下载完成之前。在你打开此项之前不会下载任何内容。",
+    "voice_previews_off": "已关闭 — 试听在本机渲染",
+    "voice_previews_ready": "精选集已缓存",
+    "voice_previews_partial": "已缓存 {{total}} 个精选试听中的 {{cached}} 个",
+    "voice_previews_checked": "{{when}}检查",
+    "voice_previews_never": "尚未检查",
+    "voice_previews_check": "立即检查",
+    "voice_previews_rejected": "语音库更新被拒绝：{{message}}"
   },
   "enterprise_faq": {
     "q_internal_tools": "我需要内部工具的许可证吗？",
