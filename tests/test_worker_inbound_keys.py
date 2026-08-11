@@ -289,3 +289,46 @@ def test_the_sweep_interval_can_be_shortened_with_the_threshold(monkeypatch):
 
     monkeypatch.setenv("OMNIVOICE_IDLE_SWEEP_SECONDS", "0")
     assert agent._sweep_seconds_from_env() == 60.0
+
+
+# ── Preload on a node ──────────────────────────────────────────────────────
+
+
+def test_a_worker_machine_does_not_preload_a_model(monkeypatch, caplog):
+    """A node has no local user to warm the model for.
+
+    The startup preload exists so the first /generate feels instant for the
+    person in front of the app. On a headless GPU node there is nobody there,
+    so it is several GB held from boot against a request that may never
+    arrive — and the idle sweep cannot reclaim it, because the sweep owns the
+    worker executor's engines while this is the default local model. Observed
+    on hardware: a node that had run nothing still sat at 2.4 GB.
+    """
+    import asyncio
+
+    from services import model_manager
+
+    monkeypatch.setenv("OMNIVOICE_WORKER_MODE", "1")
+    monkeypatch.setattr(model_manager, "model", None)
+    loaded = {"count": 0}
+    monkeypatch.setattr(
+        model_manager,
+        "_checkpoint_in_local_cache",
+        lambda *a, **k: loaded.__setitem__("count", loaded["count"] + 1) or True,
+    )
+
+    with caplog.at_level("INFO"):
+        asyncio.run(model_manager.preload_model())
+
+    assert loaded["count"] == 0, "a worker machine still went looking for a model to preload"
+    assert "loads on first request" in caplog.text
+
+
+def test_a_desktop_machine_still_preloads(monkeypatch):
+    """A machine that is both an app and a worker keeps the warm-up — there is
+    a real user in front of it and the whole point of preloading stands."""
+    from services import model_manager
+
+    monkeypatch.delenv("OMNIVOICE_WORKER_MODE", raising=False)
+
+    assert model_manager._headless_worker() is False
