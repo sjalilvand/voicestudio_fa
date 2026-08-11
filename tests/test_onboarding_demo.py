@@ -1,11 +1,8 @@
 """First-run onboarding seeds the demo voice profile (#621).
 
-The demo clip `backend/assets/samples/demo_voice.wav` is a build artifact that
-was never committed, so it shipped absent from installs — onboarding then logged
-"Demo audio not found" and seeded nothing, leaving an empty Launchpad. The fix
-commits the clip (it's un-ignored in .gitignore and bundled via the Tauri
-`backend` resource). These tests pin that the asset is present + valid and that
-onboarding actually seeds the demo profile from it.
+The demo reference and pre-rendered clone are build artifacts. If either ships
+absent, onboarding is empty or its no-engine preview fails. These tests pin that
+both assets are present + valid and that onboarding seeds the demo profile.
 """
 import os
 import sqlite3
@@ -20,6 +17,10 @@ _WAV = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "backend", "assets", "samples", "demo_voice.wav",
 )
+_CLONE_WAV = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "backend", "assets", "samples", "demo_clone_output.wav",
+)
 
 
 def test_demo_clip_is_committed_and_valid():
@@ -32,6 +33,18 @@ def test_demo_clip_is_committed_and_valid():
     with wave.open(_WAV, "rb") as w:
         assert w.getnframes() > 0, "demo_voice.wav has no audio frames"
         assert w.getframerate() > 0
+
+
+def test_demo_clone_preview_is_committed_and_valid():
+    """The no-engine fallback must ship as real generated audio too."""
+    assert os.path.isfile(_CLONE_WAV), (
+        f"{_CLONE_WAV} is missing — regenerate with "
+        "scripts/render_demos_omnivoice.py --only cloning and commit it."
+    )
+    with wave.open(_CLONE_WAV, "rb") as w:
+        assert w.getnframes() > 0, "demo_clone_output.wav has no audio frames"
+        assert w.getframerate() == 24000
+        assert w.getnchannels() == 1
 
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -49,16 +62,19 @@ def test_demo_clip_is_not_gitignored():
     if shutil.which("git") is None:
         import pytest
         pytest.skip("git not available")
-    rel = "backend/assets/samples/demo_voice.wav"
-    # `git check-ignore` exits 0 (and echoes the path) when the path IS ignored.
-    res = subprocess.run(
-        ["git", "check-ignore", rel], cwd=_ROOT,
-        capture_output=True, text=True,
-    )
-    assert res.returncode != 0 and not res.stdout.strip(), (
-        f"{rel} is gitignored — the un-ignore allowlist in .gitignore was lost. "
-        "Restore `!backend/assets/samples/*.wav` or the clip drops from builds."
-    )
+    for rel in (
+        "backend/assets/samples/demo_voice.wav",
+        "backend/assets/samples/demo_clone_output.wav",
+    ):
+        # `git check-ignore` exits 0 (and echoes the path) when the path IS ignored.
+        res = subprocess.run(
+            ["git", "check-ignore", rel], cwd=_ROOT,
+            capture_output=True, text=True,
+        )
+        assert res.returncode != 0 and not res.stdout.strip(), (
+            f"{rel} is gitignored — the un-ignore allowlist in .gitignore was lost. "
+            "Restore `!backend/assets/samples/*.wav` or the clip drops from builds."
+        )
 
 
 def test_backend_is_a_bundled_tauri_resource():
@@ -127,3 +143,42 @@ def test_seed_is_noop_when_profiles_exist(tmp_path, monkeypatch):
     n = c.execute("SELECT COUNT(*) FROM voice_profiles").fetchone()[0]
     c.close()
     assert n == 1  # unchanged — no demo seeded on a non-empty DB
+
+
+def test_existing_demo_profile_receives_the_latest_bundled_voice(tmp_path, monkeypatch):
+    db_path = str(tmp_path / "ob.db")
+    conn = sqlite3.connect(db_path)
+    conn.execute(_table_sql())
+    conn.execute(
+        "INSERT INTO voice_profiles (id, name, is_demo, description, ref_text) "
+        "VALUES (?, ?, 1, 'old neutral description', ?)",
+        (
+            onboarding.DEMO_PROFILE_ID,
+            onboarding.DEMO_PROFILE_NAME,
+            onboarding.DEMO_REF_TEXT,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+    bundled = tmp_path / "bundled.wav"
+    bundled.write_bytes(b"new omnivoice demo")
+    voices = tmp_path / "voices"
+    voices.mkdir()
+    copied = voices / f"{onboarding.DEMO_PROFILE_ID}.wav"
+    copied.write_bytes(b"old demo")
+
+    monkeypatch.setattr(onboarding, "get_db", lambda: sqlite3.connect(db_path))
+    monkeypatch.setattr(onboarding, "VOICES_DIR", str(voices))
+    monkeypatch.setattr(onboarding, "_DEMO_AUDIO", str(bundled))
+
+    onboarding.seed_sample_project()
+
+    assert copied.read_bytes() == bundled.read_bytes()
+    conn = sqlite3.connect(db_path)
+    description = conn.execute(
+        "SELECT description FROM voice_profiles WHERE id=?",
+        (onboarding.DEMO_PROFILE_ID,),
+    ).fetchone()[0]
+    conn.close()
+    assert description == onboarding._DEMO_DESCRIPTION
