@@ -50,7 +50,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Fixed
 
 - Restored the pre-release version to 0.4.2 while the next release remains in preparation. (#1488)
-- Dictation shortcuts now work system-wide through the desktop portal on Wayland, work on focused browser and Docker pages, and show the correct platform keys. (#1490)
+- Dictation shortcuts now register and rebind through the desktop portal on Wayland, honor custom keys in focused app views, and show the effective platform keys. (#1490)
 - Multi-language dubbing now translates, edits, generates, retains, and exports every selected language, and its language picker stays visible at viewport edges. (#1486)
 - Dubbing's **From video** cast now uses available source-audio samples for every speaker and short line, including jobs without a pooled diarization clone. (#1484)
 - Basic Dubbing translation remains available without an LLM; Cinematic and Autofit now degrade through the existing Fast translation path instead of blocking the quality choice. (#1481)

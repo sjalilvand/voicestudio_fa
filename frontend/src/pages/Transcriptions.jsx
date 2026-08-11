@@ -13,7 +13,8 @@ import { Mic, Copy, Trash2, Search, Clock, Languages, FileText, Download } from 
 import { Button } from '../ui';
 import { toast } from 'react-hot-toast';
 import { toMillis } from '../utils/relativeTime';
-import { detectPlatform } from '../utils/micError';
+import { replaceShortcutHint } from '../utils/dictationShortcut';
+import { useEffectiveDictationShortcut } from '../hooks/useEffectiveDictationShortcut';
 import {
   loadTranscriptions,
   TRANSCRIPTIONS_KEY,
@@ -47,12 +48,10 @@ export default function TranscriptionsPage() {
   const [transcriptions, setTranscriptions] = useState(loadTranscriptions);
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
+  const { info: shortcut } = useEffectiveDictationShortcut();
   const emptyDescription = useMemo(() => {
-    const description = t('transcriptions.empty_desc');
-    return detectPlatform() === 'mac'
-      ? description
-      : description.replaceAll('⌘', 'Ctrl').replaceAll('⇧', 'Shift');
-  }, [t]);
+    return replaceShortcutHint(t('transcriptions.empty_desc'), shortcut.display);
+  }, [shortcut.display, t]);
 
   // Listen for new transcriptions added from CaptureButton
   useEffect(() => {

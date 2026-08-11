@@ -6,8 +6,10 @@
 //! compositor-owned, permission-aware API for this job.
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
 
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 use zbus::{
     blocking::{Connection, Proxy},
     zvariant::{OwnedObjectPath, OwnedValue, Str},
@@ -17,10 +19,74 @@ const DESKTOP_DESTINATION: &str = "org.freedesktop.portal.Desktop";
 const DESKTOP_PATH: &str = "/org/freedesktop/portal/desktop";
 const GLOBAL_SHORTCUTS_INTERFACE: &str = "org.freedesktop.portal.GlobalShortcuts";
 const REQUEST_INTERFACE: &str = "org.freedesktop.portal.Request";
+const SESSION_INTERFACE: &str = "org.freedesktop.portal.Session";
 const REGISTRY_INTERFACE: &str = "org.freedesktop.host.portal.Registry";
 const SHORTCUT_ID: &str = "voice-dictation";
+static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
 type VariantMap = HashMap<String, OwnedValue>;
+
+#[derive(Clone)]
+struct PortalRegistration {
+    connection: Connection,
+    session: OwnedObjectPath,
+}
+
+#[derive(Default)]
+pub struct PortalShortcutState {
+    active: Mutex<Option<PortalRegistration>>,
+    revision: AtomicU64,
+}
+
+impl PortalShortcutState {
+    pub fn replace(&self, app: tauri::AppHandle, accelerator: String) -> Result<String, String> {
+        let revision = self.reserve();
+        self.replace_reserved(app, accelerator, revision)
+    }
+
+    pub fn reserve(&self) -> u64 {
+        self.revision.fetch_add(1, Ordering::SeqCst) + 1
+    }
+
+    fn is_current(&self, revision: u64) -> bool {
+        self.revision.load(Ordering::SeqCst) == revision
+    }
+
+    pub fn replace_reserved(
+        &self,
+        app: tauri::AppHandle,
+        accelerator: String,
+        revision: u64,
+    ) -> Result<String, String> {
+        // Bind the replacement first. A declined consent dialog or unavailable
+        // portal therefore leaves the working shortcut and saved preference
+        // untouched.
+        let (registration, display) = bind(&accelerator)?;
+        if !self.is_current(revision) {
+            let _ = close_session(&registration);
+            return Err("shortcut registration was superseded by a newer request".into());
+        }
+        let mut active = match self.active.lock() {
+            Ok(active) => active,
+            Err(_) => {
+                let _ = close_session(&registration);
+                return Err("portal shortcut lock poisoned".into());
+            }
+        };
+        if let Err(error) = start_listener(app, registration.clone()) {
+            let _ = close_session(&registration);
+            return Err(error);
+        }
+        let previous = active.replace(registration);
+        drop(active);
+        if let Some(previous) = previous {
+            if let Err(error) = close_session(&previous) {
+                log::warn!("Could not close the previous Wayland shortcut session: {error}");
+            }
+        }
+        Ok(display)
+    }
+}
 
 const DESKTOP_ID: &str = "com.debpalash.omnivoice-studio";
 
@@ -100,7 +166,7 @@ pub fn is_wayland_session() -> bool {
 /// The portal may still let the user choose a different chord in its consent
 /// dialog, so an unknown spelling is deliberately omitted rather than guessed.
 fn portal_trigger(accelerator: &str) -> Option<String> {
-    let mut modifiers = Vec::new();
+    let mut modifiers: Vec<String> = Vec::new();
     let mut key = None;
 
     for part in accelerator
@@ -109,15 +175,15 @@ fn portal_trigger(accelerator: &str) -> Option<String> {
         .filter(|part| !part.is_empty())
     {
         match part.to_ascii_lowercase().as_str() {
-            "cmdorctrl" | "commandorcontrol" | "ctrl" | "control" | "cmd" | "command" => {
-                if !modifiers.contains(&"CTRL") {
-                    modifiers.push("CTRL");
+            "cmdorctrl" | "commandorcontrol" | "ctrl" | "control" => {
+                if !modifiers.iter().any(|modifier| modifier == "CTRL") {
+                    modifiers.push("CTRL".into());
                 }
             }
-            "shift" => modifiers.push("SHIFT"),
-            "alt" | "option" => modifiers.push("ALT"),
-            "super" | "meta" => modifiers.push("LOGO"),
-            _ if key.is_none() => key = Some(part),
+            "shift" => modifiers.push("SHIFT".into()),
+            "alt" | "option" => modifiers.push("ALT".into()),
+            "cmd" | "command" | "super" | "meta" => modifiers.push("LOGO".into()),
+            _ if key.is_none() => key = xkb_key_name(part),
             _ => return None,
         }
     }
@@ -130,8 +196,82 @@ fn portal_trigger(accelerator: &str) -> Option<String> {
     Some(modifiers.join("+"))
 }
 
+fn xkb_key_name(key: &str) -> Option<String> {
+    let lower = key.to_ascii_lowercase();
+    if let Some(letter) = lower.strip_prefix("key") {
+        if letter.len() == 1
+            && letter
+                .chars()
+                .all(|character| character.is_ascii_alphabetic())
+        {
+            return Some(letter.to_owned());
+        }
+    }
+    if let Some(digit) = lower.strip_prefix("digit") {
+        if digit.len() == 1 && digit.chars().all(|character| character.is_ascii_digit()) {
+            return Some(digit.to_owned());
+        }
+    }
+    if lower.len() == 1
+        && lower
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric())
+    {
+        return Some(lower);
+    }
+    Some(
+        match lower.as_str() {
+            "space" => "space",
+            "enter" | "return" => "Return",
+            "escape" | "esc" => "Escape",
+            "tab" => "Tab",
+            "backspace" => "BackSpace",
+            "delete" => "Delete",
+            "insert" => "Insert",
+            "home" => "Home",
+            "end" => "End",
+            "pageup" => "Page_Up",
+            "pagedown" => "Page_Down",
+            "arrowup" | "up" => "Up",
+            "arrowdown" | "down" => "Down",
+            "arrowleft" | "left" => "Left",
+            "arrowright" | "right" => "Right",
+            "minus" => "minus",
+            "equal" => "equal",
+            "comma" => "comma",
+            "period" => "period",
+            "slash" => "slash",
+            "semicolon" => "semicolon",
+            "quote" | "apostrophe" => "apostrophe",
+            "bracketleft" => "bracketleft",
+            "bracketright" => "bracketright",
+            "backslash" => "backslash",
+            "backquote" | "grave" => "grave",
+            _ if lower.strip_prefix('f').is_some_and(|digits| {
+                digits
+                    .parse::<u8>()
+                    .is_ok_and(|number| (1..=35).contains(&number))
+            }) =>
+            {
+                return Some(key.to_ascii_uppercase());
+            }
+            _ => return None,
+        }
+        .into(),
+    )
+}
+
 fn variant_string(value: &str) -> OwnedValue {
     OwnedValue::from(Str::from(value))
+}
+
+fn trigger_description(shortcuts: Vec<(String, VariantMap)>) -> Option<String> {
+    shortcuts
+        .into_iter()
+        .find(|(id, _)| id == SHORTCUT_ID)
+        .and_then(|(_, mut properties)| properties.remove("trigger_description"))
+        .and_then(|value| String::try_from(value).ok())
+        .filter(|description| !description.trim().is_empty())
 }
 
 fn request_path(connection: &Connection, token: &str) -> Result<OwnedObjectPath, String> {
@@ -185,7 +325,7 @@ where
     Ok(results)
 }
 
-fn run(app: tauri::AppHandle, accelerator: String) -> Result<(), String> {
+fn bind(accelerator: &str) -> Result<(PortalRegistration, String), String> {
     ensure_desktop_identity()?;
     let connection = Connection::session()
         .map_err(|error| format!("could not connect to the desktop portal: {error}"))?;
@@ -216,8 +356,9 @@ fn run(app: tauri::AppHandle, accelerator: String) -> Result<(), String> {
     .map_err(|error| format!("could not open the global-shortcuts portal: {error}"))?;
 
     let process = std::process::id();
-    let create_token = format!("vs_create_{process}");
-    let session_token = format!("vs_session_{process}");
+    let sequence = REQUEST_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let create_token = format!("vs_create_{process}_{sequence}");
+    let session_token = format!("vs_session_{process}_{sequence}");
     let mut create_options = VariantMap::new();
     create_options.insert("handle_token".into(), variant_string(&create_token));
     create_options.insert(
@@ -248,23 +389,59 @@ fn run(app: tauri::AppHandle, accelerator: String) -> Result<(), String> {
     };
 
     let mut shortcut_info = VariantMap::new();
-    shortcut_info.insert(
-        "description".into(),
-        variant_string("Start and stop VoiceStudio dictation"),
-    );
+    shortcut_info.insert("description".into(), variant_string("VoiceStudio"));
     if let Some(trigger) = portal_trigger(&accelerator) {
         shortcut_info.insert("preferred_trigger".into(), variant_string(&trigger));
     }
     let shortcuts = vec![(SHORTCUT_ID.to_string(), shortcut_info)];
-    let bind_token = format!("vs_bind_{process}");
+    let bind_token = format!("vs_bind_{process}_{sequence}");
     let mut bind_options = VariantMap::new();
     bind_options.insert("handle_token".into(), variant_string(&bind_token));
-    response_for(&connection, &bind_token, || {
+    let mut bind_results = response_for(&connection, &bind_token, || {
         portal.call(
             "BindShortcuts",
             &(session.clone(), shortcuts, "", bind_options),
         )
     })?;
+
+    let display = bind_results
+        .remove("shortcuts")
+        .and_then(|value| Vec::<(String, VariantMap)>::try_from(value).ok())
+        .and_then(trigger_description)
+        .unwrap_or_else(|| crate::dictation_shortcut::display_accelerator(accelerator));
+
+    drop(portal);
+    drop(registry);
+    Ok((
+        PortalRegistration {
+            connection,
+            session,
+        },
+        display,
+    ))
+}
+
+fn close_session(registration: &PortalRegistration) -> Result<(), String> {
+    let session = Proxy::new(
+        &registration.connection,
+        DESKTOP_DESTINATION,
+        registration.session.as_str(),
+        SESSION_INTERFACE,
+    )
+    .map_err(|error| format!("could not open the shortcut session: {error}"))?;
+    session
+        .call::<_, _, ()>("Close", &())
+        .map_err(|error| format!("could not close the shortcut session: {error}"))
+}
+
+fn listen(app: tauri::AppHandle, registration: PortalRegistration) -> Result<(), String> {
+    let portal = Proxy::new(
+        &registration.connection,
+        DESKTOP_DESTINATION,
+        DESKTOP_PATH,
+        GLOBAL_SHORTCUTS_INTERFACE,
+    )
+    .map_err(|error| format!("could not open the global-shortcuts portal: {error}"))?;
 
     log::info!("Wayland dictation shortcut registered through xdg-desktop-portal");
     let mut signals = portal
@@ -291,7 +468,7 @@ fn run(app: tauri::AppHandle, accelerator: String) -> Result<(), String> {
                 continue;
             }
         };
-        if signal_session != session || shortcut_id != SHORTCUT_ID {
+        if signal_session != registration.session || shortcut_id != SHORTCUT_ID {
             continue;
         }
         if member == "Activated" {
@@ -305,34 +482,62 @@ fn run(app: tauri::AppHandle, accelerator: String) -> Result<(), String> {
     Err("global-shortcuts portal closed the session".into())
 }
 
-pub fn register(app: tauri::AppHandle, accelerator: String) {
-    if let Err(error) = std::thread::Builder::new()
+fn start_listener(app: tauri::AppHandle, registration: PortalRegistration) -> Result<(), String> {
+    std::thread::Builder::new()
         .name("wayland-global-shortcut".into())
         .spawn(move || {
-            if let Err(error) = run(app, accelerator) {
+            if let Err(error) = listen(app, registration) {
+                log::info!("Wayland shortcut listener stopped: {error}");
+            }
+        })
+        .map(|_| ())
+        .map_err(|error| format!("failed to start Wayland shortcut listener: {error}"))
+}
+
+pub fn register_initial(app: tauri::AppHandle, accelerator: String, revision: u64) {
+    let worker_app = app.clone();
+    if let Err(error) = std::thread::Builder::new()
+        .name("wayland-global-shortcut-setup".into())
+        .spawn(move || {
+            let manager = worker_app.state::<crate::dictation_shortcut::DictationShortcutManager>();
+            if let Err(error) = manager.register_portal_initial(&worker_app, accelerator, revision)
+            {
                 log::error!("Wayland dictation shortcut unavailable: {error}");
             }
         })
     {
-        log::error!("Failed to start Wayland shortcut listener: {error}");
+        log::error!("Failed to start Wayland shortcut setup: {error}");
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{desktop_exec_value, portal_trigger};
+    use super::{
+        desktop_exec_value, portal_trigger, trigger_description, variant_string,
+        PortalShortcutState,
+    };
+    use std::collections::HashMap;
     use std::path::Path;
 
     #[test]
     fn converts_tauri_accelerators_to_portal_triggers() {
         assert_eq!(
             portal_trigger("CmdOrCtrl+Shift+Space").as_deref(),
-            Some("CTRL+SHIFT+Space")
+            Some("CTRL+SHIFT+space")
         );
         assert_eq!(
             portal_trigger("Alt+Control+K").as_deref(),
-            Some("ALT+CTRL+K")
+            Some("ALT+CTRL+k")
         );
+        assert_eq!(
+            portal_trigger("Super+PageUp").as_deref(),
+            Some("LOGO+Page_Up")
+        );
+        assert_eq!(
+            portal_trigger("Ctrl+BracketLeft").as_deref(),
+            Some("CTRL+bracketleft")
+        );
+        assert_eq!(portal_trigger("Cmd+Digit1").as_deref(), Some("LOGO+1"));
     }
 
     #[test]
@@ -347,5 +552,24 @@ mod tests {
             desktop_exec_value(Path::new("/tmp/Voice Studio/$build")),
             "\"/tmp/Voice Studio/\\$build\""
         );
+    }
+
+    #[test]
+    fn uses_the_portals_effective_trigger_description() {
+        let mut properties = HashMap::new();
+        properties.insert("trigger_description".into(), variant_string("Meta+Shift+V"));
+        assert_eq!(
+            trigger_description(vec![("voice-dictation".into(), properties)]).as_deref(),
+            Some("Meta+Shift+V")
+        );
+    }
+
+    #[test]
+    fn newer_rebinds_supersede_in_flight_registration() {
+        let state = PortalShortcutState::default();
+        let startup = state.reserve();
+        let changed = state.reserve();
+        assert!(!state.is_current(startup));
+        assert!(state.is_current(changed));
     }
 }

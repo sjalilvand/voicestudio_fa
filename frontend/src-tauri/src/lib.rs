@@ -13,6 +13,7 @@ pub mod bootstrap;
 pub mod tools;
 pub mod backend;
 pub mod commands;
+pub mod dictation_shortcut;
 pub mod crash;
 pub mod reset;
 pub mod uninstall;
@@ -32,7 +33,8 @@ use tauri::tray::TrayIconBuilder;
 use tauri_plugin_positioner::{Position, WindowExt};
 
 use crate::bootstrap::{BootstrapStage, BootstrapState, set_stage};
-use crate::config::{default_dictation_shortcut, load_config};
+use crate::config::load_config;
+use crate::dictation_shortcut::DictationShortcutManager;
 
 // ── Port ──────────────────────────────────────────────────────────────────
 
@@ -64,10 +66,7 @@ pub struct AppFlags {
 
 pub struct TrayHandle {
     pub tray: Mutex<Option<tauri::tray::TrayIcon>>,
-}
-
-pub struct DictationShortcutState {
-    pub current: Mutex<Option<tauri_plugin_global_shortcut::Shortcut>>,
+    pub dictate: Mutex<Option<tauri::menu::MenuItem<tauri::Wry>>>,
 }
 
 pub const TRAY_ICON_DEFAULT: &[u8] = include_bytes!("../icons/32x32.png");
@@ -439,6 +438,7 @@ pub fn run() {
             commands::save_text_file,
             commands::reveal_host_path,
             commands::get_dictation_shortcut,
+            commands::get_effective_dictation_shortcut,
             commands::set_dictation_shortcut,
             commands::get_launch_as_widget,
             commands::set_launch_as_widget,
@@ -542,17 +542,14 @@ pub fn run() {
             });
             app.manage(TrayHandle {
                 tray: Mutex::new(None),
+                dictate: Mutex::new(None),
             });
-            app.manage(DictationShortcutState {
-                current: Mutex::new(None),
-            });
+            let startup_shortcut = load_config(app.handle()).dictation_shortcut;
+            app.manage(DictationShortcutManager::new(&startup_shortcut));
 
             // ── Global dictation shortcut (hold-to-talk) ─────────────────
             {
-                use std::str::FromStr;
-                use tauri_plugin_global_shortcut::{
-                    GlobalShortcutExt, Shortcut, ShortcutState,
-                };
+                use tauri_plugin_global_shortcut::ShortcutState;
 
                 app.handle().plugin(
                     tauri_plugin_global_shortcut::Builder::new()
@@ -576,48 +573,17 @@ pub fn run() {
                         .build(),
                 )?;
 
-                let cfg = load_config(app.handle());
-                let accel = cfg.dictation_shortcut.clone();
-                #[cfg(target_os = "linux")]
-                if crate::wayland_shortcut::is_wayland_session() {
-                    crate::wayland_shortcut::register(app.handle().clone(), accel.clone());
-                }
-                #[cfg(target_os = "linux")]
-                let use_native_shortcut = !crate::wayland_shortcut::is_wayland_session();
-                #[cfg(not(target_os = "linux"))]
-                let use_native_shortcut = true;
-
-                let parsed = Shortcut::from_str(&accel)
-                    .or_else(|_| {
-                        log::warn!(
-                            "Saved shortcut '{accel}' unparseable — falling back to default"
-                        );
-                        Shortcut::from_str(&default_dictation_shortcut())
-                    });
-                if use_native_shortcut {
-                    match parsed {
-                        Ok(shortcut) => match app.global_shortcut().register(shortcut.clone()) {
-                            Ok(()) => {
-                                log::info!("Global shortcut '{accel}' registered");
-                                if let Ok(mut slot) = app
-                                    .state::<DictationShortcutState>()
-                                    .current
-                                    .lock()
-                                {
-                                    *slot = Some(shortcut);
-                                }
-                            }
-                            Err(e) => log::warn!("Failed to register global shortcut: {e}"),
-                        },
-                        Err(e) => log::warn!("No usable dictation shortcut: {e}"),
-                    }
-                }
+                DictationShortcutManager::register_initial(
+                    app.handle().clone(),
+                    startup_shortcut.clone(),
+                );
             }
 
             // ── System tray ──────────────────────────────────────────────
             let tray_menu = if pill_mode_tray {
                 // Pill mode: minimal tray with Open Studio + Dictate + Quit
-                let dictate_i = MenuItemBuilder::new("Start Dictation  ⌘⇧Space")
+                let shortcut_hint = app.state::<DictationShortcutManager>().info().display;
+                let dictate_i = MenuItemBuilder::new(format!("Start Dictation  {shortcut_hint}"))
                     .id("dictate")
                     .build(app)?;
                 let open_studio_i = MenuItemBuilder::new("Open VoiceStudio")
@@ -638,7 +604,8 @@ pub fn run() {
                 let show_i = MenuItemBuilder::new("Show VoiceStudio")
                     .id("show")
                     .build(app)?;
-                let dictate_i = MenuItemBuilder::new("Start Dictation  ⌘⇧Space")
+                let shortcut_hint = app.state::<DictationShortcutManager>().info().display;
+                let dictate_i = MenuItemBuilder::new(format!("Start Dictation  {shortcut_hint}"))
                     .id("dictate")
                     .build(app)?;
                 let switch_to_pill_i = MenuItemBuilder::new("Switch to Dictation Widget")
@@ -661,6 +628,13 @@ pub fn run() {
                     .build()?
             };
 
+            if let Some(item) = tray_menu.get("dictate") {
+                if let Some(item) = item.as_menuitem() {
+                    if let Ok(mut slot) = app.state::<TrayHandle>().dictate.lock() {
+                        *slot = Some(item.clone());
+                    }
+                }
+            }
 
             let tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())

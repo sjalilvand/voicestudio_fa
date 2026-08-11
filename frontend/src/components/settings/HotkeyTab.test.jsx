@@ -1,20 +1,36 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 
 import HotkeyTab from './HotkeyTab';
+
+const shortcutEvents = vi.hoisted(() => ({}));
 
 // Recording is only armed in the desktop shell; pretend we are in it and
 // stub the two shortcut IPC commands.
 vi.mock('./native', () => ({ isTauri: () => true }));
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: vi.fn(async (cmd) => (cmd === 'get_dictation_shortcut' ? 'CmdOrCtrl+Shift+Space' : '')),
+  invoke: vi.fn(async (cmd) =>
+    cmd === 'get_effective_dictation_shortcut'
+      ? {
+          accelerator: 'CmdOrCtrl+Shift+Space',
+          display: 'Ctrl+Shift+Space',
+          backend: 'native',
+        }
+      : '',
+  ),
+}));
+vi.mock('@tauri-apps/api/event', () => ({
+  listen: vi.fn(async (name, handler) => {
+    shortcutEvents[name] = handler;
+    return vi.fn();
+  }),
 }));
 
 async function startRecording() {
   render(<HotkeyTab />);
   // Wait for the mount-time shortcut load so state updates stay inside act().
-  await screen.findByText('CmdOrCtrl+Shift+Space');
+  await screen.findByText('Ctrl+Shift+Space');
   fireEvent.click(screen.getByRole('button', { name: 'Record shortcut' }));
   expect(screen.getByText(/listening/)).toBeInTheDocument();
 }
@@ -66,5 +82,20 @@ describe('HotkeyTab — recording feedback and cancel affordances', () => {
     await startRecording();
     fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
     expect(screen.queryByText(/listening/)).toBeNull();
+  });
+
+  it('shows the portal effective shortcut when registration finishes', async () => {
+    render(<HotkeyTab />);
+    await screen.findByText('Ctrl+Shift+Space');
+    act(() => {
+      shortcutEvents['dictation-shortcut-changed']({
+        payload: {
+          accelerator: 'CmdOrCtrl+Shift+Space',
+          display: 'Meta+Shift+V',
+          backend: 'portal',
+        },
+      });
+    });
+    expect(await screen.findByText('Meta+Shift+V')).toBeInTheDocument();
   });
 });

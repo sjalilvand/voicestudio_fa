@@ -2,23 +2,39 @@ import { fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import DesktopCaptureShortcutBridge from './DesktopCaptureShortcutBridge';
 
-const { emit } = vi.hoisted(() => ({ emit: vi.fn() }));
-vi.mock('@tauri-apps/api/event', () => ({ emit }));
+const { emit, invoke, listen, handlers } = vi.hoisted(() => ({
+  emit: vi.fn(),
+  invoke: vi.fn(),
+  listen: vi.fn(),
+  handlers: {},
+}));
+vi.mock('@tauri-apps/api/core', () => ({ invoke }));
+vi.mock('@tauri-apps/api/event', () => ({ emit, listen }));
 
 describe('DesktopCaptureShortcutBridge', () => {
   beforeEach(() => {
     window.__TAURI_INTERNALS__ = {};
     emit.mockReset().mockResolvedValue(undefined);
+    invoke.mockReset().mockResolvedValue({
+      accelerator: 'Ctrl+Alt+K',
+      display: 'Ctrl+Alt+K',
+      backend: 'native',
+    });
+    listen.mockReset().mockImplementation(async (name, handler) => {
+      handlers[name] = handler;
+      return vi.fn();
+    });
   });
 
   afterEach(() => {
     delete window.__TAURI_INTERNALS__;
   });
 
-  it('forwards focused Ctrl+Shift+Space press and release to the widget', async () => {
+  it('forwards the configured shortcut and disarms when a modifier is released first', async () => {
     render(<DesktopCaptureShortcutBridge />);
-    fireEvent.keyDown(window, { code: 'Space', ctrlKey: true, shiftKey: true });
-    fireEvent.keyUp(window, { code: 'Space', ctrlKey: true, shiftKey: true });
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('get_effective_dictation_shortcut'));
+    fireEvent.keyDown(window, { code: 'KeyK', ctrlKey: true, altKey: true });
+    fireEvent.keyUp(window, { code: 'ControlLeft', altKey: true });
 
     await waitFor(() => {
       expect(emit).toHaveBeenCalledWith('tray-dictate');
@@ -28,14 +44,25 @@ describe('DesktopCaptureShortcutBridge', () => {
 
   it('ignores auto-repeat and unrelated shortcuts', async () => {
     render(<DesktopCaptureShortcutBridge />);
+    await waitFor(() => expect(invoke).toHaveBeenCalled());
     fireEvent.keyDown(window, {
-      code: 'Space',
+      code: 'KeyK',
       ctrlKey: true,
-      shiftKey: true,
+      altKey: true,
       repeat: true,
     });
-    fireEvent.keyDown(window, { code: 'Space', ctrlKey: true });
+    fireEvent.keyDown(window, { code: 'KeyK', ctrlKey: true });
     await Promise.resolve();
     expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('uses a successfully rebound shortcut without remounting', async () => {
+    render(<DesktopCaptureShortcutBridge />);
+    await waitFor(() => expect(handlers['dictation-shortcut-changed']).toBeTypeOf('function'));
+    handlers['dictation-shortcut-changed']({
+      payload: { accelerator: 'Ctrl+Shift+Space', display: 'Ctrl+Shift+Space' },
+    });
+    fireEvent.keyDown(window, { code: 'Space', ctrlKey: true, shiftKey: true });
+    await waitFor(() => expect(emit).toHaveBeenCalledWith('tray-dictate'));
   });
 });
