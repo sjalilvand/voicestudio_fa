@@ -128,6 +128,8 @@ mysteriously.
 
 ## Security
 
+* Idle worker sessions use TLS keepalives, so NAT mappings stay open without
+  the control plane mistaking its own keepalive interval for abusive traffic.
 * **All traffic is TLS.** There is no way to disable verification.
 * This machine generates its own certificate. The enrollment token carries that
   certificate's fingerprint, and the worker pins it — so a machine on the same

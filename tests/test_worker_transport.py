@@ -21,6 +21,9 @@ from worker.lifecycle import TaskState
 from worker.pool import WorkerPool
 from worker.protocol.gen import worker_v1_pb2 as pb
 from worker.scheduler import Scheduler
+import grpc
+
+from worker.protocol.gen import worker_v1_pb2_grpc as pb_grpc
 from worker.transport import codec
 from worker.transport.client import WorkerClient, WorkerConfig, backoff_delay, config_from_token
 from worker.transport.server import WorkerServicer, serve
@@ -584,3 +587,34 @@ async def test_a_restarted_worker_reconnects_without_a_new_token(harness, tmp_pa
         await revived.stop()
     finally:
         worker_agent._paths = original_paths
+
+
+
+@pytest.mark.asyncio
+async def test_server_accepts_the_keepalive_interval_it_configures(monkeypatch):
+    """The server must not evict healthy idle workers for its own ping policy."""
+    captured = {}
+
+    class FakeServer:
+        def add_secure_port(self, *_args):
+            return 7443
+
+        async def start(self):
+            pass
+
+    def fake_server(*, options):
+        captured.update(dict(options))
+        return FakeServer()
+
+    monkeypatch.setattr(grpc.aio, "server", fake_server)
+    monkeypatch.setattr(pb_grpc, "add_WorkerServiceServicer_to_server", lambda *_args: None)
+    monkeypatch.setattr(grpc, "ssl_server_credentials", lambda *_args: object())
+
+    await serve(
+        object(),
+        certificate_pem=b"certificate",
+        private_key_pem=b"private-key",
+    )
+
+    assert captured["grpc.http2.min_ping_interval_without_data_ms"] <= 25_000
+    assert captured["grpc.http2.max_pings_without_data"] == 0
