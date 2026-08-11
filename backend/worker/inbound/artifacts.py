@@ -131,9 +131,20 @@ class ArtifactStore:
     # ── Inputs: panel pushes, node reads ──────────────────────────────────
 
     def begin_input(self, ref: pb.ArtifactRef) -> str:
-        """Reserve a staging path for an incoming push. Returns the path."""
-        artifact_id = safe_filename(ref.artifact_id or uuid.uuid4().hex)
-        path = self._place("in", artifact_id, ref.filename)
+        """Reserve a staging path for an incoming push. Returns the path.
+
+        The wire id is HASHED into a directory name rather than used as one.
+        Staged inputs are legitimately nested — `inputs/<digest>.wav` — so
+        demanding a bare filename here rejected every real input, failed the
+        dispatch, and left the scheduler retrying about eighteen times a
+        second while the GPU sat idle and the user watched a spinner. Hashing
+        accepts any id the protocol allows while keeping the placement
+        entirely ours to decide, which is the property that actually matters.
+        """
+        key = hashlib.sha256(
+            (ref.artifact_id or uuid.uuid4().hex).encode("utf-8")
+        ).hexdigest()[:32]
+        path = self._place("in", key, ref.filename)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         return path
 

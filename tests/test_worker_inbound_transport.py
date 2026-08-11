@@ -9,6 +9,7 @@ connector, and assert on the state the scheduler ends up in.
 from __future__ import annotations
 
 import asyncio
+import os
 import socket
 import sqlite3
 
@@ -490,3 +491,63 @@ async def test_a_stale_frame_cannot_poison_the_next_attach(inbound):
     finally:
         task.cancel()
         await asyncio.gather(task, return_exceptions=True)
+
+
+@pytest.mark.asyncio
+async def test_a_nested_input_id_is_accepted_the_way_staging_really_writes_it(
+    inbound, tmp_path
+):
+    """Staged inputs are nested, and the node must take them as they come.
+
+    `task_store.stage_input` mints `inputs/<digest><ext>` — a path, not a bare
+    name. The node ran `safe_filename` on it, which rejects anything nested, so
+    every real clone input was refused, the dispatch failed, and the scheduler
+    retried about eighteen times a second while the GPU sat idle and the user
+    watched a spinner. Every earlier test used a flat id like "ref-1" and so
+    never touched the shape production actually produces.
+    """
+    from worker.protocol.gen import worker_v1_pb2 as pb
+
+    await inbound.connect_panel()
+    source = tmp_path / "reference.wav"
+    source.write_bytes(b"reference audio bytes")
+
+    nested = pb.ArtifactRef(
+        artifact_id="inputs/0f1e2d3c4b5a69788796a5b4c3d2e1f0.wav",
+        filename="reference.wav",
+    )
+    declared = await inbound.connection.push_input(nested, str(source))
+
+    destination = tmp_path / "staged.wav"
+    await inbound.artifacts.stage_in(declared, str(destination))
+    assert destination.read_bytes() == b"reference audio bytes"
+
+
+@pytest.mark.asyncio
+async def test_a_pushed_input_cannot_escape_the_staging_directory(inbound, tmp_path):
+    """Accepting nested ids must not mean accepting traversal.
+
+    The id is now hashed rather than used as a path, so it cannot steer
+    placement at all. The declared FILENAME still can, and is still required to
+    be a bare name — that is the containment the old check was really buying,
+    and it must not have been traded away to fix the rejection above.
+    """
+    from worker.protocol.gen import worker_v1_pb2 as pb
+
+    await inbound.connect_panel()
+    source = tmp_path / "evil.wav"
+    source.write_bytes(b"payload")
+
+    hostile = pb.ArtifactRef(
+        artifact_id="../../../../../../tmp/escaped.wav", filename="../../escaped.wav"
+    )
+    with pytest.raises(RuntimeError, match="bare filename|did not accept"):
+        await inbound.connection.push_input(hostile, str(source))
+
+    # And nothing was left behind by the refusal.
+    root = inbound.artifacts._root
+    assert not any(
+        "escaped" in name
+        for _, _, files in os.walk(root)
+        for name in files
+    )
