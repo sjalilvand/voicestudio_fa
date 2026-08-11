@@ -32,16 +32,16 @@ describe('MultiLangPicker viewport-safe menu', () => {
         <MultiLangPicker selected={[]} onChange={onChange} />
       </div>,
     );
-    const trigger = screen.getByRole('button', { name: 'Add language' });
+    const trigger = screen.getByRole('button', { name: 'Manage languages' });
     vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(rect());
 
     fireEvent.click(trigger);
 
-    const menu = screen.getByRole('dialog', { name: 'Add language' });
+    const menu = screen.getByRole('dialog', { name: 'Manage languages' });
     expect(container).not.toContainElement(menu);
-    expect(menu).toHaveStyle({ bottom: '84px', left: '40px', width: '220px' });
+    expect(menu).toHaveStyle({ bottom: '84px', left: '40px', width: '320px' });
     expect(menu.style.top).toBe('');
-    expect(menu.style.maxHeight).toBe('260px');
+    expect(menu.style.maxHeight).toBe('360px');
 
     fireEvent.click(screen.getAllByRole('button', { name: /Spanish/ })[0]);
     expect(onChange).toHaveBeenCalledWith([{ lang: 'Spanish', code: 'es' }]);
@@ -51,19 +51,47 @@ describe('MultiLangPicker viewport-safe menu', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1000 });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 });
     render(<MultiLangPicker selected={[]} onChange={vi.fn()} />);
-    const trigger = screen.getByRole('button', { name: 'Add language' });
+    const trigger = screen.getByRole('button', { name: 'Manage languages' });
     vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
       rect({ y: 20, top: 20, bottom: 44 }),
     );
 
     fireEvent.click(trigger);
-    const menu = screen.getByRole('dialog', { name: 'Add language' });
+    const menu = screen.getByRole('dialog', { name: 'Manage languages' });
     expect(menu).toHaveStyle({ top: '48px' });
     expect(menu.style.bottom).toBe('');
 
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('dialog', { name: 'Add language' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Manage languages' })).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
+  });
+
+  it('keeps 56 selected languages collapsed and manages them through search', () => {
+    const selected = Array.from({ length: 56 }, (_, index) => ({
+      lang: `Language ${index}`,
+      code: `l${index}`,
+    }));
+    const onChange = vi.fn();
+    const progressByCode = Object.fromEntries(
+      selected.map(({ code }, index) => [code, { ready: index === 0 ? 14 : 0, total: 14 }]),
+    );
+    render(
+      <MultiLangPicker selected={selected} onChange={onChange} progressByCode={progressByCode} />,
+    );
+
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Manage languages' })).toHaveTextContent(
+      'Done: 1 · Pending: 55',
+    );
+    expect(screen.queryByText('Language 55')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Manage languages' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search languages…' }), {
+      target: { value: 'Language 55' },
+    });
+    expect(screen.getByRole('button', { name: 'Remove Language 55' })).toHaveTextContent('0/14');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Language 55' }));
+    expect(onChange).toHaveBeenCalledWith(selected.slice(0, 55));
   });
 });
 
@@ -72,7 +100,7 @@ describe('MultiLangPicker responsive language cards', () => {
     expect(Object.keys(LANGUAGE_FLAGS).sort()).toEqual(LANG_CODES.map(({ code }) => code).sort());
   });
 
-  it('shows selected languages with flags in a responsive grid', () => {
+  it('keeps selected languages compact and shows their flags in the manager', () => {
     render(
       <MultiLangPicker
         selected={[
@@ -83,17 +111,17 @@ describe('MultiLangPicker responsive language cards', () => {
       />,
     );
 
-    const grid = screen.getByTestId('multi-lang-selected-grid');
-    expect(grid).toHaveClass('grid');
-    expect(within(grid).getByTestId('language-flag-es')).toBeInTheDocument();
-    expect(within(grid).getByTestId('language-flag-ja')).toBeInTheDocument();
+    expect(screen.queryByTestId('language-flag-es')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Manage languages' }));
+    const manager = screen.getByRole('dialog', { name: 'Manage languages' });
+    expect(within(manager).getByTestId('language-flag-es')).toBeInTheDocument();
+    expect(within(manager).getByTestId('language-flag-ja')).toBeInTheDocument();
   });
 
-  it('shows flags in the searchable result grid', () => {
+  it('shows flags in searchable language results', () => {
     render(<MultiLangPicker selected={[]} onChange={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Add language' }));
-    const results = screen.getByTestId('multi-lang-all-grid');
-    expect(results).toHaveClass('grid');
-    expect(within(results).getByTestId('language-flag-af')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Manage languages' }));
+    const manager = screen.getByRole('dialog', { name: 'Manage languages' });
+    expect(within(manager).getByTestId('language-flag-af')).toBeInTheDocument();
   });
 });

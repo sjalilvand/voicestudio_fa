@@ -928,7 +928,10 @@
     "languages_selected_one": "{{count}} idioma seleccionado",
     "languages_selected_other": "{{count}} idiomas seleccionados",
     "multi_translating": "Traduciendo → {{lang}} ({{current}}/{{total}})…",
-    "multi_lang_skipped": "Falló la traducción de {{langs}}; esos doblajes se omitieron para evitar pistas en el idioma incorrecto."
+    "multi_lang_skipped": "Falló la traducción de {{langs}}; esos doblajes se omitieron para evitar pistas en el idioma incorrecto.",
+    "manage_languages": "Gestionar idiomas",
+    "languages_done": "Listo",
+    "languages_pending": "Pendiente"
   },
   "glossary": {
     "title": "Glosario",

@@ -928,7 +928,10 @@
     "paste_translation_more_rows": "+ ще {{count}} рядків",
     "languages_selected": "Вибрано {{count}} мов",
     "multi_translating": "Переклад → {{lang}} ({{current}}/{{total}})…",
-    "multi_lang_skipped": "Не вдалося перекласти {{langs}}. Ці доріжки пропущено, щоб не створити дубляж неправильною мовою."
+    "multi_lang_skipped": "Не вдалося перекласти {{langs}}. Ці доріжки пропущено, щоб не створити дубляж неправильною мовою.",
+    "manage_languages": "Керувати мовами",
+    "languages_done": "Готово",
+    "languages_pending": "Очікує"
   },
   "glossary": {
     "title": "Глосарій",

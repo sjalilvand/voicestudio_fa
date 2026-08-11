@@ -335,29 +335,27 @@ export default function DubRightColumn({
       )}
 
       {multiLangMode && batchTargets?.length > 1 && (
-        <div className="flex items-center gap-[4px] mb-[4px] px-[2px] flex-wrap">
+        <label className="mb-[4px] flex max-w-[320px] items-center gap-[7px] px-[2px]">
           <span className={OUT_TITLE}>{t('dub.language')}:</span>
-          {batchTargets.map((target) => (
-            <button
-              key={target.code}
-              type="button"
-              className={`px-[7px] py-[2px] rounded-full border text-[0.62rem] font-mono cursor-pointer transition-[background,color,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)] disabled:cursor-not-allowed disabled:opacity-50 ${
-                dubLangCode === target.code
-                  ? 'bg-[var(--chrome-hover-bg)] text-[var(--chrome-fg)] border-[var(--chrome-accent)]'
-                  : 'bg-transparent text-[var(--chrome-fg-muted)] border-transparent hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--chrome-fg)]'
-              }`}
-              onClick={() => {
-                setDubLang(target.lang);
-                setDubLangCode(target.code);
-              }}
-              disabled={multiBatchBusy}
-              aria-pressed={dubLangCode === target.code}
-              title={target.lang}
-            >
-              {target.code.toUpperCase()}
-            </button>
-          ))}
-        </div>
+          <select
+            className="input-base min-w-0 flex-1 !px-[7px] !py-[3px] !text-[0.68rem]"
+            value={dubLangCode}
+            disabled={multiBatchBusy}
+            aria-label={t('dub.language')}
+            onChange={(event) => {
+              const target = batchTargets.find((item) => item.code === event.target.value);
+              if (!target) return;
+              setDubLang(target.lang);
+              setDubLangCode(target.code);
+            }}
+          >
+            {batchTargets.map((target) => (
+              <option key={target.code} value={target.code}>
+                {target.lang} · {target.code.toUpperCase()}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
 
       {/* Segment-table toolbar. "Paste translation" is the manual counterpart

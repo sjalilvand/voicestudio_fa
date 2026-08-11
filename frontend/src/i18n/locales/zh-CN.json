@@ -887,7 +887,10 @@
     "paste_translation_more_rows": "还有 {{count}} 行",
     "languages_selected": "已选择 {{count}} 种语言",
     "multi_translating": "正在翻译 → {{lang}}（{{current}}/{{total}}）…",
-    "multi_lang_skipped": "{{langs}} 翻译失败；已跳过这些配音，以免生成语言错误的音轨。"
+    "multi_lang_skipped": "{{langs}} 翻译失败；已跳过这些配音，以免生成语言错误的音轨。",
+    "manage_languages": "管理语言",
+    "languages_done": "已完成",
+    "languages_pending": "待处理"
   },
   "glossary": {
     "title": "术语表",

@@ -928,7 +928,10 @@
     "languages_selected_one": "Wybrano {{count}} język",
     "languages_selected_other": "Wybrano {{count}} języka",
     "multi_translating": "Tłumaczenie → {{lang}} ({{current}}/{{total}})…",
-    "multi_lang_skipped": "Tłumaczenie dla {{langs}} nie powiodło się. Te dubbingi pominięto, aby nie utworzyć ścieżki w niewłaściwym języku."
+    "multi_lang_skipped": "Tłumaczenie dla {{langs}} nie powiodło się. Te dubbingi pominięto, aby nie utworzyć ścieżki w niewłaściwym języku.",
+    "manage_languages": "Zarządzaj językami",
+    "languages_done": "Gotowe",
+    "languages_pending": "Oczekujące"
   },
   "glossary": {
     "title": "Glosariusz",

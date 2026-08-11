@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useLayoutEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Search, Plus } from 'lucide-react';
+import { Check, X, Search, Globe } from 'lucide-react';
 import { POPULAR_LANGS } from '../utils/constants';
 import { LANG_CODES } from '../utils/languages';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +16,7 @@ export default function MultiLangPicker({
   selected = [], // array of { lang: string, code: string }
   onChange, // (newSelected) => void
   disabled = false,
+  progressByCode = {},
 }) {
   const { t } = useTranslation();
   const [dropOpen, setDropOpen] = useState(false);
@@ -61,15 +62,15 @@ export default function MultiLangPicker({
       const gap = 4;
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      const width = Math.min(Math.max(rect.width, 220), viewportWidth - margin * 2);
+      const width = Math.min(Math.max(rect.width, 320), viewportWidth - margin * 2);
       const left = Math.min(
         Math.max(margin, rect.left),
         Math.max(margin, viewportWidth - width - margin),
       );
       const below = viewportHeight - rect.bottom - gap - margin;
       const above = rect.top - gap - margin;
-      const openUp = below < 260 && above > below;
-      const maxHeight = Math.max(0, Math.min(260, openUp ? above : below));
+      const openUp = below < 360 && above > below;
+      const maxHeight = Math.max(0, Math.min(360, openUp ? above : below));
       setMenuPos(
         openUp
           ? { bottom: viewportHeight - rect.top + gap, left, width, maxHeight }
@@ -89,8 +90,30 @@ export default function MultiLangPicker({
   useEffect(() => {
     if (dropOpen && inputRef.current) inputRef.current.focus();
   }, [dropOpen]);
+  useEffect(() => {
+    if (!disabled) return undefined;
+    const frame = requestAnimationFrame(() => setDropOpen(false));
+    return () => cancelAnimationFrame(frame);
+  }, [disabled]);
 
   const selectedCodes = useMemo(() => new Set(selected.map((s) => s.code)), [selected]);
+  const completedCount = useMemo(
+    () =>
+      selected.filter(({ code }) => {
+        const progress = progressByCode[code];
+        return progress?.total > 0 && progress.ready === progress.total;
+      }).length,
+    [progressByCode, selected],
+  );
+  const selectedFiltered = useMemo(() => {
+    const normalized = query.toLowerCase().trim();
+    if (!normalized) return selected;
+    return selected.filter(
+      (item) =>
+        item.lang.toLowerCase().includes(normalized) ||
+        item.code.toLowerCase().includes(normalized),
+    );
+  }, [query, selected]);
 
   const addLang = (lang, code) => {
     if (selectedCodes.has(code)) return;
@@ -126,68 +149,39 @@ export default function MultiLangPicker({
 
   return (
     <div className="relative" ref={dropRef}>
-      <div className="flex items-start gap-[5px] min-h-[28px]">
-        {selected.length > 0 && (
-          <div
-            className="grid min-w-0 flex-1 grid-cols-[repeat(auto-fit,minmax(112px,1fr))] gap-[4px]"
-            data-testid="multi-lang-selected-grid"
-          >
-            {selected.map((s) => (
-              <span
-                key={s.code}
-                className="flex min-w-0 items-center gap-[5px] px-[6px] py-[3px] bg-[var(--chrome-hover-bg)] border border-solid border-transparent rounded-[var(--chrome-radius-pill)] [font-family:var(--font-sans)] text-[0.68rem] font-medium text-[color:var(--chrome-fg)]"
-                title={s.lang}
-              >
-                <LanguageFlag code={s.code} />
-                <span className="min-w-0 flex-1 truncate">{s.lang}</span>
-                <span className="[font-family:var(--font-mono)] text-[0.58rem] uppercase text-[color:var(--chrome-fg-dim)]">
-                  {s.code}
-                </span>
-                {!disabled && (
-                  <button
-                    type="button"
-                    className="bg-transparent border-0 text-[color:var(--chrome-fg-muted)] cursor-pointer p-0 flex shrink-0 items-center rounded-full [transition:color_0.15s] hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)]"
-                    onClick={() => removeLang(s.code)}
-                    aria-label={t('common.remove', { term: s.lang })}
-                  >
-                    <X size={8} aria-hidden="true" />
-                  </button>
-                )}
-              </span>
-            ))}
-          </div>
-        )}
-        {!disabled && (
-          <button
-            ref={triggerRef}
-            type="button"
-            className="flex shrink-0 items-center justify-center w-[24px] h-[24px] mt-[2px] rounded-full border border-dashed border-transparent bg-transparent text-[color:var(--chrome-fg-muted)] cursor-pointer [transition:background-color_0.15s,color_0.15s,border-color_0.15s] hover:bg-[var(--chrome-hover-bg)] hover:text-[color:var(--chrome-fg)] hover:border-solid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)]"
-            onClick={() => setDropOpen((open) => !open)}
-            title={t('dub.add_language')}
-            aria-label={t('dub.add_language')}
-            aria-haspopup="dialog"
-            aria-expanded={dropOpen}
-            aria-controls={dropOpen ? menuId : undefined}
-          >
-            <Plus size={10} aria-hidden="true" />
-          </button>
-        )}
-      </div>
-
-      {selected.length > 0 && (
-        <div className="[font-family:var(--font-mono)] text-[0.62rem] text-[color:var(--chrome-fg-dim)] mt-[4px]">
+      <button
+        ref={triggerRef}
+        type="button"
+        className="flex min-h-[30px] max-w-full items-center gap-[7px] rounded-[var(--chrome-radius-pill)] border border-transparent bg-[var(--chrome-hover-bg)] px-[9px] py-[4px] text-left text-[color:var(--chrome-fg)] cursor-pointer transition-colors hover:bg-[var(--chrome-accent-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={() => setDropOpen((open) => !open)}
+        disabled={disabled}
+        aria-haspopup="dialog"
+        aria-expanded={dropOpen}
+        aria-controls={dropOpen ? menuId : undefined}
+        aria-label={t('dub.manage_languages')}
+      >
+        <Globe size={11} className="shrink-0" aria-hidden="true" />
+        <span className="truncate text-[0.7rem] font-medium">{t('dub.manage_languages')}</span>
+        <span className="shrink-0 font-mono text-[0.62rem] text-[color:var(--chrome-fg-muted)]">
           {t('dub.languages_selected', { count: selected.length })}
-        </div>
-      )}
+        </span>
+        {selected.length > 0 && (
+          <span className="min-w-0 truncate font-mono text-[0.6rem] text-[color:var(--chrome-fg-dim)]">
+            {t('dub.languages_done')}: {completedCount} · {t('dub.languages_pending')}:{' '}
+            {selected.length - completedCount}
+          </span>
+        )}
+      </button>
 
       {dropOpen &&
+        !disabled &&
         createPortal(
           <div
             ref={menuRef}
             id={menuId}
             className="multi-lang__drop"
             role="dialog"
-            aria-label={t('dub.add_language')}
+            aria-label={t('dub.manage_languages')}
             style={
               menuPos
                 ? {
@@ -214,61 +208,87 @@ export default function MultiLangPicker({
               />
             </div>
             <div className="overflow-y-auto overscroll-contain flex-1 py-[4px]">
+              {selectedFiltered.length > 0 && (
+                <>
+                  <div className="[font-family:var(--font-mono)] text-[0.62rem] font-semibold uppercase [letter-spacing:0.04em] text-[color:var(--chrome-fg-dim)] pt-[6px] px-[10px] pb-[2px]">
+                    {t('dub.languages_selected', { count: selected.length })}
+                  </div>
+                  {selectedFiltered.map((item) => (
+                    <button
+                      key={item.code}
+                      type="button"
+                      className="flex items-center gap-[8px] w-full px-[10px] py-[5px] bg-transparent border-0 text-[color:var(--chrome-fg)] [font-family:var(--font-sans)] text-[0.76rem] cursor-pointer text-left hover:bg-[var(--chrome-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chrome-accent)]"
+                      style={{ contentVisibility: 'auto', containIntrinsicSize: '30px' }}
+                      onClick={() => removeLang(item.code)}
+                      aria-label={t('common.remove', { term: item.lang })}
+                    >
+                      <Check size={10} className="text-[var(--chrome-accent)]" aria-hidden="true" />
+                      <LanguageFlag code={item.code} />
+                      <span className="min-w-[28px] font-mono text-[0.68rem] font-semibold uppercase text-[var(--chrome-accent)]">
+                        {item.code}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">{item.lang}</span>
+                      <span className="shrink-0 font-mono text-[0.62rem] text-[var(--chrome-fg-dim)]">
+                        {progressByCode[item.code]?.ready || 0}/
+                        {progressByCode[item.code]?.total || 0}
+                      </span>
+                      <X size={10} aria-hidden="true" />
+                    </button>
+                  ))}
+                </>
+              )}
               {popularFiltered.length > 0 && (
                 <>
                   <div className="[font-family:var(--font-mono)] text-[0.62rem] font-semibold uppercase [letter-spacing:0.04em] text-[color:var(--chrome-fg-dim)] pt-[6px] px-[10px] pb-[2px]">
                     {t('dub.popular')}
                   </div>
-                  <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-[2px] px-[4px]">
-                    {popularFiltered.map((item) => (
-                      <button
-                        key={item.code}
-                        type="button"
-                        className="flex min-w-0 items-center gap-[7px] rounded-[4px] px-[7px] py-[5px] bg-transparent border-0 text-[color:var(--chrome-fg)] [font-family:var(--font-sans)] text-[0.76rem] cursor-pointer text-left [transition:background_0.1s] hover:bg-[var(--chrome-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chrome-accent)]"
-                        onClick={() => addLang(item.lang, item.code)}
-                      >
-                        <LanguageFlag code={item.code} />
-                        <span className="[font-family:var(--font-mono)] text-[0.64rem] text-[color:var(--chrome-accent)] min-w-[24px] font-semibold uppercase">
-                          {item.code}
-                        </span>
-                        <span className="min-w-0 truncate">{item.lang}</span>
-                      </button>
-                    ))}
-                  </div>
+                  {popularFiltered.map((item) => (
+                    <button
+                      key={item.code}
+                      type="button"
+                      className="flex items-center gap-[8px] w-full px-[10px] py-[5px] bg-transparent border-0 text-[color:var(--chrome-fg)] [font-family:var(--font-sans)] text-[0.76rem] cursor-pointer text-left [transition:background_0.1s] hover:bg-[var(--chrome-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chrome-accent)]"
+                      style={{ contentVisibility: 'auto', containIntrinsicSize: '30px' }}
+                      onClick={() => addLang(item.lang, item.code)}
+                    >
+                      <LanguageFlag code={item.code} />
+                      <span className="[font-family:var(--font-mono)] text-[0.68rem] text-[color:var(--chrome-accent)] min-w-[28px] font-semibold">
+                        {item.code}
+                      </span>
+                      <span className="min-w-0 truncate">{item.lang}</span>
+                    </button>
+                  ))}
                 </>
               )}
               <div className="[font-family:var(--font-mono)] text-[0.62rem] font-semibold uppercase [letter-spacing:0.04em] text-[color:var(--chrome-fg-dim)] pt-[6px] px-[10px] pb-[2px]">
                 {t('dub.all_languages')}
               </div>
-              <div
-                className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-[2px] px-[4px]"
-                data-testid="multi-lang-all-grid"
-              >
-                {filteredLangs.slice(0, 50).map((lc) => (
-                  <button
-                    key={lc.code}
-                    type="button"
-                    className="flex min-w-0 items-center gap-[7px] rounded-[4px] px-[7px] py-[5px] bg-transparent border-0 text-[color:var(--chrome-fg)] [font-family:var(--font-sans)] text-[0.76rem] cursor-pointer text-left [transition:background_0.1s] hover:bg-[var(--chrome-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chrome-accent)]"
-                    onClick={() => addLang(lc.label, lc.code)}
-                  >
-                    <LanguageFlag code={lc.code} />
-                    <span className="[font-family:var(--font-mono)] text-[0.64rem] text-[color:var(--chrome-accent)] min-w-[24px] font-semibold uppercase">
-                      {lc.code}
-                    </span>
-                    <span className="min-w-0 truncate">{lc.label}</span>
-                  </button>
-                ))}
-              </div>
+              {filteredLangs.slice(0, 50).map((lc) => (
+                <button
+                  key={lc.code}
+                  type="button"
+                  className="flex items-center gap-[8px] w-full px-[10px] py-[5px] bg-transparent border-0 text-[color:var(--chrome-fg)] [font-family:var(--font-sans)] text-[0.76rem] cursor-pointer text-left [transition:background_0.1s] hover:bg-[var(--chrome-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chrome-accent)]"
+                  style={{ contentVisibility: 'auto', containIntrinsicSize: '30px' }}
+                  onClick={() => addLang(lc.label, lc.code)}
+                >
+                  <LanguageFlag code={lc.code} />
+                  <span className="[font-family:var(--font-mono)] text-[0.68rem] text-[color:var(--chrome-accent)] min-w-[28px] font-semibold">
+                    {lc.code}
+                  </span>
+                  <span className="min-w-0 truncate">{lc.label}</span>
+                </button>
+              ))}
               {filteredLangs.length > 50 && (
                 <div className="px-[10px] py-[8px] text-[0.7rem] text-[color:var(--chrome-fg-dim)] text-center">
                   {t('dub.more_to_narrow', { count: filteredLangs.length - 50 })}
                 </div>
               )}
-              {filteredLangs.length === 0 && popularFiltered.length === 0 && (
-                <div className="px-[10px] py-[8px] text-[0.7rem] text-[color:var(--chrome-fg-dim)] text-center">
-                  {t('dub.no_matches')}
-                </div>
-              )}
+              {filteredLangs.length === 0 &&
+                popularFiltered.length === 0 &&
+                selectedFiltered.length === 0 && (
+                  <div className="px-[10px] py-[8px] text-[0.7rem] text-[color:var(--chrome-fg-dim)] text-center">
+                    {t('dub.no_matches')}
+                  </div>
+                )}
             </div>
           </div>,
           document.body,

@@ -928,7 +928,10 @@
     "languages_selected_one": "{{count}} lingua selezionata",
     "languages_selected_other": "{{count}} lingue selezionate",
     "multi_translating": "Traduzione → {{lang}} ({{current}}/{{total}})…",
-    "multi_lang_skipped": "La traduzione non è riuscita per {{langs}}; i relativi doppiaggi sono stati ignorati per evitare una traccia nella lingua sbagliata."
+    "multi_lang_skipped": "La traduzione non è riuscita per {{langs}}; i relativi doppiaggi sono stati ignorati per evitare una traccia nella lingua sbagliata.",
+    "manage_languages": "Gestisci lingue",
+    "languages_done": "Completate",
+    "languages_pending": "In attesa"
   },
   "glossary": {
     "title": "Glossario",

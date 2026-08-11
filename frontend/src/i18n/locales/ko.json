@@ -928,7 +928,10 @@
     "paste_translation_more_rows": "+ {{count}}개 행 더",
     "languages_selected": "{{count}}개 언어 선택됨",
     "multi_translating": "번역 중 → {{lang}} ({{current}}/{{total}})…",
-    "multi_lang_skipped": "{{langs}} 번역에 실패하여 잘못된 언어의 트랙이 생성되지 않도록 해당 더빙을 건너뛰었습니다."
+    "multi_lang_skipped": "{{langs}} 번역에 실패하여 잘못된 언어의 트랙이 생성되지 않도록 해당 더빙을 건너뛰었습니다.",
+    "manage_languages": "언어 관리",
+    "languages_done": "완료",
+    "languages_pending": "대기 중"
   },
   "glossary": {
     "title": "용어집",

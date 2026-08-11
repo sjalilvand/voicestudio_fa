@@ -1,25 +1,19 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Check, AlertCircle, X } from 'lucide-react';
 import { Badge } from '../../ui';
 import DubFailureNotice from './DubFailureNotice';
+import TrackManager from './TrackManager';
 
 // How long a translate/pipeline error banner lingers before it self-clears.
 // Long enough to read a short message; the × and corrective-action clears are
 // the primary escape hatches — this is the belt-and-suspenders timeout.
 const ERROR_AUTOCLEAR_MS = 12000;
 
-// Export-track toggle chips: flat pill outline, tinted by on/off/success state.
-const TRACK_LABEL =
-  'inline-flex items-center gap-[4px] px-[8px] py-[2px] border border-transparent rounded-[var(--chrome-radius-pill)] cursor-pointer transition-colors';
-const TRACK_ON = 'text-[var(--chrome-fg)] border-transparent bg-[var(--chrome-hover-bg)]';
-const TRACK_OFF = 'text-[var(--chrome-fg-dim)]';
-const TRACK_ON_SUCCESS =
-  'text-[var(--chrome-severity-ok)] border-transparent bg-[color-mix(in_srgb,var(--chrome-severity-ok)_10%,transparent)]';
-
 export default function DubFooter({
   t,
   dubStep,
   dubTracks,
+  dubLangCode,
   incrementalPlan,
   dubError,
   dubFailure,
@@ -35,6 +29,13 @@ export default function DubFooter({
   // errors the user needs to keep reading until the run ends.
   const canAutoClear =
     !!dubError && !!onDismissError && dubStep !== 'generating' && dubStep !== 'stopping';
+  const availableTracks = useMemo(
+    () => [
+      { code: 'original', label: t('dub.original_track'), kind: 'original' },
+      ...dubTracks.map((code) => ({ code, label: code.toUpperCase(), kind: 'dub' })),
+    ],
+    [dubTracks, t],
+  );
   useEffect(() => {
     if (!canAutoClear) return undefined;
     const id = setTimeout(() => onDismissError(), ERROR_AUTOCLEAR_MS);
@@ -85,35 +86,14 @@ export default function DubFooter({
       )}
       {/* Output options + Timing moved to the top of the right (transcript) section. */}
       {dubTracks.length > 0 && (
-        <div className="flex items-center gap-[var(--space-2)] mb-[2px] px-[var(--space-3)] py-[3px] text-[length:var(--text-xs)] text-[var(--chrome-fg-muted)] font-[family-name:var(--font-sans)] bg-[var(--chrome-bg)] rounded-[var(--chrome-radius-pill)] border border-transparent flex-wrap">
-          <span className="font-[family-name:var(--chrome-font-mono)] text-[length:var(--chrome-label-size)] tracking-[var(--chrome-label-track)] uppercase text-[var(--chrome-fg-muted)] font-semibold">
-            {t('dub.export_tracks')}
-          </span>
-          <label
-            className={`${TRACK_LABEL} ${exportTracks['original'] !== false ? TRACK_ON : TRACK_OFF}`}
-          >
-            <input
-              type="checkbox"
-              className="accent-[var(--color-brand)]"
-              checked={exportTracks['original'] !== false}
-              onChange={(e) => setExportTracks((prev) => ({ ...prev, original: e.target.checked }))}
-            />
-            <span>{t('dub.original_track')}</span>
-          </label>
-          {dubTracks.map((t) => (
-            <label
-              key={t}
-              className={`${TRACK_LABEL} ${exportTracks[t] !== false ? TRACK_ON_SUCCESS : TRACK_OFF}`}
-            >
-              <input
-                type="checkbox"
-                className="accent-[var(--color-brand)]"
-                checked={exportTracks[t] !== false}
-                onChange={(e) => setExportTracks((prev) => ({ ...prev, [t]: e.target.checked }))}
-              />
-              <span className="uppercase tracking-[0.04em]">{t}</span>
-            </label>
-          ))}
+        <div className="mb-[2px] px-[var(--space-3)] py-[3px]">
+          <TrackManager
+            t={t}
+            tracks={availableTracks}
+            selection={exportTracks}
+            setSelection={setExportTracks}
+            primaryCode={dubLangCode}
+          />
         </div>
       )}
       {(() => {

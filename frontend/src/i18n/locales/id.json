@@ -928,7 +928,10 @@
     "paste_translation_more_rows": "+ {{count}} baris lagi",
     "languages_selected": "{{count}} bahasa dipilih",
     "multi_translating": "Menerjemahkan → {{lang}} ({{current}}/{{total}})…",
-    "multi_lang_skipped": "Terjemahan untuk {{langs}} gagal; sulih suara tersebut dilewati agar tidak menghasilkan trek dalam bahasa yang salah."
+    "multi_lang_skipped": "Terjemahan untuk {{langs}} gagal; sulih suara tersebut dilewati agar tidak menghasilkan trek dalam bahasa yang salah.",
+    "manage_languages": "Kelola bahasa",
+    "languages_done": "Selesai",
+    "languages_pending": "Tertunda"
   },
   "glossary": {
     "title": "Glosarium",
