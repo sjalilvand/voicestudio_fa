@@ -96,6 +96,40 @@ def set_bind_port(value: int) -> None:
     _set_setting(_PORT_KEY, str(int(value)))
 
 
+# Addresses that are legal to BIND but meaningless to DIAL. A connection
+# string built from one of these is broken for the person who receives it, and
+# broken in the least diagnosable way: it looks like a perfectly good address.
+_WILDCARD_BINDS = frozenset({"0.0.0.0", "::", "[::]", "*", ""})
+
+
+def advertised_host() -> str:
+    """The address to put in a connection string.
+
+    Not the bind address. Binding to 0.0.0.0 means "every interface", which is
+    exactly what you want for listening and exactly what you cannot hand to
+    somebody else — verified on hardware, where the string came out as
+    `ovnode://…@0.0.0.0:7444` and would have failed on the far end with a
+    connection error that names nothing.
+    """
+    host = bind_host()
+    if host not in _WILDCARD_BINDS:
+        return host
+
+    # Ask the routing table which source address would be used to reach the
+    # outside world. No packets are sent — a connected UDP socket only fixes
+    # the local endpoint — so this works with no network and no DNS.
+    import socket  # noqa: PLC0415
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.connect(("192.0.2.1", 9))  # TEST-NET-1: reserved, never routed
+        return sock.getsockname()[0]
+    except OSError:
+        return ""
+    finally:
+        sock.close()
+
+
 def is_exposed(host: Optional[str] = None) -> bool:
     """True when the listener is reachable from other machines.
 
@@ -215,9 +249,14 @@ class InboundNode:
             await listener.stop()
 
     def connection_string(self, secret: str, *, host: Optional[str] = None) -> str:
-        """The one artifact a user copies to another machine."""
+        """The one artifact a user copies to another machine.
+
+        Built from the ADVERTISED host, never the bind — see `advertised_host`.
+        """
         return format_connection(
-            host=host or bind_host(), port=self.port or bind_port(), secret=secret
+            host=host or advertised_host() or bind_host(),
+            port=self.port or bind_port(),
+            secret=secret,
         )
 
     def snapshot(self) -> dict:

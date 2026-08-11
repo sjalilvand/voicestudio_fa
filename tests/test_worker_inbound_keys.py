@@ -218,3 +218,33 @@ def test_inbound_is_off_unless_it_was_turned_on(monkeypatch):
     monkeypatch.setattr(inbound_service, "_setting", lambda name, default="": default)
 
     assert inbound_service.enabled() is False
+
+
+def test_a_wildcard_bind_never_reaches_the_connection_string(monkeypatch):
+    """0.0.0.0 is legal to bind and meaningless to dial.
+
+    Found on hardware: with the listener bound to every interface, the issued
+    string came out as ovnode://…@0.0.0.0:7444, which fails on the far end with
+    a connection error that names nothing. The string has to carry an address
+    the other machine can actually reach.
+    """
+    from worker.inbound import service as inbound_service
+
+    monkeypatch.setattr(inbound_service, "bind_host", lambda: "0.0.0.0")
+    monkeypatch.setattr(inbound_service, "bind_port", lambda: 7444)
+
+    node = inbound_service.InboundNode()
+    text = node.connection_string("ovnode_" + "k" * 40)
+
+    assert "0.0.0.0" not in text
+    assert parse_connection(text).host not in ("0.0.0.0", "", "*")
+
+
+def test_an_explicit_bind_is_advertised_as_given(monkeypatch):
+    """Only wildcards are substituted — a user who typed a specific address
+    meant that address, including one this host cannot introspect."""
+    from worker.inbound import service as inbound_service
+
+    monkeypatch.setattr(inbound_service, "bind_host", lambda: "192.168.0.202")
+
+    assert inbound_service.advertised_host() == "192.168.0.202"
