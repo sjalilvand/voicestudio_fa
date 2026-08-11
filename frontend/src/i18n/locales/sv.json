@@ -2075,6 +2075,10 @@
   },
   "history": {
     "dub_meta": "{{segments}} segment · {{duration}} s",
+    "dub_meta_one": "{{count}} segment · {{duration}} s",
+    "dub_meta_few": "{{count}} segment · {{duration}} s",
+    "dub_meta_many": "{{count}} segment · {{duration}} s",
+    "dub_meta_other": "{{count}} segment · {{duration}} s",
     "dub_title": "Dubbhistorik",
     "empty": "Inget här ännu — dina generationer visas till höger.",
     "empty_dub": "Dina dubbar visas här.",

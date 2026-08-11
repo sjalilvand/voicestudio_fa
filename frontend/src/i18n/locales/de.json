@@ -2075,6 +2075,10 @@
   },
   "history": {
     "dub_meta": "{{segments}} Segmente · {{duration}} s",
+    "dub_meta_one": "{{count}} Segment · {{duration}} s",
+    "dub_meta_few": "{{count}} Segmente · {{duration}} s",
+    "dub_meta_many": "{{count}} Segmente · {{duration}} s",
+    "dub_meta_other": "{{count}} Segmente · {{duration}} s",
     "dub_title": "Dub-Verlauf",
     "empty": "Hier ist noch nichts — Ihre Generierungen erscheinen rechts.",
     "empty_dub": "Ihre Dubs erscheinen hier.",

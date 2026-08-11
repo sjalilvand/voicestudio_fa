@@ -2075,6 +2075,10 @@
   },
   "history": {
     "dub_meta": "{{segments}}개 세그먼트 · {{duration}}초",
+    "dub_meta_one": "{{count}}개 세그먼트 · {{duration}}초",
+    "dub_meta_few": "{{count}}개 세그먼트 · {{duration}}초",
+    "dub_meta_many": "{{count}}개 세그먼트 · {{duration}}초",
+    "dub_meta_other": "{{count}}개 세그먼트 · {{duration}}초",
     "dub_title": "더빙 기록",
     "empty": "아직 아무것도 없습니다 — 생성 결과가 오른쪽에 표시됩니다.",
     "empty_dub": "더빙 결과가 여기에 표시됩니다.",

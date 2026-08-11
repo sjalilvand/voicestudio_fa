@@ -2075,6 +2075,10 @@
   },
   "history": {
     "dub_meta": "{{segments}} segmentos · {{duration}} s",
+    "dub_meta_one": "{{count}} segmento · {{duration}} s",
+    "dub_meta_few": "{{count}} segmentos · {{duration}} s",
+    "dub_meta_many": "{{count}} segmentos · {{duration}} s",
+    "dub_meta_other": "{{count}} segmentos · {{duration}} s",
     "dub_title": "Histórico de dublagens",
     "empty": "Nada por aqui ainda — suas gerações aparecerão à direita.",
     "empty_dub": "Suas dublagens aparecerão aqui.",

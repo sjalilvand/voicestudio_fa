@@ -190,6 +190,7 @@ export default function WorkspaceHistory({
                         </span>
                         <span className="history-meta">
                           {t('history.dub_meta', {
+                            count: item.segments_count,
                             segments: item.segments_count,
                             duration: Math.round(item.duration || 0),
                           })}

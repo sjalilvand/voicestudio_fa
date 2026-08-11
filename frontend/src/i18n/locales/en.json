@@ -2812,6 +2812,10 @@
   },
   "history": {
     "dub_meta": "{{segments}} segs · {{duration}}s",
+    "dub_meta_one": "{{count}} seg · {{duration}}s",
+    "dub_meta_few": "{{count}} segs · {{duration}}s",
+    "dub_meta_many": "{{count}} segs · {{duration}}s",
+    "dub_meta_other": "{{count}} segs · {{duration}}s",
     "dub_title": "Dub history",
     "empty": "Nothing here yet — your generations will appear on the right.",
     "empty_dub": "Your dubs will appear here.",

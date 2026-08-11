@@ -1,10 +1,11 @@
 // Generation takes: the Studio history rail's star / load-as-output actions.
-import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
+import i18next from 'i18next';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import React from 'react';
 
-import i18n from '../i18n';
+import es from '../i18n/locales/es.json';
 import WorkspaceHistory from './WorkspaceHistory';
 
 beforeAll(() => {
@@ -37,10 +38,6 @@ const takes = [
 ];
 
 const noop = () => {};
-
-afterEach(async () => {
-  await i18n.changeLanguage('en');
-});
 
 function renderRail(overrides = {}) {
   return render(
@@ -166,9 +163,14 @@ describe('WorkspaceHistory dub media previews', () => {
   });
 
   it('localizes Dub row metadata and icon actions', async () => {
-    await i18n.changeLanguage('es');
+    const localizedI18n = i18next.createInstance();
+    await localizedI18n.init({
+      lng: 'es',
+      fallbackLng: false,
+      resources: { es: { translation: es } },
+    });
     render(
-      <I18nextProvider i18n={i18n}>
+      <I18nextProvider i18n={localizedI18n}>
         <WorkspaceHistory
           variant="dub"
           dubHistory={[

@@ -2075,6 +2075,10 @@
   },
   "history": {
     "dub_meta": "{{segments}} مقطعًا · {{duration}} ث",
+    "dub_meta_one": "{{count}} مقطع · {{duration}} ث",
+    "dub_meta_few": "{{count}} مقاطع · {{duration}} ث",
+    "dub_meta_many": "{{count}} مقطعًا · {{duration}} ث",
+    "dub_meta_other": "{{count}} مقطع · {{duration}} ث",
     "dub_title": "سجل الدبلجة",
     "empty": "لا شيء هنا بعد — ستظهر مخرجاتك على اليمين.",
     "empty_dub": "ستظهر دبلجاتك هنا.",

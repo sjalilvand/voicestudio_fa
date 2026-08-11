@@ -2075,6 +2075,10 @@
   },
   "history": {
     "dub_meta": "{{segments}} segmentos · {{duration}} s",
+    "dub_meta_one": "{{count}} segmento · {{duration}} s",
+    "dub_meta_few": "{{count}} segmentos · {{duration}} s",
+    "dub_meta_many": "{{count}} segmentos · {{duration}} s",
+    "dub_meta_other": "{{count}} segmentos · {{duration}} s",
     "dub_title": "Historial de doblajes",
     "empty": "Aún no hay nada: tus generaciones aparecerán a la derecha.",
     "empty_dub": "Tus doblajes aparecerán aquí.",
