@@ -95,6 +95,13 @@ class NodeConnection:
         self._stop.set()
 
     async def _connect_once(self) -> None:
+        # A fresh outbox per attempt. The queue used to be built once and
+        # reused, so anything a dying session left behind became the NEXT
+        # attach's first frame — the node then saw something other than the
+        # registration it requires first, aborted the call, and the pair span
+        # at full speed: on hardware this reached session epoch 2445 inside a
+        # second, with the log reading "Locally aborted" over and over.
+        self._outbox = asyncio.Queue()
         async with self._channel() as channel:
             stub = pb_grpc.NodeServiceStub(channel)
             metadata = ((KEY_METADATA_KEY, self._connection.secret),)

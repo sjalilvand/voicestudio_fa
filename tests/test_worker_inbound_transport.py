@@ -459,3 +459,34 @@ async def test_repasting_a_key_for_a_connected_machine_redials_it(inbound, monke
         "the old session must be replaced, not reused"
     )
     await outbound.stop()
+
+
+@pytest.mark.asyncio
+async def test_a_stale_frame_cannot_poison_the_next_attach(inbound):
+    """The outbox must not survive a dead session.
+
+    Found on hardware. The queue was built once per NodeConnection and reused
+    across reconnects, so a frame left behind by a dying session became the
+    FIRST frame of the next attach. The node requires a registration there,
+    aborted the call, and the two span at full speed — session epoch 2445
+    inside one second, with the node logging "Locally aborted" on repeat and
+    the panel reporting the worker offline while it was visibly connected.
+    """
+    from worker.protocol.gen import worker_v1_pb2 as pb
+
+    await inbound.connect_panel()
+    connection = inbound.connection
+
+    # Exactly what a torn-down session leaves behind: an unsent frame, still
+    # queued, that would be handed to the next attach as its opening word.
+    stale = pb.ServerMessage(ping=pb.Ping(nonce=7))
+    connection._outbox.put_nowait(stale)
+    poisoned = connection._outbox
+
+    task = asyncio.create_task(connection._connect_once())
+    try:
+        await _until(lambda: connection._outbox is not poisoned)
+        assert connection._outbox is not poisoned, "the dead session's queue was reused"
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
