@@ -55,6 +55,12 @@ class PanelKey:
     last_seen_at: float = 0.0
     last_seen_peer: str = ""
     revoked: bool = False
+    # The id THIS panel assigned to this node. One per key, not one per node:
+    # every panel keeps its own registry, so the same machine is a different
+    # worker id to each of them. Persisted because the node signs its challenge
+    # over the id, so a node that forgets it can never authenticate again —
+    # the inbound equivalent of the worker-id file outbound keeps.
+    worker_id: str = ""
 
     def public(self) -> dict:
         """The shape the UI sees. Deliberately has no field for the secret."""
@@ -169,6 +175,22 @@ class KeyStore:
             key.revoked = True
             self._save_locked()
         return True
+
+    def remember_worker_id(self, key_id: str, worker_id: str) -> None:
+        """Record the id a panel assigned, so the next reconnect can sign for it."""
+        if not worker_id:
+            return
+        with self._lock:
+            key = self._keys.get(key_id)
+            if key is None or key.worker_id == worker_id:
+                return
+            key.worker_id = worker_id
+            self._save_locked()
+
+    def worker_id_for(self, key_id: str) -> str:
+        with self._lock:
+            key = self._keys.get(key_id)
+            return key.worker_id if key is not None else ""
 
     def list_keys(self) -> list[dict]:
         with self._lock:

@@ -63,7 +63,7 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
         keys: KeyStore,
         log: ConnectionLog,
         artifacts: ArtifactStore,
-        client_factory: Callable[[ArtifactStore], WorkerClient],
+        client_factory: Callable[[ArtifactStore, str], WorkerClient],
     ) -> None:
         self._keys = keys
         self._log = log
@@ -103,7 +103,11 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
         session_id = uuid.uuid4().hex
         peer = _peer_of(context)
         self._log.opened(session_id=session_id, key_id=key_id, label=label, peer=peer)
-        client = self._client_factory(self._artifacts)
+        # Built per key, not per node: each panel keeps its own registry, so
+        # the same machine has a different worker id to each of them, and the
+        # node signs its challenge over that id. Handing every panel the same
+        # client would make the signature match at most one of them.
+        client = self._client_factory(self._artifacts, key_id)
         reader: Optional[asyncio.Task] = None
         try:
             # The node speaks first even though the panel dialled: it is still
@@ -305,7 +309,7 @@ class NodeListener:
         keys: KeyStore,
         log: ConnectionLog,
         artifacts: ArtifactStore,
-        client_factory: Callable[[ArtifactStore], WorkerClient],
+        client_factory: Callable[[ArtifactStore, str], WorkerClient],
     ) -> None:
         self._servicer = NodeServicer(
             keys=keys, log=log, artifacts=artifacts, client_factory=client_factory
