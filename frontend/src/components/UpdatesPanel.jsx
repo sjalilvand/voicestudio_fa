@@ -142,7 +142,12 @@ export default function UpdatesPanel() {
             {status === 'error' && (
               <span className="updates-panel__err">
                 {error || t('update.failed')}
-                <button className="updates-panel__link" onClick={onInstall}>
+                <button
+                  className="updates-panel__link"
+                  onClick={onInstall}
+                  disabled={busy}
+                  title={busy ? t('update.busy') : undefined}
+                >
                   {t('update.retry')}
                 </button>
                 <button

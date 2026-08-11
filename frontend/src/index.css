@@ -5955,35 +5955,11 @@ button.dub-stepper__action:focus-visible {
     var(--chrome-bg);
 }
 
-.stories-header {
-  flex: 0 0 auto;
-  min-height: 50px;
-  padding: 7px 12px;
-  background: color-mix(in srgb, var(--chrome-bg) 95%, var(--color-bg-elev-1));
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--chrome-fg) 6%, transparent);
-}
-
-.stories-identity {
-  flex: 0 1 240px;
-}
-
 .stories-title {
   font-size: 1.05rem;
   font-weight: var(--weight-semibold);
   letter-spacing: -0.015em;
   line-height: 1.2;
-}
-
-.stories-title__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 auto;
-  border-radius: 8px;
-  color: var(--color-brand);
-  background: color-mix(in srgb, var(--color-brand) 10%, transparent);
 }
 
 .stories-speed-value {
@@ -6009,18 +5985,6 @@ button.dub-stepper__action:focus-visible {
   max-height: min(280px, 38vh);
   overflow-y: auto;
   overscroll-behavior: contain;
-}
-
-.stories-cast-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 5px;
-}
-
-.stories-cast-member {
-  padding: 4px 5px;
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--chrome-bg) 55%, transparent);
 }
 
 .stories-cast-member:focus-within {
@@ -6171,13 +6135,6 @@ button.dub-stepper__action:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-.shell-narrow .stories-header,
-.shell-mini .stories-header {
-  flex-direction: column;
-  align-items: stretch;
-  padding: 7px 9px;
-}
-
 .shell-narrow .stories-panel,
 .shell-mini .stories-panel {
   width: calc(100% - 18px);
@@ -6186,14 +6143,6 @@ button.dub-stepper__action:focus-visible {
 .shell-narrow .stories-track-list,
 .shell-mini .stories-track-list {
   padding: 7px 9px 16px;
-}
-
-.shell-narrow .stories-line {
-  grid-template-columns: 28px 150px minmax(140px, 1fr) 156px;
-  grid-template-areas:
-    'drag text text text'
-    'drag character voice actions'
-    '. drawer drawer drawer';
 }
 
 .shell-mini .stories-line {
@@ -6210,27 +6159,29 @@ button.dub-stepper__action:focus-visible {
   flex-wrap: wrap;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .stories-line,
-  .stories-line__text {
-    transition: none;
-  }
-}
-
 /* Stories v2 — full-height production workspace */
 .stories-header {
+  flex: 0 0 auto;
   min-height: 56px;
   padding: 9px 14px;
   background: color-mix(in srgb, var(--chrome-bg) 88%, var(--color-bg-elev-1));
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--chrome-fg) 6%, transparent);
 }
 
 .stories-identity {
-  flex-basis: 360px;
+  flex: 0 1 360px;
 }
 
 .stories-title__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 32px;
   height: 32px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  color: var(--color-brand);
+  background: color-mix(in srgb, var(--color-brand) 10%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-brand) 12%, transparent);
 }
 
@@ -6399,6 +6350,7 @@ button.dub-stepper__action:focus-visible {
   align-items: center;
   gap: 4px;
   padding: 4px;
+  border-radius: 7px;
   background: color-mix(in srgb, var(--color-bg-elev-1) 62%, transparent);
 }
 

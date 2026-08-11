@@ -82,7 +82,7 @@ describe('WorkspaceHistory takes actions', () => {
   it('exposes text expansion and icon actions to keyboard and assistive technology', () => {
     renderRail();
 
-    const expand = screen.getAllByRole('button', { name: 'Expand text' })[0];
+    const expand = screen.getByRole('button', { name: 'first take' });
     expect(expand).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(expand);
     expect(expand).toHaveAttribute('aria-expanded', 'true');

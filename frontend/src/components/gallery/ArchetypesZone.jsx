@@ -187,8 +187,12 @@ export default function ArchetypesZone({
               value={viewMode}
               onChange={setViewMode}
               items={[
-                { value: 'grid', label: <Grid size={14} />, title: 'Grid' },
-                { value: 'list', label: <List size={14} />, title: 'List' },
+                {
+                  value: 'grid',
+                  label: <Grid size={14} />,
+                  title: t('library.card_grid'),
+                },
+                { value: 'list', label: <List size={14} />, title: t('library.list') },
               ]}
             />
           </div>

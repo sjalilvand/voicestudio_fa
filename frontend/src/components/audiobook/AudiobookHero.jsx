@@ -1,6 +1,6 @@
+import { useRef } from 'react';
 import { BookMarked, BookOpen, FileUp, ListTree, Loader, Sparkles, Square } from 'lucide-react';
 
-import { buttonVariants } from '@/components/ui/button.tsx';
 import { Button } from '../../ui';
 
 /** The inviting front door for the long-form workflow: context, path, and actions. */
@@ -17,6 +17,8 @@ export default function AudiobookHero({
   onCreate,
   onStop,
 }) {
+  const importInputRef = useRef(null);
+
   return (
     <section className="rounded-[12px] border border-transparent bg-[var(--color-bg-elev-2)] px-[12px] py-[9px]">
       <div className="flex flex-wrap items-center justify-between gap-[10px]">
@@ -33,25 +35,28 @@ export default function AudiobookHero({
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-[4px]">
-          <label
+          <Button
+            type="button"
+            variant="subtle"
+            size="sm"
             title={t('audiobook.import')}
-            className={buttonVariants({
-              variant: 'subtle',
-              size: 'omniSm',
-              className: busy ? 'cursor-default opacity-50' : 'cursor-pointer',
-            })}
+            aria-label={t('audiobook.import')}
+            onClick={() => importInputRef.current?.click()}
+            disabled={busy}
+            leading={importing ? <Loader className="animate-spin" /> : <FileUp />}
           >
-            {importing ? <Loader className="animate-spin" /> : <FileUp />}
-            <span className="leading-none">{t('audiobook.import')}</span>
-            <input
-              type="file"
-              accept=".txt,.md,.epub,.pdf"
-              onChange={onImport}
-              disabled={busy}
-              aria-label={t('audiobook.import')}
-              className="hidden"
-            />
-          </label>
+            {t('audiobook.import')}
+          </Button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".txt,.md,.epub,.pdf"
+            onChange={onImport}
+            disabled={busy}
+            tabIndex={-1}
+            aria-hidden="true"
+            className="hidden"
+          />
           <Button
             variant="subtle"
             size="sm"

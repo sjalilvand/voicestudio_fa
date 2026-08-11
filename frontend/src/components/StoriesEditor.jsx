@@ -243,6 +243,7 @@ export default function StoriesEditor({ profiles = [] }) {
   const fileInputRef = useRef(null);
   const dragId = useRef(null);
   const sampleBootstrapRef = useRef(false);
+  const sampleVoicesBackfilledRef = useRef(false);
   const [dragOver, setDragOver] = useState(null);
 
   // ── Cast ────────────────────────────────────────────────────────────────
@@ -340,6 +341,7 @@ export default function StoriesEditor({ profiles = [] }) {
   }, [newProject]);
   const createSampleStory = useCallback(() => {
     newProject();
+    sampleVoicesBackfilledRef.current = profiles.length > 0;
     setCast(
       SAMPLE_STORY_CAST.map((member, index) => ({
         ...member,
@@ -381,20 +383,21 @@ export default function StoriesEditor({ profiles = [] }) {
   }, [createSampleStory, currentProjectId, storyProjects.length, tracks]);
   useEffect(() => {
     if (
+      sampleVoicesBackfilledRef.current ||
       currentProject?.name !== SAMPLE_STORY_NAME ||
       !profiles.length ||
       cast.some((member) => member.profileId)
     ) {
       return;
     }
+    sampleVoicesBackfilledRef.current = true;
     setCast(
       cast.map((member, index) => ({
         ...member,
         profileId: profiles[index % profiles.length].id,
       })),
     );
-    saveProject(SAMPLE_STORY_NAME);
-  }, [cast, currentProject?.name, profiles, saveProject, setCast]);
+  }, [cast, currentProject?.name, profiles, setCast]);
   const openProject = useCallback(
     (id) => {
       loadProject(id);
@@ -404,7 +407,7 @@ export default function StoriesEditor({ profiles = [] }) {
   );
   const confirmDeleteProject = useCallback(
     async (id) => {
-      if (await askConfirm(t('stories.deleteProject'), t('stories.deleteProject'))) {
+      if (await askConfirm(t('stories.deleteProjectConfirm'), t('stories.deleteProject'))) {
         deleteProject(id);
       }
     },
@@ -1038,12 +1041,14 @@ export default function StoriesEditor({ profiles = [] }) {
               role="list"
             >
               {tracks.map((track, index) => {
-                const dragProps = {
+                const dragHandleProps = {
                   draggable: true,
                   onDragStart: (e) => {
                     dragId.current = track.id;
                     e.dataTransfer.effectAllowed = 'move';
                   },
+                };
+                const dropProps = {
                   onDragOver: (e) => {
                     e.preventDefault();
                     if (dragOver !== track.id) setDragOver(track.id);
@@ -1074,11 +1079,12 @@ export default function StoriesEditor({ profiles = [] }) {
                       ]
                         .filter(Boolean)
                         .join(' ')}
-                      {...dragProps}
+                      {...dropProps}
                     >
                       <div
                         className="stories-line-number flex items-center justify-center text-fg-subtle cursor-grab"
                         aria-hidden="true"
+                        {...dragHandleProps}
                       >
                         {String(index + 1).padStart(2, '0')}
                       </div>
@@ -1131,11 +1137,12 @@ export default function StoriesEditor({ profiles = [] }) {
                     onBlurCapture={(e) => {
                       if (!e.currentTarget.contains(e.relatedTarget)) setActiveTrack(null);
                     }}
-                    {...dragProps}
+                    {...dropProps}
                   >
                     <div
                       className="stories-line__drag flex flex-col items-center justify-center gap-[2px] text-fg-subtle cursor-grab active:cursor-grabbing"
                       aria-hidden="true"
+                      {...dragHandleProps}
                     >
                       <span className="stories-line-number">
                         {String(index + 1).padStart(2, '0')}

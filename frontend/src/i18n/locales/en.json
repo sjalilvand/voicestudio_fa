@@ -101,6 +101,7 @@
     "untitled": "Untitled story",
     "projectName": "Project name",
     "deleteProject": "Delete project",
+    "deleteProjectConfirm": "Delete this project permanently?",
     "noProjects": "No saved stories yet — Save to keep this one.",
     "projectSaved": "Story saved",
     "generateAll": "Generate",

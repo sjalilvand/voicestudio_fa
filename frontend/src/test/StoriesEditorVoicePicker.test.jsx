@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../i18n';
 
@@ -94,5 +94,29 @@ describe('StoriesEditor voice pickers (#1220)', () => {
     ).toBeInTheDocument();
     expect(state.storyTracks.filter((track) => track.text.startsWith('#'))).toHaveLength(2);
     expect(state.storyTracks.some((track) => track.text.includes('[pause'))).toBe(true);
+  });
+
+  it('does not restore sample voices after the user clears them', async () => {
+    useAppStore.setState({ storyTracks: [], storyProjects: [], currentProjectId: null });
+    renderEditor();
+    await waitFor(() => expect(useAppStore.getState().storyTracks).toHaveLength(11));
+
+    act(() => {
+      useAppStore
+        .getState()
+        .setCast(useAppStore.getState().cast.map((member) => ({ ...member, profileId: null })));
+    });
+    await act(async () => {});
+
+    expect(useAppStore.getState().cast.every((member) => member.profileId === null)).toBe(true);
+  });
+
+  it('makes only the drag handle draggable so text remains selectable', () => {
+    const { container } = renderEditor();
+    const row = screen.getByRole('listitem');
+
+    expect(row).not.toHaveAttribute('draggable');
+    expect(within(row).getByRole('textbox')).not.toHaveAttribute('draggable');
+    expect(container.querySelector('.stories-line__drag')).toHaveAttribute('draggable', 'true');
   });
 });

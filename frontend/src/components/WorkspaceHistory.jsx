@@ -294,9 +294,6 @@ export default function WorkspaceHistory({
                   title={item.text}
                   onClick={() => setExpanded((e) => (e === item.id ? null : item.id))}
                   aria-expanded={expanded === item.id}
-                  aria-label={t(
-                    expanded === item.id ? 'history.collapse_text' : 'history.expand_text',
-                  )}
                 >
                   {displayTitle(item.text)}
                 </button>
