@@ -25,6 +25,7 @@
     "workspaces": "Робочі простори"
   },
   "settings": {
+    "openapi": "API VoiceStudio",
     "general": "Загальні",
     "theme": "Тема",
     "language": "Мова",
@@ -335,6 +336,9 @@
     "clear": "ясно",
     "refresh": "Оновити",
     "close": "Закрити",
+    "minimize_window": "Згорнути вікно",
+    "maximize_restore_window": "Розгорнути або відновити вікно",
+    "close_window": "Закрити вікно",
     "back": "Назад",
     "play": "грати",
     "pause": "Пауза",
@@ -354,7 +358,8 @@
     "no": "немає",
     "more_info": "Більше інформації",
     "learn_more": "Дізнайтесь більше",
-    "saving": "Збереження…"
+    "saving": "Збереження…",
+    "remove": "Видалити {{term}}"
   },
   "launchpad": {
     "greeting": "привіт",
@@ -948,7 +953,13 @@
     "paste_translation_row_unmatched": "немає відповідності — без змін",
     "paste_translation_apply": "Застосувати до {{count}} сегментів",
     "paste_translation_cancel": "Скасувати",
-    "paste_translation_more_rows": "+ ще {{count}} рядків"
+    "paste_translation_more_rows": "+ ще {{count}} рядків",
+    "languages_selected": "Вибрано {{count}} мов",
+    "multi_translating": "Переклад → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "Не вдалося перекласти {{langs}}. Ці доріжки пропущено, щоб не створити дубляж неправильною мовою.",
+    "manage_languages": "Керувати мовами",
+    "languages_done": "Готово",
+    "languages_pending": "Очікує"
   },
   "glossary": {
     "title": "Глосарій",
@@ -2110,10 +2121,33 @@
     "filter_starred": "Із зіркою",
     "load_take_failed": "Не вдалося завантажити дубль: {{message}}"
   },
+  "openapi": {
+    "title": "API VoiceStudio",
+    "loading": "Завантаження специфікації API…",
+    "unreachable_title": "Специфікація бекенду недоступна",
+    "unreachable_body": "Не вдалося отримати специфікацію OpenAPI локального бекенду за адресою {{url}}. Переконайтеся, що бекенд працює, і повторіть спробу.",
+    "retry": "Повторити",
+    "copy_url": "Копіювати URL специфікації",
+    "copy_url_aria": "Копіювати URL /openapi.json",
+    "copied": "URL специфікації скопійовано",
+    "copy_failed": "Не вдалося скопіювати — виділіть і скопіюйте URL вище вручну.",
+    "open_raw": "Відкрити вихідну специфікацію",
+    "open_raw_aria": "Відкрити вихідний JSON OpenAPI у браузері"
+  },
   "recording": {
     "cleaned_loaded": "Запис очищено та завантажено!",
     "loaded_raw": "Запис завантажено (необроблений — усунення шуму недоступне)",
-    "too_short": "Запис надто короткий"
+    "too_short": "Запис надто короткий",
+    "input_device": "Пристрій введення",
+    "default_input": "Системний за замовчуванням",
+    "microphone_number": "Мікрофон {{number}}",
+    "channels": "Канали",
+    "channels_auto": "Автоматично",
+    "channels_mono": "Моно",
+    "channels_stereo": "Стерео",
+    "input_level": "Рівень входу мікрофона",
+    "input_detected": "Сигнал виявлено",
+    "no_input_detected": "Сигнал не виявлено"
   },
   "pronunciation": {
     "title": "Словник вимови",

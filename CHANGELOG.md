@@ -3,13 +3,17 @@
 All notable changes to VoiceStudio.
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
-Versions track the desktop app (`tauri.conf.json` + `frontend/src-tauri/Cargo.toml`).
-The bundled TTS model package (`pyproject.toml`) is versioned independently.
+`frontend/package.json` is the app-version source of truth; Cargo, Python, and
+the frozen-backend fallback mirror it for their toolchains.
 
 ## [Unreleased]
 
 **Highlights**
 
+- VoiceStudio now gives the app, desktop chrome, documentation, and package metadata one clear identity
+- A local-first creative studio: voice cloning, design, dubbing, dictation, stories, audiobooks, and transcription without a subscription meter
+- Reliability first: automatic cache repair, truthful hardware routing, safer sidecars, and actionable recovery instead of mystery failures
+- Security boundaries now match the product: native file access stays native, untrusted network destinations fail closed, and public errors keep private diagnostics local
 - RTX 40-series GPUs are used again instead of being sent to the CPU
 - A warning before a slow generation, rather than after a five-minute wait
 - The watermark can be turned off in Settings, as the docs always said
@@ -24,6 +28,7 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 - Remote GPU workers render audiobooks chapter by chapter, with automatic per-chapter local fallback and one combined notice if the worker drops out. (#1478)
 - Remote GPU workers can now run a job to completion: long renders no longer die at two minutes, a worker that drops and reconnects mid-render keeps its work, and a timed-out job no longer takes the worker offline for good. Placing a job still needs the development-only `POST /workers/tasks`; wiring the app's own Synthesize button to it comes next.
+- VoiceStudio now uses one waveform-and-spark mark across the title bar, About screen, README, browser favicon, and every desktop/platform icon. (#1487)
 - PocketTTS now asks you to review its code license, model license and gated-access conditions before first use, and explains how to unlock the model instead of showing a raw download failure — thanks @paoloantinori! (#1442)
 - The repository moved to github.com/debpalash/VoiceStudio. Every link in the app, docs and scripts now points there; GitHub redirects the old URLs, and the Docker image paths, the app bundle identifier and your data folder are all deliberately unchanged. (#1394)
 - The app is now **VoiceStudio** (previously OmniVoice-Studio). Only the name you see changes — your data folder, settings and the Docker image paths stay put, so upgrading needs nothing from you. On Linux the .deb is now `voicestudio`; remove the old `omnivoice-studio` package once.
@@ -35,6 +40,8 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 - Remote GPU model downloads now use the normal Models install flow and show per-worker progress. (#1478)
 - Settings → System → **Remote workers** sends individual jobs to GPUs on your other machines while everything else stays here. Off by default; each machine is added with a single-use token and approved before any audio reaches it. See [docs/remote-workers.md](docs/remote-workers.md).
+- IndexTTS 2.5 is available as a pinned one-click sidecar with five-language dubbing, expressive cloning, and backward-compatible IndexTTS-2 support. (#1482) — thanks @marwanlhabti5-coder!
+- Voice recording now offers microphone and channel selection with a live input-level meter on every desktop platform. (#1481)
 - Settings → Appearance → **Navigation style** switches the workspace switcher between the icon rail down the window edge and browser-style tabs across the title bar. Both offer the same workspaces; the choice sticks across launches, and the rail stays the default. Tab labels fold down to icons when the title bar runs out of room — the workspace you're in keeps its name. (#1412)
 - Portable mode lets you choose the folder — press **Change…** on the first-run setup screen and put the whole install on an external drive. It also stops being greyed out after a default Program Files install. (#766)
 - Settings → Privacy now has an **Invisible watermark** toggle. On by default, available to everyone, and it only affects audio generated after the change. (#1308)
@@ -54,6 +61,13 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 - Remote GPU jobs stay pinned to the selected worker across retries and restarts, stop when their caller leaves, and cannot return from cancellation as completed. (#1478)
 - Remote GPU model labels now survive registration, legacy blank model IDs share one capacity slot, long jobs retain bounded leases, and idle cleanup cannot evict a live local render. (#1478)
 - Remote GPU jobs now stop before dispatch when that worker lacks the model, offer the download there, and refresh scheduling as soon as it finishes. (#1478)
+- Restored the pre-release version to 0.4.2 while the next release remains in preparation. (#1488)
+- Large multi-language dubbing batches now use compact searchable language and track managers instead of overflowing the editor. (#1492)
+- Multi-language dubbing now translates, edits, generates, retains, and exports every selected language, and its language picker stays visible at viewport edges. (#1486)
+- Dubbing's **From video** cast now uses available source-audio samples for every speaker and short line, including jobs without a pooled diarization clone. (#1484)
+- Basic Dubbing translation remains available without an LLM; Cinematic and Autofit now degrade through the existing Fast translation path instead of blocking the quality choice. (#1481)
+- Linux microphone recording now falls back to WAV when WebKit cannot encode MediaRecorder audio, and desktop scaling/titlebar controls remain responsive at every UI scale. (#1481)
+- Dubbing can install a missing ASR model and retry the same job, navigate back through completed stages, and finish transcription under low GPU memory without producing an empty transcript. (#1481)
 - Filenames and other outside data can no longer forge extra lines or terminal commands in backend and frontend diagnostic logs. (#1457)
 - Backend journal, dictation reset, voice-catalog, and crash-notification failures are now visible and retryable instead of being silently ignored. (#1459)
 - Backend failures keep raw tracebacks, local paths and credentials in the local log instead of returning them in API responses. (#1454)

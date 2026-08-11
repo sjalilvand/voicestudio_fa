@@ -1,7 +1,7 @@
-// Microphone PCM capture for the opt-in AEC path (parity Action 8). Routes a
-// getUserMedia stream through an AudioWorklet that emits fixed-size Float32
-// frames; the caller converts/tags/sends them. Only used when AEC is enabled
-// — the default dictation path keeps using MediaRecorder/WebM untouched.
+// Microphone PCM capture for the opt-in AEC path and for WebViews that cannot
+// construct MediaRecorder. Routes a getUserMedia stream through an
+// AudioWorklet that emits fixed-size Float32 frames; the caller converts,
+// tags, streams, or WAV-encodes them.
 
 const WORKLET_URL = '/aec-worklet.js';
 
@@ -10,27 +10,27 @@ const WORKLET_URL = '/aec-worklet.js';
  *
  * @param {MediaStream} stream      mic stream from getUserMedia
  * @param {(frame: Float32Array) => void} onFrame  called per frame
- * @param {{sampleRate?: number, frameSize?: number}} opts
+ * @param {{sampleRate?: number, frameSize?: number, channels?: number}} opts
  * @returns {Promise<() => Promise<void>>}  async stop() that tears down the graph
  */
 export async function startMicCapture(
   stream,
   onFrame,
-  { sampleRate = 16000, frameSize = 320 } = {},
+  { sampleRate = 16000, frameSize = 320, channels = 1 } = {},
 ) {
   const Ctx = window.AudioContext || window.webkitAudioContext;
   const ctx = new Ctx({ sampleRate });
   await ctx.audioWorklet.addModule(WORKLET_URL);
   const src = ctx.createMediaStreamSource(stream);
   const node = new AudioWorkletNode(ctx, 'aec-frame-emitter', {
-    processorOptions: { frameSize },
+    processorOptions: { frameSize, channels },
   });
   node.port.onmessage = (e) => onFrame(e.data);
   // Mic → worklet only. Deliberately NOT connected to destination: we tap the
   // mic, we don't want to play it back through the speakers.
   src.connect(node);
 
-  return async function stop() {
+  const stop = async function stop() {
     try {
       node.port.onmessage = null;
     } catch {
@@ -52,4 +52,9 @@ export async function startMicCapture(
       /* ignore */
     }
   };
+  // Existing callers use this value as a function. The property lets generic
+  // PCM/WAV recording encode the frames at the AudioContext's actual rate.
+  stop.sampleRate = ctx.sampleRate;
+  stop.channels = channels;
+  return stop;
 }

@@ -25,6 +25,7 @@
     "workspaces": "พื้นที่ทำงาน"
   },
   "settings": {
+    "openapi": "API ของ VoiceStudio",
     "general": "ทั่วไป",
     "theme": "ธีม",
     "language": "ภาษา",
@@ -335,6 +336,9 @@
     "clear": "ชัดเจน",
     "refresh": "รีเฟรช",
     "close": "ปิด",
+    "minimize_window": "ย่อหน้าต่าง",
+    "maximize_restore_window": "ขยายหรือคืนค่าหน้าต่าง",
+    "close_window": "ปิดหน้าต่าง",
     "back": "กลับ",
     "play": "เล่น",
     "pause": "หยุดชั่วคราว",
@@ -354,7 +358,8 @@
     "no": "ไม่",
     "more_info": "ข้อมูลเพิ่มเติม",
     "learn_more": "เรียนรู้เพิ่มเติม",
-    "saving": "กำลังบันทึก…"
+    "saving": "กำลังบันทึก…",
+    "remove": "ลบ {{term}}"
   },
   "launchpad": {
     "greeting": "สวัสดี",
@@ -948,7 +953,13 @@
     "paste_translation_row_unmatched": "ไม่จับคู่ — คงเดิม",
     "paste_translation_apply": "ใช้กับ {{count}} เซกเมนต์",
     "paste_translation_cancel": "ยกเลิก",
-    "paste_translation_more_rows": "+ อีก {{count}} แถว"
+    "paste_translation_more_rows": "+ อีก {{count}} แถว",
+    "languages_selected": "เลือก {{count}} ภาษาแล้ว",
+    "multi_translating": "กำลังแปล → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "การแปลสำหรับ {{langs}} ล้มเหลว จึงข้ามเสียงพากย์เหล่านั้นเพื่อป้องกันไม่ให้สร้างแทร็กผิดภาษา",
+    "manage_languages": "จัดการภาษา",
+    "languages_done": "เสร็จแล้ว",
+    "languages_pending": "รอดำเนินการ"
   },
   "glossary": {
     "title": "อภิธานศัพท์",
@@ -2110,10 +2121,33 @@
     "filter_starred": "ติดดาว",
     "load_take_failed": "โหลดเทคนั้นไม่ได้: {{message}}"
   },
+  "openapi": {
+    "title": "API ของ VoiceStudio",
+    "loading": "กำลังโหลดข้อกำหนด API…",
+    "unreachable_title": "ไม่พบข้อกำหนดของแบ็กเอนด์",
+    "unreachable_body": "ไม่สามารถเข้าถึงข้อกำหนด OpenAPI ของแบ็กเอนด์ภายในเครื่องที่ {{url}} ได้ โปรดตรวจสอบว่าแบ็กเอนด์กำลังทำงาน แล้วลองอีกครั้ง",
+    "retry": "ลองอีกครั้ง",
+    "copy_url": "คัดลอก URL ของข้อกำหนด",
+    "copy_url_aria": "คัดลอก URL /openapi.json",
+    "copied": "คัดลอก URL ของข้อกำหนดแล้ว",
+    "copy_failed": "คัดลอกไม่สำเร็จ — โปรดเลือกและคัดลอก URL ด้านบนด้วยตนเอง",
+    "open_raw": "เปิดข้อกำหนดดิบ",
+    "open_raw_aria": "เปิด JSON ของ OpenAPI แบบดิบในเบราว์เซอร์"
+  },
   "recording": {
     "cleaned_loaded": "ทำความสะอาดและโหลดการบันทึกแล้ว!",
     "loaded_raw": "โหลดการบันทึกแล้ว (ดิบ — ใช้การลดเสียงรบกวนไม่ได้)",
-    "too_short": "การบันทึกสั้นเกินไป"
+    "too_short": "การบันทึกสั้นเกินไป",
+    "input_device": "อุปกรณ์อินพุต",
+    "default_input": "ค่าเริ่มต้นของระบบ",
+    "microphone_number": "ไมโครโฟน {{number}}",
+    "channels": "ช่องสัญญาณ",
+    "channels_auto": "อัตโนมัติ",
+    "channels_mono": "โมโน",
+    "channels_stereo": "สเตอริโอ",
+    "input_level": "ระดับอินพุตไมโครโฟน",
+    "input_detected": "ตรวจพบเสียง",
+    "no_input_detected": "ไม่พบเสียง"
   },
   "pronunciation": {
     "title": "พจนานุกรมการออกเสียง",

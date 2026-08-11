@@ -515,7 +515,7 @@ class OmniVoiceBackend(TTSBackend):
     """
 
     id = "omnivoice"
-    display_name = "OmniVoice (600 languages, zero-shot)"
+    display_name = "VoiceStudio (k2-fsa/OmniVoice, 600+ languages)"
     gpu_compat = ("cuda", "mps", "cpu")
     # Derived from the pool's own per-job budget (_GPU_VRAM_PER_JOB_GB = 5.0 in
     # model_manager, itself measured from the ~1.6 GB forward + autoregressive
@@ -1787,7 +1787,7 @@ class SherpaOnnxBackend(TTSBackend):
       • Android / iOS
       • WebAssembly (browser)
 
-    This is the bridge to browser-based OmniVoice: the same engine runs natively
+    This is the bridge to browser-based VoiceStudio: the same engine runs natively
     on desktop and compiles to WASM for the web UI.
 
     Install: pip install sherpa-onnx
@@ -1828,7 +1828,7 @@ class SherpaOnnxBackend(TTSBackend):
             return False, (
                 "OMNIVOICE_SHERPA_MODEL not set. Point it to a sherpa-onnx TTS "
                 "model directory (containing model.onnx + tokens.txt), then "
-                "restart OmniVoice. Download models from "
+                "restart VoiceStudio. Download models from "
                 "https://github.com/k2-fsa/sherpa-onnx/releases"
             )
         if not os.path.isfile(os.path.join(model_dir, "model.onnx")):
@@ -2041,7 +2041,7 @@ _INSTALL_HINTS: dict[str, str] = {
     "mlx-audio":     "pip install mlx-audio  (Apple Silicon only)",
     "voxcpm2":       'pip install "voxcpm>=2.0.3"  (floor: 2.0.3 fixed Apple-Silicon audio quality; CPU/MPS supported, CUDA recommended for speed)',
     "moss-tts-nano": "git clone OpenMOSS/MOSS-TTS-Nano && pip install -e .  (not on PyPI)",
-    "indextts2":     "git clone index-tts/index-tts && uv pip install -e .  (NOT uv sync --all-extras)",
+    "indextts2":     "git clone --branch indextts-2.5 https://github.com/index-tts/index-tts.git && cd index-tts && uv venv .venv && uv pip install --python .venv/bin/python -e .  (Windows: .venv\\Scripts\\python.exe; NOT uv sync --all-extras)",
     "gpt-sovits":    "External API server — start api_v2.py on port 9880",
     "sherpa-onnx":   "pip install sherpa-onnx  (universal ONNX runtime, WASM-ready)",
     "omnivoice-gguf":"Bundled — runs the C++ omnivoice-tts binary in bin/. Quants download lazily from Serveurperso/OmniVoice-GGUF on first generate.",

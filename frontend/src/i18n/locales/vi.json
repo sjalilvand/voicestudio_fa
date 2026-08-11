@@ -25,6 +25,7 @@
     "workspaces": "Không gian làm việc"
   },
   "settings": {
+    "openapi": "API VoiceStudio",
     "general": "Chung",
     "theme": "Giao diện",
     "language": "Ngôn ngữ",
@@ -335,6 +336,9 @@
     "clear": "Xóa",
     "refresh": "Làm mới",
     "close": "Đóng",
+    "minimize_window": "Thu nhỏ cửa sổ",
+    "maximize_restore_window": "Phóng to hoặc khôi phục cửa sổ",
+    "close_window": "Đóng cửa sổ",
     "back": "Quay lại",
     "play": "Chơi",
     "pause": "Tạm dừng",
@@ -354,7 +358,8 @@
     "no": "Không",
     "more_info": "Thêm thông tin",
     "learn_more": "Tìm hiểu thêm",
-    "saving": "Đang lưu…"
+    "saving": "Đang lưu…",
+    "remove": "Xóa {{term}}"
   },
   "launchpad": {
     "greeting": "xin chào ở đó",
@@ -948,7 +953,13 @@
     "paste_translation_row_unmatched": "không khớp — giữ nguyên",
     "paste_translation_apply": "Áp dụng cho {{count}} phân đoạn",
     "paste_translation_cancel": "Hủy",
-    "paste_translation_more_rows": "+ {{count}} dòng nữa"
+    "paste_translation_more_rows": "+ {{count}} dòng nữa",
+    "languages_selected": "Đã chọn {{count}} ngôn ngữ",
+    "multi_translating": "Đang dịch → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "Không thể dịch {{langs}}; các bản lồng tiếng đó đã được bỏ qua để tránh tạo bản nhạc sai ngôn ngữ.",
+    "manage_languages": "Quản lý ngôn ngữ",
+    "languages_done": "Hoàn tất",
+    "languages_pending": "Đang chờ"
   },
   "glossary": {
     "title": "Thuật ngữ",
@@ -2110,10 +2121,33 @@
     "filter_starred": "Đã gắn sao",
     "load_take_failed": "Không thể tải bản thu đó: {{message}}"
   },
+  "openapi": {
+    "title": "API VoiceStudio",
+    "loading": "Đang tải đặc tả API…",
+    "unreachable_title": "Không có đặc tả backend",
+    "unreachable_body": "Không thể truy cập đặc tả OpenAPI của backend cục bộ tại {{url}}. Hãy bảo đảm backend đang chạy rồi thử lại.",
+    "retry": "Thử lại",
+    "copy_url": "Sao chép URL đặc tả",
+    "copy_url_aria": "Sao chép URL /openapi.json",
+    "copied": "Đã sao chép URL đặc tả",
+    "copy_failed": "Sao chép thất bại — hãy chọn và sao chép thủ công URL ở trên.",
+    "open_raw": "Mở đặc tả thô",
+    "open_raw_aria": "Mở JSON OpenAPI thô trong trình duyệt"
+  },
   "recording": {
     "cleaned_loaded": "Đã làm sạch và tải bản ghi âm!",
     "loaded_raw": "Đã tải bản ghi âm (thô — không có khử nhiễu)",
-    "too_short": "Bản ghi âm quá ngắn"
+    "too_short": "Bản ghi âm quá ngắn",
+    "input_device": "Thiết bị đầu vào",
+    "default_input": "Mặc định hệ thống",
+    "microphone_number": "Micrô {{number}}",
+    "channels": "Kênh",
+    "channels_auto": "Tự động",
+    "channels_mono": "Đơn âm",
+    "channels_stereo": "Âm thanh nổi",
+    "input_level": "Mức đầu vào micrô",
+    "input_detected": "Đã phát hiện âm thanh",
+    "no_input_detected": "Không phát hiện âm thanh"
   },
   "pronunciation": {
     "title": "Từ điển phát âm",

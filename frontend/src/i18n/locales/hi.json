@@ -25,6 +25,7 @@
     "workspaces": "वर्कस्पेस"
   },
   "settings": {
+    "openapi": "VoiceStudio API",
     "general": "सामान्य",
     "theme": "थीम",
     "language": "भाषा",
@@ -335,6 +336,9 @@
     "clear": "स्पष्ट",
     "refresh": "ताज़ा करें",
     "close": "बंद करें",
+    "minimize_window": "विंडो को छोटा करें",
+    "maximize_restore_window": "विंडो को बड़ा करें या पुनर्स्थापित करें",
+    "close_window": "विंडो बंद करें",
     "back": "वापस",
     "play": "खेलो",
     "pause": "विराम",
@@ -354,7 +358,8 @@
     "no": "नहीं",
     "more_info": "अधिक जानकारी",
     "learn_more": "और जानें",
-    "saving": "सहेजा जा रहा है…"
+    "saving": "सहेजा जा रहा है…",
+    "remove": "{{term}} हटाएं"
   },
   "launchpad": {
     "greeting": "नमस्ते",
@@ -908,8 +913,6 @@
     "prep_elapsed": "{{time}} बीत गया",
     "add_language": "भाषा जोड़ें",
     "search_languages": "भाषाएँ खोजें...",
-    "languages_selected_one": "{{count}} भाषा चयनित",
-    "languages_selected_other": "{{count}} भाषाएँ चयनित",
     "more_to_narrow": "+{{count}} अधिक - संकीर्ण करने के लिए टाइप करें",
     "no_matches": "कोई मेल नहीं",
     "diagnostic_copied": "डायग्नोस्टिक कॉपी किया गया",
@@ -948,7 +951,15 @@
     "paste_translation_row_unmatched": "कोई मिलान नहीं — अपरिवर्तित",
     "paste_translation_apply": "{{count}} सेगमेंट पर लागू करें",
     "paste_translation_cancel": "रद्द करें",
-    "paste_translation_more_rows": "+ {{count}} और पंक्तियाँ"
+    "paste_translation_more_rows": "+ {{count}} और पंक्तियाँ",
+    "languages_selected": "चयनित भाषाएँ: {{count}}",
+    "languages_selected_one": "{{count}} भाषा चुनी गई",
+    "languages_selected_other": "{{count}} भाषाएँ चुनी गईं",
+    "multi_translating": "अनुवाद हो रहा है → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "{{langs}} के लिए अनुवाद विफल रहा—गलत भाषा का ट्रैक बनने से रोकने के लिए उन डब को छोड़ दिया गया।",
+    "manage_languages": "भाषाएँ प्रबंधित करें",
+    "languages_done": "पूर्ण",
+    "languages_pending": "बाकी"
   },
   "glossary": {
     "title": "शब्दावली",
@@ -2110,10 +2121,33 @@
     "filter_starred": "स्टार किए गए",
     "load_take_failed": "वह टेक लोड नहीं हो सका: {{message}}"
   },
+  "openapi": {
+    "title": "VoiceStudio API",
+    "loading": "API विनिर्देश लोड हो रहा है…",
+    "unreachable_title": "बैकएंड विनिर्देश उपलब्ध नहीं है",
+    "unreachable_body": "{{url}} पर स्थानीय बैकएंड के OpenAPI विनिर्देश तक नहीं पहुँचा जा सका। सुनिश्चित करें कि बैकएंड चल रहा है, फिर दोबारा कोशिश करें।",
+    "retry": "दोबारा कोशिश करें",
+    "copy_url": "विनिर्देश URL कॉपी करें",
+    "copy_url_aria": "/openapi.json URL कॉपी करें",
+    "copied": "विनिर्देश URL कॉपी हो गया",
+    "copy_failed": "कॉपी नहीं हो सका — ऊपर दिए URL को चुनकर मैन्युअल रूप से कॉपी करें।",
+    "open_raw": "मूल विनिर्देश खोलें",
+    "open_raw_aria": "ब्राउज़र में मूल OpenAPI JSON खोलें"
+  },
   "recording": {
     "cleaned_loaded": "रिकॉर्डिंग साफ़ करके लोड हो गई!",
     "loaded_raw": "रिकॉर्डिंग लोड हुई (रॉ — डेनोइज़िंग अनुपलब्ध)",
-    "too_short": "रिकॉर्डिंग बहुत छोटी है"
+    "too_short": "रिकॉर्डिंग बहुत छोटी है",
+    "input_device": "इनपुट डिवाइस",
+    "default_input": "सिस्टम डिफ़ॉल्ट",
+    "microphone_number": "माइक्रोफ़ोन {{number}}",
+    "channels": "चैनल",
+    "channels_auto": "स्वचालित",
+    "channels_mono": "मोनो",
+    "channels_stereo": "स्टीरियो",
+    "input_level": "माइक्रोफ़ोन इनपुट स्तर",
+    "input_detected": "आवाज़ मिली",
+    "no_input_detected": "कोई आवाज़ नहीं मिली"
   },
   "pronunciation": {
     "title": "उच्चारण शब्दकोश",

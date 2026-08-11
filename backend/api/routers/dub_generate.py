@@ -32,6 +32,7 @@ from services.rvc import apply_rvc, is_enabled as rvc_is_enabled
 from services.incremental import segment_fingerprint, fit_fingerprint
 from services.fit_planner import UNDERRUN_TOLERANCE, FitParams, plan_fit
 from services.watermark import mark_synthetic
+from services.speaker_clone import auto_profile_id
 from api.routers.dub_core import _get_job, _save_job
 from omnivoice.utils.voice_design import heal_design_instruct
 
@@ -209,7 +210,7 @@ CONSISTENT_MIN_REF_S = 3.0
 def _speaker_key_matches(speaker_id: str, key: str) -> bool:
     """Same matching rule the `auto:` branch has always used: the safe-name
     slug first (`auto_profile_id`), the raw speaker id as fallback."""
-    return speaker_id.lower().replace(" ", "_") == key or speaker_id == key
+    return auto_profile_id(speaker_id) == f"auto:{key}" or speaker_id == key
 
 
 def _find_speaker_clone(clones: dict, key: str):
@@ -234,7 +235,7 @@ def _speaker_key_for_segment(job: dict, sid) -> str | None:
     for row in job.get("segments") or []:
         if isinstance(row, dict) and str(row.get("id", "")) == str(sid):
             spk = row.get("speaker_id") or "Speaker 1"
-            return spk.lower().replace(" ", "_")
+            return auto_profile_id(spk)[len("auto:"):]
     return None
 
 
@@ -876,7 +877,19 @@ async def dub_generate(job_id: str, req: DubRequest):
                         # editor's Voice dropdown can actually render ("From
                         # Video → Speaker N"). `seg_id` is closed over from
                         # the per-segment loop below.
-                        seg_ref = (job.get("segment_clones") or {}).get(str(seg_id))
+                        segment_speaker_key = _speaker_key_for_segment(job, seg_id)
+                        # Legacy jobs may not persist diarized segment rows.
+                        # Preserve their established per-line preference; only
+                        # suppress it when current metadata proves the user
+                        # explicitly selected a different speaker.
+                        selected_is_segment_speaker = (
+                            segment_speaker_key is None or segment_speaker_key == key
+                        )
+                        seg_ref = (
+                            (job.get("segment_clones") or {}).get(str(seg_id))
+                            if selected_is_segment_speaker
+                            else None
+                        )
                         if seg_ref:
                             ref_audio = seg_ref.get("ref_audio")
                             ref_text = seg_ref.get("ref_text")
@@ -885,6 +898,13 @@ async def dub_generate(job_id: str, req: DubRequest):
                             auto = _find_speaker_clone(
                                 job.get("speaker_clones") or {}, key
                             )
+                            if auto is None:
+                                # Short lines may have no line-specific clip.
+                                # Reuse this speaker's best source instead of
+                                # silently reverting to the engine default.
+                                auto = resolve_consistent_ref(
+                                    job, key, _consistent_ref_memo
+                                )
                             if auto:
                                 ref_audio = auto.get("ref_audio")
                                 ref_text = auto.get("ref_text")
@@ -1714,12 +1734,17 @@ async def preview_segment(job_id: str, req: SegmentPreviewRequest):
         pid = req.profile_id
         if pid and pid.startswith("auto:"):
             key = pid[len("auto:"):]
-            clones = job.get("speaker_clones") or {}
-            for spk, info in clones.items():
-                if spk.lower().replace(" ", "_") == key or spk == key:
-                    ref_audio = info.get("ref_audio")
-                    ref_text = info.get("ref_text")
-                    break
+            info = None
+            if (
+                req.segment_id is not None
+                and _speaker_key_for_segment(job, req.segment_id) == key
+            ):
+                info = (job.get("segment_clones") or {}).get(str(req.segment_id))
+            if info is None:
+                info = resolve_consistent_ref(job, key)
+            if info:
+                ref_audio = info.get("ref_audio")
+                ref_text = info.get("ref_text")
             pid = None
 
         instruct_str = req.instruct

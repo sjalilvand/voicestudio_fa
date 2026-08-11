@@ -25,6 +25,7 @@
     "workspaces": "작업 공간"
   },
   "settings": {
+    "openapi": "VoiceStudio API",
     "general": "일반",
     "theme": "테마",
     "language": "언어",
@@ -335,6 +336,9 @@
     "clear": "지우기",
     "refresh": "새로고침",
     "close": "닫기",
+    "minimize_window": "창 최소화",
+    "maximize_restore_window": "창 최대화 또는 복원",
+    "close_window": "창 닫기",
     "back": "뒤로",
     "play": "플레이",
     "pause": "일시중지",
@@ -354,7 +358,8 @@
     "no": "아니요",
     "more_info": "추가 정보",
     "learn_more": "자세히 알아보기",
-    "saving": "저장 중…"
+    "saving": "저장 중…",
+    "remove": "{{term}} 삭제"
   },
   "launchpad": {
     "greeting": "안녕하세요",
@@ -948,7 +953,13 @@
     "paste_translation_row_unmatched": "일치 없음 — 변경 안 함",
     "paste_translation_apply": "{{count}}개 세그먼트에 적용",
     "paste_translation_cancel": "취소",
-    "paste_translation_more_rows": "+ {{count}}개 행 더"
+    "paste_translation_more_rows": "+ {{count}}개 행 더",
+    "languages_selected": "{{count}}개 언어 선택됨",
+    "multi_translating": "번역 중 → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "{{langs}} 번역에 실패하여 잘못된 언어의 트랙이 생성되지 않도록 해당 더빙을 건너뛰었습니다.",
+    "manage_languages": "언어 관리",
+    "languages_done": "완료",
+    "languages_pending": "대기 중"
   },
   "glossary": {
     "title": "용어집",
@@ -2110,10 +2121,33 @@
     "filter_starred": "별표됨",
     "load_take_failed": "테이크를 불러오지 못했습니다: {{message}}"
   },
+  "openapi": {
+    "title": "VoiceStudio API",
+    "loading": "API 사양 불러오는 중…",
+    "unreachable_title": "백엔드 사양을 사용할 수 없음",
+    "unreachable_body": "{{url}}의 로컬 백엔드 OpenAPI 사양에 연결할 수 없습니다. 백엔드가 실행 중인지 확인한 후 다시 시도하세요.",
+    "retry": "다시 시도",
+    "copy_url": "사양 URL 복사",
+    "copy_url_aria": "/openapi.json URL 복사",
+    "copied": "사양 URL을 복사했습니다",
+    "copy_failed": "복사하지 못했습니다. 위 URL을 선택하여 직접 복사하세요.",
+    "open_raw": "원본 사양 열기",
+    "open_raw_aria": "원본 OpenAPI JSON을 브라우저에서 열기"
+  },
   "recording": {
     "cleaned_loaded": "녹음이 정리되어 로드되었습니다!",
     "loaded_raw": "녹음이 로드되었습니다 (원본 — 노이즈 제거 사용 불가)",
-    "too_short": "녹음이 너무 짧습니다"
+    "too_short": "녹음이 너무 짧습니다",
+    "input_device": "입력 장치",
+    "default_input": "시스템 기본값",
+    "microphone_number": "마이크 {{number}}",
+    "channels": "채널",
+    "channels_auto": "자동",
+    "channels_mono": "모노",
+    "channels_stereo": "스테레오",
+    "input_level": "마이크 입력 레벨",
+    "input_detected": "입력 감지됨",
+    "no_input_detected": "입력 감지 안 됨"
   },
   "pronunciation": {
     "title": "Pronunciation dictionary",

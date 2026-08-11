@@ -25,6 +25,7 @@
     "workspaces": "Werkruimtes"
   },
   "settings": {
+    "openapi": "VoiceStudio-API",
     "general": "Algemeen",
     "theme": "Thema",
     "language": "Taal",
@@ -335,6 +336,9 @@
     "clear": "Duidelijk",
     "refresh": "Vernieuwen",
     "close": "Sluiten",
+    "minimize_window": "Venster minimaliseren",
+    "maximize_restore_window": "Venster maximaliseren of herstellen",
+    "close_window": "Venster sluiten",
     "back": "Terug",
     "play": "Spelen",
     "pause": "Pauze",
@@ -354,7 +358,8 @@
     "no": "Nee",
     "more_info": "Meer informatie",
     "learn_more": "Meer informatie",
-    "saving": "Opslaan…"
+    "saving": "Opslaan…",
+    "remove": "{{term}} verwijderen"
   },
   "launchpad": {
     "greeting": "Hallo daar",
@@ -908,8 +913,6 @@
     "prep_elapsed": "{{time}} verstreken",
     "add_language": "Taal toevoegen",
     "search_languages": "Talen zoeken…",
-    "languages_selected_one": "{{count}} taal geselecteerd",
-    "languages_selected_other": "{{count}} talen geselecteerd",
     "more_to_narrow": "+{{count}} meer — typ om te verkleinen",
     "no_matches": "Geen overeenkomsten",
     "diagnostic_copied": "Diagnostiek gekopieerd",
@@ -948,7 +951,15 @@
     "paste_translation_row_unmatched": "geen match — ongewijzigd",
     "paste_translation_apply": "Toepassen op {{count}} segmenten",
     "paste_translation_cancel": "Annuleren",
-    "paste_translation_more_rows": "+ nog {{count}} rijen"
+    "paste_translation_more_rows": "Extra rijen: {{count}}",
+    "languages_selected": "Geselecteerde talen: {{count}}",
+    "languages_selected_one": "{{count}} taal geselecteerd",
+    "languages_selected_other": "{{count}} talen geselecteerd",
+    "multi_translating": "Vertalen → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "De vertaling voor {{langs}} is mislukt. Deze nasynchronisaties zijn overgeslagen om een track in de verkeerde taal te voorkomen.",
+    "manage_languages": "Talen beheren",
+    "languages_done": "Gereed",
+    "languages_pending": "In behandeling"
   },
   "glossary": {
     "title": "Woordenlijst",
@@ -2110,10 +2121,33 @@
     "filter_starred": "Met ster",
     "load_take_failed": "Kon die take niet laden: {{message}}"
   },
+  "openapi": {
+    "title": "VoiceStudio-API",
+    "loading": "API-specificatie laden…",
+    "unreachable_title": "Backendspecificatie niet beschikbaar",
+    "unreachable_body": "De OpenAPI-specificatie van de lokale backend op {{url}} is niet bereikbaar. Controleer of de backend actief is en probeer het opnieuw.",
+    "retry": "Opnieuw proberen",
+    "copy_url": "Specificatie-URL kopiëren",
+    "copy_url_aria": "De URL van /openapi.json kopiëren",
+    "copied": "Specificatie-URL gekopieerd",
+    "copy_failed": "Kopiëren mislukt — selecteer en kopieer de URL hierboven handmatig.",
+    "open_raw": "Ruwe specificatie openen",
+    "open_raw_aria": "De ruwe OpenAPI-JSON in de browser openen"
+  },
   "recording": {
     "cleaned_loaded": "Opname opgeschoond en geladen!",
     "loaded_raw": "Opname geladen (ruw — ruisonderdrukking niet beschikbaar)",
-    "too_short": "Opname te kort"
+    "too_short": "Opname te kort",
+    "input_device": "Invoerapparaat",
+    "default_input": "Systeemstandaard",
+    "microphone_number": "Microfoon {{number}}",
+    "channels": "Kanalen",
+    "channels_auto": "Automatisch",
+    "channels_mono": "Mono",
+    "channels_stereo": "Stereo",
+    "input_level": "Microfooningangsniveau",
+    "input_detected": "Invoer gedetecteerd",
+    "no_input_detected": "Geen invoer gedetecteerd"
   },
   "pronunciation": {
     "title": "Uitspraakwoordenboek",

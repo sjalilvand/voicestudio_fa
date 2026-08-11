@@ -1,14 +1,14 @@
 <div align="center">
-  <img src="docs/logo.png" alt="VoiceStudio Logo" width="120" />
+  <img src="docs/logo.png" alt="VoiceStudio Logo" width="120" height="120" />
   <h1>VoiceStudio</h1>
   <p><sub><em>previously OmniVoice-Studio</em></sub></p>
-  <h3>The open-source ElevenLabs alternative.</h3>
-  <p>Real-time dictation, zero-shot voice cloning, and cinematic video dubbing — all on your desktop.<br/><b>No accounts. No API keys. No cloud.</b> Everything runs on your machine. Open-source, <b>646 languages.</b></p>
+  <h3>Make voices. Tell stories. Keep the files. ♡</h3>
+  <p>Clone, design, dub, dictate, and build audiobooks in one open-source desktop studio.<br/><b>Local-first by default.</b> No subscription or usage meter. Optional online services stay opt-in.</p>
 
   <p>
     <a href="#quickstart">Quickstart</a> ·
     <a href="#features">Features</a> ·
-    <a href="#why-ovs">vs Others</a> ·
+    <a href="#why-voicestudio">Why VoiceStudio</a> ·
     <a href="#tts-engines">Engines</a> ·
     <a href="#openai-api">API</a> ·
     <a href="#sponsor--donate">Donate</a> ·
@@ -48,55 +48,10 @@
   <img src="docs/screenshot-launchpad.png" alt="VoiceStudio — Launchpad" width="100%"/>
 </div>
 
-> **Your voice is the most personal data you have. So why rent it back from a cloud?** Every mainstream voice tool ships your audio to someone else's server and bills you monthly for the privilege. VoiceStudio flips that: clone, design, dub, and dictate on your own hardware — 646 languages, no meter running, nothing leaving your machine.
+> **Your voice is personal. Your studio should feel personal too.** VoiceStudio keeps its core workflow on your hardware: clone, design, dub, dictate, and publish in 646 languages without a subscription or usage meter. Network-backed engines and services are optional, visible choices—not hidden requirements.
 
 > [!WARNING]
 > **Active beta.** Things may break between releases — for the newest fixes, run from source. Bug reports and PRs are very welcome: [open an issue](https://github.com/debpalash/VoiceStudio/issues) or [join Discord](https://discord.gg/bzQavDfVV9).
-
-<a id="screenshots"></a>
-
-## 📸 See it in action
-
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <img src="docs/screenshot-studio.png" alt="Studio" width="100%"/>
-      <br/><b>Studio</b><br/>
-      <sub>Generate &amp; clone in one workspace — a 3-second clip mirrors any voice, 646 languages, zero-shot.</sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="docs/screenshot-design.png" alt="Voice Design" width="100%"/>
-      <br/><b>Voice Design</b><br/>
-      <sub>Build new voices from scratch — gender, age, accent, pitch, emotion, dialect.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/screenshot-gallery.png" alt="Voice Gallery" width="100%"/>
-      <br/><b>Voice Gallery</b><br/>
-      <sub>Browse ready-made archetype voices with language filters, or build your own — then pick any of them in Studio, Audiobook, Stories, and Dubbing.</sub>
-    </td>
-    <td align="center">
-      <img src="docs/screenshot-dub.png" alt="Video Dubbing" width="100%"/>
-      <br/><b>Video Dubbing</b><br/>
-      <sub>A real dub, end to end: 37 segments transcribed, translated to Bengali, re-voiced, and timed — ready to export as MP4.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/screenshot-engines.png" alt="Settings — Engines" width="100%"/>
-      <br/><b>Settings → Engines</b><br/>
-      <sub>The engine compatibility matrix — 14 TTS engines with per-engine GPU preflight, no silent CPU fallback.</sub>
-    </td>
-    <td align="center">
-      <img src="docs/screenshot-settings.png" alt="Settings — Models" width="100%"/>
-      <br/><b>Settings → Models</b><br/>
-      <sub>One-click model store — auto-detects your platform (CUDA / MPS / CPU) and recommends the right models.</sub>
-    </td>
-  </tr>
-</table>
-
----
 
 <a id="features"></a>
 
@@ -122,7 +77,7 @@ Three flagships, five more headliners, and a dozen under the fold.
   <td align="center" width="20%">📖<br/><b>Audiobook</b><br/><sub>EPUB/PDF → .m4b, multi-voice cast</sub></td>
   <td align="center" width="20%">🎭<br/><b>Stories</b><br/><sub>Multi-voice script editor</sub></td>
   <td align="center" width="20%">⌨️<br/><b>Dictation Widget</b><br/><sub><kbd>⌘⇧Space</kbd> in any app</sub></td>
-  <td align="center" width="20%">🔐<br/><b>100% Local</b><br/><sub>No keys, no cloud, no accounts</sub></td>
+  <td align="center" width="20%">🔐<br/><b>Local-first</b><br/><sub>Core creation stays on your machine</sub></td>
   <td align="center" width="20%">🤖<br/><b>MCP Server</b><br/><sub>Use from Claude, Cursor, …</sub></td>
 </tr>
 </table>
@@ -179,22 +134,22 @@ Three flagships, five more headliners, and a dozen under the fold.
 
 ---
 
-<a id="why-ovs"></a>
+<a id="why-voicestudio"></a>
 
-## ⚖️ vs Others
+## ⚖️ Why VoiceStudio
 
-ElevenLabs charges **$5–$330/mo** and processes your audio on their servers. VoiceStudio runs **on your hardware, with no usage limits.**
+Cloud voice tools are convenient, but they put your workflow behind an account, a meter, and somebody else's infrastructure. VoiceStudio gives you a capable studio that runs on your hardware, with optional integrations when you choose them.
 
 | | **ElevenLabs** | **VoiceStudio** |
 |---|---|---|
-| **Pricing** | $5–$330/mo, per-character billing | Free & open-source (AGPL-3.0) · [Commercial license](#license) for proprietary use |
+| **Pricing** | Subscription and usage limits | Free & open-source (AGPL-3.0) · [Commercial license](#license) for proprietary use |
 | **Voice Cloning** | ✅ 3s clip | ✅ 3s clip, zero-shot |
 | **Voice Design** | ✅ Gender, age | ✅ Gender, age, accent, pitch, style, dialect |
 | **Audiobook / Stories** | ❌ | ✅ Full audiobook editor + multi-voice stories (EPUB/PDF import, .m4b export) |
-| **Languages** | 32 | **646** |
+| **Languages** | Plan/model dependent | **646** |
 | **Video Dubbing** | ✅ Cloud-only | ✅ Fully local |
-| **Data Privacy** | Audio sent to cloud | **Nothing leaves your machine** |
-| **API Keys** | Required | Not needed |
+| **Data Privacy** | Audio is processed remotely | Core workflow runs locally; online services are explicit opt-ins |
+| **API Keys** | Account required | Not needed for the local workflow |
 | **GPU Support** | N/A (cloud) | CUDA · Apple Silicon · ROCm (Linux) · CPU |
 | **Desktop App** | ❌ | ✅ macOS · Windows · Linux |
 | **TTS Engines** | 1 | **14** — [full matrix](#tts-engines) |
@@ -232,7 +187,7 @@ Professional-grade voice AI, minus the subscription and the cloud.
 
 ### 🗣️ TTS Engines
 
-**14 engines, one picker.** VoiceStudio (default, 600+ languages) is always available; seven more are opt-in and auto-detected (CosyVoice 3, GPT-SoVITS, VoxCPM2, MOSS-TTS-Nano, KittenTTS, MLX-Audio, Sherpa-ONNX), plus six lazy-installed heavyweights (IndexTTS 2, OmniVoice GGUF, Supertonic 3, MOSS-TTS-v1.5, dots.tts, Confucius4-TTS). Switch in **Settings → TTS Engine**; the choice applies everywhere synthesis happens.
+**14 engines, one picker.** VoiceStudio (default, 600+ languages) is always available; seven more are opt-in and auto-detected (CosyVoice 3, GPT-SoVITS, VoxCPM2, MOSS-TTS-Nano, KittenTTS, MLX-Audio, Sherpa-ONNX), plus six lazy-installed heavyweights (IndexTTS 2.5, OmniVoice GGUF, Supertonic 3, MOSS-TTS-v1.5, dots.tts, Confucius4-TTS). Switch in **Settings → TTS Engine**; the choice applies everywhere synthesis happens.
 
 <details>
 <summary><b>📊 The full matrix</b> — 14 engines × platform × clone/instruct × license</summary>
@@ -241,7 +196,7 @@ Professional-grade voice AI, minus the subscription and the cloud.
 
 | Engine | Languages | Clone | Instruct | Linux | macOS ARM | Windows | License |
 |--------|:---------:|:-----:|:--------:|:-----:|:---------:|:-------:|:-------:|
-| **OmniVoice** (default) | 600+ | ✅ | ✅ | ✅ CUDA/CPU | ✅ MPS | ✅ CUDA/CPU | Built-in |
+| **VoiceStudio** (default, powered by k2-fsa/OmniVoice) | 600+ | ✅ | ✅ | ✅ CUDA/CPU | ✅ MPS | ✅ CUDA/CPU | Built-in |
 | **CosyVoice 3** | 9 + 18 dialects | ✅ | ✅ | ✅ CUDA/CPU | ✅ MPS | ✅ CUDA/CPU | Apache-2.0 |
 | **GPT-SoVITS** | 5 | ✅ | — | ✅ CUDA/CPU | — | ✅ CUDA/CPU | MIT |
 | **VoxCPM2** | 30 | ✅ | ✅ | ✅ CUDA/CPU | ✅ MPS | ✅ CUDA/CPU | Apache-2.0 |
@@ -249,12 +204,17 @@ Professional-grade voice AI, minus the subscription and the cloud.
 | **KittenTTS** | English | — | — | ✅ CPU | ✅ CPU | ✅ CPU | MIT |
 | **MLX-Audio** (Kokoro, Qwen3-TTS, CSM, Dia, …) | Multi | Varies | Varies | ❌ | ✅ Native | ❌ | Varies |
 | **Sherpa-ONNX** | 20+ | — | — | ✅ CUDA/CPU | ✅ CPU | ✅ CUDA/CPU | Apache-2.0 |
-| **IndexTTS 2** ⚡ | Multi | ✅ | — | ✅ CUDA | — | ✅ CUDA | Apache-2.0 |
+| **IndexTTS 2.5** ⚡ | ZH · EN · JA · ES · AR | ✅ | — | ✅ CUDA | — | ✅ CUDA | Bilibili model license¹ |
 | **OmniVoice GGUF** ⚡ | 600+ | ✅ | ✅ | ✅ CPU | ✅ CPU | ✅ CPU | Built-in |
 | **Supertonic 3** ⚡ | 31 | — | — | ✅ CPU | ✅ CPU | ✅ CPU | OpenRAIL-M |
 | **MOSS-TTS-v1.5** ⚡ (8B) | 31 | ✅ | — | ✅ CUDA/CPU | ✅ CPU | ✅ CUDA/CPU | Apache-2.0 |
 | **dots.tts** ⚡ (2B) | 24 | ✅ | — | ✅ CUDA/CPU | ✅ CPU | ❌ | Apache-2.0 |
 | **Confucius4-TTS** ⚡ | 14 | ✅ | — | ✅ CUDA/CPU | ✅ CPU | ✅ CUDA/CPU | Apache-2.0 |
+
+¹ IndexTTS 2.5 requires a separate written Bilibili license above 100 million
+monthly active users or RMB 1 billion in annual revenue. Review its
+[model license](https://huggingface.co/IndexTeam/IndexTTS-2.5/blob/main/LICENSE)
+before enabling the optional sidecar.
 
 GPT-SoVITS connects to `http://127.0.0.1:9880` by default. To use a server on
 another machine, set `OMNIVOICE_GPTSOVITS_URL` to its credential-free
@@ -295,6 +255,8 @@ another machine, set `OMNIVOICE_GPTSOVITS_URL` to its credential-free
 | **OpenAI-compatible** ⚠️ remote | `openai-compat-asr` | Server-dependent | A path to **Qwen3-ASR** today (self-hosted server, no transformers wait), any OpenAI-compatible transcription endpoint, or OpenAI's own API — no install, configure + test the connection in **Settings → Engines** (ASR tab). Audio leaves your machine to whatever server you point it at; see [docs/engines/openai-compatible-asr.md](docs/engines/openai-compatible-asr.md). |
 
 > Whisper-family engines cover ~100 languages; **FunASR / SenseVoice** adds an all-in-one multilingual path with built-in voice-activity detection and inline speaker diarization. **sherpa-onnx** powers the live dictation model picker — you talk and text appears as you speak. Every engine runs on-device — no API keys, no cloud.
+
+> If Dubbing needs an ASR model that is not installed yet, it offers the recommended download in place, shows its progress, and retries transcription on the same job when the model is ready.
 
 > **GPU without efficient float16?** On older NVIDIA GPUs (Maxwell/Pascal, GTX 16xx) or after a CTranslate2/cuDNN mismatch, the CTranslate2 ASR engines (WhisperX, Faster-Whisper) can't run `float16` and VoiceStudio automatically retries on `int8` — no config needed. If transcription still fails, pin the compute type with the `ASR_COMPUTE_TYPE` env var (escape hatch): `ASR_COMPUTE_TYPE=int8` (or `float32` for CPU). Set it to `int8` and restart the backend.
 
@@ -430,10 +392,10 @@ Ships two [skills](https://skills.sh):
 | **Dubbing** | Full pipeline (transcribe→translate→synthesize→mux), scene-aware splitting, lip-sync scoring, streaming TTS, per-speaker voice assignment, Smart Fit timing + second-pass QC, paste-in translations from any external tool, dedicated Dub home |
 | **Voice** | Zero-shot cloning, voice design, A/B comparison, voice preview widget, gallery with favorites/tags (its voices selectable in every picker — Studio, Audiobook, Stories, Dubbing), portable persona bundles (`.ovsvoice`), voice console workspace |
 | **Audio** | Demucs vocal isolation, per-segment gain, selective track export, stem/SRT/VTT/MP3 export, unlimited-length TTS via sentence-chunked generation |
-| **Multi-Lang** | Multi-language batch picker, batch dubbing queue with sequential GPU execution |
+| **Multi-Lang** | Translate All preserves the primary language plus every extra language chip; Generate renders and exports one retained track per language with sequential GPU execution |
 | **Diarization** | Pyannote ML diarization, auto speaker clone extraction, per-speaker voice assignment |
 | **ASR** | 11 engines (WhisperX, Faster-Whisper, isolated Faster-Whisper, MLX Whisper, PyTorch Whisper, Parakeet TDT, Parakeet TDT v3 MLX, Moonshine, FunASR/SenseVoice, sherpa-onnx live dictation, OpenAI-compatible remote), crash-isolated subprocess backend |
-| **TTS** | 14 engines (VoiceStudio, CosyVoice 3, GPT-SoVITS, VoxCPM2, MOSS-TTS-Nano, KittenTTS, MLX-Audio, Sherpa-ONNX, + lazy: IndexTTS 2, OmniVoice GGUF, Supertonic 3, MOSS-TTS-v1.5, dots.tts, Confucius4-TTS), engine routing with GPU preflight |
+| **TTS** | 14 engines (VoiceStudio, CosyVoice 3, GPT-SoVITS, VoxCPM2, MOSS-TTS-Nano, KittenTTS, MLX-Audio, Sherpa-ONNX, + lazy: IndexTTS 2.5, OmniVoice GGUF, Supertonic 3, MOSS-TTS-v1.5, dots.tts, Confucius4-TTS), engine routing with GPU preflight |
 | **Infra** | Docker deployment, CUDA/MPS/ROCm auto-detect, cuDNN 8 compat, VRAM-aware model offloading, engine routing (no silent CPU fallback), diagnostics suite & error journal, restricted-network mirror support |
 | **AI Provenance** | AudioSeal invisible watermarking (SynthID-like), video logo overlay, watermark detection API |
 | **UX** | Undo/redo, keyboard shortcuts, drag-and-drop, session persistence, glassmorphism design system, UI scale fix for Linux/WebKitGTK |

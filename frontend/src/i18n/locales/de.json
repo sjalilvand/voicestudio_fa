@@ -25,6 +25,7 @@
     "workspaces": "Arbeitsbereiche"
   },
   "settings": {
+    "openapi": "VoiceStudio-API",
     "general": "Allgemein",
     "theme": "Theme",
     "language": "Sprache",
@@ -335,6 +336,9 @@
     "clear": "Klar",
     "refresh": "Aktualisieren",
     "close": "Schließen",
+    "minimize_window": "Fenster minimieren",
+    "maximize_restore_window": "Fenster maximieren oder wiederherstellen",
+    "close_window": "Fenster schließen",
     "back": "Zurück",
     "play": "Spielen",
     "pause": "Pause",
@@ -354,7 +358,8 @@
     "no": "Nein",
     "more_info": "Weitere Informationen",
     "learn_more": "Erfahren Sie mehr",
-    "saving": "Speichern…"
+    "saving": "Speichern…",
+    "remove": "{{term}} entfernen"
   },
   "launchpad": {
     "greeting": "Hallo",
@@ -908,8 +913,6 @@
     "prep_elapsed": "{{time}} abgelaufen",
     "add_language": "Sprache hinzufügen",
     "search_languages": "Sprachen suchen…",
-    "languages_selected_one": "{{count}} Sprache ausgewählt",
-    "languages_selected_other": "{{count}} Sprachen ausgewählt",
     "more_to_narrow": "+{{count}} mehr – zum Eingrenzen eingeben",
     "no_matches": "Keine Übereinstimmungen",
     "diagnostic_copied": "Diagnose kopiert",
@@ -948,7 +951,15 @@
     "paste_translation_row_unmatched": "keine Zuordnung — unverändert",
     "paste_translation_apply": "Auf {{count}} Segmente anwenden",
     "paste_translation_cancel": "Abbrechen",
-    "paste_translation_more_rows": "+ {{count}} weitere Zeilen"
+    "paste_translation_more_rows": "+ {{count}} weitere Zeilen",
+    "languages_selected": "Ausgewählte Sprachen: {{count}}",
+    "languages_selected_one": "{{count}} Sprache ausgewählt",
+    "languages_selected_other": "{{count}} Sprachen ausgewählt",
+    "multi_translating": "Übersetzung → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "Die Übersetzung für {{langs}} ist fehlgeschlagen. Diese Synchronfassungen wurden übersprungen, damit keine Spur in der falschen Sprache entsteht.",
+    "manage_languages": "Sprachen verwalten",
+    "languages_done": "Fertig",
+    "languages_pending": "Ausstehend"
   },
   "glossary": {
     "title": "Glossar",
@@ -2110,10 +2121,33 @@
     "filter_starred": "Markiert",
     "load_take_failed": "Take konnte nicht geladen werden: {{message}}"
   },
+  "openapi": {
+    "title": "VoiceStudio-API",
+    "loading": "API-Spezifikation wird geladen…",
+    "unreachable_title": "Backend-Spezifikation nicht verfügbar",
+    "unreachable_body": "Die OpenAPI-Spezifikation des lokalen Backends unter {{url}} ist nicht erreichbar. Stelle sicher, dass das Backend läuft, und versuche es erneut.",
+    "retry": "Erneut versuchen",
+    "copy_url": "Spezifikations-URL kopieren",
+    "copy_url_aria": "URL zu /openapi.json kopieren",
+    "copied": "Spezifikations-URL kopiert",
+    "copy_failed": "Kopieren fehlgeschlagen — wähle die URL oben aus und kopiere sie manuell.",
+    "open_raw": "Rohspezifikation öffnen",
+    "open_raw_aria": "OpenAPI-Rohdaten im JSON-Format im Browser öffnen"
+  },
   "recording": {
     "cleaned_loaded": "Aufnahme bereinigt & geladen!",
     "loaded_raw": "Aufnahme geladen (roh — Entrauschen nicht verfügbar)",
-    "too_short": "Aufnahme zu kurz"
+    "too_short": "Aufnahme zu kurz",
+    "input_device": "Eingabegerät",
+    "default_input": "Systemstandard",
+    "microphone_number": "Mikrofon {{number}}",
+    "channels": "Kanäle",
+    "channels_auto": "Automatisch",
+    "channels_mono": "Mono",
+    "channels_stereo": "Stereo",
+    "input_level": "Mikrofonpegel",
+    "input_detected": "Eingang erkannt",
+    "no_input_detected": "Kein Eingang erkannt"
   },
   "pronunciation": {
     "title": "Aussprachewörterbuch",

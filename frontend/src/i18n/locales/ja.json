@@ -25,6 +25,7 @@
     "workspaces": "ワークスペース"
   },
   "settings": {
+    "openapi": "VoiceStudio API",
     "general": "一般",
     "theme": "テーマ",
     "language": "言語",
@@ -335,6 +336,9 @@
     "clear": "クリア",
     "refresh": "リフレッシュ",
     "close": "閉じる",
+    "minimize_window": "ウィンドウを最小化",
+    "maximize_restore_window": "ウィンドウを最大化または元に戻す",
+    "close_window": "ウィンドウを閉じる",
     "back": "戻る",
     "play": "遊ぶ",
     "pause": "一時停止",
@@ -354,7 +358,8 @@
     "no": "いいえ",
     "more_info": "詳細情報",
     "learn_more": "さらに詳しく",
-    "saving": "保存中…"
+    "saving": "保存中…",
+    "remove": "{{term}} を削除"
   },
   "launchpad": {
     "greeting": "こんにちは。",
@@ -948,7 +953,13 @@
     "paste_translation_row_unmatched": "一致なし — 変更しません",
     "paste_translation_apply": "{{count}} セグメントに適用",
     "paste_translation_cancel": "キャンセル",
-    "paste_translation_more_rows": "他 {{count}} 行"
+    "paste_translation_more_rows": "他 {{count}} 行",
+    "languages_selected": "{{count}} 言語を選択",
+    "multi_translating": "翻訳中 → {{lang}}（{{current}}/{{total}}）…",
+    "multi_lang_skipped": "{{langs}} の翻訳に失敗したため、誤った言語のトラックが生成されないよう該当する吹き替えをスキップしました。",
+    "manage_languages": "言語を管理",
+    "languages_done": "完了",
+    "languages_pending": "保留中"
   },
   "glossary": {
     "title": "用語集",
@@ -2110,10 +2121,33 @@
     "filter_starred": "スター付き",
     "load_take_failed": "テイクを読み込めませんでした: {{message}}"
   },
+  "openapi": {
+    "title": "VoiceStudio API",
+    "loading": "API 仕様を読み込んでいます…",
+    "unreachable_title": "バックエンド仕様を利用できません",
+    "unreachable_body": "{{url}} にあるローカルバックエンドの OpenAPI 仕様に接続できませんでした。バックエンドが実行中であることを確認して、再試行してください。",
+    "retry": "再試行",
+    "copy_url": "仕様 URL をコピー",
+    "copy_url_aria": "/openapi.json の URL をコピー",
+    "copied": "仕様 URL をコピーしました",
+    "copy_failed": "コピーに失敗しました。上の URL を選択して手動でコピーしてください。",
+    "open_raw": "未加工の仕様を開く",
+    "open_raw_aria": "未加工の OpenAPI JSON をブラウザーで開く"
+  },
   "recording": {
     "cleaned_loaded": "録音をクリーンアップして読み込みました！",
     "loaded_raw": "録音を読み込みました（未処理 — ノイズ除去は利用できません）",
-    "too_short": "録音が短すぎます"
+    "too_short": "録音が短すぎます",
+    "input_device": "入力デバイス",
+    "default_input": "システム既定",
+    "microphone_number": "マイク {{number}}",
+    "channels": "チャンネル",
+    "channels_auto": "自動",
+    "channels_mono": "モノラル",
+    "channels_stereo": "ステレオ",
+    "input_level": "マイク入力レベル",
+    "input_detected": "入力を検出",
+    "no_input_detected": "入力を検出できません"
   },
   "pronunciation": {
     "title": "発音辞典",

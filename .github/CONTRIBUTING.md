@@ -28,7 +28,23 @@ Read it before opening a proposal; the licence check in particular ends most of 
 - [Bun](https://bun.sh/) (frontend package manager)
 - [uv](https://docs.astral.sh/uv/) (Python environment manager)
 - [ffmpeg](https://ffmpeg.org/) (audio/video processing)
+- [Rust / Cargo](https://rustup.rs/) (desktop shell only)
 - Python 3.10+ (managed automatically by `uv`)
+
+Linux desktop development also needs WebKitGTK/GTK development libraries. On
+Debian or Ubuntu, install the same packages used by CI:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+  libwebkit2gtk-4.1-dev libgtk-3-dev libpango1.0-dev libcairo2-dev \
+  libsoup-3.0-dev libgdk-pixbuf-2.0-dev \
+  libayatana-appindicator3-dev librsvg2-dev libssl-dev libxdo-dev \
+  libasound2-dev build-essential curl wget file
+```
+
+See the [Linux source-build guide](../docs/install/linux.md#building-from-source)
+for Fedora and Arch packages.
 
 ### Clone & Run
 
@@ -67,6 +83,18 @@ names: there is no `desktop=prod` (note the **hyphen** in `desktop-prod`).
 `desktop-prod` is Windows-aware (auto-detects bash/git; see `scripts/desktop-prod.mjs`).
 
 Requires [Rust](https://rustup.rs/) and platform-specific Tauri dependencies — see the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
+
+After installing Rust with rustup on macOS/Linux, either open a new terminal or
+load Cargo into the current one before starting the desktop app:
+
+```bash
+source "$HOME/.cargo/env"
+bun desktop
+```
+
+On Linux, errors such as `Package gdk-3.0 was not found`, `pango.pc` missing,
+or `javascriptcoregtk-4.1` missing mean the native packages above were not
+installed; changing `PKG_CONFIG_PATH` does not fix libraries that are absent.
 
 If the app opens but stays on the **setup splash with no buttons**, the Python
 backend didn't finish starting — the splash surfaces the stall reason, a log
@@ -174,6 +202,7 @@ class MyEngineBackend(TTSBackend):
 
 - **Components**: Functional components with hooks
 - **State**: Zustand stores in `src/stores/`, organized by slice
+- **Brand assets**: Reuse the canonical mark, palette, naming, and compatibility rules in [`docs/branding.md`](../docs/branding.md); do not redraw or rename runtime identifiers ad hoc
 - **CSS**: **Utilities-first + shadcn/ui, one stylesheet.** UI is built on the shadcn/ui primitives in `src/components/ui/` (wrapped by the `src/ui/` barrel, themed to the VoiceStudio palette), composed with Tailwind v4 utility classes. **All styling now lives in a single file — `src/index.css`**: the `@theme` / `[data-theme]` token foundation plus the irreducible set utilities can't express (`@keyframes`, glassmorphism/`backdrop-filter`, pseudo-elements, `:has()`, unlayered cascade overrides, and styling hooks on library-generated DOM like virtualized rows / WaveSurfer). The per-component `.css` files were eliminated in the CSS→Tailwind/shadcn migration — **do not create new ones.** Reach for shadcn primitives + utilities; if a rule is genuinely irreducible, add it to `src/index.css` with a provenance comment. (The only other `.css` is the test-only visual harness. See `docs/shadcn-migration.md`.)
 - **Naming**: `PascalCase` for components, `camelCase` for hooks and utils
 

@@ -25,6 +25,7 @@
     "workspaces": "工作區"
   },
   "settings": {
+    "openapi": "VoiceStudio API",
     "general": "一般",
     "theme": "佈景主題",
     "language": "顯示語言",
@@ -335,6 +336,9 @@
     "clear": "清除",
     "refresh": "重新整理",
     "close": "關閉",
+    "minimize_window": "最小化視窗",
+    "maximize_restore_window": "最大化或還原視窗",
+    "close_window": "關閉視窗",
     "back": "返回",
     "play": "玩",
     "pause": "暫停",
@@ -354,7 +358,8 @@
     "no": "否",
     "more_info": "更多資訊",
     "learn_more": "了解更多",
-    "saving": "儲存中…"
+    "saving": "儲存中…",
+    "remove": "刪除 {{term}}"
   },
   "launchpad": {
     "greeting": "你好",
@@ -948,7 +953,13 @@
     "paste_translation_row_unmatched": "無對應——維持原樣",
     "paste_translation_apply": "套用到 {{count}} 個片段",
     "paste_translation_cancel": "取消",
-    "paste_translation_more_rows": "還有 {{count}} 行"
+    "paste_translation_more_rows": "還有 {{count}} 行",
+    "languages_selected": "已選擇 {{count}} 種語言",
+    "multi_translating": "正在翻譯 → {{lang}}（{{current}}/{{total}}）…",
+    "multi_lang_skipped": "{{langs}} 翻譯失敗；已略過這些配音，以免產生語言錯誤的音軌。",
+    "manage_languages": "管理語言",
+    "languages_done": "已完成",
+    "languages_pending": "待處理"
   },
   "glossary": {
     "title": "詞彙表",
@@ -2110,10 +2121,33 @@
     "filter_starred": "已加星",
     "load_take_failed": "無法載入該次生成:{{message}}"
   },
+  "openapi": {
+    "title": "VoiceStudio API",
+    "loading": "正在載入 API 規格…",
+    "unreachable_title": "後端規格無法使用",
+    "unreachable_body": "無法存取 {{url}} 上的本機後端 OpenAPI 規格。請確認後端正在執行，然後重試。",
+    "retry": "重試",
+    "copy_url": "複製規格網址",
+    "copy_url_aria": "複製 /openapi.json 網址",
+    "copied": "已複製規格網址",
+    "copy_failed": "複製失敗 — 請手動選取並複製上方網址。",
+    "open_raw": "開啟原始規格",
+    "open_raw_aria": "在瀏覽器中開啟原始 OpenAPI JSON"
+  },
   "recording": {
     "cleaned_loaded": "錄音已清理並載入！",
     "loaded_raw": "錄音已載入（原始 — 無法降噪）",
-    "too_short": "錄音太短"
+    "too_short": "錄音太短",
+    "input_device": "輸入裝置",
+    "default_input": "系統預設",
+    "microphone_number": "麥克風 {{number}}",
+    "channels": "聲道",
+    "channels_auto": "自動",
+    "channels_mono": "單聲道",
+    "channels_stereo": "立體聲",
+    "input_level": "麥克風輸入電平",
+    "input_detected": "偵測到輸入",
+    "no_input_detected": "未偵測到輸入"
   },
   "pronunciation": {
     "title": "發音字典",

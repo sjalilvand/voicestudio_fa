@@ -72,6 +72,7 @@ import { toastErrorWithReport } from './utils/errorToast';
 import { listenDictationNotice, showDictationNotice } from './utils/dictationNotice';
 import { addBreadcrumb } from './utils/breadcrumbs';
 import { appShellClasses } from './utils/appShellClasses';
+import { applyUiScale } from './utils/uiScaleEngine';
 import { recordValueMoment } from './utils/donationMoments';
 import {
   POPULAR_LANGS,
@@ -83,6 +84,7 @@ import {
 } from './utils/constants';
 import { LANG_CODES } from './utils/languages';
 import { restoreProjectExtras } from './utils/projectState';
+import { castSourcesFromJob } from './utils/segments';
 import { API, apiFetch, apiJson } from './api/client';
 import { flushMemory as apiFlushMemory } from './api/system';
 import {
@@ -145,26 +147,13 @@ function App() {
     return () => ro.disconnect();
   }, []);
 
-  // Engine capability probe (#523/#524): does this WebView honor `zoom` as a
-  // LAYOUT transform? Chromium (WebView2 / macOS WebKit) and modern WebKitGTK
-  // do; older WebKitGTK (Linux) treats it as a no-op. The .app-container sizing
-  // branches on the result (index.css) so the shell fills the window on BOTH —
-  // no black band on WebKitGTK, no clipped Generate/Settings CTAs on Chromium.
-  // Measuring a real zoomed element is robust where @supports(zoom)/UA-sniffing
-  // aren't (both report "supported" on WebKitGTK even when zoom doesn't lay out).
+  // Desktop UI scale belongs at the webview boundary. A CSS `zoom` probe can
+  // report the expected bounding box on WebKitGTK even when the painted shell
+  // still occupies only the upper-left of the window. Tauri's native zoom keeps
+  // layout and paint in agreement; browser/dev sessions retain the CSS path.
   useLayoutEffect(() => {
-    let honored = true;
-    try {
-      const probe = document.createElement('div');
-      probe.style.cssText = 'position:absolute;left:-9999px;top:0;width:100px;height:100px;zoom:2';
-      document.body.appendChild(probe);
-      honored = Math.round(probe.getBoundingClientRect().width) >= 150;
-      probe.remove();
-    } catch {
-      honored = true;
-    } // safe default: the existing zoom path
-    document.documentElement.dataset.zoomLayout = honored ? 'on' : 'off';
-  }, []);
+    void applyUiScale(uiScale);
+  }, [uiScale]);
   const shellSizeClass =
     shellWidth <= 600 ? 'shell-mini' : shellWidth <= 1100 ? 'shell-narrow' : '';
   const theme = useAppStore((s) => s.theme);
@@ -433,8 +422,19 @@ function App() {
   const [compareProgress, setCompareProgress] = useState('');
 
   // ═══ MIC RECORDING ═══
-  const { isRecording, isCleaning, recordingTime, startRecording, stopRecording } =
-    useRecording(ingestRefAudio);
+  const {
+    isRecording,
+    isCleaning,
+    recordingTime,
+    audioInputs,
+    selectedAudioInputId,
+    setSelectedAudioInputId,
+    channelMode,
+    setChannelMode,
+    inputLevelStore,
+    startRecording,
+    stopRecording,
+  } = useRecording(ingestRefAudio);
 
   // ═══ DUB STATE ═══
   const dubJobId = useAppStore((s) => s.dubJobId);
@@ -525,10 +525,12 @@ function App() {
     setPreviewAudios,
     transcribeElapsed,
     transcribeProgress,
+    asrInstall,
     handleDubUpload: _handleDubUpload,
     handleDubIngestUrl,
     handleDubAbort,
     handleDubRetryTranscribe,
+    handleInstallMissingAsr,
     handleDubStop,
     handleDubGenerate,
     handleCleanupSegments,
@@ -1077,11 +1079,9 @@ function App() {
           item.language_code || job.language_code || 'und',
         );
       }
-      // Rehydrate the auto-extracted speaker clones so the CAST dropdown's
-      // "🎤 From video" option reappears after a reload. Projects that
-      // predate the speaker-clone feature have an empty map; the Extract
-      // Voices button in the CAST strip handles those.
-      setSpeakerClones(job.speaker_clones || {});
+      // Rehydrate path-free cast sources. Legacy heuristic jobs may have only
+      // per-segment references; castSourcesFromJob recovers those too.
+      setSpeakerClones(castSourcesFromJob(job));
     } catch (e) {
       console.error('Failed to restore job_data', e);
     }
@@ -1176,7 +1176,7 @@ function App() {
   // awaiting_setup stage would never get to render.
   if (bootstrapStage === 'awaiting_setup') {
     return (
-      <div style={{ zoom: uiScale }}>
+      <div className="app-bootstrap-scale" style={{ '--ui-scale': uiScale }}>
         <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
       </div>
     );
@@ -1189,7 +1189,7 @@ function App() {
   // flash the empty studio before the wizard has a chance to mount.
   if (!setupChecked) {
     return (
-      <div style={{ zoom: uiScale }}>
+      <div className="app-bootstrap-scale" style={{ '--ui-scale': uiScale }}>
         <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
       </div>
     );
@@ -1472,6 +1472,7 @@ function App() {
                     dubLocalBlobUrl={dubLocalBlobUrl}
                     transcribeElapsed={transcribeElapsed}
                     transcribeProgress={transcribeProgress}
+                    asrInstall={asrInstall}
                     translateProvider={translateProvider}
                     setTranslateProvider={setTranslateProvider}
                     onGlossaryChange={setGlossaryTerms}
@@ -1487,6 +1488,7 @@ function App() {
                     handleDubUpload={handleDubUpload}
                     handleDubIngestUrl={handleDubIngestUrl}
                     handleDubRetryTranscribe={handleDubRetryTranscribe}
+                    handleInstallMissingAsr={handleInstallMissingAsr}
                     handleDubStop={handleDubStop}
                     handleDubGenerate={handleDubGenerate}
                     handleDubDownload={handleDubDownload}
@@ -1596,6 +1598,12 @@ function App() {
                     isRecording={isRecording}
                     isCleaning={isCleaning}
                     recordingTime={recordingTime}
+                    audioInputs={audioInputs}
+                    selectedAudioInputId={selectedAudioInputId}
+                    setSelectedAudioInputId={setSelectedAudioInputId}
+                    channelMode={channelMode}
+                    setChannelMode={setChannelMode}
+                    inputLevelStore={inputLevelStore}
                     vdStates={vdStates}
                     setVdStates={setVdStates}
                     isGenerating={isGenerating}
