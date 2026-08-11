@@ -188,8 +188,17 @@
     "history_retention_cap": "유지할 테이크 수",
     "history_retention_cap_hint": "별표된 테이크는 정리 대상에서 제외 · 0 = 무제한",
     "history_retention_saved": "보존 한도가 저장되었습니다",
+    "history_retention_load_failed": "현재 보존 한도를 불러올 수 없습니다",
     "history_retention_save_failed": "저장하지 못했습니다",
-    "history_retention_invalid": "0 이상을 입력하세요"
+    "history_retention_invalid": "0 이상을 입력하세요",
+    "models_dir_help": "모델 가중치가 저장되는 위치입니다. 필요하면 더 크거나 빠른 드라이브를 선택하세요. 변경 사항은 다시 시작한 후 적용됩니다.",
+    "models_dir_saved": "모델 폴더 저장됨 — 적용하려면 다시 시작하세요",
+    "models_dir_reverted": "기본 폴더 복원됨 — 적용하려면 다시 시작하세요",
+    "models_dir_reset_hint": "기본 캐시 위치로 되돌리기",
+    "models_dir_effective": "현재 사용 중",
+    "models_dir_configured": "설정됨",
+    "models_dir_default": "기본값 사용",
+    "models_dir_restart": "↻ 새 위치를 사용하려면 VoiceStudio를 다시 시작하세요."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -265,6 +274,7 @@
     "untitled": "제목없는 이야기",
     "projectName": "프로젝트 이름",
     "deleteProject": "프로젝트 삭제",
+    "deleteProjectConfirm": "이 프로젝트를 영구적으로 삭제할까요?",
     "noProjects": "아직 저장된 스토리가 없습니다. 이 스토리를 유지하려면 저장하세요.",
     "projectSaved": "스토리가 저장되었습니다",
     "generateAll": "생성",
@@ -340,7 +350,8 @@
     "more_info": "추가 정보",
     "learn_more": "자세히 알아보기",
     "saving": "저장 중…",
-    "remove": "{{term}} 삭제"
+    "remove": "{{term}} 삭제",
+    "not_set": "설정되지 않음"
   },
   "launchpad": {
     "greeting": "안녕하세요",
@@ -581,6 +592,10 @@
     "retry": "재시도",
     "activeEngine": "활성 {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} 엔진 호환성",
+    "familyMatrixTitle": "{{family}} 엔진",
+    "familyDesc_tts": "스크립트를 음성으로 변환합니다. 활성으로 표시된 엔진을 스튜디오, 더빙, 일괄 작업에서 사용합니다.",
+    "familyDesc_asr": "오디오를 텍스트로 변환하여 더빙, 자막, 받아쓰기에 사용합니다.",
+    "familyDesc_llm": "번역과 다시 쓰기를 위한 선택적 텍스트 도우미입니다. “끔”이면 해당 단계를 건너뜁니다.",
     "active": "활성",
     "whyUnavailable": "왜 사용할 수 없나요?",
     "lastError": "마지막 오류: {{error}}",
@@ -1185,6 +1200,7 @@
     "subtitle": "수백 가지의 미리 만들어진 디자인 음성 중 하나를 선택하여 사용하세요.",
     "zone_archetypes": "원형",
     "zone_imports": "내 수입품",
+    "filters": "필터",
     "all": "모두",
     "favorites": "즐겨찾기",
     "favorite": "즐겨찾기",
@@ -2101,7 +2117,15 @@
     "unstar_take": "별표 해제 — 정리 허용",
     "play_take": "활성 출력으로 불러오기",
     "filter_starred": "별표됨",
-    "load_take_failed": "테이크를 불러오지 못했습니다: {{message}}"
+    "load_take_failed": "테이크를 불러오지 못했습니다: {{message}}",
+    "mode_clone": "복제",
+    "mode_synth": "합성",
+    "generation_seconds": "{{duration}}초",
+    "expand_text": "텍스트 펼치기",
+    "collapse_text": "텍스트 접기",
+    "seed": "시드 {{seed}}",
+    "load_config": "설정 불러오기",
+    "delete_confirm": "이 기록 항목을 삭제할까요?"
   },
   "openapi": {
     "title": "VoiceStudio API",
@@ -2191,7 +2215,7 @@
     "dismiss": "닫기",
     "output": "출력",
     "title": "Audiobook",
-    "subtitle": "장으로 구분된 스크립트를 장으로 구분된 m4b 오디오북으로 바꿔보세요.",
+    "subtitle": "이야기를 쓰거나 가져오고, 각 배역의 목소리를 정한 다음 실제 챕터가 있는 완성도 높은 오디오북으로 내보내세요.",
     "script": "스크립트",
     "script_placeholder": "# Chapter One\nOnce upon a time… [pause 500ms] the end.\n\n# Chapter Two\n[voice:narrator] And so it continued.",
     "default_voice": "Default voice",

@@ -7,11 +7,11 @@ import { GROUPS } from './settingsCategories';
 /**
  * SettingsSidebar — the grouped category navigation for the Settings hub.
  *
- * Wide (≥760px): a vertical rail of group headers + category items (icon +
+ * Wide (≥760px of scaled shell content): a vertical rail of group headers + category items (icon +
  * label; active item = brand accent with an inset accent bar). Restart-bearing
  * categories show a small ↻ glyph.
  *
- * Narrow (<760px): collapses to a single native <select> drop-down (with
+ * Narrow (<760px of scaled shell content): collapses to a single native <select> drop-down (with
  * <optgroup> per group) so the whole IA stays reachable on a phone-width window.
  *
  * `visibleIds` (a Set) filters which categories render — the search box in the
@@ -59,9 +59,12 @@ export default function SettingsSidebar({ visibleIds, active, onSelect, query, o
   }
 
   return (
-    <nav aria-label={t('settings.title', { defaultValue: 'Settings' })}>
+    <nav
+      aria-label={t('settings.title', { defaultValue: 'Settings' })}
+      className="@min-[760px]/settings-shell:flex @min-[760px]/settings-shell:min-h-0 @min-[760px]/settings-shell:flex-1 @min-[760px]/settings-shell:flex-col"
+    >
       {/* Narrow: dropdown navigator */}
-      <div className="min-[760px]:hidden">
+      <div className="@min-[760px]/settings-shell:hidden">
         <select
           value={active}
           onChange={(e) => onSelect(e.target.value)}
@@ -86,7 +89,10 @@ export default function SettingsSidebar({ visibleIds, active, onSelect, query, o
       </div>
 
       {/* Wide: vertical grouped rail */}
-      <div className="hidden flex-col gap-[var(--space-4)] min-[760px]:flex">
+      <div
+        data-testid="settings-nav-scroll"
+        className="settings-sidebar-scroll hidden min-h-0 flex-1 flex-col gap-[var(--space-4)] overflow-y-auto overscroll-contain pr-[var(--space-2)] @min-[760px]/settings-shell:flex"
+      >
         {GROUPS.map((g) => {
           const items = g.items.filter((it) => isVisible(it.id));
           if (items.length === 0) return null;

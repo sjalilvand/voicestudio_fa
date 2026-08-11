@@ -188,8 +188,17 @@
     "history_retention_cap": "保留數量",
     "history_retention_cap_hint": "已加星項目不計入清理 · 0 = 不限",
     "history_retention_saved": "保留上限已儲存",
+    "history_retention_load_failed": "無法載入目前的保留上限",
     "history_retention_save_failed": "儲存失敗",
-    "history_retention_invalid": "請輸入 0 或更大的數字"
+    "history_retention_invalid": "請輸入 0 或更大的數字",
+    "models_dir_help": "模型權重的儲存位置。需要時可選擇容量更大或速度更快的磁碟；變更將在重新啟動後生效。",
+    "models_dir_saved": "模型資料夾已儲存 — 重新啟動後生效",
+    "models_dir_reverted": "已還原預設資料夾 — 重新啟動後生效",
+    "models_dir_reset_hint": "還原預設快取位置",
+    "models_dir_effective": "目前使用",
+    "models_dir_configured": "已設定",
+    "models_dir_default": "使用預設值",
+    "models_dir_restart": "↻ 重新啟動 VoiceStudio 以使用新位置。"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -265,6 +274,7 @@
     "untitled": "無題故事",
     "projectName": "項目名稱",
     "deleteProject": "刪除項目",
+    "deleteProjectConfirm": "要永久刪除此專案嗎？",
     "noProjects": "尚未儲存故事 — 儲存以保留此故事。",
     "projectSaved": "故事已儲存",
     "generateAll": "產生",
@@ -340,7 +350,8 @@
     "more_info": "更多資訊",
     "learn_more": "了解更多",
     "saving": "儲存中…",
-    "remove": "刪除 {{term}}"
+    "remove": "刪除 {{term}}",
+    "not_set": "未設定"
   },
   "launchpad": {
     "greeting": "你好",
@@ -581,6 +592,10 @@
     "retry": "重試",
     "activeEngine": "活動 {{family}}：{{engine}}",
     "engineCompatLabel": "{{family}} 引擎相容性",
+    "familyMatrixTitle": "{{family}} 引擎",
+    "familyDesc_tts": "將腳本轉換為語音。標示為啟用的引擎供工作室、配音和批次處理使用。",
+    "familyDesc_asr": "將音訊轉換為文字，用於轉錄、配音、字幕和聽寫。",
+    "familyDesc_llm": "用於翻譯和改寫的選用文字助理。「關閉」會略過這些步驟。",
     "active": "活躍的",
     "whyUnavailable": "為什麼不可用？",
     "lastError": "最後一個錯誤：{{error}}",
@@ -1185,6 +1200,7 @@
     "subtitle": "數百種現成的設計聲音 - 選擇一種即可使用。",
     "zone_archetypes": "原型",
     "zone_imports": "我的進口",
+    "filters": "篩選條件",
     "all": "全部",
     "favorites": "收藏夾",
     "favorite": "最愛",
@@ -2101,7 +2117,15 @@
     "unstar_take": "取消加星 — 允許清理",
     "play_take": "載入為目前輸出",
     "filter_starred": "已加星",
-    "load_take_failed": "無法載入該次生成:{{message}}"
+    "load_take_failed": "無法載入該次生成:{{message}}",
+    "mode_clone": "複製",
+    "mode_synth": "合成",
+    "generation_seconds": "{{duration}} 秒",
+    "expand_text": "展開文字",
+    "collapse_text": "收合文字",
+    "seed": "種子 {{seed}}",
+    "load_config": "載入設定",
+    "delete_confirm": "刪除此歷史記錄嗎？"
   },
   "openapi": {
     "title": "VoiceStudio API",
@@ -2191,7 +2215,7 @@
     "dismiss": "關閉",
     "output": "輸出",
     "title": "有聲書",
-    "subtitle": "將章節分隔的腳本轉換為章節化的 m4b 有聲書。",
+    "subtitle": "撰寫或匯入故事，為每個角色分配聲音，再匯出具備真實章節的精緻有聲書。",
     "script": "腳本",
     "script_placeholder": "#第一章\n從前…[停頓 500 毫秒]結束。\n\n# 第二章\n[聲音：旁白] 就這樣繼續下去。",
     "default_voice": "預設語音",

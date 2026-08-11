@@ -17,7 +17,6 @@
 import {
   AudioLines,
   Palette,
-  Settings2,
   Plug,
   Cpu,
   Mic,
@@ -63,6 +62,11 @@ export const GROUPS = [
           'sidebar rail',
           'titlebar tabs',
           'tabs',
+          'language',
+          'locale',
+          'interface language',
+          'review mode',
+          'stage checkpoints',
         ],
         keywordKeys: [
           'settings.ui_scale',
@@ -75,15 +79,9 @@ export const GROUPS = [
           // / "Leiste" matches what the user actually sees on screen.
           'settings.nav_style_rail',
           'settings.nav_style_tabs',
+          'settings.language',
+          'settings.review_mode',
         ],
-      },
-      {
-        id: 'general',
-        labelKey: 'settings.general',
-        defaultLabel: 'General',
-        icon: Settings2,
-        keywords: ['language', 'locale', 'interface language', 'review mode', 'stage checkpoints'],
-        keywordKeys: ['settings.language', 'settings.review_mode'],
       },
     ],
   },
@@ -397,7 +395,7 @@ export const CATEGORIES = GROUPS.flatMap((g) => g.items.map((it) => ({ ...it, gr
 export const CATEGORY_BY_ID = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
 
 /** The category shown on first open (and the deep-link/persist fallback). */
-export const DEFAULT_CATEGORY = 'general';
+export const DEFAULT_CATEGORY = 'appearance';
 
 /**
  * Map legacy Settings tab ids (the old 11-tab shell, still used by deep-links
@@ -405,6 +403,7 @@ export const DEFAULT_CATEGORY = 'general';
  * not listed is assumed to already be a valid new category id.
  */
 export const LEGACY_TAB_MAP = {
+  general: 'appearance',
   capture: 'dictation',
 };
 

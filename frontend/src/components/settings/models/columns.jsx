@@ -39,8 +39,8 @@ export function makeModelColumns({
         const rt = getRowRuntime(m);
         return (
           <>
-            {/* Both lines truncate with ellipsis (CSS) — the full text stays
-                reachable via the title attributes. */}
+            {/* Keep the idle state to one scan-friendly line. The full label,
+                repository and optional note remain available on hover. */}
             <span className="models-row__title" title={m.label}>
               <span
                 className="models-row__avatar"
@@ -49,7 +49,7 @@ export function makeModelColumns({
               >
                 {m.repo_id.split('/')[0].slice(0, 2).toUpperCase()}
               </span>
-              {m.label}
+              <span className="models-row__label">{m.label}</span>
               {m.required && <span className="models-row__tag">{t('models.required_tag')}</span>}
               {/* Curated "best for your system" pick (curated_on in models.yaml).
                   Required rows already carry the stronger "required" tag. */}
@@ -63,13 +63,13 @@ export function makeModelColumns({
                 </span>
               )}
             </span>
-            <span
+            <code
               className="models-row__repo"
               title={m.note ? `${m.repo_id} · ${m.note}` : m.repo_id}
+              translate="no"
             >
-              <code>{m.repo_id}</code>
-              {m.note && <span className="models-row__note"> · {m.note}</span>}
-            </span>
+              {m.repo_id}
+            </code>
             {rt.showBar && (
               <div className="models-row__progressline flex flex-col gap-[3px] mt-[6px]">
                 <Progress value={rt.aggPct} tone={rt.isDeleting ? 'warn' : 'brand'} size="xs" />

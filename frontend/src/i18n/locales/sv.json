@@ -188,8 +188,17 @@
     "history_retention_cap": "Tagningar att behålla",
     "history_retention_cap_hint": "Stjärnmärkta tagningar räknas aldrig vid rensning · 0 = obegränsat",
     "history_retention_saved": "Lagringsgräns sparad",
+    "history_retention_load_failed": "Det gick inte att läsa in den aktuella lagringsgränsen",
     "history_retention_save_failed": "Kunde inte spara",
-    "history_retention_invalid": "Ange 0 eller mer"
+    "history_retention_invalid": "Ange 0 eller mer",
+    "models_dir_help": "Här lagras modellvikter. Välj en större eller snabbare enhet vid behov; ändringar gäller efter omstart.",
+    "models_dir_saved": "Modellmappen sparades — starta om för att tillämpa",
+    "models_dir_reverted": "Standardmappen återställdes — starta om för att tillämpa",
+    "models_dir_reset_hint": "Återgå till standardplatsen för cache",
+    "models_dir_effective": "Används nu",
+    "models_dir_configured": "Konfigurerad",
+    "models_dir_default": "Använder standard",
+    "models_dir_restart": "↻ Starta om VoiceStudio för att använda den nya platsen."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -265,6 +274,7 @@
     "untitled": "Berättelse utan titel",
     "projectName": "Projektnamn",
     "deleteProject": "Ta bort projekt",
+    "deleteProjectConfirm": "Ta bort projektet permanent?",
     "noProjects": "Inga sparade berättelser ännu — Spara för att behålla den här.",
     "projectSaved": "Berättelsen sparad",
     "generateAll": "Generera",
@@ -340,7 +350,8 @@
     "more_info": "Mer info",
     "learn_more": "Läs mer",
     "saving": "Sparar…",
-    "remove": "Ta bort {{term}}"
+    "remove": "Ta bort {{term}}",
+    "not_set": "Inte inställt"
   },
   "launchpad": {
     "greeting": "hej då",
@@ -581,6 +592,10 @@
     "retry": "Försök igen",
     "activeEngine": "Aktiv {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} motorkompatibilitet",
+    "familyMatrixTitle": "{{family}}-motorer",
+    "familyDesc_tts": "Gör om manus till tal. Studio, Dubbning och Batch använder den aktiva motorn.",
+    "familyDesc_asr": "Gör om ljud till text för transkribering, dubbning, undertexter och diktering.",
+    "familyDesc_llm": "Valfri texthjälp för översättning och omskrivning. ”Av” hoppar över dessa steg.",
     "active": "aktiv",
     "whyUnavailable": "Varför inte tillgänglig?",
     "lastError": "Senaste fel: {{error}}",
@@ -1185,6 +1200,7 @@
     "subtitle": "Hundratals färdigdesignade röster — välj en och gå.",
     "zone_archetypes": "Arketyper",
     "zone_imports": "Mina importer",
+    "filters": "Filter",
     "all": "Alla",
     "favorites": "Favoriter",
     "favorite": "Favorit",
@@ -2101,7 +2117,15 @@
     "unstar_take": "Ta bort stjärna — tillåt rensning",
     "play_take": "Läs in som aktiv utmatning",
     "filter_starred": "Stjärnmärkta",
-    "load_take_failed": "Kunde inte läsa in tagningen: {{message}}"
+    "load_take_failed": "Kunde inte läsa in tagningen: {{message}}",
+    "mode_clone": "Kloning",
+    "mode_synth": "Syntes",
+    "generation_seconds": "{{duration}} s",
+    "expand_text": "Expandera text",
+    "collapse_text": "Fäll ihop text",
+    "seed": "Seed {{seed}}",
+    "load_config": "Läs in inställningar",
+    "delete_confirm": "Ta bort det här historikobjektet?"
   },
   "openapi": {
     "title": "VoiceStudio API",
@@ -2191,7 +2215,7 @@
     "dismiss": "Avfärda",
     "output": "Utdata",
     "title": "Ljudbok",
-    "subtitle": "Förvandla ett kapitelavgränsat manus till en kapitelinställd m4b-ljudbok.",
+    "subtitle": "Skriv eller importera din berättelse, tilldela varje roll en röst och exportera en finslipad ljudbok med riktiga kapitel.",
     "script": "Manus",
     "script_placeholder": "# Kapitel ett\nDet var en gång... [paus 500ms] slutet.\n\n# Kapitel två\n[voice:berättare] Och så fortsatte det.",
     "default_voice": "Standardröst",

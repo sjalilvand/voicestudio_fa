@@ -80,6 +80,12 @@ describe('HFMirrorPanel', () => {
     render(<HFMirrorPanel />);
 
     const mirror = await screen.findByTestId('hf-preset-https://hf-mirror.com');
+    expect(
+      screen.getByRole('heading', { name: 'Hugging Face mirror' }).closest('section'),
+    ).toHaveClass('models-settings-compact', '!py-[9px]');
+    expect(screen.getByText('Mirror preset').closest('[data-slot="setting-row"]')).toHaveClass(
+      '!py-[5px]',
+    );
     const official = screen.getByTestId('hf-preset-official');
     const auto = screen.getByTestId('hf-preset-auto');
     expect(mirror).toHaveAttribute('aria-pressed', 'true');

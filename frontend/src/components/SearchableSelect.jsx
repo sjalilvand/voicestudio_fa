@@ -41,6 +41,7 @@ export default function SearchableSelect({
   disabled = false,
   buttonStyle,
   buttonClassName = 'input-base',
+  ariaLabel,
   size = 'md',
   // When true, emit a `.ss-group-label` header each time `option.group` changes
   // (and `option.groupLabel` is non-empty) while walking the MAIN rows. Default
@@ -259,6 +260,7 @@ export default function SearchableSelect({
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-label={ariaLabel}
         title={currentLabel}
       >
         <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[color:var(--text-primary)]">

@@ -149,7 +149,11 @@ export default function UninstallPanel() {
           })}
         </p>
         {owned.length > 0 && (
-          <div className="mb-[var(--space-4)] flex flex-col gap-[var(--space-2)]">
+          <div
+            className="settings-list-scroll mb-[var(--space-4)] flex max-h-[420px] flex-col gap-[var(--space-2)] overflow-y-auto overscroll-contain rounded-[var(--chrome-radius-pill)] bg-[var(--chrome-bg)] p-[var(--space-2)] [scrollbar-gutter:stable]"
+            tabIndex={0}
+            aria-label={t('settings.uninstall', { defaultValue: 'Remove all data' })}
+          >
             {owned.map((tg) => (
               <StorageTargetRow
                 key={tg.key}

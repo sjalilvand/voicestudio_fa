@@ -188,8 +188,17 @@
     "history_retention_cap": "Zu behaltende Takes",
     "history_retention_cap_hint": "Markierte Takes zählen nie zum Aufräumen · 0 = unbegrenzt",
     "history_retention_saved": "Aufbewahrungslimit gespeichert",
+    "history_retention_load_failed": "Das aktuelle Aufbewahrungslimit konnte nicht geladen werden",
     "history_retention_save_failed": "Speichern fehlgeschlagen",
-    "history_retention_invalid": "0 oder mehr eingeben"
+    "history_retention_invalid": "0 oder mehr eingeben",
+    "models_dir_help": "Hier werden Modellgewichte gespeichert. Wähle bei Bedarf ein größeres oder schnelleres Laufwerk; Änderungen gelten nach einem Neustart.",
+    "models_dir_saved": "Modellordner gespeichert — zum Anwenden neu starten",
+    "models_dir_reverted": "Standardordner wiederhergestellt — zum Anwenden neu starten",
+    "models_dir_reset_hint": "Zum standardmäßigen Cache-Speicherort zurückkehren",
+    "models_dir_effective": "Derzeit verwendet",
+    "models_dir_configured": "Konfiguriert",
+    "models_dir_default": "Standard wird verwendet",
+    "models_dir_restart": "↻ Starte VoiceStudio neu, um den neuen Speicherort zu verwenden."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -265,6 +274,7 @@
     "untitled": "Geschichte ohne Titel",
     "projectName": "Projektname",
     "deleteProject": "Projekt löschen",
+    "deleteProjectConfirm": "Dieses Projekt dauerhaft löschen?",
     "noProjects": "Noch keine gespeicherten Geschichten – Speichern Sie, um diese zu behalten.",
     "projectSaved": "Geschichte gespeichert",
     "generateAll": "Generieren",
@@ -340,7 +350,8 @@
     "more_info": "Weitere Informationen",
     "learn_more": "Erfahren Sie mehr",
     "saving": "Speichern…",
-    "remove": "{{term}} entfernen"
+    "remove": "{{term}} entfernen",
+    "not_set": "Nicht festgelegt"
   },
   "launchpad": {
     "greeting": "Hallo",
@@ -581,6 +592,10 @@
     "retry": "Versuchen Sie es noch einmal",
     "activeEngine": "Aktiv {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} Motorkompatibilität",
+    "familyMatrixTitle": "{{family}}-Engines",
+    "familyDesc_tts": "Wandelt Ihr Skript in Sprache um. Studio, Synchronisation und Stapelverarbeitung verwenden den aktiven Engine.",
+    "familyDesc_asr": "Transkribiert Audio für Synchronisation, Untertitel und Diktat.",
+    "familyDesc_llm": "Optionaler Texthelfer für Übersetzungen und Überarbeitungen. „Aus“ überspringt diese Schritte.",
     "active": "aktiv",
     "whyUnavailable": "Warum nicht verfügbar?",
     "lastError": "Letzter Fehler: {{error}}",
@@ -1185,6 +1200,7 @@
     "subtitle": "Hunderte vorgefertigte Stimmen – wählen Sie eine aus und legen Sie los.",
     "zone_archetypes": "Archetypen",
     "zone_imports": "Meine Importe",
+    "filters": "Filter",
     "all": "Alle",
     "favorites": "Favoriten",
     "favorite": "Favorit",
@@ -2101,7 +2117,15 @@
     "unstar_take": "Markierung entfernen — Aufräumen erlauben",
     "play_take": "Als aktive Ausgabe laden",
     "filter_starred": "Markiert",
-    "load_take_failed": "Take konnte nicht geladen werden: {{message}}"
+    "load_take_failed": "Take konnte nicht geladen werden: {{message}}",
+    "mode_clone": "Klon",
+    "mode_synth": "Synthese",
+    "generation_seconds": "{{duration}} s",
+    "expand_text": "Text erweitern",
+    "collapse_text": "Text einklappen",
+    "seed": "Seed {{seed}}",
+    "load_config": "Konfiguration laden",
+    "delete_confirm": "Diesen Verlaufseintrag löschen?"
   },
   "openapi": {
     "title": "VoiceStudio-API",
@@ -2191,7 +2215,7 @@
     "dismiss": "Verwerfen",
     "output": "Ausgabe",
     "title": "Hörbuch",
-    "subtitle": "Verwandeln Sie ein durch Kapitel getrenntes Skript in ein in Kapitel unterteiltes m4b-Hörbuch.",
+    "subtitle": "Schreiben oder importieren Sie Ihre Geschichte, weisen Sie jeder Rolle eine Stimme zu und exportieren Sie ein fertiges Hörbuch mit echten Kapiteln.",
     "script": "Skript",
     "script_placeholder": "# Kapitel eins\nEs war einmal… [Pause 500 ms] das Ende.\n\n# Kapitel Zwei\n[Stimme:Erzähler] Und so ging es weiter.",
     "default_voice": "Standardstimme",

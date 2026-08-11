@@ -42,14 +42,14 @@ export default function ModelSection({ sectionKey, title, group, columns, getRow
   const rowVirtualizer = useVirtualizer({
     count: tableRows.length,
     getScrollElement: () => tableBodyRef.current,
-    estimateSize: () => 54,
+    estimateSize: () => 40,
     overscan: 8,
   });
 
   const installed = group.models.filter((m) => m.installed).length;
 
   return (
-    <div className="mt-[var(--space-3)]" data-testid={`models-section-${sectionKey}`}>
+    <div className="mt-[var(--space-2)]" data-testid={`models-section-${sectionKey}`}>
       <div className="mb-[4px] flex items-baseline gap-[var(--space-2)] px-[2px]">
         <span className="text-[length:var(--text-sm)] font-semibold text-[var(--chrome-fg)]">
           {title}

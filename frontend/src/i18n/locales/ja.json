@@ -188,8 +188,17 @@
     "history_retention_cap": "保持するテイク数",
     "history_retention_cap_hint": "スター付きテイクは整理の対象外 · 0 = 無制限",
     "history_retention_saved": "保持上限を保存しました",
+    "history_retention_load_failed": "現在の保持上限を読み込めませんでした",
     "history_retention_save_failed": "保存できませんでした",
-    "history_retention_invalid": "0以上を入力してください"
+    "history_retention_invalid": "0以上を入力してください",
+    "models_dir_help": "モデルの重みを保存する場所です。必要に応じて容量が大きい、または高速なドライブを選択してください。変更は再起動後に適用されます。",
+    "models_dir_saved": "モデルフォルダーを保存しました — 適用するには再起動してください",
+    "models_dir_reverted": "既定のフォルダーに戻しました — 適用するには再起動してください",
+    "models_dir_reset_hint": "既定のキャッシュ場所に戻す",
+    "models_dir_effective": "現在使用中",
+    "models_dir_configured": "設定済み",
+    "models_dir_default": "既定値を使用",
+    "models_dir_restart": "↻ 新しい場所を使用するには VoiceStudio を再起動してください。"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -265,6 +274,7 @@
     "untitled": "題名のない物語",
     "projectName": "プロジェクト名",
     "deleteProject": "プロジェクトの削除",
+    "deleteProjectConfirm": "このプロジェクトを完全に削除しますか？",
     "noProjects": "保存されたストーリーはまだありません — このストーリーを保存するには保存してください。",
     "projectSaved": "ストーリーが保存されました",
     "generateAll": "生成する",
@@ -340,7 +350,8 @@
     "more_info": "詳細情報",
     "learn_more": "さらに詳しく",
     "saving": "保存中…",
-    "remove": "{{term}} を削除"
+    "remove": "{{term}} を削除",
+    "not_set": "未設定"
   },
   "launchpad": {
     "greeting": "こんにちは。",
@@ -581,6 +592,10 @@
     "retry": "再試行",
     "activeEngine": "アクティブ {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} エンジンの互換性",
+    "familyMatrixTitle": "{{family}} エンジン",
+    "familyDesc_tts": "スクリプトを音声に変換します。有効と表示されたエンジンがスタジオ、ダビング、バッチで使用されます。",
+    "familyDesc_asr": "音声をテキストに変換し、ダビング、字幕、音声入力の文字起こしに使用します。",
+    "familyDesc_llm": "翻訳や書き換え用の任意のテキスト補助です。「オフ」にするとこれらの手順を省略します。",
     "active": "アクティブな",
     "whyUnavailable": "なぜ利用できないのでしょうか?",
     "lastError": "最後のエラー: {{error}}",
@@ -1185,6 +1200,7 @@
     "subtitle": "何百もの既製のデザインされた音声 - 1 つを選んですぐに使用できます。",
     "zone_archetypes": "原型",
     "zone_imports": "私の輸入品",
+    "filters": "フィルター",
     "all": "すべて",
     "favorites": "お気に入り",
     "favorite": "お気に入り",
@@ -2101,7 +2117,15 @@
     "unstar_take": "スター解除 — クリーンアップを許可",
     "play_take": "アクティブな出力として読み込む",
     "filter_starred": "スター付き",
-    "load_take_failed": "テイクを読み込めませんでした: {{message}}"
+    "load_take_failed": "テイクを読み込めませんでした: {{message}}",
+    "mode_clone": "クローン",
+    "mode_synth": "音声合成",
+    "generation_seconds": "{{duration}}秒",
+    "expand_text": "テキストを展開",
+    "collapse_text": "テキストを折りたたむ",
+    "seed": "シード {{seed}}",
+    "load_config": "設定を読み込む",
+    "delete_confirm": "この履歴項目を削除しますか？"
   },
   "openapi": {
     "title": "VoiceStudio API",
@@ -2191,7 +2215,7 @@
     "dismiss": "閉じる",
     "output": "出力",
     "title": "オーディオブック",
-    "subtitle": "チャプター区切りのスクリプトをチャプター化された m4b オーディオブックに変換します。",
+    "subtitle": "物語を書いたり読み込んだり、声を配役して、本格的な章付きオーディオブックを書き出せます。",
     "script": "スクリプト",
     "script_placeholder": "# 第一章\nむかしむかし… [500 ミリ秒停止] 終了。\n\n# 第二章\n[音声:ナレーター] そして、それは続きました。",
     "default_voice": "デフォルトボイス",

@@ -112,6 +112,14 @@ function renderNameCell(mOver = {}) {
 }
 
 describe('Model Store row — curated "recommended" chip', () => {
+  it('keeps repository metadata inline and moves the verbose note to its tooltip', () => {
+    renderNameCell({ note: 'Long compatibility and quality guidance' });
+    const repo = screen.getByText('org/model');
+    expect(repo).toHaveClass('models-row__repo');
+    expect(repo).toHaveAttribute('title', 'org/model · Long compatibility and quality guidance');
+    expect(screen.queryByText('Long compatibility and quality guidance')).not.toBeInTheDocument();
+  });
+
   it('badges a curated row with the recommended chip (existing badge_recommended key)', () => {
     renderNameCell({ curated: true });
     const chip = screen.getByTestId('model-recommended-org/model');
@@ -242,6 +250,8 @@ describe('Model Store — grouped catalog', () => {
   it('renders role sections in order with localized titles', async () => {
     mountTab();
     await waitFor(() => expect(screen.getByTestId('models-section-tts')).toBeInTheDocument());
+    expect(screen.getByTestId('model-list-panel')).toHaveClass('min-h-[95%]');
+    expect(screen.getByTestId('model-list-area')).toHaveClass('flex-1');
     const keys = ['tts', 'asr', 'dictation', 'diarisation'];
     const sections = keys.map((k) => screen.getByTestId(`models-section-${k}`));
     // DOM order matches the section order.

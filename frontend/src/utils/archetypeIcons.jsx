@@ -133,7 +133,8 @@ export function NowPlaying({ color }) {
   );
 }
 
-/** Color-coded icon tile with a small flag badge — the visual anchor of a card. */
+/** Color-coded icon tile. Accent flags live in the metadata row, where they
+ * remain readable and do not duplicate into a clipped badge under the tile. */
 export function ArchetypeAvatar({ item, size = 44 }) {
   const color = USE_CASE_COLOR[item.use_case] || '#83a598';
   return (
@@ -146,9 +147,6 @@ export function ArchetypeAvatar({ item, size = 44 }) {
       }}
     >
       <ArchetypeIcon name={item.icon} size={Math.round(size * 0.46)} color={color} />
-      <span className="arch-avatar-flag">
-        <AccentFlag accent={item.facets?.accent} lang={item.language} size={15} />
-      </span>
     </div>
   );
 }

@@ -1,14 +1,10 @@
 // Audiobook tab layout — the prod-polish compaction (#1214).
 //
-// The right-hand settings column was flattened into consistent collapsible
-// Sections (Output / Book details / Pronunciation / Markup) with the primary
-// inputs (script, default voice, language) always visible. This guards that
-// contract so a future refactor can't silently drop a control or un-collapse
-// the column: every key control still renders, Output starts open, the long
-// groups start collapsed, and a collapsed group opens on click.
+// The right-hand settings column is a compact property inspector: essentials
+// stay visible and one optional production tool opens at a time.
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '../i18n';
@@ -40,9 +36,6 @@ const withI18n = (node) => (
     <I18nextProvider i18n={i18n}>{node}</I18nextProvider>
   </QueryClientProvider>
 );
-// The <details> element that holds a given section header title.
-const sectionFor = (title) => screen.getByText(title).closest('details');
-
 describe('AudiobookTab — compact grouped layout (#1214)', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -50,17 +43,25 @@ describe('AudiobookTab — compact grouped layout (#1214)', () => {
   });
 
   it('keeps the primary inputs always visible', () => {
-    render(withI18n(<AudiobookTab profiles={[]} />));
+    const { container } = render(withI18n(<AudiobookTab profiles={[]} />));
     // Script editor, default voice, language — the three always-on controls.
     expect(screen.getByLabelText(en.audiobook.script)).toBeTruthy();
     expect(screen.getByText(en.audiobook.default_voice)).toBeTruthy();
     expect(screen.getByText(en.audiobook.language)).toBeTruthy();
-    // The action bar keeps the new "Load sample" button + Create.
-    expect(screen.getByText(en.audiobook.load_sample)).toBeTruthy();
+    expect(screen.getByLabelText(en.audiobook.format)).toBeTruthy();
+    // Secondary actions stay discoverable through accessible icon labels.
+    expect(screen.getByLabelText(en.audiobook.load_sample)).toBeTruthy();
+    expect(screen.getByLabelText(en.audiobook.import)).toBeTruthy();
+    expect(screen.getByLabelText(en.audiobook.preview_plan)).toBeTruthy();
     expect(screen.getByText(en.audiobook.create)).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: en.audiobook.title })).toBeTruthy();
+    expect(container.querySelector('[class*="container-name:audiobook-inspector"]')).toBeTruthy();
+    expect(
+      container.querySelector('[class*="@min-[360px]/audiobook-inspector:grid-cols-2"]'),
+    ).toBeTruthy();
   });
 
-  it('groups the secondary controls into collapsible sections', () => {
+  it('groups optional controls into an icon-led tool strip', () => {
     render(withI18n(<AudiobookTab profiles={[]} />));
     for (const title of [
       en.audiobook.output,
@@ -68,26 +69,32 @@ describe('AudiobookTab — compact grouped layout (#1214)', () => {
       en.audiobook.lexicon,
       en.audiobook.markup_help,
     ]) {
-      expect(sectionFor(title).tagName).toBe('DETAILS');
+      expect(screen.getByRole('button', { name: title })).toBeTruthy();
     }
   });
 
-  it('opens Output by default and collapses the long groups', () => {
+  it('keeps optional panels closed by default', () => {
     render(withI18n(<AudiobookTab profiles={[]} />));
-    expect(sectionFor(en.audiobook.output).open).toBe(true);
-    expect(sectionFor(en.audiobook.details).open).toBe(false);
-    expect(sectionFor(en.audiobook.lexicon).open).toBe(false);
-    // Output is open, so its format control is reachable right away.
-    expect(screen.getByLabelText(en.audiobook.format)).toBeTruthy();
+    expect(screen.queryByLabelText(en.audiobook.loudness)).toBeNull();
+    expect(screen.queryByLabelText(en.audiobook.meta_title)).toBeNull();
   });
 
-  it('a collapsed section toggles open on its summary', () => {
+  it('opens Cast by default when the script contains cast tags', () => {
+    useAppStore.getState().setScript('# Chapter\n[voice:Mara] Hello');
     render(withI18n(<AudiobookTab profiles={[]} />));
-    const details = sectionFor(en.audiobook.details);
-    expect(details.open).toBe(false);
-    fireEvent.click(within(details).getByText(en.audiobook.details));
-    expect(details.open).toBe(true);
-    // Once open, the metadata inputs are present.
+    expect(screen.getByRole('button', { name: en.audiobook.cast })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByLabelText(`${en.audiobook.cast}: Mara`)).toBeTruthy();
+  });
+
+  it('shows only the selected optional panel', () => {
+    render(withI18n(<AudiobookTab profiles={[]} />));
+    fireEvent.click(screen.getByRole('button', { name: en.audiobook.details }));
     expect(screen.getByLabelText(en.audiobook.meta_title)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.audiobook.output }));
+    expect(screen.queryByLabelText(en.audiobook.meta_title)).toBeNull();
+    expect(screen.getByLabelText(en.audiobook.loudness)).toBeTruthy();
   });
 });

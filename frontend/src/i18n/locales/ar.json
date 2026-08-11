@@ -188,8 +188,17 @@
     "history_retention_cap": "اللقطات المحتفظ بها",
     "history_retention_cap_hint": "اللقطات المميزة بنجمة لا تُحتسب في التنظيف · 0 = بلا حد",
     "history_retention_saved": "تم حفظ حد الاحتفاظ",
+    "history_retention_load_failed": "تعذر تحميل حد الاحتفاظ الحالي",
     "history_retention_save_failed": "تعذر الحفظ",
-    "history_retention_invalid": "أدخل 0 أو أكثر"
+    "history_retention_invalid": "أدخل 0 أو أكثر",
+    "models_dir_help": "مكان تنزيل أوزان النماذج. اختر محرك أقراص أكبر أو أسرع؛ تُطبّق التغييرات بعد إعادة التشغيل.",
+    "models_dir_saved": "تم حفظ مجلد النماذج — أعد التشغيل للتطبيق",
+    "models_dir_reverted": "تمت العودة إلى المجلد الافتراضي — أعد التشغيل للتطبيق",
+    "models_dir_reset_hint": "العودة إلى موقع ذاكرة التخزين المؤقت الافتراضي",
+    "models_dir_effective": "المستخدم الآن",
+    "models_dir_configured": "المُعَدّ",
+    "models_dir_default": "استخدام الإعداد الافتراضي",
+    "models_dir_restart": "↻ أعد تشغيل VoiceStudio لاستخدام الموقع الجديد."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -265,6 +274,7 @@
     "untitled": "قصة بلا عنوان",
     "projectName": "اسم المشروع",
     "deleteProject": "حذف المشروع",
+    "deleteProjectConfirm": "هل تريد حذف هذا المشروع نهائيًا؟",
     "noProjects": "لا توجد قصص محفوظة حتى الآن — احفظ للاحتفاظ بهذه القصة.",
     "projectSaved": "تم حفظ القصة",
     "generateAll": "إنشاء",
@@ -340,7 +350,8 @@
     "more_info": "مزيد من المعلومات",
     "learn_more": "تعلم المزيد",
     "saving": "جارٍ الحفظ…",
-    "remove": "إزالة {{term}}"
+    "remove": "إزالة {{term}}",
+    "not_set": "غير محدد"
   },
   "launchpad": {
     "greeting": "مرحبا هناك",
@@ -581,6 +592,10 @@
     "retry": "أعد المحاولة",
     "activeEngine": "نشط {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} توافق المحرك",
+    "familyMatrixTitle": "محركات {{family}}",
+    "familyDesc_tts": "يحوّل النص إلى كلام. المحرك النشط هو الذي تستخدمه الاستوديو والدبلجة والمعالجة الدفعية.",
+    "familyDesc_asr": "يحوّل الصوت إلى نص للنسخ والدبلجة والتسميات التوضيحية والإملاء.",
+    "familyDesc_llm": "مساعد نصي اختياري للترجمة وإعادة الصياغة. يؤدي إيقافه إلى تخطي هذه الخطوات.",
     "active": "نشط",
     "whyUnavailable": "لماذا غير متوفر؟",
     "lastError": "الخطأ الأخير: {{error}}",
@@ -1185,6 +1200,7 @@
     "subtitle": "مئات من الأصوات المصممة الجاهزة - اختر واحدة وانطلق.",
     "zone_archetypes": "النماذج الأولية",
     "zone_imports": "وارداتي",
+    "filters": "عوامل التصفية",
     "all": "الكل",
     "favorites": "المفضلة",
     "favorite": "المفضلة",
@@ -2101,7 +2117,15 @@
     "unstar_take": "إزالة النجمة — السماح بالتنظيف",
     "play_take": "تحميل كإخراج نشط",
     "filter_starred": "المميزة بنجمة",
-    "load_take_failed": "تعذر تحميل تلك اللقطة: {{message}}"
+    "load_take_failed": "تعذر تحميل تلك اللقطة: {{message}}",
+    "mode_clone": "استنساخ",
+    "mode_synth": "تركيب",
+    "generation_seconds": "{{duration}} ث",
+    "expand_text": "توسيع النص",
+    "collapse_text": "طي النص",
+    "seed": "البذرة {{seed}}",
+    "load_config": "تحميل الإعدادات",
+    "delete_confirm": "حذف عنصر السجل هذا؟"
   },
   "openapi": {
     "title": "واجهة برمجة تطبيقات VoiceStudio",
@@ -2191,7 +2215,7 @@
     "dismiss": "تجاهل",
     "output": "الإخراج",
     "title": "كتاب مسموع",
-    "subtitle": "قم بتحويل البرنامج النصي المحدد بفصل إلى كتاب صوتي m4b مقسم.",
+    "subtitle": "اكتب قصتك أو استوردها، وأسند كل دور إلى صوت، ثم صدّر كتابًا صوتيًا متقنًا بفصول حقيقية.",
     "script": "البرنامج النصي",
     "script_placeholder": "#الفصل الأول\nذات مرة... [وقفة 500 مللي ثانية] النهاية.\n\n#الفصل الثاني\n[صوت: الراوي] وهكذا استمر.",
     "default_voice": "الصوت الافتراضي",

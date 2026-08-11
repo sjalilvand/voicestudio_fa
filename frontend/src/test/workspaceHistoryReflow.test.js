@@ -46,6 +46,13 @@ describe('workspace narrow-shell reflow (#476 CTA-clipping guard)', () => {
     expect(css).toMatch(/\.studio-action-bar\s*\{[^}]*position:\s*sticky/s);
   });
 
+  it('keeps saved voices in the left rail and generation history alone on the right', () => {
+    expect(app).toMatch(
+      /className="studio-voices">\s*<WorkspaceVoices[\s\S]*?<\/div>\s*<div className="studio-with-history__main">/,
+    );
+    expect(app).toMatch(/<div className="studio-right">\s*<WorkspaceHistory\s+history=\{history\}/);
+  });
+
   it('gives Dub Projects its own narrower rail than Dub History', () => {
     expect(app).toMatch(/className="studio-projects">\s*<WorkspaceProjects/);
     expect(css).toMatch(/\.studio-projects\s*\{[^}]*flex:\s*0 0 240px/s);
@@ -56,5 +63,11 @@ describe('workspace narrow-shell reflow (#476 CTA-clipping guard)', () => {
     expect(app).toMatch(
       /dubStep === 'idle'[\s\S]*?className="studio-projects"[\s\S]*?canSave=\{false\}/,
     );
+  });
+
+  it('gives the Script editor more height without crowding narrow shells', () => {
+    expect(indexRaw).toMatch(/\.studio-script-input\s*\{[^}]*min-height:\s*240px/s);
+    expect(indexRaw).toMatch(/\.shell-narrow\s+\.studio-script-input[^}]*min-height:\s*200px/s);
+    expect(indexRaw).toMatch(/\.shell-mini\s+\.studio-script-input[^}]*min-height:\s*160px/s);
   });
 });

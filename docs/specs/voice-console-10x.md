@@ -2,46 +2,30 @@
 
 **Goal:** take the consolidated Voice workspace from ~7/10 to reference-quality (Linear/Raycast tier) without losing the studio identity. The thesis: **three questions, three zones** — *What should it say?* (Script) · *Who says it?* (Voice) · *Go* (a pinned action bar). Everything else is progressive disclosure.
 
-Scope: the `studio` workspace only (CloneDesignTab + right rail). No backend changes.
+Scope: the `studio` workspace only (voice-library rail + CloneDesignTab + generation rail). No backend changes.
 
 ---
 
 ## 0 — Wireframe
 
 ```
-┌────────────────────────────────────────────────────────────────────────────────────────────┐
-│ ◉ Voice                          ⊙ VoiceStudio                            🔔2  ● Idle  ⚡Flush │
-├──┬──────────────────────────────────────────────────────┬──────────────────────────────────┤
-│  │  SCRIPT                                              │ ┌─ ACTIVE VOICE ───────────────┐ │
-│◉ │ ┌──────────────────────────────────────────────────┐ │ │ ◉ Maya — designed            │ │
-│  │ │ You came a long way for an answer you already    │ │ │ male · elderly · very low    │ │
-│◌ │ │ had. Sit. The fire is warm, and the truth▌       │ │ │ ▶ ▁▂▅▇▅▂▁ sample · 0:03      │ │
-│  │ │                                                  │ │ │ [Edit voice]    [+ New]     │ │
-│◌ │ │                                       ⊕ Insert ▾ │ │ └──────────────────────────────┘ │
-│  │ └──────────────────────────────────────────────────┘ │                                  │
-│◌ │     └ tag popover: [laughter][sigh][question-…]      │  SAVED VOICES            search ⌕│
-│  │                                                      │ │ ◉ Maya        designed   ▶   │ │
-│◌ │  VOICE            ( From audio ) (● By design )      │ │ ◌ The Anchor  clone      ▶   │ │
-│  │ ┌──────────────────────────────────────────────────┐ │ │ ◌ Storyteller clone      ▶   │ │
-│◌ │ │ ✎ warm elderly storyteller, slightly raspy…      │ │                                  │
-│  │ └──────────────────────────────────────────────────┘ │  HISTORY      [All][Clone][Des] │
-│  │  Starting points                                  ‹ ›│ │ ⬢ DESIGN   English · 19.8s   │ │
-│  │  (Narrator)(Casual)(News)(Story)(Corporate)(Energ…   │ │ You came a long way for an…  │ │
-│  │                                                      │ │ ▶ ▂▅▇▅▂▇▅▂  0:08 · seed 32…  │ │
-│  │  Identity   male · elderly · very low pitch    ⌄     │ │ 💾 🔒 ⤓ 📂 🗑                 │ │
-│  │  ┌─ expanded ──────────────────────────────────────┐ │ ├──────────────────────────────┤ │
-│  │  │ Gender  (✦Auto)(●male)(female)                  │ │ │ ⬡ CLONE    0:12              │ │
-│  │  │ Age     (✦Auto)(child)(teen)(young)(mid)(●eld)  │ │ │ …                            │ │
-│  │  │ Pitch   (✦Auto)(v.low●)(low)(mod)(high)(v.high) │ │ └──────────────────────────────┘ │
-│  │  │ Style   (●Auto)(whisper)   Accent[Auto▾] Dial[▾]│ │                                  │
-│  │  └─────────────────────────────────────────────────┘ │                                  │
-│  ├──────────────────────────────────────────────────────┤                                  │
-│  │  Fr French ▾   Steps ── 10   ⚙ Overrides ▸          │                                  │
-│  │ ┃            ▷  SYNTHESIZE  (⌘↵)                   ┃ │                                  │
-├──┴──────────────────────────────────────────────────────┴──────────────────────────────────┤
-│ ▾ Logs 11 · Updates                                                      ⚲ Local   ⬡  ♥    │
-└────────────────────────────────────────────────────────────────────────────────────────────┘
-   └ rail      └ SCRIPT → VOICE scroll · ACTION BAR pinned     └ Active voice → library → work
+┌──────────────────────────────────────────────────────────────────────────────────────────────┐
+│ ◉ Voice                            ⊙ VoiceStudio                           🔔2 ● Idle ⚡Flush │
+├──┬──────────────────────┬──────────────────────────────────────────┬─────────────────────────┤
+│  │ ACTIVE VOICE         │ SCRIPT                                   │ GENERATED VOICES        │
+│◉ │ ◉ Maya · designed    │ ┌──────────────────────────────────────┐ │ [All][Clone][Design]   │
+│  │ ▶ sample · 0:03      │ │ You came a long way for an answer…  │ │ ⬢ DESIGN · 19.8s      │
+│◌ │                      │ └──────────────────────────────────────┘ │ ▶ ▂▅▇▅▂ · seed 32      │
+│  │ VOICE CLONES         │ VOICE       (From audio)(● By design)   │                         │
+│◌ │ ◉ Maya           ▶   │ ✎ warm elderly storyteller…            │ ⬡ CLONE · 12.0s        │
+│  │ ◌ The Anchor     ▶   │ Identity male · elderly · very low     │ ▶ ▂▃▆▃▂                │
+│◌ │ ◌ Storyteller    ▶   │                                          │                         │
+│  │                      ├──────────────────────────────────────────┤                         │
+│  │                      │ Fr French ▾  Steps 10  ▷ SYNTHESIZE ⌘↵ │                         │
+├──┴──────────────────────┴──────────────────────────────────────────┴─────────────────────────┤
+│ ▾ Logs 11 · Updates                                                       ⚲ Local  ⬡  ♥     │
+└──────────────────────────────────────────────────────────────────────────────────────────────┘
+   └ nav  └ active + saved voices   └ definition + pinned action      └ full-height generations
 ```
 
 **Action bar (pinned, never scrolls away):**
@@ -60,7 +44,7 @@ Scope: the `studio` workspace only (CloneDesignTab + right rail). No backend cha
               Describe-box edits update this line live (the magic moment).
 ```
 
-**Right rail — Active voice card (new):**
+**Left rail — Active voice card:**
 ```
 ┌─ ACTIVE VOICE ────────────────────────┐
 │ ◉ Maya                     [designed] │   ← identity always visible: who will
@@ -85,9 +69,9 @@ Empty state:  "No voice selected — describe one ←, drop audio, or pick below
 
 5. **Identity summary line.** The four chip-groups + two selects collapse to one quiet recipe line (`male · elderly · very low pitch`) once any value is non-Auto; click (or describe-box activity) expands. First-run (all Auto) starts expanded. This is the single biggest density win and it makes describe-→-controls feel magical (the line rewrites live).
 
-## 2 — Right rail: identity first
+## 2 — Voice library left, generations right
 
-Order: **ACTIVE VOICE card → Saved voices → History.** The card answers "who will speak when I press Synthesize" — currently invisible until output surprises you. Card shows name, method badge, recipe line, a 3s identity sample (`<WaveformPlayer compact>` of the profile's ref/rendered audio), Edit (loads into the form) and + New (clears). Empty card carries verbs, not absence: *"describe one ←, drop audio, or pick below."* Saved voices shrinks to compact rows (name · badge · play); history unchanged (post-#389).
+The left rail holds **ACTIVE VOICE → Saved voices**, while the right rail gives generated takes/history its full height. The card answers "who will speak when I press Synthesize." It shows name, method badge, recipe line, a 3s identity sample (`<WaveformPlayer compact>` of the profile's ref/rendered audio), Edit (loads into the form) and + New (clears). Empty card carries verbs, not absence: *"describe one, drop audio, or pick below."* Saved voices stays a compact list (name · badge · play); history remains unchanged (post-#389).
 
 ## 3 — Craft rules (the last 2 points live here)
 

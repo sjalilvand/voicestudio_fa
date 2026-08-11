@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
+import { ArrowUpRight } from 'lucide-react';
 
-// ── Feature-card geometry ───────────────────────────────────────────
-// Decorative waveform bar heights (px) on each card face — 7 CSS-only bars
-// pulse via stagger-delayed scaleY keyframes (see .lp-card-wave in
-// index.css). Static under prefers-reduced-motion.
-const CARD_WAVE = [8, 15, 10, 19, 12, 16, 9];
 // Card min-track (px) handed to the grid's `repeat(auto-fit, minmax(min, 1fr))`.
 // This floor is the ONLY responsive knob: the browser derives the column count
 // from the grid's OWN rendered width (= the shell's own width under the
@@ -15,47 +11,35 @@ const CARD_MIN_NARROW = '240px';
 
 /**
  * FeatureCard — one launchpad feature tile in the full-width grid. `--card-hue`
- * (inline) drives the accent: icon, border, waveform, badge, glow. Hover OR
+ * (inline) drives the accent: icon, border, badge, and hover treatment. Hover OR
  * keyboard focus raises the card forward (`lp-action-card--raised`: lift + glow
  * + top z) — the raise is class-driven from React state so pointer and keyboard
  * share one code path and tests can assert it. The waveform strip is pure
  * decoration (aria-hidden); the button's accessible name stays title + desc.
  */
 function FeatureCard({ hue, Icon, title, desc, count, onClick, index, raised, onRaise, onSettle }) {
-  // Cursor-tracked spotlight: pointer position feeds --mx/--my so the
-  // .lp-glow-layer radial gradient follows the cursor (it centres itself on
-  // keyboard focus, which has no pointer).
-  const handleMouseMove = (e) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
-    e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
-  };
   return (
     <button
       type="button"
-      className={`lp-action-card lp-animate lp-glow-card${raised === index ? ' lp-action-card--raised' : ''}`}
+      className={`lp-action-card${raised === index ? ' lp-action-card--raised' : ''}`}
       style={{ '--card-hue': hue, '--lp-i': index }}
       onClick={onClick}
-      onMouseMove={handleMouseMove}
       onMouseEnter={() => onRaise(index)}
       onFocus={() => onRaise(index)}
       onBlur={onSettle}
     >
-      <span className="lp-glow-layer" aria-hidden="true" />
       {count > 0 && <span className="card-count">{count}</span>}
       <div className="card-icon">
         <Icon size={18} color={hue} />
       </div>
       <h3>{title}</h3>
       <p className="card-desc">{desc}</p>
-      <span className="lp-card-wave" aria-hidden="true">
-        {CARD_WAVE.map((h, i) => (
-          <span
-            key={i}
-            className="lp-card-wave__bar"
-            style={{ '--wave-h': `${h}px`, '--wave-i': i }}
-          />
-        ))}
+      <span
+        className="absolute bottom-[13px] right-[14px] inline-flex h-[20px] w-[20px] items-center justify-center rounded-[var(--chrome-radius-pill)] bg-[color-mix(in_srgb,var(--card-hue)_10%,transparent)] text-[var(--card-hue)]"
+        aria-hidden="true"
+        data-testid="launchpad-card-open"
+      >
+        <ArrowUpRight size={12} />
       </span>
     </button>
   );

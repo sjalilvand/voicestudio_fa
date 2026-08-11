@@ -188,8 +188,17 @@
     "history_retention_cap": "Saklanacak kayıt sayısı",
     "history_retention_cap_hint": "Yıldızlı kayıtlar temizlikte sayılmaz · 0 = sınırsız",
     "history_retention_saved": "Saklama sınırı kaydedildi",
+    "history_retention_load_failed": "Mevcut saklama sınırı yüklenemedi",
     "history_retention_save_failed": "Kaydedilemedi",
-    "history_retention_invalid": "0 veya daha büyük bir değer girin"
+    "history_retention_invalid": "0 veya daha büyük bir değer girin",
+    "models_dir_help": "Model ağırlıklarının saklandığı yer. Gerektiğinde daha büyük veya hızlı bir sürücü seçin; değişiklikler yeniden başlatınca uygulanır.",
+    "models_dir_saved": "Model klasörü kaydedildi — uygulamak için yeniden başlatın",
+    "models_dir_reverted": "Varsayılan klasör geri yüklendi — uygulamak için yeniden başlatın",
+    "models_dir_reset_hint": "Varsayılan önbellek konumuna dön",
+    "models_dir_effective": "Şu anda kullanılan",
+    "models_dir_configured": "Yapılandırılan",
+    "models_dir_default": "Varsayılan kullanılıyor",
+    "models_dir_restart": "↻ Yeni konumu kullanmak için VoiceStudio’yu yeniden başlatın."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -265,6 +274,7 @@
     "untitled": "Başlıksız hikaye",
     "projectName": "Proje adı",
     "deleteProject": "Projeyi sil",
+    "deleteProjectConfirm": "Bu proje kalıcı olarak silinsin mi?",
     "noProjects": "Henüz kayıtlı hikaye yok — Bunu saklamak için kaydedin.",
     "projectSaved": "Hikaye kaydedildi",
     "generateAll": "Oluştur",
@@ -340,7 +350,8 @@
     "more_info": "Daha fazla bilgi",
     "learn_more": "Daha fazla bilgi edinin",
     "saving": "Kaydediliyor…",
-    "remove": "{{term}} öğesini kaldır"
+    "remove": "{{term}} öğesini kaldır",
+    "not_set": "Ayarlanmadı"
   },
   "launchpad": {
     "greeting": "merhaba orada",
@@ -581,6 +592,10 @@
     "retry": "Yeniden dene",
     "activeEngine": "Etkin {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} motor uyumluluğu",
+    "familyMatrixTitle": "{{family}} Motorları",
+    "familyDesc_tts": "Metni konuşmaya dönüştürür. Stüdyo, Dublaj ve Toplu İşlem etkin motoru kullanır.",
+    "familyDesc_asr": "Sesi; transkripsiyon, dublaj, altyazı ve dikte için metne dönüştürür.",
+    "familyDesc_llm": "Çeviri ve yeniden yazma için isteğe bağlı metin yardımcısıdır. “Kapalı” bu adımları atlar.",
     "active": "aktif",
     "whyUnavailable": "Neden kullanılamıyor?",
     "lastError": "Son hata: {{error}}",
@@ -1185,6 +1200,7 @@
     "subtitle": "Yüzlerce hazır tasarlanmış ses; birini seçin ve gidin.",
     "zone_archetypes": "Arketipler",
     "zone_imports": "İthalatlarım",
+    "filters": "Filtreler",
     "all": "Hepsi",
     "favorites": "Favoriler",
     "favorite": "Favori",
@@ -2101,7 +2117,15 @@
     "unstar_take": "Yıldızı kaldır — temizliğe izin ver",
     "play_take": "Etkin çıktı olarak yükle",
     "filter_starred": "Yıldızlı",
-    "load_take_failed": "Kayıt yüklenemedi: {{message}}"
+    "load_take_failed": "Kayıt yüklenemedi: {{message}}",
+    "mode_clone": "Klonlama",
+    "mode_synth": "Sentez",
+    "generation_seconds": "{{duration}} sn",
+    "expand_text": "Metni genişlet",
+    "collapse_text": "Metni daralt",
+    "seed": "Seed {{seed}}",
+    "load_config": "Ayarları yükle",
+    "delete_confirm": "Bu geçmiş öğesi silinsin mi?"
   },
   "openapi": {
     "title": "VoiceStudio API",
@@ -2191,7 +2215,7 @@
     "dismiss": "Kapat",
     "output": "Çıktı",
     "title": "Sesli kitap",
-    "subtitle": "Bölümle ayrılmış bir komut dosyasını bölümlere ayrılmış bir m4b sesli kitaba dönüştürün.",
+    "subtitle": "Hikâyenizi yazın veya içe aktarın, her rolü seslendirin ve gerçek bölümleri olan tamamlanmış bir sesli kitap dışa aktarın.",
     "script": "Senaryo",
     "script_placeholder": "# Birinci Bölüm\nBir varmış bir yokmuş… [500ms durakla] son.\n\n# İkinci Bölüm\n[ses:anlatıcı] Ve böyle devam etti.",
     "default_voice": "Varsayılan ses",

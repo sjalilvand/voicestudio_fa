@@ -54,10 +54,8 @@ function DubThumb({ jobId, fallback }) {
   );
 }
 
-// Squiggle was replaced by the .lp-hero__sweep span — a pure-CSS animated
-// accent line under the H1. Less static, no SVG dependency.
-// The feature-card tile (.lp-action-card + waveform + hover-forward) lives in
-// components/LaunchpadDeck.jsx — one card, one rendering, at every shell width.
+// The feature-card tile lives in LaunchpadDeck so every shell width gets the
+// same clear entry points.
 
 export default function Launchpad({
   profiles,
@@ -152,43 +150,24 @@ export default function Launchpad({
   const shellNarrow = useShellNarrow(rootRef);
 
   return (
-    <div className="launchpad" ref={rootRef}>
-      {/* Ambient backdrop — chrome-accent aurora that drifts forever. Lives
-          behind everything at z=0, contributes the "eternal glow" the user
-          asked for without painting any one surface. */}
-      <div className="lp-aurora" aria-hidden="true">
-        <span className="lp-aurora__blob lp-aurora__blob--pink" />
-        <span className="lp-aurora__blob lp-aurora__blob--green" />
-        <span className="lp-aurora__blob lp-aurora__blob--amber" />
-      </div>
-
+    <div
+      className="launchpad [container-type:inline-size] [container-name:launchpad]"
+      ref={rootRef}
+    >
       {/* Hero */}
-      <div className="relative z-[1] pt-[42px] px-[44px] pb-[24px] max-[900px]:pt-[24px] max-[900px]:px-[20px] max-[900px]:pb-[16px]">
+      <div className="relative z-[1] mx-auto w-full max-w-[1180px] px-[44px] pb-[20px] pt-[34px] @max-[900px]/launchpad:px-[20px] @max-[900px]/launchpad:pb-[16px] @max-[900px]/launchpad:pt-[24px]">
         <div className="flex justify-between items-start gap-[24px] flex-wrap">
           <div className="max-w-[640px]">
-            <div className="flex items-center gap-[10px] mb-[12px]">
-              <div className="flex items-center gap-[2px] h-[22px]">
-                {[10, 14, 8, 16, 12, 14, 9, 12].map((h, i) => (
-                  <span
-                    key={i}
-                    className="lp-wave-bar"
-                    style={{
-                      // Per-bar animation offsets + distinct durations give
-                      // a breathing, never-identical pulse instead of the
-                      // rigid uniform bounce the old version had.
-                      '--bar-h': `${h}px`,
-                      '--bar-delay': `${i * 0.17}s`,
-                      '--bar-dur': `${1.8 + (i % 3) * 0.4}s`,
-                    }}
-                  />
-                ))}
-              </div>
+            <div className="mb-[12px] flex items-center gap-[8px]">
+              <span
+                className="h-[6px] w-[6px] rounded-full bg-[var(--chrome-accent)] shadow-[0_0_12px_color-mix(in_srgb,var(--chrome-accent)_55%,transparent)]"
+                aria-hidden="true"
+              />
               <span className="[font-family:var(--chrome-font-mono)] text-[length:var(--chrome-label-size)] font-semibold [letter-spacing:var(--chrome-label-track)] uppercase text-[color:var(--chrome-fg-muted)]">
                 {t('launchpad.greeting')}
               </span>
             </div>
-            <h1 className="text-[2.75rem] max-[900px]:text-[1.8rem] max-[640px]:text-[1.4rem] font-normal m-0 text-[color:var(--chrome-fg)] [font-family:var(--font-serif)]! [letter-spacing:-0.02em]! [line-height:1.04] inline-block relative [font-optical-sizing:auto] px-[4px]">
-              <span className="lp-hero__halo" aria-hidden="true" />
+            <h1 className="text-[2.75rem] @max-[900px]/launchpad:text-[1.8rem] @max-[640px]/launchpad:text-[1.4rem] font-normal m-0 text-[color:var(--chrome-fg)] [font-family:var(--font-serif)]! [letter-spacing:-0.02em]! [line-height:1.04] inline-block relative [font-optical-sizing:auto] px-[4px]">
               <Trans
                 i18nKey="launchpad.hero_title"
                 components={{
@@ -197,9 +176,8 @@ export default function Launchpad({
                   ),
                 }}
               />
-              <span className="lp-hero__sweep" aria-hidden="true" />
             </h1>
-            <p className="m-0 mt-[14px] text-[color:var(--chrome-fg-muted)] text-[0.82rem] max-[900px]:text-[0.85rem] max-[640px]:text-[0.78rem] [font-family:var(--font-sans)] font-normal max-w-[560px] max-[640px]:max-w-full [line-height:1.6]">
+            <p className="m-0 mt-[14px] text-[color:var(--chrome-fg-muted)] text-[0.82rem] @max-[900px]/launchpad:text-[0.85rem] @max-[640px]/launchpad:text-[0.78rem] [font-family:var(--font-sans)] font-normal max-w-[560px] @max-[640px]/launchpad:max-w-full [line-height:1.6]">
               <Trans
                 i18nKey="launchpad.hero_desc"
                 values={{ count: 646 }}
@@ -217,6 +195,7 @@ export default function Launchpad({
               noise that opens an empty modal, so we gate it. */}
           {profiles.length >= 2 && (
             <button
+              type="button"
               onClick={() => setIsCompareModalOpen(true)}
               className="inline-flex items-center gap-[6px] py-[6px] px-[14px] [font-family:var(--font-sans)] text-[0.72rem] font-medium [letter-spacing:0.02em] text-[color:var(--chrome-accent)] bg-[var(--chrome-accent-bg)] border border-solid border-[var(--chrome-accent-border)] rounded-[var(--chrome-radius-pill)] cursor-pointer shrink-0 [transition:background_var(--dur-fast),border-color_var(--dur-fast)] hover:bg-[color-mix(in_srgb,var(--chrome-accent)_22%,transparent)]"
               title={t('launchpad.ab_compare_title')}
@@ -233,14 +212,14 @@ export default function Launchpad({
           down to the 900×600 minimum without a viewport @media. `shellNarrow`
           (the app-container's own width class) only tunes how comfortably the
           columns pack. */}
-      <div className="py-[4px] px-[44px] relative z-[1] max-[900px]:px-[20px] max-[640px]:px-[12px]">
+      <div className="relative z-[1] mx-auto w-full max-w-[1180px] px-[44px] py-[4px] @max-[900px]/launchpad:px-[20px] @max-[640px]/launchpad:px-[12px]">
         <LaunchpadDeck features={features} narrow={shellNarrow} />
       </div>
 
       {/* Recent files from OmniDrive — last few exports, with a jump to the
           full file browser (the Projects/OmniDrive page). */}
       {recentFiles.length > 0 && (
-        <div className="pt-[28px] px-[44px] pb-[40px] relative z-[1] max-[900px]:pt-0 max-[900px]:px-[20px] max-[900px]:pb-[24px] max-[640px]:pt-0 max-[640px]:px-[12px] max-[640px]:pb-[16px]">
+        <div className="pt-[28px] px-[44px] pb-[40px] relative z-[1] @max-[900px]/launchpad:pt-0 @max-[900px]/launchpad:px-[20px] @max-[900px]/launchpad:pb-[24px] @max-[640px]/launchpad:px-[12px] @max-[640px]/launchpad:pb-[16px]">
           <div className="flex items-center justify-between gap-[12px] mb-[12px]">
             <div className="[font-family:var(--chrome-font-mono)] text-[length:var(--chrome-label-size)] font-semibold uppercase [letter-spacing:var(--chrome-label-track)] text-[color:var(--chrome-fg-muted)] m-0 flex items-center gap-[8px]">
               <HardDrive size={12} color="#fabd2f" /> {t('launchpad.recent_files')}
@@ -282,10 +261,13 @@ export default function Launchpad({
 
       {/* Demo profile callout */}
       {demoProfile && profiles.length === 1 && studioProjects.length === 0 && (
-        <div className="flex items-center gap-[10px] py-[10px] px-[18px] mt-[8px] mx-[44px] mb-0 bg-[color-mix(in_srgb,var(--chrome-accent)_8%,var(--chrome-bg))] border border-solid border-[var(--chrome-accent-border)] rounded-[var(--chrome-radius-pill)] text-[0.76rem] text-[color:var(--chrome-fg)] relative z-[1] animate-[lpFadeUp_0.5s_cubic-bezier(0.4,0,0.2,1)_both]">
-          <span className="text-[1.1rem]">👋</span>
+        <div className="flex flex-wrap items-center gap-[10px] py-[10px] px-[18px] mt-[8px] mx-[44px] @max-[900px]/launchpad:mx-[20px] @max-[640px]/launchpad:mx-[12px] mb-0 bg-[color-mix(in_srgb,var(--chrome-accent)_8%,var(--chrome-bg))] border border-solid border-[var(--chrome-accent-border)] rounded-[var(--chrome-radius-pill)] text-[0.76rem] text-[color:var(--chrome-fg)] relative z-[1] animate-[lpFadeUp_0.5s_cubic-bezier(0.4,0,0.2,1)_both]">
+          <span className="text-[1.1rem]" aria-hidden="true">
+            👋
+          </span>
           <span>{t('launchpad.demo_callout')}</span>
           <button
+            type="button"
             className="ml-auto py-[4px] px-[14px] [font-family:var(--font-sans)] text-[0.7rem] font-semibold rounded-[var(--chrome-radius-pill)] bg-[var(--chrome-accent-bg)] border border-solid border-[var(--chrome-accent-border)] text-[color:var(--chrome-accent)] cursor-pointer [transition:background_var(--dur-fast)] hover:bg-[color-mix(in_srgb,var(--chrome-accent)_22%,transparent)]"
             onClick={() => {
               openStudio('audio');
@@ -299,7 +281,7 @@ export default function Launchpad({
 
       {/* Recent Projects */}
       {(profiles.length > 0 || studioProjects.length > 0) && (
-        <div className="pt-[28px] px-[44px] pb-[40px] relative z-[1] max-[900px]:pt-0 max-[900px]:px-[20px] max-[900px]:pb-[24px] max-[640px]:pt-0 max-[640px]:px-[12px] max-[640px]:pb-[16px]">
+        <div className="pt-[28px] px-[44px] pb-[40px] relative z-[1] @max-[900px]/launchpad:pt-0 @max-[900px]/launchpad:px-[20px] @max-[900px]/launchpad:pb-[24px] @max-[640px]/launchpad:px-[12px] @max-[640px]/launchpad:pb-[16px]">
           <div className="grid [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))] gap-[20px]">
             {/* Cloned voices */}
             {cloneProfiles.length > 0 && (
@@ -318,6 +300,7 @@ export default function Launchpad({
                         <div className={projMeta}>{p.ref_audio_path}</div>
                       </div>
                       <button
+                        type="button"
                         className={projAction}
                         onClick={() => {
                           openStudio('audio');
@@ -360,6 +343,7 @@ export default function Launchpad({
                         </span>
                       )}
                       <button
+                        type="button"
                         className={projAction}
                         onClick={() => {
                           openStudio('design');
@@ -396,6 +380,7 @@ export default function Launchpad({
                         </div>
                       </div>
                       <button
+                        type="button"
                         className={projAction}
                         onClick={() => {
                           setMode('dub');

@@ -36,7 +36,7 @@ export default function SettingsInput({
       data-slot="settings-input"
       type={type}
       className={cn(
-        'w-full min-w-0 max-w-[min(360px,100%)] box-border rounded-[var(--chrome-radius-pill)] border border-transparent bg-[color-mix(in_srgb,var(--chrome-bg)_94%,white)] px-[var(--space-4)] py-[var(--space-3)] text-[color:var(--chrome-fg)] [font-family:var(--font-sans)] text-[length:var(--text-sm)] focus:outline-none focus:border-[var(--chrome-accent)] disabled:opacity-50 disabled:cursor-not-allowed',
+        'w-full min-w-0 max-w-[min(360px,100%)] box-border rounded-[var(--chrome-radius-pill)] border border-[color-mix(in_srgb,var(--chrome-fg)_9%,transparent)] bg-[var(--chrome-bg)] px-[var(--space-4)] py-[var(--space-3)] text-[color:var(--chrome-fg)] [font-family:var(--font-sans)] text-[length:var(--text-sm)] transition-[border-color,background] duration-[120ms] hover:border-[color-mix(in_srgb,var(--chrome-fg)_16%,transparent)] focus:border-[var(--chrome-accent)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
         mono && '[font-family:var(--chrome-font-mono)]',
         className,
       )}

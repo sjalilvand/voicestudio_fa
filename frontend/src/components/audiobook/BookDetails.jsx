@@ -20,14 +20,16 @@ export default function BookDetails({
   setMetaField,
 }) {
   return (
-    <div className="flex gap-[12px] items-start">
-      <div style={{ position: 'relative', width: 96, height: 96, flexShrink: 0 }}>
+    <div className="flex items-start gap-[9px]">
+      <div className="relative size-[64px] shrink-0">
         {coverPreview ? (
           <>
             <img
               src={coverPreview}
               alt={t('audiobook.cover')}
-              style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 6 }}
+              width="64"
+              height="64"
+              className="size-[64px] rounded-[7px] object-cover"
             />
             <Button
               variant="icon"
@@ -43,8 +45,8 @@ export default function BookDetails({
           <label
             className={buttonVariants({ variant: 'subtle', size: 'omniMd' })}
             style={{
-              width: 96,
-              height: 96,
+              width: 64,
+              height: 64,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -53,8 +55,8 @@ export default function BookDetails({
               cursor: 'pointer',
             }}
           >
-            <ImageIcon size={20} />
-            <span style={{ fontSize: '0.65rem' }}>{t('audiobook.cover_add')}</span>
+            <ImageIcon size={17} />
+            <span className="text-[0.58rem]">{t('audiobook.cover_add')}</span>
             <input
               type="file"
               accept="image/png,image/jpeg"
@@ -64,11 +66,13 @@ export default function BookDetails({
           </label>
         )}
       </div>
-      <div className="grid grid-cols-[1fr_1fr] gap-[8px] flex-1 min-w-0">
+      <div className="grid min-w-0 flex-1 grid-cols-2 gap-[6px]">
         {META_FIELDS.map((k) => (
           <input
             key={k}
             className="input-base"
+            name={`audiobook-${k}`}
+            autoComplete="off"
             placeholder={t(`audiobook.meta_${k}`)}
             value={meta[k]}
             onChange={setMetaField(k)}
@@ -77,6 +81,8 @@ export default function BookDetails({
         ))}
         <input
           className="input-base"
+          name="audiobook-description"
+          autoComplete="off"
           placeholder={t('audiobook.meta_description')}
           value={meta.description}
           onChange={setMetaField('description')}

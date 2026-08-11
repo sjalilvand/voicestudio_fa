@@ -46,10 +46,10 @@ export default function SettingsToggle({
         {...rest}
       />
       <span
-        className="absolute inset-0 rounded-[var(--radius-pill)] bg-[var(--chrome-hover-bg)] transition-[background] duration-[160ms] ease-in-out [.is-on_&]:bg-[var(--color-brand)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-[var(--color-ring)] peer-focus-visible:outline-offset-2"
+        className="absolute inset-0 rounded-[var(--radius-pill)] bg-[color-mix(in_srgb,var(--chrome-fg)_14%,var(--chrome-bg))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--chrome-fg)_8%,transparent)] transition-[background] duration-[160ms] ease-in-out [.is-on_&]:bg-[var(--color-brand)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-[var(--color-ring)] peer-focus-visible:outline-offset-2"
         aria-hidden="true"
       >
-        <span className="absolute top-[3px] left-[3px] w-[18px] h-[18px] rounded-full bg-[var(--chrome-bg)] shadow-[var(--shadow-sm)] transition-transform duration-[160ms] ease-in-out [.is-on_&]:translate-x-[18px]" />
+        <span className="absolute top-[3px] left-[3px] w-[18px] h-[18px] rounded-full bg-[var(--chrome-fg-muted)] shadow-[var(--shadow-sm)] transition-[transform,background] duration-[160ms] ease-in-out [.is-on_&]:translate-x-[18px] [.is-on_&]:bg-[var(--chrome-bg)]" />
       </span>
     </label>
   );

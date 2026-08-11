@@ -188,8 +188,17 @@
     "history_retention_cap": "Takes a manter",
     "history_retention_cap_hint": "Takes com estrela nunca contam para a limpeza · 0 = ilimitado",
     "history_retention_saved": "Limite de retenção salvo",
+    "history_retention_load_failed": "Não foi possível carregar o limite de retenção atual",
     "history_retention_save_failed": "Não foi possível salvar",
-    "history_retention_invalid": "Digite 0 ou mais"
+    "history_retention_invalid": "Digite 0 ou mais",
+    "models_dir_help": "Onde os pesos dos modelos são armazenados. Escolha uma unidade maior ou mais rápida quando necessário; as alterações são aplicadas após reiniciar.",
+    "models_dir_saved": "Pasta de modelos salva — reinicie para aplicar",
+    "models_dir_reverted": "Pasta padrão restaurada — reinicie para aplicar",
+    "models_dir_reset_hint": "Voltar ao local padrão do cache",
+    "models_dir_effective": "Em uso agora",
+    "models_dir_configured": "Configurado",
+    "models_dir_default": "Usando o padrão",
+    "models_dir_restart": "↻ Reinicie o VoiceStudio para usar o novo local."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -265,6 +274,7 @@
     "untitled": "História sem título",
     "projectName": "Nome do projeto",
     "deleteProject": "Excluir projeto",
+    "deleteProjectConfirm": "Excluir este projeto permanentemente?",
     "noProjects": "Nenhuma história salva ainda – Salve para manter esta.",
     "projectSaved": "História salva",
     "generateAll": "Gerar",
@@ -340,7 +350,8 @@
     "more_info": "Mais informações",
     "learn_more": "Saiba mais",
     "saving": "Salvando…",
-    "remove": "Remover {{term}}"
+    "remove": "Remover {{term}}",
+    "not_set": "Não definido"
   },
   "launchpad": {
     "greeting": "Olá",
@@ -581,6 +592,10 @@
     "retry": "Tentar novamente",
     "activeEngine": "Ativo {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} compatibilidade do motor",
+    "familyMatrixTitle": "Motores {{family}}",
+    "familyDesc_tts": "Transforma o roteiro em fala. Estúdio, Dublagem e Lote usam o motor ativo.",
+    "familyDesc_asr": "Transforma áudio em texto para transcrição, dublagem, legendas e ditado.",
+    "familyDesc_llm": "Assistente de texto opcional para tradução e reescrita. “Desativado” ignora essas etapas.",
     "active": "ativo",
     "whyUnavailable": "Por que indisponível?",
     "lastError": "Último erro: {{error}}",
@@ -1185,6 +1200,7 @@
     "subtitle": "Centenas de vozes projetadas e prontas - escolha uma e pronto.",
     "zone_archetypes": "Arquétipos",
     "zone_imports": "Minhas importações",
+    "filters": "Filtros",
     "all": "Todos",
     "favorites": "Favoritos",
     "favorite": "Favorito",
@@ -2101,7 +2117,15 @@
     "unstar_take": "Desmarcar — permitir limpeza",
     "play_take": "Carregar como saída ativa",
     "filter_starred": "Marcadas",
-    "load_take_failed": "Não foi possível carregar essa take: {{message}}"
+    "load_take_failed": "Não foi possível carregar essa take: {{message}}",
+    "mode_clone": "Clonagem",
+    "mode_synth": "Síntese",
+    "generation_seconds": "{{duration}} s",
+    "expand_text": "Expandir texto",
+    "collapse_text": "Recolher texto",
+    "seed": "Seed {{seed}}",
+    "load_config": "Carregar configurações",
+    "delete_confirm": "Excluir este item do histórico?"
   },
   "openapi": {
     "title": "API do VoiceStudio",
@@ -2191,7 +2215,7 @@
     "dismiss": "Dispensar",
     "output": "Saída",
     "title": "Audiolivro",
-    "subtitle": "Transforme um script delimitado por capítulos em um audiolivro m4b com capítulos.",
+    "subtitle": "Escreva ou importe sua história, escolha cada voz e exporte um audiolivro bem-acabado com capítulos de verdade.",
     "script": "Roteiro",
     "script_placeholder": "# Capítulo Um\nEra uma vez… [pausa de 500ms] o fim.\n\n# Capítulo Dois\n[voz: narrador] E assim continuou.",
     "default_voice": "Voz padrão",

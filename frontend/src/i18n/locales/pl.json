@@ -188,8 +188,17 @@
     "history_retention_cap": "Nagrania do zachowania",
     "history_retention_cap_hint": "Nagrania z gwiazdką nigdy nie liczą się do czyszczenia · 0 = bez limitu",
     "history_retention_saved": "Limit przechowywania zapisany",
+    "history_retention_load_failed": "Nie udało się wczytać bieżącego limitu przechowywania",
     "history_retention_save_failed": "Nie udało się zapisać",
-    "history_retention_invalid": "Wpisz 0 lub więcej"
+    "history_retention_invalid": "Wpisz 0 lub więcej",
+    "models_dir_help": "Miejsce przechowywania wag modeli. W razie potrzeby wybierz większy lub szybszy dysk; zmiany zaczną działać po ponownym uruchomieniu.",
+    "models_dir_saved": "Folder modeli zapisany — uruchom ponownie, aby zastosować",
+    "models_dir_reverted": "Przywrócono folder domyślny — uruchom ponownie, aby zastosować",
+    "models_dir_reset_hint": "Przywróć domyślną lokalizację pamięci podręcznej",
+    "models_dir_effective": "Używane teraz",
+    "models_dir_configured": "Skonfigurowano",
+    "models_dir_default": "Używana domyślna",
+    "models_dir_restart": "↻ Uruchom ponownie VoiceStudio, aby użyć nowej lokalizacji."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -265,6 +274,7 @@
     "untitled": "Historia bez tytułu",
     "projectName": "Nazwa projektu",
     "deleteProject": "Usuń projekt",
+    "deleteProjectConfirm": "Usunąć ten projekt na stałe?",
     "noProjects": "Nie ma jeszcze zapisanych historii — Zapisz, aby zachować tę.",
     "projectSaved": "Historia zapisana",
     "generateAll": "Wygeneruj",
@@ -340,7 +350,8 @@
     "more_info": "Więcej informacji",
     "learn_more": "Dowiedz się więcej",
     "saving": "Zapisywanie…",
-    "remove": "Usuń {{term}}"
+    "remove": "Usuń {{term}}",
+    "not_set": "Nie ustawiono"
   },
   "launchpad": {
     "greeting": "cześć",
@@ -581,6 +592,10 @@
     "retry": "Spróbuj ponownie",
     "activeEngine": "Aktywny {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} kompatybilność silnika",
+    "familyMatrixTitle": "Silniki {{family}}",
+    "familyDesc_tts": "Zamienia skrypt na mowę. Studio, Dubbing i Przetwarzanie wsadowe używają aktywnego silnika.",
+    "familyDesc_asr": "Zamienia dźwięk na tekst do transkrypcji, dubbingu, napisów i dyktowania.",
+    "familyDesc_llm": "Opcjonalny pomocnik tekstowy do tłumaczeń i przeredagowywania. „Wył.” pomija te kroki.",
     "active": "aktywny",
     "whyUnavailable": "Dlaczego niedostępne?",
     "lastError": "Ostatni błąd: {{error}}",
@@ -1185,6 +1200,7 @@
     "subtitle": "Setki gotowych, zaprojektowanych głosów — wybierz jeden i gotowe.",
     "zone_archetypes": "Archetypy",
     "zone_imports": "Mój import",
+    "filters": "Filtry",
     "all": "Wszystko",
     "favorites": "Ulubione",
     "favorite": "Ulubiony",
@@ -2101,7 +2117,15 @@
     "unstar_take": "Usuń gwiazdkę — pozwól na czyszczenie",
     "play_take": "Wczytaj jako aktywne wyjście",
     "filter_starred": "Z gwiazdką",
-    "load_take_failed": "Nie udało się wczytać nagrania: {{message}}"
+    "load_take_failed": "Nie udało się wczytać nagrania: {{message}}",
+    "mode_clone": "Klonowanie",
+    "mode_synth": "Synteza",
+    "generation_seconds": "{{duration}} s",
+    "expand_text": "Rozwiń tekst",
+    "collapse_text": "Zwiń tekst",
+    "seed": "Ziarno {{seed}}",
+    "load_config": "Wczytaj ustawienia",
+    "delete_confirm": "Usunąć ten element historii?"
   },
   "openapi": {
     "title": "API VoiceStudio",
@@ -2191,7 +2215,7 @@
     "dismiss": "Odrzuć",
     "output": "Wyjście",
     "title": "Książka audio",
-    "subtitle": "Zamień skrypt podzielony na rozdziały w audiobook m4b podzielony na rozdziały.",
+    "subtitle": "Napisz lub zaimportuj historię, obsadź każdy głos, a następnie wyeksportuj dopracowany audiobook z prawdziwymi rozdziałami.",
     "script": "Skrypt",
     "script_placeholder": "#Rozdział pierwszy\nDawno, dawno temu… [pauza 500 ms] koniec.\n\n#Rozdział drugi\n[głos:narrator] I tak to trwało.",
     "default_voice": "Domyślny głos",
