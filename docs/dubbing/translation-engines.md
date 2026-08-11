@@ -171,6 +171,9 @@ provider via environment variables (e.g. `GROQ_API_KEY`, or the legacy
 `TRANSLATE_BASE_URL` / `TRANSLATE_API_KEY` / `TRANSLATE_MODEL`, which map to the
 **Custom** provider).
 
+OrcaRouter can be configured without the UI with `ORCAROUTER_API_KEY`, and its
+defaults can be overridden with `ORCAROUTER_BASE_URL` and `ORCAROUTER_MODEL`.
+
 ### Pinning the active provider with `LLM_DEFAULT_PROVIDER`
 
 By default the LLM used for Cinematic/Autofit is the one you mark "use for

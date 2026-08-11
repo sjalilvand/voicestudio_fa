@@ -39,12 +39,28 @@ def lp(monkeypatch, clean_llm_env):
 
 def test_registry_has_all_providers(lp):
     ids = {p.id for p in lp.all_providers()}
-    # 12 cloud + 2 local + custom + openai
+    # 13 cloud + 2 local + custom + openai
     for expected in ("openai", "openrouter", "orcarouter", "groq", "cerebras", "google-ai",
                      "mistral", "cohere", "nvidia", "github-models", "cloudflare",
                      "huggingface", "sambanova", "siliconflow", "ollama",
                      "lmstudio", "custom"):
         assert expected in ids, expected
+
+
+def test_orcarouter_provider_contract(lp, monkeypatch):
+    p = lp.get_provider("orcarouter")
+    assert p.default_base_url == "https://api.orcarouter.ai/v1"
+    assert p.default_model == "openai/gpt-5.5"
+    assert p.key_envs == ("ORCAROUTER_API_KEY",)
+    assert p.base_url_env == "ORCAROUTER_BASE_URL"
+    assert p.model_env == "ORCAROUTER_MODEL"
+
+    monkeypatch.setenv("ORCAROUTER_API_KEY", "sk-orca-test")
+    monkeypatch.setenv("ORCAROUTER_BASE_URL", "https://orcarouter.example/v1")
+    monkeypatch.setenv("ORCAROUTER_MODEL", "orcarouter/test-model")
+    assert lp.resolve_api_key(p) == "sk-orca-test"
+    assert lp.resolve_base_url(p) == "https://orcarouter.example/v1"
+    assert lp.resolve_model(p) == "orcarouter/test-model"
 
 
 def test_default_base_url_and_model(lp):
