@@ -5,13 +5,7 @@ import {
   probeRemoteBackend,
 } from './remoteBackendProbe';
 
-const response = (body: unknown, status = 200) =>
-  ({
-    ok: status >= 200 && status < 300,
-    status,
-    headers: new Headers(),
-    text: vi.fn().mockResolvedValue(JSON.stringify(body)),
-  }) as unknown as Response;
+const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
 describe('remote backend probe', () => {
   beforeEach(() => localStorage.clear());
@@ -43,7 +37,7 @@ describe('remote backend probe', () => {
 
   it.each([
     ['https://gpu-box:3900', new TypeError('certificate verify failed'), 'tls'],
-    ['https://gpu-box:3900', new TypeError('Failed to fetch'), 'tls'],
+    ['https://gpu-box:3900', new TypeError('Failed to fetch'), 'network'],
     ['https://gpu-box:3900', new TypeError('blocked by CORS policy'), 'cors'],
     ['http://gpu-box:3900', new TypeError('Failed to fetch'), 'network'],
     ['https://gpu-box:7443', new TypeError('Failed to fetch'), 'wrong_port'],
@@ -68,19 +62,43 @@ describe('remote backend probe', () => {
   });
 
   it('rejects an oversized health response without consuming it', async () => {
-    const text = vi.fn();
+    const getReader = vi.fn();
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
       headers: new Headers({ 'content-length': '20000' }),
-      text,
+      body: { getReader },
     });
     await expect(
       probeRemoteBackend('https://gpu-box:3900', '', {
         fetchImpl: fetchImpl as typeof fetch,
       }),
     ).resolves.toMatchObject({ ok: false, kind: 'wrong_port' });
-    expect(text).not.toHaveBeenCalled();
+    expect(getReader).not.toHaveBeenCalled();
+  });
+
+  it('cancels a chunked health response once it exceeds the byte limit', async () => {
+    const cancel = vi.fn().mockResolvedValue(undefined);
+    const releaseLock = vi.fn();
+    const chunks = [new Uint8Array(10_000), new Uint8Array(7_000)];
+    const read = vi
+      .fn()
+      .mockResolvedValueOnce({ done: false, value: chunks[0] })
+      .mockResolvedValueOnce({ done: false, value: chunks[1] });
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      body: { getReader: () => ({ read, cancel, releaseLock }) },
+    });
+
+    await expect(
+      probeRemoteBackend('https://gpu-box:3900', '', {
+        fetchImpl: fetchImpl as typeof fetch,
+      }),
+    ).resolves.toMatchObject({ ok: false, kind: 'wrong_port' });
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(read).toHaveBeenCalledTimes(2);
   });
 
   it('does not request or disclose credentials embedded in a legacy URL', async () => {

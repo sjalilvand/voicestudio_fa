@@ -32,10 +32,34 @@ function transportKind(url: URL, error: unknown): RemoteProbeKind {
   if (url.port === '7443') return 'wrong_port';
   if (/certificate|cert_|ssl|tls/.test(text)) return 'tls';
   if (/cors|cross-origin/.test(text)) return 'cors';
-  // Browser fetch deliberately hides TLS details behind a generic TypeError.
-  // HTTPS failures are therefore most actionable as certificate/TLS guidance;
-  // plain HTTP failures remain network guidance.
-  return url.protocol === 'https:' ? 'tls' : 'network';
+  // Browser fetch deliberately hides DNS, connection, CORS, and TLS details
+  // behind the same generic TypeError. Only report TLS when the error says so.
+  return 'network';
+}
+
+async function readBoundedBody(response: Response): Promise<string | null> {
+  const reader = response.body?.getReader();
+  if (!reader) return null;
+
+  const decoder = new TextDecoder();
+  const parts: string[] = [];
+  let bytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > MAX_HEALTH_BYTES) {
+        await reader.cancel();
+        return null;
+      }
+      parts.push(decoder.decode(value, { stream: true }));
+    }
+    parts.push(decoder.decode());
+    return parts.join('');
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 export async function probeRemoteBackend(
@@ -77,8 +101,8 @@ export async function probeRemoteBackend(
     if (Number.isFinite(advertisedBytes) && advertisedBytes > MAX_HEALTH_BYTES) {
       return { ok: false, kind: 'wrong_port', target };
     }
-    const payload = await response.text();
-    if (payload.length > MAX_HEALTH_BYTES) {
+    const payload = await readBoundedBody(response);
+    if (payload === null) {
       return { ok: false, kind: 'wrong_port', target };
     }
     let body: unknown = null;
