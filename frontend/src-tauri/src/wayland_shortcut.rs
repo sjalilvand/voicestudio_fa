@@ -1,0 +1,659 @@
+//! Wayland global shortcut support through xdg-desktop-portal.
+//!
+//! `tauri-plugin-global-shortcut` uses `global-hotkey`, whose Linux backend is
+//! X11-only. Under XWayland its registration can still return `Ok(())`, but a
+//! native Wayland compositor never sends it key events. The portal is the
+//! compositor-owned, permission-aware API for this job.
+
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{mpsc, Mutex};
+use std::time::Duration;
+
+use tauri::Manager;
+use zbus::{
+    blocking::{Connection, Proxy},
+    zvariant::{OwnedObjectPath, OwnedValue, Str},
+};
+
+const DESKTOP_DESTINATION: &str = "org.freedesktop.portal.Desktop";
+const DESKTOP_PATH: &str = "/org/freedesktop/portal/desktop";
+const GLOBAL_SHORTCUTS_INTERFACE: &str = "org.freedesktop.portal.GlobalShortcuts";
+const REQUEST_INTERFACE: &str = "org.freedesktop.portal.Request";
+const SESSION_INTERFACE: &str = "org.freedesktop.portal.Session";
+const REGISTRY_INTERFACE: &str = "org.freedesktop.host.portal.Registry";
+const SHORTCUT_ID: &str = "voice-dictation";
+static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
+const PORTAL_LISTENER_TIMEOUT: Duration = Duration::from_secs(5);
+const PORTAL_RESPONSE_TIMEOUT: Duration = Duration::from_secs(60);
+
+type VariantMap = HashMap<String, OwnedValue>;
+
+#[derive(Clone)]
+struct PortalRegistration {
+    connection: Connection,
+    session: OwnedObjectPath,
+}
+
+#[derive(Default)]
+pub struct PortalShortcutState {
+    active: Mutex<Option<PortalRegistration>>,
+    revision: AtomicU64,
+}
+
+impl PortalShortcutState {
+    pub fn replace(&self, app: tauri::AppHandle, accelerator: String) -> Result<String, String> {
+        let revision = self.reserve();
+        self.replace_reserved(app, accelerator, revision)
+    }
+
+    pub fn reserve(&self) -> u64 {
+        self.revision.fetch_add(1, Ordering::SeqCst) + 1
+    }
+
+    fn is_current(&self, revision: u64) -> bool {
+        self.revision.load(Ordering::SeqCst) == revision
+    }
+
+    pub fn replace_reserved(
+        &self,
+        app: tauri::AppHandle,
+        accelerator: String,
+        revision: u64,
+    ) -> Result<String, String> {
+        // Bind the replacement first. A declined consent dialog or unavailable
+        // portal therefore leaves the working shortcut and saved preference
+        // untouched.
+        let (registration, display) = bind(&accelerator)?;
+        if !self.is_current(revision) {
+            let _ = close_session(&registration);
+            return Err("shortcut registration was superseded by a newer request".into());
+        }
+        let mut active = match self.active.lock() {
+            Ok(active) => active,
+            Err(_) => {
+                let _ = close_session(&registration);
+                return Err("portal shortcut lock poisoned".into());
+            }
+        };
+        if !self.is_current(revision) {
+            drop(active);
+            let _ = close_session(&registration);
+            return Err("shortcut registration was superseded by a newer request".into());
+        }
+        if let Err(error) = start_listener(app, registration.clone()) {
+            let _ = close_session(&registration);
+            return Err(error);
+        }
+        let previous = active.replace(registration);
+        drop(active);
+        if let Some(previous) = previous {
+            if let Err(error) = close_session(&previous) {
+                log::warn!("Could not close the previous Wayland shortcut session: {error}");
+            }
+        }
+        Ok(display)
+    }
+}
+
+const DESKTOP_ID: &str = "com.debpalash.omnivoice-studio";
+
+fn desktop_entry_exists() -> bool {
+    let filename = format!("{DESKTOP_ID}.desktop");
+    let user_entry = dirs_next::data_dir()
+        .map(|dir| dir.join("applications").join(&filename))
+        .is_some_and(|path| path.is_file());
+    if user_entry {
+        return true;
+    }
+    std::env::var_os("XDG_DATA_DIRS")
+        .map(|dirs| {
+            std::env::split_paths(&dirs)
+                .any(|dir| dir.join("applications").join(&filename).is_file())
+        })
+        .unwrap_or_else(|| {
+            ["/usr/local/share", "/usr/share"].iter().any(|dir| {
+                std::path::Path::new(dir)
+                    .join("applications")
+                    .join(&filename)
+                    .is_file()
+            })
+        })
+}
+
+fn desktop_exec_path() -> Result<std::path::PathBuf, String> {
+    // AppImage's current_exe() points inside its transient mount. APPIMAGE is
+    // the stable launcher path the desktop entry must retain.
+    if let Some(path) = std::env::var_os("APPIMAGE").filter(|path| !path.is_empty()) {
+        return Ok(path.into());
+    }
+    std::env::current_exe().map_err(|error| format!("could not locate VoiceStudio: {error}"))
+}
+
+fn desktop_exec_value(path: &std::path::Path) -> String {
+    let escaped = path
+        .to_string_lossy()
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('`', "\\`")
+        .replace('$', "\\$");
+    format!("\"{escaped}\"")
+}
+
+/// The host portal resolves un-sandboxed apps through their desktop entry.
+/// Deb packages already install one; dev builds and standalone AppImages may
+/// not. Add an invisible identity entry only when none exists.
+fn ensure_desktop_identity() -> Result<(), String> {
+    if desktop_entry_exists() {
+        return Ok(());
+    }
+    let applications = dirs_next::data_dir()
+        .ok_or("could not locate the user data directory")?
+        .join("applications");
+    std::fs::create_dir_all(&applications)
+        .map_err(|error| format!("could not create applications directory: {error}"))?;
+    let entry = format!(
+        "[Desktop Entry]\nType=Application\nName=VoiceStudio\nExec={}\nTerminal=false\nNoDisplay=true\nStartupWMClass=VoiceStudio\nX-VoiceStudio-Generated=true\n",
+        desktop_exec_value(&desktop_exec_path()?)
+    );
+    let path = applications.join(format!("{DESKTOP_ID}.desktop"));
+    std::fs::write(&path, entry)
+        .map_err(|error| format!("could not create {}: {error}", path.display()))?;
+    log::info!("Installed Wayland portal identity at {}", path.display());
+    Ok(())
+}
+
+pub fn is_wayland_session() -> bool {
+    std::env::var("XDG_SESSION_TYPE")
+        .map(|kind| kind.eq_ignore_ascii_case("wayland"))
+        .unwrap_or(false)
+        || std::env::var_os("WAYLAND_DISPLAY").is_some()
+}
+
+/// Convert Tauri's cross-platform accelerator spelling to the portal format.
+/// The portal may still let the user choose a different chord in its consent
+/// dialog, so an unknown spelling is deliberately omitted rather than guessed.
+fn portal_trigger(accelerator: &str) -> Option<String> {
+    let mut modifiers: Vec<String> = Vec::new();
+    let mut key = None;
+
+    for part in accelerator
+        .split('+')
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+    {
+        match part.to_ascii_lowercase().as_str() {
+            "cmdorctrl" | "commandorcontrol" | "ctrl" | "control" => {
+                if !modifiers.iter().any(|modifier| modifier == "CTRL") {
+                    modifiers.push("CTRL".into());
+                }
+            }
+            "shift" => modifiers.push("SHIFT".into()),
+            "alt" | "option" => modifiers.push("ALT".into()),
+            "cmd" | "command" | "super" | "meta" => modifiers.push("LOGO".into()),
+            _ if key.is_none() => key = xkb_key_name(part),
+            _ => return None,
+        }
+    }
+
+    let key = key?;
+    if modifiers.is_empty() {
+        return None;
+    }
+    modifiers.push(key);
+    Some(modifiers.join("+"))
+}
+
+fn xkb_key_name(key: &str) -> Option<String> {
+    let lower = key.to_ascii_lowercase();
+    if let Some(letter) = lower.strip_prefix("key") {
+        if letter.len() == 1
+            && letter
+                .chars()
+                .all(|character| character.is_ascii_alphabetic())
+        {
+            return Some(letter.to_owned());
+        }
+    }
+    if let Some(digit) = lower.strip_prefix("digit") {
+        if digit.len() == 1 && digit.chars().all(|character| character.is_ascii_digit()) {
+            return Some(digit.to_owned());
+        }
+    }
+    if lower.len() == 1
+        && lower
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric())
+    {
+        return Some(lower);
+    }
+    Some(
+        match lower.as_str() {
+            "space" => "space",
+            "enter" | "return" => "Return",
+            "escape" | "esc" => "Escape",
+            "tab" => "Tab",
+            "backspace" => "BackSpace",
+            "delete" => "Delete",
+            "insert" => "Insert",
+            "home" => "Home",
+            "end" => "End",
+            "pageup" => "Page_Up",
+            "pagedown" => "Page_Down",
+            "arrowup" | "up" => "Up",
+            "arrowdown" | "down" => "Down",
+            "arrowleft" | "left" => "Left",
+            "arrowright" | "right" => "Right",
+            "minus" => "minus",
+            "equal" => "equal",
+            "comma" => "comma",
+            "period" => "period",
+            "slash" => "slash",
+            "semicolon" => "semicolon",
+            "quote" | "apostrophe" => "apostrophe",
+            "bracketleft" => "bracketleft",
+            "bracketright" => "bracketright",
+            "backslash" => "backslash",
+            "backquote" | "grave" => "grave",
+            _ if lower.strip_prefix('f').is_some_and(|digits| {
+                digits
+                    .parse::<u8>()
+                    .is_ok_and(|number| (1..=35).contains(&number))
+            }) =>
+            {
+                return Some(key.to_ascii_uppercase());
+            }
+            _ => return None,
+        }
+        .into(),
+    )
+}
+
+fn variant_string(value: &str) -> OwnedValue {
+    OwnedValue::from(Str::from(value))
+}
+
+fn trigger_description(shortcuts: Vec<(String, VariantMap)>) -> Option<String> {
+    shortcuts
+        .into_iter()
+        .find(|(id, _)| id == SHORTCUT_ID)
+        .and_then(|(_, mut properties)| properties.remove("trigger_description"))
+        .and_then(|value| String::try_from(value).ok())
+        .filter(|description| !description.trim().is_empty())
+}
+
+fn request_path(connection: &Connection, token: &str) -> Result<OwnedObjectPath, String> {
+    let sender = connection
+        .unique_name()
+        .ok_or("session bus did not assign a unique name")?
+        .as_str()
+        .trim_start_matches(':')
+        .replace('.', "_");
+    OwnedObjectPath::try_from(format!("{DESKTOP_PATH}/request/{sender}/{token}"))
+        .map_err(|error| format!("invalid portal request path: {error}"))
+}
+
+fn response_for<F>(connection: &Connection, token: &str, call: F) -> Result<VariantMap, String>
+where
+    F: FnOnce() -> Result<OwnedObjectPath, zbus::Error>,
+{
+    // Subscribe before making the request: a fast portal is allowed to answer
+    // immediately after returning the request handle.
+    let expected = request_path(connection, token)?;
+    let listener_connection = connection.clone();
+    let listener_path = expected.clone();
+    let (ready_tx, ready_rx) = mpsc::sync_channel(1);
+    let (response_tx, response_rx) = mpsc::sync_channel(1);
+    std::thread::Builder::new()
+        .name("wayland-portal-response".into())
+        .spawn(move || {
+            let request = match Proxy::new(
+                &listener_connection,
+                DESKTOP_DESTINATION,
+                listener_path.as_str(),
+                REQUEST_INTERFACE,
+            ) {
+                Ok(request) => request,
+                Err(error) => {
+                    let _ = ready_tx.send(Err(format!("portal request listener: {error}")));
+                    return;
+                }
+            };
+            let mut responses = match request.receive_signal("Response") {
+                Ok(responses) => responses,
+                Err(error) => {
+                    let _ = ready_tx.send(Err(format!("portal response listener: {error}")));
+                    return;
+                }
+            };
+            if ready_tx.send(Ok(())).is_err() {
+                return;
+            }
+            let response = responses
+                .next()
+                .ok_or_else(|| "portal closed before answering the shortcut request".to_string());
+            let _ = response_tx.send(response);
+        })
+        .map_err(|error| format!("could not start the portal response listener: {error}"))?;
+    receive_with_timeout(
+        &ready_rx,
+        PORTAL_LISTENER_TIMEOUT,
+        "portal response listener",
+    )?;
+
+    let returned = call().map_err(|error| format!("portal request failed: {error}"))?;
+    if returned != expected {
+        return Err(format!(
+            "portal returned unexpected request path {returned} (expected {expected})"
+        ));
+    }
+
+    let message = match receive_with_timeout(
+        &response_rx,
+        PORTAL_RESPONSE_TIMEOUT,
+        "portal shortcut request",
+    ) {
+        Ok(message) => message,
+        Err(error) => {
+            if let Ok(request) = Proxy::new(
+                connection,
+                DESKTOP_DESTINATION,
+                expected.as_str(),
+                REQUEST_INTERFACE,
+            ) {
+                let _ = request.call::<_, _, ()>("Close", &());
+            }
+            return Err(error);
+        }
+    };
+    let (code, results): (u32, VariantMap) = message
+        .body()
+        .deserialize()
+        .map_err(|error| format!("invalid portal response: {error}"))?;
+    if code != 0 {
+        return Err(format!(
+            "portal shortcut request was declined (response {code})"
+        ));
+    }
+    Ok(results)
+}
+
+fn receive_with_timeout<T>(
+    receiver: &mpsc::Receiver<Result<T, String>>,
+    timeout: Duration,
+    operation: &str,
+) -> Result<T, String> {
+    match receiver.recv_timeout(timeout) {
+        Ok(result) => result,
+        Err(mpsc::RecvTimeoutError::Timeout) => Err(format!(
+            "{operation} timed out after {} seconds",
+            timeout.as_secs()
+        )),
+        Err(mpsc::RecvTimeoutError::Disconnected) => {
+            Err(format!("{operation} stopped before completing"))
+        }
+    }
+}
+
+fn bind(accelerator: &str) -> Result<(PortalRegistration, String), String> {
+    ensure_desktop_identity()?;
+    let connection = Connection::session()
+        .map_err(|error| format!("could not connect to the desktop portal: {error}"))?;
+
+    // GNOME's host portal uses the installed desktop entry to associate this
+    // un-sandboxed process with its desktop id.
+    let registry = Proxy::new(
+        &connection,
+        DESKTOP_DESTINATION,
+        DESKTOP_PATH,
+        REGISTRY_INTERFACE,
+    )
+    .map_err(|error| format!("could not open the portal registry: {error}"))?;
+    let registry_options: VariantMap = HashMap::new();
+    if let Err(error) = registry.call::<_, _, ()>("Register", &(DESKTOP_ID, registry_options)) {
+        // Development builds and portable AppImages may not have a desktop
+        // entry for the host registry to resolve. Portal v1 does not require
+        // this handshake, so continue and let CreateSession be authoritative.
+        log::warn!("Wayland portal host registration skipped: {error}");
+    }
+
+    let portal = Proxy::new(
+        &connection,
+        DESKTOP_DESTINATION,
+        DESKTOP_PATH,
+        GLOBAL_SHORTCUTS_INTERFACE,
+    )
+    .map_err(|error| format!("could not open the global-shortcuts portal: {error}"))?;
+
+    let process = std::process::id();
+    let sequence = REQUEST_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let create_token = format!("vs_create_{process}_{sequence}");
+    let session_token = format!("vs_session_{process}_{sequence}");
+    let mut create_options = VariantMap::new();
+    create_options.insert("handle_token".into(), variant_string(&create_token));
+    create_options.insert(
+        "session_handle_token".into(),
+        variant_string(&session_token),
+    );
+    let mut create_results = response_for(&connection, &create_token, || {
+        portal.call("CreateSession", &(create_options,))
+    })?;
+    let session_value = create_results
+        .remove("session_handle")
+        .ok_or("portal did not return a shortcut session")?;
+    // The portal specification declares an object path, but deployed portal
+    // versions historically returned a string. Accept both wire formats.
+    let session = match session_value
+        .try_clone()
+        .ok()
+        .and_then(|value| OwnedObjectPath::try_from(value).ok())
+    {
+        Some(path) => path,
+        None => {
+            let path = String::try_from(session_value).map_err(|error| {
+                format!("portal returned an invalid shortcut session handle: {error}")
+            })?;
+            OwnedObjectPath::try_from(path)
+                .map_err(|error| format!("portal returned an invalid session path: {error}"))?
+        }
+    };
+
+    let mut shortcut_info = VariantMap::new();
+    shortcut_info.insert("description".into(), variant_string("VoiceStudio"));
+    if let Some(trigger) = portal_trigger(&accelerator) {
+        shortcut_info.insert("preferred_trigger".into(), variant_string(&trigger));
+    }
+    let shortcuts = vec![(SHORTCUT_ID.to_string(), shortcut_info)];
+    let bind_token = format!("vs_bind_{process}_{sequence}");
+    let mut bind_options = VariantMap::new();
+    bind_options.insert("handle_token".into(), variant_string(&bind_token));
+    let mut bind_results = response_for(&connection, &bind_token, || {
+        portal.call(
+            "BindShortcuts",
+            &(session.clone(), shortcuts, "", bind_options),
+        )
+    })?;
+
+    let display = bind_results
+        .remove("shortcuts")
+        .and_then(|value| Vec::<(String, VariantMap)>::try_from(value).ok())
+        .and_then(trigger_description)
+        .unwrap_or_else(|| crate::dictation_shortcut::display_accelerator(accelerator));
+
+    drop(portal);
+    drop(registry);
+    Ok((
+        PortalRegistration {
+            connection,
+            session,
+        },
+        display,
+    ))
+}
+
+fn close_session(registration: &PortalRegistration) -> Result<(), String> {
+    let session = Proxy::new(
+        &registration.connection,
+        DESKTOP_DESTINATION,
+        registration.session.as_str(),
+        SESSION_INTERFACE,
+    )
+    .map_err(|error| format!("could not open the shortcut session: {error}"))?;
+    session
+        .call::<_, _, ()>("Close", &())
+        .map_err(|error| format!("could not close the shortcut session: {error}"))
+}
+
+fn listen(app: tauri::AppHandle, registration: PortalRegistration) -> Result<(), String> {
+    let portal = Proxy::new(
+        &registration.connection,
+        DESKTOP_DESTINATION,
+        DESKTOP_PATH,
+        GLOBAL_SHORTCUTS_INTERFACE,
+    )
+    .map_err(|error| format!("could not open the global-shortcuts portal: {error}"))?;
+
+    log::info!("Wayland dictation shortcut registered through xdg-desktop-portal");
+    let mut signals = portal
+        .receive_all_signals()
+        .map_err(|error| format!("could not listen for portal shortcuts: {error}"))?;
+    for message in &mut signals {
+        let header = message.header();
+        let member = header
+            .member()
+            .map(|name| name.as_str().to_owned())
+            .unwrap_or_default();
+        if member != "Activated" && member != "Deactivated" {
+            continue;
+        }
+        let (signal_session, shortcut_id, _timestamp, _options): (
+            OwnedObjectPath,
+            String,
+            u32,
+            VariantMap,
+        ) = match message.body().deserialize() {
+            Ok(body) => body,
+            Err(error) => {
+                log::warn!("Invalid Wayland shortcut signal: {error}");
+                continue;
+            }
+        };
+        if signal_session != registration.session || shortcut_id != SHORTCUT_ID {
+            continue;
+        }
+        if member == "Activated" {
+            log::info!("Wayland shortcut pressed: dictation start");
+            crate::dispatch_dictation_capture(&app, "start");
+        } else {
+            log::info!("Wayland shortcut released: dictation stop");
+            crate::dispatch_dictation_capture(&app, "stop");
+        }
+    }
+    Err("global-shortcuts portal closed the session".into())
+}
+
+fn start_listener(app: tauri::AppHandle, registration: PortalRegistration) -> Result<(), String> {
+    std::thread::Builder::new()
+        .name("wayland-global-shortcut".into())
+        .spawn(move || {
+            if let Err(error) = listen(app, registration) {
+                log::info!("Wayland shortcut listener stopped: {error}");
+            }
+        })
+        .map(|_| ())
+        .map_err(|error| format!("failed to start Wayland shortcut listener: {error}"))
+}
+
+pub fn register_initial(app: tauri::AppHandle, accelerator: String, revision: u64) {
+    let worker_app = app.clone();
+    if let Err(error) = std::thread::Builder::new()
+        .name("wayland-global-shortcut-setup".into())
+        .spawn(move || {
+            let manager = worker_app.state::<crate::dictation_shortcut::DictationShortcutManager>();
+            if let Err(error) = manager.register_portal_initial(&worker_app, accelerator, revision)
+            {
+                log::error!("Wayland dictation shortcut unavailable: {error}");
+            }
+        })
+    {
+        log::error!("Failed to start Wayland shortcut setup: {error}");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        desktop_exec_value, portal_trigger, receive_with_timeout, trigger_description,
+        variant_string, PortalShortcutState,
+    };
+    use std::collections::HashMap;
+    use std::path::Path;
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    #[test]
+    fn converts_tauri_accelerators_to_portal_triggers() {
+        assert_eq!(
+            portal_trigger("CmdOrCtrl+Shift+Space").as_deref(),
+            Some("CTRL+SHIFT+space")
+        );
+        assert_eq!(
+            portal_trigger("Alt+Control+K").as_deref(),
+            Some("ALT+CTRL+k")
+        );
+        assert_eq!(
+            portal_trigger("Super+PageUp").as_deref(),
+            Some("LOGO+Page_Up")
+        );
+        assert_eq!(
+            portal_trigger("Ctrl+BracketLeft").as_deref(),
+            Some("CTRL+bracketleft")
+        );
+        assert_eq!(portal_trigger("Cmd+Digit1").as_deref(), Some("LOGO+1"));
+    }
+
+    #[test]
+    fn rejects_modifier_free_or_ambiguous_accelerators() {
+        assert_eq!(portal_trigger("Space"), None);
+        assert_eq!(portal_trigger("Ctrl+K+L"), None);
+    }
+
+    #[test]
+    fn desktop_exec_paths_are_quoted_and_escaped() {
+        assert_eq!(
+            desktop_exec_value(Path::new("/tmp/Voice Studio/$build")),
+            "\"/tmp/Voice Studio/\\$build\""
+        );
+    }
+
+    #[test]
+    fn uses_the_portals_effective_trigger_description() {
+        let mut properties = HashMap::new();
+        properties.insert("trigger_description".into(), variant_string("Meta+Shift+V"));
+        assert_eq!(
+            trigger_description(vec![("voice-dictation".into(), properties)]).as_deref(),
+            Some("Meta+Shift+V")
+        );
+    }
+
+    #[test]
+    fn newer_rebinds_supersede_in_flight_registration() {
+        let state = PortalShortcutState::default();
+        let startup = state.reserve();
+        let changed = state.reserve();
+        assert!(!state.is_current(startup));
+        assert!(state.is_current(changed));
+    }
+
+    #[test]
+    fn portal_response_wait_is_bounded() {
+        let (_sender, receiver) = mpsc::channel::<Result<(), String>>();
+        let error = receive_with_timeout(
+            &receiver,
+            Duration::from_millis(1),
+            "portal shortcut request",
+        )
+        .unwrap_err();
+        assert!(error.contains("timed out"));
+    }
+}

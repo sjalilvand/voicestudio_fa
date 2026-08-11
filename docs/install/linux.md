@@ -81,6 +81,27 @@ pkg-config --exists \
 The first app launch downloads model weights on demand. Subsequent launches
 reuse the Rust build, Python environment, and installed models.
 
+## Wayland dictation shortcut
+
+System-wide dictation on Wayland uses the standard
+`org.freedesktop.portal.GlobalShortcuts` interface. Your desktop must run
+`xdg-desktop-portal` and a portal backend that implements that interface. The
+desktop owns the consent dialog and may let you replace VoiceStudio's preferred
+key combination.
+
+VoiceStudio binds the replacement before saving a changed shortcut. If consent
+is declined or the portal is unavailable, Settings keeps the previous shortcut
+and reports the registration failure. The configured shortcut still works while
+the VoiceStudio window is focused.
+
+If the global shortcut stops working, restart your desktop's portal service,
+then save the shortcut again in **Settings → Hotkey** to reopen consent. Portal
+packages and support vary by desktop; use the backend recommended by your
+distribution rather than running multiple portal backends in the same session.
+See the portal project's [service integration checks](https://flatpak.github.io/xdg-desktop-portal/docs/system-integration.html)
+and the Arch Linux [backend compatibility table](https://wiki.archlinux.org/title/XDG_Desktop_Portal#List_of_backends_and_interfaces)
+for concrete service and desktop-backend checks.
+
 ## Install (AppImage)
 
 Download the latest AppImage from the

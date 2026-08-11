@@ -7,9 +7,11 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use tauri::image::Image;
+use tauri::Manager;
 use tauri_plugin_dialog::DialogExt;
 
-use crate::{AppFlags, TrayHandle, DictationShortcutState};
+use crate::dictation_shortcut::{DictationShortcutManager, ShortcutInfo, update_tray_hint};
+use crate::{AppFlags, TrayHandle};
 use crate::{TRAY_ICON_DEFAULT, TRAY_ICON_RECORDING};
 use crate::config::{load_config, save_config};
 
@@ -875,21 +877,25 @@ pub fn simulate_type(text: Option<String>, backspaces: Option<u32>) -> Result<()
 
 #[tauri::command]
 pub fn set_tray_recording(
+    app: tauri::AppHandle,
     recording: bool,
     tray_handle: tauri::State<'_, TrayHandle>,
     flags: tauri::State<'_, AppFlags>,
+    shortcuts: tauri::State<'_, DictationShortcutManager>,
 ) -> Result<(), String> {
     // Record the state BEFORE the icon swap: the tray's Start/Stop item reads
     // this to decide which event to emit, and it must stay correct even if the
     // icon fails to decode. (It used to read `widget.is_visible()`, which the
     // permanently-hidden widget made meaningless.)
     flags.dictating.store(recording, Ordering::SeqCst);
+    log::info!("Dictation recording state: {recording}");
     let bytes = if recording { TRAY_ICON_RECORDING } else { TRAY_ICON_DEFAULT };
     let img = Image::from_bytes(bytes).map_err(|e| format!("decode tray icon: {e}"))?;
     let lock = tray_handle.tray.lock().map_err(|_| "tray lock poisoned")?;
     if let Some(ref tray) = *lock {
         tray.set_icon(Some(img)).map_err(|e| format!("set_icon: {e}"))?;
     }
+    update_tray_hint(&app, &shortcuts.info().display, recording);
     Ok(())
 }
 
@@ -909,40 +915,129 @@ pub fn get_dictation_shortcut(app: tauri::AppHandle) -> String {
 }
 
 #[tauri::command]
+pub fn get_effective_dictation_shortcut(
+    state: tauri::State<'_, DictationShortcutManager>,
+) -> ShortcutInfo {
+    state.info()
+}
+
+#[tauri::command]
+pub fn request_dictation_capture(app: tauri::AppHandle, action: String) -> Result<(), String> {
+    if action != "start" && action != "stop" && action != "toggle" {
+        return Err("capture action must be start, stop, or toggle".into());
+    }
+    crate::dispatch_dictation_capture(&app, &action);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn mark_dictation_capture_ready(app: tauri::AppHandle) {
+    let flags = app.state::<AppFlags>();
+    let Ok(mut capture) = flags.capture.lock() else {
+        log::warn!("Dictation capture state lock poisoned");
+        return;
+    };
+    capture.ready = true;
+    if let Some(action) = capture.pending.take() {
+        drop(capture);
+        crate::dispatch_dictation_capture(&app, &action);
+    }
+}
+
+#[tauri::command]
 pub fn set_dictation_shortcut(
     app: tauri::AppHandle,
     accelerator: String,
-    state: tauri::State<'_, DictationShortcutState>,
-) -> Result<String, String> {
-    use std::str::FromStr;
-    use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
-
-    let parsed = Shortcut::from_str(&accelerator)
-        .map_err(|e| format!("Invalid shortcut '{accelerator}': {e}"))?;
-
-    let gs = app.global_shortcut();
-
-    let mut slot = state.current.lock().map_err(|_| "shortcut lock poisoned")?;
-    let prev = slot.take();
-    if let Some(ref p) = prev {
-        let _ = gs.unregister(p.clone());
-    }
-    if let Err(e) = gs.register(parsed.clone()) {
-        if let Some(p) = prev {
-            if gs.register(p.clone()).is_ok() {
-                *slot = Some(p);
-            }
-        }
-        return Err(format!("Failed to register '{accelerator}': {e}"));
-    }
-    *slot = Some(parsed);
-    drop(slot);
-
-    let mut cfg = load_config(&app);
-    cfg.dictation_shortcut = accelerator.clone();
-    save_config(&app, &cfg);
+    state: tauri::State<'_, DictationShortcutManager>,
+) -> Result<ShortcutInfo, String> {
+    let info = state.serialize_update(|| {
+        let mut cfg = load_config(&app);
+        let previous = cfg.dictation_shortcut.clone();
+        let path = crate::config::config_path(&app)
+            .ok_or_else(|| "Could not locate the VoiceStudio config directory".to_string())?;
+        apply_shortcut_change(
+            &accelerator,
+            &previous,
+            |value| state.replace(&app, value),
+            || {
+                cfg.dictation_shortcut = accelerator.clone();
+                crate::config::save_config_at(&path, &cfg)
+            },
+        )
+    })?;
     log::info!("Dictation shortcut updated to {accelerator}");
-    Ok(accelerator)
+    Ok(info)
+}
+
+fn apply_shortcut_change<T, A, P>(
+    replacement: &str,
+    previous: &str,
+    mut activate: A,
+    persist: P,
+) -> Result<T, String>
+where
+    A: FnMut(&str) -> Result<T, String>,
+    P: FnOnce() -> Result<(), String>,
+{
+    let active = activate(replacement)?;
+    if let Err(error) = persist() {
+        let rollback = activate(previous);
+        return Err(match rollback {
+            Ok(_) => format!("Could not save the shortcut: {error}"),
+            Err(rollback_error) => format!(
+                "Could not save the shortcut ({error}); restoring the previous shortcut also failed: {rollback_error}"
+            ),
+        });
+    }
+    Ok(active)
+}
+
+#[cfg(test)]
+mod shortcut_change_tests {
+    use super::apply_shortcut_change;
+    use std::cell::RefCell;
+
+    #[test]
+    fn activates_the_replacement_before_persisting_it() {
+        let events = RefCell::new(Vec::new());
+        let result = apply_shortcut_change(
+            "Ctrl+Alt+K",
+            "Ctrl+Shift+Space",
+            |value| {
+                events.borrow_mut().push(format!("activate:{value}"));
+                Ok(value.to_owned())
+            },
+            || {
+                events.borrow_mut().push("persist".into());
+                Ok(())
+            },
+        )
+        .unwrap();
+
+        assert_eq!(result, "Ctrl+Alt+K");
+        assert_eq!(events.into_inner(), ["activate:Ctrl+Alt+K", "persist"]);
+    }
+
+    #[test]
+    fn restores_the_previous_binding_when_persistence_fails() {
+        let events = RefCell::new(Vec::new());
+        let error = apply_shortcut_change(
+            "Ctrl+Alt+K",
+            "Ctrl+Shift+Space",
+            |value| {
+                events.borrow_mut().push(format!("activate:{value}"));
+                Ok(())
+            },
+            || Err("disk full".into()),
+        )
+        .unwrap_err();
+
+        assert!(error.contains("disk full"));
+        assert_eq!(
+            events.into_inner(),
+            ["activate:Ctrl+Alt+K", "activate:Ctrl+Shift+Space"]
+        );
+    }
 }
 
 // ── Launch-mode persistence ───────────────────────────────────────────────

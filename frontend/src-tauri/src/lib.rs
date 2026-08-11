@@ -13,11 +13,14 @@ pub mod bootstrap;
 pub mod tools;
 pub mod backend;
 pub mod commands;
+pub mod dictation_shortcut;
 pub mod crash;
 pub mod reset;
 pub mod uninstall;
 pub mod updater_channel;
 pub mod blank_guard;
+#[cfg(target_os = "linux")]
+pub mod wayland_shortcut;
 
 use std::process::Child;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -30,7 +33,8 @@ use tauri::tray::TrayIconBuilder;
 use tauri_plugin_positioner::{Position, WindowExt};
 
 use crate::bootstrap::{BootstrapStage, BootstrapState, set_stage};
-use crate::config::{default_dictation_shortcut, load_config};
+use crate::config::load_config;
+use crate::dictation_shortcut::DictationShortcutManager;
 
 // ── Port ──────────────────────────────────────────────────────────────────
 
@@ -58,14 +62,53 @@ pub struct AppFlags {
     /// already reports every start and stop via `set_tray_recording` (it drives
     /// the tray icon), so that same call keeps this in step.
     pub dictating: AtomicBool,
+    pub capture: Mutex<CaptureDispatchState>,
+}
+
+pub struct CaptureDispatchState {
+    pub ready: bool,
+    pub pending: Option<String>,
 }
 
 pub struct TrayHandle {
     pub tray: Mutex<Option<tauri::tray::TrayIcon>>,
+    pub dictate: Mutex<Option<tauri::menu::MenuItem<tauri::Wry>>>,
 }
 
-pub struct DictationShortcutState {
-    pub current: Mutex<Option<tauri_plugin_global_shortcut::Shortcut>>,
+fn dictation_capture_event(action: &str, dictating: bool) -> &'static str {
+    match action {
+        "stop" => "tray-dictate-stop",
+        "toggle" if dictating => "tray-dictate-stop",
+        _ => "tray-dictate",
+    }
+}
+
+pub fn dispatch_dictation_capture(app: &tauri::AppHandle, action: &str) {
+    let flags = app.state::<AppFlags>();
+    let event = dictation_capture_event(action, flags.dictating.load(Ordering::SeqCst));
+    let Ok(mut capture) = flags.capture.lock() else {
+        log::warn!("Dictation capture state lock poisoned");
+        return;
+    };
+    if capture.ready {
+        let _ = app.emit(event, ());
+    } else {
+        capture.pending = Some(action.to_owned());
+    }
+}
+
+#[cfg(test)]
+mod dictation_capture_tests {
+    use super::dictation_capture_event;
+
+    #[test]
+    fn toggle_starts_when_idle_and_stops_when_recording() {
+        assert_eq!(dictation_capture_event("toggle", false), "tray-dictate");
+        assert_eq!(
+            dictation_capture_event("toggle", true),
+            "tray-dictate-stop"
+        );
+    }
 }
 
 pub const TRAY_ICON_DEFAULT: &[u8] = include_bytes!("../icons/32x32.png");
@@ -437,7 +480,10 @@ pub fn run() {
             commands::save_text_file,
             commands::reveal_host_path,
             commands::get_dictation_shortcut,
+            commands::get_effective_dictation_shortcut,
             commands::set_dictation_shortcut,
+            commands::request_dictation_capture,
+            commands::mark_dictation_capture_ready,
             commands::get_launch_as_widget,
             commands::set_launch_as_widget,
             commands::clear_webview_cache_and_relaunch,
@@ -537,20 +583,21 @@ pub fn run() {
             app.manage(AppFlags {
                 quitting: AtomicBool::new(false),
                 dictating: AtomicBool::new(false),
+                capture: Mutex::new(CaptureDispatchState {
+                    ready: false,
+                    pending: None,
+                }),
             });
             app.manage(TrayHandle {
                 tray: Mutex::new(None),
+                dictate: Mutex::new(None),
             });
-            app.manage(DictationShortcutState {
-                current: Mutex::new(None),
-            });
+            let startup_shortcut = load_config(app.handle()).dictation_shortcut;
+            app.manage(DictationShortcutManager::new(&startup_shortcut));
 
             // ── Global dictation shortcut (hold-to-talk) ─────────────────
             {
-                use std::str::FromStr;
-                use tauri_plugin_global_shortcut::{
-                    GlobalShortcutExt, Shortcut, ShortcutState,
-                };
+                use tauri_plugin_global_shortcut::ShortcutState;
 
                 app.handle().plugin(
                     tauri_plugin_global_shortcut::Builder::new()
@@ -563,48 +610,23 @@ pub fn run() {
                                     // host for the recorder, and dictation gives
                                     // no on-screen pill. See the window builder
                                     // above for why it must still exist.
-                                    let _ = app_handle.emit("tray-dictate", ());
+                                    dispatch_dictation_capture(app_handle, "start");
                                 }
                                 ShortcutState::Released => {
                                     log::info!("Global shortcut released: dictation stop");
-                                    let _ = app_handle.emit("tray-dictate-stop", ());
+                                    dispatch_dictation_capture(app_handle, "stop");
                                 }
                             }
                         })
                         .build(),
                 )?;
-
-                let cfg = load_config(app.handle());
-                let accel = cfg.dictation_shortcut.clone();
-                let parsed = Shortcut::from_str(&accel)
-                    .or_else(|_| {
-                        log::warn!(
-                            "Saved shortcut '{accel}' unparseable — falling back to default"
-                        );
-                        Shortcut::from_str(&default_dictation_shortcut())
-                    });
-                match parsed {
-                    Ok(shortcut) => match app.global_shortcut().register(shortcut.clone()) {
-                        Ok(()) => {
-                            log::info!("Global shortcut '{accel}' registered");
-                            if let Ok(mut slot) = app
-                                .state::<DictationShortcutState>()
-                                .current
-                                .lock()
-                            {
-                                *slot = Some(shortcut);
-                            }
-                        }
-                        Err(e) => log::warn!("Failed to register global shortcut: {e}"),
-                    },
-                    Err(e) => log::warn!("No usable dictation shortcut: {e}"),
-                }
             }
 
             // ── System tray ──────────────────────────────────────────────
             let tray_menu = if pill_mode_tray {
                 // Pill mode: minimal tray with Open Studio + Dictate + Quit
-                let dictate_i = MenuItemBuilder::new("Start Dictation  ⌘⇧Space")
+                let shortcut_hint = app.state::<DictationShortcutManager>().info().display;
+                let dictate_i = MenuItemBuilder::new(format!("Start Dictation  {shortcut_hint}"))
                     .id("dictate")
                     .build(app)?;
                 let open_studio_i = MenuItemBuilder::new("Open VoiceStudio")
@@ -625,7 +647,8 @@ pub fn run() {
                 let show_i = MenuItemBuilder::new("Show VoiceStudio")
                     .id("show")
                     .build(app)?;
-                let dictate_i = MenuItemBuilder::new("Start Dictation  ⌘⇧Space")
+                let shortcut_hint = app.state::<DictationShortcutManager>().info().display;
+                let dictate_i = MenuItemBuilder::new(format!("Start Dictation  {shortcut_hint}"))
                     .id("dictate")
                     .build(app)?;
                 let switch_to_pill_i = MenuItemBuilder::new("Switch to Dictation Widget")
@@ -648,6 +671,21 @@ pub fn run() {
                     .build()?
             };
 
+            if let Some(item) = tray_menu.get("dictate") {
+                if let Some(item) = item.as_menuitem() {
+                    if let Ok(mut slot) = app.state::<TrayHandle>().dictate.lock() {
+                        *slot = Some(item.clone());
+                    }
+                }
+            }
+
+            // Publish the effective shortcut only after the tray item exists;
+            // Wayland portal registration completes asynchronously and may
+            // otherwise race past the first tray-label update.
+            DictationShortcutManager::register_initial(
+                app.handle().clone(),
+                startup_shortcut.clone(),
+            );
 
             let tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
@@ -713,9 +751,9 @@ pub fn run() {
                             // current by the frontend's existing
                             // `set_tray_recording` call on every start and stop.
                             if app.state::<AppFlags>().dictating.load(Ordering::SeqCst) {
-                                let _ = app.emit("tray-dictate-stop", ());
+                                dispatch_dictation_capture(app, "stop");
                             } else {
-                                let _ = app.emit("tray-dictate", ());
+                                dispatch_dictation_capture(app, "start");
                             }
                         }
                         "settings" => {

@@ -14,6 +14,7 @@ import { asrMissingPayload, toastAsrModelMissing } from '../utils/asrModelMissin
 import { createWaveform } from './captureWaveform';
 import { emitDictationNotice } from '../utils/dictationNotice';
 import { audioFormatForMimeType, startSupportedMediaRecorder } from '../utils/mediaRecorder';
+import { BROWSER_DICTATION_REQUEST } from '../utils/dictationCapture';
 
 // True inside the Tauri shell (desktop app / widget window); false in the
 // browser webui / Docker, where the native commands don't exist. Gating on
@@ -333,6 +334,14 @@ export default function CaptureWidget({ onDismiss }) {
   // identity, but the listener must not re-subscribe to follow them.
   const startRecordingRef = useRef(null);
   const stopRecordingRef = useRef(null);
+  // Hold mode can be released while microphone permission or getUserMedia is
+  // still pending. Preserve that release so the completed start cannot leave
+  // an orphaned recording behind.
+  const holdStartRef = useRef(null);
+  // Linux can deliver the same shortcut through both the native global-hotkey
+  // plugin and the focused main-window fallback. Collapse that pair into one
+  // logical action without slowing intentional toggle-mode presses.
+  const nativeEventAtRef = useRef({ start: 0, stop: 0 });
 
   // Sherpa live-streaming session refs. `sherpaModeRef` flips on at start when a
   // sherpa model is selected; `committedRef` accumulates per-utterance finals so
@@ -407,6 +416,41 @@ export default function CaptureWidget({ onDismiss }) {
     pcmModeRef.current = false;
   }, []);
 
+  // Browser buttons and focused-window shortcuts use the same request event;
+  // the recorder remains owned by this single component.
+  const browserRequestRef = useRef(null);
+  browserRequestRef.current = (action) => {
+    if (!enabledRef.current) return;
+    const current = stateRef.current;
+    if (action === 'stop') {
+      if (current === 'recording') stopRecordingRef.current?.();
+      else if (holdStartRef.current === 'starting') holdStartRef.current = 'released';
+      return;
+    }
+    if (current === 'setup') {
+      if (modeRef.current === 'hold') holdStartRef.current = 'starting';
+      checkAccessibility().then((ok) => {
+        if (ok) startRecordingRef.current?.(modeRef.current === 'hold');
+        else holdStartRef.current = null;
+      });
+      return;
+    }
+    const idle = current === 'idle' || current === 'done' || current === 'error';
+    if (action === 'toggle') {
+      if (idle) startRecordingRef.current?.();
+      else if (current === 'recording') stopRecordingRef.current?.();
+    } else if (idle) {
+      startRecordingRef.current?.(modeRef.current === 'hold');
+    }
+  };
+
+  useEffect(() => {
+    if (inTauri()) return;
+    const onRequest = (event) => browserRequestRef.current?.(event.detail?.action || 'start');
+    window.addEventListener(BROWSER_DICTATION_REQUEST, onRequest);
+    return () => window.removeEventListener(BROWSER_DICTATION_REQUEST, onRequest);
+  }, []);
+
   // Hydrate dictation prefs (enabled / mode / model) from the backend once. The
   // widget runs in its own Tauri webview (a separate JS context from the main
   // window), so it loads the prefs itself rather than relying on the Settings
@@ -448,6 +492,9 @@ export default function CaptureWidget({ onDismiss }) {
       try {
         const { listen } = await import('@tauri-apps/api/event');
         unlistenStart = await listen('tray-dictate', () => {
+          const now = Date.now();
+          if (now - nativeEventAtRef.current.start < 150) return;
+          nativeEventAtRef.current.start = now;
           if (!enabledRef.current) {
             // The hotkey is inert, but Rust has already shown the window.
             // Put it back rather than leaving an empty capsule on screen.
@@ -458,8 +505,10 @@ export default function CaptureWidget({ onDismiss }) {
           if (s === 'setup') {
             // Re-probe on each press — the user may have just granted access
             // in System Settings; if so, flow straight into recording.
+            if (modeRef.current === 'hold') holdStartRef.current = 'starting';
             checkAccessibility().then((ok) => {
-              if (ok) startRecordingRef.current?.();
+              if (ok) startRecordingRef.current?.(modeRef.current === 'hold');
+              else holdStartRef.current = null;
             });
             return;
           }
@@ -470,15 +519,22 @@ export default function CaptureWidget({ onDismiss }) {
             else if (s === 'recording') stopRecordingRef.current?.();
           } else if (idle) {
             // Hold mode: keydown → start.
-            startRecordingRef.current?.();
+            startRecordingRef.current?.(true);
           }
         });
         unlistenStop = await listen('tray-dictate-stop', () => {
+          const now = Date.now();
+          if (now - nativeEventAtRef.current.stop < 150) return;
+          nativeEventAtRef.current.stop = now;
           // Only hold mode acts on release; toggle ignores it.
           if (modeRef.current === 'hold' && stateRef.current === 'recording') {
             stopRecordingRef.current?.();
+          } else if (modeRef.current === 'hold' && holdStartRef.current === 'starting') {
+            holdStartRef.current = 'released';
           }
         });
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('mark_dictation_capture_ready');
         // Unmounted while the dynamic import was in flight — drop the
         // subscriptions we just created rather than leaking them.
         if (cancelled) {
@@ -511,29 +567,14 @@ export default function CaptureWidget({ onDismiss }) {
     const onKeyDown = (e) => {
       if (!isCombo(e)) return;
       e.preventDefault();
-      if (!enabledRef.current) return;
-      if (state === 'setup') {
-        checkAccessibility().then((ok) => {
-          if (ok) startRecording();
-        });
-        return;
-      }
-      const idle = state === 'idle' || state === 'done' || state === 'error';
-      if (modeRef.current === 'toggle') {
-        if (idle) startRecording();
-        else if (state === 'recording') stopRecording();
-      } else if (idle) {
-        // Hold mode: holding the combo records; auto-repeat keydowns are
-        // ignored because we only start from an idle state.
-        startRecording();
-      }
+      browserRequestRef.current?.(modeRef.current === 'toggle' ? 'toggle' : 'start');
     };
     const onKeyUp = (e) => {
       // Hold mode stops as soon as Space (or a modifier) is released.
       if (modeRef.current !== 'hold') return;
       if (e.code !== 'Space' && e.key !== 'Meta' && e.key !== 'Control' && e.key !== 'Shift')
         return;
-      if (state === 'recording') stopRecording();
+      browserRequestRef.current?.('stop');
     };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
@@ -770,6 +811,7 @@ export default function CaptureWidget({ onDismiss }) {
     // raises the OS prompt; micError.js stays the reactive fallback), and
     // outside Tauri checkMicrophone() is always 'unknown' → unchanged.
     if ((await checkMicrophone()) === 'denied') {
+      holdStartRef.current = null;
       showMicDeniedGuide(t);
       setTrayRecording(false);
       setErrorInfo({
@@ -1156,7 +1198,15 @@ export default function CaptureWidget({ onDismiss }) {
       setErrorInfo(null);
       setDoneKind(null);
       setDuration(0);
+      stateRef.current = 'recording';
+      if (holdStartRef.current === 'released') {
+        holdStartRef.current = null;
+        stopRecordingRef.current?.();
+      } else {
+        holdStartRef.current = null;
+      }
     } catch (err) {
+      holdStartRef.current = null;
       // Same guard as the success path above (#1175 review): the session may
       // already have RESOLVED while setup was failing — a connect-time WS
       // error frame (e.g. the typed asr_model_missing preflight) or an
@@ -1261,7 +1311,10 @@ export default function CaptureWidget({ onDismiss }) {
   // must run after every render so the once-attached tray listener above never
   // calls into a stale closure.
   useEffect(() => {
-    startRecordingRef.current = startRecording;
+    startRecordingRef.current = (trackHold = false) => {
+      if (trackHold && holdStartRef.current !== 'released') holdStartRef.current = 'starting';
+      return startRecording();
+    };
     stopRecordingRef.current = stopRecording;
   });
 

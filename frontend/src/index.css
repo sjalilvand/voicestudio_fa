@@ -3327,7 +3327,7 @@ html[data-ui-scale-engine='native'] .app-bootstrap-scale {
 
 /* ── Widget-mode body (standalone Tauri window) ─────────────────────── */
 
-body:has(.capture-pill) {
+html[data-window='widget'] body:has(.capture-pill) {
   background: transparent !important;
   margin: 0;
   padding: 8px;
