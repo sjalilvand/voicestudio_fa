@@ -2661,12 +2661,42 @@ def release_tts_side_caches():
         logger.debug("clone-prompt cache clear failed during unload", exc_info=True)
 
 
+def _clear_cublas_workspaces(torch) -> None:
+    """Drop cuBLAS's per-handle workspaces before emptying the cache.
+
+    Measured on a 4090: after unloading the model, ``empty_cache()`` left
+    803 MB reserved with 8.5 MB allocated. A segment dump explained it —
+    **one** 803 MB segment, 794.7 MB of it inactive-but-split, pinned by a
+    single live 8,519,680-byte block. That number is cuBLAS's default
+    workspace. It is taken from the caching allocator on first use, it lands
+    inside whatever segment the model load had just grown, and it is held for
+    the life of the cuBLAS handle — so one 8.5 MB block kept three quarters of
+    a gigabyte from ever going back to the driver, no matter how many times
+    the user pressed Flush Memory.
+
+    Clearing the workspaces first lets the whole segment go. The next cuBLAS
+    call re-allocates one, which is why this belongs here (on the unload
+    paths) and not on any hot path.
+
+    Private API, so it is optional by construction: a torch build without it
+    keeps today's behaviour rather than failing an unload.
+    """
+    clear = getattr(getattr(torch, "_C", None), "_cuda_clearCublasWorkspaces", None)
+    if clear is None:
+        return
+    try:
+        clear()
+    except Exception:  # noqa: BLE001 — freeing memory must never raise
+        logger.debug("clearing cuBLAS workspaces failed", exc_info=True)
+
+
 def free_vram():
     """Release cached GPU memory on any accelerator (CUDA, MPS, XPU)."""
     torch = _lazy_torch()
     import gc
     gc.collect()
     if torch.cuda.is_available():
+        _clear_cublas_workspaces(torch)
         torch.cuda.empty_cache()
     elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         torch.mps.empty_cache()

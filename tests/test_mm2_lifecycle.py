@@ -378,3 +378,56 @@ def test_no_caller_open_codes_the_shared_unload():
         "unload_shared_model(), which frees in the right order:\n  "
         + "\n  ".join(offenders)
     )
+
+
+def test_free_vram_clears_cublas_workspaces_before_emptying(monkeypatch):
+    """cuBLAS's 8.5 MB workspace pins the segment it sits in (#1495).
+
+    Measured on a 4090: one live workspace block held an 803 MB segment that
+    empty_cache() could never return. Clearing has to come first — afterwards
+    the segment is already gone from empty_cache()'s point of view and the
+    next cuBLAS call has re-taken a workspace.
+    """
+    calls: list = []
+
+    class _Cuda:
+        @staticmethod
+        def is_available():
+            return True
+
+        @staticmethod
+        def empty_cache():
+            calls.append("empty_cache")
+
+    class _C:
+        @staticmethod
+        def _cuda_clearCublasWorkspaces():
+            calls.append("clear_cublas")
+
+    fake = type("_Torch", (), {"cuda": _Cuda, "_C": _C, "backends": type("_B", (), {})})
+    monkeypatch.setattr(mm, "_lazy_torch", lambda: fake)
+
+    mm.free_vram()
+
+    assert calls == ["clear_cublas", "empty_cache"]
+
+
+def test_free_vram_survives_a_torch_without_the_private_api(monkeypatch):
+    """The clear is a private binding, so its absence must not break an unload."""
+    calls: list = []
+
+    class _Cuda:
+        @staticmethod
+        def is_available():
+            return True
+
+        @staticmethod
+        def empty_cache():
+            calls.append("empty_cache")
+
+    fake = type("_Torch", (), {"cuda": _Cuda, "_C": type("_C", (), {}), "backends": type("_B", (), {})})
+    monkeypatch.setattr(mm, "_lazy_torch", lambda: fake)
+
+    mm.free_vram()
+
+    assert calls == ["empty_cache"]
