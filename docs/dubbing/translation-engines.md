@@ -159,7 +159,7 @@ and with no LLM configured (or on any LLM error) it simply does nothing.
 
 **Settings → System → LLM Providers** is the one place to set up the LLM. Pick a
 provider, paste its API key, choose a model, **Test** it, and "use for
-translation." Supported: OpenAI, OpenRouter, Groq, Cerebras, Google AI (Gemini),
+translation." Supported: OpenAI, OpenRouter, OrcaRouter, Groq, Cerebras, Google AI (Gemini),
 Mistral, Cohere, NVIDIA, GitHub Models, Cloudflare, Hugging Face, SambaNova,
 SiliconFlow, **local Ollama / LM Studio** (offline, no key), and a **Custom**
 OpenAI-compatible endpoint.
@@ -171,6 +171,9 @@ provider via environment variables (e.g. `GROQ_API_KEY`, or the legacy
 `TRANSLATE_BASE_URL` / `TRANSLATE_API_KEY` / `TRANSLATE_MODEL`, which map to the
 **Custom** provider).
 
+OrcaRouter can be configured without the UI with `ORCAROUTER_API_KEY`, and its
+defaults can be overridden with `ORCAROUTER_BASE_URL` and `ORCAROUTER_MODEL`.
+
 ### Pinning the active provider with `LLM_DEFAULT_PROVIDER`
 
 By default the LLM used for Cinematic/Autofit is the one you mark "use for
@@ -180,7 +183,7 @@ shared machine — set the `LLM_DEFAULT_PROVIDER` environment variable to a
 provider id before launching the backend:
 
 ```
-LLM_DEFAULT_PROVIDER=groq        # or openai, openrouter, cerebras, ollama, custom, …
+LLM_DEFAULT_PROVIDER=groq        # or openai, openrouter, orcarouter, cerebras, ollama, custom, …
 ```
 
 Resolution order for the active provider is: `LLM_DEFAULT_PROVIDER` (env) →
