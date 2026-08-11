@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 
 import pytest
 
@@ -275,3 +276,105 @@ def test_list_models_downgrades_truncated_cache(tmp_path, monkeypatch):
     assert row["installed"] is False
     assert row["incomplete"] is True
     models.invalidate_cache()
+
+# ── The unload ordering (#1495) ─────────────────────────────────────────────
+#
+# Dropping the shared reference has to happen BEFORE the allocator caches are
+# emptied. Inverted, the unload frees nothing and says it worked: the weights
+# are still reachable so gc keeps them, empty_cache() only returns blocks the
+# allocator already considered free, and the reference drops a moment later
+# into a cache nobody will flush again. That is how a headless worker node held
+# 3.6 GB across an idle sweep whose log line read "Released 1 idle engine(s)".
+#
+# Four call sites open-coded the pair; the one the engine-registry sweep reaches
+# was the inverted one, which is why every UI-driven unload looked fine. These
+# pin the ordering at the helper, at the sweep path, and at the facade — and the
+# last test keeps new callers from open-coding it again.
+
+class _Weights:
+    """Stands in for the model. Identity is all these tests need."""
+
+
+def _watch_free_vram(monkeypatch, manager=mm):
+    """Record what the shared ref held at each free_vram() call.
+
+    ``manager`` is explicit because other suites reimport
+    services.model_manager, so more than one module object can be alive at
+    once. Each caller here patches the exact object the code under test will
+    reach — ``OmniVoiceBackend.unload`` imports at call time and gets whatever
+    sys.modules holds now, the facade uses the alias it bound at its own import.
+    Patching this file's alias for all of them passes alone and fails in a full
+    run, which is how this test first went red.
+    """
+    seen: list = []
+    monkeypatch.setattr(manager, "free_vram", lambda: seen.append(manager.model))
+    monkeypatch.setattr(manager, "release_tts_side_caches", lambda: None)
+    monkeypatch.setattr(manager, "model", _Weights())
+    return seen
+
+
+def test_unload_shared_model_clears_the_ref_before_freeing(monkeypatch):
+    seen = _watch_free_vram(monkeypatch)
+    assert mm.unload_shared_model() is True
+    assert seen == [None], "free_vram() ran while the model was still referenced"
+    assert mm.model is None
+
+
+def test_unload_shared_model_is_idempotent(monkeypatch):
+    seen = _watch_free_vram(monkeypatch)
+    monkeypatch.setattr(mm, "model", None)
+    assert mm.unload_shared_model() is False
+    assert seen == [], "nothing was resident, so the allocator was left alone"
+
+
+def test_engine_unload_releases_the_shared_model(monkeypatch):
+    """The idle-sweep path — the one that was inverted."""
+    manager = sys.modules["services.model_manager"]
+    seen = _watch_free_vram(monkeypatch, manager)
+    monkeypatch.setattr(tb, "clear_clone_prompt_cache", lambda: None)
+
+    tb.OmniVoiceBackend().unload()
+
+    assert seen == [None], "the engine sweep emptied the cache before releasing"
+    assert manager.model is None
+
+
+def test_facade_unload_tts_releases_the_shared_model(monkeypatch):
+    seen = _watch_free_vram(monkeypatch, ml.mm)
+
+    assert _run(ml.unload("tts")) == {"unloaded": "tts", "success": True}
+
+    assert seen == [None]
+    assert ml.mm.model is None
+
+
+def test_no_caller_open_codes_the_shared_unload():
+    """One ordering, in one place.
+
+    The bug was not that someone wrote the two lines wrongly — it was that five
+    modules each wrote them at all, so getting one wrong stayed invisible next
+    to four that were right. Assigning ``model_manager.model`` from outside the
+    module is the shape that made that possible; ``unload_shared_model()`` is
+    the replacement.
+    """
+    import pathlib
+    import re
+
+    root = pathlib.Path(mm.__file__).resolve().parents[1]
+    skip = {".venv", "venv", "site-packages", "node_modules", "__pycache__", "build", "dist"}
+    pattern = re.compile(r"^\w+\.model\s*=\s*(?!=)")
+
+    offenders = []
+    for path in root.rglob("*.py"):
+        if path.name == "model_manager.py" or skip & set(path.parts):
+            continue
+        for number, line in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
+            stripped = line.strip()
+            if pattern.match(stripped) and ("mm." in stripped or "model_manager." in stripped):
+                offenders.append(f"{path.relative_to(root)}:{number}: {stripped}")
+
+    assert not offenders, (
+        "assign model_manager.model only inside model_manager; callers use "
+        "unload_shared_model(), which frees in the right order:\n  "
+        + "\n  ".join(offenders)
+    )

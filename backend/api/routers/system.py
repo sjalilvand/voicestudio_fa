@@ -544,9 +544,10 @@ async def flush_memory(unload_model: bool = False):
     if unload_model:
         import services.model_manager as mm
         async with mm._model_lock:
-            if mm.model is not None:
-                mm.model = None
-                freed_model = True
+            # Also drops the clone-prompt side cache, which this path used to
+            # leave resident — an "unload" that kept the encoded reference
+            # tensors belonging to the model it just released (#1495).
+            freed_model = mm.unload_shared_model()
 
     # Multi-pass GC to break reference cycles
     gc.collect(generation=2)

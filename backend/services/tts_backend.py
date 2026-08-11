@@ -608,18 +608,25 @@ class OmniVoiceBackend(TTSBackend):
         clear the shared one and free GPU memory too. Idempotent and safe before
         the first generate(). Best-effort: assignment is GIL-atomic, so we don't
         take the async ``_model_lock`` from this sync path; the registry wraps
-        this call in try/except so a race can never block an engine switch."""
+        this call in try/except so a race can never block an engine switch.
+
+        Delegates to ``model_manager.unload_shared_model`` rather than clearing
+        the singleton here: this path used to free the device caches *before*
+        dropping the shared reference, which frees nothing, and it is the path
+        the idle sweep on a headless worker node runs (#1495)."""
         self._model = None
         clear_clone_prompt_cache()  # #427: drop cached prompts so VRAM is freed
         try:
             import services.model_manager as mm
-            if mm.model is not None:
-                mm.free_vram()
-                mm.model = None
+            mm.unload_shared_model()
         except Exception as exc:
-            logger.warning("Shared voice model unload did not complete")
+            # The reference is already gone by the time anything in here can
+            # raise — only the device-cache flush is left, and that failing is
+            # a driver problem, not a stuck model. Saying "retry" would send
+            # the user to repeat an unload that already happened.
+            logger.warning("Shared voice model released, but the device cache flush failed")
             raise RuntimeError(
-                "The shared voice model could not be unloaded. Retry after the current generation finishes."
+                "The voice model was released, but the GPU memory cache could not be flushed."
             ) from exc
 
 

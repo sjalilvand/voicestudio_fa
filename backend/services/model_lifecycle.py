@@ -220,9 +220,7 @@ async def unload(model_id: str) -> dict:
 
     if model_id == "tts":
         async with mm._model_lock:
-            if mm.model is not None:
-                mm.model = None
-                mm.free_vram()
+            if mm.unload_shared_model():
                 return {"unloaded": "tts", "success": True}
         return {"unloaded": "tts", "success": False, "reason": "not loaded"}
 

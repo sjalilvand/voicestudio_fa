@@ -2595,7 +2595,6 @@ def _resolve_idle_timeout() -> float:
 
 
 async def idle_worker():
-    global model
     torch = _lazy_torch()
     while True:
         await asyncio.sleep(30)
@@ -2603,9 +2602,7 @@ async def idle_worker():
         async with _model_lock:
             if model is not None and time.time() - _last_used > idle_timeout:
                 logger.info("Idle timeout reached. Unloading VoiceStudio model to free VRAM.")
-                model = None
-                release_tts_side_caches()
-                free_vram()
+                unload_shared_model()
         # The capture/dictation ASR was never idle-released — so once a user
         # dictated, its model stayed resident for the life of the process while
         # the TTS model dutifully freed its 3.8 GB. On a 16 GB Mac that left the
@@ -2621,6 +2618,16 @@ async def idle_worker():
                 free_vram()
         except Exception:  # noqa: BLE001 — the reaper must never kill idle_worker
             logger.warning("idle capture-ASR release failed", exc_info=True)
+        # Same bargain for the AudioSeal watermark models, which loaded on the
+        # first embed and were never released. Deliberately only here and not
+        # in the make-room paths: watermarking runs immediately *after* a
+        # generate, so evicting it just before one would only buy a reload.
+        try:
+            from services.watermark import release_idle_models
+
+            release_idle_models(idle_timeout)
+        except Exception:  # noqa: BLE001 — the reaper must never kill idle_worker
+            logger.warning("idle watermark-model release failed", exc_info=True)
 
 def release_tts_side_caches():
     """Drop caches keyed to the TTS model, for when the model itself is released.
@@ -2667,6 +2674,39 @@ def free_vram():
         torch.xpu.empty_cache()
 
 
+def unload_shared_model() -> bool:
+    """Drop the shared VoiceStudio model and actually give the memory back.
+
+    The order is the entire point of this function. Clearing the reference has
+    to come FIRST, then the allocator caches. ``free_vram()`` run while
+    ``model`` is still bound releases nothing: the weights are still reachable,
+    so ``gc.collect()`` keeps them and ``empty_cache()`` only returns blocks
+    the allocator already considered free. The reference drops a moment later,
+    the weights go back into torch's cache, and nobody ever hands that cache to
+    the driver — so the unload is logged, the engine is dropped from the
+    registry, and ``nvidia-smi`` does not move.
+
+    Six call sites open-coded this pair and one of them had it inverted — the
+    one the engine-registry sweep reaches, which is the sweep a headless worker
+    node runs. A worker therefore sat on 3.6 GB indefinitely while reporting
+    the engine released, and every other path looked fine (#1495). One helper,
+    so there is one ordering and nowhere left to get it wrong.
+
+    Takes no lock of its own: the sync engine-registry path
+    (``OmniVoiceBackend.unload``) cannot await one, and callers that do hold
+    ``_model_lock`` simply keep holding it across the call. Assignment is
+    GIL-atomic, so the worst a race costs is a redundant reload. Idempotent —
+    returns False when nothing was resident.
+    """
+    global model
+    if model is None:
+        return False
+    model = None
+    release_tts_side_caches()
+    free_vram()
+    return True
+
+
 def _has_dedicated_vram():
     """Check if the current device has limited dedicated VRAM that needs offloading."""
     torch = _lazy_torch()
@@ -2704,9 +2744,7 @@ def _offload_unified_memory() -> bool:
             "(it reloads on the next generation).",
             "unknown" if free_gb is None else f"{free_gb:.1f}",
         )
-        model = None
-        release_tts_side_caches()
-        free_vram()
+        unload_shared_model()
         return True
     except Exception as e:  # noqa: BLE001
         logger.warning("unified-memory TTS offload failed (continuing): %s", e)

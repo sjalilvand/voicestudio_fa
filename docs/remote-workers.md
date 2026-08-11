@@ -249,15 +249,29 @@ kept, so turning it back on does not mean setting everything up again.
 | `OMNIVOICE_INBOUND_PORT` | Port to accept them on (default `7444`) |
 | `OMNIVOICE_ENGINE_IDLE_UNLOAD_SECONDS` | How long a model may sit unused before its VRAM is handed back (default `600`, minimum `5`) |
 | `OMNIVOICE_IDLE_SWEEP_SECONDS` | How often that check runs (default `60`, minimum `1`) |
-
-The last two exist so the ten-minute unload can be watched in a minute while
-testing — set them together, since shortening only the threshold still means
-waiting a full sweep interval to see it fire. Values that are unparseable or
-below the floor are ignored with a warning rather than honoured: a zero
-threshold would unload a model the instant it went idle and reload it for the
-next request.
 | `OMNIVOICE_WORKER_MODE` | `1` on the worker machine |
 | `OMNIVOICE_WORKER_TOKEN` | Enrollment token, first run only |
+
+`OMNIVOICE_ENGINE_IDLE_UNLOAD_SECONDS` and `OMNIVOICE_IDLE_SWEEP_SECONDS` exist
+so the ten-minute unload can be watched in a minute while testing — set them
+together, since shortening only the threshold still means waiting a full sweep
+interval to see it fire. Values that are unparseable or below the floor are
+ignored with a warning rather than honoured: a zero threshold would unload a
+model the instant it went idle and reload it for the next request.
+
+### Two idle timers, not one
+
+A worker node runs the full app, so two independent reapers can release the
+same model and they are configured separately:
+
+| Timer | Default | Set with |
+|---|---|---|
+| Engine registry — drops the cached engine instance and, for VoiceStudio, the shared model with it | 600 s | `OMNIVOICE_ENGINE_IDLE_UNLOAD_SECONDS` |
+| In-process model reaper — the backstop, also releases the dictation ASR and the watermark models | 900 s | `OMNIVOICE_IDLE_TIMEOUT` (or Settings) |
+
+In practice the first one gets there first and the second finds nothing to do.
+Shortening only `OMNIVOICE_ENGINE_IDLE_UNLOAD_SECONDS` is the right move when
+testing; the backstop is not worth touching.
 
 Only one VoiceStudio instance can accept remote workers on a given port. If
 another instance already owns the configured port, the app continues running

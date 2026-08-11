@@ -61,7 +61,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- Remote workers that lack required task inputs, progress leases, or model-download commands are now refused visibly instead of returning wrong audio or hanging. (#1478)
+- An idle voice model now actually hands its memory back. The unload emptied the GPU cache a moment before releasing the model, so it freed nothing while reporting success — a GPU machine lending its card sat on 3.6 GB indefinitely. (#1495)
+- The AudioSeal watermark models are released after the same idle period as everything else, instead of staying in memory for the life of the app once anything was watermarked. (#1495)
 - Remote GPU workers now synthesize a dub's fresh segments as one coarse job with live progress and cancellation; fitting, assembly and RVC remain local. (#1478)
 - Gallery voice previews now fall back to a local render when a downloaded clip cannot be decoded, instead of failing silently. (#1478)
 - A second VoiceStudio instance can no longer silently share the remote-worker port; it keeps running locally and explains how to resolve the conflict. (#1478)

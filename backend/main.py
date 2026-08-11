@@ -839,9 +839,10 @@ async def lifespan(app: FastAPI):
     # Unload the model and free GPU memory
     try:
         import services.model_manager as mm
-        if mm.model is not None:
-            mm.model = None
+        if mm.unload_shared_model():
             logger.info("Shutdown: model unloaded.")
+        # Still unconditional: there are allocator caches to hand back even when
+        # no model was resident.
         mm.free_vram()
         # Abandon a still-running preload's GPU-pool thread (Python can't kill
         # a thread mid blocking call) so it can't outlive this shutdown block

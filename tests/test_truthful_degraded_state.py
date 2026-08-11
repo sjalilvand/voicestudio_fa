@@ -214,8 +214,13 @@ def test_shared_voice_unload_failure_is_stable(monkeypatch):
     monkeypatch.setattr(manager, "free_vram", lambda: (_ for _ in ()).throw(RuntimeError("/secret/gpu")))
     with pytest.raises(RuntimeError) as caught:
         backend.unload()
-    assert str(caught.value) == "The shared voice model could not be unloaded. Retry after the current generation finishes."
-    assert manager.model is not None
+    assert str(caught.value) == "The voice model was released, but the GPU memory cache could not be flushed."
+    # The reference drop is the durable half and must survive a failing cache
+    # flush (#1495). This used to assert the opposite — that a raising
+    # free_vram() left the model bound for a retry — which was not a decision
+    # but a consequence of freeing before clearing, the very ordering that let
+    # a worker node hold 3.6 GB through an idle sweep.
+    assert manager.model is None
     monkeypatch.setattr(manager, "free_vram", lambda: None)
     backend.unload()
     assert manager.model is None

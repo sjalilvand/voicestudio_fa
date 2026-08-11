@@ -78,9 +78,7 @@ async def evict_other_tts_engines(keep_id: str) -> list[str]:
             import services.model_manager as mm
 
             async with mm._model_lock:
-                if mm.model is not None:
-                    mm.model = None
-                    mm.free_vram()
+                if mm.unload_shared_model():
                     evicted.append("omnivoice")
         except Exception:  # noqa: BLE001
             logger.warning("evict: VoiceStudio core unload failed", exc_info=True)
