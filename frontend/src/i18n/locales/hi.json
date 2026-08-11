@@ -25,6 +25,15 @@
     "workspaces": "वर्कस्पेस"
   },
   "settings": {
+    "remote_backend_recovery_title": "रिमोट बैकएंड से संपर्क नहीं हो सका",
+    "remote_backend_recovery_hint": "आप बाद में सेटिंग्स → शेयरिंग में रिमोट बैकएंड बदल सकते हैं।",
+    "remote_backend_use_local": "लोकल बैकएंड इस्तेमाल करें",
+    "remote_backend_error_tls": "सुरक्षित कनेक्शन सत्यापित नहीं हो सका। प्रमाणपत्र जाँचें और VoiceStudio HTTP API पोर्ट इस्तेमाल करें।",
+    "remote_backend_error_cors": "रिमोट बैकएंड ने इस ऐप को रोक दिया। CORS सेटिंग्स में ऐप के ओरिजिन को अनुमति दें।",
+    "remote_backend_error_network": "रिमोट बैकएंड तक पहुँचा नहीं जा सका। पता, नेटवर्क और फ़ायरवॉल जाँचें।",
+    "remote_backend_error_timeout": "रिमोट बैकएंड ने समय पर जवाब नहीं दिया।",
+    "remote_backend_error_http": "रिमोट बैकएंड ने HTTP {{status}} लौटाया।",
+    "remote_backend_error_wrong_port": "यह VoiceStudio HTTP API नहीं लगता। पोर्ट 7443 आम तौर पर रिमोट वर्कर नियंत्रण पोर्ट है; पोर्ट 3900 आज़माएँ।",
     "openapi": "VoiceStudio API",
     "general": "सामान्य",
     "theme": "थीम",
