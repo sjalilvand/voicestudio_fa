@@ -1121,8 +1121,6 @@
     "all_languages": "All languages",
     "add_language": "Add language",
     "search_languages": "Search languages…",
-    "languages_selected_one": "{{count}} language selected",
-    "languages_selected_other": "{{count}} languages selected",
     "more_to_narrow": "+{{count}} more — type to narrow",
     "no_matches": "No matches",
     "engine_label": "Engine",
@@ -1171,6 +1169,7 @@
     "stop_progress": "Stop ({{current}}/{{total}})",
     "regen_changed": "Regen {{count}} changed",
     "qc_btn": "Verify dub timing (second-pass check)",
+    "verify": "Verify",
     "qc_running": "Checking dub timing…",
     "qc_result": "{{flagged}} of {{total}} lines may need a re-listen",
     "qc_clean": "All {{total}} lines match the script",
@@ -1212,7 +1211,13 @@
     "paste_translation_row_unmatched": "no match — left unchanged",
     "paste_translation_apply": "Apply to {{count}} segments",
     "paste_translation_cancel": "Cancel",
-    "paste_translation_more_rows": "+ {{count}} more rows"
+    "paste_translation_more_rows": "+ {{count}} more rows",
+    "languages_selected": "Languages selected: {{count}}",
+    "languages_selected_one": "{{count}} language selected",
+    "languages_selected_other": "{{count}} languages selected",
+    "manage_languages": "Manage languages",
+    "languages_done": "Done",
+    "languages_pending": "Pending"
   },
   "glossary": {
     "title": "Glossary",
@@ -1530,7 +1535,9 @@
     "export_title": "Export all",
     "clear_title": "Clear all",
     "empty_title": "No transcriptions yet",
-    "empty_desc": "Use the capture button (⌘+⇧+Space) to record and transcribe audio.",
+    "empty_desc": "Select Start dictation or press {{shortcut}} to record and transcribe audio.",
+    "capture": "Start dictation",
+    "capture_failed": "Could not start dictation. Check microphone access, then try again.",
     "empty_search_title": "No matching transcriptions",
     "empty_search_desc": "Try a different search term.",
     "copy": "Copy",
@@ -2013,7 +2020,8 @@
     "more_info": "More info",
     "learn_more": "Learn more",
     "saving": "Saving…",
-    "unknown": "unknown"
+    "unknown": "unknown",
+    "remove": "Remove {{term}}"
   },
   "keyboard": {
     "title": "Keyboard shortcuts",
@@ -2806,6 +2814,13 @@
     "hf_token_get_short": "Get one free →"
   },
   "history": {
+    "dub_meta": "{{segments}} segs · {{duration}}s",
+    "dub_meta_zero": "{{count}} segs · {{duration}}s",
+    "dub_meta_one": "{{count}} seg · {{duration}}s",
+    "dub_meta_two": "{{count}} segs · {{duration}}s",
+    "dub_meta_few": "{{count}} segs · {{duration}}s",
+    "dub_meta_many": "{{count}} segs · {{duration}}s",
+    "dub_meta_other": "{{count}} segs · {{duration}}s",
     "dub_title": "Dub history",
     "empty": "Nothing here yet — your generations will appear on the right.",
     "empty_dub": "Your dubs will appear here.",

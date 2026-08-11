@@ -330,7 +330,8 @@
     "no": "Không",
     "more_info": "Thêm thông tin",
     "learn_more": "Tìm hiểu thêm",
-    "saving": "Đang lưu…"
+    "saving": "Đang lưu…",
+    "remove": "Xóa {{term}}"
   },
   "launchpad": {
     "greeting": "xin chào ở đó",
@@ -906,6 +907,7 @@
     "target_language": "Lồng tiếng sang",
     "transcript_after_extract": "Bản chép lời sẽ xuất hiện sau khi trích xuất.",
     "qc_btn": "Xác minh thời gian lồng tiếng (kiểm tra lần thứ hai)",
+    "verify": "Xác minh",
     "qc_running": "Đang kiểm tra thời gian lồng tiếng…",
     "qc_result": "{{flagged}} trong số {{total}} dòng có thể cần nghe lại",
     "qc_clean": "Tất cả các dòng {{total}} đều khớp với tập lệnh",
@@ -924,7 +926,13 @@
     "paste_translation_row_unmatched": "không khớp — giữ nguyên",
     "paste_translation_apply": "Áp dụng cho {{count}} phân đoạn",
     "paste_translation_cancel": "Hủy",
-    "paste_translation_more_rows": "+ {{count}} dòng nữa"
+    "paste_translation_more_rows": "+ {{count}} dòng nữa",
+    "languages_selected": "Đã chọn {{count}} ngôn ngữ",
+    "multi_translating": "Đang dịch → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "Không thể dịch {{langs}}; các bản lồng tiếng đó đã được bỏ qua để tránh tạo bản nhạc sai ngôn ngữ.",
+    "manage_languages": "Quản lý ngôn ngữ",
+    "languages_done": "Hoàn tất",
+    "languages_pending": "Đang chờ"
   },
   "glossary": {
     "title": "Thuật ngữ",
@@ -1218,7 +1226,9 @@
     "export_title": "Xuất tất cả",
     "clear_title": "Xóa tất cả",
     "empty_title": "No transcriptions yet",
-    "empty_desc": "Sử dụng nút chụp (⌘+⇧+Space) để ghi và chép lại âm thanh.",
+    "empty_desc": "Chọn Bắt đầu đọc chính tả hoặc nhấn {{shortcut}} để ghi và chép lại âm thanh.",
+    "capture": "Bắt đầu đọc chính tả",
+    "capture_failed": "Không thể bắt đầu đọc chính tả. Hãy kiểm tra quyền truy cập micrô rồi thử lại.",
     "empty_search_title": "Không có bản chép lời phù hợp",
     "empty_search_desc": "Hãy thử một cụm từ tìm kiếm khác.",
     "copy": "Sao chép",
@@ -2067,6 +2077,13 @@
     "hf_token_get_short": "Nhận một cái miễn phí →"
   },
   "history": {
+    "dub_meta": "{{segments}} phân đoạn · {{duration}} giây",
+    "dub_meta_zero": "{{count}} phân đoạn · {{duration}} giây",
+    "dub_meta_one": "{{count}} phân đoạn · {{duration}} giây",
+    "dub_meta_two": "{{count}} phân đoạn · {{duration}} giây",
+    "dub_meta_few": "{{count}} phân đoạn · {{duration}} giây",
+    "dub_meta_many": "{{count}} phân đoạn · {{duration}} giây",
+    "dub_meta_other": "{{count}} phân đoạn · {{duration}} giây",
     "dub_title": "Lịch sử lồng tiếng",
     "empty": "Chưa có gì ở đây — các bản tạo của bạn sẽ xuất hiện ở bên phải.",
     "empty_dub": "Các bản lồng tiếng của bạn sẽ xuất hiện tại đây.",

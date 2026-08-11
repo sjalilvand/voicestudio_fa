@@ -330,7 +330,8 @@
     "no": "Não",
     "more_info": "Mais informações",
     "learn_more": "Saiba mais",
-    "saving": "Salvando…"
+    "saving": "Salvando…",
+    "remove": "Remover {{term}}"
   },
   "launchpad": {
     "greeting": "Olá",
@@ -884,8 +885,6 @@
     "prep_elapsed": "{{time}} decorrido",
     "add_language": "Adicionar idioma",
     "search_languages": "Pesquisar idiomas…",
-    "languages_selected_one": "{{count}} idioma selecionado",
-    "languages_selected_other": "{{count}} idiomas selecionados",
     "more_to_narrow": "+{{count}} mais — digite para restringir",
     "no_matches": "Nenhuma correspondência",
     "diagnostic_copied": "Diagnóstico copiado",
@@ -906,6 +905,7 @@
     "target_language": "Dublar para",
     "transcript_after_extract": "A transcrição aparece após a extração.",
     "qc_btn": "Verifique o tempo de dublagem (verificação de segunda passagem)",
+    "verify": "Verificar",
     "qc_running": "Verificando o tempo de dublagem…",
     "qc_result": "{{flagged}} de {{total}} linhas podem precisar de uma nova escuta",
     "qc_clean": "Todas as linhas {{total}} correspondem ao script",
@@ -924,7 +924,15 @@
     "paste_translation_row_unmatched": "sem correspondência — inalterado",
     "paste_translation_apply": "Aplicar a {{count}} segmentos",
     "paste_translation_cancel": "Cancelar",
-    "paste_translation_more_rows": "+ {{count}} linhas adicionais"
+    "paste_translation_more_rows": "Linhas adicionais: {{count}}",
+    "languages_selected": "Idiomas selecionados: {{count}}",
+    "languages_selected_one": "{{count}} idioma selecionado",
+    "languages_selected_other": "{{count}} idiomas selecionados",
+    "multi_translating": "Traduzindo → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "A tradução de {{langs}} falhou; essas dublagens foram ignoradas para evitar uma faixa no idioma errado.",
+    "manage_languages": "Gerenciar idiomas",
+    "languages_done": "Concluído",
+    "languages_pending": "Pendente"
   },
   "glossary": {
     "title": "Glossário",
@@ -1218,7 +1226,9 @@
     "export_title": "Exportar tudo",
     "clear_title": "Limpar tudo",
     "empty_title": "Ainda não há transcrições",
-    "empty_desc": "Use o botão de captura (⌘+⇧+Espaço) para gravar e transcrever áudio.",
+    "empty_desc": "Selecione Iniciar ditado ou pressione {{shortcut}} para gravar e transcrever áudio.",
+    "capture": "Iniciar ditado",
+    "capture_failed": "Não foi possível iniciar o ditado. Verifique o acesso ao microfone e tente novamente.",
     "empty_search_title": "Nenhuma transcrição correspondente",
     "empty_search_desc": "Experimente um termo de pesquisa diferente.",
     "copy": "Copiar",
@@ -2067,6 +2077,13 @@
     "hf_token_get_short": "Ganhe um grátis →"
   },
   "history": {
+    "dub_meta": "{{segments}} segmentos · {{duration}} s",
+    "dub_meta_zero": "{{count}} segmentos · {{duration}} s",
+    "dub_meta_one": "{{count}} segmento · {{duration}} s",
+    "dub_meta_two": "{{count}} segmentos · {{duration}} s",
+    "dub_meta_few": "{{count}} segmentos · {{duration}} s",
+    "dub_meta_many": "{{count}} segmentos · {{duration}} s",
+    "dub_meta_other": "{{count}} segmentos · {{duration}} s",
     "dub_title": "Histórico de dublagens",
     "empty": "Nada por aqui ainda — suas gerações aparecerão à direita.",
     "empty_dub": "Suas dublagens aparecerão aqui.",

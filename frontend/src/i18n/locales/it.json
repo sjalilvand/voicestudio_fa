@@ -330,7 +330,8 @@
     "no": "No",
     "more_info": "Maggiori informazioni",
     "learn_more": "Scopri di più",
-    "saving": "Salvataggio…"
+    "saving": "Salvataggio…",
+    "remove": "Rimuovi {{term}}"
   },
   "launchpad": {
     "greeting": "ciao a tutti",
@@ -884,8 +885,6 @@
     "prep_elapsed": "{{time}} trascorso",
     "add_language": "Aggiungi lingua",
     "search_languages": "Cerca lingue…",
-    "languages_selected_one": "{{count}} lingua selezionata",
-    "languages_selected_other": "{{count}} lingue selezionate",
     "more_to_narrow": "+{{count}} altro: digita per restringere",
     "no_matches": "Nessuna corrispondenza",
     "diagnostic_copied": "Diagnostica copiata",
@@ -906,6 +905,7 @@
     "target_language": "Doppia in",
     "transcript_after_extract": "La trascrizione appare dopo l'estrazione.",
     "qc_btn": "Verifica i tempi di duplicazione (controllo del secondo passaggio)",
+    "verify": "Verifica",
     "qc_running": "Controllo dei tempi di duplicazione…",
     "qc_result": "{{flagged}} delle righe {{total}} potrebbe richiedere un nuovo ascolto",
     "qc_clean": "Tutte le righe {{total}} corrispondono allo script",
@@ -924,7 +924,15 @@
     "paste_translation_row_unmatched": "nessuna corrispondenza — invariato",
     "paste_translation_apply": "Applica a {{count}} segmenti",
     "paste_translation_cancel": "Annulla",
-    "paste_translation_more_rows": "+ altre {{count}} righe"
+    "paste_translation_more_rows": "Altre righe: {{count}}",
+    "languages_selected": "Lingue selezionate: {{count}}",
+    "languages_selected_one": "{{count}} lingua selezionata",
+    "languages_selected_other": "{{count}} lingue selezionate",
+    "multi_translating": "Traduzione → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "La traduzione non è riuscita per {{langs}}; i relativi doppiaggi sono stati ignorati per evitare una traccia nella lingua sbagliata.",
+    "manage_languages": "Gestisci lingue",
+    "languages_done": "Completate",
+    "languages_pending": "In attesa"
   },
   "glossary": {
     "title": "Glossario",
@@ -1218,7 +1226,9 @@
     "export_title": "Esporta tutto",
     "clear_title": "Cancella tutto",
     "empty_title": "Nessuna trascrizione ancora",
-    "empty_desc": "Utilizza il pulsante di acquisizione (⌘+⇧+Spazio) per registrare e trascrivere l'audio.",
+    "empty_desc": "Seleziona Avvia dettatura o premi {{shortcut}} per registrare e trascrivere l'audio.",
+    "capture": "Avvia dettatura",
+    "capture_failed": "Impossibile avviare la dettatura. Verifica l’accesso al microfono e riprova.",
     "empty_search_title": "Nessuna trascrizione corrispondente",
     "empty_search_desc": "Prova un termine di ricerca diverso.",
     "copy": "Copia",
@@ -2067,6 +2077,13 @@
     "hf_token_get_short": "Ottienine uno gratis →"
   },
   "history": {
+    "dub_meta": "{{segments}} segmenti · {{duration}} s",
+    "dub_meta_zero": "{{count}} segmenti · {{duration}} s",
+    "dub_meta_one": "{{count}} segmento · {{duration}} s",
+    "dub_meta_two": "{{count}} segmenti · {{duration}} s",
+    "dub_meta_few": "{{count}} segmenti · {{duration}} s",
+    "dub_meta_many": "{{count}} segmenti · {{duration}} s",
+    "dub_meta_other": "{{count}} segmenti · {{duration}} s",
     "dub_title": "Cronologia doppiaggi",
     "empty": "Ancora niente qui — le tue generazioni appariranno sulla destra.",
     "empty_dub": "I tuoi doppiaggi appariranno qui.",

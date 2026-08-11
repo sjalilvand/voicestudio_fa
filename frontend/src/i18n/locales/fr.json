@@ -330,7 +330,8 @@
     "no": "Non",
     "more_info": "Plus d'informations",
     "learn_more": "En savoir plus",
-    "saving": "Enregistrement…"
+    "saving": "Enregistrement…",
+    "remove": "Supprimer {{term}}"
   },
   "launchpad": {
     "greeting": "bonjour",
@@ -884,8 +885,6 @@
     "prep_elapsed": "{{time}} écoulé",
     "add_language": "Ajouter une langue",
     "search_languages": "Rechercher des langues…",
-    "languages_selected_one": "{{count}} langue sélectionnée",
-    "languages_selected_other": "{{count}} langues sélectionnées",
     "more_to_narrow": "+{{count}} plus — tapez pour affiner",
     "no_matches": "Aucune correspondance",
     "diagnostic_copied": "Diagnostic copié",
@@ -906,6 +905,7 @@
     "target_language": "Doubler en",
     "transcript_after_extract": "La transcription apparaît après l'extraction.",
     "qc_btn": "Vérifier le timing du doublage (vérification du deuxième passage)",
+    "verify": "Vérifier",
     "qc_running": "Vérification du timing de doublage…",
     "qc_result": "{{flagged}} lignes sur {{total}} peuvent nécessiter une réécoute",
     "qc_clean": "Toutes les lignes {{total}} correspondent au script",
@@ -924,7 +924,15 @@
     "paste_translation_row_unmatched": "aucune correspondance — inchangé",
     "paste_translation_apply": "Appliquer à {{count}} segments",
     "paste_translation_cancel": "Annuler",
-    "paste_translation_more_rows": "+ {{count}} lignes supplémentaires"
+    "paste_translation_more_rows": "+ {{count}} lignes supplémentaires",
+    "languages_selected": "Langues sélectionnées : {{count}}",
+    "languages_selected_one": "{{count}} langue sélectionnée",
+    "languages_selected_other": "{{count}} langues sélectionnées",
+    "multi_translating": "Traduction → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "La traduction a échoué pour {{langs}} ; ces doublages ont été ignorés afin d’éviter une piste dans la mauvaise langue.",
+    "manage_languages": "Gérer les langues",
+    "languages_done": "Terminé",
+    "languages_pending": "En attente"
   },
   "glossary": {
     "title": "Glossaire",
@@ -1218,7 +1226,9 @@
     "export_title": "Exporter tout",
     "clear_title": "Tout effacer",
     "empty_title": "Aucune transcription pour l'instant",
-    "empty_desc": "Utilisez le bouton de capture (⌘+⇧+Espace) pour enregistrer et transcrire l'audio.",
+    "empty_desc": "Sélectionnez Démarrer la dictée ou appuyez sur {{shortcut}} pour enregistrer et transcrire l'audio.",
+    "capture": "Démarrer la dictée",
+    "capture_failed": "Impossible de démarrer la dictée. Vérifiez l’accès au microphone, puis réessayez.",
     "empty_search_title": "Aucune transcription correspondante",
     "empty_search_desc": "Essayez un autre terme de recherche.",
     "copy": "Copier",
@@ -2067,6 +2077,13 @@
     "hf_token_get_short": "Obtenez-en un gratuitement →"
   },
   "history": {
+    "dub_meta": "{{segments}} segments · {{duration}} s",
+    "dub_meta_zero": "{{count}} segment · {{duration}} s",
+    "dub_meta_one": "{{count}} segment · {{duration}} s",
+    "dub_meta_two": "{{count}} segments · {{duration}} s",
+    "dub_meta_few": "{{count}} segments · {{duration}} s",
+    "dub_meta_many": "{{count}} segments · {{duration}} s",
+    "dub_meta_other": "{{count}} segments · {{duration}} s",
     "dub_title": "Historique des doublages",
     "empty": "Rien ici pour l'instant — vos générations apparaîtront à droite.",
     "empty_dub": "Vos doublages apparaîtront ici.",

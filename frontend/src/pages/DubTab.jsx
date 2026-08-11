@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store';
 import { API } from '../api/client';
@@ -14,6 +14,11 @@ import DubHeader from '../components/dub/DubHeader';
 import DubLeftColumn from '../components/dub/DubLeftColumn';
 import DubRightColumn from '../components/dub/DubRightColumn';
 import DubFooter from '../components/dub/DubFooter';
+import {
+  hasCompleteTranslation,
+  multiLangTargets,
+  translationProgressByCode,
+} from '../utils/multiLang';
 
 export default function DubTab(props) {
   const { t, i18n } = useTranslation();
@@ -175,6 +180,44 @@ export default function DubTab(props) {
   const setMultiLangMode = useAppStore((s) => s.setMultiLangMode);
   const multiLangs = useAppStore((s) => s.multiLangs);
   const setMultiLangs = useAppStore((s) => s.setMultiLangs);
+  // The primary target picker and the segment-language switch share the
+  // legacy visible-text slot, but only the picker changes batch membership.
+  const primaryTargetRef = useRef({ lang: dubLang, code: dubLangCode });
+  useEffect(() => {
+    primaryTargetRef.current = { lang: dubLang, code: dubLangCode };
+    // A new backend job starts with the store's restored primary target.
+    // Segment-language switches never change dubJobId and therefore leave it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dubJobId]);
+  const setPrimaryDubLang = useCallback(
+    (lang) => {
+      primaryTargetRef.current = { ...primaryTargetRef.current, lang };
+      setDubLang(lang);
+    },
+    [setDubLang],
+  );
+  const setPrimaryDubLangCode = useCallback(
+    (code) => {
+      primaryTargetRef.current = { ...primaryTargetRef.current, code };
+      switchDubLangCode(code);
+    },
+    [switchDubLangCode],
+  );
+  // The primary target dropdown is part of a multi-language job too. The
+  // chip picker adds extra targets; it does not replace the active one.
+  const batchTargets = useMemo(
+    () =>
+      multiLangTargets(primaryTargetRef.current.lang, primaryTargetRef.current.code, multiLangs),
+    // The store language values intentionally invalidate this memo after a
+    // primary-picker change; segment switches recompute the same ref-backed
+    // target list without changing batch membership.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dubLang, dubLangCode, multiLangs],
+  );
+  const multiLangProgress = useMemo(
+    () => translationProgressByCode(dubSegments, batchTargets),
+    [batchTargets, dubSegments],
+  );
   // Landing "Advanced" disclosure (pre-upload options).
   const [landingAdvOpen, setLandingAdvOpen] = useState(false);
 
@@ -188,58 +231,71 @@ export default function DubTab(props) {
   // A pick whose translate fails is skipped (never render a wrong-language
   // track); the batch continues and the skips are reported at the end.
   const multiBatchRunningRef = useRef(false);
+  const [multiBatchBusy, setMultiBatchBusy] = useState(false);
   const onGenerateClick = useCallback(async () => {
-    if (multiLangMode && multiLangs.length > 0) {
+    if (multiLangMode && batchTargets.length > 0) {
       if (multiBatchRunningRef.current) return; // ignore re-clicks mid-batch
       multiBatchRunningRef.current = true;
+      setMultiBatchBusy(true);
       const skipped = [];
-      // Skip the redundant translate ONLY for the first pick, and only when
-      // it targets the language the editor text is already in (every segment
-      // carries a translation differing from its original — i.e. the user
-      // just ran Translate All into this exact language). After the first
-      // pick the editor text is the previous pick's language, so every later
-      // pick always translates. Correctness beats cleverness.
-      const editorAlreadyTranslated =
-        dubSegments.length > 0 &&
-        dubSegments.every((s) => s.text_original && s.text !== s.text_original);
+      const { lang: primaryLanguage, code: primaryCode } = primaryTargetRef.current;
       try {
-        for (let i = 0; i < multiLangs.length; i++) {
-          const l = multiLangs[i];
-          setDubLang(l.lang);
-          // Keep UI/exports in sync AND snapshot the previous pick's
-          // translations before this pick's translate pass overwrites the
-          // visible text (P1.2).
-          switchDubLangCode(l.code);
-          const skipTranslate = i === 0 && l.code === dubLangCode && editorAlreadyTranslated;
-          if (!skipTranslate) {
-            // Honest phase label: this pill slot otherwise only says
-            // "Generating…", hiding the translate pass entirely.
-            useAppStore.getState().showPill(
-              'translating',
-              t('dub.multi_translating', {
-                lang: l.lang,
-                current: i + 1,
-                total: multiLangs.length,
-              }),
-              { homeMode: 'dub' },
-            );
-            // eslint-disable-next-line no-await-in-loop
-            const ok = await handleTranslateAll(l.code);
-            if (!ok) {
-              // Error already surfaced by handleTranslateAll (banner/toast);
-              // drop the phase pill and move on to the next language.
-              useAppStore.getState().dismissPill();
+        for (let i = 0; i < batchTargets.length; i++) {
+          const l = batchTargets[i];
+          try {
+            setDubLang(l.lang);
+            // Keep UI/exports in sync AND snapshot the previous pick's
+            // translations before this pick's translate pass overwrites the
+            // visible text (P1.2).
+            switchDubLangCode(l.code);
+            // A changed visible text is not proof that it belongs to this
+            // target (switching to an untranslated language intentionally
+            // leaves the previous text visible). Only the per-language map
+            // can safely suppress a redundant translation request.
+            const cached = hasCompleteTranslation(useAppStore.getState().dubSegments, l.code);
+            if (!cached) {
+              // Honest phase label: this pill slot otherwise only says
+              // "Generating…", hiding the translate pass entirely.
+              useAppStore.getState().showPill(
+                'translating',
+                t('dub.multi_translating', {
+                  lang: l.lang,
+                  current: i + 1,
+                  total: batchTargets.length,
+                }),
+                { homeMode: 'dub' },
+              );
+              const ok = await handleTranslateAll(l.code);
+              // Partial translations are useful for manual review, but an
+              // automated batch must never synthesize the untranslated rows
+              // into a mixed-language track.
+              const complete = hasCompleteTranslation(useAppStore.getState().dubSegments, l.code);
+              if (!ok || !complete) {
+                // Error already surfaced by handleTranslateAll (banner/toast);
+                // drop the phase pill and move on to the next language.
+                useAppStore.getState().dismissPill();
+                skipped.push(l.lang);
+                continue;
+              }
+            }
+            await handleDubGenerate({
+              langOverride: { language: l.lang, language_code: l.code },
+            });
+          } catch {
+            // Keep independent target languages moving after one unexpected
+            // failure; the underlying action already surfaces its error.
+            useAppStore.getState().dismissPill();
+            if (!skipped.includes(l.lang)) {
               skipped.push(l.lang);
-              continue;
             }
           }
-          // eslint-disable-next-line no-await-in-loop
-          await handleDubGenerate({ langOverride: { language: l.lang, language_code: l.code } });
         }
-      } catch {
-        /* a failed language stops the batch; its error is already surfaced */
+      } finally {
+        setDubLang(primaryLanguage);
+        switchDubLangCode(primaryCode);
+        multiBatchRunningRef.current = false;
+        setMultiBatchBusy(false);
       }
-      multiBatchRunningRef.current = false;
       if (skipped.length) {
         toast.error(t('dub.multi_lang_skipped', { langs: skipped.join(', ') }), {
           duration: 8000,
@@ -250,15 +306,40 @@ export default function DubTab(props) {
     }
   }, [
     multiLangMode,
-    multiLangs,
-    dubSegments,
-    dubLangCode,
+    batchTargets,
     handleTranslateAll,
     handleDubGenerate,
     setDubLang,
     switchDubLangCode,
     t,
   ]);
+
+  // In multi-language mode, "Translate All" means all configured targets,
+  // while still restoring the primary target in the editor afterwards. Each
+  // translation lands in segments[].translations[code], so Generate can
+  // reuse the complete maps without retranslating or losing another language.
+  const onTranslateClick = useCallback(async () => {
+    if (!multiLangMode) return handleTranslateAll();
+    if (multiBatchRunningRef.current) return false;
+    multiBatchRunningRef.current = true;
+    setMultiBatchBusy(true);
+    const { lang: primaryLanguage, code: primaryCode } = primaryTargetRef.current;
+    let allOk = true;
+    try {
+      for (const target of batchTargets) {
+        setDubLang(target.lang);
+        switchDubLangCode(target.code);
+        const ok = await handleTranslateAll(target.code);
+        if (!ok) allOk = false;
+      }
+    } finally {
+      setDubLang(primaryLanguage);
+      switchDubLangCode(primaryCode);
+      multiBatchRunningRef.current = false;
+      setMultiBatchBusy(false);
+    }
+    return allOk;
+  }, [multiLangMode, batchTargets, handleTranslateAll, setDubLang, switchDubLangCode]);
 
   // Live ETA while generating — elapsed ticks each second; remaining is
   // extrapolated from the current/total rate so it's only meaningful once
@@ -487,9 +568,16 @@ export default function DubTab(props) {
     try {
       const lang = previewMode !== 'original' ? previewMode : undefined;
       const res = await dubQc(dubJobId, lang);
+      // A generation that finishes while QC is in flight invalidates these
+      // measurements. Ignore the stale response instead of attaching timing
+      // results from the previous audio to the new dub.
+      if (useAppStore.getState().dubGenNonce !== dubGenNonce) {
+        toast.dismiss(loadingId);
+        return;
+      }
       const byId = new Map((res.segments || []).map((q) => [String(q.seg_id), q]));
-      setDubSegments(
-        dubSegments.map((s, i) => {
+      setDubSegments((currentSegments) =>
+        currentSegments.map((s, i) => {
           const q = byId.get(String(s.id ?? i));
           if (!q) return s;
           return {
@@ -533,7 +621,7 @@ export default function DubTab(props) {
     } finally {
       setQcRunning(false);
     }
-  }, [dubJobId, qcRunning, previewMode, dubSegments, setDubSegments, t]);
+  }, [dubJobId, qcRunning, previewMode, dubGenNonce, setDubSegments, t]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -618,7 +706,7 @@ export default function DubTab(props) {
             onGenerateClick={onGenerateClick}
             isTranslating={isTranslating}
             multiLangMode={multiLangMode}
-            multiLangs={multiLangs}
+            multiLangs={batchTargets}
             incrementalPlan={incrementalPlan}
             handleDubGenerate={handleDubGenerate}
             qcRunning={qcRunning}
@@ -662,12 +750,12 @@ export default function DubTab(props) {
               translateProvider={translateProvider}
               dubInstruct={dubInstruct}
               setDubInstruct={setDubInstruct}
-              handleTranslateAll={handleTranslateAll}
+              handleTranslateAll={onTranslateClick}
               isTranslating={isTranslating}
               hasAnyTranslation={hasAnyTranslation}
               handleCleanupSegments={handleCleanupSegments}
-              setDubLang={setDubLang}
-              setDubLangCode={switchDubLangCode}
+              setDubLang={setPrimaryDubLang}
+              setDubLangCode={setPrimaryDubLangCode}
               dubDialect={dubDialect}
               setDubDialect={setDubDialect}
               i18n={i18n}
@@ -682,6 +770,7 @@ export default function DubTab(props) {
               setMultiLangMode={setMultiLangMode}
               multiLangs={multiLangs}
               setMultiLangs={setMultiLangs}
+              multiLangProgress={multiLangProgress}
               editSegments={editSegments}
             />
             <DubRightColumn
@@ -695,6 +784,11 @@ export default function DubTab(props) {
               defaultTrack={defaultTrack}
               setDefaultTrack={setDefaultTrack}
               dubLangCode={dubLangCode}
+              multiLangMode={multiLangMode}
+              batchTargets={batchTargets}
+              multiBatchBusy={multiBatchBusy}
+              setDubLang={setDubLang}
+              setDubLangCode={switchDubLangCode}
               dubTracks={dubTracks}
               timingStrategy={timingStrategy}
               setTimingStrategy={setTimingStrategy}
@@ -743,6 +837,7 @@ export default function DubTab(props) {
             t={t}
             dubStep={dubStep}
             dubTracks={dubTracks}
+            dubLangCode={dubLangCode}
             incrementalPlan={incrementalPlan}
             dubError={dubError}
             dubFailure={dubFailure}

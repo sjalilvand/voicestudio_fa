@@ -99,10 +99,10 @@ _ENGINE_AGNOSTIC_KEYS = (
 # Never raise one: if this fails after adding en.json keys, add the keys to
 # every locale (translated) in the same change instead.
 _MISSING_BASELINE = {
-    "ar": 504, "de": 504, "es": 504, "fr": 504, "hi": 504, "id": 504,
-    "it": 504, "ja": 504, "ko": 504, "nl": 504, "pl": 504, "pt": 504,
-    "ru": 504, "sv": 504, "th": 504, "tr": 504, "uk": 504, "vi": 504,
-    "zh-CN": 497, "zh-TW": 504,
+    "ar": 502, "de": 502, "es": 502, "fr": 502, "hi": 502, "id": 502,
+    "it": 502, "ja": 502, "ko": 502, "nl": 502, "pl": 502, "pt": 502,
+    "ru": 502, "sv": 502, "th": 502, "tr": 502, "uk": 502, "vi": 502,
+    "zh-CN": 495, "zh-TW": 502,
 }
 
 
@@ -244,6 +244,29 @@ def test_placeholders_match_en(locale):
         f"{locale}.json placeholder drift against en.json "
         f"({len(problems)} key(s)):\n" + "\n".join(problems[:25])
     )
+
+
+@pytest.mark.parametrize("locale", _LOCALES)
+def test_dub_history_has_every_plural_form(locale):
+    """Keep the full i18next plural key set available in every locale."""
+    history = _load(locale).get("history", {})
+    required = {
+        "dub_meta_zero",
+        "dub_meta_one",
+        "dub_meta_two",
+        "dub_meta_few",
+        "dub_meta_many",
+        "dub_meta_other",
+    }
+    missing = sorted(required - history.keys())
+    assert not missing, f"{locale}.json is missing Dub history plural forms: {missing}"
+
+    invalid = sorted(
+        key
+        for key in required
+        if "{{count}}" not in history[key] or "{{duration}}" not in history[key]
+    )
+    assert not invalid, f"{locale}.json has invalid Dub history plural forms: {invalid}"
 
 
 @pytest.mark.parametrize("locale", _LOCALES)

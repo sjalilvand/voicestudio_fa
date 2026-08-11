@@ -330,7 +330,8 @@
     "no": "ไม่",
     "more_info": "ข้อมูลเพิ่มเติม",
     "learn_more": "เรียนรู้เพิ่มเติม",
-    "saving": "กำลังบันทึก…"
+    "saving": "กำลังบันทึก…",
+    "remove": "ลบ {{term}}"
   },
   "launchpad": {
     "greeting": "สวัสดี",
@@ -906,6 +907,7 @@
     "target_language": "พากย์เป็น",
     "transcript_after_extract": "ทรานสคริปต์จะปรากฏหลังการแยกเสียง",
     "qc_btn": "ตรวจสอบระยะเวลาการพากย์ (ตรวจสอบรอบที่สอง)",
+    "verify": "ตรวจสอบ",
     "qc_running": "กำลังตรวจสอบเวลาพากย์...",
     "qc_result": "{{flagged}} จาก {{total}} บรรทัดอาจต้องฟังซ้ำ",
     "qc_clean": "{{total}} บรรทัดทั้งหมดตรงกับสคริปต์",
@@ -924,7 +926,13 @@
     "paste_translation_row_unmatched": "ไม่จับคู่ — คงเดิม",
     "paste_translation_apply": "ใช้กับ {{count}} เซกเมนต์",
     "paste_translation_cancel": "ยกเลิก",
-    "paste_translation_more_rows": "+ อีก {{count}} แถว"
+    "paste_translation_more_rows": "+ อีก {{count}} แถว",
+    "languages_selected": "เลือก {{count}} ภาษาแล้ว",
+    "multi_translating": "กำลังแปล → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "การแปลสำหรับ {{langs}} ล้มเหลว จึงข้ามเสียงพากย์เหล่านั้นเพื่อป้องกันไม่ให้สร้างแทร็กผิดภาษา",
+    "manage_languages": "จัดการภาษา",
+    "languages_done": "เสร็จแล้ว",
+    "languages_pending": "รอดำเนินการ"
   },
   "glossary": {
     "title": "อภิธานศัพท์",
@@ -1218,7 +1226,9 @@
     "export_title": "ส่งออกทั้งหมด",
     "clear_title": "เคลียร์ทั้งหมด",
     "empty_title": "ยังไม่มีการถอดเสียงเป็นคำ",
-    "empty_desc": "ใช้ปุ่มจับภาพ (⌘+⇧+Space) เพื่อบันทึกและถอดเสียง",
+    "empty_desc": "เลือก เริ่มการป้อนตามคำบอก หรือกด {{shortcut}} เพื่อบันทึกและถอดเสียง",
+    "capture": "เริ่มการป้อนตามคำบอก",
+    "capture_failed": "ไม่สามารถเริ่มการป้อนตามคำบอกได้ โปรดตรวจสอบสิทธิ์เข้าถึงไมโครโฟนแล้วลองอีกครั้ง",
     "empty_search_title": "ไม่มีการถอดเสียงที่ตรงกัน",
     "empty_search_desc": "ลองใช้คำค้นหาอื่น",
     "copy": "คัดลอก",
@@ -2067,6 +2077,13 @@
     "hf_token_get_short": "รับฟรีหนึ่งรายการ →"
   },
   "history": {
+    "dub_meta": "{{segments}} เซกเมนต์ · {{duration}} วินาที",
+    "dub_meta_zero": "{{count}} เซกเมนต์ · {{duration}} วินาที",
+    "dub_meta_one": "{{count}} เซกเมนต์ · {{duration}} วินาที",
+    "dub_meta_two": "{{count}} เซกเมนต์ · {{duration}} วินาที",
+    "dub_meta_few": "{{count}} เซกเมนต์ · {{duration}} วินาที",
+    "dub_meta_many": "{{count}} เซกเมนต์ · {{duration}} วินาที",
+    "dub_meta_other": "{{count}} เซกเมนต์ · {{duration}} วินาที",
     "dub_title": "ประวัติการพากย์",
     "empty": "ยังไม่มีอะไรที่นี่ — ผลงานที่สร้างจะปรากฏทางด้านขวา",
     "empty_dub": "เสียงพากย์ของคุณจะปรากฏที่นี่",

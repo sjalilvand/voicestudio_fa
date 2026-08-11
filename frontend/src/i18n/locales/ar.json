@@ -330,7 +330,8 @@
     "no": "لا",
     "more_info": "مزيد من المعلومات",
     "learn_more": "تعلم المزيد",
-    "saving": "جارٍ الحفظ…"
+    "saving": "جارٍ الحفظ…",
+    "remove": "إزالة {{term}}"
   },
   "launchpad": {
     "greeting": "مرحبا هناك",
@@ -906,6 +907,7 @@
     "target_language": "الدبلجة إلى",
     "transcript_after_extract": "يظهر النص بعد الاستخراج.",
     "qc_btn": "التحقق من توقيت الدبلجة (فحص المرور الثاني)",
+    "verify": "تحقق",
     "qc_running": "جارٍ التحقق من توقيت الدبلجة…",
     "qc_result": "{{flagged}} من {{total}} قد تحتاج الأسطر إلى إعادة الاستماع",
     "qc_clean": "جميع أسطر {{total}} تتطابق مع النص",
@@ -924,7 +926,13 @@
     "paste_translation_row_unmatched": "لا مطابقة — دون تغيير",
     "paste_translation_apply": "تطبيق على {{count}} مقاطع",
     "paste_translation_cancel": "إلغاء",
-    "paste_translation_more_rows": "+ {{count}} صفوف إضافية"
+    "paste_translation_more_rows": "+ {{count}} صفوف إضافية",
+    "languages_selected": "تم تحديد {{count}} لغة",
+    "multi_translating": "جارٍ الترجمة ← {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "فشلت ترجمة {{langs}}، لذا تم تخطي عمليات الدبلجة هذه لتجنب إنشاء مسار بلغة خاطئة.",
+    "manage_languages": "إدارة اللغات",
+    "languages_done": "مكتمل",
+    "languages_pending": "قيد الانتظار"
   },
   "glossary": {
     "title": "مسرد",
@@ -1218,7 +1226,9 @@
     "export_title": "تصدير الكل",
     "clear_title": "مسح الكل",
     "empty_title": "لا يوجد نسخ بعد",
-    "empty_desc": "استخدم زر الالتقاط (⌘+⇧+Space) لتسجيل الصوت ونسخه.",
+    "empty_desc": "اختر بدء الإملاء أو اضغط {{shortcut}} لتسجيل الصوت ونسخه.",
+    "capture": "بدء الإملاء",
+    "capture_failed": "تعذر بدء الإملاء. تحقق من إذن الميكروفون، ثم حاول مرة أخرى.",
     "empty_search_title": "لا توجد نسخ مطابقة",
     "empty_search_desc": "حاول استخدام مصطلح بحث مختلف.",
     "copy": "نسخ",
@@ -2067,6 +2077,13 @@
     "hf_token_get_short": "احصل على واحدة مجانًا →"
   },
   "history": {
+    "dub_meta": "{{segments}} مقطعًا · {{duration}} ث",
+    "dub_meta_zero": "{{count}} مقاطع · {{duration}} ث",
+    "dub_meta_one": "{{count}} مقطع · {{duration}} ث",
+    "dub_meta_two": "{{count}} مقطعان · {{duration}} ث",
+    "dub_meta_few": "{{count}} مقاطع · {{duration}} ث",
+    "dub_meta_many": "{{count}} مقطعًا · {{duration}} ث",
+    "dub_meta_other": "{{count}} مقطع · {{duration}} ث",
     "dub_title": "سجل الدبلجة",
     "empty": "لا شيء هنا بعد — ستظهر مخرجاتك على اليمين.",
     "empty_dub": "ستظهر دبلجاتك هنا.",

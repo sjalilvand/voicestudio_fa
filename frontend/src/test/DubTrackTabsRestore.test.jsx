@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import toast from 'react-hot-toast';
 import { useAppStore } from '../store';
 
 // Regression guard for the "completed dub tracks' tabs hidden until the
@@ -16,7 +17,7 @@ import { useAppStore } from '../store';
 
 // Heavy children are stubbed; DubLeftColumn is the probe — DubTab owns both
 // `hasDubbedTrack` and the previewMode auto-jump, and hands them down as props.
-const captured = vi.hoisted(() => ({ left: [] }));
+const captured = vi.hoisted(() => ({ left: [], header: [] }));
 vi.mock('../components/dub/DubLeftColumn', () => ({
   default: (props) => {
     captured.left.push(props);
@@ -24,18 +25,22 @@ vi.mock('../components/dub/DubLeftColumn', () => ({
   },
 }));
 vi.mock('../components/dub/DubHeader', () => ({
-  default: ({ resetDub, pipelineSteps = [], onPipelineStep }) => (
-    <div>
-      <button data-testid="reset-dub" onClick={resetDub}>
-        reset
-      </button>
-      {pipelineSteps.map((step) => (
-        <button key={step} onClick={() => onPipelineStep(step)}>
-          {step}
+  default: (props) => {
+    captured.header.push(props);
+    const { resetDub, pipelineSteps = [], onPipelineStep } = props;
+    return (
+      <div>
+        <button data-testid="reset-dub" onClick={resetDub}>
+          reset
         </button>
-      ))}
-    </div>
-  ),
+        {pipelineSteps.map((step) => (
+          <button key={step} onClick={() => onPipelineStep(step)}>
+            {step}
+          </button>
+        ))}
+      </div>
+    );
+  },
 }));
 vi.mock('../components/dub/DubRightColumn', () => ({ default: () => null }));
 vi.mock('../components/dub/DubFooter', () => ({ default: () => null }));
@@ -80,6 +85,7 @@ vi.mock('../api/client', async (importOriginal) => {
 });
 
 import DubTab from '../pages/DubTab';
+import { dubQc } from '../api/dub';
 
 const noop = () => {};
 function makeProps() {
@@ -151,6 +157,8 @@ describe('DubTab — completed tracks always show their tabs (restore P0)', () =
   beforeEach(() => {
     useAppStore.setState(baseState, true);
     captured.left.length = 0;
+    captured.header.length = 0;
+    vi.mocked(dubQc).mockReset();
   });
 
   it("restored project (tracks ['bn'], language_code frozen at 'und'): switcher shows and preview jumps to the track", () => {
@@ -238,5 +246,51 @@ describe('DubTab — completed tracks always show their tabs (restore P0)', () =
     confirm.mockReturnValue(true);
     fireEvent.click(screen.getByRole('button', { name: 'transcribe' }));
     expect(retry).toHaveBeenCalledTimes(3);
+  });
+
+  it('discards QC results when a newer generation finishes while verification is in flight', async () => {
+    const loadingId = 'qc-loading';
+    vi.spyOn(toast, 'loading').mockReturnValue(loadingId);
+    const dismissSpy = vi.spyOn(toast, 'dismiss').mockImplementation(() => {});
+    let resolveQc;
+    vi.mocked(dubQc).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveQc = resolve;
+        }),
+    );
+    useAppStore.setState({
+      dubJobId: 'job1',
+      dubStep: 'done',
+      dubTracks: ['es'],
+      dubLangCode: 'es',
+      dubGenNonce: 1,
+      dubSegments: [{ id: 's1', text: 'Old audio' }],
+    });
+    render(<DubTab {...makeProps()} />);
+
+    let qcPromise;
+    act(() => {
+      qcPromise = captured.header.at(-1).handleDubQc();
+    });
+    expect(dubQc).toHaveBeenCalledWith('job1', 'es');
+
+    act(() => {
+      useAppStore.setState({
+        dubGenNonce: 2,
+        dubSegments: [{ id: 's1', text: 'New audio' }],
+      });
+    });
+    await act(async () => {
+      resolveQc({
+        segments: [{ seg_id: 's1', drift: 0.8, flagged: true, recognized_text: 'Old' }],
+        flagged_count: 1,
+        total: 1,
+      });
+      await qcPromise;
+    });
+
+    expect(useAppStore.getState().dubSegments).toEqual([{ id: 's1', text: 'New audio' }]);
+    expect(dismissSpy).toHaveBeenCalledWith(loadingId);
   });
 });

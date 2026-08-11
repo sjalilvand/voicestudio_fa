@@ -91,6 +91,10 @@ libc = "0.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = "2.0"
+# Wayland compositors do not expose global keys through X11 grabs. Use the
+# standard xdg-desktop-portal GlobalShortcuts interface there; zbus is already
+# present transitively through Tauri's opener/single-instance plugins.
+zbus = "5.16"
 
 [dev-dependencies]
 # Scoped-reset tests build real directory trees to prove the delete guard only

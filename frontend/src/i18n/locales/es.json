@@ -330,7 +330,8 @@
     "no": "No",
     "more_info": "Más información",
     "learn_more": "Más información",
-    "saving": "Guardando…"
+    "saving": "Guardando…",
+    "remove": "Eliminar {{term}}"
   },
   "launchpad": {
     "greeting": "hola",
@@ -884,8 +885,6 @@
     "prep_elapsed": "{{time}} transcurrido",
     "add_language": "Agregar idioma",
     "search_languages": "Buscar idiomas…",
-    "languages_selected_one": "{{count}} idioma seleccionado",
-    "languages_selected_other": "{{count}} idiomas seleccionados",
     "more_to_narrow": "+{{count}} más — escribe para limitar",
     "no_matches": "No hay coincidencias",
     "diagnostic_copied": "Diagnóstico copiado",
@@ -906,6 +905,7 @@
     "target_language": "Doblar a",
     "transcript_after_extract": "La transcripción aparecerá tras la extracción.",
     "qc_btn": "Verificar el tiempo de doblaje (verificación de segundo paso)",
+    "verify": "Verificar",
     "qc_running": "Comprobando el tiempo de doblaje...",
     "qc_result": "Es posible que sea necesario volver a escuchar {{flagged}} de {{total}} líneas",
     "qc_clean": "Todas las líneas {{total}} coinciden con el guión.",
@@ -924,7 +924,15 @@
     "paste_translation_row_unmatched": "sin coincidencia — sin cambios",
     "paste_translation_apply": "Aplicar a {{count}} segmentos",
     "paste_translation_cancel": "Cancelar",
-    "paste_translation_more_rows": "+ {{count}} filas más"
+    "paste_translation_more_rows": "+ {{count}} filas más",
+    "languages_selected": "Idiomas seleccionados: {{count}}",
+    "languages_selected_one": "{{count}} idioma seleccionado",
+    "languages_selected_other": "{{count}} idiomas seleccionados",
+    "multi_translating": "Traduciendo → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "Falló la traducción de {{langs}}; esos doblajes se omitieron para evitar pistas en el idioma incorrecto.",
+    "manage_languages": "Gestionar idiomas",
+    "languages_done": "Listo",
+    "languages_pending": "Pendiente"
   },
   "glossary": {
     "title": "Glosario",
@@ -1218,7 +1226,9 @@
     "export_title": "Exportar todo",
     "clear_title": "Borrar todo",
     "empty_title": "Aún no hay transcripciones",
-    "empty_desc": "Utilice el botón de captura (⌘+⇧+Espacio) para grabar y transcribir audio.",
+    "empty_desc": "Seleccione Iniciar dictado o pulse {{shortcut}} para grabar y transcribir audio.",
+    "capture": "Iniciar dictado",
+    "capture_failed": "No se pudo iniciar el dictado. Comprueba el acceso al micrófono y vuelve a intentarlo.",
     "empty_search_title": "No hay transcripciones coincidentes",
     "empty_search_desc": "Pruebe con un término de búsqueda diferente.",
     "copy": "Copiar",
@@ -2067,6 +2077,13 @@
     "hf_token_get_short": "Consigue uno gratis →"
   },
   "history": {
+    "dub_meta": "{{segments}} segmentos · {{duration}} s",
+    "dub_meta_zero": "{{count}} segmentos · {{duration}} s",
+    "dub_meta_one": "{{count}} segmento · {{duration}} s",
+    "dub_meta_two": "{{count}} segmentos · {{duration}} s",
+    "dub_meta_few": "{{count}} segmentos · {{duration}} s",
+    "dub_meta_many": "{{count}} segmentos · {{duration}} s",
+    "dub_meta_other": "{{count}} segmentos · {{duration}} s",
     "dub_title": "Historial de doblajes",
     "empty": "Aún no hay nada: tus generaciones aparecerán a la derecha.",
     "empty_dub": "Tus doblajes aparecerán aquí.",

@@ -330,7 +330,8 @@
     "no": "Hayır",
     "more_info": "Daha fazla bilgi",
     "learn_more": "Daha fazla bilgi edinin",
-    "saving": "Kaydediliyor…"
+    "saving": "Kaydediliyor…",
+    "remove": "{{term}} öğesini kaldır"
   },
   "launchpad": {
     "greeting": "merhaba orada",
@@ -906,6 +907,7 @@
     "target_language": "Dublaj dili",
     "transcript_after_extract": "Transkript, çıkarma işleminden sonra görünür.",
     "qc_btn": "Dub zamanlamasını doğrulayın (ikinci geçiş kontrolü)",
+    "verify": "Doğrula",
     "qc_running": "Dub zamanlaması kontrol ediliyor…",
     "qc_result": "{{flagged}} / {{total}} satırların yeniden dinlenmesi gerekebilir",
     "qc_clean": "Tüm {{total}} satırları komut dosyasıyla eşleşiyor",
@@ -924,7 +926,13 @@
     "paste_translation_row_unmatched": "eşleşme yok — değişmedi",
     "paste_translation_apply": "{{count}} segmente uygula",
     "paste_translation_cancel": "İptal",
-    "paste_translation_more_rows": "+ {{count}} satır daha"
+    "paste_translation_more_rows": "+ {{count}} satır daha",
+    "languages_selected": "{{count}} dil seçildi",
+    "multi_translating": "Çevriliyor → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "{{langs}} için çeviri başarısız oldu; yanlış dilde parça oluşmaması için bu dublajlar atlandı.",
+    "manage_languages": "Dilleri yönet",
+    "languages_done": "Tamamlandı",
+    "languages_pending": "Bekliyor"
   },
   "glossary": {
     "title": "Sözlük",
@@ -1218,7 +1226,9 @@
     "export_title": "Tümünü dışa aktar",
     "clear_title": "Tümünü temizle",
     "empty_title": "Henüz transkripsiyon yok",
-    "empty_desc": "Sesi kaydetmek ve metne dönüştürmek için yakalama düğmesini (⌘+⇧+Boşluk) kullanın.",
+    "empty_desc": "Sesi kaydetmek ve metne dönüştürmek için Dikteyi başlat'ı seçin veya {{shortcut}} tuşlarına basın.",
+    "capture": "Dikteyi başlat",
+    "capture_failed": "Dikte başlatılamadı. Mikrofon erişimini kontrol edip tekrar deneyin.",
     "empty_search_title": "Eşleşen transkripsiyon yok",
     "empty_search_desc": "Farklı bir arama terimi deneyin.",
     "copy": "Kopyala",
@@ -2067,6 +2077,13 @@
     "hf_token_get_short": "Ücretsiz bir tane alın →"
   },
   "history": {
+    "dub_meta": "{{segments}} segment · {{duration}} sn",
+    "dub_meta_zero": "{{count}} segment · {{duration}} sn",
+    "dub_meta_one": "{{count}} segment · {{duration}} sn",
+    "dub_meta_two": "{{count}} segment · {{duration}} sn",
+    "dub_meta_few": "{{count}} segment · {{duration}} sn",
+    "dub_meta_many": "{{count}} segment · {{duration}} sn",
+    "dub_meta_other": "{{count}} segment · {{duration}} sn",
     "dub_title": "Dublaj geçmişi",
     "empty": "Burada henüz bir şey yok — oluşturduklarınız sağda görünecek.",
     "empty_dub": "Dublajlarınız burada görünecek.",

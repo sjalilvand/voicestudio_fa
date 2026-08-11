@@ -330,7 +330,8 @@
     "no": "Nein",
     "more_info": "Weitere Informationen",
     "learn_more": "Erfahren Sie mehr",
-    "saving": "Speichern…"
+    "saving": "Speichern…",
+    "remove": "{{term}} entfernen"
   },
   "launchpad": {
     "greeting": "Hallo",
@@ -884,8 +885,6 @@
     "prep_elapsed": "{{time}} abgelaufen",
     "add_language": "Sprache hinzufügen",
     "search_languages": "Sprachen suchen…",
-    "languages_selected_one": "{{count}} Sprache ausgewählt",
-    "languages_selected_other": "{{count}} Sprachen ausgewählt",
     "more_to_narrow": "+{{count}} mehr – zum Eingrenzen eingeben",
     "no_matches": "Keine Übereinstimmungen",
     "diagnostic_copied": "Diagnose kopiert",
@@ -906,6 +905,7 @@
     "target_language": "Dubben in",
     "transcript_after_extract": "Das Transkript erscheint nach der Extraktion.",
     "qc_btn": "Überprüfen des Dub-Timings (Second-Pass-Check)",
+    "verify": "Prüfen",
     "qc_running": "Dub-Timing wird überprüft…",
     "qc_result": "{{flagged}} von {{total}} Zeilen müssen möglicherweise erneut abgehört werden",
     "qc_clean": "Alle {{total}}-Zeilen stimmen mit dem Skript überein",
@@ -924,7 +924,15 @@
     "paste_translation_row_unmatched": "keine Zuordnung — unverändert",
     "paste_translation_apply": "Auf {{count}} Segmente anwenden",
     "paste_translation_cancel": "Abbrechen",
-    "paste_translation_more_rows": "+ {{count}} weitere Zeilen"
+    "paste_translation_more_rows": "+ {{count}} weitere Zeilen",
+    "languages_selected": "Ausgewählte Sprachen: {{count}}",
+    "languages_selected_one": "{{count}} Sprache ausgewählt",
+    "languages_selected_other": "{{count}} Sprachen ausgewählt",
+    "multi_translating": "Übersetzung → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "Die Übersetzung für {{langs}} ist fehlgeschlagen. Diese Synchronfassungen wurden übersprungen, damit keine Spur in der falschen Sprache entsteht.",
+    "manage_languages": "Sprachen verwalten",
+    "languages_done": "Fertig",
+    "languages_pending": "Ausstehend"
   },
   "glossary": {
     "title": "Glossar",
@@ -1218,7 +1226,9 @@
     "export_title": "Alles exportieren",
     "clear_title": "Alles löschen",
     "empty_title": "Noch keine Transkriptionen",
-    "empty_desc": "Verwenden Sie die Aufnahmetaste (⌘+⇧+Leertaste), um Audio aufzunehmen und zu transkribieren.",
+    "empty_desc": "Wählen Sie „Diktat starten“ oder drücken Sie {{shortcut}}, um Audio aufzunehmen und zu transkribieren.",
+    "capture": "Diktat starten",
+    "capture_failed": "Das Diktat konnte nicht gestartet werden. Prüfe den Mikrofonzugriff und versuche es erneut.",
     "empty_search_title": "Keine passenden Transkriptionen",
     "empty_search_desc": "Versuchen Sie es mit einem anderen Suchbegriff.",
     "copy": "Kopieren",
@@ -2067,6 +2077,13 @@
     "hf_token_get_short": "Holen Sie sich eins gratis →"
   },
   "history": {
+    "dub_meta": "{{segments}} Segmente · {{duration}} s",
+    "dub_meta_zero": "{{count}} Segmente · {{duration}} s",
+    "dub_meta_one": "{{count}} Segment · {{duration}} s",
+    "dub_meta_two": "{{count}} Segmente · {{duration}} s",
+    "dub_meta_few": "{{count}} Segmente · {{duration}} s",
+    "dub_meta_many": "{{count}} Segmente · {{duration}} s",
+    "dub_meta_other": "{{count}} Segmente · {{duration}} s",
     "dub_title": "Dub-Verlauf",
     "empty": "Hier ist noch nichts — Ihre Generierungen erscheinen rechts.",
     "empty_dub": "Ihre Dubs erscheinen hier.",

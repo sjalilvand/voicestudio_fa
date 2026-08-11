@@ -330,7 +330,8 @@
     "no": "いいえ",
     "more_info": "詳細情報",
     "learn_more": "さらに詳しく",
-    "saving": "保存中…"
+    "saving": "保存中…",
+    "remove": "{{term}} を削除"
   },
   "launchpad": {
     "greeting": "こんにちは。",
@@ -906,6 +907,7 @@
     "target_language": "吹き替え先",
     "transcript_after_extract": "文字起こしは抽出後に表示されます。",
     "qc_btn": "ダビングタイミングの検証（2パス目チェック）",
+    "verify": "検証",
     "qc_running": "ダビングのタイミングを確認中…",
     "qc_result": "{{total}} 行中 {{flagged}} 行は再試行が必要な可能性があります",
     "qc_clean": "すべての {{total}} 行がスクリプトと一致します",
@@ -924,7 +926,13 @@
     "paste_translation_row_unmatched": "一致なし — 変更しません",
     "paste_translation_apply": "{{count}} セグメントに適用",
     "paste_translation_cancel": "キャンセル",
-    "paste_translation_more_rows": "他 {{count}} 行"
+    "paste_translation_more_rows": "他 {{count}} 行",
+    "languages_selected": "{{count}} 言語を選択",
+    "multi_translating": "翻訳中 → {{lang}}（{{current}}/{{total}}）…",
+    "multi_lang_skipped": "{{langs}} の翻訳に失敗したため、誤った言語のトラックが生成されないよう該当する吹き替えをスキップしました。",
+    "manage_languages": "言語を管理",
+    "languages_done": "完了",
+    "languages_pending": "保留中"
   },
   "glossary": {
     "title": "用語集",
@@ -1218,7 +1226,9 @@
     "export_title": "すべてエクスポート",
     "clear_title": "すべてクリア",
     "empty_title": "転写はまだありません",
-    "empty_desc": "キャプチャ ボタン (⌘+⇧+Space) を使用して音声を録音し、文字に起こします。",
+    "empty_desc": "「音声入力を開始」を選択するか {{shortcut}} を押して、音声を録音し文字に起こします。",
+    "capture": "音声入力を開始",
+    "capture_failed": "音声入力を開始できませんでした。マイクへのアクセスを確認して、もう一度お試しください。",
     "empty_search_title": "一致する文字起こしはありません",
     "empty_search_desc": "別の検索語を試してください。",
     "copy": "コピー",
@@ -2067,6 +2077,13 @@
     "hf_token_get_short": "1 つ無料で入手 →"
   },
   "history": {
+    "dub_meta": "{{segments}} セグメント · {{duration}} 秒",
+    "dub_meta_zero": "{{count}} セグメント · {{duration}} 秒",
+    "dub_meta_one": "{{count}} セグメント · {{duration}} 秒",
+    "dub_meta_two": "{{count}} セグメント · {{duration}} 秒",
+    "dub_meta_few": "{{count}} セグメント · {{duration}} 秒",
+    "dub_meta_many": "{{count}} セグメント · {{duration}} 秒",
+    "dub_meta_other": "{{count}} セグメント · {{duration}} 秒",
     "dub_title": "ダブ履歴",
     "empty": "まだ何もありません — 生成結果が右側に表示されます。",
     "empty_dub": "ダブはここに表示されます。",

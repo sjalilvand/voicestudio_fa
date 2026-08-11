@@ -330,7 +330,8 @@
     "no": "Tidak",
     "more_info": "Informasi lebih lanjut",
     "learn_more": "Pelajari lebih lanjut",
-    "saving": "Menyimpan…"
+    "saving": "Menyimpan…",
+    "remove": "Hapus {{term}}"
   },
   "launchpad": {
     "greeting": "halo",
@@ -906,6 +907,7 @@
     "target_language": "Sulih suara ke",
     "transcript_after_extract": "Transkrip muncul setelah ekstraksi.",
     "qc_btn": "Verifikasi waktu sulih suara (pemeriksaan jalur kedua)",
+    "verify": "Verifikasi",
     "qc_running": "Memeriksa waktu sulih suara…",
     "qc_result": "{{flagged}} dari {{total}} baris mungkin perlu didengarkan ulang",
     "qc_clean": "Semua baris {{total}} cocok dengan skrip",
@@ -924,7 +926,13 @@
     "paste_translation_row_unmatched": "tidak cocok — tidak diubah",
     "paste_translation_apply": "Terapkan ke {{count}} segmen",
     "paste_translation_cancel": "Batal",
-    "paste_translation_more_rows": "+ {{count}} baris lagi"
+    "paste_translation_more_rows": "+ {{count}} baris lagi",
+    "languages_selected": "{{count}} bahasa dipilih",
+    "multi_translating": "Menerjemahkan → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "Terjemahan untuk {{langs}} gagal; sulih suara tersebut dilewati agar tidak menghasilkan trek dalam bahasa yang salah.",
+    "manage_languages": "Kelola bahasa",
+    "languages_done": "Selesai",
+    "languages_pending": "Tertunda"
   },
   "glossary": {
     "title": "Glosarium",
@@ -1218,7 +1226,9 @@
     "export_title": "Ekspor semua",
     "clear_title": "Hapus semuanya",
     "empty_title": "Belum ada transkripsi",
-    "empty_desc": "Gunakan tombol ambil (⌘+⇧+Spasi) untuk merekam dan menyalin audio.",
+    "empty_desc": "Pilih Mulai dikte atau tekan {{shortcut}} untuk merekam dan menyalin audio.",
+    "capture": "Mulai dikte",
+    "capture_failed": "Dikte tidak dapat dimulai. Periksa akses mikrofon, lalu coba lagi.",
     "empty_search_title": "Tidak ada transkripsi yang cocok",
     "empty_search_desc": "Coba istilah pencarian lain.",
     "copy": "Salin",
@@ -2067,6 +2077,13 @@
     "hf_token_get_short": "Dapatkan satu gratis →"
   },
   "history": {
+    "dub_meta": "{{segments}} segmen · {{duration}} dtk",
+    "dub_meta_zero": "{{count}} segmen · {{duration}} dtk",
+    "dub_meta_one": "{{count}} segmen · {{duration}} dtk",
+    "dub_meta_two": "{{count}} segmen · {{duration}} dtk",
+    "dub_meta_few": "{{count}} segmen · {{duration}} dtk",
+    "dub_meta_many": "{{count}} segmen · {{duration}} dtk",
+    "dub_meta_other": "{{count}} segmen · {{duration}} dtk",
     "dub_title": "Riwayat sulih suara",
     "empty": "Belum ada apa pun di sini — hasil generasi Anda akan muncul di sebelah kanan.",
     "empty_dub": "Sulih suara Anda akan muncul di sini.",

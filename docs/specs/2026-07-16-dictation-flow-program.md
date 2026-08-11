@@ -8,7 +8,7 @@ Dictating prompts to AI agents is the fastest-growing text-input workload (Claud
 
 ## Current state (verified in-repo)
 
-Widget: pill webview + `tauri-plugin-global-shortcut` (`CmdOrCtrl+Shift+Space`, toggle/hold) + browser-mode keyboard fallback; `getUserMedia` → raw-PCM WS `/ws/transcribe`; paste via arboard+enigo with clipboard restore, macOS a11y fail-loud, Windows no-activate. Backend: 7 sherpa models (Parakeet TDT v3 default), streaming path (zipformer/paraformer) + chunked-offline path (0.8 s partial cadence, **RMS silence gate**), `text_polish` on finals, opt-in LLM refinement (Ollama/LM Studio, ≤4 s wall clock). Gaps: no real VAD, no dictionary/hotwords, no per-app awareness, no command grammar, no language picker, enigo-only Linux insertion, no dictation docs, picker understates model size ~4×.
+Widget: pill webview + `tauri-plugin-global-shortcut` (`CmdOrCtrl+Shift+Space`, toggle/hold) on macOS, Windows and X11 + the GlobalShortcuts desktop portal on Wayland + browser-mode keyboard fallback; `getUserMedia` → raw-PCM WS `/ws/transcribe`; paste via arboard+enigo with clipboard restore, macOS a11y fail-loud, Windows no-activate. Backend: 7 sherpa models (Parakeet TDT v3 default), streaming path (zipformer/paraformer) + chunked-offline path (0.8 s partial cadence, **RMS silence gate**), `text_polish` on finals, opt-in LLM refinement (Ollama/LM Studio, ≤4 s wall clock). Gaps: no real VAD, no dictionary/hotwords, no per-app awareness, no command grammar, no language picker, enigo-only Linux insertion, no comprehensive dictation feature guide beyond the Linux installation note, picker understates model size ~4×.
 
 ## Program phases
 

@@ -32,6 +32,11 @@ export default function DubRightColumn({
   defaultTrack,
   setDefaultTrack,
   dubLangCode,
+  multiLangMode,
+  batchTargets,
+  multiBatchBusy,
+  setDubLang,
+  setDubLangCode,
   dubTracks,
   timingStrategy,
   setTimingStrategy,
@@ -327,6 +332,30 @@ export default function DubRightColumn({
           onDismiss={onCheckpointDismiss}
           continueLoading={isTranslating}
         />
+      )}
+
+      {multiLangMode && batchTargets?.length > 1 && (
+        <label className="mb-[4px] flex max-w-[320px] items-center gap-[7px] px-[2px]">
+          <span className={OUT_TITLE}>{t('dub.language')}:</span>
+          <select
+            className="input-base min-w-0 flex-1 !px-[7px] !py-[3px] !text-[0.68rem]"
+            value={dubLangCode}
+            disabled={multiBatchBusy}
+            aria-label={t('dub.language')}
+            onChange={(event) => {
+              const target = batchTargets.find((item) => item.code === event.target.value);
+              if (!target) return;
+              setDubLang(target.lang);
+              setDubLangCode(target.code);
+            }}
+          >
+            {batchTargets.map((target) => (
+              <option key={target.code} value={target.code}>
+                {target.lang} · {target.code.toUpperCase()}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
 
       {/* Segment-table toolbar. "Paste translation" is the manual counterpart

@@ -330,7 +330,8 @@
     "no": "Нет",
     "more_info": "Дополнительная информация",
     "learn_more": "Узнать больше",
-    "saving": "Сохранение…"
+    "saving": "Сохранение…",
+    "remove": "Удалить {{term}}"
   },
   "launchpad": {
     "greeting": "привет",
@@ -884,8 +885,6 @@
     "prep_elapsed": "{{time}} прошло",
     "add_language": "Добавить язык",
     "search_languages": "Поиск языков…",
-    "languages_selected_one": "{{count}} выбран язык",
-    "languages_selected_other": "Выбрано {{count}} языков",
     "more_to_narrow": "+{{count}} еще — введите текст, чтобы сузить",
     "no_matches": "Нет совпадений",
     "diagnostic_copied": "Диагностика скопирована",
@@ -906,6 +905,7 @@
     "target_language": "Дублировать на",
     "transcript_after_extract": "Стенограмма появится после извлечения.",
     "qc_btn": "Проверка синхронизации перезаписи (вторая проверка)",
+    "verify": "Проверить",
     "qc_running": "Проверка синхронизации дубляжа…",
     "qc_result": "{{flagged}} из {{total}} строк может потребоваться повторное прослушивание",
     "qc_clean": "Все строки {{total}} соответствуют сценарию",
@@ -924,7 +924,15 @@
     "paste_translation_row_unmatched": "нет совпадения — без изменений",
     "paste_translation_apply": "Применить к {{count}} сегментам",
     "paste_translation_cancel": "Отмена",
-    "paste_translation_more_rows": "+ ещё {{count}} строк"
+    "paste_translation_more_rows": "Дополнительных строк: {{count}}",
+    "languages_selected": "Выбрано языков: {{count}}",
+    "languages_selected_one": "{{count}} выбран язык",
+    "languages_selected_other": "Выбрано {{count}} языка",
+    "multi_translating": "Перевод → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "Не удалось перевести {{langs}}. Эти дорожки пропущены, чтобы не создать озвучку на неверном языке.",
+    "manage_languages": "Управление языками",
+    "languages_done": "Готово",
+    "languages_pending": "Ожидает"
   },
   "glossary": {
     "title": "Глоссарий",
@@ -1218,7 +1226,9 @@
     "export_title": "Экспортировать все",
     "clear_title": "Очистить все",
     "empty_title": "Транскрипций пока нет",
-    "empty_desc": "Используйте кнопку захвата (⌘+⇧+Пробел) для записи и расшифровки звука.",
+    "empty_desc": "Выберите «Начать диктовку» или нажмите {{shortcut}}, чтобы записать и расшифровать звук.",
+    "capture": "Начать диктовку",
+    "capture_failed": "Не удалось начать диктовку. Проверьте доступ к микрофону и повторите попытку.",
     "empty_search_title": "Нет подходящих транскрипций",
     "empty_search_desc": "Попробуйте другой поисковый запрос.",
     "copy": "Копировать",
@@ -2067,6 +2077,13 @@
     "hf_token_get_short": "Получите один бесплатно →"
   },
   "history": {
+    "dub_meta": "{{segments}} сегментов · {{duration}} с",
+    "dub_meta_zero": "{{count}} сегментов · {{duration}} с",
+    "dub_meta_one": "{{count}} сегмент · {{duration}} с",
+    "dub_meta_two": "{{count}} сегмента · {{duration}} с",
+    "dub_meta_few": "{{count}} сегмента · {{duration}} с",
+    "dub_meta_many": "{{count}} сегментов · {{duration}} с",
+    "dub_meta_other": "{{count}} сегмента · {{duration}} с",
     "dub_title": "История дубляжа",
     "empty": "Пока пусто — ваши генерации появятся справа.",
     "empty_dub": "Ваши дубляжи появятся здесь.",

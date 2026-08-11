@@ -330,7 +330,8 @@
     "no": "Nee",
     "more_info": "Meer informatie",
     "learn_more": "Meer informatie",
-    "saving": "Opslaan…"
+    "saving": "Opslaan…",
+    "remove": "{{term}} verwijderen"
   },
   "launchpad": {
     "greeting": "Hallo daar",
@@ -884,8 +885,6 @@
     "prep_elapsed": "{{time}} verstreken",
     "add_language": "Taal toevoegen",
     "search_languages": "Talen zoeken…",
-    "languages_selected_one": "{{count}} taal geselecteerd",
-    "languages_selected_other": "{{count}} talen geselecteerd",
     "more_to_narrow": "+{{count}} meer — typ om te verkleinen",
     "no_matches": "Geen overeenkomsten",
     "diagnostic_copied": "Diagnostiek gekopieerd",
@@ -906,6 +905,7 @@
     "target_language": "Dubben naar",
     "transcript_after_extract": "Het afschrift verschijnt na extractie.",
     "qc_btn": "Controleer de dub-timing (tweede-doorgangscontrole)",
+    "verify": "Controleren",
     "qc_running": "De dubtiming controleren...",
     "qc_result": "{{flagged}} van {{total}} regels moeten mogelijk opnieuw worden beluisterd",
     "qc_clean": "Alle {{total}} regels komen overeen met het script",
@@ -924,7 +924,15 @@
     "paste_translation_row_unmatched": "geen match — ongewijzigd",
     "paste_translation_apply": "Toepassen op {{count}} segmenten",
     "paste_translation_cancel": "Annuleren",
-    "paste_translation_more_rows": "+ nog {{count}} rijen"
+    "paste_translation_more_rows": "Extra rijen: {{count}}",
+    "languages_selected": "Geselecteerde talen: {{count}}",
+    "languages_selected_one": "{{count}} taal geselecteerd",
+    "languages_selected_other": "{{count}} talen geselecteerd",
+    "multi_translating": "Vertalen → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "De vertaling voor {{langs}} is mislukt. Deze nasynchronisaties zijn overgeslagen om een track in de verkeerde taal te voorkomen.",
+    "manage_languages": "Talen beheren",
+    "languages_done": "Gereed",
+    "languages_pending": "In behandeling"
   },
   "glossary": {
     "title": "Woordenlijst",
@@ -1218,7 +1226,9 @@
     "export_title": "Alles exporteren",
     "clear_title": "Alles wissen",
     "empty_title": "Nog geen transcripties",
-    "empty_desc": "Gebruik de opnameknop (⌘+⇧+Spatie) om audio op te nemen en te transcriberen.",
+    "empty_desc": "Selecteer Dicteren starten of druk op {{shortcut}} om audio op te nemen en te transcriberen.",
+    "capture": "Dicteren starten",
+    "capture_failed": "Dicteren kon niet worden gestart. Controleer de microfoontoegang en probeer het opnieuw.",
     "empty_search_title": "Geen overeenkomende transcripties",
     "empty_search_desc": "Probeer een andere zoekterm.",
     "copy": "Kopieer",
@@ -2067,6 +2077,13 @@
     "hf_token_get_short": "Ontvang er één gratis →"
   },
   "history": {
+    "dub_meta": "{{segments}} segmenten · {{duration}} s",
+    "dub_meta_zero": "{{count}} segmenten · {{duration}} s",
+    "dub_meta_one": "{{count}} segment · {{duration}} s",
+    "dub_meta_two": "{{count}} segmenten · {{duration}} s",
+    "dub_meta_few": "{{count}} segmenten · {{duration}} s",
+    "dub_meta_many": "{{count}} segmenten · {{duration}} s",
+    "dub_meta_other": "{{count}} segmenten · {{duration}} s",
     "dub_title": "Dubgeschiedenis",
     "empty": "Hier is nog niets — je generaties verschijnen rechts.",
     "empty_dub": "Je dubs verschijnen hier.",
