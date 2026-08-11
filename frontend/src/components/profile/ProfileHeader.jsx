@@ -104,7 +104,7 @@ export default function ProfileHeader({
       </div>
 
       {/* Hero */}
-      <section className="voice-profile__hero border-b border-solid border-[var(--chrome-border)] pb-[var(--space-5)]">
+      <section className="voice-profile__hero pb-[var(--space-5)]">
         <div className="flex w-full flex-wrap items-center gap-[var(--space-5)]">
           <div className="flex min-w-[260px] flex-1 items-center gap-[var(--space-4)]">
             <div
@@ -153,7 +153,7 @@ export default function ProfileHeader({
           </div>
 
           {(profile.ref_audio_path || profile.locked_audio_path) && (
-            <div className="flex min-w-[260px] flex-1 flex-col gap-[var(--space-2)] border-t border-solid border-[var(--chrome-border)] pt-[var(--space-5)] @min-[620px]/voice-profile:border-l @min-[620px]/voice-profile:border-t-0 @min-[620px]/voice-profile:pl-[var(--space-5)] @min-[620px]/voice-profile:pt-0">
+            <div className="flex min-w-[260px] flex-1 flex-col gap-[var(--space-2)] rounded-[var(--radius-md)] bg-[var(--chrome-hover-bg)] p-[var(--space-4)]">
               <div className="inline-flex items-center gap-[var(--space-2)] [font-size:var(--text-xs)] font-semibold uppercase tracking-[0.05em] text-fg-subtle">
                 <Volume2 size={11} />{' '}
                 {profile.is_locked ? t('voice_profile.locked_ref') : t('voice_profile.ref_audio')}

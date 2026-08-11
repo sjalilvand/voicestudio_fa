@@ -34,9 +34,9 @@ export default function ArchetypeCard({
 
   const cardBase =
     'group relative flex min-h-[168px] flex-col gap-[9px] p-[13px] rounded-[10px] ' +
-    'border border-[rgba(255,255,255,0.075)] bg-[rgba(255,255,255,0.026)] ' +
-    'transition-[transform,box-shadow,border-color,background-color] duration-150 ' +
-    'hover:-translate-y-px hover:border-[rgba(255,255,255,0.15)] ' +
+    'border border-transparent bg-[rgba(255,255,255,0.026)] ' +
+    'transition-[transform,box-shadow,background-color] duration-150 ' +
+    'hover:-translate-y-px ' +
     'hover:bg-[rgba(255,255,255,0.042)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.32)] ' +
     'motion-reduce:transition-none motion-reduce:hover:translate-y-0';
   const cardState = isPlaying
@@ -95,7 +95,7 @@ export default function ArchetypeCard({
 
       {/* Actions — quiet Preview (ghost, token hover), confident accent Use voice
           (tinted → solid accent with inverse text), subtle magic-wand icon. */}
-      <div className="flex items-center gap-[6px] mt-auto pt-[9px] border-t border-[rgba(255,255,255,0.055)]">
+      <div className="mt-auto flex items-center gap-[6px] pt-[9px]">
         <button
           type="button"
           className="inline-flex items-center gap-[6px] px-[9px] py-[6px] rounded-[6px] bg-transparent text-[var(--color-fg-muted)] text-[0.68rem] cursor-pointer transition-colors hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--color-fg)]"

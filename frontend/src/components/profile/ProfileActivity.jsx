@@ -61,7 +61,7 @@ export default function ProfileActivity({
       </Panel>
 
       {usage && (usage.synth_total || usage.projects?.length) ? (
-        <section className="border-t border-solid border-[var(--chrome-border)] pt-[var(--space-4)]">
+        <section className="pt-[var(--space-4)]">
           <div className="mb-[var(--space-3)] text-[var(--text-sm)] font-semibold text-fg-muted">
             {t('voice_profile.used_title')}
           </div>

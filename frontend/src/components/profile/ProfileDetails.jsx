@@ -85,7 +85,7 @@ export default function ProfileDetails({
             />
           </Field>
         ) : profile.ref_text ? (
-          <details className="mt-[var(--space-4)] border-t border-solid border-[var(--chrome-border)] pt-[var(--space-3)]">
+          <details className="mt-[var(--space-4)] rounded-[var(--radius-md)] bg-[var(--chrome-hover-bg)] p-[var(--space-3)]">
             <summary className="cursor-pointer text-[var(--text-sm)] font-medium text-fg-muted marker:text-fg-subtle">
               {t('voice_profile.ref_transcript')}
             </summary>

@@ -279,7 +279,7 @@ export default function VoiceProfile({ voiceId, onBack, onOpenProject, onDeleted
         audioUrl={audioUrl}
         t={t}
       />
-      <div className="grid items-start gap-[var(--space-6)] @min-[980px]/voice-profile:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)] @min-[980px]/voice-profile:[&>*+*]:border-l @min-[980px]/voice-profile:[&>*+*]:border-solid @min-[980px]/voice-profile:[&>*+*]:border-[var(--chrome-border)] @min-[980px]/voice-profile:[&>*+*]:pl-[var(--space-6)]">
+      <div className="grid items-start gap-[var(--space-6)] @min-[980px]/voice-profile:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)]">
         <ProfileDetails
           profile={profile}
           editing={editing}
