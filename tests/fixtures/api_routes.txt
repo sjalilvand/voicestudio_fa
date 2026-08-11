@@ -18,6 +18,8 @@ DELETE /profiles/{profile_id}
 DELETE /profiles/{profile_id}/consent
 DELETE /projects/{project_id}
 DELETE /pronunciation/{entry_id}
+DELETE /workers/inbound/connections/{endpoint}
+DELETE /workers/inbound/keys/{key_id}
 DELETE /workers/{worker_id}
 GET /api/mcp/bindings
 GET /api/settings/analytics
@@ -137,6 +139,7 @@ GET /tools/plugins
 GET /v1/audio/voices
 GET /watermark/status
 GET /workers
+GET /workers/inbound
 GET /workers/target
 GET /workers/tasks
 PATCH /gallery/voices/{voice_id}
@@ -246,6 +249,10 @@ POST /watermark/detect
 POST /watermark/settings
 POST /workers/enabled
 POST /workers/enrollments
+POST /workers/inbound/connections
+POST /workers/inbound/enabled
+POST /workers/inbound/keys
+POST /workers/inbound/sessions/{session_id}/disconnect
 POST /workers/target
 POST /workers/tasks
 POST /workers/tasks/{task_id}/cancel

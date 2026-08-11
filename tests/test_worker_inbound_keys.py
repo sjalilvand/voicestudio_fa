@@ -1,7 +1,7 @@
 """Admission for inbound mode: per-panel keys, hashing, throttling.
 
 Inbound trades away the TLS pinning and single-use enrollment token that
-outbound relies on (docs/adr/0002-inbound-node-mode.md), so the API key is the
+outbound relies on (docs/adr/inbound-node-mode.md), so the API key is the
 whole of admission. These tests exist because everything that protects it —
 hashing at rest, per-key revocation, the failed-auth throttle — is invisible in
 normal use and would fail silently if it regressed.
@@ -184,3 +184,37 @@ def test_pasting_an_outbound_enrollment_token_says_so():
         parse_connection("ovnode://ovw_" + "a" * 40 + "@10.0.0.1:7444")
 
     assert "other direction" in str(excinfo.value)
+
+
+# ── Settings gate ──────────────────────────────────────────────────────────
+
+
+def test_the_bind_is_localhost_until_someone_widens_it(monkeypatch):
+    """With no TLS, the difference between localhost and 0.0.0.0 is the
+    difference between a credential on one machine and a credential on a
+    network. It must never widen as a side effect of enabling the feature."""
+    from worker.inbound import service as inbound_service
+
+    monkeypatch.delenv("OMNIVOICE_INBOUND_BIND", raising=False)
+    monkeypatch.setattr(inbound_service, "_setting", lambda name, default="": default)
+
+    assert inbound_service.bind_host() == "127.0.0.1"
+    assert inbound_service.is_exposed("127.0.0.1") is False
+
+
+def test_a_wider_bind_is_reported_as_exposed():
+    """The UI needs to say so at the point the bind is widened, not bury it."""
+    from worker.inbound import service as inbound_service
+
+    assert inbound_service.is_exposed("0.0.0.0") is True
+    assert inbound_service.is_exposed("192.168.0.110") is True
+    assert inbound_service.is_exposed("localhost") is False
+
+
+def test_inbound_is_off_unless_it_was_turned_on(monkeypatch):
+    from worker.inbound import service as inbound_service
+
+    monkeypatch.delenv("OMNIVOICE_INBOUND_NODE", raising=False)
+    monkeypatch.setattr(inbound_service, "_setting", lambda name, default="": default)
+
+    assert inbound_service.enabled() is False

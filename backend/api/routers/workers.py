@@ -343,3 +343,138 @@ async def cancel_task(task_id: str) -> dict:
     if not cancelled:
         raise HTTPException(status_code=404, detail="No such active task.")
     return {"ok": True}
+
+
+# ── Inbound mode ───────────────────────────────────────────────────────────
+#
+# The other direction: this machine accepts connections from panels, or dials
+# out to nodes that do. Outbound enrollment above is unchanged and remains the
+# default — see docs/adr/inbound-node-mode.md for why this exists alongside it
+# rather than replacing it.
+
+
+class InboundEnableRequest(BaseModel):
+    enabled: bool
+    # Widening the bind is a separate decision from turning the feature on,
+    # so it is a separate field with a safe default rather than a flag that
+    # rides along with `enabled`.
+    bind: str = ""
+    port: int = 0
+
+
+class IssueKeyRequest(BaseModel):
+    label: str = Field(default="", max_length=64)
+
+
+class ConnectRequest(BaseModel):
+    connection_string: str = Field(min_length=1, max_length=512)
+
+
+@router.get("/inbound")
+def inbound_status() -> dict:
+    from worker.inbound import service as inbound_service  # noqa: PLC0415
+
+    return {
+        **inbound_service.node.snapshot(),
+        "connections": inbound_service.outbound.snapshot(),
+    }
+
+
+@router.post("/inbound/enabled")
+async def set_inbound_enabled(request: InboundEnableRequest) -> dict:
+    from worker.inbound import service as inbound_service  # noqa: PLC0415
+
+    if request.bind:
+        inbound_service.set_bind_host(request.bind)
+    if request.port:
+        inbound_service.set_bind_port(request.port)
+    inbound_service.set_enabled(request.enabled)
+
+    if request.enabled:
+        await inbound_service.node.start()
+        if inbound_service.node.startup_error:
+            raise HTTPException(status_code=409, detail=inbound_service.node.startup_error)
+    else:
+        await inbound_service.node.stop()
+    return inbound_service.node.snapshot()
+
+
+@router.post("/inbound/keys")
+def issue_inbound_key(request: IssueKeyRequest) -> dict:
+    """Mint one panel's key and return the string it pastes.
+
+    The secret is in this response and nowhere else afterwards — only its hash
+    is stored, so it cannot be shown again, only replaced.
+    """
+    from worker.inbound import service as inbound_service  # noqa: PLC0415
+
+    if not inbound_service.node.running:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "This machine is not accepting connections yet. Turn on "
+                "Settings → System → Remote workers → Accept connections first."
+            ),
+        )
+    issued = inbound_service.node.keys.issue(request.label)
+    return {
+        "key_id": issued.key.key_id,
+        "label": issued.key.label,
+        "connection_string": inbound_service.node.connection_string(issued.secret),
+        "exposed": inbound_service.is_exposed(),
+        "shown_once": True,
+    }
+
+
+@router.delete("/inbound/keys/{key_id}")
+def revoke_inbound_key(key_id: str) -> dict:
+    """Revoke one panel. Everyone else stays connected — the whole reason keys
+    are per panel rather than one shared node key."""
+    from worker.inbound import service as inbound_service  # noqa: PLC0415
+
+    if not inbound_service.node.keys.revoke(key_id):
+        raise HTTPException(status_code=404, detail="No such key.")
+    return inbound_service.node.snapshot()
+
+
+@router.post("/inbound/sessions/{session_id}/disconnect")
+def disconnect_inbound_session(session_id: str) -> dict:
+    from worker.inbound import service as inbound_service  # noqa: PLC0415
+
+    if not inbound_service.node.log.kick(session_id):
+        raise HTTPException(status_code=404, detail="That connection has already ended.")
+    return inbound_service.node.snapshot()
+
+
+@router.post("/inbound/connections")
+async def add_inbound_connection(request: ConnectRequest) -> dict:
+    """Paste a connection string from a GPU machine and dial it."""
+    from worker.inbound import service as inbound_service  # noqa: PLC0415
+    from worker.inbound.connection_string import InvalidConnectionString  # noqa: PLC0415
+
+    if not service.control_plane.running:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Remote workers are turned off. Enable them in "
+                "Settings → System → Remote workers first."
+            ),
+        )
+    try:
+        connection = await inbound_service.outbound.add(
+            request.connection_string, service.control_plane.servicer
+        )
+    except InvalidConnectionString as exc:
+        # 400 with the parser's own words: every one of these otherwise
+        # surfaces as "cannot connect", which is what a firewall, a wrong port
+        # and a dead node all say too.
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"endpoint": connection.endpoint, "connections": inbound_service.outbound.snapshot()}
+
+
+@router.delete("/inbound/connections/{endpoint}")
+async def remove_inbound_connection(endpoint: str) -> dict:
+    from worker.inbound import service as inbound_service  # noqa: PLC0415
+
+    await inbound_service.outbound.remove(endpoint)
+    return {"connections": inbound_service.outbound.snapshot()}
