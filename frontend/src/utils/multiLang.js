@@ -21,3 +21,27 @@ export function multiLangTargets(activeLanguage, activeCode, selected) {
   for (const item of selected || []) add(item?.lang, item?.code);
   return targets;
 }
+
+export function translationProgressByCode(segments, targets, visibleCode = '') {
+  return Object.fromEntries(
+    (targets || []).map(({ code }) => {
+      let ready = 0;
+      let total = 0;
+      for (const segment of segments || []) {
+        const source = segment.text_original || segment.text || '';
+        if (!String(source).trim()) continue;
+        total += 1;
+        const translated = segment.translations?.[code];
+        const visibleLegacyTranslation =
+          code === visibleCode &&
+          segment.text_original &&
+          segment.text !== segment.text_original &&
+          String(segment.text || '').trim();
+        if ((typeof translated === 'string' && translated.trim()) || visibleLegacyTranslation) {
+          ready += 1;
+        }
+      }
+      return [code, { ready, total }];
+    }),
+  );
+}

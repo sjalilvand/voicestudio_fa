@@ -928,7 +928,10 @@
     "paste_translation_more_rows": "他 {{count}} 行",
     "languages_selected": "{{count}} 言語を選択",
     "multi_translating": "翻訳中 → {{lang}}（{{current}}/{{total}}）…",
-    "multi_lang_skipped": "{{langs}} の翻訳に失敗したため、誤った言語のトラックが生成されないよう該当する吹き替えをスキップしました。"
+    "multi_lang_skipped": "{{langs}} の翻訳に失敗したため、誤った言語のトラックが生成されないよう該当する吹き替えをスキップしました。",
+    "manage_languages": "言語を管理",
+    "languages_done": "完了",
+    "languages_pending": "保留中"
   },
   "glossary": {
     "title": "用語集",

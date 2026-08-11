@@ -928,7 +928,10 @@
     "paste_translation_more_rows": "+ {{count}} satır daha",
     "languages_selected": "{{count}} dil seçildi",
     "multi_translating": "Çevriliyor → {{lang}} ({{current}}/{{total}})…",
-    "multi_lang_skipped": "{{langs}} için çeviri başarısız oldu; yanlış dilde parça oluşmaması için bu dublajlar atlandı."
+    "multi_lang_skipped": "{{langs}} için çeviri başarısız oldu; yanlış dilde parça oluşmaması için bu dublajlar atlandı.",
+    "manage_languages": "Dilleri yönet",
+    "languages_done": "Tamamlandı",
+    "languages_pending": "Bekliyor"
   },
   "glossary": {
     "title": "Sözlük",
