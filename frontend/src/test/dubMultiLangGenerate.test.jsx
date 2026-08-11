@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, act } from '@testing-library/react';
+import { render, act, fireEvent, screen } from '@testing-library/react';
 import toast from 'react-hot-toast';
 import { useAppStore } from '../store';
 
@@ -26,7 +26,6 @@ vi.mock('../components/dub/DubRightColumn', () => ({ default: () => null }));
 vi.mock('../components/dub/DubFooter', () => ({ default: () => null }));
 vi.mock('../components/dub/DubPipelineStepper', () => ({ default: () => null }));
 vi.mock('../components/dub/IdleSkeleton', () => ({ default: () => null }));
-vi.mock('../components/ExportModal', () => ({ default: () => null }));
 vi.mock('../hooks/useTimelineOnsets', () => ({ default: () => ({ onsets: [] }) }));
 vi.mock('../api/dub', () => ({ dubQc: vi.fn() }));
 // Never-resolving async deps keep the render synchronous (no post-test act noise).
@@ -40,6 +39,7 @@ vi.mock('../api/client', async (importOriginal) => {
 });
 
 import DubTab from '../pages/DubTab';
+import ExportModal from '../components/ExportModal';
 
 const noop = () => {};
 function makeProps(over = {}) {
@@ -96,27 +96,50 @@ function makeProps(over = {}) {
 
 const baseState = useAppStore.getState();
 const PICKS = [
-  { lang: 'Bengali', code: 'bn' },
+  { lang: 'Hindi', code: 'hi' },
   { lang: 'Spanish', code: 'es' },
+  { lang: 'French', code: 'fr' },
+  { lang: 'German', code: 'de' },
 ];
 
 /** Render DubTab in multi-lang mode and return { onGenerateClick, calls, mocks }. */
-function setup({ translateOk = () => true, langCode = 'en', segments } = {}) {
+function setup({
+  translateOk = () => true,
+  translatedText = (code, segment) => `${code}:${segment.text_original || segment.text}`,
+  langCode = 'bn',
+  segments,
+} = {}) {
   const calls = [];
   const handleTranslateAll = vi.fn(async (code) => {
     calls.push(`translate:${code}`);
-    return translateOk(code);
+    const ok = translateOk(code);
+    if (ok) {
+      useAppStore.getState().setDubSegments((prev) =>
+        prev.map((segment, index) => {
+          const text = translatedText(code, segment, index);
+          return text
+            ? { ...segment, text, translations: { ...segment.translations, [code]: text } }
+            : segment;
+        }),
+      );
+    }
+    return ok;
   });
   const handleDubGenerate = vi.fn(async (opts) => {
-    calls.push(`generate:${opts?.langOverride?.language_code ?? 'default'}`);
+    const code = opts?.langOverride?.language_code ?? 'default';
+    calls.push(`generate:${code}`);
+    if (code !== 'default') {
+      useAppStore.getState().setDubTracks((prev) => (prev.includes(code) ? prev : [...prev, code]));
+    }
   });
   useAppStore.setState({
     dubJobId: 'job1',
     dubStep: 'editing',
     dubLangCode: langCode,
-    dubLang: 'English',
+    dubLang: langCode === 'bn' ? 'Bengali' : 'English',
     multiLangMode: true,
     multiLangs: PICKS,
+    dubTracks: [],
     dubSegments: segments ?? [{ id: '1', text: 'hello', text_original: 'hello' }],
   });
   render(<DubTab {...makeProps({ handleTranslateAll, handleDubGenerate })} />);
@@ -143,14 +166,70 @@ describe('DubTab — multi-language generate translates each language first (P1.
       await onGenerateClick();
     });
     // Pre-fix this was ['generate:bn', 'generate:es'] — translate never ran.
-    expect(calls).toEqual(['translate:bn', 'generate:bn', 'translate:es', 'generate:es']);
+    expect(calls).toEqual([
+      'translate:bn',
+      'generate:bn',
+      'translate:hi',
+      'generate:hi',
+      'translate:es',
+      'generate:es',
+      'translate:fr',
+      'generate:fr',
+      'translate:de',
+      'generate:de',
+    ]);
     // langOverride keeps the existing handleDubGenerate call shape.
     expect(handleDubGenerate).toHaveBeenNthCalledWith(1, {
       langOverride: { language: 'Bengali', language_code: 'bn' },
     });
     expect(handleDubGenerate).toHaveBeenNthCalledWith(2, {
-      langOverride: { language: 'Spanish', language_code: 'es' },
+      langOverride: { language: 'Hindi', language_code: 'hi' },
     });
+    const state = useAppStore.getState();
+    expect(state.dubTracks).toEqual(['bn', 'hi', 'es', 'fr', 'de']);
+    expect(state.dubSegments[0].translations).toEqual({
+      bn: 'bn:hello',
+      hi: 'hi:hello',
+      es: 'es:hello',
+      fr: 'fr:hello',
+      de: 'de:hello',
+    });
+
+    // The generated per-language track state feeds the export drawer, where
+    // both tracks are selected by default and handed to the export action.
+    const exported = [];
+    render(
+      <ExportModal
+        open
+        onClose={noop}
+        jobId="job1"
+        filename="video.mp4"
+        dubTracks={state.dubTracks}
+        dubLangCode="es"
+        preserveBg={false}
+        setPreserveBg={noop}
+        defaultTrack="original"
+        setDefaultTrack={noop}
+        exportTracks={{}}
+        setExportTracks={noop}
+        dualSubs={false}
+        setDualSubs={noop}
+        burnSubs={false}
+        setBurnSubs={noop}
+        API=""
+        triggerDownload={noop}
+        handleDubDownload={() => exported.push(...useAppStore.getState().dubTracks)}
+        handleAudioExport={noop}
+        segmentCount={1}
+      />,
+    );
+    expect(screen.getByLabelText(/^BN/)).toBeChecked();
+    expect(screen.getByLabelText(/^HI/)).toBeChecked();
+    expect(screen.getByLabelText(/^ES/)).toBeChecked();
+    expect(screen.getByLabelText(/^FR/)).toBeChecked();
+    expect(screen.getByLabelText(/^DE/)).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Export MP4' }));
+    expect(exported).toEqual(['bn', 'hi', 'es', 'fr', 'de']);
   });
 
   it('a failed translate skips ONLY that language’s generate, continues, and reports it', async () => {
@@ -159,7 +238,17 @@ describe('DubTab — multi-language generate translates each language first (P1.
     await act(async () => {
       await onGenerateClick();
     });
-    expect(calls).toEqual(['translate:bn', 'translate:es', 'generate:es']);
+    expect(calls).toEqual([
+      'translate:bn',
+      'translate:hi',
+      'generate:hi',
+      'translate:es',
+      'generate:es',
+      'translate:fr',
+      'generate:fr',
+      'translate:de',
+      'generate:de',
+    ]);
     expect(errorSpy).toHaveBeenCalledTimes(1);
     expect(errorSpy.mock.calls[0][0]).toContain('Bengali');
   });
@@ -169,12 +258,87 @@ describe('DubTab — multi-language generate translates each language first (P1.
       langCode: 'bn',
       // text differs from text_original on every segment = a translation into
       // dubLangCode ('bn') is already applied — pick 1 can go straight to generate.
-      segments: [{ id: '1', text: 'ওহে', text_original: 'hello' }],
+      segments: [
+        {
+          id: '1',
+          text: 'ওহে',
+          text_original: 'hello',
+          translations: { bn: 'ওহে' },
+        },
+      ],
     });
     await act(async () => {
       await onGenerateClick();
     });
-    expect(calls).toEqual(['generate:bn', 'translate:es', 'generate:es']);
+    expect(calls).toEqual([
+      'generate:bn',
+      'translate:hi',
+      'generate:hi',
+      'translate:es',
+      'generate:es',
+      'translate:fr',
+      'generate:fr',
+      'translate:de',
+      'generate:de',
+    ]);
+  });
+
+  it('changed text from another language never suppresses the selected target translation', async () => {
+    const { onGenerateClick, calls } = setup({
+      langCode: 'bn',
+      segments: [
+        {
+          id: '1',
+          text: 'hola',
+          text_original: 'hello',
+          translations: { es: 'hola' },
+        },
+      ],
+    });
+    await act(async () => {
+      await onGenerateClick();
+    });
+    expect(calls).toEqual([
+      'translate:bn',
+      'generate:bn',
+      'translate:hi',
+      'generate:hi',
+      'generate:es',
+      'translate:fr',
+      'generate:fr',
+      'translate:de',
+      'generate:de',
+    ]);
+  });
+
+  it('a partial translation never generates a mixed-language track and later targets continue', async () => {
+    const errorSpy = vi.spyOn(toast, 'error');
+    const { onGenerateClick, calls } = setup({
+      segments: [
+        { id: '1', text: 'one', text_original: 'one' },
+        { id: '2', text: 'two', text_original: 'two' },
+      ],
+      translatedText: (code, segment, index) =>
+        code === 'bn' && index === 1 ? null : `${code}:${segment.text_original}`,
+    });
+    await act(async () => {
+      await onGenerateClick();
+    });
+    expect(calls).toEqual([
+      'translate:bn',
+      'translate:hi',
+      'generate:hi',
+      'translate:es',
+      'generate:es',
+      'translate:fr',
+      'generate:fr',
+      'translate:de',
+      'generate:de',
+    ]);
+    expect(useAppStore.getState().dubTracks).toEqual(['hi', 'es', 'fr', 'de']);
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Bengali'), {
+      duration: 8000,
+    });
   });
 
   it('untranslated editor text is ALWAYS translated, even when the first pick matches dubLangCode', async () => {
@@ -185,7 +349,18 @@ describe('DubTab — multi-language generate translates each language first (P1.
     await act(async () => {
       await onGenerateClick();
     });
-    expect(calls).toEqual(['translate:bn', 'generate:bn', 'translate:es', 'generate:es']);
+    expect(calls).toEqual([
+      'translate:bn',
+      'generate:bn',
+      'translate:hi',
+      'generate:hi',
+      'translate:es',
+      'generate:es',
+      'translate:fr',
+      'generate:fr',
+      'translate:de',
+      'generate:de',
+    ]);
   });
 
   it('single-language mode is untouched: generate only, no translate, no override', async () => {

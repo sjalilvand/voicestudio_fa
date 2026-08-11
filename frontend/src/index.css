@@ -2493,10 +2493,7 @@ input[type="file"]::file-selector-button:hover {
 /* from MultiLangPicker (components/MultiLangPicker.css) */
 /* Dropdown */
 .multi-lang__drop {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
+  position: fixed;
   z-index: var(--z-overlay);
   margin-top: 4px;
   background: var(--chrome-bg);
@@ -2512,6 +2509,9 @@ input[type="file"]::file-selector-button:hover {
 @keyframes mlp-in {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .multi-lang__drop { animation: none; }
 }
 
 /* from ReadinessChecklist (components/ReadinessChecklist.css) */

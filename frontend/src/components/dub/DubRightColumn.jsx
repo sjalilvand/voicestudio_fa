@@ -32,6 +32,10 @@ export default function DubRightColumn({
   defaultTrack,
   setDefaultTrack,
   dubLangCode,
+  multiLangMode,
+  batchTargets,
+  setDubLang,
+  setDubLangCode,
   dubTracks,
   timingStrategy,
   setTimingStrategy,
@@ -327,6 +331,31 @@ export default function DubRightColumn({
           onDismiss={onCheckpointDismiss}
           continueLoading={isTranslating}
         />
+      )}
+
+      {multiLangMode && batchTargets?.length > 1 && (
+        <div className="flex items-center gap-[4px] mb-[4px] px-[2px] flex-wrap">
+          <span className={OUT_TITLE}>{t('dub.language')}:</span>
+          {batchTargets.map((target) => (
+            <button
+              key={target.code}
+              type="button"
+              className={`px-[7px] py-[2px] rounded-full border text-[0.62rem] font-mono cursor-pointer transition-[background,color,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)] ${
+                dubLangCode === target.code
+                  ? 'bg-[var(--chrome-hover-bg)] text-[var(--chrome-fg)] border-[var(--chrome-accent)]'
+                  : 'bg-transparent text-[var(--chrome-fg-muted)] border-transparent hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--chrome-fg)]'
+              }`}
+              onClick={() => {
+                setDubLang(target.lang);
+                setDubLangCode(target.code);
+              }}
+              aria-pressed={dubLangCode === target.code}
+              title={target.lang}
+            >
+              {target.code.toUpperCase()}
+            </button>
+          ))}
+        </div>
       )}
 
       {/* Segment-table toolbar. "Paste translation" is the manual counterpart
