@@ -330,7 +330,8 @@
     "no": "Nein",
     "more_info": "Weitere Informationen",
     "learn_more": "Erfahren Sie mehr",
-    "saving": "Speichern…"
+    "saving": "Speichern…",
+    "remove": "{{term}} entfernen"
   },
   "launchpad": {
     "greeting": "Hallo",
@@ -884,8 +885,6 @@
     "prep_elapsed": "{{time}} abgelaufen",
     "add_language": "Sprache hinzufügen",
     "search_languages": "Sprachen suchen…",
-    "languages_selected_one": "{{count}} Sprache ausgewählt",
-    "languages_selected_other": "{{count}} Sprachen ausgewählt",
     "more_to_narrow": "+{{count}} mehr – zum Eingrenzen eingeben",
     "no_matches": "Keine Übereinstimmungen",
     "diagnostic_copied": "Diagnose kopiert",
@@ -924,7 +923,12 @@
     "paste_translation_row_unmatched": "keine Zuordnung — unverändert",
     "paste_translation_apply": "Auf {{count}} Segmente anwenden",
     "paste_translation_cancel": "Abbrechen",
-    "paste_translation_more_rows": "+ {{count}} weitere Zeilen"
+    "paste_translation_more_rows": "+ {{count}} weitere Zeilen",
+    "languages_selected": "Ausgewählte Sprachen: {{count}}",
+    "languages_selected_one": "{{count}} Sprache ausgewählt",
+    "languages_selected_other": "{{count}} Sprachen ausgewählt",
+    "multi_translating": "Übersetzung → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "Die Übersetzung für {{langs}} ist fehlgeschlagen. Diese Synchronfassungen wurden übersprungen, damit keine Spur in der falschen Sprache entsteht."
   },
   "glossary": {
     "title": "Glossar",

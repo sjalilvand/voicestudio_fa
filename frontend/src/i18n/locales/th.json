@@ -330,7 +330,8 @@
     "no": "ไม่",
     "more_info": "ข้อมูลเพิ่มเติม",
     "learn_more": "เรียนรู้เพิ่มเติม",
-    "saving": "กำลังบันทึก…"
+    "saving": "กำลังบันทึก…",
+    "remove": "ลบ {{term}}"
   },
   "launchpad": {
     "greeting": "สวัสดี",
@@ -924,7 +925,10 @@
     "paste_translation_row_unmatched": "ไม่จับคู่ — คงเดิม",
     "paste_translation_apply": "ใช้กับ {{count}} เซกเมนต์",
     "paste_translation_cancel": "ยกเลิก",
-    "paste_translation_more_rows": "+ อีก {{count}} แถว"
+    "paste_translation_more_rows": "+ อีก {{count}} แถว",
+    "languages_selected": "เลือก {{count}} ภาษาแล้ว",
+    "multi_translating": "กำลังแปล → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "การแปลสำหรับ {{langs}} ล้มเหลว จึงข้ามเสียงพากย์เหล่านั้นเพื่อป้องกันไม่ให้สร้างแทร็กผิดภาษา"
   },
   "glossary": {
     "title": "อภิธานศัพท์",

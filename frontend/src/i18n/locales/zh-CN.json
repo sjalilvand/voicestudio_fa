@@ -112,7 +112,8 @@
     "no": "否",
     "more_info": "更多信息",
     "learn_more": "了解更多",
-    "saving": "保存中…"
+    "saving": "保存中…",
+    "remove": "删除 {{term}}"
   },
   "nav": {
     "launchpad": "工作台",
@@ -883,7 +884,10 @@
     "paste_translation_row_unmatched": "无匹配——保持不变",
     "paste_translation_apply": "应用到 {{count}} 个片段",
     "paste_translation_cancel": "取消",
-    "paste_translation_more_rows": "还有 {{count}} 行"
+    "paste_translation_more_rows": "还有 {{count}} 行",
+    "languages_selected": "已选择 {{count}} 种语言",
+    "multi_translating": "正在翻译 → {{lang}}（{{current}}/{{total}}）…",
+    "multi_lang_skipped": "{{langs}} 翻译失败；已跳过这些配音，以免生成语言错误的音轨。"
   },
   "glossary": {
     "title": "术语表",

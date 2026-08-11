@@ -330,7 +330,8 @@
     "no": "немає",
     "more_info": "Більше інформації",
     "learn_more": "Дізнайтесь більше",
-    "saving": "Збереження…"
+    "saving": "Збереження…",
+    "remove": "Видалити {{term}}"
   },
   "launchpad": {
     "greeting": "привіт",
@@ -924,7 +925,10 @@
     "paste_translation_row_unmatched": "немає відповідності — без змін",
     "paste_translation_apply": "Застосувати до {{count}} сегментів",
     "paste_translation_cancel": "Скасувати",
-    "paste_translation_more_rows": "+ ще {{count}} рядків"
+    "paste_translation_more_rows": "+ ще {{count}} рядків",
+    "languages_selected": "Вибрано {{count}} мов",
+    "multi_translating": "Переклад → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "Не вдалося перекласти {{langs}}. Ці доріжки пропущено, щоб не створити дубляж неправильною мовою."
   },
   "glossary": {
     "title": "Глосарій",

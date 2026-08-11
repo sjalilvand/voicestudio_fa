@@ -330,7 +330,8 @@
     "no": "Non",
     "more_info": "Plus d'informations",
     "learn_more": "En savoir plus",
-    "saving": "Enregistrement…"
+    "saving": "Enregistrement…",
+    "remove": "Supprimer {{term}}"
   },
   "launchpad": {
     "greeting": "bonjour",
@@ -884,8 +885,6 @@
     "prep_elapsed": "{{time}} écoulé",
     "add_language": "Ajouter une langue",
     "search_languages": "Rechercher des langues…",
-    "languages_selected_one": "{{count}} langue sélectionnée",
-    "languages_selected_other": "{{count}} langues sélectionnées",
     "more_to_narrow": "+{{count}} plus — tapez pour affiner",
     "no_matches": "Aucune correspondance",
     "diagnostic_copied": "Diagnostic copié",
@@ -924,7 +923,12 @@
     "paste_translation_row_unmatched": "aucune correspondance — inchangé",
     "paste_translation_apply": "Appliquer à {{count}} segments",
     "paste_translation_cancel": "Annuler",
-    "paste_translation_more_rows": "+ {{count}} lignes supplémentaires"
+    "paste_translation_more_rows": "+ {{count}} lignes supplémentaires",
+    "languages_selected": "Langues sélectionnées : {{count}}",
+    "languages_selected_one": "{{count}} langue sélectionnée",
+    "languages_selected_other": "{{count}} langues sélectionnées",
+    "multi_translating": "Traduction → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "La traduction a échoué pour {{langs}} ; ces doublages ont été ignorés afin d’éviter une piste dans la mauvaise langue."
   },
   "glossary": {
     "title": "Glossaire",

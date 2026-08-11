@@ -330,7 +330,8 @@
     "no": "Không",
     "more_info": "Thêm thông tin",
     "learn_more": "Tìm hiểu thêm",
-    "saving": "Đang lưu…"
+    "saving": "Đang lưu…",
+    "remove": "Xóa {{term}}"
   },
   "launchpad": {
     "greeting": "xin chào ở đó",
@@ -924,7 +925,10 @@
     "paste_translation_row_unmatched": "không khớp — giữ nguyên",
     "paste_translation_apply": "Áp dụng cho {{count}} phân đoạn",
     "paste_translation_cancel": "Hủy",
-    "paste_translation_more_rows": "+ {{count}} dòng nữa"
+    "paste_translation_more_rows": "+ {{count}} dòng nữa",
+    "languages_selected": "Đã chọn {{count}} ngôn ngữ",
+    "multi_translating": "Đang dịch → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "Không thể dịch {{langs}}; các bản lồng tiếng đó đã được bỏ qua để tránh tạo bản nhạc sai ngôn ngữ."
   },
   "glossary": {
     "title": "Thuật ngữ",

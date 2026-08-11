@@ -330,7 +330,8 @@
     "no": "नहीं",
     "more_info": "अधिक जानकारी",
     "learn_more": "और जानें",
-    "saving": "सहेजा जा रहा है…"
+    "saving": "सहेजा जा रहा है…",
+    "remove": "{{term}} हटाएं"
   },
   "launchpad": {
     "greeting": "नमस्ते",
@@ -884,8 +885,6 @@
     "prep_elapsed": "{{time}} बीत गया",
     "add_language": "भाषा जोड़ें",
     "search_languages": "भाषाएँ खोजें...",
-    "languages_selected_one": "{{count}} भाषा चयनित",
-    "languages_selected_other": "{{count}} भाषाएँ चयनित",
     "more_to_narrow": "+{{count}} अधिक - संकीर्ण करने के लिए टाइप करें",
     "no_matches": "कोई मेल नहीं",
     "diagnostic_copied": "डायग्नोस्टिक कॉपी किया गया",
@@ -924,7 +923,12 @@
     "paste_translation_row_unmatched": "कोई मिलान नहीं — अपरिवर्तित",
     "paste_translation_apply": "{{count}} सेगमेंट पर लागू करें",
     "paste_translation_cancel": "रद्द करें",
-    "paste_translation_more_rows": "+ {{count}} और पंक्तियाँ"
+    "paste_translation_more_rows": "+ {{count}} और पंक्तियाँ",
+    "languages_selected": "चयनित भाषाएँ: {{count}}",
+    "languages_selected_one": "{{count}} भाषा चुनी गई",
+    "languages_selected_other": "{{count}} भाषाएँ चुनी गईं",
+    "multi_translating": "अनुवाद हो रहा है → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "{{langs}} के लिए अनुवाद विफल रहा—गलत भाषा का ट्रैक बनने से रोकने के लिए उन डब को छोड़ दिया गया।"
   },
   "glossary": {
     "title": "शब्दावली",

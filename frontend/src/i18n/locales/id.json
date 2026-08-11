@@ -330,7 +330,8 @@
     "no": "Tidak",
     "more_info": "Informasi lebih lanjut",
     "learn_more": "Pelajari lebih lanjut",
-    "saving": "Menyimpan…"
+    "saving": "Menyimpan…",
+    "remove": "Hapus {{term}}"
   },
   "launchpad": {
     "greeting": "halo",
@@ -924,7 +925,10 @@
     "paste_translation_row_unmatched": "tidak cocok — tidak diubah",
     "paste_translation_apply": "Terapkan ke {{count}} segmen",
     "paste_translation_cancel": "Batal",
-    "paste_translation_more_rows": "+ {{count}} baris lagi"
+    "paste_translation_more_rows": "+ {{count}} baris lagi",
+    "languages_selected": "{{count}} bahasa dipilih",
+    "multi_translating": "Menerjemahkan → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "Terjemahan untuk {{langs}} gagal; sulih suara tersebut dilewati agar tidak menghasilkan trek dalam bahasa yang salah."
   },
   "glossary": {
     "title": "Glosarium",
