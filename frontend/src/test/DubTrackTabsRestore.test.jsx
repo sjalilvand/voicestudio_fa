@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import toast from 'react-hot-toast';
 import { useAppStore } from '../store';
 
 // Regression guard for the "completed dub tracks' tabs hidden until the
@@ -248,6 +249,9 @@ describe('DubTab — completed tracks always show their tabs (restore P0)', () =
   });
 
   it('discards QC results when a newer generation finishes while verification is in flight', async () => {
+    const loadingId = 'qc-loading';
+    vi.spyOn(toast, 'loading').mockReturnValue(loadingId);
+    const dismissSpy = vi.spyOn(toast, 'dismiss').mockImplementation(() => {});
     let resolveQc;
     vi.mocked(dubQc).mockImplementationOnce(
       () =>
@@ -287,5 +291,6 @@ describe('DubTab — completed tracks always show their tabs (restore P0)', () =
     });
 
     expect(useAppStore.getState().dubSegments).toEqual([{ id: 's1', text: 'New audio' }]);
+    expect(dismissSpy).toHaveBeenCalledWith(loadingId);
   });
 });

@@ -571,7 +571,10 @@ export default function DubTab(props) {
       // A generation that finishes while QC is in flight invalidates these
       // measurements. Ignore the stale response instead of attaching timing
       // results from the previous audio to the new dub.
-      if (useAppStore.getState().dubGenNonce !== dubGenNonce) return;
+      if (useAppStore.getState().dubGenNonce !== dubGenNonce) {
+        toast.dismiss(loadingId);
+        return;
+      }
       const byId = new Map((res.segments || []).map((q) => [String(q.seg_id), q]));
       setDubSegments((currentSegments) =>
         currentSegments.map((s, i) => {
