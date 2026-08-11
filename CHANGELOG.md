@@ -8,11 +8,11 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ## [Unreleased]
 
-## [5.0.0] — 2026-08-11
+## [0.5.0] — 2026-08-11
 
 **Highlights**
 
-- VoiceStudio 5.0.0 gives the app, desktop chrome, documentation, and package metadata one clear identity
+- VoiceStudio 0.5.0 gives the app, desktop chrome, documentation, and package metadata one clear identity
 - A local-first creative studio: voice cloning, design, dubbing, dictation, stories, audiobooks, and transcription without a subscription meter
 - Reliability first: automatic cache repair, truthful hardware routing, safer sidecars, and actionable recovery instead of mystery failures
 - Security boundaries now match the product: native file access stays native, untrusted network destinations fail closed, and public errors keep private diagnostics local

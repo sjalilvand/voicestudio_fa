@@ -1,4 +1,4 @@
-"""VoiceStudio 5.0.0 release-brand and source-launch contracts."""
+"""VoiceStudio 0.5.0 release-brand and source-launch contracts."""
 
 from __future__ import annotations
 
@@ -8,10 +8,10 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_VERSION = "5.0.0"
+RELEASE_VERSION = "0.5.0"
 
 
-def test_release_version_is_5_0_0_everywhere() -> None:
+def test_release_version_is_0_5_0_everywhere() -> None:
     package = json.loads((ROOT / "frontend/package.json").read_text())
     assert package["version"] == RELEASE_VERSION
 
