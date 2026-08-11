@@ -10,7 +10,9 @@ import React from 'react';
 const BASE =
   'inline-flex items-center justify-center gap-[5px] flex-1 mt-0 ' +
   'font-[family-name:var(--font-sans)] tracking-[0.02em] normal-case ' +
-  'bg-transparent border rounded-[var(--chrome-radius-pill)] shadow-none transition-colors ' +
+  'bg-transparent border rounded-[var(--chrome-radius-pill)] shadow-none touch-manipulation ' +
+  'transition-[transform,background,color,box-shadow] duration-150 motion-reduce:transition-none ' +
+  'focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)] ' +
   'disabled:opacity-45 disabled:cursor-not-allowed';
 
 const TONES = {

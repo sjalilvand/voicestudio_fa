@@ -905,6 +905,7 @@
     "target_language": "Dubben naar",
     "transcript_after_extract": "Het afschrift verschijnt na extractie.",
     "qc_btn": "Controleer de dub-timing (tweede-doorgangscontrole)",
+    "verify": "Controleren",
     "qc_running": "De dubtiming controleren...",
     "qc_result": "{{flagged}} van {{total}} regels moeten mogelijk opnieuw worden beluisterd",
     "qc_clean": "Alle {{total}} regels komen overeen met het script",

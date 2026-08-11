@@ -905,6 +905,7 @@
     "target_language": "Dublar para",
     "transcript_after_extract": "A transcrição aparece após a extração.",
     "qc_btn": "Verifique o tempo de dublagem (verificação de segunda passagem)",
+    "verify": "Verificar",
     "qc_running": "Verificando o tempo de dublagem…",
     "qc_result": "{{flagged}} de {{total}} linhas podem precisar de uma nova escuta",
     "qc_clean": "Todas as linhas {{total}} correspondem ao script",

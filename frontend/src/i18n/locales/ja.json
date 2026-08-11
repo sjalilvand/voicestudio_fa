@@ -907,6 +907,7 @@
     "target_language": "吹き替え先",
     "transcript_after_extract": "文字起こしは抽出後に表示されます。",
     "qc_btn": "ダビングタイミングの検証（2パス目チェック）",
+    "verify": "検証",
     "qc_running": "ダビングのタイミングを確認中…",
     "qc_result": "{{total}} 行中 {{flagged}} 行は再試行が必要な可能性があります",
     "qc_clean": "すべての {{total}} 行がスクリプトと一致します",

@@ -907,6 +907,7 @@
     "target_language": "Sulih suara ke",
     "transcript_after_extract": "Transkrip muncul setelah ekstraksi.",
     "qc_btn": "Verifikasi waktu sulih suara (pemeriksaan jalur kedua)",
+    "verify": "Verifikasi",
     "qc_running": "Memeriksa waktu sulih suara…",
     "qc_result": "{{flagged}} dari {{total}} baris mungkin perlu didengarkan ulang",
     "qc_clean": "Semua baris {{total}} cocok dengan skrip",
