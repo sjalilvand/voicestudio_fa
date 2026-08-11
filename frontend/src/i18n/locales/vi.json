@@ -25,6 +25,15 @@
     "workspaces": "Không gian làm việc"
   },
   "settings": {
+    "remote_backend_recovery_title": "Không thể kết nối với backend từ xa",
+    "remote_backend_recovery_hint": "Bạn có thể đổi backend từ xa sau trong Cài đặt → Chia sẻ.",
+    "remote_backend_use_local": "Dùng backend cục bộ",
+    "remote_backend_error_tls": "Không thể xác minh kết nối bảo mật. Hãy kiểm tra chứng chỉ và dùng cổng HTTP API của VoiceStudio.",
+    "remote_backend_error_cors": "Backend từ xa đã chặn ứng dụng này. Hãy cho phép nguồn của ứng dụng trong cài đặt CORS.",
+    "remote_backend_error_network": "Không thể truy cập backend từ xa. Hãy kiểm tra địa chỉ, mạng và tường lửa.",
+    "remote_backend_error_timeout": "Backend từ xa không phản hồi kịp thời.",
+    "remote_backend_error_http": "Backend từ xa trả về HTTP {{status}}.",
+    "remote_backend_error_wrong_port": "Dịch vụ này có vẻ không phải HTTP API của VoiceStudio. Cổng 7443 thường dùng để điều khiển worker từ xa; hãy thử cổng 3900.",
     "openapi": "API VoiceStudio",
     "general": "Chung",
     "theme": "Giao diện",

@@ -25,6 +25,15 @@
     "workspaces": "Werkruimtes"
   },
   "settings": {
+    "remote_backend_recovery_title": "Kan de externe backend niet bereiken",
+    "remote_backend_recovery_hint": "Je kunt de externe backend later wijzigen via Instellingen → Delen.",
+    "remote_backend_use_local": "Lokale backend gebruiken",
+    "remote_backend_error_tls": "De beveiligde verbinding kon niet worden geverifieerd. Controleer het certificaat en gebruik de HTTP-API-poort van VoiceStudio.",
+    "remote_backend_error_cors": "De externe backend heeft deze app geblokkeerd. Sta de oorsprong van de app toe in de CORS-instellingen.",
+    "remote_backend_error_network": "De externe backend is niet bereikbaar. Controleer het adres, netwerk en de firewall.",
+    "remote_backend_error_timeout": "De externe backend reageerde niet op tijd.",
+    "remote_backend_error_http": "De externe backend gaf HTTP {{status}} terug.",
+    "remote_backend_error_wrong_port": "Dit lijkt niet de VoiceStudio HTTP-API. Poort 7443 is meestal de besturingspoort van de externe worker; probeer poort 3900.",
     "openapi": "VoiceStudio-API",
     "general": "Algemeen",
     "theme": "Thema",

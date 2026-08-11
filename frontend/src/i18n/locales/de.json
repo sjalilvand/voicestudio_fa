@@ -25,6 +25,15 @@
     "workspaces": "Arbeitsbereiche"
   },
   "settings": {
+    "remote_backend_recovery_title": "Remote-Backend nicht erreichbar",
+    "remote_backend_recovery_hint": "Du kannst das Remote-Backend später unter Einstellungen → Freigabe ändern.",
+    "remote_backend_use_local": "Lokales Backend verwenden",
+    "remote_backend_error_tls": "Die sichere Verbindung konnte nicht überprüft werden. Prüfe das Zertifikat und verwende den HTTP-API-Port von VoiceStudio.",
+    "remote_backend_error_cors": "Das Remote-Backend hat diese App blockiert. Erlaube den Ursprung der App in den CORS-Einstellungen.",
+    "remote_backend_error_network": "Das Remote-Backend ist nicht erreichbar. Prüfe Adresse, Netzwerk und Firewall.",
+    "remote_backend_error_timeout": "Das Remote-Backend hat nicht rechtzeitig geantwortet.",
+    "remote_backend_error_http": "Das Remote-Backend hat HTTP {{status}} zurückgegeben.",
+    "remote_backend_error_wrong_port": "Dies scheint nicht die VoiceStudio-HTTP-API zu sein. Port 7443 ist normalerweise der Steuerport des Remote-Workers; versuche Port 3900.",
     "openapi": "VoiceStudio-API",
     "general": "Allgemein",
     "theme": "Theme",

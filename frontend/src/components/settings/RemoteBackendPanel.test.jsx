@@ -19,6 +19,9 @@ vi.mock('../../utils/dialog', () => ({ askConfirm }));
 import toast from 'react-hot-toast';
 import RemoteBackendPanel, { isValidBackendUrl } from './RemoteBackendPanel';
 
+const healthResponse = (version) =>
+  new Response(JSON.stringify({ status: 'ok', version, device: 'cuda' }), { status: 200 });
+
 describe('isValidBackendUrl', () => {
   it('accepts absolute http(s) URLs only', () => {
     expect(isValidBackendUrl('http://gpu-box:3900')).toBe(true);
@@ -28,6 +31,8 @@ describe('isValidBackendUrl', () => {
     expect(isValidBackendUrl('gpu-box:3900')).toBe(false);
     expect(isValidBackendUrl('not a url')).toBe(false);
     expect(isValidBackendUrl('ftp://gpu-box')).toBe(false);
+    expect(isValidBackendUrl('https://user:secret@gpu-box:3900')).toBe(false);
+    expect(isValidBackendUrl('https://gpu-box:3900?key=secret')).toBe(false);
     expect(isValidBackendUrl('')).toBe(false);
   });
 });
@@ -79,10 +84,7 @@ describe('RemoteBackendPanel', () => {
   });
 
   it('skips the confirmation when the exact URL passed a connection test', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ version: '0.3.15', device: 'cuda' }),
-    });
+    global.fetch = vi.fn().mockResolvedValue(healthResponse('0.3.15'));
     render(<RemoteBackendPanel reload={reload} />);
     setUrl('http://gpu-box:3900');
 
@@ -93,6 +95,32 @@ describe('RemoteBackendPanel', () => {
     await waitFor(() => expect(reload).toHaveBeenCalled());
     expect(askConfirm).not.toHaveBeenCalled();
     expect(localStorage.getItem('ov_backend_url')).toBe('http://gpu-box:3900');
+  });
+
+  it('classifies a wrong 7443 service and succeeds when retried with the HTTP API', async () => {
+    global.fetch = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(healthResponse('0.4.2'));
+    render(<RemoteBackendPanel reload={reload} />);
+    setUrl('https://gpu-box:7443');
+    fireEvent.click(screen.getByTestId('remote-backend-test'));
+    await screen.findByText(/7443/);
+
+    setUrl('http://gpu-box:3900');
+    fireEvent.click(screen.getByTestId('remote-backend-test'));
+    await screen.findByText('OK — 0.4.2 on cuda');
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('offers an explicit disable action that clears the remote URL and key', () => {
+    localStorage.setItem('ov_backend_url', 'http://old-box:3900');
+    localStorage.setItem('ov_api_key', 'secret');
+    render(<RemoteBackendPanel reload={reload} />);
+    fireEvent.click(screen.getByTestId('remote-backend-disable'));
+    expect(localStorage.getItem('ov_backend_url')).toBeNull();
+    expect(localStorage.getItem('ov_api_key')).toBeNull();
+    expect(reload).toHaveBeenCalledOnce();
   });
 
   it('clears both settings and reloads without confirmation when the URL is emptied', async () => {
