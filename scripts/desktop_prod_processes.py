@@ -32,11 +32,18 @@ def appimage_belongs_to_build(raw: bytes, build_root: Path) -> bool:
     )
 
 
+def _process_start_time(process_dir: Path) -> str:
+    """Return Linux /proc stat field 22 without splitting a spaced comm field."""
+    fields_after_comm = (process_dir / "stat").read_text().rsplit(") ", 1)[1].split()
+    return fields_after_comm[19]
+
+
 def open_owned_processes(
     build_root: Path,
     proc_root: Path = Path("/proc"),
     *,
     pidfd_open: Callable[[int, int], int] | None = None,
+    read_start_time: Callable[[Path], str] = _process_start_time,
 ) -> list[tuple[int, int]]:
     """Open identity-bound handles before inspecting each candidate process."""
     if pidfd_open is None:
@@ -49,15 +56,17 @@ def open_owned_processes(
             continue
         pid = int(process_dir.name)
         try:
+            start_before = read_start_time(process_dir)
             pidfd = pidfd_open(pid, 0)
         except (OSError, ProcessLookupError):
             continue
         try:
             raw = (process_dir / "environ").read_bytes()
+            start_after = read_start_time(process_dir)
         except (OSError, PermissionError):
             os.close(pidfd)
             continue
-        if appimage_belongs_to_build(raw, build_root):
+        if start_before == start_after and appimage_belongs_to_build(raw, build_root):
             owned.append((pid, pidfd))
             continue
         os.close(pidfd)
@@ -71,6 +80,14 @@ def _signal_process(pidfd: int, sig: signal.Signals) -> None:
         return
 
 
+def _poll_exited(poller: select.poll, pending: set[int], deadline: float) -> set[int]:
+    exited: set[int] = set()
+    while time.monotonic() < deadline and exited != pending:
+        remaining_ms = max(0, int((deadline - time.monotonic()) * 1000))
+        exited.update(fd for fd, _ in poller.poll(min(remaining_ms, 100)))
+    return exited
+
+
 def stop_owned_processes(build_root: Path, timeout_s: float = 5.0) -> list[int]:
     """Stop only processes held by pidfds, preventing PID-reuse termination."""
     owned = open_owned_processes(build_root)
@@ -82,16 +99,19 @@ def stop_owned_processes(build_root: Path, timeout_s: float = 5.0) -> list[int]:
         poller.register(pidfd, select.POLLIN)
         _signal_process(pidfd, signal.SIGTERM)
 
-    deadline = time.monotonic() + timeout_s
-    exited: set[int] = set()
-    while time.monotonic() < deadline and len(exited) < len(owned):
-        remaining_ms = max(0, int((deadline - time.monotonic()) * 1000))
-        exited.update(fd for fd, _ in poller.poll(min(remaining_ms, 100)))
+    pending = {pidfd for _, pidfd in owned}
+    exited = _poll_exited(poller, pending, time.monotonic() + timeout_s)
+    killed = pending - exited
+    for pidfd in killed:
+        _signal_process(pidfd, signal.SIGKILL)
+
+    if killed:
+        exited.update(_poll_exited(poller, killed, time.monotonic() + timeout_s))
 
     for _, pidfd in owned:
-        if pidfd not in exited:
-            _signal_process(pidfd, signal.SIGKILL)
         os.close(pidfd)
+    if exited != pending:
+        raise RuntimeError("VoiceStudio processes did not exit; refusing to reset app data")
     return [pid for pid, _ in owned]
 
 

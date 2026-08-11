@@ -19,6 +19,8 @@ import importlib.util
 import json
 import os
 
+import pytest
+
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _PKG = os.path.join(_ROOT, "package.json")
 _SH = os.path.join(_ROOT, "scripts", "desktop-prod.sh")
@@ -168,6 +170,10 @@ def test_linux_extracted_appimage_and_backend_are_stopped_before_wipe(tmp_path):
         (process_dir / "environ").write_bytes(
             ("\0".join(environment) + "\0").encode()
         )
+        # field 22 (starttime) is index 19 after the closing comm parenthesis.
+        (process_dir / "stat").write_text(
+            f"{pid} (VoiceStudio worker) S " + " ".join(["0"] * 18 + [str(pid)])
+        )
 
     owned = build_root / "bundle" / "appimage" / "VoiceStudio_0.4.2_amd64.AppImage"
     process(101, f"APPIMAGE={owned}", "HOME=/home/test")
@@ -206,3 +212,68 @@ def test_linux_extracted_appimage_and_backend_are_stopped_before_wipe(tmp_path):
     call = 'python3 scripts/desktop_prod_processes.py "$TAURI_BUILD_ROOT"'
     assert call in src
     assert src.index(call) < src.index('if [ "$KEEP_DATA" = false ]; then')
+
+
+def test_linux_pid_reuse_is_rejected_after_environment_read(tmp_path):
+    build_root = tmp_path / "repo" / "frontend" / "src-tauri" / "target" / "debug"
+    proc_root = tmp_path / "proc"
+    process_dir = proc_root / "101"
+    process_dir.mkdir(parents=True)
+    owned = build_root / "bundle" / "appimage" / "VoiceStudio_0.4.2_amd64.AppImage"
+    (process_dir / "environ").write_bytes(f"APPIMAGE={owned}\0".encode())
+
+    spec = importlib.util.spec_from_file_location(
+        "desktop_prod_processes_reuse", _APPIMAGE_PROCESSES
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    identities = iter(["old-start", "replacement-start"])
+    opened_fds = []
+
+    def fake_pidfd_open(pid: int, flags: int) -> int:
+        fd = os.open(os.devnull, os.O_RDONLY)
+        opened_fds.append(fd)
+        return fd
+
+    found = module.open_owned_processes(
+        build_root,
+        proc_root,
+        pidfd_open=fake_pidfd_open,
+        read_start_time=lambda _path: next(identities),
+    )
+
+    assert found == []
+    for fd in opened_fds:
+        with pytest.raises(OSError):
+            os.fstat(fd)
+
+
+def test_reset_waits_for_killed_process_exit_or_fails(monkeypatch, tmp_path):
+    spec = importlib.util.spec_from_file_location(
+        "desktop_prod_processes_exit", _APPIMAGE_PROCESSES
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    def run(exits_after_kill: bool) -> tuple[list[int] | None, list[int]]:
+        fd = os.open(os.devnull, os.O_RDONLY)
+        monkeypatch.setattr(module, "open_owned_processes", lambda _root: [(101, fd)])
+        polls = iter([set(), {fd} if exits_after_kill else set()])
+        monkeypatch.setattr(module, "_poll_exited", lambda *_args: next(polls))
+        sent = []
+        monkeypatch.setattr(module, "_signal_process", lambda _fd, sig: sent.append(sig))
+        try:
+            return module.stop_owned_processes(tmp_path), sent
+        except RuntimeError:
+            return None, sent
+
+    result, sent = run(True)
+    assert result == [101]
+    assert sent == [module.signal.SIGTERM, module.signal.SIGKILL]
+
+    result, sent = run(False)
+    assert result is None
+    assert sent == [module.signal.SIGTERM, module.signal.SIGKILL]
