@@ -104,6 +104,7 @@ export default function DubLeftColumn({
   setMultiLangMode,
   multiLangs,
   setMultiLangs,
+  multiLangProgress,
   editSegments,
 }) {
   // Two-stage LLM translation quality — only meaningful (and only rendered)
@@ -758,6 +759,7 @@ export default function DubLeftColumn({
                   selected={multiLangs}
                   onChange={setMultiLangs}
                   disabled={dubStep === 'generating'}
+                  progressByCode={multiLangProgress}
                 />
               )}
             </div>

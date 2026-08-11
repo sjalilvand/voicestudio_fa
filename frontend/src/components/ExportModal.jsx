@@ -10,25 +10,13 @@ import {
   Layers,
   Download,
   Check,
-  Globe,
   Zap,
   X,
   Building2,
 } from 'lucide-react';
-import { Button, Segmented, Badge } from '../ui';
+import { Button, Segmented } from '../ui';
+import TrackManager from './dub/TrackManager';
 
-// ── Tailwind class fragments for the stateful chrome that used to live in
-// ExportModal.css (track chips, tab strip, toggles). Kept as module constants
-// so the conditional state logic reads cleanly at the call sites.
-const TRACK_BASE =
-  'inline-flex items-center gap-[6px] px-[10px] py-[4px] rounded-[var(--chrome-radius-pill)] border text-[length:var(--text-sm)] cursor-pointer transition-[border-color,color,background] duration-[var(--dur-fast)]';
-const trackCls = (on, kind) => {
-  if (on && kind === 'dub')
-    return `${TRACK_BASE} border-[var(--chrome-accent-border)] bg-[var(--chrome-accent-bg)] text-[var(--chrome-accent)]`;
-  if (on)
-    return `${TRACK_BASE} border-transparent bg-[var(--chrome-hover-bg)] text-[var(--chrome-fg)]`;
-  return `${TRACK_BASE} border-transparent text-[var(--chrome-fg-muted)]`;
-};
 const TAB_BASE =
   'inline-flex items-center gap-[6px] px-[12px] py-[6px] bg-transparent border-0 border-b-2 cursor-pointer text-[length:var(--text-sm)] transition-[color,border-color] duration-[var(--dur-fast)]';
 const tabCls = (active) =>
@@ -164,12 +152,8 @@ export default function ExportModal({
   const selectedTracks = allTracks.filter((t) => exportTracks[t.code] !== false);
   const selectedDubs = selectedTracks.filter((t) => t.kind === 'dub');
 
-  const toggleTrack = (code) =>
-    setExportTracks((prev) => ({ ...prev, [code]: prev[code] === false ? true : false }));
   const setAllTracks = (on) =>
     setExportTracks(Object.fromEntries(allTracks.map((t) => [t.code, on])));
-  const setDubsOnly = () =>
-    setExportTracks(Object.fromEntries(allTracks.map((t) => [t.code, t.kind === 'dub'])));
 
   // ── Presets — map label → state deltas and jump to the right tab.
   const applyPreset = (key) => {
@@ -336,50 +320,14 @@ export default function ExportModal({
             ))}
           </div>
 
-          {/* Track checklist — shared across tabs */}
-          <div className="flex flex-col gap-[var(--space-2)]">
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-[4px] uppercase [font-family:var(--chrome-font-mono)] text-[length:var(--chrome-label-size)] tracking-[var(--chrome-label-track)] text-[var(--chrome-fg-muted)]">
-                <Globe size={9} /> {t('exportModal.tracks')}
-              </span>
-              <div className="inline-flex items-center gap-[4px] text-[length:var(--text-xs)] text-[var(--chrome-fg-dim)] [&_button]:cursor-pointer [&_button]:border-none [&_button]:bg-transparent [&_button]:px-[4px] [&_button]:py-[2px] [&_button]:text-[length:var(--text-xs)] [&_button]:text-[var(--chrome-fg-muted)] [&_button:hover]:text-[var(--chrome-fg)]">
-                <button type="button" onClick={() => setAllTracks(true)}>
-                  {t('exportModal.track_all')}
-                </button>
-                <span>·</span>
-                <button type="button" onClick={() => setAllTracks(false)}>
-                  {t('exportModal.track_none')}
-                </button>
-                <span>·</span>
-                <button type="button" onClick={setDubsOnly}>
-                  {t('exportModal.track_dubs_only')}
-                </button>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-[6px]">
-              {allTracks.map((track) => {
-                const on = exportTracks[track.code] !== false;
-                return (
-                  <label key={track.code} className={trackCls(on, track.kind)}>
-                    <input
-                      type="checkbox"
-                      checked={on}
-                      onChange={() => toggleTrack(track.code)}
-                      className="m-0 accent-[var(--color-brand)]"
-                    />
-                    <span className="[font-family:var(--chrome-font-mono)] tracking-[0.02em]">
-                      {track.label}
-                    </span>
-                    {track.kind === 'dub' && track.code === dubLangCode && (
-                      <Badge tone="brand" size="xs">
-                        {t('exportModal.primary')}
-                      </Badge>
-                    )}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
+          {/* Track choices stay collapsed until the user needs to manage them. */}
+          <TrackManager
+            t={t}
+            tracks={allTracks}
+            selection={exportTracks}
+            setSelection={setExportTracks}
+            primaryCode={dubLangCode}
+          />
 
           {/* Tabs */}
           <div className="flex gap-[var(--space-1)] [border-bottom:1px_solid_var(--chrome-border)]">

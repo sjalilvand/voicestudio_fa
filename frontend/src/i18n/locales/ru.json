@@ -928,7 +928,10 @@
     "languages_selected_one": "{{count}} выбран язык",
     "languages_selected_other": "Выбрано {{count}} языка",
     "multi_translating": "Перевод → {{lang}} ({{current}}/{{total}})…",
-    "multi_lang_skipped": "Не удалось перевести {{langs}}. Эти дорожки пропущены, чтобы не создать озвучку на неверном языке."
+    "multi_lang_skipped": "Не удалось перевести {{langs}}. Эти дорожки пропущены, чтобы не создать озвучку на неверном языке.",
+    "manage_languages": "Управление языками",
+    "languages_done": "Готово",
+    "languages_pending": "Ожидает"
   },
   "glossary": {
     "title": "Глоссарий",
