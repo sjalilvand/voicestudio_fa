@@ -39,6 +39,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Added
 
+- First-run setup now recommends a screen-aware interface scale, with compact controls available throughout setup. (#1502)
 - OrcaRouter is now available as a named OpenAI-compatible LLM provider — thanks @Marc-oss-hub! (#1499)
 - IndexTTS 2.5 is available as a pinned one-click sidecar with five-language dubbing, expressive cloning, and backward-compatible IndexTTS-2 support. (#1482) — thanks @marwanlhabti5-coder!
 - Voice recording now offers microphone and channel selection with a live input-level meter on every desktop platform. (#1481)
