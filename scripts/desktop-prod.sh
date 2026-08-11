@@ -29,10 +29,15 @@ set -euo pipefail
 # …) is repo-root-relative, so invoking the script from any other directory
 # used to mis-resolve them (#962 hardening).
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
+REPO_ROOT="$(pwd -P)"
 
 APP_ID="com.debpalash.omnivoice-studio"
 TAURI_DIR="frontend/src-tauri"
 APP_NAME="VoiceStudio"
+TAURI_BUILD_ROOT="$REPO_ROOT/$TAURI_DIR/target/debug"
+if [ -d "$TAURI_BUILD_ROOT" ]; then
+  TAURI_BUILD_ROOT="$(cd "$TAURI_BUILD_ROOT" && pwd -P)"
+fi
 
 # ── Detect platform ───────────────────────────────────────────────────────
 OS="$(uname -s)"
@@ -170,6 +175,18 @@ kill_running_instances() {
   # both live under `${TAURI_DIR}/target/debug/`, and `pgrep -f` sees the
   # absolute path, of which that is a substring.
   pids="$(pgrep -f "${TAURI_DIR}/target/debug/.*omnivoice-studio" 2>/dev/null || true)"
+  # APPIMAGE_EXTRACT_AND_RUN replaces the command with a /tmp extraction path,
+  # so pgrep cannot connect the live shell (or its inherited backend) to this
+  # checkout. APPIMAGE remains in both processes' environments and is the
+  # stable ownership proof. Missing this case let a fresh run delete the live
+  # SQLite/log directory, then single-instance merely refocused the broken app.
+  if [ "$PLATFORM" = "linux" ]; then
+    local appimage_pids
+    appimage_pids="$(python3 scripts/desktop_prod_processes.py "$TAURI_BUILD_ROOT")"
+    if [ -n "$appimage_pids" ]; then
+      echo "🔪 Terminated extracted VoiceStudio AppImage processes: $(echo "$appimage_pids" | tr '\n' ' ')"
+    fi
+  fi
   warn_installed_instance
   local port_pid
   for port_pid in $(lsof -nP -iTCP:3900 -sTCP:LISTEN -t 2>/dev/null || true); do
