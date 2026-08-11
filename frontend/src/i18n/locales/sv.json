@@ -184,6 +184,7 @@
     "workers_desc": "Skicka enskilda jobb till GPU:er på dina andra maskiner. Resultaten kommer tillbaka hit. Ingenting skickas förrän du lägger till en arbetare och godkänner den.",
     "workers_enable": "Använd fjärrarbetare",
     "workers_enable_hint": "Medan detta är av accepteras ingen anslutning och ingenting lämnar den här maskinen.",
+    "workers_port_conflict": "Fjärrarbetare är inte tillgängliga eftersom en annan VoiceStudio-instans redan tar emot dem på den här porten. Stäng den andra instansen eller ställ in OMNIVOICE_WORKER_PORT på en annan port och starta om VoiceStudio.",
     "workers_endpoint": "Arbetare ansluter till",
     "workers_endpoint_hint": "En arbetare måste kunna nå den här adressen. På olika nätverk är ett VPN som Tailscale det tillförlitliga sättet.",
     "workers_add": "Lägg till en arbetare",
@@ -2360,7 +2361,7 @@
     "started": "Laddar ner {{label}} — följ förloppet i Inställningar → Modeller och försök sedan igen.",
     "install_failed": "Kunde inte starta nedladdningen: {{message}}"
   },
-  "model_missing": {"message":"Modellen har inte hämtats på {{target}}.","download":"Hämta modell","download_size":"Hämta ({{size}})","started":"Hämtar på {{target}} — försök generera igen när det är klart.","failed":"Det gick inte att starta hämtningen: {{message}}"},
+  "model_missing": {"message":"Modellen har inte hämtats på {{target}}.","download":"Hämta modell","download_size":"Hämta ({{size}})","started":"Hämtar på {{target}} — försök generera igen när det är klart.","failed":"Det gick inte att starta hämtningen: {{message}}","manual_worker":"Installera denna motor direkt på {{target}}."},
   "backend_start_failure": {
     "notice": "VoiceStudios backend kunde inte starta — inget fungerar förrän den gör det.",
     "view": "Se varför",
@@ -2380,6 +2381,7 @@
     "tasks": "uppgifter",
     "coverage": "endast {{ops}}",
     "opLocal": "Lokalt — {{op}} körs inte på distans än",
+    "dictationLocal": "Diktering körs alltid på den här datorn",
     "ops": {
       "tts": "TTS",
       "clone": "röstkloning",

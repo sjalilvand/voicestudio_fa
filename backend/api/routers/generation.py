@@ -2029,6 +2029,7 @@ async def generate_speech(
             "size_bytes": size_bytes,
             "target": e.target,
             "target_label": e.target_label,
+            "downloadable": e.downloadable,
         }) from e
     except gpu_gateway.RemoteJobFailed as e:
         # Rule 2 of the fallback policy: a single-shot interactive render that

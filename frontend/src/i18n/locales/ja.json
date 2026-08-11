@@ -184,6 +184,7 @@
     "workers_desc": "個々のジョブを他のマシンの GPU に送ります。結果はここに戻ります。ワーカーを追加して承認するまで、何も送信されません。",
     "workers_enable": "リモートワーカーを使う",
     "workers_enable_hint": "これがオフの間は接続を受け付けず、このマシンから何も出ていきません。",
+    "workers_port_conflict": "別のVoiceStudioインスタンスがこのポートですでにリモートワーカーを受け付けているため、利用できません。もう一方のインスタンスを閉じるか、OMNIVOICE_WORKER_PORTを別のポートに設定してVoiceStudioを再起動してください。",
     "workers_endpoint": "ワーカーの接続先",
     "workers_endpoint_hint": "ワーカーがこのアドレスに到達できる必要があります。別のネットワークでは、Tailscale などの VPN が確実な方法です。",
     "workers_add": "ワーカーを追加",
@@ -2360,7 +2361,7 @@
     "started": "{{label}} をダウンロード中 — 設定 → モデルで進行状況を確認し、完了後にもう一度お試しください。",
     "install_failed": "ダウンロードを開始できませんでした: {{message}}"
   },
-  "model_missing": {"message":"このモデルは {{target}} にダウンロードされていません。","download":"モデルをダウンロード","download_size":"ダウンロード（{{size}}）","started":"{{target}} でダウンロード中です。完了後にもう一度生成してください。","failed":"ダウンロードを開始できませんでした：{{message}}"},
+  "model_missing": {"message":"このモデルは {{target}} にダウンロードされていません。","download":"モデルをダウンロード","download_size":"ダウンロード（{{size}}）","started":"{{target}} でダウンロード中です。完了後にもう一度生成してください。","failed":"ダウンロードを開始できませんでした：{{message}}","manual_worker":"このエンジンを {{target}} に直接インストールしてください。"},
   "backend_start_failure": {
     "notice": "VoiceStudio のバックエンドを起動できませんでした。起動するまで何も実行できません。",
     "view": "理由を見る",
@@ -2380,6 +2381,7 @@
     "tasks": "タスク",
     "coverage": "{{ops}} のみ",
     "opLocal": "ローカル — {{op}}はまだリモートで実行できません",
+    "dictationLocal": "音声入力は常にこのマシンで実行されます",
     "ops": {
       "tts": "TTS",
       "clone": "音声クローン",

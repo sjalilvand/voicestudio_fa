@@ -184,6 +184,7 @@
     "workers_desc": "Einzelne Aufträge an GPUs auf Ihren anderen Rechnern senden. Die Ergebnisse kommen hierher zurück. Es wird nichts gesendet, bevor Sie einen Worker hinzufügen und freigeben.",
     "workers_enable": "Remote-Worker verwenden",
     "workers_enable_hint": "Solange dies aus ist, wird keine Verbindung angenommen und nichts verlässt diesen Rechner.",
+    "workers_port_conflict": "Remote-Worker sind nicht verfügbar, weil eine andere VoiceStudio-Instanz sie bereits an diesem Port annimmt. Schließen Sie die andere Instanz oder setzen Sie OMNIVOICE_WORKER_PORT auf einen anderen Port und starten Sie VoiceStudio neu.",
     "workers_endpoint": "Worker verbinden sich mit",
     "workers_endpoint_hint": "Ein Worker muss diese Adresse erreichen können. In anderen Netzwerken ist ein VPN wie Tailscale der zuverlässige Weg.",
     "workers_add": "Worker hinzufügen",
@@ -2360,7 +2361,7 @@
     "started": "{{label}} wird heruntergeladen — Fortschritt unter Einstellungen → Modelle, danach erneut versuchen.",
     "install_failed": "Download konnte nicht gestartet werden: {{message}}"
   },
-  "model_missing": {"message":"Dieses Modell wurde auf {{target}} nicht heruntergeladen.","download":"Modell herunterladen","download_size":"Herunterladen ({{size}})","started":"Download auf {{target}} gestartet — versuchen Sie danach erneut Generieren.","failed":"Download konnte nicht gestartet werden: {{message}}"},
+  "model_missing": {"message":"Dieses Modell wurde auf {{target}} nicht heruntergeladen.","download":"Modell herunterladen","download_size":"Herunterladen ({{size}})","started":"Download auf {{target}} gestartet — versuchen Sie danach erneut Generieren.","failed":"Download konnte nicht gestartet werden: {{message}}","manual_worker":"Installieren Sie diese Engine direkt auf {{target}}."},
   "backend_start_failure": {
     "notice": "Das VoiceStudio-Backend konnte nicht starten — bis dahin funktioniert nichts.",
     "view": "Ursache anzeigen",
@@ -2380,6 +2381,7 @@
     "tasks": "Aufgaben",
     "coverage": "nur {{ops}}",
     "opLocal": "Lokal — {{op}} läuft noch nicht auf Remote-Workern",
+    "dictationLocal": "Diktat läuft immer auf diesem Gerät",
     "ops": {
       "tts": "TTS",
       "clone": "Stimmklonen",

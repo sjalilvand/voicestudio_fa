@@ -343,6 +343,25 @@ describe('GpuTarget', () => {
     expect(container.querySelector('.text-amber-400')).toBeNull();
   });
 
+  it('labels dictation as intentionally local without an unported notice', async () => {
+    useAppStore.setState({ mode: 'dictation' });
+    apiFetch.mockResolvedValue(
+      respond({
+        target: 'w1',
+        op: 'dictation',
+        active: { remote: false, label: 'Local', reason: 'ignored server wording' },
+        remote_operations: ['audiobook', 'tts'],
+        targets: [LOCAL, READY],
+      }),
+    );
+    renderPicker();
+
+    await waitFor(() => expect(paths()).toContain('/workers/target?op=dictation'));
+    fireEvent.click(await screen.findByRole('button'));
+    expect(await screen.findByText('Dictation always runs on this machine')).toBeInTheDocument();
+    expect(screen.queryByText(/does not run remotely yet/)).not.toBeInTheDocument();
+  });
+
   it('says what a worker actually takes, in the menu', async () => {
     apiFetch.mockResolvedValue(
       respond({

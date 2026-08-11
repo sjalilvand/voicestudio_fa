@@ -184,6 +184,7 @@
     "workers_desc": "Gửi từng tác vụ tới GPU trên các máy khác của bạn. Kết quả sẽ quay lại đây. Không có gì được gửi đi cho đến khi bạn thêm một máy phụ và phê duyệt nó.",
     "workers_enable": "Dùng máy phụ từ xa",
     "workers_enable_hint": "Khi tắt, không kết nối nào được chấp nhận và không có gì rời khỏi máy này.",
+    "workers_port_conflict": "Worker từ xa không khả dụng vì một phiên bản VoiceStudio khác đang nhận chúng trên cổng này. Hãy đóng phiên bản kia, hoặc đặt OMNIVOICE_WORKER_PORT sang cổng khác rồi khởi động lại VoiceStudio.",
     "workers_endpoint": "Máy phụ kết nối tới",
     "workers_endpoint_hint": "Máy phụ phải truy cập được địa chỉ này. Trên các mạng khác nhau, VPN như Tailscale là cách đáng tin cậy.",
     "workers_add": "Thêm máy phụ",
@@ -2360,7 +2361,7 @@
     "started": "Đang tải {{label}} — theo dõi tiến trình trong Cài đặt → Mô hình, sau đó thử lại.",
     "install_failed": "Không thể bắt đầu tải xuống: {{message}}"
   },
-  "model_missing": {"message":"Mô hình này chưa được tải xuống trên {{target}}.","download":"Tải mô hình","download_size":"Tải xuống ({{size}})","started":"Đang tải trên {{target}} — hãy Tạo lại khi hoàn tất.","failed":"Không thể bắt đầu tải xuống: {{message}}"},
+  "model_missing": {"message":"Mô hình này chưa được tải xuống trên {{target}}.","download":"Tải mô hình","download_size":"Tải xuống ({{size}})","started":"Đang tải trên {{target}} — hãy Tạo lại khi hoàn tất.","failed":"Không thể bắt đầu tải xuống: {{message}}","manual_worker":"Cài đặt công cụ này trực tiếp trên {{target}}."},
   "backend_start_failure": {
     "notice": "Backend của VoiceStudio không khởi động được — sẽ không có gì chạy cho đến khi nó khởi động.",
     "view": "Xem lý do",
@@ -2380,6 +2381,7 @@
     "tasks": "tác vụ",
     "coverage": "chỉ {{ops}}",
     "opLocal": "Cục bộ — {{op}} chưa chạy từ xa",
+    "dictationLocal": "Đọc chính tả luôn chạy trên máy này",
     "ops": {
       "tts": "TTS",
       "clone": "nhân bản giọng nói",

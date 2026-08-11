@@ -85,12 +85,14 @@ async def test_start_if_enabled_is_a_no_op_when_disabled(monkeypatch):
 async def test_a_failing_start_never_takes_the_app_down(monkeypatch):
     """The user's local workflow does not depend on this feature existing."""
     monkeypatch.setattr(service, "remote_workers_enabled", lambda: True)
+    monkeypatch.setattr(service.control_plane, "startup_error", None)
 
     async def _boom(**kwargs):
         raise OSError("port already in use")
 
     monkeypatch.setattr(service.control_plane, "start", _boom)
     await service.start_if_enabled()  # must not raise
+    assert service.control_plane.startup_error == "port already in use"
 
 
 def test_paths_live_under_the_user_data_directory():
@@ -100,10 +102,17 @@ def test_paths_live_under_the_user_data_directory():
     assert locations["artifacts"].startswith(locations["root"])
 
 
-def test_snapshot_is_inert_when_stopped():
+def test_snapshot_is_inert_when_stopped(monkeypatch):
+    monkeypatch.setattr(service, "remote_workers_enabled", lambda: False)
     plane = service.ControlPlane()
     snapshot = plane.snapshot()
-    assert snapshot == {"enabled": False, "running": False, "workers": [], "queue_depth": 0}
+    assert snapshot == {
+        "enabled": False,
+        "running": False,
+        "startup_error": None,
+        "workers": [],
+        "queue_depth": 0,
+    }
 
 
 def test_port_falls_back_when_the_env_var_is_garbage(monkeypatch):
@@ -181,7 +190,7 @@ def test_engines_that_cannot_clone_do_not_advertise_it(monkeypatch):
         "services.tts_backend.list_backends",
         lambda: [{"id": "e", "available": True, "supports_cloning": None, "gpu_compat": ["cuda"]}],
     )
-    assert capabilities.discover()[0]["operations"] == ["tts"]
+    assert capabilities.discover()[0]["operations"] == ["audiobook", "tts"]
 
 
 def test_default_concurrency_is_one():
@@ -685,7 +694,7 @@ def test_the_target_endpoint_answers_per_operation(client, monkeypatch, db):
 
     whole = client.get("/workers/target").json()
     assert whole["op"] == ""
-    assert whole["remote_operations"] == ["tts"]
+    assert whole["remote_operations"] == ["audiobook", "tts"]
 
 
 # ── Config is read from the database, not from the pool's stale copy ───────

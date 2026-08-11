@@ -313,7 +313,7 @@ def test_status_answers_for_the_operation_it_was_asked_about(db, settings):
     assert payload["target"] == worker.id, "the user's choice is not lost"
     assert payload["active"]["remote"] is False
     # What the menu needs to say "gpu2 · TTS only".
-    assert payload["remote_operations"] == ["tts"]
+    assert payload["remote_operations"] == ["audiobook", "tts"]
 
 
 # ── The badge cannot lie ───────────────────────────────────────────────────

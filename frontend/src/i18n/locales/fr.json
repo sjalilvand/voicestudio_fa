@@ -184,6 +184,7 @@
     "workers_desc": "Envoyez des tâches individuelles aux GPU de vos autres machines. Les résultats reviennent ici. Rien n'est envoyé tant que vous n'avez pas ajouté et approuvé un worker.",
     "workers_enable": "Utiliser des workers distants",
     "workers_enable_hint": "Tant que ceci est désactivé, aucune connexion n'est acceptée et rien ne quitte cette machine.",
+    "workers_port_conflict": "Les workers distants sont indisponibles, car une autre instance de VoiceStudio les accepte déjà sur ce port. Fermez l’autre instance, ou définissez OMNIVOICE_WORKER_PORT sur un autre port puis redémarrez VoiceStudio.",
     "workers_endpoint": "Les workers se connectent à",
     "workers_endpoint_hint": "Un worker doit pouvoir joindre cette adresse. Sur des réseaux différents, un VPN comme Tailscale est la méthode fiable.",
     "workers_add": "Ajouter un worker",
@@ -2360,7 +2361,7 @@
     "started": "Téléchargement de {{label}} — suivez la progression dans Réglages → Modèles, puis réessayez.",
     "install_failed": "Impossible de démarrer le téléchargement : {{message}}"
   },
-  "model_missing": {"message":"Ce modèle n’est pas téléchargé sur {{target}}.","download":"Télécharger le modèle","download_size":"Télécharger ({{size}})","started":"Téléchargement sur {{target}} — relancez Générer une fois terminé.","failed":"Impossible de lancer le téléchargement : {{message}}"},
+  "model_missing": {"message":"Ce modèle n’est pas téléchargé sur {{target}}.","download":"Télécharger le modèle","download_size":"Télécharger ({{size}})","started":"Téléchargement sur {{target}} — relancez Générer une fois terminé.","failed":"Impossible de lancer le téléchargement : {{message}}","manual_worker":"Installez ce moteur directement sur {{target}}."},
   "backend_start_failure": {
     "notice": "Le backend d'VoiceStudio n'a pas pu démarrer — rien ne fonctionnera tant qu'il ne démarre pas.",
     "view": "Voir pourquoi",
@@ -2380,6 +2381,7 @@
     "tasks": "tâches",
     "coverage": "{{ops}} uniquement",
     "opLocal": "Local — {{op}} ne s'exécute pas encore à distance",
+    "dictationLocal": "La dictée s'exécute toujours sur cette machine",
     "ops": {
       "tts": "TTS",
       "clone": "clonage vocal",

@@ -510,14 +510,23 @@ class WorkerClient:
     async def _on_prewarm(self, request: pb.PrewarmRequest) -> None:
         """Load/download a catalog model, then report the resulting capability."""
         engine = request.engine
-        if not engine and request.model_id:
-            for cap in self.config.capabilities or []:
-                if request.model_id in (cap.get("repo_ids") or []):
-                    engine = str(cap.get("engine") or "")
-                    break
+        capability = next(
+            (
+                cap for cap in (self.config.capabilities or [])
+                if request.model_id and cap.get("model_id") == request.model_id
+            ),
+            None,
+        )
+        if not engine and capability is not None:
+            engine = str(capability.get("engine") or "")
         try:
             if not engine:
                 raise ValueError("the requested catalog model has no worker engine")
+            if request.download_if_missing:
+                repo_ids = list((capability or {}).get("repo_ids") or [])
+                if len(repo_ids) != 1:
+                    raise ValueError("the requested worker model has no single catalog repository")
+                await self._install_catalog_repo(repo_ids[0])
             from worker.executor import TaskExecutor  # noqa: PLC0415
 
             await asyncio.to_thread(TaskExecutor._load_backend, engine)
@@ -525,6 +534,40 @@ class WorkerClient:
             logger.warning("Prewarm failed for %s", engine or request.model_id, exc_info=True)
         finally:
             await self.refresh_capabilities()
+
+    async def _install_catalog_repo(self, repo_id: str) -> None:
+        """Run the existing setup installer and pipe its hf_progress upstream."""
+        from api.routers.setup.download import InstallModelRequest, install_model  # noqa: PLC0415
+        from utils import download_aggregator, hf_progress  # noqa: PLC0415
+
+        hf_progress.install()
+        download_aggregator.install()
+        loop = asyncio.get_running_loop()
+        terminal = loop.create_future()
+
+        def listener(event: dict) -> None:
+            if event.get("repo_id") != repo_id:
+                return
+            payload = json.dumps(event, separators=(",", ":"), ensure_ascii=False)
+            loop.call_soon_threadsafe(
+                asyncio.create_task,
+                self._send(pb.WorkerMessage(
+                    download_progress=pb.DownloadProgress(event_json=payload)
+                )),
+            )
+            if event.get("phase") in {
+                "install_done", "install_error", "install_cancelled",
+            } and not terminal.done():
+                loop.call_soon_threadsafe(terminal.set_result, event)
+
+        listener_id = hf_progress.register_listener(listener)
+        try:
+            await install_model(InstallModelRequest(repo_id=repo_id, target="local"))
+            event = await terminal
+            if event.get("phase") != "install_done":
+                raise RuntimeError(event.get("error") or "model install did not complete")
+        finally:
+            hf_progress.unregister_listener(listener_id)
 
     @staticmethod
     def _key(ref: pb.TaskRef) -> str:

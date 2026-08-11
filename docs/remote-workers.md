@@ -78,14 +78,18 @@ small cards.
 
 ## What runs remotely
 
-**Speech synthesis, and nothing else yet.** Dubbing, audiobook rendering,
-transcription and dictation run on this machine whichever worker you pick —
-dictation deliberately and permanently, because there latency *is* the feature.
-The rest are being ported one operation at a time.
+**Speech synthesis and audiobook chapters.** Audiobooks are dispatched one
+chapter at a time; if a worker repeatedly fails, the failed chapter and the
+rest of that book run locally and the job reports one combined notice. ASR,
+diarization, translation and RVC still run on this machine. Dictation always
+runs here, deliberately and permanently, because there latency *is* the
+feature. The remaining operations are being ported one at a time.
 
 The picker knows this. It resolves against the surface you are on, so a chosen
 worker reads **Local** on a tab whose work has no remote path yet and names the
 reason, instead of showing a green dot next to a GPU that receives nothing.
+The Dictation surface states that it always uses this machine without showing
+the generic "not ported yet" notice.
 
 While the port is in progress, the only way to place a task by hand is
 `POST /workers/tasks` — a **development-only** endpoint. It is loopback-only,
@@ -169,6 +173,12 @@ kept, so turning it back on does not mean setting everything up again.
 | `OMNIVOICE_WORKER_ENDPOINT_HOST` | Override the address shown to workers |
 | `OMNIVOICE_WORKER_MODE` | `1` on the worker machine |
 | `OMNIVOICE_WORKER_TOKEN` | Enrollment token, first run only |
+
+Only one VoiceStudio instance can accept remote workers on a given port. If
+another instance already owns the configured port, the app continues running
+with remote workers unavailable and shows the conflict in Settings. Close the
+other instance, or give this one a different `OMNIVOICE_WORKER_PORT` and
+restart it.
 
 State lives under your data directory in `workers/`: the certificate and key,
 the worker's own key, and received artifacts.

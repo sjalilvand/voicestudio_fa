@@ -242,6 +242,24 @@ models:
     size_gb: 0.08
     curated_on: [all]
 
+  - repo_id: "openbmb/VoxCPM2"
+    label: "VoxCPM2 (30 languages, voice cloning and design)"
+    role: TTS
+    size_gb: 5.0
+    curated_on: [cuda]
+
+  - repo_id: "FunAudioLLM/Fun-CosyVoice3-0.5B-2512"
+    label: "CosyVoice 3 0.5B (multilingual zero-shot)"
+    role: TTS
+    size_gb: 9.8
+    curated_on: [cuda]
+
+  - repo_id: "lj1995/GPT-SoVITS"
+    label: "GPT-SoVITS pretrained weights"
+    role: TTS
+    size_gb: 2.0
+    curated_on: [cuda]
+
   # ── mlx-audio engines (Apple Silicon only) ────────────────────────────
 
   - repo_id: "mlx-community/Kokoro-82M-bf16"

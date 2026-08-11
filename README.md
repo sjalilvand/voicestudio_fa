@@ -138,6 +138,7 @@ Three flagships, five more headliners, and a dozen under the fold.
 - 🛡️ **AI Watermark** — AudioSeal (Meta): invisible, survives compression.
 - 🔬 **Diagnostics** — self-check suite, error journal, scrubbed diagnostic bundles.
 - ⚡ **GPU Auto-Detect** — CUDA · MPS · ROCm (Linux, opt-in) · CPU; ≤8 GB VRAM auto-offloads.
+- 📥 **Remote Model Downloads** — install pinned model weights on the selected worker with live progress.
 - 🧭 **Engine routing** — preflight GPU check per engine; no silent CPU fallback.
 - 🧩 **Extensible** — subclass `TTSBackend`, add any engine in ~50 lines.
 - 🎒 **Portable personas** — export voices as `.ovsvoice` bundles: identity + watermark.

@@ -184,6 +184,7 @@
     "workers_desc": "개별 작업을 다른 컴퓨터의 GPU로 보냅니다. 결과는 이곳으로 돌아옵니다. 워커를 추가하고 승인하기 전까지는 아무것도 전송되지 않습니다.",
     "workers_enable": "원격 워커 사용",
     "workers_enable_hint": "이 설정이 꺼져 있는 동안에는 연결을 받지 않으며 이 컴퓨터에서 나가는 것도 없습니다.",
+    "workers_port_conflict": "다른 VoiceStudio 인스턴스가 이미 이 포트에서 원격 워커 연결을 받고 있어 사용할 수 없습니다. 다른 인스턴스를 닫거나 OMNIVOICE_WORKER_PORT를 다른 포트로 설정한 뒤 VoiceStudio를 다시 시작하세요.",
     "workers_endpoint": "워커 연결 주소",
     "workers_endpoint_hint": "워커가 이 주소에 도달할 수 있어야 합니다. 네트워크가 다르면 Tailscale 같은 VPN이 확실한 방법입니다.",
     "workers_add": "워커 추가",
@@ -2360,7 +2361,7 @@
     "started": "{{label}} 다운로드 중 — 설정 → 모델에서 진행 상황을 확인한 뒤 다시 시도하세요.",
     "install_failed": "다운로드를 시작할 수 없습니다: {{message}}"
   },
-  "model_missing": {"message":"이 모델은 {{target}}에 다운로드되지 않았습니다.","download":"모델 다운로드","download_size":"다운로드 ({{size}})","started":"{{target}}에서 다운로드 중입니다. 완료되면 다시 생성하세요.","failed":"다운로드를 시작할 수 없습니다: {{message}}"},
+  "model_missing": {"message":"이 모델은 {{target}}에 다운로드되지 않았습니다.","download":"모델 다운로드","download_size":"다운로드 ({{size}})","started":"{{target}}에서 다운로드 중입니다. 완료되면 다시 생성하세요.","failed":"다운로드를 시작할 수 없습니다: {{message}}","manual_worker":"이 엔진을 {{target}}에 직접 설치하세요."},
   "backend_start_failure": {
     "notice": "VoiceStudio 백엔드를 시작하지 못했습니다. 시작되기 전까지는 아무것도 실행할 수 없습니다.",
     "view": "이유 보기",
@@ -2380,6 +2381,7 @@
     "tasks": "작업",
     "coverage": "{{ops}}만",
     "opLocal": "로컬 — {{op}}은(는) 아직 원격에서 실행되지 않습니다",
+    "dictationLocal": "받아쓰기는 항상 이 컴퓨터에서 실행됩니다",
     "ops": {
       "tts": "TTS",
       "clone": "음성 복제",

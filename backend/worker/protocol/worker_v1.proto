@@ -284,6 +284,14 @@ message CapabilityUpdate {
   repeated ModelCapability capabilities = 2;
 }
 
+// A model-install event in the same JSON shape emitted by utils.hf_progress.
+// The repo is resolved on the worker from the opaque PrewarmRequest.model_id;
+// no repository path or URL is accepted over the wire.
+message DownloadProgress {
+  Envelope envelope = 1;
+  string event_json = 2;
+}
+
 message WorkerMessage {
   oneof payload {
     Heartbeat heartbeat = 1;
@@ -298,7 +306,9 @@ message WorkerMessage {
     CapabilityUpdate capabilities = 10;
     WorkerGoodbye goodbye = 11;
     Pong pong = 12;
+    DownloadProgress download_progress = 13;
   }
+  reserved 14;  // future streaming frame
 }
 
 // ── Control stream: server → worker ────────────────────────────────────────

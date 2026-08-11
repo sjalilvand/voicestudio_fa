@@ -753,6 +753,7 @@
     "workers_desc": "Send individual jobs to GPUs on your other machines. Results come back here. Nothing is sent until you add a worker and approve it.",
     "workers_enable": "Use remote workers",
     "workers_enable_hint": "While this is off, no connection is accepted and nothing leaves this machine.",
+    "workers_port_conflict": "Remote workers are unavailable because another VoiceStudio instance is already accepting them on this port. Close the other instance, or set OMNIVOICE_WORKER_PORT to a different port and restart VoiceStudio.",
     "workers_endpoint": "Workers connect to",
     "workers_endpoint_hint": "A worker has to be able to reach this address. On different networks, a VPN such as Tailscale is the reliable way.",
     "workers_add": "Add a worker",
@@ -2900,13 +2901,14 @@
     "started": "Downloading {{label}} — watch progress in Settings → Models, then try again.",
     "install_failed": "Couldn't start the download: {{message}}"
   },
-  "model_missing": {"message":"This model is not downloaded on {{target}}.","download":"Download model","download_size":"Download ({{size}})","started":"Downloading on {{target}} — try Generate again when it finishes.","failed":"Couldn't start the download: {{message}}"},
+  "model_missing": {"message":"This model is not downloaded on {{target}}.","download":"Download model","download_size":"Download ({{size}})","started":"Downloading on {{target}} — try Generate again when it finishes.","failed":"Couldn't start the download: {{message}}","manual_worker":"Install this engine directly on {{target}}."},
   "gpu": {
     "local": "Local",
     "picker": "Where jobs run",
     "tasks": "tasks",
     "coverage": "{{ops}} only",
     "opLocal": "Local — {{op}} does not run remotely yet",
+    "dictationLocal": "Dictation always runs on this machine",
     "ops": {
       "tts": "TTS",
       "clone": "voice cloning",

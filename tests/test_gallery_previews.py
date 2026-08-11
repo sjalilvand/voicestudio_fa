@@ -25,6 +25,7 @@ import ast
 import base64
 import hashlib
 import io
+import importlib.util
 import json
 import tarfile
 from pathlib import Path
@@ -213,6 +214,10 @@ def sandbox(tmp_path, monkeypatch, signer, _live_gallery):
     monkeypatch.setattr(gallery, "DATA_DIR", str(tmp_path))
     monkeypatch.setattr(gallery, "UPDATER_PUBKEY", signer.pubkey)
     monkeypatch.setenv("OMNIVOICE_GALLERY_URL", StubGallery.BASE)
+    # Local renders are the competing cache tier; isolate them too so route
+    # tests cannot pass/fail based on a developer's real outputs directory.
+    from api.routers import archetypes as router_mod
+    monkeypatch.setattr(router_mod, "_PREVIEW_DIR", tmp_path / "local_previews")
     return tmp_path
 
 
@@ -518,18 +523,63 @@ def test_preview_serves_the_gallery_file_without_touching_the_engine(client, san
     assert resp.content == _mp3(b"G")
 
 
+def test_offline_gallery_miss_still_renders_locally(client, sandbox, stub, monkeypatch, caplog):
+    """Exercise the full route with an actual failing HTTP transport."""
+    gallery.set_enabled(True)
+    stub.raises = httpx.ConnectError("airplane mode")
+    offline_client = stub.client()
+    monkeypatch.setattr(gallery, "_client", lambda client=None: offline_client)
+
+    async def _render(_item, path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"RIFF-offline-local")
+
+    monkeypatch.setattr("api.routers.archetypes._render_archetype_wav", _render)
+    item, _ = _first_archetype()
+    resp = client.get(f"/archetypes/{item['id']}/preview")
+    assert resp.status_code == 200
+    assert resp.headers["X-OmniVoice-Preview-Source"] == "local"
+    assert resp.content == b"RIFF-offline-local"
+    assert not [r for r in caplog.records if r.levelno >= 30]
+
+
+def test_local_retry_bypasses_present_gallery_file(client, sandbox, monkeypatch):
+    """A client-side decode error must be able to replace silence with a render."""
+    item, key = _first_archetype()
+    gallery.preview_path(key).write_bytes(_mp3(b"undecodable"))
+
+    async def _render(_item, path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"RIFF-local-render")
+
+    monkeypatch.setattr("api.routers.archetypes._render_archetype_wav", _render)
+    resp = client.get(f"/archetypes/{item['id']}/preview?local=true")
+    assert resp.status_code == 200
+    assert resp.headers["X-OmniVoice-Preview-Source"] == "local"
+    assert resp.content == b"RIFF-local-render"
+
+
 def test_preview_state_is_three_states(client, sandbox, monkeypatch):
     item, key = _first_archetype()
 
     monkeypatch.setattr("api.routers.archetypes._no_voice_model_downloaded", lambda: True)
-    assert client.get(f"/archetypes/{item['id']}/preview/state").json()["source"] == "no_model"
+    body = client.get(f"/archetypes/{item['id']}/preview/state").json()
+    assert body == {
+        "source": "no_model",
+        "message": "You're offline and no voice model is downloaded yet — Settings → Models → Download.",
+    }
 
     monkeypatch.setattr("api.routers.archetypes._no_voice_model_downloaded", lambda: False)
     body = client.get(f"/archetypes/{item['id']}/preview/state").json()
-    assert body["source"] == "rendering" and "moment" in body["message"]
+    assert body == {
+        "source": "rendering",
+        "message": "Rendering this preview on your machine — it may take a moment.",
+    }
 
     gallery.preview_path(key).write_bytes(_mp3(b"G"))
-    assert client.get(f"/archetypes/{item['id']}/preview/state").json()["source"] == "gallery"
+    body = client.get(f"/archetypes/{item['id']}/preview/state").json()
+    assert body["source"] == "gallery"
+    assert body["message"].startswith("Pre-rendered preview from the voice gallery")
 
 
 def test_missing_model_gets_an_action_not_a_log_file(client, sandbox, monkeypatch):
@@ -603,6 +653,45 @@ def test_publish_script_forces_the_watermark_and_asserts_detection():
     assert any(isinstance(node, ast.Raise)
                and getattr(node.exc.func, "id", "") == "AssertionError"
                for node in ast.walk(tree) if isinstance(node, ast.Raise))
+
+
+@pytest.mark.asyncio
+async def test_publish_build_aborts_when_watermark_detection_fails(tmp_path, monkeypatch):
+    """Prove the publish assertion executes, not merely that its source exists."""
+    spec = importlib.util.spec_from_file_location(
+        "render_gallery_under_test", _REPO / "scripts" / "render_gallery.py")
+    assert spec and spec.loader
+    publish = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(publish)
+    from api.routers import archetypes as router_mod
+    from api.routers import generation
+    from services import watermark
+
+    class Audio:
+        shape = (1, 16000)
+
+    async def _render(_archetype, path):
+        path.write_bytes(b"wav")
+
+    async def _file_step(_src, dst):
+        dst.write_bytes(b"audio")
+
+    monkeypatch.setattr(router_mod, "_render_archetype_wav", _render)
+    monkeypatch.setattr(publish, "_load", lambda _path: (Audio(), 16000))
+    monkeypatch.setattr(publish, "_encode_mp3", _file_step)
+    monkeypatch.setattr(publish, "_decode_wav", _file_step)
+    monkeypatch.setattr(watermark, "mark_synthetic", lambda audio, _sr, **_kw: audio)
+    monkeypatch.setattr(watermark, "detect_watermark", lambda _audio, _sr: {
+        "is_watermarked": False, "confidence": 0.0,
+    })
+    monkeypatch.setattr(generation, "_safe_torchaudio_save",
+                        lambda path, _audio, _sr: Path(path).write_bytes(b"marked"))
+
+    out = tmp_path / "previews"
+    out.mkdir()
+    with pytest.raises(AssertionError, match="watermark did not survive"):
+        await publish._build_one({"id": "x"}, KEY_A, tmp_path, out)
+    assert not (out / f"{KEY_A}.mp3").exists()
 
 
 def test_publish_script_and_client_agree_on_the_schema():

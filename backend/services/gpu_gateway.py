@@ -105,12 +105,16 @@ class ModelLoadTimeout(GatewayError):
 class ModelNotDownloaded(GatewayError):
     """The selected worker positively reported that required weights are absent."""
 
-    def __init__(self, *, engine: str, repo_ids: list[str], target: str, target_label: str):
+    def __init__(
+        self, *, engine: str, repo_ids: list[str], target: str, target_label: str,
+        downloadable: bool = True,
+    ):
         super().__init__(f"This model is not downloaded on {target_label}.")
         self.engine = engine
         self.repo_ids = repo_ids
         self.target = target
         self.target_label = target_label
+        self.downloadable = downloadable
 
 
 class RemoteJobFailed(GatewayError):
@@ -167,12 +171,16 @@ class LocalCall:
     ``run_on_gpu_pool_guarded`` already requires.
     """
 
-    fn: Callable[[], Any]
+    fn: Optional[Callable[[], Any]] = None
     what: str = "GPU job"
     timeout: Optional[float] = None
     queue_timeout: Optional[float] = None
     # The engine's declared VRAM floor; only shapes the timeout message.
     min_vram_gb: float = 0.0
+    # Some remote-first callers cannot construct the local callable without
+    # loading the very model they are trying to offload.  Prepare it only when
+    # routing/fallback actually selects this machine.
+    prepare: Optional[Callable[[], Any]] = None
 
 
 @dataclass(frozen=True)
@@ -434,6 +442,13 @@ async def run(
 
 async def _run_local(call: LocalCall, *, admit: bool = False, executor=None) -> Any:
     """The local branch: admission, then the guarded pool."""
+    if call.prepare is not None:
+        prepared = await call.prepare()
+        if not isinstance(prepared, LocalCall):
+            raise TypeError("LocalCall.prepare must return a LocalCall")
+        return await _run_local(prepared, admit=admit, executor=executor)
+    if call.fn is None:
+        raise TypeError("LocalCall requires fn or prepare")
     from services.model_manager import (  # noqa: PLC0415 — torch lives down here
         check_gpu_admission,
         run_on_gpu_pool_guarded,
@@ -539,11 +554,15 @@ def _require_remote_download(
         if model_id and cap.get("model_id") not in (model_id, "", None):
             continue
         if cap.get("downloaded") is False and cap.get("repo_ids"):
+            from services.sidecar_install import SPECS  # noqa: PLC0415
+
+            sidecar_repos = {s.weights_repo_id for s in SPECS.values()}
             raise ModelNotDownloaded(
                 engine=engine,
                 repo_ids=list(cap["repo_ids"]),
                 target=decision.worker_id,
                 target_label=decision.label,
+                downloadable=not any(repo in sidecar_repos for repo in cap["repo_ids"]),
             )
 
 
@@ -838,15 +857,29 @@ async def download(
         if plane is None or getattr(plane, "servicer", None) is None:
             raise RemoteUnsupported(f"{decision.label} is not connected.")
         live = plane.pool.get(decision.worker_id) if plane.pool is not None else None
-        advertised = {
-            repo
-            for cap in (live.record.capabilities if live is not None else [])
-            for repo in (cap.get("repo_ids") or [])
-        }
-        if repo_id not in advertised:
+        capability = next(
+            (
+                cap for cap in (live.record.capabilities if live is not None else [])
+                if repo_id in (cap.get("repo_ids") or [])
+            ),
+            None,
+        )
+        if capability is None:
             raise GatewayError(f"Unknown model for {decision.label}: {repo_id!r}.")
+        # Managed sidecars currently fetch mutable source HEAD before installing
+        # editable code. Do not make that supply-chain path remotely triggerable.
+        from services.sidecar_install import SPECS  # noqa: PLC0415
+
+        if any(spec.weights_repo_id == repo_id for spec in SPECS.values()):
+            raise GatewayError(
+                f"{repo_id!r} must be installed directly on {decision.label}; "
+                "remote sidecar installation is disabled."
+            )
         sent = await plane.servicer.prewarm(
-            decision.worker_id, engine="", model_id=repo_id, download_if_missing=True
+            decision.worker_id,
+            engine=str(capability.get("engine") or ""),
+            model_id=str(capability.get("model_id") or ""),
+            download_if_missing=True,
         )
         if not sent:
             raise RemoteUnsupported(f"{decision.label} is not connected.")
@@ -862,7 +895,7 @@ async def download(
         # The wire and the UI both carry catalog ids only; anything else is a
         # path by another name, and paths are what the protocol forbids.
         raise GatewayError(f"Unknown model: {repo_id!r}.")
-    return await install_model(InstallModelRequest(repo_id=repo_id))
+    return await install_model(InstallModelRequest(repo_id=repo_id, target="local"))
 
 
 # ── Plumbing ───────────────────────────────────────────────────────────────

@@ -343,8 +343,16 @@ class CapabilityUpdate(_message.Message):
     capabilities: _containers.RepeatedCompositeFieldContainer[ModelCapability]
     def __init__(self, envelope: _Optional[_Union[Envelope, _Mapping]] = ..., capabilities: _Optional[_Iterable[_Union[ModelCapability, _Mapping]]] = ...) -> None: ...
 
+class DownloadProgress(_message.Message):
+    __slots__ = ("envelope", "event_json")
+    ENVELOPE_FIELD_NUMBER: _ClassVar[int]
+    EVENT_JSON_FIELD_NUMBER: _ClassVar[int]
+    envelope: Envelope
+    event_json: str
+    def __init__(self, envelope: _Optional[_Union[Envelope, _Mapping]] = ..., event_json: _Optional[str] = ...) -> None: ...
+
 class WorkerMessage(_message.Message):
-    __slots__ = ("heartbeat", "accepted", "rejected", "model_loading", "started", "progress", "result", "failed", "cancel_ack", "capabilities", "goodbye", "pong")
+    __slots__ = ("heartbeat", "accepted", "rejected", "model_loading", "started", "progress", "result", "failed", "cancel_ack", "capabilities", "goodbye", "pong", "download_progress")
     HEARTBEAT_FIELD_NUMBER: _ClassVar[int]
     ACCEPTED_FIELD_NUMBER: _ClassVar[int]
     REJECTED_FIELD_NUMBER: _ClassVar[int]
@@ -357,6 +365,7 @@ class WorkerMessage(_message.Message):
     CAPABILITIES_FIELD_NUMBER: _ClassVar[int]
     GOODBYE_FIELD_NUMBER: _ClassVar[int]
     PONG_FIELD_NUMBER: _ClassVar[int]
+    DOWNLOAD_PROGRESS_FIELD_NUMBER: _ClassVar[int]
     heartbeat: Heartbeat
     accepted: TaskAccepted
     rejected: TaskRejected
@@ -369,7 +378,8 @@ class WorkerMessage(_message.Message):
     capabilities: CapabilityUpdate
     goodbye: WorkerGoodbye
     pong: Pong
-    def __init__(self, heartbeat: _Optional[_Union[Heartbeat, _Mapping]] = ..., accepted: _Optional[_Union[TaskAccepted, _Mapping]] = ..., rejected: _Optional[_Union[TaskRejected, _Mapping]] = ..., model_loading: _Optional[_Union[TaskModelLoading, _Mapping]] = ..., started: _Optional[_Union[TaskStarted, _Mapping]] = ..., progress: _Optional[_Union[TaskProgress, _Mapping]] = ..., result: _Optional[_Union[TaskResult, _Mapping]] = ..., failed: _Optional[_Union[TaskFailed, _Mapping]] = ..., cancel_ack: _Optional[_Union[TaskCancelAck, _Mapping]] = ..., capabilities: _Optional[_Union[CapabilityUpdate, _Mapping]] = ..., goodbye: _Optional[_Union[WorkerGoodbye, _Mapping]] = ..., pong: _Optional[_Union[Pong, _Mapping]] = ...) -> None: ...
+    download_progress: DownloadProgress
+    def __init__(self, heartbeat: _Optional[_Union[Heartbeat, _Mapping]] = ..., accepted: _Optional[_Union[TaskAccepted, _Mapping]] = ..., rejected: _Optional[_Union[TaskRejected, _Mapping]] = ..., model_loading: _Optional[_Union[TaskModelLoading, _Mapping]] = ..., started: _Optional[_Union[TaskStarted, _Mapping]] = ..., progress: _Optional[_Union[TaskProgress, _Mapping]] = ..., result: _Optional[_Union[TaskResult, _Mapping]] = ..., failed: _Optional[_Union[TaskFailed, _Mapping]] = ..., cancel_ack: _Optional[_Union[TaskCancelAck, _Mapping]] = ..., capabilities: _Optional[_Union[CapabilityUpdate, _Mapping]] = ..., goodbye: _Optional[_Union[WorkerGoodbye, _Mapping]] = ..., pong: _Optional[_Union[Pong, _Mapping]] = ..., download_progress: _Optional[_Union[DownloadProgress, _Mapping]] = ...) -> None: ...
 
 class Deadlines(_message.Message):
     __slots__ = ("accept_seconds", "model_load_seconds", "execution_seconds", "progress_lease_seconds", "result_delivery_seconds")

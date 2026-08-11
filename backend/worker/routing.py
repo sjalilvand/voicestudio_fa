@@ -41,6 +41,11 @@ advertises, but a job only reaches the scheduler where this side has a
 producer for it — so ``decide(op=...)`` answers for the surface the user is
 looking at rather than for the machine, and the badge cannot read
 "gpu2 ● ready" on a tab whose work is 100% local.
+
+Speech synthesis and chapter-at-a-time audiobook rendering have remote
+producers. ASR, diarization, translation and RVC remain local. Dictation is
+intentionally local regardless of the selected target because its latency is
+the feature.
 """
 from __future__ import annotations
 
@@ -57,7 +62,7 @@ LOCAL = "local"
 # Operations with a remote producer today. Ports land one at a time (dubbing
 # and dictation are explicitly not here), and this set is what keeps the
 # picker honest about it.
-REMOTE_OPERATIONS = frozenset({"tts"})
+REMOTE_OPERATIONS = frozenset({"audiobook", "tts"})
 
 # Only for the sentence the user reads; an unknown op falls back to its id
 # rather than inventing a name for it.

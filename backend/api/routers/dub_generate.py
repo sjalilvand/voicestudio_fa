@@ -44,6 +44,38 @@ logger = logging.getLogger("omnivoice.dub")
 MAX_STRETCH_RATIO = 1.8
 
 
+def _prepare_oom_retry(error: Exception, *, execution_target: str) -> bool:
+    """Prepare one *local* low-step retry after a genuine device OOM.
+
+    The cache being flushed must belong to the device that raised the error.
+    A remote worker owns its own recovery policy; flushing this process's CUDA
+    cache after a remote failure both stalls the wrong GPU and can evict an
+    unrelated local job.  Keep this guard at the retry chokepoint so a future
+    ``dub_segments`` producer cannot accidentally inherit the old behaviour.
+
+    Returns ``False`` for non-OOM errors.  Remote OOMs are deliberately raised
+    unchanged: the worker may classify/retry them, but this process must not.
+    """
+    is_oom = (
+        isinstance(error, torch.cuda.OutOfMemoryError)
+        or "out of memory" in str(error).lower()
+        or "CUDA error" in str(error)
+    )
+    if not is_oom:
+        return False
+    if execution_target != "local":
+        raise error
+
+    import gc
+
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        torch.mps.empty_cache()
+    return True
+
+
 def _underrun_min_rate() -> float:
     """Floor for the underrun fill (audio slowed toward its slot, never below
     this rate). Default 0.85 stays natural-sounding; OMNIVOICE_UNDERRUN_MIN_RATE=1.0
@@ -611,7 +643,8 @@ async def dub_generate(job_id: str, req: DubRequest):
                 sync_scores.append(1.0)
                 continue
 
-            def _gen(text, lang, instruct_str, dur_s, nstep, cfg, spd, profile_id, effect_preset):
+            def _gen(text, lang, instruct_str, dur_s, nstep, cfg, spd, profile_id, effect_preset,
+                     *, execution_target="local"):
                 # Normalize once at the segment's text→engine choke point
                 # (covers the OOM-retry generate below too, which reuses this
                 # closure's `text`). Pref-gated, idempotent, never raises.
@@ -762,19 +795,7 @@ async def dub_generate(job_id: str, req: DubRequest):
                         )
                     return normalize_audio(mastered_audio, target_dBFS=-2.0)
                 except Exception as e:
-                    is_oom = (
-                        isinstance(e, torch.cuda.OutOfMemoryError)
-                        or "out of memory" in str(e).lower()
-                        or "CUDA error" in str(e)
-                    )
-                    import gc
-                    gc.collect()
-                    if torch.cuda.is_available():
-                        torch.cuda.empty_cache()
-                    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-                        torch.mps.empty_cache()
-
-                    if not is_oom:
+                    if not _prepare_oom_retry(e, execution_target=execution_target):
                         raise
 
                     retry_steps = min(nstep, 8)
@@ -1602,4 +1623,3 @@ async def preview_segment(job_id: str, req: SegmentPreviewRequest):
             "X-Audio-Duration": str(round(audio_tensor.shape[-1] / sr, 2)),
         },
     )
-

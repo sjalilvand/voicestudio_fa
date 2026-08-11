@@ -113,6 +113,13 @@ def repo_ids_for(entry: dict) -> list[str]:
     engine_id = entry.get("id") or ""
     if engine_id == "omnivoice":
         return ["k2-fsa/OmniVoice"]
+    fixed_repos = {
+        "voxcpm2": "openbmb/VoxCPM2",
+        "cosyvoice": "FunAudioLLM/Fun-CosyVoice3-0.5B-2512",
+        "gpt-sovits": "lj1995/GPT-SoVITS",
+    }
+    if engine_id in fixed_repos:
+        return [fixed_repos[engine_id]]
     if engine_id == "mlx-audio":
         active = entry.get("active_model_id") or "kokoro"
         for model in entry.get("curated_models") or []:
@@ -205,7 +212,10 @@ def _operations_for(entry: dict) -> list[str]:
     answer depends on the loaded model, which we treat as "no" rather than
     risk a task that fails at the last moment.
     """
-    operations = ["tts"]
+    # Audiobook chapters use the same TTS engine, but are advertised as their
+    # own schedulable operation so an older worker cannot accept a task whose
+    # chapter assembler it does not implement.
+    operations = ["audiobook", "tts"]
     if entry.get("supports_cloning") is True:
         operations.append("clone")
     return operations

@@ -184,6 +184,7 @@
     "workers_desc": "Invia singoli lavori alle GPU dei tuoi altri computer. I risultati tornano qui. Non viene inviato nulla finché non aggiungi un worker e lo approvi.",
     "workers_enable": "Usa worker remoti",
     "workers_enable_hint": "Finché questa opzione è disattivata, non viene accettata alcuna connessione e nulla lascia questo computer.",
+    "workers_port_conflict": "I worker remoti non sono disponibili perché un'altra istanza di VoiceStudio li sta già accettando su questa porta. Chiudi l'altra istanza oppure imposta OMNIVOICE_WORKER_PORT su una porta diversa e riavvia VoiceStudio.",
     "workers_endpoint": "I worker si connettono a",
     "workers_endpoint_hint": "Un worker deve poter raggiungere questo indirizzo. Su reti diverse, una VPN come Tailscale è la via affidabile.",
     "workers_add": "Aggiungi un worker",
@@ -2360,7 +2361,7 @@
     "started": "Download di {{label}} in corso — segui l'avanzamento in Impostazioni → Modelli, poi riprova.",
     "install_failed": "Impossibile avviare il download: {{message}}"
   },
-  "model_missing": {"message":"Questo modello non è stato scaricato su {{target}}.","download":"Scarica modello","download_size":"Scarica ({{size}})","started":"Download avviato su {{target}} — riprova Genera al termine.","failed":"Impossibile avviare il download: {{message}}"},
+  "model_missing": {"message":"Questo modello non è stato scaricato su {{target}}.","download":"Scarica modello","download_size":"Scarica ({{size}})","started":"Download avviato su {{target}} — riprova Genera al termine.","failed":"Impossibile avviare il download: {{message}}","manual_worker":"Installa questo motore direttamente su {{target}}."},
   "backend_start_failure": {
     "notice": "Il backend di VoiceStudio non è riuscito ad avviarsi: nulla funzionerà finché non parte.",
     "view": "Vedi perché",
@@ -2380,6 +2381,7 @@
     "tasks": "attività",
     "coverage": "solo {{ops}}",
     "opLocal": "Locale — {{op}} non viene ancora eseguito da remoto",
+    "dictationLocal": "La dettatura viene sempre eseguita su questo computer",
     "ops": {
       "tts": "TTS",
       "clone": "clonazione vocale",

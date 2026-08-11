@@ -20,6 +20,7 @@ features:
   - AI Watermark
   - 100% Local
   - GPU Auto-Detect
+  - Remote Model Downloads
   - Extensible
 
 # id: must exactly match the registry keys in backend/services/tts_backend.py

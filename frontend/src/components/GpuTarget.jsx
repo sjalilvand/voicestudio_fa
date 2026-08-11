@@ -56,6 +56,7 @@ const OP_BY_MODE = {
   audiobook: 'audiobook',
   stories: 'longform',
   transcriptions: 'asr',
+  dictation: 'dictation',
 };
 
 /** ready → green, busy → amber, offline → red. */
@@ -168,7 +169,9 @@ export default function GpuTarget() {
       })
     : '';
   const reason = opIsLocalOnly
-    ? t('gpu.opLocal', {
+    ? op === 'dictation'
+      ? t('gpu.dictationLocal', { defaultValue: 'Dictation always runs on this machine' })
+      : t('gpu.opLocal', {
         op: opLabel(op),
         defaultValue: 'Local — {{op}} does not run remotely yet',
       })

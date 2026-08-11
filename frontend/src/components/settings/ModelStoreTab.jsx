@@ -11,7 +11,7 @@ import { SettingsSection, SettingsInput, SETTINGS_SECTION_SURFACE } from './prim
 import { askConfirm } from './native';
 import { fmtBytes } from './models/format';
 import { computeRowRuntime } from './models/runtime';
-import { reduceModelDownloadEvent, isAutoPurgeTerminal } from './models/downloadReducer';
+import { downloadKey, progressForRepo, reduceModelDownloadEvent, isAutoPurgeTerminal } from './models/downloadReducer';
 import { makeModelColumns } from './models/columns';
 import { groupModels } from './models/sections';
 import RecoBanner from './models/RecoBanner';
@@ -263,7 +263,10 @@ export default function ModelStoreTab({ info, modelBadge }) {
       await cancelInstallModel(repoId);
       setRowState((prev) => ({
         ...prev,
-        [repoId]: { ...(prev[repoId] || { files: {} }), phase: 'install_cancelled' },
+        [downloadKey('local', repoId)]: {
+          ...(prev[downloadKey('local', repoId)] || { files: {} }),
+          phase: 'install_cancelled',
+        },
       }));
     } catch (e) {
       toast.error(e.message || String(e));
@@ -276,7 +279,9 @@ export default function ModelStoreTab({ info, modelBadge }) {
     (repoId) => {
       setRowState((prev) => {
         const next = { ...prev };
-        delete next[repoId];
+        for (const key of Object.keys(next)) {
+          if (key.endsWith(`\u0000${repoId}`)) delete next[key];
+        }
         return next;
       });
       delete speedRef.current[repoId];
@@ -323,7 +328,7 @@ export default function ModelStoreTab({ info, modelBadge }) {
   );
 
   const getRowRuntime = React.useCallback(
-    (m) => computeRowRuntime(m, rowState, busy),
+    (m) => computeRowRuntime(m, { [m.repo_id]: progressForRepo(rowState, m.repo_id) }, busy),
     [busy, rowState],
   );
 

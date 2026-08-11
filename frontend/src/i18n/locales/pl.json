@@ -184,6 +184,7 @@
     "workers_desc": "Wysyłaj pojedyncze zadania do GPU na innych swoich komputerach. Wyniki wracają tutaj. Nic nie zostanie wysłane, dopóki nie dodasz workera i go nie zatwierdzisz.",
     "workers_enable": "Używaj zdalnych workerów",
     "workers_enable_hint": "Gdy ta opcja jest wyłączona, żadne połączenie nie jest przyjmowane i nic nie opuszcza tego komputera.",
+    "workers_port_conflict": "Zdalne workery są niedostępne, ponieważ inna instancja VoiceStudio już przyjmuje je na tym porcie. Zamknij drugą instancję albo ustaw OMNIVOICE_WORKER_PORT na inny port i uruchom VoiceStudio ponownie.",
     "workers_endpoint": "Workery łączą się z",
     "workers_endpoint_hint": "Worker musi móc osiągnąć ten adres. W różnych sieciach niezawodnym sposobem jest VPN, np. Tailscale.",
     "workers_add": "Dodaj workera",
@@ -2360,7 +2361,7 @@
     "started": "Pobieranie {{label}} — postęp znajdziesz w Ustawienia → Modele, potem spróbuj ponownie.",
     "install_failed": "Nie udało się rozpocząć pobierania: {{message}}"
   },
-  "model_missing": {"message":"Ten model nie został pobrany na {{target}}.","download":"Pobierz model","download_size":"Pobierz ({{size}})","started":"Pobieranie na {{target}} — po zakończeniu ponów generowanie.","failed":"Nie udało się rozpocząć pobierania: {{message}}"},
+  "model_missing": {"message":"Ten model nie został pobrany na {{target}}.","download":"Pobierz model","download_size":"Pobierz ({{size}})","started":"Pobieranie na {{target}} — po zakończeniu ponów generowanie.","failed":"Nie udało się rozpocząć pobierania: {{message}}","manual_worker":"Zainstaluj ten silnik bezpośrednio na {{target}}."},
   "backend_start_failure": {
     "notice": "Backend VoiceStudio nie mógł się uruchomić — nic nie zadziała, dopóki nie wystartuje.",
     "view": "Zobacz dlaczego",
@@ -2380,6 +2381,7 @@
     "tasks": "zadania",
     "coverage": "tylko {{ops}}",
     "opLocal": "Lokalnie — {{op}} nie działa jeszcze zdalnie",
+    "dictationLocal": "Dyktowanie zawsze działa na tym komputerze",
     "ops": {
       "tts": "TTS",
       "clone": "klonowanie głosu",

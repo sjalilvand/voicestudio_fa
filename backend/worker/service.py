@@ -93,6 +93,7 @@ class ControlPlane:
         self._server = None
         self._tasks: list[asyncio.Task] = []
         self._started = False
+        self.startup_error: Optional[str] = None
         # The port we actually bound, which is not necessarily the configured
         # one — an enrollment token carries this, so advertising the config
         # value instead hands workers an endpoint nothing is listening on.
@@ -134,17 +135,22 @@ class ControlPlane:
             cert_fingerprint=self.credentials.fingerprint,
         )
         self._port = port or control_port()
-        self._server = await serve(
-            self.servicer,
-            port=self._port,
-            certificate_pem=self.credentials.certificate_pem,
-            private_key_pem=self.credentials.private_key_pem,
-        )
+        try:
+            self._server = await serve(
+                self.servicer,
+                port=self._port,
+                certificate_pem=self.credentials.certificate_pem,
+                private_key_pem=self.credentials.private_key_pem,
+            )
+        except Exception:
+            self._port = None
+            raise
         self._tasks = [
             asyncio.create_task(self._sweep_loop(), name="worker-sweep"),
             asyncio.create_task(self._dispatch_loop(), name="worker-dispatch"),
         ]
         self._started = True
+        self.startup_error = None
         logger.info("Remote worker control plane started on port %d", self._port)
 
     async def stop(self) -> None:
@@ -166,6 +172,7 @@ class ControlPlane:
             self._server = None
         self._port = None
         self._started = False
+        self.startup_error = None
 
     async def cancel(self, task_id: str, *, reason: str = "cancelled") -> bool:
         """Cancel locally, notify the owner, and hold its slot until ACK."""
@@ -261,7 +268,13 @@ class ControlPlane:
         """Everything the workers UI needs in one call."""
         stamp = resolve(now)
         if not self.running:
-            return {"enabled": False, "running": False, "workers": [], "queue_depth": 0}
+            return {
+                "enabled": remote_workers_enabled(),
+                "running": False,
+                "startup_error": self.startup_error,
+                "workers": [],
+                "queue_depth": 0,
+            }
         from worker import registry  # noqa: PLC0415
 
         # Config comes from the DATABASE, liveness from the pool — never the
@@ -315,9 +328,10 @@ async def start_if_enabled() -> None:
         return
     try:
         await control_plane.start()
-    except Exception:
+    except Exception as exc:
         # A failure here must never take the app down with it: the user's
         # local workflow does not depend on this feature existing.
+        control_plane.startup_error = str(exc)
         logger.exception("Remote worker control plane failed to start")
 
 

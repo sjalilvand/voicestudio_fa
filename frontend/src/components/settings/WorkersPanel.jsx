@@ -184,7 +184,16 @@ export default function WorkersPanel() {
         control={<SettingsToggle checked={enabled} disabled={busy} onChange={setEnabled} />}
       />
 
-      {enabled && (
+      {enabled && !data?.running && data?.startup_error && (
+        <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/5 p-3 text-sm text-red-300">
+          {t('settings.workers_port_conflict', {
+            defaultValue:
+              'Remote workers are unavailable because another VoiceStudio instance is already accepting them on this port. Close the other instance, or set OMNIVOICE_WORKER_PORT to a different port and restart VoiceStudio.',
+          })}
+        </p>
+      )}
+
+      {enabled && data?.running && (
         <>
           <SettingRow
             mono

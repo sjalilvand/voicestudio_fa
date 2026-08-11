@@ -246,7 +246,6 @@ POST /watermark/detect
 POST /watermark/settings
 POST /workers/enabled
 POST /workers/enrollments
-POST /workers/models/download
 POST /workers/target
 POST /workers/tasks
 POST /workers/tasks/{task_id}/cancel

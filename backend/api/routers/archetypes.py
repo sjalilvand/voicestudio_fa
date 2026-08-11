@@ -360,7 +360,10 @@ def preview_archetype_state(archetype_id: str):
 
 
 @router.get("/archetypes/{archetype_id}/preview")
-async def preview_archetype(archetype_id: str):
+async def preview_archetype(
+    archetype_id: str,
+    local: bool = Query(False, description="Bypass gallery audio after a client decode failure"),
+):
     """Serve a short preview clip — from the gallery, the cache, or the engine."""
     a = archetypes.get_archetype(archetype_id)
     if a is None:
@@ -370,8 +373,8 @@ async def preview_archetype(archetype_id: str):
     # Gallery first, and only for /preview: these bytes are audio we can prove
     # the provenance of, so they beat a local render of the same key. A miss
     # (offline, disabled, key not published) is silent — we just render.
-    gallery_path = gallery.cached_preview(key)
-    if gallery_path is None:
+    gallery_path = None if local else gallery.cached_preview(key)
+    if gallery_path is None and not local:
         gallery_path = await gallery.fetch_preview(key)
     if gallery_path is not None:
         # Nothing else in the app polls, so the daily refresh hangs off the

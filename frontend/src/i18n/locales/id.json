@@ -184,6 +184,7 @@
     "workers_desc": "Kirim pekerjaan satu per satu ke GPU di mesin Anda yang lain. Hasilnya kembali ke sini. Tidak ada yang dikirim sampai Anda menambahkan pekerja dan menyetujuinya.",
     "workers_enable": "Gunakan pekerja jarak jauh",
     "workers_enable_hint": "Selama ini mati, tidak ada koneksi yang diterima dan tidak ada yang meninggalkan mesin ini.",
+    "workers_port_conflict": "Worker jarak jauh tidak tersedia karena instans VoiceStudio lain sudah menerimanya di port ini. Tutup instans lain, atau atur OMNIVOICE_WORKER_PORT ke port berbeda lalu mulai ulang VoiceStudio.",
     "workers_endpoint": "Pekerja terhubung ke",
     "workers_endpoint_hint": "Pekerja harus dapat menjangkau alamat ini. Di jaringan berbeda, VPN seperti Tailscale adalah cara yang andal.",
     "workers_add": "Tambahkan pekerja",
@@ -2360,7 +2361,7 @@
     "started": "Mengunduh {{label}} — pantau progresnya di Pengaturan → Model, lalu coba lagi.",
     "install_failed": "Tidak dapat memulai unduhan: {{message}}"
   },
-  "model_missing": {"message":"Model ini belum diunduh di {{target}}.","download":"Unduh model","download_size":"Unduh ({{size}})","started":"Mengunduh di {{target}} — coba Buat lagi setelah selesai.","failed":"Tidak dapat memulai unduhan: {{message}}"},
+  "model_missing": {"message":"Model ini belum diunduh di {{target}}.","download":"Unduh model","download_size":"Unduh ({{size}})","started":"Mengunduh di {{target}} — coba Buat lagi setelah selesai.","failed":"Tidak dapat memulai unduhan: {{message}}","manual_worker":"Instal mesin ini langsung di {{target}}."},
   "backend_start_failure": {
     "notice": "Backend VoiceStudio gagal dijalankan — tidak ada yang bisa berjalan sampai backend hidup.",
     "view": "Lihat alasannya",
@@ -2380,6 +2381,7 @@
     "tasks": "tugas",
     "coverage": "hanya {{ops}}",
     "opLocal": "Lokal — {{op}} belum berjalan dari jarak jauh",
+    "dictationLocal": "Dikte selalu berjalan di mesin ini",
     "ops": {
       "tts": "TTS",
       "clone": "kloning suara",

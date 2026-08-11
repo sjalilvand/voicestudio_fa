@@ -60,11 +60,6 @@ class TargetRequest(BaseModel):
     target: str = Field(..., max_length=64)
 
 
-class ModelDownloadRequest(BaseModel):
-    repo_id: str = Field(..., max_length=256)
-    target: str = Field(..., max_length=64)
-
-
 class WorkerUpdate(BaseModel):
     name: str | None = Field(None, max_length=120)
     enabled: bool | None = None
@@ -124,20 +119,6 @@ def set_target(request: TargetRequest) -> dict:
     return routing.status()
 
 
-@router.post("/models/download")
-async def download_model(request: ModelDownloadRequest) -> dict:
-    """Start a catalog model download on the worker named by the 409."""
-    from services import gpu_gateway
-
-    decision = routing.decide()
-    if not decision.remote or decision.worker_id != request.target:
-        raise HTTPException(status_code=409, detail="The selected GPU target changed; try again.")
-    try:
-        return await gpu_gateway.download(request.repo_id, decision=decision)
-    except gpu_gateway.GatewayError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-
-
 @router.post("/enabled")
 async def set_enabled(request: EnableRequest) -> dict:
     """Turn the feature on or off.
@@ -147,7 +128,11 @@ async def set_enabled(request: EnableRequest) -> dict:
     """
     service.set_remote_workers_enabled(request.enabled)
     if request.enabled:
-        await service.control_plane.start()
+        try:
+            await service.control_plane.start()
+        except Exception as exc:
+            service.control_plane.startup_error = str(exc)
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
     else:
         await service.control_plane.stop()
     return service.control_plane.snapshot()

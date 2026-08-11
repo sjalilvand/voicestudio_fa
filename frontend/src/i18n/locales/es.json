@@ -184,6 +184,7 @@
     "workers_desc": "Envía trabajos individuales a las GPU de tus otros equipos. Los resultados vuelven aquí. No se envía nada hasta que añadas un trabajador y lo apruebes.",
     "workers_enable": "Usar trabajadores remotos",
     "workers_enable_hint": "Mientras esto esté desactivado, no se acepta ninguna conexión y nada sale de este equipo.",
+    "workers_port_conflict": "Los trabajadores remotos no están disponibles porque otra instancia de VoiceStudio ya los acepta en este puerto. Cierra la otra instancia o configura OMNIVOICE_WORKER_PORT con otro puerto y reinicia VoiceStudio.",
     "workers_endpoint": "Los trabajadores se conectan a",
     "workers_endpoint_hint": "Un trabajador debe poder alcanzar esta dirección. En redes distintas, una VPN como Tailscale es la forma fiable.",
     "workers_add": "Añadir un trabajador",
@@ -2360,7 +2361,7 @@
     "started": "Descargando {{label}} — sigue el progreso en Ajustes → Modelos y vuelve a intentarlo.",
     "install_failed": "No se pudo iniciar la descarga: {{message}}"
   },
-  "model_missing": {"message":"Este modelo no está descargado en {{target}}.","download":"Descargar modelo","download_size":"Descargar ({{size}})","started":"Descargando en {{target}}; vuelve a pulsar Generar cuando termine.","failed":"No se pudo iniciar la descarga: {{message}}"},
+  "model_missing": {"message":"Este modelo no está descargado en {{target}}.","download":"Descargar modelo","download_size":"Descargar ({{size}})","started":"Descargando en {{target}}; vuelve a pulsar Generar cuando termine.","failed":"No se pudo iniciar la descarga: {{message}}","manual_worker":"Instala este motor directamente en {{target}}."},
   "backend_start_failure": {
     "notice": "El backend de VoiceStudio no pudo iniciarse: nada funcionará hasta que lo haga.",
     "view": "Ver el motivo",
@@ -2380,6 +2381,7 @@
     "tasks": "tareas",
     "coverage": "solo {{ops}}",
     "opLocal": "Local: {{op}} aún no se ejecuta en remoto",
+    "dictationLocal": "El dictado siempre se ejecuta en este equipo",
     "ops": {
       "tts": "TTS",
       "clone": "clonación de voz",

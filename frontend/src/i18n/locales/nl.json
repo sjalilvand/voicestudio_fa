@@ -184,6 +184,7 @@
     "workers_desc": "Stuur losse taken naar de GPU's van je andere machines. De resultaten komen hier terug. Er wordt niets verstuurd totdat je een worker toevoegt en goedkeurt.",
     "workers_enable": "Externe workers gebruiken",
     "workers_enable_hint": "Zolang dit uit staat, wordt er geen verbinding geaccepteerd en verlaat er niets deze machine.",
+    "workers_port_conflict": "Externe workers zijn niet beschikbaar omdat een andere VoiceStudio-instantie ze al op deze poort accepteert. Sluit de andere instantie, of stel OMNIVOICE_WORKER_PORT in op een andere poort en start VoiceStudio opnieuw.",
     "workers_endpoint": "Workers verbinden met",
     "workers_endpoint_hint": "Een worker moet dit adres kunnen bereiken. Op andere netwerken is een VPN zoals Tailscale de betrouwbare manier.",
     "workers_add": "Worker toevoegen",
@@ -2360,7 +2361,7 @@
     "started": "{{label}} wordt gedownload — volg de voortgang in Instellingen → Modellen en probeer het daarna opnieuw.",
     "install_failed": "Kon de download niet starten: {{message}}"
   },
-  "model_missing": {"message":"Dit model is niet gedownload op {{target}}.","download":"Model downloaden","download_size":"Downloaden ({{size}})","started":"Downloaden op {{target}} — probeer Genereren opnieuw wanneer dit klaar is.","failed":"Download kon niet worden gestart: {{message}}"},
+  "model_missing": {"message":"Dit model is niet gedownload op {{target}}.","download":"Model downloaden","download_size":"Downloaden ({{size}})","started":"Downloaden op {{target}} — probeer Genereren opnieuw wanneer dit klaar is.","failed":"Download kon niet worden gestart: {{message}}","manual_worker":"Installeer deze engine rechtstreeks op {{target}}."},
   "backend_start_failure": {
     "notice": "De VoiceStudio-backend kon niet starten — tot die tijd werkt er niets.",
     "view": "Bekijk waarom",
@@ -2380,6 +2381,7 @@
     "tasks": "taken",
     "coverage": "alleen {{ops}}",
     "opLocal": "Lokaal — {{op}} draait nog niet op afstand",
+    "dictationLocal": "Dicteren wordt altijd op deze machine uitgevoerd",
     "ops": {
       "tts": "TTS",
       "clone": "stemklonen",

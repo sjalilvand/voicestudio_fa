@@ -114,6 +114,7 @@ class TaskExecutor:
         handler = {
             "tts": self._run_tts,
             "clone": self._run_tts,
+            "audiobook": self._run_audiobook,
         }.get(operation)
         if handler is None:
             raise TaskFailure(
@@ -175,6 +176,82 @@ class TaskExecutor:
         )
         await report.progress(1.0, "done")
         return {"meta": meta, "payload": payload}
+
+    async def _run_audiobook(self, assignment, params: dict, report: "_Reporters") -> dict:
+        """Render one chapter as one leased unit, matching local longform assembly."""
+        spans = params.get("spans") or []
+        voices = params.get("voices") or []
+        if not spans or len(voices) != len(spans):
+            raise TaskFailure(WorkerError(
+                error_class=ErrorClass.TERMINAL,
+                code="INVALID_TASK_PARAMS",
+                message="The audiobook task carried an invalid chapter.",
+                hint="Re-plan the audiobook and try again.",
+            ))
+        load_budget, run_budget = _budgets(assignment)
+        await report.loading(0.0, f"preparing {assignment.engine}")
+        backend = await self._bounded(
+            asyncio.to_thread(self._load_backend, assignment.engine),
+            timeout=load_budget, code="MODEL_LOAD_TIMEOUT",
+            what=f"Loading '{assignment.engine}'",
+        )
+        await report.loading(1.0, "model ready")
+        await report.progress(0.05, "synthesising chapter")
+        audio = await self._bounded(
+            asyncio.to_thread(self._synthesize_audiobook, backend, spans, voices, params),
+            timeout=run_budget, code="EXECUTION_TIMEOUT", what="Audiobook chapter",
+        )
+        await report.progress(0.9, "encoding")
+        payload, meta = await asyncio.to_thread(self._encode, audio, params, backend)
+        await report.progress(1.0, "done")
+        return {"meta": meta, "payload": payload}
+
+    @staticmethod
+    def _synthesize_audiobook(backend, rows: list[dict], voices: list[dict], params: dict):
+        from services.audiobook import ExpressiveOptions, Span, segment_seed, synthesize_chapter
+        from services.tts_backend import OmniVoiceBackend
+
+        refs = params.get("ref_audio") or []
+        voices = [dict(voice, ref_audio=refs[i] if i < len(refs) else None)
+                  for i, voice in enumerate(voices)]
+        opts = ExpressiveOptions.from_manifest(params.get("expressive"))
+        language = params.get("language")
+        extra = {
+            key: value for key, value in opts.to_manifest().items()
+            if value is not None and key not in ("seed", "vary_repeats")
+        }
+        if isinstance(backend, OmniVoiceBackend):
+            extra.setdefault("num_step", 32)
+            extra.setdefault("guidance_scale", 2.0)
+            for key in ("emo_vector", "emo_text", "emo_alpha"):
+                extra.pop(key, None)
+        occurrence = {"value": 0}
+        def synth(text, index, speed=None):
+            voice = voices[int(index)]
+            base_seed = opts.seed if opts.seed is not None else voice.get("seed")
+            if base_seed is not None:
+                import torch
+                nonce = occurrence["value"] if opts.vary_repeats else 0
+                occurrence["value"] += 1
+                torch.manual_seed(segment_seed(base_seed, text, nonce))
+            kwargs = {
+                "language": language,
+                "ref_audio": voice.get("ref_audio"),
+                "ref_text": voice.get("ref_text"),
+                "instruct": voice.get("instruct"),
+                "speed": float(speed) if speed else 1.0,
+                **extra,
+            }
+            return backend.generate(text, **kwargs)
+
+        spans = [Span(voice_id=str(i), text=row.get("text", ""),
+                      pause_ms_after=int(row.get("pause_ms_after") or 0),
+                      speed=row.get("speed")) for i, row in enumerate(rows)]
+        sample_rate = int(getattr(backend, "sample_rate", 0) or 24_000)
+        audio, _duration = synthesize_chapter(
+            spans, synth, sample_rate, lexicon=params.get("lexicon")
+        )
+        return _mark(audio, sample_rate, params)
 
     # ── Inputs ────────────────────────────────────────────────────────────
 

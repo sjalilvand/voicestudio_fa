@@ -49,6 +49,10 @@ PROTOCOL_VERSION = 1
 # skew is the normal case rather than the exception.
 MIN_SUPPORTED_VERSION = 1
 
+
+class ControlPlaneBindError(RuntimeError):
+    """The configured control-plane address is already owned."""
+
 # Metadata key carrying the session token when a worker opens its stream.
 SESSION_METADATA_KEY = "x-omnivoice-session"
 
@@ -549,6 +553,21 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
             caps = [codec.capability_from_pb(c) for c in message.capabilities.capabilities]
             registry.update_capabilities(session.worker_id, capabilities=caps)
             self.pool.apply_capabilities(session.worker_id, caps)
+            return
+
+        if kind == "download_progress":
+            try:
+                event = json.loads(message.download_progress.event_json)
+                if not isinstance(event, dict):
+                    raise ValueError("progress event is not an object")
+                # The authenticated session, never the worker payload, is the
+                # authoritative target identity.
+                event["target"] = session.worker_id
+                from utils import hf_progress  # noqa: PLC0415
+
+                hf_progress.emit(event)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                logger.warning("Worker %s sent malformed download progress", session.worker_id)
             return
 
         if kind == "goodbye":
@@ -1122,6 +1141,12 @@ async def serve(
     """Start the control-plane server. TLS is not optional."""
     server = grpc.aio.server(
         options=[
+            # gRPC enables SO_REUSEPORT by default where the platform supports
+            # it. That is useful for replicated stateless services, but two
+            # VoiceStudio control planes have independent worker registries
+            # and schedulers: sharing this port sends each connection to an
+            # arbitrary app instance.
+            ("grpc.so_reuseport", 0),
             ("grpc.max_receive_message_length", 8 * 1024 * 1024),
             ("grpc.max_send_message_length", 8 * 1024 * 1024),
             # Consumer NAT/CGNAT mappings expire silently after 30–120s, and a
@@ -1142,7 +1167,22 @@ async def serve(
     )
     pb_grpc.add_WorkerServiceServicer_to_server(servicer, server)
     credentials = grpc.ssl_server_credentials([(private_key_pem, certificate_pem)])
-    server.add_secure_port(f"{host}:{port}", credentials)
+    try:
+        bound_port = server.add_secure_port(f"{host}:{port}", credentials)
+    except RuntimeError as exc:
+        raise ControlPlaneBindError(
+            f"Another VoiceStudio instance is already accepting remote workers "
+            f"on port {port}. Close the other instance, or set "
+            "OMNIVOICE_WORKER_PORT to a different port and restart VoiceStudio."
+        ) from exc
+    # add_secure_port() reports bind failure as 0; awaiting start() is not the
+    # documented place to discover it and historically let this pass unseen.
+    if bound_port == 0:
+        raise ControlPlaneBindError(
+            f"Another VoiceStudio instance is already accepting remote workers "
+            f"on port {port}. Close the other instance, or set "
+            "OMNIVOICE_WORKER_PORT to a different port and restart VoiceStudio."
+        )
     await server.start()
     logger.info("Worker control plane listening on %s:%d (TLS)", host, port)
     return server
@@ -1166,6 +1206,7 @@ def _peer_address(context) -> str:
 
 
 __all__ = [
+    "ControlPlaneBindError",
     "INLINE_RESULT_THRESHOLD",
     "MAX_ARTIFACT_BYTES",
     "MAX_TASK_ARTIFACT_BYTES",

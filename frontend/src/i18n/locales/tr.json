@@ -184,6 +184,7 @@
     "workers_desc": "Tek tek işleri diğer makinelerinizdeki GPU'lara gönderin. Sonuçlar buraya döner. Bir işçi ekleyip onaylayana kadar hiçbir şey gönderilmez.",
     "workers_enable": "Uzak işçileri kullan",
     "workers_enable_hint": "Bu kapalıyken hiçbir bağlantı kabul edilmez ve bu makineden hiçbir şey çıkmaz.",
+    "workers_port_conflict": "Başka bir VoiceStudio örneği bu bağlantı noktasında uzak çalışanları zaten kabul ettiği için uzak çalışanlar kullanılamıyor. Diğer örneği kapatın veya OMNIVOICE_WORKER_PORT değerini farklı bir bağlantı noktası yapıp VoiceStudio'yu yeniden başlatın.",
     "workers_endpoint": "İşçilerin bağlanacağı adres",
     "workers_endpoint_hint": "Bir işçinin bu adrese erişebilmesi gerekir. Farklı ağlarda Tailscale gibi bir VPN güvenilir yoldur.",
     "workers_add": "İşçi ekle",
@@ -2360,7 +2361,7 @@
     "started": "{{label}} indiriliyor — ilerlemeyi Ayarlar → Modeller'den izleyin, sonra yeniden deneyin.",
     "install_failed": "İndirme başlatılamadı: {{message}}"
   },
-  "model_missing": {"message":"Bu model {{target}} üzerine indirilmemiş.","download":"Modeli indir","download_size":"İndir ({{size}})","started":"{{target}} üzerine indiriliyor — bitince yeniden Oluştur'a basın.","failed":"İndirme başlatılamadı: {{message}}"},
+  "model_missing": {"message":"Bu model {{target}} üzerine indirilmemiş.","download":"Modeli indir","download_size":"İndir ({{size}})","started":"{{target}} üzerine indiriliyor — bitince yeniden Oluştur'a basın.","failed":"İndirme başlatılamadı: {{message}}","manual_worker":"Bu motoru doğrudan {{target}} üzerine kurun."},
   "backend_start_failure": {
     "notice": "VoiceStudio arka ucu başlatılamadı — başlayana kadar hiçbir şey çalışmaz.",
     "view": "Nedenini gör",
@@ -2380,6 +2381,7 @@
     "tasks": "görev",
     "coverage": "yalnızca {{ops}}",
     "opLocal": "Yerel — {{op}} henüz uzaktan çalışmıyor",
+    "dictationLocal": "Dikte her zaman bu makinede çalışır",
     "ops": {
       "tts": "TTS",
       "clone": "ses klonlama",

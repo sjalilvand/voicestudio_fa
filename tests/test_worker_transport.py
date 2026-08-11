@@ -25,7 +25,7 @@ from worker.protocol.gen import worker_v1_pb2_grpc as pb_grpc
 from worker.scheduler import Scheduler
 from worker.transport import codec
 from worker.transport.client import WorkerClient, WorkerConfig, backoff_delay, config_from_token
-from worker.transport.server import WorkerServicer, serve
+from worker.transport.server import ControlPlaneBindError, WorkerServicer, serve
 
 ENGINE, MODEL, OP = "indextts", "IndexTTS-2", "tts"
 
@@ -622,6 +622,35 @@ async def test_server_accepts_the_keepalive_interval_it_configures(monkeypatch):
 
     assert captured["grpc.http2.min_ping_interval_without_data_ms"] <= 25_000
     assert captured["grpc.http2.max_pings_without_data"] == 0
+    assert captured["grpc.so_reuseport"] == 0
+
+
+@pytest.mark.asyncio
+async def test_server_refuses_an_occupied_control_plane_port(monkeypatch):
+    """add_secure_port returns zero when the exclusive bind cannot be made."""
+    started = False
+
+    class FakeServer:
+        def add_secure_port(self, *_args):
+            return 0
+
+        async def start(self):
+            nonlocal started
+            started = True
+
+    monkeypatch.setattr(grpc.aio, "server", lambda **_kwargs: FakeServer())
+    monkeypatch.setattr(pb_grpc, "add_WorkerServiceServicer_to_server", lambda *_args: None)
+    monkeypatch.setattr(grpc, "ssl_server_credentials", lambda *_args: object())
+
+    with pytest.raises(ControlPlaneBindError, match="Another VoiceStudio instance"):
+        await serve(
+            object(),
+            port=7443,
+            certificate_pem=b"certificate",
+            private_key_pem=b"private-key",
+        )
+
+    assert started is False
 
 
 def test_certificate_regenerates_when_it_stops_covering_this_machine(tmp_path, monkeypatch):

@@ -57,6 +57,18 @@ def test_generated_package_is_importable():
     assert pb.TaskRef(task_id="t").task_id == "t"
 
 
+def test_download_progress_is_additive_and_frame_14_stays_reserved():
+    from worker.protocol.gen import worker_v1_pb2 as pb
+
+    field = pb.WorkerMessage.DESCRIPTOR.fields_by_name["download_progress"]
+    assert field.number == 13
+    source = open(
+        os.path.join(_REPO, "backend", "worker", "protocol", "worker_v1.proto"),
+        encoding="utf-8",
+    ).read()
+    assert "reserved 14;" in source
+
+
 def test_stub_import_is_relative():
     with open(os.path.join(_GEN_DIR, "worker_v1_pb2_grpc.py"), encoding="utf-8") as fh:
         source = fh.read()

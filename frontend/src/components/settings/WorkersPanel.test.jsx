@@ -76,6 +76,16 @@ describe('WorkersPanel', () => {
     expect(screen.getByText(/No workers yet/i)).toBeInTheDocument();
   });
 
+  it('explains an occupied control-plane port without exposing inactive controls', async () => {
+    apiFetch.mockResolvedValue(
+      respond({ enabled: true, running: false, startup_error: 'CONTROL_PLANE_PORT_IN_USE', workers: [] }),
+    );
+    renderPanel();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/another VoiceStudio instance/i);
+    expect(screen.queryByText(/Generate token/i)).not.toBeInTheDocument();
+  });
+
   it('shows the token once, with its shown-once warning', async () => {
     respondWith((path) =>
       path === '/workers'
