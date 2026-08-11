@@ -66,7 +66,7 @@ export default function TrackManager({ t, tracks, selection, setSelection, prima
       <button
         ref={triggerRef}
         type="button"
-        className="inline-flex items-center gap-[6px] rounded-[var(--chrome-radius-pill)] border border-transparent bg-[var(--chrome-hover-bg)] px-[9px] py-[4px] text-[length:var(--text-xs)] text-[var(--chrome-fg)] cursor-pointer transition-colors hover:border-[var(--chrome-border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)]"
+        className="inline-flex items-center gap-[6px] rounded-[var(--chrome-radius-pill)] border border-transparent bg-[var(--chrome-hover-bg)] px-[9px] py-[4px] text-[length:var(--text-xs)] text-[var(--chrome-fg)] cursor-pointer transition-colors hover:bg-[var(--chrome-accent-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)]"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -95,9 +95,9 @@ export default function TrackManager({ t, tracks, selection, setSelection, prima
               role="dialog"
               aria-modal="true"
               aria-labelledby={titleId}
-              className="flex max-h-[min(560px,80vh)] w-full max-w-[420px] flex-col overflow-hidden rounded-[10px] border border-[var(--chrome-border-strong)] bg-[var(--chrome-bg)] shadow-2xl"
+              className="flex max-h-[min(560px,80vh)] w-full max-w-[420px] flex-col overflow-hidden rounded-[10px] bg-[var(--chrome-bg)] shadow-2xl"
             >
-              <div className="flex items-center gap-[8px] border-b border-[var(--chrome-border)] px-[12px] py-[10px]">
+              <div className="flex items-center gap-[8px] bg-[var(--chrome-hover-bg)] px-[12px] py-[10px]">
                 <span
                   id={titleId}
                   className="font-mono text-[0.72rem] uppercase text-[var(--chrome-fg)]"
@@ -124,7 +124,7 @@ export default function TrackManager({ t, tracks, selection, setSelection, prima
                   {t('exportModal.track_dubs_only')}
                 </button>
               </div>
-              <label className="mx-[12px] my-[10px] flex items-center gap-[7px] rounded-[6px] border border-[var(--chrome-border)] px-[8px] py-[6px] text-[var(--chrome-fg-muted)]">
+              <label className="mx-[12px] my-[10px] flex items-center gap-[7px] rounded-[6px] bg-[var(--chrome-hover-bg)] px-[8px] py-[6px] text-[var(--chrome-fg-muted)]">
                 <Search size={11} aria-hidden="true" />
                 <input
                   ref={inputRef}

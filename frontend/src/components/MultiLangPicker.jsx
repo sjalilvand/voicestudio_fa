@@ -151,7 +151,7 @@ export default function MultiLangPicker({
       <button
         ref={triggerRef}
         type="button"
-        className="flex min-h-[30px] max-w-full items-center gap-[7px] rounded-[var(--chrome-radius-pill)] border border-transparent bg-[var(--chrome-hover-bg)] px-[9px] py-[4px] text-left text-[color:var(--chrome-fg)] cursor-pointer transition-[background-color,border-color] hover:border-[var(--chrome-border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex min-h-[30px] max-w-full items-center gap-[7px] rounded-[var(--chrome-radius-pill)] border border-transparent bg-[var(--chrome-hover-bg)] px-[9px] py-[4px] text-left text-[color:var(--chrome-fg)] cursor-pointer transition-colors hover:bg-[var(--chrome-accent-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)] disabled:cursor-not-allowed disabled:opacity-50"
         onClick={() => setDropOpen((open) => !open)}
         disabled={disabled}
         aria-haspopup="dialog"
