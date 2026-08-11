@@ -36,6 +36,9 @@ export default function DubHeader({
   pipelineSteps,
   onPipelineStep,
 }) {
+  const workflowActionBusy =
+    qcRunning || isTranslating || dubStep === 'generating' || dubStep === 'stopping';
+
   return (
     <div className="flex flex-col gap-[2px] min-w-0 px-[10px] py-[4px] shrink-0 bg-[var(--color-bg-elev-1)] rounded-md mb-[2px]">
       {/* Row 1: project title (left) + actions (right). Row 2: the pipeline
@@ -87,7 +90,7 @@ export default function DubHeader({
                 sm
                 tone="stopping"
                 disabled
-                className="!flex-none [.shell-mini_&]:flex-1"
+                className="flex-none! [.shell-mini_&]:flex-1!"
                 icon={<Loader className="spinner" size={9} aria-hidden="true" />}
                 label={t('dub.stopping')}
                 aria-busy="true"
@@ -96,7 +99,7 @@ export default function DubHeader({
               <FooterBtn
                 sm
                 tone="danger"
-                className="!flex-none hover:-translate-y-px active:translate-y-0 motion-reduce:transform-none [.shell-mini_&]:flex-1"
+                className="flex-none! hover:-translate-y-px active:translate-y-0 motion-reduce:transform-none [.shell-mini_&]:flex-1!"
                 onClick={handleDubStop}
                 icon={<Square size={9} aria-hidden="true" />}
                 label={t('dub.stop_progress', {
@@ -109,12 +112,12 @@ export default function DubHeader({
                 <FooterBtn
                   sm
                   tone={dubSegments.length && !isTranslating ? 'pink' : 'idle'}
-                  className="dub-action-btn--generate !h-[30px] !flex-none !px-[11px] !text-[0.68rem] !font-semibold !tracking-[0.015em] enabled:hover:-translate-y-px enabled:active:translate-y-0 motion-reduce:transform-none enabled:shadow-[0_5px_14px_color-mix(in_srgb,var(--chrome-accent)_18%,transparent)] enabled:hover:shadow-[0_7px_18px_color-mix(in_srgb,var(--chrome-accent)_26%,transparent)] [.shell-mini_&]:flex-1"
+                  className="dub-action-btn--generate !h-[30px] flex-none! !px-[11px] !text-[0.68rem] !font-semibold !tracking-[0.015em] enabled:hover:-translate-y-px enabled:active:translate-y-0 motion-reduce:transform-none enabled:shadow-[0_5px_14px_color-mix(in_srgb,var(--chrome-accent)_18%,transparent)] enabled:hover:shadow-[0_7px_18px_color-mix(in_srgb,var(--chrome-accent)_26%,transparent)] [.shell-mini_&]:flex-1!"
                   onClick={onGenerateClick}
                   // The multi-language batch translates between generates while
                   // dubStep briefly sits back at 'editing' — keep the CTA inert
                   // during that phase so a re-click can't start a second batch.
-                  disabled={!dubSegments.length || isTranslating}
+                  disabled={!dubSegments.length || qcRunning || isTranslating}
                   icon={<Play className="fill-current" size={11} aria-hidden="true" />}
                   label={
                     multiLangMode && multiLangs.length > 1
@@ -129,7 +132,8 @@ export default function DubHeader({
                   <FooterBtn
                     sm
                     tone="pink"
-                    className="!h-[30px] !flex-none !px-[10px] enabled:hover:-translate-y-px enabled:active:translate-y-0 motion-reduce:transform-none [.shell-mini_&]:flex-1"
+                    className="!h-[30px] flex-none! !px-[10px] enabled:hover:-translate-y-px enabled:active:translate-y-0 motion-reduce:transform-none [.shell-mini_&]:flex-1!"
+                    disabled={workflowActionBusy}
                     onClick={() =>
                       handleDubGenerate({ regenOnly: incrementalPlan.stale, preview: true })
                     }
@@ -143,7 +147,7 @@ export default function DubHeader({
               <FooterBtn
                 sm
                 tone="idle"
-                className="dub-action-btn--verify !h-[30px] !flex-none !px-[9px] enabled:hover:-translate-y-px enabled:active:translate-y-0 motion-reduce:transform-none enabled:hover:shadow-[var(--shadow-sm)] [.shell-mini_&]:flex-1"
+                className="dub-action-btn--verify !h-[30px] flex-none! !px-[9px] enabled:hover:-translate-y-px enabled:active:translate-y-0 motion-reduce:transform-none enabled:hover:shadow-[var(--shadow-sm)] [.shell-mini_&]:flex-1!"
                 disabled={qcRunning || !dubSegments.length}
                 onClick={handleDubQc}
                 icon={
@@ -162,8 +166,8 @@ export default function DubHeader({
             <FooterBtn
               sm
               tone={dubStep === 'done' ? 'green' : 'idle'}
-              className="dub-action-btn--export !h-[30px] !flex-none !px-[10px] !font-semibold enabled:hover:-translate-y-px enabled:active:translate-y-0 motion-reduce:transform-none enabled:shadow-[0_5px_14px_color-mix(in_srgb,var(--chrome-severity-ok)_13%,transparent)] enabled:hover:shadow-[0_7px_18px_color-mix(in_srgb,var(--chrome-severity-ok)_20%,transparent)] [.shell-mini_&]:flex-1"
-              disabled={dubStep !== 'done' && !dubSegments.length}
+              className="dub-action-btn--export !h-[30px] flex-none! !px-[10px] !font-semibold enabled:hover:-translate-y-px enabled:active:translate-y-0 motion-reduce:transform-none enabled:shadow-[0_5px_14px_color-mix(in_srgb,var(--chrome-severity-ok)_13%,transparent)] enabled:hover:shadow-[0_7px_18px_color-mix(in_srgb,var(--chrome-severity-ok)_20%,transparent)] [.shell-mini_&]:flex-1!"
+              disabled={workflowActionBusy || (dubStep !== 'done' && !dubSegments.length)}
               onClick={() => setExportOpen(true)}
               icon={<Download size={12} aria-hidden="true" />}
               label={t('dub.export_btn')}

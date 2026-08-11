@@ -72,7 +72,7 @@ describe('DubHeader — polished workflow actions', () => {
     const group = screen.getByTestId('dub-primary-actions');
     expect(group).toHaveClass('flex-wrap', '[.shell-mini_&]:w-full');
     for (const button of within(group).getAllByRole('button')) {
-      expect(button).toHaveClass('[.shell-mini_&]:flex-1', 'motion-reduce:transform-none');
+      expect(button).toHaveClass('[.shell-mini_&]:flex-1!', 'motion-reduce:transform-none');
     }
   });
 
@@ -81,6 +81,8 @@ describe('DubHeader — polished workflow actions', () => {
     const verify = screen.getByRole('button', { name: t('dub.qc_btn') });
     expect(verify).toBeDisabled();
     expect(verify).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: t('dub.generate_dub') })).toBeDisabled();
+    expect(screen.getByRole('button', { name: t('dub.export_btn') })).toBeDisabled();
 
     rerender(
       <DubHeader {...makeProps({ dubStep: 'editing', dubSegments: [], incrementalPlan: null })} />,

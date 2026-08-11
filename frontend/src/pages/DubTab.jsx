@@ -568,9 +568,13 @@ export default function DubTab(props) {
     try {
       const lang = previewMode !== 'original' ? previewMode : undefined;
       const res = await dubQc(dubJobId, lang);
+      // A generation that finishes while QC is in flight invalidates these
+      // measurements. Ignore the stale response instead of attaching timing
+      // results from the previous audio to the new dub.
+      if (useAppStore.getState().dubGenNonce !== dubGenNonce) return;
       const byId = new Map((res.segments || []).map((q) => [String(q.seg_id), q]));
-      setDubSegments(
-        dubSegments.map((s, i) => {
+      setDubSegments((currentSegments) =>
+        currentSegments.map((s, i) => {
           const q = byId.get(String(s.id ?? i));
           if (!q) return s;
           return {
@@ -614,7 +618,7 @@ export default function DubTab(props) {
     } finally {
       setQcRunning(false);
     }
-  }, [dubJobId, qcRunning, previewMode, dubSegments, setDubSegments, t]);
+  }, [dubJobId, qcRunning, previewMode, dubGenNonce, setDubSegments, t]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
