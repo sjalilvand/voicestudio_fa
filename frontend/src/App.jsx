@@ -24,6 +24,7 @@ const VoiceProfile = lazy(() => import('./pages/VoiceProfile'));
 const BatchQueue = lazy(() => import('./pages/BatchQueue'));
 const ToolsPage = lazy(() => import('./pages/ToolsPage'));
 const SetupWizard = lazy(() => import('./pages/SetupWizard'));
+const UiScaleSetup = lazy(() => import('./components/UiScaleSetup'));
 const KeyboardCheatsheet = lazy(() => import('./components/KeyboardCheatsheet'));
 const VoicePreview = lazy(() => import('./components/VoicePreview'));
 const LogsFooter = lazy(() => import('./components/LogsFooter'));
@@ -75,6 +76,7 @@ import { addBreadcrumb } from './utils/breadcrumbs';
 import { appShellClasses } from './utils/appShellClasses';
 import { configuredRemoteBackend, probeRemoteBackend } from './utils/remoteBackendProbe';
 import { applyUiScale } from './utils/uiScaleEngine';
+import { resolveUiScale, suggestUiScale } from './utils/uiScaleSuggestion';
 import { recordValueMoment } from './utils/donationMoments';
 import {
   POPULAR_LANGS,
@@ -129,6 +131,32 @@ function App() {
   // Mode + uiScale + sidebar-collapsed persist across reloads automatically
   // via the store's `partialize`; active project / voice ids stay transient.
   const uiScale = useAppStore((s) => s.uiScale);
+  const uiScaleConfigured = useAppStore((s) => s.uiScaleConfigured);
+  const uiScalePreviewed = useAppStore((s) => s.uiScalePreviewed);
+  const setUiScale = useAppStore((s) => s.setUiScale);
+  const setUiScaleConfigured = useAppStore((s) => s.setUiScaleConfigured);
+  const setUiScalePreviewed = useAppStore((s) => s.setUiScalePreviewed);
+  const [storeHydrated, setStoreHydrated] = useState(
+    () => useAppStore.persist?.hasHydrated?.() ?? true,
+  );
+
+  useEffect(() => {
+    if (storeHydrated) return undefined;
+    const unsubscribe = useAppStore.persist?.onFinishHydration?.(() => setStoreHydrated(true));
+    if (useAppStore.persist?.hasHydrated?.()) setStoreHydrated(true);
+    return unsubscribe;
+  }, [storeHydrated]);
+
+  const startupSuggestedScale = suggestUiScale({
+    width: typeof window === 'undefined' ? 1440 : window.innerWidth,
+    height: typeof window === 'undefined' ? 900 : window.innerHeight,
+  });
+  const effectiveUiScale = resolveUiScale({
+    configured: uiScaleConfigured,
+    previewed: uiScalePreviewed,
+    selected: uiScale,
+    suggested: startupSuggestedScale,
+  });
 
   // Responsive shell breakpoints driven off the app-container's OWN width, not
   // the viewport. The shell is sized `width: calc(100vw / --ui-scale)` then
@@ -154,8 +182,8 @@ function App() {
   // still occupies only the upper-left of the window. Tauri's native zoom keeps
   // layout and paint in agreement; browser/dev sessions retain the CSS path.
   useLayoutEffect(() => {
-    void applyUiScale(uiScale);
-  }, [uiScale]);
+    void applyUiScale(effectiveUiScale);
+  }, [effectiveUiScale]);
   const shellSizeClass =
     shellWidth <= 600 ? 'shell-mini' : shellWidth <= 1100 ? 'shell-narrow' : '';
   const theme = useAppStore((s) => s.theme);
@@ -1199,7 +1227,7 @@ function App() {
   // awaiting_setup stage would never get to render.
   if (bootstrapStage === 'awaiting_setup') {
     return (
-      <div className="app-bootstrap-scale" style={{ '--ui-scale': uiScale }}>
+      <div className="app-bootstrap-scale" style={{ '--ui-scale': effectiveUiScale }}>
         <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
       </div>
     );
@@ -1210,21 +1238,36 @@ function App() {
   // Also blocks render until we've heard back from the backend at least once
   // — the frozen sidecar's cold-start import is ~5-10 s and without this we
   // flash the empty studio before the wizard has a chance to mount.
-  if (!setupChecked) {
+  if (!setupChecked || !storeHydrated) {
     return (
-      <div className="app-bootstrap-scale" style={{ '--ui-scale': uiScale }}>
+      <div className="app-bootstrap-scale" style={{ '--ui-scale': effectiveUiScale }}>
         <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
       </div>
     );
   }
   if (remoteFailure) {
     return (
-      <div className="app-bootstrap-scale" style={{ '--ui-scale': uiScale }}>
+      <div className="app-bootstrap-scale" style={{ '--ui-scale': effectiveUiScale }}>
         <RemoteBackendRecovery
           failure={remoteFailure}
           onRetry={retryRemoteBackend}
           onOpenSettings={openRemoteBackendSettings}
         />
+      </div>
+    );
+  }
+  if (!uiScaleConfigured && bootstrapStage === 'ready') {
+    return (
+      <div className="app-wizard-wrap" style={{ '--ui-scale': effectiveUiScale }}>
+        <div data-tauri-drag-region className="app-wizard-dragstrip" />
+        <Suspense fallback={<LazyFallback />}>
+          <UiScaleSetup
+            uiScale={uiScale}
+            setUiScale={setUiScale}
+            setUiScaleConfigured={setUiScaleConfigured}
+            setUiScalePreviewed={setUiScalePreviewed}
+          />
+        </Suspense>
       </div>
     );
   }
@@ -1240,7 +1283,7 @@ function App() {
     // inline zoom on top of a full-viewport box pushed the pinned
     // Continue/HF-token row below the window at any scale > 1.
     return (
-      <div className="app-wizard-wrap" style={{ '--ui-scale': uiScale }}>
+      <div className="app-wizard-wrap" style={{ '--ui-scale': effectiveUiScale }}>
         {/* Invisible drag strip across the top 28 px of the wizard —
             matches the macOS traffic-light zone so the window can be
             dragged / double-click-zoomed from anywhere along the top. */}
@@ -1272,7 +1315,11 @@ function App() {
   // Block the main UI until Rust reports the backend is ready. In dev web
   // (no Tauri), the hook returns 'ready' immediately so this is a no-op.
   if (bootstrapStage !== 'ready') {
-    return <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />;
+    return (
+      <div className="app-bootstrap-scale" style={{ '--ui-scale': effectiveUiScale }}>
+        <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
+      </div>
+    );
   }
 
   return (
@@ -1285,7 +1332,7 @@ function App() {
         hideSidebar,
         shellSizeClass,
       })}
-      style={{ '--ui-scale': uiScale }}
+      style={{ '--ui-scale': effectiveUiScale }}
     >
       {pendingTrimFile && (
         <ErrorBoundary name="audio-trimmer">

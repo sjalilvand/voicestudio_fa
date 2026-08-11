@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import i18n, { LANGUAGES } from '../i18n';
 import { useAppStore } from '../store';
 import { Badge, Button, Input, Progress, Select } from '../ui';
+import UiScaleControl from './UiScaleControl';
 
 const APP_VERSION = __APP_VERSION__ || '0.0.0';
 const GIB = 1024 * 1024 * 1024;
@@ -420,7 +421,8 @@ export default function FirstRunSetup() {
 
   if (!setup || !plan) {
     return (
-      <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-bg px-6 font-sans text-fg">
+      <div className="absolute inset-0 z-[9999] flex flex-col items-center justify-center bg-bg px-6 font-sans text-fg">
+        <UiScaleControl />
         {serverError ? (
           <ErrorBox>{serverError}</ErrorBox>
         ) : (
@@ -449,7 +451,7 @@ export default function FirstRunSetup() {
   const rocmAvailable = setup.os === 'linux';
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center overflow-hidden bg-bg px-6 pt-12 font-sans text-fg">
+    <div className="absolute inset-0 z-[9999] flex flex-col items-center overflow-hidden bg-bg px-6 pt-12 font-sans text-fg">
       <div className="flex w-full max-w-[1100px] flex-1 flex-col">
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto pb-4">
           {/* ── Masthead: waveform + headline + language/region ──────────── */}
@@ -484,6 +486,7 @@ export default function FirstRunSetup() {
               <div className="flex shrink-0 flex-col items-end gap-2">
                 {/* Language + download region: the two "where am I" choices. */}
                 <div className="flex items-center gap-2">
+                  <UiScaleControl />
                   <Select
                     size="sm"
                     value={locale}

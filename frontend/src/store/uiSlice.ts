@@ -74,6 +74,10 @@ export interface UiSlice {
   sidebarTab: SidebarTab;
   showCheatsheet: boolean;
   uiScale: number;
+  /** True after the first-start scale check has been confirmed. */
+  uiScaleConfigured: boolean;
+  /** Transient: an unconfirmed first-start scale is being previewed. */
+  uiScalePreviewed: boolean;
   navStyle: NavStyle;
 
   setMode: (mode: AppMode) => void;
@@ -90,6 +94,8 @@ export interface UiSlice {
   setSidebarTab: (tab: SidebarTab) => void;
   setShowCheatsheet: (open: boolean | ((prev: boolean) => boolean)) => void;
   setUiScale: (scale: number) => void;
+  setUiScaleConfigured: (configured: boolean) => void;
+  setUiScalePreviewed: (previewed: boolean) => void;
   setNavStyle: (style: NavStyle) => void;
 
   /** Jump to the voice-profile page, remembering what mode you were on. */
@@ -114,6 +120,8 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (set, get) 
   // 100% by default — the app renders at native size out of the box; users
   // who prefer larger UI pick their scale in Settings → Appearance (persisted).
   uiScale: 1.0,
+  uiScaleConfigured: false,
+  uiScalePreviewed: false,
   // The icon rail is the out-of-the-box navigation; titlebar tabs are opt-in
   // from Settings → Appearance and persist like the other chrome preferences.
   navStyle: 'rail',
@@ -135,6 +143,8 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (set, get) 
         typeof open === 'function' ? (open as (p: boolean) => boolean)(s.showCheatsheet) : open,
     })),
   setUiScale: (scale) => set({ uiScale: scale }),
+  setUiScaleConfigured: (configured) => set({ uiScaleConfigured: configured }),
+  setUiScalePreviewed: (previewed) => set({ uiScalePreviewed: previewed }),
   setNavStyle: (style) => set({ navStyle: style }),
 
   openVoiceProfile: (id) => {

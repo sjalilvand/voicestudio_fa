@@ -13,6 +13,7 @@ import DictationDemo from '../components/DictationDemo';
 import PermissionChecks from '../components/PermissionChecks';
 import { APP_VERSION } from '../utils/appVersion';
 import { Button } from '../ui';
+import UiScaleControl from '../components/UiScaleControl';
 
 // macOS convention: double-click the title-bar drag region to toggle zoom.
 const doubleClickMaximize = async () => {
@@ -340,6 +341,7 @@ export default function SetupWizard({ onReady }) {
               </p>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-2">
+              <UiScaleControl />
               <StepperNav
                 step={step}
                 maxUnlockedStep={preflightOk ? (modelsReady ? stepIds.length - 1 : 1) : 0}
