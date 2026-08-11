@@ -86,7 +86,9 @@ def bind_host() -> str:
     point. Reaching this node from another machine should be a decision
     somebody made, not a side effect of turning the feature on.
     """
-    return os.environ.get("OMNIVOICE_INBOUND_BIND") or _setting(_BIND_KEY) or DEFAULT_BIND
+    return (
+        os.environ.get("OMNIVOICE_INBOUND_BIND") or _setting(_BIND_KEY) or DEFAULT_BIND
+    )
 
 
 def set_bind_host(value: str) -> None:
@@ -142,9 +144,9 @@ def advertised_host() -> str:
 def is_exposed(host: Optional[str] = None) -> bool:
     """True when the listener is reachable from other machines.
 
-    The UI says so at the point the bind is widened, because with no TLS this
-    is the difference between a credential on one machine and a credential on
-    a network (docs/adr/inbound-node-mode.md).
+    The UI says so at the point the bind is widened because the private
+    connection string then admits clients beyond this machine. Transport
+    remains pinned TLS (docs/adr/inbound-node-mode.md).
     """
     return (host if host is not None else bind_host()) not in (
         "127.0.0.1",
@@ -160,7 +162,22 @@ def paths() -> dict[str, str]:
     return {
         "keys": os.path.join(root, "inbound-keys.json"),
         "staged": os.path.join(root, "inbound-staged"),
+        "certificate": os.path.join(root, "inbound-node.crt"),
+        "private_key": os.path.join(root, "inbound-node.key"),
     }
+
+
+def _tls_credentials():
+    from worker import tls  # noqa: PLC0415
+
+    wanted = tls.default_hostnames()
+    for host in (bind_host(), advertised_host()):
+        if host not in _WILDCARD_BINDS and host not in wanted:
+            wanted.append(host)
+    locations = paths()
+    return tls.load_or_create(
+        locations["certificate"], locations["private_key"], hostnames=wanted
+    )
 
 
 class InboundNode:
@@ -168,6 +185,7 @@ class InboundNode:
 
     def __init__(self) -> None:
         self._listener: Optional[NodeListener] = None
+        self._credentials = None
         self._keys: Optional[KeyStore] = None
         self._log = ConnectionLog()
         self._idle_sweep: Optional[asyncio.Task] = None
@@ -242,6 +260,7 @@ class InboundNode:
             log=self._log,
             artifacts=ArtifactStore(paths()["staged"]),
             client_factory=self._client_factory,
+            credentials=_tls_credentials(),
         )
         try:
             await listener.start(host=bind_host(), port=bind_port())
@@ -252,6 +271,7 @@ class InboundNode:
             logger.error("Could not start the inbound listener: %s", exc)
             return
         self._listener = listener
+        self._credentials = listener.credentials
         # A node that only accepts inbound connections never starts the
         # dial-out agent, which is where the idle sweep used to live — so
         # without this a shared GPU box held its weights forever.
@@ -274,10 +294,15 @@ class InboundNode:
 
         Built from the ADVERTISED host, never the bind — see `advertised_host`.
         """
+        if self._credentials is None:
+            raise RuntimeError(
+                "This machine is not accepting connections yet. Turn it on and try again."
+            )
         return format_connection(
             host=host or advertised_host() or bind_host(),
             port=self.port or bind_port(),
             secret=secret,
+            fingerprint=self._credentials.fingerprint,
         )
 
     def snapshot(self) -> dict:
@@ -290,6 +315,9 @@ class InboundNode:
             "port": self.port or bind_port(),
             "exposed": is_exposed(host),
             "startup_error": self.startup_error,
+            "tls_fingerprint": self._credentials.fingerprint
+            if self._credentials
+            else "",
             "keys": self.keys.list_keys(),
             **state,
         }
@@ -378,7 +406,9 @@ class OutboundNodes:
             try:
                 await self._dial(self._connection_for(entry), servicer)
             except InvalidConnectionString as exc:
-                logger.warning("Ignoring a saved connection that no longer parses: %s", exc)
+                logger.warning(
+                    "Ignoring a saved connection that no longer parses: %s", exc
+                )
 
     async def _dial(self, connection: Connection, servicer) -> None:
         from worker.inbound.connector import NodeConnection  # noqa: PLC0415

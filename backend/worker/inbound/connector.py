@@ -20,11 +20,13 @@ import contextlib
 import hashlib
 import logging
 import os
+import socket
+import ssl
 from typing import Optional
 
 import grpc
 
-from worker import identity, registry
+from worker import identity, registry, tls
 from worker.inbound.connection_string import Connection
 from worker.inbound.listener import KEY_METADATA_KEY
 from worker.protocol.gen import worker_v1_pb2 as pb
@@ -34,6 +36,32 @@ from worker.transport.client import MAX_MESSAGE_BYTES, backoff_delay
 logger = logging.getLogger(__name__)
 
 _PUSH_CHUNK_BYTES = 1024 * 1024
+
+
+def _fetch_pinned_certificate(
+    connection: Connection, *, timeout: float = 10.0
+) -> bytes:
+    """Fetch the node certificate, then accept it only when its pin matches.
+
+    The first TLS handshake is intentionally CA-agnostic because the node uses
+    a self-signed certificate. The copied fingerprint is the trust anchor; the
+    verified leaf is then the sole root trusted by the real gRPC channel.
+    """
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    with socket.create_connection(
+        (connection.host, connection.port), timeout=timeout
+    ) as raw, context.wrap_socket(raw, server_hostname=connection.host) as secured:
+        certificate_der = secured.getpeercert(binary_form=True)
+    if not certificate_der or not tls.pin_matches(
+        certificate_der, connection.fingerprint
+    ):
+        raise RuntimeError(
+            "That GPU machine presented a different certificate fingerprint. "
+            "Remove this connection and paste a newly created connection string."
+        )
+    return ssl.DER_cert_to_PEM_cert(certificate_der).encode("ascii")
 
 
 class NodeConnection:
@@ -57,10 +85,11 @@ class NodeConnection:
     def last_error(self) -> str:
         return self._last_error
 
-    def _channel(self) -> grpc.aio.Channel:
-        # Plaintext by decision, recorded in docs/adr/inbound-node-mode.md.
-        return grpc.aio.insecure_channel(
+    def _channel(self, certificate_pem: bytes) -> grpc.aio.Channel:
+        credentials = grpc.ssl_channel_credentials(root_certificates=certificate_pem)
+        return grpc.aio.secure_channel(
             self._connection.endpoint,
+            credentials,
             options=[
                 ("grpc.max_receive_message_length", MAX_MESSAGE_BYTES),
                 ("grpc.max_send_message_length", MAX_MESSAGE_BYTES),
@@ -102,7 +131,10 @@ class NodeConnection:
         # at full speed: on hardware this reached session epoch 2445 inside a
         # second, with the log reading "Locally aborted" over and over.
         self._outbox = asyncio.Queue()
-        async with self._channel() as channel:
+        certificate_pem = await asyncio.to_thread(
+            _fetch_pinned_certificate, self._connection
+        )
+        async with self._channel(certificate_pem) as channel:
             stub = pb_grpc.NodeServiceStub(channel)
             metadata = ((KEY_METADATA_KEY, self._connection.secret),)
             stream = stub.Attach(self._outbound(), metadata=metadata)
@@ -152,7 +184,9 @@ class NodeConnection:
         """
         public_key = bytes(request.public_key)
         if len(public_key) != 32:
-            return self._servicer._refuse("AUTH_FAILED", "That machine sent no usable identity.")
+            return self._servicer._refuse(
+                "AUTH_FAILED", "That machine sent no usable identity."
+            )
         key_id = identity.key_id_for(public_key)
         if registry.is_revoked(key_id):
             return self._servicer._refuse(
@@ -197,7 +231,9 @@ class NodeConnection:
                     "That machine could not prove it is the one this key was added for.",
                 )
 
-        return self._servicer.register_inbound(worker, request, address=self._connection.endpoint)
+        return self._servicer.register_inbound(
+            worker, request, address=self._connection.endpoint
+        )
 
     @staticmethod
     def _proves_key_possession(request: pb.RegisterRequest, known) -> bool:
@@ -275,7 +311,9 @@ class NodeConnection:
                         last=offset >= size,
                     )
 
-        ack = await stub.PushInput(chunks(), metadata=((KEY_METADATA_KEY, self._connection.secret),))
+        ack = await stub.PushInput(
+            chunks(), metadata=((KEY_METADATA_KEY, self._connection.secret),)
+        )
         if not ack.committed:
             raise RuntimeError(
                 ack.error.message or "that GPU machine did not accept the input"
@@ -329,7 +367,9 @@ class NodeConnection:
         if ref.sha256 and digest.hexdigest() != ref.sha256:
             with contextlib.suppress(OSError):
                 os.remove(destination)
-            raise RuntimeError("the result did not match the checksum that machine declared")
+            raise RuntimeError(
+                "the result did not match the checksum that machine declared"
+            )
 
 
 class _Frames:

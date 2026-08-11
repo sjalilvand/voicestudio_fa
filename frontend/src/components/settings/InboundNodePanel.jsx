@@ -11,9 +11,8 @@
  *
  *   • The connection string is shown exactly once. Only its hash is stored,
  *     so it cannot be displayed again — that is the point, not a limitation.
- *   • This mode is not encrypted. Wherever the UI could leave someone thinking
- *     otherwise, it says so — loudest at the moment they widen the bind beyond
- *     this machine, which is when the credential starts crossing a network.
+ *   • Every connection uses TLS and pins the node certificate carried in the
+ *     one-time connection string. There is no plaintext fallback.
  */
 import React, { useState } from 'react';
 import { Check, Copy, Link2, LogOut, Trash2, Wifi } from 'lucide-react';
@@ -26,11 +25,22 @@ import { Badge, Button } from '../../ui';
 
 const REFRESH_MS = 5000;
 
+function failureMessage(error, t) {
+  if (error?.isServerMessage && typeof error.message === 'string' && error.message.trim()) {
+    return error.message;
+  }
+  return t('settings.inbound_request_failed', {
+    defaultValue:
+      'Could not reach that GPU machine. Check that it is online and accepting connections, then try again.',
+  });
+}
+
 function relative(seconds, t) {
   if (!seconds) return '';
   const mins = Math.max(0, Math.round((Date.now() / 1000 - seconds) / 60));
   if (mins < 1) return t('settings.inbound_just_now', { defaultValue: 'just now' });
-  if (mins < 60) return t('settings.inbound_minutes_ago', { defaultValue: '{{count}}m ago', count: mins });
+  if (mins < 60)
+    return t('settings.inbound_minutes_ago', { defaultValue: '{{count}}m ago', count: mins });
   return t('settings.inbound_hours_ago', {
     defaultValue: '{{count}}h ago',
     count: Math.round(mins / 60),
@@ -64,7 +74,7 @@ export default function InboundNodePanel({ request }) {
       await fn();
       refresh();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(failureMessage(err, t));
     } finally {
       setBusy(false);
     }
@@ -142,7 +152,7 @@ export default function InboundNodePanel({ request }) {
         title={t('settings.inbound_title', { defaultValue: 'Share this GPU with other people' })}
         description={t('settings.inbound_desc', {
           defaultValue:
-            'Let other machines connect to this one, so more than one person can use its GPU at the same time. Leave this off if only you use it — the setup above is encrypted and this is not.',
+            'Let other machines connect to this one so several people can share its GPU. Every connection is encrypted and pinned to this machine’s certificate.',
         })}
       >
         <SettingRow
@@ -151,13 +161,13 @@ export default function InboundNodePanel({ request }) {
             defaultValue:
               'Other people connect to this machine instead of it connecting to them. Nobody gets in without a connection string you create.',
           })}
-          control={
-            <SettingsToggle checked={!!data?.enabled} disabled={busy} onChange={toggle} />
-          }
+          control={<SettingsToggle checked={!!data?.enabled} disabled={busy} onChange={toggle} />}
         />
 
         {data?.startup_error ? (
-          <p className="text-sm text-red-500">{data.startup_error}</p>
+          <p className="text-sm text-red-500" aria-live="polite">
+            {data.startup_error}
+          </p>
         ) : null}
 
         {data?.enabled ? (
@@ -168,7 +178,7 @@ export default function InboundNodePanel({ request }) {
                 data?.exposed
                   ? t('settings.inbound_bind_exposed', {
                       defaultValue:
-                        'Anyone who can reach {{address}} on your network can use this GPU if they have a connection string. Because this mode is not encrypted, someone watching the network could copy one. Use it only on a network you trust.',
+                        'Anyone who can reach {{address}} can connect with a valid connection string. TLS encrypts the session and pins this machine’s certificate; keep each string private and remove access when it is no longer needed.',
                       address: `${data?.bind}:${data?.port}`,
                     })
                   : t('settings.inbound_bind_local', {
@@ -177,23 +187,31 @@ export default function InboundNodePanel({ request }) {
                     })
               }
               control={
-              <div className="flex items-center gap-2">
-                <input
-                  className="input w-44"
-                  value={bind}
-                  placeholder={data?.bind || '127.0.0.1'}
-                  onChange={(e) => setBind(e.target.value)}
-                  aria-label={t('settings.inbound_bind', { defaultValue: 'Reachable from' })}
-                />
-                <Button size="sm" variant="secondary" disabled={busy || !bind} onClick={() => toggle(true)}>
-                  {t('settings.inbound_bind_apply', { defaultValue: 'Apply' })}
-                </Button>
-                {data?.exposed ? (
-                  <Badge variant="warning">
-                    {t('settings.inbound_exposed_badge', { defaultValue: 'On your network' })}
-                  </Badge>
-                ) : null}
-              </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    className="input w-44"
+                    value={bind}
+                    placeholder={data?.bind || '127.0.0.1'}
+                    onChange={(e) => setBind(e.target.value)}
+                    name="inbound-bind-address"
+                    autoComplete="off"
+                    spellCheck={false}
+                    aria-label={t('settings.inbound_bind', { defaultValue: 'Reachable from' })}
+                  />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy || !bind}
+                    onClick={() => toggle(true)}
+                  >
+                    {t('settings.inbound_bind_apply', { defaultValue: 'Apply' })}
+                  </Button>
+                  {data?.exposed ? (
+                    <Badge variant="warning">
+                      {t('settings.inbound_exposed_badge', { defaultValue: 'On your network' })}
+                    </Badge>
+                  ) : null}
+                </div>
               }
             />
 
@@ -204,20 +222,22 @@ export default function InboundNodePanel({ request }) {
                   'Creates a connection string for one person. Give each person their own, so removing one does not disconnect everybody.',
               })}
               control={
-              <div className="flex items-center gap-2">
-                <input
-                  className="input w-44"
-                  value={label}
-                  placeholder={t('settings.inbound_label_placeholder', {
-                    defaultValue: "Alice's laptop",
-                  })}
-                  onChange={(e) => setLabel(e.target.value)}
-                  aria-label={t('settings.inbound_label', { defaultValue: 'Name' })}
-                />
-                <Button size="sm" disabled={busy} onClick={issue}>
-                  {t('settings.inbound_create', { defaultValue: 'Create' })}
-                </Button>
-              </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    className="input w-44"
+                    value={label}
+                    placeholder={t('settings.inbound_label_placeholder', {
+                      defaultValue: "Alice's laptop",
+                    })}
+                    onChange={(e) => setLabel(e.target.value)}
+                    name="inbound-person-label"
+                    autoComplete="off"
+                    aria-label={t('settings.inbound_label', { defaultValue: 'Name' })}
+                  />
+                  <Button size="sm" disabled={busy} onClick={issue}>
+                    {t('settings.inbound_create', { defaultValue: 'Create' })}
+                  </Button>
+                </div>
               }
             />
 
@@ -231,8 +251,14 @@ export default function InboundNodePanel({ request }) {
                   })}
                 </p>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 truncate text-xs">{issued.connection_string}</code>
-                  <Button size="sm" variant="secondary" onClick={() => copy(issued.connection_string)}>
+                  <code className="flex-1 truncate text-xs" translate="no">
+                    {issued.connection_string}
+                  </code>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => copy(issued.connection_string)}
+                  >
                     {copied ? <Check size={14} /> : <Copy size={14} />}
                     {copied
                       ? t('settings.workers_copied', { defaultValue: 'Copied' })
@@ -242,7 +268,7 @@ export default function InboundNodePanel({ request }) {
                 <p className="text-xs opacity-70">
                   {t('settings.inbound_shown_once_warning', {
                     defaultValue:
-                      'Treat it like a password. It is not encrypted in transit, so send it over something private and only use it on a network you trust.',
+                      'Treat it like a password and send it privately. Its certificate fingerprint pins the encrypted connection to this GPU machine.',
                   })}
                 </p>
               </div>
@@ -302,7 +328,12 @@ export default function InboundNodePanel({ request }) {
                         })}
                       </span>
                     </span>
-                    <Button size="sm" variant="ghost" disabled={busy} onClick={() => disconnect(session)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => disconnect(session)}
+                    >
                       <LogOut size={14} />
                       {t('settings.inbound_disconnect', { defaultValue: 'Disconnect' })}
                     </Button>
@@ -325,21 +356,30 @@ export default function InboundNodePanel({ request }) {
         <SettingRow
           title={t('settings.inbound_connect_row', { defaultValue: 'Connection string' })}
           subtitle={t('settings.inbound_connect_hint', {
-            defaultValue: 'Starts with ovnode:// and includes the key, the address and the port.',
+            defaultValue:
+              'Starts with ovnode:// and includes the key, address, port and certificate fingerprint.',
           })}
           control={
-          <div className="flex items-center gap-2">
-            <input
-              className="input w-72"
-              value={paste}
-              placeholder="ovnode://…@192.168.0.110:7444"
-              onChange={(e) => setPaste(e.target.value)}
-              aria-label={t('settings.inbound_connect_row', { defaultValue: 'Connection string' })}
-            />
-            <Button size="sm" disabled={busy || !paste.trim()} onClick={connect}>
-              {t('settings.inbound_connect', { defaultValue: 'Connect' })}
-            </Button>
-          </div>
+            <div className="flex items-center gap-2">
+              <input
+                className="input w-72"
+                value={paste}
+                placeholder={t('settings.inbound_connect_placeholder', {
+                  defaultValue: 'ovnode://…@192.168.0.110:7444?fingerprint=…',
+                })}
+                onChange={(e) => setPaste(e.target.value)}
+                name="inbound-connection-string"
+                autoComplete="off"
+                spellCheck={false}
+                translate="no"
+                aria-label={t('settings.inbound_connect_row', {
+                  defaultValue: 'Connection string',
+                })}
+              />
+              <Button size="sm" disabled={busy || !paste.trim()} onClick={connect}>
+                {t('settings.inbound_connect', { defaultValue: 'Connect' })}
+              </Button>
+            </div>
           }
         />
 

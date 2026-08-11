@@ -16,6 +16,7 @@ security a real CA would, without asking the user to run one.
 
 There is deliberately no way to disable verification.
 """
+
 from __future__ import annotations
 
 import datetime as _dt
@@ -170,7 +171,8 @@ def generate_self_signed(
         )
         .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
         .add_extension(
-            x509.ExtendedKeyUsage([x509.ExtendedKeyUsageOID.SERVER_AUTH]), critical=False
+            x509.ExtendedKeyUsage([x509.ExtendedKeyUsageOID.SERVER_AUTH]),
+            critical=False,
         )
         .sign(key, hashes.SHA256())
     )
@@ -196,14 +198,19 @@ def load_or_create(
     """
     existing = _load(cert_path, key_path)
     wanted = hostnames or default_hostnames()
-    # Only re-check reachability for the default set. An explicit hostname list
-    # is the caller's decision and must not be second-guessed against whatever
-    # interface this machine happens to have.
-    address = "" if hostnames is not None else primary_ip()
-    if existing is not None and not _expiring_soon(existing) and covers(existing, address):
+    # Every explicitly requested identity must be present. This matters for an
+    # inbound listener bound to a user-entered LAN address: keeping a stable
+    # certificate that does not name that address makes mandatory hostname
+    # verification fail even though its fingerprint is correct.
+    missing = [
+        host for host in wanted if existing is not None and not covers(existing, host)
+    ]
+    if existing is not None and not _expiring_soon(existing) and not missing:
         return existing
     if existing is not None:
-        reason = "expiring" if _expiring_soon(existing) else "no longer covers this machine's address"
+        reason = (
+            "expiring" if _expiring_soon(existing) else "missing a requested hostname"
+        )
         logger.info("Control-plane certificate is %s — regenerating.", reason)
     credentials = generate_self_signed(hostnames=wanted)
     _save(cert_path, key_path, credentials)
@@ -229,7 +236,9 @@ def _load(cert_path: str, key_path: str) -> Optional[ServerCredentials]:
     )
 
 
-def _expiring_soon(credentials: ServerCredentials, *, now: Optional[_dt.datetime] = None) -> bool:
+def _expiring_soon(
+    credentials: ServerCredentials, *, now: Optional[_dt.datetime] = None
+) -> bool:
     certificate = x509.load_der_x509_certificate(credentials.certificate_der)
     stamp = now or _dt.datetime.now(_dt.timezone.utc)
     expires = getattr(certificate, "not_valid_after_utc", None)
@@ -259,7 +268,8 @@ def pin_matches(certificate_der: bytes, expected_fingerprint: str) -> bool:
     import hmac  # noqa: PLC0415 — trivial, keeps the module import light
 
     return hmac.compare_digest(
-        certificate_fingerprint(certificate_der).lower(), (expected_fingerprint or "").lower()
+        certificate_fingerprint(certificate_der).lower(),
+        (expected_fingerprint or "").lower(),
     )
 
 

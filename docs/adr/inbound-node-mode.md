@@ -58,39 +58,29 @@ Specifics:
   explicit setting, and the bound address is shown in the UI.
 - **Off by default.** Enabling it is the consent surface.
 
-## The part we are choosing to accept: no TLS
+## Transport security
 
-Inbound runs in plaintext. The owner decided this deliberately after the risk
-was raised. Recording it here so it is a decision with a rationale rather than
-an omission someone discovers later.
+Inbound connections always use TLS. The node creates a persistent self-signed
+certificate, and each connection string carries its SHA-256 fingerprint. The
+panel performs a discovery handshake only to retrieve the leaf certificate,
+verifies the fingerprint before sending credentials or user data, and then
+opens gRPC with that pinned certificate as its sole trust root. Certificate and
+hostname verification therefore remain mandatory without requiring a public
+certificate authority or a separate manual pinning step.
 
-What that means, stated plainly:
+There is no plaintext fallback. The listener cannot open any port, including a
+non-loopback port, without TLS credentials. A fingerprint mismatch fails closed
+before the API key, reference audio, jobs, or rendered audio are sent.
 
-- The API key crosses the network in gRPC metadata **in the clear**. Anyone who
-  can read the LAN segment — or sits on the path — can lift it and use the GPU.
-- There is no server authentication, so a machine that can answer at the node's
-  address can impersonate it and receive whatever the panel sends, **including
-  reference audio for voice cloning**.
-- Rendered audio comes back in the clear.
+The API key remains admission rather than identity: the connection string is a
+private bearer credential, while the certificate authenticates the GPU machine.
+The certificate persists across restarts. Replacing it invalidates old
+connection strings, which must be reissued with the new fingerprint.
 
-Why it was accepted: the target is a trusted LAN or a self-hosted setup where
-the alternative is people not using the feature at all. TLS here means either
-a self-signed certificate the user must pin by hand — the step that already
-makes outbound enrollment the hardest part of the flow — or a CA nobody has.
-The judgement is that the honest, documented plaintext channel is better than a
-pinning ceremony that gets abandoned halfway.
-
-Consequences accepted with it:
-
-- **This mode is for LAN and self-hosted use only, and is never a fleet
-  transport.** `goal_v2.md` B2 and B5.2 require hosted workers to dial out with
-  no inbound ports; nothing here relaxes that, and the hosted platform must not
-  inherit this path. See "Amendment" below.
-- Binding to `0.0.0.0` on an untrusted network exposes a plaintext bearer
-  credential to that network. The UI says so at the point the bind is widened.
-- If the threat model ever changes, TLS is additive: the listener already
-  terminates its own connections, so `add_secure_port` and a pinned certificate
-  slot in without touching the protocol.
+This mode remains for locally owned hardware, not the hosted fleet.
+`goal_v2.md` B2 and B5.2 require hosted workers to dial out with no inbound
+ports; nothing here relaxes that, and the hosted platform must not inherit this
+path. See "Amendment" below.
 
 ## Amendment to goal_v2.md B5.2
 
@@ -98,8 +88,8 @@ B5.2 reads "Workers connect outbound; the control plane never dials in", and
 B2 promises "no static IP, no inbound ports". Those remain true **for the
 hosted fleet**, which is what they were written about. They are now scoped
 statements rather than global ones: the OSS desktop product also supports an
-inbound mode for locally-owned hardware, with the weaker posture documented
-above. The conformance fixtures for the Go control plane must cover
+inbound mode for locally-owned hardware, with pinned TLS as documented above.
+The conformance fixtures for the Go control plane must cover
 `WorkerService` only.
 
 ## Alternatives rejected

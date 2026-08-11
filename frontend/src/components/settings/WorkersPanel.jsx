@@ -53,9 +53,11 @@ async function request(path, { body, ...opts } = {}) {
   const payload = await res.json().catch(() => null);
   if (!res.ok) {
     const detail = payload?.detail;
-    throw new Error(
+    const error = new Error(
       typeof detail === 'string' ? detail : detail ? JSON.stringify(detail) : `HTTP ${res.status}`,
     );
+    error.isServerMessage = typeof detail === 'string' && detail.trim().length > 0;
+    throw error;
   }
   return payload;
 }
@@ -98,7 +100,9 @@ export default function WorkersPanel() {
     setBusy(true);
     setCopied(false);
     try {
-      setToken(await request('/workers/enrollments', { method: 'POST', body: { ttl_seconds: 900 } }));
+      setToken(
+        await request('/workers/enrollments', { method: 'POST', body: { ttl_seconds: 900 } }),
+      );
     } catch (e) {
       toast.error(e?.message || String(e));
     } finally {
@@ -169,113 +173,116 @@ export default function WorkersPanel() {
 
   return (
     <>
-    <SettingsSection
-      icon={Cpu}
-      title={t('settings.workers_title', { defaultValue: 'Remote workers' })}
-      description={t('settings.workers_desc', {
-        defaultValue:
-          'Send individual jobs to GPUs on your other machines. Results come back here. Nothing is sent until you add a worker and approve it.',
-      })}
-    >
-      <SettingRow
-        title={t('settings.workers_enable', { defaultValue: 'Use remote workers' })}
-        subtitle={t('settings.workers_enable_hint', {
+      <SettingsSection
+        icon={Cpu}
+        title={t('settings.workers_title', { defaultValue: 'Remote workers' })}
+        description={t('settings.workers_desc', {
           defaultValue:
-            'While this is off, no connection is accepted and nothing leaves this machine.',
+            'Send individual jobs to GPUs on your other machines. Results come back here. Nothing is sent until you add a worker and approve it.',
         })}
-        control={<SettingsToggle checked={enabled} disabled={busy} onChange={setEnabled} />}
-      />
-
-      {enabled && !data?.running && data?.startup_error && (
-        <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/5 p-3 text-sm text-red-300">
-          {t('settings.workers_port_conflict', {
+      >
+        <SettingRow
+          title={t('settings.workers_enable', { defaultValue: 'Use remote workers' })}
+          subtitle={t('settings.workers_enable_hint', {
             defaultValue:
-              'Remote workers are unavailable because another VoiceStudio instance is already accepting them on this port. Close the other instance, or set OMNIVOICE_WORKER_PORT to a different port and restart VoiceStudio.',
+              'While this is off, no connection is accepted and nothing leaves this machine.',
           })}
-        </p>
-      )}
+          control={<SettingsToggle checked={enabled} disabled={busy} onChange={setEnabled} />}
+        />
 
-      {enabled && data?.running && (
-        <>
-          <SettingRow
-            mono
-            title={t('settings.workers_endpoint', { defaultValue: 'Workers connect to' })}
-            subtitle={t('settings.workers_endpoint_hint', {
+        {enabled && !data?.running && data?.startup_error && (
+          <p
+            role="alert"
+            className="rounded-lg border border-red-500/40 bg-red-500/5 p-3 text-sm text-red-300"
+          >
+            {t('settings.workers_port_conflict', {
               defaultValue:
-                'A worker has to be able to reach this address. On different networks, a VPN such as Tailscale is the reliable way.',
+                'Remote workers are unavailable because another VoiceStudio instance is already accepting them on this port. Close the other instance, or set OMNIVOICE_WORKER_PORT to a different port and restart VoiceStudio.',
             })}
-            control={<code>{data?.endpoint || '—'}</code>}
-          />
+          </p>
+        )}
 
-          <SettingRow
-            title={t('settings.workers_add', { defaultValue: 'Add a worker' })}
-            subtitle={t('settings.workers_add_hint', {
-              defaultValue:
-                'Generate a token, then paste it into OmniVoice on the other machine.',
-            })}
-            control={
-              <Button onClick={createToken} disabled={busy}>
-                {t('settings.workers_new_token', { defaultValue: 'Generate token' })}
-              </Button>
-            }
-          />
+        {enabled && data?.running && (
+          <>
+            <SettingRow
+              mono
+              title={t('settings.workers_endpoint', { defaultValue: 'Workers connect to' })}
+              subtitle={t('settings.workers_endpoint_hint', {
+                defaultValue:
+                  'A worker has to be able to reach this address. On different networks, a VPN such as Tailscale is the reliable way.',
+              })}
+              control={<code>{data?.endpoint || '—'}</code>}
+            />
 
-          {token && (
-            <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
-              {/* Deliberately plain visible text, not an InfoHint tooltip: a
+            <SettingRow
+              title={t('settings.workers_add', { defaultValue: 'Add a worker' })}
+              subtitle={t('settings.workers_add_hint', {
+                defaultValue:
+                  'Generate a token, then paste it into OmniVoice on the other machine.',
+              })}
+              control={
+                <Button onClick={createToken} disabled={busy}>
+                  {t('settings.workers_new_token', { defaultValue: 'Generate token' })}
+                </Button>
+              }
+            />
+
+            {token && (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+                {/* Deliberately plain visible text, not an InfoHint tooltip: a
                   warning the user must act on before navigating away cannot
                   be hidden behind a hover. */}
-              <p className="m-0 text-xs text-amber-300">
-                {t('settings.workers_token_once', {
-                  defaultValue:
-                    'Copy this now — it is shown only once, works only once, and expires in 15 minutes.',
+                <p className="m-0 text-xs text-amber-300">
+                  {t('settings.workers_token_once', {
+                    defaultValue:
+                      'Copy this now — it is shown only once, works only once, and expires in 15 minutes.',
+                  })}
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <code className="flex-1 break-all rounded bg-black/20 p-2 text-xs">
+                    {token.token}
+                  </code>
+                  <Button variant="secondary" onClick={copyToken}>
+                    {copied ? <Check size={14} /> : <Copy size={14} />}
+                    {copied
+                      ? t('settings.workers_copied', { defaultValue: 'Copied' })
+                      : t('settings.workers_copy', { defaultValue: 'Copy' })}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {workers.length === 0 ? (
+              <p className="py-3 text-sm opacity-70">
+                {t('settings.workers_none', {
+                  defaultValue: 'No workers yet. Generate a token to add your first one.',
                 })}
               </p>
-              <div className="mt-2 flex items-center gap-2">
-                <code className="flex-1 break-all rounded bg-black/20 p-2 text-xs">
-                  {token.token}
-                </code>
-                <Button variant="secondary" onClick={copyToken}>
-                  {copied ? <Check size={14} /> : <Copy size={14} />}
-                  {copied
-                    ? t('settings.workers_copied', { defaultValue: 'Copied' })
-                    : t('settings.workers_copy', { defaultValue: 'Copy' })}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {workers.length === 0 ? (
-            <p className="py-3 text-sm opacity-70">
-              {t('settings.workers_none', {
-                defaultValue: 'No workers yet. Generate a token to add your first one.',
-              })}
-            </p>
-          ) : (
-            <ul className="divide-y divide-white/10">
-              {workers.map((w) => (
-                <WorkerRow
-                  key={w.id}
-                  worker={w}
-                  onRemove={() => removeWorker(w)}
-                  onResume={() => resumeWorker(w)}
-                  onToggle={() => toggleWorker(w)}
-                  onRename={(name) => renameWorker(w, name)}
-                />
-              ))}
-            </ul>
-          )}
-        </>
-      )}
-    </SettingsSection>
-    {/* The other direction: this machine accepting connections, and the
+            ) : (
+              <ul className="divide-y divide-white/10">
+                {workers.map((w) => (
+                  <WorkerRow
+                    key={w.id}
+                    worker={w}
+                    onRemove={() => removeWorker(w)}
+                    onResume={() => resumeWorker(w)}
+                    onToggle={() => toggleWorker(w)}
+                    onRename={(name) => renameWorker(w, name)}
+                  />
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </SettingsSection>
+      {/* The other direction: this machine accepting connections, and the
         machines this one dials. Kept in the same System entry because a user
         looking for "use my other GPU" should find both ways in one place, and
         behind the same master toggle because "off means off" is this feature's
         contract — a second switch that stayed live under it would be exactly
         the surprise that promise exists to prevent. Headless nodes that only
         lend a GPU set OMNIVOICE_INBOUND_NODE and never see this panel. */}
-    {enabled && <InboundNodePanel request={request} />}
+      {enabled && <InboundNodePanel request={request} />}
     </>
   );
 }
@@ -356,9 +363,7 @@ export function WorkerRow({ worker, onRemove, onResume, onToggle, onRename = () 
         {/* The breaker summary is written to be understood: "paused after 3
             failures, retrying in 60s" is actionable in a way that a
             reliability percentage never is. */}
-        {paused && (
-          <p className="mt-0.5 text-xs text-amber-400">{worker.breakers[0].summary}</p>
-        )}
+        {paused && <p className="mt-0.5 text-xs text-amber-400">{worker.breakers[0].summary}</p>}
       </div>
       {paused && (
         <Button variant="secondary" size="sm" onClick={onResume}>

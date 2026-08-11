@@ -43,8 +43,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Added
 
-- Remote GPU machines can now accept connections instead of dialling out, so several people can use the same box at once — each gets their own connection string, revocable on its own, with a live list of who is connected and a disconnect button. Unencrypted by design and meant for a network you trust; the dial-out setup stays the default and stays TLS. (#1496)
-
+- Remote GPU machines can now accept connections instead of dialling out, so several people can use the same box at once — each gets their own revocable connection string, with certificate-pinned TLS, a live list of who is connected, and a disconnect button. (#1496)
 - Remote GPU model downloads now use the normal Models install flow and show per-worker progress. (#1478)
 - Settings → System → **Remote workers** sends individual jobs to GPUs on your other machines while everything else stays here. Off by default; each machine is added with a single-use token and approved before any audio reaches it. See [docs/remote-workers.md](docs/remote-workers.md).
 - First-run setup now recommends a screen-aware interface scale, with compact controls available throughout setup. (#1502)

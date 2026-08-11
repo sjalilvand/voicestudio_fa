@@ -12,24 +12,47 @@ import asyncio
 import os
 import socket
 import sqlite3
+from dataclasses import replace
+from types import SimpleNamespace
 
 import pytest
 import pytest_asyncio
 
-from worker import registry
-from worker.identity import WorkerKeypair
-from worker.inbound.artifacts import ArtifactStore
-from worker.inbound.connection_log import ConnectionLog
-from worker.inbound.connection_string import parse_connection
-from worker.inbound.connector import NodeConnection
-from worker.inbound.keys import KeyStore
-from worker.inbound.listener import NodeListener
-from worker.pool import WorkerPool
-from worker.scheduler import Scheduler
-from worker.transport.client import WorkerClient, WorkerConfig
-from worker.transport.server import WorkerServicer
-
 ENGINE, MODEL, OP = "indextts", "IndexTTS-2", "tts"
+
+
+def _worker_modules():
+    """Resolve app modules at test runtime, after isolation fixtures run."""
+    from worker import registry, tls
+    from worker.identity import WorkerKeypair
+    from worker.inbound.artifacts import ArtifactStore
+    from worker.inbound.connection_log import ConnectionLog
+    from worker.inbound.connection_string import format_connection, parse_connection
+    from worker.inbound.connector import NodeConnection
+    from worker.inbound.keys import KeyStore
+    from worker.inbound.listener import NodeListener
+    from worker.pool import WorkerPool
+    from worker.scheduler import Scheduler
+    from worker.transport.client import WorkerClient, WorkerConfig
+    from worker.transport.server import WorkerServicer
+
+    return SimpleNamespace(
+        ArtifactStore=ArtifactStore,
+        ConnectionLog=ConnectionLog,
+        KeyStore=KeyStore,
+        NodeConnection=NodeConnection,
+        NodeListener=NodeListener,
+        Scheduler=Scheduler,
+        WorkerClient=WorkerClient,
+        WorkerConfig=WorkerConfig,
+        WorkerKeypair=WorkerKeypair,
+        WorkerPool=WorkerPool,
+        WorkerServicer=WorkerServicer,
+        format_connection=format_connection,
+        parse_connection=parse_connection,
+        registry=registry,
+        tls=tls,
+    )
 
 
 @pytest.fixture
@@ -66,26 +89,53 @@ def _capabilities():
     ]
 
 
+class _ObservedConnectionLog:
+    """ConnectionLog with concrete async signals instead of wall-clock waits."""
+
+    def __init__(self, *, now):
+        self._inner = _worker_modules().ConnectionLog(now=now)
+        self.rejected_event = asyncio.Event()
+        self.closed_event = asyncio.Event()
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+    def rejected(self, *, peer, detail):
+        self._inner.rejected(peer=peer, detail=detail)
+        self.rejected_event.set()
+
+    def closed(self, session_id, *, detail=""):
+        self._inner.closed(session_id, detail=detail)
+        self.closed_event.set()
+
+
 class _InboundHarness:
     """A node listening on loopback, plus the panel that dials it."""
 
     def __init__(self, tmp_path):
+        worker = _worker_modules()
+        self.worker = worker
         # Node side.
-        self.keys = KeyStore(str(tmp_path / "inbound-keys.json"))
-        self.log = ConnectionLog()
-        self.artifacts = ArtifactStore(str(tmp_path / "staged"))
-        self.keypair = WorkerKeypair.generate()
+        self.keys = worker.KeyStore(str(tmp_path / "inbound-keys.json"))
+        self.clock = [100.0]
+        self.log = _ObservedConnectionLog(now=lambda: self.clock[0])
+        self.artifacts = worker.ArtifactStore(str(tmp_path / "staged"))
+        self.keypair = worker.WorkerKeypair.generate()
+        self.credentials = worker.tls.generate_self_signed(
+            hostnames=["localhost", "127.0.0.1"]
+        )
         self.executed: list[str] = []
-        self.listener = NodeListener(
+        self.listener = worker.NodeListener(
             keys=self.keys,
             log=self.log,
             artifacts=self.artifacts,
             client_factory=self._client,
+            credentials=self.credentials,
         )
         # Panel side.
-        self.pool = WorkerPool()
-        self.scheduler = Scheduler(self.pool, persist=False)
-        self.servicer = WorkerServicer(
+        self.pool = worker.WorkerPool()
+        self.scheduler = worker.Scheduler(self.pool, persist=False)
+        self.servicer = worker.WorkerServicer(
             self.scheduler, self.pool, artifact_dir=str(tmp_path / "artifacts")
         )
         self.connection = None
@@ -98,8 +148,8 @@ class _InboundHarness:
             self.executed.append(assignment.ref.task_id)
             return {"result_json": "{}", "payload": b"", "meta": {}}
 
-        return WorkerClient(
-            WorkerConfig(
+        return self.worker.WorkerClient(
+            self.worker.WorkerConfig(
                 endpoint="",
                 cert_fingerprint="",
                 certificate_pem=b"",
@@ -108,7 +158,12 @@ class _InboundHarness:
                 enrollment_token="",
                 max_concurrent_tasks=1,
                 capabilities=_capabilities(),
-                host={"hostname": "gpu-node", "os": "linux", "arch": "x86_64", "gpus": []},
+                host={
+                    "hostname": "gpu-node",
+                    "os": "linux",
+                    "arch": "x86_64",
+                    "gpus": [],
+                },
             ),
             execute=execute,
             artifacts=artifacts,
@@ -128,8 +183,14 @@ class _InboundHarness:
             from worker.identity import hash_secret
 
             self.panel_key_id = hash_secret(secret)[:12]
-        connection = parse_connection(f"ovnode://{secret}@127.0.0.1:{self.port}")
-        self.connection = NodeConnection(self.servicer, connection)
+        text = self.worker.format_connection(
+            host="127.0.0.1",
+            port=self.port,
+            secret=secret,
+            fingerprint=self.credentials.fingerprint,
+        )
+        connection = self.worker.parse_connection(text)
+        self.connection = self.worker.NodeConnection(self.servicer, connection)
         self.connector_task = asyncio.create_task(self.connection.run_forever())
         if wait:
             await _until(lambda: len(self.pool) == 1)
@@ -177,13 +238,36 @@ async def test_a_panel_that_dials_a_node_ends_up_with_a_schedulable_worker(inbou
 
 
 @pytest.mark.asyncio
+async def test_a_panel_refuses_a_node_whose_tls_certificate_misses_the_pin(inbound):
+    secret = inbound.keys.issue("Test panel").secret
+    connection = inbound.worker.parse_connection(
+        inbound.worker.format_connection(
+            host="127.0.0.1",
+            port=inbound.port,
+            secret=secret,
+            fingerprint=inbound.credentials.fingerprint,
+        )
+    )
+    impostor_pin = "0" * 64
+    assert impostor_pin != inbound.credentials.fingerprint
+    dialer = inbound.worker.NodeConnection(
+        inbound.servicer, replace(connection, fingerprint=impostor_pin)
+    )
+
+    with pytest.raises(RuntimeError, match="certificate fingerprint"):
+        await asyncio.wait_for(dialer._connect_once(), timeout=2.0)
+
+    assert len(inbound.pool) == 0
+
+
+@pytest.mark.asyncio
 async def test_the_node_is_enrolled_by_its_own_key_not_by_the_api_key(inbound):
     """The API key admits a panel; identity stays with the node's keypair. If
     these were conflated, anyone who copied the key could impersonate the
     machine to a panel that had already trusted it."""
     await inbound.connect_panel()
 
-    stored = registry.list_workers()
+    stored = inbound.worker.registry.list_workers()
     assert len(stored) == 1
     assert stored[0].key_id == inbound.keypair.key_id
 
@@ -201,8 +285,15 @@ async def test_two_panels_can_use_one_node_at_the_same_time(tmp_path, db, inboun
     alice = next(iter(inbound.pool)).worker_id
 
     bob_secret = inbound.keys.issue("Bob").secret
-    connection = parse_connection(f"ovnode://{bob_secret}@127.0.0.1:{inbound.port}")
-    bob = NodeConnection(second.servicer, connection)
+    connection = inbound.worker.parse_connection(
+        inbound.worker.format_connection(
+            host="127.0.0.1",
+            port=inbound.port,
+            secret=bob_secret,
+            fingerprint=inbound.credentials.fingerprint,
+        )
+    )
+    bob = inbound.worker.NodeConnection(second.servicer, connection)
     task = asyncio.create_task(bob.run_forever())
     try:
         await _until(lambda: len(second.pool) == 1)
@@ -219,7 +310,7 @@ async def test_two_panels_can_use_one_node_at_the_same_time(tmp_path, db, inboun
 @pytest.mark.asyncio
 async def test_a_panel_with_no_key_never_reaches_the_worker_pool(inbound):
     await inbound.connect_panel(secret="ovnode_" + "z" * 40, wait=False)
-    await asyncio.sleep(0.5)
+    await asyncio.wait_for(inbound.log.rejected_event.wait(), timeout=2.0)
 
     assert len(inbound.pool) == 0
     kinds = [e["kind"] for e in inbound.log.snapshot()["events"]]
@@ -281,7 +372,7 @@ async def test_a_revoked_key_stops_working_without_disturbing_the_others(inbound
     inbound.keys.revoke(alice.key.key_id)
 
     await inbound.connect_panel(secret=alice.secret, wait=False)
-    await asyncio.sleep(0.5)
+    await asyncio.wait_for(inbound.log.rejected_event.wait(), timeout=2.0)
 
     assert len(inbound.pool) == 0
 
@@ -297,15 +388,18 @@ async def test_the_owner_can_see_who_connected_and_kick_them(inbound):
 
     # The kick has to land on an idle session too, which is the case a
     # loop that only wakes on outbound traffic would never notice.
-    await _until(lambda: inbound.log.snapshot()["sessions"] == [])
+    await asyncio.wait_for(inbound.log.closed_event.wait(), timeout=2.0)
+    assert inbound.log.snapshot()["sessions"] == []
 
     # And it has to STAY landed for a moment. The panel redials on its own, so
     # without a cooldown the person is back within two seconds and the button
     # appears to do nothing — which is what it did on hardware, where the log
     # read disconnected and connected in the same breath.
     assert inbound.log.cooling_down(sessions[0]["key_id"]) is True
-    await asyncio.sleep(2.5)
-    assert inbound.log.snapshot()["sessions"] == [], "the kicked panel came straight back"
+    await asyncio.wait_for(inbound.log.rejected_event.wait(), timeout=2.0)
+    assert inbound.log.snapshot()["sessions"] == [], (
+        "the kicked panel came straight back"
+    )
 
 
 @pytest.mark.asyncio
@@ -444,10 +538,10 @@ async def test_a_different_machine_cannot_re_adopt_an_enrolled_workers_identity(
     from worker.protocol.gen import worker_v1_pb2 as pb
 
     await inbound.connect_panel()
-    enrolled = registry.list_workers()[0]
+    enrolled = inbound.worker.registry.list_workers()[0]
 
     # A second machine: valid key, valid self-signature, wrong identity.
-    impostor = WorkerKeypair.generate()
+    impostor = inbound.worker.WorkerKeypair.generate()
     challenge, nonce = b"c" * 32, b"n" * 32
     forged = pb.RegisterRequest(
         envelope=pb.Envelope(sequence=0),
@@ -462,11 +556,15 @@ async def test_a_different_machine_cannot_re_adopt_an_enrolled_workers_identity(
         ),
     )
 
-    assert NodeConnection._proves_key_possession(forged, enrolled) is False
+    assert (
+        inbound.worker.NodeConnection._proves_key_possession(forged, enrolled) is False
+    )
 
 
 @pytest.mark.asyncio
-async def test_the_node_keeps_sending_heartbeats_after_it_registers(inbound, monkeypatch):
+async def test_the_node_keeps_sending_heartbeats_after_it_registers(
+    inbound, monkeypatch
+):
     """A session that goes quiet is declared dead and flaps forever.
 
     Found on hardware, not here: the inbound Attach handler started the read
@@ -585,13 +683,25 @@ async def test_repasting_a_key_for_a_connected_machine_redials_it(inbound, monke
     outbound = inbound_service.OutboundNodes(inbound.keys)
     saved = []
     monkeypatch.setattr(outbound, "saved", lambda: list(saved))
-    monkeypatch.setattr(outbound, "_save", lambda entries: saved.clear() or saved.extend(entries))
+    monkeypatch.setattr(
+        outbound, "_save", lambda entries: saved.clear() or saved.extend(entries)
+    )
 
-    first = f"ovnode://{inbound.keys.issue('One').secret}@127.0.0.1:{inbound.port}"
+    first = inbound.worker.format_connection(
+        host="127.0.0.1",
+        port=inbound.port,
+        secret=inbound.keys.issue("One").secret,
+        fingerprint=inbound.credentials.fingerprint,
+    )
     await outbound.add(first, inbound.servicer)
     original = outbound._connections[f"127.0.0.1:{inbound.port}"]
 
-    second = f"ovnode://{inbound.keys.issue('Two').secret}@127.0.0.1:{inbound.port}"
+    second = inbound.worker.format_connection(
+        host="127.0.0.1",
+        port=inbound.port,
+        secret=inbound.keys.issue("Two").secret,
+        fingerprint=inbound.credentials.fingerprint,
+    )
     await outbound.add(second, inbound.servicer)
 
     endpoint = f"127.0.0.1:{inbound.port}"
@@ -712,11 +822,7 @@ async def test_a_pushed_input_cannot_escape_the_staging_directory(inbound, tmp_p
 
     # And nothing was left behind by the refusal.
     root = inbound.artifacts._root
-    assert not any(
-        "escaped" in name
-        for _, _, files in os.walk(root)
-        for name in files
-    )
+    assert not any("escaped" in name for _, _, files in os.walk(root) for name in files)
 
 
 @pytest.mark.asyncio
@@ -742,15 +848,19 @@ async def test_an_inbound_only_node_still_unloads_idle_models(monkeypatch, tmp_p
         refreshed["count"] += 1
 
     monkeypatch.setattr(agent_module, "IDLE_SWEEP_INTERVAL_SECONDS", 0.05)
-    import services.tts_backend as tts_backend
     import services.model_manager as model_manager
+    import services.tts_backend as tts_backend
 
     monkeypatch.setattr(tts_backend, "release_idle_engines", fake_release)
-    monkeypatch.setattr(model_manager, "gpu_pool_stats", lambda: {"running": 0, "queued": 0})
+    monkeypatch.setattr(
+        model_manager, "gpu_pool_stats", lambda: {"running": 0, "queued": 0}
+    )
 
     task = asyncio.create_task(agent_module.idle_unload_loop(fake_refresh))
     try:
-        await _until(lambda: released["count"] >= 1 and refreshed["count"] >= 1, timeout=5.0)
+        await _until(
+            lambda: released["count"] >= 1 and refreshed["count"] >= 1, timeout=5.0
+        )
     finally:
         task.cancel()
         await asyncio.gather(task, return_exceptions=True)
@@ -762,20 +872,37 @@ async def test_an_inbound_only_node_still_unloads_idle_models(monkeypatch, tmp_p
 @pytest.mark.asyncio
 async def test_enabling_inbound_starts_the_idle_sweep(monkeypatch, tmp_path):
     """The wiring, not just the loop: the gap was a missing caller."""
+    from worker import agent as agent_module
     from worker.inbound import service as inbound_service
 
+    started = asyncio.Event()
+    received = []
+
+    async def idle_unload_sentinel(refresh):
+        received.append(refresh)
+        started.set()
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(agent_module, "idle_unload_loop", idle_unload_sentinel)
     node = inbound_service.InboundNode()
     monkeypatch.setattr(inbound_service, "bind_host", lambda: "127.0.0.1")
     monkeypatch.setattr(inbound_service, "bind_port", lambda: 0)
     monkeypatch.setattr(
-        inbound_service, "paths", lambda: {"keys": str(tmp_path / "k.json"), "staged": str(tmp_path / "s")}
+        inbound_service,
+        "paths",
+        lambda: {
+            "keys": str(tmp_path / "k.json"),
+            "staged": str(tmp_path / "s"),
+            "certificate": str(tmp_path / "inbound.crt"),
+            "private_key": str(tmp_path / "inbound.key"),
+        },
     )
     monkeypatch.setattr(node, "_client_factory", lambda artifacts, key_id: None)
 
     await node.start()
     try:
-        assert node._idle_sweep is not None, "enabling inbound did not start the idle sweep"
-        assert not node._idle_sweep.done()
+        await asyncio.wait_for(started.wait(), timeout=2.0)
+        assert received == [node._listener.refresh_all]
     finally:
         await node.stop()
     assert node._idle_sweep is None

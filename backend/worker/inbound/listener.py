@@ -29,6 +29,7 @@ from worker.inbound.keys import KeyStore
 from worker.protocol.gen import worker_v1_pb2 as pb
 from worker.protocol.gen import worker_v1_pb2_grpc as pb_grpc
 from worker.transport.client import ArtifactTransport, MAX_MESSAGE_BYTES, WorkerClient
+from worker.tls import ServerCredentials
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,9 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
             try:
                 await client.refresh_capabilities()
             except Exception:
-                logger.debug("Could not refresh capabilities for a panel", exc_info=True)
+                logger.debug(
+                    "Could not refresh capabilities for a panel", exc_info=True
+                )
 
     # ── Admission ─────────────────────────────────────────────────────────
 
@@ -176,7 +179,9 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
             await client.stop()
             self._log.closed(session_id)
 
-    async def _pump_incoming(self, client: WorkerClient, request_iterator, session_id: str) -> None:
+    async def _pump_incoming(
+        self, client: WorkerClient, request_iterator, session_id: str
+    ) -> None:
         async for message in request_iterator:
             kind = message.WhichOneof("payload")
             if kind == "assignment":
@@ -236,7 +241,9 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
                     chunk.last = offset >= staged.size_bytes
                     yield chunk
         except OSError as exc:
-            await context.abort(grpc.StatusCode.INTERNAL, f"Could not read the result: {exc}")
+            await context.abort(
+                grpc.StatusCode.INTERNAL, f"Could not read the result: {exc}"
+            )
             return
         # Dropped only after the last chunk left this process. A panel that
         # dies mid-fetch can ask again; the stale sweep is what eventually
@@ -347,11 +354,15 @@ class NodeListener:
         log: ConnectionLog,
         artifacts: ArtifactStore,
         client_factory: Callable[[ArtifactTransport, str], WorkerClient],
+        credentials: ServerCredentials,
     ) -> None:
+        if not credentials:
+            raise ValueError("TLS credentials are required for the inbound listener.")
         self._servicer = NodeServicer(
             keys=keys, log=log, artifacts=artifacts, client_factory=client_factory
         )
         self._artifacts = artifacts
+        self._credentials = credentials
         self._server: Optional[grpc.aio.Server] = None
         self._bound_port = 0
 
@@ -367,6 +378,10 @@ class NodeListener:
     def port(self) -> int:
         """The port actually bound, which is not always the one requested."""
         return self._bound_port
+
+    @property
+    def credentials(self) -> ServerCredentials:
+        return self._credentials
 
     async def start(self, *, host: str = DEFAULT_BIND, port: int = DEFAULT_PORT) -> int:
         if self._server is not None:
@@ -386,11 +401,15 @@ class NodeListener:
             ]
         )
         pb_grpc.add_NodeServiceServicer_to_server(self._servicer, server)
-        # Plaintext by design; see docs/adr/inbound-node-mode.md. The API
-        # key is what admits a panel, and it is not confidential against
-        # anyone who can read this LAN segment.
-        bind = f"[{host}]:{port}" if ":" in host and not host.startswith("[") else f"{host}:{port}"
-        bound = server.add_insecure_port(bind)
+        bind = (
+            f"[{host}]:{port}"
+            if ":" in host and not host.startswith("[")
+            else f"{host}:{port}"
+        )
+        credentials = grpc.ssl_server_credentials(
+            [(self._credentials.private_key_pem, self._credentials.certificate_pem)]
+        )
+        bound = server.add_secure_port(bind, credentials)
         if not bound:
             raise RuntimeError(
                 f"Could not listen on {bind}. Another program may already be using that port."
@@ -398,7 +417,9 @@ class NodeListener:
         await server.start()
         self._server = server
         self._bound_port = bound
-        logger.info("Inbound node listener accepting connections on %s", bind)
+        logger.info(
+            "Inbound node listener accepting pinned TLS connections on %s", bind
+        )
         return bound
 
     async def stop(self) -> None:

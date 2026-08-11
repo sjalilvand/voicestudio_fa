@@ -5,6 +5,7 @@ real worker client through it. Mocking the transport would prove only that the
 mocks agree with each other; the wiring between protobuf, the servicer, and the
 scheduler is exactly what this layer exists to get right.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -14,7 +15,6 @@ import sqlite3
 import grpc
 import pytest
 import pytest_asyncio
-
 from worker import identity, registry, tls
 from worker.errors import ErrorClass, WorkerError
 from worker.identity import WorkerKeypair
@@ -24,8 +24,18 @@ from worker.protocol.gen import worker_v1_pb2 as pb
 from worker.protocol.gen import worker_v1_pb2_grpc as pb_grpc
 from worker.scheduler import Scheduler
 from worker.transport import codec
-from worker.transport.client import WorkerClient, WorkerConfig, backoff_delay, config_from_token
-from worker.transport.server import ControlPlaneBindError, REQUIRED_FEATURES, WorkerServicer, serve
+from worker.transport.client import (
+    WorkerClient,
+    WorkerConfig,
+    backoff_delay,
+    config_from_token,
+)
+from worker.transport.server import (
+    REQUIRED_FEATURES,
+    ControlPlaneBindError,
+    WorkerServicer,
+    serve,
+)
 
 ENGINE, MODEL, OP = "indextts", "IndexTTS-2", "tts"
 
@@ -157,7 +167,10 @@ def test_expired_token_is_refused():
 
 def test_error_round_trips_through_protobuf():
     original = WorkerError(
-        error_class=ErrorClass.CAPABILITY, code="INSUFFICIENT_MEMORY", message="too big", hint="h"
+        error_class=ErrorClass.CAPABILITY,
+        code="INSUFFICIENT_MEMORY",
+        message="too big",
+        hint="h",
     )
     restored = codec.error_from_pb(codec.error_to_pb(original))
     assert restored == original
@@ -174,14 +187,24 @@ def test_unknown_error_class_degrades_to_retryable():
 def test_capability_concurrency_is_derived_when_not_supplied():
     """Never defaulted to a constant: a wrong value corrupts output (#315)."""
     message = codec.capability_to_pb(
-        {"engine": ENGINE, "model_id": MODEL, "backend": "cuda", "free_memory_bytes": 24 * 1024**3}
+        {
+            "engine": ENGINE,
+            "model_id": MODEL,
+            "backend": "cuda",
+            "free_memory_bytes": 24 * 1024**3,
+        }
     )
     assert message.derived_concurrency >= 1
 
 
 def test_apple_capability_stays_serial():
     message = codec.capability_to_pb(
-        {"engine": ENGINE, "model_id": MODEL, "backend": "mps", "free_memory_bytes": 64 * 1024**3}
+        {
+            "engine": ENGINE,
+            "model_id": MODEL,
+            "backend": "mps",
+            "free_memory_bytes": 64 * 1024**3,
+        }
     )
     assert message.derived_concurrency == 1
 
@@ -196,7 +219,9 @@ def test_capability_round_trips():
 
 
 def test_legacy_capability_without_display_name_still_decodes():
-    restored = codec.capability_from_pb(pb.ModelCapability(engine=ENGINE, model_id=MODEL))
+    restored = codec.capability_from_pb(
+        pb.ModelCapability(engine=ENGINE, model_id=MODEL)
+    )
     assert restored["engine"] == ENGINE
     assert restored["display_name"] == ""
 
@@ -205,11 +230,23 @@ def test_legacy_capability_without_display_name_still_decodes():
 async def test_cancel_is_sent_and_ack_releases_the_parked_slot(tmp_path):
     pool = WorkerPool()
     record = registry.RemoteWorker(
-        id="w1", name="w1", key_id="key-w1", public_key=b"0" * 32,
-        capabilities=_capabilities(), consent_granted_at=1.0, created_at=1.0,
+        id="w1",
+        name="w1",
+        key_id="key-w1",
+        public_key=b"0" * 32,
+        capabilities=_capabilities(),
+        consent_granted_at=1.0,
+        created_at=1.0,
     )
     token = identity.issue_session(worker_id="w1", key_id="key-w1", epoch=1, now=1000.0)
-    pool.connect(record, session=token, epoch=1, max_concurrent_tasks=1, backend="cuda", now=1000.0)
+    pool.connect(
+        record,
+        session=token,
+        epoch=1,
+        max_concurrent_tasks=1,
+        backend="cuda",
+        now=1000.0,
+    )
     scheduler = Scheduler(pool, persist=False)
     task = scheduler.submit(operation=OP, engine=ENGINE, model_id=MODEL, now=1000.0)
     assignment = scheduler.next_assignment(now=1000.0)
@@ -245,7 +282,14 @@ def test_host_round_trips():
         "arch": "x86_64",
         "worker_version": "0.3.1",
         "cpu_count": 16,
-        "gpus": [{"vendor": "nvidia", "model": "RTX 4090", "backend": "cuda", "memory_bytes": 1}],
+        "gpus": [
+            {
+                "vendor": "nvidia",
+                "model": "RTX 4090",
+                "backend": "cuda",
+                "memory_bytes": 1,
+            }
+        ],
     }
     restored = codec.host_from_pb(codec.host_to_pb(host))
     assert restored["hostname"] == "box"
@@ -381,7 +425,8 @@ async def test_enrollment_token_is_single_use(harness, db):
     await harness.connect_worker()
     token = identity.EnrollmentToken.decode(
         registry.create_enrollment(
-            endpoint=f"localhost:{harness.port}", cert_fingerprint=harness.creds.fingerprint
+            endpoint=f"localhost:{harness.port}",
+            cert_fingerprint=harness.creds.fingerprint,
         ).encode()
     )
     assert registry.redeem_enrollment(token, worker_id="a") is True
@@ -428,7 +473,9 @@ async def test_keepalive_frame_carries_slow_task_past_one_progress_lease(
 
     deadline = asyncio.get_running_loop().time() + 2.0
     while attempt.lease_expires_at <= initial_expiry:
-        assert asyncio.get_running_loop().time() < deadline, "no keepalive reached the server"
+        assert asyncio.get_running_loop().time() < deadline, (
+            "no keepalive reached the server"
+        )
         await asyncio.sleep(0.01)
 
     harness.scheduler.sweep(now=initial_expiry + 1.0)
@@ -494,7 +541,11 @@ async def test_worker_at_capacity_rejects_without_penalty(harness):
     if assignment is not None:
         await harness.servicer.dispatch(assignment)
         await asyncio.sleep(0.5)
-        assert second.state in (TaskState.QUEUED, TaskState.ASSIGNED, TaskState.ACCEPTED)
+        assert second.state in (
+            TaskState.QUEUED,
+            TaskState.ASSIGNED,
+            TaskState.ACCEPTED,
+        )
         assert second.excluded_workers == set()
 
     release.set()
@@ -509,7 +560,9 @@ async def test_stale_epoch_messages_are_ignored(harness):
     assignment = harness.scheduler.next_assignment()
 
     ignored = harness.scheduler.on_accepted(
-        task.task_id, assignment.attempt.attempt_id, epoch=assignment.attempt.session_epoch + 5
+        task.task_id,
+        assignment.attempt.attempt_id,
+        epoch=assignment.attempt.session_epoch + 5,
     )
     assert ignored is None
     assert task.state is TaskState.ASSIGNED
@@ -521,10 +574,14 @@ async def test_disconnect_starts_a_grace_window_rather_than_failing(harness):
     task = harness.scheduler.submit(operation=OP, engine=ENGINE, model_id=MODEL)
     assignment = harness.scheduler.next_assignment()
     harness.scheduler.on_accepted(
-        task.task_id, assignment.attempt.attempt_id, epoch=assignment.attempt.session_epoch
+        task.task_id,
+        assignment.attempt.attempt_id,
+        epoch=assignment.attempt.session_epoch,
     )
     harness.scheduler.on_started(
-        task.task_id, assignment.attempt.attempt_id, epoch=assignment.attempt.session_epoch
+        task.task_id,
+        assignment.attempt.attempt_id,
+        epoch=assignment.attempt.session_epoch,
     )
 
     harness.scheduler.on_disconnected(assignment.worker.worker_id)
@@ -537,15 +594,20 @@ async def test_disconnect_starts_a_grace_window_rather_than_failing(harness):
 async def test_control_stream_requires_a_session(harness):
     """An unauthenticated stream must be refused, not merely ignored."""
     import grpc
-
     from worker.protocol.gen import worker_v1_pb2_grpc as pb_grpc
 
-    credentials = grpc.ssl_channel_credentials(root_certificates=harness.creds.certificate_pem)
-    async with grpc.aio.secure_channel(f"localhost:{harness.port}", credentials) as channel:
+    credentials = grpc.ssl_channel_credentials(
+        root_certificates=harness.creds.certificate_pem
+    )
+    async with grpc.aio.secure_channel(
+        f"localhost:{harness.port}", credentials
+    ) as channel:
         stub = pb_grpc.WorkerServiceStub(channel)
 
         async def _messages():
-            yield pb.WorkerMessage(heartbeat=pb.Heartbeat(active_tasks=0, available_slots=1))
+            yield pb.WorkerMessage(
+                heartbeat=pb.Heartbeat(active_tasks=0, available_slots=1)
+            )
 
         with pytest.raises(grpc.aio.AioRpcError) as exc:
             async for _ in stub.Control(_messages()):
@@ -696,11 +758,14 @@ async def test_inbound_input_containment_failure_never_reaches_connector(tmp_pat
 async def test_registration_refuses_an_unknown_key(harness, db):
     """Knowing a worker id proves nothing without the private key."""
     import grpc
-
     from worker.protocol.gen import worker_v1_pb2_grpc as pb_grpc
 
-    credentials = grpc.ssl_channel_credentials(root_certificates=harness.creds.certificate_pem)
-    async with grpc.aio.secure_channel(f"localhost:{harness.port}", credentials) as channel:
+    credentials = grpc.ssl_channel_credentials(
+        root_certificates=harness.creds.certificate_pem
+    )
+    async with grpc.aio.secure_channel(
+        f"localhost:{harness.port}", credentials
+    ) as channel:
         stub = pb_grpc.WorkerServiceStub(channel)
         stranger = WorkerKeypair.generate()
         response = await stub.Register(
@@ -721,11 +786,14 @@ async def test_registration_refuses_an_unknown_key(harness, db):
 @pytest.mark.asyncio
 async def test_registration_refuses_an_incompatible_protocol(harness, db):
     import grpc
-
     from worker.protocol.gen import worker_v1_pb2_grpc as pb_grpc
 
-    credentials = grpc.ssl_channel_credentials(root_certificates=harness.creds.certificate_pem)
-    async with grpc.aio.secure_channel(f"localhost:{harness.port}", credentials) as channel:
+    credentials = grpc.ssl_channel_credentials(
+        root_certificates=harness.creds.certificate_pem
+    )
+    async with grpc.aio.secure_channel(
+        f"localhost:{harness.port}", credentials
+    ) as channel:
         stub = pb_grpc.WorkerServiceStub(channel)
         response = await stub.Register(
             pb.RegisterRequest(protocol_version_min=99, protocol_version_max=99)
@@ -769,7 +837,9 @@ async def test_server_accepts_the_keepalive_interval_it_configures(monkeypatch):
         return FakeServer()
 
     monkeypatch.setattr(grpc.aio, "server", fake_server)
-    monkeypatch.setattr(pb_grpc, "add_WorkerServiceServicer_to_server", lambda *_args: None)
+    monkeypatch.setattr(
+        pb_grpc, "add_WorkerServiceServicer_to_server", lambda *_args: None
+    )
     monkeypatch.setattr(grpc, "ssl_server_credentials", lambda *_args: object())
 
     await serve(
@@ -797,7 +867,9 @@ async def test_server_refuses_an_occupied_control_plane_port(monkeypatch):
             started = True
 
     monkeypatch.setattr(grpc.aio, "server", lambda **_kwargs: FakeServer())
-    monkeypatch.setattr(pb_grpc, "add_WorkerServiceServicer_to_server", lambda *_args: None)
+    monkeypatch.setattr(
+        pb_grpc, "add_WorkerServiceServicer_to_server", lambda *_args: None
+    )
     monkeypatch.setattr(grpc, "ssl_server_credentials", lambda *_args: object())
 
     with pytest.raises(ControlPlaneBindError, match="Another VoiceStudio instance"):
@@ -811,7 +883,9 @@ async def test_server_refuses_an_occupied_control_plane_port(monkeypatch):
     assert started is False
 
 
-def test_certificate_regenerates_when_it_stops_covering_this_machine(tmp_path, monkeypatch):
+def test_certificate_regenerates_when_it_stops_covering_this_machine(
+    tmp_path, monkeypatch
+):
     """A laptop that moved networks otherwise keeps a certificate no worker on
     the new network can validate."""
     cert, key = str(tmp_path / "c.pem"), str(tmp_path / "k.pem")
@@ -832,6 +906,15 @@ def test_explicit_hostnames_are_not_second_guessed(tmp_path, monkeypatch):
     first = tls.load_or_create(cert, key, hostnames=["localhost"])
     second = tls.load_or_create(cert, key, hostnames=["localhost"])
     assert first.fingerprint == second.fingerprint
+
+
+def test_certificate_regenerates_when_an_explicit_listener_host_is_added(tmp_path):
+    cert, key = str(tmp_path / "c.pem"), str(tmp_path / "k.pem")
+    first = tls.load_or_create(cert, key, hostnames=["localhost"])
+    second = tls.load_or_create(cert, key, hostnames=["localhost", "192.168.0.110"])
+
+    assert second.fingerprint != first.fingerprint
+    assert tls.covers(second, "192.168.0.110")
 
 
 @pytest.mark.asyncio
@@ -858,7 +941,8 @@ async def test_a_restarted_worker_reconnects_without_a_new_token(harness, tmp_pa
     try:
         # First run: enroll with a token, exactly as a new machine would.
         token = registry.create_enrollment(
-            endpoint=f"127.0.0.1:{harness.port}", cert_fingerprint=harness.creds.fingerprint
+            endpoint=f"127.0.0.1:{harness.port}",
+            cert_fingerprint=harness.creds.fingerprint,
         )
         agent = worker_agent.WorkerAgent()
         await agent.start(token_text=token.encode())
@@ -877,7 +961,9 @@ async def test_a_restarted_worker_reconnects_without_a_new_token(harness, tmp_pa
         await revived.start(endpoint=f"127.0.0.1:{harness.port}")
         await harness._await_connection()
 
-        assert len(registry.list_workers()) == 1, "a reconnect must not enroll a second worker"
+        assert len(registry.list_workers()) == 1, (
+            "a reconnect must not enroll a second worker"
+        )
         assert harness.pool.get(first_id) is not None
         await revived.stop()
     finally:

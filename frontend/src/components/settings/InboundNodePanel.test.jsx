@@ -54,13 +54,11 @@ describe('InboundNodePanel', () => {
     expect(screen.queryByText(/On your network/i)).toBeNull();
   });
 
-  it('warns that a widened bind exposes an unencrypted credential', async () => {
-    // The whole security posture of this mode rests on the user knowing this
-    // at the moment it becomes true, so a silent badge is not enough — the
-    // address and the reason both have to be on screen.
+  it('explains that a widened bind remains encrypted and certificate-pinned', async () => {
     renderPanel(stub({ ...BASE, bind: '0.0.0.0', exposed: true }));
 
-    expect(await screen.findByText(/not encrypted/i)).toBeTruthy();
+    expect(await screen.findByText(/TLS encrypts/i)).toBeTruthy();
+    expect(screen.getByText(/pins this machine’s certificate/i)).toBeTruthy();
     expect(screen.getByText(/0\.0\.0\.0:7444/)).toBeTruthy();
     // Exact match: the same words appear inside the warning sentence, and a
     // substring query would pass even if the badge itself disappeared.
@@ -73,7 +71,7 @@ describe('InboundNodePanel', () => {
         return {
           key_id: 'abc',
           label: 'Alice',
-          connection_string: 'ovnode://ovnode_secret@10.0.0.2:7444',
+          connection_string: `ovnode://ovnode_secret@10.0.0.2:7444?fingerprint=${'a'.repeat(64)}`,
         };
       }
       return BASE;
@@ -83,7 +81,9 @@ describe('InboundNodePanel', () => {
     fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'Alice' } });
     fireEvent.click(screen.getByText('Create'));
 
-    expect(await screen.findByText('ovnode://ovnode_secret@10.0.0.2:7444')).toBeTruthy();
+    expect(
+      await screen.findByText(`ovnode://ovnode_secret@10.0.0.2:7444?fingerprint=${'a'.repeat(64)}`),
+    ).toBeTruthy();
     expect(screen.getByText(/not shown again/i)).toBeTruthy();
     expect(screen.getByText(/like a password/i)).toBeTruthy();
   });
@@ -138,7 +138,9 @@ describe('InboundNodePanel', () => {
     // firewall, a wrong port and a dead node all say too.
     const request = vi.fn(async (path) => {
       if (path === '/workers/inbound/connections') {
-        throw new Error('That looks like an address without a key.');
+        const error = new Error('That looks like an address without a key.');
+        error.isServerMessage = true;
+        throw error;
       }
       return BASE;
     });
@@ -151,6 +153,25 @@ describe('InboundNodePanel', () => {
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith('That looks like an address without a key.'),
+    );
+  });
+
+  it('maps raw transport failures to an actionable localized message', async () => {
+    const request = vi.fn(async (path) => {
+      if (path === '/workers/inbound/connections') throw new Error('HTTP 502');
+      return BASE;
+    });
+    renderPanel(request);
+
+    const input = await screen.findByLabelText('Connection string');
+    expect(input).toHaveAttribute('placeholder', 'ovnode://…@192.168.0.110:7444?fingerprint=…');
+    fireEvent.change(input, { target: { value: 'ovnode://broken' } });
+    fireEvent.click(screen.getByText('Connect'));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'Could not reach that GPU machine. Check that it is online and accepting connections, then try again.',
+      ),
     );
   });
 

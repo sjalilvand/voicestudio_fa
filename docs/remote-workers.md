@@ -79,7 +79,7 @@ Then **Add a person** for each panel that should have access. You get a
 connection string:
 
 ```
-ovnode://ovnode_xxxxxxxx@192.168.0.110:7444
+ovnode://ovnode_xxxxxxxx@192.168.0.110:7444?fingerprint=<64-hex-digits>
 ```
 
 Copy it once — it is not shown again. Give a separate one to each person.
@@ -103,13 +103,11 @@ immediately. Their app reconnects by itself after that, because their
 connection string is still valid. To stop someone for good, remove their
 connection string instead.
 
-> **This mode is not encrypted.** The connection string is a password that
-> travels in the clear, so anyone who can watch that network can copy it and
-> use your GPU — and your reference audio and rendered speech cross the network
-> unencrypted too. Use it on a network you trust, such as your own home or
-> office LAN, and not on shared or public Wi-Fi. The dial-out setup above is
-> fully encrypted and is the better choice whenever one machine is enough.
-> The reasoning is recorded in [the decision record](adr/inbound-node-mode.md).
+> **Keep the connection string private.** It contains the API key and the GPU
+> machine's certificate fingerprint. VoiceStudio checks that fingerprint before
+> sending credentials, audio, or jobs; a mismatch fails closed. Every inbound
+> connection uses TLS with no plaintext fallback. The design is recorded in
+> [the decision record](adr/inbound-node-mode.md).
 
 ## What you can change
 
