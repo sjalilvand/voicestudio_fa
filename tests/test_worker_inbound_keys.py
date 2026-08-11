@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import stat
+
 import pytest
 
 
@@ -86,6 +87,8 @@ def test_a_locked_out_peer_is_refused_even_with_the_right_key(store):
 
 def test_failed_key_throttle_ignores_ephemeral_source_ports(store):
     """Reconnects from one host must contribute to the same lockout."""
+    from worker.inbound import keys as keys_module
+
     store.issue("Alice")
 
     for port in range(41000, 41000 + keys_module._MAX_FAILURES):
@@ -95,6 +98,8 @@ def test_failed_key_throttle_ignores_ephemeral_source_ports(store):
 
 
 def test_failed_key_throttle_normalises_bracketed_ipv6_ports(store):
+    from worker.inbound import keys as keys_module
+
     store.issue("Alice")
 
     for port in range(41000, 41000 + keys_module._MAX_FAILURES):
@@ -121,6 +126,8 @@ def test_keys_survive_a_restart(store, tmp_path):
 
 
 def test_pasted_connection_secrets_use_the_protected_key_file(store, tmp_path):
+    from worker.inbound.keys import KEY_PREFIX, KeyStore
+
     secret = KEY_PREFIX + "s" * 40
     store.remember_connection_secret("10.0.0.2:7444", secret)
 
@@ -133,9 +140,14 @@ def test_pasted_connection_secrets_use_the_protected_key_file(store, tmp_path):
 
 def test_legacy_saved_connection_is_migrated_out_of_settings(store, monkeypatch):
     from worker.inbound import service as inbound_service
+    from worker.inbound.connection_string import format_connection
+    from worker.inbound.keys import KEY_PREFIX
 
     secret = KEY_PREFIX + "s" * 40
-    legacy = format_connection(host="10.0.0.2", port=7444, secret=secret)
+    fingerprint = "a" * 64
+    legacy = format_connection(
+        host="10.0.0.2", port=7444, secret=secret, fingerprint=fingerprint
+    )
     settings = {inbound_service._SAVED_KEY: legacy}
     monkeypatch.setattr(
         inbound_service,
@@ -153,6 +165,7 @@ def test_legacy_saved_connection_is_migrated_out_of_settings(store, monkeypatch)
     assert outbound.saved() == ["10.0.0.2:7444"]
     assert secret not in settings[inbound_service._SAVED_KEY]
     assert store.connection_secret("10.0.0.2:7444") == secret
+    assert store.connection_fingerprint("10.0.0.2:7444") == fingerprint
 
 
 def test_a_corrupt_key_file_is_reported_rather_than_read_as_no_keys(tmp_path, caplog):

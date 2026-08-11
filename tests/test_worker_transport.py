@@ -664,6 +664,7 @@ async def test_control_stream_setup_failure_clears_open_flag():
     with pytest.raises(RuntimeError, match="queue closed"):
         await servicer.Control(None, object())
     assert session.stream_open is False
+@pytest.mark.asyncio
 async def test_stream_start_refuses_a_worker_removed_after_registration(tmp_path):
     """Both stream directions must leave a raced session reusable/closed."""
     from worker.transport.server import SESSION_METADATA_KEY, _Session

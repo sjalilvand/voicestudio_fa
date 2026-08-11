@@ -322,6 +322,8 @@ async def test_attach_ends_when_its_incoming_reader_stops(tmp_path, monkeypatch)
     """A dead reader must not leave a node advertising a healthy session."""
     from worker.protocol.gen import worker_v1_pb2 as pb
 
+    worker = _worker_modules()
+
     class FakeClient:
         def build_register_request(self):
             return pb.RegisterRequest()
@@ -348,11 +350,12 @@ async def test_attach_ends_when_its_incoming_reader_stops(tmp_path, monkeypatch)
         async def abort(self, code, message):
             raise AssertionError(f"unexpected abort: {code}: {message}")
 
-    servicer = NodeListener(
-        keys=KeyStore(str(tmp_path / "keys.json")),
-        log=ConnectionLog(),
-        artifacts=ArtifactStore(str(tmp_path / "staged")),
+    servicer = worker.NodeListener(
+        keys=worker.KeyStore(str(tmp_path / "keys.json")),
+        log=worker.ConnectionLog(),
+        artifacts=worker.ArtifactStore(str(tmp_path / "staged")),
         client_factory=lambda _artifacts, _key_id: FakeClient(),
+        credentials=worker.tls.generate_self_signed(hostnames=["127.0.0.1"]),
     )._servicer
     monkeypatch.setattr(servicer, "_authenticate", lambda _context: ("panel-a", "A"))
 
@@ -478,7 +481,7 @@ async def test_an_offset_mismatch_removes_the_partial_input(inbound):
 async def test_staged_artifacts_are_isolated_by_panel_key(tmp_path):
     from worker.protocol.gen import worker_v1_pb2 as pb
 
-    store = ArtifactStore(str(tmp_path / "staged"))
+    store = _worker_modules().ArtifactStore(str(tmp_path / "staged"))
     result = await store.publish(
         pb.TaskRef(task_id="t1", attempt_id="a1"),
         b"alice audio",
@@ -649,8 +652,14 @@ async def test_result_pull_stops_at_its_runtime_byte_cap(tmp_path):
     from worker.inbound.connection_string import Connection
     from worker.protocol.gen import worker_v1_pb2 as pb
 
-    connection = NodeConnection(
-        object(), Connection(host="127.0.0.1", port=7444, secret="ovnode_" + "s" * 40)
+    connection = _worker_modules().NodeConnection(
+        object(),
+        Connection(
+            host="127.0.0.1",
+            port=7444,
+            secret="ovnode_" + "s" * 40,
+            fingerprint="a" * 64,
+        ),
     )
 
     class Stub:
@@ -706,7 +715,9 @@ async def test_repasting_a_key_for_a_connected_machine_redials_it(inbound, monke
 
     endpoint = f"127.0.0.1:{inbound.port}"
     assert saved == [endpoint], "settings must persist only the non-secret endpoint"
-    assert inbound.keys.connection_secret(endpoint) == parse_connection(second).secret
+    parsed_second = inbound.worker.parse_connection(second)
+    assert inbound.keys.connection_secret(endpoint) == parsed_second.secret
+    assert inbound.keys.connection_fingerprint(endpoint) == parsed_second.fingerprint
     assert outbound._connections[f"127.0.0.1:{inbound.port}"] is not original, (
         "the old session must be replaced, not reused"
     )
@@ -717,10 +728,11 @@ async def test_repasting_a_key_for_a_connected_machine_redials_it(inbound, monke
 async def test_saved_endpoint_reloads_its_key_from_protected_storage(tmp_path, monkeypatch):
     from worker.inbound import service as inbound_service
 
-    store = KeyStore(str(tmp_path / "keys.json"))
+    store = _worker_modules().KeyStore(str(tmp_path / "keys.json"))
     endpoint = "10.0.0.2:7444"
     secret = "ovnode_" + "s" * 40
-    store.remember_connection_secret(endpoint, secret)
+    fingerprint = "a" * 64
+    store.remember_connection_secret(endpoint, secret, fingerprint)
     outbound = inbound_service.OutboundNodes(store)
     monkeypatch.setattr(outbound, "saved", lambda: [endpoint])
     dialled = []
@@ -734,6 +746,7 @@ async def test_saved_endpoint_reloads_its_key_from_protected_storage(tmp_path, m
     assert len(dialled) == 1
     assert dialled[0].endpoint == endpoint
     assert dialled[0].secret == secret
+    assert dialled[0].fingerprint == fingerprint
 
 
 @pytest.mark.asyncio

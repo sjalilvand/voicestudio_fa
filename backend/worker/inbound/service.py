@@ -351,7 +351,7 @@ class OutboundNodes:
                     migrated = True
                     continue
                 self.credentials.remember_connection_secret(
-                    connection.endpoint, connection.secret
+                    connection.endpoint, connection.secret, connection.fingerprint
                 )
                 endpoints.append(connection.endpoint)
                 migrated = True
@@ -372,7 +372,9 @@ class OutboundNodes:
         # replaces it rather than leaving a dead entry that retries forever.
         entries = [e for e in entries if _endpoint_of(e) != connection.endpoint]
         entries.append(connection.endpoint)
-        self.credentials.remember_connection_secret(connection.endpoint, connection.secret)
+        self.credentials.remember_connection_secret(
+            connection.endpoint, connection.secret, connection.fingerprint
+        )
         self._save(entries)
 
         # Tear down any live session to this machine BEFORE dialling. Without
@@ -451,11 +453,14 @@ class OutboundNodes:
         except ValueError as exc:
             raise InvalidConnectionString("That saved node address is not valid.") from exc
         secret = self.credentials.connection_secret(endpoint)
-        if not host or not port or not secret:
+        fingerprint = self.credentials.connection_fingerprint(endpoint)
+        if not host or not port or not secret or not fingerprint:
             raise InvalidConnectionString(
                 "That saved GPU connection has no protected key. Paste its connection string again."
             )
-        return Connection(host=host, port=port, secret=secret)
+        return Connection(
+            host=host, port=port, secret=secret, fingerprint=fingerprint
+        )
 
 
 def _endpoint_of(entry: str) -> str:

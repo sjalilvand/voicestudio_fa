@@ -111,6 +111,7 @@ class KeyStore:
         self._lock = threading.Lock()
         self._keys: dict[str, PanelKey] = {}
         self._connection_secrets: dict[str, str] = {}
+        self._connection_fingerprints: dict[str, str] = {}
         self._failures: dict[str, _Failures] = {}
         self._load()
 
@@ -145,6 +146,13 @@ class KeyStore:
                 for endpoint, secret in connections.items()
                 if endpoint and secret
             }
+        fingerprints = raw.get("connection_fingerprints", {})
+        if isinstance(fingerprints, dict):
+            self._connection_fingerprints = {
+                str(endpoint): str(fingerprint)
+                for endpoint, fingerprint in fingerprints.items()
+                if endpoint and fingerprint
+            }
 
     def _save_locked(self) -> None:
         directory = os.path.dirname(os.path.abspath(self._path))
@@ -153,6 +161,7 @@ class KeyStore:
             {
                 "keys": [asdict(k) for k in self._keys.values()],
                 "connection_secrets": self._connection_secrets,
+                "connection_fingerprints": self._connection_fingerprints,
             },
             indent=2,
         ).encode("utf-8")
@@ -227,19 +236,28 @@ class KeyStore:
 
     # ── Panel-side connection credentials ───────────────────────────────
 
-    def remember_connection_secret(self, endpoint: str, secret: str) -> None:
+    def remember_connection_secret(
+        self, endpoint: str, secret: str, fingerprint: str = ""
+    ) -> None:
         """Persist a pasted node secret outside the UI-readable settings store."""
         with self._lock:
             self._connection_secrets[endpoint] = secret
+            if fingerprint:
+                self._connection_fingerprints[endpoint] = fingerprint
             self._save_locked()
 
     def connection_secret(self, endpoint: str) -> str:
         with self._lock:
             return self._connection_secrets.get(endpoint, "")
 
+    def connection_fingerprint(self, endpoint: str) -> str:
+        with self._lock:
+            return self._connection_fingerprints.get(endpoint, "")
+
     def forget_connection_secret(self, endpoint: str) -> None:
         with self._lock:
             if self._connection_secrets.pop(endpoint, None) is not None:
+                self._connection_fingerprints.pop(endpoint, None)
                 self._save_locked()
 
     # ── Authentication ────────────────────────────────────────────────────
