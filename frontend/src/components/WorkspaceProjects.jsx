@@ -1,9 +1,9 @@
 /**
- * WorkspaceProjects — the right-side "Dub projects" panel.
+ * WorkspaceProjects — the compact left-side "Dub projects" panel.
  *
  * Relocates the saved-dub-project list (and the Save-project button) out of the
- * left Sidebar so the Dub workspace can dissolve its sidebar, mirroring the
- * Voice workspace's WorkspaceVoices. Card markup + actions mirror the former
+ * left Sidebar so the Dub workspace can dissolve its global sidebar, mirroring
+ * the Voice workspace's WorkspaceVoices rail. Card markup + actions mirror the former
  * Sidebar section 1:1 (open/load, delete).
  */
 import React, { useMemo, useState } from 'react';

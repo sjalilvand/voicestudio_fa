@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../i18n';
 
@@ -63,12 +63,36 @@ describe('StoriesEditor voice pickers (#1220)', () => {
 
   it('cast picker renders VoiceSelector and stores the character voice', () => {
     renderEditor();
-    // Open the Cast panel.
-    fireEvent.click(screen.getByRole('button', { name: /Cast/ }));
-    const castRegion = screen.getByRole('region', { name: /Cast/ });
+    const castRegion = screen.getByRole('complementary', { name: /Stories/ });
     const trigger = within(castRegion).getByRole('button', { name: /Default/ });
     fireEvent.click(trigger);
     fireEvent.mouseDown(screen.getByText('Aria'));
     expect(useAppStore.getState().cast[0].profileId).toBe('p_clone');
+  });
+
+  it('renders a calm writing hierarchy with the project stats and line canvas', () => {
+    renderEditor();
+    expect(screen.getByRole('heading', { level: 1, name: /Untitled story/ })).toBeInTheDocument();
+    expect(screen.getAllByText('1 lines').length).toBeGreaterThan(0);
+    expect(screen.getByRole('main')).toHaveClass('stories-manuscript');
+    expect(screen.getByRole('complementary')).toHaveClass('stories-sidebar');
+    expect(screen.getByRole('list')).toHaveClass('stories-track-list');
+    expect(screen.getByRole('listitem')).toHaveClass('stories-line');
+  });
+
+  it('loads a comprehensive working sample by default', async () => {
+    useAppStore.setState({ storyTracks: [], storyProjects: [], currentProjectId: null });
+    renderEditor();
+
+    await waitFor(() => expect(useAppStore.getState().storyTracks).toHaveLength(11));
+    const state = useAppStore.getState();
+    expect(state.cast.map((member) => member.name)).toEqual(['Narrator', 'Mara', 'Cole']);
+    expect(state.cast.every((member) => member.profileId === 'p_clone')).toBe(true);
+    expect(state.storyProjects.at(-1)?.name).toBe("The Lighthouse at Wits' End");
+    expect(
+      screen.getByRole('heading', { name: "The Lighthouse at Wits' End" }),
+    ).toBeInTheDocument();
+    expect(state.storyTracks.filter((track) => track.text.startsWith('#'))).toHaveLength(2);
+    expect(state.storyTracks.some((track) => track.text.includes('[pause'))).toBe(true);
   });
 });

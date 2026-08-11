@@ -1,4 +1,3 @@
-import React from 'react';
 import VoiceSelector from '../VoiceSelector';
 
 /**
@@ -30,27 +29,23 @@ export default function CastPanel({
     );
   }
   return (
-    <div className="flex flex-col gap-[10px]">
-      <p className="muted text-[0.72rem] leading-[1.5] m-0 text-fg-muted">
-        {t('audiobook.cast_hint')}
-      </p>
+    <div className="flex flex-col gap-[7px]">
       {castNames.map((name) => {
         const mapped = voiceCast[name] || '';
         return (
-          <div key={name} className="flex flex-col gap-[4px]">
-            <div className="flex items-center justify-between gap-[8px]">
-              <code className="text-[0.72rem] text-fg break-all">[voice:{name}]</code>
-              {!mapped && (
-                <span className="muted text-[0.68rem] text-fg-muted whitespace-nowrap">
-                  {t('audiobook.cast_uses_default')}
-                </span>
-              )}
-            </div>
+          <div
+            key={name}
+            className="grid grid-cols-[minmax(72px,0.7fr)_minmax(0,1.3fr)] items-center gap-[7px]"
+          >
+            <code className="truncate text-[0.68rem] text-fg" title={`[voice:${name}]`}>
+              {name}
+            </code>
             <VoiceSelector
               value={mapped}
               onChange={(v) => setVoiceCast(name, v || null)}
               profiles={profiles}
               defaultLabel={t('audiobook.engine_default')}
+              ariaLabel={`${t('audiobook.cast')}: ${name}`}
             />
           </div>
         );

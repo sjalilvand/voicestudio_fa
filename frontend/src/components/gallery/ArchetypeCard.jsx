@@ -32,14 +32,12 @@ export default function ArchetypeCard({
     : dialect || (a.language === 'Chinese' ? 'Chinese' : null);
   const hasChips = Boolean(accentLabel || a.facets.whisper);
 
-  // Borderless by direction: the card keeps a transparent border only to reserve
-  // the box width; the playing state is conveyed by an accent ring (box-shadow)
-  // + lift, never a literal border.
   const cardBase =
-    'group relative flex flex-col gap-[11px] p-[14px] rounded-[13px] border border-transparent ' +
-    'bg-[linear-gradient(180deg,rgba(255,255,255,0.038),rgba(255,255,255,0.012))] ' +
-    'transition-[transform,box-shadow] duration-150 ' +
-    'hover:-translate-y-[2px] hover:shadow-[0_6px_22px_rgba(0,0,0,0.4)] ' +
+    'group relative flex min-h-[168px] flex-col gap-[9px] p-[13px] rounded-[10px] ' +
+    'border border-[rgba(255,255,255,0.075)] bg-[rgba(255,255,255,0.026)] ' +
+    'transition-[transform,box-shadow,border-color,background-color] duration-150 ' +
+    'hover:-translate-y-px hover:border-[rgba(255,255,255,0.15)] ' +
+    'hover:bg-[rgba(255,255,255,0.042)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.32)] ' +
     'motion-reduce:transition-none motion-reduce:hover:translate-y-0';
   const cardState = isPlaying
     ? 'shadow-[0_0_0_1px_var(--card-accent),0_6px_22px_rgba(0,0,0,0.4)]'
@@ -48,10 +46,10 @@ export default function ArchetypeCard({
   return (
     <div className={`${cardBase} ${cardState}`} style={{ '--card-accent': color }}>
       {/* Header — the name is the focal point; metadata recedes (smaller, muted). */}
-      <div className="flex items-center gap-[11px]">
-        <ArchetypeAvatar item={a} />
+      <div className="flex items-start gap-[10px]">
+        <ArchetypeAvatar item={a} size={40} />
         <div className="flex-1 min-w-0">
-          <div className="text-[0.86rem] font-semibold leading-tight text-[var(--color-fg)] truncate">
+          <div className="text-[0.82rem] font-semibold leading-tight text-[var(--color-fg)] truncate">
             {a.name}
           </div>
           {sub && (
@@ -61,6 +59,7 @@ export default function ArchetypeCard({
           )}
         </div>
         <button
+          type="button"
           className={`flex-shrink-0 flex items-center justify-center w-[26px] h-[26px] rounded-[7px] cursor-pointer transition-[color,background-color,opacity] hover:bg-[var(--chrome-hover-bg)] ${
             isFavorite
               ? 'text-[#fabd2f]'
@@ -68,8 +67,10 @@ export default function ArchetypeCard({
           }`}
           onClick={() => onToggleFavorite(a.id)}
           title={t('gallery.favorite', { defaultValue: 'Favorite' })}
+          aria-label={t('gallery.favorite', { defaultValue: 'Favorite' })}
+          aria-pressed={isFavorite}
         >
-          <Star size={15} fill={isFavorite ? 'currentColor' : 'none'} />
+          <Star size={15} fill={isFavorite ? 'currentColor' : 'none'} aria-hidden="true" />
         </button>
       </div>
 
@@ -94,33 +95,38 @@ export default function ArchetypeCard({
 
       {/* Actions — quiet Preview (ghost, token hover), confident accent Use voice
           (tinted → solid accent with inverse text), subtle magic-wand icon. */}
-      <div className="flex items-center gap-[6px] mt-auto">
+      <div className="flex items-center gap-[6px] mt-auto pt-[9px] border-t border-[rgba(255,255,255,0.055)]">
         <button
-          className="inline-flex items-center gap-[6px] px-[11px] py-[6px] rounded-[8px] bg-transparent text-[var(--color-fg-muted)] text-[0.7rem] cursor-pointer transition-colors hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--color-fg)]"
+          type="button"
+          className="inline-flex items-center gap-[6px] px-[9px] py-[6px] rounded-[6px] bg-transparent text-[var(--color-fg-muted)] text-[0.68rem] cursor-pointer transition-colors hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--color-fg)]"
           onClick={() => onPreview(a)}
           title={t('gallery.preview', { defaultValue: 'Preview' })}
         >
           {isLoadingPreview ? (
-            <Loader className="spin" size={15} />
+            <Loader className="spin" size={15} aria-hidden="true" />
           ) : isPlaying ? (
             <NowPlaying color={color} />
           ) : (
-            <Play size={15} />
+            <Play size={15} aria-hidden="true" />
           )}
           <span>{t('gallery.preview', { defaultValue: 'Preview' })}</span>
         </button>
         <button
-          className="flex-1 inline-flex items-center justify-center gap-[6px] px-[10px] py-[6px] rounded-[8px] bg-[color-mix(in_srgb,var(--card-accent)_15%,transparent)] text-[var(--card-accent)] text-[0.72rem] font-semibold cursor-pointer transition-colors hover:bg-[var(--card-accent)] hover:text-[var(--color-fg-inverse)] focus-visible:bg-[var(--card-accent)] focus-visible:text-[var(--color-fg-inverse)]"
+          type="button"
+          className="flex-1 inline-flex items-center justify-center gap-[6px] px-[10px] py-[6px] rounded-[6px] bg-[color-mix(in_srgb,var(--card-accent)_13%,transparent)] text-[var(--card-accent)] text-[0.7rem] font-semibold cursor-pointer transition-colors hover:bg-[var(--card-accent)] hover:text-[var(--color-fg-inverse)] focus-visible:bg-[var(--card-accent)] focus-visible:text-[var(--color-fg-inverse)]"
           onClick={() => onUse(a)}
         >
-          <UserPlus size={14} /> {t('gallery.use_voice', { defaultValue: 'Use voice' })}
+          <UserPlus size={14} aria-hidden="true" />{' '}
+          {t('gallery.use_voice', { defaultValue: 'Use voice' })}
         </button>
         <button
+          type="button"
           className="inline-flex items-center justify-center w-[30px] h-[30px] flex-shrink-0 rounded-[8px] bg-transparent text-[var(--color-fg-muted)] cursor-pointer opacity-50 transition-[opacity,color,background-color] duration-150 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--card-accent)]"
           onClick={() => onDesign(a)}
           title={t('gallery.open_designer', { defaultValue: 'Open in Designer' })}
+          aria-label={t('gallery.open_designer', { defaultValue: 'Open in Designer' })}
         >
-          <Wand2 size={14} />
+          <Wand2 size={14} aria-hidden="true" />
         </button>
       </div>
     </div>

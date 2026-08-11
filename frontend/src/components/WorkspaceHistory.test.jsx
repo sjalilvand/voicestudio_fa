@@ -79,6 +79,18 @@ describe('WorkspaceHistory takes actions', () => {
     expect(playTakeAsOutput.mock.calls[0][0].id).toBe('bb2');
   });
 
+  it('exposes text expansion and icon actions to keyboard and assistive technology', () => {
+    renderRail();
+
+    const expand = screen.getAllByRole('button', { name: 'Expand text' })[0];
+    expect(expand).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(expand);
+    expect(expand).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getAllByRole('button', { name: 'Export' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Load settings' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(2);
+  });
+
   it('starred filter narrows the rail to starred takes only', () => {
     renderRail();
 
