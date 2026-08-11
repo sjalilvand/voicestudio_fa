@@ -551,3 +551,65 @@ async def test_a_pushed_input_cannot_escape_the_staging_directory(inbound, tmp_p
         for _, _, files in os.walk(root)
         for name in files
     )
+
+
+@pytest.mark.asyncio
+async def test_an_inbound_only_node_still_unloads_idle_models(monkeypatch, tmp_path):
+    """Requirement: free models nothing has used for ten minutes.
+
+    The sweep used to live inside the dial-out agent, which an inbound-only
+    node never starts — so a machine lending its GPU to panels that dial IN
+    held several GB of weights forever. That is exactly the cost the sweep
+    exists to avoid, and it was absent in the mode most likely to be a shared
+    box: on hardware, that node's VRAM never came back.
+    """
+    from worker import agent as agent_module
+
+    released = {"count": 0}
+    refreshed = {"count": 0}
+
+    def fake_release():
+        released["count"] += 1
+        return ["indextts"]
+
+    async def fake_refresh():
+        refreshed["count"] += 1
+
+    monkeypatch.setattr(agent_module, "IDLE_SWEEP_INTERVAL_SECONDS", 0.05)
+    import services.tts_backend as tts_backend
+    import services.model_manager as model_manager
+
+    monkeypatch.setattr(tts_backend, "release_idle_engines", fake_release)
+    monkeypatch.setattr(model_manager, "gpu_pool_stats", lambda: {"running": 0, "queued": 0})
+
+    task = asyncio.create_task(agent_module.idle_unload_loop(fake_refresh))
+    try:
+        await _until(lambda: released["count"] >= 1 and refreshed["count"] >= 1, timeout=5.0)
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+
+    assert released["count"] >= 1, "nothing swept idle engines"
+    assert refreshed["count"] >= 1, "freed VRAM was never re-advertised"
+
+
+@pytest.mark.asyncio
+async def test_enabling_inbound_starts_the_idle_sweep(monkeypatch, tmp_path):
+    """The wiring, not just the loop: the gap was a missing caller."""
+    from worker.inbound import service as inbound_service
+
+    node = inbound_service.InboundNode()
+    monkeypatch.setattr(inbound_service, "bind_host", lambda: "127.0.0.1")
+    monkeypatch.setattr(inbound_service, "bind_port", lambda: 0)
+    monkeypatch.setattr(
+        inbound_service, "paths", lambda: {"keys": str(tmp_path / "k.json"), "staged": str(tmp_path / "s")}
+    )
+    monkeypatch.setattr(node, "_client_factory", lambda artifacts, key_id: None)
+
+    await node.start()
+    try:
+        assert node._idle_sweep is not None, "enabling inbound did not start the idle sweep"
+        assert not node._idle_sweep.done()
+    finally:
+        await node.stop()
+    assert node._idle_sweep is None

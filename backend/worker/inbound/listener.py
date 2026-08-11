@@ -69,6 +69,16 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
         self._log = log
         self._artifacts = artifacts
         self._client_factory = client_factory
+        # Live clients, one per attached panel. Kept so a freed engine can be
+        # re-advertised to everyone rather than only to whoever asks next.
+        self._clients: set = set()
+
+    async def refresh_all(self) -> None:
+        for client in list(self._clients):
+            try:
+                await client.refresh_capabilities()
+            except Exception:
+                logger.debug("Could not refresh capabilities for a panel", exc_info=True)
 
     # ── Admission ─────────────────────────────────────────────────────────
 
@@ -111,6 +121,7 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
         # node signs its challenge over that id. Handing every panel the same
         # client would make the signature match at most one of them.
         client = self._client_factory(self._artifacts, key_id)
+        self._clients.add(client)
         reader: Optional[asyncio.Task] = None
         heartbeat: Optional[asyncio.Task] = None
         try:
@@ -158,6 +169,7 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
                 task.cancel()
                 with contextlib.suppress(asyncio.CancelledError, Exception):
                     await task
+            self._clients.discard(client)
             await client.stop()
             self._log.closed(session_id)
 
@@ -329,6 +341,10 @@ class NodeListener:
         self._artifacts = artifacts
         self._server: Optional[grpc.aio.Server] = None
         self._bound_port = 0
+
+    async def refresh_all(self) -> None:
+        """Re-advertise capabilities to every attached panel."""
+        await self._servicer.refresh_all()
 
     @property
     def running(self) -> bool:

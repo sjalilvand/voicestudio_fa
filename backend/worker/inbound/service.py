@@ -161,6 +161,7 @@ class InboundNode:
         self._listener: Optional[NodeListener] = None
         self._keys: Optional[KeyStore] = None
         self._log = ConnectionLog()
+        self._idle_sweep: Optional[asyncio.Task] = None
         self.startup_error: Optional[str] = None
 
     @property
@@ -242,8 +243,19 @@ class InboundNode:
             logger.error("Could not start the inbound listener: %s", exc)
             return
         self._listener = listener
+        # A node that only accepts inbound connections never starts the
+        # dial-out agent, which is where the idle sweep used to live — so
+        # without this a shared GPU box held its weights forever.
+        from worker.agent import idle_unload_loop  # noqa: PLC0415
+
+        self._idle_sweep = asyncio.create_task(
+            idle_unload_loop(listener.refresh_all), name="inbound-idle-unload"
+        )
 
     async def stop(self) -> None:
+        sweep, self._idle_sweep = self._idle_sweep, None
+        if sweep is not None:
+            sweep.cancel()
         listener, self._listener = self._listener, None
         if listener is not None:
             await listener.stop()

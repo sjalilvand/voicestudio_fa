@@ -214,35 +214,11 @@ class WorkerAgent:
     # ── Idle unloading ────────────────────────────────────────────────────
 
     async def _unload_idle_engines(self) -> None:
-        """Hand back engines this worker has not used for ten minutes.
+        await idle_unload_loop(self._refresh_capabilities)
 
-        Only in worker mode: a machine lending its GPU is usually not the one
-        its owner is sitting at, so holding several GB of weights against a
-        task that may never come is pure cost. Local behaviour is unchanged —
-        nothing sweeps the cache unless this agent is running.
-        """
-        from services import tts_backend  # noqa: PLC0415
-
-        while True:
-            await asyncio.sleep(IDLE_SWEEP_INTERVAL_SECONDS)
-            try:
-                # This process serves the desktop user as well as remote
-                # assignments. Local work runs through the shared GPU pool but
-                # does not enter the worker executor's per-engine guard.
-                from services import model_manager  # noqa: PLC0415
-
-                local = model_manager.gpu_pool_stats()
-                if local.get("running", 0) or local.get("queued", 0):
-                    continue
-                # unload() frees device caches and reaps sidecars — blocking,
-                # so it must not run on the loop that answers heartbeats.
-                released = await asyncio.to_thread(tts_backend.release_idle_engines)
-                if released and self._client is not None:
-                    await self._client.refresh_capabilities()
-            except asyncio.CancelledError:
-                raise
-            except Exception:
-                logger.exception("Idle engine sweep failed (the worker continues)")
+    async def _refresh_capabilities(self) -> None:
+        if self._client is not None:
+            await self._client.refresh_capabilities()
 
     async def stop(self) -> None:
         if self._client is not None:
@@ -254,6 +230,45 @@ class WorkerAgent:
                 await asyncio.gather(task, return_exceptions=True)
                 setattr(self, attribute, None)
         self._client = None
+
+
+async def idle_unload_loop(on_released=None) -> None:
+    """Hand back engines this machine has not used for ten minutes.
+
+    Module-level because BOTH transports need it and only one of them used to
+    have it: the sweep lived inside the dial-out agent, which an inbound-only
+    node never starts, so a machine lending its GPU to panels that dial IN held
+    several GB of weights forever against a task that might never come. That is
+    the exact cost this exists to avoid, and it was silently absent in the mode
+    most likely to be a shared box.
+
+    Local behaviour is unchanged: nothing sweeps unless a worker role is
+    running. `on_released` re-advertises capabilities when something was
+    actually freed, so a control plane's view of what is resident does not go
+    stale the moment it becomes useful.
+    """
+    from services import tts_backend  # noqa: PLC0415
+
+    while True:
+        await asyncio.sleep(IDLE_SWEEP_INTERVAL_SECONDS)
+        try:
+            # This process serves the desktop user as well as remote
+            # assignments. Local work runs through the shared GPU pool but
+            # does not enter the worker executor's per-engine guard.
+            from services import model_manager  # noqa: PLC0415
+
+            local = model_manager.gpu_pool_stats()
+            if local.get("running", 0) or local.get("queued", 0):
+                continue
+            # unload() frees device caches and reaps sidecars — blocking, so it
+            # must not run on the loop that answers heartbeats.
+            released = await asyncio.to_thread(tts_backend.release_idle_engines)
+            if released and on_released is not None:
+                await on_released()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Idle engine sweep failed (the worker continues)")
 
 
 agent = WorkerAgent()
