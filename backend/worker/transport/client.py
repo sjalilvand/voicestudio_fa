@@ -423,6 +423,24 @@ class WorkerClient:
         """The next frame this worker wants to send."""
         return await self._outbox.get()
 
+    def start_heartbeat(self, response: pb.RegisterResponse) -> asyncio.Task:
+        """Begin the heartbeat this session's liveness depends on.
+
+        Separate from `accept_registration` because the task has to live and
+        die with the stream, not with the registration. Outbound starts the
+        same loop inside `_connect_once`; inbound has no such place, and
+        leaving it out is invisible for exactly as long as the grace window —
+        which is why it survived every sub-second test and only showed up on
+        hardware, as a worker that registered, went quiet, was declared dead
+        ~90s later, reconnected, and flapped forever.
+        """
+        return asyncio.create_task(
+            self._heartbeat_loop(
+                response.heartbeat_interval_seconds or _HEARTBEAT_SECONDS
+            ),
+            name="inbound-heartbeat",
+        )
+
     async def handle_server_message(self, message: pb.ServerMessage) -> None:
         await self._on_server_message(message)
 

@@ -109,6 +109,7 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
         # client would make the signature match at most one of them.
         client = self._client_factory(self._artifacts, key_id)
         reader: Optional[asyncio.Task] = None
+        heartbeat: Optional[asyncio.Task] = None
         try:
             # The node speaks first even though the panel dialled: it is still
             # the side with capabilities to declare, and the panel cannot
@@ -124,6 +125,7 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
                 return
             await client.accept_registration(first.registered)
 
+            heartbeat = client.start_heartbeat(first.registered)
             reader = asyncio.create_task(
                 self._pump_incoming(client, request_iterator, session_id)
             )
@@ -147,10 +149,12 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
         except Exception as exc:
             logger.warning("Inbound session from %s ended: %s", peer or "a panel", exc)
         finally:
-            if reader is not None:
-                reader.cancel()
+            for task in (reader, heartbeat):
+                if task is None:
+                    continue
+                task.cancel()
                 with contextlib.suppress(asyncio.CancelledError, Exception):
-                    await reader
+                    await task
             await client.stop()
             self._log.closed(session_id)
 

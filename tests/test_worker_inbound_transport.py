@@ -341,3 +341,52 @@ async def test_a_different_machine_cannot_re_adopt_an_enrolled_workers_identity(
     )
 
     assert NodeConnection._proves_key_possession(forged, enrolled) is False
+
+
+@pytest.mark.asyncio
+async def test_the_node_keeps_sending_heartbeats_after_it_registers(inbound, monkeypatch):
+    """A session that goes quiet is declared dead and flaps forever.
+
+    Found on hardware, not here: the inbound Attach handler started the read
+    pump and the outbound loop but never the heartbeat loop that the outbound
+    path starts in `_connect_once`. The node registered, said nothing more, was
+    declared dead ~90 seconds later, reconnected, and repeated — while every
+    test in this file finished inside three seconds, comfortably within the
+    grace window that hid it.
+
+    So this test asserts on the frames themselves rather than on liveness: it
+    watches the node's own outbox for a heartbeat, which is the thing that was
+    missing, and does not depend on how long the grace window happens to be.
+    """
+    # The interval the panel advertises, shortened so this asserts on a real
+    # emitted frame in a second rather than waiting out the production value.
+    from worker.transport import server as server_module
+
+    monkeypatch.setattr(server_module, "_HEARTBEAT_INTERVAL_SECONDS", 1)
+
+    seen = []
+    client_box = {}
+
+    original = inbound._client
+
+    def capture(artifacts, key_id):
+        client = original(artifacts, key_id)
+        client_box["client"] = client
+        real_send = client._send
+
+        async def spy(message, **kwargs):
+            if message.WhichOneof("payload") == "heartbeat":
+                seen.append(message)
+            return await real_send(message, **kwargs)
+
+        client._send = spy
+        return client
+
+    inbound.listener._servicer._client_factory = capture
+    await inbound.connect_panel()
+
+    # Drive the loop rather than waiting out a real interval: the bug is a
+    # missing task, not a slow one, so what matters is that something is
+    # scheduled to produce these at all.
+    await _until(lambda: len(seen) >= 2, timeout=15.0)
+    assert len(seen) >= 2, "the node registered and then never sent a heartbeat"
