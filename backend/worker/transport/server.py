@@ -830,7 +830,18 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
 
         artifact = None
         if result.artifacts:
-            artifact = self._contained_artifact(result.artifacts[0].artifact_id)
+            if session.connection is not None:
+                # Inbound: the node cannot call us, so a result it "delivered"
+                # is only staged on its own disk until we pull it. Without this
+                # the task commits with an artifact path that was never
+                # written, and the job fails with "finished the job but its
+                # audio did not arrive" — which is exactly what it did on
+                # hardware before this existed.
+                artifact = await self._fetch_inbound_artifact(
+                    session, attempt, result.artifacts[0]
+                )
+            else:
+                artifact = self._contained_artifact(result.artifacts[0].artifact_id)
         # No attempt record, no place to put it: the payload of a task we
         # cannot identify has nothing to be attached to, and the worker keeps
         # its copy because nothing below will acknowledge it.
@@ -916,6 +927,34 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         path.parent.mkdir(parents=True, exist_ok=True)
         return str(path)
 
+    async def _fetch_inbound_artifact(
+        self, session: _Session, attempt: Optional[Attempt], ref: pb.ArtifactRef
+    ) -> Optional[str]:
+        """Pull a staged result down from a node this control plane dialled.
+
+        Returns the local path, or None — and None is not a silent loss: the
+        commit below records no artifact, the task fails with a message naming
+        the machine, and the node keeps its copy because nothing acknowledges
+        a result we could not fetch.
+        """
+        if attempt is None:
+            return None
+        path = self._artifact_path(attempt.task_id, attempt.attempt_id)
+        if path is None:
+            return None
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            await session.connection.fetch_result(ref, path)
+        except Exception as exc:
+            logger.warning(
+                "Could not fetch the result for task %s from %s: %s",
+                attempt.task_id,
+                session.worker_id,
+                exc,
+            )
+            return None
+        return path
+
     def _contained_artifact(self, artifact_id: str) -> Optional[str]:
         """An artifact the worker names is only ever a reference into our own
         store, and is resolved as one."""
@@ -943,17 +982,35 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         session = self._sessions.get(assignment.worker.worker_id)
         if session is None:
             return False
-        await session.send(
-            pb.ServerMessage(
-                assignment=codec.assignment_to_pb(
-                    assignment.task,
-                    assignment.attempt,
-                    assignment.deadlines,
-                    artifact_root=self.artifact_dir,
-                )
-            )
+        message = codec.assignment_to_pb(
+            assignment.task,
+            assignment.attempt,
+            assignment.deadlines,
+            artifact_root=self.artifact_dir,
         )
+        if session.connection is not None and message.inputs:
+            # Inbound: the node cannot pull, so its inputs have to be here
+            # BEFORE the assignment is. The executor asks for them as soon as
+            # it starts, and an assignment that overtakes its own reference
+            # audio fails on a file that is merely late.
+            try:
+                await self._push_inbound_inputs(session, message)
+            except Exception as exc:
+                logger.warning(
+                    "Could not send task inputs to %s: %s", session.worker_id, exc
+                )
+                return False
+        await session.send(pb.ServerMessage(assignment=message))
         return True
+
+    async def _push_inbound_inputs(self, session: _Session, message) -> None:
+        """Upload every declared input, replacing each ref with what landed."""
+        pushed = []
+        for ref in message.inputs:
+            local = self._contained_artifact(ref.artifact_id) or ref.artifact_id
+            pushed.append(await session.connection.push_input(ref, local))
+        del message.inputs[:]
+        message.inputs.extend(pushed)
 
     async def cancel(self, worker_id: str, task_id: str, attempt_id: str, epoch: int) -> bool:
         session = self._sessions.get(worker_id)
