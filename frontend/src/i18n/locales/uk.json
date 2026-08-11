@@ -2075,7 +2075,9 @@
   },
   "history": {
     "dub_meta": "{{segments}} сегментів · {{duration}} с",
+    "dub_meta_zero": "{{count}} сегментів · {{duration}} с",
     "dub_meta_one": "{{count}} сегмент · {{duration}} с",
+    "dub_meta_two": "{{count}} сегменти · {{duration}} с",
     "dub_meta_few": "{{count}} сегменти · {{duration}} с",
     "dub_meta_many": "{{count}} сегментів · {{duration}} с",
     "dub_meta_other": "{{count}} сегмента · {{duration}} с",

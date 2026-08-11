@@ -2075,7 +2075,9 @@
   },
   "history": {
     "dub_meta": "{{segments}} खंड · {{duration}} सेकंड",
+    "dub_meta_zero": "{{count}} खंड · {{duration}} सेकंड",
     "dub_meta_one": "{{count}} खंड · {{duration}} सेकंड",
+    "dub_meta_two": "{{count}} खंड · {{duration}} सेकंड",
     "dub_meta_few": "{{count}} खंड · {{duration}} सेकंड",
     "dub_meta_many": "{{count}} खंड · {{duration}} सेकंड",
     "dub_meta_other": "{{count}} खंड · {{duration}} सेकंड",

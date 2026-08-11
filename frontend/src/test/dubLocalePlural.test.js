@@ -1,5 +1,6 @@
 import i18next from 'i18next';
 import { describe, expect, it } from 'vitest';
+import ar from '../i18n/locales/ar.json';
 import de from '../i18n/locales/de.json';
 import en from '../i18n/locales/en.json';
 import es from '../i18n/locales/es.json';
@@ -11,7 +12,7 @@ import pl from '../i18n/locales/pl.json';
 import pt from '../i18n/locales/pt.json';
 import ru from '../i18n/locales/ru.json';
 
-const resources = { de, en, es, fr, hi, it: itLocale, nl, pl, pt, ru };
+const resources = { ar, de, en, es, fr, hi, it: itLocale, nl, pl, pt, ru };
 
 async function translate(locale, key, count, options = {}) {
   const instance = i18next.createInstance();
@@ -61,5 +62,10 @@ describe('dubbing count translations', () => {
     expect(await translate(locale, 'history.dub_meta', 1, { duration: 9 })).toBe(one);
     expect(await translate(locale, 'history.dub_meta', 2, { duration: 9 })).toBe(few);
     expect(await translate(locale, 'history.dub_meta', 5, { duration: 9 })).toBe(many);
+  });
+
+  it('formats Arabic zero and dual Dub history counts', async () => {
+    expect(await translate('ar', 'history.dub_meta', 0, { duration: 9 })).toBe('0 مقاطع · 9 ث');
+    expect(await translate('ar', 'history.dub_meta', 2, { duration: 9 })).toBe('2 مقطعان · 9 ث');
   });
 });

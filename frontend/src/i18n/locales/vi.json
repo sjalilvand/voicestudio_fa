@@ -2075,7 +2075,9 @@
   },
   "history": {
     "dub_meta": "{{segments}} phân đoạn · {{duration}} giây",
+    "dub_meta_zero": "{{count}} phân đoạn · {{duration}} giây",
     "dub_meta_one": "{{count}} phân đoạn · {{duration}} giây",
+    "dub_meta_two": "{{count}} phân đoạn · {{duration}} giây",
     "dub_meta_few": "{{count}} phân đoạn · {{duration}} giây",
     "dub_meta_many": "{{count}} phân đoạn · {{duration}} giây",
     "dub_meta_other": "{{count}} phân đoạn · {{duration}} giây",

@@ -2075,7 +2075,9 @@
   },
   "history": {
     "dub_meta": "{{segments}}개 세그먼트 · {{duration}}초",
+    "dub_meta_zero": "{{count}}개 세그먼트 · {{duration}}초",
     "dub_meta_one": "{{count}}개 세그먼트 · {{duration}}초",
+    "dub_meta_two": "{{count}}개 세그먼트 · {{duration}}초",
     "dub_meta_few": "{{count}}개 세그먼트 · {{duration}}초",
     "dub_meta_many": "{{count}}개 세그먼트 · {{duration}}초",
     "dub_meta_other": "{{count}}개 세그먼트 · {{duration}}초",

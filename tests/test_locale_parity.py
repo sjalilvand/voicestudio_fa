@@ -247,6 +247,29 @@ def test_placeholders_match_en(locale):
 
 
 @pytest.mark.parametrize("locale", _LOCALES)
+def test_dub_history_has_every_plural_form(locale):
+    """Keep the full i18next plural key set available in every locale."""
+    history = _load(locale).get("history", {})
+    required = {
+        "dub_meta_zero",
+        "dub_meta_one",
+        "dub_meta_two",
+        "dub_meta_few",
+        "dub_meta_many",
+        "dub_meta_other",
+    }
+    missing = sorted(required - history.keys())
+    assert not missing, f"{locale}.json is missing Dub history plural forms: {missing}"
+
+    invalid = sorted(
+        key
+        for key in required
+        if "{{count}}" not in history[key] or "{{duration}}" not in history[key]
+    )
+    assert not invalid, f"{locale}.json has invalid Dub history plural forms: {invalid}"
+
+
+@pytest.mark.parametrize("locale", _LOCALES)
 def test_no_placeholder_only_values(locale):
     """A value made of nothing but {{placeholders}} and punctuation is not a
     translation — it is a missing string.

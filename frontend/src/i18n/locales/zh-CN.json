@@ -2082,7 +2082,9 @@
   },
   "history": {
     "dub_meta": "{{segments}} 个片段 · {{duration}} 秒",
+    "dub_meta_zero": "{{count}} 个片段 · {{duration}} 秒",
     "dub_meta_one": "{{count}} 个片段 · {{duration}} 秒",
+    "dub_meta_two": "{{count}} 个片段 · {{duration}} 秒",
     "dub_meta_few": "{{count}} 个片段 · {{duration}} 秒",
     "dub_meta_many": "{{count}} 个片段 · {{duration}} 秒",
     "dub_meta_other": "{{count}} 个片段 · {{duration}} 秒",
