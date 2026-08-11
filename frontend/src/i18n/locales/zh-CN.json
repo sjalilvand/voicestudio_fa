@@ -1186,7 +1186,7 @@
     "empty_title": "暂无转录记录",
     "empty_desc": "选择“开始听写”或按 {{shortcut}} 录制和转录音频。",
     "capture": "开始听写",
-    "capture_failed": "无法开始听写。",
+    "capture_failed": "无法开始听写。请检查麦克风访问权限，然后重试。",
     "empty_search_title": "未找到匹配的转录",
     "empty_search_desc": "试试其他搜索词。",
     "copy": "复制",

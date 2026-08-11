@@ -1536,7 +1536,7 @@
     "empty_title": "No transcriptions yet",
     "empty_desc": "Select Start dictation or press {{shortcut}} to record and transcribe audio.",
     "capture": "Start dictation",
-    "capture_failed": "Could not start dictation.",
+    "capture_failed": "Could not start dictation. Check microphone access, then try again.",
     "empty_search_title": "No matching transcriptions",
     "empty_search_desc": "Try a different search term.",
     "copy": "Copy",

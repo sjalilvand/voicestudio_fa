@@ -334,6 +334,10 @@ export default function CaptureWidget({ onDismiss }) {
   // identity, but the listener must not re-subscribe to follow them.
   const startRecordingRef = useRef(null);
   const stopRecordingRef = useRef(null);
+  // Hold mode can be released while microphone permission or getUserMedia is
+  // still pending. Preserve that release so the completed start cannot leave
+  // an orphaned recording behind.
+  const holdStartRef = useRef(null);
   // Linux can deliver the same shortcut through both the native global-hotkey
   // plugin and the focused main-window fallback. Collapse that pair into one
   // logical action without slowing intentional toggle-mode presses.
@@ -420,11 +424,14 @@ export default function CaptureWidget({ onDismiss }) {
     const current = stateRef.current;
     if (action === 'stop') {
       if (current === 'recording') stopRecordingRef.current?.();
+      else if (holdStartRef.current === 'starting') holdStartRef.current = 'released';
       return;
     }
     if (current === 'setup') {
+      if (modeRef.current === 'hold') holdStartRef.current = 'starting';
       checkAccessibility().then((ok) => {
-        if (ok) startRecordingRef.current?.();
+        if (ok) startRecordingRef.current?.(modeRef.current === 'hold');
+        else holdStartRef.current = null;
       });
       return;
     }
@@ -433,7 +440,7 @@ export default function CaptureWidget({ onDismiss }) {
       if (idle) startRecordingRef.current?.();
       else if (current === 'recording') stopRecordingRef.current?.();
     } else if (idle) {
-      startRecordingRef.current?.();
+      startRecordingRef.current?.(modeRef.current === 'hold');
     }
   };
 
@@ -498,8 +505,10 @@ export default function CaptureWidget({ onDismiss }) {
           if (s === 'setup') {
             // Re-probe on each press — the user may have just granted access
             // in System Settings; if so, flow straight into recording.
+            if (modeRef.current === 'hold') holdStartRef.current = 'starting';
             checkAccessibility().then((ok) => {
-              if (ok) startRecordingRef.current?.();
+              if (ok) startRecordingRef.current?.(modeRef.current === 'hold');
+              else holdStartRef.current = null;
             });
             return;
           }
@@ -510,7 +519,7 @@ export default function CaptureWidget({ onDismiss }) {
             else if (s === 'recording') stopRecordingRef.current?.();
           } else if (idle) {
             // Hold mode: keydown → start.
-            startRecordingRef.current?.();
+            startRecordingRef.current?.(true);
           }
         });
         unlistenStop = await listen('tray-dictate-stop', () => {
@@ -520,6 +529,8 @@ export default function CaptureWidget({ onDismiss }) {
           // Only hold mode acts on release; toggle ignores it.
           if (modeRef.current === 'hold' && stateRef.current === 'recording') {
             stopRecordingRef.current?.();
+          } else if (modeRef.current === 'hold' && holdStartRef.current === 'starting') {
+            holdStartRef.current = 'released';
           }
         });
         const { invoke } = await import('@tauri-apps/api/core');
@@ -800,6 +811,7 @@ export default function CaptureWidget({ onDismiss }) {
     // raises the OS prompt; micError.js stays the reactive fallback), and
     // outside Tauri checkMicrophone() is always 'unknown' → unchanged.
     if ((await checkMicrophone()) === 'denied') {
+      holdStartRef.current = null;
       showMicDeniedGuide(t);
       setTrayRecording(false);
       setErrorInfo({
@@ -1186,7 +1198,15 @@ export default function CaptureWidget({ onDismiss }) {
       setErrorInfo(null);
       setDoneKind(null);
       setDuration(0);
+      stateRef.current = 'recording';
+      if (holdStartRef.current === 'released') {
+        holdStartRef.current = null;
+        stopRecordingRef.current?.();
+      } else {
+        holdStartRef.current = null;
+      }
     } catch (err) {
+      holdStartRef.current = null;
       // Same guard as the success path above (#1175 review): the session may
       // already have RESOLVED while setup was failing — a connect-time WS
       // error frame (e.g. the typed asr_model_missing preflight) or an
@@ -1291,7 +1311,10 @@ export default function CaptureWidget({ onDismiss }) {
   // must run after every render so the once-attached tray listener above never
   // calls into a stale closure.
   useEffect(() => {
-    startRecordingRef.current = startRecording;
+    startRecordingRef.current = (trackHold = false) => {
+      if (trackHold && holdStartRef.current !== 'released') holdStartRef.current = 'starting';
+      return startRecording();
+    };
     stopRecordingRef.current = stopRecording;
   });
 

@@ -1227,7 +1227,7 @@
     "empty_title": "Nie ma jeszcze transkrypcji",
     "empty_desc": "Wybierz Rozpocznij dyktowanie lub naciśnij {{shortcut}}, aby nagrać i transkrybować dźwięk.",
     "capture": "Rozpocznij dyktowanie",
-    "capture_failed": "Nie udało się rozpocząć dyktowania.",
+    "capture_failed": "Nie udało się rozpocząć dyktowania. Sprawdź dostęp do mikrofonu i spróbuj ponownie.",
     "empty_search_title": "Brak pasujących transkrypcji",
     "empty_search_desc": "Wypróbuj inne wyszukiwane hasło.",
     "copy": "Kopiuj",

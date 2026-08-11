@@ -50,6 +50,7 @@ export default function TranscriptionsPage() {
   const [selectedId, setSelectedId] = useState(null);
   const { info: shortcut } = useEffectiveDictationShortcut();
   const emptyDescription = t('transcriptions.empty_desc', { shortcut: shortcut.display });
+  const normalizedSearch = search.trim();
 
   const startCapture = useCallback(async () => {
     try {
@@ -70,12 +71,12 @@ export default function TranscriptionsPage() {
   }, []);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return transcriptions;
-    const q = search.toLowerCase();
+    if (!normalizedSearch) return transcriptions;
+    const q = normalizedSearch.toLowerCase();
     return transcriptions.filter(
       (t) => t.text.toLowerCase().includes(q) || (t.language || '').toLowerCase().includes(q),
     );
-  }, [transcriptions, search]);
+  }, [transcriptions, normalizedSearch]);
 
   const selected = useMemo(
     () => transcriptions.find((t) => t.id === selectedId),
@@ -205,12 +206,14 @@ export default function TranscriptionsPage() {
             <div className="txn-empty flex h-full flex-col items-center justify-center gap-[8px] px-[20px] py-[40px] text-center text-fg-muted">
               <Mic size={32} className="txn-empty__icon opacity-30" />
               <p className="txn-empty__title m-0 text-[var(--text-sm)] font-medium text-fg">
-                {search ? t('transcriptions.empty_search_title') : t('transcriptions.empty_title')}
+                {normalizedSearch
+                  ? t('transcriptions.empty_search_title')
+                  : t('transcriptions.empty_title')}
               </p>
               <p className="txn-empty__desc m-0 max-w-[280px] text-[var(--text-xs)] leading-[1.6] text-fg-muted">
-                {search ? t('transcriptions.empty_search_desc') : emptyDescription}
+                {normalizedSearch ? t('transcriptions.empty_search_desc') : emptyDescription}
               </p>
-              {!search && (
+              {!normalizedSearch && (
                 <Button size="sm" variant="primary" onClick={startCapture}>
                   <Mic size={13} /> {t('transcriptions.capture')}
                 </Button>

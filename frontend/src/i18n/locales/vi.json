@@ -1227,7 +1227,7 @@
     "empty_title": "No transcriptions yet",
     "empty_desc": "Chọn Bắt đầu đọc chính tả hoặc nhấn {{shortcut}} để ghi và chép lại âm thanh.",
     "capture": "Bắt đầu đọc chính tả",
-    "capture_failed": "Không thể bắt đầu đọc chính tả.",
+    "capture_failed": "Không thể bắt đầu đọc chính tả. Hãy kiểm tra quyền truy cập micrô rồi thử lại.",
     "empty_search_title": "Không có bản chép lời phù hợp",
     "empty_search_desc": "Hãy thử một cụm từ tìm kiếm khác.",
     "copy": "Sao chép",

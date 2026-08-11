@@ -1227,7 +1227,7 @@
     "empty_title": "Henüz transkripsiyon yok",
     "empty_desc": "Sesi kaydetmek ve metne dönüştürmek için Dikteyi başlat'ı seçin veya {{shortcut}} tuşlarına basın.",
     "capture": "Dikteyi başlat",
-    "capture_failed": "Dikte başlatılamadı.",
+    "capture_failed": "Dikte başlatılamadı. Mikrofon erişimini kontrol edip tekrar deneyin.",
     "empty_search_title": "Eşleşen transkripsiyon yok",
     "empty_search_desc": "Farklı bir arama terimi deneyin.",
     "copy": "Kopyala",

@@ -75,13 +75,17 @@ pub struct TrayHandle {
     pub dictate: Mutex<Option<tauri::menu::MenuItem<tauri::Wry>>>,
 }
 
+fn dictation_capture_event(action: &str, dictating: bool) -> &'static str {
+    match action {
+        "stop" => "tray-dictate-stop",
+        "toggle" if dictating => "tray-dictate-stop",
+        _ => "tray-dictate",
+    }
+}
+
 pub fn dispatch_dictation_capture(app: &tauri::AppHandle, action: &str) {
-    let event = if action == "stop" {
-        "tray-dictate-stop"
-    } else {
-        "tray-dictate"
-    };
     let flags = app.state::<AppFlags>();
+    let event = dictation_capture_event(action, flags.dictating.load(Ordering::SeqCst));
     let Ok(mut capture) = flags.capture.lock() else {
         log::warn!("Dictation capture state lock poisoned");
         return;
@@ -90,6 +94,20 @@ pub fn dispatch_dictation_capture(app: &tauri::AppHandle, action: &str) {
         let _ = app.emit(event, ());
     } else {
         capture.pending = Some(action.to_owned());
+    }
+}
+
+#[cfg(test)]
+mod dictation_capture_tests {
+    use super::dictation_capture_event;
+
+    #[test]
+    fn toggle_starts_when_idle_and_stops_when_recording() {
+        assert_eq!(dictation_capture_event("toggle", false), "tray-dictate");
+        assert_eq!(
+            dictation_capture_event("toggle", true),
+            "tray-dictate-stop"
+        );
     }
 }
 

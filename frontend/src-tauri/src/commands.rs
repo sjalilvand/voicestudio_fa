@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use tauri::image::Image;
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 use tauri_plugin_dialog::DialogExt;
 
 use crate::dictation_shortcut::{DictationShortcutManager, ShortcutInfo, update_tray_hint};
@@ -939,12 +939,8 @@ pub fn mark_dictation_capture_ready(app: tauri::AppHandle) {
     };
     capture.ready = true;
     if let Some(action) = capture.pending.take() {
-        let event = if action == "stop" {
-            "tray-dictate-stop"
-        } else {
-            "tray-dictate"
-        };
-        let _ = app.emit(event, ());
+        drop(capture);
+        crate::dispatch_dictation_capture(&app, &action);
     }
 }
 

@@ -1227,7 +1227,7 @@
     "empty_title": "Inga transkriptioner än",
     "empty_desc": "Välj Starta diktering eller tryck på {{shortcut}} för att spela in och transkribera ljud.",
     "capture": "Starta diktering",
-    "capture_failed": "Det gick inte att starta dikteringen.",
+    "capture_failed": "Det gick inte att starta dikteringen. Kontrollera mikrofonåtkomsten och försök igen.",
     "empty_search_title": "Inga matchande transkriptioner",
     "empty_search_desc": "Prova en annan sökterm.",
     "copy": "Kopiera",

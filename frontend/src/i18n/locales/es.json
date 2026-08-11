@@ -1227,7 +1227,7 @@
     "empty_title": "Aún no hay transcripciones",
     "empty_desc": "Seleccione Iniciar dictado o pulse {{shortcut}} para grabar y transcribir audio.",
     "capture": "Iniciar dictado",
-    "capture_failed": "No se pudo iniciar el dictado.",
+    "capture_failed": "No se pudo iniciar el dictado. Comprueba el acceso al micrófono y vuelve a intentarlo.",
     "empty_search_title": "No hay transcripciones coincidentes",
     "empty_search_desc": "Pruebe con un término de búsqueda diferente.",
     "copy": "Copiar",

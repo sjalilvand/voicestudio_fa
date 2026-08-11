@@ -1227,7 +1227,7 @@
     "empty_title": "Belum ada transkripsi",
     "empty_desc": "Pilih Mulai dikte atau tekan {{shortcut}} untuk merekam dan menyalin audio.",
     "capture": "Mulai dikte",
-    "capture_failed": "Dikte tidak dapat dimulai.",
+    "capture_failed": "Dikte tidak dapat dimulai. Periksa akses mikrofon, lalu coba lagi.",
     "empty_search_title": "Tidak ada transkripsi yang cocok",
     "empty_search_desc": "Coba istilah pencarian lain.",
     "copy": "Salin",

@@ -40,7 +40,21 @@ describe('Transcriptions capture entry point', () => {
     render(<TranscriptionsPage />);
     fireEvent.click(screen.getAllByRole('button', { name: 'Start dictation' }).at(-1));
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not start dictation.'));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'Could not start dictation. Check microphone access, then try again.',
+      ),
+    );
+  });
+
+  it('keeps the capture action available for whitespace-only searches', () => {
+    render(<TranscriptionsPage />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search transcriptions…' }), {
+      target: { value: '   ' },
+    });
+
+    expect(screen.getAllByRole('button', { name: 'Start dictation' })).toHaveLength(2);
+    expect(screen.getByText('No transcriptions yet')).toBeInTheDocument();
   });
 
   it('shows a successful transcript emitted by the shared recorder', async () => {

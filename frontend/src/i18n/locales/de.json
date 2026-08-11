@@ -1227,7 +1227,7 @@
     "empty_title": "Noch keine Transkriptionen",
     "empty_desc": "Wählen Sie „Diktat starten“ oder drücken Sie {{shortcut}}, um Audio aufzunehmen und zu transkribieren.",
     "capture": "Diktat starten",
-    "capture_failed": "Das Diktat konnte nicht gestartet werden.",
+    "capture_failed": "Das Diktat konnte nicht gestartet werden. Prüfe den Mikrofonzugriff und versuche es erneut.",
     "empty_search_title": "Keine passenden Transkriptionen",
     "empty_search_desc": "Versuchen Sie es mit einem anderen Suchbegriff.",
     "copy": "Kopieren",
