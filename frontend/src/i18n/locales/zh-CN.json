@@ -405,7 +405,15 @@
     "history_retention_cap_hint": "已加星条目不计入清理 · 0 = 不限",
     "history_retention_saved": "保留上限已保存",
     "history_retention_save_failed": "保存失败",
-    "history_retention_invalid": "请输入 0 或更大的数"
+    "history_retention_invalid": "请输入 0 或更大的数",
+    "models_dir_help": "模型权重的存储位置。需要时可选择容量更大或速度更快的驱动器；更改将在重启后生效。",
+    "models_dir_saved": "模型文件夹已保存 — 重启后生效",
+    "models_dir_reverted": "已恢复默认文件夹 — 重启后生效",
+    "models_dir_reset_hint": "恢复默认缓存位置",
+    "models_dir_effective": "当前使用",
+    "models_dir_configured": "已配置",
+    "models_dir_default": "使用默认值",
+    "models_dir_restart": "↻ 重启 VoiceStudio 以使用新位置。"
   },
   "about": {
     "app": "应用",
@@ -1135,6 +1143,7 @@
     "subtitle": "Hundreds of ready-made designed voices — pick one and go.",
     "zone_archetypes": "原型",
     "zone_imports": "My Imports",
+    "filters": "筛选",
     "all": "全部",
     "favorites": "收藏夹",
     "favorite": "最爱",
@@ -2099,7 +2108,15 @@
     "unstar_take": "取消加星 — 允许清理",
     "play_take": "载入为当前输出",
     "filter_starred": "已加星",
-    "load_take_failed": "无法加载该条生成:{{message}}"
+    "load_take_failed": "无法加载该条生成:{{message}}",
+    "mode_clone": "克隆",
+    "mode_synth": "合成",
+    "generation_seconds": "{{duration}} 秒",
+    "expand_text": "展开文本",
+    "collapse_text": "收起文本",
+    "seed": "种子 {{seed}}",
+    "load_config": "加载设置",
+    "delete_confirm": "删除此历史记录吗？"
   },
   "openapi": {
     "title": "VoiceStudio API",
@@ -2189,7 +2206,7 @@
     "dismiss": "关闭",
     "output": "输出",
     "title": "有声读物",
-    "subtitle": "将章节分隔的脚本转换为章节化的 m4b 有声读物。",
+    "subtitle": "编写或导入故事，为每个角色分配声音，再导出带有真实章节的精致有声书。",
     "script": "脚本",
     "script_placeholder": "#第一章\n从前……[停顿 500 毫秒]结束。\n\n# 第二章\n[声音：旁白] 就这样继续下去。",
     "default_voice": "默认语音",

@@ -951,6 +951,13 @@ describe('EngineCompatibilityMatrix', () => {
     await waitFor(() => screen.getByText('OmniVoice (test)'));
     expect(screen.getByText('Engine Compatibility Matrix')).toBeInTheDocument();
     expect(document.querySelectorAll('.engine-matrix__tab-family').length).toBe(3);
+    const labels = document.querySelectorAll('.engine-matrix__tab-label');
+    expect(labels).toHaveLength(3);
+    for (const label of labels) {
+      expect(label).toHaveClass('items-center');
+      expect(label).not.toHaveClass('flex-col');
+    }
+    expect(document.querySelector('.engine-matrix__tab-active')).toHaveAttribute('translate', 'no');
   });
 
   it('names what each family does in pinned mode (one description line)', async () => {
@@ -1178,7 +1185,9 @@ describe('EngineCompatibilityMatrix', () => {
       const name = row.querySelector('.engine-matrix__name');
       expect(name.className).toMatch(/\btruncate\b/);
       expect(name.className).toMatch(/\bwhitespace-nowrap\b/);
+      expect(name).toHaveClass('text-[length:var(--text-sm)]');
       expect(name).toHaveAttribute('title', name.textContent);
+      expect(row.querySelector('.engine-matrix__id')).toHaveClass('text-[length:var(--text-2xs)]');
     }
   });
 

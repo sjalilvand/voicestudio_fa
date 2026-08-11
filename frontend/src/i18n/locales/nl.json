@@ -180,7 +180,15 @@
     "history_retention_cap_hint": "Takes met ster tellen nooit mee voor opruimen · 0 = onbeperkt",
     "history_retention_saved": "Bewaarlimiet opgeslagen",
     "history_retention_save_failed": "Opslaan mislukt",
-    "history_retention_invalid": "Voer 0 of meer in"
+    "history_retention_invalid": "Voer 0 of meer in",
+    "models_dir_help": "Hier worden modelgewichten opgeslagen. Kies indien nodig een grotere of snellere schijf; wijzigingen gelden na opnieuw starten.",
+    "models_dir_saved": "Modelmap opgeslagen — start opnieuw om toe te passen",
+    "models_dir_reverted": "Standaardmap hersteld — start opnieuw om toe te passen",
+    "models_dir_reset_hint": "Terugzetten naar de standaard cachelocatie",
+    "models_dir_effective": "Nu in gebruik",
+    "models_dir_configured": "Geconfigureerd",
+    "models_dir_default": "Standaard wordt gebruikt",
+    "models_dir_restart": "↻ Start VoiceStudio opnieuw om de nieuwe locatie te gebruiken."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1176,6 +1184,7 @@
     "subtitle": "Honderden kant-en-klare ontworpen stemmen: kies er één en ga aan de slag.",
     "zone_archetypes": "Archetypen",
     "zone_imports": "Mijn import",
+    "filters": "Filters",
     "all": "Allemaal",
     "favorites": "Favorieten",
     "favorite": "Favoriet",
@@ -2092,7 +2101,15 @@
     "unstar_take": "Ster verwijderen — opruimen toestaan",
     "play_take": "Laden als actieve uitvoer",
     "filter_starred": "Met ster",
-    "load_take_failed": "Kon die take niet laden: {{message}}"
+    "load_take_failed": "Kon die take niet laden: {{message}}",
+    "mode_clone": "Kloon",
+    "mode_synth": "Synthese",
+    "generation_seconds": "{{duration}} s",
+    "expand_text": "Tekst uitvouwen",
+    "collapse_text": "Tekst invouwen",
+    "seed": "Seed {{seed}}",
+    "load_config": "Instellingen laden",
+    "delete_confirm": "Dit geschiedenisitem verwijderen?"
   },
   "openapi": {
     "title": "VoiceStudio-API",
@@ -2182,7 +2199,7 @@
     "dismiss": "Sluiten",
     "output": "Uitvoer",
     "title": "Audioboek",
-    "subtitle": "Verander een door hoofdstukken gescheiden script in een m4b-audioboek in hoofdstukken.",
+    "subtitle": "Schrijf of importeer je verhaal, wijs elke stem toe en exporteer een verzorgd luisterboek met echte hoofdstukken.",
     "script": "Script",
     "script_placeholder": "# Hoofdstuk één\nEr was eens… [pauze 500 ms] het einde.\n\n# Hoofdstuk twee\n[stem:verteller] En zo ging het verder.",
     "default_voice": "Standaardstem",

@@ -180,7 +180,15 @@
     "history_retention_cap_hint": "Bản thu gắn sao không bao giờ bị dọn · 0 = không giới hạn",
     "history_retention_saved": "Đã lưu giới hạn lưu trữ",
     "history_retention_save_failed": "Không thể lưu",
-    "history_retention_invalid": "Nhập 0 trở lên"
+    "history_retention_invalid": "Nhập 0 trở lên",
+    "models_dir_help": "Nơi lưu trọng số mô hình. Chọn ổ đĩa lớn hơn hoặc nhanh hơn khi cần; thay đổi có hiệu lực sau khi khởi động lại.",
+    "models_dir_saved": "Đã lưu thư mục mô hình — khởi động lại để áp dụng",
+    "models_dir_reverted": "Đã khôi phục thư mục mặc định — khởi động lại để áp dụng",
+    "models_dir_reset_hint": "Trở về vị trí bộ nhớ đệm mặc định",
+    "models_dir_effective": "Đang sử dụng",
+    "models_dir_configured": "Đã cấu hình",
+    "models_dir_default": "Dùng mặc định",
+    "models_dir_restart": "↻ Khởi động lại VoiceStudio để dùng vị trí mới."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1176,6 +1184,7 @@
     "subtitle": "Hàng trăm giọng nói được thiết kế sẵn — hãy chọn một giọng nói và sử dụng.",
     "zone_archetypes": "nguyên mẫu",
     "zone_imports": "Nhập khẩu của tôi",
+    "filters": "Bộ lọc",
     "all": "Tất cả",
     "favorites": "Yêu thích",
     "favorite": "yêu thích",
@@ -2092,7 +2101,15 @@
     "unstar_take": "Bỏ sao — cho phép dọn dẹp",
     "play_take": "Tải làm đầu ra hiện tại",
     "filter_starred": "Đã gắn sao",
-    "load_take_failed": "Không thể tải bản thu đó: {{message}}"
+    "load_take_failed": "Không thể tải bản thu đó: {{message}}",
+    "mode_clone": "Nhân bản",
+    "mode_synth": "Tổng hợp",
+    "generation_seconds": "{{duration}} giây",
+    "expand_text": "Mở rộng văn bản",
+    "collapse_text": "Thu gọn văn bản",
+    "seed": "Seed {{seed}}",
+    "load_config": "Tải cài đặt",
+    "delete_confirm": "Xóa mục lịch sử này?"
   },
   "openapi": {
     "title": "API VoiceStudio",
@@ -2182,7 +2199,7 @@
     "dismiss": "Bỏ qua",
     "output": "Đầu ra",
     "title": "Sách nói",
-    "subtitle": "Biến tập lệnh được phân cách theo chương thành sách nói m4b được chia theo chương.",
+    "subtitle": "Viết hoặc nhập câu chuyện, chọn giọng cho từng vai, rồi xuất sách nói hoàn chỉnh với các chương thực sự.",
     "script": "kịch bản",
     "script_placeholder": "# Chương Một\nNgày xửa ngày xưa… [tạm dừng 500ms] đoạn cuối.\n\n# Chương hai\n[giọng:người kể chuyện] Và cứ thế mọi chuyện tiếp tục.",
     "default_voice": "Giọng nói mặc định",

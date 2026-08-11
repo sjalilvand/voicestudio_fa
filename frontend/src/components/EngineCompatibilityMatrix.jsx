@@ -606,17 +606,21 @@ export default function EngineCompatibilityMatrix({
   const TitleIcon = showFamilyTabs ? Layers : familyMeta.icon;
 
   return (
-    <section className="engine-matrix flex flex-col gap-[var(--space-3,8px)]">
-      <header className="engine-matrix__head flex items-center justify-between gap-[12px]">
-        <h3 className="engine-matrix__title inline-flex items-center gap-[6px] m-0 text-[13px] font-semibold text-[color:var(--chrome-fg,currentColor)]">
-          <TitleIcon size={14} />{' '}
-          {showFamilyTabs
-            ? t('engines.matrixTitle')
-            : t('engines.familyMatrixTitle', { family: familyMeta.label })}
+    <section className="engine-matrix flex min-h-0 flex-1 flex-col gap-[8px]">
+      <header className="engine-matrix__head flex flex-wrap items-center justify-between gap-[8px] rounded-[10px] bg-[var(--chrome-bg)] px-[10px] py-[7px]">
+        <h3 className="engine-matrix__title m-0 inline-flex min-w-0 items-center gap-[8px] text-[length:var(--text-sm)] font-semibold text-[color:var(--chrome-fg,currentColor)]">
+          <span className="inline-flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[7px] bg-[color-mix(in_srgb,var(--chrome-accent)_11%,transparent)] text-[var(--chrome-accent)]">
+            <TitleIcon size={13} aria-hidden="true" />
+          </span>
+          <span>
+            {showFamilyTabs
+              ? t('engines.matrixTitle')
+              : t('engines.familyMatrixTitle', { family: familyMeta.label })}
+          </span>
         </h3>
         <Button
           size="sm"
-          variant="subtle"
+          variant="ghost"
           onClick={reload}
           loading={loading}
           leading={<RefreshCw size={11} />}
@@ -628,28 +632,36 @@ export default function EngineCompatibilityMatrix({
       {showFamilyTabs && families.length > 1 && (
         <Segmented
           size="sm"
+          className="engine-matrix__tabs w-full [&>*]:flex-1"
           value={activeFamily}
           onChange={(f) => {
             setActiveFamily(f);
             onFamilyChange?.(f);
           }}
-          items={families.map((f) => ({
-            value: f,
-            title: t('engines.activeEngine', {
-              family: FAMILY_META[f].label,
-              engine: data[f].active,
-            }),
-            label: (
-              <span className="engine-matrix__tab-label inline-flex flex-col items-center gap-0 leading-[1.1] px-[2px] py-[1px]">
-                <span className="engine-matrix__tab-family text-[12px] font-bold tracking-[0.02em]">
-                  {FAMILY_META[f].label}
+          items={families.map((f) => {
+            const FamilyIcon = FAMILY_META[f].icon;
+            return {
+              value: f,
+              title: t('engines.activeEngine', {
+                family: FAMILY_META[f].label,
+                engine: data[f].active,
+              }),
+              label: (
+                <span className="engine-matrix__tab-label inline-flex min-w-0 items-center justify-center gap-[6px] whitespace-nowrap px-[5px] py-[1px] leading-none">
+                  <FamilyIcon size={12} className="shrink-0 opacity-70" aria-hidden="true" />
+                  <span className="engine-matrix__tab-family text-[11px] font-bold tracking-[0.03em]">
+                    {FAMILY_META[f].label}
+                  </span>
+                  <span
+                    className="engine-matrix__tab-active max-w-[120px] truncate rounded-[5px] bg-black/[0.09] px-[5px] py-[3px] font-mono text-[9px] lowercase tracking-[0] opacity-70"
+                    translate="no"
+                  >
+                    {data[f].active}
+                  </span>
                 </span>
-                <span className="engine-matrix__tab-active text-[9px] font-mono opacity-[0.65] lowercase tracking-[0] mt-[1px]">
-                  {data[f].active}
-                </span>
-              </span>
-            ),
-          }))}
+              ),
+            };
+          })}
         />
       )}
 
@@ -657,13 +669,20 @@ export default function EngineCompatibilityMatrix({
           LLM) is the scariest part for first-run users. Rendered in both
           tabbed and pinned modes, always for the family on screen. */}
       <p
-        className={cn('engine-matrix__family-desc m-0 -mt-[4px] text-[12px] leading-[1.4]', MUTED)}
+        className={cn(
+          'engine-matrix__family-desc m-0 rounded-[8px] bg-[color-mix(in_srgb,var(--chrome-accent)_5%,transparent)] px-[10px] py-[6px] text-[11px] leading-[1.4]',
+          MUTED,
+        )}
         data-testid={`family-desc-${activeFamily}`}
       >
         {t(`engines.familyDesc_${activeFamily}`)}
       </p>
 
-      <Table role="table" aria-label={t('engines.engineCompatLabel', { family: activeFamily })}>
+      <Table
+        className="engine-matrix__table flex min-h-0 flex-1 flex-col overflow-hidden rounded-[10px] bg-[var(--chrome-bg)] shadow-[0_5px_18px_color-mix(in_srgb,black_10%,transparent)]"
+        role="table"
+        aria-label={t('engines.engineCompatLabel', { family: activeFamily })}
+      >
         {/* Column header — shares ROW_GRID with every row so the tracks are
             pixel-identical. Hidden at narrow widths where the meta columns
             collapse into each row's second line. */}
@@ -689,7 +708,13 @@ export default function EngineCompatibilityMatrix({
             {t('engines.colActions')}
           </span>
         </div>
-        <div className="flex flex-col pb-[8px]" role="rowgroup">
+        <div
+          className="settings-list-scroll flex min-h-0 flex-1 flex-col gap-[var(--space-2)] overflow-y-auto overscroll-contain py-[var(--space-2)] [scrollbar-gutter:stable] focus-visible:outline-none focus-visible:shadow-[inset_0_0_0_1px_var(--chrome-accent)]"
+          role="rowgroup"
+          tabIndex={0}
+          data-testid="engine-list-scroll"
+          aria-label={t('engines.engineCompatLabel', { family: activeFamily })}
+        >
           {backends.map((b) => {
             const isActive = b.id === activeBackendId;
             const health = healthByEngine[b.id];
@@ -752,7 +777,9 @@ export default function EngineCompatibilityMatrix({
                     'engine-matrix__row',
                     ROW_GRID,
                     ROW_SHELL,
-                    '[border-top:1px_solid_var(--chrome-border,rgba(255,255,255,0.06))]',
+                    'mx-[var(--space-2)] rounded-[var(--chrome-radius-pill)] border border-[color-mix(in_srgb,var(--chrome-fg)_7%,transparent)] transition-colors duration-[120ms] hover:bg-[var(--chrome-hover-bg)]',
+                    isActive &&
+                      'bg-[color-mix(in_srgb,var(--chrome-accent)_7%,transparent)] shadow-[inset_2px_0_0_var(--chrome-accent)]',
                     !b.available && 'opacity-[0.78]',
                   )}
                 >
@@ -761,14 +788,14 @@ export default function EngineCompatibilityMatrix({
                   <div
                     role="cell"
                     className={cn(
-                      'engine-matrix__cell engine-matrix__cell--name flex min-w-0 flex-col justify-center gap-[2px]',
+                      'engine-matrix__cell engine-matrix__cell--name flex min-w-0 flex-col justify-center gap-0',
                       CELL_NARROW.name,
                     )}
                   >
                     <span className="flex min-w-0 items-center gap-[6px]">
                       <EngineMark id={b.id} size={18} className="shrink-0" />
                       <span
-                        className="engine-matrix__name min-w-0 truncate whitespace-nowrap font-semibold text-[13px] text-[color:var(--chrome-fg,currentColor)]"
+                        className="engine-matrix__name min-w-0 truncate whitespace-nowrap font-semibold leading-[1.2] text-[length:var(--text-sm)] text-[color:var(--chrome-fg,currentColor)]"
                         title={b.display_name}
                       >
                         {b.display_name}
@@ -793,12 +820,23 @@ export default function EngineCompatibilityMatrix({
                         </Badge>
                       )}
                     </span>
-                    <span className="flex min-w-0 items-center gap-[6px] overflow-hidden whitespace-nowrap">
+                    <span className="flex min-w-0 items-center gap-[5px] overflow-hidden whitespace-nowrap leading-[1.2]">
                       <code
-                        className={cn('engine-matrix__id shrink-0 font-mono text-[11px]', MUTED)}
+                        className={cn(
+                          'engine-matrix__id shrink-0 font-mono text-[length:var(--text-2xs)]',
+                          MUTED,
+                        )}
                       >
                         {b.id}
                       </code>
+                      <Badge
+                        tone="neutral"
+                        size="xs"
+                        className="shrink-0"
+                        data-testid={`family-capability-${b.id}`}
+                      >
+                        {FAMILY_META[activeFamily]?.label || activeFamily.toUpperCase()}
+                      </Badge>
                       {/* Capability: voice cloning from reference audio. Only an
                         explicit supports_cloning=true earns it (TTS family). */}
                       {activeFamily === 'tts' && b.supports_cloning && (
@@ -848,7 +886,7 @@ export default function EngineCompatibilityMatrix({
                       {b.available && b.hint && (
                         <span
                           className={cn(
-                            'engine-matrix__advice min-w-0 truncate text-[11px]',
+                            'engine-matrix__advice min-w-0 truncate text-[length:var(--text-xs)]',
                             MUTED,
                           )}
                           title={b.hint}
@@ -859,7 +897,10 @@ export default function EngineCompatibilityMatrix({
                       )}
                       {b.available && b.install_hint && (
                         <span
-                          className={cn('engine-matrix__hint min-w-0 truncate text-[11px]', MUTED)}
+                          className={cn(
+                            'engine-matrix__hint min-w-0 truncate text-[length:var(--text-xs)]',
+                            MUTED,
+                          )}
                           title={b.install_hint}
                         >
                           {b.install_hint}

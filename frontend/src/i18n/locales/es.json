@@ -180,7 +180,15 @@
     "history_retention_cap_hint": "Las tomas destacadas nunca cuentan para la limpieza · 0 = sin límite",
     "history_retention_saved": "Límite de retención guardado",
     "history_retention_save_failed": "No se pudo guardar",
-    "history_retention_invalid": "Introduce 0 o más"
+    "history_retention_invalid": "Introduce 0 o más",
+    "models_dir_help": "Dónde se guardan los pesos de los modelos. Elige una unidad más grande o rápida si hace falta; los cambios se aplican al reiniciar.",
+    "models_dir_saved": "Carpeta de modelos guardada — reinicia para aplicar",
+    "models_dir_reverted": "Carpeta predeterminada restaurada — reinicia para aplicar",
+    "models_dir_reset_hint": "Volver a la ubicación de caché predeterminada",
+    "models_dir_effective": "En uso ahora",
+    "models_dir_configured": "Configurada",
+    "models_dir_default": "Usando la predeterminada",
+    "models_dir_restart": "↻ Reinicia VoiceStudio para usar la nueva ubicación."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1176,6 +1184,7 @@
     "subtitle": "Cientos de voces diseñadas ya preparadas: elige una y listo.",
     "zone_archetypes": "Arquetipos",
     "zone_imports": "Mis Importaciones",
+    "filters": "Filtros",
     "all": "Todos",
     "favorites": "Favoritos",
     "favorite": "Favorito",
@@ -2092,7 +2101,15 @@
     "unstar_take": "Quitar estrella — permitir limpieza",
     "play_take": "Cargar como salida activa",
     "filter_starred": "Destacadas",
-    "load_take_failed": "No se pudo cargar esa toma: {{message}}"
+    "load_take_failed": "No se pudo cargar esa toma: {{message}}",
+    "mode_clone": "Clonación",
+    "mode_synth": "Síntesis",
+    "generation_seconds": "{{duration}} s",
+    "expand_text": "Expandir texto",
+    "collapse_text": "Contraer texto",
+    "seed": "Semilla {{seed}}",
+    "load_config": "Cargar ajustes",
+    "delete_confirm": "¿Eliminar este elemento del historial?"
   },
   "openapi": {
     "title": "API de VoiceStudio",
@@ -2182,7 +2199,7 @@
     "dismiss": "Descartar",
     "output": "Salida",
     "title": "Audiolibro",
-    "subtitle": "Convierta un guión delimitado por capítulos en un audiolibro m4b dividido en capítulos.",
+    "subtitle": "Escribe o importa tu historia, asigna cada voz y exporta un audiolibro pulido con capítulos reales.",
     "script": "Guión",
     "script_placeholder": "# Capítulo uno\nÉrase una vez… [pausa 500ms] el final.\n\n# Capítulo Dos\n[voz:narrador] Y así continuó.",
     "default_voice": "Voz predeterminada",

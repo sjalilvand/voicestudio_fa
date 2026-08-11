@@ -90,6 +90,8 @@ describe('StorageUsagePanel', () => {
     expect(screen.getByTestId('storage-cat-data')).toBeInTheDocument();
     expect(screen.getByTestId('storage-cat-engine_venvs')).toBeInTheDocument();
     expect(screen.getByTestId('storage-cat-temp')).toBeInTheDocument();
+    expect(screen.getByTestId('storage-category-scroll')).toHaveClass('overflow-y-auto');
+    expect(screen.getByTestId('storage-category-scroll')).toHaveClass('overscroll-contain');
 
     // Human sizes from fmtBytes
     expect(screen.getByText('12.00 GB')).toBeInTheDocument();

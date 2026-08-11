@@ -180,7 +180,15 @@
     "history_retention_cap_hint": "เทคที่ติดดาวไม่ถูกนับในการล้าง · 0 = ไม่จำกัด",
     "history_retention_saved": "บันทึกขีดจำกัดการเก็บแล้ว",
     "history_retention_save_failed": "บันทึกไม่สำเร็จ",
-    "history_retention_invalid": "กรอก 0 ขึ้นไป"
+    "history_retention_invalid": "กรอก 0 ขึ้นไป",
+    "models_dir_help": "ตำแหน่งจัดเก็บค่าน้ำหนักโมเดล เลือกไดรฟ์ที่ใหญ่กว่าหรือเร็วกว่าเมื่อจำเป็น การเปลี่ยนแปลงจะมีผลหลังเริ่มใหม่",
+    "models_dir_saved": "บันทึกโฟลเดอร์โมเดลแล้ว — เริ่มใหม่เพื่อใช้งาน",
+    "models_dir_reverted": "คืนค่าโฟลเดอร์เริ่มต้นแล้ว — เริ่มใหม่เพื่อใช้งาน",
+    "models_dir_reset_hint": "กลับไปยังตำแหน่งแคชเริ่มต้น",
+    "models_dir_effective": "ใช้งานอยู่ตอนนี้",
+    "models_dir_configured": "กำหนดค่าแล้ว",
+    "models_dir_default": "ใช้ค่าเริ่มต้น",
+    "models_dir_restart": "↻ เริ่ม VoiceStudio ใหม่เพื่อใช้ตำแหน่งใหม่"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1176,6 +1184,7 @@
     "subtitle": "เสียงที่ออกแบบมาสำเร็จรูปหลายร้อยเสียง — เลือกหนึ่งเสียงแล้วไปได้เลย",
     "zone_archetypes": "ต้นแบบ",
     "zone_imports": "การนำเข้าของฉัน",
+    "filters": "ตัวกรอง",
     "all": "ทั้งหมด",
     "favorites": "รายการโปรด",
     "favorite": "ของโปรด",
@@ -2092,7 +2101,15 @@
     "unstar_take": "เอาดาวออก — อนุญาตให้ล้างได้",
     "play_take": "โหลดเป็นเอาต์พุตปัจจุบัน",
     "filter_starred": "ติดดาว",
-    "load_take_failed": "โหลดเทคนั้นไม่ได้: {{message}}"
+    "load_take_failed": "โหลดเทคนั้นไม่ได้: {{message}}",
+    "mode_clone": "โคลน",
+    "mode_synth": "สังเคราะห์",
+    "generation_seconds": "{{duration}} วินาที",
+    "expand_text": "ขยายข้อความ",
+    "collapse_text": "ย่อข้อความ",
+    "seed": "ซีด {{seed}}",
+    "load_config": "โหลดการตั้งค่า",
+    "delete_confirm": "ลบรายการประวัตินี้หรือไม่"
   },
   "openapi": {
     "title": "API ของ VoiceStudio",
@@ -2182,7 +2199,7 @@
     "dismiss": "ปิด",
     "output": "เอาต์พุต",
     "title": "หนังสือเสียง",
-    "subtitle": "เปลี่ยนสคริปต์ที่คั่นด้วยบทให้เป็นหนังสือเสียงแบบแบ่งบท m4b",
+    "subtitle": "เขียนหรือนำเข้าเรื่องราว เลือกเสียงให้แต่ละบทบาท แล้วส่งออกเป็นหนังสือเสียงที่สมบูรณ์พร้อมบทจริง",
     "script": "สคริปต์",
     "script_placeholder": "#บทที่หนึ่ง\nกาลครั้งหนึ่ง… [หยุดชั่วคราว 500ms] สิ้นสุด\n\n#บทที่สอง\n[เสียง: ผู้บรรยาย] และมันก็ดำเนินต่อไป",
     "default_voice": "เสียงเริ่มต้น",

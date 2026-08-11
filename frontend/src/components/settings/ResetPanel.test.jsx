@@ -204,6 +204,7 @@ describe('ResetPanel', () => {
   it('clears history through the API without bouncing the backend', async () => {
     await openDialog();
     fireEvent.click(screen.getByTestId('reset-advanced-toggle'));
+    expect(screen.getByTestId('reset-advanced')).toHaveClass('overflow-y-auto');
     fireEvent.click(await screen.findByTestId('reset-scope-history'));
     fireEvent.click(screen.getByTestId('reset-scope-ui_prefs')); // untick, leaving history alone
     fireEvent.click(screen.getByTestId('factory-reset-confirm'));

@@ -180,7 +180,15 @@
     "history_retention_cap_hint": "Take berbintang tidak pernah dihitung dalam pembersihan · 0 = tanpa batas",
     "history_retention_saved": "Batas penyimpanan disimpan",
     "history_retention_save_failed": "Tidak dapat menyimpan",
-    "history_retention_invalid": "Masukkan 0 atau lebih"
+    "history_retention_invalid": "Masukkan 0 atau lebih",
+    "models_dir_help": "Lokasi penyimpanan bobot model. Pilih drive yang lebih besar atau cepat bila perlu; perubahan berlaku setelah mulai ulang.",
+    "models_dir_saved": "Folder model disimpan — mulai ulang untuk menerapkan",
+    "models_dir_reverted": "Folder bawaan dipulihkan — mulai ulang untuk menerapkan",
+    "models_dir_reset_hint": "Kembalikan ke lokasi cache bawaan",
+    "models_dir_effective": "Sedang digunakan",
+    "models_dir_configured": "Dikonfigurasi",
+    "models_dir_default": "Menggunakan bawaan",
+    "models_dir_restart": "↻ Mulai ulang VoiceStudio untuk memakai lokasi baru."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1176,6 +1184,7 @@
     "subtitle": "Ratusan desain suara siap pakai — pilih satu dan mulai.",
     "zone_archetypes": "Arketipe",
     "zone_imports": "Impor Saya",
+    "filters": "Filter",
     "all": "Semua",
     "favorites": "Favorit",
     "favorite": "Favorit",
@@ -2092,7 +2101,15 @@
     "unstar_take": "Hapus bintang — izinkan pembersihan",
     "play_take": "Muat sebagai keluaran aktif",
     "filter_starred": "Berbintang",
-    "load_take_failed": "Tidak dapat memuat take itu: {{message}}"
+    "load_take_failed": "Tidak dapat memuat take itu: {{message}}",
+    "mode_clone": "Klon",
+    "mode_synth": "Sintesis",
+    "generation_seconds": "{{duration}} dtk",
+    "expand_text": "Perluas teks",
+    "collapse_text": "Ciutkan teks",
+    "seed": "Seed {{seed}}",
+    "load_config": "Muat pengaturan",
+    "delete_confirm": "Hapus item riwayat ini?"
   },
   "openapi": {
     "title": "API VoiceStudio",
@@ -2182,7 +2199,7 @@
     "dismiss": "Tutup",
     "output": "Keluaran",
     "title": "Buku Audio",
-    "subtitle": "Ubah skrip yang dibatasi bab menjadi buku audio m4b yang diberi bab.",
+    "subtitle": "Tulis atau impor cerita Anda, pilih suara untuk setiap peran, lalu ekspor buku audio rapi dengan bab sungguhan.",
     "script": "naskah",
     "script_placeholder": "# Bab Satu\nSuatu ketika… [pause 500ms] berakhir.\n\n# Bab Dua\n[suara: narator] Dan hal itu berlanjut.",
     "default_voice": "Suara bawaan",

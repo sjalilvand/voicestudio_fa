@@ -180,7 +180,15 @@
     "history_retention_cap_hint": "اللقطات المميزة بنجمة لا تُحتسب في التنظيف · 0 = بلا حد",
     "history_retention_saved": "تم حفظ حد الاحتفاظ",
     "history_retention_save_failed": "تعذر الحفظ",
-    "history_retention_invalid": "أدخل 0 أو أكثر"
+    "history_retention_invalid": "أدخل 0 أو أكثر",
+    "models_dir_help": "مكان تنزيل أوزان النماذج. اختر محرك أقراص أكبر أو أسرع؛ تُطبّق التغييرات بعد إعادة التشغيل.",
+    "models_dir_saved": "تم حفظ مجلد النماذج — أعد التشغيل للتطبيق",
+    "models_dir_reverted": "تمت العودة إلى المجلد الافتراضي — أعد التشغيل للتطبيق",
+    "models_dir_reset_hint": "العودة إلى موقع ذاكرة التخزين المؤقت الافتراضي",
+    "models_dir_effective": "المستخدم الآن",
+    "models_dir_configured": "المُعَدّ",
+    "models_dir_default": "استخدام الإعداد الافتراضي",
+    "models_dir_restart": "↻ أعد تشغيل VoiceStudio لاستخدام الموقع الجديد."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1176,6 +1184,7 @@
     "subtitle": "مئات من الأصوات المصممة الجاهزة - اختر واحدة وانطلق.",
     "zone_archetypes": "النماذج الأولية",
     "zone_imports": "وارداتي",
+    "filters": "عوامل التصفية",
     "all": "الكل",
     "favorites": "المفضلة",
     "favorite": "المفضلة",
@@ -2092,7 +2101,15 @@
     "unstar_take": "إزالة النجمة — السماح بالتنظيف",
     "play_take": "تحميل كإخراج نشط",
     "filter_starred": "المميزة بنجمة",
-    "load_take_failed": "تعذر تحميل تلك اللقطة: {{message}}"
+    "load_take_failed": "تعذر تحميل تلك اللقطة: {{message}}",
+    "mode_clone": "استنساخ",
+    "mode_synth": "تركيب",
+    "generation_seconds": "{{duration}} ث",
+    "expand_text": "توسيع النص",
+    "collapse_text": "طي النص",
+    "seed": "البذرة {{seed}}",
+    "load_config": "تحميل الإعدادات",
+    "delete_confirm": "حذف عنصر السجل هذا؟"
   },
   "openapi": {
     "title": "واجهة برمجة تطبيقات VoiceStudio",
@@ -2182,7 +2199,7 @@
     "dismiss": "تجاهل",
     "output": "الإخراج",
     "title": "كتاب مسموع",
-    "subtitle": "قم بتحويل البرنامج النصي المحدد بفصل إلى كتاب صوتي m4b مقسم.",
+    "subtitle": "اكتب قصتك أو استوردها، وأسند كل دور إلى صوت، ثم صدّر كتابًا صوتيًا متقنًا بفصول حقيقية.",
     "script": "البرنامج النصي",
     "script_placeholder": "#الفصل الأول\nذات مرة... [وقفة 500 مللي ثانية] النهاية.\n\n#الفصل الثاني\n[صوت: الراوي] وهكذا استمر.",
     "default_voice": "الصوت الافتراضي",

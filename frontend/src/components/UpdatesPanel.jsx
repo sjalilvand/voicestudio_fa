@@ -13,6 +13,7 @@ import {
   X,
   ShieldCheck,
   Sparkles,
+  CheckCircle2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAppStore } from '../store';
@@ -93,62 +94,123 @@ export default function UpdatesPanel() {
 
   return (
     <div className="updates-panel">
-      <div className="updates-panel__live">
-        {status === 'available' && (
-          <button
-            className="updates-panel__cta"
-            onClick={onInstall}
-            disabled={busy}
-            title={busy ? t('update.busy') : undefined}
-          >
-            <Download size={13} /> {t('update.available', { version: version || '' })} ·{' '}
-            {t('update.install')}
-          </button>
-        )}
-        {status === 'downloading' && (
-          <span className="updates-panel__progress">
-            {t('update.downloading', { pct: Math.round(progress) })}
-            <span className="updates-panel__bar">
-              <span style={{ width: `${progress}%` }} />
+      <div className="updates-panel__summary">
+        <div className={`updates-panel__live updates-panel__live--${status}`}>
+          <span className="updates-panel__status-icon" aria-hidden="true">
+            {status === 'available' || status === 'downloading' ? (
+              <Download size={18} />
+            ) : status === 'ready' || status === 'checking' ? (
+              <RefreshCw size={18} className={status === 'checking' ? 'animate-spin' : ''} />
+            ) : status === 'error' ? (
+              <AlertTriangle size={18} />
+            ) : (
+              <CheckCircle2 size={18} />
+            )}
+          </span>
+          <div className="updates-panel__live-copy">
+            <span className="updates-panel__version-label">
+              {t('about.version')} {appVersion || APP_VERSION}
             </span>
-          </span>
-        )}
-        {status === 'ready' && (
-          <button
-            className="updates-panel__cta"
-            onClick={onInstall}
-            disabled={busy}
-            title={busy ? t('update.busy') : undefined}
-          >
-            <RotateCw size={13} /> {t('update.restart')}
-          </button>
-        )}
-        {status === 'error' && (
-          <span className="updates-panel__err">
-            <AlertTriangle size={13} /> {error || t('update.failed')}
-            <button className="updates-panel__link" onClick={onInstall}>
-              {t('update.retry')}
-            </button>
-            <button
-              className="updates-panel__icon"
-              onClick={dismissUpdate}
-              aria-label={t('update.dismiss')}
+            {status === 'available' && (
+              <button
+                className="updates-panel__cta"
+                onClick={onInstall}
+                disabled={busy}
+                title={busy ? t('update.busy') : undefined}
+              >
+                {t('update.available', { version: version || '' })} · {t('update.install')}
+              </button>
+            )}
+            {status === 'downloading' && (
+              <span className="updates-panel__progress">
+                {t('update.downloading', { pct: Math.round(progress) })}
+                <span className="updates-panel__bar">
+                  <span style={{ width: `${progress}%` }} />
+                </span>
+              </span>
+            )}
+            {status === 'ready' && (
+              <button
+                className="updates-panel__cta"
+                onClick={onInstall}
+                disabled={busy}
+                title={busy ? t('update.busy') : undefined}
+              >
+                <RotateCw size={13} /> {t('update.restart')}
+              </button>
+            )}
+            {status === 'error' && (
+              <span className="updates-panel__err">
+                {error || t('update.failed')}
+                <button className="updates-panel__link" onClick={onInstall}>
+                  {t('update.retry')}
+                </button>
+                <button
+                  className="updates-panel__icon"
+                  onClick={dismissUpdate}
+                  aria-label={t('update.dismiss')}
+                >
+                  <X size={13} />
+                </button>
+              </span>
+            )}
+            {(status === 'idle' || status === 'checking') && (
+              <span className="updates-panel__ok">
+                {t('updates.up_to_date', { version: appVersion || '' })}
+                <button
+                  className="updates-panel__link"
+                  onClick={() => checkForUpdate(useAppStore.getState())}
+                >
+                  <RefreshCw size={12} /> {t('updates.check_now')}
+                </button>
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="updates-panel__preferences">
+          <div className="updates-panel__channel">
+            <span>{t('about.update_channel')}</span>
+            <div
+              className="updates-panel__seg"
+              role="radiogroup"
+              aria-label={t('about.update_channel')}
             >
-              <X size={13} />
-            </button>
-          </span>
-        )}
-        {(status === 'idle' || status === 'checking') && (
-          <span className="updates-panel__ok">
-            {t('updates.up_to_date', { version: appVersion || '' })}
-            <button
-              className="updates-panel__link"
-              onClick={() => checkForUpdate(useAppStore.getState())}
-            >
-              <RefreshCw size={12} /> {t('updates.check_now')}
-            </button>
-          </span>
-        )}
+              {['stable', 'preview'].map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  role="radio"
+                  aria-checked={channel === c}
+                  className={`updates-panel__segbtn ${channel === c ? 'is-active' : ''}`}
+                  onClick={() =>
+                    setChannel(useAppStore.getState(), c).catch((e) =>
+                      toast(t('settings.channel_set_failed', { message: e?.message || e }), {
+                        icon: '⚠️',
+                      }),
+                    )
+                  }
+                >
+                  {t(`about.channel_${c}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Data-safety line: the backend snapshots omnivoice.db before every
+              schema migration (i.e. before the first run of an updated build). */}
+          <div className="updates-panel__backup" data-testid="backup-line">
+            <ShieldCheck size={14} aria-hidden="true" />
+            <span>
+              {t('updates.backup_line')}{' '}
+              {latestBackup?.created_at
+                ? t('updates.backup_latest', {
+                    when: new Date(latestBackup.created_at * 1000).toLocaleString(),
+                  })
+                : t('updates.backup_none')}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* The available build's actual release notes — the updater manifest
@@ -162,53 +224,11 @@ export default function UpdatesPanel() {
         </div>
       )}
 
-      <div className="updates-panel__channel">
-        <span>{t('about.update_channel')}</span>
-        <div
-          className="updates-panel__seg"
-          role="radiogroup"
-          aria-label={t('about.update_channel')}
-        >
-          {['stable', 'preview'].map((c) => (
-            <button
-              key={c}
-              type="button"
-              role="radio"
-              aria-checked={channel === c}
-              className={`updates-panel__segbtn ${channel === c ? 'is-active' : ''}`}
-              onClick={() =>
-                setChannel(useAppStore.getState(), c).catch((e) =>
-                  toast(t('settings.channel_set_failed', { message: e?.message || e }), {
-                    icon: '⚠️',
-                  }),
-                )
-              }
-            >
-              {t(`about.channel_${c}`)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Data-safety line: the backend snapshots omnivoice.db before every
-          schema migration (i.e. before the first run of an updated build). */}
-      <div className="updates-panel__backup" data-testid="backup-line">
-        <ShieldCheck size={12} aria-hidden="true" />
-        <span>
-          {t('updates.backup_line')}{' '}
-          {latestBackup?.created_at
-            ? t('updates.backup_latest', {
-                when: new Date(latestBackup.created_at * 1000).toLocaleString(),
-              })
-            : t('updates.backup_none')}
-        </span>
-      </div>
-
       {/* "What's new" — the app's own CHANGELOG.md, newest expanded. */}
       {changelog.length > 0 && (
         <div className="updates-panel__whatsnew">
           <div className="updates-panel__rel-head">
-            <Sparkles size={12} aria-hidden="true" /> {t('update.whats_new')}
+            <Sparkles size={14} aria-hidden="true" /> {t('update.whats_new')}
           </div>
           <ChangelogViewer releases={changelog} />
         </div>

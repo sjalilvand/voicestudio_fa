@@ -180,7 +180,15 @@
     "history_retention_cap_hint": "Les prises étoilées ne comptent jamais pour le nettoyage · 0 = illimité",
     "history_retention_saved": "Limite de rétention enregistrée",
     "history_retention_save_failed": "Enregistrement impossible",
-    "history_retention_invalid": "Saisissez 0 ou plus"
+    "history_retention_invalid": "Saisissez 0 ou plus",
+    "models_dir_help": "Emplacement des poids de modèles. Choisissez si besoin un disque plus grand ou plus rapide ; les changements s’appliquent après redémarrage.",
+    "models_dir_saved": "Dossier des modèles enregistré — redémarrez pour appliquer",
+    "models_dir_reverted": "Dossier par défaut restauré — redémarrez pour appliquer",
+    "models_dir_reset_hint": "Rétablir l’emplacement du cache par défaut",
+    "models_dir_effective": "Utilisé actuellement",
+    "models_dir_configured": "Configuré",
+    "models_dir_default": "Valeur par défaut",
+    "models_dir_restart": "↻ Redémarrez VoiceStudio pour utiliser le nouvel emplacement."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1176,6 +1184,7 @@
     "subtitle": "Des centaines de voix prêtes à l'emploi : choisissez-en une et c'est parti.",
     "zone_archetypes": "Archétypes",
     "zone_imports": "Mes importations",
+    "filters": "Filtres",
     "all": "Tout",
     "favorites": "Favoris",
     "favorite": "Favoris",
@@ -2092,7 +2101,15 @@
     "unstar_take": "Retirer l'étoile — autoriser le nettoyage",
     "play_take": "Charger comme sortie active",
     "filter_starred": "Étoilées",
-    "load_take_failed": "Impossible de charger cette prise : {{message}}"
+    "load_take_failed": "Impossible de charger cette prise : {{message}}",
+    "mode_clone": "Clonage",
+    "mode_synth": "Synthèse",
+    "generation_seconds": "{{duration}} s",
+    "expand_text": "Développer le texte",
+    "collapse_text": "Réduire le texte",
+    "seed": "Graine {{seed}}",
+    "load_config": "Charger les réglages",
+    "delete_confirm": "Supprimer cet élément de l’historique ?"
   },
   "openapi": {
     "title": "API VoiceStudio",
@@ -2182,7 +2199,7 @@
     "dismiss": "Ignorer",
     "output": "Sortie",
     "title": "Livre audio",
-    "subtitle": "Transformez un script délimité par des chapitres en un livre audio m4b chapitré.",
+    "subtitle": "Écrivez ou importez votre histoire, attribuez chaque voix, puis exportez un livre audio soigné avec de vrais chapitres.",
     "script": "Scénario",
     "script_placeholder": "# Chapitre un\nIl était une fois… [pause 500ms] la fin.\n\n# Chapitre deux\n[voix:narrateur] Et ainsi de suite.",
     "default_voice": "Voix par défaut",

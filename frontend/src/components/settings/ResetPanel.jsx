@@ -309,15 +309,17 @@ export default function ResetPanel({ _forceAdvanced = false } = {}) {
           </p>
         ) : (
           <>
-            <div className="mb-[var(--space-4)] flex flex-col gap-[var(--space-2)]">
+            <div className="mb-[var(--space-4)] grid grid-cols-1 gap-[var(--space-2)] @min-[620px]/settings:grid-cols-2">
               {TIERS.map((tier) => {
                 const size = selectedBytes(scopes, PRESETS[tier.id]);
                 const on = activePreset === tier.id;
                 return (
                   <label
                     key={tier.id}
-                    className={`flex cursor-pointer items-start gap-[var(--space-3)] rounded-[var(--radius-md)] p-[var(--space-3)] ${
-                      on ? 'bg-[var(--chrome-accent-bg)]' : 'bg-[var(--chrome-hover-bg)]'
+                    className={`flex cursor-pointer items-start gap-[var(--space-3)] rounded-[var(--chrome-radius-pill)] border p-[var(--space-4)] transition-colors ${
+                      on
+                        ? 'border-[color-mix(in_srgb,var(--chrome-accent)_32%,transparent)] bg-[var(--chrome-accent-bg)] shadow-[inset_2px_0_0_var(--chrome-accent)]'
+                        : 'border-[color-mix(in_srgb,var(--chrome-fg)_7%,transparent)] bg-[var(--chrome-bg)] hover:bg-[var(--chrome-hover-bg)]'
                     }`}
                   >
                     <input
@@ -361,8 +363,12 @@ export default function ResetPanel({ _forceAdvanced = false } = {}) {
 
             {advanced && (
               <div
-                className="mb-[var(--space-4)] flex flex-col gap-[var(--space-2)]"
+                className="settings-list-scroll mb-[var(--space-4)] flex max-h-[420px] flex-col gap-[var(--space-2)] overflow-y-auto overscroll-contain rounded-[var(--chrome-radius-pill)] bg-[var(--chrome-bg)] p-[var(--space-2)] [scrollbar-gutter:stable]"
                 data-testid="reset-advanced"
+                tabIndex={0}
+                aria-label={t('settings.reset_advanced', {
+                  defaultValue: 'Choose exactly what to remove',
+                })}
               >
                 {SCOPE_ORDER.map((key) => {
                   const s = byKey[key];
