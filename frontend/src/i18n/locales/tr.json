@@ -907,6 +907,7 @@
     "target_language": "Dublaj dili",
     "transcript_after_extract": "Transkript, çıkarma işleminden sonra görünür.",
     "qc_btn": "Dub zamanlamasını doğrulayın (ikinci geçiş kontrolü)",
+    "verify": "Doğrula",
     "qc_running": "Dub zamanlaması kontrol ediliyor…",
     "qc_result": "{{flagged}} / {{total}} satırların yeniden dinlenmesi gerekebilir",
     "qc_clean": "Tüm {{total}} satırları komut dosyasıyla eşleşiyor",

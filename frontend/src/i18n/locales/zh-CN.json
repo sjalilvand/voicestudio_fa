@@ -866,6 +866,7 @@
     "target_language": "配音为",
     "transcript_after_extract": "提取完成后将显示转录文本。",
     "qc_btn": "验证配音时序（第二遍检查）",
+    "verify": "验证",
     "qc_running": "检查配音时间...",
     "qc_result": "{{flagged}} 行（共 {{total}} 行）可能需要重新收听",
     "qc_clean": "所有 {{total}} 行都与脚本匹配",

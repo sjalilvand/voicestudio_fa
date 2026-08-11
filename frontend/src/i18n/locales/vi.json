@@ -907,6 +907,7 @@
     "target_language": "Lồng tiếng sang",
     "transcript_after_extract": "Bản chép lời sẽ xuất hiện sau khi trích xuất.",
     "qc_btn": "Xác minh thời gian lồng tiếng (kiểm tra lần thứ hai)",
+    "verify": "Xác minh",
     "qc_running": "Đang kiểm tra thời gian lồng tiếng…",
     "qc_result": "{{flagged}} trong số {{total}} dòng có thể cần nghe lại",
     "qc_clean": "Tất cả các dòng {{total}} đều khớp với tập lệnh",

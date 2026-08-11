@@ -907,6 +907,7 @@
     "target_language": "配音成",
     "transcript_after_extract": "擷取完成後將顯示逐字稿。",
     "qc_btn": "驗證配音時序（第二遍檢視）",
+    "verify": "驗證",
     "qc_running": "檢查配音時間...",
     "qc_result": "{{flagged}} 行（共 {{total}} 行）可能需要重新聆聽",
     "qc_clean": "所有 {{total}} 行都與腳本匹配",

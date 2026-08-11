@@ -905,6 +905,7 @@
     "target_language": "Doubler en",
     "transcript_after_extract": "La transcription apparaît après l'extraction.",
     "qc_btn": "Vérifier le timing du doublage (vérification du deuxième passage)",
+    "verify": "Vérifier",
     "qc_running": "Vérification du timing de doublage…",
     "qc_result": "{{flagged}} lignes sur {{total}} peuvent nécessiter une réécoute",
     "qc_clean": "Toutes les lignes {{total}} correspondent au script",

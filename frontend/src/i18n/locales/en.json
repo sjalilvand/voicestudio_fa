@@ -1169,6 +1169,7 @@
     "stop_progress": "Stop ({{current}}/{{total}})",
     "regen_changed": "Regen {{count}} changed",
     "qc_btn": "Verify dub timing (second-pass check)",
+    "verify": "Verify",
     "qc_running": "Checking dub timing…",
     "qc_result": "{{flagged}} of {{total}} lines may need a re-listen",
     "qc_clean": "All {{total}} lines match the script",

@@ -905,6 +905,7 @@
     "target_language": "Dubben in",
     "transcript_after_extract": "Das Transkript erscheint nach der Extraktion.",
     "qc_btn": "Überprüfen des Dub-Timings (Second-Pass-Check)",
+    "verify": "Prüfen",
     "qc_running": "Dub-Timing wird überprüft…",
     "qc_result": "{{flagged}} von {{total}} Zeilen müssen möglicherweise erneut abgehört werden",
     "qc_clean": "Alle {{total}}-Zeilen stimmen mit dem Skript überein",

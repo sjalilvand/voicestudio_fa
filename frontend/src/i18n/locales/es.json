@@ -905,6 +905,7 @@
     "target_language": "Doblar a",
     "transcript_after_extract": "La transcripción aparecerá tras la extracción.",
     "qc_btn": "Verificar el tiempo de doblaje (verificación de segundo paso)",
+    "verify": "Verificar",
     "qc_running": "Comprobando el tiempo de doblaje...",
     "qc_result": "Es posible que sea necesario volver a escuchar {{flagged}} de {{total}} líneas",
     "qc_clean": "Todas las líneas {{total}} coinciden con el guión.",

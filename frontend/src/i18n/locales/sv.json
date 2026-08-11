@@ -907,6 +907,7 @@
     "target_language": "Dubba till",
     "transcript_after_extract": "Avskriften visas efter extraktionen.",
     "qc_btn": "Verifiera dubbningstid (second-pass check)",
+    "verify": "Verifiera",
     "qc_running": "Kontrollerar dubbningstid...",
     "qc_result": "{{flagged}} av {{total}} rader kan behöva lyssnas om",
     "qc_clean": "Alla {{total}} rader matchar skriptet",

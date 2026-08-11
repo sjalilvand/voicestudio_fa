@@ -905,6 +905,7 @@
     "target_language": "Dubbinguj na",
     "transcript_after_extract": "Transkrypcja pojawi się po ekstrakcji.",
     "qc_btn": "Sprawdź czas dubowania (kontrola drugiego przejścia)",
+    "verify": "Sprawdź",
     "qc_running": "Sprawdzam synchronizację dubbingu…",
     "qc_result": "{{flagged}} z {{total}} wierszy może wymagać ponownego przesłuchania",
     "qc_clean": "Wszystkie linie {{total}} odpowiadają skryptowi",
