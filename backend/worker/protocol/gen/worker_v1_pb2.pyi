@@ -123,7 +123,7 @@ class ModelCapability(_message.Message):
     def __init__(self, engine: _Optional[str] = ..., model_id: _Optional[str] = ..., operations: _Optional[_Iterable[str]] = ..., supported: _Optional[bool] = ..., installed: _Optional[bool] = ..., downloaded: _Optional[bool] = ..., resident: _Optional[bool] = ..., min_memory_bytes: _Optional[int] = ..., precision: _Optional[str] = ..., derived_concurrency: _Optional[int] = ..., cpu_fallback: _Optional[bool] = ..., repo_ids: _Optional[_Iterable[str]] = ..., display_name: _Optional[str] = ...) -> None: ...
 
 class RegisterRequest(_message.Message):
-    __slots__ = ("envelope", "protocol_version_min", "protocol_version_max", "enrollment_token", "worker_id", "public_key", "challenge_signature", "challenge", "host", "capabilities", "max_concurrent_tasks", "in_flight", "completed_unacked", "key_id", "nonce", "labels")
+    __slots__ = ("envelope", "protocol_version_min", "protocol_version_max", "enrollment_token", "worker_id", "public_key", "challenge_signature", "challenge", "host", "capabilities", "max_concurrent_tasks", "in_flight", "completed_unacked", "key_id", "nonce", "labels", "features")
     class LabelsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -147,6 +147,7 @@ class RegisterRequest(_message.Message):
     KEY_ID_FIELD_NUMBER: _ClassVar[int]
     NONCE_FIELD_NUMBER: _ClassVar[int]
     LABELS_FIELD_NUMBER: _ClassVar[int]
+    FEATURES_FIELD_NUMBER: _ClassVar[int]
     envelope: Envelope
     protocol_version_min: int
     protocol_version_max: int
@@ -163,7 +164,8 @@ class RegisterRequest(_message.Message):
     key_id: str
     nonce: bytes
     labels: _containers.ScalarMap[str, str]
-    def __init__(self, envelope: _Optional[_Union[Envelope, _Mapping]] = ..., protocol_version_min: _Optional[int] = ..., protocol_version_max: _Optional[int] = ..., enrollment_token: _Optional[str] = ..., worker_id: _Optional[str] = ..., public_key: _Optional[bytes] = ..., challenge_signature: _Optional[bytes] = ..., challenge: _Optional[bytes] = ..., host: _Optional[_Union[HostInfo, _Mapping]] = ..., capabilities: _Optional[_Iterable[_Union[ModelCapability, _Mapping]]] = ..., max_concurrent_tasks: _Optional[int] = ..., in_flight: _Optional[_Iterable[_Union[TaskRef, _Mapping]]] = ..., completed_unacked: _Optional[_Iterable[_Union[TaskRef, _Mapping]]] = ..., key_id: _Optional[str] = ..., nonce: _Optional[bytes] = ..., labels: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    features: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, envelope: _Optional[_Union[Envelope, _Mapping]] = ..., protocol_version_min: _Optional[int] = ..., protocol_version_max: _Optional[int] = ..., enrollment_token: _Optional[str] = ..., worker_id: _Optional[str] = ..., public_key: _Optional[bytes] = ..., challenge_signature: _Optional[bytes] = ..., challenge: _Optional[bytes] = ..., host: _Optional[_Union[HostInfo, _Mapping]] = ..., capabilities: _Optional[_Iterable[_Union[ModelCapability, _Mapping]]] = ..., max_concurrent_tasks: _Optional[int] = ..., in_flight: _Optional[_Iterable[_Union[TaskRef, _Mapping]]] = ..., completed_unacked: _Optional[_Iterable[_Union[TaskRef, _Mapping]]] = ..., key_id: _Optional[str] = ..., nonce: _Optional[bytes] = ..., labels: _Optional[_Mapping[str, str]] = ..., features: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class RegisterResponse(_message.Message):
     __slots__ = ("envelope", "worker_id", "session_token", "session_epoch", "protocol_version", "session_expires_at_unix", "heartbeat_interval_seconds", "authoritative_in_flight", "error")

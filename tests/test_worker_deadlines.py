@@ -81,6 +81,14 @@ def test_long_operations_get_a_longer_grace_window():
     assert for_task("dub").grace_seconds > for_task("dictation").grace_seconds
 
 
+def test_reconnect_backoff_grace_and_progress_lease_are_strictly_ordered():
+    from worker.transport.client import _MAX_BACKOFF_SECONDS
+
+    for operation in Operation:
+        budget = for_task(operation.value)
+        assert _MAX_BACKOFF_SECONDS < budget.grace_seconds < budget.progress_lease_seconds
+
+
 def test_media_length_scales_operations_measured_in_seconds():
     short = for_task("dub", input_seconds=10)
     long = for_task("dub", input_seconds=3600)

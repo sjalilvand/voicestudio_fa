@@ -47,7 +47,8 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
-- Remote dubbing OOM recovery can no longer flush the control-plane GPU; dubbing remains local until its coarse worker operation is complete. (#1478)
+- Remote workers that lack required task inputs, progress leases, or model-download commands are now refused visibly instead of returning wrong audio or hanging. (#1478)
+- Remote GPU workers now synthesize a dub's fresh segments as one coarse job with live progress and cancellation; fitting, assembly and RVC remain local. (#1478)
 - Gallery voice previews now fall back to a local render when a downloaded clip cannot be decoded, instead of failing silently. (#1478)
 - A second VoiceStudio instance can no longer silently share the remote-worker port; it keeps running locally and explains how to resolve the conflict. (#1478)
 - Remote GPU jobs stay pinned to the selected worker across retries and restarts, stop when their caller leaves, and cannot return from cancellation as completed. (#1478)

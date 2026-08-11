@@ -260,9 +260,7 @@ def test_a_ported_operation_still_runs_remotely(db, settings):
     assert routing.decide(plane, op="tts").remote is True
 
 
-def test_an_unported_operation_never_claims_the_remote_target(db, settings):
-    """Otherwise the badge reads "gpu2 ● ready" on the Dub tab while every
-    second of that work runs here."""
+def test_dubbing_claims_the_remote_target_after_its_producer_lands(db, settings):
     plane = _Plane()
     worker = _enroll("desktop-4090")
     _connect(plane, worker)
@@ -270,18 +268,16 @@ def test_an_unported_operation_never_claims_the_remote_target(db, settings):
 
     decision = routing.decide(plane, op="dub")
 
-    assert decision.remote is False
-    assert decision.worker_id is None
-    assert "dubbing" in decision.reason
+    assert decision.remote is True
+    assert decision.worker_id == worker.id
 
 
-def test_coverage_is_decided_before_reachability(db, settings):
-    """A sleeping 4090 is beside the point for work nothing would send it."""
+def test_dubbing_reports_reachability_after_its_producer_lands(db, settings):
     plane = _Plane()
     worker = _enroll("desktop-4090")
     routing.set_target_id(worker.id)
 
-    assert "does not run remotely yet" in routing.decide(plane, op="dub").reason
+    assert "offline" in routing.decide(plane, op="dub").reason
 
 
 def test_omitting_the_operation_answers_for_the_target(db, settings):
@@ -311,9 +307,9 @@ def test_status_answers_for_the_operation_it_was_asked_about(db, settings):
 
     assert payload["op"] == "dub"
     assert payload["target"] == worker.id, "the user's choice is not lost"
-    assert payload["active"]["remote"] is False
+    assert payload["active"]["remote"] is True
     # What the menu needs to say "gpu2 · TTS only".
-    assert payload["remote_operations"] == ["audiobook", "tts"]
+    assert payload["remote_operations"] == ["audiobook", "dub", "dub_segments", "tts"]
 
 
 # ── The badge cannot lie ───────────────────────────────────────────────────

@@ -143,6 +143,41 @@ def test_pinned_capacity_races_do_not_spend_attempts_or_exclude_the_worker():
     assert task.excluded_workers == set()
 
 
+def test_a_connected_pin_that_cannot_run_this_is_not_reported_as_offline():
+    """"Offline" and "here but cannot run this" are different facts.
+
+    Found on real hardware, not in this suite: asking a live worker for an
+    engine it does not have answered "is offline or cannot be reached. Wake
+    the selected worker" — while that worker reported ready, one free slot and
+    3.6 ms latency. The user is sent to wake a machine that is already awake,
+    and the actual cause (the model is not there) is never mentioned.
+
+    The whole suite was green when that shipped, because nothing asked a
+    connected worker for something it could not do.
+    """
+    sched = _scheduler(_pool(_record("chosen", operations=["tts"])))
+    task = _submit(sched, pinned_worker_id="chosen", operation="dubbing")
+
+    with pytest.raises(NoEligibleWorker) as exc:
+        sched.select_worker(task, now=1001.0)
+
+    message = str(exc.value)
+    assert "offline" not in message.lower(), "the worker is connected"
+    assert "connected but" in message
+    # Names the engine rather than the operation: "cannot run indextts" points
+    # at the thing the user can install, where "cannot run dubbing" does not.
+    assert task.engine in message
+    assert exc.value.retryable is False
+
+
+def test_supports_does_not_hide_a_missing_download_from_gateway_preflight():
+    """Scheduling filters installation, while the gateway owns downloads."""
+    worker = _pool(_record("chosen", operations=["tts"])).get("chosen")
+    worker.record.capabilities[0]["downloaded"] = False
+
+    assert worker.supports(ENGINE, MODEL, OP) is True
+
+
 def test_unreachable_pin_fails_by_name_instead_of_leaking_or_waiting_forever():
     sched = _scheduler(_pool(_record("other")))
     task = _submit(sched, pinned_worker_id="chosen")

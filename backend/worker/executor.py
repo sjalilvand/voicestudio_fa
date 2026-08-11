@@ -21,6 +21,8 @@ import hashlib
 import json
 import logging
 import os
+import io
+import zipfile
 from typing import Any, Awaitable, Callable, Optional
 
 from worker.errors import ErrorClass, WorkerError
@@ -115,6 +117,7 @@ class TaskExecutor:
             "tts": self._run_tts,
             "clone": self._run_tts,
             "audiobook": self._run_audiobook,
+            "dub_segments": self._run_dub_segments,
         }.get(operation)
         if handler is None:
             raise TaskFailure(
@@ -133,6 +136,76 @@ class TaskExecutor:
                 on_model_loading or self._on_model_loading,
             ),
         )
+
+    async def _run_dub_segments(self, assignment, params: dict, report: "_Reporters") -> dict:
+        """Render every requested dub line under one lease and return one bundle."""
+        rows = params.get("segments") or []
+        refs = params.get("ref_audio") or []
+        if not rows:
+            raise TaskFailure(WorkerError(
+                error_class=ErrorClass.TERMINAL, code="INVALID_TASK_PARAMS",
+                message="The dubbing task carried no segments.",
+                hint="Re-open the dub and try again.",
+            ))
+        load_budget, run_budget = _budgets(assignment)
+        await report.loading(0.0, f"preparing {assignment.engine}")
+        backend = await self._bounded(
+            asyncio.to_thread(self._load_backend, assignment.engine),
+            timeout=load_budget, code="MODEL_LOAD_TIMEOUT", what=f"Loading '{assignment.engine}'",
+        )
+        await report.loading(1.0, "model ready")
+        rendered: list[tuple[int, bytes]] = []
+        for index, row in enumerate(rows):
+            row = dict(row)
+            row["ref_audio"] = refs[index] if index < len(refs) else None
+            audio = await self._bounded(
+                asyncio.to_thread(self._synthesize_dub_segment, backend, row),
+                timeout=run_budget, code="EXECUTION_TIMEOUT", what=f"Dubbing segment {index + 1}",
+            )
+            payload, _meta = await asyncio.to_thread(self._encode, audio, row, backend)
+            rendered.append((int(row.get("index", index)), payload))
+            await report.progress((index + 1) / len(rows), f"segment {index + 1} of {len(rows)}")
+
+        bundle = io.BytesIO()
+        with zipfile.ZipFile(bundle, "w", compression=zipfile.ZIP_STORED) as archive:
+            for index, payload in rendered:
+                archive.writestr(f"segments/{index}.wav", payload)
+        data = bundle.getvalue()
+        return {"payload": data, "meta": {
+            "filename": "dub-segments.zip", "content_type": "application/zip",
+            "segments": len(rendered), "bytes": len(data),
+        }}
+
+    @staticmethod
+    def _synthesize_dub_segment(backend, row: dict):
+        """Worker-side equivalent of dubbing's text-to-engine chokepoint."""
+        from services.audio_dsp import apply_effects_chain, apply_mastering, get_effect_chain, normalize_audio
+        from services.text_normalization import normalize_for_tts
+
+        text = normalize_for_tts(row.get("text") or "", row.get("language"))
+        if row.get("seed") is not None:
+            import torch
+            torch.manual_seed(int(row["seed"]))
+        kwargs = {
+            "language": row.get("language") if row.get("language") != "Auto" else None,
+            "ref_audio": row.get("ref_audio"), "ref_text": row.get("ref_text"),
+            "cache_ref": not bool(row.get("ref_single_use")),
+            "instruct": row.get("instruct") or None, "duration": row.get("duration"),
+            "num_step": int(row.get("num_step") or 16),
+            "guidance_scale": float(row.get("guidance_scale") or 2.0),
+            "speed": float(row.get("speed") or 1.0), "denoise": True,
+            "postprocess_output": True,
+        }
+        audio = backend.generate(text=text, **kwargs)
+        preset = row.get("effect_preset") or "broadcast"
+        if preset != "raw":
+            if not getattr(backend, "applies_own_mastering", False):
+                audio = apply_mastering(audio, sample_rate=backend.sample_rate)
+            chain = get_effect_chain(preset)
+            if chain:
+                audio = apply_effects_chain(audio, sample_rate=backend.sample_rate, chain=chain)
+            audio = normalize_audio(audio, target_dBFS=-2.0)
+        return audio
 
     # ── Operations ────────────────────────────────────────────────────────
 

@@ -349,7 +349,7 @@ async def prewarm(
     """
     decision = decision or decide(op, control_plane=control_plane)
     if decision.remote:
-        _require_remote_download(engine, decision, control_plane=control_plane)
+        await preflight(engine, decision, control_plane=control_plane)
         plane = _plane(control_plane)
         if engine and plane is not None and getattr(plane, "servicer", None) is not None:
             await plane.servicer.prewarm(decision.worker_id, engine=engine)
@@ -491,7 +491,7 @@ async def _run_remote(
     if scheduler is None:
         raise _NotDispatched("the control plane has no scheduler")
 
-    _require_remote_download(call.engine, decision, call.model_id, control_plane=plane)
+    await preflight(call.engine, decision, call.model_id, control_plane=plane)
 
     params = dict(call.params or {})
     deadline = call.deadline_seconds
@@ -535,34 +535,46 @@ async def _run_remote(
     return _decode(call, settled, decision)
 
 
-def _require_remote_download(
+async def preflight(
     engine: str,
     decision: Decision,
     model_id: str = "",
     *,
     control_plane=None,
 ) -> None:
-    """Reject only an explicit downloaded=false report; missing facts fail open."""
-    plane = _plane(control_plane)
-    pool = getattr(plane, "pool", None) if plane is not None else None
-    worker = pool.get(decision.worker_id) if pool is not None else None
-    if worker is None:
+    """Refuse a positively absent remote model before scheduler admission.
+
+    ``downloaded`` predates ``repo_ids`` on the wire.  A worker in the
+    protocol compatibility window can therefore prove absence while lacking
+    the newer field that names the download.  Recover catalog ids for that
+    case; an absent/unknown ``downloaded`` fact still fails open.
+    """
+    if not engine:
         return
-    for cap in worker.record.capabilities or []:
-        if cap.get("engine") != engine:
-            continue
+    target = await status(engine, decision=decision, control_plane=control_plane)
+    for cap in target["models"]:
         if model_id and cap.get("model_id") not in (model_id, "", None):
             continue
-        if cap.get("downloaded") is False and cap.get("repo_ids"):
+        if cap.get("downloaded") is False:
+            repo_ids = list(cap.get("repo_ids") or [])
+            if not repo_ids:
+                from worker.capabilities import repo_ids_for  # noqa: PLC0415
+
+                repo_ids = repo_ids_for({"id": engine})
+            if not repo_ids:
+                # Positive absence without a safe catalog target is actionable
+                # only as "cannot run"; never invent a path or reject an
+                # opaque/user-managed installation.
+                return
             from services.sidecar_install import SPECS  # noqa: PLC0415
 
             sidecar_repos = {s.weights_repo_id for s in SPECS.values()}
             raise ModelNotDownloaded(
                 engine=engine,
-                repo_ids=list(cap["repo_ids"]),
+                repo_ids=repo_ids,
                 target=decision.worker_id,
                 target_label=decision.label,
-                downloadable=not any(repo in sidecar_repos for repo in cap["repo_ids"]),
+                downloadable=not any(repo in sidecar_repos for repo in repo_ids),
             )
 
 
@@ -945,6 +957,7 @@ __all__ = [
     "decode_audio_artifact",
     "download",
     "notice_for",
+    "preflight",
     "prewarm",
     "run",
     "status",

@@ -55,7 +55,7 @@ from worker.identity import EnrollmentToken, WorkerKeypair
 from worker.protocol.gen import worker_v1_pb2 as pb
 from worker.protocol.gen import worker_v1_pb2_grpc as pb_grpc
 from worker.transport import codec
-from worker.transport.server import PROTOCOL_VERSION, SESSION_METADATA_KEY
+from worker.transport.server import PROTOCOL_VERSION, REQUIRED_FEATURES, SESSION_METADATA_KEY
 
 logger = logging.getLogger("omnivoice.worker")
 
@@ -395,6 +395,7 @@ class WorkerClient:
                     for t in self._running
                 ],
                 completed_unacked=[p.ref for p in self._pending.values()],
+                features=sorted(REQUIRED_FEATURES),
             )
         )
 

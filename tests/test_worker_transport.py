@@ -25,7 +25,7 @@ from worker.protocol.gen import worker_v1_pb2_grpc as pb_grpc
 from worker.scheduler import Scheduler
 from worker.transport import codec
 from worker.transport.client import WorkerClient, WorkerConfig, backoff_delay, config_from_token
-from worker.transport.server import ControlPlaneBindError, WorkerServicer, serve
+from worker.transport.server import ControlPlaneBindError, REQUIRED_FEATURES, WorkerServicer, serve
 
 ENGINE, MODEL, OP = "indextts", "IndexTTS-2", "tts"
 
@@ -548,6 +548,7 @@ async def test_registration_refuses_an_unknown_key(harness, db):
         stranger = WorkerKeypair.generate()
         response = await stub.Register(
             pb.RegisterRequest(
+                features=sorted(REQUIRED_FEATURES),
                 protocol_version_min=1,
                 protocol_version_max=1,
                 public_key=stranger.public_bytes(),

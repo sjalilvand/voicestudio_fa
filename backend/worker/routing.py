@@ -42,8 +42,9 @@ producer for it — so ``decide(op=...)`` answers for the surface the user is
 looking at rather than for the machine, and the badge cannot read
 "gpu2 ● ready" on a tab whose work is 100% local.
 
-Speech synthesis and chapter-at-a-time audiobook rendering have remote
-producers. ASR, diarization, translation and RVC remain local. Dictation is
+Speech synthesis, chapter-at-a-time audiobook rendering, and coarse
+``dub_segments`` synthesis have remote producers. Dub assembly, ASR,
+diarization, translation and RVC remain local. Dictation is
 intentionally local regardless of the selected target because its latency is
 the feature.
 """
@@ -59,10 +60,18 @@ logger = logging.getLogger("omnivoice.worker")
 # with one: worker ids are 12 hex characters.
 LOCAL = "local"
 
-# Operations with a remote producer today. Ports land one at a time (dubbing
-# and dictation are explicitly not here), and this set is what keeps the
-# picker honest about it.
-REMOTE_OPERATIONS = frozenset({"audiobook", "tts"})
+# Operations with a remote producer today. Ports land one at a time, and this
+# set is what keeps the picker honest about which ones have arrived.
+#
+# `dub` is the surface the user picks; `dub_segments` is the coarse worker op
+# it dispatches (dub_generate.py). Both belong here because the GPU work does
+# leave this machine — listing only the worker op would make the Dub tab read
+# "Local" while a remote card renders it.
+#
+# Dictation is deliberately absent and should stay that way: it runs ASR per
+# utterance inside a live WebSocket loop, where a round trip per utterance
+# would spend the one thing that route exists for.
+REMOTE_OPERATIONS = frozenset({"audiobook", "dub", "dub_segments", "tts"})
 
 # Only for the sentence the user reads; an unknown op falls back to its id
 # rather than inventing a name for it.
@@ -70,6 +79,7 @@ _OP_LABELS = {
     "tts": "speech synthesis",
     "clone": "voice cloning",
     "dub": "dubbing",
+    "dub_segments": "dubbing",
     "audiobook": "audiobook rendering",
     "dictation": "dictation",
     "asr": "transcription",

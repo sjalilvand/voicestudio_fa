@@ -82,12 +82,12 @@ class Operation(str, enum.Enum):
 # longer grace: losing a 40-minute dub to a 45-second network blip and redoing
 # it from zero is the expensive mistake.
 _PROFILE: dict[Operation, tuple[float, int]] = {
-    Operation.DICTATION: (0.5, 20),
-    Operation.ASR: (2.0, 45),
-    Operation.TTS: (1.0, 45),
-    Operation.CLONE: (2.0, 60),
-    Operation.DUB: (12.0, 120),
-    Operation.AUDIOBOOK: (24.0, 120),
+    Operation.DICTATION: (0.5, 75),
+    Operation.ASR: (2.0, 75),
+    Operation.TTS: (1.0, 75),
+    Operation.CLONE: (2.0, 75),
+    Operation.DUB: (12.0, 90),
+    Operation.AUDIOBOOK: (24.0, 90),
 }
 
 

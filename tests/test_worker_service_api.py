@@ -190,7 +190,7 @@ def test_engines_that_cannot_clone_do_not_advertise_it(monkeypatch):
         "services.tts_backend.list_backends",
         lambda: [{"id": "e", "available": True, "supports_cloning": None, "gpu_compat": ["cuda"]}],
     )
-    assert capabilities.discover()[0]["operations"] == ["audiobook", "tts"]
+    assert capabilities.discover()[0]["operations"] == ["audiobook", "dub_segments", "tts"]
 
 
 def test_default_concurrency_is_one():
@@ -596,9 +596,9 @@ def test_submit_demands_a_deadline(client):
 
 def test_submit_refuses_an_operation_with_no_remote_path(client, monkeypatch):
     _running(monkeypatch, _Scheduler())
-    response = client.post("/workers/tasks", json={**_BODY, "operation": "dub"})
+    response = client.post("/workers/tasks", json={**_BODY, "operation": "asr"})
     assert response.status_code == 400
-    assert "dub" in response.json()["detail"]
+    assert "asr" in response.json()["detail"]
 
 
 def test_a_full_queue_is_refused_at_the_door(client, monkeypatch):
@@ -686,15 +686,16 @@ def test_the_target_endpoint_answers_per_operation(client, monkeypatch, db):
     worker = registry_enroll("desktop-4090")
     store = {"worker_target": worker.id}
     monkeypatch.setattr("services.settings_store.get_text", lambda k, d=None: store.get(k, d))
+    monkeypatch.setattr(service.control_plane, "_started", True)
 
     scoped = client.get("/workers/target", params={"op": "dub"}).json()
     assert scoped["op"] == "dub"
     assert scoped["active"]["remote"] is False
-    assert "does not run remotely yet" in scoped["active"]["reason"]
+    assert "offline" in scoped["active"]["reason"]
 
     whole = client.get("/workers/target").json()
     assert whole["op"] == ""
-    assert whole["remote_operations"] == ["audiobook", "tts"]
+    assert whole["remote_operations"] == ["audiobook", "dub", "dub_segments", "tts"]
 
 
 # ── Config is read from the database, not from the pool's stale copy ───────

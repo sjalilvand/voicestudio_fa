@@ -422,6 +422,58 @@ def test_midjob_remote_failure_is_reported_not_silently_redone(client, monkeypat
     assert r.headers.get("X-OmniVoice-Routing") == "remote_failed"
 
 
+def test_legacy_worker_missing_weights_returns_typed_409_before_submit(
+    client, monkeypatch
+):
+    """An older peer's positive absence still reaches the HTTP download offer."""
+    import services.gpu_gateway as gateway
+
+    class Worker:
+        class Record:
+            capabilities = [{
+                "engine": "cosyvoice", "model_id": "cosyvoice:default",
+                "supported": True, "installed": True, "downloaded": False,
+                # Phase-4 wire payload: repo_ids did not exist yet.
+                "operations": ["tts"],
+            }]
+        record = Record()
+
+    class Pool:
+        def get(self, _worker_id):
+            return Worker()
+
+    class Scheduler:
+        submitted = []
+
+        def submit(self, **kwargs):
+            self.submitted.append(kwargs)
+            raise AssertionError("scheduler.submit ran before model preflight")
+
+    class Plane:
+        running = True
+        pool = Pool()
+        scheduler = Scheduler()
+
+    decision = _remote_decision("gpu2")
+    monkeypatch.setattr(gateway, "decide", lambda op, **kwargs: decision)
+    monkeypatch.setattr(gateway, "_plane", lambda control_plane=None: Plane())
+
+    response = _post(client, text="Legacy capability probe.", engine="cosyvoice")
+
+    assert response.status_code == 409, response.text
+    assert response.json()["detail"] == {
+        "error": "model_not_downloaded",
+        "message": "This model is not downloaded on gpu2.",
+        "engine": "cosyvoice",
+        "repo_ids": ["FunAudioLLM/Fun-CosyVoice3-0.5B-2512"],
+        "size_bytes": int(9.8 * 1024**3),
+        "target": decision.worker_id,
+        "target_label": "gpu2",
+        "downloadable": True,
+    }
+    assert Plane.scheduler.submitted == []
+
+
 def test_remote_render_is_not_refused_by_this_hosts_capabilities(
     client, monkeypatch
 ):

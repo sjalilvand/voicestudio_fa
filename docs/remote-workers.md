@@ -78,10 +78,11 @@ small cards.
 
 ## What runs remotely
 
-**Speech synthesis and audiobook chapters.** Audiobooks are dispatched one
-chapter at a time; if a worker repeatedly fails, the failed chapter and the
-rest of that book run locally and the job reports one combined notice. ASR,
-diarization, translation and RVC still run on this machine. Dictation always
+**Speech synthesis, audiobook chapters, and dub segment synthesis.** Audiobooks
+are dispatched one chapter at a time. A dub sends all fresh segments as one
+coarse task and receives their WAVs in one result bundle; fitting, assembly and
+RVC still run on this machine. If a remote multi-unit render fails, its local
+fallback is reported once. ASR, diarization and translation also remain local. Dictation always
 runs here, deliberately and permanently, because there latency *is* the
 feature. The remaining operations are being ported one at a time.
 
@@ -91,7 +92,7 @@ reason, instead of showing a green dot next to a GPU that receives nothing.
 The Dictation surface states that it always uses this machine without showing
 the generic "not ported yet" notice.
 
-While the port is in progress, the only way to place a task by hand is
+For protocol development, a task can also be placed by hand with
 `POST /workers/tasks` — a **development-only** endpoint. It is loopback-only,
 sits behind the same opt-in as everything else here, takes a mandatory
 deadline, submits one task and waits for it. It is not a stable API and goes
@@ -135,9 +136,19 @@ in 45s" — and **Resume** clears it immediately when you've fixed the machine.
 launch OmniVoice recovers those tasks and reconciles with each worker about
 what is genuinely still in flight.
 
-**Version mismatch.** A worker more than two releases away from this machine is
-refused with a message saying which side to update, rather than failing tasks
-mysteriously.
+**Version or feature mismatch.** The protocol keeps a two-release compatibility
+window, but release numbers alone do not prove that a worker understands every
+additive command. Registration therefore also declares named features for task
+inputs, progress leases, and remote model downloads. A worker outside the
+version window, or one missing a required feature, is refused with
+`UPGRADE_REQUIRED` and an update instruction before any task runs. It can never
+silently render without reference audio or leave a download stuck at 0%.
+
+Every remote failure includes a concrete next step. Capacity, missing models,
+expired leases or sessions, authentication, rejected inputs, and result upload
+failures are shown as named errors with advice to retry, reconnect, install the
+model, free resources, or re-enroll as appropriate; they do not reach the UI
+with a blank hint.
 
 ## Security
 
@@ -182,3 +193,29 @@ restart it.
 
 State lives under your data directory in `workers/`: the certificate and key,
 the worker's own key, and received artifacts.
+
+## Contributor acceptance check
+
+After changing remote-worker routing or transport, run the non-destructive
+hardware acceptance script from the repository root:
+
+```bash
+scripts/verify-remote-worker.sh \
+  --worker-id '<worker-id>' \
+  --ssh-target '<user@worker-host>'
+```
+
+`WORKER_ID`, `WORKER_SSH_TARGET`, `WORKER_START_COMMAND`, `VOICESTUDIO_API`,
+and `WORKER_CONTROL_PORT` are equivalent environment variables. Pass
+`--worker-start-command` (or its environment equivalent) when the worker does
+not start with `OMNIVOICE_WORKER_MODE=1 omnivoice`; it is printed only in the
+manual worker-loss procedure. The worker id is optional only when exactly one
+worker is connected. The script requires an SSH target so it can verify the
+worker's OS and NVIDIA GPU before accepting any result.
+
+The check never deletes model caches or user data. It selects an engine the
+worker itself reports as absent for the missing-model check. Operations that
+would disrupt the machine or network, including airplane mode, simultaneous
+downloads, and stopping a worker during an audiobook, are printed as exact
+`MANUAL` steps and are never reported as passed automatically. A failed
+precondition or automated check exits non-zero.

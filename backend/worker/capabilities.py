@@ -89,6 +89,9 @@ def discover(*, include_unavailable: bool = False) -> list[dict]:
                 # `available` implies the engine can start; weights are fetched
                 # on first use, which the load-phase deadline covers.
                 "downloaded": downloaded,
+                # Empty means this engine is not installable through the HF
+                # catalog. It remains runnable when installed: sidecars and
+                # user-managed engines legitimately install another way.
                 "repo_ids": repo_ids,
                 "resident": engine_id in resident,
                 "min_memory_bytes": int(float(entry.get("min_vram_gb") or 0) * 1024**3),
@@ -215,7 +218,7 @@ def _operations_for(entry: dict) -> list[str]:
     # Audiobook chapters use the same TTS engine, but are advertised as their
     # own schedulable operation so an older worker cannot accept a task whose
     # chapter assembler it does not implement.
-    operations = ["audiobook", "tts"]
+    operations = ["audiobook", "dub_segments", "tts"]
     if entry.get("supports_cloning") is True:
         operations.append("clone")
     return operations

@@ -21,7 +21,7 @@ from worker.pool import WorkerPool
 from worker.protocol.gen import worker_v1_pb2 as pb
 from worker.scheduler import Scheduler
 from worker.transport import codec
-from worker.transport.server import WorkerServicer
+from worker.transport.server import REQUIRED_FEATURES, WorkerServicer
 
 ENGINE, MODEL, OP = "indextts", "IndexTTS-2", "tts"
 
@@ -97,6 +97,7 @@ class _Plane:
         )
         response = await self.servicer.Register(
             pb.RegisterRequest(
+                features=sorted(REQUIRED_FEATURES),
                 envelope=pb.Envelope(sequence=self.epoch),
                 protocol_version_min=1,
                 protocol_version_max=1,

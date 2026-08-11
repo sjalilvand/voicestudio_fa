@@ -18,6 +18,9 @@ import re
 
 import pytest
 
+from worker.protocol.gen import worker_v1_pb2 as pb
+from worker.transport.server import REQUIRED_FEATURES, WorkerServicer
+
 _PROTO = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "backend",
@@ -67,6 +70,29 @@ def test_registration_negotiates_a_version_range(proto):
     body = _message_body(proto, "RegisterRequest")
     assert "protocol_version_min" in body
     assert "protocol_version_max" in body
+
+
+def test_registration_declares_semantic_features(proto):
+    assert "repeated string features = 17;" in _message_body(proto, "RegisterRequest")
+
+
+@pytest.mark.asyncio
+async def test_old_worker_is_visibly_refused_before_running_wrong_audio():
+    """An old peer can share v1's protobuf shape while missing inputs/progress.
+
+    Registration must fail by name, before authentication or task dispatch,
+    instead of allowing a clone with no reference audio to report SUCCESS.
+    """
+    servicer = object.__new__(WorkerServicer)
+    response = await servicer.Register(
+        pb.RegisterRequest(protocol_version_min=1, protocol_version_max=1), None
+    )
+
+    assert response.error.code == "UPGRADE_REQUIRED"
+    assert "missing required protocol features" in response.error.message
+    assert "task_inputs_v1" in response.error.message
+    assert "no task was run" in response.error.message
+    assert REQUIRED_FEATURES
 
 
 # ── Control / data plane separation ────────────────────────────────────────

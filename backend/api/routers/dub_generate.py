@@ -4,6 +4,8 @@ import json
 import logging
 import time
 import asyncio
+import shutil
+import zipfile
 import torch
 import torchaudio
 from fastapi import APIRouter, HTTPException
@@ -13,7 +15,8 @@ from core.config import DUB_DIR, VOICES_DIR, dub_seg_path
 from core.tasks import task_manager
 from schemas.requests import DubRequest
 from services.model_manager import _gpu_pool, run_on_gpu_pool_guarded
-from services.tts_backend import resolve_generation_backend
+from services.tts_backend import resolve_generation_backend, active_backend_id
+from services import gpu_gateway
 from services.audio_dsp import apply_mastering, normalize_audio, apply_effects_chain, get_effect_chain
 from services.audio_io import atomic_save_wav, _safe_torchaudio_save
 from services.ffmpeg_utils import (
@@ -348,6 +351,75 @@ def resolve_consistent_ref(job: dict, speaker_key: str, memo: dict | None = None
     return ref
 
 
+def _remote_voice(job: dict, profile_id: str | None, seg_id, voice_match: str,
+                  memo: dict) -> tuple[str | None, str | None, bool, str | None, int | None]:
+    """Resolve a dub binding without touching the TTS model."""
+    ref_audio = ref_text = instruct = None
+    seed = None
+    single_use = False
+    if profile_id and profile_id.startswith("auto-seg:"):
+        sid = profile_id[len("auto-seg:"):]
+        info = (job.get("segment_clones") or {}).get(sid)
+        shared = False
+        if voice_match == "consistent" and sid == str(seg_id):
+            key = _speaker_key_for_segment(job, sid)
+            alternate = resolve_consistent_ref(job, key, memo) if key else None
+            if alternate:
+                info = alternate
+                shared = True
+        if info:
+            ref_audio, ref_text = info.get("ref_audio"), info.get("ref_text")
+            single_use = not shared
+    elif profile_id and profile_id.startswith("auto:"):
+        key = profile_id[len("auto:"):]
+        if voice_match == "consistent":
+            info = resolve_consistent_ref(job, key, memo)
+        else:
+            info = ((job.get("segment_clones") or {}).get(str(seg_id))
+                    or _find_speaker_clone(job.get("speaker_clones") or {}, key))
+            single_use = str(seg_id) in (job.get("segment_clones") or {})
+        if info:
+            ref_audio, ref_text = info.get("ref_audio"), info.get("ref_text")
+    elif profile_id:
+        with db_conn() as conn:
+            row = conn.execute("SELECT * FROM voice_profiles WHERE id=?", (profile_id,)).fetchone()
+        if row:
+            seed = row["seed"]
+            if row["is_locked"] and row["locked_audio_path"]:
+                ref_audio = os.path.join(VOICES_DIR, row["locked_audio_path"])
+                ref_text = row["ref_text"]
+            elif row["instruct"] and not row["is_locked"]:
+                try:
+                    vd_states = row["vd_states"]
+                except (KeyError, IndexError):
+                    vd_states = None
+                instruct = heal_design_instruct(row["instruct"], vd_states)
+            else:
+                ref_audio = os.path.join(VOICES_DIR, row["ref_audio_path"])
+                ref_text = row["ref_text"]
+    return ref_audio, ref_text, single_use, instruct, seed
+
+
+def _decode_remote_dub(result: gpu_gateway.RemoteResult) -> dict[int, str]:
+    """Extract the worker bundle into a task-scoped directory, path-safely."""
+    target = os.path.join(DUB_DIR, ".remote", result.task_id)
+    os.makedirs(target, exist_ok=True)
+    paths: dict[int, str] = {}
+    with zipfile.ZipFile(result.path) as archive:
+        for member in archive.infolist():
+            match = re.fullmatch(r"segments/(\d+)\.wav", member.filename)
+            if not match:
+                raise ValueError(f"unexpected dub artifact member: {member.filename}")
+            index = int(match.group(1))
+            destination = os.path.join(target, f"{index}.wav")
+            partial = f"{destination}.part"
+            with archive.open(member) as source, open(partial, "wb") as output:
+                shutil.copyfileobj(source, output)
+            os.replace(partial, destination)
+            paths[index] = destination
+    return paths
+
+
 router = APIRouter()
 
 @router.post("/dub/generate/{job_id}")
@@ -519,6 +591,7 @@ async def dub_generate(job_id: str, req: DubRequest):
         # every segment of that speaker for the whole run.
         voice_match = (req.voice_match or "per_line").lower()
         _consistent_ref_memo: dict = {}
+        remote_audio: dict[int, str] = {}
         # Strategy-transition guard: smart_fit re-mixes the *natural-rate*
         # per-segment WAVs from disk. If the previous run used strict_slot,
         # the on-disk WAVs are slot-squeezed ("slotted") — reusing them would
@@ -559,6 +632,86 @@ async def dub_generate(job_id: str, req: DubRequest):
         _t_cache = 0.0
         _t_tts = 0.0
 
+        # One coarse remote lease for every segment that actually needs fresh
+        # synthesis. Assembly, fitting and the separately-pooled RVC pass stay
+        # here; the worker returns a single verified bundle of segment WAVs.
+        decision = gpu_gateway.decide("dub_segments")
+        if decision.remote:
+            remote_rows: list[dict] = []
+            remote_refs: list[str | None] = []
+            for i, seg in enumerate(req.segments):
+                seg_id = seg_ids[i] if i < len(seg_ids) else f"seg_{i}"
+                if (regen_only is not None and seg_id not in regen_only) or not seg.text.strip():
+                    continue
+                ref_audio, ref_text, ref_single_use, profile_instruct, seed = _remote_voice(
+                    job, seg.profile_id or None, seg_id, voice_match, _consistent_ref_memo
+                )
+                ref_audio = warn_if_ref_missing(
+                    ref_audio, job_id=job_id, seg_id=seg_id, where="remote dub render"
+                )
+                seg_instruct = seg.instruct or req.instruct or profile_instruct
+                seg_speed = seg.speed if seg.speed is not None else req.speed
+                if seg.direction and seg.direction.strip():
+                    try:
+                        from services.director import parse as _parse_direction
+                        direction = _parse_direction(seg.direction)
+                        extra = direction.instruct_prompt()
+                        if extra:
+                            seg_instruct = f"{seg_instruct}, {extra}" if seg_instruct else extra
+                        bias = direction.rate_bias()
+                        if bias and abs(bias - 1.0) > 0.01 and strategy == "strict_slot":
+                            seg_speed = (seg_speed or 1.0) * bias
+                    except Exception:
+                        logger.debug("direction parse skipped for remote segment %s", seg_id,
+                                     exc_info=True)
+                remote_rows.append({
+                    "index": i, "text": seg.text,
+                    "language": seg.target_lang or req.language,
+                    "ref_text": ref_text, "ref_single_use": ref_single_use,
+                    "instruct": seg_instruct,
+                    "duration": (seg.end - seg.start) if strategy == "strict_slot" else None,
+                    "num_step": 8 if req.preview else req.num_step,
+                    "guidance_scale": req.guidance_scale, "speed": seg_speed,
+                    "effect_preset": seg.effect_preset or "broadcast",
+                    "seed": seed,
+                    # RVC changes the waveform locally after TTS, so that path
+                    # is marked at the existing post-RVC chokepoint below.
+                    "watermark": not rvc_is_enabled(),
+                })
+                remote_refs.append(ref_audio)
+            if remote_rows:
+                states: asyncio.Queue = asyncio.Queue()
+                call = gpu_gateway.RemoteCall(
+                    engine=active_backend_id(), operation="dub_segments",
+                    params={"segments": remote_rows, "ref_audio": remote_refs},
+                    decode=_decode_remote_dub,
+                )
+                dub_run = gpu_gateway.JobRun("dub_segments")
+                run = asyncio.create_task(gpu_gateway.run(
+                    "dub_segments", local=gpu_gateway.LocalCall(fn=lambda: {}),
+                    remote=call, decision=decision, job=dub_run,
+                    on_state=states.put_nowait,
+                ))
+                while not run.done():
+                    if task_manager.is_cancelled(task_id):
+                        run.cancel()
+                        try:
+                            await run
+                        except asyncio.CancelledError:
+                            pass
+                        yield f"data: {json.dumps({'type': 'cancelled', 'segments_processed': 0})}\n\n"
+                        return
+                    try:
+                        state = await asyncio.wait_for(states.get(), timeout=0.25)
+                    except asyncio.TimeoutError:
+                        continue
+                    fraction = float(state.get("progress") or 0.0)
+                    yield f"data: {json.dumps({'type': 'progress', 'current': round(fraction * total, 2), 'total': total, 'text': state.get('stage') or state.get('phase')})}\n\n"
+                remote_audio = await run
+                notice = dub_run.notice()
+                if notice is not None:
+                    yield f"data: {json.dumps({'type': 'routing_notice', 'status': notice[0], 'reason': notice[1]})}\n\n"
+
         for i, seg in enumerate(req.segments):
             seg_id = seg_ids[i] if i < len(seg_ids) else f"seg_{i}"
 
@@ -567,7 +720,8 @@ async def dub_generate(job_id: str, req: DubRequest):
                 yield f"data: {json.dumps({'type': 'cancelled', 'segments_processed': i})}\n\n"
                 return
 
-            yield f"data: {json.dumps({'type': 'progress', 'current': i, 'total': total, 'text': seg.text[:50]})}\n\n"
+            if not remote_audio:
+                yield f"data: {json.dumps({'type': 'progress', 'current': i, 'total': total, 'text': seg.text[:50]})}\n\n"
 
             seg_duration = seg.end - seg.start
             if seg_duration <= 0.05 or not seg.text.strip():
@@ -901,14 +1055,24 @@ async def dub_generate(job_id: str, req: DubRequest):
                 # Budget from the shared length-scaled helper (#1190): a long
                 # dub segment used to die on the flat 300s even after v0.3.22.
                 from services.model_manager import generate_timeout_s
-                audio_tensor = await run_on_gpu_pool_guarded(
-                    lambda: _gen(
-                        seg.text, seg_lang, seg_instruct, _dur_for_tts,
-                        _num_step, req.guidance_scale, seg_speed, seg_profile, seg_effect_preset,
-                    ),
-                    what="Dub generate",
-                    timeout=generate_timeout_s(seg.text),
-                )
+                if i in remote_audio:
+                    audio_tensor, remote_sr = torchaudio.load(remote_audio[i])
+                    try:
+                        os.unlink(remote_audio[i])
+                    except OSError:
+                        pass
+                    if remote_sr != backend.sample_rate:
+                        import torchaudio.functional as AF
+                        audio_tensor = AF.resample(audio_tensor, remote_sr, backend.sample_rate)
+                else:
+                    audio_tensor = await run_on_gpu_pool_guarded(
+                        lambda: _gen(
+                            seg.text, seg_lang, seg_instruct, _dur_for_tts,
+                            _num_step, req.guidance_scale, seg_speed, seg_profile, seg_effect_preset,
+                        ),
+                        what="Dub generate",
+                        timeout=generate_timeout_s(seg.text),
+                    )
                 _t_tts += time.perf_counter() - _t_tts_0
 
                 # Check abort immediately after GPU work completes
@@ -997,8 +1161,9 @@ async def dub_generate(job_id: str, req: DubRequest):
                 # no double-mark. Cached-reuse audio is already marked;
                 # silence/zero slots carry no speech to mark, so neither is
                 # re-watermarked.
-                audio_tensor = mark_synthetic(audio_tensor, backend.sample_rate,
-                                              context="dub_generate.segment")
+                if i not in remote_audio or rvc_is_enabled():
+                    audio_tensor = mark_synthetic(audio_tensor, backend.sample_rate,
+                                                  context="dub_generate.segment")
 
                 seg_wav_path = _seg_lang_path(seg_id)
                 try:

@@ -84,6 +84,13 @@ def test_hint_is_carried_when_the_taxonomy_has_one():
     assert err.hint
 
 
+def test_every_protocol_code_has_an_actionable_hint():
+    from core.failure import _HINTS
+
+    assert errors._PROTOCOL_CODES.keys() <= _HINTS.keys()
+    assert all(_HINTS[code].strip() for code in errors._PROTOCOL_CODES)
+
+
 def test_from_exception_never_produces_an_empty_message():
     """Empty str(e) was the root of the 'unknown error' reports (#122/#63)."""
 

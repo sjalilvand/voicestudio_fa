@@ -278,6 +278,33 @@ async def test_positive_missing_model_stops_before_submit():
 
 
 @pytest.mark.asyncio
+async def test_legacy_positive_absence_without_repo_ids_stops_before_submit():
+    """Phase-4 peers predate repo_ids but still positively report absence."""
+    class Worker:
+        class Record:
+            capabilities = [{
+                "engine": "cosyvoice", "model_id": "cosyvoice:default",
+                "supported": True, "installed": True, "downloaded": False,
+                "operations": ["tts"],
+            }]
+        record = Record()
+
+    worker = Worker()
+    scheduler = FakeScheduler()
+    plane = FakePlane(scheduler, pool=FakePool(worker))
+
+    with pytest.raises(gpu_gateway.ModelNotDownloaded) as caught:
+        await gpu_gateway.run(
+            "tts", local=local_call(), remote=remote_call(engine="cosyvoice"),
+            decision=REMOTE, control_plane=plane,
+        )
+
+    assert scheduler.submitted == []
+    assert caught.value.repo_ids == ["FunAudioLLM/Fun-CosyVoice3-0.5B-2512"]
+    assert caught.value.target_label == "gpu2"
+
+
+@pytest.mark.asyncio
 async def test_missing_download_fact_fails_open(tmp_path):
     worker = CapabilityWorker()
     worker.record.capabilities = [{"engine": "indextts", "installed": True}]

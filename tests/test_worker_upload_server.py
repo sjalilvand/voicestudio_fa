@@ -30,7 +30,7 @@ from worker.pool import WorkerPool
 from worker.protocol.gen import worker_v1_pb2 as pb
 from worker.scheduler import Scheduler
 from worker.transport import codec, server as server_module
-from worker.transport.server import SESSION_METADATA_KEY, WorkerServicer
+from worker.transport.server import REQUIRED_FEATURES, SESSION_METADATA_KEY, WorkerServicer
 
 ENGINE, MODEL, OP = "indextts", "IndexTTS-2", "tts"
 
@@ -114,6 +114,7 @@ class _Plane:
         )
         response = await self.servicer.Register(
             pb.RegisterRequest(
+                features=sorted(REQUIRED_FEATURES),
                 envelope=pb.Envelope(sequence=self.epoch),
                 protocol_version_min=1,
                 protocol_version_max=1,
@@ -214,6 +215,27 @@ async def test_a_verified_upload_commits_under_its_own_attempt(plane):
     # written — the worker never learns our filesystem layout.
     assert not os.path.isabs(ack.artifact_id)
     assert plane.servicer._contained_artifact(ack.artifact_id) == final
+
+
+@pytest.mark.asyncio
+async def test_verified_upload_atomically_replaces_an_existing_attempt_file(plane):
+    task, attempt = plane.running()
+    final = plane.final_path(task, attempt)
+    os.makedirs(os.path.dirname(final), exist_ok=True)
+    with open(final, "wb") as fh:
+        fh.write(b"stale result")
+    payload = b"new verified result"
+
+    ack = await plane.upload(_chunks(_ref(plane, task, attempt, payload=payload), payload))
+
+    assert ack.committed is True
+    assert open(final, "rb").read() == payload
+
+
+@pytest.mark.parametrize("task_id", ["CON", "NUL.txt", "name.", "x" * 241])
+@pytest.mark.asyncio
+async def test_windows_hostile_artifact_components_are_refused(plane, task_id):
+    assert plane.servicer._artifact_path(task_id, "attempt") is None
 
 
 @pytest.mark.asyncio

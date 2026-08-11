@@ -431,6 +431,21 @@ class Scheduler:
         ]
         if not capable:
             if task.pinned_worker_id:
+                # "Offline" and "here but cannot run this" are different facts,
+                # and answering both with the first sends the user to go wake a
+                # machine that is already awake — verified against a live
+                # worker reporting ready, 1 free slot and 3.6 ms latency while
+                # this raised "offline or cannot be reached".
+                pinned = next(
+                    (w for w in self.pool if w.worker_id == task.pinned_worker_id), None
+                )
+                if pinned is not None and pinned.record.schedulable:
+                    raise NoEligibleWorker(
+                        f"The selected worker {task.pinned_worker_id} is connected but "
+                        f"cannot run {task.engine or task.operation}. Install or download "
+                        "it there, or choose another GPU.",
+                        retryable=False,
+                    )
                 raise NoEligibleWorker(
                     f"The selected worker {task.pinned_worker_id} is offline or cannot be reached.",
                     retryable=False,

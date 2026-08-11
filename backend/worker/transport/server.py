@@ -49,6 +49,16 @@ PROTOCOL_VERSION = 1
 # skew is the normal case rather than the exception.
 MIN_SUPPORTED_VERSION = 1
 
+# Semantic changes that remained additive on the protobuf wire but are not
+# safe to ignore. In particular, accepting a clone without task inputs can
+# return plausible wrong audio as SUCCESS, so absence is a registration error
+# rather than an execution-time fallback.
+REQUIRED_FEATURES = frozenset({
+    "task_progress_v1",
+    "task_inputs_v1",
+    "remote_model_download_v1",
+})
+
 
 class ControlPlaneBindError(RuntimeError):
     """The configured control-plane address is already owned."""
@@ -299,6 +309,14 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
                 "UPGRADE_REQUIRED",
                 "This worker is newer than the control plane. Update OmniVoice on this "
                 "machine, then reconnect.",
+            )
+        missing_features = sorted(REQUIRED_FEATURES.difference(request.features))
+        if missing_features:
+            return self._refuse(
+                "UPGRADE_REQUIRED",
+                "This worker is missing required protocol features "
+                f"({', '.join(missing_features)}). Update VoiceStudio on the worker "
+                "machine, then reconnect; no task was run.",
             )
 
         worker = self._authenticate(request)

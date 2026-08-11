@@ -158,6 +158,9 @@ message RegisterRequest {
   string key_id = 14;   // which enrolled key signed this
   bytes nonce = 15;     // replay protection
   map<string, string> labels = 16;  // hosted: region, owner class, pool
+  // Behavioural capabilities, independent of release/version skew. A peer
+  // must never infer wire semantics from protocol_version alone.
+  repeated string features = 17;
 }
 
 message RegisterResponse {

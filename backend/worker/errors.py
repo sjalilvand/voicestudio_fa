@@ -108,6 +108,10 @@ _PROTOCOL_CODES: dict[str, ErrorClass] = {
     "EXECUTION_TIMEOUT": ErrorClass.TIMEOUT,
     "PROGRESS_LEASE_EXPIRED": ErrorClass.TIMEOUT,
     "RESULT_DELIVERY_TIMEOUT": ErrorClass.TIMEOUT,
+    "INPUT_FETCH_TIMEOUT": ErrorClass.TIMEOUT,
+    "INPUT_FETCH_FAILED": ErrorClass.TRANSIENT,
+    "RESULT_UPLOAD_FAILED": ErrorClass.TRANSIENT,
+    "WORKER_FAILED": ErrorClass.TRANSIENT,
     "SESSION_EXPIRED": ErrorClass.PROTOCOL,
     "STALE_EPOCH": ErrorClass.PROTOCOL,
     "STALE_ATTEMPT": ErrorClass.PROTOCOL,
@@ -121,6 +125,11 @@ _PROTOCOL_CODES: dict[str, ErrorClass] = {
     # unclassified it fell through to TRANSIENT and the task retried until it
     # ran out of attempts, each one paying the full generation again.
     "RESULT_TOO_LARGE": ErrorClass.TERMINAL,
+    "ARTIFACT_TOO_LARGE": ErrorClass.TERMINAL,
+    "OFFSET_MISMATCH": ErrorClass.TRANSIENT,
+    "SIZE_MISMATCH": ErrorClass.TRANSIENT,
+    "DIGEST_MISMATCH": ErrorClass.TRANSIENT,
+    "UPLOAD_INCOMPLETE": ErrorClass.TRANSIENT,
 }
 
 
