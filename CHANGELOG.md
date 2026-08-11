@@ -53,6 +53,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Leaving a screen while its waveform is still loading no longer opens a bug-report prompt for a normal cancelled request. (#1498)
 - Linux production test launches now stop their own extracted AppImage before resetting SQLite and logs. (#1494)
 - Restored the pre-release version to 0.4.2 while the next release remains in preparation. (#1488)
 - Large multi-language dubbing batches now use compact searchable language and track managers instead of overflowing the editor. (#1492)
