@@ -25,6 +25,15 @@
     "workspaces": "Arbetsytor"
   },
   "settings": {
+    "remote_backend_recovery_title": "Det går inte att nå fjärrbackend",
+    "remote_backend_recovery_hint": "Du kan ändra fjärrbackend senare under Inställningar → Delning.",
+    "remote_backend_use_local": "Använd lokal backend",
+    "remote_backend_error_tls": "Den säkra anslutningen kunde inte verifieras. Kontrollera certifikatet och använd VoiceStudios HTTP API-port.",
+    "remote_backend_error_cors": "Fjärrbackend blockerade appen. Tillåt appens ursprung i CORS-inställningarna.",
+    "remote_backend_error_network": "Fjärrbackend kunde inte nås. Kontrollera adressen, nätverket och brandväggen.",
+    "remote_backend_error_timeout": "Fjärrbackend svarade inte i tid.",
+    "remote_backend_error_http": "Fjärrbackend returnerade HTTP {{status}}.",
+    "remote_backend_error_wrong_port": "Det här verkar inte vara VoiceStudios HTTP API. Port 7443 är vanligtvis kontrollporten för fjärrworkern; prova port 3900.",
     "openapi": "VoiceStudio API",
     "general": "Allmänt",
     "theme": "Tema",

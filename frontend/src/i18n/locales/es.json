@@ -25,6 +25,15 @@
     "workspaces": "Espacios de trabajo"
   },
   "settings": {
+    "remote_backend_recovery_title": "No se puede acceder al backend remoto",
+    "remote_backend_recovery_hint": "Puedes cambiar el backend remoto más tarde en Ajustes → Compartir.",
+    "remote_backend_use_local": "Usar backend local",
+    "remote_backend_error_tls": "No se pudo verificar la conexión segura. Revisa el certificado y usa el puerto de la API HTTP de VoiceStudio.",
+    "remote_backend_error_cors": "El backend remoto bloqueó esta aplicación. Permite el origen de la aplicación en la configuración CORS.",
+    "remote_backend_error_network": "No se pudo acceder al backend remoto. Revisa la dirección, la red y el cortafuegos.",
+    "remote_backend_error_timeout": "El backend remoto no respondió a tiempo.",
+    "remote_backend_error_http": "El backend remoto devolvió HTTP {{status}}.",
+    "remote_backend_error_wrong_port": "Esto no parece la API HTTP de VoiceStudio. El puerto 7443 suele ser el puerto de control del trabajador remoto; prueba el 3900.",
     "openapi": "API de VoiceStudio",
     "general": "General",
     "theme": "Tema",

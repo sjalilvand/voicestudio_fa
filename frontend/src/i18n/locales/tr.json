@@ -25,6 +25,15 @@
     "workspaces": "Çalışma alanları"
   },
   "settings": {
+    "remote_backend_recovery_title": "Uzak arka uca ulaşılamıyor",
+    "remote_backend_recovery_hint": "Uzak arka ucu daha sonra Ayarlar → Paylaşım bölümünden değiştirebilirsiniz.",
+    "remote_backend_use_local": "Yerel arka ucu kullan",
+    "remote_backend_error_tls": "Güvenli bağlantı doğrulanamadı. Sertifikayı kontrol edin ve VoiceStudio HTTP API bağlantı noktasını kullanın.",
+    "remote_backend_error_cors": "Uzak arka uç bu uygulamayı engelledi. CORS ayarlarında uygulamanın kaynağına izin verin.",
+    "remote_backend_error_network": "Uzak arka uca ulaşılamadı. Adresi, ağı ve güvenlik duvarını kontrol edin.",
+    "remote_backend_error_timeout": "Uzak arka uç zamanında yanıt vermedi.",
+    "remote_backend_error_http": "Uzak arka uç HTTP {{status}} döndürdü.",
+    "remote_backend_error_wrong_port": "Bu hizmet VoiceStudio HTTP API gibi görünmüyor. 7443 bağlantı noktası genellikle uzak worker denetimi içindir; 3900 bağlantı noktasını deneyin.",
     "openapi": "VoiceStudio API",
     "general": "Genel",
     "theme": "Tema",

@@ -25,6 +25,15 @@
     "workspaces": "ワークスペース"
   },
   "settings": {
+    "remote_backend_recovery_title": "リモートバックエンドに接続できません",
+    "remote_backend_recovery_hint": "リモートバックエンドは後で「設定」→「共有」から変更できます。",
+    "remote_backend_use_local": "ローカルバックエンドを使用",
+    "remote_backend_error_tls": "安全な接続を検証できませんでした。証明書を確認し、VoiceStudio HTTP API のポートを使用してください。",
+    "remote_backend_error_cors": "リモートバックエンドがこのアプリをブロックしました。CORS 設定でアプリのオリジンを許可してください。",
+    "remote_backend_error_network": "リモートバックエンドに到達できません。アドレス、ネットワーク、ファイアウォールを確認してください。",
+    "remote_backend_error_timeout": "リモートバックエンドが時間内に応答しませんでした。",
+    "remote_backend_error_http": "リモートバックエンドが HTTP {{status}} を返しました。",
+    "remote_backend_error_wrong_port": "VoiceStudio HTTP API ではないようです。ポート 7443 は通常リモートワーカーの制御用です。ポート 3900 をお試しください。",
     "openapi": "VoiceStudio API",
     "general": "一般",
     "theme": "テーマ",

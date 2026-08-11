@@ -46,6 +46,7 @@ import FloatingPill from './components/FloatingPill';
 import GlobalAudioPlayer from './components/GlobalAudioPlayer';
 import BackendCrashNotice from './components/BackendCrashNotice';
 import BackendStartFailureNotice from './components/BackendStartFailureNotice';
+import RemoteBackendRecovery from './components/RemoteBackendRecovery';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
 import LanguageSwitchPrompt from './components/LanguageSwitchPrompt';
 import { initAnalyticsFromConsent } from './utils/analytics';
@@ -72,6 +73,7 @@ import { toastErrorWithReport } from './utils/errorToast';
 import { listenDictationNotice, showDictationNotice } from './utils/dictationNotice';
 import { addBreadcrumb } from './utils/breadcrumbs';
 import { appShellClasses } from './utils/appShellClasses';
+import { configuredRemoteBackend, probeRemoteBackend } from './utils/remoteBackendProbe';
 import { applyUiScale } from './utils/uiScaleEngine';
 import { recordValueMoment } from './utils/donationMoments';
 import {
@@ -567,6 +569,7 @@ function App() {
   const setActiveProject = useAppStore((s) => s.setActiveProject);
   const sidebarTab = useAppStore((s) => s.sidebarTab);
   const setSidebarTab = useAppStore((s) => s.setSidebarTab);
+  const openSettingsTab = useAppStore((s) => s.openSettingsTab);
 
   // Snap sidebar to a valid tab when view changes
   useEffect(() => {
@@ -591,6 +594,17 @@ function App() {
   // the studio in front of a user who actually needs the wizard.
   const [setupNeeded, setSetupNeeded] = useState(false);
   const [setupChecked, setSetupChecked] = useState(false);
+  const [remoteFailure, setRemoteFailure] = useState(null);
+  const [remoteProbeAttempt, setRemoteProbeAttempt] = useState(0);
+  const retryRemoteBackend = useCallback(() => {
+    setRemoteFailure(null);
+    setSetupChecked(false);
+    setRemoteProbeAttempt((attempt) => attempt + 1);
+  }, []);
+  const openRemoteBackendSettings = useCallback(() => {
+    setRemoteFailure(null);
+    openSettingsTab('sharing');
+  }, [openSettingsTab]);
   useEffect(() => {
     // Gate the probe on the bootstrap being 'ready' — before that there is
     // no backend to answer. Probing from mount burned the 30-attempt ceiling
@@ -601,6 +615,15 @@ function App() {
     if (bootstrapStage !== 'ready') return undefined;
     let cancelled = false;
     (async () => {
+      const remote = configuredRemoteBackend();
+      if (remote) {
+        const result = await probeRemoteBackend(remote.url, remote.key);
+        if (cancelled) return;
+        setRemoteFailure(result.ok ? null : result);
+        setSetupNeeded(false);
+        setSetupChecked(true);
+        return;
+      }
       const { setupStatus } = await import('./api/setup');
       // ~30 attempts × ~1s ≈ 30s ceiling; enough for a cold sidecar on slow disks.
       for (let attempt = 0; attempt < 30 && !cancelled; attempt++) {
@@ -619,7 +642,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [bootstrapStage]);
+  }, [bootstrapStage, remoteProbeAttempt]);
 
   // ── First sound ──
   // Onboarding should end with the product doing the thing: the moment the
@@ -1191,6 +1214,17 @@ function App() {
     return (
       <div className="app-bootstrap-scale" style={{ '--ui-scale': uiScale }}>
         <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
+      </div>
+    );
+  }
+  if (remoteFailure) {
+    return (
+      <div className="app-bootstrap-scale" style={{ '--ui-scale': uiScale }}>
+        <RemoteBackendRecovery
+          failure={remoteFailure}
+          onRetry={retryRemoteBackend}
+          onOpenSettings={openRemoteBackendSettings}
+        />
       </div>
     );
   }

@@ -251,6 +251,15 @@
     "seed_reroll_hint": "滚动一个新的随机种子并保留它"
   },
   "settings": {
+    "remote_backend_recovery_title": "无法连接远程后端",
+    "remote_backend_recovery_hint": "你可以稍后在“设置 → 共享”中更改远程后端。",
+    "remote_backend_use_local": "使用本地后端",
+    "remote_backend_error_tls": "无法验证安全连接。请检查证书并使用 VoiceStudio HTTP API 端口。",
+    "remote_backend_error_cors": "远程后端阻止了此应用。请在 CORS 设置中允许此应用的来源。",
+    "remote_backend_error_network": "无法访问远程后端。请检查地址、网络和防火墙。",
+    "remote_backend_error_timeout": "远程后端未及时响应。",
+    "remote_backend_error_http": "远程后端返回了 HTTP {{status}}。",
+    "remote_backend_error_wrong_port": "这似乎不是 VoiceStudio HTTP API。端口 7443 通常用于远程工作进程控制；请尝试端口 3900。",
     "openapi": "VoiceStudio API",
     "title": "设置",
     "general": "通用",
