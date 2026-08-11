@@ -25,6 +25,15 @@
     "workspaces": "Ruang kerja"
   },
   "settings": {
+    "remote_backend_recovery_title": "Backend jarak jauh tidak dapat dijangkau",
+    "remote_backend_recovery_hint": "Anda dapat mengubah backend jarak jauh nanti di Pengaturan → Berbagi.",
+    "remote_backend_use_local": "Gunakan backend lokal",
+    "remote_backend_error_tls": "Koneksi aman tidak dapat diverifikasi. Periksa sertifikat dan gunakan port API HTTP VoiceStudio.",
+    "remote_backend_error_cors": "Backend jarak jauh memblokir aplikasi ini. Izinkan origin aplikasi di pengaturan CORS.",
+    "remote_backend_error_network": "Backend jarak jauh tidak dapat dijangkau. Periksa alamat, jaringan, dan firewall.",
+    "remote_backend_error_timeout": "Backend jarak jauh tidak merespons tepat waktu.",
+    "remote_backend_error_http": "Backend jarak jauh mengembalikan HTTP {{status}}.",
+    "remote_backend_error_wrong_port": "Layanan ini tampaknya bukan API HTTP VoiceStudio. Port 7443 biasanya merupakan port kontrol pekerja jarak jauh; coba port 3900.",
     "openapi": "API VoiceStudio",
     "general": "Umum",
     "theme": "Tema",

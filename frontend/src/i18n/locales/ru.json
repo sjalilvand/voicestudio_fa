@@ -25,6 +25,15 @@
     "workspaces": "Рабочие пространства"
   },
   "settings": {
+    "remote_backend_recovery_title": "Не удалось подключиться к удалённому бэкенду",
+    "remote_backend_recovery_hint": "Позже удалённый бэкенд можно изменить в разделе «Настройки → Общий доступ».",
+    "remote_backend_use_local": "Использовать локальный бэкенд",
+    "remote_backend_error_tls": "Не удалось проверить защищённое соединение. Проверьте сертификат и используйте порт HTTP API VoiceStudio.",
+    "remote_backend_error_cors": "Удалённый бэкенд заблокировал приложение. Разрешите источник приложения в настройках CORS.",
+    "remote_backend_error_network": "Удалённый бэкенд недоступен. Проверьте адрес, сеть и брандмауэр.",
+    "remote_backend_error_timeout": "Удалённый бэкенд не ответил вовремя.",
+    "remote_backend_error_http": "Удалённый бэкенд вернул HTTP {{status}}.",
+    "remote_backend_error_wrong_port": "Похоже, это не HTTP API VoiceStudio. Порт 7443 обычно служит для управления удалённым worker; попробуйте порт 3900.",
     "openapi": "API VoiceStudio",
     "general": "Общие",
     "theme": "Тема",

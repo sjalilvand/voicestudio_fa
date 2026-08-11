@@ -25,6 +25,15 @@
     "workspaces": "พื้นที่ทำงาน"
   },
   "settings": {
+    "remote_backend_recovery_title": "ไม่สามารถเชื่อมต่อแบ็กเอนด์ระยะไกลได้",
+    "remote_backend_recovery_hint": "คุณเปลี่ยนแบ็กเอนด์ระยะไกลภายหลังได้ที่ การตั้งค่า → การแชร์",
+    "remote_backend_use_local": "ใช้แบ็กเอนด์ในเครื่อง",
+    "remote_backend_error_tls": "ไม่สามารถยืนยันการเชื่อมต่อที่ปลอดภัยได้ โปรดตรวจสอบใบรับรองและใช้พอร์ต HTTP API ของ VoiceStudio",
+    "remote_backend_error_cors": "แบ็กเอนด์ระยะไกลบล็อกแอปนี้ โปรดอนุญาตต้นทางของแอปในการตั้งค่า CORS",
+    "remote_backend_error_network": "ไม่สามารถเข้าถึงแบ็กเอนด์ระยะไกลได้ โปรดตรวจสอบที่อยู่ เครือข่าย และไฟร์วอลล์",
+    "remote_backend_error_timeout": "แบ็กเอนด์ระยะไกลไม่ตอบสนองภายในเวลาที่กำหนด",
+    "remote_backend_error_http": "แบ็กเอนด์ระยะไกลส่งคืน HTTP {{status}}",
+    "remote_backend_error_wrong_port": "บริการนี้ดูเหมือนไม่ใช่ HTTP API ของ VoiceStudio โดยปกติพอร์ต 7443 ใช้ควบคุมเวิร์กเกอร์ระยะไกล โปรดลองพอร์ต 3900",
     "openapi": "API ของ VoiceStudio",
     "general": "ทั่วไป",
     "theme": "ธีม",

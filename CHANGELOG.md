@@ -69,6 +69,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Remote GPU model labels now survive registration, legacy blank model IDs share one capacity slot, long jobs retain bounded leases, and idle cleanup cannot evict a live local render. (#1478)
 - Remote GPU jobs now stop before dispatch when that worker lacks the model, offer the download there, and refresh scheduling as soon as it finishes. (#1478)
 - Leaving a screen while its waveform is still loading no longer opens a bug-report prompt for a normal cancelled request. (#1498)
+- An unreachable remote backend now opens a retryable recovery screen instead of sending the app into local model setup, with clear TLS, CORS, network, HTTP, and wrong-port guidance — thanks @debpalash! (#1501)
 - Linux production test launches now stop their own extracted AppImage before resetting SQLite and logs. (#1494)
 - Restored the pre-release version to 0.4.2 while the next release remains in preparation. (#1488)
 - Large multi-language dubbing batches now use compact searchable language and track managers instead of overflowing the editor. (#1492)
