@@ -23,6 +23,11 @@ from typing import Callable, Optional
 # nobody rotates.
 _MAX_EVENTS = 200
 
+# How long a kicked panel stays out. Long enough that the disconnect is
+# visible and the person notices; short enough that it is plainly not a
+# revocation, which is a separate and permanent action.
+_KICK_COOLDOWN_SECONDS = 60.0
+
 
 @dataclass
 class Session:
@@ -54,6 +59,7 @@ class ConnectionLog:
         self._lock = threading.Lock()
         self._sessions: dict[str, Session] = {}
         self._events: deque[Event] = deque(maxlen=_MAX_EVENTS)
+        self._cooldowns: dict[str, float] = {}
 
     # ── Sessions ──────────────────────────────────────────────────────────
 
@@ -108,7 +114,19 @@ class ConnectionLog:
             if session is None:
                 return False
             session.disconnect_requested = True
+            # A panel reconnects on its own, so without this the person is back
+            # within two seconds and the button appears to do nothing —
+            # verified on hardware, where the log read disconnected/connected
+            # in the same breath. The cooldown makes the disconnect visible and
+            # deliberately does NOT last: revoking the key is how you stop
+            # somebody for good, and a kick that silently became permanent
+            # would be a different promise than the button makes.
+            self._cooldowns[session.key_id] = self._now() + _KICK_COOLDOWN_SECONDS
             return True
+
+    def cooling_down(self, key_id: str) -> bool:
+        with self._lock:
+            return self._cooldowns.get(key_id, 0.0) > self._now()
 
     def disconnect_requested(self, session_id: str) -> bool:
         with self._lock:

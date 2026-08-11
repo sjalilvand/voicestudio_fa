@@ -81,6 +81,9 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
         metadata = {k.lower(): v for k, v in (context.invocation_metadata() or ())}
         secret = metadata.get(KEY_METADATA_KEY, "")
         key = self._keys.authenticate(secret, peer=peer)
+        if key is not None and self._log.cooling_down(key.key_id):
+            self._log.rejected(peer=peer, detail="recently disconnected by the owner")
+            return None
         if key is None:
             self._log.rejected(
                 peer=peer, detail="no key" if not secret else "key not recognised"

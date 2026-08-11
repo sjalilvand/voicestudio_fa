@@ -297,19 +297,31 @@ class OutboundNodes:
         entries = [e for e in entries if _endpoint_of(e) != connection.endpoint]
         entries.append(text.strip())
         self._save(entries)
+
+        # Tear down any live session to this machine BEFORE dialling. Without
+        # this, re-pasting for an already-connected machine saved the new key
+        # and then short-circuited on the existing connection — so a wrong key
+        # reported success, kept working on the old session, and only failed
+        # after a restart, by which time nothing pointed at the paste that
+        # caused it. Verified on hardware.
+        await self._drop(connection.endpoint)
         await self._dial(connection, servicer)
         return connection
 
-    async def remove(self, endpoint: str) -> bool:
-        entries = [e for e in self.saved() if _endpoint_of(e) != endpoint]
-        self._save(entries)
+    async def _drop(self, endpoint: str) -> None:
         connection = self._connections.pop(endpoint, None)
         task = self._tasks.pop(endpoint, None)
         if connection is not None:
             await connection.stop()
         if task is not None:
             task.cancel()
-        return connection is not None
+
+    async def remove(self, endpoint: str) -> bool:
+        entries = [e for e in self.saved() if _endpoint_of(e) != endpoint]
+        self._save(entries)
+        existed = endpoint in self._connections
+        await self._drop(endpoint)
+        return existed
 
     async def start_all(self, servicer) -> None:
         for entry in self.saved():

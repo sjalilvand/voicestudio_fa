@@ -242,6 +242,14 @@ async def test_the_owner_can_see_who_connected_and_kick_them(inbound):
     # loop that only wakes on outbound traffic would never notice.
     await _until(lambda: inbound.log.snapshot()["sessions"] == [])
 
+    # And it has to STAY landed for a moment. The panel redials on its own, so
+    # without a cooldown the person is back within two seconds and the button
+    # appears to do nothing — which is what it did on hardware, where the log
+    # read disconnected and connected in the same breath.
+    assert inbound.log.cooling_down(sessions[0]["key_id"]) is True
+    await asyncio.sleep(2.5)
+    assert inbound.log.snapshot()["sessions"] == [], "the kicked panel came straight back"
+
 
 @pytest.mark.asyncio
 async def test_an_input_pushed_before_the_assignment_is_there_when_the_task_asks(
@@ -419,3 +427,35 @@ async def test_a_staged_result_comes_back_whole_when_its_ref_declares_a_size(
     await inbound.connection.fetch_result(ref, str(destination))
 
     assert destination.read_bytes() == payload
+
+
+@pytest.mark.asyncio
+async def test_repasting_a_key_for_a_connected_machine_redials_it(inbound, monkeypatch):
+    """Re-pasting must replace the live session, not report success against it.
+
+    Found on hardware: `add` saved the new string and then short-circuited
+    because a connection to that endpoint already existed. A wrong key
+    therefore overwrote a working one, answered 200 with connected=true from
+    the stale session, and only failed after a restart — by which point nothing
+    pointed back at the paste that caused it.
+    """
+    from worker.inbound import service as inbound_service
+
+    await inbound.connect_panel()
+    outbound = inbound_service.OutboundNodes()
+    saved = []
+    monkeypatch.setattr(outbound, "saved", lambda: list(saved))
+    monkeypatch.setattr(outbound, "_save", lambda entries: saved.clear() or saved.extend(entries))
+
+    first = f"ovnode://{inbound.keys.issue('One').secret}@127.0.0.1:{inbound.port}"
+    await outbound.add(first, inbound.servicer)
+    original = outbound._connections[f"127.0.0.1:{inbound.port}"]
+
+    second = f"ovnode://{inbound.keys.issue('Two').secret}@127.0.0.1:{inbound.port}"
+    await outbound.add(second, inbound.servicer)
+
+    assert saved == [second], "the newly pasted string must be the saved one"
+    assert outbound._connections[f"127.0.0.1:{inbound.port}"] is not original, (
+        "the old session must be replaced, not reused"
+    )
+    await outbound.stop()

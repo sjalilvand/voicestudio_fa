@@ -97,6 +97,12 @@ working, which is why each person gets their own.
 panel currently attached, where it connected from, how many jobs it has run,
 and a **Disconnect** button.
 
+**Disconnect and Remove do different things.** Disconnect ends the session now
+and keeps that person out for a minute — use it to get someone off the card
+immediately. Their app reconnects by itself after that, because their
+connection string is still valid. To stop someone for good, remove their
+connection string instead.
+
 > **This mode is not encrypted.** The connection string is a password that
 > travels in the clear, so anyone who can watch that network can copy it and
 > use your GPU — and your reference audio and rendered speech cross the network
