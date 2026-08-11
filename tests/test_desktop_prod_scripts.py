@@ -15,12 +15,18 @@ have to opt out of it.
 Mechanical on purpose (token-economy convention): a rule a reviewer would have
 to remember belongs in a test, not in anyone's head.
 """
+import importlib.util
 import json
 import os
+import subprocess
+import sys
+
+import pytest
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _PKG = os.path.join(_ROOT, "package.json")
 _SH = os.path.join(_ROOT, "scripts", "desktop-prod.sh")
+_APPIMAGE_PROCESSES = os.path.join(_ROOT, "scripts", "desktop_prod_processes.py")
 
 # Scripts whose NAME promises a re-launch of an existing build rather than a
 # fresh-install emulation. Add new aliases here when they appear.
@@ -148,3 +154,172 @@ def test_kill_is_scoped_to_this_checkouts_build():
         "an installed instance is neither killed nor mentioned; single-instance "
         "will swallow the launch and the developer gets no explanation"
     )
+
+
+def test_linux_extracted_appimage_and_backend_are_stopped_before_wipe(tmp_path):
+    """Extraction hides the checkout path from argv, but APPIMAGE survives.
+
+    Reproduce the production failure with a fake procfs: the Tauri process and
+    backend inherit the same owned APPIMAGE, while a similarly named build from
+    another checkout and an unrelated process must remain untouched.
+    """
+    build_root = tmp_path / "repo" / "frontend" / "src-tauri" / "target" / "debug"
+    proc_root = tmp_path / "proc"
+
+    def process(pid: int, *environment: str) -> None:
+        process_dir = proc_root / str(pid)
+        process_dir.mkdir(parents=True)
+        (process_dir / "environ").write_bytes(
+            ("\0".join(environment) + "\0").encode()
+        )
+        # field 22 (starttime) is index 19 after the closing comm parenthesis.
+        (process_dir / "stat").write_text(
+            f"{pid} (VoiceStudio worker) S " + " ".join(["0"] * 18 + [str(pid)])
+        )
+
+    owned = build_root / "bundle" / "appimage" / "VoiceStudio_0.4.2_amd64.AppImage"
+    process(101, f"APPIMAGE={owned}", "HOME=/home/test")
+    process(102, f"APPIMAGE={owned}", "ROLE=backend")
+    process(
+        201,
+        f"APPIMAGE={build_root}-other/bundle/appimage/VoiceStudio_0.4.2_amd64.AppImage",
+    )
+    process(202, f"APPIMAGE={owned}.untrusted")
+    process(203, "HOME=/home/test")
+
+    spec = importlib.util.spec_from_file_location(
+        "desktop_prod_processes", _APPIMAGE_PROCESSES
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    opened = []
+
+    def fake_pidfd_open(pid: int, flags: int) -> int:
+        opened.append((pid, flags))
+        return os.open(os.devnull, os.O_RDONLY)
+
+    owned = module.open_owned_processes(
+        build_root, proc_root, pidfd_open=fake_pidfd_open
+    )
+    found = [str(pid) for pid, _ in owned]
+    for _, pidfd in owned:
+        os.close(pidfd)
+
+    assert found == ["101", "102"]
+    assert [pid for pid, _ in opened] == [101, 102, 201, 202, 203]
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux AppImage process contract")
+def test_linux_process_stop_executes_before_data_wipe(tmp_path):
+    """Execute the shell with controlled commands and record the true order."""
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    order_log = tmp_path / "order.log"
+    backend_data = tmp_path / "home" / ".omnivoice"
+    backend_data.mkdir(parents=True)
+    marker = backend_data / "order-marker"
+    marker.write_text("live backend data")
+
+    fake_python = fake_bin / "python3"
+    fake_python.write_text(
+        "#!/bin/sh\n"
+        '[ "$1" = scripts/desktop_prod_processes.py ] || exit 90\n'
+        '[ -f "$ORDER_MARKER" ] || exit 91\n'
+        'printf "stop-before-wipe\\n" >> "$ORDER_LOG"\n'
+    )
+    fake_python.chmod(0o755)
+    for command in ("pgrep", "lsof"):
+        stub = fake_bin / command
+        stub.write_text("#!/bin/sh\nexit 1\n")
+        stub.chmod(0o755)
+
+    env = os.environ.copy()
+    env.update(
+        {
+            "HOME": str(tmp_path / "home"),
+            "XDG_DATA_HOME": str(tmp_path / "xdg"),
+            "ORDER_LOG": str(order_log),
+            "ORDER_MARKER": str(marker),
+            "PATH": f"{fake_bin}:/usr/bin:/bin",
+        }
+    )
+    result = subprocess.run(
+        ["/bin/bash", _SH, "--skip-build"],  # noqa: S603
+        cwd=_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    # No build artifact exists in this fixture, so launch fails only after the
+    # stop and wipe steps have both executed.
+    assert result.returncode != 0
+    assert order_log.read_text().splitlines() == ["stop-before-wipe"]
+    assert not backend_data.exists()
+
+
+def test_linux_pid_reuse_is_rejected_after_environment_read(tmp_path):
+    build_root = tmp_path / "repo" / "frontend" / "src-tauri" / "target" / "debug"
+    proc_root = tmp_path / "proc"
+    process_dir = proc_root / "101"
+    process_dir.mkdir(parents=True)
+    owned = build_root / "bundle" / "appimage" / "VoiceStudio_0.4.2_amd64.AppImage"
+    (process_dir / "environ").write_bytes(f"APPIMAGE={owned}\0".encode())
+
+    spec = importlib.util.spec_from_file_location(
+        "desktop_prod_processes_reuse", _APPIMAGE_PROCESSES
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    identities = iter(["old-start", "replacement-start"])
+    opened_fds = []
+
+    def fake_pidfd_open(pid: int, flags: int) -> int:
+        fd = os.open(os.devnull, os.O_RDONLY)
+        opened_fds.append(fd)
+        return fd
+
+    found = module.open_owned_processes(
+        build_root,
+        proc_root,
+        pidfd_open=fake_pidfd_open,
+        read_start_time=lambda _path: next(identities),
+    )
+
+    assert found == []
+    for fd in opened_fds:
+        with pytest.raises(OSError):
+            os.fstat(fd)
+
+
+def test_reset_waits_for_killed_process_exit_or_fails(monkeypatch, tmp_path):
+    spec = importlib.util.spec_from_file_location(
+        "desktop_prod_processes_exit", _APPIMAGE_PROCESSES
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    def run(exits_after_kill: bool) -> tuple[list[int] | None, list[int]]:
+        fd = os.open(os.devnull, os.O_RDONLY)
+        monkeypatch.setattr(module, "open_owned_processes", lambda _root: [(101, fd)])
+        polls = iter([set(), {fd} if exits_after_kill else set()])
+        monkeypatch.setattr(module, "_poll_exited", lambda *_args: next(polls))
+        sent = []
+        monkeypatch.setattr(module, "_signal_process", lambda _fd, sig: sent.append(sig))
+        try:
+            return module.stop_owned_processes(tmp_path), sent
+        except RuntimeError:
+            return None, sent
+
+    result, sent = run(True)
+    assert result == [101]
+    assert sent == [module.signal.SIGTERM, module.signal.SIGKILL]
+
+    result, sent = run(False)
+    assert result is None
+    assert sent == [module.signal.SIGTERM, module.signal.SIGKILL]

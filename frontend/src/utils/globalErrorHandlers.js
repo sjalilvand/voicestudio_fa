@@ -25,7 +25,11 @@ const IGNORE_PATTERNS = [
   /Script error\.?$/i, // opaque cross-origin errors carry no info
 ];
 
-function shouldShow(message) {
+function shouldShow(message, error) {
+  // Some browser streams (including WaveSurfer's BodyStreamBuffer) describe
+  // normal cancellation without the word "AbortError" in the message. The
+  // structured DOMException name is the reliable cancellation contract.
+  if (error?.name === 'AbortError') return false;
   if (!message || IGNORE_PATTERNS.some((p) => p.test(message))) return false;
   const key = String(message).slice(0, 200);
   const now = Date.now();
@@ -35,7 +39,7 @@ function shouldShow(message) {
 }
 
 function surface(message, error) {
-  if (!shouldShow(message)) return;
+  if (!shouldShow(message, error)) return;
   const err = error instanceof Error ? error : new Error(String(error ?? message));
   toastErrorWithReport(
     i18next.t('errors.unexpected', { message: String(message).slice(0, 140) }),

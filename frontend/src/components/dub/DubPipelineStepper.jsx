@@ -32,7 +32,13 @@ const DUB_PHASE_BY_STEP = {
   done: 5,
 };
 
-function DubPipelineStepper({ dubStep, inline = false, selectableSteps = [], onStepSelect }) {
+function DubPipelineStepper({
+  dubStep,
+  inline = false,
+  variant,
+  selectableSteps = [],
+  onStepSelect,
+}) {
   const { t } = useTranslation();
   const current = DUB_PHASE_BY_STEP[dubStep] ?? 0;
   const busy =
@@ -43,7 +49,13 @@ function DubPipelineStepper({ dubStep, inline = false, selectableSteps = [], onS
     dubStep === 'stopping';
   return (
     <div
-      className={inline ? 'dub-stepper dub-stepper--inline' : 'dub-stepper'}
+      className={[
+        'dub-stepper',
+        inline ? 'dub-stepper--inline' : '',
+        variant === 'command' ? 'dub-stepper--command' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       role="list"
       aria-label={t('dub.pipeline', { defaultValue: 'Dubbing pipeline' })}
     >

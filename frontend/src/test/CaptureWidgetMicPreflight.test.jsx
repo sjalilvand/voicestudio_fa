@@ -10,13 +10,15 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
-const { toastMock } = vi.hoisted(() => ({
+const { toastMock, eventHandlers, captureState } = vi.hoisted(() => ({
   toastMock: Object.assign(vi.fn(), {
     error: vi.fn(),
     success: vi.fn(),
     dismiss: vi.fn(),
     loading: vi.fn(),
   }),
+  eventHandlers: {},
+  captureState: { pending: null },
 }));
 vi.mock('react-hot-toast', () => ({ default: toastMock, toast: toastMock }));
 
@@ -25,7 +27,10 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args) => invokeMock(...args),
 }));
 vi.mock('@tauri-apps/api/event', () => ({
-  listen: vi.fn(async () => () => {}),
+  listen: vi.fn(async (name, handler) => {
+    eventHandlers[name] = handler;
+    return () => delete eventHandlers[name];
+  }),
 }));
 vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => ({ hide: async () => {} }),
@@ -57,12 +62,24 @@ vi.mock('../store', () => {
 });
 
 import CaptureWidget from '../components/CaptureWidget';
+import { requestDictationCapture } from '../utils/dictationCapture';
 
 /** Route the invoke mock per command. */
 function stubInvoke({ mic = 'granted' } = {}) {
-  invokeMock.mockImplementation(async (cmd) => {
+  invokeMock.mockImplementation(async (cmd, payload) => {
     if (cmd === 'check_microphone') return mic;
     if (cmd === 'check_accessibility') return true;
+    if (cmd === 'request_dictation_capture') {
+      const event = payload?.action === 'stop' ? 'tray-dictate-stop' : 'tray-dictate';
+      if (eventHandlers[event]) return eventHandlers[event]();
+      captureState.pending = event;
+      return undefined;
+    }
+    if (cmd === 'mark_dictation_capture_ready' && captureState.pending) {
+      const pending = captureState.pending;
+      captureState.pending = null;
+      return eventHandlers[pending]?.();
+    }
     return undefined;
   });
 }
@@ -83,12 +100,13 @@ const notFound = () => {
   return e;
 };
 
-/** Fire the in-page dictation shortcut (Ctrl+Shift+Space). */
+/** Request capture through the same controller used by the page and shortcut. */
 function pressShortcut() {
-  fireEvent.keyDown(window, { code: 'Space', ctrlKey: true, shiftKey: true });
+  void requestDictationCapture('start');
 }
 
 beforeEach(() => {
+  captureState.pending = null;
   invokeMock.mockReset();
   toastMock.mockClear();
   toastMock.error.mockClear();
@@ -126,6 +144,20 @@ describe('CaptureWidget — mic permission pre-flight (Tauri)', () => {
     });
   });
 
+  it('the shared desktop capture request surfaces microphone denial', async () => {
+    stubInvoke({ mic: 'denied' });
+    const gum = installGum(async () => {
+      throw notFound();
+    });
+    render(<CaptureWidget />);
+    await waitFor(() => expect(eventHandlers['tray-dictate']).toBeTypeOf('function'));
+    eventHandlers['tray-dictate']();
+
+    expect(await screen.findByText(/Mic access denied/)).toBeInTheDocument();
+    expect(gum).not.toHaveBeenCalled();
+    expect(toastMock.error).toHaveBeenCalled();
+  });
+
   it.each(['granted', 'prompt', 'unknown'])(
     '"%s" proceeds to getUserMedia as before (reactive micError stays the fallback)',
     async (mic) => {
@@ -149,6 +181,16 @@ describe('CaptureWidget — mic permission pre-flight (Tauri)', () => {
 });
 
 describe('CaptureWidget — plain browser (no Tauri)', () => {
+  it('starts through the shared capture request', async () => {
+    const gum = installGum(async () => {
+      throw notFound();
+    });
+    render(<CaptureWidget />);
+    await requestDictationCapture('start');
+
+    await waitFor(() => expect(gum).toHaveBeenCalled());
+  });
+
   it('behaviour unchanged: no permission probe, straight to getUserMedia', async () => {
     const gum = installGum(async () => {
       throw notFound();

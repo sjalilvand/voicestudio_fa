@@ -18,6 +18,7 @@ import {
   Fingerprint,
   Wand2,
   Film,
+  AudioWaveform,
   Save,
   Lock,
   Download as DownloadIcon,
@@ -46,6 +47,47 @@ const displayTitle = (text) => {
   const stripped = (text || '').replace(/^(\s*\[[^\]]{1,30}\]\s*)+/, '').trim();
   return stripped || text || '';
 };
+
+const dubInputType = (item) => {
+  try {
+    const job = typeof item.job_data === 'string' ? JSON.parse(item.job_data) : item.job_data;
+    return job?.input_type === 'audio' ? 'audio' : 'video';
+  } catch {
+    return 'video';
+  }
+};
+
+function DubMediaPreview({ item, inputType }) {
+  const frameClass =
+    'relative flex h-[54px] w-[88px] flex-[0_0_88px] items-center justify-center overflow-hidden rounded-[var(--chrome-radius-pill)] bg-[var(--chrome-hover-bg)] text-[color:var(--chrome-fg-dim)]';
+
+  if (inputType === 'audio') {
+    return (
+      <div className={frameClass} aria-hidden="true">
+        <AudioWaveform size={28} strokeWidth={1.5} data-testid={`dub-audio-waveform-${item.id}`} />
+      </div>
+    );
+  }
+
+  return (
+    <div className={frameClass} aria-hidden="true">
+      <Film size={20} strokeWidth={1.5} />
+      <img
+        src={`${API}/dub/thumb/${encodeURIComponent(item.id)}`}
+        alt=""
+        width="88"
+        height="54"
+        loading="lazy"
+        decoding="async"
+        className="absolute inset-0 h-full w-full object-cover"
+        data-testid={`dub-thumbnail-${item.id}`}
+        onError={(event) => {
+          event.currentTarget.hidden = true;
+        }}
+      />
+    </div>
+  );
+}
 
 /**
  * Defer mounting <WaveformPlayer> (and its audio fetch + waveform decode)
@@ -130,49 +172,65 @@ export default function WorkspaceHistory({
               {t('history.empty_dub', { defaultValue: 'Your dubs will appear here.' })}
             </div>
           ) : (
-            dubHistory.map((item) => (
-              <div
-                key={`dub-${item.id}`}
-                className="history-item history-item--dub"
-                onClick={() => restoreDubHistory(item)}
-              >
-                <div className="flex items-center justify-between gap-2 min-w-0">
-                  <span className="history-kind history-kind--audio">
-                    <Film size={9} /> {t('sidebar.dub_label')}
-                  </span>
-                  <span className="history-meta">
-                    {item.segments_count} segs · {Math.round(item.duration || 0)}s
-                  </span>
+            dubHistory.map((item) => {
+              const inputType = dubInputType(item);
+              const MediaIcon = inputType === 'audio' ? AudioWaveform : Film;
+              return (
+                <div
+                  key={`dub-${item.id}`}
+                  className="history-item history-item--dub"
+                  onClick={() => restoreDubHistory(item)}
+                >
+                  <div className="flex min-w-0 gap-[8px]">
+                    <DubMediaPreview item={item} inputType={inputType} />
+                    <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <span className="history-kind history-kind--audio">
+                          <MediaIcon size={9} aria-hidden="true" /> {t('sidebar.dub_label')}
+                        </span>
+                        <span className="history-meta">
+                          {t('history.dub_meta', {
+                            count: item.segments_count,
+                            segments: item.segments_count,
+                            duration: Math.round(item.duration || 0),
+                          })}
+                        </span>
+                      </div>
+                      <div className="history-title">{item.filename}</div>
+                      <div className="history-subtitle">
+                        {[item.language, item.language_code]
+                          .filter((v) => v && v !== 'und' && v !== 'Auto')
+                          .join(' · ') || t('dub.auto')}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="history-actions">
+                    <button
+                      type="button"
+                      className="history-action-btn accent"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        restoreDubHistory(item);
+                      }}
+                    >
+                      <FolderOpen size={10} aria-hidden="true" /> {t('sidebar.open')}
+                    </button>
+                    <button
+                      type="button"
+                      className="history-action-btn danger history-action-icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteHistory(item.id, 'dub');
+                      }}
+                      title={t('common.delete')}
+                      aria-label={t('common.delete')}
+                    >
+                      <Trash2 size={10} aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
-                <div className="history-title">{item.filename}</div>
-                <div className="history-subtitle">
-                  {[item.language, item.language_code]
-                    .filter((v) => v && v !== 'und' && v !== 'Auto')
-                    .join(' · ') || 'Auto'}
-                </div>
-                <div className="history-actions">
-                  <button
-                    className="history-action-btn accent"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      restoreDubHistory(item);
-                    }}
-                  >
-                    <FolderOpen size={10} /> {t('sidebar.open')}
-                  </button>
-                  <button
-                    className="history-action-btn danger history-action-icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteHistory(item.id, 'dub');
-                    }}
-                    title="Delete"
-                  >
-                    <Trash2 size={10} />
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </aside>

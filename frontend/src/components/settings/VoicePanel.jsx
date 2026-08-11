@@ -4,8 +4,7 @@
  * The home of the live-dictation controls (the "Voice" card in the screenshot):
  *
  *   1. Enable Voice Dictation — master toggle. Subtitle shows the REAL
- *      registered dictation shortcut (read from the `get_dictation_shortcut`
- *      Tauri command, same source as HotkeyTab); changing the shortcut still
+ *      effective dictation shortcut (same live source as HotkeyTab); changing it still
  *      lives in HotkeyTab below.
  *   2. Dictation Mode — Toggle / Hold segmented control. Toggle = press once to
  *      start, again to stop. Hold = dictate while the key is held.
@@ -35,6 +34,7 @@ import { useInstallModel, useDeleteModel } from '../../api/hooks';
 import { setupDownloadStreamUrl } from '../../api/setup';
 import { isTauri as _isTauri } from '../../utils/media';
 import { Badge, Progress, Segmented } from '../../ui';
+import { useEffectiveDictationShortcut } from '../../hooks/useEffectiveDictationShortcut';
 import { SettingsSection, SettingRow, SettingsToggle } from './primitives';
 
 /** Native confirm dialog in Tauri, window.confirm in the web UI. Mirrors the
@@ -58,10 +58,6 @@ function fmtSize(sizeGb) {
   return `${sizeGb.toFixed(sizeGb < 10 ? 1 : 0)} GB`;
 }
 
-/** The default shortcut label HotkeyTab resets to — used when not in Tauri or
- * the read fails, so the subtitle never shows a bare placeholder. */
-const DEFAULT_SHORTCUT = 'CmdOrCtrl+Shift+Space';
-
 export default function VoicePanel() {
   const { t } = useTranslation();
 
@@ -78,7 +74,7 @@ export default function VoicePanel() {
   const [engineReason, setEngineReason] = useState(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [shortcut, setShortcut] = useState('');
+  const { info: shortcut } = useEffectiveDictationShortcut(_isTauri);
 
   // Per-repo download runtime, keyed by repo_id, driven by the shared SSE
   // progress stream (same events ModelStoreTab consumes):
@@ -95,27 +91,6 @@ export default function VoicePanel() {
   useEffect(() => {
     loadPrefs();
   }, [loadPrefs]);
-
-  // Read the registered dictation shortcut the same way HotkeyTab does.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!_isTauri) {
-        setShortcut(DEFAULT_SHORTCUT);
-        return;
-      }
-      try {
-        const { invoke } = await import('@tauri-apps/api/core');
-        const v = await invoke('get_dictation_shortcut');
-        if (!cancelled) setShortcut(v || DEFAULT_SHORTCUT);
-      } catch {
-        if (!cancelled) setShortcut(DEFAULT_SHORTCUT);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const loadModels = React.useCallback(async () => {
     try {
@@ -264,7 +239,7 @@ export default function VoicePanel() {
   // back to the backend `languages` string when a key is missing.
   const modelDesc = (m) => t(`voicePanel.model_desc.${m.id}`, { defaultValue: m.languages || '' });
 
-  const shortcutLabel = shortcut || DEFAULT_SHORTCUT;
+  const shortcutLabel = shortcut.display;
 
   return (
     <SettingsSection
