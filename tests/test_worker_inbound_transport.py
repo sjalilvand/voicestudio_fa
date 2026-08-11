@@ -390,3 +390,32 @@ async def test_the_node_keeps_sending_heartbeats_after_it_registers(inbound, mon
     # scheduled to produce these at all.
     await _until(lambda: len(seen) >= 2, timeout=15.0)
     assert len(seen) >= 2, "the node registered and then never sent a heartbeat"
+
+
+@pytest.mark.asyncio
+async def test_a_staged_result_comes_back_whole_when_its_ref_declares_a_size(
+    inbound, tmp_path
+):
+    """A real result ref carries size_bytes, and that must not be read as an
+    offset.
+
+    Found on hardware: FetchResult seeked to `request.size_bytes` as if it were
+    a resume point, so it started at EOF, yielded nothing, and the fetch failed
+    with "the result ended before its final chunk" — while the finished render
+    sat on the node's disk. Every earlier test called publish/stage directly and
+    never exercised FetchResult with a populated ref, which is why it survived.
+    """
+    from worker.protocol.gen import worker_v1_pb2 as pb
+
+    await inbound.connect_panel()
+    payload = b"rendered audio bytes" * 1000
+
+    ref = await inbound.artifacts.publish(
+        pb.TaskRef(task_id="t1", attempt_id="a1"), payload, {"filename": "out.wav"}
+    )
+    assert ref.size_bytes == len(payload), "the ref must declare the real size"
+
+    destination = tmp_path / "fetched.wav"
+    await inbound.connection.fetch_result(ref, str(destination))
+
+    assert destination.read_bytes() == payload

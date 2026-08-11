@@ -187,10 +187,15 @@ class NodeServicer(pb_grpc.NodeServiceServicer):
             )
             return
 
-        offset = int(request.size_bytes or 0)
+        # Always from the start. `size_bytes` on the incoming ref is the
+        # artifact's TOTAL size, not a resume point — reading it as one seeks
+        # straight to EOF, yields no chunks, and the fetch fails with "the
+        # result ended before its final chunk" while the render sits complete
+        # on disk. ArtifactRef carries no resume field, so resumption needs a
+        # protocol addition rather than a reinterpreted one.
+        offset = 0
         try:
             with open(staged.path, "rb") as handle:
-                handle.seek(offset)
                 while True:
                     data = handle.read(_FETCH_CHUNK_BYTES)
                     if not data:
