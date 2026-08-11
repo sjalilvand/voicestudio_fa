@@ -25,6 +25,15 @@
     "workspaces": "مساحات العمل"
   },
   "settings": {
+    "remote_backend_recovery_title": "تعذّر الوصول إلى الواجهة الخلفية البعيدة",
+    "remote_backend_recovery_hint": "يمكنك تغيير الواجهة الخلفية البعيدة لاحقًا من الإعدادات ← المشاركة.",
+    "remote_backend_use_local": "استخدام الواجهة الخلفية المحلية",
+    "remote_backend_error_tls": "تعذّر التحقق من الاتصال الآمن. تحقّق من الشهادة واستخدم منفذ HTTP API الخاص بـ VoiceStudio.",
+    "remote_backend_error_cors": "حظرت الواجهة الخلفية البعيدة هذا التطبيق. اسمح بمصدر التطبيق في إعدادات CORS.",
+    "remote_backend_error_network": "تعذّر الوصول إلى الواجهة الخلفية البعيدة. تحقّق من العنوان والشبكة وجدار الحماية.",
+    "remote_backend_error_timeout": "لم تستجب الواجهة الخلفية البعيدة في الوقت المحدد.",
+    "remote_backend_error_http": "أعادت الواجهة الخلفية البعيدة حالة HTTP {{status}}.",
+    "remote_backend_error_wrong_port": "لا تبدو هذه واجهة VoiceStudio HTTP API. المنفذ 7443 مخصص عادةً للتحكم بالعامل البعيد؛ جرّب المنفذ 3900.",
     "openapi": "واجهة برمجة تطبيقات VoiceStudio",
     "general": "عام",
     "theme": "المظهر",

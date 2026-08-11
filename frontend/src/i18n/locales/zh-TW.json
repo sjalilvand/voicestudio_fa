@@ -25,6 +25,15 @@
     "workspaces": "工作區"
   },
   "settings": {
+    "remote_backend_recovery_title": "無法連線至遠端後端",
+    "remote_backend_recovery_hint": "你可以稍後在「設定 → 分享」中變更遠端後端。",
+    "remote_backend_use_local": "使用本機後端",
+    "remote_backend_error_tls": "無法驗證安全連線。請檢查憑證並使用 VoiceStudio HTTP API 連接埠。",
+    "remote_backend_error_cors": "遠端後端封鎖了此應用程式。請在 CORS 設定中允許此應用程式的來源。",
+    "remote_backend_error_network": "無法存取遠端後端。請檢查位址、網路和防火牆。",
+    "remote_backend_error_timeout": "遠端後端未及時回應。",
+    "remote_backend_error_http": "遠端後端回傳 HTTP {{status}}。",
+    "remote_backend_error_wrong_port": "這似乎不是 VoiceStudio HTTP API。連接埠 7443 通常用於遠端工作程序控制；請嘗試連接埠 3900。",
     "openapi": "VoiceStudio API",
     "general": "一般",
     "theme": "佈景主題",
