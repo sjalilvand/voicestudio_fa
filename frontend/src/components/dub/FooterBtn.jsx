@@ -38,7 +38,7 @@ const FooterBtn = React.forwardRef(function FooterBtn(
   const size = sm ? 'px-[6px] py-[3px] text-[0.62rem]' : 'px-[8px] py-[5px] text-[0.72rem]';
   const cls = [BASE, size, TONES[tone] || TONES.idle, className].filter(Boolean).join(' ');
   return (
-    <button ref={ref} className={cls} disabled={disabled} onClick={onClick} {...rest}>
+    <button type="button" ref={ref} className={cls} disabled={disabled} onClick={onClick} {...rest}>
       {icon} {label}
     </button>
   );

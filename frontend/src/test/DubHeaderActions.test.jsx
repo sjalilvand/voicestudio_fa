@@ -53,6 +53,10 @@ describe('DubHeader — polished workflow actions', () => {
     expect(verify).toHaveClass('dub-action-btn--verify');
     expect(exportButton).toHaveClass('dub-action-btn--export');
     expect(group.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(3);
+    for (const button of buttons) {
+      expect(button).toHaveAttribute('type', 'button');
+      expect(button).toHaveClass('focus-visible:shadow-[var(--focus-ring)]');
+    }
 
     fireEvent.click(generate);
     fireEvent.click(verify);
