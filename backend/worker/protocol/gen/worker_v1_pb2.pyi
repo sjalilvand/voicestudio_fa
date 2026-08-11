@@ -354,7 +354,7 @@ class DownloadProgress(_message.Message):
     def __init__(self, envelope: _Optional[_Union[Envelope, _Mapping]] = ..., event_json: _Optional[str] = ...) -> None: ...
 
 class WorkerMessage(_message.Message):
-    __slots__ = ("heartbeat", "accepted", "rejected", "model_loading", "started", "progress", "result", "failed", "cancel_ack", "capabilities", "goodbye", "pong", "download_progress")
+    __slots__ = ("heartbeat", "accepted", "rejected", "model_loading", "started", "progress", "result", "failed", "cancel_ack", "capabilities", "goodbye", "pong", "download_progress", "register")
     HEARTBEAT_FIELD_NUMBER: _ClassVar[int]
     ACCEPTED_FIELD_NUMBER: _ClassVar[int]
     REJECTED_FIELD_NUMBER: _ClassVar[int]
@@ -368,6 +368,7 @@ class WorkerMessage(_message.Message):
     GOODBYE_FIELD_NUMBER: _ClassVar[int]
     PONG_FIELD_NUMBER: _ClassVar[int]
     DOWNLOAD_PROGRESS_FIELD_NUMBER: _ClassVar[int]
+    REGISTER_FIELD_NUMBER: _ClassVar[int]
     heartbeat: Heartbeat
     accepted: TaskAccepted
     rejected: TaskRejected
@@ -381,7 +382,8 @@ class WorkerMessage(_message.Message):
     goodbye: WorkerGoodbye
     pong: Pong
     download_progress: DownloadProgress
-    def __init__(self, heartbeat: _Optional[_Union[Heartbeat, _Mapping]] = ..., accepted: _Optional[_Union[TaskAccepted, _Mapping]] = ..., rejected: _Optional[_Union[TaskRejected, _Mapping]] = ..., model_loading: _Optional[_Union[TaskModelLoading, _Mapping]] = ..., started: _Optional[_Union[TaskStarted, _Mapping]] = ..., progress: _Optional[_Union[TaskProgress, _Mapping]] = ..., result: _Optional[_Union[TaskResult, _Mapping]] = ..., failed: _Optional[_Union[TaskFailed, _Mapping]] = ..., cancel_ack: _Optional[_Union[TaskCancelAck, _Mapping]] = ..., capabilities: _Optional[_Union[CapabilityUpdate, _Mapping]] = ..., goodbye: _Optional[_Union[WorkerGoodbye, _Mapping]] = ..., pong: _Optional[_Union[Pong, _Mapping]] = ..., download_progress: _Optional[_Union[DownloadProgress, _Mapping]] = ...) -> None: ...
+    register: RegisterRequest
+    def __init__(self, heartbeat: _Optional[_Union[Heartbeat, _Mapping]] = ..., accepted: _Optional[_Union[TaskAccepted, _Mapping]] = ..., rejected: _Optional[_Union[TaskRejected, _Mapping]] = ..., model_loading: _Optional[_Union[TaskModelLoading, _Mapping]] = ..., started: _Optional[_Union[TaskStarted, _Mapping]] = ..., progress: _Optional[_Union[TaskProgress, _Mapping]] = ..., result: _Optional[_Union[TaskResult, _Mapping]] = ..., failed: _Optional[_Union[TaskFailed, _Mapping]] = ..., cancel_ack: _Optional[_Union[TaskCancelAck, _Mapping]] = ..., capabilities: _Optional[_Union[CapabilityUpdate, _Mapping]] = ..., goodbye: _Optional[_Union[WorkerGoodbye, _Mapping]] = ..., pong: _Optional[_Union[Pong, _Mapping]] = ..., download_progress: _Optional[_Union[DownloadProgress, _Mapping]] = ..., register: _Optional[_Union[RegisterRequest, _Mapping]] = ...) -> None: ...
 
 class Deadlines(_message.Message):
     __slots__ = ("accept_seconds", "model_load_seconds", "execution_seconds", "progress_lease_seconds", "result_delivery_seconds")
@@ -501,7 +503,7 @@ class Shutdown(_message.Message):
     def __init__(self, envelope: _Optional[_Union[Envelope, _Mapping]] = ..., reason: _Optional[str] = ...) -> None: ...
 
 class ServerMessage(_message.Message):
-    __slots__ = ("assignment", "cancel", "result_ack", "config", "ping", "drain", "shutdown", "prewarm")
+    __slots__ = ("assignment", "cancel", "result_ack", "config", "ping", "drain", "shutdown", "prewarm", "registered")
     ASSIGNMENT_FIELD_NUMBER: _ClassVar[int]
     CANCEL_FIELD_NUMBER: _ClassVar[int]
     RESULT_ACK_FIELD_NUMBER: _ClassVar[int]
@@ -510,6 +512,7 @@ class ServerMessage(_message.Message):
     DRAIN_FIELD_NUMBER: _ClassVar[int]
     SHUTDOWN_FIELD_NUMBER: _ClassVar[int]
     PREWARM_FIELD_NUMBER: _ClassVar[int]
+    REGISTERED_FIELD_NUMBER: _ClassVar[int]
     assignment: TaskAssignment
     cancel: TaskCancel
     result_ack: ResultAckMessage
@@ -518,7 +521,8 @@ class ServerMessage(_message.Message):
     drain: Drain
     shutdown: Shutdown
     prewarm: PrewarmRequest
-    def __init__(self, assignment: _Optional[_Union[TaskAssignment, _Mapping]] = ..., cancel: _Optional[_Union[TaskCancel, _Mapping]] = ..., result_ack: _Optional[_Union[ResultAckMessage, _Mapping]] = ..., config: _Optional[_Union[ConfigUpdate, _Mapping]] = ..., ping: _Optional[_Union[Ping, _Mapping]] = ..., drain: _Optional[_Union[Drain, _Mapping]] = ..., shutdown: _Optional[_Union[Shutdown, _Mapping]] = ..., prewarm: _Optional[_Union[PrewarmRequest, _Mapping]] = ...) -> None: ...
+    registered: RegisterResponse
+    def __init__(self, assignment: _Optional[_Union[TaskAssignment, _Mapping]] = ..., cancel: _Optional[_Union[TaskCancel, _Mapping]] = ..., result_ack: _Optional[_Union[ResultAckMessage, _Mapping]] = ..., config: _Optional[_Union[ConfigUpdate, _Mapping]] = ..., ping: _Optional[_Union[Ping, _Mapping]] = ..., drain: _Optional[_Union[Drain, _Mapping]] = ..., shutdown: _Optional[_Union[Shutdown, _Mapping]] = ..., prewarm: _Optional[_Union[PrewarmRequest, _Mapping]] = ..., registered: _Optional[_Union[RegisterResponse, _Mapping]] = ...) -> None: ...
 
 class ArtifactRef(_message.Message):
     __slots__ = ("artifact_id", "task_id", "attempt_id", "filename", "content_type", "size_bytes", "sha256", "session_token")
@@ -567,6 +571,18 @@ class ResultChunk(_message.Message):
     def __init__(self, ref: _Optional[_Union[ArtifactRef, _Mapping]] = ..., offset: _Optional[int] = ..., data: _Optional[bytes] = ..., last: _Optional[bool] = ..., session_token: _Optional[str] = ...) -> None: ...
 
 class ResultAck(_message.Message):
+    __slots__ = ("artifact_id", "bytes_received", "committed", "error")
+    ARTIFACT_ID_FIELD_NUMBER: _ClassVar[int]
+    BYTES_RECEIVED_FIELD_NUMBER: _ClassVar[int]
+    COMMITTED_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    artifact_id: str
+    bytes_received: int
+    committed: bool
+    error: Error
+    def __init__(self, artifact_id: _Optional[str] = ..., bytes_received: _Optional[int] = ..., committed: _Optional[bool] = ..., error: _Optional[_Union[Error, _Mapping]] = ...) -> None: ...
+
+class ArtifactAck(_message.Message):
     __slots__ = ("artifact_id", "bytes_received", "committed", "error")
     ARTIFACT_ID_FIELD_NUMBER: _ClassVar[int]
     BYTES_RECEIVED_FIELD_NUMBER: _ClassVar[int]

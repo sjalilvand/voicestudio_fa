@@ -254,11 +254,18 @@ class WorkerClient:
         cancel: Optional[Callable[[str], Awaitable[None]]] = None,
         capability_probe: Optional[Callable[[], list[dict]]] = None,
         on_registered: Optional[Callable[[str], None]] = None,
+        artifacts: Optional["ArtifactTransport"] = None,
     ) -> None:
         self.config = config
         self._execute = execute
         self._cancel = cancel
         self._capability_probe = capability_probe
+        # Outbound mode moves artifacts with RPCs this side initiates
+        # (UploadResult / DownloadArtifact), which is only possible because
+        # this side dialled. In inbound mode the node cannot call the panel at
+        # all, so both directions are driven from the panel and this hook
+        # swaps in the staging that makes that work. None means outbound.
+        self._artifacts = artifacts
         # Lets the agent persist the server-assigned id. Without it a restarted
         # worker signs its challenge with an empty worker_id, the signature
         # never matches, and reconnecting needs a fresh enrollment token —
@@ -323,25 +330,10 @@ class WorkerClient:
         async with self._channel() as channel:
             stub = pb_grpc.WorkerServiceStub(channel)
             response = await self._register(stub)
-            if response.error.code:
-                # An authentication or version refusal is not something a
-                # retry loop fixes; say so rather than reconnecting forever.
-                raise RuntimeError(f"{response.error.code}: {response.error.message}")
-
-            self._epoch = response.session_epoch
-            self._session_token = response.session_token
-            self.config.worker_id = response.worker_id
-            # The token is spent; every later connection proves key possession.
-            self.config.enrollment_token = ""
-            if self._on_registered is not None:
-                try:
-                    self._on_registered(response.worker_id)
-                except Exception:
-                    logger.warning("Could not persist the worker id", exc_info=True)
-
-            authoritative = {ref.attempt_id for ref in response.authoritative_in_flight}
-            await self._cancel_zombies(authoritative)
-            await self._redeliver_pending()
+            # An authentication or version refusal is not something a retry
+            # loop fixes; `accept_registration` raises rather than reconnecting
+            # forever.
+            await self.accept_registration(response)
 
             metadata = ((SESSION_METADATA_KEY, self._session_token),)
             stream = stub.Control(self._outbound(), metadata=metadata)
@@ -361,7 +353,17 @@ class WorkerClient:
                 # instead of the honest "no session".
                 self._stub = None
 
-    async def _register(self, stub) -> pb.RegisterResponse:
+    # ── Session seams ─────────────────────────────────────────────────────
+    #
+    # Outbound owns its whole connection: dial, Register, stream, repeat. A
+    # node being dialled owns none of that — the gRPC servicer does — so these
+    # three expose the parts that are about the PROTOCOL rather than about who
+    # opened the socket. Outbound calls them through `_connect_once` exactly as
+    # before; inbound calls them from the Attach handler. Neither mode gets its
+    # own copy of registration, zombie reconciliation or redelivery.
+
+    def build_register_request(self) -> pb.RegisterRequest:
+        """This worker's self-description. Identical in both modes."""
         challenge = identity.new_challenge()
         nonce = identity.new_challenge()
         signature = self.config.keypair.sign(
@@ -375,29 +377,57 @@ class WorkerClient:
         capabilities = (
             self._capability_probe() if self._capability_probe else self.config.capabilities
         )
-        return await stub.Register(
-            pb.RegisterRequest(
-                envelope=pb.Envelope(sequence=self._epoch),
-                protocol_version_min=PROTOCOL_VERSION,
-                protocol_version_max=PROTOCOL_VERSION,
-                enrollment_token=self.config.enrollment_token,
-                worker_id=self.config.worker_id,
-                public_key=self.config.keypair.public_bytes(),
-                challenge=challenge,
-                challenge_signature=signature,
-                nonce=nonce,
-                key_id=self.config.keypair.key_id,
-                host=codec.host_to_pb(self.config.host or describe_host()),
-                capabilities=[codec.capability_to_pb(c) for c in capabilities],
-                max_concurrent_tasks=self.config.max_concurrent_tasks,
-                in_flight=[
-                    codec.task_ref(t.split("/")[0], t.split("/")[1], self._epoch)
-                    for t in self._running
-                ],
-                completed_unacked=[p.ref for p in self._pending.values()],
-                features=sorted(REQUIRED_FEATURES),
-            )
+        return pb.RegisterRequest(
+            envelope=pb.Envelope(sequence=self._epoch),
+            protocol_version_min=PROTOCOL_VERSION,
+            protocol_version_max=PROTOCOL_VERSION,
+            enrollment_token=self.config.enrollment_token,
+            worker_id=self.config.worker_id,
+            public_key=self.config.keypair.public_bytes(),
+            challenge=challenge,
+            challenge_signature=signature,
+            nonce=nonce,
+            key_id=self.config.keypair.key_id,
+            host=codec.host_to_pb(self.config.host or describe_host()),
+            capabilities=[codec.capability_to_pb(c) for c in capabilities],
+            max_concurrent_tasks=self.config.max_concurrent_tasks,
+            in_flight=[
+                codec.task_ref(t.split("/")[0], t.split("/")[1], self._epoch)
+                for t in self._running
+            ],
+            completed_unacked=[p.ref for p in self._pending.values()],
+            features=sorted(REQUIRED_FEATURES),
         )
+
+    async def accept_registration(self, response: pb.RegisterResponse) -> None:
+        """Adopt the control plane's answer and recover in-flight state."""
+        if response.error.code:
+            raise RuntimeError(f"{response.error.code}: {response.error.message}")
+
+        self._epoch = response.session_epoch
+        self._session_token = response.session_token
+        self.config.worker_id = response.worker_id
+        # The token is spent; every later connection proves key possession.
+        self.config.enrollment_token = ""
+        if self._on_registered is not None:
+            try:
+                self._on_registered(response.worker_id)
+            except Exception:
+                logger.warning("Could not persist the worker id", exc_info=True)
+
+        authoritative = {ref.attempt_id for ref in response.authoritative_in_flight}
+        await self._cancel_zombies(authoritative)
+        await self._redeliver_pending()
+
+    async def next_outbound(self) -> pb.WorkerMessage:
+        """The next frame this worker wants to send."""
+        return await self._outbox.get()
+
+    async def handle_server_message(self, message: pb.ServerMessage) -> None:
+        await self._on_server_message(message)
+
+    async def _register(self, stub) -> pb.RegisterResponse:
+        return await stub.Register(self.build_register_request())
 
     # ── Outbound ──────────────────────────────────────────────────────────
 
@@ -749,6 +779,11 @@ class WorkerClient:
         refuse a transfer that arrives short or corrupted instead of renaming a
         truncated file into place and calling the task done.
         """
+        if self._artifacts is not None:
+            # Inbound: nothing is pushed. The result is staged here and the
+            # panel fetches it after the TaskResult frame names it.
+            return await self._artifacts.publish(ref, payload, meta)
+
         stub = self._stub
         if stub is None:
             raise RuntimeError("no session is established")
@@ -868,6 +903,11 @@ class WorkerClient:
 
     async def _fetch_input(self, ref: pb.ArtifactRef, destination: str) -> None:
         """Download one declared input with authenticated, ordered chunks."""
+        if self._artifacts is not None:
+            # Inbound: the panel pushed this before it sent the assignment, so
+            # there is nothing to pull — only a staged file to hand over.
+            return await self._artifacts.stage_in(ref, destination)
+
         if self._stub is None:
             raise RuntimeError("no session is established")
         request = pb.ArtifactRef()
