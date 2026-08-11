@@ -8,11 +8,9 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ## [Unreleased]
 
-## [5.0.0] — 2026-08-11
-
 **Highlights**
 
-- VoiceStudio 5.0.0 gives the app, desktop chrome, documentation, and package metadata one clear identity
+- VoiceStudio now gives the app, desktop chrome, documentation, and package metadata one clear identity
 - A local-first creative studio: voice cloning, design, dubbing, dictation, stories, audiobooks, and transcription without a subscription meter
 - Reliability first: automatic cache repair, truthful hardware routing, safer sidecars, and actionable recovery instead of mystery failures
 - Security boundaries now match the product: native file access stays native, untrusted network destinations fail closed, and public errors keep private diagnostics local
@@ -51,6 +49,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Restored the pre-release version to 0.4.2 while the next release remains in preparation. (#1488)
 - Dictation shortcuts now work system-wide through the desktop portal on Wayland, work on focused browser and Docker pages, and show the correct platform keys. (#1490)
 - Multi-language dubbing now translates, edits, generates, retains, and exports every selected language, and its language picker stays visible at viewport edges. (#1486)
 - Dubbing's **From video** cast now uses available source-audio samples for every speaker and short line, including jobs without a pooled diarization clone. (#1484)
