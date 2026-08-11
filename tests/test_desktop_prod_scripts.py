@@ -15,12 +15,14 @@ have to opt out of it.
 Mechanical on purpose (token-economy convention): a rule a reviewer would have
 to remember belongs in a test, not in anyone's head.
 """
+import importlib.util
 import json
 import os
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _PKG = os.path.join(_ROOT, "package.json")
 _SH = os.path.join(_ROOT, "scripts", "desktop-prod.sh")
+_APPIMAGE_PROCESSES = os.path.join(_ROOT, "scripts", "desktop_prod_processes.py")
 
 # Scripts whose NAME promises a re-launch of an existing build rather than a
 # fresh-install emulation. Add new aliases here when they appear.
@@ -148,3 +150,59 @@ def test_kill_is_scoped_to_this_checkouts_build():
         "an installed instance is neither killed nor mentioned; single-instance "
         "will swallow the launch and the developer gets no explanation"
     )
+
+
+def test_linux_extracted_appimage_and_backend_are_stopped_before_wipe(tmp_path):
+    """Extraction hides the checkout path from argv, but APPIMAGE survives.
+
+    Reproduce the production failure with a fake procfs: the Tauri process and
+    backend inherit the same owned APPIMAGE, while a similarly named build from
+    another checkout and an unrelated process must remain untouched.
+    """
+    build_root = tmp_path / "repo" / "frontend" / "src-tauri" / "target" / "debug"
+    proc_root = tmp_path / "proc"
+
+    def process(pid: int, *environment: str) -> None:
+        process_dir = proc_root / str(pid)
+        process_dir.mkdir(parents=True)
+        (process_dir / "environ").write_bytes(
+            ("\0".join(environment) + "\0").encode()
+        )
+
+    owned = build_root / "bundle" / "appimage" / "VoiceStudio_0.4.2_amd64.AppImage"
+    process(101, f"APPIMAGE={owned}", "HOME=/home/test")
+    process(102, f"APPIMAGE={owned}", "ROLE=backend")
+    process(
+        201,
+        f"APPIMAGE={build_root}-other/bundle/appimage/VoiceStudio_0.4.2_amd64.AppImage",
+    )
+    process(202, f"APPIMAGE={owned}.untrusted")
+    process(203, "HOME=/home/test")
+
+    spec = importlib.util.spec_from_file_location(
+        "desktop_prod_processes", _APPIMAGE_PROCESSES
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    opened = []
+
+    def fake_pidfd_open(pid: int, flags: int) -> int:
+        opened.append((pid, flags))
+        return os.open(os.devnull, os.O_RDONLY)
+
+    owned = module.open_owned_processes(
+        build_root, proc_root, pidfd_open=fake_pidfd_open
+    )
+    found = [str(pid) for pid, _ in owned]
+    for _, pidfd in owned:
+        os.close(pidfd)
+
+    assert found == ["101", "102"]
+    assert [pid for pid, _ in opened] == [101, 102, 201, 202, 203]
+
+    src = open(_SH, encoding="utf-8").read()
+    call = 'python3 scripts/desktop_prod_processes.py "$TAURI_BUILD_ROOT"'
+    assert call in src
+    assert src.index(call) < src.index('if [ "$KEEP_DATA" = false ]; then')
