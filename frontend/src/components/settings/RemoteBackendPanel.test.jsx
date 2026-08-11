@@ -19,6 +19,9 @@ vi.mock('../../utils/dialog', () => ({ askConfirm }));
 import toast from 'react-hot-toast';
 import RemoteBackendPanel, { isValidBackendUrl } from './RemoteBackendPanel';
 
+const healthResponse = (version) =>
+  new Response(JSON.stringify({ status: 'ok', version, device: 'cuda' }), { status: 200 });
+
 describe('isValidBackendUrl', () => {
   it('accepts absolute http(s) URLs only', () => {
     expect(isValidBackendUrl('http://gpu-box:3900')).toBe(true);
@@ -81,11 +84,7 @@ describe('RemoteBackendPanel', () => {
   });
 
   it('skips the confirmation when the exact URL passed a connection test', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      headers: new Headers(),
-      text: async () => JSON.stringify({ status: 'ok', version: '0.3.15', device: 'cuda' }),
-    });
+    global.fetch = vi.fn().mockResolvedValue(healthResponse('0.3.15'));
     render(<RemoteBackendPanel reload={reload} />);
     setUrl('http://gpu-box:3900');
 
@@ -102,11 +101,7 @@ describe('RemoteBackendPanel', () => {
     global.fetch = vi
       .fn()
       .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-      .mockResolvedValueOnce({
-        ok: true,
-        headers: new Headers(),
-        text: async () => JSON.stringify({ status: 'ok', version: '0.4.2', device: 'cuda' }),
-      });
+      .mockResolvedValueOnce(healthResponse('0.4.2'));
     render(<RemoteBackendPanel reload={reload} />);
     setUrl('https://gpu-box:7443');
     fireEvent.click(screen.getByTestId('remote-backend-test'));
