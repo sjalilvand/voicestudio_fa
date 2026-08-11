@@ -339,7 +339,8 @@
     "more_info": "ข้อมูลเพิ่มเติม",
     "learn_more": "เรียนรู้เพิ่มเติม",
     "saving": "กำลังบันทึก…",
-    "remove": "ลบ {{term}}"
+    "remove": "ลบ {{term}}",
+    "not_set": "ยังไม่ได้ตั้งค่า"
   },
   "launchpad": {
     "greeting": "สวัสดี",

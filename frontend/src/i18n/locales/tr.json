@@ -339,7 +339,8 @@
     "more_info": "Daha fazla bilgi",
     "learn_more": "Daha fazla bilgi edinin",
     "saving": "Kaydediliyor…",
-    "remove": "{{term}} öğesini kaldır"
+    "remove": "{{term}} öğesini kaldır",
+    "not_set": "Ayarlanmadı"
   },
   "launchpad": {
     "greeting": "merhaba orada",

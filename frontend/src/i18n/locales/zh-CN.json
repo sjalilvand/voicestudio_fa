@@ -113,7 +113,8 @@
     "more_info": "更多信息",
     "learn_more": "了解更多",
     "saving": "保存中…",
-    "remove": "删除 {{term}}"
+    "remove": "删除 {{term}}",
+    "not_set": "未设置"
   },
   "nav": {
     "launchpad": "工作台",

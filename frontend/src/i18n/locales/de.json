@@ -339,7 +339,8 @@
     "more_info": "Weitere Informationen",
     "learn_more": "Erfahren Sie mehr",
     "saving": "Speichern…",
-    "remove": "{{term}} entfernen"
+    "remove": "{{term}} entfernen",
+    "not_set": "Nicht festgelegt"
   },
   "launchpad": {
     "greeting": "Hallo",

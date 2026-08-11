@@ -339,7 +339,8 @@
     "more_info": "詳細情報",
     "learn_more": "さらに詳しく",
     "saving": "保存中…",
-    "remove": "{{term}} を削除"
+    "remove": "{{term}} を削除",
+    "not_set": "未設定"
   },
   "launchpad": {
     "greeting": "こんにちは。",

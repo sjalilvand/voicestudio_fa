@@ -339,7 +339,8 @@
     "more_info": "更多資訊",
     "learn_more": "了解更多",
     "saving": "儲存中…",
-    "remove": "刪除 {{term}}"
+    "remove": "刪除 {{term}}",
+    "not_set": "未設定"
   },
   "launchpad": {
     "greeting": "你好",

@@ -339,7 +339,8 @@
     "more_info": "अधिक जानकारी",
     "learn_more": "और जानें",
     "saving": "सहेजा जा रहा है…",
-    "remove": "{{term}} हटाएं"
+    "remove": "{{term}} हटाएं",
+    "not_set": "सेट नहीं"
   },
   "launchpad": {
     "greeting": "नमस्ते",

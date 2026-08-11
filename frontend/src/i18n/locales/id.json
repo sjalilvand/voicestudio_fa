@@ -339,7 +339,8 @@
     "more_info": "Informasi lebih lanjut",
     "learn_more": "Pelajari lebih lanjut",
     "saving": "Menyimpan…",
-    "remove": "Hapus {{term}}"
+    "remove": "Hapus {{term}}",
+    "not_set": "Belum diatur"
   },
   "launchpad": {
     "greeting": "halo",

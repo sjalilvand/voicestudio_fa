@@ -8,7 +8,7 @@ import {
   Clock,
   Volume2,
 } from 'lucide-react';
-import { Panel, Button, Input, Badge } from '../../ui';
+import { Button, Input, Badge } from '../../ui';
 import WaveformPlayer from '../WaveformPlayer';
 
 /**
@@ -36,13 +36,20 @@ export default function ProfileHeader({
   return (
     <>
       {/* Toolbar */}
-      <div className="flex shrink-0 items-center gap-[var(--space-3)]">
-        <Button variant="ghost" size="sm" onClick={onBack} leading={<ArrowLeft size={12} />}>
-          {t('common.back')}
+      <div className="flex shrink-0 flex-wrap items-center gap-[var(--space-2)]">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="!size-[28px] !p-0"
+          onClick={onBack}
+          aria-label={t('common.back')}
+          title={t('common.back')}
+        >
+          <ArrowLeft size={13} />
         </Button>
-        <span className="inline-flex items-center gap-[var(--space-2)] text-fg-muted [font-size:var(--text-base)] font-semibold tracking-[0.02em]">
+        <span className="inline-flex items-center gap-[var(--space-2)] text-fg-subtle [font-size:var(--text-xs)] font-semibold uppercase tracking-[0.06em]">
           <TypeIcon size={12} />{' '}
-          {isDesign ? t('voice_profile.designed') : t('voice_profile.cloned')} voice
+          {isDesign ? t('voice_profile.designed') : t('voice_profile.cloned')}
         </span>
         <div className="flex-1" />
         {!editing && (
@@ -57,7 +64,7 @@ export default function ProfileHeader({
         )}
         {!editing && (
           <label
-            className="inline-flex items-center gap-1 text-[11px]"
+            className="inline-flex items-center gap-1 text-[11px] text-fg-muted"
             title={t('voice_profile.persona_include_ref_hint', {
               defaultValue:
                 'Include the raw reference clip. Off = share only a watermarked preview (recommended).',
@@ -75,22 +82,31 @@ export default function ProfileHeader({
           <Button
             variant="subtle"
             size="sm"
+            className="!size-[28px] !p-0"
             onClick={onExportPersona}
             loading={exporting}
-            leading={!exporting && <Download size={12} />}
+            aria-label={t('voice_profile.persona_export', { defaultValue: 'Export persona' })}
+            title={t('voice_profile.persona_export', { defaultValue: 'Export persona' })}
           >
-            {t('voice_profile.persona_export', { defaultValue: 'Export persona' })}
+            {!exporting && <Download size={12} />}
           </Button>
         )}
-        <Button variant="danger" size="sm" onClick={onDelete} leading={<Trash2 size={12} />}>
-          {t('common.delete')}
+        <Button
+          variant="danger"
+          size="sm"
+          className="!size-[28px] !p-0"
+          onClick={onDelete}
+          aria-label={t('common.delete')}
+          title={t('common.delete')}
+        >
+          <Trash2 size={12} />
         </Button>
       </div>
 
       {/* Hero */}
-      <Panel variant="glass" padding="md">
-        <div className="flex w-full flex-wrap items-center gap-[var(--space-6)]">
-          <div className="flex min-w-[280px] flex-1 items-center gap-[var(--space-5)]">
+      <section className="voice-profile__hero border-b border-solid border-[var(--chrome-border)] pb-[var(--space-5)]">
+        <div className="flex w-full flex-wrap items-center gap-[var(--space-5)]">
+          <div className="flex min-w-[260px] flex-1 items-center gap-[var(--space-4)]">
             <div
               className={`flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-[16px_20px_14px_22px/18px_14px_22px_16px] border ${
                 isDesign
@@ -100,17 +116,18 @@ export default function ProfileHeader({
             >
               <TypeIcon size={22} />
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-[var(--space-3)]">
+            <div className="flex min-w-0 flex-1 flex-col gap-[var(--space-2)]">
               {editing ? (
                 <Input
                   size="lg"
                   value={draft.name}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                   placeholder={t('voice_profile.name_placeholder')}
+                  aria-label={t('voice_profile.name_placeholder')}
                   autoFocus
                 />
               ) : (
-                <h1 className="m-0 [font-family:var(--font-display)] [font-size:var(--text-2xl)] font-bold tracking-[-0.02em] text-fg">
+                <h1 className="m-0 text-pretty [font-family:var(--font-display)] [font-size:var(--text-2xl)] font-bold tracking-[-0.02em] text-fg">
                   {profile.name}
                 </h1>
               )}
@@ -124,26 +141,19 @@ export default function ProfileHeader({
                   <Badge tone="warn" dot>
                     <Lock size={10} /> {t('voice_profile.locked')}
                   </Badge>
-                ) : (
-                  <Badge tone="neutral">{t('voice_profile.free')}</Badge>
-                )}
+                ) : null}
                 {profile.language && profile.language !== 'Auto' && (
                   <Badge tone="info">{profile.language}</Badge>
                 )}
-                <Badge tone="neutral" size="xs">
+                <span className="inline-flex items-center gap-[4px] text-[0.65rem] text-fg-subtle">
                   <Clock size={9} /> {createdDate}
-                </Badge>
-                {profile.seed != null && (
-                  <Badge tone="violet" size="xs">
-                    seed {profile.seed}
-                  </Badge>
-                )}
+                </span>
               </div>
             </div>
           </div>
 
           {(profile.ref_audio_path || profile.locked_audio_path) && (
-            <div className="flex min-w-[280px] flex-1 flex-col gap-[var(--space-2)]">
+            <div className="flex min-w-[260px] flex-1 flex-col gap-[var(--space-2)] border-t border-solid border-[var(--chrome-border)] pt-[var(--space-5)] @min-[620px]/voice-profile:border-l @min-[620px]/voice-profile:border-t-0 @min-[620px]/voice-profile:pl-[var(--space-5)] @min-[620px]/voice-profile:pt-0">
               <div className="inline-flex items-center gap-[var(--space-2)] [font-size:var(--text-xs)] font-semibold uppercase tracking-[0.05em] text-fg-subtle">
                 <Volume2 size={11} />{' '}
                 {profile.is_locked ? t('voice_profile.locked_ref') : t('voice_profile.ref_audio')}
@@ -156,7 +166,7 @@ export default function ProfileHeader({
             </div>
           )}
         </div>
-      </Panel>
+      </section>
     </>
   );
 }

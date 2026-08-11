@@ -339,7 +339,8 @@
     "more_info": "Meer informatie",
     "learn_more": "Meer informatie",
     "saving": "Opslaan…",
-    "remove": "{{term}} verwijderen"
+    "remove": "{{term}} verwijderen",
+    "not_set": "Niet ingesteld"
   },
   "launchpad": {
     "greeting": "Hallo daar",

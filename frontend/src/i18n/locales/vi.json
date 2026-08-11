@@ -339,7 +339,8 @@
     "more_info": "Thêm thông tin",
     "learn_more": "Tìm hiểu thêm",
     "saving": "Đang lưu…",
-    "remove": "Xóa {{term}}"
+    "remove": "Xóa {{term}}",
+    "not_set": "Chưa đặt"
   },
   "launchpad": {
     "greeting": "xin chào ở đó",

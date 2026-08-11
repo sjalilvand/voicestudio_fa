@@ -339,7 +339,8 @@
     "more_info": "Mer info",
     "learn_more": "Läs mer",
     "saving": "Sparar…",
-    "remove": "Ta bort {{term}}"
+    "remove": "Ta bort {{term}}",
+    "not_set": "Inte inställt"
   },
   "launchpad": {
     "greeting": "hej då",

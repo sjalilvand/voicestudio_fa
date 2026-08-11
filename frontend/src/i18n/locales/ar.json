@@ -339,7 +339,8 @@
     "more_info": "مزيد من المعلومات",
     "learn_more": "تعلم المزيد",
     "saving": "جارٍ الحفظ…",
-    "remove": "إزالة {{term}}"
+    "remove": "إزالة {{term}}",
+    "not_set": "غير محدد"
   },
   "launchpad": {
     "greeting": "مرحبا هناك",

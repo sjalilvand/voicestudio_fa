@@ -18,26 +18,27 @@ export default function ProfileActivity({
   onOpenProject,
 }) {
   return (
-    <>
+    <div className="flex min-w-0 flex-col gap-[var(--space-4)]">
       {/* Try-it */}
       <Panel
         variant="flat"
         padding="md"
+        className="!bg-transparent !shadow-none"
         title={
           <>
             <Play size={13} /> {t('voice_profile.try_voice')}
           </>
         }
       >
-        <Field label={t('voice_profile.test_phrase')} hint={t('voice_profile.test_help')}>
+        <Field label={t('voice_profile.test_phrase')}>
           <Textarea
-            rows={2}
+            rows={3}
             value={testText}
             onChange={(e) => setTestText(e.target.value)}
             placeholder={t('voice_profile.test_placeholder')}
           />
         </Field>
-        <div className="mt-[var(--space-4)] flex flex-wrap items-center gap-[var(--space-4)]">
+        <div className="mt-[var(--space-3)] flex flex-wrap items-center gap-[var(--space-4)]">
           <Button
             variant="primary"
             size="sm"
@@ -59,13 +60,11 @@ export default function ProfileActivity({
         </div>
       </Panel>
 
-      {/* Usage */}
-      <Panel variant="flat" padding="md" title={<>{t('voice_profile.used_title')}</>}>
-        {!usage || (!usage.synth_total && !usage.projects?.length) ? (
-          <div className="p-[var(--space-3)] italic text-fg-subtle">
-            {t('voice_profile.used_empty')}
+      {usage && (usage.synth_total || usage.projects?.length) ? (
+        <section className="border-t border-solid border-[var(--chrome-border)] pt-[var(--space-4)]">
+          <div className="mb-[var(--space-3)] text-[var(--text-sm)] font-semibold text-fg-muted">
+            {t('voice_profile.used_title')}
           </div>
-        ) : (
           <>
             <div className="mb-[var(--space-4)] flex flex-wrap gap-[var(--space-3)]">
               <Badge tone="brand">
@@ -98,8 +97,8 @@ export default function ProfileActivity({
               </ul>
             )}
           </>
-        )}
-      </Panel>
-    </>
+        </section>
+      ) : null}
+    </div>
   );
 }

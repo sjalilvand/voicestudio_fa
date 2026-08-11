@@ -339,7 +339,8 @@
     "more_info": "Більше інформації",
     "learn_more": "Дізнайтесь більше",
     "saving": "Збереження…",
-    "remove": "Видалити {{term}}"
+    "remove": "Видалити {{term}}",
+    "not_set": "Не задано"
   },
   "launchpad": {
     "greeting": "привіт",

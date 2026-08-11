@@ -2030,7 +2030,8 @@
     "learn_more": "Learn more",
     "saving": "Saving…",
     "unknown": "unknown",
-    "remove": "Remove {{term}}"
+    "remove": "Remove {{term}}",
+    "not_set": "Not set"
   },
   "keyboard": {
     "title": "Keyboard shortcuts",
