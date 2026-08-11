@@ -13,6 +13,7 @@ const respond = (body, { ok = true, status = 200 } = {}) => ({ ok, status, json:
 
 import toast from 'react-hot-toast';
 import GpuTarget from './GpuTarget';
+import { useAppStore } from '../store';
 
 const LOCAL = { id: 'local', label: 'Local', available: true, connected: true, is_local: true };
 const DESKTOP = {
@@ -33,7 +34,12 @@ function renderPicker() {
   );
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  // The picker resolves against the workspace in front of the user, so every
+  // test states which one it is rather than inheriting the last one's.
+  useAppStore.setState({ mode: 'studio' });
+});
 
 describe('GpuTarget', () => {
   it('renders nothing when no worker is enrolled', async () => {
@@ -260,6 +266,116 @@ describe('GpuTarget', () => {
 
     await screen.findByText('Local');
     expect(container.querySelector('.bg-red-400')).toBeTruthy();
+  });
+
+  // ── Op awareness ────────────────────────────────────────────────────────
+  //
+  // A worker is not remote for everything: work reaches it only where this
+  // side has a producer, and those are ported one at a time. Without asking
+  // per operation the badge reads "gpu2 ● ready" on the Dub tab while 100% of
+  // dubbing runs locally — the exact lie the resolved-answer rule exists to
+  // prevent, in a place the user cannot see it happen.
+
+  const paths = () => apiFetch.mock.calls.filter(([, o]) => !o?.method).map(([p]) => p);
+
+  it('asks routing about the operation the current workspace submits', async () => {
+    useAppStore.setState({ mode: 'dub' });
+    apiFetch.mockResolvedValue(
+      respond({ target: 'w1', op: 'dub', active: { remote: false }, targets: [LOCAL, DESKTOP] }),
+    );
+    renderPicker();
+
+    await waitFor(() => expect(paths()).toContain('/workers/target?op=dub'));
+  });
+
+  it('asks about the target itself where the workspace submits no job', async () => {
+    // The launchpad renders no GPU work; the menu is being opened to pick a
+    // machine, not to ask about one job.
+    useAppStore.setState({ mode: 'launchpad' });
+    apiFetch.mockResolvedValue(
+      respond({ target: 'w1', op: '', active: { remote: false }, targets: [LOCAL, DESKTOP] }),
+    );
+    renderPicker();
+
+    await waitFor(() => expect(paths()).toContain('/workers/target'));
+  });
+
+  it('reads Local, in the user language, on a surface that has no remote path', async () => {
+    useAppStore.setState({ mode: 'dub' });
+    apiFetch.mockResolvedValue(
+      respond({
+        target: 'w1',
+        op: 'dub',
+        // The worker is healthy and chosen — it simply receives no dubbing.
+        active: { remote: false, label: 'Local', reason: 'dubbing does not run remotely yet' },
+        remote_operations: ['tts'],
+        targets: [LOCAL, READY],
+      }),
+    );
+    renderPicker();
+
+    expect(await screen.findByText('Local')).toBeInTheDocument();
+    expect(screen.queryByText('desktop-4090')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button'));
+    // Localized here, not the control plane's English sentence.
+    expect(
+      await screen.findByText('Local — dubbing does not run remotely yet'),
+    ).toBeInTheDocument();
+  });
+
+  it('does not warn in amber when the surface simply has no remote path', async () => {
+    // Nothing is wrong: the machine is fine and this work was never going to
+    // leave. Amber is reserved for "the worker you picked is down".
+    useAppStore.setState({ mode: 'dub' });
+    apiFetch.mockResolvedValue(
+      respond({
+        target: 'w1',
+        op: 'dub',
+        active: { remote: false, label: 'Local', reason: 'dubbing does not run remotely yet' },
+        remote_operations: ['tts'],
+        targets: [LOCAL, READY],
+      }),
+    );
+    const { container } = renderPicker();
+
+    await screen.findByText('Local');
+    expect(container.querySelector('.text-amber-400')).toBeNull();
+  });
+
+  it('says what a worker actually takes, in the menu', async () => {
+    apiFetch.mockResolvedValue(
+      respond({
+        target: 'local',
+        op: 'tts',
+        active: { remote: false },
+        remote_operations: ['tts'],
+        targets: [LOCAL, READY],
+      }),
+    );
+    renderPicker();
+
+    fireEvent.click(await screen.findByRole('button'));
+    expect(await screen.findByText(/192\.168\.0\.222:2222 · TTS only/)).toBeInTheDocument();
+  });
+
+  it('claims no coverage when the control plane reports none', async () => {
+    // An older control plane answers without `remote_operations`. Saying
+    // "TTS only" there would be an invention, and greying the surface out
+    // would break a working setup.
+    useAppStore.setState({ mode: 'dub' });
+    apiFetch.mockResolvedValue(
+      respond({
+        target: 'w1',
+        active: { remote: true, worker_id: 'w1', label: 'desktop-4090' },
+        targets: [LOCAL, READY],
+      }),
+    );
+    renderPicker();
+
+    expect(await screen.findByText('desktop-4090')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button'));
+    expect(screen.queryByText(/only/i)).not.toBeInTheDocument();
   });
 
   it('shows the address and live task count for a busy worker', async () => {

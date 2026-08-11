@@ -2300,7 +2300,8 @@
     "droppedChunks_one": "Let op: {{count}} deel van je tekst leverde geen audio op en ontbreekt dus in deze opname. Genereer opnieuw — een andere seed lost dit meestal op.",
     "droppedChunks_other": "Let op: {{count}} delen van je tekst leverden geen audio op en ontbreken dus in deze opname. Genereer opnieuw — een andere seed lost dit meestal op.",
     "droppedChunksWithText_one": "Let op: {{count}} deel van je tekst leverde geen audio op en ontbreekt in deze opname — “{{text}}”. Genereer opnieuw; een andere seed lost dit meestal op.",
-    "droppedChunksWithText_other": "Let op: {{count}} delen van je tekst leverden geen audio op en ontbreken in deze opname — “{{text}}”. Genereer opnieuw; een andere seed lost dit meestal op."
+    "droppedChunksWithText_other": "Let op: {{count}} delen van je tekst leverden geen audio op en ontbreken in deze opname — “{{text}}”. Genereer opnieuw; een andere seed lost dit meestal op.",
+    "streamingOffRemote": "De progressieve preview staat uit terwijl {{label}} rendert — de voltooide opname speelt zodra die binnen is."
   },
   "voiceSelector": {
     "engineDefault": "Standaard motor",
@@ -2375,6 +2376,16 @@
   "gpu": {
     "local": "Lokaal",
     "picker": "Waar taken draaien",
-    "tasks": "taken"
+    "tasks": "taken",
+    "coverage": "alleen {{ops}}",
+    "opLocal": "Lokaal — {{op}} draait nog niet op afstand",
+    "ops": {
+      "tts": "TTS",
+      "clone": "stemklonen",
+      "dub": "nasynchronisatie",
+      "audiobook": "audioboeken renderen",
+      "longform": "verhaalvertelling",
+      "asr": "transcriptie"
+    }
   }
 }

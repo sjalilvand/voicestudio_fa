@@ -22,10 +22,19 @@ silent for a progress lease, and the longest silence in a task's life — the
 cold model load — happens *after* the worker says it started. So every running
 task carries a timer that renews the lease, marked ``keepalive`` so the server
 can tell "still working" from "still ticking" and bound it by the phase budget.
+
+**Bulk bytes never ride the control stream.** A result above the negotiated
+inline threshold goes over UploadResult on a second RPC, and the control
+stream carries only its ``ArtifactRef``. What is left on that stream is split
+again into control and bulk queues, because the heartbeat this whole liveness
+model rests on must not queue behind a payload — including the one payload,
+``result_json``, that has no size cliff to catch it.
 """
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import hashlib
 import inspect
 import json
 import logging
@@ -59,6 +68,28 @@ _HEARTBEAT_SECONDS = 20.0
 # see _oversized_result_error for why that has to be a failure and not a retry.
 MAX_MESSAGE_BYTES = 8 * 1024 * 1024
 
+# Room left for result_json, the ref, and protobuf framing when a payload does
+# ride inline. The inline decision is made on the payload alone, so without a
+# reserve a payload sized exactly at the frame cap would overflow it.
+_INLINE_FRAME_HEADROOM_BYTES = 64 * 1024
+
+# One upload chunk. Small enough that a chunk boundary — and therefore a lease
+# renewal — comes round often on a slow uplink, large enough that a 100 MB dub
+# is a hundred frames rather than a hundred thousand.
+_UPLOAD_CHUNK_BYTES = 1024 * 1024
+
+# How many times a single upload may be asked to resume before the worker
+# calls the receiver broken. Generous for a genuinely flaky uplink — each
+# resume restarts from a real byte count, so honest progress needs very few —
+# and low enough that a receiver stuck in a resume loop costs one attempt
+# rather than this worker's whole session.
+_MAX_UPLOAD_RESUMES = 8
+
+# The progress stage a result upload reports under. The control plane keys
+# RESULT_UPLOADING (and its much longer delivery budget) off this, so it is a
+# wire constant, not a cosmetic label.
+UPLOAD_STAGE = "uploading"
+
 # Used when an assignment carries no lease (an older control plane, or a test).
 # Mirrors deadlines.py's _HEARTBEAT_GRACE_S * 4.
 _DEFAULT_PROGRESS_LEASE_SECONDS = 120.0
@@ -68,7 +99,7 @@ _DEFAULT_PROGRESS_LEASE_SECONDS = 120.0
 _MIN_KEEPALIVE_INTERVAL_SECONDS = 0.05
 
 # Reporter keywords the client offers the executor, per task.
-_REPORTER_KWARGS = frozenset({"on_progress", "on_model_loading"})
+_EXECUTOR_KWARGS = frozenset({"on_progress", "on_model_loading", "fetch_input"})
 
 
 def keepalive_interval(lease_seconds: float) -> float:
@@ -96,8 +127,8 @@ def _accepted_reporter_kwargs(execute: Callable) -> frozenset[str]:
     except (TypeError, ValueError):  # C-implemented or otherwise unintrospectable
         return frozenset()
     if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
-        return _REPORTER_KWARGS
-    return frozenset(name for name in _REPORTER_KWARGS if name in parameters)
+        return _EXECUTOR_KWARGS
+    return frozenset(name for name in _EXECUTOR_KWARGS if name in parameters)
 
 
 def backoff_delay(attempt: int, *, jitter: Optional[Callable[[], float]] = None) -> float:
@@ -113,17 +144,72 @@ def backoff_delay(attempt: int, *, jitter: Optional[Callable[[], float]] = None)
     return ceiling * roll
 
 
+class _Outbox:
+    """Two queues behind one interface: control frames overtake bulk ones.
+
+    The liveness model is built on the heartbeat arriving every 20 s, but a
+    single FIFO puts that heartbeat *behind* whatever result frame is being
+    written — and a result frame is the one message with no small upper bound
+    on its size. The worker then looks dead while it is in fact busy delivering
+    exactly the work it was asked for.
+
+    Splitting by class rather than shrinking the payload is the durable fix:
+    the upload path below already moves the big bytes off this stream, but
+    ``result_json`` has no size cliff to catch, and the next bulk message added
+    to the protocol would reintroduce the stall silently.
+
+    Strict priority, not fair queuing: control frames are small, bounded in
+    number by the number of running tasks, and only ever *reduce* work — there
+    is nothing here for a bulk frame to be starved by for long.
+    """
+
+    def __init__(self) -> None:
+        self.control: asyncio.Queue[pb.WorkerMessage] = asyncio.Queue()
+        self.bulk: asyncio.Queue[pb.WorkerMessage] = asyncio.Queue()
+        self._arrival = asyncio.Event()
+
+    def put_nowait(self, message: pb.WorkerMessage, *, bulk: bool = False) -> None:
+        (self.bulk if bulk else self.control).put_nowait(message)
+        self._arrival.set()
+
+    async def put(self, message: pb.WorkerMessage, *, bulk: bool = False) -> None:
+        self.put_nowait(message, bulk=bulk)
+
+    async def get(self) -> pb.WorkerMessage:
+        while True:
+            if not self.control.empty():
+                return self.control.get_nowait()
+            if not self.bulk.empty():
+                return self.bulk.get_nowait()
+            # Cleared before the wait and set by every put, with no await in
+            # between: on a single loop that ordering cannot lose a wakeup.
+            self._arrival.clear()
+            await self._arrival.wait()
+
+    def qsize(self) -> int:
+        return self.control.qsize() + self.bulk.qsize()
+
+    def empty(self) -> bool:
+        return self.qsize() == 0
+
+
 @dataclass
 class PendingResult:
     """A finished result the server has not acknowledged yet.
 
     Held until RESULT_ACK arrives, across reconnects. Dropping it early is how
     a completed forty-minute dub disappears with no error anywhere.
+
+    Anything over the inline threshold is uploaded first and represented here
+    by its ``ArtifactRef`` alone — the bytes are already durable on the control
+    plane, so a redelivery costs one small frame instead of re-sending a
+    payload that may not even fit in one (#B9).
     """
 
     ref: pb.TaskRef
     result_json: str = ""
     inline_payload: bytes = b""
+    artifacts: list[pb.ArtifactRef] = field(default_factory=list)
     usage: Optional[pb.UsageReport] = None
 
 
@@ -179,12 +265,18 @@ class WorkerClient:
         # which would make key-based identity pointless.
         self._on_registered = on_registered
         self._reporter_kwargs = _accepted_reporter_kwargs(execute)
-        self._outbox: asyncio.Queue[pb.WorkerMessage] = asyncio.Queue()
+        self._outbox = _Outbox()
         self._pending: dict[str, PendingResult] = {}
         self._running: dict[str, asyncio.Task] = {}
         self._keepalives: dict[str, asyncio.Task] = {}
         self._epoch = 0
         self._session_token = ""
+        # Negotiated by ConfigUpdate; None means "use the executor's own
+        # preference", so the threshold is never spelled twice.
+        self._inline_threshold: Optional[int] = None
+        # The live stub, kept so the result upload can use a second RPC on the
+        # same channel rather than the control stream.
+        self._stub = None
         self._stop = asyncio.Event()
 
     # ── Connection ────────────────────────────────────────────────────────
@@ -256,11 +348,18 @@ class WorkerClient:
             heartbeat = asyncio.create_task(
                 self._heartbeat_loop(response.heartbeat_interval_seconds or _HEARTBEAT_SECONDS)
             )
+            # Published only once the session is established: an upload before
+            # this point would carry a token the server has not issued yet.
+            self._stub = stub
             try:
                 async for message in stream:
                     await self._on_server_message(message)
             finally:
                 heartbeat.cancel()
+                # The channel closes with this block, so a stub kept past it
+                # would fail every upload with a confusing "channel closed"
+                # instead of the honest "no session".
+                self._stub = None
 
     async def _register(self, stub) -> pb.RegisterResponse:
         challenge = identity.new_challenge()
@@ -306,8 +405,14 @@ class WorkerClient:
             message = await self._outbox.get()
             yield message
 
-    async def _send(self, message: pb.WorkerMessage) -> None:
-        await self._outbox.put(message)
+    async def _send(self, message: pb.WorkerMessage, *, bulk: bool = False) -> None:
+        """Enqueue a frame. ``bulk`` is for anything that can be large.
+
+        Only result frames qualify today. Everything else — heartbeat, pong,
+        progress, accept/reject, started/failed — is the control plane's view
+        of whether this worker is alive, and must not queue behind a payload.
+        """
+        await self._outbox.put(message, bulk=bulk)
 
     async def _heartbeat_loop(self, interval: float) -> None:
         while True:
@@ -335,7 +440,7 @@ class WorkerClient:
         """Re-send anything the server never acknowledged."""
         for pending in list(self._pending.values()):
             logger.info("Redelivering unacknowledged result for task %s", pending.ref.task_id)
-            await self._send(_result_message(pending))
+            await self._send(_result_message(pending), bulk=True)
 
     async def _cancel_zombies(self, authoritative: set[str]) -> None:
         """Stop work the control plane no longer believes in."""
@@ -374,6 +479,11 @@ class WorkerClient:
         elif kind == "config":
             if message.config.max_concurrent_tasks:
                 self.config.max_concurrent_tasks = message.config.max_concurrent_tasks
+            if message.config.inline_result_threshold_bytes:
+                # Negotiated, so the two sides cannot drift: the control plane
+                # is the one that knows how much it is willing to take on the
+                # control stream, and it may lower this at any time.
+                self._inline_threshold = int(message.config.inline_result_threshold_bytes)
         elif kind == "ping":
             # Answer immediately; the server times the round trip.
             await self._send(pb.WorkerMessage(pong=pb.Pong(nonce=message.ping.nonce)))
@@ -421,23 +531,37 @@ class WorkerClient:
                 ),
                 name=f"worker-keepalive-{assignment.ref.attempt_id}",
             )
-            result = await self._execute(assignment, **self._reporters(assignment))
+            result = await self._execute(assignment, **self._executor_kwargs(assignment))
+
+            meta = result.get("meta", {}) or {}
+            payload = result.get("payload", b"") or b""
+            artifacts: list[pb.ArtifactRef] = []
+            if self._should_upload(payload):
+                # The keepalive timer is still armed here on purpose: the
+                # upload runs under the same attempt, and the renewals it
+                # sends per chunk (below) are what buy it the delivery budget.
+                artifacts, payload = await self._deliver_out_of_band(
+                    assignment.ref, payload, meta
+                )
+
             # Stopped before the terminal frame so no keepalive can arrive
             # claiming an attempt the server has already settled.
             self._stop_keepalive(key)
 
             pending = PendingResult(
                 ref=assignment.ref,
-                result_json=json.dumps(result.get("meta", {})),
-                inline_payload=result.get("payload", b"") or b"",
+                result_json=json.dumps(meta),
+                inline_payload=payload,
+                artifacts=artifacts,
             )
             oversized = _oversized_result_error(pending)
             if oversized is not None:
-                # Deliberately NOT recorded in _pending. An over-cap frame is
-                # rejected identically on every reconnect, so remembering it
-                # would redeliver a payload that can never be accepted and
-                # tear the session down each time (#B9) — taking every other
-                # task on this worker with it.
+                # Reachable now only through an enormous result_json: bulk
+                # bytes take the upload path above. Deliberately NOT recorded
+                # in _pending — an over-cap frame is rejected identically on
+                # every reconnect, so remembering it would redeliver a frame
+                # that can never be accepted and tear the session down each
+                # time (#B9), taking every other task on this worker with it.
                 logger.warning(
                     "Result for task %s is too large to deliver inline; failing it",
                     assignment.ref.task_id,
@@ -448,7 +572,7 @@ class WorkerClient:
             # Recorded BEFORE sending: if the connection dies mid-send we must
             # still know to redeliver.
             self._pending[key] = pending
-            await self._send(_result_message(pending))
+            await self._send(_result_message(pending), bulk=True)
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -474,6 +598,175 @@ class WorkerClient:
             pb.WorkerMessage(failed=pb.TaskFailed(ref=ref, error=codec.error_to_pb(error)))
         )
 
+    # ── Result delivery ───────────────────────────────────────────────────
+
+    def inline_limit(self) -> int:
+        """How many payload bytes may ride the control stream.
+
+        The negotiated value when the control plane has stated one, otherwise
+        the executor's own preference — read from the executor rather than
+        copied, so there is exactly one default in the tree.
+
+        Clamped to what a frame can actually hold in either case: a control
+        plane that negotiates a threshold above the frame ceiling would
+        otherwise turn every large result into RESULT_TOO_LARGE, which is the
+        precise failure this phase exists to remove.
+        """
+        if self._inline_threshold is not None:
+            limit = self._inline_threshold
+        else:
+            from worker.executor import INLINE_LIMIT_BYTES  # noqa: PLC0415
+
+            limit = INLINE_LIMIT_BYTES
+        return max(0, min(int(limit), MAX_MESSAGE_BYTES - _INLINE_FRAME_HEADROOM_BYTES))
+
+    def _should_upload(self, payload: bytes) -> bool:
+        return bool(payload) and len(payload) > self.inline_limit()
+
+    async def _deliver_out_of_band(
+        self, ref: pb.TaskRef, payload: bytes, meta: dict
+    ) -> tuple[list[pb.ArtifactRef], bytes]:
+        """Upload the payload, returning ``([ref], b"")`` on success.
+
+        Falls back to inline delivery — ``([], payload)`` — only when the
+        payload would still fit in a frame. That fallback is what keeps an
+        older control plane (no UploadResult) and a one-off network stumble
+        from destroying a render that already succeeded; above the frame
+        ceiling there is no such option, and the attempt fails TRANSIENT so a
+        retry can find a working path rather than looping on a dead one.
+        """
+        try:
+            return [await self._upload_result(ref, payload, meta)], b""
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            if len(payload) <= MAX_MESSAGE_BYTES - _INLINE_FRAME_HEADROOM_BYTES:
+                logger.warning(
+                    "Uploading the result for task %s failed (%s); sending it inline instead",
+                    ref.task_id,
+                    exc,
+                )
+                return [], payload
+            from worker.executor import TaskFailure  # noqa: PLC0415
+
+            raise TaskFailure(
+                WorkerError(
+                    error_class=ErrorClass.TRANSIENT,
+                    code="RESULT_UPLOAD_FAILED",
+                    message=(
+                        f"The result ({len(payload) / (1024 * 1024):.1f} MiB) could not be "
+                        f"uploaded to the control plane: {exc}"
+                    ),
+                    hint="Check the connection between this worker and the control plane.",
+                )
+            ) from exc
+
+    async def _upload_result(
+        self, ref: pb.TaskRef, payload: bytes, meta: dict
+    ) -> pb.ArtifactRef:
+        """Stream one result over UploadResult and return its committed ref.
+
+        ``sha256`` and ``size_bytes`` are stated up front so the receiver can
+        refuse a transfer that arrives short or corrupted instead of renaming a
+        truncated file into place and calling the task done.
+        """
+        stub = self._stub
+        if stub is None:
+            raise RuntimeError("no session is established")
+
+        artifact = pb.ArtifactRef(
+            task_id=ref.task_id,
+            attempt_id=ref.attempt_id,
+            filename=str(meta.get("filename") or f"{ref.attempt_id}.wav"),
+            content_type=str(meta.get("content_type") or "audio/wav"),
+            size_bytes=len(payload),
+            sha256=hashlib.sha256(payload).hexdigest(),
+            session_token=self._session_token,
+        )
+        # Sent before the first chunk so the control plane can move the attempt
+        # into RESULT_UPLOADING — and onto its delivery budget — before a slow
+        # uplink has had a chance to burn the ordinary progress lease.
+        await self._report_upload(ref, 0.0)
+
+        offset = 0
+        for _ in range(_MAX_UPLOAD_RESUMES):
+            ack = await stub.UploadResult(self._result_chunks(ref, artifact, payload, offset))
+            if ack.committed:
+                break
+            resumed = int(ack.bytes_received)
+            if ack.error.code and ack.error.code != "OFFSET_MISMATCH":
+                raise RuntimeError(ack.error.message or "the control plane refused the upload")
+            if resumed < 0 or resumed > len(payload) or resumed == offset:
+                raise RuntimeError(ack.error.message or "the control plane could not resume the upload")
+            offset = resumed
+        else:
+            # Bounded, because "did this make progress" cannot be answered by
+            # comparing against the previous offset alone: a receiver that
+            # alternates between two byte counts satisfies `resumed != offset`
+            # forever, and one that advances a few bytes per round would retry
+            # once per byte of a 100 MB dub. Either way the worker stops
+            # rendering anything else while it spins.
+            raise RuntimeError(
+                f"the control plane asked to resume the upload more than "
+                f"{_MAX_UPLOAD_RESUMES} times without committing it"
+            )
+        if ack.bytes_received and ack.bytes_received != len(payload):
+            raise RuntimeError(
+                f"the control plane received {ack.bytes_received} of {len(payload)} bytes"
+            )
+        # The final renewal cannot come from the chunk loop: the receiver stops
+        # pulling at ``last``, so the generator is closed before the code after
+        # that yield ever runs.
+        await self._report_upload(ref, 1.0)
+
+        committed = pb.ArtifactRef()
+        committed.CopyFrom(artifact)
+        if ack.artifact_id:
+            committed.artifact_id = ack.artifact_id
+        # The control stream is already authenticated; echoing the session
+        # token back on it would only widen where the token is written.
+        committed.ClearField("session_token")
+        return committed
+
+    async def _result_chunks(
+        self, ref: pb.TaskRef, artifact: pb.ArtifactRef, payload: bytes, offset: int = 0
+    ):
+        """Chunks in order, each ``offset`` equal to the bytes already sent.
+
+        The receiver checks that equality against the length it holds, so this
+        is a contract and not a hint. Exactly one chunk carries ``last``, and
+        only that one licenses the commit.
+        """
+        total = len(payload)
+        while offset < total:
+            data = payload[offset : offset + _UPLOAD_CHUNK_BYTES]
+            offset += len(data)
+            yield pb.ResultChunk(
+                ref=artifact,
+                offset=offset - len(data),
+                data=data,
+                last=offset >= total,
+                session_token=self._session_token,
+            )
+            # Per chunk, not per timer: a lease renewed by real transfer
+            # progress cannot keep an attempt alive over a stalled upload.
+            await self._report_upload(ref, offset / total)
+
+    async def _report_upload(self, ref: pb.TaskRef, fraction: float) -> None:
+        await self._send(
+            pb.WorkerMessage(
+                progress=pb.TaskProgress(
+                    ref=ref,
+                    progress=float(fraction),
+                    stage=UPLOAD_STAGE,
+                    # Upload bytes are liveness, not synthesis progress. Mark
+                    # them keepalive so the server applies the phase ceiling
+                    # and does not replace an already-finished 100% with 0%.
+                    keepalive=True,
+                )
+            )
+        )
+
     # ── Liveness ──────────────────────────────────────────────────────────
 
     async def _keepalive_loop(self, ref: pb.TaskRef, interval: float) -> None:
@@ -494,7 +787,37 @@ class WorkerClient:
         if timer is not None:
             timer.cancel()
 
-    def _reporters(self, assignment: pb.TaskAssignment) -> dict[str, Callable]:
+    async def _fetch_input(self, ref: pb.ArtifactRef, destination: str) -> None:
+        """Download one declared input with authenticated, ordered chunks."""
+        if self._stub is None:
+            raise RuntimeError("no session is established")
+        request = pb.ArtifactRef()
+        request.CopyFrom(ref)
+        request.session_token = self._session_token
+        offset = 0
+        complete = False
+        try:
+            with open(destination, "wb") as handle:
+                async for chunk in self._stub.DownloadArtifact(request):
+                    if int(chunk.offset) != offset:
+                        raise RuntimeError(
+                            f"input offset {chunk.offset} did not match {offset} bytes received"
+                        )
+                    handle.write(chunk.data)
+                    offset += len(chunk.data)
+                    if chunk.last:
+                        complete = True
+                        break
+        except Exception:
+            with contextlib.suppress(OSError):
+                os.remove(destination)
+            raise
+        if not complete:
+            with contextlib.suppress(OSError):
+                os.remove(destination)
+            raise RuntimeError("input download ended before its final chunk")
+
+    def _executor_kwargs(self, assignment: pb.TaskAssignment) -> dict[str, Callable]:
         """Per-task progress callbacks for the executor.
 
         Bound to this assignment's ref rather than installed on the executor
@@ -528,7 +851,11 @@ class WorkerClient:
                 )
             )
 
-        available = {"on_progress": on_progress, "on_model_loading": on_model_loading}
+        available = {
+            "on_progress": on_progress,
+            "on_model_loading": on_model_loading,
+            "fetch_input": self._fetch_input,
+        }
         return {k: v for k, v in available.items() if k in self._reporter_kwargs}
 
 
@@ -544,6 +871,7 @@ def _result_message(pending: PendingResult) -> pb.WorkerMessage:
             ref=pending.ref,
             result_json=pending.result_json,
             inline_payload=pending.inline_payload,
+            artifacts=pending.artifacts,
         )
     )
 
@@ -558,10 +886,10 @@ def _oversized_result_error(pending: PendingResult) -> Optional[WorkerError]:
     worker in the fleet would produce the same frame and be rejected the same
     way. Retrying it burns the whole fleet's slots to arrive back here.
 
-    The executor also flags ``meta["inline"]`` against its own, much smaller
-    preference — that flag selects the Phase 3 upload path and is deliberately
-    not a failure condition, because everything between the two thresholds
-    delivers correctly today.
+    A last line of defence rather than the size policy it once was: bulk bytes
+    now take the UploadResult path (``WorkerClient.inline_limit``), so what
+    still reaches this is a ``result_json`` — a transcript, a segment list —
+    that on its own will not fit in a frame.
     """
     size = _result_message(pending).ByteSize()
     if size <= MAX_MESSAGE_BYTES:
@@ -619,6 +947,7 @@ def config_from_token(
 
 __all__ = [
     "MAX_MESSAGE_BYTES",
+    "UPLOAD_STAGE",
     "PendingResult",
     "WorkerClient",
     "WorkerConfig",

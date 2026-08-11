@@ -2307,7 +2307,8 @@
     "droppedChunks_one": "请注意：文本中有 {{count}} 处没有生成音频，因此这段录音缺少该部分。请重新生成——换一个随机种子通常就能解决。",
     "droppedChunks_other": "请注意：文本中有 {{count}} 处没有生成音频，因此这段录音缺少这些部分。请重新生成——换一个随机种子通常就能解决。",
     "droppedChunksWithText_one": "请注意：文本中有 {{count}} 处没有生成音频，这段录音缺少该部分——“{{text}}”。请重新生成，换一个随机种子通常就能解决。",
-    "droppedChunksWithText_other": "请注意：文本中有 {{count}} 处没有生成音频，这段录音缺少这些部分——“{{text}}”。请重新生成，换一个随机种子通常就能解决。"
+    "droppedChunksWithText_other": "请注意：文本中有 {{count}} 处没有生成音频，这段录音缺少这些部分——“{{text}}”。请重新生成，换一个随机种子通常就能解决。",
+    "streamingOffRemote": "{{label}} 渲染期间已关闭渐进式预览，完成后会立即播放。"
   },
   "voiceSelector": {
     "engineDefault": "引擎默认",
@@ -2382,6 +2383,16 @@
   "gpu": {
     "local": "本机",
     "picker": "任务运行位置",
-    "tasks": "任务"
+    "tasks": "任务",
+    "coverage": "仅 {{ops}}",
+    "opLocal": "本机 — {{op}}尚不支持远程运行",
+    "ops": {
+      "tts": "TTS",
+      "clone": "声音克隆",
+      "dub": "视频配音",
+      "audiobook": "有声书渲染",
+      "longform": "故事朗读",
+      "asr": "转写"
+    }
   }
 }

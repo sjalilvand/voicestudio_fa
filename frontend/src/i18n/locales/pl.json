@@ -2300,7 +2300,8 @@
     "droppedChunks_one": "Uwaga: {{count}} fragment tekstu nie wygenerował dźwięku, więc brakuje go w tym nagraniu. Wygeneruj ponownie — inne ziarno zwykle rozwiązuje problem.",
     "droppedChunks_other": "Uwaga: fragmenty tekstu ({{count}}) nie wygenerowały dźwięku, więc brakuje ich w tym nagraniu. Wygeneruj ponownie — inne ziarno zwykle rozwiązuje problem.",
     "droppedChunksWithText_one": "Uwaga: {{count}} fragment tekstu nie wygenerował dźwięku i brakuje go w tym nagraniu — „{{text}}”. Wygeneruj ponownie; inne ziarno zwykle rozwiązuje problem.",
-    "droppedChunksWithText_other": "Uwaga: fragmenty tekstu ({{count}}) nie wygenerowały dźwięku i brakuje ich w tym nagraniu — „{{text}}”. Wygeneruj ponownie; inne ziarno zwykle rozwiązuje problem."
+    "droppedChunksWithText_other": "Uwaga: fragmenty tekstu ({{count}}) nie wygenerowały dźwięku i brakuje ich w tym nagraniu — „{{text}}”. Wygeneruj ponownie; inne ziarno zwykle rozwiązuje problem.",
+    "streamingOffRemote": "Podgląd progresywny jest wyłączony, gdy renderuje {{label}} — gotowe nagranie odtworzy się zaraz po nadejściu."
   },
   "voiceSelector": {
     "engineDefault": "Domyślne ustawienie silnika",
@@ -2375,6 +2376,16 @@
   "gpu": {
     "local": "Lokalnie",
     "picker": "Gdzie wykonywane są zadania",
-    "tasks": "zadania"
+    "tasks": "zadania",
+    "coverage": "tylko {{ops}}",
+    "opLocal": "Lokalnie — {{op}} nie działa jeszcze zdalnie",
+    "ops": {
+      "tts": "TTS",
+      "clone": "klonowanie głosu",
+      "dub": "dubbing",
+      "audiobook": "renderowanie audiobooków",
+      "longform": "narracja opowiadań",
+      "asr": "transkrypcja"
+    }
   }
 }

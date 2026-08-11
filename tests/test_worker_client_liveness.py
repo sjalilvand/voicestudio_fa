@@ -272,32 +272,40 @@ async def test_an_executor_that_takes_no_reporters_still_runs():
 
 
 @pytest.mark.asyncio
-async def test_an_oversized_result_never_enters_the_redelivery_set():
-    """The B9 regression: recorded-then-rejected means it is re-sent on every
-    reconnect, killing the session each time and stranding every other task."""
+async def test_an_oversized_result_uploads_then_enters_the_redelivery_set():
+    """Large payload bytes use UploadResult; only the small artifact reference
+    is retained for control-stream redelivery."""
     oversized = b"\0" * (MAX_MESSAGE_BYTES + 1024)
 
     async def execute(assignment, **_):
         return {"meta": {"bytes": len(oversized), "inline": False}, "payload": oversized}
 
+    class Stub:
+        async def UploadResult(self, chunks):  # noqa: N802
+            received = 0
+            async for chunk in chunks:
+                assert chunk.offset == received
+                received += len(chunk.data)
+            return pb.ResultAck(
+                artifact_id="t-1/a-1.bin", bytes_received=received, committed=True
+            )
+
     client = _client(execute)
+    client._stub = Stub()
+    client._session_token = "session"
     wire = _Wire(client)
     try:
         await client._on_assignment(_assignment())
-        failed = await wire.until("failed")
+        result = await wire.until("result")
         await _settle(client)
 
-        assert client._pending == {}
-        assert "result" not in wire.kinds()
-        assert failed.failed.error.code == "RESULT_TOO_LARGE"
-        # TERMINAL: the size is a property of the output, so every worker in
-        # the fleet would produce the same frame and be rejected the same way.
-        assert failed.failed.error.error_class == pb.ERROR_CLASS_TERMINAL
+        assert not result.result.inline_payload
+        assert result.result.artifacts[0].artifact_id == "t-1/a-1.bin"
+        assert list(client._pending) == ["t-1/a-1"]
 
-        before = len(wire.frames)
         await client._redeliver_pending()
         await asyncio.sleep(0.05)
-        assert len(wire.frames) == before
+        assert wire.kinds().count("result") == 2
     finally:
         await wire.close()
 
@@ -343,6 +351,93 @@ async def test_the_size_gate_measures_the_frame_not_just_the_payload():
         await _settle(client)
         assert client._pending == {}
         assert failed.failed.error.code == "RESULT_TOO_LARGE"
+    finally:
+        await wire.close()
+
+
+@pytest.mark.asyncio
+async def test_an_oversized_payload_with_no_session_fails_without_being_remembered():
+    """The upload path's own failure mode, which the size gate never sees.
+
+    ``_stub`` is None whenever no session is established — between a disconnect
+    and the next Register, and against a control plane too old to serve
+    UploadResult at all. The payload is then over the frame cap with nowhere to
+    go, which is the shape B9 started as.
+
+    Two properties matter and they pull in opposite directions. It must not be
+    remembered: an over-cap frame in ``_pending`` is re-sent on every reconnect,
+    killing the session each time and stranding every other task. But it must
+    stay RETRYABLE, unlike the size gate's TERMINAL verdict — nothing about the
+    output is wrong here, only the route to the control plane, and the very next
+    attempt has a live session to upload through.
+    """
+    oversized = b"\0" * (MAX_MESSAGE_BYTES + 1024)
+
+    async def execute(assignment, **_):
+        return {"meta": {"bytes": len(oversized)}, "payload": oversized}
+
+    client = _client(execute)
+    assert client._stub is None, "no session — there is nothing to upload through"
+    wire = _Wire(client)
+    try:
+        await client._on_assignment(_assignment())
+        failed = await wire.until("failed")
+        await _settle(client)
+
+        assert client._pending == {}
+        assert "result" not in wire.kinds()
+        assert failed.failed.error.code == "RESULT_UPLOAD_FAILED"
+        assert failed.failed.error.error_class == pb.ERROR_CLASS_TRANSIENT
+
+        # The reconnect that used to re-send the over-cap frame sends nothing.
+        before = len(wire.frames)
+        await client._redeliver_pending()
+        await asyncio.sleep(0.05)
+        assert len(wire.frames) == before
+    finally:
+        await wire.close()
+
+
+@pytest.mark.asyncio
+async def test_a_receiver_that_never_commits_cannot_spin_the_upload_forever():
+    """A resume loop is bounded by a count, not by "did the offset change".
+
+    The tempting guard — refuse when the receiver repeats the offset it just
+    gave us — passes a receiver that alternates between two byte counts, and
+    passes one that advances a handful of bytes per round. Both spin: the first
+    forever, the second once per few bytes of a payload measured in megabytes.
+    Neither is distinguishable from a slow-but-honest resume by looking at a
+    single pair of offsets, so the bound has to be on the number of rounds.
+
+    The worker is single-slot by default, so a spin here is not one lost
+    upload — it is the machine, doing nothing else, until someone restarts it.
+    """
+    payload = b"\0" * (MAX_MESSAGE_BYTES + 1024)
+    rounds = []
+
+    async def execute(assignment, **_):
+        return {"meta": {"bytes": len(payload)}, "payload": payload}
+
+    class Oscillating:
+        async def UploadResult(self, chunks):  # noqa: N802
+            async for _ in chunks:
+                pass
+            rounds.append(len(rounds))
+            # Alternates, so `resumed != offset` holds on every single round.
+            return pb.ResultAck(bytes_received=8 if len(rounds) % 2 else 16, committed=False)
+
+    client = _client(execute)
+    client._stub = Oscillating()
+    client._session_token = "session"
+    wire = _Wire(client)
+    try:
+        await client._on_assignment(_assignment())
+        failed = await wire.until("failed")
+        await _settle(client)
+
+        assert len(rounds) <= 16, "the upload kept asking to resume"
+        assert client._pending == {}
+        assert failed.failed.error.code == "RESULT_UPLOAD_FAILED"
     finally:
         await wire.close()
 

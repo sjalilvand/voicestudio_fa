@@ -8,6 +8,8 @@ domain:
   * fencing — one active session per worker, newest epoch wins, stale epochs
     dropped rather than merged
   * ordering — persist a result before acknowledging it
+  * integrity — an artifact is verified against its declared digest before it
+    is renamed into place, and only an explicit last chunk commits one
 
 Everything else is delegated. If this file starts making scheduling decisions,
 something has been put in the wrong place.
@@ -21,11 +23,12 @@ alive are exactly what must never queue behind anything else.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import os
 import time
-from typing import Optional
+from typing import Callable, Optional
 
 import grpc
 
@@ -54,10 +57,188 @@ SESSION_METADATA_KEY = "x-omnivoice-session"
 # payload here head-of-line blocks the heartbeats that prove the worker alive.
 INLINE_RESULT_THRESHOLD = 256 * 1024
 
+# Ceilings on what a remote peer may stream into our filesystem. They are not
+# derived from anything the worker says: ``ArtifactRef.size_bytes`` narrows the
+# cap when it is declared, but can never widen it. A gibibyte is roughly six
+# hours of the 24 kHz PCM16 WAV the executor writes — past any single render,
+# far short of a disk.
+MAX_ARTIFACT_BYTES = 1024**3
+# And a budget across every artifact one task delivers, so retries and
+# redeliveries cannot walk past the per-artifact cap one upload at a time.
+MAX_TASK_ARTIFACT_BYTES = 2 * 1024**3
+
 _HEARTBEAT_INTERVAL_SECONDS = 20
 # How often the control plane times a round trip to each worker. Frequent
 # enough that the latency shown in the UI is current, rare enough to be free.
 _PING_INTERVAL_SECONDS = 5.0
+# Read size when serving an input. Two orders of magnitude under the 8 MiB
+# message cap, so a large input is many small frames rather than one that the
+# receiver refuses outright.
+_DOWNLOAD_CHUNK_BYTES = 64 * 1024
+_REHASH_BLOCK_BYTES = 1024 * 1024
+
+
+def _upload_refused(
+    code: str,
+    message: str,
+    *,
+    bytes_received: int = 0,
+    error_class: int = pb.ERROR_CLASS_PROTOCOL,
+) -> pb.ResultAck:
+    """A terminal ack that commits nothing and says why.
+
+    Refusals are answered rather than aborted: the ack is the only frame this
+    RPC ever sends back, so aborting the call would leave the worker knowing
+    the upload failed and nothing about whether to retry, resume, or re-render.
+    """
+    return pb.ResultAck(
+        bytes_received=bytes_received,
+        committed=False,
+        error=pb.Error(error_class=error_class, code=code, message=message),
+    )
+
+
+class _Upload:
+    """One in-progress result transfer.
+
+    Bytes land in an attempt-scoped ``.part`` file and are renamed into place
+    only once the declared digest matches what actually arrived, so a
+    truncated, reordered, or corrupted transfer can never be mistaken for a
+    finished result. Every rule here exists because the sender is remote: the
+    offset is checked against what we hold rather than trusted as a hint, the
+    total is capped whether or not a size was declared, and an iterator that
+    simply stops commits nothing.
+    """
+
+    def __init__(
+        self,
+        *,
+        attempt: Attempt,
+        artifact_id: str,
+        final: str,
+        limit: int,
+        declared_size: int,
+        declared_sha256: str,
+        on_commit: Callable[[Attempt, int], None],
+    ) -> None:
+        self.attempt = attempt
+        self.artifact_id = artifact_id
+        self.final = final
+        self.part = f"{final}.part"
+        self.limit = limit
+        self.declared_size = declared_size
+        self.declared_sha256 = declared_sha256.strip().lower()
+        self._on_commit = on_commit
+        self._digest = hashlib.sha256()
+        self._handle = None
+        self.received = 0
+
+    def held_bytes(self) -> int:
+        try:
+            return os.path.getsize(self.part)
+        except OSError:
+            return 0
+
+    async def start(self, offset: int) -> Optional[pb.ResultAck]:
+        """Open the part file at ``offset``, or refuse with what we hold."""
+        held = self.held_bytes()
+        if offset == 0:
+            self._handle = open(self.part, "wb")
+            return None
+        if offset == held and 0 < held <= self.limit:
+            # The digest has to cover the bytes already on disk, or the
+            # verification at commit would attest only to the resumed tail —
+            # which is exactly the case a resume exists to protect.
+            await asyncio.to_thread(self._rehash_held)
+            self.received = held
+            self._handle = open(self.part, "ab")
+            return None
+        return _upload_refused(
+            "OFFSET_MISMATCH",
+            "Resume from the byte count in this ack.",
+            bytes_received=held,
+            error_class=pb.ERROR_CLASS_TRANSIENT,
+        )
+
+    def _rehash_held(self) -> None:
+        with open(self.part, "rb") as fh:
+            for block in iter(lambda: fh.read(_REHASH_BLOCK_BYTES), b""):
+                self._digest.update(block)
+
+    def write(self, chunk) -> Optional[pb.ResultAck]:
+        """Append one chunk. Non-None means the transfer is over."""
+        if int(chunk.offset) != self.received:
+            # Not a resume point: a gap or an overlap inside a live stream is
+            # a sender that has lost track of what it sent, and appending it
+            # would produce a file that hashes to nothing anybody expected.
+            return _upload_refused(
+                "OFFSET_MISMATCH",
+                "Resume from the byte count in this ack.",
+                bytes_received=self.received,
+                error_class=pb.ERROR_CLASS_TRANSIENT,
+            )
+        data = bytes(chunk.data)
+        if self.received + len(data) > self.limit:
+            self.discard()
+            return _upload_refused(
+                "ARTIFACT_TOO_LARGE",
+                "This result is larger than the control plane accepts.",
+            )
+        self._handle.write(data)
+        self._digest.update(data)
+        self.received += len(data)
+        return None
+
+    def commit(self) -> pb.ResultAck:
+        """Verify, then rename. Never the other way round."""
+        self.close()
+        if self.declared_size and self.received != self.declared_size:
+            self.discard()
+            return _upload_refused(
+                "SIZE_MISMATCH",
+                "The transfer did not deliver the number of bytes it declared.",
+                error_class=pb.ERROR_CLASS_TRANSIENT,
+            )
+        if self._digest.hexdigest() != self.declared_sha256:
+            # Keeping the part file would let the next resume append onto
+            # bytes already known to be wrong.
+            self.discard()
+            return _upload_refused(
+                "DIGEST_MISMATCH",
+                "The uploaded result does not match its declared sha256.",
+                error_class=pb.ERROR_CLASS_TRANSIENT,
+            )
+        os.replace(self.part, self.final)
+        self._on_commit(self.attempt, self.received)
+        return pb.ResultAck(
+            artifact_id=self.artifact_id, bytes_received=self.received, committed=True
+        )
+
+    def incomplete(self) -> pb.ResultAck:
+        """The stream ended with no terminal chunk.
+
+        The part file survives for a resume and nothing is renamed. This used
+        to return ``committed=True`` over whatever bytes happened to arrive.
+        """
+        self.close()
+        return _upload_refused(
+            "UPLOAD_INCOMPLETE",
+            "The upload ended before its last chunk; resume from the byte count in this ack.",
+            bytes_received=self.received,
+            error_class=pb.ERROR_CLASS_TRANSIENT,
+        )
+
+    def close(self) -> None:
+        if self._handle is not None:
+            self._handle.close()
+            self._handle = None
+
+    def discard(self) -> None:
+        self.close()
+        try:
+            os.remove(self.part)
+        except OSError:
+            pass
 
 
 class _Session:
@@ -94,6 +275,10 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         self.cert_fingerprint = cert_fingerprint
         self._sessions: dict[str, _Session] = {}
         self._by_token: dict[str, _Session] = {}
+        # task_id → attempt_id → committed artifact bytes. Per attempt rather
+        # than a running total, so a redelivered upload of the same attempt
+        # replaces its own entry instead of spending the task's budget twice.
+        self._artifact_bytes: dict[str, dict[str, int]] = {}
         os.makedirs(artifact_dir, exist_ok=True)
 
     # ── Registration ──────────────────────────────────────────────────────
@@ -261,6 +446,19 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
             return
 
         session.stream_open = True
+        from worker.executor import INLINE_LIMIT_BYTES  # noqa: PLC0415
+
+        await session.send(
+            pb.ServerMessage(
+                config=pb.ConfigUpdate(
+                    heartbeat_interval_seconds=_HEARTBEAT_INTERVAL_SECONDS,
+                    max_concurrent_tasks=max(
+                        1, self.pool.get(session.worker_id).capacity.max_concurrent_tasks
+                    ),
+                    inline_result_threshold_bytes=INLINE_LIMIT_BYTES,
+                )
+            )
+        )
         writer = asyncio.create_task(self._write_loop(session, context))
         reader = asyncio.create_task(self._read_loop(session, request_iterator))
         pinger = asyncio.create_task(self._ping_loop(session))
@@ -601,7 +799,10 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         await session.send(
             pb.ServerMessage(
                 assignment=codec.assignment_to_pb(
-                    assignment.task, assignment.attempt, assignment.deadlines
+                    assignment.task,
+                    assignment.attempt,
+                    assignment.deadlines,
+                    artifact_root=self.artifact_dir,
                 )
             )
         )
@@ -633,76 +834,245 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
     async def UploadResult(self, request_iterator, context) -> pb.ResultAck:
         """Receive a result artifact in chunks, resumably.
 
-        Written to an attempt-scoped ``.part`` file and only renamed into place
-        once the last chunk lands, so a partial transfer can never be mistaken
-        for a finished result.
+        Nothing the sender says is taken on trust. Every chunk must name the
+        exact offset this control plane already holds, the total is bounded per
+        artifact and per task, the digest declared in ``ArtifactRef.sha256``
+        must match the bytes that arrived, and only an explicit ``last`` chunk
+        renames the ``.part`` file into place. An iterator that simply stops
+        leaves the partial file for a resume and commits nothing — it used to
+        commit, which is how a truncated transfer became a finished render.
+
+        Resume is real, and this is where it is reported. The call is
+        client-streaming with a single terminal ack, so there is no mid-stream
+        channel for "bytes already held": a chunk whose offset disagrees with
+        what we hold is answered with ``committed=False`` and
+        ``bytes_received`` set to the authoritative held count, and the worker
+        restarts from there. That ack is the bytes-held probe the proto
+        promised and no RPC provided.
         """
-        artifact_id = ""
-        received = 0
-        handle = None
-        path = ""
-        final = ""
+        upload: Optional[_Upload] = None
         try:
             async for chunk in request_iterator:
-                if handle is None:
-                    ref = chunk.ref
-                    session = self._session_for(context, ref)
-                    if session is None:
-                        await context.abort(
-                            grpc.StatusCode.UNAUTHENTICATED, "Unknown or expired session."
-                        )
-                        return pb.ResultAck(committed=False)
-                    # Same rule as an inline result: the destination is minted
-                    # from our own attempt record, never assembled from the ids
-                    # in the request.
-                    attempt = self._attempt_for(session, ref)
-                    final = (
-                        self._artifact_path(attempt.task_id, attempt.attempt_id)
-                        if attempt is not None
-                        else None
-                    )
-                    if final is None:
-                        await context.abort(
-                            grpc.StatusCode.PERMISSION_DENIED,
-                            "No such attempt is running for this worker.",
-                        )
-                        return pb.ResultAck(committed=False)
-                    artifact_id = final
-                    path = f"{final}.part"
-                    # Resume where a previous transfer stopped.
-                    mode = "ab" if chunk.offset and os.path.exists(path) else "wb"
-                    handle = open(path, mode)
-                    received = handle.tell()
-                handle.write(chunk.data)
-                received += len(chunk.data)
+                if upload is None:
+                    upload, refusal = await self._open_upload(context, chunk)
+                    if upload is None:
+                        if refusal is None:
+                            await context.abort(
+                                grpc.StatusCode.UNAUTHENTICATED,
+                                "Unknown or expired session.",
+                            )
+                            return _upload_refused(
+                                "UNAUTHENTICATED", "Unknown or expired session."
+                            )
+                        return refusal
+                refusal = upload.write(chunk)
+                if refusal is not None:
+                    return refusal
+                self._renew_upload_lease(upload.attempt)
                 if chunk.last:
-                    break
+                    return upload.commit()
         finally:
-            if handle is not None:
-                handle.close()
-        if path and final:
-            os.replace(path, final)
-            artifact_id = final
-        return pb.ResultAck(artifact_id=artifact_id, bytes_received=received, committed=True)
+            if upload is not None:
+                upload.close()
+        if upload is None:
+            return _upload_refused("EMPTY_UPLOAD", "The upload carried no chunks.")
+        return upload.incomplete()
+
+    async def _open_upload(self, context, chunk) -> tuple[Optional[_Upload], Optional[pb.ResultAck]]:
+        """Authorise the first chunk and open its destination.
+
+        ``(None, None)`` means unauthenticated — the one failure answered with
+        a gRPC abort rather than an ack, because a caller we cannot identify
+        has no business being told anything about the task it named.
+        """
+        ref = chunk.ref
+        session = self._session_for(context, ref) or self._session_for(context, chunk)
+        if session is None:
+            return None, None
+        # Same rule as an inline result: the destination is minted from our own
+        # attempt record, never assembled from the ids in the request.
+        attempt = self._attempt_for(session, ref)
+        final = (
+            self._artifact_path(attempt.task_id, attempt.attempt_id)
+            if attempt is not None
+            else None
+        )
+        if attempt is None or final is None:
+            return None, _upload_refused(
+                "UNKNOWN_ATTEMPT", "No such attempt is running for this worker."
+            )
+        if not ref.sha256:
+            # Refused before a single byte is accepted. An upload with no
+            # declared digest cannot be verified, and committing it would make
+            # the whole verification path decorative.
+            return None, _upload_refused(
+                "DIGEST_REQUIRED", "Declare ArtifactRef.sha256 before uploading a result."
+            )
+        declared = int(ref.size_bytes)
+        if declared > MAX_ARTIFACT_BYTES:
+            return None, _upload_refused(
+                "ARTIFACT_TOO_LARGE", "This result is larger than the control plane accepts."
+            )
+        # A declared size narrows the cap; an undeclared one gets the ceiling.
+        limit = declared or MAX_ARTIFACT_BYTES
+        if self._artifact_bytes_spent(attempt.task_id) + limit > MAX_TASK_ARTIFACT_BYTES:
+            return None, _upload_refused(
+                "TASK_BUDGET_EXCEEDED",
+                "This task has delivered as many artifact bytes as it is allowed.",
+            )
+        # Last, and only once the request is known to be one we would accept:
+        # a refusal must not leave a task parked in RESULT_UPLOADING with no
+        # transfer under way. Cancelled, timed out, or already committed by
+        # another attempt all fail here, because accepting these bytes would
+        # overwrite the artifact of whichever attempt actually won.
+        if not self._begin_uploading(attempt):
+            return None, _upload_refused(
+                "ATTEMPT_NOT_LIVE", "This attempt is no longer accepting a result."
+            )
+        upload = _Upload(
+            attempt=attempt,
+            artifact_id=self._artifact_id_for(final),
+            final=final,
+            limit=limit,
+            declared_size=declared,
+            declared_sha256=ref.sha256,
+            on_commit=self._record_artifact_bytes,
+        )
+        refusal = await upload.start(int(chunk.offset))
+        if refusal is not None:
+            upload.close()
+            return None, refusal
+        return upload, None
+
+    def _begin_uploading(self, attempt: Attempt) -> bool:
+        """Put the task into RESULT_UPLOADING for the length of the transfer.
+
+        Without this transition ``Task.uploading`` has no callers, so
+        RESULT_UPLOADING is unreachable and the entire delivery of a large
+        result runs under the 120 s progress lease while the 900 s
+        ``result_delivery_seconds`` budget sits unused because nothing ever
+        entered the state it applies to.
+        """
+        task = self.scheduler.get(attempt.task_id)
+        if task is None or task.state.terminal or attempt.state.terminal:
+            return False
+        try:
+            task.uploading(attempt.attempt_id, session_epoch=attempt.session_epoch)
+        except Exception:
+            logger.debug(
+                "Refusing an upload for attempt %s: not in a state that can deliver",
+                attempt.attempt_id,
+                exc_info=True,
+            )
+            return False
+        self._renew_upload_lease(attempt)
+        return True
+
+    def _renew_upload_lease(self, attempt: Attempt) -> None:
+        """Renew the lease from upload progress, under the delivery budget.
+
+        Routed through the scheduler rather than computed here: it owns the
+        phase budgets, and ``on_progress(keepalive=True)`` already caps a
+        renewal at the current phase's ceiling — which, now that the task is in
+        RESULT_UPLOADING, is ``result_delivery_seconds``. A keepalive and not a
+        progress frame: bytes on the wire prove the worker is alive, not that
+        the render advanced, and overwriting a finished 100% with a transfer's
+        zero is a UI that goes backwards.
+        """
+        self.scheduler.on_progress(
+            attempt.task_id,
+            attempt.attempt_id,
+            progress=0.0,
+            keepalive=True,
+            epoch=attempt.session_epoch,
+        )
+
+    def _artifact_bytes_spent(self, task_id: str) -> int:
+        """How much of this task's artifact budget is already committed."""
+        for known in list(self._artifact_bytes):
+            task = self.scheduler.get(known)
+            if task is None or task.state.terminal:
+                self._artifact_bytes.pop(known, None)
+        return sum(self._artifact_bytes.get(task_id, {}).values())
+
+    def _record_artifact_bytes(self, attempt: Attempt, count: int) -> None:
+        self._artifact_bytes.setdefault(attempt.task_id, {})[attempt.attempt_id] = count
+
+    def _artifact_id_for(self, path: str) -> str:
+        """The store-relative id a worker may name this artifact by.
+
+        Relative, not the absolute path it lives at: the id travels back on the
+        control stream as ``TaskResult.artifacts[0].artifact_id`` and is
+        re-resolved against the artifact directory, and handing a remote peer
+        our filesystem layout buys nothing that resolution does not already do.
+        """
+        try:
+            return os.path.relpath(path, self.artifact_dir)
+        except ValueError:  # different drive on Windows; cannot happen, but
+            return path
 
     async def DownloadArtifact(self, request: pb.ArtifactRef, context):
-        """Stream a task input (reference audio, source video) to a worker."""
-        if not self._authorized(context, request):
+        """Stream a task input (reference audio, source video) to a worker.
+
+        Bound to the attempt that needs the input, not merely to a live
+        session. Until artifacts started flowing inwards, ``inputs`` carried
+        nothing and "any authenticated worker may read any staged file" was a
+        distinction without a difference; from here those files are the user's
+        own reference audio, staged from their voice library.
+        """
+        session = self._session_for(context, request)
+        if session is None:
             await context.abort(grpc.StatusCode.UNAUTHENTICATED, "Unknown or expired session.")
+            return
+        if not self._may_read_input(session, request):
+            await context.abort(
+                grpc.StatusCode.PERMISSION_DENIED,
+                "This input belongs to a task that is not running on this worker.",
+            )
             return
         path = self._resolve_input(request.artifact_id)
         if path is None:
             await context.abort(grpc.StatusCode.NOT_FOUND, "Artifact not found.")
             return
+        # A ref minted here rather than the caller's echoed back: the request
+        # carries the worker's session token, and nothing goes back out that
+        # did not have to go out.
+        served = pb.ArtifactRef(
+            artifact_id=request.artifact_id,
+            task_id=request.task_id,
+            attempt_id=request.attempt_id,
+            filename=os.path.basename(path),
+            content_type=request.content_type,
+            size_bytes=os.path.getsize(path),
+        )
         offset = 0
         with open(path, "rb") as fh:
             while True:
-                data = fh.read(64 * 1024)
+                data = fh.read(_DOWNLOAD_CHUNK_BYTES)
                 if not data:
                     break
-                yield pb.ArtifactChunk(ref=request, offset=offset, data=data, last=False)
+                yield pb.ArtifactChunk(ref=served, offset=offset, data=data, last=False)
                 offset += len(data)
-        yield pb.ArtifactChunk(ref=request, offset=offset, data=b"", last=True)
+        yield pb.ArtifactChunk(ref=served, offset=offset, data=b"", last=True)
+
+    def _may_read_input(self, session: _Session, ref) -> bool:
+        """Does this session hold a live attempt of the task naming the input?
+
+        Per-task rather than per-artifact on purpose: staged inputs are
+        content-hashed so repeated clones of one voice share a single copy, and
+        an id that is deliberately shared cannot itself carry the
+        authorisation. The attempt does.
+        """
+        task = self.scheduler.get(ref.task_id) if ref.task_id else None
+        if task is None:
+            return False
+        if ref.attempt_id:
+            attempt, foreign = self._attempt_and_owner(session, ref)
+            return attempt is not None and not foreign and attempt.state.live
+        return any(
+            attempt.worker_id == session.worker_id and attempt.state.live
+            for attempt in task.attempts
+        )
 
     def _session_for(self, context, ref) -> Optional[_Session]:
         """The live session a transfer belongs to, by ref token or by metadata."""
@@ -711,9 +1081,6 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
             session = self._by_token[token]
             return None if session.session.expired() else session
         return self._session_from_metadata(context)
-
-    def _authorized(self, context, ref) -> bool:
-        return self._session_for(context, ref) is not None
 
     def _resolve_input(self, artifact_id: str) -> Optional[str]:
         """Resolve an input reference to a path inside the artifact directory.
@@ -776,6 +1143,8 @@ def _peer_address(context) -> str:
 
 __all__ = [
     "INLINE_RESULT_THRESHOLD",
+    "MAX_ARTIFACT_BYTES",
+    "MAX_TASK_ARTIFACT_BYTES",
     "MIN_SUPPORTED_VERSION",
     "PROTOCOL_VERSION",
     "SESSION_METADATA_KEY",

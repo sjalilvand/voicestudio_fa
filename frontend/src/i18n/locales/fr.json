@@ -2300,7 +2300,8 @@
     "droppedChunks_one": "Attention : {{count}} partie de votre texte n'a produit aucun audio, elle manque donc dans cette prise. Relancez la génération — une autre graine suffit généralement.",
     "droppedChunks_other": "Attention : {{count}} parties de votre texte n'ont produit aucun audio, elles manquent donc dans cette prise. Relancez la génération — une autre graine suffit généralement.",
     "droppedChunksWithText_one": "Attention : {{count}} partie de votre texte n'a produit aucun audio et manque dans cette prise — « {{text}} ». Relancez la génération ; une autre graine suffit généralement.",
-    "droppedChunksWithText_other": "Attention : {{count}} parties de votre texte n'ont produit aucun audio et manquent dans cette prise — « {{text}} ». Relancez la génération ; une autre graine suffit généralement."
+    "droppedChunksWithText_other": "Attention : {{count}} parties de votre texte n'ont produit aucun audio et manquent dans cette prise — « {{text}} ». Relancez la génération ; une autre graine suffit généralement.",
+    "streamingOffRemote": "L'aperçu progressif est désactivé pendant que {{label}} effectue le rendu — la prise finale sera lue dès son arrivée."
   },
   "voiceSelector": {
     "engineDefault": "Moteur par défaut",
@@ -2375,6 +2376,16 @@
   "gpu": {
     "local": "Local",
     "picker": "Où les tâches s'exécutent",
-    "tasks": "tâches"
+    "tasks": "tâches",
+    "coverage": "{{ops}} uniquement",
+    "opLocal": "Local — {{op}} ne s'exécute pas encore à distance",
+    "ops": {
+      "tts": "TTS",
+      "clone": "clonage vocal",
+      "dub": "doublage",
+      "audiobook": "rendu de livre audio",
+      "longform": "narration d'histoires",
+      "asr": "transcription"
+    }
   }
 }

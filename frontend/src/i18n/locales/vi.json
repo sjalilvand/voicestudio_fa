@@ -2300,7 +2300,8 @@
     "droppedChunks_one": "Lưu ý: {{count}} phần trong văn bản của bạn không tạo ra âm thanh, nên bản thu này bị thiếu phần đó. Hãy thử tạo lại — thường chỉ cần một seed khác.",
     "droppedChunks_other": "Lưu ý: {{count}} phần trong văn bản của bạn không tạo ra âm thanh, nên bản thu này bị thiếu các phần đó. Hãy thử tạo lại — thường chỉ cần một seed khác.",
     "droppedChunksWithText_one": "Lưu ý: {{count}} phần trong văn bản của bạn không tạo ra âm thanh và bị thiếu trong bản thu này — “{{text}}”. Hãy thử tạo lại; thường chỉ cần một seed khác.",
-    "droppedChunksWithText_other": "Lưu ý: {{count}} phần trong văn bản của bạn không tạo ra âm thanh và bị thiếu trong bản thu này — “{{text}}”. Hãy thử tạo lại; thường chỉ cần một seed khác."
+    "droppedChunksWithText_other": "Lưu ý: {{count}} phần trong văn bản của bạn không tạo ra âm thanh và bị thiếu trong bản thu này — “{{text}}”. Hãy thử tạo lại; thường chỉ cần một seed khác.",
+    "streamingOffRemote": "Xem trước lũy tiến bị tắt trong khi {{label}} kết xuất — bản hoàn chỉnh sẽ phát ngay khi có."
   },
   "voiceSelector": {
     "engineDefault": "Mặc định công cụ",
@@ -2375,6 +2376,16 @@
   "gpu": {
     "local": "Cục bộ",
     "picker": "Nơi tác vụ chạy",
-    "tasks": "tác vụ"
+    "tasks": "tác vụ",
+    "coverage": "chỉ {{ops}}",
+    "opLocal": "Cục bộ — {{op}} chưa chạy từ xa",
+    "ops": {
+      "tts": "TTS",
+      "clone": "nhân bản giọng nói",
+      "dub": "lồng tiếng",
+      "audiobook": "kết xuất sách nói",
+      "longform": "kể chuyện",
+      "asr": "phiên âm"
+    }
   }
 }

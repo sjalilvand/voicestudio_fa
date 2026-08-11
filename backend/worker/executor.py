@@ -17,8 +17,10 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import hashlib
 import json
 import logging
+import os
 from typing import Any, Awaitable, Callable, Optional
 
 from worker.errors import ErrorClass, WorkerError
@@ -29,6 +31,17 @@ logger = logging.getLogger("omnivoice.worker")
 # uploaded separately so it cannot head-of-line block heartbeats.
 INLINE_LIMIT_BYTES = 256 * 1024
 
+# Where the control plane reports that it could not stage an input. Mirrors
+# ``codec._INPUT_ERRORS_KEY``; the two are pinned together by a test rather
+# than by an import, because this module must not depend on the transport.
+INPUT_ERRORS_PARAM = "input_errors"
+
+# Fetched inputs are cached by content hash, so the second clone of a voice
+# transfers nothing. Bounded, because a cache with no ceiling is the same disk
+# leak on the worker that unpurged artifacts were on the control plane.
+INPUT_CACHE_LIMIT_BYTES = 2 * 1024 * 1024 * 1024
+_FALLBACK_INPUT_FETCH_SECONDS = 600.0
+
 #   on_progress(fraction: float, stage: str)
 #   on_model_loading(fraction: float, detail: str)
 #
@@ -38,6 +51,13 @@ INLINE_LIMIT_BYTES = 256 * 1024
 # a caller that drives the executor directly.
 ProgressReporter = Callable[[float, str], Awaitable[None]]
 LoadReporter = Callable[[float, str], Awaitable[None]]
+
+#   fetch_input(ref: ArtifactRef, destination: str) -> Awaitable[Any]
+#
+# Supplied by the transport, which owns the ``DownloadArtifact`` stream and the
+# session credentials it needs. The executor decides *what* to fetch and where
+# it lands; it does not know there is a network.
+InputFetcher = Callable[[Any, str], Awaitable[Any]]
 
 # Used when an assignment carries no deadlines (the HTTP mirror, and tests).
 # Generous on purpose: the server lease is the real bound, and a worker-side
@@ -58,9 +78,13 @@ class TaskExecutor:
         *,
         on_progress: Optional[ProgressReporter] = None,
         on_model_loading: Optional[LoadReporter] = None,
+        fetch_input: Optional[InputFetcher] = None,
+        input_dir: Optional[str] = None,
     ) -> None:
         self._on_progress = on_progress
         self._on_model_loading = on_model_loading
+        self._fetch_input = fetch_input
+        self._input_dir = input_dir
 
     async def execute(
         self,
@@ -68,6 +92,7 @@ class TaskExecutor:
         *,
         on_progress: Optional[ProgressReporter] = None,
         on_model_loading: Optional[LoadReporter] = None,
+        fetch_input: Optional[InputFetcher] = None,
     ) -> dict:
         """Run one assignment and return ``{"meta": {...}, "payload": bytes}``.
 
@@ -82,6 +107,9 @@ class TaskExecutor:
         """
         operation = (assignment.operation or "tts").lower()
         params = _parse_params(assignment.params_json)
+        params = await self._materialize_inputs(
+            assignment, params, fetch_input or self._fetch_input
+        )
 
         handler = {
             "tts": self._run_tts,
@@ -147,6 +175,93 @@ class TaskExecutor:
         )
         await report.progress(1.0, "done")
         return {"meta": meta, "payload": payload}
+
+    # ── Inputs ────────────────────────────────────────────────────────────
+
+    async def _materialize_inputs(self, assignment, params: dict, fetch) -> dict:
+        """Turn declared inputs into local files, then point the params at them.
+
+        The control plane sends artifact ids, never paths — its own paths mean
+        nothing here. So a clone arrives with ``ref_audio`` set to an id, and
+        the audio itself only exists once this has fetched it. Getting that
+        wrong does not fail loudly: the engine renders in the default voice and
+        the user gets audio that is simply not their clone.
+        """
+        errors = params.get(INPUT_ERRORS_PARAM)
+        if errors:
+            detail = "; ".join(str(e) for e in errors) if isinstance(errors, list) else str(errors)
+            raise TaskFailure(
+                WorkerError(
+                    error_class=ErrorClass.TERMINAL,
+                    code="INPUT_UNAVAILABLE",
+                    message=f"The task's input files could not be prepared: {detail}",
+                    hint="Check that the reference audio still exists, then try again.",
+                )
+            )
+
+        refs = [ref for ref in (getattr(assignment, "inputs", None) or []) if ref.artifact_id]
+        if not refs:
+            return params
+        if fetch is None:
+            raise TaskFailure(
+                WorkerError(
+                    error_class=ErrorClass.CAPABILITY,
+                    code="INPUT_TRANSFER_UNSUPPORTED",
+                    message="This worker cannot fetch task inputs.",
+                    hint="Update the worker, or run this task on a worker that can.",
+                )
+            )
+
+        _, run_budget = _budgets(assignment)
+        local: dict[str, str] = {}
+        for ref in refs:
+            local[ref.artifact_id] = await self._bounded(
+                self._fetch_one(ref, fetch),
+                timeout=min(run_budget, _FALLBACK_INPUT_FETCH_SECONDS),
+                code="INPUT_FETCH_TIMEOUT",
+                what=f"Fetching '{ref.filename or ref.artifact_id}'",
+            )
+        return _rewrite_params(params, local)
+
+    async def _fetch_one(self, ref, fetch) -> str:
+        """The local copy of one input, downloaded only if we lack it.
+
+        Content-addressed: the name is the hash the control plane computed, so
+        a second clone of the same voice — or a retry of this very task on this
+        worker — costs no transfer at all.
+        """
+        directory = self._input_dir or default_input_dir()
+        os.makedirs(directory, exist_ok=True)
+        destination = os.path.join(directory, _cache_name(ref))
+        if _already_held(destination, ref):
+            _touch(destination)
+            return destination
+
+        partial = f"{destination}.part"
+        try:
+            await fetch(ref, partial)
+        except TaskFailure:
+            raise
+        except Exception as exc:
+            _discard(partial)
+            raise TaskFailure(
+                WorkerError(
+                    # Transient on purpose: an id we cannot resolve now is far
+                    # more often a dropped stream than a permanently missing
+                    # file, and one wasted retry beats failing real work.
+                    error_class=ErrorClass.TRANSIENT,
+                    code="INPUT_FETCH_FAILED",
+                    message=f"Could not fetch '{ref.filename or ref.artifact_id}': {exc}",
+                    hint="The control plane may have restarted; the task will be retried.",
+                )
+            ) from exc
+
+        # Off the loop: hashing a source video on the event loop thread would
+        # stall every heartbeat this worker owes the control plane.
+        await asyncio.to_thread(_verify, partial, ref)
+        os.replace(partial, destination)
+        await asyncio.to_thread(_prune_input_cache, directory)
+        return destination
 
     # ── Engine plumbing ───────────────────────────────────────────────────
 
@@ -328,6 +443,142 @@ def _budgets(assignment) -> tuple[float, float]:
     )
 
 
+def default_input_dir() -> str:
+    """Where fetched inputs are cached on this worker.
+
+    Under the app's own data directory when there is one — a worker is the
+    ordinary backend in worker mode — and the system temp dir otherwise, so a
+    stripped-down install still runs instead of failing on a missing path.
+    """
+    try:
+        from core.config import DATA_DIR  # noqa: PLC0415
+
+        return os.path.join(str(DATA_DIR), "workers", "inputs")
+    except Exception:  # pragma: no cover — no app data dir on this host
+        import tempfile  # noqa: PLC0415
+
+        return os.path.join(tempfile.gettempdir(), "omnivoice-worker-inputs")
+
+
+def _cache_name(ref) -> str:
+    """A safe, content-addressed local name for one input.
+
+    Never the wire filename: that is remote input, and joining it onto a
+    directory is how a peer writes outside it. The hash the control plane sent
+    is the identity; the extension is kept only when it is a plain one,
+    because an engine that shells out to ffmpeg reads the suffix.
+    """
+    digest = "".join(c for c in (getattr(ref, "sha256", "") or "") if c in "0123456789abcdef")
+    if len(digest) != 64:
+        digest = hashlib.sha256((ref.artifact_id or "").encode("utf-8")).hexdigest()
+    suffix = os.path.splitext(os.path.basename(str(getattr(ref, "filename", "") or "")))[1].lower()
+    if not (1 < len(suffix) <= 9 and suffix[1:].isalnum()):
+        suffix = ""
+    return f"{digest}{suffix}"
+
+
+def _already_held(path: str, ref) -> bool:
+    """Do we already have this exact input?
+
+    Size alone: the name is the content hash and the only writer is an atomic
+    rename, so a file of the right size at this name cannot be different bytes.
+    """
+    try:
+        expected = int(getattr(ref, "size_bytes", 0) or 0)
+        return os.path.isfile(path) and (not expected or os.path.getsize(path) == expected)
+    except OSError:  # pragma: no cover
+        return False
+
+
+def _touch(path: str) -> None:
+    try:
+        os.utime(path, None)
+    except OSError:  # pragma: no cover
+        pass
+
+
+def _discard(path: str) -> None:
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
+def _verify(path: str, ref) -> None:
+    """Refuse a transfer that does not match what was announced.
+
+    A truncated reference clip does not fail — it clones three seconds of
+    silence — so the check has to happen before the file is committed.
+    """
+    expected_size = int(getattr(ref, "size_bytes", 0) or 0)
+    expected_hash = (getattr(ref, "sha256", "") or "").lower()
+    try:
+        actual_size = os.path.getsize(path)
+    except OSError as exc:
+        _discard(path)
+        raise TaskFailure(
+            WorkerError(
+                error_class=ErrorClass.TRANSIENT,
+                code="INPUT_FETCH_FAILED",
+                message=f"The input '{ref.filename or ref.artifact_id}' did not arrive.",
+                hint="The task will be retried.",
+            )
+        ) from exc
+
+    actual_hash = ""
+    if expected_hash:
+        digest = hashlib.sha256()
+        with open(path, "rb") as handle:
+            for block in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(block)
+        actual_hash = digest.hexdigest()
+
+    if (expected_size and actual_size != expected_size) or (
+        expected_hash and actual_hash != expected_hash
+    ):
+        _discard(path)
+        raise TaskFailure(
+            WorkerError(
+                error_class=ErrorClass.TRANSIENT,
+                code="INPUT_CORRUPT",
+                message=f"The input '{ref.filename or ref.artifact_id}' arrived damaged.",
+                hint="The transfer will be retried.",
+            )
+        )
+
+
+def _prune_input_cache(directory: str, limit_bytes: int = INPUT_CACHE_LIMIT_BYTES) -> None:
+    """Keep the input cache under its ceiling, oldest first."""
+    try:
+        entries = []
+        total = 0
+        for name in os.listdir(directory):
+            path = os.path.join(directory, name)
+            if not os.path.isfile(path):
+                continue
+            stat = os.stat(path)
+            entries.append((stat.st_mtime, stat.st_size, path))
+            total += stat.st_size
+        for _mtime, size, path in sorted(entries):
+            if total <= limit_bytes:
+                break
+            os.remove(path)
+            total -= size
+    except OSError:  # pragma: no cover — a full cache is not a failed task
+        logger.debug("Could not prune the worker input cache", exc_info=True)
+
+
+def _rewrite_params(params: dict, local: dict[str, str]):
+    """Replace every artifact id in the params with its local path."""
+    if isinstance(params, dict):
+        return {key: _rewrite_params(value, local) for key, value in params.items()}
+    if isinstance(params, list):
+        return [_rewrite_params(item, local) for item in params]
+    if isinstance(params, str):
+        return local.get(params, params)
+    return params
+
+
 def _mark(audio, sample_rate: int, params: dict):
     """Provenance-mark synthetic audio before it is encoded (EU AI Act 50(2)).
 
@@ -370,4 +621,13 @@ def encode_inline(payload: bytes) -> str:
     return base64.b64encode(payload).decode("ascii")
 
 
-__all__ = ["INLINE_LIMIT_BYTES", "TaskExecutor", "TaskFailure", "UnsupportedOperation"]
+__all__ = [
+    "INLINE_LIMIT_BYTES",
+    "INPUT_CACHE_LIMIT_BYTES",
+    "INPUT_ERRORS_PARAM",
+    "InputFetcher",
+    "TaskExecutor",
+    "TaskFailure",
+    "UnsupportedOperation",
+    "default_input_dir",
+]

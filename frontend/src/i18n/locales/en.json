@@ -2584,7 +2584,8 @@
     "droppedChunks_one": "Heads up: {{count}} part of your text produced no audio, so this take is missing it. Try re-generating — a different seed usually fixes it.",
     "droppedChunks_other": "Heads up: {{count}} parts of your text produced no audio, so this take is missing them. Try re-generating — a different seed usually fixes it.",
     "droppedChunksWithText_one": "Heads up: {{count}} part of your text produced no audio, so this take is missing it — “{{text}}”. Try re-generating; a different seed usually fixes it.",
-    "droppedChunksWithText_other": "Heads up: {{count}} parts of your text produced no audio, so this take is missing them — “{{text}}”. Try re-generating; a different seed usually fixes it."
+    "droppedChunksWithText_other": "Heads up: {{count}} parts of your text produced no audio, so this take is missing them — “{{text}}”. Try re-generating; a different seed usually fixes it.",
+    "streamingOffRemote": "Progressive preview is off while {{label}} renders this — the finished take plays as soon as it lands."
   },
   "voiceSelector": {
     "engineDefault": "Engine default",
@@ -2902,6 +2903,16 @@
   "gpu": {
     "local": "Local",
     "picker": "Where jobs run",
-    "tasks": "tasks"
+    "tasks": "tasks",
+    "coverage": "{{ops}} only",
+    "opLocal": "Local — {{op}} does not run remotely yet",
+    "ops": {
+      "tts": "TTS",
+      "clone": "voice cloning",
+      "dub": "dubbing",
+      "audiobook": "audiobook rendering",
+      "longform": "story narration",
+      "asr": "transcription"
+    }
   }
 }

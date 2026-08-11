@@ -2300,7 +2300,8 @@
     "droppedChunks_one": "Dikkat: Metninizin {{count}} bölümü ses üretmedi, bu nedenle bu kayıtta eksik. Yeniden oluşturmayı deneyin — genellikle farklı bir tohum sorunu çözer.",
     "droppedChunks_other": "Dikkat: Metninizin {{count}} bölümü ses üretmedi, bu nedenle bu kayıtta eksikler. Yeniden oluşturmayı deneyin — genellikle farklı bir tohum sorunu çözer.",
     "droppedChunksWithText_one": "Dikkat: Metninizin {{count}} bölümü ses üretmedi ve bu kayıtta eksik — “{{text}}”. Yeniden oluşturmayı deneyin; genellikle farklı bir tohum sorunu çözer.",
-    "droppedChunksWithText_other": "Dikkat: Metninizin {{count}} bölümü ses üretmedi ve bu kayıtta eksikler — “{{text}}”. Yeniden oluşturmayı deneyin; genellikle farklı bir tohum sorunu çözer."
+    "droppedChunksWithText_other": "Dikkat: Metninizin {{count}} bölümü ses üretmedi ve bu kayıtta eksikler — “{{text}}”. Yeniden oluşturmayı deneyin; genellikle farklı bir tohum sorunu çözer.",
+    "streamingOffRemote": "{{label}} işlerken aşamalı önizleme kapalıdır — tamamlanan kayıt geldiği anda çalınır."
   },
   "voiceSelector": {
     "engineDefault": "Motor varsayılanı",
@@ -2375,6 +2376,16 @@
   "gpu": {
     "local": "Yerel",
     "picker": "İşlerin çalıştığı yer",
-    "tasks": "görev"
+    "tasks": "görev",
+    "coverage": "yalnızca {{ops}}",
+    "opLocal": "Yerel — {{op}} henüz uzaktan çalışmıyor",
+    "ops": {
+      "tts": "TTS",
+      "clone": "ses klonlama",
+      "dub": "dublaj",
+      "audiobook": "sesli kitap işleme",
+      "longform": "hikâye seslendirme",
+      "asr": "deşifre"
+    }
   }
 }

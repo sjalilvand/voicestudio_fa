@@ -2300,7 +2300,8 @@
     "droppedChunks_one": "Hinweis: {{count}} Teil deines Textes hat kein Audio erzeugt, in dieser Aufnahme fehlt er also. Generiere es neu — ein anderer Seed behebt das meistens.",
     "droppedChunks_other": "Hinweis: {{count}} Teile deines Textes haben kein Audio erzeugt, in dieser Aufnahme fehlen sie also. Generiere es neu — ein anderer Seed behebt das meistens.",
     "droppedChunksWithText_one": "Hinweis: {{count}} Teil deines Textes hat kein Audio erzeugt und fehlt in dieser Aufnahme — „{{text}}“. Generiere es neu; ein anderer Seed behebt das meistens.",
-    "droppedChunksWithText_other": "Hinweis: {{count}} Teile deines Textes haben kein Audio erzeugt und fehlen in dieser Aufnahme — „{{text}}“. Generiere es neu; ein anderer Seed behebt das meistens."
+    "droppedChunksWithText_other": "Hinweis: {{count}} Teile deines Textes haben kein Audio erzeugt und fehlen in dieser Aufnahme — „{{text}}“. Generiere es neu; ein anderer Seed behebt das meistens.",
+    "streamingOffRemote": "Die progressive Vorschau ist deaktiviert, während {{label}} rendert — die fertige Aufnahme wird abgespielt, sobald sie eintrifft."
   },
   "voiceSelector": {
     "engineDefault": "Motorstandard",
@@ -2375,6 +2376,16 @@
   "gpu": {
     "local": "Lokal",
     "picker": "Wo Aufträge laufen",
-    "tasks": "Aufgaben"
+    "tasks": "Aufgaben",
+    "coverage": "nur {{ops}}",
+    "opLocal": "Lokal — {{op}} läuft noch nicht auf Remote-Workern",
+    "ops": {
+      "tts": "TTS",
+      "clone": "Stimmklonen",
+      "dub": "Synchronisation",
+      "audiobook": "Hörbuch-Rendering",
+      "longform": "Story-Vertonung",
+      "asr": "Transkription"
+    }
   }
 }

@@ -17,12 +17,18 @@ flips the task to completed, so the ack can only follow a durable fact.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
+import mimetypes
+import os
+import re
+import shutil
 import time
-from typing import Iterable, Optional
+from typing import Iterable, Iterator, Optional
 
 from core.db import db_conn
+from core.path_security import UnsafePath, resolve_within, safe_filename
 from worker.clock import resolve
 from worker.errors import ErrorClass, WorkerError
 from worker.lifecycle import Attempt, AttemptState, PriorityClass, Task, TaskState
@@ -92,6 +98,272 @@ def _row_to_task(row, attempts: list[Attempt]) -> Task:
     return task
 
 
+# ── Input artifacts ────────────────────────────────────────────────────────
+#
+# A worker is another machine. Every file-valued parameter — reference audio
+# for a clone, a source video for a dub — lives in ``VOICES_DIR`` or a tempdir
+# on the *control plane*, so sending its path is sending a string that names
+# nothing on the far side. That is why remote cloning could not work: the
+# assignment carried ``ref_audio=/Users/…/voices/x.wav`` and the worker either
+# failed to open it or, worse, rendered with the default voice.
+#
+# Staging copies those files into the artifact directory the control plane
+# already serves over ``DownloadArtifact``, which refuses anything outside it.
+# The copy is named by the SHA-256 of its contents, so cloning the same voice
+# a hundred times keeps exactly one copy on disk and lets the worker's own
+# cache skip the transfer entirely on every clone after the first.
+
+INPUT_PARAM_KEYS: tuple[str, ...] = (
+    "ref_audio",
+    "reference_audio",
+    "prompt_audio",
+    "prompt_wav",
+    "source_audio",
+    "audio_path",
+    "source_video",
+    "video_path",
+)
+
+# Where staged inputs live under the artifact root, and the key under which a
+# task records what was staged for it. The record is what makes the purge
+# exact: an input is deletable only when no surviving task still refers to it.
+INPUTS_DIRNAME = "inputs"
+INPUTS_PARAM_KEY = "inputs"
+
+_HASH_CHUNK_BYTES = 1024 * 1024
+_SAFE_EXTENSION = re.compile(r"^\.[A-Za-z0-9]{1,8}$")
+
+
+class InputStagingError(RuntimeError):
+    """A task input could not be staged for transfer to a worker.
+
+    Raised rather than swallowed: a clone whose reference audio silently went
+    missing does not fail, it renders someone else's voice.
+    """
+
+
+def artifact_root(*, create_dir: bool = True) -> str:
+    """The directory the control plane serves artifacts from.
+
+    Imported lazily: ``worker.service`` owns the layout, and a module-level
+    import here would tie the durable store to the lifecycle module that
+    starts the gRPC server.
+    """
+    from worker.service import paths  # noqa: PLC0415 — layout owner, not a dependency
+
+    root = paths()["artifacts"]
+    if create_dir:
+        os.makedirs(os.path.join(root, INPUTS_DIRNAME), exist_ok=True)
+    return root
+
+
+def _extension(source: str) -> str:
+    """The source extension when it is a plain one, else nothing.
+
+    Kept for the worker's benefit — soundfile sniffs content, but an engine
+    that shells out to ffmpeg reads the suffix — and sanitised because the
+    name is about to become a filesystem path.
+    """
+    suffix = os.path.splitext(str(source))[1]
+    return suffix.lower() if _SAFE_EXTENSION.match(suffix) else ""
+
+
+def _digest(path: str) -> tuple[str, int]:
+    """(sha256, size) read in chunks — a source video is not a bytes object."""
+    digest = hashlib.sha256()
+    size = 0
+    with open(path, "rb") as handle:
+        while True:
+            block = handle.read(_HASH_CHUNK_BYTES)
+            if not block:
+                break
+            digest.update(block)
+            size += len(block)
+    return digest.hexdigest(), size
+
+
+def stage_input(source: str, *, root: Optional[str] = None, now: Optional[float] = None) -> dict:
+    """Copy one input into the artifact store, keyed by its content hash.
+
+    Returns the record that ends up on the task row. ``source`` is kept in it
+    so a local fallback still has the original file, and stripped before the
+    record reaches the wire.
+    """
+    stamp = resolve(now)
+    base = root or artifact_root()
+    try:
+        digest, size = _digest(source)
+    except OSError as exc:
+        raise InputStagingError(f"Could not read the task input {source!r}: {exc}") from exc
+
+    artifact_id = os.path.join(INPUTS_DIRNAME, f"{digest}{_extension(source)}")
+    try:
+        destination = resolve_within(base, artifact_id)
+    except UnsafePath as exc:  # pragma: no cover — the id is ours, hex only
+        raise InputStagingError(f"Refusing to stage {source!r} outside the artifact store") from exc
+
+    try:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        # Same size at a content-addressed name means the same bytes: the only
+        # writer is the rename below, so a truncated file cannot exist here.
+        if not (destination.is_file() and destination.stat().st_size == size):
+            partial = destination.with_name(destination.name + ".part")
+            shutil.copyfile(source, partial)
+            os.replace(partial, destination)
+        # Freshness, not decoration: the purge dates an unreferenced input by
+        # its mtime, so re-using a staged voice has to renew it.
+        os.utime(destination, (stamp, stamp))
+    except OSError as exc:
+        raise InputStagingError(f"Could not stage the task input {source!r}: {exc}") from exc
+
+    filename = os.path.basename(str(source)) or f"{digest}{_extension(source)}"
+    return {
+        "artifact_id": artifact_id,
+        "path": str(destination),
+        "source": str(source),
+        "filename": filename,
+        "sha256": digest,
+        "size_bytes": size,
+        "content_type": mimetypes.guess_type(filename)[0] or "application/octet-stream",
+    }
+
+
+def _iter_input_values(params: dict) -> Iterator[tuple[str, Optional[int], str]]:
+    """``(key, index, value)`` for every parameter that could name a file."""
+    for key in INPUT_PARAM_KEYS:
+        value = params.get(key)
+        if isinstance(value, str):
+            yield key, None, value
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                if isinstance(item, str):
+                    yield key, index, item
+
+
+def ensure_staged(
+    task: Task, *, root: Optional[str] = None, now: Optional[float] = None
+) -> list[dict]:
+    """Stage every file-valued parameter of *task*, once.
+
+    Idempotent by design — it runs at submission (so the durable row records
+    what a later purge must keep) and again at dispatch (so a task built
+    without the store, or a scheduler running unpersisted, still gets inputs
+    the worker can fetch). Already-staged keys are skipped, so the second call
+    does no I/O.
+    """
+    params = task.params if isinstance(task.params, dict) else {}
+    recorded = params.get(INPUTS_PARAM_KEY)
+    entries: list[dict] = [e for e in recorded if isinstance(e, dict)] if isinstance(recorded, list) else []
+    if root:
+        # A task may have been staged when it was submitted under the default
+        # store, then dispatched by a servicer configured with another store.
+        # Recorded metadata is not proof that this servicer can serve it.
+        refreshed: list[dict] = []
+        for entry in entries:
+            artifact_id = str(entry.get("artifact_id") or "")
+            try:
+                available = bool(artifact_id and resolve_within(root, artifact_id).is_file())
+            except UnsafePath:
+                available = False
+            if available:
+                refreshed.append(entry)
+                continue
+            source = str(entry.get("source") or "")
+            if source and os.path.isfile(source):
+                replacement = stage_input(source, root=root, now=now)
+                replacement.update(key=entry.get("key"), index=entry.get("index"))
+                refreshed.append(replacement)
+            else:
+                raise InputStagingError(
+                    f"The staged task input {artifact_id!r} is unavailable in this artifact store."
+                )
+        entries = refreshed
+        params[INPUTS_PARAM_KEY] = entries
+    covered = {(e.get("key"), e.get("index")) for e in entries}
+
+    for key, index, value in _iter_input_values(params):
+        if (key, index) in covered or not value:
+            continue
+        # Not every value of these keys is a file: an engine may take a voice
+        # id here. Only what exists on this disk is an input.
+        if not os.path.isfile(value):
+            continue
+        entry = stage_input(value, root=root, now=now)
+        entry["key"] = key
+        entry["index"] = index
+        entries.append(entry)
+        covered.add((key, index))
+
+    if entries:
+        params[INPUTS_PARAM_KEY] = entries
+        task.params = params
+    return entries
+
+
+def _referenced_artifacts(conn) -> set[str]:
+    """Every staged input still named by a surviving task row."""
+    referenced: set[str] = set()
+    for row in conn.execute("SELECT params_json FROM remote_tasks").fetchall():
+        try:
+            params = json.loads(row["params_json"] or "{}")
+            entries = params.get(INPUTS_PARAM_KEY) or []
+        except (ValueError, AttributeError):
+            continue
+        for entry in entries:
+            if isinstance(entry, dict) and entry.get("artifact_id"):
+                referenced.add(str(entry["artifact_id"]))
+    return referenced
+
+
+def purge_artifacts(
+    task_ids: Iterable[str], referenced: set[str], *, cutoff: float, root: Optional[str] = None
+) -> int:
+    """Delete the results of purged tasks and every input nothing points at.
+
+    Both directions, deliberately: results are attempt-scoped and die with
+    their task, while a content-hashed input is shared, so it may only go once
+    no surviving task refers to it *and* it is older than the same cutoff the
+    rows were judged by. Nothing here raises — a purge that fails is a disk
+    that stays fuller than we wanted, not a failed request.
+    """
+    removed = 0
+    try:
+        base = root or artifact_root(create_dir=False)
+    except Exception:  # pragma: no cover — no data dir at all
+        logger.debug("No artifact root to purge", exc_info=True)
+        return 0
+    if not os.path.isdir(base):
+        return 0
+
+    for task_id in task_ids:
+        try:
+            path = resolve_within(base, safe_filename(task_id))
+        except UnsafePath:
+            continue
+        if os.path.isdir(path):
+            shutil.rmtree(path, ignore_errors=True)
+            removed += 1
+
+    inputs_dir = os.path.join(base, INPUTS_DIRNAME)
+    try:
+        names = os.listdir(inputs_dir)
+    except OSError:
+        return removed
+    for name in names:
+        artifact_id = os.path.join(INPUTS_DIRNAME, name)
+        if artifact_id in referenced:
+            continue
+        path = os.path.join(inputs_dir, name)
+        try:
+            if not os.path.isfile(path) or os.path.getmtime(path) >= cutoff:
+                continue
+            os.remove(path)
+            removed += 1
+        except OSError:
+            logger.debug("Could not purge the staged input %s", name, exc_info=True)
+    return removed
+
+
 # ── Writes ─────────────────────────────────────────────────────────────────
 
 
@@ -100,12 +372,17 @@ def create(task: Task, *, project_id: Optional[str] = None, now: Optional[float]
 
     Idempotent on ``idempotency_key``: a client that retries its HTTP request
     gets the original task back rather than a second render of the same text.
+
+    Inputs are staged before the row is written, so the durable record names
+    the artifacts the task owns. Persisting first would leave a task whose
+    reference audio no purge can account for.
     """
     stamp = resolve(now)
     if task.idempotency_key:
         existing = get_by_idempotency_key(task.idempotency_key)
         if existing is not None:
             return existing
+    ensure_staged(task, now=stamp)
     with db_conn() as conn:
         conn.execute(
             "INSERT INTO remote_tasks "
@@ -292,10 +569,29 @@ def list_tasks(*, states: Optional[Iterable[TaskState]] = None, limit: int = 100
         return [_row_to_task(r, _attempts_for(conn, r["id"])) for r in rows]
 
 
-def purge_finished(*, older_than_seconds: float = 7 * 24 * 3600, now: Optional[float] = None) -> int:
+def purge_finished(
+    *,
+    older_than_seconds: float = 7 * 24 * 3600,
+    now: Optional[float] = None,
+    root: Optional[str] = None,
+) -> int:
+    """Drop old finished tasks — rows *and* the bytes they own.
+
+    Rows only was a leak with no ceiling: every remote render leaves a result
+    artifact on disk, and every remote clone leaves a copy of the reference
+    audio. Neither was ever deleted, so the feature grew the user's disk for
+    as long as they used it.
+    """
     cutoff = resolve(now) - older_than_seconds
     terminal = ", ".join(f"'{s.value}'" for s in TaskState if s.terminal)
     with db_conn() as conn:
+        doomed = [
+            row["id"]
+            for row in conn.execute(
+                f"SELECT id FROM remote_tasks WHERE state IN ({terminal}) AND finished_at < ?",
+                (cutoff,),
+            ).fetchall()
+        ]
         conn.execute(
             f"DELETE FROM remote_task_attempts WHERE task_id IN "
             f"(SELECT id FROM remote_tasks WHERE state IN ({terminal}) AND finished_at < ?)",
@@ -304,17 +600,32 @@ def purge_finished(*, older_than_seconds: float = 7 * 24 * 3600, now: Optional[f
         cur = conn.execute(
             f"DELETE FROM remote_tasks WHERE state IN ({terminal}) AND finished_at < ?", (cutoff,)
         )
-        return cur.rowcount
+        removed = cur.rowcount
+        # Read the survivors inside the same transaction that deleted the
+        # rows: an input is only unreferenced relative to what is left.
+        referenced = _referenced_artifacts(conn)
+    # Filesystem work outside the transaction — a slow rmtree must not hold
+    # SQLite's write lock against the dispatch loop.
+    purge_artifacts(doomed, referenced, cutoff=cutoff, root=root)
+    return removed
 
 
 __all__ = [
+    "INPUTS_DIRNAME",
+    "INPUTS_PARAM_KEY",
+    "INPUT_PARAM_KEYS",
+    "InputStagingError",
+    "artifact_root",
     "commit_result",
     "create",
+    "ensure_staged",
     "get",
     "get_by_idempotency_key",
     "is_committed",
     "list_tasks",
     "load_unfinished",
+    "purge_artifacts",
     "purge_finished",
     "save",
+    "stage_input",
 ]

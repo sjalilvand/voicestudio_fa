@@ -2300,7 +2300,8 @@
     "droppedChunks_one": "Atenção: {{count}} parte do seu texto não gerou áudio, então falta nesta gravação. Tente gerar de novo — outra semente costuma resolver.",
     "droppedChunks_other": "Atenção: {{count}} partes do seu texto não geraram áudio, então faltam nesta gravação. Tente gerar de novo — outra semente costuma resolver.",
     "droppedChunksWithText_one": "Atenção: {{count}} parte do seu texto não gerou áudio e falta nesta gravação — “{{text}}”. Tente gerar de novo; outra semente costuma resolver.",
-    "droppedChunksWithText_other": "Atenção: {{count}} partes do seu texto não geraram áudio e faltam nesta gravação — “{{text}}”. Tente gerar de novo; outra semente costuma resolver."
+    "droppedChunksWithText_other": "Atenção: {{count}} partes do seu texto não geraram áudio e faltam nesta gravação — “{{text}}”. Tente gerar de novo; outra semente costuma resolver.",
+    "streamingOffRemote": "A pré-visualização progressiva está desativada enquanto {{label}} renderiza — a gravação final será reproduzida assim que chegar."
   },
   "voiceSelector": {
     "engineDefault": "Padrão do mecanismo",
@@ -2375,6 +2376,16 @@
   "gpu": {
     "local": "Local",
     "picker": "Onde os trabalhos são executados",
-    "tasks": "tarefas"
+    "tasks": "tarefas",
+    "coverage": "apenas {{ops}}",
+    "opLocal": "Local — {{op}} ainda não é executado remotamente",
+    "ops": {
+      "tts": "TTS",
+      "clone": "clonagem de voz",
+      "dub": "dublagem",
+      "audiobook": "renderização de audiolivros",
+      "longform": "narração de histórias",
+      "asr": "transcrição"
+    }
   }
 }

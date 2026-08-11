@@ -2300,7 +2300,8 @@
     "droppedChunks_one": "알림: 텍스트 중 {{count}}개 부분이 오디오로 생성되지 않아 이 테이크에서 빠졌습니다. 다시 생성해 보세요 — 보통 다른 시드로 해결됩니다.",
     "droppedChunks_other": "알림: 텍스트 중 {{count}}개 부분이 오디오로 생성되지 않아 이 테이크에서 빠졌습니다. 다시 생성해 보세요 — 보통 다른 시드로 해결됩니다.",
     "droppedChunksWithText_one": "알림: 텍스트 중 {{count}}개 부분이 오디오로 생성되지 않아 이 테이크에서 빠졌습니다 — “{{text}}”. 다시 생성해 보세요. 보통 다른 시드로 해결됩니다.",
-    "droppedChunksWithText_other": "알림: 텍스트 중 {{count}}개 부분이 오디오로 생성되지 않아 이 테이크에서 빠졌습니다 — “{{text}}”. 다시 생성해 보세요. 보통 다른 시드로 해결됩니다."
+    "droppedChunksWithText_other": "알림: 텍스트 중 {{count}}개 부분이 오디오로 생성되지 않아 이 테이크에서 빠졌습니다 — “{{text}}”. 다시 생성해 보세요. 보통 다른 시드로 해결됩니다.",
+    "streamingOffRemote": "{{label}}이(가) 렌더링하는 동안 점진적 미리듣기가 꺼집니다. 완성된 결과는 도착하는 즉시 재생됩니다."
   },
   "voiceSelector": {
     "engineDefault": "엔진 기본값",
@@ -2375,6 +2376,16 @@
   "gpu": {
     "local": "로컬",
     "picker": "작업 실행 위치",
-    "tasks": "작업"
+    "tasks": "작업",
+    "coverage": "{{ops}}만",
+    "opLocal": "로컬 — {{op}}은(는) 아직 원격에서 실행되지 않습니다",
+    "ops": {
+      "tts": "TTS",
+      "clone": "음성 복제",
+      "dub": "더빙",
+      "audiobook": "오디오북 렌더링",
+      "longform": "스토리 내레이션",
+      "asr": "전사"
+    }
   }
 }

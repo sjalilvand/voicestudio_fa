@@ -6,6 +6,8 @@ here makes decisions; it converts.
 """
 from __future__ import annotations
 
+import logging
+import os
 from typing import Optional
 
 from worker.capacity import derive_concurrency
@@ -13,6 +15,12 @@ from worker.deadlines import Deadlines
 from worker.errors import ErrorClass, WorkerError
 from worker.lifecycle import Attempt, PriorityClass, Task
 from worker.protocol.gen import worker_v1_pb2 as pb
+
+logger = logging.getLogger("omnivoice.worker")
+
+# Where a staging failure is reported to the worker. Named here because both
+# sides of the wire read it: the executor turns it into a terminal error.
+_INPUT_ERRORS_KEY = "input_errors"
 
 # Domain ErrorClass ↔ protobuf enum. Explicit rather than by-name so renaming
 # one side cannot silently change the meaning of a wire value.
@@ -69,25 +77,127 @@ def deadlines_to_pb(budget: Deadlines) -> pb.Deadlines:
     )
 
 
-def assignment_to_pb(task: Task, attempt: Attempt, budget: Deadlines) -> pb.TaskAssignment:
+def assignment_to_pb(
+    task: Task, attempt: Attempt, budget: Deadlines, *, artifact_root: Optional[str] = None
+) -> pb.TaskAssignment:
     """Build the wire assignment.
 
     ``params_json`` carries the operation's parameters opaquely; the transport
     has no business knowing what a dub or a clone needs.
+
+    The one thing it cannot stay opaque about is a **path**. A parameter like
+    ``ref_audio`` names a file on the control plane's disk, which is not a
+    thing on the worker's — so a clone assignment used to arrive naming a file
+    that did not exist, and the worker either failed to open it or rendered
+    the default voice. Every file-valued parameter is therefore staged into
+    the artifact store, declared in ``inputs`` for the worker to fetch over
+    ``DownloadArtifact``, and replaced in ``params_json`` by its artifact id.
+    No local path ever crosses the wire.
     """
     import json  # noqa: PLC0415 — only needed on this path
 
+    entries, errors = _staged_inputs(task, artifact_root)
     return pb.TaskAssignment(
         ref=ref_for(attempt),
         operation=task.operation,
         engine=task.engine,
         model_id=task.model_id,
-        params_json=json.dumps(task.params),
+        params_json=json.dumps(remote_params(task.params, entries, errors)),
+        inputs=[input_ref(entry, task, attempt) for entry in entries],
         deadlines=deadlines_to_pb(budget),
         priority_class=int(task.priority),
         attempt_number=attempt.attempt_number,
         max_attempts=task.max_attempts,
     )
+
+
+def input_ref(entry: dict, task: Task, attempt: Attempt) -> pb.ArtifactRef:
+    """One staged input as the worker will ask for it back.
+
+    ``sha256`` and ``size_bytes`` are populated rather than left at their
+    defaults because they are what lets the worker verify the transfer and,
+    more usefully, recognise a reference clip it already holds.
+    """
+    return pb.ArtifactRef(
+        artifact_id=str(entry.get("artifact_id") or ""),
+        task_id=task.task_id,
+        attempt_id=attempt.attempt_id,
+        filename=str(entry.get("filename") or ""),
+        content_type=str(entry.get("content_type") or ""),
+        size_bytes=int(entry.get("size_bytes") or 0),
+        sha256=str(entry.get("sha256") or ""),
+    )
+
+
+def remote_params(params: dict, entries: list[dict], errors: list[str]) -> dict:
+    """The parameters as the worker should see them.
+
+    Two rules. The staging bookkeeping (which holds control-plane paths) is
+    stripped. And any remaining file-valued parameter is *removed* rather than
+    passed through: an unstaged local path is worse than an absent one,
+    because absent fails loudly while a dead path can silently produce audio
+    in the wrong voice.
+    """
+    from worker.task_store import INPUT_PARAM_KEYS, INPUTS_PARAM_KEY  # noqa: PLC0415
+
+    remote = {
+        key: value
+        for key, value in (params or {}).items()
+        if key not in (INPUTS_PARAM_KEY, _INPUT_ERRORS_KEY)
+    }
+    mapped: dict[str, dict[Optional[int], str]] = {}
+    for entry in entries:
+        artifact_id = str(entry.get("artifact_id") or "")
+        if artifact_id:
+            mapped.setdefault(str(entry.get("key") or ""), {})[entry.get("index")] = artifact_id
+
+    for key in INPUT_PARAM_KEYS:
+        if key not in remote:
+            continue
+        by_index = mapped.get(key, {})
+        value = remote[key]
+        if isinstance(value, list):
+            rewritten = [
+                by_index.get(index, item)
+                for index, item in enumerate(value)
+                if index in by_index or not _is_local_path(item)
+            ]
+            remote[key] = rewritten
+        elif isinstance(value, str):
+            if None in by_index:
+                remote[key] = by_index[None]
+            elif _is_local_path(value):
+                remote.pop(key)
+    if errors:
+        remote[_INPUT_ERRORS_KEY] = errors
+    return remote
+
+
+def _is_local_path(value) -> bool:
+    """Does this value name a place on this machine rather than a plain id?"""
+    if not isinstance(value, str) or not value:
+        return False
+    return os.path.isabs(value) or os.sep in value or "/" in value or os.path.exists(value)
+
+
+def _staged_inputs(task: Task, artifact_root: Optional[str]) -> tuple[list[dict], list[str]]:
+    """Stage this task's inputs, or say why they could not be staged.
+
+    A staging failure must not take down the dispatch loop, and it must not
+    fall back to sending the path: the assignment goes out with an explicit
+    error the worker turns into a terminal failure the user can read.
+    """
+    from worker import task_store  # noqa: PLC0415 — control-plane only
+
+    try:
+        entries = task_store.ensure_staged(task, root=artifact_root)
+    except task_store.InputStagingError as exc:
+        logger.warning("Could not stage inputs for task %s: %s", task.task_id, exc)
+        return [], [str(exc)]
+    except Exception as exc:  # pragma: no cover — defensive
+        logger.warning("Input staging failed for task %s", task.task_id, exc_info=True)
+        return [], [f"Task inputs could not be prepared: {exc}"]
+    return [e for e in entries if e.get("artifact_id")], []
 
 
 def capability_to_pb(cap: dict) -> pb.ModelCapability:
@@ -199,7 +309,9 @@ __all__ = [
     "error_to_pb",
     "host_from_pb",
     "host_to_pb",
+    "input_ref",
     "priority_from_pb",
+    "remote_params",
     "ref_for",
     "task_ref",
 ]

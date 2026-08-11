@@ -485,12 +485,22 @@ async def test_the_executor_reports_through_the_callbacks_the_client_injects(
 
 def test_the_client_can_see_that_this_executor_takes_reporters():
     """The transport probes the injected executor's signature rather than
-    assuming it. A rename here would silently stop every progress frame — and
-    the only symptom is tasks dying of an expired lease."""
+    assuming it, so every name here is a wire contract in disguise.
+
+    Spelled out literally rather than compared against the transport's own
+    constant: both sides deriving the set from one symbol would agree with each
+    other while agreeing with nothing the executor actually accepts.
+
+    Each omission fails silently and differently. Drop ``on_progress`` or
+    ``on_model_loading`` and no frame is ever sent — the only symptom is tasks
+    dying of an expired lease. Drop ``fetch_input`` and the executor cannot pull
+    the reference audio a clone needs, so it renders *something* and returns it
+    as success: a plausible wrong result, which is strictly worse.
+    """
     from worker.transport.client import _accepted_reporter_kwargs
 
     assert _accepted_reporter_kwargs(TaskExecutor().execute) == frozenset(
-        {"on_progress", "on_model_loading"}
+        {"on_progress", "on_model_loading", "fetch_input"}
     )
 
 

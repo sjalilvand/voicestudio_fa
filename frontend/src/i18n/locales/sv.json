@@ -2300,7 +2300,8 @@
     "droppedChunks_one": "Obs: {{count}} del av din text gav inget ljud, så den saknas i den här tagningen. Generera om — ett annat frö brukar lösa det.",
     "droppedChunks_other": "Obs: {{count}} delar av din text gav inget ljud, så de saknas i den här tagningen. Generera om — ett annat frö brukar lösa det.",
     "droppedChunksWithText_one": "Obs: {{count}} del av din text gav inget ljud och saknas i den här tagningen — ”{{text}}”. Generera om; ett annat frö brukar lösa det.",
-    "droppedChunksWithText_other": "Obs: {{count}} delar av din text gav inget ljud och saknas i den här tagningen — ”{{text}}”. Generera om; ett annat frö brukar lösa det."
+    "droppedChunksWithText_other": "Obs: {{count}} delar av din text gav inget ljud och saknas i den här tagningen — ”{{text}}”. Generera om; ett annat frö brukar lösa det.",
+    "streamingOffRemote": "Progressiv förhandsvisning är av medan {{label}} renderar — den färdiga tagningen spelas upp så snart den kommer."
   },
   "voiceSelector": {
     "engineDefault": "Standard för motor",
@@ -2375,6 +2376,16 @@
   "gpu": {
     "local": "Lokalt",
     "picker": "Var jobben körs",
-    "tasks": "uppgifter"
+    "tasks": "uppgifter",
+    "coverage": "endast {{ops}}",
+    "opLocal": "Lokalt — {{op}} körs inte på distans än",
+    "ops": {
+      "tts": "TTS",
+      "clone": "röstkloning",
+      "dub": "dubbning",
+      "audiobook": "ljudboksrendering",
+      "longform": "berättarröst",
+      "asr": "transkribering"
+    }
   }
 }

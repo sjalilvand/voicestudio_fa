@@ -2300,7 +2300,8 @@
     "droppedChunks_one": "請注意：文字中有 {{count}} 處未產生音訊，因此這段錄音缺少該部分。請重新產生——換一個隨機種子通常就能解決。",
     "droppedChunks_other": "請注意：文字中有 {{count}} 處未產生音訊，因此這段錄音缺少這些部分。請重新產生——換一個隨機種子通常就能解決。",
     "droppedChunksWithText_one": "請注意：文字中有 {{count}} 處未產生音訊，這段錄音缺少該部分——「{{text}}」。請重新產生，換一個隨機種子通常就能解決。",
-    "droppedChunksWithText_other": "請注意：文字中有 {{count}} 處未產生音訊，這段錄音缺少這些部分——「{{text}}」。請重新產生，換一個隨機種子通常就能解決。"
+    "droppedChunksWithText_other": "請注意：文字中有 {{count}} 處未產生音訊，這段錄音缺少這些部分——「{{text}}」。請重新產生，換一個隨機種子通常就能解決。",
+    "streamingOffRemote": "{{label}} 算繪期間已關閉漸進式預覽，完成後會立即播放。"
   },
   "voiceSelector": {
     "engineDefault": "引擎預設",
@@ -2375,6 +2376,16 @@
   "gpu": {
     "local": "本機",
     "picker": "工作執行位置",
-    "tasks": "工作"
+    "tasks": "工作",
+    "coverage": "僅 {{ops}}",
+    "opLocal": "本機 — {{op}}尚未支援遠端執行",
+    "ops": {
+      "tts": "TTS",
+      "clone": "聲音複製",
+      "dub": "影片配音",
+      "audiobook": "有聲書算繪",
+      "longform": "故事朗讀",
+      "asr": "轉錄"
+    }
   }
 }

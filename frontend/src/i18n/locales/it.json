@@ -2300,7 +2300,8 @@
     "droppedChunks_one": "Attenzione: {{count}} parte del testo non ha prodotto audio, quindi manca in questa registrazione. Riprova a generare: di solito basta un seed diverso.",
     "droppedChunks_other": "Attenzione: {{count}} parti del testo non hanno prodotto audio, quindi mancano in questa registrazione. Riprova a generare: di solito basta un seed diverso.",
     "droppedChunksWithText_one": "Attenzione: {{count}} parte del testo non ha prodotto audio e manca in questa registrazione — «{{text}}». Riprova a generare; di solito basta un seed diverso.",
-    "droppedChunksWithText_other": "Attenzione: {{count}} parti del testo non hanno prodotto audio e mancano in questa registrazione — «{{text}}». Riprova a generare; di solito basta un seed diverso."
+    "droppedChunksWithText_other": "Attenzione: {{count}} parti del testo non hanno prodotto audio e mancano in questa registrazione — «{{text}}». Riprova a generare; di solito basta un seed diverso.",
+    "streamingOffRemote": "L'anteprima progressiva è disattivata mentre {{label}} esegue il rendering: la traccia finale verrà riprodotta appena arriva."
   },
   "voiceSelector": {
     "engineDefault": "Motore difettoso",
@@ -2375,6 +2376,16 @@
   "gpu": {
     "local": "Locale",
     "picker": "Dove vengono eseguiti i lavori",
-    "tasks": "attività"
+    "tasks": "attività",
+    "coverage": "solo {{ops}}",
+    "opLocal": "Locale — {{op}} non viene ancora eseguito da remoto",
+    "ops": {
+      "tts": "TTS",
+      "clone": "clonazione vocale",
+      "dub": "doppiaggio",
+      "audiobook": "rendering di audiolibri",
+      "longform": "narrazione di storie",
+      "asr": "trascrizione"
+    }
   }
 }

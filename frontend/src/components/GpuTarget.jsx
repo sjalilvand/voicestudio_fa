@@ -12,6 +12,13 @@
  *
  * `Local` has no rename control. It is not a machine — it is this machine —
  * and there is nothing to name.
+ *
+ * The answer is also per operation, because a worker is not remote for
+ * everything: work reaches a worker only where this side has a producer for
+ * it, and those are ported one at a time. Without that, the badge would read
+ * "gpu2 ● ready" on the Dub, Audiobook and Transcripts tabs while 100% of
+ * that work runs here — the same lie the resolved-answer rule exists to
+ * prevent, in a place the user cannot even see it happen.
  */
 import React, { useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -20,12 +27,36 @@ import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../api/client';
+import { useAppStore } from '../store';
 
 // Two cadences: a slow tick that just keeps status honest, and a fast one
 // while work is in flight so the task count reads as live rather than lagging
 // several seconds behind the thing the user is watching.
 const IDLE_REFRESH_MS = 5000;
 const BUSY_REFRESH_MS = 1000;
+
+/**
+ * What the workspace in front of the user actually submits.
+ *
+ * A workspace that submits no GPU job of its own — the launchpad, Settings,
+ * the gallery, OmniDrive — maps to no operation, which asks about the target
+ * itself rather than about one job. That is exactly what the menu wants when
+ * you open it from anywhere to pick a machine.
+ *
+ * Ids are the control plane's (`worker/routing.py`), not the UI's: `mode` is
+ * a navigation id and these are units of work, so `studio` and the legacy
+ * `clone`/`design` modes all submit `tts`.
+ */
+const OP_BY_MODE = {
+  generate: 'tts',
+  studio: 'tts',
+  clone: 'tts',
+  design: 'tts',
+  dub: 'dub',
+  audiobook: 'audiobook',
+  stories: 'longform',
+  transcriptions: 'asr',
+};
 
 /** ready → green, busy → amber, offline → red. */
 const DOT = {
@@ -90,9 +121,14 @@ export default function GpuTarget() {
     });
   }, []);
 
+  // The surface being rendered, not the machine — see OP_BY_MODE. Part of the
+  // query key so switching tabs re-resolves instead of showing the previous
+  // tab's answer until the next poll.
+  const op = OP_BY_MODE[useAppStore((s) => s.mode)] || '';
+
   const { data } = useQuery({
-    queryKey: ['workers', 'target'],
-    queryFn: () => request('/workers/target'),
+    queryKey: ['workers', 'target', op],
+    queryFn: () => request(op ? `/workers/target?op=${encodeURIComponent(op)}` : '/workers/target'),
     refetchInterval: (query) => {
       const t = (query.state?.data?.targets || []).find((x) => x.id === query.state?.data?.target);
       return t && t.active_tasks > 0 ? BUSY_REFRESH_MS : IDLE_REFRESH_MS;
@@ -114,18 +150,48 @@ export default function GpuTarget() {
     ? targets.find((x) => x.id === active.worker_id)
     : targets.find((x) => x.is_local);
   const label = active?.remote ? active.label : t('gpu.local', { defaultValue: 'Local' });
-  const fellBack = !active?.remote && chosen !== 'local';
+
+  // What a worker can be sent at all. Absent (an older control plane, or a
+  // response that predates op-awareness) means "don't claim anything" — the
+  // coverage line and the unported reason simply do not render.
+  const remoteOps = data?.remote_operations || [];
+  const opLabel = (id) => t(`gpu.ops.${id}`, { defaultValue: id });
+  // Chosen a worker, on a surface nothing would ever send it. Not a failure
+  // and not the worker's fault, so it is deliberately NOT `fellBack`: no
+  // amber, because there is nothing wrong to warn about.
+  const opIsLocalOnly =
+    Boolean(op) && chosen !== 'local' && remoteOps.length > 0 && !remoteOps.includes(op);
+  const coverage = remoteOps.length
+    ? t('gpu.coverage', {
+        ops: remoteOps.map(opLabel).join(', '),
+        defaultValue: '{{ops}} only',
+      })
+    : '';
+  const reason = opIsLocalOnly
+    ? t('gpu.opLocal', {
+        op: opLabel(op),
+        defaultValue: 'Local — {{op}} does not run remotely yet',
+      })
+    : active?.reason || '';
+  const fellBack = !active?.remote && chosen !== 'local' && !opIsLocalOnly;
   // When the chosen worker is unreachable the work runs here, but the DOT must
   // report the worker's state — a green dot beside "Local" would hide that
-  // the machine you picked is down.
-  const dotStatus = fellBack ? chosenTarget?.status || 'offline' : activeTarget?.status || 'ready';
+  // the machine you picked is down. Same on an unported surface: the machine
+  // is fine, and the reason line is what says why it is idle.
+  const dotStatus =
+    fellBack || opIsLocalOnly ? chosenTarget?.status || 'offline' : activeTarget?.status || 'ready';
   const chipLatency = latencyLabel(active?.remote ? activeTarget : null);
 
   const choose = async (id) => {
     setOpen(false);
     try {
       const next = await request('/workers/target', { method: 'POST', body: { target: id } });
-      queryClient.setQueryData(['workers', 'target'], next);
+      // POST answers for the target as a whole. Writing that into an
+      // op-scoped cache entry would paint "gpu2 ● ready" on a tab whose work
+      // is local until the next poll corrected it — so it seeds the cache
+      // only where the two questions are the same one, and the invalidate
+      // below refreshes the rest.
+      if (!op) queryClient.setQueryData(['workers', 'target', ''], next);
       queryClient.invalidateQueries({ queryKey: ['workers'] });
     } catch (e) {
       toast.error(e?.message || String(e));
@@ -138,7 +204,7 @@ export default function GpuTarget() {
         ref={buttonRef}
         type="button"
         onClick={toggle}
-        title={active?.reason || undefined}
+        title={reason || undefined}
         aria-label={t('gpu.picker', { defaultValue: 'Where jobs run' })}
         className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs opacity-80 hover:opacity-100"
       >
@@ -186,24 +252,39 @@ export default function GpuTarget() {
                   </span>
                   {/* The address disambiguates two machines a user named
                       similarly; the detail says why one cannot be picked; the
-                      task count is what makes "busy" mean something. */}
+                      task count is what makes "busy" mean something; the
+                      coverage is what stops the entry from implying the
+                      machine takes everything. Coverage is dropped while the
+                      worker is unusable — "offline · TTS only" answers a
+                      question the user is not asking yet. */}
                   {!target.is_local && (
                     <span className="block truncate opacity-60">
                       {target.detail
                         ? target.detail
-                        : target.active_tasks > 0
-                          ? `${target.endpoint} · ${target.active_tasks}/${target.max_tasks} ${t(
-                              'gpu.tasks',
-                              { defaultValue: 'tasks' },
-                            )}`
-                          : target.endpoint}
+                        : [
+                            target.active_tasks > 0
+                              ? `${target.endpoint} · ${target.active_tasks}/${target.max_tasks} ${t(
+                                  'gpu.tasks',
+                                  { defaultValue: 'tasks' },
+                                )}`
+                              : target.endpoint,
+                            coverage,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
                     </span>
                   )}
                 </span>
               </button>
             ))}
-            {fellBack && active?.reason && (
-              <p className="m-0 px-2 py-1 text-[11px] text-amber-400">{active.reason}</p>
+            {reason && (fellBack || opIsLocalOnly) && (
+              <p
+                className={`m-0 px-2 py-1 text-[11px] ${
+                  fellBack ? 'text-amber-400' : 'opacity-60'
+                }`}
+              >
+                {reason}
+              </p>
             )}
             </div>
           </>,
