@@ -1213,7 +1213,10 @@
     "paste_translation_more_rows": "+ {{count}} more rows",
     "languages_selected": "Languages selected: {{count}}",
     "languages_selected_one": "{{count}} language selected",
-    "languages_selected_other": "{{count}} languages selected"
+    "languages_selected_other": "{{count}} languages selected",
+    "manage_languages": "Manage languages",
+    "languages_done": "Done",
+    "languages_pending": "Pending"
   },
   "glossary": {
     "title": "Glossary",

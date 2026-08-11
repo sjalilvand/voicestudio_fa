@@ -928,7 +928,10 @@
     "paste_translation_more_rows": "+ {{count}} صفوف إضافية",
     "languages_selected": "تم تحديد {{count}} لغة",
     "multi_translating": "جارٍ الترجمة ← {{lang}} ({{current}}/{{total}})…",
-    "multi_lang_skipped": "فشلت ترجمة {{langs}}، لذا تم تخطي عمليات الدبلجة هذه لتجنب إنشاء مسار بلغة خاطئة."
+    "multi_lang_skipped": "فشلت ترجمة {{langs}}، لذا تم تخطي عمليات الدبلجة هذه لتجنب إنشاء مسار بلغة خاطئة.",
+    "manage_languages": "إدارة اللغات",
+    "languages_done": "مكتمل",
+    "languages_pending": "قيد الانتظار"
   },
   "glossary": {
     "title": "مسرد",

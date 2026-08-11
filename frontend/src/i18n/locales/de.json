@@ -928,7 +928,10 @@
     "languages_selected_one": "{{count}} Sprache ausgewählt",
     "languages_selected_other": "{{count}} Sprachen ausgewählt",
     "multi_translating": "Übersetzung → {{lang}} ({{current}}/{{total}})…",
-    "multi_lang_skipped": "Die Übersetzung für {{langs}} ist fehlgeschlagen. Diese Synchronfassungen wurden übersprungen, damit keine Spur in der falschen Sprache entsteht."
+    "multi_lang_skipped": "Die Übersetzung für {{langs}} ist fehlgeschlagen. Diese Synchronfassungen wurden übersprungen, damit keine Spur in der falschen Sprache entsteht.",
+    "manage_languages": "Sprachen verwalten",
+    "languages_done": "Fertig",
+    "languages_pending": "Ausstehend"
   },
   "glossary": {
     "title": "Glossar",

@@ -223,6 +223,7 @@ describe('DubTab — multi-language generate translates each language first (P1.
         segmentCount={1}
       />,
     );
+    fireEvent.click(screen.getByRole('button', { name: /tracks 6\/6/i }));
     expect(screen.getByLabelText(/^BN/)).toBeChecked();
     expect(screen.getByLabelText(/^HI/)).toBeChecked();
     expect(screen.getByLabelText(/^ES/)).toBeChecked();

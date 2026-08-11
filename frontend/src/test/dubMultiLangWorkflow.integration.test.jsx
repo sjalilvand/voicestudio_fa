@@ -253,6 +253,7 @@ describe('multi-language workflow integration', () => {
         `${code}:hello`,
         `${code}:world`,
       ]);
+      expect(captured.left.at(-1).multiLangProgress[code]).toEqual({ ready: 2, total: 2 });
     }
 
     act(() => {
@@ -317,6 +318,7 @@ describe('multi-language workflow integration', () => {
         segmentCount={2}
       />,
     );
+    fireEvent.click(screen.getByRole('button', { name: /tracks 6\/6/i }));
     for (const code of EXPECTED_CODES)
       expect(screen.getByLabelText(new RegExp(`^${code.toUpperCase()}`))).toBeChecked();
     fireEvent.click(screen.getByRole('button', { name: 'Export MP4' }));

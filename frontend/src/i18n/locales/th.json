@@ -928,7 +928,10 @@
     "paste_translation_more_rows": "+ อีก {{count}} แถว",
     "languages_selected": "เลือก {{count}} ภาษาแล้ว",
     "multi_translating": "กำลังแปล → {{lang}} ({{current}}/{{total}})…",
-    "multi_lang_skipped": "การแปลสำหรับ {{langs}} ล้มเหลว จึงข้ามเสียงพากย์เหล่านั้นเพื่อป้องกันไม่ให้สร้างแทร็กผิดภาษา"
+    "multi_lang_skipped": "การแปลสำหรับ {{langs}} ล้มเหลว จึงข้ามเสียงพากย์เหล่านั้นเพื่อป้องกันไม่ให้สร้างแทร็กผิดภาษา",
+    "manage_languages": "จัดการภาษา",
+    "languages_done": "เสร็จแล้ว",
+    "languages_pending": "รอดำเนินการ"
   },
   "glossary": {
     "title": "อภิธานศัพท์",

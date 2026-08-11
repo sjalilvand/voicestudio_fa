@@ -14,7 +14,11 @@ import DubHeader from '../components/dub/DubHeader';
 import DubLeftColumn from '../components/dub/DubLeftColumn';
 import DubRightColumn from '../components/dub/DubRightColumn';
 import DubFooter from '../components/dub/DubFooter';
-import { hasCompleteTranslation, multiLangTargets } from '../utils/multiLang';
+import {
+  hasCompleteTranslation,
+  multiLangTargets,
+  translationProgressByCode,
+} from '../utils/multiLang';
 
 export default function DubTab(props) {
   const { t, i18n } = useTranslation();
@@ -209,6 +213,10 @@ export default function DubTab(props) {
     // target list without changing batch membership.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [dubLang, dubLangCode, multiLangs],
+  );
+  const multiLangProgress = useMemo(
+    () => translationProgressByCode(dubSegments, batchTargets),
+    [batchTargets, dubSegments],
   );
   // Landing "Advanced" disclosure (pre-upload options).
   const [landingAdvOpen, setLandingAdvOpen] = useState(false);
@@ -755,6 +763,7 @@ export default function DubTab(props) {
               setMultiLangMode={setMultiLangMode}
               multiLangs={multiLangs}
               setMultiLangs={setMultiLangs}
+              multiLangProgress={multiLangProgress}
               editSegments={editSegments}
             />
             <DubRightColumn
@@ -821,6 +830,7 @@ export default function DubTab(props) {
             t={t}
             dubStep={dubStep}
             dubTracks={dubTracks}
+            dubLangCode={dubLangCode}
             incrementalPlan={incrementalPlan}
             dubError={dubError}
             dubFailure={dubFailure}

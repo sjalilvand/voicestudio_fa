@@ -928,7 +928,10 @@
     "paste_translation_more_rows": "還有 {{count}} 行",
     "languages_selected": "已選擇 {{count}} 種語言",
     "multi_translating": "正在翻譯 → {{lang}}（{{current}}/{{total}}）…",
-    "multi_lang_skipped": "{{langs}} 翻譯失敗；已略過這些配音，以免產生語言錯誤的音軌。"
+    "multi_lang_skipped": "{{langs}} 翻譯失敗；已略過這些配音，以免產生語言錯誤的音軌。",
+    "manage_languages": "管理語言",
+    "languages_done": "已完成",
+    "languages_pending": "待處理"
   },
   "glossary": {
     "title": "詞彙表",

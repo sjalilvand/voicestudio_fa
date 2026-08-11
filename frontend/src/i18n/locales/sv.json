@@ -928,7 +928,10 @@
     "paste_translation_more_rows": "+ {{count}} rader till",
     "languages_selected": "{{count}} språk har valts",
     "multi_translating": "Översätter → {{lang}} ({{current}}/{{total}})…",
-    "multi_lang_skipped": "Översättningen misslyckades för {{langs}}. Dessa dubbningar hoppades över för att undvika ett spår på fel språk."
+    "multi_lang_skipped": "Översättningen misslyckades för {{langs}}. Dessa dubbningar hoppades över för att undvika ett spår på fel språk.",
+    "manage_languages": "Hantera språk",
+    "languages_done": "Klart",
+    "languages_pending": "Väntar"
   },
   "glossary": {
     "title": "Ordlista",

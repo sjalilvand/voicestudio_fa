@@ -928,7 +928,10 @@
     "languages_selected_one": "{{count}} भाषा चुनी गई",
     "languages_selected_other": "{{count}} भाषाएँ चुनी गईं",
     "multi_translating": "अनुवाद हो रहा है → {{lang}} ({{current}}/{{total}})…",
-    "multi_lang_skipped": "{{langs}} के लिए अनुवाद विफल रहा—गलत भाषा का ट्रैक बनने से रोकने के लिए उन डब को छोड़ दिया गया।"
+    "multi_lang_skipped": "{{langs}} के लिए अनुवाद विफल रहा—गलत भाषा का ट्रैक बनने से रोकने के लिए उन डब को छोड़ दिया गया।",
+    "manage_languages": "भाषाएँ प्रबंधित करें",
+    "languages_done": "पूर्ण",
+    "languages_pending": "बाकी"
   },
   "glossary": {
     "title": "शब्दावली",
