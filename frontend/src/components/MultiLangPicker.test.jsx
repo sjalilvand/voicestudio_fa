@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, within } from '@testing-library/react';
 import '../i18n';
 import MultiLangPicker from './MultiLangPicker';
+import { LANGUAGE_FLAGS } from './LanguageFlag';
+import { LANG_CODES } from '../utils/languages';
 
 const rect = (overrides = {}) => ({
   x: 40,
@@ -90,5 +92,36 @@ describe('MultiLangPicker viewport-safe menu', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove Language 55' }));
     expect(onChange).toHaveBeenCalledWith(selected.slice(0, 55));
+  });
+});
+
+describe('MultiLangPicker responsive language cards', () => {
+  it('maps every supported language to a representative flag', () => {
+    expect(Object.keys(LANGUAGE_FLAGS).sort()).toEqual(LANG_CODES.map(({ code }) => code).sort());
+  });
+
+  it('keeps selected languages compact and shows their flags in the manager', () => {
+    render(
+      <MultiLangPicker
+        selected={[
+          { lang: 'Spanish', code: 'es' },
+          { lang: 'Japanese', code: 'ja' },
+        ]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId('language-flag-es')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Manage languages' }));
+    const manager = screen.getByRole('dialog', { name: 'Manage languages' });
+    expect(within(manager).getByTestId('language-flag-es')).toBeInTheDocument();
+    expect(within(manager).getByTestId('language-flag-ja')).toBeInTheDocument();
+  });
+
+  it('shows flags in searchable language results', () => {
+    render(<MultiLangPicker selected={[]} onChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Manage languages' }));
+    const manager = screen.getByRole('dialog', { name: 'Manage languages' });
+    expect(within(manager).getByTestId('language-flag-af')).toBeInTheDocument();
   });
 });

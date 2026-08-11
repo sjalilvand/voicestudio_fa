@@ -2075,6 +2075,13 @@
     "hf_token_get_short": "Ücretsiz bir tane alın →"
   },
   "history": {
+    "dub_meta": "{{segments}} segment · {{duration}} sn",
+    "dub_meta_zero": "{{count}} segment · {{duration}} sn",
+    "dub_meta_one": "{{count}} segment · {{duration}} sn",
+    "dub_meta_two": "{{count}} segment · {{duration}} sn",
+    "dub_meta_few": "{{count}} segment · {{duration}} sn",
+    "dub_meta_many": "{{count}} segment · {{duration}} sn",
+    "dub_meta_other": "{{count}} segment · {{duration}} sn",
     "dub_title": "Dublaj geçmişi",
     "empty": "Burada henüz bir şey yok — oluşturduklarınız sağda görünecek.",
     "empty_dub": "Dublajlarınız burada görünecek.",

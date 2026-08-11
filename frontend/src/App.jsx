@@ -1462,6 +1462,19 @@ function App() {
           <div
             className={`studio-with-history ${dubStep === 'idle' ? '' : 'studio-with-history--editing'}`}
           >
+            {dubStep === 'idle' && (
+              <div className="studio-projects">
+                <WorkspaceProjects
+                  projects={studioProjects}
+                  activeProjectId={activeProjectId}
+                  canSave={false}
+                  saveProject={saveProject}
+                  loadProject={loadProject}
+                  deleteProject={deleteProject}
+                  renameProject={renameProject}
+                />
+              </div>
+            )}
             <div className="studio-with-history__main">
               <ErrorBoundary name="dub">
                 <Suspense fallback={<LazyFallback />}>
@@ -1529,15 +1542,6 @@ function App() {
               editor (dubStep !== 'idle'). */}
             {dubStep === 'idle' && (
               <div className="studio-right">
-                <WorkspaceProjects
-                  projects={studioProjects}
-                  activeProjectId={activeProjectId}
-                  canSave={dubStep !== 'idle' || !!dubVideoFile}
-                  saveProject={saveProject}
-                  loadProject={loadProject}
-                  deleteProject={deleteProject}
-                  renameProject={renameProject}
-                />
                 <WorkspaceHistory
                   variant="dub"
                   dubHistory={dubHistory}

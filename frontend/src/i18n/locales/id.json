@@ -2075,6 +2075,13 @@
     "hf_token_get_short": "Dapatkan satu gratis →"
   },
   "history": {
+    "dub_meta": "{{segments}} segmen · {{duration}} dtk",
+    "dub_meta_zero": "{{count}} segmen · {{duration}} dtk",
+    "dub_meta_one": "{{count}} segmen · {{duration}} dtk",
+    "dub_meta_two": "{{count}} segmen · {{duration}} dtk",
+    "dub_meta_few": "{{count}} segmen · {{duration}} dtk",
+    "dub_meta_many": "{{count}} segmen · {{duration}} dtk",
+    "dub_meta_other": "{{count}} segmen · {{duration}} dtk",
     "dub_title": "Riwayat sulih suara",
     "empty": "Belum ada apa pun di sini — hasil generasi Anda akan muncul di sebelah kanan.",
     "empty_dub": "Sulih suara Anda akan muncul di sini.",

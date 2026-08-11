@@ -2075,6 +2075,13 @@
     "hf_token_get_short": "Получите один бесплатно →"
   },
   "history": {
+    "dub_meta": "{{segments}} сегментов · {{duration}} с",
+    "dub_meta_zero": "{{count}} сегментов · {{duration}} с",
+    "dub_meta_one": "{{count}} сегмент · {{duration}} с",
+    "dub_meta_two": "{{count}} сегмента · {{duration}} с",
+    "dub_meta_few": "{{count}} сегмента · {{duration}} с",
+    "dub_meta_many": "{{count}} сегментов · {{duration}} с",
+    "dub_meta_other": "{{count}} сегмента · {{duration}} с",
     "dub_title": "История дубляжа",
     "empty": "Пока пусто — ваши генерации появятся справа.",
     "empty_dub": "Ваши дубляжи появятся здесь.",

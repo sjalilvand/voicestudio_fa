@@ -1,8 +1,11 @@
 // Generation takes: the Studio history rail's star / load-as-output actions.
+import i18next from 'i18next';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { I18nextProvider } from 'react-i18next';
 import React from 'react';
 
+import es from '../i18n/locales/es.json';
 import WorkspaceHistory from './WorkspaceHistory';
 
 beforeAll(() => {
@@ -88,5 +91,105 @@ describe('WorkspaceHistory takes actions', () => {
     renderRail({ toggleStarHistory: undefined, playTakeAsOutput: undefined });
     expect(screen.queryByTestId('take-star-aa1')).toBeNull();
     expect(screen.queryByTestId('take-play-aa1')).toBeNull();
+  });
+});
+
+describe('WorkspaceHistory dub media previews', () => {
+  const renderDubRail = (dubHistory) =>
+    render(
+      <WorkspaceHistory
+        variant="dub"
+        dubHistory={dubHistory}
+        restoreDubHistory={noop}
+        deleteHistory={noop}
+      />,
+    );
+
+  it('shows extracted thumbnails for YouTube and uploaded video dubs', () => {
+    renderDubRail([
+      {
+        id: 'youtube-job',
+        filename: 'YouTube clip',
+        segments_count: 3,
+        duration: 12,
+        job_data: JSON.stringify({ input_type: 'video' }),
+      },
+      {
+        id: 'uploaded-video',
+        filename: 'movie.mp4',
+        segments_count: 2,
+        duration: 8,
+        job_data: JSON.stringify({ video_path: '/dubs/uploaded-video/original.mp4' }),
+      },
+    ]);
+
+    expect(screen.getByTestId('dub-thumbnail-youtube-job')).toHaveAttribute(
+      'src',
+      expect.stringContaining('/dub/thumb/youtube-job'),
+    );
+    expect(screen.getByTestId('dub-thumbnail-uploaded-video')).toHaveAttribute(
+      'src',
+      expect.stringContaining('/dub/thumb/uploaded-video'),
+    );
+  });
+
+  it('shows a waveform tile instead of a thumbnail for audio-only dubs', () => {
+    renderDubRail([
+      {
+        id: 'audio-job',
+        filename: 'interview.wav',
+        segments_count: 4,
+        duration: 30,
+        job_data: JSON.stringify({ input_type: 'audio' }),
+      },
+    ]);
+
+    expect(screen.getByTestId('dub-audio-waveform-audio-job')).toBeInTheDocument();
+    expect(screen.queryByTestId('dub-thumbnail-audio-job')).toBeNull();
+  });
+
+  it('keeps malformed legacy job data renderable as a video row', () => {
+    renderDubRail([
+      {
+        id: 'legacy-job',
+        filename: 'legacy.mp4',
+        segments_count: 1,
+        duration: 5,
+        job_data: '{not-json',
+      },
+    ]);
+
+    expect(screen.getByTestId('dub-thumbnail-legacy-job')).toBeInTheDocument();
+  });
+
+  it('localizes Dub row metadata and icon actions', async () => {
+    const localizedI18n = i18next.createInstance();
+    await localizedI18n.init({
+      lng: 'es',
+      fallbackLng: false,
+      resources: { es: { translation: es } },
+    });
+    render(
+      <I18nextProvider i18n={localizedI18n}>
+        <WorkspaceHistory
+          variant="dub"
+          dubHistory={[
+            {
+              id: 'localized-job',
+              filename: 'pelicula.mp4',
+              segments_count: 2,
+              duration: 5,
+              job_data: JSON.stringify({ input_type: 'video' }),
+            },
+          ]}
+          restoreDubHistory={noop}
+          deleteHistory={noop}
+        />
+      </I18nextProvider>,
+    );
+
+    expect(screen.getByText(/2 segmentos/)).toBeInTheDocument();
+    expect(screen.getByText('Automático')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Eliminar' })).toBeInTheDocument();
   });
 });

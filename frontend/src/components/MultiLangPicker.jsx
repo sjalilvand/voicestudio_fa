@@ -4,6 +4,7 @@ import { Check, X, Search, Globe } from 'lucide-react';
 import { POPULAR_LANGS } from '../utils/constants';
 import { LANG_CODES } from '../utils/languages';
 import { useTranslation } from 'react-i18next';
+import LanguageFlag from './LanguageFlag';
 
 /**
  * MultiLangPicker — chip-based multi-language selector for batch dubbing.
@@ -222,6 +223,7 @@ export default function MultiLangPicker({
                       aria-label={t('common.remove', { term: item.lang })}
                     >
                       <Check size={10} className="text-[var(--chrome-accent)]" aria-hidden="true" />
+                      <LanguageFlag code={item.code} />
                       <span className="min-w-[28px] font-mono text-[0.68rem] font-semibold uppercase text-[var(--chrome-accent)]">
                         {item.code}
                       </span>
@@ -248,6 +250,7 @@ export default function MultiLangPicker({
                       style={{ contentVisibility: 'auto', containIntrinsicSize: '30px' }}
                       onClick={() => addLang(item.lang, item.code)}
                     >
+                      <LanguageFlag code={item.code} />
                       <span className="[font-family:var(--font-mono)] text-[0.68rem] text-[color:var(--chrome-accent)] min-w-[28px] font-semibold">
                         {item.code}
                       </span>
@@ -267,6 +270,7 @@ export default function MultiLangPicker({
                   style={{ contentVisibility: 'auto', containIntrinsicSize: '30px' }}
                   onClick={() => addLang(lc.label, lc.code)}
                 >
+                  <LanguageFlag code={lc.code} />
                   <span className="[font-family:var(--font-mono)] text-[0.68rem] text-[color:var(--chrome-accent)] min-w-[28px] font-semibold">
                     {lc.code}
                   </span>

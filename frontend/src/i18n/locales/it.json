@@ -2075,6 +2075,13 @@
     "hf_token_get_short": "Ottienine uno gratis →"
   },
   "history": {
+    "dub_meta": "{{segments}} segmenti · {{duration}} s",
+    "dub_meta_zero": "{{count}} segmenti · {{duration}} s",
+    "dub_meta_one": "{{count}} segmento · {{duration}} s",
+    "dub_meta_two": "{{count}} segmenti · {{duration}} s",
+    "dub_meta_few": "{{count}} segmenti · {{duration}} s",
+    "dub_meta_many": "{{count}} segmenti · {{duration}} s",
+    "dub_meta_other": "{{count}} segmenti · {{duration}} s",
     "dub_title": "Cronologia doppiaggi",
     "empty": "Ancora niente qui — le tue generazioni appariranno sulla destra.",
     "empty_dub": "I tuoi doppiaggi appariranno qui.",

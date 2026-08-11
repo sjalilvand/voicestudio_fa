@@ -2075,6 +2075,13 @@
     "hf_token_get_short": "एक निःशुल्क प्राप्त करें →"
   },
   "history": {
+    "dub_meta": "{{segments}} खंड · {{duration}} सेकंड",
+    "dub_meta_zero": "{{count}} खंड · {{duration}} सेकंड",
+    "dub_meta_one": "{{count}} खंड · {{duration}} सेकंड",
+    "dub_meta_two": "{{count}} खंड · {{duration}} सेकंड",
+    "dub_meta_few": "{{count}} खंड · {{duration}} सेकंड",
+    "dub_meta_many": "{{count}} खंड · {{duration}} सेकंड",
+    "dub_meta_other": "{{count}} खंड · {{duration}} सेकंड",
     "dub_title": "डब इतिहास",
     "empty": "अभी यहाँ कुछ नहीं — आपकी पीढ़ियाँ दाईं ओर दिखाई देंगी।",
     "empty_dub": "आपके डब यहाँ दिखाई देंगे।",
