@@ -62,11 +62,35 @@ pub struct AppFlags {
     /// already reports every start and stop via `set_tray_recording` (it drives
     /// the tray icon), so that same call keeps this in step.
     pub dictating: AtomicBool,
+    pub capture: Mutex<CaptureDispatchState>,
+}
+
+pub struct CaptureDispatchState {
+    pub ready: bool,
+    pub pending: Option<String>,
 }
 
 pub struct TrayHandle {
     pub tray: Mutex<Option<tauri::tray::TrayIcon>>,
     pub dictate: Mutex<Option<tauri::menu::MenuItem<tauri::Wry>>>,
+}
+
+pub fn dispatch_dictation_capture(app: &tauri::AppHandle, action: &str) {
+    let event = if action == "stop" {
+        "tray-dictate-stop"
+    } else {
+        "tray-dictate"
+    };
+    let flags = app.state::<AppFlags>();
+    let Ok(mut capture) = flags.capture.lock() else {
+        log::warn!("Dictation capture state lock poisoned");
+        return;
+    };
+    if capture.ready {
+        let _ = app.emit(event, ());
+    } else {
+        capture.pending = Some(action.to_owned());
+    }
 }
 
 pub const TRAY_ICON_DEFAULT: &[u8] = include_bytes!("../icons/32x32.png");
@@ -440,6 +464,8 @@ pub fn run() {
             commands::get_dictation_shortcut,
             commands::get_effective_dictation_shortcut,
             commands::set_dictation_shortcut,
+            commands::request_dictation_capture,
+            commands::mark_dictation_capture_ready,
             commands::get_launch_as_widget,
             commands::set_launch_as_widget,
             commands::clear_webview_cache_and_relaunch,
@@ -539,6 +565,10 @@ pub fn run() {
             app.manage(AppFlags {
                 quitting: AtomicBool::new(false),
                 dictating: AtomicBool::new(false),
+                capture: Mutex::new(CaptureDispatchState {
+                    ready: false,
+                    pending: None,
+                }),
             });
             app.manage(TrayHandle {
                 tray: Mutex::new(None),
@@ -562,21 +592,16 @@ pub fn run() {
                                     // host for the recorder, and dictation gives
                                     // no on-screen pill. See the window builder
                                     // above for why it must still exist.
-                                    let _ = app_handle.emit("tray-dictate", ());
+                                    dispatch_dictation_capture(app_handle, "start");
                                 }
                                 ShortcutState::Released => {
                                     log::info!("Global shortcut released: dictation stop");
-                                    let _ = app_handle.emit("tray-dictate-stop", ());
+                                    dispatch_dictation_capture(app_handle, "stop");
                                 }
                             }
                         })
                         .build(),
                 )?;
-
-                DictationShortcutManager::register_initial(
-                    app.handle().clone(),
-                    startup_shortcut.clone(),
-                );
             }
 
             // ── System tray ──────────────────────────────────────────────
@@ -635,6 +660,14 @@ pub fn run() {
                     }
                 }
             }
+
+            // Publish the effective shortcut only after the tray item exists;
+            // Wayland portal registration completes asynchronously and may
+            // otherwise race past the first tray-label update.
+            DictationShortcutManager::register_initial(
+                app.handle().clone(),
+                startup_shortcut.clone(),
+            );
 
             let tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
@@ -700,9 +733,9 @@ pub fn run() {
                             // current by the frontend's existing
                             // `set_tray_recording` call on every start and stop.
                             if app.state::<AppFlags>().dictating.load(Ordering::SeqCst) {
-                                let _ = app.emit("tray-dictate-stop", ());
+                                dispatch_dictation_capture(app, "stop");
                             } else {
-                                let _ = app.emit("tray-dictate", ());
+                                dispatch_dictation_capture(app, "start");
                             }
                         }
                         "settings" => {

@@ -2,19 +2,17 @@ import { fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import DesktopCaptureShortcutBridge from './DesktopCaptureShortcutBridge';
 
-const { emit, invoke, listen, handlers } = vi.hoisted(() => ({
-  emit: vi.fn(),
+const { invoke, listen, handlers } = vi.hoisted(() => ({
   invoke: vi.fn(),
   listen: vi.fn(),
   handlers: {},
 }));
 vi.mock('@tauri-apps/api/core', () => ({ invoke }));
-vi.mock('@tauri-apps/api/event', () => ({ emit, listen }));
+vi.mock('@tauri-apps/api/event', () => ({ listen }));
 
 describe('DesktopCaptureShortcutBridge', () => {
   beforeEach(() => {
     window.__TAURI_INTERNALS__ = {};
-    emit.mockReset().mockResolvedValue(undefined);
     invoke.mockReset().mockResolvedValue({
       accelerator: 'Ctrl+Alt+K',
       display: 'Ctrl+Alt+K',
@@ -37,8 +35,8 @@ describe('DesktopCaptureShortcutBridge', () => {
     fireEvent.keyUp(window, { code: 'ControlLeft', altKey: true });
 
     await waitFor(() => {
-      expect(emit).toHaveBeenCalledWith('tray-dictate');
-      expect(emit).toHaveBeenCalledWith('tray-dictate-stop');
+      expect(invoke).toHaveBeenCalledWith('request_dictation_capture', { action: 'start' });
+      expect(invoke).toHaveBeenCalledWith('request_dictation_capture', { action: 'stop' });
     });
   });
 
@@ -53,7 +51,7 @@ describe('DesktopCaptureShortcutBridge', () => {
     });
     fireEvent.keyDown(window, { code: 'KeyK', ctrlKey: true });
     await Promise.resolve();
-    expect(emit).not.toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledTimes(1);
   });
 
   it('uses a successfully rebound shortcut without remounting', async () => {
@@ -63,6 +61,24 @@ describe('DesktopCaptureShortcutBridge', () => {
       payload: { accelerator: 'Ctrl+Shift+Space', display: 'Ctrl+Shift+Space' },
     });
     fireEvent.keyDown(window, { code: 'Space', ctrlKey: true, shiftKey: true });
-    await waitFor(() => expect(emit).toHaveBeenCalledWith('tray-dictate'));
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('request_dictation_capture', { action: 'start' }),
+    );
+  });
+
+  it('removes a subscription that resolves after unmount', async () => {
+    let resolveListen;
+    const unlisten = vi.fn();
+    listen.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveListen = resolve;
+      }),
+    );
+    const view = render(<DesktopCaptureShortcutBridge />);
+    view.unmount();
+    resolveListen(unlisten);
+
+    await waitFor(() => expect(unlisten).toHaveBeenCalledOnce());
+    expect(invoke).not.toHaveBeenCalled();
   });
 });

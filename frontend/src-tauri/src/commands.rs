@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use tauri::image::Image;
+use tauri::{Emitter, Manager};
 use tauri_plugin_dialog::DialogExt;
 
 use crate::dictation_shortcut::{DictationShortcutManager, ShortcutInfo, update_tray_hint};
@@ -921,24 +922,53 @@ pub fn get_effective_dictation_shortcut(
 }
 
 #[tauri::command]
+pub fn request_dictation_capture(app: tauri::AppHandle, action: String) -> Result<(), String> {
+    if action != "start" && action != "stop" && action != "toggle" {
+        return Err("capture action must be start, stop, or toggle".into());
+    }
+    crate::dispatch_dictation_capture(&app, &action);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn mark_dictation_capture_ready(app: tauri::AppHandle) {
+    let flags = app.state::<AppFlags>();
+    let Ok(mut capture) = flags.capture.lock() else {
+        log::warn!("Dictation capture state lock poisoned");
+        return;
+    };
+    capture.ready = true;
+    if let Some(action) = capture.pending.take() {
+        let event = if action == "stop" {
+            "tray-dictate-stop"
+        } else {
+            "tray-dictate"
+        };
+        let _ = app.emit(event, ());
+    }
+}
+
+#[tauri::command]
 pub fn set_dictation_shortcut(
     app: tauri::AppHandle,
     accelerator: String,
     state: tauri::State<'_, DictationShortcutManager>,
 ) -> Result<ShortcutInfo, String> {
-    let mut cfg = load_config(&app);
-    let previous = cfg.dictation_shortcut.clone();
-    let path = crate::config::config_path(&app)
-        .ok_or_else(|| "Could not locate the VoiceStudio config directory".to_string())?;
-    let info = apply_shortcut_change(
-        &accelerator,
-        &previous,
-        |value| state.replace(&app, value),
-        || {
-            cfg.dictation_shortcut = accelerator.clone();
-            crate::config::save_config_at(&path, &cfg)
-        },
-    )?;
+    let info = state.serialize_update(|| {
+        let mut cfg = load_config(&app);
+        let previous = cfg.dictation_shortcut.clone();
+        let path = crate::config::config_path(&app)
+            .ok_or_else(|| "Could not locate the VoiceStudio config directory".to_string())?;
+        apply_shortcut_change(
+            &accelerator,
+            &previous,
+            |value| state.replace(&app, value),
+            || {
+                cfg.dictation_shortcut = accelerator.clone();
+                crate::config::save_config_at(&path, &cfg)
+            },
+        )
+    })?;
     log::info!("Dictation shortcut updated to {accelerator}");
     Ok(info)
 }

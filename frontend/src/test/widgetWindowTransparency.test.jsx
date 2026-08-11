@@ -31,6 +31,8 @@ const setLabel = (label) =>
   }));
 
 describe('the widget window marks itself on <html>', () => {
+  let root;
+
   beforeEach(() => {
     vi.resetModules();
     const root = document.createElement('div');
@@ -41,6 +43,8 @@ describe('the widget window marks itself on <html>', () => {
   });
 
   afterEach(() => {
+    root?.unmount();
+    root = undefined;
     document.getElementById('root')?.remove();
     delete document.documentElement.dataset.window;
     delete window.__TAURI_INTERNALS__;
@@ -51,21 +55,21 @@ describe('the widget window marks itself on <html>', () => {
   it('sets data-window="widget" when rendering in the widget window', async () => {
     setLabel('widget');
     const { bootstrapApp } = await import('../main-app.jsx');
-    await bootstrapApp();
+    root = await bootstrapApp();
     expect(document.documentElement.dataset.window).toBe('widget');
   });
 
   it('leaves the main window unmarked, so it keeps the opaque chrome', async () => {
     setLabel('main');
     const { bootstrapApp } = await import('../main-app.jsx');
-    await bootstrapApp();
+    root = await bootstrapApp();
     expect(document.documentElement.dataset.window).toBeUndefined();
   });
 
   it('mounts the in-page capture listener in browser mode', async () => {
     setLabel('main');
     const { bootstrapApp } = await import('../main-app.jsx');
-    await bootstrapApp();
+    root = await bootstrapApp();
     expect(await screen.findByTestId('capture-widget-mounted')).toBeInTheDocument();
   });
 
@@ -73,7 +77,7 @@ describe('the widget window marks itself on <html>', () => {
     window.__TAURI_INTERNALS__ = {};
     setLabel('main');
     const { bootstrapApp } = await import('../main-app.jsx');
-    await bootstrapApp();
+    root = await bootstrapApp();
     expect(screen.queryByTestId('capture-widget-mounted')).not.toBeInTheDocument();
   });
 });

@@ -4,7 +4,6 @@ import {
   formatShortcut,
   isShortcutRelease,
   parseShortcut,
-  replaceShortcutHint,
 } from './dictationShortcut';
 
 describe('dictation shortcut parsing', () => {
@@ -50,11 +49,5 @@ describe('dictation shortcut parsing', () => {
     expect(formatShortcut('CmdOrCtrl+Shift+Space', 'mac')).toBe('⌘⇧Space');
     expect(formatShortcut('CmdOrCtrl+Shift+Space', 'windows')).toBe('Ctrl+Shift+Space');
     expect(formatShortcut('Cmd+Option+K', 'linux')).toBe('Super+Alt+K');
-  });
-
-  it('replaces the translated default hint without changing its prose', () => {
-    expect(replaceShortcutHint('Record with (⌘+⇧+Space) now.', 'Ctrl+Alt+K')).toBe(
-      'Record with (Ctrl+Alt+K) now.',
-    );
   });
 });

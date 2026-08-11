@@ -98,6 +98,9 @@ If the global shortcut stops working, restart your desktop's portal service,
 then save the shortcut again in **Settings → Hotkey** to reopen consent. Portal
 packages and support vary by desktop; use the backend recommended by your
 distribution rather than running multiple portal backends in the same session.
+See the portal project's [service integration checks](https://flatpak.github.io/xdg-desktop-portal/docs/system-integration.html)
+and the Arch Linux [backend compatibility table](https://wiki.archlinux.org/title/XDG_Desktop_Portal#List_of_backends_and_interfaces)
+for concrete service and desktop-backend checks.
 
 ## Install (AppImage)
 

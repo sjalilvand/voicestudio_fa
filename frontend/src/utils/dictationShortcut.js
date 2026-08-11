@@ -127,8 +127,4 @@ export function formatShortcut(accelerator, platform = detectPlatform()) {
   return parts.map((part) => glyphs[part.toLowerCase()] || part).join('');
 }
 
-export function replaceShortcutHint(description, display) {
-  return description.replace(/\((?:⌘|Ctrl)[^)]*\)/u, `(${display})`);
-}
-
 export { DEFAULT_SHORTCUT };

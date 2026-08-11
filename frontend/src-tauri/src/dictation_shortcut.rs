@@ -19,6 +19,7 @@ pub struct ShortcutInfo {
 }
 
 pub struct DictationShortcutManager {
+    updates: Mutex<()>,
     native: Mutex<Option<Shortcut>>,
     effective: Mutex<ShortcutInfo>,
     #[cfg(target_os = "linux")]
@@ -28,6 +29,7 @@ pub struct DictationShortcutManager {
 impl DictationShortcutManager {
     pub fn new(accelerator: &str) -> Self {
         Self {
+            updates: Mutex::new(()),
             native: Mutex::new(None),
             effective: Mutex::new(ShortcutInfo {
                 accelerator: accelerator.to_owned(),
@@ -95,6 +97,17 @@ impl DictationShortcutManager {
             })
     }
 
+    pub fn serialize_update<T>(
+        &self,
+        update: impl FnOnce() -> Result<T, String>,
+    ) -> Result<T, String> {
+        let _guard = self
+            .updates
+            .lock()
+            .map_err(|_| "shortcut update lock poisoned".to_string())?;
+        update()
+    }
+
     #[cfg(target_os = "linux")]
     pub(crate) fn register_portal_initial(
         &self,
@@ -119,10 +132,12 @@ impl DictationShortcutManager {
             .native
             .lock()
             .map_err(|_| "shortcut lock poisoned".to_string())?;
-        let previous = slot.take();
-        if let Some(shortcut) = previous.as_ref() {
-            let _ = global.unregister(shortcut.clone());
+        if let Some(shortcut) = slot.as_ref() {
+            global.unregister(shortcut.clone()).map_err(|error| {
+                format!("Failed to unregister the previous shortcut: {error}")
+            })?;
         }
+        let previous = slot.take();
         if let Err(error) = global.register(parsed.clone()) {
             if let Some(shortcut) = previous {
                 if global.register(shortcut.clone()).is_ok() {
@@ -213,7 +228,9 @@ fn backend_name() -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::display_accelerator;
+    use super::{display_accelerator, DictationShortcutManager};
+    use std::sync::{mpsc, Arc, Barrier, Mutex};
+    use std::time::Duration;
 
     #[test]
     fn formats_the_platform_shortcut_hint() {
@@ -226,5 +243,61 @@ mod tests {
         );
         #[cfg(not(target_os = "macos"))]
         assert_eq!(display_accelerator("Cmd+Option+K"), "Super+Alt+K");
+    }
+
+    #[test]
+    fn serializes_overlapping_update_and_rollback_flows() {
+        let manager = Arc::new(DictationShortcutManager::new("Ctrl+Shift+Space"));
+        let state = Arc::new(Mutex::new((
+            "Ctrl+Shift+Space".to_string(),
+            "Ctrl+Shift+Space".to_string(),
+        )));
+        let (first_entered_tx, first_entered_rx) = mpsc::channel();
+        let (release_first_tx, release_first_rx) = mpsc::channel();
+        let (second_entered_tx, second_entered_rx) = mpsc::channel();
+        let second_ready = Arc::new(Barrier::new(2));
+
+        let first_manager = Arc::clone(&manager);
+        let first_state = Arc::clone(&state);
+        let first = std::thread::spawn(move || {
+            first_manager
+                .serialize_update(|| {
+                    first_state.lock().unwrap().1 = "Ctrl+Alt+A".into();
+                    first_entered_tx.send(()).unwrap();
+                    release_first_rx.recv().unwrap();
+                    // Simulate a failed persistence and its runtime rollback.
+                    first_state.lock().unwrap().1 = "Ctrl+Shift+Space".into();
+                    Err::<(), _>("disk full".to_string())
+                })
+                .unwrap_err()
+        });
+        first_entered_rx.recv().unwrap();
+
+        let second_manager = Arc::clone(&manager);
+        let second_state = Arc::clone(&state);
+        let second_barrier = Arc::clone(&second_ready);
+        let second = std::thread::spawn(move || {
+            second_barrier.wait();
+            second_manager
+                .serialize_update(|| {
+                    second_entered_tx.send(()).unwrap();
+                    let mut state = second_state.lock().unwrap();
+                    state.1 = "Ctrl+Alt+B".into();
+                    state.0 = "Ctrl+Alt+B".into();
+                    Ok(())
+                })
+                .unwrap();
+        });
+        second_ready.wait();
+        assert!(second_entered_rx
+            .recv_timeout(Duration::from_millis(50))
+            .is_err());
+
+        release_first_tx.send(()).unwrap();
+        assert_eq!(first.join().unwrap(), "disk full");
+        second.join().unwrap();
+        let state = state.lock().unwrap();
+        assert_eq!(state.0, "Ctrl+Alt+B");
+        assert_eq!(state.1, "Ctrl+Alt+B");
     }
 }

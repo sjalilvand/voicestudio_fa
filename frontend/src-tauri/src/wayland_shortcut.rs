@@ -7,9 +7,10 @@
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Mutex;
+use std::sync::{mpsc, Mutex};
+use std::time::Duration;
 
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 use zbus::{
     blocking::{Connection, Proxy},
     zvariant::{OwnedObjectPath, OwnedValue, Str},
@@ -23,6 +24,8 @@ const SESSION_INTERFACE: &str = "org.freedesktop.portal.Session";
 const REGISTRY_INTERFACE: &str = "org.freedesktop.host.portal.Registry";
 const SHORTCUT_ID: &str = "voice-dictation";
 static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
+const PORTAL_LISTENER_TIMEOUT: Duration = Duration::from_secs(5);
+const PORTAL_RESPONSE_TIMEOUT: Duration = Duration::from_secs(60);
 
 type VariantMap = HashMap<String, OwnedValue>;
 
@@ -73,6 +76,11 @@ impl PortalShortcutState {
                 return Err("portal shortcut lock poisoned".into());
             }
         };
+        if !self.is_current(revision) {
+            drop(active);
+            let _ = close_session(&registration);
+            return Err("shortcut registration was superseded by a newer request".into());
+        }
         if let Err(error) = start_listener(app, registration.clone()) {
             let _ = close_session(&registration);
             return Err(error);
@@ -292,16 +300,46 @@ where
     // Subscribe before making the request: a fast portal is allowed to answer
     // immediately after returning the request handle.
     let expected = request_path(connection, token)?;
-    let request = Proxy::new(
-        connection,
-        DESKTOP_DESTINATION,
-        expected.as_str(),
-        REQUEST_INTERFACE,
-    )
-    .map_err(|error| format!("portal request listener: {error}"))?;
-    let mut responses = request
-        .receive_signal("Response")
-        .map_err(|error| format!("portal response listener: {error}"))?;
+    let listener_connection = connection.clone();
+    let listener_path = expected.clone();
+    let (ready_tx, ready_rx) = mpsc::sync_channel(1);
+    let (response_tx, response_rx) = mpsc::sync_channel(1);
+    std::thread::Builder::new()
+        .name("wayland-portal-response".into())
+        .spawn(move || {
+            let request = match Proxy::new(
+                &listener_connection,
+                DESKTOP_DESTINATION,
+                listener_path.as_str(),
+                REQUEST_INTERFACE,
+            ) {
+                Ok(request) => request,
+                Err(error) => {
+                    let _ = ready_tx.send(Err(format!("portal request listener: {error}")));
+                    return;
+                }
+            };
+            let mut responses = match request.receive_signal("Response") {
+                Ok(responses) => responses,
+                Err(error) => {
+                    let _ = ready_tx.send(Err(format!("portal response listener: {error}")));
+                    return;
+                }
+            };
+            if ready_tx.send(Ok(())).is_err() {
+                return;
+            }
+            let response = responses
+                .next()
+                .ok_or_else(|| "portal closed before answering the shortcut request".to_string());
+            let _ = response_tx.send(response);
+        })
+        .map_err(|error| format!("could not start the portal response listener: {error}"))?;
+    receive_with_timeout(
+        &ready_rx,
+        PORTAL_LISTENER_TIMEOUT,
+        "portal response listener",
+    )?;
 
     let returned = call().map_err(|error| format!("portal request failed: {error}"))?;
     if returned != expected {
@@ -310,9 +348,24 @@ where
         ));
     }
 
-    let message = responses
-        .next()
-        .ok_or("portal closed before answering the shortcut request")?;
+    let message = match receive_with_timeout(
+        &response_rx,
+        PORTAL_RESPONSE_TIMEOUT,
+        "portal shortcut request",
+    ) {
+        Ok(message) => message,
+        Err(error) => {
+            if let Ok(request) = Proxy::new(
+                connection,
+                DESKTOP_DESTINATION,
+                expected.as_str(),
+                REQUEST_INTERFACE,
+            ) {
+                let _ = request.call::<_, _, ()>("Close", &());
+            }
+            return Err(error);
+        }
+    };
     let (code, results): (u32, VariantMap) = message
         .body()
         .deserialize()
@@ -323,6 +376,23 @@ where
         ));
     }
     Ok(results)
+}
+
+fn receive_with_timeout<T>(
+    receiver: &mpsc::Receiver<Result<T, String>>,
+    timeout: Duration,
+    operation: &str,
+) -> Result<T, String> {
+    match receiver.recv_timeout(timeout) {
+        Ok(result) => result,
+        Err(mpsc::RecvTimeoutError::Timeout) => Err(format!(
+            "{operation} timed out after {} seconds",
+            timeout.as_secs()
+        )),
+        Err(mpsc::RecvTimeoutError::Disconnected) => {
+            Err(format!("{operation} stopped before completing"))
+        }
+    }
 }
 
 fn bind(accelerator: &str) -> Result<(PortalRegistration, String), String> {
@@ -459,7 +529,7 @@ fn listen(app: tauri::AppHandle, registration: PortalRegistration) -> Result<(),
         let (signal_session, shortcut_id, _timestamp, _options): (
             OwnedObjectPath,
             String,
-            u64,
+            u32,
             VariantMap,
         ) = match message.body().deserialize() {
             Ok(body) => body,
@@ -473,10 +543,10 @@ fn listen(app: tauri::AppHandle, registration: PortalRegistration) -> Result<(),
         }
         if member == "Activated" {
             log::info!("Wayland shortcut pressed: dictation start");
-            let _ = app.emit("tray-dictate", ());
+            crate::dispatch_dictation_capture(&app, "start");
         } else {
             log::info!("Wayland shortcut released: dictation stop");
-            let _ = app.emit("tray-dictate-stop", ());
+            crate::dispatch_dictation_capture(&app, "stop");
         }
     }
     Err("global-shortcuts portal closed the session".into())
@@ -513,11 +583,13 @@ pub fn register_initial(app: tauri::AppHandle, accelerator: String, revision: u6
 #[cfg(test)]
 mod tests {
     use super::{
-        desktop_exec_value, portal_trigger, trigger_description, variant_string,
-        PortalShortcutState,
+        desktop_exec_value, portal_trigger, receive_with_timeout, trigger_description,
+        variant_string, PortalShortcutState,
     };
     use std::collections::HashMap;
     use std::path::Path;
+    use std::sync::mpsc;
+    use std::time::Duration;
 
     #[test]
     fn converts_tauri_accelerators_to_portal_triggers() {
@@ -571,5 +643,17 @@ mod tests {
         let changed = state.reserve();
         assert!(!state.is_current(startup));
         assert!(state.is_current(changed));
+    }
+
+    #[test]
+    fn portal_response_wait_is_bounded() {
+        let (_sender, receiver) = mpsc::channel::<Result<(), String>>();
+        let error = receive_with_timeout(
+            &receiver,
+            Duration::from_millis(1),
+            "portal shortcut request",
+        )
+        .unwrap_err();
+        assert!(error.contains("timed out"));
     }
 }

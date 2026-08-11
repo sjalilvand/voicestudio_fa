@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { emit, listen } from '@tauri-apps/api/event';
+import { listen } from '@tauri-apps/api/event';
 import {
   DEFAULT_SHORTCUT,
   eventMatchesShortcut,
   isShortcutRelease,
   parseShortcut,
 } from '../utils/dictationShortcut';
+import { requestDictationCapture } from '../utils/dictationCapture';
 
 /** Focused-window fallback for desktop environments whose global shortcut
  * backend reports registration success but never delivers press events. */
@@ -21,9 +22,9 @@ export default function DesktopCaptureShortcutBridge() {
 
     const forward = (name) => {
       try {
-        Promise.resolve(emit(name)).catch((error) =>
-          console.warn(`${name} fallback emit failed:`, error),
-        );
+        Promise.resolve(
+          requestDictationCapture(name === 'tray-dictate-stop' ? 'stop' : 'start'),
+        ).catch((error) => console.warn(`${name} fallback emit failed:`, error));
       } catch (error) {
         console.warn(`${name} fallback emit failed:`, error);
       }
@@ -49,9 +50,14 @@ export default function DesktopCaptureShortcutBridge() {
 
     (async () => {
       try {
-        unlisten = await listen('dictation-shortcut-changed', ({ payload }) => {
+        const subscription = await listen('dictation-shortcut-changed', ({ payload }) => {
           if (payload?.accelerator) acceleratorRef.current = payload.accelerator;
         });
+        if (cancelled) {
+          subscription();
+          return;
+        }
+        unlisten = subscription;
         const current = await invoke('get_effective_dictation_shortcut');
         if (!cancelled && current?.accelerator) acceleratorRef.current = current.accelerator;
         if (cancelled) unlisten?.();

@@ -14,6 +14,7 @@ import { asrMissingPayload, toastAsrModelMissing } from '../utils/asrModelMissin
 import { createWaveform } from './captureWaveform';
 import { emitDictationNotice } from '../utils/dictationNotice';
 import { audioFormatForMimeType, startSupportedMediaRecorder } from '../utils/mediaRecorder';
+import { BROWSER_DICTATION_REQUEST } from '../utils/dictationCapture';
 
 // True inside the Tauri shell (desktop app / widget window); false in the
 // browser webui / Docker, where the native commands don't exist. Gating on
@@ -411,6 +412,38 @@ export default function CaptureWidget({ onDismiss }) {
     pcmModeRef.current = false;
   }, []);
 
+  // Browser buttons and focused-window shortcuts use the same request event;
+  // the recorder remains owned by this single component.
+  const browserRequestRef = useRef(null);
+  browserRequestRef.current = (action) => {
+    if (!enabledRef.current) return;
+    const current = stateRef.current;
+    if (action === 'stop') {
+      if (current === 'recording') stopRecordingRef.current?.();
+      return;
+    }
+    if (current === 'setup') {
+      checkAccessibility().then((ok) => {
+        if (ok) startRecordingRef.current?.();
+      });
+      return;
+    }
+    const idle = current === 'idle' || current === 'done' || current === 'error';
+    if (action === 'toggle') {
+      if (idle) startRecordingRef.current?.();
+      else if (current === 'recording') stopRecordingRef.current?.();
+    } else if (idle) {
+      startRecordingRef.current?.();
+    }
+  };
+
+  useEffect(() => {
+    if (inTauri()) return;
+    const onRequest = (event) => browserRequestRef.current?.(event.detail?.action || 'start');
+    window.addEventListener(BROWSER_DICTATION_REQUEST, onRequest);
+    return () => window.removeEventListener(BROWSER_DICTATION_REQUEST, onRequest);
+  }, []);
+
   // Hydrate dictation prefs (enabled / mode / model) from the backend once. The
   // widget runs in its own Tauri webview (a separate JS context from the main
   // window), so it loads the prefs itself rather than relying on the Settings
@@ -489,6 +522,8 @@ export default function CaptureWidget({ onDismiss }) {
             stopRecordingRef.current?.();
           }
         });
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('mark_dictation_capture_ready');
         // Unmounted while the dynamic import was in flight — drop the
         // subscriptions we just created rather than leaking them.
         if (cancelled) {
@@ -521,29 +556,14 @@ export default function CaptureWidget({ onDismiss }) {
     const onKeyDown = (e) => {
       if (!isCombo(e)) return;
       e.preventDefault();
-      if (!enabledRef.current) return;
-      if (state === 'setup') {
-        checkAccessibility().then((ok) => {
-          if (ok) startRecording();
-        });
-        return;
-      }
-      const idle = state === 'idle' || state === 'done' || state === 'error';
-      if (modeRef.current === 'toggle') {
-        if (idle) startRecording();
-        else if (state === 'recording') stopRecording();
-      } else if (idle) {
-        // Hold mode: holding the combo records; auto-repeat keydowns are
-        // ignored because we only start from an idle state.
-        startRecording();
-      }
+      browserRequestRef.current?.(modeRef.current === 'toggle' ? 'toggle' : 'start');
     };
     const onKeyUp = (e) => {
       // Hold mode stops as soon as Space (or a modifier) is released.
       if (modeRef.current !== 'hold') return;
       if (e.code !== 'Space' && e.key !== 'Meta' && e.key !== 'Control' && e.key !== 'Shift')
         return;
-      if (state === 'recording') stopRecording();
+      browserRequestRef.current?.('stop');
     };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);

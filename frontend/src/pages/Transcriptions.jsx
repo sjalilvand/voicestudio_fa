@@ -13,8 +13,8 @@ import { Mic, Copy, Trash2, Search, Clock, Languages, FileText, Download } from 
 import { Button } from '../ui';
 import { toast } from 'react-hot-toast';
 import { toMillis } from '../utils/relativeTime';
-import { replaceShortcutHint } from '../utils/dictationShortcut';
 import { useEffectiveDictationShortcut } from '../hooks/useEffectiveDictationShortcut';
+import { requestDictationCapture } from '../utils/dictationCapture';
 import {
   loadTranscriptions,
   TRANSCRIPTIONS_KEY,
@@ -49,9 +49,16 @@ export default function TranscriptionsPage() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const { info: shortcut } = useEffectiveDictationShortcut();
-  const emptyDescription = useMemo(() => {
-    return replaceShortcutHint(t('transcriptions.empty_desc'), shortcut.display);
-  }, [shortcut.display, t]);
+  const emptyDescription = t('transcriptions.empty_desc', { shortcut: shortcut.display });
+
+  const startCapture = useCallback(async () => {
+    try {
+      await requestDictationCapture('start');
+    } catch (error) {
+      console.warn('Could not start dictation:', error);
+      toast.error(t('transcriptions.capture_failed'));
+    }
+  }, [t]);
 
   // Listen for new transcriptions added from CaptureButton
   useEffect(() => {
@@ -151,6 +158,9 @@ export default function TranscriptionsPage() {
           </span>
         </div>
         <div className="txn-header__right flex items-center gap-[6px]">
+          <Button size="sm" variant="primary" onClick={startCapture}>
+            <Mic size={13} /> {t('transcriptions.capture')}
+          </Button>
           <div className="txn-search relative flex items-center">
             <Search
               size={13}
@@ -200,6 +210,11 @@ export default function TranscriptionsPage() {
               <p className="txn-empty__desc m-0 max-w-[280px] text-[var(--text-xs)] leading-[1.6] text-fg-muted">
                 {search ? t('transcriptions.empty_search_desc') : emptyDescription}
               </p>
+              {!search && (
+                <Button size="sm" variant="primary" onClick={startCapture}>
+                  <Mic size={13} /> {t('transcriptions.capture')}
+                </Button>
+              )}
             </div>
           ) : (
             filtered.map((t) => (
