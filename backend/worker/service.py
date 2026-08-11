@@ -167,6 +167,23 @@ class ControlPlane:
         self._port = None
         self._started = False
 
+    async def cancel(self, task_id: str, *, reason: str = "cancelled") -> bool:
+        """Cancel locally, notify the owner, and hold its slot until ACK."""
+        if self.scheduler is None:
+            return False
+        task = self.scheduler.get(task_id) if hasattr(self.scheduler, "get") else None
+        attempt = task.active_attempt if task is not None else None
+        if not self.scheduler.cancel(task_id, reason=reason):
+            return False
+        if attempt is not None and self.servicer is not None:
+            await self.servicer.cancel(
+                attempt.worker_id,
+                task_id,
+                attempt.attempt_id,
+                attempt.session_epoch,
+            )
+        return True
+
     async def _sweep_loop(self) -> None:
         while True:
             await asyncio.sleep(_SWEEP_INTERVAL_SECONDS)

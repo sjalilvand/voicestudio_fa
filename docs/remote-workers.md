@@ -69,10 +69,12 @@ added later.
 | Resume | Clear a paused worker after you've fixed it |
 | Remove | Revoke its key — it cannot reconnect without a new token |
 
-That is the whole surface, deliberately. There is no strategy picker, no
-weights, and no per-model concurrency setting: concurrency is measured from
-free VRAM at runtime because a configured value silently corrupts output on
-compiled models and crashes small cards.
+That is the whole surface, deliberately. **Preferred** pins new work to that
+worker; if it is asleep, VoiceStudio names that worker instead of silently
+sending the job elsewhere. There are no routing weights or per-model
+concurrency settings: concurrency is measured from free VRAM at runtime because
+a configured value silently corrupts output on compiled models and crashes
+small cards.
 
 ## What runs remotely
 
@@ -94,9 +96,12 @@ away once generation routes itself.
 ## How work is placed
 
 A task goes to a worker that is connected, approved, enabled, has the engine,
-has a free slot, and is not paused. Among those, OmniVoice prefers the
-least-busy one, and breaks ties in favour of a worker that already has the
-model loaded — a warm model is seconds away where a cold one can be minutes.
+has a free slot, and is not paused. An explicitly preferred worker is a hard
+choice. Without one, VoiceStudio chooses the least-busy eligible worker and
+breaks ties in favour of a worker that already has the model loaded — a warm
+model is seconds away where a cold one can be minutes.
+Model identities are stable scheduling keys; the worker reports a separate
+human-readable model name, so label changes do not split capacity or history.
 
 If every capable worker is busy, the task waits. If **no** worker can run it at
 all, it fails immediately and says so, rather than waiting for something that
@@ -115,6 +120,10 @@ task to prove itself. Repeated trips back off further, up to thirty minutes.
 Being busy, being asked for an engine it doesn't have, or losing its network
 connection are *not* counted against it.
 
+Long-running work sends explicit keepalive frames. They let a slow render live
+past the two-minute progress lease, but cannot extend it beyond the current
+phase budget when the worker is genuinely stuck.
+
 The row tells you what happened in words — "Paused after 3 failures … retrying
 in 45s" — and **Resume** clears it immediately when you've fixed the machine.
 
@@ -128,8 +137,6 @@ mysteriously.
 
 ## Security
 
-* Idle worker sessions use TLS keepalives, so NAT mappings stay open without
-  the control plane mistaking its own keepalive interval for abusive traffic.
 * **All traffic is TLS.** There is no way to disable verification.
 * This machine generates its own certificate. The enrollment token carries that
   certificate's fingerprint, and the worker pins it — so a machine on the same
@@ -137,6 +144,8 @@ mysteriously.
 * **A worker's identity is a key it generates and never sends.** The worker ID
   is a display name, not a credential; knowing it gets an attacker nothing.
 * **Removing a worker revokes its key**, and that survives restarting the app.
+* Idle worker sessions use TLS keepalives, so NAT mappings stay open without
+  the control plane mistaking its own keepalive interval for abusive traffic.
 * Tasks name engines from a fixed registry, never file paths — a path here
   would be remote code execution on every worker.
 

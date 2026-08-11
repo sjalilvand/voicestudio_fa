@@ -2360,6 +2360,7 @@
     "started": "{{label}} wordt gedownload — volg de voortgang in Instellingen → Modellen en probeer het daarna opnieuw.",
     "install_failed": "Kon de download niet starten: {{message}}"
   },
+  "model_missing": {"message":"Dit model is niet gedownload op {{target}}.","download":"Model downloaden","download_size":"Downloaden ({{size}})","started":"Downloaden op {{target}} — probeer Genereren opnieuw wanneer dit klaar is.","failed":"Download kon niet worden gestart: {{message}}"},
   "backend_start_failure": {
     "notice": "De VoiceStudio-backend kon niet starten — tot die tijd werkt er niets.",
     "view": "Bekijk waarom",

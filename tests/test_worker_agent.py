@@ -278,6 +278,30 @@ async def test_the_worker_releases_engines_it_has_stopped_using(monkeypatch, enr
 
 
 @pytest.mark.asyncio
+async def test_remote_sweep_does_not_unload_during_local_gpu_work(monkeypatch, enrolled):
+    """The same process may serve a local user and remote assignments."""
+    from services import model_manager, tts_backend
+    from worker import capabilities
+
+    monkeypatch.setattr(capabilities, "discover", lambda **_: [])
+    monkeypatch.setattr(agent, "IDLE_SWEEP_INTERVAL_SECONDS", 0.01)
+    monkeypatch.setattr(
+        model_manager, "gpu_pool_stats", lambda: {"running": 1, "queued": 0}
+    )
+    unloaded = []
+    monkeypatch.setattr(tts_backend, "release_idle_engines", lambda: unloaded.append(1))
+
+    instance = agent.WorkerAgent()
+    try:
+        await instance.start()
+        await asyncio.sleep(0.05)
+    finally:
+        await instance.stop()
+
+    assert unloaded == []
+
+
+@pytest.mark.asyncio
 async def test_a_failing_sweep_never_takes_the_worker_down(monkeypatch, enrolled):
     """The agent's standing promise: a machine that cannot do the extra thing is
     still a perfectly good worker."""

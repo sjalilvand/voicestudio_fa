@@ -226,9 +226,19 @@ class WorkerAgent:
         while True:
             await asyncio.sleep(IDLE_SWEEP_INTERVAL_SECONDS)
             try:
+                # This process serves the desktop user as well as remote
+                # assignments. Local work runs through the shared GPU pool but
+                # does not enter the worker executor's per-engine guard.
+                from services import model_manager  # noqa: PLC0415
+
+                local = model_manager.gpu_pool_stats()
+                if local.get("running", 0) or local.get("queued", 0):
+                    continue
                 # unload() frees device caches and reaps sidecars — blocking,
                 # so it must not run on the loop that answers heartbeats.
-                await asyncio.to_thread(tts_backend.release_idle_engines)
+                released = await asyncio.to_thread(tts_backend.release_idle_engines)
+                if released and self._client is not None:
+                    await self._client.refresh_capabilities()
             except asyncio.CancelledError:
                 raise
             except Exception:

@@ -124,6 +124,12 @@ message ModelCapability {
   // True when the engine is present but would run on CPU fallback here —
   // capability is not the same as acceleration.
   bool cpu_fallback = 11;
+  // Catalog ids only, never paths. Lets the control plane offer the exact
+  // download required by a positive downloaded=false capability.
+  repeated string repo_ids = 12;
+  // Human-readable UI label. Never use this as a scheduling or residency key;
+  // unlike model_id it may change with ordinary copy edits.
+  string display_name = 13;
 }
 
 message RegisterRequest {

@@ -2360,6 +2360,7 @@
     "started": "Download di {{label}} in corso — segui l'avanzamento in Impostazioni → Modelli, poi riprova.",
     "install_failed": "Impossibile avviare il download: {{message}}"
   },
+  "model_missing": {"message":"Questo modello non è stato scaricato su {{target}}.","download":"Scarica modello","download_size":"Scarica ({{size}})","started":"Download avviato su {{target}} — riprova Genera al termine.","failed":"Impossibile avviare il download: {{message}}"},
   "backend_start_failure": {
     "notice": "Il backend di VoiceStudio non è riuscito ad avviarsi: nulla funzionerà finché non parte.",
     "view": "Vedi perché",

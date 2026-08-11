@@ -227,6 +227,8 @@ def capability_to_pb(cap: dict) -> pb.ModelCapability:
         precision=str(cap.get("precision") or ""),
         derived_concurrency=max(0, declared),
         cpu_fallback=bool(cap.get("cpu_fallback")),
+        repo_ids=list(cap.get("repo_ids") or []),
+        display_name=str(cap.get("display_name") or ""),
     )
 
 
@@ -243,6 +245,8 @@ def capability_from_pb(message: pb.ModelCapability) -> dict:
         "precision": message.precision,
         "derived_concurrency": message.derived_concurrency,
         "cpu_fallback": message.cpu_fallback,
+        "repo_ids": list(message.repo_ids),
+        "display_name": message.display_name,
     }
 
 

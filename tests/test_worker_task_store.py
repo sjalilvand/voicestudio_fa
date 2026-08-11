@@ -46,7 +46,11 @@ def _task(task_id="t1", **kw) -> Task:
 
 
 def test_task_round_trips(db):
-    task = _task(priority=PriorityClass.BATCH, max_attempts=5)
+    task = _task(
+        priority=PriorityClass.BATCH,
+        max_attempts=5,
+        pinned_worker_id="gpu-bedroom",
+    )
     task.deadline_at = 1234.0
     task_store.create(task, now=1000.0)
 
@@ -56,6 +60,7 @@ def test_task_round_trips(db):
     assert loaded.priority is PriorityClass.BATCH
     assert loaded.max_attempts == 5
     assert loaded.deadline_at == 1234.0
+    assert loaded.pinned_worker_id == "gpu-bedroom"
 
 
 def test_attempts_round_trip(db):

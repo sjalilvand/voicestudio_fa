@@ -168,7 +168,12 @@ class WorkerCapacity:
         return max(0, self.max_concurrent_tasks - self.active_tasks - self.zombie_tasks)
 
     def slot_for(self, engine: str, model_id: str) -> Optional[ModelSlot]:
-        return self.slots.get(self.slot_key(engine, model_id))
+        exact = self.slots.get(self.slot_key(engine, model_id))
+        if exact is not None or not model_id:
+            return exact
+        # Protocol-v1 workers may advertise only an engine (model_id="").
+        # That row is an engine-wide wildcard, not a second pool of capacity.
+        return self.slots.get(self.slot_key(engine, ""))
 
     def can_accept(self, engine: str, model_id: str) -> bool:
         if self.available_slots <= 0:
@@ -186,9 +191,11 @@ class WorkerCapacity:
 
     def reserve(self, engine: str, model_id: str) -> None:
         self.active_tasks += 1
-        slot = self.slots.setdefault(
-            self.slot_key(engine, model_id), ModelSlot(engine=engine, model_id=model_id)
-        )
+        slot = self.slot_for(engine, model_id)
+        if slot is None:
+            slot = self.slots.setdefault(
+                self.slot_key(engine, model_id), ModelSlot(engine=engine, model_id=model_id)
+            )
         slot.active += 1
 
     def release(
@@ -208,7 +215,7 @@ class WorkerCapacity:
         it with a decrement would invent worker-wide capacity out of nothing —
         so it is refused and reported rather than absorbed.
         """
-        slot = self.slots.get(self.slot_key(engine, model_id))
+        slot = self.slot_for(engine, model_id)
         if slot is None or slot.active <= 0:
             return False
         slot.active -= 1
@@ -220,7 +227,7 @@ class WorkerCapacity:
 
     def reap_zombie(self, engine: str, model_id: str) -> None:
         """The worker confirmed the stuck thread exited. Capacity returns."""
-        slot = self.slots.get(self.slot_key(engine, model_id))
+        slot = self.slot_for(engine, model_id)
         if slot is not None and slot.zombie_expiries:
             # Oldest first: parks are indistinguishable, so releasing the one
             # that has waited longest is the only ordering that cannot starve.

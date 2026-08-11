@@ -72,6 +72,8 @@ def discover(*, include_unavailable: bool = False) -> list[dict]:
         engine_id = entry.get("id") or ""
         routing = entry.get("routing_status") or ""
         gpu_compat = set(entry.get("gpu_compat") or [])
+        repo_ids = repo_ids_for(entry)
+        downloaded = _downloaded(repo_ids)
         discovered.append(
             {
                 "engine": engine_id,
@@ -80,13 +82,14 @@ def discover(*, include_unavailable: bool = False) -> list[dict]:
                 # any UI copy edit; nothing keys off it.
                 "display_name": entry.get("display_name") or engine_id,
                 "operations": _operations_for(entry),
-                "supported": available,
+                "supported": routing != "unavailable",
                 # A subprocess engine is only usable once its venv exists, and
                 # `available` already reflects that probe.
                 "installed": available,
                 # `available` implies the engine can start; weights are fetched
                 # on first use, which the load-phase deadline covers.
-                "downloaded": available,
+                "downloaded": downloaded,
+                "repo_ids": repo_ids,
                 "resident": engine_id in resident,
                 "min_memory_bytes": int(float(entry.get("min_vram_gb") or 0) * 1024**3),
                 "precision": "",
@@ -99,6 +102,70 @@ def discover(*, include_unavailable: bool = False) -> list[dict]:
             }
         )
     return discovered
+
+
+def repo_ids_for(entry: dict) -> list[str]:
+    """Catalog repositories used by one engine; an empty answer is unknown.
+
+    Unknown deliberately stays unknown.  User-managed clones and engines whose
+    loaders do not expose a repository must keep working (fail-open).
+    """
+    engine_id = entry.get("id") or ""
+    if engine_id == "omnivoice":
+        return ["k2-fsa/OmniVoice"]
+    if engine_id == "mlx-audio":
+        active = entry.get("active_model_id") or "kokoro"
+        for model in entry.get("curated_models") or []:
+            if model.get("key") == active and model.get("repo_id"):
+                return [model["repo_id"]]
+    try:
+        from services.sidecar_install import _user_managed_dir, get_spec  # noqa: PLC0415
+
+        spec = get_spec(engine_id)
+        if spec is not None and spec.weights_repo_id:
+            # A user-managed clone is intentionally opaque: its weights may be
+            # valid outside both the managed checkout and HF cache layout.
+            if _user_managed_dir(spec) is not None:
+                return []
+            return [spec.weights_repo_id]
+    except Exception:
+        logger.debug("Sidecar repository probe failed for %s", engine_id, exc_info=True)
+    return []
+
+
+def _downloaded(repo_ids: list[str]) -> bool:
+    """Positive absence only: uncertainty and non-HF installs proceed."""
+    if not repo_ids:
+        return True
+    try:
+        from api.routers.setup.models import (  # noqa: PLC0415
+            KNOWN_MODELS,
+            cache_is_complete,
+            is_cached,
+        )
+
+        by_id = {m.get("repo_id"): m for m in KNOWN_MODELS}
+        for repo_id in repo_ids:
+            try:
+                from services.sidecar_install import SPECS, _weights_present  # noqa: PLC0415
+
+                managed = next((s for s in SPECS.values() if s.weights_repo_id == repo_id), None)
+                if managed is not None:
+                    if not _weights_present(managed):
+                        return False
+                    continue
+            except Exception:
+                # Cannot prove sidecar absence; compatibility wins.
+                return True
+            if not is_cached(repo_id):
+                return False
+            meta = by_id.get(repo_id, {"repo_id": repo_id})
+            if not cache_is_complete(meta):
+                return False
+        return True
+    except Exception:
+        logger.debug("Model cache probe was inconclusive", exc_info=True)
+        return True
 
 
 def model_id_for(entry: dict) -> str:
@@ -216,4 +283,6 @@ def max_concurrent_tasks(capabilities: Optional[list[dict]] = None) -> int:
     return min(positive) if positive else 1
 
 
-__all__ = ["describe_gpus", "discover", "max_concurrent_tasks", "model_id_for"]
+__all__ = [
+    "describe_gpus", "discover", "max_concurrent_tasks", "model_id_for", "repo_ids_for"
+]

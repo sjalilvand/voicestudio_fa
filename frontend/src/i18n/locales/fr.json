@@ -2360,6 +2360,7 @@
     "started": "Téléchargement de {{label}} — suivez la progression dans Réglages → Modèles, puis réessayez.",
     "install_failed": "Impossible de démarrer le téléchargement : {{message}}"
   },
+  "model_missing": {"message":"Ce modèle n’est pas téléchargé sur {{target}}.","download":"Télécharger le modèle","download_size":"Télécharger ({{size}})","started":"Téléchargement sur {{target}} — relancez Générer une fois terminé.","failed":"Impossible de lancer le téléchargement : {{message}}"},
   "backend_start_failure": {
     "notice": "Le backend d'VoiceStudio n'a pas pu démarrer — rien ne fonctionnera tant qu'il ne démarre pas.",
     "view": "Voir pourquoi",

@@ -2360,6 +2360,7 @@
     "started": "Laddar ner {{label}} — följ förloppet i Inställningar → Modeller och försök sedan igen.",
     "install_failed": "Kunde inte starta nedladdningen: {{message}}"
   },
+  "model_missing": {"message":"Modellen har inte hämtats på {{target}}.","download":"Hämta modell","download_size":"Hämta ({{size}})","started":"Hämtar på {{target}} — försök generera igen när det är klart.","failed":"Det gick inte att starta hämtningen: {{message}}"},
   "backend_start_failure": {
     "notice": "VoiceStudios backend kunde inte starta — inget fungerar förrän den gör det.",
     "view": "Se varför",

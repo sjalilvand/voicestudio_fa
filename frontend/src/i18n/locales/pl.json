@@ -2360,6 +2360,7 @@
     "started": "Pobieranie {{label}} — postęp znajdziesz w Ustawienia → Modele, potem spróbuj ponownie.",
     "install_failed": "Nie udało się rozpocząć pobierania: {{message}}"
   },
+  "model_missing": {"message":"Ten model nie został pobrany na {{target}}.","download":"Pobierz model","download_size":"Pobierz ({{size}})","started":"Pobieranie na {{target}} — po zakończeniu ponów generowanie.","failed":"Nie udało się rozpocząć pobierania: {{message}}"},
   "backend_start_failure": {
     "notice": "Backend VoiceStudio nie mógł się uruchomić — nic nie zadziała, dopóki nie wystartuje.",
     "view": "Zobacz dlaczego",

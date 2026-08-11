@@ -249,6 +249,10 @@ _BASE_SCHEMA = """
         created_at REAL NOT NULL,
         updated_at REAL NOT NULL,
         deadline_at REAL,
+        -- Deliberate additive-reconcile exception to the alembic rule: remote
+        -- task recovery must work in bundled installs where alembic may be
+        -- unavailable, and this nullable affinity column is additive-only.
+        pinned_worker_id TEXT,
         finished_at REAL
     );
     CREATE INDEX IF NOT EXISTS idx_remote_tasks_state ON remote_tasks(state, priority, created_at);

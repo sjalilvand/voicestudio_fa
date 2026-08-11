@@ -128,12 +128,12 @@ class Scheduler:
         # Central queue: task_id → Task, insertion-ordered.
         self._tasks: dict[str, Task] = {}
         self._listeners: list[Callable[[str, Task], None]] = []
-        # Callers blocked in `wait`, task_id → their futures. Deliberately not
+        # Callers blocked in `wait`, task_id → one shared future. Deliberately not
         # built on `on_change`: that list has no unregister, so one listener
-        # per await would leak for the life of the process. One future per
-        # waiter rather than one shared per task, so a waiter that times out
-        # cancels only its own.
-        self._waiters: dict[str, list[asyncio.Future]] = {}
+        # per await would leak for the life of the process. `shield` below
+        # prevents one request timeout from cancelling the shared outcome.
+        self._waiters: dict[str, asyncio.Future] = {}
+        self._waiter_counts: dict[str, int] = {}
         # task_id → when its progress was last written through. Cleared with
         # the task, so it cannot outlive what it describes.
         self._progress_saved_at: dict[str, float] = {}
@@ -180,16 +180,20 @@ class Scheduler:
         if task.state.terminal:
             return task
 
-        future: asyncio.Future = asyncio.get_running_loop().create_future()
-        self._waiters.setdefault(task_id, []).append(future)
+        future = self._waiters.get(task_id)
+        if future is None:
+            future = asyncio.get_running_loop().create_future()
+            self._waiters[task_id] = future
+        self._waiter_counts[task_id] = self._waiter_counts.get(task_id, 0) + 1
         try:
-            return await asyncio.wait_for(future, timeout)
+            return await asyncio.wait_for(asyncio.shield(future), timeout)
         finally:
-            waiters = self._waiters.get(task_id)
-            if waiters is not None:
-                if future in waiters:
-                    waiters.remove(future)
-                if not waiters:
+            remaining = self._waiter_counts.get(task_id, 1) - 1
+            if remaining > 0:
+                self._waiter_counts[task_id] = remaining
+            else:
+                self._waiter_counts.pop(task_id, None)
+                if not future.done() and self._waiters.get(task_id) is future:
                     self._waiters.pop(task_id, None)
 
     def _resolve(self, task: Task) -> None:
@@ -202,9 +206,10 @@ class Scheduler:
         is a torn-down worker session for a message that changed nothing.
         """
         self._progress_saved_at.pop(task.task_id, None)
-        for future in self._waiters.pop(task.task_id, []):
-            if not future.done():
-                future.set_result(task)
+        future = self._waiters.pop(task.task_id, None)
+        self._waiter_counts.pop(task.task_id, None)
+        if future is not None and not future.done():
+            future.set_result(task)
 
     def abort_waiters(self, reason: str = "The control plane stopped.") -> int:
         """Fail every outstanding waiter. Called from ``ControlPlane.stop``.
@@ -214,12 +219,12 @@ class Scheduler:
         """
         pending = self._waiters
         self._waiters = {}
+        self._waiter_counts = {}
         count = 0
-        for futures in pending.values():
-            for future in futures:
-                if not future.done():
-                    future.set_exception(SchedulerStopped(reason))
-                    count += 1
+        for future in pending.values():
+            if not future.done():
+                future.set_exception(SchedulerStopped(reason))
+                count += 1
         return count
 
     # ── Submission ────────────────────────────────────────────────────────
@@ -235,6 +240,7 @@ class Scheduler:
         idempotency_key: Optional[str] = None,
         max_attempts: int = 3,
         deadline_seconds: Optional[float] = None,
+        pinned_worker_id: Optional[str] = None,
         now: Optional[float] = None,
     ) -> Task:
         """Admit a task, or refuse it at the door.
@@ -271,6 +277,7 @@ class Scheduler:
             idempotency_key=idempotency_key,
             max_attempts=max_attempts,
             created_at=stamp,
+            pinned_worker_id=pinned_worker_id,
         )
         if deadline_seconds:
             task.deadline_at = stamp + deadline_seconds
@@ -296,6 +303,15 @@ class Scheduler:
         stamp = resolve(now)
         restored = task_store.load_unfinished()
         for task in restored:
+            if task.state is TaskState.QUEUED and task.deadline_at is None:
+                # Rows created before deadlines became mandatory would never
+                # be swept. Recovery gives them one bounded lifetime.
+                task.deadline_at = stamp + deadline_policy.for_task(
+                    task.operation,
+                    text=task.params.get("text"),
+                    input_seconds=float(task.params.get("input_seconds") or 0.0),
+                ).total_seconds
+                self._save(task, now=stamp)
             self._tasks.setdefault(task.task_id, task)
             attempt = task.active_attempt
             if attempt is not None:
@@ -360,6 +376,8 @@ class Scheduler:
         model_key = WorkerCapacity.slot_key(task.engine, task.model_id)
         eligible = []
         for worker in self.pool:
+            if task.pinned_worker_id and worker.worker_id != task.pinned_worker_id:
+                continue
             if not worker.record.schedulable or worker.draining:
                 continue
             if worker.stale(now=stamp):
@@ -408,9 +426,15 @@ class Scheduler:
         capable = [
             w
             for w in self.pool
-            if w.record.schedulable and w.supports(task.engine, task.model_id, task.operation)
+            if (not task.pinned_worker_id or w.worker_id == task.pinned_worker_id)
+            and w.record.schedulable and w.supports(task.engine, task.model_id, task.operation)
         ]
         if not capable:
+            if task.pinned_worker_id:
+                raise NoEligibleWorker(
+                    f"The selected worker {task.pinned_worker_id} is offline or cannot be reached.",
+                    retryable=False,
+                )
             raise NoEligibleWorker(
                 f"No connected worker can run {task.engine or task.operation}. "
                 "Check the worker is online and has that engine installed.",
@@ -437,13 +461,18 @@ class Scheduler:
             except NoEligibleWorker as exc:
                 if exc.retryable:
                     continue
+                pinned = bool(task.pinned_worker_id)
                 self._fail(
                     task,
                     WorkerError(
-                        error_class=ErrorClass.CAPABILITY,
-                        code="NO_CAPABLE_WORKER",
+                        error_class=ErrorClass.CAPACITY if pinned else ErrorClass.CAPABILITY,
+                        code="PINNED_WORKER_UNREACHABLE" if pinned else "NO_CAPABLE_WORKER",
                         message=str(exc),
-                        hint="Install the engine on a worker, or run this task locally.",
+                        hint=(
+                            "Wake the selected worker, choose another GPU, or run locally."
+                            if pinned else
+                            "Install the engine on a worker, or run this task locally."
+                        ),
                     ),
                     now=stamp,
                 )
@@ -783,11 +812,23 @@ class Scheduler:
         stamp = resolve(now)
         attempt = task.active_attempt
         task.cancel(reason=reason, now=stamp)
-        if attempt is not None:
-            self._release_slot(task, attempt, now=stamp)
+        # A live GPU call is not known to have stopped yet. Its slot remains
+        # parked in `in_flight` until the worker acknowledges TaskCancel.
         self._save(task, now=stamp)
         self._emit("cancelled", task)
         return True
+
+    def on_cancel_ack(
+        self, task_id: str, attempt_id: str, *, epoch: Optional[int] = None,
+        now: Optional[float] = None,
+    ) -> Optional[Task]:
+        task = self._fenced(task_id, attempt_id, epoch)
+        if task is None:
+            return None
+        attempt = task.get_attempt(attempt_id)
+        self._release_slot(task, attempt, now=now)
+        self._save(task, now=now)
+        return task
 
     # ── Sweeper ───────────────────────────────────────────────────────────
 

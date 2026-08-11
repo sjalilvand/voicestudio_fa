@@ -118,6 +118,41 @@ def test_queue_full_error_is_actionable():
     assert "add another worker" in str(exc.value).lower()
 
 
+def test_pin_is_a_hard_filter_in_both_selection_lists():
+    sched = _scheduler(_pool(_record("chosen"), _record("other")))
+    task = _submit(sched, pinned_worker_id="chosen")
+    assert [w.worker_id for w in sched.eligible_workers(task, now=1000.0)] == ["chosen"]
+    sched.pool.disconnect("chosen")
+    with pytest.raises(NoEligibleWorker, match="selected worker") as exc:
+        sched.select_worker(task, now=1001.0)
+    assert exc.value.retryable is False
+
+
+def test_pinned_capacity_races_do_not_spend_attempts_or_exclude_the_worker():
+    sched = _scheduler(_pool(_record("chosen")))
+    task = _submit(sched, pinned_worker_id="chosen", max_attempts=2)
+    for stamp in (1001.0, 1002.0, 1003.0):
+        assignment = sched.next_assignment(now=stamp)
+        sched.on_failed(
+            task.task_id, assignment.attempt.attempt_id,
+            WorkerError(error_class=ErrorClass.CAPACITY, code="WORKER_AT_CAPACITY", message="busy"),
+            epoch=1, now=stamp + 0.1,
+        )
+    assert task.state is TaskState.QUEUED
+    assert task.attempts_remaining == 2
+    assert task.excluded_workers == set()
+
+
+def test_unreachable_pin_fails_by_name_instead_of_leaking_or_waiting_forever():
+    sched = _scheduler(_pool(_record("other")))
+    task = _submit(sched, pinned_worker_id="chosen")
+
+    assert sched.next_assignment(now=1001.0) is None
+    assert task.state is TaskState.FAILED
+    assert task.error.code == "PINNED_WORKER_UNREACHABLE"
+    assert "chosen" in task.error.message
+
+
 # ── Ordering ───────────────────────────────────────────────────────────────
 
 
@@ -447,6 +482,20 @@ def test_disconnect_starts_a_grace_window_without_failing():
     assert a.attempt.grace_expires_at is not None
 
 
+def test_restore_stamps_a_deadline_on_legacy_queued_rows(monkeypatch):
+    from worker import task_store
+
+    task = _submit(_scheduler(_pool(_record("w1"))))
+    task.deadline_at = None
+    saves = []
+    monkeypatch.setattr(task_store, "load_unfinished", lambda: [task])
+    monkeypatch.setattr(task_store, "save", lambda saved, **kw: saves.append(saved.deadline_at))
+    sched = Scheduler(_pool(_record("w1")))
+    sched.restore(now=10_000.0)
+    assert task.deadline_at > 10_000.0
+    assert saves == [task.deadline_at]
+
+
 def test_grace_expiry_requeues_and_frees_the_slot():
     pool = _pool(_record("w1"), _record("w2"))
     sched = _scheduler(pool)
@@ -556,15 +605,41 @@ def test_queued_task_past_its_deadline_fails_with_a_clear_reason():
 # ── Cancellation ───────────────────────────────────────────────────────────
 
 
-def test_cancel_releases_capacity():
+def test_cancel_parks_capacity_until_worker_acknowledges():
     pool = _pool(_record("w1"))
     sched = _scheduler(pool)
     task = _submit(sched)
-    sched.next_assignment(now=1000.0)
+    assignment = sched.next_assignment(now=1000.0)
 
     assert sched.cancel(task.task_id, now=1001.0) is True
     assert task.state is TaskState.CANCELLED
+    assert pool.get("w1").capacity.active_tasks == 1
+    assert assignment.attempt.attempt_id in pool.get("w1").in_flight
+
+    sched.on_cancel_ack(
+        task.task_id, assignment.attempt.attempt_id, epoch=1, now=1002.0
+    )
     assert pool.get("w1").capacity.active_tasks == 0
+    assert assignment.attempt.attempt_id not in pool.get("w1").in_flight
+
+
+def test_cancelled_task_cannot_resurrect_to_completed():
+    sched = _scheduler(_pool(_record("w1")))
+    task = _submit(sched)
+    assignment = sched.next_assignment(now=1000.0)
+    sched.cancel(task.task_id, now=1001.0)
+
+    committed, _ = sched.on_result(
+        task.task_id,
+        assignment.attempt.attempt_id,
+        result_ref="late.wav",
+        epoch=1,
+        now=1002.0,
+    )
+
+    assert committed is False
+    assert task.state is TaskState.CANCELLED
+    assert task.result_ref is None
 
 
 def test_cancelling_a_finished_task_is_a_no_op():
@@ -687,6 +762,42 @@ async def test_a_cancelled_task_wakes_its_waiter():
     sched.cancel(task.task_id, now=1001.0)
 
     assert (await waiter).state is TaskState.CANCELLED
+
+
+def test_cancel_ack_releases_a_parked_slot_exactly_once():
+    pool = _pool(_record("w1"), slots=1)
+    sched = _scheduler(pool)
+    task = _submit(sched)
+    assignment = sched.next_assignment(now=1000.0)
+    sched.cancel(task.task_id, now=1001.0)
+    sched.on_cancel_ack(task.task_id, assignment.attempt.attempt_id, epoch=1, now=1002.0)
+    sched.on_cancel_ack(task.task_id, assignment.attempt.attempt_id, epoch=1, now=1003.0)
+    assert pool.get("w1").capacity.available_slots == 1
+
+
+@pytest.mark.asyncio
+async def test_control_plane_sends_task_cancel_to_the_attempt_owner():
+    from worker.service import ControlPlane
+
+    pool = _pool(_record("w1"), slots=1)
+    sched = _scheduler(pool)
+    task = _submit(sched)
+    assignment = sched.next_assignment(now=1000.0)
+    sent = []
+
+    class Servicer:
+        async def cancel(self, *args):
+            sent.append(args)
+            return True
+
+    plane = ControlPlane()
+    plane.scheduler = sched
+    plane.servicer = Servicer()
+    assert await plane.cancel(task.task_id, reason="caller left")
+    assert sent == [(
+        "w1", task.task_id, assignment.attempt.attempt_id,
+        assignment.attempt.session_epoch,
+    )]
 
 
 @pytest.mark.asyncio
@@ -836,6 +947,44 @@ def test_a_keepalive_cannot_outlive_the_execution_budget():
     assert a.attempt.error.code == "EXECUTION_TIMEOUT"
 
 
+def test_keepalive_distinguishes_slow_execution_from_a_wedge():
+    """A slow executor crosses 120s; a timer-only wedge still hits its phase cap."""
+    sched = _scheduler(_pool(_record("w1")))
+    _submit(sched)
+    a = _running(sched)
+    original_lease = a.attempt.lease_expires_at
+
+    # Timer frames prove the worker is alive, so crossing the original lease
+    # is not itself a failure.
+    clock = original_lease - 1.0
+    sched.on_progress(
+        a.task.task_id,
+        a.attempt.attempt_id,
+        progress=0.0,
+        keepalive=True,
+        epoch=1,
+        now=clock,
+    )
+    sched.sweep(now=original_lease + 1.0)
+    assert a.task.state is TaskState.RUNNING
+
+    # But keepalive=True carries no evidence of forward progress. Repeating it
+    # can renew only up to the execution phase budget.
+    while a.task.state is TaskState.RUNNING:
+        clock += 40.0
+        sched.on_progress(
+            a.task.task_id,
+            a.attempt.attempt_id,
+            progress=0.0,
+            keepalive=True,
+            epoch=1,
+            now=clock,
+        )
+        sched.sweep(now=clock)
+
+    assert a.attempt.error.code == "EXECUTION_TIMEOUT"
+
+
 def test_real_progress_renews_without_a_ceiling():
     """Slow is not wedged: a task that keeps producing output keeps its lease
     however long it takes (a 40-minute dub is not a hung task)."""
@@ -942,6 +1091,22 @@ def test_restore_rearms_the_lease_of_a_recovered_attempt(monkeypatch):
 
     assert sched.sweep(now=99_001.0) == []
     assert a.task.state is TaskState.RUNNING
+
+
+def test_restore_bounds_a_legacy_queued_task_with_no_deadline(monkeypatch):
+    """Pre-deadline rows otherwise survive every sweep forever."""
+    from worker import task_store
+
+    task = _submit(_scheduler(_pool(_record("w1"))))
+    task.deadline_at = None
+    saves = []
+    monkeypatch.setattr(task_store, "load_unfinished", lambda: [task])
+    monkeypatch.setattr(task_store, "save", lambda saved, now=None: saves.append(saved.deadline_at))
+
+    sched = Scheduler(_pool(_record("w1")))
+    assert sched.restore(now=10_000.0) == 1
+    assert task.deadline_at is not None and task.deadline_at > 10_000.0
+    assert saves == [task.deadline_at]
 
 
 # ── Zombie slots (B2) ──────────────────────────────────────────────────────

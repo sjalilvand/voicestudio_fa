@@ -307,6 +307,8 @@ class Task:
     deadline_at: Optional[float] = None
     error: Optional[WorkerError] = None
     result_ref: Optional[str] = None
+    # An explicit routing choice is a hard affinity, not a ranking hint.
+    pinned_worker_id: Optional[str] = None
     # Workers this task must not be sent to again: each failed attempt excludes
     # its worker so a retry is genuinely a different try, not the same one.
     excluded_workers: set[str] = field(default_factory=set)
@@ -326,7 +328,21 @@ class Task:
 
     @property
     def attempts_remaining(self) -> int:
-        return max(0, self.max_attempts - self.attempt_count)
+        # Capacity rejections and a stream disappearing before dispatch are
+        # advisory races, not executions. Keep their audit rows, but do not
+        # spend the retry budget on work that never started.
+        charged = sum(
+            1
+            for attempt in self.attempts
+            if not (
+                attempt.error is not None
+                and (
+                    attempt.error.error_class is ErrorClass.CAPACITY
+                    or attempt.error.code == "WORKER_UNREACHABLE"
+                )
+            )
+        )
+        return max(0, self.max_attempts - charged)
 
     def get_attempt(self, attempt_id: str) -> Optional[Attempt]:
         for attempt in self.attempts:
@@ -433,6 +449,14 @@ class Task:
         if not attempt.matches(session_epoch=session_epoch):
             raise LifecycleError("stale session epoch")
 
+        if self.state is TaskState.CANCELLED:
+            # Cancellation is authoritative. A worker may be unable to stop a
+            # native GPU call, but its late result cannot resurrect the task.
+            if not attempt.state.terminal:
+                attempt.state = AttemptState.CANCELLED
+                attempt.finished_at = resolve(now)
+            return False, attempt
+
         if self.state is TaskState.COMPLETED:
             # A duplicate. Ack-and-discard; never a second commit.
             if attempt.state is not AttemptState.COMMITTED:
@@ -494,7 +518,7 @@ class Task:
         # A worker that declined for capacity is not excluded — it was right,
         # and it will have room later. Everything else gets excluded so a
         # retry is a genuinely different try.
-        if error.error_class is not ErrorClass.CAPACITY:
+        if error.error_class is not ErrorClass.CAPACITY and not self.pinned_worker_id:
             self.excluded_workers.add(attempt.worker_id)
 
         self._settle_after_attempt(error, now=stamp)
@@ -515,7 +539,8 @@ class Task:
         stamp = resolve(now)
         attempt.state = AttemptState.LOST
         attempt.finished_at = stamp
-        self.excluded_workers.add(attempt.worker_id)
+        if not self.pinned_worker_id:
+            self.excluded_workers.add(attempt.worker_id)
         self._settle_after_attempt(
             WorkerError(
                 error_class=ErrorClass.TRANSIENT,
@@ -539,7 +564,16 @@ class Task:
             self._set_state(TaskState.TIMEOUT, now=now)
             return
         if not error.retryable or self.attempts_remaining <= 0:
-            self.error = error
+            self.error = (
+                WorkerError(
+                    error_class=error.error_class,
+                    code="PINNED_WORKER_EXHAUSTED",
+                    message=f"The selected worker {self.pinned_worker_id} could not finish the task.",
+                    hint="Wake or repair that worker, choose another GPU, or run locally.",
+                )
+                if self.pinned_worker_id and self.attempts_remaining <= 0
+                else error
+            )
             self._set_state(
                 TaskState.TIMEOUT if error.error_class is ErrorClass.TIMEOUT else TaskState.FAILED,
                 now=now,

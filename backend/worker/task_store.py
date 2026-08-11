@@ -88,6 +88,7 @@ def _row_to_task(row, attempts: list[Attempt]) -> Task:
         state=TaskState(row["state"]),
         max_attempts=int(row["max_attempts"]),
         created_at=float(row["created_at"]),
+        pinned_worker_id=row["pinned_worker_id"],
     )
     task.attempts = sorted(attempts, key=lambda a: a.attempt_number)
     task.finished_at = row["finished_at"]
@@ -373,6 +374,11 @@ def create(task: Task, *, project_id: Optional[str] = None, now: Optional[float]
     Idempotent on ``idempotency_key``: a client that retries its HTTP request
     gets the original task back rather than a second render of the same text.
 
+    ``pinned_worker_id`` deliberately follows core.db's additive schema
+    reconciliation instead of alembic: remote recovery also runs in bundled
+    installs where alembic may be unavailable, and the nullable column is a
+    backward-compatible affinity fact rather than a data transformation.
+
     Inputs are staged before the row is written, so the durable record names
     the artifacts the task owns. Persisting first would leave a task whose
     reference audio no purge can account for.
@@ -387,8 +393,8 @@ def create(task: Task, *, project_id: Optional[str] = None, now: Optional[float]
         conn.execute(
             "INSERT INTO remote_tasks "
             "(id, idempotency_key, operation, engine, model_id, params_json, priority, state, "
-            " max_attempts, excluded_json, project_id, created_at, updated_at, deadline_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " max_attempts, excluded_json, project_id, created_at, updated_at, deadline_at, pinned_worker_id) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 task.task_id,
                 task.idempotency_key,
@@ -404,6 +410,7 @@ def create(task: Task, *, project_id: Optional[str] = None, now: Optional[float]
                 stamp,
                 stamp,
                 task.deadline_at,
+                task.pinned_worker_id,
             ),
         )
     return task
@@ -458,7 +465,7 @@ def save(task: Task, *, now: Optional[float] = None) -> None:
     with db_conn() as conn:
         conn.execute(
             "UPDATE remote_tasks SET state=?, excluded_json=?, error_json=?, result_ref=?, "
-            "updated_at=?, deadline_at=?, finished_at=? WHERE id=?",
+            "updated_at=?, deadline_at=?, finished_at=?, pinned_worker_id=? WHERE id=?",
             (
                 task.state.value,
                 json.dumps(sorted(task.excluded_workers)),
@@ -467,6 +474,7 @@ def save(task: Task, *, now: Optional[float] = None) -> None:
                 stamp,
                 task.deadline_at,
                 task.finished_at,
+                task.pinned_worker_id,
                 task.task_id,
             ),
         )

@@ -2360,6 +2360,7 @@
     "started": "Mengunduh {{label}} — pantau progresnya di Pengaturan → Model, lalu coba lagi.",
     "install_failed": "Tidak dapat memulai unduhan: {{message}}"
   },
+  "model_missing": {"message":"Model ini belum diunduh di {{target}}.","download":"Unduh model","download_size":"Unduh ({{size}})","started":"Mengunduh di {{target}} — coba Buat lagi setelah selesai.","failed":"Tidak dapat memulai unduhan: {{message}}"},
   "backend_start_failure": {
     "notice": "Backend VoiceStudio gagal dijalankan — tidak ada yang bisa berjalan sampai backend hidup.",
     "view": "Lihat alasannya",

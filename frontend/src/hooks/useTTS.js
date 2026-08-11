@@ -14,6 +14,7 @@ import { CLONE_MAX_SECONDS, PRESETS } from '../utils/constants';
 import { buildDesignInstruct, designModeProfileId } from '../utils/voiceInstruct';
 import { toast } from 'react-hot-toast';
 import { toastErrorWithReport } from '../utils/errorToast';
+import { modelNotDownloadedPayload, toastModelNotDownloaded } from '../utils/modelNotDownloaded';
 import { addBreadcrumb } from '../utils/breadcrumbs';
 import i18next from 'i18next';
 const t = i18next.t.bind(i18next);
@@ -369,6 +370,8 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
       // Real generation failures get the "Report this bug" action.
       if (err?.name === 'AbortError') {
         toast.error(t('tts_errors.timeout'));
+      } else if (modelNotDownloadedPayload(err)) {
+        toastModelNotDownloaded(modelNotDownloadedPayload(err));
       } else {
         toastErrorWithReport(t('tts_errors.error_prefix', { message: err.message }), err);
       }

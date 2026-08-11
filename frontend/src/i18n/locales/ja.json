@@ -2360,6 +2360,7 @@
     "started": "{{label}} をダウンロード中 — 設定 → モデルで進行状況を確認し、完了後にもう一度お試しください。",
     "install_failed": "ダウンロードを開始できませんでした: {{message}}"
   },
+  "model_missing": {"message":"このモデルは {{target}} にダウンロードされていません。","download":"モデルをダウンロード","download_size":"ダウンロード（{{size}}）","started":"{{target}} でダウンロード中です。完了後にもう一度生成してください。","failed":"ダウンロードを開始できませんでした：{{message}}"},
   "backend_start_failure": {
     "notice": "VoiceStudio のバックエンドを起動できませんでした。起動するまで何も実行できません。",
     "view": "理由を見る",

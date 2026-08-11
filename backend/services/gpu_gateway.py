@@ -102,6 +102,17 @@ class ModelLoadTimeout(GatewayError):
     """A local engine did not finish loading inside the model-load budget."""
 
 
+class ModelNotDownloaded(GatewayError):
+    """The selected worker positively reported that required weights are absent."""
+
+    def __init__(self, *, engine: str, repo_ids: list[str], target: str, target_label: str):
+        super().__init__(f"This model is not downloaded on {target_label}.")
+        self.engine = engine
+        self.repo_ids = repo_ids
+        self.target = target
+        self.target_label = target_label
+
+
 class RemoteJobFailed(GatewayError):
     """Remote work started and then failed. Rule 2: this is not a fallback.
 
@@ -330,6 +341,10 @@ async def prewarm(
     """
     decision = decision or decide(op, control_plane=control_plane)
     if decision.remote:
+        _require_remote_download(engine, decision, control_plane=control_plane)
+        plane = _plane(control_plane)
+        if engine and plane is not None and getattr(plane, "servicer", None) is not None:
+            await plane.servicer.prewarm(decision.worker_id, engine=engine)
         return decision
     if backend is None:
         # The native model path warms itself through `model_manager.get_model`;
@@ -461,6 +476,8 @@ async def _run_remote(
     if scheduler is None:
         raise _NotDispatched("the control plane has no scheduler")
 
+    _require_remote_download(call.engine, decision, call.model_id, control_plane=plane)
+
     params = dict(call.params or {})
     deadline = call.deadline_seconds
     if deadline is None:
@@ -474,6 +491,7 @@ async def _run_remote(
             params=params,
             idempotency_key=call.idempotency_key,
             deadline_seconds=deadline,
+            pinned_worker_id=decision.worker_id,
         )
     except QueueFull as exc:
         raise _NotDispatched(str(exc)) from exc
@@ -484,6 +502,7 @@ async def _run_remote(
         settled = await _await_task(
             scheduler, task.task_id, timeout=deadline,
             on_state=on_state, label=decision.label,
+            control_plane=plane,
         )
     except KeyError as exc:
         # The scheduler no longer holds the task (purged, or restored into a
@@ -501,7 +520,36 @@ async def _run_remote(
     return _decode(call, settled, decision)
 
 
-async def _await_task(scheduler, task_id: str, *, timeout: float, on_state, label: str):
+def _require_remote_download(
+    engine: str,
+    decision: Decision,
+    model_id: str = "",
+    *,
+    control_plane=None,
+) -> None:
+    """Reject only an explicit downloaded=false report; missing facts fail open."""
+    plane = _plane(control_plane)
+    pool = getattr(plane, "pool", None) if plane is not None else None
+    worker = pool.get(decision.worker_id) if pool is not None else None
+    if worker is None:
+        return
+    for cap in worker.record.capabilities or []:
+        if cap.get("engine") != engine:
+            continue
+        if model_id and cap.get("model_id") not in (model_id, "", None):
+            continue
+        if cap.get("downloaded") is False and cap.get("repo_ids"):
+            raise ModelNotDownloaded(
+                engine=engine,
+                repo_ids=list(cap["repo_ids"]),
+                target=decision.worker_id,
+                target_label=decision.label,
+            )
+
+
+async def _await_task(
+    scheduler, task_id: str, *, timeout: float, on_state, label: str, control_plane=None
+):
     """Await a terminal task, reporting coarse progress, cancelling if we leave.
 
     Every exit that is not a terminal task cancels the remote task, because a
@@ -532,11 +580,11 @@ async def _await_task(scheduler, task_id: str, *, timeout: float, on_state, labe
         raise
     except asyncio.CancelledError:
         waiter.cancel()
-        _cancel(scheduler, task_id, "the client stopped waiting")
+        await _cancel(control_plane, scheduler, task_id, "the client stopped waiting")
         raise
     except BaseException:
         waiter.cancel()
-        _cancel(scheduler, task_id, "the task passed its deadline")
+        await _cancel(control_plane, scheduler, task_id, "the task passed its deadline")
         raise
 
 
@@ -581,9 +629,12 @@ def _emit(on_state, payload: dict) -> None:
         logger.debug("Remote progress listener failed", exc_info=True)
 
 
-def _cancel(scheduler, task_id: str, reason: str) -> None:
+async def _cancel(control_plane, scheduler, task_id: str, reason: str) -> None:
     try:
-        scheduler.cancel(task_id, reason=reason)
+        if control_plane is not None and hasattr(control_plane, "cancel"):
+            await control_plane.cancel(task_id, reason=reason)
+        else:
+            scheduler.cancel(task_id, reason=reason)
     except Exception:
         logger.exception("Could not cancel abandoned remote task %s", task_id)
 
@@ -635,14 +686,18 @@ def _decode(call: RemoteCall, task, decision: Decision) -> Any:
 
 def _classify(task, reason: str, decision: Decision):
     """``_NotDispatched`` while nothing ran; ``RemoteJobFailed`` once it did."""
-    if not _work_started(task):
-        return _NotDispatched(reason)
     error = getattr(task, "error", None)
+    code = getattr(error, "code", "") or ""
+    # An explicit target is a user choice, not permission to leak onto local
+    # compute when that machine is asleep. Preserve the scheduler's named
+    # pinned verdict even though no worker accepted the attempt.
+    if not _work_started(task) and not code.startswith("PINNED_WORKER_"):
+        return _NotDispatched(reason)
     return RemoteJobFailed(
         f"{decision.label} did not finish this job: {reason}",
         worker_label=decision.label,
         task_id=task.task_id,
-        code=getattr(error, "code", "") or "",
+        code=code,
         hint=getattr(error, "hint", "") or "",
     )
 
@@ -779,11 +834,23 @@ async def download(
     """
     decision = decision or decide(op, control_plane=control_plane)
     if decision.remote:
-        raise RemoteUnsupported(
-            f"Model downloads do not run on {decision.label} yet — the weights "
-            f"would land on this machine instead. Install the model on "
-            f"{decision.label} directly, or switch the GPU target to Local."
+        plane = _plane(control_plane)
+        if plane is None or getattr(plane, "servicer", None) is None:
+            raise RemoteUnsupported(f"{decision.label} is not connected.")
+        live = plane.pool.get(decision.worker_id) if plane.pool is not None else None
+        advertised = {
+            repo
+            for cap in (live.record.capabilities if live is not None else [])
+            for repo in (cap.get("repo_ids") or [])
+        }
+        if repo_id not in advertised:
+            raise GatewayError(f"Unknown model for {decision.label}: {repo_id!r}.")
+        sent = await plane.servicer.prewarm(
+            decision.worker_id, engine="", model_id=repo_id, download_if_missing=True
         )
+        if not sent:
+            raise RemoteUnsupported(f"{decision.label} is not connected.")
+        return {"status": "started", "repo_id": repo_id, "target": decision.worker_id}
 
     from api.routers.setup.download import (  # noqa: PLC0415
         InstallModelRequest,
@@ -832,6 +899,7 @@ def _model_load_timeout() -> float:
 
 __all__ = [
     "GatewayError",
+    "ModelNotDownloaded",
     "JobRun",
     "LOCAL",
     "LocalCall",

@@ -4,6 +4,16 @@ VoiceStudio downloads models from the Hugging Face Hub on first use. This page
 explains how downloads are made fast, how to read the progress, and what to do
 on slow or restricted networks.
 
+When a remote GPU is selected, the catalog is filtered and curated for that
+worker's reported OS, architecture, and GPU backend—not for the control-plane
+computer. Generation checks the worker's capability report before submitting a
+job. If the required weights are positively known to be absent, VoiceStudio
+shows “model not downloaded on &lt;worker&gt;” with a download action. The download
+runs on that worker and refreshes its capabilities when it finishes; press
+Generate again afterward (the interrupted job is not automatically resubmitted).
+Unknown or user-managed cache layouts are allowed through so existing manual
+engine installs remain compatible.
+
 ## Download backend: legacy LFS by default (accurate progress)
 
 VoiceStudio ships `hf_xet` (Hugging Face's chunked, parallel, dedup transfer

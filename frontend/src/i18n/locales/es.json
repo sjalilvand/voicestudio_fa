@@ -2360,6 +2360,7 @@
     "started": "Descargando {{label}} — sigue el progreso en Ajustes → Modelos y vuelve a intentarlo.",
     "install_failed": "No se pudo iniciar la descarga: {{message}}"
   },
+  "model_missing": {"message":"Este modelo no está descargado en {{target}}.","download":"Descargar modelo","download_size":"Descargar ({{size}})","started":"Descargando en {{target}}; vuelve a pulsar Generar cuando termine.","failed":"No se pudo iniciar la descarga: {{message}}"},
   "backend_start_failure": {
     "notice": "El backend de VoiceStudio no pudo iniciarse: nada funcionará hasta que lo haga.",
     "view": "Ver el motivo",

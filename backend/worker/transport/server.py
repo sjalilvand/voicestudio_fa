@@ -567,6 +567,11 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
             return
 
         if kind == "cancel_ack":
+            ref = message.cancel_ack.ref
+            if self._owns(session, ref):
+                self.scheduler.on_cancel_ack(
+                    ref.task_id, ref.attempt_id, epoch=ref.session_epoch
+                )
             return
 
         if kind == "result":
@@ -827,6 +832,17 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         await session.send(
             pb.ServerMessage(drain=pb.Drain(deadline_seconds=deadline_seconds))
         )
+        return True
+
+    async def prewarm(
+        self, worker_id: str, *, engine: str, model_id: str = "", download_if_missing: bool = False
+    ) -> bool:
+        session = self._sessions.get(worker_id)
+        if session is None:
+            return False
+        await session.send(pb.ServerMessage(prewarm=pb.PrewarmRequest(
+            engine=engine, model_id=model_id, download_if_missing=download_if_missing,
+        )))
         return True
 
     # ── Artifact transfer ─────────────────────────────────────────────────

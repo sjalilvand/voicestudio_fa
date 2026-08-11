@@ -60,6 +60,11 @@ class TargetRequest(BaseModel):
     target: str = Field(..., max_length=64)
 
 
+class ModelDownloadRequest(BaseModel):
+    repo_id: str = Field(..., max_length=256)
+    target: str = Field(..., max_length=64)
+
+
 class WorkerUpdate(BaseModel):
     name: str | None = Field(None, max_length=120)
     enabled: bool | None = None
@@ -117,6 +122,20 @@ def set_target(request: TargetRequest) -> dict:
             raise HTTPException(status_code=404, detail="No such worker.")
     routing.set_target_id(chosen)
     return routing.status()
+
+
+@router.post("/models/download")
+async def download_model(request: ModelDownloadRequest) -> dict:
+    """Start a catalog model download on the worker named by the 409."""
+    from services import gpu_gateway
+
+    decision = routing.decide()
+    if not decision.remote or decision.worker_id != request.target:
+        raise HTTPException(status_code=409, detail="The selected GPU target changed; try again.")
+    try:
+        return await gpu_gateway.download(request.repo_id, decision=decision)
+    except gpu_gateway.GatewayError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("/enabled")
@@ -265,6 +284,7 @@ async def submit_task(request: Request, body: SubmitTaskRequest) -> dict:
             params=body.params,
             idempotency_key=body.idempotency_key or None,
             deadline_seconds=body.deadline_seconds,
+            pinned_worker_id=routing.decide().worker_id or None,
         )
     except QueueFull as exc:
         raise HTTPException(status_code=429, detail=str(exc)) from exc
@@ -297,7 +317,7 @@ async def submit_task(request: Request, body: SubmitTaskRequest) -> dict:
         # a failure here would replace the caller's real error with a 500.
         if settled is None and reason is not None:
             try:
-                scheduler.cancel(task.task_id, reason=reason)
+                await service.control_plane.cancel(task.task_id, reason=reason)
             except Exception:
                 logger.exception("Could not cancel abandoned remote task %s", task.task_id)
 
@@ -331,10 +351,10 @@ async def _await_terminal(request: Request, scheduler, task_id: str, *, timeout:
 
 
 @router.post("/tasks/{task_id}/cancel")
-def cancel_task(task_id: str) -> dict:
+async def cancel_task(task_id: str) -> dict:
     if not service.control_plane.running:
         raise HTTPException(status_code=409, detail="Remote workers are turned off.")
-    cancelled = service.control_plane.scheduler.cancel(task_id, reason="cancelled by user")
+    cancelled = await service.control_plane.cancel(task_id, reason="cancelled by user")
     if not cancelled:
         raise HTTPException(status_code=404, detail="No such active task.")
     return {"ok": True}

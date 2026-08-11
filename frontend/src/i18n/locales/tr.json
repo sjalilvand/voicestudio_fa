@@ -2360,6 +2360,7 @@
     "started": "{{label}} indiriliyor — ilerlemeyi Ayarlar → Modeller'den izleyin, sonra yeniden deneyin.",
     "install_failed": "İndirme başlatılamadı: {{message}}"
   },
+  "model_missing": {"message":"Bu model {{target}} üzerine indirilmemiş.","download":"Modeli indir","download_size":"İndir ({{size}})","started":"{{target}} üzerine indiriliyor — bitince yeniden Oluştur'a basın.","failed":"İndirme başlatılamadı: {{message}}"},
   "backend_start_failure": {
     "notice": "VoiceStudio arka ucu başlatılamadı — başlayana kadar hiçbir şey çalışmaz.",
     "view": "Nedenini gör",

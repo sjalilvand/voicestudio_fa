@@ -2011,6 +2011,25 @@ async def generate_speech(
         )
     except HTTPException:
         raise
+    except gpu_gateway.ModelNotDownloaded as e:
+        size_bytes = None
+        try:
+            from api.routers.setup.models import KNOWN_MODELS
+
+            sizes = [m.get("size_gb") for m in KNOWN_MODELS if m.get("repo_id") in e.repo_ids]
+            if sizes and all(size is not None for size in sizes):
+                size_bytes = int(sum(float(size) for size in sizes) * 1024**3)
+        except Exception:
+            pass
+        raise HTTPException(status_code=409, detail={
+            "error": "model_not_downloaded",
+            "message": str(e),
+            "engine": e.engine,
+            "repo_ids": e.repo_ids,
+            "size_bytes": size_bytes,
+            "target": e.target,
+            "target_label": e.target_label,
+        }) from e
     except gpu_gateway.RemoteJobFailed as e:
         # Rule 2 of the fallback policy: a single-shot interactive render that
         # failed ON the worker is reported, not silently redone here. Minutes

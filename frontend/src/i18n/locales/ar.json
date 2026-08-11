@@ -2360,6 +2360,7 @@
     "started": "جارٍ تنزيل {{label}} — تابع التقدم في الإعدادات ← النماذج، ثم حاول مرة أخرى.",
     "install_failed": "تعذّر بدء التنزيل: {{message}}"
   },
+  "model_missing": {"message":"لم يتم تنزيل هذا النموذج على {{target}}.","download":"تنزيل النموذج","download_size":"تنزيل ({{size}})","started":"بدأ التنزيل على {{target}} — أعد التوليد بعد اكتماله.","failed":"تعذر بدء التنزيل: {{message}}"},
   "backend_start_failure": {
     "notice": "تعذّر تشغيل الواجهة الخلفية لـ VoiceStudio — لن يعمل أي شيء حتى تبدأ.",
     "view": "عرض السبب",

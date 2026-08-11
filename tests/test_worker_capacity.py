@@ -69,6 +69,31 @@ def test_reserve_and_release_round_trip():
     assert cap.available_slots == 2
 
 
+def test_engine_only_capability_and_named_task_share_one_slot():
+    """An old worker's model_id="" is a wildcard, not extra capacity."""
+    cap = _cap(max_concurrent_tasks=2)
+    cap.slots["indextts:"] = ModelSlot(
+        engine="indextts", model_id="", derived_concurrency=1
+    )
+
+    cap.reserve("indextts", "indextts:default")
+
+    assert set(cap.slots) == {"indextts:"}
+    assert cap.can_accept("indextts", "indextts:default") is False
+    assert cap.release("indextts", "indextts:default") is True
+
+
+def test_engine_only_task_matching_remains_tolerant():
+    """Restored tasks may still match a capability by engine alone."""
+    cap = _cap()
+    cap.slots["indextts:"] = ModelSlot(engine="indextts", model_id="")
+
+    cap.reserve("indextts", "")
+
+    assert cap.slot_for("indextts", "") is cap.slots["indextts:"]
+    assert cap.release("indextts", "") is True
+
+
 def test_timeout_parks_a_zombie_slot_instead_of_returning_it():
     """A timed-out GPU job cannot be killed — the thread keeps the device.
     Returning the slot early is how a worker gets overcommitted into an OOM."""

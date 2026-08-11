@@ -2900,6 +2900,7 @@
     "started": "Downloading {{label}} — watch progress in Settings → Models, then try again.",
     "install_failed": "Couldn't start the download: {{message}}"
   },
+  "model_missing": {"message":"This model is not downloaded on {{target}}.","download":"Download model","download_size":"Download ({{size}})","started":"Downloading on {{target}} — try Generate again when it finishes.","failed":"Couldn't start the download: {{message}}"},
   "gpu": {
     "local": "Local",
     "picker": "Where jobs run",

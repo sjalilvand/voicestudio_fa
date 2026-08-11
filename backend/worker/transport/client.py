@@ -436,6 +436,19 @@ class WorkerClient:
             if c.get("resident")
         ]
 
+    async def refresh_capabilities(self) -> None:
+        """Re-probe and publish after model/download/residency changes."""
+        if self._capability_probe is None:
+            return
+        try:
+            capabilities = self._capability_probe()
+            self.config.capabilities = capabilities
+            await self._send(pb.WorkerMessage(capabilities=pb.CapabilityUpdate(
+                capabilities=[codec.capability_to_pb(c) for c in capabilities]
+            )))
+        except Exception:
+            logger.warning("Could not refresh worker capabilities", exc_info=True)
+
     async def _redeliver_pending(self) -> None:
         """Re-send anything the server never acknowledged."""
         for pending in list(self._pending.values()):
@@ -491,6 +504,27 @@ class WorkerClient:
             self._stop.set()
         elif kind == "shutdown":
             self._stop.set()
+        elif kind == "prewarm":
+            asyncio.create_task(self._on_prewarm(message.prewarm), name="worker-prewarm")
+
+    async def _on_prewarm(self, request: pb.PrewarmRequest) -> None:
+        """Load/download a catalog model, then report the resulting capability."""
+        engine = request.engine
+        if not engine and request.model_id:
+            for cap in self.config.capabilities or []:
+                if request.model_id in (cap.get("repo_ids") or []):
+                    engine = str(cap.get("engine") or "")
+                    break
+        try:
+            if not engine:
+                raise ValueError("the requested catalog model has no worker engine")
+            from worker.executor import TaskExecutor  # noqa: PLC0415
+
+            await asyncio.to_thread(TaskExecutor._load_backend, engine)
+        except Exception:
+            logger.warning("Prewarm failed for %s", engine or request.model_id, exc_info=True)
+        finally:
+            await self.refresh_capabilities()
 
     @staticmethod
     def _key(ref: pb.TaskRef) -> str:
@@ -592,6 +626,7 @@ class WorkerClient:
             # outlive the task that owns it.
             self._stop_keepalive(key)
             self._running.pop(key, None)
+            await self.refresh_capabilities()
 
     async def _fail(self, ref: pb.TaskRef, error: WorkerError) -> None:
         await self._send(

@@ -108,6 +108,16 @@ class FakePool:
         return self._worker
 
 
+class CapabilityWorker:
+    class Record:
+        capabilities = [{
+            "engine": "indextts", "model_id": "indextts:default",
+            "supported": True, "installed": True, "downloaded": False,
+            "repo_ids": ["IndexTeam/IndexTTS-2"], "operations": ["tts"],
+        }]
+    record = Record()
+
+
 def local_call(value="local", *, boom=None):
     def _fn():
         if boom is not None:
@@ -255,6 +265,33 @@ async def test_prewarm_does_not_disguise_pool_saturation(pool_executor, monkeypa
 
 
 @pytest.mark.asyncio
+async def test_positive_missing_model_stops_before_submit():
+    scheduler = FakeScheduler()
+    plane = FakePlane(scheduler, pool=FakePool(CapabilityWorker()))
+    with pytest.raises(gpu_gateway.ModelNotDownloaded) as caught:
+        await gpu_gateway.run(
+            "tts", local=local_call(), remote=remote_call(), decision=REMOTE,
+            control_plane=plane,
+        )
+    assert scheduler.submitted == []
+    assert caught.value.repo_ids == ["IndexTeam/IndexTTS-2"]
+
+
+@pytest.mark.asyncio
+async def test_missing_download_fact_fails_open(tmp_path):
+    worker = CapabilityWorker()
+    worker.record.capabilities = [{"engine": "indextts", "installed": True}]
+    artifact = tmp_path / "a1.bin"
+    artifact.write_bytes(b"ok")
+    scheduler = FakeScheduler(result_ref=str(artifact))
+    plane = FakePlane(scheduler, pool=FakePool(worker))
+    assert await gpu_gateway.run(
+        "tts", local=local_call(), remote=remote_call(decode=lambda r: r.read()),
+        decision=REMOTE, control_plane=plane,
+    ) == b"ok"
+
+
+@pytest.mark.asyncio
 async def test_remote_target_submits_and_decodes(tmp_path, pool_executor):
     artifact = tmp_path / "a1.bin"
     artifact.write_bytes(b"wav")
@@ -270,6 +307,7 @@ async def test_remote_target_submits_and_decodes(tmp_path, pool_executor):
     assert value == b"wav"
     assert scheduler.submitted[0]["engine"] == "indextts"
     assert scheduler.submitted[0]["deadline_seconds"] > 0
+    assert scheduler.submitted[0]["pinned_worker_id"] == REMOTE.worker_id
 
 
 @pytest.mark.asyncio

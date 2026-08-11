@@ -11,6 +11,7 @@ import asyncio
 import socket
 import sqlite3
 
+import grpc
 import pytest
 import pytest_asyncio
 
@@ -20,10 +21,8 @@ from worker.identity import WorkerKeypair
 from worker.lifecycle import TaskState
 from worker.pool import WorkerPool
 from worker.protocol.gen import worker_v1_pb2 as pb
-from worker.scheduler import Scheduler
-import grpc
-
 from worker.protocol.gen import worker_v1_pb2_grpc as pb_grpc
+from worker.scheduler import Scheduler
 from worker.transport import codec
 from worker.transport.client import WorkerClient, WorkerConfig, backoff_delay, config_from_token
 from worker.transport.server import WorkerServicer, serve
@@ -170,11 +169,55 @@ def test_apple_capability_stays_serial():
 
 
 def test_capability_round_trips():
-    original = _capabilities(resident=True)[0]
+    original = {**_capabilities(resident=True)[0], "display_name": "IndexTTS 2"}
     restored = codec.capability_from_pb(codec.capability_to_pb(original))
     assert restored["engine"] == original["engine"]
     assert restored["resident"] is True
     assert restored["installed"] is True
+    assert restored["display_name"] == "IndexTTS 2"
+
+
+def test_legacy_capability_without_display_name_still_decodes():
+    restored = codec.capability_from_pb(pb.ModelCapability(engine=ENGINE, model_id=MODEL))
+    assert restored["engine"] == ENGINE
+    assert restored["display_name"] == ""
+
+
+@pytest.mark.asyncio
+async def test_cancel_is_sent_and_ack_releases_the_parked_slot(tmp_path):
+    pool = WorkerPool()
+    record = registry.RemoteWorker(
+        id="w1", name="w1", key_id="key-w1", public_key=b"0" * 32,
+        capabilities=_capabilities(), consent_granted_at=1.0, created_at=1.0,
+    )
+    token = identity.issue_session(worker_id="w1", key_id="key-w1", epoch=1, now=1000.0)
+    pool.connect(record, session=token, epoch=1, max_concurrent_tasks=1, backend="cuda", now=1000.0)
+    scheduler = Scheduler(pool, persist=False)
+    task = scheduler.submit(operation=OP, engine=ENGINE, model_id=MODEL, now=1000.0)
+    assignment = scheduler.next_assignment(now=1000.0)
+    servicer = WorkerServicer(scheduler, pool, artifact_dir=str(tmp_path))
+
+    class Session:
+        worker_id = "w1"
+
+        def __init__(self):
+            self.sent = []
+
+        async def send(self, message):
+            self.sent.append(message)
+
+    session = Session()
+    servicer._sessions["w1"] = session
+    scheduler.cancel(task.task_id, now=1001.0)
+    assert await servicer.cancel("w1", task.task_id, assignment.attempt.attempt_id, 1)
+    assert session.sent[-1].WhichOneof("payload") == "cancel"
+    assert pool.get("w1").capacity.active_tasks == 1
+
+    await servicer._handle(
+        session,
+        pb.WorkerMessage(cancel_ack=pb.TaskCancelAck(ref=session.sent[-1].cancel.ref)),
+    )
+    assert pool.get("w1").capacity.active_tasks == 0
 
 
 def test_host_round_trips():
@@ -341,6 +384,41 @@ async def test_task_flows_end_to_end(harness):
 
     assert harness.executed == [task.task_id]
     assert completed.result_ref is not None
+
+
+@pytest.mark.asyncio
+async def test_keepalive_frame_carries_slow_task_past_one_progress_lease(
+    harness, monkeypatch
+):
+    """No real 120s sleep: advance the scheduler at its injected ``now`` seam."""
+    from worker.transport import client as client_module
+
+    release = asyncio.Event()
+
+    async def _slow(_assignment):
+        await release.wait()
+        return {"meta": {}, "payload": b"audio"}
+
+    monkeypatch.setattr(client_module, "keepalive_interval", lambda _lease: 0.01)
+    await harness.connect_worker(execute=_slow)
+    task = harness.scheduler.submit(operation=OP, engine=ENGINE, model_id=MODEL)
+    assignment = harness.scheduler.next_assignment(now=1_000.0)
+    await harness.servicer.dispatch(assignment)
+    running = await harness.await_state(task.task_id, TaskState.RUNNING)
+    attempt = running.active_attempt
+    initial_expiry = attempt.lease_expires_at
+
+    deadline = asyncio.get_running_loop().time() + 2.0
+    while attempt.lease_expires_at <= initial_expiry:
+        assert asyncio.get_running_loop().time() < deadline, "no keepalive reached the server"
+        await asyncio.sleep(0.01)
+
+    harness.scheduler.sweep(now=initial_expiry + 1.0)
+    assert task.state is TaskState.RUNNING
+    assert attempt.progress == 0.0, "a keepalive must not impersonate real progress"
+
+    release.set()
+    await harness.await_state(task.task_id, TaskState.COMPLETED)
 
 
 @pytest.mark.asyncio
@@ -516,6 +594,36 @@ def test_default_hostnames_include_a_routable_address():
         assert address in names
 
 
+@pytest.mark.asyncio
+async def test_server_accepts_the_keepalive_interval_it_configures(monkeypatch):
+    """The server must not evict healthy idle workers for its own ping policy."""
+    captured = {}
+
+    class FakeServer:
+        def add_secure_port(self, *_args):
+            return 7443
+
+        async def start(self):
+            pass
+
+    def fake_server(*, options):
+        captured.update(dict(options))
+        return FakeServer()
+
+    monkeypatch.setattr(grpc.aio, "server", fake_server)
+    monkeypatch.setattr(pb_grpc, "add_WorkerServiceServicer_to_server", lambda *_args: None)
+    monkeypatch.setattr(grpc, "ssl_server_credentials", lambda *_args: object())
+
+    await serve(
+        object(),
+        certificate_pem=b"certificate",
+        private_key_pem=b"private-key",
+    )
+
+    assert captured["grpc.http2.min_ping_interval_without_data_ms"] <= 25_000
+    assert captured["grpc.http2.max_pings_without_data"] == 0
+
+
 def test_certificate_regenerates_when_it_stops_covering_this_machine(tmp_path, monkeypatch):
     """A laptop that moved networks otherwise keeps a certificate no worker on
     the new network can validate."""
@@ -587,34 +695,3 @@ async def test_a_restarted_worker_reconnects_without_a_new_token(harness, tmp_pa
         await revived.stop()
     finally:
         worker_agent._paths = original_paths
-
-
-
-@pytest.mark.asyncio
-async def test_server_accepts_the_keepalive_interval_it_configures(monkeypatch):
-    """The server must not evict healthy idle workers for its own ping policy."""
-    captured = {}
-
-    class FakeServer:
-        def add_secure_port(self, *_args):
-            return 7443
-
-        async def start(self):
-            pass
-
-    def fake_server(*, options):
-        captured.update(dict(options))
-        return FakeServer()
-
-    monkeypatch.setattr(grpc.aio, "server", fake_server)
-    monkeypatch.setattr(pb_grpc, "add_WorkerServiceServicer_to_server", lambda *_args: None)
-    monkeypatch.setattr(grpc, "ssl_server_credentials", lambda *_args: object())
-
-    await serve(
-        object(),
-        certificate_pem=b"certificate",
-        private_key_pem=b"private-key",
-    )
-
-    assert captured["grpc.http2.min_ping_interval_without_data_ms"] <= 25_000
-    assert captured["grpc.http2.max_pings_without_data"] == 0

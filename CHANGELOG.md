@@ -45,6 +45,9 @@ The bundled TTS model package (`pyproject.toml`) is versioned independently.
 
 ### Fixed
 
+- Remote GPU jobs stay pinned to the selected worker across retries and restarts, stop when their caller leaves, and cannot return from cancellation as completed. (#1478)
+- Remote GPU model labels now survive registration, legacy blank model IDs share one capacity slot, long jobs retain bounded leases, and idle cleanup cannot evict a live local render. (#1478)
+- Remote GPU jobs now stop before dispatch when that worker lacks the model, offer the download there, and refresh scheduling as soon as it finishes. (#1478)
 - Filenames and other outside data can no longer forge extra lines or terminal commands in backend and frontend diagnostic logs. (#1457)
 - Backend journal, dictation reset, voice-catalog, and crash-notification failures are now visible and retryable instead of being silently ignored. (#1459)
 - Backend failures keep raw tracebacks, local paths and credentials in the local log instead of returning them in API responses. (#1454)
