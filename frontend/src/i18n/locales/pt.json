@@ -330,7 +330,8 @@
     "no": "Não",
     "more_info": "Mais informações",
     "learn_more": "Saiba mais",
-    "saving": "Salvando…"
+    "saving": "Salvando…",
+    "remove": "Remover {{term}}"
   },
   "launchpad": {
     "greeting": "Olá",
@@ -924,7 +925,10 @@
     "paste_translation_row_unmatched": "sem correspondência — inalterado",
     "paste_translation_apply": "Aplicar a {{count}} segmentos",
     "paste_translation_cancel": "Cancelar",
-    "paste_translation_more_rows": "+ {{count}} linhas adicionais"
+    "paste_translation_more_rows": "+ {{count}} linhas adicionais",
+    "languages_selected": "{{count}} idiomas selecionados",
+    "multi_translating": "Traduzindo → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "A tradução de {{langs}} falhou; essas dublagens foram ignoradas para evitar uma faixa no idioma errado."
   },
   "glossary": {
     "title": "Glossário",

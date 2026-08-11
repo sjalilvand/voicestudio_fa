@@ -330,7 +330,8 @@
     "no": "Нет",
     "more_info": "Дополнительная информация",
     "learn_more": "Узнать больше",
-    "saving": "Сохранение…"
+    "saving": "Сохранение…",
+    "remove": "Удалить {{term}}"
   },
   "launchpad": {
     "greeting": "привет",
@@ -924,7 +925,10 @@
     "paste_translation_row_unmatched": "нет совпадения — без изменений",
     "paste_translation_apply": "Применить к {{count}} сегментам",
     "paste_translation_cancel": "Отмена",
-    "paste_translation_more_rows": "+ ещё {{count}} строк"
+    "paste_translation_more_rows": "+ ещё {{count}} строк",
+    "languages_selected": "Выбрано языков: {{count}}",
+    "multi_translating": "Перевод → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "Не удалось перевести {{langs}}. Эти дорожки пропущены, чтобы не создать озвучку на неверном языке."
   },
   "glossary": {
     "title": "Глоссарий",

@@ -194,6 +194,44 @@ beforeEach(() => {
 });
 
 describe('multi-language workflow integration', () => {
+  it('shares one lock between translate and generate while a language batch is active', async () => {
+    let releaseFirstTranslation;
+    dubApi.dubTranslate.mockImplementationOnce(
+      (body) =>
+        new Promise((resolve) => {
+          releaseFirstTranslation = () =>
+            resolve({
+              translated: body.segments.map((segment) => ({
+                id: segment.id,
+                text: `${body.target_lang}:${segment.text}`,
+              })),
+              target_lang: body.target_lang,
+            });
+        }),
+    );
+    render(<Harness />);
+
+    let inFlight;
+    await act(async () => {
+      inFlight = captured.left.at(-1).handleTranslateAll();
+      await Promise.resolve();
+    });
+
+    expect(captured.right.at(-1).multiBatchBusy).toBe(true);
+    await act(async () => {
+      await captured.header.at(-1).onGenerateClick();
+      await captured.left.at(-1).handleTranslateAll();
+    });
+    expect(dubApi.dubTranslate).toHaveBeenCalledTimes(1);
+    expect(dubApi.dubGenerate).not.toHaveBeenCalled();
+
+    releaseFirstTranslation();
+    await act(async () => {
+      await inFlight;
+    });
+    expect(captured.right.at(-1).multiBatchBusy).toBe(false);
+  });
+
   it('translates primary + 4 chips, generates their own texts/tracks, and exposes all to export', async () => {
     render(<Harness />);
 

@@ -1212,7 +1212,8 @@
     "paste_translation_row_unmatched": "no match — left unchanged",
     "paste_translation_apply": "Apply to {{count}} segments",
     "paste_translation_cancel": "Cancel",
-    "paste_translation_more_rows": "+ {{count}} more rows"
+    "paste_translation_more_rows": "+ {{count}} more rows",
+    "languages_selected": "{{count}} languages selected"
   },
   "glossary": {
     "title": "Glossary",
@@ -2013,7 +2014,8 @@
     "more_info": "More info",
     "learn_more": "Learn more",
     "saving": "Saving…",
-    "unknown": "unknown"
+    "unknown": "unknown",
+    "remove": "Remove {{term}}"
   },
   "keyboard": {
     "title": "Keyboard shortcuts",

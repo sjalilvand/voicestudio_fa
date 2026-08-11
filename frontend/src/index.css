@@ -2495,7 +2495,6 @@ input[type="file"]::file-selector-button:hover {
 .multi-lang__drop {
   position: fixed;
   z-index: var(--z-overlay);
-  margin-top: 4px;
   background: var(--chrome-bg);
   border: 1px solid var(--chrome-border-strong);
   border-radius: 8px;

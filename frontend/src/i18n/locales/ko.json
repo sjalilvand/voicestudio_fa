@@ -330,7 +330,8 @@
     "no": "아니요",
     "more_info": "추가 정보",
     "learn_more": "자세히 알아보기",
-    "saving": "저장 중…"
+    "saving": "저장 중…",
+    "remove": "{{term}} 삭제"
   },
   "launchpad": {
     "greeting": "안녕하세요",
@@ -924,7 +925,10 @@
     "paste_translation_row_unmatched": "일치 없음 — 변경 안 함",
     "paste_translation_apply": "{{count}}개 세그먼트에 적용",
     "paste_translation_cancel": "취소",
-    "paste_translation_more_rows": "+ {{count}}개 행 더"
+    "paste_translation_more_rows": "+ {{count}}개 행 더",
+    "languages_selected": "{{count}}개 언어 선택됨",
+    "multi_translating": "번역 중 → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "{{langs}} 번역에 실패하여 잘못된 언어의 트랙이 생성되지 않도록 해당 더빙을 건너뛰었습니다."
   },
   "glossary": {
     "title": "용어집",

@@ -223,10 +223,12 @@ export default function DubTab(props) {
   // A pick whose translate fails is skipped (never render a wrong-language
   // track); the batch continues and the skips are reported at the end.
   const multiBatchRunningRef = useRef(false);
+  const [multiBatchBusy, setMultiBatchBusy] = useState(false);
   const onGenerateClick = useCallback(async () => {
     if (multiLangMode && batchTargets.length > 0) {
       if (multiBatchRunningRef.current) return; // ignore re-clicks mid-batch
       multiBatchRunningRef.current = true;
+      setMultiBatchBusy(true);
       const skipped = [];
       const primaryLanguage = dubLang;
       const primaryCode = dubLangCode;
@@ -285,6 +287,7 @@ export default function DubTab(props) {
         setDubLang(primaryLanguage);
         switchDubLangCode(primaryCode);
         multiBatchRunningRef.current = false;
+        setMultiBatchBusy(false);
       }
       if (skipped.length) {
         toast.error(t('dub.multi_lang_skipped', { langs: skipped.join(', ') }), {
@@ -310,11 +313,11 @@ export default function DubTab(props) {
   // while still restoring the primary target in the editor afterwards. Each
   // translation lands in segments[].translations[code], so Generate can
   // reuse the complete maps without retranslating or losing another language.
-  const multiTranslateRunningRef = useRef(false);
   const onTranslateClick = useCallback(async () => {
-    if (!multiLangMode || batchTargets.length <= 1) return handleTranslateAll();
-    if (multiTranslateRunningRef.current) return false;
-    multiTranslateRunningRef.current = true;
+    if (!multiLangMode) return handleTranslateAll();
+    if (multiBatchRunningRef.current) return false;
+    multiBatchRunningRef.current = true;
+    setMultiBatchBusy(true);
     const primaryLanguage = dubLang;
     const primaryCode = dubLangCode;
     let allOk = true;
@@ -328,7 +331,8 @@ export default function DubTab(props) {
     } finally {
       setDubLang(primaryLanguage);
       switchDubLangCode(primaryCode);
-      multiTranslateRunningRef.current = false;
+      multiBatchRunningRef.current = false;
+      setMultiBatchBusy(false);
     }
     return allOk;
   }, [
@@ -778,6 +782,7 @@ export default function DubTab(props) {
               dubLangCode={dubLangCode}
               multiLangMode={multiLangMode}
               batchTargets={batchTargets}
+              multiBatchBusy={multiBatchBusy}
               setDubLang={setDubLang}
               setDubLangCode={switchDubLangCode}
               dubTracks={dubTracks}

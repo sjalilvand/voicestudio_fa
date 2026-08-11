@@ -34,6 +34,7 @@ export default function DubRightColumn({
   dubLangCode,
   multiLangMode,
   batchTargets,
+  multiBatchBusy,
   setDubLang,
   setDubLangCode,
   dubTracks,
@@ -340,7 +341,7 @@ export default function DubRightColumn({
             <button
               key={target.code}
               type="button"
-              className={`px-[7px] py-[2px] rounded-full border text-[0.62rem] font-mono cursor-pointer transition-[background,color,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)] ${
+              className={`px-[7px] py-[2px] rounded-full border text-[0.62rem] font-mono cursor-pointer transition-[background,color,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)] disabled:cursor-not-allowed disabled:opacity-50 ${
                 dubLangCode === target.code
                   ? 'bg-[var(--chrome-hover-bg)] text-[var(--chrome-fg)] border-[var(--chrome-accent)]'
                   : 'bg-transparent text-[var(--chrome-fg-muted)] border-transparent hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--chrome-fg)]'
@@ -349,6 +350,7 @@ export default function DubRightColumn({
                 setDubLang(target.lang);
                 setDubLangCode(target.code);
               }}
+              disabled={multiBatchBusy}
               aria-pressed={dubLangCode === target.code}
               title={target.lang}
             >

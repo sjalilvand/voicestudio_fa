@@ -330,7 +330,8 @@
     "no": "नहीं",
     "more_info": "अधिक जानकारी",
     "learn_more": "और जानें",
-    "saving": "सहेजा जा रहा है…"
+    "saving": "सहेजा जा रहा है…",
+    "remove": "{{term}} हटाएं"
   },
   "launchpad": {
     "greeting": "नमस्ते",
@@ -924,7 +925,10 @@
     "paste_translation_row_unmatched": "कोई मिलान नहीं — अपरिवर्तित",
     "paste_translation_apply": "{{count}} सेगमेंट पर लागू करें",
     "paste_translation_cancel": "रद्द करें",
-    "paste_translation_more_rows": "+ {{count}} और पंक्तियाँ"
+    "paste_translation_more_rows": "+ {{count}} और पंक्तियाँ",
+    "languages_selected": "{{count}} भाषाएँ चुनी गईं",
+    "multi_translating": "अनुवाद हो रहा है → {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "{{langs}} के लिए अनुवाद विफल रहा—गलत भाषा का ट्रैक बनने से रोकने के लिए उन डब को छोड़ दिया गया।"
   },
   "glossary": {
     "title": "शब्दावली",

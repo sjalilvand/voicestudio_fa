@@ -330,7 +330,8 @@
     "no": "لا",
     "more_info": "مزيد من المعلومات",
     "learn_more": "تعلم المزيد",
-    "saving": "جارٍ الحفظ…"
+    "saving": "جارٍ الحفظ…",
+    "remove": "إزالة {{term}}"
   },
   "launchpad": {
     "greeting": "مرحبا هناك",
@@ -924,7 +925,10 @@
     "paste_translation_row_unmatched": "لا مطابقة — دون تغيير",
     "paste_translation_apply": "تطبيق على {{count}} مقاطع",
     "paste_translation_cancel": "إلغاء",
-    "paste_translation_more_rows": "+ {{count}} صفوف إضافية"
+    "paste_translation_more_rows": "+ {{count}} صفوف إضافية",
+    "languages_selected": "تم تحديد {{count}} لغة",
+    "multi_translating": "جارٍ الترجمة ← {{lang}} ({{current}}/{{total}})…",
+    "multi_lang_skipped": "فشلت ترجمة {{langs}}، لذا تم تخطي عمليات الدبلجة هذه لتجنب إنشاء مسار بلغة خاطئة."
   },
   "glossary": {
     "title": "مسرد",
