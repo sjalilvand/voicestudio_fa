@@ -27,8 +27,28 @@ logger = logging.getLogger("omnivoice.worker")
 
 # How often the idle-engine sweep runs. Well under the ten-minute idle
 # threshold it enforces, so a model is released promptly after it goes cold
-# rather than up to a full interval later.
-IDLE_SWEEP_INTERVAL_SECONDS = 60.0
+# rather than up to a full interval later. Override with
+# OMNIVOICE_IDLE_SWEEP_SECONDS when shortening the threshold for testing —
+# leaving the interval at 60s while the threshold is 30s means waiting a full
+# minute to observe a thirty-second rule, which reads as a broken sweep.
+def _sweep_seconds_from_env(default: float = 60.0, floor: float = 1.0) -> float:
+    raw = (os.environ.get("OMNIVOICE_IDLE_SWEEP_SECONDS") or "").strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        logger.warning("Ignoring OMNIVOICE_IDLE_SWEEP_SECONDS=%r: not a number.", raw)
+        return default
+    if value < floor:
+        logger.warning(
+            "Ignoring OMNIVOICE_IDLE_SWEEP_SECONDS=%s: below the %ss floor.", value, floor
+        )
+        return default
+    return value
+
+
+IDLE_SWEEP_INTERVAL_SECONDS = _sweep_seconds_from_env()
 
 
 def worker_mode_enabled() -> bool:

@@ -248,3 +248,44 @@ def test_an_explicit_bind_is_advertised_as_given(monkeypatch):
     monkeypatch.setattr(inbound_service, "bind_host", lambda: "192.168.0.202")
 
     assert inbound_service.advertised_host() == "192.168.0.202"
+
+
+# ── Idle-unload tunables ───────────────────────────────────────────────────
+
+
+def test_the_idle_threshold_can_be_shortened_for_testing(monkeypatch):
+    """Ten minutes is right in production and useless to observe by hand."""
+    from services import tts_backend
+
+    monkeypatch.setenv("OMNIVOICE_ENGINE_IDLE_UNLOAD_SECONDS", "60")
+    assert tts_backend._idle_seconds_from_env(
+        "OMNIVOICE_ENGINE_IDLE_UNLOAD_SECONDS", 600.0, floor=5.0
+    ) == 60.0
+
+
+def test_a_zero_or_junk_idle_threshold_is_refused(monkeypatch, caplog):
+    """A zero threshold unloads an engine the instant it goes idle, so a busy
+    machine reloads it for every request. Falling back loudly beats honouring
+    a value that quietly destroys throughput."""
+    from services import tts_backend
+
+    for bad in ("0", "-5", "abc", "2"):
+        monkeypatch.setenv("OMNIVOICE_ENGINE_IDLE_UNLOAD_SECONDS", bad)
+        with caplog.at_level("WARNING"):
+            value = tts_backend._idle_seconds_from_env(
+                "OMNIVOICE_ENGINE_IDLE_UNLOAD_SECONDS", 600.0, floor=5.0
+            )
+        assert value == 600.0, f"{bad!r} should not have been honoured"
+    assert "Ignoring" in caplog.text
+
+
+def test_the_sweep_interval_can_be_shortened_with_the_threshold(monkeypatch):
+    """Shortening only the threshold still means waiting a full minute to see
+    a thirty-second rule fire, which reads as a broken sweep."""
+    from worker import agent
+
+    monkeypatch.setenv("OMNIVOICE_IDLE_SWEEP_SECONDS", "5")
+    assert agent._sweep_seconds_from_env() == 5.0
+
+    monkeypatch.setenv("OMNIVOICE_IDLE_SWEEP_SECONDS", "0")
+    assert agent._sweep_seconds_from_env() == 60.0

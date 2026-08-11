@@ -2431,8 +2431,34 @@ _ENGINE_LAST_USED: dict[type, float] = {}
 # under the thread rendering it.
 _ENGINE_IN_USE: dict[type, int] = {}
 
+def _idle_seconds_from_env(name: str, default: float, *, floor: float) -> float:
+    """Read a tunable idle duration, ignoring anything unusable.
+
+    These exist so the ten-minute behaviour can be observed in a minute during
+    testing instead of a coffee break. A bad value must not change behaviour
+    silently, and must never reach zero: a zero threshold unloads an engine the
+    instant it goes idle, which on a busy machine means reloading it for every
+    request.
+    """
+    raw = (os.environ.get(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        logger.warning("Ignoring %s=%r: not a number.", name, raw)
+        return default
+    if value < floor:
+        logger.warning("Ignoring %s=%s: below the %ss floor.", name, value, floor)
+        return default
+    return value
+
+
 #: How long an engine may sit unused before its weights are handed back.
-ENGINE_IDLE_UNLOAD_SECONDS = 600.0
+#: Override with OMNIVOICE_ENGINE_IDLE_UNLOAD_SECONDS (testing).
+ENGINE_IDLE_UNLOAD_SECONDS = _idle_seconds_from_env(
+    "OMNIVOICE_ENGINE_IDLE_UNLOAD_SECONDS", 600.0, floor=5.0
+)
 
 
 @contextmanager
