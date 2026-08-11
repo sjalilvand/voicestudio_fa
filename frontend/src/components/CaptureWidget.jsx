@@ -333,6 +333,10 @@ export default function CaptureWidget({ onDismiss }) {
   // identity, but the listener must not re-subscribe to follow them.
   const startRecordingRef = useRef(null);
   const stopRecordingRef = useRef(null);
+  // Linux can deliver the same shortcut through both the native global-hotkey
+  // plugin and the focused main-window fallback. Collapse that pair into one
+  // logical action without slowing intentional toggle-mode presses.
+  const nativeEventAtRef = useRef({ start: 0, stop: 0 });
 
   // Sherpa live-streaming session refs. `sherpaModeRef` flips on at start when a
   // sherpa model is selected; `committedRef` accumulates per-utterance finals so
@@ -448,6 +452,9 @@ export default function CaptureWidget({ onDismiss }) {
       try {
         const { listen } = await import('@tauri-apps/api/event');
         unlistenStart = await listen('tray-dictate', () => {
+          const now = Date.now();
+          if (now - nativeEventAtRef.current.start < 150) return;
+          nativeEventAtRef.current.start = now;
           if (!enabledRef.current) {
             // The hotkey is inert, but Rust has already shown the window.
             // Put it back rather than leaving an empty capsule on screen.
@@ -474,6 +481,9 @@ export default function CaptureWidget({ onDismiss }) {
           }
         });
         unlistenStop = await listen('tray-dictate-stop', () => {
+          const now = Date.now();
+          if (now - nativeEventAtRef.current.stop < 150) return;
+          nativeEventAtRef.current.stop = now;
           // Only hold mode acts on release; toggle ignores it.
           if (modeRef.current === 'hold' && stateRef.current === 'recording') {
             stopRecordingRef.current?.();

@@ -13,6 +13,7 @@ import { Mic, Copy, Trash2, Search, Clock, Languages, FileText, Download } from 
 import { Button } from '../ui';
 import { toast } from 'react-hot-toast';
 import { toMillis } from '../utils/relativeTime';
+import { detectPlatform } from '../utils/micError';
 import {
   loadTranscriptions,
   TRANSCRIPTIONS_KEY,
@@ -46,6 +47,12 @@ export default function TranscriptionsPage() {
   const [transcriptions, setTranscriptions] = useState(loadTranscriptions);
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
+  const emptyDescription = useMemo(() => {
+    const description = t('transcriptions.empty_desc');
+    return detectPlatform() === 'mac'
+      ? description
+      : description.replaceAll('⌘', 'Ctrl').replaceAll('⇧', 'Shift');
+  }, [t]);
 
   // Listen for new transcriptions added from CaptureButton
   useEffect(() => {
@@ -192,7 +199,7 @@ export default function TranscriptionsPage() {
                 {search ? t('transcriptions.empty_search_title') : t('transcriptions.empty_title')}
               </p>
               <p className="txn-empty__desc m-0 max-w-[280px] text-[var(--text-xs)] leading-[1.6] text-fg-muted">
-                {search ? t('transcriptions.empty_search_desc') : t('transcriptions.empty_desc')}
+                {search ? t('transcriptions.empty_search_desc') : emptyDescription}
               </p>
             </div>
           ) : (

@@ -16,10 +16,14 @@
  * is transparent, so html, body and #root all have to be covered.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { screen } from '@testing-library/react';
 import fs from 'node:fs';
 import path from 'node:path';
 
 vi.mock('../App.jsx', () => ({ default: () => null }));
+vi.mock('../components/CaptureWidget.jsx', () => ({
+  default: () => <span data-testid="capture-widget-mounted" />,
+}));
 
 const setLabel = (label) =>
   vi.doMock('@tauri-apps/api/window', () => ({
@@ -33,11 +37,13 @@ describe('the widget window marks itself on <html>', () => {
     root.id = 'root';
     document.body.appendChild(root);
     delete document.documentElement.dataset.window;
+    delete window.__TAURI_INTERNALS__;
   });
 
   afterEach(() => {
     document.getElementById('root')?.remove();
     delete document.documentElement.dataset.window;
+    delete window.__TAURI_INTERNALS__;
     vi.doUnmock('@tauri-apps/api/window');
     vi.restoreAllMocks();
   });
@@ -55,15 +61,30 @@ describe('the widget window marks itself on <html>', () => {
     await bootstrapApp();
     expect(document.documentElement.dataset.window).toBeUndefined();
   });
+
+  it('mounts the in-page capture listener in browser mode', async () => {
+    setLabel('main');
+    const { bootstrapApp } = await import('../main-app.jsx');
+    await bootstrapApp();
+    expect(await screen.findByTestId('capture-widget-mounted')).toBeInTheDocument();
+  });
+
+  it('leaves capture to the separate widget in a desktop main window', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    setLabel('main');
+    const { bootstrapApp } = await import('../main-app.jsx');
+    await bootstrapApp();
+    expect(screen.queryByTestId('capture-widget-mounted')).not.toBeInTheDocument();
+  });
 });
 
 describe('index.css honours the marker', () => {
   const css = fs.readFileSync(path.join(import.meta.dirname, '..', 'index.css'), 'utf8');
+  const marker = "html[data-window='widget']";
 
   it('clears the background on html, body AND #root', () => {
     // Any one of the three left opaque defeats the window transparency, so
     // the selector list is the contract — not just "the file mentions it".
-    const marker = "html[data-window='widget']";
     const start = css.indexOf(`${marker},`);
     expect(start).toBeGreaterThan(-1);
     const rule = css.slice(start, css.indexOf('}', start));
@@ -75,5 +96,7 @@ describe('index.css honours the marker', () => {
 
   it('does not disturb the main window background', () => {
     expect(css).toContain('background-color: var(--chrome-bg)');
+    expect(css).toContain(`${marker} body:has(.capture-pill)`);
+    expect(css).not.toContain('\nbody:has(.capture-pill)');
   });
 });

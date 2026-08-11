@@ -18,6 +18,8 @@ pub mod reset;
 pub mod uninstall;
 pub mod updater_channel;
 pub mod blank_guard;
+#[cfg(target_os = "linux")]
+pub mod wayland_shortcut;
 
 use std::process::Child;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -576,6 +578,15 @@ pub fn run() {
 
                 let cfg = load_config(app.handle());
                 let accel = cfg.dictation_shortcut.clone();
+                #[cfg(target_os = "linux")]
+                if crate::wayland_shortcut::is_wayland_session() {
+                    crate::wayland_shortcut::register(app.handle().clone(), accel.clone());
+                }
+                #[cfg(target_os = "linux")]
+                let use_native_shortcut = !crate::wayland_shortcut::is_wayland_session();
+                #[cfg(not(target_os = "linux"))]
+                let use_native_shortcut = true;
+
                 let parsed = Shortcut::from_str(&accel)
                     .or_else(|_| {
                         log::warn!(
@@ -583,21 +594,23 @@ pub fn run() {
                         );
                         Shortcut::from_str(&default_dictation_shortcut())
                     });
-                match parsed {
-                    Ok(shortcut) => match app.global_shortcut().register(shortcut.clone()) {
-                        Ok(()) => {
-                            log::info!("Global shortcut '{accel}' registered");
-                            if let Ok(mut slot) = app
-                                .state::<DictationShortcutState>()
-                                .current
-                                .lock()
-                            {
-                                *slot = Some(shortcut);
+                if use_native_shortcut {
+                    match parsed {
+                        Ok(shortcut) => match app.global_shortcut().register(shortcut.clone()) {
+                            Ok(()) => {
+                                log::info!("Global shortcut '{accel}' registered");
+                                if let Ok(mut slot) = app
+                                    .state::<DictationShortcutState>()
+                                    .current
+                                    .lock()
+                                {
+                                    *slot = Some(shortcut);
+                                }
                             }
-                        }
-                        Err(e) => log::warn!("Failed to register global shortcut: {e}"),
-                    },
-                    Err(e) => log::warn!("No usable dictation shortcut: {e}"),
+                            Err(e) => log::warn!("Failed to register global shortcut: {e}"),
+                        },
+                        Err(e) => log::warn!("No usable dictation shortcut: {e}"),
+                    }
                 }
             }
 

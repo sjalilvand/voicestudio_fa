@@ -18,6 +18,7 @@ import './index.css';
 import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary';
 import RemoteAuthGate from './components/RemoteAuthGate';
+import DesktopCaptureShortcutBridge from './components/DesktopCaptureShortcutBridge';
 import { installConsoleCapture } from './utils/consoleBuffer.js';
 import { installGlobalErrorHandlers } from './utils/globalErrorHandlers.js';
 
@@ -69,6 +70,7 @@ async function detectIsWidget() {
 
 export async function bootstrapApp() {
   const isWidget = await detectIsWidget();
+  const isDesktopShell = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
   // The widget window is `transparent: true` (tauri.conf.json), but it loads
   // the SAME index.html as the main window — so `body { background-color:
@@ -128,7 +130,21 @@ export async function bootstrapApp() {
                 <CaptureWidget />
               </Suspense>
             ) : (
-              <App />
+              <>
+                <App />
+                {isDesktopShell && <DesktopCaptureShortcutBridge />}
+                {/* The desktop shell owns a separate global-hotkey widget
+                    window. Browser/Docker builds do not, so mount the same
+                    capture engine here to provide the documented focused-page
+                    Ctrl+Shift+Space fallback. */}
+                {!isDesktopShell && (
+                  <div className="capture-pill-host">
+                    <Suspense fallback={null}>
+                      <CaptureWidget />
+                    </Suspense>
+                  </div>
+                )}
+              </>
             )}
           </RemoteAuthGate>
         </QueryClientProvider>
