@@ -7,7 +7,9 @@ import { useAppStore } from '../store';
 import UiScaleControl from './UiScaleControl';
 
 describe('<UiScaleControl />', () => {
-  beforeEach(() => useAppStore.getState().setUiScale(1));
+  beforeEach(() =>
+    useAppStore.setState({ uiScale: 1, uiScaleConfigured: false, uiScalePreviewed: false }),
+  );
 
   it('adjusts the persisted scale in small readable steps', () => {
     render(
@@ -18,6 +20,7 @@ describe('<UiScaleControl />', () => {
 
     fireEvent.click(screen.getByTestId('ui-scale-increase'));
     expect(useAppStore.getState().uiScale).toBe(1.05);
+    expect(useAppStore.getState().uiScalePreviewed).toBe(true);
     expect(screen.getByText('105%')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('ui-scale-decrease'));

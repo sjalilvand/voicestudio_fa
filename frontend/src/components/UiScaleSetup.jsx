@@ -12,7 +12,12 @@ function getViewport() {
   };
 }
 
-export default function UiScaleSetup({ uiScale, setUiScale, setUiScaleConfigured }) {
+export default function UiScaleSetup({
+  uiScale,
+  setUiScale,
+  setUiScaleConfigured,
+  setUiScalePreviewed,
+}) {
   const { t } = useTranslation();
   const [viewport, setViewport] = useState(getViewport);
   const suggestedScale = suggestUiScale(viewport);
@@ -38,6 +43,7 @@ export default function UiScaleSetup({ uiScale, setUiScale, setUiScaleConfigured
     hasPickedRef.current = true;
     setSelectedScale(scale);
     setUiScale(scale);
+    setUiScalePreviewed(true);
   };
 
   const moveSelection = (event, currentIndex) => {
@@ -61,6 +67,7 @@ export default function UiScaleSetup({ uiScale, setUiScale, setUiScaleConfigured
   const finish = () => {
     setUiScale(selectedScale);
     setUiScaleConfigured(true);
+    setUiScalePreviewed(false);
   };
 
   const selectedPercent = Math.round(selectedScale * 100);

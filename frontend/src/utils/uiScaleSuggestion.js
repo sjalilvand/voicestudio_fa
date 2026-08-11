@@ -13,3 +13,8 @@ export function suggestUiScale({ width, height }) {
     Math.abs(option - clamped) < Math.abs(best - clamped) ? option : best,
   );
 }
+
+/** Keep the screen-aware default until the user explicitly previews a choice. */
+export function resolveUiScale({ configured, previewed, selected, suggested }) {
+  return !configured && !previewed ? suggested : selected;
+}

@@ -8,30 +8,34 @@ import UiScaleSetup from './UiScaleSetup';
 const renderSetup = () => {
   const setUiScale = vi.fn();
   const setUiScaleConfigured = vi.fn();
+  const setUiScalePreviewed = vi.fn();
   render(
     <I18nextProvider i18n={i18n}>
       <UiScaleSetup
         uiScale={1}
         setUiScale={setUiScale}
         setUiScaleConfigured={setUiScaleConfigured}
+        setUiScalePreviewed={setUiScalePreviewed}
       />
     </I18nextProvider>,
   );
-  return { setUiScale, setUiScaleConfigured };
+  return { setUiScale, setUiScaleConfigured, setUiScalePreviewed };
 };
 
 describe('<UiScaleSetup />', () => {
   it('preselects the resolution suggestion and persists the checked choice', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 720 });
-    const { setUiScale, setUiScaleConfigured } = renderSetup();
+    const { setUiScale, setUiScaleConfigured, setUiScalePreviewed } = renderSetup();
 
     expect(screen.getByTestId('ui-scale-option-80')).toHaveAttribute('aria-checked', 'true');
     fireEvent.click(screen.getByTestId('ui-scale-option-110'));
     expect(setUiScale).toHaveBeenLastCalledWith(1.1);
+    expect(setUiScalePreviewed).toHaveBeenLastCalledWith(true);
 
     fireEvent.click(screen.getByTestId('ui-scale-setup-continue'));
     expect(setUiScaleConfigured).toHaveBeenCalledWith(true);
+    expect(setUiScalePreviewed).toHaveBeenLastCalledWith(false);
     expect(setUiScale).toHaveBeenLastCalledWith(1.1);
   });
 

@@ -76,7 +76,7 @@ import { addBreadcrumb } from './utils/breadcrumbs';
 import { appShellClasses } from './utils/appShellClasses';
 import { configuredRemoteBackend, probeRemoteBackend } from './utils/remoteBackendProbe';
 import { applyUiScale } from './utils/uiScaleEngine';
-import { suggestUiScale } from './utils/uiScaleSuggestion';
+import { resolveUiScale, suggestUiScale } from './utils/uiScaleSuggestion';
 import { recordValueMoment } from './utils/donationMoments';
 import {
   POPULAR_LANGS,
@@ -132,8 +132,10 @@ function App() {
   // via the store's `partialize`; active project / voice ids stay transient.
   const uiScale = useAppStore((s) => s.uiScale);
   const uiScaleConfigured = useAppStore((s) => s.uiScaleConfigured);
+  const uiScalePreviewed = useAppStore((s) => s.uiScalePreviewed);
   const setUiScale = useAppStore((s) => s.setUiScale);
   const setUiScaleConfigured = useAppStore((s) => s.setUiScaleConfigured);
+  const setUiScalePreviewed = useAppStore((s) => s.setUiScalePreviewed);
   const [storeHydrated, setStoreHydrated] = useState(
     () => useAppStore.persist?.hasHydrated?.() ?? true,
   );
@@ -149,7 +151,12 @@ function App() {
     width: typeof window === 'undefined' ? 1440 : window.innerWidth,
     height: typeof window === 'undefined' ? 900 : window.innerHeight,
   });
-  const effectiveUiScale = !uiScaleConfigured ? startupSuggestedScale : uiScale;
+  const effectiveUiScale = resolveUiScale({
+    configured: uiScaleConfigured,
+    previewed: uiScalePreviewed,
+    selected: uiScale,
+    suggested: startupSuggestedScale,
+  });
 
   // Responsive shell breakpoints driven off the app-container's OWN width, not
   // the viewport. The shell is sized `width: calc(100vw / --ui-scale)` then
@@ -1258,6 +1265,7 @@ function App() {
             uiScale={uiScale}
             setUiScale={setUiScale}
             setUiScaleConfigured={setUiScaleConfigured}
+            setUiScalePreviewed={setUiScalePreviewed}
           />
         </Suspense>
       </div>

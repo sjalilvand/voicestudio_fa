@@ -16,8 +16,13 @@ export default function UiScaleControl() {
   const { t } = useTranslation();
   const uiScale = useAppStore((s) => s.uiScale);
   const setUiScale = useAppStore((s) => s.setUiScale);
+  const setUiScalePreviewed = useAppStore((s) => s.setUiScalePreviewed);
   const label = t('settings.ui_scale');
   const percent = Math.round(uiScale * 100);
+  const adjustScale = (nextScale) => {
+    setUiScale(nextScale);
+    setUiScalePreviewed(true);
+  };
 
   return (
     <div className="ui-scale-control" aria-label={label} data-testid="ui-scale-control">
@@ -26,7 +31,7 @@ export default function UiScaleControl() {
         variant="ghost"
         size="sm"
         iconSize="sm"
-        onClick={() => setUiScale(clampScale(uiScale - SCALE_STEP))}
+        onClick={() => adjustScale(clampScale(uiScale - SCALE_STEP))}
         disabled={uiScale <= MIN_SCALE}
         aria-label={`${label} −`}
         title={`${label} −`}
@@ -41,7 +46,7 @@ export default function UiScaleControl() {
         variant="ghost"
         size="sm"
         iconSize="sm"
-        onClick={() => setUiScale(clampScale(uiScale + SCALE_STEP))}
+        onClick={() => adjustScale(clampScale(uiScale + SCALE_STEP))}
         disabled={uiScale >= MAX_SCALE}
         aria-label={`${label} +`}
         title={`${label} +`}
