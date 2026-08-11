@@ -22,7 +22,7 @@ export function multiLangTargets(activeLanguage, activeCode, selected) {
   return targets;
 }
 
-export function translationProgressByCode(segments, targets, visibleCode = '') {
+export function translationProgressByCode(segments, targets) {
   return Object.fromEntries(
     (targets || []).map(({ code }) => {
       let ready = 0;
@@ -32,12 +32,7 @@ export function translationProgressByCode(segments, targets, visibleCode = '') {
         if (!String(source).trim()) continue;
         total += 1;
         const translated = segment.translations?.[code];
-        const visibleLegacyTranslation =
-          code === visibleCode &&
-          segment.text_original &&
-          segment.text !== segment.text_original &&
-          String(segment.text || '').trim();
-        if ((typeof translated === 'string' && translated.trim()) || visibleLegacyTranslation) {
+        if (typeof translated === 'string' && translated.trim()) {
           ready += 1;
         }
       }

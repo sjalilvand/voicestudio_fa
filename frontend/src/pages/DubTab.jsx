@@ -215,8 +215,8 @@ export default function DubTab(props) {
     [dubLang, dubLangCode, multiLangs],
   );
   const multiLangProgress = useMemo(
-    () => translationProgressByCode(dubSegments, batchTargets, dubLangCode),
-    [batchTargets, dubLangCode, dubSegments],
+    () => translationProgressByCode(dubSegments, batchTargets),
+    [batchTargets, dubSegments],
   );
   // Landing "Advanced" disclosure (pre-upload options).
   const [landingAdvOpen, setLandingAdvOpen] = useState(false);
