@@ -18,6 +18,7 @@ to remember belongs in a test, not in anyone's head.
 import importlib.util
 import json
 import os
+import subprocess
 
 import pytest
 
@@ -208,10 +209,54 @@ def test_linux_extracted_appimage_and_backend_are_stopped_before_wipe(tmp_path):
     assert found == ["101", "102"]
     assert [pid for pid, _ in opened] == [101, 102, 201, 202, 203]
 
-    src = open(_SH, encoding="utf-8").read()
-    call = 'python3 scripts/desktop_prod_processes.py "$TAURI_BUILD_ROOT"'
-    assert call in src
-    assert src.index(call) < src.index('if [ "$KEEP_DATA" = false ]; then')
+
+
+def test_linux_process_stop_executes_before_data_wipe(tmp_path):
+    """Execute the shell with controlled commands and record the true order."""
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    order_log = tmp_path / "order.log"
+    backend_data = tmp_path / "home" / ".omnivoice"
+    backend_data.mkdir(parents=True)
+    marker = backend_data / "order-marker"
+    marker.write_text("live backend data")
+
+    fake_python = fake_bin / "python3"
+    fake_python.write_text(
+        "#!/bin/sh\n"
+        '[ "$1" = scripts/desktop_prod_processes.py ] || exit 90\n'
+        '[ -f "$ORDER_MARKER" ] || exit 91\n'
+        'printf "stop-before-wipe\\n" >> "$ORDER_LOG"\n'
+    )
+    fake_python.chmod(0o755)
+    for command in ("pgrep", "lsof"):
+        stub = fake_bin / command
+        stub.write_text("#!/bin/sh\nexit 1\n")
+        stub.chmod(0o755)
+
+    env = os.environ.copy()
+    env.update(
+        {
+            "HOME": str(tmp_path / "home"),
+            "XDG_DATA_HOME": str(tmp_path / "xdg"),
+            "ORDER_LOG": str(order_log),
+            "ORDER_MARKER": str(marker),
+            "PATH": f"{fake_bin}:/usr/bin:/bin",
+        }
+    )
+    result = subprocess.run(
+        ["bash", _SH, "--skip-build"],
+        cwd=_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    # No build artifact exists in this fixture, so launch fails only after the
+    # stop and wipe steps have both executed.
+    assert result.returncode != 0
+    assert order_log.read_text().splitlines() == ["stop-before-wipe"]
+    assert not backend_data.exists()
 
 
 def test_linux_pid_reuse_is_rejected_after_environment_read(tmp_path):
