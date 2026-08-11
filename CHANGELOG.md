@@ -8,6 +8,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ## [Unreleased]
 
+- Corrected the VoiceStudio release metadata and Launchpad screenshot to 0.5.0. (#1488)
+
 ## [0.5.0] — 2026-08-11
 
 **Highlights**
