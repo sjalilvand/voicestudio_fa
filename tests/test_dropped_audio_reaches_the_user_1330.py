@@ -155,8 +155,9 @@ def test_the_streaming_path_emits_a_warning_frame_before_done():
     # Order matters: a consumer that stops reading at `done` would never see a
     # warning emitted after it.
     src = _generation_src()
-    warn = src.index('"type": "warning", "code": "dropped_chunks"')
-    done = src.index('"type": "done", "id": meta["id"]')
+    local_stream = src.index("if _dropped_sink:")
+    warn = src.index('"type": "warning", "code": "dropped_chunks"', local_stream)
+    done = src.index('"type": "done", "id": meta["id"]', warn)
     assert warn < done
 
 

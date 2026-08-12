@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 import math
+import time
 import torch
 from typing import Optional
 
@@ -34,6 +35,8 @@ logger = logging.getLogger("omnivoice.watermark")
 _generator = None
 _detector = None
 _audioseal_available: Optional[bool] = None
+# Monotonic stamp of the last embed/detect, for the idle release below.
+_last_used = 0.0
 
 # 16-bit message: "OM" in ASCII = 0x4F 0x4D = 0100_1111 0100_1101
 # This is our signature — every VoiceStudio-generated audio carries it.
@@ -76,7 +79,8 @@ def _check_available() -> bool:
 
 def _get_generator():
     """Lazy-load the AudioSeal generator model."""
-    global _generator
+    global _generator, _last_used
+    _last_used = time.monotonic()
     if _generator is None:
         from audioseal import AudioSeal
         _generator = AudioSeal.load_generator("audioseal_wm_16bits")
@@ -87,13 +91,39 @@ def _get_generator():
 
 def _get_detector():
     """Lazy-load the AudioSeal detector model."""
-    global _detector
+    global _detector, _last_used
+    _last_used = time.monotonic()
     if _detector is None:
         from audioseal import AudioSeal
         _detector = AudioSeal.load_detector("audioseal_detector_16bits")
         _detector.eval()
         logger.info("AudioSeal detector loaded (16-bit message mode)")
     return _detector
+
+
+def release_idle_models(idle_seconds: float, *, now: Optional[float] = None) -> bool:
+    """Drop the AudioSeal models if nothing has watermarked for ``idle_seconds``.
+
+    These load on the first embed or detect and then stayed resident for the
+    life of the process — the same bargain the TTS model and the capture ASR
+    both stopped making. Modest next to those (they run on CPU, so this is
+    system RAM rather than VRAM), but a batch job that watermarks once leaves
+    them held forever afterwards, and the machines that hit memory pressure are
+    the ones running batches.
+
+    Returns True if anything was released. Never raises: this runs from the
+    idle reaper, which must survive it.
+    """
+    global _generator, _detector
+    if _generator is None and _detector is None:
+        return False
+    stamp = time.monotonic() if now is None else float(now)
+    if stamp - _last_used < idle_seconds:
+        return False
+    _generator = None
+    _detector = None
+    logger.info("Idle timeout reached. Released the AudioSeal watermark models.")
+    return True
 
 
 def is_enabled() -> bool:

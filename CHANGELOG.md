@@ -18,6 +18,8 @@ the frozen-backend fallback mirror it for their toolchains.
 - RTX 40-series GPUs are used again instead of being sent to the CPU
 - A warning before a slow generation, rather than after a five-minute wait
 - The watermark can be turned off in Settings, as the docs always said
+- Your other GPU can take the work now — send individual jobs to a second machine, opt-in
+- More than one person can share one GPU machine, without shell access to it or taking turns
 - Workspace tabs in the title bar, if you prefer them to the icon rail (#1412)
 - macOS support now matches what the app actually delivers
 - Linux AppImage: a blank white window on rolling distros (Mesa 26.1+) now starts normally
@@ -26,6 +28,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Changed
 
+- Remote GPU workers render audiobooks chapter by chapter, with automatic per-chapter local fallback and one combined notice if the worker drops out. (#1478)
+- Remote GPU workers can now run a job to completion: long renders no longer die at two minutes, a worker that drops and reconnects mid-render keeps its work, and a timed-out job no longer takes the worker offline for good. Placing a job still needs the development-only `POST /workers/tasks`; wiring the app's own Synthesize button to it comes next.
 - Voice, Stories, Audiobook, Gallery, Settings, profiles, and Launchpad now use compact, responsive layouts with accessible controls. (#1491)
 - Dubbing's Generate Dub, Verify, and Export actions now use a compact hierarchy with visible labels, responsive reflow, and motion-safe feedback. (#1493)
 - The Dub workspace now has a compact production command bar, responsive flag-based language cards, media previews in Dub History, and a narrower Projects rail. (#1489)
@@ -39,6 +43,9 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Added
 
+- Remote GPU machines can now accept connections instead of dialling out, so several people can use the same box at once — each gets their own revocable connection string, with certificate-pinned TLS, a live list of who is connected, and a disconnect button. (#1496)
+- Remote GPU model downloads now use the normal Models install flow and show per-worker progress. (#1478)
+- Settings → System → **Remote workers** sends individual jobs to GPUs on your other machines while everything else stays here. Off by default; each machine is added with a single-use token and approved before any audio reaches it. See [docs/remote-workers.md](docs/remote-workers.md).
 - First-run setup now recommends a screen-aware interface scale, with compact controls available throughout setup. (#1502)
 - OrcaRouter is now available as a named OpenAI-compatible LLM provider — thanks @Marc-oss-hub! (#1499)
 - IndexTTS 2.5 is available as a pinned one-click sidecar with five-language dubbing, expressive cloning, and backward-compatible IndexTTS-2 support. (#1482) — thanks @marwanlhabti5-coder!
@@ -55,6 +62,16 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- An idle voice model now actually hands its memory back. The unload emptied the GPU cache a moment before releasing the model, so it freed nothing while reporting success — a GPU machine lending its card sat on 3.6 GB indefinitely. (#1495)
+- Unloading a model on an NVIDIA GPU now returns the last ~770 MB too. A single 8.5 MB cuBLAS workspace sat inside the model's memory block and kept the whole block reserved, so an idle machine held 1.2 GB instead of 470 MB no matter how often you pressed Flush Memory. (#1495)
+- Flush Memory reports reserved GPU memory alongside allocated. Allocated alone reads near zero right after an unload while the GPU still shows gigabytes, which is exactly the case people were reporting. (#1495)
+- The AudioSeal watermark models are released after the same idle period as everything else, instead of staying in memory for the life of the app once anything was watermarked. (#1495)
+- Remote GPU workers now synthesize a dub's fresh segments as one coarse job with live progress and cancellation; fitting, assembly and RVC remain local. (#1478)
+- Gallery voice previews now fall back to a local render when a downloaded clip cannot be decoded, instead of failing silently. (#1478)
+- A second VoiceStudio instance can no longer silently share the remote-worker port; it keeps running locally and explains how to resolve the conflict. (#1478)
+- Remote GPU jobs stay pinned to the selected worker across retries and restarts, stop when their caller leaves, and cannot return from cancellation as completed. (#1478)
+- Remote GPU model labels now survive registration, legacy blank model IDs share one capacity slot, long jobs retain bounded leases, and idle cleanup cannot evict a live local render. (#1478)
+- Remote GPU jobs now stop before dispatch when that worker lacks the model, offer the download there, and refresh scheduling as soon as it finishes. (#1478)
 - Leaving a screen while its waveform is still loading no longer opens a bug-report prompt for a normal cancelled request. (#1498)
 - An unreachable remote backend now opens a retryable recovery screen instead of sending the app into local model setup, with clear TLS, CORS, network, HTTP, and wrong-port guidance — thanks @debpalash! (#1501)
 - Linux production test launches now stop their own extracted AppImage before resetting SQLite and logs. (#1494)

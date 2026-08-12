@@ -53,7 +53,7 @@ export default function VoiceGallery() {
   // detour — this page used to carry its own copy of that logic). The claim
   // routes to the global mini-player with the voice name as its label, and
   // starting any other playback stops this one (#316).
-  const playUrl = async (fullUrl, id, label) => {
+  const playUrl = async (fullUrl, id, label, fallbackUrl = null) => {
     if (playingId === id) {
       stopActivePlayback(); // onDone('stopped') below resets playingId
       return;
@@ -69,8 +69,15 @@ export default function VoiceGallery() {
       setPlayingId(id);
       await playBlobAudio(blob, {
         label,
-        // ended / stopped / error all mean "this card is no longer playing".
-        onDone: () => setPlayingId((cur) => (cur === id ? null : cur)),
+        // A present, verified gallery file can still be undecodable. The media
+        // element reports that asynchronously, so retry from the backend's
+        // explicit local-render path here rather than leaving a silent card.
+        onDone: (reason) => {
+          setPlayingId((cur) => (cur === id ? null : cur));
+          if (reason === 'error' && fallbackUrl) {
+            void playUrl(fallbackUrl, id, label);
+          }
+        },
       });
     } catch (e) {
       setPlayingId((cur) => (cur === id ? null : cur));
@@ -148,7 +155,9 @@ export default function VoiceGallery() {
           setViewMode={setViewMode}
           playingId={playingId}
           loadingPreviewId={loadingPreviewId}
-          onPreview={(a) => playUrl(archetypePreviewUrl(a.id), a.id, a.name)}
+          onPreview={(a) =>
+            playUrl(archetypePreviewUrl(a.id), a.id, a.name, archetypePreviewUrl(a.id, true))
+          }
           onUse={async (a) => {
             try {
               // eslint-disable-next-line react-hooks/rules-of-hooks -- useArchetypeAsProfile is an API call, not a React hook

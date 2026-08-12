@@ -20,6 +20,7 @@ features:
   - AI Watermark
   - Local-first
   - GPU Auto-Detect
+  - Remote Model Downloads
   - Extensible
 
 # id: must exactly match the registry keys in backend/services/tts_backend.py
@@ -85,6 +86,9 @@ asr_engines:
 
 # Doc files that must exist (the install path users are sent to).
 docs:
+  - docs/downloading-models.md
+  - docs/remote-workers.md
+  - docs/adr/inbound-node-mode.md
   - docs/branding.md
   - docs/install/macos.md
   - docs/install/windows.md

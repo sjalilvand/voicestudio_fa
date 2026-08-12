@@ -2441,6 +2441,15 @@ def _checkpoint_in_local_cache(checkpoint: str) -> bool:
         return False
 
 
+def _headless_worker() -> bool:
+    """True when this process serves remote work and has no local UI."""
+    try:
+        from worker.agent import worker_mode_enabled  # noqa: PLC0415
+    except Exception:
+        return False
+    return worker_mode_enabled()
+
+
 async def preload_model():
     """Background model warm-up — call from lifespan startup.
 
@@ -2451,6 +2460,23 @@ async def preload_model():
     global model, _last_used
     if model is not None:
         return  # already loaded
+
+    # A machine lending its GPU has no local user to warm the model FOR. This
+    # preload exists to make the first /generate feel instant for the person
+    # sitting in front of the app; on a headless node there is nobody sitting
+    # there, so it is several GB of VRAM held from boot against a request that
+    # may never come — and the idle sweep cannot reclaim it, because the sweep
+    # owns the worker executor's engines and this is the default local model.
+    # Observed on hardware: a node that had run nothing still sat at 2.4 GB.
+    #
+    # A machine that is BOTH a desktop app and a worker keeps the warm-up:
+    # there is a real user there, and the whole point stands.
+    if _headless_worker():
+        logger.info(
+            "Preload skipped: this process is running as a remote worker, so the "
+            "model loads on first request and is released when it goes idle."
+        )
+        return
     try:
         # Warm-up is gated on LOCAL availability only — never a Hub API
         # probe. The old `model_info(checkpoint)` probe proved the repo
@@ -2569,7 +2595,6 @@ def _resolve_idle_timeout() -> float:
 
 
 async def idle_worker():
-    global model
     torch = _lazy_torch()
     while True:
         await asyncio.sleep(30)
@@ -2577,9 +2602,7 @@ async def idle_worker():
         async with _model_lock:
             if model is not None and time.time() - _last_used > idle_timeout:
                 logger.info("Idle timeout reached. Unloading VoiceStudio model to free VRAM.")
-                model = None
-                release_tts_side_caches()
-                free_vram()
+                unload_shared_model()
         # The capture/dictation ASR was never idle-released — so once a user
         # dictated, its model stayed resident for the life of the process while
         # the TTS model dutifully freed its 3.8 GB. On a 16 GB Mac that left the
@@ -2595,6 +2618,16 @@ async def idle_worker():
                 free_vram()
         except Exception:  # noqa: BLE001 — the reaper must never kill idle_worker
             logger.warning("idle capture-ASR release failed", exc_info=True)
+        # Same bargain for the AudioSeal watermark models, which loaded on the
+        # first embed and were never released. Deliberately only here and not
+        # in the make-room paths: watermarking runs immediately *after* a
+        # generate, so evicting it just before one would only buy a reload.
+        try:
+            from services.watermark import release_idle_models
+
+            release_idle_models(idle_timeout)
+        except Exception:  # noqa: BLE001 — the reaper must never kill idle_worker
+            logger.warning("idle watermark-model release failed", exc_info=True)
 
 def release_tts_side_caches():
     """Drop caches keyed to the TTS model, for when the model itself is released.
@@ -2628,17 +2661,80 @@ def release_tts_side_caches():
         logger.debug("clone-prompt cache clear failed during unload", exc_info=True)
 
 
+def _clear_cublas_workspaces(torch) -> None:
+    """Drop cuBLAS's per-handle workspaces before emptying the cache.
+
+    Measured on a 4090: after unloading the model, ``empty_cache()`` left
+    803 MB reserved with 8.5 MB allocated. A segment dump explained it —
+    **one** 803 MB segment, 794.7 MB of it inactive-but-split, pinned by a
+    single live 8,519,680-byte block. That number is cuBLAS's default
+    workspace. It is taken from the caching allocator on first use, it lands
+    inside whatever segment the model load had just grown, and it is held for
+    the life of the cuBLAS handle — so one 8.5 MB block kept three quarters of
+    a gigabyte from ever going back to the driver, no matter how many times
+    the user pressed Flush Memory.
+
+    Clearing the workspaces first lets the whole segment go. The next cuBLAS
+    call re-allocates one, which is why this belongs here (on the unload
+    paths) and not on any hot path.
+
+    Private API, so it is optional by construction: a torch build without it
+    keeps today's behaviour rather than failing an unload.
+    """
+    clear = getattr(getattr(torch, "_C", None), "_cuda_clearCublasWorkspaces", None)
+    if clear is None:
+        return
+    try:
+        clear()
+    except Exception:  # noqa: BLE001 — freeing memory must never raise
+        logger.debug("clearing cuBLAS workspaces failed", exc_info=True)
+
+
 def free_vram():
     """Release cached GPU memory on any accelerator (CUDA, MPS, XPU)."""
     torch = _lazy_torch()
     import gc
     gc.collect()
     if torch.cuda.is_available():
+        _clear_cublas_workspaces(torch)
         torch.cuda.empty_cache()
     elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         torch.mps.empty_cache()
     elif hasattr(torch, "xpu") and torch.xpu.is_available():
         torch.xpu.empty_cache()
+
+
+def unload_shared_model() -> bool:
+    """Drop the shared VoiceStudio model and actually give the memory back.
+
+    The order is the entire point of this function. Clearing the reference has
+    to come FIRST, then the allocator caches. ``free_vram()`` run while
+    ``model`` is still bound releases nothing: the weights are still reachable,
+    so ``gc.collect()`` keeps them and ``empty_cache()`` only returns blocks
+    the allocator already considered free. The reference drops a moment later,
+    the weights go back into torch's cache, and nobody ever hands that cache to
+    the driver — so the unload is logged, the engine is dropped from the
+    registry, and ``nvidia-smi`` does not move.
+
+    Six call sites open-coded this pair and one of them had it inverted — the
+    one the engine-registry sweep reaches, which is the sweep a headless worker
+    node runs. A worker therefore sat on 3.6 GB indefinitely while reporting
+    the engine released, and every other path looked fine (#1495). One helper,
+    so there is one ordering and nowhere left to get it wrong.
+
+    Takes no lock of its own: the sync engine-registry path
+    (``OmniVoiceBackend.unload``) cannot await one, and callers that do hold
+    ``_model_lock`` simply keep holding it across the call. Assignment is
+    GIL-atomic, so the worst a race costs is a redundant reload. Idempotent —
+    returns False when nothing was resident.
+    """
+    global model
+    if model is None:
+        return False
+    model = None
+    release_tts_side_caches()
+    free_vram()
+    return True
 
 
 def _has_dedicated_vram():
@@ -2678,9 +2774,7 @@ def _offload_unified_memory() -> bool:
             "(it reloads on the next generation).",
             "unknown" if free_gb is None else f"{free_gb:.1f}",
         )
-        model = None
-        release_tts_side_caches()
-        free_vram()
+        unload_shared_model()
         return True
     except Exception as e:  # noqa: BLE001
         logger.warning("unified-memory TTS offload failed (continuing): %s", e)

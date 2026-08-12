@@ -301,12 +301,14 @@ def _validate_snapshot_has_weights(repo_id: str, snapshot_path: str) -> None:
 
 
 @router.get("/setup/download-stream")
-async def setup_download_stream():
+async def setup_download_stream(target: str | None = None):
     """SSE: forward every HuggingFace download tqdm update as a JSON event."""
     queue: asyncio.Queue = asyncio.Queue(maxsize=512)
     loop = asyncio.get_running_loop()
 
     def listener(event):
+        if target and event.get("target", "local") != target:
+            return
         try:
             loop.call_soon_threadsafe(_safe_put, queue, event)
         except RuntimeError:
@@ -340,6 +342,7 @@ async def setup_download_stream():
 
 class InstallModelRequest(BaseModel):
     repo_id: str
+    target: str | None = None
 
 
 
@@ -389,6 +392,21 @@ async def install_model(req: InstallModelRequest):
                 + ", ".join(m["repo_id"] for m in KNOWN_MODELS)
             ),
         )
+    target = (req.target or "").strip()
+    if target != "local":
+        from services import gpu_gateway  # noqa: PLC0415
+        from worker import routing  # noqa: PLC0415
+
+        decision = routing.decide()
+        if target and target != "local" and (
+            not decision.remote or decision.worker_id != target
+        ):
+            raise HTTPException(status_code=409, detail="The selected GPU target changed; try again.")
+        if decision.remote:
+            try:
+                return await gpu_gateway.download(req.repo_id, decision=decision)
+            except gpu_gateway.GatewayError as exc:
+                raise HTTPException(status_code=409, detail=str(exc)) from exc
     # Cooldown guard — don't retry if the same model just failed.
     import time as _time_check
     _sweep_cooldowns(_time_check.time())  # bound the dict (MM2-06)
@@ -410,6 +428,7 @@ async def install_model(req: InstallModelRequest):
 
     def _do():
         token = hf_progress.current_repo_id.set(req.repo_id)
+        target_token = hf_progress.current_target.set("local")
         _cancelled.discard(req.repo_id)  # clear any stale cancel from a prior run
         hf_progress.emit({
             "repo_id": req.repo_id,
@@ -505,6 +524,7 @@ async def install_model(req: InstallModelRequest):
                     return
                 download_aggregator.start(
                     req.repo_id,
+                    target=target or "local",
                     total_bytes=_summary["to_download_bytes"],
                     files_total=max(0, _summary["n_files"] - _summary["n_cached"]),
                 )
@@ -518,7 +538,7 @@ async def install_model(req: InstallModelRequest):
                 # No preflight (older/gated repo, mirror without dry-run, etc.):
                 # fall back to today's fill-in-as-files-appear behaviour.
                 logger.info("model install %s: preflight unavailable (%s)", req.repo_id, _pf_err)
-                download_aggregator.start(req.repo_id)
+                download_aggregator.start(req.repo_id, target=target or "local")
                 hf_progress.emit({
                     "repo_id": req.repo_id,
                     "filename": req.repo_id,
@@ -618,7 +638,7 @@ async def install_model(req: InstallModelRequest):
             # Flush the overall bar to 100% with the true byte total (FDL-06):
             # under Xet the per-file byte bars don't surface completion, so the
             # aggregator can sit below 100% even though every file landed.
-            download_aggregator.complete(req.repo_id)
+            download_aggregator.complete(req.repo_id, target=target or "local")
             logger.info("model install done: %s", req.repo_id)
             hf_progress.emit({
                 "repo_id": req.repo_id,
@@ -662,8 +682,9 @@ async def install_model(req: InstallModelRequest):
             })
         finally:
             _cancelled.discard(req.repo_id)
-            download_aggregator.finish(req.repo_id)
+            download_aggregator.finish(req.repo_id, target=target or "local")
             hf_progress.current_repo_id.reset(token)
+            hf_progress.current_target.reset(target_token)
             with _active_installs_lock:
                 _active_installs.discard(req.repo_id)
 

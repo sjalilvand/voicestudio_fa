@@ -71,8 +71,8 @@ export const listArchetypes = (filters: ArchetypeFilters = {}): Promise<Archetyp
 };
 
 /** Full URL for an archetype preview clip (use as an <audio> src). */
-export const archetypePreviewUrl = (id: string): string =>
-  apiUrl(`/archetypes/${encodeURIComponent(id)}/preview`);
+export const archetypePreviewUrl = (id: string, local = false): string =>
+  apiUrl(`/archetypes/${encodeURIComponent(id)}/preview${local ? '?local=true' : ''}`);
 
 /** Materialize an archetype into a reusable voice profile. */
 export const useArchetypeAsProfile = (

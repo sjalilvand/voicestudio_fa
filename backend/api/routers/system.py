@@ -544,9 +544,10 @@ async def flush_memory(unload_model: bool = False):
     if unload_model:
         import services.model_manager as mm
         async with mm._model_lock:
-            if mm.model is not None:
-                mm.model = None
-                freed_model = True
+            # Also drops the clone-prompt side cache, which this path used to
+            # leave resident — an "unload" that kept the encoded reference
+            # tensors belonging to the model it just released (#1495).
+            freed_model = mm.unload_shared_model()
 
     # Multi-pass GC to break reference cycles
     gc.collect(generation=2)
@@ -555,15 +556,25 @@ async def flush_memory(unload_model: bool = False):
 
     free_vram()
 
-    # Snapshot after flush
+    # Snapshot after flush. Two numbers, because one of them is a lie by
+    # omission: `memory_allocated` counts live tensors only, so it reads ~0
+    # after an unload while nvidia-smi still shows gigabytes — which is exactly
+    # the report we keep getting ("flush says it worked, the GPU says it
+    # didn't"). `memory_reserved` is what the caching allocator holds from the
+    # driver, and the gap between reserved and the driver's own figure is the
+    # CUDA context plus kernel workspaces, which no in-process call can return.
     vram_after = 0.0
+    vram_reserved = 0.0
     try:
         if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
             driver = getattr(torch.mps, "driver_allocated_memory", None)
             if driver:
                 vram_after = driver() / (1024**3)
+            current = getattr(torch.mps, "current_allocated_memory", None)
+            vram_reserved = (current() / (1024**3)) if current else vram_after
         elif torch.cuda.is_available():
             vram_after = torch.cuda.memory_allocated() / (1024**3)
+            vram_reserved = torch.cuda.memory_reserved() / (1024**3)
     except Exception:
         pass
 
@@ -574,6 +585,7 @@ async def flush_memory(unload_model: bool = False):
         "unloaded_model": freed_model,
         "ram_after": round(ram_after, 2),
         "vram_after": round(vram_after, 2),
+        "vram_reserved": round(vram_reserved, 2),
     }
 
 

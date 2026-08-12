@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { reduceWizardDownloadEvent, mirrorBlockedRepos } from '../components/WizardLibrary.jsx';
 
 const REPO = 'org/model';
+const KEY = `local\u0000${REPO}`;
 
 // P1-A: the first-run wizard used to DELETE a row on install_error (never even
 // reading ev.error), so a failed download vanished with no reason. It must now
@@ -14,15 +15,15 @@ describe('reduceWizardDownloadEvent — install_error persists (P1-A)', () => {
       phase: 'install_error',
       error: 'We couldn’t connect to hf-mirror.com',
     });
-    expect(s[REPO]).toBeDefined();
-    expect(s[REPO].phase).toBe('install_error');
-    expect(s[REPO].error).toBe('We couldn’t connect to hf-mirror.com');
+    expect(s[KEY]).toBeDefined();
+    expect(s[KEY].phase).toBe('install_error');
+    expect(s[KEY].error).toBe('We couldn’t connect to hf-mirror.com');
   });
 
   it('install_done still drops the transient row (reverts to installed flag)', () => {
     let s = reduceWizardDownloadEvent({}, { repo_id: REPO, phase: 'install_start' });
     s = reduceWizardDownloadEvent(s, { repo_id: REPO, phase: 'install_done' });
-    expect(s[REPO]).toBeUndefined();
+    expect(s[KEY]).toBeUndefined();
   });
 
   it('aggregate + per-file events accumulate without clearing the row', () => {
@@ -37,8 +38,8 @@ describe('reduceWizardDownloadEvent — install_error persists (P1-A)', () => {
       downloaded: 10,
       total: 100,
     });
-    expect(s[REPO].agg.totalBytes).toBe(100);
-    expect(s[REPO].files['a.bin'].total).toBe(100);
+    expect(s[KEY].agg.totalBytes).toBe(100);
+    expect(s[KEY].files['a.bin'].total).toBe(100);
   });
 
   it('ignores keepalive events without a repo_id', () => {
@@ -54,10 +55,10 @@ describe('reduceWizardDownloadEvent — install_error persists (P1-A)', () => {
       error: 'mirror down',
       docs_topic: 'HF_MIRROR_UNREACHABLE',
     });
-    expect(s[REPO].docsTopic).toBe('HF_MIRROR_UNREACHABLE');
+    expect(s[KEY].docsTopic).toBe('HF_MIRROR_UNREACHABLE');
     // Absent docs_topic (older backend / other failures) degrades to ''.
     const s2 = reduceWizardDownloadEvent({}, { repo_id: REPO, phase: 'install_error', error: 'x' });
-    expect(s2[REPO].docsTopic).toBe('');
+    expect(s2[KEY].docsTopic).toBe('');
   });
 });
 

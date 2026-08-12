@@ -281,22 +281,15 @@ def uninstall_sidecar_engine(engine_id: str):
 # repeated health checks don't spawn a new SubprocessBackend (each spawn
 # allocates a sidecar venv probe + atexit hook). The cache is keyed by
 # class to survive registry-sandbox tests that rebind ids transiently.
-_ENGINE_INSTANCES: dict[type, object] = {}
+#
+# It now lives in services.tts_backend — the worker executor needs the same
+# warm instances and cannot import an API router without inverting the
+# layering. This name is the SAME dict object, kept so the existing consumers
+# (engine_memory eviction, model_lifecycle inventory/unload) go on working
+# unchanged; rebinding it here would fork the cache in two.
+_ENGINE_INSTANCES: dict[type, object] = tts_backend._ENGINE_INSTANCES
 
-
-def _get_engine_instance(cls):
-    """Return a cached singleton instance of ``cls``.
-
-    SubprocessBackend's ``__init__`` registers an atexit shutdown hook,
-    so re-instantiating per request would leak handler entries (and on
-    real engines, additional sidecar processes the first time the lock
-    is acquired). One instance per process is the right move.
-    """
-    inst = _ENGINE_INSTANCES.get(cls)
-    if inst is None:
-        inst = cls()
-        _ENGINE_INSTANCES[cls] = inst
-    return inst
+_get_engine_instance = tts_backend.get_engine_instance
 
 
 def _resolve_engine_class(engine_id: str):

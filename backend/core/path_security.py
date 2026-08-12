@@ -10,7 +10,12 @@ from __future__ import annotations
 
 import ntpath
 import os
+import re
 from pathlib import Path
+
+_WINDOWS_RESERVED_NAMES = frozenset({"CON", "PRN", "AUX", "NUL"}) | frozenset(
+    f"{prefix}{number}" for prefix in ("COM", "LPT") for number in range(1, 10)
+)
 
 
 class UnsafePath(ValueError):
@@ -28,6 +33,10 @@ def safe_filename(value: object) -> str:
         or os.path.isabs(name)
         or ntpath.isabs(name)
         or ntpath.basename(name) != name
+        or name.endswith((" ", "."))
+        or re.search(r"[\x00-\x1f]", name)
+        or name.split(".", 1)[0].upper() in _WINDOWS_RESERVED_NAMES
+        or len(name.encode("utf-8")) > 240
     ):
         raise UnsafePath("expected a bare filename")
     return name

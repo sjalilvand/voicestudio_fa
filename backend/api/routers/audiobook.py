@@ -25,6 +25,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import uuid
 
 from collections.abc import Awaitable, Callable
@@ -681,6 +682,87 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
                                   "cached": seg_cache.hits}
 
 
+def _remote_chapter_call(chapter, *, engine_id, default_voice, voice_map,
+                         language, lexicon, opts, cache_dir):
+    """Build one opaque remote chapter task without loading a local TTS model."""
+    import hashlib
+
+    from services import gpu_gateway
+    from services.text_normalization import normalize_for_tts
+    from services.watermark import is_enabled as watermark_enabled
+
+    rows, voices, refs = [], [], []
+    for span in chapter.spans:
+        profile_id = _map_span_voice(span.voice_id, default_voice, voice_map)
+        voice = _resolve_voice(profile_id)
+        rows.append({
+            "text": normalize_for_tts(span.text, language),
+            "pause_ms_after": span.pause_ms_after,
+            "speed": getattr(span, "speed", None),
+        })
+        refs.append(voice.get("ref_audio"))
+        voices.append({
+            "ref_text": voice.get("ref_text"), "instruct": voice.get("instruct"),
+            "seed": voice.get("seed"),
+        })
+    params = {
+        "spans": rows, "voices": voices, "ref_audio": refs,
+        "language": language, "lexicon": lexicon,
+        "expressive": opts.to_manifest(), "watermark": bool(watermark_enabled()),
+    }
+    signature = hashlib.sha256(json.dumps(params, sort_keys=True, default=str).encode()).hexdigest()
+    wav_path = os.path.join(cache_dir, f"remote-{signature}.wav")
+
+    def decode(result):
+        import soundfile as sf
+        if not os.path.exists(wav_path):
+            partial = f"{wav_path}.part"
+            shutil.copyfile(result.path, partial)
+            os.replace(partial, wav_path)
+        info = sf.info(wav_path)
+        return wav_path, float(info.duration), False, None
+
+    return gpu_gateway.RemoteCall(
+        engine=engine_id, operation="audiobook", params=params,
+        idempotency_key=f"audiobook:{signature}", decode=decode,
+    ), wav_path
+
+
+async def _run_chapter(chapter, *, operation="audiobook", decision, job, default_voice, language, opts,
+                       voice_map, lexicon, cache_dir):
+    """Run one chapter through the gateway; local preparation stays lazy."""
+    from services import gpu_gateway
+    from services.tts_backend import active_backend_id
+
+    engine_id = active_backend_id()
+    remote, remote_cache = _remote_chapter_call(
+        chapter, engine_id=engine_id, default_voice=default_voice,
+        voice_map=voice_map, language=language, lexicon=lexicon,
+        opts=opts, cache_dir=cache_dir,
+    )
+    if decision.remote and os.path.exists(remote_cache):
+        import soundfile as sf
+        info = sf.info(remote_cache)
+        return remote_cache, float(info.duration), True, None
+
+    async def prepare_local():
+        synth, sr, resolve, local_engine = await _prepare_synth(
+            default_voice, language=language, opts=opts, voice_map=voice_map
+        )
+        return gpu_gateway.LocalCall(
+            fn=lambda: _render_chapter_cached(
+                chapter, synth, sr, local_engine, resolve, cache_dir, lexicon,
+                language, opts, voice_map,
+            ),
+            what="Audiobook chapter",
+        )
+
+    return await gpu_gateway.run(
+        operation, local=gpu_gateway.LocalCall(prepare=prepare_local),
+        remote=remote, decision=decision, job=job,
+    )
+
+
 class AudiobookPreviewRequest(ExpressiveMixin):
     text: str
     chapter_index: int = 0
@@ -700,7 +782,7 @@ async def audiobook_preview(req: AudiobookPreviewRequest) -> dict:
     cache (the later full render reuses it) and a re-preview is instant.
     """
     from core.config import OUTPUTS_DIR
-    from services.model_manager import _gpu_pool
+    from services import gpu_gateway
 
     plan = parse_audiobook_script(req.text, default_voice=req.default_voice)
     if not plan.chapters:
@@ -714,16 +796,11 @@ async def audiobook_preview(req: AudiobookPreviewRequest) -> dict:
     os.makedirs(cache_dir, exist_ok=True)
     resolved_lang = _resolve_default_language(req.language, req.default_voice)
     opts = _expressive_opts(req)
-    synth, sr, resolve, engine_id = await _prepare_synth(
-        req.default_voice,
-        language=resolved_lang,
-        opts=opts,
-        voice_map=req.voice_map,
-    )
-    loop = asyncio.get_running_loop()
-    wav_path, dur, was_cached, _seg_stats = await loop.run_in_executor(
-        _gpu_pool, _render_chapter_cached, chapter, synth, sr, engine_id, resolve, cache_dir,
-        req.lexicon, resolved_lang, opts, req.voice_map,
+    decision = gpu_gateway.decide("audiobook")
+    wav_path, dur, was_cached, _seg_stats = await _run_chapter(
+        chapter, decision=decision, job=None, default_voice=req.default_voice,
+        language=resolved_lang, opts=opts, voice_map=req.voice_map,
+        lexicon=req.lexicon, cache_dir=cache_dir,
     )
     return {
         "output": os.path.relpath(wav_path, OUTPUTS_DIR),  # served via /audio
@@ -762,7 +839,7 @@ async def _render_longform_sse(
     from core.config import OUTPUTS_DIR
     from core.failure import build_failure, build_failure_event
     from services.ffmpeg_utils import find_ffmpeg, run_ffmpeg
-    from services.model_manager import _gpu_pool
+    from services import gpu_gateway
 
     opts = opts or ExpressiveOptions()
 
@@ -837,13 +914,11 @@ async def _render_longform_sse(
     cache_dir = os.path.join(OUTPUTS_DIR, "longform_cache")
     os.makedirs(cache_dir, exist_ok=True)
     prune_cache_dir(cache_dir)  # bound disk before this job adds its chapters
-    loop = asyncio.get_running_loop()
-
     try:
         resolved_lang = _resolve_default_language(language, default_voice)
-        synth, sr, resolve, engine_id = await _prepare_synth(
-            default_voice, language=resolved_lang, opts=opts, voice_map=voice_map
-        )
+        operation = "audiobook" if job_type == "audiobook" else "longform"
+        decision = gpu_gateway.decide(operation)
+        chapter_run = gpu_gateway.JobRun(operation)
 
         total = len(plan.chapters)
         chapter_files: list[str] = []
@@ -877,10 +952,11 @@ async def _render_longform_sse(
                     interrupted = True
                     break
             try:
-                wav_path, dur, was_cached, seg_stats = await loop.run_in_executor(
-                    _gpu_pool, _render_chapter_cached,
-                    chapter, synth, sr, engine_id, resolve, cache_dir, lexicon,
-                    resolved_lang, opts, voice_map,
+                wav_path, dur, was_cached, seg_stats = await _run_chapter(
+                    chapter, operation=operation, decision=decision, job=chapter_run,
+                    default_voice=default_voice, language=resolved_lang,
+                    opts=opts, voice_map=voice_map, lexicon=lexicon,
+                    cache_dir=cache_dir,
                 )
             except Exception as e:  # isolate a bad chapter — keep going
                 logger.warning("[%s] chapter %d (%s) failed to render",
@@ -917,6 +993,11 @@ async def _render_longform_sse(
                 ev["segments"] = seg_stats["total"]
                 ev["cached_segments"] = seg_stats["cached"]
             yield _emit(ev)
+
+        route_notice = chapter_run.notice()
+        if route_notice is not None:
+            yield _emit({"type": "routing_notice", "status": route_notice[0],
+                         "reason": route_notice[1]})
 
         if interrupted:
             logger.info("[%s] client disconnected — stopped after %d/%d chapters",
@@ -1033,6 +1114,25 @@ async def _render_longform_sse(
         yield _emit({"type": "error", "error": "render failed (see backend log)"})
 
 
+async def _public_longform_stream(plan, **render_kwargs):
+    """Keep generator diagnostics local if setup fails before its own guard."""
+    try:
+        async for event in _render_longform_sse(plan, **render_kwargs):
+            yield event
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:
+        from core.public_errors import public_failure
+
+        error = public_failure(
+            logger,
+            "Longform response stream failed",
+            exc,
+            response="Render failed; check the backend log for details.",
+        )
+        yield f"data: {json.dumps({'type': 'error', 'error': error})}\n\n"
+
+
 @router.post("/audiobook")
 async def audiobook_synthesize(req: AudiobookRequest, request: Request = None):
     """Synthesize a chapterized audiobook from a script, streaming SSE progress."""
@@ -1041,7 +1141,7 @@ async def audiobook_synthesize(req: AudiobookRequest, request: Request = None):
     # to a direct in-process call, e.g. a unit test); its disconnect poll is what
     # lets Stop cancel the render mid-book (#1216).
     return StreamingResponse(
-        _render_longform_sse(
+        _public_longform_stream(
             plan, default_voice=req.default_voice, language=req.language,
             fmt=req.format, bitrate=req.bitrate,
             loudness=req.loudness, cover_path=req.cover_path, metadata=req.metadata,
@@ -1102,7 +1202,7 @@ async def longform_render(req: LongformRenderRequest, request: Request = None):
             chapters.append(Chapter(title=c.title or f"Chapter {i + 1}", spans=spans))
     plan = AudiobookPlan(chapters=chapters)
     return StreamingResponse(
-        _render_longform_sse(
+        _public_longform_stream(
             plan, default_voice=req.default_voice, language=req.language,
             fmt=req.format, bitrate=req.bitrate,
             loudness=req.loudness, cover_path=req.cover_path, metadata=req.metadata,
@@ -1195,7 +1295,7 @@ async def resume_longform(job_id: str, request: Request = None):
     # unrendered ones synthesize. Using a fresh id means the request's job_id
     # never names a work dir / output file (defence-in-depth path-injection).
     return StreamingResponse(
-        _render_longform_sse(
+        _public_longform_stream(
             plan, default_voice=p.get("default_voice"), language=p.get("language"),
             fmt=p.get("fmt", "m4b"), bitrate=p.get("bitrate", "128k"),
             loudness=p.get("loudness"), cover_path=p.get("cover_path"),

@@ -22,8 +22,10 @@ import logging
 import os
 import re
 import threading
+import time
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+from contextlib import contextmanager
 from typing import Optional
 
 import torch
@@ -606,18 +608,25 @@ class OmniVoiceBackend(TTSBackend):
         clear the shared one and free GPU memory too. Idempotent and safe before
         the first generate(). Best-effort: assignment is GIL-atomic, so we don't
         take the async ``_model_lock`` from this sync path; the registry wraps
-        this call in try/except so a race can never block an engine switch."""
+        this call in try/except so a race can never block an engine switch.
+
+        Delegates to ``model_manager.unload_shared_model`` rather than clearing
+        the singleton here: this path used to free the device caches *before*
+        dropping the shared reference, which frees nothing, and it is the path
+        the idle sweep on a headless worker node runs (#1495)."""
         self._model = None
         clear_clone_prompt_cache()  # #427: drop cached prompts so VRAM is freed
         try:
             import services.model_manager as mm
-            if mm.model is not None:
-                mm.free_vram()
-                mm.model = None
+            mm.unload_shared_model()
         except Exception as exc:
-            logger.warning("Shared voice model unload did not complete")
+            # The reference is already gone by the time anything in here can
+            # raise — only the device-cache flush is left, and that failing is
+            # a driver problem, not a stuck model. Saying "retry" would send
+            # the user to repeat an unload that already happened.
+            logger.warning("Shared voice model released, but the device cache flush failed")
             raise RuntimeError(
-                "The shared voice model could not be unloaded. Retry after the current generation finishes."
+                "The voice model was released, but the GPU memory cache could not be flushed."
             ) from exc
 
 
@@ -2401,6 +2410,162 @@ def get_active_tts_backend(*, model=None) -> TTSBackend:
         _active_instance_id = bid
         _active_mlx_model_key = mlx_model_key
     return _active_instance
+
+
+# ── Shared engine-instance cache ──────────────────────────────────────────
+#
+# One instance per engine class for the lifetime of the process. It lived in
+# ``api/routers/engines.py`` until the worker needed it too: a worker executing
+# a remote assignment must reuse the same warm engine the local generate path
+# uses, and importing an API router from ``worker/`` would invert the layering
+# (``worker/executor.py`` is a translator over ``services/``). The router now
+# aliases this dict, so every consumer that already reaches for
+# ``engines._ENGINE_INSTANCES`` — engine_memory's eviction, model_lifecycle's
+# inventory and unload — keeps operating on the one true cache.
+#
+# Keyed by CLASS, not by engine id, because registry-sandbox tests rebind ids
+# transiently; ``get_engine_instance_for`` resolves an id through
+# ``get_backend_class`` so callers can key by id without the cache doing so.
+_ENGINE_INSTANCES: dict[type, object] = {}
+_ENGINE_CACHE_LOCK = threading.RLock()
+
+# Last use, on the monotonic clock — a wall clock would make an NTP step or a
+# laptop resume look like a ten-minute idle and unload a model mid-job.
+_ENGINE_LAST_USED: dict[type, float] = {}
+
+# How many jobs are inside an engine right now. A long generation touches the
+# cache once at the start, so on elapsed time alone a 40-minute dub looks
+# exactly like an abandoned model — and the sweep would unload it out from
+# under the thread rendering it.
+_ENGINE_IN_USE: dict[type, int] = {}
+
+def _idle_seconds_from_env(name: str, default: float, *, floor: float) -> float:
+    """Read a tunable idle duration, ignoring anything unusable.
+
+    These exist so the ten-minute behaviour can be observed in a minute during
+    testing instead of a coffee break. A bad value must not change behaviour
+    silently, and must never reach zero: a zero threshold unloads an engine the
+    instant it goes idle, which on a busy machine means reloading it for every
+    request.
+    """
+    raw = (os.environ.get(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        logger.warning("Ignoring %s=%r: not a number.", name, raw)
+        return default
+    if value < floor:
+        logger.warning("Ignoring %s=%s: below the %ss floor.", name, value, floor)
+        return default
+    return value
+
+
+#: How long an engine may sit unused before its weights are handed back.
+#: Override with OMNIVOICE_ENGINE_IDLE_UNLOAD_SECONDS (testing).
+ENGINE_IDLE_UNLOAD_SECONDS = _idle_seconds_from_env(
+    "OMNIVOICE_ENGINE_IDLE_UNLOAD_SECONDS", 600.0, floor=5.0
+)
+
+
+@contextmanager
+def engine_in_use(instance, *, now: Optional[float] = None):
+    """Hold an engine against the idle sweep for the duration of one job.
+
+    Leaving on the exit stamp rather than the entry one makes "idle" mean
+    "idle since the work finished", which is the only reading under which the
+    ten-minute window measures what it claims to.
+    """
+    cls = type(instance)
+    with _ENGINE_CACHE_LOCK:
+        _ENGINE_IN_USE[cls] = _ENGINE_IN_USE.get(cls, 0) + 1
+    try:
+        yield instance
+    finally:
+        with _ENGINE_CACHE_LOCK:
+            remaining = _ENGINE_IN_USE.get(cls, 1) - 1
+            if remaining > 0:
+                _ENGINE_IN_USE[cls] = remaining
+            else:
+                _ENGINE_IN_USE.pop(cls, None)
+            _ENGINE_LAST_USED[cls] = time.monotonic() if now is None else float(now)
+
+
+def get_engine_instance(cls, *, now: Optional[float] = None):
+    """Return the cached singleton instance of ``cls``, creating it once.
+
+    ``SubprocessBackend.__init__`` registers an atexit shutdown hook, so
+    re-instantiating per call would leak handler entries — and on real engines,
+    an extra sidecar process the first time the lock is acquired. One instance
+    per process is the right move.
+    """
+    with _ENGINE_CACHE_LOCK:
+        inst = _ENGINE_INSTANCES.get(cls)
+        if inst is None:
+            inst = cls()
+            _ENGINE_INSTANCES[cls] = inst
+        _ENGINE_LAST_USED[cls] = time.monotonic() if now is None else float(now)
+        return inst
+
+
+def get_engine_instance_for(engine_id: str, *, now: Optional[float] = None):
+    """Cached instance of the TTS engine registered under ``engine_id``.
+
+    Deliberately NOT :func:`get_active_tts_backend`: that resolves
+    ``active_backend_id()``, i.e. *this machine's* Settings preference. On a
+    remote worker that would run whatever the worker's owner happens to prefer
+    while the control plane's slots, breaker history and result metadata are
+    keyed to the engine it believes ran — wrong audio, silently.
+    """
+    return get_engine_instance(get_backend_class(engine_id), now=now)
+
+
+def release_idle_engines(
+    idle_seconds: float = ENGINE_IDLE_UNLOAD_SECONDS,
+    *,
+    now: Optional[float] = None,
+) -> list[str]:
+    """Unload and drop every cached engine unused for ``idle_seconds``.
+
+    Least-recently-used first, so a sweep cut short by a raising ``unload()``
+    has already freed the coldest engine. Never raises: a stuck unload must not
+    take down the loop that called it. Returns the engine ids released.
+    """
+    stamp = time.monotonic() if now is None else float(now)
+    pending: list[tuple[str, object]] = []
+    with _ENGINE_CACHE_LOCK:
+        # Entries other consumers popped straight out of the cache
+        # (engine_memory's eviction, model_lifecycle's unload) would otherwise
+        # pin a stale class.
+        for cls in [c for c in _ENGINE_LAST_USED if c not in _ENGINE_INSTANCES]:
+            _ENGINE_LAST_USED.pop(cls, None)
+        coldest_first = sorted(
+            _ENGINE_INSTANCES, key=lambda c: _ENGINE_LAST_USED.get(c, 0.0)
+        )
+        for cls in coldest_first:
+            if _ENGINE_IN_USE.get(cls):
+                continue
+            # An instance put here by some other path has no timestamp; start
+            # its clock now rather than leaving it resident forever.
+            last_used = _ENGINE_LAST_USED.setdefault(cls, stamp)
+            if stamp - last_used < idle_seconds:
+                continue
+            inst = _ENGINE_INSTANCES.pop(cls, None)
+            _ENGINE_LAST_USED.pop(cls, None)
+            if inst is not None:
+                pending.append((getattr(cls, "id", cls.__name__), inst))
+
+    released: list[str] = []
+    for engine_id, inst in pending:
+        try:
+            inst.unload()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("idle unload: %s.unload() raised: %s", engine_id, exc)
+        released.append(engine_id)
+    if released:
+        logger.info("Released %d idle engine(s): %s", len(released), ", ".join(released))
+    return released
 
 
 # ── Shared generation-time engine resolution (issue #312 class) ───────────
