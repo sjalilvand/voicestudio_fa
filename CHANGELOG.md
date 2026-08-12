@@ -62,6 +62,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Worker restart coverage now waits for the registration response to persist its identity instead of racing the client callback in CI. (#1505)
 - Dub language and export selections now restore without false schema warnings, and remote-worker port 7443 is identified instead of reported as a generic timeout. (#1504)
 - A configured remote backend now bypasses local first-run setup, verifies itself before app requests begin, and shows recovery instead of leaving the desktop stuck on Setup. (#1503)
 - An idle voice model now actually hands its memory back. The unload emptied the GPU cache a moment before releasing the model, so it freed nothing while reporting success — a GPU machine lending its card sat on 3.6 GB indefinitely. (#1495)
