@@ -949,6 +949,15 @@ async def test_a_restarted_worker_reconnects_without_a_new_token(harness, tmp_pa
         await agent.start(token_text=token.encode())
         await harness._await_connection()
         first_id = registry.list_workers()[0].id
+        # The server publishes its session before the registration response
+        # reaches the client. Wait for that response callback to persist the
+        # id instead of racing its filesystem write.
+        deadline = asyncio.get_running_loop().time() + 2.0
+        while (
+            worker_agent.load_worker_id(monkey_paths["worker_id"]) != first_id
+            and asyncio.get_running_loop().time() < deadline
+        ):
+            await asyncio.sleep(0.01)
         assert worker_agent.load_worker_id(monkey_paths["worker_id"]) == first_id
 
         # The process goes away.
