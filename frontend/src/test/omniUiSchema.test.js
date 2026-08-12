@@ -39,13 +39,27 @@ describe('sanitizeOmniUi', () => {
       language: 'en',
       isSidebarCollapsed: false,
       dubSegments: [{ id: '1', text: 'x' }],
+      dubTracks: ['es', 'fr'],
       dubStep: 'editing',
+      exportTracks: { original: true, es: false },
       preserveBg: true,
       speed: 1,
       steps: 16,
       cfg: 2,
     };
     expect(sanitizeOmniUi({ ...good })).toEqual(good);
+  });
+
+  it('rejects swapped persisted track shapes without dropping valid track state', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(
+      sanitizeOmniUi({
+        dubTracks: ['es'],
+        exportTracks: { original: true, es: false },
+      }),
+    ).toEqual({ dubTracks: ['es'], exportTracks: { original: true, es: false } });
+    expect(sanitizeOmniUi({ dubTracks: {}, exportTracks: [] })).toEqual({});
+    warn.mockRestore();
   });
 
   it('schema covers every field the restore path reads', () => {

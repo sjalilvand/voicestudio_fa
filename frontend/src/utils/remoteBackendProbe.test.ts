@@ -41,6 +41,7 @@ describe('remote backend probe', () => {
     ['https://gpu-box:3900', new TypeError('blocked by CORS policy'), 'cors'],
     ['http://gpu-box:3900', new TypeError('Failed to fetch'), 'network'],
     ['https://gpu-box:7443', new TypeError('Failed to fetch'), 'wrong_port'],
+    ['https://gpu-box:7443', new DOMException('aborted', 'AbortError'), 'wrong_port'],
   ])('classifies %s transport failures as %s', async (url, error, kind) => {
     const result = await probeRemoteBackend(url, '', {
       fetchImpl: vi.fn().mockRejectedValue(error),

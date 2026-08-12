@@ -919,7 +919,9 @@ def test_certificate_regenerates_when_an_explicit_listener_host_is_added(tmp_pat
 
 
 @pytest.mark.asyncio
-async def test_a_restarted_worker_reconnects_without_a_new_token(harness, tmp_path):
+async def test_a_restarted_worker_reconnects_without_a_new_token(
+    harness, tmp_path, monkeypatch
+):
     """Key-based identity is pointless if a restart needs a fresh token.
 
     The challenge signature binds to the worker id, so a worker that does not
@@ -939,6 +941,14 @@ async def test_a_restarted_worker_reconnects_without_a_new_token(harness, tmp_pa
     }
     original_paths = worker_agent._paths
     worker_agent._paths = lambda: monkey_paths
+    persisted = asyncio.Event()
+    original_save_worker_id = worker_agent.save_worker_id
+
+    def save_worker_id(path, worker_id):
+        original_save_worker_id(path, worker_id)
+        persisted.set()
+
+    monkeypatch.setattr(worker_agent, "save_worker_id", save_worker_id)
     try:
         # First run: enroll with a token, exactly as a new machine would.
         token = registry.create_enrollment(
@@ -949,6 +959,10 @@ async def test_a_restarted_worker_reconnects_without_a_new_token(harness, tmp_pa
         await agent.start(token_text=token.encode())
         await harness._await_connection()
         first_id = registry.list_workers()[0].id
+        # The server publishes its session before the registration response
+        # reaches the client. Wait for that response callback to persist the
+        # id instead of racing its filesystem write.
+        await asyncio.wait_for(persisted.wait(), timeout=2.0)
         assert worker_agent.load_worker_id(monkey_paths["worker_id"]) == first_id
 
         # The process goes away.

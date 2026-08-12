@@ -28,8 +28,8 @@ export function disableRemoteBackend(reload: () => void): void {
 
 function transportKind(url: URL, error: unknown): RemoteProbeKind {
   const text = String((error as Error)?.message || error).toLowerCase();
-  if ((error as Error)?.name === 'AbortError') return 'timeout';
   if (url.port === '7443') return 'wrong_port';
+  if ((error as Error)?.name === 'AbortError') return 'timeout';
   if (/certificate|cert_|ssl|tls/.test(text)) return 'tls';
   if (/cors|cross-origin/.test(text)) return 'cors';
   // Browser fetch deliberately hides DNS, connection, CORS, and TLS details
