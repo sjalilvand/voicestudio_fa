@@ -63,7 +63,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- The Simplified Chinese (zh-CN) translation no longer mistranslates brand names and technical terms — Discord, Tailscale, Hugging Face, IPA, and LLM (Cinematic) were rendered as nonsensical literal translations, and ~250 more awkward machine-translation strings are now natural Chinese. (#1507)
+- The Simplified Chinese (zh-CN) translation no longer mistranslates brand names and technical terms — Discord, Tailscale, Hugging Face, IPA, and LLM (Cinematic) were rendered as nonsensical literal translations, and ~250 more awkward machine-translation strings are now natural Chinese. (#1508) — thanks @anyingiit!
 - Worker restart coverage now waits for the registration response to persist its identity instead of racing the client callback in CI. (#1505)
 - Dub language and export selections now restore without false schema warnings, and remote-worker port 7443 is identified instead of reported as a generic timeout. (#1504)
 - A configured remote backend now bypasses local first-run setup, verifies itself before app requests begin, and shows recovery instead of leaving the desktop stuck on Setup. (#1503)
