@@ -39,10 +39,10 @@ export const OMNI_UI_SCHEMA = {
   dubSegments: isArrOfObj,
   dubLang: isStr,
   dubLangCode: isStr,
-  dubTracks: isObj,
+  dubTracks: isArr,
   dubStep: isStr, // additionally clamped by clampRestoredDubStep (#1067)
   dubTranscript: isStr,
-  exportTracks: isArr,
+  exportTracks: isObj,
   preserveBg: isBool,
   defaultTrack: isStr,
   exportHistory: isArr,
