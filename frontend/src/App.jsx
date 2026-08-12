@@ -118,14 +118,9 @@ function App() {
   // polls every 1 s; until `ready`, we render BootstrapSplash instead of the
   // normal app shell, so the user sees real progress instead of a hung UI.
   const { stage: bootstrapStage, message: bootstrapMessage } = useBootstrapStage();
-
-  // Analytics is OFF until the user opts in (Settings → Privacy). We never call
-  // posthog.init() at load — that would track people before they consented, and
-  // would make the app's own "sends nothing out of the box" promise false. Ask
-  // the backend for the stored consent, and only then start it.
-  useEffect(() => {
-    initAnalyticsFromConsent(() => apiJson('/api/settings/analytics'));
-  }, []);
+  // Read once, like api/client.ts. Saving or disabling a remote backend reloads
+  // the app, so this value and API's module-level base always move together.
+  const [remoteBackend] = useState(() => configuredRemoteBackend());
 
   // UI navigation state now lives in the Zustand `uiSlice` (Phase 2.2).
   // Mode + uiScale + sidebar-collapsed persist across reloads automatically
@@ -633,19 +628,25 @@ function App() {
     setRemoteFailure(null);
     openSettingsTab('sharing');
   }, [openSettingsTab]);
+  const backendReady = remoteBackend ? setupChecked && !remoteFailure : bootstrapStage === 'ready';
+
+  // Analytics remains off until the selected backend has passed its startup
+  // gate. Starting this request on mount leaked connection/CORS noise from a
+  // stale remote URL before the recovery screen could explain or repair it.
   useEffect(() => {
-    // Gate the probe on the bootstrap being 'ready' — before that there is
-    // no backend to answer. Probing from mount burned the 30-attempt ceiling
-    // during the setup/installing acts (minutes long on a first run), so the
-    // wizard was silently skipped straight into the studio once the install
-    // finished. Keyed on bootstrapStage: the probe (re)runs the moment the
-    // backend becomes reachable.
-    if (bootstrapStage !== 'ready') return undefined;
+    if (!backendReady) return;
+    void initAnalyticsFromConsent(() => apiJson('/api/settings/analytics'));
+  }, [backendReady]);
+
+  useEffect(() => {
+    // A local backend cannot answer before Rust reports ready. A configured
+    // remote is independent of the local bootstrap and must be probed at once;
+    // otherwise a first-run shell parks at awaiting_setup forever.
+    if (!remoteBackend && bootstrapStage !== 'ready') return undefined;
     let cancelled = false;
     (async () => {
-      const remote = configuredRemoteBackend();
-      if (remote) {
-        const result = await probeRemoteBackend(remote.url, remote.key);
+      if (remoteBackend) {
+        const result = await probeRemoteBackend(remoteBackend.url, remoteBackend.key);
         if (cancelled) return;
         setRemoteFailure(result.ok ? null : result);
         setSetupNeeded(false);
@@ -670,7 +671,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [bootstrapStage, remoteProbeAttempt]);
+  }, [bootstrapStage, remoteBackend, remoteProbeAttempt]);
 
   // ── First sound ──
   // Onboarding should end with the product doing the thing: the moment the
@@ -678,7 +679,7 @@ function App() {
   // it. Best-effort by design — a first impression must never surface an
   // error, so every failure path is silent.
   useEffect(() => {
-    if (!setupChecked || setupNeeded || bootstrapStage !== 'ready') return;
+    if (!setupChecked || setupNeeded || !backendReady) return;
     let pending = false;
     try {
       pending = sessionStorage.getItem('omnivoice.firstSound') === '1';
@@ -706,7 +707,7 @@ function App() {
         /* silent — see above */
       }
     })();
-  }, [setupChecked, setupNeeded, bootstrapStage]);
+  }, [setupChecked, setupNeeded, backendReady]);
 
   // ── Tauri auto-updater ──
   // On boot, ask GitHub Releases if a newer build is available. If yes,
@@ -1225,7 +1226,7 @@ function App() {
   // when explicitly requested via `--setup`. Without this, a live backend
   // answering /setup/status would route straight to the model wizard and the
   // awaiting_setup stage would never get to render.
-  if (bootstrapStage === 'awaiting_setup') {
+  if (!remoteBackend && bootstrapStage === 'awaiting_setup') {
     return (
       <div className="app-bootstrap-scale" style={{ '--ui-scale': effectiveUiScale }}>
         <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
@@ -1256,7 +1257,7 @@ function App() {
       </div>
     );
   }
-  if (!uiScaleConfigured && bootstrapStage === 'ready') {
+  if (!uiScaleConfigured && backendReady) {
     return (
       <div className="app-wizard-wrap" style={{ '--ui-scale': effectiveUiScale }}>
         <div data-tauri-drag-region className="app-wizard-dragstrip" />
@@ -1271,7 +1272,7 @@ function App() {
       </div>
     );
   }
-  if (setupNeeded && bootstrapStage === 'ready') {
+  if (setupNeeded && backendReady) {
     // Render outside the `app-container` grid so the wizard spans the full
     // viewport instead of getting squeezed into whatever grid cell the
     // studio layout reserves for the main content column. Gated on the
@@ -1314,7 +1315,7 @@ function App() {
 
   // Block the main UI until Rust reports the backend is ready. In dev web
   // (no Tauri), the hook returns 'ready' immediately so this is a no-op.
-  if (bootstrapStage !== 'ready') {
+  if (!backendReady) {
     return (
       <div className="app-bootstrap-scale" style={{ '--ui-scale': effectiveUiScale }}>
         <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
