@@ -58,6 +58,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### CI
 
+- Linux release smoke now validates linuxdeploy's wrapped custom launcher instead of rejecting a healthy AppImage. (#1506)
 - The stdio wire protocol every engine sidecar speaks is now tested once across all nine of them, instead of against a single engine — a bug in any one sidecar's copy gets caught — thanks @paoloantinori! (#1408)
 
 ### Fixed
