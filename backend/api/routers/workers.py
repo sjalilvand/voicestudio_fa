@@ -401,7 +401,18 @@ async def set_inbound_enabled(request: InboundEnableRequest) -> dict:
     if inbound_service.enabled():
         await inbound_service.node.start()
         if inbound_service.node.startup_error:
-            raise HTTPException(status_code=409, detail=inbound_service.node.startup_error)
+            from core.public_errors import public_failure
+
+            detail = public_failure(
+                logger,
+                "Inbound worker listener failed to start",
+                inbound_service.node.startup_error,
+                response=(
+                    "The inbound worker listener could not start; "
+                    "check the backend log for details."
+                ),
+            )
+            raise HTTPException(status_code=409, detail=detail)
     else:
         await inbound_service.node.stop()
     return inbound_service.node.snapshot()

@@ -24,6 +24,7 @@ import ipaddress
 import logging
 import os
 import socket
+import ssl
 from dataclasses import dataclass
 from typing import Optional
 
@@ -38,6 +39,15 @@ logger = logging.getLogger("omnivoice.worker")
 
 _CERT_VALID_DAYS = 825  # the CA/Browser Forum maximum; long enough to be quiet
 _RENEW_WITHIN_DAYS = 30
+
+
+def unverified_client_context() -> ssl.SSLContext:
+    """Build the pin-bootstrap context without permitting legacy TLS."""
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    return context
 
 
 @dataclass(frozen=True)

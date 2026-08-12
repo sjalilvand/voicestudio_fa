@@ -98,9 +98,9 @@ def fetch_server_certificate(endpoint: str, *, timeout: float = 10.0) -> bytes:
     host, _, port = endpoint.rpartition(":")
     if not host:
         raise ValueError(f"Endpoint must be host:port — got {endpoint!r}")
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
+    from worker import tls  # noqa: PLC0415
+
+    context = tls.unverified_client_context()
     with ssl.create_connection((host, int(port)), timeout=timeout) as raw:
         with context.wrap_socket(raw, server_hostname=host) as tls:
             der = tls.getpeercert(binary_form=True)

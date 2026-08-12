@@ -340,7 +340,7 @@ def revoke(worker_id: str, *, now: Optional[float] = None) -> bool:
             (stamp, worker_id),
         )
     if cur.rowcount:
-        logger.info("Revoked remote worker %s", worker_id)
+        logger.info("Remote worker revoked")
     return bool(cur.rowcount)
 
 

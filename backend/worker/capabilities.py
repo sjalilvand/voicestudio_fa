@@ -139,7 +139,7 @@ def repo_ids_for(entry: dict) -> list[str]:
                 return []
             return [spec.weights_repo_id]
     except Exception:
-        logger.debug("Sidecar repository probe failed for %s", engine_id, exc_info=True)
+        logger.debug("Sidecar repository probe failed", exc_info=True)
     return []
 
 

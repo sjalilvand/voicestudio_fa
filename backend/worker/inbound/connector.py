@@ -47,9 +47,7 @@ def _fetch_pinned_certificate(
     a self-signed certificate. The copied fingerprint is the trust anchor; the
     verified leaf is then the sole root trusted by the real gRPC channel.
     """
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
+    context = tls.unverified_client_context()
     with socket.create_connection(
         (connection.host, connection.port), timeout=timeout
     ) as raw, context.wrap_socket(raw, server_hostname=connection.host) as secured:
@@ -109,12 +107,12 @@ class NodeConnection:
                 raise
             except Exception as exc:
                 attempt += 1
-                self._last_error = str(exc)
+                self._last_error = "Connection failed; check the backend log for details."
                 delay = backoff_delay(attempt)
                 logger.warning(
-                    "Connection to %s failed (%s). Retrying in %.1fs.",
+                    "Connection to %s failed (class=%s; details withheld). Retrying in %.1fs.",
                     self._connection.redacted(),
-                    exc,
+                    type(exc).__name__,
                     delay,
                 )
                 with contextlib.suppress(asyncio.TimeoutError):
