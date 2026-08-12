@@ -63,6 +63,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- The Linux app icon is no longer blank: the AppImage shipped `.DirIcon` as a symlink into the machine that built it, so file managers and app menus drew nothing. (#1518)
+- The Linux desktop entry no longer ships an empty `Categories=`, which `desktop-file-validate` rejects and menu builders skip. (#1518)
 - The Simplified Chinese (zh-CN) translation no longer mistranslates brand names and technical terms — Discord, Tailscale, Hugging Face, IPA, and LLM (Cinematic) were rendered as nonsensical literal translations, and ~250 more awkward machine-translation strings are now natural Chinese. (#1508) — thanks @anyingiit!
 - Worker restart coverage now waits for the registration response to persist its identity instead of racing the client callback in CI. (#1505)
 - Dub language and export selections now restore without false schema warnings, and remote-worker port 7443 is identified instead of reported as a generic timeout. (#1504)
