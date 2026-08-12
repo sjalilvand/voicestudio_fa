@@ -386,7 +386,7 @@ pub async fn reset_purge(app: tauri::AppHandle, scopes: Vec<String>) -> Result<R
         .filter(|s| DISK_SCOPES.contains(&s.as_str()))
         .collect();
 
-    let mut report = ResetReport::default();
+    let report = ResetReport::default();
     if wanted.is_empty() {
         return Ok(report);
     }
