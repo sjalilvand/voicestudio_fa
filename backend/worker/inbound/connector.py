@@ -105,16 +105,11 @@ class NodeConnection:
                 attempt = 0
             except asyncio.CancelledError:
                 raise
-            except Exception as exc:
+            except Exception:
                 attempt += 1
                 self._last_error = "Connection failed; check the backend log for details."
                 delay = backoff_delay(attempt)
-                logger.warning(
-                    "Connection to %s failed (class=%s; details withheld). Retrying in %.1fs.",
-                    self._connection.redacted(),
-                    type(exc).__name__,
-                    delay,
-                )
+                logger.warning("Inbound worker connection failed; retry scheduled.")
                 with contextlib.suppress(asyncio.TimeoutError):
                     await asyncio.wait_for(self._stop.wait(), timeout=delay)
 

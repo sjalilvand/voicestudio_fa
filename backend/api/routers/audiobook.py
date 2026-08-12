@@ -1114,10 +1114,10 @@ async def _render_longform_sse(
         yield _emit({"type": "error", "error": "render failed (see backend log)"})
 
 
-async def _public_longform_stream(stream):
+async def _public_longform_stream(plan, **render_kwargs):
     """Keep generator diagnostics local if setup fails before its own guard."""
     try:
-        async for event in stream:
+        async for event in _render_longform_sse(plan, **render_kwargs):
             yield event
     except asyncio.CancelledError:
         raise
@@ -1141,14 +1141,14 @@ async def audiobook_synthesize(req: AudiobookRequest, request: Request = None):
     # to a direct in-process call, e.g. a unit test); its disconnect poll is what
     # lets Stop cancel the render mid-book (#1216).
     return StreamingResponse(
-        _public_longform_stream(_render_longform_sse(
+        _public_longform_stream(
             plan, default_voice=req.default_voice, language=req.language,
             fmt=req.format, bitrate=req.bitrate,
             loudness=req.loudness, cover_path=req.cover_path, metadata=req.metadata,
             lexicon=req.lexicon, opts=_expressive_opts(req), voice_map=req.voice_map,
             job_type="audiobook",
             is_disconnected=request.is_disconnected if request is not None else None,
-        )),
+        ),
         media_type="text/event-stream",
     )
 
@@ -1202,14 +1202,14 @@ async def longform_render(req: LongformRenderRequest, request: Request = None):
             chapters.append(Chapter(title=c.title or f"Chapter {i + 1}", spans=spans))
     plan = AudiobookPlan(chapters=chapters)
     return StreamingResponse(
-        _public_longform_stream(_render_longform_sse(
+        _public_longform_stream(
             plan, default_voice=req.default_voice, language=req.language,
             fmt=req.format, bitrate=req.bitrate,
             loudness=req.loudness, cover_path=req.cover_path, metadata=req.metadata,
             lexicon=req.lexicon, opts=_expressive_opts(req), voice_map=req.voice_map,
             job_type="story",
             is_disconnected=request.is_disconnected if request is not None else None,
-        )),
+        ),
         media_type="text/event-stream",
     )
 
@@ -1295,7 +1295,7 @@ async def resume_longform(job_id: str, request: Request = None):
     # unrendered ones synthesize. Using a fresh id means the request's job_id
     # never names a work dir / output file (defence-in-depth path-injection).
     return StreamingResponse(
-        _public_longform_stream(_render_longform_sse(
+        _public_longform_stream(
             plan, default_voice=p.get("default_voice"), language=p.get("language"),
             fmt=p.get("fmt", "m4b"), bitrate=p.get("bitrate", "128k"),
             loudness=p.get("loudness"), cover_path=p.get("cover_path"),
@@ -1304,6 +1304,6 @@ async def resume_longform(job_id: str, request: Request = None):
             voice_map=p.get("voice_map"),
             job_type=entry["job_type"],
             is_disconnected=request.is_disconnected if request is not None else None,
-        )),
+        ),
         media_type="text/event-stream",
     )
