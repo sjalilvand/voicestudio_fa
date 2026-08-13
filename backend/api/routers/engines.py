@@ -25,7 +25,7 @@ from huggingface_hub import utils as hf_utils
 from huggingface_hub.errors import HFValidationError
 from pydantic import BaseModel
 
-from api.dependencies import require_loopback
+from api.dependencies import require_admin, require_admin_action, require_desktop
 from core import prefs
 from services import tts_backend, asr_backend, llm_backend, translation_engines
 from services.audio_dsp import list_effect_presets
@@ -113,7 +113,10 @@ def list_translation_engines():
     }
 
 
-@router.post("/engines/translation/{engine_id}/install")
+@router.post(
+    "/engines/translation/{engine_id}/install",
+    dependencies=[Depends(require_admin)],
+)
 async def install_translation_engine(engine_id: str):
     entry = translation_engines.get_engine(engine_id)
     if not entry:
@@ -149,7 +152,10 @@ async def install_translation_engine(engine_id: str):
     }
 
 
-@router.delete("/engines/translation/{engine_id}")
+@router.delete(
+    "/engines/translation/{engine_id}",
+    dependencies=[Depends(require_admin)],
+)
 async def uninstall_translation_engine(engine_id: str):
     entry = translation_engines.get_engine(engine_id)
     if not entry:
@@ -188,15 +194,16 @@ async def uninstall_translation_engine(engine_id: str):
 # POST /engines/sonitranslate/install). Mirrors the
 # /engines/translation/{engine_id}/install namespace pattern.
 #
-# Loopback-gated: installing spawns subprocesses (git/uv) and writes to the
-# data directory — only the local desktop frontend may trigger it. The job
-# runs fine in packaged builds: the venv lives under the user data dir, not
-# inside the signed app bundle, and uv resolves via OMNIVOICE_BUNDLED_UV/PATH.
+# Desktop-only: installing spawns git/uv against mutable source and writes an
+# editable environment. An API key does not make that supply-chain path safe to
+# trigger remotely. The job runs fine in packaged builds: the venv lives under
+# the user data dir, not inside the signed app bundle, and uv resolves via
+# OMNIVOICE_BUNDLED_UV/PATH.
 
 
 @router.post(
     "/engines/sidecar/{engine_id}/install",
-    dependencies=[Depends(require_loopback)],
+    dependencies=[Depends(require_admin), Depends(require_desktop)],
 )
 def install_sidecar_engine(engine_id: str):
     """Start (or report) the one-click install for a sidecar engine.
@@ -222,7 +229,7 @@ def install_sidecar_engine(engine_id: str):
 
 @router.get(
     "/engines/sidecar/{engine_id}/install/status",
-    dependencies=[Depends(require_loopback)],
+    dependencies=[Depends(require_admin)],
 )
 def sidecar_install_status(engine_id: str):
     """Step-by-step status of the sidecar install job (poll while running).
@@ -243,7 +250,7 @@ def sidecar_install_status(engine_id: str):
 
 @router.delete(
     "/engines/sidecar/{engine_id}/install",
-    dependencies=[Depends(require_loopback)],
+    dependencies=[Depends(require_admin)],
 )
 def uninstall_sidecar_engine(engine_id: str):
     """Remove an app-managed sidecar install (checkout + venv + weights) and
@@ -274,8 +281,8 @@ def uninstall_sidecar_engine(engine_id: str):
 # frame. Result includes wall-clock latency so the UI can render
 # "1234 ms — pong" inline next to the button.
 #
-# Loopback-gated (T-02-13): only the local desktop frontend may trigger
-# a sidecar spawn through this endpoint.
+# Admin-gated (T-02-13): only the local desktop frontend or an authenticated
+# server-mode administrator may trigger a sidecar spawn through this endpoint.
 
 # Engine instances cached for the lifetime of the FastAPI process so that
 # repeated health checks don't spawn a new SubprocessBackend (each spawn
@@ -311,7 +318,7 @@ def _resolve_engine_class(engine_id: str):
 
 @router.get(
     "/engines/{engine_id}/health",
-    dependencies=[Depends(require_loopback)],
+    dependencies=[Depends(require_admin_action)],
 )
 def engine_health(engine_id: str):
     """Spawn-and-ping a SubprocessBackend; ``is_available()`` for the rest.
@@ -385,7 +392,7 @@ def engine_health(engine_id: str):
 #     hanging the Settings panel. The orphaned worker is best-effort daemon.
 #   * A process-wide lock serialises self-tests so a click-storm can't stack
 #     concurrent model loads.
-#   * Only ever on user click (POST) — never on Settings load. Loopback-gated.
+#   * Only ever on user click (POST) — never on Settings load. Admin-gated.
 
 # Deliberately short + ASCII so the synth stays CPU-cheap and the phrase never
 # trips the no-hardcoded-CJK guard.
@@ -452,7 +459,7 @@ class SelfTestResponse(BaseModel):
 @router.post(
     "/engines/{engine_id}/selftest",
     response_model=SelfTestResponse,
-    dependencies=[Depends(require_loopback)],
+    dependencies=[Depends(require_admin)],
 )
 def engine_selftest(engine_id: str):
     """Run a bounded, real synthesis on an available in-process TTS engine.
@@ -551,7 +558,11 @@ class SelectEngineResponse(BaseModel):
     routing_reason: str | None = None
 
 
-@router.post("/engines/select", response_model=SelectEngineResponse)
+@router.post(
+    "/engines/select",
+    response_model=SelectEngineResponse,
+    dependencies=[Depends(require_admin)],
+)
 def select_engine(req: SelectEngineRequest):
     """Persist a family's engine pick to prefs.json. Refuses unknown backends,
     backends whose deps aren't installed, AND backends that cannot run on THIS

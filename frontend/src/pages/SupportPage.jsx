@@ -523,9 +523,10 @@ export default function SupportPage({ onBack, initialView = 'support' }) {
     const id = SECTION_IDS[initialView] || SECTION_IDS.support;
     // rAF: the panel has to be laid out before an offset means anything.
     const frame = requestAnimationFrame(() => {
-      sectionRef.current
-        ?.querySelector(`#${id}`)
-        ?.scrollIntoView({ block: 'start', behavior: 'auto' });
+      const section = sectionRef.current?.querySelector(`#${id}`);
+      if (typeof section?.scrollIntoView === 'function') {
+        section.scrollIntoView({ block: 'start', behavior: 'auto' });
+      }
     });
     return () => cancelAnimationFrame(frame);
   }, [initialView]);

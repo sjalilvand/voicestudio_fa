@@ -196,10 +196,11 @@ time, so in production **restart the backend** to apply a change. Default empty
 ## Admin routes and server mode
 
 Admin routes — `/system/*` (including `set-env`, **RCE-class**),
-`/api/settings/*`, engine install/uninstall, media tools, MCP bindings — sit on
-a stricter gate (`require_admin`, `backend/api/dependencies.py`) than
-consumption. On the desktop build they are **true-loopback-only**: no PIN, key,
-or trusted network reaches them from another machine.
+`/api/settings/*`, engine selection/install/uninstall, media tools, MCP
+bindings, pronunciation settings, and remote-worker management — sit on a
+stricter gate (`require_admin`, `backend/api/dependencies.py`) than consumption.
+On the desktop build they are **true-loopback-only**: no PIN, key, or trusted
+network reaches them from another machine.
 
 In **server mode** (`OMNIVOICE_SERVER_MODE=1`, the Docker image) the loopback
 origin is unenforceable — NAT rewrites the source and even a
@@ -207,16 +208,22 @@ origin is unenforceable — NAT rewrites the source and even a
 requirement is dropped (issue #261, else the operator is 403'd out of their own
 `/system/*`). It is replaced by a **credential rule**, not removed:
 
-- **No API key configured** → read-only admin discovery remains available for
-  the bare Docker bootstrap flow, but `POST`/`PUT`/`PATCH`/`DELETE` requests are
-  denied. Set `OMNIVOICE_API_KEY` before changing settings remotely.
-- **A credential is configured** → admin requires the **API key** (`Authorization:
+- **No credential configured** (neither API key nor share PIN) → read-only
+  admin discovery remains available for the bare Docker bootstrap flow, but
+  `POST`/`PUT`/`PATCH`/`DELETE` requests are denied. Side-effectful GET actions
+  are denied too: engine health may start a sidecar, deep diagnostics may load
+  a model, and LLM provider discovery makes a request with the saved provider
+  credential. Set `OMNIVOICE_API_KEY` before changing settings or triggering
+  those actions remotely.
+- **An API key is configured** → admin requires that **API key** (`Authorization:
   Bearer` / `?api_key` / `ov_key` cookie), or genuine loopback. The **6-digit
   share PIN does not gate admin** (it is brute-forceable), and trusted-network
   membership never does either. A **PIN-only** server-mode deployment therefore
-  allows remote read-only discovery but blocks remote mutations; remote writes
-  require the long API key. Discovery never returns the share PIN itself; only
-  loopback or a caller already authenticated with the API key can read it.
+  keeps admin routes loopback-only; remote admin requires the long API key.
+
+Managed sidecar installation remains true-loopback-only even with an API key.
+Its installer fetches mutable source and creates an editable environment, so it
+must be run directly on that machine until the source supply chain is pinned.
 
 Host paths are never selected through HTTP. The native Tauri process validates
 model-cache and export destinations plus custom FFmpeg/FFprobe binaries, writes

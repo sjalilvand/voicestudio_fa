@@ -30,6 +30,24 @@ def test_inert_without_env(monkeypatch):
     assert c.get("/health").status_code == 200
 
 
+def test_whitespace_only_env_is_not_an_api_key(monkeypatch):
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "   ")
+    c = _client()
+    response = c.get("/v1/audio/voices")
+    assert response.status_code == 200
+    assert isinstance(response.json().get("voices"), list)
+
+
+def test_whitespace_query_does_not_shadow_valid_cookie(key_env):
+    c = _client()
+    c.cookies.set("ov_key", key_env)
+
+    response = c.get("/v1/audio/voices?api_key=%20%20%20")
+
+    assert response.status_code == 200
+    assert isinstance(response.json().get("voices"), list)
+
+
 def test_loopback_bypasses_key(key_env):
     c = _client(("127.0.0.1", 1))
     assert c.get("/system/info").status_code == 200

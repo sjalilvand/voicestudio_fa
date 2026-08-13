@@ -6,7 +6,10 @@ composed at the route or router level without surprises.
 
 Currently exposed:
 - `require_loopback`: 403 unless the request came from a loopback origin
-  (bypassed in explicit server mode — see `_server_mode`).
+  (read-only bootstrap is allowed in explicit server mode; mutations still
+  require the admin API key — see `_server_mode`).
+- `require_admin`: method-aware admin gate for privileged routers.
+- `require_admin_action`: strict admin gate for side-effectful GET actions.
 - `require_native_access`: true-loopback-only access to the host filesystem;
   unlike `require_loopback`, it is never bypassed by server mode.
 - `ws_remote_authorized`: whether a WebSocket handshake from a non-loopback
@@ -50,7 +53,7 @@ def _trusted_networks():
 
 def is_loopback(host):
     """True loopback address only (127.0.0.1, ::1, localhost) — NOT a trusted
-    network. Admin gates (``require_loopback`` → ``/system/set-env``,
+    network. Admin gates (``require_admin`` → ``/system/set-env``,
     ``/api/settings/*``) use this so a trusted-network CIDR exempts consumption
     (TTS / dictation) but never the RCE-class admin surface."""
     return host in _LOOPBACK_HOSTS
@@ -74,6 +77,7 @@ def is_local_host(host):
     return any(ip in net for net in _trusted_networks())
 
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
+_READ_ONLY_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
 def _server_mode() -> bool:
@@ -96,6 +100,34 @@ def _server_mode() -> bool:
     return os.environ.get("OMNIVOICE_SERVER_MODE", "").strip().lower() in _TRUTHY
 
 
+def remote_api_key() -> str | None:
+    """The normalized remote-backend bearer key, or None when remote mode is
+    off. Surrounding whitespace is configuration noise, never a valid secret.
+    Read at call time so tests can monkeypatch the environment."""
+    return os.environ.get("OMNIVOICE_API_KEY", "").strip() or None
+
+
+def presented_api_key(connection) -> str:
+    """Return the first non-empty normalized API key on an HTTP/WS connection.
+
+    Authorization wins over query, which wins over cookie. Each channel is
+    stripped before fallback so whitespace in a higher-priority channel cannot
+    shadow a valid lower-priority credential.
+    """
+    headers = getattr(connection, "headers", None) or {}
+    query = getattr(connection, "query_params", None) or {}
+    cookies = getattr(connection, "cookies", None) or {}
+
+    auth = headers.get("authorization", "")
+    supplied = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
+    if supplied:
+        return supplied
+    supplied = (query.get("api_key") or "").strip()
+    if supplied:
+        return supplied
+    return (cookies.get("ov_key") or "").strip()
+
+
 def _configured_pin(request) -> str | None:
     """The active share PIN (``app.state.network_share.pin``) or None. Read via
     getattr so a bare Request stub (or a request that hit before lifespan set
@@ -107,10 +139,13 @@ def _configured_pin(request) -> str | None:
 
 
 def _admin_credential_configured(request) -> bool:
-    """Whether the operator has set ANY credential gate — the remote API key or
-    a share PIN. When neither is set, server mode leaves admin open (the Docker
-    issue #261 flow the image depends on)."""
-    if os.environ.get("OMNIVOICE_API_KEY"):
+    """Whether an API key or share PIN is configured.
+
+    The PIN cannot authorize admin access, but its presence means the operator
+    opted out of bare-server discovery. Remote admin then remains closed until
+    they configure and present the long API key.
+    """
+    if remote_api_key():
         return True
     return bool(_configured_pin(request))
 
@@ -129,17 +164,10 @@ def _request_presents_admin_credential(request) -> bool:
     admin. Net: remote admin in server mode requires the API key; a PIN-only
     deployment keeps admin loopback-only. getattr-defensive so a minimal Request
     stub never raises."""
-    api_key = os.environ.get("OMNIVOICE_API_KEY") or ""
+    api_key = remote_api_key() or ""
     if not api_key:
         return False
-    headers = getattr(request, "headers", None) or {}
-    query = getattr(request, "query_params", None) or {}
-    cookies = getattr(request, "cookies", None) or {}
-
-    auth = headers.get("authorization", "")
-    supplied = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
-    if not supplied:
-        supplied = query.get("api_key") or cookies.get("ov_key") or ""
+    supplied = presented_api_key(request)
     return bool(supplied and secrets.compare_digest(supplied, api_key))
 
 
@@ -163,9 +191,9 @@ def require_loopback(request: Request) -> None:
     unenforceable, so the gate can't require true loopback. It then applies the
     admin-credential rule instead:
 
-    - No credential configured (no API key, no PIN) → open, matching the #261
-      Docker flow where the operator reaches ``/system/*`` off the bridge
-      gateway with nothing set.
+    - No credential configured (no API key, no PIN) → read-only requests are
+      open, matching the #261 Docker bootstrap flow. State-changing requests
+      fail closed even if a route accidentally kept this legacy dependency.
     - A credential IS configured → the request must present the **API key**.
       This keeps the two-tier privilege model intact under server mode:
       ``OMNIVOICE_TRUSTED_NETWORKS`` is a *consumption* exemption
@@ -173,14 +201,20 @@ def require_loopback(request: Request) -> None:
       NEVER by itself unlock the admin surface (``/system/set-env`` — RCE-class —
       and ``/api/settings/*``). The 6-digit share PIN is a consumption credential
       too and does not gate admin, so a PIN-only deployment keeps admin
-      loopback-only; remote admin requires the (long) API key. A LAN client in a
-      trusted CIDR — or one holding only the PIN — gets 403 here even though it
-      sails through the consumption gates. See docs/api-auth.md (#1213).
+      loopback-only; remote admin requires the long API key. See
+      docs/api-auth.md (#1213).
     """
     host = request.client.host if request.client else None
     if is_loopback(host):
         return
     if _server_mode():
+        method = str(getattr(request, "method", "GET")).upper()
+        if method not in _READ_ONLY_METHODS:
+            # Defense in depth. Privileged routers should declare
+            # ``require_admin`` directly, but a missed migration must not turn
+            # into an unauthenticated Docker write primitive.
+            require_admin(request)
+            return
         if not _admin_credential_configured(request):
             return
         if _request_presents_admin_credential(request):
@@ -206,11 +240,26 @@ def require_admin(request: Request) -> None:
         return
     if _server_mode():
         method = str(getattr(request, "method", "GET")).upper()
-        read_only = method in {"GET", "HEAD", "OPTIONS"}
-        if read_only and not os.environ.get("OMNIVOICE_API_KEY", "").strip():
+        read_only = method in _READ_ONLY_METHODS
+        if read_only and not _admin_credential_configured(request):
             return
         if _request_presents_admin_credential(request):
             return
+    raise HTTPException(status_code=403, detail="loopback origin or admin API key required")
+
+
+def require_admin_action(request: Request) -> None:
+    """Gate an administrative action even when its HTTP method is read-only.
+
+    A small number of legacy GET endpoints have real side effects. For example,
+    an engine health check may spawn a sidecar process. Such routes cannot use
+    :func:`require_admin`'s bare-server discovery exception.
+    """
+    host = request.client.host if request.client else None
+    if is_loopback(host):
+        return
+    if _server_mode() and _request_presents_admin_credential(request):
+        return
     raise HTTPException(status_code=403, detail="loopback origin or admin API key required")
 
 
@@ -232,9 +281,10 @@ def require_local(request: Request) -> None:
     trusted network. The consumption-tier companion to :func:`require_loopback`:
     use on routes a trusted-network client (LAN/proxy) should reach without a PIN
     or API key — e.g. the dictation model/prefs endpoints that pair with the
-    dictation WebSocket. Admin routes stay on :func:`require_loopback`.
+    dictation WebSocket. Admin routes stay on :func:`require_admin`.
 
-    In server mode the gate is a no-op (same as :func:`require_loopback`)."""
+    In server mode this consumption gate is a no-op. Admin dependencies remain
+    method-aware and independent from this exemption."""
     host = request.client.host if request.client else None
     if is_local_host(host):
         return
@@ -256,12 +306,6 @@ def require_native_access(request: Request) -> None:
         raise HTTPException(status_code=403, detail="native filesystem access requires loopback origin")
 
 
-def remote_api_key() -> str | None:
-    """The remote-backend bearer key (Wave 2.3), or None when remote mode is
-    off. Read at call time so tests can monkeypatch the env."""
-    return os.environ.get("OMNIVOICE_API_KEY") or None
-
-
 def ws_remote_authorized(websocket) -> bool:
     """Whether a WebSocket handshake presents the remote API key.
 
@@ -273,12 +317,4 @@ def ws_remote_authorized(websocket) -> bool:
     key = remote_api_key()
     if not key:
         return False
-    auth = websocket.headers.get("authorization", "")
-    supplied = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
-    if not supplied:
-        supplied = (
-            websocket.query_params.get("api_key")
-            or websocket.cookies.get("ov_key")
-            or ""
-        )
-    return secrets.compare_digest(supplied, key)
+    return secrets.compare_digest(presented_api_key(websocket), key)
