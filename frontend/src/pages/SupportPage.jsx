@@ -313,10 +313,10 @@ function SupportView() {
                 type="button"
                 aria-pressed={selected}
                 onClick={() => setAmount(selected ? null : a.value)}
-                className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-md border px-1.5 py-2 transition-colors ${
+                className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-md border-0 bg-[color-mix(in_srgb,var(--chrome-fg)_5%,transparent)] px-1.5 py-2 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--chrome-fg-muted)_18%,transparent)] transition-[background,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)] ${
                   selected
-                    ? 'border-[var(--chrome-accent)] bg-[var(--chrome-accent-bg)]'
-                    : `${a.common ? 'border-transparent' : 'border-border'} hover:border-transparent hover:bg-[color-mix(in_srgb,var(--chrome-accent)_7%,transparent)]`
+                    ? 'bg-[var(--chrome-accent-bg)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--chrome-accent)_45%,transparent)]'
+                    : `${a.common ? 'bg-[color-mix(in_srgb,var(--chrome-accent)_7%,transparent)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--chrome-accent)_30%,transparent)]' : ''} hover:bg-[var(--chrome-accent-bg)] hover:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--chrome-accent)_35%,transparent)]`
                 }`}
               >
                 <span className="font-serif text-[1.05rem] font-medium text-[var(--chrome-fg)]">
@@ -334,10 +334,10 @@ function SupportView() {
             type="button"
             aria-pressed={amount === 'custom'}
             onClick={() => setAmount(amount === 'custom' ? null : 'custom')}
-            className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-md border px-1.5 py-2 transition-colors ${
+            className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-md border-0 bg-[color-mix(in_srgb,var(--chrome-fg)_5%,transparent)] px-1.5 py-2 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--chrome-fg-muted)_18%,transparent)] transition-[background,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)] ${
               amount === 'custom'
-                ? 'border-[var(--chrome-accent)] bg-[var(--chrome-accent-bg)]'
-                : 'border-border hover:border-transparent hover:bg-[color-mix(in_srgb,var(--chrome-accent)_7%,transparent)]'
+                ? 'bg-[var(--chrome-accent-bg)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--chrome-accent)_45%,transparent)]'
+                : 'hover:bg-[var(--chrome-accent-bg)] hover:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--chrome-accent)_35%,transparent)]'
             }`}
           >
             <span className="font-mono text-[0.78rem] uppercase tracking-[var(--chrome-label-track)] text-[var(--chrome-fg-muted)]">
