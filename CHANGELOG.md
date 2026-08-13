@@ -10,6 +10,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- The Launchpad hero wears the project's signal-field waveform artwork, feathered into the dark chrome. (#1533)
 - Switch TTS, ASR and LLM engines from the status bar or workspace, with ready-only choices, memory status and environment-pin protection. (#1530)
 - The engine catalogue frames uninstalled engines as "Add more engines" with a "What it needs" explainer, instead of a wall of unavailable rows. (#1531)
 - Docker/server mode now requires an API key for remote changes and side-effectful admin checks across workers, engines, media tools, MCP, pronunciation, diagnostics, and LLM providers. (#1525)
