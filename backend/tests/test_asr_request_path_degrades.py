@@ -34,6 +34,7 @@ exactly the object the handlers closed over. (Same hazard the
 """
 from __future__ import annotations
 
+import ast
 import io
 import re
 import sys
@@ -199,24 +200,125 @@ def test_missing_weights_after_degrading_is_409_not_500(asr, monkeypatch):
 # The bug is re-introduced by one import line, so assert the shape in CI
 # rather than relying on review to catch the sixth call site.
 
-# `get_active_asr_backend` is a legitimate *pure selector* — these are the
-# files allowed to call it. Everything else must use the loader. To add an
-# entry, say why the raw selector (no ensure_loaded, no degradation) is right.
+# `get_active_asr_backend` is a legitimate *pure selector*, and exactly one
+# module may call it. Approved entries are RELATIVE paths, not basenames: a
+# basename match would exempt any future `<anything>/asr_backend.py` from the
+# guard it exists to enforce (CodeRabbit, #1523).
+_SELECTOR = "get_active_asr_backend"
+_HOME_MODULE = "services/asr_backend.py"
+
+# Relative path → why the raw selector (no ensure_loaded, no degradation) is
+# right there. Add an entry only with that reason.
 _SELECTOR_ALLOWED: dict[str, str] = {
-    # (none — every router call site loads and transcribes)
+    # (none — every call site outside the home module loads and transcribes)
 }
 
-_CALL = re.compile(r"\bget_active_asr_backend\s*\(")
+
+def _selector_call_lines(source: str) -> list[int]:
+    """Lines where THIS module's selector is called — resolved, not matched.
+
+    Three ways to get this wrong, all of them seen in review:
+
+    * a line regex misses ``import get_active_asr_backend as pick`` and fires
+      on the name inside docstrings and comments (#1523);
+    * matching any call named ``get_active_asr_backend`` also reports a local
+      helper or an unrelated object's method that happens to share the name
+      (CodeRabbit, #1524).
+
+    So bindings are resolved first: a bare call counts only if the name was
+    imported FROM services.asr_backend, and an attribute call only if it hangs
+    off a module alias for it.
+    """
+    tree = ast.parse(source)
+
+    home = _HOME_MODULE.removesuffix(".py").replace("/", ".")  # services.asr_backend
+    tail = home.rsplit(".", 1)[-1]  # asr_backend
+
+    functions: set[str] = set()  # names bound to the selector itself
+    modules: set[str] = set()  # names bound to the module holding it
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            if module == home or module.endswith(f".{tail}") or module == tail:
+                for name in node.names:
+                    if name.name == _SELECTOR:
+                        functions.add(name.asname or name.name)
+            elif module and home.startswith(f"{module}."):
+                # from services import asr_backend
+                for name in node.names:
+                    if name.name == tail:
+                        modules.add(name.asname or name.name)
+        elif isinstance(node, ast.Import):
+            for name in node.names:
+                if name.name == home or name.name.endswith(f".{tail}"):
+                    modules.add(name.asname or name.name.split(".")[0])
+
+    lines = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if isinstance(func, ast.Name) and func.id in functions:
+            lines.append(node.lineno)
+        elif (
+            isinstance(func, ast.Attribute)
+            and func.attr == _SELECTOR
+            and isinstance(func.value, ast.Name)
+            and func.value.id in modules
+        ):
+            lines.append(node.lineno)
+    return sorted(lines)
+
+
+def _offenders(paths, root):
+    found = []
+    for path in sorted(paths):
+        rel = path.relative_to(root).as_posix()
+        if rel == _HOME_MODULE or rel in _SELECTOR_ALLOWED:
+            continue
+        try:
+            hits = _selector_call_lines(path.read_text(encoding="utf-8"))
+        except SyntaxError:  # not ours to police here
+            continue
+        found.extend(f"{rel}:{line}" for line in hits)
+    return found
+
+
+@pytest.mark.parametrize(
+    ("label", "source", "flagged"),
+    [
+        (
+            "direct import",
+            "from services.asr_backend import get_active_asr_backend\nget_active_asr_backend()\n",
+            True,
+        ),
+        (
+            "aliased import",
+            "from services.asr_backend import get_active_asr_backend as pick\npick()\n",
+            True,
+        ),
+        (
+            "module attribute",
+            "from services import asr_backend\nasr_backend.get_active_asr_backend()\n",
+            True,
+        ),
+        # False positives teach people to add allowlist entries for code that
+        # was never the bug — which is how a guard stops being believed.
+        (
+            "unrelated local function of the same name",
+            "def get_active_asr_backend():\n    return 1\n\nget_active_asr_backend()\n",
+            False,
+        ),
+        ("unrelated object method", "registry.get_active_asr_backend()\n", False),
+        ('name only in a docstring', '\"\"\"once called get_active_asr_backend().\"\"\"\n', False),
+    ],
+)
+def test_the_guard_resolves_the_selector_instead_of_matching_its_name(label, source, flagged):
+    assert bool(_selector_call_lines(source)) is flagged, label
 
 
 def test_routers_use_the_degrading_loader():
-    offenders = []
-    for path in sorted(_ROUTERS.glob("*.py")):
-        if path.name in _SELECTOR_ALLOWED:
-            continue
-        for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-            if _CALL.search(line) and not line.lstrip().startswith("#"):
-                offenders.append(f"{path.name}:{i}: {line.strip()}")
+    offenders = _offenders(_ROUTERS.glob("*.py"), _BACKEND)
 
     assert not offenders, (
         "Request paths must select ASR via load_active_asr_backend() — the raw "
@@ -228,24 +330,14 @@ def test_routers_use_the_degrading_loader():
     )
 
 
-# Routers are where the bug was found, but not the only place it can live: a
-# service or engine module that transcribes on a request's behalf skips
-# ensure_loaded() just as thoroughly. Scan the whole backend, so the guard
-# cannot be sidestepped by moving the call one module down the stack.
-# (Broader scan contributed on #1519 — thanks @ahov520!)
-_HOME_MODULE = "asr_backend.py"
-
-
 def test_no_module_outside_asr_backend_calls_the_raw_selector():
-    offenders = []
-    for path in sorted(_BACKEND.rglob("*.py")):
-        rel = path.relative_to(_BACKEND).as_posix()
-        if path.name == _HOME_MODULE or rel.startswith("tests/") or path.name in _SELECTOR_ALLOWED:
-            continue
-        for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-            stripped = line.lstrip()
-            if _CALL.search(line) and not stripped.startswith("#"):
-                offenders.append(f"{rel}:{i}: {line.strip()}")
+    # Routers are where the bug was found, but not the only place it can live:
+    # a service or engine module that transcribes on a request's behalf skips
+    # ensure_loaded() just as thoroughly. Scan the whole backend, so the guard
+    # cannot be sidestepped by moving the call one module down the stack.
+    # (Broader scan contributed on #1519 — thanks @ahov520!)
+    paths = (p for p in _BACKEND.rglob("*.py") if not p.relative_to(_BACKEND).as_posix().startswith("tests/"))
+    offenders = _offenders(paths, _BACKEND)
 
     assert not offenders, (
         "Only services/asr_backend.py may call the raw get_active_asr_backend() "
