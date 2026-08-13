@@ -1,7 +1,7 @@
-# OmniVoice Studio — Install on Windows
+# VoiceStudio — Install on Windows
 
 This page is self-contained: follow it top to bottom and you'll end up with a
-working OmniVoice Studio install on Windows 10 / 11 (x64).
+working VoiceStudio install on Windows 10 / 11 (x64).
 
 ## Prerequisites
 
@@ -44,9 +44,9 @@ driver it's picked up automatically (no CUDA Toolkit install needed).
 
 **AMD GPUs — including Ryzen / Ryzen AI integrated Radeon graphics — run
 CPU-only on Windows.** ROCm is not supported on Windows: PyTorch publishes no
-Windows ROCm wheels, and OmniVoice's ROCm option is Linux-only. (The Ryzen AI
+Windows ROCm wheels, and VoiceStudio's ROCm option is Linux-only. (The Ryzen AI
 NPU is likewise not used.) Everything still works on CPU, just slower. If you
-have an AMD GPU and want GPU acceleration, run OmniVoice on Linux instead —
+have an AMD GPU and want GPU acceleration, run VoiceStudio on Linux instead —
 see [linux.md — AMD GPU (ROCm)](linux.md#amd-gpu-rocm).
 
 ## Install (from source)
@@ -54,8 +54,8 @@ see [linux.md — AMD GPU (ROCm)](linux.md#amd-gpu-rocm).
 Run from a regular (non-admin) PowerShell:
 
 ```bash
-git clone https://github.com/debpalash/OmniVoice-Studio.git
-cd OmniVoice-Studio
+git clone https://github.com/debpalash/VoiceStudio.git
+cd VoiceStudio
 bun install
 bun run desktop-prod
 ```
@@ -73,9 +73,9 @@ model weights. The splash screen shows progress.
 ## Install (pre-built MSI)
 
 Download the latest MSI from the
-[Releases page](https://github.com/debpalash/OmniVoice-Studio/releases/latest),
+[Releases page](https://github.com/debpalash/VoiceStudio/releases/latest),
 run it, follow the wizard. The shortcut lands in the Start menu as
-**OmniVoice Studio**.
+**VoiceStudio**.
 
 ### Installing to a different drive
 
@@ -85,7 +85,7 @@ The wizard's **directory picker** lets you install the app to any **local**
 drive (D:, E:, …). Two caveats:
 
 - **Mapped network drives (Z: → a share) are not supported** — this is a
-  Windows Installer limitation, not an OmniVoice bug: MSI custom actions run
+  Windows Installer limitation, not a VoiceStudio bug: MSI custom actions run
   as a service account that doesn't see per-user drive mappings, so the
   install fails or rolls back. Install to a local drive instead.
 - The install location only moves the ~200 MB app itself. The big data
@@ -105,40 +105,62 @@ another drive (`engines\.uv-cache`). An explicit `UV_CACHE_DIR` /
 `UV_PYTHON_INSTALL_DIR` you set yourself always wins.
 
 If an install to a local non-C: drive fails anyway, capture a log with
-`msiexec /i OmniVoice*.msi /L*V install.log` and
-[open an issue](https://github.com/debpalash/OmniVoice-Studio/issues) with it
+`msiexec /i VoiceStudio*.msi /L*V install.log` and
+[open an issue](https://github.com/debpalash/VoiceStudio/issues) with it
 — that log shows exactly which step rolled back.
 
 ## Portable install (Windows)
 
 <a id="portable-install"></a>
 
-OmniVoice Studio has a **Portable** mode: instead of scattering data across
+VoiceStudio has a **Portable** mode: instead of scattering data across
 `%APPDATA%` and `%LOCALAPPDATA%`, the whole install — Python env, model
-weights, voices, projects, settings — lives in a single
-`OmniVoiceStudio-Data` folder created **next to the executable**. Moving or
-copying the app folder (exe + that data folder together) relocates the entire
-install, USB-stick style.
+weights, voices, projects, settings — lives in a single folder. By **default**
+that is `OmniVoiceStudio-Data` next to the executable; you can put it anywhere
+writable from the setup screen (see below). Moving or copying the app folder
+(exe + that data folder together) relocates the entire install, USB-stick
+style.
 
-The first-run setup screen offers Portable whenever the folder next to
-`OmniVoice Studio.exe` is writable. A default MSI install goes to
-`C:\Program Files`, which is *not* user-writable — that's why Portable shows
-as greyed out after a default install
-([#766](https://github.com/debpalash/OmniVoice-Studio/issues/766)). To enable
-it, install to a user-writable folder instead:
+The first-run setup screen offers Portable, and the folder is **yours to
+choose** — press **Change…** on the Portable folder row and point it at any
+writable location (an external SSD, a second drive, a USB stick).
+
+Where the folder lives decides how far it travels, and the setup screen tells
+you which of these you're getting:
+
+- **Inside the app's own folder** (e.g. `D:\Apps\VoiceStudio\MyData`, with the
+  exe in `D:\Apps\VoiceStudio`) — the `portable.path` marker records it as a
+  **relative** path. Move the app folder as a unit, to another machine or a
+  different drive letter, and the install still finds itself. This is the
+  USB-stick case Portable exists for.
+- **Somewhere else, app folder writable** (e.g. exe in `D:\Apps`, data on
+  `E:\VoiceStudio`) — the marker can only record an **absolute** path, so the
+  install is tied to that exact path. Change the drive letter or the mount
+  point and you'll have to point the app at it again.
+- **App folder read-only** (a default `C:\Program Files` MSI install) — no
+  marker can be written at all, so the location is remembered for **your user
+  account only** on this machine.
+
+That second case used to be a hard block: Portable was greyed out entirely
+after a default install
+([#766](https://github.com/debpalash/VoiceStudio/issues/766)). It no longer
+is — you just get the machine-bound variant unless the app itself sits
+somewhere writable.
+
+If you want the fully-portable version, install to a user-writable folder:
 
 - Re-run the MSI and choose a custom destination folder in the setup wizard
-  (e.g. `D:\Apps\OmniVoice`), or
+  (e.g. `D:\Apps\VoiceStudio`), or
 - From a terminal:
-  `msiexec /i OmniVoice.Studio_<version>_x64_en-US.msi INSTALLDIR="D:\Apps\OmniVoice"`
+  `msiexec /i VoiceStudio.Studio_<version>_x64_en-US.msi INSTALLDIR="D:\Apps\VoiceStudio"`
 
-On the next launch, pick **Portable** on the first-run setup screen. What
-lives next to the exe afterwards:
+On the next launch, pick **Portable** on the first-run setup screen. With the
+default folder, what lives next to the exe afterwards:
 
 <!-- validate: skip -->
 ```
-D:\Apps\OmniVoice\
-├── OmniVoice Studio.exe        ← the app
+D:\Apps\VoiceStudio\
+├── VoiceStudio.exe        ← the app
 └── OmniVoiceStudio-Data\       ← the whole install, self-contained
     ├── config.json             ← install-mode + app settings
     ├── env\                    ← Python venv + backend code
@@ -153,7 +175,7 @@ data just lives in `%APPDATA%\OmniVoice` and the model cache in
 ## HF_TOKEN persistence
 
 The **recommended path** is the in-app **Settings → API Keys** panel: it
-writes the token to OmniVoice's encrypted SQLite store *and* to the canonical
+writes the token to VoiceStudio's encrypted SQLite store *and* to the canonical
 `huggingface_hub` location, so every subprocess the app spawns picks it up.
 
 If you prefer setting an environment variable directly (power-user / CLI runs
@@ -178,7 +200,7 @@ Full HF token guide: [docs/setup/huggingface-token.md](../setup/huggingface-toke
 
 <a id="torch-compile-oom"></a>
 
-On Windows, certain TTS engines (notably IndexTTS-2 and some CosyVoice paths)
+On Windows, certain TTS engines (notably IndexTTS 2.5 and some CosyVoice paths)
 trigger `torch.compile` / Triton kernel compilation during the first
 synthesise call. On machines with <16 GB VRAM, that compile step can OOM
 *before* the audio render even begins — the error usually surfaces as
@@ -187,7 +209,7 @@ failed`.
 
 **The one-click fix:** open **Settings → Performance** in the app and toggle
 **"Disable torch.compile (Windows)"** on. That sets the
-`TORCH_COMPILE_DISABLE=1` env var on every engine subprocess OmniVoice spawns,
+`TORCH_COMPILE_DISABLE=1` env var on every engine subprocess VoiceStudio spawns,
 which falls back to the eager-mode kernel path. You'll lose a few percent of
 peak throughput in exchange for the engine actually loading.
 
@@ -200,7 +222,7 @@ bun run desktop-prod
 
 This setting is a no-op on macOS and Linux (the OOM is Windows-specific —
 the `torch.compile` kernel cache behaves differently on the other platforms).
-Tracking issue: [#65](https://github.com/debpalash/OmniVoice-Studio/issues/65).
+Tracking issue: [#65](https://github.com/debpalash/VoiceStudio/issues/65).
 
 ## Hugging Face token (optional but recommended)
 

@@ -1,6 +1,6 @@
 # Remote GPU backend
 
-Run the OmniVoice backend on one machine (a GPU box, a home server) and drive
+Run the VoiceStudio backend on one machine (a GPU box, a home server) and drive
 it from the desktop app or a browser on another — over your tailnet, with the
 inference staying on the powerful machine.
 
@@ -8,6 +8,12 @@ inference staying on the powerful machine.
 > [docs/api-auth.md](api-auth.md) for a consumer-focused reference of every auth
 > gate (share PIN, API key, dictation WebSocket, trusted networks) with the exact
 > headers, params, and `401`/`403`/`429` meanings.
+
+> Want to keep working *here* and only send individual jobs to another GPU? That
+> is a different feature — see [docs/remote-workers.md](remote-workers.md). This
+> page moves the whole backend (and your projects with it) to the other machine;
+> remote workers keep everything local and farm out single tasks. Both are
+> supported, and setting one up does not affect the other.
 
 This is opt-in and off by default: with no API key set, the backend stays
 loopback-only exactly as before.
@@ -17,7 +23,7 @@ loopback-only exactly as before.
 ```
 ┌──────────────┐     tailnet (WireGuard)      ┌─────────────────────┐
 │ laptop        │  ws/https to MagicDNS URL   │ gpu-box              │
-│ OmniVoice UI  │ ──────────────────────────▶ │ OmniVoice backend    │
+│ VoiceStudio UI  │ ──────────────────────────▶ │ VoiceStudio backend    │
 │ (thin client) │  Authorization: Bearer …    │ OMNIVOICE_API_KEY set │
 └──────────────┘                              └─────────────────────┘
 ```
@@ -37,6 +43,12 @@ uv run uvicorn backend.main:app --host 0.0.0.0 --port 3900
 ```
 
 The Docker image is the same idea — pass `-e OMNIVOICE_API_KEY=…`.
+
+If a **browser** will load the UI from a different origin than the backend
+(e.g. a Vite dev server on `:3901` opened via the box's LAN IP), you also need
+the backend's CORS allow-list to include that origin — see
+[Browsers from another origin (CORS)](api-auth.md#browsers-from-another-origin-cors);
+neither server mode nor trusted networks covers CORS.
 
 When `OMNIVOICE_API_KEY` is set, **every non-loopback HTTP and WebSocket
 request must present it**, as `Authorization: Bearer <key>`, `?api_key=<key>`
@@ -121,7 +133,7 @@ remote key — is what's gating access.
   the access control for those too (the short share PIN is consumption-only and
   does not gate admin) — see the credential rule below.
 - **Trust a LAN or reverse proxy with `OMNIVOICE_TRUSTED_NETWORKS`.** If you run
-  OmniVoice behind a reverse proxy (nginx, Caddy, NPM) or only expose it on a
+  VoiceStudio behind a reverse proxy (nginx, Caddy, NPM) or only expose it on a
   trusted LAN/Tailnet, set `OMNIVOICE_TRUSTED_NETWORKS` to a comma-separated list
   of CIDRs (e.g. `192.168.1.0/24,10.0.0.0/8`); clients from those networks are
   then treated as trusted by the **consumption** gates (share PIN, API key,

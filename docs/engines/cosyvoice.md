@@ -1,14 +1,14 @@
-# OmniVoice Studio — CosyVoice Engine
+# VoiceStudio — CosyVoice Engine
 
-CosyVoice is one of the multilingual TTS engines OmniVoice can drive. It does
+CosyVoice is one of the multilingual TTS engines VoiceStudio can drive. It does
 zero-shot voice cloning across 9+ languages with separate models for "base",
 "instruct", and "SFT" use cases.
 
 ## Install
 
-CosyVoice is installed *per-engine* from the in-app **Settings → Engines** tab:
+CosyVoice is installed *per-engine* from the in-app **Model Catalogue → Engines** tab:
 
-1. Open **Settings → Engines**.
+1. Open **Model Catalogue → Engines**.
 2. Click **Install** next to "CosyVoice".
 3. The app fetches the engine source, creates a dedicated venv, syncs deps,
    and downloads model weights (~2 GB).
@@ -43,7 +43,7 @@ apps, or pick a smaller variant (CosyVoice-300M without instruct).
 
 ## Troubleshooting
 
-- **Issue [#55](https://github.com/debpalash/OmniVoice-Studio/issues/55):**
+- **Issue [#55](https://github.com/debpalash/VoiceStudio/issues/55):**
   CosyVoice install clashing with IndexTTS — fixed in v0.3+ via per-engine
   venvs.
 - For other errors, capture the splash-screen log (Settings → Logs → Backend)

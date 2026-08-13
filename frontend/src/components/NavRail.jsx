@@ -1,29 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Globe,
-  Fingerprint,
-  Film,
-  FolderOpen,
-  Settings2,
-  ArrowLeftRight,
-  Library,
-  FileText,
-  BookOpen,
-  BookMarked,
-} from 'lucide-react';
-
-const ITEM_DEFS = [
-  { id: 'launchpad', Icon: Globe, tKey: 'launchpad', accent: '#f3a5b6' },
-  { id: 'studio', Icon: Fingerprint, tKey: 'voice', accent: '#d3869b' },
-  { id: 'dub', Icon: Film, tKey: 'dub', accent: '#fe8019' },
-  { id: 'stories', Icon: BookOpen, tKey: 'stories', accent: '#fabd2f' },
-  { id: 'audiobook', Icon: BookMarked, tKey: 'audiobook', accent: '#8ec07c' },
-  { id: 'gallery', Icon: Library, tKey: 'gallery', accent: '#b8bb26' },
-  { id: 'transcriptions', Icon: FileText, tKey: 'transcripts', accent: '#d3869b' },
-  { id: 'projects', Icon: FolderOpen, tKey: 'omnidrive', accent: '#83a598' },
-];
-const FOOTER_DEFS = [{ id: 'settings', Icon: Settings2, tKey: 'settings', accent: '#fabd2f' }];
+import { ArrowLeftRight } from 'lucide-react';
+import { NAV_ITEMS as ITEM_DEFS, NAV_FOOTER_ITEMS as FOOTER_DEFS } from './navItems';
 
 // Shared icon-button base for the chrome rail (was `.rail-btn`). `group` enables
 // the hover-reveal of the per-button tooltip label below.
@@ -83,9 +61,9 @@ export default function NavRail({ mode, setMode, side = 'left', onFlipSide }) {
 
   return (
     <aside
-      className={`nav-rail z-50 flex select-none flex-col items-center gap-[6px] bg-[var(--chrome-bg)] py-[8px] ${asideBorder}`}
+      className={`nav-rail z-50 flex select-none flex-col items-center gap-[10px] bg-[var(--chrome-bg)] pb-[10px] pt-[18px] ${asideBorder}`}
     >
-      <div className="flex flex-1 flex-col items-center gap-[4px]">
+      <div className="flex flex-1 flex-col items-center gap-[9px]">
         {items.map((it) => (
           <RailBtn
             key={it.id}
@@ -96,7 +74,7 @@ export default function NavRail({ mode, setMode, side = 'left', onFlipSide }) {
           />
         ))}
       </div>
-      <div className="flex flex-col items-center gap-[4px]">
+      <div className="flex flex-col items-center gap-[8px]">
         {footerItems.map((it) => (
           <RailBtn
             key={it.id}

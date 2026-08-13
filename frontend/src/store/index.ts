@@ -107,6 +107,9 @@ export const useAppStore = create<AppStore>()(
         isSidebarProjectsCollapsed: s.isSidebarProjectsCollapsed,
         sidebarTab: s.sidebarTab,
         uiScale: s.uiScale,
+        uiScaleConfigured: s.uiScaleConfigured,
+        // Rail vs titlebar tabs — a chrome preference, so it sticks like scale.
+        navStyle: s.navStyle,
         locale: s.locale,
         // Explicit-choice + first-run-offer flags must survive restarts, or the
         // one-time "Switch to English?" offer would re-nag on every launch.
@@ -169,7 +172,7 @@ export const useAppStore = create<AppStore>()(
         firedMilestones: s.firedMilestones,
         optedOut: s.optedOut,
       }),
-      version: 6,
+      version: 7,
       // Drop old persisted shapes rather than crashing the app. Every field
       // has a safe default in its slice, so v1/v2/v3 users pick up v4 defaults
       // for new fields (timingStrategy etc.) and keep any keys we still write
@@ -220,6 +223,12 @@ export const useAppStore = create<AppStore>()(
           // #007: donation-prompt fields are new. Every field has a safe slice
           // default (INITIAL_DONATION), so a v5→v6 user simply picks those up —
           // pass through untouched. Never throws.
+        }
+        if (version < 7) {
+          // Existing installs already passed first-run and may intentionally
+          // use exactly 100%. Mark all v1–v6 records as configured; only a
+          // brand-new v7 store should show the scale check.
+          p.uiScaleConfigured = true;
         }
         return p as Partial<AppStore>; // also covers version > 6 (downgrade→upgrade)
       },

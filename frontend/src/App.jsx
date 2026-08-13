@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import './index.css';
 import { useAppStore, FONT_STACKS } from './store';
+import { NAV_ITEMS } from './components/navItems';
 import SearchableSelect from './components/SearchableSelect';
 import DirectionDialog from './components/DirectionDialog';
 
@@ -24,19 +25,21 @@ const VoiceProfile = lazy(() => import('./pages/VoiceProfile'));
 const BatchQueue = lazy(() => import('./pages/BatchQueue'));
 const ToolsPage = lazy(() => import('./pages/ToolsPage'));
 const SetupWizard = lazy(() => import('./pages/SetupWizard'));
+const UiScaleSetup = lazy(() => import('./components/UiScaleSetup'));
 const KeyboardCheatsheet = lazy(() => import('./components/KeyboardCheatsheet'));
 const VoicePreview = lazy(() => import('./components/VoicePreview'));
 const LogsFooter = lazy(() => import('./components/LogsFooter'));
 const ProjectsPage = lazy(() => import('./pages/Projects'));
 const VoiceGallery = lazy(() => import('./pages/VoiceGallery'));
 const SupportPage = lazy(() => import('./pages/SupportPage'));
-const ContactPage = lazy(() => import('./pages/ContactPage'));
 const TranscriptionsPage = lazy(() => import('./pages/Transcriptions'));
 const StoriesEditor = lazy(() => import('./components/StoriesEditor'));
 const AudiobookTab = lazy(() => import('./pages/AudiobookTab'));
+const ModelCataloguePage = lazy(() => import('./pages/ModelCatalogue'));
 
 import Header from './components/Header';
 import NavRail from './components/NavRail';
+import TitleTabs from './components/TitleTabs';
 import WorkspaceHistory from './components/WorkspaceHistory';
 import WorkspaceVoices from './components/WorkspaceVoices';
 import WorkspaceProjects from './components/WorkspaceProjects';
@@ -45,6 +48,7 @@ import FloatingPill from './components/FloatingPill';
 import GlobalAudioPlayer from './components/GlobalAudioPlayer';
 import BackendCrashNotice from './components/BackendCrashNotice';
 import BackendStartFailureNotice from './components/BackendStartFailureNotice';
+import RemoteBackendRecovery from './components/RemoteBackendRecovery';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
 import LanguageSwitchPrompt from './components/LanguageSwitchPrompt';
 import { initAnalyticsFromConsent } from './utils/analytics';
@@ -68,7 +72,12 @@ const LazyFallback = () => <div className="app-lazy-fallback">{i18n.t('app.loadi
 
 import { Toaster, toast } from 'react-hot-toast';
 import { toastErrorWithReport } from './utils/errorToast';
+import { listenDictationNotice, showDictationNotice } from './utils/dictationNotice';
 import { addBreadcrumb } from './utils/breadcrumbs';
+import { appShellClasses } from './utils/appShellClasses';
+import { configuredRemoteBackend, probeRemoteBackend } from './utils/remoteBackendProbe';
+import { applyUiScale } from './utils/uiScaleEngine';
+import { resolveUiScale, suggestUiScale } from './utils/uiScaleSuggestion';
 import { recordValueMoment } from './utils/donationMoments';
 import {
   POPULAR_LANGS,
@@ -80,6 +89,7 @@ import {
 } from './utils/constants';
 import { LANG_CODES } from './utils/languages';
 import { restoreProjectExtras } from './utils/projectState';
+import { castSourcesFromJob } from './utils/segments';
 import { API, apiFetch, apiJson } from './api/client';
 import { flushMemory as apiFlushMemory } from './api/system';
 import {
@@ -109,19 +119,49 @@ function App() {
   // polls every 1 s; until `ready`, we render BootstrapSplash instead of the
   // normal app shell, so the user sees real progress instead of a hung UI.
   const { stage: bootstrapStage, message: bootstrapMessage } = useBootstrapStage();
-
-  // Analytics is OFF until the user opts in (Settings → Privacy). We never call
-  // posthog.init() at load — that would track people before they consented, and
-  // would make the app's own "sends nothing out of the box" promise false. Ask
-  // the backend for the stored consent, and only then start it.
-  useEffect(() => {
-    initAnalyticsFromConsent(() => apiJson('/api/settings/analytics'));
-  }, []);
+  // Read once, like api/client.ts. Saving or disabling a remote backend reloads
+  // the app, so this value and API's module-level base always move together.
+  const [remoteBackend] = useState(() => configuredRemoteBackend());
 
   // UI navigation state now lives in the Zustand `uiSlice` (Phase 2.2).
   // Mode + uiScale + sidebar-collapsed persist across reloads automatically
   // via the store's `partialize`; active project / voice ids stay transient.
   const uiScale = useAppStore((s) => s.uiScale);
+  const uiScaleConfigured = useAppStore((s) => s.uiScaleConfigured);
+  const uiScalePreviewed = useAppStore((s) => s.uiScalePreviewed);
+  const setUiScale = useAppStore((s) => s.setUiScale);
+  const setUiScaleConfigured = useAppStore((s) => s.setUiScaleConfigured);
+  const setUiScalePreviewed = useAppStore((s) => s.setUiScalePreviewed);
+  const [storeHydrated, setStoreHydrated] = useState(
+    () => useAppStore.persist?.hasHydrated?.() ?? true,
+  );
+
+  useEffect(() => {
+    if (storeHydrated) return undefined;
+    const unsubscribe = useAppStore.persist?.onFinishHydration?.(() => setStoreHydrated(true));
+    if (useAppStore.persist?.hasHydrated?.()) setStoreHydrated(true);
+    return unsubscribe;
+  }, [storeHydrated]);
+
+  // Latched on first render — "startup" is the contract, not a per-render read.
+  // Tauri's native zoom keeps the CSS viewport equal to the visible window
+  // (utils/uiScaleEngine.js), so applying a scale changes `window.innerWidth`.
+  // Re-measuring here on every render made this value depend on the zoom it
+  // itself produces, which is the other half of the first-run oscillation
+  // fixed in UiScaleSetup.jsx — see the long comment there. A live read also
+  // can't be the "startup" suggestion by definition.
+  const [startupSuggestedScale] = useState(() =>
+    suggestUiScale({
+      width: typeof window === 'undefined' ? 1440 : window.innerWidth,
+      height: typeof window === 'undefined' ? 900 : window.innerHeight,
+    }),
+  );
+  const effectiveUiScale = resolveUiScale({
+    configured: uiScaleConfigured,
+    previewed: uiScalePreviewed,
+    selected: uiScale,
+    suggested: startupSuggestedScale,
+  });
 
   // Responsive shell breakpoints driven off the app-container's OWN width, not
   // the viewport. The shell is sized `width: calc(100vw / --ui-scale)` then
@@ -142,26 +182,13 @@ function App() {
     return () => ro.disconnect();
   }, []);
 
-  // Engine capability probe (#523/#524): does this WebView honor `zoom` as a
-  // LAYOUT transform? Chromium (WebView2 / macOS WebKit) and modern WebKitGTK
-  // do; older WebKitGTK (Linux) treats it as a no-op. The .app-container sizing
-  // branches on the result (index.css) so the shell fills the window on BOTH —
-  // no black band on WebKitGTK, no clipped Generate/Settings CTAs on Chromium.
-  // Measuring a real zoomed element is robust where @supports(zoom)/UA-sniffing
-  // aren't (both report "supported" on WebKitGTK even when zoom doesn't lay out).
+  // Desktop UI scale belongs at the webview boundary. A CSS `zoom` probe can
+  // report the expected bounding box on WebKitGTK even when the painted shell
+  // still occupies only the upper-left of the window. Tauri's native zoom keeps
+  // layout and paint in agreement; browser/dev sessions retain the CSS path.
   useLayoutEffect(() => {
-    let honored = true;
-    try {
-      const probe = document.createElement('div');
-      probe.style.cssText = 'position:absolute;left:-9999px;top:0;width:100px;height:100px;zoom:2';
-      document.body.appendChild(probe);
-      honored = Math.round(probe.getBoundingClientRect().width) >= 150;
-      probe.remove();
-    } catch {
-      honored = true;
-    } // safe default: the existing zoom path
-    document.documentElement.dataset.zoomLayout = honored ? 'on' : 'off';
-  }, []);
+    void applyUiScale(effectiveUiScale);
+  }, [effectiveUiScale]);
   const shellSizeClass =
     shellWidth <= 600 ? 'shell-mini' : shellWidth <= 1100 ? 'shell-narrow' : '';
   const theme = useAppStore((s) => s.theme);
@@ -198,6 +225,9 @@ function App() {
   useEffect(() => {
     addBreadcrumb(`view:${mode}`);
   }, [mode]);
+  // Navigation skin: the icon rail (default) or titlebar tabs (Settings →
+  // Appearance). Only one of the two renders at a time.
+  const navStyle = useAppStore((s) => s.navStyle);
   const [navRailSide, setNavRailSide] = useState(() => {
     try {
       return localStorage.getItem('omnivoice.navRailSide') || 'left';
@@ -239,6 +269,27 @@ function App() {
       if (unlisten) unlisten();
     };
   }, [setMode]);
+
+  // Dictation failures are raised in the widget window, which is never shown —
+  // this is the only place they can reach the user. Without it, a hotkey press
+  // that can't paste (Accessibility ungranted) or can't record (mic denied)
+  // would be indistinguishable from a hotkey that isn't working at all.
+  useEffect(() => {
+    let unlisten;
+    let cancelled = false;
+    (async () => {
+      const stop = await listenDictationNotice(showDictationNotice);
+      // The await above can outlive the effect (StrictMode double-mount, or a
+      // fast unmount) — drop the subscription rather than leaking a listener
+      // that would double every later toast.
+      if (cancelled) stop();
+      else unlisten = stop;
+    })();
+    return () => {
+      cancelled = true;
+      if (unlisten) unlisten();
+    };
+  }, []);
   const flipNavRailSide = useCallback(() => {
     setNavRailSide((prev) => {
       const next = prev === 'left' ? 'right' : 'left';
@@ -264,10 +315,11 @@ function App() {
     mode === 'enterprise' ||
     mode === 'contact' ||
     mode === 'transcriptions' ||
+    mode === 'catalogue' ||
     mode === 'stories' ||
     mode === 'audiobook' ||
     // Voice (studio) and Dub workspaces moved their saved voices /
-    // projects + history into right-side panels; left sidebar dissolved.
+    // projects + history into workspace rails; global sidebar dissolved.
     mode === 'studio' ||
     mode === 'dub';
   const availableSidebarTabs = [];
@@ -406,8 +458,19 @@ function App() {
   const [compareProgress, setCompareProgress] = useState('');
 
   // ═══ MIC RECORDING ═══
-  const { isRecording, isCleaning, recordingTime, startRecording, stopRecording } =
-    useRecording(ingestRefAudio);
+  const {
+    isRecording,
+    isCleaning,
+    recordingTime,
+    audioInputs,
+    selectedAudioInputId,
+    setSelectedAudioInputId,
+    channelMode,
+    setChannelMode,
+    inputLevelStore,
+    startRecording,
+    stopRecording,
+  } = useRecording(ingestRefAudio);
 
   // ═══ DUB STATE ═══
   const dubJobId = useAppStore((s) => s.dubJobId);
@@ -498,10 +561,12 @@ function App() {
     setPreviewAudios,
     transcribeElapsed,
     transcribeProgress,
+    asrInstall,
     handleDubUpload: _handleDubUpload,
     handleDubIngestUrl,
     handleDubAbort,
     handleDubRetryTranscribe,
+    handleInstallMissingAsr,
     handleDubStop,
     handleDubGenerate,
     handleCleanupSegments,
@@ -538,6 +603,7 @@ function App() {
   const setActiveProject = useAppStore((s) => s.setActiveProject);
   const sidebarTab = useAppStore((s) => s.sidebarTab);
   const setSidebarTab = useAppStore((s) => s.setSidebarTab);
+  const openSettingsTab = useAppStore((s) => s.openSettingsTab);
 
   // Snap sidebar to a valid tab when view changes
   useEffect(() => {
@@ -562,16 +628,42 @@ function App() {
   // the studio in front of a user who actually needs the wizard.
   const [setupNeeded, setSetupNeeded] = useState(false);
   const [setupChecked, setSetupChecked] = useState(false);
+  const [remoteFailure, setRemoteFailure] = useState(null);
+  const [remoteProbeAttempt, setRemoteProbeAttempt] = useState(0);
+  const retryRemoteBackend = useCallback(() => {
+    setRemoteFailure(null);
+    setSetupChecked(false);
+    setRemoteProbeAttempt((attempt) => attempt + 1);
+  }, []);
+  const openRemoteBackendSettings = useCallback(() => {
+    setRemoteFailure(null);
+    openSettingsTab('sharing');
+  }, [openSettingsTab]);
+  const backendReady = remoteBackend ? setupChecked && !remoteFailure : bootstrapStage === 'ready';
+
+  // Analytics remains off until the selected backend has passed its startup
+  // gate. Starting this request on mount leaked connection/CORS noise from a
+  // stale remote URL before the recovery screen could explain or repair it.
   useEffect(() => {
-    // Gate the probe on the bootstrap being 'ready' — before that there is
-    // no backend to answer. Probing from mount burned the 30-attempt ceiling
-    // during the setup/installing acts (minutes long on a first run), so the
-    // wizard was silently skipped straight into the studio once the install
-    // finished. Keyed on bootstrapStage: the probe (re)runs the moment the
-    // backend becomes reachable.
-    if (bootstrapStage !== 'ready') return undefined;
+    if (!backendReady) return;
+    void initAnalyticsFromConsent(() => apiJson('/api/settings/analytics'));
+  }, [backendReady]);
+
+  useEffect(() => {
+    // A local backend cannot answer before Rust reports ready. A configured
+    // remote is independent of the local bootstrap and must be probed at once;
+    // otherwise a first-run shell parks at awaiting_setup forever.
+    if (!remoteBackend && bootstrapStage !== 'ready') return undefined;
     let cancelled = false;
     (async () => {
+      if (remoteBackend) {
+        const result = await probeRemoteBackend(remoteBackend.url, remoteBackend.key);
+        if (cancelled) return;
+        setRemoteFailure(result.ok ? null : result);
+        setSetupNeeded(false);
+        setSetupChecked(true);
+        return;
+      }
       const { setupStatus } = await import('./api/setup');
       // ~30 attempts × ~1s ≈ 30s ceiling; enough for a cold sidecar on slow disks.
       for (let attempt = 0; attempt < 30 && !cancelled; attempt++) {
@@ -590,7 +682,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [bootstrapStage]);
+  }, [bootstrapStage, remoteBackend, remoteProbeAttempt]);
 
   // ── First sound ──
   // Onboarding should end with the product doing the thing: the moment the
@@ -598,7 +690,7 @@ function App() {
   // it. Best-effort by design — a first impression must never surface an
   // error, so every failure path is silent.
   useEffect(() => {
-    if (!setupChecked || setupNeeded || bootstrapStage !== 'ready') return;
+    if (!setupChecked || setupNeeded || !backendReady) return;
     let pending = false;
     try {
       pending = sessionStorage.getItem('omnivoice.firstSound') === '1';
@@ -626,7 +718,7 @@ function App() {
         /* silent — see above */
       }
     })();
-  }, [setupChecked, setupNeeded, bootstrapStage]);
+  }, [setupChecked, setupNeeded, backendReady]);
 
   // ── Tauri auto-updater ──
   // On boot, ask GitHub Releases if a newer build is available. If yes,
@@ -712,6 +804,22 @@ function App() {
   // ── KEYBOARD SHORTCUTS ──
   useEffect(() => {
     const handler = (e) => {
+      // In-webview navigation only: using DOM keydown keeps this identical in
+      // browser, macOS, Windows and Linux builds (unlike OS-level hotkeys).
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey) {
+        const key = e.key.toLowerCase();
+        if (key === 'e') {
+          e.preventDefault();
+          window.dispatchEvent(new Event('engine-quick-switch'));
+          return;
+        }
+        const index = Number(key);
+        if (index >= 1 && index <= NAV_ITEMS.length) {
+          e.preventDefault();
+          setMode(NAV_ITEMS[index - 1].id);
+          return;
+        }
+      }
       // ⌘+Enter or Ctrl+Enter → Generate
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault();
@@ -781,17 +889,16 @@ function App() {
       return;
     }
     try {
-      const { save } = await import('@tauri-apps/plugin-dialog');
-      const ext = fallbackName.includes('.') ? fallbackName.split('.').pop() : 'wav';
-      const destPath = await save({
-        defaultPath: fallbackName,
-        filters: [{ name: 'Media', extensions: [ext] }],
+      const { invoke } = await import('@tauri-apps/api/core');
+      const selection = await invoke('authorize_host_path', {
+        kind: 'dub_export',
+        suggestedName: fallbackName,
       });
-      if (!destPath) return; // User cancelled
+      if (!selection) return; // User cancelled
 
       await exportAction({
         source_filename: sourceIdentifier,
-        destination_path: destPath,
+        authorization: selection.authorization,
         mode,
       });
       toast.success(i18n.t('app.toast_exported', { name: fallbackName }));
@@ -812,7 +919,7 @@ function App() {
       toast.error(i18n.t('app.toast_open_folder_failed', { message: err.message }));
     }
   };
-  // Save a dynamic (save_path-aware) export — dub video/audio/subtitles — to
+  // Save a dynamic export — dub video/audio/subtitles — to
   // disk. The parity-safe dialog + server-side copy vs browser-blob branch now
   // lives in the shared `downloadMedia` util (#1218) so audiobook/story exports
   // reuse the exact same path and never fall back to a webview-hijacking
@@ -1051,11 +1158,9 @@ function App() {
           item.language_code || job.language_code || 'und',
         );
       }
-      // Rehydrate the auto-extracted speaker clones so the CAST dropdown's
-      // "🎤 From video" option reappears after a reload. Projects that
-      // predate the speaker-clone feature have an empty map; the Extract
-      // Voices button in the CAST strip handles those.
-      setSpeakerClones(job.speaker_clones || {});
+      // Rehydrate path-free cast sources. Legacy heuristic jobs may have only
+      // per-segment references; castSourcesFromJob recovers those too.
+      setSpeakerClones(castSourcesFromJob(job));
     } catch (e) {
       console.error('Failed to restore job_data', e);
     }
@@ -1108,7 +1213,7 @@ function App() {
   };
 
   const deleteHistory = async (id, type) => {
-    if (!(await askConfirm('Delete this history item?'))) return;
+    if (!(await askConfirm(i18n.t('history.delete_confirm')))) return;
     try {
       const endpoint = type === 'dub' ? `${API}/dub/history/${id}` : `${API}/history/${id}`;
       await apiFetch(endpoint, { method: 'DELETE' });
@@ -1148,9 +1253,9 @@ function App() {
   // when explicitly requested via `--setup`. Without this, a live backend
   // answering /setup/status would route straight to the model wizard and the
   // awaiting_setup stage would never get to render.
-  if (bootstrapStage === 'awaiting_setup') {
+  if (!remoteBackend && bootstrapStage === 'awaiting_setup') {
     return (
-      <div style={{ zoom: uiScale }}>
+      <div className="app-bootstrap-scale" style={{ '--ui-scale': effectiveUiScale }}>
         <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
       </div>
     );
@@ -1161,22 +1266,52 @@ function App() {
   // Also blocks render until we've heard back from the backend at least once
   // — the frozen sidecar's cold-start import is ~5-10 s and without this we
   // flash the empty studio before the wizard has a chance to mount.
-  if (!setupChecked) {
+  if (!setupChecked || !storeHydrated) {
     return (
-      <div style={{ zoom: uiScale }}>
+      <div className="app-bootstrap-scale" style={{ '--ui-scale': effectiveUiScale }}>
         <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
       </div>
     );
   }
-  if (setupNeeded && bootstrapStage === 'ready') {
+  if (remoteFailure) {
+    return (
+      <div className="app-bootstrap-scale" style={{ '--ui-scale': effectiveUiScale }}>
+        <RemoteBackendRecovery
+          failure={remoteFailure}
+          onRetry={retryRemoteBackend}
+          onOpenSettings={openRemoteBackendSettings}
+        />
+      </div>
+    );
+  }
+  if (!uiScaleConfigured && backendReady) {
+    return (
+      <div className="app-wizard-wrap" style={{ '--ui-scale': effectiveUiScale }}>
+        <div data-tauri-drag-region className="app-wizard-dragstrip" />
+        <Suspense fallback={<LazyFallback />}>
+          <UiScaleSetup
+            uiScale={uiScale}
+            setUiScale={setUiScale}
+            setUiScaleConfigured={setUiScaleConfigured}
+            setUiScalePreviewed={setUiScalePreviewed}
+          />
+        </Suspense>
+      </div>
+    );
+  }
+  if (setupNeeded && backendReady) {
     // Render outside the `app-container` grid so the wizard spans the full
     // viewport instead of getting squeezed into whatever grid cell the
     // studio layout reserves for the main content column. Gated on the
     // bootstrap being 'ready': while the stage is still settling (checking /
     // awaiting_setup racing the first poll), the wizard must not steal the
     // mount from the install-plan screen.
+    // `--ui-scale`, NOT a bare inline `zoom`: the CSS shrinks the box by the
+    // scale and zooms it back (#504 contract, same as .app-container). An
+    // inline zoom on top of a full-viewport box pushed the pinned
+    // Continue/HF-token row below the window at any scale > 1.
     return (
-      <div className="app-wizard-wrap" style={{ zoom: uiScale }}>
+      <div className="app-wizard-wrap" style={{ '--ui-scale': effectiveUiScale }}>
         {/* Invisible drag strip across the top 28 px of the wizard —
             matches the macOS traffic-light zone so the window can be
             dragged / double-click-zoomed from anywhere along the top. */}
@@ -1207,23 +1342,25 @@ function App() {
 
   // Block the main UI until Rust reports the backend is ready. In dev web
   // (no Tauri), the hook returns 'ready' immediately so this is a no-op.
-  if (bootstrapStage !== 'ready') {
-    return <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />;
+  if (!backendReady) {
+    return (
+      <div className="app-bootstrap-scale" style={{ '--ui-scale': effectiveUiScale }}>
+        <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
+      </div>
+    );
   }
 
   return (
     <div
       ref={shellRef}
-      className={[
-        'app-container',
-        isSidebarCollapsed ? 'sidebar-collapsed' : '',
-        hideSidebar ? 'sidebar-hidden' : '',
-        navRailSide === 'right' ? 'rail-right' : '',
+      className={appShellClasses({
+        navStyle,
+        navRailSide,
+        isSidebarCollapsed,
+        hideSidebar,
         shellSizeClass,
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      style={{ '--ui-scale': uiScale }}
+      })}
+      style={{ '--ui-scale': effectiveUiScale }}
     >
       {pendingTrimFile && (
         <ErrorBoundary name="audio-trimmer">
@@ -1287,6 +1424,7 @@ function App() {
       <Header
         mode={mode}
         setMode={setMode}
+        navStyle={navStyle}
         modelStatus={modelStatus}
         doubleClickMaximize={doubleClickMaximize}
         activeProjectName={activeProjectName}
@@ -1306,7 +1444,9 @@ function App() {
         }}
       />
 
-      <NavRail mode={mode} setMode={setMode} side={navRailSide} onFlipSide={flipNavRailSide} />
+      {navStyle === 'tabs' ? null : (
+        <NavRail mode={mode} setMode={setMode} side={navRailSide} onFlipSide={flipNavRailSide} />
+      )}
 
       <div className="main-content">
         {/* ═══ LAUNCHPAD TAB ═══ */}
@@ -1382,6 +1522,12 @@ function App() {
               <TranscriptionsPage />
             </Suspense>
           </ErrorBoundary>
+        ) : mode === 'catalogue' ? (
+          <ErrorBoundary name="catalogue">
+            <Suspense fallback={<LazyFallback />}>
+              <ModelCataloguePage />
+            </Suspense>
+          </ErrorBoundary>
         ) : mode === 'stories' ? (
           <ErrorBoundary name="stories">
             <Suspense fallback={<LazyFallback />}>
@@ -1409,7 +1555,9 @@ function App() {
         ) : mode === 'contact' ? (
           <ErrorBoundary name="contact">
             <Suspense fallback={<LazyFallback />}>
-              <ContactPage onBack={() => setMode('launchpad')} />
+              {/* Same page as donate / enterprise — it scrolls to the contact
+                  section. Three routes, one destination. */}
+              <SupportPage initialView="contact" onBack={() => setMode('launchpad')} />
             </Suspense>
           </ErrorBoundary>
         ) : mode === 'launchpad' ? (
@@ -1431,6 +1579,19 @@ function App() {
           <div
             className={`studio-with-history ${dubStep === 'idle' ? '' : 'studio-with-history--editing'}`}
           >
+            {dubStep === 'idle' && (
+              <div className="studio-projects">
+                <WorkspaceProjects
+                  projects={studioProjects}
+                  activeProjectId={activeProjectId}
+                  canSave={false}
+                  saveProject={saveProject}
+                  loadProject={loadProject}
+                  deleteProject={deleteProject}
+                  renameProject={renameProject}
+                />
+              </div>
+            )}
             <div className="studio-with-history__main">
               <ErrorBoundary name="dub">
                 <Suspense fallback={<LazyFallback />}>
@@ -1441,6 +1602,7 @@ function App() {
                     dubLocalBlobUrl={dubLocalBlobUrl}
                     transcribeElapsed={transcribeElapsed}
                     transcribeProgress={transcribeProgress}
+                    asrInstall={asrInstall}
                     translateProvider={translateProvider}
                     setTranslateProvider={setTranslateProvider}
                     onGlossaryChange={setGlossaryTerms}
@@ -1456,6 +1618,7 @@ function App() {
                     handleDubUpload={handleDubUpload}
                     handleDubIngestUrl={handleDubIngestUrl}
                     handleDubRetryTranscribe={handleDubRetryTranscribe}
+                    handleInstallMissingAsr={handleInstallMissingAsr}
                     handleDubStop={handleDubStop}
                     handleDubGenerate={handleDubGenerate}
                     handleDubDownload={handleDubDownload}
@@ -1496,15 +1659,6 @@ function App() {
               editor (dubStep !== 'idle'). */}
             {dubStep === 'idle' && (
               <div className="studio-right">
-                <WorkspaceProjects
-                  projects={studioProjects}
-                  activeProjectId={activeProjectId}
-                  canSave={dubStep !== 'idle' || !!dubVideoFile}
-                  saveProject={saveProject}
-                  loadProject={loadProject}
-                  deleteProject={deleteProject}
-                  renameProject={renameProject}
-                />
                 <WorkspaceHistory
                   variant="dub"
                   dubHistory={dubHistory}
@@ -1517,6 +1671,24 @@ function App() {
           </div>
         ) : (
           <div className="studio-with-history">
+            <div className="studio-voices">
+              <WorkspaceVoices
+                defineMethod={defineMethod}
+                profiles={profiles}
+                selectedProfile={selectedProfile}
+                setSelectedProfile={setSelectedProfile}
+                previewLoading={previewLoading}
+                handleSelectProfile={handleSelectProfile}
+                handleDeleteProfile={handleDeleteProfile}
+                handlePreviewVoice={handlePreviewVoice}
+                handleUnlockProfile={handleUnlockProfile}
+                openVoiceProfile={openVoiceProfile}
+                onOpenVoicePreview={(profileId) => {
+                  setVoicePreviewProfileId(profileId || '');
+                  setIsVoicePreviewOpen(true);
+                }}
+              />
+            </div>
             <div className="studio-with-history__main">
               <ErrorBoundary name="clone-design">
                 <Suspense fallback={<LazyFallback />}>
@@ -1565,6 +1737,12 @@ function App() {
                     isRecording={isRecording}
                     isCleaning={isCleaning}
                     recordingTime={recordingTime}
+                    audioInputs={audioInputs}
+                    selectedAudioInputId={selectedAudioInputId}
+                    setSelectedAudioInputId={setSelectedAudioInputId}
+                    channelMode={channelMode}
+                    setChannelMode={setChannelMode}
+                    inputLevelStore={inputLevelStore}
                     vdStates={vdStates}
                     setVdStates={setVdStates}
                     isGenerating={isGenerating}
@@ -1584,22 +1762,6 @@ function App() {
               </ErrorBoundary>
             </div>
             <div className="studio-right">
-              <WorkspaceVoices
-                defineMethod={defineMethod}
-                profiles={profiles}
-                selectedProfile={selectedProfile}
-                setSelectedProfile={setSelectedProfile}
-                previewLoading={previewLoading}
-                handleSelectProfile={handleSelectProfile}
-                handleDeleteProfile={handleDeleteProfile}
-                handlePreviewVoice={handlePreviewVoice}
-                handleUnlockProfile={handleUnlockProfile}
-                openVoiceProfile={openVoiceProfile}
-                onOpenVoicePreview={(profileId) => {
-                  setVoicePreviewProfileId(profileId || '');
-                  setIsVoicePreviewOpen(true);
-                }}
-              />
               <WorkspaceHistory
                 history={history}
                 handleSaveHistoryAsProfile={handleSaveHistoryAsProfile}

@@ -6,6 +6,7 @@ import SearchableSelect from './SearchableSelect';
 import { ArchetypeIcon } from '../utils/archetypeIcons';
 import { PRESETS } from '../utils/constants';
 import { useArchetypes } from '../api/hooks';
+import { autoProfileId } from '../utils/segments';
 import { useArchetypeAsProfile } from '../api/archetypes';
 import { useAppStore } from '../store';
 
@@ -47,6 +48,7 @@ import { useAppStore } from '../store';
  * @param {()=>void} [onCreateVoice]  render an inline "create voice" button
  * @param {string}   [recentsKey='']  persist recents under this key (real ids only)
  * @param {string}   [placeholder]    trigger placeholder when nothing resolves
+ * @param {string}   [ariaLabel]      accessible label for the select trigger
  * @param {boolean}  [menuPortal=false] portal the dropdown to <body> (needed
  *   inside clipping ancestors: overflow:auto panels / react-window rows — #1220)
  */
@@ -83,6 +85,7 @@ export default function VoiceSelector({
   onCreateVoice,
   recentsKey = '',
   placeholder,
+  ariaLabel,
   disabled = false,
   size = 'md',
   buttonClassName,
@@ -149,9 +152,8 @@ export default function VoiceSelector({
     // 2. fromVideo (dub only) — slug rule byte-identical to DubSegmentRow.
     const speakers = speakerClones ? Object.keys(speakerClones) : [];
     for (const spk of speakers) {
-      const slug = (spk || '').toLowerCase().replace(/\s+/g, '_');
       list.push({
-        value: `auto:${slug}`,
+        value: autoProfileId(spk),
         label: `🎤 ${spk}`,
         group: 'fromVideo',
         groupLabel: t('voiceSelector.fromVideo'),
@@ -299,6 +301,7 @@ export default function VoiceSelector({
         disabled={disabled || materializing}
         size={size}
         buttonClassName={buttonClassName}
+        ariaLabel={ariaLabel}
         menuPortal={menuPortal}
         onOpenChange={setOpen}
         onQueryChange={setRawQuery}

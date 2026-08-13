@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec for OmniVoice Studio backend.
+# PyInstaller spec for VoiceStudio backend.
 #
 # Produces a one-folder bundle at dist/omnivoice-backend/ that Tauri launches
 # as a sidecar binary. Kept intentionally permissive with collect_all(...)
@@ -41,6 +41,16 @@ hiddenimports = [
     # even though pyproject.toml ships the package. Guarded by
     # tests/test_socks_proxy.py.
     'socksio',
+    # Remote GPU workers (backend/worker/). The feature is opt-in, so every
+    # import of it is deliberately deferred to the moment it is switched on —
+    # inside `lifespan` and inside `ControlPlane.start()`. That keeps the cost
+    # off users who never enable it, but it also means a frozen build has no
+    # static import chain to follow, so the modules must be named here or the
+    # feature raises ModuleNotFoundError only in the installers.
+    'grpc', 'grpc.aio',
+    'worker.service', 'worker.agent',
+    'worker.transport.server', 'worker.transport.client',
+    'worker.protocol.gen.worker_v1_pb2', 'worker.protocol.gen.worker_v1_pb2_grpc',
 
     # Core
     'uuid', 'asyncio',

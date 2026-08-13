@@ -1,7 +1,7 @@
-# OmniVoice Studio — Install on Linux
+# VoiceStudio — Install on Linux
 
 This page is self-contained: follow it top to bottom and you'll end up with a
-working OmniVoice Studio install on a Debian / Ubuntu / Fedora / Arch host.
+working VoiceStudio install on a Debian / Ubuntu / Fedora / Arch host.
 
 ## Prerequisites
 
@@ -33,7 +33,12 @@ Everything above, plus the toolchain:
 
   ```bash
   # Debian / Ubuntu
-  sudo apt install libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev libxdo-dev build-essential
+  sudo apt-get update
+  sudo apt-get install -y \
+    libwebkit2gtk-4.1-dev libgtk-3-dev libpango1.0-dev libcairo2-dev \
+    libsoup-3.0-dev libgdk-pixbuf-2.0-dev \
+    libayatana-appindicator3-dev librsvg2-dev libssl-dev libxdo-dev \
+    libasound2-dev build-essential curl wget file
 
   # Fedora
   sudo dnf install webkit2gtk4.1-devel libappindicator-gtk3-devel librsvg2-devel openssl-devel
@@ -48,30 +53,76 @@ Everything above, plus the toolchain:
 ## Install (from source)
 
 ```bash
-git clone https://github.com/debpalash/OmniVoice-Studio.git
-cd OmniVoice-Studio
+git clone https://github.com/debpalash/VoiceStudio.git
+cd VoiceStudio
 bun install
-bun run desktop-prod
+source "$HOME/.cargo/env"  # only needed in a shell opened before rustup finished
+bun desktop               # development build with hot reload
 ```
 
-The first launch creates the Python venv via `uv`, syncs deps, and downloads
-model weights (~2.4 GB). Subsequent launches start in seconds.
+Use `bun run desktop-prod` instead when you need to build and launch the
+production bundle. Both commands create the Python environment via `uv`, sync
+dependencies, and start the backend automatically; do not start the backend in
+a second terminal.
+
+The first Rust build takes longer because Cargo compiles the Tauri shell. If it
+fails with `Package gdk-3.0 was not found`, `pango.pc` missing,
+`libsoup-3.0` missing, or `javascriptcoregtk-4.1` missing, install the complete
+Debian/Ubuntu package block above. Those messages mean the development
+libraries are absent, not that `PKG_CONFIG_PATH` needs changing. Verify them
+with:
+
+```bash
+pkg-config --exists \
+  gdk-3.0 pango cairo libsoup-3.0 javascriptcoregtk-4.1 gdk-pixbuf-2.0 \
+  && echo "Tauri system libraries are ready"
+```
+
+The first app launch downloads model weights on demand. Subsequent launches
+reuse the Rust build, Python environment, and installed models.
+
+## Wayland dictation shortcut
+
+System-wide dictation on Wayland uses the standard
+`org.freedesktop.portal.GlobalShortcuts` interface. Your desktop must run
+`xdg-desktop-portal` and a portal backend that implements that interface. The
+desktop owns the consent dialog and may let you replace VoiceStudio's preferred
+key combination.
+
+VoiceStudio binds the replacement before saving a changed shortcut. If consent
+is declined or the portal is unavailable, Settings keeps the previous shortcut
+and reports the registration failure. The configured shortcut still works while
+the VoiceStudio window is focused.
+
+While a dictation is running, VoiceStudio shows a small always-on-top capsule.
+It sits near the bottom of the screen your pointer is on — except on Wayland,
+where the protocol gives applications no say in their own placement and the
+compositor decides where it appears. The capsule works the same either way; only
+its position is out of the app's hands there.
+
+If the global shortcut stops working, restart your desktop's portal service,
+then save the shortcut again in **Settings → Hotkey** to reopen consent. Portal
+packages and support vary by desktop; use the backend recommended by your
+distribution rather than running multiple portal backends in the same session.
+See the portal project's [service integration checks](https://flatpak.github.io/xdg-desktop-portal/docs/system-integration.html)
+and the Arch Linux [backend compatibility table](https://wiki.archlinux.org/title/XDG_Desktop_Portal#List_of_backends_and_interfaces)
+for concrete service and desktop-backend checks.
 
 ## Install (AppImage)
 
 Download the latest AppImage from the
-[Releases page](https://github.com/debpalash/OmniVoice-Studio/releases/latest),
+[Releases page](https://github.com/debpalash/VoiceStudio/releases/latest),
 make it executable, and run:
 
 ```bash
-chmod +x OmniVoice.Studio_*.AppImage
-./OmniVoice.Studio_*.AppImage
+chmod +x VoiceStudio.Studio_*.AppImage
+./VoiceStudio.Studio_*.AppImage
 ```
 
 No FUSE? Use `--appimage-extract-and-run`:
 
 ```bash
-./OmniVoice.Studio_*.AppImage --appimage-extract-and-run
+./VoiceStudio.Studio_*.AppImage --appimage-extract-and-run
 ```
 
 ## .deb package
@@ -90,7 +141,7 @@ The desktop app uses these canonical paths (kept in sync with
 <!-- validate -->
 ```bash
 APP_ID="com.debpalash.omnivoice-studio"
-APP_NAME="OmniVoice Studio"
+APP_NAME="VoiceStudio"
 ```
 
 ## AppImage white screen / EGL errors (Fedora 44, Ubuntu 24.04+, 26.04)
@@ -112,7 +163,7 @@ Could not create default EGL display: EGL_BAD_PARAMETER
 Disable the DMA-BUF renderer before launching:
 
 ```bash
-WEBKIT_DISABLE_DMABUF_RENDERER=1 ./OmniVoice.Studio_*.AppImage
+WEBKIT_DISABLE_DMABUF_RENDERER=1 ./VoiceStudio.Studio_*.AppImage
 ```
 
 **WebKitGTK 2.44 / 2.46 (Fedora 44, Ubuntu 24.04 at release):** a
@@ -120,10 +171,10 @@ compositing-mode regression blanks the surface on first paint. Disable
 compositing mode instead:
 
 ```bash
-WEBKIT_DISABLE_COMPOSITING_MODE=1 ./OmniVoice.Studio_*.AppImage
+WEBKIT_DISABLE_COMPOSITING_MODE=1 ./VoiceStudio.Studio_*.AppImage
 ```
 
-OmniVoice's AppRun launcher autodetects the broken 2.44/2.46 range and sets
+VoiceStudio's AppRun launcher autodetects the broken 2.44/2.46 range and sets
 this second variable for you (shipped in v0.3+). The manual env-var path
 remains the documented fallback when running from a checked-out source tree.
 
@@ -131,11 +182,110 @@ remains the documented fallback when running from a checked-out source tree.
 (slower, but always paints):
 
 ```bash
-WEBKIT_DISABLE_DMABUF_RENDERER=1 LIBGL_ALWAYS_SOFTWARE=1 ./OmniVoice.Studio_*.AppImage
+WEBKIT_DISABLE_DMABUF_RENDERER=1 LIBGL_ALWAYS_SOFTWARE=1 ./VoiceStudio.Studio_*.AppImage
 ```
 
-Tracking issues: [#62](https://github.com/debpalash/OmniVoice-Studio/issues/62),
-[#961](https://github.com/debpalash/OmniVoice-Studio/issues/961).
+### If no environment variable helps at all (Mesa 26.1+)
+
+On a host with **Mesa 26.1 or newer** — Arch/CachyOS, and rolling distros
+generally — none of the variables above make any difference, including
+`WEBKIT_DMABUF_RENDERER_FORCE_SHM`, `WEBKIT_SKIA_ENABLE_CPU_RENDERING`,
+`EGL_PLATFORM=surfaceless` and `MESA_LOADER_DRIVER_OVERRIDE=swrast`. That is
+expected: the failure is in EGL **display creation**, which happens before
+WebKit consults any rendering-path flag, so there is nothing left for a flag
+to change.
+
+The cause is a version pairing, not a bug in either half. The AppImage bundles
+a WebKitGTK built on Ubuntu but ships no `libEGL` of its own, so that bundled
+WebKit runs against *your* Mesa. On Mesa ≥ 26.1 it calls
+`eglGetPlatformDisplay()` in a way the newer driver rejects. Your distro's own
+WebKitGTK is fine, because it was compiled against the Mesa you are running —
+which is why building from source works on the same machine.
+
+**From v0.4.1 the AppImage handles this itself:** when your system has a
+WebKitGTK at least as new as the bundled one, the launcher lets your copy take
+precedence, and the bundled libraries fill in only what your system lacks.
+
+That check reads your WebKit version from `pkg-config`, which is only installed
+alongside the **development** package. If you have the runtime but not the dev
+package, the launcher can't compare versions and keeps the bundled copy — so
+tell it explicitly:
+
+```bash
+OMNIVOICE_PREFER_SYSTEM_WEBKIT=1 ./VoiceStudio.Studio_*.AppImage
+```
+
+(Set it to `0` to force the bundled copy — useful if your distro's WebKitGTK is
+older than ours and you'd rather keep the newer bundled one.)
+
+If you are on v0.4.0 or older, either update or build from source:
+
+```bash
+git clone https://github.com/debpalash/VoiceStudio.git
+cd VoiceStudio
+bun install
+bun run desktop-prod
+```
+
+Tracking issues: [#62](https://github.com/debpalash/VoiceStudio/issues/62),
+[#961](https://github.com/debpalash/VoiceStudio/issues/961),
+[#1258](https://github.com/debpalash/VoiceStudio/issues/1258).
+
+## AppImage: "No microphone found" while the raw binary records fine
+
+Recording from the AppImage fails with *"No microphone found. Connect or enable
+a microphone and try again."* — but `pactl list short sources` shows your
+microphones, `gst-launch-1.0 pulsesrc … ! fakesink` captures, and running
+`frontend/src-tauri/target/debug/omnivoice-studio` directly records without
+trouble. `GST_DEBUG=2` shows the real message:
+
+```text
+WARN GST_REGISTRY gst_registry_binary_check_magic:
+  Binary registry magic version is different : 1.23.90 != 1.3.0
+GStreamer element appsink not found. Please install it.
+```
+
+Same shape as the blank-window problem above, in a different library. The
+AppImage bundles the GStreamer **core** (WebKitGTK links it) but not its
+**plugins** — those are loaded dynamically at runtime, so the packaging step
+cannot see them to copy. The bundled core then reads *your* plugin directory,
+whose plugins were built against *your* core, the version check rejects them,
+and the scan produces nothing. `appsink` is one of the elements that goes
+missing, and it is the one WebKit needs to hand over a capture stream — so
+`getUserMedia()` reports no device. Your raw binary works because it uses your
+core with your plugins, which agree.
+
+**From v0.4.3 the launcher prefers your system's GStreamer**, which is the only
+core that can match the plugins that will actually load. It does that by
+preloading that one library (`LD_PRELOAD`) rather than by putting your system
+library directory ahead of the bundle — your GStreamer shares that directory
+with most of the system, so hoisting it would quietly replace every *other*
+bundled library too. If your distro's GStreamer is itself broken and you would
+rather fall back to the bundled core:
+
+```bash
+OMNIVOICE_PREFER_SYSTEM_GSTREAMER=0 ./VoiceStudio.Studio_*.AppImage
+```
+
+The launcher checks first that your GStreamer can actually load alongside the
+libraries the AppImage bundles — a system core built against newer GLib than we
+ship would fail to load and take the whole app down with it, which is worse than
+a missing microphone. If that check fails it prints a warning, keeps the bundled
+core, and the app still starts (with capture still broken); building from source
+avoids the mismatch entirely.
+
+The AppImage also keeps its plugin-scan cache to itself, at
+`~/.cache/VoiceStudio/gstreamer-registry.bin`, rather than in the shared
+`~/.cache/gstreamer-1.0/`. GStreamer names that shared file by architecture
+alone, so two cores of different versions overwrite each other's — which both
+makes this failure depend on whichever application ran last, and lets the
+AppImage corrupt the cache every other GStreamer app on your machine reads.
+
+If you set `XDG_CACHE_HOME`, the path follows it
+(`$XDG_CACHE_HOME/VoiceStudio/gstreamer-registry.bin`); `~/.cache` is the default
+when it is unset.
+
+Tracking issue: [#1333](https://github.com/debpalash/VoiceStudio/issues/1333).
 
 ## .deb ffprobe conflict
 
@@ -180,7 +330,7 @@ that picks these defaults automatically; for v0.3 set them by hand.
 
 ROCm support is **Linux-only and opt-in**. The **default install ships the
 CUDA build** of PyTorch (the `pytorch-cuda` index in `pyproject.toml`), so on
-an AMD-only machine `torch.cuda.is_available()` is `False` and OmniVoice runs
+an AMD-only machine `torch.cuda.is_available()` is `False` and VoiceStudio runs
 on CPU until you opt into the ROCm variant.
 
 > **Running in Docker or Podman instead?** There's a prebuilt ROCm image —
@@ -194,7 +344,7 @@ Three ways to opt in, in order of preference:
 
 **1. First-run setup screen (recommended).** On Linux the setup screen's
 **Compute** card offers **"AMD GPU (ROCm, Linux)"** next to the default
-**Auto**. When OmniVoice detects an AMD GPU *and* the ROCm userspace
+**Auto**. When VoiceStudio detects an AMD GPU *and* the ROCm userspace
 (`/opt/rocm` present, or `rocminfo` on PATH), the ROCm option is pre-selected;
 with an AMD GPU but no ROCm runtime it stays offered-but-unselected — install
 ROCm first (or continue on CPU). Choosing ROCm makes the bootstrap reinstall
@@ -216,14 +366,14 @@ uv pip install --reinstall torch==2.8.0 torchaudio==2.8.0 \
 ```
 run that manually if you want a specific ROCm point release; the
 `OMNIVOICE_TORCH_INDEX` env var only accepts a PEP 503 index URL, not a
-find-links page. If the reinstall fails (network, unsupported card), OmniVoice
+find-links page. If the reinstall fails (network, unsupported card), VoiceStudio
 keeps the default torch build and warns instead of breaking the install.
 
 **3. Manual wheel swap (fallback).** Replace torch with the ROCm wheel
 **after** the first-run install populates the venv:
 
 ```bash
-# From the project directory (source install), into OmniVoice's uv venv.
+# From the project directory (source install), into VoiceStudio's uv venv.
 # Matches the app's torch==2.8.0 pin — a different ROCm point release
 # (e.g. rocm6.2, rocm7.x) may not carry that exact torch build.
 uv pip install --reinstall torch torchaudio \
@@ -232,7 +382,7 @@ uv pip install --reinstall torch torchaudio \
 
 Once a ROCm build of PyTorch is in the venv, detection is automatic —
 `get_best_device()` returns the GPU (ROCm-built PyTorch reports through
-`torch.cuda.is_available()`), and OmniVoice auto-sets
+`torch.cuda.is_available()`), and VoiceStudio auto-sets
 `HSA_OVERRIDE_GFX_VERSION` for consumer cards whose GFX ID isn't in the
 official ROCm support matrix. Relaunch and the Settings → System panel should
 report the GPU device instead of `cpu`. Verify the wheel sees your card:
@@ -250,7 +400,7 @@ Notes:
 - ZLUDA (CUDA-on-ROCm translation) can work but is unsupported here — prefer a
   native ROCm wheel.
 
-Tracking issue: [#124](https://github.com/debpalash/OmniVoice-Studio/issues/124).
+Tracking issue: [#124](https://github.com/debpalash/VoiceStudio/issues/124).
 
 ## Hugging Face token (optional but recommended)
 

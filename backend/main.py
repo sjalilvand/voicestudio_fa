@@ -96,35 +96,17 @@ except ImportError:
 
 # ── cuDNN 8 library preload ─────────────────────────────────────────────
 # CTranslate2 (used by faster-whisper / WhisperX) requires cuDNN 8, but
-# PyTorch 2.8+ pulls cuDNN 9. scripts/setup.py installs cuDNN 8
-# side-by-side into cudnn8_compat/ (survives `uv sync`). We preload all
-# cuDNN 8 libs via ctypes so CTranslate2's dlopen/LoadLibrary finds them.
-if sys.platform != "darwin":  # macOS has no CUDA
-    _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    _pyver = f"python{sys.version_info.major}.{sys.version_info.minor}"
-    if sys.platform == "win32":
-        _cudnn8_lib = os.path.join(
-            _project_root, ".venv", "Lib", "site-packages",
-            "cudnn8_compat", "nvidia", "cudnn", "bin",
-        )
-        _cudnn8_glob = "cudnn*64_8.dll"
-    else:
-        _cudnn8_lib = os.path.join(
-            _project_root, ".venv", "lib", _pyver, "site-packages",
-            "cudnn8_compat", "nvidia", "cudnn", "lib",
-        )
-        _cudnn8_glob = "libcudnn*.so.8"
-    if os.path.isdir(_cudnn8_lib):
-        try:
-            import ctypes, glob
-            _mode = 0 if sys.platform == "win32" else ctypes.RTLD_GLOBAL
-            for _so in sorted(glob.glob(os.path.join(_cudnn8_lib, _cudnn8_glob))):
-                try:
-                    ctypes.CDLL(_so, mode=_mode)
-                except OSError:
-                    pass
-        except Exception:
-            pass
+# PyTorch 2.8+ pulls cuDNN 9, so the bootstrap side-loads cuDNN 8 into
+# cudnn8_compat/ and we preload it here for CTranslate2's dlopen/LoadLibrary.
+# Lives in core.cudnn8 so the ASR sidecar — a child process with its own clean
+# import path — gets the same preload, and so `asr_backend` can ASK whether it
+# worked instead of walking into a native __fastfail (#1371).
+try:
+    from core.cudnn8 import preload as _preload_cudnn8
+
+    _preload_cudnn8()
+except Exception:  # noqa: BLE001 — never block startup on a best-effort preload
+    pass
 
 # Route HF/Torch caches to a single external directory when requested.
 _cache_dir = os.environ.get("OMNIVOICE_CACHE_DIR")
@@ -364,6 +346,8 @@ import time
 import threading
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -391,7 +375,11 @@ from services.model_manager import (
 )
 from services import network_share
 
-from api.dependencies import is_local_host  # loopback + OMNIVOICE_TRUSTED_NETWORKS
+from api.dependencies import (  # loopback + OMNIVOICE_TRUSTED_NETWORKS
+    is_local_host,
+    presented_api_key,
+    remote_api_key,
+)
 
 from api.routers import (
     system,
@@ -770,6 +758,23 @@ async def lifespan(app: FastAPI):
     )
     if mcp_mounted:
         logger.info("MCP server mounted at /mcp")
+    # Remote GPU workers (opt-in). Starts nothing — no socket, no certificate,
+    # no background loop — unless the user turned the feature on, so an install
+    # that never touches it is byte-for-byte the app it was before.
+    try:
+        from worker import service as worker_service
+        await worker_service.start_if_enabled()
+    except Exception:
+        logger.exception("Remote worker startup failed (continuing without it)")
+
+    # The other side of the same feature: on a machine running in worker mode,
+    # connect out to its control plane and start taking work.
+    try:
+        from worker import agent as worker_agent
+        await worker_agent.start_if_worker_mode()
+    except Exception:
+        logger.exception("Worker agent startup failed (continuing without it)")
+
     # Startup finished — disarm the hang watchdog before serving (#632).
     if _watchdog_armed:
         try:
@@ -778,6 +783,19 @@ async def lifespan(app: FastAPI):
         except Exception:
             pass
     yield
+    # Stop accepting remote work early in shutdown: a worker that reconnects
+    # to a half-torn-down control plane is worse than one that simply finds it
+    # gone and backs off.
+    try:
+        from worker import agent as worker_agent
+        await worker_agent.stop()
+    except Exception:
+        logger.exception("Worker agent shutdown failed")
+    try:
+        from worker import service as worker_service
+        await worker_service.stop()
+    except Exception:
+        logger.exception("Remote worker shutdown failed")
     # ── Graceful shutdown (SIGTERM from Tauri, Ctrl+C, etc.) ────────────
     logger.info("Shutdown: cleaning up…")
     # FIRST: flip model_manager into shutdown mode, so a model load that is
@@ -827,9 +845,10 @@ async def lifespan(app: FastAPI):
     # Unload the model and free GPU memory
     try:
         import services.model_manager as mm
-        if mm.model is not None:
-            mm.model = None
+        if mm.unload_shared_model():
             logger.info("Shutdown: model unloaded.")
+        # Still unconditional: there are allocator caches to hand back even when
+        # no model was resident.
         mm.free_vram()
         # Abandon a still-running preload's GPU-pool thread (Python can't kill
         # a thread mid blocking call) so it can't outlive this shutdown block
@@ -849,21 +868,23 @@ async def lifespan(app: FastAPI):
         await close_http_client()
     except Exception:
         pass
-    logger.info("Shutdown: done.")
     # Last thing on a clean shutdown: retire the run sentinel so the next
-    # startup doesn't misread this exit as a crash (#1164). After "Shutdown:
-    # done." on purpose — if anything above dies, the sentinel survives and
-    # the death still gets reported.
+    # startup doesn't misread this exit as a crash (#1164). If clearing fails,
+    # retain the sentinel and report a degraded shutdown truthfully.
     try:
-        run_sentinel.clear_sentinel()
+        sentinel_cleared = run_sentinel.clear_sentinel()
     except Exception:
-        pass
+        sentinel_cleared = False
+    if sentinel_cleared:
+        logger.info("Shutdown: done.")
+    else:
+        logger.warning("Shutdown completed, but the run sentinel could not be cleared")
 
 
 from core.version import APP_VERSION  # single source of truth (pyproject metadata)
 
 app = FastAPI(
-    title="OmniVoice Studio API",
+    title="VoiceStudio API",
     version=APP_VERSION,
     lifespan=lifespan,
     docs_url=None,       # Disabled — replaced by Scalar at /docs
@@ -905,6 +926,65 @@ def _cors_headers_for(request: Request) -> "dict[str, str]":
             "Vary": "Origin",
         }
     return {}
+
+
+# Largest `input` echo we put in a 422 body. Enough to see which field is
+# wrong, far too small to mirror an upload back at the client or the log.
+_VALIDATION_INPUT_MAX = 200
+
+
+def _safe_validation_input(value):
+    """Render a pydantic error's ``input`` as something JSON-encodable.
+
+    FastAPI's default handler runs ``jsonable_encoder(exc.errors())``, and for
+    a body-level validation failure ``errors()[i]["input"]`` is the RAW REQUEST
+    BODY. Two bugs fall out of that, both live before this handler existed:
+
+    1. ``jsonable_encoder`` decodes ``bytes`` as UTF-8, so ANY binary body
+       (a multipart audio upload posted to a JSON-body route — easy to do by
+       hand, and what several MCP/OpenAI-compat clients do on a bad path)
+       raised ``UnicodeDecodeError`` *inside the error handler*. The client got
+       a 500 where the request was merely malformed, and the escaping
+       exception dumped the entire body into omnivoice.log — a 145 KB WAV
+       wrote ~500 KB of log. For a local-first voice app that is user audio
+       landing on disk in a file we invite people to paste into bug reports.
+    2. Even when decodable, the whole body was mirrored into the response.
+
+    So: bytes are never decoded (only their length is reported), and every
+    echoed value is truncated. Pure — unit-testable without a request.
+    """
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return f"<{len(bytes(value))} bytes of binary data>"
+    if isinstance(value, str) and len(value) > _VALIDATION_INPUT_MAX:
+        return value[:_VALIDATION_INPUT_MAX] + f"… (+{len(value) - _VALIDATION_INPUT_MAX} chars)"
+    return value
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """422 for a malformed request — never a 500, never an audio-sized body.
+
+    Mirrors FastAPI's default shape (``{"detail": [...]}``) so existing clients
+    and the frontend's error parsing are unaffected; only ``input`` is
+    sanitized (see :func:`_safe_validation_input`). Goes through
+    ``_cors_headers_for`` like every other hand-built error response here, so
+    the browser sees the real detail instead of a bare CORS failure.
+    """
+    safe = []
+    for err in exc.errors():
+        err = dict(err)
+        if "input" in err:
+            err["input"] = _safe_validation_input(err["input"])
+        # `ctx` can carry the triggering exception object, which is not
+        # JSON-encodable either.
+        if "ctx" in err:
+            err["ctx"] = {k: str(v) for k, v in dict(err["ctx"]).items()}
+        safe.append(err)
+    return JSONResponse(
+        status_code=422,
+        content=jsonable_encoder({"detail": safe}),
+        headers=_cors_headers_for(request),
+    )
 
 
 @app.exception_handler(Exception)
@@ -953,7 +1033,7 @@ async def global_exception_handler(request: Request, exc: Exception):
                 # genuinely reportable bugs — suppressing the report button for
                 # every 503 would silence exactly the class users need to file.
                 "detail": (
-                    "[shutting_down] OmniVoice is shutting down, so it didn't "
+                    "[shutting_down] VoiceStudio is shutting down, so it didn't "
                     "start loading the model. Reopen the app and try again."
                 )
             },
@@ -984,9 +1064,15 @@ async def global_exception_handler(request: Request, exc: Exception):
     # Appending the shared hints HERE covers every route that can leak a
     # model-load/download error (generate, dub, archetypes, …), not just TTS
     # generate. append_hint is a no-op for every other error and never raises.
-    from core.failure import append_hint
+    from core.public_errors import public_exception_response
+
+    content = public_exception_response(
+        exc,
+        fallback="VoiceStudio hit an internal error; check the backend log for details.",
+    )
+    content["error_class"] = _entry.get("error_class")
     return JSONResponse(
-        {"detail": append_hint(str(exc)), "error_class": _entry.get("error_class")},
+        content,
         status_code=500,
         headers=headers,
     )
@@ -1049,6 +1135,52 @@ class NetworkAccessMiddleware:
         return await self.app(scope, receive, send)
 
 
+#: Header stamped on EVERY response so a client can tell this backend apart
+#: from whatever else might answer at the same URL (#1385). A rehosted UI
+#: whose API requests land on a static host or a proxy with no API route gets
+#: that host's 404 page; the frontend needs an authoritative "this really is
+#: a VoiceStudio backend" signal rather than guessing from the body shape,
+#: since a proxy can return JSON too. Value is the version, which is also
+#: useful when a desktop app talks to an older remote backend.
+BACKEND_MARKER_HEADER = "x-omnivoice-backend"
+
+
+class BackendMarkerMiddleware:
+    """Stamp ``x-omnivoice-backend: <version>`` on every response.
+
+    Pure ASGI, same reasoning as the gates below it: wrapping only the
+    ``http.response.start`` message keeps streaming bodies streaming.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        async def send_with_marker(message):
+            if message["type"] == "http.response.start":
+                MutableHeaders(scope=message).setdefault(
+                    BACKEND_MARKER_HEADER, _backend_marker_value()
+                )
+            await send(message)
+
+        return await self.app(scope, receive, send_with_marker)
+
+
+def _backend_marker_value() -> str:
+    # ImportError only: the marker's JOB is to be present, so a frozen build
+    # that cannot import the version module still answers "yes, a backend".
+    # Anything else is a real defect and should surface, not be masked.
+    try:
+        from core.version import APP_VERSION
+
+        return str(APP_VERSION)
+    except ImportError:
+        return "unknown"
+
+
 class BearerKeyMiddleware:
     """When OMNIVOICE_API_KEY is set, non-loopback clients must present it on
     every HTTP + WebSocket request: ``Authorization: Bearer <key>``,
@@ -1069,7 +1201,7 @@ class BearerKeyMiddleware:
     async def __call__(self, scope, receive, send):
         if scope["type"] not in ("http", "websocket"):
             return await self.app(scope, receive, send)
-        key = os.environ.get("OMNIVOICE_API_KEY") or ""
+        key = remote_api_key() or ""
         if not key:
             return await self.app(scope, receive, send)
         client = scope["client"][0] if scope.get("client") else None
@@ -1084,10 +1216,7 @@ class BearerKeyMiddleware:
         from starlette.requests import HTTPConnection
 
         conn = HTTPConnection(scope)
-        auth = conn.headers.get("authorization", "")
-        supplied = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
-        if not supplied:
-            supplied = conn.query_params.get("api_key") or conn.cookies.get("ov_key") or ""
+        supplied = presented_api_key(conn)
 
         if not secrets.compare_digest(supplied, key):
             if scope["type"] == "websocket":
@@ -1135,7 +1264,10 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["Content-Disposition"],
+    # The marker must be readable cross-origin too — a browser UI served from
+    # another origin is exactly the deployment that needs to tell "the backend
+    # answered 404" from "something else answered 404" (#1385).
+    expose_headers=["Content-Disposition", BACKEND_MARKER_HEADER],
 )
 
 # Registered AFTER CORS so CORS remains the outermost layer (CORS headers are
@@ -1150,6 +1282,12 @@ app.add_middleware(NetworkAccessMiddleware)
 # carried its own loopback guard; remote mode is exactly the case where a
 # keyed non-loopback client must reach them.
 app.add_middleware(BearerKeyMiddleware)
+
+# Registered LAST, which in Starlette means OUTERMOST — so the marker lands on
+# every response, including the two gates' 401s above and StaticFiles' bare
+# "Not Found". Its absence is what lets a client conclude "whatever answered
+# me is not a VoiceStudio backend" (#1385).
+app.add_middleware(BackendMarkerMiddleware)
 
 # Register canonical audio MIME types before any StaticFiles mount.
 # Python's `mimetypes.guess_type()` returns `audio/x-wav` for `.wav` and
@@ -1226,7 +1364,9 @@ app.include_router(pronunciation.router)  # Expressive-TTS Spec 01: pronunciatio
 app.include_router(settings_router.router)  # Phase 1 AUTH-03 endpoints
 app.include_router(media_tools_router.router)  # Settings → Audio tools + wizard media-engine self-heal
 from api.routers import mcp_bindings as _mcp_bindings_router  # noqa: E402
+from api.routers import workers as workers_router  # noqa: E402
 app.include_router(_mcp_bindings_router.router)  # Wave 2.2 per-agent voice bindings
+app.include_router(workers_router.router)  # Remote GPU workers (opt-in)
 
 # ── Mount the MCP server (Wave 2.2) ───────────────────────────────────────
 # FastMCP's Streamable-HTTP app is sub-mounted at /mcp; its session manager is
@@ -1370,7 +1510,7 @@ if __name__ == "__main__":
     # Rust sidecar launcher in lib.rs::BACKEND_PORT must stay in sync.
     #
     # SECURITY: default to loopback (127.0.0.1) so the API isn't reachable
-    # from the LAN out of the box. OmniVoice ships no authentication; binding
+    # from the LAN out of the box. VoiceStudio ships no authentication; binding
     # to 0.0.0.0 by default would expose every router on this process to any
     # host on the user's network. Docker images that need to publish the port
     # set OMNIVOICE_BIND_HOST=0.0.0.0 explicitly (see deploy/docker-compose.yml)
@@ -1402,7 +1542,7 @@ if __name__ == "__main__":
 
     def _fail_port_in_use(exc: "OSError | None") -> None:
         print(
-            f"FATAL: port {_port} is already in use — another OmniVoice "
+            f"FATAL: port {_port} is already in use — another VoiceStudio "
             f"backend (or another app) is listening on it. Quit the other "
             f"instance and relaunch; if nothing is visibly running, an "
             f"orphaned backend from a previous session is still holding the "
@@ -1411,6 +1551,28 @@ if __name__ == "__main__":
             flush=True,
         )
         sys.exit(_EXIT_PORT_IN_USE)
+
+    class _BindErrorWatcher(logging.Filter):
+        """Remembers the EADDRINUSE uvicorn logged on its way out (#1364).
+
+        uvicorn's startup does ``logger.error(exc); sys.exit(1)`` with the
+        OSError itself as the record's message, so the errno is available as an
+        object — no locale-dependent string matching. Passing every record
+        through untouched; this only observes.
+        """
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.bind_error: "OSError | None" = None
+
+        def filter(self, record: logging.LogRecord) -> bool:
+            msg = record.msg
+            if isinstance(msg, OSError) and (
+                msg.errno in (48, 98, 10048)
+                or getattr(msg, "winerror", None) == 10048
+            ):
+                self.bind_error = msg
+            return True
 
     # #1223: uvicorn does NOT let a bind failure reach the caller — it logs the
     # raw errno and raises SystemExit(1) from inside its startup, so an
@@ -1422,13 +1584,36 @@ if __name__ == "__main__":
     # Windows) — and exit with a code the shell can recognise.
     if (_bind_err := _port_taken(_bind_host, _port)) is not None:
         _fail_port_in_use(_bind_err)
+
+    _watcher = _BindErrorWatcher()
+    # Attached BEFORE uvicorn.run because uvicorn configures logging during
+    # startup, well after we lose control. Two properties this depends on, both
+    # measured against the installed uvicorn rather than assumed, and both
+    # pinned by tests in tests/test_port_in_use_exit.py:
+    #
+    #  1. uvicorn's `configure_logging()` runs `dictConfig`, which replaces the
+    #     logger's HANDLERS but leaves its FILTERS in place — so this survives.
+    #  2. it does reset the logger's LEVEL to the configured log_level, which
+    #     would overwrite anything we set here. A filter only runs on records
+    #     the logger actually emits, so a `log_level` above ERROR would blind
+    #     this watcher. We therefore pass no log_level to uvicorn.run() at all
+    #     (its default is INFO); the test asserts we never start.
+    logging.getLogger("uvicorn.error").addFilter(_watcher)
     try:
         uvicorn.run(app, host=_bind_host, port=_port)
     except SystemExit:
         # Lost the race between the probe above and uvicorn's own bind (a
-        # competing process grabbed the port in between). Re-probe: if the port
-        # is taken now, that is what killed us, whatever exit code uvicorn
-        # chose.
+        # competing process grabbed the port in between).
+        #
+        # Re-probing alone is not enough (#1364): if the process that took the
+        # port was itself exiting — an orphaned backend from the previous
+        # session, which is the common case — the port is free again by the
+        # time we look, so the probe says "fine" and the user gets a bare
+        # `exit code 1` with no explanation for a crash we fully understood.
+        # uvicorn already told us the errno on its way out; believe that first
+        # and fall back to the probe.
+        if _watcher.bind_error is not None:
+            _fail_port_in_use(_watcher.bind_error)
         if _port_taken(_bind_host, _port) is not None:
             _fail_port_in_use(None)
         raise

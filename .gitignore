@@ -138,6 +138,10 @@ marketing.md
 .specify/
 .claude/skills/speckit-*/
 .antigravitycli/
+# `backlog` (the CLI task tracker) writes a config + one markdown file per task
+# into the repo root. A contributor running it locally had those three files
+# swept into a PR that was otherwise a single script (#1322 / #1306).
+backlog/
 
 # Locally-installed third-party skill packs (marketingskills, hallmark,
 # mattpocock/skills, …) — ignore every skill dir by default; a skill that
@@ -151,5 +155,11 @@ playwright-report/
 # probe — generated HTML reports
 tests/probe/reports/
 
-# local Backlog.md task tracker; never tracked upstream
-backlog/
+# Local architecture/planning scratch (goal docs, review briefs, council
+# reports). Working notes for whoever is driving a change, not a repo artifact.
+/remote/
+
+# Dubbing-demo intermediates. The .mp4/.srt/manifest.json in this directory ARE
+# committed (they ship with the app); the per-language source WAVs are just the
+# inputs scripts/render_dub_demo_audio.py hands to scripts/build_dub_demo.sh.
+backend/assets/samples/demo/dubbing/*.src.wav

@@ -26,6 +26,25 @@ import { KOFI_URL, PAYPAL_URL } from '../utils/donateLinks';
 // Sponsor roster + "become a sponsor" links — single source of truth in
 // config/sponsors.js (kept in lockstep with SPONSORS.md).
 import { SPONSORS, SPONSOR_TIERS, SPONSOR_CONTACT } from '../config/sponsors';
+import { ContactSections } from './ContactPage';
+
+/** Anchor ids the three legacy routes (donate / enterprise / contact) land on. */
+const SECTION_IDS = {
+  support: 'support-give',
+  license: 'support-license',
+  contact: 'support-contact',
+};
+
+/** A hairline, not a heading: the sections already headline themselves, and
+ *  the point of merging them was fewer edges, not more chrome. */
+function SectionDivider() {
+  return (
+    <hr
+      aria-hidden="true"
+      className="m-0 h-px border-0 bg-[color-mix(in_srgb,var(--chrome-fg)_8%,transparent)]"
+    />
+  );
+}
 // Suggested amounts — ladder starts at $10; middle ($20) is "most common".
 const SUGGESTED_AMOUNTS = [
   { value: 10, label: '$10' },
@@ -121,7 +140,7 @@ function SponsorLogo({ sponsor }) {
       }}
       title={sponsor.name}
       aria-label={t('support.sponsors_logo_aria', {
-        defaultValue: 'Visit {{name}}, an OmniVoice sponsor',
+        defaultValue: 'Visit {{name}}, a VoiceStudio sponsor',
         name: sponsor.name,
       })}
       className="flex min-h-[64px] items-center justify-center rounded-md border border-border bg-transparent px-4 py-3 transition-colors hover:border-transparent hover:bg-[var(--chrome-hover-bg)]"
@@ -153,7 +172,8 @@ function SponsorsSection() {
       <SectionTitle>{t('support.sponsors_title', { defaultValue: 'Sponsors' })}</SectionTitle>
       <p className="mb-3.5 font-sans text-[0.75rem] leading-[1.6] text-[var(--chrome-fg-muted)]">
         {t('support.sponsors_lead', {
-          defaultValue: 'The companies and people keeping OmniVoice free, local, and open source.',
+          defaultValue:
+            'The companies and people keeping VoiceStudio free, local, and open source.',
         })}
       </p>
 
@@ -168,7 +188,7 @@ function SponsorsSection() {
           </span>
           <span className="font-serif text-[1.05rem] text-[var(--chrome-fg)]">
             {t('support.sponsors_empty_title', {
-              defaultValue: 'Be the first to sponsor OmniVoice',
+              defaultValue: 'Be the first to sponsor VoiceStudio',
             })}
           </span>
           <span className="font-mono text-[0.68rem] uppercase tracking-[var(--chrome-label-track)] text-[var(--chrome-fg-dim)]">
@@ -293,10 +313,10 @@ function SupportView() {
                 type="button"
                 aria-pressed={selected}
                 onClick={() => setAmount(selected ? null : a.value)}
-                className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-md border px-1.5 py-2 transition-colors ${
+                className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-md border-0 bg-[color-mix(in_srgb,var(--chrome-fg)_5%,transparent)] px-1.5 py-2 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--chrome-fg-muted)_18%,transparent)] transition-[background,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)] ${
                   selected
-                    ? 'border-[var(--chrome-accent)] bg-[var(--chrome-accent-bg)]'
-                    : `${a.common ? 'border-transparent' : 'border-border'} hover:border-transparent hover:bg-[color-mix(in_srgb,var(--chrome-accent)_7%,transparent)]`
+                    ? 'bg-[var(--chrome-accent-bg)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--chrome-accent)_45%,transparent)]'
+                    : `${a.common ? 'bg-[color-mix(in_srgb,var(--chrome-accent)_7%,transparent)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--chrome-accent)_30%,transparent)]' : ''} hover:bg-[var(--chrome-accent-bg)] hover:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--chrome-accent)_35%,transparent)]`
                 }`}
               >
                 <span className="font-serif text-[1.05rem] font-medium text-[var(--chrome-fg)]">
@@ -314,10 +334,10 @@ function SupportView() {
             type="button"
             aria-pressed={amount === 'custom'}
             onClick={() => setAmount(amount === 'custom' ? null : 'custom')}
-            className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-md border px-1.5 py-2 transition-colors ${
+            className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-md border-0 bg-[color-mix(in_srgb,var(--chrome-fg)_5%,transparent)] px-1.5 py-2 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--chrome-fg-muted)_18%,transparent)] transition-[background,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)] ${
               amount === 'custom'
-                ? 'border-[var(--chrome-accent)] bg-[var(--chrome-accent-bg)]'
-                : 'border-border hover:border-transparent hover:bg-[color-mix(in_srgb,var(--chrome-accent)_7%,transparent)]'
+                ? 'bg-[var(--chrome-accent-bg)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--chrome-accent)_45%,transparent)]'
+                : 'hover:bg-[var(--chrome-accent-bg)] hover:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--chrome-accent)_35%,transparent)]'
             }`}
           >
             <span className="font-mono text-[0.78rem] uppercase tracking-[var(--chrome-label-track)] text-[var(--chrome-fg-muted)]">
@@ -361,7 +381,7 @@ function SupportView() {
             variant="subtle"
             size="sm"
             leading={<Star size={14} />}
-            onClick={() => openExternal('https://github.com/debpalash/OmniVoice-Studio')}
+            onClick={() => openExternal('https://github.com/debpalash/VoiceStudio')}
           >
             {t('support.star_github')}
           </Button>
@@ -388,10 +408,10 @@ function SupportView() {
 }
 
 /* ── Commercial License panel ─────────────────────────────────────────── */
-const LICENSE_EMAIL = 'OmniVoice@palash.dev';
+const LICENSE_EMAIL = 'VoiceStudio@palash.dev';
 const LICENSE_MAILTO =
-  'mailto:OmniVoice@palash.dev?subject=OmniVoice Commercial License Inquiry' +
-  '&body=Hi Palash,%0A%0AI%27d like to talk about a commercial license for OmniVoice Studio.%0A%0AOrganization:%0ATeam size:%0AUse case:%0A';
+  'mailto:VoiceStudio@palash.dev?subject=VoiceStudio Commercial License Inquiry' +
+  '&body=Hi Palash,%0A%0AI%27d like to talk about a commercial license for VoiceStudio.%0A%0AOrganization:%0ATeam size:%0AUse case:%0A';
 
 function LicenseView() {
   const { t } = useTranslation();
@@ -420,7 +440,7 @@ function LicenseView() {
         <p className="mx-auto mt-4 max-w-[540px] font-sans text-[0.85rem] leading-[1.65] text-[var(--chrome-fg-muted)]">
           {t('enterprise.hero_simple', {
             defaultValue:
-              'OmniVoice Studio is free and open-source under the AGPL-3.0 — including for commercial and internal business use. You only need a commercial license to embed it in a closed-source product without AGPL’s copyleft obligations.',
+              'VoiceStudio is free and open-source under the AGPL-3.0 — including for commercial and internal business use. You only need a commercial license to embed it in a closed-source product without AGPL’s copyleft obligations.',
           })}
         </p>
       </div>
@@ -485,17 +505,31 @@ function LicenseView() {
  */
 export default function SupportPage({ onBack, initialView = 'support' }) {
   const { t } = useTranslation();
-  const [view, setView] = useState(initialView === 'license' ? 'license' : 'support');
 
-  // Literal class strings (no interpolation) so Tailwind's JIT can see them.
-  const TAB_BASE =
-    'inline-flex items-center justify-center gap-1.5 rounded-md border px-[18px] py-1.5 font-mono text-[0.72rem] font-semibold uppercase tracking-[var(--chrome-label-track)] whitespace-nowrap transition-colors';
-  const TAB_INACTIVE =
-    'border-transparent text-[var(--chrome-fg-muted)] hover:text-[var(--chrome-fg)]';
-  const TAB_SUPPORT_ACTIVE =
-    'border-transparent bg-[color-mix(in_srgb,var(--color-brand)_18%,transparent)] text-[var(--chrome-fg)]';
-  const TAB_LICENSE_ACTIVE =
-    'border-transparent bg-[color-mix(in_srgb,#83a598_18%,transparent)] text-[var(--chrome-fg)]';
+  // Sponsoring, buying a commercial licence and getting in touch were three
+  // destinations answering one question, and every one of them made you leave
+  // to find the others. They are one page now: three sections, in the order
+  // people actually need them, on a single scroll. `initialView` is kept —
+  // every existing entry point (footer heart, the dub/export "commercial
+  // licence" links, Contact) still passes it — but it now scrolls to a
+  // section instead of hiding the other two.
+  const sectionRef = React.useRef(null);
+  React.useEffect(() => {
+    // Every view scrolls, including 'support'. App.jsx renders SupportPage in
+    // the same tree position for donate / enterprise / contact, so React keeps
+    // ONE instance and only swaps props — treating 'support' as "already at the
+    // top" left the footer heart showing whichever section you were last on
+    // (CodeRabbit).
+    const id = SECTION_IDS[initialView] || SECTION_IDS.support;
+    // rAF: the panel has to be laid out before an offset means anything.
+    const frame = requestAnimationFrame(() => {
+      const section = sectionRef.current?.querySelector(`#${id}`);
+      if (typeof section?.scrollIntoView === 'function') {
+        section.scrollIntoView({ block: 'start', behavior: 'auto' });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [initialView]);
 
   return (
     <div className="relative isolate flex flex-1 flex-col overflow-y-auto bg-[var(--chrome-bg)]">
@@ -506,50 +540,45 @@ export default function SupportPage({ onBack, initialView = 'support' }) {
         <span className="lp-aurora__blob lp-aurora__blob--amber" />
       </div>
 
-      {/* Top bar: Back (left) · toggle (center) · spacer (right, balances Back) */}
       <div className="relative z-[2] flex items-center justify-between gap-3 px-11 pt-4">
         <Button variant="subtle" size="sm" onClick={onBack} leading={<ArrowLeft size={14} />}>
           {t('donate.back')}
         </Button>
-
-        <div
-          className="grid grid-cols-2 gap-1 rounded-md border border-border bg-[color-mix(in_srgb,var(--chrome-fg)_5%,transparent)] p-[3px]"
-          role="tablist"
-          aria-label={t('support.toggle_label')}
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={view === 'support'}
-            className={`${TAB_BASE} ${view === 'support' ? TAB_SUPPORT_ACTIVE : TAB_INACTIVE}`}
-            onClick={() => setView('support')}
-          >
-            <Heart size={13} /> {t('support.tab_support')}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={view === 'license'}
-            className={`${TAB_BASE} ${view === 'license' ? TAB_LICENSE_ACTIVE : TAB_INACTIVE}`}
-            onClick={() => setView('license')}
-          >
-            <Building2 size={13} /> {t('support.tab_license')}
-          </button>
-        </div>
-
         <span className="w-24 shrink-0" aria-hidden="true" />
       </div>
 
-      {/* key={view} remounts the panel so its entry animations replay on toggle.
-          The Support panel is short, so it's centered vertically; License is
-          tall enough to fill on its own and stays top-aligned. */}
       <div
-        className={`relative z-[1] mx-auto flex w-full max-w-[640px] flex-col gap-6 px-8 pb-10 ${
-          view === 'support' ? 'flex-1 justify-center' : ''
-        }`}
-        key={view}
+        ref={sectionRef}
+        className="relative z-[1] mx-auto flex w-full max-w-[720px] flex-col gap-12 px-8 pb-16 pt-2"
       >
-        {view === 'support' ? <SupportView /> : <LicenseView />}
+        <section id={SECTION_IDS.support} aria-label={t('support.tab_support')}>
+          <SupportView />
+        </section>
+
+        <SectionDivider />
+
+        <section id={SECTION_IDS.license} aria-label={t('support.tab_license')}>
+          <LicenseView />
+        </section>
+
+        <SectionDivider />
+
+        <section
+          id={SECTION_IDS.contact}
+          aria-label={t('contact.channels_label', { defaultValue: 'Ways to get in touch' })}
+          className="flex flex-col gap-6"
+        >
+          <div className="text-center">
+            <span className="mx-auto mb-4 flex size-12 items-center justify-center rounded-md border border-transparent bg-[color-mix(in_srgb,#d3869b_12%,transparent)]">
+              <MessageCircle size={24} className="text-[#f3a5b6]" />
+            </span>
+            <h2 className="relative inline-block font-serif text-[2rem] font-normal leading-tight tracking-[-0.02em] text-[var(--chrome-fg)]">
+              {t('contact.hero_title', { defaultValue: 'We\u2019d love to hear from you' })}
+              <span className="lp-hero__sweep" aria-hidden="true" />
+            </h2>
+          </div>
+          <ContactSections />
+        </section>
       </div>
     </div>
   );

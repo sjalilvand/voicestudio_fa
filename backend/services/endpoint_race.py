@@ -15,7 +15,7 @@ Principles (owner-set):
   endpoint gets probed first — never to decide. No geo-IP lookups, no
   third-party calls, no telemetry.
 - **Explicit choices are never auto-switched.** A user with an endpoint
-  configured anywhere (Settings → Models, ``HF_ENDPOINT`` env, the
+  configured anywhere (Model Catalogue → Models, ``HF_ENDPOINT`` env, the
   ``hf_endpoint`` pref) is in manual mode; auto applies only where nothing
   was chosen. ``OMNIVOICE_HF_ENDPOINT_MODE=manual`` is a hard env opt-out.
 - **Sticky, canonical-first decisions.** With both endpoints reachable the
@@ -83,6 +83,26 @@ _race_lock = threading.Lock()
 _FAILOVER_ATTEMPTED: set[str] = set()
 
 
+def _is_allowed_probe_endpoint(endpoint: str) -> bool:
+    """Only probe the two fixed HTTPS origins shipped by VoiceStudio."""
+    try:
+        parsed = urlsplit(endpoint)
+        port = parsed.port
+    except (TypeError, ValueError):
+        return False
+    return (
+        parsed.scheme == "https"
+        and parsed.hostname in {urlsplit(CANONICAL_ENDPOINT).hostname,
+                                urlsplit(COMMUNITY_MIRROR).hostname}
+        and port in (None, 443)
+        and parsed.username is None
+        and parsed.password is None
+        and parsed.path in ("", "/")
+        and not parsed.query
+        and not parsed.fragment
+    )
+
+
 @dataclass
 class ProbeResult:
     endpoint: str
@@ -120,11 +140,13 @@ def probe_endpoint(endpoint: str, timeout: float = PROBE_TIMEOUT_S) -> ProbeResu
     Any HTTP response (even an error status) counts as reachable — the probe
     measures whether the network path works, not whether a specific resource
     exists. Never raises."""
+    if not _is_allowed_probe_endpoint(endpoint):
+        return ProbeResult(endpoint=endpoint, reachable=False, error="invalid_endpoint")
     url = endpoint.rstrip("/") + "/"
-    req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "OmniVoice-endpoint-probe"})
+    req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "VoiceStudio-endpoint-probe"})
     start = time.monotonic()
     try:
-        with urllib.request.urlopen(req, timeout=timeout):
+        with urllib.request.urlopen(req, timeout=timeout):  # nosec B310 -- fixed HTTPS allowlist above
             pass
     except urllib.error.HTTPError:
         pass  # the server answered → reachable
@@ -143,19 +165,21 @@ def throughput_probe(endpoint: str, timeout: float = PROBE_TIMEOUT_S) -> Optiona
     Used only as a tiebreak confirmation when latency says the mirror is
     decisively faster — throughput is what a multi-GB download actually
     feels. Best-effort; any failure returns None (tiebreak skipped)."""
+    if not _is_allowed_probe_endpoint(endpoint):
+        return None
     url = endpoint.rstrip("/") + _THROUGHPUT_SAMPLE_PATH
     req = urllib.request.Request(
         url,
         headers={
             "Range": f"bytes=0-{_THROUGHPUT_SAMPLE_BYTES - 1}",
-            "User-Agent": "OmniVoice-endpoint-probe",
+            "User-Agent": "VoiceStudio-endpoint-probe",
         },
     )
     deadline = time.monotonic() + timeout
     total = 0
     start = time.monotonic()
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 -- fixed HTTPS allowlist above
             while total < _THROUGHPUT_SAMPLE_BYTES and time.monotonic() < deadline:
                 chunk = resp.read(min(65536, _THROUGHPUT_SAMPLE_BYTES - total))
                 if not chunk:
@@ -241,11 +265,14 @@ def env_opt_out() -> bool:
     return (os.environ.get(MODE_ENV) or "").strip().lower() in _OPT_OUT_VALUES
 
 
-def explicit_endpoint() -> str:
+_PREF_READ_FAILED = object()
+
+
+def explicit_endpoint():
     """The endpoint the user explicitly configured, or "".
 
     Same resolution the download paths use: ``HF_ENDPOINT`` env (what
-    Settings → Models persists via user_env and what main.py loads at boot)
+    Model Catalogue → Models persists via user_env and what main.py loads at boot)
     with the ``hf_endpoint`` pref as fallback. Unlike
     ``core.failure.configured_hf_mirror`` this does NOT filter the official
     endpoint — explicitly choosing huggingface.co is still an explicit
@@ -258,7 +285,8 @@ def explicit_endpoint() -> str:
 
         return str(prefs.get("hf_endpoint", "") or "").strip().rstrip("/")
     except Exception:
-        return ""
+        logger.warning("Endpoint preference could not be read; using manual mode")
+        return _PREF_READ_FAILED
 
 
 def mode() -> str:
@@ -267,7 +295,8 @@ def mode() -> str:
     Settings (including explicitly choosing the official endpoint)."""
     if env_opt_out():
         return "manual"
-    if explicit_endpoint():
+    endpoint = explicit_endpoint()
+    if endpoint is _PREF_READ_FAILED or endpoint:
         return "manual"
     try:
         from core import prefs
@@ -275,7 +304,9 @@ def mode() -> str:
         if str(prefs.get(_MODE_PREF, "") or "").strip().lower() == "manual":
             return "manual"
     except Exception:
-        pass
+        # A failed preference read must not opt the user into network racing.
+        logger.warning("Endpoint mode preference could not be read; using manual mode")
+        return "manual"
     return "auto"
 
 
@@ -424,6 +455,8 @@ def effective_endpoint() -> Optional[str]:
     per-download hot path. Never raises."""
     try:
         ep = explicit_endpoint()
+        if ep is _PREF_READ_FAILED:
+            return None
         if ep:
             return ep
         if mode() != "auto":

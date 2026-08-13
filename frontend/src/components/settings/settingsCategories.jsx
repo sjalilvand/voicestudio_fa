@@ -17,7 +17,6 @@
 import {
   AudioLines,
   Palette,
-  Settings2,
   Plug,
   Cpu,
   Mic,
@@ -59,6 +58,15 @@ export const GROUPS = [
           'auto-play preview',
           'header live stats',
           'system metrics',
+          'navigation style',
+          'sidebar rail',
+          'titlebar tabs',
+          'tabs',
+          'language',
+          'locale',
+          'interface language',
+          'review mode',
+          'stage checkpoints',
         ],
         keywordKeys: [
           'settings.ui_scale',
@@ -66,15 +74,14 @@ export const GROUPS = [
           'settings.font',
           'settings.autoplay_preview',
           'settings.header_live_stats',
+          'settings.nav_style',
+          // The visible option labels too, so a non-English search for "tabs"
+          // / "Leiste" matches what the user actually sees on screen.
+          'settings.nav_style_rail',
+          'settings.nav_style_tabs',
+          'settings.language',
+          'settings.review_mode',
         ],
-      },
-      {
-        id: 'general',
-        labelKey: 'settings.general',
-        defaultLabel: 'General',
-        icon: Settings2,
-        keywords: ['language', 'locale', 'interface language', 'review mode', 'stage checkpoints'],
-        keywordKeys: ['settings.language', 'settings.review_mode'],
       },
     ],
   },
@@ -88,8 +95,14 @@ export const GROUPS = [
         labelKey: 'settings.engines',
         defaultLabel: 'Engines',
         icon: Plug,
+        // Engine selection lives in the Model Catalogue workspace now; the
+        // category stays so the old name still finds it (it renders a pointer).
         keywords: [
           'engine',
+          'catalogue',
+          'catalog',
+          'model catalogue',
+          'default engine',
           'tts engine',
           'indextts',
           'cosyvoice',
@@ -115,6 +128,9 @@ export const GROUPS = [
           'models directory',
           'hugging face mirror',
           'hf_endpoint',
+          'catalogue',
+          'catalog',
+          'model store',
         ],
       },
       {
@@ -278,6 +294,32 @@ export const GROUPS = [
         keywordKeys: ['settings.audio_tools', 'settings.ffmpeg', 'settings.audio_tools_ytdlp'],
       },
       {
+        id: 'workers',
+        labelKey: 'settings.workers_title',
+        defaultLabel: 'Remote workers',
+        icon: Cpu,
+        // Its own System entry rather than a section inside Sharing: this
+        // sends work OUT to machines you own, where everything under Sharing
+        // is about letting something else reach this one.
+        keywords: [
+          'remote workers',
+          'workers',
+          'gpu',
+          'second gpu',
+          'another machine',
+          'distributed',
+          'enrollment token',
+          'offload',
+          'join code',
+          'join',
+          'qr',
+          'lend gpu',
+          'share gpu',
+          'worker mode',
+        ],
+        keywordKeys: ['settings.workers_title', 'settings.workers_add'],
+      },
+      {
         id: 'sharing',
         labelKey: 'settings.sharing',
         defaultLabel: 'Sharing & Remote',
@@ -288,7 +330,7 @@ export const GROUPS = [
       {
         id: 'openapi',
         labelKey: 'settings.openapi',
-        defaultLabel: 'OpenAPI',
+        defaultLabel: 'VoiceStudio API',
         icon: Braces,
         keywords: ['api', 'openapi', 'scalar', 'rest', 'swagger', 'docs', 'reference', 'endpoints'],
       },
@@ -311,6 +353,7 @@ export const GROUPS = [
           'api key',
           'openai',
           'openrouter',
+          'orcarouter',
           'groq',
           'ollama',
           'gemini',
@@ -387,7 +430,7 @@ export const CATEGORIES = GROUPS.flatMap((g) => g.items.map((it) => ({ ...it, gr
 export const CATEGORY_BY_ID = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
 
 /** The category shown on first open (and the deep-link/persist fallback). */
-export const DEFAULT_CATEGORY = 'general';
+export const DEFAULT_CATEGORY = 'appearance';
 
 /**
  * Map legacy Settings tab ids (the old 11-tab shell, still used by deep-links
@@ -395,6 +438,7 @@ export const DEFAULT_CATEGORY = 'general';
  * not listed is assumed to already be a valid new category id.
  */
 export const LEGACY_TAB_MAP = {
+  general: 'appearance',
   capture: 'dictation',
 };
 

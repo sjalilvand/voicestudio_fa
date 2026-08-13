@@ -9,16 +9,18 @@
  * Endpoints:
  *   GET /api/settings/storage/models-dir
  *     → {configured, effective, default, restart_required}
- *   PUT /api/settings/storage/models-dir  body {path}  (empty path clears)
+ *   Native IPC authorizes the path, then PUT sends only the one-shot token.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { HardDrive } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { apiJson, apiFetch } from '../../api/client';
 import { SettingsSection, SettingRow, InfoHint } from './primitives';
 import RestartBadge from './RestartBadge';
 
 export default function StoragePanel() {
+  const { t } = useTranslation();
   const [configured, setConfigured] = useState('');
   const [effective, setEffective] = useState('');
   const [def, setDef] = useState('');
@@ -38,24 +40,27 @@ export default function StoragePanel() {
       setDef(d?.default || '');
       setInput(d?.configured || '');
     } catch (e) {
-      setError(e?.message || 'Failed to load storage settings');
+      setError(e?.message || t('settings.storage_load_failed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  const save = async (path) => {
+  const save = async (reset = false) => {
     setSaving(true);
     setError(null);
     try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const selection = await invoke('authorize_host_path', { kind: 'models_dir', reset });
+      if (!selection) return;
       const res = await apiFetch('/api/settings/storage/models-dir', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path }),
+        body: JSON.stringify({ authorization: selection.authorization }),
       });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
@@ -65,13 +70,11 @@ export default function StoragePanel() {
       setConfigured(b?.configured || '');
       setRestart(Boolean(b?.restart_required));
       toast.success(
-        path
-          ? 'Models directory saved — restart to apply'
-          : 'Reverted to default — restart to apply',
+        selection.path ? t('settings.models_dir_saved') : t('settings.models_dir_reverted'),
       );
       refresh();
     } catch (e) {
-      setError(e?.message || 'Failed to save models directory');
+      setError(e?.message || t('settings.perf_save_failed'));
     } finally {
       setSaving(false);
     }
@@ -79,17 +82,14 @@ export default function StoragePanel() {
 
   return (
     <SettingsSection
-      className="storagepanel"
+      className="storagepanel models-settings-compact !mb-[8px] !px-[10px] !py-[9px] [&>header]:!mb-[6px] [&>header]:!gap-[8px] [&>header]:!pb-[6px] [&>header_h2]:!text-[length:var(--text-md)] [&>header_[data-slot=settings-section-icon]]:!h-[24px] [&>header_[data-slot=settings-section-icon]]:!w-[24px]"
+      compact
       icon={HardDrive}
-      title="Models directory"
+      title={t('firstrun.models_dir')}
       actions={
         <>
           <RestartBadge />
-          <InfoHint label="Models directory">
-            Where model weights download (the HuggingFace / Torch cache). Point this at a larger or
-            faster drive — useful when your system drive is small. Changes apply on the next
-            restart.
-          </InfoHint>
+          <InfoHint label={t('firstrun.models_dir')}>{t('settings.models_dir_help')}</InfoHint>
         </>
       }
     >
@@ -103,53 +103,71 @@ export default function StoragePanel() {
       )}
 
       <SettingRow
-        stack
         align="start"
-        title="Cache location"
-        subtitle="Where model weights download"
+        className="!px-[6px] !py-[5px]"
+        title={t('settings.storage_cat_hf_cache')}
+        subtitle={t('firstrun.models_dir_desc')}
         control={
-          <div className="flex w-full flex-wrap items-center gap-[var(--space-3)]">
+          <div className="flex w-full flex-wrap items-center gap-[5px]">
             <input
-              className="box-border min-w-0 max-w-[520px] flex-[1_1_280px] rounded-[var(--chrome-radius-pill)] [border:1px_solid_var(--chrome-border)] bg-[var(--chrome-hover-bg)] px-[var(--space-3)] py-[var(--space-2)] font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-base)] text-[var(--chrome-fg)] placeholder:text-[var(--chrome-fg-dim)] focus-visible:border-[var(--chrome-accent)] focus-visible:shadow-[var(--focus-ring)] focus-visible:outline-none"
+              className="box-border min-w-0 max-w-[520px] flex-[1_1_280px] rounded-[8px] [border:1px_solid_var(--chrome-border)] bg-[var(--chrome-hover-bg)] px-[8px] py-[5px] font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-sm)] text-[var(--chrome-fg)] placeholder:text-[var(--chrome-fg-dim)] focus-visible:border-[var(--chrome-accent)] focus-visible:shadow-[var(--focus-ring)] focus-visible:outline-none"
               type="text"
               value={input}
               placeholder={def || '~/.cache/huggingface'}
-              onChange={(e) => setInput(e.target.value)}
+              readOnly
               disabled={saving || loading}
               spellCheck={false}
-              aria-label="Models directory"
+              name="models-directory"
+              autoComplete="off"
+              aria-label={t('firstrun.models_dir')}
               data-testid="models-dir-input"
             />
             <button
-              className="flex-none cursor-pointer rounded-[var(--chrome-radius-pill)] [border:1px_solid_transparent] bg-[var(--chrome-accent)] px-[var(--space-4)] py-[var(--space-2)] font-sans text-[length:var(--text-base)] text-[var(--chrome-bg)] disabled:cursor-default disabled:opacity-50"
-              onClick={() => save(input.trim())}
+              type="button"
+              className="flex-none cursor-pointer rounded-[7px] [border:1px_solid_transparent] bg-[var(--chrome-accent)] px-[9px] py-[5px] font-sans text-[length:var(--text-sm)] text-[var(--chrome-bg)] disabled:cursor-default disabled:opacity-50"
+              onClick={() => save(false)}
               disabled={saving || loading}
               data-testid="models-dir-save"
             >
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? t('common.saving') : t('common.save')}
             </button>
             <button
-              className="flex-none cursor-pointer rounded-[var(--chrome-radius-pill)] [border:1px_solid_var(--chrome-border)] bg-transparent px-[var(--space-4)] py-[var(--space-2)] font-sans text-[length:var(--text-base)] text-[var(--chrome-fg-muted)] hover:enabled:bg-[var(--chrome-hover-bg)] hover:enabled:text-[var(--chrome-fg)] disabled:cursor-default disabled:opacity-50"
+              type="button"
+              className="flex-none cursor-pointer rounded-[7px] [border:1px_solid_var(--chrome-border)] bg-transparent px-[9px] py-[5px] font-sans text-[length:var(--text-sm)] text-[var(--chrome-fg-muted)] hover:enabled:bg-[var(--chrome-hover-bg)] hover:enabled:text-[var(--chrome-fg)] disabled:cursor-default disabled:opacity-50"
               onClick={() => {
-                setInput('');
-                save('');
+                save(true);
               }}
               disabled={saving || loading || !configured}
-              title="Revert to the default cache location"
+              title={t('settings.models_dir_reset_hint')}
             >
-              Reset
+              {t('settings.reset')}
             </button>
           </div>
         }
       />
 
-      <SettingRow title="Effective now" control={<>{effective || '…'}</>} mono />
-
-      <SettingRow title="Configured" control={<>{configured || 'using default'}</>} mono />
+      <div className="grid grid-cols-2 gap-[5px] px-[6px] pt-[5px] max-[560px]:grid-cols-1">
+        <div className="flex min-w-0 items-center gap-[6px] rounded-[7px] bg-[var(--chrome-bg)] px-[8px] py-[4px]">
+          <span className="shrink-0 text-[length:var(--text-xs)] text-[var(--chrome-fg-dim)]">
+            {t('settings.models_dir_effective')}
+          </span>
+          <code className="min-w-0 flex-1 truncate text-right text-[length:var(--text-xs)] text-[var(--chrome-fg-muted)]">
+            {effective || '…'}
+          </code>
+        </div>
+        <div className="flex min-w-0 items-center gap-[6px] rounded-[7px] bg-[var(--chrome-bg)] px-[8px] py-[4px]">
+          <span className="shrink-0 text-[length:var(--text-xs)] text-[var(--chrome-fg-dim)]">
+            {t('settings.models_dir_configured')}
+          </span>
+          <code className="min-w-0 flex-1 truncate text-right text-[length:var(--text-xs)] text-[var(--chrome-fg-muted)]">
+            {configured || t('settings.models_dir_default')}
+          </code>
+        </div>
+      </div>
 
       {restart && (
-        <p className="mx-0 mb-0 mt-[var(--space-3)] text-[length:var(--text-base)] text-[var(--chrome-severity-warn)]">
-          ↻ Restart OmniVoice to use the new location.
+        <p className="mx-[6px] mb-0 mt-[5px] text-[length:var(--text-xs)] text-[var(--chrome-severity-warn)]">
+          {t('settings.models_dir_restart')}
         </p>
       )}
     </SettingsSection>

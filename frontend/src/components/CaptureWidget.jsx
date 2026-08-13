@@ -12,6 +12,9 @@ import { checkMicrophone, openMicrophoneSettings } from '../utils/permissions';
 import { showMicDeniedGuide } from '../utils/micDeniedToast';
 import { asrMissingPayload, toastAsrModelMissing } from '../utils/asrModelMissing';
 import { createWaveform } from './captureWaveform';
+import { emitDictationNotice } from '../utils/dictationNotice';
+import { audioFormatForMimeType, startSupportedMediaRecorder } from '../utils/mediaRecorder';
+import { BROWSER_DICTATION_REQUEST } from '../utils/dictationCapture';
 
 // True inside the Tauri shell (desktop app / widget window); false in the
 // browser webui / Docker, where the native commands don't exist. Gating on
@@ -30,6 +33,20 @@ async function setTrayRecording(recording) {
   } catch (err) {
     // Cosmetic only (the tray dot) — a pill error would outrank the failure.
     console.warn('set_tray_recording failed:', err);
+  }
+}
+
+// Show the standalone pill window, bottom-centred and without taking focus
+// (no-op in the browser webui, where the pill is just a DOM node).
+async function showWidgetWindow() {
+  if (!inTauri()) return;
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    await invoke('show_dictation_pill');
+  } catch (err) {
+    // Dictation still records and pastes without the pill on screen — the
+    // session must not be aborted over its chrome.
+    console.warn('widget show failed:', err);
   }
 }
 
@@ -85,10 +102,23 @@ const WAVE_BARS = 12;
 // failed session can't leave the widget parked on screen indefinitely.
 const ERROR_AUTO_DISMISS_MS = 8000;
 
+// How long the widget window may stay visible while the pill is idle before we
+// treat it as stranded and hide it. Long enough that the normal show → emit →
+// startRecording() handshake (a few frames) is never interrupted, short enough
+// that a user who sees an empty capsule does not have to live with it.
+const IDLE_VISIBLE_GRACE_MS = 1200;
+
+// How often we re-check that invariant while idle. The window is shown by the
+// Rust side, so there is no React state change to key off when a press is
+// dropped — only polling catches a window that became visible while we were
+// already idle. One `isVisible()` IPC per tick, skipped entirely whenever the
+// document reports itself hidden (the overwhelmingly common case).
+const IDLE_VISIBLE_POLL_MS = 600;
+
 // A dictation model id is a sherpa-onnx live model when it carries the
 // `sherpa-` prefix the backend assigns (see services/sherpa_dictation.py). Only
-// then do we open the low-latency raw-PCM streaming path; anything else (or no
-// selection) falls through to the legacy MediaRecorder/WebM path unchanged.
+// then do we open the low-latency raw-PCM streaming path. Other models use a
+// supported MediaRecorder container when available, or raw PCM on WebKitGTK.
 export function isSherpaModel(id) {
   return typeof id === 'string' && id.startsWith('sherpa-');
 }
@@ -299,6 +329,33 @@ export default function CaptureWidget({ onDismiss }) {
   useEffect(() => {
     enabledRef.current = dictationEnabled;
   }, [dictationEnabled]);
+  // `state` follows the same rule, and for a sharper reason than the prefs do.
+  // The tray listener used to depend on [state], so every single state change
+  // tore the Tauri listener down and re-attached it through an `await import()`
+  // + `await listen()` — a gap with NOTHING listening. A shortcut press that
+  // landed in that gap was lost, and because the Rust side shows the widget
+  // window BEFORE it emits `tray-dictate` (lib.rs), a lost press left the
+  // window visible with the pill stuck in `idle` — which renders null, so all
+  // the user saw was an empty square that Esc could not clear (the widget
+  // deliberately never takes focus on macOS/Windows, #287/#982). Reading state
+  // through a ref lets the listener attach exactly once, for the lifetime of
+  // the component, so there is no gap to lose a press in.
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+  // Same reason: the trigger callbacks are defined further down and change
+  // identity, but the listener must not re-subscribe to follow them.
+  const startRecordingRef = useRef(null);
+  const stopRecordingRef = useRef(null);
+  // Hold mode can be released while microphone permission or getUserMedia is
+  // still pending. Preserve that release so the completed start cannot leave
+  // an orphaned recording behind.
+  const holdStartRef = useRef(null);
+  // Linux can deliver the same shortcut through both the native global-hotkey
+  // plugin and the focused main-window fallback. Collapse that pair into one
+  // logical action without slowing intentional toggle-mode presses.
+  const nativeEventAtRef = useRef({ start: 0, stop: 0 });
 
   // Sherpa live-streaming session refs. `sherpaModeRef` flips on at start when a
   // sherpa model is selected; `committedRef` accumulates per-utterance finals so
@@ -333,6 +390,7 @@ export default function CaptureWidget({ onDismiss }) {
 
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
+  const recordingFormatRef = useRef({ mimeType: 'audio/webm', extension: 'webm' });
   const streamRef = useRef(null);
   const timerRef = useRef(null);
   const wsRef = useRef(null);
@@ -350,6 +408,7 @@ export default function CaptureWidget({ onDismiss }) {
   // raw PCM via an AudioWorklet and tag mic/far-end frames instead of using
   // MediaRecorder. All AEC state lives in refs so the default path is inert.
   const aecModeRef = useRef(false);
+  const pcmModeRef = useRef(false);
   const aecStopRef = useRef(null); // async teardown of the mic worklet graph
   const farEndUnsubRef = useRef(null); // unsubscribe from the far-end bus
 
@@ -368,6 +427,42 @@ export default function CaptureWidget({ onDismiss }) {
       console.warn('mic worklet teardown failed:', err);
     }
     aecModeRef.current = false;
+    pcmModeRef.current = false;
+  }, []);
+
+  // Browser buttons and focused-window shortcuts use the same request event;
+  // the recorder remains owned by this single component.
+  const browserRequestRef = useRef(null);
+  browserRequestRef.current = (action) => {
+    if (!enabledRef.current) return;
+    const current = stateRef.current;
+    if (action === 'stop') {
+      if (current === 'recording') stopRecordingRef.current?.();
+      else if (holdStartRef.current === 'starting') holdStartRef.current = 'released';
+      return;
+    }
+    if (current === 'setup') {
+      if (modeRef.current === 'hold') holdStartRef.current = 'starting';
+      checkAccessibility().then((ok) => {
+        if (ok) startRecordingRef.current?.(modeRef.current === 'hold');
+        else holdStartRef.current = null;
+      });
+      return;
+    }
+    const idle = current === 'idle' || current === 'done' || current === 'error';
+    if (action === 'toggle') {
+      if (idle) startRecordingRef.current?.();
+      else if (current === 'recording') stopRecordingRef.current?.();
+    } else if (idle) {
+      startRecordingRef.current?.(modeRef.current === 'hold');
+    }
+  };
+
+  useEffect(() => {
+    if (inTauri()) return;
+    const onRequest = (event) => browserRequestRef.current?.(event.detail?.action || 'start');
+    window.addEventListener(BROWSER_DICTATION_REQUEST, onRequest);
+    return () => window.removeEventListener(BROWSER_DICTATION_REQUEST, onRequest);
   }, []);
 
   // Hydrate dictation prefs (enabled / mode / model) from the backend once. The
@@ -406,35 +501,60 @@ export default function CaptureWidget({ onDismiss }) {
   useEffect(() => {
     if (!inTauri()) return; // browser webui — the keyboard fallback below runs
     let unlistenStart, unlistenStop;
+    let cancelled = false;
     (async () => {
       try {
         const { listen } = await import('@tauri-apps/api/event');
         unlistenStart = await listen('tray-dictate', () => {
-          if (!enabledRef.current) return;
-          if (state === 'setup') {
+          const now = Date.now();
+          if (now - nativeEventAtRef.current.start < 150) return;
+          nativeEventAtRef.current.start = now;
+          if (!enabledRef.current) {
+            // The hotkey is inert, but Rust has already shown the window.
+            // Put it back rather than leaving an empty capsule on screen.
+            hideWidgetWindow();
+            return;
+          }
+          const s = stateRef.current;
+          if (s === 'setup') {
             // Re-probe on each press — the user may have just granted access
             // in System Settings; if so, flow straight into recording.
+            if (modeRef.current === 'hold') holdStartRef.current = 'starting';
             checkAccessibility().then((ok) => {
-              if (ok) startRecording();
+              if (ok) startRecordingRef.current?.(modeRef.current === 'hold');
+              else holdStartRef.current = null;
             });
             return;
           }
-          const idle = state === 'idle' || state === 'done' || state === 'error';
+          const idle = s === 'idle' || s === 'done' || s === 'error';
           if (modeRef.current === 'toggle') {
             // Press once to start, again to stop.
-            if (idle) startRecording();
-            else if (state === 'recording') stopRecording();
+            if (idle) startRecordingRef.current?.();
+            else if (s === 'recording') stopRecordingRef.current?.();
           } else if (idle) {
             // Hold mode: keydown → start.
-            startRecording();
+            startRecordingRef.current?.(true);
           }
         });
         unlistenStop = await listen('tray-dictate-stop', () => {
+          const now = Date.now();
+          if (now - nativeEventAtRef.current.stop < 150) return;
+          nativeEventAtRef.current.stop = now;
           // Only hold mode acts on release; toggle ignores it.
-          if (modeRef.current === 'hold' && state === 'recording') {
-            stopRecording();
+          if (modeRef.current === 'hold' && stateRef.current === 'recording') {
+            stopRecordingRef.current?.();
+          } else if (modeRef.current === 'hold' && holdStartRef.current === 'starting') {
+            holdStartRef.current = 'released';
           }
         });
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('mark_dictation_capture_ready');
+        // Unmounted while the dynamic import was in flight — drop the
+        // subscriptions we just created rather than leaking them.
+        if (cancelled) {
+          unlistenStart?.();
+          unlistenStop?.();
+        }
       } catch (err) {
         // Hotkey wiring failed inside Tauri — dictation still works via the
         // in-page shortcut, but say so in the console for bug reports.
@@ -442,10 +562,14 @@ export default function CaptureWidget({ onDismiss }) {
       }
     })();
     return () => {
+      cancelled = true;
       if (unlistenStart) unlistenStart();
       if (unlistenStop) unlistenStop();
     };
-  }, [state]);
+    // Attach ONCE — see stateRef above. Adding a dependency here reintroduces
+    // the dropped-press window that stranded the widget.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Keyboard fallback (web UI / Docker — no global tray hotkey). Mirrors the
   // tray semantics so the DEFAULT dictation behaviour is identical with or
@@ -457,29 +581,14 @@ export default function CaptureWidget({ onDismiss }) {
     const onKeyDown = (e) => {
       if (!isCombo(e)) return;
       e.preventDefault();
-      if (!enabledRef.current) return;
-      if (state === 'setup') {
-        checkAccessibility().then((ok) => {
-          if (ok) startRecording();
-        });
-        return;
-      }
-      const idle = state === 'idle' || state === 'done' || state === 'error';
-      if (modeRef.current === 'toggle') {
-        if (idle) startRecording();
-        else if (state === 'recording') stopRecording();
-      } else if (idle) {
-        // Hold mode: holding the combo records; auto-repeat keydowns are
-        // ignored because we only start from an idle state.
-        startRecording();
-      }
+      browserRequestRef.current?.(modeRef.current === 'toggle' ? 'toggle' : 'start');
     };
     const onKeyUp = (e) => {
       // Hold mode stops as soon as Space (or a modifier) is released.
       if (modeRef.current !== 'hold') return;
       if (e.code !== 'Space' && e.key !== 'Meta' && e.key !== 'Control' && e.key !== 'Shift')
         return;
-      if (state === 'recording') stopRecording();
+      browserRequestRef.current?.('stop');
     };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
@@ -514,7 +623,7 @@ export default function CaptureWidget({ onDismiss }) {
       clearTimeout(dismissTimerRef.current);
       dismissTimerRef.current = null;
     }
-    if (aecModeRef.current || sherpaModeRef.current) teardownAec();
+    if (aecModeRef.current || sherpaModeRef.current || pcmModeRef.current) teardownAec();
     setState('idle');
     setTranscript('');
     setPartialText('');
@@ -545,7 +654,7 @@ export default function CaptureWidget({ onDismiss }) {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
-    if (aecModeRef.current || sherpaModeRef.current) {
+    if (aecModeRef.current || sherpaModeRef.current || pcmModeRef.current) {
       teardownAec();
     }
     if (streamRef.current) {
@@ -716,6 +825,7 @@ export default function CaptureWidget({ onDismiss }) {
     // raises the OS prompt; micError.js stays the reactive fallback), and
     // outside Tauri checkMicrophone() is always 'unknown' → unchanged.
     if ((await checkMicrophone()) === 'denied') {
+      holdStartRef.current = null;
       showMicDeniedGuide(t);
       setTrayRecording(false);
       setErrorInfo({
@@ -732,6 +842,7 @@ export default function CaptureWidget({ onDismiss }) {
       });
       streamRef.current = stream;
       chunksRef.current = [];
+      recordingFormatRef.current = { mimeType: 'audio/webm', extension: 'webm' };
       wsPendingRef.current = [];
       wsHadFinalRef.current = false;
       committedRef.current = [];
@@ -754,10 +865,6 @@ export default function CaptureWidget({ onDismiss }) {
         dismissTimerRef.current = null;
       }
 
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm';
-
       // Read prefs at start time (avoids stale closures). AEC is opt-in; the
       // sherpa live engine is selected when the persisted dictation model is a
       // sherpa-onnx model — that path streams raw int16 PCM and emits live
@@ -765,10 +872,29 @@ export default function CaptureWidget({ onDismiss }) {
       const aecOn = useAppStore.getState().aecEnabled === true;
       const modelId = useAppStore.getState().dictationModelId;
       const sherpaOn = isSherpaModel(modelId);
+      const supportedRecorder =
+        aecOn || sherpaOn
+          ? null
+          : startSupportedMediaRecorder(stream, {
+              onData: (e) => {
+                if (e.data.size === 0) return;
+                if (e.data.type) recordingFormatRef.current = audioFormatForMimeType(e.data.type);
+                chunksRef.current.push(e.data);
+                void e.data.arrayBuffer().then((buf) => {
+                  const ws = wsRef.current;
+                  if (ws && ws.readyState === WebSocket.OPEN) ws.send(buf);
+                  else wsPendingRef.current.push(buf);
+                });
+              },
+              onStop: () => {},
+            });
+      const pcmFallback = !aecOn && !sherpaOn && supportedRecorder === null;
+      if (supportedRecorder) mediaRecorderRef.current = supportedRecorder.recorder;
       aecModeRef.current = aecOn;
       sherpaModeRef.current = sherpaOn;
+      pcmModeRef.current = pcmFallback;
       // Raw-PCM transport is used whenever AEC or the sherpa live engine is on.
-      const pcmMode = aecOn || sherpaOn;
+      const pcmMode = aecOn || sherpaOn || pcmFallback;
 
       // Open WebSocket BEFORE starting capture.
       try {
@@ -777,14 +903,31 @@ export default function CaptureWidget({ onDismiss }) {
         //   • sherpa → ?model=<id>&sr=16000  (raw int16 PCM, live partials)
         //   • AEC    → ?aec=1&sr=16000       (tagged raw PCM, NLMS canceller)
         //   • both   → ?model=<id>&aec=1&sr=16000
-        //   • neither → /ws/transcribe       (legacy MediaRecorder/WebM)
+        //   • no recorder → ?pcm=1&sr=16000  (WebKitGTK fallback)
+        //   • otherwise → /ws/transcribe     (negotiated media container)
         const params = [];
         if (sherpaOn) params.push(`model=${encodeURIComponent(modelId)}`);
         if (aecOn) params.push('aec=1');
+        if (pcmFallback) params.push('pcm=1');
         if (pcmMode) params.push('sr=16000');
         const wsPath = params.length ? `/ws/transcribe?${params.join('&')}` : '/ws/transcribe';
         const ws = new WebSocket(buildWsUrl(wsPath));
         ws.binaryType = 'arraybuffer';
+        const failRawPcmSession = () => {
+          if (
+            wsHadFinalRef.current ||
+            !(sherpaModeRef.current || aecModeRef.current || pcmModeRef.current)
+          ) {
+            return false;
+          }
+          wsHadFinalRef.current = true;
+          stopCaptureGraph();
+          setTrayRecording(false);
+          setModelStatus(null);
+          setErrorInfo({ kind: 'server', message: '' });
+          setState('error');
+          return true;
+        };
         ws.onopen = () => {
           for (const buf of wsPendingRef.current) {
             try {
@@ -925,7 +1068,7 @@ export default function CaptureWidget({ onDismiss }) {
               toastAsrModelMissing(asrMissingPayload(msg));
               setErrorInfo({ kind: 'transcription', message: t('asr_missing.message') });
               setState('error');
-            } else if (sherpaModeRef.current || aecModeRef.current) {
+            } else if (sherpaModeRef.current || aecModeRef.current || pcmModeRef.current) {
               // Raw-PCM paths have no WebM blob to re-POST — surface the
               // backend's error instead of leaving the pill wedged in
               // "Transcribing…" forever.
@@ -942,6 +1085,7 @@ export default function CaptureWidget({ onDismiss }) {
         };
         ws.onerror = () => {
           wsRef.current = null;
+          failRawPcmSession();
         };
         ws.onclose = () => {
           wsRef.current = null;
@@ -955,6 +1099,7 @@ export default function CaptureWidget({ onDismiss }) {
             }
             return;
           }
+          if (failRawPcmSession()) return;
           if (
             !wsHadFinalRef.current &&
             mediaRecorderRef.current &&
@@ -1041,22 +1186,8 @@ export default function CaptureWidget({ onDismiss }) {
         }
         mediaRecorderRef.current = null;
       } else {
-        const recorder = new MediaRecorder(stream, { mimeType });
-        recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            chunksRef.current.push(e.data);
-            e.data.arrayBuffer().then((buf) => {
-              const ws = wsRef.current;
-              if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(buf);
-              } else {
-                wsPendingRef.current.push(buf);
-              }
-            });
-          }
-        };
-        recorder.onstop = () => {};
-        recorder.start(250);
+        const { recorder, mimeType, extension } = supportedRecorder;
+        recordingFormatRef.current = { mimeType, extension };
         mediaRecorderRef.current = recorder;
       }
       // The session may already have RESOLVED while the mic graph was being
@@ -1081,7 +1212,15 @@ export default function CaptureWidget({ onDismiss }) {
       setErrorInfo(null);
       setDoneKind(null);
       setDuration(0);
+      stateRef.current = 'recording';
+      if (holdStartRef.current === 'released') {
+        holdStartRef.current = null;
+        stopRecordingRef.current?.();
+      } else {
+        holdStartRef.current = null;
+      }
     } catch (err) {
+      holdStartRef.current = null;
       // Same guard as the success path above (#1175 review): the session may
       // already have RESOLVED while setup was failing — a connect-time WS
       // error frame (e.g. the typed asr_model_missing preflight) or an
@@ -1091,6 +1230,7 @@ export default function CaptureWidget({ onDismiss }) {
         stopCaptureGraph();
         return;
       }
+      stopCaptureGraph();
       // Distinguish "permission denied" (→ per-OS settings hint) from
       // "no device" / "device busy" / anything else (#323).
       toast.error(micErrorMessage(t, err), { duration: 6000 });
@@ -1143,13 +1283,14 @@ export default function CaptureWidget({ onDismiss }) {
 
   const sendForTranscription = useCallback(async () => {
     if (wsHadFinalRef.current) return;
-    // No WebM blob exists on any raw-PCM path (AEC or sherpa live) — the WS is
-    // the only result channel there.
-    if (aecModeRef.current || sherpaModeRef.current) return;
+    // No encoded blob exists on a raw-PCM path — the WS is the only result
+    // channel there.
+    if (aecModeRef.current || sherpaModeRef.current || pcmModeRef.current) return;
 
-    const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+    const { mimeType, extension } = recordingFormatRef.current;
+    const blob = new Blob(chunksRef.current, { type: mimeType });
     const formData = new FormData();
-    formData.append('audio', blob, 'capture.webm');
+    formData.append('audio', blob, `capture.${extension}`);
     formData.append('mode', captureMode);
 
     try {
@@ -1179,6 +1320,124 @@ export default function CaptureWidget({ onDismiss }) {
       setTranscript('');
     }
   }, [captureMode, applyResult, t]);
+
+  // Keep the trigger refs pointing at the current callbacks. No dep array: it
+  // must run after every render so the once-attached tray listener above never
+  // calls into a stale closure.
+  useEffect(() => {
+    startRecordingRef.current = (trackHold = false) => {
+      if (trackHold && holdStartRef.current !== 'released') holdStartRef.current = 'starting';
+      return startRecording();
+    };
+    stopRecordingRef.current = stopRecording;
+  });
+
+  // Safety net: the widget window must never sit on screen with nothing in it.
+  //
+  // Visibility is decided in Rust (lib.rs shows the window on the global
+  // shortcut, before emitting `tray-dictate`) but content is decided here, and
+  // nothing kept the two in agreement. Any path that shows the window without
+  // the pill reaching a drawing state — a dropped event, a hotkey pressed
+  // while dictation is disabled, a startRecording() that bails early — left an
+  // empty capsule stranded on the desktop. It could not be dismissed either:
+  // `idle` renders null so there is no X button, and the Esc handler never
+  // fires because the widget deliberately refuses focus on macOS and Windows
+  // (#287, #982).
+  //
+  // Rather than patch each call site, converge on the invariant itself: if we
+  // are idle and the window is still visible a beat later, hide it. One effect
+  // covers every path that exists now and every one added later.
+  // A one-shot timer keyed on the transition into `idle` is not enough: the
+  // window is shown by the Rust side, and `state` does not change when a press
+  // is dropped. So a press arriving while we are ALREADY idle shows the window
+  // without re-running this effect, and the square strands exactly as before —
+  // the same bug, one path over. Poll instead, so the invariant holds no matter
+  // who made the window visible or when (CodeRabbit, #1399).
+  // Every state but `idle` is one the user is meant to see — listening,
+  // transcribing, the result flash, an error, the Accessibility prompt. Show
+  // the window here rather than at each call site, for the same reason the
+  // idle reconcile below hides it here: one invariant covers the paths that
+  // exist now and the ones added later. `dismiss()` owns the hide.
+  useEffect(() => {
+    if (state === 'idle') return;
+    showWidgetWindow();
+  }, [state]);
+
+  useEffect(() => {
+    if (state !== 'idle' || !inTauri()) return undefined;
+    let cancelled = false;
+    // Grace is measured from when the window was first SEEN visible-while-idle,
+    // not from the effect mounting: a real dictation shows the window a beat
+    // before React flips out of `idle`, and hiding it in that gap would cancel
+    // the very session the user just started.
+    let visibleSince = 0;
+
+    const reconcile = async () => {
+      // A positively-hidden document cannot be a stranded pill, and skipping
+      // the IPC keeps the common case free. Platforms that never report hidden
+      // just pay for the check — correct either way.
+      if (typeof document !== 'undefined' && document.hidden) {
+        visibleSince = 0;
+        return;
+      }
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        const win = getCurrentWindow();
+        // Only the standalone widget window owns its own visibility; the
+        // in-app pill is just a DOM node in the main window.
+        if (cancelled || win.label !== 'widget') return;
+        const visible = await win.isVisible();
+        // Re-check AFTER the IPC. The thing that tears this effect down is
+        // recording starting — so a continuation resuming here is, precisely,
+        // the case where hiding would take the pill off screen at the moment
+        // the user began speaking. One check covers the rest of the function:
+        // nothing below awaits again before `hide()` (CodeRabbit, #1399).
+        if (cancelled) return;
+        if (!visible) {
+          visibleSince = 0;
+          return;
+        }
+        const now = Date.now();
+        if (!visibleSince) {
+          visibleSince = now;
+          return;
+        }
+        if (now - visibleSince < IDLE_VISIBLE_GRACE_MS) return;
+        console.warn('capture: widget window visible while idle — hiding it');
+        await win.hide();
+        visibleSince = 0;
+      } catch (err) {
+        console.warn('capture: idle-visibility reconcile failed:', err);
+      }
+    };
+
+    const id = setInterval(reconcile, IDLE_VISIBLE_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [state]);
+
+  // The pill carries these states on screen now, but it is transient and
+  // deliberately unfocusable. States that need the user to DO something —
+  // grant Accessibility, grant the mic, retry after a failure — also go to the
+  // main window, where the instruction survives the pill's auto-dismiss and
+  // can be acted on.
+  useEffect(() => {
+    if (state !== 'error' && state !== 'setup') return;
+    const kind = state === 'setup' ? 'setup' : errorInfo?.kind || 'transcription';
+    emitDictationNotice({
+      kind,
+      // Localize here: this is where the error's context lives, and both
+      // windows share one i18n instance and language.
+      label: state === 'setup' ? t('capture.a11y_setup') : errorLabel(t, errorInfo),
+      // Only an OS-level denial has a settings pane worth opening. A mic that
+      // is merely busy or absent fails with the same kind, and sending that
+      // user to the permissions pane sends them somewhere nothing is wrong —
+      // the same condition the pill's own mic button carried.
+      deniedByOs: !!errorInfo?.deniedByOs,
+    });
+  }, [state, errorInfo, t]);
 
   // Idle: render nothing — pill is hold-to-talk only (Whisper-Flow / Ghost-Pepper
   // style). The tray-dictate listener above stays mounted, so the shortcut still

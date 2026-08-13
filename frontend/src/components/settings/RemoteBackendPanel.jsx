@@ -1,7 +1,7 @@
 /**
  * Settings → Sharing → Remote backend panel (parity program Wave 2.3).
  *
- * Point this app at an OmniVoice backend running elsewhere (a GPU box over
+ * Point this app at a VoiceStudio backend running elsewhere (a GPU box over
  * Tailscale, a Docker deployment). Stores the URL + API key in localStorage
  * — they are CLIENT-side settings — and reloads the app so api/client.ts
  * re-resolves the base. "Test" hits {url}/health (with the key) and shows
@@ -20,18 +20,24 @@ import toast from 'react-hot-toast';
 import { Trans, useTranslation } from 'react-i18next';
 import { LS_BACKEND_URL, LS_API_KEY, API } from '../../api/client';
 import { askConfirm } from '../../utils/dialog';
+import { disableRemoteBackend, probeRemoteBackend } from '../../utils/remoteBackendProbe';
 import { SettingsSection, SettingRow, InfoHint, SettingsInput } from './primitives';
 import { Button, Badge } from '../../ui';
 
-const REMOTE_GPU_DOCS_URL =
-  'https://github.com/debpalash/OmniVoice-Studio/blob/main/docs/remote-gpu.md';
+const REMOTE_GPU_DOCS_URL = 'https://github.com/debpalash/VoiceStudio/blob/main/docs/remote-gpu.md';
 
 /** A saved backend base must be a parseable absolute http(s) URL. */
 export function isValidBackendUrl(value) {
   if (!value) return false;
   try {
     const u = new URL(value);
-    return u.protocol === 'http:' || u.protocol === 'https:';
+    return (
+      (u.protocol === 'http:' || u.protocol === 'https:') &&
+      !u.username &&
+      !u.password &&
+      !u.search &&
+      !u.hash
+    );
   } catch {
     return false;
   }
@@ -43,6 +49,7 @@ export default function RemoteBackendPanel({ reload = () => window.location.relo
   const [key, setKey] = useState(() => localStorage.getItem(LS_API_KEY) || '');
   const [probe, setProbe] = useState(null); // {ok, detail, target}
   const [testing, setTesting] = useState(false);
+  const hasSavedRemote = Boolean(localStorage.getItem(LS_BACKEND_URL));
 
   const normalized = url.trim().replace(/\/+$/, '');
 
@@ -51,23 +58,7 @@ export default function RemoteBackendPanel({ reload = () => window.location.relo
     setProbe(null);
     const target = normalized || API;
     try {
-      const res = await fetch(`${target}/health`, {
-        headers: key.trim() ? { Authorization: `Bearer ${key.trim()}` } : {},
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.detail || `HTTP ${res.status}`);
-      setProbe({
-        ok: true,
-        detail: `${body.version || '?'} on ${body.device || '?'}`,
-        target,
-      });
-    } catch (e) {
-      setProbe({
-        ok: false,
-        detail:
-          e?.message || t('settings.remote_backend_unreachable', { defaultValue: 'unreachable' }),
-        target,
-      });
+      setProbe(await probeRemoteBackend(target, key.trim()));
     } finally {
       setTesting(false);
     }
@@ -173,6 +164,16 @@ export default function RemoteBackendPanel({ reload = () => window.location.relo
         <Button variant="subtle" size="sm" onClick={onSave} data-testid="remote-backend-save">
           {t('settings.remote_backend_save', { defaultValue: 'Save & reload' })}
         </Button>
+        {hasSavedRemote && (
+          <Button
+            variant="subtle"
+            size="sm"
+            onClick={() => disableRemoteBackend(reload)}
+            data-testid="remote-backend-disable"
+          >
+            {t('settings.remote_backend_use_local')}
+          </Button>
+        )}
         {probe && (
           <Badge tone={probe.ok ? 'success' : 'danger'} dot role="status">
             {probe.ok
@@ -181,7 +182,9 @@ export default function RemoteBackendPanel({ reload = () => window.location.relo
                   defaultValue: 'OK — {{detail}}',
                 })
               : t('settings.remote_backend_probe_fail', {
-                  detail: probe.detail,
+                  detail: t(`settings.remote_backend_error_${probe.kind}`, {
+                    status: probe.status,
+                  }),
                   defaultValue: 'Failed — {{detail}}',
                 })}
           </Badge>

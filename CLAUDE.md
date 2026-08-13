@@ -1,9 +1,9 @@
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
 
-**OmniVoice Studio**
+**VoiceStudio**
 
-OmniVoice Studio is an open-source, fully-local ElevenLabs alternative — a desktop app for voice cloning, voice design, video dubbing, and real-time dictation across 646 languages. It runs entirely on the user's machine (CUDA/MPS/ROCm/CPU auto-detect), with no API keys, no accounts, and no cloud dependencies. It's an active beta with a growing user base who hit it with real workloads (50-video batches, multi-engine setups, edge-OS platforms) and report friction in GitHub Issues and Discord. The current version lives in `frontend/package.json` (the single source of truth — see Versioning); the latest stable tag is on the [Releases page](https://github.com/debpalash/OmniVoice-Studio/releases/latest). With `AUTO_VERSION_BUMP` off (the current owner setting), `main` holds at the released version between releases.
+VoiceStudio is an open-source, fully-local ElevenLabs alternative — a desktop app for voice cloning, voice design, video dubbing, and real-time dictation across 646 languages. It runs entirely on the user's machine (CUDA/MPS/ROCm/CPU auto-detect), with no API keys, no accounts, and no cloud dependencies. It's an active beta with a growing user base who hit it with real workloads (50-video batches, multi-engine setups, edge-OS platforms) and report friction in GitHub Issues and Discord. The current version lives in `frontend/package.json` (the single source of truth — see Versioning); the latest stable tag is on the [Releases page](https://github.com/debpalash/VoiceStudio/releases/latest). With `AUTO_VERSION_BUMP` off (the current owner setting), `main` holds at the released version between releases.
 
 **Core Value:** **A first-run that actually works.** A user who downloads the installer (or clones the repo) should reach a working voice-cloning or dubbing output without hitting a wall — and when something does go wrong, the error or docs should tell them exactly what to do.
 
@@ -13,7 +13,7 @@ Everything else (new engines, fancy features) is downstream of "the thing instal
 
 - **Existing engine compatibility**: Users with already-installed engines (IndexTTS, CosyVoice, etc.) must not have to reinstall. Fixes touching engine code must be backward-compatible with on-disk model state.
 - **Cross-platform parity**: Every fix must work on macOS (Apple Silicon + Intel), Windows (x64), and Linux (AppImage + deb). No platform-only regressions; the cross-platform bug bash (PR #51) is the baseline.
-- **Default features must work on every platform (strict rule, 2026-05-20):** A feature that ships in default mode — out-of-the-box, no user customization, no opt-in toggle — must behave identically on macOS, Windows, and Linux. Platform-specific *implementation code* is allowed for OS APIs / shells / packaging, but the user-visible *default behavior* cannot diverge. Platform-only features (e.g., a macOS-only global shortcut, a Windows-only path picker) must go behind explicit user opt-in: Settings toggle, env var, or CLI flag. When a default doesn't work on a platform, that's a P0 bug — either fix it on the missing platform or move it behind opt-in. No third option.
+- **Default features must work on every platform (strict rule, 2026-05-20):** A feature that ships in default mode — out-of-the-box, no user customization, no opt-in toggle — must behave identically on macOS, Windows, and Linux. Platform-specific *implementation code* is allowed for OS APIs / shells / packaging, but the user-visible *default behavior* cannot diverge. Platform-only features (e.g., a macOS-only global shortcut, a Windows-only path picker) must go behind explicit user opt-in: Settings toggle, env var, or CLI flag. When a default doesn't work on a platform, that's a P0 bug — either fix it on the missing platform or move it behind opt-in. No third option. **This rule governs BEHAVIOUR, not PERFORMANCE** (clarified 2026-07-30, council): hardware acceleration is expected to vary by host — CUDA, MPS, DirectML, Triton availability and `torch.compile` are all host-dependent by design, and reading the rule to forbid that would forbid GPU support itself. An optimization that is skipped where it cannot work (missing Triton, an arch the wheel lacks, a path its toolchain cannot link) is NOT a parity violation; a *feature* the user can see and use on one OS but not another is.
 - **Backward-compatible project data**: Existing `omnivoice_data/` (user voices, projects, settings) must keep working without manual migration. Any DB schema change goes through alembic with a tested upgrade path.
 - **Local-first guarantee preserved**: nothing leaves the machine without the user's **explicit yes**, and the app must remain fully functional with everything declined. Auto bug reporting is opt-in and submits only to GitHub Issues (prefilled-URL, from the user's own browser). Product analytics (owner-sanctioned 2026-07-16) is opt-in PostHog EU with a **first-run consent prompt** — two equal-weight Yes/No buttons, never default-on, skipping = off; consent-gated, allowlisted content-free metadata only (`backend/core/analytics.py`); every build — installer, Docker, and source alike (owner reversal 2026-07-20, #1193) — carries the in-repo publishable write-only token and shows the same consent ask, with env/baked token overriding it. No required cloud calls, accounts, or API keys.
 - **Beta release cadence (no RC, no ceremony — strict rule, 2026-05-20):** the v0.3.x line has **no release candidates, no 48h soak, no formal release ceremony**. Every fix goes continuous-to-main; the owner tags a patch (`v0.3.Z`) from main whenever the current state is worth cutting. No `-rc` tags. No phased release. No `v0.4` deferrals while the v0.3.x line is open — every open issue and every open community PR gets absorbed into the v0.3.x line or explicitly declined. Users follow `main` for previews; users wanting stable stay on the latest tagged release. ROADMAP.md's Phase 6 "Release/Verify/Retro" entries are obsolete unless the user revives them.
@@ -89,3 +89,17 @@ Direct repo edits are authorized (owner decision, 2026-07-08). The GSD command g
 > Profile not yet configured. Run `/gsd-profile-user` to generate your developer profile.
 > This section is managed by `generate-claude-profile` -- do not edit manually.
 <!-- GSD:profile-end -->
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `debpalash/VoiceStudio`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical roles, each label string equal to its name. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.

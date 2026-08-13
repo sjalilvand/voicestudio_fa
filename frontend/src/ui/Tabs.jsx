@@ -37,7 +37,7 @@ export default function Tabs({
   // boolean, so it carries the same CSS specificity as — and twMerge-overrides
   // — shadcn's TabsTrigger defaults (e.g. `data-[state=active]:bg-background`).
   // The leading utilities also reset shadcn's list/trigger box-model defaults
-  // (h-9, bg-muted, rounded-lg, flex-1, active shadow) back to OmniVoice's.
+  // (h-9, bg-muted, rounded-lg, flex-1, active shadow) back to VoiceStudio's.
   const listClass = isPill
     ? 'h-auto inline-flex shrink-0 gap-[3px] rounded-[var(--chrome-radius-pill)] border border-transparent bg-[var(--chrome-bg)] p-[3px]'
     : 'h-auto inline-flex shrink-0 gap-[var(--space-5)] rounded-none border-0 border-b border-transparent bg-transparent p-0';
@@ -76,6 +76,7 @@ export default function Tabs({
               key={item.id}
               value={item.id}
               className={`ui-tabs__tab ${active ? 'is-active' : ''} ${tabClass}`}
+              title={item.title}
               style={active && item.accent ? { '--ui-tab-accent': item.accent } : undefined}
             >
               {Icon && <Icon size={12} className="ui-tabs__icon" />}

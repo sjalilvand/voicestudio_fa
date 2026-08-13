@@ -24,7 +24,7 @@ import Table from '../../ui/Table.jsx';
 import Tabs from '../../ui/Tabs.jsx';
 import SettingRow from '../../components/settings/primitives/SettingRow.jsx';
 import SettingsToggle from '../../components/settings/primitives/SettingsToggle.jsx';
-// shadcn/ui proof components — themed via the OmniVoice token bridge (index.css).
+// shadcn/ui proof components — themed via the VoiceStudio token bridge (index.css).
 // Rendered here across all 3 themes to prove the bridge keeps them on-palette.
 import { Button as ShadcnButton } from '../../components/ui/button.tsx';
 import { Input as ShadcnInput } from '../../components/ui/input.tsx';
@@ -40,6 +40,7 @@ import './harness.css';
 // backend. The `providers` key is what flips the harness into wrapped mode —
 // leaf specs without it are byte-for-byte unaffected.
 import AppearancePanel from '../../components/settings/AppearancePanel.jsx';
+import TitleTabs from '../../components/TitleTabs.jsx';
 import GeneralTab from '../../components/settings/GeneralTab.jsx';
 import StoragePanel from '../../components/settings/StoragePanel.jsx';
 import ResetPanel from '../../components/settings/ResetPanel.jsx';
@@ -54,7 +55,7 @@ const RESET_SCAN = [
   { key: 'history', paths: [], size_bytes: 0, exists: true, shared: false, needs_restart: false },
   {
     key: 'settings',
-    paths: ['~/…/OmniVoice/prefs.json'],
+    paths: ['~/…/VoiceStudio/prefs.json'],
     size_bytes: 4096,
     exists: true,
     shared: false,
@@ -62,7 +63,7 @@ const RESET_SCAN = [
   },
   {
     key: 'content',
-    paths: ['~/…/OmniVoice/voices'],
+    paths: ['~/…/VoiceStudio/voices'],
     size_bytes: 5.4 * 1024 ** 3,
     exists: true,
     shared: false,
@@ -70,7 +71,7 @@ const RESET_SCAN = [
   },
   {
     key: 'engines',
-    paths: ['~/…/OmniVoice/engines'],
+    paths: ['~/…/VoiceStudio/engines'],
     size_bytes: 2.3 * 1024 ** 3,
     exists: true,
     shared: false,
@@ -78,7 +79,7 @@ const RESET_SCAN = [
   },
   {
     key: 'tools',
-    paths: ['~/…/OmniVoice/media_tools'],
+    paths: ['~/…/VoiceStudio/media_tools'],
     size_bytes: 96 * 1024 ** 2,
     exists: true,
     shared: false,
@@ -94,7 +95,7 @@ const RESET_SCAN = [
   },
   {
     key: 'caches',
-    paths: ['~/…/OmniVoice/gallery_cache'],
+    paths: ['~/…/VoiceStudio/gallery_cache'],
     size_bytes: 11 * 1024 ** 2,
     exists: true,
     shared: false,
@@ -102,7 +103,7 @@ const RESET_SCAN = [
   },
   {
     key: 'logs',
-    paths: ['~/…/OmniVoice/omnivoice.log'],
+    paths: ['~/…/VoiceStudio/omnivoice.log'],
     size_bytes: 820,
     exists: true,
     shared: false,
@@ -468,6 +469,37 @@ export const SPECS = {
   },
 
   // ── Panels (provider-wrapped) ────────────────────────────────────────────
+
+  // The titlebar tab strip (Settings → Appearance → Navigation style). Framed
+  // the way it actually ships — recessed shelf above, content plane below —
+  // because the whole point of the skin is the seam between the two: the
+  // active tab has to read as one surface with the page under it.
+  TitleTabs: {
+    width: 1100,
+    providers: {
+      store: ({ theme }) => ({ theme: theme === 'default' ? 'gruvbox' : theme, locale: 'en' }),
+    },
+    render: () => (
+      <div style={{ width: 1100 }}>
+        <div className="header-area header-area--tabs">
+          <div>
+            <TitleTabs mode="dub" setMode={() => {}} />
+          </div>
+          <div
+            style={{
+              fontFamily: 'var(--chrome-font-mono)',
+              fontSize: 10.5,
+              color: 'var(--chrome-fg-dim)',
+              paddingBottom: 8,
+            }}
+          >
+            READY
+          </div>
+        </div>
+        <div style={{ height: 72, background: 'var(--chrome-bg)' }} />
+      </div>
+    ),
+  },
 
   // Store + i18n only — the simplest page-level target. Aligns the store's
   // active `theme` with the rendered data-theme variant so the highlighted

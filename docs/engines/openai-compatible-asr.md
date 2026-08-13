@@ -1,4 +1,4 @@
-# OmniVoice Studio — OpenAI-Compatible Remote ASR
+# VoiceStudio — OpenAI-Compatible Remote ASR
 
 Point transcription at **any** server exposing an OpenAI-compatible
 `POST /v1/audio/transcriptions` endpoint — LM Studio or a llama.cpp-style
@@ -9,7 +9,7 @@ and claims no GPU.
 
 ## Setup
 
-Everything lives on one screen — **Settings → Engines**, **ASR** tab:
+Everything lives on one screen — **Model Catalogue → Engines**, **ASR** tab:
 
 1. The **OpenAI-compatible (remote server)** row shows as unavailable until
    a server is configured. The config panel appears **below the engine
@@ -32,7 +32,7 @@ Everything lives on one screen — **Settings → Engines**, **ASR** tab:
    always wins over the Settings pick.
 
 Config changes apply on the next transcription — no restart needed. The
-engine is never active by default: OmniVoice's ASR auto-detect only ever
+engine is never active by default: VoiceStudio's ASR auto-detect only ever
 picks local engines, and the app works fully with this engine unconfigured.
 
 ## Examples
@@ -60,7 +60,7 @@ path returns word-level timestamps — that's not part of this API.
 
 ## Privacy note
 
-Unlike every other ASR engine in OmniVoice, audio sent through this backend
+Unlike every other ASR engine in VoiceStudio, audio sent through this backend
 leaves your machine — to whatever server **you** configured, and nowhere
 else. If that's a self-hosted server on your own network, nothing leaves
 your control; if it's a third-party API (Groq, OpenAI's, or someone

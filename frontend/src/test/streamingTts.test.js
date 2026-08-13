@@ -15,6 +15,7 @@ const {
   streamGenerateSpeech,
   createStreamingChunkPlayer,
   supportsStreamingPreview,
+  resolveRemoteTtsTarget,
   decodePcm16Base64,
   peaksFromChunkList,
   StreamingPreviewError,
@@ -185,6 +186,48 @@ describe('supportsStreamingPreview', () => {
   });
 });
 
+// ── resolveRemoteTtsTarget ──────────────────────────────────────────────────
+//
+// The stream is rendered by THIS process, so a progressive preview on a
+// remote target would quietly run the job on this machine after the user
+// picked their 4090. This is the check that stops that, and it must fail
+// open: a picker that cannot be reached must never block a local render.
+
+describe('resolveRemoteTtsTarget', () => {
+  const json = (body, ok = true) => ({ ok, json: async () => body });
+
+  it('asks routing for the tts operation specifically', async () => {
+    apiFetch.mockResolvedValue(json({ active: { remote: false } }));
+    await resolveRemoteTtsTarget();
+    expect(apiFetch.mock.calls[0][0]).toBe('/workers/target?op=tts');
+    // A dead backend must fail this probe in one round trip, not stall the
+    // click behind the transport retry ladder.
+    expect(apiFetch.mock.calls[0][1]).toMatchObject({ retryTransport: false });
+  });
+
+  it('reports the worker when the resolved target is remote', async () => {
+    apiFetch.mockResolvedValue(
+      json({ active: { remote: true, worker_id: 'w1', label: 'desktop-4090' } }),
+    );
+    expect(await resolveRemoteTtsTarget()).toEqual({ workerId: 'w1', label: 'desktop-4090' });
+  });
+
+  it('answers local for a fallback decision, so streaming stays available', async () => {
+    apiFetch.mockResolvedValue(
+      json({ active: { remote: false, reason: 'desktop-4090 is offline — running locally' } }),
+    );
+    expect(await resolveRemoteTtsTarget()).toBeNull();
+  });
+
+  it('answers local when the endpoint errors or the backend is unreachable', async () => {
+    apiFetch.mockResolvedValue(json({ detail: 'nope' }, false));
+    expect(await resolveRemoteTtsTarget()).toBeNull();
+
+    apiFetch.mockRejectedValue(new Error('connection refused'));
+    expect(await resolveRemoteTtsTarget()).toBeNull();
+  });
+});
+
 // ── streamGenerateSpeech ────────────────────────────────────────────────────
 
 describe('streamGenerateSpeech', () => {
@@ -293,6 +336,48 @@ describe('streamGenerateSpeech', () => {
     const apiErr = Object.assign(new Error('400 Bad Request: nope'), { name: 'ApiError' });
     apiFetch.mockRejectedValue(apiErr);
     await expect(streamGenerateSpeech(new FormData(), {})).rejects.toBe(apiErr);
+  });
+
+  // #1330 — the take is real, but part of the text produced no audio. Driven
+  // through the actual NDJSON reader rather than by matching source text
+  // (CodeRabbit): a serialization the client cannot parse would pass the
+  // literal check and still leave the user with a silently short take.
+  it('forwards a warning frame to onWarning and still resolves with done', async () => {
+    const warned = [];
+    apiFetch.mockResolvedValue(
+      ndjsonResponse([
+        startEvent(3),
+        chunkEvent(0),
+        chunkEvent(1),
+        { type: 'warning', code: 'dropped_chunks', count: 1, text: ['the tail that vanished.'] },
+        doneEvent,
+      ]),
+    );
+    const meta = await streamGenerateSpeech(new FormData(), {
+      onWarning: (ev) => warned.push(ev),
+    });
+    // Not an error: the stream completed and the caller got its metadata.
+    expect(meta.id).toBe('abc12345');
+    expect(warned).toHaveLength(1);
+    expect(warned[0]).toMatchObject({ code: 'dropped_chunks', count: 1 });
+    expect(warned[0].text).toEqual(['the tail that vanished.']);
+  });
+
+  it('does not require the caller to handle warnings', async () => {
+    // A consumer that never passes onWarning must not crash on the new frame.
+    // total_chunks covers the chunk delivered plus the two that dropped —
+    // a payload the backend could actually emit (CodeRabbit).
+    apiFetch.mockResolvedValue(
+      ndjsonResponse([
+        startEvent(3),
+        chunkEvent(0),
+        { type: 'warning', code: 'dropped_chunks', count: 2, text: [] },
+        doneEvent,
+      ]),
+    );
+    await expect(streamGenerateSpeech(new FormData(), {})).resolves.toMatchObject({
+      id: 'abc12345',
+    });
   });
 });
 

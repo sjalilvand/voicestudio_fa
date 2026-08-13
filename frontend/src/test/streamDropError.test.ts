@@ -10,6 +10,16 @@ import { streamDropError } from '../utils/backendCrash';
 
 const FALLBACK = 'Transcribe stream dropped before emitting any segments.';
 
+// `streamDropError`'s no-marker branch asks whether the backend is still
+// answering (#1242): a live process rules the caller's "it crashed" guess out.
+// Its default probe is a REAL `fetch` at the configured API origin, so a test
+// that leaves it unstubbed asserts against whatever happens to be listening on
+// the developer's machine — three of the tests below passed in CI (nothing
+// there) and failed for anyone running the app locally. Every test states which
+// answer it wants.
+const DEAD = async () => false;
+const ALIVE = async () => true;
+
 function marker(overrides = {}) {
   return {
     ts: Math.floor(Date.now() / 1000) - 12,
@@ -47,8 +57,16 @@ describe('streamDropError (#1062)', () => {
   });
 
   it('keeps the caller message when there is no crash marker', async () => {
-    const err = await streamDropError(FALLBACK, async () => null);
+    const err = await streamDropError(FALLBACK, async () => null, { probeAlive: DEAD });
     expect(err.message).toBe(FALLBACK);
+  });
+
+  it('says a live backend was not the crash it looked like (#1242)', async () => {
+    const err = await streamDropError(FALLBACK, async () => null, { probeAlive: ALIVE });
+    // The caller's guess is dropped: the process answered, so it did not die.
+    expect(err.message).not.toContain(FALLBACK);
+    expect(err.message).toMatch(/still running/i);
+    expect(err.message).toMatch(/proxy|buffering/i);
   });
 
   it('never masks the caller message when the forensics lookup itself fails', async () => {
@@ -95,6 +113,7 @@ describe('streamDropError — waits for the shell to notice the death (#1119)', 
         waitMs: 5,
         intervalMs: 1,
         sleep: async () => {},
+        probeAlive: DEAD,
       });
       expect(err.message).toBe(FALLBACK);
     } finally {
@@ -104,10 +123,14 @@ describe('streamDropError — waits for the shell to notice the death (#1119)', 
 
   it('does not stall a browser/Docker user — no shell means no marker, ever', async () => {
     let calls = 0;
-    const err = await streamDropError(FALLBACK, async () => {
-      calls += 1;
-      return null;
-    });
+    const err = await streamDropError(
+      FALLBACK,
+      async () => {
+        calls += 1;
+        return null;
+      },
+      { probeAlive: DEAD },
+    );
     expect(err.message).toBe(FALLBACK);
     expect(calls).toBe(1); // asked once, then stopped — no 8 s wait
   });
@@ -150,7 +173,7 @@ describe('crashCauseHint', () => {
   it('offers the isolated engine for synthesis AND for transcription', async () => {
     const { crashCauseHint } = await import('../utils/backendCrash');
     const hint = crashCauseHint({ exit_code: null, signal: 11 });
-    expect(hint).toMatch(/OmniVoice \(subprocess\)/);
+    expect(hint).toMatch(/VoiceStudio \(subprocess\)/);
     expect(hint).toMatch(/Faster-Whisper/);
   });
 
@@ -170,5 +193,170 @@ describe('crashCauseHint', () => {
     const { crashCauseHint, isNativeFault } = await import('../utils/backendCrash');
     expect(isNativeFault({ exit_code: 78, signal: null })).toBe(false);
     expect(crashCauseHint({ exit_code: 78, signal: null })).toMatch(/port 3900/);
+  });
+
+  // #1282 (`import torchaudio` exploding 4 s after launch) and #1376
+  // (transformers' lazy loader raising ModuleNotFoundError 28 s in) both
+  // arrived as a plain `exit code 1` and therefore both got the VRAM default —
+  // telling users whose Python environment was half-installed to go flush a
+  // TTS model. Nothing in the exit code distinguishes them; the traceback was
+  // sitting unread in the marker.
+  describe('a backend that died importing its own dependencies (#1282)', () => {
+    const TORCHAUDIO_TAIL = [
+      'Traceback (most recent call last):',
+      '  File "...\\backend\\main.py", line 197, in <module>',
+      '    import torchaudio',
+      '  File "...\\torchaudio\\_internal\\__init__.py", line 4, in <module>',
+      '    from torch.hub import download_url_to_file',
+      "ImportError: cannot import name 'download_url_to_file'",
+    ].join('\n');
+
+    const TRANSFORMERS_TAIL =
+      '  File "...\\transformers\\utils\\import_utils.py", line 2184, in __getattr__\n' +
+      '    raise ModuleNotFoundError(\n' +
+      "ModuleNotFoundError: Could not import module 'GenerationMixin'.";
+
+    it('names the environment, not VRAM, for a torchaudio import failure', async () => {
+      const { crashCauseHint } = await import('../utils/backendCrash');
+      const hint = crashCauseHint({
+        exit_code: 1,
+        signal: null,
+        last_stderr: TORCHAUDIO_TAIL,
+      });
+      expect(hint).toMatch(/Clean & Retry/);
+      expect(hint).not.toMatch(/VRAM/);
+    });
+
+    it('catches the transformers lazy-import failure too', async () => {
+      const { crashCauseHint } = await import('../utils/backendCrash');
+      const hint = crashCauseHint({
+        exit_code: 1,
+        signal: null,
+        last_stderr: TRANSFORMERS_TAIL,
+      });
+      expect(hint).toMatch(/Clean & Retry/);
+      expect(hint).not.toMatch(/VRAM/);
+    });
+
+    it('wins over the native-fault branch — a DLL that will not load is still the environment', async () => {
+      // On Windows a missing dependent DLL surfaces as an access violation.
+      // "Update your GPU driver" is the wrong advice when the venv is broken.
+      const { crashCauseHint } = await import('../utils/backendCrash');
+      const hint = crashCauseHint({
+        exit_code: -1073741819,
+        signal: null,
+        last_stderr: 'ImportError: DLL load failed while importing torch._C',
+      });
+      expect(hint).toMatch(/Clean & Retry/);
+    });
+
+    it('does not fire on an unrelated traceback that merely mentions torch', async () => {
+      // Narrow on purpose: an ImportError is required, not just the word.
+      const { crashCauseHint, isBrokenEnvironmentCrash } = await import('../utils/backendCrash');
+      const marker = {
+        exit_code: 1,
+        signal: null,
+        last_stderr: 'RuntimeError: CUDA error: out of memory (torch/cuda/__init__.py)',
+      };
+      expect(isBrokenEnvironmentCrash(marker)).toBe(false);
+      expect(crashCauseHint(marker)).toMatch(/VRAM/);
+    });
+
+    it('does not fire on an import error in something optional', async () => {
+      const { isBrokenEnvironmentCrash } = await import('../utils/backendCrash');
+      expect(
+        isBrokenEnvironmentCrash({
+          last_stderr: "ModuleNotFoundError: No module named 'some_optional_plugin'",
+        }),
+      ).toBe(false);
+    });
+
+    it('never outranks an OOM kill, whose signal is a fact about THIS process', async () => {
+      // backend_err.log is appended across runs and the shell captures its
+      // last ~40 lines, so a process killed early carries the PREVIOUS run's
+      // output. A stale import traceback must not turn a memory kill into
+      // "rebuild your environment" (greptile).
+      const { crashCauseHint } = await import('../utils/backendCrash');
+      const hint = crashCauseHint({
+        exit_code: null,
+        signal: 9,
+        last_stderr: TORCHAUDIO_TAIL,
+      });
+      expect(hint).toMatch(/memory \(RAM\)/);
+      expect(hint).not.toMatch(/Clean & Retry/);
+    });
+
+    it('ignores an import traceback stranded above this run’s own output', async () => {
+      const { isBrokenEnvironmentCrash } = await import('../utils/backendCrash');
+      const stale = [
+        TORCHAUDIO_TAIL,
+        ...Array.from({ length: 25 }, (_, i) => `INFO  this run line ${i}`),
+      ].join('\n');
+      expect(isBrokenEnvironmentCrash({ last_stderr: stale })).toBe(false);
+      // ...but the same traceback as the LAST thing written still counts.
+      expect(isBrokenEnvironmentCrash({ last_stderr: TORCHAUDIO_TAIL })).toBe(true);
+    });
+
+    it('falls back cleanly when there is no captured tail at all', async () => {
+      const { crashCauseHint, isBrokenEnvironmentCrash } = await import('../utils/backendCrash');
+      expect(isBrokenEnvironmentCrash({ last_stderr: '' })).toBe(false);
+      expect(crashCauseHint({ exit_code: 1, signal: null })).toMatch(/VRAM/);
+    });
+  });
+});
+
+describe('stream drop with no crash marker (#1242)', () => {
+  const FB = 'fallback message with no cause asserted';
+
+  // The reporter was in `server` mode with the backend having answered 20 s
+  // earlier. No crash marker existed — correctly, since nothing had crashed —
+  // and the caller's fallback then asserted "Likely ASR backend failed to
+  // load" about a model that had loaded fine.
+  it('does not blame the ASR model when the backend is still answering', async () => {
+    const { streamDropError } = await import('../utils/backendCrash');
+    const err = await streamDropError(FB, async () => null, {
+      probeAlive: async () => true,
+      waitMs: 0,
+    });
+    expect(err.message).not.toBe(FB);
+    expect(err.message).toMatch(/still running|did not crash/i);
+    expect(err.message).not.toMatch(/ASR/i);
+  });
+
+  it('names the proxy as the likely cause in a served deployment', async () => {
+    const { streamDropError } = await import('../utils/backendCrash');
+    const err = await streamDropError(FB, async () => null, {
+      probeAlive: async () => true,
+      waitMs: 0,
+    });
+    expect(err.message).toMatch(/proxy|buffering/i);
+  });
+
+  it("keeps the caller's message when the backend is gone too", async () => {
+    const { streamDropError } = await import('../utils/backendCrash');
+    const err = await streamDropError(FB, async () => null, {
+      probeAlive: async () => false,
+      waitMs: 0,
+    });
+    expect(err.message).toBe(FB);
+  });
+
+  it('a real crash marker still wins over the liveness probe', async () => {
+    const { streamDropError } = await import('../utils/backendCrash');
+    const marker = {
+      ts: Math.floor(Date.now() / 1000) - 5,
+      exit_code: null,
+      signal: 9,
+      exit_desc: 'signal: 9',
+      backend_version: '0.4.2',
+      uptime_s: 30,
+      last_stderr: '',
+      acknowledged: false,
+    };
+    const err = await streamDropError(FB, async () => marker, {
+      probeAlive: async () => true,
+      waitMs: 0,
+    });
+    expect(err.message).toMatch(/memory \(RAM\)/);
   });
 });

@@ -1,8 +1,10 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { X, Search, Globe, Plus } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect, useLayoutEffect, useId } from 'react';
+import { createPortal } from 'react-dom';
+import { Check, X, Search, Globe } from 'lucide-react';
 import { POPULAR_LANGS } from '../utils/constants';
 import { LANG_CODES } from '../utils/languages';
 import { useTranslation } from 'react-i18next';
+import LanguageFlag from './LanguageFlag';
 
 /**
  * MultiLangPicker — chip-based multi-language selector for batch dubbing.
@@ -14,38 +16,113 @@ export default function MultiLangPicker({
   selected = [], // array of { lang: string, code: string }
   onChange, // (newSelected) => void
   disabled = false,
+  progressByCode = {},
 }) {
   const { t } = useTranslation();
   const [dropOpen, setDropOpen] = useState(false);
   const [query, setQuery] = useState('');
   const dropRef = useRef(null);
+  const menuRef = useRef(null);
+  const triggerRef = useRef(null);
   const inputRef = useRef(null);
+  const menuId = useId();
+  const [menuPos, setMenuPos] = useState(null);
 
   // Close dropdown on outside click
   useEffect(() => {
     if (!dropOpen) return;
     const handler = (e) => {
-      if (dropRef.current && !dropRef.current.contains(e.target)) setDropOpen(false);
+      const insideTrigger = dropRef.current?.contains(e.target);
+      const insideMenu = menuRef.current?.contains(e.target);
+      if (!insideTrigger && !insideMenu) setDropOpen(false);
+    };
+    const onKeyDown = (e) => {
+      if (e.key !== 'Escape') return;
+      setDropOpen(false);
+      triggerRef.current?.focus();
     };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [dropOpen]);
+
+  // The picker appears inside scrollable/clipping dubbing panels. A body
+  // portal escapes every overflow ancestor; fixed positioning plus an
+  // above/below flip keeps the menu inside the viewport at either edge.
+  useLayoutEffect(() => {
+    if (!dropOpen) return;
+    const place = () => {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const margin = 8;
+      const gap = 4;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const width = Math.min(Math.max(rect.width, 320), viewportWidth - margin * 2);
+      const left = Math.min(
+        Math.max(margin, rect.left),
+        Math.max(margin, viewportWidth - width - margin),
+      );
+      const below = viewportHeight - rect.bottom - gap - margin;
+      const above = rect.top - gap - margin;
+      const openUp = below < 360 && above > below;
+      const maxHeight = Math.max(0, Math.min(360, openUp ? above : below));
+      setMenuPos(
+        openUp
+          ? { bottom: viewportHeight - rect.top + gap, left, width, maxHeight }
+          : { top: rect.bottom + gap, left, width, maxHeight },
+      );
+    };
+    place();
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('resize', place);
+    };
   }, [dropOpen]);
 
   // Focus search when dropdown opens
   useEffect(() => {
     if (dropOpen && inputRef.current) inputRef.current.focus();
   }, [dropOpen]);
+  useEffect(() => {
+    if (!disabled) return undefined;
+    const frame = requestAnimationFrame(() => setDropOpen(false));
+    return () => cancelAnimationFrame(frame);
+  }, [disabled]);
 
   const selectedCodes = useMemo(() => new Set(selected.map((s) => s.code)), [selected]);
+  const completedCount = useMemo(
+    () =>
+      selected.filter(({ code }) => {
+        const progress = progressByCode[code];
+        return progress?.total > 0 && progress.ready === progress.total;
+      }).length,
+    [progressByCode, selected],
+  );
+  const selectedFiltered = useMemo(() => {
+    const normalized = query.toLowerCase().trim();
+    if (!normalized) return selected;
+    return selected.filter(
+      (item) =>
+        item.lang.toLowerCase().includes(normalized) ||
+        item.code.toLowerCase().includes(normalized),
+    );
+  }, [query, selected]);
 
   const addLang = (lang, code) => {
     if (selectedCodes.has(code)) return;
-    onChange([...selected, { lang, code }]);
+    onChange?.([...selected, { lang, code }]);
     setQuery('');
   };
 
   const removeLang = (code) => {
-    onChange(selected.filter((s) => s.code !== code));
+    onChange?.(selected.filter((s) => s.code !== code));
   };
 
   const filteredLangs = useMemo(() => {
@@ -72,107 +149,150 @@ export default function MultiLangPicker({
 
   return (
     <div className="relative" ref={dropRef}>
-      <div className="flex flex-wrap gap-[4px] items-center min-h-[28px]">
-        {selected.map((s) => (
-          <span
-            key={s.code}
-            className="inline-flex items-center gap-[4px] px-[8px] py-[2px] bg-[var(--chrome-hover-bg)] border border-solid border-transparent rounded-full [font-family:var(--font-mono)] text-[0.68rem] font-medium text-[color:var(--chrome-fg)] uppercase"
-          >
-            <Globe size={9} />
-            <span>{s.code}</span>
-            {!disabled && (
-              <button
-                type="button"
-                className="bg-transparent border-0 text-[color:var(--chrome-fg-muted)] cursor-pointer p-0 flex items-center rounded-full [transition:color_0.15s] hover:text-danger"
-                onClick={() => removeLang(s.code)}
-                aria-label={`Remove ${s.lang}`}
-              >
-                <X size={8} />
-              </button>
-            )}
-          </span>
-        ))}
-        {!disabled && (
-          <button
-            type="button"
-            className="flex items-center justify-center w-[24px] h-[24px] rounded-full border border-dashed border-transparent bg-transparent text-[color:var(--chrome-fg-muted)] cursor-pointer [transition:all_0.15s] hover:bg-[var(--chrome-hover-bg)] hover:text-[color:var(--chrome-fg)] hover:border-solid"
-            onClick={() => setDropOpen(!dropOpen)}
-            title={t('dub.add_language')}
-          >
-            <Plus size={10} />
-          </button>
-        )}
-      </div>
-
-      {selected.length > 0 && (
-        <div className="[font-family:var(--font-mono)] text-[0.62rem] text-[color:var(--chrome-fg-dim)] mt-[4px]">
+      <button
+        ref={triggerRef}
+        type="button"
+        className="flex min-h-[30px] max-w-full items-center gap-[7px] rounded-[var(--chrome-radius-pill)] border border-transparent bg-[var(--chrome-hover-bg)] px-[9px] py-[4px] text-left text-[color:var(--chrome-fg)] cursor-pointer transition-colors hover:bg-[var(--chrome-accent-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={() => setDropOpen((open) => !open)}
+        disabled={disabled}
+        aria-haspopup="dialog"
+        aria-expanded={dropOpen}
+        aria-controls={dropOpen ? menuId : undefined}
+        aria-label={t('dub.manage_languages')}
+      >
+        <Globe size={11} className="shrink-0" aria-hidden="true" />
+        <span className="truncate text-[0.7rem] font-medium">{t('dub.manage_languages')}</span>
+        <span className="shrink-0 font-mono text-[0.62rem] text-[color:var(--chrome-fg-muted)]">
           {t('dub.languages_selected', { count: selected.length })}
-        </div>
-      )}
+        </span>
+        {selected.length > 0 && (
+          <span className="min-w-0 truncate font-mono text-[0.6rem] text-[color:var(--chrome-fg-dim)]">
+            {t('dub.languages_done')}: {completedCount} · {t('dub.languages_pending')}:{' '}
+            {selected.length - completedCount}
+          </span>
+        )}
+      </button>
 
-      {dropOpen && (
-        <div className="multi-lang__drop">
-          <div className="flex items-center gap-[6px] px-[10px] py-[8px] border-b border-solid border-b-transparent text-[color:var(--chrome-fg-muted)]">
-            <Search size={10} />
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('dub.search_languages')}
-              spellCheck={false}
-              className="flex-1 bg-transparent border-0 outline-none text-[color:var(--chrome-fg)] [font-family:var(--font-sans)] text-[0.78rem]"
-            />
-          </div>
-          <div className="overflow-y-auto flex-1 py-[4px]">
-            {popularFiltered.length > 0 && (
-              <>
-                <div className="[font-family:var(--font-mono)] text-[0.62rem] font-semibold uppercase [letter-spacing:0.04em] text-[color:var(--chrome-fg-dim)] pt-[6px] px-[10px] pb-[2px]">
-                  {t('dub.popular')}
-                </div>
-                {popularFiltered.map((item) => (
-                  <button
-                    key={item.code}
-                    type="button"
-                    className="flex items-center gap-[8px] w-full px-[10px] py-[5px] bg-transparent border-0 text-[color:var(--chrome-fg)] [font-family:var(--font-sans)] text-[0.76rem] cursor-pointer text-left [transition:background_0.1s] hover:bg-[var(--chrome-hover-bg)]"
-                    onClick={() => addLang(item.lang, item.code)}
-                  >
-                    <span className="[font-family:var(--font-mono)] text-[0.68rem] text-[color:var(--chrome-accent)] min-w-[28px] font-semibold">
-                      {item.code}
-                    </span>
-                    <span>{item.lang}</span>
-                  </button>
-                ))}
-              </>
-            )}
-            <div className="[font-family:var(--font-mono)] text-[0.62rem] font-semibold uppercase [letter-spacing:0.04em] text-[color:var(--chrome-fg-dim)] pt-[6px] px-[10px] pb-[2px]">
-              {t('dub.all_languages')}
+      {dropOpen &&
+        !disabled &&
+        createPortal(
+          <div
+            ref={menuRef}
+            id={menuId}
+            className="multi-lang__drop"
+            role="dialog"
+            aria-label={t('dub.manage_languages')}
+            style={
+              menuPos
+                ? {
+                    left: menuPos.left,
+                    width: menuPos.width,
+                    maxHeight: menuPos.maxHeight,
+                    ...(menuPos.bottom != null ? { bottom: menuPos.bottom } : { top: menuPos.top }),
+                  }
+                : { visibility: 'hidden' }
+            }
+          >
+            <div className="flex items-center gap-[6px] px-[10px] py-[8px] border-b border-solid border-b-transparent text-[color:var(--chrome-fg-muted)]">
+              <Search size={10} aria-hidden="true" />
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t('dub.search_languages')}
+                aria-label={t('dub.search_languages')}
+                name="language-search"
+                autoComplete="off"
+                spellCheck={false}
+                className="flex-1 bg-transparent border-0 text-[color:var(--chrome-fg)] [font-family:var(--font-sans)] text-[0.78rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-accent)]"
+              />
             </div>
-            {filteredLangs.slice(0, 50).map((lc) => (
-              <button
-                key={lc.code}
-                type="button"
-                className="flex items-center gap-[8px] w-full px-[10px] py-[5px] bg-transparent border-0 text-[color:var(--chrome-fg)] [font-family:var(--font-sans)] text-[0.76rem] cursor-pointer text-left [transition:background_0.1s] hover:bg-[var(--chrome-hover-bg)]"
-                onClick={() => addLang(lc.label, lc.code)}
-              >
-                <span className="[font-family:var(--font-mono)] text-[0.68rem] text-[color:var(--chrome-accent)] min-w-[28px] font-semibold">
-                  {lc.code}
-                </span>
-                <span>{lc.label}</span>
-              </button>
-            ))}
-            {filteredLangs.length > 50 && (
-              <div className="px-[10px] py-[8px] text-[0.7rem] text-[color:var(--chrome-fg-dim)] text-center">
-                {t('dub.more_to_narrow', { count: filteredLangs.length - 50 })}
+            <div className="overflow-y-auto overscroll-contain flex-1 py-[4px]">
+              {selectedFiltered.length > 0 && (
+                <>
+                  <div className="[font-family:var(--font-mono)] text-[0.62rem] font-semibold uppercase [letter-spacing:0.04em] text-[color:var(--chrome-fg-dim)] pt-[6px] px-[10px] pb-[2px]">
+                    {t('dub.languages_selected', { count: selected.length })}
+                  </div>
+                  {selectedFiltered.map((item) => (
+                    <button
+                      key={item.code}
+                      type="button"
+                      className="flex items-center gap-[8px] w-full px-[10px] py-[5px] bg-transparent border-0 text-[color:var(--chrome-fg)] [font-family:var(--font-sans)] text-[0.76rem] cursor-pointer text-left hover:bg-[var(--chrome-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chrome-accent)]"
+                      style={{ contentVisibility: 'auto', containIntrinsicSize: '30px' }}
+                      onClick={() => removeLang(item.code)}
+                      aria-label={t('common.remove', { term: item.lang })}
+                    >
+                      <Check size={10} className="text-[var(--chrome-accent)]" aria-hidden="true" />
+                      <LanguageFlag code={item.code} />
+                      <span className="min-w-[28px] font-mono text-[0.68rem] font-semibold uppercase text-[var(--chrome-accent)]">
+                        {item.code}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">{item.lang}</span>
+                      <span className="shrink-0 font-mono text-[0.62rem] text-[var(--chrome-fg-dim)]">
+                        {progressByCode[item.code]?.ready || 0}/
+                        {progressByCode[item.code]?.total || 0}
+                      </span>
+                      <X size={10} aria-hidden="true" />
+                    </button>
+                  ))}
+                </>
+              )}
+              {popularFiltered.length > 0 && (
+                <>
+                  <div className="[font-family:var(--font-mono)] text-[0.62rem] font-semibold uppercase [letter-spacing:0.04em] text-[color:var(--chrome-fg-dim)] pt-[6px] px-[10px] pb-[2px]">
+                    {t('dub.popular')}
+                  </div>
+                  {popularFiltered.map((item) => (
+                    <button
+                      key={item.code}
+                      type="button"
+                      className="flex items-center gap-[8px] w-full px-[10px] py-[5px] bg-transparent border-0 text-[color:var(--chrome-fg)] [font-family:var(--font-sans)] text-[0.76rem] cursor-pointer text-left [transition:background_0.1s] hover:bg-[var(--chrome-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chrome-accent)]"
+                      style={{ contentVisibility: 'auto', containIntrinsicSize: '30px' }}
+                      onClick={() => addLang(item.lang, item.code)}
+                    >
+                      <LanguageFlag code={item.code} />
+                      <span className="[font-family:var(--font-mono)] text-[0.68rem] text-[color:var(--chrome-accent)] min-w-[28px] font-semibold">
+                        {item.code}
+                      </span>
+                      <span className="min-w-0 truncate">{item.lang}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+              <div className="[font-family:var(--font-mono)] text-[0.62rem] font-semibold uppercase [letter-spacing:0.04em] text-[color:var(--chrome-fg-dim)] pt-[6px] px-[10px] pb-[2px]">
+                {t('dub.all_languages')}
               </div>
-            )}
-            {filteredLangs.length === 0 && popularFiltered.length === 0 && (
-              <div className="px-[10px] py-[8px] text-[0.7rem] text-[color:var(--chrome-fg-dim)] text-center">
-                {t('dub.no_matches')}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+              {filteredLangs.slice(0, 50).map((lc) => (
+                <button
+                  key={lc.code}
+                  type="button"
+                  className="flex items-center gap-[8px] w-full px-[10px] py-[5px] bg-transparent border-0 text-[color:var(--chrome-fg)] [font-family:var(--font-sans)] text-[0.76rem] cursor-pointer text-left [transition:background_0.1s] hover:bg-[var(--chrome-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--chrome-accent)]"
+                  style={{ contentVisibility: 'auto', containIntrinsicSize: '30px' }}
+                  onClick={() => addLang(lc.label, lc.code)}
+                >
+                  <LanguageFlag code={lc.code} />
+                  <span className="[font-family:var(--font-mono)] text-[0.68rem] text-[color:var(--chrome-accent)] min-w-[28px] font-semibold">
+                    {lc.code}
+                  </span>
+                  <span className="min-w-0 truncate">{lc.label}</span>
+                </button>
+              ))}
+              {filteredLangs.length > 50 && (
+                <div className="px-[10px] py-[8px] text-[0.7rem] text-[color:var(--chrome-fg-dim)] text-center">
+                  {t('dub.more_to_narrow', { count: filteredLangs.length - 50 })}
+                </div>
+              )}
+              {filteredLangs.length === 0 &&
+                popularFiltered.length === 0 &&
+                selectedFiltered.length === 0 && (
+                  <div className="px-[10px] py-[8px] text-[0.7rem] text-[color:var(--chrome-fg-dim)] text-center">
+                    {t('dub.no_matches')}
+                  </div>
+                )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

@@ -15,21 +15,25 @@ Environment variables (`OMNIVOICE_TTS_BACKEND`, `OMNIVOICE_ASR_BACKEND`,
 `OMNIVOICE_LLM_BACKEND`) still win over the UI choice so power-users can pin
 a backend without Settings silently undoing it.
 """
+import logging
 import os
-import re
 import threading
 from time import perf_counter
 
 from fastapi import APIRouter, Depends, HTTPException
+from huggingface_hub import utils as hf_utils
+from huggingface_hub.errors import HFValidationError
 from pydantic import BaseModel
 
-from api.dependencies import require_loopback
+from api.dependencies import require_admin, require_admin_action, require_desktop
 from core import prefs
 from services import tts_backend, asr_backend, llm_backend, translation_engines
 from services.audio_dsp import list_effect_presets
 from api.schemas import EffectPresetsResponse
+from api.public_engine_metadata import public_backends, public_unavailability
 
 router = APIRouter()
+logger = logging.getLogger("omnivoice.engines_api")
 
 _FAMILIES = {
     "tts": (tts_backend, "tts_backend"),
@@ -38,37 +42,47 @@ _FAMILIES = {
 }
 
 
+def _family_payload(family: str, module):
+    """Public inventory plus whether an environment pin owns this family."""
+    return {
+        "active": module.active_backend_id(),
+        "env_override": bool(os.environ.get(f"OMNIVOICE_{family.upper()}_BACKEND")),
+        "backends": public_backends(module.list_backends()),
+    }
+
+def _is_hf_repo_id(value: str) -> bool:
+    """Validate the route's ``owner/repo`` contract in bounded time."""
+    if not isinstance(value, str) or len(value) > 96 or value.count("/") != 1:
+        return False
+    try:
+        hf_utils.validate_repo_id(value)
+    except (HFValidationError, TypeError):
+        return False
+    return True
+
+
 @router.get("/engines")
 def list_all_engines():
     return {
-        "tts": {
-            "active": tts_backend.active_backend_id(),
-            "backends": tts_backend.list_backends(),
-        },
-        "asr": {
-            "active": asr_backend.active_backend_id(),
-            "backends": asr_backend.list_backends(),
-        },
-        "llm": {
-            "active": llm_backend.active_backend_id(),
-            "backends": llm_backend.list_backends(),
-        },
+        "tts": _family_payload("tts", tts_backend),
+        "asr": _family_payload("asr", asr_backend),
+        "llm": _family_payload("llm", llm_backend),
     }
 
 
 @router.get("/engines/tts")
 def list_tts_backends():
-    return {"active": tts_backend.active_backend_id(), "backends": tts_backend.list_backends()}
+    return _family_payload("tts", tts_backend)
 
 
 @router.get("/engines/asr")
 def list_asr_backends():
-    return {"active": asr_backend.active_backend_id(), "backends": asr_backend.list_backends()}
+    return _family_payload("asr", asr_backend)
 
 
 @router.get("/engines/llm")
 def list_llm_backends():
-    return {"active": llm_backend.active_backend_id(), "backends": llm_backend.list_backends()}
+    return _family_payload("llm", llm_backend)
 
 
 @router.get("/engines/effects/presets", response_model=EffectPresetsResponse)
@@ -91,12 +105,18 @@ def list_translation_engines():
     an engine whose Python dependency isn't importable yet.
     """
     return {
-        "engines": translation_engines.list_engines(),
+        "engines": [
+            {**entry, "availability_reason": public_unavailability(entry.get("availability_reason"))}
+            for entry in translation_engines.list_engines()
+        ],
         "sandboxed": translation_engines.is_frozen(),
     }
 
 
-@router.post("/engines/translation/{engine_id}/install")
+@router.post(
+    "/engines/translation/{engine_id}/install",
+    dependencies=[Depends(require_admin)],
+)
 async def install_translation_engine(engine_id: str):
     entry = translation_engines.get_engine(engine_id)
     if not entry:
@@ -132,7 +152,10 @@ async def install_translation_engine(engine_id: str):
     }
 
 
-@router.delete("/engines/translation/{engine_id}")
+@router.delete(
+    "/engines/translation/{engine_id}",
+    dependencies=[Depends(require_admin)],
+)
 async def uninstall_translation_engine(engine_id: str):
     entry = translation_engines.get_engine(engine_id)
     if not entry:
@@ -161,7 +184,7 @@ async def uninstall_translation_engine(engine_id: str):
 # Sidecar engines (dedicated venv + source checkout + weights, isolated from
 # the parent's transformers>=5.3) used to require four manual terminal steps.
 # These routes drive services.sidecar_install: POST starts a resumable
-# background job, GET polls its step-by-step status (the Settings → Engines
+# background job, GET polls its step-by-step status (the Model Catalogue → Engines
 # Install button polls this), DELETE removes an app-managed install.
 #
 # Path namespace: /engines/sidecar/{engine_id}/… — NOT /engines/{engine_id}/…
@@ -171,15 +194,16 @@ async def uninstall_translation_engine(engine_id: str):
 # POST /engines/sonitranslate/install). Mirrors the
 # /engines/translation/{engine_id}/install namespace pattern.
 #
-# Loopback-gated: installing spawns subprocesses (git/uv) and writes to the
-# data directory — only the local desktop frontend may trigger it. The job
-# runs fine in packaged builds: the venv lives under the user data dir, not
-# inside the signed app bundle, and uv resolves via OMNIVOICE_BUNDLED_UV/PATH.
+# Desktop-only: installing spawns git/uv against mutable source and writes an
+# editable environment. An API key does not make that supply-chain path safe to
+# trigger remotely. The job runs fine in packaged builds: the venv lives under
+# the user data dir, not inside the signed app bundle, and uv resolves via
+# OMNIVOICE_BUNDLED_UV/PATH.
 
 
 @router.post(
     "/engines/sidecar/{engine_id}/install",
-    dependencies=[Depends(require_loopback)],
+    dependencies=[Depends(require_admin), Depends(require_desktop)],
 )
 def install_sidecar_engine(engine_id: str):
     """Start (or report) the one-click install for a sidecar engine.
@@ -205,7 +229,7 @@ def install_sidecar_engine(engine_id: str):
 
 @router.get(
     "/engines/sidecar/{engine_id}/install/status",
-    dependencies=[Depends(require_loopback)],
+    dependencies=[Depends(require_admin)],
 )
 def sidecar_install_status(engine_id: str):
     """Step-by-step status of the sidecar install job (poll while running).
@@ -226,7 +250,7 @@ def sidecar_install_status(engine_id: str):
 
 @router.delete(
     "/engines/sidecar/{engine_id}/install",
-    dependencies=[Depends(require_loopback)],
+    dependencies=[Depends(require_admin)],
 )
 def uninstall_sidecar_engine(engine_id: str):
     """Remove an app-managed sidecar install (checkout + venv + weights) and
@@ -257,29 +281,22 @@ def uninstall_sidecar_engine(engine_id: str):
 # frame. Result includes wall-clock latency so the UI can render
 # "1234 ms — pong" inline next to the button.
 #
-# Loopback-gated (T-02-13): only the local desktop frontend may trigger
-# a sidecar spawn through this endpoint.
+# Admin-gated (T-02-13): only the local desktop frontend or an authenticated
+# server-mode administrator may trigger a sidecar spawn through this endpoint.
 
 # Engine instances cached for the lifetime of the FastAPI process so that
 # repeated health checks don't spawn a new SubprocessBackend (each spawn
 # allocates a sidecar venv probe + atexit hook). The cache is keyed by
 # class to survive registry-sandbox tests that rebind ids transiently.
-_ENGINE_INSTANCES: dict[type, object] = {}
+#
+# It now lives in services.tts_backend — the worker executor needs the same
+# warm instances and cannot import an API router without inverting the
+# layering. This name is the SAME dict object, kept so the existing consumers
+# (engine_memory eviction, model_lifecycle inventory/unload) go on working
+# unchanged; rebinding it here would fork the cache in two.
+_ENGINE_INSTANCES: dict[type, object] = tts_backend._ENGINE_INSTANCES
 
-
-def _get_engine_instance(cls):
-    """Return a cached singleton instance of ``cls``.
-
-    SubprocessBackend's ``__init__`` registers an atexit shutdown hook,
-    so re-instantiating per request would leak handler entries (and on
-    real engines, additional sidecar processes the first time the lock
-    is acquired). One instance per process is the right move.
-    """
-    inst = _ENGINE_INSTANCES.get(cls)
-    if inst is None:
-        inst = cls()
-        _ENGINE_INSTANCES[cls] = inst
-    return inst
+_get_engine_instance = tts_backend.get_engine_instance
 
 
 def _resolve_engine_class(engine_id: str):
@@ -301,7 +318,7 @@ def _resolve_engine_class(engine_id: str):
 
 @router.get(
     "/engines/{engine_id}/health",
-    dependencies=[Depends(require_loopback)],
+    dependencies=[Depends(require_admin_action)],
 )
 def engine_health(engine_id: str):
     """Spawn-and-ping a SubprocessBackend; ``is_available()`` for the rest.
@@ -309,10 +326,10 @@ def engine_health(engine_id: str):
     Returns:
         { id, ok, message, latency_ms }
 
-    Never raises through to a 500: if the backend's check throws, the
-    exception is captured into the response body as ``ok=False`` /
-    ``message="ExcType: ..."`` so the UI can render a per-row failure
-    without crashing the panel. Unknown engine ids return 404.
+        Never raises through to a 500: backend diagnostics stay in the local
+        log and the response carries a fixed failure message, so the UI can
+        render a per-row failure without exposing private data. Unknown engine
+        ids return 404.
     """
     cls = _resolve_engine_class(engine_id)
     if cls is None:
@@ -341,16 +358,17 @@ def engine_health(engine_id: str):
         except Exception as exc:
             ok, msg = False, f"{type(exc).__name__}: {exc}"
 
-    # Mask any HF token the engine accidentally leaked into the message
-    # so the response body matches the same redaction guarantee as
-    # ``list_backends()``.
-    from services.tts_backend import _mask_hf_tokens
+    # Engine-owned output can contain much more than shaped HF tokens: local
+    # paths, arbitrary credentials, source lines, or a nested traceback.
+    from core.public_errors import public_engine_health
 
     latency_ms = (perf_counter() - t0) * 1000.0
+    if not ok:
+        logger.warning("Engine health check failed; details withheld")
     return {
         "id": engine_id,
         "ok": bool(ok),
-        "message": _mask_hf_tokens(msg) if isinstance(msg, str) else str(msg),
+        "message": public_engine_health(bool(ok), msg),
         "latency_ms": latency_ms,
     }
 
@@ -374,11 +392,11 @@ def engine_health(engine_id: str):
 #     hanging the Settings panel. The orphaned worker is best-effort daemon.
 #   * A process-wide lock serialises self-tests so a click-storm can't stack
 #     concurrent model loads.
-#   * Only ever on user click (POST) — never on Settings load. Loopback-gated.
+#   * Only ever on user click (POST) — never on Settings load. Admin-gated.
 
 # Deliberately short + ASCII so the synth stays CPU-cheap and the phrase never
 # trips the no-hardcoded-CJK guard.
-_SELFTEST_PHRASE = "OmniVoice engine self test."
+_SELFTEST_PHRASE = "VoiceStudio engine self test."
 _SELFTEST_LOCK = threading.Lock()
 
 
@@ -441,7 +459,7 @@ class SelfTestResponse(BaseModel):
 @router.post(
     "/engines/{engine_id}/selftest",
     response_model=SelfTestResponse,
-    dependencies=[Depends(require_loopback)],
+    dependencies=[Depends(require_admin)],
 )
 def engine_selftest(engine_id: str):
     """Run a bounded, real synthesis on an available in-process TTS engine.
@@ -540,7 +558,11 @@ class SelectEngineResponse(BaseModel):
     routing_reason: str | None = None
 
 
-@router.post("/engines/select", response_model=SelectEngineResponse)
+@router.post(
+    "/engines/select",
+    response_model=SelectEngineResponse,
+    dependencies=[Depends(require_admin)],
+)
 def select_engine(req: SelectEngineRequest):
     """Persist a family's engine pick to prefs.json. Refuses unknown backends,
     backends whose deps aren't installed, AND backends that cannot run on THIS
@@ -571,7 +593,7 @@ def select_engine(req: SelectEngineRequest):
     # #981: mlx-audio multiplexes 7+ curated models behind one backend id —
     # persist the model pick alongside the backend id so the UI can actually
     # select which curated model gets loaded (previously it always defaulted
-    # to Kokoro no matter what the user downloaded in Settings → Models).
+    # to Kokoro no matter what the user downloaded in Model Catalogue → Models).
     if req.family == "tts" and req.backend_id == "mlx-audio" and req.model_id is not None:
         known_keys = tts_backend.MLXAudioBackend.CURATED_MODELS
         # Accept a curated key OR a raw HF repo id ("owner/name") — the same
@@ -579,11 +601,11 @@ def select_engine(req: SelectEngineRequest):
         # Anything else (typo'd key, malformed id) is rejected outright
         # rather than silently persisted as a "custom repo" that then fails
         # to resolve at load time.
-        if req.model_id not in known_keys and not re.fullmatch(r"[\w.-]+/[\w.-]+", req.model_id):
+        if req.model_id not in known_keys and not _is_hf_repo_id(req.model_id):
             raise HTTPException(
                 400,
-                f"Unknown mlx-audio model: {req.model_id!r}. Expected one of "
-                f"{sorted(known_keys)} or a HF repo id like 'owner/name'.",
+                "Unknown mlx-audio model. Expected a curated model key or a "
+                "Hugging Face repo ID like 'owner/name'.",
             )
         prefs.set_("mlx_audio_model_id", req.model_id)
     prefs.set_(pref_key, req.backend_id)

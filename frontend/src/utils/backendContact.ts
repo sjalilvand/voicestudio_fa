@@ -77,9 +77,23 @@ const EN = {
   contact_recent:
     'It was answering {{ago}} ago and then stopped responding — it most likely crashed or was killed mid-request.',
   contact_never: 'It has not answered at all this session — it may never have started.',
-  dev: "Can't reach the local OmniVoice backend. {{contact}} Check the terminal running `bun run dev` for a Python traceback or an exit banner, and the omnivoice.log file in your OmniVoice data folder for the last thing the backend logged.",
+  dev:
+    "Can't reach the local VoiceStudio backend. {{contact}} In `bun run dev` the backend runs " +
+    'with auto-reload, so any file change — including a save while a request was in flight — ' +
+    'restarts it and drops the connection. Retry the action first; if it was a reload, it just ' +
+    'works. If it keeps failing, check the terminal running `bun run dev` for a Python ' +
+    'traceback or an exit banner, and omnivoice.log in your VoiceStudio data folder for the last ' +
+    'thing the backend logged.',
   server:
-    "Can't reach the OmniVoice backend server. {{contact}} Check the server logs for the cause (e.g. `docker logs <container>` or `journalctl`) — and note that if Docker serves this page, the page itself can go down with the backend.",
+    "Can't reach the VoiceStudio backend server. {{contact}} Check the server logs for the cause (e.g. `docker logs <container>` or `journalctl`) — and note that if Docker serves this page, the page itself can go down with the backend.",
+  desktop:
+    "Can't reach the local VoiceStudio backend. {{contact}} Open the crash notice if one appeared, " +
+    'or Settings → Logs → Backend for the last thing it logged — "{{retry}}" restarts it, and ' +
+    '"{{cleanRetry}}" rebuilds its environment if it will not come back.',
+  misrouted:
+    'The server answering {{url}} is not a VoiceStudio backend — it returned its own 404 page. ' +
+    'API requests are landing on the wrong host: check the Backend URL in Settings → Sharing, ' +
+    'or, if a reverse proxy serves this UI, its route for API paths.',
 } as const;
 
 function tr(key: string, vars: Record<string, string>, fallback: string): string {
@@ -106,16 +120,49 @@ export function describeLastContact(nowMs: number = Date.now()): string {
 }
 
 /**
- * Mode-aware give-up message for a transport failure (#1164). Only for
- * non-desktop modes — the desktop copy (crash markers, lifecycle stages,
- * Settings → Logs) stays in api/client.ts, where the shell forensics live.
+ * Mode-aware give-up message for a transport failure (#1164, #1337).
+ *
+ * Every mode now carries the last-contact story, desktop included. It used to
+ * be non-desktop only, and the desktop copy said "it may still be starting up,
+ * or it stopped" — which its own captured data often contradicted: #1337 and
+ * #1378 both recorded the backend answering **2 seconds** before the failure,
+ * and a backend that answered 2s ago is not starting up. Saying so sent
+ * desktop users off to wait and retry instead of at the forensics that would
+ * have told them what happened.
  */
 export function unreachableBackendMessage(
-  mode?: Exclude<DeploymentMode, 'desktop'> | DeploymentMode,
+  mode?: DeploymentMode,
   nowMs: number = Date.now(),
 ): string {
   const m = mode ?? deploymentMode();
   const contact = describeLastContact(nowMs);
+  if (m === 'desktop') {
+    // The buttons this names are themselves translated (French renders
+    // them as "Réessayer" / "Nettoyer et réessayer", Japanese differently
+    // again), so quoting the English labels would send a non-English user
+    // hunting for a button that says something else (CodeRabbit). Resolve
+    // them through the same i18n layer.
+    return tr(
+      'backendUnreachable.desktop',
+      {
+        contact,
+        retry: tr('bootstrap.retry', {}, 'Retry'),
+        cleanRetry: tr('bootstrap.clean_retry', {}, 'Clean & Retry'),
+      },
+      EN.desktop,
+    );
+  }
   if (m === 'dev') return tr('backendUnreachable.dev', { contact }, EN.dev);
   return tr('backendUnreachable.server', { contact }, EN.server);
+}
+
+/**
+ * A 404 answered by something that is not this backend (#1385): a rehosted UI
+ * whose API requests land on its own static host, or a reverse proxy with no
+ * route for API paths. Echoing that server's 404 page ("NOT_FOUND bom1::…")
+ * sends the user chasing a page that never existed — name the routing problem
+ * instead, and where to fix it.
+ */
+export function misroutedBackendMessage(url: string): string {
+  return tr('backendUnreachable.misrouted', { url }, EN.misrouted);
 }

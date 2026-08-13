@@ -1,19 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  BookMarked,
-  BookOpen,
-  BookText,
-  Code,
-  Loader,
-  SlidersHorizontal,
-  SpellCheck,
-  Square,
-  Upload,
-  Users,
-} from 'lucide-react';
-
-import {
   audiobookPlan,
   audiobookGenerate,
   audiobookUploadCover,
@@ -21,29 +8,21 @@ import {
   audiobookImport,
 } from '../api/audiobook';
 import { audioUrl } from '../api/generate';
-import { listEngines } from '../api/engines';
+import { useEngines } from '../api/hooks';
 import { consumeLongformStream } from '../utils/longformStream';
 import { useAppStore } from '../store';
-import VoiceSelector from '../components/VoiceSelector';
-import SearchableSelect from '../components/SearchableSelect';
-import AudiobookOverrides, { overridesToRequest } from '../components/audiobook/AudiobookOverrides';
-import Section from '../components/audiobook/Section';
-import BookDetails from '../components/audiobook/BookDetails';
-import LexiconEditor from '../components/audiobook/LexiconEditor';
+import { overridesToRequest } from '../components/audiobook/AudiobookOverrides';
 import GenerationProgress from '../components/audiobook/GenerationProgress';
 import PlanList from '../components/audiobook/PlanList';
 import AudiobookResult from '../components/audiobook/AudiobookResult';
-import CastPanel from '../components/audiobook/CastPanel';
 import MarkupToolbar from '../components/audiobook/MarkupToolbar';
 import StatsBar from '../components/audiobook/StatsBar';
 import ValidationWarnings from '../components/audiobook/ValidationWarnings';
+import AudiobookHero from '../components/audiobook/AudiobookHero';
+import AudiobookInspector from '../components/audiobook/AudiobookInspector';
 import { useAudiobookLexicon } from '../hooks/useAudiobookLexicon';
 import { parseCastNames, validateScript } from '../utils/audiobookScript';
 import { SAMPLE_AUDIOBOOK_SCRIPT } from '../data/sampleAudiobook';
-import ALL_LANGUAGES from '../languages.json';
-import { POPULAR_LANGS } from '../utils/constants';
-import { Button } from '../ui';
-import { buttonVariants } from '@/components/ui/button.tsx';
 
 // Chrome-mono uppercase form label (was the scoped `.audiobook-tab .field-label`
 // rule; `.field-label` has no global styling, so it's reproduced as utilities).
@@ -82,23 +61,12 @@ export default function AudiobookTab({ profiles = [] }) {
   const setLanguage = (v) => setOutputPrefs({ language: v || 'Auto' });
   const overrides = useAppStore((s) => s.overrides);
   const setLongformOverrides = useAppStore((s) => s.setLongformOverrides);
-  // Show emotion controls only when the active engine understands them
-  // (IndexTTS2). Fetched once on mount; degrades to hidden if the probe fails.
-  const [emotionSupported, setEmotionSupported] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    listEngines()
-      .then((r) => {
-        if (!alive) return;
-        const active = r?.tts?.active;
-        const b = (r?.tts?.backends || []).find((x) => x.id === active);
-        setEmotionSupported(!!b?.supports_emotion);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, []);
+  // Derived from the shared engine cache so a switch elsewhere updates these
+  // controls immediately instead of leaving a stale mount-time snapshot.
+  const { data: engines } = useEngines();
+  const activeTts = engines?.tts?.active;
+  const emotionSupported = !!engines?.tts?.backends?.find((engine) => engine.id === activeTts)
+    ?.supports_emotion;
   const [plan, setPlan] = useState(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -334,7 +302,12 @@ export default function AudiobookTab({ profiles = [] }) {
             setChapters((prev) =>
               prev.map((c, j) =>
                 j === evt.index
-                  ? { ...c, title: evt.title, status: 'failed' }
+                  ? {
+                      ...c,
+                      title: evt.title,
+                      status: 'failed',
+                      error: evt.reason || evt.error || '',
+                    }
                   : j === evt.index + 1 && c.status === 'pending'
                     ? { ...c, status: 'rendering' }
                     : c,
@@ -403,195 +376,81 @@ export default function AudiobookTab({ profiles = [] }) {
   );
 
   return (
-    <div className="audiobook-tab flex flex-col h-full box-border px-[1.5rem] py-[1.25rem] gap-[12px]">
-      <div className="audiobook-tab__head flex flex-wrap items-start justify-between gap-[16px]">
-        <div>
-          <div
-            role="heading"
-            aria-level={2}
-            className="flex items-center gap-[8px] m-0 [font-family:var(--font-serif)] [font-size:var(--text-xl)] [font-weight:var(--weight-semibold)] text-fg"
-          >
-            <BookMarked size={20} /> {t('audiobook.title')}
-          </div>
-          <p className="muted audiobook-tab__sub mt-[2px] text-[var(--text-sm)] text-fg-muted">
-            {t('audiobook.subtitle')}
-          </p>
-        </div>
-        <div className="audiobook-tab__actions flex flex-wrap items-center gap-[8px]">
-          {/* All four use the one shadcn button layout (icon in the leading slot,
-              text in a leading-none span) so the row lines up. Import is a <label>
-              (it wraps the file input) styled the same way — the old inline
-              flex/gap override is what made it ragged. */}
-          <label
-            className={buttonVariants({ variant: 'subtle', size: 'omniMd' })}
-            style={{ cursor: busy ? 'default' : 'pointer' }}
-          >
-            {importing ? <Loader size={14} className="spin" /> : <Upload size={14} />}
-            <span className="leading-none">{t('audiobook.import')}</span>
-            <input
-              type="file"
-              accept=".txt,.md,.epub,.pdf"
-              onChange={onImport}
-              disabled={busy}
-              style={{ display: 'none' }}
-            />
-          </label>
-          <Button
-            variant="subtle"
-            onClick={loadSample}
-            disabled={busy}
-            title={t('audiobook.load_sample_hint')}
-            leading={<BookOpen size={14} />}
-          >
-            {t('audiobook.load_sample')}
-          </Button>
-          <Button variant="subtle" onClick={onPreview} disabled={!canRun} loading={planLoading}>
-            {t('audiobook.preview_plan')}
-          </Button>
-          {generating ? (
-            <Button variant="danger" onClick={onStop} leading={<Square size={14} />}>
-              {t('audiobook.stop')}
-            </Button>
-          ) : (
-            <Button variant="primary" onClick={onCreate} disabled={!canRun}>
-              {t('audiobook.create')}
-            </Button>
-          )}
-        </div>
-      </div>
+    <div className="audiobook-tab flex h-full flex-col box-border px-[1.25rem] py-[1rem] gap-[10px] max-[1120px]:overflow-y-auto">
+      <AudiobookHero
+        t={t}
+        busy={busy}
+        importing={importing}
+        planLoading={planLoading}
+        generating={generating}
+        canRun={canRun}
+        onImport={onImport}
+        onLoadSample={loadSample}
+        onPreview={onPreview}
+        onCreate={onCreate}
+        onStop={onStop}
+      />
 
-      <div className="audiobook-tab__body grid flex-auto grid-cols-[minmax(0,1fr)_minmax(300px,380px)] max-[900px]:grid-cols-1 gap-[16px] min-h-0">
+      <div className="audiobook-tab__body grid flex-auto grid-cols-[minmax(0,1fr)_minmax(440px,500px)] max-[1120px]:grid-cols-1 gap-[14px] min-h-0">
         {/* Left: script editor fills the height */}
-        <div className="audiobook-tab__script flex flex-col min-h-0 gap-[6px]">
-          <label className={FIELD_LABEL}>{t('audiobook.script')}</label>
-          <MarkupToolbar t={t} textareaRef={textareaRef} text={text} setText={setText} />
-          <textarea
-            ref={textareaRef}
-            className="input-base"
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              if (warningsDismissed) setWarningsDismissed(false);
-            }}
-            onKeyDown={onScriptKeyDown}
-            placeholder={t('audiobook.script_placeholder')}
-            aria-label={t('audiobook.script')}
-          />
-          {text.trim() ? (
-            <StatsBar t={t} text={text} />
-          ) : (
-            <p className="muted text-[var(--text-sm)] text-fg-muted m-0">
-              {t('audiobook.empty_hint')}
-            </p>
-          )}
+        <div className="audiobook-tab__script flex flex-col min-h-0 gap-[7px]">
+          <div className="flex min-h-[18px] items-center justify-between gap-[12px] px-[4px]">
+            <label className={FIELD_LABEL}>{t('audiobook.script')}</label>
+            {text.trim() ? <StatsBar t={t} text={text} /> : null}
+          </div>
+          <div className="audiobook-tab__manuscript flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px]">
+            <div className="border-b border-transparent px-[10px] py-[7px]">
+              <MarkupToolbar t={t} textareaRef={textareaRef} text={text} setText={setText} />
+            </div>
+            <textarea
+              ref={textareaRef}
+              className="input-base"
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                if (warningsDismissed) setWarningsDismissed(false);
+              }}
+              onKeyDown={onScriptKeyDown}
+              placeholder={t('audiobook.script_placeholder')}
+              aria-label={t('audiobook.script')}
+            />
+            {!text.trim() && (
+              <p className="m-0 border-t border-transparent px-[14px] py-[9px] text-[var(--text-sm)] text-fg-muted">
+                {t('audiobook.empty_hint')}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Right: settings + results, scrolls independently */}
-        <div className="audiobook-tab__side flex flex-col gap-[12px] min-h-0 overflow-y-auto max-[900px]:overflow-visible pr-[4px]">
-          <div className="audiobook-tab__field flex flex-col gap-[4px]">
-            <label className={FIELD_LABEL}>{t('audiobook.default_voice')}</label>
-            <VoiceSelector
-              value={defaultVoice}
-              onChange={setDefaultVoice}
-              profiles={profiles}
-              defaultLabel={t('audiobook.engine_default')}
-            />
-          </div>
-
-          <div className="audiobook-tab__field flex flex-col gap-[4px]">
-            <label className={FIELD_LABEL}>{t('audiobook.language')}</label>
-            <SearchableSelect
-              value={language}
-              options={ALL_LANGUAGES}
-              popular={POPULAR_LANGS}
-              recentsKey="omnivoice.recents.audiobookLang"
-              onChange={setLanguage}
-            />
-          </div>
-
-          {/* Cast — one row per distinct [voice:NAME] in the script (#1217).
-              Open by default so the multi-voice mapping is discoverable the
-              moment a script uses [voice:…]; hidden entirely when it doesn't. */}
-          {castNames.length > 0 && (
-            <Section title={t('audiobook.cast')} icon={<Users size={13} />} defaultOpen>
-              <CastPanel
-                t={t}
-                castNames={castNames}
-                voiceCast={voiceCast}
-                setVoiceCast={setVoiceCast}
-                profiles={profiles}
-              />
-            </Section>
-          )}
-
-          <AudiobookOverrides
+        <div className="audiobook-tab__side flex flex-col gap-[9px] min-h-0 overflow-y-auto max-[1120px]:overflow-visible rounded-[12px] bg-[var(--color-bg-elev-2)] p-[10px]">
+          <AudiobookInspector
             t={t}
+            profiles={profiles}
+            defaultVoice={defaultVoice}
+            setDefaultVoice={setDefaultVoice}
+            language={language}
+            setLanguage={setLanguage}
+            format={format}
+            setFormat={setFormat}
+            loudness={loudness}
+            setLoudness={setLoudness}
+            castNames={castNames}
+            voiceCast={voiceCast}
+            setVoiceCast={setVoiceCast}
             overrides={overrides}
-            onChange={setLongformOverrides}
+            setOverrides={setLongformOverrides}
             emotionSupported={emotionSupported}
+            coverPreview={coverPreview}
+            onCoverPick={onCoverPick}
+            clearCover={clearCover}
+            meta={meta}
+            setMetaField={setMetaField}
+            lex={lex}
+            setLexRow={setLexRow}
+            addLexRow={addLexRow}
+            removeLexRow={removeLexRow}
           />
-
-          {/* Output — format + loudness. Open by default so a first-timer sees a
-              tangible setting next to the always-on voice/language above. */}
-          <Section title={t('audiobook.output')} icon={<SlidersHorizontal size={13} />} defaultOpen>
-            <div className="grid grid-cols-[1fr_1fr] gap-[8px]">
-              <div className="flex flex-col gap-[4px]">
-                <label className={FIELD_LABEL}>{t('audiobook.format')}</label>
-                <select
-                  className="input-base"
-                  value={format}
-                  onChange={(e) => setFormat(e.target.value)}
-                  aria-label={t('audiobook.format')}
-                >
-                  <option value="m4b">{t('audiobook.format_m4b')}</option>
-                  <option value="mp3">{t('audiobook.format_mp3')}</option>
-                </select>
-              </div>
-              <div className="flex flex-col gap-[4px]">
-                <label className={FIELD_LABEL}>{t('audiobook.loudness')}</label>
-                <select
-                  className="input-base"
-                  value={loudness}
-                  onChange={(e) => setLoudness(e.target.value)}
-                  aria-label={t('audiobook.loudness')}
-                >
-                  <option value="off">{t('audiobook.loudness_off')}</option>
-                  <option value="acx">{t('audiobook.loudness_acx')}</option>
-                  <option value="podcast">{t('audiobook.loudness_podcast')}</option>
-                </select>
-              </div>
-            </div>
-          </Section>
-
-          {/* Book details — cover + embedded metadata. Collapsed by default. */}
-          <Section title={t('audiobook.details')} icon={<BookText size={13} />}>
-            <BookDetails
-              t={t}
-              coverPreview={coverPreview}
-              onCoverPick={onCoverPick}
-              clearCover={clearCover}
-              meta={meta}
-              setMetaField={setMetaField}
-            />
-          </Section>
-
-          {/* Pronunciation lexicon — collapsed by default. */}
-          <Section title={t('audiobook.lexicon')} icon={<SpellCheck size={13} />}>
-            <LexiconEditor
-              t={t}
-              lex={lex}
-              setLexRow={setLexRow}
-              addLexRow={addLexRow}
-              removeLexRow={removeLexRow}
-            />
-          </Section>
-
-          {/* Markup quick reference — collapsed by default. */}
-          <Section title={t('audiobook.markup_help')} icon={<Code size={13} />}>
-            <p className="muted" style={{ fontSize: '0.72rem', lineHeight: 1.6 }}>
-              {t('audiobook.markup_hint')}
-            </p>
-          </Section>
 
           {!warningsDismissed && !generating && (
             <ValidationWarnings

@@ -90,6 +90,36 @@ def get_model_catalog() -> ModelCatalog:
 
 # ── Platform Detection ─────────────────────────────────────────────────────
 
+def _target_worker():
+    """Selected live remote worker, or None when the catalog targets local."""
+    try:
+        from worker import routing, service  # noqa: PLC0415
+
+        decision = routing.decide()
+        plane = service.control_plane
+        return plane.pool.get(decision.worker_id) if decision.remote and plane.pool else None
+    except Exception:
+        return None
+
+
+def _target_host() -> dict | None:
+    """Selected remote worker host, or None when the catalog targets local."""
+    live = _target_worker()
+    return dict(live.record.host or {}) if live is not None else None
+
+
+def _target_repo_inventory() -> tuple[str, set[str]] | None:
+    """Selected worker id and the catalog repositories it reports on disk."""
+    live = _target_worker()
+    if live is None:
+        return None
+    downloaded: set[str] = set()
+    for capability in live.record.capabilities or []:
+        if capability.get("downloaded"):
+            downloaded.update(str(repo) for repo in capability.get("repo_ids") or [])
+    return live.id, downloaded
+
+
 def _current_platform_tags() -> list[str]:
     """Return platform tags that the current host supports.
 
@@ -100,6 +130,25 @@ def _current_platform_tags() -> list[str]:
     ``rocm`` (AMD HIP builds), and ``cpu`` (no GPU acceleration at all —
     Apple Silicon is NOT tagged cpu; it curates via ``darwin-arm64``).
     """
+    target = _target_host()
+    if target is not None:
+        target_os = {"windows": "win32", "darwin": "darwin"}.get(
+            str(target.get("os") or "").lower(), "linux"
+        )
+        arch = str(target.get("arch") or "").lower()
+        arch = {"amd64": "x86_64", "aarch64": "arm64"}.get(arch, arch)
+        tags = [target_os, f"{target_os}-{arch}"]
+        backend = ""
+        if target.get("gpus"):
+            backend = str(target["gpus"][0].get("backend") or "").lower()
+        if backend:
+            tags.append(backend)
+            if backend == "rocm":
+                tags.append("cuda")
+        if not backend and not (target_os == "darwin" and arch == "arm64"):
+            tags.append("cpu")
+        return tags
+
     tags = [sys.platform]
     arch = _platform.machine()
     tags.append(f"{sys.platform}-{arch}")
@@ -238,7 +287,7 @@ def _hub_cache_roots() -> list[str]:
     HF stores repos under ``$HF_HUB_CACHE`` (== ``$HF_HOME/hub`` by default). When
     only ``HF_HOME`` (or the ``~/.cache/huggingface`` default) is known, the repos
     live under the ``hub`` subdir — so we probe both ``<dir>`` (the
-    ``HF_HUB_CACHE``-is-set case, e.g. OmniVoice's Windows short cache) and
+    ``HF_HUB_CACHE``-is-set case, e.g. VoiceStudio's Windows short cache) and
     ``<dir>/hub`` (the ``HF_HOME``-only case). Without this the WinError-448
     fallback would look one level too high and miss the cache (CodeRabbit #137).
     """
@@ -455,35 +504,52 @@ def list_models():
     Uses a 10 s response cache to avoid repeated ``scan_cache_dir()`` disk
     walks when the frontend polls.
     """
-    cached_response = _cached("models")
+    platform_tags = _current_platform_tags()
+    remote_inventory = _target_repo_inventory()
+    target_key = remote_inventory[0] if remote_inventory else "local"
+    cache_key = "models:" + target_key + ":" + ",".join(sorted(platform_tags))
+    cached_response = _cached(cache_key)
     if cached_response is not None:
         return cached_response
 
     cached_by_repo: dict[str, dict] = {}
-    try:
-        from huggingface_hub import scan_cache_dir
-        info = scan_cache_dir()
-        for entry in info.repos:
-            cached_by_repo[entry.repo_id] = {
-                "size_on_disk": entry.size_on_disk,
-                "last_accessed": entry.last_accessed,
-                "nb_files": entry.nb_files,
-            }
-    except Exception as e:
-        # WinError-448 fallback (#117/#118): use a direct disk scan so installed
-        # models still show as installed instead of offering a re-download.
-        logger.warning("scan_cache_dir failed (%s); using disk fallback", e)
-        cached_by_repo = _scan_cache_on_disk()
+    if remote_inventory is not None:
+        for model in KNOWN_MODELS:
+            if model["repo_id"] in remote_inventory[1]:
+                cached_by_repo[model["repo_id"]] = {
+                    "size_on_disk": int(float(model.get("size_gb") or 0) * _GIB),
+                    "last_accessed": None,
+                    "nb_files": 0,
+                }
+    else:
+        try:
+            from huggingface_hub import scan_cache_dir
+            info = scan_cache_dir()
+            for entry in info.repos:
+                cached_by_repo[entry.repo_id] = {
+                    "size_on_disk": entry.size_on_disk,
+                    "last_accessed": entry.last_accessed,
+                    "nb_files": entry.nb_files,
+                }
+        except Exception as e:
+            # WinError-448 fallback (#117/#118): use a direct disk scan so installed
+            # models still show as installed instead of offering a re-download.
+            logger.warning("scan_cache_dir failed (%s); using disk fallback", e)
+            cached_by_repo = _scan_cache_on_disk()
 
     out = []
-    host_tags = set(_current_platform_tags())
+    host_tags = set(platform_tags)
     for m in KNOWN_MODELS:
         cached = cached_by_repo.get(m["repo_id"])
-        on_disk = cached is not None and cached["size_on_disk"] > 0
+        on_disk = (
+            m["repo_id"] in remote_inventory[1]
+            if remote_inventory is not None
+            else cached is not None and cached["size_on_disk"] > 0
+        )
         # A size-positive cache can still be a truncated download (config landed,
         # weight shard didn't). Treat that as not-installed + incomplete so the
         # wizard re-offers the download instead of stranding the user (#622).
-        incomplete = on_disk and not cache_is_complete(m)
+        incomplete = on_disk and remote_inventory is None and not cache_is_complete(m)
         out.append({
             **m,
             "installed": on_disk and not incomplete,
@@ -498,14 +564,14 @@ def list_models():
     response = {
         "models": out,
         "total_installed_bytes": sum(m["size_on_disk_bytes"] for m in out),
-        "hf_cache_dir": hf_cache_dir(),
+        "hf_cache_dir": "" if remote_inventory is not None else hf_cache_dir(),
         # Free space on the cache volume, so the Model Store header can warn
         # BEFORE an "Install all" overruns the disk (pairs with the per-install
         # disk_space_error guard in setup/download.py).
-        "disk_free_gb": round(disk_free_bytes() / _GIB, 1),
-        "platform_tags": _current_platform_tags(),
+        "disk_free_gb": None if remote_inventory is not None else round(disk_free_bytes() / _GIB, 1),
+        "platform_tags": platform_tags,
     }
-    _set_cache("models", response)
+    _set_cache(cache_key, response)
     return response
 
 
@@ -518,18 +584,19 @@ def recommendations():
     TTS model is required; the ASR picks here are the optional "best for your
     system" set the wizard and Settings surface for on-demand install.
     """
-    is_mac_arm = sys.platform == "darwin" and _platform.machine() == "arm64"
-    is_mac_intel = sys.platform == "darwin" and _platform.machine() == "x86_64"
-    is_linux = sys.platform.startswith("linux")
-    is_windows = sys.platform == "win32"
-
     tags = set(_current_platform_tags())
+    target_os = "darwin" if "darwin" in tags else "win32" if "win32" in tags else "linux"
+    target_arch = next((tag.split("-", 1)[1] for tag in tags if tag.startswith(target_os + "-")), _platform.machine())
+    is_mac_arm = target_os == "darwin" and target_arch == "arm64"
+    is_mac_intel = target_os == "darwin" and target_arch == "x86_64"
+    is_linux = target_os == "linux"
+    is_windows = target_os == "win32"
     has_cuda = "cuda" in tags and "rocm" not in tags
     has_rocm = "rocm" in tags
 
     # Device label — used as the card title.
     if is_mac_arm:
-        device_label = f"Apple Silicon ({_platform.machine()})"
+        device_label = f"Apple Silicon ({target_arch})"
     elif is_mac_intel:
         device_label = "macOS Intel (x86_64)"
     elif is_windows:
@@ -537,7 +604,7 @@ def recommendations():
     elif is_linux:
         device_label = "Linux x64" + (" + CUDA" if has_cuda else " + ROCm" if has_rocm else "")
     else:
-        device_label = f"{sys.platform} / {_platform.machine()}"
+        device_label = f"{target_os} / {target_arch}"
 
     # Curated preset for this host, in catalog order (required entries lead).
     curated = [
@@ -547,51 +614,57 @@ def recommendations():
 
     if is_mac_arm:
         rationale = (
-            "Apple Silicon preset: OmniVoice (required) covers multilingual TTS + "
+            "Apple Silicon preset: VoiceStudio (required) covers multilingual TTS + "
             "cloning on its own. The optional picks are Metal-native: MLX Whisper "
             "large-v3 for dubbing/transcription, Whisper Turbo (MLX) + Parakeet TDT "
             "v3 for live dictation, Kokoro + KittenTTS for instant English TTS."
         )
     elif has_cuda:
         rationale = (
-            "NVIDIA preset: OmniVoice (required) runs standalone. Optional ASR picks "
+            "NVIDIA preset: VoiceStudio (required) runs standalone. Optional ASR picks "
             "are CUDA-accelerated via CTranslate2 — Whisper large-v3 for dubbing "
             "(best word timestamps), Turbo for 5× faster transcription, Parakeet TDT "
             "v3 for live dictation. KittenTTS adds CPU-realtime English."
         )
     elif has_rocm:
         rationale = (
-            "AMD/ROCm preset: OmniVoice (required) runs standalone. CTranslate2 has "
+            "AMD/ROCm preset: VoiceStudio (required) runs standalone. CTranslate2 has "
             "no ROCm backend, so the PyTorch Whisper large-v3 build is the "
             "GPU-accelerated ASR route; faster-whisper works on CPU, and Parakeet "
             "TDT v3 handles live dictation."
         )
     else:
         rationale = (
-            "CPU preset: OmniVoice (required) runs standalone. Optional picks favour "
+            "CPU preset: VoiceStudio (required) runs standalone. Optional picks favour "
             "speed on CPU — Whisper large-v3 (int8) for accuracy, Turbo when speed "
             "matters, Parakeet TDT v3 (int8 ONNX) for live dictation, KittenTTS for "
             "instant English TTS."
         )
 
+    remote_inventory = _target_repo_inventory()
     cached_ids: set[str] = set()
-    try:
-        from huggingface_hub import scan_cache_dir
-        info = scan_cache_dir()
-        cached_ids = {
-            entry.repo_id for entry in info.repos if entry.size_on_disk > 0
-        }
-    except Exception as e:
-        # WinError-448 fallback (#117/#118): recommend based on the disk scan.
-        logger.debug("scan_cache_dir failed (%s); using disk fallback", e)
-        cached_ids = set(_scan_cache_on_disk().keys())
+    if remote_inventory is not None:
+        cached_ids = remote_inventory[1]
+    else:
+        try:
+            from huggingface_hub import scan_cache_dir
+            info = scan_cache_dir()
+            cached_ids = {
+                entry.repo_id for entry in info.repos if entry.size_on_disk > 0
+            }
+        except Exception as e:
+            # WinError-448 fallback (#117/#118): recommend based on the disk scan.
+            logger.debug("scan_cache_dir failed (%s); using disk fallback", e)
+            cached_ids = set(_scan_cache_on_disk().keys())
 
     entries = []
     for meta in curated:
         rid = meta["repo_id"]
         # Mirror /models: a truncated cache (weights missing) is not installed, so
         # the wizard counts it toward the remaining download instead of "all set".
-        installed = rid in cached_ids and cache_is_complete(meta)
+        installed = rid in cached_ids and (
+            remote_inventory is not None or cache_is_complete(meta)
+        )
         entries.append({
             "repo_id": rid,
             "label": meta.get("label", rid),
@@ -607,8 +680,8 @@ def recommendations():
 
     return {
         "device": {
-            "os": sys.platform,
-            "arch": _platform.machine(),
+            "os": target_os,
+            "arch": target_arch,
             "is_mac_arm": is_mac_arm,
             "is_mac_intel": is_mac_intel,
             "is_linux": is_linux,

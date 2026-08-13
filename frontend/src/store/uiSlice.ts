@@ -12,6 +12,7 @@
  * to the launchpad rather than half-load a stale project state.
  */
 import type { StateCreator } from 'zustand';
+import type { EngineFamily } from '../api/types';
 
 export type AppMode =
   | 'launchpad'
@@ -28,7 +29,12 @@ export type AppMode =
   | 'tools'
   | 'batch'
   | 'contact'
+  | 'catalogue'
   | 'settings';
+
+/** Which pane the Model Catalogue workspace opens on. */
+export type CatalogueTab = 'engines' | 'models';
+export type CatalogueTarget = CatalogueTab | { pane?: CatalogueTab; family?: EngineFamily };
 
 /**
  * The Voice workspace's "Define voice" method (was the Clone/Design tab
@@ -38,6 +44,14 @@ export type AppMode =
 type DefineMethod = 'audio' | 'design';
 
 type SidebarTab = 'projects' | 'history' | 'downloads';
+
+/**
+ * Which navigation skin renders the workspace switcher:
+ *  - 'rail': the vertical icon rail down the window edge (default)
+ *  - 'tabs': browser-style tabs in the title bar
+ * Both render `components/navItems.js`; see `TitleTabs.jsx`.
+ */
+export type NavStyle = 'rail' | 'tabs';
 
 export interface UiSlice {
   mode: AppMode;
@@ -61,11 +75,24 @@ export interface UiSlice {
    * `pendingProfileId`.
    */
   pendingSettingsTab: string | null;
+  /**
+   * One-shot hand-off for "open the Model Catalogue on a specific pane" — the
+   * catalogue twin of `pendingSettingsTab`, used by the Settings pointers that
+   * replaced the old Engines / Model Store panels.
+   */
+  pendingCatalogueTab: CatalogueTab | null;
+  /** Optional engine family to focus after entering the catalogue. */
+  pendingCatalogueFamily: EngineFamily | null;
   isSidebarCollapsed: boolean;
   isSidebarProjectsCollapsed: boolean;
   sidebarTab: SidebarTab;
   showCheatsheet: boolean;
   uiScale: number;
+  /** True after the first-start scale check has been confirmed. */
+  uiScaleConfigured: boolean;
+  /** Transient: an unconfirmed first-start scale is being previewed. */
+  uiScalePreviewed: boolean;
+  navStyle: NavStyle;
 
   setMode: (mode: AppMode) => void;
   setDefineMethod: (method: DefineMethod) => void;
@@ -74,13 +101,20 @@ export interface UiSlice {
   setModeBeforeVoice: (mode: AppMode | null) => void;
   setPendingProfileId: (id: string | null) => void;
   setPendingSettingsTab: (tab: string | null) => void;
+  setPendingCatalogueTab: (tab: CatalogueTab | null) => void;
+  setPendingCatalogueFamily: (family: EngineFamily | null) => void;
   /** Navigate to Settings on a specific tab in one call. */
   openSettingsTab: (tab: string) => void;
+  /** Navigate to the Model Catalogue on a specific pane in one call. */
+  openCatalogue: (target?: CatalogueTarget) => void;
   setIsSidebarCollapsed: (collapsed: boolean) => void;
   setIsSidebarProjectsCollapsed: (collapsed: boolean) => void;
   setSidebarTab: (tab: SidebarTab) => void;
   setShowCheatsheet: (open: boolean | ((prev: boolean) => boolean)) => void;
   setUiScale: (scale: number) => void;
+  setUiScaleConfigured: (configured: boolean) => void;
+  setUiScalePreviewed: (previewed: boolean) => void;
+  setNavStyle: (style: NavStyle) => void;
 
   /** Jump to the voice-profile page, remembering what mode you were on. */
   openVoiceProfile: (id: string) => void;
@@ -97,6 +131,8 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (set, get) 
   modeBeforeVoice: null,
   pendingProfileId: null,
   pendingSettingsTab: null,
+  pendingCatalogueTab: null,
+  pendingCatalogueFamily: null,
   isSidebarCollapsed: false,
   isSidebarProjectsCollapsed: false,
   sidebarTab: 'projects',
@@ -104,6 +140,11 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (set, get) 
   // 100% by default — the app renders at native size out of the box; users
   // who prefer larger UI pick their scale in Settings → Appearance (persisted).
   uiScale: 1.0,
+  uiScaleConfigured: false,
+  uiScalePreviewed: false,
+  // The icon rail is the out-of-the-box navigation; titlebar tabs are opt-in
+  // from Settings → Appearance and persist like the other chrome preferences.
+  navStyle: 'rail',
 
   setMode: (mode) => set({ mode }),
   setDefineMethod: (method) => set({ defineMethod: method }),
@@ -112,7 +153,14 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (set, get) 
   setModeBeforeVoice: (mode) => set({ modeBeforeVoice: mode }),
   setPendingProfileId: (id) => set({ pendingProfileId: id }),
   setPendingSettingsTab: (tab) => set({ pendingSettingsTab: tab }),
+  setPendingCatalogueTab: (tab) => set({ pendingCatalogueTab: tab }),
+  setPendingCatalogueFamily: (family) => set({ pendingCatalogueFamily: family }),
   openSettingsTab: (tab) => set({ pendingSettingsTab: tab, mode: 'settings' }),
+  openCatalogue: (target = 'engines') => {
+    const { pane = 'engines', family = null } =
+      typeof target === 'string' ? { pane: target } : target;
+    set({ pendingCatalogueTab: pane, pendingCatalogueFamily: family, mode: 'catalogue' });
+  },
   setIsSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
   setIsSidebarProjectsCollapsed: (collapsed) => set({ isSidebarProjectsCollapsed: collapsed }),
   setSidebarTab: (tab) => set({ sidebarTab: tab }),
@@ -122,6 +170,9 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (set, get) 
         typeof open === 'function' ? (open as (p: boolean) => boolean)(s.showCheatsheet) : open,
     })),
   setUiScale: (scale) => set({ uiScale: scale }),
+  setUiScaleConfigured: (configured) => set({ uiScaleConfigured: configured }),
+  setUiScalePreviewed: (previewed) => set({ uiScalePreviewed: previewed }),
+  setNavStyle: (style) => set({ navStyle: style }),
 
   openVoiceProfile: (id) => {
     const prev = get().mode;

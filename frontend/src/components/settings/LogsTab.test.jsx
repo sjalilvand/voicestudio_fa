@@ -73,6 +73,9 @@ describe('LogsTab', () => {
     expect(box).toHaveAttribute('tabindex', '0');
     expect(box).toHaveAttribute('role', 'log');
     expect(box).toHaveAccessibleName('Logs');
+    expect(box).toHaveClass('flex-1');
+    expect(box).toHaveClass('overflow-auto');
+    expect(box).not.toHaveClass('max-h-[280px]');
   });
 
   it('scrolls to the newest entries when logs load', () => {

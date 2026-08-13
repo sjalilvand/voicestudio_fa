@@ -131,15 +131,15 @@ def _isolated_engine_hint(streak: int) -> str:
         "%d consecutive ASR transcribe timeouts this session — pool resets are "
         "not recovering the hang. Recommend switching the ASR engine to "
         "'Faster-Whisper (crash-isolated subprocess)' [faster-whisper-isolated] "
-        "in Settings → Engines. Not switching automatically (#730).", streak,
+        "in Model Catalogue → Engines. Not switching automatically (#730).", streak,
     )
     return (
         f"This is {streak} transcribe timeouts in a row this session, so pool "
         "resets aren't recovering the underlying hang. Recommended: switch the "
         "ASR engine to 'Faster-Whisper (crash-isolated subprocess)' "
-        "(faster-whisper-isolated) in Settings → Engines — it runs "
+        "(faster-whisper-isolated) in Model Catalogue → Engines — it runs "
         "transcription in a separate process that can be force-killed to "
-        "reclaim a hung transcribe and its VRAM. OmniVoice never switches "
+        "reclaim a hung transcribe and its VRAM. VoiceStudio never switches "
         "engines automatically."
     )
 
@@ -181,8 +181,8 @@ async def run_transcribe_guarded(executor, fn, *, what: str = "ASR",
             "available compute. Most often the GPU is VRAM-starved: the resident "
             "TTS model and a large ASR model (large-v3) contend for memory. "
             "Capacity was restored automatically, but for a durable fix Flush the "
-            "TTS model to free VRAM, pick a smaller ASR model in Settings → "
-            f"Models, or set ASR to CPU. (Raise {timeout_env} "
+            "TTS model to free VRAM, pick a smaller ASR model in "
+            f"Model Catalogue → Models, or set ASR to CPU. (Raise {timeout_env} "
             "for very long transcribes.)"
         )
         hint = _isolated_engine_hint(streak)
@@ -212,8 +212,32 @@ def _is_compute_type_error(msg: str) -> bool:
     return "compute type" in low or "efficient float16" in low
 
 
+def _ctranslate2_cudnn_ok() -> tuple[bool, str]:
+    """Availability gate for the two CTranslate2 engines (WhisperX, faster-whisper).
+
+    Importing them proves nothing about cuDNN 8: CTranslate2 only reaches for it
+    when it builds a CUDA model, and if it is missing the library prints
+    ``Could not locate cudnn_ops_infer64_8.dll`` and ``__fastfail``s — taking the
+    whole backend down with 0xC0000409, no exception, no traceback, nothing to
+    fall back from (#1371). The shell restarts the backend, the user retries,
+    and it dies again.
+
+    So ask *before* selecting the engine, and let ``_auto_detect`` fall through
+    to pytorch-whisper — which runs on torch's own cuDNN 9 stack and exists for
+    exactly this case. Same shape as the #692 exec-stack handling: a native
+    library we cannot load makes the engine unavailable, not fatal.
+    """
+    try:
+        from core.cudnn8 import ctranslate2_cudnn_status
+
+        return ctranslate2_cudnn_status()
+    except Exception as e:  # noqa: BLE001 — a broken probe must not block ASR
+        logger.debug("cuDNN 8 probe unavailable (%s) — assuming usable", e)
+        return True, "ready"
+
+
 def _decode_audio_16k_mono(audio_path: str):
-    """Decode `audio_path` to a 16 kHz mono float32 waveform using OmniVoice's
+    """Decode `audio_path` to a 16 kHz mono float32 waveform using VoiceStudio's
     *validated* ffmpeg, instead of whisperx.load_audio's bare ``"ffmpeg"`` PATH
     lookup.
 
@@ -240,7 +264,7 @@ def _decode_audio_16k_mono(audio_path: str):
     if not ffmpeg:
         raise RuntimeError(
             "Cannot transcribe: ffmpeg is missing or not runnable. Install "
-            "ffmpeg (or let OmniVoice's bundled binary download), then retry. "
+            "ffmpeg (or let VoiceStudio's bundled binary download), then retry. "
             "On Windows a '[WinError 193]' here means the ffmpeg binary is "
             "corrupt or the wrong architecture — reinstall it or clear the "
             "imageio-ffmpeg cache."
@@ -366,7 +390,7 @@ def _harden_speechbrain_lazy_imports() -> None:
         except AttributeError:
             _warnings.warn(
                 "Failed to inspect frame to check if we should ignore importing a "
-                "module lazily (OmniVoice cross-platform guard)."
+                "module lazily (VoiceStudio cross-platform guard)."
             )
         if importer_frame is not None:
             # Normalise BOTH separators explicitly (not os.path.basename, which is
@@ -576,7 +600,6 @@ class WhisperXBackend(ASRBackend):
     def is_available(cls) -> tuple[bool, str]:
         try:
             import whisperx  # noqa: F401
-            return True, "ready"
         except ImportError as e:
             return False, f"whisperx not installed: {e}"
         except Exception as e:  # noqa: BLE001
@@ -586,6 +609,7 @@ class WhisperXBackend(ASRBackend):
             # availability probe must REPORT 'unusable here', never raise, so
             # engine selection falls back instead of crashing the ASR preflight.
             return False, f"whisperx failed to load ({type(e).__name__}): {e}"
+        return _ctranslate2_cudnn_ok()
 
     def ensure_loaded(self) -> None:
         # Surface a whisperx/CTranslate2/torch load failure at preflight (once,
@@ -850,7 +874,7 @@ class WhisperXBackend(ASRBackend):
         import whisperx  # used for whisperx.align() below
         self._ensure_asr()
         logger.info("whisperx transcribing %s (word_timestamps=%s)", audio_path, word_timestamps)
-        # Decode via OmniVoice's validated ffmpeg, NOT whisperx.load_audio's bare
+        # Decode via VoiceStudio's validated ffmpeg, NOT whisperx.load_audio's bare
         # "ffmpeg" PATH lookup which yields [WinError 193] -> "no segments" on
         # Windows (#479). Same 16 kHz mono s16le array whisperx expects.
         audio = _decode_audio_16k_mono(audio_path)
@@ -939,7 +963,6 @@ class FasterWhisperBackend(ASRBackend):
     def is_available(cls) -> tuple[bool, str]:
         try:
             import faster_whisper  # noqa: F401
-            return True, "ready"
         except ImportError as e:
             return False, f"faster-whisper not installed: {e}"
         except Exception as e:  # noqa: BLE001
@@ -947,6 +970,7 @@ class FasterWhisperBackend(ASRBackend):
             # hardened kernels / newer glibc ("cannot enable executable stack",
             # #692) — an OSError. Report unavailable so we fall back, not crash.
             return False, f"faster-whisper failed to load ({type(e).__name__}): {e}"
+        return _ctranslate2_cudnn_ok()
 
     def _ensure_model(self):
         if self._model is not None:
@@ -1132,8 +1156,20 @@ class MLXWhisperBackend(ASRBackend):
             "MLX Whisper transcribing %s (model=%s, word_timestamps=%s)",
             audio_path, self._model_name, word_timestamps,
         )
+        # Decode once here, rather than handing mlx_whisper a path. Given a
+        # path it calls whisper.audio.load_audio, which shells out to a bare
+        # "ffmpeg" PATH lookup -- the same lookup the WhisperX backend was
+        # moved off in #479, and one that cannot find the bundled
+        # imageio-ffmpeg binary because that is named ffmpeg-<plat>-vN. On a
+        # clean from-source install with no system ffmpeg this fails the whole
+        # request with [Errno 2] No such file or directory: ffmpeg.
+        #
+        # The aligner below already used the validated decoder, so this was one
+        # call site out of two in the same method. Reusing that decode also
+        # stops the file being decoded twice per transcription.
+        audio = _decode_audio_16k_mono(audio_path)
         result = mlx_whisper.transcribe(
-            audio_path,
+            audio,
             path_or_hf_repo=self._model_name,
             word_timestamps=word_timestamps,
         )
@@ -1148,7 +1184,7 @@ class MLXWhisperBackend(ASRBackend):
         if word_timestamps and result.get("segments"):
             result["segments"] = forced_align(
                 result["segments"],
-                _decode_audio_16k_mono(audio_path),
+                audio,
                 result.get("language", "en"),
             )
         # Normalise to the `chunks` shape the rest of the pipeline expects.
@@ -1196,6 +1232,11 @@ class PyTorchWhisperBackend(ASRBackend):
         # Reuses the `_asr_pipe` attached to the TTS model when available.
         self._pipe = asr_pipe
 
+    # whisper-large-v3-turbo occupies roughly 3.2 GiB before generation adds
+    # its encoder/decoder workspace. Loading it onto a nearly full card works,
+    # then the first transcribe fails with a CUDA OOM and yields zero segments.
+    _CUDA_VRAM_BUDGET_GB = 5.0
+
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
         try:
@@ -1203,6 +1244,40 @@ class PyTorchWhisperBackend(ASRBackend):
             return True, "ready"
         except ImportError as e:
             return False, f"transformers not installed: {e}"
+
+    @classmethod
+    def _pick_device(cls) -> str:
+        from services.model_manager import get_best_device
+
+        device = str(get_best_device())
+        if not device.startswith("cuda") or os.environ.get(
+            "OMNIVOICE_ASR_VRAM_PREFLIGHT", "1"
+        ).strip().lower() in ("0", "false", "no"):
+            return device
+        try:
+            import torch
+
+            free, _total = torch.cuda.mem_get_info()
+            free_gb = free / 1024**3
+        except Exception:  # noqa: BLE001 — an unavailable probe must not block ASR
+            return device
+        if free_gb >= cls._CUDA_VRAM_BUDGET_GB:
+            return device
+        logger.warning(
+            "PyTorch Whisper VRAM preflight: %.1f GB free < %.1f GB needed "
+            "for reliable CUDA transcription — using CPU instead. Close other "
+            "GPU apps or Flush models to restore GPU-speed ASR.",
+            free_gb,
+            cls._CUDA_VRAM_BUDGET_GB,
+        )
+        return "cpu"
+
+    def ensure_loaded(self) -> None:
+        # Unlike the CTranslate2 backends, this fallback used to inherit the
+        # protocol's no-op loader. Import/model failures therefore appeared on
+        # every chunk as the misleading "produced no segments" result. Load it
+        # once during the stream preflight so the real failure is reported once.
+        self._ensure_pipe()
 
     def _ensure_pipe(self):
         if self._pipe is not None:
@@ -1216,12 +1291,10 @@ class PyTorchWhisperBackend(ASRBackend):
         # constructor and this path is skipped.
         import torch
         from transformers import pipeline as hf_pipeline
-        from services.model_manager import get_best_device
-
         model_name = os.environ.get(
             "OMNIVOICE_PYTORCH_ASR_MODEL", "openai/whisper-large-v3-turbo"
         )
-        device = get_best_device()
+        device = self._pick_device()
         asr_dtype = torch.float16 if str(device).startswith("cuda") else torch.float32
         logger.info(
             "PyTorchWhisperBackend: loading standalone ASR pipeline %s on %s",
@@ -1232,18 +1305,35 @@ class PyTorchWhisperBackend(ASRBackend):
                 "automatic-speech-recognition",
                 model=model_name,
                 dtype=asr_dtype,
-                device_map=device,
+                # `device_map="cpu"` only controls weight placement; the
+                # pipeline can still choose CUDA as its execution device.
+                # `device` is the pipeline-level contract and keeps the
+                # low-VRAM fallback entirely on CPU.
+                device=device,
             )
         except Exception as e:
             # #549: an incomplete transformers install fails to build the ASR
             # pipeline (e.g. "Could not import module 'AutoFeatureExtractor'").
             # The raw error is opaque; re-raise with an actionable next step so
             # the toast tells the user how to recover instead of "no segments".
+            # #1376: "install is incomplete" is only ONE of the causes. A
+            # torch/torchvision version mismatch fails with the same lazy-import
+            # wording (transformers' __getattr__ wraps the real error), and for
+            # that cause reinstalling transformers alone fixes nothing — the
+            # trio has to move together, at the pinned versions, or the
+            # reinstall can itself resolve a drifted pair (#1357).
+            # Literal versions rather than the constraint file: desktop
+            # installs don't ship deploy/ (greptile on #1377); the lockstep
+            # test in tests/test_failure_classify.py keeps them current.
             raise RuntimeError(
                 "transformers ASR pipeline failed to import (AutoFeatureExtractor) "
-                "— your transformers install is incomplete; reinstall with "
-                "`uv pip install --reinstall transformers`, or use faster-whisper "
-                "(OmniVoice's default ASR) which avoids the transformers pipeline. "
+                "— either your transformers install is incomplete, or torch and "
+                "torchvision are mismatched (which fails with this exact wording). "
+                "Reinstall them together at the pinned versions: `uv pip install "
+                "--python .venv --reinstall torch==2.8.0 torchaudio==2.8.0 "
+                "torchvision==0.23.0 transformers` in the project folder — or use faster-whisper "
+                "(VoiceStudio's default ASR), which avoids the transformers "
+                "pipeline. "
                 f"Underlying: {e}"
             ) from e
 
@@ -1321,7 +1411,7 @@ class NeMoASRBackend(ASRBackend):
             [audio_path], timestamps=word_timestamps
         )
         # NeMo returns a list of Hypothesis objects with .text and optional
-        # .timestep / .alignments. Normalise to OmniVoice's expected shape.
+        # .timestep / .alignments. Normalise to VoiceStudio's expected shape.
         hyp = outputs[0] if outputs else None
         if hyp is None:
             return {"chunks": [], "segments": [], "language": "en"}
@@ -1607,7 +1697,7 @@ def _load_audio_16k_mono_f32(audio_path: str):
     """Decode any audio file to 16 kHz mono float32 in [-1, 1] for sherpa.
 
     Prefers soundfile (WAV/FLAC — the dictation buffers are already WAV) and
-    resamples to 16 kHz when needed; falls back to OmniVoice's validated ffmpeg
+    resamples to 16 kHz when needed; falls back to VoiceStudio's validated ffmpeg
     for containers soundfile can't read (WebM/Opus). 16 kHz is sherpa's cheapest
     feed; it resamples internally too, but doing it here keeps the contract tight.
     """
@@ -1743,7 +1833,7 @@ class SherpaDictationBackend(ASRBackend):
 
 
 def _sherpa_result(text: str, samples, sr) -> dict:
-    """Normalise a sherpa decode to OmniVoice's ``{chunks, segments, language,
+    """Normalise a sherpa decode to VoiceStudio's ``{chunks, segments, language,
     text}`` contract. sherpa gives plain text (no VAD split), so emit a single
     segment spanning the buffer — same shape Moonshine uses."""
     text = (text or "").strip()
@@ -1781,7 +1871,7 @@ def _clean_funasr_text(text):
 
 
 def _normalize_funasr(res) -> dict:
-    """Normalise FunASR ``generate()`` output → OmniVoice's
+    """Normalise FunASR ``generate()`` output → VoiceStudio's
     ``{chunks, segments, language}`` shape (the same one the Whisper backends
     return, consumed by ``services.segmentation``). Defensive about FunASR's
     output variations: prefers VAD ``sentence_info`` (ms timestamps + optional
@@ -2081,7 +2171,7 @@ class OpenAICompatASRBackend(ASRBackend):
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
         if not resolve_openai_compat_asr_base_url():
-            return False, "Configure a server endpoint in Settings → Engines"
+            return False, "Configure a server endpoint in Model Catalogue → Engines"
         try:
             import openai  # noqa: F401
         except ImportError:
@@ -2217,7 +2307,7 @@ _REGISTRY: dict[str, type[ASRBackend]] = _LazyASRRegistry({
 })
 
 
-# Short install hints surfaced as tooltips on the Settings → Engines UI
+# Short install hints surfaced as tooltips on the Model Catalogue → Engines UI
 # (parity with tts_backend._INSTALL_HINTS).
 _INSTALL_HINTS: dict[str, str] = {
     "whisperx":        "pip install whisperx  (CTranslate2 + wav2vec2 alignment; CUDA or CPU)",
@@ -2226,12 +2316,12 @@ _INSTALL_HINTS: dict[str, str] = {
     "pytorch-whisper": "Bundled with transformers — no extra install (CUDA/MPS/CPU)",
     "nemo-parakeet":   (
         "No safe install path in this app yet — nemo_toolkit's ASR extras pin "
-        "transformers>=4.57,<4.58, which conflicts with OmniVoice's own "
+        "transformers>=4.57,<4.58, which conflicts with VoiceStudio's own "
         "transformers>=5.3 requirement and WILL break the backend "
         "(ImportError on startup) if installed into this shared venv. Do NOT "
         "install nemo_toolkit here. If you want to try Parakeet TDT, set it "
         "up in a separate/dedicated Python environment — not the one "
-        "OmniVoice manages; in-app isolation for this engine is tracked "
+        "VoiceStudio manages; in-app isolation for this engine is tracked "
         "separately."
     ),
     "parakeet-mlx":    (
@@ -2243,8 +2333,8 @@ _INSTALL_HINTS: dict[str, str] = {
     "funasr":          "pip install funasr  (SenseVoiceSmall + FSMN-VAD; CUDA or CPU)",
     "sherpa-onnx-asr": "uv add sherpa-onnx  (ONNX live dictation; CPU, cross-platform)",
     "openai-compat-asr": (
-        "No install needed — configure a server endpoint in Settings → "
-        "Engines. Points OmniVoice at any OpenAI-compatible transcription "
+        "No install needed — configure a server endpoint in "
+        "Model Catalogue → Engines. Points VoiceStudio at any OpenAI-compatible "
         "server (a self-hosted Qwen3-ASR/FunASR/SenseVoice server, OpenAI's "
         "own Whisper API, or similar) — a path to Qwen3-ASR today, without "
         "waiting on a direct transformers integration."
@@ -2286,7 +2376,7 @@ def _deep_import_reason(cls: type["ASRBackend"], exc: ImportError) -> str:
     )
     return (
         f"{cls.display_name} failed to load: {what}. The app environment "
-        "looks partially installed — reinstall OmniVoice Studio (or run "
+        "looks partially installed — reinstall VoiceStudio (or run "
         "`uv sync --reinstall` on a source checkout; plain `uv sync` "
         "trusts the intact package metadata and skips the broken files) "
         "to repair it."
@@ -2318,13 +2408,10 @@ def list_backends() -> list[dict]:
         else:
             try:
                 ok, msg = cls.is_available()
-            except Exception as exc:
+            except Exception:
                 ok = False
-                msg = f"{type(exc).__name__}: {exc}"
-                logger.warning(
-                    "asr list_backends: %s.is_available() raised — degrading "
-                    "gracefully so the picker still renders: %s", bid, msg,
-                )
+                msg = "Availability probe failed; check the backend log."
+                logger.warning("asr list_backends: availability probe failed for registered backend %s", bid)
         if ok:
             _LAST_ERRORS.pop(bid, None)
         else:
@@ -2488,7 +2575,7 @@ def load_active_asr_backend(*, asr_pipe=None) -> ASRBackend:
     import inside ``load_model``), so auto-detect can pick a backend that then
     dies at load with ``No module named 'lightning_fabric'`` — which used to
     fail ASR init wholesale even though the next engine in line works fine.
-    Instead: record the backend as broken (Settings → Engines shows why),
+    Instead: record the backend as broken (Model Catalogue → Engines shows why),
     re-select, and load the next candidate — mirroring how
     :func:`_probe_available` already swallows broken natives at probe time.
 
@@ -2522,7 +2609,7 @@ def load_active_asr_backend(*, asr_pipe=None) -> ASRBackend:
             # ModuleNotFoundError and its ImportError parent ("cannot import
             # name X" version skew) are the same env-rot class: the backend
             # cannot work in this process, but siblings with independent
-            # import chains can. Record it either way so Settings → Engines
+            # import chains can. Record it either way so Model Catalogue → Engines
             # reports the truth (unavailable + why + how to repair).
             reason = _deep_import_reason(type(backend), e)
             _DEEP_IMPORT_BROKEN[bid] = scrub_text(reason)
@@ -2576,7 +2663,7 @@ def transcribe_reference(audio_path: str) -> str | None:
     """Transcribe a voice-clone reference clip with the active ASR backend.
 
     Voice cloning without a user-supplied transcript used to fall through to
-    ``OmniVoice.load_asr_model()`` — a transformers ``pipeline()`` load of
+    ``VoiceStudio.load_asr_model()`` — a transformers ``pipeline()`` load of
     whisper-large-v3-turbo that fails outright on transformers 5.3 (#308),
     even when whisperx / faster-whisper / mlx-whisper are installed and
     working. Route the reference transcript through the registry instead, so
@@ -2601,7 +2688,13 @@ def transcribe_reference(audio_path: str) -> str | None:
                     "reference auto-transcription (no silent download).")
         return None
     try:
-        backend = get_active_asr_backend()
+        # `load_*`, not `get_*`: a backend whose shallow probe passes but whose
+        # deep import chain is broken would otherwise be handed back here and
+        # fail at `.transcribe()` below, costing every clone-without-transcript
+        # its reference text even with a healthy engine next in line (#1185).
+        # This path is best-effort, so a genuinely exhausted chain still just
+        # returns None and defers to the model's built-in fallback.
+        backend = load_active_asr_backend()
     except Exception as e:  # noqa: BLE001 — never let ASR break generation
         logger.warning("transcribe_reference: no ASR backend available (%s)", e)
         return None
@@ -2773,7 +2866,7 @@ def _parakeet_mlx_installed() -> bool:
     trigger a surprise multi-GB download (the asr_model_missing contract).
     Installed state comes from the same HF-cache helpers the model store uses
     (positive results memoized — see :func:`_repo_installed`), so the answer
-    matches the Settings → Models install badges. Never raises.
+    matches the Model Catalogue → Models install badges. Never raises.
     """
     try:
         repo = os.environ.get("ASR_MODEL_PARAKEET_MLX", _PARAKEET_MLX_DEFAULT)
@@ -2900,7 +2993,7 @@ def get_capture_asr_backend() -> ASRBackend:
         # Prefer an already-installed Parakeet TDT v3 on Apple Silicon (when
         # the language gate allows it — see _capture_prefers_parakeet). Gated
         # on the weights being on disk so this NEVER triggers a download —
-        # users opt in by installing the model from Settings → Models. The
+        # users opt in by installing the model from Model Catalogue → Models. The
         # gate's answer is part of the warm-singleton key so installing
         # parakeet mid-session rebuilds the singleton instead of serving the
         # stale whisper pick until restart (the memo in _repo_installed keeps
@@ -3083,7 +3176,7 @@ def _repo_installed(repo: str) -> bool:
     """``is_cached`` + ``cache_is_complete`` with a positive-only session memo.
 
     Installed state comes from the same HF-cache helpers the model store uses,
-    so the answer matches the Settings → Models install badges."""
+    so the answer matches the Model Catalogue → Models install badges."""
     if repo in _INSTALLED_REPO_MEMO:
         return True
     from api.routers.setup.models import cache_is_complete, get_model_catalog, is_cached
@@ -3107,7 +3200,7 @@ def asr_model_missing_error(*, purpose: str = "transcribe",
     ``sherpa_model_id`` lets the live-dictation WS pass its per-session
     ``?model=`` override. Installed state comes from the same HF-cache helpers
     the model store uses (see :func:`_repo_installed`), so the answer matches
-    the Settings → Models install badges.
+    the Model Catalogue → Models install badges.
 
     FAIL-OPEN rule: a repo the model catalog doesn't know (a custom
     ``ASR_MODEL_*`` pin, pytorch-whisper's default repo, an unrecognized
@@ -3160,8 +3253,8 @@ def asr_model_missing_detail(payload: dict) -> str:
     if rec.get("label"):
         return (
             "No speech-to-text model is installed. Download "
-            f"{rec['label']} ({rec['size_gb']} GB) from Settings → Models, "
+            f"{rec['label']} ({rec['size_gb']} GB) from Model Catalogue → Models, "
             "then retry."
         )
     return ("No speech-to-text model is installed. Download one from "
-            "Settings → Models, then retry.")
+            "Model Catalogue → Models, then retry.")

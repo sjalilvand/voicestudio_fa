@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────────────
-# desktop-prod.sh — Build & launch OmniVoice Studio as a "fresh install"
+# desktop-prod.sh — Build & launch VoiceStudio as a "fresh install"
 #
 # This gives you the EXACT same experience as a user downloading the
 # installer (DMG on macOS, AppImage on Linux):
@@ -10,8 +10,14 @@
 #
 # Usage:
 #   bun desktop-prod          # build debug + wipe + launch
-#   bun desktop-prod:run      # re-launch last build (skip compile)
+#   bun desktop-prod:run      # re-launch last build (skip compile, keep data)
 #   bun desktop-prod:upgrade  # rebuild, but keep data (test upgrade)
+#
+# NOTE on the flags (#1333): --skip-build and --keep-data are INDEPENDENT.
+# --skip-build only skips the compile; on its own it still wipes app data,
+# which is why `desktop-prod:run` passes --keep-data too. Wiping is the
+# default because this script exists to emulate a first install; a plain
+# re-launch is not that, and must not cost you your voice profiles.
 #
 # For a stricter NEW-USER emulation on macOS (webview localStorage, prefs,
 # caches wiped too + launch with a dev-tools-hidden environment), see
@@ -23,10 +29,15 @@ set -euo pipefail
 # …) is repo-root-relative, so invoking the script from any other directory
 # used to mis-resolve them (#962 hardening).
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
+REPO_ROOT="$(pwd -P)"
 
 APP_ID="com.debpalash.omnivoice-studio"
 TAURI_DIR="frontend/src-tauri"
-APP_NAME="OmniVoice Studio"
+APP_NAME="VoiceStudio"
+TAURI_BUILD_ROOT="$REPO_ROOT/$TAURI_DIR/target/debug"
+if [ -d "$TAURI_BUILD_ROOT" ]; then
+  TAURI_BUILD_ROOT="$(cd "$TAURI_BUILD_ROOT" && pwd -P)"
+fi
 
 # ── Detect platform ───────────────────────────────────────────────────────
 OS="$(uname -s)"
@@ -57,7 +68,7 @@ elif [ "$PLATFORM" = "windows" ]; then
   # (backend/core/config.py::get_app_data_dir) and relocates the HF cache to
   # %LOCALAPPDATA%\OmniVoice\hf_cache. Tauri keys its data by APP_ID under
   # LOCALAPPDATA; WebView2 state lives in EBWebView. All paths are APP_ID/
-  # OmniVoice-scoped, and each rm is guarded by `[ -d ]`, so a slightly-off
+  # data-dir-scoped, and each rm is guarded by `[ -d ]`, so a slightly-off
   # path is a no-op, never a wrong delete.
   APP_DATA="${LOCALAPPDATA}/${APP_ID}"
   BACKEND_DATA="${APPDATA}/OmniVoice"
@@ -88,7 +99,9 @@ for arg in "$@"; do
     -h|--help)
       echo "Usage: $0 [--skip-build] [--keep-data] [--keep-models] [--pill]"
       echo ""
-      echo "  --skip-build   Skip cargo build, use last compiled binary"
+      echo "  --skip-build   Skip cargo build, use last compiled binary."
+      echo "                 Does NOT imply --keep-data: on its own it still"
+      echo "                 wipes app data. Pair the two to just re-launch."
       echo "  --keep-data    Don't wipe app data (test upgrade path)"
       echo "  --keep-models  Wipe app/backend data for a fresh app, but KEEP the"
       echo "                 HF model cache — fresh first-run without re-downloading"
@@ -98,17 +111,17 @@ for arg in "$@"; do
       echo "Environment:"
       echo "  FRESH_NUKE_HF=1  Also wipe the HF cache when it is the SHARED global"
       echo "                   cache (~/.cache/huggingface). By default only an"
-      echo "                   OmniVoice-scoped cache path is removed."
+      echo "                   VoiceStudio-scoped cache path is removed."
       exit 0
       ;;
   esac
 done
 
-# Is a path unambiguously OmniVoice-scoped (safe to auto-delete)? The HF
+# Is a path unambiguously VoiceStudio-scoped (safe to auto-delete)? The HF
 # cache defaults to the SHARED ~/.cache/huggingface on macOS/Linux — the app
 # only relocates it on Windows (backend/core/config.py) — and HF_HOME can
 # point anywhere. Wiping a shared cache would delete models unrelated to
-# OmniVoice, so non-scoped paths are kept unless FRESH_NUKE_HF=1.
+# VoiceStudio, so non-scoped paths are kept unless FRESH_NUKE_HF=1.
 # (Kept in sync with isAppScoped() in scripts/desktop-common.mjs.)
 is_app_scoped() {
   case "$1" in
@@ -117,13 +130,64 @@ is_app_scoped() {
   esac
 }
 
-# ── Kill-before-wipe: never clean under a live instance ────────────────────
-# A backend that survives the wipe becomes a zombie: /health keeps answering
-# from memory, the next launch attaches to it, and every real route 500s off
-# deleted files + an empty DB. Terminate our own processes first.
+# ── Kill before launch (and before any wipe) ───────────────────────────────
+# Two independent reasons, which is why this is unconditional (#1333 review):
+#
+# 1. Wipe: a backend that survives it becomes a zombie — /health keeps
+#    answering from memory, the next launch attaches to it, and every real
+#    route 500s off deleted files + an empty DB.
+# 2. Launch: the app registers tauri_plugin_single_instance, whose callback
+#    IGNORES the new argv and merely refocuses the window the running process
+#    already has. So starting a second copy over a live one silently does
+#    nothing — `desktop-prod:run` would refocus the OLD build instead of
+#    running the one just compiled, and `desktop-prod:run:pill` would leave
+#    you looking at studio mode with --pill quietly discarded.
+#
+# Reason 2 applies whatever the data policy is, so this must not sit inside
+# the KEEP_DATA branch.
+#
+# The kill is scoped to THIS checkout's build artifacts. A bare `${APP_NAME}.app`
+# pattern also matches an installed /Applications copy, and killing that costs a
+# developer unsaved work in a session this script never started (greptile) —
+# previously masked because the kill only ran on wipe runs, where the developer
+# had already asked for a clean slate. An installed copy still cannot be ignored
+# outright (single-instance would swallow this launch), so it gets a warning.
+warn_installed_instance() {
+  local installed
+  installed="$(pgrep -f "${APP_NAME}.app" 2>/dev/null || true)"
+  # Drop anything already matched as our own dev build.
+  local p keep=""
+  for p in $installed; do
+    case " $pids " in *" $p "*) ;; *) keep="$keep $p" ;; esac
+  done
+  [ -z "${keep// /}" ] && return 0
+  echo "⚠️  An installed ${APP_NAME} is running (pid(s):$keep)."
+  echo "   Not touching it — that is your session, and killing it would cost"
+  echo "   you unsaved work. But single-instance keys on the bundle id, so it"
+  echo "   will swallow this launch: quit it first, or you'll keep looking at"
+  echo "   the installed app instead of this build."
+  echo ""
+}
+
 kill_running_instances() {
   local pids=""
-  pids="$(pgrep -f "${APP_NAME}.app|target/debug/omnivoice-studio" 2>/dev/null || true)"
+  # One pattern covers both launch shapes: the raw binary and the .app bundle
+  # both live under `${TAURI_DIR}/target/debug/`, and `pgrep -f` sees the
+  # absolute path, of which that is a substring.
+  pids="$(pgrep -f "${TAURI_DIR}/target/debug/.*omnivoice-studio" 2>/dev/null || true)"
+  # APPIMAGE_EXTRACT_AND_RUN replaces the command with a /tmp extraction path,
+  # so pgrep cannot connect the live shell (or its inherited backend) to this
+  # checkout. APPIMAGE remains in both processes' environments and is the
+  # stable ownership proof. Missing this case let a fresh run delete the live
+  # SQLite/log directory, then single-instance merely refocused the broken app.
+  if [ "$PLATFORM" = "linux" ]; then
+    local appimage_pids
+    appimage_pids="$(python3 scripts/desktop_prod_processes.py "$TAURI_BUILD_ROOT")"
+    if [ -n "$appimage_pids" ]; then
+      echo "🔪 Terminated extracted VoiceStudio AppImage processes: $(echo "$appimage_pids" | tr '\n' ' ')"
+    fi
+  fi
+  warn_installed_instance
   local port_pid
   for port_pid in $(lsof -nP -iTCP:3900 -sTCP:LISTEN -t 2>/dev/null || true); do
     if ps -p "$port_pid" -o command= 2>/dev/null | grep -qiE 'omnivoice|com\.debpalash'; then
@@ -133,7 +197,7 @@ kill_running_instances() {
   # shellcheck disable=SC2086
   pids="$(echo $pids | tr ' ' '\n' | sort -u | tr '\n' ' ')"
   [ -z "${pids// /}" ] && return 0
-  echo "🔪 Terminating running OmniVoice processes:$pids"
+  echo "🔪 Terminating running VoiceStudio processes:$pids"
   # shellcheck disable=SC2086
   kill $pids 2>/dev/null || true
   local i=0
@@ -145,14 +209,15 @@ kill_running_instances() {
   done
   # shellcheck disable=SC2086
   kill -9 $pids 2>/dev/null || true
-  echo "   All stopped — safe to wipe."
+  echo "   All stopped."
   echo ""
 }
 
+kill_running_instances
+
 # ── Wipe app data for fresh-install simulation ─────────────────────────────
 if [ "$KEEP_DATA" = false ]; then
-  kill_running_instances
-  echo "🧹 Cleaning all OmniVoice data for fresh prod emulation..."
+  echo "🧹 Cleaning all VoiceStudio data for fresh prod emulation..."
   echo ""
 
   # 1. App data (Tauri bundle dir: post-install venv + webview state)
@@ -177,7 +242,7 @@ if [ "$KEEP_DATA" = false ]; then
   #    --keep-models preserves it so a "fresh app" run doesn't re-pull multi-GB
   #    weights (the model-download is the slow, bandwidth-heavy part of a clean
   #    run; everything else still resets for an honest first-run emulation).
-  #    Only an OmniVoice-scoped path is auto-removed: on macOS/Linux the app
+  #    Only a VoiceStudio-scoped path is auto-removed: on macOS/Linux the app
   #    uses the SHARED ~/.cache/huggingface, which also holds models from
   #    other projects — wiping it needs the explicit FRESH_NUKE_HF=1 opt-in.
   if [ "$KEEP_MODELS" = true ]; then
@@ -196,7 +261,7 @@ if [ "$KEEP_DATA" = false ]; then
   else
     HF_SIZE=$(du -sh "${HF_CACHE}" 2>/dev/null | cut -f1)
     echo "   ◆ HF cache:     ${HF_CACHE} (${HF_SIZE}) — KEPT (shared global cache)"
-    echo "     ↳ Not OmniVoice-scoped; wiping it would delete models unrelated to"
+    echo "     ↳ Not VoiceStudio-scoped; wiping it would delete models unrelated to"
     echo "       this app. Models will be REUSED, not re-downloaded. To wipe anyway:"
     echo "       FRESH_NUKE_HF=1 bun desktop-prod"
   fi

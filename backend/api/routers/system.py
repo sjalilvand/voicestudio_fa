@@ -11,27 +11,28 @@ from core.prefs import set_ as prefs_set, delete as prefs_delete
 from services import network_share
 from services import tailscale as _tailscale
 from api.schemas import SysinfoResponse, SystemInfoResponse, ModelStatusResponse
-from api.dependencies import require_loopback
+from api.dependencies import is_loopback, require_admin, require_admin_action
 from fastapi.responses import FileResponse, StreamingResponse
 import torch
 import shutil
 
 from core.config import OUTPUTS_DIR, DATA_DIR, CRASH_LOG_PATH, LOG_PATH, IDLE_TIMEOUT_SECONDS
 from core.version import APP_VERSION
+from core.logging_utils import log_safe
+from core.public_errors import public_failure
 from services.model_manager import get_model_status, get_best_device, resolve_omnivoice_checkpoint
 from services.ffmpeg_utils import find_ffmpeg, run_ffmpeg
 
-# Router-level loopback gate. Every route mounted on `router` (GET + POST,
-# present and future) is gated by `require_loopback`, which 403s any request
-# whose `client.host` is not a loopback address. This closes the same trust
+# Router-level admin gate. Every route mounted on `router` (GET + POST,
+# present and future) is gated by `require_admin`: desktop requests must be
+# loopback; server-mode mutations require the long API key. This closes the trust
 # boundary that PR #81 only patched on `/system/set-env` and that the
 # 260518-ivy deferred-items file enumerated for follow-up: /model/unload/*,
 # /system/logs/clear, /system/logs/tauri/clear, /system/flush-memory,
 # /clean-audio (POSTs) plus the read-side info-disclosure routes
 # /system/info, /system/logs, /system/logs/tauri, /system/logs/stream.
-# This router only ever serves the local Tauri shell and the dev frontend
-# at http://127.0.0.1:3901 — both are loopback origins.
-router = APIRouter(dependencies=[Depends(require_loopback)])
+# Native Tauri/dev callers remain loopback and need no credential.
+router = APIRouter(dependencies=[Depends(require_admin)])
 logger = logging.getLogger("omnivoice.api")
 
 # Cache device checks at module load — they don't change at runtime
@@ -266,7 +267,7 @@ def system_info():
             "backend_port": network_share.backend_port(),
             "share_port_base": network_share.share_port_base(),
             "ui_port": _ui_port(),
-            "error": str(e),
+            "error": "System information is temporarily unavailable; check the backend log for details.",
         }
 
 
@@ -288,7 +289,7 @@ def _tauri_log_candidates():
       `com.debpalash.omnivoice-studio` (frontend/src-tauri/tauri.conf.json).
     - backend.rs::backend_log_path() redirects the spawned backend's
       stdout/stderr to `backend.log` / `backend_err.log` under
-      `~/Library/Logs/OmniVoice` (macOS), `$XDG_STATE_HOME/OmniVoice` falling
+      `~/Library/Logs/OmniVoice` (macOS), `$XDG_STATE_HOME/VoiceStudio` falling
       back to `~/.local/state/OmniVoice` (Linux), and
       `%LOCALAPPDATA%\\OmniVoice\\Logs` (Windows). This is where uvicorn
       startup banners and hard-crash tracebacks land — keep all three OS
@@ -299,7 +300,7 @@ def _tauri_log_candidates():
     if sys.platform == "darwin":
         return [
             os.path.join(home, "Library/Logs", bid, "tauri.log"),
-            os.path.join(home, "Library/Logs", bid, "OmniVoice Studio.log"),
+            os.path.join(home, "Library/Logs", bid, "VoiceStudio.log"),
             os.path.join(home, "Library/Logs/OmniVoice/backend.log"),
             os.path.join(home, "Library/Logs/OmniVoice/backend_err.log"),
         ]
@@ -363,7 +364,14 @@ async def system_logs_tauri(tail: int = 200):
                 lines, total = await asyncio.to_thread(_tail_file, p, tail)
                 return {"lines": lines, "path": p, "exists": True, "total_lines": total}
             except Exception as e:
-                return {"lines": [], "path": p, "exists": True, "error": str(e)}
+                error = public_failure(
+                    logger,
+                    "Could not read Tauri log",
+                    e,
+                    response="Could not read the Tauri log; check the backend log for details.",
+                    traceback=True,
+                )
+                return {"lines": [], "path": p, "exists": True, "error": error}
     return {"lines": [], "path": None, "exists": False, "candidates": candidates}
 
 
@@ -392,13 +400,18 @@ async def stream_logs(
     if not path or not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"Log file not found for source={source}")
 
+    try:
+        initial_position = os.path.getsize(path)
+    except OSError as exc:
+        logger.warning("Log stream could not determine its starting position")
+        raise HTTPException(
+            status_code=503,
+            detail="The log stream could not be started. Retry after checking file permissions.",
+        ) from exc
+
     async def _generate():
         """Yield SSE events whenever new lines appear in the log file."""
-        last_pos = 0
-        try:
-            last_pos = os.path.getsize(path)
-        except Exception:
-            pass
+        last_pos = initial_position
         while True:
             await asyncio.sleep(interval)
             try:
@@ -453,8 +466,12 @@ async def clear_system_logs():
         for key in ("crash_log_acked", "crash_log_acked_size"):
             try:
                 prefs_delete(key)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Cleared logs but could not reset crash acknowledgement state")
+                raise HTTPException(
+                    status_code=500,
+                    detail="Logs were cleared, but notification state could not be reset. Retry the clear operation.",
+                ) from exc
     return {"cleared": cleared_any}
 
 
@@ -468,14 +485,20 @@ def _truncate_file(path: str):
 async def clear_tauri_logs():
     """Truncate whichever Tauri-side log files we know about. OS-level rotation may recreate them."""
     cleared = []
+    failed = 0
     for p in _tauri_log_candidates():
         if os.path.exists(p):
             try:
                 await asyncio.to_thread(_truncate_file, p)
                 cleared.append(p)
-            except Exception:
-                pass
-    return {"cleared": cleared}
+            except OSError:
+                failed += 1
+    if failed:
+        raise HTTPException(
+            status_code=500,
+            detail="One or more desktop log files could not be cleared. Close any app using them and retry.",
+        )
+    return {"cleared": cleared, "failed": 0}
 
 @router.get("/sysinfo", response_model=SysinfoResponse)
 def get_sys_info():
@@ -521,9 +544,10 @@ async def flush_memory(unload_model: bool = False):
     if unload_model:
         import services.model_manager as mm
         async with mm._model_lock:
-            if mm.model is not None:
-                mm.model = None
-                freed_model = True
+            # Also drops the clone-prompt side cache, which this path used to
+            # leave resident — an "unload" that kept the encoded reference
+            # tensors belonging to the model it just released (#1495).
+            freed_model = mm.unload_shared_model()
 
     # Multi-pass GC to break reference cycles
     gc.collect(generation=2)
@@ -532,15 +556,25 @@ async def flush_memory(unload_model: bool = False):
 
     free_vram()
 
-    # Snapshot after flush
+    # Snapshot after flush. Two numbers, because one of them is a lie by
+    # omission: `memory_allocated` counts live tensors only, so it reads ~0
+    # after an unload while nvidia-smi still shows gigabytes — which is exactly
+    # the report we keep getting ("flush says it worked, the GPU says it
+    # didn't"). `memory_reserved` is what the caching allocator holds from the
+    # driver, and the gap between reserved and the driver's own figure is the
+    # CUDA context plus kernel workspaces, which no in-process call can return.
     vram_after = 0.0
+    vram_reserved = 0.0
     try:
         if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
             driver = getattr(torch.mps, "driver_allocated_memory", None)
             if driver:
                 vram_after = driver() / (1024**3)
+            current = getattr(torch.mps, "current_allocated_memory", None)
+            vram_reserved = (current() / (1024**3)) if current else vram_after
         elif torch.cuda.is_available():
             vram_after = torch.cuda.memory_allocated() / (1024**3)
+            vram_reserved = torch.cuda.memory_reserved() / (1024**3)
     except Exception:
         pass
 
@@ -551,6 +585,7 @@ async def flush_memory(unload_model: bool = False):
         "unloaded_model": freed_model,
         "ram_after": round(ram_after, 2),
         "vram_after": round(vram_after, 2),
+        "vram_reserved": round(vram_reserved, 2),
     }
 
 
@@ -652,7 +687,7 @@ def system_notifications():
                 "id": "disk-low",
                 "level": "warn",
                 "title": f"Low disk space ({free_gb:.1f} GB free)",
-                "message": "OmniVoice needs disk space for models, audio, and temp files.",
+                "message": "VoiceStudio needs disk space for models, audio, and temp files.",
                 "action": None,
             })
     except Exception:
@@ -705,7 +740,7 @@ def system_notifications():
                 },
             })
     except Exception:
-        pass
+        logger.warning("Previous-run crash record could not be checked")
 
     # 5. A previous session logged a crash the user never saw.
     #    crash_log grew past the last acknowledged size AND predates this
@@ -728,7 +763,7 @@ def system_notifications():
                 },
             })
     except Exception:
-        pass
+        logger.warning("Previous-session crash log could not be checked")
 
     return {"notifications": notes, "count": len(notes)}
 
@@ -806,7 +841,6 @@ async def ack_crash():
 PERSISTENT_KEYS = {
     "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY",
     "http_proxy", "https_proxy", "all_proxy",
-    "FFMPEG_PATH", "FFPROBE_PATH",
     "TRANSLATE_BASE_URL", "TRANSLATE_API_KEY", "TRANSLATE_MODEL",
     "DEEPL_API_KEY", "DEEPL_BASE_URL",
     "MICROSOFT_API_KEY", "MICROSOFT_BASE_URL",
@@ -843,7 +877,7 @@ async def set_env_var(body: dict):
     are set on ``os.environ`` for the running process.
 
     The loopback-origin gate that previously lived inline here is now applied
-    at the router level via `dependencies=[Depends(require_loopback)]` on
+    at the router level via `dependencies=[Depends(require_admin)]` on
     `router` — see the top of this file. Every route on this router is
     gated, including this one. The 403 body and behavior are unchanged.
     """
@@ -858,23 +892,6 @@ async def set_env_var(body: dict):
         )
 
     if value:
-        # Validate executable paths if the user is setting them manually.
-        # Reject control characters / null bytes (defense-in-depth against
-        # path-injection), then require an existing regular file. NOTE: this
-        # endpoint is loopback-only and MUST remain so — a remote caller able
-        # to set FFMPEG_PATH/FFPROBE_PATH could point it at an arbitrary
-        # binary (RCE). Network sharing must never expose /system/set-env.
-        if key in ("FFMPEG_PATH", "FFPROBE_PATH"):
-            if any(ord(c) < 0x20 or ord(c) == 0x7F for c in value):
-                raise HTTPException(
-                    status_code=400,
-                    detail="Invalid path: control characters are not allowed",
-                )
-            if not os.path.isfile(value):
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"File not found: {value}",
-                )
         # Port keys must be a numeric string in the unprivileged range so a
         # typo can't drop the backend onto a privileged port (<1024) or an
         # out-of-range value uvicorn would reject at bind time.
@@ -892,7 +909,7 @@ async def set_env_var(body: dict):
                     detail=f"Invalid port for {key}: must be between 1024 and 65535.",
                 )
         os.environ[key] = value
-        logger.info("Set environment variable: %s (length=%d)", key, len(value))
+        logger.info("Environment variable set (length=%d)", len(value))
 
         # Capability 1 / issue #35: HF_TOKEN persists across restarts via
         # huggingface_hub.login() — writes the token to $HF_HOME/token so
@@ -907,10 +924,10 @@ async def set_env_var(body: dict):
                 # Non-fatal — the runtime env var is still set, so the
                 # current process will still see the token. We just lose
                 # persistence across restarts.
-                logger.warning("Could not persist HF token to disk: %s", e)
+                logger.warning("Could not persist HF token to disk: %s", log_safe(e))
     else:
         os.environ.pop(key, None)
-        logger.info("Cleared environment variable: %s", key)
+        logger.info("Environment variable cleared")
 
         # Mirror the persistence on clear — wipe the saved token file too.
         if key == "HF_TOKEN":
@@ -985,18 +1002,26 @@ async def _do_clean_audio(audio, tmp_dir, clean_id):
     clean_filename = f"mic_{clean_id}.wav"
     final_path = os.path.join(OUTPUTS_DIR, clean_filename)
 
+    conversion_fallback = False
     try:
-        await run_ffmpeg(
+        rc, _, _ = await run_ffmpeg(
             [ffmpeg, "-y", "-i", clean_path, "-ar", "24000", "-ac", "1", final_path],
             timeout=120.0,
         )
+        conversion_fallback = rc != 0
     except asyncio.TimeoutError:
-        pass
-    if not os.path.exists(final_path):
+        conversion_fallback = True
+        logger.warning("Final clean-audio conversion timed out; returning the cleaned source format")
+    if conversion_fallback:
+        shutil.copy2(clean_path, final_path)
+    elif not os.path.exists(final_path):
         shutil.copy2(clean_path, final_path)
 
+    headers = {"X-Clean-Filename": clean_filename}
+    if conversion_fallback:
+        headers["X-Clean-Conversion"] = "fallback"
     return FileResponse(final_path, media_type="audio/wav", filename=clean_filename,
-                        headers={"X-Clean-Filename": clean_filename})
+                        headers=headers)
 
 
 @router.get("/system/asr-backends")
@@ -1064,7 +1089,10 @@ async def diagnostic_bundle(network: bool = Query(False, description="Include th
 # ── Self-check diagnostics ────────────────────────────────────────────────
 
 
-@router.get("/system/diagnose")
+@router.get(
+    "/system/diagnose",
+    dependencies=[Depends(require_admin_action)],
+)
 async def system_diagnose(
     network: bool = Query(True, description="Include the HuggingFace hub reachability probe"),
     deep: bool = Query(False, description="Also load the active engine and synthesize a short utterance (may cold-load the model — minutes on first run)"),
@@ -1101,12 +1129,21 @@ def quarantine_status():
 # ── Network sharing (loopback-only control surface) ──────────────────────────
 
 @router.get("/system/network/state")
-async def network_state():
+async def network_state(request: Request):
     st = network_share.get_state()
+    # PIN-only server mode permits unauthenticated read-only discovery, but the
+    # PIN is itself a consumption credential. Reveal it only to the native
+    # loopback UI or to a remote caller that already passed the configured
+    # long API-key gate. The boolean lets headless dashboards remain useful.
+    host = request.client.host if request.client else None
+    may_reveal_pin = is_loopback(host) or bool(
+        os.environ.get("OMNIVOICE_API_KEY", "").strip()
+    )
     return {
         "enabled": st.enabled,
         "share_port": st.share_port,
-        "pin": st.pin,
+        "pin": st.pin if may_reveal_pin else None,
+        "pin_required": bool(st.pin),
         "lan_addresses": st.lan_addresses,
     }
 
@@ -1137,7 +1174,16 @@ async def tailscale_status():
 
 @router.post("/system/tailscale/enable")
 async def tailscale_enable():
-    return _tailscale.serve_enable()
+    result = _tailscale.serve_enable()
+    if result.get("ok"):
+        return result
+    error = public_failure(
+        logger,
+        "Tailscale serve failed",
+        result.get("error", "unknown error"),
+        response="Tailscale sharing could not be enabled; check the backend log for details.",
+    )
+    return {"ok": False, "error": error}
 
 
 @router.post("/system/tailscale/disable")

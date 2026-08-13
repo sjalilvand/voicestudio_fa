@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Loader, Star, RotateCcw, Grid, List } from 'lucide-react';
+import { Loader, Star, RotateCcw, Grid, List, SlidersHorizontal } from 'lucide-react';
 import { Button, Select, Segmented } from '../../ui';
 import { useArchetypeCategories, useArchetypes } from '../../api/hooks';
-import { ArchetypeIcon } from '../../utils/archetypeIcons';
 import { titleCase, facetLabel } from './constants';
 import ArchetypeCard from './ArchetypeCard';
 
@@ -62,6 +61,7 @@ export default function ArchetypesZone({
   onDesign,
 }) {
   const [favOnly, setFavOnly] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [offset, setOffset] = useState(0);
   useEffect(() => {
     setOffset(0);
@@ -98,6 +98,9 @@ export default function ArchetypesZone({
 
   const favSet = useMemo(() => new Set(favorites), [favorites]);
   const applyFav = (list) => (favOnly ? list.filter((a) => favSet.has(a.id)) : list);
+  const advancedFilterCount = ['gender', 'age', 'pitch', 'accent', 'lang', 'whisper'].filter(
+    (key) => filters[key] !== null && filters[key] !== '',
+  ).length;
 
   // NOTE: no `key` here — React keys must be passed directly on the element,
   // not spread in (spreading a `key` prop triggers a dev warning + is ignored).
@@ -114,8 +117,6 @@ export default function ArchetypesZone({
     onToggleFavorite: toggleFavorite,
   });
 
-  const facetGroup =
-    'flex items-center gap-[5px] flex-nowrap min-w-0 overflow-x-auto overflow-y-hidden [scrollbar-width:thin]';
   const facetToggle =
     'inline-flex items-center gap-[5px] h-[26px] box-border px-[9px] rounded-[7px] border border-transparent bg-[var(--chrome-hover-bg)] text-[var(--chrome-fg-muted)] text-[0.68rem] whitespace-nowrap cursor-pointer hover:text-[var(--chrome-fg)] hover:border-[color:var(--chrome-border-strong)]';
   const gridClass =
@@ -125,60 +126,39 @@ export default function ArchetypesZone({
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
-      <div className="flex flex-row items-center gap-[10px] flex-nowrap shrink-0 pt-[2px] pb-[10px] mb-[8px] border-b border-transparent">
-        {/* Three filter lanes (categories · facets · toggles), each its own
-            horizontally-scrollable portion; the view toggle is pinned right. */}
-        <div className={`${facetGroup} flex-[2.4_1_0]`}>
-          <Button
-            variant="chip"
-            active={!filters.use_case}
-            onClick={() => setFilter('use_case', null)}
+      <div className="shrink-0 mb-[8px] pb-[8px] border-b border-transparent">
+        <div className="flex items-center gap-[6px] min-w-0">
+          <Select
+            size="sm"
+            className="w-auto min-w-[132px] max-w-[190px] shrink-0"
+            aria-label={t('gallery.zone_archetypes', { defaultValue: 'Archetypes' })}
+            value={filters.use_case ?? ''}
+            onChange={(e) => setFilter('use_case', e.target.value || null)}
           >
-            {t('gallery.all', { defaultValue: 'All' })}
-          </Button>
-          {categories.map((c) => (
-            <Button
-              key={c.id}
-              variant="chip"
-              active={filters.use_case === c.id}
-              leading={<ArchetypeIcon name={c.icon} size={13} />}
-              onClick={() => setFilter('use_case', filters.use_case === c.id ? null : c.id)}
-              title={c.name}
-            >
-              {t(`archetypes.use_${c.id}`, { defaultValue: c.name })}
-            </Button>
-          ))}
-        </div>
-
-        <div className={`${facetGroup} flex-[1.6_1_0] pl-[10px] border-l border-transparent`}>
-          {['gender', 'age', 'pitch', 'accent', 'lang'].map((dim) => (
-            <Select
-              key={dim}
-              size="sm"
-              value={filters[dim] ?? ''}
-              onChange={(e) => setFilter(dim, e.target.value || null)}
-            >
-              <option value="">
-                {t(`archetypes.facet_${dim}`, { defaultValue: titleCase(dim) })}
+            <option value="">{t('gallery.all', { defaultValue: 'All' })}</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {t(`archetypes.use_${c.id}`, { defaultValue: c.name })}
               </option>
-              {FACETS[dim].map((opt) => (
-                <option key={opt} value={opt}>
-                  {facetLabel(opt)}
-                </option>
-              ))}
-            </Select>
-          ))}
-        </div>
-
-        <div className={`${facetGroup} flex-[1_1_0] pl-[10px] border-l border-transparent`}>
-          <label className={facetToggle}>
-            <input
-              type="checkbox"
-              checked={filters.whisper === true}
-              onChange={(e) => setFilter('whisper', e.target.checked ? true : null)}
-            />
-            {t('archetypes.facet_whisper', { defaultValue: 'Whisper' })}
-          </label>
+            ))}
+          </Select>
+          <Button
+            variant="ghost"
+            size="sm"
+            active={filtersOpen}
+            leading={<SlidersHorizontal size={13} />}
+            trailing={
+              advancedFilterCount > 0 ? (
+                <span className="min-w-[16px] rounded-full bg-[var(--accent)] px-[4px] py-px text-center text-[0.58rem] leading-[14px] text-white">
+                  {advancedFilterCount}
+                </span>
+              ) : null
+            }
+            aria-expanded={filtersOpen}
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            {t('gallery.filters', { defaultValue: 'Filters' })}
+          </Button>
           <label className={facetToggle}>
             <input
               type="checkbox"
@@ -187,28 +167,68 @@ export default function ArchetypesZone({
             />
             <Star size={12} /> {t('gallery.favorites', { defaultValue: 'Favorites' })}
           </label>
-          <Button
-            variant="ghost"
-            size="sm"
-            leading={<RotateCcw size={12} />}
-            onClick={() => {
-              resetFilters();
-              setFavOnly(false);
-            }}
-          >
-            {t('gallery.reset', { defaultValue: 'Reset' })}
-          </Button>
+          {hasActiveFilters(filters) || favOnly ? (
+            <Button
+              variant="icon"
+              iconSize="md"
+              onClick={() => {
+                resetFilters();
+                setFavOnly(false);
+              }}
+              title={t('gallery.reset', { defaultValue: 'Reset' })}
+              aria-label={t('gallery.reset', { defaultValue: 'Reset' })}
+            >
+              <RotateCcw size={13} />
+            </Button>
+          ) : null}
+          <div className="ml-auto shrink-0">
+            <Segmented
+              size="xs"
+              value={viewMode}
+              onChange={setViewMode}
+              items={[
+                {
+                  value: 'grid',
+                  label: <Grid size={14} />,
+                  title: t('library.card_grid'),
+                },
+                { value: 'list', label: <List size={14} />, title: t('library.list') },
+              ]}
+            />
+          </div>
         </div>
 
-        <Segmented
-          size="xs"
-          value={viewMode}
-          onChange={setViewMode}
-          items={[
-            { value: 'grid', label: <Grid size={14} />, title: 'Grid' },
-            { value: 'list', label: <List size={14} />, title: 'List' },
-          ]}
-        />
+        {filtersOpen ? (
+          <div className="mt-[6px] flex items-center gap-[6px] overflow-x-auto pb-px [scrollbar-width:thin]">
+            {['gender', 'age', 'pitch', 'accent', 'lang'].map((dim) => (
+              <Select
+                key={dim}
+                size="sm"
+                className="w-auto min-w-[94px] max-w-[132px] shrink-0"
+                aria-label={t(`archetypes.facet_${dim}`, { defaultValue: titleCase(dim) })}
+                value={filters[dim] ?? ''}
+                onChange={(e) => setFilter(dim, e.target.value || null)}
+              >
+                <option value="">
+                  {t(`archetypes.facet_${dim}`, { defaultValue: titleCase(dim) })}
+                </option>
+                {FACETS[dim].map((opt) => (
+                  <option key={opt} value={opt}>
+                    {facetLabel(opt)}
+                  </option>
+                ))}
+              </Select>
+            ))}
+            <label className={`${facetToggle} shrink-0`}>
+              <input
+                type="checkbox"
+                checked={filters.whisper === true}
+                onChange={(e) => setFilter('whisper', e.target.checked ? true : null)}
+              />
+              {t('archetypes.facet_whisper', { defaultValue: 'Whisper' })}
+            </label>
+          </div>
+        ) : null}
       </div>
 
       {showFeatured && (

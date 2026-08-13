@@ -22,6 +22,7 @@ import { scrubText } from '../utils/scrub.js';
 import { deploymentMode } from '../utils/deploymentMode.ts';
 import {
   lastBackendContact,
+  misroutedBackendMessage,
   recordBackendContact,
   unreachableBackendMessage,
 } from '../utils/backendContact.ts';
@@ -172,13 +173,34 @@ export function apiUrl(path?: string): string {
   return path.startsWith('http') ? path : `${API}${path.startsWith('/') ? '' : '/'}${path}`;
 }
 
-async function readError(res: Response): Promise<string> {
+// Stamped on EVERY response by the backend's BackendMarkerMiddleware and
+// exposed cross-origin, so its presence is AUTHORITATIVE: this really is an
+// VoiceStudio backend answering, whatever the body looks like (#1385).
+const BACKEND_MARKER_HEADER = 'x-omnivoice-backend';
+
+// `backendShaped` — did this response come from a VoiceStudio backend?
+//
+// The marker header settles it outright. Body shape is the fallback for a
+// backend older than the header (a desktop app pointed at a remote box that
+// hasn't been updated): every backend error route answers JSON with
+// `detail`/`error`, and Starlette's mounted StaticFiles answer plain-text
+// "Not Found" — the one non-JSON backend voice. That fallback is a heuristic,
+// which is exactly why the header exists: a proxy CAN return
+// `{"error":"Not Found"}` and impersonate the shape.
+async function readError(res: Response): Promise<{ detail: unknown; backendShaped: boolean }> {
+  const marked = Boolean(res.headers?.get?.(BACKEND_MARKER_HEADER));
   const text = await res.text().catch(() => '');
   try {
     const j = JSON.parse(text);
-    return j.detail || j.error || text || res.statusText;
+    // `detail` is FastAPI/Starlette's own error key — including the
+    // `{"detail":"Not Found"}` an unrouted path produces. `error` is used by
+    // a few 4xx/5xx handlers but never for a 404, so an unmarked
+    // `{"error":…}` 404 is a foreign server, not an old backend.
+    if (j.detail) return { detail: j.detail, backendShaped: true };
+    if (j.error) return { detail: j.error, backendShaped: marked };
+    return { detail: text || res.statusText, backendShaped: marked };
   } catch {
-    return text || res.statusText;
+    return { detail: text || res.statusText, backendShaped: marked || text.trim() === 'Not Found' };
   }
 }
 
@@ -193,7 +215,7 @@ const TRANSPORT_RETRY_BACKOFF_MS = [400, 900, 1600];
 // longer. When the desktop shell says the backend is starting/restarting
 // (bootstrap_status ≠ ready/failed), keep retrying at this interval instead
 // of dead-ending every request mid-restart with "Can't reach the local
-// OmniVoice backend". Bounded by STARTUP_GRACE_MS (matches the supervisor's
+// VoiceStudio backend". Bounded by STARTUP_GRACE_MS (matches the supervisor's
 // own 120 s respawn-health wait in src-tauri/src/bootstrap.rs); the shell
 // flipping to `failed` — or being absent (browser/Docker) — exits the wait
 // immediately, so a truly dead backend still errors promptly.
@@ -218,7 +240,9 @@ const STARTUP_GRACE_MS = 120_000;
 const RECONCILE_MS = 12_000;
 const RECONCILE_INTERVAL_MS = 1000;
 
-export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Response> {
+export type ApiFetchOptions = RequestInit & { retryTransport?: boolean };
+
+export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promise<Response> {
   const pin = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('ov_pin') : null;
   const key = _apiKey();
   // Only modify the request when a PIN/API key is set, so the default call
@@ -227,9 +251,10 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
   const extra: Record<string, string> = {};
   if (pin) extra['X-OmniVoice-Pin'] = pin;
   if (key) extra['Authorization'] = `Bearer ${key}`;
+  const { retryTransport = true, ...requestOpts } = opts;
   const finalOpts: RequestInit = Object.keys(extra).length
-    ? { ...opts, headers: { ...(opts.headers as Record<string, string>), ...extra } }
-    : opts;
+    ? { ...requestOpts, headers: { ...(requestOpts.headers as Record<string, string>), ...extra } }
+    : requestOpts;
   const signal = finalOpts.signal as AbortSignal | null | undefined;
   let lastDetail = '';
   // The shell's last word on the backend. When it still says `ready` after we've
@@ -261,7 +286,7 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
       // lets callers distinguish a transport failure from an HTTP error.
       if (signal?.aborted || (e as Error)?.name === 'AbortError') throw e;
       lastDetail = String((e as Error)?.message || e);
-      if (attempt < TRANSPORT_RETRY_BACKOFF_MS.length) {
+      if (retryTransport && attempt < TRANSPORT_RETRY_BACKOFF_MS.length) {
         await new Promise((r) => setTimeout(r, TRANSPORT_RETRY_BACKOFF_MS[attempt]));
         continue;
       }
@@ -270,7 +295,7 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
       // import — not 2.9 s). Keep waiting exactly as long as the shell says
       // "starting", bounded by STARTUP_GRACE_MS.
       const elapsed = Date.now() - startedAt;
-      if (elapsed < STARTUP_GRACE_MS) {
+      if (retryTransport && elapsed < STARTUP_GRACE_MS) {
         try {
           lastStage = await backendLifecycleStage();
         } catch {
@@ -320,7 +345,7 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
           /* no window (tests) — the ApiError below still tells the story */
         }
         throw new ApiError(
-          `The local OmniVoice backend crashed (${describeCrashExit(crash)}) ${crashAge(crash)} ago ` +
+          `The local VoiceStudio backend crashed (${describeCrashExit(crash)}) ${crashAge(crash)} ago ` +
             'and is being restarted — this request could not reach it. ' +
             'Open the crash notice for the error output, or check Settings → Logs → Backend.',
           { status: 0, detail: failureDetail },
@@ -334,10 +359,10 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
       // GPU). Name what actually happened and point at the thing that fixes it.
       if (lastStage.stage === 'ready') {
         throw new ApiError(
-          'The local OmniVoice backend is running but stopped responding. This usually means a ' +
+          'The local VoiceStudio backend is running but stopped responding. This usually means a ' +
             'job (a generation or a transcription) is stuck holding the engine — often a model ' +
             'too heavy for the available memory on this machine. Check Settings → Logs → Backend ' +
-            'for the last thing it was doing; a smaller model or engine (Settings → Models) is ' +
+            'for the last thing it was doing; a smaller model or engine (Model Catalogue → Models) is ' +
             'the usual fix. Restarting the app clears it for now.',
           { status: 0, detail: failureDetail },
         );
@@ -367,32 +392,41 @@ export async function apiFetch(path: string, opts: RequestInit = {}): Promise<Re
           /* no window (tests) — the ApiError below still carries the diagnosis */
         }
         throw new ApiError(
-          'The local OmniVoice backend could not start, so this request had nowhere to go. ' +
+          'The local VoiceStudio backend could not start, so this request had nowhere to go. ' +
             `The app reported:\n\n${diagnosis}\n\n` +
             'Open the details for the full output, or use Retry / Clean & Retry in Settings → Logs → Backend.',
           { status: 0, detail: { ...failureDetail, startFailure: diagnosis } },
         );
       }
-      // #1164: outside the desktop shell there is no supervisor and no
-      // "restart the app" — the old desktop-shaped copy sent dev/Docker
-      // users chasing advice that doesn't exist in their deployment. Say
-      // where THEIR forensics live, and whether the backend ever answered
-      // this session (crashed mid-session vs never started).
-      if (mode !== 'desktop') {
-        throw new ApiError(unreachableBackendMessage(mode), {
-          status: 0,
-          detail: failureDetail,
-        });
-      }
-      throw new ApiError(
-        "Can't reach the local OmniVoice backend — it may still be starting up, or it stopped. " +
-          'Wait a few seconds and try again; if it persists, restart the app (or check Settings → Logs → Backend).',
-        { status: 0, detail: failureDetail },
-      );
+      // #1164: every deployment gets forensics that exist in ITS world — the
+      // old desktop-shaped copy sent dev/Docker users chasing a "restart the
+      // app" they don't have.
+      //
+      // #1337: and desktop now gets the same honesty it was giving everyone
+      // else. Its copy used to say "it may still be starting up, or it
+      // stopped" regardless of what we knew — while #1337 and #1378 both
+      // recorded the backend answering 2 SECONDS before the failure. A
+      // backend that answered 2s ago is not starting up, and telling those
+      // users to wait and retry sent them away from the crash forensics.
+      throw new ApiError(unreachableBackendMessage(mode), {
+        status: 0,
+        detail: failureDetail,
+      });
     }
     if (!res.ok) {
       // An HTTP error means the backend *did* respond — never retry it.
-      const detail = await readError(res);
+      const { detail, backendShaped } = await readError(res);
+      // #1385: a 404 in some other server's voice means the request never
+      // reached a VoiceStudio backend at all — a static host's catch-all page
+      // or a reverse proxy with no route for this path. Echoing that page
+      // ("NOT_FOUND bom1::…") sends the user chasing a page that never
+      // existed; name the actual problem instead: where requests are going.
+      if (res.status === 404 && !backendShaped) {
+        throw new ApiError(misroutedBackendMessage(apiUrl(path)), {
+          status: res.status,
+          detail,
+        });
+      }
       // 401 on a remote device: route to the right gate by reading the detail.
       // "API key required" (BearerKeyMiddleware, OMNIVOICE_API_KEY) vs anything
       // else, i.e. "PIN required" (NetworkAccessMiddleware). Both are 401; the

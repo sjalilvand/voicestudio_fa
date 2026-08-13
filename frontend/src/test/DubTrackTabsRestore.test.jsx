@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import toast from 'react-hot-toast';
 import { useAppStore } from '../store';
 
 // Regression guard for the "completed dub tracks' tabs hidden until the
@@ -16,18 +17,57 @@ import { useAppStore } from '../store';
 
 // Heavy children are stubbed; DubLeftColumn is the probe — DubTab owns both
 // `hasDubbedTrack` and the previewMode auto-jump, and hands them down as props.
-const captured = vi.hoisted(() => ({ left: [] }));
+const captured = vi.hoisted(() => ({ left: [], header: [] }));
 vi.mock('../components/dub/DubLeftColumn', () => ({
   default: (props) => {
     captured.left.push(props);
     return <div data-testid="left-col" />;
   },
 }));
-vi.mock('../components/dub/DubHeader', () => ({ default: () => null }));
+vi.mock('../components/dub/DubHeader', () => ({
+  default: (props) => {
+    captured.header.push(props);
+    const { resetDub, pipelineSteps = [], onPipelineStep } = props;
+    return (
+      <div>
+        <button data-testid="reset-dub" onClick={resetDub}>
+          reset
+        </button>
+        {pipelineSteps.map((step) => (
+          <button key={step} onClick={() => onPipelineStep(step)}>
+            {step}
+          </button>
+        ))}
+      </div>
+    );
+  },
+}));
 vi.mock('../components/dub/DubRightColumn', () => ({ default: () => null }));
 vi.mock('../components/dub/DubFooter', () => ({ default: () => null }));
-vi.mock('../components/dub/DubPipelineStepper', () => ({ default: () => null }));
-vi.mock('../components/dub/IdleSkeleton', () => ({ default: () => null }));
+vi.mock('../components/dub/DubPipelineStepper', () => ({
+  default: ({ selectableSteps = [], onStepSelect }) => (
+    <div>
+      {selectableSteps.map((step) => (
+        <button key={step} onClick={() => onStepSelect(step)}>
+          {step}
+        </button>
+      ))}
+    </div>
+  ),
+}));
+vi.mock('../components/dub/IdleSkeleton', () => ({
+  default: ({ youtubeCookieFile, setYoutubeCookieFile }) => (
+    <div>
+      <span data-testid="cookie-name">{youtubeCookieFile?.name || 'none'}</span>
+      <button
+        data-testid="select-cookie"
+        onClick={() => setYoutubeCookieFile(new File(['secret'], 'cookies.txt'))}
+      >
+        select
+      </button>
+    </div>
+  ),
+}));
 vi.mock('../components/ExportModal', () => ({ default: () => null }));
 vi.mock('../hooks/useTimelineOnsets', () => ({ default: () => ({ onsets: [] }) }));
 vi.mock('../api/dub', () => ({
@@ -45,6 +85,7 @@ vi.mock('../api/client', async (importOriginal) => {
 });
 
 import DubTab from '../pages/DubTab';
+import { dubQc } from '../api/dub';
 
 const noop = () => {};
 function makeProps() {
@@ -116,6 +157,8 @@ describe('DubTab — completed tracks always show their tabs (restore P0)', () =
   beforeEach(() => {
     useAppStore.setState(baseState, true);
     captured.left.length = 0;
+    captured.header.length = 0;
+    vi.mocked(dubQc).mockReset();
   });
 
   it("restored project (tracks ['bn'], language_code frozen at 'und'): switcher shows and preview jumps to the track", () => {
@@ -145,5 +188,109 @@ describe('DubTab — completed tracks always show their tabs (restore P0)', () =
     // switcher appeared trackless and the auto-jump 404'd the preview.
     expect(left.hasDubbedTrack).toBe(false);
     expect(left.previewMode).toBe('original');
+  });
+
+  it('clears a selected cookie export when a completed dub is reset', () => {
+    const resetDub = vi.fn(() =>
+      useAppStore.setState({ dubJobId: null, dubStep: 'idle', dubTracks: [] }),
+    );
+    useAppStore.setState({ dubJobId: null, dubStep: 'idle', dubTracks: [] });
+    render(<DubTab {...makeProps()} resetDub={resetDub} />);
+
+    fireEvent.click(screen.getByTestId('select-cookie'));
+    expect(screen.getByTestId('cookie-name')).toHaveTextContent('cookies.txt');
+    act(() => useAppStore.setState({ dubJobId: 'job1', dubStep: 'done' }));
+    fireEvent.click(screen.getByTestId('reset-dub'));
+
+    expect(resetDub).toHaveBeenCalledOnce();
+    expect(screen.getByTestId('cookie-name')).toHaveTextContent('none');
+  });
+
+  it('retries an incomplete transcript directly but confirms before replacing a completed one', () => {
+    const retry = vi.fn();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    useAppStore.setState({
+      dubJobId: 'job1',
+      dubStep: 'idle',
+      dubSegments: [],
+      dubTracks: [],
+    });
+    const { rerender } = render(<DubTab {...makeProps()} handleDubRetryTranscribe={retry} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'transcribe' }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(confirm).not.toHaveBeenCalled();
+
+    act(() =>
+      useAppStore.setState({
+        dubStep: 'idle',
+        dubSegments: [{ id: 'partial', text: 'Incomplete transcript' }],
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'transcribe' }));
+    expect(retry).toHaveBeenCalledTimes(2);
+    expect(confirm).not.toHaveBeenCalled();
+
+    act(() =>
+      useAppStore.setState({
+        dubStep: 'editing',
+        dubSegments: [{ id: 's1', text: 'Complete transcript' }],
+      }),
+    );
+    rerender(<DubTab {...makeProps()} handleDubRetryTranscribe={retry} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'transcribe' }));
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(retry).toHaveBeenCalledTimes(2);
+
+    confirm.mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'transcribe' }));
+    expect(retry).toHaveBeenCalledTimes(3);
+  });
+
+  it('discards QC results when a newer generation finishes while verification is in flight', async () => {
+    const loadingId = 'qc-loading';
+    vi.spyOn(toast, 'loading').mockReturnValue(loadingId);
+    const dismissSpy = vi.spyOn(toast, 'dismiss').mockImplementation(() => {});
+    let resolveQc;
+    vi.mocked(dubQc).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveQc = resolve;
+        }),
+    );
+    useAppStore.setState({
+      dubJobId: 'job1',
+      dubStep: 'done',
+      dubTracks: ['es'],
+      dubLangCode: 'es',
+      dubGenNonce: 1,
+      dubSegments: [{ id: 's1', text: 'Old audio' }],
+    });
+    render(<DubTab {...makeProps()} />);
+
+    let qcPromise;
+    act(() => {
+      qcPromise = captured.header.at(-1).handleDubQc();
+    });
+    expect(dubQc).toHaveBeenCalledWith('job1', 'es');
+
+    act(() => {
+      useAppStore.setState({
+        dubGenNonce: 2,
+        dubSegments: [{ id: 's1', text: 'New audio' }],
+      });
+    });
+    await act(async () => {
+      resolveQc({
+        segments: [{ seg_id: 's1', drift: 0.8, flagged: true, recognized_text: 'Old' }],
+        flagged_count: 1,
+        total: 1,
+      });
+      await qcPromise;
+    });
+
+    expect(useAppStore.getState().dubSegments).toEqual([{ id: 's1', text: 'New audio' }]);
+    expect(dismissSpy).toHaveBeenCalledWith(loadingId);
   });
 });

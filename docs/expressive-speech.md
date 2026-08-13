@@ -12,7 +12,7 @@ ignores.
 | You want | Do this | Works on |
 |---|---|---|
 | A pause | Type `[pause]`, `[pause 500ms]`, or `[pause 1.5s]` in the text | Every engine |
-| Laughter or a sigh | ⊕ Insert → `[laughter]` / `[sigh]` | Default engine (OmniVoice) |
+| Laughter or a sigh | ⊕ Insert → `[laughter]` / `[sigh]` | Default engine (VoiceStudio) |
 | An audible breath **on demand** | `[breath]` in the text | CosyVoice 3 only (opt-in) — see [Breaths](#breaths-specifically) |
 | Whispering | Style → `whisper` (the voice-design/style field) | Default engine |
 | Emotion ("excited", "sad", graded intensity) | IndexTTS2's emotion controls — Audiobook tab's Production Overrides, or the `/ws/tts` API — or CosyVoice 3 instruct | Opt-in engines only |
@@ -53,7 +53,7 @@ for your engine below.
   dictionary. Not expression, but often what a "it says this weirdly" problem
   actually needs.
 
-### Default engine (OmniVoice)
+### Default engine (VoiceStudio)
 
 **Non-verbal tags.** The bundled model natively tokenizes 13 reaction tags
 (`omnivoice/models/omnivoice.py`, `_NONVERBAL_PATTERN`) — the ⊕ Insert button
@@ -122,7 +122,7 @@ the default engine's taxonomy, so free-text instruct currently needs the API
 Setup: clone + install [CosyVoice](https://github.com/FunAudioLLM/CosyVoice)
 (non-trivial: `git clone --recursive`, its requirements, SoX), then set
 `OMNIVOICE_COSYVOICE_MODEL` to the model directory and select it in
-Settings → Engines. CUDA or CPU; MPS is unverified upstream.
+Model Catalogue → Engines. CUDA or CPU; MPS is unverified upstream.
 
 ### VoxCPM2 (opt-in)
 

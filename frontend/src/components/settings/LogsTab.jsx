@@ -60,6 +60,8 @@ export default function LogsTab({
     <SettingsSection
       icon={FileText}
       title={t('settings.logs')}
+      className="flex h-full min-h-[420px] flex-col"
+      contentClassName="flex min-h-0 flex-1 flex-col"
       actions={
         <>
           <ReportBugButton />
@@ -89,13 +91,14 @@ export default function LogsTab({
       }
     >
       <Segmented
+        className="w-full shrink-0 [&>*]:flex-1"
         items={LOG_SOURCE_DEFS.map((d) => ({ ...d, label: t(`common.${d.key}`) }))}
         value={logSource}
         onChange={setLogSource}
         aria-label={t('logs.source', { defaultValue: 'Log source' })}
       />
 
-      <div className="settings-log-meta flex items-center gap-[var(--space-4)] my-[var(--space-4)] font-mono text-[var(--text-base)] text-[var(--chrome-fg-dim)]">
+      <div className="settings-log-meta my-[var(--space-4)] flex shrink-0 items-center gap-[var(--space-4)] font-mono text-[var(--text-base)] text-[var(--chrome-fg-dim)]">
         <span>{logMeta.path || '—'}</span>
         {hasLogFile && (
           <Button
@@ -121,7 +124,7 @@ export default function LogsTab({
         role="log"
         aria-label={t('settings.logs')}
         data-testid="logs-scroll"
-        className="bg-[var(--chrome-bg)] [border:1px_solid_var(--chrome-border)] rounded-[var(--chrome-radius-pill)] px-[12px] py-[10px] max-h-[280px] overflow-auto font-mono text-[0.72rem] text-[var(--chrome-fg-muted)] whitespace-pre-wrap break-words focus-visible:outline-none focus-visible:border-[var(--chrome-accent)] focus-visible:shadow-[var(--focus-ring)]"
+        className="settings-list-scroll min-h-0 flex-1 overflow-auto overscroll-contain whitespace-pre-wrap break-words rounded-[var(--chrome-radius-pill)] bg-[var(--chrome-bg)] px-[12px] py-[10px] font-mono text-[0.72rem] text-[var(--chrome-fg-muted)] [border:1px_solid_var(--chrome-border)] [scrollbar-gutter:stable] focus-visible:border-[var(--chrome-accent)] focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]"
       >
         {logs.length === 0 ? (
           <span className="settings-log__empty font-sans text-[var(--chrome-fg-dim)]">

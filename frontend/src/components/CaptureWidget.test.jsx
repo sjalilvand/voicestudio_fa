@@ -132,6 +132,8 @@ describe('CaptureWidget', () => {
     mocks.holder.paste = async () => undefined;
     mocks.holder.calls = [];
     mocks.holder.onFrame = null;
+    mocks.state.dictationMode = 'toggle';
+    mocks.state.dictationModelId = 'sherpa-parakeet-tdt-v3';
     FakeWebSocket.instances = [];
     global.WebSocket = FakeWebSocket;
     global.MediaRecorder = FakeMediaRecorder;
@@ -150,6 +152,45 @@ describe('CaptureWidget', () => {
 
   const pasteCalls = () => mocks.holder.calls.filter(([c]) => c === 'simulate_paste');
   const typeCalls = () => mocks.holder.calls.filter(([c]) => c === 'simulate_type');
+
+  it('honors a hold-mode release while microphone startup is pending', async () => {
+    mocks.state.dictationMode = 'hold';
+    let resolveMicrophone;
+    const getUserMedia = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveMicrophone = resolve;
+        }),
+    );
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia },
+    });
+    render(withI18n(<CaptureWidget />));
+
+    fireEvent.keyDown(window, { code: 'Space', ctrlKey: true, shiftKey: true });
+    await waitFor(() => expect(getUserMedia).toHaveBeenCalledOnce());
+    fireEvent.keyUp(window, { code: 'Space' });
+    await act(async () => {
+      resolveMicrophone({ getTracks: () => [{ stop() {} }] });
+    });
+
+    expect(await screen.findByText(/Transcribing/)).toBeInTheDocument();
+    expect(screen.queryByText(/Listening/)).not.toBeInTheDocument();
+  });
+
+  it('falls back to raw PCM when MediaRecorder cannot be constructed', async () => {
+    mocks.state.dictationModelId = null;
+    delete global.MediaRecorder;
+    render(withI18n(<CaptureWidget />));
+
+    const ws = await startSession();
+    expect(ws.url).toContain('/ws/transcribe?pcm=1&sr=16000');
+    expect(mocks.holder.onFrame).toBeTypeOf('function');
+
+    act(() => mocks.holder.onFrame(new Float32Array([0.25, -0.25])));
+    expect(ws.sent.some((value) => value instanceof ArrayBuffer)).toBe(true);
+  });
 
   it('renders truthful model status from {type:"status"} frames', async () => {
     render(withI18n(<CaptureWidget />));

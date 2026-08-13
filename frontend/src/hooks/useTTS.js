@@ -5,6 +5,7 @@ import { pickDesignSeed } from '../utils/seed';
 import { playBlobAudio, playPing } from '../utils/media';
 import {
   StreamingPreviewError,
+  resolveRemoteTtsTarget,
   streamGenerateSpeech,
   supportsStreamingPreview,
 } from '../utils/streamingTts';
@@ -13,6 +14,7 @@ import { CLONE_MAX_SECONDS, PRESETS } from '../utils/constants';
 import { buildDesignInstruct, designModeProfileId } from '../utils/voiceInstruct';
 import { toast } from 'react-hot-toast';
 import { toastErrorWithReport } from '../utils/errorToast';
+import { modelNotDownloadedPayload, toastModelNotDownloaded } from '../utils/modelNotDownloaded';
 import { addBreadcrumb } from '../utils/breadcrumbs';
 import i18next from 'i18next';
 const t = i18next.t.bind(i18next);
@@ -21,6 +23,11 @@ const t = i18next.t.bind(i18next);
 // shouldn't fire one toast per request. Tracks the last status surfaced this
 // session (module scope, no localStorage); resets on full reload.
 let _lastRoutingStatus = null;
+
+// Same de-dup, for "progressive playback is off because your GPU is the one
+// across the room". Keyed by worker so switching machines re-announces, while
+// ten renders in a row on the same worker say it once.
+let _lastStreamingOffWorker = null;
 
 /**
  * Encapsulates TTS generation logic, streaming response handling,
@@ -208,6 +215,20 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
       const ac = new AbortController();
       abortTimer = setTimeout(() => ac.abort(), 21 * 60 * 1000);
 
+      // #1330 — one voice for both delivery paths. A dropped chunk is not an
+      // error (the audio is real), so it is a persistent-ish warning toast
+      // rather than a thrown failure, and it quotes the lost text so the user
+      // can tell at a glance what to re-render.
+      const announceDroppedText = (count, sample) => {
+        const preview = (sample || '').trim().slice(0, 120);
+        toast(
+          preview
+            ? t('tts.droppedChunksWithText', { count, text: preview })
+            : t('tts.droppedChunks', { count }),
+          { icon: '\u26a0\ufe0f', duration: 8000 },
+        );
+      };
+
       // Header handling shared by both delivery paths (streaming + classic).
       const applyResponseHeaders = (response) => {
         // #526: surface the seed the backend actually used so the Design tab
@@ -220,6 +241,16 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
         // headers only on cpu_fallback / accelerated-with-caveat (never on the
         // benign cpu_only / clean-accelerated paths), so their mere presence is
         // the signal. De-duped by status so a batch doesn't spam.
+        // #1330: some of the text rendered to no audio. The take that came
+        // back is clean and simply short, so nothing else would ever tell the
+        // user — they reported it by reading along. Classic path only; the
+        // streaming path learns this from a `warning` frame (headers are sent
+        // before the render starts).
+        const droppedCount = parseInt(response.headers.get('X-OmniVoice-Dropped-Chunks') || '', 10);
+        if (Number.isInteger(droppedCount) && droppedCount > 0) {
+          announceDroppedText(droppedCount, response.headers.get('X-OmniVoice-Dropped-Text'));
+        }
+
         const routingStatus = response.headers.get('X-OmniVoice-Routing');
         if (routingStatus && routingStatus !== _lastRoutingStatus) {
           _lastRoutingStatus = routingStatus;
@@ -244,8 +275,26 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
       // Any MID-stream failure falls back to the classic whole-file flow with
       // no user-visible difference beyond the old wait; pre-stream HTTP errors
       // (ApiError) throw straight to the shared catch, exactly like before.
+      //
+      // Remote GPU is the one case where it must NOT run: the stream is
+      // rendered by this process, so taking it would silently ignore the
+      // worker the user picked — a local render dressed as a remote one. The
+      // classic path below is the one that goes remote, so it wins, and the
+      // user is told why their progressive playback stopped rather than left
+      // to conclude the app got slower.
       let streamed = false;
-      if (useAppStore.getState().autoPlayPreview && supportsStreamingPreview()) {
+      const wantsStreaming = useAppStore.getState().autoPlayPreview && supportsStreamingPreview();
+      const remoteTarget = wantsStreaming
+        ? await resolveRemoteTtsTarget({ signal: ac.signal })
+        : null;
+      if (remoteTarget) {
+        const who = remoteTarget.label || remoteTarget.workerId || '';
+        if (who !== _lastStreamingOffWorker) {
+          _lastStreamingOffWorker = who;
+          toast(t('tts.streamingOffRemote', { label: who }), { icon: '🖥️', duration: 6000 });
+        }
+      }
+      if (wantsStreaming && !remoteTarget) {
         try {
           await streamGenerateSpeech(formData, {
             signal: ac.signal,
@@ -253,6 +302,10 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
             finalLabel: t('player.generated_audio'),
             onHeaders: applyResponseHeaders,
             onProgress: setProgressPct,
+            onWarning: (ev) => {
+              if (ev?.code === 'dropped_chunks' && ev.count > 0)
+                announceDroppedText(ev.count, (ev.text || []).join(' | '));
+            },
           });
           streamed = true;
         } catch (err) {
@@ -317,6 +370,8 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
       // Real generation failures get the "Report this bug" action.
       if (err?.name === 'AbortError') {
         toast.error(t('tts_errors.timeout'));
+      } else if (modelNotDownloadedPayload(err)) {
+        toastModelNotDownloaded(modelNotDownloadedPayload(err));
       } else {
         toastErrorWithReport(t('tts_errors.error_prefix', { message: err.message }), err);
       }

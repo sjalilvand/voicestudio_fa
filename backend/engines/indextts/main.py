@@ -1,8 +1,8 @@
-"""IndexTTS-2 sidecar entry point (Phase 2 Plan 02-03).
+"""IndexTTS 2.5/2 sidecar entry point (Phase 2 Plan 02-03).
 
 Runs inside ``engines/indextts/.venv`` (or the user's existing
 ``${OMNIVOICE_INDEXTTS_DIR}/.venv``) with ``transformers<5``, isolated
-from the OmniVoice parent process which pins ``transformers>=5.3``.
+from the VoiceStudio parent process which pins ``transformers>=5.3``.
 Closes issue #42 — the canonical ``OffloadedCache`` ImportError that
 results from running both libraries inside one Python interpreter.
 
@@ -50,7 +50,7 @@ Op flow expected by the parent:
 Restrictions:
 
   * NO imports from ``backend.services``, ``backend.engines`` (other
-    than this package), or any OmniVoice parent code. The sidecar runs
+    than this package), or any VoiceStudio parent code. The sidecar runs
     under a venv where those modules may not resolve.
   * NO logging of ``os.environ`` contents or env-var values. Defense in
     depth against accidental token-bytes-on-stderr (T-02-08); the
@@ -109,6 +109,8 @@ EMOTION_KWARGS_ALLOWLIST = frozenset({
     "use_emo_text",     # bool — set by parent when emo_text supplied
     "use_random",       # bool
     "target_tokens",    # int — duration control
+    "duration_factor",  # float — IndexTTS 2.5 duration scaling
+    "lang",             # IndexTTS 2.5 language token
 })
 
 
@@ -144,6 +146,40 @@ def _recv(stream):
 # Module-level singleton — populated on the first synthesize op and reused
 # for every subsequent request in this sidecar's lifetime.
 _model = None
+_model_version = None
+
+
+def _torch_bf16_supported() -> bool:
+    """Return whether this sidecar can safely enable IndexTTS 2.5 BF16."""
+    try:
+        import torch
+
+        supported = getattr(torch.cuda, "is_bf16_supported", None)
+        return bool(torch.cuda.is_available() and supported and supported())
+    except Exception:
+        return False
+
+
+def _model_init_kwargs(
+    repo_dir: str, *, version: str, reduced_precision: bool,
+) -> dict:
+    """Build version-specific constructor arguments for IndexTTS 2.5 or 2."""
+    model_dir = os.path.join(repo_dir, "checkpoints")
+    cfg_name = "config_v2_5.yaml" if version == "2.5" else "config.yaml"
+    kwargs = {
+        "cfg_path": os.path.join(model_dir, cfg_name),
+        "model_dir": model_dir,
+        "use_cuda_kernel": False,
+        "use_deepspeed": False,
+    }
+    if version == "2.5":
+        kwargs.update(
+            use_bf16=reduced_precision and _torch_bf16_supported(),
+            use_qwen_emo=True,
+        )
+    else:
+        kwargs["use_fp16"] = reduced_precision
+    return kwargs
 
 
 def _load_model(stdout) -> object:
@@ -155,29 +191,32 @@ def _load_model(stdout) -> object:
     in-flight synthesize op and continues the dispatch loop (the next
     request retries the load).
     """
-    global _model
+    global _model, _model_version
     if _model is not None:
         return _model
 
     _send(stdout, {"op": "progress", "stage": "loading_model", "percent": 0})
 
     # Imported lazily so a missing dep doesn't block the ready handshake.
-    from indextts.infer_v2 import IndexTTS2  # type: ignore[import-not-found]
+    # A user-managed IndexTTS-2 checkout remains supported; app-managed
+    # installs use the reviewed 2.5 branch and take this first path.
+    try:
+        from indextts.infer_v2_5 import IndexTTS2  # type: ignore[import-not-found]
+        _model_version = "2.5"
+    except ModuleNotFoundError as exc:
+        if exc.name != "indextts.infer_v2_5":
+            raise
+        from indextts.infer_v2 import IndexTTS2  # type: ignore[import-not-found,no-redef]
+        _model_version = "2"
 
     _send(stdout, {"op": "progress", "stage": "loading_model", "percent": 50})
 
     repo_dir = os.environ.get("OMNIVOICE_INDEXTTS_DIR", ".")
-    cfg_path = os.path.join(repo_dir, "checkpoints", "config.yaml")
-    model_dir = os.path.join(repo_dir, "checkpoints")
-    use_fp16 = os.environ.get("OMNIVOICE_INDEXTTS_FP16", "1") == "1"
-
-    _model = IndexTTS2(
-        cfg_path=cfg_path,
-        model_dir=model_dir,
-        use_fp16=use_fp16,
-        use_cuda_kernel=False,
-        use_deepspeed=False,
+    reduced_precision = os.environ.get("OMNIVOICE_INDEXTTS_FP16", "1") == "1"
+    model_kw = _model_init_kwargs(
+        repo_dir, version=_model_version, reduced_precision=reduced_precision,
     )
+    _model = IndexTTS2(**model_kw)
 
     _send(stdout, {"op": "progress", "stage": "loading_model", "percent": 100})
     return _model
@@ -229,14 +268,7 @@ def _handle_synthesize(msg: dict, stdout) -> None:
     # Build infer_kwargs by filtering through the allowlist. The parent
     # has already done any vector-vs-audio-vs-text emotion priority
     # arbitration; we just forward whichever keys it sent.
-    infer_kw: dict = {
-        "spk_audio_prompt": ref_audio,
-        "text": text,
-        "verbose": False,
-    }
-    for k, v in msg.items():
-        if k in EMOTION_KWARGS_ALLOWLIST and v is not None:
-            infer_kw[k] = v
+    infer_kw = _build_infer_kwargs(msg, ref_audio, is_v25=_model_version == "2.5")
 
     # IndexTTS2.infer() writes to a file; we route through tempfile so
     # cleanup is automatic on success and on exit.
@@ -263,12 +295,52 @@ def _handle_synthesize(msg: dict, stdout) -> None:
     })
 
 
+def _build_infer_kwargs(msg: dict, ref_audio: str, *, is_v25: bool) -> dict:
+    """Translate the stable VoiceStudio wire payload to either upstream API."""
+    infer_kw: dict = {
+        "spk_audio_prompt": ref_audio,
+        "text": msg.get("text"),
+        "verbose": False,
+    }
+    for k, v in msg.items():
+        if k in EMOTION_KWARGS_ALLOWLIST and v is not None:
+            infer_kw[k] = v
+    if is_v25:
+        # 2.5 requires language and replaced exact AR target_tokens with an
+        # S2M duration factor. Dubbing's fit stage remains the exact timeline
+        # authority, so an obsolete target_tokens kwarg must not leak into the
+        # upstream transformers generate call.
+        infer_kw.pop("target_tokens", None)
+        infer_kw["lang"] = str(infer_kw.get("lang") or "en").lower()
+    else:
+        infer_kw.pop("lang", None)
+        infer_kw.pop("duration_factor", None)
+    return infer_kw
+
+
 # ── main loop ─────────────────────────────────────────────────────────────
 
 
 def main() -> int:
     stdin = sys.stdin.buffer
-    stdout = sys.stdout.buffer
+    # Frames go down a PRIVATE fd, and fd 1 is pointed at stderr (#1428).
+    #
+    # This sidecar's protocol is length-prefixed binary on stdout, but it is
+    # not the only thing writing there: the libraries it loads print freely to
+    # fd 1 — wetextprocessing's FST logs, tqdm bars, native prints from torch
+    # and ONNX runtime. Those bytes interleave with frames, and the parent
+    # then reads four bytes of log text as a length prefix, which is how a
+    # generation dies with `OSError: frame too large: 1044258881` (that number
+    # is ASCII). Worse, it desyncs the stream, so every later request on the
+    # same sidecar reads stale bytes and no retry can recover.
+    #
+    # Duplicating fd 1 first keeps a clean channel only this module can write
+    # to; redirecting fd 1 to fd 2 sends the library noise to stderr, which
+    # the parent already drains into its own log (through the HF-token
+    # redactor). Nothing is lost and the frame stream cannot be corrupted.
+    _frame_fd = os.dup(1)
+    os.dup2(2, 1)
+    stdout = os.fdopen(_frame_fd, "wb")
 
     # The ready handshake fires BEFORE any heavy import. SubprocessBackend's
     # SPAWN_READY_TIMEOUT_S is 30 s; we comfortably make that even on a

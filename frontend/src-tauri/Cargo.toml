@@ -1,7 +1,11 @@
 [package]
+# NOT renamed with the product (VoiceStudio). This is the BINARY name, and
+# scripts/desktop-common.mjs keys its dev-vs-release distinction on it: the dev
+# launcher's pkill matches `omnivoice-studio` and must never match a user's
+# installed app. Renaming it would collapse that distinction.
 name = "omnivoice-studio"
 version = "0.4.2"
-description = "OmniVoice Studio – AI voice cloning & dubbing desktop app"
+description = "VoiceStudio – AI voice cloning & dubbing desktop app"
 authors = ["Debpalash"]
 license = "AGPL-3.0-only"
 repository = ""
@@ -18,6 +22,7 @@ tauri-build = { version = "2.6.0", features = [] }
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
+getrandom = "0.3"
 log = "0.4"
 tauri = { version = "2.11.0", features = ["macos-private-api", "protocol-asset", "tray-icon", "image-png"] }
 tauri-plugin-log = "2"
@@ -86,6 +91,10 @@ libc = "0.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = "2.0"
+# Wayland compositors do not expose global keys through X11 grabs. Use the
+# standard xdg-desktop-portal GlobalShortcuts interface there; zbus is already
+# present transitively through Tauri's opener/single-instance plugins.
+zbus = "5.16"
 
 [dev-dependencies]
 # Scoped-reset tests build real directory trees to prove the delete guard only

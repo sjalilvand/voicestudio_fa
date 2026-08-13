@@ -18,8 +18,9 @@ features:
   - Batch Queue
   - MCP Server
   - AI Watermark
-  - 100% Local
+  - Local-first
   - GPU Auto-Detect
+  - Remote Model Downloads
   - Extensible
 
 # id: must exactly match the registry keys in backend/services/tts_backend.py
@@ -28,7 +29,7 @@ features:
 # doc (optional): a repo-relative doc file that must exist.
 tts_engines:
   - id: omnivoice
-    readme: "**OmniVoice** (default)"
+    readme: "**VoiceStudio** (default, powered by k2-fsa/OmniVoice)"
   - id: omnivoice-subprocess
     doc: docs/engines/omnivoice-subprocess.md
   - id: cosyvoice
@@ -45,6 +46,7 @@ tts_engines:
   - id: gpt-sovits
   - id: sherpa-onnx
   - id: indextts2
+    readme: "**IndexTTS 2.5** ⚡"
     doc: docs/engines/indextts.md
   - id: omnivoice-gguf
   - id: supertonic3
@@ -57,6 +59,7 @@ tts_engines:
   - id: confucius4-tts
     readme: "**Confucius4-TTS**"
     doc: docs/engines/confucius4-tts.md
+  - id: pockettts
 
 # Same contract against backend/services/asr_backend.py _REGISTRY.
 asr_engines:
@@ -83,6 +86,10 @@ asr_engines:
 
 # Doc files that must exist (the install path users are sent to).
 docs:
+  - docs/downloading-models.md
+  - docs/remote-workers.md
+  - docs/adr/inbound-node-mode.md
+  - docs/branding.md
   - docs/install/macos.md
   - docs/install/windows.md
   - docs/install/linux.md

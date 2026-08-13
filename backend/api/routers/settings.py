@@ -1,11 +1,10 @@
 """Settings API — HF token save/clear/state endpoints (Phase 1 AUTH-03 backend half).
 
 These endpoints are the backend half of the Wave 2 Settings → API Keys
-panel. Threat T-01-03 mitigation: every write endpoint is gated by the
-router-level `require_loopback` dep, so non-loopback origins get 403
-before the handler runs. Reads are loopback-gated too — the masked
-token preview is useful telemetry that we still don't want exposed on
-the LAN.
+panel. Threat T-01-03 mitigation: the router-level `require_admin` dependency
+keeps desktop callers loopback-only and requires the long API key for every
+remote server-mode mutation. Read-only bare-Docker discovery remains available
+until an API key is configured; once configured, reads require it too.
 
 The state endpoint duplicates `/system/hf-token/state` (which lives on
 `system.py` for legacy-router compatibility); both return the same shape.
@@ -20,14 +19,15 @@ from dataclasses import asdict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from api.dependencies import require_loopback
+from core.logging_utils import log_safe
+from api.dependencies import require_admin, require_admin_action
 
 logger = logging.getLogger("omnivoice.api.settings")
 
 router = APIRouter(
     prefix="/api/settings",
     tags=["settings"],
-    dependencies=[Depends(require_loopback)],
+    dependencies=[Depends(require_admin)],
 )
 
 
@@ -92,8 +92,8 @@ def get_hf_token_state(fresh: bool = Query(False)):
 
 
 # ── Performance settings (INST-12) ────────────────────────────────────────
-# Threat T-02-04: same loopback guard as the hf-token endpoints via the
-# router-level `require_loopback` dep.
+# Threat T-02-04: same admin guard as the hf-token endpoints via the
+# router-level `require_admin` dep.
 
 
 _TORCH_COMPILE_KEY = "perf.torch_compile_disabled"
@@ -445,16 +445,46 @@ def test_llm_provider(provider_id: str):
             "reply": reply[:80],
             "latency_ms": int((_time.monotonic() - t0) * 1000),
         }
-    except Exception as e:  # noqa: BLE001 — surface a clean, scrubbed error to the UI
+    except Exception as e:  # noqa: BLE001 — classify without exposing diagnostics
+        kind = _classify_llm_error(e)
+        from core.public_errors import provider_failure
+        failure = provider_failure(kind)
+        # A successful local catalog probe proves the cached model is stale.
+        # Invalidate it, but never include catalog or exception text in the
+        # response: both are controlled by the provider.
+        if kind == "not_found" and p.local:
+            available = _local_models(base_url, api_key)
+            if available is not None:
+                llm_providers.forget_discovered_models(p.id)
         return {
             "ok": False,
-            "kind": _classify_llm_error(e),
-            "detail": _scrub_llm_detail(e, api_key),
+            **failure,
             "latency_ms": int((_time.monotonic() - t0) * 1000),
         }
 
 
-@router.get("/llm-providers/{provider_id}/models")
+def _local_models(base_url: str, api_key: str):
+    """Model ids a local OpenAI-compatible server currently serves.
+
+    ``None`` when the listing itself failed, ``[]`` when it succeeded and the
+    server has nothing loaded. The distinction is load-bearing: collapsing both
+    to ``[]`` let the caller state "reports no loaded models" on a lookup that
+    never happened, which is a confident wrong diagnosis in place of a vague
+    right one (CodeRabbit). Only used to sharpen an error message, so it must
+    never raise a second error on top of the first.
+    """
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key, base_url=base_url, max_retries=0)
+        return sorted(m.id for m in client.models.list(timeout=5))
+    except Exception:  # noqa: BLE001
+        return None
+
+
+@router.get(
+    "/llm-providers/{provider_id}/models",
+    dependencies=[Depends(require_admin_action)],
+)
 def list_llm_provider_models(provider_id: str):
     """List model ids the provider's key can access (OpenAI-compat /models).
 
@@ -480,10 +510,10 @@ def list_llm_provider_models(provider_id: str):
         # can say "first 200 shown" rather than implying it's the full list.
         return {"ok": True, "models": ids[:200], "truncated": len(ids) > 200}
     except Exception as e:  # noqa: BLE001
+        from core.public_errors import provider_failure
         return {
             "ok": False,
-            "kind": _classify_llm_error(e),
-            "detail": _scrub_llm_detail(e, api_key),
+            **provider_failure(_classify_llm_error(e)),
             "models": [],
         }
 
@@ -548,7 +578,7 @@ def set_llm_skill(skill_id: str, body: _LLMSkillBody):
 #: Engines that have an in-tree acceptance dialog. Adding a new engine
 #: here means adding a corresponding frontend dialog + a license URLs
 #: dict in its constants module. Until that, the API refuses the write.
-_LICENSE_ALLOWED_ENGINES: frozenset[str] = frozenset({"supertonic3"})
+_LICENSE_ALLOWED_ENGINES: frozenset[str] = frozenset({"supertonic3", "pockettts"})
 
 
 class _LicenseAcceptBody(BaseModel):
@@ -577,8 +607,8 @@ def post_license_acceptance(body: _LicenseAcceptBody) -> dict:
     from services import settings_store
     try:
         settings_store.set_license_accepted(eid, body.accepted)
-    except Exception:
-        logger.exception("set_license_accepted failed for %s", eid)
+    except Exception as exc:
+        logger.error("set_license_accepted failed for %s: %s", log_safe(eid), log_safe(exc))
         raise HTTPException(status_code=500, detail="Failed to persist license acceptance")
     return {"ok": True, "engine_id": eid, "accepted": bool(body.accepted)}
 
@@ -603,8 +633,8 @@ def get_license_acceptance(engine_id: str) -> dict:
     from services import settings_store
     try:
         accepted = settings_store.get_license_accepted(eid)
-    except Exception:
-        logger.exception("get_license_accepted failed for %s", eid)
+    except Exception as exc:
+        logger.error("get_license_accepted failed for %s: %s", log_safe(eid), log_safe(exc))
         raise HTTPException(status_code=500, detail="Failed to read license acceptance")
     return {"engine_id": eid, "accepted": bool(accepted)}
 
@@ -636,7 +666,7 @@ def _effective_models_dir() -> str:
 
 
 class _ModelsDirBody(BaseModel):
-    path: str = Field(default="", description="Absolute directory; empty clears → default cache")
+    authorization: str = Field(description="One-shot native desktop authorization")
 
 
 @router.get("/storage/models-dir")
@@ -665,17 +695,18 @@ def set_models_dir(body: _ModelsDirBody):
     saved. Returns restart_required=True.
     """
     from core import user_env
+    from core.path_authorization import PathAuthorizationError, consume
 
-    raw = (body.path or "").strip()
+    try:
+        raw = consume(body.authorization, "models_dir").strip()
+    except PathAuthorizationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     if not raw:
         user_env.unset_user_env(_MODELS_DIR_ENV)
         return {"configured": None, "default": _default_models_dir(), "restart_required": True}
 
-    # Reject control characters / NUL before touching the filesystem: an
-    # embedded NUL makes os.makedirs raise ValueError (→ 500). This is also
-    # the input-validation barrier for the path before it reaches any fs call
-    # (the dir is user-chosen by design — this is a loopback-gated, same-user
-    # local file picker, not a cross-privilege boundary).
+    # Tauri already validates this before issuing the capability. Keep the
+    # backend checks as defense in depth against a corrupt capability file.
     if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in raw):
         raise HTTPException(status_code=400, detail="Path contains invalid control characters")
 
@@ -736,7 +767,7 @@ async def get_storage_report(refresh: bool = Query(False)):
 
 @router.post("/storage/temp/clear")
 async def clear_temp_files():
-    """Delete OmniVoice-owned temp files (Settings → Storage → Temporary files).
+    """Delete VoiceStudio-owned temp files (Settings → Storage → Temporary files).
 
     Removes only the ``omnivoice*`` entries in the OS temp dir — the exact
     population the storage report's "temp" category counts — and invalidates

@@ -1,6 +1,6 @@
 # Authenticating the local API
 
-OmniVoice's backend is **loopback-only and unauthenticated by default** — a
+VoiceStudio's backend is **loopback-only and unauthenticated by default** — a
 script running on the same machine as `http://localhost:3900` needs no key, no
 PIN, no header. Everything on this page only matters once you reach the backend
 from **another device** (a phone on your LAN, a laptop over Tailscale, a client
@@ -18,10 +18,11 @@ env var that exempts trusted callers:
 Loopback traffic (`127.0.0.1`, `::1`, `localhost`) is **never** gated — local
 tools keep working unchanged whichever gate is set.
 
-> OmniVoice separates **consumption** (TTS, dictation, voices) from
+> VoiceStudio separates **consumption** (TTS, dictation, voices) from
 > **administration** (`/system/*`, `/api/settings/*` — RCE-class). The PIN and
 > trusted networks are *consumption* credentials; the **admin surface is only
-> ever reached from loopback or with the API key** (see [Admin routes](#admin-routes-and-server-mode)).
+> ever reached from loopback or with the API key**. Host-path capabilities stay
+> desktop-only even with a key (see [Admin routes](#admin-routes-and-server-mode)).
 
 > Both gates can be active at once. The PIN and the API key are independent; when
 > both are set, each is checked on the paths it covers.
@@ -41,14 +42,14 @@ present it. Supply it any one of three ways:
 
 | Where | How |
 |---|---|
-| Header | `X-OmniVoice-Pin: <pin>` |
+| Header | `X-VoiceStudio-Pin: <pin>` |
 | Query param | `?pin=<pin>` |
 | Cookie | `ov_pin=<pin>` — the backend sets this automatically after the first valid PIN, so browser sessions only prove it once |
 
 ```bash
 # From another device on the LAN — with the PIN
 curl http://<host>:3900/v1/audio/voices \
-  -H "X-OmniVoice-Pin: 123456"
+  -H "X-VoiceStudio-Pin: 123456"
 ```
 
 A missing or wrong PIN returns:
@@ -195,10 +196,11 @@ time, so in production **restart the backend** to apply a change. Default empty
 ## Admin routes and server mode
 
 Admin routes — `/system/*` (including `set-env`, **RCE-class**),
-`/api/settings/*`, engine install/uninstall, media tools, MCP bindings — sit on
-a stricter gate (`require_loopback`, `backend/api/dependencies.py`) than
-consumption. On the desktop build they are **true-loopback-only**: no PIN, key,
-or trusted network reaches them from another machine.
+`/api/settings/*`, engine selection/install/uninstall, media tools, MCP
+bindings, pronunciation settings, and remote-worker management — sit on a
+stricter gate (`require_admin`, `backend/api/dependencies.py`) than consumption.
+On the desktop build they are **true-loopback-only**: no PIN, key, or trusted
+network reaches them from another machine.
 
 In **server mode** (`OMNIVOICE_SERVER_MODE=1`, the Docker image) the loopback
 origin is unenforceable — NAT rewrites the source and even a
@@ -206,13 +208,31 @@ origin is unenforceable — NAT rewrites the source and even a
 requirement is dropped (issue #261, else the operator is 403'd out of their own
 `/system/*`). It is replaced by a **credential rule**, not removed:
 
-- **No credential configured** (no API key, no PIN) → admin is open. The bare
-  Docker flow; exposure rests entirely on your port mapping / firewall.
-- **A credential is configured** → admin requires the **API key** (`Authorization:
+- **No credential configured** (neither API key nor share PIN) → read-only
+  admin discovery remains available for the bare Docker bootstrap flow, but
+  `POST`/`PUT`/`PATCH`/`DELETE` requests are denied. Side-effectful GET actions
+  are denied too: engine health may start a sidecar, deep diagnostics may load
+  a model, and LLM provider discovery makes a request with the saved provider
+  credential. Set `OMNIVOICE_API_KEY` before changing settings or triggering
+  those actions remotely.
+- **An API key is configured** → admin requires that **API key** (`Authorization:
   Bearer` / `?api_key` / `ov_key` cookie), or genuine loopback. The **6-digit
   share PIN does not gate admin** (it is brute-forceable), and trusted-network
-  membership never does either. So a **PIN-only** server-mode deployment keeps
-  admin loopback-only; remote admin requires the long API key.
+  membership never does either. A **PIN-only** server-mode deployment therefore
+  keeps admin routes loopback-only; remote admin requires the long API key.
+
+Managed sidecar installation remains true-loopback-only even with an API key.
+Its installer fetches mutable source and creates an editable environment, so it
+must be run directly on that machine until the source supply chain is pinned.
+
+Host paths are never selected through HTTP. The native Tauri process validates
+model-cache and export destinations plus custom FFmpeg/FFprobe binaries, writes
+a private one-shot capability, and only that opaque authorization reaches the
+backend. `/export` therefore accepts an `authorization` token, never a
+`destination_path`; revealing an arbitrary exported path runs in the native
+process, while the HTTP fallback is limited to the server-owned data root.
+`/system/set-env` does not accept executable-path keys at all. Server mode and
+an API key do not weaken that native boundary.
 
 This is the fix for a real escalation (#1213): before it, server mode made the
 admin gate a no-op, so with an API key set *and* a trusted CIDR configured, a LAN
@@ -222,13 +242,39 @@ credential at all**, because the API-key middleware waved it through as
 
 ---
 
+## Browsers from another origin (CORS)
+
+Everything above gates *authentication*. A **browser** frontend served from a
+different origin than the backend hits a separate wall first: CORS. The
+backend's allow-list defaults to loopback + Tauri origins only
+(`http://localhost:<ui-port>`, `http://127.0.0.1:<ui-port>`,
+`tauri://localhost`, `http://tauri.localhost`), so opening a dev/source UI via
+a LAN IP (e.g. `http://192.168.1.159:3901` talking to `…:3900`) blocks every
+request with *"Missing Header: Access-Control-Allow-Origin"* — regardless of
+`OMNIVOICE_SERVER_MODE` or `OMNIVOICE_TRUSTED_NETWORKS`, neither of which
+touches CORS (#1348).
+
+Add the exact origin the browser shows in its address bar:
+
+```bash
+export OMNIVOICE_ALLOWED_ORIGINS="http://192.168.1.159:3901,http://localhost:3901,http://127.0.0.1:3901,tauri://localhost,http://tauri.localhost"
+```
+
+Each entry must be a bare origin — `scheme://host:port`, exactly what the
+browser sends in its `Origin` header — with no path and no trailing slash
+(`http://192.168.1.159:3901/` would never match). The variable **replaces**
+the default list, so restate the loopback/Tauri origins alongside your own. (The in-app LAN share and Tailscale flows in
+[docs/sharing.md](sharing.md) don't need this — they serve UI and API from the
+same origin.) If you only moved the Vite dev server's port, set
+`OMNIVOICE_UI_PORT` instead and the default list follows it.
+
 ## Status codes
 
 | Code | Meaning | What to do |
 |---|---|---|
 | **401** | Consumption auth failed — `{"detail": "PIN required"}` or `{"detail": "API key required"}`. | Supply the PIN / key (header, cookie, or query param above). A WebSocket surfaces this as close code **1008**. |
-| **403** | `{"detail": "loopback origin required"}` — you reached a **loopback-gated** route (admin: `/system/*`, `/api/settings/*`; or a `require_local` route from outside a trusted network) from a non-loopback origin. | A PIN won't help. Run the request from the box itself; for `require_local` routes add the caller to `OMNIVOICE_TRUSTED_NETWORKS`; for **admin** routes use `OMNIVOICE_SERVER_MODE=1` **and** present the **API key** (the PIN/trusted-network don't reach admin). |
-| **429** | **Not an auth failure.** The GPU pool is saturated (admission control) or a model download is rate-limited. Ships with `Retry-After` and `X-OmniVoice-Retryable: true`. | Back off for `Retry-After` seconds and retry the identical request. |
+| **403** | Authorization failed: loopback/native access was required, a server-mode mutation lacked the API key, or a native path capability was invalid, expired, or for a different operation. | A PIN cannot grant admin or filesystem access. Run native operations from the desktop app; configure and present the API key for remote server-mode mutations; reopen the native picker if a one-shot capability expired. |
+| **429** | **Not an auth failure.** The GPU pool is saturated (admission control) or a model download is rate-limited. Ships with `Retry-After` and `X-VoiceStudio-Retryable: true`. | Back off for `Retry-After` seconds and retry the identical request. |
 
 ---
 
@@ -238,5 +284,5 @@ credential at all**, because the API-key middleware waved it through as
   Tailscale, with the API key.
 - [docs/sharing.md](sharing.md) — the in-app LAN share + PIN flow.
 - [docs/agentic-voice.md](agentic-voice.md) — pointing OpenAI-compatible agent
-  frameworks at OmniVoice.
+  frameworks at VoiceStudio.
 - [docs/mcp.md](mcp.md) — the MCP server for AI agents.

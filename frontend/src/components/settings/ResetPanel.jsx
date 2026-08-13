@@ -205,7 +205,7 @@ export default function ResetPanel({ _forceAdvanced = false } = {}) {
       toast.success(
         steps.restart
           ? t('settings.reset_done_restart', {
-              defaultValue: 'Reset complete — restarting OmniVoice…',
+              defaultValue: 'Reset complete — restarting VoiceStudio…',
             })
           : t('settings.reset_done', { defaultValue: 'Reset complete — reloading…' }),
       );
@@ -279,7 +279,7 @@ export default function ResetPanel({ _forceAdvanced = false } = {}) {
     },
     {
       id: 'everything',
-      label: t('settings.reset_tier_everything', { defaultValue: 'Everything OmniVoice did' }),
+      label: t('settings.reset_tier_everything', { defaultValue: 'Everything VoiceStudio did' }),
       hint: t('settings.reset_tier_everything_hint', {
         defaultValue:
           'Back to a fresh install: settings, voices, projects, audio, models, engines, logs. The app restarts on the first-run screen.',
@@ -297,7 +297,7 @@ export default function ResetPanel({ _forceAdvanced = false } = {}) {
         icon={RotateCcw}
         title={t('settings.reset', { defaultValue: 'Reset & remove' })}
         description={t('settings.reset_desc', {
-          defaultValue: 'Put part — or all — of OmniVoice back to how it shipped.',
+          defaultValue: 'Put part — or all — of VoiceStudio back to how it shipped.',
         })}
       >
         {shellless ? (
@@ -309,15 +309,17 @@ export default function ResetPanel({ _forceAdvanced = false } = {}) {
           </p>
         ) : (
           <>
-            <div className="mb-[var(--space-4)] flex flex-col gap-[var(--space-2)]">
+            <div className="mb-[var(--space-4)] grid grid-cols-1 gap-[var(--space-2)] @min-[620px]/settings:grid-cols-2">
               {TIERS.map((tier) => {
                 const size = selectedBytes(scopes, PRESETS[tier.id]);
                 const on = activePreset === tier.id;
                 return (
                   <label
                     key={tier.id}
-                    className={`flex cursor-pointer items-start gap-[var(--space-3)] rounded-[var(--radius-md)] p-[var(--space-3)] ${
-                      on ? 'bg-[var(--chrome-accent-bg)]' : 'bg-[var(--chrome-hover-bg)]'
+                    className={`flex cursor-pointer items-start gap-[var(--space-3)] rounded-[var(--chrome-radius-pill)] border p-[var(--space-4)] transition-colors ${
+                      on
+                        ? 'border-[color-mix(in_srgb,var(--chrome-accent)_32%,transparent)] bg-[var(--chrome-accent-bg)] shadow-[inset_2px_0_0_var(--chrome-accent)]'
+                        : 'border-[color-mix(in_srgb,var(--chrome-fg)_7%,transparent)] bg-[var(--chrome-bg)] hover:bg-[var(--chrome-hover-bg)]'
                     }`}
                   >
                     <input
@@ -361,8 +363,12 @@ export default function ResetPanel({ _forceAdvanced = false } = {}) {
 
             {advanced && (
               <div
-                className="mb-[var(--space-4)] flex flex-col gap-[var(--space-2)]"
+                className="settings-list-scroll mb-[var(--space-4)] flex max-h-[420px] flex-col gap-[var(--space-2)] overflow-y-auto overscroll-contain rounded-[var(--chrome-radius-pill)] bg-[var(--chrome-bg)] p-[var(--space-2)] [scrollbar-gutter:stable]"
                 data-testid="reset-advanced"
+                tabIndex={0}
+                aria-label={t('settings.reset_advanced', {
+                  defaultValue: 'Choose exactly what to remove',
+                })}
               >
                 {SCOPE_ORDER.map((key) => {
                   const s = byKey[key];
@@ -413,7 +419,7 @@ export default function ResetPanel({ _forceAdvanced = false } = {}) {
       <Dialog
         open={open}
         onClose={() => !busy && setOpen(false)}
-        title={t('settings.reset_confirm_title', { defaultValue: 'Reset OmniVoice?' })}
+        title={t('settings.reset_confirm_title', { defaultValue: 'Reset VoiceStudio?' })}
         size="md"
         footer={
           <>
@@ -462,7 +468,7 @@ export default function ResetPanel({ _forceAdvanced = false } = {}) {
               <span data-testid="reset-shared-warning">
                 {t('settings.reset_models_shared_warning', {
                   defaultValue:
-                    'The model cache is the standard Hugging Face cache, shared with other AI tools on this machine — removing it may delete models OmniVoice never downloaded. Everything OmniVoice needs will download again on next use.',
+                    'The model cache is the standard Hugging Face cache, shared with other AI tools on this machine — removing it may delete models VoiceStudio never downloaded. Everything VoiceStudio needs will download again on next use.',
                 })}
               </span>
             </p>
@@ -503,7 +509,7 @@ export default function ResetPanel({ _forceAdvanced = false } = {}) {
             <p className="m-0 [font-family:var(--font-sans)] text-[length:var(--text-sm)] leading-[1.6] text-[var(--chrome-fg-muted)]">
               {t('settings.reset_restart_note', {
                 defaultValue:
-                  'OmniVoice will restart its engine to finish. This takes a few seconds.',
+                  'VoiceStudio will restart its engine to finish. This takes a few seconds.',
               })}
             </p>
           )}

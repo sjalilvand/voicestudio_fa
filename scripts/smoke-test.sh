@@ -31,7 +31,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 APP_ID="com.debpalash.omnivoice-studio"
 TAURI_DIR="frontend/src-tauri"
-APP_NAME="OmniVoice Studio"
+APP_NAME="VoiceStudio"
 BACKEND_URL="http://127.0.0.1:3900"
 
 # Timeouts (seconds)
@@ -90,7 +90,8 @@ elif [ "$PLATFORM" = "windows" ]; then
   HF_CACHE="${HF_HOME:-${LOCALAPPDATA}/OmniVoice/hf_cache}"
 else
   APP_DATA="${XDG_DATA_HOME:-$HOME/.local/share}/${APP_ID}"
-  OV_DATA="${XDG_DATA_HOME:-$HOME/.local/share}/OmniVoice"
+  # Linux: the backend uses ~/.omnivoice, NOT XDG (backend/core/config.py).
+  OV_DATA="$HOME/.omnivoice"
   HF_CACHE="${HF_HOME:-$HOME/.cache/huggingface}"
 fi
 
@@ -116,7 +117,7 @@ for arg in "$@"; do
 done
 
 # ══════════════════════════════════════════════════════════════════════════
-header "🧪 OmniVoice Studio — End-to-End Smoke Test"
+header "🧪 VoiceStudio — End-to-End Smoke Test"
 echo "   Platform: $PLATFORM | $(date)"
 echo ""
 

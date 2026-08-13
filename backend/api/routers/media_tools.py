@@ -12,14 +12,14 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from api.dependencies import require_loopback
+from api.dependencies import require_admin
 
 logger = logging.getLogger("omnivoice.api")
-router = APIRouter(dependencies=[Depends(require_loopback)])
+router = APIRouter(dependencies=[Depends(require_admin)])
 
 
 class CustomPathRequest(BaseModel):
-    path: str
+    authorization: str
 
 
 def _svc():
@@ -61,8 +61,13 @@ def media_tools_ytdlp_restore():
 
 @router.post("/media-tools/{tool}/custom-path")
 def media_tools_custom_path(tool: str, body: CustomPathRequest):
+    from core.path_authorization import PathAuthorizationError, consume
+
     try:
-        return _svc().set_custom_path(tool, body.path)
+        path = consume(body.authorization, tool)
+        return _svc().set_custom_path(tool, path)
+    except PathAuthorizationError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

@@ -26,12 +26,45 @@
  * falling back would only duplicate the failure).
  */
 import { generateSpeech, withTtsInflight } from '../api/generate';
+import { apiFetch } from '../api/client';
 import { claimTrackedPlayback } from './playback';
 
 /** True when the webview can progressively play PCM chunks (Web Audio). */
 export const supportsStreamingPreview = () =>
   typeof window !== 'undefined' &&
   typeof (window.AudioContext || window.webkitAudioContext) === 'function';
+
+/**
+ * The resolved GPU target for synthesis, when it is a remote worker.
+ *
+ * `/generate?stream=true` renders in THIS process — there is no streaming
+ * path to a worker — so a progressive preview would quietly run the job on
+ * this machine after the user picked their 4090. That is the one thing the
+ * whole picker exists to prevent, so the caller takes the classic (remote-
+ * capable) path instead and says why.
+ *
+ * Resolved per generate rather than once at mount, deliberately: a worker can
+ * go to sleep between two clicks, and this asks routing the same question the
+ * generation path asks, so the two cannot disagree.
+ *
+ * Any failure answers "local". Remote workers are opt-in and the endpoint is
+ * loopback-only; a picker that cannot be reached must never stand between a
+ * user and an ordinary local render, and transport retries are off so a dead
+ * backend fails here in one round trip instead of stalling the click.
+ *
+ * @returns {Promise<{workerId: string|null, label: string}|null>}
+ */
+export async function resolveRemoteTtsTarget({ signal } = {}) {
+  try {
+    const res = await apiFetch('/workers/target?op=tts', { signal, retryTransport: false });
+    if (!res?.ok) return null;
+    const active = (await res.json())?.active;
+    if (!active?.remote) return null;
+    return { workerId: active.worker_id || null, label: active.label || '' };
+  } catch {
+    return null;
+  }
+}
 
 /** A failure AFTER the stream started — the signal to fall back to the
  *  classic whole-file /generate flow. */
@@ -300,7 +333,7 @@ export async function streamGenerateSpeech(formData, opts = {}) {
 
 async function _streamGenerateSpeech(
   formData,
-  { signal, label, finalLabel, onHeaders, onProgress } = {},
+  { signal, label, finalLabel, onHeaders, onProgress, onWarning } = {},
 ) {
   const fd = new FormData();
   for (const [k, v] of formData.entries()) fd.append(k, v);
@@ -339,6 +372,11 @@ async function _streamGenerateSpeech(
         player?.appendPcm16Base64(ev.pcm);
         if (totalChunks > 0)
           onProgress?.(Math.min(100, Math.round((received / totalChunks) * 100)));
+      } else if (ev.type === 'warning') {
+        // #1330: the render finished, but some of the text produced no audio.
+        // Not an error — the take is real and playable — so it must not take
+        // the stream down; it just must not be silent either.
+        onWarning?.(ev);
       } else if (ev.type === 'done') {
         meta = ev;
       } else if (ev.type === 'error') {

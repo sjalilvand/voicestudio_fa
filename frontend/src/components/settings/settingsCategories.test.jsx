@@ -3,7 +3,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { CATEGORIES, CATEGORY_BY_ID, matchCategories } from './settingsCategories';
+import {
+  CATEGORIES,
+  CATEGORY_BY_ID,
+  matchCategories,
+  resolveCategoryId,
+} from './settingsCategories';
 import en from '../../i18n/locales/en.json';
 
 const SETTINGS_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -20,6 +25,17 @@ describe('matchCategories — search matching', () => {
   it('English keywords match in every locale (no translate fn needed)', () => {
     expect(matchCategories('proxy')).toContain('network');
     expect(matchCategories('ui scale')).toContain('appearance');
+    expect(matchCategories('language')).toContain('appearance');
+  });
+
+  it('folds the former General category into Appearance', () => {
+    expect(CATEGORY_BY_ID.general).toBeUndefined();
+    expect(resolveCategoryId('general')).toBe('appearance');
+  });
+
+  it('uses the concise VoiceStudio API label', () => {
+    expect(CATEGORY_BY_ID.openapi.defaultLabel).toBe('VoiceStudio API');
+    expect(en.settings.openapi).toBe('VoiceStudio API');
   });
 
   it('keywordKeys match through the active locale, so localized setting names find their category', () => {

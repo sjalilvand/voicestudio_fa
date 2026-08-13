@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import re
 import sys
+from time import perf_counter
 
 import pytest
 
@@ -65,7 +66,7 @@ def fresh_app(monkeypatch, tmp_path):
 def _client(app, host="127.0.0.1"):
     """TestClient anchored to a loopback (or non-loopback) client tuple.
 
-    `require_loopback` reads `request.client.host`; the default
+    The admin dependency reads `request.client.host`; the default
     TestClient tuple is `('testclient', 50000)` which the dep rejects.
     """
     from fastapi.testclient import TestClient
@@ -99,6 +100,14 @@ def test_engines_response_includes_new_fields(fresh_app):
         assert entry["isolation_mode"] in {"in-process", "subprocess"}
 
 
+def test_engines_response_marks_environment_pinned_families(fresh_app, monkeypatch):
+    monkeypatch.setenv("OMNIVOICE_ASR_BACKEND", "pytorch-whisper")
+    body = _client(fresh_app).get("/engines").json()
+
+    assert body["asr"]["env_override"] is True
+    assert body["tts"]["env_override"] is False
+
+
 def test_all_families_share_the_11_key_shape(fresh_app):
     client = _client(fresh_app)
     body = client.get("/engines").json()
@@ -129,6 +138,85 @@ def test_llm_entries_are_network_n_a(fresh_app):
         assert entry["routing_status"] == "n/a"
         assert entry["routing_reason"] is None
         assert entry["gpu_compat"] == []
+
+
+def test_engine_discovery_omits_service_diagnostics(fresh_app, monkeypatch):
+    from api.routers import engines
+
+    private = "Traceback: token=private-value at /home/alice/models/engine.py"
+    unsafe = {
+        "id": "probe", "display_name": "Probe", "available": False,
+        "reason": private, "last_error": private, "routing_reason": private,
+        "routing_status": "cpu_fallback",
+        "install_hint": "Install the registered dependency.",
+    }
+    monkeypatch.setattr(engines.tts_backend, "active_backend_id", lambda: "probe")
+    monkeypatch.setattr(engines.tts_backend, "list_backends", lambda: [unsafe])
+
+    body = _client(fresh_app).get("/engines/tts").json()
+    rendered = repr(body)
+    assert private not in rendered
+    assert "/home/alice" not in rendered
+    assert "Traceback" not in rendered
+    assert "private-value" not in rendered
+    assert body["backends"][0]["reason"] == (
+        "Engine unavailable. Check installation and configuration."
+    )
+    assert body["backends"][0]["last_error"] == "A previous engine check failed."
+    assert body["backends"][0]["install_hint"] == "Install the registered dependency."
+    assert body["backends"][0]["routing_reason"] == (
+        "GPU acceleration is unavailable; this engine will use CPU."
+    )
+
+
+@pytest.mark.parametrize(
+    ("status", "private_reason", "expected"),
+    [
+        (
+            "accelerated",
+            "NVIDIA RTX has 4.0 GB VRAM; this engine wants about 8 GB.",
+            "The accelerator may not meet this engine's recommended VRAM.",
+        ),
+        (
+            "accelerated",
+            "sm_120 is absent and may fail at kernel launch: /home/alice",
+            "The selected accelerator may not be supported by this PyTorch build.",
+        ),
+        (
+            "cpu_fallback",
+            "engine has no CUDA path; running on CPU at /home/alice",
+            "GPU acceleration is unavailable; this engine will use CPU.",
+        ),
+        (
+            "cpu_only",
+            "DirectML GPU present; engine routes via private CPU path",
+            "This engine runs on CPU on this host.",
+        ),
+        (
+            "unavailable",
+            "requires cuda; this host probe read /home/alice/device",
+            "This engine has no compatible compute device on this host.",
+        ),
+    ],
+)
+def test_engine_discovery_preserves_routing_outcome_without_diagnostics(
+    fresh_app, monkeypatch, status, private_reason, expected
+):
+    from api.routers import engines
+
+    unsafe = {
+        "id": "probe",
+        "available": status != "unavailable",
+        "routing_status": status,
+        "routing_reason": private_reason,
+    }
+    monkeypatch.setattr(engines.tts_backend, "active_backend_id", lambda: "probe")
+    monkeypatch.setattr(engines.tts_backend, "list_backends", lambda: [unsafe])
+
+    body = _client(fresh_app).get("/engines/tts").json()
+
+    assert body["backends"][0]["routing_reason"] == expected
+    assert "/home/alice" not in repr(body)
 
 
 def test_indextts2_entry_has_subprocess_isolation_mode(fresh_app):
@@ -247,7 +335,7 @@ def test_select_llm_never_routing_gated(fresh_app, monkeypatch):
     assert r.status_code == 200, r.text
 
 
-# ── ASR selection via /engines/select (Settings → Engines ASR picker) ──────
+# ── ASR selection via /engines/select (Model Catalogue → Engines ASR picker) ──────
 #
 # The ASR family was always wired in _FAMILIES on paper, but no UI called it
 # and nothing exercised it — the Settings picker now does. Lock the contract:
@@ -367,7 +455,7 @@ def test_get_engines_asr_family_shape(fresh_app):
 # mlx-audio multiplexes 7+ curated models behind one backend id. Before this
 # fix there was NO way anywhere in the UI/API to pick which curated model
 # actually loads — it always defaulted to Kokoro even if the user had
-# downloaded e.g. Llama-OuteTTS via Settings → Models.
+# downloaded e.g. Llama-OuteTTS via Model Catalogue → Models.
 
 
 def _make_mlx_audio_available(monkeypatch):
@@ -418,6 +506,45 @@ def test_select_mlx_audio_raw_repo_id_accepted(fresh_app, monkeypatch):
     )
     assert r.status_code == 200, r.text
     assert _prefs.get("mlx_audio_model_id") == "mlx-community/Some-Other-Model-4bit"
+
+
+def test_select_mlx_audio_repo_id_accepts_underscore_prefixes(fresh_app, monkeypatch):
+    _make_mlx_audio_available(monkeypatch)
+    r = _client(fresh_app).post(
+        "/engines/select",
+        json={
+            "family": "tts", "backend_id": "mlx-audio",
+            "model_id": "_owner/_repo",
+        },
+    )
+    assert r.status_code == 200, r.text
+
+
+@pytest.mark.parametrize(
+    "model_id",
+    [
+        "owner/repo/extra",
+        "-owner/repo",
+        "owner/.repo",
+        "owner/repo--name",
+        "owner/repo..name",
+        "owner/repo.",
+        "owner/repo.git",
+        f"owner/{'a' * 97}",
+        "-" * 100_000,
+    ],
+)
+def test_select_mlx_audio_rejects_malformed_repo_ids(fresh_app, monkeypatch, model_id):
+    _make_mlx_audio_available(monkeypatch)
+    started = perf_counter()
+    r = _client(fresh_app).post(
+        "/engines/select",
+        json={"family": "tts", "backend_id": "mlx-audio", "model_id": model_id},
+    )
+    assert r.status_code == 400
+    assert perf_counter() - started < 0.5
+    assert len(r.content) < 256
+    assert model_id[:100] not in r.text
 
 
 def test_select_mlx_audio_without_model_id_does_not_touch_pref(fresh_app, monkeypatch):
@@ -471,7 +598,7 @@ def test_engine_health_subprocess_success(fresh_app, monkeypatch):
     body = r.json()
     assert body["id"] == "indextts2"
     assert body["ok"] is True
-    assert body["message"] == "pong"
+    assert body["message"] == "Healthy"
     assert isinstance(body["latency_ms"], (int, float))
     assert body["latency_ms"] >= 0.0
 
@@ -495,12 +622,56 @@ def test_engine_health_unknown_id(fresh_app):
     assert "unknown engine id" in r.json()["detail"]
 
 
-def test_engine_health_loopback_only(fresh_app):
-    """Non-loopback client tuple is rejected by require_loopback."""
+def test_engine_health_is_admin_gated(fresh_app):
+    """Non-loopback desktop traffic is rejected by require_admin."""
     client = _client(fresh_app, host="10.0.0.5")
     r = client.get("/engines/omnivoice/health")
     assert r.status_code == 403
-    assert r.json()["detail"] == "loopback origin required"
+    assert r.json()["detail"] == "loopback origin or admin API key required"
+
+
+def test_server_mode_engine_mutations_require_api_key(fresh_app, monkeypatch):
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.delenv("OMNIVOICE_API_KEY", raising=False)
+    client = _client(fresh_app, host="172.17.0.1")
+
+    requests = [
+        ("post", "/engines/translation/deep-translator/install", None),
+        ("delete", "/engines/translation/deep-translator", None),
+        ("post", "/engines/sidecar/indextts2/install", None),
+        ("delete", "/engines/sidecar/indextts2/install", None),
+        ("post", "/engines/omnivoice/selftest", None),
+        ("post", "/engines/select", {}),
+    ]
+    for method, path, body in requests:
+        response = client.request(method.upper(), path, json=body)
+        assert response.status_code == 403, path
+
+
+def test_server_mode_engine_health_requires_api_key(fresh_app, monkeypatch):
+    """Health is a GET but can spawn a sidecar, so it is not discovery."""
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.delenv("OMNIVOICE_API_KEY", raising=False)
+    client = _client(fresh_app, host="172.17.0.1")
+
+    response = client.get("/engines/omnivoice/health")
+
+    assert response.status_code == 403
+
+
+def test_server_mode_sidecar_install_stays_desktop_only(fresh_app, monkeypatch):
+    """An API key cannot remotely trigger the mutable-source installer."""
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")
+    client = _client(fresh_app, host="172.17.0.1")
+
+    response = client.post(
+        "/engines/sidecar/indextts2/install",
+        headers={"authorization": "Bearer s3cret"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "desktop origin required"
 
 
 def test_engine_health_caches_instance_across_calls(fresh_app, monkeypatch):
@@ -628,10 +799,10 @@ def test_selftest_unknown_id_is_404(fresh_app):
     assert "unknown TTS engine id" in r.json()["detail"]
 
 
-def test_selftest_loopback_only(fresh_app):
+def test_selftest_is_admin_gated(fresh_app):
     r = _client(fresh_app, host="10.0.0.9").post("/engines/omnivoice/selftest")
     assert r.status_code == 403
-    assert r.json()["detail"] == "loopback origin required"
+    assert r.json()["detail"] == "loopback origin or admin API key required"
 
 
 def test_selftest_captures_synth_exception_without_500(fresh_app):
@@ -774,11 +945,13 @@ def test_no_hf_token_leak_in_engines_response(fresh_app):
             f"HF tokens leaked into /engines response body: {matches}"
         )
 
-        # The masked sentinel must be present — otherwise the test isn't
-        # actually exercising the redaction path.
+        # The boundary emits stable metadata rather than a partially scrubbed
+        # service diagnostic.
         by_id = {b["id"]: b for b in r.json()["tts"]["backends"]}
         assert "tainted-test" in by_id
-        assert "hf_***REDACTED***" in (by_id["tainted-test"]["reason"] or "")
+        assert by_id["tainted-test"]["reason"] == (
+            "Engine unavailable. Check installation and configuration."
+        )
     finally:
         tts_mod._REGISTRY.clear()
         tts_mod._REGISTRY.update(saved)
@@ -802,4 +975,4 @@ def test_no_hf_token_leak_in_health_response(fresh_app, monkeypatch):
     body = r.json()
     assert body["ok"] is False
     assert not HF_TOKEN_RE.search(body["message"])
-    assert "hf_***REDACTED***" in body["message"]
+    assert body["message"] == "Engine unavailable; check the backend log for details."

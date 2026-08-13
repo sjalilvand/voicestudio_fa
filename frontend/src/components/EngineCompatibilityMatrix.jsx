@@ -25,16 +25,18 @@ import {
 import { listLoadedModels, unloadLoadedModel } from '../api/system';
 import { copyText } from '../utils/copyText';
 import { ChevronRight } from 'lucide-react';
-import { Badge, Button, Segmented, Select, Table } from '../ui';
+import { Badge, Button, Select, Table, Tabs } from '../ui';
 import { cn } from '@/lib/utils';
 import EngineMark from './EngineMark';
 import SupertonicLicenseDialog from './SupertonicLicenseDialog';
+import PocketTTSLicenseDialog from './PocketTTSLicenseDialog';
 
 /** Engines that gate first use behind an in-app license acceptance dialog.
  *  Phase 3 Plan 03-01 ‑‑ Supertonic-3 today; future OpenRAIL-M engines
  *  add themselves here alongside an in-tree dialog component. */
 const LICENSE_DIALOGS = {
   supertonic3: SupertonicLicenseDialog,
+  pockettts: PocketTTSLicenseDialog,
 };
 
 /** Heuristic detector for the "license not accepted" backend reason
@@ -80,9 +82,9 @@ function reasonMentionsLicense(reason) {
  *   - activeId?: string  the currently-active backend id for this
  *     family. Used to render the "active" badge.
  *   - showFamilyTabs?: boolean  default true. The TTS/ASR/LLM tab strip
- *     (Radix Segmented — roving tabindex + arrow keys) presents one family
- *     at a time over the single shared GET /engines payload. Settings →
- *     Engines mounts exactly one matrix in this mode. Pass false to pin
+ *     (Radix Tabs — roving tabindex + arrow keys) presents one family
+ *     at a time over the single shared GET /engines payload. The Model
+ *     Catalogue mounts exactly one matrix in this mode. Pass false to pin
  *     the matrix to `family` (no switcher; the header names the family).
  *   - onFamilyChange?: (family) => void  fires when the user switches the
  *     family tab, so a host can render family-specific companion panels
@@ -224,6 +226,10 @@ export default function EngineCompatibilityMatrix({
   showFamilyTabs = true,
   onFamilyChange = null,
   reloadToken = 0,
+  // The catalogue passes its app-wide query here. Keeping the standalone
+  // fallback preserves the matrix's injectable API seam for isolated hosts
+  // and its extensive focused test suite.
+  sharedEngines = null,
   // Injectable API layer — lets the RTL suite mock it without module-level
   // vi.mock incantations, and keeps the "one GET /engines per Settings open"
   // contract overridable by hosts.
@@ -240,9 +246,15 @@ export default function EngineCompatibilityMatrix({
   apiInstallStatus = getSidecarInstallStatus,
 }) {
   const { t } = useTranslation();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [localData, setLocalData] = useState(null);
+  const [localLoading, setLocalLoading] = useState(true);
+  const [localError, setLocalError] = useState(null);
+  const sharedRefetch = sharedEngines?.refetch;
+  const isShared = Boolean(sharedEngines);
+  const sharedReloadToken = useRef(reloadToken);
+  const data = sharedEngines?.data ?? localData;
+  const loading = isShared ? sharedEngines.isLoading : localLoading;
+  const error = sharedEngines?.error ?? localError;
   const [activeFamily, setActiveFamily] = useState(family);
   // Phase 3 Plan 03-01 / TTS-05: which engine has its license dialog
   // currently open, or null. Only one dialog is ever open at a time.
@@ -286,26 +298,42 @@ export default function EngineCompatibilityMatrix({
   }, [apiListLoadedModels]);
 
   const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const fresh = await apiListEngines();
-      setData(fresh);
-    } catch (e) {
-      const msg = e?.message || String(e);
-      setError(msg);
-      toastErrorWithReport(t('engines.loadFailed', { message: msg }), e);
-    } finally {
-      setLoading(false);
+    if (sharedRefetch) {
+      const result = await sharedRefetch();
+      if (result.error) {
+        const message = result.error?.message || String(result.error);
+        toastErrorWithReport(t('engines.loadFailed', { message }), result.error);
+      }
+    } else {
+      setLocalLoading(true);
+      setLocalError(null);
+      try {
+        setLocalData(await apiListEngines());
+      } catch (requestError) {
+        const message = requestError?.message || String(requestError);
+        setLocalError(requestError);
+        toastErrorWithReport(t('engines.loadFailed', { message }), requestError);
+      } finally {
+        setLocalLoading(false);
+      }
     }
     refreshResidency();
-  }, [apiListEngines, refreshResidency, t]);
+  }, [apiListEngines, refreshResidency, sharedRefetch, t]);
 
   useEffect(() => {
-    reload();
+    if (isShared) {
+      if (sharedReloadToken.current !== reloadToken) {
+        sharedReloadToken.current = reloadToken;
+        void reload();
+        return;
+      }
+      refreshResidency();
+      return;
+    }
+    void reload();
     // reloadToken: an external bump (e.g. the ASR config panel just saved a
     // server URL) refetches so availability + "Use" reflect the new config.
-  }, [reload, reloadToken]);
+  }, [reload, reloadToken, refreshResidency, isShared]);
 
   // Unload a resident engine's model/sidecar by its /model/loaded id. Safe by
   // contract: the model reloads lazily on the next generation.
@@ -327,7 +355,18 @@ export default function EngineCompatibilityMatrix({
   );
 
   const familyData = data?.[activeFamily];
-  const backends = useMemo(() => (familyData?.backends || []).map(normalizeEntry), [familyData]);
+  // Available engines first, unavailable after — the list is something you
+  // pick FROM, and burying a usable engine under four you cannot select makes
+  // you read the whole matrix to find it. Within each group the backend's own
+  // order is preserved (it is meaningful: registration order puts the defaults
+  // first), so this only lifts the rows you can act on.
+  const backends = useMemo(() => {
+    const rows = (familyData?.backends || []).map(normalizeEntry);
+    return rows
+      .map((row, index) => ({ row, index }))
+      .sort((a, b) => Number(b.row.available) - Number(a.row.available) || a.index - b.index)
+      .map(({ row }) => row);
+  }, [familyData]);
   const families = useMemo(
     () => Object.keys(FAMILY_META).filter((f) => data?.[f]?.backends),
     [data],
@@ -585,7 +624,8 @@ export default function EngineCompatibilityMatrix({
         className="engine-matrix engine-matrix--error flex flex-col gap-[8px] items-center p-[16px]"
         role="alert"
       >
-        <AlertTriangle size={14} /> {t('engines.couldNotLoad', { message: error })}
+        <AlertTriangle size={14} />{' '}
+        {t('engines.couldNotLoad', { message: error.message || String(error) })}
         <Button size="sm" variant="subtle" onClick={reload} leading={<RefreshCw size={11} />}>
           {t('engines.retry')}
         </Button>
@@ -604,17 +644,21 @@ export default function EngineCompatibilityMatrix({
   const TitleIcon = showFamilyTabs ? Layers : familyMeta.icon;
 
   return (
-    <section className="engine-matrix flex flex-col gap-[var(--space-3,8px)]">
-      <header className="engine-matrix__head flex items-center justify-between gap-[12px]">
-        <h3 className="engine-matrix__title inline-flex items-center gap-[6px] m-0 text-[13px] font-semibold text-[color:var(--chrome-fg,currentColor)]">
-          <TitleIcon size={14} />{' '}
-          {showFamilyTabs
-            ? t('engines.matrixTitle')
-            : t('engines.familyMatrixTitle', { family: familyMeta.label })}
+    <section className="engine-matrix flex min-h-0 flex-1 flex-col gap-[8px]">
+      <header className="engine-matrix__head flex flex-wrap items-center justify-between gap-[8px] rounded-[10px] bg-[var(--chrome-bg)] px-[10px] py-[7px]">
+        <h3 className="engine-matrix__title m-0 inline-flex min-w-0 items-center gap-[8px] text-[length:var(--text-sm)] font-semibold text-[color:var(--chrome-fg,currentColor)]">
+          <span className="inline-flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[7px] bg-[color-mix(in_srgb,var(--chrome-accent)_11%,transparent)] text-[var(--chrome-accent)]">
+            <TitleIcon size={13} aria-hidden="true" />
+          </span>
+          <span>
+            {showFamilyTabs
+              ? t('engines.matrixTitle')
+              : t('engines.familyMatrixTitle', { family: familyMeta.label })}
+          </span>
         </h3>
         <Button
           size="sm"
-          variant="subtle"
+          variant="ghost"
           onClick={reload}
           loading={loading}
           leading={<RefreshCw size={11} />}
@@ -624,30 +668,38 @@ export default function EngineCompatibilityMatrix({
       </header>
 
       {showFamilyTabs && families.length > 1 && (
-        <Segmented
+        <Tabs
           size="sm"
+          className="engine-matrix__tabs w-full [&>*]:flex-1"
           value={activeFamily}
           onChange={(f) => {
             setActiveFamily(f);
             onFamilyChange?.(f);
           }}
-          items={families.map((f) => ({
-            value: f,
-            title: t('engines.activeEngine', {
-              family: FAMILY_META[f].label,
-              engine: data[f].active,
-            }),
-            label: (
-              <span className="engine-matrix__tab-label inline-flex flex-col items-center gap-0 leading-[1.1] px-[2px] py-[1px]">
-                <span className="engine-matrix__tab-family text-[12px] font-bold tracking-[0.02em]">
-                  {FAMILY_META[f].label}
+          items={families.map((f) => {
+            const FamilyIcon = FAMILY_META[f].icon;
+            return {
+              id: f,
+              title: t('engines.activeEngine', {
+                family: FAMILY_META[f].label,
+                engine: data[f].active,
+              }),
+              label: (
+                <span className="engine-matrix__tab-label inline-flex min-w-0 items-center justify-center gap-[6px] whitespace-nowrap px-[5px] py-[1px] leading-none">
+                  <FamilyIcon size={12} className="shrink-0 opacity-70" aria-hidden="true" />
+                  <span className="engine-matrix__tab-family text-[11px] font-bold tracking-[0.03em]">
+                    {FAMILY_META[f].label}
+                  </span>
+                  <span
+                    className="engine-matrix__tab-active max-w-[120px] truncate rounded-[5px] bg-black/[0.09] px-[5px] py-[3px] font-mono text-[9px] lowercase tracking-[0] opacity-70"
+                    translate="no"
+                  >
+                    {data[f].active}
+                  </span>
                 </span>
-                <span className="engine-matrix__tab-active text-[9px] font-mono opacity-[0.65] lowercase tracking-[0] mt-[1px]">
-                  {data[f].active}
-                </span>
-              </span>
-            ),
-          }))}
+              ),
+            };
+          })}
         />
       )}
 
@@ -655,13 +707,20 @@ export default function EngineCompatibilityMatrix({
           LLM) is the scariest part for first-run users. Rendered in both
           tabbed and pinned modes, always for the family on screen. */}
       <p
-        className={cn('engine-matrix__family-desc m-0 -mt-[4px] text-[12px] leading-[1.4]', MUTED)}
+        className={cn(
+          'engine-matrix__family-desc m-0 rounded-[8px] bg-[color-mix(in_srgb,var(--chrome-accent)_5%,transparent)] px-[10px] py-[6px] text-[11px] leading-[1.4]',
+          MUTED,
+        )}
         data-testid={`family-desc-${activeFamily}`}
       >
         {t(`engines.familyDesc_${activeFamily}`)}
       </p>
 
-      <Table role="table" aria-label={t('engines.engineCompatLabel', { family: activeFamily })}>
+      <Table
+        className="engine-matrix__table flex min-h-0 flex-1 flex-col overflow-hidden rounded-[10px] bg-[var(--chrome-bg)] shadow-[0_5px_18px_color-mix(in_srgb,black_10%,transparent)]"
+        role="table"
+        aria-label={t('engines.engineCompatLabel', { family: activeFamily })}
+      >
         {/* Column header — shares ROW_GRID with every row so the tracks are
             pixel-identical. Hidden at narrow widths where the meta columns
             collapse into each row's second line. */}
@@ -687,8 +746,14 @@ export default function EngineCompatibilityMatrix({
             {t('engines.colActions')}
           </span>
         </div>
-        <div className="flex flex-col pb-[8px]" role="rowgroup">
-          {backends.map((b) => {
+        <div
+          className="settings-list-scroll flex min-h-0 flex-1 flex-col gap-[var(--space-2)] overflow-y-auto overscroll-contain py-[var(--space-2)] [scrollbar-gutter:stable] focus-visible:outline-none focus-visible:shadow-[inset_0_0_0_1px_var(--chrome-accent)]"
+          role="rowgroup"
+          tabIndex={0}
+          data-testid="engine-list-scroll"
+          aria-label={t('engines.engineCompatLabel', { family: activeFamily })}
+        >
+          {backends.map((b, index) => {
             const isActive = b.id === activeBackendId;
             const health = healthByEngine[b.id];
             const selfTest = selfTestByEngine[b.id];
@@ -743,6 +808,20 @@ export default function EngineCompatibilityMatrix({
             ) : null;
             return (
               <React.Fragment key={b.id}>
+                {(index === 0 || (backends[index - 1]?.available && !b.available)) && (
+                  <div
+                    className={cn(
+                      'px-[var(--space-2)] pt-[4px] font-mono text-[10px] font-semibold uppercase tracking-[0.08em]',
+                      MUTED,
+                    )}
+                  >
+                    {/* Section framing, not status: "ready to use" vs "add
+                        more" frames the grey majority as headroom to unlock
+                        rather than a mostly-broken app (13 of 16 rows read as
+                        failures under a plain "Not installed" caption). */}
+                    {b.available ? t('engines.sectionReady') : t('engines.sectionMore')}
+                  </div>
+                )}
                 <div
                   role="row"
                   data-engine-id={b.id}
@@ -750,8 +829,15 @@ export default function EngineCompatibilityMatrix({
                     'engine-matrix__row',
                     ROW_GRID,
                     ROW_SHELL,
-                    '[border-top:1px_solid_var(--chrome-border,rgba(255,255,255,0.06))]',
-                    !b.available && 'opacity-[0.78]',
+                    'mx-[var(--space-2)] rounded-[var(--chrome-radius-pill)] border border-[color-mix(in_srgb,var(--chrome-fg)_7%,transparent)] transition-colors duration-[120ms] hover:bg-[var(--chrome-hover-bg)]',
+                    isActive &&
+                      'bg-[color-mix(in_srgb,var(--chrome-accent)_7%,transparent)] shadow-[inset_2px_0_0_var(--chrome-accent)]',
+                    // Dim the TEXT of an unavailable row, not the row: fading
+                    // the whole thing took the status badge and GPU chips down
+                    // with it, and those are exactly what tells you WHY it is
+                    // unavailable. Text recedes; the evidence stays legible.
+                    !b.available &&
+                      'engine-matrix__row--unavailable text-[color:var(--chrome-fg-muted)]',
                   )}
                 >
                   {/* Line 1: mark + name (truncated, never wraps) + badges.
@@ -759,14 +845,26 @@ export default function EngineCompatibilityMatrix({
                   <div
                     role="cell"
                     className={cn(
-                      'engine-matrix__cell engine-matrix__cell--name flex min-w-0 flex-col justify-center gap-[2px]',
+                      'engine-matrix__cell engine-matrix__cell--name flex min-w-0 flex-col justify-center gap-0',
                       CELL_NARROW.name,
                     )}
                   >
                     <span className="flex min-w-0 items-center gap-[6px]">
-                      <EngineMark id={b.id} size={18} className="shrink-0" />
+                      <EngineMark
+                        id={b.id}
+                        size={18}
+                        className={cn('shrink-0', !b.available && 'opacity-60')}
+                      />
                       <span
-                        className="engine-matrix__name min-w-0 truncate whitespace-nowrap font-semibold text-[13px] text-[color:var(--chrome-fg,currentColor)]"
+                        className={cn(
+                          'engine-matrix__name min-w-0 truncate whitespace-nowrap font-semibold leading-[1.2] text-[length:var(--text-sm)]',
+                          // The name pins its own colour, so the row-level dim
+                          // cannot reach it — it has to recede here or the row
+                          // reads as available at a glance.
+                          b.available
+                            ? 'text-[color:var(--chrome-fg,currentColor)]'
+                            : 'text-[color:color-mix(in_srgb,var(--chrome-fg)_58%,transparent)]',
+                        )}
                         title={b.display_name}
                       >
                         {b.display_name}
@@ -791,12 +889,23 @@ export default function EngineCompatibilityMatrix({
                         </Badge>
                       )}
                     </span>
-                    <span className="flex min-w-0 items-center gap-[6px] overflow-hidden whitespace-nowrap">
+                    <span className="flex min-w-0 items-center gap-[5px] overflow-hidden whitespace-nowrap leading-[1.2]">
                       <code
-                        className={cn('engine-matrix__id shrink-0 font-mono text-[11px]', MUTED)}
+                        className={cn(
+                          'engine-matrix__id shrink-0 font-mono text-[length:var(--text-2xs)]',
+                          MUTED,
+                        )}
                       >
                         {b.id}
                       </code>
+                      <Badge
+                        tone="neutral"
+                        size="xs"
+                        className="shrink-0"
+                        data-testid={`family-capability-${b.id}`}
+                      >
+                        {FAMILY_META[activeFamily]?.label || activeFamily.toUpperCase()}
+                      </Badge>
                       {/* Capability: voice cloning from reference audio. Only an
                         explicit supports_cloning=true earns it (TTS family). */}
                       {activeFamily === 'tts' && b.supports_cloning && (
@@ -814,7 +923,7 @@ export default function EngineCompatibilityMatrix({
                         one backend id (Kokoro, CSM, OuteTTS, …); without this
                         picker there's no way to load anything but the default
                         (Kokoro) even after downloading a different model's
-                        weights in Settings → Models. Disabled while the row
+                        weights in Model Catalogue → Models. Disabled while the row
                         itself isn't available/selectable, matching the "Use"
                         button's gating. */}
                       {b.curated_models && b.curated_models.length > 0 && (
@@ -846,7 +955,7 @@ export default function EngineCompatibilityMatrix({
                       {b.available && b.hint && (
                         <span
                           className={cn(
-                            'engine-matrix__advice min-w-0 truncate text-[11px]',
+                            'engine-matrix__advice min-w-0 truncate text-[length:var(--text-xs)]',
                             MUTED,
                           )}
                           title={b.hint}
@@ -857,7 +966,10 @@ export default function EngineCompatibilityMatrix({
                       )}
                       {b.available && b.install_hint && (
                         <span
-                          className={cn('engine-matrix__hint min-w-0 truncate text-[11px]', MUTED)}
+                          className={cn(
+                            'engine-matrix__hint min-w-0 truncate text-[length:var(--text-xs)]',
+                            MUTED,
+                          )}
                           title={b.install_hint}
                         >
                           {b.install_hint}

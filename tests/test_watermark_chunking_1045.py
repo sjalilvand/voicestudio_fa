@@ -121,3 +121,50 @@ def test_iter_chunks_covers_everything_exactly_once():
 
 def test_iter_chunks_empty_audio_yields_nothing():
     assert list(_iter_chunks(torch.zeros(1, 1, 0), SR)) == []
+
+
+# ── Idle release of the AudioSeal models (#1495) ───────────────────────────
+#
+# They loaded on the first embed and then stayed resident for the life of the
+# process — the one model in the app still making that bargain after the TTS
+# model and the capture ASR both stopped. CPU-resident, so this is system RAM,
+# and the machines that notice are the ones running batches.
+
+def test_idle_release_drops_both_models(monkeypatch):
+    monkeypatch.setattr(watermark, "_generator", object())
+    monkeypatch.setattr(watermark, "_detector", object())
+    monkeypatch.setattr(watermark, "_last_used", 100.0)
+
+    assert watermark.release_idle_models(60.0, now=200.0) is True
+    assert watermark._generator is None
+    assert watermark._detector is None
+
+
+def test_idle_release_keeps_a_recently_used_model(monkeypatch):
+    generator = object()
+    monkeypatch.setattr(watermark, "_generator", generator)
+    monkeypatch.setattr(watermark, "_detector", None)
+    monkeypatch.setattr(watermark, "_last_used", 100.0)
+
+    assert watermark.release_idle_models(60.0, now=130.0) is False
+    assert watermark._generator is generator
+
+
+def test_idle_release_is_a_noop_when_nothing_loaded(monkeypatch):
+    monkeypatch.setattr(watermark, "_generator", None)
+    monkeypatch.setattr(watermark, "_detector", None)
+    monkeypatch.setattr(watermark, "_last_used", 0.0)
+
+    assert watermark.release_idle_models(0.0) is False
+
+
+def test_embedding_restarts_the_idle_clock(monkeypatch):
+    """Without this the models are released mid-batch: `_last_used` would sit
+    at whatever the first embed set it to while the batch kept watermarking."""
+    monkeypatch.setattr(watermark, "_generator", object())
+    monkeypatch.setattr(watermark, "_last_used", 0.0)
+    monkeypatch.setattr(watermark.time, "monotonic", lambda: 500.0)
+
+    watermark._get_generator()
+
+    assert watermark._last_used == 500.0

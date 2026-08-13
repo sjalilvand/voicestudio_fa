@@ -22,8 +22,10 @@ import logging
 import os
 import re
 import threading
+import time
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+from contextlib import contextmanager
 from typing import Optional
 
 import torch
@@ -513,7 +515,7 @@ class OmniVoiceBackend(TTSBackend):
     """
 
     id = "omnivoice"
-    display_name = "OmniVoice (600 languages, zero-shot)"
+    display_name = "VoiceStudio (k2-fsa/OmniVoice, 600+ languages)"
     gpu_compat = ("cuda", "mps", "cpu")
     # Derived from the pool's own per-job budget (_GPU_VRAM_PER_JOB_GB = 5.0 in
     # model_manager, itself measured from the ~1.6 GB forward + autoregressive
@@ -606,16 +608,26 @@ class OmniVoiceBackend(TTSBackend):
         clear the shared one and free GPU memory too. Idempotent and safe before
         the first generate(). Best-effort: assignment is GIL-atomic, so we don't
         take the async ``_model_lock`` from this sync path; the registry wraps
-        this call in try/except so a race can never block an engine switch."""
+        this call in try/except so a race can never block an engine switch.
+
+        Delegates to ``model_manager.unload_shared_model`` rather than clearing
+        the singleton here: this path used to free the device caches *before*
+        dropping the shared reference, which frees nothing, and it is the path
+        the idle sweep on a headless worker node runs (#1495)."""
         self._model = None
         clear_clone_prompt_cache()  # #427: drop cached prompts so VRAM is freed
         try:
             import services.model_manager as mm
-            if mm.model is not None:
-                mm.model = None
-                mm.free_vram()
-        except Exception:
-            pass
+            mm.unload_shared_model()
+        except Exception as exc:
+            # The reference is already gone by the time anything in here can
+            # raise — only the device-cache flush is left, and that failing is
+            # a driver problem, not a stuck model. Saying "retry" would send
+            # the user to repeat an unload that already happened.
+            logger.warning("Shared voice model released, but the device cache flush failed")
+            raise RuntimeError(
+                "The voice model was released, but the GPU memory cache could not be flushed."
+            ) from exc
 
 
 # ── VoxCPM2 adapter (optional, scaffolded) ──────────────────────────────────
@@ -911,6 +923,34 @@ class VoxCPM2Backend(TTSBackend):
 # ── MOSS-TTS-Nano adapter (tiny, CPU-friendly, 20 langs) ────────────────────
 
 
+# ── MOSS-TTS-Nano entry-point resolution (#1287) ────────────────────────────
+# The upstream repo is installed straight from git (`pip install -e .`) with no
+# pinned release, and the class it exports has changed. Rather than hard-import
+# one name and fail at generate time, resolve among the names it has used and
+# report honestly when none is present.
+_MOSS_CLASS_NAMES = ("MossTTSNano", "MOSSTTSNano", "MossTTS", "MossTTSNanoForCausalLM")
+
+
+def _moss_model_class(module):
+    """The first known MOSS model class on ``module``, or None."""
+    for name in _MOSS_CLASS_NAMES:
+        cls = getattr(module, name, None)
+        if cls is not None and hasattr(cls, "from_pretrained"):
+            return cls
+    return None
+
+
+def _moss_candidate_exports(module):
+    """Public names on ``module`` that look like a model class — so the error
+    can say what IS there instead of only what is missing."""
+    return [
+        n
+        for n in dir(module)
+        if not n.startswith("_")
+        and hasattr(getattr(module, n, None), "from_pretrained")
+    ]
+
+
 class MossTTSNanoBackend(TTSBackend):
     """OpenMOSS MOSS-TTS-Nano-100M — the low-resource / broad-language pick.
 
@@ -944,13 +984,27 @@ class MossTTSNanoBackend(TTSBackend):
         try:
             # MOSS ships its own package alongside the HF weights.
             import moss_tts_nano  # noqa: F401
-            return True, "ready"
         except ImportError:
             return False, (
                 "moss_tts_nano package not installed. Install from "
                 "https://github.com/OpenMOSS/MOSS-TTS-Nano "
                 "(`pip install -e .`), then set OMNIVOICE_TTS_BACKEND=moss-tts-nano."
             )
+        # Importing the MODULE is not enough (#1287). The user had the package
+        # installed, so this reported "ready", they switched engine, and the
+        # first generate died with `cannot import name 'MossTTSNano'` — the
+        # upstream repo is unpinned and moves. An availability check that does
+        # not verify the API it will actually call is a check that lies.
+        if _moss_model_class(moss_tts_nano) is None:
+            exported = ", ".join(_moss_candidate_exports(moss_tts_nano)) or "no model class"
+            return False, (
+                "moss_tts_nano is installed but does not expose a usable model "
+                f"class (found: {exported}). MOSS-TTS-Nano is unpinned upstream and "
+                "its entry point has changed before — pull the latest "
+                "github.com/OpenMOSS/MOSS-TTS-Nano and re-run `pip install -e .`, "
+                "or open an issue with the version you have so the name can be added."
+            )
+        return True, "ready"
 
     @property
     def sample_rate(self) -> int:
@@ -969,13 +1023,19 @@ class MossTTSNanoBackend(TTSBackend):
         ok, msg = self.is_available()
         if not ok:
             raise RuntimeError(f"MOSS-TTS-Nano unavailable: {msg}")
-        from moss_tts_nano import MossTTSNano  # type: ignore[import-not-found]
+        import moss_tts_nano  # type: ignore[import-not-found]
+
+        model_cls = _moss_model_class(moss_tts_nano)
+        if model_cls is None:  # pragma: no cover - is_available() gates this
+            raise RuntimeError(
+                "moss_tts_nano exposes no usable model class; see Model Catalogue → Engines"
+            )
         checkpoint = os.environ.get(
             "OMNIVOICE_MOSS_TTS_MODEL", "OpenMOSS-Team/MOSS-TTS-Nano"
         )
         logger.info("Loading MOSS-TTS-Nano from %s", checkpoint)
         self._model = _retry_once_with_fresh_hf_client(
-            lambda: MossTTSNano.from_pretrained(checkpoint, trust_remote_code=True),
+            lambda: model_cls.from_pretrained(checkpoint, trust_remote_code=True),
             "MOSS-TTS-Nano",
         )
 
@@ -1284,7 +1344,7 @@ class MLXAudioBackend(TTSBackend):
     def __init__(self):
         self._model = None
         self._sr = 24000  # most mlx-audio engines emit 24 kHz mono
-        # Env var > persisted UI choice (#981 — Settings → Engines curated-
+        # Env var > persisted UI choice (#981 — Model Catalogue → Engines curated-
         # model picker) > default. Mirrors active_backend_id()'s resolution
         # order exactly so power-users can still pin a model without the UI
         # silently undoing it.
@@ -1350,6 +1410,19 @@ class MLXAudioBackend(TTSBackend):
         logger.info("Loading mlx-audio model %s", self._model_id)
         self._model = load_model(self._model_id)
 
+    def _is_voice_design(self) -> bool:
+        """Whether the loaded model builds a voice from a text description.
+
+        Asks the model's own config — `tts_model_type`, the exact field
+        mlx-audio branches on — so this cannot drift from the library's own
+        behaviour. Falls back to the model id, which carries `VoiceDesign` by
+        naming convention, when a config doesn't expose the field.
+        """
+        kind = getattr(getattr(self._model, "config", None), "tts_model_type", None)
+        if kind:
+            return kind == "voice_design"
+        return "voicedesign" in (self._model_id or "").lower()
+
     def generate(self, text: str, **kw) -> torch.Tensor:
         import numpy as np
         self._ensure_loaded()
@@ -1358,6 +1431,7 @@ class MLXAudioBackend(TTSBackend):
         ref_audio = kw.get("ref_audio")
         ref_text  = kw.get("ref_text")
         language  = kw.get("language")
+        instruct  = kw.get("instruct")
         speed     = float(kw.get("speed", 1.0))
 
         # mlx-audio's generate(...) returns an iterator of result objects,
@@ -1367,6 +1441,21 @@ class MLXAudioBackend(TTSBackend):
         kwargs = {"text": text, "speed": speed}
         if voice:     kwargs["voice"] = voice
         if ref_audio: kwargs["ref_audio"] = ref_audio
+        # The comment above claimed instruct was passed "for Qwen3"; it never
+        # was. The curated `qwen3-tts` model IS the VoiceDesign variant, which
+        # mlx-audio refuses to run without one — so the engine was unusable no
+        # matter what the user typed, and the reported failure was a bare
+        # 400 quoting a library message (#1405).
+        if instruct:
+            kwargs["instruct"] = instruct
+        elif self._is_voice_design():
+            raise ValueError(
+                "This model builds a voice from a written description, so it "
+                "needs one — for example \"a warm, low-pitched British "
+                "narrator\". Pick a designed voice (those carry a "
+                "description), or choose a cloning model and supply a "
+                "reference clip instead."
+            )
         # CSM (sesame.py) only builds its cloning context when BOTH ref_audio
         # AND ref_text are present — with ref_text missing, its context list
         # stays empty and indexing into it raises an opaque
@@ -1618,11 +1707,11 @@ class GPTSoVITSBackend(TTSBackend):
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
         # GPT-SoVITS runs as an external API server — check if it's reachable.
-        import urllib.request
+        from services.outbound_http import open_trusted_endpoint
         url = os.environ.get("OMNIVOICE_GPTSOVITS_URL", "http://127.0.0.1:9880")
         try:
-            req = urllib.request.Request(f"{url}/", method="GET")
-            urllib.request.urlopen(req, timeout=2)
+            with open_trusted_endpoint(url, method="GET", timeout=2):
+                pass
             return True, "ready (server reachable)"
         except Exception:
             return False, (
@@ -1640,8 +1729,8 @@ class GPTSoVITSBackend(TTSBackend):
         return ["zh", "en", "ja", "yue", "ko"]
 
     def generate(self, text: str, **kw) -> torch.Tensor:
-        import urllib.request
         import urllib.parse
+        from services.outbound_http import open_trusted_endpoint
 
         ref_audio = kw.get("ref_audio")
         ref_text = kw.get("ref_text", "")
@@ -1669,11 +1758,10 @@ class GPTSoVITSBackend(TTSBackend):
             params["speed_factor"] = str(speed)
 
         query = urllib.parse.urlencode(params)
-        url = f"{self._url}/?{query}"
-
         try:
-            req = urllib.request.Request(url, method="POST")
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with open_trusted_endpoint(
+                self._url, method="POST", query=query, timeout=120
+            ) as resp:
                 audio_bytes = resp.read()
         except Exception as e:
             raise RuntimeError(
@@ -1706,7 +1794,7 @@ class SherpaOnnxBackend(TTSBackend):
       • Android / iOS
       • WebAssembly (browser)
 
-    This is the bridge to browser-based OmniVoice: the same engine runs natively
+    This is the bridge to browser-based VoiceStudio: the same engine runs natively
     on desktop and compiles to WASM for the web UI.
 
     Install: pip install sherpa-onnx
@@ -1747,7 +1835,7 @@ class SherpaOnnxBackend(TTSBackend):
             return False, (
                 "OMNIVOICE_SHERPA_MODEL not set. Point it to a sherpa-onnx TTS "
                 "model directory (containing model.onnx + tokens.txt), then "
-                "restart OmniVoice. Download models from "
+                "restart VoiceStudio. Download models from "
                 "https://github.com/k2-fsa/sherpa-onnx/releases"
             )
         if not os.path.isfile(os.path.join(model_dir, "model.onnx")):
@@ -1854,6 +1942,11 @@ _LAZY_REGISTRY: dict[str, tuple[str, str]] = {
     # engine stays the default). Unlike the entries above it runs under the
     # parent interpreter (crash isolation, not dependency isolation).
     "omnivoice-subprocess": ("engines.omnivoice_subprocess", "OmniVoiceSubprocessBackend"),
+    # Issue #1306: Kyutai PocketTTS, CPU-only, low-latency TTS hired for the
+    # "fastest CPU render / lowest latency" job. Opt-in, subprocess-isolated
+    # under the parent interpreter (crash isolation, not dependency isolation,
+    # same as omnivoice-subprocess: pocket-tts deps sit at the parent's pins).
+    "pockettts": ("engines.pockettts", "PocketTTSBackend"),
     # Issue #590: Confucius4-TTS (netease-youdao) — LLM-based, 14-language
     # cross-lingual zero-shot cloning, Apache-2.0. Opt-in + subprocess-isolated
     # (own Python 3.10 venv) like the entries above. Validated end-to-end
@@ -1945,7 +2038,7 @@ _LAST_ERRORS: dict[str, str] = {}
 
 
 
-# Short install hints surfaced as tooltips on the Settings → Engines UI.
+# Short install hints surfaced as tooltips on the Model Catalogue → Engines UI.
 # Helps users understand what pip package to install and where.
 _INSTALL_HINTS: dict[str, str] = {
     "omnivoice":     "pip install omnivoice  (bundled — no extra install needed)",
@@ -1955,11 +2048,12 @@ _INSTALL_HINTS: dict[str, str] = {
     "mlx-audio":     "pip install mlx-audio  (Apple Silicon only)",
     "voxcpm2":       'pip install "voxcpm>=2.0.3"  (floor: 2.0.3 fixed Apple-Silicon audio quality; CPU/MPS supported, CUDA recommended for speed)',
     "moss-tts-nano": "git clone OpenMOSS/MOSS-TTS-Nano && pip install -e .  (not on PyPI)",
-    "indextts2":     "git clone index-tts/index-tts && uv pip install -e .  (NOT uv sync --all-extras)",
+    "indextts2":     "git clone --branch indextts-2.5 https://github.com/index-tts/index-tts.git && cd index-tts && uv venv .venv && uv pip install --python .venv/bin/python -e .  (Windows: .venv\\Scripts\\python.exe; NOT uv sync --all-extras)",
     "gpt-sovits":    "External API server — start api_v2.py on port 9880",
     "sherpa-onnx":   "pip install sherpa-onnx  (universal ONNX runtime, WASM-ready)",
     "omnivoice-gguf":"Bundled — runs the C++ omnivoice-tts binary in bin/. Quants download lazily from Serveurperso/OmniVoice-GGUF on first generate.",
     "supertonic3":   "uv sync --extra supertonic  (CPU-only ONNX, 31 langs, ~400 MB model on first use; OpenRAIL-M model license)",
+    "pockettts":     "uv sync --extra pockettts  (Kyutai, CPU-only, ~100 MB model on first use; MIT code + CC-BY-4.0 weights; HF-gated, review terms and set HF_TOKEN)",
     "moss-tts-v15":  "git clone OpenMOSS/MOSS-TTS + set OMNIVOICE_MOSS_TTS_V15_DIR  (own venv, transformers==5.0; 8B, ~16 GB weights; CUDA/CPU, no MPS; Apache-2.0)",
     "dots-tts":      "git clone rednote-hilab/dots.tts + set OMNIVOICE_DOTS_TTS_DIR  (own venv, transformers==4.57; 2B, ~9 GB weights; CUDA/CPU, Linux/macOS only — no Windows; Apache-2.0)",
     "confucius4-tts":"git clone netease-youdao/Confucius4-TTS + set OMNIVOICE_CONFUCIUS4_TTS_DIR  (own Python 3.10 venv; 14-lang cross-lingual zero-shot clone; ~5 GB weights auto-download; CUDA/CPU, no MPS; Apache-2.0)",
@@ -1984,7 +2078,7 @@ _SETUP_SNIPPETS: dict[str, str] = {
 
 
 # Short, readable labels for mlx-audio's curated models (#981) — surfaced in
-# the Settings → Engines model picker so users see more than a bare key.
+# the Model Catalogue → Engines model picker so users see more than a bare key.
 # Single-sourced here rather than on MLXAudioBackend.CURATED_MODELS itself so
 # the class dict stays a plain key → repo-id map (what __init__ needs).
 _MLX_AUDIO_MODEL_LABELS: dict[str, str] = {
@@ -2069,14 +2163,10 @@ def list_backends() -> list[dict]:
     for bid, cls in _REGISTRY.items():
         try:
             ok, msg = cls.is_available()
-        except Exception as exc:
+        except Exception:
             ok = False
-            msg = f"{type(exc).__name__}: {exc}"
-            logger.warning(
-                "list_backends: %s.is_available() raised — degrading "
-                "gracefully so the picker still renders: %s",
-                bid, msg,
-            )
+            msg = "Availability probe failed; check the backend log."
+            logger.warning("list_backends: availability probe failed for registered backend %s", bid)
         if ok:
             _LAST_ERRORS.pop(bid, None)
         else:
@@ -2322,11 +2412,167 @@ def get_active_tts_backend(*, model=None) -> TTSBackend:
     return _active_instance
 
 
+# ── Shared engine-instance cache ──────────────────────────────────────────
+#
+# One instance per engine class for the lifetime of the process. It lived in
+# ``api/routers/engines.py`` until the worker needed it too: a worker executing
+# a remote assignment must reuse the same warm engine the local generate path
+# uses, and importing an API router from ``worker/`` would invert the layering
+# (``worker/executor.py`` is a translator over ``services/``). The router now
+# aliases this dict, so every consumer that already reaches for
+# ``engines._ENGINE_INSTANCES`` — engine_memory's eviction, model_lifecycle's
+# inventory and unload — keeps operating on the one true cache.
+#
+# Keyed by CLASS, not by engine id, because registry-sandbox tests rebind ids
+# transiently; ``get_engine_instance_for`` resolves an id through
+# ``get_backend_class`` so callers can key by id without the cache doing so.
+_ENGINE_INSTANCES: dict[type, object] = {}
+_ENGINE_CACHE_LOCK = threading.RLock()
+
+# Last use, on the monotonic clock — a wall clock would make an NTP step or a
+# laptop resume look like a ten-minute idle and unload a model mid-job.
+_ENGINE_LAST_USED: dict[type, float] = {}
+
+# How many jobs are inside an engine right now. A long generation touches the
+# cache once at the start, so on elapsed time alone a 40-minute dub looks
+# exactly like an abandoned model — and the sweep would unload it out from
+# under the thread rendering it.
+_ENGINE_IN_USE: dict[type, int] = {}
+
+def _idle_seconds_from_env(name: str, default: float, *, floor: float) -> float:
+    """Read a tunable idle duration, ignoring anything unusable.
+
+    These exist so the ten-minute behaviour can be observed in a minute during
+    testing instead of a coffee break. A bad value must not change behaviour
+    silently, and must never reach zero: a zero threshold unloads an engine the
+    instant it goes idle, which on a busy machine means reloading it for every
+    request.
+    """
+    raw = (os.environ.get(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        logger.warning("Ignoring %s=%r: not a number.", name, raw)
+        return default
+    if value < floor:
+        logger.warning("Ignoring %s=%s: below the %ss floor.", name, value, floor)
+        return default
+    return value
+
+
+#: How long an engine may sit unused before its weights are handed back.
+#: Override with OMNIVOICE_ENGINE_IDLE_UNLOAD_SECONDS (testing).
+ENGINE_IDLE_UNLOAD_SECONDS = _idle_seconds_from_env(
+    "OMNIVOICE_ENGINE_IDLE_UNLOAD_SECONDS", 600.0, floor=5.0
+)
+
+
+@contextmanager
+def engine_in_use(instance, *, now: Optional[float] = None):
+    """Hold an engine against the idle sweep for the duration of one job.
+
+    Leaving on the exit stamp rather than the entry one makes "idle" mean
+    "idle since the work finished", which is the only reading under which the
+    ten-minute window measures what it claims to.
+    """
+    cls = type(instance)
+    with _ENGINE_CACHE_LOCK:
+        _ENGINE_IN_USE[cls] = _ENGINE_IN_USE.get(cls, 0) + 1
+    try:
+        yield instance
+    finally:
+        with _ENGINE_CACHE_LOCK:
+            remaining = _ENGINE_IN_USE.get(cls, 1) - 1
+            if remaining > 0:
+                _ENGINE_IN_USE[cls] = remaining
+            else:
+                _ENGINE_IN_USE.pop(cls, None)
+            _ENGINE_LAST_USED[cls] = time.monotonic() if now is None else float(now)
+
+
+def get_engine_instance(cls, *, now: Optional[float] = None):
+    """Return the cached singleton instance of ``cls``, creating it once.
+
+    ``SubprocessBackend.__init__`` registers an atexit shutdown hook, so
+    re-instantiating per call would leak handler entries — and on real engines,
+    an extra sidecar process the first time the lock is acquired. One instance
+    per process is the right move.
+    """
+    with _ENGINE_CACHE_LOCK:
+        inst = _ENGINE_INSTANCES.get(cls)
+        if inst is None:
+            inst = cls()
+            _ENGINE_INSTANCES[cls] = inst
+        _ENGINE_LAST_USED[cls] = time.monotonic() if now is None else float(now)
+        return inst
+
+
+def get_engine_instance_for(engine_id: str, *, now: Optional[float] = None):
+    """Cached instance of the TTS engine registered under ``engine_id``.
+
+    Deliberately NOT :func:`get_active_tts_backend`: that resolves
+    ``active_backend_id()``, i.e. *this machine's* Settings preference. On a
+    remote worker that would run whatever the worker's owner happens to prefer
+    while the control plane's slots, breaker history and result metadata are
+    keyed to the engine it believes ran — wrong audio, silently.
+    """
+    return get_engine_instance(get_backend_class(engine_id), now=now)
+
+
+def release_idle_engines(
+    idle_seconds: float = ENGINE_IDLE_UNLOAD_SECONDS,
+    *,
+    now: Optional[float] = None,
+) -> list[str]:
+    """Unload and drop every cached engine unused for ``idle_seconds``.
+
+    Least-recently-used first, so a sweep cut short by a raising ``unload()``
+    has already freed the coldest engine. Never raises: a stuck unload must not
+    take down the loop that called it. Returns the engine ids released.
+    """
+    stamp = time.monotonic() if now is None else float(now)
+    pending: list[tuple[str, object]] = []
+    with _ENGINE_CACHE_LOCK:
+        # Entries other consumers popped straight out of the cache
+        # (engine_memory's eviction, model_lifecycle's unload) would otherwise
+        # pin a stale class.
+        for cls in [c for c in _ENGINE_LAST_USED if c not in _ENGINE_INSTANCES]:
+            _ENGINE_LAST_USED.pop(cls, None)
+        coldest_first = sorted(
+            _ENGINE_INSTANCES, key=lambda c: _ENGINE_LAST_USED.get(c, 0.0)
+        )
+        for cls in coldest_first:
+            if _ENGINE_IN_USE.get(cls):
+                continue
+            # An instance put here by some other path has no timestamp; start
+            # its clock now rather than leaving it resident forever.
+            last_used = _ENGINE_LAST_USED.setdefault(cls, stamp)
+            if stamp - last_used < idle_seconds:
+                continue
+            inst = _ENGINE_INSTANCES.pop(cls, None)
+            _ENGINE_LAST_USED.pop(cls, None)
+            if inst is not None:
+                pending.append((getattr(cls, "id", cls.__name__), inst))
+
+    released: list[str] = []
+    for engine_id, inst in pending:
+        try:
+            inst.unload()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("idle unload: %s.unload() raised: %s", engine_id, exc)
+        released.append(engine_id)
+    if released:
+        logger.info("Released %d idle engine(s): %s", len(released), ", ".join(released))
+    return released
+
+
 # ── Shared generation-time engine resolution (issue #312 class) ───────────
 #
 # dub_generate.py and batch.py used to call services.model_manager.get_model()
 # directly, hardcoding OmniVoice regardless of the engine selected in
-# Settings → Engines — a SILENT fallback: pick VoxCPM2, dub anyway with
+# Model Catalogue → Engines — a SILENT fallback: pick VoxCPM2, dub anyway with
 # OmniVoice, no error. This is the single resolution path both routers now
 # call instead, mirroring generation.py's /generate resolution (engine id →
 # is_available() → routing gate) plus a voice-cloning capability gate that
@@ -2357,7 +2603,7 @@ async def resolve_generation_backend(
     except ValueError as e:
         raise ValueError(
             f"Active TTS engine '{engine_id}' is not a recognized backend ({e}). "
-            "Check Settings → Engines or the OMNIVOICE_TTS_BACKEND env var."
+            "Check Model Catalogue → Engines or the OMNIVOICE_TTS_BACKEND env var."
         ) from e
 
     try:
@@ -2390,8 +2636,8 @@ async def resolve_generation_backend(
         raise ValueError(
             f"The active TTS engine '{engine_id}' doesn't support voice cloning, "
             f"so {cloning_purpose} can't preserve speaker voices. Switch to one "
-            f"of: {', '.join(cloning_capable_engine_ids())} in Settings → "
-            "Engines, or use OmniVoice for this job."
+            f"of: {', '.join(cloning_capable_engine_ids())} in "
+            "Model Catalogue → Engines, or use OmniVoice for this job."
         )
 
     return backend

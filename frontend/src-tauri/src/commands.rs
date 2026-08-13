@@ -3,14 +3,269 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::image::Image;
+use tauri::Manager;
+use tauri_plugin_dialog::DialogExt;
 
-use crate::{AppFlags, TrayHandle, DictationShortcutState};
+use crate::dictation_shortcut::{DictationShortcutManager, ShortcutInfo, update_tray_hint};
+use crate::{AppFlags, TrayHandle};
 use crate::{TRAY_ICON_DEFAULT, TRAY_ICON_RECORDING};
 use crate::config::{load_config, save_config};
+
+// ── Native host-path authorization ───────────────────────────────────────
+
+#[derive(Serialize, Deserialize)]
+struct AuthorizedHostPath {
+    token: String,
+    kind: String,
+    path: String,
+}
+
+#[derive(Serialize)]
+pub struct AuthorizedPathSelection {
+    authorization: String,
+    path: String,
+}
+
+pub fn path_authorization_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> PathBuf {
+    crate::setup::resolved_data_dir(app)
+        .unwrap_or_else(crate::setup::default_data_dir)
+        .join(".path-authorizations")
+}
+
+fn remember_reveal_path<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    path: &Path,
+) -> Result<(), String> {
+    let dir = path_authorization_dir(app);
+    fs::create_dir_all(&dir).map_err(|e| format!("Could not create authorization store: {e}"))?;
+    let ledger = dir.join("revealed-paths");
+    let selected = path.to_string_lossy().into_owned();
+    let mut paths: Vec<String> = fs::read_to_string(&ledger)
+        .unwrap_or_default()
+        .lines()
+        .map(str::to_owned)
+        .collect();
+    paths.retain(|item| item != &selected);
+    paths.push(selected);
+    if paths.len() > 1024 {
+        paths.drain(..paths.len() - 1024);
+    }
+    fs::write(&ledger, format!("{}\n", paths.join("\n")))
+        .map_err(|e| format!("Could not remember selected path: {e}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&ledger, fs::Permissions::from_mode(0o600))
+            .map_err(|e| format!("Could not protect selected paths: {e}"))?;
+    }
+    Ok(())
+}
+
+fn reveal_path_is_authorized<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    target: &Path,
+) -> bool {
+    if let Ok(data_root) = fs::canonicalize(
+        crate::setup::resolved_data_dir(app).unwrap_or_else(crate::setup::default_data_dir),
+    ) {
+        if target.starts_with(data_root) {
+            return true;
+        }
+    }
+    let Ok(ledger) = fs::read_to_string(path_authorization_dir(app).join("revealed-paths")) else {
+        return false;
+    };
+    ledger.lines().any(|selected| {
+        fs::canonicalize(selected)
+            .map(|remembered| remembered == target)
+            .unwrap_or(false)
+    })
+}
+
+fn validate_host_path(kind: &str, path: PathBuf) -> Result<PathBuf, String> {
+    if !matches!(
+        kind,
+        "models_dir"
+            | "ffmpeg"
+            | "ffprobe"
+            | "dub_export"
+            | "soni_input"
+            | "soni_output_dir"
+    ) {
+        return Err("Unsupported host-path capability".into());
+    }
+    if path.to_string_lossy().chars().any(|c| c.is_control()) {
+        return Err("Path contains invalid control characters".into());
+    }
+    if kind == "models_dir" && path.as_os_str().is_empty() {
+        return Ok(PathBuf::new()); // explicit reset to the platform default
+    }
+    if !path.is_absolute() {
+        return Err("Path must be absolute".into());
+    }
+    if matches!(kind, "models_dir" | "soni_output_dir") {
+        fs::create_dir_all(&path).map_err(|e| format!("Directory is not writable: {e}"))?;
+        let probe = path.join(".voicestudio-write-test");
+        fs::write(&probe, b"ok").map_err(|e| format!("Directory is not writable: {e}"))?;
+        let _ = fs::remove_file(probe);
+    } else if kind == "dub_export" {
+        let parent = path
+            .parent()
+            .ok_or_else(|| "Save destination must have a parent directory".to_string())?;
+        if !parent.is_dir() {
+            return Err("Save destination directory does not exist".into());
+        }
+    } else if kind == "soni_input" {
+        if !path.is_file() {
+            return Err("Selected media input is not a file".into());
+        }
+    } else {
+        if !path.is_file() {
+            return Err("Selected media tool is not a file".into());
+        }
+        let mut child = crate::tools::no_window(
+            std::process::Command::new(&path)
+                .arg("-version")
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped()),
+        )
+        .spawn()
+        .map_err(|e| format!("Selected media tool could not run: {e}"))?;
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            match child.try_wait() {
+                Ok(Some(_)) => break,
+                Ok(None) if Instant::now() < deadline => {
+                    std::thread::sleep(Duration::from_millis(25));
+                }
+                Ok(None) => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return Err("Selected media tool did not respond within 5 seconds".into());
+                }
+                Err(e) => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return Err(format!("Selected media tool could not be checked: {e}"));
+                }
+            }
+        }
+        let output = child
+            .wait_with_output()
+            .map_err(|e| format!("Selected media tool output could not be read: {e}"))?;
+        let version_text = format!(
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        )
+        .to_ascii_lowercase();
+        if !output.status.success() || !version_text.contains(kind) {
+            return Err("Selected media tool failed its version check".into());
+        }
+    }
+    Ok(path)
+}
+
+#[tauri::command]
+pub async fn authorize_host_path(
+    app: tauri::AppHandle,
+    kind: String,
+    suggested_name: Option<String>,
+    reset: Option<bool>,
+) -> Result<Option<AuthorizedPathSelection>, String> {
+    let selected = if kind == "models_dir" && reset.unwrap_or(false) {
+        Some(PathBuf::new())
+    } else {
+        let dialog = app.dialog().file();
+        let picked = match kind.as_str() {
+            "models_dir" | "soni_output_dir" => dialog.blocking_pick_folder(),
+            "ffmpeg" | "ffprobe" | "soni_input" => dialog.blocking_pick_file(),
+            "dub_export" => {
+                let mut save = app.dialog().file();
+                if let Some(name) = suggested_name.as_deref() {
+                    save = save.set_file_name(name);
+                }
+                save.blocking_save_file()
+            }
+            _ => return Err("Unsupported host-path capability".into()),
+        };
+        picked.and_then(|value| value.into_path().ok())
+    };
+    let Some(selected) = selected else {
+        return Ok(None);
+    };
+    let validated = validate_host_path(&kind, selected)?;
+    let mut random = [0_u8; 32];
+    getrandom::fill(&mut random).map_err(|e| format!("Secure randomness unavailable: {e}"))?;
+    let token: String = random.iter().map(|b| format!("{b:02x}")).collect();
+    let dir = path_authorization_dir(&app);
+    fs::create_dir_all(&dir).map_err(|e| format!("Could not create authorization store: {e}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o700))
+            .map_err(|e| format!("Could not protect authorization store: {e}"))?;
+    }
+    let target = dir.join(format!("{token}.json"));
+    let payload = AuthorizedHostPath {
+        token: token.clone(),
+        kind,
+        path: validated.to_string_lossy().into_owned(),
+    };
+    fs::write(&target, serde_json::to_vec(&payload).map_err(|e| e.to_string())?)
+        .map_err(|e| format!("Could not authorize path: {e}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&target, fs::Permissions::from_mode(0o600))
+            .map_err(|e| format!("Could not protect authorization: {e}"))?;
+    }
+    if payload.kind == "dub_export" {
+        remember_reveal_path(&app, &validated)?;
+    }
+    Ok(Some(AuthorizedPathSelection {
+        authorization: token,
+        path: validated.to_string_lossy().into_owned(),
+    }))
+}
+
+#[cfg(test)]
+mod host_path_authorization_tests {
+    use super::validate_host_path;
+    use std::path::PathBuf;
+
+    #[test]
+    fn rejects_unknown_relative_and_control_character_paths() {
+        assert!(validate_host_path("shell", PathBuf::from("/tmp/tool")).is_err());
+        assert!(validate_host_path("models_dir", PathBuf::from("relative/models")).is_err());
+        assert!(validate_host_path("models_dir", PathBuf::from("/tmp/bad\npath")).is_err());
+    }
+
+    #[test]
+    fn empty_models_path_is_the_authorized_default_reset() {
+        assert_eq!(validate_host_path("models_dir", PathBuf::new()).unwrap(), PathBuf::new());
+    }
+
+    #[test]
+    fn dub_export_accepts_only_absolute_paths_in_existing_directories() {
+        let parent = std::env::temp_dir();
+        let destination = parent.join("voicestudio-authorized-export.wav");
+        assert_eq!(
+            validate_host_path("dub_export", destination.clone()).unwrap(),
+            destination,
+        );
+        assert!(validate_host_path("dub_export", PathBuf::from("relative/export.wav")).is_err());
+        assert!(validate_host_path(
+            "dub_export",
+            parent.join("missing-directory/export.wav"),
+        )
+        .is_err());
+    }
+}
 
 // ── System metrics ────────────────────────────────────────────────────────
 
@@ -622,15 +877,25 @@ pub fn simulate_type(text: Option<String>, backspaces: Option<u32>) -> Result<()
 
 #[tauri::command]
 pub fn set_tray_recording(
+    app: tauri::AppHandle,
     recording: bool,
     tray_handle: tauri::State<'_, TrayHandle>,
+    flags: tauri::State<'_, AppFlags>,
+    shortcuts: tauri::State<'_, DictationShortcutManager>,
 ) -> Result<(), String> {
+    // Record the state BEFORE the icon swap: the tray's Start/Stop item reads
+    // this to decide which event to emit, and it must stay correct even if the
+    // icon fails to decode. (It used to read `widget.is_visible()`, which the
+    // permanently-hidden widget made meaningless.)
+    flags.dictating.store(recording, Ordering::SeqCst);
+    log::info!("Dictation recording state: {recording}");
     let bytes = if recording { TRAY_ICON_RECORDING } else { TRAY_ICON_DEFAULT };
     let img = Image::from_bytes(bytes).map_err(|e| format!("decode tray icon: {e}"))?;
     let lock = tray_handle.tray.lock().map_err(|_| "tray lock poisoned")?;
     if let Some(ref tray) = *lock {
         tray.set_icon(Some(img)).map_err(|e| format!("set_icon: {e}"))?;
     }
+    update_tray_hint(&app, &shortcuts.info().display, recording);
     Ok(())
 }
 
@@ -650,40 +915,240 @@ pub fn get_dictation_shortcut(app: tauri::AppHandle) -> String {
 }
 
 #[tauri::command]
+pub fn get_effective_dictation_shortcut(
+    state: tauri::State<'_, DictationShortcutManager>,
+) -> ShortcutInfo {
+    state.info()
+}
+
+#[tauri::command]
+pub fn request_dictation_capture(app: tauri::AppHandle, action: String) -> Result<(), String> {
+    if action != "start" && action != "stop" && action != "toggle" {
+        return Err("capture action must be start, stop, or toggle".into());
+    }
+    crate::dispatch_dictation_capture(&app, &action);
+    Ok(())
+}
+
+/// Distance from the bottom edge of the work area, in logical pixels — clear of
+/// a dock/taskbar without floating in the middle of the screen.
+const PILL_BOTTOM_MARGIN: f64 = 56.0;
+
+/// Bottom-centre the pill inside a monitor. Pure geometry so the placement can
+/// be tested without a display server; every value is physical pixels except
+/// `scale`, which converts the logical margin.
+fn pill_bottom_centre(
+    origin: (i32, i32),
+    area: (u32, u32),
+    size: (u32, u32),
+    scale: f64,
+) -> (i32, i32) {
+    let x = origin.0 + (area.0 as i32 - size.0 as i32) / 2;
+    let margin = (PILL_BOTTOM_MARGIN * scale).round() as i32;
+    let y = origin.1 + area.1 as i32 - size.1 as i32 - margin;
+    // A pill taller than its monitor would otherwise be placed off the top.
+    (x.max(origin.0), y.max(origin.1))
+}
+
+/// Place the pill above the bottom edge of the screen the pointer is on.
+///
+/// Wayland denies clients any say in their own placement, so `set_position` is
+/// a no-op there and the compositor decides — the pill still appears, just
+/// wherever that compositor puts it. Every other platform honours it.
+fn place_dictation_pill(app: &tauri::AppHandle, win: &tauri::WebviewWindow) {
+    let monitor = app
+        .cursor_position()
+        .ok()
+        .and_then(|point| app.monitor_from_point(point.x, point.y).ok().flatten())
+        .or_else(|| win.current_monitor().ok().flatten())
+        .or_else(|| app.primary_monitor().ok().flatten());
+    let Some(monitor) = monitor else {
+        log::warn!("pill: no monitor available to place the capture pill on");
+        return;
+    };
+    let size = match win.outer_size() {
+        Ok(size) => size,
+        Err(error) => {
+            log::warn!("pill: could not measure the capture pill: {error}");
+            return;
+        }
+    };
+    let area = monitor.size();
+    let origin = monitor.position();
+    let (x, y) = pill_bottom_centre(
+        (origin.x, origin.y),
+        (area.width, area.height),
+        (size.width, size.height),
+        monitor.scale_factor(),
+    );
+    if let Err(error) = win.set_position(tauri::PhysicalPosition::new(x, y)) {
+        log::warn!("pill: could not place the capture pill: {error}");
+        return;
+    }
+    log::info!(
+        "pill: placed at {x},{y} ({}x{} on a {}x{} monitor)",
+        size.width, size.height, area.width, area.height
+    );
+}
+
+/// Show the dictation pill for the duration of a capture.
+///
+/// Called by the capture widget on every state that the user must see —
+/// recording, transcribing, the result flash, an error, the Accessibility
+/// prompt. `dismiss()` in the widget owns hiding it again, and the idle
+/// reconcile there is the backstop.
+#[tauri::command]
+pub fn show_dictation_pill(app: tauri::AppHandle) -> Result<(), String> {
+    let Some(win) = app.get_webview_window("widget") else {
+        return Err("the capture window is not available".into());
+    };
+    place_dictation_pill(&app, &win);
+    // The pill must never take focus: the paste lands in whatever app the user
+    // was typing into, and stealing foreground breaks that (#982, #287).
+    #[cfg(target_os = "windows")]
+    crate::show_pill_noactivate(&win);
+    #[cfg(not(target_os = "windows"))]
+    win.show()
+        .map_err(|error| format!("could not show the capture pill: {error}"))?;
+    log::info!("pill: shown (visible={:?})", win.is_visible());
+    Ok(())
+}
+
+#[cfg(test)]
+mod pill_placement_tests {
+    use super::{pill_bottom_centre, PILL_BOTTOM_MARGIN};
+
+    #[test]
+    fn centres_horizontally_and_sits_above_the_bottom_edge() {
+        let (x, y) = pill_bottom_centre((0, 0), (1920, 1080), (300, 64), 1.0);
+        assert_eq!(x, 810);
+        assert_eq!(y, 1080 - 64 - PILL_BOTTOM_MARGIN as i32);
+    }
+
+    #[test]
+    fn places_relative_to_the_monitor_origin_on_a_second_screen() {
+        // A monitor to the right of / above the primary has a non-zero origin;
+        // ignoring it puts the pill on the wrong screen entirely.
+        let (x, y) = pill_bottom_centre((1920, -200), (2560, 1440), (600, 128), 2.0);
+        assert_eq!(x, 1920 + (2560 - 600) / 2);
+        assert_eq!(y, -200 + 1440 - 128 - (PILL_BOTTOM_MARGIN * 2.0) as i32);
+    }
+
+    #[test]
+    fn never_places_the_pill_off_the_top_or_left_of_its_monitor() {
+        let (x, y) = pill_bottom_centre((0, 0), (200, 100), (300, 300), 1.0);
+        assert_eq!((x, y), (0, 0));
+    }
+}
+
+#[tauri::command]
+pub fn mark_dictation_capture_ready(app: tauri::AppHandle) {
+    let flags = app.state::<AppFlags>();
+    let Ok(mut capture) = flags.capture.lock() else {
+        log::warn!("Dictation capture state lock poisoned");
+        return;
+    };
+    capture.ready = true;
+    if let Some(action) = capture.pending.take() {
+        drop(capture);
+        crate::dispatch_dictation_capture(&app, &action);
+    }
+}
+
+#[tauri::command]
 pub fn set_dictation_shortcut(
     app: tauri::AppHandle,
     accelerator: String,
-    state: tauri::State<'_, DictationShortcutState>,
-) -> Result<String, String> {
-    use std::str::FromStr;
-    use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
-
-    let parsed = Shortcut::from_str(&accelerator)
-        .map_err(|e| format!("Invalid shortcut '{accelerator}': {e}"))?;
-
-    let gs = app.global_shortcut();
-
-    let mut slot = state.current.lock().map_err(|_| "shortcut lock poisoned")?;
-    let prev = slot.take();
-    if let Some(ref p) = prev {
-        let _ = gs.unregister(p.clone());
-    }
-    if let Err(e) = gs.register(parsed.clone()) {
-        if let Some(p) = prev {
-            if gs.register(p.clone()).is_ok() {
-                *slot = Some(p);
-            }
-        }
-        return Err(format!("Failed to register '{accelerator}': {e}"));
-    }
-    *slot = Some(parsed);
-    drop(slot);
-
-    let mut cfg = load_config(&app);
-    cfg.dictation_shortcut = accelerator.clone();
-    save_config(&app, &cfg);
+    state: tauri::State<'_, DictationShortcutManager>,
+) -> Result<ShortcutInfo, String> {
+    let info = state.serialize_update(|| {
+        let mut cfg = load_config(&app);
+        let previous = cfg.dictation_shortcut.clone();
+        let path = crate::config::config_path(&app)
+            .ok_or_else(|| "Could not locate the VoiceStudio config directory".to_string())?;
+        apply_shortcut_change(
+            &accelerator,
+            &previous,
+            |value| state.replace(&app, value),
+            || {
+                cfg.dictation_shortcut = accelerator.clone();
+                crate::config::save_config_at(&path, &cfg)
+            },
+        )
+    })?;
     log::info!("Dictation shortcut updated to {accelerator}");
-    Ok(accelerator)
+    Ok(info)
+}
+
+fn apply_shortcut_change<T, A, P>(
+    replacement: &str,
+    previous: &str,
+    mut activate: A,
+    persist: P,
+) -> Result<T, String>
+where
+    A: FnMut(&str) -> Result<T, String>,
+    P: FnOnce() -> Result<(), String>,
+{
+    let active = activate(replacement)?;
+    if let Err(error) = persist() {
+        let rollback = activate(previous);
+        return Err(match rollback {
+            Ok(_) => format!("Could not save the shortcut: {error}"),
+            Err(rollback_error) => format!(
+                "Could not save the shortcut ({error}); restoring the previous shortcut also failed: {rollback_error}"
+            ),
+        });
+    }
+    Ok(active)
+}
+
+#[cfg(test)]
+mod shortcut_change_tests {
+    use super::apply_shortcut_change;
+    use std::cell::RefCell;
+
+    #[test]
+    fn activates_the_replacement_before_persisting_it() {
+        let events = RefCell::new(Vec::new());
+        let result = apply_shortcut_change(
+            "Ctrl+Alt+K",
+            "Ctrl+Shift+Space",
+            |value| {
+                events.borrow_mut().push(format!("activate:{value}"));
+                Ok(value.to_owned())
+            },
+            || {
+                events.borrow_mut().push("persist".into());
+                Ok(())
+            },
+        )
+        .unwrap();
+
+        assert_eq!(result, "Ctrl+Alt+K");
+        assert_eq!(events.into_inner(), ["activate:Ctrl+Alt+K", "persist"]);
+    }
+
+    #[test]
+    fn restores_the_previous_binding_when_persistence_fails() {
+        let events = RefCell::new(Vec::new());
+        let error = apply_shortcut_change(
+            "Ctrl+Alt+K",
+            "Ctrl+Shift+Space",
+            |value| {
+                events.borrow_mut().push(format!("activate:{value}"));
+                Ok(())
+            },
+            || Err("disk full".into()),
+        )
+        .unwrap_err();
+
+        assert!(error.contains("disk full"));
+        assert_eq!(
+            events.into_inner(),
+            ["activate:Ctrl+Alt+K", "activate:Ctrl+Shift+Space"]
+        );
+    }
 }
 
 // ── Launch-mode persistence ───────────────────────────────────────────────
@@ -718,6 +1183,53 @@ pub fn save_text_file(path: String, contents: String) -> Result<(), String> {
         std::fs::create_dir_all(dir).map_err(|e| format!("create dir: {e}"))?;
     }
     std::fs::write(p, contents).map_err(|e| format!("write: {e}"))
+}
+
+#[tauri::command]
+pub fn reveal_host_path(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    // Revealing is a native-shell action, never a loopback HTTP authority.
+    // Canonicalization rejects missing paths and removes traversal/symlinks;
+    // argv-only spawning avoids shell interpretation on every platform.
+    let target = std::fs::canonicalize(&path)
+        .map_err(|_| "That file or folder is no longer on disk".to_string())?;
+    if !reveal_path_is_authorized(&app, &target) {
+        return Err("That path was not selected by VoiceStudio".into());
+    }
+    let folder = if target.is_dir() {
+        target.clone()
+    } else {
+        target.parent()
+            .ok_or_else(|| "That path has no containing folder".to_string())?
+            .to_path_buf()
+    };
+    let mut command = if cfg!(target_os = "macos") {
+        let mut command = std::process::Command::new("open");
+        if target.is_file() {
+            command.arg("-R").arg(&target);
+        } else {
+            command.arg(&folder);
+        }
+        command
+    } else if cfg!(target_os = "windows") {
+        let mut command = std::process::Command::new("explorer");
+        if target.is_file() {
+            command.arg("/select,").arg(&target);
+        } else {
+            command.arg(&folder);
+        }
+        command
+    } else {
+        let mut command = std::process::Command::new("xdg-open");
+        command.arg(&folder);
+        command
+    };
+    let mut child = crate::tools::no_window(&mut command)
+        .spawn()
+        .map_err(|e| format!("Could not open the containing folder: {e}"))?;
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
+    Ok(())
 }
 
 // ── WebView cache repair (issue #879) ─────────────────────────────────────

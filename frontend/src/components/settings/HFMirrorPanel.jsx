@@ -144,6 +144,8 @@ export default function HFMirrorPanel() {
   // GET failed is exactly the user who needs this panel — never let it vanish.
   return (
     <SettingsSection
+      className="models-settings-compact !mb-[8px] !px-[10px] !py-[9px] [&>header]:!mb-[6px] [&>header]:!gap-[8px] [&>header]:!pb-[6px] [&>header_h2]:!text-[length:var(--text-md)] [&>header_p]:!leading-[1.3] [&>header_[data-slot=settings-section-icon]]:!h-[24px] [&>header_[data-slot=settings-section-icon]]:!w-[24px]"
+      compact
       icon={Globe}
       title={t('models.mirror_title')}
       description={t('models.mirror_description')}
@@ -179,13 +181,14 @@ export default function HFMirrorPanel() {
       {state && (
         <>
           <SettingRow
-            stack
+            className="!px-[6px] !py-[5px]"
             title={t('models.mirror_preset_title')}
             hint={t('models.mirror_preset_hint')}
             control={
-              <div className="flex flex-wrap items-center gap-[6px] min-w-0 max-w-full">
+              <div className="flex min-w-0 max-w-full flex-wrap items-center gap-[4px]">
                 <Button
                   variant="preset"
+                  className="!px-[7px] !py-[3px]"
                   active={isAuto}
                   onClick={() => save('', 'auto')}
                   disabled={saving}
@@ -197,6 +200,7 @@ export default function HFMirrorPanel() {
                 {state.presets.map((p) => (
                   <Button
                     variant="preset"
+                    className="!px-[7px] !py-[3px]"
                     key={p.label}
                     active={!isAuto && normalizeMirror(p.url) === configured}
                     onClick={() => save(p.url, 'manual')}
@@ -212,16 +216,16 @@ export default function HFMirrorPanel() {
 
           {isAuto && (
             <SettingRow
-              stack
+              className="!px-[6px] !py-[5px]"
               title={t('models.mirror_auto_title', { defaultValue: 'Automatic selection' })}
-              note={t('models.mirror_auto_hint', {
+              hint={t('models.mirror_auto_hint', {
                 defaultValue:
-                  'OmniVoice probes huggingface.co and the community mirror, then uses whichever actually works — preferring the official endpoint unless the mirror is decisively faster. Downloads are checksum-verified by Hugging Face regardless of endpoint, so a mirror can never corrupt models.',
+                  'VoiceStudio probes huggingface.co and the community mirror, then uses whichever actually works — preferring the official endpoint unless the mirror is decisively faster. Downloads are checksum-verified by Hugging Face regardless of endpoint, so a mirror can never corrupt models.',
               })}
               control={
                 <>
                   <span
-                    className="min-w-0 truncate font-mono text-[length:var(--text-sm)] text-[color:var(--chrome-fg-muted)]"
+                    className="min-w-0 flex-1 truncate font-mono text-[length:var(--text-xs)] text-[color:var(--chrome-fg-muted)]"
                     data-testid="hf-mirror-auto-status"
                   >
                     {autoStatus}
@@ -245,9 +249,9 @@ export default function HFMirrorPanel() {
           )}
 
           <SettingRow
-            stack
+            className="!px-[6px] !py-[5px]"
             title={t('models.mirror_custom_url', { defaultValue: 'Custom mirror URL' })}
-            note={t('models.mirror_custom_url_note', {
+            hint={t('models.mirror_custom_url_note', {
               defaultValue: 'Sets the HF_ENDPOINT environment variable for Hugging Face downloads.',
             })}
             subtitle={restart ? t('models.mirror_restart_note') : undefined}
@@ -256,9 +260,13 @@ export default function HFMirrorPanel() {
                 <SettingsInput
                   mono
                   type="text"
+                  className="!max-w-none !rounded-[8px] !px-[8px] !py-[5px]"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://hf-mirror.com"
+                  name="hugging-face-mirror-url"
+                  autoComplete="off"
+                  spellCheck={false}
                   aria-label={t('models.mirror_custom_url', { defaultValue: 'Custom mirror URL' })}
                   data-testid="hf-mirror-url"
                 />

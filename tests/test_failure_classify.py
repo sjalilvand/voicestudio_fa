@@ -177,3 +177,64 @@ def test_classify_ssl_handshake_failure():
 def test_classify_generic_still_empty():
     # A genuinely unknown reason must still classify to "" (no false hint).
     assert failure.classify("some totally unrelated failure") == ""
+
+
+def test_transformers_import_hint_names_the_package_that_actually_breaks():
+    """#1376: the hint told users to reinstall torch+torchaudio+transformers —
+    omitting torchvision, the package whose ABI mismatch produces this exact
+    lazy-import wording (#1357's `torchvision::nms`). Following the advice to
+    the letter left the broken package untouched.
+
+    It must also point at the pinned constraint file: an unpinned reinstall of
+    the trio can itself resolve a drifted pair, which is the bug the pins
+    exist to prevent.
+    """
+    hint = failure._HINTS["TRANSFORMERS_IMPORT"]
+    assert "torchvision" in hint
+
+
+def test_transformers_import_hint_versions_match_the_constraint_file():
+    """The hint carries LITERAL pins — desktop installs don't ship deploy/, so
+    a `--constraint deploy/torch-constraints.txt` command fails with "file not
+    found" for exactly the users most likely to need it (greptile on #1377).
+    Literals drift, so this locks them to the constraint file: bump the pins,
+    and this fails until every advice surface says the new versions."""
+    import os
+    import re
+
+    root = os.path.join(os.path.dirname(__file__), "..")
+    with open(os.path.join(root, "deploy", "torch-constraints.txt")) as fh:
+        pins = dict(
+            re.fullmatch(r"([A-Za-z0-9_.\-]+)==([^\s;]+)", ln.split("#")[0].strip()).groups()
+            for ln in fh
+            if re.fullmatch(r"([A-Za-z0-9_.\-]+)==([^\s;]+)", ln.split("#")[0].strip())
+        )
+
+    surfaces = {
+        "core/failure.py hint": failure._HINTS["TRANSFORMERS_IMPORT"],
+    }
+    with open(os.path.join(root, "backend", "services", "asr_backend.py")) as fh:
+        surfaces["asr_backend.py error"] = fh.read()
+    with open(os.path.join(root, "docs", "install", "troubleshooting.md")) as fh:
+        surfaces["troubleshooting.md"] = fh.read()
+
+    # The COMMAND, not isolated substrings (CodeRabbit): a surface could carry
+    # the right pin in a comment while its actual reinstall line says something
+    # else. Normalizing collapses the asr_backend source's string-literal line
+    # breaks so the assertion sees what the user sees.
+    command = (
+        f"uv pip install --python .venv --reinstall torch=={pins['torch']} "
+        f"torchaudio=={pins['torchaudio']} torchvision=={pins['torchvision']} "
+        f"transformers"
+    )
+
+    def _normalize(text):
+        return re.sub(r"[\s\"\\]+", " ", text)
+
+    for name, text in surfaces.items():
+        assert command in _normalize(text), (
+            f"{name} does not carry the exact pinned reinstall command "
+            f"({command!r}) — either a pin drifted from "
+            f"deploy/torch-constraints.txt or the command was reworded; "
+            f"following stale advice would recreate the mismatch it fixes"
+        )

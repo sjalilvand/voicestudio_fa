@@ -98,7 +98,7 @@ class OpenAICompatBackend(LLMBackend):
         if p is None:
             return False, (
                 "No LLM configured. Add a provider key in Settings → LLM Providers "
-                "(OpenAI/OpenRouter/Groq/… or a local Ollama), or set "
+                "(OpenAI/OpenRouter/OrcaRouter/Groq/… or a local Ollama), or set "
                 "TRANSLATE_BASE_URL (+ TRANSLATE_API_KEY)."
             )
         if not llm_providers.resolve_base_url(p):
@@ -231,13 +231,10 @@ def list_backends() -> list[dict]:
     for bid, cls in _REGISTRY.items():
         try:
             ok, msg = cls.is_available()
-        except Exception as exc:
+        except Exception:
             ok = False
-            msg = f"{type(exc).__name__}: {exc}"
-            logger.warning(
-                "llm list_backends: %s.is_available() raised — degrading "
-                "gracefully so the picker still renders: %s", bid, msg,
-            )
+            msg = "Availability probe failed; check the backend log."
+            logger.warning("llm list_backends: availability probe failed for registered backend %s", bid)
         if ok:
             _LAST_ERRORS.pop(bid, None)
         else:

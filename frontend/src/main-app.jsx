@@ -18,6 +18,8 @@ import './index.css';
 import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary';
 import RemoteAuthGate from './components/RemoteAuthGate';
+import DesktopCaptureShortcutBridge from './components/DesktopCaptureShortcutBridge';
+import CaptureWidget from './components/CaptureWidget.jsx';
 import { installConsoleCapture } from './utils/consoleBuffer.js';
 import { installGlobalErrorHandlers } from './utils/globalErrorHandlers.js';
 
@@ -36,15 +38,24 @@ const queryClient = new QueryClient({
   },
 });
 
-import { Suspense, lazy } from 'react';
-const CaptureWidget = lazy(() => import('./components/CaptureWidget.jsx'));
-
 // Detect which Tauri window we're rendering in.
 // Tauri 2's WebviewUrl::App(PathBuf) variant doesn't support query strings —
 // declaring `"url": "/?window=widget"` in tauri.conf.json silently failed to
 // create the widget window. So both windows load the same index.html and we
 // differentiate by window label via the Tauri JS API.
 async function detectIsWidget() {
+  // The widget window stamps this from an initialization_script (lib.rs)
+  // before any page script runs, so it is always here and never races.
+  //
+  // It has to be first. Asking `getCurrentWindow()` throws when Tauri's
+  // internals aren't injected yet, and the catch below can only guess — the
+  // URL query it looks for is one Tauri 2 cannot set. A widget window that
+  // guessed "main" rendered <App/>: opaque background, no pill, and no
+  // CaptureWidget to run the hide reconcile, leaving a dark rectangle on the
+  // desktop that nothing but quitting the app could remove.
+  if (typeof window !== 'undefined' && window.__OV_WINDOW__) {
+    return window.__OV_WINDOW__ === 'widget';
+  }
   try {
     const { getCurrentWindow } = await import('@tauri-apps/api/window');
     return getCurrentWindow().label === 'widget';
@@ -57,8 +68,20 @@ async function detectIsWidget() {
 
 export async function bootstrapApp() {
   const isWidget = await detectIsWidget();
+  const isDesktopShell = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
-  createRoot(document.getElementById('root')).render(
+  // The widget window is `transparent: true` (tauri.conf.json), but it loads
+  // the SAME index.html as the main window — so `body { background-color:
+  // var(--chrome-bg) }` painted an opaque rectangle across all 300x64 of it,
+  // defeating the transparency and showing a hard-edged dark square wherever
+  // the pill happened to sit. Mark the document so index.css can scope the
+  // chrome background away for this window only. Set before the first render;
+  // the window is created hidden and only shown on a dictation trigger, so
+  // there is no window in which an unstyled frame can be seen.
+  if (isWidget) document.documentElement.dataset.window = 'widget';
+
+  const root = createRoot(document.getElementById('root'));
+  root.render(
     <StrictMode>
       {/* Root error boundary — the missing layer between App's own render and
           the shell's blank_guard (frontend/src-tauri/src/blank_guard.rs). App
@@ -79,38 +102,26 @@ export async function bootstrapApp() {
             unaffected (the gate only shows on an ov:auth-required event). */}
           <RemoteAuthGate>
             {isWidget ? (
-              <Suspense
-                fallback={
-                  <div
-                    style={{
-                      position: 'fixed',
-                      inset: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: 'rgba(18, 18, 22, 0.88)',
-                      backdropFilter: 'blur(24px) saturate(180%)',
-                      WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                      borderRadius: '100px',
-                      color: 'rgba(255, 255, 255, 0.9)',
-                      fontFamily: '"Inter Variable", "Inter", -apple-system, sans-serif',
-                      fontSize: 13,
-                      userSelect: 'none',
-                    }}
-                  >
-                    Loading dictation…
-                  </div>
-                }
-              >
-                <CaptureWidget />
-              </Suspense>
+              <CaptureWidget />
             ) : (
-              <App />
+              <>
+                <App />
+                {isDesktopShell && <DesktopCaptureShortcutBridge />}
+                {/* The desktop shell owns a separate global-hotkey widget
+                    window. Browser/Docker builds do not, so mount the same
+                    capture engine here to provide the documented focused-page
+                    Ctrl+Shift+Space fallback. */}
+                {!isDesktopShell && (
+                  <div className="capture-pill-host">
+                    <CaptureWidget />
+                  </div>
+                )}
+              </>
             )}
           </RemoteAuthGate>
         </QueryClientProvider>
       </ErrorBoundary>
     </StrictMode>,
   );
+  return root;
 }

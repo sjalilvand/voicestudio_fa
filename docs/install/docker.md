@@ -1,10 +1,10 @@
-# OmniVoice Studio — Install with Docker
+# VoiceStudio — Install with Docker
 
 For headless servers, dedicated GPUs, or "I want one command" deployments.
 The docker image bundles the backend; the UI is served over HTTP and you open
 it in a normal browser.
 
-**Official images:** [`ghcr.io/debpalash/omnivoice-studio`](https://github.com/debpalash/OmniVoice-Studio/pkgs/container/omnivoice-studio)
+**Official images:** [`ghcr.io/debpalash/omnivoice-studio`](https://github.com/debpalash/VoiceStudio/pkgs/container/omnivoice-studio)
 and [`palashdeb/omnivoice-studio` on Docker Hub](https://hub.docker.com/r/palashdeb/omnivoice-studio) — same images, same tags.
 
 > **Image ↔ version mapping**
@@ -109,15 +109,34 @@ the CUDA tags exactly.
 Verify the container sees the GPU:
 
 ```bash
-docker exec omnivoice python3 -c \
-  "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+docker exec <container> python3 -c \
+  "import torch; ok = torch.cuda.is_available(); print(ok, torch.cuda.get_device_name(0) if ok else 'unavailable')"
 ```
+
+Use `omnivoice` for the `docker run` examples above. Docker Compose names the
+ROCm container `omnivoice-studio-rocm` (CPU: `omnivoice-studio`, NVIDIA:
+`omnivoice-studio-gpu`); `docker compose ps` shows the exact active name.
 
 (ROCm-built PyTorch reports through `torch.cuda.*` — `True` plus your card's
 name means torch can see the GPU.) That check alone isn't proof the app is
-using it: **Settings → System** shows the device OmniVoice actually resolved.
+using it: **Settings → System** shows the device VoiceStudio actually resolved.
 If it reads `cpu` while the command above prints `True`, the backend log line
 starting `Falling back to CPU:` names the architecture mismatch it hit.
+
+The image installs and launches VoiceStudio through that same `python3`
+interpreter. To verify this invariant on an older or custom image, compare
+`docker exec <container> python3 -c "import sys, torch; print(sys.executable,
+torch.version.hip)"` with `docker exec <container> sh -c 'tr "\\0" " "
+</proc/1/cmdline'`; PID 1 must begin with `python3 -m uvicorn`.
+
+If the command prints `False`, **Settings → System** now says why, and the
+three answers need different fixes:
+
+| What it says | What to do |
+|---|---|
+| `/dev/kfd is not present` | The container was started without `--device /dev/kfd --device /dev/dri`, or the host's `amdgpu` driver isn't loaded. |
+| `this process cannot open it` | A group problem. Run `ls -l /dev/kfd /dev/dri/render*` **on the host**, and pass those GIDs with `--group-add`. The numbers differ between machines — a `--group-add 39` copied from someone else's command grants nothing. |
+| `no GPU was enumerated` | The device nodes are fine and the runtime still found nothing — usually a card newer than the image's ROCm. Check `rocminfo` on the host, and see the `HSA_OVERRIDE_GFX_VERSION` note above. |
 
 ## Docker Compose (recommended)
 
@@ -141,7 +160,7 @@ enforces loopback-only.
 
 <a id="lan-access"></a>
 
-To expose OmniVoice on your LAN (e.g. you're running it on a homelab box and
+To expose VoiceStudio on your LAN (e.g. you're running it on a homelab box and
 opening the UI from a laptop), change the host port mapping:
 
 ```yaml
@@ -152,7 +171,7 @@ services:
       - "0.0.0.0:3900:3900"   # ← was 127.0.0.1:3900:3900
 ```
 
-The OmniVoice frontend defaults to the **same origin** the page was served
+The VoiceStudio frontend defaults to the **same origin** the page was served
 from, so opening the UI from `http://<lan-ip>:3900` Just Works for both the
 page load *and* the API/media requests it makes afterwards.
 
@@ -173,7 +192,7 @@ docker run -e OMNIVOICE_PUBLIC_API_BASE=https://api.your-host.example \
 > may instead bake `VITE_OMNIVOICE_API` at build time, but the runtime var above
 > is simpler and image-agnostic.
 
-> **Security:** OmniVoice ships no authentication. Anything on your LAN with
+> **Security:** VoiceStudio ships no authentication. Anything on your LAN with
 > the URL can use the app. Put it behind a reverse proxy with `basic_auth`
 > (Caddy / nginx + htpasswd) or a private network overlay (Tailscale, ZeroTier)
 > before exposing publicly.
@@ -194,7 +213,7 @@ Two paths are worth persisting across container restarts:
   pushes. Pull the image again after the fix is merged: `docker pull ghcr.io/debpalash/omnivoice-studio:latest`.
   The running version is now shown in **Settings → About → Version** (read live
   from the backend), so the web UI no longer displays a dash in Docker.
-- **Checking which version is running:** `docker exec omnivoice python -c "import importlib.metadata; print(importlib.metadata.version('omnivoice'))"`, or hit the `/health` endpoint — it returns `{"status": "ok", "device": ..., "version": "0.3.x"}`.
+- **Checking which version is running:** `docker exec <container> python3 -c "import importlib.metadata; print(importlib.metadata.version('omnivoice'))"`, or hit the `/health` endpoint — it returns `{"status": "ok", "device": ..., "version": "0.3.x"}`. Use the container name listed by `docker compose ps` (or `omnivoice` for the `docker run` examples).
 - **"Loopback origin required" errors (and a blank version):** the desktop
   build restricts the `/system/*` and `/api/settings/*` routes to a loopback
   origin, but Docker's NAT makes every request look non-loopback, so the gate
@@ -210,7 +229,10 @@ Two paths are worth persisting across container restarts:
 - **GPU not detected (AMD):** make sure you pulled the `:rocm` tag (the default
   image is CUDA-only) and passed `--device /dev/kfd --device /dev/dri`. Check
   the container sees the card with
-  `docker exec omnivoice rocminfo | grep -i gfx`; on RDNA3 consumer cards try
-  `-e HSA_OVERRIDE_GFX_VERSION=11.0.0` — see
-  [Pull and run (AMD GPU / ROCm)](#pull-and-run-amd-gpu--rocm) above.
+  `docker exec omnivoice rocminfo | grep -i gfx`. On consumer cards, run
+  **without** any `HSA_OVERRIDE_GFX_VERSION` first — the backend sets it
+  itself when your card needs it, and overriding a natively-supported GPU
+  only forces it onto foreign kernels. See
+  [Pull and run (AMD GPU / ROCm)](#pull-and-run-amd-gpu--rocm) above for when
+  to set one by hand.
 - More entries: [docs/install/troubleshooting.md](troubleshooting.md).

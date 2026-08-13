@@ -1,6 +1,6 @@
 # Performance guide
 
-Where the time goes when OmniVoice feels slow, what you can tune, and what you
+Where the time goes when VoiceStudio feels slow, what you can tune, and what you
 should leave alone. Everything here applies to the current release; numbers
 marked "measured" come from `scripts/bench_pipeline.py` on a 16 GB Apple
 Silicon M2 — your hardware will differ, but the *ratios* hold.
@@ -38,7 +38,7 @@ Before touching any knob, check these — they account for most slowness reports
    - **Settings → About → Run self-check** (the `/system/diagnose` endpoint)
      warns explicitly: *"cpu (no GPU acceleration detected)"* with a hint
      about drivers.
-   - **Settings → Engines** shows a routing badge per engine — "GPU active",
+   - **Model Catalogue → Engines** shows a routing badge per engine — "GPU active",
      "CPU fallback", or "CPU" — with the *reason* shown as small text under
      the badge (full text on hover).
    Note: **GPU acceleration on Windows is NVIDIA/CUDA-only** — AMD and Intel
@@ -81,7 +81,7 @@ None of them are required — the defaults are chosen for the common case.
 | Variable | Default | What it does |
 |---|---|---|
 | `OMNIVOICE_IDLE_TIMEOUT_S` | `900` | Seconds of idle before the TTS model unloads to free memory. Raise it (e.g. `3600`) if you generate in bursts and dislike the ~8 s reload; lower it on tight-memory machines. |
-| `OMNIVOICE_SIDECAR_IDLE_TIMEOUT_S` | `300` | Same idea for sidecar engines (IndexTTS-2 etc.). |
+| `OMNIVOICE_SIDECAR_IDLE_TIMEOUT_S` | `300` | Same idea for sidecar engines (IndexTTS 2.5 etc.). |
 | `OMNIVOICE_LLM_CONCURRENCY` | `6` | Parallel LLM translation calls during a dub. Raise for a fast API endpoint, lower if your provider rate-limits. |
 | `OMNIVOICE_GPU_WORKERS` | auto | Concurrent generations on the GPU. Auto-sized from free VRAM (1 worker per 5 GB, max 4); MPS and CPU always get 1. **Do not raise this on ≤10 GB cards or Apple Silicon** — two concurrent jobs over-committing VRAM is exactly the crash class (#567) the auto-sizing exists to prevent. |
 | `OMNIVOICE_CPU_POOL` | `min(8, cores)` | Thread pool for CPU-side work (translation dispatch, audio I/O). |
@@ -90,6 +90,7 @@ None of them are required — the defaults are chosen for the common case.
 | `OMNIVOICE_INDEXTTS_FP16` | `1` | IndexTTS half-precision. Leave on. |
 | `OMNIVOICE_ASR_VRAM_PREFLIGHT` | `1` | Downgrade transcription precision instead of crashing when VRAM is short (CUDA). Leave on. |
 | `OMNIVOICE_GENERATE_TIMEOUT_S` | `300` | Abandon a generation after this many seconds **of actual compute** — the clock starts when a GPU worker picks the job up, never while it waits in line. It's a floor, not a ceiling: the budget grows with the text (+1 s per 40 characters past the first 1200), so long inputs rarely need this raised. |
+| `OMNIVOICE_ENGINE_IMPORT_PROBE_TIMEOUT_S` | `60` | How long to wait while checking that a sidecar engine's virtualenv can import the engine. Only affects how quickly a *broken* venv is ruled out — a probe that runs out of time is treated as "unproven", and the venv is used anyway, so a slow machine is never told its engine is missing. Per-engine override: `OMNIVOICE_INDEXTTS_IMPORT_PROBE_TIMEOUT_S` (and the same shape for `CONFUCIUS4`, `DOTS_TTS`, `MOSS_TTS_V15`). |
 | `OMNIVOICE_GPU_QUEUE_TIMEOUT_S` | `1800` | How long a job may sit in the GPU queue before it's reported as a saturated pool (a retryable condition — nothing ran). Waiting is normal on 1-worker machines; lower this only if you'd rather fail fast than queue. |
 
 **torch.compile** is probe-based, not platform-based: it's attempted only
@@ -160,7 +161,7 @@ drain, or restart the backend, and then Flush.
   - **Unload all + flush** — the above **plus** fully unloads the resident
     TTS model. Frees the most memory; the next generation pays the ~8 s
     reload.
-- **Settings → Models** — rows whose weights are resident right now show an
+- **Model Catalogue → Models** — rows whose weights are resident right now show an
   "In memory" badge with the same per-model **Unload** button.
 
 **From a script** (the local API on port 3900), the same operations:
@@ -211,7 +212,7 @@ CPU ASR, the crash-isolated ASR engine).
   to 3-4 concurrent generations (API/batch workloads); ≤10 GB deliberately
   serializes.
 - **CPU-only**: expect ~2x slower than MPS, more against CUDA. Prefer the
-  smaller/faster engines (see Settings → Engines) and short reference clips.
+  smaller/faster engines (see Model Catalogue → Engines) and short reference clips.
 
 ## Measuring instead of guessing
 

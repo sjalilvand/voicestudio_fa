@@ -174,6 +174,60 @@ def test_get_spec_accepts_repo_id():
     assert not sd.is_sherpa_model(None)
 
 
+def test_model_resolution_pins_offline_probe_and_download(monkeypatch, tmp_path):
+    from services import hf_revisions, sherpa_dictation as sd
+    import huggingface_hub
+    from huggingface_hub import constants as hf_constants
+
+    spec = sd.get_spec("sherpa-whisper-tiny")
+    monkeypatch.setattr(hf_constants, "HF_HUB_CACHE", str(tmp_path))
+    calls = []
+
+    def fake_snapshot(**kwargs):
+        calls.append(kwargs)
+        if kwargs.get("local_files_only"):
+            raise FileNotFoundError("not cached")
+        return "/cache/pinned"
+
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", fake_snapshot)
+    assert sd._resolve_model_dir(spec) == "/cache/pinned"
+    assert len(calls) == 2
+    assert all(call["revision"] == hf_revisions.revision_for(spec.repo_id) for call in calls)
+
+
+def test_model_resolution_probes_preserved_legacy_snapshot(monkeypatch, tmp_path):
+    from services import hf_revisions, sherpa_dictation as sd
+    import huggingface_hub
+    from huggingface_hub import constants as hf_constants
+
+    spec = sd.get_spec("sherpa-whisper-tiny")
+    legacy_revision = "e" * 40
+    ref = (
+        tmp_path
+        / "models--csukuangfj--sherpa-onnx-whisper-tiny"
+        / "refs"
+        / "main"
+    )
+    ref.parent.mkdir(parents=True)
+    ref.write_text(legacy_revision + "\n", encoding="ascii")
+    monkeypatch.setattr(hf_constants, "HF_HUB_CACHE", str(tmp_path))
+    calls = []
+
+    def fake_snapshot(**kwargs):
+        calls.append(kwargs)
+        return "/cache/legacy"
+
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", fake_snapshot)
+    assert sd._resolve_model_dir(spec) == "/cache/legacy"
+    assert calls == [{
+        "repo_id": spec.repo_id,
+        "revision": legacy_revision,
+        "local_files_only": True,
+        "allow_patterns": list(spec.files.values()),
+    }]
+    assert calls[0]["revision"] != hf_revisions.revision_for(spec.repo_id)
+
+
 # ── The 4 recognizer kinds construct + transcribe ───────────────────────────
 
 
@@ -205,7 +259,12 @@ def test_recognizer_kind_constructs_and_transcribes(
     cls = fake_sherpa.OnlineRecognizer if is_online else fake_sherpa.OfflineRecognizer
     assert cls.factory == factory
     assert cls.last_kwargs["provider"] == "cpu"
-    assert cls.last_kwargs["num_threads"] == 2
+    # The thread count is per-model now (the 0.6B Parakeets get more than the
+    # 2-thread base default, capped at the host's cores). What this test owns
+    # is that the recognizer is built with whatever the policy resolved — the
+    # policy's own rules are pinned in tests/test_sherpa_model_sizes.py.
+    assert cls.last_kwargs["num_threads"] == sd._threads_for(spec)
+    assert cls.last_kwargs["num_threads"] >= 2
     if kind == "offline-transducer":
         assert cls.last_kwargs["model_type"] == "nemo_transducer"
     if kind == "offline-whisper":

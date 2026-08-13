@@ -18,6 +18,7 @@ import {
   Fingerprint,
   Wand2,
   Film,
+  AudioWaveform,
   Save,
   Lock,
   Download as DownloadIcon,
@@ -46,6 +47,47 @@ const displayTitle = (text) => {
   const stripped = (text || '').replace(/^(\s*\[[^\]]{1,30}\]\s*)+/, '').trim();
   return stripped || text || '';
 };
+
+const dubInputType = (item) => {
+  try {
+    const job = typeof item.job_data === 'string' ? JSON.parse(item.job_data) : item.job_data;
+    return job?.input_type === 'audio' ? 'audio' : 'video';
+  } catch {
+    return 'video';
+  }
+};
+
+function DubMediaPreview({ item, inputType }) {
+  const frameClass =
+    'relative flex h-[54px] w-[88px] flex-[0_0_88px] items-center justify-center overflow-hidden rounded-[var(--chrome-radius-pill)] bg-[var(--chrome-hover-bg)] text-[color:var(--chrome-fg-dim)]';
+
+  if (inputType === 'audio') {
+    return (
+      <div className={frameClass} aria-hidden="true">
+        <AudioWaveform size={28} strokeWidth={1.5} data-testid={`dub-audio-waveform-${item.id}`} />
+      </div>
+    );
+  }
+
+  return (
+    <div className={frameClass} aria-hidden="true">
+      <Film size={20} strokeWidth={1.5} />
+      <img
+        src={`${API}/dub/thumb/${encodeURIComponent(item.id)}`}
+        alt=""
+        width="88"
+        height="54"
+        loading="lazy"
+        decoding="async"
+        className="absolute inset-0 h-full w-full object-cover"
+        data-testid={`dub-thumbnail-${item.id}`}
+        onError={(event) => {
+          event.currentTarget.hidden = true;
+        }}
+      />
+    </div>
+  );
+}
 
 /**
  * Defer mounting <WaveformPlayer> (and its audio fetch + waveform decode)
@@ -130,49 +172,61 @@ export default function WorkspaceHistory({
               {t('history.empty_dub', { defaultValue: 'Your dubs will appear here.' })}
             </div>
           ) : (
-            dubHistory.map((item) => (
-              <div
-                key={`dub-${item.id}`}
-                className="history-item history-item--dub"
-                onClick={() => restoreDubHistory(item)}
-              >
-                <div className="flex items-center justify-between gap-2 min-w-0">
-                  <span className="history-kind history-kind--audio">
-                    <Film size={9} /> {t('sidebar.dub_label')}
-                  </span>
-                  <span className="history-meta">
-                    {item.segments_count} segs · {Math.round(item.duration || 0)}s
-                  </span>
+            dubHistory.map((item) => {
+              const inputType = dubInputType(item);
+              const MediaIcon = inputType === 'audio' ? AudioWaveform : Film;
+              return (
+                <div key={`dub-${item.id}`} className="history-item history-item--dub">
+                  <div className="flex min-w-0 gap-[8px]">
+                    <DubMediaPreview item={item} inputType={inputType} />
+                    <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <span className="history-kind history-kind--audio">
+                          <MediaIcon size={9} aria-hidden="true" /> {t('sidebar.dub_label')}
+                        </span>
+                        <span className="history-meta">
+                          {t('history.dub_meta', {
+                            count: item.segments_count,
+                            segments: item.segments_count,
+                            duration: Math.round(item.duration || 0),
+                          })}
+                        </span>
+                      </div>
+                      <div className="history-title">{item.filename}</div>
+                      <div className="history-subtitle">
+                        {[item.language, item.language_code]
+                          .filter((v) => v && v !== 'und' && v !== 'Auto')
+                          .join(' · ') || t('dub.auto')}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="history-actions">
+                    <button
+                      type="button"
+                      className="history-action-btn accent"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        restoreDubHistory(item);
+                      }}
+                    >
+                      <FolderOpen size={10} aria-hidden="true" /> {t('sidebar.open')}
+                    </button>
+                    <button
+                      type="button"
+                      className="history-action-btn danger history-action-icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteHistory(item.id, 'dub');
+                      }}
+                      title={t('common.delete')}
+                      aria-label={t('common.delete')}
+                    >
+                      <Trash2 size={10} aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
-                <div className="history-title">{item.filename}</div>
-                <div className="history-subtitle">
-                  {[item.language, item.language_code]
-                    .filter((v) => v && v !== 'und' && v !== 'Auto')
-                    .join(' · ') || 'Auto'}
-                </div>
-                <div className="history-actions">
-                  <button
-                    className="history-action-btn accent"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      restoreDubHistory(item);
-                    }}
-                  >
-                    <FolderOpen size={10} /> {t('sidebar.open')}
-                  </button>
-                  <button
-                    className="history-action-btn danger history-action-icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteHistory(item.id, 'dub');
-                    }}
-                    title="Delete"
-                  >
-                    <Trash2 size={10} />
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </aside>
@@ -224,22 +278,29 @@ export default function WorkspaceHistory({
                     className="history-kind"
                     style={{ color: accent, background: `${accent}22` }}
                   >
-                    <KindIcon size={9} /> {item.mode || 'synth'}
+                    <KindIcon size={9} aria-hidden="true" />{' '}
+                    {item.mode === 'clone' ? t('history.mode_clone') : t('history.mode_synth')}
                   </span>
                   <span className="history-meta">
                     {item.language && item.language !== 'Auto' ? `${item.language} · ` : ''}
-                    {item.generation_time ? `${item.generation_time}s` : ''}
+                    {item.generation_time
+                      ? t('history.generation_seconds', { duration: item.generation_time })
+                      : ''}
                   </span>
                 </div>
-                <div
+                <button
+                  type="button"
                   className={`history-title history-title--clamp ${expanded === item.id ? 'history-title--expanded' : ''}`}
                   title={item.text}
                   onClick={() => setExpanded((e) => (e === item.id ? null : item.id))}
+                  aria-expanded={expanded === item.id}
                 >
                   {displayTitle(item.text)}
-                </div>
+                </button>
                 {item.seed != null && String(item.seed) !== '' ? (
-                  <div className="history-subtitle history-subtitle--seed">seed {item.seed}</div>
+                  <div className="history-subtitle history-subtitle--seed">
+                    {t('history.seed', { seed: item.seed })}
+                  </div>
                 ) : null}
                 {item.audio_path ? (
                   <LazyWaveform
@@ -254,6 +315,7 @@ export default function WorkspaceHistory({
                   <div className="history-actions">
                     {toggleStarHistory ? (
                       <button
+                        type="button"
                         className={`history-action-btn history-action-icon ${item.starred ? 'accent' : ''}`}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -266,12 +328,22 @@ export default function WorkspaceHistory({
                             ? t('history.unstar_take', { defaultValue: 'Unstar — allow cleanup' })
                             : t('history.star_take', { defaultValue: 'Star — keep this take' })
                         }
+                        aria-label={
+                          item.starred
+                            ? t('history.unstar_take', { defaultValue: 'Unstar — allow cleanup' })
+                            : t('history.star_take', { defaultValue: 'Star — keep this take' })
+                        }
                       >
-                        <Star size={10} fill={item.starred ? 'currentColor' : 'none'} />
+                        <Star
+                          size={10}
+                          fill={item.starred ? 'currentColor' : 'none'}
+                          aria-hidden="true"
+                        />
                       </button>
                     ) : null}
                     {playTakeAsOutput ? (
                       <button
+                        type="button"
                         className="history-action-btn accent history-action-icon"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -281,59 +353,71 @@ export default function WorkspaceHistory({
                         title={t('history.play_take', {
                           defaultValue: 'Load as active output',
                         })}
+                        aria-label={t('history.play_take', {
+                          defaultValue: 'Load as active output',
+                        })}
                       >
-                        <Play size={10} />
+                        <Play size={10} aria-hidden="true" />
                       </button>
                     ) : null}
                     <button
+                      type="button"
                       className="history-action-btn accent"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSaveHistoryAsProfile(item);
                       }}
                     >
-                      <Save size={10} /> {t('sidebar.save_label')}
+                      <Save size={10} aria-hidden="true" /> {t('sidebar.save_label')}
                     </button>
                     {item.profile_id ? (
                       <button
+                        type="button"
                         className="history-action-btn accent history-action-icon"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleLockProfile(item.profile_id, item.id, item.seed);
                         }}
                         title={t('sidebar.lock_identity')}
+                        aria-label={t('sidebar.lock_identity')}
                       >
-                        <Lock size={10} />
+                        <Lock size={10} aria-hidden="true" />
                       </button>
                     ) : null}
                     <button
+                      type="button"
                       className="history-action-btn history-action-icon"
                       onClick={(e) =>
                         handleNativeExport(e, item.audio_path, item.audio_path, item.mode)
                       }
-                      title="Export"
+                      title={t('dub.export')}
+                      aria-label={t('dub.export')}
                     >
-                      <DownloadIcon size={10} />
+                      <DownloadIcon size={10} aria-hidden="true" />
                     </button>
                     <button
+                      type="button"
                       className="history-action-btn history-action-icon"
                       onClick={(e) => {
                         e.stopPropagation();
                         restoreHistory(item);
                       }}
-                      title="Load config"
+                      title={t('history.load_config')}
+                      aria-label={t('history.load_config')}
                     >
-                      <FolderOpen size={10} />
+                      <FolderOpen size={10} aria-hidden="true" />
                     </button>
                     <button
+                      type="button"
                       className="history-action-btn danger history-action-icon"
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteHistory(item.id, 'synth');
                       }}
-                      title="Delete"
+                      title={t('common.delete')}
+                      aria-label={t('common.delete')}
                     >
-                      <Trash2 size={10} />
+                      <Trash2 size={10} aria-hidden="true" />
                     </button>
                   </div>
                 ) : null}

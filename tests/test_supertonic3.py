@@ -208,7 +208,7 @@ def test_cpu_only_honest(mock_settings_store):
 @pytest.mark.skipif(not _SUPERTONIC_INSTALLED, reason="supertonic optional dep not installed (uv sync --all-extras)")
 def test_license_gate(mock_settings_store):
     """Until the user accepts the license, is_available() returns False
-    with a Settings → Engines hint. After accept, it flips True."""
+    with a Model Catalogue → Engines hint. After accept, it flips True."""
     mock_settings_store.pop("supertonic3", None)
     from engines.supertonic3.backend import Supertonic3Backend
 
@@ -216,8 +216,11 @@ def test_license_gate(mock_settings_store):
     assert ok is False, (
         f"expected ok=False with license unaccepted, got ({ok!r}, {msg!r})"
     )
-    assert "Settings" in msg and "Engines" in msg, (
-        f"reason should point the user at Settings → Engines: {msg!r}"
+    # Engines moved out of Settings into the Model Catalogue workspace, so the
+    # hint names that; what must not drift is that it names a place the user
+    # can actually reach the accept button from.
+    assert "Model Catalogue" in msg and "Engines" in msg, (
+        f"reason should point the user at Model Catalogue → Engines: {msg!r}"
     )
     assert "license" in msg.lower()
 
@@ -231,7 +234,7 @@ def test_license_gate(mock_settings_store):
 
 def test_optional_dep_missing(monkeypatch, mock_settings_store):
     """If ``import supertonic`` fails, is_available() returns False with
-    an install hint that mentions Settings → Engines or `uv add`."""
+    an install hint that mentions Model Catalogue → Engines or `uv add`."""
     mock_settings_store["supertonic3"] = True
 
     real_import = builtins.__import__
@@ -250,8 +253,8 @@ def test_optional_dep_missing(monkeypatch, mock_settings_store):
 
     ok, msg = Supertonic3Backend.is_available()
     assert ok is False
-    assert any(needle in msg for needle in ("uv add", "Settings", "supertonic")), (
-        f"install hint should mention 'uv add' or 'Settings': {msg!r}"
+    assert any(needle in msg for needle in ("uv add", "Model Catalogue", "supertonic")), (
+        f"install hint should mention 'uv add' or Model Catalogue: {msg!r}"
     )
 
 

@@ -224,7 +224,7 @@ pub fn respawn_backend(
             Some(v) if crate::backend::same_app_version(&v) => {
                 if crate::backend::backend_deep_healthy(backend_port()) {
                     log::info!(
-                        "Port {} already serving OmniVoice backend v{} — attaching",
+                        "Port {} already serving VoiceStudio backend v{} — attaching",
                         backend_port(), v
                     );
                     set_stage(&stage_handle, BootstrapStage::Ready);
@@ -234,7 +234,7 @@ pub fn respawn_backend(
                 // install was wiped/corrupted while it kept running. Attaching
                 // would look alive and 500 on everything — replace it.
                 log::warn!(
-                    "Port {} serves OmniVoice v{} but failed the deep health probe — replacing it",
+                    "Port {} serves VoiceStudio v{} but failed the deep health probe — replacing it",
                     backend_port(), v
                 );
                     set_backend_kill_intended(true); // deliberate kill, not a crash (#941)
@@ -246,7 +246,7 @@ pub fn respawn_backend(
                 // classic post-update orphan). Attaching would silently run
                 // OLD backend code under the new UI — replace it instead.
                 log::warn!(
-                    "Port {} serves a stale OmniVoice backend (v{} != app v{}) — replacing it",
+                    "Port {} serves a stale VoiceStudio backend (v{} != app v{}) — replacing it",
                     backend_port(),
                     if v.is_empty() { "<unknown>" } else { v.as_str() },
                     env!("CARGO_PKG_VERSION"),
@@ -269,8 +269,8 @@ pub fn respawn_backend(
                     BootstrapStage::Failed {
                         message: format!(
                             "Port {} is already in use by another application, \
-                             and OmniVoice could not free it. Quit whatever is \
-                             using that port (another copy of OmniVoice, or an \
+                             and VoiceStudio could not free it. Quit whatever is \
+                             using that port (another copy of VoiceStudio, or an \
                              app that claimed it) and try again.",
                             backend_port()
                         ),
@@ -338,7 +338,7 @@ pub fn spawn_backend_and_wait(app: &tauri::AppHandle, stage_handle: &Arc<Mutex<B
                     None
                 };
             if let Some((exit_info, real_exit)) = process_dead {
-                let err_tail = crate::backend::read_error_log_tail(30);
+                let err_tail = crate::backend::read_error_log_tail_for_run(30);
                 // #941: persist the forensics for every true process death —
                 // startup crashes included — unless the app is shutting down
                 // or a retry flow deliberately killed the child.
@@ -347,7 +347,7 @@ pub fn spawn_backend_and_wait(app: &tauri::AppHandle, stage_handle: &Arc<Mutex<B
                         crate::crash::record_crash(crate::crash::marker_now(
                             exit,
                             backend_uptime_s(app),
-                            crate::backend::read_error_log_tail(CRASH_STDERR_TAIL_LINES),
+                            crate::backend::read_error_log_tail_for_run(CRASH_STDERR_TAIL_LINES),
                         ));
                     }
                 }
@@ -426,7 +426,7 @@ pub fn spawn_backend_and_wait(app: &tauri::AppHandle, stage_handle: &Arc<Mutex<B
                 {
                     format!(
                         "Port {} is already in use, so the backend could not \
-                         start. Another copy of OmniVoice — or an app that \
+                         start. Another copy of VoiceStudio — or an app that \
                          claimed that port — is holding it. Quit it and try \
                          again; if nothing is visibly running, an orphaned \
                          backend from a previous session still has the port.",
@@ -443,7 +443,7 @@ pub fn spawn_backend_and_wait(app: &tauri::AppHandle, stage_handle: &Arc<Mutex<B
             }
             std::thread::sleep(Duration::from_millis(500));
         }
-        let err_tail = crate::backend::read_error_log_tail(20);
+        let err_tail = crate::backend::read_error_log_tail_for_run(20);
         let msg = if err_tail.is_empty() {
             "Backend did not respond within 300 s".to_string()
         } else {
@@ -587,10 +587,10 @@ fn supervise_backend(app: &tauri::AppHandle, stage_handle: &Arc<Mutex<BootstrapS
         crate::crash::record_crash(crate::crash::marker_now(
             &exit,
             uptime_s,
-            crate::backend::read_error_log_tail(CRASH_STDERR_TAIL_LINES),
+            crate::backend::read_error_log_tail_for_run(CRASH_STDERR_TAIL_LINES),
         ));
         if restart_budget_exhausted(&mut restart_times, Instant::now()) {
-            let tail = crate::backend::read_error_log_tail(30);
+            let tail = crate::backend::read_error_log_tail_for_run(30);
             let msg = format!(
                 "The backend kept crashing ({} times in {} min; last death: {}) and couldn't \
                  be kept running. Use Clean & Retry, or check Settings → Logs → Backend.{}",
@@ -629,7 +629,7 @@ fn supervise_backend(app: &tauri::AppHandle, stage_handle: &Arc<Mutex<BootstrapS
                     // silently lost the translated guidance.
                     message: format!(
                         "Port {} is still in use by another application and \
-                         OmniVoice could not free it, so the backend can't \
+                         VoiceStudio could not free it, so the backend can't \
                          restart. Quit whatever is using that port and relaunch.",
                         backend_port()
                     ),
@@ -789,7 +789,7 @@ const PY_INSTALL_MIRROR: &str =
 const BOOTSTRAP_REMEDIATION: &str =
     "First-run setup couldn't download Python — your network may be blocking GitHub. \
 Fix: install Python 3.11+ from https://www.python.org/downloads/ (tick \"Add to PATH\"), \
-then relaunch — OmniVoice will use your system Python. Advanced: set \
+then relaunch — VoiceStudio will use your system Python. Advanced: set \
 UV_PYTHON_INSTALL_MIRROR to a reachable mirror (see docs/install/troubleshooting.md).";
 
 /// #889: PyTorch stopped shipping macOS x86_64 wheels after 2.2.x, and the
@@ -893,7 +893,7 @@ const ROCM_TORCH_INDEX: &str = "https://download.pytorch.org/whl/rocm6.4";
 /// every app update when `uv.lock` changed. `--inexact` is the fix for #1029:
 /// plain `uv sync` UNINSTALLS every package not in the lockfile, which
 /// silently deleted user-pip-installed optional engines (voxcpm, kittentts —
-/// packages the app's own Settings → Engines hints tell users to install
+/// packages the app's own Model Catalogue → Engines hints tell users to install
 /// into this venv) on every single update. `--inexact` still installs/
 /// upgrades everything the lockfile demands — locked deps stay exactly
 /// correct — it just stops removing extras the user added on purpose.
@@ -915,9 +915,10 @@ const REPAIR_SYNC_ARGS_UNLOCKED: [&str; 3] = ["sync", "--no-dev", "--verbose"];
 /// caller); the detection side (`get_best_device`) already routes ROCm through
 /// `torch.cuda`, so installing the ROCm wheel is all that's needed.
 fn rocm_torch_reinstall_args(rocm_index_url: &str) -> Vec<String> {
+    // Keep in sync with [tool.uv.constraint-dependencies] in pyproject.toml
     vec![
         "pip".into(), "install".into(), "--reinstall".into(),
-        "torch".into(), "torchaudio".into(),
+        "torch==2.8.0".into(), "torchaudio==2.8.0".into(), "torchvision==0.23.0".into(),
         "--index-url".into(), rocm_index_url.into(),
     ]
 }
@@ -1666,7 +1667,7 @@ the existing venv; newly added dependencies may be missing (#307)",
     if resource_readme.is_file() {
         let _ = fs::copy(&resource_readme, project_dir.join("README.md"));
     } else if !project_dir.join("README.md").exists() {
-        let _ = fs::write(project_dir.join("README.md"), "# OmniVoice\n");
+        let _ = fs::write(project_dir.join("README.md"), "# VoiceStudio\n");
         log::warn!("No README.md in bundle — created stub");
     }
     // Shipped release notes for the Settings → Updates "What's new" viewer
@@ -1921,7 +1922,7 @@ mod tests {
     fn update_drift_sync_preserves_user_installed_engines() {
         // #1029: the routine update sync must carry --inexact so a
         // user-pip-installed optional engine (voxcpm, kittentts — packages
-        // the app's own Settings → Engines hints tell users to install into
+        // the app's own Model Catalogue → Engines hints tell users to install into
         // this venv) survives every update instead of being silently
         // uninstalled. --frozen must stay (lockfile is the resolution truth).
         assert!(DRIFT_SYNC_ARGS.contains(&"--inexact"),
@@ -2047,8 +2048,9 @@ mod tests {
         assert_eq!(args[0], "pip");
         assert_eq!(args[1], "install");
         assert!(args.iter().any(|a| a == "--reinstall"));
-        assert!(args.iter().any(|a| a == "torch"));
-        assert!(args.iter().any(|a| a == "torchaudio"));
+        assert!(args.iter().any(|a| a == "torch==2.8.0"));
+        assert!(args.iter().any(|a| a == "torchaudio==2.8.0"));
+        assert!(args.iter().any(|a| a == "torchvision==0.23.0"));
         let i = args.iter().position(|a| a == "--index-url").expect("has --index-url");
         // rocm6.4, not rocm6.2: rocm6.2's index tops out at torch 2.5.1 and
         // can't satisfy the app's torch==2.8.0 pin (#972) — a regression to

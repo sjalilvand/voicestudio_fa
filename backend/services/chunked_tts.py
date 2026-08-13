@@ -126,7 +126,91 @@ def split_text_into_chunks(text: str, max_chars: int = DEFAULT_MAX_CHUNK_CHARS) 
             chunks.append(chunk)
         remaining = remaining[split_pos + 1:]
 
-    return chunks
+    return _merge_unspeakable(chunks, max_chars)
+
+
+#: A character that can actually be voiced — any letter or digit, in any
+#: script. Punctuation, brackets, quotes and dashes are not speech on their own.
+_SPEAKABLE_RE = re.compile(r"[^\W_]", re.UNICODE)
+
+
+def _merge_unspeakable(chunks: List[str], max_chars: int = 0) -> List[str]:
+    """Fold chunks with nothing to say into their neighbour (#1330).
+
+    A boundary can land so that the tail becomes a chunk of pure punctuation —
+    ``'.'``, ``'"'``, ``'—'``, ``'...'``. Measured: text of 799 filler chars
+    plus ``' ...'`` splits into ``['aaa…', '...']``.
+
+    Sending that to an engine is at best a wasted GPU job, and at worst the
+    engine returns no audio for it — which is indistinguishable from the
+    silent-truncation bug this module now reports out loud. Users would get
+    "part of your text produced no audio — '...'" for a chunk that never
+    carried any speech, which teaches them to ignore a warning that exists to
+    catch real data loss.
+
+    The punctuation is not dropped: it is appended to the previous chunk (or
+    prepended to the next, when it comes first), so the text the engine sees is
+    unchanged in content and the join still covers every character.
+
+    ``max_chars`` keeps that fold honest. Appending blindly would push the
+    previous chunk past the caller's ceiling — 799 characters plus ``"..."``
+    is 803 — and ``len(chunk) <= max_chars`` is an invariant the splitter's own
+    tests assert (CodeRabbit). When the fold would overflow, the last WORD of
+    the previous chunk moves across instead, so the fragment carries speech of
+    its own and both chunks stay inside the limit.
+
+    That is not always possible: the neighbour may be a single word, or its
+    last word may itself be punctuation (borrowing it would just produce a
+    second silent chunk — measured: ``"longer." + "." -> ". ."``). In those
+    cases the fold wins and the chunk runs over, but **only ever by non-speech
+    characters** — measured worst case, 3. ``max_chars`` bounds how much SPEECH
+    a chunk holds (#505, the acoustic-degradation limit), and trailing
+    punctuation is not speech, so the guarantee that matters is intact.
+    """
+    if len(chunks) < 2:
+        return chunks
+    out: List[str] = []
+    for chunk in chunks:
+        if _SPEAKABLE_RE.search(chunk) or not out:
+            out.append(chunk)
+            continue
+        # Rejoin with a space: these were separated by whitespace the splitter
+        # stripped, and gluing "word" to "..." would change the token the
+        # engine sees.
+        merged = f"{out[-1]} {chunk}"
+        if max_chars <= 0 or len(merged) <= max_chars:
+            out[-1] = merged
+            continue
+        # Overflow: hand the previous chunk's last word to the fragment. The
+        # fragment then carries speech and stands on its own.
+        head, sep, last_word = out[-1].rpartition(" ")
+        # The borrowed word must itself carry speech, or the "fixed" chunk is
+        # just as silent as the one being folded ("longer." + "." -> ". .").
+        if sep and head and _SPEAKABLE_RE.search(last_word):
+            out[-1] = head
+            out.append(f"{last_word} {chunk}")
+        else:
+            # A single-word chunk has nothing to give; keeping the fragment
+            # attached is still better than emitting a silent one, and the
+            # overflow is a few punctuation characters.
+            out[-1] = merged
+    # A leading unspeakable chunk had nothing before it to merge into; fold it
+    # forward instead so it still never renders alone.
+    if len(out) > 1 and not _SPEAKABLE_RE.search(out[0]):
+        merged = f"{out[0]} {out[1]}"
+        if max_chars <= 0 or len(merged) <= max_chars:
+            out[1] = merged
+            out.pop(0)
+        else:
+            # Same trade as above, mirrored: borrow the next chunk's first word.
+            first_word, sep, tail = out[1].partition(" ")
+            if sep and tail and _SPEAKABLE_RE.search(first_word):
+                out[0] = f"{out[0]} {first_word}"
+                out[1] = tail
+            else:
+                out[1] = merged
+                out.pop(0)
+    return out
 
 
 def _find_last_sentence_end(text: str) -> int:
@@ -211,8 +295,82 @@ def _normalize_chunk_shapes(chunks: list) -> list:
     return chunks
 
 
+def report_dropped_chunks(dropped: list, total: int, texts=None, sink=None) -> None:
+    """Log the sentences that produced no audio. Never raises.
+
+    Deliberately WARNING, not debug: this is missing output the user paid
+    compute for.
+
+    ``sink`` — an optional list the caller owns. The lost text lands in it so
+    the *user* can be told too, which the log alone never did: a log line
+    nobody reads is not a fix for silent truncation, it is a record of it.
+    Kept as an explicit parameter rather than a contextvar because the render
+    runs on a plain ThreadPoolExecutor, which does not carry context across.
+    """
+    try:
+        named = []
+        if texts:
+            named = [str(texts[i]) for i in dropped if 0 <= i < len(texts)]
+        if sink is not None:
+            try:
+                sink.extend(named or [""] * len(dropped))
+            except Exception:  # noqa: BLE001 — a caller's odd sink must not break the join
+                pass
+        detail = ""
+        if named:
+            detail = " — no audio for: " + "; ".join(repr(t[:80]) for t in named)
+        logger.warning(
+            "Dropped %d of %d rendered chunk(s): the engine returned no audio "
+            "for them, so the output is missing that text%s. This is silent in "
+            "the waveform — the result sounds clean and is simply short (#1330).",
+            len(dropped), total, detail,
+        )
+    except Exception:  # noqa: BLE001 — a diagnostic must not break the join
+        # The fallback cannot assume logging works either: whatever broke the
+        # report above may be the logger. Losing the diagnostic is acceptable;
+        # turning missing audio into a failed render is not.
+        try:
+            logger.exception("Could not report dropped audio chunks")
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def join_rendered_chunks(rendered: list, sample_rate: int, *,
+                         crossfade_ms: int = DEFAULT_CROSSFADE_MS,
+                         texts=None, sink=None):
+    """Join what a multi-chunk render produced, reporting whatever it lost.
+
+    ``None`` when nothing rendered — the caller's dead-render handling owns
+    that case, and returning a silence buffer instead would hide it.
+
+    This exists because the "obvious" inline version has a hole that shipped:
+    a span that splits into several chunks where only ONE renders was returned
+    directly, skipping the join and therefore skipping the reporting the join
+    does. The chapter came back short and said nothing about it — the same
+    silent-truncation bug (#1330) one branch over. Keeping the decision in one
+    function means there is one place that can be wrong, and it is testable.
+    """
+    dropped = [i for i, r in enumerate(rendered)
+               if r is None or getattr(r, "shape", (0,))[-1] == 0]
+    kept = [r for i, r in enumerate(rendered) if i not in set(dropped)]
+    if not kept:
+        if dropped:
+            report_dropped_chunks(dropped, len(rendered), texts, sink)
+        return None
+    if len(kept) == 1:
+        # concatenate_audio_chunks short-circuits a single chunk without
+        # reporting, so the report has to happen here.
+        if dropped:
+            report_dropped_chunks(dropped, len(rendered), texts, sink)
+        return kept[0]
+    return concatenate_audio_chunks(rendered, sample_rate,
+                                    crossfade_ms=crossfade_ms, texts=texts,
+                                    sink=sink)
+
+
 def concatenate_audio_chunks(chunks: list, sample_rate: int,
-                             crossfade_ms: int = DEFAULT_CROSSFADE_MS):
+                             crossfade_ms: int = DEFAULT_CROSSFADE_MS,
+                             texts=None, sink=None):
     """Join per-chunk waveforms with a linear crossfade on the sample axis.
 
     ``chunks`` are torch tensors as returned by the engine (1-D, or N-D with
@@ -220,10 +378,28 @@ def concatenate_audio_chunks(chunks: list, sample_rate: int,
     Mixed ranks / mono-vs-multichannel chunks are normalized to one shape
     first (#897), so no producer can crash the concat. Crossfade overlap is
     clamped to the shorter neighbor; ``crossfade_ms=0`` is a hard concat.
+
+    **Empty chunks are dropped, and that is now said out loud (#1330).** A
+    chunk arrives empty when the engine returned nothing for that slice of
+    text; skipping it is still the right joining behaviour, because the
+    alternative is a crash or a gap. What was wrong was doing it in silence:
+    the audio came back clean and simply missing a sentence, so the only way a
+    user could notice was by reading along — which is exactly how it was
+    reported ("this app dosent generate me the last few sentences"). The count
+    now reaches the log, and callers that know the text can pass ``texts`` to
+    have the dropped slices named.
     """
     import torch
 
-    chunks = [c for c in chunks if c is not None and c.shape[-1] > 0]
+    kept, dropped = [], []
+    for i, c in enumerate(chunks):
+        if c is not None and c.shape[-1] > 0:
+            kept.append(c)
+        else:
+            dropped.append(i)
+    if dropped:
+        report_dropped_chunks(dropped, len(chunks), texts, sink)
+    chunks = kept
     if not chunks:
         return torch.zeros(1, dtype=torch.float32)
     if len(chunks) == 1:

@@ -9,7 +9,7 @@
 
 The Stories Editor turns a **written story or script into a fully-voiced audio production** — narrator plus a distinct cloned/designed voice per character, with pacing and per-line direction — and generates **one cohesive audiobook** (plus pro outputs: per-character stems, chapter markers).
 
-It is the step up from the Clone/Design tabs (one voice, one block) to a **multi-voice production tool**: OmniVoice's "audiobook / radio-drama studio." Target users: indie authors (chapter → audiobook), podcasters/creators (dramatized readings), game & animation devs (batch character lines), hobbyists (bring a story to life).
+It is the step up from the Clone/Design tabs (one voice, one block) to a **multi-voice production tool**: VoiceStudio's "audiobook / radio-drama studio." Target users: indie authors (chapter → audiobook), podcasters/creators (dramatized readings), game & animation devs (batch character lines), hobbyists (bring a story to life).
 
 ## 2. Design philosophy — simple by default, deep on demand
 
@@ -19,6 +19,23 @@ The editor must feel **no-brain** at the surface and **studio-grade** underneath
 - **Depth (revealed only when you click into a line / open a panel):** per-line voice override, emotion/tone, speed, pauses, inline mid-line voice switches, drag-reorder, regenerate-a-single-line, per-character stems, chapter markers, import/export.
 
 Nothing studio-grade is on the default surface; everything is one click away.
+
+### Calm production-desk refinement (2026-08-11)
+
+- A restrained production header keeps only story identity and delivery controls visible; project, cast, and pacing setup live in a persistent left rail.
+- The manuscript is the visual center: dense editable line cards, persistent line numbers, quieter metadata, and studio controls that strengthen only on hover or keyboard focus.
+- Cast, project, and import surfaces use bounded scrolling so large productions keep the manuscript and export controls reachable.
+- Long scripts use `content-visibility` on line cards, while narrow shells reflow each line into text, casting, and action rows without horizontal overflow.
+- The bottom status dock remains calm and persistent: lines, used characters, estimated duration, character count, and live render progress.
+
+### Full-height pro workflow (2026-08-11)
+
+1. **Start working immediately:** on a pristine install, Stories creates and opens **The Lighthouse at Wits' End** as a normal saved project. Its 2 chapters, 3-character cast, pauses, expressive tags, and voice assignments exercise the real preview, stems, and Generate paths—not a visual mock.
+2. **Set up on the left:** a persistent production rail owns project naming/saving, saved projects, cast-to-voice mapping, global pacing, and stems. Sections collapse independently without covering the manuscript.
+3. **Write in the center:** the full-height manuscript canvas owns import, paste/auto-cast, line and chapter creation, editing, reorder, preview, and per-line direction. Long stories stay fast through `content-visibility`.
+4. **Deliver from the header:** story length, runtime, format, progress, and Generate stay reachable while the manuscript scrolls.
+
+The hierarchy is spatial instead of label-heavy: setup rail → manuscript → output header. The default sample is authored content stored through the same project actions as user work, automatically adopts installed voice profiles, and remains fully editable or deletable.
 
 ## 3. Interaction model (chosen: line cards)
 

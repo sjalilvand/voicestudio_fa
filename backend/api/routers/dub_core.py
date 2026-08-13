@@ -4,15 +4,19 @@ import asyncio
 import logging
 import shutil
 import subprocess
+import tempfile
+from urllib.parse import urlsplit
 import soundfile as sf
 import torch
 from typing import Optional
+from fastapi import Request
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 
 from core.db import db_conn
 from core.config import PREVIEW_DIR
 from core.tasks import task_manager
+from core.logging_utils import log_safe
 from core import event_bus
 from schemas.requests import DubIngestUrlRequest, ParseSubtitleTextRequest
 from services.model_manager import get_model, _gpu_pool, _cpu_pool, get_diarization_pipeline, offload_tts_for_asr, restore_tts_after_asr, should_preload_tts_asr
@@ -39,6 +43,67 @@ from services import dub_pipeline
 
 router = APIRouter()
 logger = logging.getLogger("omnivoice.api")
+
+_MAX_COOKIE_EXPORT_BYTES = 1024 * 1024
+
+
+def _cookie_transport_allowed(
+    scheme: str, client_host: str | None, origin: str | None
+) -> bool:
+    """Credentials may cross HTTP only from a local UI to a loopback peer."""
+    from api.dependencies import is_local_host
+
+    if scheme == "https":
+        return True
+    try:
+        origin_host = urlsplit(origin or "").hostname or ""
+    except ValueError:
+        return False
+    return is_local_host(client_host or "") and (
+        is_local_host(origin_host) or origin_host == "tauri.localhost"
+    )
+
+
+def _stage_cookie_export(contents: str | None) -> str | None:
+    """Write an explicitly supplied cookies.txt export to a private temp file."""
+    if contents is None:
+        return None
+    cookie_bytes = contents.encode("utf-8")
+    if len(cookie_bytes) > _MAX_COOKIE_EXPORT_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Cookie file is too large (maximum 1 MB). Export cookies in "
+                "Netscape cookies.txt format and try again."
+            ),
+        )
+    first_line = contents.lstrip("\ufeff\r\n ").splitlines()[0] if contents.strip() else ""
+    if not first_line.startswith(("# Netscape HTTP Cookie File", "# HTTP Cookie File")):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "This is not a Netscape cookies.txt export. Export cookies as "
+                "cookies.txt from your browser, then choose that file."
+            ),
+        )
+    fd, cookie_path = tempfile.mkstemp(
+        prefix="voicestudio-ytdlp-", suffix=".cookies.txt",
+    )
+    try:
+        os.chmod(cookie_path, 0o600)
+        with os.fdopen(fd, "wb") as cookie_handle:
+            cookie_handle.write(cookie_bytes)
+    except Exception:
+        try:
+            os.close(fd)
+        except OSError:
+            pass  # Best effort: fdopen may already have consumed/closed the descriptor.
+        try:
+            os.unlink(cookie_path)
+        except OSError:
+            pass  # Best effort: preserve the original staging error.
+        raise
+    return cookie_path
 
 
 # ── Legacy-name aliases to services/dub_pipeline.py ────────────────────────
@@ -176,7 +241,7 @@ async def dub_import_srt(job_id: str, file: UploadFile = File(...)):
     _save_job(job_id, job)
     logger.info(
         "Imported %d cue(s) from .srt for job %s (skipped=%d, overlap_shifted=%d, clamped=%d)",
-        len(segments), job_id, result.skipped_cues, result.dropped_overlaps, clamped,
+        len(segments), log_safe(job_id), result.skipped_cues, result.dropped_overlaps, clamped,
     )
     return {
         "segments": segments,
@@ -208,13 +273,18 @@ def dub_abort(job_id: str):
     with _active_procs_lock:
         had_procs = bool(_active_procs.get(job_id))
     _kill_job_procs(job_id)
+    try:
+        if task_manager.cancel_task(job_id) is False:
+            raise RuntimeError("task cancellation was declined")
+    except Exception as exc:
+        logger.warning("Dub task cancellation failed")
+        raise HTTPException(
+            status_code=503,
+            detail="The dub could not be fully aborted. Retry the abort operation.",
+        ) from exc
     job = _dub_jobs.get(job_id)
     if job is not None:
         job["aborted"] = True
-    try:
-        task_manager.cancel_task(job_id)
-    except Exception:
-        pass
     return {"aborted": True, "had_active_procs": had_procs}
 
 
@@ -252,13 +322,28 @@ def delete_single_dub_history(history_id: str):
         with db_conn() as conn:
             conn.execute("DELETE FROM dub_history WHERE id=?", (history_id,))
 
+    # #1331 (deletion half): the content-hash cache points newer jobs' paths
+    # (vocals, and pre-fix clone refs) into this dir. Check BEFORE the row is
+    # deleted — the scan reads dub_history, and after _delete_row this row's
+    # neighbours are all that's left to consult either way.
+    holders = dub_pipeline.job_dir_referenced_by_others(history_id)
+
     # Atomic with the evict — see purge_jobs (#1252 review).
     dub_pipeline.purge_jobs([history_id], delete_rows=_delete_row)
     safe = _safe_job_dir(history_id)
-    if safe and os.path.isdir(safe):
+    if holders:
+        # Keep the directory: another saved dub still renders from files in
+        # it. Disk is the cheap thing here; a job that silently loses its
+        # cloned voice on every regen is not. The row is gone, so the entry
+        # disappears from history either way.
+        logger.info(
+            "dub delete %s: history row removed but directory kept — still "
+            "referenced by job(s) %s (#1331)", log_safe(history_id), log_safe(", ".join(holders)),
+        )
+    elif safe and os.path.isdir(safe):
         shutil.rmtree(safe, ignore_errors=True)
     event_bus.emit("dub_history", {"action": "deleted", "id": history_id})
-    return {"deleted": True}
+    return {"deleted": True, "dir_kept_for": holders}
 
 @router.post("/preview/upload")
 async def preview_upload(video: UploadFile = File(...)):
@@ -285,7 +370,7 @@ async def preview_upload(video: UploadFile = File(...)):
             )
             has_audio = True
         except Exception as e:
-            logger.warning(f"FFmpeg extraction failed: {e}")
+            logger.warning("FFmpeg extraction failed: %s", log_safe(e))
             pass
 
     return {
@@ -380,7 +465,7 @@ async def dub_upload(
 
 
 @router.post("/dub/ingest-url")
-async def dub_ingest_url(req: DubIngestUrlRequest):
+async def dub_ingest_url(req: DubIngestUrlRequest, request: Request):
     """Ingest a remote video URL via yt-dlp. Queues background prep task.
 
     Returns 202 immediately with {job_id, task_id}. All work (download,
@@ -409,7 +494,17 @@ async def dub_ingest_url(req: DubIngestUrlRequest):
             status_code=400,
             detail="Invalid job_id. Must be alphanumeric + hyphens/underscores only, ≤64 chars. Generate a fresh job_id or omit it to auto-create one.",
         )
+    if req.cookie_file and not _cookie_transport_allowed(
+        request.url.scheme,
+        request.client.host if request.client else None,
+        request.headers.get("origin"),
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Cookie exports require HTTPS or the local desktop app.",
+        )
     os.makedirs(job_dir, exist_ok=True)
+    cookie_path = _stage_cookie_export(req.cookie_file)
 
     task_id = f"prep_{job_id}"
     source = {
@@ -417,12 +512,21 @@ async def dub_ingest_url(req: DubIngestUrlRequest):
         "url": url,
         "fetch_subs": bool(req.fetch_subs),
         "sub_langs": req.sub_langs or None,
+        "cookie_file": cookie_path,
     }
-    await task_manager.add_task(
-        task_id, "prep",
-        _ingest_gen, job_id, job_dir,
-        source, None,
-    )
+    try:
+        await task_manager.add_task(
+            task_id, "prep",
+            _ingest_gen, job_id, job_dir,
+            source, None,
+        )
+    except Exception:
+        if cookie_path:
+            try:
+                os.unlink(cookie_path)
+            except OSError:
+                pass  # Best effort: do not hide the task-enqueue failure.
+        raise
     return JSONResponse(
         status_code=202,
         content={"job_id": job_id, "task_id": task_id, "filename": ""},
@@ -453,7 +557,7 @@ _prep_event_helper = dub_pipeline.prep_event  # alias; we keep the module-local 
 #: into one reference, which is how "made up" clone voices happen).
 CLONE_SKIP_HEURISTIC_MSG = (
     "auto voice cloning skipped: speaker labels are gap-based estimates — "
-    "set up diarization (Settings → Models → pyannote) for per-speaker clones"
+    "set up diarization (Model Catalogue → Models → pyannote) for per-speaker clones"
 )
 
 
@@ -585,7 +689,7 @@ async def dub_transcribe_stream(
         else:
             # The TTS core model is loaded here for exactly one reason: to harvest a
             # preloaded `_asr_pipe` off it (passed to get_active_asr_backend below).
-            # That attribute is only ever set by OmniVoice.from_pretrained under
+            # That attribute is only ever set by VoiceStudio.from_pretrained under
             # OMNIVOICE_PRELOAD_TTS_ASR, which is off by default — so in the default
             # config this loaded ~3 GB, harvested None, and then offload_tts_for_asr()
             # freed it again 60 lines below. On unified memory that offload is a full
@@ -616,7 +720,10 @@ async def dub_transcribe_stream(
                         yield b": tts-load keepalive\n\n"
                     _model = _model_task.result()
                 except Exception as e:
-                    logger.exception("transcribe preflight: model load failed (job=%r)", job_id)
+                    logger.error(
+                        "transcribe preflight: model load failed (job=%s): %s",
+                        log_safe(job_id), log_safe(e),
+                    )
                     from core.failure import build_failure
                     f = build_failure(e, stage="transcribe-preflight", include_diagnostic=False)
                     preflight_error = f["reason"] + (f" — {f['hint']}" if f.get("hint") else "")
@@ -662,6 +769,16 @@ async def dub_transcribe_stream(
                         preflight_payload = _missing
                     if _missing is None:
                         try:
+                            # Free recoverable TTS VRAM before ASR chooses its
+                            # device. Probing first falsely routed Whisper to
+                            # CPU even when this offload made CUDA viable.
+                            try:
+                                await asyncio.get_running_loop().run_in_executor(
+                                    _cpu_pool, offload_tts_for_asr
+                                )
+                                _tts_offloaded["v"] = True
+                            except Exception as e:
+                                logger.warning("offload_tts_for_asr failed (continuing): %s", e)
                             # The PyTorch-Whisper backend lazily builds its own pipeline
                             # when no preloaded `_asr_pipe` is present (issue #255), so it
                             # no longer needs OMNIVOICE_PRELOAD_TTS_ASR=1.
@@ -719,7 +836,7 @@ async def dub_transcribe_stream(
                             preflight_error = asr_model_missing_detail(e.payload)
                             preflight_payload = e.payload
                         except Exception as e:
-                            logger.exception("transcribe preflight: ASR load failed (job=%r)", job_id)
+                            logger.error("Transcription preflight ASR load failed")
                             from core.failure import build_failure
                             f = build_failure(e, stage="transcribe-preflight", include_diagnostic=False)
                             preflight_error = "ASR backend initialization failed: " + f["reason"] + (
@@ -750,9 +867,10 @@ async def dub_transcribe_stream(
 
         try:
             audio_np, sr = await loop.run_in_executor(_cpu_pool, _load)
-        except Exception as e:
+        except Exception:
             # Terminal error → always emit `done` (see preflight note, #578).
-            yield _sse_event("error", {"detail": f"audio load failed: {e}", "retryable": True})
+            from core.public_errors import stream_failure
+            yield _sse_event("error", stream_failure("transcription_failed"))
             yield _sse_event("done", {})
             return
 
@@ -790,17 +908,6 @@ async def dub_transcribe_stream(
             "chunk_s": transcribe_chunk_s,
         })
 
-        # Free VRAM: move TTS model to CPU so WhisperX + VAD can fit.
-        # Only offloads when free GPU memory is < 4 GB (e.g. laptop GPUs).
-        # Non-fatal: an offload failure must not drop the stream (#255) —
-        # transcription can still proceed (it just has less headroom).
-        try:
-            await loop.run_in_executor(_cpu_pool, offload_tts_for_asr)
-            # Restore is now owed on every exit path, not just success (#1191).
-            _tts_offloaded["v"] = True
-        except Exception as e:
-            logger.warning("offload_tts_for_asr failed (continuing): %s", e)
-
         all_segments: list[dict] = []
         # Words (global-timeline) retained so diarization can re-split a segment
         # that spans two speakers' turns at the word boundary (#486).
@@ -808,6 +915,7 @@ async def dub_transcribe_stream(
         detected_lang = None
         next_seg_id = 0
         chunk_errors: list[str] = []
+        chunk_error_codes: list[str] = []
         # Speaker turns from an ASR backend that diarizes inline (FunASR cam++).
         # When present, _diarize() uses them and skips pyannote (Phase 2, #182).
         asr_speaker_turns: list[dict] = []
@@ -852,9 +960,26 @@ async def dub_transcribe_stream(
                             continue
                         turns.append({"start": s0 + offset, "end": s1 + offset, "speaker": spk})
                     return {"chunks": shifted, "language": r.get("language"), "speaker_turns": turns}
-                except Exception as e:
-                    logger.exception("chunk transcribe failed (backend=%s)", _asr_backend.id)
-                    return {"chunks": [], "language": None, "error": str(e)}
+                except Exception as exc:
+                    # Keep diagnostics local and fixed-shape. In particular,
+                    # CUDA OOM is a distinct, actionable recovery class rather
+                    # than the generic "no segments" dead end.
+                    is_memory = isinstance(exc, torch.OutOfMemoryError)
+                    logger.error(
+                        "Chunk transcription failed (backend=%s; class=%s; details withheld)",
+                        _asr_backend.id,
+                        type(exc).__name__,
+                    )
+                    from core.public_errors import stream_failure
+                    failure = stream_failure(
+                        "transcription_memory" if is_memory else "transcription_failed"
+                    )
+                    return {
+                        "chunks": [],
+                        "language": None,
+                        "error": failure["detail"],
+                        "error_code": failure["code"],
+                    }
 
             # Retry a failed/timed-out chunk once on a fresh pool before giving
             # up. Otherwise a transient wedge on the FIRST chunk (whisperx often
@@ -871,7 +996,6 @@ async def dub_transcribe_stream(
                 # worker, and raises the actionable ASRTimeoutError. Run it as
                 # a task and poll so we can keep yielding pings — the
                 # EventSource connection drops without them.
-                pool_reset_by_guard = False
                 task = asyncio.ensure_future(run_transcribe_guarded(
                     _gpu_pool, _transcribe_chunk,
                     what=f"Dub chunk {i + 1}/{chunks_n}",
@@ -885,17 +1009,23 @@ async def dub_transcribe_stream(
                     yield _sse_event("ping", {})
                 try:
                     part = task.result()
-                except ASRTimeoutError as e:
+                except ASRTimeoutError:
                     # The guard already reset the pool; keep the actionable
                     # message (it names the durable fixes, and — after repeated
                     # timeouts — the crash-isolated engine escape hatch).
-                    pool_reset_by_guard = True
                     logger.error(
                         "Transcribe chunk %d/%d timed out after %.0fs (attempt %d/%d, job=%s)",
                         i + 1, chunks_n, transcribe_timeout_s, _attempt,
-                        _CHUNK_TRANSCRIBE_ATTEMPTS, job_id,
+                        _CHUNK_TRANSCRIBE_ATTEMPTS, log_safe(job_id),
                     )
-                    part = {"chunks": [], "language": None, "error": str(e)}
+                    from core.public_errors import stream_failure
+                    failure = stream_failure("transcription_timeout")
+                    part = {
+                        "chunks": [],
+                        "language": None,
+                        "error": failure["detail"],
+                        "error_code": failure["code"],
+                    }
                 # Success → keep it. Failure/timeout → retry once on a fresh
                 # worker (the internal _transcribe_chunk except returns an
                 # error-part; the timeout path already reset the pool).
@@ -904,14 +1034,17 @@ async def dub_transcribe_stream(
                 if _attempt < _CHUNK_TRANSCRIBE_ATTEMPTS:
                     logger.warning(
                         "Retrying transcribe chunk %d/%d after failure/timeout (next attempt %d/%d, job=%s)",
-                        i + 1, chunks_n, _attempt + 1, _CHUNK_TRANSCRIBE_ATTEMPTS, job_id,
+                        i + 1, chunks_n, _attempt + 1, _CHUNK_TRANSCRIBE_ATTEMPTS, log_safe(job_id),
                     )
-                    if not pool_reset_by_guard:
-                        reset_pool_after_wedge(
-                            _gpu_pool, what=f"Dub chunk {i + 1}/{chunks_n}")
+                    # A completed exception did not wedge the worker. Resetting
+                    # the pool here leaked a healthy executor on every ordinary
+                    # decode failure; run_transcribe_guarded already resets the
+                    # pool on the only case that needs it: a real timeout.
             if part.get("error"):
                 chunk_errors.append(part["error"])
-                logger.warning("Chunk %d/%d error: %s", i + 1, chunks_n, part["error"])
+                if part.get("error_code"):
+                    chunk_error_codes.append(part["error_code"])
+                logger.warning("Chunk %d/%d error: %s", i + 1, chunks_n, log_safe(part["error"]))
             if detected_lang is None and part.get("language"):
                 detected_lang = part["language"]
             asr_speaker_turns.extend(part.get("speaker_turns") or [])
@@ -949,6 +1082,7 @@ async def dub_transcribe_stream(
                 "segments": chunk_segs,
                 "progress": (i + 1) / chunks_n,
                 "error": part.get("error"),
+                "error_code": part.get("error_code"),
             })
 
         if job.get("aborted"):
@@ -974,7 +1108,9 @@ async def dub_transcribe_stream(
                     seen.add(s)
                     uniq.append(s)
             if uniq:
-                detail = "Transcription produced no segments. " + " | ".join(uniq[:3])
+                # Chunk failures already carry a complete recovery message.
+                # Do not prepend another generic sentence to it.
+                detail = " | ".join(uniq[:3])
                 # Add the actionable hint for a recognized failure class
                 # (e.g. pkg_resources missing → install setuptools).
                 hint = build_failure(" ".join(uniq), stage="transcribe", include_diagnostic=False).get("hint")
@@ -986,8 +1122,11 @@ async def dub_transcribe_stream(
                     "too short, or in an unsupported format. Try re-uploading or "
                     "check that the source has an audible speech track."
                 )
-            logger.error("transcribe yielded 0 segments (job=%s): %s", job_id, detail)
-            yield _sse_event("error", {"detail": detail, "retryable": True})
+            logger.error("transcribe yielded 0 segments (job=%s): %s", log_safe(job_id), log_safe(detail))
+            payload = {"detail": detail, "retryable": True}
+            if chunk_error_codes:
+                payload["code"] = chunk_error_codes[0]
+            yield _sse_event("error", payload)
             yield _sse_event("done", {})
             return
 
@@ -1064,7 +1203,7 @@ async def dub_transcribe_stream(
                         f"unavailable, so the ASR engine's built-in speaker "
                         f"turns were used and the detected count may differ "
                         f"from the {num_speakers} you set. Set up diarization "
-                        f"(Settings → Models → pyannote) to enforce an exact "
+                        f"(Model Catalogue → Models → pyannote) to enforce an exact "
                         f"speaker count."
                     )
                 return resplit, {
@@ -1245,7 +1384,11 @@ async def dub_transcribe_stream(
         # new target language and have the ORIGINAL speaker speak it — the
         # central pro-grade dubbing promise.
         try:
-            from services.speaker_clone import extract_speaker_clones, auto_profile_id
+            from services.speaker_clone import (
+                auto_profile_id,
+                build_cast_sources,
+                extract_speaker_clones,
+            )
             vocals_for_clone = job.get("vocals_path") or asr_audio_target
             clones = {}
             if labels_source == "heuristic":
@@ -1258,17 +1401,25 @@ async def dub_transcribe_stream(
                 # warning to the user.)
                 logger.info(
                     "auto speaker clones skipped (labels_source=heuristic, job=%s)",
-                    job_id,
+                    log_safe(job_id),
                 )
                 yield _sse_event("warning", {
                     "detail": CLONE_SKIP_HEURISTIC_MSG,
                     "source": "speaker_clone",
                 })
             else:
+                # Clones are written into THIS job's dir, never alongside the
+                # vocals (#1331): on a content-hash cache hit vocals_path
+                # points into an OLDER job's dir, so dirname(vocals) wrote the
+                # new job's clone refs into a directory the user can delete by
+                # removing that older history entry — after which every
+                # single-segment regen silently rendered in the default voice.
+                _clone_dir = _safe_job_dir(job_id) or os.path.dirname(vocals_for_clone)
+                os.makedirs(_clone_dir, exist_ok=True)
                 fut_clones = loop.run_in_executor(
                     _cpu_pool, lambda: extract_speaker_clones(
                         vocals_for_clone, final_segs,
-                        os.path.dirname(vocals_for_clone),
+                        _clone_dir,
                         labels_source=labels_source,
                     ),
                 )
@@ -1307,10 +1458,17 @@ async def dub_transcribe_stream(
                 try:
                     from services.speaker_clone import extract_segment_refs
                     seg_ids_for_clone = [s.get("id", i) for i, s in enumerate(final_segs)]
+                    # Same #1331 rule as the per-speaker extraction above, and
+                    # this is the DEFAULT path: per-segment references must
+                    # live in THIS job's dir, or a cache-hit job's clips die
+                    # with the older job they were written next to (both
+                    # reviewers, on the first version of this fix).
+                    _seg_clone_dir = _safe_job_dir(job_id) or os.path.dirname(vocals_for_clone)
+                    os.makedirs(_seg_clone_dir, exist_ok=True)
                     seg_clones = await loop.run_in_executor(
                         _cpu_pool, lambda: extract_segment_refs(
                             vocals_for_clone, final_segs,
-                            os.path.dirname(vocals_for_clone),
+                            _seg_clone_dir,
                             seg_ids=seg_ids_for_clone,
                         ),
                     )
@@ -1332,7 +1490,9 @@ async def dub_transcribe_stream(
                 except Exception as e:
                     logger.warning("per-segment clone refs skipped: %s", e)
 
-            if clones or seg_clones:
+            cast_sources = build_cast_sources(final_segs, clones, seg_clones)
+            job["cast_sources"] = cast_sources
+            if cast_sources:
                 if clones:
                     job["speaker_clones"] = clones
                 # Default each segment's profile_id to its detected speaker's
@@ -1354,16 +1514,11 @@ async def dub_transcribe_stream(
                     if s.get("profile_id"):
                         continue
                     spk = s.get("speaker_id") or "Speaker 1"
-                    if spk in clones:
+                    if spk in cast_sources:
+                        # Keep one UI-visible value for pooled and per-segment
+                        # sources. Generation resolves this line's own clip
+                        # first and falls back to the speaker's best clip.
                         s["profile_id"] = auto_profile_id(spk)
-                        continue
-                    # No per-speaker clone for this speaker (too little usable
-                    # audio overall) but this single line was long enough for
-                    # its own ref — fall back to the per-segment id. The editor
-                    # can't render it, but generation still clones correctly.
-                    sid = str(s.get("id", ""))
-                    if sid and sid in seg_clones:
-                        s["profile_id"] = f"auto-seg:{sid}"
         except Exception as e:
             logger.warning("speaker_clone extraction skipped: %s", e)
 
@@ -1396,7 +1551,10 @@ async def dub_transcribe_stream(
             "segments": final_segs,
             "source_lang": job["source_lang"],
             "full_transcript": job["full_transcript"],
-            "speaker_clones": job.get("speaker_clones", {}),
+            # The client only needs labels and durations. Never send host
+            # paths or reference transcripts through this public event.
+            "speaker_clones": job.get("cast_sources", {}),
+            "cast_sources": job.get("cast_sources", {}),
         })
         yield _sse_event("done", {})
 
@@ -1417,12 +1575,10 @@ async def dub_transcribe_stream(
         try:
             async for ev in _gen_body():
                 yield ev
-        except Exception as e:  # noqa: BLE001 — last-resort stream finalizer
-            logger.exception("transcribe stream crashed (job=%r)", job_id)
-            from core.failure import build_failure
-            f = build_failure(e, stage="transcribe", include_diagnostic=False)
-            detail = f["reason"] + (f" — {f['hint']}" if f.get("hint") else "")
-            yield _sse_event("error", {"detail": detail, "retryable": True})
+        except Exception:  # noqa: BLE001 — last-resort stream finalizer
+            logger.error("Transcription stream failed unexpectedly")
+            from core.public_errors import stream_failure
+            yield _sse_event("error", stream_failure("transcription_failed"))
             yield _sse_event("done", {})
         finally:
             # Last-resort VRAM release (see _loaded_asr above): covers crashes,
@@ -1531,8 +1687,11 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
         # / mlx / pytorch based on what's installed + user preference. Works
         # identically on all platforms; the older mlx-vs-pytorch branching
         # here duplicated the logic in asr_backend.py and skipped WhisperX.
-        from services.asr_backend import get_active_asr_backend
-        _asr = get_active_asr_backend(asr_pipe=getattr(_model, "_asr_pipe", None))
+        # `load_*`, not `get_*`: the plain selector hands back engines whose
+        # shallow probe passed but whose deep import chain is broken, which
+        # then dies at `.transcribe()`. The loader degrades (#1185).
+        from services.asr_backend import load_active_asr_backend
+        _asr = load_active_asr_backend(asr_pipe=getattr(_model, "_asr_pipe", None))
         try:
             try:
                 logger.info("Transcribing full audio via %s ...", _asr.id)

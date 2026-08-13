@@ -15,7 +15,7 @@
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -72,6 +72,48 @@ describe('SetupWizard — the pinned action row stays on screen', () => {
     expect(root.className).toMatch(/\bpb-\d/);
   });
 
+  it('every flex ancestor of the model-list scroller can actually shrink', async () => {
+    // The bug that survived TWO earlier fixes (and shipped in 0.4.2): the
+    // max-w-[1100px] wrapper was `flex-1 flex-col` WITHOUT min-h-0. Per the
+    // flex spec, min-height:auto on a column-flex item resolves to its
+    // min-content height — the full model list — so the wrapper grew past
+    // the root, overflow-hidden clipped everything below the window, and the
+    // inner overflow-y-auto clamp never engaged: Continue and the HF-token
+    // card were simply unreachable. jsdom does no layout, so this pins the
+    // CLASS RULE the layout depends on: every growable flex ancestor between
+    // the scroller and the wizard root must also be allowed to shrink.
+    // Measured for real in Chromium: footer at y=3078 in a 900px window
+    // without min-h-0 on the wrapper; y=884 with it.
+    const { container } = render(withI18n(<SetupWizard onReady={() => {}} />));
+    fireEvent.click(await screen.findByText(/All good — continue/i));
+
+    const scroller = await waitFor(() => {
+      const el = [...container.querySelectorAll('[class*="overflow-y-auto"]')].pop();
+      expect(el).toBeTruthy();
+      return el;
+    });
+    const root = container.firstElementChild;
+    let el = scroller.parentElement;
+    let checked = 0;
+    while (el && el !== root) {
+      const cls = el.className || '';
+      if (/\bflex-(1|auto)\b/.test(cls)) {
+        checked += 1;
+        expect(
+          cls,
+          `growable ancestor lacks min-h-0: <${el.tagName.toLowerCase()} class="${cls}">`,
+        ).toMatch(/\bmin-h-0\b/);
+      }
+      el = el.parentElement;
+    }
+    // The walk must terminate AT the root, not fall off the document — and it
+    // must actually have inspected the growable chain it exists for, or a
+    // refactor that reparents the scroller silently turns this test into a
+    // no-op (CodeRabbit).
+    expect(el).toBe(root);
+    expect(checked).toBeGreaterThanOrEqual(2);
+  });
+
   it('keeps Continue and the HF-token card OUT of the scrolling region', async () => {
     render(withI18n(<SetupWizard onReady={() => {}} />));
     fireEvent.click(await screen.findByText(/All good — continue/i));
@@ -119,6 +161,56 @@ describe('studio chrome does not appear before the studio', () => {
     // A leftover `bottom: var(--logs-footer-height)` would strand a dead 28px
     // gap under the wizard now that no footer is rendered there.
     expect(body).not.toContain('--logs-footer-height');
-    expect(body).toMatch(/bottom:\s*0;/);
+    // The full-viewport promise is now expressed as the #504 scale contract
+    // (viewport ÷ scale, zoomed back) rather than `bottom: 0` — asserted in
+    // detail below.
+    expect(body).toMatch(/height:\s*calc\(100vh/);
+  });
+
+  // The UI-scale regression that shipped in 0.4.2: the wrap was `inset: 0`
+  // (full-viewport box) with a bare inline `zoom` on the mount, so at any
+  // UI scale > 1 the zoomed content overran the window and the pinned
+  // Continue button + HF-token card were pushed below the visible edge —
+  // unreachable, since overflow: hidden means no scrollbar. At scale 1
+  // nothing showed, which is how it survived. The fix is the exact
+  // .app-container contract (#504): shrink the box by the scale, zoom back.
+  describe('UI scale cannot push the pinned row off screen', () => {
+    it('the wrap is shrunk by --ui-scale and zoomed back, like .app-container', () => {
+      const css = readSrc('index.css');
+      const rule = css.slice(css.indexOf('.app-wizard-wrap {'));
+      const body = rule.slice(0, rule.indexOf('}'));
+      expect(body).toMatch(/width:\s*calc\(100vw\s*\/\s*var\(--ui-scale, 1\)\)/);
+      expect(body).toMatch(/height:\s*calc\(100vh\s*\/\s*var\(--ui-scale, 1\)\)/);
+      expect(body).toMatch(/zoom:\s*var\(--ui-scale, 1\)/);
+      // `inset`-style pinning of the bottom edge is the broken shape: a
+      // full-viewport box that zoom then magnifies past the window.
+      expect(body).not.toMatch(/bottom:\s*0/);
+      expect(body).not.toMatch(/right:\s*0/);
+    });
+
+    it('keeps the WebKitGTK zoom-no-op fallback, same as the studio shell', () => {
+      // On engines where `zoom` does not lay out (older WebKitGTK), the
+      // shrunk box cannot be magnified back — without this override the
+      // wizard renders at 1/scale size with a black band around it.
+      const css = readSrc('index.css');
+      expect(css).toMatch(/html\[data-zoom-layout='off'\] \.app-wizard-wrap \{[^}]*zoom:\s*1/);
+    });
+
+    it('fills the viewport without CSS zoom when Tauri owns the scale', () => {
+      const css = readSrc('index.css');
+      expect(css).toMatch(
+        /html\[data-ui-scale-engine='native'\] \.app-wizard-wrap \{[^}]*width:\s*100vw[^}]*height:\s*100vh[^}]*zoom:\s*1/,
+      );
+    });
+
+    it('the mount passes --ui-scale and never a bare inline zoom', () => {
+      const app = readSrc('App.jsx');
+      const mount = app.slice(app.indexOf('className="app-wizard-wrap"'));
+      const tag = mount.slice(0, mount.indexOf('>'));
+      expect(tag).toContain("'--ui-scale': effectiveUiScale");
+      // An inline `zoom:` on top of the CSS contract double-applies the
+      // scale — the CSS zooms once, this would zoom again.
+      expect(tag).not.toMatch(/zoom:\s*uiScale/);
+    });
   });
 });

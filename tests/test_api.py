@@ -1,5 +1,5 @@
 """
-OmniVoice Studio API — Unit Test Suite
+VoiceStudio API — Unit Test Suite
 Tests all roadmap features: TaskManager, scene detection, lip-sync scoring,
 export endpoints (VTT, SRT, MP3, segments ZIP, stems ZIP), streaming TTS.
 
@@ -74,7 +74,7 @@ def client():
 
     `client=("127.0.0.1", 50000)` makes `request.client.host` resolve to a
     loopback address — required because `backend/api/routers/system.py` is
-    now gated by a router-level `require_loopback` dependency. Tests that
+    now gated by a router-level `require_admin` dependency. Tests that
     deliberately exercise the non-loopback rejection path build their own
     plain `TestClient(app)` (which defaults to host='testclient').
     """
@@ -551,7 +551,7 @@ class TestStreamingTTS:
 def test_set_env_rejects_non_loopback():
     """A TestClient that does NOT override `client=` sets
     `request.client.host = 'testclient'` (non-loopback). The router-level
-    `require_loopback` dependency must return 403 and must NOT mutate
+    `require_admin` dependency must return 403 and must NOT mutate
     os.environ. NOTE: the project-wide `client` fixture is now built with a
     loopback override so most tests see protected routes — this test
     instantiates its own plain client to exercise the rejection path."""
@@ -598,6 +598,55 @@ def test_set_env_allows_loopback():
             os.environ.pop("HF_TOKEN", None)
         else:
             os.environ["HF_TOKEN"] = original
+
+
+def test_server_mode_remote_without_api_key_cannot_set_executable_path(monkeypatch, tmp_path):
+    """GHAS #506: bare Docker exposure must not become an executable setter."""
+    from fastapi.testclient import TestClient
+    from main import app
+
+    executable = tmp_path / "ffmpeg"
+    executable.write_bytes(b"not actually executable")
+    original = os.environ.get("FFMPEG_PATH")
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.delenv("OMNIVOICE_API_KEY", raising=False)
+    try:
+        response = TestClient(app, client=("172.17.0.1", 50000)).post(
+            "/system/set-env",
+            json={"key": "FFMPEG_PATH", "value": str(executable)},
+        )
+        assert response.status_code == 403
+        assert os.environ.get("FFMPEG_PATH") == original
+    finally:
+        if original is None:
+            os.environ.pop("FFMPEG_PATH", None)
+        else:
+            os.environ["FFMPEG_PATH"] = original
+
+
+def test_set_env_never_accepts_executable_path_even_with_admin_key(monkeypatch, tmp_path):
+    """Executable selection exists only behind native IPC, never this API."""
+    from fastapi.testclient import TestClient
+    from main import app
+
+    executable = tmp_path / "ffmpeg"
+    executable.write_bytes(b"not actually executable")
+    original = os.environ.get("FFMPEG_PATH")
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")
+    try:
+        response = TestClient(app, client=("172.17.0.1", 50000)).post(
+            "/system/set-env",
+            headers={"authorization": "Bearer s3cret"},
+            json={"key": "FFMPEG_PATH", "value": str(executable)},
+        )
+        assert response.status_code == 400
+        assert os.environ.get("FFMPEG_PATH") == original
+    finally:
+        if original is None:
+            os.environ.pop("FFMPEG_PATH", None)
+        else:
+            os.environ["FFMPEG_PATH"] = original
 
 
 def test_set_env_loopback_still_validates_allowlist():
@@ -686,4 +735,3 @@ def test_static_audio_served_with_canonical_mime():
         )
     finally:
         tmp_wav.unlink(missing_ok=True)
-

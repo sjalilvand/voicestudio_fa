@@ -10,7 +10,9 @@ import React from 'react';
 const BASE =
   'inline-flex items-center justify-center gap-[5px] flex-1 mt-0 ' +
   'font-[family-name:var(--font-sans)] tracking-[0.02em] normal-case ' +
-  'bg-transparent border rounded-[var(--chrome-radius-pill)] shadow-none transition-colors ' +
+  'bg-transparent border rounded-[var(--chrome-radius-pill)] shadow-none touch-manipulation ' +
+  'transition-[transform,background,color,box-shadow] duration-150 motion-reduce:transition-none ' +
+  'focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)] ' +
   'disabled:opacity-45 disabled:cursor-not-allowed';
 
 const TONES = {
@@ -36,7 +38,7 @@ const FooterBtn = React.forwardRef(function FooterBtn(
   const size = sm ? 'px-[6px] py-[3px] text-[0.62rem]' : 'px-[8px] py-[5px] text-[0.72rem]';
   const cls = [BASE, size, TONES[tone] || TONES.idle, className].filter(Boolean).join(' ');
   return (
-    <button ref={ref} className={cls} disabled={disabled} onClick={onClick} {...rest}>
+    <button type="button" ref={ref} className={cls} disabled={disabled} onClick={onClick} {...rest}>
       {icon} {label}
     </button>
   );

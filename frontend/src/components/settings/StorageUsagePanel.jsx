@@ -13,7 +13,16 @@
  * so re-mounts and refreshes never spam).
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, FolderOpen, HardDrive, Package, RefreshCw, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  FolderOpen,
+  HardDrive,
+  Package,
+  RefreshCw,
+  Trash2,
+  Database,
+  Boxes,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { apiJson } from '../../api/client';
@@ -32,6 +41,12 @@ export function _resetCriticalToastForTests() {
 }
 
 const CATEGORY_ORDER = ['hf_cache', 'data', 'engine_venvs', 'temp'];
+const CATEGORY_ICONS = {
+  hf_cache: Package,
+  data: Database,
+  engine_venvs: Boxes,
+  temp: Trash2,
+};
 
 function warningText(t, w) {
   const vars = {
@@ -43,7 +58,7 @@ function warningText(t, w) {
   if (w.kind === 'low_disk' && w.severity === 'critical') {
     return t('settings.storage_warn_critical', {
       defaultValue:
-        'Critically low disk space: {{free}} GB free on {{path}} — OmniVoice needs at least {{min}} GB. Generation and model downloads may fail.',
+        'Critically low disk space: {{free}} GB free on {{path}} — VoiceStudio needs at least {{min}} GB. Generation and model downloads may fail.',
       ...vars,
     });
   }
@@ -189,7 +204,7 @@ export default function StorageUsagePanel() {
     const ok = await askConfirm(
       t('settings.storage_clear_temp_confirm', {
         defaultValue:
-          "Delete OmniVoice's temporary working files? Don't do this while a dub or batch job is running.",
+          "Delete VoiceStudio's temporary working files? Don't do this while a dub or batch job is running.",
       }),
       t('settings.storage_clear_temp', { defaultValue: 'Clear temp files' }),
     );
@@ -258,7 +273,7 @@ export default function StorageUsagePanel() {
       icon={HardDrive}
       title={t('settings.storage_usage', { defaultValue: 'Disk usage' })}
       description={t('settings.storage_usage_desc', {
-        defaultValue: 'What OmniVoice stores on this machine, and how much space is left.',
+        defaultValue: 'What VoiceStudio stores on this machine, and how much space is left.',
       })}
       actions={
         <SmallButton
@@ -297,15 +312,18 @@ export default function StorageUsagePanel() {
       )}
 
       {!loading && dataVolume && (
-        <div className="mb-[var(--space-4)]" data-testid="storage-disk-gauge">
-          <div className="mb-[var(--space-2)] flex items-baseline justify-between gap-[var(--space-3)]">
-            <span className="text-[length:var(--text-base)] font-medium text-[var(--chrome-fg)]">
+        <div
+          className="mb-[var(--space-4)] rounded-[var(--chrome-radius-pill)] bg-[var(--chrome-bg)] p-[var(--space-5)]"
+          data-testid="storage-disk-gauge"
+        >
+          <div className="mb-[var(--space-4)] flex flex-wrap items-start justify-between gap-[var(--space-3)]">
+            <span className="flex min-w-0 flex-col gap-[var(--space-1)] text-[length:var(--text-md)] font-semibold text-[var(--chrome-fg)]">
               {t('settings.storage_data_volume', { defaultValue: 'Data volume' })}
-              <span className="ml-[var(--space-2)] font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-xs)] text-[var(--chrome-fg-dim)]">
+              <span className="truncate font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-xs)] font-normal text-[var(--chrome-fg-dim)]">
                 {dataVolume.path}
               </span>
             </span>
-            <span className="font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-sm)] text-[var(--chrome-fg-muted)] tabular-nums">
+            <span className="rounded-[var(--chrome-radius-pill)] bg-[var(--chrome-hover-bg)] px-[var(--space-3)] py-[var(--space-2)] font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-sm)] text-[var(--chrome-fg)] tabular-nums">
               {t('settings.storage_volume_free', {
                 defaultValue: '{{free}} free of {{total}}',
                 free: fmtBytes(dataVolume.free_bytes),
@@ -313,7 +331,7 @@ export default function StorageUsagePanel() {
               })}
             </span>
           </div>
-          <div className="h-[6px] w-full overflow-hidden rounded-[var(--chrome-radius-pill)] bg-[var(--chrome-hover-bg)]">
+          <div className="h-[8px] w-full overflow-hidden rounded-[var(--chrome-radius-pill)] bg-[var(--chrome-hover-bg)]">
             <div
               className="h-full rounded-[var(--chrome-radius-pill)]"
               style={{
@@ -330,138 +348,154 @@ export default function StorageUsagePanel() {
         </div>
       )}
 
-      {!loading &&
-        categories.map((cat) => (
-          <div
-            key={cat.id}
-            className="border-b border-transparent py-[var(--space-3)] last:border-b-0"
-            data-testid={`storage-cat-${cat.id}`}
-          >
-            <div className="flex items-center justify-between gap-[var(--space-3)]">
-              <span className="min-w-0 text-[length:var(--text-base)] font-medium text-[var(--chrome-fg)]">
-                {catLabel(cat.id)}
-                {partialNote(cat)}
-              </span>
-              <span className="flex flex-none items-center gap-[var(--space-2)]">
-                <span className="font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-sm)] text-[var(--chrome-fg-muted)] tabular-nums">
-                  {fmtBytes(cat.bytes)}
-                </span>
-                {cat.id === 'hf_cache' && (
-                  <SmallButton
-                    onClick={() => openSettingsTab('models')}
-                    title={t('settings.storage_manage_models_hint', {
-                      defaultValue: 'Reclaim space by removing models in the Model Store',
-                    })}
-                    testId="storage-manage-models"
-                  >
-                    <Package size={12} />
-                    {t('settings.storage_manage_models', { defaultValue: 'Manage models' })}
-                  </SmallButton>
-                )}
-                {cat.id === 'temp' && (
-                  <SmallButton
-                    onClick={clearTemp}
-                    title={t('settings.storage_clear_temp_hint', {
-                      defaultValue: "Delete OmniVoice's own files in the temp directory",
-                    })}
-                    testId="storage-clear-temp"
-                    disabled={(cat.bytes || 0) === 0}
-                  >
-                    <Trash2 size={12} />
-                    {t('settings.storage_clear_temp', { defaultValue: 'Clear temp files' })}
-                  </SmallButton>
-                )}
-                {cat.exists && (
-                  <SmallButton
-                    onClick={() => openFolder(cat.path)}
-                    title={cat.path}
-                    testId={`storage-open-${cat.id}`}
-                  >
-                    <FolderOpen size={12} />
-                    {t('settings.storage_open_folder', { defaultValue: 'Open folder' })}
-                  </SmallButton>
-                )}
-              </span>
-            </div>
-            <div className="mt-[var(--space-2)]">
-              <ProportionBar value={cat.bytes || 0} max={maxCatBytes} />
-            </div>
-            <p className="mx-0 mb-0 mt-[2px] truncate font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-xs)] text-[var(--chrome-fg-dim)]">
-              {cat.path}
-            </p>
+      {!loading && categories.length > 0 && (
+        <div
+          className="settings-list-scroll max-h-[clamp(320px,58dvh,620px)] overflow-y-auto overscroll-contain rounded-[var(--chrome-radius-pill)] bg-[var(--chrome-bg)] p-[var(--space-2)] [scrollbar-gutter:stable]"
+          data-testid="storage-category-scroll"
+          tabIndex={0}
+          aria-label={t('settings.storage_usage', { defaultValue: 'Disk usage' })}
+        >
+          {categories.map((cat) => {
+            const CategoryIcon = CATEGORY_ICONS[cat.id] || HardDrive;
+            return (
+              <div
+                key={cat.id}
+                className="rounded-[var(--chrome-radius-pill)] border-b border-[color-mix(in_srgb,var(--chrome-fg)_7%,transparent)] p-[var(--space-4)] last:border-b-0"
+                data-testid={`storage-cat-${cat.id}`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-[var(--space-3)]">
+                  <span className="flex min-w-0 flex-1 items-center gap-[var(--space-3)] text-[length:var(--text-md)] font-medium text-[var(--chrome-fg)]">
+                    <span className="inline-flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[var(--chrome-radius-pill)] bg-[color-mix(in_srgb,var(--chrome-accent)_10%,transparent)] text-[var(--chrome-accent)]">
+                      <CategoryIcon size={14} aria-hidden="true" />
+                    </span>
+                    <span>
+                      {catLabel(cat.id)}
+                      {partialNote(cat)}
+                    </span>
+                  </span>
+                  <span className="ml-auto flex flex-wrap items-center justify-end gap-[var(--space-2)] @max-[520px]/settings:ml-0 @max-[520px]/settings:w-full @max-[520px]/settings:justify-start">
+                    <span className="font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-sm)] text-[var(--chrome-fg-muted)] tabular-nums">
+                      {fmtBytes(cat.bytes)}
+                    </span>
+                    {cat.id === 'hf_cache' && (
+                      <SmallButton
+                        onClick={() => openSettingsTab('models')}
+                        title={t('settings.storage_manage_models_hint', {
+                          defaultValue: 'Reclaim space by removing models in the Model Store',
+                        })}
+                        testId="storage-manage-models"
+                      >
+                        <Package size={12} />
+                        {t('settings.storage_manage_models', { defaultValue: 'Manage models' })}
+                      </SmallButton>
+                    )}
+                    {cat.id === 'temp' && (
+                      <SmallButton
+                        onClick={clearTemp}
+                        title={t('settings.storage_clear_temp_hint', {
+                          defaultValue: "Delete VoiceStudio's own files in the temp directory",
+                        })}
+                        testId="storage-clear-temp"
+                        disabled={(cat.bytes || 0) === 0}
+                      >
+                        <Trash2 size={12} />
+                        {t('settings.storage_clear_temp', { defaultValue: 'Clear temp files' })}
+                      </SmallButton>
+                    )}
+                    {cat.exists && (
+                      <SmallButton
+                        onClick={() => openFolder(cat.path)}
+                        title={cat.path}
+                        testId={`storage-open-${cat.id}`}
+                      >
+                        <FolderOpen size={12} />
+                        {t('settings.storage_open_folder', { defaultValue: 'Open folder' })}
+                      </SmallButton>
+                    )}
+                  </span>
+                </div>
+                <div className="mt-[var(--space-2)]">
+                  <ProportionBar value={cat.bytes || 0} max={maxCatBytes} />
+                </div>
+                <p className="mx-0 mb-0 mt-[2px] truncate font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-xs)] text-[var(--chrome-fg-dim)]">
+                  {cat.path}
+                </p>
 
-            {cat.id === 'hf_cache' && (cat.items || []).length > 0 && (
-              <ul className="m-0 mt-[var(--space-2)] list-none p-0">
-                <li className="pb-[2px] text-[length:var(--text-xs)] text-[var(--chrome-fg-dim)]">
-                  {t('settings.storage_top_models', { defaultValue: 'Largest models' })}
-                </li>
-                {cat.items.map((m) => (
-                  <li
-                    key={m.name}
-                    className="flex items-center justify-between gap-[var(--space-3)] py-[1px] pl-[var(--space-3)] text-[length:var(--text-xs)]"
-                  >
-                    <span className="min-w-0 truncate font-[family-name:var(--chrome-font-mono)] text-[var(--chrome-fg-muted)]">
-                      {m.name}
-                    </span>
-                    <span className="flex-none font-[family-name:var(--chrome-font-mono)] text-[var(--chrome-fg-dim)] tabular-nums">
-                      {fmtBytes(m.bytes)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+                {cat.id === 'hf_cache' && (cat.items || []).length > 0 && (
+                  <ul className="m-0 mt-[var(--space-2)] list-none p-0">
+                    <li className="pb-[2px] text-[length:var(--text-xs)] text-[var(--chrome-fg-dim)]">
+                      {t('settings.storage_top_models', { defaultValue: 'Largest models' })}
+                    </li>
+                    {cat.items.map((m) => (
+                      <li
+                        key={m.name}
+                        className="flex items-center justify-between gap-[var(--space-3)] py-[1px] pl-[var(--space-3)] text-[length:var(--text-xs)]"
+                      >
+                        <span className="min-w-0 truncate font-[family-name:var(--chrome-font-mono)] text-[var(--chrome-fg-muted)]">
+                          {m.name}
+                        </span>
+                        <span className="flex-none font-[family-name:var(--chrome-font-mono)] text-[var(--chrome-fg-dim)] tabular-nums">
+                          {fmtBytes(m.bytes)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
-            {cat.id === 'data' && (cat.children || []).length > 0 && (
-              <ul className="m-0 mt-[var(--space-2)] list-none p-0">
-                {cat.children.map((c) => (
-                  <li
-                    key={c.id}
-                    className="flex items-center justify-between gap-[var(--space-3)] py-[1px] pl-[var(--space-3)] text-[length:var(--text-xs)]"
-                  >
-                    <span className="min-w-0 truncate text-[var(--chrome-fg-muted)]">
-                      {childLabel(c.id)}
-                    </span>
-                    <span className="flex flex-none items-center gap-[var(--space-2)]">
-                      <span className="font-[family-name:var(--chrome-font-mono)] text-[var(--chrome-fg-dim)] tabular-nums">
-                        {fmtBytes(c.bytes)}
-                      </span>
-                      {c.id === 'logs' && (
-                        <SmallButton
-                          onClick={clearLogs}
-                          title={t('settings.storage_clear_logs_hint', {
-                            defaultValue: 'Truncate the backend runtime and crash logs',
-                          })}
-                          testId="storage-clear-logs"
-                        >
-                          <Trash2 size={12} />
-                          {t('settings.storage_clear_logs', { defaultValue: 'Clear logs' })}
-                        </SmallButton>
-                      )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+                {cat.id === 'data' && (cat.children || []).length > 0 && (
+                  <ul className="m-0 mt-[var(--space-2)] list-none p-0">
+                    {cat.children.map((c) => (
+                      <li
+                        key={c.id}
+                        className="flex items-center justify-between gap-[var(--space-3)] py-[1px] pl-[var(--space-3)] text-[length:var(--text-xs)]"
+                      >
+                        <span className="min-w-0 truncate text-[var(--chrome-fg-muted)]">
+                          {childLabel(c.id)}
+                        </span>
+                        <span className="flex flex-none items-center gap-[var(--space-2)]">
+                          <span className="font-[family-name:var(--chrome-font-mono)] text-[var(--chrome-fg-dim)] tabular-nums">
+                            {fmtBytes(c.bytes)}
+                          </span>
+                          {c.id === 'logs' && (
+                            <SmallButton
+                              onClick={clearLogs}
+                              title={t('settings.storage_clear_logs_hint', {
+                                defaultValue: 'Truncate the backend runtime and crash logs',
+                              })}
+                              testId="storage-clear-logs"
+                            >
+                              <Trash2 size={12} />
+                              {t('settings.storage_clear_logs', { defaultValue: 'Clear logs' })}
+                            </SmallButton>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
-            {cat.id === 'engine_venvs' && (cat.items || []).length > 0 && (
-              <ul className="m-0 mt-[var(--space-2)] list-none p-0">
-                {cat.items.map((m) => (
-                  <li
-                    key={m.name}
-                    className="flex items-center justify-between gap-[var(--space-3)] py-[1px] pl-[var(--space-3)] text-[length:var(--text-xs)]"
-                  >
-                    <span className="min-w-0 truncate font-[family-name:var(--chrome-font-mono)] text-[var(--chrome-fg-muted)]">
-                      {m.name}
-                    </span>
-                    <span className="flex-none font-[family-name:var(--chrome-font-mono)] text-[var(--chrome-fg-dim)] tabular-nums">
-                      {fmtBytes(m.bytes)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ))}
+                {cat.id === 'engine_venvs' && (cat.items || []).length > 0 && (
+                  <ul className="m-0 mt-[var(--space-2)] list-none p-0">
+                    {cat.items.map((m) => (
+                      <li
+                        key={m.name}
+                        className="flex items-center justify-between gap-[var(--space-3)] py-[1px] pl-[var(--space-3)] text-[length:var(--text-xs)]"
+                      >
+                        <span className="min-w-0 truncate font-[family-name:var(--chrome-font-mono)] text-[var(--chrome-fg-muted)]">
+                          {m.name}
+                        </span>
+                        <span className="flex-none font-[family-name:var(--chrome-font-mono)] text-[var(--chrome-fg-dim)] tabular-nums">
+                          {fmtBytes(m.bytes)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </SettingsSection>
   );
 }

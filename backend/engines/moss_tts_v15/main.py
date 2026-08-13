@@ -36,6 +36,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import struct
 import sys
 import traceback
@@ -50,8 +51,30 @@ MAX_FRAME_BYTES = 64 * 1024 * 1024
 #: the loaded model at synthesize time; this is the handshake default).
 MOSS_SAMPLE_RATE = 24000
 
-#: HF repo id for the weights, overridable for air-gapped / mirror installs.
+#: Reviewed HF repo and immutable revision for the default remote-code model.
 _DEFAULT_REPO = "OpenMOSS-Team/MOSS-TTS-v1.5"
+_DEFAULT_REVISION = "cdd3b911b1585e3f2dbc7775ef10f9926f58850a"
+_SHA = re.compile(r"[0-9a-f]{40}\Z")
+
+
+def _model_source() -> tuple[str, str]:
+    """Return a pinned model source; custom remote code requires two opt-ins."""
+    repo = os.environ.get("OMNIVOICE_MOSS_TTS_V15_MODEL", _DEFAULT_REPO)
+    if repo == _DEFAULT_REPO:
+        return repo, _DEFAULT_REVISION
+    unsafe = os.environ.get("OMNIVOICE_MOSS_TTS_V15_TRUST_REMOTE_CODE", "").lower()
+    revision = os.environ.get("OMNIVOICE_MOSS_TTS_V15_REVISION", "")
+    if unsafe not in {"1", "true", "yes", "on"}:
+        raise RuntimeError(
+            "A custom MOSS model contains executable remote code. Set "
+            "OMNIVOICE_MOSS_TTS_V15_TRUST_REMOTE_CODE=1 only after auditing it."
+        )
+    if not _SHA.fullmatch(revision):
+        raise RuntimeError(
+            "A custom MOSS model requires OMNIVOICE_MOSS_TTS_V15_REVISION="
+            "<40-character commit SHA>; branches and tags are mutable."
+        )
+    return repo, revision
 
 #: ISO-639-1 → MOSS language name. MOSS's ``build_user_message`` takes a
 #: language *name* ("French"), not a code. Unknown codes are omitted so the
@@ -130,14 +153,16 @@ def _load_model(stdout):
     import torch
     from transformers import AutoModel, AutoProcessor
 
-    repo = os.environ.get("OMNIVOICE_MOSS_TTS_V15_MODEL", _DEFAULT_REPO)
+    repo, revision = _model_source()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.bfloat16 if device == "cuda" else torch.float32
     # "sdpa" works on CUDA + CPU and needs no extra dep. flash_attention_2
     # (Ampere+ CUDA, optional flash-attn) is opt-in via env.
     attn = os.environ.get("OMNIVOICE_MOSS_TTS_V15_ATTN", "sdpa")
 
-    processor = AutoProcessor.from_pretrained(repo, trust_remote_code=True)
+    processor = AutoProcessor.from_pretrained(
+        repo, revision=revision, trust_remote_code=True,
+    )
     # The audio tokenizer is a separate sub-module that must be moved to the
     # device independently (easy to miss — see upstream README).
     processor.audio_tokenizer = processor.audio_tokenizer.to(device)
@@ -146,6 +171,7 @@ def _load_model(stdout):
 
     model = AutoModel.from_pretrained(
         repo,
+        revision=revision,
         trust_remote_code=True,
         attn_implementation=attn,
         torch_dtype=dtype,
@@ -169,8 +195,12 @@ def _tensor_to_pcm_b64(audio, sample_rate: int) -> tuple[str, int, int]:
 
     arr = audio.detach().to("cpu").float().numpy()
     arr = np.asarray(arr, dtype=np.float32).squeeze()
-    if arr.ndim > 1:
-        arr = arr.mean(axis=0)  # defensive downmix to mono
+    while arr.ndim > 1:
+        # Downmix along whichever axis is the channel axis. Hardcoded to axis 0
+        # this averaged across TIME for a channels-last (N, 2) array -- every
+        # output sample became the mean of two neighbouring samples, which is
+        # not a downmix but a destroyed waveform. (#1328)
+        arr = arr.mean(axis=int(np.argmin(arr.shape)))
     arr = np.clip(arr, -1.0, 1.0)
     pcm = (arr * 32767.0).astype(np.int16).tobytes()
     return base64.b64encode(pcm).decode("ascii"), int(sample_rate), int(arr.shape[0])
@@ -249,7 +279,24 @@ def _handle_synthesize(msg: dict, stdout) -> None:
 
 def main() -> int:
     stdin = sys.stdin.buffer
-    stdout = sys.stdout.buffer
+    # Frames go down a PRIVATE fd, and fd 1 is pointed at stderr (#1428).
+    #
+    # This sidecar's protocol is length-prefixed binary on stdout, but it is
+    # not the only thing writing there: the libraries it loads print freely to
+    # fd 1 — wetextprocessing's FST logs, tqdm bars, native prints from torch
+    # and ONNX runtime. Those bytes interleave with frames, and the parent
+    # then reads four bytes of log text as a length prefix, which is how a
+    # generation dies with `OSError: frame too large: 1044258881` (that number
+    # is ASCII). Worse, it desyncs the stream, so every later request on the
+    # same sidecar reads stale bytes and no retry can recover.
+    #
+    # Duplicating fd 1 first keeps a clean channel only this module can write
+    # to; redirecting fd 1 to fd 2 sends the library noise to stderr, which
+    # the parent already drains into its own log (through the HF-token
+    # redactor). Nothing is lost and the frame stream cannot be corrupted.
+    _frame_fd = os.dup(1)
+    os.dup2(2, 1)
+    stdout = os.fdopen(_frame_fd, "wb")
 
     # Ready handshake fires BEFORE any heavy import — nothing above this line
     # touches transformers/torch, so we make the 30 s spawn window even cold.

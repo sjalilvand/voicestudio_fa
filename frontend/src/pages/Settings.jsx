@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { copyText } from '../utils/copyText';
 import { normalizeChannel } from '../utils/updateChannel';
-import { CheckCircle, RefreshCw, ArrowDownToLine } from 'lucide-react';
+import { ArrowDownToLine } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { API, apiFetch } from '../api/client';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +9,6 @@ import { systemLogs, systemLogsTauri, clearSystemLogs, clearTauriLogs } from '..
 import { useSysinfo, useModelStatus, useSystemInfo } from '../api/hooks';
 import { getFrontendLogs, clearFrontendLogs } from '../utils/consoleBuffer';
 import { resolveAboutVersion } from '../utils/appVersion';
-import { Badge } from '../ui';
 import { SettingsSection } from '../components/settings/primitives';
 import { useAppStore } from '../store';
 // Panels — re-hosted as-is; the redesign reorganizes them, not their logic.
@@ -25,6 +24,7 @@ import StorageUsagePanel from '../components/settings/StorageUsagePanel';
 import HFMirrorPanel from '../components/settings/HFMirrorPanel';
 import SharingPanel from '../components/settings/SharingPanel';
 import RemoteBackendPanel from '../components/settings/RemoteBackendPanel';
+import WorkersPanel from '../components/settings/WorkersPanel';
 import MCPBindingsPanel from '../components/settings/MCPBindingsPanel';
 import OpenApiPanel from '../components/settings/OpenApiPanel';
 import PronunciationPanel from '../components/settings/PronunciationPanel';
@@ -32,8 +32,9 @@ import PermissionsPanel from '../components/settings/PermissionsPanel';
 import DictationDemo from '../components/DictationDemo';
 import UpdatesPanel from '../components/UpdatesPanel';
 import GeneralTab from '../components/settings/GeneralTab';
-import ModelStoreTab from '../components/settings/ModelStoreTab';
-import EnginesTab from '../components/settings/EnginesTab';
+// Engine selection + the model store moved to the Model Catalogue workspace
+// (pages/ModelCatalogue.jsx); these categories now signpost it.
+import CataloguePointer from '../components/settings/CataloguePointer';
 import HotkeyTab from '../components/settings/HotkeyTab';
 import TranslationTab from '../components/settings/TranslationTab';
 import NetworkTab from '../components/settings/NetworkTab';
@@ -119,6 +120,35 @@ export default function Settings() {
     }
   }, [query, visibleIds, visibleSet, active]);
 
+  // ── Sidebar keyboard loop ──────────────────────────────────────────────────
+  // ⌘K / Ctrl+K focuses the filter from anywhere on the page; the search box
+  // hands focus down into the category list (Enter / ↓) and the list hands it
+  // back (↑ past the top). Same binding on every platform — only the keycap
+  // hint differs.
+  const searchRef = useRef(null);
+  const focusSearch = useCallback(() => {
+    const el = searchRef.current;
+    if (!el) return;
+    el.focus();
+    el.select?.();
+  }, []);
+  const focusActiveCategory = useCallback(() => {
+    // The rail is a roving-tabindex list: the active item is its only tab stop,
+    // so focusing it is "enter the list" regardless of which item that is.
+    document.querySelector('[data-testid^="settings-nav-"][aria-current="page"]')?.focus?.();
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key !== 'k' && e.key !== 'K') return;
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
+      e.preventDefault();
+      focusSearch();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [focusSearch]);
+
   // ── Shared data (TanStack Query — shared cache with App.jsx) ───────────────
   const { data: hw } = useSysinfo();
   const { data: status } = useModelStatus();
@@ -190,7 +220,7 @@ export default function Settings() {
     })();
     const fmtGB = (v) => (typeof v === 'number' ? `${v.toFixed(2)} GB` : '—');
     const lines = [
-      '### OmniVoice Studio diagnostics',
+      '### VoiceStudio diagnostics',
       '',
       `- **App version:** ${resolveAboutVersion(appVersion, info)}`,
       `- **Tauri runtime:** ${tauriVersion || (isTauri() ? '—' : 'web preview')}`,
@@ -213,8 +243,8 @@ export default function Settings() {
       `- **Update channel:** ${updateChannel}`,
       `- **Update endpoint:** ${
         updateChannel === 'preview'
-          ? 'https://github.com/debpalash/OmniVoice-Studio/releases/download/preview/latest.json'
-          : 'https://github.com/debpalash/OmniVoice-Studio/releases/latest/download/latest.json'
+          ? 'https://github.com/debpalash/VoiceStudio/releases/download/preview/latest.json'
+          : 'https://github.com/debpalash/VoiceStudio/releases/latest/download/latest.json'
       }`,
       `- **User agent:** ${ua}`,
     ];
@@ -348,35 +378,27 @@ export default function Settings() {
     }
   };
 
-  const modelBadge =
-    status?.status === 'ready' ? (
-      <Badge tone="success">
-        <CheckCircle size={11} /> {t('models.ready_badge')}
-      </Badge>
-    ) : status?.status === 'loading' ? (
-      <Badge tone="warn">
-        <RefreshCw size={11} className="spinner" /> {t('models.loading_badge')}
-      </Badge>
-    ) : (
-      <Badge tone="warn">{t('models.idle_badge')}</Badge>
-    );
-
   const renderCategory = (id) => {
     switch (id) {
       case 'appearance':
-        return <AppearancePanel />;
-      case 'general':
-        return <GeneralTab />;
+        return (
+          <>
+            <AppearancePanel />
+            <GeneralTab />
+          </>
+        );
       case 'engines':
-        return <EnginesTab />;
+        return <CataloguePointer area="engines" />;
       case 'models':
+        // What stays here is the storage-shaped remainder: where weights live
+        // on disk and which mirror they come from (both restart-bound, hence
+        // the category's `restart: true`). Browsing / installing / removing
+        // them is the Model Catalogue's Models pane.
         return (
           <>
             <StoragePanel />
             <HFMirrorPanel />
-            {/* OpenAI-compatible ASR config moved to Settings → Engines (ASR
-                tab) — configure/test/activate now live on one screen. */}
-            <ModelStoreTab info={info} modelBadge={modelBadge} />
+            <CataloguePointer area="models" />
           </>
         );
       case 'dictation':
@@ -422,6 +444,8 @@ export default function Settings() {
             <MCPBindingsPanel />
           </>
         );
+      case 'workers':
+        return <WorkersPanel />;
       case 'openapi':
         return <OpenApiPanel />;
       case 'credentials':
@@ -471,43 +495,51 @@ export default function Settings() {
     }
   };
 
-  const cat = CATEGORY_BY_ID[active] || CATEGORY_BY_ID.general;
+  const cat = CATEGORY_BY_ID[active] || CATEGORY_BY_ID.appearance;
   const CatIcon = cat.icon;
 
   return (
-    // [ rail | content ] hub. Below 760px the rail collapses to a dropdown (in
-    // SettingsSidebar) and the layout stacks. The content column establishes the
-    // `settings` container so SettingRow's `@max-[600px]/settings:` stacking
-    // variant still fires on the real content width.
-    <div className="flex min-h-full w-full box-border flex-1 flex-col overflow-y-auto bg-[var(--chrome-bg)] p-[var(--space-5)_var(--space-7)_var(--space-7)] font-sans min-[760px]:grid min-[760px]:[grid-template-columns:var(--settings-rail)_minmax(0,1fr)] min-[760px]:gap-[var(--space-5)] min-[760px]:[align-content:start]">
-      <aside className="mb-[var(--space-4)] min-[760px]:sticky min-[760px]:top-[var(--space-5)] min-[760px]:mb-0 min-[760px]:self-start">
-        <SettingsSearch value={query} onChange={setQuery} />
-        <SettingsSidebar
-          visibleIds={visibleSet}
-          active={active}
-          onSelect={setActive}
-          query={query}
-          onClearSearch={() => setQuery('')}
-        />
-      </aside>
+    // Query the scaled shell's actual content width. Viewport media queries fire
+    // at the wrong logical width when WebKitGTK/Tauri zoom is active.
+    <div className="h-full min-h-0 w-full [container-type:inline-size] [container-name:settings-shell]">
+      <div className="flex h-full min-h-0 w-full box-border flex-1 flex-col overflow-y-auto bg-[var(--chrome-bg)] p-[var(--space-5)_var(--space-7)_var(--space-7)] font-sans @min-[760px]/settings-shell:grid @min-[760px]/settings-shell:overflow-hidden @min-[760px]/settings-shell:[grid-template-columns:var(--settings-rail)_minmax(0,1fr)] @min-[760px]/settings-shell:[grid-template-rows:minmax(0,1fr)] @min-[760px]/settings-shell:gap-[var(--space-5)]">
+        <aside className="mb-[var(--space-4)] @min-[760px]/settings-shell:mb-0 @min-[760px]/settings-shell:flex @min-[760px]/settings-shell:h-full @min-[760px]/settings-shell:min-h-0 @min-[760px]/settings-shell:flex-col @min-[760px]/settings-shell:overflow-hidden">
+          <SettingsSearch
+            value={query}
+            onChange={setQuery}
+            inputRef={searchRef}
+            onEnterList={focusActiveCategory}
+          />
+          <SettingsSidebar
+            visibleIds={visibleSet}
+            active={active}
+            onSelect={setActive}
+            query={query}
+            onClearSearch={() => setQuery('')}
+            onFocusSearch={focusSearch}
+          />
+        </aside>
 
-      <div className="min-w-0 w-full max-w-[1100px] mx-auto flex-auto self-start [container-type:inline-size] [container-name:settings]">
-        <header className="mb-[var(--space-4)] flex items-center gap-[var(--space-3)]">
-          {CatIcon && (
-            <span
-              className="shrink-0 inline-flex items-center justify-center w-[26px] h-[26px] rounded-[var(--chrome-radius-pill)] text-[color:var(--chrome-accent)] bg-[color-mix(in_srgb,var(--chrome-accent)_12%,var(--chrome-bg))] border border-transparent"
-              aria-hidden="true"
-            >
-              <CatIcon size={15} />
-            </span>
-          )}
-          <h1 className="m-0 flex-auto [font-family:var(--font-sans)] text-[length:var(--text-lg)] font-bold tracking-[-0.01em] text-[color:var(--chrome-fg)]">
-            {t(cat.labelKey, { defaultValue: cat.defaultLabel })}
-          </h1>
-          {cat.restart && <RestartBadge />}
-        </header>
+        <div className="min-w-0 w-full max-w-[1100px] mx-auto flex-auto self-start [container-type:inline-size] [container-name:settings] @min-[760px]/settings-shell:flex @min-[760px]/settings-shell:h-full @min-[760px]/settings-shell:min-h-0 @min-[760px]/settings-shell:flex-col @min-[760px]/settings-shell:overflow-hidden @min-[760px]/settings-shell:pr-[var(--space-2)]">
+          <header className="z-10 mb-[var(--space-5)] flex shrink-0 items-center gap-[var(--space-3)] border-b border-[color-mix(in_srgb,var(--chrome-fg)_7%,transparent)] bg-[var(--chrome-bg)] pb-[var(--space-4)]">
+            {CatIcon && (
+              <span
+                className="inline-flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[var(--chrome-radius-pill)] border border-transparent bg-[color-mix(in_srgb,var(--chrome-accent)_12%,var(--chrome-bg))] text-[color:var(--chrome-accent)]"
+                aria-hidden="true"
+              >
+                <CatIcon size={16} />
+              </span>
+            )}
+            <h1 className="m-0 flex-auto [font-family:var(--font-sans)] text-[length:var(--text-xl)] font-bold tracking-[-0.02em] text-[color:var(--chrome-fg)]">
+              {t(cat.labelKey, { defaultValue: cat.defaultLabel })}
+            </h1>
+            {cat.restart && <RestartBadge />}
+          </header>
 
-        <div className="[&>*:first-child]:mt-0">{renderCategory(active)}</div>
+          <div className="[&>*:first-child]:mt-0 @min-[760px]/settings-shell:min-h-0 @min-[760px]/settings-shell:flex-1 @min-[760px]/settings-shell:overflow-y-auto @min-[760px]/settings-shell:overscroll-contain">
+            {renderCategory(active)}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 import os
 from typing import Optional
+from core.logging_utils import log_safe
 
 logger = logging.getLogger("omnivoice.memory_budget")
 
@@ -70,8 +71,8 @@ def _format(mem: dict, headroom_gb: float) -> Optional[str]:
         if vram < headroom_gb:
             return (
                 f"Low GPU memory: {vram:.1f} GB free. Loading another model may "
-                "run out of VRAM — unload one you're not using (Settings → "
-                "Models), or switch to a smaller engine."
+                "run out of VRAM — unload one you're not using "
+                "(Model Catalogue → Models), or switch to a smaller engine."
             )
         return None
     ram = mem.get("ram_available_gb")
@@ -79,7 +80,7 @@ def _format(mem: dict, headroom_gb: float) -> Optional[str]:
         return (
             f"Low memory: {ram:.1f} GB free. Loading a large model here risks the "
             "backend being killed by the OS — close some apps, or unload a model "
-            "you're not using (Settings → Models)."
+            "you're not using (Model Catalogue → Models)."
         )
     return None
 
@@ -90,5 +91,5 @@ def log_if_low(context: str, headroom_gb: float = _LOW_RAM_HEADROOM_GB) -> Optio
     regardless; this is forensics, so a later OOM death has a breadcrumb."""
     msg = low_memory_warning(headroom_gb)
     if msg:
-        logger.warning("%s: %s", context, msg)
+        logger.warning("%s: %s", log_safe(context), log_safe(msg))
     return msg

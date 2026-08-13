@@ -33,10 +33,8 @@ describe('CastPanel', () => {
         profiles={[]}
       />,
     );
-    expect(screen.getByText('[voice:Mara]')).toBeInTheDocument();
-    expect(screen.getByText('[voice:Cole]')).toBeInTheDocument();
-    // Both unmapped → both show the "uses Default voice" hint.
-    expect(screen.getAllByText('audiobook.cast_uses_default')).toHaveLength(2);
+    expect(screen.getByText('Mara')).toBeInTheDocument();
+    expect(screen.getByText('Cole')).toBeInTheDocument();
 
     fireEvent.change(screen.getAllByTestId('voice-selector')[0], {
       target: { value: 'pid-1' },
@@ -72,7 +70,7 @@ describe('MarkupToolbar', () => {
     const ta = screen.getByLabelText('script');
     ta.focus();
     ta.setSelectionRange(5, 5); // caret right after "hello"
-    fireEvent.click(screen.getByText('audiobook.insert_pause'));
+    fireEvent.click(screen.getByRole('button', { name: 'audiobook.insert_pause' }));
     expect(ta.value).toBe('hello[pause 500ms] world');
   });
 
@@ -81,7 +79,7 @@ describe('MarkupToolbar', () => {
     const ta = screen.getByLabelText('script');
     ta.focus();
     ta.setSelectionRange(0, 11); // select the whole thing
-    fireEvent.click(screen.getByText('audiobook.insert_slow'));
+    fireEvent.click(screen.getByRole('button', { name: 'audiobook.insert_slow' }));
     expect(ta.value).toBe('[slow]hello world[/slow]');
   });
 
@@ -90,8 +88,16 @@ describe('MarkupToolbar', () => {
     const ta = screen.getByLabelText('script');
     ta.focus();
     ta.setSelectionRange(0, 0);
-    fireEvent.click(screen.getByText('audiobook.insert_voice'));
+    fireEvent.click(screen.getByRole('button', { name: 'audiobook.insert_voice' }));
     expect(ta.value).toBe('[voice:NAME]');
+  });
+
+  it('exposes an accessible dismissal control for the reactions menu', () => {
+    render(<ToolbarHarness />);
+    fireEvent.click(screen.getByRole('button', { name: 'audiobook.insert_reactions' }));
+    const close = screen.getByRole('button', { name: 'common.close' });
+    fireEvent.click(close);
+    expect(screen.queryByRole('menu')).toBeNull();
   });
 });
 

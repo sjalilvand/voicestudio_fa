@@ -1,4 +1,4 @@
-# Agent Rules — OmniVoice Studio
+# Agent Rules — VoiceStudio
 
 Binding for every AI agent (Claude, Codex, Cursor, review bots, …). CLAUDE.md is the full constitution; this is the operating contract. When they conflict, CLAUDE.md wins.
 
@@ -10,6 +10,11 @@ Binding for every AI agent (Claude, Codex, Cursor, review bots, …). CLAUDE.md 
 - Mechanical rules live in deterministic tests, never in agent effort: changelog style (`tests/test_changelog_style.py`), locale parity (`tests/test_locale_parity.py`), version lockstep (`tests/test_app_version.py`), CJK (`tests/test_no_hardcoded_cjk.py`).
 - Run targeted tests while iterating; full suites only before landing.
 - Tests and CI simulate CI honestly: `HF_HUB_OFFLINE=1` + empty `HF_HUB_CACHE` — a populated dev cache masks real failures.
+
+## Cross-platform parity: behaviour, not performance
+- The parity rule covers user-visible BEHAVIOUR. Hardware acceleration varies by host by design (CUDA/MPS/DirectML, Triton availability, `torch.compile`); skipping an optimization where it physically cannot work is not a parity violation.
+- Do not "fix" a parity finding by disabling a working optimization everywhere. That trades a real regression for a semantic one.
+- A feature the user can see and use on one OS but not another IS a violation. Judge by what the user can do, not by how fast it runs.
 
 ## Merge protocol (hard rules)
 1. Never merge without review. Harvest CodeRabbit + Greptile comments first; never merge with an unread Critical/P1.
@@ -27,3 +32,17 @@ Binding for every AI agent (Claude, Codex, Cursor, review bots, …). CLAUDE.md 
 - Versioning: `frontend/package.json` is the single source of truth; never bump without the owner asking.
 - `frontend/package.json` dep changes require regenerating root `bun.lock` (Docker runs `--frozen-lockfile`).
 - Issues: absorb or decline — never defer to a future version. Check the open-PR queue before implementing community-reported fixes.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `debpalash/VoiceStudio`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical roles, each label string equal to its name. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.

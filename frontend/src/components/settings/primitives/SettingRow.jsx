@@ -6,7 +6,7 @@ import InfoHint from './InfoHint';
  * SettingRow — one labelled row in a SettingsSection.
  *
  * FAST-mode shadcn migration: the grid layout, label/subtitle typography and the
- * right-aligned control slot are now Tailwind utilities on the OmniVoice
+ * right-aligned control slot are now Tailwind utilities on the VoiceStudio
  * `--chrome-*` / `--space-*` token bridge (palette preserved exactly). The old
  * `.st-row*` rules in primitives.css are gone. Row-stacking on a narrow Settings
  * column is reproduced with the Tailwind v4 named-container variant
@@ -45,7 +45,7 @@ export default function SettingRow({
       data-slot="setting-row"
       data-mono={mono ? '' : undefined}
       className={cn(
-        'grid gap-y-[1px] py-[var(--space-4)] min-h-0 border-b border-transparent last:border-b-0 [font-family:var(--font-sans)]',
+        'grid min-h-0 gap-y-[1px] rounded-[var(--chrome-radius-pill)] border-b border-[color-mix(in_srgb,var(--chrome-fg)_7%,transparent)] px-[var(--space-3)] py-[var(--space-5)] [font-family:var(--font-sans)] last:border-b-0',
         align === 'start' ? 'items-start' : 'items-center',
         stack
           ? 'grid-cols-[1fr] gap-[var(--space-3)]'
@@ -54,8 +54,16 @@ export default function SettingRow({
       )}
     >
       <div className={cn('min-w-0 flex flex-col gap-[2px]', stack ? 'max-w-none' : 'max-w-[52ch]')}>
-        <span className="inline-flex items-center gap-[var(--space-2)] text-[color:var(--chrome-fg)] font-medium text-[length:var(--text-base)] leading-[1.35] [&_svg]:text-[var(--chrome-fg-dim)] [&_svg]:shrink-0">
-          {Icon && <Icon size={14} aria-hidden="true" />}
+        <span className="inline-flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-medium leading-[1.35] text-[color:var(--chrome-fg)]">
+          {Icon && (
+            <span
+              data-slot="setting-row-icon"
+              className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[var(--chrome-radius-pill)] bg-[color-mix(in_srgb,var(--chrome-accent)_9%,transparent)] text-[var(--chrome-accent)]"
+              aria-hidden="true"
+            >
+              <Icon size={13} />
+            </span>
+          )}
           {title}
           {hint && <InfoHint>{hint}</InfoHint>}
         </span>

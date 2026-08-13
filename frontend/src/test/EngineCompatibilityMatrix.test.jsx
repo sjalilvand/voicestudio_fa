@@ -69,6 +69,46 @@ describe('EngineCompatibilityMatrix', () => {
     vi.useRealTimers();
   });
 
+  it('lists available engines first, keeping registration order inside each group', async () => {
+    // The fixture is deliberately interleaved (available, UNavailable,
+    // available). A matrix that renders it in payload order buries a usable
+    // engine under one you cannot select, which is the whole reason to sort:
+    // this list is something you pick FROM.
+    render(
+      <EngineCompatibilityMatrix
+        family="tts"
+        activeId="omnivoice"
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
+        apiGetEngineHealth={vi.fn()}
+      />,
+    );
+    await screen.findByText('OmniVoice (test)');
+
+    const order = Array.from(document.querySelectorAll('.engine-matrix__name')).map(
+      (el) => el.textContent,
+    );
+    expect(order).toEqual(['OmniVoice (test)', 'IndexTTS2 (test)', 'KittenTTS (test)']);
+  });
+
+  it("dims an unavailable engine's name without fading its evidence", async () => {
+    // Fading the whole row took the status badge and GPU chips with it — the
+    // two things that say WHY the engine is unavailable.
+    render(
+      <EngineCompatibilityMatrix
+        family="tts"
+        activeId="omnivoice"
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
+        apiGetEngineHealth={vi.fn()}
+      />,
+    );
+    const unavailable = await screen.findByText('KittenTTS (test)');
+    const available = screen.getByText('IndexTTS2 (test)');
+
+    expect(unavailable.className).toContain('color-mix');
+    expect(available.className).not.toContain('color-mix');
+    expect(unavailable.closest('.engine-matrix__row').className).not.toContain('opacity-');
+  });
+
   it('renders one row per backend with the documented columns', async () => {
     const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
     render(
@@ -565,6 +605,42 @@ describe('EngineCompatibilityMatrix', () => {
     });
   });
 
+  it('mounts the PocketTTS terms dialog from an unavailable engine row', async () => {
+    const apiListEngines = vi.fn().mockResolvedValue({
+      tts: {
+        active: 'omnivoice',
+        backends: [
+          {
+            id: 'pockettts',
+            display_name: 'PocketTTS',
+            available: false,
+            reason: 'PocketTTS license not accepted. Review the terms to enable it.',
+            install_hint: null,
+            last_error: null,
+            isolation_mode: 'subprocess',
+            gpu_compat: ['cpu'],
+          },
+        ],
+      },
+      asr: { active: '', backends: [] },
+      llm: { active: 'off', backends: [] },
+    });
+    render(
+      <EngineCompatibilityMatrix
+        family="tts"
+        apiListEngines={apiListEngines}
+        apiGetEngineHealth={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => screen.getByText('PocketTTS'));
+    fireEvent.click(screen.getByRole('button', { name: /review and accept pockettts license/i }));
+    await waitFor(() => {
+      expect(screen.getByText('PocketTTS License Acceptance')).toBeInTheDocument();
+      expect(screen.getByText('Review the access conditions')).toBeInTheDocument();
+    });
+  });
+
   // ── Real-synthesis self-test (in-process TTS engines) ──────────────────
   it('clicking Self-test runs a real synthesis and renders audio seconds + sample rate', async () => {
     const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
@@ -847,7 +923,7 @@ describe('EngineCompatibilityMatrix', () => {
     expect(screen.getByTestId('curated-model-select-mlx-audio')).toBeDisabled();
   });
 
-  // ── showFamilyTabs={false} — pinned per-family mount (Settings → Engines) ─
+  // ── showFamilyTabs={false} — pinned per-family mount (Model Catalogue → Engines) ─
   function multiFamilyResponse() {
     return {
       tts: {
@@ -915,6 +991,13 @@ describe('EngineCompatibilityMatrix', () => {
     await waitFor(() => screen.getByText('OmniVoice (test)'));
     expect(screen.getByText('Engine Compatibility Matrix')).toBeInTheDocument();
     expect(document.querySelectorAll('.engine-matrix__tab-family').length).toBe(3);
+    const labels = document.querySelectorAll('.engine-matrix__tab-label');
+    expect(labels).toHaveLength(3);
+    for (const label of labels) {
+      expect(label).toHaveClass('items-center');
+      expect(label).not.toHaveClass('flex-col');
+    }
+    expect(document.querySelector('.engine-matrix__tab-active')).toHaveAttribute('translate', 'no');
   });
 
   it('names what each family does in pinned mode (one description line)', async () => {
@@ -953,7 +1036,7 @@ describe('EngineCompatibilityMatrix', () => {
   // ── `hint` — available-but-has-advice rows ──────────────────────────────
   function hintResponse() {
     const resp = makeEnginesResponse();
-    // OmniVoice: available with advice (the VoxCPM2 ">=2.0.3" shape).
+    // VoiceStudio: available with advice (the VoxCPM2 ">=2.0.3" shape).
     resp.tts.backends[0].hint =
       'installed voxcpm 2.0.1 is older than 2.0.3 — upgrading is recommended';
     return resp;
@@ -1142,7 +1225,9 @@ describe('EngineCompatibilityMatrix', () => {
       const name = row.querySelector('.engine-matrix__name');
       expect(name.className).toMatch(/\btruncate\b/);
       expect(name.className).toMatch(/\bwhitespace-nowrap\b/);
+      expect(name).toHaveClass('text-[length:var(--text-sm)]');
       expect(name).toHaveAttribute('title', name.textContent);
+      expect(row.querySelector('.engine-matrix__id')).toHaveClass('text-[length:var(--text-2xs)]');
     }
   });
 

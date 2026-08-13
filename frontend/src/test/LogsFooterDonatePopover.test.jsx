@@ -6,15 +6,20 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-vi.mock('../api/hooks', () => ({
+// Partial mocks: the footer's other chrome (engine quick switch, compute
+// chip) keeps whatever these modules gain next without this file tracking it.
+vi.mock('../api/hooks', async (importOriginal) => ({
+  ...(await importOriginal()),
   useSystemLogs: () => ({ data: null, refetch: vi.fn() }),
   useTauriLogs: () => ({ data: null, refetch: vi.fn() }),
   useNotifications: () => ({ data: null }),
   useVisibleNotifications: () => ({ data: null, notifications: [] }),
   isDismissibleNotification: () => false,
 }));
-vi.mock('../api/system', () => ({
+vi.mock('../api/system', async (importOriginal) => ({
+  ...(await importOriginal()),
   clearSystemLogs: vi.fn(),
   clearTauriLogs: vi.fn(),
 }));
@@ -62,25 +67,39 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+// The footer hosts a react-query consumer (the status-bar Compute control), so
+// it needs a provider — same as the other two LogsFooter suites.
+function renderFooter() {
+  return render(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <LogsFooter />
+    </QueryClientProvider>,
+  );
+}
+
 describe('LogsFooter donation-moment popover', () => {
   it('is hidden by default and appears on the donation-moment event', () => {
-    render(<LogsFooter />);
+    renderFooter();
     expect(popover()).toBeNull();
 
     fireMoment(0);
     expect(popover()).toBeInTheDocument();
     // Line 1 copy (en), Ko-fi + PayPal CTAs, Later, and the quiet opt-out.
     expect(screen.getByText(/100% local/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Support OmniVoice on Ko-fi' })).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Support OmniVoice via PayPal' }),
+      screen.getByRole('button', { name: 'Support VoiceStudio on Ko-fi' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Support VoiceStudio via PayPal' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: "Don't ask again" })).toBeInTheDocument();
   });
 
   it('shows end-to-end when the eligibility engine fires (mocked storage + random)', () => {
-    render(<LogsFooter />);
+    renderFooter();
     // Seed persisted history: past the lifetime minimum, first moment long ago.
     localStorage.setItem(LS_MOMENT_COUNT, String(MIN_LIFETIME_MOMENTS));
     localStorage.setItem(
@@ -95,7 +114,7 @@ describe('LogsFooter donation-moment popover', () => {
   });
 
   it('pulses the heart while open, and "Later" quietly dismisses', () => {
-    render(<LogsFooter />);
+    renderFooter();
     expect(heartBtn().className).toContain('heart-glow');
 
     fireMoment(1);
@@ -109,7 +128,7 @@ describe('LogsFooter donation-moment popover', () => {
   });
 
   it('"Don\'t ask again" sets the permanent opt-out (new + legacy flags)', () => {
-    render(<LogsFooter />);
+    renderFooter();
     fireMoment(2);
     fireEvent.click(screen.getByRole('button', { name: "Don't ask again" }));
     expect(popover()).toBeNull();
@@ -118,21 +137,21 @@ describe('LogsFooter donation-moment popover', () => {
   });
 
   it('Ko-fi / PayPal CTAs open the existing donate links and dismiss', () => {
-    render(<LogsFooter />);
+    renderFooter();
     fireMoment(0);
-    fireEvent.click(screen.getByRole('button', { name: 'Support OmniVoice on Ko-fi' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Support VoiceStudio on Ko-fi' }));
     expect(openExternal).toHaveBeenCalledWith(KOFI_URL);
     expect(popover()).toBeNull();
 
     fireMoment(0);
-    fireEvent.click(screen.getByRole('button', { name: 'Support OmniVoice via PayPal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Support VoiceStudio via PayPal' }));
     expect(openExternal).toHaveBeenCalledWith(PAYPAL_URL);
     expect(popover()).toBeNull();
   });
 
   it(`auto-dismisses after ${DONATE_POPOVER_AUTO_DISMISS_MS / 1000}s`, () => {
     vi.useFakeTimers();
-    render(<LogsFooter />);
+    renderFooter();
     fireMoment(3);
     expect(popover()).toBeInTheDocument();
 
@@ -147,7 +166,7 @@ describe('LogsFooter donation-moment popover', () => {
   });
 
   it('manual entry is unchanged: the heart still opens the donate view', () => {
-    render(<LogsFooter />);
+    renderFooter();
     fireMoment(0);
     fireEvent.click(heartBtn());
     // Popover retires and the app routes to the existing donate mode.

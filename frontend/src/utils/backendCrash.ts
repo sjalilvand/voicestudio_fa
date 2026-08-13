@@ -84,6 +84,30 @@ export function _adaptLastRunCrash(
   };
 }
 
+/** True when this marker is the run SENTINEL — startup noticing the previous
+ * run never cleared its marker — rather than an observed process death. The
+ * sentinel genuinely does not know whether the previous run crashed: the
+ * machine sleeping, a force-quit, a stopped WSL VM or a Docker restart all
+ * leave the same trace, and those benign causes are the majority case
+ * (#1375). */
+export function isSentinelMarker(marker: BackendCrashMarker): boolean {
+  return (
+    marker.exit_code === null &&
+    marker.signal === null &&
+    marker.exit_desc === 'process ended uncleanly (previous run)'
+  );
+}
+
+/** True when the marker carries something a maintainer could act on: a log
+ * tail, or at least a concrete exit code/signal. A sentinel with neither
+ * produces a bug report whose evidence block is EMPTY — the reporter files it
+ * in good faith, nobody can answer it, and it sits open (#1375). The
+ * one-click report is gated on this; the notice itself is not. */
+export function hasCrashEvidence(marker: BackendCrashMarker): boolean {
+  if ((marker.last_stderr || '').trim()) return true;
+  return marker.exit_code !== null || marker.signal !== null;
+}
+
 const HTTP_FALLBACK_TIMEOUT_MS = 2500;
 
 /** Auth headers a non-desktop deployment may need (LAN-share PIN, remote API
@@ -231,7 +255,60 @@ export function isNativeFault(marker: Pick<BackendCrashMarker, 'exit_code' | 'si
   return marker.exit_code != null && NT_FAULT_EXIT_CODES.has(marker.exit_code);
 }
 
-export function crashCauseHint(marker: Pick<BackendCrashMarker, 'exit_code' | 'signal'>): string {
+/**
+ * True when the captured stderr shows the backend dying while IMPORTING its
+ * own dependencies — a broken/incomplete Python environment, not a workload.
+ *
+ * Reported repeatedly (#1282: `import torchaudio` → `from torch.hub import …`
+ * exploding 4 s after launch; #1376: transformers' lazy module raising
+ * `ModuleNotFoundError: Could not import module 'GenerationMixin'` 28 s in).
+ * Both fell through to the VRAM default, which told users whose venv was
+ * half-installed to go flush a TTS model. Nothing about the exit code
+ * distinguishes these — the traceback is the only evidence, and it was sitting
+ * unread in the marker.
+ *
+ * Deliberately narrow: an ImportError *plus* one of the packages the app
+ * cannot run without. A model file that fails to import mid-request is a
+ * different animal, and a generic "ImportError" match would swallow it.
+ */
+const _IMPORT_FAILURE_MARKERS = [
+  'modulenotfounderror',
+  'importerror',
+  'dll load failed',
+  'undefined symbol',
+];
+const _CORE_DEPENDENCIES = [
+  'torch',
+  'torchaudio',
+  'torchvision',
+  'transformers',
+  'soundfile',
+  'numpy',
+];
+
+// How much of the captured tail is treated as "this run". backend_err.log is
+// appended across runs and the shell captures its last ~40 lines, so a process
+// that died before writing 40 lines of its own carries the PREVIOUS run's
+// output above its own (greptile). An import traceback stranded up there must
+// not diagnose the crash that happened after it — restricting the match to the
+// most recent lines means a stale one only counts when the current run wrote
+// almost nothing, which is itself the startup death this classifies.
+const _RECENT_TAIL_LINES = 20;
+
+export function isBrokenEnvironmentCrash(
+  marker: Partial<Pick<BackendCrashMarker, 'last_stderr'>>,
+): boolean {
+  const raw = (marker.last_stderr || '').trim();
+  if (!raw) return false;
+  const tail = raw.split('\n').slice(-_RECENT_TAIL_LINES).join('\n').toLowerCase();
+  if (!_IMPORT_FAILURE_MARKERS.some((m) => tail.includes(m))) return false;
+  return _CORE_DEPENDENCIES.some((d) => tail.includes(d));
+}
+
+export function crashCauseHint(
+  marker: Pick<BackendCrashMarker, 'exit_code' | 'signal'> &
+    Partial<Pick<BackendCrashMarker, 'last_stderr'>>,
+): string {
   // #1223: the backend exits 78 (EX_CONFIG) when it could not bind its port.
   // That is not a crash and has nothing to do with memory — the old message
   // sent a user whose real problem was a leftover process off to shrink their
@@ -240,7 +317,7 @@ export function crashCauseHint(marker: Pick<BackendCrashMarker, 'exit_code' | 's
     return i18next.t('errors.crash_port_in_use', {
       defaultValue:
         'The backend could not start because port 3900 is already in use — another copy of ' +
-        'OmniVoice (or an app that claimed that port) is holding it. Quit the other instance ' +
+        'VoiceStudio (or an app that claimed that port) is holding it. Quit the other instance ' +
         'and relaunch; if nothing is visibly running, an orphaned backend from a previous ' +
         'session is still holding the port.',
     });
@@ -250,7 +327,26 @@ export function crashCauseHint(marker: Pick<BackendCrashMarker, 'exit_code' | 's
       defaultValue:
         'It was force-killed (signal 9), which usually means the operating system ran out of ' +
         'memory (RAM) and stopped it. Close memory-heavy apps, pick a smaller ASR model in ' +
-        'Settings → Models, or flush the TTS model before transcribing.',
+        'Model Catalogue → Models, or flush the TTS model before transcribing.',
+    });
+  }
+  // Ordered deliberately, between the two explicit-fact branches.
+  //
+  // AFTER signal 9: an OOM kill is an unambiguous fact about THIS process, and
+  // a failed import never produces one — so a stale traceback in the captured
+  // tail must never outrank it (greptile).
+  //
+  // BEFORE the native-fault branch: a dependency that will not load takes the
+  // process down as an access violation on Windows (a missing dependent DLL),
+  // where "update your GPU driver" is just as wrong as the VRAM advice.
+  if (isBrokenEnvironmentCrash(marker)) {
+    return i18next.t('errors.crash_broken_env', {
+      defaultValue:
+        'It died while loading its own Python dependencies, so this is not about memory or ' +
+        'your GPU — the environment is incomplete or was left half-updated. Use "Clean & Retry" ' +
+        'in Settings → Logs → Backend, which rebuilds it from scratch; that repairs it in ' +
+        'place, without touching your voices or projects. If it still fails afterwards, the ' +
+        'crash details name the exact package that would not import.',
     });
   }
   // A native crash inside the compute stack — the process was executing bad
@@ -270,8 +366,8 @@ export function crashCauseHint(marker: Pick<BackendCrashMarker, 'exit_code' | 's
         'It crashed inside the compute stack rather than running out of memory — that points ' +
         'at a GPU driver that does not match the bundled CUDA runtime, or a model file that ' +
         'downloaded incompletely. Update your GPU driver, then re-download the model from ' +
-        'Settings → Models (it repairs a partial download in place). If it keeps happening, ' +
-        'switch to a crash-isolated engine in Settings → Engines — "OmniVoice (subprocess)" ' +
+        'Model Catalogue → Models (it repairs a partial download in place). If it keeps happening, ' +
+        'switch to a crash-isolated engine in Model Catalogue → Engines — "VoiceStudio (subprocess)" ' +
         'for synthesis, "Faster-Whisper (crash-isolated subprocess)" for transcription. Those ' +
         'run the model in a separate process, so a crash like this takes down that process ' +
         'instead of the whole backend.',
@@ -281,7 +377,7 @@ export function crashCauseHint(marker: Pick<BackendCrashMarker, 'exit_code' | 's
     defaultValue:
       'On smaller GPUs the usual cause is running out of VRAM while loading the ASR model on ' +
       'top of the TTS model: flush the TTS model first, or pick a smaller ASR model in ' +
-      'Settings → Models.',
+      'Model Catalogue → Models.',
   });
 }
 
@@ -313,10 +409,36 @@ export function crashAge(marker: Pick<BackendCrashMarker, 'ts'>, nowMs = Date.no
  * `getCrash` is an injectable seam (same idea as services/endpoint_race's
  * injectable probers) so the branch logic is unit-testable without a shell.
  */
+/** Is the backend answering right now? Short timeout — this runs on a failure
+ *  path and must not add a visible stall. Any error means "cannot tell". */
+async function _probeBackendAlive(): Promise<boolean> {
+  try {
+    const { apiUrl } = await import('../api/client.ts');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+    try {
+      const res = await fetch(apiUrl('/system/info'), {
+        signal: controller.signal,
+        headers: _fallbackHeaders(),
+      });
+      return res.ok;
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    return false;
+  }
+}
+
 export async function streamDropError(
   fallbackMessage: string,
   getCrash: () => Promise<BackendCrashMarker | null> = getUnacknowledgedBackendCrash,
-  opts: { waitMs?: number; intervalMs?: number; sleep?: (ms: number) => Promise<void> } = {},
+  opts: {
+    waitMs?: number;
+    intervalMs?: number;
+    sleep?: (ms: number) => Promise<void>;
+    probeAlive?: () => Promise<boolean>;
+  } = {},
 ): Promise<Error> {
   // #1119: the shell learns the backend died from a ~2 s POLL — it must notice
   // the child exit and write the crash marker. Asking for that marker ONCE, at
@@ -346,14 +468,42 @@ export async function streamDropError(
     if (Date.now() >= deadline) break;
     await sleep(intervalMs);
   }
-  if (!crash) return new Error(fallbackMessage);
+  if (!crash) {
+    // No crash marker — but "no marker" is not "the backend died and we missed
+    // it". Outside the Tauri shell there is no death watcher at all, so this
+    // branch is where every browser/Docker user lands, and the caller's
+    // fallback used to assert a cause on their behalf ("Likely ASR backend
+    // failed to load"). #1242 reported exactly that, in `server` mode, with the
+    // backend having answered 20 s earlier — so nothing had crashed and nothing
+    // had failed to load.
+    //
+    // Ask instead of assuming. If the backend is still answering, the process
+    // did not go away, which rules the caller's guess out: in a served
+    // deployment a stream that dies while the server is healthy is
+    // characteristically a reverse proxy or load balancer buffering or timing
+    // out the SSE connection.
+    const probeAlive = opts.probeAlive ?? _probeBackendAlive;
+    if (await probeAlive()) {
+      return new Error(
+        i18next.t('errors.stream_cut_backend_alive', {
+          defaultValue:
+            'The stream ended early, but the backend is still running — so it did not crash. ' +
+            'In a served or containerised setup this is usually a reverse proxy or load balancer ' +
+            'buffering or timing out the connection: disable response buffering for this route ' +
+            '(nginx: proxy_buffering off; X-Accel-Buffering: no) and raise its read timeout. ' +
+            'Running the desktop app directly, or on localhost without a proxy, will confirm it.',
+        }),
+      );
+    }
+    return new Error(fallbackMessage);
+  }
   try {
     window.dispatchEvent(new CustomEvent('ov:backend-crashed', { detail: crash }));
   } catch {
     /* no window (tests) — the Error below still tells the story */
   }
   return new Error(
-    `The local OmniVoice backend crashed (${describeCrashExit(crash)}) ${crashAge(crash)} ago, ` +
+    `The local VoiceStudio backend crashed (${describeCrashExit(crash)}) ${crashAge(crash)} ago, ` +
       'which dropped this stream — it is being restarted automatically. Open the crash notice for ' +
       `the error output. ${crashCauseHint(crash)}`,
   );

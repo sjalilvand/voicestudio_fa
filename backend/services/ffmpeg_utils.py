@@ -1,6 +1,7 @@
 import asyncio
 import errno
 import logging
+from core.logging_utils import log_safe
 import os
 import shutil
 import subprocess
@@ -9,6 +10,7 @@ import sys
 # Leaf module (stdlib-only) — safe to import at module top, unlike
 # services.dub_pipeline which imports this module and would cycle.
 from services.proc_registry import register_proc, unregister_proc
+from core.path_security import UnsafePath, resolve_within
 
 logger = logging.getLogger("omnivoice.api")
 
@@ -194,7 +196,7 @@ def find_ffmpeg():
       1. ``FFMPEG_PATH`` env var (set by Tauri when a sidecar is bundled, or
          by the user's Settings → Audio tools override via prefs).
       2. ``imageio-ffmpeg`` pip package (ships a static binary per platform).
-      3. OmniVoice-acquired static bundle (``services.media_tools``) — the
+      3. VoiceStudio-acquired static bundle (``services.media_tools``) — the
          checksummed build the app downloads itself when nothing else
          resolves; the only bundled tier that also ships ffprobe.
       4. Common system paths / ``PATH``.
@@ -216,7 +218,7 @@ def find_ffmpeg():
         logger.debug("imageio_ffmpeg binary not usable at %s", candidate)
     except Exception as e:
         logger.debug("imageio_ffmpeg unavailable: %s", e)
-    # 3. OmniVoice-acquired bundled static binary (never downloads here —
+    # 3. VoiceStudio-acquired bundled static binary (never downloads here —
     # acquisition is media_tools' background job; this only picks up an
     # already-installed build).
     candidate = _acquired_bundled("ffmpeg")
@@ -263,7 +265,7 @@ def resolve_ffprobe() -> str | None:
       2. ``FFPROBE_PATH`` env var — legacy alias kept for backward
          compatibility with older Tauri shells / dev environments; also the
          key Settings → Audio tools persists a user override under.
-      3. OmniVoice-acquired static bundle (``services.media_tools``) —
+      3. VoiceStudio-acquired static bundle (``services.media_tools``) —
          imageio-ffmpeg ships no ffprobe, so this is the bundled tier that
          closes the source-install gap.
       4. ``shutil.which("ffprobe")`` — system ``PATH`` fallback.
@@ -317,12 +319,12 @@ def find_ffprobe():
 def ensure_media_tools_on_path() -> list[str]:
     """Put the resolved ffmpeg/ffprobe on ``PATH`` for third-party code (#1256).
 
-    OmniVoice's own call sites always resolve an explicit path, so a bundled
+    VoiceStudio's own call sites always resolve an explicit path, so a bundled
     sidecar that was never on ``PATH`` works fine for us. Our dependencies do
     not get that courtesy: a library that shells out to ``ffprobe`` by bare
     name dies with ``FileNotFoundError: [Errno 2] No such file or directory:
     'ffprobe'``. The reporter of #1256 hit that mid-synthesis and was told the
-    engine had "stopped with an error OmniVoice doesn't recognize", on a Mac
+    engine had "stopped with an error VoiceStudio doesn't recognize", on a Mac
     where the app's OWN ffprobe was sitting on disk, resolvable, the whole
     time.
 
@@ -550,21 +552,25 @@ async def _pitch_preserving_stretch(wav, target_samples: int, sr: int):
     return torch.from_numpy(out_arr.copy()).unsqueeze(0).to(wav.device)
 
 
-async def probe_duration(path: str) -> float | None:
+async def probe_duration(path: str, *, allowed_root: str) -> float | None:
     """Return a media file's duration in seconds via ffprobe, or None.
 
     Used by the Smart Fit pipeline to sanity-check source/track lengths
     without loading the media. Never raises — probing is best-effort.
     """
     ffprobe = find_ffprobe()
-    if not ffprobe or not os.path.isfile(path):
+    try:
+        media_path = resolve_within(allowed_root, path)
+    except UnsafePath:
+        return None
+    if not ffprobe or not media_path.is_file():
         return None
     try:
         proc = await spawn_subprocess(
             ffprobe, "-v", "error",
             "-show_entries", "format=duration",
             "-of", "default=noprint_wrappers=1:nokey=1",
-            path,
+            str(media_path),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -573,7 +579,7 @@ async def probe_duration(path: str) -> float | None:
             return None
         return float(stdout.decode().strip())
     except Exception as e:
-        logger.debug("probe_duration failed for %s: %s", os.path.basename(str(path)), e)
+        logger.debug("probe_duration failed for %s: %s", log_safe(os.path.basename(str(path))), log_safe(e))
         return None
 
 
@@ -606,7 +612,7 @@ async def probe_frame_rates(path: str) -> "tuple[str, str] | None":
             return None
         return parts[0].strip(), parts[1].strip()
     except Exception as e:
-        logger.debug("probe_frame_rates failed for %s: %s", os.path.basename(str(path)), e)
+        logger.debug("probe_frame_rates failed for %s: %s", log_safe(os.path.basename(str(path))), log_safe(e))
         return None
 
 

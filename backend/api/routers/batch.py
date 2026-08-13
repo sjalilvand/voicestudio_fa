@@ -20,6 +20,8 @@ from pydantic import BaseModel
 
 from core.config import DATA_DIR
 from core import failure
+from core.logging_utils import log_safe
+from core.file_cleanup import FileCleanupError, unlink_if_present
 
 router = APIRouter()
 logger = logging.getLogger("omnivoice.batch")
@@ -149,14 +151,17 @@ async def _run_batch_pipeline(job_id: str, job: dict):
     # ── 2. Transcribe ─────────────────────────────────────────────────
     _set_progress(job, "transcribe", 0)
 
-    from services.asr_backend import get_active_asr_backend
+    from services.asr_backend import load_active_asr_backend
     from services.model_manager import _gpu_pool, _cpu_pool, run_on_gpu_pool_guarded
     from services.segmentation import (
         segment_transcript, assign_speakers_heuristic,
     )
 
     def _transcribe():
-        backend = get_active_asr_backend()
+        # `load_*`, not `get_*`: the plain selector returns engines whose
+        # shallow probe passed but whose deep import chain is broken, failing
+        # the whole batch job at `.transcribe()` instead of degrading (#1185).
+        backend = load_active_asr_backend()
         result = backend.transcribe(audio_path, word_timestamps=True)
         detected_lang = result.get("language", "en")
         segments = segment_transcript(result, duration=duration)
@@ -188,8 +193,8 @@ async def _run_batch_pipeline(job_id: str, job: dict):
         return
 
     # ── Engine resolution (issue #312 class) ────────────────────────────
-    # Batch used to hardcode OmniVoice via get_model() regardless of the
-    # engine selected in Settings → Engines. require_cloning only when a
+    # Batch used to hardcode VoiceStudio via get_model() regardless of the
+    # engine selected in Model Catalogue → Engines. require_cloning only when a
     # specific voice is pinned (job["voice_id"]) — an unpinned job is fine on
     # any active engine. Resolved ONCE for the whole job (every language
     # below shares the same active engine); an uncaught ValueError here
@@ -531,7 +536,10 @@ async def enqueue_batch_job(
     _jobs[job_id] = job
     await _queue.put(job_id)
 
-    logger.info("Batch job %s enqueued: %s → %s", job_id, video.filename, lang_list)
+    logger.info(
+        "Batch job %s enqueued (%d target languages)",
+        log_safe(job_id), len(lang_list),
+    )
     return {"job_id": job_id, "status": "queued", "queue_position": _queue.qsize()}
 
 
@@ -573,14 +581,18 @@ def cancel_batch_job(job_id: str):
 @router.delete("/batch/jobs/{job_id}")
 def delete_batch_job(job_id: str):
     """Delete a batch job record and its video file."""
-    job = _jobs.pop(job_id, None)
+    job = _jobs.get(job_id)
     if not job:
         raise HTTPException(404, "Job not found")
-    if job.get("video_path") and os.path.exists(job["video_path"]):
+    if job.get("video_path"):
         try:
-            os.remove(job["video_path"])
-        except Exception:
-            pass
+            unlink_if_present(job["video_path"])
+        except FileCleanupError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail="Could not delete the batch video file. Close any app using it and retry.",
+            ) from exc
+    _jobs.pop(job_id, None)
     return {"deleted": True}
 
 
