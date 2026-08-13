@@ -36,6 +36,8 @@
     "open_models": "Apri modelli"
   },
   "settings": {
+    "remote_backend_test": "Verifica connessione",
+    "remote_backend_save": "Salva e ricarica",
     "remote_backend_recovery_title": "Impossibile raggiungere il backend remoto",
     "remote_backend_recovery_hint": "Puoi modificare il backend remoto in seguito in Impostazioni → Condivisione.",
     "remote_backend_use_local": "Usa il backend locale",

@@ -36,6 +36,8 @@
     "open_models": "فتح النماذج"
   },
   "settings": {
+    "remote_backend_test": "اختبار الاتصال",
+    "remote_backend_save": "حفظ وإعادة التحميل",
     "remote_backend_recovery_title": "تعذّر الوصول إلى الواجهة الخلفية البعيدة",
     "remote_backend_recovery_hint": "يمكنك تغيير الواجهة الخلفية البعيدة لاحقًا من الإعدادات ← المشاركة.",
     "remote_backend_use_local": "استخدام الواجهة الخلفية المحلية",

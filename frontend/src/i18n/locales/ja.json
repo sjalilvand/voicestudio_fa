@@ -36,6 +36,8 @@
     "open_models": "モデルを開く"
   },
   "settings": {
+    "remote_backend_test": "接続をテスト",
+    "remote_backend_save": "保存して再読み込み",
     "remote_backend_recovery_title": "リモートバックエンドに接続できません",
     "remote_backend_recovery_hint": "リモートバックエンドは後で「設定」→「共有」から変更できます。",
     "remote_backend_use_local": "ローカルバックエンドを使用",

@@ -36,6 +36,8 @@
     "open_models": "Mở mô hình"
   },
   "settings": {
+    "remote_backend_test": "Kiểm tra kết nối",
+    "remote_backend_save": "Lưu và tải lại",
     "remote_backend_recovery_title": "Không thể kết nối với backend từ xa",
     "remote_backend_recovery_hint": "Bạn có thể đổi backend từ xa sau trong Cài đặt → Chia sẻ.",
     "remote_backend_use_local": "Dùng backend cục bộ",

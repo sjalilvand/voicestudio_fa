@@ -36,6 +36,8 @@
     "open_models": "Відкрити моделі"
   },
   "settings": {
+    "remote_backend_test": "Перевірити з’єднання",
+    "remote_backend_save": "Зберегти й перезавантажити",
     "remote_backend_recovery_title": "Не вдалося підключитися до віддаленого бекенду",
     "remote_backend_recovery_hint": "Згодом віддалений бекенд можна змінити в Налаштування → Спільний доступ.",
     "remote_backend_use_local": "Використовувати локальний бекенд",

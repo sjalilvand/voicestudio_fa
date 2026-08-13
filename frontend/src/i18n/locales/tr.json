@@ -36,6 +36,8 @@
     "open_models": "Modelleri aç"
   },
   "settings": {
+    "remote_backend_test": "Bağlantıyı test et",
+    "remote_backend_save": "Kaydet ve yeniden yükle",
     "remote_backend_recovery_title": "Uzak arka uca ulaşılamıyor",
     "remote_backend_recovery_hint": "Uzak arka ucu daha sonra Ayarlar → Paylaşım bölümünden değiştirebilirsiniz.",
     "remote_backend_use_local": "Yerel arka ucu kullan",

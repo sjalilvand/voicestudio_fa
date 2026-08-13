@@ -272,6 +272,8 @@
     "seed_reroll_hint": "滚动一个新的随机种子并保留它"
   },
   "settings": {
+    "remote_backend_test": "测试连接",
+    "remote_backend_save": "保存并重新加载",
     "remote_backend_recovery_title": "无法连接远程后端",
     "remote_backend_recovery_hint": "你可以稍后在“设置 → 共享”中更改远程后端。",
     "remote_backend_use_local": "使用本地后端",

@@ -36,6 +36,8 @@
     "open_models": "開啟模型"
   },
   "settings": {
+    "remote_backend_test": "測試連線",
+    "remote_backend_save": "儲存並重新載入",
     "remote_backend_recovery_title": "無法連線至遠端後端",
     "remote_backend_recovery_hint": "你可以稍後在「設定 → 分享」中變更遠端後端。",
     "remote_backend_use_local": "使用本機後端",

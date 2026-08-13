@@ -36,6 +36,8 @@
     "open_models": "Modellen openen"
   },
   "settings": {
+    "remote_backend_test": "Verbinding testen",
+    "remote_backend_save": "Opslaan en herladen",
     "remote_backend_recovery_title": "Kan de externe backend niet bereiken",
     "remote_backend_recovery_hint": "Je kunt de externe backend later wijzigen via Instellingen → Delen.",
     "remote_backend_use_local": "Lokale backend gebruiken",

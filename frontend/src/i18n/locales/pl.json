@@ -36,6 +36,8 @@
     "open_models": "Otwórz modele"
   },
   "settings": {
+    "remote_backend_test": "Testuj połączenie",
+    "remote_backend_save": "Zapisz i wczytaj ponownie",
     "remote_backend_recovery_title": "Nie można połączyć się ze zdalnym backendem",
     "remote_backend_recovery_hint": "Zdalny backend możesz później zmienić w Ustawienia → Udostępnianie.",
     "remote_backend_use_local": "Użyj lokalnego backendu",

@@ -431,14 +431,18 @@ def test_whitespace_query_does_not_shadow_admin_key_cookie(monkeypatch):
     monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
     monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")
 
-    require_admin(
-        _req_full(
-            "172.17.0.1",
-            method="POST",
-            query={"api_key": "   "},
-            cookies={"ov_key": "s3cret"},
-        )
+    request = _req_full(
+        "172.17.0.1",
+        method="POST",
+        query={"api_key": "   "},
+        cookies={"ov_key": "s3cret"},
+        headers={
+            "origin": "http://voice.test",
+            "x-voicestudio-csrf": "1",
+        },
     )
+    request.url = SimpleNamespace(scheme="http", netloc="voice.test")
+    require_admin(request)
 
 
 def test_server_mode_desktop_capability_rejects_remote_api_key(monkeypatch):
@@ -466,3 +470,36 @@ def test_is_local_host_unwraps_ipv4_mapped_ipv6(monkeypatch):
     monkeypatch.setenv("OMNIVOICE_TRUSTED_NETWORKS", "192.168.1.0/24")
     assert is_local_host("::ffff:192.168.1.5") is True
     assert is_local_host("::ffff:8.8.8.8") is False
+
+
+def test_side_effectful_get_cookie_session_requires_same_origin_csrf(monkeypatch, request):
+    from services.admin_sessions import admin_session_store
+
+    admin_session_store.clear()
+    request.addfinalizer(admin_session_store.clear)
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")
+    session = admin_session_store.issue("s3cret")
+
+    missing = _req_full(
+        "172.17.0.1",
+        method="GET",
+        cookies={"ov_session": session.token},
+    )
+    missing.url = SimpleNamespace(scheme="http", netloc="voice.test")
+    with pytest.raises(HTTPException) as exc:
+        require_admin_action(missing)
+    assert exc.value.status_code == 403
+
+    allowed = _req_full(
+        "172.17.0.1",
+        method="GET",
+        cookies={"ov_session": session.token},
+        headers={
+            "origin": "http://voice.test",
+            "x-voicestudio-csrf": "1",
+            "sec-fetch-site": "same-origin",
+        },
+    )
+    allowed.url = SimpleNamespace(scheme="http", netloc="voice.test")
+    require_admin_action(allowed)

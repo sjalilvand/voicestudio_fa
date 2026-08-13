@@ -36,6 +36,8 @@
     "open_models": "मॉडल खोलें"
   },
   "settings": {
+    "remote_backend_test": "कनेक्शन जाँचें",
+    "remote_backend_save": "सहेजें और फिर से लोड करें",
     "remote_backend_recovery_title": "रिमोट बैकएंड से संपर्क नहीं हो सका",
     "remote_backend_recovery_hint": "आप बाद में सेटिंग्स → शेयरिंग में रिमोट बैकएंड बदल सकते हैं।",
     "remote_backend_use_local": "लोकल बैकएंड इस्तेमाल करें",

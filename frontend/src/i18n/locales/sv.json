@@ -36,6 +36,8 @@
     "open_models": "Öppna modeller"
   },
   "settings": {
+    "remote_backend_test": "Testa anslutningen",
+    "remote_backend_save": "Spara och ladda om",
     "remote_backend_recovery_title": "Det går inte att nå fjärrbackend",
     "remote_backend_recovery_hint": "Du kan ändra fjärrbackend senare under Inställningar → Delning.",
     "remote_backend_use_local": "Använd lokal backend",

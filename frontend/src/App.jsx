@@ -657,7 +657,7 @@ function App() {
     let cancelled = false;
     (async () => {
       if (remoteBackend) {
-        const result = await probeRemoteBackend(remoteBackend.url, remoteBackend.key);
+        const result = await probeRemoteBackend(remoteBackend.url);
         if (cancelled) return;
         setRemoteFailure(result.ok ? null : result);
         setSetupNeeded(false);

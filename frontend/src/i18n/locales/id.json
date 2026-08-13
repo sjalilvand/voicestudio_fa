@@ -36,6 +36,8 @@
     "open_models": "Buka model"
   },
   "settings": {
+    "remote_backend_test": "Uji koneksi",
+    "remote_backend_save": "Simpan dan muat ulang",
     "remote_backend_recovery_title": "Backend jarak jauh tidak dapat dijangkau",
     "remote_backend_recovery_hint": "Anda dapat mengubah backend jarak jauh nanti di Pengaturan → Berbagi.",
     "remote_backend_use_local": "Gunakan backend lokal",

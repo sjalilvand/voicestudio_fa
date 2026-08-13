@@ -36,6 +36,8 @@
     "open_models": "เปิดโมเดล"
   },
   "settings": {
+    "remote_backend_test": "ทดสอบการเชื่อมต่อ",
+    "remote_backend_save": "บันทึกและโหลดใหม่",
     "remote_backend_recovery_title": "ไม่สามารถเชื่อมต่อแบ็กเอนด์ระยะไกลได้",
     "remote_backend_recovery_hint": "คุณเปลี่ยนแบ็กเอนด์ระยะไกลภายหลังได้ที่ การตั้งค่า → การแชร์",
     "remote_backend_use_local": "ใช้แบ็กเอนด์ในเครื่อง",
