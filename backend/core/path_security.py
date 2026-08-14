@@ -17,6 +17,13 @@ _WINDOWS_RESERVED_NAMES = frozenset({"CON", "PRN", "AUX", "NUL"}) | frozenset(
     f"{prefix}{number}" for prefix in ("COM", "LPT") for number in range(1, 10)
 )
 
+# Both separator families, so a stored sub-path splits into the same components
+# on every host. Windows accepts ``/`` as a real separator, so splitting on
+# ``os.sep`` alone left ``"job/out.mp4"`` as a single component there while the
+# identical value split cleanly on POSIX. POSIX input never reaches this with a
+# backslash — it is rejected as a foreign separator before the split.
+_PATH_SEPARATORS = re.compile(r"[\\/]")
+
 
 class UnsafePath(ValueError):
     """Raised when a path crosses its allowed filesystem boundary."""
@@ -69,7 +76,7 @@ def resolve_within(root: os.PathLike[str] | str, value: os.PathLike[str] | str) 
     # containment proof explicit to static analysis, this rejects empty,
     # dot, parent, drive, and separator-bearing components before Path sees
     # any persisted/request-derived string.
-    parts = raw.split(os.sep)
+    parts = _PATH_SEPARATORS.split(raw)
     clean_parts: list[str] = []
     for part in parts:
         clean = os.path.basename(part)
