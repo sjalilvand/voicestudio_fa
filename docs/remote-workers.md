@@ -153,6 +153,15 @@ fallback is reported once. ASR, diarization and translation also remain local. D
 runs here, deliberately and permanently, because there latency *is* the
 feature. The remaining operations are being ported one at a time.
 
+### Voice identity parity
+
+For TTS, the worker receives the complete local rendering contract: the voice
+profile's reference audio and transcript, its pinned seed, model quality
+controls, text chunking/crossfade settings, and output effect preset. The
+worker runs the same native or generic rendering pipeline as local
+`/generate`; selecting a gallery voice therefore does not turn it into a new
+random voice merely because it was rendered on another GPU.
+
 The picker knows this. It resolves against the surface you are on, so a chosen
 worker reads **Local** on a tab whose work has no remote path yet and names the
 reason, instead of showing a green dot next to a GPU that receives nothing. The
