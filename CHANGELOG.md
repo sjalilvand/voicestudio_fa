@@ -31,6 +31,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Changed
 
 - Gallery personas now preview through the local backend, retain their complete voice-design recipe, and open directly in Voice, Stories, or Audiobook. (#1542)
+- Typing and large workspace edits no longer serialize and rewrite persisted documents on every input; writes are coalesced off the interaction path — thanks @bultodepapas! (#1541)
 - Support amount choices now use every theme's shared card, accent and focus tokens. (#1530)
 - Sponsoring, commercial licensing and getting in touch are one page now. They answered the same question between them and each used to live somewhere else, so they are three sections on a single scroll — the footer heart, the commercial-licence links and Contact all land on it, at the section you asked for. (#1522)
 - Model Catalogue switches panes with tabs instead of a two-state toggle, and the Engine Compatibility Matrix's TTS / ASR / LLM switcher is now tabs too — arrow-key navigable, and each tab still shows the engine it would use. (#1522)
