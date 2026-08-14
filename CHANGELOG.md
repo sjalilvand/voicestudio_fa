@@ -11,9 +11,14 @@ the frozen-backend fallback mirror it for their toolchains.
 **Highlights**
 
 - Reporting a bug from an outdated build now offers the latest release first
+- The backend is only announced ready once it can actually serve, and crash-loop restarts now pace themselves
 
 ### Added
 - The bug reporter notices when you're on an outdated build and offers the latest release before filing — with a "File anyway" escape hatch — and stamps a `Build status` line into every report so up-to-date reports are tellable from stale ones (#1547)
+
+### Fixed
+- "Ready" now requires the deep health probe (a working database-backed route), not just the identity probe — a backend whose install broke underneath can no longer be announced up while every real request fails (#1548)
+- Supervisor restarts after repeat crashes now back off (immediate, then 5s, then 15s) instead of respawning back-to-back, so a tight crash loop can't burn the whole restart budget in seconds (#1548)
 
 ## [0.5.0] — 2026-08-13
 
