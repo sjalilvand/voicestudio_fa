@@ -10,8 +10,12 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- The backend now answers within a second of launch and narrates its startup step by step
 - Reporting a bug from an outdated build now offers the latest release first
 - The backend is only announced ready once it can actually serve, and crash-loop restarts now pace themselves
+
+### Changed
+- The backend binds its port immediately and reports startup progress live — `/health` answers 503-with-step and a new `/startup/progress` endpoint lists every step while PyTorch, API routes, and database migrations load in the background, so "starting at step X" is never mistakable for "dead"; the desktop splash narrates each step (#1550)
 
 ### Added
 - The bug reporter notices when you're on an outdated build and offers the latest release before filing — with a "File anyway" escape hatch — and stamps a `Build status` line into every report so up-to-date reports are tellable from stale ones (#1547)
