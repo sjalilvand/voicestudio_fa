@@ -219,10 +219,12 @@ what is genuinely still in flight.
 **Version or feature mismatch.** The protocol keeps a two-release compatibility
 window, but release numbers alone do not prove that a worker understands every
 additive command. Registration therefore also declares named features for task
-inputs, progress leases, and remote model downloads. A worker outside the
+inputs, progress leases, remote model downloads, and the voice-identity render
+pipeline. A worker outside the
 version window, or one missing a required feature, is refused with
 `UPGRADE_REQUIRED` and an update instruction before any task runs. It can never
-silently render without reference audio or leave a download stuck at 0%.
+silently render without reference audio, substitute a different voice, or leave
+a download stuck at 0%.
 
 Every remote failure includes a concrete next step. Capacity, missing models,
 expired leases or sessions, authentication, rejected inputs, and result upload
