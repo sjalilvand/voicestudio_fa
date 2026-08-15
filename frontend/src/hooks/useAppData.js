@@ -174,21 +174,28 @@ export default function useAppData() {
   // per-render closures over stable imports/setters — a useRef-free module
   // would need hooks inside a helper, which rules-of-hooks forbids.
   const loadersRef = useRef({ profiles: 0, history: 0, dub: 0, projects: 0, exports: 0 });
-  const makeLoader = (key, fetch, set, label) => async ({ rethrow } = {}) => {
-    const gen = ++loadersRef.current[key];
-    try {
-      const data = await fetch();
-      if (gen === loadersRef.current[key]) set(data);
-    } catch (e) {
-      console.warn(`Failed to load ${label}:`, e);
-      if (rethrow) throw e;
-    }
-  };
+  const makeLoader =
+    (key, fetch, set, label) =>
+    async ({ rethrow } = {}) => {
+      const gen = ++loadersRef.current[key];
+      try {
+        const data = await fetch();
+        if (gen === loadersRef.current[key]) set(data);
+      } catch (e) {
+        console.warn(`Failed to load ${label}:`, e);
+        if (rethrow) throw e;
+      }
+    };
   const loadProfiles = makeLoader('profiles', listProfiles, setProfiles, 'voice profiles');
   const loadHistory = makeLoader('history', listHistory, setHistory, 'generation history');
   const loadDubHistory = makeLoader('dub', listDubHistory, setDubHistory, 'dub history');
   const loadProjects = makeLoader('projects', listProjects, setStudioProjects, 'projects');
-  const loadExportHistory = makeLoader('exports', listExportHistory, setExportHistory, 'export history');
+  const loadExportHistory = makeLoader(
+    'exports',
+    listExportHistory,
+    setExportHistory,
+    'export history',
+  );
 
   // ── WebSocket real-time updates ──
   useRealtimeEvents({
