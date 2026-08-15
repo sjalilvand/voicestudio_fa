@@ -1,0 +1,67 @@
+import { describe, it, expect, vi } from 'vitest';
+import { retryInitialLoad } from '../utils/initialLoadRetry';
+
+// #1158 class: the initial data loads (profiles/history/…) ran exactly once
+// after the backend became reachable. A transient failure on that single call
+// (backend restarting, WS reconnect window, a 502 from the LAN gate) left the
+// voices panel empty with no retry — which reads to users as "all my voices
+// are gone". The load itself already keeps the previous list on later (WS)
+// reloads; only the INITIAL load must retry until first success.
+
+describe('retryInitialLoad (#1158 class)', () => {
+  it('retries a failing loader until it succeeds', async () => {
+    let calls = 0;
+    const loader = vi.fn(async () => {
+      calls += 1;
+      if (calls < 3) throw new Error('transient');
+    });
+    await retryInitialLoad(loader, { baseDelayMs: 1 });
+    expect(calls).toBe(3);
+  });
+
+  it('does not retry after first success', async () => {
+    const loader = vi.fn(async () => {});
+    await retryInitialLoad(loader, { baseDelayMs: 1 });
+    expect(loader).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops retrying when cancelled', async () => {
+    const loader = vi.fn(async () => {
+      throw new Error('down');
+    });
+    const opts = { baseDelayMs: 1 };
+    const p = retryInitialLoad(loader, opts);
+    opts.cancelled = true;
+    await p;
+    // At most one attempt plus whatever was already in flight; the point is
+    // it terminates instead of looping forever after cancellation.
+    expect(loader.mock.calls.length).toBeLessThan(5);
+  });
+
+  // #1158 wiring contract: the initial load must pass loaders that REJECT on
+  // failure. useAppData's loadProfiles-style loaders swallow errors by design
+  // (WS reloads keep the previous list); if the initial-load call site ever
+  // stops using { rethrow: true }, the retry helper resolves on attempt one
+  // and the fix is silently inert again (skeptic finding F1).
+  it('integration: useAppData wires rethrowing loaders into the retry', async () => {
+    const { readFileSync } = await import('node:fs');
+    // jsdom replaces the global URL; Node's fileURLToPath needs a REAL node:
+    // URL instance, so build one from the specifier's pathname directly.
+    const nodeUrl = await import('node:url');
+    const NodeURL = nodeUrl.URL;
+    const hookPath = new NodeURL('../hooks/useAppData.js', import.meta.url).pathname;
+    const src = readFileSync(hookPath, 'utf8');
+    const initialBlock = src.slice(src.indexOf('retryInitialLoad('));
+    for (const loader of [
+      'loadProfiles',
+      'loadHistory',
+      'loadDubHistory',
+      'loadProjects',
+      'loadExportHistory',
+    ]) {
+      expect(initialBlock).toContain(`${loader}({ rethrow: true })`);
+    }
+    // and the loader factory must actually rethrow when asked
+    expect(src).toContain('if (rethrow) throw e;');
+  });
+});

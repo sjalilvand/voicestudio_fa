@@ -34,6 +34,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Renaming, deleting, or revoking consent on a voice (and starring/clearing history, recording exports) now live-updates every open tab again: those sync API routes run in worker threads where the WebSocket event was silently dropped, so the UI kept stale lists until a reload — which could look like "all my voices are gone". Events are now handed off to the serving loop thread-safely, and the initial list load retries until first success instead of leaving an empty panel on one transient failure.
 - Crash reports now carry the crashed run's own stderr: the shared error log is append-only with per-run offsets, so a restart can no longer overwrite the dying process's final output with the replacement's healthy startup. (#1510)
 - Wayland: a stale portal identity no longer kills the dictation shortcut for the whole session. The desktop entry the app writes for the GlobalShortcuts portal could point at a binary that has since moved (a `cargo clean`, a relocated AppImage) — GNOME then refuses the bind with "App info not found" and the hotkey silently dies. The entry is validated and rewritten at startup now. (#1526)
 - The guard that keeps transcription on the degrading ASR loader now scans the whole backend, not just the routers — a service that transcribes on a request's behalf skipped `ensure_loaded()` just as thoroughly. (#1519) — thanks @ahov520!

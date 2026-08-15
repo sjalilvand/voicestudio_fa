@@ -10,6 +10,7 @@ import { useModelStatus } from '../api/hooks';
 import useRealtimeEvents from './useRealtimeEvents';
 import { mergeDescribedAttrs } from '../utils/voiceInstruct';
 import { sanitizeOmniUi } from '../utils/omniUiSchema';
+import { retryInitialLoad } from '../utils/initialLoadRetry';
 
 /**
  * Encapsulates all data-loading effects, localStorage persistence,
@@ -122,43 +123,27 @@ export default function useAppData() {
   }, [modelStatus, modelSubStage, modelDetail, modelError, modelProgress]);
 
   // ── Data loading callbacks ──
-  // Failures keep the previous list (better than blanking the UI), but are
-  // logged so "my voices/history vanished" reports carry a cause (#1158).
-  const loadProfiles = useCallback(async () => {
-    try {
-      setProfiles(await listProfiles());
-    } catch (e) {
-      console.warn('Failed to load voice profiles:', e);
-    }
-  }, []);
-  const loadHistory = useCallback(async () => {
-    try {
-      setHistory(await listHistory());
-    } catch (e) {
-      console.warn('Failed to load generation history:', e);
-    }
-  }, []);
-  const loadDubHistory = useCallback(async () => {
-    try {
-      setDubHistory(await listDubHistory());
-    } catch (e) {
-      console.warn('Failed to load dub history:', e);
-    }
-  }, []);
-  const loadProjects = useCallback(async () => {
-    try {
-      setStudioProjects(await listProjects());
-    } catch (e) {
-      console.warn('Failed to load projects:', e);
-    }
-  }, []);
-  const loadExportHistory = useCallback(async () => {
-    try {
-      setExportHistory(await listExportHistory());
-    } catch (e) {
-      console.warn('Failed to load export history:', e);
-    }
-  }, []);
+  // WS-triggered reloads swallow failures: keeping the previous list is
+  // better than blanking the UI, and the warn gives "my voices vanished"
+  // reports a cause (#1158). The INITIAL load passes `{ rethrow: true }` so
+  // retryInitialLoad can retry — there is no previous list to keep yet.
+  const makeLoader = (fetch, set, label) =>
+    useCallback(
+      async ({ rethrow } = {}) => {
+        try {
+          set(await fetch());
+        } catch (e) {
+          console.warn(`Failed to load ${label}:`, e);
+          if (rethrow) throw e;
+        }
+      },
+      [],
+    );
+  const loadProfiles = makeLoader(listProfiles, setProfiles, 'voice profiles');
+  const loadHistory = makeLoader(listHistory, setHistory, 'generation history');
+  const loadDubHistory = makeLoader(listDubHistory, setDubHistory, 'dub history');
+  const loadProjects = makeLoader(listProjects, setStudioProjects, 'projects');
+  const loadExportHistory = makeLoader(listExportHistory, setExportHistory, 'export history');
 
   // ── WebSocket real-time updates ──
   useRealtimeEvents({
@@ -171,10 +156,10 @@ export default function useAppData() {
 
   // ── Initial data load with backend retry ──
   useEffect(() => {
-    let cancelled = false;
+    const cancelledRef = { cancelled: false };
     const loadAll = async () => {
       let delay = 1000;
-      while (!cancelled) {
+      while (!cancelledRef.cancelled) {
         try {
           await apiModelStatus();
           break;
@@ -182,12 +167,16 @@ export default function useAppData() {
         await new Promise((r) => setTimeout(r, delay));
         delay = Math.min(delay * 2, 4000);
       }
-      if (cancelled) return;
-      loadProfiles();
-      loadHistory();
-      loadDubHistory();
-      loadProjects();
-      loadExportHistory();
+      if (cancelledRef.cancelled) return;
+      // Initial loads retry until FIRST success (#1158 class): a later
+      // (WS-triggered) reload failure keeps the previous list, but the first
+      // load has no previous list to keep — one transient failure used to
+      // leave the panel empty, which read as "my voices are gone".
+      retryInitialLoad(() => loadProfiles({ rethrow: true }), cancelledRef);
+      retryInitialLoad(() => loadHistory({ rethrow: true }), cancelledRef);
+      retryInitialLoad(() => loadDubHistory({ rethrow: true }), cancelledRef);
+      retryInitialLoad(() => loadProjects({ rethrow: true }), cancelledRef);
+      retryInitialLoad(() => loadExportHistory({ rethrow: true }), cancelledRef);
     };
     loadAll();
     // Restore local UI state
@@ -242,7 +231,7 @@ export default function useAppData() {
       if (saved.showOverrides !== undefined) setShowOverrides(saved.showOverrides);
     } catch (e) {}
     return () => {
-      cancelled = true;
+      cancelledRef.cancelled = true;
     };
   }, []);
 
