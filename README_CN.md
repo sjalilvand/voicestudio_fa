@@ -180,8 +180,8 @@ Hugging Face Token 的配置见
 | **API 密钥** | 需要账号 | 本地流程不需要 |
 | **GPU 支持** | 不适用（云端） | CUDA · Apple Silicon · ROCm（Linux）· CPU |
 | **桌面应用** | ❌ | ✅ macOS · Windows · Linux |
-| **TTS 引擎** | 1 | **14** — [完整矩阵](#tts-engines) |
-| **ASR 引擎** | 1 | **10** — [完整阵容](#asr-engines) |
+| **TTS 引擎** | 1 | **16** — [完整矩阵](#tts-engines) |
+| **ASR 引擎** | 1 | **11** — [完整阵容](#asr-engines) |
 | **MCP 服务器** | ❌ | ✅ 可从 Claude、Cursor 及任何 MCP 客户端使用 |
 | **自检** | ❌ | ✅ 诊断套件、错误日志、脱敏调试包 |
 | **可定制** | ❌ 闭源 | ✅ 随你 Fork、扩展、发布 |
@@ -221,10 +221,10 @@ Hugging Face Token 的配置见
 
 ### 🗣️ TTS 引擎
 
-**14 个引擎，一个选择器。** VoiceStudio（默认，支持 600+ 语言）始终可用；另有七个引擎可选装并自动检测（CosyVoice 3、GPT-SoVITS、VoxCPM2、MOSS-TTS-Nano、KittenTTS、MLX-Audio、Sherpa-ONNX），外加六个按需延迟安装的重量级引擎（IndexTTS 2.5、OmniVoice GGUF、Supertonic 3、MOSS-TTS-v1.5、dots.tts、Confucius4-TTS）。在 **设置 → TTS 引擎** 中切换；所选引擎将应用于所有语音合成场景。
+**16 个引擎，一个选择器。** VoiceStudio（默认，支持 600+ 语言）始终可用；另有七个引擎可选装并自动检测（CosyVoice 3、GPT-SoVITS、VoxCPM2、MOSS-TTS-Nano、KittenTTS、MLX-Audio、Sherpa-ONNX），外加八个按需延迟安装的引擎（IndexTTS 2.5、OmniVoice GGUF、OmniVoice 子进程版、PocketTTS、Supertonic 3、MOSS-TTS-v1.5、dots.tts、Confucius4-TTS）。在 **设置 → TTS 引擎** 中切换；所选引擎将应用于所有语音合成场景。**每个引擎都有独立指南：[docs/engines](docs/engines/README.md)（英文）。**
 
 <details>
-<summary><b>📊 完整矩阵</b>——14 个引擎 × 平台 × 克隆/指令 × 许可证</summary>
+<summary><b>📊 完整矩阵</b>——16 个引擎 × 平台 × 克隆/指令 × 许可证</summary>
 
 <br/>
 
@@ -261,10 +261,10 @@ Hugging Face Token 的配置见
 
 ### 🎧 ASR 引擎
 
-**10 个引擎**——它们驱动听写、视频配音和字幕。**WhisperX** 是跨平台的默认引擎（约 100 种语言，词级时间对齐）；其余引擎均为可选装并自动检测。在 **设置 → 引擎** 中切换。九个完全在本地设备上运行；第十个（OpenAI 兼容）是可选的远程客户端，可用于 Qwen3-ASR 或任何兼容的服务器。
+**11 个引擎**——它们驱动听写、视频配音和字幕。**WhisperX** 是跨平台的默认引擎（约 100 种语言，词级时间对齐）；其余引擎均为可选装并自动检测。在 **设置 → 引擎** 中切换。十个完全在本地设备上运行；第十一个（OpenAI 兼容）是可选的远程客户端，可用于 Qwen3-ASR 或任何兼容的服务器。
 
 <details>
-<summary><b>📊 完整阵容</b>——10 个引擎、各自的强项与计算类型说明</summary>
+<summary><b>📊 完整阵容</b>——11 个引擎、各自的强项与计算类型说明</summary>
 
 <br/>
 
@@ -281,7 +281,7 @@ Hugging Face Token 的配置见
 | **sherpa-onnx**（实时听写） | `sherpa-onnx-asr` | 25 种欧洲语言 + 90+ | 实时、快于实时的听写——小体积流式/离线 ONNX 模型（Parakeet TDT v3/v2、流式 Zipformer 与 Paraformer、Whisper Tiny），CPU 运行，macOS / Windows / Linux 表现完全一致。在 **设置 → 语音** 中按模型选择。 |
 | **OpenAI 兼容** ⚠️ 远程 | `openai-compat-asr` | 取决于服务器 | 当下通往 **Qwen3-ASR** 的路径（自托管服务器，无需等 transformers 支持）、任何 OpenAI 兼容的转录端点，或 OpenAI 官方 API——无需安装，在 **设置 → 引擎**（ASR 标签页）中配置并测试连接。音频会离开你的设备，发送到你指定的任何服务器；参见 [docs/engines/openai-compatible-asr.md](docs/engines/openai-compatible-asr.md)。 |
 
-> Whisper 系列引擎覆盖约 100 种语言；**FunASR / SenseVoice** 额外提供一条多语言一体化路径，内置语音活动检测与行内说话人分离。**sherpa-onnx** 驱动实时听写的模型选择器——你边说，文字边出现。每个引擎都在本地设备上运行——无需 API 密钥，无需云端。
+> Whisper 系列引擎覆盖约 100 种语言；**FunASR / SenseVoice** 额外提供一条多语言一体化路径，内置语音活动检测与行内说话人分离。**sherpa-onnx** 驱动实时听写的模型选择器——你边说，文字边出现。除可选的 OpenAI 兼容远程客户端外，所有引擎都在本地设备上运行——无需 API 密钥，无需云端。
 
 > **GPU 不支持高效 float16？** 在较老的 NVIDIA GPU（Maxwell/Pascal、GTX 16xx）上，或在 CTranslate2/cuDNN 版本不匹配之后，CTranslate2 系 ASR 引擎（WhisperX、Faster-Whisper）无法运行 `float16`，VoiceStudio 会自动改用 `int8` 重试——无需配置。如果转录仍然失败，可用 `ASR_COMPUTE_TYPE` 环境变量固定计算类型（逃生舱口）：`ASR_COMPUTE_TYPE=int8`（CPU 用 `float32`）。将其设为 `int8` 并重启后端。
 
