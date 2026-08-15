@@ -36,6 +36,8 @@
     "open_models": "Modellen openen"
   },
   "settings": {
+    "remote_backend_test": "Verbinding testen",
+    "remote_backend_save": "Opslaan en herladen",
     "remote_backend_recovery_title": "Kan de externe backend niet bereiken",
     "remote_backend_recovery_hint": "Je kunt de externe backend later wijzigen via Instellingen → Delen.",
     "remote_backend_use_local": "Lokale backend gebruiken",
@@ -58,6 +60,8 @@
     "credentials": "Inloggegevens",
     "llm_providers": "LLM-providers",
     "llmp_desc": "Drijft de Cinematic- en Autofit-vertaling aan — de LLM herschrijft elke regel zodat die binnen het tijdsbudget van zijn segment past en de videotiming behouden blijft. Sleutels worden versleuteld opgeslagen; lokale providers (Ollama/LM Studio) blijven volledig offline.",
+    "llmp_catalogue_note": "De als actief gemarkeerde provider antwoordt zodra de LLM-enginefamilie in de catalogus op \"OpenAI-compatibel\" staat.",
+    "llmp_catalogue_link": "LLM-familie in de catalogus openen",
     "llmp_provider": "Provider",
     "llmp_provider_hint": "Kies een provider om te configureren. De actieve wordt gebruikt voor Cinematic/Autofit-vertaling. Lokale providers hebben geen sleutel nodig, maar hun server moet wel draaien.",
     "llmp_local_tag": "lokaal",
@@ -311,7 +315,22 @@
     "workers_summary_online": "{{count}} online",
     "workers_token_expired": "Verlopen — genereer een nieuwe",
     "workers_token_expires_in": "Verloopt over {{time}}",
-    "workers_token_qr_hint": "Op de andere machine: Instellingen → Systeem → Externe workers → Koppelen, en scan of plak daar."
+    "workers_token_qr_hint": "Op de andere machine: Instellingen → Systeem → Externe workers → Koppelen, en scan of plak daar.",
+    "compute_device": "Rekenapparaat",
+    "compute_device_title": "Rekenapparaat",
+    "compute_device_desc": "Op welk apparaat de backend modellen draait. Auto is voor bijna iedereen juist.",
+    "compute_device_env_pinned": "Vastgezet door de omgevingsvariabele OMNIVOICE_DEVICE",
+    "compute_device_ignored": "Dat apparaat is op deze machine niet gedetecteerd — Auto is van kracht",
+    "compute_device_restart": "Wordt van kracht na het herstarten van de app",
+    "compute_device_note": "Alleen op deze machine gedetecteerde apparaten worden getoond. CPU werkt altijd; een vastgezet apparaat verzint nooit hardware.",
+    "compute_device_auto": "Auto (aanbevolen)",
+    "device_family_cuda": "NVIDIA GPU (CUDA)",
+    "device_family_rocm": "AMD GPU (ROCm)",
+    "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_mps": "Apple GPU (MPS)",
+    "device_family_cpu": "CPU",
+    "device_load_failed": "Apparaatinstelling kon niet worden geladen",
+    "perf_save_failed": "Instelling kon niet worden opgeslagen"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -706,6 +725,7 @@
     "ready": "klaar",
     "unavailable": "niet beschikbaar",
     "use": "Gebruik",
+    "configureProviders": "Providers configureren",
     "loading": "Motoren laden…",
     "refresh": "Vernieuwen",
     "matrixTitle": "Motorcompatibiliteitsmatrix",
@@ -1330,6 +1350,9 @@
     "reset": "Opnieuw instellen",
     "preview": "Voorbeeld",
     "use_voice": "Gebruik stem",
+    "more_actions": "Meer acties",
+    "use_in_stories": "In Verhalen gebruiken",
+    "set_audiobook_default": "Instellen als standaardstem voor Audioboek",
     "open_designer": "Openen in Ontwerper",
     "no_matches": "Er zijn geen stemmen die overeenkomen met deze filters.",
     "load_more": "Laad meer",
@@ -2075,7 +2098,11 @@
   },
   "reportBug": {
     "label": "Rapporteer een bug",
-    "title": "Opent een vooraf ingevulde GitHub Issues-pagina in uw browser. Er wordt niets verzonden totdat u op Verzenden klikt."
+    "title": "Opent een vooraf ingevulde GitHub Issues-pagina in uw browser. Er wordt niets verzonden totdat u op Verzenden klikt.",
+    "staleTitle": "Update beschikbaar",
+    "staleMessage": "U gebruikt VoiceStudio {{current}}, maar {{latest}} is al uit — deze bug is daar mogelijk al verholpen. De nieuwste versie bekijken voordat u rapporteert?",
+    "staleView": "Update bekijken",
+    "staleFileAnyway": "Toch rapporteren"
   },
   "app": {
     "loading": "Laden…",

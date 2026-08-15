@@ -36,6 +36,8 @@
     "open_models": "Abrir modelos"
   },
   "settings": {
+    "remote_backend_test": "Testar conexão",
+    "remote_backend_save": "Salvar e recarregar",
     "remote_backend_recovery_title": "Não foi possível acessar o backend remoto",
     "remote_backend_recovery_hint": "Você pode alterar o backend remoto depois em Configurações → Compartilhamento.",
     "remote_backend_use_local": "Usar backend local",
@@ -58,6 +60,8 @@
     "credentials": "Credenciais",
     "llm_providers": "Provedores de LLM",
     "llmp_desc": "Alimenta a tradução Cinematic e Autofit — o LLM reescreve cada linha para caber no tempo do seu segmento, mantendo a sincronização do vídeo. As chaves são armazenadas criptografadas; provedores locais (Ollama/LM Studio) permanecem totalmente offline.",
+    "llmp_catalogue_note": "O provedor marcado como ativo é o que responde sempre que a família de motores LLM no catálogo estiver definida como \"compatível com OpenAI\".",
+    "llmp_catalogue_link": "Abrir a família LLM no catálogo",
     "llmp_provider": "Provedor",
     "llmp_provider_hint": "Escolha um provedor para configurar. O ativo é usado na tradução Cinematic/Autofit. Provedores locais não precisam de chave, mas o servidor deles precisa estar em execução.",
     "llmp_local_tag": "local",
@@ -311,7 +315,22 @@
     "workers_summary_online": "{{count}} online",
     "workers_token_expired": "Expirado — gere um novo",
     "workers_token_expires_in": "Expira em {{time}}",
-    "workers_token_qr_hint": "Na outra máquina: Configurações → Sistema → Workers remotos → Associar, depois escaneie ou cole."
+    "workers_token_qr_hint": "Na outra máquina: Configurações → Sistema → Workers remotos → Associar, depois escaneie ou cole.",
+    "compute_device": "Dispositivo de computação",
+    "compute_device_title": "Dispositivo de computação",
+    "compute_device_desc": "Em qual dispositivo o backend executa os modelos. Auto é o certo para quase todos.",
+    "compute_device_env_pinned": "Fixado pela variável de ambiente OMNIVOICE_DEVICE",
+    "compute_device_ignored": "Esse dispositivo não foi detectado nesta máquina — Auto está em vigor",
+    "compute_device_restart": "Entra em vigor após reiniciar o aplicativo",
+    "compute_device_note": "Apenas dispositivos detectados nesta máquina são listados. A CPU sempre funciona; fixar um dispositivo nunca inventa hardware.",
+    "compute_device_auto": "Auto (recomendado)",
+    "device_family_cuda": "NVIDIA GPU (CUDA)",
+    "device_family_rocm": "AMD GPU (ROCm)",
+    "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_mps": "Apple GPU (MPS)",
+    "device_family_cpu": "CPU",
+    "device_load_failed": "Falha ao carregar a configuração do dispositivo",
+    "perf_save_failed": "Falha ao salvar a configuração"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -706,6 +725,7 @@
     "ready": "pronto",
     "unavailable": "indisponível",
     "use": "Usar",
+    "configureProviders": "Configurar provedores",
     "loading": "Carregando motores…",
     "refresh": "Atualizar",
     "matrixTitle": "Matriz de compatibilidade do motor",
@@ -1330,6 +1350,9 @@
     "reset": "Redefinir",
     "preview": "Visualização",
     "use_voice": "Usar voz",
+    "more_actions": "Mais ações",
+    "use_in_stories": "Usar em Histórias",
+    "set_audiobook_default": "Definir como voz padrão do Audiolivro",
     "open_designer": "Abrir no Designer",
     "no_matches": "Nenhuma voz corresponde a esses filtros.",
     "load_more": "Carregar mais",
@@ -2075,7 +2098,11 @@
   },
   "reportBug": {
     "label": "Reportar um bug",
-    "title": "Abre uma página pré-preenchida de problemas do GitHub em seu navegador. Nada é enviado até você clicar em Enviar."
+    "title": "Abre uma página pré-preenchida de problemas do GitHub em seu navegador. Nada é enviado até você clicar em Enviar.",
+    "staleTitle": "Atualização disponível",
+    "staleMessage": "Você está usando o VoiceStudio {{current}}, mas a {{latest}} já foi lançada — este bug pode já estar corrigido. Ver a versão mais recente antes de reportar?",
+    "staleView": "Ver atualização",
+    "staleFileAnyway": "Reportar mesmo assim"
   },
   "app": {
     "loading": "Carregando…",

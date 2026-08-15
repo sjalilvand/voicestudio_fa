@@ -36,6 +36,8 @@
     "open_models": "Öppna modeller"
   },
   "settings": {
+    "remote_backend_test": "Testa anslutningen",
+    "remote_backend_save": "Spara och ladda om",
     "remote_backend_recovery_title": "Det går inte att nå fjärrbackend",
     "remote_backend_recovery_hint": "Du kan ändra fjärrbackend senare under Inställningar → Delning.",
     "remote_backend_use_local": "Använd lokal backend",
@@ -58,6 +60,8 @@
     "credentials": "Autentisering",
     "llm_providers": "LLM-leverantörer",
     "llmp_desc": "Driver Cinematic- och Autofit-översättning — LLM:en skriver om varje rad så att den ryms inom segmentets tidsbudget och videons timing hålls. Nycklar lagras krypterat; lokala leverantörer (Ollama/LM Studio) förblir helt offline.",
+    "llmp_catalogue_note": "Leverantören som är markerad som aktiv är den som svarar när LLM-motorfamiljen i katalogen är inställd på \"OpenAI-kompatibel\".",
+    "llmp_catalogue_link": "Öppna LLM-familjen i katalogen",
     "llmp_provider": "Leverantör",
     "llmp_provider_hint": "Välj en leverantör att konfigurera. Den aktiva används för Cinematic/Autofit-översättning. Lokala leverantörer behöver ingen nyckel, men deras server måste vara igång.",
     "llmp_local_tag": "lokal",
@@ -311,7 +315,22 @@
     "workers_summary_online": "{{count}} online",
     "workers_token_expired": "Har gått ut — skapa en ny",
     "workers_token_expires_in": "Går ut om {{time}}",
-    "workers_token_qr_hint": "På den andra maskinen: Inställningar → System → Fjärrarbetare → Anslut, skanna eller klistra sedan in."
+    "workers_token_qr_hint": "På den andra maskinen: Inställningar → System → Fjärrarbetare → Anslut, skanna eller klistra sedan in.",
+    "compute_device": "Beräkningsenhet",
+    "compute_device_title": "Beräkningsenhet",
+    "compute_device_desc": "Vilken enhet backend kör modeller på. Auto är rätt för nästan alla.",
+    "compute_device_env_pinned": "Låst av miljövariabeln OMNIVOICE_DEVICE",
+    "compute_device_ignored": "Den enheten hittades inte på den här datorn — Auto gäller",
+    "compute_device_restart": "Träder i kraft efter omstart av appen",
+    "compute_device_note": "Endast enheter som hittats på den här datorn visas. CPU fungerar alltid; att låsa en enhet hittar aldrig på hårdvara.",
+    "compute_device_auto": "Auto (rekommenderas)",
+    "device_family_cuda": "NVIDIA GPU (CUDA)",
+    "device_family_rocm": "AMD GPU (ROCm)",
+    "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_mps": "Apple GPU (MPS)",
+    "device_family_cpu": "CPU",
+    "device_load_failed": "Kunde inte läsa in enhetsinställningen",
+    "perf_save_failed": "Kunde inte spara inställningen"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -706,6 +725,7 @@
     "ready": "redo",
     "unavailable": "otillgänglig",
     "use": "Använd",
+    "configureProviders": "Konfigurera leverantörer",
     "loading": "Laddar motorer...",
     "refresh": "Uppdatera",
     "matrixTitle": "Motorkompatibilitetsmatris",
@@ -1330,6 +1350,9 @@
     "reset": "Återställ",
     "preview": "Förhandsgranska",
     "use_voice": "Använd röst",
+    "more_actions": "Fler åtgärder",
+    "use_in_stories": "Använd i Berättelser",
+    "set_audiobook_default": "Ange som standardröst för Ljudbok",
     "open_designer": "Öppna i Designer",
     "no_matches": "Inga röster matchar dessa filter.",
     "load_more": "Ladda mer",
@@ -2075,7 +2098,11 @@
   },
   "reportBug": {
     "label": "Rapportera ett fel",
-    "title": "Öppnar en förifylld GitHub-problemsida i din webbläsare. Inget skickas förrän du klickar på Skicka."
+    "title": "Öppnar en förifylld GitHub-problemsida i din webbläsare. Inget skickas förrän du klickar på Skicka.",
+    "staleTitle": "Uppdatering tillgänglig",
+    "staleMessage": "Du använder VoiceStudio {{current}}, men {{latest}} är redan ute — det här felet kan redan vara åtgärdat där. Se den senaste versionen innan du rapporterar?",
+    "staleView": "Visa uppdatering",
+    "staleFileAnyway": "Rapportera ändå"
   },
   "app": {
     "loading": "Laddar...",

@@ -36,6 +36,8 @@
     "open_models": "開啟模型"
   },
   "settings": {
+    "remote_backend_test": "測試連線",
+    "remote_backend_save": "儲存並重新載入",
     "remote_backend_recovery_title": "無法連線至遠端後端",
     "remote_backend_recovery_hint": "你可以稍後在「設定 → 分享」中變更遠端後端。",
     "remote_backend_use_local": "使用本機後端",
@@ -58,6 +60,8 @@
     "credentials": "金鑰憑證",
     "llm_providers": "LLM 提供者",
     "llmp_desc": "為 Cinematic 與 Autofit 翻譯提供支援：LLM 會改寫每一行，使其符合所在片段的時間預算，以維持影片時序。金鑰以加密方式儲存；本機提供者（Ollama/LM Studio）完全離線運作。",
+    "llmp_catalogue_note": "當目錄中的 LLM 引擎系列設為「OpenAI 相容」時，即由標記為使用中的提供者回應。",
+    "llmp_catalogue_link": "在目錄中開啟 LLM 系列",
     "llmp_provider": "提供者",
     "llmp_provider_hint": "選擇要設定的提供者。目前啟用的提供者將用於 Cinematic/Autofit 翻譯。本機提供者無需金鑰，但其伺服器必須處於執行狀態。",
     "llmp_local_tag": "本機",
@@ -311,7 +315,22 @@
     "workers_summary_online": "{{count}} 台上線",
     "workers_token_expired": "已過期——請重新產生",
     "workers_token_expires_in": "{{time}} 後過期",
-    "workers_token_qr_hint": "在另一台機器上：設定 → 系統 → 遠端工作機 → 加入，然後掃描或貼上。"
+    "workers_token_qr_hint": "在另一台機器上：設定 → 系統 → 遠端工作機 → 加入，然後掃描或貼上。",
+    "compute_device": "運算裝置",
+    "compute_device_title": "運算裝置",
+    "compute_device_desc": "後端在哪個裝置上執行模型。絕大多數情況下選「自動」即可。",
+    "compute_device_env_pinned": "已由環境變數 OMNIVOICE_DEVICE 固定",
+    "compute_device_ignored": "本機未偵測到該裝置——目前實際使用「自動」",
+    "compute_device_restart": "重新啟動應用程式後生效",
+    "compute_device_note": "僅列出本機偵測到的裝置。CPU 永遠可用；固定裝置不會憑空生出硬體。",
+    "compute_device_auto": "自動（建議）",
+    "device_family_cuda": "NVIDIA GPU (CUDA)",
+    "device_family_rocm": "AMD GPU (ROCm)",
+    "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_mps": "Apple GPU (MPS)",
+    "device_family_cpu": "CPU",
+    "device_load_failed": "無法載入裝置設定",
+    "perf_save_failed": "無法儲存設定"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -706,6 +725,7 @@
     "ready": "準備好了",
     "unavailable": "不可用",
     "use": "使用",
+    "configureProviders": "設定提供者",
     "loading": "正在載入引擎...",
     "refresh": "重新整理",
     "matrixTitle": "引擎相容性矩陣",
@@ -1330,6 +1350,9 @@
     "reset": "重置",
     "preview": "預覽",
     "use_voice": "使用語音",
+    "more_actions": "更多操作",
+    "use_in_stories": "在劇本中使用",
+    "set_audiobook_default": "設為有聲書預設語音",
     "open_designer": "在設計器中打開",
     "no_matches": "沒有聲音符合這些過濾器。",
     "load_more": "加載更多",
@@ -2075,7 +2098,11 @@
   },
   "reportBug": {
     "label": "報告錯誤",
-    "title": "在浏览器中打开预填充的 GitHub 问题页面。在您单击“提交”之前，不会发送任何内容。"
+    "title": "在瀏覽器中開啟預先填寫的 GitHub 問題頁面。在您按一下「提交」之前，不會傳送任何內容。",
+    "staleTitle": "有可用更新",
+    "staleMessage": "您正在使用 VoiceStudio {{current}}，但 {{latest}} 已經發布——這個錯誤可能已在新版本中修復。回報前先查看最新版本？",
+    "staleView": "查看更新",
+    "staleFileAnyway": "仍然回報"
   },
   "app": {
     "loading": "加載中...",

@@ -36,6 +36,8 @@
     "open_models": "Mở mô hình"
   },
   "settings": {
+    "remote_backend_test": "Kiểm tra kết nối",
+    "remote_backend_save": "Lưu và tải lại",
     "remote_backend_recovery_title": "Không thể kết nối với backend từ xa",
     "remote_backend_recovery_hint": "Bạn có thể đổi backend từ xa sau trong Cài đặt → Chia sẻ.",
     "remote_backend_use_local": "Dùng backend cục bộ",
@@ -58,6 +60,8 @@
     "credentials": "Xác thực",
     "llm_providers": "Nhà cung cấp LLM",
     "llmp_desc": "Cung cấp năng lực cho bản dịch Cinematic và Autofit — LLM viết lại từng dòng cho vừa quỹ thời gian của phân đoạn để giữ đúng nhịp thời gian của video. Khóa được lưu ở dạng mã hóa; nhà cung cấp cục bộ (Ollama/LM Studio) hoạt động hoàn toàn ngoại tuyến.",
+    "llmp_catalogue_note": "Nhà cung cấp được đánh dấu đang hoạt động là bên trả lời khi nhóm engine LLM trong danh mục được đặt là \"tương thích OpenAI\".",
+    "llmp_catalogue_link": "Mở nhóm LLM trong danh mục",
     "llmp_provider": "Nhà cung cấp",
     "llmp_provider_hint": "Chọn nhà cung cấp để cấu hình. Nhà cung cấp đang hoạt động sẽ được dùng cho bản dịch Cinematic/Autofit. Nhà cung cấp cục bộ không cần khóa nhưng máy chủ của chúng phải đang chạy.",
     "llmp_local_tag": "cục bộ",
@@ -311,7 +315,22 @@
     "workers_summary_online": "{{count}} trực tuyến",
     "workers_token_expired": "Đã hết hạn — hãy tạo mã mới",
     "workers_token_expires_in": "Hết hạn sau {{time}}",
-    "workers_token_qr_hint": "Trên máy kia: Cài đặt → Hệ thống → Máy phụ từ xa → Tham gia, rồi quét hoặc dán."
+    "workers_token_qr_hint": "Trên máy kia: Cài đặt → Hệ thống → Máy phụ từ xa → Tham gia, rồi quét hoặc dán.",
+    "compute_device": "Thiết bị tính toán",
+    "compute_device_title": "Thiết bị tính toán",
+    "compute_device_desc": "Backend chạy mô hình trên thiết bị nào. Tự động phù hợp với hầu hết mọi người.",
+    "compute_device_env_pinned": "Được ghim bởi biến môi trường OMNIVOICE_DEVICE",
+    "compute_device_ignored": "Không phát hiện thiết bị đó trên máy này — Tự động đang có hiệu lực",
+    "compute_device_restart": "Có hiệu lực sau khi khởi động lại ứng dụng",
+    "compute_device_note": "Chỉ liệt kê các thiết bị được phát hiện trên máy này. CPU luôn hoạt động; ghim một thiết bị không bao giờ bịa ra phần cứng.",
+    "compute_device_auto": "Tự động (khuyên dùng)",
+    "device_family_cuda": "NVIDIA GPU (CUDA)",
+    "device_family_rocm": "AMD GPU (ROCm)",
+    "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_mps": "Apple GPU (MPS)",
+    "device_family_cpu": "CPU",
+    "device_load_failed": "Không tải được cài đặt thiết bị",
+    "perf_save_failed": "Không lưu được cài đặt"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -706,6 +725,7 @@
     "ready": "sẵn sàng",
     "unavailable": "không có sẵn",
     "use": "sử dụng",
+    "configureProviders": "Cấu hình nhà cung cấp",
     "loading": "Đang tải động cơ…",
     "refresh": "Làm mới",
     "matrixTitle": "Ma trận tương thích động cơ",
@@ -1330,6 +1350,9 @@
     "reset": "Đặt lại",
     "preview": "Xem trước",
     "use_voice": "Sử dụng giọng nói",
+    "more_actions": "Thao tác khác",
+    "use_in_stories": "Dùng trong Kịch bản",
+    "set_audiobook_default": "Đặt làm giọng mặc định cho Sách nói",
     "open_designer": "Mở trong Trình thiết kế",
     "no_matches": "Không có giọng nói nào phù hợp với các bộ lọc này.",
     "load_more": "Tải thêm",
@@ -2075,7 +2098,11 @@
   },
   "reportBug": {
     "label": "Báo cáo lỗi",
-    "title": "Mở trang Vấn đề GitHub được điền sẵn trong trình duyệt của bạn. Không có gì được gửi cho đến khi bạn nhấp vào Gửi."
+    "title": "Mở trang Vấn đề GitHub được điền sẵn trong trình duyệt của bạn. Không có gì được gửi cho đến khi bạn nhấp vào Gửi.",
+    "staleTitle": "Có bản cập nhật",
+    "staleMessage": "Bạn đang dùng VoiceStudio {{current}}, nhưng {{latest}} đã ra mắt — lỗi này có thể đã được sửa ở đó. Xem bản phát hành mới nhất trước khi báo cáo?",
+    "staleView": "Xem bản cập nhật",
+    "staleFileAnyway": "Vẫn báo cáo"
   },
   "app": {
     "loading": "Đang tải…",

@@ -36,6 +36,8 @@
     "open_models": "Buka model"
   },
   "settings": {
+    "remote_backend_test": "Uji koneksi",
+    "remote_backend_save": "Simpan dan muat ulang",
     "remote_backend_recovery_title": "Backend jarak jauh tidak dapat dijangkau",
     "remote_backend_recovery_hint": "Anda dapat mengubah backend jarak jauh nanti di Pengaturan → Berbagi.",
     "remote_backend_use_local": "Gunakan backend lokal",
@@ -58,6 +60,8 @@
     "credentials": "Kredensial",
     "llm_providers": "Penyedia LLM",
     "llmp_desc": "Menggerakkan terjemahan Cinematic & Autofit — LLM menulis ulang setiap baris agar sesuai dengan jatah waktu segmennya sehingga pengaturan waktu video tetap terjaga. Kunci disimpan terenkripsi; penyedia lokal (Ollama/LM Studio) sepenuhnya offline.",
+    "llmp_catalogue_note": "Penyedia yang ditandai aktif adalah yang menjawab ketika keluarga mesin LLM di katalog disetel ke \"kompatibel OpenAI\".",
+    "llmp_catalogue_link": "Buka keluarga LLM di katalog",
     "llmp_provider": "Penyedia",
     "llmp_provider_hint": "Pilih penyedia untuk dikonfigurasi. Penyedia aktif digunakan untuk terjemahan Cinematic/Autofit. Penyedia lokal tidak memerlukan kunci, tetapi servernya harus berjalan.",
     "llmp_local_tag": "lokal",
@@ -311,7 +315,22 @@
     "workers_summary_online": "{{count}} online",
     "workers_token_expired": "Kedaluwarsa — buat yang baru",
     "workers_token_expires_in": "Kedaluwarsa dalam {{time}}",
-    "workers_token_qr_hint": "Di mesin yang lain: Pengaturan → Sistem → Pekerja jarak jauh → Gabung, lalu pindai atau tempelkan."
+    "workers_token_qr_hint": "Di mesin yang lain: Pengaturan → Sistem → Pekerja jarak jauh → Gabung, lalu pindai atau tempelkan.",
+    "compute_device": "Perangkat komputasi",
+    "compute_device_title": "Perangkat komputasi",
+    "compute_device_desc": "Di perangkat mana backend menjalankan model. Auto tepat untuk hampir semua orang.",
+    "compute_device_env_pinned": "Disematkan oleh variabel lingkungan OMNIVOICE_DEVICE",
+    "compute_device_ignored": "Perangkat itu tidak terdeteksi di mesin ini — Auto yang berlaku",
+    "compute_device_restart": "Berlaku setelah aplikasi dimulai ulang",
+    "compute_device_note": "Hanya perangkat yang terdeteksi di mesin ini yang ditampilkan. CPU selalu berfungsi; menyematkan perangkat tidak pernah mengarang perangkat keras.",
+    "compute_device_auto": "Auto (disarankan)",
+    "device_family_cuda": "NVIDIA GPU (CUDA)",
+    "device_family_rocm": "AMD GPU (ROCm)",
+    "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_mps": "Apple GPU (MPS)",
+    "device_family_cpu": "CPU",
+    "device_load_failed": "Gagal memuat pengaturan perangkat",
+    "perf_save_failed": "Gagal menyimpan pengaturan"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -706,6 +725,7 @@
     "ready": "siap",
     "unavailable": "tidak tersedia",
     "use": "Gunakan",
+    "configureProviders": "Konfigurasikan penyedia",
     "loading": "Memuat mesin…",
     "refresh": "Segarkan",
     "matrixTitle": "Matriks Kompatibilitas Mesin",
@@ -1330,6 +1350,9 @@
     "reset": "Setel ulang",
     "preview": "Pratinjau",
     "use_voice": "Gunakan suara",
+    "more_actions": "Tindakan lainnya",
+    "use_in_stories": "Gunakan di Cerita",
+    "set_audiobook_default": "Atur sebagai suara default Buku Audio",
     "open_designer": "Buka di Desainer",
     "no_matches": "Tidak ada suara yang cocok dengan filter ini.",
     "load_more": "Muat lebih banyak",
@@ -2075,7 +2098,11 @@
   },
   "reportBug": {
     "label": "Laporkan bug",
-    "title": "Membuka halaman Masalah GitHub yang telah diisi sebelumnya di browser Anda. Tidak ada yang dikirim sampai Anda mengklik Kirim."
+    "title": "Membuka halaman Masalah GitHub yang telah diisi sebelumnya di browser Anda. Tidak ada yang dikirim sampai Anda mengklik Kirim.",
+    "staleTitle": "Pembaruan tersedia",
+    "staleMessage": "Anda menggunakan VoiceStudio {{current}}, tetapi {{latest}} sudah dirilis — bug ini mungkin sudah diperbaiki di sana. Lihat rilis terbaru sebelum melapor?",
+    "staleView": "Lihat pembaruan",
+    "staleFileAnyway": "Tetap laporkan"
   },
   "app": {
     "loading": "Memuat…",

@@ -397,6 +397,7 @@ function App() {
     handleLockProfile,
     handleUnlockProfile,
   } = useProfiles({ loadHistory, loadProfiles });
+  const clearSelectedProfile = useCallback(() => setSelectedProfile(null), [setSelectedProfile]);
 
   const {
     refAudio,
@@ -657,7 +658,7 @@ function App() {
     let cancelled = false;
     (async () => {
       if (remoteBackend) {
-        const result = await probeRemoteBackend(remoteBackend.url, remoteBackend.key);
+        const result = await probeRemoteBackend(remoteBackend.url);
         if (cancelled) return;
         setRemoteFailure(result.ok ? null : result);
         setSetupNeeded(false);
@@ -1513,7 +1514,7 @@ function App() {
         ) : mode === 'gallery' ? (
           <ErrorBoundary name="gallery">
             <Suspense fallback={<LazyFallback />}>
-              <VoiceGallery />
+              <VoiceGallery clearSelectedProfile={clearSelectedProfile} />
             </Suspense>
           </ErrorBoundary>
         ) : mode === 'transcriptions' ? (

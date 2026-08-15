@@ -17,67 +17,21 @@ Currently exposed:
   keep their own inline loopback guards.
 """
 
-import ipaddress
 import os
-import secrets
 
 from fastapi import HTTPException, Request
 
-
-# IPv4 + IPv6 loopback literals + the conventional `localhost` hostname.
-# `request.client.host` carries an address, not a hostname, so the literal
-# "localhost" entry is defensive — some upstream wrappers (TestClient with
-# a custom client tuple, certain reverse-proxy headers) may pass strings
-# rather than parsed addresses. We accept the broader set without weakening
-# the guard: nothing here matches a non-loopback origin.
-_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
-
-
-def _trusted_networks():
-    """CIDR networks from OMNIVOICE_TRUSTED_NETWORKS (comma-separated) treated as
-    loopback-trusted — e.g. a reverse proxy or self-hosted LAN, so the API-key /
-    PIN gates don't block LAN clients that can't present the credential (a proxy
-    that strips the Authorization header). Read at call time (matching
-    `_server_mode` / `remote_api_key`) so tests can monkeypatch the env; restart
-    to apply changes in production."""
-    nets = []
-    for cidr in os.environ.get("OMNIVOICE_TRUSTED_NETWORKS", "").split(","):
-        cidr = cidr.strip()
-        if cidr:
-            try:
-                nets.append(ipaddress.ip_network(cidr, strict=False))
-            except ValueError:
-                pass  # malformed entry ignored — never wedge the auth gate
-    return nets
-
-
-def is_loopback(host):
-    """True loopback address only (127.0.0.1, ::1, localhost) — NOT a trusted
-    network. Admin gates (``require_admin`` → ``/system/set-env``,
-    ``/api/settings/*``) use this so a trusted-network CIDR exempts consumption
-    (TTS / dictation) but never the RCE-class admin surface."""
-    return host in _LOOPBACK_HOSTS
-
-
-def is_local_host(host):
-    """Loopback address, OR on a configured trusted network. The consumption
-    gates (PIN/API-key middleware, WS guard) call this so a trusted LAN/proxy is
-    exempted. Admin gates use :func:`is_loopback` — NOT this — to preserve the
-    two-tier privilege model: consumption trust ≠ admin trust."""
-    if is_loopback(host):
-        return True
-    try:
-        ip = ipaddress.ip_address(host)
-    except (ValueError, TypeError):
-        return False
-    # Unwrap IPv4-mapped IPv6 (::ffff:192.168.1.5) so it matches IPv4 CIDRs —
-    # dual-stack proxies (Caddy, Node.js) frequently pass the mapped form.
-    if getattr(ip, "ipv4_mapped", None):
-        ip = ip.ipv4_mapped
-    return any(ip in net for net in _trusted_networks())
+from core.auth import (
+    CredentialTransport,
+    PrincipalKind,
+    is_local_host,
+    is_loopback,
+    principal_for,
+    remote_api_key,
+)
+from core.csrf import SAFE_HTTP_METHODS, cookie_csrf_allowed
 
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
-_READ_ONLY_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
 def _server_mode() -> bool:
@@ -98,34 +52,6 @@ def _server_mode() -> bool:
     to admin routes — is unchanged. Read at call time so it stays testable.
     """
     return os.environ.get("OMNIVOICE_SERVER_MODE", "").strip().lower() in _TRUTHY
-
-
-def remote_api_key() -> str | None:
-    """The normalized remote-backend bearer key, or None when remote mode is
-    off. Surrounding whitespace is configuration noise, never a valid secret.
-    Read at call time so tests can monkeypatch the environment."""
-    return os.environ.get("OMNIVOICE_API_KEY", "").strip() or None
-
-
-def presented_api_key(connection) -> str:
-    """Return the first non-empty normalized API key on an HTTP/WS connection.
-
-    Authorization wins over query, which wins over cookie. Each channel is
-    stripped before fallback so whitespace in a higher-priority channel cannot
-    shadow a valid lower-priority credential.
-    """
-    headers = getattr(connection, "headers", None) or {}
-    query = getattr(connection, "query_params", None) or {}
-    cookies = getattr(connection, "cookies", None) or {}
-
-    auth = headers.get("authorization", "")
-    supplied = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
-    if supplied:
-        return supplied
-    supplied = (query.get("api_key") or "").strip()
-    if supplied:
-        return supplied
-    return (cookies.get("ov_key") or "").strip()
 
 
 def _configured_pin(request) -> str | None:
@@ -150,25 +76,34 @@ def _admin_credential_configured(request) -> bool:
     return bool(_configured_pin(request))
 
 
-def _request_presents_admin_credential(request) -> bool:
-    """Whether the request carries a valid **API key** via the channels the
-    middleware accepts (``Authorization: Bearer`` / ``?api_key`` / ``ov_key``
-    cookie).
+def _request_presents_admin_credential(
+    request,
+    *,
+    side_effectful_get: bool = False,
+) -> bool:
+    """Whether the canonical principal carries remote admin capability.
 
-    Admin is RCE-class (``/system/set-env`` + ``/api/settings/*``), so only the
-    API key — a long operator-chosen secret — unlocks it. The 6-digit share PIN
-    is deliberately NOT accepted here: it is a *consumption* credential for LAN
-    playback and is short enough to brute-force (10^6, no lockout), so it must
-    never gate the admin surface (CodeRabbit #1213). A trusted-network CIDR
-    (``is_local_host`` — also a consumption exemption) likewise never unlocks
-    admin. Net: remote admin in server mode requires the API key; a PIN-only
-    deployment keeps admin loopback-only. getattr-defensive so a minimal Request
-    stub never raises."""
-    api_key = remote_api_key() or ""
-    if not api_key:
+    API-key and short-lived session principals may unlock server-mode admin.
+    PIN and trusted-network principals remain consumption-only.
+    """
+    principal = principal_for(request)
+    if principal.kind not in {
+        PrincipalKind.API_KEY,
+        PrincipalKind.ADMIN_SESSION,
+    }:
         return False
-    supplied = presented_api_key(request)
-    return bool(supplied and secrets.compare_digest(supplied, api_key))
+    if principal.transport not in {
+        CredentialTransport.COOKIE,
+        CredentialTransport.LEGACY_COOKIE,
+    }:
+        return True
+    method = str(getattr(request, "method", "GET")).upper()
+    if side_effectful_get or method not in SAFE_HTTP_METHODS:
+        return cookie_csrf_allowed(
+            request,
+            side_effectful_get=side_effectful_get,
+        )
+    return True
 
 
 def require_loopback(request: Request) -> None:
@@ -209,7 +144,7 @@ def require_loopback(request: Request) -> None:
         return
     if _server_mode():
         method = str(getattr(request, "method", "GET")).upper()
-        if method not in _READ_ONLY_METHODS:
+        if method not in SAFE_HTTP_METHODS:
             # Defense in depth. Privileged routers should declare
             # ``require_admin`` directly, but a missed migration must not turn
             # into an unauthenticated Docker write primitive.
@@ -240,7 +175,7 @@ def require_admin(request: Request) -> None:
         return
     if _server_mode():
         method = str(getattr(request, "method", "GET")).upper()
-        read_only = method in _READ_ONLY_METHODS
+        read_only = method in SAFE_HTTP_METHODS
         if read_only and not _admin_credential_configured(request):
             return
         if _request_presents_admin_credential(request):
@@ -258,7 +193,10 @@ def require_admin_action(request: Request) -> None:
     host = request.client.host if request.client else None
     if is_loopback(host):
         return
-    if _server_mode() and _request_presents_admin_credential(request):
+    if _server_mode() and _request_presents_admin_credential(
+        request,
+        side_effectful_get=True,
+    ):
         return
     raise HTTPException(status_code=403, detail="loopback origin or admin API key required")
 
@@ -307,14 +245,8 @@ def require_native_access(request: Request) -> None:
 
 
 def ws_remote_authorized(websocket) -> bool:
-    """Whether a WebSocket handshake presents the remote API key.
-
-    Browser WebSockets cannot set an Authorization header, so the key may
-    arrive as ``?api_key=`` or via the ``ov_key`` cookie that the bearer
-    middleware sets on the first authenticated HTTP request. Returns False
-    when remote mode is off — callers keep their loopback-only behavior.
-    """
-    key = remote_api_key()
-    if not key:
-        return False
-    return secrets.compare_digest(presented_api_key(websocket), key)
+    """Whether the canonical WS principal has a remote admin credential."""
+    return principal_for(websocket).kind in {
+        PrincipalKind.API_KEY,
+        PrincipalKind.ADMIN_SESSION,
+    }

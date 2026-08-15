@@ -36,6 +36,8 @@
     "open_models": "Modelle öffnen"
   },
   "settings": {
+    "remote_backend_test": "Verbindung testen",
+    "remote_backend_save": "Speichern und neu laden",
     "remote_backend_recovery_title": "Remote-Backend nicht erreichbar",
     "remote_backend_recovery_hint": "Du kannst das Remote-Backend später unter Einstellungen → Freigabe ändern.",
     "remote_backend_use_local": "Lokales Backend verwenden",
@@ -58,6 +60,8 @@
     "credentials": "Anmeldedaten",
     "llm_providers": "LLM-Anbieter",
     "llmp_desc": "Treibt die Cinematic- und Autofit-Übersetzung an — das LLM formuliert jede Zeile so um, dass sie ins Zeitbudget ihres Segments passt und das Video-Timing erhalten bleibt. Schlüssel werden verschlüsselt gespeichert; lokale Anbieter (Ollama/LM Studio) bleiben vollständig offline.",
+    "llmp_catalogue_note": "Der als aktiv markierte Anbieter antwortet, wann immer die LLM-Engine-Familie im Katalog auf „OpenAI-kompatibel“ steht.",
+    "llmp_catalogue_link": "LLM-Familie im Katalog öffnen",
     "llmp_provider": "Anbieter",
     "llmp_provider_hint": "Anbieter zum Konfigurieren auswählen. Der aktive wird für die Cinematic/Autofit-Übersetzung verwendet. Lokale Anbieter benötigen keinen Schlüssel, ihr Server muss jedoch laufen.",
     "llmp_local_tag": "lokal",
@@ -311,7 +315,22 @@
     "workers_summary_online": "{{count}} online",
     "workers_token_expired": "Abgelaufen — erzeugen Sie ein neues",
     "workers_token_expires_in": "Läuft ab in {{time}}",
-    "workers_token_qr_hint": "Auf dem anderen Rechner: Einstellungen → System → Remote-Worker → Beitreten, dann scannen oder einfügen."
+    "workers_token_qr_hint": "Auf dem anderen Rechner: Einstellungen → System → Remote-Worker → Beitreten, dann scannen oder einfügen.",
+    "compute_device": "Rechengerät",
+    "compute_device_title": "Rechengerät",
+    "compute_device_desc": "Auf welchem Gerät das Backend Modelle ausführt. Auto ist für fast alle richtig.",
+    "compute_device_env_pinned": "Durch die Umgebungsvariable OMNIVOICE_DEVICE festgelegt",
+    "compute_device_ignored": "Dieses Gerät wurde auf diesem Rechner nicht erkannt — Auto ist aktiv",
+    "compute_device_restart": "Wird nach dem Neustart der App wirksam",
+    "compute_device_note": "Es werden nur auf diesem Rechner erkannte Geräte angezeigt. CPU funktioniert immer; ein festgelegtes Gerät erfindet keine Hardware.",
+    "compute_device_auto": "Auto (empfohlen)",
+    "device_family_cuda": "NVIDIA GPU (CUDA)",
+    "device_family_rocm": "AMD GPU (ROCm)",
+    "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_mps": "Apple GPU (MPS)",
+    "device_family_cpu": "CPU",
+    "device_load_failed": "Geräteeinstellung konnte nicht geladen werden",
+    "perf_save_failed": "Einstellung konnte nicht gespeichert werden"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -706,6 +725,7 @@
     "ready": "fertig",
     "unavailable": "nicht verfügbar",
     "use": "Benutzen",
+    "configureProviders": "Anbieter konfigurieren",
     "loading": "Motoren werden geladen…",
     "refresh": "Aktualisieren",
     "matrixTitle": "Engine-Kompatibilitätsmatrix",
@@ -1330,6 +1350,9 @@
     "reset": "Zurücksetzen",
     "preview": "Vorschau",
     "use_voice": "Benutzen Sie die Stimme",
+    "more_actions": "Weitere Aktionen",
+    "use_in_stories": "In Geschichten verwenden",
+    "set_audiobook_default": "Als Standardstimme für Hörbücher festlegen",
     "open_designer": "Im Designer öffnen",
     "no_matches": "Keine Stimmen entsprechen diesen Filtern.",
     "load_more": "Mehr laden",
@@ -2075,7 +2098,11 @@
   },
   "reportBug": {
     "label": "Melden Sie einen Fehler",
-    "title": "Öffnet eine vorab ausgefüllte GitHub-Problemseite in Ihrem Browser. Es wird nichts gesendet, bis Sie auf „Senden“ klicken."
+    "title": "Öffnet eine vorab ausgefüllte GitHub-Problemseite in Ihrem Browser. Es wird nichts gesendet, bis Sie auf „Senden“ klicken.",
+    "staleTitle": "Update verfügbar",
+    "staleMessage": "Sie verwenden VoiceStudio {{current}}, aber {{latest}} ist bereits erschienen – dieser Fehler ist dort möglicherweise schon behoben. Vor dem Melden die neueste Version ansehen?",
+    "staleView": "Update ansehen",
+    "staleFileAnyway": "Trotzdem melden"
   },
   "app": {
     "loading": "Laden…",

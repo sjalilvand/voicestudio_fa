@@ -36,6 +36,8 @@
     "open_models": "Modelleri aç"
   },
   "settings": {
+    "remote_backend_test": "Bağlantıyı test et",
+    "remote_backend_save": "Kaydet ve yeniden yükle",
     "remote_backend_recovery_title": "Uzak arka uca ulaşılamıyor",
     "remote_backend_recovery_hint": "Uzak arka ucu daha sonra Ayarlar → Paylaşım bölümünden değiştirebilirsiniz.",
     "remote_backend_use_local": "Yerel arka ucu kullan",
@@ -58,6 +60,8 @@
     "credentials": "Kimlik Bilgileri",
     "llm_providers": "LLM sağlayıcıları",
     "llmp_desc": "Cinematic ve Autofit çevirisini çalıştırır — LLM her satırı, bölümünün süre bütçesine sığacak şekilde yeniden yazar; böylece videonun zamanlaması korunur. Anahtarlar şifrelenmiş olarak saklanır; yerel sağlayıcılar (Ollama/LM Studio) tamamen çevrimdışı kalır.",
+    "llmp_catalogue_note": "Katalogda LLM motor ailesi \"OpenAI uyumlu\" olarak ayarlandığında, etkin olarak işaretlenen sağlayıcı yanıt verir.",
+    "llmp_catalogue_link": "Katalogda LLM ailesini aç",
     "llmp_provider": "Sağlayıcı",
     "llmp_provider_hint": "Yapılandırmak için bir sağlayıcı seçin. Etkin olan, Cinematic/Autofit çevirisi için kullanılır. Yerel sağlayıcılar anahtar gerektirmez ama sunucularının çalışıyor olması gerekir.",
     "llmp_local_tag": "yerel",
@@ -311,7 +315,22 @@
     "workers_summary_online": "{{count}} çevrimiçi",
     "workers_token_expired": "Süresi doldu — yenisini oluşturun",
     "workers_token_expires_in": "{{time}} içinde süresi dolacak",
-    "workers_token_qr_hint": "Diğer makinede: Ayarlar → Sistem → Uzak işçiler → Katıl, sonra tarayın veya yapıştırın."
+    "workers_token_qr_hint": "Diğer makinede: Ayarlar → Sistem → Uzak işçiler → Katıl, sonra tarayın veya yapıştırın.",
+    "compute_device": "Hesaplama aygıtı",
+    "compute_device_title": "Hesaplama aygıtı",
+    "compute_device_desc": "Backend'in modelleri hangi aygıtta çalıştıracağı. Auto neredeyse herkes için doğrudur.",
+    "compute_device_env_pinned": "OMNIVOICE_DEVICE ortam değişkeniyle sabitlendi",
+    "compute_device_ignored": "Bu aygıt bu makinede algılanmadı — Auto geçerli",
+    "compute_device_restart": "Uygulama yeniden başlatıldıktan sonra geçerli olur",
+    "compute_device_note": "Yalnızca bu makinede algılanan aygıtlar listelenir. CPU her zaman çalışır; bir aygıtı sabitlemek asla donanım uydurmaz.",
+    "compute_device_auto": "Auto (önerilen)",
+    "device_family_cuda": "NVIDIA GPU (CUDA)",
+    "device_family_rocm": "AMD GPU (ROCm)",
+    "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_mps": "Apple GPU (MPS)",
+    "device_family_cpu": "CPU",
+    "device_load_failed": "Aygıt ayarı yüklenemedi",
+    "perf_save_failed": "Ayar kaydedilemedi"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -706,6 +725,7 @@
     "ready": "hazır",
     "unavailable": "müsait değil",
     "use": "Kullanım",
+    "configureProviders": "Sağlayıcıları yapılandır",
     "loading": "Motorlar yükleniyor…",
     "refresh": "Yenile",
     "matrixTitle": "Motor Uyumluluk Matrisi",
@@ -1330,6 +1350,9 @@
     "reset": "Sıfırla",
     "preview": "Önizleme",
     "use_voice": "Sesi kullan",
+    "more_actions": "Daha fazla işlem",
+    "use_in_stories": "Hikayelerde kullan",
+    "set_audiobook_default": "Sesli kitap için varsayılan ses olarak ayarla",
     "open_designer": "Designer'da aç",
     "no_matches": "Bu filtrelerle eşleşen ses yok.",
     "load_more": "Daha fazlasını yükle",
@@ -2075,7 +2098,11 @@
   },
   "reportBug": {
     "label": "Hata bildir",
-    "title": "Tarayıcınızda önceden doldurulmuş bir GitHub Sorunları sayfasını açar. Siz Gönder'i tıklatana kadar hiçbir şey gönderilmez."
+    "title": "Tarayıcınızda önceden doldurulmuş bir GitHub Sorunları sayfasını açar. Siz Gönder'i tıklatana kadar hiçbir şey gönderilmez.",
+    "staleTitle": "Güncelleme mevcut",
+    "staleMessage": "VoiceStudio {{current}} kullanıyorsunuz, ancak {{latest}} zaten yayında — bu hata orada düzeltilmiş olabilir. Bildirmeden önce en son sürüme bakmak ister misiniz?",
+    "staleView": "Güncellemeyi görüntüle",
+    "staleFileAnyway": "Yine de bildir"
   },
   "app": {
     "loading": "Yükleniyor…",

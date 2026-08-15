@@ -196,6 +196,12 @@ export const GROUPS = [
           'vram',
           'compute',
           'platform',
+          'cuda',
+          'rocm',
+          'mps',
+          'cpu',
+          'xpu',
+          'intel',
         ],
       },
       {

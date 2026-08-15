@@ -36,6 +36,8 @@
     "open_models": "فتح النماذج"
   },
   "settings": {
+    "remote_backend_test": "اختبار الاتصال",
+    "remote_backend_save": "حفظ وإعادة التحميل",
     "remote_backend_recovery_title": "تعذّر الوصول إلى الواجهة الخلفية البعيدة",
     "remote_backend_recovery_hint": "يمكنك تغيير الواجهة الخلفية البعيدة لاحقًا من الإعدادات ← المشاركة.",
     "remote_backend_use_local": "استخدام الواجهة الخلفية المحلية",
@@ -58,6 +60,8 @@
     "credentials": "بيانات الاعتماد",
     "llm_providers": "مقدمو خدمات LLM",
     "llmp_desc": "يشغّل ترجمة Cinematic وAutofit — يعيد نموذج اللغة (LLM) صياغة كل سطر ليناسب الوقت المتاح لمقطعه حتى يبقى توقيت الفيديو متوافقًا. تُخزَّن المفاتيح مشفّرة؛ ويعمل مقدمو الخدمة المحليون (Ollama/LM Studio) دون اتصال بالإنترنت تمامًا.",
+    "llmp_catalogue_note": "المقدم المعلَّم كنشط هو من يستجيب عندما تكون عائلة محركات LLM في الكتالوج مضبوطة على \"متوافق مع OpenAI\".",
+    "llmp_catalogue_link": "افتح عائلة LLM في الكتالوج",
     "llmp_provider": "مقدم الخدمة",
     "llmp_provider_hint": "اختر مقدم خدمة لإعداده. يُستخدم النشط لترجمة Cinematic/Autofit. لا يحتاج المقدمون المحليون إلى مفتاح، لكن يجب أن يكون خادمهم قيد التشغيل.",
     "llmp_local_tag": "محلي",
@@ -311,7 +315,22 @@
     "workers_summary_online": "{{count}} متصل",
     "workers_token_expired": "انتهت الصلاحية — أنشئ رمزًا جديدًا",
     "workers_token_expires_in": "تنتهي الصلاحية خلال {{time}}",
-    "workers_token_qr_hint": "على الجهاز الآخر: الإعدادات ← النظام ← العاملون البعيدون ← انضمام، ثم امسح أو الصق."
+    "workers_token_qr_hint": "على الجهاز الآخر: الإعدادات ← النظام ← العاملون البعيدون ← انضمام، ثم امسح أو الصق.",
+    "compute_device": "جهاز الحوسبة",
+    "compute_device_title": "جهاز الحوسبة",
+    "compute_device_desc": "الجهاز الذي يشغّل عليه الخادم النماذج. الوضع التلقائي مناسب للجميع تقريبًا.",
+    "compute_device_env_pinned": "مثبّت بواسطة متغيّر البيئة OMNIVOICE_DEVICE",
+    "compute_device_ignored": "لم يُكتشف هذا الجهاز على هذا الحاسوب — الوضع التلقائي هو المعمول به",
+    "compute_device_restart": "يسري بعد إعادة تشغيل التطبيق",
+    "compute_device_note": "تُعرض فقط الأجهزة المكتشفة على هذا الحاسوب. تعمل CPU دائمًا؛ تثبيت جهاز لا يخترع عتادًا أبدًا.",
+    "compute_device_auto": "تلقائي (مستحسن)",
+    "device_family_cuda": "NVIDIA GPU (CUDA)",
+    "device_family_rocm": "AMD GPU (ROCm)",
+    "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_mps": "Apple GPU (MPS)",
+    "device_family_cpu": "CPU",
+    "device_load_failed": "تعذّر تحميل إعداد الجهاز",
+    "perf_save_failed": "تعذّر حفظ الإعداد"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -706,6 +725,7 @@
     "ready": "جاهز",
     "unavailable": "غير متاح",
     "use": "استخدم",
+    "configureProviders": "إعداد مقدمي الخدمة",
     "loading": "جارٍ تحميل المحركات…",
     "refresh": "تحديث",
     "matrixTitle": "مصفوفة توافق المحرك",
@@ -1330,6 +1350,9 @@
     "reset": "إعادة تعيين",
     "preview": "معاينة",
     "use_voice": "استخدم الصوت",
+    "more_actions": "المزيد من الإجراءات",
+    "use_in_stories": "استخدمه في القصص",
+    "set_audiobook_default": "تعيين كصوت افتراضي للكتاب المسموع",
     "open_designer": "فتح في المصمم",
     "no_matches": "لا توجد أصوات تتطابق مع هذه المرشحات.",
     "load_more": "تحميل المزيد",
@@ -2075,7 +2098,11 @@
   },
   "reportBug": {
     "label": "الإبلاغ عن خطأ",
-    "title": "يفتح صفحة مشكلات GitHub المملوءة مسبقًا في متصفحك. لا يتم إرسال أي شيء حتى تقوم بالنقر فوق إرسال."
+    "title": "يفتح صفحة مشكلات GitHub المملوءة مسبقًا في متصفحك. لا يتم إرسال أي شيء حتى تقوم بالنقر فوق إرسال.",
+    "staleTitle": "يتوفر تحديث",
+    "staleMessage": "أنت تستخدم VoiceStudio {{current}}، لكن الإصدار {{latest}} متوفر بالفعل — قد يكون هذا الخطأ مُصلحًا فيه. هل تريد الاطلاع على أحدث إصدار قبل الإبلاغ؟",
+    "staleView": "عرض التحديث",
+    "staleFileAnyway": "الإبلاغ على أي حال"
   },
   "app": {
     "loading": "جارٍ التحميل…",

@@ -36,6 +36,8 @@
     "open_models": "Abrir modelos"
   },
   "settings": {
+    "remote_backend_test": "Probar conexión",
+    "remote_backend_save": "Guardar y recargar",
     "remote_backend_recovery_title": "No se puede acceder al backend remoto",
     "remote_backend_recovery_hint": "Puedes cambiar el backend remoto más tarde en Ajustes → Compartir.",
     "remote_backend_use_local": "Usar backend local",
@@ -58,6 +60,8 @@
     "credentials": "Credenciales",
     "llm_providers": "Proveedores LLM",
     "llmp_desc": "Impulsa la traducción Cinematic y Autofit: el LLM reescribe cada línea para ajustarse al tiempo disponible de su segmento y mantener la sincronización del vídeo. Las claves se guardan cifradas; los proveedores locales (Ollama/LM Studio) funcionan totalmente sin conexión.",
+    "llmp_catalogue_note": "El proveedor marcado como activo es el que responde siempre que la familia de motores LLM del catálogo esté en «compatible con OpenAI».",
+    "llmp_catalogue_link": "Abrir la familia LLM en el catálogo",
     "llmp_provider": "Proveedor",
     "llmp_provider_hint": "Elige un proveedor para configurarlo. El activo se usa para la traducción Cinematic/Autofit. Los proveedores locales no necesitan clave, pero su servidor debe estar en ejecución.",
     "llmp_local_tag": "local",
@@ -311,7 +315,22 @@
     "workers_summary_online": "{{count}} en línea",
     "workers_token_expired": "Caducado — genera uno nuevo",
     "workers_token_expires_in": "Caduca en {{time}}",
-    "workers_token_qr_hint": "En el otro equipo: Ajustes → Sistema → Trabajadores remotos → Unirse, y luego escanea o pega."
+    "workers_token_qr_hint": "En el otro equipo: Ajustes → Sistema → Trabajadores remotos → Unirse, y luego escanea o pega.",
+    "compute_device": "Dispositivo de cómputo",
+    "compute_device_title": "Dispositivo de cómputo",
+    "compute_device_desc": "En qué dispositivo ejecuta los modelos el backend. Auto es lo correcto para casi todos.",
+    "compute_device_env_pinned": "Fijado por la variable de entorno OMNIVOICE_DEVICE",
+    "compute_device_ignored": "Ese dispositivo no se detectó en esta máquina — Auto está en efecto",
+    "compute_device_restart": "Surte efecto tras reiniciar la aplicación",
+    "compute_device_note": "Solo se listan los dispositivos detectados en esta máquina. La CPU siempre funciona; fijar un dispositivo nunca inventa hardware.",
+    "compute_device_auto": "Auto (recomendado)",
+    "device_family_cuda": "NVIDIA GPU (CUDA)",
+    "device_family_rocm": "AMD GPU (ROCm)",
+    "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_mps": "Apple GPU (MPS)",
+    "device_family_cpu": "CPU",
+    "device_load_failed": "No se pudo cargar el ajuste del dispositivo",
+    "perf_save_failed": "No se pudo guardar el ajuste"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -706,6 +725,7 @@
     "ready": "listo",
     "unavailable": "no disponible",
     "use": "uso",
+    "configureProviders": "Configurar proveedores",
     "loading": "Cargando motores…",
     "refresh": "Actualizar",
     "matrixTitle": "Matriz de compatibilidad de motores",
@@ -1330,6 +1350,9 @@
     "reset": "Reiniciar",
     "preview": "Vista previa",
     "use_voice": "usar voz",
+    "more_actions": "Más acciones",
+    "use_in_stories": "Usar en Historias",
+    "set_audiobook_default": "Establecer como voz predeterminada para Audiolibro",
     "open_designer": "Abrir en Diseñador",
     "no_matches": "Ninguna voz coincide con estos filtros.",
     "load_more": "Cargar más",
@@ -2075,7 +2098,11 @@
   },
   "reportBug": {
     "label": "Informar un error",
-    "title": "Abre una página de Problemas de GitHub precargada en su navegador. No se envía nada hasta que haga clic en Enviar."
+    "title": "Abre una página de Problemas de GitHub precargada en su navegador. No se envía nada hasta que haga clic en Enviar.",
+    "staleTitle": "Actualización disponible",
+    "staleMessage": "Está usando VoiceStudio {{current}}, pero {{latest}} ya está disponible; puede que este error ya esté corregido. ¿Ver la última versión antes de informar?",
+    "staleView": "Ver actualización",
+    "staleFileAnyway": "Informar de todos modos"
   },
   "app": {
     "loading": "Cargando…",
