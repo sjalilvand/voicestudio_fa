@@ -45,13 +45,49 @@
 <br/>
 
 <div align="center">
-  <img src="docs/screenshot-launchpad.png" alt="VoiceStudio — Launchpad" width="100%"/>
+  <img src="docs/media/0.5.0/quick-switch.gif" alt="VoiceStudio — switching TTS engines from the status bar" width="100%"/>
 </div>
 
 > **Your voice is personal. Your studio should feel personal too.** VoiceStudio keeps its core workflow on your hardware: clone, design, dub, dictate, and publish in 646 languages without a subscription or usage meter. Network-backed engines and services are optional, visible choices—not hidden requirements.
 
 > [!WARNING]
 > **Active beta.** Things may break between releases — for the newest fixes, run from source. Bug reports and PRs are very welcome: [open an issue](https://github.com/debpalash/VoiceStudio/issues) or [join Discord](https://discord.gg/bzQavDfVV9).
+
+<a id="quickstart"></a>
+
+## ⚡ Quickstart
+
+<div align="center">
+  <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/macOS-DMG_(Apple_Silicon)-000?style=for-the-badge&logo=apple&logoColor=white" alt="Download macOS DMG" /></a>
+  <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/Windows-MSI_(x64)-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download Windows MSI" /></a>
+  <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/Linux-AppImage_(x64)-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download Linux AppImage" /></a>
+  <br/>
+  <sub>Each button opens the latest-release page — download the installer for your OS from the assets list.</sub><br/>
+  <sub><b>macOS:</b> first launch needs a one-time approval — right-click → <b>Open</b> (or System Settings → Privacy &amp; Security → <b>"Open Anyway"</b> on macOS 15). No Terminal needed. <a href="docs/install/macos.md#gatekeeper-quarantine">Why?</a> · <b>Intel Macs:</b> local backend unsupported (<a href="https://github.com/debpalash/VoiceStudio/issues/889">#889</a>) — <a href="docs/install/macos.md">details</a>.</sub>
+</div>
+
+**Install guide:** [🍎 macOS](docs/install/macos.md) · [🪟 Windows](docs/install/windows.md) · [🐧 Linux](docs/install/linux.md) · [🐳 Docker](docs/install/docker.md)
+
+**Your first cloned voice, in three steps:**
+
+1. **Install & launch.** The first launch sets up its own Python runtime and downloads model weights — the splash screen narrates every step (one-time, a few minutes; instant after that).
+2. **Open Voice Cloning** from the Launchpad and drop in a **3-second clip** of any voice.
+3. **Type a line, hit Generate.** The audio is yours — created and stored on your machine, in any of 646 languages.
+
+<details>
+<summary><b>🧰 Troubleshooting · slow generation · HF tokens · restricted networks</b></summary>
+
+<br/>
+
+- **Something broke?** Run the self-check — **Settings → About → "Run self-check"** (or `uv run python backend/main.py --diagnose --deep`) — then the [top 10 install errors](docs/install/troubleshooting.md). **"Save diagnostic bundle"** packages scrubbed logs for a bug report.
+- **Feels slow?** [docs/performance.md](docs/performance.md) — where the time goes and how to tune it. Measured numbers per engine/device: [docs/benchmarks.md](docs/benchmarks.md).
+- **Want breaths, laughter, emotion?** [docs/expressive-speech.md](docs/expressive-speech.md) — what each engine can do today.
+- **HF tokens · diarization · download speed / mirrors:** [tokens](docs/setup/huggingface-token.md) · [diarization](docs/features/diarization.md) · [downloads](docs/downloading-models.md).
+- **Coming from [Real-Time-Voice-Cloning](https://github.com/CorentinJ/Real-Time-Voice-Cloning)?** [Migration guide](docs/migration/real-time-voice-cloning.md).
+
+</details>
+
+---
 
 <a id="whats-new"></a>
 
@@ -68,8 +104,8 @@ The rename release — full notes: [v0.5.0 release](https://github.com/debpalash
 - 🎤 **Dictation on Wayland** — the portal shortcut actually fires now, and the recording pill is back on every desktop.
 
 <div align="center">
-  <img src="docs/media/0.5.0/quick-switch.gif" alt="Switching engines from the status bar" width="640"/>
-  <br/><sub>Engine quick-switch from the status bar — <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>E</kbd> from any workspace</sub>
+  <img src="docs/screenshot-launchpad.png" alt="VoiceStudio — Launchpad" width="640"/>
+  <br/><sub>The Launchpad — every workspace one click away; quick-switch engines anywhere with <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>E</kbd> (shown above)</sub>
 </div>
 
 <br/>
@@ -131,35 +167,6 @@ Three flagships, five more headliners, and a dozen under the fold.
 - 🎒 **Portable personas** — export voices as `.ovsvoice` bundles: identity + watermark.
 - ♾️ **Unlimited TTS** — sentence-chunked generation, no length cap, streaming via WebSocket.
 - 🧠 **Dictation + LLM** — local-LLM cleanup of transcripts, optional echo cancellation.
-
-</details>
-
----
-
-<a id="quickstart"></a>
-
-## ⚡ Quickstart
-
-<div align="center">
-  <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/macOS-DMG_(Apple_Silicon)-000?style=for-the-badge&logo=apple&logoColor=white" alt="Download macOS DMG" /></a>
-  <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/Windows-MSI_(x64)-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download Windows MSI" /></a>
-  <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/Linux-AppImage_(x64)-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download Linux AppImage" /></a>
-  <br/>
-  <sub><b>macOS:</b> first launch needs a one-time approval — right-click → <b>Open</b> (or System Settings → Privacy &amp; Security → <b>"Open Anyway"</b> on macOS 15). No Terminal needed. <a href="docs/install/macos.md#gatekeeper-quarantine">Why?</a> · <b>Intel Macs:</b> local backend unsupported (<a href="https://github.com/debpalash/VoiceStudio/issues/889">#889</a>) — <a href="docs/install/macos.md">details</a>.</sub>
-</div>
-
-**Install guide:** [🍎 macOS](docs/install/macos.md) · [🪟 Windows](docs/install/windows.md) · [🐧 Linux](docs/install/linux.md) · [🐳 Docker](docs/install/docker.md)
-
-<details>
-<summary><b>🧰 Troubleshooting · slow generation · HF tokens · restricted networks</b></summary>
-
-<br/>
-
-- **Something broke?** Run the self-check — **Settings → About → "Run self-check"** (or `uv run python backend/main.py --diagnose --deep`) — then the [top 10 install errors](docs/install/troubleshooting.md). **"Save diagnostic bundle"** packages scrubbed logs for a bug report.
-- **Feels slow?** [docs/performance.md](docs/performance.md) — where the time goes and how to tune it.
-- **Want breaths, laughter, emotion?** [docs/expressive-speech.md](docs/expressive-speech.md) — what each engine can do today.
-- **HF tokens · diarization · download speed / mirrors:** [tokens](docs/setup/huggingface-token.md) · [diarization](docs/features/diarization.md) · [downloads](docs/downloading-models.md).
-- **Coming from [Real-Time-Voice-Cloning](https://github.com/CorentinJ/Real-Time-Voice-Cloning)?** [Migration guide](docs/migration/real-time-voice-cloning.md).
 
 </details>
 
@@ -526,7 +533,7 @@ VoiceStudio stands on exceptional open-source work: [OmniVoice (k2-fsa)](https:/
 
 ### 🧰 More local open-source from the maker
 
-[**Opal** 💠](https://github.com/debpalash/Opal) — play everything: the media player for the AI era · [**memxt** 🧠](https://github.com/debpalash/memxt) — local long-term memory for coding agents. Same rule: **your data stays on your machine.**
+[**Opal** 💠](https://github.com/debpalash/Opal) — play everything: the media player for the AI era · [**memxt** 🧠](https://github.com/debpalash/memxt) — local long-term memory for coding agents. Same rule: **your data stays on your machine.** All of it lives at [palash.dev](https://palash.dev).
 
 ---
 
