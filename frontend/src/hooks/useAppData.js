@@ -127,11 +127,17 @@ export default function useAppData() {
   // better than blanking the UI, and the warn gives "my voices vanished"
   // reports a cause (#1158). The INITIAL load passes `{ rethrow: true }` so
   // retryInitialLoad can retry — there is no previous list to keep yet.
-  const makeLoader = (fetch, set, label) =>
-    useCallback(
+  // Each loader is last-write-wins by invocation order: a slow in-flight
+  // request (the initial retry loop overlaps freely with WS reloads) must
+  // not overwrite the fresher list a later reload already applied.
+  const makeLoader = (fetch, set, label) => {
+    const genRef = { current: 0 };
+    return useCallback(
       async ({ rethrow } = {}) => {
+        const gen = ++genRef.current;
         try {
-          set(await fetch());
+          const data = await fetch();
+          if (gen === genRef.current) set(data);
         } catch (e) {
           console.warn(`Failed to load ${label}:`, e);
           if (rethrow) throw e;
@@ -139,6 +145,7 @@ export default function useAppData() {
       },
       [],
     );
+  };
   const loadProfiles = makeLoader(listProfiles, setProfiles, 'voice profiles');
   const loadHistory = makeLoader(listHistory, setHistory, 'generation history');
   const loadDubHistory = makeLoader(listDubHistory, setDubHistory, 'dub history');

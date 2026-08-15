@@ -69,13 +69,10 @@ def test_emit_from_thread_reaches_serving_loop(bus, tmp_path):
 async def _serve(bus, received: list[str], started: threading.Event, done: threading.Event):
     q = await bus.subscribe()
     started.set()
-    # Poll the queue (not `done`) — `done` is what the main thread waits on.
-    deadline = asyncio.get_event_loop().time() + 2.0
-    while asyncio.get_event_loop().time() < deadline:
-        try:
-            received.append(q.get_nowait())
-            break
-        except asyncio.QueueEmpty:
-            await asyncio.sleep(0.01)
-    done.set()
-    await bus.unsubscribe(q)
+    # Await the event itself (no sleep-polling): a failure surfaces as
+    # asyncio.TimeoutError, which fails the test with a clear traceback.
+    try:
+        received.append(await asyncio.wait_for(q.get(), 2.0))
+    finally:
+        done.set()
+        await bus.unsubscribe(q)
