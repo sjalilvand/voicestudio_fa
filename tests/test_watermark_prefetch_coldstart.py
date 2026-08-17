@@ -178,31 +178,43 @@ def test_prefetched_model_gets_one_extra_idle_window(monkeypatch):
     """Review finding: the reaper freed the prefetch-warmed, never-used
     generator at the first idle tick, re-imposing the cold start the prefetch
     exists to hide. It now survives ONE extra window; real use clears the
-    grace entirely."""
-    # Immune to a leaked background prefetch (the CI flake): if a warm-up
-    # from an earlier app-boot fires mid-test it would re-stamp _last_used.
-    monkeypatch.setattr(watermark, "will_mark", lambda: False)
-    watermark._generator = SimpleNamespace(eval=lambda: None)
-    watermark._prefetched_unused = True
-    watermark._last_used = 0.0  # long idle
+    grace entirely.
 
-    # First reaper pass: grace, model kept.
-    assert watermark.release_idle_models(900) is False
-    assert watermark._generator is not None
+    Each phase re-establishes its module state IMMEDIATELY before its
+    release_idle_models call and passes an explicit far-future ``now=``: a
+    leaked idle reaper (a test lifespan that exits without shutdown keeps
+    idle_worker running) mutates these same globals from another thread, and
+    re-stamping _last_used mid-test made the real-assertions flake on CI.
+    With preconditions set adjacent to each call and now pinned, an
+    interleaved tick cannot change the outcome.
+    """
+    import time as _time
+
+    far_future = _time.monotonic() + 1_000_000
+
+    def _given(generator_set: bool, grace: bool):
+        watermark._generator = SimpleNamespace(eval=lambda: None) if generator_set else None
+        watermark._prefetched_unused = grace
+        watermark._last_used = 0.0
+
+    # First reaper pass on a prefetched-never-used model: grace, model kept.
+    _given(generator_set=True, grace=True)
+    assert watermark.release_idle_models(900, now=far_future) is False
     # Second pass: grace consumed, model released.
-    assert watermark.release_idle_models(900) is True
-    assert watermark._generator is None
+    _given(generator_set=True, grace=False)
+    assert watermark.release_idle_models(900, now=far_future) is True
+    # After grace was consumed, an idle model with no models at all is a no-op.
+    _given(generator_set=False, grace=False)
+    assert watermark.release_idle_models(900, now=far_future) is False
 
-    # After real use (embed path), no grace at all.
+    # Real use clears the grace: embed (even a failing one) resets the flag,
+    # so the next reaper pass releases without a second window.
     import torch as _torch
     monkeypatch.setattr(watermark, "is_enabled", lambda: True)
     monkeypatch.setattr(watermark, "_check_available", lambda: True)
-    watermark._generator = SimpleNamespace(
-        eval=lambda: None,
-        __call__=lambda self, seg, **kw: _torch.zeros(1, 1, 1),
-    )
+    watermark._generator = SimpleNamespace(eval=lambda: None)
+    watermark._prefetched_unused = True
     monkeypatch.setattr(watermark, "_get_generator", lambda: watermark._generator)
-    wav = _torch.zeros(1, 2400)
-    watermark.embed_watermark(wav, 24000)  # clears _prefetched_unused
-    watermark._last_used = 0.0
-    assert watermark.release_idle_models(900) is True  # no second grace
+    watermark.embed_watermark(_torch.zeros(1, 2400), 24000)  # clears the flag
+    _given(generator_set=True, grace=False)
+    assert watermark.release_idle_models(900, now=far_future) is True
