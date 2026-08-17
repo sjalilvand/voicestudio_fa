@@ -21,12 +21,19 @@ from services import watermark
 
 @pytest.fixture(autouse=True)
 def _reset_models(monkeypatch):
+    # Reset ALL lifecycle globals (CodeRabbit, PR #1577): a stale warm-up
+    # stamp or availability cache from a prior test changes this test's
+    # conditions.
     watermark._generator = None
     watermark._detector = None
-    monkeypatch.delenv("OMNIVOICE_WM", raising=False)
+    watermark._last_used = 0.0
+    watermark._prefetched_unused = False
+    monkeypatch.setattr(watermark, "_audioseal_available", None, raising=False)
     yield
     watermark._generator = None
     watermark._detector = None
+    watermark._last_used = 0.0
+    watermark._prefetched_unused = False
 
 
 def _fake_audioseal(monkeypatch, load_s: float) -> list[int]:
@@ -152,6 +159,9 @@ def test_prefetched_model_gets_one_extra_idle_window(monkeypatch):
     generator at the first idle tick, re-imposing the cold start the prefetch
     exists to hide. It now survives ONE extra window; real use clears the
     grace entirely."""
+    # Immune to a leaked background prefetch (the CI flake): if a warm-up
+    # from an earlier app-boot fires mid-test it would re-stamp _last_used.
+    monkeypatch.setattr(watermark, "will_mark", lambda: False)
     watermark._generator = SimpleNamespace(eval=lambda: None)
     watermark._prefetched_unused = True
     watermark._last_used = 0.0  # long idle

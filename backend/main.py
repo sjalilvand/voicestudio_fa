@@ -383,6 +383,19 @@ def _capture_preload_delay_s() -> float:
         pass
     return 30.0
 
+def _watermark_preload_delay_s() -> float:
+    """Seconds after boot before the AudioSeal generator warm-up fires.
+
+    Own knob, NOT ``_capture_preload_delay_s`` + offset: a capture-specific
+    env override must not retime the watermark warm too, and the two cold
+    imports shouldn't fire on the same tick (CodeRabbit, PR #1577). Default
+    35s sits ~5s past the capture-ASR warm for the same reason."""
+    raw = os.environ.get("OMNIVOICE_PRELOAD_WATERMARK_DELAY", "")
+    try:
+        return float(raw) if raw.strip() else 35.0
+    except ValueError:
+        return 35.0
+
 
 def _capture_preload_ram_ok(min_free_bytes: int = 4 * 1024**3) -> bool:
     """RAM guard for the dictation warm-up: skip below 4 GB free so the
@@ -915,11 +928,7 @@ async def _phase_b(app: FastAPI) -> None:
     # the shared default executor.
     if _env_flag("OMNIVOICE_PRELOAD_WATERMARK", default=True):
         async def _preload_watermark():
-            # Own delay (+5s past the capture warm), not _capture_preload_delay_s:
-            # a capture-specific env override shouldn't retime this, and both
-            # warms firing on the same tick is exactly the I/O overlap the
-            # defer exists to avoid.
-            await asyncio.sleep(_capture_preload_delay_s() + 5.0)
+            await asyncio.sleep(_watermark_preload_delay_s())
             loop = asyncio.get_running_loop()
             from services import watermark as _watermark
 
@@ -1123,6 +1132,17 @@ async def lifespan(app: FastAPI):
         getattr(app.state, "watermark_preload_task", None),
         timeout=20.0,
     )
+    # The watermark warm-up runs on its dedicated 1-worker pool; cancelling
+    # the task above detaches the asyncio side but a thread already inside
+    # the ~42s cold import keeps running (Python can't kill it — same
+    # reality as the GPU-pool note above). Drain the pool's QUEUE so nothing
+    # new starts, mirroring _reset_gpu_pool's bounded-abandon approach.
+    try:
+        from services.model_manager import get_watermark_pool as _get_wm_pool
+
+        _get_wm_pool().shutdown(wait=False, cancel_futures=True)
+    except Exception:
+        pass
     # Unload the model and free GPU memory
     try:
         import services.model_manager as mm
