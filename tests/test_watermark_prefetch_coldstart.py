@@ -154,6 +154,26 @@ def test_detector_load_is_not_blocked_by_a_generator_prefetch(monkeypatch):
     t.join(timeout=10)
 
 
+def test_watermark_pool_rebuilds_after_shutdown_drain():
+    """The lifespan shutdown drains the watermark pool; a process that keeps
+    running afterwards (the test suite) must get a FRESH pool on next use,
+    not "cannot schedule new futures after shutdown" (CI, PR #1577)."""
+    import concurrent.futures
+
+    from services.model_manager import get_watermark_pool, shutdown_watermark_pool
+
+    pool_before = get_watermark_pool()
+    shutdown_watermark_pool()
+    with pytest.raises(RuntimeError):
+        # The drained pool refuses new work…
+        pool_before.submit(lambda: None).result(timeout=5)
+    # …but the next getter hands out a live replacement.
+    result = get_watermark_pool().submit(lambda: "ok").result(timeout=5)
+    assert isinstance(result, concurrent.futures.Future) or result == "ok"
+    # Clean up the replacement so later tests start from a fresh pool too.
+    shutdown_watermark_pool()
+
+
 def test_prefetched_model_gets_one_extra_idle_window(monkeypatch):
     """Review finding: the reaper freed the prefetch-warmed, never-used
     generator at the first idle tick, re-imposing the cold start the prefetch

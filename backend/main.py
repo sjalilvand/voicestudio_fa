@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 
@@ -392,9 +393,12 @@ def _watermark_preload_delay_s() -> float:
     35s sits ~5s past the capture-ASR warm for the same reason."""
     raw = os.environ.get("OMNIVOICE_PRELOAD_WATERMARK_DELAY", "")
     try:
-        return float(raw) if raw.strip() else 35.0
+        value = float(raw) if raw.strip() else 35.0
     except ValueError:
         return 35.0
+    # Reject negative/non-finite overrides (CodeRabbit, PR #1577): a negative
+    # delay would fire the warm-up during startup I/O; NaN would never fire.
+    return value if math.isfinite(value) and value >= 0 else 35.0
 
 
 def _capture_preload_ram_ok(min_free_bytes: int = 4 * 1024**3) -> bool:
@@ -1138,11 +1142,13 @@ async def lifespan(app: FastAPI):
     # reality as the GPU-pool note above). Drain the pool's QUEUE so nothing
     # new starts, mirroring _reset_gpu_pool's bounded-abandon approach.
     try:
-        from services.model_manager import get_watermark_pool as _get_wm_pool
+        from services.model_manager import shutdown_watermark_pool as _wm_drain
 
-        _get_wm_pool().shutdown(wait=False, cancel_futures=True)
+        _wm_drain()
     except Exception:
-        pass
+        # Best-effort drain: a failure here must not abort the remaining
+        # shutdown steps (model unload, MCP teardown) below.
+        logger.warning("Watermark pool drain failed at shutdown", exc_info=True)
     # Unload the model and free GPU memory
     try:
         import services.model_manager as mm

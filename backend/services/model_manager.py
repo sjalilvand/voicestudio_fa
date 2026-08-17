@@ -1074,6 +1074,22 @@ def get_watermark_pool() -> ThreadPoolExecutor:
     return _watermark_pool_singleton
 
 
+def shutdown_watermark_pool() -> None:
+    """Drain the watermark pool at app shutdown (PR #1577): refuse queued
+    work so a pending warm-up can't outlive the app, bounded-abandon like
+    the GPU pool — a thread already inside blocking import work keeps
+    running (Python can't kill it). Resets the singleton so a process that
+    KEEPS RUNNING after a lifespan shutdown — the test suite does exactly
+    this — builds a fresh pool on next use instead of dead-submitting
+    ("cannot schedule new futures after shutdown", seen on CI)."""
+    global _watermark_pool_singleton
+    with _watermark_pool_lock:
+        pool = _watermark_pool_singleton
+        _watermark_pool_singleton = None
+    if pool is not None:
+        pool.shutdown(wait=False, cancel_futures=True)
+
+
 model = None  # type: ignore
 _model_lock = asyncio.Lock()
 
