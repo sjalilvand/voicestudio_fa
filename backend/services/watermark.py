@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 import math
+import threading
 import time
 import torch
 from typing import Optional
@@ -37,6 +38,20 @@ _detector = None
 _audioseal_available: Optional[bool] = None
 # Monotonic stamp of the last embed/detect, for the idle release below.
 _last_used = 0.0
+# Per-model locks for the lazy builds below: the startup prefetch thread
+# races the first embed, and both must share ONE build (a double load doubles
+# the cold-start cost the prefetch exists to hide). One lock PER MODEL — a
+# single shared lock made the ~42s generator prefetch block unrelated detector
+# loads and the idle reaper behind it. release_idle_models acquires both, in
+# this fixed order (nothing else nests them, so no cycle is possible).
+_generator_lock = threading.Lock()
+_detector_lock = threading.Lock()
+
+# True when the generator exists ONLY because the startup prefetch built it
+# and no embed/detect has used it since. The idle reaper grants one extra
+# idle window before dropping such a model, so a first synthesis at minute
+# 20 still finds it warm (code-review finding 2 on the prefetch PR).
+_prefetched_unused = False
 
 # 16-bit message: "OM" in ASCII = 0x4F 0x4D = 0100_1111 0100_1101
 # This is our signature — every VoiceStudio-generated audio carries it.
@@ -80,25 +95,52 @@ def _check_available() -> bool:
 def _get_generator():
     """Lazy-load the AudioSeal generator model."""
     global _generator, _last_used
-    _last_used = time.monotonic()
-    if _generator is None:
-        from audioseal import AudioSeal
-        _generator = AudioSeal.load_generator("audioseal_wm_16bits")
-        _generator.eval()
-        logger.info("AudioSeal generator loaded (16-bit message mode)")
-    return _generator
+    with _generator_lock:
+        _last_used = time.monotonic()
+        if _generator is None:
+            from audioseal import AudioSeal
+            _generator = AudioSeal.load_generator("audioseal_wm_16bits")
+            _generator.eval()
+            logger.info("AudioSeal generator loaded (16-bit message mode)")
+        return _generator
 
 
 def _get_detector():
     """Lazy-load the AudioSeal detector model."""
     global _detector, _last_used
-    _last_used = time.monotonic()
-    if _detector is None:
-        from audioseal import AudioSeal
-        _detector = AudioSeal.load_detector("audioseal_detector_16bits")
-        _detector.eval()
-        logger.info("AudioSeal detector loaded (16-bit message mode)")
-    return _detector
+    with _detector_lock:
+        _last_used = time.monotonic()
+        if _detector is None:
+            from audioseal import AudioSeal
+            _detector = AudioSeal.load_detector("audioseal_detector_16bits")
+            _detector.eval()
+            logger.info("AudioSeal detector loaded (16-bit message mode)")
+        return _detector
+
+
+def prefetch_generator() -> None:
+    """Warm the AudioSeal generator eagerly (startup background thread).
+
+    The first ``mark_synthetic`` otherwise pays the audioseal import plus the
+    generator load inline — measured at ~42 s on a cold filesystem (2026-08-17
+    macOS deployment), serialized inside the first synthesis and 3 s short of
+    a 90 s client timeout. Warming here overlaps that span with the TTS model
+    load. No-op when watermarking is off or audioseal is absent; a failure
+    logs and leaves the lazy path to retry on first embed.
+    """
+    try:
+        if not will_mark():
+            logger.debug("Watermark prefetch skipped (disabled or audioseal absent)")
+            return
+        global _prefetched_unused
+        _get_generator()
+        _prefetched_unused = True
+        logger.info("AudioSeal generator prefetched in the background")
+    except Exception:
+        logger.warning(
+            "Watermark prefetch failed; the first embed will retry inline",
+            exc_info=True,
+        )
 
 
 def release_idle_models(idle_seconds: float, *, now: Optional[float] = None) -> bool:
@@ -114,14 +156,28 @@ def release_idle_models(idle_seconds: float, *, now: Optional[float] = None) -> 
     Returns True if anything was released. Never raises: this runs from the
     idle reaper, which must survive it.
     """
-    global _generator, _detector
-    if _generator is None and _detector is None:
-        return False
-    stamp = time.monotonic() if now is None else float(now)
-    if stamp - _last_used < idle_seconds:
-        return False
-    _generator = None
-    _detector = None
+    global _generator, _detector, _prefetched_unused
+    with _generator_lock, _detector_lock:
+        if _generator is None and _detector is None:
+            return False
+        stamp = time.monotonic() if now is None else float(now)
+        if stamp - _last_used < idle_seconds:
+            return False
+        if _prefetched_unused:
+            # The startup prefetch built the generator and nothing has used
+            # it yet. Drop the grace (one extra idle window only) instead of
+            # the model, so a first synthesis shortly after boot still finds
+            # it warm — the exact scenario the prefetch exists for.
+            _prefetched_unused = False
+            logger.info(
+                "Idle watermark models are prefetch-warmed but unused; "
+                "granting one more idle window before releasing."
+            )
+            return False
+        # Under the locks so a release racing the prefetch or a first embed
+        # can't wipe a model the lazy path just built.
+        _generator = None
+        _detector = None
     logger.info("Idle timeout reached. Released the AudioSeal watermark models.")
     return True
 
@@ -229,6 +285,8 @@ def embed_watermark(
         return waveform
 
     try:
+        global _prefetched_unused
+        _prefetched_unused = False
         generator = _get_generator()
         msg = torch.tensor(message or OMNI_MESSAGE, dtype=torch.int32).unsqueeze(0)
 
@@ -260,7 +318,7 @@ def embed_watermark(
         return watermarked
 
     except Exception as e:
-        logger.warning("Watermark embedding failed (passing through original): %s", e)
+        logger.warning("Watermark embedding failed (passing through original): %s", e, exc_info=True)
         return waveform
 
 
@@ -293,6 +351,8 @@ def detect_watermark(
         }
 
     try:
+        global _prefetched_unused
+        _prefetched_unused = False
         detector = _get_detector()
 
         # Normalise shape to (batch, channels, samples)
@@ -337,7 +397,7 @@ def detect_watermark(
         }
 
     except Exception as e:
-        logger.warning("Watermark detection failed: %s", e)
+        logger.warning("Watermark detection failed: %s", e, exc_info=True)
         return {
             "is_watermarked": False,
             "confidence": 0.0,

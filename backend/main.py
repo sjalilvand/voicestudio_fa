@@ -905,6 +905,46 @@ async def _phase_b(app: FastAPI) -> None:
     else:
         logger.info("Capture ASR preload disabled; dictation ASR will load on first use.")
 
+    # Watermark: warm the AudioSeal generator in the background so the first
+    # mark_synthetic doesn't serialize the audioseal import + model load
+    # inside the first synthesis (measured ~42 s inline on a cold filesystem,
+    # 2026-08-17 macOS report — 3 s short of the client's 90 s timeout).
+    # Small model on CPU; deferred a few seconds past the capture-ASR warm so
+    # the two cold imports don't contend for the same disk, and no RAM guard
+    # is needed. Runs on the watermark pool — where the model is used — not
+    # the shared default executor.
+    if _env_flag("OMNIVOICE_PRELOAD_WATERMARK", default=True):
+        async def _preload_watermark():
+            # Own delay (+5s past the capture warm), not _capture_preload_delay_s:
+            # a capture-specific env override shouldn't retime this, and both
+            # warms firing on the same tick is exactly the I/O overlap the
+            # defer exists to avoid.
+            await asyncio.sleep(_capture_preload_delay_s() + 5.0)
+            loop = asyncio.get_running_loop()
+            from services import watermark as _watermark
+
+            # Gate BEFORE touching get_watermark_pool(): the pool is lazy so
+            # hosts with watermarking disabled never spawn its thread, and
+            # creating it unconditionally would break that invariant. The
+            # race with a first embed is benign — pool creation is itself
+            # lock-guarded.
+            if not _watermark.will_mark():
+                logger.debug("Watermark preload skipped (disabled or audioseal absent)")
+                return
+            from services.model_manager import get_watermark_pool
+
+            try:
+                await loop.run_in_executor(
+                    get_watermark_pool(), _watermark.prefetch_generator
+                )
+            except Exception:
+                # prefetch_generator swallows its own errors; this guards the
+                # setup half (imports, pool construction) so a broken warm-up
+                # is visible now, not as an unretrieved exception at shutdown.
+                logger.warning("Watermark preload task failed", exc_info=True)
+
+        app.state.watermark_preload_task = asyncio.create_task(_preload_watermark())
+
     # ── MCP session manager (Wave 2.2) ────────────────────────────────────
     # Run it in its OWN task owning the full enter→exit lifecycle (anyio
     # task-affinity, see _serve_mcp); only wait, with a timeout, for ready —
@@ -1080,6 +1120,7 @@ async def lifespan(app: FastAPI):
         getattr(app.state, "worker_task", None),
         getattr(app.state, "preload_task", None),
         getattr(app.state, "capture_preload_task", None),
+        getattr(app.state, "watermark_preload_task", None),
         timeout=20.0,
     )
     # Unload the model and free GPU memory
