@@ -1063,15 +1063,18 @@ _watermark_pool_lock = threading.Lock()
 
 def get_watermark_pool() -> ThreadPoolExecutor:
     """Dedicated 1-worker pool for provenance marking. Built lazily so hosts
-    with watermarking disabled never spawn the thread."""
+    with watermarking disabled never spawn the thread.
+
+    The executor is captured and returned UNDER the lock: reading the global
+    again after an unlocked null-check could race shutdown_watermark_pool's
+    reset and hand out None (CodeRabbit, PR #1577)."""
     global _watermark_pool_singleton
-    if _watermark_pool_singleton is None:
-        with _watermark_pool_lock:
-            if _watermark_pool_singleton is None:
-                _watermark_pool_singleton = ThreadPoolExecutor(
-                    max_workers=1, thread_name_prefix="watermark",
-                )
-    return _watermark_pool_singleton
+    with _watermark_pool_lock:
+        if _watermark_pool_singleton is None:
+            _watermark_pool_singleton = ThreadPoolExecutor(
+                max_workers=1, thread_name_prefix="watermark",
+            )
+        return _watermark_pool_singleton
 
 
 def shutdown_watermark_pool() -> None:

@@ -190,6 +190,20 @@ def test_prefetched_model_gets_one_extra_idle_window(monkeypatch):
     """
     import time as _time
 
+    # Full isolation from a leaked idle reaper (idle_worker resolves
+    # watermark.release_idle_models per call): divert it to a no-op for the
+    # duration of this test, and call the real function via the saved ref.
+    real_release = watermark.release_idle_models
+    test_active = threading.Event()
+    test_active.set()
+
+    def _guarded_release(*a, **k):
+        if test_active.is_set():
+            return False  # the test owns the reaper's decisions right now
+        return real_release(*a, **k)
+
+    monkeypatch.setattr(watermark, "release_idle_models", _guarded_release)
+
     far_future = _time.monotonic() + 1_000_000
 
     def _given(generator_set: bool, grace: bool):
@@ -199,13 +213,13 @@ def test_prefetched_model_gets_one_extra_idle_window(monkeypatch):
 
     # First reaper pass on a prefetched-never-used model: grace, model kept.
     _given(generator_set=True, grace=True)
-    assert watermark.release_idle_models(900, now=far_future) is False
+    assert real_release(900, now=far_future) is False
     # Second pass: grace consumed, model released.
     _given(generator_set=True, grace=False)
-    assert watermark.release_idle_models(900, now=far_future) is True
+    assert real_release(900, now=far_future) is True
     # After grace was consumed, an idle model with no models at all is a no-op.
     _given(generator_set=False, grace=False)
-    assert watermark.release_idle_models(900, now=far_future) is False
+    assert real_release(900, now=far_future) is False
 
     # Real use clears the grace: embed (even a failing one) resets the flag,
     # so the next reaper pass releases without a second window.
@@ -215,6 +229,8 @@ def test_prefetched_model_gets_one_extra_idle_window(monkeypatch):
     watermark._generator = SimpleNamespace(eval=lambda: None)
     watermark._prefetched_unused = True
     monkeypatch.setattr(watermark, "_get_generator", lambda: watermark._generator)
-    watermark.embed_watermark(_torch.zeros(1, 2400), 24000)  # clears the flag
-    _given(generator_set=True, grace=False)
-    assert watermark.release_idle_models(900, now=far_future) is True
+    watermark.embed_watermark(_torch.zeros(1, 2400), 24000)
+    # The embed call itself must have cleared the grace — assert it, don't
+    # re-establish it, or a failing embed would pass unnoticed.
+    assert watermark._prefetched_unused is False
+    assert real_release(900, now=far_future) is True
