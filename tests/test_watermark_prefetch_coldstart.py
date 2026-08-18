@@ -41,11 +41,11 @@ def _fake_audioseal(monkeypatch, load_s: float) -> list[int]:
     records every invocation. The block is what makes a missing lock fail
     reliably instead of winning the interleaving lottery."""
     calls: list[int] = []
-    event = threading.Event()
+    import time
 
     def _slow_load(name):
         calls.append(1)
-        event.wait(load_s)
+        time.sleep(load_s)
         return SimpleNamespace(eval=lambda: None)
 
     fake = types.ModuleType("audioseal")
@@ -125,11 +125,9 @@ def test_detector_load_is_not_blocked_by_a_generator_prefetch(monkeypatch):
     """Per-model locks (review finding): a ~42s generator build in the
     prefetch thread must not stall an unrelated detector load — with the old
     single shared lock, _get_detector queued behind the whole build."""
-    import threading as _th
-
-    gen_started = _th.Event()
-    gen_release = _th.Event()
-    det_done = _th.Event()
+    gen_started = threading.Event()
+    gen_release = threading.Event()
+    det_done = threading.Event()
 
     fake = types.ModuleType("audioseal")
 
@@ -158,8 +156,6 @@ def test_watermark_pool_rebuilds_after_shutdown_drain():
     """The lifespan shutdown drains the watermark pool; a process that keeps
     running afterwards (the test suite) must get a FRESH pool on next use,
     not "cannot schedule new futures after shutdown" (CI, PR #1577)."""
-    import concurrent.futures
-
     from services.model_manager import get_watermark_pool, shutdown_watermark_pool
 
     pool_before = get_watermark_pool()
@@ -168,8 +164,7 @@ def test_watermark_pool_rebuilds_after_shutdown_drain():
         # The drained pool refuses new work…
         pool_before.submit(lambda: None).result(timeout=5)
     # …but the next getter hands out a live replacement.
-    result = get_watermark_pool().submit(lambda: "ok").result(timeout=5)
-    assert isinstance(result, concurrent.futures.Future) or result == "ok"
+    assert get_watermark_pool().submit(lambda: "ok").result(timeout=5) == "ok"
     # Clean up the replacement so later tests start from a fresh pool too.
     shutdown_watermark_pool()
 
@@ -188,23 +183,16 @@ def test_prefetched_model_gets_one_extra_idle_window(monkeypatch):
     With preconditions set adjacent to each call and now pinned, an
     interleaved tick cannot change the outcome.
     """
-    import time as _time
+    import time
 
     # Full isolation from a leaked idle reaper (idle_worker resolves
     # watermark.release_idle_models per call): divert it to a no-op for the
     # duration of this test, and call the real function via the saved ref.
     real_release = watermark.release_idle_models
-    test_active = threading.Event()
-    test_active.set()
+    # The test owns the reaper's decisions for its duration.
+    monkeypatch.setattr(watermark, "release_idle_models", lambda *a, **k: False)
 
-    def _guarded_release(*a, **k):
-        if test_active.is_set():
-            return False  # the test owns the reaper's decisions right now
-        return real_release(*a, **k)
-
-    monkeypatch.setattr(watermark, "release_idle_models", _guarded_release)
-
-    far_future = _time.monotonic() + 1_000_000
+    far_future = time.monotonic() + 1_000_000
 
     def _given(generator_set: bool, grace: bool):
         watermark._generator = SimpleNamespace(eval=lambda: None) if generator_set else None
@@ -228,7 +216,6 @@ def test_prefetched_model_gets_one_extra_idle_window(monkeypatch):
     monkeypatch.setattr(watermark, "_check_available", lambda: True)
     watermark._generator = SimpleNamespace(eval=lambda: None)
     watermark._prefetched_unused = True
-    monkeypatch.setattr(watermark, "_get_generator", lambda: watermark._generator)
     watermark.embed_watermark(_torch.zeros(1, 2400), 24000)
     # The embed call itself must have cleared the grace — assert it, don't
     # re-establish it, or a failing embed would pass unnoticed.

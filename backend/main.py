@@ -370,19 +370,27 @@ def _env_flag(name: str, default: bool = False) -> bool:
 _EAGER = _env_flag("OMNIVOICE_EAGER_INIT", default=("pytest" in sys.modules))
 
 
+def _env_float(name: str, default: float) -> float:
+    """Parse a float env override, rejecting negative and non-finite values.
+
+    Shared by the preload-delay / timeout knobs: NaN would silently never
+    fire, a negative would fire during startup I/O, so both fall back to the
+    default instead (the bug class CodeRabbit flagged on the watermark knob
+    in PR #1577 — latent in the older copies too, closed here for all)."""
+    raw = os.environ.get(name, "")
+    try:
+        value = float(raw) if raw.strip() else default
+    except ValueError:
+        return default
+    return value if math.isfinite(value) and value >= 0 else default
+
+
 def _capture_preload_delay_s() -> float:
     """Seconds after boot before the dictation (capture ASR) model warms.
 
     Late enough that it never competes with startup I/O or the TTS preload;
     overridable via OMNIVOICE_CAPTURE_PRELOAD_DELAY (mostly for tests)."""
-    raw = os.environ.get("OMNIVOICE_CAPTURE_PRELOAD_DELAY", "")
-    try:
-        v = float(raw)
-        if v >= 0:
-            return v
-    except (TypeError, ValueError):
-        pass
-    return 30.0
+    return _env_float("OMNIVOICE_CAPTURE_PRELOAD_DELAY", 30.0)
 
 def _watermark_preload_delay_s() -> float:
     """Seconds after boot before the AudioSeal generator warm-up fires.
@@ -391,14 +399,7 @@ def _watermark_preload_delay_s() -> float:
     env override must not retime the watermark warm too, and the two cold
     imports shouldn't fire on the same tick (CodeRabbit, PR #1577). Default
     35s sits ~5s past the capture-ASR warm for the same reason."""
-    raw = os.environ.get("OMNIVOICE_PRELOAD_WATERMARK_DELAY", "")
-    try:
-        value = float(raw) if raw.strip() else 35.0
-    except ValueError:
-        return 35.0
-    # Reject negative/non-finite overrides (CodeRabbit, PR #1577): a negative
-    # delay would fire the warm-up during startup I/O; NaN would never fire.
-    return value if math.isfinite(value) and value >= 0 else 35.0
+    return _env_float("OMNIVOICE_PRELOAD_WATERMARK_DELAY", 35.0)
 
 
 def _capture_preload_ram_ok(min_free_bytes: int = 4 * 1024**3) -> bool:
@@ -415,14 +416,7 @@ def _capture_preload_ram_ok(min_free_bytes: int = 4 * 1024**3) -> bool:
 def _mcp_start_timeout_s() -> float:
     """Seconds to wait for the MCP session manager to start before giving up
     and serving without it (#632). Overridable via OMNIVOICE_MCP_START_TIMEOUT_S."""
-    raw = os.environ.get("OMNIVOICE_MCP_START_TIMEOUT_S", "")
-    try:
-        v = float(raw)
-        if v > 0:
-            return v
-    except (TypeError, ValueError):
-        pass
-    return 30.0
+    return max(_env_float("OMNIVOICE_MCP_START_TIMEOUT_S", 30.0), 0.001)
 
 
 async def _serve_mcp(session_manager, ready: "asyncio.Event", stop: "asyncio.Event") -> None:

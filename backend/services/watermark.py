@@ -92,9 +92,16 @@ def _check_available() -> bool:
     return _audioseal_available
 
 
-def _get_generator():
-    """Lazy-load the AudioSeal generator model."""
-    global _generator, _last_used
+def _get_generator(mark_prefetched: bool = False):
+    """Lazy-load the AudioSeal generator model.
+
+    Owns the idle-reaper grace in ONE critical section: the startup prefetch
+    claims it (``mark_prefetched=True``) only when THIS call builds the model,
+    and every other call (a real embed) consumes it — no call-site blocks, no
+    window between two lock scopes where the claim could land on an
+    already-used model.
+    """
+    global _generator, _last_used, _prefetched_unused
     with _generator_lock:
         _last_used = time.monotonic()
         if _generator is None:
@@ -102,6 +109,9 @@ def _get_generator():
             _generator = AudioSeal.load_generator("audioseal_wm_16bits")
             _generator.eval()
             logger.info("AudioSeal generator loaded (16-bit message mode)")
+            _prefetched_unused = mark_prefetched
+        elif not mark_prefetched:
+            _prefetched_unused = False
         return _generator
 
 
@@ -132,13 +142,7 @@ def prefetch_generator() -> None:
         if not will_mark():
             logger.debug("Watermark prefetch skipped (disabled or audioseal absent)")
             return
-        global _prefetched_unused
-        _get_generator()
-        with _generator_lock:
-            # Under the lock so the "prefetched" claim can't land after an
-            # embed/detect already cleared it (CodeRabbit, PR #1577): that
-            # would grant the retention grace to a model that HAS been used.
-            _prefetched_unused = True
+        _get_generator(mark_prefetched=True)
         logger.info("AudioSeal generator prefetched in the background")
     except Exception:
         logger.warning(
@@ -289,9 +293,6 @@ def embed_watermark(
         return waveform
 
     try:
-        global _prefetched_unused
-        with _generator_lock:
-            _prefetched_unused = False
         generator = _get_generator()
         msg = torch.tensor(message or OMNI_MESSAGE, dtype=torch.int32).unsqueeze(0)
 
@@ -356,9 +357,6 @@ def detect_watermark(
         }
 
     try:
-        global _prefetched_unused
-        with _generator_lock:
-            _prefetched_unused = False
         detector = _get_detector()
 
         # Normalise shape to (batch, channels, samples)

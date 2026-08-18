@@ -50,8 +50,9 @@ os.environ["OMNIVOICE_MODEL"] = "test"
 # leaves the deferred preload task pending — 35s later (mid-suite, in
 # another thread) it loads real models and mutates watermark module state
 # under whatever test happens to be running (seen as a CI-only flake in the
-# prefetch cold-start tests). setdefault so a test can still opt in.
-os.environ["OMNIVOICE_PRELOAD_WATERMARK"] = "0"  # unconditional: a stray export from the runner shell must not re-enable it
+# prefetch cold-start tests). Unconditional: a stray export from the runner
+# shell must not re-enable it; a test that wants the warm-up monkeypatches.
+os.environ["OMNIVOICE_PRELOAD_WATERMARK"] = "0"
 
 
 # ── Test fixtures ──────────────────────────────────────────────────────────
