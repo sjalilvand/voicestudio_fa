@@ -280,7 +280,7 @@ export const createPrefsSlice: StateCreator<PrefsSlice, [], [], PrefsSlice> = (s
   glossaryVisible: true,
   reviewMode: 'on',
   showHeaderLiveStats: false,
-  timingStrategy: 'concise',
+  timingStrategy: 'strict_slot',
   fitOptions: null,
   voiceMatch: 'per_line',
   whatsNewSeenVersion: null,

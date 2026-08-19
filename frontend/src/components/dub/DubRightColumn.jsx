@@ -82,7 +82,7 @@ export default function DubRightColumn({
 }) {
   const [pasteOpen, setPasteOpen] = useState(false);
   return (
-    <div className="studio-panel dub-panel-col">
+    <div className="studio-panel dub-panel-col dub-panel-right">
       {/* Output options + timing — moved to the top of the right section. */}
       <div>
         <div className={OUT_ROW}>
@@ -163,7 +163,7 @@ export default function DubRightColumn({
               },
               {
                 value: 'strict_slot',
-                label: 'Strict slot',
+                label: 'Lip sync',
                 title:
                   'Legacy: compress audio to fit the original timing. Can sound rushed/chipmunky on high-density target languages.',
               },
