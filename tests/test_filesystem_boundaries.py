@@ -65,17 +65,17 @@ def test_stored_subpaths_split_on_both_separator_families():
     assert _PATH_SEPARATORS.split(r"sub\voice.wav") == ["sub", "voice.wav"]
 
 
-def test_resolve_within_reads_a_stored_subpath(tmp_path):
+@pytest.mark.parametrize("stored_path", ["sub/voice.wav", r"sub\voice.wav"])
+def test_resolve_within_reads_a_stored_subpath(tmp_path, stored_path):
     """A persisted sub-path resolves to the same file on Windows and POSIX.
 
-    Windows accepts ``/`` as a real separator, so a row written by a Linux
-    host (or a Docker deployment) must resolve there exactly as it does on
-    POSIX instead of being rejected as one unsafe component.
+    Rows written on Windows, POSIX, or Docker must resolve identically after
+    the same data directory is opened on another supported host.
     """
     from core.path_security import resolve_within
     root = tmp_path / "root"
     (root / "sub").mkdir(parents=True)
-    assert resolve_within(root, "sub/voice.wav") == root / "sub" / "voice.wav"
+    assert resolve_within(root, stored_path) == root / "sub" / "voice.wav"
 
 
 def test_resolve_within_rejects_traversal_through_either_separator(tmp_path):

@@ -59,11 +59,10 @@ def resolve_within(root: os.PathLike[str] | str, value: os.PathLike[str] | str) 
     raw = os.fspath(value) if value is not None else ""
     if not isinstance(raw, str) or not raw:
         raise UnsafePath("path is empty")
-    # Treat both separator families as structural on every host. Otherwise a
-    # Windows traversal string is an innocent-looking filename when validated
-    # on Linux (and can become dangerous after persisted data is moved).
-    if os.sep != "\\" and ("\\" in raw or bool(ntpath.splitdrive(raw)[0])):
-        raise UnsafePath("path uses a foreign separator or drive")
+    # Treat both separator families as structural on every host while still
+    # rejecting Windows drive paths before rebuilding relative components.
+    if os.sep != "\\" and bool(ntpath.splitdrive(raw)[0]):
+        raise UnsafePath("path uses a drive")
     root_path = Path(root).expanduser().resolve(strict=False)
     root_text = str(root_path)
     if os.path.isabs(raw):
