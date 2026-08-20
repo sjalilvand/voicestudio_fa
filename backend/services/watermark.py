@@ -298,7 +298,12 @@ async def mark_synthetic_async(
     import asyncio
     import functools
 
-    from services.model_manager import get_watermark_pool, run_on_gpu_pool_guarded
+    from services.model_manager import (
+        GpuJobTimeoutError,
+        GpuPoolBusyError,
+        get_watermark_pool,
+        run_on_gpu_pool_guarded,
+    )
 
     try:
         pool = get_watermark_pool()
@@ -315,6 +320,11 @@ async def mark_synthetic_async(
                 job, what="Audio watermark", timeout=timeout, executor=pool
             )
         return await asyncio.get_running_loop().run_in_executor(pool, job)
+    except (GpuJobTimeoutError, GpuPoolBusyError):
+        # Watermarking is provenance best-effort: a typed execution overrun or
+        # queue saturation must not discard synthesis that already completed.
+        logger.warning("Watermark skipped after its bounded dispatch expired")
+        return waveform
     except asyncio.CancelledError:
         # A queued future is cancelled during pool teardown. Caller-driven
         # cancellation while the pool is live must retain normal semantics.

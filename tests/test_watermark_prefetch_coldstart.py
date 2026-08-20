@@ -314,6 +314,37 @@ def test_watermark_preserves_caller_cancellation(monkeypatch, watermark):
     asyncio.run(_cancel())
 
 
+@pytest.mark.parametrize("error_name", ["GpuJobTimeoutError", "GpuPoolBusyError"])
+def test_timed_watermark_deadline_returns_finished_audio(
+    monkeypatch, watermark, error_name
+):
+    """Both guarded deadline phases are watermark-only fail-open outcomes."""
+    import asyncio
+    import torch
+
+    model_manager = importlib.import_module("services.model_manager")
+    error_type = getattr(model_manager, error_name)
+
+    async def _expired(*_args, **_kwargs):
+        raise error_type("watermark deadline expired")
+
+    pool = model_manager.get_watermark_pool()
+    monkeypatch.setattr(model_manager, "get_watermark_pool", lambda: pool)
+    monkeypatch.setattr(model_manager, "run_on_gpu_pool_guarded", _expired)
+
+    audio = torch.zeros(1, 240)
+    marked = asyncio.run(
+        watermark.mark_synthetic_async(
+            audio,
+            24000,
+            context="test.watermark_typed_deadline",
+            timeout=0.01,
+        )
+    )
+
+    assert marked is audio
+
+
 def test_watermark_pool_shutdown_waits_for_active_worker():
     """Lifespan teardown cannot finish while AudioSeal is still loading."""
     from services.model_manager import (
