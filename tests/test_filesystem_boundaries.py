@@ -52,6 +52,41 @@ def test_resolve_within_accepts_relative_and_existing_absolute_paths(tmp_path):
     assert resolve_within(root, item) == item
 
 
+def test_stored_subpaths_split_on_both_separator_families():
+    """The component split is host-independent.
+
+    Asserted on the splitter itself, not through ``resolve_within``: the
+    Python suite runs on Linux only, where ``os.sep`` splitting already
+    handled ``/``. A behavioural test would pass here whether or not the
+    Windows path is fixed, so it would not guard the regression.
+    """
+    from core.path_security import _PATH_SEPARATORS
+    assert _PATH_SEPARATORS.split("sub/voice.wav") == ["sub", "voice.wav"]
+    assert _PATH_SEPARATORS.split(r"sub\voice.wav") == ["sub", "voice.wav"]
+
+
+@pytest.mark.parametrize("stored_path", ["sub/voice.wav", r"sub\voice.wav"])
+def test_resolve_within_reads_a_stored_subpath(tmp_path, stored_path):
+    """A persisted sub-path resolves to the same file on Windows and POSIX.
+
+    Rows written on Windows, POSIX, or Docker must resolve identically after
+    the same data directory is opened on another supported host.
+    """
+    from core.path_security import resolve_within
+    root = tmp_path / "root"
+    (root / "sub").mkdir(parents=True)
+    assert resolve_within(root, stored_path) == root / "sub" / "voice.wav"
+
+
+def test_resolve_within_rejects_traversal_through_either_separator(tmp_path):
+    """Splitting on both separators must not open a traversal path."""
+    from core.path_security import UnsafePath, resolve_within
+    root = tmp_path / "root"
+    (root / "sub").mkdir(parents=True)
+    with pytest.raises(UnsafePath):
+        resolve_within(root, "sub/../../secret.wav")
+
+
 def test_resolve_within_rejects_parent_and_absolute_escape(tmp_path):
     from core.path_security import UnsafePath, resolve_within
     root = tmp_path / "root"
@@ -76,7 +111,10 @@ def test_resolve_within_rejects_symlink_escape(tmp_path):
         (root / "link").symlink_to(outside, target_is_directory=True)
     except OSError:
         pytest.skip("symlink creation is unavailable on this host")
-    with pytest.raises(UnsafePath):
+    # Match the reason, not just the type: when ``/`` was not treated as a
+    # separator on Windows this call failed at component validation instead,
+    # so the containment check below it was never exercised there.
+    with pytest.raises(UnsafePath, match="escapes its allowed root"):
         resolve_within(root, "link/secret.wav")
 
 
