@@ -572,7 +572,7 @@ def _build_audio_export_cmd(
 async def dub_download(
     job_id: str,
     preserve_bg: bool = Query(True, description="Mix background noise into dubbed tracks"),
-    default_track: str = Query("original"),
+    default_track: str = Query("", description="Default audio track; omitted selects the first dubbed track"),
     include_tracks: str = Query("", description="Comma-separated list of tracks to include (e.g. 'original,de,es'). Empty = include all."),
     save_authorization: str = Header("", alias="X-VoiceStudio-Path-Authorization"),
     burn_subs: bool = Query(False, description="Burn subtitles into the video stream (forces re-encode). Uses dual-subtitle layout when dual=1."),
@@ -606,6 +606,12 @@ async def dub_download(
         }
         for key, value in filtered_tracks.items()
     }
+
+    # A dub export should play the dub without requiring player-specific track
+    # selection. Keep ``original`` as an explicit opt-in, but when callers omit
+    # the preference choose the first generated dub consistently (#1575).
+    if not default_track and filtered_tracks:
+        default_track = next(iter(filtered_tracks))
 
     if not filtered_tracks and not include_original:
         raise HTTPException(status_code=400, detail="No tracks selected for export")
@@ -887,7 +893,10 @@ async def dub_download(
     if default_track == "original" and include_original:
         cmd += ["-disposition:a:0", "default"]
     else:
-        target_idx = 0
+        # A stale/missing language preference still means "play a dub", not
+        # "silently fall back to the source". The first processed dub is the
+        # deterministic fallback; ``original`` above remains explicit.
+        target_idx = tracks_to_process[0]["stream_idx"] if tracks_to_process else 0
         for t in tracks_to_process:
             if t['lang_code'] == default_track:
                 target_idx = t["stream_idx"]

@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import asyncio as _asyncio
 import importlib
+import json
 import os
+import shutil
 import struct
+import subprocess
 import uuid
 import wave
 from pathlib import Path
@@ -100,6 +103,46 @@ _SUBPROC_ATTR = "create_subprocess_" + "exec"  # dodge overzealous code-scan hoo
 
 
 class TestDubExportUniqueness:
+    @pytest.mark.skipif(
+        shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None,
+        reason="ffmpeg and ffprobe are required for the container regression",
+    )
+    def test_default_export_marks_dubbed_audio_as_default(self, app_client):
+        """#1575: players that honor MP4 disposition must choose the dub."""
+        client, dc, _dx, tmp = app_client
+        job_id, job_dir = _seed_job_with_tracks(dc, tmp)
+        video_path = job_dir / "original.mp4"
+        subprocess.run(
+            [
+                shutil.which("ffmpeg"), "-loglevel", "error", "-y",
+                "-f", "lavfi", "-i", "color=c=black:s=32x32:d=0.5",
+                "-f", "lavfi", "-i", "sine=frequency=220:duration=0.5",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac",
+                "-shortest", str(video_path),
+            ],
+            check=True,
+        )
+
+        response = client.get(
+            f"/dub/download/{job_id}",
+            params={"preserve_bg": False},
+        )
+        assert response.status_code == 200, response.text
+        exported = next((job_dir / "exports").glob("dubbed_video_*.mp4"))
+        probe = subprocess.run(
+            [
+                shutil.which("ffprobe"), "-v", "error", "-select_streams", "a",
+                "-show_entries", "stream_tags=title:stream_disposition=default",
+                "-of", "json", str(exported),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        streams = json.loads(probe.stdout)["streams"]
+        defaults = [index for index, stream in enumerate(streams) if stream["disposition"]["default"]]
+        assert defaults == [1], "the dubbed stream follows the original and must be the sole default"
+
     def test_mp4_export_produces_unique_file_each_call(self, app_client):
         client, dc, dx, tmp = app_client
         job_id, job_dir = _seed_job_with_tracks(dc, tmp)

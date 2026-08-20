@@ -949,8 +949,9 @@ function App() {
     });
     const tracksParam = selected.join(',');
     const burnParam = burnSubs ? `&burn_subs=1&dual=${dualSubs ? 1 : 0}` : '';
+    const resolvedDefaultTrack = defaultTrack || dubLangCode || dubTracks[0] || '';
     triggerDownload(
-      `${API}/dub/download/${dubJobId}/dubbed_video.mp4?preserve_bg=${preserveBg}&default_track=${defaultTrack}&include_tracks=${encodeURIComponent(tracksParam)}${burnParam}`,
+      `${API}/dub/download/${dubJobId}/dubbed_video.mp4?preserve_bg=${preserveBg}&default_track=${resolvedDefaultTrack}&include_tracks=${encodeURIComponent(tracksParam)}${burnParam}`,
       'dubbed_video.mp4',
     );
   };
@@ -1063,7 +1064,7 @@ function App() {
       setDubTracks(s.dubTracks || []);
       setDubTranscript(s.dubTranscript || '');
       setPreserveBg(s.preserveBg !== undefined ? s.preserveBg : true);
-      setDefaultTrack(s.defaultTrack !== undefined ? s.defaultTrack : 'original');
+      setDefaultTrack(s.defaultTrack !== undefined ? s.defaultTrack : '');
       setDubStep(s.dubStep === 'done' ? 'done' : s.dubSegments?.length ? 'editing' : 'idle');
       // Phase 4.5 — rehydrate per-segment fingerprints. The incremental plan
       // immediately shows "N segments changed" for any segments edited after
