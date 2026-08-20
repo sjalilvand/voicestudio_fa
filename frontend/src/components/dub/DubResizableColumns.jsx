@@ -23,6 +23,10 @@ export default function DubResizableColumns({ children, resizeLabel }) {
   const draggingRef = useRef(false);
   const columns = Children.toArray(children);
 
+  const isRtl = (element) =>
+    element.closest('[dir]')?.getAttribute('dir') === 'rtl' ||
+    document.documentElement.dir === 'rtl';
+
   const updateRatio = (nextRatio, persist = false) => {
     const next = clamp(nextRatio);
     ratioRef.current = next;
@@ -39,7 +43,10 @@ export default function DubResizableColumns({ children, resizeLabel }) {
   const ratioFromPointer = (event) => {
     const bounds = event.currentTarget.parentElement?.getBoundingClientRect();
     if (!bounds?.width) return ratioRef.current;
-    return ((event.clientX - bounds.left) / bounds.width) * 100;
+    const offset = isRtl(event.currentTarget)
+      ? (bounds.right - event.clientX) / bounds.width
+      : (event.clientX - bounds.left) / bounds.width;
+    return offset * 100;
   };
 
   const handlePointerDown = (event) => {
@@ -61,8 +68,9 @@ export default function DubResizableColumns({ children, resizeLabel }) {
 
   const handleKeyDown = (event) => {
     let next;
-    if (event.key === 'ArrowLeft') next = ratioRef.current - KEYBOARD_STEP;
-    if (event.key === 'ArrowRight') next = ratioRef.current + KEYBOARD_STEP;
+    const direction = isRtl(event.currentTarget) ? -1 : 1;
+    if (event.key === 'ArrowLeft') next = ratioRef.current - KEYBOARD_STEP * direction;
+    if (event.key === 'ArrowRight') next = ratioRef.current + KEYBOARD_STEP * direction;
     if (event.key === 'Home') next = MIN_LEFT;
     if (event.key === 'End') next = MAX_LEFT;
     if (next === undefined) return;
