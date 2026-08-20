@@ -27,3 +27,16 @@ export async function retryInitialLoad(loader, opts = {}) {
     delay = Math.min((delay || baseDelayMs) * 2, maxDelayMs);
   }
 }
+
+/** Apply only the newest invocation's response for a named list. */
+export async function loadLatest({ generations, key, fetch, apply, label, rethrow = false }) {
+  const generation = (generations[key] ?? 0) + 1;
+  generations[key] = generation;
+  try {
+    const data = await fetch();
+    if (generation === generations[key]) apply(data);
+  } catch (error) {
+    console.warn(`Failed to load ${label}:`, error);
+    if (rethrow) throw error;
+  }
+}

@@ -182,15 +182,16 @@ describe('apiFetch 401 routing', () => {
     dispatch.mockRestore();
   });
 
-  const stub401 = (detail: string) =>
+  const stubStatus = (status: number, statusText: string, detail: string) =>
     vi.fn(() =>
       Promise.resolve({
         ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
+        status,
+        statusText,
         text: async () => JSON.stringify({ detail }),
       }),
     ) as any;
+  const stub401 = (detail: string) => stubStatus(401, 'Unauthorized', detail);
 
   const authEvent = () =>
     dispatch.mock.calls.map((c) => c[0]).find((e) => (e as Event).type === 'ov:auth-required');
@@ -226,6 +227,70 @@ describe('apiFetch 401 routing', () => {
     }
     expect(authEvent()).toBeTruthy();
     expect((authEvent() as any).detail.mode).toBe('pin');
+  });
+
+  const stub403 = (detail: string) => stubStatus(403, 'Forbidden', detail);
+
+  it('dispatches ov:auth-required {mode:"apikey"} on an admin-gate 403 (#1525)', async () => {
+    globalThis.fetch = stub403('loopback origin or admin API key required');
+    const { apiFetch } = await import('./client');
+    try {
+      await apiFetch('/system/info');
+    } catch {
+      /* ApiError expected */
+    }
+    expect(authEvent()).toBeTruthy();
+    expect((authEvent() as any).detail.mode).toBe('apikey');
+  });
+
+  it('does not dispatch ov:auth-required on other 403s (CSRF / desktop-only)', async () => {
+    globalThis.fetch = stub403('browser origin rejected');
+    const { apiFetch } = await import('./client');
+    try {
+      await apiFetch('/system/info');
+    } catch {
+      /* ApiError expected */
+    }
+    expect(authEvent()).toBeFalsy();
+  });
+
+  it('a stale 403 neither clears a new session nor reopens the auth gate (PR #1569 race)', async () => {
+    // The request goes out with an old credential; while it is in flight the
+    // user completes another key exchange. A late 403 may only invalidate the
+    // credentials the failed request actually carried — wiping the fresh
+    // session or reopening the gate would undo the successful login.
+    sessionStorage.setItem(
+      ADMIN_SESSION_STORAGE_KEY,
+      JSON.stringify({
+        token: `ovs_admin_session_${'O'.repeat(43)}`,
+        expiresAt: Date.now() / 1000 + 3600,
+        apiBase: API,
+      }),
+    );
+    globalThis.fetch = vi.fn(() => {
+      sessionStorage.setItem(
+        ADMIN_SESSION_STORAGE_KEY,
+        JSON.stringify({
+          token: `ovs_admin_session_${'N'.repeat(43)}`,
+          expiresAt: Date.now() / 1000 + 3600,
+          apiBase: API,
+        }),
+      );
+      return Promise.resolve({
+        ok: false,
+        status: 403,
+        statusText: 'Forbidden',
+        text: async () => JSON.stringify({ detail: 'loopback origin or admin API key required' }),
+      });
+    }) as any;
+    const { apiFetch } = await import('./client');
+    try {
+      await apiFetch('/system/info');
+    } catch {
+      /* ApiError expected */
+    }
+    expect(authEvent()).toBeFalsy();
+    expect(sessionStorage.getItem(ADMIN_SESSION_STORAGE_KEY)).not.toBeNull();
   });
 });
 

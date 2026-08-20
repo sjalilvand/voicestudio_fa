@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { retryInitialLoad } from '../utils/initialLoadRetry';
+import { loadLatest, retryInitialLoad } from '../utils/initialLoadRetry';
 
 // #1158 class: the initial data loads (profiles/history/…) ran exactly once
 // after the backend became reachable. A transient failure on that single call
@@ -61,7 +61,44 @@ describe('retryInitialLoad (#1158 class)', () => {
     ]) {
       expect(initialBlock).toContain(`${loader}({ rethrow: true })`);
     }
-    // and the loader factory must actually rethrow when asked
-    expect(src).toContain('if (rethrow) throw e;');
+    expect(src).toContain('rethrow,');
+  });
+});
+
+describe('loadLatest', () => {
+  it('does not let a stale initial response overwrite a WebSocket reload', async () => {
+    let resolveInitial;
+    let resolveReload;
+    const initial = new Promise((resolve) => {
+      resolveInitial = resolve;
+    });
+    const reload = new Promise((resolve) => {
+      resolveReload = resolve;
+    });
+    const generations = {};
+    const apply = vi.fn();
+
+    const initialLoad = loadLatest({
+      generations,
+      key: 'profiles',
+      fetch: () => initial,
+      apply,
+      label: 'profiles',
+    });
+    const websocketReload = loadLatest({
+      generations,
+      key: 'profiles',
+      fetch: () => reload,
+      apply,
+      label: 'profiles',
+    });
+
+    resolveReload(['new']);
+    await websocketReload;
+    resolveInitial(['stale']);
+    await initialLoad;
+
+    expect(apply).toHaveBeenCalledOnce();
+    expect(apply).toHaveBeenCalledWith(['new']);
   });
 });

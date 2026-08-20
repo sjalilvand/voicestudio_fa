@@ -10,7 +10,7 @@ import { useModelStatus } from '../api/hooks';
 import useRealtimeEvents from './useRealtimeEvents';
 import { mergeDescribedAttrs } from '../utils/voiceInstruct';
 import { sanitizeOmniUi } from '../utils/omniUiSchema';
-import { retryInitialLoad } from '../utils/initialLoadRetry';
+import { loadLatest, retryInitialLoad } from '../utils/initialLoadRetry';
 import { queueJsonWrite } from '../utils/coalescedJsonStorage';
 
 /**
@@ -176,16 +176,15 @@ export default function useAppData() {
   const loadersRef = useRef({ profiles: 0, history: 0, dub: 0, projects: 0, exports: 0 });
   const makeLoader =
     (key, fetch, set, label) =>
-    async ({ rethrow } = {}) => {
-      const gen = ++loadersRef.current[key];
-      try {
-        const data = await fetch();
-        if (gen === loadersRef.current[key]) set(data);
-      } catch (e) {
-        console.warn(`Failed to load ${label}:`, e);
-        if (rethrow) throw e;
-      }
-    };
+    ({ rethrow } = {}) =>
+      loadLatest({
+        generations: loadersRef.current,
+        key,
+        fetch,
+        apply: set,
+        label,
+        rethrow,
+      });
   const loadProfiles = makeLoader('profiles', listProfiles, setProfiles, 'voice profiles');
   const loadHistory = makeLoader('history', listHistory, setHistory, 'generation history');
   const loadDubHistory = makeLoader('dub', listDubHistory, setDubHistory, 'dub history');

@@ -153,6 +153,15 @@ fallback is reported once. ASR, diarization and translation also remain local. D
 runs here, deliberately and permanently, because there latency *is* the
 feature. The remaining operations are being ported one at a time.
 
+### Voice identity parity
+
+For TTS, the worker receives the complete local rendering contract: the voice
+profile's reference audio and transcript, its pinned seed, model quality
+controls, text chunking/crossfade settings, and output effect preset. The
+worker runs the same native or generic rendering pipeline as local
+`/generate`; selecting a gallery voice therefore does not turn it into a new
+random voice merely because it was rendered on another GPU.
+
 The picker knows this. It resolves against the surface you are on, so a chosen
 worker reads **Local** on a tab whose work has no remote path yet and names the
 reason, instead of showing a green dot next to a GPU that receives nothing. The
@@ -210,10 +219,12 @@ what is genuinely still in flight.
 **Version or feature mismatch.** The protocol keeps a two-release compatibility
 window, but release numbers alone do not prove that a worker understands every
 additive command. Registration therefore also declares named features for task
-inputs, progress leases, and remote model downloads. A worker outside the
+inputs, progress leases, remote model downloads, and the voice-identity render
+pipeline. A worker outside the
 version window, or one missing a required feature, is refused with
 `UPGRADE_REQUIRED` and an update instruction before any task runs. It can never
-silently render without reference audio or leave a download stuck at 0%.
+silently render without reference audio, substitute a different voice, or leave
+a download stuck at 0%.
 
 Every remote failure includes a concrete next step. Capacity, missing models,
 expired leases or sessions, authentication, rejected inputs, and result upload
