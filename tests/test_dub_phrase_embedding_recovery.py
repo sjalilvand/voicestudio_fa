@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import numpy as np
+import importlib
 
-from api.routers.dub_core import _recover_from_phrase_embeddings
+import numpy as np
 
 
 PHRASES = [
@@ -37,7 +37,10 @@ class _Pipeline:
 
 
 def _recover(pipeline, *, diarized=None, requested=None):
-    return _recover_from_phrase_embeddings(
+    recover = importlib.import_module(
+        "api.routers.dub_core"
+    )._recover_from_phrase_embeddings
+    return recover(
         pipeline,
         [dict(item) for item in (diarized or SEGMENTS)],
         phrases=PHRASES,
@@ -88,7 +91,10 @@ def test_rejected_assignment_does_not_mutate_original_segments():
         "text": "one merged segment", "speaker_id": "Speaker 1",
     }]
 
-    result = _recover_from_phrase_embeddings(
+    recover = importlib.import_module(
+        "api.routers.dub_core"
+    )._recover_from_phrase_embeddings
+    result = recover(
         pipeline,
         [dict(item) for item in original],
         phrases=PHRASES,

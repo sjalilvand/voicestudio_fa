@@ -6,10 +6,13 @@ const css = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
 
 describe('responsive dub timeline sizing', () => {
   it('releases both forced track dimensions inside the narrow workspace', () => {
-    const narrow = css.match(
-      /@container dub-shell \(max-width: 1080px\) \{[\s\S]*?\.dub-panel-left \.seg-track \{([^}]*)\}/,
-    );
+    const targetStart = css.lastIndexOf('@container dub-shell (max-width: 1080px)');
+    const targetEnd = css.indexOf('@container dub-shell', targetStart + 1);
+    const targetContainer = css.slice(targetStart, targetEnd);
+    const narrow = targetContainer.match(/\.dub-panel-left \.seg-track \{([^}]*)\}/);
 
+    expect(targetStart).toBeGreaterThanOrEqual(0);
+    expect(targetEnd).toBeGreaterThan(targetStart);
     expect(narrow?.[1]).toMatch(/flex:\s*0 0 auto !important/);
     expect(narrow?.[1]).toMatch(/height:\s*auto/);
   });
