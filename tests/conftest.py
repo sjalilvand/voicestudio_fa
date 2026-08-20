@@ -62,6 +62,21 @@ import pytest
 import warnings as _warnings
 
 
+# App lifespans deliberately close watermark admission during shutdown. The
+# test process then keeps running and many route tests call handlers without
+# starting another lifespan, so restore the equivalent of a fresh lifespan at
+# every test boundary. ``begin_watermark_pool_lifecycle`` still refuses to
+# reopen while a timed-out worker is genuinely alive, preserving that race
+# signal instead of hiding it.
+@pytest.fixture(autouse=True)
+def _watermark_pool_lifecycle_baseline():
+    model_manager = sys.modules.get("services.model_manager")
+    begin = getattr(model_manager, "begin_watermark_pool_lifecycle", None)
+    if callable(begin):
+        begin()
+    yield
+
+
 # ── torch default-dtype isolation (CI flaky trio) ───────────────────────────
 # Three tests (test_effects_chain / test_generation_audio_guard /
 # test_persona_bundle) fail intermittently on CI — never locally — with
