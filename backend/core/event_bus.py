@@ -64,29 +64,25 @@ def emit(kind: str, payload: dict[str, Any] | None = None) -> None:
         **(payload or {}),
     }
     event_str = json.dumps(event)
-    loop = asyncio.get_running_loop() if _on_event_loop() else _serving_loop
-    if loop is None:
+    try:
+        caller_loop = asyncio.get_running_loop()
+    except RuntimeError:
+        caller_loop = None
+    target_loop = _serving_loop or caller_loop
+    if target_loop is None:
         # No serving loop yet — nobody to notify; dropping is correct.
         logger.debug("No event loop — event dropped: %s", kind)
         return
     try:
-        if _on_event_loop():
-            loop.create_task(_broadcast(event_str))
+        if caller_loop is target_loop:
+            target_loop.create_task(_broadcast(event_str))
         else:
-            # Threadpool worker (sync endpoint body): the only thread-safe way in.
-            loop.call_soon_threadsafe(_schedule_broadcast, event_str)
+            # Sync endpoints and async producers on a foreign loop must both
+            # hand off: the lock and listener queues belong to serving_loop.
+            target_loop.call_soon_threadsafe(_schedule_broadcast, event_str)
     except RuntimeError:
         # The serving loop closed between capture and use (app shutdown).
         logger.debug("Event loop closed — event dropped: %s", kind)
-
-
-def _on_event_loop() -> bool:
-    """True when called from the running event loop (async-context emit)."""
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return False
-    return True
 
 
 def _schedule_broadcast(event_str: str) -> None:
