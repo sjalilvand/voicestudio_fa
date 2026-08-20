@@ -228,7 +228,7 @@ class TestAudioOnlyDubbing:
             )
 
         assert r.status_code == 200, r.text
-        audio_files = sorted(exports_dir.glob("dubbed_audio_es_*.m4a"))
+        audio_files = sorted(exports_dir.glob("dubbed_audio_*.m4a"))
         assert len(audio_files) == 1, [f.name for f in audio_files]
         # The video-mux path must NOT have run for an audio job.
         assert not list(exports_dir.glob("dubbed_video_*.mp4"))
@@ -244,7 +244,7 @@ class TestAudioOnlyDubbing:
             r = client.get(f"/dub/download/{job_id}", params={"preserve_bg": False, "out_format": "weird"})
 
         assert r.status_code == 200, r.text
-        assert sorted(exports_dir.glob("dubbed_audio_es_*.m4a"))
+        assert sorted(exports_dir.glob("dubbed_audio_*.m4a"))
 
     def test_audio_only_download_label_rejects_traversal_and_control_chars(self, app_client):
         client, dc, _dx, tmp = app_client
