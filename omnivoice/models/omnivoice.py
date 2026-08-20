@@ -789,15 +789,15 @@ class OmniVoice(PreTrainedModel):
             ref_wav = ref_wav * 0.1 / ref_rms
 
         ref_duration = ref_wav.size(-1) / self.sampling_rate
-        if ref_duration > 20.0:
-            if ref_text is not None:
-                raise ValueError(
-                    f"{CLONE_REF_TOO_LONG_MARKER} Reference audio is "
-                    f"{ref_duration:.1f} seconds long; supplied transcripts support "
-                    "at most 20 seconds. Trim both the audio and transcript to the "
-                    "same 3-10 second passage, or omit the transcript so VoiceStudio "
-                    "can trim and transcribe the clip automatically."
-                )
+        if ref_text is not None and ref_duration > 20.0:
+            raise ValueError(
+                f"{CLONE_REF_TOO_LONG_MARKER} Reference audio is "
+                f"{ref_duration:.1f} seconds long; supplied transcripts support "
+                "at most 20 seconds. Trim both the audio and transcript to the "
+                "same 3-10 second passage, or omit the transcript so VoiceStudio "
+                "can trim and transcribe the clip automatically."
+            )
+        if ref_text is None and ref_duration > 15.0:
             # Transcript-free automatic selection examines every passage, but
             # caps the work at five bounded ASR calls. Longer references need
             # an explicit user-selected passage rather than a lossy sampling

@@ -195,6 +195,26 @@ def test_far_late_speech_at_auto_select_limit_survives_with_five_asr_calls(monke
     assert len(calls) == 5
 
 
+def test_sixteen_second_reference_uses_bounded_selection_without_preprocessing():
+    model = _model(reject_tokenization=False)
+    model.sampling_rate = 100
+    model._asr_pipe = object()
+    lengths = []
+
+    def transcribe(candidate):
+        lengths.append(candidate[0].size(-1))
+        return "Speech."
+
+    model.transcribe = transcribe
+    audio = torch.full((1, 16 * 100), 0.1)
+
+    model.create_voice_clone_prompt(
+        (audio, 100), ref_text=None, preprocess_prompt=False
+    )
+
+    assert lengths == [1500, 100]
+
+
 def test_auto_select_rejects_one_sample_over_limit_before_asr():
     model = _model(reject_tokenization=False)
     model.sampling_rate = 100
