@@ -1112,6 +1112,10 @@ class _WatermarkExecutor(Executor):
                 self._thread is None or not self._thread.is_alive()
             )
 
+    def is_shutdown(self) -> bool:
+        with self._lock:
+            return self._shutdown
+
     def shutdown(
         self,
         wait: bool = True,
@@ -1138,6 +1142,19 @@ class _WatermarkExecutor(Executor):
 
 _watermark_pool_singleton: "_WatermarkExecutor | None" = None
 _watermark_pool_lock = threading.Lock()
+_watermark_pool_accepting = True
+
+
+def begin_watermark_pool_lifecycle() -> None:
+    """Open watermark submissions for a newly-started app lifespan."""
+    global _watermark_pool_accepting, _watermark_pool_singleton
+    with _watermark_pool_lock:
+        _watermark_pool_accepting = True
+        if (
+            _watermark_pool_singleton is not None
+            and _watermark_pool_singleton.is_shutdown()
+        ):
+            _watermark_pool_singleton = None
 
 
 def get_watermark_pool() -> _WatermarkExecutor:
@@ -1149,6 +1166,8 @@ def get_watermark_pool() -> _WatermarkExecutor:
     reset and hand out None (CodeRabbit, PR #1577)."""
     global _watermark_pool_singleton
     with _watermark_pool_lock:
+        if not _watermark_pool_accepting:
+            raise RuntimeError("watermark executor is shutting down")
         if (
             _watermark_pool_singleton is not None
             and _watermark_pool_singleton.is_stopped()
@@ -1169,8 +1188,9 @@ def shutdown_watermark_pool(*, timeout: float = 20.0) -> None:
     from creating a replacement that escapes this shutdown. A process that
     keeps running after lifespan shutdown (the test suite does exactly this)
     gets a fresh pool once the old worker has actually stopped."""
-    global _watermark_pool_singleton
+    global _watermark_pool_accepting, _watermark_pool_singleton
     with _watermark_pool_lock:
+        _watermark_pool_accepting = False
         pool = _watermark_pool_singleton
     if pool is not None:
         stopped = pool.shutdown(

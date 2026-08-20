@@ -863,6 +863,8 @@ async def _phase_b(app: FastAPI) -> None:
     # #1174: arm model loads for THIS run — an in-process relaunch may carry a
     # stale shutting-down flag from a previous lifespan.
     model_loads_reset_shutdown()
+    from services.model_manager import begin_watermark_pool_lifecycle
+    begin_watermark_pool_lifecycle()
     app.state.idle_task = asyncio.create_task(idle_worker())
     app.state.worker_task = asyncio.create_task(task_manager.worker())
     # Warm the TTS model in the background so first /generate is instant.

@@ -193,14 +193,20 @@ def test_watermark_pool_rebuilds_after_shutdown_drain():
     """The lifespan shutdown drains the watermark pool; a process that keeps
     running afterwards (the test suite) must get a FRESH pool on next use,
     not "cannot schedule new futures after shutdown" (CI, PR #1577)."""
-    from services.model_manager import get_watermark_pool, shutdown_watermark_pool
+    from services.model_manager import (
+        begin_watermark_pool_lifecycle,
+        get_watermark_pool,
+        shutdown_watermark_pool,
+    )
 
+    begin_watermark_pool_lifecycle()
     pool_before = get_watermark_pool()
     shutdown_watermark_pool()
     with pytest.raises(RuntimeError):
         # The drained pool refuses new work…
         pool_before.submit(lambda: None).result(timeout=5)
-    # …but the next getter hands out a live replacement.
+    # …but the next app lifespan hands out a live replacement.
+    begin_watermark_pool_lifecycle()
     assert get_watermark_pool().submit(lambda: "ok").result(timeout=5) == "ok"
     # Clean up the replacement so later tests start from a fresh pool too.
     shutdown_watermark_pool()
@@ -208,8 +214,13 @@ def test_watermark_pool_rebuilds_after_shutdown_drain():
 
 def test_watermark_pool_shutdown_waits_for_active_worker():
     """Lifespan teardown cannot finish while AudioSeal is still loading."""
-    from services.model_manager import get_watermark_pool, shutdown_watermark_pool
+    from services.model_manager import (
+        begin_watermark_pool_lifecycle,
+        get_watermark_pool,
+        shutdown_watermark_pool,
+    )
 
+    begin_watermark_pool_lifecycle()
     started = threading.Event()
     release = threading.Event()
     shutdown_done = threading.Event()
@@ -235,7 +246,11 @@ def test_watermark_pool_shutdown_deadline_bounds_stuck_worker():
     """A stuck AudioSeal import cannot hang backend shutdown forever."""
     import time
 
-    from services.model_manager import get_watermark_pool, shutdown_watermark_pool
+    from services.model_manager import (
+        begin_watermark_pool_lifecycle,
+        get_watermark_pool,
+        shutdown_watermark_pool,
+    )
 
     started = threading.Event()
     release = threading.Event()
@@ -244,6 +259,7 @@ def test_watermark_pool_shutdown_deadline_bounds_stuck_worker():
         started.set()
         release.wait(5)
 
+    begin_watermark_pool_lifecycle()
     pool = get_watermark_pool()
     pool.submit(_stuck_load)
     assert started.wait(1)
@@ -260,7 +276,11 @@ def test_watermark_pool_shutdown_deadline_bounds_stuck_worker():
 
 def test_watermark_pool_cannot_be_replaced_while_timed_out_worker_is_alive():
     """A producer racing bounded shutdown cannot create an undrained pool."""
-    from services.model_manager import get_watermark_pool, shutdown_watermark_pool
+    from services.model_manager import (
+        begin_watermark_pool_lifecycle,
+        get_watermark_pool,
+        shutdown_watermark_pool,
+    )
 
     started = threading.Event()
     release = threading.Event()
@@ -269,23 +289,25 @@ def test_watermark_pool_cannot_be_replaced_while_timed_out_worker_is_alive():
         started.set()
         release.wait(5)
 
+    begin_watermark_pool_lifecycle()
     pool = get_watermark_pool()
     pool.submit(_stuck_load)
     assert started.wait(1)
 
     try:
         shutdown_watermark_pool(timeout=0.01)
-        assert get_watermark_pool() is pool
-        with pytest.raises(RuntimeError, match="after shutdown"):
-            get_watermark_pool().submit(lambda: "escaped")
+        with pytest.raises(RuntimeError, match="shutting down"):
+            get_watermark_pool()
+        # A deliberate in-process relaunch opens a new lifecycle even while
+        # the retired daemon worker is still winding down.
+        begin_watermark_pool_lifecycle()
+        replacement = get_watermark_pool()
+        assert replacement is not pool
+        assert replacement.submit(lambda: "ok").result(timeout=1) == "ok"
     finally:
         release.set()
         pool._thread.join(timeout=1)
-
-    replacement = get_watermark_pool()
-    assert replacement is not pool
-    assert replacement.submit(lambda: "ok").result(timeout=1) == "ok"
-    shutdown_watermark_pool()
+        shutdown_watermark_pool()
 
 
 def test_prefetched_model_gets_one_extra_idle_window(monkeypatch, watermark):
