@@ -44,6 +44,29 @@ def test_fallback_formula_matches_when_model_manager_is_unavailable(monkeypatch)
     assert deadlines._base_execution_seconds("x" * 4000) == pytest.approx(real)
 
 
+def test_execution_budget_uses_target_worker_device(monkeypatch):
+    """A CPU controller must not enlarge a remote CUDA worker's budget."""
+    from services import model_manager
+
+    monkeypatch.setattr(model_manager, "GPU_JOB_TIMEOUT_S", 300.0)
+    monkeypatch.setattr(model_manager, "CPU_JOB_TIMEOUT_S", 777.0)
+    monkeypatch.setattr(model_manager, "_GENERATE_TIMEOUT_EXPLICIT", False)
+    monkeypatch.setattr(model_manager, "_CONFIGURED_GPU_JOB_TIMEOUT_S", 300.0)
+
+    assert for_task("tts", text="short", execution_device="cuda").execution_seconds == 300
+    assert for_task("tts", text="short", execution_device="cpu").execution_seconds == 777
+
+
+def test_universal_timeout_override_wins_on_cpu_worker(monkeypatch):
+    from services import model_manager
+
+    monkeypatch.setattr(model_manager, "GPU_JOB_TIMEOUT_S", 444.0)
+    monkeypatch.setattr(model_manager, "CPU_JOB_TIMEOUT_S", 777.0)
+    monkeypatch.setattr(model_manager, "_GENERATE_TIMEOUT_EXPLICIT", True)
+
+    assert for_task("tts", text="short", execution_device="cpu").execution_seconds == 444
+
+
 def test_accept_is_generous_enough_for_a_busy_worker():
     """The old 2s accept would time out against a worker mid-inference holding
     the GIL, then penalise it for being busy."""

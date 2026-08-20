@@ -126,7 +126,9 @@ class Deadlines:
         }
 
 
-def _base_execution_seconds(text: Optional[str]) -> float:
+def _base_execution_seconds(
+    text: Optional[str], *, execution_device: Optional[str] = None
+) -> float:
     """Delegate to model_manager's budget; fall back to its formula.
 
     The lazy import keeps this module usable in a process that has no torch —
@@ -135,14 +137,18 @@ def _base_execution_seconds(text: Optional[str]) -> float:
     try:
         from services import model_manager  # noqa: PLC0415 — intentionally lazy
 
-        return float(model_manager.generate_timeout_s(text))
+        return float(
+            model_manager.generate_timeout_s(
+                text, execution_device=execution_device
+            )
+        )
     except Exception:
         base = _GENERATE_TIMEOUT_S
         try:
             from core.device_caps import detect_host_caps  # noqa: PLC0415
 
             if (
-                detect_host_caps().family == "cpu"
+                (execution_device or detect_host_caps().family) == "cpu"
                 and "OMNIVOICE_GENERATE_TIMEOUT_S" not in os.environ
             ):
                 base = _CPU_GENERATE_TIMEOUT_S
@@ -163,6 +169,7 @@ def for_task(
     model_resident: bool = False,
     model_downloaded: bool = True,
     input_seconds: float = 0.0,
+    execution_device: Optional[str] = None,
 ) -> Deadlines:
     """Compute the deadlines for one attempt.
 
@@ -174,7 +181,9 @@ def for_task(
     op = Operation.coerce(operation)
     multiplier, grace = _PROFILE[op]
 
-    execution = _base_execution_seconds(text) * multiplier
+    execution = _base_execution_seconds(
+        text, execution_device=execution_device
+    ) * multiplier
     # Media-length operations scale on duration, not characters.
     if input_seconds > 0:
         execution = max(execution, input_seconds * multiplier)
