@@ -808,25 +808,37 @@ class OmniVoice(PreTrainedModel):
             # not optional here: fall back to the same 15 s upper bound so an
             # unusual/quiet clip still cannot allocate tokens for minutes.
             max_samples = int(15.0 * self.sampling_rate)
-            if ref_wav.size(-1) <= max_samples and not torch.any(ref_wav):
-                # The silence splitter can return a silent prefix when the
-                # first speech begins after its 15 s split horizon. Recover
-                # from the original reference before selecting a safe window.
-                ref_wav = untrimmed_ref_wav
-            if ref_wav.size(-1) > max_samples:
-                envelope = ref_wav.abs().amax(dim=0)
+            original_power = untrimmed_ref_wav.abs().amax(dim=0).square()
+            activity_cap = max(float(original_power.mean()) * 100.0, 1e-10)
+
+            def activity_score(audio):
+                power = audio.abs().amax(dim=0).square().clamp_max(activity_cap)
+                return float(power.double().sum())
+
+            def densest_window(audio):
+                envelope = audio.abs().amax(dim=0)
                 # Pick the contiguous passage with the most activity. Using
                 # the midpoint of the first/last crossings can center the
                 # crop on silence when a transient is far from real speech.
-                power = envelope.square()
-                cap = max(float(power.mean()) * 100.0, 1e-10)
-                power = power.clamp_max(cap)
+                power = envelope.square().clamp_max(activity_cap)
                 # Float64 keeps small quiet-speech contributions observable
                 # after a distant full-scale transient in long references.
                 cumulative = torch.nn.functional.pad(power.double().cumsum(0), (1, 0))
                 window_power = cumulative[max_samples:] - cumulative[:-max_samples]
                 start = int(window_power.argmax())
-                ref_wav = ref_wav[:, start : start + max_samples]
+                return audio[:, start : start + max_samples], float(window_power[start])
+
+            best_original, best_original_score = densest_window(untrimmed_ref_wav)
+            if ref_wav.size(-1) > max_samples:
+                ref_wav, trimmed_score = densest_window(ref_wav)
+            else:
+                trimmed_score = activity_score(ref_wav)
+            # The silence splitter can return a mostly silent prefix when the
+            # first speech begins after its 15 s horizon. Compare activity,
+            # rather than exact zero, so a click/noise transient cannot hide
+            # the usable speech later in the original reference.
+            if best_original_score > trimmed_score:
+                ref_wav = best_original
 
         if preprocess_prompt:
             # #1188: the fixed -50 dBFS silence threshold used to consume a

@@ -148,3 +148,21 @@ def test_real_silence_splitter_does_not_keep_silent_prefix(monkeypatch):
 
     assert model.audio_tokenizer.seen_samples == 15 * 24_000
     assert model.audio_tokenizer.seen_peak > 0
+
+
+def test_real_silence_splitter_ignores_transient_before_late_speech(monkeypatch):
+    model = _model(reject_tokenization=False)
+    model._asr_pipe = object()
+    model.transcribe = lambda _audio: "Automatically aligned transcript."
+    monkeypatch.setattr(
+        "omnivoice.models.omnivoice.remove_silence_safe",
+        lambda audio, *_args, **_kwargs: audio,
+    )
+    audio = torch.zeros((1, 21 * 24_000))
+    audio[:, 1 * 24_000] = 1.0
+    audio[:, 16 * 24_000 :] = 0.01
+
+    model.create_voice_clone_prompt((audio, 24_000), ref_text=None)
+
+    assert model.audio_tokenizer.seen_samples == 15 * 24_000
+    assert 0 < model.audio_tokenizer.seen_peak < 1
