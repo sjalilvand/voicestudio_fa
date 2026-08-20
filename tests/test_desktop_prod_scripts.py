@@ -33,6 +33,37 @@ _APPIMAGE_PROCESSES = os.path.join(_ROOT, "scripts", "desktop_prod_processes.py"
 _RELAUNCH_SCRIPTS = ("desktop-prod:run", "desktop-prod:run:pill")
 
 
+def _supported_bash() -> str | None:
+    """Return a native shell capable of executing desktop-prod.sh."""
+    if os.name == "nt":
+        roots = filter(
+            None,
+            (
+                os.environ.get("ProgramFiles"),
+                os.environ.get("ProgramFiles(x86)"),
+                os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs"),
+            ),
+        )
+        for root in roots:
+            for relative in (("Git", "bin", "bash.exe"), ("Git", "usr", "bin", "bash.exe")):
+                candidate = os.path.join(root, *relative)
+                if os.path.isfile(candidate):
+                    return candidate
+
+    candidate = shutil.which("bash")
+    if candidate and not (os.name == "nt" and "\\system32\\" in candidate.lower()):
+        return candidate
+    return None
+
+
+def test_desktop_prod_execution_does_not_require_posix_bin_bash():
+    """The smoke seam must also collect on native Windows runners."""
+    with open(__file__, encoding="utf-8") as fh:
+        source = fh.read()
+    posix_only_invocation = '["' + "/bin/" + 'bash", fixture_script'
+    assert posix_only_invocation not in source
+
+
 def _scripts() -> dict:
     with open(_PKG, encoding="utf-8") as fh:
         return json.load(fh)["scripts"]
@@ -262,8 +293,11 @@ def test_linux_process_stop_executes_before_data_wipe(tmp_path):
             "PATH": f"{fake_bin}:/usr/bin:/bin",
         }
     )
+    bash = _supported_bash()
+    if bash is None:
+        pytest.skip("desktop-prod.sh smoke requires Bash (for example Git Bash on Windows)")
     result = subprocess.run(
-        ["/bin/bash", fixture_script, "--skip-build"],  # noqa: S603
+        [bash, fixture_script, "--skip-build"],  # noqa: S603
         cwd=fixture_root,
         env=env,
         capture_output=True,
