@@ -13,7 +13,7 @@ from typing import Optional
 from core.config import DUB_DIR
 from core.http_headers import content_disposition
 from core.logging_utils import log_safe
-from core.path_security import UnsafePath, resolve_within
+from core.path_security import UnsafePath, resolve_within, safe_filename
 from core.tasks import task_manager
 from fastapi import APIRouter, Header, HTTPException, Query, Response
 from fastapi.responses import FileResponse, StreamingResponse
@@ -664,7 +664,7 @@ async def dub_download(
 
         base_name = os.path.splitext(job.get("filename", "output"))[0]
         safe_name = "".join(c for c in base_name if c.isalnum() or c in "-_ ").strip() or "output"
-        dl_name = f"dubbed_{safe_name}_{safe_lang}_{stamp}.{fmt}"
+        dl_name = safe_filename(f"dubbed_{safe_name}_{safe_lang}_{stamp}.{fmt}")
         media_type = _MEDIA_TYPES.get(f".{fmt}", "audio/mp4")
         save_path = _consume_native_save(save_authorization)
         if save_path:
