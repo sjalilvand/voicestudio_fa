@@ -309,11 +309,20 @@ async def mark_synthetic_async(
     job = functools.partial(
         mark_synthetic, waveform, sample_rate, context=context, force=force
     )
-    if timeout is not None:
-        return await run_on_gpu_pool_guarded(
-            job, what="Audio watermark", timeout=timeout, executor=pool
-        )
-    return await asyncio.get_running_loop().run_in_executor(pool, job)
+    try:
+        if timeout is not None:
+            return await run_on_gpu_pool_guarded(
+                job, what="Audio watermark", timeout=timeout, executor=pool
+            )
+        return await asyncio.get_running_loop().run_in_executor(pool, job)
+    except RuntimeError:
+        # Shutdown may begin after admission but before Executor.submit().
+        # Preserve unrelated worker failures; only lifecycle rejection is
+        # fail-open because finished synthesis must not be lost to teardown.
+        if not pool.is_shutdown():
+            raise
+        logger.warning("Watermark skipped while the pool is shutting down")
+        return waveform
 
 
 @torch.no_grad()

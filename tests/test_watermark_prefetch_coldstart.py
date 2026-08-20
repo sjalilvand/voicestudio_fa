@@ -212,6 +212,38 @@ def test_watermark_pool_rebuilds_after_shutdown_drain():
     shutdown_watermark_pool()
 
 
+@pytest.mark.parametrize("timeout", [None, 0.5])
+def test_watermark_submission_racing_shutdown_returns_finished_audio(
+    monkeypatch, watermark, timeout
+):
+    """Shutdown after admission must fail open in both dispatch paths."""
+    import asyncio
+    import torch
+
+    class _ShutdownRaceExecutor:
+        def submit(self, _fn, /, *_args, **_kwargs):
+            raise RuntimeError("cannot schedule new futures after shutdown")
+
+        def is_shutdown(self):
+            return True
+
+    pool = _ShutdownRaceExecutor()
+    model_manager = importlib.import_module("services.model_manager")
+    monkeypatch.setattr(model_manager, "get_watermark_pool", lambda: pool)
+
+    audio = torch.zeros(1, 240)
+    marked = asyncio.run(
+        watermark.mark_synthetic_async(
+            audio,
+            24000,
+            context="test.shutdown_submission_race",
+            timeout=timeout,
+        )
+    )
+
+    assert marked is audio
+
+
 def test_watermark_pool_shutdown_waits_for_active_worker():
     """Lifespan teardown cannot finish while AudioSeal is still loading."""
     from services.model_manager import (
