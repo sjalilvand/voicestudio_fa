@@ -12,6 +12,7 @@ import { useAppStore, FONT_STACKS } from './store';
 import { NAV_ITEMS } from './components/navItems';
 import SearchableSelect from './components/SearchableSelect';
 import DirectionDialog from './components/DirectionDialog';
+import ModeLifecycleBoundary from './components/ModeLifecycleBoundary';
 import { resolveDubDefaultTrack } from './utils/dubDefaultTrack';
 
 // Lazy-load heavy/conditional components so they don't bloat the initial bundle.
@@ -1451,7 +1452,7 @@ function App() {
         <NavRail mode={mode} setMode={setMode} side={navRailSide} onFlipSide={flipNavRailSide} />
       )}
 
-      <div className="main-content">
+      <ModeLifecycleBoundary mode={mode}>
         {/* ═══ LAUNCHPAD TAB ═══ */}
         {mode === 'settings' ? (
           <ErrorBoundary name="settings">
@@ -1779,7 +1780,7 @@ function App() {
             </div>
           </div>
         )}
-      </div>
+      </ModeLifecycleBoundary>
 
       {/* ── SIDEBAR ── */}
       <Suspense fallback={<LazyFallback />}>
