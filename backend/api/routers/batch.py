@@ -358,7 +358,7 @@ async def _run_batch_pipeline(job_id: str, job: dict):
                 from services.model_manager import generate_timeout_s
                 audio_tensor = await run_on_gpu_pool_guarded(
                     _gen, what="Batch generate",
-                    timeout=generate_timeout_s(seg_text),
+                    timeout=generate_timeout_s(seg_text, engine=backend),
                 )
 
                 # Fit to slot

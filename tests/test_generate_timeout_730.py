@@ -118,6 +118,28 @@ def test_accelerated_host_keeps_five_minute_generate_budget(model_manager, monke
     assert model_manager.generate_timeout_s("A short CUDA render") == 300.0
 
 
+def test_cpu_only_engine_gets_cpu_budget_on_cuda_host(model_manager, monkeypatch):
+    import types
+    import core.device_caps as caps
+    import services.engine_routing as routing
+
+    class CpuEngine:
+        gpu_compat = ("cpu",)
+
+    host = types.SimpleNamespace(family="cuda")
+    monkeypatch.setattr(caps, "detect_host_caps", lambda: host)
+    monkeypatch.setattr(
+        routing, "resolve_routing",
+        lambda *args, **kwargs: {"effective_device": "cpu"},
+    )
+    monkeypatch.setattr(model_manager, "GPU_JOB_TIMEOUT_S", 300.0)
+    monkeypatch.setattr(model_manager, "CPU_JOB_TIMEOUT_S", 600.0)
+
+    assert model_manager.generate_timeout_s(
+        "A CPU fallback render", engine=CpuEngine,
+    ) == 600.0
+
+
 def test_explicit_universal_generate_timeout_wins_on_cpu(model_manager, monkeypatch):
     """Operators can still lower the watchdog to fail faster on CPU."""
     import importlib
