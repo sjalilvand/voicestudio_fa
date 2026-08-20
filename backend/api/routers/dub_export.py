@@ -668,7 +668,12 @@ async def dub_download(
         media_type = _MEDIA_TYPES.get(f".{fmt}", "audio/mp4")
         save_path = _consume_native_save(save_authorization)
         if save_path:
-            return _native_save(out_path, save_path, dl_name, media_type=media_type)
+            # Keep the request-derived download label out of the filesystem
+            # trust boundary. It is response metadata, not a source or
+            # destination path (CodeQL, #1575).
+            result = _native_save(out_path, save_path, "dubbed_audio", media_type=media_type)
+            result["display_name"] = dl_name
+            return result
         return FileResponse(
             out_path, media_type=media_type,
             headers={"Content-Disposition": content_disposition(dl_name)},
