@@ -38,6 +38,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Supervisor restarts after repeat crashes now back off (immediate, then 5s, then 15s) instead of respawning back-to-back, so a tight crash loop can't burn the whole restart budget in seconds (#1548)
 
 ### CI
+- Project agents now share pinned Vite and FastAPI skills from skills.sh (#1594)
 - Weekly full-history secret scans no longer mistake the Ed25519 private-key type name for committed key material (#1591)
 
 ## [0.5.0] — 2026-08-13
