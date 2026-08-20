@@ -610,7 +610,11 @@ async def dub_download(
     # A dub export should play the dub without requiring player-specific track
     # selection. Keep ``original`` as an explicit opt-in, but when callers omit
     # the preference choose the first generated dub consistently (#1575).
-    if not default_track and filtered_tracks:
+    if (
+        filtered_tracks
+        and not (default_track == "original" and include_original)
+        and default_track not in filtered_tracks
+    ):
         default_track = next(iter(filtered_tracks))
 
     if not filtered_tracks and not include_original:

@@ -8,7 +8,7 @@ import DubRightColumn from './DubRightColumn';
 
 const noop = () => {};
 
-function column(multiBatchBusy, setDubLang = noop, setDubLangCode = noop) {
+function column(multiBatchBusy, setDubLang = noop, setDubLangCode = noop, overrides = {}) {
   return (
     <DubRightColumn
       t={(key) => key}
@@ -46,6 +46,7 @@ function column(multiBatchBusy, setDubLang = noop, setDubLangCode = noop) {
       isTranslating={false}
       dubSegments={[]}
       dubStep="editing"
+      {...overrides}
     />
   );
 }
@@ -73,5 +74,17 @@ describe('DubRightColumn language targets', () => {
     });
     expect(setDubLang).toHaveBeenCalledWith('Spanish');
     expect(setDubLangCode).toHaveBeenCalledWith('es');
+  });
+
+  it('renders the first available dub when the saved default is stale', () => {
+    render(
+      column(false, noop, noop, {
+        defaultTrack: 'fr',
+        dubLangCode: 'bn',
+        dubTracks: ['es'],
+      }),
+    );
+
+    expect(screen.getByRole('combobox', { name: 'dub.default_track' })).toHaveValue('es');
   });
 });
