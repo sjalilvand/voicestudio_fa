@@ -839,11 +839,20 @@ class OmniVoice(PreTrainedModel):
             if self._asr_pipe is None:
                 logger.info("ASR model not loaded yet, loading on-the-fly ...")
                 self.load_asr_model()
+            max_asr_candidates = 5
             candidates = [ref_wav, best_original]
             last_start = untrimmed_ref_wav.size(-1) - max_samples
-            starts = list(range(0, last_start + 1, max_samples))
-            if starts[-1] != last_start:
-                starts.append(last_start)
+            # Bound Whisper work for arbitrarily long files while retaining
+            # whole-file coverage, including the far end where late speech is
+            # commonly found. The trim result and energy-best passage occupy
+            # the first two slots; evenly spaced windows fill the rest.
+            sampled_starts = torch.linspace(
+                0,
+                last_start,
+                steps=max_asr_candidates,
+                dtype=torch.int64,
+            ).tolist()
+            starts = [sampled_starts[-1], sampled_starts[0], *sampled_starts[1:-1]]
             candidates.extend(
                 untrimmed_ref_wav[:, start : start + max_samples] for start in starts
             )
@@ -854,6 +863,8 @@ class OmniVoice(PreTrainedModel):
                 if identity not in seen:
                     seen.add(identity)
                     unique_candidates.append(candidate)
+                if len(unique_candidates) == max_asr_candidates:
+                    break
 
             def speech_score(text):
                 return len(re.sub(r"[^\w]+", "", text or "", flags=re.UNICODE))

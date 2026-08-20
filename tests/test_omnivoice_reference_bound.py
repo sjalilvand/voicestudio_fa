@@ -189,3 +189,31 @@ def test_speech_aware_bound_prefers_quiet_voice_over_loud_non_speech(monkeypatch
 
     assert prompt.ref_text == "Spoken words."
     assert model.audio_tokenizer.seen_peak < 0.1
+
+
+def test_far_late_speech_survives_with_bounded_asr_calls(monkeypatch):
+    model = _model(reject_tokenization=False)
+    model.sampling_rate = 100
+    model._asr_pipe = object()
+    calls = []
+
+    def transcribe(candidate):
+        calls.append(candidate[0])
+        return "Late speech." if float(candidate[0][0, -1]) > 0 else ""
+
+    model.transcribe = transcribe
+    monkeypatch.setattr(
+        "omnivoice.models.omnivoice.trim_long_audio",
+        lambda audio, sampling_rate, **_kwargs: audio[:, : 15 * sampling_rate],
+    )
+    monkeypatch.setattr(
+        "omnivoice.models.omnivoice.remove_silence_safe",
+        lambda audio, *_args, **_kwargs: audio,
+    )
+    audio = torch.zeros((1, 184 * 100))
+    audio[:, -5 * 100 :] = 0.02
+
+    prompt = model.create_voice_clone_prompt((audio, 100), ref_text=None)
+
+    assert prompt.ref_text == "Late speech."
+    assert len(calls) <= 5
