@@ -852,18 +852,40 @@ fn sync_packaged_frontend(resource_root: &Path, project_dir: &Path) -> io::Resul
     if !source.join("index.html").is_file() {
         return Err(io::Error::new(
             io::ErrorKind::NotFound,
-            format!(
-                "bundled frontend is missing {}",
-                source.join("index.html").display()
-            ),
+            "bundled frontend is missing index.html",
         ));
     }
 
     let destination = project_dir.join("frontend").join("dist");
-    if destination.exists() {
-        fs::remove_dir_all(&destination)?;
+    let frontend_dir = destination.parent().expect("frontend dist has a parent");
+    let staging = frontend_dir.join(".dist-staging");
+    let backup = frontend_dir.join(".dist-backup");
+    fs::create_dir_all(frontend_dir)?;
+    if staging.exists() {
+        fs::remove_dir_all(&staging)?;
     }
-    copy_dir_recursive(&source, &destination)
+    if backup.exists() {
+        fs::remove_dir_all(&backup)?;
+    }
+    if let Err(error) = copy_dir_recursive(&source, &staging) {
+        let _ = fs::remove_dir_all(&staging);
+        return Err(error);
+    }
+
+    if destination.exists() {
+        fs::rename(&destination, &backup)?;
+    }
+    if let Err(error) = fs::rename(&staging, &destination) {
+        if backup.exists() {
+            let _ = fs::rename(&backup, &destination);
+        }
+        let _ = fs::remove_dir_all(&staging);
+        return Err(error);
+    }
+    if backup.exists() {
+        fs::remove_dir_all(backup)?;
+    }
+    Ok(())
 }
 
 /// Refresh `pyproject.toml` + `uv.lock` in the project dir from the bundled
@@ -2122,6 +2144,42 @@ mod tests {
         assert_eq!(
             fs::read_to_string(installed.join("assets").join("client.js")).unwrap(),
             "new client"
+        );
+    }
+
+    #[test]
+    fn packaged_frontend_error_does_not_expose_resource_path() {
+        let resources = tempfile::tempdir().unwrap();
+        let project = tempfile::tempdir().unwrap();
+
+        let error = sync_packaged_frontend(resources.path(), project.path()).unwrap_err();
+
+        assert_eq!(error.kind(), io::ErrorKind::NotFound);
+        assert_eq!(error.to_string(), "bundled frontend is missing index.html");
+        assert!(!error.to_string().contains(&resources.path().display().to_string()));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn failed_packaged_frontend_copy_preserves_installed_shell() {
+        use std::os::unix::fs::symlink;
+
+        let resources = tempfile::tempdir().unwrap();
+        let project = tempfile::tempdir().unwrap();
+        let source = resources.path().join("frontend").join("dist");
+        fs::create_dir_all(source.join("assets")).unwrap();
+        fs::write(source.join("index.html"), "new shell").unwrap();
+        symlink("missing-client.js", source.join("assets").join("client.js")).unwrap();
+
+        let installed = project.path().join("frontend").join("dist");
+        fs::create_dir_all(&installed).unwrap();
+        fs::write(installed.join("index.html"), "working shell").unwrap();
+
+        sync_packaged_frontend(resources.path(), project.path()).unwrap_err();
+
+        assert_eq!(
+            fs::read_to_string(installed.join("index.html")).unwrap(),
+            "working shell"
         );
     }
 
