@@ -134,21 +134,22 @@ def _base_execution_seconds(
     The lazy import keeps this module usable in a process that has no torch —
     the control plane schedules work it never executes.
     """
+    target_device = str(execution_device or "cpu").lower()
+    if target_device not in {"cpu", "cuda", "mps", "mlx", "directml", "rocm", "xpu"}:
+        target_device = "cpu"
     try:
         from services import model_manager  # noqa: PLC0415 — intentionally lazy
 
         return float(
             model_manager.generate_timeout_s(
-                text, execution_device=execution_device
+                text, execution_device=target_device
             )
         )
     except Exception:
         base = _GENERATE_TIMEOUT_S
         try:
-            from core.device_caps import detect_host_caps  # noqa: PLC0415
-
             if (
-                (execution_device or detect_host_caps().family) == "cpu"
+                target_device == "cpu"
                 and "OMNIVOICE_GENERATE_TIMEOUT_S" not in os.environ
             ):
                 base = _CPU_GENERATE_TIMEOUT_S
