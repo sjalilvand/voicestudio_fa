@@ -221,6 +221,24 @@ class TestAudioOnlyDubbing:
         assert r.status_code == 200, r.text
         assert sorted(exports_dir.glob("dubbed_audio_es_*.m4a"))
 
+    def test_audio_only_download_label_rejects_traversal_and_control_chars(self, app_client):
+        client, dc, _dx, tmp = app_client
+        job_id, _ = _seed_job_with_tracks(dc, tmp)
+        dc._dub_jobs[job_id]["input_type"] = "audio"
+        dc._dub_jobs[job_id]["filename"] = "../evil\r\nX-Injected: yes.mp4"
+
+        with patch.object(_asyncio, _SUBPROC_ATTR, side_effect=_fake_ffmpeg_factory(True)):
+            response = client.get(
+                f"/dub/download/{job_id}",
+                params={"preserve_bg": False, "default_track": "es"},
+            )
+
+        assert response.status_code == 200, response.text
+        label = response.headers["content-disposition"]
+        assert ".." not in label
+        assert "\r" not in label and "\n" not in label
+        assert "X-Injected:" not in label
+
     def test_upload_rejects_video_ext_when_audio_mode(self, app_client):
         client, dc, dx, tmp = app_client
         r = client.post(
