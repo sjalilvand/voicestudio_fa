@@ -2059,7 +2059,9 @@
     "error_prefix": "Hata: {{message}}",
     "ignored_unsupported": "Desteklenmeyen talimat göz ardı edildi: {{items}}",
     "ignored_duplicate": "Yoksayıldı (kategori zaten ayarlandı): {{items}}",
-    "ref_audio_unusable": "Referans seste konuşma duyulamadı — klip sessiz ya da neredeyse sessiz, bu yüzden klonlanacak bir ses yok. Mikrofona daha yakın şekilde yeniden kayıt yapın (doğru giriş aygıtının seçili olduğundan ve seviyenin hareket ettiğinden emin olun) veya başka bir klip seçin."
+    "ref_audio_unusable": "Referans seste konuşma duyulamadı — klip sessiz ya da neredeyse sessiz, bu yüzden klonlanacak bir ses yok. Mikrofona daha yakın şekilde yeniden kayıt yapın (doğru giriş aygıtının seçili olduğundan ve seviyenin hareket ettiğinden emin olun) veya başka bir klip seçin.",
+    "ref_audio_too_long": "Bir referans, transkriptle en fazla 20 saniye; transkriptsiz en fazla 75 saniye olabilir. Sesi 3–10 saniyelik net bir konuşma bölümüne kırpın; metin sağlıyorsanız transkripti de aynı bölüme kırpın.",
+    "ref_audio_no_speech": "Otomatik konuşma algılama referansta söylenmiş kelime bulamadı. Sesi 3–10 saniyelik net bir konuşma bölümüne kırpın veya eşleşen bir transkript sağlayın."
   },
   "sharing": {
     "title": "Paylaşım ve Uzaktan Erişim",
