@@ -36,9 +36,9 @@ the frozen-backend fallback mirror it for their toolchains.
 - The crash-isolated ASR sidecar and its download preflight now agree on which model to load — setting the shared faster-whisper model variable applies to both variants instead of the sidecar quietly using a different one (#1556)
 - "Ready" now requires the deep health probe (a working database-backed route), not just the identity probe — a backend whose install broke underneath can no longer be announced up while every real request fails (#1548)
 - Supervisor restarts after repeat crashes now back off (immediate, then 5s, then 15s) instead of respawning back-to-back, so a tight crash loop can't burn the whole restart budget in seconds (#1548)
+- The Linux desktop cleanup regression test now isolates build artifacts, so an existing developer build can no longer change its result (#1566)
 
 ### CI
-- The Linux desktop cleanup regression test now isolates build artifacts, so an existing developer build can no longer change its result (#1566)
 - Weekly full-history secret scans no longer mistake the Ed25519 private-key type name for committed key material (#1591)
 
 ## [0.5.0] — 2026-08-13
