@@ -103,6 +103,31 @@ _SUBPROC_ATTR = "create_subprocess_" + "exec"  # dodge overzealous code-scan hoo
 
 
 class TestDubExportUniqueness:
+    def test_excluded_default_resolves_before_retime_and_subtitle_selection(self, app_client):
+        client, dc, dx, tmp = app_client
+        job_id, _ = _seed_job_with_tracks(dc, tmp)
+        selected = []
+
+        def capture_default(_job, lang):
+            selected.append(lang)
+            return None
+
+        with (
+            patch.object(dx, "_video_retime_plan_for", side_effect=capture_default),
+            patch.object(_asyncio, _SUBPROC_ATTR, side_effect=_fake_ffmpeg_factory(True)),
+        ):
+            response = client.get(
+                f"/dub/download/{job_id}",
+                params={
+                    "preserve_bg": False,
+                    "default_track": "fr",
+                    "include_tracks": "original,es",
+                },
+            )
+
+        assert response.status_code == 200, response.text
+        assert selected == ["es"]
+
     @pytest.mark.skipif(
         shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None,
         reason="ffmpeg and ffprobe are required for the container regression",
@@ -112,7 +137,7 @@ class TestDubExportUniqueness:
         client, dc, _dx, tmp = app_client
         job_id, job_dir = _seed_job_with_tracks(dc, tmp)
         video_path = job_dir / "original.mp4"
-        subprocess.run(
+        subprocess.run(  # noqa: S603 -- fixed test binary and argument vector
             [
                 shutil.which("ffmpeg"), "-loglevel", "error", "-y",
                 "-f", "lavfi", "-i", "color=c=black:s=32x32:d=0.5",
@@ -129,7 +154,7 @@ class TestDubExportUniqueness:
         )
         assert response.status_code == 200, response.text
         exported = next((job_dir / "exports").glob("dubbed_video_*.mp4"))
-        probe = subprocess.run(
+        probe = subprocess.run(  # noqa: S603 -- fixed ffprobe inspection command
             [
                 shutil.which("ffprobe"), "-v", "error", "-select_streams", "a",
                 "-show_entries", "stream_tags=title:stream_disposition=default",
