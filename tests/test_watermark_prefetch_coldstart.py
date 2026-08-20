@@ -231,6 +231,33 @@ def test_watermark_pool_shutdown_waits_for_active_worker():
     assert shutdown_done.is_set()
 
 
+def test_watermark_pool_shutdown_deadline_bounds_stuck_worker():
+    """A stuck AudioSeal import cannot hang backend shutdown forever."""
+    import time
+
+    from services.model_manager import get_watermark_pool, shutdown_watermark_pool
+
+    started = threading.Event()
+    release = threading.Event()
+
+    def _stuck_load():
+        started.set()
+        release.wait(5)
+
+    pool = get_watermark_pool()
+    pool.submit(_stuck_load)
+    assert started.wait(1)
+
+    before = time.monotonic()
+    shutdown_watermark_pool(timeout=0.05)
+    elapsed = time.monotonic() - before
+
+    assert elapsed < 0.5
+    assert pool._thread is not None and pool._thread.daemon
+    release.set()
+    pool._thread.join(timeout=1)
+
+
 def test_prefetched_model_gets_one_extra_idle_window(monkeypatch, watermark):
     """Review finding: the reaper freed the prefetch-warmed, never-used
     generator at the first idle tick, re-imposing the cold start the prefetch
