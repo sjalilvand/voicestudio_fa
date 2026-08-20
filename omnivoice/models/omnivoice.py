@@ -811,16 +811,17 @@ class OmniVoice(PreTrainedModel):
             max_samples = int(15.0 * self.sampling_rate)
             if ref_wav.size(-1) > max_samples:
                 envelope = ref_wav.abs().amax(dim=0)
-                peak = float(envelope.max())
-                active = torch.nonzero(
-                    envelope >= max(peak * 0.05, 1e-5), as_tuple=False
-                ).flatten()
-                if active.numel():
-                    center = (int(active[0]) + int(active[-1])) // 2
-                    start = max(0, center - max_samples // 2)
-                    start = min(start, ref_wav.size(-1) - max_samples)
-                else:
-                    start = 0
+                # Pick the contiguous passage with the most activity. Using
+                # the midpoint of the first/last crossings can center the
+                # crop on silence when a transient is far from real speech.
+                power = envelope.square()
+                cap = max(float(power.mean()) * 100.0, 1e-10)
+                power = power.clamp_max(cap)
+                # Float64 keeps small quiet-speech contributions observable
+                # after a distant full-scale transient in long references.
+                cumulative = torch.nn.functional.pad(power.double().cumsum(0), (1, 0))
+                window_power = cumulative[max_samples:] - cumulative[:-max_samples]
+                start = int(window_power.argmax())
                 ref_wav = ref_wav[:, start : start + max_samples]
 
         if preprocess_prompt:
