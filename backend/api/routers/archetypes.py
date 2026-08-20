@@ -330,7 +330,7 @@ async def _render_archetype_wav(a: dict, out_path: Path) -> None:
     # GPU pool and brick the backend (#730 class). Budget comes from the shared
     # length-scaled helper (#1190) instead of the flat 300s default.
     from services.model_manager import generate_timeout_s
-    _budget = generate_timeout_s(text)
+    _budget = generate_timeout_s(text, engine=model)
     audio_tensor = await run_on_gpu_pool_guarded(
         lambda: _infer(_PREVIEW_SEED), what="Archetype preview generate",
         timeout=_budget)

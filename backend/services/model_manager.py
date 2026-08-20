@@ -398,7 +398,13 @@ def __getattr__(name: str):
 # (generation.py, tts_stream.py) were the last unguarded dispatch — and the
 # residual on-main reports all fail on generate:start (audio). This is the same
 # guard generalised so every GPU dispatch shares one recovery path.
+_GENERATE_TIMEOUT_EXPLICIT = "OMNIVOICE_GENERATE_TIMEOUT_S" in os.environ
 GPU_JOB_TIMEOUT_S = float(os.environ.get("OMNIVOICE_GENERATE_TIMEOUT_S", "300.0"))
+_CONFIGURED_GPU_JOB_TIMEOUT_S = GPU_JOB_TIMEOUT_S
+# CPU synthesis is healthy but substantially slower than accelerated inference.
+# Keep a separate, bounded floor so a short render on CPU is not abandoned at
+# the GPU-oriented five-minute deadline (#1588).
+CPU_JOB_TIMEOUT_S = float(os.environ.get("OMNIVOICE_CPU_GENERATE_TIMEOUT_S", "600.0"))
 
 # Queue-wait budget — a SEPARATE, deliberately generous clock (#1190/#1202).
 # The execution bound above must never be spent waiting in line: a job queued
@@ -501,7 +507,9 @@ class GpuPoolBusyError(TimeoutError):
         self.retry_after = max(1, int(round(retry_after)))
 
 
-def generate_timeout_s(text: "str | None") -> float:
+def generate_timeout_s(
+    text: "str | None", *, engine: object = None, execution_device: "str | None" = None,
+) -> float:
     """THE wall-clock execution budget for one synthesis job, scaled to input.
 
     Single source of truth for every TTS dispatch (#1190/#1202). The
@@ -517,10 +525,33 @@ def generate_timeout_s(text: "str | None") -> float:
     CPU-class hardware, still bounded (a wedged job is caught in minutes, not
     hours).
     """
-    return max(
-        GPU_JOB_TIMEOUT_S,
-        GPU_JOB_TIMEOUT_S + (max(0, len(text or "") - 1200) / 40.0),
-    )
+    base = GPU_JOB_TIMEOUT_S
+    try:
+        from core.device_caps import detect_host_caps
+        family = execution_device or detect_host_caps().family
+        if execution_device is None and engine is not None:
+            from services.engine_routing import resolve_routing
+            compat = getattr(engine, "gpu_compat", None)
+            if compat is None:
+                compat = getattr(type(engine), "gpu_compat", (family, "cpu"))
+            if tuple(compat) == ("cpu",):
+                family = "cpu"
+            else:
+                family = resolve_routing(
+                    compat, detect_host_caps(),
+                    float(getattr(engine, "min_vram_gb", 0.0) or 0.0),
+                )["effective_device"]
+        universal_override = (
+            _GENERATE_TIMEOUT_EXPLICIT
+            or GPU_JOB_TIMEOUT_S != _CONFIGURED_GPU_JOB_TIMEOUT_S
+        )
+        if family == "cpu" and not universal_override:
+            base = CPU_JOB_TIMEOUT_S
+    except Exception:
+        # Device probing is advisory here; the configured universal bound is
+        # still safe when a platform probe is unavailable during startup.
+        pass
+    return base + (max(0, len(text or "") - 1200) / 40.0)
 
 
 def _retry_after_estimate(stats: dict) -> float:

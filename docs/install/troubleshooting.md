@@ -524,6 +524,11 @@ and `OMNIVOICE_GENERATE_TIMEOUT_S` (generation) — both in seconds, default 300
 default 120). **Raise** them for very long single files/generations, **lower**
 them to fail faster on a small machine.
 
+CPU-only hosts use a bounded 600-second generation floor because correct CPU
+synthesis can take longer than the accelerated five-minute budget. Override it
+with `OMNIVOICE_CPU_GENERATE_TIMEOUT_S`; an explicit higher
+or lower `OMNIVOICE_GENERATE_TIMEOUT_S` always wins.
+
 **Two things changed here** ([#1190](https://github.com/debpalash/VoiceStudio/issues/1190)):
 
 - **Waiting in line is no longer counted as compute.** The generate budget used
