@@ -1112,6 +1112,10 @@ class _WatermarkExecutor(Executor):
                 self._thread is None or not self._thread.is_alive()
             )
 
+    def is_shutdown(self) -> bool:
+        with self._lock:
+            return self._shutdown
+
     def shutdown(
         self,
         wait: bool = True,
@@ -1150,7 +1154,10 @@ def begin_watermark_pool_lifecycle() -> None:
             and _watermark_pool_singleton.is_stopped()
         ):
             _watermark_pool_singleton = None
-        _watermark_pool_accepting = _watermark_pool_singleton is None
+        _watermark_pool_accepting = (
+            _watermark_pool_singleton is None
+            or not _watermark_pool_singleton.is_shutdown()
+        )
 
 
 def get_watermark_pool() -> _WatermarkExecutor:

@@ -210,7 +210,6 @@ def test_watermark_pool_rebuilds_after_shutdown_drain():
     assert get_watermark_pool().submit(lambda: "ok").result(timeout=5) == "ok"
     # Clean up the replacement so later tests start from a fresh pool too.
     shutdown_watermark_pool()
-    begin_watermark_pool_lifecycle()
 
 
 def test_watermark_pool_shutdown_waits_for_active_worker():
@@ -241,7 +240,6 @@ def test_watermark_pool_shutdown_waits_for_active_worker():
     release.set()
     shutdown_thread.join(timeout=2)
     assert shutdown_done.is_set()
-    begin_watermark_pool_lifecycle()
 
 
 def test_watermark_pool_shutdown_deadline_bounds_stuck_worker():
@@ -274,7 +272,6 @@ def test_watermark_pool_shutdown_deadline_bounds_stuck_worker():
     assert pool._thread is not None and pool._thread.daemon
     release.set()
     pool._thread.join(timeout=1)
-    begin_watermark_pool_lifecycle()
 
 
 def test_watermark_pool_cannot_be_replaced_while_timed_out_worker_is_alive():
@@ -316,7 +313,6 @@ def test_watermark_pool_cannot_be_replaced_while_timed_out_worker_is_alive():
     assert replacement is not pool
     assert replacement.submit(lambda: "ok").result(timeout=1) == "ok"
     shutdown_watermark_pool()
-    begin_watermark_pool_lifecycle()
 
 
 def test_prefetched_model_gets_one_extra_idle_window(monkeypatch, watermark):
