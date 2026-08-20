@@ -1035,6 +1035,7 @@
     "voice_match_per_line_title": "Cada fala é clonada de um clipe do seu próprio áudio de origem. Melhor prosódia por fala, mas a identidade da voz pode variar de fala em fala.",
     "voice_match_consistent": "Consistente",
     "voice_match_consistent_title": "Todas as falas de um falante são clonadas de uma referência compartilhada (o clone do falante ou o melhor clipe único quando não houver). Identidade de voz mais estável em toda a dublagem.",
+    "timing_lip_sync": "Sincronização labial",
     "default_track": "Faixa padrão:",
     "original_track": "Originais",
     "selected_dub": "{{code}} (dublagem selecionada)",

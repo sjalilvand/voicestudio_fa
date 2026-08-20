@@ -1035,6 +1035,7 @@
     "voice_match_per_line_title": "Ogni battuta viene clonata da un clip del proprio audio sorgente. Migliore prosodia per battuta, ma l'identità della voce può variare da battuta a battuta.",
     "voice_match_consistent": "Coerente",
     "voice_match_consistent_title": "Tutte le battute di un parlante vengono clonate da un riferimento condiviso (il clone del parlante o il miglior clip singolo se assente). Identità vocale più stabile in tutto il doppiaggio.",
+    "timing_lip_sync": "Sincronizzazione labiale",
     "default_track": "Traccia predefinita:",
     "original_track": "Originale",
     "selected_dub": "{{code}} (duplicazione selezionata)",

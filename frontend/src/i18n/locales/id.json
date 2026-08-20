@@ -1035,6 +1035,7 @@
     "voice_match_per_line_title": "Setiap baris dikloning dari klip audio sumbernya sendiri. Prosodi per baris paling cocok, tetapi identitas suara bisa bergeser antarbaris.",
     "voice_match_consistent": "Konsisten",
     "voice_match_consistent_title": "Semua baris satu pembicara dikloning dari satu referensi bersama (klon pembicara, atau satu klip terbaik jika tidak ada). Identitas suara lebih stabil di seluruh sulih suara.",
+    "timing_lip_sync": "Sinkronisasi bibir",
     "default_track": "Lagu Bawaan:",
     "original_track": "Asli",
     "selected_dub": "{{code}} (Suara yang Dipilih)",

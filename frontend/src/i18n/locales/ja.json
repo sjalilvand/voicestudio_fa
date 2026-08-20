@@ -1035,6 +1035,7 @@
     "voice_match_per_line_title": "各セリフを自身のソース音声のクリップからクローンします。行ごとの抑揚は最も合いますが、声の同一性が行ごとにぶれることがあります。",
     "voice_match_consistent": "一貫",
     "voice_match_consistent_title": "話者の全セリフを1つの共有参照（話者クローン、なければ最良の1クリップ）からクローンします。吹き替え全体で声の同一性が安定します。",
+    "timing_lip_sync": "リップシンク",
     "default_track": "デフォルトのトラック:",
     "original_track": "オリジナル",
     "selected_dub": "{{code}} (選択されたダブ)",

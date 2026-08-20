@@ -1035,6 +1035,7 @@
     "voice_match_per_line_title": "Mỗi câu được nhân bản từ đoạn âm thanh nguồn của chính nó. Ngữ điệu khớp nhất theo từng câu, nhưng bản sắc giọng có thể trôi giữa các câu.",
     "voice_match_consistent": "Nhất quán",
     "voice_match_consistent_title": "Mọi câu của một người nói được nhân bản từ một tham chiếu chung (bản sao giọng người nói, hoặc đoạn đơn tốt nhất nếu không có). Bản sắc giọng ổn định hơn trong toàn bộ bản lồng tiếng.",
+    "timing_lip_sync": "Đồng bộ môi",
     "default_track": "Bản nhạc mặc định:",
     "original_track": "Bản gốc",
     "selected_dub": "{{code}} (Lồng tiếng được chọn)",

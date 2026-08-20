@@ -1035,6 +1035,7 @@
     "voice_match_per_line_title": "Her satır kendi kaynak sesinin klibinden klonlanır. Satır başına en iyi prozodi, ancak ses kimliği satırdan satıra kayabilir.",
     "voice_match_consistent": "Tutarlı",
     "voice_match_consistent_title": "Bir konuşmacının tüm satırları tek bir ortak referanstan klonlanır (konuşmacı klonu, yoksa en iyi tek klip). Tüm dublajda daha kararlı bir ses kimliği.",
+    "timing_lip_sync": "Dudak senkronizasyonu",
     "default_track": "Varsayılan Parça:",
     "original_track": "Orijinal",
     "selected_dub": "{{code}} (Seçilmiş Dub)",
