@@ -103,6 +103,25 @@ _SUBPROC_ATTR = "create_subprocess_" + "exec"  # dodge overzealous code-scan hoo
 
 
 class TestDubExportUniqueness:
+    def test_original_only_resolves_stale_default_before_retime(self, app_client):
+        client, dc, dx, tmp = app_client
+        job_id, _ = _seed_job_with_tracks(dc, tmp)
+        with (
+            patch.object(dx, "_video_retime_plan_for") as retime_for,
+            patch.object(_asyncio, _SUBPROC_ATTR, side_effect=_fake_ffmpeg_factory(True)),
+        ):
+            response = client.get(
+                f"/dub/download/{job_id}",
+                params={
+                    "preserve_bg": False,
+                    "default_track": "fr",
+                    "include_tracks": "original",
+                },
+            )
+
+        assert response.status_code == 200, response.text
+        retime_for.assert_not_called()
+
     def test_excluded_default_resolves_before_retime_and_subtitle_selection(self, app_client):
         client, dc, dx, tmp = app_client
         job_id, _ = _seed_job_with_tracks(dc, tmp)
