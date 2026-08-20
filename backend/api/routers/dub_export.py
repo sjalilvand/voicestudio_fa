@@ -616,6 +616,8 @@ async def dub_download(
         and default_track not in filtered_tracks
     ):
         default_track = next(iter(filtered_tracks))
+    elif not filtered_tracks and include_original:
+        default_track = "original"
 
     if not filtered_tracks and not include_original:
         raise HTTPException(status_code=400, detail="No tracks selected for export")
