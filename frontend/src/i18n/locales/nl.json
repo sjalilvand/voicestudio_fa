@@ -2058,7 +2058,8 @@
     "error_prefix": "Fout: {{message}}",
     "ignored_unsupported": "Genegeerde niet-ondersteunde instructie: {{items}}",
     "ignored_duplicate": "Genegeerd (categorie al ingesteld): {{items}}",
-    "ref_audio_unusable": "Er is geen spraak gehoord in de referentie-audio — de clip is stil of bijna stil, dus er is geen stem om te klonen. Neem opnieuw op dichter bij de microfoon (controleer of het juiste invoerapparaat is geselecteerd en het niveau beweegt) of kies een andere clip."
+    "ref_audio_unusable": "Er is geen spraak gehoord in de referentie-audio — de clip is stil of bijna stil, dus er is geen stem om te klonen. Neem opnieuw op dichter bij de microfoon (controleer of het juiste invoerapparaat is geselecteerd en het niveau beweegt) of kies een andere clip.",
+    "ref_audio_too_long": "Een referentie met een aangeleverd transcript mag maximaal 20 seconden duren. Knip audio en transcript tot dezelfde passage van 3–10 seconden, of verwijder het transcript zodat VoiceStudio de clip automatisch kan inkorten en transcriberen."
   },
   "sharing": {
     "title": "Delen en externe toegang",

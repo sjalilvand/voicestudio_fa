@@ -58,6 +58,7 @@ from omnivoice.utils.audio import (
     load_audio,
     remove_silence_safe,
     trim_long_audio,
+    CLONE_REF_TOO_LONG_MARKER,
     validate_clone_reference,
 )
 from omnivoice.utils.duration import RuleDurationEstimator
@@ -787,14 +788,31 @@ class OmniVoice(PreTrainedModel):
         if 0 < ref_rms < 0.1:
             ref_wav = ref_wav * 0.1 / ref_rms
 
-        if preprocess_prompt:
-            # Trim long reference audio (>20s) by splitting at the largest silence gap.
-            # Skip trimming when ref_text is user-provided, otherwise the
-            # trimmed audio will no longer match the full transcript.
-            if ref_text is None:
-                ref_wav = trim_long_audio(
-                    ref_wav, self.sampling_rate, trim_threshold=20.0
+        ref_duration = ref_wav.size(-1) / self.sampling_rate
+        if ref_duration > 20.0:
+            if ref_text is not None:
+                raise ValueError(
+                    f"{CLONE_REF_TOO_LONG_MARKER} Reference audio is "
+                    f"{ref_duration:.1f} seconds long; supplied transcripts support "
+                    "at most 20 seconds. Trim both the audio and transcript to the "
+                    "same 3-10 second passage, or omit the transcript so VoiceStudio "
+                    "can trim and transcribe the clip automatically."
                 )
+            # Safety bound, independent of the caller's optional silence/
+            # punctuation preprocessing choice. The transcript is generated
+            # from this trimmed waveform below, so audio and text stay aligned.
+            ref_wav = trim_long_audio(
+                ref_wav, self.sampling_rate, trim_threshold=20.0
+            )
+            # ``trim_long_audio`` splits at speech/silence boundaries and is
+            # deliberately fail-open when it cannot detect speech. Safety is
+            # not optional here: fall back to the same 15 s upper bound so an
+            # unusual/quiet clip still cannot allocate tokens for minutes.
+            max_samples = int(15.0 * self.sampling_rate)
+            if ref_wav.size(-1) > max_samples:
+                ref_wav = ref_wav[:, :max_samples]
+
+        if preprocess_prompt:
             # #1188: the fixed -50 dBFS silence threshold used to consume a
             # quiet-but-real recording wholesale and dead-end with
             # "Reference audio is empty after silence removal". The safe

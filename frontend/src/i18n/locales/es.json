@@ -2058,7 +2058,8 @@
     "error_prefix": "Error: {{message}}",
     "ignored_unsupported": "Instrucción no admitida ignorada: {{items}}",
     "ignored_duplicate": "Ignorado (categoría ya establecida): {{items}}",
-    "ref_audio_unusable": "No se detectó voz en el audio de referencia: el clip está en silencio o casi en silencio, así que no hay voz que clonar. Graba de nuevo más cerca del micrófono (comprueba que está seleccionado el dispositivo de entrada correcto y que el nivel se mueve) o elige otro clip."
+    "ref_audio_unusable": "No se detectó voz en el audio de referencia: el clip está en silencio o casi en silencio, así que no hay voz que clonar. Graba de nuevo más cerca del micrófono (comprueba que está seleccionado el dispositivo de entrada correcto y que el nivel se mueve) o elige otro clip.",
+    "ref_audio_too_long": "Una referencia con transcripción no puede superar los 20 segundos. Recorta el audio y la transcripción al mismo fragmento de 3–10 segundos, o elimina la transcripción para que VoiceStudio recorte y transcriba el clip automáticamente."
   },
   "sharing": {
     "title": "Compartir y acceso remoto",

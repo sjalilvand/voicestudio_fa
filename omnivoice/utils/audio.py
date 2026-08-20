@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 # instead of the raw English detail (issue #1188). The frontend matches this
 # exact string (frontend/src/utils/errorToast.jsx) — change both or neither.
 CLONE_REF_UNUSABLE_MARKER = "[clone_ref_unusable]"
+CLONE_REF_TOO_LONG_MARKER = "[clone_ref_too_long]"
 
 
 def load_audio(audio_path: str, sampling_rate: int):

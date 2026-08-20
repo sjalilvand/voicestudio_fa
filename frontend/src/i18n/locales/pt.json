@@ -2058,7 +2058,8 @@
     "error_prefix": "Erro: {{message}}",
     "ignored_unsupported": "Instrução não suportada ignorada: {{items}}",
     "ignored_duplicate": "Ignorado (categoria já definida): {{items}}",
-    "ref_audio_unusable": "Nenhuma fala foi detectada no áudio de referência — o clipe está em silêncio ou quase, então não há voz para clonar. Grave novamente mais perto do microfone (confira se o dispositivo de entrada correto está selecionado e se o nível se move) ou escolha outro clipe."
+    "ref_audio_unusable": "Nenhuma fala foi detectada no áudio de referência — o clipe está em silêncio ou quase, então não há voz para clonar. Grave novamente mais perto do microfone (confira se o dispositivo de entrada correto está selecionado e se o nível se move) ou escolha outro clipe.",
+    "ref_audio_too_long": "Uma referência com transcrição fornecida pode ter no máximo 20 segundos. Corte o áudio e a transcrição para o mesmo trecho de 3–10 segundos ou remova a transcrição para o VoiceStudio cortar e transcrever o clipe automaticamente."
   },
   "sharing": {
     "title": "Compartilhamento e acesso remoto",

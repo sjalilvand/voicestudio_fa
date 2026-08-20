@@ -2058,7 +2058,8 @@
     "error_prefix": "Fel: {{message}}",
     "ignored_unsupported": "Ignorerad instruktion som inte stöds: {{items}}",
     "ignored_duplicate": "Ignorerad (kategori redan inställd): {{items}}",
-    "ref_audio_unusable": "Inget tal kunde höras i referensljudet — klippet är tyst eller nästan tyst, så det finns ingen röst att klona. Spela in igen närmare mikrofonen (kontrollera att rätt ingångsenhet är vald och att nivån rör sig) eller välj ett annat klipp."
+    "ref_audio_unusable": "Inget tal kunde höras i referensljudet — klippet är tyst eller nästan tyst, så det finns ingen röst att klona. Spela in igen närmare mikrofonen (kontrollera att rätt ingångsenhet är vald och att nivån rör sig) eller välj ett annat klipp.",
+    "ref_audio_too_long": "En referens med angiven transkription får vara högst 20 sekunder. Klipp ljud och transkription till samma avsnitt på 3–10 sekunder, eller ta bort transkriptionen så att VoiceStudio kan klippa och transkribera automatiskt."
   },
   "sharing": {
     "title": "Delning och fjärråtkomst",

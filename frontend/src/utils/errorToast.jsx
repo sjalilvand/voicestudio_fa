@@ -27,6 +27,7 @@ import { openBugReport } from './bugReport';
 // omnivoice/utils/audio.py, [shutting_down] in main.py) — keep in sync.
 const USER_FIXABLE_MARKERS = {
   '[clone_ref_unusable]': 'tts_errors.ref_audio_unusable',
+  '[clone_ref_too_long]': 'tts_errors.ref_audio_too_long',
   '[shutting_down]': 'errors.backend_shutting_down',
 };
 

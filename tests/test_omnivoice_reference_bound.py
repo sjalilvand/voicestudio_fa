@@ -1,0 +1,88 @@
+"""Long cloning references must fail before unbounded tokenizer allocation (#1578)."""
+
+from types import SimpleNamespace
+
+import pytest
+import soundfile as sf
+import torch
+
+from omnivoice.models.omnivoice import OmniVoice
+
+
+class _Tokenizer:
+    config = SimpleNamespace(hop_length=320)
+    device = "cpu"
+
+    def __init__(self, reject=True):
+        self.reject = reject
+        self.seen_samples = None
+
+    def encode(self, audio):
+        self.seen_samples = audio.shape[-1]
+        if self.reject:
+            raise AssertionError("an unsafe reference reached the audio tokenizer")
+        return SimpleNamespace(audio_codes=torch.zeros((1, 1, 1), dtype=torch.long))
+
+
+def _model(*, reject_tokenization=True) -> OmniVoice:
+    model = OmniVoice.__new__(OmniVoice)
+    model.sampling_rate = 24_000
+    model.audio_tokenizer = _Tokenizer(reject=reject_tokenization)
+    return model
+
+
+def test_supplied_transcript_rejects_long_tensor_before_tokenization():
+    audio = torch.full((1, 21 * 24_000), 0.1)
+
+    with pytest.raises(ValueError, match=r"\[clone_ref_too_long\].*at most 20 seconds"):
+        _model().create_voice_clone_prompt(
+            (audio, 24_000),
+            ref_text="Transcript supplied by the user.",
+            preprocess_prompt=True,
+        )
+
+
+def test_supplied_transcript_rejects_long_file_before_tokenization(tmp_path):
+    path = tmp_path / "long-reference.wav"
+    sf.write(path, torch.full((21 * 24_000,), 0.1).numpy(), 24_000)
+
+    with pytest.raises(ValueError, match=r"\[clone_ref_too_long\].*at most 20 seconds"):
+        _model().create_voice_clone_prompt(
+            str(path),
+            ref_text="Transcript supplied by the user.",
+            preprocess_prompt=True,
+        )
+
+
+def test_missing_transcript_is_safely_trimmed_even_when_preprocessing_is_disabled(monkeypatch):
+    model = _model(reject_tokenization=False)
+    model._asr_pipe = object()
+    model.transcribe = lambda _audio: "Automatically aligned transcript."
+    monkeypatch.setattr(
+        "omnivoice.models.omnivoice.trim_long_audio",
+        lambda audio, sampling_rate, **_kwargs: audio[:, : 15 * sampling_rate],
+    )
+    audio = torch.full((1, 21 * 24_000), 0.1)
+
+    model.create_voice_clone_prompt(
+        (audio, 24_000),
+        ref_text=None,
+        preprocess_prompt=False,
+    )
+
+    assert model.audio_tokenizer.seen_samples == 15 * 24_000
+
+
+def test_missing_transcript_still_has_a_hard_bound_when_silence_split_cannot_trim(monkeypatch):
+    model = _model(reject_tokenization=False)
+    model._asr_pipe = object()
+    model.transcribe = lambda _audio: "Automatically aligned transcript."
+    monkeypatch.setattr(
+        "omnivoice.models.omnivoice.trim_long_audio",
+        lambda audio, _sampling_rate, **_kwargs: audio,
+    )
+    audio = torch.full((1, 21 * 24_000), 0.1)
+
+    model.create_voice_clone_prompt((audio, 24_000), ref_text=None)
+
+    assert model.audio_tokenizer.seen_samples == 15 * 24_000

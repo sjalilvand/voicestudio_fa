@@ -2058,7 +2058,8 @@
     "error_prefix": "Błąd: {{message}}",
     "ignored_unsupported": "Ignorowana nieobsługiwana instrukcja: {{items}}",
     "ignored_duplicate": "Ignorowane (kategoria już ustawiona): {{items}}",
-    "ref_audio_unusable": "W nagraniu referencyjnym nie wykryto mowy — klip jest cichy lub prawie cichy, więc nie ma głosu do sklonowania. Nagraj ponownie bliżej mikrofonu (sprawdź, czy wybrano właściwe urządzenie wejściowe i czy poziom się porusza) albo wybierz inny klip."
+    "ref_audio_unusable": "W nagraniu referencyjnym nie wykryto mowy — klip jest cichy lub prawie cichy, więc nie ma głosu do sklonowania. Nagraj ponownie bliżej mikrofonu (sprawdź, czy wybrano właściwe urządzenie wejściowe i czy poziom się porusza) albo wybierz inny klip.",
+    "ref_audio_too_long": "Nagranie referencyjne z podaną transkrypcją może mieć najwyżej 20 sekund. Przytnij dźwięk i transkrypcję do tego samego fragmentu 3–10 sekund albo usuń transkrypcję, aby VoiceStudio automatycznie przyciął i przepisał klip."
   },
   "sharing": {
     "title": "Udostępnianie i dostęp zdalny",

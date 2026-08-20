@@ -2729,7 +2729,8 @@
     "error_prefix": "Error: {{message}}",
     "ignored_unsupported": "Ignored unsupported instruct: {{items}}",
     "ignored_duplicate": "Ignored (category already set): {{items}}",
-    "ref_audio_unusable": "No speech could be heard in the reference audio — the clip is silent or nearly silent, so there is no voice to clone. Record again closer to the microphone (check that the right input device is selected and its level moves while you speak), or choose a different clip."
+    "ref_audio_unusable": "No speech could be heard in the reference audio — the clip is silent or nearly silent, so there is no voice to clone. Record again closer to the microphone (check that the right input device is selected and its level moves while you speak), or choose a different clip.",
+    "ref_audio_too_long": "A reference with a supplied transcript can be at most 20 seconds. Trim both the audio and transcript to the same 3–10 second passage, or remove the transcript so VoiceStudio can trim and transcribe the clip automatically."
   },
   "tts": {
     "routingFallback": "Running on CPU — this engine has no GPU path on your machine, so generation will be slower. {{reason}}",

@@ -2058,7 +2058,8 @@
     "error_prefix": "Errore: {{message}}",
     "ignored_unsupported": "Istruzione non supportata ignorata: {{items}}",
     "ignored_duplicate": "Ignorato (categoria già impostata): {{items}}",
-    "ref_audio_unusable": "Nessuna voce rilevata nell'audio di riferimento: la clip è silenziosa o quasi, quindi non c'è alcuna voce da clonare. Registra di nuovo più vicino al microfono (verifica che sia selezionato il dispositivo di ingresso corretto e che il livello si muova) oppure scegli un'altra clip."
+    "ref_audio_unusable": "Nessuna voce rilevata nell'audio di riferimento: la clip è silenziosa o quasi, quindi non c'è alcuna voce da clonare. Registra di nuovo più vicino al microfono (verifica che sia selezionato il dispositivo di ingresso corretto e che il livello si muova) oppure scegli un'altra clip.",
+    "ref_audio_too_long": "Un riferimento con trascrizione fornita può durare al massimo 20 secondi. Taglia audio e trascrizione sullo stesso passaggio di 3–10 secondi, oppure rimuovi la trascrizione affinché VoiceStudio tagli e trascriva automaticamente la clip."
   },
   "sharing": {
     "title": "Condivisione e accesso remoto",
