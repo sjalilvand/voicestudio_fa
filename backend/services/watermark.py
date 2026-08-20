@@ -315,6 +315,13 @@ async def mark_synthetic_async(
                 job, what="Audio watermark", timeout=timeout, executor=pool
             )
         return await asyncio.get_running_loop().run_in_executor(pool, job)
+    except asyncio.CancelledError:
+        # A queued future is cancelled during pool teardown. Caller-driven
+        # cancellation while the pool is live must retain normal semantics.
+        if not pool.is_shutdown():
+            raise
+        logger.warning("Watermark skipped while the pool is shutting down")
+        return waveform
     except RuntimeError:
         # Shutdown may begin after admission but before Executor.submit().
         # Preserve unrelated worker failures; only lifecycle rejection is

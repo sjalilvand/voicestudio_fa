@@ -244,6 +244,76 @@ def test_watermark_submission_racing_shutdown_returns_finished_audio(
     assert marked is audio
 
 
+@pytest.mark.parametrize("timeout", [None, 0.5])
+def test_queued_watermark_cancelled_by_shutdown_returns_finished_audio(
+    monkeypatch, watermark, timeout
+):
+    """Teardown cancellation of admitted work is lifecycle fail-open."""
+    import asyncio
+    from concurrent.futures import Future
+
+    import torch
+
+    class _ShutdownCancellingExecutor:
+        def submit(self, _fn, /, *_args, **_kwargs):
+            future = Future()
+            future.cancel()
+            return future
+
+        def is_shutdown(self):
+            return True
+
+    pool = _ShutdownCancellingExecutor()
+    model_manager = importlib.import_module("services.model_manager")
+    monkeypatch.setattr(model_manager, "get_watermark_pool", lambda: pool)
+
+    audio = torch.zeros(1, 240)
+    marked = asyncio.run(
+        watermark.mark_synthetic_async(
+            audio,
+            24000,
+            context="test.shutdown_queue_cancellation",
+            timeout=timeout,
+        )
+    )
+
+    assert marked is audio
+
+
+def test_watermark_preserves_caller_cancellation(monkeypatch, watermark):
+    """A live pool must not misclassify caller cancellation as teardown."""
+    import asyncio
+    from concurrent.futures import Future
+
+    import torch
+
+    class _LivePendingExecutor:
+        def submit(self, _fn, /, *_args, **_kwargs):
+            return Future()
+
+        def is_shutdown(self):
+            return False
+
+    pool = _LivePendingExecutor()
+    model_manager = importlib.import_module("services.model_manager")
+    monkeypatch.setattr(model_manager, "get_watermark_pool", lambda: pool)
+
+    async def _cancel():
+        task = asyncio.create_task(
+            watermark.mark_synthetic_async(
+                torch.zeros(1, 240),
+                24000,
+                context="test.caller_cancellation",
+            )
+        )
+        await asyncio.sleep(0)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    asyncio.run(_cancel())
+
+
 def test_watermark_pool_shutdown_waits_for_active_worker():
     """Lifespan teardown cannot finish while AudioSeal is still loading."""
     from services.model_manager import (
