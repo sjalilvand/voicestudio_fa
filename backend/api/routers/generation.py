@@ -1194,6 +1194,10 @@ async def generate_speech(
     _backend = None
     _engine_min_vram_gb = getattr(backend_cls, "min_vram_gb", 0.0)
     _routing_notice = None
+    # Remote renders deliberately skip this host's capability gate. Keep the
+    # local fallback call's timeout device-neutral so the closure is valid
+    # without pretending the control plane describes the remote worker.
+    _routing = {"effective_device": None}
 
     if not _remote:
         # Single-active-engine memory discipline: hand back any OTHER resident

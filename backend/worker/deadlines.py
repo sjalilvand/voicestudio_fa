@@ -35,6 +35,9 @@ from typing import Optional
 # plane may run in a process that never loads torch). test_worker_deadlines.py
 # asserts the two agree, so a change there cannot silently drift from here.
 _GENERATE_TIMEOUT_S = float(os.environ.get("OMNIVOICE_GENERATE_TIMEOUT_S", "300.0"))
+_CPU_GENERATE_TIMEOUT_S = float(
+    os.environ.get("OMNIVOICE_CPU_GENERATE_TIMEOUT_S", "600.0")
+)
 _MODEL_LOAD_EXTRA_S = float(os.environ.get("OMNIVOICE_MODEL_LOAD_TIMEOUT_S", "1800.0"))
 _HEARTBEAT_GRACE_S = float(os.environ.get("OMNIVOICE_MODEL_LOAD_HEARTBEAT_GRACE_S", "30.0"))
 
@@ -134,9 +137,20 @@ def _base_execution_seconds(text: Optional[str]) -> float:
 
         return float(model_manager.generate_timeout_s(text))
     except Exception:
+        base = _GENERATE_TIMEOUT_S
+        try:
+            from core.device_caps import detect_host_caps  # noqa: PLC0415
+
+            if (
+                detect_host_caps().family == "cpu"
+                and "OMNIVOICE_GENERATE_TIMEOUT_S" not in os.environ
+            ):
+                base = _CPU_GENERATE_TIMEOUT_S
+        except Exception:
+            pass
         return max(
-            _GENERATE_TIMEOUT_S,
-            _GENERATE_TIMEOUT_S + max(0, len(text or "") - _FREE_CHARS) / _CHARS_PER_SECOND,
+            base,
+            base + max(0, len(text or "") - _FREE_CHARS) / _CHARS_PER_SECOND,
         )
 
 
