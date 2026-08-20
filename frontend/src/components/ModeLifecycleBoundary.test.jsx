@@ -1,16 +1,22 @@
 import { useLayoutEffect, useRef } from 'react';
 import { render } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ModeLifecycleBoundary from './ModeLifecycleBoundary';
 
 function ImperativeWorkspace({ name }) {
   const hostRef = useRef(null);
 
   useLayoutEffect(() => {
+    const host = hostRef.current;
     const owned = document.createElement('div');
     owned.dataset.owner = name;
-    hostRef.current.appendChild(owned);
-    return () => owned.remove();
+    host.appendChild(owned);
+    return () => {
+      // Model a renderer whose asynchronous destroy completes after React has
+      // committed the next route. If the DOM host were reused, this would
+      // erase that route's children and recreate the reported ownership race.
+      setTimeout(() => host.replaceChildren(), 0);
+    };
   }, [name]);
 
   return <section ref={hostRef}>{name}</section>;
@@ -18,6 +24,7 @@ function ImperativeWorkspace({ name }) {
 
 describe('ModeLifecycleBoundary', () => {
   it('replaces the DOM owner throughout the reported rapid navigation loop', () => {
+    vi.useFakeTimers();
     const sequence = ['launchpad', 'dub', 'dub', 'launchpad', 'dub'];
     const view = render(
       <ModeLifecycleBoundary mode={sequence[0]}>
@@ -41,8 +48,12 @@ describe('ModeLifecycleBoundary', () => {
         expect(nextHost).toBe(previousHost);
       }
       expect(nextHost.querySelector('[data-owner]')?.dataset.owner).toBe(mode);
+      vi.runAllTimers();
+      expect(nextHost.textContent).toContain(mode);
+      expect(nextHost.querySelector('[data-owner]')?.dataset.owner).toBe(mode);
       previousHost = nextHost;
       previousMode = mode;
     }
+    vi.useRealTimers();
   });
 });
