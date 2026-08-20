@@ -662,9 +662,17 @@ async def dub_download(
             raise HTTPException(status_code=500, detail="ffmpeg audio export produced no output file")
         logger.info("Dub audio export wrote %s (%d bytes)", out_path, os.path.getsize(out_path))
 
-        base_name = os.path.splitext(job.get("filename", "output"))[0]
-        safe_name = "".join(c for c in base_name if c.isalnum() or c in "-_ ").strip() or "output"
-        dl_name = f"dubbed_{safe_name}_{safe_lang}_{stamp}.{fmt}"
+        # Response metadata must not become a second path-like sink for job or
+        # request data. Keep the user-selected format through explicit literal
+        # branches; source names and language keys never enter the label.
+        if fmt == "wav":
+            dl_name = f"dubbed_audio_{stamp}.wav"
+        elif fmt == "mp3":
+            dl_name = f"dubbed_audio_{stamp}.mp3"
+        elif fmt == "flac":
+            dl_name = f"dubbed_audio_{stamp}.flac"
+        else:
+            dl_name = f"dubbed_audio_{stamp}.m4a"
         media_type = _MEDIA_TYPES.get(f".{fmt}", "audio/mp4")
         save_path = _consume_native_save(save_authorization)
         if save_path:
