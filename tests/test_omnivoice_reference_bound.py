@@ -6,9 +6,6 @@ import pytest
 import soundfile as sf
 import torch
 
-from omnivoice.models.omnivoice import OmniVoice
-
-
 class _Tokenizer:
     config = SimpleNamespace(hop_length=320)
     device = "cpu"
@@ -25,7 +22,9 @@ class _Tokenizer:
         return SimpleNamespace(audio_codes=torch.zeros((1, 1, 1), dtype=torch.long))
 
 
-def _model(*, reject_tokenization=True) -> OmniVoice:
+def _model(*, reject_tokenization=True):
+    from omnivoice.models.omnivoice import OmniVoice
+
     model = OmniVoice.__new__(OmniVoice)
     model.sampling_rate = 24_000
     model.audio_tokenizer = _Tokenizer(reject=reject_tokenization)
@@ -132,3 +131,20 @@ def test_hard_bound_prefers_speech_over_distant_transient(monkeypatch):
     # Quiet references are RMS-normalized before cropping. The speech peak is
     # therefore non-zero but remains far below the isolated transient.
     assert 0 < model.audio_tokenizer.seen_peak < 1
+
+
+def test_real_silence_splitter_does_not_keep_silent_prefix(monkeypatch):
+    model = _model(reject_tokenization=False)
+    model._asr_pipe = object()
+    model.transcribe = lambda _audio: "Automatically aligned transcript."
+    monkeypatch.setattr(
+        "omnivoice.models.omnivoice.remove_silence_safe",
+        lambda audio, *_args, **_kwargs: audio,
+    )
+    audio = torch.zeros((1, 21 * 24_000))
+    audio[:, 16 * 24_000 :] = 0.1
+
+    model.create_voice_clone_prompt((audio, 24_000), ref_text=None)
+
+    assert model.audio_tokenizer.seen_samples == 15 * 24_000
+    assert model.audio_tokenizer.seen_peak > 0

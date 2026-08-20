@@ -801,14 +801,18 @@ class OmniVoice(PreTrainedModel):
             # Safety bound, independent of the caller's optional silence/
             # punctuation preprocessing choice. The transcript is generated
             # from this trimmed waveform below, so audio and text stay aligned.
-            ref_wav = trim_long_audio(
-                ref_wav, self.sampling_rate, trim_threshold=20.0
-            )
+            untrimmed_ref_wav = ref_wav
+            ref_wav = trim_long_audio(ref_wav, self.sampling_rate, trim_threshold=20.0)
             # ``trim_long_audio`` splits at speech/silence boundaries and is
             # deliberately fail-open when it cannot detect speech. Safety is
             # not optional here: fall back to the same 15 s upper bound so an
             # unusual/quiet clip still cannot allocate tokens for minutes.
             max_samples = int(15.0 * self.sampling_rate)
+            if ref_wav.size(-1) <= max_samples and not torch.any(ref_wav):
+                # The silence splitter can return a silent prefix when the
+                # first speech begins after its 15 s split horizon. Recover
+                # from the original reference before selecting a safe window.
+                ref_wav = untrimmed_ref_wav
             if ref_wav.size(-1) > max_samples:
                 envelope = ref_wav.abs().amax(dim=0)
                 # Pick the contiguous passage with the most activity. Using
