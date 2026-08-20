@@ -828,17 +828,44 @@ class OmniVoice(PreTrainedModel):
                 start = int(window_power.argmax())
                 return audio[:, start : start + max_samples], float(window_power[start])
 
-            best_original, best_original_score = densest_window(untrimmed_ref_wav)
+            best_original, _ = densest_window(untrimmed_ref_wav)
             if ref_wav.size(-1) > max_samples:
-                ref_wav, trimmed_score = densest_window(ref_wav)
-            else:
-                trimmed_score = activity_score(ref_wav)
-            # The silence splitter can return a mostly silent prefix when the
-            # first speech begins after its 15 s horizon. Compare activity,
-            # rather than exact zero, so a click/noise transient cannot hide
-            # the usable speech later in the original reference.
-            if best_original_score > trimmed_score:
-                ref_wav = best_original
+                ref_wav, _ = densest_window(ref_wav)
+
+            # Energy is only a fallback: music/noise can be louder than the
+            # actual speaker. Ask the already-required ASR boundary which
+            # bounded passage contains speech, then keep that exact waveform
+            # and transcript aligned for tokenization below.
+            if self._asr_pipe is None:
+                logger.info("ASR model not loaded yet, loading on-the-fly ...")
+                self.load_asr_model()
+            candidates = [ref_wav, best_original]
+            last_start = untrimmed_ref_wav.size(-1) - max_samples
+            starts = list(range(0, last_start + 1, max_samples))
+            if starts[-1] != last_start:
+                starts.append(last_start)
+            candidates.extend(
+                untrimmed_ref_wav[:, start : start + max_samples] for start in starts
+            )
+            unique_candidates = []
+            seen = set()
+            for candidate in candidates:
+                identity = (candidate.data_ptr(), candidate.storage_offset(), candidate.size(-1))
+                if identity not in seen:
+                    seen.add(identity)
+                    unique_candidates.append(candidate)
+
+            def speech_score(text):
+                return len(re.sub(r"[^\w]+", "", text or "", flags=re.UNICODE))
+
+            transcribed = [
+                (self.transcribe((candidate, self.sampling_rate)), candidate)
+                for candidate in unique_candidates
+            ]
+            ref_text, ref_wav = max(
+                transcribed,
+                key=lambda item: (speech_score(item[0]), activity_score(item[1])),
+            )
 
         if preprocess_prompt:
             # #1188: the fixed -50 dBFS silence threshold used to consume a

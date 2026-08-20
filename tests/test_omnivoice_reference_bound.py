@@ -166,3 +166,26 @@ def test_real_silence_splitter_ignores_transient_before_late_speech(monkeypatch)
 
     assert model.audio_tokenizer.seen_samples == 15 * 24_000
     assert 0 < model.audio_tokenizer.seen_peak < 1
+
+
+def test_speech_aware_bound_prefers_quiet_voice_over_loud_non_speech(monkeypatch):
+    model = _model(reject_tokenization=False)
+    model._asr_pipe = object()
+    model.transcribe = lambda candidate: (
+        "Spoken words." if float(candidate[0].abs().mean()) < 0.05 else ""
+    )
+    monkeypatch.setattr(
+        "omnivoice.models.omnivoice.trim_long_audio",
+        lambda audio, _sampling_rate, **_kwargs: audio,
+    )
+    monkeypatch.setattr(
+        "omnivoice.models.omnivoice.remove_silence_safe",
+        lambda audio, *_args, **_kwargs: audio,
+    )
+    audio = torch.full((1, 30 * 24_000), 0.4)
+    audio[:, 15 * 24_000 :] = 0.02
+
+    prompt = model.create_voice_clone_prompt((audio, 24_000), ref_text=None)
+
+    assert prompt.ref_text == "Spoken words."
+    assert model.audio_tokenizer.seen_peak < 0.1
