@@ -19,6 +19,7 @@ class _Tokenizer:
 
     def encode(self, audio):
         self.seen_samples = audio.shape[-1]
+        self.seen_peak = float(audio.abs().max())
         if self.reject:
             raise AssertionError("an unsafe reference reached the audio tokenizer")
         return SimpleNamespace(audio_codes=torch.zeros((1, 1, 1), dtype=torch.long))
@@ -86,3 +87,24 @@ def test_missing_transcript_still_has_a_hard_bound_when_silence_split_cannot_tri
     model.create_voice_clone_prompt((audio, 24_000), ref_text=None)
 
     assert model.audio_tokenizer.seen_samples == 15 * 24_000
+
+
+def test_hard_bound_keeps_late_speech_instead_of_cropping_only_silence(monkeypatch):
+    model = _model(reject_tokenization=False)
+    model._asr_pipe = object()
+    model.transcribe = lambda _audio: "Automatically aligned transcript."
+    monkeypatch.setattr(
+        "omnivoice.models.omnivoice.trim_long_audio",
+        lambda audio, _sampling_rate, **_kwargs: audio,
+    )
+    monkeypatch.setattr(
+        "omnivoice.models.omnivoice.remove_silence_safe",
+        lambda audio, *_args, **_kwargs: audio,
+    )
+    audio = torch.zeros((1, 21 * 24_000))
+    audio[:, 16 * 24_000 :] = 0.1
+
+    model.create_voice_clone_prompt((audio, 24_000), ref_text=None)
+
+    assert model.audio_tokenizer.seen_samples == 15 * 24_000
+    assert model.audio_tokenizer.seen_peak > 0

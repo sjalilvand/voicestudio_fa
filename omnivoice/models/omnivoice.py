@@ -810,7 +810,18 @@ class OmniVoice(PreTrainedModel):
             # unusual/quiet clip still cannot allocate tokens for minutes.
             max_samples = int(15.0 * self.sampling_rate)
             if ref_wav.size(-1) > max_samples:
-                ref_wav = ref_wav[:, :max_samples]
+                envelope = ref_wav.abs().amax(dim=0)
+                peak = float(envelope.max())
+                active = torch.nonzero(
+                    envelope >= max(peak * 0.05, 1e-5), as_tuple=False
+                ).flatten()
+                if active.numel():
+                    center = (int(active[0]) + int(active[-1])) // 2
+                    start = max(0, center - max_samples // 2)
+                    start = min(start, ref_wav.size(-1) - max_samples)
+                else:
+                    start = 0
+                ref_wav = ref_wav[:, start : start + max_samples]
 
         if preprocess_prompt:
             # #1188: the fixed -50 dBFS silence threshold used to consume a
@@ -825,6 +836,11 @@ class OmniVoice(PreTrainedModel):
                 lead_sil=100,
                 trail_sil=200,
             )
+
+        # Cropping and silence removal happen after the original validation.
+        # Re-check the actual aligned passage that ASR/tokenization will see.
+        prepared_rms = torch.sqrt(torch.mean(torch.square(ref_wav))).item()
+        validate_clone_reference(ref_wav, prepared_rms)
 
         ref_duration = ref_wav.size(-1) / self.sampling_rate
         if ref_duration > 20.0:
