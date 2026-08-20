@@ -845,6 +845,49 @@ pub fn copy_dir_recursive(src: &Path, dst: &Path) -> io::Result<()> {
     Ok(())
 }
 
+/// Install the production SPA beside `backend/`, where the Python server's
+/// static-file mount resolves it for Network Sharing clients.
+fn sync_packaged_frontend(resource_root: &Path, project_dir: &Path) -> io::Result<()> {
+    let source = resource_root.join("frontend").join("dist");
+    if !source.join("index.html").is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "bundled frontend is missing index.html",
+        ));
+    }
+
+    let destination = project_dir.join("frontend").join("dist");
+    let frontend_dir = destination.parent().expect("frontend dist has a parent");
+    let staging = frontend_dir.join(".dist-staging");
+    let backup = frontend_dir.join(".dist-backup");
+    fs::create_dir_all(frontend_dir)?;
+    if staging.exists() {
+        fs::remove_dir_all(&staging)?;
+    }
+    if backup.exists() {
+        fs::remove_dir_all(&backup)?;
+    }
+    if let Err(error) = copy_dir_recursive(&source, &staging) {
+        let _ = fs::remove_dir_all(&staging);
+        return Err(error);
+    }
+
+    if destination.exists() {
+        fs::rename(&destination, &backup)?;
+    }
+    if let Err(error) = fs::rename(&staging, &destination) {
+        if backup.exists() {
+            let _ = fs::rename(&backup, &destination);
+        }
+        let _ = fs::remove_dir_all(&staging);
+        return Err(error);
+    }
+    if backup.exists() {
+        fs::remove_dir_all(backup)?;
+    }
+    Ok(())
+}
+
 /// Refresh `pyproject.toml` + `uv.lock` in the project dir from the bundled
 /// resources, so an upgraded app never runs freshly-synced backend code against
 /// the stale dependency manifests from when the venv was first created (#307 —
@@ -1539,11 +1582,13 @@ manually, then relaunch.",
             if let Some(ref res) = resource_dir {
                 let flat = res.clone();
                 let up2  = res.join("_up_").join("_up_");
-                let (res_omni, res_backend) = if flat.join("pyproject.toml").is_file() {
-                    (flat.join("omnivoice"), flat.join("backend"))
+                let res_root = if flat.join("pyproject.toml").is_file() {
+                    flat
                 } else {
-                    (up2.join("omnivoice"), up2.join("backend"))
+                    up2
                 };
+                let res_omni = res_root.join("omnivoice");
+                let res_backend = res_root.join("backend");
                 if res_omni.is_dir() {
                     let omnivoice_dir = project_dir.join("omnivoice");
                     let _ = fs::remove_dir_all(&omnivoice_dir);
@@ -1561,6 +1606,11 @@ manually, then relaunch.",
                     }
                     log::info!("Synced backend/ from bundle");
                 }
+                if let Err(e) = sync_packaged_frontend(&res_root, &project_dir) {
+                    fail(progress, &format!("Failed to sync frontend/dist: {}", e));
+                    return None;
+                }
+                log::info!("Synced frontend/dist from bundle");
                 // #307: the source dirs above track the bundle, so the
                 // dependency manifests must too — otherwise an upgrade runs
                 // new code against a venv that predates newly added deps.
@@ -1659,6 +1709,17 @@ the existing venv; newly added dependencies may be missing (#307)",
         // copies from when the venv was first created.
         if let Ok(res) = app.path().resource_dir() {
             let _ = refresh_project_manifests(&res, &project_dir);
+            let flat = res.clone();
+            let up2 = res.join("_up_").join("_up_");
+            let res_root = if flat.join("pyproject.toml").is_file() {
+                flat
+            } else {
+                up2
+            };
+            if let Err(e) = sync_packaged_frontend(&res_root, &project_dir) {
+                fail(progress, &format!("Failed to sync frontend/dist: {}", e));
+                return None;
+            }
         }
         let mut repair_cmd = Command::new(&uv_path);
         scrub_python_env(&mut repair_cmd); // #144: don't inherit AppImage's bundled Python
@@ -1763,16 +1824,22 @@ the existing venv; newly added dependencies may be missing (#307)",
     let flat = resource_dir.clone();
     let up2  = resource_dir.join("_up_").join("_up_");
 
-    let (resource_pyproject, resource_uvlock, resource_readme, resource_changelog, resource_omnivoice, resource_backend) = if flat.join("pyproject.toml").is_file() {
-        (flat.join("pyproject.toml"), flat.join("uv.lock"), flat.join("README.md"), flat.join("CHANGELOG.md"), flat.join("omnivoice"), flat.join("backend"))
+    let resource_root = if flat.join("pyproject.toml").is_file() {
+        flat
     } else if up2.join("pyproject.toml").is_file() {
-        (up2.join("pyproject.toml"), up2.join("uv.lock"), up2.join("README.md"), up2.join("CHANGELOG.md"), up2.join("omnivoice"), up2.join("backend"))
+        up2
     } else {
         fail(progress, &format!(
             "Missing bootstrap resources — checked flat={} and _up_={}",
             flat.display(), up2.display()));
         return None;
     };
+    let resource_pyproject = resource_root.join("pyproject.toml");
+    let resource_uvlock = resource_root.join("uv.lock");
+    let resource_readme = resource_root.join("README.md");
+    let resource_changelog = resource_root.join("CHANGELOG.md");
+    let resource_omnivoice = resource_root.join("omnivoice");
+    let resource_backend = resource_root.join("backend");
 
     if !resource_pyproject.is_file() || !resource_backend.is_dir() {
         fail(progress, &format!(
@@ -1819,6 +1886,10 @@ the existing venv; newly added dependencies may be missing (#307)",
     }
     if let Err(e) = copy_dir_recursive(&resource_backend, &backend_dir) {
         fail(progress, &format!("copy backend/: {}", e));
+        return None;
+    }
+    if let Err(e) = sync_packaged_frontend(&resource_root, &project_dir) {
+        fail(progress, &format!("copy frontend/dist: {}", e));
         return None;
     }
 
@@ -2050,6 +2121,67 @@ See docs/install/linux.md (AMD GPU) to install the ROCm wheel manually.",
 mod tests {
     use super::*;
     use std::collections::HashMap;
+
+    #[test]
+    fn packaged_frontend_is_installed_for_the_lan_server() {
+        let resources = tempfile::tempdir().unwrap();
+        let project = tempfile::tempdir().unwrap();
+        let source = resources.path().join("frontend").join("dist");
+        fs::create_dir_all(source.join("assets")).unwrap();
+        fs::write(source.join("index.html"), "new shell").unwrap();
+        fs::write(source.join("assets").join("client.js"), "new client").unwrap();
+
+        let installed = project.path().join("frontend").join("dist");
+        fs::create_dir_all(&installed).unwrap();
+        fs::write(installed.join("index.html"), "stale shell").unwrap();
+
+        sync_packaged_frontend(resources.path(), project.path()).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(installed.join("index.html")).unwrap(),
+            "new shell"
+        );
+        assert_eq!(
+            fs::read_to_string(installed.join("assets").join("client.js")).unwrap(),
+            "new client"
+        );
+    }
+
+    #[test]
+    fn packaged_frontend_error_does_not_expose_resource_path() {
+        let resources = tempfile::tempdir().unwrap();
+        let project = tempfile::tempdir().unwrap();
+
+        let error = sync_packaged_frontend(resources.path(), project.path()).unwrap_err();
+
+        assert_eq!(error.kind(), io::ErrorKind::NotFound);
+        assert_eq!(error.to_string(), "bundled frontend is missing index.html");
+        assert!(!error.to_string().contains(&resources.path().display().to_string()));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn failed_packaged_frontend_copy_preserves_installed_shell() {
+        use std::os::unix::fs::symlink;
+
+        let resources = tempfile::tempdir().unwrap();
+        let project = tempfile::tempdir().unwrap();
+        let source = resources.path().join("frontend").join("dist");
+        fs::create_dir_all(source.join("assets")).unwrap();
+        fs::write(source.join("index.html"), "new shell").unwrap();
+        symlink("missing-client.js", source.join("assets").join("client.js")).unwrap();
+
+        let installed = project.path().join("frontend").join("dist");
+        fs::create_dir_all(&installed).unwrap();
+        fs::write(installed.join("index.html"), "working shell").unwrap();
+
+        sync_packaged_frontend(resources.path(), project.path()).unwrap_err();
+
+        assert_eq!(
+            fs::read_to_string(installed.join("index.html")).unwrap(),
+            "working shell"
+        );
+    }
 
     #[test]
     fn update_drift_sync_preserves_user_installed_engines() {
