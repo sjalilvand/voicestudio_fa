@@ -39,6 +39,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - The Linux desktop cleanup regression test now isolates build artifacts, so an existing developer build can no longer change its result (#1566)
 
 ### CI
+- Project agents now share pinned Vite and FastAPI skills from skills.sh (#1594)
 - Weekly full-history secret scans no longer mistake the Ed25519 private-key type name for committed key material (#1591)
 
 ## [0.5.0] — 2026-08-13
