@@ -300,6 +300,23 @@ class TTSBackend(ABC):
     #: 0 means "no meaningful floor" (CPU-class engines) and never warns.
     min_vram_gb: float = 0.0
 
+    #: True when generation allocates in ANOTHER process — a dedicated-venv
+    #: sidecar (SubprocessBackend) or a spawned binary (omnivoice-gguf).
+    #: Parent-process accelerator counters cannot see those allocations, so
+    #: profilers/diagnostics must not attribute the parent's VRAM numbers to
+    #: the engine. Duck-typed (attribute, not issubclass) for the same
+    #: module-purge reason as `_is_subprocess_isolated`.
+    runs_out_of_process: bool = False
+
+    def model_identity(self) -> Optional[str]:
+        """Which concrete model this backend would run, for adapter engines
+        that host several very different models behind one backend id
+        (mlx-audio, sherpa-onnx, cosyvoice). None means the engine id
+        already names the model. Profilers and diagnostics use this to
+        label results — without it, Kokoro-under-mlx and Dia-under-mlx
+        rows are indistinguishable."""
+        return None
+
     @abstractmethod
     def generate(
         self,
@@ -395,6 +412,95 @@ _PROMPT_CACHE_MAX = 8
 _prompt_cache: "OrderedDict[tuple, object]" = OrderedDict()
 _prompt_cache_lock = threading.Lock()
 
+# Disk layer under the in-memory LRU (upstream k2-fsa VoiceClonePrompt.save/
+# load format). The in-memory cache dies with the process, so the first
+# generation of every session re-encodes each voice (~0.4 s + an ASR pass when
+# ref_text is missing). Encoded prompts are tiny (a (8, T) int token tensor +
+# transcript), so we persist them and reload across restarts. Keyed by the
+# same tuple as the memory cache — the ref file's mtime is inside the key, so
+# an edited reference never matches a stale file; stale files age out via the
+# mtime prune. Best-effort like the memory cache: any failure means "no disk
+# hit / no disk write", never a failed generation. OMNIVOICE_PROMPT_DISK_CACHE=0
+# disables the layer entirely.
+_PROMPT_DISK_CACHE_MAX = 32
+
+
+def _prompt_disk_dir():
+    """Return the prompt-cache directory (created on first use), or None when
+    the layer is disabled or the directory can't be created."""
+    if os.environ.get("OMNIVOICE_PROMPT_DISK_CACHE", "1") == "0":
+        return None
+    try:
+        from core.config import DATA_DIR
+
+        path = os.path.join(str(DATA_DIR), "prompt_cache")
+        os.makedirs(path, exist_ok=True)
+        return path
+    except Exception as e:  # noqa: BLE001 — cache layer must never break synthesis
+        logger.debug("prompt disk cache unavailable: %s", e)
+        return None
+
+
+def _prompt_disk_path(cache_dir: str, key: tuple) -> str:
+    import hashlib
+
+    digest = hashlib.sha256(repr(key).encode("utf-8")).hexdigest()[:32]
+    return os.path.join(cache_dir, f"{digest}.pt")
+
+
+def _prompt_disk_load(key: tuple):
+    """Load a persisted prompt for ``key``, or None. Never raises."""
+    cache_dir = _prompt_disk_dir()
+    if cache_dir is None:
+        return None
+    path = _prompt_disk_path(cache_dir, key)
+    if not os.path.exists(path):
+        return None
+    try:
+        from omnivoice.models.omnivoice import VoiceClonePrompt
+
+        prompt = VoiceClonePrompt.load(path)
+        # Freshen so the LRU prune (by mtime) keeps actively used voices.
+        os.utime(path, None)
+        return prompt
+    except Exception as e:  # noqa: BLE001
+        logger.warning("failed to load cached voice prompt %s: %s", path, e)
+        try:
+            os.remove(path)  # corrupt/incompatible file — don't retry it forever
+        except OSError:
+            pass
+        return None
+
+
+def _prompt_disk_save(key: tuple, prompt) -> None:
+    """Persist ``prompt`` under ``key`` and prune old entries. Never raises."""
+    cache_dir = _prompt_disk_dir()
+    if cache_dir is None:
+        return
+    path = _prompt_disk_path(cache_dir, key)
+    try:
+        # Unique per write: two GPU-pool threads missing the same key must not
+        # interleave writes into one tmp file (os.replace stays atomic).
+        import uuid
+
+        tmp = f"{path}.tmp.{os.getpid()}.{uuid.uuid4().hex[:8]}"
+        prompt.save(tmp)
+        os.replace(tmp, path)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("failed to persist voice prompt to %s: %s", path, e)
+        return
+    try:
+        entries = [
+            os.path.join(cache_dir, f)
+            for f in os.listdir(cache_dir)
+            if f.endswith(".pt")
+        ]
+        entries.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+        for old in entries[_PROMPT_DISK_CACHE_MAX:]:
+            os.remove(old)
+    except OSError as e:
+        logger.debug("prompt disk cache prune skipped: %s", e)
+
 
 def _clone_prompt_key(ref_audio: str, ref_text, preprocess_prompt: bool = True):
     try:
@@ -433,15 +539,24 @@ def _get_clone_prompt(
         if hit is not None:
             _prompt_cache.move_to_end(key)
             return hit
-    try:
-        # Encode outside the lock (slow). Mirrors exactly what generate() would
-        # do inline for this ref (omnivoice.py:964-978), so output is identical.
-        prompt = model.create_voice_clone_prompt(
-            ref_audio, ref_text=ref_text, preprocess_prompt=preprocess_prompt
-        )
-    except Exception as e:  # noqa: BLE001 — fall back, never break synthesis
-        logger.warning("voice-clone prompt precompute failed; using inline ref: %s", e)
-        return None
+    # Memory miss → disk (survives restarts). A disk hit skips the encode AND
+    # the ASR transcription pass a ref_text-less reference would trigger.
+    prompt = _prompt_disk_load(key)
+    if prompt is None:
+        try:
+            # Encode outside the lock (slow). Mirrors exactly what generate()
+            # would do inline for this ref (omnivoice.py:964-978), so output is
+            # identical.
+            prompt = model.create_voice_clone_prompt(
+                ref_audio, ref_text=ref_text, preprocess_prompt=preprocess_prompt
+            )
+        except Exception as e:  # noqa: BLE001 — fall back, never break synthesis
+            logger.warning(
+                "voice-clone prompt precompute failed; using inline ref: %s", e
+            )
+            return None
+        if store:
+            _prompt_disk_save(key, prompt)
     if not store:
         return prompt
     with _prompt_cache_lock:
@@ -1075,7 +1190,8 @@ class KittenTTSBackend(TTSBackend):
       - English only
       - Much faster + much smaller install
 
-    Preset voice is chosen via `extras["voice"]` (defaults to "Jasper"). Any
+    Preset voice is chosen via `extras["voice"]` (defaults to DEFAULT_VOICE,
+    "expr-voice-2-f"). Any
     `ref_audio` / `instruct` / `language` arg is ignored with a log line so
     the common call-site doesn't need to know which engine it's talking to.
     """
@@ -1384,6 +1500,9 @@ class MLXAudioBackend(TTSBackend):
     def sample_rate(self) -> int:
         return self._sr
 
+    def model_identity(self) -> Optional[str]:
+        return self._model_id
+
     @property
     def supported_languages(self) -> list[str]:
         # Per-model; Kokoro supports 8, Qwen3 ~4, Kugel 24. Return "multi"
@@ -1571,6 +1690,18 @@ class CosyVoiceBackend(TTSBackend):
     def supported_languages(self) -> list[str]:
         return ["zh", "en", "ja", "ko", "yue", "de", "es", "fr", "it", "ru"]
 
+    @staticmethod
+    def _resolved_model_dir() -> str:
+        return os.environ.get(
+            "OMNIVOICE_COSYVOICE_MODEL",
+            "pretrained_models/Fun-CosyVoice3-0.5B",
+        )
+
+    def model_identity(self) -> Optional[str]:
+        # v1/v2/v3 all live behind the one "cosyvoice" id — the directory
+        # basename is the only thing that tells the models apart.
+        return os.path.basename(os.path.normpath(self._resolved_model_dir()))
+
     def _ensure_loaded(self):
         if self._model is not None:
             return
@@ -1578,10 +1709,7 @@ class CosyVoiceBackend(TTSBackend):
         if not ok:
             raise RuntimeError(f"CosyVoice unavailable: {msg}")
         from cosyvoice.cli.cosyvoice import AutoModel  # type: ignore[import-not-found]
-        model_dir = os.environ.get(
-            "OMNIVOICE_COSYVOICE_MODEL",
-            "pretrained_models/Fun-CosyVoice3-0.5B",
-        )
+        model_dir = self._resolved_model_dir()
         logger.info("Loading CosyVoice from %s", model_dir)
         self._model = AutoModel(model_dir=model_dir)
 
@@ -1813,6 +1941,10 @@ class SherpaOnnxBackend(TTSBackend):
     def __init__(self):
         self._tts = None
         self._model_dir = os.environ.get("OMNIVOICE_SHERPA_MODEL", "")
+
+    def model_identity(self) -> Optional[str]:
+        model_dir = (self._model_dir or "").strip()
+        return os.path.basename(os.path.normpath(model_dir)) if model_dir else None
 
     @classmethod
     def is_available(cls) -> tuple[bool, str]:

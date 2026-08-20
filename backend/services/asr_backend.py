@@ -2325,7 +2325,7 @@ _INSTALL_HINTS: dict[str, str] = {
         "mac-ARM source installs since 0.3.22. Parakeet TDT v3 on the GPU via "
         "MLX: 25 European languages, word timestamps, ~2 GB unified memory.)"
     ),
-    "moonshine":       "pip install useful-moonshine  (edge/CPU-optimized ASR)",
+    "moonshine":       "uv pip install moonshine-onnx  (or moonshine-voice; edge/CPU-optimized ASR)",
     "funasr":          "pip install funasr  (SenseVoiceSmall + FSMN-VAD; CUDA or CPU)",
     "sherpa-onnx-asr": "uv add sherpa-onnx  (ONNX live dictation; CPU, cross-platform)",
     "openai-compat-asr": (
@@ -2495,7 +2495,23 @@ def _ctranslate2_cuda_ok() -> bool:
     CUDA runtime version" — the #1529 report, an AMD RX 7900 XTX in the
     :rocm Docker image. Real CUDA only; ROCm hosts take the CPU path here
     (auto-detect prefers pytorch-whisper there, which does use HIP).
+
+    Also honors the user compute-device override (Settings → Performance /
+    ``OMNIVOICE_DEVICE``): a host pinned to cpu (or any non-cuda family)
+    must not hand CTranslate2 a CUDA device — the probe applies the
+    override, so gating on its family covers every CT2 loader at once.
     """
+    try:
+        from core.device_caps import detect_host_caps
+
+        if detect_host_caps().family != "cuda":
+            return False
+    except Exception:  # noqa: BLE001 — fail SAFE, not fast
+        # Without a working probe we can't know whether an override or a
+        # ROCm build is in play — guessing "cuda" from torch here is exactly
+        # the #1529 crash. CPU always works.
+        logger.warning("device probe failed — CTranslate2 taking the CPU path", exc_info=True)
+        return False
     return _cuda_reported_available() and not _rocm_torch()
 
 
@@ -3120,10 +3136,18 @@ def _offline_asr_repo(backend_id: str | None = None) -> str | None:
     bid = backend_id or active_backend_id()
     if bid == "whisperx":
         return _fw_repo(os.environ.get("ASR_MODEL_WHISPERX", "large-v3"))
-    if bid in ("faster-whisper", "faster-whisper-isolated"):
-        # The crash-isolated sidecar loads the SAME CT2 weights as in-process
-        # faster-whisper (it reuses the ASR_MODEL_FASTER selection).
+    if bid == "faster-whisper":
         return _fw_repo(os.environ.get("ASR_MODEL_FASTER", _FASTER_WHISPER_DEFAULT))
+    if bid == "faster-whisper-isolated":
+        # Mirror the sidecar's own resolution (_asr_sidecar/main.py):
+        # ASR_MODEL_FW is a sidecar-only override, otherwise the shared
+        # ASR_MODEL_FASTER selection applies — so the preflight can never
+        # download a different repo than the sidecar will load.
+        return _fw_repo(
+            os.environ.get("ASR_MODEL_FW")
+            or os.environ.get("ASR_MODEL_FASTER")
+            or _FASTER_WHISPER_DEFAULT
+        )
     if bid == "mlx-whisper":
         return os.environ.get("ASR_MODEL", _MLX_MODEL_DEFAULT)
     if bid == "parakeet-mlx":

@@ -37,13 +37,63 @@
 <br/>
 
 <div align="center">
-  <img src="docs/screenshot-launchpad.png" alt="VoiceStudio — 启动台" width="100%"/>
+  <img src="docs/media/0.5.0/quick-switch.gif" alt="VoiceStudio — 从状态栏快速切换 TTS 引擎" width="100%"/>
 </div>
 
 > **声音很私人，创作空间也应该真正属于你。** VoiceStudio 的核心流程运行在你的硬件上：克隆、设计、配音、听写，并以 646 种语言创作，不需要订阅，也没有用量计费。联网引擎和服务始终是清晰可见的可选项，而不是隐藏依赖。
 
 > [!WARNING]
 > **活跃 Beta 阶段。** 各版本之间可能出现故障——如需最新修复，请从源码运行。非常欢迎 Bug 报告和 PR：[提交 Issue](https://github.com/debpalash/VoiceStudio/issues) 或 [加入 Discord](https://discord.gg/bzQavDfVV9)。
+
+<a id="quickstart"></a>
+
+## ⚡ 快速开始
+
+<div align="center">
+  <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/macOS-DMG_(Apple_Silicon)-000?style=for-the-badge&logo=apple&logoColor=white" alt="下载 macOS DMG" /></a>
+  <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/Windows-MSI_(x64)-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="下载 Windows MSI" /></a>
+  <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/Linux-AppImage_(x64)-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="下载 Linux AppImage" /></a>
+  <br/>
+  <sub>三个按钮都会打开最新发布页——在资源列表中下载对应你系统的安装包。</sub><br/>
+  <sub><b>macOS：</b>首次启动需要一次性批准——右键点击 → <b>打开</b>（macOS 15 上为 系统设置 → 隐私与安全性 → <b>“仍要打开”</b>）。无需终端。<a href="docs/install/macos.md#gatekeeper-quarantine">为什么？</a> · <b>Intel Mac：</b>不支持本地后端（<a href="https://github.com/debpalash/VoiceStudio/issues/889">#889</a>）——<a href="docs/install/macos.md">详情</a>。</sub>
+</div>
+
+选择你的操作系统，按指南从头到尾操作：
+
+- 🍎 **macOS** — [docs/install/macos.md](docs/install/macos.md)
+- 🪟 **Windows** — [docs/install/windows.md](docs/install/windows.md)
+- 🐧 **Linux** — [docs/install/linux.md](docs/install/linux.md)
+- 🐳 **Docker** — [docs/install/docker.md](docs/install/docker.md) · [Docker Hub: `palashdeb/omnivoice-studio`](https://hub.docker.com/r/palashdeb/omnivoice-studio)
+
+**三步克隆出你的第一个声音：**
+
+1. **安装并启动。** 首次启动会自动搭建 Python 运行环境并下载模型权重——启动画面会逐步显示进度（仅首次，需要几分钟；之后即开即用）。
+2. 从启动台打开**语音克隆**，拖入任意声音的 **3 秒音频**。
+3. **输入一句话，点击生成。** 音频完全属于你——在你的设备上生成和保存，支持 646 种语言。
+
+觉得慢？[docs/performance.md](docs/performance.md) 讲清了生成时间到底花在哪里、有哪些调优开关，以及“它变慢了”的三个经典原因。各引擎/设备的实测数据见 [docs/benchmarks.md](docs/benchmarks.md)。
+
+> 正在从 **[CorentinJ/Real-Time-Voice-Cloning](https://github.com/CorentinJ/Real-Time-Voice-Cloning)**（现已归档）迁移过来？我们有专门的迁移指南：[docs/migration/real-time-voice-cloning.md](docs/migration/real-time-voice-cloning.md)。
+
+<details>
+<summary><b>🧰 卡住了？自检、Token 与受限网络</b></summary>
+
+<br/>
+
+先运行内置自检——在应用中打开 **设置 → 关于 → “运行自检”**，或在源码检出目录中执行
+`uv run python backend/main.py --diagnose`（加 `--deep` 还会实际加载当前引擎进行测试）。然后查看
+[docs/install/troubleshooting.md](docs/install/troubleshooting.md) 中排名前
+10 的安装错误。运行时出错时，应用内的错误界面会直接深链到对应条目；**设置 → 关于 →
+“保存诊断包”** 会把脱敏日志与自检报告打包，方便附在 Bug 报告里。
+
+Hugging Face Token 的配置见
+[docs/setup/huggingface-token.md](docs/setup/huggingface-token.md)。说话人分离相关的模型访问门槛见
+[docs/features/diarization.md](docs/features/diarization.md)。下载速度、⚡ 快速下载（Xet）状态，以及受限网络 / 镜像选项见
+[docs/downloading-models.md](docs/downloading-models.md)。
+
+</details>
+
+---
 
 <a id="features"></a>
 
@@ -112,49 +162,6 @@
 
 ---
 
-<a id="quickstart"></a>
-
-## ⚡ 快速开始
-
-<div align="center">
-  <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/macOS-DMG_(Apple_Silicon)-000?style=for-the-badge&logo=apple&logoColor=white" alt="下载 macOS DMG" /></a>
-  <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/Windows-MSI_(x64)-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="下载 Windows MSI" /></a>
-  <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/Linux-AppImage_(x64)-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="下载 Linux AppImage" /></a>
-  <br/>
-  <sub><b>macOS：</b>首次启动需要一次性批准——右键点击 → <b>打开</b>（macOS 15 上为 系统设置 → 隐私与安全性 → <b>“仍要打开”</b>）。无需终端。<a href="docs/install/macos.md#gatekeeper-quarantine">为什么？</a> · <b>Intel Mac：</b>不支持本地后端（<a href="https://github.com/debpalash/VoiceStudio/issues/889">#889</a>）——<a href="docs/install/macos.md">详情</a>。</sub>
-</div>
-
-选择你的操作系统，按指南从头到尾操作：
-
-- 🍎 **macOS** — [docs/install/macos.md](docs/install/macos.md)
-- 🪟 **Windows** — [docs/install/windows.md](docs/install/windows.md)
-- 🐧 **Linux** — [docs/install/linux.md](docs/install/linux.md)
-- 🐳 **Docker** — [docs/install/docker.md](docs/install/docker.md) · [Docker Hub: `palashdeb/omnivoice-studio`](https://hub.docker.com/r/palashdeb/omnivoice-studio)
-
-觉得慢？[docs/performance.md](docs/performance.md) 讲清了生成时间到底花在哪里、有哪些调优开关，以及“它变慢了”的三个经典原因。
-
-> 正在从 **[CorentinJ/Real-Time-Voice-Cloning](https://github.com/CorentinJ/Real-Time-Voice-Cloning)**（现已归档）迁移过来？我们有专门的迁移指南：[docs/migration/real-time-voice-cloning.md](docs/migration/real-time-voice-cloning.md)。
-
-<details>
-<summary><b>🧰 卡住了？自检、Token 与受限网络</b></summary>
-
-<br/>
-
-先运行内置自检——在应用中打开 **设置 → 关于 → “运行自检”**，或在源码检出目录中执行
-`uv run python backend/main.py --diagnose`（加 `--deep` 还会实际加载当前引擎进行测试）。然后查看
-[docs/install/troubleshooting.md](docs/install/troubleshooting.md) 中排名前
-10 的安装错误。运行时出错时，应用内的错误界面会直接深链到对应条目；**设置 → 关于 →
-“保存诊断包”** 会把脱敏日志与自检报告打包，方便附在 Bug 报告里。
-
-Hugging Face Token 的配置见
-[docs/setup/huggingface-token.md](docs/setup/huggingface-token.md)。说话人分离相关的模型访问门槛见
-[docs/features/diarization.md](docs/features/diarization.md)。下载速度、⚡ 快速下载（Xet）状态，以及受限网络 / 镜像选项见
-[docs/downloading-models.md](docs/downloading-models.md)。
-
-</details>
-
----
-
 <a id="why-voicestudio"></a>
 
 ## 💡 为什么选择 VoiceStudio？
@@ -173,8 +180,8 @@ Hugging Face Token 的配置见
 | **API 密钥** | 需要账号 | 本地流程不需要 |
 | **GPU 支持** | 不适用（云端） | CUDA · Apple Silicon · ROCm（Linux）· CPU |
 | **桌面应用** | ❌ | ✅ macOS · Windows · Linux |
-| **TTS 引擎** | 1 | **14** — [完整矩阵](#tts-engines) |
-| **ASR 引擎** | 1 | **10** — [完整阵容](#asr-engines) |
+| **TTS 引擎** | 1 | **16** — [完整矩阵](#tts-engines) |
+| **ASR 引擎** | 1 | **11** — [完整阵容](#asr-engines) |
 | **MCP 服务器** | ❌ | ✅ 可从 Claude、Cursor 及任何 MCP 客户端使用 |
 | **自检** | ❌ | ✅ 诊断套件、错误日志、脱敏调试包 |
 | **可定制** | ❌ 闭源 | ✅ 随你 Fork、扩展、发布 |
@@ -214,10 +221,10 @@ Hugging Face Token 的配置见
 
 ### 🗣️ TTS 引擎
 
-**14 个引擎，一个选择器。** VoiceStudio（默认，支持 600+ 语言）始终可用；另有七个引擎可选装并自动检测（CosyVoice 3、GPT-SoVITS、VoxCPM2、MOSS-TTS-Nano、KittenTTS、MLX-Audio、Sherpa-ONNX），外加六个按需延迟安装的重量级引擎（IndexTTS 2.5、OmniVoice GGUF、Supertonic 3、MOSS-TTS-v1.5、dots.tts、Confucius4-TTS）。在 **设置 → TTS 引擎** 中切换；所选引擎将应用于所有语音合成场景。
+**16 个引擎，一个选择器。** VoiceStudio（默认，支持 600+ 语言）始终可用；另有七个引擎可选装并自动检测（CosyVoice 3、GPT-SoVITS、VoxCPM2、MOSS-TTS-Nano、KittenTTS、MLX-Audio、Sherpa-ONNX），外加八个按需延迟安装的引擎（IndexTTS 2.5、OmniVoice GGUF、OmniVoice 子进程版、PocketTTS、Supertonic 3、MOSS-TTS-v1.5、dots.tts、Confucius4-TTS）。在 **设置 → TTS 引擎** 中切换；所选引擎将应用于所有语音合成场景。**每个引擎都有独立指南：[docs/engines](docs/engines/README.md)（英文）。**
 
 <details>
-<summary><b>📊 完整矩阵</b>——14 个引擎 × 平台 × 克隆/指令 × 许可证</summary>
+<summary><b>📊 完整矩阵</b>——16 个引擎 × 平台 × 克隆/指令 × 许可证</summary>
 
 <br/>
 
@@ -254,10 +261,10 @@ Hugging Face Token 的配置见
 
 ### 🎧 ASR 引擎
 
-**10 个引擎**——它们驱动听写、视频配音和字幕。**WhisperX** 是跨平台的默认引擎（约 100 种语言，词级时间对齐）；其余引擎均为可选装并自动检测。在 **设置 → 引擎** 中切换。九个完全在本地设备上运行；第十个（OpenAI 兼容）是可选的远程客户端，可用于 Qwen3-ASR 或任何兼容的服务器。
+**11 个引擎**——它们驱动听写、视频配音和字幕。**WhisperX** 是跨平台的默认引擎（约 100 种语言，词级时间对齐）；其余引擎均为可选装并自动检测。在 **设置 → 引擎** 中切换。十个完全在本地设备上运行；第十一个（OpenAI 兼容）是可选的远程客户端，可用于 Qwen3-ASR 或任何兼容的服务器。
 
 <details>
-<summary><b>📊 完整阵容</b>——10 个引擎、各自的强项与计算类型说明</summary>
+<summary><b>📊 完整阵容</b>——11 个引擎、各自的强项与计算类型说明</summary>
 
 <br/>
 
@@ -274,7 +281,7 @@ Hugging Face Token 的配置见
 | **sherpa-onnx**（实时听写） | `sherpa-onnx-asr` | 25 种欧洲语言 + 90+ | 实时、快于实时的听写——小体积流式/离线 ONNX 模型（Parakeet TDT v3/v2、流式 Zipformer 与 Paraformer、Whisper Tiny），CPU 运行，macOS / Windows / Linux 表现完全一致。在 **设置 → 语音** 中按模型选择。 |
 | **OpenAI 兼容** ⚠️ 远程 | `openai-compat-asr` | 取决于服务器 | 当下通往 **Qwen3-ASR** 的路径（自托管服务器，无需等 transformers 支持）、任何 OpenAI 兼容的转录端点，或 OpenAI 官方 API——无需安装，在 **设置 → 引擎**（ASR 标签页）中配置并测试连接。音频会离开你的设备，发送到你指定的任何服务器；参见 [docs/engines/openai-compatible-asr.md](docs/engines/openai-compatible-asr.md)。 |
 
-> Whisper 系列引擎覆盖约 100 种语言；**FunASR / SenseVoice** 额外提供一条多语言一体化路径，内置语音活动检测与行内说话人分离。**sherpa-onnx** 驱动实时听写的模型选择器——你边说，文字边出现。每个引擎都在本地设备上运行——无需 API 密钥，无需云端。
+> Whisper 系列引擎覆盖约 100 种语言；**FunASR / SenseVoice** 额外提供一条多语言一体化路径，内置语音活动检测与行内说话人分离。**sherpa-onnx** 驱动实时听写的模型选择器——你边说，文字边出现。除可选的 OpenAI 兼容远程客户端外，所有引擎都在本地设备上运行——无需 API 密钥，无需云端。
 
 > **GPU 不支持高效 float16？** 在较老的 NVIDIA GPU（Maxwell/Pascal、GTX 16xx）上，或在 CTranslate2/cuDNN 版本不匹配之后，CTranslate2 系 ASR 引擎（WhisperX、Faster-Whisper）无法运行 `float16`，VoiceStudio 会自动改用 `int8` 重试——无需配置。如果转录仍然失败，可用 `ASR_COMPUTE_TYPE` 环境变量固定计算类型（逃生舱口）：`ASR_COMPUTE_TYPE=int8`（CPU 用 `float32`）。将其设为 `int8` 并重启后端。
 
@@ -574,7 +581,7 @@ VoiceStudio 站在这些杰出开源工作的肩膀上：
 
 ## 🧰 来自同一作者的更多本地开源项目
 
-喜欢这种本地优先的理念？它是一脉相承的——同一位作者，同一条准则：**你的数据只留在你的设备上。**
+喜欢这种本地优先的理念？它是一脉相承的——同一位作者，同一条准则：**你的数据只留在你的设备上。** 全部项目见 [palash.dev](https://palash.dev)。
 
 <table>
 <tr>

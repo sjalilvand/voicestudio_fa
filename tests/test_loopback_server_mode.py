@@ -253,6 +253,89 @@ def test_side_effectful_get_rejects_remote_api_key_outside_server_mode(monkeypat
     assert exc.value.status_code == 403
 
 
+# Mode-distinct admin-gate detail: the 403 message must state what would
+# ACTUALLY satisfy the gate. The bundled UI routes any 403 whose detail
+# mentions "admin api key" to the API-key login form (frontend client.ts;
+# the literal contract is locked by tests/test_auth_gate_detail_lockstep.py).
+# Server mode accepts the key, so naming it is right. Desktop mode rejects
+# every non-loopback client regardless of credentials — the checks above only
+# run under server mode — so it must keep the plain loopback detail: naming
+# the key there invites a login form that can never succeed (a desktop
+# LAN-share guest would lose the whole consumption UI to it, #1213).
+
+
+def test_require_admin_desktop_detail_is_plain_loopback(monkeypatch):
+    """Desktop build: no presented key can satisfy the gate."""
+    monkeypatch.delenv("OMNIVOICE_SERVER_MODE", raising=False)
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")  # a valid key can't help here
+
+    with pytest.raises(HTTPException) as exc:
+        require_admin(
+            _req_full("10.0.0.5", headers={"authorization": "Bearer s3cret"})
+        )
+
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "loopback origin required"
+
+
+def test_require_admin_server_mode_detail_names_the_key(monkeypatch):
+    """Server mode with an API key configured: the 403 names the key."""
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")
+
+    with pytest.raises(HTTPException) as exc:
+        require_admin(_req_full("172.17.0.1"))  # credential configured, none presented
+
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "loopback origin or admin API key required"
+
+
+def test_require_admin_pin_only_server_mode_detail_is_plain_loopback(monkeypatch):
+    """Server mode with ONLY a share PIN (Greptile P1, PR #1569): the PIN
+    closes read-only bootstrap but no API key exists to present, so naming
+    the key would send the browser to a login form that can never succeed.
+    Only loopback can use admin here — the plain detail says so, and the
+    SPA leaves it a plain error instead of gating the whole UI."""
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.delenv("OMNIVOICE_API_KEY", raising=False)
+
+    with pytest.raises(HTTPException) as exc:
+        require_admin(_req_full("172.17.0.1", pin="424242"))  # PIN ≠ admin credential
+
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "loopback origin required"
+
+
+def test_require_admin_action_desktop_detail_is_plain_loopback(monkeypatch):
+    """Desktop build, side-effectful GET: plain loopback detail."""
+    monkeypatch.delenv("OMNIVOICE_SERVER_MODE", raising=False)
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")
+
+    with pytest.raises(HTTPException) as exc:
+        require_admin_action(
+            _req_full(
+                "10.0.0.5",
+                method="GET",
+                headers={"authorization": "Bearer s3cret"},
+            )
+        )
+
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "loopback origin required"
+
+
+def test_require_admin_action_server_mode_detail_names_the_key(monkeypatch):
+    """Server mode + key configured, side-effectful GET: names the key."""
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "s3cret")
+
+    with pytest.raises(HTTPException) as exc:
+        require_admin_action(_req_full("172.17.0.1", method="GET"))
+
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "loopback origin or admin API key required"
+
+
 def test_side_effectful_get_rejects_pin_and_trusted_network(monkeypatch):
     monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
     monkeypatch.setenv("OMNIVOICE_TRUSTED_NETWORKS", "10.0.0.0/8")

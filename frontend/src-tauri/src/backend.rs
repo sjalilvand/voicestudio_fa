@@ -100,6 +100,52 @@ pub fn backend_deep_healthy(port: u16) -> bool {
     }
 }
 
+/// Readiness = identity AND capability. The shallow probe proves the
+/// responder is OUR backend; the deep probe proves it can actually serve a
+/// DB-backed route. Declaring Ready on the shallow probe alone announced a
+/// backend whose install/DB was broken underneath as up — the UI looked
+/// alive while every real request 500'd or dead-ended on "can't reach the
+/// backend". Both Ready transitions (startup poll, supervisor respawn wait)
+/// gate on this; the supervisor's DEATH detection stays process-exit-only
+/// (`try_wait`), so a busy-but-alive backend is still never killed.
+pub fn backend_ready(port: u16) -> bool {
+    backend_healthy(port) && backend_deep_healthy(port)
+}
+
+/// Startup progress from the backend's early-bind `/startup/progress`
+/// endpoint: `(status, step, label)`, e.g. `("starting", "ml_imports",
+/// "Loading ML runtime (PyTorch)…")`. `None` when nothing answers, when the
+/// responder lacks the `x-omnivoice-backend` marker header (a foreign
+/// process on our port must not narrate our splash), or on an old backend
+/// without the endpoint — callers fall back to the legacy probes.
+pub fn startup_progress(port: u16) -> Option<(String, String, String)> {
+    let url = format!("http://127.0.0.1:{}/startup/progress", port);
+    let resp = raw_http_get(&url, Duration::from_millis(800)).ok()?;
+    if parse_http_status(&resp) != Some(200) {
+        return None;
+    }
+    let head_end = resp.find("\r\n\r\n").unwrap_or(resp.len());
+    if !resp[..head_end].to_ascii_lowercase().contains("x-omnivoice-backend") {
+        return None;
+    }
+    let body = &resp[resp.find("\r\n\r\n").map(|i| i + 4).unwrap_or(0)..];
+    let status = parse_json_string_field(body, "status")?;
+    let step = parse_json_string_field(body, "step").unwrap_or_default();
+    let label = parse_json_string_field(body, "label").unwrap_or_default();
+    Some((status, step, label))
+}
+
+/// First `"key": "value"` string field in a JSON body — same dependency-free
+/// sniffing style as `parse_app_version`. `None` for absent or non-string
+/// (e.g. `null`) values.
+fn parse_json_string_field(body: &str, key: &str) -> Option<String> {
+    let needle = format!("\"{key}\"");
+    let rest = &body[body.find(&needle)? + needle.len()..];
+    let rest = rest[rest.find(':')? + 1..].trim_start();
+    let rest = rest.strip_prefix('"')?;
+    Some(rest[..rest.find('"')?].to_string())
+}
+
 /// Status code from a raw HTTP response ("HTTP/1.1 200 OK" → 200).
 fn parse_http_status(response: &str) -> Option<u16> {
     let line = response.lines().next()?;
@@ -243,6 +289,16 @@ pub fn kill_orphan_on_port(port: u16) {
 // ── Log paths ─────────────────────────────────────────────────────────────
 
 pub fn backend_log_path() -> PathBuf {
+    // Support/test override: point logs (and the crash-marker store, which
+    // derives from this path) somewhere explicit. The fault-injection
+    // harness gives every scenario its own tempdir through this.
+    if let Ok(dir) = std::env::var("OMNIVOICE_LOG_DIR") {
+        if !dir.trim().is_empty() {
+            let log_dir = PathBuf::from(dir);
+            let _ = fs::create_dir_all(&log_dir);
+            return log_dir.join("backend.log");
+        }
+    }
     let log_dir = if cfg!(target_os = "macos") {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
         PathBuf::from(home).join("Library/Logs/OmniVoice")
@@ -471,6 +527,29 @@ fn analytics_env(baked_token: Option<&str>, baked_host: Option<&str>) -> Vec<(St
     out
 }
 
+/// Parse the `OMNIVOICE_BACKEND_CMD` override: a JSON array (`["prog","a"]`)
+/// when it starts with `[` — the form the harness uses, so paths with spaces
+/// survive — else whitespace-split. `None` for unset/empty/unparseable.
+pub fn parse_backend_cmd_override(raw: &str) -> Option<Vec<String>> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return None;
+    }
+    let argv: Vec<String> = if raw.starts_with('[') {
+        serde_json::from_str(raw).ok()?
+    } else {
+        raw.split_whitespace().map(str::to_string).collect()
+    };
+    if argv.is_empty() || argv[0].trim().is_empty() {
+        return None;
+    }
+    Some(argv)
+}
+
+fn backend_cmd_override() -> Option<Vec<String>> {
+    parse_backend_cmd_override(&std::env::var("OMNIVOICE_BACKEND_CMD").ok()?)
+}
+
 pub fn spawn_backend<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Option<&Arc<Mutex<BootstrapStage>>>) -> Option<Child> {
     let log_path = backend_log_path();
     let err_path = log_path.with_file_name("backend_err.log");
@@ -480,12 +559,22 @@ pub fn spawn_backend<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Opt
         err_path.display(),
     );
 
-    let (python, backend_dir) = match ensure_venv_ready(app, progress) {
-        Some(x) => x,
-        None => {
-            log::error!("Venv bootstrap failed — backend not started");
-            return None;
-        }
+    // Fault-injection / QA seam: OMNIVOICE_BACKEND_CMD runs the given argv
+    // as "the backend". Venv bootstrap and ffmpeg resolution are skipped
+    // (they can install toolchains or touch the network); everything else —
+    // the err-log run offset, the drainer threads, env pinning, real OS
+    // pipes, the spawn-failure diagnostic — stays exactly real, which is
+    // the point: the lifecycle harness exercises genuine process deaths.
+    let cmd_override = backend_cmd_override();
+    let (python, backend_dir) = match cmd_override {
+        Some(ref argv) => (PathBuf::from(&argv[0]), PathBuf::new()),
+        None => match ensure_venv_ready(app, progress) {
+            Some(x) => x,
+            None => {
+                log::error!("Venv bootstrap failed — backend not started");
+                return None;
+            }
+        },
     };
 
     if let Some(p) = progress {
@@ -564,18 +653,20 @@ pub fn spawn_backend<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Opt
     }
     // Analytics destination (#1123) — see analytics_env() below for why.
     env.extend(analytics_env(option_env!("VITE_POSTHOG_KEY"), option_env!("VITE_POSTHOG_HOST")));
-    let app_data = app.path().app_local_data_dir().unwrap_or_default();
-    if let Some(ffmpeg_path) = resolve_ffmpeg(app, &app_data) {
-        env.push(("FFMPEG_PATH".into(), ffmpeg_path.to_string_lossy().into()));
-    }
-    if let Some(ffprobe_path) = resolve_ffprobe(app, &app_data) {
-        let ffprobe_str: String = ffprobe_path.to_string_lossy().into();
-        env.push(("FFPROBE_PATH".into(), ffprobe_str.clone()));
-        // Issue #76: OMNIVOICE_FFPROBE_PATH is the canonical name going
-        // forward — explicit, namespaced, and unambiguously the path of a
-        // file (not a PATH-style command name). FFPROBE_PATH stays for
-        // backward compat with prior backend releases.
-        env.push(("OMNIVOICE_FFPROBE_PATH".into(), ffprobe_str));
+    if cmd_override.is_none() {
+        let app_data = app.path().app_local_data_dir().unwrap_or_default();
+        if let Some(ffmpeg_path) = resolve_ffmpeg(app, &app_data) {
+            env.push(("FFMPEG_PATH".into(), ffmpeg_path.to_string_lossy().into()));
+        }
+        if let Some(ffprobe_path) = resolve_ffprobe(app, &app_data) {
+            let ffprobe_str: String = ffprobe_path.to_string_lossy().into();
+            env.push(("FFPROBE_PATH".into(), ffprobe_str.clone()));
+            // Issue #76: OMNIVOICE_FFPROBE_PATH is the canonical name going
+            // forward — explicit, namespaced, and unambiguously the path of a
+            // file (not a PATH-style command name). FFPROBE_PATH stays for
+            // backward compat with prior backend releases.
+            env.push(("OMNIVOICE_FFPROBE_PATH".into(), ffprobe_str));
+        }
     }
     let mut cmd = Command::new(&python);
     cmd.env_remove("PYTHONHOME").env_remove("PYTHONPATH").env_remove("LD_LIBRARY_PATH");
@@ -594,18 +685,25 @@ pub fn spawn_backend<R: tauri::Runtime>(app: &tauri::AppHandle<R>, progress: Opt
         // nvidia-smi probe already uses (setup.rs).
         cmd.creation_flags(0x0800_0000 | 0x0000_0200);
     }
+    match cmd_override {
+        Some(ref argv) => {
+            cmd.args(&argv[1..]);
+        }
+        None => {
+            cmd.args([
+                "-m",
+                "uvicorn",
+                "main:app",
+                "--app-dir",
+                backend_dir.to_string_lossy().as_ref(),
+                "--host",
+                "127.0.0.1",
+                "--port",
+                &backend_port().to_string(),
+            ]);
+        }
+    }
     let mut child = match cmd
-        .args([
-            "-m",
-            "uvicorn",
-            "main:app",
-            "--app-dir",
-            backend_dir.to_string_lossy().as_ref(),
-            "--host",
-            "127.0.0.1",
-            "--port",
-            &backend_port().to_string(),
-        ])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -740,6 +838,119 @@ mod tests {
         assert!(env.iter().all(|(k, _)| k != "OMNIVOICE_INSTALL_CHANNEL"));
         std::env::remove_var("POSTHOG_PROJECT_TOKEN");
         std::env::remove_var("OMNIVOICE_INSTALL_CHANNEL");
+    }
+
+    /// Loopback responder for the /startup/progress probe tests.
+    fn spawn_progress_stub(with_marker: bool, body: &'static str) -> u16 {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { break };
+                let mut buf = [0u8; 512];
+                let _ = stream.read(&mut buf);
+                let marker = if with_marker {
+                    "x-omnivoice-backend: 0.0.0\r\n"
+                } else {
+                    ""
+                };
+                let resp = format!(
+                    "HTTP/1.1 200 OK\r\n{marker}Content-Length: {}\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = stream.write_all(resp.as_bytes());
+            }
+        });
+        port
+    }
+
+    /// Loopback HTTP responder for the probe tests: answers `/system/info`
+    /// with a genuine-looking backend body and `/profiles` with the given
+    /// status — the exact shape of a zombie whose install/DB broke while
+    /// `/system/info` kept answering from memory.
+    fn spawn_probe_stub(profiles_status: u16) -> u16 {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { break };
+                let mut buf = [0u8; 512];
+                let n = stream.read(&mut buf).unwrap_or(0);
+                let req = String::from_utf8_lossy(&buf[..n]);
+                let resp = if req.starts_with("GET /system/info") {
+                    "HTTP/1.1 200 OK\r\nContent-Length: 19\r\n\r\n{\"data_dir\": \"/x\"}\n".to_string()
+                } else {
+                    format!("HTTP/1.1 {profiles_status} X\r\nContent-Length: 2\r\n\r\n[]")
+                };
+                let _ = stream.write_all(resp.as_bytes());
+            }
+        });
+        port
+    }
+
+    #[test]
+    fn backend_cmd_override_parses_json_and_whitespace_forms() {
+        // JSON form (the harness's): paths with spaces survive.
+        assert_eq!(
+            parse_backend_cmd_override(r#"["/tmp/my dir/prog", "arg1"]"#),
+            Some(vec!["/tmp/my dir/prog".into(), "arg1".into()])
+        );
+        // Whitespace form (manual QA): OMNIVOICE_BACKEND_CMD="/bin/false x".
+        assert_eq!(
+            parse_backend_cmd_override("/bin/false x"),
+            Some(vec!["/bin/false".into(), "x".into()])
+        );
+        // Unset/empty/garbage never activates the seam — production behavior
+        // is byte-identical without the env var.
+        assert_eq!(parse_backend_cmd_override(""), None);
+        assert_eq!(parse_backend_cmd_override("   "), None);
+        assert_eq!(parse_backend_cmd_override("[not json"), None);
+        assert_eq!(parse_backend_cmd_override("[]"), None);
+        assert_eq!(parse_backend_cmd_override(r#"[""]"#), None);
+    }
+
+    #[test]
+    fn startup_progress_parses_fields_and_requires_the_marker() {
+        const BODY: &str =
+            r#"{"status": "starting", "step": "ml_imports", "label": "Loading ML runtime (PyTorch)…", "error": null}"#;
+        // Marker present → the tuple the poll loops narrate from.
+        let port = spawn_progress_stub(true, BODY);
+        assert_eq!(
+            startup_progress(port),
+            Some((
+                "starting".into(),
+                "ml_imports".into(),
+                "Loading ML runtime (PyTorch)…".into()
+            ))
+        );
+        // No marker header → a foreign responder must not narrate our splash.
+        let foreign = spawn_progress_stub(false, BODY);
+        assert_eq!(startup_progress(foreign), None);
+        // Ready body with null step/label → status still parses, step empty.
+        let ready = spawn_progress_stub(true, r#"{"status": "ready", "step": null, "label": null}"#);
+        assert_eq!(startup_progress(ready), Some(("ready".into(), String::new(), String::new())));
+        // Nothing listening → None (old backend / dead port fall back).
+        assert_eq!(startup_progress(1), None);
+    }
+
+    #[test]
+    fn ready_requires_the_deep_probe_not_just_identity() {
+        // Regression for the shallow-Ready class: a backend that identifies
+        // itself on /system/info but 500s a DB-backed route must NOT be
+        // announced Ready — that zombie looked alive while every real
+        // request dead-ended on "can't reach the backend".
+        let broken = spawn_probe_stub(500);
+        assert!(backend_healthy(broken), "identity probe should pass");
+        assert!(!backend_deep_healthy(broken), "deep probe must fail on 500");
+        assert!(!backend_ready(broken), "Ready must gate on the deep probe");
+
+        let ok = spawn_probe_stub(200);
+        assert!(backend_ready(ok), "identity + working DB route is Ready");
+
+        // Nothing listening at all: no probe passes.
+        assert!(!backend_ready(1)); // port 1 — never bindable by us
     }
 
     #[test]
