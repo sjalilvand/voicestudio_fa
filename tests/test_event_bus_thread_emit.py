@@ -77,11 +77,9 @@ def test_emit_from_foreign_running_loop_reaches_serving_loop(bus):
 
     async def serve_with_waiter_ready():
         q = await bus.subscribe()
-        waiter = asyncio.create_task(q.get())
-        await asyncio.sleep(0)  # q.get() has installed its serving-loop Future
         started.set()
         try:
-            received.append(await asyncio.wait_for(waiter, 0.5))
+            received.append(await asyncio.wait_for(q.get(), 0.5))
         except asyncio.TimeoutError:
             pass
         finally:
@@ -102,7 +100,6 @@ def test_emit_from_foreign_running_loop_reaches_serving_loop(bus):
         async def foreign_async_caller():
             assert asyncio.get_running_loop() is not serving_loop
             bus.emit("profiles", {"action": "updated", "id": "foreign-loop"})
-            await asyncio.sleep(0.05)
 
         asyncio.run(foreign_async_caller())
 
