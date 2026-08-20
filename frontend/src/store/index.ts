@@ -191,7 +191,12 @@ export const useAppStore = create<AppStore>()(
         if (version < 4) {
           // v1 → v2 added reviewMode; v2 → v3 added mode/sidebar/generate knobs;
           // v3 → v4 added timingStrategy. All of those have slice defaults, so
-          // passing through is sufficient — then fall through to the < 5 branch.
+          // v3 and earlier had no timingStrategy field and therefore behaved
+          // as concise. Preserve that historical behavior for existing
+          // envelopes; only fresh/v4+ records inherit today's strict default.
+          if (!Object.prototype.hasOwnProperty.call(p, 'timingStrategy')) {
+            p.timingStrategy = 'concise';
+          }
         }
         if (version < 5) {
           // #31: each saved Stories project becomes a LongformProject. Defaults

@@ -24,6 +24,12 @@ describe('timing-strategy v8 migration', () => {
     expect(useAppStore.getState().timingStrategy).toBe('strict_slot');
   });
 
+  it('keeps the historical concise behavior for pre-v4 persisted installs', async () => {
+    await rehydrate({ translateQuality: 'fast' }, 3);
+
+    expect(useAppStore.getState().timingStrategy).toBe('concise');
+  });
+
   it('preserves every explicit timing choice from v7', async () => {
     for (const timingStrategy of ['concise', 'smart_fit', 'stretch_video', 'strict_slot']) {
       useAppStore.setState(useAppStore.getInitialState(), true);
