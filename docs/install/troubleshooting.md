@@ -807,6 +807,15 @@ VoiceStudio now tries, in order: the default GitHub host → a gh-proxy mirror �
 
 **Linked issues:** [#130](https://github.com/debpalash/VoiceStudio/issues/130), [#60](https://github.com/debpalash/VoiceStudio/issues/60), [#57](https://github.com/debpalash/VoiceStudio/issues/57)
 
+## Workspace navigation crashes with `insertBefore` / `NotFoundError`
+
+This was a `v0.5.0` workspace-lifecycle bug exposed by rapid Launchpad ↔ Dub
+navigation while media renderers were cleaning up. Current builds isolate each
+workspace under its own DOM owner. Update VoiceStudio; no model or project data
+repair is required.
+
+**Linked issue:** [#1590](https://github.com/debpalash/VoiceStudio/issues/1590)
+
 ## Uninstalling / removing all of VoiceStudio's data
 
 VoiceStudio is fully local — no accounts, no services, nothing to deactivate. To
