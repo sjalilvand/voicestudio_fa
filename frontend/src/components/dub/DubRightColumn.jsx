@@ -5,6 +5,7 @@ import GlossaryPanel from '../GlossaryPanel';
 import CheckpointBanner from '../CheckpointBanner';
 import { LANG_CODES } from '../../utils/languages';
 import { autoProfileId } from '../../utils/segments';
+import { resolveDubDefaultTrack } from '../../utils/dubDefaultTrack';
 
 const DubSegmentTable = lazy(() => import('../DubSegmentTable'));
 const DubPasteTranslationDialog = lazy(() => import('./DubPasteTranslationDialog'));
@@ -118,7 +119,7 @@ export default function DubRightColumn({
             {t('dub.default_track')}
             <select
               className="input-base !text-[0.6rem] !px-[4px] !py-[2px] !w-[120px]"
-              value={defaultTrack || dubLangCode || dubTracks[0] || 'original'}
+              value={resolveDubDefaultTrack(defaultTrack, dubLangCode, dubTracks)}
               onChange={(e) => setDefaultTrack(e.target.value)}
             >
               <option value="original">{t('dub.original_track')}</option>

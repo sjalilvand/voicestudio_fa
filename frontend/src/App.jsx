@@ -12,6 +12,7 @@ import { useAppStore, FONT_STACKS } from './store';
 import { NAV_ITEMS } from './components/navItems';
 import SearchableSelect from './components/SearchableSelect';
 import DirectionDialog from './components/DirectionDialog';
+import { resolveDubDefaultTrack } from './utils/dubDefaultTrack';
 
 // Lazy-load heavy/conditional components so they don't bloat the initial bundle.
 const AudioTrimmer = lazy(() => import('./components/AudioTrimmer'));
@@ -949,7 +950,7 @@ function App() {
     });
     const tracksParam = selected.join(',');
     const burnParam = burnSubs ? `&burn_subs=1&dual=${dualSubs ? 1 : 0}` : '';
-    const resolvedDefaultTrack = defaultTrack || dubLangCode || dubTracks[0] || '';
+    const resolvedDefaultTrack = resolveDubDefaultTrack(defaultTrack, dubLangCode, dubTracks);
     triggerDownload(
       `${API}/dub/download/${dubJobId}/dubbed_video.mp4?preserve_bg=${preserveBg}&default_track=${resolvedDefaultTrack}&include_tracks=${encodeURIComponent(tracksParam)}${burnParam}`,
       'dubbed_video.mp4',

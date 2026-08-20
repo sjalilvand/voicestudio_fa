@@ -610,7 +610,11 @@ async def dub_download(
     # A dub export should play the dub without requiring player-specific track
     # selection. Keep ``original`` as an explicit opt-in, but when callers omit
     # the preference choose the first generated dub consistently (#1575).
-    if not default_track and filtered_tracks:
+    if (
+        filtered_tracks
+        and not (default_track == "original" and include_original)
+        and default_track not in filtered_tracks
+    ):
         default_track = next(iter(filtered_tracks))
 
     if not filtered_tracks and not include_original:
@@ -637,12 +641,17 @@ async def dub_download(
         fmt = (out_format or "m4a").lower()
         if fmt not in _AUDIO_FORMAT_CODECS:
             fmt = "m4a"
-        # lang_code is already constrained to an existing track key, but
-        # allowlist-sanitize it before it reaches the output path so a path
-        # component can never carry separators/traversal (same pattern as
-        # safe_name below).
-        safe_lang = "".join(c for c in lang_code if c.isalnum() or c in "-_") or "track"
-        out_path = os.path.join(exports_dir, f"dubbed_audio_{safe_lang}_{stamp}.{fmt}")
+        # Keep route/job data out of the filesystem and logging trust boundary.
+        # The selected format reaches the path only through literal branches.
+        if fmt == "wav":
+            output_name = f"dubbed_audio_{stamp}.wav"
+        elif fmt == "mp3":
+            output_name = f"dubbed_audio_{stamp}.mp3"
+        elif fmt == "flac":
+            output_name = f"dubbed_audio_{stamp}.flac"
+        else:
+            output_name = f"dubbed_audio_{stamp}.m4a"
+        out_path = os.path.join(exports_dir, output_name)
         bg = _optional_dub_artifact(job.get("no_vocals_path"), job_id) if preserve_bg else None
         cmd = _build_audio_export_cmd(ffmpeg, track_info["path"], bg, out_path, fmt)
         try:
@@ -660,11 +669,19 @@ async def dub_download(
             )
         if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
             raise HTTPException(status_code=500, detail="ffmpeg audio export produced no output file")
-        logger.info("Dub audio export wrote %s (%d bytes)", out_path, os.path.getsize(out_path))
+        logger.info("Dub audio export completed (%d bytes)", os.path.getsize(out_path))
 
-        base_name = os.path.splitext(job.get("filename", "output"))[0]
-        safe_name = "".join(c for c in base_name if c.isalnum() or c in "-_ ").strip() or "output"
-        dl_name = f"dubbed_{safe_name}_{safe_lang}_{stamp}.{fmt}"
+        # Response metadata must not become a second path-like sink for job or
+        # request data. Keep the user-selected format through explicit literal
+        # branches; source names and language keys never enter the label.
+        if fmt == "wav":
+            dl_name = f"dubbed_audio_{stamp}.wav"
+        elif fmt == "mp3":
+            dl_name = f"dubbed_audio_{stamp}.mp3"
+        elif fmt == "flac":
+            dl_name = f"dubbed_audio_{stamp}.flac"
+        else:
+            dl_name = f"dubbed_audio_{stamp}.m4a"
         media_type = _MEDIA_TYPES.get(f".{fmt}", "audio/mp4")
         save_path = _consume_native_save(save_authorization)
         if save_path:
