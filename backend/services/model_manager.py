@@ -1102,8 +1102,15 @@ class _WatermarkExecutor(Executor):
                 continue
             try:
                 future.set_result(fn(*args, **kwargs))
-            except BaseException as exc:
+            except (Exception, SystemExit, KeyboardInterrupt) as exc:
                 future.set_exception(exc)
+
+    def is_stopped(self) -> bool:
+        """Whether shutdown has completed and this executor can be replaced."""
+        with self._lock:
+            return self._shutdown and (
+                self._thread is None or not self._thread.is_alive()
+            )
 
     def shutdown(
         self,
@@ -1142,6 +1149,11 @@ def get_watermark_pool() -> _WatermarkExecutor:
     reset and hand out None (CodeRabbit, PR #1577)."""
     global _watermark_pool_singleton
     with _watermark_pool_lock:
+        if (
+            _watermark_pool_singleton is not None
+            and _watermark_pool_singleton.is_stopped()
+        ):
+            _watermark_pool_singleton = None
         if _watermark_pool_singleton is None:
             _watermark_pool_singleton = _WatermarkExecutor()
         return _watermark_pool_singleton
@@ -1152,22 +1164,25 @@ def shutdown_watermark_pool(*, timeout: float = 20.0) -> None:
 
     Refuse queued work and wait for the active operation: Python cannot kill
     a thread inside AudioSeal loading, so returning early would let model
-    initialization continue during interpreter teardown. Resets the singleton
-    first so a process that
-    KEEPS RUNNING after a lifespan shutdown — the test suite does exactly
-    this — builds a fresh pool on next use instead of dead-submitting
-    ("cannot schedule new futures after shutdown", seen on CI)."""
+    initialization continue during interpreter teardown. The draining pool
+    remains published until its worker stops, preventing concurrent producers
+    from creating a replacement that escapes this shutdown. A process that
+    keeps running after lifespan shutdown (the test suite does exactly this)
+    gets a fresh pool once the old worker has actually stopped."""
     global _watermark_pool_singleton
     with _watermark_pool_lock:
         pool = _watermark_pool_singleton
-        _watermark_pool_singleton = None
     if pool is not None:
         stopped = pool.shutdown(
             wait=True,
             cancel_futures=True,
             timeout=max(0.0, float(timeout)),
         )
-        if not stopped:
+        if stopped:
+            with _watermark_pool_lock:
+                if _watermark_pool_singleton is pool:
+                    _watermark_pool_singleton = None
+        else:
             logger.warning(
                 "Watermark worker exceeded the %.1fs shutdown deadline; "
                 "abandoning its daemon thread",

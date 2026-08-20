@@ -258,6 +258,36 @@ def test_watermark_pool_shutdown_deadline_bounds_stuck_worker():
     pool._thread.join(timeout=1)
 
 
+def test_watermark_pool_cannot_be_replaced_while_timed_out_worker_is_alive():
+    """A producer racing bounded shutdown cannot create an undrained pool."""
+    from services.model_manager import get_watermark_pool, shutdown_watermark_pool
+
+    started = threading.Event()
+    release = threading.Event()
+
+    def _stuck_load():
+        started.set()
+        release.wait(5)
+
+    pool = get_watermark_pool()
+    pool.submit(_stuck_load)
+    assert started.wait(1)
+
+    try:
+        shutdown_watermark_pool(timeout=0.01)
+        assert get_watermark_pool() is pool
+        with pytest.raises(RuntimeError, match="after shutdown"):
+            get_watermark_pool().submit(lambda: "escaped")
+    finally:
+        release.set()
+        pool._thread.join(timeout=1)
+
+    replacement = get_watermark_pool()
+    assert replacement is not pool
+    assert replacement.submit(lambda: "ok").result(timeout=1) == "ok"
+    shutdown_watermark_pool()
+
+
 def test_prefetched_model_gets_one_extra_idle_window(monkeypatch, watermark):
     """Review finding: the reaper freed the prefetch-warmed, never-used
     generator at the first idle tick, re-imposing the cold start the prefetch
