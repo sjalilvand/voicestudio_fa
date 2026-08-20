@@ -118,7 +118,7 @@ export default function DubRightColumn({
             {t('dub.default_track')}
             <select
               className="input-base !text-[0.6rem] !px-[4px] !py-[2px] !w-[120px]"
-              value={defaultTrack}
+              value={defaultTrack || dubLangCode || dubTracks[0] || 'original'}
               onChange={(e) => setDefaultTrack(e.target.value)}
             >
               <option value="original">{t('dub.original_track')}</option>
