@@ -147,6 +147,8 @@ def _base_execution_seconds(text: Optional[str]) -> float:
             ):
                 base = _CPU_GENERATE_TIMEOUT_S
         except Exception:
+            # Capability detection is optional in the torch-free control
+            # plane; retain the configured universal bounded fallback.
             pass
         return max(
             base,
