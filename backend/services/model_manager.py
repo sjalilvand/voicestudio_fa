@@ -399,6 +399,10 @@ def __getattr__(name: str):
 # residual on-main reports all fail on generate:start (audio). This is the same
 # guard generalised so every GPU dispatch shares one recovery path.
 GPU_JOB_TIMEOUT_S = float(os.environ.get("OMNIVOICE_GENERATE_TIMEOUT_S", "300.0"))
+# CPU synthesis is healthy but substantially slower than accelerated inference.
+# Keep a separate, bounded floor so a short render on CPU is not abandoned at
+# the GPU-oriented five-minute deadline (#1588).
+CPU_JOB_TIMEOUT_S = float(os.environ.get("OMNIVOICE_CPU_GENERATE_TIMEOUT_S", "600.0"))
 
 # Queue-wait budget — a SEPARATE, deliberately generous clock (#1190/#1202).
 # The execution bound above must never be spent waiting in line: a job queued
@@ -517,10 +521,16 @@ def generate_timeout_s(text: "str | None") -> float:
     CPU-class hardware, still bounded (a wedged job is caught in minutes, not
     hours).
     """
-    return max(
-        GPU_JOB_TIMEOUT_S,
-        GPU_JOB_TIMEOUT_S + (max(0, len(text or "") - 1200) / 40.0),
-    )
+    base = GPU_JOB_TIMEOUT_S
+    try:
+        from core.device_caps import detect_host_caps
+        if detect_host_caps().family == "cpu":
+            base = max(base, CPU_JOB_TIMEOUT_S)
+    except Exception:
+        # Device probing is advisory here; the configured universal bound is
+        # still safe when a platform probe is unavailable during startup.
+        pass
+    return base + (max(0, len(text or "") - 1200) / 40.0)
 
 
 def _retry_after_estimate(stats: dict) -> float:

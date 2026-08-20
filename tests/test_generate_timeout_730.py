@@ -91,6 +91,33 @@ def test_guard_timeout_env_default(model_manager, monkeypatch):
         importlib.reload(mm)
 
 
+def test_cpu_host_gets_bounded_ten_minute_generate_budget(model_manager, monkeypatch):
+    """A healthy CPU render may exceed the GPU-oriented five-minute floor."""
+    import types
+    import core.device_caps as caps
+
+    monkeypatch.setattr(
+        caps, "detect_host_caps", lambda: types.SimpleNamespace(family="cpu")
+    )
+    monkeypatch.setattr(model_manager, "GPU_JOB_TIMEOUT_S", 300.0)
+    monkeypatch.setattr(model_manager, "CPU_JOB_TIMEOUT_S", 600.0)
+
+    assert model_manager.generate_timeout_s("A short CPU render") == 600.0
+
+
+def test_accelerated_host_keeps_five_minute_generate_budget(model_manager, monkeypatch):
+    import types
+    import core.device_caps as caps
+
+    monkeypatch.setattr(
+        caps, "detect_host_caps", lambda: types.SimpleNamespace(family="cuda")
+    )
+    monkeypatch.setattr(model_manager, "GPU_JOB_TIMEOUT_S", 300.0)
+    monkeypatch.setattr(model_manager, "CPU_JOB_TIMEOUT_S", 600.0)
+
+    assert model_manager.generate_timeout_s("A short CUDA render") == 300.0
+
+
 def test_guard_without_reset_still_bounds(model_manager):
     """A plain executor (no `reset`, e.g. in other call sites/tests) still gets
     the wall-clock bound + actionable error — reset is best-effort, not required.

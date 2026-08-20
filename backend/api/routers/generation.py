@@ -1890,7 +1890,7 @@ async def generate_speech(
                 # Client went away mid-stream — same semantics as aborting a
                 # classic /generate mid-render: nothing is saved.
                 raise
-            except (GpuJobTimeoutError, GpuPoolBusyError) as e:
+            except GpuPoolBusyError as e:
                 # In-band error frame carries the machine-readable retryable
                 # marker (#1190) — an NDJSON consumer can back off instead of
                 # guessing from the prose.
@@ -1898,6 +1898,14 @@ async def generate_speech(
                 from core.public_errors import stream_failure
                 failure = stream_failure("generation_busy")
                 failure["retry_after"] = getattr(e, "retry_after", 30)
+                yield _line({"type": "error", **failure})
+            except GpuJobTimeoutError:
+                # The worker started and spent its full execution budget. That
+                # is compute time, not queue pressure (#1588).
+                logger.error("Streaming generation exceeded its compute budget")
+                from core.public_errors import stream_failure
+                failure = stream_failure("generation_timeout")
+                failure["retry_after"] = 30
                 yield _line({"type": "error", **failure})
             except ValueError:
                 logger.error("Streaming generation request rejected")
