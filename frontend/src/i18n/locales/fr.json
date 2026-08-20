@@ -2059,7 +2059,8 @@
     "ignored_unsupported": "Instruction non prise en charge ignorée : {{items}}",
     "ignored_duplicate": "Ignoré (catégorie déjà définie) : {{items}}",
     "ref_audio_unusable": "Aucune voix n'a été détectée dans l'audio de référence — le clip est silencieux ou presque, il n'y a donc aucune voix à cloner. Réenregistrez plus près du micro (vérifiez que le bon périphérique d'entrée est sélectionné et que le niveau bouge) ou choisissez un autre clip.",
-    "ref_audio_too_long": "Une référence accompagnée d'une transcription ne peut pas dépasser 20 secondes. Coupez l'audio et la transcription sur le même passage de 3 à 10 secondes, ou retirez la transcription pour laisser VoiceStudio couper et transcrire automatiquement le clip."
+    "ref_audio_too_long": "Une référence peut durer au maximum 20 secondes avec transcription, ou 75 secondes sans transcription. Coupez-la sur un passage vocal clair de 3 à 10 secondes ; si vous fournissez du texte, coupez la transcription sur le même passage.",
+    "ref_audio_no_speech": "La détection automatique n'a trouvé aucune parole dans la référence. Coupez-la sur un passage vocal clair de 3 à 10 secondes ou fournissez une transcription correspondante."
   },
   "sharing": {
     "title": "Partage et accès à distance",

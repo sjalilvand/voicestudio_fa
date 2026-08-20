@@ -55,6 +55,14 @@ describe('toastErrorWithReport user-fixable marker mapping (#1188)', () => {
     });
   });
 
+  it('shows localized guidance when bounded selection finds no speech', () => {
+    const detail = '[clone_ref_no_speech] Automatic speech detection found no spoken words.';
+    toastErrorWithReport(detail, new Error(detail));
+    expect(toastErrorMock).toHaveBeenCalledWith('t:tts_errors.ref_audio_no_speech', {
+      duration: 8000,
+    });
+  });
+
   it('unmarked errors keep the Report-action toast (JSX renderer, not a plain string)', () => {
     toastErrorWithReport('Error: something exploded', new Error('something exploded'));
     expect(toastErrorMock).toHaveBeenCalledTimes(1);
@@ -69,6 +77,7 @@ describe('toastErrorWithReport user-fixable marker mapping (#1188)', () => {
       const locale = JSON.parse(fs.readFileSync(path.join(localesDir, f), 'utf8'));
       expect(locale.tts_errors?.ref_audio_unusable, `${f} missing the key`).toBeTruthy();
       expect(locale.tts_errors?.ref_audio_too_long, `${f} missing the key`).toBeTruthy();
+      expect(locale.tts_errors?.ref_audio_no_speech, `${f} missing the key`).toBeTruthy();
     }
   });
 });

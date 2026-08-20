@@ -2059,7 +2059,8 @@
     "ignored_unsupported": "Nicht unterstützte Anweisung ignoriert: {{items}}",
     "ignored_duplicate": "Ignoriert (Kategorie bereits festgelegt): {{items}}",
     "ref_audio_unusable": "Im Referenz-Audio war keine Sprache zu hören — der Clip ist still oder fast still, es gibt also keine Stimme zum Klonen. Nimm näher am Mikrofon neu auf (prüfe, ob das richtige Eingabegerät gewählt ist und der Pegel ausschlägt) oder wähle einen anderen Clip.",
-    "ref_audio_too_long": "Eine Referenz mit angegebenem Transkript darf höchstens 20 Sekunden lang sein. Kürze Audio und Transkript auf dieselbe 3–10-sekündige Passage oder entferne das Transkript, damit VoiceStudio den Clip automatisch kürzt und transkribiert."
+    "ref_audio_too_long": "Eine Referenz darf mit Transkript höchstens 20 Sekunden, ohne Transkript höchstens 75 Sekunden lang sein. Kürze sie auf eine klare Sprachpassage von 3–10 Sekunden; bei mitgeliefertem Text muss das Transkript denselben Abschnitt abdecken.",
+    "ref_audio_no_speech": "Die automatische Spracherkennung hat keine gesprochenen Wörter gefunden. Kürze die Referenz auf eine klare Sprachpassage von 3–10 Sekunden oder gib ein passendes Transkript an."
   },
   "sharing": {
     "title": "Teilen und Fernzugriff",

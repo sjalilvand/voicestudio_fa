@@ -54,14 +54,10 @@ def test_supplied_transcript_rejects_long_file_before_tokenization(tmp_path):
         )
 
 
-def test_missing_transcript_is_safely_trimmed_even_when_preprocessing_is_disabled(monkeypatch):
+def test_missing_transcript_is_safely_trimmed_even_when_preprocessing_is_disabled():
     model = _model(reject_tokenization=False)
     model._asr_pipe = object()
     model.transcribe = lambda _audio: "Automatically aligned transcript."
-    monkeypatch.setattr(
-        "omnivoice.models.omnivoice.trim_long_audio",
-        lambda audio, sampling_rate, **_kwargs: audio[:, : 15 * sampling_rate],
-    )
     audio = torch.full((1, 21 * 24_000), 0.1)
 
     model.create_voice_clone_prompt(
@@ -70,32 +66,24 @@ def test_missing_transcript_is_safely_trimmed_even_when_preprocessing_is_disable
         preprocess_prompt=False,
     )
 
-    assert model.audio_tokenizer.seen_samples == 15 * 24_000
+    assert model.audio_tokenizer.seen_samples <= 15 * 24_000
 
 
-def test_missing_transcript_still_has_a_hard_bound_when_silence_split_cannot_trim(monkeypatch):
+def test_missing_transcript_still_has_a_hard_bound_when_silence_split_cannot_trim():
     model = _model(reject_tokenization=False)
     model._asr_pipe = object()
     model.transcribe = lambda _audio: "Automatically aligned transcript."
-    monkeypatch.setattr(
-        "omnivoice.models.omnivoice.trim_long_audio",
-        lambda audio, _sampling_rate, **_kwargs: audio,
-    )
     audio = torch.full((1, 21 * 24_000), 0.1)
 
     model.create_voice_clone_prompt((audio, 24_000), ref_text=None)
 
-    assert model.audio_tokenizer.seen_samples == 15 * 24_000
+    assert model.audio_tokenizer.seen_samples <= 15 * 24_000
 
 
 def test_hard_bound_keeps_late_speech_instead_of_cropping_only_silence(monkeypatch):
     model = _model(reject_tokenization=False)
     model._asr_pipe = object()
     model.transcribe = lambda _audio: "Automatically aligned transcript."
-    monkeypatch.setattr(
-        "omnivoice.models.omnivoice.trim_long_audio",
-        lambda audio, _sampling_rate, **_kwargs: audio,
-    )
     monkeypatch.setattr(
         "omnivoice.models.omnivoice.remove_silence_safe",
         lambda audio, *_args, **_kwargs: audio,
@@ -105,7 +93,7 @@ def test_hard_bound_keeps_late_speech_instead_of_cropping_only_silence(monkeypat
 
     model.create_voice_clone_prompt((audio, 24_000), ref_text=None)
 
-    assert model.audio_tokenizer.seen_samples == 15 * 24_000
+    assert model.audio_tokenizer.seen_samples <= 15 * 24_000
     assert model.audio_tokenizer.seen_peak > 0
 
 
@@ -113,10 +101,6 @@ def test_hard_bound_prefers_speech_over_distant_transient(monkeypatch):
     model = _model(reject_tokenization=False)
     model._asr_pipe = object()
     model.transcribe = lambda _audio: "Automatically aligned transcript."
-    monkeypatch.setattr(
-        "omnivoice.models.omnivoice.trim_long_audio",
-        lambda audio, _sampling_rate, **_kwargs: audio,
-    )
     monkeypatch.setattr(
         "omnivoice.models.omnivoice.remove_silence_safe",
         lambda audio, *_args, **_kwargs: audio,
@@ -127,7 +111,7 @@ def test_hard_bound_prefers_speech_over_distant_transient(monkeypatch):
 
     model.create_voice_clone_prompt((audio, 24_000), ref_text=None)
 
-    assert model.audio_tokenizer.seen_samples == 15 * 24_000
+    assert model.audio_tokenizer.seen_samples <= 15 * 24_000
     # Quiet references are RMS-normalized before cropping. The speech peak is
     # therefore non-zero but remains far below the isolated transient.
     assert 0 < model.audio_tokenizer.seen_peak < 1
@@ -146,7 +130,7 @@ def test_real_silence_splitter_does_not_keep_silent_prefix(monkeypatch):
 
     model.create_voice_clone_prompt((audio, 24_000), ref_text=None)
 
-    assert model.audio_tokenizer.seen_samples == 15 * 24_000
+    assert model.audio_tokenizer.seen_samples <= 15 * 24_000
     assert model.audio_tokenizer.seen_peak > 0
 
 
@@ -164,7 +148,7 @@ def test_real_silence_splitter_ignores_transient_before_late_speech(monkeypatch)
 
     model.create_voice_clone_prompt((audio, 24_000), ref_text=None)
 
-    assert model.audio_tokenizer.seen_samples == 15 * 24_000
+    assert model.audio_tokenizer.seen_samples <= 15 * 24_000
     assert 0 < model.audio_tokenizer.seen_peak < 1
 
 
@@ -173,10 +157,6 @@ def test_speech_aware_bound_prefers_quiet_voice_over_loud_non_speech(monkeypatch
     model._asr_pipe = object()
     model.transcribe = lambda candidate: (
         "Spoken words." if float(candidate[0].abs().mean()) < 0.05 else ""
-    )
-    monkeypatch.setattr(
-        "omnivoice.models.omnivoice.trim_long_audio",
-        lambda audio, _sampling_rate, **_kwargs: audio,
     )
     monkeypatch.setattr(
         "omnivoice.models.omnivoice.remove_silence_safe",
@@ -191,7 +171,7 @@ def test_speech_aware_bound_prefers_quiet_voice_over_loud_non_speech(monkeypatch
     assert model.audio_tokenizer.seen_peak < 0.1
 
 
-def test_far_late_speech_survives_with_bounded_asr_calls(monkeypatch):
+def test_far_late_speech_at_auto_select_limit_survives_with_five_asr_calls(monkeypatch):
     model = _model(reject_tokenization=False)
     model.sampling_rate = 100
     model._asr_pipe = object()
@@ -203,17 +183,60 @@ def test_far_late_speech_survives_with_bounded_asr_calls(monkeypatch):
 
     model.transcribe = transcribe
     monkeypatch.setattr(
-        "omnivoice.models.omnivoice.trim_long_audio",
-        lambda audio, sampling_rate, **_kwargs: audio[:, : 15 * sampling_rate],
-    )
-    monkeypatch.setattr(
         "omnivoice.models.omnivoice.remove_silence_safe",
         lambda audio, *_args, **_kwargs: audio,
     )
-    audio = torch.zeros((1, 184 * 100))
+    audio = torch.zeros((1, 75 * 100))
     audio[:, -5 * 100 :] = 0.02
 
     prompt = model.create_voice_clone_prompt((audio, 100), ref_text=None)
 
     assert prompt.ref_text == "Late speech."
-    assert len(calls) <= 5
+    assert len(calls) == 5
+
+
+def test_auto_select_rejects_one_sample_over_limit_before_asr():
+    model = _model(reject_tokenization=False)
+    model.sampling_rate = 100
+    model._asr_pipe = object()
+    calls = []
+    model.transcribe = lambda candidate: calls.append(candidate) or "Speech."
+    audio = torch.full((1, 75 * 100 + 1), 0.1)
+
+    with pytest.raises(ValueError, match=r"\[clone_ref_too_long\].*at most 75 seconds"):
+        model.create_voice_clone_prompt((audio, 100), ref_text=None)
+
+    assert calls == []
+
+
+def test_auto_select_tiles_final_partial_window_without_gaps(monkeypatch):
+    model = _model(reject_tokenization=False)
+    model.sampling_rate = 100
+    model._asr_pipe = object()
+    lengths = []
+
+    def transcribe(candidate):
+        lengths.append(candidate[0].size(-1))
+        return "Speech."
+
+    model.transcribe = transcribe
+    monkeypatch.setattr(
+        "omnivoice.models.omnivoice.remove_silence_safe",
+        lambda audio, *_args, **_kwargs: audio,
+    )
+    audio = torch.full((1, 61 * 100), 0.1)
+
+    model.create_voice_clone_prompt((audio, 100), ref_text=None)
+
+    assert lengths == [1500, 1500, 1500, 1500, 100]
+
+
+def test_auto_select_rejects_punctuation_only_transcripts_before_tokenizer():
+    model = _model(reject_tokenization=True)
+    model.sampling_rate = 100
+    model._asr_pipe = object()
+    model.transcribe = lambda _candidate: "...?!"
+    audio = torch.full((1, 21 * 100), 0.1)
+
+    with pytest.raises(ValueError, match=r"\[clone_ref_no_speech\].*could not find spoken words"):
+        model.create_voice_clone_prompt((audio, 100), ref_text=None)

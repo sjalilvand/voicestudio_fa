@@ -53,12 +53,12 @@ from transformers.modeling_outputs import ModelOutput
 from transformers.models.auto import CONFIG_MAPPING, AutoConfig
 
 from omnivoice.utils.audio import (
+    CLONE_REF_NO_SPEECH_MARKER,
+    CLONE_REF_TOO_LONG_MARKER,
     cross_fade_chunks,
     fade_and_pad_audio,
     load_audio,
     remove_silence_safe,
-    trim_long_audio,
-    CLONE_REF_TOO_LONG_MARKER,
     validate_clone_reference,
 )
 from omnivoice.utils.duration import RuleDurationEstimator
@@ -798,85 +798,49 @@ class OmniVoice(PreTrainedModel):
                     "same 3-10 second passage, or omit the transcript so VoiceStudio "
                     "can trim and transcribe the clip automatically."
                 )
-            # Safety bound, independent of the caller's optional silence/
-            # punctuation preprocessing choice. The transcript is generated
-            # from this trimmed waveform below, so audio and text stay aligned.
-            untrimmed_ref_wav = ref_wav
-            ref_wav = trim_long_audio(ref_wav, self.sampling_rate, trim_threshold=20.0)
-            # ``trim_long_audio`` splits at speech/silence boundaries and is
-            # deliberately fail-open when it cannot detect speech. Safety is
-            # not optional here: fall back to the same 15 s upper bound so an
-            # unusual/quiet clip still cannot allocate tokens for minutes.
+            # Transcript-free automatic selection examines every passage, but
+            # caps the work at five bounded ASR calls. Longer references need
+            # an explicit user-selected passage rather than a lossy sampling
+            # policy that could silently miss speech between fixed windows.
             max_samples = int(15.0 * self.sampling_rate)
-            original_power = untrimmed_ref_wav.abs().amax(dim=0).square()
+            max_auto_samples = 5 * max_samples
+            if ref_wav.size(-1) > max_auto_samples:
+                raise ValueError(
+                    f"{CLONE_REF_TOO_LONG_MARKER} Reference audio is "
+                    f"{ref_duration:.1f} seconds long; automatic transcript-free "
+                    "selection supports at most 75 seconds. Trim the audio to a "
+                    "3-10 second speech passage, or supply a matching transcript."
+                )
+
+            original_power = ref_wav.abs().amax(dim=0).square()
             activity_cap = max(float(original_power.mean()) * 100.0, 1e-10)
 
             def activity_score(audio):
                 power = audio.abs().amax(dim=0).square().clamp_max(activity_cap)
                 return float(power.double().sum())
 
-            def densest_window(audio):
-                envelope = audio.abs().amax(dim=0)
-                # Pick the contiguous passage with the most activity. Using
-                # the midpoint of the first/last crossings can center the
-                # crop on silence when a transient is far from real speech.
-                power = envelope.square().clamp_max(activity_cap)
-                # Float64 keeps small quiet-speech contributions observable
-                # after a distant full-scale transient in long references.
-                cumulative = torch.nn.functional.pad(power.double().cumsum(0), (1, 0))
-                window_power = cumulative[max_samples:] - cumulative[:-max_samples]
-                start = int(window_power.argmax())
-                return audio[:, start : start + max_samples], float(window_power[start])
-
-            best_original, _ = densest_window(untrimmed_ref_wav)
-            if ref_wav.size(-1) > max_samples:
-                ref_wav, _ = densest_window(ref_wav)
-
-            # Energy is only a fallback: music/noise can be louder than the
-            # actual speaker. Ask the already-required ASR boundary which
-            # bounded passage contains speech, then keep that exact waveform
-            # and transcript aligned for tokenization below.
             if self._asr_pipe is None:
                 logger.info("ASR model not loaded yet, loading on-the-fly ...")
                 self.load_asr_model()
-            max_asr_candidates = 5
-            candidates = [ref_wav, best_original]
-            last_start = untrimmed_ref_wav.size(-1) - max_samples
-            # Bound Whisper work for arbitrarily long files while retaining
-            # whole-file coverage, including the far end where late speech is
-            # commonly found. The trim result and energy-best passage occupy
-            # the first two slots; evenly spaced windows fill the rest.
-            sampled_starts = torch.linspace(
-                0,
-                last_start,
-                steps=max_asr_candidates,
-                dtype=torch.int64,
-            ).tolist()
-            starts = [sampled_starts[-1], sampled_starts[0], *sampled_starts[1:-1]]
-            candidates.extend(
-                untrimmed_ref_wav[:, start : start + max_samples] for start in starts
-            )
-            unique_candidates = []
-            seen = set()
-            for candidate in candidates:
-                identity = (candidate.data_ptr(), candidate.storage_offset(), candidate.size(-1))
-                if identity not in seen:
-                    seen.add(identity)
-                    unique_candidates.append(candidate)
-                if len(unique_candidates) == max_asr_candidates:
-                    break
+            candidates = list(ref_wav.split(max_samples, dim=-1))
 
             def speech_score(text):
                 return len(re.sub(r"[^\w]+", "", text or "", flags=re.UNICODE))
 
             transcribed = [
                 (self.transcribe((candidate, self.sampling_rate)), candidate)
-                for candidate in unique_candidates
+                for candidate in candidates
             ]
             ref_text, ref_wav = max(
                 transcribed,
                 key=lambda item: (speech_score(item[0]), activity_score(item[1])),
             )
+            if speech_score(ref_text) == 0:
+                raise ValueError(
+                    f"{CLONE_REF_NO_SPEECH_MARKER} Automatic speech detection "
+                    "could not find spoken words in the reference. Trim it to a "
+                    "clear 3-10 second speech passage, or supply a matching transcript."
+                )
 
         if preprocess_prompt:
             # #1188: the fixed -50 dBFS silence threshold used to consume a
