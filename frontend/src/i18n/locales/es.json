@@ -1035,6 +1035,7 @@
     "voice_match_per_line_title": "Cada línea se clona desde un clip de su propio audio original. La mejor prosodia por línea, pero la identidad de la voz puede variar de línea a línea.",
     "voice_match_consistent": "Consistente",
     "voice_match_consistent_title": "Todas las líneas de un hablante se clonan desde una referencia compartida (el clon del hablante o el mejor clip individual si no existe). Identidad de voz más estable en todo el doblaje.",
+    "timing_lip_sync": "Sincronización labial",
     "default_track": "Pista predeterminada:",
     "original_track": "Originales",
     "selected_dub": "{{code}} (Doblaje seleccionado)",

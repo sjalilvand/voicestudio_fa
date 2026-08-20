@@ -163,9 +163,8 @@ export default function DubRightColumn({
               },
               {
                 value: 'strict_slot',
-                label: 'Lip sync',
-                title:
-                  'Legacy: compress audio to fit the original timing. Can sound rushed/chipmunky on high-density target languages.',
+                label: t('dub.timing_lip_sync'),
+                title: t('dub.timing_lip_sync'),
               },
             ]}
           />

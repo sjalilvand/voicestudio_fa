@@ -51,6 +51,15 @@ function column(multiBatchBusy, setDubLang = noop, setDubLangCode = noop) {
 }
 
 describe('DubRightColumn language targets', () => {
+  it('localizes the lip-sync timing option', async () => {
+    await act(async () => {
+      render(column(false));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole('radio', { name: 'dub.timing_lip_sync' })).toBeInTheDocument();
+  });
+
   it('disables language switches for the full shared batch lock', async () => {
     const setDubLang = vi.fn();
     const setDubLangCode = vi.fn();

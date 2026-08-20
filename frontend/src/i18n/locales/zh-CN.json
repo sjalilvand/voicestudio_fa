@@ -994,6 +994,7 @@
     "voice_match_per_line_title": "每句都从其自身源音频的片段克隆。逐句韵律最匹配，但音色可能逐句漂移。",
     "voice_match_consistent": "一致",
     "voice_match_consistent_title": "同一说话人的所有句子都从一个共享参考克隆（说话人克隆，若没有则选最佳单个片段）。整段配音的音色更稳定。",
+    "timing_lip_sync": "唇形同步",
     "default_track": "默认轨道：",
     "original_track": "原声",
     "selected_dub": "{{code}}（选定配音）",

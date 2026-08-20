@@ -184,13 +184,10 @@ export const useAppStore = create<AppStore>()(
       migrate: (persisted, version) => {
         if (!persisted || typeof persisted !== 'object') return {} as Partial<AppStore>; // D1
         const p = persisted as any;
-        if (version < 8 && p.timingStrategy === 'concise') {
-          // Local dubbing UX migration: the historical default ('concise')
-          // preserves natural speech but can finish before the original mouth
-          // slot. New default is strict_slot for tighter lip sync. Explicit
-          // non-default choices (smart_fit/stretch_video/strict_slot) survive.
-          p.timingStrategy = 'strict_slot';
-        }
+        // v8 changes the fresh-install default to strict_slot. Do not rewrite
+        // an existing timingStrategy: persisted values are user preferences,
+        // and the historical concise default is indistinguishable from an
+        // explicit choice. Records without the field inherit the slice default.
         if (version < 4) {
           // v1 → v2 added reviewMode; v2 → v3 added mode/sidebar/generate knobs;
           // v3 → v4 added timingStrategy. All of those have slice defaults, so

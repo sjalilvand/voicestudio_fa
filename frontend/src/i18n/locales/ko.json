@@ -1035,6 +1035,7 @@
     "voice_match_per_line_title": "각 대사를 자신의 원본 오디오 클립에서 복제합니다. 대사별 억양은 가장 잘 맞지만 목소리 정체성이 대사마다 달라질 수 있습니다.",
     "voice_match_consistent": "일관",
     "voice_match_consistent_title": "한 화자의 모든 대사를 하나의 공유 참조(화자 클론, 없으면 최적의 단일 클립)에서 복제합니다. 더빙 전체에서 목소리가 더 안정적입니다.",
+    "timing_lip_sync": "립싱크",
     "default_track": "기본 트랙:",
     "original_track": "원본",
     "selected_dub": "{{code}}(선택된 더빙)",

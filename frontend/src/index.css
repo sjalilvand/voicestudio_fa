@@ -6841,7 +6841,8 @@ button.dub-stepper__action:focus-visible {
     max-height: 130px;
   }
   .dub-panel-left .seg-track {
-    flex: 0 0 auto;
+    flex: 0 0 auto !important;
+    height: auto;
   }
   .dub-panel-left .wfm-controls {
     flex-wrap: wrap;

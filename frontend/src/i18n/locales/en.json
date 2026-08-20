@@ -1311,6 +1311,7 @@
     "voice_match_per_line_title": "Each line clones from a clip of its own source audio. Best per-line prosody match, but the voice identity can drift from line to line.",
     "voice_match_consistent": "Consistent",
     "voice_match_consistent_title": "Every line of a speaker clones from one shared reference (the speaker clone, or the best single clip when none exists). Steadier voice identity across the whole dub.",
+    "timing_lip_sync": "Lip sync",
     "timing_concise": "Concise",
     "timing_stretch_video": "Stretch Video",
     "timing_strict_slot": "Strict slot",

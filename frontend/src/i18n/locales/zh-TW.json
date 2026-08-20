@@ -1035,6 +1035,7 @@
     "voice_match_per_line_title": "每句都從其自身來源音訊的片段複製。逐句韻律最匹配，但音色可能逐句漂移。",
     "voice_match_consistent": "一致",
     "voice_match_consistent_title": "同一說話者的所有句子都從一個共享參考複製（說話者複製，若沒有則選最佳單一片段）。整段配音的音色更穩定。",
+    "timing_lip_sync": "唇形同步",
     "default_track": "預設曲目：",
     "original_track": "原創",
     "selected_dub": "{{code}}（精選配音）",
