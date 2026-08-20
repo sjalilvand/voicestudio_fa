@@ -864,8 +864,12 @@ fn sync_packaged_frontend(resource_root: &Path, project_dir: &Path) -> io::Resul
     if staging.exists() {
         fs::remove_dir_all(&staging)?;
     }
-    if backup.exists() {
-        fs::remove_dir_all(&backup)?;
+    // A previous process may have died after moving the live shell aside but
+    // before installing staging. Restore the only known-good SPA before doing
+    // any new work; never discard that recovery copy merely because startup
+    // retried.
+    if !destination.exists() && backup.exists() {
+        fs::rename(&backup, &destination)?;
     }
     if let Err(error) = copy_dir_recursive(&source, &staging) {
         let _ = fs::remove_dir_all(&staging);
@@ -873,6 +877,12 @@ fn sync_packaged_frontend(resource_root: &Path, project_dir: &Path) -> io::Resul
     }
 
     if destination.exists() {
+        if backup.exists() {
+            // An interrupted cleanup can leave an incomplete backup. Remove
+            // it before touching the known-working destination; if cleanup
+            // fails, abort with the live shell still intact.
+            fs::remove_dir_all(&backup)?;
+        }
         fs::rename(&destination, &backup)?;
     }
     if let Err(error) = fs::rename(&staging, &destination) {
@@ -2174,6 +2184,57 @@ mod tests {
         let installed = project.path().join("frontend").join("dist");
         fs::create_dir_all(&installed).unwrap();
         fs::write(installed.join("index.html"), "working shell").unwrap();
+
+        sync_packaged_frontend(resources.path(), project.path()).unwrap_err();
+
+        assert_eq!(
+            fs::read_to_string(installed.join("index.html")).unwrap(),
+            "working shell"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn interrupted_frontend_swap_recovers_backup_before_a_later_copy_failure() {
+        use std::os::unix::fs::symlink;
+
+        let resources = tempfile::tempdir().unwrap();
+        let project = tempfile::tempdir().unwrap();
+        let source = resources.path().join("frontend").join("dist");
+        fs::create_dir_all(source.join("assets")).unwrap();
+        fs::write(source.join("index.html"), "new shell").unwrap();
+        symlink("missing-client.js", source.join("assets").join("client.js")).unwrap();
+
+        let frontend = project.path().join("frontend");
+        let installed = frontend.join("dist");
+        let backup = frontend.join(".dist-backup");
+        fs::create_dir_all(&backup).unwrap();
+        fs::write(backup.join("index.html"), "working backup shell").unwrap();
+
+        sync_packaged_frontend(resources.path(), project.path()).unwrap_err();
+
+        assert_eq!(
+            fs::read_to_string(installed.join("index.html")).unwrap(),
+            "working backup shell"
+        );
+    }
+
+    #[test]
+    fn interrupted_backup_cleanup_failure_preserves_working_destination() {
+        let resources = tempfile::tempdir().unwrap();
+        let project = tempfile::tempdir().unwrap();
+        let source = resources.path().join("frontend").join("dist");
+        fs::create_dir_all(&source).unwrap();
+        fs::write(source.join("index.html"), "new shell").unwrap();
+
+        let frontend = project.path().join("frontend");
+        let installed = frontend.join("dist");
+        let backup = frontend.join(".dist-backup");
+        fs::create_dir_all(&installed).unwrap();
+        fs::write(installed.join("index.html"), "working shell").unwrap();
+        // A non-directory at the interrupted backup path makes cleanup fail
+        // and would also prevent the live destination from being renamed.
+        fs::write(&backup, "partial backup").unwrap();
 
         sync_packaged_frontend(resources.path(), project.path()).unwrap_err();
 
