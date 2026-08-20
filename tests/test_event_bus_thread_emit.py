@@ -66,6 +66,58 @@ def test_emit_from_thread_reaches_serving_loop(bus, tmp_path):
         loop.close()
 
 
+def test_emit_from_foreign_running_loop_reaches_serving_loop(bus):
+    """An async producer may run on a worker loop, but listener state belongs
+    to the WebSocket serving loop and must only be touched there."""
+    serving_loop = asyncio.new_event_loop()
+    serving_loop.set_debug(True)
+    received: list[str] = []
+    started = threading.Event()
+    done = threading.Event()
+
+    async def serve_with_waiter_ready():
+        q = await bus.subscribe()
+        waiter = asyncio.create_task(q.get())
+        await asyncio.sleep(0)  # q.get() has installed its serving-loop Future
+        started.set()
+        try:
+            received.append(await asyncio.wait_for(waiter, 0.5))
+        except asyncio.TimeoutError:
+            pass
+        finally:
+            done.set()
+            await bus.unsubscribe(q)
+
+    def run_serving_loop():
+        asyncio.set_event_loop(serving_loop)
+        serving_loop.run_until_complete(serve_with_waiter_ready())
+
+    serving_thread = threading.Thread(
+        target=run_serving_loop, name="test-serving-loop"
+    )
+    serving_thread.start()
+    try:
+        assert started.wait(2.0), "serving loop never subscribed"
+
+        async def foreign_async_caller():
+            assert asyncio.get_running_loop() is not serving_loop
+            bus.emit("profiles", {"action": "updated", "id": "foreign-loop"})
+            await asyncio.sleep(0.05)
+
+        asyncio.run(foreign_async_caller())
+
+        assert done.wait(2.0), (
+            "emit() ran listener delivery on the caller's foreign loop"
+        )
+        assert received, "foreign-loop event never reached the serving loop"
+        payload = json.loads(received[0])
+        assert payload["id"] == "foreign-loop"
+    finally:
+        serving_loop.call_soon_threadsafe(done.set)
+        serving_thread.join(2.0)
+        serving_loop.close()
+
+
 async def _serve(bus, received: list[str], started: threading.Event, done: threading.Event):
     q = await bus.subscribe()
     started.set()
