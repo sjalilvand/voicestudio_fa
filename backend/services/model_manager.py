@@ -398,6 +398,7 @@ def __getattr__(name: str):
 # (generation.py, tts_stream.py) were the last unguarded dispatch — and the
 # residual on-main reports all fail on generate:start (audio). This is the same
 # guard generalised so every GPU dispatch shares one recovery path.
+_GENERATE_TIMEOUT_EXPLICIT = "OMNIVOICE_GENERATE_TIMEOUT_S" in os.environ
 GPU_JOB_TIMEOUT_S = float(os.environ.get("OMNIVOICE_GENERATE_TIMEOUT_S", "300.0"))
 # CPU synthesis is healthy but substantially slower than accelerated inference.
 # Keep a separate, bounded floor so a short render on CPU is not abandoned at
@@ -524,8 +525,8 @@ def generate_timeout_s(text: "str | None") -> float:
     base = GPU_JOB_TIMEOUT_S
     try:
         from core.device_caps import detect_host_caps
-        if detect_host_caps().family == "cpu":
-            base = max(base, CPU_JOB_TIMEOUT_S)
+        if detect_host_caps().family == "cpu" and not _GENERATE_TIMEOUT_EXPLICIT:
+            base = CPU_JOB_TIMEOUT_S
     except Exception:
         # Device probing is advisory here; the configured universal bound is
         # still safe when a platform probe is unavailable during startup.

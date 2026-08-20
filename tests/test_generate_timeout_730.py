@@ -118,6 +118,24 @@ def test_accelerated_host_keeps_five_minute_generate_budget(model_manager, monke
     assert model_manager.generate_timeout_s("A short CUDA render") == 300.0
 
 
+def test_explicit_universal_generate_timeout_wins_on_cpu(model_manager, monkeypatch):
+    """Operators can still lower the watchdog to fail faster on CPU."""
+    import importlib
+    import types
+    import core.device_caps as caps
+
+    monkeypatch.setenv("OMNIVOICE_GENERATE_TIMEOUT_S", "123.5")
+    mm = importlib.reload(model_manager)
+    monkeypatch.setattr(
+        caps, "detect_host_caps", lambda: types.SimpleNamespace(family="cpu")
+    )
+    try:
+        assert mm.generate_timeout_s("A short CPU render") == 123.5
+    finally:
+        monkeypatch.delenv("OMNIVOICE_GENERATE_TIMEOUT_S", raising=False)
+        importlib.reload(mm)
+
+
 def test_guard_without_reset_still_bounds(model_manager):
     """A plain executor (no `reset`, e.g. in other call sites/tests) still gets
     the wall-clock bound + actionable error — reset is best-effort, not required.
