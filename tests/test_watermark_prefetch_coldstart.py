@@ -274,7 +274,7 @@ def test_watermark_pool_shutdown_deadline_bounds_stuck_worker():
     pool._thread.join(timeout=1)
 
 
-def test_watermark_pool_cannot_be_replaced_while_timed_out_worker_is_alive():
+def test_watermark_pool_cannot_be_replaced_while_timed_out_worker_is_alive(watermark):
     """A producer racing bounded shutdown cannot create an undrained pool."""
     from services.model_manager import (
         begin_watermark_pool_lifecycle,
@@ -303,6 +303,18 @@ def test_watermark_pool_cannot_be_replaced_while_timed_out_worker_is_alive():
         begin_watermark_pool_lifecycle()
         with pytest.raises(RuntimeError, match="shutting down"):
             get_watermark_pool()
+        # Finished synthesis must still be returned unchanged: pool admission
+        # is outside mark_synthetic's synchronous fail-open boundary.
+        import asyncio
+        import torch
+
+        audio = torch.zeros(1, 240)
+        marked = asyncio.run(
+            watermark.mark_synthetic_async(
+                audio, 24000, context="test.restart_during_shutdown"
+            )
+        )
+        assert marked is audio
     finally:
         release.set()
         pool._thread.join(timeout=1)

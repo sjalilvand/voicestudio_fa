@@ -870,7 +870,6 @@ async def _finalize_generation(
     Returns ``(watermarked_tensor, meta)`` where ``meta`` carries
     ``id`` / ``filename`` / ``duration`` / ``gen_time``.
     """
-    loop = asyncio.get_running_loop()
     # Invisible AudioSeal provenance watermark on the final audio. Embedding
     # was previously only wired into the dub pipeline (dub_generate.py), so
     # plain TTS came out unmarked despite the setting being on — and the same
@@ -882,12 +881,9 @@ async def _finalize_generation(
     # AudioSeal embedding is CPU work that holds no VRAM, so occupying a GPU
     # worker with it only delays the next generate on 1-worker hosts.
     if not already_marked:
-        from services.watermark import mark_synthetic
-        from services.model_manager import get_watermark_pool
-        audio_tensor = await loop.run_in_executor(
-            get_watermark_pool(),
-            functools.partial(mark_synthetic, audio_tensor, sample_rate,
-                              context="generate.finalize"),
+        from services.watermark import mark_synthetic_async
+        audio_tensor = await mark_synthetic_async(
+            audio_tensor, sample_rate, context="generate.finalize",
         )
     gen_time = round(time.time() - start_time, 2)
 
@@ -1822,12 +1818,10 @@ async def generate_speech(
                     # (#1190): AudioSeal embedding is CPU work that owns no
                     # VRAM, and on a 1-worker host it used to serialize
                     # directly ahead of the next generate.
-                    from services.watermark import mark_synthetic
-                    from services.model_manager import get_watermark_pool
-                    _preview = await asyncio.get_running_loop().run_in_executor(
-                        get_watermark_pool(),
-                        functools.partial(mark_synthetic, audio_tensor, sample_rate,
-                                          context="generate.stream_preview"),
+                    from services.watermark import mark_synthetic_async
+                    _preview = await mark_synthetic_async(
+                        audio_tensor, sample_rate,
+                        context="generate.stream_preview",
                     )
                     yield _line({"type": "chunk", "seq": 0, "pcm": _pcm16_b64(_preview)})
                 else:
@@ -1849,12 +1843,10 @@ async def generate_speech(
                         # Provenance-mark the streamed copy off the GPU pool
                         # (#1169 mark, #1190 placement): CPU-only AudioSeal
                         # work must not occupy a GPU worker between chunks.
-                        from services.watermark import mark_synthetic
-                        from services.model_manager import get_watermark_pool
-                        preview = await asyncio.get_running_loop().run_in_executor(
-                            get_watermark_pool(),
-                            functools.partial(mark_synthetic, preview, sample_rate,
-                                              context="generate.stream_preview"),
+                        from services.watermark import mark_synthetic_async
+                        preview = await mark_synthetic_async(
+                            preview, sample_rate,
+                            context="generate.stream_preview",
                         )
                         if i == 0:
                             # After the first render so lazy-loading engines

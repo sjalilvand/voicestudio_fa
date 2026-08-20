@@ -286,6 +286,36 @@ def mark_synthetic(
     return marked
 
 
+async def mark_synthetic_async(
+    waveform: torch.Tensor,
+    sample_rate: int,
+    *,
+    context: str,
+    force: bool = False,
+    timeout: float | None = None,
+) -> torch.Tensor:
+    """Dispatch marking without letting a draining pool lose finished audio."""
+    import asyncio
+    import functools
+
+    from services.model_manager import get_watermark_pool, run_on_gpu_pool_guarded
+
+    try:
+        pool = get_watermark_pool()
+    except RuntimeError:
+        logger.warning("Watermark skipped while the prior worker is shutting down")
+        return waveform
+
+    job = functools.partial(
+        mark_synthetic, waveform, sample_rate, context=context, force=force
+    )
+    if timeout is not None:
+        return await run_on_gpu_pool_guarded(
+            job, what="Audio watermark", timeout=timeout, executor=pool
+        )
+    return await asyncio.get_running_loop().run_in_executor(pool, job)
+
+
 @torch.no_grad()
 def embed_watermark(
     waveform: torch.Tensor,
