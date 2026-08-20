@@ -18,8 +18,8 @@ to remember belongs in a test, not in anyone's head.
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
-import sys
 
 import pytest
 
@@ -211,9 +211,23 @@ def test_linux_extracted_appimage_and_backend_are_stopped_before_wipe(tmp_path):
     assert [pid for pid, _ in opened] == [101, 102, 201, 202, 203]
 
 
-@pytest.mark.skipif(sys.platform != "linux", reason="Linux AppImage process contract")
 def test_linux_process_stop_executes_before_data_wipe(tmp_path):
     """Execute the shell with controlled commands and record the true order."""
+    fixture_root = tmp_path / "repo"
+    fixture_scripts = fixture_root / "scripts"
+    fixture_scripts.mkdir(parents=True)
+    fixture_script = fixture_scripts / "desktop-prod.sh"
+    shutil.copy2(_SH, fixture_script)
+    shutil.copy2(
+        _APPIMAGE_PROCESSES,
+        fixture_scripts / "desktop_prod_processes.py",
+    )
+    # Let the AppImage lookup complete normally, then exercise the intended
+    # no-artifact launch failure without consulting this checkout's target/.
+    (fixture_root / "frontend/src-tauri/target/debug/bundle/appimage").mkdir(
+        parents=True
+    )
+
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     order_log = tmp_path / "order.log"
@@ -230,6 +244,9 @@ def test_linux_process_stop_executes_before_data_wipe(tmp_path):
         'printf "stop-before-wipe\\n" >> "$ORDER_LOG"\n'
     )
     fake_python.chmod(0o755)
+    fake_uname = fake_bin / "uname"
+    fake_uname.write_text("#!/bin/sh\nprintf 'Linux\\n'\n")
+    fake_uname.chmod(0o755)
     for command in ("pgrep", "lsof"):
         stub = fake_bin / command
         stub.write_text("#!/bin/sh\nexit 1\n")
@@ -246,8 +263,8 @@ def test_linux_process_stop_executes_before_data_wipe(tmp_path):
         }
     )
     result = subprocess.run(
-        ["/bin/bash", _SH, "--skip-build"],  # noqa: S603
-        cwd=_ROOT,
+        ["/bin/bash", fixture_script, "--skip-build"],  # noqa: S603
+        cwd=fixture_root,
         env=env,
         capture_output=True,
         text=True,
