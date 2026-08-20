@@ -101,4 +101,51 @@ describe('loadLatest', () => {
     expect(apply).toHaveBeenCalledOnce();
     expect(apply).toHaveBeenCalledWith(['new']);
   });
+
+  it('retries when a stale initial success is discarded after a newer reload fails', async () => {
+    let resolveInitial;
+    let rejectReload;
+    const initial = new Promise((resolve) => {
+      resolveInitial = resolve;
+    });
+    const reload = new Promise((_resolve, reject) => {
+      rejectReload = reject;
+    });
+    const generations = {};
+    const apply = vi.fn();
+    const fetch = vi
+      .fn()
+      .mockReturnValueOnce(initial)
+      .mockReturnValueOnce(reload)
+      .mockResolvedValueOnce(['recovered']);
+
+    const initialLoad = retryInitialLoad(
+      () =>
+        loadLatest({
+          generations,
+          key: 'profiles',
+          fetch,
+          apply,
+          label: 'profiles',
+          rethrow: true,
+        }),
+      { baseDelayMs: 1 },
+    );
+    const websocketReload = loadLatest({
+      generations,
+      key: 'profiles',
+      fetch,
+      apply,
+      label: 'profiles',
+    });
+
+    rejectReload(new Error('reload failed'));
+    await websocketReload;
+    resolveInitial(['stale']);
+    await initialLoad;
+
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(apply).toHaveBeenCalledOnce();
+    expect(apply).toHaveBeenCalledWith(['recovered']);
+  });
 });

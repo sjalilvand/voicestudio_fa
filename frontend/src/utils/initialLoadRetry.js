@@ -18,8 +18,8 @@ export async function retryInitialLoad(loader, opts = {}) {
   for (;;) {
     if (opts.cancelled) return;
     try {
-      await loader();
-      return;
+      const applied = await loader();
+      if (applied !== false) return;
     } catch {
       // transient — retry
     }
@@ -34,9 +34,12 @@ export async function loadLatest({ generations, key, fetch, apply, label, rethro
   generations[key] = generation;
   try {
     const data = await fetch();
-    if (generation === generations[key]) apply(data);
+    if (generation !== generations[key]) return false;
+    apply(data);
+    return true;
   } catch (error) {
     console.warn(`Failed to load ${label}:`, error);
     if (rethrow) throw error;
+    return false;
   }
 }
