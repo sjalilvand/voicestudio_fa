@@ -13,6 +13,7 @@ import IdleSkeleton from '../components/dub/IdleSkeleton';
 import DubHeader from '../components/dub/DubHeader';
 import DubLeftColumn from '../components/dub/DubLeftColumn';
 import DubRightColumn from '../components/dub/DubRightColumn';
+import DubResizableColumns from '../components/dub/DubResizableColumns';
 import DubFooter from '../components/dub/DubFooter';
 import {
   hasCompleteTranslation,
@@ -715,7 +716,7 @@ export default function DubTab(props) {
             pipelineSteps={pipelineSteps}
             onPipelineStep={onPipelineStep}
           />
-          <div className="dub-editor-grid grid grid-cols-2 gap-[6px] flex-1 min-h-0 min-w-0 overflow-hidden">
+          <DubResizableColumns resizeLabel={t('logs.drag_resize')}>
             <DubLeftColumn
               hasDubbedTrack={hasDubbedTrack}
               t={t}
@@ -832,7 +833,7 @@ export default function DubTab(props) {
               dubStep={dubStep}
               dubProgress={dubProgress}
             />
-          </div>
+          </DubResizableColumns>
           <DubFooter
             t={t}
             dubStep={dubStep}
