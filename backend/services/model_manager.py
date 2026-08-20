@@ -1078,10 +1078,12 @@ def get_watermark_pool() -> ThreadPoolExecutor:
 
 
 def shutdown_watermark_pool() -> None:
-    """Drain the watermark pool at app shutdown (PR #1577): refuse queued
-    work so a pending warm-up can't outlive the app, bounded-abandon like
-    the GPU pool — a thread already inside blocking import work keeps
-    running (Python can't kill it). Resets the singleton so a process that
+    """Drain the watermark pool at app shutdown (PR #1577).
+
+    Refuse queued work and wait for the active operation: Python cannot kill
+    a thread inside AudioSeal loading, so returning early would let model
+    initialization continue during interpreter teardown. Resets the singleton
+    first so a process that
     KEEPS RUNNING after a lifespan shutdown — the test suite does exactly
     this — builds a fresh pool on next use instead of dead-submitting
     ("cannot schedule new futures after shutdown", seen on CI)."""
@@ -1090,7 +1092,7 @@ def shutdown_watermark_pool() -> None:
         pool = _watermark_pool_singleton
         _watermark_pool_singleton = None
     if pool is not None:
-        pool.shutdown(wait=False, cancel_futures=True)
+        pool.shutdown(wait=True, cancel_futures=True)
 
 
 model = None  # type: ignore

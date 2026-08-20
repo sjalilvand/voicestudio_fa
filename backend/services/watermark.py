@@ -22,10 +22,13 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 import threading
 import time
-import torch
+from pathlib import Path
 from typing import Optional
+
+import torch
 
 from core.prefs import resolve
 
@@ -128,7 +131,21 @@ def _get_detector():
         return _detector
 
 
-def prefetch_generator() -> None:
+def _generator_checkpoint_cached() -> bool:
+    """Return whether AudioSeal can warm without contacting Hugging Face.
+
+    AudioSeal 0.2 stores the checkpoint in ``<cache>/audioseal`` even though
+    it uses huggingface_hub to fetch it. Keep startup local-first: an ordinary
+    boot may consume that file, but must never turn prefetch into a download.
+    """
+    cache_root = os.environ.get("AUDIOSEAL_CACHE_DIR") or os.environ.get(
+        "XDG_CACHE_HOME"
+    )
+    root = Path(cache_root).expanduser() if cache_root else Path.home() / ".cache"
+    return (root / "audioseal" / "generator_base.pth").is_file()
+
+
+def prefetch_generator(*, allow_download: bool = False) -> None:
     """Warm the AudioSeal generator eagerly (startup background thread).
 
     The first ``mark_synthetic`` otherwise pays the audioseal import plus the
@@ -136,11 +153,16 @@ def prefetch_generator() -> None:
     macOS deployment), serialized inside the first synthesis and 3 s short of
     a 90 s client timeout. Warming here overlaps that span with the TTS model
     load. No-op when watermarking is off or audioseal is absent; a failure
-    logs and leaves the lazy path to retry on first embed.
+    logs and leaves the lazy path to retry on first embed. Default startup is
+    also cache-only; a download is allowed only when the user explicitly set
+    ``OMNIVOICE_PRELOAD_WATERMARK=1``.
     """
     try:
         if not will_mark():
             logger.debug("Watermark prefetch skipped (disabled or audioseal absent)")
+            return
+        if not allow_download and not _generator_checkpoint_cached():
+            logger.info("Watermark prefetch skipped: AudioSeal checkpoint is not cached")
             return
         _get_generator(mark_prefetched=True)
         logger.info("AudioSeal generator prefetched in the background")

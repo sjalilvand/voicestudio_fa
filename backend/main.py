@@ -940,9 +940,17 @@ async def _phase_b(app: FastAPI) -> None:
                 return
             from services.model_manager import get_watermark_pool
 
+            # Default startup may warm an existing local checkpoint but may
+            # not fetch one. Only an explicit user opt-in permits a download.
+            raw_preload = os.environ.get("OMNIVOICE_PRELOAD_WATERMARK", "")
+            allow_download = raw_preload.strip().lower() in {"1", "true", "yes", "on"}
+
             try:
                 await loop.run_in_executor(
-                    get_watermark_pool(), _watermark.prefetch_generator
+                    get_watermark_pool(),
+                    lambda: _watermark.prefetch_generator(
+                        allow_download=allow_download
+                    ),
                 )
             except Exception:
                 # prefetch_generator swallows its own errors; this guards the
@@ -1130,11 +1138,9 @@ async def lifespan(app: FastAPI):
         getattr(app.state, "watermark_preload_task", None),
         timeout=20.0,
     )
-    # The watermark warm-up runs on its dedicated 1-worker pool; cancelling
-    # the task above detaches the asyncio side but a thread already inside
-    # the ~42s cold import keeps running (Python can't kill it — same
-    # reality as the GPU-pool note above). Drain the pool's QUEUE so nothing
-    # new starts, mirroring _reset_gpu_pool's bounded-abandon approach.
+    # The watermark warm-up runs on its dedicated 1-worker pool. Cancellation
+    # detaches the asyncio future but cannot kill a thread inside AudioSeal,
+    # so drain it fully before lifespan teardown reports completion.
     try:
         from services.model_manager import shutdown_watermark_pool as _wm_drain
 

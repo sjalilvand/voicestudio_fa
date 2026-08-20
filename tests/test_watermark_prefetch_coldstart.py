@@ -9,6 +9,7 @@ must be thread-safe — exactly one load, no torn state.
 """
 from __future__ import annotations
 
+import importlib
 import sys
 import threading
 import types
@@ -16,11 +17,15 @@ from types import SimpleNamespace
 
 import pytest
 
-from services import watermark
+
+@pytest.fixture
+def watermark():
+    """Resolve app state after per-test setup, never at collection time."""
+    return importlib.import_module("services.watermark")
 
 
 @pytest.fixture(autouse=True)
-def _reset_models(monkeypatch):
+def _reset_models(monkeypatch, watermark):
     # Reset ALL lifecycle globals (CodeRabbit, PR #1577): a stale warm-up
     # stamp or availability cache from a prior test changes this test's
     # conditions.
@@ -54,7 +59,7 @@ def _fake_audioseal(monkeypatch, load_s: float) -> list[int]:
     return calls
 
 
-def test_get_generator_loads_exactly_once_under_concurrency(monkeypatch):
+def test_get_generator_loads_exactly_once_under_concurrency(monkeypatch, watermark):
     """A background prefetch thread + the first embed race the lazy load;
     both must share ONE generator build, not one each."""
     calls = _fake_audioseal(monkeypatch, load_s=0.05)
@@ -79,19 +84,19 @@ def test_get_generator_loads_exactly_once_under_concurrency(monkeypatch):
     assert all(g is results[0] for g in results)
 
 
-def test_prefetch_generator_loads_when_watermarking_is_on(monkeypatch):
+def test_prefetch_generator_loads_when_watermarking_is_on(monkeypatch, watermark):
     """prefetch_generator() must build the generator eagerly (the startup
     warm-up path) while the pref is enabled and audioseal is importable."""
     calls = _fake_audioseal(monkeypatch, load_s=0)
     monkeypatch.setattr(watermark, "is_enabled", lambda: True)
 
-    watermark.prefetch_generator()
+    watermark.prefetch_generator(allow_download=True)
 
     assert calls == [1]
     assert watermark._generator is not None
 
 
-def test_prefetch_generator_no_ops_when_disabled_or_absent(monkeypatch):
+def test_prefetch_generator_no_ops_when_disabled_or_absent(monkeypatch, watermark):
     """Pref disabled, or audioseal not installed: the warm-up must touch
     nothing — no import attempts, no model, no exception."""
     calls = _fake_audioseal(monkeypatch, load_s=0)
@@ -107,7 +112,7 @@ def test_prefetch_generator_no_ops_when_disabled_or_absent(monkeypatch):
     assert watermark._generator is None
 
 
-def test_prefetch_generator_degrades_silently_on_failure(monkeypatch):
+def test_prefetch_generator_degrades_silently_on_failure(monkeypatch, watermark):
     """A failed warm-up must never take the backend down or wedge the lazy
     path: log, leave _generator None; the first embed retries inline."""
     monkeypatch.setattr(watermark, "is_enabled", lambda: True)
@@ -117,11 +122,43 @@ def test_prefetch_generator_degrades_silently_on_failure(monkeypatch):
         raise RuntimeError("hub exploded (test)")
 
     monkeypatch.setattr(watermark, "_get_generator", _boom)
-    watermark.prefetch_generator()  # must not raise
+    watermark.prefetch_generator(allow_download=True)  # must not raise
     assert watermark._generator is None
 
 
-def test_detector_load_is_not_blocked_by_a_generator_prefetch(monkeypatch):
+def test_prefetch_generator_does_not_download_with_empty_offline_cache(
+    monkeypatch, tmp_path, watermark
+):
+    """Default startup stays local-first even when watermarking is enabled."""
+    monkeypatch.setenv("AUDIOSEAL_CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("HF_HUB_OFFLINE", "1")
+    monkeypatch.setattr(watermark, "will_mark", lambda: True)
+    calls = []
+    monkeypatch.setattr(watermark, "_get_generator", lambda **kw: calls.append(kw))
+
+    watermark.prefetch_generator()
+
+    assert calls == []
+
+
+def test_prefetch_generator_loads_cached_checkpoint_offline(
+    monkeypatch, tmp_path, watermark
+):
+    cache_dir = tmp_path / "audioseal"
+    cache_dir.mkdir()
+    (cache_dir / "generator_base.pth").touch()
+    monkeypatch.setenv("AUDIOSEAL_CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("HF_HUB_OFFLINE", "1")
+    monkeypatch.setattr(watermark, "will_mark", lambda: True)
+    calls = []
+    monkeypatch.setattr(watermark, "_get_generator", lambda **kw: calls.append(kw))
+
+    watermark.prefetch_generator()
+
+    assert calls == [{"mark_prefetched": True}]
+
+
+def test_detector_load_is_not_blocked_by_a_generator_prefetch(monkeypatch, watermark):
     """Per-model locks (review finding): a ~42s generator build in the
     prefetch thread must not stall an unrelated detector load — with the old
     single shared lock, _get_detector queued behind the whole build."""
@@ -169,7 +206,32 @@ def test_watermark_pool_rebuilds_after_shutdown_drain():
     shutdown_watermark_pool()
 
 
-def test_prefetched_model_gets_one_extra_idle_window(monkeypatch):
+def test_watermark_pool_shutdown_waits_for_active_worker():
+    """Lifespan teardown cannot finish while AudioSeal is still loading."""
+    from services.model_manager import get_watermark_pool, shutdown_watermark_pool
+
+    started = threading.Event()
+    release = threading.Event()
+    shutdown_done = threading.Event()
+
+    def _blocking_load():
+        started.set()
+        release.wait(5)
+
+    get_watermark_pool().submit(_blocking_load)
+    assert started.wait(1)
+
+    shutdown_thread = threading.Thread(
+        target=lambda: (shutdown_watermark_pool(), shutdown_done.set())
+    )
+    shutdown_thread.start()
+    assert not shutdown_done.wait(0.1), "shutdown returned while worker was active"
+    release.set()
+    shutdown_thread.join(timeout=2)
+    assert shutdown_done.is_set()
+
+
+def test_prefetched_model_gets_one_extra_idle_window(monkeypatch, watermark):
     """Review finding: the reaper freed the prefetch-warmed, never-used
     generator at the first idle tick, re-imposing the cold start the prefetch
     exists to hide. It now survives ONE extra window; real use clears the
