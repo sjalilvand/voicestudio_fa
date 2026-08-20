@@ -785,8 +785,10 @@ class OmniVoice(PreTrainedModel):
         # than the trim thresholds but real is recovered below, so this is
         # the only remaining hard failure for a reference clip.
         validate_clone_reference(ref_wav, ref_rms)
+        input_gain = 1.0
         if 0 < ref_rms < 0.1:
-            ref_wav = ref_wav * 0.1 / ref_rms
+            input_gain = 0.1 / ref_rms
+            ref_wav = ref_wav * input_gain
 
         ref_duration = ref_wav.size(-1) / self.sampling_rate
         if ref_text is not None and ref_duration > 20.0:
@@ -881,6 +883,9 @@ class OmniVoice(PreTrainedModel):
         chunk_size = self.audio_tokenizer.config.hop_length
         clip_size = int(ref_wav.size(-1) % chunk_size)
         ref_wav = ref_wav[:, :-clip_size] if clip_size > 0 else ref_wav
+        aligned_rms = torch.sqrt(torch.mean(torch.square(ref_wav))).item()
+        validate_clone_reference(ref_wav, aligned_rms)
+        selected_ref_rms = aligned_rms / input_gain
         ref_audio_tokens = self.audio_tokenizer.encode(
             ref_wav.unsqueeze(0).to(self.audio_tokenizer.device),
         ).audio_codes.squeeze(
@@ -893,7 +898,7 @@ class OmniVoice(PreTrainedModel):
         return VoiceClonePrompt(
             ref_audio_tokens=ref_audio_tokens,
             ref_text=ref_text,
-            ref_rms=ref_rms,
+            ref_rms=selected_ref_rms,
         )
 
     def _decode_and_post_process(

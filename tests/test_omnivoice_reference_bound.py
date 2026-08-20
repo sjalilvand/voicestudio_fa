@@ -171,6 +171,25 @@ def test_speech_aware_bound_prefers_quiet_voice_over_loud_non_speech(monkeypatch
     assert model.audio_tokenizer.seen_peak < 0.1
 
 
+def test_selected_passage_rms_undoes_input_gain(monkeypatch):
+    model = _model(reject_tokenization=False)
+    model._asr_pipe = object()
+    model.transcribe = lambda candidate: (
+        "Selected speech." if float(candidate[0].abs().mean()) > 0.1 else ""
+    )
+    monkeypatch.setattr(
+        "omnivoice.models.omnivoice.remove_silence_safe",
+        lambda audio, *_args, **_kwargs: audio,
+    )
+    audio = torch.full((1, 30 * 24_000), 0.01)
+    audio[:, 15 * 24_000 :] = 0.02
+
+    prompt = model.create_voice_clone_prompt((audio, 24_000), ref_text=None)
+
+    assert prompt.ref_text == "Selected speech."
+    assert prompt.ref_rms == pytest.approx(0.02)
+
+
 def test_far_late_speech_at_auto_select_limit_survives_with_five_asr_calls(monkeypatch):
     model = _model(reject_tokenization=False)
     model.sampling_rate = 100
