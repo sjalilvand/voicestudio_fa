@@ -40,6 +40,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Renaming, deleting, or revoking consent on a voice (and starring/clearing history, recording exports) now live-updates every open tab again — the sync routes' WebSocket events were silently dropped, which could look like "all my voices are gone" (#1561) — thanks @paoloantinori!
 
 ### CI
+- Project agents now share pinned Vite and FastAPI skills from skills.sh (#1594)
 - Weekly full-history secret scans no longer mistake the Ed25519 private-key type name for committed key material (#1591)
 
 ## [0.5.0] — 2026-08-13
