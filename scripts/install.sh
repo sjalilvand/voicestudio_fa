@@ -56,6 +56,28 @@ warn()  { printf "  ${C_WARN}⚠  %s${C_RST}\n" "$1"; }
 die()   { printf "  ${C_ERR}✗  %s${C_RST}\n" "$1" >&2; exit 1; }
 have()  { command -v "$1" >/dev/null 2>&1; }
 
+show_usage() {
+    cat <<'USAGE'
+VoiceStudio installer
+
+  curl -fsSL https://voicestudio.sh/install | sh
+      Install the latest prebuilt app (macOS dmg / Linux AppImage).
+
+  curl -fsSL https://voicestudio.sh/install | sh -s -- --version X.Y.Z
+      Install a specific release.
+
+  curl -fsSL https://voicestudio.sh/install | sh -s -- --source
+      Clone and build from source (system deps + uv + bun).
+
+Options:
+  --binary          Prebuilt app from GitHub Releases (default)
+  --source          Clone and build from source
+  --version X.Y.Z   Release version in binary mode (default: latest)
+  --python V        Source mode: Python version for uv (default 3.11)
+  --verbose         Show all subcommand output
+USAGE
+}
+
 # ── Parse flags ─────────────────────────────────────────────────────────────
 MODE="binary"
 VERBOSE=false
@@ -77,7 +99,7 @@ for arg in "$@"; do
         --version)       _expect="version" ;;
         --verbose|-v)    VERBOSE=true ;;
         --python)        _expect="python" ;;
-        --help|-h)       sed -n '2,30p' "$0" 2>/dev/null || true; exit 0 ;;
+        --help|-h)       show_usage; exit 0 ;;
         *)               echo "Unknown option: $arg (see --help)" >&2; exit 1 ;;
     esac
 done
