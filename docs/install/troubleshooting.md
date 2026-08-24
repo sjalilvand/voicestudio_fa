@@ -632,6 +632,20 @@ the error persistently on a current build, that's section **14** (a wedged GPU
 job), section **14d** (the backend never started), or the crash notice above —
 not this window.
 
+Desktop startup, **Retry**, storage reset, setup re-entry, in-app uninstall,
+app shutdown, and automatic crash recovery also share one backend lifecycle
+owner. Overlapping start attempts wait and attach to the healthy process,
+while reset/setup/uninstall keep exclusive ownership through teardown and
+disk changes, and shutdown joins any in-progress launch before stopping it.
+They no longer launch a second backend that fails on port 3900, leave a
+misleading crash notice, delete an environment from under a starting child,
+or orphan one on exit. Quitting also interrupts a first-run `uv` install
+instead of waiting for a long download to finish. Unix builds give backend
+lifespan cleanup a bounded SIGTERM grace period; Windows' hidden backend has no
+console, so its initial stop is best-effort and may proceed directly to the
+bounded forced tree cleanup. Surviving subprocess engines cannot retain ports
+or files (#1635).
+
 ## 14c. "Can't reach the backend" in a browser — `bun run dev`, Docker, or LAN share
 
 **Symptom:** you're using VoiceStudio **outside the desktop app** — the dev
