@@ -2069,6 +2069,7 @@
     "upload_or_select": "Bir ses yükleyin veya bir ses profili seçin",
     "trim_hint": "Ses {{duration}}s — en iyi klonlama için ≤{{max}}s'ye kırpın",
     "timeout": "Oluşturma zaman aşımına uğradı; model hâlâ indiriliyor olabilir. Ayarlar → Günlükler'i kontrol edin ve tekrar deneyin.",
+    "generation_in_progress": "Bir oluşturma işlemi zaten çalışıyor — yenisini başlatmadan önce bitmesini bekleyin.",
     "error_prefix": "Hata: {{message}}",
     "ignored_unsupported": "Desteklenmeyen talimat göz ardı edildi: {{items}}",
     "ignored_duplicate": "Yoksayıldı (kategori zaten ayarlandı): {{items}}",

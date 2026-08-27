@@ -1099,21 +1099,13 @@ async def dub_transcribe_stream(
                         "error_code": failure["code"],
                     }
 
-            # Retry a failed/timed-out chunk once on a fresh pool before giving
-            # up. Otherwise a transient wedge on the FIRST chunk (whisperx often
-            # cold-loads its model there, the #730 hang) drops that whole window
-            # and the transcript is "missing the beginning, only middle+end".
-            # The retry reuses the same audio window, so a recovered chunk fills
-            # the hole instead of leaving silent gaps.
+            # Retry an ordinary completed failure once. A timed-out native call
+            # is different: its thread is still executing and must not overlap
+            # a retry against the same backend (#1669).
             part = None
+            timed_out = False
             for _attempt in range(1, _CHUNK_TRANSCRIBE_ATTEMPTS + 1):
-                # A wedged chunk gets the SAME guarded-timeout + pool-reset
-                # semantics as the whole-file paths (#730/#851):
-                # run_transcribe_guarded bounds the call, abandons the poisoned
-                # pool so the retry (and any concurrent TTS work) gets a fresh
-                # worker, and raises the actionable ASRTimeoutError. Run it as
-                # a task and poll so we can keep yielding pings — the
-                # EventSource connection drops without them.
+                # Run as a task and poll so pings keep the EventSource alive.
                 task = asyncio.ensure_future(run_transcribe_guarded(
                     _gpu_pool, _transcribe_chunk,
                     what=f"Dub chunk {i + 1}/{chunks_n}",
@@ -1128,9 +1120,12 @@ async def dub_transcribe_stream(
                 try:
                     part = task.result()
                 except ASRTimeoutError:
-                    # The guard already reset the pool; keep the actionable
-                    # message (it names the durable fixes, and — after repeated
-                    # timeouts — the crash-isolated engine escape hatch).
+                    # Python cannot kill an in-process native transcribe. Do
+                    # not swap pools and retry over the still-running call:
+                    # concurrent whisperx/CTranslate2 access caused the native
+                    # Windows access violation in #1669. Stop this transcript;
+                    # the worker remains honestly occupied until it exits.
+                    timed_out = True
                     logger.error(
                         "Transcribe chunk %d/%d timed out after %.0fs (attempt %d/%d, job=%s)",
                         i + 1, chunks_n, transcribe_timeout_s, _attempt,
@@ -1149,20 +1144,22 @@ async def dub_transcribe_stream(
                 # error-part; the timeout path already reset the pool).
                 if part is not None and not part.get("error"):
                     break
-                if _attempt < _CHUNK_TRANSCRIBE_ATTEMPTS:
+                if timed_out:
+                    break
+                if not timed_out and _attempt < _CHUNK_TRANSCRIBE_ATTEMPTS:
                     logger.warning(
                         "Retrying transcribe chunk %d/%d after failure/timeout (next attempt %d/%d, job=%s)",
                         i + 1, chunks_n, _attempt + 1, _CHUNK_TRANSCRIBE_ATTEMPTS, log_safe(job_id),
                     )
-                    # A completed exception did not wedge the worker. Resetting
-                    # the pool here leaked a healthy executor on every ordinary
-                    # decode failure; run_transcribe_guarded already resets the
-                    # pool on the only case that needs it: a real timeout.
+                    # A completed exception did not leave native work behind,
+                    # so retrying this same audio window is safe.
             if part.get("error"):
                 chunk_errors.append(part["error"])
                 if part.get("error_code"):
                     chunk_error_codes.append(part["error_code"])
                 logger.warning("Chunk %d/%d error: %s", i + 1, chunks_n, log_safe(part["error"]))
+            if timed_out:
+                break
             if detected_lang is None and part.get("language"):
                 detected_lang = part["language"]
             asr_speaker_turns.extend(part.get("speaker_turns") or [])
@@ -1922,7 +1919,8 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
             # Bound the whole-file transcribe (#730): a wedged whisperx/CTranslate2
             # call would otherwise hold its GPU-pool worker forever and starve
             # every other request into a "can't reach backend". run_transcribe_guarded
-            # also resets the pool on timeout so capacity is restored.
+            # leaves an unkillable native worker accounted for on timeout so a
+            # retry cannot overlap it (#1669).
             segments_result = await run_transcribe_guarded(_gpu_pool, _transcribe, what="Dub")
         except asyncio.CancelledError:
             job["aborted"] = True

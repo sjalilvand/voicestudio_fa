@@ -2069,6 +2069,7 @@
     "upload_or_select": "上傳音訊或選擇語音設定文件",
     "trim_hint": "音訊為 {{duration}}s — 修剪至 ≤{{max}}s 以獲得最佳克隆效果",
     "timeout": "產生超時 - 模型可能仍在下載。檢查設定 → 日誌，然後重試。",
+    "generation_in_progress": "已有產生工作正在執行，請等待完成後再啟動新工作。",
     "error_prefix": "錯誤：{{message}}",
     "ignored_unsupported": "忽略不支援的指令：{{items}}",
     "ignored_duplicate": "忽略（類別已設定）：{{items}}",

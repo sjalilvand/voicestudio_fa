@@ -2069,6 +2069,7 @@
     "upload_or_select": "Unggah audio atau pilih profil suara",
     "trim_hint": "Audio adalah {{duration}}s — potong ke ≤{{max}}s untuk kloning terbaik",
     "timeout": "Waktu pembuatan habis — model mungkin masih diunduh. Periksa Pengaturan → Log, lalu coba lagi.",
+    "generation_in_progress": "Pembuatan sedang berjalan — tunggu hingga selesai sebelum memulai yang lain.",
     "error_prefix": "Kesalahan: {{message}}",
     "ignored_unsupported": "Mengabaikan instruksi yang tidak didukung: {{items}}",
     "ignored_duplicate": "Diabaikan (kategori sudah ditetapkan): {{items}}",

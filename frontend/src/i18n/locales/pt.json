@@ -2069,6 +2069,7 @@
     "upload_or_select": "Carregue um áudio ou selecione um perfil de voz",
     "trim_hint": "O áudio é {{duration}}s – ajuste para ≤{{max}}s para melhor clonagem",
     "timeout": "O tempo de geração expirou — o modelo ainda pode estar sendo baixado. Verifique Configurações → Registros e tente novamente.",
+    "generation_in_progress": "Já existe uma geração em andamento — aguarde a conclusão antes de iniciar outra.",
     "error_prefix": "Erro: {{message}}",
     "ignored_unsupported": "Instrução não suportada ignorada: {{items}}",
     "ignored_duplicate": "Ignorado (categoria já definida): {{items}}",

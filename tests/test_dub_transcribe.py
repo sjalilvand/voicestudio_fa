@@ -564,14 +564,13 @@ def test_reset_pool_on_wedge_is_a_noop_without_reset():
         pool.shutdown(wait=False)
 
 
-def test_wedged_chunk_goes_through_guarded_reset_with_actionable_error(tmp_path, monkeypatch):
-    """Residual A on #730: a chunk that WEDGES (hangs past its timeout) must get
-    the SAME guarded-timeout + pool-reset semantics as the whole-file paths
-    (#851) — run_transcribe_guarded resets the pool once per wedged attempt and
-    the user sees the actionable ASRTimeoutError, not the old dead-end "Try
-    restarting the server". And because the retry (#867) wedges too, the second
-    consecutive timeout must surface the crash-isolated engine recommendation
-    (Residual B) in the stream error the user sees.
+def test_wedged_chunk_does_not_overlap_a_native_retry(tmp_path, monkeypatch):
+    """#1669: a timed-out native transcribe keeps executing in its thread.
+
+    Resetting the pool and immediately retrying entered the same
+    whisperx/CTranslate2 backend concurrently; the reporter's log shows that
+    sequence immediately before Windows killed the process with 0xC0000005.
+    Stop the transcript after one timeout and leave the worker accounted for.
     """
     import asyncio
     import threading
@@ -602,11 +601,13 @@ def test_wedged_chunk_goes_through_guarded_reset_with_actionable_error(tmp_path,
 
     class _WedgedASR:
         id = "whisperx"
+        calls = 0
 
         def ensure_loaded(self):
             pass
 
         def transcribe(self, path, *, word_timestamps=True):
+            type(self).calls += 1
             release_wedge.wait(timeout=30)  # wedge far past the tiny chunk timeout
             return {"chunks": [], "segments": [], "language": "en"}
 
@@ -655,17 +656,13 @@ def test_wedged_chunk_goes_through_guarded_reset_with_actionable_error(tmp_path,
         pool.shutdown()
         dc._dub_jobs.pop(job_id, None)
 
-    # Pool reset exactly once per wedged attempt, inside run_transcribe_guarded
-    # (no double-reset from the retry branch).
-    assert pool.resets == 2, f"expected one guarded reset per attempt, got {pool.resets}"
+    assert pool.resets == 0, "an in-process native call cannot be killed by swapping pools"
+    assert _WedgedASR.calls == 1, "the timed-out native call must not overlap a retry"
     # The user-facing chunk error is the guard's actionable message …
     assert "backend is running" in body, body
     assert "OMNIVOICE_TRANSCRIBE_CHUNK_TIMEOUT_S" in body, body
     # … not the old parallel mechanism's dead-end advice.
     assert "Try restarting the server" not in body, body
-    # Second consecutive timeout-with-reset → the crash-isolated engine
-    # recommendation surfaces in the error the user sees (Residual B).
-    assert "faster-whisper-isolated" in body, body
     # Terminal error followed by done — stream still closes via named events.
     err_idx = body.rfind("event: error")
     done_idx = body.rfind("event: done")

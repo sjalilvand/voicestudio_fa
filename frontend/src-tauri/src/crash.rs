@@ -35,6 +35,12 @@ use serde::{Deserialize, Serialize};
 /// How many crash markers to retain (newest first).
 pub const MAX_MARKERS: usize = 3;
 
+/// Windows debugger notification used when an external debugger terminates a
+/// process. It is not a Python/native crash code and carries no backend fault
+/// evidence; the supervisor may restart the child, but must not turn this into
+/// a crash report or spend the crash-loop budget (#1658/#1663).
+pub const WINDOWS_DBG_TERMINATE_PROCESS: i32 = 0x4001_0004;
+
 // ── Exit-status decomposition ──────────────────────────────────────────────
 
 /// Structured view of how the backend child ended: the numeric exit code (or
@@ -72,6 +78,11 @@ impl BackendExit {
             (None, None) => self.description.clone(),
         }
     }
+}
+
+/// Whether an observed child exit represents crash evidence worth persisting.
+pub fn should_record_backend_crash(exit: &BackendExit) -> bool {
+    exit.code != Some(WINDOWS_DBG_TERMINATE_PROCESS)
 }
 
 // ── Marker model ───────────────────────────────────────────────────────────
@@ -459,6 +470,23 @@ mod tests {
         assert_eq!(signaled.label(), "signal 9");
         let unknown = BackendExit::unknown("try_wait error: gone");
         assert_eq!(unknown.label(), "try_wait error: gone");
+    }
+
+    #[test]
+    fn windows_debugger_termination_is_not_a_backend_crash() {
+        let debugger_stop = BackendExit {
+            code: Some(WINDOWS_DBG_TERMINATE_PROCESS),
+            signal: None,
+            description: "exit code 1073807364".into(),
+        };
+        assert!(!should_record_backend_crash(&debugger_stop));
+
+        let access_violation = BackendExit {
+            code: Some(-1073741819),
+            signal: None,
+            description: "exit code -1073741819".into(),
+        };
+        assert!(should_record_backend_crash(&access_violation));
     }
 
     #[cfg(unix)]

@@ -2069,6 +2069,7 @@
     "upload_or_select": "Prześlij plik audio lub wybierz profil głosowy",
     "trim_hint": "Dźwięk wynosi {{duration}}s — przytnij do ≤{{max}}s, aby uzyskać najlepsze klonowanie",
     "timeout": "Upłynął limit czasu generacji — model może nadal być pobierany. Sprawdź Ustawienia → Dzienniki i spróbuj ponownie.",
+    "generation_in_progress": "Generowanie już trwa — poczekaj na jego zakończenie przed rozpoczęciem kolejnego.",
     "error_prefix": "Błąd: {{message}}",
     "ignored_unsupported": "Ignorowana nieobsługiwana instrukcja: {{items}}",
     "ignored_duplicate": "Ignorowane (kategoria już ustawiona): {{items}}",

@@ -11,6 +11,9 @@ the frozen-backend fallback mirror it for their toolchains.
 **Highlights**
 
 - VoiceStudio now acts as a local speech platform: other apps can trigger its native dictation or connect through versioned HTTP, WebSocket, JSON-RPC, CLI, and MCP transports (#1646)
+- A timed-out in-process dub transcription no longer starts a second WhisperX/CTranslate2 call over the abandoned native worker, preventing the overlapping access that preceded Windows `0xC0000005` exits (#1669)
+- Windows debugger termination code `0x40010004` is no longer misreported as a backend crash or charged against automatic restart recovery (#1663)
+- Studio now keeps one generation reservation across page changes, preventing a remount from stacking native jobs until the backend reports capacity busy or is killed under memory pressure (#1670)
 - Dictation now stays bound to the app where it started and recovers locally from silent recognizer output (#1175)
 - The backend now answers within a second of launch and narrates its startup step by step (#1550)
 - Reporting a bug from an outdated build now offers the latest release first (#1547)

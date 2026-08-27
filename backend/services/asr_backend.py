@@ -88,10 +88,9 @@ def reset_pool_after_wedge(executor, *, what: str = "ASR") -> bool:
 
 
 # ── Consecutive-timeout streak → recommend the crash-isolated engine ────────
-# A pool reset restores *capacity*, but the wedged CTranslate2/whisperx thread
-# keeps its VRAM until the process exits. When guarded transcribes keep timing
-# out back-to-back in one session, resets clearly aren't recovering the
-# underlying hang — the durable fix is the crash-isolated sidecar engine
+# A timed-out CTranslate2/whisperx thread keeps its worker and VRAM until the
+# native call exits. When guarded transcribes keep timing out back-to-back in
+# one session, the durable fix is the crash-isolated sidecar engine
 # (services.subprocess_asr, #393), whose child process CAN be hard-killed to
 # reclaim the hung call and its VRAM. We only *recommend* it (log + error
 # message); we never switch engines automatically (owner rule: no silent
@@ -146,23 +145,18 @@ def _isolated_engine_hint(streak: int) -> str:
 
 async def run_transcribe_guarded(executor, fn, *, what: str = "ASR",
                                  timeout: float = ASR_TRANSCRIBE_TIMEOUT_S,
-                                 timeout_env: str = "OMNIVOICE_ASR_TRANSCRIBE_TIMEOUT_S"):
+                                 timeout_env: str = "OMNIVOICE_ASR_TRANSCRIBE_TIMEOUT_S",
+                                 reset_on_timeout: bool = False):
     """Run a blocking transcribe ``fn`` in ``executor`` with a hard wall-clock
     bound. On timeout, raise :class:`ASRTimeoutError` with guidance instead of
     letting the request hang forever.
 
-    ``run_in_executor`` cannot cancel the underlying thread, so a wedged
-    transcribe (a CTranslate2 / whisperx / VAD hang seen on some Windows + CUDA
-    setups, #730) keeps occupying its GPU-pool worker. With a 1–2 worker pool
-    that starves every *other* request — including TTS generate — and the next
-    thing the user does surfaces as "Can't reach the local backend" even though
-    the process is alive. So on timeout we also ``reset()`` the pool when it
-    supports it (``_ResilientGpuPool``): the wedged thread is abandoned and the
-    next submit gets a fresh worker, restoring capacity without an app restart.
-    The orphaned thread still holds its VRAM until the process exits, which is
-    why the message still recommends a smaller ASR model / Flush as the durable
-    fix. Executors without ``reset`` (a plain ThreadPoolExecutor in tests) just
-    get the bound + actionable error.
+    ``run_in_executor`` cannot cancel the underlying thread, so a timed-out
+    in-process CTranslate2/whisperx call still owns its model and device. The
+    default deliberately leaves that worker accounted for: swapping in a fresh
+    pool and immediately retrying the same backend overlaps two native calls,
+    which produced the Windows access violation in #1669. A caller backed by a
+    genuinely killable process may opt into ``reset_on_timeout``.
     """
     loop = asyncio.get_running_loop()
     # Same SystemExit containment as the TTS pool (#1133 class): an ASR
@@ -171,16 +165,16 @@ async def run_transcribe_guarded(executor, fn, *, what: str = "ASR",
     try:
         result = await asyncio.wait_for(fut, timeout=timeout)
     except asyncio.TimeoutError:
-        # Free the poisoned pool so a hung transcribe can't keep starving TTS /
-        # other ASR work (the "can't reach backend" symptom, #730).
-        reset_pool_after_wedge(executor, what=what)
+        if reset_on_timeout:
+            reset_pool_after_wedge(executor, what=what)
         streak = _note_transcribe_timeout()
         msg = (
             f"{what} transcription exceeded {timeout:.0f}s and was abandoned — "
             "the backend is running, but the ASR model is too heavy for the "
             "available compute. Most often the GPU is VRAM-starved: the resident "
             "TTS model and a large ASR model (large-v3) contend for memory. "
-            "Capacity was restored automatically, but for a durable fix Flush the "
+            "The native call cannot be killed safely, so its capacity remains "
+            "reserved until it exits. For a durable fix Flush the "
             "TTS model to free VRAM, pick a smaller ASR model in "
             f"Model Catalogue → Models, or set ASR to CPU. (Raise {timeout_env} "
             "for very long transcribes.)"

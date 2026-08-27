@@ -628,7 +628,10 @@ fn spawn_backend_until_ready<R: tauri::Runtime>(
                 // startup crashes included — unless the app is shutting down
                 // or a retry flow deliberately killed the child.
                 if let Some(ref exit) = real_exit {
-                    if !backend_stop_requested(app) && !backend_kill_intended() {
+                    if !backend_stop_requested(app)
+                        && !backend_kill_intended()
+                        && crate::crash::should_record_backend_crash(exit)
+                    {
                         crate::crash::record_crash(crate::crash::marker_now(
                             exit,
                             backend_uptime_s(app),
@@ -1138,7 +1141,7 @@ fn supervise_backend<R: tauri::Runtime>(
             // A health-confirmed disconnect from an unowned listener is not a
             // process crash: no fabricated crash marker/budget entry.
             Duration::ZERO
-        } else {
+        } else if crate::crash::should_record_backend_crash(&exit) {
             let uptime_s = backend_uptime_s(app);
             crate::crash::record_crash(crate::crash::marker_now(
                 &exit,
@@ -1165,6 +1168,11 @@ fn supervise_backend<R: tauri::Runtime>(
             let delay = restart_backoff_delay(restart_times.len());
             restart_times.push(Instant::now());
             delay
+        } else {
+            log::info!(
+                "Backend received an external Windows debugger termination ({exit_info}); restarting without a crash marker"
+            );
+            Duration::ZERO
         };
         log::warn!("Backend process exited unexpectedly ({exit_info}) — restarting it (#567)");
         emit_log(app, "starting_backend", "Backend stopped unexpectedly — restarting it automatically");

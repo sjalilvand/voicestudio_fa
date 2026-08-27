@@ -2069,6 +2069,7 @@
     "upload_or_select": "Tải lên âm thanh hoặc chọn cấu hình giọng nói",
     "trim_hint": "Âm thanh là {{duration}}s — cắt thành ≤{{max}}s để sao chép tốt nhất",
     "timeout": "Đã hết thời gian tạo - mô hình có thể vẫn đang được tải xuống. Kiểm tra Cài đặt → Nhật ký, sau đó thử lại.",
+    "generation_in_progress": "Một tác vụ tạo âm thanh đang chạy — hãy đợi hoàn tất trước khi bắt đầu tác vụ khác.",
     "error_prefix": "Lỗi: {{message}}",
     "ignored_unsupported": "Đã bỏ qua hướng dẫn không được hỗ trợ: {{items}}",
     "ignored_duplicate": "Đã bỏ qua (danh mục đã được đặt): {{items}}",

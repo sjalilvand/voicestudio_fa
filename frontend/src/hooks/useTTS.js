@@ -114,6 +114,16 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
     if (!text.trim()) return toast.error(t('tts_errors.enter_text'));
     if (defineMethod === 'audio' && !refAudio && !selectedProfile)
       return toast.error(t('tts_errors.upload_or_select'));
+    // A hook-local `isGenerating` flag resets when the user changes pages.
+    // The request does not: its stream keeps owning a model/pool slot. Use the
+    // process-wide in-flight count as an atomic reservation before the first
+    // await, so remounting Studio cannot enqueue another native inference over
+    // the still-running one (#1652/#1659/#1661/#1662/#1670).
+    const generationState = useAppStore.getState();
+    if ((generationState.ttsInflight ?? 0) > 0) {
+      return toast(t('tts_errors.generation_in_progress'), { icon: '⏳' });
+    }
+    generationState.addTtsInflight?.(1);
     addBreadcrumb(`generate:start (${defineMethod})`);
     setIsGenerating(true);
     setGenerationTime(0);
@@ -377,6 +387,7 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
         toastErrorWithReport(t('tts_errors.error_prefix', { message: err.message }), err);
       }
     } finally {
+      useAppStore.getState().addTtsInflight?.(-1);
       if (abortTimer) clearTimeout(abortTimer);
       clearInterval(timerRef.current);
       setIsGenerating(false);
