@@ -14,6 +14,10 @@ the frozen-backend fallback mirror it for their toolchains.
 - A timed-out in-process dub transcription no longer starts a second WhisperX/CTranslate2 call over the abandoned native worker, preventing the overlapping access that preceded Windows `0xC0000005` exits (#1669)
 - Windows debugger termination code `0x40010004` is no longer misreported as a backend crash or charged against automatic restart recovery (#1663)
 - Studio now keeps one generation reservation across page changes, preventing a remount from stacking native jobs until the backend reports capacity busy or is killed under memory pressure (#1670)
+- Uploaded dubbing videos are normalized to browser-safe H.264/AAC before preview, preventing valid VP9, AV1, or Opus media from failing with “no supported sources” (#1644)
+- Dubbing now separates spoken and target languages, preserves translations through segment cleanup, and lets failed translations be retried or skipped without restarting the batch (#1654) — thanks @Number16BusShelter!
+- Importing replacement SRT subtitles now keeps each cue bound to the best-overlapping source speaker and clone instead of resetting every line to a random default voice (#1660) — thanks @invio-a11y!
+- Uploading a Dub preview no longer blocks every backend request while ffmpeg extracts its audio (#1667) — thanks @tfreyd!
 - Docker quick starts now require the administrator key needed through container NAT instead of starting a UI whose protected actions return 403 (#1651) — thanks @wd357dui!
 - WSL2 AMD containers now use the `/dev/dxg` ROCDXG bridge with actionable GPU diagnostics instead of silently falling back to CPU (#1655) — thanks @wd357dui!
 - Ad-hoc voice-clone references now stay alive until cancelled or timed-out GPU work actually stops reading them, so prompt caching can finish instead of failing on a deleted temp file (#1668) — thanks @tfreyd!

@@ -134,6 +134,82 @@ _save_job          = dub_pipeline.save_job
 # paste (or a mis-aimed binary) burn CPU in the parser.
 _MAX_SUBTITLE_PASTE_CHARS = 2_000_000
 
+_SRT_REPLACED_FIELDS = {
+    "id",
+    "start",
+    "end",
+    "text",
+    "text_original",
+    "translations",
+    "translate_error",
+    "translate_degraded",
+}
+
+
+def _best_overlapping_segment(cue: dict, existing: list[dict]) -> dict | None:
+    """Return the prior segment with the strongest temporal overlap."""
+    cue_start = float(cue.get("start") or 0.0)
+    cue_end = float(cue.get("end") or cue_start)
+    cue_mid = (cue_start + cue_end) / 2.0
+    best = None
+    best_key = None
+    for index, segment in enumerate(existing):
+        start = float(segment.get("start") or 0.0)
+        end = float(segment.get("end") or start)
+        overlap = min(cue_end, end) - max(cue_start, start)
+        if overlap <= 0:
+            continue
+        midpoint_distance = abs(cue_mid - ((start + end) / 2.0))
+        key = (overlap, -midpoint_distance, -index)
+        if best_key is None or key > best_key:
+            best = segment
+            best_key = key
+    return best
+
+
+def _carry_srt_voice_metadata(
+    cues: list[dict],
+    existing: list[dict],
+    segment_clones: dict | None,
+    speaker_clones: dict | None = None,
+) -> tuple[list[dict], dict]:
+    """Replace subtitle content while retaining the source cast assignment."""
+    source_clones = dict(segment_clones or {})
+    source_speaker_clones = dict(speaker_clones or {})
+    # Replacement cues get new positional ids. Starting from the old map would
+    # let an unmatched cue whose new id happens to equal an old id inherit an
+    # unrelated reference. Only explicitly overlap-matched references survive.
+    clones = {}
+    merged_segments = []
+    for new_id, cue in enumerate(cues):
+        prior = _best_overlapping_segment(cue, existing)
+        metadata = {
+            key: value
+            for key, value in (prior or {}).items()
+            if key not in _SRT_REPLACED_FIELDS
+        }
+        merged = {
+            **metadata,
+            "id": new_id,
+            "start": cue.get("start", 0.0),
+            "end": cue.get("end", 0.0),
+            "text": cue.get("text", ""),
+            "text_original": cue.get("text", ""),
+        }
+        if not merged.get("speaker_id"):
+            merged["speaker_id"] = cue.get("speaker_id") or "Speaker 1"
+        if prior is not None:
+            prior_id = str(prior.get("id", ""))
+            clone = source_clones.get(prior_id)
+            if clone is None:
+                clone = source_speaker_clones.get(prior.get("speaker_id"))
+            if clone is not None:
+                clones[str(new_id)] = clone
+                if merged.get("profile_id") == f"auto-seg:{prior_id}":
+                    merged["profile_id"] = f"auto-seg:{new_id}"
+        merged_segments.append(merged)
+    return merged_segments, clones
+
 
 @router.post("/dub/parse-subtitle-text")
 def dub_parse_subtitle_text(req: ParseSubtitleTextRequest):
@@ -234,7 +310,32 @@ async def dub_import_srt(job_id: str, file: UploadFile = File(...)):
     else:
         segments = result.segments
 
+    prior_segments = [
+        segment for segment in (job.get("segments") or []) if isinstance(segment, dict)
+    ]
+    segments, segment_clones = _carry_srt_voice_metadata(
+        segments,
+        prior_segments,
+        job.get("segment_clones"),
+        job.get("speaker_clones"),
+    )
     job["segments"] = segments
+    job["segment_clones"] = segment_clones
+    # A pooled speaker clone is keyed only by a display label. Replacement
+    # cues can reuse that label without overlapping the original speaker, so
+    # retain matched pooled references as segment-specific clones above and
+    # drop the global map before rebuilding the cast.
+    job["speaker_clones"] = {}
+    if segment_clones:
+        from services.speaker_clone import build_cast_sources
+
+        job["cast_sources"] = build_cast_sources(
+            segments,
+            None,
+            segment_clones,
+        )
+    else:
+        job.pop("cast_sources", None)
     # `source_lang` stays whatever the user (or the upload step) set; we
     # don't try to language-detect off the cue text — that's noisy and the
     # user usually knows what their .srt is.
@@ -351,12 +452,13 @@ async def preview_upload(video: UploadFile = File(...)):
     safe_name = f"{uuid.uuid4().hex[:12]}"
     vid_path = os.path.join(PREVIEW_DIR, f"{safe_name}{ext}")
     wav_path = os.path.join(PREVIEW_DIR, f"{safe_name}.wav")
-    
-    with open(vid_path, "wb") as f:
-        f.write(await video.read())
-        
-    has_audio = False
-    if ext not in [".wav", ".mp3", ".m4a", ".aac"]:
+    payload = await video.read()
+
+    def _write_and_extract() -> bool:
+        with open(vid_path, "wb") as f:
+            f.write(payload)
+        if ext in {".wav", ".mp3", ".m4a", ".aac"}:
+            return False
         try:
             ffmpeg_cmd = [
                 find_ffmpeg(), "-y", "-i", vid_path,
@@ -368,10 +470,16 @@ async def preview_upload(video: UploadFile = File(...)):
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 timeout=300,
             )
-            has_audio = True
+            return True
         except Exception as e:
             logger.warning("FFmpeg extraction failed: %s", log_safe(e))
-            pass
+            return False
+
+    # File writes and ffmpeg are blocking operations. Keep them on the bounded
+    # CPU pool so a large preview cannot stall unrelated API requests (#1667).
+    has_audio = await asyncio.get_running_loop().run_in_executor(
+        _cpu_pool, _write_and_extract
+    )
 
     return {
         "url": f"/preview/{safe_name}{ext}",
@@ -410,12 +518,38 @@ _ingest_gen       = dub_pipeline.ingest_pipeline
 #: container so a mislabelled video can't slip past the video-skipping branch.
 _AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma"}
 
+# Source-language choices exposed by the first-party dub UI. Keeping this an
+# allow-list rejects language names and private-use BCP-47 tags before they are
+# persisted as ASR overrides. Values are normalized to lowercase below.
+_DUB_SOURCE_LANG_CODES = frozenset({
+    "af", "sq", "am", "ar", "hy", "az", "eu", "be", "bn", "bs", "bg",
+    "my", "ca", "cmn-hans", "cmn-hant", "hr", "cs", "da", "nl", "en",
+    "et", "fi", "fr", "gl", "ka", "de", "el", "gu", "ht", "ha", "haw",
+    "he", "hi", "hu", "is", "id", "it", "ja", "jw", "kn", "kk", "km",
+    "ko", "ku", "ky", "lo", "la", "lv", "lt", "mk", "ms", "ml", "mt",
+    "mi", "mr", "mn", "ne", "no", "ps", "fa", "pl", "pt", "pa", "ro",
+    "ru", "sm", "gd", "sr", "sn", "sd", "si", "sk", "sl", "so", "es",
+    "su", "sw", "sv", "tg", "ta", "te", "th", "tr", "uk", "ur", "uz",
+    "vi", "cy", "xh", "yi", "yo", "zu",
+})
+
+
+def _source_lang_override(value: str | None) -> str | None:
+    """Normalize a user-selected source language; auto/und means detect."""
+    code = (value or "").strip().lower()
+    if code in {"", "auto", "und"}:
+        return None
+    if code not in _DUB_SOURCE_LANG_CODES:
+        raise HTTPException(status_code=400, detail="Invalid source language code")
+    return code
+
 
 @router.post("/dub/upload")
 async def dub_upload(
     video: UploadFile = File(...),
     job_id: Optional[str] = Form(None),
     input_type: str = Form("video"),
+    source_lang: Optional[str] = Form(None),
 ):
     """Accept a media upload, write to disk, queue background prep task.
 
@@ -445,6 +579,7 @@ async def dub_upload(
             detail=f"Audio-only dubbing needs an audio file ({', '.join(sorted(_AUDIO_EXTS))}); got '{ext or 'no extension'}'.",
         )
 
+    source_lang_override = _source_lang_override(source_lang)
     os.makedirs(job_dir, exist_ok=True)
 
     video_path = os.path.join(job_dir, f"original{ext}")
@@ -456,7 +591,13 @@ async def dub_upload(
     await task_manager.add_task(
         task_id, "prep",
         _ingest_gen, job_id, job_dir,
-        {"kind": "file", "path": video_path, "input_type": input_type}, filename,
+        {
+            "kind": "file",
+            "path": video_path,
+            "input_type": input_type,
+            "source_lang": source_lang_override,
+        },
+        filename,
     )
     return JSONResponse(
         status_code=202,
@@ -478,6 +619,7 @@ async def dub_ingest_url(req: DubIngestUrlRequest, request: Request):
             status_code=400,
             detail="URL must start with http:// or https://. Paste a full video link (e.g. https://youtube.com/watch?v=…) or drop a local file instead.",
         )
+    source_lang_override = _source_lang_override(req.source_lang)
 
     try:
         import yt_dlp  # noqa: F401
@@ -513,6 +655,7 @@ async def dub_ingest_url(req: DubIngestUrlRequest, request: Request):
         "fetch_subs": bool(req.fetch_subs),
         "sub_langs": req.sub_langs or None,
         "cookie_file": cookie_path,
+        "source_lang": source_lang_override,
     }
     try:
         await task_manager.add_task(
@@ -1666,7 +1809,9 @@ async def dub_transcribe_stream(
         except Exception as e:
             logger.warning("speaker_clone extraction skipped: %s", e)
 
-        job["source_lang"] = ((detected_lang or "en").split("_")[0][:2] or "en").lower()
+        job["source_lang"] = job.get("source_lang_override") or (
+            (detected_lang or "en").split("_")[0][:2] or "en"
+        ).lower()
         job["full_transcript"] = " ".join(s.get("text", "") for s in final_segs)
         _save_job(job_id, job)
 
@@ -1863,7 +2008,9 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
             except Exception as e:
                 logger.warning("Failed to unload ASR backend: %s", e)
 
-        job["source_lang"] = (detected_lang or "en").split("_")[0][:2].lower()
+        job["source_lang"] = job.get("source_lang_override") or (
+            (detected_lang or "en").split("_")[0][:2] or "en"
+        ).lower()
 
         scene_cuts = job.get("scene_cuts") or []
         segments = segment_transcript(result, duration=job.get("duration", 0.0), scene_cuts=scene_cuts)

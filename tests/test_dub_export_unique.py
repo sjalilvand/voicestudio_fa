@@ -292,3 +292,38 @@ class TestAudioOnlyDubbing:
         )
         assert r.status_code == 400
         assert "audio file" in r.json()["detail"].lower()
+
+    def test_ingest_requests_reject_unregistered_source_languages(self, app_client):
+        client, _dc, _dx, _tmp = app_client
+
+        form = client.post(
+            "/dub/upload",
+            files={"video": ("clip.mp4", b"video", "video/mp4")},
+            data={"source_lang": "english"},
+        )
+        json_response = client.post(
+            "/dub/ingest-url",
+            json={"url": "https://example.com/video", "source_lang": "x-123"},
+        )
+
+        assert form.status_code == 400
+        assert json_response.status_code == 400
+        assert form.json()["detail"] == "Invalid source language code"
+        assert json_response.json()["detail"] == "Invalid source language code"
+
+    def test_upload_accepts_a_registered_source_language(self, app_client, monkeypatch):
+        client, dc, _dx, _tmp = app_client
+        queued = []
+
+        async def add_task(*args):
+            queued.append(args)
+
+        monkeypatch.setattr(dc.task_manager, "add_task", add_task)
+        response = client.post(
+            "/dub/upload",
+            files={"video": ("clip.mp4", b"video", "video/mp4")},
+            data={"source_lang": "FR"},
+        )
+
+        assert response.status_code == 202
+        assert queued[0][5]["source_lang"] == "fr"

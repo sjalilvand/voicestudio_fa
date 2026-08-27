@@ -760,6 +760,22 @@ class TestTranscribeRoute:
         # In-memory job was updated.
         assert dc._dub_jobs[job_id]["source_lang"] == "es"
 
+    def test_selected_source_lang_overrides_detection(self, app_client):
+        client, dc, tmp = app_client
+        job_id = _seed_job(dc, tmp, duration=18.0)
+        dc._dub_jobs[job_id]["source_lang_override"] = "fr"
+        fixture = _load_fixture("whisper_screenshot.json")
+        fixture["language"] = "es_ES"
+
+        with patch("mlx_whisper.transcribe", return_value=fixture), patch(
+            "torch.backends.mps.is_available", return_value=True
+        ):
+            res = client.post(f"/dub/transcribe/{job_id}")
+
+        assert res.status_code == 200
+        assert res.json()["source_lang"] == "fr"
+        assert dc._dub_jobs[job_id]["source_lang"] == "fr"
+
     def test_scene_cuts_applied_when_viable(self, app_client):
         client, dc, tmp = app_client
         job_id = _seed_job(dc, tmp, duration=14.0, scene_cuts=[5.5])

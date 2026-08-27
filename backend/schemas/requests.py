@@ -190,6 +190,7 @@ class ParseSubtitleTextRequest(BaseModel):
 class DubIngestUrlRequest(BaseModel):
     url: str
     job_id: Optional[str] = None
+    source_lang: Optional[str] = None
     # When true and the URL is a caption-bearing host (YouTube, Vimeo, TED…),
     # ask yt-dlp to also download the original-language + any additional
     # sub_langs as VTT. The UI uses this to seed a transcript without running

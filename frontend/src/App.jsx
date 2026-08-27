@@ -486,6 +486,8 @@ function App() {
   const setDubLang = useAppStore((s) => s.setDubLang);
   const dubLangCode = useAppStore((s) => s.dubLangCode);
   const setDubLangCode = useAppStore((s) => s.setDubLangCode);
+  const dubSourceLangCode = useAppStore((s) => s.dubSourceLangCode);
+  const setDubSourceLangCode = useAppStore((s) => s.setDubSourceLangCode);
   const dubDialect = useAppStore((s) => s.dubDialect);
   const setDubDialect = useAppStore((s) => s.setDubDialect);
   const dubInstruct = useAppStore((s) => s.dubInstruct);
@@ -982,6 +984,7 @@ function App() {
     setDubTracks([]);
     setDubProgress({ current: 0, total: 0, text: '' });
     setDubTranscript('');
+    setDubSourceLangCode('auto');
     setShowTranscript(false);
     setPreviewAudios({});
     setDubLocalBlobUrl((prev) => {
@@ -1011,6 +1014,7 @@ function App() {
         dubSegments,
         dubLang,
         dubLangCode,
+        dubSourceLangCode,
         dubDialect,
         dubInstruct,
         dubTracks,
@@ -1062,6 +1066,7 @@ function App() {
       );
       setDubLang(s.dubLang || 'Auto');
       setDubLangCode(s.dubLangCode || 'en');
+      setDubSourceLangCode(s.dubSourceLangCode || 'auto');
       setDubDialect(s.dubDialect || '');
       setDubInstruct(s.dubInstruct || '');
       setDubTracks(s.dubTracks || []);
@@ -1144,6 +1149,7 @@ function App() {
       // restores existing rows correctly without a migration.
       setDubLang(item.language || job.language || 'Auto');
       setDubLangCode(item.language_code || job.language_code || 'und');
+      setDubSourceLangCode(job.source_lang_override || job.source_lang || 'auto');
       setDubTracks(Object.keys(job.dubbed_tracks || {}));
       setDubStep(Object.keys(job.dubbed_tracks || {}).length > 0 ? 'done' : 'editing');
       // Phase 4.5 — seg_hashes are written per successful segment by
