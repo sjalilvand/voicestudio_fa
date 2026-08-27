@@ -30,8 +30,8 @@ async def test_abandon_callback_waits_for_running_worker_to_finish():
         )
         assert await asyncio.to_thread(started.wait, 1)
         task.cancel()
-        with pytest.raises(asyncio.CancelledError):
-            await task
+        cancelled = await asyncio.gather(task, return_exceptions=True)
+        assert isinstance(cancelled[0], asyncio.CancelledError)
 
         assert not cleaned.is_set()
         release.set()

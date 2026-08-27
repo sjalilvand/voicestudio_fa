@@ -11,6 +11,7 @@ the frozen-backend fallback mirror it for their toolchains.
 **Highlights**
 
 - VoiceStudio now acts as a local speech platform: other apps can trigger its native dictation or connect through versioned HTTP, WebSocket, JSON-RPC, CLI, and MCP transports (#1646)
+- Ad-hoc voice-clone references now stay alive until cancelled or timed-out GPU work actually stops reading them, so prompt caching can finish instead of failing on a deleted temp file (#1668) — thanks @tfreyd!
 - Dictation now stays bound to the app where it started and recovers locally from silent recognizer output (#1175)
 - The backend now answers within a second of launch and narrates its startup step by step (#1550)
 - Reporting a bug from an outdated build now offers the latest release first (#1547)
@@ -46,7 +47,6 @@ the frozen-backend fallback mirror it for their toolchains.
 - The OmniVoice guide now covers combining style attributes with a reference clip (consistent instruct stabilizes cloning; the reference wins conflicts), inline pronunciation control (pinyin / CMU phonemes), and corrects the claim that the default engine can't do voice design — it can, from attributes (#1565)
 
 ### Fixed
-- Ad-hoc voice-clone references now stay alive until cancelled or timed-out GPU work actually stops reading them, so prompt caching can finish instead of failing on a deleted temp file (#1668) — thanks @tfreyd!
 - Source installs on AMD GPUs honour `OMNIVOICE_TORCH_VARIANT=rocm`: `bun run desktop` now swaps in the ROCm torch wheel after `uv sync` and launches the backend without re-syncing, instead of silently reverting to the CPU-only CUDA build on every start (#1665) — thanks @uberclokr!
 - `bun run desktop` on a fresh clone no longer fails with "resource path `../../frontend/dist` doesn't exist" — the dev launcher creates the placeholder Tauri resource directory before compiling (#1664) — thanks @uberclokr!
 - macOS no longer loses TTS after the first request when Python lacks `os.waitid`; subprocess ownership now uses a safe `waitpid` fallback without risking reused process groups (#1656) — thanks @paoloantinori!

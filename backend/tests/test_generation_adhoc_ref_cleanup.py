@@ -42,8 +42,8 @@ async def test_abandoned_reader_keeps_adhoc_reference_until_worker_finishes(tmp_
         )
         assert await asyncio.to_thread(started.wait, 1)
         task.cancel()
-        with pytest.raises(asyncio.CancelledError):
-            await task
+        cancelled = await asyncio.gather(task, return_exceptions=True)
+        assert isinstance(cancelled[0], asyncio.CancelledError)
 
         lease.finish_request()
         assert reference.exists()
