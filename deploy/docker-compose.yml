@@ -58,7 +58,7 @@ services:
       - OMNIVOICE_SERVER_MODE=1
       # Required for server-mode settings, diagnostics, and other admin
       # mutations because Docker NAT cannot prove a browser is loopback.
-      - OMNIVOICE_API_KEY=${OMNIVOICE_API_KEY:-}
+      - OMNIVOICE_API_KEY=${OMNIVOICE_API_KEY:?export a long random OMNIVOICE_API_KEY before starting a Studio profile}
       - OMNIVOICE_WORKER_PORT=${OMNIVOICE_WORKER_PORT:-7443}
       - OMNIVOICE_WORKER_ENDPOINT_HOST=${OMNIVOICE_WORKER_ENDPOINT_HOST:-}
     healthcheck:
@@ -95,7 +95,7 @@ services:
       # See the CPU service above — relaxes the loopback origin gate for the
       # headless Docker deployment (issue #261). Set to 0 to re-enable it.
       - OMNIVOICE_SERVER_MODE=1
-      - OMNIVOICE_API_KEY=${OMNIVOICE_API_KEY:-}
+      - OMNIVOICE_API_KEY=${OMNIVOICE_API_KEY:?export a long random OMNIVOICE_API_KEY before starting a Studio profile}
       - OMNIVOICE_WORKER_PORT=${OMNIVOICE_WORKER_PORT:-7443}
       - OMNIVOICE_WORKER_ENDPOINT_HOST=${OMNIVOICE_WORKER_ENDPOINT_HOST:-}
     healthcheck:
@@ -149,7 +149,7 @@ services:
       # loopback origin gate for the headless Docker deployment.
       - OMNIVOICE_BIND_HOST=0.0.0.0
       - OMNIVOICE_SERVER_MODE=1
-      - OMNIVOICE_API_KEY=${OMNIVOICE_API_KEY:-}
+      - OMNIVOICE_API_KEY=${OMNIVOICE_API_KEY:?export a long random OMNIVOICE_API_KEY before starting a Studio profile}
       - OMNIVOICE_WORKER_PORT=${OMNIVOICE_WORKER_PORT:-7443}
       - OMNIVOICE_WORKER_ENDPOINT_HOST=${OMNIVOICE_WORKER_ENDPOINT_HOST:-}
       # RDNA3 consumer cards (RX 7900 XTX/XT and friends, gfx1100): if the

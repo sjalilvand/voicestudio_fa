@@ -30,7 +30,12 @@ def test_every_compose_studio_service_receives_the_admin_key():
     text = (ROOT / "deploy/docker-compose.yml").read_text(encoding="utf-8")
     studio_half = text.split("worker-gpu:", 1)[0]
 
-    assert studio_half.count("OMNIVOICE_API_KEY=${OMNIVOICE_API_KEY:-}") == 3
+    required_key = (
+        "OMNIVOICE_API_KEY=${OMNIVOICE_API_KEY:?export a long random "
+        "OMNIVOICE_API_KEY before starting a Studio profile}"
+    )
+    assert studio_half.count(required_key) == 3
+    assert "OMNIVOICE_API_KEY=${OMNIVOICE_API_KEY:-}" not in studio_half
 
 
 def test_wsl_rocm_command_carries_the_complete_dxg_bridge():
