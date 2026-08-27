@@ -25,6 +25,19 @@ and [`palashdeb/omnivoice-studio` on Docker Hub](https://hub.docker.com/r/palash
 >
 > **Note on the update-channel toggle:** The update-channel UI (Settings → About → Update channel) is part of the Tauri desktop app's built-in auto-updater. It does **not** apply to the Docker image — the Docker image is the headless web-server build. To update your Docker deployment, pull the new image tag and recreate the container (`docker compose pull && docker compose up -d`).
 
+Docker's NAT prevents the backend from proving that a browser is on the host,
+so server-mode settings and diagnostics require an administrator API key even
+when the published port is loopback-only. Generate one before using any Studio
+profile or `docker run` command below:
+
+```bash
+export OMNIVOICE_API_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+```
+
+Keep that shell open until the container starts. The web UI asks for this key
+and exchanges it for a short-lived browser session; it does not persist the
+master key.
+
 ## Pull and run (CPU)
 
 ```bash
@@ -32,6 +45,7 @@ docker pull ghcr.io/debpalash/omnivoice-studio:latest
 
 docker run -d --name omnivoice \
   -p 127.0.0.1:3900:3900 \
+  -e OMNIVOICE_API_KEY="$OMNIVOICE_API_KEY" \
   -v omnivoice-data:/app/omnivoice_data \
   -v ~/.cache/huggingface:/root/.cache/huggingface \
   ghcr.io/debpalash/omnivoice-studio:latest
@@ -51,6 +65,7 @@ Open [http://localhost:3900](http://localhost:3900). The first run downloads
 ```bash
 docker run -d --name omnivoice --gpus all \
   -p 127.0.0.1:3900:3900 \
+  -e OMNIVOICE_API_KEY="$OMNIVOICE_API_KEY" \
   -v omnivoice-data:/app/omnivoice_data \
   -v ~/.cache/huggingface:/root/.cache/huggingface \
   ghcr.io/debpalash/omnivoice-studio:latest
@@ -71,10 +86,42 @@ as plain device nodes (no container toolkit needed):
 docker run -d --name omnivoice \
   --device /dev/kfd --device /dev/dri \
   -p 127.0.0.1:3900:3900 \
+  -e OMNIVOICE_API_KEY="$OMNIVOICE_API_KEY" \
   -v omnivoice-data:/app/omnivoice_data \
   -v ~/.cache/huggingface:/root/.cache/huggingface \
   ghcr.io/debpalash/omnivoice-studio:rocm
 ```
+
+### AMD GPU on WSL2
+
+WSL exposes AMD compute through `/dev/dxg`, not native Linux's `/dev/kfd` and
+`/dev/dri`. First install ROCm and `librocdxg` in the WSL distribution and
+confirm the host-side `rocminfo` lists the GPU. Then use the WSL-specific
+bridge flags from AMD's `librocdxg` container contract:
+
+```bash
+docker run -d --name omnivoice \
+  --device /dev/dxg \
+  -v /usr/lib/wsl/lib/libdxcore.so:/usr/lib/libdxcore.so \
+  -v /opt/rocm/lib/librocdxg.so:/usr/lib/librocdxg.so \
+  -v /opt/rocm/share/rocdxg/dids.conf:/usr/share/rocdxg/dids.conf \
+  -e HSA_ENABLE_DXG_DETECTION=1 \
+  --cap-add SYS_PTRACE \
+  --security-opt seccomp=unconfined \
+  --ipc=host --shm-size 8G \
+  -p 127.0.0.1:3900:3900 \
+  -e OMNIVOICE_API_KEY="$OMNIVOICE_API_KEY" \
+  -v omnivoice-data:/app/omnivoice_data \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  ghcr.io/debpalash/omnivoice-studio:rocm
+```
+
+The image currently uses ROCm 7.2.x, so `HSA_ENABLE_DXG_DETECTION=1` is
+required; AMD removed that requirement only in ROCk 7.13. The ptrace and
+unconfined-seccomp flags weaken container isolation, so keep the published port
+on `127.0.0.1` and do not run untrusted workloads in this container. See AMD's
+[`librocdxg` WSL container instructions](https://github.com/ROCm/librocdxg#4-container-launch--wsl-specific-flags)
+for the driver/runtime compatibility matrix.
 
 The same flags work with **Podman** (`podman run --device /dev/kfd
 --device /dev/dri …`); in a **Quadlet** unit that's two `AddDevice=` lines:
@@ -87,6 +134,7 @@ AddDevice=/dev/kfd
 AddDevice=/dev/dri
 PublishPort=127.0.0.1:3900:3900
 Volume=omnivoice-data:/app/omnivoice_data
+Environment=OMNIVOICE_API_KEY=replace-with-a-long-random-key
 ```
 
 Release pins exist too: `:stable-rocm`, `:0.5.0-rocm`, `:0.5-rocm` mirror
@@ -119,7 +167,8 @@ ROCm container `omnivoice-studio-rocm` (CPU: `omnivoice-studio`, NVIDIA:
 
 (ROCm-built PyTorch reports through `torch.cuda.*` — `True` plus your card's
 name means torch can see the GPU.) That check alone isn't proof the app is
-using it: **Settings → System** shows the device VoiceStudio actually resolved.
+using it: **Settings → Performance & Device** shows the device VoiceStudio
+actually resolved.
 **Model Catalogue → Engines** should report both `omnivoice` and
 `omnivoice-subprocess` as accelerated on ROCm, rather than a CPU-fallback
 warning.
@@ -132,8 +181,8 @@ interpreter. To verify this invariant on an older or custom image, compare
 torch.version.hip)"` with `docker exec <container> sh -c 'tr "\\0" " "
 </proc/1/cmdline'`; PID 1 must begin with `python3 -m uvicorn`.
 
-If the command prints `False`, **Settings → System** now says why, and the
-three answers need different fixes:
+If the command prints `False`, run **Settings → About → Run self-check**;
+the GPU row says why. Native Linux has three common answers:
 
 | What it says | What to do |
 |---|---|
@@ -141,9 +190,16 @@ three answers need different fixes:
 | `this process cannot open it` | A group problem. Run `ls -l /dev/kfd /dev/dri/render*` **on the host**, and pass those GIDs with `--group-add`. The numbers differ between machines — a `--group-add 39` copied from someone else's command grants nothing. |
 | `no GPU was enumerated` | The device nodes are fine and the runtime still found nothing — usually a card newer than the image's ROCm. Check `rocminfo` on the host, and see the `HSA_OVERRIDE_GFX_VERSION` note above. |
 
+On WSL, the self-check instead distinguishes a missing `/dev/dxg` permission,
+the pre-7.13 `HSA_ENABLE_DXG_DETECTION` opt-in, and incomplete ROCDXG runtime
+mounts.
+
 ## Docker Compose (recommended)
 
 ```bash
+# Generate this once in the shell that runs Compose.
+export OMNIVOICE_API_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+
 # CPU
 docker compose -f deploy/docker-compose.yml --profile cpu up -d
 
@@ -210,7 +266,8 @@ prebuilt image via `docker run -e` (the older `VITE_OMNIVOICE_API` is inlined at
 *build* time and cannot be set on a prebuilt image):
 
 ```bash
-docker run -e OMNIVOICE_PUBLIC_API_BASE=https://api.your-host.example \
+docker run -e OMNIVOICE_API_KEY="$OMNIVOICE_API_KEY" \
+  -e OMNIVOICE_PUBLIC_API_BASE=https://api.your-host.example \
   -p 0.0.0.0:3900:3900 \
   ghcr.io/debpalash/omnivoice-studio:latest
 ```
@@ -258,8 +315,10 @@ Two paths are worth persisting across container restarts:
   origin, but Docker's NAT makes every request look non-loopback, so the gate
   used to 403 the whole admin UI (issue #261). The image now ships with
   `OMNIVOICE_SERVER_MODE=1`, which relaxes that gate for the headless
-  deployment — exposure is instead governed by your `-p` port mapping (keep the
-  `127.0.0.1:` prefix to stay local) plus the optional share PIN. If you front
+  deployment. Admin mutations still require `OMNIVOICE_API_KEY`; all commands
+  above pass it into the container, and the UI prompts for it on first use.
+  Exposure is governed by your `-p` port mapping (keep the `127.0.0.1:` prefix
+  to stay local) plus authentication. If you front
   the container with your own auth proxy on loopback, set `OMNIVOICE_SERVER_MODE=0`
   to re-enable the strict gate.
 - **Media-preview 404 in LAN mode:** see the [LAN access](#lan-access) section
