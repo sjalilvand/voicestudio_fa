@@ -254,9 +254,14 @@ def why_no_gpu(torch) -> tuple[str, ...]:
                         "but this process cannot open it — pass "
                         "--device /dev/dxg to the WSL container",
                     )
-                if _rocm_requires_dxg_detection(hip) and (
-                    os.environ.get("HSA_ENABLE_DXG_DETECTION") != "1"
-                ):
+                dxg_detection = os.environ.get("HSA_ENABLE_DXG_DETECTION", "").strip()
+                if dxg_detection == "0":
+                    return (
+                        f"ROCm {hip} is installed and {_DXG_DEVICE} is reachable, "
+                        "but HSA_ENABLE_DXG_DETECTION=0 explicitly disables the "
+                        "WSL GPU bridge; remove it or set it to 1",
+                    )
+                if _rocm_requires_dxg_detection(hip) and dxg_detection != "1":
                     return (
                         f"ROCm {hip} is installed and {_DXG_DEVICE} is "
                         "reachable, but this pre-7.13 runtime requires "
