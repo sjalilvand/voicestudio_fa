@@ -74,6 +74,69 @@ def test_rocm_without_the_kernel_interface_names_the_docker_flags(linux, monkeyp
     assert "amdgpu" in msg
 
 
+def test_wsl_rocm_names_the_legacy_dxg_opt_in(linux, monkeypatch):
+    monkeypatch.delenv("HSA_ENABLE_DXG_DETECTION", raising=False)
+    monkeypatch.setattr(
+        "core.device_caps.os.path.exists", lambda path: path == "/dev/dxg"
+    )
+    monkeypatch.setattr("core.device_caps.os.access", lambda *_args: True)
+
+    msg = _joined(_torch(hip="7.2.4"))
+
+    assert "/dev/dxg" in msg
+    assert "hsa_enable_dxg_detection=1" in msg
+
+
+def test_wsl_rocm_names_missing_runtime_mounts(linux, monkeypatch):
+    monkeypatch.setenv("HSA_ENABLE_DXG_DETECTION", "1")
+    present = {
+        "/dev/dxg",
+        "/usr/lib/libdxcore.so",
+    }
+    monkeypatch.setattr(
+        "core.device_caps.os.path.exists", lambda path: path in present
+    )
+    monkeypatch.setattr("core.device_caps.os.access", lambda *_args: True)
+
+    msg = _joined(_torch(hip="7.2.4"))
+
+    assert "runtime mounts are incomplete" in msg
+    assert "/usr/lib/librocdxg.so" in msg
+    assert "/usr/share/rocdxg/dids.conf" in msg
+
+
+def test_current_wsl_rocm_does_not_demand_retired_opt_in(linux, monkeypatch):
+    monkeypatch.delenv("HSA_ENABLE_DXG_DETECTION", raising=False)
+    present = {
+        "/dev/dxg",
+        "/usr/lib/libdxcore.so",
+        "/usr/lib/librocdxg.so",
+        "/usr/share/rocdxg/dids.conf",
+    }
+    monkeypatch.setattr(
+        "core.device_caps.os.path.exists", lambda path: path in present
+    )
+    monkeypatch.setattr("core.device_caps.os.access", lambda *_args: True)
+
+    msg = _joined(_torch(hip="7.13.0"))
+
+    assert "hsa_enable_dxg_detection" not in msg
+    assert "librocdxg" in msg
+
+
+def test_current_wsl_rocm_names_an_explicitly_disabled_dxg_detector(linux, monkeypatch):
+    monkeypatch.setenv("HSA_ENABLE_DXG_DETECTION", "0")
+    monkeypatch.setattr(
+        "core.device_caps.os.path.exists", lambda path: path == "/dev/dxg"
+    )
+    monkeypatch.setattr("core.device_caps.os.access", lambda *_args: True)
+
+    msg = _joined(_torch(hip="7.13.0"))
+
+    assert "hsa_enable_dxg_detection=0" in msg
+    assert "explicitly disables" in msg
+
+
 def test_rocm_that_cannot_open_the_device_names_the_group_trap(linux, monkeypatch):
     """The reporter's most likely case, and the one a generic message cannot
     help with: the render/video GIDs differ per host, so a copied

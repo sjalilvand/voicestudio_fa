@@ -177,6 +177,23 @@ def gfx_for_hsa_override(value: str) -> str | None:
 #: The ROCm kernel driver interface. Its absence, or its presence without
 #: permission, are the two commonest reasons a ROCm host silently runs on CPU.
 _KFD_DEVICE = "/dev/kfd"
+_DXG_DEVICE = "/dev/dxg"
+_DXG_RUNTIME_PATHS = (
+    "/usr/lib/libdxcore.so",
+    "/usr/lib/librocdxg.so",
+    "/usr/share/rocdxg/dids.conf",
+)
+
+
+def _rocm_requires_dxg_detection(version: object) -> bool:
+    """Whether WSL's ROCDXG bridge still needs its explicit opt-in."""
+    try:
+        parts = str(version).split(".")
+        return (int(parts[0]), int(parts[1])) < (7, 13)
+    except (IndexError, TypeError, ValueError):
+        # Unknown versions get the conservative advice. The variable is
+        # harmless on newer runtimes and necessary on every older one.
+        return True
 
 
 def why_no_gpu(torch) -> tuple[str, ...]:
@@ -230,6 +247,40 @@ def why_no_gpu(torch) -> tuple[str, ...]:
         # /dev/kfd only exists on Linux; on any other platform its absence
         # says nothing, so don't invent a reason.
         if sys.platform.startswith("linux"):
+            if not os.path.exists(_KFD_DEVICE) and os.path.exists(_DXG_DEVICE):
+                if not os.access(_DXG_DEVICE, os.R_OK | os.W_OK):
+                    return (
+                        f"ROCm {hip} is installed and {_DXG_DEVICE} exists, "
+                        "but this process cannot open it — pass "
+                        "--device /dev/dxg to the WSL container",
+                    )
+                dxg_detection = os.environ.get("HSA_ENABLE_DXG_DETECTION", "").strip()
+                if dxg_detection == "0":
+                    return (
+                        f"ROCm {hip} is installed and {_DXG_DEVICE} is reachable, "
+                        "but HSA_ENABLE_DXG_DETECTION=0 explicitly disables the "
+                        "WSL GPU bridge; remove it or set it to 1",
+                    )
+                if _rocm_requires_dxg_detection(hip) and dxg_detection != "1":
+                    return (
+                        f"ROCm {hip} is installed and {_DXG_DEVICE} is "
+                        "reachable, but this pre-7.13 runtime requires "
+                        "HSA_ENABLE_DXG_DETECTION=1 inside WSL containers",
+                    )
+                missing = [
+                    path for path in _DXG_RUNTIME_PATHS if not os.path.exists(path)
+                ]
+                if missing:
+                    return (
+                        f"ROCm {hip} can reach {_DXG_DEVICE}, but the WSL "
+                        "ROCDXG runtime mounts are incomplete; missing: "
+                        f"{', '.join(missing)}",
+                    )
+                return (
+                    f"ROCm {hip} and the WSL ROCDXG bridge are reachable, "
+                    "but no GPU was enumerated — verify the AMD Windows "
+                    "driver, librocdxg/ROCm compatibility, and host `rocminfo`",
+                )
             if not os.path.exists(_KFD_DEVICE):
                 return (
                     f"ROCm {hip} is installed but {_KFD_DEVICE} is not "
