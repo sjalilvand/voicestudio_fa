@@ -174,7 +174,10 @@ def _carry_srt_voice_metadata(
 ) -> tuple[list[dict], dict]:
     """Replace subtitle content while retaining the source cast assignment."""
     source_clones = dict(segment_clones or {})
-    clones = dict(source_clones)
+    # Replacement cues get new positional ids. Starting from the old map would
+    # let an unmatched cue whose new id happens to equal an old id inherit an
+    # unrelated reference. Only explicitly overlap-matched references survive.
+    clones = {}
     merged_segments = []
     for new_id, cue in enumerate(cues):
         prior = _best_overlapping_segment(cue, existing)

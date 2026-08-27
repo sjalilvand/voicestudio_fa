@@ -53,6 +53,20 @@ def test_srt_cues_inherit_best_overlap_voice_metadata():
     assert clones["1"] is clone
 
 
+def test_unmatched_replacement_cue_does_not_inherit_colliding_old_clone():
+    from api.routers.dub_core import _carry_srt_voice_metadata
+
+    clone = {"ref_audio": "/job/unrelated.wav", "duration": 1.0}
+    merged, clones = _carry_srt_voice_metadata(
+        [{"id": 0, "start": 10.0, "end": 11.0, "text": "new"}],
+        [{"id": "0", "start": 0.0, "end": 1.0, "text": "removed"}],
+        {"0": clone},
+    )
+
+    assert merged[0]["speaker_id"] == "Speaker 1"
+    assert clones == {}
+
+
 def test_import_srt_rekeys_clone_refs_and_rebuilds_cast(monkeypatch):
     from api.routers import dub_core
 

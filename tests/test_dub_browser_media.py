@@ -16,7 +16,8 @@ def _run_local_ingest(tmp_path, monkeypatch, *, input_type="video"):
     normalized = []
     saved = []
 
-    def ensure(path):
+    async def ensure(job_id, path):
+        assert job_id == "browser_media"
         normalized.append(path)
         return str(normalized_path)
 
@@ -30,7 +31,7 @@ def _run_local_ingest(tmp_path, monkeypatch, *, input_type="video"):
 
         return run_proc
 
-    monkeypatch.setattr(dp, "_ensure_browser_playable_mp4", ensure)
+    monkeypatch.setattr(dp, "_ensure_browser_playable_mp4_for_job", ensure)
     monkeypatch.setattr(dp, "run_proc_factory", factory)
     monkeypatch.setattr(dp.sf, "info", lambda _path: SimpleNamespace(frames=16000, samplerate=16000))
     monkeypatch.setattr(dp, "compute_file_hash", lambda _path: "content-hash")
@@ -79,3 +80,46 @@ def test_audio_only_ingest_does_not_attempt_video_transcode(tmp_path, monkeypatc
 
     assert normalized == []
     assert saved[-1]["video_path"] == str(source)
+
+
+def test_upload_normalization_propagates_cancellation_to_registered_process(tmp_path, monkeypatch):
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"source")
+    started = asyncio.Event()
+    cleaned = asyncio.Event()
+    seen = {}
+
+    monkeypatch.setattr(dp, "_probe_codecs", lambda _path: ("vp9", "opus"))
+    monkeypatch.setattr(dp, "find_ffmpeg", lambda: "ffmpeg")
+
+    def factory(job_id):
+        seen["job_id"] = job_id
+
+        async def run_proc(_cmd, *, timeout):
+            seen["timeout"] = timeout
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            finally:
+                cleaned.set()
+
+        return run_proc
+
+    monkeypatch.setattr(dp, "run_proc_factory", factory)
+
+    async def cancel_normalization():
+        task = asyncio.create_task(
+            dp._ensure_browser_playable_mp4_for_job("cancel-job", str(source))
+        )
+        await asyncio.wait_for(started.wait(), timeout=1)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        else:
+            raise AssertionError("normalization did not propagate cancellation")
+        await asyncio.wait_for(cleaned.wait(), timeout=1)
+
+    asyncio.run(cancel_normalization())
+    assert seen == {"job_id": "cancel-job", "timeout": 1800.0}

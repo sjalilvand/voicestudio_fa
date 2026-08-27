@@ -97,11 +97,11 @@ describe('project payload — save/load round-trip (restoreProjectExtras)', () =
 });
 
 describe('App.jsx wiring guard (raw source — keeps the util honest)', () => {
-  it('saveProject persists the three fields in statePayload.state', () => {
+  it('saveProject persists multi-language and source-language fields', () => {
     const start = appSrc.indexOf('const statePayload');
     expect(start).toBeGreaterThan(-1);
     const block = appSrc.slice(start, appSrc.indexOf('apiSaveProject', start));
-    for (const key of ['multiLangMode', 'multiLangs', 'exportTracks']) {
+    for (const key of ['multiLangMode', 'multiLangs', 'exportTracks', 'dubSourceLangCode']) {
       expect(block, `statePayload.state must include ${key}`).toContain(key);
     }
   });
@@ -113,5 +113,13 @@ describe('App.jsx wiring guard (raw source — keeps the util honest)', () => {
     expect(block).toContain('restoreProjectExtras');
     expect(block).toContain('setMultiLangMode');
     expect(block).toContain('setMultiLangs');
+    expect(block).toContain("setDubSourceLangCode(s.dubSourceLangCode || 'auto')");
+  });
+
+  it('resetDub clears an auto-detected language before the next upload', () => {
+    const start = appSrc.indexOf('const resetDub');
+    expect(start).toBeGreaterThan(-1);
+    const block = appSrc.slice(start, appSrc.indexOf('// ═══ STUDIO PROJECT CRUD', start));
+    expect(block).toContain("setDubSourceLangCode('auto')");
   });
 });
