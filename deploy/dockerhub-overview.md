@@ -43,21 +43,30 @@ the entire pipeline runs on CPU, just slower. Pull size: ~5 GB compressed
 ## Quick start (CPU)
 
 ```bash
+export OMNIVOICE_API_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+
 docker run -d --name omnivoice \
   -p 127.0.0.1:3900:3900 \
+  -e OMNIVOICE_API_KEY="$OMNIVOICE_API_KEY" \
   -v omnivoice-data:/app/omnivoice_data \
   -v ~/.cache/huggingface:/root/.cache/huggingface \
   palashdeb/omnivoice-studio:latest
 ```
 
 Open <http://localhost:3900>. The first run downloads a few GB of model weights —
-follow `docker logs -f omnivoice` to watch progress.
+follow `docker logs -f omnivoice` to watch progress. When the UI asks for an
+API key, paste the generated value; settings and diagnostic actions require
+this administrator session because Docker NAT hides the browser's true
+loopback origin.
 
 ## Quick start (NVIDIA GPU)
 
 ```bash
+export OMNIVOICE_API_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+
 docker run -d --name omnivoice --gpus all \
   -p 127.0.0.1:3900:3900 \
+  -e OMNIVOICE_API_KEY="$OMNIVOICE_API_KEY" \
   -v omnivoice-data:/app/omnivoice_data \
   -v ~/.cache/huggingface:/root/.cache/huggingface \
   palashdeb/omnivoice-studio:latest
@@ -74,9 +83,12 @@ CUDA-only and runs on CPU on AMD hardware). No toolkit needed — pass the GPU
 through as device nodes; the host only needs the `amdgpu` kernel driver:
 
 ```bash
+export OMNIVOICE_API_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+
 docker run -d --name omnivoice \
   --device /dev/kfd --device /dev/dri \
   -p 127.0.0.1:3900:3900 \
+  -e OMNIVOICE_API_KEY="$OMNIVOICE_API_KEY" \
   -v omnivoice-data:/app/omnivoice_data \
   -v ~/.cache/huggingface:/root/.cache/huggingface \
   palashdeb/omnivoice-studio:rocm
