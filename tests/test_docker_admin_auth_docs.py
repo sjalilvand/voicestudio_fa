@@ -38,6 +38,26 @@ def test_every_compose_studio_service_receives_the_admin_key():
     assert "OMNIVOICE_API_KEY=${OMNIVOICE_API_KEY:-}" not in studio_half
 
 
+def test_server_mode_rejects_a_whitespace_admin_key(monkeypatch):
+    from api.dependencies import validate_server_admin_key
+
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "   \t")
+
+    with pytest.raises(RuntimeError, match="non-whitespace administrator key"):
+        validate_server_admin_key()
+
+
+def test_server_mode_allows_an_unset_or_nonblank_admin_key(monkeypatch):
+    from api.dependencies import validate_server_admin_key
+
+    monkeypatch.setenv("OMNIVOICE_SERVER_MODE", "1")
+    monkeypatch.delenv("OMNIVOICE_API_KEY", raising=False)
+    validate_server_admin_key()
+    monkeypatch.setenv("OMNIVOICE_API_KEY", "real-secret")
+    validate_server_admin_key()
+
+
 def test_wsl_rocm_command_carries_the_complete_dxg_bridge():
     text = (ROOT / "docs/install/docker.md").read_text(encoding="utf-8")
     section = text.split("### AMD GPU on WSL2", 1)[1].split("###", 1)[0]
