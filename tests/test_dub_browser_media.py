@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from types import SimpleNamespace
 
+import pytest
+
 from services import dub_pipeline as dp
 
 
@@ -123,3 +125,25 @@ def test_upload_normalization_propagates_cancellation_to_registered_process(tmp_
 
     asyncio.run(cancel_normalization())
     assert seen == {"job_id": "cancel-job", "timeout": 1800.0}
+
+
+@pytest.mark.parametrize("failure", [RuntimeError("spawn failed"), asyncio.TimeoutError()])
+def test_upload_normalization_failure_keeps_the_original_media(tmp_path, monkeypatch, failure):
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"source")
+    monkeypatch.setattr(dp, "_probe_codecs", lambda _path: ("vp9", "opus"))
+    monkeypatch.setattr(dp, "find_ffmpeg", lambda: "ffmpeg")
+
+    def factory(_job_id):
+        async def run_proc(_cmd, *, timeout):
+            assert timeout == 1800.0
+            raise failure
+
+        return run_proc
+
+    monkeypatch.setattr(dp, "run_proc_factory", factory)
+
+    result = asyncio.run(dp._ensure_browser_playable_mp4_for_job("failed-job", str(source)))
+
+    assert result == str(source)
+    assert source.exists()

@@ -507,13 +507,28 @@ _ingest_gen       = dub_pipeline.ingest_pipeline
 #: container so a mislabelled video can't slip past the video-skipping branch.
 _AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma"}
 
+# Source-language choices exposed by the first-party dub UI. Keeping this an
+# allow-list rejects language names and private-use BCP-47 tags before they are
+# persisted as ASR overrides. Values are normalized to lowercase below.
+_DUB_SOURCE_LANG_CODES = frozenset({
+    "af", "sq", "am", "ar", "hy", "az", "eu", "be", "bn", "bs", "bg",
+    "my", "ca", "cmn-hans", "cmn-hant", "hr", "cs", "da", "nl", "en",
+    "et", "fi", "fr", "gl", "ka", "de", "el", "gu", "ht", "ha", "haw",
+    "he", "hi", "hu", "is", "id", "it", "ja", "jw", "kn", "kk", "km",
+    "ko", "ku", "ky", "lo", "la", "lv", "lt", "mk", "ms", "ml", "mt",
+    "mi", "mr", "mn", "ne", "no", "ps", "fa", "pl", "pt", "pa", "ro",
+    "ru", "sm", "gd", "sr", "sn", "sd", "si", "sk", "sl", "so", "es",
+    "su", "sw", "sv", "tg", "ta", "te", "th", "tr", "uk", "ur", "uz",
+    "vi", "cy", "xh", "yi", "yo", "zu",
+})
+
 
 def _source_lang_override(value: str | None) -> str | None:
     """Normalize a user-selected source language; auto/und means detect."""
     code = (value or "").strip().lower()
     if code in {"", "auto", "und"}:
         return None
-    if len(code) > 35 or not all(ch.isalnum() or ch == "-" for ch in code):
+    if code not in _DUB_SOURCE_LANG_CODES:
         raise HTTPException(status_code=400, detail="Invalid source language code")
     return code
 
@@ -553,6 +568,7 @@ async def dub_upload(
             detail=f"Audio-only dubbing needs an audio file ({', '.join(sorted(_AUDIO_EXTS))}); got '{ext or 'no extension'}'.",
         )
 
+    source_lang_override = _source_lang_override(source_lang)
     os.makedirs(job_dir, exist_ok=True)
 
     video_path = os.path.join(job_dir, f"original{ext}")
@@ -568,7 +584,7 @@ async def dub_upload(
             "kind": "file",
             "path": video_path,
             "input_type": input_type,
-            "source_lang": _source_lang_override(source_lang),
+            "source_lang": source_lang_override,
         },
         filename,
     )
@@ -592,6 +608,7 @@ async def dub_ingest_url(req: DubIngestUrlRequest, request: Request):
             status_code=400,
             detail="URL must start with http:// or https://. Paste a full video link (e.g. https://youtube.com/watch?v=…) or drop a local file instead.",
         )
+    source_lang_override = _source_lang_override(req.source_lang)
 
     try:
         import yt_dlp  # noqa: F401
@@ -627,7 +644,7 @@ async def dub_ingest_url(req: DubIngestUrlRequest, request: Request):
         "fetch_subs": bool(req.fetch_subs),
         "sub_langs": req.sub_langs or None,
         "cookie_file": cookie_path,
-        "source_lang": _source_lang_override(req.source_lang),
+        "source_lang": source_lang_override,
     }
     try:
         await task_manager.add_task(

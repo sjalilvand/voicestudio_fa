@@ -14,14 +14,19 @@ import { useAppStore } from '../store';
 // and on a failed translate: skip that pick's generate, keep going, report
 // the skipped languages in a final toast.
 
-const captured = vi.hoisted(() => ({ header: [] }));
+const captured = vi.hoisted(() => ({ header: [], left: [] }));
 vi.mock('../components/dub/DubHeader', () => ({
   default: (props) => {
     captured.header.push(props);
     return null;
   },
 }));
-vi.mock('../components/dub/DubLeftColumn', () => ({ default: () => null }));
+vi.mock('../components/dub/DubLeftColumn', () => ({
+  default: (props) => {
+    captured.left.push(props);
+    return null;
+  },
+}));
 vi.mock('../components/dub/DubRightColumn', () => ({ default: () => null }));
 vi.mock('../components/dub/DubFooter', () => ({ default: () => null }));
 vi.mock('../components/dub/DubPipelineStepper', () => ({ default: () => null }));
@@ -101,6 +106,7 @@ const PICKS = [
   { lang: 'French', code: 'fr' },
   { lang: 'German', code: 'de' },
 ];
+const EXPECTED_CODES = ['bn', ...PICKS.map((pick) => pick.code)];
 
 /** Render DubTab in multi-lang mode and return { onGenerateClick, calls, mocks }. */
 function setup({
@@ -110,7 +116,8 @@ function setup({
   segments,
 } = {}) {
   const calls = [];
-  const handleTranslateAll = vi.fn(async (code) => {
+  const handleTranslateAll = vi.fn(async (arg) => {
+    const code = typeof arg === 'string' ? arg : arg?.langOverride;
     calls.push(`translate:${code}`);
     const ok = translateOk(code);
     if (ok) {
@@ -155,6 +162,19 @@ describe('DubTab — multi-language generate translates each language first (P1.
   beforeEach(() => {
     useAppStore.setState(baseState, true);
     captured.header.length = 0;
+    captured.left.length = 0;
+  });
+
+  it('forwards retry-only options through every language in the wrapper', async () => {
+    const { handleTranslateAll } = setup();
+
+    await act(async () => {
+      await captured.left.at(-1).handleTranslateAll({ retryFailed: true });
+    });
+
+    expect(handleTranslateAll.mock.calls.map(([options]) => options)).toEqual(
+      EXPECTED_CODES.map((langOverride) => ({ retryFailed: true, langOverride })),
+    );
   });
   afterEach(() => {
     vi.restoreAllMocks();

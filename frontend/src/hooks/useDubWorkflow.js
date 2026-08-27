@@ -70,7 +70,6 @@ export default function useDubWorkflow({
   const dubLang = useAppStore((s) => s.dubLang);
   const dubLangCode = useAppStore((s) => s.dubLangCode);
   const dubSourceLangCode = useAppStore((s) => s.dubSourceLangCode);
-  const setDubSourceLangCode = useAppStore((s) => s.setDubSourceLangCode);
   const dubInstruct = useAppStore((s) => s.dubInstruct);
   const setDubFilename = useAppStore((s) => s.setDubFilename);
   const setDubDuration = useAppStore((s) => s.setDubDuration);
@@ -286,9 +285,6 @@ export default function useDubWorkflow({
             const castSources = m.cast_sources || m.speaker_clones || {};
             setDubSegments(applySpeakerCloneDefaults(normalized, castSources));
             setDubTranscript(m.full_transcript || '');
-            if (useAppStore.getState().dubSourceLangCode === 'auto' && m.source_lang) {
-              setDubSourceLangCode(m.source_lang);
-            }
             if (castSources && typeof castSources === 'object') {
               setSpeakerClones(castSources);
             }
@@ -365,7 +361,7 @@ export default function useDubWorkflow({
           ).then(reject, reject);
         });
       }),
-    [setDubSegments, setDubTranscript, setSpeakerClones, setDubSourceLangCode],
+    [setDubSegments, setDubTranscript, setSpeakerClones],
   );
 
   // ── SSE: wait for prep pipeline ──
@@ -860,12 +856,18 @@ export default function useDubWorkflow({
   // that language rather than rendering a wrong-language track.
   const handleTranslateAll = useCallback(
     async (langOverride) => {
+      const options =
+        langOverride && typeof langOverride === 'object' && !('preventDefault' in langOverride)
+          ? langOverride
+          : {};
       const targetLang =
-        typeof langOverride === 'string' && langOverride ? langOverride : dubLangCode;
+        typeof langOverride === 'string' && langOverride
+          ? langOverride
+          : options.langOverride || dubLangCode;
       // Snapshot segments at call time: inside the multi-language loop the
       // click-time closure is stale after the previous pick's translate pass.
       const allSegments = useAppStore.getState().dubSegments;
-      const retryFailed = !!langOverride?.retryFailed;
+      const retryFailed = !!options.retryFailed;
       const segs = retryFailed
         ? allSegments.filter((segment) => segment.translate_error)
         : allSegments;

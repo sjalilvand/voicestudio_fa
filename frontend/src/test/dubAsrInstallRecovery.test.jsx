@@ -117,6 +117,40 @@ describe('Dubbing missing-ASR recovery', () => {
     expect(useAppStore.getState().dubJobId).not.toBe('job-kept-for-retry');
   });
 
+  it('keeps auto detection selected across two consecutive jobs', async () => {
+    let uploadNumber = 0;
+    dubApi.dubUpload.mockImplementation(async () => {
+      uploadNumber += 1;
+      return { job_id: `job-${uploadNumber}`, task_id: `prep-${uploadNumber}` };
+    });
+    const { result } = renderWorkflow();
+
+    const runUpload = async (detectedLanguage) => {
+      const streamStart = streams.length;
+      let upload;
+      act(() => {
+        upload = result.current.handleDubUpload(
+          new File(['video'], `job-${uploadNumber + 1}.mp4`, { type: 'video/mp4' }),
+        );
+      });
+      await waitFor(() => expect(streams).toHaveLength(streamStart + 1));
+      streams[streamStart].emit('message', { type: 'ready' });
+      await waitFor(() => expect(streams).toHaveLength(streamStart + 2));
+      streams[streamStart + 1].emit('final', {
+        segments: [{ id: '1', text: 'hello' }],
+        source_lang: detectedLanguage,
+      });
+      streams[streamStart + 1].emit('done');
+      await act(async () => upload);
+    };
+
+    await runUpload('es');
+    await runUpload('de');
+
+    expect(dubApi.dubUpload.mock.calls.map((call) => call[2].sourceLang)).toEqual(['auto', 'auto']);
+    expect(useAppStore.getState().dubSourceLangCode).toBe('auto');
+  });
+
   it('keeps the job, installs inline, then automatically retranscribes it', async () => {
     const { result } = renderWorkflow();
     let firstAttempt;

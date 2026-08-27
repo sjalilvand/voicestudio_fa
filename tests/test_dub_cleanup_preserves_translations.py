@@ -37,3 +37,28 @@ def test_cleanup_preserves_editor_metadata_and_combines_translations():
     }
     assert cleaned[0]["profile_id"] == "voice-a"
     assert cleaned[0]["translate_error"] == "retry me"
+
+
+def test_cleanup_ignores_legacy_non_mapping_translations():
+    segments = [
+        {
+            "id": "a",
+            "start": 0.0,
+            "end": 2.0,
+            "text": "Hello.",
+            "speaker_id": "Speaker 1",
+            "translations": "legacy-corrupt-value",
+        },
+        {
+            "id": "b",
+            "start": 2.1,
+            "end": 2.4,
+            "text": "Again.",
+            "speaker_id": "Speaker 1",
+            "translations": {"es": "Otra vez."},
+        },
+    ]
+
+    cleaned = clean_up_segments(segments)
+
+    assert cleaned[0]["translations"] == {"es": "Otra vez."}

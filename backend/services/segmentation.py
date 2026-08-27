@@ -117,17 +117,21 @@ def _merge_segment_extra(target: Segment, incoming: Segment, *, prepend: bool) -
             else joined(target_original, incoming_original)
         )
 
-    target_translations = target.extra.get("translations")
-    incoming_translations = incoming.extra.get("translations")
-    if isinstance(target_translations, dict) or isinstance(incoming_translations, dict):
+    raw_target_translations = target.extra.get("translations")
+    raw_incoming_translations = incoming.extra.get("translations")
+    target_translations = raw_target_translations if isinstance(raw_target_translations, dict) else {}
+    incoming_translations = (
+        raw_incoming_translations if isinstance(raw_incoming_translations, dict) else {}
+    )
+    if target_translations or incoming_translations:
         merged = {}
         languages = {
-            *(target_translations or {}).keys(),
-            *(incoming_translations or {}).keys(),
+            *target_translations.keys(),
+            *incoming_translations.keys(),
         }
         for language in languages:
-            target_text = (target_translations or {}).get(language)
-            incoming_text = (incoming_translations or {}).get(language)
+            target_text = target_translations.get(language)
+            incoming_text = incoming_translations.get(language)
             merged[language] = (
                 joined(incoming_text, target_text)
                 if prepend

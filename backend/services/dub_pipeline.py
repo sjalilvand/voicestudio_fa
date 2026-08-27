@@ -755,35 +755,45 @@ async def _ensure_browser_playable_mp4_for_job(job_id: str, video_path: str) -> 
     run_proc = run_proc_factory(job_id)
     ffmpeg_bin = find_ffmpeg()
 
+    async def attempt(cmd: list[str]) -> int:
+        try:
+            proc, _stdout, _stderr = await run_proc(cmd, timeout=1800.0)
+            return proc.returncode
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.warning(
+                "Browser-media normalization process failed for %s: %s",
+                log_safe(video_path),
+                log_safe(exc),
+            )
+            return 1
+
     rc = 1
     if not is_mp4:
-        proc, _stdout, _stderr = await run_proc(
+        rc = await attempt(
             [
                 ffmpeg_bin, "-y", "-i", video_path,
                 "-c:v", "copy", "-c:a", "copy",
                 "-movflags", "+faststart", target,
-            ],
-            timeout=1800.0,
+            ]
         )
-        rc = proc.returncode
         if rc != 0 or not os.path.exists(target):
             rc = 1
     if rc != 0:
-        proc, _stdout, _stderr = await run_proc(
+        rc = await attempt(
             [
                 ffmpeg_bin, "-y", "-i", video_path,
                 "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
                 "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
                 "-movflags", "+faststart", target,
-            ],
-            timeout=1800.0,
+            ]
         )
-        rc = proc.returncode
     if rc == 0 and os.path.exists(target) and target != video_path:
         try:
             os.remove(video_path)
         except OSError:
-            pass
+            pass  # Best effort: the normalized target is already complete.
         return target
     logger.warning(
         "Could not transcode %s to browser-playable mp4 — the in-app "

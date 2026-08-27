@@ -322,28 +322,31 @@ export default function DubTab(props) {
   // while still restoring the primary target in the editor afterwards. Each
   // translation lands in segments[].translations[code], so Generate can
   // reuse the complete maps without retranslating or losing another language.
-  const onTranslateClick = useCallback(async () => {
-    if (!multiLangMode) return handleTranslateAll();
-    if (multiBatchRunningRef.current) return false;
-    multiBatchRunningRef.current = true;
-    setMultiBatchBusy(true);
-    const { lang: primaryLanguage, code: primaryCode } = primaryTargetRef.current;
-    let allOk = true;
-    try {
-      for (const target of batchTargets) {
-        setDubLang(target.lang);
-        switchDubLangCode(target.code);
-        const ok = await handleTranslateAll(target.code);
-        if (!ok) allOk = false;
+  const onTranslateClick = useCallback(
+    async (options = {}) => {
+      if (!multiLangMode) return handleTranslateAll(options);
+      if (multiBatchRunningRef.current) return false;
+      multiBatchRunningRef.current = true;
+      setMultiBatchBusy(true);
+      const { lang: primaryLanguage, code: primaryCode } = primaryTargetRef.current;
+      let allOk = true;
+      try {
+        for (const target of batchTargets) {
+          setDubLang(target.lang);
+          switchDubLangCode(target.code);
+          const ok = await handleTranslateAll({ ...options, langOverride: target.code });
+          if (!ok) allOk = false;
+        }
+      } finally {
+        setDubLang(primaryLanguage);
+        switchDubLangCode(primaryCode);
+        multiBatchRunningRef.current = false;
+        setMultiBatchBusy(false);
       }
-    } finally {
-      setDubLang(primaryLanguage);
-      switchDubLangCode(primaryCode);
-      multiBatchRunningRef.current = false;
-      setMultiBatchBusy(false);
-    }
-    return allOk;
-  }, [multiLangMode, batchTargets, handleTranslateAll, setDubLang, switchDubLangCode]);
+      return allOk;
+    },
+    [multiLangMode, batchTargets, handleTranslateAll, setDubLang, switchDubLangCode],
+  );
 
   // Live ETA while generating — elapsed ticks each second; remaining is
   // extrapolated from the current/total rate so it's only meaningful once
