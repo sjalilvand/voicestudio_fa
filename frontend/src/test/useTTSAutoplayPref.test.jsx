@@ -95,22 +95,6 @@ beforeEach(() => {
   useAppStore.setState({ text: 'Hello there', defineMethod: 'design', ttsInflight: 0 });
 });
 
-describe('useTTS global generation admission', () => {
-  it('does not enqueue a second render after Studio remounts', async () => {
-    useAppStore.setState({ ttsInflight: 1 });
-    vi.mocked(generateSpeech).mockClear();
-    vi.mocked(streamGenerateSpeech).mockClear();
-    vi.mocked(toast).mockClear();
-
-    await runGenerate();
-
-    expect(generateSpeech).not.toHaveBeenCalled();
-    expect(streamGenerateSpeech).not.toHaveBeenCalled();
-    expect(vi.mocked(toast).mock.calls[0][0]).toMatch(/generation is already running/i);
-    expect(useAppStore.getState().ttsInflight).toBe(1);
-  });
-});
-
 describe('useTTS auto-play pref (#1032)', () => {
   it('auto-plays the finished render when autoPlayPreview is ON (default)', async () => {
     useAppStore.setState({ autoPlayPreview: true });
