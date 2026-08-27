@@ -529,13 +529,12 @@ export default function StoriesEditor({ profiles = [] }) {
 
       const parsed = parseStoryText(raw, pid);
       try {
-        const chunkBlobs = await Promise.all(
-          parsed.map((seg) =>
-            seg.type === 'chunk'
-              ? fetchChunkBlob(seg.text, seg.profileId, spd)
-              : Promise.resolve(null),
-          ),
-        );
+        const chunkBlobs = [];
+        for (const seg of parsed) {
+          chunkBlobs.push(
+            seg.type === 'chunk' ? await fetchChunkBlob(seg.text, seg.profileId, spd) : null,
+          );
+        }
         let cursor = 0;
         const finish = () => {
           setTracks((prev) =>
