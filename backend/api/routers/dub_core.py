@@ -171,9 +171,11 @@ def _carry_srt_voice_metadata(
     cues: list[dict],
     existing: list[dict],
     segment_clones: dict | None,
+    speaker_clones: dict | None = None,
 ) -> tuple[list[dict], dict]:
     """Replace subtitle content while retaining the source cast assignment."""
     source_clones = dict(segment_clones or {})
+    source_speaker_clones = dict(speaker_clones or {})
     # Replacement cues get new positional ids. Starting from the old map would
     # let an unmatched cue whose new id happens to equal an old id inherit an
     # unrelated reference. Only explicitly overlap-matched references survive.
@@ -199,6 +201,8 @@ def _carry_srt_voice_metadata(
         if prior is not None:
             prior_id = str(prior.get("id", ""))
             clone = source_clones.get(prior_id)
+            if clone is None:
+                clone = source_speaker_clones.get(prior.get("speaker_id"))
             if clone is not None:
                 clones[str(new_id)] = clone
                 if merged.get("profile_id") == f"auto-seg:{prior_id}":
@@ -313,15 +317,21 @@ async def dub_import_srt(job_id: str, file: UploadFile = File(...)):
         segments,
         prior_segments,
         job.get("segment_clones"),
+        job.get("speaker_clones"),
     )
     job["segments"] = segments
     job["segment_clones"] = segment_clones
-    if job.get("speaker_clones") or segment_clones:
+    # A pooled speaker clone is keyed only by a display label. Replacement
+    # cues can reuse that label without overlapping the original speaker, so
+    # retain matched pooled references as segment-specific clones above and
+    # drop the global map before rebuilding the cast.
+    job["speaker_clones"] = {}
+    if segment_clones:
         from services.speaker_clone import build_cast_sources
 
         job["cast_sources"] = build_cast_sources(
             segments,
-            job.get("speaker_clones"),
+            None,
             segment_clones,
         )
     else:
