@@ -227,7 +227,11 @@ export default function VoiceProfile({ voiceId, onBack, onOpenProject, onDeleted
       setTestAudioUrl(url);
       // Playback (and autoplay) is handled by the shared WaveformPlayer below.
     } catch (e) {
-      toastErrorWithReport(t('voice_profile.gen_failed', { message: e.message }), e);
+      if (e?.code === 'tts_generation_busy') {
+        toast.error(t('tts_errors.generation_in_progress'));
+      } else {
+        toastErrorWithReport(t('voice_profile.gen_failed', { message: e.message }), e);
+      }
     } finally {
       setTestGenerating(false);
     }

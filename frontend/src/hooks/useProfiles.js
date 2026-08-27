@@ -197,7 +197,11 @@ export default function useProfiles({ loadHistory, loadProfiles }) {
         );
         await loadHistory();
       } catch (err) {
-        toast.error(t('profiles.preview_failed', { message: err.message }), { id: toastId });
+        const message =
+          err?.code === 'tts_generation_busy'
+            ? t('tts_errors.generation_in_progress')
+            : t('profiles.preview_failed', { message: err.message });
+        toast.error(message, { id: toastId });
       } finally {
         setPreviewLoading(null);
       }
@@ -266,7 +270,11 @@ export default function useProfiles({ loadHistory, loadProfiles }) {
           toast.error(t('profiles.playback_failed'), { id: toastId }),
         );
       } catch (err) {
-        toast.error(t('profiles.preview_failed', { message: err.message }), { id: toastId });
+        const message =
+          err?.code === 'tts_generation_busy'
+            ? t('tts_errors.generation_in_progress')
+            : t('profiles.preview_failed', { message: err.message });
+        toast.error(message, { id: toastId });
       } finally {
         setSegmentPreviewLoading(null);
       }

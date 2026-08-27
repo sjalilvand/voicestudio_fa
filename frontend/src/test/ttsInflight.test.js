@@ -75,6 +75,7 @@ describe('synth in-flight tracking', () => {
 
     releases[0]();
     await studio;
+    expect(state.ttsInflight).toBe(0);
     expect(isAppBusy(state)).toBe(false);
   });
 
