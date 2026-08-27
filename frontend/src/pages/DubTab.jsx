@@ -95,6 +95,8 @@ export default function DubTab(props) {
   const dubLang = useAppStore((s) => s.dubLang);
   const setDubLang = useAppStore((s) => s.setDubLang);
   const dubLangCode = useAppStore((s) => s.dubLangCode);
+  const dubSourceLangCode = useAppStore((s) => s.dubSourceLangCode);
+  const setDubSourceLangCode = useAppStore((s) => s.setDubSourceLangCode);
   // User-driven language switches go through switchDubLangCode (P1.2): it
   // swaps segment text through the per-language `translations` map instead
   // of leaving the previous language's text on screen (and previously,
@@ -682,6 +684,8 @@ export default function DubTab(props) {
           youtubeCookieFile={youtubeCookieFile}
           setYoutubeCookieFile={setYoutubeCookieFile}
           dubLangCode={dubLangCode}
+          dubSourceLangCode={dubSourceLangCode}
+          setDubSourceLangCode={setDubSourceLangCode}
           setDubLangCode={switchDubLangCode}
           setDubLang={setDubLang}
           landingAdvOpen={landingAdvOpen}

@@ -79,6 +79,7 @@ class Segment:
     text: str
     speaker_id: str = "Speaker 1"
     id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
+    extra: dict = field(default_factory=dict)
 
     @property
     def duration(self) -> float:
@@ -90,12 +91,49 @@ class Segment:
 
     def to_dict(self) -> dict:
         return {
+            **self.extra,
             "id": self.id,
             "start": round(self.start, 2),
             "end": round(self.end, 2),
             "text": self.text,
             "speaker_id": self.speaker_id,
         }
+
+
+def _merge_segment_extra(target: Segment, incoming: Segment, *, prepend: bool) -> None:
+    """Preserve editor metadata when cleanup folds ``incoming`` into ``target``."""
+    for key, value in incoming.extra.items():
+        target.extra.setdefault(key, value)
+
+    def joined(left: object, right: object) -> str:
+        return _clean(f"{left or ''} {right or ''}")
+
+    target_original = target.extra.get("text_original")
+    incoming_original = incoming.extra.get("text_original")
+    if target_original is not None or incoming_original is not None:
+        target.extra["text_original"] = (
+            joined(incoming_original, target_original)
+            if prepend
+            else joined(target_original, incoming_original)
+        )
+
+    target_translations = target.extra.get("translations")
+    incoming_translations = incoming.extra.get("translations")
+    if isinstance(target_translations, dict) or isinstance(incoming_translations, dict):
+        merged = {}
+        languages = {
+            *(target_translations or {}).keys(),
+            *(incoming_translations or {}).keys(),
+        }
+        for language in languages:
+            target_text = (target_translations or {}).get(language)
+            incoming_text = (incoming_translations or {}).get(language)
+            merged[language] = (
+                joined(incoming_text, target_text)
+                if prepend
+                else joined(target_text, incoming_text)
+            )
+        target.extra["translations"] = merged
 
 
 def _clean(text: str) -> str:
@@ -317,12 +355,14 @@ def _merge_short(segments: List[Segment]) -> List[Segment]:
                 i += 1
                 continue
             if target is prev:
+                _merge_segment_extra(prev, s, prepend=False)
                 prev.text = _clean(prev.text + " " + s.text)
                 prev.end = max(prev.end, s.end)
                 segments.pop(i)
                 did_merge = True
                 continue
             if target is nxt:
+                _merge_segment_extra(nxt, s, prepend=True)
                 nxt.text = _clean(s.text + " " + nxt.text)
                 nxt.start = min(nxt.start, s.start)
                 segments.pop(i)
@@ -360,6 +400,7 @@ def _stitch_adjacent_shorts(segments: List[Segment]) -> List[Segment]:
                 and b.duration <= STITCH_DUR
                 and combined_dur <= MAX_DUR
             ):
+                _merge_segment_extra(a, b, prepend=False)
                 a.text = _clean(a.text + " " + b.text)
                 a.end = b.end
                 segments.pop(i + 1)
@@ -386,6 +427,11 @@ def clean_up_segments(segments: List[dict]) -> List[dict]:
                 text=_clean(str(s.get("text", ""))),
                 speaker_id=str(s.get("speaker_id") or "Speaker 1"),
                 id=str(s.get("id") or uuid.uuid4().hex[:8]),
+                extra={
+                    key: value
+                    for key, value in s.items()
+                    if key not in {"id", "start", "end", "text", "speaker_id"}
+                },
             ))
         except (TypeError, ValueError):
             continue

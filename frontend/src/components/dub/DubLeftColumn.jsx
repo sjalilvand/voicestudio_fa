@@ -117,6 +117,7 @@ export default function DubLeftColumn({
   // classifies as impossible to fit (default OFF — needs an LLM).
   const condenseSuggest = useAppStore((s) => s.condenseSuggest);
   const setCondenseSuggest = useAppStore((s) => s.setCondenseSuggest);
+  const failedTranslationCount = dubSegments.filter((segment) => segment.translate_error).length;
   // Frozen-build (packaged/signed, read-only site-packages) escape-hatch
   // popover: pip install is impossible, so we surface the copyable command +
   // a one-click switch to the always-bundled Argos engine + a docs deeplink.
@@ -803,6 +804,34 @@ export default function DubLeftColumn({
             </div>
           </div>
           <div className="flex justify-end gap-[6px] flex-wrap">
+            {failedTranslationCount > 0 && (
+              <>
+                <Button
+                  variant="subtle"
+                  size="sm"
+                  onClick={() => handleTranslateAll({ retryFailed: true })}
+                  disabled={isTranslating}
+                >
+                  {t('dub.retry_failed', { count: failedTranslationCount })}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    editSegments(
+                      dubSegments.map((segment) =>
+                        segment.translate_error
+                          ? { ...segment, translate_error: undefined, translation_skipped: true }
+                          : segment,
+                      ),
+                    )
+                  }
+                  disabled={isTranslating}
+                >
+                  {t('dub.skip_failed')}
+                </Button>
+              </>
+            )}
             <Button
               variant="subtle"
               size="sm"

@@ -4,12 +4,17 @@ import type { DubHistoryResponse, DubTranslateResponse } from './types';
 export async function dubUpload(
   file: File | Blob,
   jobId: string,
-  { signal, inputType = 'video' }: { signal?: AbortSignal; inputType?: 'video' | 'audio' } = {},
+  {
+    signal,
+    inputType = 'video',
+    sourceLang,
+  }: { signal?: AbortSignal; inputType?: 'video' | 'audio'; sourceLang?: string } = {},
 ): Promise<unknown> {
   const fd = new FormData();
   fd.append('video', file);
   fd.append('job_id', jobId);
   fd.append('input_type', inputType); // #119: audio-only dubbing
+  if (sourceLang && sourceLang !== 'auto') fd.append('source_lang', sourceLang);
   return apiPost('/dub/upload', fd, { signal });
 }
 
@@ -21,6 +26,8 @@ export interface IngestUrlOptions {
   subLangs?: string[];
   /** Explicit cookies.txt export used only for this import. */
   cookieFile?: File;
+  /** Explicit spoken language, or auto/undefined to use ASR detection. */
+  sourceLang?: string;
 }
 
 export const DUB_COOKIE_TRANSPORT_ERROR = 'DUB_COOKIE_TRANSPORT';
@@ -46,7 +53,7 @@ export async function dubIngestUrl(
   jobId: string,
   opts: IngestUrlOptions = {},
 ): Promise<unknown> {
-  const { signal, fetchSubs, subLangs, cookieFile } = opts;
+  const { signal, fetchSubs, subLangs, cookieFile, sourceLang } = opts;
   if (cookieFile && !_cookieTransportAllowed(API)) {
     throw cookieSelectionError(DUB_COOKIE_TRANSPORT_ERROR);
   }
@@ -62,6 +69,7 @@ export async function dubIngestUrl(
       fetch_subs: fetchSubs || undefined,
       sub_langs: subLangs && subLangs.length ? subLangs : undefined,
       cookie_file: cookieText,
+      source_lang: sourceLang && sourceLang !== 'auto' ? sourceLang : undefined,
     },
     { signal },
   );

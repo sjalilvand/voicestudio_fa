@@ -1295,6 +1295,7 @@ async def ingest_pipeline(
                 "scene_cuts": scene_cuts,
                 "youtube_subs": youtube_subs_by_lang or None,
                 "input_type": input_type,
+                "source_lang_override": source.get("source_lang"),
             }
             if not put_and_save_job(
                 job_id, full_job, filename=filename, duration=dur, content_hash=content_hash,
@@ -1323,6 +1324,7 @@ async def ingest_pipeline(
                 "scene_cuts": [],
                 "youtube_subs": youtube_subs_by_lang or None,
                 "input_type": input_type,
+                "source_lang_override": source.get("source_lang"),
             }
             if not put_and_save_job(
                 job_id, partial, filename=filename, duration=dur, content_hash=content_hash,

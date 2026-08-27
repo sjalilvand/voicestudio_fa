@@ -498,11 +498,22 @@ _ingest_gen       = dub_pipeline.ingest_pipeline
 _AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma"}
 
 
+def _source_lang_override(value: str | None) -> str | None:
+    """Normalize a user-selected source language; auto/und means detect."""
+    code = (value or "").strip().lower()
+    if code in {"", "auto", "und"}:
+        return None
+    if len(code) > 35 or not all(ch.isalnum() or ch == "-" for ch in code):
+        raise HTTPException(status_code=400, detail="Invalid source language code")
+    return code
+
+
 @router.post("/dub/upload")
 async def dub_upload(
     video: UploadFile = File(...),
     job_id: Optional[str] = Form(None),
     input_type: str = Form("video"),
+    source_lang: Optional[str] = Form(None),
 ):
     """Accept a media upload, write to disk, queue background prep task.
 
@@ -543,7 +554,13 @@ async def dub_upload(
     await task_manager.add_task(
         task_id, "prep",
         _ingest_gen, job_id, job_dir,
-        {"kind": "file", "path": video_path, "input_type": input_type}, filename,
+        {
+            "kind": "file",
+            "path": video_path,
+            "input_type": input_type,
+            "source_lang": _source_lang_override(source_lang),
+        },
+        filename,
     )
     return JSONResponse(
         status_code=202,
@@ -600,6 +617,7 @@ async def dub_ingest_url(req: DubIngestUrlRequest, request: Request):
         "fetch_subs": bool(req.fetch_subs),
         "sub_langs": req.sub_langs or None,
         "cookie_file": cookie_path,
+        "source_lang": _source_lang_override(req.source_lang),
     }
     try:
         await task_manager.add_task(
@@ -1756,7 +1774,9 @@ async def dub_transcribe_stream(
         except Exception as e:
             logger.warning("speaker_clone extraction skipped: %s", e)
 
-        job["source_lang"] = ((detected_lang or "en").split("_")[0][:2] or "en").lower()
+        job["source_lang"] = job.get("source_lang_override") or (
+            (detected_lang or "en").split("_")[0][:2] or "en"
+        ).lower()
         job["full_transcript"] = " ".join(s.get("text", "") for s in final_segs)
         _save_job(job_id, job)
 
@@ -1953,7 +1973,9 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
             except Exception as e:
                 logger.warning("Failed to unload ASR backend: %s", e)
 
-        job["source_lang"] = (detected_lang or "en").split("_")[0][:2].lower()
+        job["source_lang"] = job.get("source_lang_override") or (
+            (detected_lang or "en").split("_")[0][:2] or "en"
+        ).lower()
 
         scene_cuts = job.get("scene_cuts") or []
         segments = segment_transcript(result, duration=job.get("duration", 0.0), scene_cuts=scene_cuts)

@@ -69,6 +69,8 @@ export default function useDubWorkflow({
   const setDubSegments = useAppStore((s) => s.setDubSegments);
   const dubLang = useAppStore((s) => s.dubLang);
   const dubLangCode = useAppStore((s) => s.dubLangCode);
+  const dubSourceLangCode = useAppStore((s) => s.dubSourceLangCode);
+  const setDubSourceLangCode = useAppStore((s) => s.setDubSourceLangCode);
   const dubInstruct = useAppStore((s) => s.dubInstruct);
   const setDubFilename = useAppStore((s) => s.setDubFilename);
   const setDubDuration = useAppStore((s) => s.setDubDuration);
@@ -284,6 +286,9 @@ export default function useDubWorkflow({
             const castSources = m.cast_sources || m.speaker_clones || {};
             setDubSegments(applySpeakerCloneDefaults(normalized, castSources));
             setDubTranscript(m.full_transcript || '');
+            if (useAppStore.getState().dubSourceLangCode === 'auto' && m.source_lang) {
+              setDubSourceLangCode(m.source_lang);
+            }
             if (castSources && typeof castSources === 'object') {
               setSpeakerClones(castSources);
             }
@@ -360,7 +365,7 @@ export default function useDubWorkflow({
           ).then(reject, reject);
         });
       }),
-    [setDubSegments, setDubTranscript, setSpeakerClones],
+    [setDubSegments, setDubTranscript, setSpeakerClones, setDubSourceLangCode],
   );
 
   // ── SSE: wait for prep pipeline ──
@@ -546,7 +551,11 @@ export default function useDubWorkflow({
           { cancellable: true, homeMode: 'dub' },
         );
       try {
-        const data = await dubUpload(dubVideoFile, clientJobId, { signal: ctrl.signal, inputType });
+        const data = await dubUpload(dubVideoFile, clientJobId, {
+          signal: ctrl.signal,
+          inputType,
+          sourceLang: dubSourceLangCode,
+        });
         setDubJobId(data.job_id);
         if (data.filename) setDubFilename(data.filename);
         setDubTaskId(data.task_id);
@@ -610,6 +619,7 @@ export default function useDubWorkflow({
       loadProfiles,
       _resetStaleDubSession,
       _showMissingAsr,
+      dubSourceLangCode,
     ],
   );
 
@@ -645,6 +655,7 @@ export default function useDubWorkflow({
           fetchSubs: !!opts.fetchSubs,
           subLangs: opts.subLangs,
           cookieFile: opts.cookieFile,
+          sourceLang: dubSourceLangCode,
         });
         setDubJobId(data.job_id);
         setDubTaskId(data.task_id);
@@ -713,6 +724,7 @@ export default function useDubWorkflow({
       loadProfiles,
       _resetStaleDubSession,
       _showMissingAsr,
+      dubSourceLangCode,
     ],
   );
 
@@ -852,7 +864,11 @@ export default function useDubWorkflow({
         typeof langOverride === 'string' && langOverride ? langOverride : dubLangCode;
       // Snapshot segments at call time: inside the multi-language loop the
       // click-time closure is stale after the previous pick's translate pass.
-      const segs = useAppStore.getState().dubSegments;
+      const allSegments = useAppStore.getState().dubSegments;
+      const retryFailed = !!langOverride?.retryFailed;
+      const segs = retryFailed
+        ? allSegments.filter((segment) => segment.translate_error)
+        : allSegments;
       if (!segs.length || !targetLang) return false;
       setIsTranslating(true);
       // Root cause of the "sticky TRANSLATION FAILED banner": a new translate
@@ -876,6 +892,8 @@ export default function useDubWorkflow({
             end: s.end != null ? s.end : undefined,
           })),
           target_lang: targetLang,
+          source_lang:
+            dubSourceLangCode && dubSourceLangCode !== 'auto' ? dubSourceLangCode : undefined,
           provider: translateProvider,
           quality: translateQuality,
           // Lets the backend resolve the ASR-detected source language AND
@@ -1006,6 +1024,7 @@ export default function useDubWorkflow({
     },
     [
       dubLangCode,
+      dubSourceLangCode,
       dubDialect,
       dubJobId,
       translateProvider,
