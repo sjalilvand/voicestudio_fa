@@ -95,6 +95,8 @@ export default function IdleSkeleton({
   youtubeCookieFile,
   setYoutubeCookieFile,
   dubLangCode,
+  dubSourceLangCode,
+  setDubSourceLangCode,
   setDubLangCode,
   setDubLang,
   landingAdvOpen,
@@ -470,6 +472,24 @@ export default function IdleSkeleton({
                     (speakers, style) hides behind Advanced — ElevenLabs-style
                     flow, VoiceStudio chrome. The pick pre-seeds the editor. */}
               <div className="flex items-center justify-between gap-[10px] mt-[10px] px-[10px] py-[8px] [border:1px_solid_var(--chrome-border)] rounded-[10px] bg-[var(--chrome-hover-bg)]">
+                <label className="dub-landing-opts__lang inline-flex items-center gap-[7px] min-w-0 text-[var(--chrome-fg-muted)]">
+                  <Globe size={13} />
+                  <span className="text-[0.72rem] font-medium whitespace-nowrap">
+                    {t('dub.source_language')}
+                  </span>
+                  <select
+                    className="input-base text-[0.65rem]"
+                    value={dubSourceLangCode}
+                    onChange={(event) => setDubSourceLangCode(event.target.value)}
+                  >
+                    <option value="auto">{t('bootstrap.auto_detect')}</option>
+                    {LANG_CODES.map((language) => (
+                      <option key={language.code} value={language.code}>
+                        {language.label} — {language.code}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label className="dub-landing-opts__lang inline-flex items-center gap-[7px] min-w-0 text-[var(--chrome-fg-muted)]">
                   <Globe size={13} />
                   <span className="text-[0.72rem] font-medium whitespace-nowrap">

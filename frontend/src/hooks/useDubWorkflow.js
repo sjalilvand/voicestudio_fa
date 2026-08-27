@@ -69,6 +69,7 @@ export default function useDubWorkflow({
   const setDubSegments = useAppStore((s) => s.setDubSegments);
   const dubLang = useAppStore((s) => s.dubLang);
   const dubLangCode = useAppStore((s) => s.dubLangCode);
+  const dubSourceLangCode = useAppStore((s) => s.dubSourceLangCode);
   const dubInstruct = useAppStore((s) => s.dubInstruct);
   const setDubFilename = useAppStore((s) => s.setDubFilename);
   const setDubDuration = useAppStore((s) => s.setDubDuration);
@@ -546,7 +547,11 @@ export default function useDubWorkflow({
           { cancellable: true, homeMode: 'dub' },
         );
       try {
-        const data = await dubUpload(dubVideoFile, clientJobId, { signal: ctrl.signal, inputType });
+        const data = await dubUpload(dubVideoFile, clientJobId, {
+          signal: ctrl.signal,
+          inputType,
+          sourceLang: dubSourceLangCode,
+        });
         setDubJobId(data.job_id);
         if (data.filename) setDubFilename(data.filename);
         setDubTaskId(data.task_id);
@@ -610,6 +615,7 @@ export default function useDubWorkflow({
       loadProfiles,
       _resetStaleDubSession,
       _showMissingAsr,
+      dubSourceLangCode,
     ],
   );
 
@@ -645,6 +651,7 @@ export default function useDubWorkflow({
           fetchSubs: !!opts.fetchSubs,
           subLangs: opts.subLangs,
           cookieFile: opts.cookieFile,
+          sourceLang: dubSourceLangCode,
         });
         setDubJobId(data.job_id);
         setDubTaskId(data.task_id);
@@ -713,6 +720,7 @@ export default function useDubWorkflow({
       loadProfiles,
       _resetStaleDubSession,
       _showMissingAsr,
+      dubSourceLangCode,
     ],
   );
 
@@ -848,11 +856,25 @@ export default function useDubWorkflow({
   // that language rather than rendering a wrong-language track.
   const handleTranslateAll = useCallback(
     async (langOverride) => {
+      const options =
+        langOverride && typeof langOverride === 'object' && !('preventDefault' in langOverride)
+          ? langOverride
+          : {};
       const targetLang =
-        typeof langOverride === 'string' && langOverride ? langOverride : dubLangCode;
+        typeof langOverride === 'string' && langOverride
+          ? langOverride
+          : options.langOverride || dubLangCode;
       // Snapshot segments at call time: inside the multi-language loop the
       // click-time closure is stale after the previous pick's translate pass.
-      const segs = useAppStore.getState().dubSegments;
+      const allSegments = useAppStore.getState().dubSegments;
+      const retryFailed = !!options.retryFailed;
+      const segs = retryFailed
+        ? allSegments.filter(
+            (segment) =>
+              segment.translate_errors?.[targetLang] ||
+              (!segment.translate_errors && segment.translate_error),
+          )
+        : allSegments;
       if (!segs.length || !targetLang) return false;
       setIsTranslating(true);
       // Root cause of the "sticky TRANSLATION FAILED banner": a new translate
@@ -876,6 +898,8 @@ export default function useDubWorkflow({
             end: s.end != null ? s.end : undefined,
           })),
           target_lang: targetLang,
+          source_lang:
+            dubSourceLangCode && dubSourceLangCode !== 'auto' ? dubSourceLangCode : undefined,
           provider: translateProvider,
           quality: translateQuality,
           // Lets the backend resolve the ASR-detected source language AND
@@ -914,6 +938,12 @@ export default function useDubWorkflow({
             const hit = translatedMap[s.id];
             if (!hit) return s;
             const gotText = !!(hit.text && hit.text.trim());
+            const translateErrors = { ...s.translate_errors };
+            if (!s.translate_errors && s.translate_error) {
+              translateErrors[targetLang] = s.translate_error;
+            }
+            if (hit.error) translateErrors[targetLang] = hit.error;
+            else delete translateErrors[targetLang];
             return {
               ...s,
               text: gotText ? hit.text : s.text,
@@ -924,6 +954,7 @@ export default function useDubWorkflow({
               ...(gotText ? { translations: { ...s.translations, [targetLang]: hit.text } } : {}),
               ...(gotText ? { merge_parts: undefined } : {}),
               translate_error: hit.error || undefined,
+              translate_errors: Object.keys(translateErrors).length ? translateErrors : undefined,
               translate_degraded: hit.degraded || undefined,
               translate_literal: hit.literal || undefined,
               translate_critique: hit.critique || undefined,
@@ -1006,6 +1037,7 @@ export default function useDubWorkflow({
     },
     [
       dubLangCode,
+      dubSourceLangCode,
       dubDialect,
       dubJobId,
       translateProvider,

@@ -742,6 +742,74 @@ def _ensure_browser_playable_mp4(video_path: str) -> str:
     return video_path
 
 
+async def _ensure_browser_playable_mp4_for_job(job_id: str, video_path: str) -> str:
+    """Normalize an upload through the job's cancellable process registry."""
+    is_mp4 = video_path.lower().endswith(".mp4")
+    vcodec, acodec = await asyncio.to_thread(_probe_codecs, video_path)
+    if is_mp4 and vcodec in _BROWSER_VIDEO_CODECS and acodec in _BROWSER_AUDIO_CODECS:
+        return video_path
+
+    target = os.path.splitext(video_path)[0] + ".mp4"
+    if target == video_path:
+        target = os.path.splitext(video_path)[0] + ".browser.mp4"
+    run_proc = run_proc_factory(job_id)
+    ffmpeg_bin = find_ffmpeg()
+
+    async def attempt(cmd: list[str]) -> int:
+        try:
+            proc, _stdout, _stderr = await run_proc(cmd, timeout=1800.0)
+            return proc.returncode
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.warning(
+                "Browser-media normalization process failed for %s: %s",
+                log_safe(video_path),
+                log_safe(exc),
+            )
+            return 1
+
+    rc = 1
+    if not is_mp4:
+        rc = await attempt(
+            [
+                ffmpeg_bin, "-y", "-i", video_path,
+                "-c:v", "copy", "-c:a", "copy",
+                "-movflags", "+faststart", target,
+            ]
+        )
+        if rc == 0 and os.path.exists(target):
+            target_vcodec, target_acodec = await asyncio.to_thread(_probe_codecs, target)
+            if (
+                target_vcodec not in _BROWSER_VIDEO_CODECS
+                or target_acodec not in _BROWSER_AUDIO_CODECS
+            ):
+                rc = 1
+        else:
+            rc = 1
+    if rc != 0:
+        rc = await attempt(
+            [
+                ffmpeg_bin, "-y", "-i", video_path,
+                "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+                "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
+                "-movflags", "+faststart", target,
+            ]
+        )
+    if rc == 0 and os.path.exists(target) and target != video_path:
+        try:
+            os.remove(video_path)
+        except OSError:
+            pass  # Best effort: the normalized target is already complete.
+        return target
+    logger.warning(
+        "Could not transcode %s to browser-playable mp4 — the in-app "
+        "video player may render this file as a black box.",
+        log_safe(video_path),
+    )
+    return video_path
+
+
 # Bounded retry for transient download failures (#579/#598). yt-dlp's own
 # `retries`/`fragment_retries` cover per-fragment HTTP flakes, but a broken
 # pipe ([Errno 32]) raised while the write side of a pipe closes mid-stream
@@ -1257,6 +1325,13 @@ async def ingest_pipeline(
         except Exception:
             dur = 0.0
 
+        # URL downloads already pass through this guard in yt_download_sync.
+        # Uploaded videos did not, so a valid VP9/AV1/Opus upload could be
+        # processed successfully but remain undecodable by the in-app WebView.
+        # Codec probing/transcoding is blocking; keep it off the event loop.
+        if source.get("kind") != "url" and input_type != "audio":
+            video_path = await _ensure_browser_playable_mp4_for_job(job_id, video_path)
+
         # Content-hash cache: reuse artifacts from previous matching jobs.
         content_hash = await asyncio.to_thread(compute_file_hash, audio_path)
         cached = find_cached_job(content_hash, job_id)
@@ -1295,6 +1370,7 @@ async def ingest_pipeline(
                 "scene_cuts": scene_cuts,
                 "youtube_subs": youtube_subs_by_lang or None,
                 "input_type": input_type,
+                "source_lang_override": source.get("source_lang"),
             }
             if not put_and_save_job(
                 job_id, full_job, filename=filename, duration=dur, content_hash=content_hash,
@@ -1323,6 +1399,7 @@ async def ingest_pipeline(
                 "scene_cuts": [],
                 "youtube_subs": youtube_subs_by_lang or None,
                 "input_type": input_type,
+                "source_lang_override": source.get("source_lang"),
             }
             if not put_and_save_job(
                 job_id, partial, filename=filename, duration=dur, content_hash=content_hash,

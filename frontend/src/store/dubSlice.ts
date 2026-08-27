@@ -99,6 +99,7 @@ export interface DubSlice {
   // ── Language / translate ──────────────────────────────────────────────
   dubLang: string;
   dubLangCode: string;
+  dubSourceLangCode: string;
 
   // Optional speaker-count hint passed to pyannote diarization (#274). null =
   // let pyannote auto-detect; a positive int forces that many speakers when
@@ -169,6 +170,7 @@ export interface DubSlice {
   bumpDubGenNonce: () => void;
   setDubLang: (v: Updater<string>) => void;
   setDubLangCode: (v: Updater<string>) => void;
+  setDubSourceLangCode: (v: Updater<string>) => void;
   /**
    * User-driven target-language switch (P1.2). Unlike the plain setter it
    * also remaps segment text through the per-language `translations` store:
@@ -216,6 +218,7 @@ const INITIAL: Omit<
   | 'bumpDubGenNonce'
   | 'setDubLang'
   | 'setDubLangCode'
+  | 'setDubSourceLangCode'
   | 'switchDubLangCode'
   | 'setDubNumSpeakers'
   | 'setDubDialect'
@@ -250,6 +253,7 @@ const INITIAL: Omit<
   dubGenNonce: 0,
   dubLang: 'Auto',
   dubLangCode: 'en',
+  dubSourceLangCode: 'auto',
   dubNumSpeakers: null,
   dubDialect: '',
   multiLangMode: false,
@@ -288,6 +292,7 @@ export const createDubSlice: StateCreator<DubSlice, [], [], DubSlice> = (set, ge
   bumpDubGenNonce: () => set(() => ({ dubGenNonce: Date.now() })),
   setDubLang: (v) => set((s) => ({ dubLang: resolve(v, s.dubLang) })),
   setDubLangCode: (v) => set((s) => ({ dubLangCode: resolve(v, s.dubLangCode) })),
+  setDubSourceLangCode: (v) => set((s) => ({ dubSourceLangCode: resolve(v, s.dubSourceLangCode) })),
   switchDubLangCode: (code) =>
     set((s) => {
       const prev = s.dubLangCode;
