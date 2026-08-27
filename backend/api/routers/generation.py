@@ -8,6 +8,7 @@ import asyncio
 import tempfile
 import contextlib
 import logging
+import threading
 import traceback
 from typing import Optional
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
@@ -30,6 +31,83 @@ from omnivoice.utils.voice_design import heal_design_instruct
 
 router = APIRouter()
 logger = logging.getLogger("omnivoice.generate")
+
+
+class _TempReferenceLease:
+    """Delete a request-owned reference once every abandoned reader drains."""
+
+    def __init__(self, path: str):
+        self.path = path
+        self._lock = threading.Lock()
+        self._active = 0
+        self._request_done = False
+        self._deleted = False
+
+    def acquire(self):
+        with self._lock:
+            if self._request_done:
+                raise RuntimeError("reference lease acquired after request cleanup")
+            self._active += 1
+        once_lock = threading.Lock()
+        released = False
+
+        def release() -> None:
+            nonlocal released
+            with once_lock:
+                if released:
+                    return
+                released = True
+            self._release()
+
+        return release
+
+    def _release(self) -> None:
+        delete = False
+        with self._lock:
+            self._active -= 1
+            if self._active < 0:
+                raise RuntimeError("reference lease released too many times")
+            if self._request_done and self._active == 0 and not self._deleted:
+                self._deleted = True
+                delete = True
+        if delete:
+            with contextlib.suppress(OSError):
+                os.remove(self.path)
+
+    def finish_request(self) -> None:
+        delete = False
+        with self._lock:
+            self._request_done = True
+            if self._active == 0 and not self._deleted:
+                self._deleted = True
+                delete = True
+        if delete:
+            with contextlib.suppress(OSError):
+                os.remove(self.path)
+
+
+async def _run_with_reference_lease(lease, factory):
+    """Hold an ad-hoc reference through one local GPU-pool dispatch."""
+    if lease is None:
+        return await factory(None)
+    release = lease.acquire()
+    abandoned = False
+    try:
+        return await factory(release)
+    except GpuPoolBusyError:
+        # Busy means no job started; release now. The callback may already have
+        # done so, and the lease token is deliberately idempotent.
+        release()
+        abandoned = True
+        raise
+    except (asyncio.CancelledError, GpuJobTimeoutError):
+        # The guard owns release now: immediately for a queued cancellation,
+        # or from the worker finalizer after an in-flight job drains.
+        abandoned = True
+        raise
+    finally:
+        if not abandoned:
+            release()
 
 
 def _profile_instruct(row):
@@ -1297,6 +1375,7 @@ async def generate_speech(
 
     ref_audio_path = None
     cleanup_ref = False
+    ref_lease = None
     used_seed = seed
     resolved_profile_id = None
     history_mode = None  # profile.kind when a profile drives; else inferred at insert
@@ -1384,6 +1463,7 @@ async def generate_speech(
                 f.write(await ref_audio.read())
                 ref_audio_path = f.name
                 cleanup_ref = True
+                ref_lease = _TempReferenceLease(ref_audio_path)
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -1400,13 +1480,19 @@ async def generate_speech(
         # built-in ASR fallback), so a timeout degrades to None rather than
         # failing the whole generate.
         try:
-            ref_text = await run_on_gpu_pool_guarded(
-                functools.partial(transcribe_reference, ref_audio_path),
-                what="Reference transcribe",
-                # Floor budget (#1190): a reference clip is seconds of audio,
-                # so the length-scaled bonus never applies — but the timeout is
-                # explicit here too, so no dispatch relies on a hidden default.
-                timeout=_generate_timeout_s("", execution_device=_routing["effective_device"]),
+            ref_text = await _run_with_reference_lease(
+                ref_lease,
+                lambda release: run_on_gpu_pool_guarded(
+                    functools.partial(transcribe_reference, ref_audio_path),
+                    what="Reference transcribe",
+                    # Floor budget (#1190): a reference clip is seconds of audio,
+                    # so the length-scaled bonus never applies — but the timeout is
+                    # explicit here too, so no dispatch relies on a hidden default.
+                    timeout=_generate_timeout_s(
+                        "", execution_device=_routing["effective_device"]
+                    ),
+                    on_abandon=release,
+                )
             )
         # TimeoutError covers both the execution bound and pool saturation:
         # this path is best-effort either way.
@@ -1684,9 +1770,8 @@ async def generate_speech(
             finally:
                 if not render.done():
                     render.cancel()
-                if cleanup_ref and ref_audio_path:
-                    with contextlib.suppress(OSError):
-                        os.remove(ref_audio_path)
+                if cleanup_ref and ref_lease is not None:
+                    ref_lease.finish_request()
 
         return StreamingResponse(
             _remote_stream_events(),
@@ -1791,33 +1876,41 @@ async def generate_speech(
                 if _has_pause or len(_text_chunks) <= 1:
                     # Single-shot pipeline, unchanged — streamed as one chunk.
                     if _backend is not None:
-                        audio_tensor = await run_on_gpu_pool_guarded(
-                            functools.partial(
-                                _run_backend_inference,
-                                _backend, text, language, ref_audio_path, ref_text,
-                                instruct, duration, num_step, guidance_scale, speed,
-                                denoise, postprocess_output, used_seed, effect_preset,
-                                max_chunk_chars, crossfade_ms, dropped_sink=_dropped_sink,
-                            ),
-                            what="TTS generate",
-                            min_vram_gb=_engine_min_vram_gb,
-                            timeout=_generate_timeout_s(text, execution_device=_routing["effective_device"]),
+                        audio_tensor = await _run_with_reference_lease(
+                            ref_lease,
+                            lambda release: run_on_gpu_pool_guarded(
+                                functools.partial(
+                                    _run_backend_inference,
+                                    _backend, text, language, ref_audio_path, ref_text,
+                                    instruct, duration, num_step, guidance_scale, speed,
+                                    denoise, postprocess_output, used_seed, effect_preset,
+                                    max_chunk_chars, crossfade_ms, dropped_sink=_dropped_sink,
+                                ),
+                                what="TTS generate",
+                                min_vram_gb=_engine_min_vram_gb,
+                                timeout=_generate_timeout_s(text, execution_device=_routing["effective_device"]),
+                                on_abandon=release,
+                            )
                         )
                         sample_rate = _backend.sample_rate
                     else:
-                        audio_tensor = await run_on_gpu_pool_guarded(
-                            functools.partial(
-                                _run_inference,
-                                _model, text, language, ref_audio_path, ref_text,
-                                instruct, duration, num_step, guidance_scale, speed,
-                                t_shift, denoise, postprocess_output,
-                                layer_penalty_factor, position_temperature,
-                                class_temperature, used_seed, effect_preset,
-                                max_chunk_chars, crossfade_ms, dropped_sink=_dropped_sink,
-                            ),
-                            what="TTS generate",
-                            min_vram_gb=_engine_min_vram_gb,
-                            timeout=_generate_timeout_s(text, execution_device=_routing["effective_device"]),
+                        audio_tensor = await _run_with_reference_lease(
+                            ref_lease,
+                            lambda release: run_on_gpu_pool_guarded(
+                                functools.partial(
+                                    _run_inference,
+                                    _model, text, language, ref_audio_path, ref_text,
+                                    instruct, duration, num_step, guidance_scale, speed,
+                                    t_shift, denoise, postprocess_output,
+                                    layer_penalty_factor, position_temperature,
+                                    class_temperature, used_seed, effect_preset,
+                                    max_chunk_chars, crossfade_ms, dropped_sink=_dropped_sink,
+                                ),
+                                what="TTS generate",
+                                min_vram_gb=_engine_min_vram_gb,
+                                timeout=_generate_timeout_s(text, execution_device=_routing["effective_device"]),
+                                on_abandon=release,
+                            )
                         )
                         sample_rate = _model.sampling_rate
                     yield _line({
@@ -1846,14 +1939,18 @@ async def generate_speech(
                     for i, chunk_text in enumerate(_text_chunks):
                         # Bounded per chunk + pool-reset on hang (#730 class);
                         # a timeout surfaces as an "error" event below.
-                        raw, preview, sample_rate = await run_on_gpu_pool_guarded(
-                            functools.partial(_render_stream_chunk, i, chunk_text),
-                            what="TTS generate",
-                            min_vram_gb=_engine_min_vram_gb,
-                            # Budget scaled to THIS chunk (#1190) — the flat
-                            # 300s here is what made long streamed renders fail
-                            # even after the v0.3.22 scaled budget shipped.
-                            timeout=_generate_timeout_s(chunk_text, execution_device=_routing["effective_device"]),
+                        raw, preview, sample_rate = await _run_with_reference_lease(
+                            ref_lease,
+                            lambda release: run_on_gpu_pool_guarded(
+                                functools.partial(_render_stream_chunk, i, chunk_text),
+                                what="TTS generate",
+                                min_vram_gb=_engine_min_vram_gb,
+                                # Budget scaled to THIS chunk (#1190) — the flat
+                                # 300s here is what made long streamed renders fail
+                                # even after the v0.3.22 scaled budget shipped.
+                                timeout=_generate_timeout_s(chunk_text, execution_device=_routing["effective_device"]),
+                                on_abandon=release,
+                            )
                         )
                         parts.append(raw)
                         # Provenance-mark the streamed copy off the GPU pool
@@ -1951,9 +2048,8 @@ async def generate_speech(
             finally:
                 # Ownership of the temp reference clip moves to this generator
                 # in stream mode (the route returns before rendering starts).
-                if cleanup_ref and ref_audio_path:
-                    with contextlib.suppress(OSError):
-                        os.remove(ref_audio_path)
+                if cleanup_ref and ref_lease is not None:
+                    ref_lease.finish_request()
 
         # Routing notice (#21): known before the stream starts, so it rides the
         # same headers the classic path uses — and now also carries "your
@@ -2002,14 +2098,18 @@ async def generate_speech(
                     class_temperature, used_seed, effect_preset,
                     max_chunk_chars, crossfade_ms, dropped_sink=_dropped_text,
                 )
-            audio_tensor = await gpu_gateway.run(
-                _REMOTE_OP,
-                local=gpu_gateway.LocalCall(
-                    _local_render, what="TTS generate",
-                    timeout=_generate_timeout_s(text, execution_device=_routing["effective_device"]),
-                    min_vram_gb=_engine_min_vram_gb,
-                ),
-                decision=_decision,
+            audio_tensor = await _run_with_reference_lease(
+                ref_lease,
+                lambda release: gpu_gateway.run(
+                    _REMOTE_OP,
+                    local=gpu_gateway.LocalCall(
+                        _local_render, what="TTS generate",
+                        timeout=_generate_timeout_s(text, execution_device=_routing["effective_device"]),
+                        min_vram_gb=_engine_min_vram_gb,
+                        on_abandon=release,
+                    ),
+                    decision=_decision,
+                )
             )
             # Read after generation: engines with lazy model loading report
             # their real rate only once weights are up.
@@ -2141,9 +2241,8 @@ async def generate_speech(
             ),
         )
     finally:
-        if cleanup_ref and ref_audio_path:
-            with contextlib.suppress(OSError):
-                os.remove(ref_audio_path)
+        if cleanup_ref and ref_lease is not None:
+            ref_lease.finish_request()
 
 def _safe_output_path(name):
     if not name:
