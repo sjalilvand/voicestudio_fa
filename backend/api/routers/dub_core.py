@@ -438,12 +438,13 @@ async def preview_upload(video: UploadFile = File(...)):
     safe_name = f"{uuid.uuid4().hex[:12]}"
     vid_path = os.path.join(PREVIEW_DIR, f"{safe_name}{ext}")
     wav_path = os.path.join(PREVIEW_DIR, f"{safe_name}.wav")
-    
-    with open(vid_path, "wb") as f:
-        f.write(await video.read())
-        
-    has_audio = False
-    if ext not in [".wav", ".mp3", ".m4a", ".aac"]:
+    payload = await video.read()
+
+    def _write_and_extract() -> bool:
+        with open(vid_path, "wb") as f:
+            f.write(payload)
+        if ext in {".wav", ".mp3", ".m4a", ".aac"}:
+            return False
         try:
             ffmpeg_cmd = [
                 find_ffmpeg(), "-y", "-i", vid_path,
@@ -455,10 +456,16 @@ async def preview_upload(video: UploadFile = File(...)):
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 timeout=300,
             )
-            has_audio = True
+            return True
         except Exception as e:
             logger.warning("FFmpeg extraction failed: %s", log_safe(e))
-            pass
+            return False
+
+    # File writes and ffmpeg are blocking operations. Keep them on the bounded
+    # CPU pool so a large preview cannot stall unrelated API requests (#1667).
+    has_audio = await asyncio.get_running_loop().run_in_executor(
+        _cpu_pool, _write_and_extract
+    )
 
     return {
         "url": f"/preview/{safe_name}{ext}",
