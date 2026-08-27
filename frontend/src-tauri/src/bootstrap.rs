@@ -1141,18 +1141,26 @@ fn supervise_backend<R: tauri::Runtime>(
             // A health-confirmed disconnect from an unowned listener is not a
             // process crash: no fabricated crash marker/budget entry.
             Duration::ZERO
-        } else if crate::crash::should_record_backend_crash(&exit) {
-            let uptime_s = backend_uptime_s(app);
-            crate::crash::record_crash(crate::crash::marker_now(
-                &exit,
-                uptime_s,
-                crate::backend::read_error_log_tail_for_run(CRASH_STDERR_TAIL_LINES),
-            ));
+        } else {
+            let is_crash = crate::crash::should_record_backend_crash(&exit);
+            if is_crash {
+                let uptime_s = backend_uptime_s(app);
+                crate::crash::record_crash(crate::crash::marker_now(
+                    &exit,
+                    uptime_s,
+                    crate::backend::read_error_log_tail_for_run(CRASH_STDERR_TAIL_LINES),
+                ));
+            } else {
+                log::info!(
+                    "Backend received an external Windows debugger termination ({exit_info}); restarting without a crash marker"
+                );
+            }
             if restart_budget_exhausted(&mut restart_times, Instant::now()) {
                 let tail = crate::backend::read_error_log_tail_for_run(30);
                 let msg = format!(
-                    "The backend kept crashing ({} times in {} min; last death: {}) and couldn't \
+                    "The backend kept {} ({} times in {} min; last stop: {}) and couldn't \
                      be kept running. Use Clean & Retry, or check Settings → Logs → Backend.{}",
+                    if is_crash { "crashing" } else { "being stopped externally" },
                     MAX_RESTARTS,
                     RESTART_WINDOW.as_secs() / 60,
                     exit.label(),
@@ -1168,11 +1176,6 @@ fn supervise_backend<R: tauri::Runtime>(
             let delay = restart_backoff_delay(restart_times.len());
             restart_times.push(Instant::now());
             delay
-        } else {
-            log::info!(
-                "Backend received an external Windows debugger termination ({exit_info}); restarting without a crash marker"
-            );
-            Duration::ZERO
         };
         log::warn!("Backend process exited unexpectedly ({exit_info}) — restarting it (#567)");
         emit_log(app, "starting_backend", "Backend stopped unexpectedly — restarting it automatically");
