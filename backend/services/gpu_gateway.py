@@ -177,6 +177,9 @@ class LocalCall:
     queue_timeout: Optional[float] = None
     # The engine's declared VRAM floor; only shapes the timeout message.
     min_vram_gb: float = 0.0
+    # Called once a local worker abandoned by its waiter can no longer touch
+    # request-owned inputs. Normal completion does not call it (#1668).
+    on_abandon: Optional[Callable[[], None]] = None
     # Some remote-first callers cannot construct the local callable without
     # loading the very model they are trying to offload.  Prepare it only when
     # routing/fallback actually selects this machine.
@@ -465,6 +468,7 @@ async def _run_local(call: LocalCall, *, admit: bool = False, executor=None) -> 
         queue_timeout=call.queue_timeout,
         min_vram_gb=call.min_vram_gb,
         executor=executor,
+        on_abandon=call.on_abandon,
     )
 
 

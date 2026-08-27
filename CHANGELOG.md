@@ -11,6 +11,7 @@ the frozen-backend fallback mirror it for their toolchains.
 **Highlights**
 
 - VoiceStudio now acts as a local speech platform: other apps can trigger its native dictation or connect through versioned HTTP, WebSocket, JSON-RPC, CLI, and MCP transports (#1646)
+- Ad-hoc voice-clone references now stay alive until cancelled or timed-out GPU work actually stops reading them, so prompt caching can finish instead of failing on a deleted temp file (#1668) — thanks @tfreyd!
 - Dictation now stays bound to the app where it started and recovers locally from silent recognizer output (#1175)
 - The backend now answers within a second of launch and narrates its startup step by step (#1550)
 - Reporting a bug from an outdated build now offers the latest release first (#1547)
