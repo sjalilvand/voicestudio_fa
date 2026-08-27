@@ -147,3 +147,31 @@ def test_upload_normalization_failure_keeps_the_original_media(tmp_path, monkeyp
 
     assert result == str(source)
     assert source.exists()
+
+
+def test_successful_remux_with_unsupported_codecs_is_transcoded(tmp_path, monkeypatch):
+    source = tmp_path / "source.webm"
+    source.write_bytes(b"source")
+    target = tmp_path / "source.mp4"
+    commands = []
+
+    monkeypatch.setattr(dp, "_probe_codecs", lambda _path: ("vp9", "opus"))
+    monkeypatch.setattr(dp, "find_ffmpeg", lambda: "ffmpeg")
+
+    def factory(_job_id):
+        async def run_proc(cmd, *, timeout):
+            assert timeout == 1800.0
+            commands.append(cmd)
+            target.write_bytes(b"normalized")
+            return SimpleNamespace(returncode=0), b"", b""
+
+        return run_proc
+
+    monkeypatch.setattr(dp, "run_proc_factory", factory)
+
+    result = asyncio.run(dp._ensure_browser_playable_mp4_for_job("codec-job", str(source)))
+
+    assert result == str(target)
+    assert [cmd[cmd.index("-c:v") + 1] for cmd in commands] == ["copy", "libx264"]
+    assert [cmd[cmd.index("-c:a") + 1] for cmd in commands] == ["copy", "aac"]
+    assert not source.exists()

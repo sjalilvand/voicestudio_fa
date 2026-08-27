@@ -315,8 +315,7 @@ async def dub_import_srt(job_id: str, file: UploadFile = File(...)):
         job.get("segment_clones"),
     )
     job["segments"] = segments
-    if segment_clones:
-        job["segment_clones"] = segment_clones
+    job["segment_clones"] = segment_clones
     if job.get("speaker_clones") or segment_clones:
         from services.speaker_clone import build_cast_sources
 
@@ -325,6 +324,8 @@ async def dub_import_srt(job_id: str, file: UploadFile = File(...)):
             job.get("speaker_clones"),
             segment_clones,
         )
+    else:
+        job.pop("cast_sources", None)
     # `source_lang` stays whatever the user (or the upload step) set; we
     # don't try to language-detect off the cue text — that's noisy and the
     # user usually knows what their .srt is.

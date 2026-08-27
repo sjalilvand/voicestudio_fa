@@ -778,7 +778,14 @@ async def _ensure_browser_playable_mp4_for_job(job_id: str, video_path: str) -> 
                 "-movflags", "+faststart", target,
             ]
         )
-        if rc != 0 or not os.path.exists(target):
+        if rc == 0 and os.path.exists(target):
+            target_vcodec, target_acodec = await asyncio.to_thread(_probe_codecs, target)
+            if (
+                target_vcodec not in _BROWSER_VIDEO_CODECS
+                or target_acodec not in _BROWSER_AUDIO_CODECS
+            ):
+                rc = 1
+        else:
             rc = 1
     if rc != 0:
         rc = await attempt(

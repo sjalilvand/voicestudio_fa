@@ -869,7 +869,11 @@ export default function useDubWorkflow({
       const allSegments = useAppStore.getState().dubSegments;
       const retryFailed = !!options.retryFailed;
       const segs = retryFailed
-        ? allSegments.filter((segment) => segment.translate_error)
+        ? allSegments.filter(
+            (segment) =>
+              segment.translate_errors?.[targetLang] ||
+              (!segment.translate_errors && segment.translate_error),
+          )
         : allSegments;
       if (!segs.length || !targetLang) return false;
       setIsTranslating(true);
@@ -934,6 +938,12 @@ export default function useDubWorkflow({
             const hit = translatedMap[s.id];
             if (!hit) return s;
             const gotText = !!(hit.text && hit.text.trim());
+            const translateErrors = { ...s.translate_errors };
+            if (!s.translate_errors && s.translate_error) {
+              translateErrors[targetLang] = s.translate_error;
+            }
+            if (hit.error) translateErrors[targetLang] = hit.error;
+            else delete translateErrors[targetLang];
             return {
               ...s,
               text: gotText ? hit.text : s.text,
@@ -944,6 +954,7 @@ export default function useDubWorkflow({
               ...(gotText ? { translations: { ...s.translations, [targetLang]: hit.text } } : {}),
               ...(gotText ? { merge_parts: undefined } : {}),
               translate_error: hit.error || undefined,
+              translate_errors: Object.keys(translateErrors).length ? translateErrors : undefined,
               translate_degraded: hit.degraded || undefined,
               translate_literal: hit.literal || undefined,
               translate_critique: hit.critique || undefined,

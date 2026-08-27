@@ -149,6 +149,74 @@ describe('handleTranslateAll(langOverride) — multi-language target override', 
     expect(useAppStore.getState().dubSegments[1].translate_error).toBeUndefined();
   });
 
+  it('retries and clears failures by target language', async () => {
+    useAppStore.setState({
+      dubSegments: [
+        {
+          id: '1',
+          text: 'failed twice',
+          text_original: 'failed twice',
+          start: 0,
+          end: 1,
+        },
+        {
+          id: '2',
+          text: 'failed in French',
+          text_original: 'failed in French',
+          start: 1,
+          end: 2,
+        },
+      ],
+    });
+    dubApi.dubTranslate
+      .mockResolvedValueOnce({
+        translated: [
+          { id: '1', text: '', error: 'es offline' },
+          { id: '2', text: 'es:2' },
+        ],
+        target_lang: 'es',
+      })
+      .mockResolvedValueOnce({
+        translated: [
+          { id: '1', text: '', error: 'fr offline' },
+          { id: '2', text: '', error: 'fr offline' },
+        ],
+        target_lang: 'fr',
+      });
+    const { result } = renderWorkflow();
+
+    await act(async () => {
+      await result.current.handleTranslateAll('es');
+      await result.current.handleTranslateAll('fr');
+    });
+    expect(useAppStore.getState().dubSegments.map((segment) => segment.translate_errors)).toEqual([
+      { es: 'es offline', fr: 'fr offline' },
+      { fr: 'fr offline' },
+    ]);
+
+    dubApi.dubTranslate.mockImplementation(async ({ segments, target_lang: targetLang }) => ({
+      translated: segments.map(({ id }) => ({ id, text: `${targetLang}:${id}` })),
+      target_lang: targetLang,
+    }));
+
+    await act(async () => {
+      await result.current.handleTranslateAll({ retryFailed: true, langOverride: 'es' });
+    });
+    expect(dubApi.dubTranslate.mock.calls[2][0].segments.map(({ id }) => id)).toEqual(['1']);
+    expect(useAppStore.getState().dubSegments[0].translate_errors).toEqual({
+      fr: 'fr offline',
+    });
+
+    await act(async () => {
+      await result.current.handleTranslateAll({ retryFailed: true, langOverride: 'fr' });
+    });
+    expect(dubApi.dubTranslate.mock.calls[3][0].segments.map(({ id }) => id)).toEqual(['1', '2']);
+    expect(useAppStore.getState().dubSegments.map((segment) => segment.translate_errors)).toEqual([
+      undefined,
+      undefined,
+    ]);
+  });
+
   it('request failure resolves false and surfaces the existing error banner', async () => {
     dubApi.dubTranslate.mockRejectedValue(new Error('engine down'));
     const { result } = renderWorkflow();

@@ -122,3 +122,28 @@ def test_import_srt_rekeys_clone_refs_and_rebuilds_cast(monkeypatch):
     ]
     assert job["segment_clones"]["1"] is clone
     assert job["cast_sources"]["Speaker 2"]["kind"] == "segment"
+
+
+def test_import_srt_clears_stale_clone_and_cast_maps(monkeypatch):
+    from api.routers import dub_core
+
+    job_id = "srt-clear-cast"
+    job = {
+        "duration": 20.0,
+        "segments": [{"id": "0", "start": 0.0, "end": 1.0, "text": "old"}],
+        "segment_clones": {"0": {"ref_audio": "/job/unrelated.wav"}},
+        "cast_sources": {"Speaker 1": {"kind": "segment", "ref_audio": "/job/unrelated.wav"}},
+    }
+    dub_core._dub_jobs[job_id] = job
+    monkeypatch.setattr(dub_core, "_save_job", lambda *_args: None)
+    upload = UploadFile(
+        filename="replacement.srt",
+        file=io.BytesIO(b"1\n00:00:10,000 --> 00:00:11,000\nNew line\n"),
+    )
+    try:
+        asyncio.run(dub_core.dub_import_srt(job_id, upload))
+    finally:
+        dub_core._dub_jobs.pop(job_id, None)
+
+    assert job["segment_clones"] == {}
+    assert "cast_sources" not in job
