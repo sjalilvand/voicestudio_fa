@@ -1,0 +1,110 @@
+from __future__ import annotations
+
+import asyncio
+import io
+
+from fastapi import UploadFile
+
+
+def test_srt_cues_inherit_best_overlap_voice_metadata():
+    from api.routers.dub_core import _carry_srt_voice_metadata
+
+    existing = [
+        {
+            "id": "left",
+            "start": 0.0,
+            "end": 2.0,
+            "text": "old one",
+            "speaker_id": "Speaker 1",
+            "profile_id": "auto:speaker_1",
+            "speed": 1.1,
+            "translations": {"fr": "stale"},
+        },
+        {
+            "id": "right",
+            "start": 2.0,
+            "end": 5.0,
+            "text": "old two",
+            "speaker_id": "Speaker 2",
+            "profile_id": "auto-seg:right",
+            "effect_preset": "radio",
+        },
+    ]
+    cues = [
+        {"id": 0, "start": 0.2, "end": 1.8, "text": "new one", "speaker_id": "Speaker 1"},
+        {"id": 1, "start": 1.8, "end": 4.8, "text": "new two", "speaker_id": "Speaker 1"},
+    ]
+    clone = {"ref_audio": "/job/right.wav", "duration": 2.8}
+
+    merged, clones = _carry_srt_voice_metadata(
+        cues,
+        existing,
+        {"right": clone},
+    )
+
+    assert merged[0]["speaker_id"] == "Speaker 1"
+    assert merged[0]["profile_id"] == "auto:speaker_1"
+    assert merged[0]["speed"] == 1.1
+    assert "translations" not in merged[0]
+    assert merged[1]["speaker_id"] == "Speaker 2"
+    assert merged[1]["profile_id"] == "auto-seg:1"
+    assert merged[1]["effect_preset"] == "radio"
+    assert merged[1]["text_original"] == "new two"
+    assert clones["1"] is clone
+
+
+def test_import_srt_rekeys_clone_refs_and_rebuilds_cast(monkeypatch):
+    from api.routers import dub_core
+
+    job_id = "srt-cast"
+    clone = {
+        "ref_audio": "/job/speaker-two.wav",
+        "ref_text": "source",
+        "duration": 3.0,
+    }
+    job = {
+        "duration": 6.0,
+        "segments": [
+            {
+                "id": "old-1",
+                "start": 0.0,
+                "end": 2.0,
+                "text": "old one",
+                "speaker_id": "Speaker 1",
+                "profile_id": "auto:speaker_1",
+            },
+            {
+                "id": "old-2",
+                "start": 2.0,
+                "end": 5.0,
+                "text": "old two",
+                "speaker_id": "Speaker 2",
+                "profile_id": "auto:speaker_2",
+            },
+        ],
+        "segment_clones": {"old-2": clone},
+    }
+    dub_core._dub_jobs[job_id] = job
+    monkeypatch.setattr(dub_core, "_save_job", lambda *_args: None)
+    upload = UploadFile(
+        filename="replacement.srt",
+        file=io.BytesIO(
+            b"1\n00:00:00,000 --> 00:00:02,000\nFirst line\n\n"
+            b"2\n00:00:02,000 --> 00:00:05,000\nSecond line\n"
+        ),
+    )
+    try:
+        result = asyncio.run(dub_core.dub_import_srt(job_id, upload))
+    finally:
+        dub_core._dub_jobs.pop(job_id, None)
+
+    assert [segment["speaker_id"] for segment in result["segments"]] == [
+        "Speaker 1",
+        "Speaker 2",
+    ]
+    assert [segment["profile_id"] for segment in result["segments"]] == [
+        "auto:speaker_1",
+        "auto:speaker_2",
+    ]
+    assert job["segment_clones"]["1"] is clone
+    assert job["cast_sources"]["Speaker 2"]["kind"] == "segment"

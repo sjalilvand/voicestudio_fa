@@ -134,6 +134,75 @@ _save_job          = dub_pipeline.save_job
 # paste (or a mis-aimed binary) burn CPU in the parser.
 _MAX_SUBTITLE_PASTE_CHARS = 2_000_000
 
+_SRT_REPLACED_FIELDS = {
+    "id",
+    "start",
+    "end",
+    "text",
+    "text_original",
+    "translations",
+    "translate_error",
+    "translate_degraded",
+}
+
+
+def _best_overlapping_segment(cue: dict, existing: list[dict]) -> dict | None:
+    """Return the prior segment with the strongest temporal overlap."""
+    cue_start = float(cue.get("start") or 0.0)
+    cue_end = float(cue.get("end") or cue_start)
+    cue_mid = (cue_start + cue_end) / 2.0
+    best = None
+    best_key = None
+    for index, segment in enumerate(existing):
+        start = float(segment.get("start") or 0.0)
+        end = float(segment.get("end") or start)
+        overlap = min(cue_end, end) - max(cue_start, start)
+        if overlap <= 0:
+            continue
+        midpoint_distance = abs(cue_mid - ((start + end) / 2.0))
+        key = (overlap, -midpoint_distance, -index)
+        if best_key is None or key > best_key:
+            best = segment
+            best_key = key
+    return best
+
+
+def _carry_srt_voice_metadata(
+    cues: list[dict],
+    existing: list[dict],
+    segment_clones: dict | None,
+) -> tuple[list[dict], dict]:
+    """Replace subtitle content while retaining the source cast assignment."""
+    source_clones = dict(segment_clones or {})
+    clones = dict(source_clones)
+    merged_segments = []
+    for new_id, cue in enumerate(cues):
+        prior = _best_overlapping_segment(cue, existing)
+        metadata = {
+            key: value
+            for key, value in (prior or {}).items()
+            if key not in _SRT_REPLACED_FIELDS
+        }
+        merged = {
+            **metadata,
+            "id": new_id,
+            "start": cue.get("start", 0.0),
+            "end": cue.get("end", 0.0),
+            "text": cue.get("text", ""),
+            "text_original": cue.get("text", ""),
+        }
+        if not merged.get("speaker_id"):
+            merged["speaker_id"] = cue.get("speaker_id") or "Speaker 1"
+        if prior is not None:
+            prior_id = str(prior.get("id", ""))
+            clone = source_clones.get(prior_id)
+            if clone is not None:
+                clones[str(new_id)] = clone
+                if merged.get("profile_id") == f"auto-seg:{prior_id}":
+                    merged["profile_id"] = f"auto-seg:{new_id}"
+        merged_segments.append(merged)
+    return merged_segments, clones
+
 
 @router.post("/dub/parse-subtitle-text")
 def dub_parse_subtitle_text(req: ParseSubtitleTextRequest):
@@ -234,7 +303,25 @@ async def dub_import_srt(job_id: str, file: UploadFile = File(...)):
     else:
         segments = result.segments
 
+    prior_segments = [
+        segment for segment in (job.get("segments") or []) if isinstance(segment, dict)
+    ]
+    segments, segment_clones = _carry_srt_voice_metadata(
+        segments,
+        prior_segments,
+        job.get("segment_clones"),
+    )
     job["segments"] = segments
+    if segment_clones:
+        job["segment_clones"] = segment_clones
+    if job.get("speaker_clones") or segment_clones:
+        from services.speaker_clone import build_cast_sources
+
+        job["cast_sources"] = build_cast_sources(
+            segments,
+            job.get("speaker_clones"),
+            segment_clones,
+        )
     # `source_lang` stays whatever the user (or the upload step) set; we
     # don't try to language-detect off the cue text — that's noisy and the
     # user usually knows what their .srt is.
