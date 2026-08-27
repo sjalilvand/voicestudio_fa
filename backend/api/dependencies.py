@@ -54,6 +54,15 @@ def _server_mode() -> bool:
     return os.environ.get("OMNIVOICE_SERVER_MODE", "").strip().lower() in _TRUTHY
 
 
+def validate_server_admin_key() -> None:
+    """Reject an explicitly blank key before a server-mode app starts."""
+    raw_key = os.environ.get("OMNIVOICE_API_KEY")
+    if _server_mode() and raw_key is not None and not raw_key.strip():
+        raise RuntimeError(
+            "OMNIVOICE_API_KEY is blank; configure a non-whitespace administrator key"
+        )
+
+
 def _configured_pin(request) -> str | None:
     """The active share PIN (``app.state.network_share.pin``) or None. Read via
     getattr so a bare Request stub (or a request that hit before lifespan set

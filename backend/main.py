@@ -1009,6 +1009,9 @@ async def _phase_b(app: FastAPI) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from api.dependencies import validate_server_admin_key
+
+    validate_server_admin_key()
     # Startup watchdog (#632): a silent hang during startup (e.g. a model-load /
     # MCP deadlock on some platforms) means "Application startup complete" never
     # logs and the app sits forever with no error. If startup hasn't finished
