@@ -15,6 +15,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Dubbing now separates spoken and target languages, preserves translations through segment cleanup, and lets failed translations be retried or skipped without restarting the batch (#1654) — thanks @Number16BusShelter!
 - Importing replacement SRT subtitles now keeps each cue bound to the best-overlapping source speaker and clone instead of resetting every line to a random default voice (#1660) — thanks @invio-a11y!
 - Uploading a Dub preview no longer blocks every backend request while ffmpeg extracts its audio (#1667) — thanks @tfreyd!
+- Ad-hoc voice-clone references now stay alive until cancelled or timed-out GPU work actually stops reading them, so prompt caching can finish instead of failing on a deleted temp file (#1668) — thanks @tfreyd!
 - Dictation now stays bound to the app where it started and recovers locally from silent recognizer output (#1175)
 - The backend now answers within a second of launch and narrates its startup step by step (#1550)
 - Reporting a bug from an outdated build now offers the latest release first (#1547)
