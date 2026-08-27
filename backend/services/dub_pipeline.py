@@ -1257,6 +1257,13 @@ async def ingest_pipeline(
         except Exception:
             dur = 0.0
 
+        # URL downloads already pass through this guard in yt_download_sync.
+        # Uploaded videos did not, so a valid VP9/AV1/Opus upload could be
+        # processed successfully but remain undecodable by the in-app WebView.
+        # Codec probing/transcoding is blocking; keep it off the event loop.
+        if source.get("kind") != "url" and input_type != "audio":
+            video_path = await asyncio.to_thread(_ensure_browser_playable_mp4, video_path)
+
         # Content-hash cache: reuse artifacts from previous matching jobs.
         content_hash = await asyncio.to_thread(compute_file_hash, audio_path)
         cached = find_cached_job(content_hash, job_id)
