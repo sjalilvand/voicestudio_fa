@@ -631,7 +631,8 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
                                   timeout: "float | None" = None,
                                   executor=None,
                                   queue_timeout: "float | None" = None,
-                                  min_vram_gb: float = 0.0):
+                                  min_vram_gb: float = 0.0,
+                                  on_abandon=None):
     """Run blocking ``fn`` on the GPU pool, bounding **execution** — not the
     wait for a free worker.
 
@@ -659,6 +660,12 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
     at 0 — the default, and correct for every non-TTS job on this pool
     (reference transcribe, watermarking, dub steps) — the under-provisioned-GPU
     wording is never used, because nothing measured says it applies (#1226).
+
+    ``on_abandon`` is called once, after a job whose caller stopped waiting can
+    no longer access its inputs. A queued job that is cancelled before it
+    starts calls it immediately; a running thread calls it from ``_job``'s
+    finalizer. Normal completion never calls it. This lets request-owned temp
+    files outlive abandoned workers without delaying ordinary requests (#1668).
     """
     loop = asyncio.get_running_loop()
     ex = executor if executor is not None else _get_gpu_pool()
@@ -673,6 +680,24 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
     # job's model-load heartbeats (#1367). A dict, not a nonlocal: the closure
     # runs on a pool thread while the waiter reads from the event loop.
     _ident_box: dict = {}
+    _abandon_lock = threading.Lock()
+    _abandon_state = {
+        "requested": False,
+        "finished": False,
+        "callback_called": False,
+    }
+
+    def _fire_abandon_callback() -> None:
+        if on_abandon is None:
+            return
+        with _abandon_lock:
+            if _abandon_state["callback_called"]:
+                return
+            _abandon_state["callback_called"] = True
+        try:
+            on_abandon()
+        except Exception:  # noqa: BLE001 — cleanup cannot hide the pool result
+            logger.exception("%s abandon cleanup failed", _log_safe(what))
 
     def _job():
         # First thing the worker does: tell the awaiting coroutine the
@@ -689,8 +714,26 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
             # Idents are reused by the OS; a stale heartbeat under this ident
             # must not vouch for some future job on the same thread.
             _MODEL_LOAD_ACTIVITY.pop(threading.get_ident(), None)
+            with _abandon_lock:
+                _abandon_state["finished"] = True
+                abandoned = _abandon_state["requested"]
+            if abandoned:
+                _fire_abandon_callback()
 
-    fut = loop.run_in_executor(ex, _job)
+    concurrent_fut = ex.submit(_job)
+    fut = asyncio.wrap_future(concurrent_fut, loop=loop)
+
+    def _abandon() -> None:
+        # Keep the concurrent future so we can distinguish a job cancelled out
+        # of the queue from a thread that Python cannot stop once it has begun.
+        cancelled_before_start = concurrent_fut.cancel()
+        with _abandon_lock:
+            _abandon_state["requested"] = True
+            finished = _abandon_state["finished"]
+        fut.cancel()
+        if cancelled_before_start or finished:
+            _fire_abandon_callback()
+
     waiter = asyncio.ensure_future(started.wait())
     try:
         # Phase 1 — queue wait. Watch the future too, so a job that fails or is
@@ -703,6 +746,7 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
         # Caller went away (client disconnect). We stop awaiting the job, so
         # make sure its eventual result/exception is consumed rather than
         # logged as "Future exception was never retrieved".
+        _abandon()
         fut.add_done_callback(_swallow_abandoned)
         raise
     finally:
@@ -712,7 +756,7 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
         # Never picked up: cancel it out of the queue (a not-yet-started
         # concurrent future cancels cleanly) and report saturation, NOT a
         # too-heavy job.
-        fut.cancel()
+        _abandon()
         fut.add_done_callback(_swallow_abandoned)
         stats = gpu_pool_stats(ex)
         logger.warning(
@@ -783,14 +827,14 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
         # Caller went away mid-execution. The old wait_for cancelled the
         # wrapper itself; asyncio.wait does not, so do both halves here or the
         # eventual result is logged as "Future exception was never retrieved".
-        fut.cancel()
+        _abandon()
         fut.add_done_callback(_swallow_abandoned)
         raise
     except asyncio.TimeoutError as timeout_exc:
         # Parity with the old wait_for semantics: cancel the asyncio wrapper;
         # the worker thread keeps going regardless. Consume whatever it
         # eventually produces.
-        fut.cancel()
+        _abandon()
         fut.add_done_callback(_swallow_abandoned)
         # Capture the stacks BEFORE reset(): reset() replaces the executor, and
         # once the wedged thread is no longer a pool worker we can no longer
