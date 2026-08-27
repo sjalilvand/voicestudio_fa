@@ -80,12 +80,10 @@ def test_timeout_error_is_a_timeouterror_subclass():
     assert issubclass(ASRTimeoutError, TimeoutError)
 
 
-def test_timeout_resets_a_resilient_pool_to_restore_capacity():
-    # #730: a wedged transcribe holds its GPU-pool worker forever; with a 1-2
-    # worker pool that starves TTS generate and surfaces as "can't reach
-    # backend". On timeout, run_transcribe_guarded must reset() a pool that
-    # supports it (the real _ResilientGpuPool) so the next submit gets a fresh
-    # worker — capacity restored without an app restart.
+def test_timeout_does_not_overlap_an_in_process_native_worker():
+    # #1669: reset() cannot kill the old native thread. A fresh pool let the
+    # retry enter the same whisperx/CTranslate2 model concurrently and the
+    # process died with 0xC0000005. Keep the old worker accounted for instead.
     class _FakePool(ThreadPoolExecutor):
         def __init__(self):
             super().__init__(max_workers=1)
@@ -105,7 +103,7 @@ def test_timeout_resets_a_resilient_pool_to_restore_capacity():
             await run_transcribe_guarded(pool, _hang, what="Dub", timeout=0.2)
 
     asyncio.run(_go())
-    assert pool.reset_calls == 1
+    assert pool.reset_calls == 0
     pool.shutdown(wait=False)
 
 

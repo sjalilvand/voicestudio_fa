@@ -2072,6 +2072,7 @@
     "upload_or_select": "Carica un audio o seleziona un profilo vocale",
     "trim_hint": "L'audio è {{duration}}s: taglia a ≤{{max}}s per una migliore clonazione",
     "timeout": "Generazione scaduta: il modello potrebbe essere ancora in fase di download. Controlla Impostazioni → Registri, quindi riprova.",
+    "generation_in_progress": "È già in corso una generazione: attendi che termini prima di avviarne un’altra.",
     "error_prefix": "Errore: {{message}}",
     "ignored_unsupported": "Istruzione non supportata ignorata: {{items}}",
     "ignored_duplicate": "Ignorato (categoria già impostata): {{items}}",

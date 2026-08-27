@@ -25,7 +25,7 @@
  * their ApiError identity (they would fail the classic flow identically, so
  * falling back would only duplicate the failure).
  */
-import { generateSpeech, withTtsInflight } from '../api/generate';
+import { generateSpeechWithinAdmission, withTtsInflight } from '../api/generate';
 import { apiFetch } from '../api/client';
 import { claimTrackedPlayback } from './playback';
 
@@ -325,13 +325,7 @@ export const createStreamingChunkPlayer = ({ label, sampleRate, crossfadeMs = 0,
  *         classic flow); ApiError/AbortError propagate untouched.
  */
 export async function streamGenerateSpeech(formData, opts = {}) {
-  // The claim has to span the whole stream, not just the request. Routing this
-  // through generateSpeech() gave streaming an in-flight count for the first
-  // time, but that claim is released when the Response resolves — when the
-  // HEADERS arrive — while the audio is still being generated and read below.
-  // The updater would have seen "idle" for the entire synthesis and been free
-  // to relaunch mid-stream (Greptile P1, #1288). Nesting is fine: the store
-  // counts rather than flags.
+  // Admission spans the whole stream, not merely response headers.
   return withTtsInflight(() => _streamGenerateSpeech(formData, opts));
 }
 
@@ -351,7 +345,7 @@ async function _streamGenerateSpeech(
   // to the "one chokepoint every synth shares" — the in-flight count and the
   // under-provisioned-hardware preflight — silently did not apply to streaming
   // synthesis (Greptile P1, #1288). One door, or it is not a chokepoint.
-  const response = await generateSpeech(fd, { signal });
+  const response = await generateSpeechWithinAdmission(fd, { signal });
   onHeaders?.(response);
 
   let player = null;

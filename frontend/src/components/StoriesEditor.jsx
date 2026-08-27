@@ -517,6 +517,9 @@ export default function StoriesEditor({ profiles = [] }) {
           playBlobAudio(blob, { label: raw }).catch(() => {});
         } catch (err) {
           console.warn('Stories preview failed:', err);
+          if (err?.code === 'tts_generation_busy') {
+            toast.error(t('tts_errors.generation_in_progress'));
+          }
           setTracks((prev) =>
             prev.map((tk) => (tk.id === track.id ? { ...tk, generating: false } : tk)),
           );
@@ -526,13 +529,12 @@ export default function StoriesEditor({ profiles = [] }) {
 
       const parsed = parseStoryText(raw, pid);
       try {
-        const chunkBlobs = await Promise.all(
-          parsed.map((seg) =>
-            seg.type === 'chunk'
-              ? fetchChunkBlob(seg.text, seg.profileId, spd)
-              : Promise.resolve(null),
-          ),
-        );
+        const chunkBlobs = [];
+        for (const seg of parsed) {
+          chunkBlobs.push(
+            seg.type === 'chunk' ? await fetchChunkBlob(seg.text, seg.profileId, spd) : null,
+          );
+        }
         let cursor = 0;
         const finish = () => {
           setTracks((prev) =>
@@ -567,12 +569,15 @@ export default function StoriesEditor({ profiles = [] }) {
         step();
       } catch (err) {
         console.warn('Stories chained preview failed:', err);
+        if (err?.code === 'tts_generation_busy') {
+          toast.error(t('tts_errors.generation_in_progress'));
+        }
         setTracks((prev) =>
           prev.map((tk) => (tk.id === track.id ? { ...tk, generating: false } : tk)),
         );
       }
     },
-    [fetchChunkBlob, cast, globalSpeed, setTracks],
+    [fetchChunkBlob, cast, globalSpeed, setTracks, t],
   );
 
   // Deliver a stitched WAV in the chosen format. MP3 routes through the backend
@@ -668,7 +673,11 @@ export default function StoriesEditor({ profiles = [] }) {
       toast.success(t('stories.stemsDone', { count: stems.length }));
     } catch (err) {
       console.warn('Stems export failed:', err);
-      toast.error(t('stories.exportFailed'));
+      toast.error(
+        err?.code === 'tts_generation_busy'
+          ? t('tts_errors.generation_in_progress')
+          : t('stories.exportFailed'),
+      );
     } finally {
       setExporting(false);
     }

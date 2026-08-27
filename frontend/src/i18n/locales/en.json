@@ -2742,6 +2742,7 @@
     "upload_or_select": "Upload an audio or select a voice profile",
     "trim_hint": "Audio is {{duration}}s — trim to ≤{{max}}s for best cloning",
     "timeout": "Generation timed out — the model may still be downloading. Check Settings → Logs, then try again.",
+    "generation_in_progress": "A generation is already running — wait for it to finish before starting another.",
     "error_prefix": "Error: {{message}}",
     "ignored_unsupported": "Ignored unsupported instruct: {{items}}",
     "ignored_duplicate": "Ignored (category already set): {{items}}",

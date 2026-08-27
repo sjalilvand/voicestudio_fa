@@ -3,17 +3,12 @@ import { useAppStore } from '../store';
 import { warnIfEngineUnderProvisioned } from '../utils/generatePreflight';
 
 /**
- * Hold the in-flight count for the duration of `fn`.
- *
- * Safe to nest, and streaming relies on that: generateSpeech releases its
- * claim when the Response resolves — i.e. when the HEADERS arrive — but a
- * streaming synth reads the body for as long as it takes to generate. Wrapping
- * the whole stream in an outer claim keeps the count above zero throughout;
- * the inner one just bumps it to 2 and back. This only works because the store
- * tracks a COUNT, not a boolean (Greptile P1, #1288).
+ * Atomically admit one synthesis and hold its in-flight count for `fn`.
  */
 export async function withTtsInflight<T>(fn: () => Promise<T>): Promise<T> {
-  useAppStore.getState().addTtsInflight?.(1);
+  const state = useAppStore.getState();
+  if ((state.ttsInflight ?? 0) > 0) throw new TtsGenerationBusyError();
+  state.addTtsInflight?.(1);
   try {
     return await fn();
   } finally {
@@ -21,38 +16,35 @@ export async function withTtsInflight<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+export class TtsGenerationBusyError extends Error {
+  code = 'tts_generation_busy';
+
+  constructor() {
+    super('A generation is already running. Wait for it to finish before starting another.');
+    this.name = 'TtsGenerationBusyError';
+  }
+}
+
+async function postGenerateSpeech(formData: FormData, signal?: AbortSignal): Promise<Response> {
+  void warnIfEngineUnderProvisioned(
+    typeof formData?.get === 'function' ? String(formData.get('text') ?? '') : '',
+  );
+  return apiFetch('/generate', { method: 'POST', body: formData, signal });
+}
+
 export async function generateSpeech(
   formData: FormData,
   { signal }: { signal?: AbortSignal } = {},
 ): Promise<Response> {
-  // Count this synth as in flight for as long as it runs. Installing an update
-  // relaunches the process, so the updater has to know a synth is running
-  // (utils/appBusy) — and the guard belongs HERE, at the one call every synth
-  // path shares: the Generate tab, voice previews, the compare modal, the
-  // stories editor and profile previews all reach /generate through this
-  // function. Tracking it in any single caller would leave the others able to
-  // be silently discarded, and a new caller would have to remember to opt in.
-  //
-  // A count rather than a flag because these overlap: a boolean would be
-  // cleared by whichever request settled first while the rest were still
-  // running. `finally` so an abort or a network error releases it too.
-  useAppStore.getState().addTtsInflight?.(1);
-  // Same chokepoint argument as the in-flight count: every synth path reaches
-  // /generate through here, so the under-provisioned-hardware warning fires
-  // whether or not the user ever re-picked an engine. Intentionally not
-  // awaited — the toast must not delay the request it is warning about.
-  // The text comes along so the preflight can also catch the CPU-host case:
-  // a benign routing verdict plus a long input is the shape that quietly eats
-  // the whole compute budget (#1299, #1260).
-  void warnIfEngineUnderProvisioned(
-    typeof formData?.get === 'function' ? String(formData.get('text') ?? '') : '',
-  );
-  try {
-    // Returns the full Response so callers can stream the WAV blob + read headers.
-    return await apiFetch('/generate', { method: 'POST', body: formData, signal });
-  } finally {
-    useAppStore.getState().addTtsInflight?.(-1);
-  }
+  return withTtsInflight(() => postGenerateSpeech(formData, signal));
+}
+
+/** Streaming already holds admission until its response body is drained. */
+export async function generateSpeechWithinAdmission(
+  formData: FormData,
+  { signal }: { signal?: AbortSignal } = {},
+): Promise<Response> {
+  return postGenerateSpeech(formData, signal);
 }
 
 export async function listHistory(): Promise<unknown> {

@@ -99,7 +99,11 @@ export default function CompareModal({
       toast.success(t('compare.comparison_complete'));
       loadHistory();
     } catch (err) {
-      toast.error(t('compare.play_failed', { message: err.message }));
+      toast.error(
+        err?.code === 'tts_generation_busy'
+          ? t('tts_errors.generation_in_progress')
+          : t('compare.play_failed', { message: err.message }),
+      );
       setCompareProgress('');
     } finally {
       setIsComparing(false);

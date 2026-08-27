@@ -2072,6 +2072,7 @@
     "upload_or_select": "Ladda upp ett ljud eller välj en röstprofil",
     "trim_hint": "Ljudet är {{duration}}s — trimma till ≤{{max}}s för bästa kloning",
     "timeout": "Tidsgränsen för generationen gick ut – modellen kanske fortfarande laddas ned. Kontrollera Inställningar → Loggar och försök sedan igen.",
+    "generation_in_progress": "En generering pågår redan – vänta tills den är klar innan du startar en ny.",
     "error_prefix": "Fel: {{message}}",
     "ignored_unsupported": "Ignorerad instruktion som inte stöds: {{items}}",
     "ignored_duplicate": "Ignorerad (kategori redan inställd): {{items}}",

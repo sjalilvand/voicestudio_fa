@@ -2072,6 +2072,7 @@
     "upload_or_select": "Téléchargez un audio ou sélectionnez un profil vocal",
     "trim_hint": "L'audio est de {{duration}}s — coupez à ≤{{max}}s pour un meilleur clonage",
     "timeout": "Le délai de génération a expiré : le téléchargement du modèle est peut-être encore en cours. Vérifiez Paramètres → Journaux, puis réessayez.",
+    "generation_in_progress": "Une génération est déjà en cours — attendez sa fin avant d’en lancer une autre.",
     "error_prefix": "Erreur : {{message}}",
     "ignored_unsupported": "Instruction non prise en charge ignorée : {{items}}",
     "ignored_duplicate": "Ignoré (catégorie déjà définie) : {{items}}",

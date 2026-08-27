@@ -628,7 +628,10 @@ fn spawn_backend_until_ready<R: tauri::Runtime>(
                 // startup crashes included — unless the app is shutting down
                 // or a retry flow deliberately killed the child.
                 if let Some(ref exit) = real_exit {
-                    if !backend_stop_requested(app) && !backend_kill_intended() {
+                    if !backend_stop_requested(app)
+                        && !backend_kill_intended()
+                        && crate::crash::should_record_backend_crash(exit)
+                    {
                         crate::crash::record_crash(crate::crash::marker_now(
                             exit,
                             backend_uptime_s(app),
@@ -1139,17 +1142,25 @@ fn supervise_backend<R: tauri::Runtime>(
             // process crash: no fabricated crash marker/budget entry.
             Duration::ZERO
         } else {
-            let uptime_s = backend_uptime_s(app);
-            crate::crash::record_crash(crate::crash::marker_now(
-                &exit,
-                uptime_s,
-                crate::backend::read_error_log_tail_for_run(CRASH_STDERR_TAIL_LINES),
-            ));
+            let is_crash = crate::crash::should_record_backend_crash(&exit);
+            if is_crash {
+                let uptime_s = backend_uptime_s(app);
+                crate::crash::record_crash(crate::crash::marker_now(
+                    &exit,
+                    uptime_s,
+                    crate::backend::read_error_log_tail_for_run(CRASH_STDERR_TAIL_LINES),
+                ));
+            } else {
+                log::info!(
+                    "Backend received an external Windows debugger termination ({exit_info}); restarting without a crash marker"
+                );
+            }
             if restart_budget_exhausted(&mut restart_times, Instant::now()) {
                 let tail = crate::backend::read_error_log_tail_for_run(30);
                 let msg = format!(
-                    "The backend kept crashing ({} times in {} min; last death: {}) and couldn't \
+                    "The backend kept {} ({} times in {} min; last stop: {}) and couldn't \
                      be kept running. Use Clean & Retry, or check Settings → Logs → Backend.{}",
+                    if is_crash { "crashing" } else { "being stopped externally" },
                     MAX_RESTARTS,
                     RESTART_WINDOW.as_secs() / 60,
                     exit.label(),

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useAppStore } from '../store';
-import { generateSpeech } from '../api/generate';
+import { generateSpeech, TtsGenerationBusyError } from '../api/generate';
 import { pickDesignSeed } from '../utils/seed';
 import { playBlobAudio, playPing } from '../utils/media';
 import {
@@ -369,7 +369,9 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
     } catch (err) {
       // Timeouts are user-recoverable (retry / shorter input) — plain toast.
       // Real generation failures get the "Report this bug" action.
-      if (err?.name === 'AbortError') {
+      if (err instanceof TtsGenerationBusyError) {
+        toast(t('tts_errors.generation_in_progress'), { icon: '⏳' });
+      } else if (err?.name === 'AbortError') {
         toast.error(t('tts_errors.timeout'));
       } else if (modelNotDownloadedPayload(err)) {
         toastModelNotDownloaded(modelNotDownloadedPayload(err));

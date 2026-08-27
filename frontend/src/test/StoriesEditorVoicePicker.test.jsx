@@ -4,6 +4,17 @@ import { act, render, screen, fireEvent, within, waitFor } from '@testing-librar
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../i18n';
 
+const generationApi = vi.hoisted(() => ({
+  generateSpeech: vi.fn(),
+}));
+vi.mock('../api/generate', () => ({
+  generateSpeech: generationApi.generateSpeech,
+  audioUrl: (path) => path,
+}));
+vi.mock('../utils/media', () => ({
+  playBlobAudio: vi.fn(() => Promise.resolve()),
+}));
+
 // The Stories cast + per-line pickers migrated from native <select>s to the
 // shared, gallery-enabled VoiceSelector (#1220). VoiceSelector reads /archetypes
 // and materializes gallery picks — mock both so the editor renders standalone.
@@ -49,6 +60,10 @@ describe('StoriesEditor voice pickers (#1220)', () => {
     window.localStorage.clear();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
     seedStore();
+    generationApi.generateSpeech.mockReset();
+    generationApi.generateSpeech.mockResolvedValue({
+      blob: async () => new Blob(['audio'], { type: 'audio/wav' }),
+    });
   });
 
   it('per-line picker renders VoiceSelector and stores the picked profile id', () => {
@@ -122,5 +137,33 @@ describe('StoriesEditor voice pickers (#1220)', () => {
     expect(row).not.toHaveAttribute('draggable');
     expect(within(row).getByRole('textbox')).not.toHaveAttribute('draggable');
     expect(container.querySelector('.stories-line__drag')).toHaveAttribute('draggable', 'true');
+  });
+
+  it('serializes marker preview chunks through the shared generation admission', async () => {
+    let releaseFirst;
+    generationApi.generateSpeech.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          releaseFirst = () =>
+            resolve({ blob: async () => new Blob(['first'], { type: 'audio/wav' }) });
+        }),
+    );
+    useAppStore.setState({
+      storyTracks: [
+        {
+          ...useAppStore.getState().storyTracks[0],
+          text: 'First chunk [pause 1ms] second chunk',
+        },
+      ],
+    });
+    renderEditor();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview this line' }));
+    await waitFor(() => expect(generationApi.generateSpeech).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      releaseFirst();
+    });
+    await waitFor(() => expect(generationApi.generateSpeech).toHaveBeenCalledTimes(2));
   });
 });

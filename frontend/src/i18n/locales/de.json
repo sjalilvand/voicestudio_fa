@@ -2072,6 +2072,7 @@
     "upload_or_select": "Laden Sie ein Audio hoch oder wählen Sie ein Sprachprofil aus",
     "trim_hint": "Audio ist {{duration}}s – für bestes Klonen auf ≤{{max}}s kürzen",
     "timeout": "Zeitüberschreitung bei der Generierung – das Modell wird möglicherweise noch heruntergeladen. Überprüfen Sie Einstellungen → Protokolle und versuchen Sie es dann erneut.",
+    "generation_in_progress": "Eine Generierung läuft bereits – warte, bis sie abgeschlossen ist, bevor du eine weitere startest.",
     "error_prefix": "Fehler: {{message}}",
     "ignored_unsupported": "Nicht unterstützte Anweisung ignoriert: {{items}}",
     "ignored_duplicate": "Ignoriert (Kategorie bereits festgelegt): {{items}}",

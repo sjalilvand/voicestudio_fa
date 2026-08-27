@@ -38,7 +38,7 @@ vi.mock('../store', () => ({
   },
 }));
 
-import { generateSpeech } from '../api/generate';
+import { generateSpeech, TtsGenerationBusyError } from '../api/generate';
 import { isAppBusy } from '../utils/appBusy';
 import { createGenerateSlice } from '../store/generateSlice';
 
@@ -64,21 +64,18 @@ describe('synth in-flight tracking', () => {
     expect(isAppBusy(state)).toBe(false);
   });
 
-  it('survives overlapping syntheses — the first to finish does not clear the rest', async () => {
+  it('rejects a direct profile-preview caller while another synth owns admission', async () => {
     const releases = [];
     apiFetch.mockImplementation(() => new Promise((res) => releases.push(() => res({ ok: true }))));
 
-    const a = generateSpeech(new FormData()); // Generate tab
-    const b = generateSpeech(new FormData()); // a voice preview alongside it
-    expect(state.ttsInflight).toBe(2);
+    const studio = generateSpeech(new FormData());
+    await expect(generateSpeech(new FormData())).rejects.toBeInstanceOf(TtsGenerationBusyError);
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    expect(state.ttsInflight).toBe(1);
 
     releases[0]();
-    await a;
-    // b is still synthesising — a relaunch here would discard it.
-    expect(isAppBusy(state)).toBe(true);
-
-    releases[1]();
-    await b;
+    await studio;
+    expect(state.ttsInflight).toBe(0);
     expect(isAppBusy(state)).toBe(false);
   });
 
