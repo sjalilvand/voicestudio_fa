@@ -54,3 +54,30 @@ def test_audiobook_worker_marks_and_encodes_chapter(monkeypatch):
     )
     assert len(audio) == 20
     assert marked == [(100, "worker.executor.tts")]
+
+
+def test_audiobook_worker_forwards_mps_proxy_quality_and_seed():
+    import numpy as np
+    from services.audiobook import segment_seed
+    from worker.executor import TaskExecutor
+
+    calls = []
+
+    class Backend:
+        sample_rate = 100
+        supports_native_omnivoice_controls = True
+
+        def generate(self, text, **kwargs):
+            calls.append((text, kwargs))
+            return np.ones(20, dtype=np.float32)
+
+    TaskExecutor._synthesize_audiobook(
+        Backend(), [{"text": "hello", "pause_ms_after": 0}],
+        [{"ref_text": None, "instruct": None, "seed": 42}],
+        {"ref_audio": [None], "expressive": {}, "watermark": False},
+    )
+
+    _text, kwargs = calls[0]
+    assert kwargs["num_step"] == 32
+    assert kwargs["guidance_scale"] == 2.0
+    assert kwargs["seed"] == segment_seed(42, "hello")
