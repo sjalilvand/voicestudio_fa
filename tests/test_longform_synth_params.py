@@ -115,6 +115,28 @@ def test_generic_synth_without_pinned_seed_stays_unseeded(monkeypatch):
     assert seeds == []  # fresh-render variety unchanged when nothing is pinned
 
 
+def test_mps_proxy_keeps_longform_quality_and_child_seed(monkeypatch):
+    import api.routers.audiobook as ab
+    import services.tts_backend as tb
+
+    calls = []
+    fake = _fake_backend_cls(calls)
+    fake.id = "omnivoice"
+    fake.supports_native_omnivoice_controls = True
+    monkeypatch.setattr(tb, "active_backend_id", lambda: "omnivoice")
+    monkeypatch.setattr(tb, "get_backend_class", lambda _id: fake)
+    monkeypatch.setattr(ab, "_resolve_voice", lambda _vid: {
+        "ref_audio": None, "ref_text": None, "instruct": None, "seed": 42,
+    })
+
+    ab._build_synth("prof-1")["synth"]("một đoạn văn", None)
+
+    _text, kwargs = calls[0]
+    assert kwargs["num_step"] == ab.LONGFORM_NUM_STEP == 32
+    assert kwargs["guidance_scale"] == ab.LONGFORM_GUIDANCE_SCALE == 2.0
+    assert kwargs["seed"] == segment_seed(42, "một đoạn văn")
+
+
 # ── omnivoice branch: explicit quality preset + pinned seed ──────────────────
 
 def test_omnivoice_synth_pins_quality_preset_and_seed(monkeypatch):

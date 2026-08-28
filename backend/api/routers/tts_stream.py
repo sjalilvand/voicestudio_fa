@@ -39,6 +39,26 @@ CHUNK_SAMPLES = int(os.environ.get("OMNIVOICE_STREAM_CHUNK", "4800"))
 _perf_counter = time.perf_counter
 
 
+async def _resolve_stream_backend(engine_id: str | None):
+    """Resolve the live-stream engine without bypassing host isolation."""
+    from services.tts_backend import (
+        OmniVoiceBackend,
+        active_backend_id,
+        get_active_tts_backend,
+        get_backend_class,
+    )
+
+    if engine_id:
+        return get_backend_class(engine_id)()
+
+    cls = get_backend_class(active_backend_id())
+    if cls is OmniVoiceBackend:
+        from services.model_manager import get_model
+
+        return get_active_tts_backend(model=await get_model())
+    return get_active_tts_backend()
+
+
 class StreamTTSRequest(BaseModel):
     """Client request for streaming TTS."""
     text: str
@@ -132,10 +152,6 @@ async def ws_tts(websocket: WebSocket):
 
             try:
                 # Resolve engine
-                from services.tts_backend import (
-                    get_active_tts_backend,
-                    get_backend_class,
-                )
                 engine_id = data.get("engine")
                 # #1224: leave a breadcrumb when memory is already tight before
                 # a heavy load. /generate has done this since the 16 GB-Mac
@@ -151,13 +167,7 @@ async def ws_tts(websocket: WebSocket):
                     log_if_low(f"TTS stream load ({engine_id or 'active engine'})")
                 except Exception:
                     pass
-                if engine_id:
-                    cls = get_backend_class(engine_id)
-                    backend = cls()
-                else:
-                    from services.model_manager import get_model
-                    model = await get_model()
-                    backend = get_active_tts_backend(model=model)
+                backend = await _resolve_stream_backend(engine_id)
 
                 # ── Routing gate (#21 — no silent CPU fallback). WebSockets have
                 # no response headers, so this uses frames: an error frame +

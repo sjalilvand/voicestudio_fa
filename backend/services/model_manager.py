@@ -2849,6 +2849,21 @@ async def preload_model():
     if model is not None:
         return  # already loaded
 
+    # On MPS the configured ``omnivoice`` id resolves to a crash-isolated
+    # sidecar. Warming the native singleton here would put the same fatal MPS
+    # allocator risk back into the API process before the isolated engine is
+    # ever asked to synthesize.
+    try:
+        from core.device_caps import detect_host_caps
+
+        if detect_host_caps().family == "mps":
+            logger.info(
+                "Native TTS preload skipped: OmniVoice uses crash isolation on this host."
+            )
+            return
+    except Exception:  # noqa: BLE001 -- preload selection must stay best-effort
+        logger.debug("effective TTS preload selection failed", exc_info=True)
+
     # A machine lending its GPU has no local user to warm the model FOR. This
     # preload exists to make the first /generate feel instant for the person
     # sitting in front of the app; on a headless node there is nobody sitting

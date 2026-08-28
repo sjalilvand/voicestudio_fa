@@ -361,7 +361,7 @@ LONGFORM_NUM_STEP = 32
 LONGFORM_GUIDANCE_SCALE = 2.0
 
 
-def _seed_segment_rng(base_seed, text: str, nonce: int = 0) -> None:
+def _seed_segment_rng(base_seed, text: str, nonce: int = 0) -> int | None:
     """Apply a profile's pinned seed to this synth call (#1139).
 
     ``_resolve_voice`` has always fetched the profile ``seed`` — but only the
@@ -380,11 +380,13 @@ def _seed_segment_rng(base_seed, text: str, nonce: int = 0) -> None:
     must cover /generate and here together, not one path.
     """
     if base_seed is None:
-        return
+        return None
     import torch
 
     from services.audiobook import segment_seed
-    torch.manual_seed(segment_seed(base_seed, text, nonce))
+    seed = segment_seed(base_seed, text, nonce)
+    torch.manual_seed(seed)
+    return seed
 
 
 def _base_seed(opts: ExpressiveOptions, voice: dict):
@@ -508,16 +510,21 @@ def _build_synth(
                 "get_model": get_model, "language": language, "opts": opts}
 
     backend = cls()
-    extra = _generic_extra_kwargs(opts)
+    native_proxy = bool(getattr(cls, "supports_native_omnivoice_controls", False))
+    extra = (_omnivoice_sampling_kwargs(opts) if native_proxy
+             else _generic_extra_kwargs(opts))
     next_nonce = _make_occ_counter(opts)
 
     def synth(text, voice_id, speed=None):
         v = resolve(voice_id)
-        _seed_segment_rng(_base_seed(opts, v), text, next_nonce())
+        seed = _seed_segment_rng(_base_seed(opts, v), text, next_nonce())
+        call_extra = dict(extra)
+        if native_proxy and seed is not None:
+            call_extra["seed"] = seed
         return backend.generate(
             text, language=language, ref_audio=v["ref_audio"],
             ref_text=v["ref_text"], instruct=v["instruct"], duration=None,
-            speed=float(speed) if speed else 1.0, **extra,
+            speed=float(speed) if speed else 1.0, **call_extra,
         )
     return {"mode": "generic", "resolve": resolve, "engine_id": engine_id,
             "synth": synth, "sample_rate": backend.sample_rate}

@@ -2398,6 +2398,7 @@ def list_backends() -> list[dict]:
 
     out: list[dict] = []
     for bid, cls in _REGISTRY.items():
+        cls = _effective_backend_class(bid, cls, caps.family)
         try:
             ok, msg = cls.is_available()
         except Exception:
@@ -2471,10 +2472,29 @@ def list_backends() -> list[dict]:
     return out
 
 
+def _effective_backend_class(
+    backend_id: str,
+    backend_cls: type[TTSBackend],
+    host_family: str | None = None,
+) -> type[TTSBackend]:
+    """Resolve host-specific containment without changing the configured id."""
+    if backend_id != "omnivoice":
+        return backend_cls
+    if host_family is None:
+        from core.device_caps import detect_host_caps
+
+        host_family = detect_host_caps().family
+    if host_family != "mps":
+        return backend_cls
+    from engines.omnivoice_subprocess import OmniVoiceMPSSubprocessBackend
+
+    return OmniVoiceMPSSubprocessBackend
+
+
 def get_backend_class(backend_id: str) -> type[TTSBackend]:
     if backend_id not in _REGISTRY:
         raise ValueError(f"Unknown TTS backend: {backend_id!r}. Known: {list(_REGISTRY)}")
-    return _REGISTRY[backend_id]
+    return _effective_backend_class(backend_id, _REGISTRY[backend_id])
 
 
 def cloning_capable_engine_ids() -> list[str]:

@@ -1,7 +1,9 @@
 """omnivoice-subprocess: the resident OmniVoice TTS engine in a crash-isolated
 sidecar process (#730/#1190).
 
-The default ``omnivoice`` engine runs in-process on the GPU ``ThreadPoolExecutor``.
+The ``omnivoice`` engine runs in-process on CUDA, ROCm, and CPU. On MPS it is
+resolved to :class:`OmniVoiceMPSSubprocessBackend` so a fatal native allocator
+exit cannot take down the local API process.
 When a generate or load there exceeds its execution budget the pool is "reset"
 but the abandoned worker *thread* cannot be killed (Python cannot interrupt a
 native torch/MPS call), so it holds the MPS device until it finishes on its
@@ -13,16 +15,11 @@ timeout the parent's watchdog calls ``proc.kill()``, reclaiming the child's
 VRAM/device, and the next request transparently respawns a fresh sidecar. That
 is the one thing the in-process engine structurally cannot do.
 
-OPT-IN (Settings -> Engines, or ``OMNIVOICE_TTS_BACKEND=omnivoice-subprocess``);
-the in-process ``omnivoice`` stays the default so existing users see no change.
+The explicit ``omnivoice-subprocess`` id remains available on every host for
+operators who want the same containment elsewhere.
 
-Tradeoff vs the in-process engine: identical model and quality, a little extra
-per-call overhead (one stdio round-trip), and it does not carry the native
-advanced-parameter surface (``t_shift`` / ``layer_penalty_factor`` /
-``position_temperature`` / ``class_temperature``) or parent-side seed
-determinism, because the generic ``backend.generate`` path does not forward
-those. Acceptable for unattended / reaction-triggered use where reliability
-matters more than those controls.
+Tradeoff vs the in-process engine: identical model, controls, seed behavior,
+and quality, with a little extra per-call overhead (one stdio round-trip).
 
 Unlike IndexTTS / dots.tts / Supertonic-3, this sidecar runs under the PARENT
 interpreter (``venv_python() -> sys.executable``): the goal here is crash
@@ -102,4 +99,34 @@ class OmniVoiceSubprocessBackend(SubprocessBackend):
         return ["multi"]
 
 
-__all__ = ["OmniVoiceSubprocessBackend"]
+class OmniVoiceMPSSubprocessBackend(OmniVoiceSubprocessBackend):
+    """Effective ``omnivoice`` implementation on MPS.
+
+    Native torch/MPS allocator failures can terminate the process without a
+    catchable Python exception. Keeping the same engine id and model surface in
+    a child makes that failure recoverable while Settings, APIs, and saved
+    projects continue to refer to ``omnivoice``.
+    """
+
+    id = "omnivoice"
+    display_name = "VoiceStudio (k2-fsa/OmniVoice, 600+ languages)"
+    supports_native_omnivoice_controls = True
+
+    def generate(self, text: str, **kw):
+        from services.model_manager import make_room_before_generate
+
+        make_room_before_generate()
+        try:
+            return super().generate(text, **kw)
+        except RuntimeError as exc:
+            if "sidecar closed pipe mid-generate" not in str(exc):
+                raise
+            raise RuntimeError(
+                "The isolated OmniVoice engine stopped during generation, "
+                "usually because macOS reclaimed it under memory pressure. "
+                "The VoiceStudio backend is still running. Close memory-heavy "
+                "apps or select a smaller TTS engine, then retry."
+            ) from exc
+
+
+__all__ = ["OmniVoiceMPSSubprocessBackend", "OmniVoiceSubprocessBackend"]

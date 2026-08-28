@@ -10,6 +10,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- OmniVoice generation on Apple Silicon now runs in a crash-isolated child, so fatal MPS memory exits no longer take down the local backend (#1697, #1698) — thanks @ndntran14!
 - Model-load GPU exhaustion now returns a sanitized, actionable dubbing error, and readiness correctly attributes the shared model status to TTS (#1695)
 - Source-mode development now restarts an isolated backend crash without tearing down the UI, while repeated crash loops still stop loudly with diagnostics (#1690)
 - Dubbing playback now keeps an audible companion source when a WebView can render the preview picture but cannot decode its audio (#1692)

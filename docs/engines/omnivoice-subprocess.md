@@ -6,12 +6,12 @@ wedged generation can be hard-killed and its VRAM/device reclaimed.
 
 ## Why this engine exists
 
-The default `omnivoice` engine runs in-process on the GPU worker pool. On
-VRAM-tight machines (Apple Silicon MPS especially) a heavy generation or model
-load can exceed its execution budget. When that happens the worker is
-"abandoned" but **cannot be killed** (Python cannot interrupt a native torch /
-MPS call), so it keeps holding the GPU device until it finishes on its own, and
-every later synth queues behind it and hangs (#730 / #1190).
+An in-process `omnivoice` engine runs on the GPU worker pool. On VRAM-tight
+machines a heavy generation or model load can exceed its execution budget.
+When that happens the worker is "abandoned" but **cannot be killed** (Python
+cannot interrupt a native torch call), so it keeps holding the GPU device until
+it finishes on its own, and every later synth queues behind it and hangs
+(#730 / #1190).
 
 `omnivoice-subprocess` runs the model in a child process spawned via the same
 `SubprocessBackend` primitive used by IndexTTS, Supertonic-3, and dots.tts. A
@@ -26,17 +26,18 @@ structurally cannot do.
   must recover on its own instead of hanging until a manual restart.
 - **VRAM-starved MPS hosts** that hit the abandoned-worker cascade.
 
-For interactive single-shot use on a machine with comfortable VRAM, the default
-in-process `omnivoice` engine is faster (no stdio round-trip) and remains the
-default.
+On Apple Silicon, the default `omnivoice` id automatically uses this isolated
+implementation. CUDA, ROCm, and CPU keep the in-process implementation and its
+lower call overhead.
 
 ## Selecting it
 
 - **Settings -> Engines**, or
 - `OMNIVOICE_TTS_BACKEND=omnivoice-subprocess`
 
-It is **opt-in**; the in-process engine stays the default, so existing setups
-see no change.
+The explicit engine is opt-in on CUDA, ROCm, and CPU. Apple Silicon gets the
+same isolation automatically while keeping the default `omnivoice` id in APIs,
+Settings, and saved projects.
 
 ## Platform support
 
@@ -54,11 +55,9 @@ see no change.
 - A wedged generation is **killed and recovered** at the recv-timeout deadline
   (`OMNIVOICE_SIDECAR_RECV_TIMEOUT_S`, default 300s, aligned with the generate
   budget) instead of hanging indefinitely.
-- It does **not** carry the native advanced-parameter surface
-  (`t_shift` / `layer_penalty_factor` / `position_temperature` /
-  `class_temperature`) or parent-side seed determinism, because the generic
-  engine path does not forward those. For plain voice-clone and design
-  synthesis this is a non-issue.
+- The default Apple Silicon proxy preserves native advanced parameters,
+  deterministic seeds, and longform quality settings across the process
+  boundary.
 - The recv-timeout deadline is per call and assumes the route's text chunking:
   `/generate` and `/v1/audio/speech` split long text into pieces of at most
   `max_chunk_chars` before calling the engine, so each call stays short. A

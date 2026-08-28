@@ -201,7 +201,7 @@ None on the critical path to world-class. All are answers to real demand.
 | Kill per-segment disk round-trip | 🟡 | Long-video assembly stays disk-backed to bound RAM. Unchanged same-rate natural segments now skip the redundant decode → scratch encode → decode cycle; fresh segments still persist once and reload for assembly. |
 | Cold start ≤1.5 s to first audible sample | 🟡 | Installed models preload in the background and `scripts/bench_pipeline.py` measures cold/warm synthesis; target is not yet verified. |
 | Speculative regeneration on hover | ⏳ | — |
-| Crash-sandbox engines (subprocess isolation) | 🟡 | Killable sidecar engines and opt-in `omnivoice-subprocess` are live; the default in-process engine can still take down the server on a native crash. |
+| Crash-sandbox engines (subprocess isolation) | 🟡 | Killable sidecar engines and opt-in `omnivoice-subprocess` are live; the default OmniVoice engine now routes through the crash sandbox on MPS, while CUDA/ROCm/CPU retain the lower-overhead in-process path. |
 | Interaction budgets (<50 ms UI, <200 ms preview, <4 s first seg) | 🟡 | `/ws/tts` reports real TTFA, total generation time and RTF; frontend responsiveness instrumentation exists, but no cross-surface budget gate yet. |
 | Dedicated dev-week per quarter | ⏳ | Cadence not yet booked. |
 
