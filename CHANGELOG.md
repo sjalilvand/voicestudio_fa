@@ -6,6 +6,18 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 `frontend/package.json` is the app-version source of truth; Cargo, Python, and
 the frozen-backend fallback mirror it for their toolchains.
 
+## [Unreleased]
+
+**Highlights**
+
+### Changed
+
+### Added
+
+### Docs
+
+### Fixed
+
 ## [0.5.1] — 2026-08-28
 
 **Highlights**
