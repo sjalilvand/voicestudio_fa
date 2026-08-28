@@ -29,6 +29,7 @@ function baseProps(overrides = {}) {
   const noop = vi.fn();
   return {
     t: i18n.t,
+    uiLocale: 'en',
     dubVideoFile: null, // URL-ingest / restored job: no local File
     activeProjectName: '',
     dubFilename: '',
@@ -64,6 +65,8 @@ function baseProps(overrides = {}) {
     youtubeCookieFile: null,
     setYoutubeCookieFile: noop,
     dubLangCode: 'en',
+    dubSourceLangCode: 'auto',
+    setDubSourceLangCode: noop,
     setDubLangCode: noop,
     setDubLang: noop,
     landingAdvOpen: false,
@@ -106,6 +109,29 @@ describe('IdleSkeleton — pipeline-stage vs idle dropzone', () => {
     expect(screen.getByText(DROP_HINT)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(URL_PLACEHOLDER)).toBeInTheDocument();
     expect(screen.getByLabelText('Choose a cookies.txt export')).toBeInTheDocument();
+  });
+
+  it('keeps source-language selection available after choosing a local file', () => {
+    const setDubSourceLangCode = vi.fn();
+    renderIdle({
+      dubVideoFile: new File(['video'], 'thai.mp4', { type: 'video/mp4' }),
+      setDubSourceLangCode,
+    });
+
+    fireEvent.change(screen.getByRole('combobox', { name: i18n.t('dub.source_language') }), {
+      target: { value: 'th' },
+    });
+    expect(setDubSourceLangCode).toHaveBeenCalledWith('th');
+  });
+
+  it('localizes source-language option names for the active UI locale', () => {
+    renderIdle({
+      dubVideoFile: new File(['video'], 'thai.mp4', { type: 'video/mp4' }),
+      uiLocale: 'fr',
+    });
+
+    const thai = new Intl.DisplayNames(['fr', 'en'], { type: 'language' }).of('th');
+    expect(screen.getByRole('option', { name: `${thai} — th` })).toBeInTheDocument();
   });
 
   it('clears the native cookie picker when the selection is removed', () => {

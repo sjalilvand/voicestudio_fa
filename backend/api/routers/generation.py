@@ -459,6 +459,31 @@ def _is_timeout_failure(e) -> bool:
     return False
 
 
+def _is_media_process_launch_failure(exc: BaseException) -> bool:
+    """Identify an ffmpeg/ffprobe launch ENOENT without guessing from a file name."""
+    if not isinstance(exc, FileNotFoundError):
+        return False
+
+    # A regular missing reference/model file may itself be named "ffmpeg".
+    # Require the innermost raise site to be Python's process launcher so that
+    # basename collisions keep the normal missing-file diagnosis (#1677).
+    traceback_cursor = exc.__traceback__
+    if traceback_cursor is None:
+        return False
+    while traceback_cursor.tb_next is not None:
+        traceback_cursor = traceback_cursor.tb_next
+    origin_module = traceback_cursor.tb_frame.f_globals.get("__name__", "")
+    if origin_module != "subprocess" and not origin_module.startswith("asyncio."):
+        return False
+
+    filename = getattr(exc, "filename", None)
+    if not filename:
+        return "[winerror 2]" in str(exc).lower()
+    return os.path.basename(str(filename)).lower() in {
+        "ffmpeg", "ffmpeg.exe", "ffprobe", "ffprobe.exe",
+    }
+
+
 def _oom_friendly_reraise(e):
     """Best-effort cache flush + the user-facing OOM hint shared by both
     inference paths."""
@@ -483,6 +508,21 @@ def _oom_friendly_reraise(e):
     # that lost its +x bit) is NOT an OOM — don't send the user to the Flush
     # button; tell them what's actually wrong.
     es = str(e)
+    # #1677: Windows CreateProcess reports a missing executable as a bare
+    # ``FileNotFoundError: [WinError 2] ...`` with no filename, while POSIX
+    # includes the missing ffmpeg/ffprobe name. The bundled-media downloader
+    # now republishes PATH as soon as it finishes, but a failed/blocked
+    # download still needs an actionable recovery rather than the unknown-
+    # error dead end. Keep missing reference/model files on their own path.
+    for _exc in _exception_chain(e):
+        if _is_media_process_launch_failure(_exc):
+            raise RuntimeError(
+                "A required media program couldn't be launched. Open "
+                "Settings → Audio tools and use "
+                "Download/Repair for the media engine, then retry. If Audio "
+                "tools is already ready, repair the selected TTS engine and "
+                f"restart VoiceStudio. Underlying error: {_safe_exc_text(_exc)}"
+            ) from e
     if isinstance(e, PermissionError) or "Permission denied" in es or "Errno 13" in es:
         raise RuntimeError(
             f"A required engine binary couldn't be executed (permission denied). "

@@ -25,7 +25,7 @@ import DubbingDemo from '../DubbingDemo';
 import DubFailureNotice from './DubFailureNotice';
 import PrepOverlay from './PrepOverlay';
 import TranscribeOverlay from './TranscribeOverlay';
-import { LANG_CODES } from '../../utils/languages';
+import { LANG_CODES, languageLabel } from '../../utils/languages';
 
 const SPEAKERS_INPUT =
   'w-[52px] ml-[4px] px-[6px] py-[4px] rounded-[6px] border border-[var(--border,#3c3836)] bg-[var(--input-bg,#282828)] text-inherit text-[12px]';
@@ -59,6 +59,7 @@ function AsrInstallStatus({ t, install, onAbort }) {
 
 export default function IdleSkeleton({
   t,
+  uiLocale,
   dubVideoFile,
   activeProjectName,
   dubFilename,
@@ -272,6 +273,26 @@ export default function IdleSkeleton({
                     />
                   </label>
                 )}
+                <label className="inline-flex items-center gap-[5px] text-[12px] text-[var(--muted,#a89984)] whitespace-nowrap">
+                  <Globe size={13} /> {t('dub.source_language')}
+                  <select
+                    className="input-base text-[0.65rem]"
+                    value={dubSourceLangCode}
+                    disabled={
+                      dubStep === 'uploading' ||
+                      dubStep === 'transcribing' ||
+                      dubStep === 'installing-asr'
+                    }
+                    onChange={(event) => setDubSourceLangCode(event.target.value)}
+                  >
+                    <option value="auto">{t('bootstrap.auto_detect')}</option>
+                    {LANG_CODES.map((language) => (
+                      <option key={language.code} value={language.code}>
+                        {languageLabel(language.code, uiLocale, language.label)} — {language.code}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label
                   className="inline-flex items-center gap-[5px] text-[12px] text-[var(--muted,#a89984)] whitespace-nowrap"
                   title={t('dub.num_speakers_help')}
@@ -485,7 +506,7 @@ export default function IdleSkeleton({
                     <option value="auto">{t('bootstrap.auto_detect')}</option>
                     {LANG_CODES.map((language) => (
                       <option key={language.code} value={language.code}>
-                        {language.label} — {language.code}
+                        {languageLabel(language.code, uiLocale, language.label)} — {language.code}
                       </option>
                     ))}
                   </select>
@@ -506,7 +527,7 @@ export default function IdleSkeleton({
                   >
                     {LANG_CODES.map((lc) => (
                       <option key={lc.code} value={lc.code}>
-                        {lc.label} — {lc.code}
+                        {languageLabel(lc.code, uiLocale, lc.label)} — {lc.code}
                       </option>
                     ))}
                   </select>
