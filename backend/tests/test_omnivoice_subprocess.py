@@ -22,6 +22,7 @@ import os
 import subprocess
 import sys
 import time
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -30,8 +31,11 @@ from services.subprocess_backend import (
     RECV_TIMEOUT_S,
     SubprocessBackend,
 )
-from services.tts_backend import get_backend_class
-from engines.omnivoice_subprocess import OmniVoiceSubprocessBackend
+from services.tts_backend import OmniVoiceBackend, get_backend_class, list_backends
+from engines.omnivoice_subprocess import (
+    OmniVoiceMPSSubprocessBackend,
+    OmniVoiceSubprocessBackend,
+)
 
 
 # ── stub sidecar (model-free) ──────────────────────────────────────────────
@@ -69,6 +73,8 @@ while True:
         sys.exit(0)
     elif op == "synthesize":
         t = m.get("text", "")
+        if t == "CRASH":
+            os._exit(137)
         if t == "HANG":
             while True:  # wedge forever; the parent must hard-kill us
                 time.sleep(1)
@@ -114,6 +120,80 @@ def _use_stub(monkeypatch, stub_path):
 
 def test_registry_resolves_to_subprocess_backend():
     assert get_backend_class("omnivoice-subprocess") is OmniVoiceSubprocessBackend
+
+
+@pytest.mark.parametrize(
+    ("family", "expected_name"),
+    [("mps", "OmniVoiceMPSSubprocessBackend"), ("cuda", "OmniVoiceBackend"),
+     ("cpu", "OmniVoiceBackend")],
+)
+def test_omnivoice_is_crash_isolated_only_on_mps(monkeypatch, family, expected_name):
+    from core.device_caps import HostCaps
+
+    available = (family, "cpu") if family != "cpu" else ("cpu",)
+    monkeypatch.setattr(
+        "core.device_caps.detect_host_caps",
+        lambda: HostCaps(family=family, available_families=available),
+    )
+
+    resolved = get_backend_class("omnivoice")
+    assert resolved.__name__ == expected_name
+    if family != "mps":
+        assert resolved is OmniVoiceBackend
+
+
+def test_engine_catalogue_reports_effective_mps_isolation(monkeypatch):
+    from core.device_caps import HostCaps
+    from services import tts_backend
+
+    monkeypatch.setattr(tts_backend, "_REGISTRY", {"omnivoice": OmniVoiceBackend})
+    monkeypatch.setattr(
+        "core.device_caps.detect_host_caps",
+        lambda: HostCaps(family="mps", available_families=("mps", "cpu")),
+    )
+    monkeypatch.setattr(
+        "engines.omnivoice_subprocess.OmniVoiceSubprocessBackend.is_available",
+        classmethod(lambda cls: (True, "ready")),
+    )
+
+    row = next(item for item in list_backends() if item["id"] == "omnivoice")
+    assert row["isolation_mode"] == "subprocess"
+
+
+def test_mps_startup_does_not_preload_native_model(monkeypatch):
+    from core.device_caps import HostCaps
+    from services import model_manager
+
+    monkeypatch.setattr(
+        "core.device_caps.detect_host_caps",
+        lambda: HostCaps(family="mps", available_families=("mps", "cpu")),
+    )
+    monkeypatch.setenv("OMNIVOICE_TTS_BACKEND", "omnivoice")
+    monkeypatch.setattr(model_manager, "model", None)
+
+    async def fail_load():
+        raise AssertionError("native OmniVoice must not load in the API process on MPS")
+
+    monkeypatch.setattr(model_manager, "_load_model_with_timeout", fail_load)
+    asyncio.run(model_manager.preload_model())
+
+
+def test_streaming_mps_path_does_not_load_native_model(monkeypatch):
+    from api.routers.tts_stream import _resolve_stream_backend
+    from services import model_manager, tts_backend
+
+    sentinel = object()
+    monkeypatch.setattr(tts_backend, "active_backend_id", lambda: "omnivoice")
+    monkeypatch.setattr(
+        tts_backend, "get_backend_class", lambda _id: OmniVoiceMPSSubprocessBackend,
+    )
+    monkeypatch.setattr(tts_backend, "get_active_tts_backend", lambda: sentinel)
+
+    async def fail_load():
+        raise AssertionError("streaming must not load native OmniVoice on MPS")
+
+    monkeypatch.setattr(model_manager, "get_model", fail_load)
+    assert asyncio.run(_resolve_stream_backend(None)) is sentinel
 
 
 def test_is_marked_subprocess_isolated():
@@ -257,6 +337,21 @@ def test_wedged_sidecar_is_hard_killed_and_recovers(stub_sidecar, monkeypatch):
         b.shutdown()
 
 
+def test_mps_proxy_survives_fatal_child_exit_and_recovers(stub_sidecar, monkeypatch):
+    _use_stub(monkeypatch, stub_sidecar)
+    monkeypatch.setattr(
+        "services.model_manager.make_room_before_generate", lambda: None,
+    )
+    b = OmniVoiceMPSSubprocessBackend()
+    try:
+        with pytest.raises(RuntimeError, match="backend is still running"):
+            b.generate("CRASH")
+        assert b._proc is not None and b._proc.poll() is not None
+        assert b.generate("ok").shape[1] == 24000
+    finally:
+        b.shutdown()
+
+
 def test_desktop_timeout_kills_engine_subtree_before_late_mutation(
     stub_sidecar, monkeypatch, tmp_path
 ):
@@ -301,3 +396,94 @@ def test_generate_does_not_deadlock_when_called_on_gpu_pool_worker(stub_sidecar,
         assert tensor.shape[1] == 24000
     finally:
         b.shutdown()
+
+
+def test_sidecar_forwards_native_controls_and_applies_seed(monkeypatch):
+    import torch
+    from engines.omnivoice_subprocess import main as sidecar
+
+    calls = []
+    seeds = []
+    frames = []
+
+    class FakeModel:
+        sampling_rate = 24000
+
+        def generate(self, **kwargs):
+            calls.append(kwargs)
+            return [torch.zeros(1, 16)]
+
+    monkeypatch.setattr(sidecar, "_load_model", lambda _stdout: FakeModel())
+    monkeypatch.setattr(sidecar, "_send", lambda _stdout, frame: frames.append(frame))
+    real_manual_seed = torch.manual_seed
+    monkeypatch.setattr(
+        torch, "manual_seed", lambda seed: (seeds.append(seed), real_manual_seed(seed))[1],
+    )
+
+    sidecar._handle_synthesize({
+        "text": "hello",
+        "seed": 123,
+        "t_shift": 0.4,
+        "layer_penalty_factor": 0.2,
+        "position_temperature": 0.7,
+        "class_temperature": 0.8,
+        "audio_chunk_duration": 10,
+        "audio_chunk_threshold": 0.6,
+    }, object())
+
+    assert seeds == [123]
+    assert calls == [{
+        "text": "hello",
+        "ref_audio": None,
+        "ref_text": None,
+        "t_shift": 0.4,
+        "layer_penalty_factor": 0.2,
+        "position_temperature": 0.7,
+        "class_temperature": 0.8,
+        "audio_chunk_duration": 10,
+        "audio_chunk_threshold": 0.6,
+    }]
+    assert frames[-1]["op"] == "audio"
+
+
+def test_generation_proxy_forwards_native_controls_and_seed():
+    import torch
+    from api.routers.generation import _run_backend_inference
+
+    calls = []
+
+    class Proxy:
+        id = "omnivoice"
+        display_name = "OmniVoice"
+        sample_rate = 24000
+        applies_own_mastering = True
+        supports_native_omnivoice_controls = True
+
+        def generate(self, text, **kwargs):
+            calls.append((text, kwargs))
+            return torch.zeros(1, 240)
+
+    _run_backend_inference(
+        Proxy(), "hello", "en", None, None, None, None,
+        16, 2.0, 1.0, False, False, 321,
+        t_shift=0.4, layer_penalty_factor=0.2,
+        position_temperature=0.7, class_temperature=0.8,
+    )
+
+    assert calls == [("hello", {
+        "duration": None,
+        "language": "en",
+        "ref_audio": None,
+        "ref_text": None,
+        "instruct": None,
+        "num_step": 16,
+        "guidance_scale": 2.0,
+        "speed": 1.0,
+        "denoise": False,
+        "postprocess_output": False,
+        "t_shift": 0.4,
+        "layer_penalty_factor": 0.2,
+        "position_temperature": 0.7,
+        "class_temperature": 0.8,
+        "seed": 321,
+    })]

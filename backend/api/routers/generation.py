@@ -813,15 +813,17 @@ def _run_backend_inference(
     backend, text, language, ref_audio_path, ref_text, instruct, duration,
     num_step, guidance_scale, speed, denoise, postprocess_output,
     used_seed, effect_preset="broadcast",
-    max_chunk_chars=None, crossfade_ms=None, *, dropped_sink=None,
+    max_chunk_chars=None, crossfade_ms=None, *, t_shift=None,
+    layer_penalty_factor=None, position_temperature=None,
+    class_temperature=None, dropped_sink=None,
 ):
     """Engine-aware twin of :func:`_run_inference` (issue #312).
 
     Runs the request through a pluggable ``TTSBackend`` adapter instead of the
-    VoiceStudio model directly. The adapter protocol is narrower than the
-    VoiceStudio-native surface — engine-specific extras (``t_shift``,
-    ``layer_penalty_factor``, …) only exist on the native path, which is why
-    VoiceStudio itself still goes through ``_run_inference``.
+    VoiceStudio model directly. A crash-isolated OmniVoice proxy advertises
+    ``supports_native_omnivoice_controls`` and receives the same advanced
+    controls and per-call seed as the native path; other adapters keep the
+    narrower protocol unchanged.
     """
     import torch
     try:
@@ -836,6 +838,18 @@ def _run_backend_inference(
             instruct=instruct, num_step=num_step, guidance_scale=guidance_scale,
             speed=speed, denoise=denoise, postprocess_output=postprocess_output,
         )
+        native_proxy = bool(
+            getattr(backend, "supports_native_omnivoice_controls", False)
+        )
+        if native_proxy:
+            gen_kwargs.update({
+                key: value for key, value in {
+                    "t_shift": t_shift,
+                    "layer_penalty_factor": layer_penalty_factor,
+                    "position_temperature": position_temperature,
+                    "class_temperature": class_temperature,
+                }.items() if value is not None
+            })
         sr = backend.sample_rate
 
         # Inline [pause Nms] markers (issue #276) work for every engine — the
@@ -845,10 +859,17 @@ def _run_backend_inference(
         has_pause = len(segments) > 1 or (segments and segments[0][1] > 0)
 
         if has_pause:
+            first_span = True
+
             def _gen_span(span_text):
+                nonlocal first_span
                 # Per-span duration is left to the engine; an explicit overall
                 # `duration` can't be meaningfully split across spans.
-                return backend.generate(span_text, duration=None, **gen_kwargs)
+                span_kwargs = dict(gen_kwargs)
+                if native_proxy and first_span and used_seed is not None:
+                    span_kwargs["seed"] = used_seed
+                first_span = False
+                return backend.generate(span_text, duration=None, **span_kwargs)
             audio_out = _render_with_pauses(_gen_span, segments, sr)
         else:
             # Wave 1.2: sentence-boundary chunking for long text (see
@@ -865,12 +886,19 @@ def _run_backend_inference(
                 for i, chunk_text in enumerate(text_chunks):
                     if used_seed is not None:
                         torch.manual_seed(used_seed + i)
-                    parts.append(backend.generate(chunk_text, duration=None, **gen_kwargs))
+                    chunk_kwargs = dict(gen_kwargs)
+                    if native_proxy and used_seed is not None:
+                        chunk_kwargs["seed"] = used_seed + i
+                    parts.append(backend.generate(
+                        chunk_text, duration=None, **chunk_kwargs
+                    ))
                     _note_generate_progress()
                 audio_out = concatenate_audio_chunks(parts, sr, _xfade_ms,
                                                      texts=text_chunks,
                                                      sink=dropped_sink)
             else:
+                if native_proxy and used_seed is not None:
+                    gen_kwargs["seed"] = used_seed
                 audio_out = backend.generate(text, duration=duration, **gen_kwargs)
 
         return _apply_effect_chain(
@@ -1853,6 +1881,17 @@ async def generate_speech(
                         instruct=instruct, num_step=num_step,
                         guidance_scale=guidance_scale, speed=speed,
                         denoise=denoise, postprocess_output=postprocess_output,
+                        **({
+                            key: value for key, value in {
+                                "t_shift": t_shift,
+                                "layer_penalty_factor": layer_penalty_factor,
+                                "position_temperature": position_temperature,
+                                "class_temperature": class_temperature,
+                                "seed": used_seed + i if used_seed is not None else None,
+                            }.items() if value is not None
+                        } if getattr(
+                            _backend, "supports_native_omnivoice_controls", False
+                        ) else {}),
                     )
                     sr = _backend.sample_rate
                     skip = getattr(_backend, "applies_own_mastering", False)
@@ -1924,7 +1963,11 @@ async def generate_speech(
                                     _backend, text, language, ref_audio_path, ref_text,
                                     instruct, duration, num_step, guidance_scale, speed,
                                     denoise, postprocess_output, used_seed, effect_preset,
-                                    max_chunk_chars, crossfade_ms, dropped_sink=_dropped_sink,
+                                    max_chunk_chars, crossfade_ms, t_shift=t_shift,
+                                    layer_penalty_factor=layer_penalty_factor,
+                                    position_temperature=position_temperature,
+                                    class_temperature=class_temperature,
+                                    dropped_sink=_dropped_sink,
                                 ),
                                 what="TTS generate",
                                 min_vram_gb=_engine_min_vram_gb,
@@ -2127,7 +2170,11 @@ async def generate_speech(
                     _backend, text, language, ref_audio_path, ref_text, instruct,
                     duration, num_step, guidance_scale, speed, denoise,
                     postprocess_output, used_seed, effect_preset,
-                    max_chunk_chars, crossfade_ms, dropped_sink=_dropped_text,
+                    max_chunk_chars, crossfade_ms, t_shift=t_shift,
+                    layer_penalty_factor=layer_penalty_factor,
+                    position_temperature=position_temperature,
+                    class_temperature=class_temperature,
+                    dropped_sink=_dropped_text,
                 )
             else:
                 _local_render = functools.partial(

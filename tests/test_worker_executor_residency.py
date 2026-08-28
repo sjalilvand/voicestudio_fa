@@ -83,6 +83,27 @@ class _FakeBackend:
         type(self).unloaded += 1
 
 
+def test_dub_worker_forwards_seed_into_mps_proxy():
+    calls = []
+
+    class Proxy:
+        sample_rate = 24_000
+        applies_own_mastering = False
+        supports_native_omnivoice_controls = True
+
+        def generate(self, text, **kwargs):
+            calls.append((text, kwargs))
+            import torch
+
+            return torch.zeros(1, 240)
+
+    TaskExecutor._synthesize_dub_segment(Proxy(), {
+        "text": "hello", "seed": 123, "effect_preset": "raw",
+    })
+
+    assert calls[0][1]["seed"] == 123
+
+
 @pytest.mark.asyncio
 async def test_cancelling_execution_drains_the_blocking_engine_thread(monkeypatch):
     started = threading.Event()

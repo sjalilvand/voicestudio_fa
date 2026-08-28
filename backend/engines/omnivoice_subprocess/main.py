@@ -50,6 +50,8 @@ OMNIVOICE_SAMPLE_RATE = 24000
 _GEN_KW_ALLOWLIST = (
     "language", "instruct", "duration", "num_step", "guidance_scale",
     "speed", "denoise", "postprocess_output", "preprocess_prompt",
+    "t_shift", "layer_penalty_factor", "position_temperature",
+    "class_temperature", "audio_chunk_duration", "audio_chunk_threshold",
 )
 
 _model = None
@@ -182,6 +184,12 @@ def _handle_synthesize(msg: dict, stdout) -> None:
     ref_audio = msg.get("ref_audio") or None
     ref_text = msg.get("ref_text") or None
     gen_kw = {k: msg[k] for k in _GEN_KW_ALLOWLIST if k in msg}
+
+    seed = msg.get("seed")
+    if seed is not None:
+        import torch
+
+        torch.manual_seed(int(seed))
 
     audios = model.generate(
         text=text, ref_audio=ref_audio, ref_text=ref_text, **gen_kw

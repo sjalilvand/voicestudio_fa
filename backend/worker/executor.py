@@ -208,9 +208,11 @@ class TaskExecutor:
         from services.text_normalization import normalize_for_tts
 
         text = normalize_for_tts(row.get("text") or "", row.get("language"))
+        seed = None
         if row.get("seed") is not None:
             import torch
-            torch.manual_seed(int(row["seed"]))
+            seed = int(row["seed"])
+            torch.manual_seed(seed)
         kwargs = {
             "language": row.get("language") if row.get("language") != "Auto" else None,
             "ref_audio": row.get("ref_audio"), "ref_text": row.get("ref_text"),
@@ -221,6 +223,11 @@ class TaskExecutor:
             "speed": float(row.get("speed") or 1.0), "denoise": True,
             "postprocess_output": True,
         }
+        if (
+            getattr(backend, "supports_native_omnivoice_controls", False)
+            and seed is not None
+        ):
+            kwargs["seed"] = seed
         audio = backend.generate(text=text, **kwargs)
         preset = row.get("effect_preset") or "broadcast"
         if preset != "raw":
@@ -332,7 +339,10 @@ class TaskExecutor:
             key: value for key, value in opts.to_manifest().items()
             if value is not None and key not in ("seed", "vary_repeats")
         }
-        if isinstance(backend, OmniVoiceBackend):
+        native_proxy = bool(
+            getattr(backend, "supports_native_omnivoice_controls", False)
+        )
+        if isinstance(backend, OmniVoiceBackend) or native_proxy:
             extra.setdefault("num_step", 32)
             extra.setdefault("guidance_scale", 2.0)
             for key in ("emo_vector", "emo_text", "emo_alpha"):
@@ -341,11 +351,13 @@ class TaskExecutor:
         def synth(text, index, speed=None):
             voice = voices[int(index)]
             base_seed = opts.seed if opts.seed is not None else voice.get("seed")
+            seed = None
             if base_seed is not None:
                 import torch
                 nonce = occurrence["value"] if opts.vary_repeats else 0
                 occurrence["value"] += 1
-                torch.manual_seed(segment_seed(base_seed, text, nonce))
+                seed = segment_seed(base_seed, text, nonce)
+                torch.manual_seed(seed)
             kwargs = {
                 "language": language,
                 "ref_audio": voice.get("ref_audio"),
@@ -354,6 +366,8 @@ class TaskExecutor:
                 "speed": float(speed) if speed else 1.0,
                 **extra,
             }
+            if native_proxy and seed is not None:
+                kwargs["seed"] = seed
             return backend.generate(text, **kwargs)
 
         spans = [Span(voice_id=str(i), text=row.get("text", ""),
@@ -646,6 +660,10 @@ class TaskExecutor:
                     duration, num_step, guidance_scale, speed, denoise,
                     postprocess_output, used_seed, effect_preset,
                     max_chunk_chars, crossfade_ms,
+                    t_shift=params.get("t_shift"),
+                    layer_penalty_factor=params.get("layer_penalty_factor"),
+                    position_temperature=params.get("position_temperature"),
+                    class_temperature=params.get("class_temperature"),
                 )
         except Exception as exc:
             from worker import errors as worker_errors  # noqa: PLC0415
