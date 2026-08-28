@@ -1,43 +1,142 @@
-import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
+import React from 'react';
+import { act, render, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Regression guard: the dub editor's play button stayed permanently disabled
-// (disabled={!ready}) whenever the initial WaveSurfer decode failed and the
-// component fell back to a peaks-only ws.load(undefined, [peaks], duration)
-// call — the waveform still rendered from those peaks (so nothing looked
-// visibly broken), but `ready` was only ever set from the 'ready' event
-// re-firing on that recovery load, which this component's own error-handling
-// code never actually confirmed. Each fallback load must now explicitly
-// confirm readiness once it settles, instead of assuming the event fires.
-//
-// Driving WaveSurfer + a real decode-failure/recovery sequence through jsdom
-// is brittle (see WaveformTimeline.unlock.test.js), so this is a
-// source-level contract guard, same house pattern: every `ws.load(undefined,
-// ...)` recovery call inside the `ws.on('error', ...)` handler must be
-// followed by an explicit setReady(true) confirmation.
+const wave = vi.hoisted(() => ({ handlers: {}, instance: null }));
 
-const src = readFileSync(
-  path.resolve(process.cwd(), 'src/components/WaveformTimeline.jsx'),
-  'utf8',
-);
+vi.mock('wavesurfer.js', () => ({
+  default: {
+    create: vi.fn(() => {
+      const parent = document.createElement('div');
+      const wrapper = document.createElement('div');
+      parent.appendChild(wrapper);
+      Object.defineProperty(wrapper, 'scrollWidth', { configurable: true, value: 2300 });
+      wave.handlers = {};
+      wave.instance = {
+        on: vi.fn((event, handler) => {
+          (wave.handlers[event] ||= []).push(handler);
+          return () => {};
+        }),
+        un: vi.fn(),
+        load: vi.fn(() => Promise.resolve()),
+        setMediaElement: vi.fn(),
+        getDuration: vi.fn(() => 23),
+        getWrapper: vi.fn(() => wrapper),
+        zoom: vi.fn(),
+        pause: vi.fn(),
+        destroy: vi.fn(),
+        cancelAudioFetch: vi.fn(),
+      };
+      return wave.instance;
+    }),
+  },
+}));
 
-describe('WaveformTimeline error-recovery ready confirmation', () => {
-  it("confirms readiness explicitly after every fallback ws.load() call, not just via the 'ready' event", () => {
-    const errorHandler = /ws\.on\('error', \(err\) => \{([\s\S]*?)\n    \}\);/.exec(src)?.[1];
-    expect(errorHandler, "ws.on('error', ...) handler not found").toBeTruthy();
+vi.mock('wavesurfer.js/dist/plugins/minimap.esm.js', () => ({
+  default: { create: vi.fn(() => ({})) },
+}));
+vi.mock('wavesurfer.js/dist/plugins/timeline.esm.js', () => ({
+  default: { create: vi.fn(() => ({})) },
+}));
 
-    // Every recovery load in this handler passes peaks explicitly
-    // (`ws.load(undefined, [...], ...)`) — each occurrence must be
-    // immediately confirmed ready via a .then()/.catch() pair (or an
-    // unconditional setReady in a synchronous catch), not left to hope the
-    // 'ready' event re-fires on its own.
-    const loadCalls = [...errorHandler.matchAll(/ws\.load\(undefined, \[[^\]]*\][^)]*\)/g)];
-    expect(loadCalls.length).toBeGreaterThanOrEqual(3);
+import WaveformTimeline from './WaveformTimeline';
 
-    for (const match of loadCalls) {
-      const tail = errorHandler.slice(match.index, match.index + 220);
-      expect(tail, `no readiness confirmation after: ${match[0]}`).toMatch(/setReady\(true\)/);
-    }
+class ResizeObserverStub {
+  observe() {}
+  disconnect() {}
+}
+
+function emitWave(event, value) {
+  for (const handler of wave.handlers[event] || []) handler(value);
+}
+
+describe('WaveformTimeline audible error recovery (#1692)', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.stubGlobal('ResizeObserver', ResizeObserverStub);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(16) })),
+    );
+    const decoded = {
+      duration: 23,
+      getChannelData: () => new Float32Array([0, 0.5, -0.5, 0]),
+    };
+    vi.stubGlobal(
+      'AudioContext',
+      class {
+        async decodeAudioData() {
+          return decoded;
+        }
+      },
+    );
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+    vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {});
+  });
+
+  it('loads unequal-duration peaks from the selected dub and synchronizes its video', async () => {
+    let releaseFetch;
+    fetch.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          releaseFetch = () => resolve({ ok: true, arrayBuffer: async () => new ArrayBuffer(16) });
+        }),
+    );
+    const { container } = render(
+      React.createElement(WaveformTimeline, {
+        audioSrc: 'http://localhost/original.wav',
+        videoSrc: 'http://localhost/dubbed.mp4',
+        playbackFallbackSrc: 'http://localhost/dubbed-es.wav',
+      }),
+    );
+    const video = container.querySelector('video');
+    Object.defineProperty(video, 'duration', { configurable: true, value: 61 });
+
+    act(() => emitWave('error', new DOMException('video decode failed', 'NotSupportedError')));
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+    act(() => emitWave('error', new Error('duplicate original-video error')));
+    expect(container.querySelector('.wfm-error')).not.toBeInTheDocument();
+    await act(async () => releaseFetch());
+    await waitFor(() => expect(wave.instance.setMediaElement).toHaveBeenCalledOnce());
+    const fallbackAudio = wave.instance.setMediaElement.mock.calls[0][0];
+    expect(fallbackAudio).toBeInstanceOf(HTMLAudioElement);
+    expect(fallbackAudio.src).toBe('http://localhost/dubbed-es.wav');
+    expect(fetch).toHaveBeenCalledWith('http://localhost/dubbed-es.wav');
+    expect(wave.instance.load).toHaveBeenCalledWith(
+      'http://localhost/dubbed-es.wav',
+      [expect.any(Float32Array)],
+      23,
+    );
+    expect(wave.instance.load.mock.calls[0][0]).not.toBeUndefined();
+
+    fallbackAudio.currentTime = 7;
+    act(() => fallbackAudio.dispatchEvent(new Event('seeking')));
+    expect(video.currentTime).toBe(7);
+
+    act(() => fallbackAudio.dispatchEvent(new Event('play')));
+    expect(video.muted).toBe(true);
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
+
+    act(() => fallbackAudio.dispatchEvent(new Event('pause')));
+    expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
+  });
+
+  it('makes a rejected companion terminal instead of recursively reloading it', async () => {
+    render(
+      React.createElement(WaveformTimeline, {
+        audioSrc: 'http://localhost/original.wav',
+        videoSrc: 'http://localhost/dubbed.mp4',
+        playbackFallbackSrc: 'http://localhost/missing-dub.wav',
+      }),
+    );
+    wave.instance.load.mockRejectedValueOnce(new Error('companion rejected'));
+
+    act(() => emitWave('error', new Error('initial decode failed')));
+
+    await waitFor(() => expect(document.querySelector('.wfm-error')).toBeInTheDocument());
+    act(() => emitWave('error', new Error('companion rejected')));
+    expect(wave.instance.load).toHaveBeenCalledOnce();
   });
 });

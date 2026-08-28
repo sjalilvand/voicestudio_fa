@@ -44,6 +44,7 @@ const WF_BTN_PLAY = `${WF_BTN_BASE} bg-[var(--chrome-accent-bg)] text-[color:var
  * Props:
  *   audioSrc        – URL / blob URL for audio (WaveSurfer media + waveform source)
  *   videoSrc        – URL / blob URL for the video preview (optional, shown above waveform)
+ *   playbackFallbackSrc – audible companion used if the video transport cannot decode
  *   segments        – Array<{ id, start, end, text }>
  *   disabled        – locks drag/resize of segment boxes
  *   overlayContent  – React node rendered as a translucent overlay on the waveform
@@ -59,6 +60,7 @@ function WaveformTimeline(
   {
     audioSrc,
     videoSrc,
+    playbackFallbackSrc = audioSrc,
     segments = [],
     disabled = false,
     overlayContent,
@@ -147,6 +149,9 @@ function WaveformTimeline(
     // ── 1. Create the video element imperatively (stable, no React re-renders) ──
     let videoEl = null;
     let videoRetryTimer = null;
+    let fallbackAudioEl = null;
+    let fallbackSyncCleanup = null;
+    let recoveryState = 'idle';
     if (videoSrc && videoContainerRef.current) {
       // Remove prior children + detach listeners explicitly to avoid leaks.
       const c = videoContainerRef.current;
@@ -162,6 +167,7 @@ function WaveformTimeline(
         c.removeChild(child);
       }
       videoEl = document.createElement('video');
+      videoEl.crossOrigin = 'anonymous';
       videoEl.src = videoSrc;
       videoEl.muted = false;
       videoEl.playsInline = true;
@@ -215,6 +221,13 @@ function WaveformTimeline(
         }
         if (code === 3 || code === 4) {
           console.warn('[WaveformTimeline] video element rejected source', videoSrc, 'code', code);
+          // A valid companion WAV can still make this an audio editor. Keep
+          // WaveSurfer mounted so its error recovery can swap transports;
+          // only the unusable visual surface needs to disappear.
+          if (playbackFallbackSrc) {
+            videoEl.style.display = 'none';
+            return;
+          }
           setSourceMissing(code === 4);
           setLoadError(true);
         }
@@ -229,6 +242,7 @@ function WaveformTimeline(
       videoEl ??
       (() => {
         const a = document.createElement('audio');
+        a.crossOrigin = 'anonymous';
         a.src = audioSrc;
         a.preload = 'auto';
         return a;
@@ -338,6 +352,74 @@ function WaveformTimeline(
     });
     ws.on('finish', () => setIsPlaying(false));
 
+    // WaveSurfer 7's load(undefined, peaks, duration) clears the attached
+    // media element's src. The old recovery path therefore rendered fallback
+    // peaks but silently disconnected the video transport — exactly the
+    // visible-waveform/no-audio failure reported in #1692. Preserve an actual
+    // URL on every recovery load. When video decoding caused the failure,
+    // move playback to the known-good companion audio and keep the visual
+    // video muted + time-synchronised.
+    const fallbackSource = playbackFallbackSrc || audioSrc || videoSrc;
+    const loadRecoveredPeaks = (peaks, fallbackDuration) => {
+      if (videoEl && fallbackSource && fallbackSource !== videoSrc) {
+        if (!fallbackAudioEl) {
+          fallbackAudioEl = document.createElement('audio');
+          fallbackAudioEl.crossOrigin = 'anonymous';
+          fallbackAudioEl.preload = 'auto';
+          fallbackAudioEl.src = fallbackSource;
+          fallbackAudioEl.muted = false;
+          fallbackAudioEl.volume = 1;
+
+          const syncVideoTime = (force = false) => {
+            if (!videoEl || !fallbackAudioEl) return;
+            const next = fallbackAudioEl.currentTime || 0;
+            if (force || Math.abs((videoEl.currentTime || 0) - next) > 0.25) {
+              try {
+                videoEl.currentTime = next;
+              } catch (_) {
+                /* visual sync is best-effort; audio remains authoritative */
+              }
+            }
+          };
+          const playVideo = () => {
+            syncVideoTime(true);
+            videoEl.muted = true;
+            videoEl.play().catch(() => {});
+          };
+          const pauseVideo = () => videoEl.pause();
+          const seekVideo = () => syncVideoTime(true);
+          const trackVideo = () => syncVideoTime(false);
+          fallbackAudioEl.addEventListener('play', playVideo);
+          fallbackAudioEl.addEventListener('pause', pauseVideo);
+          fallbackAudioEl.addEventListener('seeking', seekVideo);
+          fallbackAudioEl.addEventListener('timeupdate', trackVideo);
+          fallbackSyncCleanup = () => {
+            fallbackAudioEl?.removeEventListener('play', playVideo);
+            fallbackAudioEl?.removeEventListener('pause', pauseVideo);
+            fallbackAudioEl?.removeEventListener('seeking', seekVideo);
+            fallbackAudioEl?.removeEventListener('timeupdate', trackVideo);
+          };
+
+          ws.setMediaElement(fallbackAudioEl);
+          mediaElRef.current = fallbackAudioEl;
+        }
+      }
+      recoveryState = 'loading';
+      return Promise.resolve(ws.load(fallbackSource, peaks, fallbackDuration));
+    };
+
+    const failRecovery = (error, { missing = false } = {}) => {
+      recoveryState = 'failed';
+      console.warn('Audio fallback failed:', error);
+      setReady(false);
+      setSourceMissing(missing);
+      setLoadError(true);
+    };
+    const finishRecovery = () => {
+      recoveryState = 'ready';
+      setReady(true);
+    };
+
     // Handle errors (like Safari refusing to decode .mov in WebAudio)
     ws.on('error', (err) => {
       const errStr =
@@ -346,29 +428,22 @@ function WaveformTimeline(
       if (errName === 'AbortError' || errStr.includes('abort')) {
         return; // Ignore React cleanup aborts
       }
-      // WebKit NotSupportedError — skip decode, load with empty peaks so media element still works
-      if (errName === 'NotSupportedError' || errStr.includes('not supported')) {
-        console.warn('WebKit audio decode not supported, using media element directly');
-        try {
-          const emptyPeaks = new Float32Array(1000).fill(0);
-          // Don't rely solely on the 'ready' event firing again for this
-          // recovery load — the play button stayed permanently disabled
-          // when it didn't (the waveform still rendered from the peaks, so
-          // there was no visible sign anything was wrong). Confirm
-          // readiness explicitly once this load settles either way.
-          Promise.resolve(ws.load(undefined, [emptyPeaks], mediaEl.duration || 60))
-            .then(() => setReady(true))
-            .catch(() => setReady(true));
-        } catch (_) {
-          setReady(true);
-        }
+      // Repeated errors from the original video can arrive while its companion
+      // is still being fetched/decoded. They do not say anything about that
+      // replacement, so let the in-flight attempt settle. Once WaveSurfer has
+      // switched to loading the companion, any further error is terminal.
+      if (recoveryState === 'decoding' || recoveryState === 'failed') return;
+      if (recoveryState === 'loading' || recoveryState === 'ready') {
+        failRecovery(err);
         return;
       }
+      recoveryState = 'decoding';
 
-      // If WaveSurfer failed to decode the media element stream (e.g. 404, .mov on MacOS, or pure .wav files failing to emit peaks),
-      // we manually fetch the companion `audioSrc`, decode it, and supply raw peaks.
-      if (audioSrc) {
-        fetch(audioSrc)
+      // Decode the exact source recovery will play. Using original-audio
+      // peaks with a dubbed companion made its waveform and range controls
+      // drift whenever the generated track had different timing.
+      if (fallbackSource) {
+        fetch(fallbackSource)
           .then((res) => {
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return res.arrayBuffer();
@@ -382,9 +457,9 @@ function WaveformTimeline(
             // Same explicit-readiness guard as the NotSupportedError branch
             // above — don't depend on the 'ready' event re-firing for this
             // manually-decoded recovery load.
-            Promise.resolve(ws.load(undefined, [channelData], audioBuffer.duration))
-              .then(() => setReady(true))
-              .catch(() => setReady(true));
+            loadRecoveredPeaks([channelData], audioBuffer.duration)
+              .then(finishRecovery)
+              .catch((loadErr) => failRecovery(loadErr));
           })
           .catch((decodeErr) => {
             // HTTP 404 on the companion audio means the source file is
@@ -395,23 +470,29 @@ function WaveformTimeline(
             // to empty peaks so the media element can still play.
             const isMissing = /\bHTTP 404\b/.test(String(decodeErr?.message || decodeErr));
             if (isMissing) {
-              console.warn('Audio source missing (HTTP 404):', audioSrc);
-              setSourceMissing(true);
-              setLoadError(true);
+              failRecovery(decodeErr, { missing: true });
+              return;
+            }
+            // If this is the same timeline as audioSrc, the media element may
+            // still play even though WebAudio cannot decode it. A dubbed
+            // companion is a different timeline, so never fake its duration
+            // from the original media.
+            if (fallbackSource !== audioSrc) {
+              failRecovery(decodeErr);
               return;
             }
             console.warn('Audio decode fallback failed, loading with empty peaks:', decodeErr);
             try {
               const emptyPeaks = new Float32Array(1000).fill(0);
-              Promise.resolve(ws.load(undefined, [emptyPeaks], mediaEl.duration || 60))
-                .then(() => setReady(true))
-                .catch(() => setReady(true));
-            } catch (_) {
-              setLoadError(true);
+              loadRecoveredPeaks([emptyPeaks], mediaEl.duration || 60)
+                .then(finishRecovery)
+                .catch((loadErr) => failRecovery(loadErr));
+            } catch (loadErr) {
+              failRecovery(loadErr);
             }
           });
       } else {
-        setLoadError(true);
+        failRecovery(err);
       }
     });
 
@@ -427,6 +508,14 @@ function WaveformTimeline(
       try {
         ws.cancelAudioFetch?.();
       } catch (_) {}
+      fallbackSyncCleanup?.();
+      if (fallbackAudioEl) {
+        try {
+          fallbackAudioEl.pause();
+          fallbackAudioEl.removeAttribute('src');
+          fallbackAudioEl.load?.();
+        } catch (_) {}
+      }
       // Empty the media source before destroy so any in-flight fetch
       // resolves its AbortController without a stale reference.
       if (mediaEl && !videoEl) {
@@ -459,7 +548,7 @@ function WaveformTimeline(
       setReady(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [audioSrc, videoSrc]);
+  }, [audioSrc, videoSrc, playbackFallbackSrc]);
 
   // ── Alignment metrics — the single {pxPerSec, scrollLeft} source ────────────
   // Everything the SegmentTrack draws derives from these two numbers, read
