@@ -297,7 +297,7 @@ exposing the backend.
 Install the VoiceStudio skills for Claude Code, Codex, Cursor, and other [skills.sh](https://skills.sh)-compatible agents:
 
 ```bash
-npx skills add debpalash/omnivoice-studio
+npx skills add debpalash/VoiceStudio
 ```
 
 - `omnivoice`: synthesize speech and transcribe audio through local VoiceStudio.

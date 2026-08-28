@@ -10,11 +10,15 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- CosyVoice setup guidance now separates downloaded model files from the runtime that makes the engine available.
+
 ### Changed
 
 ### Added
 
 ### Docs
+
+- The CosyVoice guide now states that packaged builds have no one-click runtime installer and records the exact readiness checks exposed by [Discussion 1631](https://github.com/debpalash/VoiceStudio/discussions/1631).
 
 ### Fixed
 

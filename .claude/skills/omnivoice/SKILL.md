@@ -5,6 +5,9 @@ description: "Local TTS, voice cloning, voice design, and video dubbing via the 
 
 # VoiceStudio
 
+The canonical cross-agent package lives at `skills/omnivoice/SKILL.md`. This
+Claude-specific package retains the MCP lifecycle helpers and references.
+
 ## Overview
 
 Generate audio locally via the VoiceStudio MCP server. Tools: `generate_speech`, `list_voices`, `list_personalities`, `list_languages`, `check_health`. Resources: `voice://{id}`, `history://recent`.
@@ -166,4 +169,4 @@ The MCP server does not expose the dubbing endpoint. The full transcribe → tra
 
 Backend Swagger / OpenAPI: `http://127.0.0.1:3900/docs` (when backend is up).
 
-Upstream: github.com/debpalash/VoiceStudio — FSL-1.1-ALv2 (free for personal/internal/non-commercial; auto-converts to Apache-2.0 two years after each release).
+Upstream: github.com/debpalash/VoiceStudio. The app uses AGPL-3.0-only; optional engines and downloaded models retain their own licenses. See `LICENSE-NOTICE.md` in the repository.
