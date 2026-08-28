@@ -13,6 +13,8 @@ import { Tabs as ShadcnTabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
  * @param onChange  (id) => void
  * @param size      'sm' | 'md'
  * @param variant   'pill' (default) | 'underline'
+ * @param idPrefix  optional prefix used to associate triggers with external panels
+ * @param children  optional Radix TabsContent elements associated by value
  */
 export default function Tabs({
   items = [],
@@ -20,6 +22,8 @@ export default function Tabs({
   onChange,
   size = 'md',
   variant = 'pill',
+  idPrefix,
+  children,
   className = '',
   ...rest
 }) {
@@ -75,6 +79,12 @@ export default function Tabs({
             <TabsTrigger
               key={item.id}
               value={item.id}
+              {...(idPrefix
+                ? {
+                    id: `${idPrefix}-tab-${item.id}`,
+                    'aria-controls': `${idPrefix}-panel-${item.id}`,
+                  }
+                : {})}
               className={`ui-tabs__tab ${active ? 'is-active' : ''} ${tabClass}`}
               title={item.title}
               style={active && item.accent ? { '--ui-tab-accent': item.accent } : undefined}
@@ -85,6 +95,7 @@ export default function Tabs({
           );
         })}
       </TabsList>
+      {children}
     </ShadcnTabs>
   );
 }
