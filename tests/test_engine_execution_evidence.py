@@ -232,3 +232,41 @@ def test_stopped_asr_sidecar_invalidates_cached_loaded_evidence(monkeypatch):
     row = asr_backend.list_backends()[0]
     assert row["execution_evidence"]["evidence_state"] == "not_loaded"
     assert "stopped" not in asr_backend._RUNTIME_EVIDENCE
+
+
+def test_unloaded_in_process_asr_invalidates_cached_loaded_evidence(monkeypatch):
+    from services import asr_backend
+
+    class _Backend:
+        id = "released"
+        display_name = "Released backend"
+        gpu_compat = ("cuda", "cpu")
+
+        def __init__(self):
+            self._model = object()
+
+        @classmethod
+        def is_available(cls):
+            return True, "ready"
+
+        def execution_evidence_loaded(self):
+            return self._model is not None
+
+        def unload(self):
+            self._model = None
+
+    instance = _Backend()
+    monkeypatch.setattr(asr_backend, "_REGISTRY", {"released": _Backend})
+    monkeypatch.setattr(asr_backend, "_RUNTIME_INSTANCES", {"released": instance})
+    monkeypatch.setattr(
+        asr_backend,
+        "_RUNTIME_EVIDENCE",
+        {"released": {"evidence_state": "loaded", "actual_execution_device": "cuda:0"}},
+    )
+
+    instance.unload()
+    row = asr_backend.list_backends()[0]
+
+    assert row["execution_evidence"]["evidence_state"] == "not_loaded"
+    assert row["execution_evidence"]["actual_execution_device"] is None
+    assert "released" not in asr_backend._RUNTIME_EVIDENCE

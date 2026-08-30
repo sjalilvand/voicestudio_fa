@@ -30,6 +30,7 @@ import re
 import contextlib
 import threading
 import time
+import weakref
 from utils.containment import contain_system_exit
 
 from abc import ABC, abstractmethod
@@ -2369,6 +2370,7 @@ _LAST_ERRORS: dict[str, str] = {}
 # reinstall / ``uv sync --reinstall`` and an app restart anyway.
 _DEEP_IMPORT_BROKEN: dict[str, str] = {}
 _RUNTIME_EVIDENCE: dict[str, dict] = {}
+_RUNTIME_INSTANCES: weakref.WeakValueDictionary[str, "ASRBackend"] = weakref.WeakValueDictionary()
 
 
 def _deep_import_reason(cls: type["ASRBackend"], exc: ImportError) -> str:
@@ -2425,20 +2427,23 @@ def list_backends() -> list[dict]:
         isolation = "subprocess" if getattr(cls, "_is_subprocess_isolated", False) else "in-process"
         gpu_compat = getattr(cls, "gpu_compat", ("cpu",))
         routing = routing_fields(gpu_compat, caps)
-        execution_evidence = _RUNTIME_EVIDENCE.get(bid)
-        if isolation == "subprocess":
-            # Cached load-time facts are valid only while this exact child is
-            # still alive. Recompute lifecycle state so shutdown/reaping cannot
-            # leave a ghost "loaded" engine in diagnostics.
-            execution_evidence = execution_snapshot(
-                engine_id=bid,
-                engine_cls=cls,
-                instance=_ISOLATED_INSTANCES.get(bid),
-                routing=routing,
-                caps=caps,
-            )
-            if execution_evidence["evidence_state"] == "not_loaded":
-                _RUNTIME_EVIDENCE.pop(bid, None)
+        # Cached load-time facts are valid only while their exact backend still
+        # owns live model state. Recompute from that instance so unload/reaping
+        # cannot leave ghost GPU/provider evidence in diagnostics.
+        instance = (
+            _ISOLATED_INSTANCES.get(bid)
+            if isolation == "subprocess"
+            else _RUNTIME_INSTANCES.get(bid)
+        )
+        execution_evidence = execution_snapshot(
+            engine_id=bid,
+            engine_cls=cls,
+            instance=instance,
+            routing=routing,
+            caps=caps,
+        )
+        if execution_evidence["evidence_state"] == "not_loaded":
+            _RUNTIME_EVIDENCE.pop(bid, None)
         out.append({
             "id": bid,
             "display_name": cls.display_name,
@@ -2712,6 +2717,7 @@ def load_active_asr_backend(*, asr_pipe=None) -> ASRBackend:
                 routing=routing,
                 caps=caps,
             )
+            _RUNTIME_INSTANCES[bid] = backend
             return backend
         except ImportError as e:
             # ModuleNotFoundError and its ImportError parent ("cannot import
