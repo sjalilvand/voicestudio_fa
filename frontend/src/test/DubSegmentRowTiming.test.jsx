@@ -111,6 +111,17 @@ describe('DubSegmentRow timing fields', () => {
     expect(nearLimit.onMoveResize).not.toHaveBeenCalled();
   });
 
+  it('accepts an exact 300 ms boundary despite decimal rounding', () => {
+    const props = makeProps({ seg: { id: 's1', start: 1, end: 3.3, text: 'x' } });
+    render(<DubSegmentRow {...props} />);
+    const start = timeFields()[0];
+
+    fireEvent.change(start, { target: { value: '3.0' } });
+    fireEvent.blur(start);
+
+    expect(props.onMoveResize).toHaveBeenCalledWith('s1', { start: 3, end: 3.3 });
+  });
+
   it('surfaces an adjacent overlap beside the timing controls', () => {
     render(<DubSegmentRow {...makeProps({ hasOverlap: true })} />);
     expect(

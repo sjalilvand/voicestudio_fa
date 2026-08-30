@@ -22,6 +22,7 @@ import VoiceSelector from './VoiceSelector';
 
 const CHAR_BUDGET_RATIO = 1.3;
 const SENTENCE_END = /[.!?。！？]/;
+const TIME_EPSILON = 1e-9;
 
 function rowClass(isActive, isDone, selected, isPlaying, timelineSelected) {
   return `segment-row${isActive ? ' segment-active' : ''}${isDone ? ' segment-done' : ''}${selected ? ' segment-selected' : ''}${isPlaying ? ' segment-playing' : ''}${timelineSelected ? ' segment-timeline-selected' : ''}`;
@@ -192,7 +193,9 @@ function DubSegmentRow({
     const v = parseTime(e.target.value);
     const current = seg[edge];
     const inRange =
-      edge === 'start' ? v >= 0 && v <= seg.end - MIN_SEG_DUR : v >= seg.start + MIN_SEG_DUR;
+      edge === 'start'
+        ? v >= 0 && v <= seg.end - MIN_SEG_DUR + TIME_EPSILON
+        : v >= seg.start + MIN_SEG_DUR - TIME_EPSILON;
     if (v == null || !inRange) {
       e.target.value = formatTime(current);
       return;
