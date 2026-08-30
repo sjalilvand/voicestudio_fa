@@ -683,9 +683,15 @@ export default function CaptureWidget({ onDismiss }) {
   useEffect(() => {
     if (!inTauri()) return; // browser webui — the keyboard fallback below runs
     let unlistenStart, unlistenStop;
+    let registrationId;
     let cancelled = false;
     (async () => {
       try {
+        registrationId = await tauriInvoke('begin_dictation_capture_registration');
+        if (cancelled) {
+          await tauriInvoke('end_dictation_capture_registration', { registrationId });
+          return;
+        }
         const { listen } = await import('@tauri-apps/api/event');
         unlistenStart = await listen('tray-dictate', async (event) => {
           const now = Date.now();
@@ -803,15 +809,24 @@ export default function CaptureWidget({ onDismiss }) {
           }
         });
         await ensureDictationPrefsHydrated();
-        const { invoke } = await import('@tauri-apps/api/core');
-        await invoke('mark_dictation_capture_ready');
+        if (cancelled) {
+          unlistenStart?.();
+          unlistenStop?.();
+          await tauriInvoke('end_dictation_capture_registration', { registrationId });
+          return;
+        }
+        await tauriInvoke('mark_dictation_capture_ready', { registrationId });
         // Unmounted while the dynamic import was in flight — drop the
         // subscriptions we just created rather than leaking them.
         if (cancelled) {
           unlistenStart?.();
           unlistenStop?.();
+          await tauriInvoke('end_dictation_capture_registration', { registrationId });
         }
       } catch (err) {
+        if (registrationId) {
+          void tauriInvoke('end_dictation_capture_registration', { registrationId });
+        }
         // Hotkey wiring failed inside Tauri — dictation still works via the
         // in-page shortcut, but say so in the console for bug reports.
         console.warn('tray-dictate listen failed:', err);
@@ -822,6 +837,9 @@ export default function CaptureWidget({ onDismiss }) {
       nativeStartSequenceRef.current += 1;
       if (unlistenStart) unlistenStart();
       if (unlistenStop) unlistenStop();
+      if (registrationId) {
+        void tauriInvoke('end_dictation_capture_registration', { registrationId });
+      }
     };
     // Attach ONCE — see stateRef above. Adding a dependency here reintroduces
     // the dropped-press window that stranded the widget.

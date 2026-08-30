@@ -119,6 +119,7 @@ beforeEach(() => {
   window.__TAURI_INTERNALS__ = {};
   invokeMock.mockReset();
   invokeMock.mockImplementation(async (cmd) => {
+    if (cmd === 'begin_dictation_capture_registration') return 1;
     if (cmd === 'check_microphone') return 'granted';
     if (cmd === 'check_accessibility') return true;
     if (cmd === 'mark_dictation_capture_ready' && eventState.pendingStart) {
