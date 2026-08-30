@@ -10,6 +10,7 @@ import {
   Scissors,
   Merge,
   MoreHorizontal,
+  Minus,
   Plus,
   Sparkles,
 } from 'lucide-react';
@@ -85,6 +86,7 @@ function DubSegmentRow({
   onDirect,
   onSeek,
   timelineSelected,
+  hasOverlap,
 }) {
   const { t } = useTranslation();
   const textInputRef = useRef(null);
@@ -204,6 +206,21 @@ function DubSegmentRow({
     });
   };
 
+  const nudgeTime = (edge, delta) => {
+    const current = seg[edge];
+    const limit = edge === 'start' ? seg.end - 0.001 : seg.start + 0.001;
+    const next = +(
+      edge === 'start'
+        ? Math.max(0, Math.min(limit, current + delta))
+        : Math.max(limit, current + delta)
+    ).toFixed(3);
+    if (Math.abs(next - current) <= 1e-3) return;
+    onMoveResize(seg.id, {
+      start: edge === 'start' ? next : seg.start,
+      end: edge === 'end' ? next : seg.end,
+    });
+  };
+
   const handleTextKeyDown = (e) => {
     if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
       e.preventDefault();
@@ -247,30 +264,39 @@ function DubSegmentRow({
         title={t('segment.select_title')}
       />
       <span className="segment-time flex flex-col min-w-0 overflow-hidden tabular-nums">
+        {['start', 'end'].map((edge) => (
+          <span className="seg-time-stepper" key={`${edge}-${seg.id}-${seg[edge]}`}>
+            <button
+              type="button"
+              onClick={() => nudgeTime(edge, -0.1)}
+              disabled={disabled || (edge === 'start' && seg.start <= 0)}
+              aria-label={`−0.1s ${t(edge === 'start' ? 'segment.time_edit_title' : 'segment.time_edit_end_title')}`}
+            >
+              <Minus size={10} />
+            </button>
+            <input
+              type="text"
+              className="seg-time-input"
+              defaultValue={formatTime(seg[edge])}
+              disabled={disabled}
+              title={t(
+                edge === 'start' ? 'segment.time_edit_title' : 'segment.time_edit_end_title',
+              )}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={timeKeyDown(edge)}
+              onBlur={commitTime(edge)}
+            />
+            <button
+              type="button"
+              onClick={() => nudgeTime(edge, 0.1)}
+              disabled={disabled}
+              aria-label={`+0.1s ${t(edge === 'start' ? 'segment.time_edit_title' : 'segment.time_edit_end_title')}`}
+            >
+              <Plus size={10} />
+            </button>
+          </span>
+        ))}
         <span className="flex items-baseline gap-[2px] min-w-0">
-          <input
-            type="text"
-            className="seg-time-input"
-            defaultValue={formatTime(seg.start)}
-            key={`start-${seg.id}-${seg.start}`}
-            disabled={disabled}
-            title={t('segment.time_edit_title')}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={timeKeyDown('start')}
-            onBlur={commitTime('start')}
-          />
-          <span className="text-[var(--chrome-fg-muted)]">–</span>
-          <input
-            type="text"
-            className="seg-time-input"
-            defaultValue={formatTime(seg.end)}
-            key={`end-${seg.id}-${seg.end}`}
-            disabled={disabled}
-            title={t('segment.time_edit_end_title')}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={timeKeyDown('end')}
-            onBlur={commitTime('end')}
-          />
           {seg.speed && seg.speed !== 1.0 && (
             <span
               className="text-[0.52rem] ml-[1px]"
@@ -280,6 +306,11 @@ function DubSegmentRow({
             </span>
           )}
         </span>
+        {hasOverlap && (
+          <span className="seg-overlap-warning" title={t('timeline.overlap_warning')}>
+            <AlertCircle size={9} /> {t('timeline.overlap_warning')}
+          </span>
+        )}
         {fitBadge && (
           <span
             className="text-[0.48rem] mt-[1px] inline-flex items-center gap-[1px]"

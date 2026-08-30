@@ -83,6 +83,26 @@ describe('DubSegmentRow timing fields', () => {
     expect(props.onEditField).not.toHaveBeenCalled();
   });
 
+  it('nudges either edge by 100 ms with accessible controls', () => {
+    const props = makeProps();
+    render(<DubSegmentRow {...props} />);
+
+    const decrement = screen.getAllByRole('button', { name: /−0\.1s/ });
+    const increment = screen.getAllByRole('button', { name: /\+0\.1s/ });
+    fireEvent.click(decrement[0]);
+    fireEvent.click(increment[1]);
+
+    expect(props.onMoveResize).toHaveBeenNthCalledWith(1, 's1', { start: 0.9, end: 3 });
+    expect(props.onMoveResize).toHaveBeenNthCalledWith(2, 's1', { start: 1, end: 3.1 });
+  });
+
+  it('surfaces an adjacent overlap beside the timing controls', () => {
+    render(<DubSegmentRow {...makeProps({ hasOverlap: true })} />);
+    expect(
+      screen.getByText('Overlaps an adjacent segment — both lines will play together'),
+    ).toBeInTheDocument();
+  });
+
   it('accepts raw seconds as well as m:ss.s', () => {
     const props = makeProps();
     render(<DubSegmentRow {...props} />);
