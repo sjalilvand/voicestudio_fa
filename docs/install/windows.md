@@ -120,9 +120,11 @@ If an install to a local non-C: drive fails anyway, capture a log with
 
 The MSI checks the `pv` version value in both the machine-wide and current-user
 Edge Update registry keys for the WebView2 Runtime product
-`{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}`. When no `pv` version is detected,
-the install fails without making a network request and directs the operator to
-the offline runtime.
+`{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}`. When no `pv` version is detected and
+the bootstrapper was not explicitly allowed (or was explicitly disabled), the
+install fails without making a network request and directs the operator to the
+offline runtime. `ALLOWWEBVIEW2BOOTSTRAP=1` instead selects the opt-in path
+documented below.
 
 Managed or offline deployments can prohibit that network action:
 
