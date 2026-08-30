@@ -28,15 +28,17 @@ function Assert-Contains([string]$Value, [string]$Expected, [string]$Label) {
 }
 
 $secure = Get-MsiValue "SELECT ``Value`` FROM ``Property`` WHERE ``Property``='SecureCustomProperties'"
+Assert-Contains $secure "ALLOWWEBVIEW2BOOTSTRAP" "secure MSI properties"
 Assert-Contains $secure "DISABLEWEBVIEW2BOOTSTRAP" "secure MSI properties"
 
 $bootstrapCondition = Get-MsiValue "SELECT ``Condition`` FROM ``InstallExecuteSequence`` WHERE ``Action``='DownloadAndInvokeBootstrapper'"
-Assert-Contains $bootstrapCondition 'DISABLEWEBVIEW2BOOTSTRAP = "1"' "WebView2 bootstrap condition"
+Assert-Contains $bootstrapCondition 'ALLOWWEBVIEW2BOOTSTRAP = "1"' "WebView2 bootstrap condition"
+Assert-Contains $bootstrapCondition 'DISABLEWEBVIEW2BOOTSTRAP <> "1"' "WebView2 bootstrap condition"
 
 $launchCondition = Get-MsiValue "SELECT ``Condition`` FROM ``InstallExecuteSequence`` WHERE ``Action``='LaunchApplication'"
 Assert-Contains $launchCondition 'AUTOLAUNCHAPP <> "0"' "launch condition"
 
-$runtimeCondition = Get-MsiValue "SELECT ``Condition`` FROM ``LaunchCondition`` WHERE ``Condition``='Installed OR REMOVE OR INSTALLED_WEBVIEW2_VERSION OR DISABLEWEBVIEW2BOOTSTRAP <> `"1`"'"
+$runtimeCondition = Get-MsiValue "SELECT ``Condition`` FROM ``LaunchCondition`` WHERE ``Condition``='Installed OR REMOVE OR INSTALLED_WEBVIEW2_VERSION OR (ALLOWWEBVIEW2BOOTSTRAP = `"1`" AND DISABLEWEBVIEW2BOOTSTRAP <> `"1`")'"
 Assert-Contains $runtimeCondition "INSTALLED_WEBVIEW2_VERSION" "fail-closed runtime condition"
 
 $bootstrapCommand = Get-MsiValue "SELECT ``Target`` FROM ``CustomAction`` WHERE ``Action``='DownloadAndInvokeBootstrapper'"

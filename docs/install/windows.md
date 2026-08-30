@@ -118,17 +118,16 @@ If an install to a local non-C: drive fails anyway, capture a log with
 
 ## Managed WebView2 installation
 
-The MSI checks both the machine-wide and current-user Edge Update registry
-keys for the WebView2 Runtime product
-`{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}`. When neither key is present, the
-default install downloads Microsoft's bootstrapper from
-`https://go.microsoft.com/fwlink/p/?LinkId=2124703` with PowerShell and runs it
-silently with `/install`.
+The MSI checks the `pv` version value in both the machine-wide and current-user
+Edge Update registry keys for the WebView2 Runtime product
+`{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}`. When no `pv` version is detected,
+the install fails without making a network request and directs the operator to
+the offline runtime.
 
 Managed or offline deployments can prohibit that network action:
 
 ```powershell
-msiexec /i VoiceStudio*.msi DISABLEWEBVIEW2BOOTSTRAP=1 AUTOLAUNCHAPP=0 /qn /L*V install.log
+msiexec /i VoiceStudio_0.5.1_x64_en-US.msi DISABLEWEBVIEW2BOOTSTRAP=1 AUTOLAUNCHAPP=0 /qn /L*V "%TEMP%\VoiceStudio-install.log"
 ```
 
 With `DISABLEWEBVIEW2BOOTSTRAP=1`, detection still runs but no WebView2
@@ -138,6 +137,12 @@ the MSI fails before copying VoiceStudio and tells the operator to deploy the
 first. This fail-closed behavior prevents a detection miss from becoming an
 unexpected elevated download. `/L*V` records detection and action selection in
 the named Windows Installer log.
+
+An interactive administrator may explicitly permit Microsoft's network
+bootstrapper by setting `ALLOWWEBVIEW2BOOTSTRAP=1`. Only then does the MSI
+download `https://go.microsoft.com/fwlink/p/?LinkId=2124703` with PowerShell
+and invoke it silently with `/install`; `DISABLEWEBVIEW2BOOTSTRAP=1` always
+wins if both properties are supplied.
 
 `AUTOLAUNCHAPP=0` is independent: it prevents VoiceStudio from launching after
 a successful silent install. It does not disable WebView2 detection or setup.

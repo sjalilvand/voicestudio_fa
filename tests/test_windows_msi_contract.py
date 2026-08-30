@@ -19,13 +19,19 @@ def test_webview_detection_covers_machine_and_user_installs():
 
 def test_managed_webview_switch_is_public_secure_and_fail_closed():
     source = _source()
+    assert '<Property Id="ALLOWWEBVIEW2BOOTSTRAP" Secure="yes" />' in source
     assert '<Property Id="DISABLEWEBVIEW2BOOTSTRAP" Secure="yes" />' in source
-    assert 'DISABLEWEBVIEW2BOOTSTRAP <> "1"' in source
     assert "Evergreen Standalone Runtime" in source
-    assert source.count(
-        'NOT(REMOVE OR INSTALLED_WEBVIEW2_VERSION OR DISABLEWEBVIEW2BOOTSTRAP = "1")'
-    ) == 3
-    assert 'AND DISABLEWEBVIEW2BOOTSTRAP <> "1"' in source
+    action_condition = (
+        'NOT(REMOVE OR INSTALLED_WEBVIEW2_VERSION) AND '
+        'ALLOWWEBVIEW2BOOTSTRAP = "1" AND DISABLEWEBVIEW2BOOTSTRAP <> "1"'
+    )
+    assert source.count(action_condition) == 3
+    launch_condition = (
+        'Installed OR REMOVE OR INSTALLED_WEBVIEW2_VERSION OR '
+        '(ALLOWWEBVIEW2BOOTSTRAP = "1" AND DISABLEWEBVIEW2BOOTSTRAP <> "1")'
+    )
+    assert launch_condition in source
 
 
 def test_webview_download_and_silent_invocation_are_pinned():
@@ -36,20 +42,17 @@ def test_webview_download_and_silent_invocation_are_pinned():
     assert "{{webview_installer_args}} &apos;/install&apos;" in source
 
 
-def test_webview_action_truth_table():
-    def selected(*, installed: bool, disabled: bool, removing: bool = False) -> bool:
-        return not (removing or installed or disabled)
-
-    assert not selected(installed=True, disabled=False)
-    assert not selected(installed=True, disabled=True)
-    assert selected(installed=False, disabled=False)
-    assert not selected(installed=False, disabled=True)
+def test_wix_template_contains_no_literal_newline_escapes():
+    assert r"\n" not in _source()
 
 
 def test_autolaunch_zero_is_explicitly_false():
     source = _source()
     assert 'AUTOLAUNCHAPP AND AUTOLAUNCHAPP &lt;&gt; "0" AND NOT Installed' in source
-    assert '(NOT AUTOLAUNCHAPP OR AUTOLAUNCHAPP &lt;&gt; "0")' in source
+    assert (
+        "WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT AUTOLAUNCHAPP "
+        "AND NOT Installed"
+    ) in source
 
 
 def test_release_smoke_inspects_the_built_msi():

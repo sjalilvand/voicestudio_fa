@@ -33,7 +33,10 @@
         <Property Id="REINSTALLMODE" Value="amus" />
 
         <!-- Auto launch app after installation, useful for passive mode which usually used in updates -->
-        <Property Id="AUTOLAUNCHAPP" Secure="yes" />\n        <!-- Public managed-deployment switch: never invoke or update WebView2. -->\n        <Property Id="DISABLEWEBVIEW2BOOTSTRAP" Secure="yes" />
+        <Property Id="AUTOLAUNCHAPP" Secure="yes" />
+        <!-- Managed-deployment switches. Explicit allow is required for network bootstrap. -->
+        <Property Id="ALLOWWEBVIEW2BOOTSTRAP" Secure="yes" />
+        <Property Id="DISABLEWEBVIEW2BOOTSTRAP" Secure="yes" />
         <!-- Property to forward cli args to the launched app to not lose those of the pre-update instance -->
         <Property Id="LAUNCHAPPARGS" Secure="yes" />
 
@@ -89,7 +92,7 @@
 
         <UI>
             <!-- launch app checkbox -->
-            <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND (NOT AUTOLAUNCHAPP OR AUTOLAUNCHAPP &lt;&gt; "0") AND NOT Installed</Publish>
+            <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT AUTOLAUNCHAPP AND NOT Installed</Publish>
 
             <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
 
@@ -282,19 +285,22 @@
         </Feature>
 
         {{#if install_webview}}
-        <!-- WebView2 -->\n        <!-- Pinned from tauri-cli 2.11.4; local changes are guarded by tests. -->
+        <!-- WebView2 -->
+        <!-- Pinned from tauri-cli 2.11.4; local changes are guarded by tests. -->
         <Property Id="INSTALLED_WEBVIEW2_VERSION">
             <RegistrySearch Id="Webview2VersionSystemx64" Root="HKLM" Key="SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" Name="pv" Type="raw" />
             <RegistrySearch Id="Webview2VersionSystemx86" Root="HKLM" Key="SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" Name="pv" Type="raw" />
             <RegistrySearch Id="Webview2VersionUser" Root="HKCU" Key="SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" Name="pv" Type="raw"/>
         </Property>
 
-        <Condition Message="Microsoft Edge WebView2 Runtime is required. Install the Evergreen Standalone Runtime first, or omit DISABLEWEBVIEW2BOOTSTRAP=1 to allow the Microsoft bootstrapper."><![CDATA[Installed OR REMOVE OR INSTALLED_WEBVIEW2_VERSION OR DISABLEWEBVIEW2BOOTSTRAP <> "1"]]></Condition>\n\n        {{#if download_bootstrapper}}
+        <Condition Message="Microsoft Edge WebView2 Runtime is required. Install the Evergreen Standalone Runtime first, or explicitly set ALLOWWEBVIEW2BOOTSTRAP=1."><![CDATA[Installed OR REMOVE OR INSTALLED_WEBVIEW2_VERSION OR (ALLOWWEBVIEW2BOOTSTRAP = "1" AND DISABLEWEBVIEW2BOOTSTRAP <> "1")]]></Condition>
+
+        {{#if download_bootstrapper}}
         <!-- Download webview bootstrapper mode -->
         <CustomAction Id='DownloadAndInvokeBootstrapper' Directory="INSTALLDIR" Execute="deferred" ExeCommand='powershell.exe -NoProfile -windowstyle hidden try [\{] [\[]Net.ServicePointManager[\]]::SecurityProtocol = [\[]Net.SecurityProtocolType[\]]::Tls12 [\}] catch [\{][\}]; Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile "$env:TEMP\MicrosoftEdgeWebview2Setup.exe" ; Start-Process -FilePath "$env:TEMP\MicrosoftEdgeWebview2Setup.exe" -ArgumentList ({{webview_installer_args}} &apos;/install&apos;) -Wait' Return='check'/>
         <InstallExecuteSequence>
             <Custom Action='DownloadAndInvokeBootstrapper' Before='InstallFinalize'>
-                <![CDATA[NOT(REMOVE OR INSTALLED_WEBVIEW2_VERSION OR DISABLEWEBVIEW2BOOTSTRAP = "1")]]>
+                <![CDATA[NOT(REMOVE OR INSTALLED_WEBVIEW2_VERSION) AND ALLOWWEBVIEW2BOOTSTRAP = "1" AND DISABLEWEBVIEW2BOOTSTRAP <> "1"]]>
             </Custom>
         </InstallExecuteSequence>
         {{/if}}
@@ -305,7 +311,7 @@
         <CustomAction Id='InvokeBootstrapper' BinaryKey='MicrosoftEdgeWebview2Setup.exe' Execute="deferred" ExeCommand='{{webview_installer_args}} /install' Return='check' />
         <InstallExecuteSequence>
             <Custom Action='InvokeBootstrapper' Before='InstallFinalize'>
-                <![CDATA[NOT(REMOVE OR INSTALLED_WEBVIEW2_VERSION OR DISABLEWEBVIEW2BOOTSTRAP = "1")]]>
+                <![CDATA[NOT(REMOVE OR INSTALLED_WEBVIEW2_VERSION) AND ALLOWWEBVIEW2BOOTSTRAP = "1" AND DISABLEWEBVIEW2BOOTSTRAP <> "1"]]>
             </Custom>
         </InstallExecuteSequence>
         {{/if}}
@@ -316,7 +322,7 @@
         <CustomAction Id='InvokeStandalone' BinaryKey='MicrosoftEdgeWebView2RuntimeInstaller.exe' Execute="deferred" ExeCommand='{{webview_installer_args}} /install' Return='check' />
         <InstallExecuteSequence>
             <Custom Action='InvokeStandalone' Before='InstallFinalize'>
-                <![CDATA[NOT(REMOVE OR INSTALLED_WEBVIEW2_VERSION OR DISABLEWEBVIEW2BOOTSTRAP = "1")]]>
+                <![CDATA[NOT(REMOVE OR INSTALLED_WEBVIEW2_VERSION) AND ALLOWWEBVIEW2BOOTSTRAP = "1" AND DISABLEWEBVIEW2BOOTSTRAP <> "1"]]>
             </Custom>
         </InstallExecuteSequence>
         {{/if}}
@@ -336,6 +342,7 @@
             <Custom Action='UpdateWebView2ViaEdgeUpdate' Before='InstallFinalize'>
                 <![CDATA[
                   NOT REMOVE
+                  AND ALLOWWEBVIEW2BOOTSTRAP = "1"
                   AND DISABLEWEBVIEW2BOOTSTRAP <> "1"
                   AND INSTALLED_WEBVIEW2_VERSION
                   AND (INSTALLED_WEBVIEW2_VERSION < MINIMUM_WEBVIEW2_VERSION)
