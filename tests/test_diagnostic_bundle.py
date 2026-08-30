@@ -51,6 +51,12 @@ def test_bundle_members_and_meta(bundle_env):
         text_report = zf.read("self_check.txt").decode()
         if report["engine_execution"]:
             assert "Engine execution evidence:" in text_report
+            row = report["engine_execution"][0]
+            assert f"{row['family']}:{row['engine_id']}" in text_report
+            assert f"evidence-state={row['evidence_state']}" in text_report
+            assert "device=" in text_report
+            assert "precision=" in text_report
+            assert "fallback-stage=" in text_report
 
 
 def test_bundle_log_tails_are_scrubbed(bundle_env):

@@ -304,6 +304,16 @@ class ASRBackend(ABC):
     # broken GPU path, strictly worse than the honest `cpu_fallback`.)
     gpu_compat: tuple[str, ...] = ("cpu",)
 
+    def execution_evidence_loaded(self) -> bool:
+        """Whether this instance has live model state worth reporting."""
+        if getattr(self, "runs_out_of_process", False):
+            proc = getattr(self, "_proc", None)
+            return proc is not None and proc.poll() is None
+        return any(
+            getattr(self, attr, None) is not None
+            for attr in ("_model", "_asr", "_pipeline", "_pipe", "_transcriber", "_rec")
+        )
+
     @classmethod
     @abstractmethod
     def is_available(cls) -> tuple[bool, str]:

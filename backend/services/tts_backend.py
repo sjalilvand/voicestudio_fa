@@ -407,6 +407,13 @@ class TTSBackend(ABC):
     # entirely (it drives the shared model_manager singleton).
     _MODEL_ATTRS: tuple[str, ...] = ("_model", "_tts")
 
+    def execution_evidence_loaded(self) -> bool:
+        """Whether this instance has live model state worth reporting."""
+        if self.runs_out_of_process:
+            proc = getattr(self, "_proc", None)
+            return proc is not None and proc.poll() is None
+        return any(getattr(self, attr, None) is not None for attr in self._MODEL_ATTRS)
+
     def unload(self) -> None:
         """Release the heavy model this backend holds, and free device caches.
 

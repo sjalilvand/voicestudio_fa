@@ -425,10 +425,23 @@ def format_text(report: dict) -> str:
             else:
                 provider = "not loaded"
             precision = item.get("precision_or_quantization") or "unknown"
+            device = item.get("actual_execution_device") or "unknown"
+            gpu = item.get("gpu_name") or "none"
+            architecture = item.get("gpu_architecture") or "unknown"
+            fallback_stage = item.get("cpu_fallback_stage") or "none"
+            fallback_reason = item.get("cpu_fallback_reason") or "none"
+            versions = ",".join(
+                f"{name}={version}"
+                for name, version in sorted(item.get("runtime_versions", {}).items())
+            ) or "none"
             visible = "yes" if item.get("parent_memory_observable") else "no"
             lines.append(
                 f"  {item['family']}:{item['engine_id']} provider={provider}; "
-                f"precision={precision}; parent-memory-visible={visible}"
+                f"device={device}; gpu={gpu}; architecture={architecture}; "
+                f"precision={precision}; fallback-stage={fallback_stage}; "
+                f"fallback-reason={fallback_reason}; runtimes={versions}; "
+                f"evidence-state={item.get('evidence_state', 'unknown')}; "
+                f"parent-memory-visible={visible}"
             )
     s = report["summary"]
     lines.append("")

@@ -56,10 +56,18 @@ def snapshot(
         getattr(engine_cls, "_is_subprocess_isolated", False)
         or getattr(engine_cls, "runs_out_of_process", False)
     )
+    loaded = False
+    if instance is not None:
+        contract = getattr(instance, "execution_evidence_loaded", False)
+        try:
+            loaded = bool(contract() if callable(contract) else contract)
+        except Exception:
+            loaded = False
+
     actual_device = None
     provider = None
     precision = None
-    if instance is not None:
+    if loaded:
         actual_device = _value(instance, "_device", "device", "execution_device")
         provider = _value(instance, "_provider", "provider", "execution_provider")
         precision = _value(
@@ -68,12 +76,12 @@ def snapshot(
         if provider is None and actual_device is not None:
             provider = actual_device
 
-    runtime_fallback_reason = _value(instance, "_fallback_reason", "fallback_reason") if instance else None
-    runtime_fallback_stage = _value(instance, "_fallback_stage", "fallback_stage") if instance else None
+    runtime_fallback_reason = _value(instance, "_fallback_reason", "fallback_reason") if loaded else None
+    runtime_fallback_stage = _value(instance, "_fallback_stage", "fallback_stage") if loaded else None
     status = routing.get("routing_status")
     fallback = status == "cpu_fallback" or runtime_fallback_reason is not None
     evidence_state = "not_loaded"
-    if instance is not None:
+    if loaded:
         evidence_state = "loaded"
         if isolated and provider is None and actual_device is None:
             evidence_state = "subprocess_loaded_provider_unreported"

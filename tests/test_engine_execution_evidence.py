@@ -1,9 +1,5 @@
 from dataclasses import dataclass
 
-from services.engine_evidence import snapshot
-from api.public_engine_metadata import public_backends
-
-
 @dataclass
 class _Caps:
     family: str = "rocm"
@@ -11,30 +7,35 @@ class _Caps:
 
 
 class _TorchEngine:
+    execution_evidence_loaded = True
     gpu_compat = ("rocm", "cpu")
     _device = "cuda:0"
     _dtype = "float16"
 
 
 class _FasterWhisper:
+    execution_evidence_loaded = True
     gpu_compat = ("cuda", "cpu")
     _device = "cpu"
     _compute_type = "int8"
 
 
 class _OnnxEngine:
+    execution_evidence_loaded = True
     gpu_compat = ("cpu",)
     _provider = "CPUExecutionProvider"
     _dtype = "int8"
 
 
 class _SidecarEngine:
+    execution_evidence_loaded = True
     gpu_compat = ("rocm", "cpu")
     runs_out_of_process = True
     _device = "cuda:0"
 
 
 class _LoadFallbackEngine:
+    execution_evidence_loaded = True
     gpu_compat = ("cuda", "cpu")
     _device = "cpu"
     _fallback_reason = "CUDA memory was exhausted while loading the engine"
@@ -42,6 +43,8 @@ class _LoadFallbackEngine:
 
 
 def _snap(cls, routing):
+    from services.engine_evidence import snapshot
+
     return snapshot(
         engine_id=cls.__name__, engine_cls=cls, instance=cls(), routing=routing, caps=_Caps()
     )
@@ -72,25 +75,70 @@ def test_cpu_onnx_and_subprocess_observability_are_explicit():
     assert sidecar["parent_memory_observable"] is False
 
 
-def test_loaded_subprocess_without_child_provider_is_not_called_unloaded():
+def test_subprocess_state_follows_live_child_not_wrapper_presence():
+    from services.engine_evidence import snapshot
+
+    class _Process:
+        def __init__(self, returncode):
+            self.returncode = returncode
+
+        def poll(self):
+            return self.returncode
+
     class _OpaqueSidecar:
         gpu_compat = ("cpu",)
         runs_out_of_process = True
 
-    evidence = _snap(_OpaqueSidecar, {"routing_status": "cpu_only", "routing_reason": None})
-    assert evidence["evidence_state"] == "subprocess_loaded_provider_unreported"
-    assert evidence["actual_execution_provider"] is None
+        def __init__(self, process):
+            self._proc = process
+
+        def execution_evidence_loaded(self):
+            return self._proc is not None and self._proc.poll() is None
+
+    routing = {"routing_status": "cpu_only", "routing_reason": None}
+    for process, expected in (
+        (None, "not_loaded"),
+        (_Process(1), "not_loaded"),
+        (_Process(None), "subprocess_loaded_provider_unreported"),
+    ):
+        evidence = snapshot(
+            engine_id="opaque",
+            engine_cls=_OpaqueSidecar,
+            instance=_OpaqueSidecar(process),
+            routing=routing,
+            caps=_Caps(),
+        )
+        assert evidence["evidence_state"] == expected
 
 
 def test_public_inventory_replaces_nested_private_fallback_detail():
+    from api.public_engine_metadata import public_backends
+
     entry = {
         "routing_status": "cpu_fallback",
         "routing_reason": "/home/alice/private driver error",
         "execution_evidence": {"cpu_fallback_reason": "/home/alice/private driver error"},
     }
     public = public_backends([entry])[0]
-    assert "alice" not in public["routing_reason"]
-    assert "alice" not in public["execution_evidence"]["cpu_fallback_reason"]
+    expected = "GPU acceleration is unavailable; this engine will use CPU."
+    assert public["routing_reason"] == expected
+    assert public["execution_evidence"]["cpu_fallback_reason"] == expected
+
+
+def test_constructed_in_process_backend_is_not_loaded_until_contract_says_so():
+    from services.engine_evidence import snapshot
+
+    class _Lazy:
+        gpu_compat = ("cpu",)
+        execution_evidence_loaded = False
+        _device = "cpu"
+
+    routing = {"routing_status": "cpu_only", "routing_reason": None}
+    evidence = snapshot(
+        engine_id="lazy", engine_cls=_Lazy, instance=_Lazy(), routing=routing, caps=_Caps()
+    )
+    assert evidence["evidence_state"] == "not_loaded"
+    assert evidence["actual_execution_device"] is None
 
 
 def test_post_load_fallback_overrides_preflight_prediction():
