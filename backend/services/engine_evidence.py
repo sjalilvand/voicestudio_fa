@@ -72,10 +72,15 @@ def snapshot(
     runtime_fallback_stage = _value(instance, "_fallback_stage", "fallback_stage") if instance else None
     status = routing.get("routing_status")
     fallback = status == "cpu_fallback" or runtime_fallback_reason is not None
+    evidence_state = "not_loaded"
+    if instance is not None:
+        evidence_state = "loaded"
+        if isolated and provider is None and actual_device is None:
+            evidence_state = "subprocess_loaded_provider_unreported"
     return {
         "implementation_variant": f"{engine_cls.__module__}.{engine_cls.__name__}",
         "declared_device_families": list(getattr(engine_cls, "gpu_compat", ("cpu",))),
-        "evidence_state": "loaded" if instance is not None else "not_loaded",
+        "evidence_state": evidence_state,
         "actual_execution_provider": provider,
         "actual_execution_device": actual_device,
         "gpu_name": getattr(caps, "device_name", "") or None,

@@ -72,6 +72,16 @@ def test_cpu_onnx_and_subprocess_observability_are_explicit():
     assert sidecar["parent_memory_observable"] is False
 
 
+def test_loaded_subprocess_without_child_provider_is_not_called_unloaded():
+    class _OpaqueSidecar:
+        gpu_compat = ("cpu",)
+        runs_out_of_process = True
+
+    evidence = _snap(_OpaqueSidecar, {"routing_status": "cpu_only", "routing_reason": None})
+    assert evidence["evidence_state"] == "subprocess_loaded_provider_unreported"
+    assert evidence["actual_execution_provider"] is None
+
+
 def test_public_inventory_replaces_nested_private_fallback_detail():
     entry = {
         "routing_status": "cpu_fallback",

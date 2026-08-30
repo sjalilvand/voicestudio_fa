@@ -23,7 +23,9 @@ def test_tts_registry_lists_all_backends():
         evidence = r["execution_evidence"]
         assert evidence["implementation_variant"]
         assert evidence["declared_device_families"] == r["gpu_compat"]
-        assert evidence["evidence_state"] in {"loaded", "not_loaded"}
+        assert evidence["evidence_state"] in {
+            "loaded", "not_loaded", "subprocess_loaded_provider_unreported"
+        }
         assert evidence["runtime_versions"]["python"]
 
 

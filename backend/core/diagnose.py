@@ -418,7 +418,12 @@ def format_text(report: dict) -> str:
         lines.append("")
         lines.append("Engine execution evidence:")
         for item in report["engine_execution"]:
-            provider = item.get("actual_execution_provider") or "not loaded"
+            if item.get("actual_execution_provider"):
+                provider = item["actual_execution_provider"]
+            elif item.get("evidence_state") == "subprocess_loaded_provider_unreported":
+                provider = "loaded child; provider not reported"
+            else:
+                provider = "not loaded"
             precision = item.get("precision_or_quantization") or "unknown"
             visible = "yes" if item.get("parent_memory_observable") else "no"
             lines.append(
