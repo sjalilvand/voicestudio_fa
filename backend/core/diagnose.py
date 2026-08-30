@@ -367,10 +367,29 @@ def run_diagnostics(include_network: bool = True, deep: bool = False) -> dict:
     counts = {OK: 0, WARN: 0, FAIL: 0}
     for c in checks:
         counts[c["status"]] += 1
+    engine_execution = []
+    try:
+        from services import asr_backend, tts_backend
+
+        for family, module in (("tts", tts_backend), ("asr", asr_backend)):
+            active = module.active_backend_id()
+            row = next((item for item in module.list_backends() if item.get("id") == active), None)
+            if row is not None:
+                engine_execution.append({
+                    "family": family,
+                    "engine_id": active,
+                    **row["execution_evidence"],
+                })
+    except Exception:
+        # Evidence supplements the health checks; a registry failure is already
+        # represented by the engine check and must not break the bundle.
+        pass
+
     return {
         "app_version": APP_VERSION,
         "platform": scrub_text(platform.platform()),
         "checks": checks,
+        "engine_execution": engine_execution,
         "summary": {
             "ok": counts[FAIL] == 0,
             "passed": counts[OK],
@@ -395,6 +414,17 @@ def format_text(report: dict) -> str:
         lines.append(f"{tag[c['status']]} {c['label']}: {c['detail']}")
         if c.get("hint"):
             lines.append(f"       hint: {c['hint']}")
+    if report.get("engine_execution"):
+        lines.append("")
+        lines.append("Engine execution evidence:")
+        for item in report["engine_execution"]:
+            provider = item.get("actual_execution_provider") or "not loaded"
+            precision = item.get("precision_or_quantization") or "unknown"
+            visible = "yes" if item.get("parent_memory_observable") else "no"
+            lines.append(
+                f"  {item['family']}:{item['engine_id']} provider={provider}; "
+                f"precision={precision}; parent-memory-visible={visible}"
+            )
     s = report["summary"]
     lines.append("")
     lines.append(

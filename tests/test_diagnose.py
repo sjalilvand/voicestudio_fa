@@ -13,7 +13,7 @@ def report():
 
 
 def test_report_shape(report):
-    assert set(report) == {"app_version", "platform", "checks", "summary"}
+    assert set(report) == {"app_version", "platform", "checks", "engine_execution", "summary"}
     ids = [c["id"] for c in report["checks"]]
     assert len(ids) == len(set(ids)), "check ids must be unique"
     for c in report["checks"]:

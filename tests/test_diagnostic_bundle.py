@@ -47,6 +47,10 @@ def test_bundle_members_and_meta(bundle_env):
         assert meta["app_version"]
         report = json.loads(zf.read("self_check.json"))
         assert report["summary"]["passed"] >= 1
+        assert "engine_execution" in report
+        text_report = zf.read("self_check.txt").decode()
+        if report["engine_execution"]:
+            assert "Engine execution evidence:" in text_report
 
 
 def test_bundle_log_tails_are_scrubbed(bundle_env):

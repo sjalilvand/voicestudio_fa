@@ -950,6 +950,8 @@ class FasterWhisperBackend(ASRBackend):
         # (after the #551 compute_type / #255 OOM→CPU fallback chain).
         self._device: str | None = None
         self._compute_type: str | None = None
+        self._fallback_reason: str | None = None
+        self._fallback_stage: str | None = None
 
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
@@ -1027,6 +1029,8 @@ class FasterWhisperBackend(ASRBackend):
                 except Exception:  # noqa: BLE001 — cache clear is best-effort
                     pass
                 device = "cpu"
+                self._fallback_reason = "CUDA memory was exhausted while loading the engine"
+                self._fallback_stage = "model_load"
                 candidates = _compute_type_candidates(device)
                 compute_type = candidates[0]
                 continue
@@ -2354,6 +2358,7 @@ _LAST_ERRORS: dict[str, str] = {}
 # failing ASR wholesale. Per-process by design: repairing the env requires a
 # reinstall / ``uv sync --reinstall`` and an app restart anyway.
 _DEEP_IMPORT_BROKEN: dict[str, str] = {}
+_RUNTIME_EVIDENCE: dict[str, dict] = {}
 
 
 def _deep_import_reason(cls: type["ASRBackend"], exc: ImportError) -> str:
@@ -2384,6 +2389,7 @@ def list_backends() -> list[dict]:
     """
     from core.device_caps import detect_host_caps
     from core.scrub import scrub_text
+    from services.engine_evidence import snapshot as execution_snapshot
     from services.engine_routing import routing_fields
     caps = detect_host_caps()
 
@@ -2408,6 +2414,7 @@ def list_backends() -> list[dict]:
             _LAST_ERRORS[bid] = scrub_text(msg)
         isolation = "subprocess" if getattr(cls, "_is_subprocess_isolated", False) else "in-process"
         gpu_compat = getattr(cls, "gpu_compat", ("cpu",))
+        routing = routing_fields(gpu_compat, caps)
         out.append({
             "id": bid,
             "display_name": cls.display_name,
@@ -2419,7 +2426,14 @@ def list_backends() -> list[dict]:
             "last_error": _LAST_ERRORS.get(bid),
             "isolation_mode": isolation,
             "gpu_compat": list(gpu_compat),
-            **routing_fields(gpu_compat, caps),
+            **routing,
+            "execution_evidence": _RUNTIME_EVIDENCE.get(bid) or execution_snapshot(
+                engine_id=bid,
+                engine_cls=cls,
+                instance=None,
+                routing=routing,
+                caps=caps,
+            ),
         })
     return out
 
@@ -2660,6 +2674,20 @@ def load_active_asr_backend(*, asr_pipe=None) -> ASRBackend:
                 raise ASRModelMissingError(missing)
         try:
             backend.ensure_loaded()
+            from core.device_caps import detect_host_caps
+            from services.engine_evidence import snapshot as execution_snapshot
+            from services.engine_routing import routing_fields
+
+            cls = type(backend)
+            caps = detect_host_caps()
+            routing = routing_fields(getattr(cls, "gpu_compat", ("cpu",)), caps)
+            _RUNTIME_EVIDENCE[bid] = execution_snapshot(
+                engine_id=bid,
+                engine_cls=cls,
+                instance=backend,
+                routing=routing,
+                caps=caps,
+            )
             return backend
         except ImportError as e:
             # ModuleNotFoundError and its ImportError parent ("cannot import
