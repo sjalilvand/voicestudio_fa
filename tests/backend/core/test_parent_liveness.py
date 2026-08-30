@@ -4,22 +4,25 @@ import subprocess
 import sys
 from pathlib import Path
 
-from core.parent_liveness import _watch_parent_pipe, arm_desktop_parent_watchdog
-
-
 def test_parent_pipe_eof_exits_cleanly():
+    from core.parent_liveness import _watch_parent_pipe
+
     exits = []
     _watch_parent_pipe(io.BytesIO(b""), exits.append)
     assert exits == [0]
 
 
 def test_parent_pipe_ignores_bytes_until_eof():
+    from core.parent_liveness import _watch_parent_pipe
+
     exits = []
     _watch_parent_pipe(io.BytesIO(b"keepalive"), exits.append)
     assert exits == [0]
 
 
 def test_watchdog_is_disabled_outside_desktop(monkeypatch):
+    from core.parent_liveness import arm_desktop_parent_watchdog
+
     monkeypatch.delenv("OMNIVOICE_DESKTOP_CONTAINED", raising=False)
     assert arm_desktop_parent_watchdog() is False
 
