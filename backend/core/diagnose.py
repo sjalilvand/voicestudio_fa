@@ -21,6 +21,7 @@ Check shape:
 """
 from __future__ import annotations
 
+import importlib
 import os
 import platform
 import shutil
@@ -368,11 +369,10 @@ def run_diagnostics(include_network: bool = True, deep: bool = False) -> dict:
     for c in checks:
         counts[c["status"]] += 1
     engine_execution = []
-    from services import asr_backend, tts_backend
-
-    for family, module in (("tts", tts_backend), ("asr", asr_backend)):
+    for family in ("tts", "asr"):
         active = "unknown"
         try:
+            module = importlib.import_module(f"services.{family}_backend")
             active = module.active_backend_id()
             row = next((item for item in module.list_backends() if item.get("id") == active), None)
             if row is not None:
