@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { formatTime } from '../utils/format';
 import { LANG_CODES } from '../utils/languages';
+import { MIN_SEG_DUR } from '../utils/timeline';
 import { Menu, Button, Badge } from '../ui';
 import VoiceSelector from './VoiceSelector';
 
@@ -190,7 +191,8 @@ function DubSegmentRow({
   const commitTime = (edge) => (e) => {
     const v = parseTime(e.target.value);
     const current = seg[edge];
-    const inRange = edge === 'start' ? v >= 0 && v < seg.end : v > seg.start;
+    const inRange =
+      edge === 'start' ? v >= 0 && v <= seg.end - MIN_SEG_DUR : v >= seg.start + MIN_SEG_DUR;
     if (v == null || !inRange) {
       e.target.value = formatTime(current);
       return;
@@ -208,7 +210,7 @@ function DubSegmentRow({
 
   const nudgeTime = (edge, delta) => {
     const current = seg[edge];
-    const limit = edge === 'start' ? seg.end - 0.001 : seg.start + 0.001;
+    const limit = edge === 'start' ? seg.end - MIN_SEG_DUR : seg.start + MIN_SEG_DUR;
     const next = +(
       edge === 'start'
         ? Math.max(0, Math.min(limit, current + delta))
@@ -270,7 +272,7 @@ function DubSegmentRow({
               type="button"
               onClick={() => nudgeTime(edge, -0.1)}
               disabled={disabled || (edge === 'start' && seg.start <= 0)}
-              aria-label={`−0.1s ${t(edge === 'start' ? 'segment.time_edit_title' : 'segment.time_edit_end_title')}`}
+              aria-label={t(`segment.time_nudge_${edge}_earlier`)}
             >
               <Minus size={10} />
             </button>
@@ -290,7 +292,7 @@ function DubSegmentRow({
               type="button"
               onClick={() => nudgeTime(edge, 0.1)}
               disabled={disabled}
-              aria-label={`+0.1s ${t(edge === 'start' ? 'segment.time_edit_title' : 'segment.time_edit_end_title')}`}
+              aria-label={t(`segment.time_nudge_${edge}_later`)}
             >
               <Plus size={10} />
             </button>

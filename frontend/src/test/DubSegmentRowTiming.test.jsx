@@ -87,13 +87,28 @@ describe('DubSegmentRow timing fields', () => {
     const props = makeProps();
     render(<DubSegmentRow {...props} />);
 
-    const decrement = screen.getAllByRole('button', { name: /−0\.1s/ });
-    const increment = screen.getAllByRole('button', { name: /\+0\.1s/ });
+    const decrement = screen.getAllByRole('button', { name: /0\.1 seconds earlier/ });
+    const increment = screen.getAllByRole('button', { name: /0\.1 seconds later/ });
     fireEvent.click(decrement[0]);
     fireEvent.click(increment[1]);
 
     expect(props.onMoveResize).toHaveBeenNthCalledWith(1, 's1', { start: 0.9, end: 3 });
     expect(props.onMoveResize).toHaveBeenNthCalledWith(2, 's1', { start: 1, end: 3.1 });
+  });
+
+  it('preserves the timeline minimum duration for typed and stepped edits', () => {
+    const props = makeProps();
+    render(<DubSegmentRow {...props} />);
+    const start = timeFields()[0];
+
+    fireEvent.change(start, { target: { value: '2.8' } });
+    fireEvent.blur(start);
+    expect(props.onMoveResize).not.toHaveBeenCalled();
+
+    const nearLimit = makeProps({ seg: { id: 's1', start: 2.7, end: 3, text: 'x' } });
+    render(<DubSegmentRow {...nearLimit} />);
+    fireEvent.click(screen.getAllByRole('button', { name: /start time 0\.1 seconds later/ })[1]);
+    expect(nearLimit.onMoveResize).not.toHaveBeenCalled();
   });
 
   it('surfaces an adjacent overlap beside the timing controls', () => {
