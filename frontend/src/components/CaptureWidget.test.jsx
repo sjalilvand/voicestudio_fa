@@ -311,10 +311,7 @@ describe('CaptureWidget', () => {
     view.unmount();
 
     await waitFor(() =>
-      expect(mocks.holder.calls).toContainEqual([
-        'end_dictation_capture_registration',
-        ready[1],
-      ]),
+      expect(mocks.holder.calls).toContainEqual(['end_dictation_capture_registration', ready[1]]),
     );
   });
 
