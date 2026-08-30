@@ -13,6 +13,7 @@ def _watch_parent_pipe(reader: BinaryIO, exit_process: Callable[[int], None]) ->
         while reader.read(1):
             pass
     except (OSError, ValueError):
+        # A broken or already-closed parent-owned pipe is equivalent to EOF.
         pass
     exit_process(0)
 
