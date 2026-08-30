@@ -57,12 +57,13 @@ def snapshot(
         or getattr(engine_cls, "runs_out_of_process", False)
     )
     loaded = False
+    probe_failed = False
     if instance is not None:
-        contract = getattr(instance, "execution_evidence_loaded", False)
         try:
+            contract = getattr(instance, "execution_evidence_loaded", False)
             loaded = bool(contract() if callable(contract) else contract)
-        except Exception:
-            loaded = False
+        except Exception:  # noqa: BLE001 - third-party lifecycle descriptors may raise
+            probe_failed = True
 
     actual_device = None
     provider = None
@@ -81,7 +82,9 @@ def snapshot(
     status = routing.get("routing_status")
     fallback = status == "cpu_fallback" or runtime_fallback_reason is not None
     evidence_state = "not_loaded"
-    if loaded:
+    if probe_failed:
+        evidence_state = "probe_error"
+    elif loaded:
         evidence_state = "loaded"
         if isolated and provider is None and actual_device is None:
             evidence_state = "subprocess_loaded_provider_unreported"

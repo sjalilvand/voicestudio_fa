@@ -149,3 +149,86 @@ def test_post_load_fallback_overrides_preflight_prediction():
     assert evidence["actual_execution_device"] == "cpu"
     assert evidence["cpu_fallback_stage"] == "model_load"
     assert "memory" in evidence["cpu_fallback_reason"]
+
+
+def test_lifecycle_probe_lookup_and_call_failures_are_explicit():
+    from services.engine_evidence import snapshot
+
+    class _RaisingDescriptor:
+        gpu_compat = ("cpu",)
+
+        @property
+        def execution_evidence_loaded(self):
+            raise RuntimeError("descriptor failed")
+
+    class _RaisingCallable:
+        gpu_compat = ("cpu",)
+
+        def execution_evidence_loaded(self):
+            raise RuntimeError("probe failed")
+
+    routing = {"routing_status": "cpu_only", "routing_reason": None}
+    for cls in (_RaisingDescriptor, _RaisingCallable):
+        evidence = snapshot(
+            engine_id="broken-probe",
+            engine_cls=cls,
+            instance=cls(),
+            routing=routing,
+            caps=_Caps(),
+        )
+        assert evidence["evidence_state"] == "probe_error"
+        assert evidence["actual_execution_device"] is None
+
+
+def test_public_runtime_fallback_overrides_accelerated_preflight_category():
+    from api.public_engine_metadata import public_backends
+
+    public = public_backends(
+        [{
+            "routing_status": "accelerated",
+            "routing_reason": None,
+            "execution_evidence": {
+                "cpu_fallback_reason": "/private/model load failed with hf_secret",
+                "cpu_fallback_stage": "model_load",
+            },
+        }]
+    )[0]
+    assert public["execution_evidence"]["cpu_fallback_reason"] == (
+        "GPU acceleration is unavailable; this engine will use CPU."
+    )
+
+
+def test_stopped_asr_sidecar_invalidates_cached_loaded_evidence(monkeypatch):
+    from services import asr_backend
+
+    class _StoppedProcess:
+        def poll(self):
+            return 0
+
+    class _StoppedSidecar:
+        id = "stopped"
+        display_name = "Stopped sidecar"
+        gpu_compat = ("cpu",)
+        _is_subprocess_isolated = True
+        runs_out_of_process = True
+
+        def __init__(self):
+            self._proc = _StoppedProcess()
+
+        @classmethod
+        def is_available(cls):
+            return True, "ready"
+
+        def execution_evidence_loaded(self):
+            return self._proc.poll() is None
+
+    monkeypatch.setattr(asr_backend, "_REGISTRY", {"stopped": _StoppedSidecar})
+    monkeypatch.setattr(asr_backend, "_ISOLATED_INSTANCES", {"stopped": _StoppedSidecar()})
+    monkeypatch.setattr(
+        asr_backend,
+        "_RUNTIME_EVIDENCE",
+        {"stopped": {"evidence_state": "loaded", "actual_execution_device": "cuda:0"}},
+    )
+    row = asr_backend.list_backends()[0]
+    assert row["execution_evidence"]["evidence_state"] == "not_loaded"
+    assert "stopped" not in asr_backend._RUNTIME_EVIDENCE

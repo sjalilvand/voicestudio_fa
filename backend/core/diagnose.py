@@ -368,10 +368,11 @@ def run_diagnostics(include_network: bool = True, deep: bool = False) -> dict:
     for c in checks:
         counts[c["status"]] += 1
     engine_execution = []
-    try:
-        from services import asr_backend, tts_backend
+    from services import asr_backend, tts_backend
 
-        for family, module in (("tts", tts_backend), ("asr", asr_backend)):
+    for family, module in (("tts", tts_backend), ("asr", asr_backend)):
+        active = "unknown"
+        try:
             active = module.active_backend_id()
             row = next((item for item in module.list_backends() if item.get("id") == active), None)
             if row is not None:
@@ -380,10 +381,25 @@ def run_diagnostics(include_network: bool = True, deep: bool = False) -> dict:
                     "engine_id": active,
                     **row["execution_evidence"],
                 })
-    except Exception:
-        # Evidence supplements the health checks; a registry failure is already
-        # represented by the engine check and must not break the bundle.
-        pass
+        except Exception:  # noqa: BLE001 - evidence must not break diagnostics
+            # Preserve the other family's successful evidence and make this
+            # collection failure explicit without exposing exception text.
+            engine_execution.append({
+                "family": family,
+                "engine_id": active,
+                "implementation_variant": None,
+                "declared_device_families": [],
+                "evidence_state": "collection_failed",
+                "actual_execution_provider": None,
+                "actual_execution_device": None,
+                "gpu_name": None,
+                "gpu_architecture": None,
+                "precision_or_quantization": None,
+                "cpu_fallback_reason": None,
+                "cpu_fallback_stage": None,
+                "parent_memory_observable": None,
+                "runtime_versions": {},
+            })
 
     return {
         "app_version": APP_VERSION,

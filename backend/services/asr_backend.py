@@ -2425,6 +2425,20 @@ def list_backends() -> list[dict]:
         isolation = "subprocess" if getattr(cls, "_is_subprocess_isolated", False) else "in-process"
         gpu_compat = getattr(cls, "gpu_compat", ("cpu",))
         routing = routing_fields(gpu_compat, caps)
+        execution_evidence = _RUNTIME_EVIDENCE.get(bid)
+        if isolation == "subprocess":
+            # Cached load-time facts are valid only while this exact child is
+            # still alive. Recompute lifecycle state so shutdown/reaping cannot
+            # leave a ghost "loaded" engine in diagnostics.
+            execution_evidence = execution_snapshot(
+                engine_id=bid,
+                engine_cls=cls,
+                instance=_ISOLATED_INSTANCES.get(bid),
+                routing=routing,
+                caps=caps,
+            )
+            if execution_evidence["evidence_state"] == "not_loaded":
+                _RUNTIME_EVIDENCE.pop(bid, None)
         out.append({
             "id": bid,
             "display_name": cls.display_name,
@@ -2437,7 +2451,7 @@ def list_backends() -> list[dict]:
             "isolation_mode": isolation,
             "gpu_compat": list(gpu_compat),
             **routing,
-            "execution_evidence": _RUNTIME_EVIDENCE.get(bid) or execution_snapshot(
+            "execution_evidence": execution_evidence or execution_snapshot(
                 engine_id=bid,
                 engine_cls=cls,
                 instance=None,
