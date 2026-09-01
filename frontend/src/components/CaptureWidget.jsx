@@ -684,16 +684,50 @@ export default function CaptureWidget({ onDismiss }) {
     if (!inTauri()) return; // browser webui — the keyboard fallback below runs
     let unlistenStart, unlistenStop;
     let registrationId;
+    let endedRegistrationId;
     let cancelled = false;
+    const teardownRegistration = async () => {
+      const stopStart = unlistenStart;
+      const stopStop = unlistenStop;
+      unlistenStart = undefined;
+      unlistenStop = undefined;
+      try {
+        stopStart?.();
+      } catch (err) {
+        console.warn('tray-dictate unlisten failed:', err);
+      }
+      try {
+        stopStop?.();
+      } catch (err) {
+        console.warn('tray-dictate-stop unlisten failed:', err);
+      }
+      if (registrationId && endedRegistrationId !== registrationId) {
+        endedRegistrationId = registrationId;
+        await tauriInvoke('end_dictation_capture_registration', { registrationId });
+      }
+    };
+    const acknowledgeDelivery = (event) => {
+      const deliveryId = event?.payload?.deliveryId;
+      const eventRegistrationId = event?.payload?.registrationId;
+      if (eventRegistrationId != null && eventRegistrationId !== registrationId) return false;
+      if (deliveryId != null) {
+        void tauriInvoke('acknowledge_dictation_capture_delivery', {
+          registrationId,
+          deliveryId,
+        }).catch((err) => console.warn('dictation delivery acknowledgement failed:', err));
+      }
+      return true;
+    };
     (async () => {
       try {
         registrationId = await tauriInvoke('begin_dictation_capture_registration');
         if (cancelled) {
-          await tauriInvoke('end_dictation_capture_registration', { registrationId });
+          await teardownRegistration();
           return;
         }
         const { listen } = await import('@tauri-apps/api/event');
         unlistenStart = await listen('tray-dictate', async (event) => {
+          if (!acknowledgeDelivery(event)) return;
           const now = Date.now();
           if (now - nativeEventAtRef.current.start < 150) return;
           nativeEventAtRef.current.start = now;
@@ -796,7 +830,8 @@ export default function CaptureWidget({ onDismiss }) {
             startRecordingRef.current?.(true, sessionId);
           }
         });
-        unlistenStop = await listen('tray-dictate-stop', async () => {
+        unlistenStop = await listen('tray-dictate-stop', async (event) => {
+          if (!acknowledgeDelivery(event)) return;
           const now = Date.now();
           if (now - nativeEventAtRef.current.stop < 150) return;
           nativeEventAtRef.current.stop = now;
@@ -810,23 +845,17 @@ export default function CaptureWidget({ onDismiss }) {
         });
         await ensureDictationPrefsHydrated();
         if (cancelled) {
-          unlistenStart?.();
-          unlistenStop?.();
-          await tauriInvoke('end_dictation_capture_registration', { registrationId });
+          await teardownRegistration();
           return;
         }
         await tauriInvoke('mark_dictation_capture_ready', { registrationId });
         // Unmounted while the dynamic import was in flight — drop the
         // subscriptions we just created rather than leaking them.
         if (cancelled) {
-          unlistenStart?.();
-          unlistenStop?.();
-          await tauriInvoke('end_dictation_capture_registration', { registrationId });
+          await teardownRegistration();
         }
       } catch (err) {
-        if (registrationId) {
-          void tauriInvoke('end_dictation_capture_registration', { registrationId });
-        }
+        await teardownRegistration().catch(() => {});
         // Hotkey wiring failed inside Tauri — dictation still works via the
         // in-page shortcut, but say so in the console for bug reports.
         console.warn('tray-dictate listen failed:', err);
@@ -835,11 +864,7 @@ export default function CaptureWidget({ onDismiss }) {
     return () => {
       cancelled = true;
       nativeStartSequenceRef.current += 1;
-      if (unlistenStart) unlistenStart();
-      if (unlistenStop) unlistenStop();
-      if (registrationId) {
-        void tauriInvoke('end_dictation_capture_registration', { registrationId });
-      }
+      void teardownRegistration();
     };
     // Attach ONCE — see stateRef above. Adding a dependency here reintroduces
     // the dropped-press window that stranded the widget.

@@ -1078,6 +1078,20 @@ pub fn mark_dictation_capture_ready(app: tauri::AppHandle, registration_id: u64)
 }
 
 #[tauri::command]
+pub fn acknowledge_dictation_capture_delivery(
+    app: tauri::AppHandle,
+    registration_id: u64,
+    delivery_id: u64,
+) {
+    let flags = app.state::<AppFlags>();
+    let Ok(mut capture) = flags.capture.lock() else {
+        log::warn!("Dictation capture state lock poisoned");
+        return;
+    };
+    capture.acknowledge(registration_id, delivery_id);
+}
+
+#[tauri::command]
 pub fn end_dictation_capture_registration(app: tauri::AppHandle, registration_id: u64) {
     let flags = app.state::<AppFlags>();
     let Ok(mut capture) = flags.capture.lock() else {
