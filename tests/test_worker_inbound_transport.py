@@ -1322,9 +1322,8 @@ async def test_blocked_result_read_does_not_stall_key_revocation(
     stream = servicer.FetchResult(
         pb.ArtifactRef(artifact_id=result.artifact_id), Context()
     )
-    watchdog = Timer(0.5, release_read.set)
+    watchdog = Timer(2.0, release_read.set)
     watchdog.start()
-    started_at = asyncio.get_running_loop().time()
     fetching = asyncio.create_task(anext(stream))
 
     async def wait_for_read():
@@ -1333,9 +1332,9 @@ async def test_blocked_result_read_does_not_stall_key_revocation(
 
     try:
         await asyncio.wait_for(wait_for_read(), timeout=1)
+        assert not release_read.is_set(), "result reading blocked the gRPC event loop"
         assert servicer.revoke_key(issued.key.key_id) is True
         cleanup = servicer._key_retirements[issued.key.key_id]
-        assert asyncio.get_running_loop().time() - started_at < 0.2
     finally:
         release_read.set()
         watchdog.cancel()
@@ -1440,9 +1439,8 @@ async def test_blocked_input_write_does_not_stall_key_revocation(
             raise RuntimeError(message)
 
     monkeypatch.setattr(listener_module, "_write_all", blocked_write)
-    watchdog = Timer(0.5, release_write.set)
+    watchdog = Timer(2.0, release_write.set)
     watchdog.start()
-    started_at = asyncio.get_running_loop().time()
     uploading = asyncio.create_task(servicer.PushInput(chunks(), Context()))
 
     async def wait_for_write():
@@ -1451,9 +1449,9 @@ async def test_blocked_input_write_does_not_stall_key_revocation(
 
     try:
         await asyncio.wait_for(wait_for_write(), timeout=1)
+        assert not release_write.is_set(), "input writing blocked the gRPC event loop"
         assert servicer.revoke_key(issued.key.key_id) is True
         cleanup = servicer._key_retirements[issued.key.key_id]
-        assert asyncio.get_running_loop().time() - started_at < 0.2
     finally:
         release_write.set()
         watchdog.cancel()
@@ -1516,15 +1514,16 @@ async def test_input_admission_and_mkdir_do_not_block_the_listener_loop(
         async def abort(self, _code, message):
             raise RuntimeError(message)
 
-    watchdog = Timer(0.5, release_admission.set)
+    watchdog = Timer(2.0, release_admission.set)
     watchdog.start()
-    started_at = asyncio.get_running_loop().time()
     uploading = asyncio.create_task(servicer.PushInput(chunks(), Context()))
     try:
         await asyncio.wait_for(
             asyncio.to_thread(admission_started.wait), timeout=1
         )
-        assert asyncio.get_running_loop().time() - started_at < 0.2
+        assert not release_admission.is_set(), (
+            "input admission blocked the gRPC event loop"
+        )
     finally:
         release_admission.set()
         watchdog.cancel()
@@ -1577,15 +1576,14 @@ async def test_artifact_untrack_cleanup_does_not_block_the_listener_loop(
         async def abort(self, _code, message):
             raise RuntimeError(message)
 
-    watchdog = Timer(0.5, release_cleanup.set)
+    watchdog = Timer(2.0, release_cleanup.set)
     watchdog.start()
-    started_at = asyncio.get_running_loop().time()
     uploading = asyncio.create_task(servicer.PushInput(chunks(), Context()))
     try:
         await asyncio.wait_for(
             asyncio.to_thread(cleanup_started.wait), timeout=1
         )
-        assert asyncio.get_running_loop().time() - started_at < 0.2
+        assert not release_cleanup.is_set(), "input cleanup blocked the gRPC event loop"
     finally:
         release_cleanup.set()
         watchdog.cancel()
@@ -2196,9 +2194,8 @@ async def test_result_ack_deletion_does_not_block_the_attach_loop(
         real_acked(artifact_id, key_id=key_id)
 
     monkeypatch.setattr(inbound.artifacts, "result_acked", blocked_acked)
-    watchdog = Timer(0.5, release_cleanup.set)
+    watchdog = Timer(2.0, release_cleanup.set)
     watchdog.start()
-    started_at = asyncio.get_running_loop().time()
     handling = asyncio.create_task(
         protocol.handle_server_message(
             pb.ServerMessage(result_ack=pb.ResultAckMessage(ref=ref))
@@ -2208,7 +2205,9 @@ async def test_result_ack_deletion_does_not_block_the_attach_loop(
         await asyncio.wait_for(
             asyncio.to_thread(cleanup_started.wait), timeout=1
         )
-        assert asyncio.get_running_loop().time() - started_at < 0.2
+        assert not release_cleanup.is_set(), (
+            "result cleanup blocked the gRPC event loop"
+        )
     finally:
         release_cleanup.set()
         watchdog.cancel()
@@ -2758,9 +2757,8 @@ async def test_result_publish_sweep_does_not_block_the_listener_loop(
         real_sweep(*args, **kwargs)
 
     monkeypatch.setattr(store, "_sweep_locked", blocked_sweep)
-    watchdog = Timer(0.5, release_sweep.set)
+    watchdog = Timer(2.0, release_sweep.set)
     watchdog.start()
-    started_at = asyncio.get_running_loop().time()
     publish = asyncio.create_task(
         store.publish(
             pb.TaskRef(task_id="task", attempt_id="attempt"),
@@ -2771,7 +2769,9 @@ async def test_result_publish_sweep_does_not_block_the_listener_loop(
     )
     try:
         await asyncio.wait_for(asyncio.to_thread(sweep_started.wait), timeout=1)
-        assert asyncio.get_running_loop().time() - started_at < 0.2
+        assert not release_sweep.is_set(), (
+            "artifact sweeping blocked the gRPC event loop"
+        )
     finally:
         release_sweep.set()
         watchdog.cancel()
@@ -2932,9 +2932,8 @@ async def test_duplicate_input_validation_never_blocks_other_panel_admission(
         return real_matches(path, expected_digest, expected_size)
 
     monkeypatch.setattr(artifacts_module, "_file_matches", blocked_matches)
-    watchdog = Timer(0.5, release_validation.set)
+    watchdog = Timer(2.0, release_validation.set)
     watchdog.start()
-    started_at = asyncio.get_running_loop().time()
     committing = asyncio.create_task(
         store.commit_input_async(
             ref, retry, digest, len(payload), key_id="panel"
@@ -2947,14 +2946,15 @@ async def test_duplicate_input_validation_never_blocks_other_panel_admission(
 
     try:
         await asyncio.wait_for(wait_for_validation(), timeout=1)
-        elapsed = asyncio.get_running_loop().time() - started_at
+        assert not release_validation.is_set(), (
+            "duplicate hashing blocked the gRPC event loop"
+        )
         other = store.begin_input(
             pb.ArtifactRef(artifact_id="other", filename="reference.wav"),
             key_id="other-panel",
             reserve_bytes=1,
         )
         store.discard_input(other)
-        assert elapsed < 0.2, "duplicate hashing stalled the gRPC event loop"
     finally:
         release_validation.set()
         watchdog.cancel()
@@ -3325,9 +3325,8 @@ async def test_cancelled_result_pull_drains_off_loop_write_before_unlink(
 
     monkeypatch.setattr(connector_module, "_write_all", blocked_write)
     destination = tmp_path / "partial.wav"
-    watchdog = Timer(0.5, release_write.set)
+    watchdog = Timer(2.0, release_write.set)
     watchdog.start()
-    started_at = asyncio.get_running_loop().time()
     fetching = asyncio.create_task(
         connection.fetch_result(
             pb.ArtifactRef(artifact_id="a1"), str(destination)
@@ -3340,7 +3339,9 @@ async def test_cancelled_result_pull_drains_off_loop_write_before_unlink(
 
     try:
         await asyncio.wait_for(wait_for_write(), timeout=1)
-        assert asyncio.get_running_loop().time() - started_at < 0.2
+        assert not release_write.is_set(), (
+            "fetched-result writing blocked the gRPC event loop"
+        )
         fetching.cancel()
         await asyncio.sleep(0)
         assert not fetching.done(), "cancellation abandoned an active file write"
