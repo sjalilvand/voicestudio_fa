@@ -27,6 +27,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- The setup splash now waits through the backend's full startup budget instead of reporting slow Windows CUDA initialization as stuck after two minutes (#1749)
 - OmniVoice subprocess startup now allows slow packaged Windows Python runtimes to signal readiness before termination (#1711)
 - SRT files selected during source analysis now wait for speaker cloning, then replace transcript text without losing voices (#1709)
 - Windows MSI deployments can now prohibit WebView2 bootstrap with `DISABLEWEBVIEW2BOOTSTRAP=1`, and `AUTOLAUNCHAPP=0` reliably suppresses first launch (#1714)
