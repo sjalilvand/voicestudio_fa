@@ -27,6 +27,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- OmniVoice subprocess startup now allows slow packaged Windows Python runtimes to signal readiness before termination (#1711)
 - SRT files selected during source analysis now wait for speaker cloning, then replace transcript text without losing voices (#1709)
 - Windows MSI deployments can now prohibit WebView2 bootstrap with `DISABLEWEBVIEW2BOOTSTRAP=1`, and `AUTOLAUNCHAPP=0` reliably suppresses first launch (#1714)
 - Subtitle rows now provide 100 ms timing steppers and flag adjacent overlaps without requiring precise timeline dragging (#1710)
