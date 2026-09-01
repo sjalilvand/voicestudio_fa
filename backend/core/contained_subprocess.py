@@ -336,8 +336,7 @@ class WindowsJobPopen:
 
     def __del__(self) -> None:
         try:
-            with self._lock:
-                self._close_job(terminate=True)
+            self._close_job(terminate=True)
         except Exception:
             pass  # interpreter shutdown; closing the OS handle is best-effort
 
@@ -371,11 +370,11 @@ def _spawn_windows_owned(argv: list[str], kwargs: dict[str, Any]) -> WindowsJobP
             try:
                 child.kill()
             except OSError:
-                pass
+                pass  # the suspended child may already have exited
             try:
                 child.wait(timeout=5)
             except (OSError, subprocess.TimeoutExpired):
-                pass
+                pass  # Job termination remains the authoritative cleanup
         kernel32.CloseHandle(job)
         raise
 
