@@ -60,7 +60,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from core.config import DATA_DIR
-from core.contained_subprocess import OwnedPopen, spawn_owned
+from core.contained_subprocess import OwnedPopen, WindowsJobPopen, spawn_owned
 
 logger = logging.getLogger("omnivoice.sidecar_install")
 
@@ -1097,14 +1097,14 @@ def _run_logged(job: dict, argv: list[str], *, timeout: float,
 
 def _kill_tree(proc: "subprocess.Popen") -> None:
     """Kill an operation through its stable nested group/Job owner."""
-    if isinstance(proc, OwnedPopen):
+    if isinstance(proc, (OwnedPopen, WindowsJobPopen)):
         # The retained supervisor/process-group or nested Job is the stable
         # per-operation owner.  Do not fall back to a direct PID kill.
         proc.kill()
         try:
             proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
-            pass
+            return
         return
     # A test double or a legacy caller without the nested owner can only be
     # stopped through its stable direct-process handle.
