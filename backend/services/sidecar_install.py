@@ -1057,7 +1057,8 @@ def _run_logged(job: dict, argv: list[str], *, timeout: float,
     would hang past the timeout waiting for pipe EOF.
     """
     # ``spawn_owned`` creates the local timeout group/Job before the operation
-    # starts and links it to backend death through its control pipe.
+    # starts. POSIX links it to backend death through a control pipe; Windows
+    # retains a kill-on-close Job handle in this backend process.
     popen_kwargs = _install_containment_kwargs()
     try:
         proc = spawn_owned(

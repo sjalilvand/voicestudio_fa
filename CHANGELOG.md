@@ -27,6 +27,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Windows isolated engines now retain direct Job ownership without an extra Python supervisor process that can deadlock the child loader (#1734)
 - OmniVoice subprocess startup now allows slow packaged Windows Python runtimes to signal readiness before termination (#1711)
 - SRT files selected during source analysis now wait for speaker cloning, then replace transcript text without losing voices (#1709)
 - Windows MSI deployments can now prohibit WebView2 bootstrap with `DISABLEWEBVIEW2BOOTSTRAP=1`, and `AUTOLAUNCHAPP=0` reliably suppresses first launch (#1714)
