@@ -375,11 +375,16 @@ def test_desktop_windows_timeout_never_taskkills_a_reusable_pid(monkeypatch):
 
 def test_windows_job_timeout_waits_for_terminated_tree():
     events = []
+
+    def timed_out_wait(timeout=None):
+        events.append(("wait", timeout))
+        raise subprocess.TimeoutExpired("operation.exe", timeout)
+
     child = SimpleNamespace(
         stdin=None,
         stdout=None,
         stderr=None,
-        wait=lambda timeout=None: events.append(("wait", timeout)) or 1,
+        wait=timed_out_wait,
     )
     kernel = SimpleNamespace(
         TerminateJobObject=lambda job, code: events.append(("terminate", job, code)),
