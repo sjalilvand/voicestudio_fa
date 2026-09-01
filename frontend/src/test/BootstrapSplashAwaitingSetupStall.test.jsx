@@ -123,9 +123,17 @@ describe('useBootstrapStage — awaiting_setup is human-gated (#1376)', () => {
     expect(result.current.stage).toBe('starting_backend');
     expect(result.current.message ?? '').not.toMatch(/stuck/i);
 
+    // Pin both sides of the six-minute fallback boundary.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3 * 60 * 1000 - 1_000);
+    });
+
+    expect(result.current.stage).toBe('starting_backend');
+    expect(result.current.message ?? '').not.toMatch(/stuck/i);
+
     // A frontend-only deadlock remains bounded if the shell never advances.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(4 * 60 * 1000);
+      await vi.advanceTimersByTimeAsync(2_000);
     });
 
     expect(result.current.stage).toBe('failed');
