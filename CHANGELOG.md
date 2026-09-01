@@ -16,6 +16,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Added
 
+- The MCP server gains an output mode and a file lane: `OMNIVOICE_MCP_OUTPUT_MODE` (`resources` — the original base64 default — `files`, or `both`) lets `generate_speech` return a URL to the render plus a WAV written under `OMNIVOICE_MCP_BASE_PATH` instead of base64 inline, and `transcribe` / `clone_voice` accept `audio_path` / `ref_audio_path` read from inside that same base path, which acts as the security boundary — so an LLM agent never has to carry audio through its context.
+
 ### Docs
 
 - The CosyVoice guide now states that packaged builds have no one-click runtime installer and records the exact readiness checks exposed by [Discussion 1631](https://github.com/debpalash/VoiceStudio/discussions/1631).
