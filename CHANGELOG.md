@@ -10,25 +10,39 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- Show estimated and measured model, dependency, cache, and temporary disk costs in the engine catalogue (#1718)
 - CosyVoice setup guidance now separates downloaded model files from the runtime that makes the engine available.
+- MCP tools can now keep audio out of agent context by returning files and accepting base-path-confined file inputs (#1760) — thanks @agudmund!
 
 ### Changed
 
 ### Added
 
-- The MCP server gains an output mode and a file lane: `OMNIVOICE_MCP_OUTPUT_MODE` (`resources` — the original base64 default — `files`, or `both`) lets `generate_speech` return a URL to the render plus a WAV written under `OMNIVOICE_MCP_BASE_PATH` instead of base64 inline, and `transcribe` / `clone_voice` accept `audio_path` / `ref_audio_path` read from inside that same base path, which acts as the security boundary — so an LLM agent never has to carry audio through its context.
+- Windows releases now include an independently updatable per-user MSI that installs and uninstalls without elevation (#1713)
+- Engine status and diagnostic bundles now record loaded execution provider, device, precision, fallback stage, accelerator identity, runtime versions, and parent-process memory visibility (#1717)
 
 ### Docs
 
+- Local gigastt is now documented as a supported OpenAI-compatible ASR endpoint, with loopback privacy distinguished from remote servers (#1736) — thanks @ekhodzitsky!
 - The CosyVoice guide now states that packaged builds have no one-click runtime installer and records the exact readiness checks exposed by [Discussion 1631](https://github.com/debpalash/VoiceStudio/discussions/1631).
 - A production private-API guide now covers pinned containers, root credentials, network isolation, streaming proxies, health checks, upgrades, and benchmark evidence (#1720)
+- RX 6700 XT/gfx1031 over WSL2 ROCDXG is now explicitly unverified until a published end-to-end GPU workload proves the mapped path (#1716)
 
 ### Fixed
 
+- OpenAI-compatible ASR now requires HTTPS outside loopback and refuses redirects so audio stays on the configured origin (#1736)
+- Windows isolated engines now retain direct Job ownership without an extra Python supervisor process that can deadlock the child loader (#1734)
+- The setup splash now waits through the backend's full startup budget instead of reporting slow Windows CUDA initialization as stuck after two minutes (#1749)
+- Dubbing jobs can now reuse every source-language code produced by automatic ASR detection without a 400 error on the next upload (#1737)
+- Incomplete Sherpa-ONNX model snapshots now self-repair before recognizer startup instead of failing on a missing ONNX file (#1733)
+- OmniVoice subprocess startup now allows slow packaged Windows Python runtimes to signal readiness before termination (#1711)
+- SRT files selected during source analysis now wait for speaker cloning, then replace transcript text without losing voices (#1709)
+- Windows MSI deployments can now prohibit WebView2 bootstrap with `DISABLEWEBVIEW2BOOTSTRAP=1`, and `AUTOLAUNCHAPP=0` reliably suppresses first launch (#1714)
 - Subtitle rows now provide 100 ms timing steppers and flag adjacent overlaps without requiring precise timeline dragging (#1710)
 - Repair-sync failures now retain uv's final dependency error instead of reporting only an opaque exit status (#1705)
 - YouTube ingest now retries yt-dlp's transient “page needs to be reloaded” response (#1706)
 - Dictation model readiness now follows the live Hugging Face cache selected in Settings (#1707)
+- Dictation capture now queues native events whenever its webview listener unmounts or reloads instead of emitting them to nobody (#1707)
 - Desktop-contained backends now exit when their owning app disappears instead of surviving as stale port-3900 processes (#1707)
 
 ## [0.5.1] — 2026-08-28

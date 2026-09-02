@@ -30,12 +30,19 @@ or another tool by path:
 | `OMNIVOICE_MCP_TIMEOUT_S` | seconds (default `120`) | How long a tool waits on the backend. CPU hosts render a paragraph in minutes and serialize generations, so an agent queued behind another render can outlast the default; raise it in step with `OMNIVOICE_GENERATE_TIMEOUT_S`. |
 | `OMNIVOICE_MCP_BASE_PATH` | a directory | The **security boundary** for file-shaped traffic. `transcribe(audio_path=…)` and `clone_voice(ref_audio_path=…)` read only from inside it (relative paths resolve against it, absolute paths must already lie within it, symlinks are resolved before the check), and files mode writes only into it. With no base path configured, path arguments are refused with a reason. |
 
+Input files are opened through confined, no-follow descriptors after path
+validation, so replacing a checked file or parent directory cannot redirect a
+read outside the base path.
+
 Set them on the **backend's** environment for the mounted `/mcp` endpoint
 (the launcher, a service file, Docker `-e`), or on the server entry's `env`
-when running `python -m backend.mcp_server` standalone. A recommended agent
-setup: `OMNIVOICE_MCP_OUTPUT_MODE=files` with the base path pointing at the
-agent's own working directory — nothing large ever enters its context, and
-every render is a file it can name.
+when running `python -m backend.mcp_server` standalone. The base path must be
+visible to both the backend and the agent. If they run in different containers
+or filesystem namespaces, mount one shared directory at the same path in both;
+`output_path` is reported in the backend's namespace. The agent's working
+directory is suitable only when that shared mount exists. With this setup,
+`OMNIVOICE_MCP_OUTPUT_MODE=files` keeps every render out of agent context while
+still returning a path the agent can use.
 
 ## Connecting
 

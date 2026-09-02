@@ -80,9 +80,23 @@ model weights. The splash screen shows progress.
 ## Install (pre-built MSI)
 
 Download the latest MSI from the
-[Releases page](https://github.com/debpalash/VoiceStudio/releases/latest),
-run it, follow the wizard. The shortcut lands in the Start menu as
-**VoiceStudio**.
+[Releases page](https://github.com/debpalash/VoiceStudio/releases/latest).
+
+| Artifact name | Scope | Administrator required | Default location |
+|---|---|---|---|
+| `VoiceStudio_<version>_x64_en-US.msi` | All users (per-machine) | Yes | `%ProgramFiles%\VoiceStudio` |
+| `VoiceStudio_Current_User_<version>_x64_en-US.msi` | Current user only | No | `%LOCALAPPDATA%\VoiceStudio (Current User)` |
+
+Run the artifact matching the required scope and follow the wizard. The
+per-user artifact can be installed, updated, and removed by a standard Windows
+account. It has a separate Windows Installer upgrade identity, shortcut name,
+and signed updater manifest, so it cannot upgrade or uninstall the per-machine
+copy (or vice versa). Both copies use the same VoiceStudio data directory; do
+not run them simultaneously against the same projects.
+
+Automatic updates preserve the installed scope. Managed deployments should
+continue to use the per-machine MSI. Users without elevation should choose the
+artifact containing `Current_User`.
 
 ### Installing to a different drive
 
@@ -115,6 +129,51 @@ If an install to a local non-C: drive fails anyway, capture a log with
 `msiexec /i VoiceStudio*.msi /L*V install.log` and
 [open an issue](https://github.com/debpalash/VoiceStudio/issues) with it
 — that log shows exactly which step rolled back.
+
+## Managed WebView2 installation
+
+The MSI checks the `pv` version value in both the machine-wide and current-user
+Edge Update registry keys for the WebView2 Runtime product
+`{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}`. When no `pv` version is detected and
+the bootstrapper was not explicitly allowed (or was explicitly disabled), the
+install fails without making a network request and directs the operator to the
+offline runtime. `ALLOWWEBVIEW2BOOTSTRAP=1` instead selects the opt-in path
+documented below.
+
+Managed or offline deployments can prohibit that network action:
+
+```powershell
+msiexec /i VoiceStudio_0.5.1_x64_en-US.msi DISABLEWEBVIEW2BOOTSTRAP=1 AUTOLAUNCHAPP=0 /qn /L*V "%TEMP%\VoiceStudio-install.log"
+```
+
+The per-user artifact never contains a WebView2 download or installer action.
+It does not require an elevated terminal, and fails closed when the runtime is
+absent:
+
+```powershell
+msiexec /i VoiceStudio_Current_User_0.5.1_x64_en-US.msi DISABLEWEBVIEW2BOOTSTRAP=1 AUTOLAUNCHAPP=0 /qn /L*V "%TEMP%\VoiceStudio-user-install.log"
+```
+
+For the per-machine artifact, `DISABLEWEBVIEW2BOOTSTRAP=1` leaves detection
+enabled but prevents every WebView2 PowerShell, download, and installer action.
+For the per-user artifact that property is redundant because those actions are
+omitted from the MSI. If the runtime is absent, either MSI fails before copying
+VoiceStudio and tells the operator to deploy the
+[Microsoft Evergreen Runtime](https://developer.microsoft.com/microsoft-edge/webview2/#download-section)
+first. `/L*V` records detection and action selection in the named Windows
+Installer log.
+
+An interactive administrator may explicitly permit Microsoft's network
+bootstrapper for the per-machine artifact by setting
+`ALLOWWEBVIEW2BOOTSTRAP=1`. Only then does that MSI download
+`https://go.microsoft.com/fwlink/p/?LinkId=2124703` with PowerShell and invoke
+it silently with `/install`; `DISABLEWEBVIEW2BOOTSTRAP=1` always wins if both
+properties are supplied. `ALLOWWEBVIEW2BOOTSTRAP` has no effect on the
+per-user artifact.
+
+`AUTOLAUNCHAPP=0` is independent: it prevents VoiceStudio from launching after
+a successful silent install. It does not change WebView2 detection; on the
+per-machine artifact it also does not disable an otherwise permitted setup.
 
 ## Portable install (Windows)
 

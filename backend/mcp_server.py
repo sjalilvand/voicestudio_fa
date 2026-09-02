@@ -37,6 +37,8 @@ import base64
 import json
 import logging
 import os
+import re
+import stat
 import sys
 
 logger = logging.getLogger("omnivoice.mcp")
@@ -91,6 +93,7 @@ def _sniff_audio_ext(raw: bytes) -> str:
 
 _OUTPUT_MODES = ("resources", "files", "both")
 _MAX_INPUT_BYTES = 200 * 1024 * 1024
+_SAFE_AUDIO_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
 
 def _output_mode() -> str:
@@ -134,13 +137,72 @@ def _resolve_under_base(path: str) -> str:
             "names a directory"
         )
     candidate = os.path.realpath(os.path.join(base, os.path.expanduser(path)))
-    try:
-        inside = os.path.commonpath([base, candidate]) == base
-    except ValueError:  # different drives on Windows: nothing in common
-        inside = False
-    if not inside:
+    if not _path_is_under_base(base, candidate):
         raise ValueError(f"{path!r} resolves outside OMNIVOICE_MCP_BASE_PATH")
     return candidate
+
+
+def _opened_file_is_confined(fd: int, resolved: str, base: str) -> bool:
+    """Verify that an opened descriptor still names a file under ``base``."""
+    proc_fd = f"/proc/self/fd/{fd}"
+    if os.path.exists(proc_fd):
+        return _path_is_under_base(base, os.path.realpath(proc_fd))
+    try:
+        current = os.path.realpath(resolved)
+        return _path_is_under_base(base, current) and os.path.samestat(
+            os.fstat(fd), os.stat(current, follow_symlinks=False)
+        )
+    except OSError:
+        return False
+
+
+def _path_is_under_base(base: str, candidate: str) -> bool:
+    try:
+        common = os.path.commonpath([base, candidate])
+    except ValueError:  # different drives on Windows
+        return False
+    return os.path.normcase(common) == os.path.normcase(base)
+
+
+def _open_under_base(path: str, flags: int, *, mode: int = 0o600) -> tuple[int, str]:
+    """Open ``path`` without following a component replaced after validation."""
+    base = _base_path()
+    if base is None:
+        raise ValueError(
+            "OMNIVOICE_MCP_BASE_PATH is not set; file paths are refused until it "
+            "names a directory"
+        )
+    resolved = _resolve_under_base(path)
+    relative = os.path.relpath(resolved, base)
+    parts = [part for part in relative.split(os.sep) if part not in ("", ".")]
+    if not parts or parts[0] == os.pardir:
+        raise ValueError(f"{path!r} resolves outside OMNIVOICE_MCP_BASE_PATH")
+
+    no_follow = getattr(os, "O_NOFOLLOW", 0)
+    close_on_exec = getattr(os, "O_CLOEXEC", 0)
+    binary = getattr(os, "O_BINARY", 0)
+    file_flags = flags | no_follow | close_on_exec | binary
+    supports_dir_fd = os.open in getattr(os, "supports_dir_fd", ())
+    directory_flag = getattr(os, "O_DIRECTORY", 0)
+
+    if supports_dir_fd and directory_flag:
+        directory_flags = os.O_RDONLY | directory_flag | no_follow | close_on_exec
+        directory_fd = os.open(base, directory_flags)
+        try:
+            for component in parts[:-1]:
+                next_fd = os.open(component, directory_flags, dir_fd=directory_fd)
+                os.close(directory_fd)
+                directory_fd = next_fd
+            fd = os.open(parts[-1], file_flags, mode, dir_fd=directory_fd)
+        finally:
+            os.close(directory_fd)
+    else:
+        fd = os.open(resolved, file_flags, mode)
+
+    if not _opened_file_is_confined(fd, resolved, base):
+        os.close(fd)
+        raise ValueError(f"{path!r} resolves outside OMNIVOICE_MCP_BASE_PATH")
+    return fd, resolved
 
 
 def _read_input_audio(
@@ -159,34 +221,45 @@ def _read_input_audio(
         return None, f"pass exactly one of {label} or the matching *_path argument"
     if audio_path:
         try:
-            resolved = _resolve_under_base(audio_path)
+            fd, _resolved = _open_under_base(audio_path, os.O_RDONLY)
         except ValueError as e:
             return None, str(e)
-        if not os.path.isfile(resolved):
+        except FileNotFoundError:
             return None, f"no such file under OMNIVOICE_MCP_BASE_PATH: {audio_path!r}"
-        if os.path.getsize(resolved) > _MAX_INPUT_BYTES:
+        except OSError as e:
+            return None, f"could not safely read {audio_path!r}: {e}"
+        with os.fdopen(fd, "rb") as handle:
+            info = os.fstat(handle.fileno())
+            if not stat.S_ISREG(info.st_mode):
+                return None, f"{audio_path!r} is not a regular file"
+            if info.st_size > _MAX_INPUT_BYTES:
+                return None, too_big
+            raw = handle.read(_MAX_INPUT_BYTES + 1)
+        if len(raw) > _MAX_INPUT_BYTES:
             return None, too_big
-        with open(resolved, "rb") as f:
-            return f.read(), None
-    # Base64 is always larger than the bytes it carries, so the encoded
-    # length is a safe lower bound on the decoded size.
-    if len(audio_base64) > _MAX_INPUT_BYTES:
-        return None, too_big
+        if not raw:
+            return None, f"{label} is empty"
+        return raw, None
     raw = _decode_ref_audio(audio_base64)
     if raw is None:
         return None, f"{label} is not valid base64"
     if not raw:
         return None, f"{label} is empty"
+    if len(raw) > _MAX_INPUT_BYTES:
+        return None, too_big
     return raw, None
 
 
 def _write_output(audio_id: str, raw: bytes) -> str:
     """Land a render under the base path as ``<audio_id>.wav``; returns the path."""
+    if not _SAFE_AUDIO_ID.fullmatch(audio_id):
+        raise ValueError("backend returned an invalid X-Audio-Id header")
     base = _base_path()
     os.makedirs(base, exist_ok=True)
-    path = os.path.join(base, f"{audio_id}.wav")
-    with open(path, "wb") as f:
-        f.write(raw)
+    filename = f"{audio_id}.wav"
+    fd, path = _open_under_base(filename, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+    with os.fdopen(fd, "wb") as handle:
+        handle.write(raw)
     return path
 
 
@@ -219,6 +292,8 @@ def _speech_result(audio_id: str, gen_time, duration, raw: bytes, api_base: str)
     The backend already keeps every render on disk and serves it at
     ``/audio/<audio_id>.wav``, so files mode costs nothing but a URL - plus one
     write when a base path invites the WAV into the agent's own directory."""
+    if not _SAFE_AUDIO_ID.fullmatch(audio_id):
+        raise ValueError("backend returned an invalid X-Audio-Id header")
     mode = _output_mode()
     out = {
         "audio_id": audio_id,

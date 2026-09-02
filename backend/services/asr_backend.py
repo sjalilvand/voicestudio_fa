@@ -24,12 +24,15 @@ faster-whisper because it's available on every platform we ship to).
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import logging
 import os
 import re
 import contextlib
 import threading
 import time
+import weakref
+from urllib.parse import urlsplit
 from utils.containment import contain_system_exit
 
 from abc import ABC, abstractmethod
@@ -303,6 +306,16 @@ class ASRBackend(ABC):
     # per-engine notes; an unverified `rocm` claim would route ROCm hosts to a
     # broken GPU path, strictly worse than the honest `cpu_fallback`.)
     gpu_compat: tuple[str, ...] = ("cpu",)
+
+    def execution_evidence_loaded(self) -> bool:
+        """Whether this instance has live model state worth reporting."""
+        if getattr(self, "runs_out_of_process", False):
+            proc = getattr(self, "_proc", None)
+            return proc is not None and proc.poll() is None
+        return any(
+            getattr(self, attr, None) is not None
+            for attr in ("_model", "_asr", "_pipeline", "_pipe", "_transcriber", "_rec")
+        )
 
     @classmethod
     @abstractmethod
@@ -950,6 +963,8 @@ class FasterWhisperBackend(ASRBackend):
         # (after the #551 compute_type / #255 OOM→CPU fallback chain).
         self._device: str | None = None
         self._compute_type: str | None = None
+        self._fallback_reason: str | None = None
+        self._fallback_stage: str | None = None
 
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
@@ -1027,6 +1042,8 @@ class FasterWhisperBackend(ASRBackend):
                 except Exception:  # noqa: BLE001 — cache clear is best-effort
                     pass
                 device = "cpu"
+                self._fallback_reason = "CUDA memory was exhausted while loading the engine"
+                self._fallback_stage = "model_load"
                 candidates = _compute_type_candidates(device)
                 compute_type = candidates[0]
                 continue
@@ -1985,6 +2002,42 @@ _ASR_OPENAI_COMPAT_MODEL_KEY = "asr.openai_compat.model"
 _ASR_OPENAI_COMPAT_SECRET_NAME = "asr_openai_compat_key"
 
 
+def normalize_openai_compat_asr_base_url(value: str) -> str:
+    """Normalize a safe ASR endpoint, allowing plain HTTP only on loopback."""
+    base = (value or "").strip().rstrip("/")
+    if not base:
+        return ""
+    try:
+        parsed = urlsplit(base)
+        _ = parsed.port
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Invalid OpenAI-compatible ASR base URL") from exc
+    scheme = parsed.scheme.lower()
+    if (
+        scheme not in {"http", "https"}
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError(
+            "OpenAI-compatible ASR base URL must be a credential-free HTTP(S) URL"
+        )
+    host = parsed.hostname.lower()
+    loopback = host == "localhost"
+    if not loopback:
+        try:
+            address = ipaddress.ip_address(host)
+            address = getattr(address, "ipv4_mapped", None) or address
+            loopback = address.is_loopback
+        except ValueError:
+            loopback = False
+    if scheme == "http" and not loopback:
+        raise ValueError("Non-loopback OpenAI-compatible ASR endpoints require HTTPS")
+    return base
+
+
 def resolve_openai_compat_asr_base_url() -> str:
     from services import settings_store
     return (
@@ -2048,7 +2101,7 @@ def probe_openai_compat_server(
     maps to a translated message:
 
       not_configured   no base URL anywhere
-      invalid_url      base URL without an http(s):// scheme
+      invalid_url      malformed URL or non-loopback HTTP endpoint
       ok               2xx — ``model_found`` says whether the configured
                        model appears in the server's list (None = unknown)
       ok_no_models     404/405/501 — reachable, but no /models endpoint
@@ -2063,7 +2116,7 @@ def probe_openai_compat_server(
 
     from core.scrub import scrub_text
 
-    base = (base_url if base_url is not None else resolve_openai_compat_asr_base_url()).strip().rstrip("/")
+    configured_base = base_url if base_url is not None else resolve_openai_compat_asr_base_url()
     mdl = (model if model is not None else resolve_openai_compat_asr_model()).strip()
     if api_key is None:
         key = resolve_openai_compat_asr_api_key()
@@ -2079,9 +2132,11 @@ def probe_openai_compat_server(
         "model_found": None,
         "detail": None,
     }
-    if not base:
+    if not configured_base.strip():
         return out
-    if not base.startswith(("http://", "https://")):
+    try:
+        base = normalize_openai_compat_asr_base_url(configured_base)
+    except ValueError:
         out["status"] = "invalid_url"
         return out
 
@@ -2092,7 +2147,7 @@ def probe_openai_compat_server(
     try:
         with httpx.Client(
             timeout=httpx.Timeout(timeout_s, connect=min(5.0, timeout_s)),
-            follow_redirects=True,
+            follow_redirects=False,
         ) as client:
             resp = client.get(f"{base}/models", headers=headers)
     except httpx.TimeoutException as exc:
@@ -2155,13 +2210,20 @@ class OpenAICompatASRBackend(ASRBackend):
     gpu_compat = ("cpu",)  # network client only — no local compute
 
     def __init__(self):
-        self._base_url = resolve_openai_compat_asr_base_url()
+        self._base_url = normalize_openai_compat_asr_base_url(
+            resolve_openai_compat_asr_base_url()
+        )
         self._model = resolve_openai_compat_asr_model()
 
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
-        if not resolve_openai_compat_asr_base_url():
+        base_url = resolve_openai_compat_asr_base_url()
+        if not base_url:
             return False, "Configure a server endpoint in Model Catalogue → Engines"
+        try:
+            normalize_openai_compat_asr_base_url(base_url)
+        except ValueError as exc:
+            return False, str(exc)
         try:
             import openai  # noqa: F401
         except ImportError:
@@ -2169,13 +2231,18 @@ class OpenAICompatASRBackend(ASRBackend):
         return True, "ready"
 
     def _client(self):
-        from openai import OpenAI
+        from openai import DefaultHttpxClient, OpenAI
         api_key = resolve_openai_compat_asr_api_key() or "not-needed"
         # max_retries=0: mirrors llm_skills.resolve_skill_client — a
         # rate-limited/slow server retrying inside the SDK would blow past
         # whatever bounded timeout the caller (dub transcribe, dictation)
         # expects from a single call.
-        return OpenAI(base_url=self._base_url, api_key=api_key, max_retries=0)
+        return OpenAI(
+            base_url=self._base_url,
+            api_key=api_key,
+            max_retries=0,
+            http_client=DefaultHttpxClient(follow_redirects=False),
+        )
 
     def transcribe(self, audio_path: str, *, word_timestamps: bool = True) -> dict:
         logger.info(
@@ -2354,6 +2421,8 @@ _LAST_ERRORS: dict[str, str] = {}
 # failing ASR wholesale. Per-process by design: repairing the env requires a
 # reinstall / ``uv sync --reinstall`` and an app restart anyway.
 _DEEP_IMPORT_BROKEN: dict[str, str] = {}
+_RUNTIME_EVIDENCE: dict[str, dict] = {}
+_RUNTIME_INSTANCES: weakref.WeakValueDictionary[str, "ASRBackend"] = weakref.WeakValueDictionary()
 
 
 def _deep_import_reason(cls: type["ASRBackend"], exc: ImportError) -> str:
@@ -2384,6 +2453,7 @@ def list_backends() -> list[dict]:
     """
     from core.device_caps import detect_host_caps
     from core.scrub import scrub_text
+    from services.engine_evidence import snapshot as execution_snapshot
     from services.engine_routing import routing_fields
     caps = detect_host_caps()
 
@@ -2408,6 +2478,24 @@ def list_backends() -> list[dict]:
             _LAST_ERRORS[bid] = scrub_text(msg)
         isolation = "subprocess" if getattr(cls, "_is_subprocess_isolated", False) else "in-process"
         gpu_compat = getattr(cls, "gpu_compat", ("cpu",))
+        routing = routing_fields(gpu_compat, caps)
+        # Cached load-time facts are valid only while their exact backend still
+        # owns live model state. Recompute from that instance so unload/reaping
+        # cannot leave ghost GPU/provider evidence in diagnostics.
+        instance = (
+            _ISOLATED_INSTANCES.get(bid)
+            if isolation == "subprocess"
+            else _RUNTIME_INSTANCES.get(bid)
+        )
+        execution_evidence = execution_snapshot(
+            engine_id=bid,
+            engine_cls=cls,
+            instance=instance,
+            routing=routing,
+            caps=caps,
+        )
+        if execution_evidence["evidence_state"] == "not_loaded":
+            _RUNTIME_EVIDENCE.pop(bid, None)
         out.append({
             "id": bid,
             "display_name": cls.display_name,
@@ -2419,7 +2507,14 @@ def list_backends() -> list[dict]:
             "last_error": _LAST_ERRORS.get(bid),
             "isolation_mode": isolation,
             "gpu_compat": list(gpu_compat),
-            **routing_fields(gpu_compat, caps),
+            **routing,
+            "execution_evidence": execution_evidence or execution_snapshot(
+                engine_id=bid,
+                engine_cls=cls,
+                instance=None,
+                routing=routing,
+                caps=caps,
+            ),
         })
     return out
 
@@ -2660,6 +2755,21 @@ def load_active_asr_backend(*, asr_pipe=None) -> ASRBackend:
                 raise ASRModelMissingError(missing)
         try:
             backend.ensure_loaded()
+            from core.device_caps import detect_host_caps
+            from services.engine_evidence import snapshot as execution_snapshot
+            from services.engine_routing import routing_fields
+
+            cls = type(backend)
+            caps = detect_host_caps()
+            routing = routing_fields(getattr(cls, "gpu_compat", ("cpu",)), caps)
+            _RUNTIME_EVIDENCE[bid] = execution_snapshot(
+                engine_id=bid,
+                engine_cls=cls,
+                instance=backend,
+                routing=routing,
+                caps=caps,
+            )
+            _RUNTIME_INSTANCES[bid] = backend
             return backend
         except ImportError as e:
             # ModuleNotFoundError and its ImportError parent ("cannot import

@@ -1,11 +1,11 @@
-# VoiceStudio — OpenAI-Compatible Remote ASR
+# VoiceStudio: OpenAI-Compatible ASR
 
 Point transcription at **any** server exposing an OpenAI-compatible
-`POST /v1/audio/transcriptions` endpoint — LM Studio or a llama.cpp-style
-local server, a self-hosted Qwen3-ASR/FunASR/SenseVoice box on your network,
-Groq, or OpenAI's own Whisper API. Unlike every other ASR engine, this one
-runs no model locally: it's a pure network client, so it needs no install
-and claims no GPU.
+`POST /v1/audio/transcriptions` endpoint: gigastt, LM Studio, or a
+llama.cpp-style server on the same machine; a self-hosted
+Qwen3-ASR/FunASR/SenseVoice box on your network; Groq; or OpenAI's Whisper
+API. VoiceStudio is a pure client in this mode, so the configured server owns
+model installation and compute.
 
 ## Setup
 
@@ -39,12 +39,17 @@ picks local engines, and the app works fully with this engine unconfigured.
 
 | Server | Server URL | Model | API key |
 | --- | --- | --- | --- |
+| [gigastt](https://github.com/ekhodzitsky/gigastt) (local Russian specialist) | `http://127.0.0.1:9876/v1` | `gigaam-v3-rnnt` | none |
 | LM Studio (local) | `http://localhost:1234/v1` | the model name shown in LM Studio | none |
 | llama.cpp / whisper.cpp server (local) | `http://localhost:8080/v1` | whatever the server loads (often ignored) | none |
 | speaches / faster-whisper-server (local) | `http://localhost:8000/v1` | e.g. `Systran/faster-whisper-large-v3` | none |
-| Self-hosted Qwen3-ASR / FunASR (LAN box) | `http://<host>:8000/v1` | your deployment's model id | if you enabled auth |
+| Self-hosted Qwen3-ASR / FunASR (LAN box) | `https://<host>:8000/v1` | your deployment's model id | if you enabled auth |
 | Groq | `https://api.groq.com/openai/v1` | `whisper-large-v3` | required |
 | OpenAI | `https://api.openai.com/v1` | `whisper-1` | required |
+
+Plain HTTP is accepted only for exact loopback hosts such as `localhost`,
+`127.0.0.1`, and `::1`. Every non-loopback endpoint must use HTTPS. VoiceStudio
+does not follow redirects from transcription or connection-probe requests.
 
 Local servers vary in which endpoints they implement — if **Test
 connection** reports the server is reachable but doesn't list models,
@@ -60,8 +65,7 @@ path returns word-level timestamps — that's not part of this API.
 
 ## Privacy note
 
-Unlike every other ASR engine in VoiceStudio, audio sent through this backend
-leaves your machine — to whatever server **you** configured, and nowhere
-else. If that's a self-hosted server on your own network, nothing leaves
-your control; if it's a third-party API (Groq, OpenAI's, or someone
-else's), review their data handling before sending anything sensitive.
+Audio goes only to the server **you** configure. A loopback URL such as the
+gigastt example keeps it on the same machine and may use HTTP. LAN and public
+endpoints require HTTPS, and redirects are not followed. Review the configured
+server's data handling before sending anything sensitive.
