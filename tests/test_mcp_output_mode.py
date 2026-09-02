@@ -126,6 +126,20 @@ def test_base64_limit_applies_to_decoded_bytes(monkeypatch):
     assert raw is None and err == "audio exceeds 200 MB limit"
 
 
+def test_oversized_base64_is_rejected_before_decode(monkeypatch):
+    import mcp_server
+
+    monkeypatch.setattr(mcp_server, "_MAX_INPUT_BYTES", 3)
+
+    def fail_decode(_value):  # pragma: no cover - must short-circuit first
+        raise AssertionError("oversized base64 reached the decoder")
+
+    monkeypatch.setattr(mcp_server, "_decode_ref_audio", fail_decode)
+    oversized = base64.b64encode(b"abcd").decode()
+    raw, err = mcp_server._read_input_audio(oversized, None)
+    assert raw is None and err == "audio exceeds 200 MB limit"
+
+
 def test_concurrent_parent_replacement_cannot_escape_base(
     monkeypatch, tmp_path
 ):

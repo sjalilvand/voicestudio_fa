@@ -240,6 +240,14 @@ def _read_input_audio(
         if not raw:
             return None, f"{label} is empty"
         return raw, None
+    encoded = (
+        audio_base64.split(",", 1)[-1]
+        if audio_base64.startswith("data:")
+        else audio_base64
+    )
+    max_encoded_bytes = 4 * ((_MAX_INPUT_BYTES + 2) // 3)
+    if len(encoded) > max_encoded_bytes:
+        return None, too_big
     raw = _decode_ref_audio(audio_base64)
     if raw is None:
         return None, f"{label} is not valid base64"
