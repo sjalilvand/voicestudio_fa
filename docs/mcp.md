@@ -10,11 +10,39 @@ start once VoiceStudio is open.
 
 | Tool | What it does |
 |---|---|
-| `generate_speech` | text → WAV (base64). Uses the agent's bound voice unless a `profile_id` is passed. |
-| `clone_voice` | base64 audio → new voice profile. Returns a `profile_id` for use with `generate_speech`. |
-| `transcribe` | base64 audio → text (646 languages). |
+| `generate_speech` | text → WAV. Uses the agent's bound voice unless a `profile_id` is passed. Returns base64 by default, or a URL + file in [files mode](#output-mode-and-file-inputs). |
+| `clone_voice` | reference audio (base64, or a `ref_audio_path` under the base path) → new voice profile. Returns a `profile_id` for use with `generate_speech`. |
+| `transcribe` | audio (base64, or an `audio_path` under the base path) → text (646 languages). |
 | `list_voices` / `list_personalities` / `list_languages` | enumerate what's available. |
 | `check_health` | backend status + active GPU device. |
+
+## Output mode and file inputs
+
+An LLM agent pays for every byte it receives in context, and a WAV as base64
+is a lot of bytes — a short clip already brushes per-result limits, a
+paragraph of narration blows them. Two environment variables move the audio
+out of the conversation and onto disk, where an agent can hand it to a player
+or another tool by path:
+
+| Variable | Values | Effect |
+|---|---|---|
+| `OMNIVOICE_MCP_OUTPUT_MODE` | `resources` (default) · `files` · `both` | `resources` returns `wav_base64` inline (the original contract). `files` returns `audio_url` (the render served at `/audio/<audio_id>.wav`, which the backend keeps anyway) and, when a base path is set, `output_path` — the WAV written into that directory. `both` returns everything. |
+| `OMNIVOICE_MCP_TIMEOUT_S` | seconds (default `120`) | How long a tool waits on the backend. CPU hosts render a paragraph in minutes and serialize generations, so an agent queued behind another render can outlast the default; raise it in step with `OMNIVOICE_GENERATE_TIMEOUT_S`. |
+| `OMNIVOICE_MCP_BASE_PATH` | a directory | The **security boundary** for file-shaped traffic. `transcribe(audio_path=…)` and `clone_voice(ref_audio_path=…)` read only from inside it (relative paths resolve against it, absolute paths must already lie within it, symlinks are resolved before the check), and files mode writes only into it. With no base path configured, path arguments are refused with a reason. |
+
+Input files are opened through confined, no-follow descriptors after path
+validation, so replacing a checked file or parent directory cannot redirect a
+read outside the base path.
+
+Set them on the **backend's** environment for the mounted `/mcp` endpoint
+(the launcher, a service file, Docker `-e`), or on the server entry's `env`
+when running `python -m backend.mcp_server` standalone. The base path must be
+visible to both the backend and the agent. If they run in different containers
+or filesystem namespaces, mount one shared directory at the same path in both;
+`output_path` is reported in the backend's namespace. The agent's working
+directory is suitable only when that shared mount exists. With this setup,
+`OMNIVOICE_MCP_OUTPUT_MODE=files` keeps every render out of agent context while
+still returning a path the agent can use.
 
 ## Connecting
 

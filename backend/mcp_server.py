@@ -7,8 +7,8 @@ Run standalone:
 
 Tools exposed:
     generate_speech   — text → WAV audio (voice clone or design)
-    clone_voice       — base64 reference audio → new voice profile
-    transcribe        — base64 audio → text
+    clone_voice       — reference audio (base64, or a file path) → new voice profile
+    transcribe        — audio (base64, or a file path) → text
     list_voices       — enumerate saved voice profiles
     list_languages    — available TTS languages
     list_personalities — voice personality presets
@@ -17,6 +17,18 @@ Tools exposed:
 Resources exposed:
     voice://{profile_id}  — voice profile metadata
     history://recent      — last 20 generated audio items
+
+Output mode (OMNIVOICE_MCP_OUTPUT_MODE):
+    resources — generate_speech returns the WAV as base64 inline (the original
+                contract; default)
+    files     — it returns a URL to the render (and, with a base path, a WAV
+                written there); nothing large ever enters the agent's context
+    both      — both of the above
+
+File inputs (OMNIVOICE_MCP_BASE_PATH):
+    One directory that agents may read audio from (transcribe / clone_voice
+    `*_path` arguments) and receive files in (files mode). It is the security
+    boundary: with no base path configured, path-shaped inputs are refused.
 """
 from __future__ import annotations
 
@@ -25,6 +37,8 @@ import base64
 import json
 import logging
 import os
+import re
+import stat
 import sys
 
 logger = logging.getLogger("omnivoice.mcp")
@@ -67,6 +81,244 @@ def _sniff_audio_ext(raw: bytes) -> str:
         # extension is a storage nicety, not a correctness gate (CR, #1198).
         return ".m4a"
     return ".wav"
+
+
+# ── Output mode + the base path boundary ─────────────────────────────────
+# An LLM agent that receives a WAV as base64 pays for every byte in context:
+# a 1.4 s clip already brushes per-result token caps, and a paragraph of
+# narration blows them outright. The ElevenLabs MCP settled this with an
+# OUTPUT_MODE (files / resources / both) and a BASE_PATH that doubles as the
+# security boundary for file-shaped inputs; the same two knobs here, named in
+# the OMNIVOICE_* family the rest of the server reads.
+
+_OUTPUT_MODES = ("resources", "files", "both")
+_MAX_INPUT_BYTES = 200 * 1024 * 1024
+_SAFE_AUDIO_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _output_mode() -> str:
+    """How generate_speech hands audio back (OMNIVOICE_MCP_OUTPUT_MODE).
+
+    'resources' is the original base64-inline contract and stays the default
+    so existing integrations see no change; 'files' returns a URL to the
+    render (plus a WAV under the base path when one is configured); 'both'
+    returns everything. Anything unrecognized falls back to 'resources' with
+    a warning rather than failing the tool."""
+    mode = os.environ.get("OMNIVOICE_MCP_OUTPUT_MODE", "resources").strip().lower()
+    if mode not in _OUTPUT_MODES:
+        logger.warning(
+            "OMNIVOICE_MCP_OUTPUT_MODE=%r is not one of %s; using 'resources'",
+            mode, _OUTPUT_MODES,
+        )
+        return "resources"
+    return mode
+
+
+def _base_path() -> "str | None":
+    """The one directory agents may read audio from and receive files in
+    (OMNIVOICE_MCP_BASE_PATH), realpath'd; None when unset."""
+    raw = os.environ.get("OMNIVOICE_MCP_BASE_PATH", "").strip()
+    if not raw:
+        return None
+    return os.path.realpath(os.path.expanduser(raw))
+
+
+def _resolve_under_base(path: str) -> str:
+    """Absolute realpath of ``path`` when it lies inside the base path.
+
+    Relative paths resolve against the base; absolute paths must already be
+    inside it. Both sides are realpath'd, so a symlink pointing outward cannot
+    smuggle a read in. Raises ValueError with an agent-legible reason when no
+    base path is configured or the path escapes it."""
+    base = _base_path()
+    if base is None:
+        raise ValueError(
+            "OMNIVOICE_MCP_BASE_PATH is not set; file paths are refused until it "
+            "names a directory"
+        )
+    candidate = os.path.realpath(os.path.join(base, os.path.expanduser(path)))
+    if not _path_is_under_base(base, candidate):
+        raise ValueError(f"{path!r} resolves outside OMNIVOICE_MCP_BASE_PATH")
+    return candidate
+
+
+def _opened_file_is_confined(fd: int, resolved: str, base: str) -> bool:
+    """Verify that an opened descriptor still names a file under ``base``."""
+    proc_fd = f"/proc/self/fd/{fd}"
+    if os.path.exists(proc_fd):
+        return _path_is_under_base(base, os.path.realpath(proc_fd))
+    try:
+        current = os.path.realpath(resolved)
+        return _path_is_under_base(base, current) and os.path.samestat(
+            os.fstat(fd), os.stat(current, follow_symlinks=False)
+        )
+    except OSError:
+        return False
+
+
+def _path_is_under_base(base: str, candidate: str) -> bool:
+    try:
+        common = os.path.commonpath([base, candidate])
+    except ValueError:  # different drives on Windows
+        return False
+    return os.path.normcase(common) == os.path.normcase(base)
+
+
+def _open_under_base(path: str, flags: int, *, mode: int = 0o600) -> tuple[int, str]:
+    """Open ``path`` without following a component replaced after validation."""
+    base = _base_path()
+    if base is None:
+        raise ValueError(
+            "OMNIVOICE_MCP_BASE_PATH is not set; file paths are refused until it "
+            "names a directory"
+        )
+    resolved = _resolve_under_base(path)
+    relative = os.path.relpath(resolved, base)
+    parts = [part for part in relative.split(os.sep) if part not in ("", ".")]
+    if not parts or parts[0] == os.pardir:
+        raise ValueError(f"{path!r} resolves outside OMNIVOICE_MCP_BASE_PATH")
+
+    no_follow = getattr(os, "O_NOFOLLOW", 0)
+    close_on_exec = getattr(os, "O_CLOEXEC", 0)
+    binary = getattr(os, "O_BINARY", 0)
+    file_flags = flags | no_follow | close_on_exec | binary
+    supports_dir_fd = os.open in getattr(os, "supports_dir_fd", ())
+    directory_flag = getattr(os, "O_DIRECTORY", 0)
+
+    if supports_dir_fd and directory_flag:
+        directory_flags = os.O_RDONLY | directory_flag | no_follow | close_on_exec
+        directory_fd = os.open(base, directory_flags)
+        try:
+            for component in parts[:-1]:
+                next_fd = os.open(component, directory_flags, dir_fd=directory_fd)
+                os.close(directory_fd)
+                directory_fd = next_fd
+            fd = os.open(parts[-1], file_flags, mode, dir_fd=directory_fd)
+        finally:
+            os.close(directory_fd)
+    else:
+        fd = os.open(resolved, file_flags, mode)
+
+    if not _opened_file_is_confined(fd, resolved, base):
+        os.close(fd)
+        raise ValueError(f"{path!r} resolves outside OMNIVOICE_MCP_BASE_PATH")
+    return fd, resolved
+
+
+def _read_input_audio(
+    audio_base64: "str | None",
+    audio_path: "str | None",
+    *,
+    label: str = "audio_base64",
+    too_big: str = "audio exceeds 200 MB limit",
+) -> "tuple[bytes | None, str | None]":
+    """Audio bytes from exactly one of the two input lanes, or (None, error).
+
+    The base64 lane keeps its data-URI tolerance and 200 MB cap; the path lane
+    is honored only inside the base path (the security boundary) and applies
+    the same cap to the file's size before reading it."""
+    if bool(audio_base64) == bool(audio_path):
+        return None, f"pass exactly one of {label} or the matching *_path argument"
+    if audio_path:
+        try:
+            fd, _resolved = _open_under_base(audio_path, os.O_RDONLY)
+        except ValueError as e:
+            return None, str(e)
+        except FileNotFoundError:
+            return None, f"no such file under OMNIVOICE_MCP_BASE_PATH: {audio_path!r}"
+        except OSError as e:
+            return None, f"could not safely read {audio_path!r}: {e}"
+        with os.fdopen(fd, "rb") as handle:
+            info = os.fstat(handle.fileno())
+            if not stat.S_ISREG(info.st_mode):
+                return None, f"{audio_path!r} is not a regular file"
+            if info.st_size > _MAX_INPUT_BYTES:
+                return None, too_big
+            raw = handle.read(_MAX_INPUT_BYTES + 1)
+        if len(raw) > _MAX_INPUT_BYTES:
+            return None, too_big
+        if not raw:
+            return None, f"{label} is empty"
+        return raw, None
+    encoded = (
+        audio_base64.split(",", 1)[-1]
+        if audio_base64.startswith("data:")
+        else audio_base64
+    )
+    max_encoded_bytes = 4 * ((_MAX_INPUT_BYTES + 2) // 3)
+    if len(encoded) > max_encoded_bytes:
+        return None, too_big
+    raw = _decode_ref_audio(audio_base64)
+    if raw is None:
+        return None, f"{label} is not valid base64"
+    if not raw:
+        return None, f"{label} is empty"
+    if len(raw) > _MAX_INPUT_BYTES:
+        return None, too_big
+    return raw, None
+
+
+def _write_output(audio_id: str, raw: bytes) -> str:
+    """Land a render under the base path as ``<audio_id>.wav``; returns the path."""
+    if not _SAFE_AUDIO_ID.fullmatch(audio_id):
+        raise ValueError("backend returned an invalid X-Audio-Id header")
+    base = _base_path()
+    os.makedirs(base, exist_ok=True)
+    filename = f"{audio_id}.wav"
+    fd, path = _open_under_base(filename, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+    with os.fdopen(fd, "wb") as handle:
+        handle.write(raw)
+    return path
+
+
+def _post_timeout_s() -> float:
+    """Seconds the tools wait on a backend POST (OMNIVOICE_MCP_TIMEOUT_S,
+    default 120). A CPU host renders a paragraph in minutes and serializes
+    generations, so an agent behind another render used to hit the fixed
+    budget with an empty-message timeout; the knob follows the backend's own
+    OMNIVOICE_GENERATE_TIMEOUT_S when a deployment raises that."""
+    raw = os.environ.get("OMNIVOICE_MCP_TIMEOUT_S", "").strip()
+    try:
+        value = float(raw) if raw else 120.0
+    except ValueError:
+        logger.warning("OMNIVOICE_MCP_TIMEOUT_S=%r is not a number; using 120", raw)
+        return 120.0
+    return value if value > 0 else 120.0
+
+
+def _maybe_number(value):
+    """A response-header number as a number, or the raw text (e.g. '?')."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return value
+
+
+def _speech_result(audio_id: str, gen_time, duration, raw: bytes, api_base: str) -> dict:
+    """The generate_speech reply shaped by the output mode.
+
+    The backend already keeps every render on disk and serves it at
+    ``/audio/<audio_id>.wav``, so files mode costs nothing but a URL - plus one
+    write when a base path invites the WAV into the agent's own directory."""
+    if not _SAFE_AUDIO_ID.fullmatch(audio_id):
+        raise ValueError("backend returned an invalid X-Audio-Id header")
+    mode = _output_mode()
+    out = {
+        "audio_id": audio_id,
+        "generation_time_s": gen_time,
+        "audio_duration_s": duration,
+        "format": "wav",
+        "output_mode": mode,
+    }
+    if mode in ("files", "both"):
+        out["audio_url"] = f"{api_base.rstrip('/')}/audio/{audio_id}.wav"
+        if _base_path() is not None:
+            out["output_path"] = _write_output(audio_id, raw)
+        else:
+            out["note"] = "set OMNIVOICE_MCP_BASE_PATH to also receive the WAV as a file"
+    if mode in ("resources", "both"):
+        out["wav_base64"] = base64.b64encode(raw).decode("ascii")
+    return out
 
 
 # ── Lazy imports — keeps startup fast when not using MCP ────────────────
@@ -147,7 +399,7 @@ def create_mcp_server():
 
     async def _api_post_form(path: str, data: dict, files: dict | None = None):
         import httpx
-        async with httpx.AsyncClient(base_url=_api_base(), timeout=120) as c:
+        async with httpx.AsyncClient(base_url=_api_base(), timeout=_post_timeout_s()) as c:
             r = await c.post(path, data=data, files=files or {})
             r.raise_for_status()
             return r
@@ -190,8 +442,12 @@ def create_mcp_server():
             steps: Diffusion steps (8=fast/draft, 16=balanced, 32=quality).
 
         Returns:
-            JSON with audio_id, generation_time, audio_duration, and
-            base64-encoded WAV data.
+            JSON with audio_id, generation_time_s, audio_duration_s and the
+            audio itself shaped by OMNIVOICE_MCP_OUTPUT_MODE: base64 WAV data
+            ('resources', the default), a URL to the render plus a WAV under
+            OMNIVOICE_MCP_BASE_PATH when one is set ('files'), or all of the
+            above ('both'). Prefer 'files' for LLM agents: nothing large
+            enters the context.
         """
         # Per-agent voice binding (Wave 2.2): explicit arg wins; otherwise
         # resolve this client's bound profile, then the global default.
@@ -218,18 +474,10 @@ def create_mcp_server():
         r = await _api_post_form("/generate", data=form)
 
         audio_id = r.headers.get("X-Audio-Id", "unknown")
-        gen_time = r.headers.get("X-Gen-Time", "?")
-        duration = r.headers.get("X-Audio-Duration", "?")
+        gen_time = _maybe_number(r.headers.get("X-Gen-Time", "?"))
+        duration = _maybe_number(r.headers.get("X-Audio-Duration", "?"))
 
-        wav_b64 = base64.b64encode(r.content).decode("ascii")
-
-        return (
-            f'{{"audio_id":"{audio_id}",'
-            f'"generation_time_s":{gen_time},'
-            f'"audio_duration_s":{duration},'
-            f'"format":"wav",'
-            f'"wav_base64":"{wav_b64}"}}'
-        )
+        return json.dumps(_speech_result(audio_id, gen_time, duration, r.content, _api_base()))
 
     @mcp.tool()
     async def list_voices() -> str:
@@ -266,30 +514,39 @@ def create_mcp_server():
         )
 
     @mcp.tool()
-    async def transcribe(audio_base64: str, language: str | None = None) -> str:
+    async def transcribe(
+        audio_base64: str | None = None,
+        audio_path: str | None = None,
+        language: str | None = None,
+    ) -> str:
         """Transcribe spoken audio to text.
+
+        Pass exactly one of audio_base64 or audio_path.
 
         Args:
             audio_base64: Base64-encoded audio bytes (wav/mp3/webm/m4a).
+            audio_path: Path to an audio file under OMNIVOICE_MCP_BASE_PATH
+                (relative to it, or absolute inside it). The base path is the
+                security boundary: with none configured, paths are refused.
+                Prefer this lane for LLM agents - the audio never enters the
+                agent's context.
             language: Optional language hint; omit for auto-detect.
 
         Returns:
             JSON with the recognized text, language, and duration.
         """
-        try:
-            raw = base64.b64decode(audio_base64, validate=True)
-        except Exception:
-            return '{"error":"audio_base64 is not valid base64"}'
-        # 200 MB cap — same spirit as voicebox's transcribe gate. Keeps a
-        # buggy/hostile agent from posting an unbounded blob.
-        if len(raw) > 200 * 1024 * 1024:
-            return '{"error":"audio exceeds 200 MB limit"}'
+        # 200 MB cap on both lanes — same spirit as voicebox's transcribe
+        # gate. Keeps a buggy/hostile agent from posting an unbounded blob.
+        raw, err = _read_input_audio(audio_base64, audio_path)
+        if err:
+            return json.dumps({"error": err})
         data = {}
         if language:
             data["language"] = language
         r = await _api_post_form(
             "/transcribe", data=data,
-            files={"audio": ("audio.wav", raw, "application/octet-stream")},
+            files={"audio": (f"audio{_sniff_audio_ext(raw)}", raw,
+                             "application/octet-stream")},
         )
         return str(r.json())
 
@@ -319,15 +576,17 @@ def create_mcp_server():
     @mcp.tool()
     async def clone_voice(
         name: str,
-        ref_audio_base64: str,
+        ref_audio_base64: str | None = None,
         ref_text: str = "",
         instruct: str = "",
         language: str = "Auto",
+        ref_audio_path: str | None = None,
     ) -> str:
         """Clone a new voice profile from a reference audio sample.
 
         The new voice is immediately available for use with generate_speech
-        (pass the returned profile_id as the profile_id argument).
+        (pass the returned profile_id as the profile_id argument). Pass
+        exactly one of ref_audio_base64 or ref_audio_path.
 
         Args:
             name: A human-friendly name for the cloned voice.
@@ -338,19 +597,20 @@ def create_mcp_server():
                 quality for some engines).
             instruct: Optional style instruction (e.g. 'whisper', 'excited').
             language: Language of the reference audio (ISO code or 'Auto').
+            ref_audio_path: Path to the reference audio under
+                OMNIVOICE_MCP_BASE_PATH (relative to it, or absolute inside
+                it); refused when no base path is configured. Prefer this
+                lane for LLM agents - the clip never enters the context.
 
         Returns:
             JSON with the new profile's id, name, and kind.
         """
-        # Reject oversized inputs before decoding (base64 is always larger
-        # than raw, so this is a safe lower bound on the decoded size).
-        if len(ref_audio_base64) > 200 * 1024 * 1024:
-            return '{"error":"reference audio exceeds 200 MB limit"}'
-        raw = _decode_ref_audio(ref_audio_base64)
-        if raw is None:
-            return '{"error":"ref_audio_base64 is not valid base64"}'
-        if not raw:
-            return '{"error":"ref_audio_base64 is empty"}'
+        raw, err = _read_input_audio(
+            ref_audio_base64, ref_audio_path,
+            label="ref_audio_base64", too_big="reference audio exceeds 200 MB limit",
+        )
+        if err:
+            return json.dumps({"error": err})
         import httpx
         try:
             r = await _api_post_form(
