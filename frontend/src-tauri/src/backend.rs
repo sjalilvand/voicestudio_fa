@@ -66,6 +66,45 @@ fn parse_app_version(body: &str) -> Option<String> {
     Some(rest[..rest.find('"')?].to_string())
 }
 
+/// The `data_dir` the running backend advertises via `/system/info` — the
+/// directory `backend/core/config.py::get_app_data_dir()` resolved for
+/// itself (honors `OMNIVOICE_DATA_DIR`, else the per-OS default).
+///
+/// This exists so Tauri's one-shot host-path capability files
+/// (`commands::authorize_host_path`) always land where
+/// `backend/core/path_authorization.py` actually looks for them. Tauri's own
+/// `setup::resolved_data_dir` normally agrees with the backend, but they can
+/// diverge: dev mode spawns the backend out-of-process
+/// (`scripts/dev-backend.mjs`, which strips `OMNIVOICE_*` from the child
+/// env) so it may fall back to a different platform default than Tauri
+/// computes, and in a packaged build a custom data folder or portable mode
+/// applied after the backend already started can do the same (#1781).
+/// Asking the backend directly makes the two processes structurally unable
+/// to disagree.
+///
+/// `None` when nothing VoiceStudio answers at `port` (not started yet,
+/// unreachable) or an old backend predating the `data_dir` field — callers
+/// fall back to Tauri's own resolution, the historical behavior.
+///
+/// Only an ABSOLUTE path is accepted. `get_app_data_dir()` returns
+/// `OMNIVOICE_DATA_DIR` verbatim, so a relative value (`OMNIVOICE_DATA_DIR=
+/// omnivoice_data`, plausible for source/Docker setups) would make the
+/// backend resolve the store against ITS working directory while Tauri
+/// resolved the same string against its own — silently recreating the very
+/// split this function exists to close. A relative advertisement is
+/// therefore treated as unusable and the caller falls back, which is also
+/// what keeps a foreign responder on the port from steering capability
+/// writes to a path of its choosing.
+pub fn backend_data_dir(port: u16) -> Option<String> {
+    let url = format!("http://127.0.0.1:{}/system/info", port);
+    let body = ureq_get_with_timeout(&url, Duration::from_millis(500)).ok()?;
+    if !is_omnivoice_body(&body) {
+        return None;
+    }
+    parse_json_string_field(&body, "data_dir")
+        .filter(|dir| !dir.is_empty() && Path::new(dir).is_absolute())
+}
+
 /// Whether a running backend's version matches THIS app build, comparing
 /// **base** versions (any `-N` pre-release suffix stripped from both sides) so
 /// a preview build `0.3.10-4` still attaches to its `0.3.10` backend.
@@ -138,12 +177,81 @@ pub fn startup_progress(port: u16) -> Option<(String, String, String)> {
 /// First `"key": "value"` string field in a JSON body — same dependency-free
 /// sniffing style as `parse_app_version`. `None` for absent or non-string
 /// (e.g. `null`) values.
+///
+/// Decodes JSON string escapes properly (`decode_json_string`) rather than
+/// substring-slicing to the first `"` byte: a naive slice returns the
+/// literal wire form, which breaks on any value containing a backslash or an
+/// escaped quote. This matters most for `data_dir` — a Windows path like
+/// `C:\Users\x\AppData\Roaming\OmniVoice` serialises as
+/// `"C:\\Users\\x\\..."`, and slicing to the first raw `"` would either hand
+/// back the doubled-backslash form verbatim or, for a path containing a
+/// literal quote, truncate the value outright.
 fn parse_json_string_field(body: &str, key: &str) -> Option<String> {
     let needle = format!("\"{key}\"");
     let rest = &body[body.find(&needle)? + needle.len()..];
     let rest = rest[rest.find(':')? + 1..].trim_start();
     let rest = rest.strip_prefix('"')?;
-    Some(rest[..rest.find('"')?].to_string())
+    decode_json_string(rest)
+}
+
+/// Decode a JSON string body starting right after its opening `"`, stopping
+/// at the first *unescaped* closing `"`. Handles `\\`, `\"`, `\/`, `\n`,
+/// `\r`, `\t`, `\b`, `\f`, and `\uXXXX` (including UTF-16 surrogate pairs for
+/// codepoints outside the BMP). Returns `None` on an unterminated string or a
+/// malformed escape — matching the previous function's `?`-propagating
+/// behavior on absent/malformed input.
+fn decode_json_string(rest: &str) -> Option<String> {
+    fn read_hex4(chars: &mut std::str::Chars) -> Option<u32> {
+        let mut hex = String::with_capacity(4);
+        for _ in 0..4 {
+            hex.push(chars.next()?);
+        }
+        u32::from_str_radix(&hex, 16).ok()
+    }
+
+    let mut chars = rest.chars();
+    let mut out = String::new();
+    loop {
+        let c = chars.next()?;
+        if c == '"' {
+            return Some(out);
+        }
+        if c != '\\' {
+            out.push(c);
+            continue;
+        }
+        match chars.next()? {
+            '"' => out.push('"'),
+            '\\' => out.push('\\'),
+            '/' => out.push('/'),
+            'n' => out.push('\n'),
+            'r' => out.push('\r'),
+            't' => out.push('\t'),
+            'b' => out.push('\u{0008}'),
+            'f' => out.push('\u{000C}'),
+            'u' => {
+                let code = read_hex4(&mut chars)?;
+                if (0xD800..=0xDBFF).contains(&code) {
+                    // High surrogate: must be followed by a \uXXXX low
+                    // surrogate to form one codepoint outside the BMP.
+                    if chars.next()? != '\\' || chars.next()? != 'u' {
+                        return None;
+                    }
+                    let low = read_hex4(&mut chars)?;
+                    if !(0xDC00..=0xDFFF).contains(&low) {
+                        return None;
+                    }
+                    let cp = 0x10000 + (((code - 0xD800) << 10) | (low - 0xDC00));
+                    out.push(char::from_u32(cp)?);
+                } else if (0xDC00..=0xDFFF).contains(&code) {
+                    return None; // lone low surrogate — malformed
+                } else {
+                    out.push(char::from_u32(code)?);
+                }
+            }
+            _ => return None, // invalid escape
+        }
+    }
 }
 
 /// Status code from a raw HTTP response ("HTTP/1.1 200 OK" → 200).
@@ -839,6 +947,148 @@ mod tests {
             }
         });
         port
+    }
+
+    /// Loopback responder that answers `/system/info` with an arbitrary
+    /// body, for `backend_data_dir` tests.
+    fn spawn_system_info_stub(body: &'static str) -> u16 {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { break };
+                let mut buf = [0u8; 512];
+                let _ = stream.read(&mut buf);
+                let resp = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = stream.write_all(resp.as_bytes());
+            }
+        });
+        port
+    }
+
+    #[test]
+    fn backend_data_dir_reads_system_info_and_degrades_safely() {
+        // Reachable backend advertising data_dir → Some(path). This is what
+        // lets Tauri and the backend agree on where one-shot capability
+        // files live (#1781) even when they'd otherwise resolve different
+        // platform defaults (e.g. a dev backend spawned without
+        // OMNIVOICE_DATA_DIR).
+        //
+        // The fixture must be a platform-appropriate ABSOLUTE path:
+        // `Path::new("/custom/data").is_absolute()` is FALSE on Windows
+        // (Windows requires a drive prefix like `C:` *and* a root — a
+        // rooted-but-driveless path is drive-relative and genuinely
+        // ambiguous), so a Unix-style fixture would spuriously fail the
+        // `is_absolute()` filter in `backend_data_dir` on that platform.
+        // The wire body doubles each backslash (JSON escaping); the new
+        // `decode_json_string` decodes that back to a single backslash, so
+        // the assertion checks the DECODED form, not the wire form.
+        #[cfg(windows)]
+        let (body, expected) = (
+            r#"{"data_dir": "C:\\custom\\data"}"#,
+            r"C:\custom\data",
+        );
+        #[cfg(not(windows))]
+        let (body, expected) = (r#"{"data_dir": "/custom/data"}"#, "/custom/data");
+        let port = spawn_system_info_stub(body);
+        assert_eq!(backend_data_dir(port), Some(expected.to_string()));
+
+        // A rooted-but-driveless path is drive-relative on Windows (which
+        // drive is "the" drive is ambiguous) and must be REJECTED there —
+        // `is_absolute()` correctly returns false for it, and the fixture
+        // fixed above must not silently paper over that. `/custom/data` and
+        // `\data` are exactly the un-prefixed forms a misbehaving responder
+        // (or a backend running under an unexpected shell) could send.
+        #[cfg(windows)]
+        {
+            assert_eq!(
+                backend_data_dir(spawn_system_info_stub(r#"{"data_dir": "/custom/data"}"#)),
+                None
+            );
+            assert_eq!(
+                backend_data_dir(spawn_system_info_stub(r#"{"data_dir": "\\data"}"#)),
+                None
+            );
+        }
+
+        // Old backend body (identifies via model_checkpoint) predating the
+        // data_dir field → None, so callers fall back to Tauri's own
+        // resolution instead of trusting a missing field.
+        let old = spawn_system_info_stub(r#"{"model_checkpoint": "x"}"#);
+        assert_eq!(backend_data_dir(old), None);
+
+        // Explicit empty data_dir must not resolve to a bare/relative root —
+        // treated the same as absent.
+        let empty = spawn_system_info_stub(r#"{"data_dir": ""}"#);
+        assert_eq!(backend_data_dir(empty), None);
+
+        // A foreign (non-VoiceStudio) responder must not be trusted either.
+        let foreign = spawn_system_info_stub(r#"{"hello": "world"}"#);
+        assert_eq!(backend_data_dir(foreign), None);
+
+        // A RELATIVE data_dir is unusable and must not be adopted: the
+        // backend resolves it against its own working directory, so joining
+        // the same string onto Tauri's cwd would recreate exactly the split
+        // #1781 is about. `get_app_data_dir()` hands back
+        // OMNIVOICE_DATA_DIR verbatim, so this is reachable without any
+        // malice — a source or Docker setup using a relative override.
+        let relative = spawn_system_info_stub(r#"{"data_dir": "omnivoice_data"}"#);
+        assert_eq!(backend_data_dir(relative), None);
+        let dotted = spawn_system_info_stub(r#"{"data_dir": "./data"}"#);
+        assert_eq!(backend_data_dir(dotted), None);
+
+        // Nothing listening → None, same fallback path.
+        assert_eq!(backend_data_dir(1), None); // port 1 — never bindable by us
+    }
+
+    #[test]
+    fn parse_json_string_field_decodes_escape_sequences() {
+        // Windows data dirs are full of backslashes: the backend serializes
+        // `C:\Users\x\AppData\Roaming\OmniVoice` as
+        // `"C:\\Users\\x\\AppData\\Roaming\\OmniVoice"` on the wire. A naive
+        // substring extract to the first raw `"` would hand back the
+        // doubled-backslash literal instead of the real path.
+        assert_eq!(
+            parse_json_string_field(
+                r#"{"data_dir": "C:\\Users\\x\\AppData\\Roaming\\OmniVoice"}"#,
+                "data_dir"
+            ),
+            Some(r"C:\Users\x\AppData\Roaming\OmniVoice".to_string())
+        );
+
+        // A path containing an escaped quote must not truncate the value at
+        // that quote — only an UNESCAPED quote terminates the string.
+        assert_eq!(
+            parse_json_string_field(r#"{"data_dir": "C:\\a \"weird\" dir"}"#, "data_dir"),
+            Some("C:\\a \"weird\" dir".to_string())
+        );
+
+        // \uXXXX escapes, including a surrogate pair for a codepoint outside
+        // the BMP (backend labels are ensure_ascii-encoded JSON, so any
+        // non-ASCII text — e.g. an ellipsis "…" or an emoji — arrives this
+        // way, not as raw UTF-8 bytes).
+        assert_eq!(
+            parse_json_string_field(r#"{"label": "Loading\u2026"}"#, "label"),
+            Some("Loading\u{2026}".to_string())
+        );
+        assert_eq!(
+            parse_json_string_field(r#"{"label": "\ud83d\ude00"}"#, "label"),
+            Some("\u{1F600}".to_string())
+        );
+
+        // The other basic escapes.
+        assert_eq!(
+            parse_json_string_field(r#"{"x": "a\nb\tc\rd\/e"}"#, "x"),
+            Some("a\nb\tc\rd/e".to_string())
+        );
+
+        // Malformed/unterminated input still degrades to None.
+        assert_eq!(parse_json_string_field(r#"{"x": "unterminated"#, "x"), None);
+        assert_eq!(parse_json_string_field(r#"{"x": "bad \q escape"}"#, "x"), None);
     }
 
     #[test]
