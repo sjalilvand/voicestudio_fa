@@ -455,9 +455,88 @@ fn prepare_backend_launch<R: tauri::Runtime>(
     stage_handle: &Arc<Mutex<BootstrapStage>>,
 ) -> LaunchPreparation {
     let mut replace = tracked_backend_exists(app);
-    match crate::backend::running_backend_version(backend_port()) {
-        Some(v) if crate::backend::same_app_version(&v) => {
-            if crate::backend::backend_deep_healthy(backend_port()) {
+    // #1770: version and code fingerprint are read from ONE `/system/info`
+    // fetch (`running_backend_identity`) — never two independent probes for
+    // THOSE two fields. Splitting them would let a transport hiccup on the
+    // second one masquerade as "responded, but the field was absent", which
+    // `code_fingerprint_is_current` treats as stale — silently killing a
+    // perfectly healthy backend on a single flaky probe.
+    //
+    // The health probe (`/profiles`) and the identity probe (`/system/info`)
+    // are still two separate requests — they hit different routes, so they
+    // can't be folded into one fetch — which leaves a structurally similar
+    // window open: two unsynchronized requests can never be atomic, so
+    // EITHER ordering can pair the response of one process on the port with
+    // a DIFFERENT process's response to the other probe if the port changes
+    // hands between them. (This window predates #1770: the old code split
+    // `running_backend_version` and `backend_deep_healthy` the same way, but
+    // this PR makes the identity check load-bearing, so it's the right
+    // place to reason about it explicitly rather than leave it implicit.)
+    //
+    // Reordering cannot remove that window — it only decides which side of
+    // the pair can be stale, and the two failure modes are not equally bad:
+    //   - identity-then-health (the naive order): a swap after the identity
+    //     probe means we could attach on a STALE IDENTITY paired with a
+    //     fresh health check — silently adopting code we never actually
+    //     validated. That's exactly the #1770 bug, and nothing downstream
+    //     ever re-checks identity on an attached backend, so it would be
+    //     permanent for the life of the session.
+    //   - health-then-identity (this order): a swap after the health probe
+    //     means we could attach on a STALE HEALTH CHECK paired with a fresh
+    //     identity — the code is correctly validated, only the "it was
+    //     alive a moment ago" claim might be outdated. That failure is
+    //     SELF-CORRECTING: an attached backend is polled continuously by
+    //     `attached_backend_healthy()` in the supervisor loop (see its grace
+    //     window — `attached_backend_health_grace_recovers_without_false_crash_or_port_failure`
+    //     covers exactly this), so a backend that was actually unhealthy at
+    //     attach time is caught and replaced within one poll interval.
+    //     Identity has no equivalent recheck — that absence is the whole
+    //     reason this PR exists — so its correctness must be established at
+    //     attach time, as late as possible.
+    //
+    // Health is therefore probed FIRST and identity LAST, immediately
+    // before the attach decision, deliberately choosing "stale health" over
+    // "stale identity" as the side left exposed. A process swap that
+    // happened before the identity probe is caught by that fresh read (the
+    // version-mismatch and fingerprint-mismatch arms below fire exactly as
+    // if the swap had always been there). The remaining exposure —
+    // attaching to a backend whose health was confirmed a moment earlier
+    // rather than at this exact instant — is irreducible without one atomic
+    // endpoint returning identity + readiness together, and is accepted
+    // because the supervisor's continuous health polling already covers it.
+    let deep_healthy = crate::backend::backend_deep_healthy(backend_port());
+    match crate::backend::running_backend_identity(backend_port()) {
+        Some(identity) if crate::backend::same_app_version(&identity.version) => {
+            let v = identity.version;
+            // Version match alone doesn't prove code match — `main` holds
+            // one version string for an entire release cycle, so a
+            // same-version backend can still be running weeks-old code.
+            let our_fp = own_backend_code_fingerprint(app);
+            let code_current =
+                crate::backend::code_fingerprint_is_current(identity.code_fingerprint.as_deref(), our_fp.as_deref());
+            if !deep_healthy {
+                log::warn!(
+                    "Port {} serves VoiceStudio v{} but failed the deep health probe — replacing it",
+                    backend_port(),
+                    v
+                );
+                replace = true;
+            } else if !code_current {
+                // Maintainer-recognizable marker: grep logs for
+                // "STALE-CODE-ATTACH" or "#1770" to spot this class
+                // directly, rather than re-deriving it from an export 422,
+                // two reports, and a code audit.
+                log::warn!(
+                    "STALE-CODE-ATTACH (#1770): port {} serves VoiceStudio v{} — version matches \
+this build, but its code fingerprint does not (running={:?}, ours={:?}). A same-version backend \
+can still run stale code within one release cycle; replacing it instead of attaching.",
+                    backend_port(),
+                    v,
+                    identity.code_fingerprint,
+                    our_fp,
+                );
+                replace = true;
+            } else {
                 if replace {
                     let owner = SUPERVISOR_OWNER.fetch_add(1, Ordering::SeqCst) + 1;
                     log::info!(
@@ -478,20 +557,13 @@ fn prepare_backend_launch<R: tauri::Runtime>(
                 );
                 set_stage(stage_handle, BootstrapStage::Ready);
                 return LaunchPreparation::SuperviseAttached { owner };
-            } else {
-                log::warn!(
-                    "Port {} serves VoiceStudio v{} but failed the deep health probe — replacing it",
-                    backend_port(),
-                    v
-                );
-                replace = true;
             }
         }
-        Some(v) => {
+        Some(identity) => {
             log::warn!(
                 "Port {} serves a stale VoiceStudio backend (v{} != app v{}) — replacing it",
                 backend_port(),
-                if v.is_empty() { "<unknown>" } else { v.as_str() },
+                if identity.version.is_empty() { "<unknown>" } else { identity.version.as_str() },
                 env!("CARGO_PKG_VERSION"),
             );
             replace = true;
@@ -1539,6 +1611,116 @@ pub fn find_dev_project_root() -> Option<PathBuf> {
         }
     }
     None
+}
+
+// ── #1770: attach-handshake code fingerprint ────────────────────────────────
+//
+// `same_app_version` (backend.rs) only proves the running backend's *version
+// string* matches this build's. That's not the same as its *code* matching:
+// per the Versioning convention, `main` holds ONE version string for an
+// entire release cycle, so every commit merged during that cycle — including
+// the one that fixed #1770 itself — reports the same `app_version`. A
+// backend that answers with today's version string can still be running
+// weeks-old code. The fingerprint below closes that gap: it's a content
+// digest of the backend's actual `.py` sources, passed to a spawned child as
+// `OMNIVOICE_BUILD_FINGERPRINT` and echoed back via `GET /system/info`
+// (`code_fingerprint`), so the attach handshake can compare "the code this
+// build ships" against "the code the already-running process loaded" instead
+// of trusting a coarse version string alone.
+
+/// Recursively collect every `.py` file under `dir`, as (label, path) pairs
+/// where `label` is `"<root_label>/<path relative to dir>"` with `/`
+/// separators (stable across platforms). Skips `__pycache__` and dotdirs
+/// (`.venv`, `.pytest_cache`, …) so dev mode — which executes `backend/`
+/// directly out of the live source tree and litters it with bytecode caches
+/// and test artifacts — doesn't shift the fingerprint without any actual
+/// code change.
+fn collect_py_files(dir: &Path, base: &Path, root_label: &str, out: &mut Vec<(String, PathBuf)>) -> io::Result<()> {
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        let file_type = entry.file_type()?;
+        if file_type.is_dir() {
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            if name == "__pycache__" || name.starts_with('.') {
+                continue;
+            }
+            collect_py_files(&path, base, root_label, out)?;
+        } else if file_type.is_file() && path.extension().and_then(|e| e.to_str()) == Some("py") {
+            let rel = path.strip_prefix(base).unwrap_or(&path);
+            out.push((format!("{}/{}", root_label, rel.to_string_lossy().replace('\\', "/")), path));
+        }
+    }
+    Ok(())
+}
+
+/// Content fingerprint of one or more Python source directories (each
+/// hashed under its own directory-name label so `backend/x.py` and
+/// `omnivoice/x.py` can't collide). `None` if no `.py` files were found or
+/// any of them couldn't be read — an unreadable/empty source location means
+/// we can't vouch for a fingerprint either way.
+///
+/// Deterministic within a single process (files sorted by label before
+/// hashing) but the digest is NOT a portable content hash — `DefaultHasher`
+/// makes no cross-version stability guarantee. That's fine here: every
+/// fingerprint that's ever compared was produced by a VoiceStudio process
+/// hashing on its own toolchain, so "same code -> same digest" only ever
+/// needs to hold within one build, never across arbitrary Rust versions.
+/// Pure (no `AppHandle`) and unit-tested directly with tempdirs.
+pub fn hash_python_sources(dirs: &[PathBuf]) -> Option<String> {
+    let mut files: Vec<(String, PathBuf)> = Vec::new();
+    for dir in dirs {
+        let root_label = dir.file_name()?.to_string_lossy().into_owned();
+        collect_py_files(dir, dir, &root_label, &mut files).ok()?;
+    }
+    if files.is_empty() {
+        return None;
+    }
+    files.sort_by(|a, b| a.0.cmp(&b.0));
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    for (label, path) in &files {
+        std::hash::Hash::hash(label, &mut hasher);
+        let bytes = fs::read(path).ok()?;
+        std::hash::Hash::hash(&bytes, &mut hasher);
+    }
+    Some(format!("{:016x}", std::hash::Hasher::finish(&hasher)))
+}
+
+static OWN_CODE_FINGERPRINT: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+
+/// Our own build's code fingerprint — computed once per process (the source
+/// location doesn't change mid-session) from wherever `ensure_venv_ready`
+/// would sync `backend/`/`omnivoice/` from: the live dev source tree under
+/// `bun run tauri dev`, or the packaged bundle's resource dir otherwise.
+/// `spawn_backend` passes this to the child as `OMNIVOICE_BUILD_FINGERPRINT`;
+/// `prepare_backend_launch` compares it against what an already-running
+/// backend reports. `None` when neither source location resolves — callers
+/// must then skip fingerprint enforcement (see
+/// `backend::code_fingerprint_is_current`), not treat every attach as stale.
+pub fn own_backend_code_fingerprint<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<String> {
+    OWN_CODE_FINGERPRINT
+        .get_or_init(|| {
+            if let Some(dev_root) = find_dev_project_root() {
+                let dirs: Vec<PathBuf> = [dev_root.join("backend"), dev_root.join("omnivoice")]
+                    .into_iter()
+                    .filter(|d| d.is_dir())
+                    .collect();
+                if !dirs.is_empty() {
+                    return hash_python_sources(&dirs);
+                }
+            }
+            let res = app.path().resource_dir().ok()?;
+            let flat = res.clone();
+            let up2 = res.join("_up_").join("_up_");
+            let res_root = if flat.join("pyproject.toml").is_file() { flat } else { up2 };
+            let dirs: Vec<PathBuf> = [res_root.join("backend"), res_root.join("omnivoice")]
+                .into_iter()
+                .filter(|d| d.is_dir())
+                .collect();
+            hash_python_sources(&dirs)
+        })
+        .clone()
 }
 
 // ── plan-03 (#130): restricted-network bootstrap resilience ────────────────
@@ -3935,5 +4117,66 @@ mod failure_preservation_tests {
         let unique = format!("wiring probe {:?}", std::thread::current().id());
         set_stage(&s, BootstrapStage::Failed { message: unique.clone() });
         assert_eq!(last_failure_message().as_deref(), Some(unique.as_str()));
+    }
+}
+
+/// #1770: attach-handshake code fingerprint — plain functions, no
+/// `AppHandle` (a `tauri::test::mock_builder` test aborts the whole test
+/// binary on the Windows CI runner, which broke a PR earlier today; the fix
+/// there was exactly this — split the pure decision out and test that).
+#[cfg(test)]
+mod code_fingerprint_tests {
+    use super::*;
+
+    #[test]
+    fn hash_python_sources_changes_with_content_and_ignores_noise() {
+        let backend = tempfile::tempdir().unwrap();
+        fs::write(backend.path().join("main.py"), "print('v1')").unwrap();
+        fs::create_dir_all(backend.path().join("api")).unwrap();
+        fs::write(backend.path().join("api").join("schemas.py"), "class X: pass").unwrap();
+
+        let baseline = hash_python_sources(&[backend.path().to_path_buf()]).unwrap();
+
+        // Same content hashed again -> identical fingerprint (deterministic).
+        assert_eq!(hash_python_sources(&[backend.path().to_path_buf()]).unwrap(), baseline);
+
+        // __pycache__ / dotdirs (bytecode caches, .pytest_cache — exactly what
+        // dev mode litters a live-executed source tree with) never move it.
+        fs::create_dir_all(backend.path().join("__pycache__")).unwrap();
+        fs::write(backend.path().join("__pycache__").join("main.cpython-311.pyc"), "junk").unwrap();
+        fs::create_dir_all(backend.path().join(".pytest_cache")).unwrap();
+        fs::write(backend.path().join(".pytest_cache").join("v"), "junk").unwrap();
+        assert_eq!(hash_python_sources(&[backend.path().to_path_buf()]).unwrap(), baseline);
+
+        // Actual code changing -> the fingerprint changes (the whole point:
+        // this is what `same_app_version` alone cannot see, #1770).
+        fs::write(backend.path().join("main.py"), "print('v2')").unwrap();
+        assert_ne!(hash_python_sources(&[backend.path().to_path_buf()]).unwrap(), baseline);
+    }
+
+    #[test]
+    fn hash_python_sources_is_none_for_no_py_files() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("README.md"), "no python here").unwrap();
+        assert_eq!(hash_python_sources(&[dir.path().to_path_buf()]), None);
+    }
+
+    #[test]
+    fn hash_python_sources_separates_directories_by_label() {
+        // backend/x.py and omnivoice/x.py must not collide onto the same
+        // fingerprint entry.
+        let backend = tempfile::tempdir().unwrap();
+        let backend_dir = backend.path().join("backend");
+        fs::create_dir_all(&backend_dir).unwrap();
+        fs::write(backend_dir.join("x.py"), "A").unwrap();
+
+        let omnivoice = tempfile::tempdir().unwrap();
+        let omnivoice_dir = omnivoice.path().join("omnivoice");
+        fs::create_dir_all(&omnivoice_dir).unwrap();
+        fs::write(omnivoice_dir.join("x.py"), "B").unwrap();
+
+        let both = hash_python_sources(&[backend_dir.clone(), omnivoice_dir.clone()]).unwrap();
+        let backend_only = hash_python_sources(&[backend_dir]).unwrap();
+        assert_ne!(both, backend_only);
     }
 }

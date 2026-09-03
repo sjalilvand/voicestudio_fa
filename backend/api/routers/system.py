@@ -218,6 +218,7 @@ def system_info():
                 "OMNIVOICE_GENERATE_TIMEOUT_S"),
             "cpu_generate_timeout_shadowed": _prefs_mod.is_env_shadowed(
                 "OMNIVOICE_CPU_GENERATE_TIMEOUT_S"),
+            "code_fingerprint": os.environ.get("OMNIVOICE_BUILD_FINGERPRINT", ""),
             "data_dir": DATA_DIR,
             "outputs_dir": OUTPUTS_DIR,
             "crash_log_path": CRASH_LOG_PATH,
@@ -257,6 +258,7 @@ def system_info():
             "cpu_generate_timeout_s": 600.0,
             "generate_timeout_shadowed": False,
             "cpu_generate_timeout_shadowed": False,
+            "code_fingerprint": os.environ.get("OMNIVOICE_BUILD_FINGERPRINT", ""),
             "data_dir": DATA_DIR,
             "outputs_dir": OUTPUTS_DIR,
             "crash_log_path": str(CRASH_LOG_PATH),
