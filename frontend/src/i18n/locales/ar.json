@@ -599,7 +599,7 @@
     "stop_playback": "إيقاف التشغيل",
     "describe_label": "صِف صوتك",
     "describe_placeholder": "مثال: a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "وصفك (بالإنجليزية) يضبط عناصر التحكم أدناه — ويمكنك تعديلها يدويًا لاحقًا.",
+    "describe_hint": "صِف الصوت، أو اختر نقطة بداية. أيٌّ منهما يملأ التفاصيل أدناه.",
     "describe_unmatched": "تعذّر التعيين: {{items}}",
     "describe_no_match": "لم يتم التعرف على سمات صوتية بعد — جرّب كلمات مثل deep أو elderly أو British.",
     "define_by_design": "بالتصميم",
@@ -620,7 +620,13 @@
     "seed_keep": "احتفظ بهذه البذرة",
     "seed_reroll": "بذرة جديدة",
     "seed_reroll_hint": "قم بلف بذرة عشوائية جديدة واحتفظ بها",
-    "define_convert": "تحويل"
+    "define_convert": "تحويل",
+    "details": "التفاصيل",
+    "edit": "تعديل",
+    "cat_AccentDialect": "لكنة أو لهجة",
+    "accent_dialect_hint": "أحدهما فقط، لا كلاهما",
+    "reset_to_description": "إعادة الضبط حسب الوصف",
+    "chips_more": "{{count}} أخرى…"
   },
   "about": {
     "app": "التطبيق",

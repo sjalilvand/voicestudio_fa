@@ -599,7 +599,7 @@
     "stop_playback": "Zatrzymaj odtwarzanie",
     "describe_label": "Opisz swój głos",
     "describe_placeholder": "np. a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "Twój opis (po angielsku) ustawia poniższe kontrolki — możesz je potem doprecyzować.",
+    "describe_hint": "Opisz głos albo wybierz punkt wyjścia. Każde z tych działań wypełni szczegóły poniżej.",
     "describe_unmatched": "Nie udało się dopasować: {{items}}",
     "describe_no_match": "Nie rozpoznano jeszcze cech głosu — spróbuj słów takich jak deep, elderly lub British.",
     "define_by_design": "Według projektu",
@@ -620,7 +620,13 @@
     "script": "Skrypt",
     "starting_points": "Punkty wyjścia",
     "voice_kicker": "Głos",
-    "define_convert": "Konwertuj"
+    "define_convert": "Konwertuj",
+    "details": "Szczegóły",
+    "edit": "Edytuj",
+    "cat_AccentDialect": "Akcent lub dialekt",
+    "accent_dialect_hint": "jedno albo drugie, nigdy oba",
+    "reset_to_description": "Przywróć na podstawie opisu",
+    "chips_more": "jeszcze {{count}}…"
   },
   "about": {
     "app": "Aplikacja",

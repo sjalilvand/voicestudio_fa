@@ -599,7 +599,7 @@
     "stop_playback": "Hentikan pemutaran",
     "describe_label": "Deskripsikan suara Anda",
     "describe_placeholder": "mis. a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "Deskripsi Anda (dalam bahasa Inggris) mengatur kontrol di bawah — Anda tetap bisa menyetelnya setelahnya.",
+    "describe_hint": "Deskripsikan suaranya, atau pilih titik awal. Keduanya akan mengisi detail di bawah.",
     "describe_unmatched": "Tidak dapat dipetakan: {{items}}",
     "describe_no_match": "Belum ada ciri suara yang dikenali — coba kata seperti deep, elderly, atau British.",
     "define_by_design": "Lewat desain",
@@ -620,7 +620,13 @@
     "seed_keep": "Simpan benih ini",
     "seed_reroll": "Benih baru",
     "seed_reroll_hint": "Gulung benih acak baru dan simpan",
-    "define_convert": "Konversi"
+    "define_convert": "Konversi",
+    "details": "Detail",
+    "edit": "Edit",
+    "cat_AccentDialect": "Aksen atau dialek",
+    "accent_dialect_hint": "salah satu saja, tidak keduanya",
+    "reset_to_description": "Setel ulang sesuai deskripsi",
+    "chips_more": "{{count}} lainnya…"
   },
   "about": {
     "app": "Aplikasi",

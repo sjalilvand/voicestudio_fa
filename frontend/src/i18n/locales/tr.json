@@ -599,7 +599,7 @@
     "stop_playback": "Oynatmayı durdur",
     "describe_label": "Sesinizi tarif edin",
     "describe_placeholder": "örn. a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "Açıklamanız (İngilizce) aşağıdaki denetimleri ayarlar — sonradan ince ayar yapabilirsiniz.",
+    "describe_hint": "Sesi tanımlayın veya bir başlangıç noktası seçin. Her ikisi de aşağıdaki ayrıntıları doldurur.",
     "describe_unmatched": "Eşlenemedi: {{items}}",
     "describe_no_match": "Henüz ses özelliği tanınmadı — deep, elderly veya British gibi kelimeler deneyin.",
     "define_by_design": "Tasarımla",
@@ -620,7 +620,13 @@
     "seed_keep": "Bu tohumu sakla",
     "seed_reroll": "Yeni tohum",
     "seed_reroll_hint": "Yeni bir rastgele tohum yuvarlayın ve saklayın",
-    "define_convert": "Dönüştür"
+    "define_convert": "Dönüştür",
+    "details": "Ayrıntılar",
+    "edit": "Düzenle",
+    "cat_AccentDialect": "Aksan veya lehçe",
+    "accent_dialect_hint": "yalnızca biri, asla ikisi birden",
+    "reset_to_description": "Açıklamaya göre sıfırla",
+    "chips_more": "{{count}} tane daha…"
   },
   "about": {
     "app": "Uygulama",

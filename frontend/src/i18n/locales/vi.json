@@ -599,7 +599,7 @@
     "stop_playback": "Dừng phát",
     "describe_label": "Mô tả giọng nói của bạn",
     "describe_placeholder": "vd. a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "Mô tả của bạn (bằng tiếng Anh) sẽ thiết lập các điều khiển bên dưới — bạn vẫn có thể tinh chỉnh sau.",
+    "describe_hint": "Mô tả giọng nói, hoặc chọn một điểm khởi đầu. Cả hai cách đều tự điền chi tiết bên dưới.",
     "describe_unmatched": "Không thể ánh xạ: {{items}}",
     "describe_no_match": "Chưa nhận ra đặc điểm giọng nói nào — hãy thử các từ như deep, elderly hoặc British.",
     "define_by_design": "Theo thiết kế",
@@ -620,7 +620,13 @@
     "seed_keep": "Giữ hạt giống này",
     "seed_reroll": "Hạt giống mới",
     "seed_reroll_hint": "Cuộn một hạt giống ngẫu nhiên mới và giữ nó",
-    "define_convert": "Chuyển đổi"
+    "define_convert": "Chuyển đổi",
+    "details": "Chi tiết",
+    "edit": "Chỉnh sửa",
+    "cat_AccentDialect": "Giọng hoặc phương ngữ",
+    "accent_dialect_hint": "chỉ một trong hai, không cả hai",
+    "reset_to_description": "Đặt lại theo mô tả",
+    "chips_more": "{{count}} mục khác…"
   },
   "about": {
     "app": "ứng dụng",

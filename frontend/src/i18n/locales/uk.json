@@ -599,7 +599,7 @@
     "stop_playback": "Зупинити відтворення",
     "describe_label": "Опишіть свій голос",
     "describe_placeholder": "напр. a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "Ваш опис (англійською) налаштовує елементи нижче — їх можна підлаштувати вручну.",
+    "describe_hint": "Опишіть голос або виберіть відправну точку — в обох випадках деталі нижче заповняться автоматично.",
     "describe_unmatched": "Не вдалося зіставити: {{items}}",
     "describe_no_match": "Голосові риси ще не розпізнано — спробуйте слова deep, elderly або British.",
     "define_by_design": "За дизайном",
@@ -620,7 +620,13 @@
     "script": "Сценарій",
     "starting_points": "Відправні точки",
     "voice_kicker": "Голос",
-    "define_convert": "Перетворити"
+    "define_convert": "Перетворити",
+    "details": "Деталі",
+    "edit": "Редагувати",
+    "cat_AccentDialect": "Акцент або діалект",
+    "accent_dialect_hint": "одне з двох, ніколи обидва",
+    "reset_to_description": "Скинути за описом",
+    "chips_more": "ще {{count}}…"
   },
   "about": {
     "app": "додаток",

@@ -599,7 +599,7 @@
     "stop_playback": "Interrompi riproduzione",
     "describe_label": "Descrivi la tua voce",
     "describe_placeholder": "es. a warm elderly British storyteller, slightly raspy",
-    "describe_hint": "La tua descrizione (in inglese) imposta i controlli qui sotto — puoi comunque regolarli dopo.",
+    "describe_hint": "Descrivi la voce, oppure scegli un punto di partenza. In entrambi i casi i dettagli qui sotto si compilano automaticamente.",
     "describe_unmatched": "Impossibile mappare: {{items}}",
     "describe_no_match": "Nessun tratto vocale riconosciuto — prova parole come deep, elderly o British.",
     "define_by_design": "Tramite progettazione",
@@ -620,7 +620,13 @@
     "seed_keep": "Conserva questo seme",
     "seed_reroll": "Nuovo seme",
     "seed_reroll_hint": "Lancia un nuovo seme casuale e conservalo",
-    "define_convert": "Converti"
+    "define_convert": "Converti",
+    "details": "Dettagli",
+    "edit": "Modifica",
+    "cat_AccentDialect": "Accento o dialetto",
+    "accent_dialect_hint": "uno o l'altro, mai entrambi",
+    "reset_to_description": "Reimposta in base alla descrizione",
+    "chips_more": "altri {{count}}…"
   },
   "about": {
     "app": "App",
