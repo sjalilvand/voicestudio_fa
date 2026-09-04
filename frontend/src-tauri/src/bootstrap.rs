@@ -265,6 +265,9 @@ pub fn respawn_backend<R: tauri::Runtime>(
     stage: Arc<Mutex<BootstrapStage>>,
     logs: Arc<Mutex<Vec<LogPayload>>>,
 ) {
+    // Before anything reaches for lifecycle ownership: a readiness wait may be
+    // holding it while a slow backend starts (#1791).
+    preempt_backend_wait();
     if let Ok(mut guard) = stage.lock() {
         *guard = BootstrapStage::Checking;
     }
@@ -308,6 +311,7 @@ pub fn with_backend_stopped<R: tauri::Runtime, T>(
     app: &tauri::AppHandle<R>,
     action: impl FnOnce() -> T,
 ) -> Result<T, String> {
+    preempt_backend_wait();
     let state = app.state::<BackendState>();
     let _lifecycle = state.lifecycle.lock().unwrap_or_else(|e| e.into_inner());
     if let Err(error) = stop_backend_locked(app) {
@@ -682,6 +686,9 @@ fn spawn_backend_until_ready<R: tauri::Runtime>(
     stage_handle: &Arc<Mutex<BootstrapStage>>,
 ) -> bool {
     let mut venv_heal_attempted = false;
+    // Snapshot taken AFTER our caller acquired lifecycle ownership, so a bump
+    // that happened before we started is not mistaken for a preemption of us.
+    let wait_generation = backend_wait_generation();
     'bootstrap: loop {
         if backend_stop_requested(app) {
             return false;
@@ -703,6 +710,13 @@ fn spawn_backend_until_ready<R: tauri::Runtime>(
         {
             if backend_stop_requested(app) {
                 log::info!("App is quitting — backend startup poll cancelled");
+                return false;
+            }
+            if backend_wait_generation() != wait_generation {
+                log::info!(
+                    "Retry/reset is taking the backend lifecycle — standing down from \
+                     the startup wait so it can proceed"
+                );
                 return false;
             }
             if crate::backend::backend_ready(backend_port()) {
@@ -901,6 +915,30 @@ static SUPERVISOR_OWNER: AtomicU64 = AtomicU64::new(0);
 /// crash marker for — or respawn against — an *intentional* kill. Cleared the
 /// moment a fresh child is spawned and tracked (`track_backend_child`).
 static BACKEND_KILL_INTENDED: AtomicBool = AtomicBool::new(false);
+
+/// Bumped by any flow about to take backend lifecycle ownership for a
+/// deliberate replacement — Retry, Clean & Retry, reset, uninstall.
+///
+/// #1791: the readiness wait keeps waiting for as long as the backend answers
+/// `/startup/progress`, and it holds `BackendState::lifecycle` the whole time
+/// (`launch_backend_and_wait` takes it around the entire launch). Without a way
+/// to interrupt that wait, the user's own escape hatch would deadlock behind
+/// it: Retry and Clean & Retry both need the same lock, so pressing either on
+/// a slow start would hang instead of restarting anything — trading a backend
+/// killed too early for an app with no way out, which is worse. Every such
+/// flow bumps this BEFORE reaching for the lock; the waiting loop sees the
+/// change within one poll, returns, and releases it (Greptile, #1809).
+static BACKEND_WAIT_GENERATION: AtomicU64 = AtomicU64::new(0);
+
+/// Ask any in-flight readiness wait to stand down, so this caller can take
+/// lifecycle ownership. Call before locking, never while holding the lock.
+pub fn preempt_backend_wait() {
+    BACKEND_WAIT_GENERATION.fetch_add(1, Ordering::SeqCst);
+}
+
+fn backend_wait_generation() -> u64 {
+    BACKEND_WAIT_GENERATION.load(Ordering::SeqCst)
+}
 
 /// Bumped every time `track_backend_child` installs a new child. The
 /// supervisor snapshots it when it observes a death; a change during its
@@ -3473,6 +3511,28 @@ mod tests {
             Duration::from_secs(301),
             budget
         ));
+    }
+
+    #[test]
+    fn a_retry_preempts_an_in_flight_readiness_wait() {
+        // #1791 + Greptile on #1809: the wait holds lifecycle ownership, which
+        // Retry and Clean & Retry both need. A waiter that cannot be asked to
+        // stand down turns a slow start into an app with no way out — strictly
+        // worse than the early kill this fix removed. The waiter snapshots the
+        // generation once ownership is held; a later bump means someone else is
+        // taking over.
+        let snapshot = backend_wait_generation();
+        assert_eq!(backend_wait_generation(), snapshot, "nothing changed yet");
+        preempt_backend_wait();
+        assert_ne!(
+            backend_wait_generation(),
+            snapshot,
+            "Retry must be visible to the waiting loop"
+        );
+        // And the flow that preempted then takes its OWN snapshot, so it does
+        // not immediately cancel itself.
+        let theirs = backend_wait_generation();
+        assert_eq!(backend_wait_generation(), theirs);
     }
 
     #[test]
