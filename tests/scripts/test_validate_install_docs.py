@@ -55,6 +55,7 @@ def _make_root(tmp_path: Path, *, docs: dict[str, str], script: str) -> Path:
 
 
 def test_help_is_safe_for_cp1252_consoles():
+    """The real help path must remain printable under legacy Windows encoding."""
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "cp1252"
     result = subprocess.run(
