@@ -453,6 +453,7 @@ function App() {
   // ═══ MIC RECORDING ═══
   const {
     isRecording,
+    isStartingRecording,
     isCleaning,
     recordingTime,
     audioInputs,
@@ -1686,6 +1687,7 @@ function App() {
                 handlePreviewVoice={handlePreviewVoice}
                 handleUnlockProfile={handleUnlockProfile}
                 openVoiceProfile={openVoiceProfile}
+                selectionDisabled={isStartingRecording || isRecording}
                 onOpenVoicePreview={(profileId) => {
                   setVoicePreviewProfileId(profileId || '');
                   setIsVoicePreviewOpen(true);
@@ -1738,6 +1740,7 @@ function App() {
                     showSaveProfile={showSaveProfile}
                     setShowSaveProfile={setShowSaveProfile}
                     isRecording={isRecording}
+                    isStartingRecording={isStartingRecording}
                     isCleaning={isCleaning}
                     recordingTime={recordingTime}
                     audioInputs={audioInputs}
