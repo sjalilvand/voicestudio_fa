@@ -654,7 +654,13 @@ fn show_and_focus_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 /// tests — `#[allow(dead_code)]` elsewhere, same treatment as `is_app_origin`
 /// and `with_noactivate_style` above.
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
-fn should_restore_on_reopen(main_window_visible: bool) -> bool {
+fn should_restore_on_reopen(main_window_visible: bool, _cocoa_has_visible_windows: bool) -> bool {
+    // Cocoa's aggregate flag is accepted and deliberately ignored. Taking it
+    // as a parameter rather than dropping it at the call site is what lets
+    // the tests below pin the contract: `(main: false, cocoa: true)` — the
+    // pill up, the main window closed — must still restore. An earlier
+    // revision decided on the aggregate alone and left the Dock icon dead in
+    // exactly that state.
     !main_window_visible
 }
 
@@ -664,12 +670,12 @@ mod reopen_tests {
 
     #[test]
     fn restores_when_the_main_window_is_hidden() {
-        assert!(should_restore_on_reopen(false));
+        assert!(should_restore_on_reopen(false, false));
     }
 
     #[test]
     fn does_nothing_when_the_main_window_is_already_visible() {
-        assert!(!should_restore_on_reopen(true));
+        assert!(!should_restore_on_reopen(true, true));
     }
 
     /// Regression guard: the dictation pill is a separate always-on-top
@@ -681,8 +687,11 @@ mod reopen_tests {
     /// The decision must depend only on the main window.
     #[test]
     fn restores_even_when_another_window_such_as_the_pill_is_visible() {
-        let main_window_visible = false;
-        assert!(should_restore_on_reopen(main_window_visible));
+        // Cocoa reports a visible window (the pill) while the main window is
+        // hidden. Passing both values separately is the point: this case is
+        // what distinguishes the main-window rule from the aggregate one, and
+        // it fails if the body ever goes back to `!cocoa_has_visible_windows`.
+        assert!(should_restore_on_reopen(false, true));
     }
 }
 
@@ -1269,7 +1278,10 @@ pub fn run() {
         // is the same sequence that item runs, so both paths behave
         // identically.
         #[cfg(target_os = "macos")]
-        tauri::RunEvent::Reopen { .. } => {
+        tauri::RunEvent::Reopen {
+            has_visible_windows,
+            ..
+        } => {
             // Cocoa's `has_visible_windows` is deliberately NOT used: the
             // dictation pill is a separate always-on-top window that sets it
             // to `true` on its own. Ask the main window directly instead.
@@ -1280,7 +1292,7 @@ pub fn run() {
                 .get_webview_window("main")
                 .map(|win| win.is_visible().unwrap_or(false))
                 .unwrap_or(false);
-            if should_restore_on_reopen(main_visible) {
+            if should_restore_on_reopen(main_visible, has_visible_windows) {
                 show_and_focus_main_window(app_handle);
             }
         }
