@@ -2106,7 +2106,9 @@
     "voice_previews_never": "nog niet gecontroleerd",
     "voice_previews_check": "Nu controleren",
     "voice_previews_rejected": "Update van de stemgalerij geweigerd: {{message}}",
-    "role_llm": "LLM"
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "Heb ik een licentie nodig voor interne tools?",

@@ -2106,7 +2106,9 @@
     "voice_previews_never": "noch nicht geprüft",
     "voice_previews_check": "Jetzt prüfen",
     "voice_previews_rejected": "Aktualisierung der Stimmgalerie abgelehnt: {{message}}",
-    "role_llm": "LLM"
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "Benötige ich eine Lizenz für interne Tools?",

@@ -2113,7 +2113,9 @@
     "voice_previews_never": "尚未检查",
     "voice_previews_check": "立即检查",
     "voice_previews_rejected": "语音库更新被拒绝：{{message}}",
-    "role_llm": "LLM"
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "我需要内部工具的许可证吗？",

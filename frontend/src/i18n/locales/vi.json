@@ -2106,7 +2106,9 @@
     "voice_previews_never": "chưa kiểm tra",
     "voice_previews_check": "Kiểm tra ngay",
     "voice_previews_rejected": "Bản cập nhật thư viện giọng bị từ chối: {{message}}",
-    "role_llm": "LLM"
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "Tôi có cần giấy phép cho các công cụ nội bộ không?",

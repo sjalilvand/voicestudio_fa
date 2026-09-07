@@ -2106,7 +2106,9 @@
     "voice_previews_never": "ще не перевірялося",
     "voice_previews_check": "Перевірити зараз",
     "voice_previews_rejected": "Оновлення галереї голосів відхилено: {{message}}",
-    "role_llm": "LLM"
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "Чи потрібна мені ліцензія на внутрішні інструменти?",

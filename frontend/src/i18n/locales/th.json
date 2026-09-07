@@ -2106,7 +2106,9 @@
     "voice_previews_never": "ยังไม่ได้ตรวจสอบ",
     "voice_previews_check": "ตรวจสอบตอนนี้",
     "voice_previews_rejected": "ปฏิเสธการอัปเดตคลังเสียง: {{message}}",
-    "role_llm": "LLM"
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "ฉันจำเป็นต้องมีใบอนุญาตสำหรับเครื่องมือภายในหรือไม่?",

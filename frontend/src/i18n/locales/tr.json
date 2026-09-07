@@ -2106,7 +2106,9 @@
     "voice_previews_never": "henüz kontrol edilmedi",
     "voice_previews_check": "Şimdi kontrol et",
     "voice_previews_rejected": "Ses galerisi güncellemesi reddedildi: {{message}}",
-    "role_llm": "LLM"
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "Dahili araçlar için lisansa ihtiyacım var mı?",

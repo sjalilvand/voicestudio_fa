@@ -2106,7 +2106,9 @@
     "voice_previews_never": "未確認",
     "voice_previews_check": "今すぐ確認",
     "voice_previews_rejected": "ボイスギャラリーの更新を拒否しました: {{message}}",
-    "role_llm": "LLM"
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "内部ツールにはライセンスが必要ですか?",
