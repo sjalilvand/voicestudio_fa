@@ -69,6 +69,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - The workspace engine menu opens beside its button instead of at the opposite edge of the page (#1823)
 - Cloning reuses the dubbing language picker with flags, search, and single selection, opening above the pinned synthesis controls (#1823)
 - The first-run welcome line uses an instruction accepted by OmniVoice and VoiceDesign engines (#1861) — thanks @psiberfunk!
+- The header status dot now honors OS Reduce Motion instead of pulsing regardless (#1862) — thanks @psiberfunk!
 
 
 ## [0.5.2] — 2026-09-02

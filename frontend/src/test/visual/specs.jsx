@@ -17,6 +17,7 @@ import i18n from '../../i18n';
 import WaveformTimeline from '../../components/WaveformTimeline.jsx';
 import DubWorkspaceFixture from './DubWorkspaceFixture.jsx';
 import '../../components/dub/DubRightColumn.css';
+import Header from '../../components/Header';
 import { Download, Mic, Search, Sparkles, Trash2 } from 'lucide-react';
 
 import Badge from '../../ui/Badge.jsx';
@@ -292,6 +293,10 @@ export const SPECS = {
         />
       </div>
     ),
+  },
+  HeaderStatus: {
+    providers: {},
+    render: () => <Header mode="dub" setMode={() => {}} modelStatus="idle" />,
   },
   Badge: {
     render: () => (
