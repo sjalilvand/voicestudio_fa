@@ -3668,6 +3668,49 @@ html[data-ui-scale-engine='native'] .app-bootstrap-scale {
   border-color: rgba(245, 158, 11, 0.35);
 }
 
+/* ── Widget-window shadow (standalone Tauri window) ───────────────────
+   The `widget` window (tauri.conf.json, label `widget`) is exactly
+   300x64, `transparent: true`, `decorations: false`. Its body gets a
+   flush `padding: 8px` on every edge (see `body:has(.capture-pill)`
+   below) around the 48px-tall pill, plus `overflow: hidden` — so there
+   is only an 8px gutter on every side for anything painted outside the
+   pill's box before the clip kicks in.
+
+   The shadows above need real clearance (`0 8px 32px` alone wants ~40px)
+   that only the main window (`.capture-pill-host`, ~line 2236) has. Here
+   they were hard-clipped into a straight edge at the window boundary —
+   a rounded capsule sitting inside a hard-edged dark rectangle instead of
+   floating free. The shadow is decorative, so shrink it to actually fit
+   rather than let it clip: every non-inset layer must keep
+   `|y-offset| + blur + spread <= 8` (the gutter), which bounds every
+   side since padding is symmetric and every offset-x here is 0. Applies
+   to every state that sets its own box-shadow, not just the base pill,
+   otherwise the clip reappears the moment recording/transcribing starts.
+   Also caps `max-width` to the 300px window's 284px content box
+   (300 - 8px padding * 2) — the shared 340px value is wider than the
+   window itself. */
+html[data-window='widget'] .capture-pill {
+  max-width: 284px;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.35),   /* 1 + 3 + 0 = 4 <= 8 */
+    0 1px 2px rgba(0, 0, 0, 0.25),   /* 1 + 2 + 0 = 3 <= 8 */
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+html[data-window='widget'] .capture-pill--recording {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.35),        /* 1 + 3 + 0 = 4 <= 8 */
+    0 0 6px rgba(239, 68, 68, 0.1),       /* 0 + 6 + 0 = 6 <= 8 */
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+html[data-window='widget'] .capture-pill--transcribing {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.35),        /* 1 + 3 + 0 = 4 <= 8 */
+    0 0 6px rgba(99, 102, 241, 0.1),      /* 0 + 6 + 0 = 6 <= 8 */
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
 /* ── Animations ─────────────────────────────────────────────────────── */
 
 @keyframes pill-slide-in {
