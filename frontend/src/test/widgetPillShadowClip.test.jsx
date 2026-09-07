@@ -67,7 +67,7 @@ function expectShadowFitsGutter(rule) {
 }
 
 describe('index.css: widget-scoped .capture-pill shadow fits the 8px gutter', () => {
-  it('defines an override under html[data-window=\'widget\'] whose outer shadow layers and max-width both fit inside the padding gutter', () => {
+  it("defines an override under html[data-window='widget'] whose outer shadow layers and max-width both fit inside the padding gutter", () => {
     // No such rule exists pre-fix: the widget window inherits the unscoped
     // .capture-pill shadow verbatim, which is what gets clipped.
     const rule = extractRule("html[data-window='widget'] .capture-pill");
@@ -90,7 +90,7 @@ describe('index.css: widget-scoped .capture-pill shadow fits the 8px gutter', ()
   // would reappear the instant the user starts recording, which is the
   // pill's single most common state.
   it.each(['recording', 'transcribing'])(
-    'also fits the %s state\'s own colored-glow shadow inside the gutter',
+    "also fits the %s state's own colored-glow shadow inside the gutter",
     (state) => {
       const rule = extractRule(`html[data-window='widget'] .capture-pill--${state}`);
       expect(rule).not.toBeNull();
