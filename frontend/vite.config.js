@@ -2,14 +2,12 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync } from 'fs';
+import { resolveDialogEsm } from './resolveDialogEsm.mjs';
 
 const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'));
 
-const dialogEsm = [
-  path.resolve(__dirname, 'node_modules/@tauri-apps/plugin-dialog/dist-js/index.js'),
-  path.resolve(__dirname, '../node_modules/@tauri-apps/plugin-dialog/dist-js/index.js'),
-].find(existsSync);
+const dialogEsm = resolveDialogEsm(__dirname);
 
 // https://vite.dev/config/
 export default defineConfig({
