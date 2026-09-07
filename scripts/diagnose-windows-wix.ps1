@@ -9,14 +9,33 @@ $lock = Get-Content "$repo/bun.lock" -Raw
 $cliMatch = [regex]::Match($lock, '"@tauri-apps/cli":\s*\["@tauri-apps/cli@([^"\s]+)"')
 if (-not $cliMatch.Success) { throw 'Cannot resolve the Tauri CLI version from bun.lock' }
 $cliPackage = '@tauri-apps/cli@' + $cliMatch.Groups[1].Value
-New-Item -ItemType Directory -Force -Path $fixture, $artifacts, "$fixture/src", "$fixture/resources/nested", "$fixture/binaries" | Out-Null
+New-Item -ItemType Directory -Force -Path $fixture, $artifacts, "$fixture/src", "$fixture/resources/nested", "$fixture/binaries", "$fixture/tauri-stub/src" | Out-Null
 @'
 [package]
 name = "wix-diagnostic"
 version = "0.0.0"
 edition = "2021"
+[dependencies]
+tauri = { path = "tauri-stub" }
 [workspace]
 '@ | Set-Content -Encoding utf8 "$fixture/Cargo.toml"
+@'
+[package]
+name = "tauri"
+version = "2.0.0"
+edition = "2021"
+[features]
+custom-protocol = []
+'@ | Set-Content -Encoding utf8 "$fixture/tauri-stub/Cargo.toml"
+'' | Set-Content -Encoding utf8 "$fixture/tauri-stub/src/lib.rs"
+@'
+from pathlib import Path
+import uuid
+root = Path(__file__).parent / "resources" / "nested"
+for previous in root.glob("asset-*.txt"):
+    previous.unlink()
+(root / f"asset-{uuid.uuid4().hex}.txt").write_text("changing frontend-like resource")
+'@ | Set-Content -Encoding utf8 "$fixture/build-assets.py"
 'fn main() { println!("MSI authoring diagnostic only"); }' | Set-Content -Encoding utf8 "$fixture/src/main.rs"
 'Nested resource payload' | Set-Content -Encoding utf8 "$fixture/resources/nested/payload.txt"
 'Root resource payload' | Set-Content -Encoding utf8 "$fixture/resources/readme.txt"
@@ -26,7 +45,7 @@ $config = @{
     productName = 'VoiceStudio MSI Diagnostic'
     version = '0.0.0'
     identifier = 'com.debpalash.voicestudio.wixdiagnostic'
-    build = @{}
+    build = @{ beforeBuildCommand = 'python build-assets.py' }
     bundle = @{
         active = $true
         targets = @('msi')
@@ -57,10 +76,14 @@ try {
             productName = "VoiceStudio MSI Diagnostic $scope"
             bundle = @{ windows = @{ wix = @{ template = "$scope.wxs" } } }
         }
+        if ($scope -eq 'per-user') {
+            $production = Get-Content "$repo/frontend/src-tauri/tauri.per-user.conf.json" -Raw | ConvertFrom-Json -AsHashtable
+            if ($production.ContainsKey('build')) { $scopeConfig.build = $production.build }
+        }
         $scopeConfig | ConvertTo-Json -Depth 20 | Set-Content -Encoding utf8 "$fixture/$scope.conf.json"
         $log = Join-Path $artifacts "$scope.log"
         $ErrorActionPreference = 'Continue'
-        & bun x --package $cliPackage tauri bundle -vv --target $target --bundles msi --config "$scope.conf.json" *> $log
+        & bun x --package $cliPackage tauri build -vv --target $target --bundles msi --config "$scope.conf.json" *> $log
         $results[$scope] = $LASTEXITCODE
         $ErrorActionPreference = 'Stop'
         Get-Content $log
