@@ -191,13 +191,13 @@ class _OomModel:
 def test_oom_frees_vram_and_retries_once(tmp_path, monkeypatch):
     freed = []
     monkeypatch.setattr(
-        "services.model_manager.free_vram", lambda: freed.append(True), raising=False
+        "services.model_manager.free_vram", lambda: freed.append(m.calls), raising=False
     )
     m = _OomModel(fails=1)
     got = tb._get_clone_prompt(m, _wav(tmp_path), "hello")
     assert got == f"PROMPT::{_wav(tmp_path)}"
     assert m.calls == 2, "the OOM must be retried, not fallen back from"
-    assert freed, "allocator caches must be dropped before the retry"
+    assert freed == [1], "allocator caches must be dropped before the retry"
 
 
 def test_oom_that_survives_the_retry_raises_instead_of_falling_back(tmp_path, monkeypatch):
