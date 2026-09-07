@@ -11,6 +11,7 @@
 // ─────────────────────────────────────────────────────────────────
 
 import React from 'react';
+import Header from '../../components/Header';
 import { Download, Mic, Search, Sparkles, Trash2 } from 'lucide-react';
 
 import Badge from '../../ui/Badge.jsx';
@@ -159,6 +160,10 @@ const TABLE_COLS = [
 ];
 
 export const SPECS = {
+  HeaderStatus: {
+    providers: {},
+    render: () => <Header mode="dub" setMode={() => {}} modelStatus="idle" />,
+  },
   Badge: {
     render: () => (
       <>
