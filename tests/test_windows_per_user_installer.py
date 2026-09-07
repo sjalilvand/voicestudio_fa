@@ -11,11 +11,11 @@ SCRIPT = ROOT / "scripts/render-per-user-wix.py"
 CONFIG = ROOT / "frontend/src-tauri/tauri.per-user.conf.json"
 
 
-RESOURCE_FIXTURE = """<!-- BEGIN BUNDLED_RESOURCES -->
+RESOURCE_FIXTURE = """<Wix><Component Id="helper.exe" Guid="random"><File Id="Bin_helper.exe" Source="C:/build/helper.exe" /></Component><!-- BEGIN BUNDLED_RESOURCES -->
 <Component Id="randomRoot" Guid="00000000-0000-0000-0000-000000000001" KeyPath="yes" Win64="$(var.Win64)"><File Id="rootFile" Source="C:/build/README.md" /></Component>
 <Directory Id="randomDir" Name="backend"><Directory Id="nestedDir" Name="data">
 <Component Id="randomNested" Guid="00000000-0000-0000-0000-000000000002" KeyPath="yes" Win64="$(var.Win64)"><File Id="nestedFile" Source="C:/build/a&amp;b.json" /></Component>
-</Directory></Directory><!-- END BUNDLED_RESOURCES -->"""
+</Directory></Directory><!-- END BUNDLED_RESOURCES --></Wix>"""
 
 
 def _renderer():
@@ -150,3 +150,19 @@ def test_main_and_helper_files_use_registry_keypaths():
         'Name="Binary_{{ bin.id }}" Type="integer" Value="1" KeyPath="yes"' in rendered
     )
     assert 'Guid="{{bin.guid}}"' not in rendered
+
+
+def test_external_binary_guid_is_explicit_and_stable_across_builds():
+    renderer = _renderer()
+    first = renderer.render(SOURCE.read_text(), RESOURCE_FIXTURE)
+    second = renderer.render(
+        SOURCE.read_text(),
+        RESOURCE_FIXTURE.replace("C:/build/", "D:/runner/").replace(
+            'Guid="random"', 'Guid="another"'
+        ),
+    )
+    marker = '<Component Id="{{ bin.id }}" Guid="'
+    first_guid = first.split(marker)[1].split(" Win64=")[0]
+    assert first_guid == second.split(marker)[1].split(" Win64=")[0]
+    assert '(eq bin.id "helper.exe")' in first_guid
+    assert 'Guid="*"' not in marker + first_guid

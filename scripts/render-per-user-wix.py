@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import xml.etree.ElementTree as ET
 from pathlib import Path, PureWindowsPath
 from uuid import UUID, uuid5
@@ -181,7 +182,34 @@ def render(source: str, system_wxs: str) -> str:
         'Guid="41f6d598-8908-4004-9332-291b64fd38be"',
         f'Guid="{uuid5(USER_NAMESPACE, "main-binary-registry-keypath")}"',
     )
-    rendered = rendered.replace('Guid="{{bin.guid}}"', 'Guid="*"')
+    # WiX cannot auto-generate GUIDs for components containing both a file and
+    # a registry keypath. Tauri binary IDs are sanitized installed filenames;
+    # retain the dynamic bin.path while supplying stable, per-user GUIDs.
+    system_tree = ET.fromstring(system_wxs)
+    binary_guids = []
+    for component in system_tree.iter():
+        if component.tag.rsplit("}", 1)[-1] != "Component":
+            continue
+        for file in component:
+            if file.tag.rsplit("}", 1)[-1] != "File" or not file.get(
+                "Id", ""
+            ).startswith("Bin_"):
+                continue
+            binary_id = component.attrib["Id"]
+            installed_name = (
+                file.get("Name") or PureWindowsPath(file.attrib["Source"]).name
+            )
+            guid = uuid5(USER_NAMESPACE, "binary:" + installed_name.casefold())
+            binary_guids.append(
+                "{{#if (eq bin.id "
+                + json.dumps(binary_id)
+                + ")}}"
+                + str(guid)
+                + "{{/if}}"
+            )
+    rendered = rendered.replace(
+        'Guid="{{bin.guid}}"', 'Guid="' + "".join(binary_guids) + '"'
+    )
     for file_token, key_name in (
         (
             '<File Id="Path" Source="{{main_binary_path}}" KeyPath="yes" Checksum="yes"/>',
