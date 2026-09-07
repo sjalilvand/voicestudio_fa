@@ -20,7 +20,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- Onboarding recognizes local Hugging Face tokens without network checks, preserves Windows CLI logins, and clears saved token files explicitly (#1852) — thanks @psiberfunk!
+- Onboarding reads Hugging Face tokens locally, preserves Windows CLI logins, and requires successful discovery before replacing saved credentials (#1852) — thanks @psiberfunk!
 
 
 ## [0.5.2] — 2026-09-02
