@@ -1277,7 +1277,13 @@
     "qc_verify": "Xác minh",
     "qc_verify_title": "Đã nghe thấy ASR vượt qua lần thứ hai: \"{{heard}}\" — nghe lại hoặc lồng tiếng lại dòng này.",
     "live_play_title": "Stream dòng này ngay (nghe thử trực tiếp)",
-    "live_stop_title": "Dừng nghe thử trực tiếp"
+    "live_stop_title": "Dừng nghe thử trực tiếp",
+    "plan_apply": "Dùng bản viết lại ngắn hơn",
+    "plan_apply_title": "Thay dòng này bằng bản viết lại ngắn hơn được đề xuất: “{{text}}”",
+    "plan_impossible": "Không vừa +{{seconds}}giây",
+    "plan_impossible_title": "Lời nói dự kiến ≈{{est}}giây, thời gian có sẵn {{avail}}giây. Khoảng {{seconds}}giây vượt quá khả năng điều chỉnh nên âm thanh sẽ bị cắt. Hãy rút ngắn văn bản trước khi tạo.",
+    "plan_tight": "Vừa sát giới hạn",
+    "plan_tight_title": "Lời nói dự kiến ≈{{est}}giây, thời gian có sẵn {{avail}}giây. Căn chỉnh thông minh có thể bù bằng cách tăng tốc giọng nói rõ rệt hoặc làm chậm video. Hãy rút ngắn văn bản để có kết quả tốt hơn."
   },
   "timeline": {
     "track_label": "Dòng thời gian phân đoạn",

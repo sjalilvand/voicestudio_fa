@@ -1277,7 +1277,13 @@
     "qc_verify": "Zweryfikuj",
     "qc_verify_title": "ASR drugiego przejścia usłyszał: „{{heard}}” — posłuchaj ponownie lub ponownie dubuj tę linijkę.",
     "live_play_title": "Streamuj tę linię teraz (podgląd na żywo)",
-    "live_stop_title": "Zatrzymaj podgląd na żywo"
+    "live_stop_title": "Zatrzymaj podgląd na żywo",
+    "plan_apply": "Użyj krótszej wersji",
+    "plan_apply_title": "Zastąp ten wiersz proponowaną krótszą wersją: „{{text}}”",
+    "plan_impossible": "Nie zmieści się +{{seconds}}s",
+    "plan_impossible_title": "Przewidywana mowa ≈{{est}}s przy {{avail}}s dostępnego czasu. Około {{seconds}}s przekracza możliwości dopasowania i dźwięk zostałby przycięty. Skróć tekst przed generowaniem.",
+    "plan_tight": "Na granicy dopasowania",
+    "plan_tight_title": "Przewidywana mowa ≈{{est}}s przy {{avail}}s dostępnego czasu. Inteligentne dopasowanie może to skompensować słyszalnym przyspieszeniem mowy lub spowolnieniem wideo. Skróć tekst, aby uzyskać lepszy wynik."
   },
   "timeline": {
     "track_label": "Oś czasu segmentów",

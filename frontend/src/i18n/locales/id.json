@@ -1277,7 +1277,13 @@
     "qc_verify": "Verifikasi",
     "qc_verify_title": "ASR lintasan kedua mendengar: \"{{heard}}\" — dengarkan ulang atau sulih suara ulang baris ini.",
     "live_play_title": "Streaming baris ini sekarang (pratinjau langsung)",
-    "live_stop_title": "Hentikan pratinjau langsung"
+    "live_stop_title": "Hentikan pratinjau langsung",
+    "plan_apply": "Gunakan versi lebih singkat",
+    "plan_apply_title": "Ganti baris ini dengan versi lebih singkat yang disarankan: “{{text}}”",
+    "plan_impossible": "Tidak muat +{{seconds}}d",
+    "plan_impossible_title": "Perkiraan ucapan ≈{{est}}d, waktu tersedia {{avail}}d. Sekitar {{seconds}}d melebihi kemampuan penyesuaian dan audio akan terpotong. Persingkat teks sebelum membuat audio.",
+    "plan_tight": "Hampir tidak muat",
+    "plan_tight_title": "Perkiraan ucapan ≈{{est}}d, waktu tersedia {{avail}}d. Penyesuaian cerdas dapat mengatasinya dengan mempercepat suara secara nyata atau memperlambat video. Persingkat teks untuk hasil lebih baik."
   },
   "timeline": {
     "track_label": "Lini masa segmen",

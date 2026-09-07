@@ -1277,7 +1277,13 @@
     "qc_verify": "検証する",
     "qc_verify_title": "2 パス目の ASR は次のように聞きました: 「{{heard}}」 — この行をもう一度聞くか、再ダビングします。",
     "live_play_title": "この行を今すぐストリーミング(ライブプレビュー)",
-    "live_stop_title": "ライブプレビューを停止"
+    "live_stop_title": "ライブプレビューを停止",
+    "plan_apply": "短い書き換えを使う",
+    "plan_apply_title": "この行を提案された短い文に置き換えます：「{{text}}」",
+    "plan_impossible": "収まりません +{{seconds}}秒",
+    "plan_impossible_title": "予測音声は約{{est}}秒、使用可能時間は{{avail}}秒です。調整できる範囲を約{{seconds}}秒超えており、音声が切り詰められます。生成前に文章を短くしてください。",
+    "plan_tight": "余裕が少ない",
+    "plan_tight_title": "予測音声は約{{est}}秒、使用可能時間は{{avail}}秒です。スマートフィットで調整できますが、音声の速度上昇や動画の減速が目立ちます。より自然な結果にするには文章を短くしてください。"
   },
   "timeline": {
     "track_label": "セグメントタイムライン",

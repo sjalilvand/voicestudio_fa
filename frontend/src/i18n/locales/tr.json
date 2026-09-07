@@ -1277,7 +1277,13 @@
     "qc_verify": "Doğrula",
     "qc_verify_title": "İkinci geçiş ASR şunu duydu: \"{{heard}}\" — bu satırı yeniden dinleyin veya yeniden dublajlayın.",
     "live_play_title": "Bu satırı şimdi akıt (canlı önizleme)",
-    "live_stop_title": "Canlı önizlemeyi durdur"
+    "live_stop_title": "Canlı önizlemeyi durdur",
+    "plan_apply": "Daha kısa sürümü kullan",
+    "plan_apply_title": "Bu satırı önerilen daha kısa sürümle değiştir: “{{text}}”",
+    "plan_impossible": "Sığmayacak +{{seconds}}sn",
+    "plan_impossible_title": "Tahmini konuşma ≈{{est}}sn, kullanılabilir süre {{avail}}sn. Yaklaşık {{seconds}}sn hiçbir uyarlamayla karşılanamaz ve ses kesilir. Üretmeden önce metni kısaltın.",
+    "plan_tight": "Zar zor sığıyor",
+    "plan_tight_title": "Tahmini konuşma ≈{{est}}sn, kullanılabilir süre {{avail}}sn. Akıllı uyarlama, sesi belirgin biçimde hızlandırarak veya videoyu yavaşlatarak bunu karşılayabilir. Daha iyi sonuç için metni kısaltın."
   },
   "timeline": {
     "track_label": "Segment zaman çizelgesi",

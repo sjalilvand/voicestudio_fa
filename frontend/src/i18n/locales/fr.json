@@ -1277,7 +1277,13 @@
     "qc_verify": "Vérifier",
     "qc_verify_title": "ASR de deuxième passage entendu : \"{{heard}}\" – réécoutez ou redoublez cette ligne.",
     "live_play_title": "Diffuser cette ligne maintenant (aperçu en direct)",
-    "live_stop_title": "Arrêter l'aperçu en direct"
+    "live_stop_title": "Arrêter l'aperçu en direct",
+    "plan_apply": "Utiliser la version plus courte",
+    "plan_apply_title": "Remplacer cette ligne par la version plus courte proposée : « {{text}} »",
+    "plan_impossible": "Ne tient pas +{{seconds}}s",
+    "plan_impossible_title": "Parole estimée ≈{{est}}s pour {{avail}}s disponibles. Environ {{seconds}}s dépassent les possibilités d’ajustement ; l’audio serait coupé. Raccourcissez le texte avant la génération.",
+    "plan_tight": "Ajustement serré",
+    "plan_tight_title": "Parole estimée ≈{{est}}s pour {{avail}}s disponibles. L’ajustement intelligent peut compenser avec une accélération audible ou un ralentissement vidéo. Raccourcissez le texte pour un meilleur résultat."
   },
   "timeline": {
     "track_label": "Chronologie des segments",

@@ -83,6 +83,7 @@ export default function EngineQuickSwitch({
 
   if (!active || available.length === 0) return null;
 
+  const activeName = engineDisplayName(active.display_name);
   const locked = Boolean(familyData.env_override);
   const choose = async (backendId) => {
     if (backendId === familyData.active || locked) return;
@@ -116,17 +117,17 @@ export default function EngineQuickSwitch({
           aria-expanded={open}
           title={t('engines.activeEngine', {
             family: family.toUpperCase(),
-            engine: active.display_name,
+            engine: activeName,
           })}
           aria-label={t('engines.activeEngine', {
             family: family.toUpperCase(),
-            engine: active.display_name,
+            engine: activeName,
           })}
           className={`inline-flex items-center gap-[5px] rounded-sm border-0 bg-transparent px-[7px] font-medium text-[color:var(--chrome-fg-muted)] transition-[background,color] hover:bg-[var(--chrome-hover-bg)] hover:text-[color:var(--chrome-fg)] ${prominent ? 'min-h-11 text-sm text-left' : 'h-[20px] text-[11px]'}`}
         >
           <Cpu size={13} aria-hidden="true" />
           <span className={prominent ? 'min-w-0 break-words' : 'max-w-[124px] truncate'}>
-            {active.display_name}
+            {activeName}
           </span>
         </button>
       )}

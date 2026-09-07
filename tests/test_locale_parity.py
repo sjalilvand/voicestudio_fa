@@ -99,10 +99,10 @@ _ENGINE_AGNOSTIC_KEYS = (
 # Never raise one: if this fails after adding en.json keys, add the keys to
 # every locale (translated) in the same change instead.
 _MISSING_BASELINE = {
-    "ar": 493, "de": 493, "es": 493, "fr": 493, "hi": 493, "id": 493,
-    "it": 493, "ja": 493, "ko": 0, "nl": 493, "pl": 493, "pt": 493,
-    "ru": 493, "sv": 493, "th": 493, "tr": 493, "uk": 493, "vi": 493,
-    "zh-CN": 486, "zh-TW": 493,
+    "ar": 485, "de": 485, "es": 485, "fr": 485, "hi": 485, "id": 485,
+    "it": 485, "ja": 485, "ko": 0, "nl": 485, "pl": 485, "pt": 485,
+    "ru": 485, "sv": 485, "th": 485, "tr": 485, "uk": 485, "vi": 485,
+    "zh-CN": 478, "zh-TW": 485,
 }
 
 #: Keys every locale must carry regardless of the aggregate ratchet above.
@@ -431,3 +431,15 @@ def test_every_locale_carries_the_user_facing_dictation_status(locale, key):
         f"{locale}.json copies the English {key!r} verbatim ({english!r}); "
         f"translate it or the ratchet is measuring nothing"
     )
+
+
+@pytest.mark.parametrize("locale", sorted(_MISSING_BASELINE))
+def test_dub_plan_actions_and_explanations_are_translated(locale):
+    with open(os.path.join(_LOCALES_DIR, f"{locale}.json"), encoding="utf-8") as source:
+        segment = json.load(source)["segment"]
+    for key in (
+        "plan_apply", "plan_apply_title", "plan_impossible",
+        "plan_impossible_title", "plan_tight", "plan_tight_title",
+    ):
+        assert segment.get(key), f"{locale}: missing segment.{key}"
+        assert segment[key] != _load("en")["segment"][key]
