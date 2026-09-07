@@ -829,7 +829,8 @@
     "familyDesc_tts": "Transforma o roteiro em fala. Estúdio, Dublagem e Lote usam o motor ativo.",
     "familyDesc_asr": "Transforma áudio em texto para transcrição, dublagem, legendas e ditado.",
     "familyDesc_llm": "Assistente de texto opcional para tradução e reescrita. “Desativado” ignora essas etapas.",
-    "mpsLongText": "{{engine}} é executado em Apple Silicon (MPS) aqui e este texto é longo — a geração pode ultrapassar o limite de tempo. Um texto mais curto, ou dividido em algumas partes, será bem mais rápido."
+    "mpsLongText": "{{engine}} é executado em Apple Silicon (MPS) aqui e este texto é longo — a geração pode ultrapassar o limite de tempo. Um texto mais curto, ou dividido em algumas partes, será bem mais rápido.",
+    "inMemory": "Na memória"
   },
   "capture": {
     "desc": "As teclas de atalho globais funcionam apenas no aplicativo de desktop. A IU da web usa um atalho <1>Ctrl+Shift+Space</1> na página enquanto a janela está em foco.",
@@ -1180,7 +1181,8 @@
     "languages_pending": "Pendente",
     "live_preview": "Prévia ao vivo",
     "live_preview_title": "Ouça uma linha enquanto a edita — o segmento editado transmite TTS com sua voz do CAST após uma breve pausa. Apenas reprodução: nada é salvo e a exportação continua renderizando em qualidade total.",
-    "live_preview_pick_voice": "Atribua uma voz do CAST a esta linha ou ao seu falante para ouvir a prévia ao vivo."
+    "live_preview_pick_voice": "Atribua uma voz do CAST a esta linha ou ao seu falante para ouvir a prévia ao vivo.",
+    "autofit_quality": "Ajuste automático"
   },
   "glossary": {
     "title": "Glossário",
@@ -2100,7 +2102,8 @@
     "voice_previews_checked": "verificado {{when}}",
     "voice_previews_never": "ainda não verificado",
     "voice_previews_check": "Verificar agora",
-    "voice_previews_rejected": "Atualização da galeria de vozes rejeitada: {{message}}"
+    "voice_previews_rejected": "Atualização da galeria de vozes rejeitada: {{message}}",
+    "role_llm": "LLM"
   },
   "enterprise_faq": {
     "q_internal_tools": "Preciso de uma licença para ferramentas internas?",
@@ -2770,5 +2773,9 @@
     "transcript": "O que foi ouvido",
     "result_kicker": "Take convertido",
     "need_source_and_voice": "Adicione primeiro um clipe de origem e escolha uma voz de destino."
+  },
+  "player": {
+    "pause": "Pausar",
+    "play": "Reproduzir"
   }
 }

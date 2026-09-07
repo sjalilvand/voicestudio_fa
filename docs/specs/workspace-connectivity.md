@@ -163,4 +163,5 @@ One **Export** path for every audio/video asset, surfaced via `<UseInMenu>` → 
 
 Conversion keeps its method tab active until the request settles, including failures.
 Engine quick-switch triggers and expanded choices use the same formatted model name.
-Dubbing fit badges, explanations, and shorter-rewrite actions are localized in every supported UI language.
+Dubbing fit badges, explanations, shorter-rewrite actions, playback controls,
+and engine residency labels are localized in every supported UI language.

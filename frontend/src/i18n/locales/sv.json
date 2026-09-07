@@ -829,7 +829,8 @@
     "familyDesc_tts": "Gör om manus till tal. Studio, Dubbning och Batch använder den aktiva motorn.",
     "familyDesc_asr": "Gör om ljud till text för transkribering, dubbning, undertexter och diktering.",
     "familyDesc_llm": "Valfri texthjälp för översättning och omskrivning. ”Av” hoppar över dessa steg.",
-    "mpsLongText": "{{engine}} körs på Apple Silicon (MPS) här och den här texten är lång — genereringen kan överskrida tidsbudgeten. Kortare text, eller uppdelad i flera tagningar, går betydligt snabbare."
+    "mpsLongText": "{{engine}} körs på Apple Silicon (MPS) här och den här texten är lång — genereringen kan överskrida tidsbudgeten. Kortare text, eller uppdelad i flera tagningar, går betydligt snabbare.",
+    "inMemory": "I minnet"
   },
   "capture": {
     "desc": "Globala snabbtangenter fungerar bara i skrivbordsappen. Webbgränssnittet använder en genväg <1>Ctrl+Skift+Mellanslag</1> på sidan medan fönstret har fokus.",
@@ -1180,7 +1181,8 @@
     "languages_pending": "Väntar",
     "live_preview": "Live-förhandsvisning",
     "live_preview_title": "Hör en rad medan du redigerar den — det redigerade segmentet strömmar TTS med sin CAST-röst efter en kort paus. Endast uppspelning: inget sparas och exporten renderas fortfarande i full kvalitet.",
-    "live_preview_pick_voice": "Tilldela en CAST-röst till den här raden eller dess talare för att höra live-förhandsvisningen."
+    "live_preview_pick_voice": "Tilldela en CAST-röst till den här raden eller dess talare för att höra live-förhandsvisningen.",
+    "autofit_quality": "Automatisk anpassning"
   },
   "glossary": {
     "title": "Ordlista",
@@ -2100,7 +2102,8 @@
     "voice_previews_checked": "kontrollerat {{when}}",
     "voice_previews_never": "inte kontrollerat än",
     "voice_previews_check": "Kontrollera nu",
-    "voice_previews_rejected": "Uppdatering av röstgalleriet avvisades: {{message}}"
+    "voice_previews_rejected": "Uppdatering av röstgalleriet avvisades: {{message}}",
+    "role_llm": "LLM"
   },
   "enterprise_faq": {
     "q_internal_tools": "Behöver jag en licens för interna verktyg?",
@@ -2770,5 +2773,9 @@
     "transcript": "Vad som hördes",
     "result_kicker": "Konverterad tagning",
     "need_source_and_voice": "Lägg först till ett källklipp och välj en målröst."
+  },
+  "player": {
+    "pause": "Pausa",
+    "play": "Spela upp"
   }
 }

@@ -829,7 +829,8 @@
     "familyDesc_tts": "Trasforma il copione in voce. Studio, Doppiaggio e Batch usano il motore attivo.",
     "familyDesc_asr": "Trasforma l’audio in testo per trascrizione, doppiaggio, sottotitoli e dettatura.",
     "familyDesc_llm": "Assistente di testo opzionale per traduzioni e riscritture. “Disattivato” salta questi passaggi.",
-    "mpsLongText": "{{engine}} qui viene eseguito su Apple Silicon (MPS) e questo testo è lungo: la generazione potrebbe superare il limite di tempo. Un testo più breve, o diviso in più riprese, sarà molto più veloce."
+    "mpsLongText": "{{engine}} qui viene eseguito su Apple Silicon (MPS) e questo testo è lungo: la generazione potrebbe superare il limite di tempo. Un testo più breve, o diviso in più riprese, sarà molto più veloce.",
+    "inMemory": "In memoria"
   },
   "capture": {
     "desc": "I tasti di scelta rapida globali funzionano solo nell'app desktop. L'interfaccia utente Web utilizza una scorciatoia <1>Ctrl+Shift+Spazio</1> nella pagina mentre la finestra è attiva.",
@@ -1180,7 +1181,8 @@
     "languages_pending": "In attesa",
     "live_preview": "Anteprima dal vivo",
     "live_preview_title": "Ascolta una riga mentre la modifichi: il segmento modificato trasmette il TTS con la sua voce CAST dopo una breve pausa. Solo riproduzione: nulla viene salvato e l'esportazione resta a piena qualità.",
-    "live_preview_pick_voice": "Assegna una voce CAST a questa riga o al suo parlante per sentire l'anteprima dal vivo."
+    "live_preview_pick_voice": "Assegna una voce CAST a questa riga o al suo parlante per sentire l'anteprima dal vivo.",
+    "autofit_quality": "Adattamento automatico"
   },
   "glossary": {
     "title": "Glossario",
@@ -2100,7 +2102,8 @@
     "voice_previews_checked": "verificato {{when}}",
     "voice_previews_never": "non ancora verificato",
     "voice_previews_check": "Verifica ora",
-    "voice_previews_rejected": "Aggiornamento della galleria vocale rifiutato: {{message}}"
+    "voice_previews_rejected": "Aggiornamento della galleria vocale rifiutato: {{message}}",
+    "role_llm": "LLM"
   },
   "enterprise_faq": {
     "q_internal_tools": "Ho bisogno di una licenza per gli strumenti interni?",
@@ -2770,5 +2773,9 @@
     "transcript": "Cosa è stato sentito",
     "result_kicker": "Take convertito",
     "need_source_and_voice": "Aggiungi prima un clip sorgente e scegli una voce di destinazione."
+  },
+  "player": {
+    "pause": "Pausa",
+    "play": "Riproduci"
   }
 }

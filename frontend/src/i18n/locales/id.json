@@ -829,7 +829,8 @@
     "familyDesc_tts": "Mengubah naskah menjadi suara. Studio, Dubbing, dan Batch menggunakan mesin yang aktif.",
     "familyDesc_asr": "Mengubah audio menjadi teks untuk transkripsi, sulih suara, teks layar, dan dikte.",
     "familyDesc_llm": "Pembantu teks opsional untuk terjemahan dan penulisan ulang. “Nonaktif” akan melewati langkah tersebut.",
-    "mpsLongText": "{{engine}} berjalan di Apple Silicon (MPS) di sini dan teks ini panjang — proses mungkin melampaui batas waktu. Teks lebih pendek, atau membaginya menjadi beberapa bagian, akan jauh lebih cepat."
+    "mpsLongText": "{{engine}} berjalan di Apple Silicon (MPS) di sini dan teks ini panjang — proses mungkin melampaui batas waktu. Teks lebih pendek, atau membaginya menjadi beberapa bagian, akan jauh lebih cepat.",
+    "inMemory": "Dalam memori"
   },
   "capture": {
     "desc": "Tombol pintas global hanya berfungsi di aplikasi desktop. UI web menggunakan pintasan <1>Ctrl+Shift+Space</1> dalam halaman saat jendela memiliki fokus.",
@@ -1180,7 +1181,8 @@
     "languages_pending": "Tertunda",
     "live_preview": "Pratinjau langsung",
     "live_preview_title": "Dengarkan baris saat Anda mengeditnya — segmen yang diedit menstreaming TTS dengan suara CAST-nya setelah jeda singkat. Hanya pemutaran: tidak ada yang disimpan, dan ekspor tetap dirender dalam kualitas penuh.",
-    "live_preview_pick_voice": "Tetapkan suara CAST ke baris ini atau pembicaranya untuk mendengar pratinjau langsung."
+    "live_preview_pick_voice": "Tetapkan suara CAST ke baris ini atau pembicaranya untuk mendengar pratinjau langsung.",
+    "autofit_quality": "Penyesuaian otomatis"
   },
   "glossary": {
     "title": "Glosarium",
@@ -2100,7 +2102,8 @@
     "voice_previews_checked": "diperiksa {{when}}",
     "voice_previews_never": "belum diperiksa",
     "voice_previews_check": "Periksa sekarang",
-    "voice_previews_rejected": "Pembaruan galeri suara ditolak: {{message}}"
+    "voice_previews_rejected": "Pembaruan galeri suara ditolak: {{message}}",
+    "role_llm": "LLM"
   },
   "enterprise_faq": {
     "q_internal_tools": "Apakah saya memerlukan lisensi untuk alat internal?",
@@ -2770,5 +2773,9 @@
     "transcript": "Yang terdengar",
     "result_kicker": "Hasil konversi",
     "need_source_and_voice": "Tambahkan klip sumber dan pilih suara target terlebih dahulu."
+  },
+  "player": {
+    "pause": "Jeda",
+    "play": "Putar"
   }
 }

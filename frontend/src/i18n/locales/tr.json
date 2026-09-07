@@ -829,7 +829,8 @@
     "familyDesc_tts": "Metni konuşmaya dönüştürür. Stüdyo, Dublaj ve Toplu İşlem etkin motoru kullanır.",
     "familyDesc_asr": "Sesi; transkripsiyon, dublaj, altyazı ve dikte için metne dönüştürür.",
     "familyDesc_llm": "Çeviri ve yeniden yazma için isteğe bağlı metin yardımcısıdır. “Kapalı” bu adımları atlar.",
-    "mpsLongText": "{{engine}} burada Apple Silicon (MPS) üzerinde çalışıyor ve bu metin uzun — üretim süre bütçesini aşabilir. Daha kısa bir metin ya da birkaç parçaya bölmek çok daha hızlı olacaktır."
+    "mpsLongText": "{{engine}} burada Apple Silicon (MPS) üzerinde çalışıyor ve bu metin uzun — üretim süre bütçesini aşabilir. Daha kısa bir metin ya da birkaç parçaya bölmek çok daha hızlı olacaktır.",
+    "inMemory": "Bellekte"
   },
   "capture": {
     "desc": "Genel kısayol tuşları yalnızca masaüstü uygulamasında çalışır. Web kullanıcı arayüzü, pencere odaktayken sayfa içi <1>Ctrl+Shift+Space</1> kısayolunu kullanır.",
@@ -1180,7 +1181,8 @@
     "languages_pending": "Bekliyor",
     "live_preview": "Canlı önizleme",
     "live_preview_title": "Bir satırı düzenlerken dinleyin — düzenlenen segment kısa bir duraklamadan sonra CAST sesiyle TTS akışı yapar. Yalnızca oynatma: hiçbir şey kaydedilmez ve dışa aktarma yine tam kalitede işlenir.",
-    "live_preview_pick_voice": "Canlı önizlemeyi duymak için bu satıra veya konuşmacısına bir CAST sesi atayın."
+    "live_preview_pick_voice": "Canlı önizlemeyi duymak için bu satıra veya konuşmacısına bir CAST sesi atayın.",
+    "autofit_quality": "Otomatik sığdır"
   },
   "glossary": {
     "title": "Sözlük",
@@ -2100,7 +2102,8 @@
     "voice_previews_checked": "{{when}} kontrol edildi",
     "voice_previews_never": "henüz kontrol edilmedi",
     "voice_previews_check": "Şimdi kontrol et",
-    "voice_previews_rejected": "Ses galerisi güncellemesi reddedildi: {{message}}"
+    "voice_previews_rejected": "Ses galerisi güncellemesi reddedildi: {{message}}",
+    "role_llm": "LLM"
   },
   "enterprise_faq": {
     "q_internal_tools": "Dahili araçlar için lisansa ihtiyacım var mı?",
@@ -2770,5 +2773,9 @@
     "transcript": "Duyulan metin",
     "result_kicker": "Dönüştürülen kayıt",
     "need_source_and_voice": "Önce bir kaynak klip ekleyin ve hedef ses seçin."
+  },
+  "player": {
+    "pause": "Duraklat",
+    "play": "Oynat"
   }
 }

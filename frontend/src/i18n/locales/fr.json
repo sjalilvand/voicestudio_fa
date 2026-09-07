@@ -829,7 +829,8 @@
     "familyDesc_tts": "Transforme votre script en voix. Studio, Doublage et Traitement par lots utilisent le moteur actif.",
     "familyDesc_asr": "Transforme l’audio en texte pour la transcription, le doublage, les sous-titres et la dictée.",
     "familyDesc_llm": "Assistant textuel facultatif pour la traduction et la réécriture. « Désactivé » ignore ces étapes.",
-    "mpsLongText": "{{engine}} fonctionne ici sur Apple Silicon (MPS) et ce texte est long — la génération risque de dépasser le budget de temps. Un texte plus court, ou découpé en plusieurs prises, sera bien plus rapide."
+    "mpsLongText": "{{engine}} fonctionne ici sur Apple Silicon (MPS) et ce texte est long — la génération risque de dépasser le budget de temps. Un texte plus court, ou découpé en plusieurs prises, sera bien plus rapide.",
+    "inMemory": "En mémoire"
   },
   "capture": {
     "desc": "Les raccourcis clavier globaux ne fonctionnent que dans l'application de bureau. L'interface utilisateur Web utilise un raccourci <1>Ctrl+Shift+Espace</1> sur la page lorsque la fenêtre a le focus.",
@@ -1180,7 +1181,8 @@
     "languages_pending": "En attente",
     "live_preview": "Aperçu en direct",
     "live_preview_title": "Écoutez une ligne pendant que vous la modifiez : le segment modifié diffuse la synthèse vocale avec sa voix CAST après une courte pause. Lecture seule : rien n'est enregistré et l'export reste rendu en pleine qualité.",
-    "live_preview_pick_voice": "Attribuez une voix CAST à cette ligne ou à son locuteur pour entendre l'aperçu en direct."
+    "live_preview_pick_voice": "Attribuez une voix CAST à cette ligne ou à son locuteur pour entendre l'aperçu en direct.",
+    "autofit_quality": "Ajustement automatique"
   },
   "glossary": {
     "title": "Glossaire",
@@ -2100,7 +2102,8 @@
     "voice_previews_checked": "vérifié {{when}}",
     "voice_previews_never": "pas encore vérifié",
     "voice_previews_check": "Vérifier maintenant",
-    "voice_previews_rejected": "Mise à jour de la galerie de voix refusée : {{message}}"
+    "voice_previews_rejected": "Mise à jour de la galerie de voix refusée : {{message}}",
+    "role_llm": "LLM"
   },
   "enterprise_faq": {
     "q_internal_tools": "Ai-je besoin d’une licence pour les outils internes ?",
@@ -2770,5 +2773,9 @@
     "transcript": "Ce qui a été entendu",
     "result_kicker": "Prise convertie",
     "need_source_and_voice": "Ajoutez d'abord un clip source et choisissez une voix cible."
+  },
+  "player": {
+    "pause": "Mettre en pause",
+    "play": "Lire"
   }
 }

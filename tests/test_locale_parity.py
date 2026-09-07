@@ -99,10 +99,10 @@ _ENGINE_AGNOSTIC_KEYS = (
 # Never raise one: if this fails after adding en.json keys, add the keys to
 # every locale (translated) in the same change instead.
 _MISSING_BASELINE = {
-    "ar": 485, "de": 485, "es": 485, "fr": 485, "hi": 485, "id": 485,
-    "it": 485, "ja": 485, "ko": 0, "nl": 485, "pl": 485, "pt": 485,
-    "ru": 485, "sv": 485, "th": 485, "tr": 485, "uk": 485, "vi": 485,
-    "zh-CN": 478, "zh-TW": 485,
+    "ar": 480, "de": 480, "es": 480, "fr": 480, "hi": 480, "id": 480,
+    "it": 480, "ja": 480, "ko": 0, "nl": 480, "pl": 480, "pt": 480,
+    "ru": 480, "sv": 480, "th": 480, "tr": 480, "uk": 480, "vi": 480,
+    "zh-CN": 473, "zh-TW": 480,
 }
 
 #: Keys every locale must carry regardless of the aggregate ratchet above.
@@ -116,6 +116,11 @@ _REQUIRED_IN_EVERY_LOCALE = (
     "capture.copied",
     "capture.inserted",
     "capture.pasted",
+    "dub.autofit_quality",
+    "engines.inMemory",
+    "models.role_llm",
+    "player.pause",
+    "player.play",
 )
 
 
@@ -427,7 +432,8 @@ def test_every_locale_carries_the_user_facing_dictation_status(locale, key):
         f"{locale}.json is missing {key!r} — users on that locale see the raw key "
         f"or the English string"
     )
-    assert value != english, (
+    # Standard model acronyms and product/CLI names are shared across locales.
+    assert key in {"models.role_llm", "settings.hf_source_cli_label"} or value != english, (
         f"{locale}.json copies the English {key!r} verbatim ({english!r}); "
         f"translate it or the ratchet is measuring nothing"
     )

@@ -829,7 +829,8 @@
     "familyDesc_tts": "スクリプトを音声に変換します。有効と表示されたエンジンがスタジオ、ダビング、バッチで使用されます。",
     "familyDesc_asr": "音声をテキストに変換し、ダビング、字幕、音声入力の文字起こしに使用します。",
     "familyDesc_llm": "翻訳や書き換え用の任意のテキスト補助です。「オフ」にするとこれらの手順を省略します。",
-    "mpsLongText": "ここでは {{engine}} が Apple Silicon（MPS）で実行され、このテキストは長いため、生成が時間制限を超える可能性があります。テキストを短くするか、数回に分けたほうが大幅に高速です。"
+    "mpsLongText": "ここでは {{engine}} が Apple Silicon（MPS）で実行され、このテキストは長いため、生成が時間制限を超える可能性があります。テキストを短くするか、数回に分けたほうが大幅に高速です。",
+    "inMemory": "メモリに読み込み済み"
   },
   "capture": {
     "desc": "グローバル ホットキーはデスクトップ アプリでのみ機能します。 Web UI は、ウィンドウにフォーカスがある間、ページ内 <1>Ctrl+Shift+Space</1> ショートカットを使用します。",
@@ -1180,7 +1181,8 @@
     "languages_pending": "保留中",
     "live_preview": "ライブプレビュー",
     "live_preview_title": "編集中のセリフをそのまま試聴 — 編集したセグメントは少し置いてから CAST ボイスで TTS をストリーミングします。再生のみ: 何も保存されず、書き出しは引き続きフル品質でレンダリングされます。",
-    "live_preview_pick_voice": "ライブプレビューを聴くには、この行または話者に CAST ボイスを割り当ててください。"
+    "live_preview_pick_voice": "ライブプレビューを聴くには、この行または話者に CAST ボイスを割り当ててください。",
+    "autofit_quality": "自動フィット"
   },
   "glossary": {
     "title": "用語集",
@@ -2100,7 +2102,8 @@
     "voice_previews_checked": "{{when}}に確認",
     "voice_previews_never": "未確認",
     "voice_previews_check": "今すぐ確認",
-    "voice_previews_rejected": "ボイスギャラリーの更新を拒否しました: {{message}}"
+    "voice_previews_rejected": "ボイスギャラリーの更新を拒否しました: {{message}}",
+    "role_llm": "LLM"
   },
   "enterprise_faq": {
     "q_internal_tools": "内部ツールにはライセンスが必要ですか?",
@@ -2770,5 +2773,9 @@
     "transcript": "聞き取った内容",
     "result_kicker": "変換されたテイク",
     "need_source_and_voice": "先にソースクリップを追加し、変換先の声を選んでください。"
+  },
+  "player": {
+    "pause": "一時停止",
+    "play": "再生"
   }
 }

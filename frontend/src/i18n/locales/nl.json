@@ -829,7 +829,8 @@
     "familyDesc_tts": "Zet je script om in spraak. Studio, Nasynchronisatie en Batch gebruiken de actieve engine.",
     "familyDesc_asr": "Zet audio om in tekst voor transcriptie, nasynchronisatie, ondertiteling en dicteren.",
     "familyDesc_llm": "Optionele teksthulp voor vertalen en herschrijven. ‘Uit’ slaat deze stappen over.",
-    "mpsLongText": "{{engine}} draait hier op Apple Silicon (MPS) en deze tekst is lang — de generatie overschrijdt mogelijk het tijdsbudget. Kortere tekst, of opsplitsen in meerdere takes, is veel sneller."
+    "mpsLongText": "{{engine}} draait hier op Apple Silicon (MPS) en deze tekst is lang — de generatie overschrijdt mogelijk het tijdsbudget. Kortere tekst, of opsplitsen in meerdere takes, is veel sneller.",
+    "inMemory": "In het geheugen"
   },
   "capture": {
     "desc": "Globale sneltoetsen werken alleen in de desktop-app. De webinterface gebruikt een sneltoets <1>Ctrl+Shift+Spatie</1> op de pagina terwijl het venster focus heeft.",
@@ -1180,7 +1181,8 @@
     "languages_pending": "In behandeling",
     "live_preview": "Livevoorbeeld",
     "live_preview_title": "Hoor een regel terwijl je die bewerkt — het bewerkte segment streamt na een korte pauze TTS met zijn CAST-stem. Alleen afspelen: er wordt niets opgeslagen en exporteren rendert nog steeds op volledige kwaliteit.",
-    "live_preview_pick_voice": "Wijs een CAST-stem toe aan deze regel of de spreker om het livevoorbeeld te horen."
+    "live_preview_pick_voice": "Wijs een CAST-stem toe aan deze regel of de spreker om het livevoorbeeld te horen.",
+    "autofit_quality": "Automatisch passend maken"
   },
   "glossary": {
     "title": "Woordenlijst",
@@ -2100,7 +2102,8 @@
     "voice_previews_checked": "gecontroleerd {{when}}",
     "voice_previews_never": "nog niet gecontroleerd",
     "voice_previews_check": "Nu controleren",
-    "voice_previews_rejected": "Update van de stemgalerij geweigerd: {{message}}"
+    "voice_previews_rejected": "Update van de stemgalerij geweigerd: {{message}}",
+    "role_llm": "LLM"
   },
   "enterprise_faq": {
     "q_internal_tools": "Heb ik een licentie nodig voor interne tools?",
@@ -2770,5 +2773,9 @@
     "transcript": "Wat er is gehoord",
     "result_kicker": "Geconverteerde take",
     "need_source_and_voice": "Voeg eerst een bronclip toe en kies een doelstem."
+  },
+  "player": {
+    "pause": "Pauzeren",
+    "play": "Afspelen"
   }
 }
