@@ -10,7 +10,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
-- Fix current-user Windows installer validation and nested resource cleanup (#730)
+- Fix current-user Windows installer validation and nested resource cleanup (#1873)
 
 - Voice cloning now starts with a clear upload-or-record choice, reveals recording and reference details only when needed, and keeps sampling controls under Production Overrides (#1817)
 
