@@ -21,6 +21,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Fixed
 
 - Slow backend startups remain running with progress updates, and Retry interrupts startup without stale timeout failures (#1809)
+- Fast macOS process exits no longer turn a completed shutdown into a permission error (#1809)
 
 ## [0.5.2] — 2026-09-02
 

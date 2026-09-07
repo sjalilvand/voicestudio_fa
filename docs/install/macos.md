@@ -190,3 +190,10 @@ Hit a wall? See [docs/install/troubleshooting.md](troubleshooting.md).
 The in-app error UI (the React error boundary that fires on backend errors)
 includes an **"Open docs for this error"** button — that button deeplinks
 back into this docs tree at the right section for the error class.
+
+### Fast process shutdown
+
+A process that exits while shutdown is signalling it can report a macOS
+permission error. VoiceStudio accepts this only after confirming the original
+process exited without being reaped, then still waits for nested operations to
+drain. Live-process permission errors and lost process ownership remain failures.
