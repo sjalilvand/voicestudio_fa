@@ -465,6 +465,9 @@ export function BootstrapSplash({ stage, message }) {
   const [attemptStart, setAttemptStart] = useState(0);
   const logRef = useRef(null);
   const prevStageRef = useRef(stage); // previous stage, for restart detection
+  // True between a retry WE initiated and the poll catching up to it, so the
+  // fallback effect below doesn't re-stamp an already-exact attempt boundary.
+  const selfInitiatedRef = useRef(false);
   const prevProgRef = useRef(null); // {bytes, t} — last progress event
   const rateRef = useRef(0); // EMA bytes/sec across events
 
@@ -499,12 +502,25 @@ export function BootstrapSplash({ stage, message }) {
   // instead of fabricating completed work (#1894).
   const installWorkSeen = INSTALL_STAGES.some((s) => observedStages.has(s));
 
+  // Open a new bootstrap attempt. Called at the moment a retry is INITIATED,
+  // not when the ~1s status poll later reports `checking`: the Rust side
+  // starts emitting logs for the new attempt immediately, and a boundary
+  // stamped at detection time would sit *after* those lines and discard them
+  // as belonging to the old attempt — losing exactly the fast-stage evidence
+  // the log union exists to capture.
+  const beginAttempt = () => {
+    selfInitiatedRef.current = true;
+    setLogs([]);
+    setPolledStages(new Set());
+    setAttemptStart(Date.now());
+  };
+
   const handleRetry = async () => {
     if (retrying) return;
     setRetrying(true);
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      setLogs([]);
+      beginAttempt();
       await invoke('retry_bootstrap');
     } catch (e) {
       console.error('retry failed', e);
@@ -519,7 +535,7 @@ export function BootstrapSplash({ stage, message }) {
     setRetrying(true);
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      setLogs([]);
+      beginAttempt();
       await invoke('clean_and_retry_bootstrap');
     } catch (e) {
       console.error('clean retry failed', e);
@@ -537,15 +553,32 @@ export function BootstrapSplash({ stage, message }) {
   // `checking`, and what the previous attempt did says nothing about what
   // this one will do. Without the reset, stages the new attempt skips would
   // still render as completed, which is the very fabrication this change
-  // exists to remove. Keyed off the stage moving back to a restart stage
-  // rather than off our own Retry buttons, so a restart initiated on the
-  // Rust side resets it too.
+  // exists to remove.
+  //
+  // Retries we initiate call beginAttempt() directly, so their boundary is
+  // exact. This effect is the FALLBACK for a restart begun on the Rust side,
+  // where the stage poll is the only signal we get. There the boundary can
+  // land up to one poll interval late, and log lines from the new attempt in
+  // that window are discarded rather than counted. That is the deliberate
+  // direction to fail in: a discarded line can leave a step showing pending
+  // (conservative, and honest), whereas counting a stale line would render a
+  // step DONE for work this attempt never did — the bug this change exists to
+  // fix. Closing the window entirely needs a Rust-provided attempt id, which
+  // would be a new IPC surface and is deliberately out of scope here.
   useEffect(() => {
     const prev = prevStageRef.current;
     prevStageRef.current = stage;
     const restarted = RESTART_STAGES.has(stage) && !RESTART_STAGES.has(prev);
     if (restarted) {
-      setAttemptStart(Date.now());
+      if (selfInitiatedRef.current) {
+        // beginAttempt() already opened this attempt with an exact boundary.
+        // Re-stamping it here — a poll interval later — would discard the
+        // new attempt's own early log lines, which is the bug this guard
+        // exists to prevent.
+        selfInitiatedRef.current = false;
+      } else {
+        setAttemptStart(Date.now());
+      }
       setPolledStages(new Set([stage]));
       return;
     }

@@ -24,7 +24,7 @@
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import { BootstrapSplash } from '../components/BootstrapSplash';
 
 vi.mock('@tauri-apps/api/core', () => ({
@@ -160,5 +160,49 @@ describe('BootstrapSplash — observed-stage tracking (#1894)', () => {
     expect(screen.queryByText('Downloading uv (Python package manager)…')).toBeNull();
     expect(screen.queryByText(/first run, 5.10 min/)).toBeNull();
     expect(screen.getByText('Starting backend…')).toBeInTheDocument();
+  });
+
+  it('logs arriving after Retry but before the next poll are not discarded', async () => {
+    // Greptile finding on ece08bd7: the attempt boundary was stamped when the
+    // ~1s poll first reported `checking`, which lands AFTER the Rust side has
+    // already emitted the new attempt's first log lines — so that evidence was
+    // filtered out as "previous attempt" and a fast stage missed by polling
+    // stayed pending. The boundary must open when the retry is initiated.
+    window.__TAURI_INTERNALS__ = {};
+    const { invoke } = await import('@tauri-apps/api/core');
+    const { listen } = await import('@tauri-apps/api/event');
+    const handlers = {};
+    listen.mockImplementation(async (name, cb) => {
+      handlers[name] = cb;
+      return () => {};
+    });
+    invoke.mockImplementation(async () => null);
+
+    const { rerender } = render(<BootstrapSplash stage="failed" message="uv sync failed" />);
+    await waitFor(() => expect(handlers['bootstrap-log']).toBeTypeOf('function'));
+
+    // User clicks Retry — this opens the new attempt.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^Retry$/ }));
+    });
+
+    // Rust immediately emits the new attempt's logs, still before the poll
+    // has reported `checking`.
+    await act(async () => {
+      handlers['bootstrap-log']({
+        payload: { stage: 'creating_venv', line: 'Creating virtualenv at .venv' },
+      });
+    });
+
+    // Only now does the poll catch up, and it never samples creating_venv.
+    rerender(<BootstrapSplash stage="checking" message={null} />);
+    rerender(<BootstrapSplash stage="installing_deps" message={null} />);
+
+    // The log line proved creating_venv ran in THIS attempt; it must not have
+    // been discarded by a boundary stamped after it arrived.
+    await waitFor(() => {
+      const venvStep = screen.getByText('Creating Python virtual environment…');
+      expect(venvStep.className).toMatch(/text-fg-muted/);
+    });
   });
 });
