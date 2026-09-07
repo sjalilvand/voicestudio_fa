@@ -93,6 +93,8 @@ def test_release_builds_publishes_and_smokes_as_a_standard_user():
     assert "smoke-per-user-msi.ps1" in workflow
     assert "Start-Process msiexec.exe -Credential" in smoke
     assert "if ($LASTEXITCODE -ne 0)" in smoke
+    assert "-PrepareHostedRunner" in workflow
+    assert "New-LocalUser" in smoke
     assert "if ($createdUser)" in smoke
     assert "standard-user uninstall" in smoke
     assert "latest/download/latest-user.json" in updater

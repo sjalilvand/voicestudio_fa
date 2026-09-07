@@ -320,3 +320,12 @@ system build's resource snapshot. The Windows MSI authoring
 job runs after the test suite and preserves verbose WiX logs and rendered XML.
 For focused diagnosis, dispatch CI with `windows_wix_diagnostic=true`; it skips
 the other jobs and never signs, publishes, or installs the fixture bundles.
+
+The release smoke installs and removes the current-user MSI using a standard
+Windows account. On disposable GitHub-hosted Windows Server runners, it explicitly
+allows unmanaged MSI installations for the duration of this test, then restores
+the previous Installer policy value and type (or its absence), even on failure.
+This test-host preparation does not change installer privileges or user machines.
+Verbose MSI logs are printed if installation or removal fails. The Windows CI
+job also rejects an invalid MSI and verifies policy absence, value types, account
+cleanup, and verbose failure logs using Windows PowerShell 5.1.
