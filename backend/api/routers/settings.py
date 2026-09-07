@@ -65,8 +65,7 @@ def save_hf_token(body: _HFTokenBody):
 
 @router.delete("/hf-token")
 def clear_hf_token(also_clear_hf_cli: bool = Query(False)):
-    """Clear the App-source token. Optionally also call huggingface_hub.logout
-    to clear the canonical HF file. Returns the updated cascade state."""
+    """Clear the App token and optionally recognized local Hub token files."""
     from services import token_resolver
     try:
         token_resolver.clear_app_token(also_clear_hf_cli=also_clear_hf_cli)

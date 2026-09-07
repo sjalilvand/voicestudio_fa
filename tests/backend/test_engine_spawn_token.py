@@ -19,6 +19,10 @@ def fresh_app(monkeypatch, tmp_path):
     The Settings router is mounted manually because the full main.py app
     factory imports the entire backend stack (torch, whisperx, demucs, …)
     which is too heavy for a unit test."""
+    from huggingface_hub import constants
+    monkeypatch.setattr(constants, "HF_TOKEN_PATH", str(tmp_path / "hf-token"))
+    monkeypatch.setattr(constants, "HF_STORED_TOKENS_PATH", str(tmp_path / "stored_tokens"))
+    monkeypatch.setenv("HF_TOKEN_PATH", str(tmp_path / "hf-token"))
     monkeypatch.setenv("OMNIVOICE_DATA_DIR", str(tmp_path))
     monkeypatch.delenv("HF_TOKEN", raising=False)
     monkeypatch.delenv("HUGGING_FACE_HUB_TOKEN", raising=False)
@@ -206,6 +210,10 @@ def test_subprocess_env_includes_hf_token_when_resolved(monkeypatch, tmp_path):
     to a Popen-style subprocess launcher contains HF_TOKEN=<that token>.
     This is the AUTH-04 invariant; the SoniTranslate launcher (and any
     future subprocess launcher) MUST follow this exact pattern."""
+    from huggingface_hub import constants
+    monkeypatch.setattr(constants, "HF_TOKEN_PATH", str(tmp_path / "hf-token"))
+    monkeypatch.setattr(constants, "HF_STORED_TOKENS_PATH", str(tmp_path / "stored_tokens"))
+    monkeypatch.setenv("HF_TOKEN_PATH", str(tmp_path / "hf-token"))
     monkeypatch.setenv("OMNIVOICE_DATA_DIR", str(tmp_path))
     monkeypatch.delenv("HF_TOKEN", raising=False)
     for mod in list(sys.modules):
@@ -233,6 +241,10 @@ def test_subprocess_env_unchanged_when_no_token(monkeypatch, tmp_path):
     contain an injected HF_TOKEN. (If the parent had one in os.environ
     it would still be in the copy — but the launcher does not _add_ an
     empty string, which would clobber any child-set default.)"""
+    from huggingface_hub import constants
+    monkeypatch.setattr(constants, "HF_TOKEN_PATH", str(tmp_path / "hf-token"))
+    monkeypatch.setattr(constants, "HF_STORED_TOKENS_PATH", str(tmp_path / "stored_tokens"))
+    monkeypatch.setenv("HF_TOKEN_PATH", str(tmp_path / "hf-token"))
     monkeypatch.setenv("OMNIVOICE_DATA_DIR", str(tmp_path))
     monkeypatch.delenv("HF_TOKEN", raising=False)
     monkeypatch.delenv("HUGGING_FACE_HUB_TOKEN", raising=False)
@@ -259,6 +271,10 @@ def test_sonitranslate_module_uses_resolver(monkeypatch, tmp_path):
     launcher block contains the canonical resolver import. This guards
     against future refactors silently reverting the AUTH-04 wiring."""
     import inspect
+    from huggingface_hub import constants
+    monkeypatch.setattr(constants, "HF_TOKEN_PATH", str(tmp_path / "hf-token"))
+    monkeypatch.setattr(constants, "HF_STORED_TOKENS_PATH", str(tmp_path / "stored_tokens"))
+    monkeypatch.setenv("HF_TOKEN_PATH", str(tmp_path / "hf-token"))
     monkeypatch.setenv("OMNIVOICE_DATA_DIR", str(tmp_path))
     for mod in list(sys.modules):
         if (

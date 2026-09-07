@@ -4,7 +4,7 @@ Resolution priority (highest → lowest):
 
   1. app    — `settings_store.get_hf_token()` (encrypted in SQLite)
   2. env    — `HF_TOKEN` or the legacy `HUGGING_FACE_HUB_TOKEN` env var
-  3. hf-cli — `huggingface_hub.get_token()` (canonical ~/.cache/huggingface/token)
+  3. hf-cli — the selected local Hub token file (`HF_TOKEN_PATH`)
 
 For each candidate, the resolver calls `huggingface_hub.whoami(token=...)`
 to verify the token is live; any HTTP error (401, 403, network) skips to
@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+from pathlib import Path
 import threading
 import time
 from dataclasses import dataclass
@@ -79,19 +80,26 @@ def _read_app() -> Optional[str]:
         return None
 
 
+def _clean_token(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    return value.replace("\r", "").replace("\n", "").strip() or None
+
+
 def _read_env() -> Optional[str]:
     # HF docs explicitly accept either name; user may have either exported.
     val = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
-    return val or None
+    return _clean_token(val)
 
 
 def _read_hf_cli() -> Optional[str]:
     try:
-        import huggingface_hub
-        tok = huggingface_hub.get_token()
-        return tok or None
+        from huggingface_hub import constants
+        return _clean_token(Path(constants.HF_TOKEN_PATH).read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None
     except Exception:
-        logger.exception("huggingface_hub.get_token failed")
+        logger.warning("Could not read the local Hugging Face token file")
         return None
 
 
@@ -249,15 +257,30 @@ def save_app_token(token: str) -> None:
     invalidate_cache()
 
 
+def clear_hf_cli_tokens() -> None:
+    """Remove recognized Hub token files without refreshing or revoking tokens."""
+    from core.config import HF_CLI_TOKEN_PATHS
+    from huggingface_hub import constants
+
+    # Hub's active path remains authoritative if imported before app config.
+    paths = set(HF_CLI_TOKEN_PATHS) | {constants.HF_TOKEN_PATH}
+    failed = False
+    for token_path in paths:
+        path = Path(token_path)
+        for target in (path, path.parent / "stored_tokens"):
+            try:
+                target.unlink(missing_ok=True)
+            except OSError:
+                failed = True
+    invalidate_cache()
+    if failed:
+        raise OSError("Could not clear all local Hugging Face token files")
+
+
 def clear_app_token(also_clear_hf_cli: bool = False) -> None:
-    """Remove from the encrypted settings store; optionally also call
-    `huggingface_hub.logout()` to clear the canonical HF file."""
+    """Clear the encrypted app token, optionally recognized local Hub files."""
     from services import settings_store
     settings_store.clear_hf_token()
     if also_clear_hf_cli:
-        try:
-            import huggingface_hub
-            huggingface_hub.logout()
-        except Exception:
-            logger.exception("huggingface_hub.logout failed (non-fatal)")
+        clear_hf_cli_tokens()
     invalidate_cache()

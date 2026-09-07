@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "Đặt lại không thành công: {{message}}",
     "reset_longform_failed": "VoiceStudio không thể xóa an toàn các dự án đã lưu. Dữ liệu dự án của bạn không bị thay đổi; hãy giải phóng dung lượng hoặc khởi động lại ứng dụng rồi thử lại.",
     "cancel": "Hủy",
-    "hf_token_also_clear": "Đồng thời xóa",
+    "hf_token_also_clear": "Đồng thời xóa các tệp mã thông báo HuggingFace CLI đã lưu",
     "hf_token_clear_btn": "Xóa token",
     "hf_token_clear_confirm": "Xóa token HuggingFace từ nguồn Ứng dụng?",
     "hf_token_clear_dialog": "Xóa token",

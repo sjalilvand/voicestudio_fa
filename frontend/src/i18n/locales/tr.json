@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "Sıfırlama başarısız oldu: {{message}}",
     "reset_longform_failed": "VoiceStudio kaydedilmiş projeleri güvenli bir şekilde temizleyemedi. Proje verileriniz değiştirilmedi; depolama alanı açın veya uygulamayı yeniden başlatıp tekrar deneyin.",
     "cancel": "İptal",
-    "hf_token_also_clear": "Ayrıca temizle",
+    "hf_token_also_clear": "Kaydedilmiş HuggingFace CLI belirteç dosyalarını da sil",
     "hf_token_clear_btn": "Belirteci temizle",
     "hf_token_clear_confirm": "Uygulama kaynaklı HuggingFace belirteci temizlensin mi?",
     "hf_token_clear_dialog": "Belirteci temizle",

@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "Reset mislukt: {{message}}",
     "reset_longform_failed": "VoiceStudio kon de opgeslagen projecten niet veilig wissen. Je projectgegevens zijn niet gewijzigd; maak opslagruimte vrij of start de app opnieuw en probeer het nogmaals.",
     "cancel": "Annuleer",
-    "hf_token_also_clear": "Ook wissen",
+    "hf_token_also_clear": "Ook opgeslagen HuggingFace CLI-tokenbestanden verwijderen",
     "hf_token_clear_btn": "Token wissen",
     "hf_token_clear_confirm": "De HuggingFace-token uit de app-bron wissen?",
     "hf_token_clear_dialog": "Token wissen",

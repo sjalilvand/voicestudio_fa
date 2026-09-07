@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "Penyetelan ulang gagal: {{message}}",
     "reset_longform_failed": "VoiceStudio tidak dapat menghapus proyek tersimpan dengan aman. Data proyek Anda tidak diubah; kosongkan sebagian ruang penyimpanan atau mulai ulang aplikasi, lalu coba lagi.",
     "cancel": "Batalkan",
-    "hf_token_also_clear": "Hapus juga",
+    "hf_token_also_clear": "Hapus juga berkas token HuggingFace CLI yang tersimpan",
     "hf_token_clear_btn": "Hapus token",
     "hf_token_clear_confirm": "Hapus token HuggingFace dari sumber Aplikasi?",
     "hf_token_clear_dialog": "Hapus token",

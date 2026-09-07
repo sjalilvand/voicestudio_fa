@@ -72,7 +72,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Cloning reuses the dubbing language picker with flags, search, and single selection, opening above the pinned synthesis controls (#1823)
 - The first-run welcome line uses an instruction accepted by OmniVoice and VoiceDesign engines (#1861) — thanks @psiberfunk!
 - The header status dot now honors OS Reduce Motion instead of pulsing regardless (#1862) — thanks @psiberfunk!
-- Onboarding recognizes locally saved Hugging Face tokens without network checks, localizes source labels, and requires a click to replace a token (#1852) — thanks @psiberfunk!
+- Onboarding recognizes local Hugging Face tokens without network checks, preserves Windows CLI logins, and clears saved token files explicitly (#1852) — thanks @psiberfunk!
 - The logs panel no longer reports “All clear” before log retrieval succeeds or while logs contain warnings or errors (#1870) — thanks @motodriver!
 - MOSS accelerator routing and status match runtime selection, with CPU fallback when device probing fails (#1830) — thanks @li-lizhe!
 - Confucius accelerator routing tolerates failed device probes, and dots.tts keeps safe default precision on non-CUDA hosts (#1831) — thanks @li-lizhe!

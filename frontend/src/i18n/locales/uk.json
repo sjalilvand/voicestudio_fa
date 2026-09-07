@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "Помилка скидання: {{message}}",
     "reset_longform_failed": "VoiceStudio не вдалося безпечно видалити збережені проєкти. Дані проєктів не змінено; звільніть місце або перезапустіть застосунок і повторіть спробу.",
     "cancel": "Скасувати",
-    "hf_token_also_clear": "Також очистити",
+    "hf_token_also_clear": "Також видалити збережені файли токенів HuggingFace CLI",
     "hf_token_clear_btn": "Очистити токен",
     "hf_token_clear_confirm": "Очистити токен HuggingFace із джерела App?",
     "hf_token_clear_dialog": "Очистити токен",

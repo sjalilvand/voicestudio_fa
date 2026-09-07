@@ -604,7 +604,7 @@
     "shortcut_reset_failed": "Reset failed: {{message}}",
     "reset_longform_failed": "VoiceStudio couldn’t safely clear saved projects. Your project data was left intact; free some storage or restart the app, then try again.",
     "cancel": "Cancel",
-    "hf_token_also_clear": "Also clear",
+    "hf_token_also_clear": "Also clear saved HuggingFace CLI token files",
     "hf_token_clear_btn": "Clear token",
     "hf_token_clear_confirm": "Clear the App-source HuggingFace token?",
     "hf_token_clear_dialog": "Clear token",
