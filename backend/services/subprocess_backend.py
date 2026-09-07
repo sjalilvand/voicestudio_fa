@@ -777,28 +777,30 @@ class SubprocessBackend(TTSBackend):
         return msg
 
     def _recv_with_timeout(self, timeout_s: float) -> Optional[dict]:
-        """Recv that aborts if the sidecar goes silent.
+        """Read one frame, finishing timeout cleanup before the caller can retry.
 
-        Implemented by polling the proc for liveness with a deadline. We
-        don't block on a `select` of the pipe because Windows can't select
-        on subprocess pipes — keeping the implementation cross-platform
-        means a simpler polling loop here.
+        A watchdog closes the pipe on timeout; Windows cannot select on pipes.
+        EOF alone does not prove the owned process/supervisor has exited.
         """
         # On Unix we could use selectors; on Windows the pipe is not
         # selectable. Use a watchdog thread that kills the sidecar on
         # timeout — that triggers EOF on stdout, so _recv returns None
         # and the caller raises.
-        watchdog = threading.Timer(timeout_s, self._timeout_kill)
+        proc = self._proc
+        watchdog = threading.Timer(timeout_s, self._timeout_kill, args=(proc,))
         watchdog.daemon = True
         watchdog.start()
         try:
             return self._recv()
         finally:
             watchdog.cancel()
+            # cancel() cannot stop an already-running callback. Finish its
+            # bounded reap before another receive or generation starts.
+            watchdog.join()
             self._touch()  # any reply (or attempt) counts as recent activity
 
-    def _timeout_kill(self) -> None:
-        proc = self._proc
+    def _timeout_kill(self, proc: Optional[subprocess.Popen]) -> None:
+        """Kill only the child this receive captured, then reap its owner."""
         if proc is None:
             return
         try:
@@ -807,6 +809,7 @@ class SubprocessBackend(TTSBackend):
                 self.id,
             )
             proc.kill()
+            proc.wait(timeout=2)
         except Exception:
             pass
 

@@ -106,3 +106,7 @@ See also: [benchmarks.md](../benchmarks.md),
 [performance.md](../performance.md),
 [expressive-speech.md](../expressive-speech.md),
 [disk usage](disk-usage.md).
+
+A timed-out subprocess is killed and given a bounded wait to exit before the
+request returns, so retrying cannot reuse its closing process. Timeout cleanup
+remains tied to the original child and cannot kill a replacement sidecar.

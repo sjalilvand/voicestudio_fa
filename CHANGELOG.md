@@ -20,6 +20,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Timed-out voice engines finish process cleanup before retrying, and old timeout callbacks cannot kill replacement engines (#730)
+
 
 ## [0.5.2] — 2026-09-02
 
