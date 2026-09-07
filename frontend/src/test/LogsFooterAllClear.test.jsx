@@ -1,7 +1,10 @@
 import React, { Profiler } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, QueryObserver } from '@tanstack/react-query';
+
+const toasts = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+vi.mock('react-hot-toast', () => ({ default: Object.assign(vi.fn(), toasts) }));
 
 const queries = vi.hoisted(() => ({
   backend: {},
@@ -47,6 +50,8 @@ function footer(onRender = () => {}) {
 
 beforeEach(() => {
   localStorage.clear();
+  toasts.success.mockClear();
+  toasts.error.mockClear();
   queries.frontend = [];
   for (const source of ['backend', 'tauri']) {
     queries[source] = { data: { lines: [] }, isSuccess: true, refetch: vi.fn(async () => {}) };
@@ -123,3 +128,32 @@ describe('LogsFooter all-clear evidence', () => {
     },
   );
 });
+
+it.each(['backend', 'tauri'])(
+  'reports refresh failure after clearing %s without claiming success',
+  async (source) => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const observer = new QueryObserver(client, {
+      queryKey: ['failed-refresh', source],
+      queryFn: async () => {
+        throw new Error('log refresh unavailable');
+      },
+    });
+    queries[source].refetch = (options) => observer.refetch(options);
+    const view = footer();
+    fireEvent.click(
+      screen.getByRole('button', { name: source === 'backend' ? /^Backend logs/ : /^Tauri logs/ }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Clear/i }));
+    await waitFor(() =>
+      expect(toasts.error).toHaveBeenCalledWith(expect.stringContaining('log refresh unavailable')),
+    );
+    expect(toasts.success).not.toHaveBeenCalled();
+    queries[source] = { ...queries[source], isSuccess: false, isError: true };
+    view.update();
+    act(() => window.dispatchEvent(new CustomEvent('omni:open-notifications')));
+    expect(screen.queryByText(ALL_CLEAR)).toBeNull();
+    observer.destroy();
+    client.clear();
+  },
+);

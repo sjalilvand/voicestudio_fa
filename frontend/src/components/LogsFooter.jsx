@@ -419,10 +419,10 @@ export default function LogsFooter() {
     try {
       if (active === 'backend') {
         await clearSystemLogs();
-        await backendLogs.refetch();
+        await backendLogs.refetch({ throwOnError: true });
       } else if (active === 'tauri') {
         await clearTauriLogs();
-        await tauriLogs.refetch();
+        await tauriLogs.refetch({ throwOnError: true });
       } else if (active === 'frontend') {
         clearFrontendLogs();
         pullFrontend();
