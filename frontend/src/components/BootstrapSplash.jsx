@@ -127,6 +127,10 @@ const STEPS = [
 // journey chrome should already be armed by the time the step list appears.
 const INSTALL_STAGES = ['downloading_uv', 'creating_venv', 'installing_deps', 'awaiting_setup'];
 
+// Stages the bootstrap restarts *from*. Arriving at one of these from
+// anywhere else means a new attempt began (Retry, or a Rust-side restart).
+const RESTART_STAGES = new Set(['checking', 'awaiting_setup']);
+
 const MAX_LOG_LINES = 200;
 
 /** Scan logs + error message for known failure patterns and return i18n keys
@@ -452,13 +456,36 @@ export function BootstrapSplash({ stage, message }) {
   const [progress, setProgress] = useState(null);
   const [region, setRegionState] = useState('auto');
   const [retrying, setRetrying] = useState(false);
-  // Stages actually seen this session (sticky/monotonic — see the tracking
-  // effect below). Drives "done" ticks and journey visibility off observed
-  // reality instead of list position (#1894).
-  const [observedStages, setObservedStages] = useState(() => new Set([stage]));
+  // Stages actually seen during the CURRENT bootstrap attempt (see the
+  // tracking effect below). Drives "done" ticks and journey visibility off
+  // observed reality instead of list position (#1894).
+  const [polledStages, setPolledStages] = useState(() => new Set([stage]));
+  // Wall-clock start of the current attempt. A retry restarts the bootstrap;
+  // log lines from the previous attempt must not count toward this one.
+  const [attemptStart, setAttemptStart] = useState(0);
   const logRef = useRef(null);
+  const prevStageRef = useRef(stage); // previous stage, for restart detection
   const prevProgRef = useRef(null); // {bytes, t} — last progress event
   const rateRef = useRef(0); // EMA bytes/sec across events
+
+  // The union of what we polled and what actually logged.
+  //
+  // Neither source alone is complete. `bootstrap_status` is sampled ~1/s, so
+  // a stage that starts and finishes between samples is never polled — on a
+  // fast disk `creating_venv` routinely does. Stage-tagged `bootstrap-log`
+  // lines close that gap: the Rust side emits them as the work happens, so a
+  // line tagged with a stage is proof that stage ran, whether or not the
+  // poll ever saw it. Lines are filtered to the current attempt so a retry
+  // cannot inherit the previous one's evidence (the visible log is left
+  // alone — clearing it on a Rust-side restart would destroy the user's
+  // context, cf. #1847).
+  const observedStages = useMemo(() => {
+    const seen = new Set(polledStages);
+    for (const entry of logs) {
+      if (entry?.stage && (entry.t ?? 0) >= attemptStart) seen.add(entry.stage);
+    }
+    return seen;
+  }, [polledStages, logs, attemptStart]);
 
   const label = t(`bootstrap.${stage}`, STAGE_LABEL[stage]);
   const stepIndex = Math.max(0, STEPS.indexOf(stage));
@@ -501,13 +528,28 @@ export function BootstrapSplash({ stage, message }) {
     }
   };
 
-  // Record `stage` as observed the moment it's seen. Sticky/monotonic: the
-  // functional updater bails out (same Set reference) once a stage is
-  // already recorded, so this never un-observes anything and never loops.
-  // `bootstrap_status` is polled ~1/s by useBootstrapStage, so a stage that
-  // actually ran is guaranteed to land here at least once (#1894).
+  // Record `stage` as observed the moment it's seen, and reset when a new
+  // attempt begins.
+  //
+  // Sticky WITHIN an attempt: the functional updater bails out (same Set
+  // reference) once a stage is recorded, so it never un-observes and never
+  // loops. But NOT across attempts — a Retry restarts the bootstrap from
+  // `checking`, and what the previous attempt did says nothing about what
+  // this one will do. Without the reset, stages the new attempt skips would
+  // still render as completed, which is the very fabrication this change
+  // exists to remove. Keyed off the stage moving back to a restart stage
+  // rather than off our own Retry buttons, so a restart initiated on the
+  // Rust side resets it too.
   useEffect(() => {
-    setObservedStages((prev) => (prev.has(stage) ? prev : new Set(prev).add(stage)));
+    const prev = prevStageRef.current;
+    prevStageRef.current = stage;
+    const restarted = RESTART_STAGES.has(stage) && !RESTART_STAGES.has(prev);
+    if (restarted) {
+      setAttemptStart(Date.now());
+      setPolledStages(new Set([stage]));
+      return;
+    }
+    setPolledStages((p) => (p.has(stage) ? p : new Set(p).add(stage)));
   }, [stage]);
 
   // Load persisted region on mount.

@@ -12,13 +12,19 @@
  * but `downloading_uv`/`creating_venv` still rendered done), and `JourneyRail`
  * hardcoded Setup=done/Installing=active regardless of `stage`.
  *
- * The fix tracks which stages were actually observed (sticky, via the
- * `bootstrap_status` poll) and derives doneness + journey-chrome visibility
- * from that instead of list position.
+ * The fix tracks which stages were actually observed and derives doneness +
+ * journey-chrome visibility from that instead of list position.
+ *
+ * Two follow-up findings from bot review on PR #1896 are covered at the end:
+ *   - the ~1s `bootstrap_status` poll can miss a stage that starts and
+ *     finishes between samples, so stage-tagged `bootstrap-log` lines are
+ *     unioned in as independent proof a stage ran;
+ *   - a Retry restarts the bootstrap, so stages observed during the previous
+ *     attempt must not carry over and render as done in the new one.
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { BootstrapSplash } from '../components/BootstrapSplash';
 
 vi.mock('@tauri-apps/api/core', () => ({
@@ -109,5 +115,50 @@ describe('BootstrapSplash — observed-stage tracking (#1894)', () => {
         expect(stepLabel.className).toMatch(/text-fg-muted/);
       }
     }
+  });
+
+  it('a stage the 1s poll never sampled still counts as done when its logs prove it ran', async () => {
+    // Greptile finding on #1896: `bootstrap_status` is sampled ~1/s, so on a
+    // fast disk `creating_venv` can start and finish between two samples and
+    // never be polled. Stage-tagged bootstrap logs are emitted as the work
+    // happens, so they are independent proof the stage ran.
+    window.__TAURI_INTERNALS__ = {};
+    const { invoke } = await import('@tauri-apps/api/core');
+    invoke.mockImplementation(async (cmd) =>
+      cmd === 'get_bootstrap_logs'
+        ? [{ stage: 'creating_venv', line: 'Creating virtualenv at .venv' }]
+        : null,
+    );
+
+    // Poll sequence skips creating_venv entirely.
+    const { rerender } = render(<BootstrapSplash stage="downloading_uv" message={null} />);
+    rerender(<BootstrapSplash stage="installing_deps" message={null} />);
+
+    await waitFor(() => {
+      const venvStep = screen.getByText('Creating Python virtual environment…');
+      expect(venvStep.className).toMatch(/text-fg-muted/);
+    });
+  });
+
+  it('a retry drops stages observed during the previous attempt', () => {
+    // Greptile finding on #1896: the observed set was add-only and the splash
+    // stays mounted across a Retry, so a stage the FAILED attempt reached
+    // would still render done in the new attempt even if that attempt skips
+    // it. Arriving back at `checking` from elsewhere means a new attempt.
+    const { rerender } = render(<BootstrapSplash stage="checking" message={null} />);
+    rerender(<BootstrapSplash stage="downloading_uv" message={null} />);
+    rerender(<BootstrapSplash stage="installing_deps" message={null} />);
+    rerender(<BootstrapSplash stage="failed" message="uv sync failed" />);
+
+    // Retry: Rust goes back to `checking`, then this attempt finds the venv
+    // healthy and jumps straight to starting_backend.
+    rerender(<BootstrapSplash stage="checking" message={null} />);
+    rerender(<BootstrapSplash stage="starting_backend" message={null} />);
+
+    // Nothing from the previous attempt may be presented as this attempt's
+    // completed work — so the install chrome is gone entirely again.
+    expect(screen.queryByText('Downloading uv (Python package manager)…')).toBeNull();
+    expect(screen.queryByText(/first run, 5.10 min/)).toBeNull();
+    expect(screen.getByText('Starting backend…')).toBeInTheDocument();
   });
 });
