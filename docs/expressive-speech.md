@@ -23,6 +23,9 @@ ignores.
 Everything you type in the text box reaches the active engine **verbatim** —
 the pipeline goes out of its way not to break tags:
 
+- Tilde-separated integer, signed, and decimal ranges get a spoken separator in
+  English, Korean, Japanese, and Chinese; malformed chains and product codes
+  are left unchanged.
 - The text-normalization pass (numbers, abbreviations) skips every `[…]` span
   (`backend/services/text_normalization.py`).
 - The long-text chunker never cuts inside a bracket tag

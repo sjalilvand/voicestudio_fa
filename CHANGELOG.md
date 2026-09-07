@@ -13,6 +13,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - The desktop app builds and opens from a fresh clone again (#1818) — thanks @flutterkage2k!
 - GPUs with less VRAM than the engine needs no longer get half the compute-time budget a CPU gets (#1806) — thanks @VishvakR!
 - Gallery voice previews play again — the quality guard was rejecting good renders as silent (#1819) — thanks @flutterkage2k!
+- Tilde-separated number ranges are spoken clearly without running their endpoints together (#1821) — thanks @flutterkage2k!
 - Voice cloning now starts with a clear upload-or-record choice, reveals recording and reference details only when needed, and keeps sampling controls under Production Overrides (#1817)
 
 ### Changed
@@ -34,6 +35,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Backend connection errors report crashes only when recorded evidence exists, and diagnostic waits honor cancellation (#1810)
 - A CUDA or ROCm GPU with less VRAM than the engine needs now gets the CPU compute-time budget instead of the shorter accelerated one, since it pages to system RAM and renders slower than the CPU would — applied to local generation, voice conversion, and remote worker deadlines alike (#1806) — thanks @VishvakR!
 - Gallery previews no longer fail with "the voice engine returned no audible audio" on perfectly good renders: the degenerate-buzz guard measured spectral flatness over the whole clip (so the value tracked clip length) against a threshold calibrated on a synthetic signal, and rejected real speech in every language tested (#1819) — thanks @flutterkage2k!
+- Speak tilde separators in integer, signed, and decimal ranges in English, Korean, Japanese, and Chinese (#1821) — thanks @flutterkage2k!
 
 
 ## [0.5.2] — 2026-09-02
