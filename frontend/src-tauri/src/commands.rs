@@ -12,7 +12,7 @@ use tauri_plugin_dialog::DialogExt;
 
 use crate::config::{load_config, save_config};
 use crate::dictation_shortcut::{update_tray_hint, DictationShortcutManager, ShortcutInfo};
-use crate::{AppFlags, CaptureReceiptCancellation, TrayHandle};
+use crate::{AppFlags, CaptureAcceptanceTimeout, CaptureReceiptCancellation, TrayHandle};
 use crate::{TRAY_ICON_DEFAULT, TRAY_ICON_RECORDING};
 
 // ── Native host-path authorization ───────────────────────────────────────
@@ -1080,22 +1080,17 @@ pub async fn request_dictation_capture(
         return completion
             .unwrap_or_else(|| Err("capture request completed without an outcome".into()));
     }
-    let (completion, cancelled) = {
-        let mut capture = flags
-            .capture
-            .lock()
-            .map_err(|_| "Dictation capture state lock poisoned".to_string())?;
-        if let Some(completion) = capture.take_completion(delivery_id) {
-            (Some(completion), None)
-        } else {
-            (None, capture.cancel_delivery(delivery_id))
+    let timeout_outcome = flags
+        .capture
+        .lock()
+        .map_err(|_| "Dictation capture state lock poisoned".to_string())?
+        .take_completion_or_cancel(delivery_id);
+    match timeout_outcome {
+        CaptureAcceptanceTimeout::Completed(completion) => return completion,
+        CaptureAcceptanceTimeout::Cancelled(event) if event.name == "tray-dictate" => {
+            flags.output.finish_session(event.payload.session_id);
         }
-    };
-    if let Some(completion) = completion {
-        return completion;
-    }
-    if let Some(event) = cancelled.filter(|event| event.name == "tray-dictate") {
-        flags.output.finish_session(event.payload.session_id);
+        CaptureAcceptanceTimeout::Cancelled(_) | CaptureAcceptanceTimeout::Missing => {}
     }
     Err("dictation capture did not start in time".into())
 }

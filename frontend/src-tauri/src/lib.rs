@@ -121,6 +121,12 @@ pub(crate) enum CaptureReceiptCancellation {
     Missing,
 }
 
+pub(crate) enum CaptureAcceptanceTimeout {
+    Completed(Result<(), String>),
+    Cancelled(CaptureEvent),
+    Missing,
+}
+
 struct CaptureEnqueue {
     delivery_id: u64,
     event: Option<CaptureEvent>,
@@ -273,6 +279,20 @@ impl CaptureDispatchState {
             .map(|delivery| delivery.event)
     }
 
+    pub(crate) fn take_completion_or_cancel(
+        &mut self,
+        delivery_id: u64,
+    ) -> CaptureAcceptanceTimeout {
+        if let Some(completion) = self.take_completion(delivery_id) {
+            CaptureAcceptanceTimeout::Completed(completion)
+        } else {
+            self.cancel_delivery(delivery_id).map_or(
+                CaptureAcceptanceTimeout::Missing,
+                CaptureAcceptanceTimeout::Cancelled,
+            )
+        }
+    }
+
     pub(crate) fn end_registration(&mut self, registration_id: u64) {
         if self.active_registration == Some(registration_id) {
             self.active_registration = None;
@@ -385,8 +405,8 @@ fn dispatch_dictation_capture_from(
 #[cfg(test)]
 mod dictation_capture_tests {
     use super::{
-        dictation_capture_event, CaptureDispatchState, CaptureEvent, CaptureReceiptCancellation,
-        DictationCapturePayload,
+        dictation_capture_event, CaptureAcceptanceTimeout, CaptureDispatchState, CaptureEvent,
+        CaptureReceiptCancellation, DictationCapturePayload,
     };
 
     fn capture_event(name: &'static str) -> CaptureEvent {
@@ -511,6 +531,27 @@ mod dictation_capture_tests {
         assert!(matches!(
             state.cancel_unreceived_delivery(delivery_id),
             CaptureReceiptCancellation::Received
+        ));
+    }
+
+    #[test]
+    fn completion_at_the_timeout_boundary_wins_over_cancellation() {
+        let mut state = CaptureDispatchState::default();
+        let registration_id = state.begin_registration();
+        state.mark_registration_ready(registration_id);
+        let mut event = capture_event("tray-dictate");
+        event.await_result = true;
+        let delivery_id = state.enqueue(event).delivery_id;
+        state.acknowledge(registration_id, delivery_id);
+        state.complete(registration_id, delivery_id, None);
+
+        assert!(matches!(
+            state.take_completion_or_cancel(delivery_id),
+            CaptureAcceptanceTimeout::Completed(Ok(()))
+        ));
+        assert!(matches!(
+            state.take_completion_or_cancel(delivery_id),
+            CaptureAcceptanceTimeout::Missing
         ));
     }
 

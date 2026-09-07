@@ -87,8 +87,7 @@ def test_in_page_capture_waits_for_listener_acceptance(commands_rs: str) -> None
     assert "request_dictation_capture_delivery" in body
     assert "wait_for_capture_delivery" in body
     assert "completion_ready" in body
-    assert "take_completion" in body
-    assert "cancel_delivery" in body
+    assert "take_completion_or_cancel" in body
     assert "capture window did not acknowledge the request" in body
     assert "dictation capture did not start in time" in body
 
