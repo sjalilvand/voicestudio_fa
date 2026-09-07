@@ -2409,7 +2409,7 @@ def list_backends() -> list[dict]:
           "one_click_install": bool,                # services.sidecar_install can provision it in-app
           "last_error":     Optional[str],          # cached most-recent failure
           "isolation_mode": "in-process" | "subprocess",
-          "gpu_compat":     list[str],              # subset of {cuda, rocm, mps, xpu, cpu}
+          "gpu_compat":     list[str],              # subset of {cuda, rocm, mps, xpu, npu, cpu}
           "supports_cloning": Optional[bool],       # True/False from the class attr; None when
                                                     #   model-dependent (property, e.g. mlx-audio)
           "effective_device": str,                  # device this engine uses on THIS host

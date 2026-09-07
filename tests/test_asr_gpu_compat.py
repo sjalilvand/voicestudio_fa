@@ -34,7 +34,7 @@ _EXPECTED = {
 # is_available — e.g. parakeet-mlx gates on Apple Silicon via mlx_supported()).
 _GPU_ONLY: set[str] = {"parakeet-mlx"}
 
-_VALID = {"cuda", "rocm", "mps", "xpu", "cpu"}
+_VALID = {"cuda", "rocm", "mps", "xpu", "npu", "cpu"}
 
 
 def _cls(engine_id):

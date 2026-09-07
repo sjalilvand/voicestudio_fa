@@ -149,7 +149,7 @@ def _compute_device_state() -> dict:
     caps = device_caps.detect_host_caps()
     env_pin = (os.environ.get("OMNIVOICE_DEVICE") or "").strip().lower()
     auto_family = next(
-        (f for f in ("cuda", "rocm", "xpu", "mps") if f in caps.available_families),
+        (f for f in device_caps.ACCELERATOR_PRIORITY if f in caps.available_families),
         "cpu",
     )
     value = device_caps.requested_device_override()

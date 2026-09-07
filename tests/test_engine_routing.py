@@ -132,7 +132,7 @@ def test_empty_compat_is_defensive_cpu_only():
 
 # ── Contract guarantees ───────────────────────────────────────────────────
 def test_never_emits_n_a():
-    for fam in ("cuda", "rocm", "mps", "xpu", "cpu"):
+    for fam in ("cuda", "rocm", "mps", "xpu", "npu", "cpu"):
         for compat in ((), ("cpu",), ("cuda",), ("cuda", "cpu"), ("mps", "cpu")):
             assert resolve_routing(compat, _caps(fam))["routing_status"] != "n/a"
 

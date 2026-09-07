@@ -29,15 +29,11 @@ Do NOT import ``main.py`` from the parent process — it runs under a
 different venv (``transformers==5.0.0``) and importing it in-process would
 re-introduce the exact conflict this isolation exists to avoid.
 
-Hardware honesty (cross-platform rule): MOSS-TTS-v1.5's upstream documents
-only CUDA and CPU. There is **no documented or tested MPS path** — the
-custom ``trust_remote_code`` modelling code and the separate audio
-tokenizer are unverified on Apple Silicon. We therefore advertise
-``gpu_compat = ("cuda", "cpu")`` and the sidecar selects ``cuda`` when
-present else ``cpu`` — it never silently routes to MPS where it might
-crash. On Apple Silicon the engine honestly resolves to CPU (slow but
-correct), and the engine is opt-in regardless, so it never becomes a
-broken default on any platform.
+Hardware routing follows the sidecar's runtime-available PyTorch accelerator:
+CUDA/ROCm, XPU, or a registered NPU. MPS remains excluded; CPU is the fallback.
+XPU/NPU routing is covered with mocked device contracts, not physical-hardware
+synthesis certification; users need a compatible torch/vendor runtime in the
+isolated engine venv.
 """
 from __future__ import annotations
 
@@ -91,7 +87,7 @@ class MossTTSV15Backend(SubprocessBackend):
     _DEFAULT_SAMPLE_RATE = 24000
     # Honest hardware surface: upstream documents CUDA + CPU only. MPS is
     # undocumented / untested, so we do NOT claim it (cross-platform rule).
-    gpu_compat = ("cuda", "cpu")
+    gpu_compat = ("cuda", "rocm", "xpu", "npu", "cpu")
 
     # ── availability ───────────────────────────────────────────────────────
 

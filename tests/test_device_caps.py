@@ -235,3 +235,24 @@ def test_result_is_cached_until_refresh():
 def teardown_module(_module):
     # Drop any cached mock-derived result so other test modules re-probe clean.
     device_caps.detect_host_caps.cache_clear()
+
+
+def test_builtin_xpu_does_not_require_ipex():
+    caps = _probe_with({'torch': _torch_mock(xpu_available=True), 'intel_extension_for_pytorch': None})
+    assert caps.family == 'xpu'
+
+
+def test_registered_npu_is_reported_without_importing_vendor_packages():
+    torch = _torch_mock()
+    torch.npu = types.SimpleNamespace(is_available=lambda: True, get_device_name=lambda i: 'Ascend')
+    caps = _probe_with({'torch': torch, 'intel_extension_for_pytorch': None})
+    assert caps.family == 'npu'
+    assert caps.available_families == ('npu', 'cpu')
+    assert caps.device_name == 'Ascend'
+
+
+def test_unavailable_npu_does_not_claim_acceleration():
+    torch = _torch_mock()
+    torch.npu = types.SimpleNamespace(is_available=lambda: False)
+    caps = _probe_with({'torch': torch, 'intel_extension_for_pytorch': None})
+    assert caps.family == 'cpu'
