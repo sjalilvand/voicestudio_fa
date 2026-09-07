@@ -538,6 +538,7 @@ def _probe() -> HostCaps:
     try:
         import intel_extension_for_pytorch  # noqa: F401
     except Exception:
+        # Optional IPEX may be absent or incompatible; still probe native torch XPU.
         pass
     try:
         if hasattr(torch, "xpu") and torch.xpu.is_available():
@@ -562,9 +563,11 @@ def _probe() -> HostCaps:
                 try:
                     device_name = torch.npu.get_device_name(0)
                 except Exception:
+                    # An unavailable display name does not invalidate a usable NPU.
                     pass
             notes.append("NPU VRAM not queried")
     except Exception:
+        # Missing or broken vendor backends mean no usable NPU; continue probing.
         pass
 
     # ── Apple Silicon MPS ────────────────────────────────────────────────
