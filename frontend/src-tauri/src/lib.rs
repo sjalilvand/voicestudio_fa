@@ -633,23 +633,29 @@ fn show_and_focus_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     }
 }
 
-/// Whether a macOS `RunEvent::Reopen` (Dock icon clicked with no visible
-/// windows — Cocoa's `applicationShouldHandleReopen:hasVisibleWindows:`)
-/// should restore the main window. Pure so it's unit-testable — the actual
-/// event only fires inside the real Cocoa event loop and can't be
-/// synthesized under `cargo test` (see the `with_noactivate_style` comment
-/// above for the same rationale). `CloseRequested` (see `on_window_event`
-/// below) hides the main window rather than destroying it, so Cocoa reports
-/// `has_visible_windows: false` once the user has closed it — exactly when
-/// the Dock icon should bring it back. When some window is already visible,
-/// defer to Cocoa's default handling instead of stealing focus.
+/// Whether a macOS `RunEvent::Reopen` (Dock icon clicked — Cocoa's
+/// `applicationShouldHandleReopen:hasVisibleWindows:`) should restore the
+/// main window. Pure so it's unit-testable — the actual event only fires
+/// inside the real Cocoa event loop and can't be synthesized under
+/// `cargo test` (see the `with_noactivate_style` comment above for the same
+/// rationale). `CloseRequested` (see `on_window_event` below) hides the main
+/// window rather than destroying it, so it is merely invisible once the user
+/// has closed it — exactly when the Dock icon should bring it back.
+///
+/// Keyed on the MAIN window specifically, not on Cocoa's `has_visible_windows`
+/// flag. This app owns a second window: the always-on-top dictation pill
+/// (`widget`, built below), which is shown and hidden independently and can
+/// sit on screen for a long time on its own — the Accessibility-setup state
+/// persists until the permission is granted. Keying on "any window visible"
+/// would report `true` from the pill alone and leave the Dock icon dead in
+/// precisely the case this handler exists to fix.
 ///
 /// Only called from the macOS-gated `RunEvent::Reopen` arm below outside of
 /// tests — `#[allow(dead_code)]` elsewhere, same treatment as `is_app_origin`
 /// and `with_noactivate_style` above.
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
-fn should_restore_on_reopen(has_visible_windows: bool) -> bool {
-    !has_visible_windows
+fn should_restore_on_reopen(main_window_visible: bool) -> bool {
+    !main_window_visible
 }
 
 #[cfg(test)]
@@ -657,13 +663,26 @@ mod reopen_tests {
     use super::should_restore_on_reopen;
 
     #[test]
-    fn restores_when_no_window_is_visible() {
+    fn restores_when_the_main_window_is_hidden() {
         assert!(should_restore_on_reopen(false));
     }
 
     #[test]
-    fn defers_to_cocoa_when_a_window_is_already_visible() {
+    fn does_nothing_when_the_main_window_is_already_visible() {
         assert!(!should_restore_on_reopen(true));
+    }
+
+    /// Regression guard: the dictation pill is a separate always-on-top
+    /// window that can be visible while the main window is closed — the
+    /// Accessibility-setup state stays up until the permission is granted.
+    /// An earlier revision keyed this decision on Cocoa's
+    /// `has_visible_windows`, which the pill alone sets to `true`, leaving
+    /// the Dock icon dead in exactly the situation this handler is for.
+    /// The decision must depend only on the main window.
+    #[test]
+    fn restores_even_when_another_window_such_as_the_pill_is_visible() {
+        let main_window_visible = false;
+        assert!(should_restore_on_reopen(main_window_visible));
     }
 }
 
@@ -1250,11 +1269,18 @@ pub fn run() {
         // is the same sequence that item runs, so both paths behave
         // identically.
         #[cfg(target_os = "macos")]
-        tauri::RunEvent::Reopen {
-            has_visible_windows,
-            ..
-        } => {
-            if should_restore_on_reopen(has_visible_windows) {
+        tauri::RunEvent::Reopen { .. } => {
+            // Cocoa's `has_visible_windows` is deliberately NOT used: the
+            // dictation pill is a separate always-on-top window that sets it
+            // to `true` on its own. Ask the main window directly instead.
+            // `is_visible()` errors only if the window has gone away, and a
+            // redundant show is harmless next to a Dock icon that stays dead,
+            // so treat an error as "not visible" and restore.
+            let main_visible = app_handle
+                .get_webview_window("main")
+                .map(|win| win.is_visible().unwrap_or(false))
+                .unwrap_or(false);
+            if should_restore_on_reopen(main_visible) {
                 show_and_focus_main_window(app_handle);
             }
         }
