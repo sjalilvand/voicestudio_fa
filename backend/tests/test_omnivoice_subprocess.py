@@ -617,3 +617,69 @@ def test_timeout_never_kills_a_replacement_process(monkeypatch):
         replacement.kill.assert_not_called()
     finally:
         backend._proc = None
+
+
+@pytest.mark.parametrize("failure", ["wait", "kill"])
+def test_timeout_quarantine_blocks_reuse_and_retains_cleanup_handle(failure):
+    class StuckProcess:
+        stdin = None
+        def __init__(self):
+            self.exited = False
+            self.kill_calls = 0
+        def poll(self):
+            return 0 if self.exited else None
+        def kill(self):
+            self.kill_calls += 1
+            if failure == "kill" and not self.exited:
+                raise PermissionError("kill failed")
+        def terminate(self):
+            pass
+        def wait(self, timeout):
+            if not self.exited:
+                raise subprocess.TimeoutExpired("stuck-sidecar", timeout)
+            return 0
+
+    backend = OmniVoiceSubprocessBackend()
+    proc = StuckProcess()
+    backend._proc = proc
+    try:
+        backend._timeout_kill(proc)
+        with pytest.raises(RuntimeError, match="still stopping"):
+            backend._spawn()
+        backend.shutdown()
+        # Even after shutdown clears the current slot, ownership survives;
+        # retry must not silently start a second process next to this one.
+        before = proc.kill_calls
+        with pytest.raises(RuntimeError, match="still stopping"):
+            backend._spawn()
+        assert proc.kill_calls > before
+    finally:
+        proc.exited = True
+        backend.shutdown()
+
+
+def test_timeout_quarantine_does_not_clear_or_kill_replacement():
+    from unittest.mock import Mock
+    backend = OmniVoiceSubprocessBackend()
+    original = Mock()
+    original.wait.side_effect = subprocess.TimeoutExpired("old-sidecar", 2)
+    replacement = Mock()
+    replacement.poll.return_value = None
+    backend._proc = replacement
+    try:
+        backend._timeout_kill(original)
+        with pytest.raises(RuntimeError, match="still stopping"):
+            backend._spawn()
+        assert backend._proc is replacement
+        replacement.kill.assert_not_called()
+        # Once the captured owner is reaped, reuse of the healthy replacement
+        # is allowed without starting or terminating another process.
+        original.wait.side_effect = None
+        original.wait.return_value = 0
+        backend._spawn()
+        assert backend._proc is replacement
+        replacement.kill.assert_not_called()
+    finally:
+        original.wait.side_effect = None
+        backend._proc = None
+        backend.shutdown()
