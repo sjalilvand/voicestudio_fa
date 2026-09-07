@@ -77,6 +77,8 @@ the frozen-backend fallback mirror it for their toolchains.
 - MOSS accelerator routing and status match runtime selection, with CPU fallback when device probing fails (#1830) — thanks @li-lizhe!
 - Confucius accelerator routing tolerates failed device probes, and dots.tts keeps safe default precision on non-CUDA hosts (#1831) — thanks @li-lizhe!
 - On macOS, the header status dot and kicker no longer render underneath the overlaid traffic lights (#1863) — thanks @psiberfunk!
+- The capture widget can hide after recording and recover from being left visible while idle (#1865) — thanks @psiberfunk!
+
 - macOS retains the shared desktop window sizing, resize limits, and file-drop behavior when native chrome is applied (#1865) — thanks @psiberfunk!
 
 - On macOS, the header no longer shows Windows-style minimize/maximize/close buttons alongside the native traffic lights (#1865) — thanks @psiberfunk!
