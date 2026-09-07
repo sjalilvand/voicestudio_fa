@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "Сброс не удался: {{message}}",
     "reset_longform_failed": "VoiceStudio не удалось безопасно удалить сохранённые проекты. Данные проектов не изменены; освободите место или перезапустите приложение и повторите попытку.",
     "cancel": "Отмена",
-    "hf_token_also_clear": "Также очистить",
+    "hf_token_also_clear": "Также удалить сохранённые файлы токенов HuggingFace CLI",
     "hf_token_clear_btn": "Очистить токен",
     "hf_token_clear_confirm": "Очистить токен HuggingFace, заданный в приложении?",
     "hf_token_clear_dialog": "Очистить токен",

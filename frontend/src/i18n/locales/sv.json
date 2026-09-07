@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "Återställning misslyckades: {{message}}",
     "reset_longform_failed": "VoiceStudio kunde inte rensa de sparade projekten på ett säkert sätt. Dina projektdata ändrades inte; frigör lagringsutrymme eller starta om appen och försök igen.",
     "cancel": "Avbryt",
-    "hf_token_also_clear": "Rensa också",
+    "hf_token_also_clear": "Radera även sparade tokenfiler för HuggingFace CLI",
     "hf_token_clear_btn": "Rensa token",
     "hf_token_clear_confirm": "Rensa HuggingFace-token från App-källan?",
     "hf_token_clear_dialog": "Rensa token",

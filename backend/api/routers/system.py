@@ -910,7 +910,7 @@ async def set_env_var(body: dict):
     Persistent keys (proxy, FFMPEG_PATH, translation provider keys, …) are
     saved to ``prefs.json`` so they survive backend restarts (restored at
     startup in ``main.py``). HF_TOKEN is persisted via
-    ``huggingface_hub.login()`` (and cleared via ``logout()``). Other keys
+    ``huggingface_hub.login()`` (and cleared with the shared token-file helper). Other keys
     are set on ``os.environ`` for the running process.
 
     The loopback-origin gate that previously lived inline here is now applied
@@ -985,14 +985,14 @@ async def set_env_var(body: dict):
         # Mirror the persistence on clear — wipe the saved token file too.
         if key == "HF_TOKEN":
             try:
-                from huggingface_hub import logout as _hf_logout
-                _hf_logout()
-                logger.info("HF token cleared from $HF_HOME/token via logout()")
-            except Exception as e:
-                logger.warning("Could not clear HF token file: %s", e)
+                from services.token_resolver import clear_hf_cli_tokens
+                clear_hf_cli_tokens()
+                logger.info("Local Hugging Face token files cleared")
+            except Exception:
+                raise HTTPException(status_code=500, detail="Could not clear local Hugging Face token files") from None
 
     # HF_TOKEN persistence is handled above via huggingface_hub.login()/
-    # logout() — it never touches prefs.json. Everything else in
+    # clear_hf_cli_tokens() — it never touches prefs.json. Everything else in
     # PERSISTENT_KEYS (proxy, FFMPEG_PATH, translation provider keys, …) is
     # saved to prefs.json so it survives backend restarts (restored at
     # startup in main.py). Non-persistent keys stay process-local.

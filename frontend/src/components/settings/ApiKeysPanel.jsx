@@ -112,10 +112,8 @@ export default function ApiKeysPanel() {
       setClearOpen(false);
       setAlsoClearCli(false);
       await refresh();
-    } catch (e) {
-      setError(
-        e?.message || t('settings.hf_token_clear_error', { defaultValue: 'Failed to clear token' }),
-      );
+    } catch {
+      setError(t('settings.hf_token_clear_error', { defaultValue: 'Failed to clear token' }));
     } finally {
       setSaving(false);
     }
@@ -291,8 +289,9 @@ export default function ApiKeysPanel() {
               checked={alsoClearCli}
               onChange={(e) => setAlsoClearCli(e.target.checked)}
             />{' '}
-            {t('settings.hf_token_also_clear', { defaultValue: 'Also clear' })}{' '}
-            <code>~/.cache/huggingface/token</code>
+            {t('settings.hf_token_also_clear', {
+              defaultValue: 'Also clear saved HuggingFace CLI token files',
+            })}
           </label>
           <div className="flex justify-end gap-[var(--space-3)]">
             <button

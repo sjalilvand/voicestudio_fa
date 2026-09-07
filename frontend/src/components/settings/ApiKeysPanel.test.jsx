@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
+import i18n from '../../i18n';
 
 const STATE_THREE_UNSET = {
   active: null,
@@ -167,6 +168,45 @@ describe('ApiKeysPanel', () => {
       // also_clear_hf_cli default is false → no query string
       expect(del[0]).not.toMatch(/also_clear_hf_cli=true/);
     });
+  });
+
+  it('keeps failed clear open for retry and shows the localized error', async () => {
+    const previousLanguage = i18n.language;
+    await i18n.changeLanguage('ko');
+    await waitFor(() => expect(i18n.hasResourceBundle('ko', 'translation')).toBe(true));
+    expect(i18n.t('settings.hf_token_clear_error')).not.toBe('Failed to clear token');
+    const fetchMock = mockFetchSequence(
+      { status: 200, body: STATE_APP_ACTIVE },
+      { status: 500, body: { detail: 'Failed to clear local Hugging Face token files' } },
+      { status: 200, body: STATE_THREE_UNSET },
+      { status: 200, body: STATE_THREE_UNSET },
+    );
+    global.fetch = fetchMock;
+    const { unmount } = render(<ApiKeysPanel />);
+    try {
+      fireEvent.click(
+        await screen.findByRole('button', { name: i18n.t('settings.hf_token_clear_short') }),
+      );
+      const checkbox = screen.getByRole('checkbox');
+      fireEvent.click(checkbox);
+      const confirm = screen.getByRole('button', { name: i18n.t('settings.hf_token_clear_btn') });
+      fireEvent.click(confirm);
+      expect(await screen.findByText(i18n.t('settings.hf_token_clear_error'))).toBeInTheDocument();
+      expect(
+        screen.queryByText('Failed to clear local Hugging Face token files'),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(checkbox).toBeChecked();
+      expect(confirm).toBeEnabled();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      fireEvent.click(confirm);
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(fetchMock.mock.calls[2][0]).toContain('also_clear_hf_cli=true');
+      expect(screen.queryByText(i18n.t('settings.hf_token_clear_error'))).not.toBeInTheDocument();
+    } finally {
+      unmount();
+      await i18n.changeLanguage(previousLanguage);
+    }
   });
 
   it('"Test now" busts the whoami cache (?fresh=1); plain mounts stay cached', async () => {

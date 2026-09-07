@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "重置失敗：{{message}}",
     "reset_longform_failed": "VoiceStudio 無法安全清除已儲存的專案。您的專案資料未被變更；請釋放一些儲存空間或重新啟動應用程式後再試。",
     "cancel": "取消",
-    "hf_token_also_clear": "一併清除",
+    "hf_token_also_clear": "同時清除已儲存的 HuggingFace CLI 權杖檔案",
     "hf_token_clear_btn": "清除代幣",
     "hf_token_clear_confirm": "確定要清除 App 來源的 HuggingFace 代幣嗎？",
     "hf_token_clear_dialog": "清除代幣",

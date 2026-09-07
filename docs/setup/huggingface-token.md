@@ -14,7 +14,7 @@ call wins:
    Set via the in-app **Settings → API Keys** panel.
 2. **Env** — `HF_TOKEN` (or the legacy `HUGGING_FACE_HUB_TOKEN`) environment
    variable visible to the VoiceStudio process.
-3. **HF CLI** — the canonical `~/.cache/huggingface/token` file written by
+3. **HF CLI** — the local `HF_TOKEN_PATH` file (normally `~/.cache/huggingface/token`) written by
    `huggingface-cli login`.
 
 Source labels in onboarding and Settings follow the selected UI language;
@@ -81,8 +81,8 @@ huggingface-cli login
 # paste token at the prompt
 ```
 
-That writes to `~/.cache/huggingface/token`. VoiceStudio reads via
-`huggingface_hub.get_token()` and picks it up automatically — you'll see the
+That normally writes to `~/.cache/huggingface/token`. VoiceStudio reads the
+selected local token file directly — you'll see the
 **HF CLI** row in **Settings → API Keys** flip to "set".
 
 ## Accepting model licenses
@@ -117,3 +117,8 @@ process).
   working as intended (App is highest priority).
 
 Opening onboarding or Settings only reads local token presence and masked previews; it does not contact Hugging Face. Untested tokens are shown as **Not tested**, and onboarding reports where a token was found without claiming it is valid. **Test now** explicitly contacts Hugging Face. Replacing a saved token does not revoke the previous token on Hugging Face.
+
+
+Windows automatically shortens the model cache path while keeping the normal CLI token location. If only a previous VoiceStudio short-cache token exists, the app continues using that file. An existing normal CLI token takes priority; explicit token or cache overrides remain authoritative. Credentials are never copied between these locations.
+
+The CLI row reads only the selected local file, without OAuth refresh or environment-token fallback. **Also clear saved HuggingFace CLI token files** removes both active and stored-token files at recognized automatic locations, so an older app token cannot reappear on restart. Explicit overrides limit clearing to their selected location. Clearing only the app token preserves CLI files; neither action revokes tokens on Hugging Face or changes Git credentials. A file permission failure is reported instead of claiming the files were cleared.
