@@ -10,7 +10,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
-- Gallery voice previews play again — the quality guard was rejecting good renders as silent (#1819)
+- Gallery voice previews play again — the quality guard was rejecting good renders as silent (#1819) — thanks @flutterkage2k!
+- Voice cloning now starts with a clear upload-or-record choice, reveals recording and reference details only when needed, and keeps sampling controls under Production Overrides (#1817)
 
 ### Changed
 
@@ -20,7 +21,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- Gallery previews no longer fail with "the voice engine returned no audible audio" on perfectly good renders: the degenerate-buzz guard measured spectral flatness over the whole clip (so the value tracked clip length) against a threshold calibrated on a synthetic signal, and rejected real speech in every language tested (#1819)
+- Gallery previews no longer fail with "the voice engine returned no audible audio" on perfectly good renders: the degenerate-buzz guard measured spectral flatness over the whole clip (so the value tracked clip length) against a threshold calibrated on a synthetic signal, and rejected real speech in every language tested (#1819) — thanks @flutterkage2k!
 
 
 ## [0.5.2] — 2026-09-02
