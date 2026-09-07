@@ -154,7 +154,7 @@ export default function Header({
   // traffic lights provide the same window actions as our custom desktop row.
   const isDesktop = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
   const hasMacTrafficLights =
-    isDesktop && typeof navigator !== 'undefined' && /^Mac/.test(navigator.platform || '');
+    isDesktop && typeof navigator !== 'undefined' && (navigator.platform || '').startsWith('Mac');
   const showWindowControls = isDesktop && !hasMacTrafficLights;
   const { t } = useTranslation();
   // Sysinfo is subscribed here (not in App via useAppData) so the 5s poll
