@@ -320,21 +320,19 @@ def test_the_task_deadline_still_covers_the_raised_execution_budget(device):
     assert ceiling >= corrected.total_seconds
 
 
-def test_losing_the_worker_never_shortens_an_under_provisioned_budget():
-    """`Scheduler._budget_for` recomputes with no worker once one disconnects,
-    so `under_provisioned` goes False there. That must not shorten anything: no
-    worker means no `execution_device`, which `_base_execution_seconds` already
-    coerces to "cpu" — the very budget the floor raises an under-provisioned
-    card to.
-
-    Driven through a real scheduler rather than the policy alone (CodeRabbit on
-    the PR): the coercion lives in the disconnect path, so a test that only
-    called `for_task` would pass even if that path stopped doing it."""
+@pytest.mark.parametrize("gpu_seconds", [300, 900])
+def test_losing_the_worker_never_shortens_an_under_provisioned_budget(
+    gpu_seconds, monkeypatch, model_manager,
+):
+    """Worker loss must retain the granted budget, including GPU > CPU overrides."""
     from worker import deadlines
     from worker.identity import issue_session
     from worker.pool import WorkerPool
     from worker.scheduler import Scheduler
 
+    monkeypatch.setattr(model_manager, "GPU_JOB_TIMEOUT_S", gpu_seconds)
+    monkeypatch.setattr(model_manager, "CPU_JOB_TIMEOUT_S", 600.0)
+    monkeypatch.setattr(model_manager, "_CPU_GENERATE_TIMEOUT_EXPLICIT", True)
     now = 1000.0
     worker = _worker()  # 4 GB card, 6 GB engine
     pool = WorkerPool()
@@ -357,7 +355,7 @@ def test_losing_the_worker_never_shortens_an_under_provisioned_budget():
     # Bound: the worker is present, so its own verdict raises the budget.
     bound = sched._budget_for(task)
     on_cpu = deadlines.for_task("tts", text="short", execution_device="cpu")
-    assert bound.execution_seconds == on_cpu.execution_seconds
+    assert bound.execution_seconds == max(gpu_seconds, on_cpu.execution_seconds)
 
     # …and it survives the worker vanishing.
     pool.disconnect(worker.record.id)

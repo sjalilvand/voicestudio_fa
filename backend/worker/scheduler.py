@@ -656,6 +656,7 @@ class Scheduler:
                 task.engine, task.model_id, task.operation
             ),
         )
+        attempt.deadlines = budget
         attempt.renew_lease(budget.accept_seconds, now=now)
         self._save(task, now=now)
         self._emit("assigned", task)
@@ -1298,6 +1299,9 @@ class Scheduler:
 
     def _budget_for(self, task: Task) -> deadline_policy.Deadlines:
         attempt = task.active_attempt
+        if attempt is not None and attempt.deadlines is not None:
+            return attempt.deadlines
+        # Legacy stored attempts have no snapshot; retain their prior policy.
         worker = self.pool.get(attempt.worker_id) if attempt else None
         return deadline_policy.for_task(
             task.operation,
