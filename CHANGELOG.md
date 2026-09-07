@@ -20,6 +20,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Release retries replace their own partially uploaded installers without colliding with existing assets (#1871)
 
 ## [0.5.2] — 2026-09-02
 
