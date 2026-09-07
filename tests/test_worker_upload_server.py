@@ -808,6 +808,7 @@ async def test_upload_write_does_not_block_revocation_or_publish_after_it(
     real_write_all = server_module._write_all
 
     def blocked_write(handle, data):
+        watchdog.start()
         write_started.set()
         if not release_write.wait(timeout=10):
             raise TimeoutError("test did not release the result upload write")
@@ -821,7 +822,6 @@ async def test_upload_write_does_not_block_revocation_or_publish_after_it(
         release_write.set()
 
     watchdog = Timer(5, unblock_stalled_loop)
-    watchdog.start()
     uploading = asyncio.create_task(
         plane.upload(_chunks(_ref(plane, task, attempt, payload=payload), payload))
     )
