@@ -75,6 +75,9 @@ the frozen-backend fallback mirror it for their toolchains.
 - MOSS accelerator routing now matches runtime device selection, including native XPU and registered NPU detection (#1830) — thanks @li-lizhe!
 - Confucius accelerator routing matches device selection, and dots.tts keeps safe CPU precision on non-CUDA accelerators (#1831) — thanks @li-lizhe!
 - On macOS, the header status dot and kicker no longer render underneath the overlaid traffic lights (#1863) — thanks @psiberfunk!
+- macOS retains the shared desktop window sizing, resize limits, and file-drop behavior when native chrome is applied (#1865) — thanks @psiberfunk!
+
+- On macOS, the header no longer shows Windows-style minimize/maximize/close buttons alongside the native traffic lights (#1865) — thanks @psiberfunk!
 
 
 ## [0.5.2] — 2026-09-02

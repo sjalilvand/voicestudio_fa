@@ -153,12 +153,12 @@ export default function Header({
   // breadcrumb + wordmark normally sit — the tabs already say where you are,
   // and two answers to that question in one bar is one too many.
   const tabsInTitlebar = navStyle === 'tabs';
+  // The macOS platform config enables decorated overlay chrome. Its native
+  // traffic lights provide the same window actions as our custom desktop row.
   const isDesktop = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-  const showWindowControls = isDesktop;
-  // The macOS config replaces the base window with decorated overlay chrome.
-  // Reserve its traffic-light area only inside the desktop webview.
   const hasMacTrafficLights =
     isDesktop && typeof navigator !== 'undefined' && /^Mac/.test(navigator.platform || '');
+  const showWindowControls = isDesktop && !hasMacTrafficLights;
   const { t } = useTranslation();
   // Sysinfo is subscribed here (not in App via useAppData) so the 5s poll
   // only re-renders the header chrome, not the whole App tree.
