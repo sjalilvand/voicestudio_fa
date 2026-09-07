@@ -183,8 +183,8 @@ def test_synthesize_rejects_empty_text(sc):
         sc._handle_synthesize({"text": ""}, io.BytesIO())
 
 
-@pytest.mark.parametrize('family', [None, 'cuda', 'xpu', 'npu', 'mps'])
-def test_load_model_matches_routing(sc, monkeypatch, family):
+@pytest.mark.parametrize('family,legacy', [(None, False), ('cuda', False), ('xpu', False), ('npu', False), ('mps', False), (None, True), ('cuda', True)])
+def test_load_model_matches_routing(sc, monkeypatch, family, legacy):
     import sys
     from types import SimpleNamespace
     from unittest.mock import Mock
@@ -194,7 +194,9 @@ def test_load_model_matches_routing(sc, monkeypatch, family):
 
     accelerator = Mock(return_value=SimpleNamespace(type=family) if family else None)
     monkeypatch.setitem(sys.modules, 'torch', SimpleNamespace(
-        accelerator=SimpleNamespace(current_accelerator=accelerator),
+        accelerator=SimpleNamespace() if legacy else SimpleNamespace(current_accelerator=accelerator),
+        cuda=SimpleNamespace(is_available=lambda: family == 'cuda'),
+        device=lambda value: SimpleNamespace(type=value),
     ))
     constructor = Mock()
     monkeypatch.setitem(sys.modules, 'confuciustts.cli.inference', SimpleNamespace(ConfuciusTTS=constructor))
@@ -204,6 +206,7 @@ def test_load_model_matches_routing(sc, monkeypatch, family):
     sc._load_model(io.BytesIO())
     expected = family if family not in (None, 'mps') else 'cpu'
     constructor.assert_called_once_with(config_path='fixture.yaml', device=expected)
-    accelerator.assert_called_once_with(check_available=True)
+    if not legacy:
+        accelerator.assert_called_once_with(check_available=True)
     caps = HostCaps(family=family or 'cpu', available_families=(family, 'cpu') if family else ('cpu',))
     assert resolve_routing(Confucius4Backend.gpu_compat, caps)['effective_device'] == expected
