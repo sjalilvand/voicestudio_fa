@@ -1279,7 +1279,13 @@
     "qc_verify": "驗證",
     "qc_verify_title": "第二遍 ASR 聽到：「{{heard}}」 — 重新聆聽或重新配音此台詞。",
     "live_play_title": "立即串流此行(即時預覽)",
-    "live_stop_title": "停止即時預覽"
+    "live_stop_title": "停止即時預覽",
+    "plan_apply": "使用較短的改寫",
+    "plan_apply_title": "將此行替換為建議的較短改寫：「{{text}}」",
+    "plan_impossible": "無法容納 +{{seconds}}秒",
+    "plan_impossible_title": "預計語音約{{est}}秒，可用時間為{{avail}}秒。約有{{seconds}}秒超出任何適配方式的調整範圍，音訊將被截斷。請在產生前縮短文字。",
+    "plan_tight": "勉強適配",
+    "plan_tight_title": "預計語音約{{est}}秒，可用時間為{{avail}}秒。智慧適配可以處理，但會明顯加快語速或減慢影片。縮短文字可獲得更自然的效果。"
   },
   "timeline": {
     "track_label": "片段時間軸",

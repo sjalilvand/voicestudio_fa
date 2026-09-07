@@ -60,7 +60,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Gallery previews no longer fail with "the voice engine returned no audible audio" on perfectly good renders: the degenerate-buzz guard measured spectral flatness over the whole clip (so the value tracked clip length) against a threshold calibrated on a synthetic signal, and rejected real speech in every language tested (#1819) — thanks @flutterkage2k!
 - Speak tilde separators in integer, signed, and decimal ranges in English, Korean, Japanese, and Chinese (#1821) — thanks @flutterkage2k!
 
-- Keep recording cleanup and clipboard edits safe, synchronize dubbing language controls, and localize timeline controls and timing warnings (#1841)
+- Keep recording and conversion work safe while switching methods, synchronize dubbing language controls, and localize timeline controls and timing warnings (#1841)
 
 - Dubbing playback starts before waveform decoding, automatic cast names are readable, and transcript timestamps have more room (#1823)
 - The title-bar engine button stays compact and stable while cycling labels, with engine names aligned right (#1823)

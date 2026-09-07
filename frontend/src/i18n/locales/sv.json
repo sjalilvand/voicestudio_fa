@@ -1279,7 +1279,13 @@
     "qc_verify": "Verifiera",
     "qc_verify_title": "Second-pass ASR hörde: \"{{heard}}\" — lyssna igen eller dubba om den här raden.",
     "live_play_title": "Strömma den här raden nu (live-förhandsvisning)",
-    "live_stop_title": "Stoppa live-förhandsvisningen"
+    "live_stop_title": "Stoppa live-förhandsvisningen",
+    "plan_apply": "Använd kortare version",
+    "plan_apply_title": "Ersätt raden med den föreslagna kortare versionen: ”{{text}}”",
+    "plan_impossible": "Ryms inte +{{seconds}}s",
+    "plan_impossible_title": "Beräknat tal ≈{{est}}s, tillgänglig tid {{avail}}s. Cirka {{seconds}}s överskrider vad anpassningen klarar och ljudet skulle klippas. Korta texten före generering.",
+    "plan_tight": "Ryms precis",
+    "plan_tight_title": "Beräknat tal ≈{{est}}s, tillgänglig tid {{avail}}s. Smart anpassning kan lösa detta med hörbart snabbare tal eller långsammare video. Korta texten för ett bättre resultat."
   },
   "timeline": {
     "track_label": "Segmenttidslinje",

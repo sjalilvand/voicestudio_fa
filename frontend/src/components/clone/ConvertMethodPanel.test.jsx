@@ -174,6 +174,38 @@ describe('ConvertMethodPanel', () => {
     expect(screen.queryByText('convert.need_source_and_voice')).toBeNull();
   });
 
+  it.each(['success', 'failure'])(
+    'keeps method switching busy until conversion %s settles',
+    async (outcome) => {
+      let resolveConversion, rejectConversion;
+      convertSpeech.mockImplementation(
+        () =>
+          new Promise((resolve, reject) => {
+            resolveConversion = resolve;
+            rejectConversion = reject;
+          }),
+      );
+      const onRecordingBusyChange = vi.fn();
+      render(
+        <ConvertMethodPanel
+          t={t}
+          profiles={profiles}
+          onRecordingBusyChange={onRecordingBusyChange}
+        />,
+      );
+      addSourceClip();
+      fireEvent.change(screen.getByLabelText('voice-selector'), {
+        target: { value: 'vp-1' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'convert.convert' }));
+      await waitFor(() => expect(convertSpeech).toHaveBeenCalled());
+      expect(onRecordingBusyChange).toHaveBeenLastCalledWith(true);
+      if (outcome === 'success') resolveConversion({ id: 'take', audio_url: '/audio/take.wav' });
+      else rejectConversion(new Error('Conversion failed'));
+      await waitFor(() => expect(onRecordingBusyChange).toHaveBeenLastCalledWith(false));
+    },
+  );
+
   it('previews the source clip with the shared waveform player', () => {
     render(<ConvertMethodPanel t={t} profiles={profiles} />);
     addSourceClip();

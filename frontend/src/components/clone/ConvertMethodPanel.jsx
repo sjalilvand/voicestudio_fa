@@ -95,9 +95,11 @@ export default function ConvertMethodPanel({ t, profiles = [], onRecordingBusyCh
   } = useRecording(async (file) => ingestSource(file));
 
   useEffect(() => {
-    onRecordingBusyChange?.(Boolean(isStartingRecording || isRecording || isCleaning));
+    onRecordingBusyChange?.(
+      Boolean(isStartingRecording || isRecording || isCleaning || isConverting),
+    );
     return () => onRecordingBusyChange?.(false);
-  }, [isStartingRecording, isRecording, isCleaning, onRecordingBusyChange]);
+  }, [isStartingRecording, isRecording, isCleaning, isConverting, onRecordingBusyChange]);
 
   const canConvert = !!sourceFile && !!voiceId && !isConverting;
 

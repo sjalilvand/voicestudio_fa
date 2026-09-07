@@ -1279,7 +1279,13 @@
     "qc_verify": "Überprüfen",
     "qc_verify_title": "ASR im zweiten Durchgang hörte: „{{heard}}“ – hören Sie sich diese Zeile noch einmal an oder überspielen Sie sie erneut.",
     "live_play_title": "Diese Zeile jetzt streamen (Live-Vorschau)",
-    "live_stop_title": "Live-Vorschau stoppen"
+    "live_stop_title": "Live-Vorschau stoppen",
+    "plan_apply": "Kürzere Fassung verwenden",
+    "plan_apply_title": "Diese Zeile durch die vorgeschlagene kürzere Fassung ersetzen: „{{text}}“",
+    "plan_impossible": "Passt nicht +{{seconds}}s",
+    "plan_impossible_title": "Geschätzte Sprache ≈{{est}}s bei {{avail}}s verfügbarer Zeit. Etwa {{seconds}}s lassen sich nicht ausgleichen; Audio würde abgeschnitten. Text vor dem Generieren kürzen.",
+    "plan_tight": "Knapp passend",
+    "plan_tight_title": "Geschätzte Sprache ≈{{est}}s bei {{avail}}s verfügbarer Zeit. Smart Fit kann dies mit hörbarer Beschleunigung oder langsamerem Video ausgleichen. Für ein besseres Ergebnis den Text kürzen."
   },
   "timeline": {
     "track_label": "Segment-Zeitleiste",

@@ -1238,7 +1238,13 @@
     "qc_verify": "验证",
     "qc_verify_title": "第二遍 ASR 听到：“{{heard}}” — 重新聆听或重新配音此台词。",
     "live_play_title": "立即流式播放该行(实时预览)",
-    "live_stop_title": "停止实时预览"
+    "live_stop_title": "停止实时预览",
+    "plan_apply": "使用较短的改写",
+    "plan_apply_title": "将此行替换为建议的较短改写：“{{text}}”",
+    "plan_impossible": "无法容纳 +{{seconds}}秒",
+    "plan_impossible_title": "预计语音约{{est}}秒，可用时间为{{avail}}秒。约有{{seconds}}秒超出任何适配方式的调整范围，音频将被截断。请在生成前缩短文本。",
+    "plan_tight": "勉强适配",
+    "plan_tight_title": "预计语音约{{est}}秒，可用时间为{{avail}}秒。智能适配可以处理，但会明显加快语速或减慢视频。缩短文本可获得更自然的效果。"
   },
   "timeline": {
     "track_label": "片段时间轴",

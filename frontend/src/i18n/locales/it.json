@@ -1279,7 +1279,13 @@
     "qc_verify": "Verifica",
     "qc_verify_title": "ASR di secondo passaggio ha sentito: \"{{heard}}\" — riascolta o ri-doppia questa riga.",
     "live_play_title": "Trasmetti questa riga ora (anteprima dal vivo)",
-    "live_stop_title": "Ferma l'anteprima dal vivo"
+    "live_stop_title": "Ferma l'anteprima dal vivo",
+    "plan_apply": "Usa la versione più breve",
+    "plan_apply_title": "Sostituisci questa riga con la versione più breve suggerita: «{{text}}»",
+    "plan_impossible": "Non entra +{{seconds}}s",
+    "plan_impossible_title": "Parlato previsto ≈{{est}}s su {{avail}}s disponibili. Circa {{seconds}}s superano ogni possibilità di adattamento e l’audio verrebbe tagliato. Accorcia il testo prima di generare.",
+    "plan_tight": "Adattamento al limite",
+    "plan_tight_title": "Parlato previsto ≈{{est}}s su {{avail}}s disponibili. L’adattamento intelligente può compensare accelerando la voce in modo udibile o rallentando il video. Accorcia il testo per un risultato migliore."
   },
   "timeline": {
     "track_label": "Timeline dei segmenti",

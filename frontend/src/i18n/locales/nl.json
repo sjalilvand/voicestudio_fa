@@ -1279,7 +1279,13 @@
     "qc_verify": "Verifieer",
     "qc_verify_title": "Tweede passage ASR hoorde: \"{{heard}}\" — luister of dub deze regel opnieuw.",
     "live_play_title": "Deze regel nu streamen (livevoorbeeld)",
-    "live_stop_title": "Livevoorbeeld stoppen"
+    "live_stop_title": "Livevoorbeeld stoppen",
+    "plan_apply": "Kortere versie gebruiken",
+    "plan_apply_title": "Deze regel vervangen door de voorgestelde kortere versie: “{{text}}”",
+    "plan_impossible": "Past niet +{{seconds}}s",
+    "plan_impossible_title": "Verwachte spraak ≈{{est}}s bij {{avail}}s beschikbare tijd. Ongeveer {{seconds}}s kan niet worden opgevangen; de audio zou worden afgekapt. Kort de tekst in vóór het genereren.",
+    "plan_tight": "Past maar net",
+    "plan_tight_title": "Verwachte spraak ≈{{est}}s bij {{avail}}s beschikbare tijd. Slim passend maken kan dit opvangen door hoorbaar snellere spraak of tragere video. Kort de tekst in voor een beter resultaat."
   },
   "timeline": {
     "track_label": "Segmenttijdlijn",

@@ -1279,7 +1279,13 @@
     "qc_verify": "verificar",
     "qc_verify_title": "Se escuchó ASR en el segundo paso: \"{{heard}}\": vuelva a escuchar o doblar esta línea.",
     "live_play_title": "Transmitir esta línea ahora (vista previa en vivo)",
-    "live_stop_title": "Detener la vista previa en vivo"
+    "live_stop_title": "Detener la vista previa en vivo",
+    "plan_apply": "Usar versión más corta",
+    "plan_apply_title": "Sustituir esta línea por la versión más corta sugerida: «{{text}}»",
+    "plan_impossible": "No cabe +{{seconds}}s",
+    "plan_impossible_title": "Voz estimada ≈{{est}}s frente a {{avail}}s disponibles. Sobran unos {{seconds}}s que ningún ajuste puede compensar; se recortaría el audio. Acorta el texto antes de generar.",
+    "plan_tight": "Ajuste justo",
+    "plan_tight_title": "Voz estimada ≈{{est}}s frente a {{avail}}s disponibles. El ajuste inteligente puede compensarlo acelerando la voz de forma audible o ralentizando el vídeo. Acorta el texto para mejorar el resultado."
   },
   "timeline": {
     "track_label": "Línea de tiempo de segmentos",
