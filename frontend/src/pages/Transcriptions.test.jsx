@@ -1,11 +1,13 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { requestDictationCapture, toast } = vi.hoisted(() => ({
+const { requestDictationCapture, copyToClipboard, toast } = vi.hoisted(() => ({
   requestDictationCapture: vi.fn(),
+  copyToClipboard: vi.fn(),
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 
+vi.mock('../utils/copyText', () => ({ copyText: copyToClipboard }));
 vi.mock('../utils/dictationCapture', () => ({ requestDictationCapture }));
 vi.mock('../components/EngineQuickSwitch', () => ({ default: () => null }));
 vi.mock('../hooks/useEffectiveDictationShortcut', () => ({
@@ -101,5 +103,35 @@ describe('segments without timings (#1798)', () => {
     expect(segTimeRange({ text: 'no timings' })).toBe('');
     expect(segTimeRange(undefined)).toBe('');
     expect(segTimeRange({ start: NaN, end: Infinity })).toBe('');
+    expect(segTimeRange({ start: '0', end: {} })).toBe('');
+  });
+});
+
+describe('transcription clipboard', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    toast.success.mockReset();
+    toast.error.mockReset();
+    copyToClipboard.mockReset();
+    addTranscription({ text: 'Copy this transcript.', language: 'en' });
+  });
+
+  it.each([true, false])('reports clipboard result %s accurately', async (copied) => {
+    copyToClipboard.mockResolvedValueOnce(copied);
+    render(<TranscriptionsPage />);
+    fireEvent.click(screen.getByText('Copy this transcript.'));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+    await waitFor(() => expect(copyToClipboard).toHaveBeenCalledWith('Copy this transcript.'));
+    await waitFor(() => expect(copied ? toast.success : toast.error).toHaveBeenCalled());
+    expect(copied ? toast.error : toast.success).not.toHaveBeenCalled();
+  });
+
+  it('reports an unexpected clipboard rejection', async () => {
+    copyToClipboard.mockRejectedValueOnce(new Error('Clipboard unavailable'));
+    render(<TranscriptionsPage />);
+    fireEvent.click(screen.getByText('Copy this transcript.'));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(toast.success).not.toHaveBeenCalled();
   });
 });

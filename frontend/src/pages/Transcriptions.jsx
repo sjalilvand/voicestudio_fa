@@ -13,6 +13,7 @@ import { Mic, Copy, Trash2, Search, Clock, Languages, FileText, Download } from 
 import { Button } from '../ui';
 import EngineQuickSwitch from '../components/EngineQuickSwitch';
 import { toast } from 'react-hot-toast';
+import { copyText as copyToClipboard } from '../utils/copyText';
 import { toMillis } from '../utils/relativeTime';
 import { useEffectiveDictationShortcut } from '../hooks/useEffectiveDictationShortcut';
 import { requestDictationCapture } from '../utils/dictationCapture';
@@ -103,8 +104,11 @@ export default function TranscriptionsPage() {
 
   const copyText = useCallback(
     (text) => {
-      copyText(text).then(
-        () => toast.success(t('transcriptions.copied')),
+      copyToClipboard(text).then(
+        (copied) =>
+          copied
+            ? toast.success(t('transcriptions.copied'))
+            : toast.error(t('transcriptions.copy_failed')),
         () => toast.error(t('transcriptions.copy_failed')),
       );
     },
