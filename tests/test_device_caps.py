@@ -274,7 +274,10 @@ def test_generic_directml_loader_respects_selected_family(monkeypatch, npu_avail
         "torch_directml": types.SimpleNamespace(device_count=lambda: 1, device=lambda i: "privateuseone:0"),
     }
     with patch.dict("sys.modules", modules):
-        caps = live_caps.refresh()
+        try:
+            caps = live_caps.refresh()
+        finally:
+            live_caps.detect_host_caps.cache_clear()
     assert caps.family == ("npu" if npu_available else "cpu")
     monkeypatch.setattr(live_caps, "detect_host_caps", lambda: caps)
     monkeypatch.setattr(model_manager, "_lazy_torch", lambda: torch)
