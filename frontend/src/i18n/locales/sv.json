@@ -6,7 +6,7 @@
     "clear_confirm": "Detta tar permanent bort alla sparade Berättelse- och Ljudboksprojekt och alla osparade utkast så att VoiceStudio kan öppnas igen. Det går inte att ångra. Fortsätta?"
   },
   "backendUnreachable": {
-    "contact_recent": "Den svarade för {{ago}} sedan och slutade sedan svara — den kraschade eller avslutades troligen mitt i en förfrågan.",
+    "contact_recent": "Den svarade för {{ago}} sedan och slutade sedan svara, och ingen krasch registrerades — den kan alltså fortfarande vara igång men fast i ett tungt jobb som håller motorn upptagen.",
     "contact_never": "Den har inte svarat alls under den här sessionen — den kanske aldrig startade.",
     "dev": "Kan inte nå den lokala VoiceStudio-backend. {{contact}} Med `bun run dev` körs backend med automatisk omladdning: varje filändring — även en sparning medan en förfrågan pågick — startar om den och bryter anslutningen. Försök med åtgärden igen först; var det en omladdning fungerar det. Om det fortsätter att misslyckas, titta i terminalen med `bun run dev` efter en Python-traceback eller ett avslutsmeddelande, och i omnivoice.log i din VoiceStudio-datamapp.",
     "server": "Kan inte nå VoiceStudio-backendservern. {{contact}} Kontrollera serverloggarna för orsaken (t.ex. `docker logs <container>` eller `journalctl`) — och observera att om Docker serverar den här sidan kan själva sidan gå ner tillsammans med backenden.",
@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "Återställning misslyckades: {{message}}",
     "reset_longform_failed": "VoiceStudio kunde inte rensa de sparade projekten på ett säkert sätt. Dina projektdata ändrades inte; frigör lagringsutrymme eller starta om appen och försök igen.",
     "cancel": "Avbryt",
-    "hf_token_also_clear": "Rensa också",
+    "hf_token_also_clear": "Radera även sparade tokenfiler för HuggingFace CLI",
     "hf_token_clear_btn": "Rensa token",
     "hf_token_clear_confirm": "Rensa HuggingFace-token från App-källan?",
     "hf_token_clear_dialog": "Rensa token",
@@ -334,6 +334,7 @@
     "device_family_cuda": "NVIDIA GPU (CUDA)",
     "device_family_rocm": "AMD GPU (ROCm)",
     "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
     "device_load_failed": "Kunde inte läsa in enhetsinställningen",
@@ -348,7 +349,11 @@
     "generate_timeout_saved": "Sparat. Starta om VoiceStudio för att den nya budgeten ska gälla.",
     "generate_timeout_shadowed_badge": "Åsidosatt externt",
     "generate_timeout_shadowed_note": "En miljövariabel utanför VoiceStudio (skal, .env-fil eller container) anger just nu detta värde — värdet som sparats här ignoreras tills den variabeln tas bort.",
-    "generate_timeout_shadowed_toast": "Sparat, men en miljövariabel utanför VoiceStudio anger just nu detta värde — det kommer fortsätta användas tills den variabeln tas bort."
+    "generate_timeout_shadowed_toast": "Sparat, men en miljövariabel utanför VoiceStudio anger just nu detta värde — det kommer fortsätta användas tills den variabeln tas bort.",
+    "hf_token_not_checked": "Inte testad",
+    "hf_source_app_label": "VoiceStudio (krypterad, rekommenderas)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "Miljövariabel"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -539,6 +544,9 @@
     "convert_desc": "Säg det en gång — hör det med en annan röst. Tal till tal, helt lokalt."
   },
   "clone": {
+    "text_label": "Text",
+    "paste": "Klistra in",
+    "paste_failed": "Åtkomst till urklipp blockerades. Klistra in direkt i textfältet med tangentbordet.",
     "prompt": "Fråga",
     "language": "Språk",
     "steps": "Steg",
@@ -643,7 +651,8 @@
     "cat_AccentDialect": "Accent eller dialekt",
     "accent_dialect_hint": "det ena eller det andra, aldrig båda",
     "reset_to_description": "Återställ till beskrivning",
-    "chips_more": "{{count}} till…"
+    "chips_more": "{{count}} till…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "App",
@@ -823,7 +832,8 @@
     "familyDesc_tts": "Gör om manus till tal. Studio, Dubbning och Batch använder den aktiva motorn.",
     "familyDesc_asr": "Gör om ljud till text för transkribering, dubbning, undertexter och diktering.",
     "familyDesc_llm": "Valfri texthjälp för översättning och omskrivning. ”Av” hoppar över dessa steg.",
-    "mpsLongText": "{{engine}} körs på Apple Silicon (MPS) här och den här texten är lång — genereringen kan överskrida tidsbudgeten. Kortare text, eller uppdelad i flera tagningar, går betydligt snabbare."
+    "mpsLongText": "{{engine}} körs på Apple Silicon (MPS) här och den här texten är lång — genereringen kan överskrida tidsbudgeten. Kortare text, eller uppdelad i flera tagningar, går betydligt snabbare.",
+    "inMemory": "I minnet"
   },
   "capture": {
     "desc": "Globala snabbtangenter fungerar bara i skrivbordsappen. Webbgränssnittet använder en genväg <1>Ctrl+Skift+Mellanslag</1> på sidan medan fönstret har fokus.",
@@ -961,6 +971,9 @@
     "consent_revoked": "Verifieringen återkallad"
   },
   "dub": {
+    "timing_label": "Tajming",
+    "timing_concise": "Kortfattat",
+    "timing_stretch_video": "Förläng video",
     "install_engine_pkg": "Installera {{pkg}}",
     "needs_install_short": "Kräver installation",
     "install_popover_title": "Installera denna motor",
@@ -1171,7 +1184,8 @@
     "languages_pending": "Väntar",
     "live_preview": "Live-förhandsvisning",
     "live_preview_title": "Hör en rad medan du redigerar den — det redigerade segmentet strömmar TTS med sin CAST-röst efter en kort paus. Endast uppspelning: inget sparas och exporten renderas fortfarande i full kvalitet.",
-    "live_preview_pick_voice": "Tilldela en CAST-röst till den här raden eller dess talare för att höra live-förhandsvisningen."
+    "live_preview_pick_voice": "Tilldela en CAST-röst till den här raden eller dess talare för att höra live-förhandsvisningen.",
+    "autofit_quality": "Automatisk anpassning"
   },
   "glossary": {
     "title": "Ordlista",
@@ -1270,7 +1284,13 @@
     "qc_verify": "Verifiera",
     "qc_verify_title": "Second-pass ASR hörde: \"{{heard}}\" — lyssna igen eller dubba om den här raden.",
     "live_play_title": "Strömma den här raden nu (live-förhandsvisning)",
-    "live_stop_title": "Stoppa live-förhandsvisningen"
+    "live_stop_title": "Stoppa live-förhandsvisningen",
+    "plan_apply": "Använd kortare version",
+    "plan_apply_title": "Ersätt raden med den föreslagna kortare versionen: ”{{text}}”",
+    "plan_impossible": "Ryms inte +{{seconds}}s",
+    "plan_impossible_title": "Beräknat tal ≈{{est}}s, tillgänglig tid {{avail}}s. Cirka {{seconds}}s överskrider vad anpassningen klarar och ljudet skulle klippas. Korta texten före generering.",
+    "plan_tight": "Ryms precis",
+    "plan_tight_title": "Beräknat tal ≈{{est}}s, tillgänglig tid {{avail}}s. Smart anpassning kan lösa detta med hörbart snabbare tal eller långsammare video. Korta texten för ett bättre resultat."
   },
   "timeline": {
     "track_label": "Segmenttidslinje",
@@ -1861,6 +1881,7 @@
     "hint": "8 steg · snabb förhandsgranskning"
   },
   "header": {
+    "speech": "Tal",
     "kicker_studio": "Studio",
     "kicker_library": "Bibliotek",
     "kicker_preferences": "Inställningar",
@@ -1967,6 +1988,7 @@
     "preview_voice": "Förhandsgranska röst"
   },
   "checkpoint": {
+    "timing_review": "{{count}} segment behöver tidsgranskas",
     "asr_title": "Avskrifter klara",
     "asr_cta": "Översätt",
     "asr_hint": "Åtgärda eventuella ASR-fel nu – tight diction sparar TTS-försök senare.",
@@ -1977,7 +1999,13 @@
     "done_hint": "Granska timing och synkroniseringsförhållanden. Justera vilken linje som helst och tryck på \"Regen ändrad\" för en snabb delvis redo.",
     "segment_one": "{{count}} segment",
     "segment_other": "{{count}} segment",
-    "dismiss_title": "Avvisa — kommer inte att dyka upp igen för det här steget förrän du laddar om"
+    "dismiss_title": "Avvisa — kommer inte att dyka upp igen för det här steget förrän du laddar om",
+    "timing_review_one": "{{count}} segment behöver tidsgranskning",
+    "timing_review_other": "{{count}} segment behöver tidsgranskas",
+    "timing_review_zero": "{{count}} segment behöver tidsgranskas",
+    "timing_review_two": "{{count}} segment behöver tidsgranskas",
+    "timing_review_few": "{{count}} segment behöver tidsgranskas",
+    "timing_review_many": "{{count}} segment behöver tidsgranskas"
   },
   "compare": {
     "title": "A/B-röstjämförelse",
@@ -2077,7 +2105,10 @@
     "voice_previews_checked": "kontrollerat {{when}}",
     "voice_previews_never": "inte kontrollerat än",
     "voice_previews_check": "Kontrollera nu",
-    "voice_previews_rejected": "Uppdatering av röstgalleriet avvisades: {{message}}"
+    "voice_previews_rejected": "Uppdatering av röstgalleriet avvisades: {{message}}",
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "Behöver jag en licens för interna verktyg?",
@@ -2369,7 +2400,10 @@
     "hf_token_saved_fast": "Hugging Face-token har sparats — nedladdningar går nu snabbare",
     "hf_token_inline_prompt": "Snabba upp nedladdningarna med ett gratis Hugging Face-token",
     "hf_token_inline_ph": "Klistra in hf_… token (valfritt)",
-    "hf_token_get_short": "Få en gratis →"
+    "hf_token_get_short": "Få en gratis →",
+    "hf_token_active_using": "Hugging Face-token hittades i {{source}} — {{masked}}",
+    "hf_token_replace": "Ersätt token…",
+    "hf_token_replace_warning": "Detta ersätter token som sparats för denna app. Den gamla token återkallas inte."
   },
   "history": {
     "dub_meta": "{{segments}} segment · {{duration}} s",
@@ -2604,7 +2638,13 @@
   },
   "waveform": {
     "source_missing": "Källmedia saknas – den här filen kan ha flyttats eller tagits bort. Ladda upp videon igen för att fortsätta.",
-    "load_failed": "Det gick inte att ladda ljud från den här filen"
+    "load_failed": "Det gick inte att ladda ljud från den här filen",
+    "controls": "Uppspelningskontroller",
+    "restart": "Starta om uppspelning",
+    "shortcuts": "J/K/L: bakåt, spela/pausa, framåt",
+    "zoom": "Zoomnivå",
+    "timeline": "Tidslinje för ljudvåg",
+    "loading": "Laddar vågform…"
   },
   "tts": {
     "routingFallback": "Körs på CPU — den här motorn har ingen GPU-sökväg på din maskin, så genereringen kommer att gå långsammare. {{reason}}",
@@ -2738,5 +2778,9 @@
     "transcript": "Vad som hördes",
     "result_kicker": "Konverterad tagning",
     "need_source_and_voice": "Lägg först till ett källklipp och välj en målröst."
+  },
+  "player": {
+    "pause": "Pausa",
+    "play": "Spela upp"
   }
 }

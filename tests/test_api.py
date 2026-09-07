@@ -738,3 +738,37 @@ def test_static_audio_served_with_canonical_mime():
         )
     finally:
         tmp_wav.unlink(missing_ok=True)
+
+
+@pytest.mark.parametrize("fail_clear", [False, True])
+def test_system_hf_clear_uses_shared_token_file_cleanup(monkeypatch, tmp_path, fail_clear):
+    from pathlib import Path
+    from fastapi.testclient import TestClient
+    from main import app
+    from core import config
+    from huggingface_hub import constants
+    selected = tmp_path / "selected" / "token"
+    legacy = tmp_path / "legacy" / "token"
+    for path in (selected, legacy):
+        path.parent.mkdir()
+        path.write_text("synthetic-cli-token")
+        path.with_name("stored_tokens").write_text("synthetic-stored")
+    monkeypatch.setattr(constants, "HF_TOKEN_PATH", str(selected))
+    monkeypatch.setattr(config, "HF_CLI_TOKEN_PATHS", (str(selected), str(legacy)))
+    monkeypatch.setenv("HF_TOKEN", "synthetic-env")
+    if fail_clear:
+        original = Path.unlink
+        def unlink(path, *args, **kwargs):
+            if path == selected:
+                raise PermissionError("synthetic-private-content")
+            return original(path, *args, **kwargs)
+        monkeypatch.setattr(Path, "unlink", unlink)
+    response = TestClient(app, client=("127.0.0.1", 12345)).post(
+        "/system/set-env", json={"key": "HF_TOKEN", "value": ""}
+    )
+    assert response.status_code == (500 if fail_clear else 200)
+    assert "synthetic-private-content" not in response.text
+    assert not legacy.exists()
+    assert not legacy.with_name("stored_tokens").exists()
+    assert selected.exists() == fail_clear
+    assert "HF_TOKEN" not in os.environ

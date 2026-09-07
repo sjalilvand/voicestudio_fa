@@ -345,6 +345,8 @@ const SCENARIO_ENV: &[&str] = &[
     "OMNIVOICE_TEST_BEFORE_TRACK_RELEASE",
     "OMNIVOICE_TEST_AFTER_TRACK_ENTERED",
     "OMNIVOICE_TEST_AFTER_TRACK_RELEASE",
+    "OMNIVOICE_TEST_LAUNCH_LOCKED_ENTERED",
+    "OMNIVOICE_TEST_LAUNCH_LOCKED_RELEASE",
     "OMNIVOICE_BACKEND_CMD",
     "OMNIVOICE_LOG_DIR",
     "OMNIVOICE_PORT",
@@ -1759,4 +1761,40 @@ fn deferred_startup_failure_names_the_step() {
         "the launch poll must narrate the step the backend reported; logs: {:?}",
         logs.iter().map(|l| &l.line).collect::<Vec<_>>()
     );
+}
+
+
+#[test]
+fn retry_preempts_launch_before_the_readiness_wait_starts() {
+    let t = TestApp::new(&Scenario { serve_ms: Some(0), ..Default::default() });
+    std::env::set_var("OMNIVOICE_SCENARIO_PROGRESS_ONLY", "1");
+    let entered = t._logdir.path().join("launch-locked");
+    let release = t._logdir.path().join("release-launch");
+    std::env::set_var("OMNIVOICE_TEST_LAUNCH_LOCKED_ENTERED", &entered);
+    std::env::set_var("OMNIVOICE_TEST_LAUNCH_LOCKED_RELEASE", &release);
+    let bootstrap = t.run_bootstrap();
+    let entered_launch = wait_until(Duration::from_secs(5), || entered.exists());
+    if !entered_launch {
+        // Release and join before asserting: a timeout must not detach a
+        // bootstrap thread while it still owns the lifecycle mutex.
+        let released = std::fs::write(&release, b"release");
+        t.quit();
+        t.kill_tracked_child();
+        join_with_timeout(bootstrap, Duration::from_secs(10), "launch gate timeout");
+        released.expect("release launch gate after timeout");
+        panic!("bootstrap did not enter the launch gate");
+    }
+    app_lib::bootstrap::preempt_backend_wait();
+    let handle = t.handle();
+    let retry = std::thread::spawn(move || {
+        let state = handle.state::<BackendState>();
+        let _ownership = state.lifecycle.lock().unwrap();
+    });
+    std::fs::write(&release, b"release").unwrap();
+    let acquired = wait_until(Duration::from_secs(3), || retry.is_finished());
+    t.quit();
+    t.kill_tracked_child();
+    join_with_timeout(bootstrap, Duration::from_secs(10), "preempted launch");
+    join_with_timeout(retry, Duration::from_secs(10), "retry ownership");
+    assert!(acquired, "old launch swallowed Retry's generation and held lifecycle");
 }

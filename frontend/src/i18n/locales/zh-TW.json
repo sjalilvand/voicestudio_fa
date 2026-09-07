@@ -6,7 +6,7 @@
     "clear_confirm": "這將永久刪除所有已儲存的故事與有聲書專案以及所有未儲存的草稿，讓 VoiceStudio 能重新開啟。此操作無法復原。是否繼續？"
   },
   "backendUnreachable": {
-    "contact_recent": "它在 {{ago}}前還有回應，之後停止回應——很可能是在處理請求時當機或被強制終止。",
+    "contact_recent": "它在 {{ago}} 前還有回應，之後停止回應，而且沒有記錄到當機——因此它可能仍在執行，只是卡在佔用引擎的繁重工作上。",
     "contact_never": "本次工作階段中它從未回應——可能根本沒有啟動。",
     "dev": "無法連線本機 VoiceStudio 後端。{{contact}} 在 `bun run dev` 下後端以自動重新載入方式執行，任何檔案變動（包括請求進行中的儲存）都會重啟它並中斷連線。請先重試該操作；若是重新載入造成的，重試即可成功。若仍然失敗，請查看執行 `bun run dev` 的終端機是否有 Python 追蹤訊息或結束訊息，以及 VoiceStudio 資料夾中的 omnivoice.log。",
     "server": "無法連線 VoiceStudio 後端伺服器。{{contact}} 請查看伺服器日誌以找出原因（例如 `docker logs <容器>` 或 `journalctl`）——另請注意：如果此頁面由 Docker 提供，頁面本身也可能隨後端一起停止運作。",
@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "重置失敗：{{message}}",
     "reset_longform_failed": "VoiceStudio 無法安全清除已儲存的專案。您的專案資料未被變更；請釋放一些儲存空間或重新啟動應用程式後再試。",
     "cancel": "取消",
-    "hf_token_also_clear": "一併清除",
+    "hf_token_also_clear": "同時清除已儲存的 HuggingFace CLI 權杖檔案",
     "hf_token_clear_btn": "清除代幣",
     "hf_token_clear_confirm": "確定要清除 App 來源的 HuggingFace 代幣嗎？",
     "hf_token_clear_dialog": "清除代幣",
@@ -334,6 +334,7 @@
     "device_family_cuda": "NVIDIA GPU (CUDA)",
     "device_family_rocm": "AMD GPU (ROCm)",
     "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
     "device_load_failed": "無法載入裝置設定",
@@ -348,7 +349,11 @@
     "generate_timeout_saved": "已儲存。重新啟動 VoiceStudio 以套用新的預算。",
     "generate_timeout_shadowed_badge": "已被外部覆寫",
     "generate_timeout_shadowed_note": "VoiceStudio 之外的一個環境變數（終端機、.env 檔案或容器）目前正在設定此值 — 在移除該變數之前，此處儲存的值會被忽略。",
-    "generate_timeout_shadowed_toast": "已儲存，但 VoiceStudio 之外的一個環境變數目前正在設定此值 — 在移除該變數之前，將持續使用該值。"
+    "generate_timeout_shadowed_toast": "已儲存，但 VoiceStudio 之外的一個環境變數目前正在設定此值 — 在移除該變數之前，將持續使用該值。",
+    "hf_token_not_checked": "未測試",
+    "hf_source_app_label": "VoiceStudio（已加密，建議）",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "環境變數"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -539,6 +544,9 @@
     "convert_desc": "說一次,用另一種聲音聽到。語音到語音,完全在本機執行。"
   },
   "clone": {
+    "text_label": "文字",
+    "paste": "貼上",
+    "paste_failed": "剪貼簿存取遭到封鎖。請使用鍵盤直接貼上到文字欄位。",
     "prompt": "提示",
     "language": "語言",
     "steps": "步驟",
@@ -643,7 +651,8 @@
     "cat_AccentDialect": "口音或方言",
     "accent_dialect_hint": "二選一，不能同時選擇",
     "reset_to_description": "依描述重設",
-    "chips_more": "還有 {{count}} 個…"
+    "chips_more": "還有 {{count}} 個…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "應用程式",
@@ -823,7 +832,8 @@
     "familyDesc_tts": "將腳本轉換為語音。標示為啟用的引擎供工作室、配音和批次處理使用。",
     "familyDesc_asr": "將音訊轉換為文字，用於轉錄、配音、字幕和聽寫。",
     "familyDesc_llm": "用於翻譯和改寫的選用文字助理。「關閉」會略過這些步驟。",
-    "mpsLongText": "{{engine}} 在此機器上使用 Apple Silicon（MPS）執行，而這段文字較長 — 生成可能超出時間預算。縮短文字或分成幾次生成會快得多。"
+    "mpsLongText": "{{engine}} 在此機器上使用 Apple Silicon（MPS）執行，而這段文字較長 — 生成可能超出時間預算。縮短文字或分成幾次生成會快得多。",
+    "inMemory": "已載入記憶體"
   },
   "capture": {
     "desc": "全域熱鍵僅適用於桌面應用程式。當視窗具有焦點時，Web UI 使用頁內 <1>Ctrl+Shift+Space</1> 快速鍵。",
@@ -961,6 +971,9 @@
     "consent_revoked": "驗證已撤銷"
   },
   "dub": {
+    "timing_label": "時間匹配",
+    "timing_concise": "精簡",
+    "timing_stretch_video": "延長影片",
     "install_engine_pkg": "安裝 {{pkg}}",
     "needs_install_short": "需要安裝",
     "install_popover_title": "安裝此引擎",
@@ -1171,7 +1184,8 @@
     "languages_pending": "待處理",
     "live_preview": "即時預覽",
     "live_preview_title": "邊編輯邊試聽 — 停頓片刻後,所編輯的片段會以其 CAST 聲音串流合成語音。僅播放:不會儲存任何內容,匯出仍以完整品質算繪。",
-    "live_preview_pick_voice": "為此行或其說話者指定一個 CAST 聲音,即可聆聽即時預覽。"
+    "live_preview_pick_voice": "為此行或其說話者指定一個 CAST 聲音,即可聆聽即時預覽。",
+    "autofit_quality": "自動適配"
   },
   "glossary": {
     "title": "詞彙表",
@@ -1270,7 +1284,13 @@
     "qc_verify": "驗證",
     "qc_verify_title": "第二遍 ASR 聽到：「{{heard}}」 — 重新聆聽或重新配音此台詞。",
     "live_play_title": "立即串流此行(即時預覽)",
-    "live_stop_title": "停止即時預覽"
+    "live_stop_title": "停止即時預覽",
+    "plan_apply": "使用較短的改寫",
+    "plan_apply_title": "將此行替換為建議的較短改寫：「{{text}}」",
+    "plan_impossible": "無法容納 +{{seconds}}秒",
+    "plan_impossible_title": "預計語音約{{est}}秒，可用時間為{{avail}}秒。約有{{seconds}}秒超出任何適配方式的調整範圍，音訊將被截斷。請在產生前縮短文字。",
+    "plan_tight": "勉強適配",
+    "plan_tight_title": "預計語音約{{est}}秒，可用時間為{{avail}}秒。智慧適配可以處理，但會明顯加快語速或減慢影片。縮短文字可獲得更自然的效果。"
   },
   "timeline": {
     "track_label": "片段時間軸",
@@ -1861,6 +1881,7 @@
     "hint": "8步·快速預覽"
   },
   "header": {
+    "speech": "語音",
     "kicker_studio": "工作室",
     "kicker_library": "圖書館",
     "kicker_preferences": "偏好設定",
@@ -1967,6 +1988,7 @@
     "preview_voice": "預覽語音"
   },
   "checkpoint": {
+    "timing_review": "{{count}} 個片段需要檢查時間同步",
     "asr_title": "成績單已準備好",
     "asr_cta": "翻譯",
     "asr_hint": "立即修復所有 ASR 錯誤 - 嚴格的措辭可以節省以後的 TTS 嘗試。",
@@ -1977,7 +1999,13 @@
     "done_hint": "檢查時序和同步比率。調整任何線條並點擊“Regen Changed”即可快速部分重做。",
     "segment_one": "{{count}} 段",
     "segment_other": "{{count}} 段",
-    "dismiss_title": "關閉 — 在重新載入之前不會再次出現在該階段"
+    "dismiss_title": "關閉 — 在重新載入之前不會再次出現在該階段",
+    "timing_review_one": "{{count}} 個片段需要檢查時間",
+    "timing_review_other": "{{count}} 個片段需要檢查時間同步",
+    "timing_review_zero": "{{count}} 個片段需要檢查時間同步",
+    "timing_review_two": "{{count}} 個片段需要檢查時間同步",
+    "timing_review_few": "{{count}} 個片段需要檢查時間同步",
+    "timing_review_many": "{{count}} 個片段需要檢查時間同步"
   },
   "compare": {
     "title": "A/B 語音比較",
@@ -2077,7 +2105,10 @@
     "voice_previews_checked": "{{when}}檢查",
     "voice_previews_never": "尚未檢查",
     "voice_previews_check": "立即檢查",
-    "voice_previews_rejected": "語音庫更新遭拒：{{message}}"
+    "voice_previews_rejected": "語音庫更新遭拒：{{message}}",
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "我需要內部工具的授權嗎？",
@@ -2369,7 +2400,10 @@
     "hf_token_saved_fast": "擁抱臉部令牌已儲存 — 下載速度更快",
     "hf_token_inline_prompt": "使用免費的 Hugging Face 令牌加快下載速度",
     "hf_token_inline_ph": "貼上 hf_… 令牌（可選）",
-    "hf_token_get_short": "免費獲得一份 →"
+    "hf_token_get_short": "免費獲得一份 →",
+    "hf_token_active_using": "在 {{source}} 中找到 Hugging Face 權杖 — {{masked}}",
+    "hf_token_replace": "更換權杖…",
+    "hf_token_replace_warning": "這會取代為此應用程式儲存的權杖，但不會撤銷舊權杖。"
   },
   "history": {
     "dub_meta": "{{segments}} 個片段 · {{duration}} 秒",
@@ -2604,7 +2638,13 @@
   },
   "waveform": {
     "source_missing": "來源媒體遺失 - 該檔案可能已移動或被刪除。重新上傳影片以繼續。",
-    "load_failed": "無法從此文件加載音頻"
+    "load_failed": "無法從此文件加載音頻",
+    "controls": "播放控制",
+    "restart": "從頭播放",
+    "shortcuts": "J/K/L：後退、播放/暫停、前進",
+    "zoom": "縮放比例",
+    "timeline": "音訊波形時間軸",
+    "loading": "正在載入波形…"
   },
   "tts": {
     "routingFallback": "在 CPU 上運作 — 引擎在您的電腦上沒有 GPU 路徑，因此產生速度會較慢。 {{reason}}",
@@ -2738,5 +2778,9 @@
     "transcript": "辨識到的內容",
     "result_kicker": "轉換後的音訊",
     "need_source_and_voice": "請先加入來源音訊並選擇目標聲音。"
+  },
+  "player": {
+    "pause": "暫停",
+    "play": "播放"
   }
 }

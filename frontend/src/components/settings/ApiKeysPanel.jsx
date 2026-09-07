@@ -55,9 +55,9 @@ export default function ApiKeysPanel() {
   const [alsoClearCli, setAlsoClearCli] = useState(false);
   const [error, setError] = useState(null);
 
-  // `fresh` busts the backend's 300s whoami cache — used by "Test now" so it
+  // Ordinary reads are local. `fresh` explicitly validates tokens for "Test now" so it
   // really re-runs whoami instead of echoing a cached (possibly stale) verdict.
-  // Plain mounts/refreshes keep the cache so Settings visits stay cheap.
+  // Plain mounts/refreshes read local presence without contacting Hugging Face.
   const refresh = useCallback(
     async ({ fresh = false } = {}) => {
       setLoading(true);
@@ -112,10 +112,8 @@ export default function ApiKeysPanel() {
       setClearOpen(false);
       setAlsoClearCli(false);
       await refresh();
-    } catch (e) {
-      setError(
-        e?.message || t('settings.hf_token_clear_error', { defaultValue: 'Failed to clear token' }),
-      );
+    } catch {
+      setError(t('common.error', { defaultValue: 'Something went wrong' }));
     } finally {
       setSaving(false);
     }
@@ -208,7 +206,9 @@ export default function ApiKeysPanel() {
                           {row.masked}
                         </code>
                       )}
-                      {row.whoami_ok ? (
+                      {row.whoami_ok == null ? (
+                        <span>{t('settings.hf_token_not_checked')}</span>
+                      ) : row.whoami_ok ? (
                         <span className="inline-flex items-center gap-[4px] text-[var(--chrome-severity-ok)]">
                           <CheckCircle2 size={12} />{' '}
                           {row.whoami_user ||
@@ -289,8 +289,9 @@ export default function ApiKeysPanel() {
               checked={alsoClearCli}
               onChange={(e) => setAlsoClearCli(e.target.checked)}
             />{' '}
-            {t('settings.hf_token_also_clear', { defaultValue: 'Also clear' })}{' '}
-            <code>~/.cache/huggingface/token</code>
+            {t('settings.hf_token_also_clear', {
+              defaultValue: 'Also clear saved HuggingFace CLI token files',
+            })}
           </label>
           <div className="flex justify-end gap-[var(--space-3)]">
             <button

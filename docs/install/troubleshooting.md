@@ -654,6 +654,8 @@ the error persistently on a current build, that's section **14** (a wedged GPU
 job), section **14d** (the backend never started), or the crash notice above —
 not this window.
 
+A startup timeout from an earlier attempt cannot replace the current startup state after **Retry** takes over.
+
 Desktop startup, **Retry**, storage reset, setup re-entry, in-app uninstall,
 app shutdown, and automatic crash recovery also share one backend lifecycle
 owner. Overlapping start attempts wait and attach to the healthy process,

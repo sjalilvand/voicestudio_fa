@@ -6,7 +6,7 @@
     "clear_confirm": "VoiceStudio を再び開けるように、保存済みのストーリーとオーディオブックのプロジェクト、および未保存の下書きをすべて完全に削除します。この操作は元に戻せません。続行しますか？"
   },
   "backendUnreachable": {
-    "contact_recent": "{{ago}}前までは応答していましたが、応答が止まりました — リクエストの途中でクラッシュしたか、強制終了された可能性が高いです。",
+    "contact_recent": "{{ago}}前までは応答していましたが、その後応答しなくなりました。クラッシュは記録されていないため、まだ動作していて、エンジンを占有する重い処理で止まっているだけかもしれません。",
     "contact_never": "このセッションでは一度も応答していません — そもそも起動していない可能性があります。",
     "dev": "ローカルの VoiceStudio バックエンドに接続できません。{{contact}} `bun run dev` ではバックエンドが自動リロードで動作するため、ファイルの変更（リクエスト中の保存も含む）で再起動し、接続が切れます。まず操作をやり直してください。リロードが原因ならそれで動きます。それでも失敗する場合は、`bun run dev` を実行しているターミナルの Python トレースバックや終了メッセージ、および VoiceStudio データフォルダーの omnivoice.log を確認してください。",
     "server": "VoiceStudio バックエンドサーバーに接続できません。{{contact}} サーバーログで原因を確認してください（例: `docker logs <container>` や `journalctl`）。なお、このページを Docker が配信している場合、バックエンドと一緒にページ自体も落ちることがあります。",
@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "リセットに失敗しました: {{message}}",
     "reset_longform_failed": "VoiceStudio は保存済みプロジェクトを安全に消去できませんでした。プロジェクトデータは変更されていません。ストレージの空き容量を増やすかアプリを再起動して、もう一度お試しください。",
     "cancel": "キャンセル",
-    "hf_token_also_clear": "あわせてクリア",
+    "hf_token_also_clear": "保存済みの HuggingFace CLI トークンファイルも削除する",
     "hf_token_clear_btn": "トークンをクリア",
     "hf_token_clear_confirm": "アプリに保存された HuggingFace トークンをクリアしますか?",
     "hf_token_clear_dialog": "トークンをクリア",
@@ -334,6 +334,7 @@
     "device_family_cuda": "NVIDIA GPU (CUDA)",
     "device_family_rocm": "AMD GPU (ROCm)",
     "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
     "device_load_failed": "デバイス設定を読み込めませんでした",
@@ -348,7 +349,11 @@
     "generate_timeout_saved": "保存しました。新しい予算を適用するには VoiceStudio を再起動してください。",
     "generate_timeout_shadowed_badge": "外部から上書きされています",
     "generate_timeout_shadowed_note": "VoiceStudio の外部にある環境変数（シェル、.env ファイル、またはコンテナ）が現在この値を設定しています — その変数が削除されるまで、ここで保存した値は無視されます。",
-    "generate_timeout_shadowed_toast": "保存しましたが、VoiceStudio の外部にある環境変数が現在この値を設定しています — その変数が削除されるまで、その値が使われ続けます。"
+    "generate_timeout_shadowed_toast": "保存しましたが、VoiceStudio の外部にある環境変数が現在この値を設定しています — その変数が削除されるまで、その値が使われ続けます。",
+    "hf_token_not_checked": "未テスト",
+    "hf_source_app_label": "VoiceStudio（暗号化済み、推奨）",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "環境変数"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -539,6 +544,9 @@
     "convert_desc": "一度話すだけで、別の声に。音声から音声へ、すべてローカルで。"
   },
   "clone": {
+    "text_label": "テキスト",
+    "paste": "貼り付け",
+    "paste_failed": "クリップボードへのアクセスが拒否されました。キーボードでテキスト欄に直接貼り付けてください。",
     "prompt": "プロンプト",
     "language": "言語",
     "steps": "ステップ",
@@ -643,7 +651,8 @@
     "cat_AccentDialect": "アクセントまたは方言",
     "accent_dialect_hint": "どちらか一方のみ、両方は不可",
     "reset_to_description": "説明に基づいてリセット",
-    "chips_more": "他{{count}}件…"
+    "chips_more": "他{{count}}件…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "アプリ",
@@ -823,7 +832,8 @@
     "familyDesc_tts": "スクリプトを音声に変換します。有効と表示されたエンジンがスタジオ、ダビング、バッチで使用されます。",
     "familyDesc_asr": "音声をテキストに変換し、ダビング、字幕、音声入力の文字起こしに使用します。",
     "familyDesc_llm": "翻訳や書き換え用の任意のテキスト補助です。「オフ」にするとこれらの手順を省略します。",
-    "mpsLongText": "ここでは {{engine}} が Apple Silicon（MPS）で実行され、このテキストは長いため、生成が時間制限を超える可能性があります。テキストを短くするか、数回に分けたほうが大幅に高速です。"
+    "mpsLongText": "ここでは {{engine}} が Apple Silicon（MPS）で実行され、このテキストは長いため、生成が時間制限を超える可能性があります。テキストを短くするか、数回に分けたほうが大幅に高速です。",
+    "inMemory": "メモリに読み込み済み"
   },
   "capture": {
     "desc": "グローバル ホットキーはデスクトップ アプリでのみ機能します。 Web UI は、ウィンドウにフォーカスがある間、ページ内 <1>Ctrl+Shift+Space</1> ショートカットを使用します。",
@@ -961,6 +971,9 @@
     "consent_revoked": "検証が取り消されました"
   },
   "dub": {
+    "timing_label": "タイミング",
+    "timing_concise": "簡潔",
+    "timing_stretch_video": "動画を引き伸ばす",
     "install_engine_pkg": "{{pkg}} をインストール",
     "needs_install_short": "インストールが必要",
     "install_popover_title": "このエンジンをインストール",
@@ -1171,7 +1184,8 @@
     "languages_pending": "保留中",
     "live_preview": "ライブプレビュー",
     "live_preview_title": "編集中のセリフをそのまま試聴 — 編集したセグメントは少し置いてから CAST ボイスで TTS をストリーミングします。再生のみ: 何も保存されず、書き出しは引き続きフル品質でレンダリングされます。",
-    "live_preview_pick_voice": "ライブプレビューを聴くには、この行または話者に CAST ボイスを割り当ててください。"
+    "live_preview_pick_voice": "ライブプレビューを聴くには、この行または話者に CAST ボイスを割り当ててください。",
+    "autofit_quality": "自動フィット"
   },
   "glossary": {
     "title": "用語集",
@@ -1270,7 +1284,13 @@
     "qc_verify": "検証する",
     "qc_verify_title": "2 パス目の ASR は次のように聞きました: 「{{heard}}」 — この行をもう一度聞くか、再ダビングします。",
     "live_play_title": "この行を今すぐストリーミング(ライブプレビュー)",
-    "live_stop_title": "ライブプレビューを停止"
+    "live_stop_title": "ライブプレビューを停止",
+    "plan_apply": "短い書き換えを使う",
+    "plan_apply_title": "この行を提案された短い文に置き換えます：「{{text}}」",
+    "plan_impossible": "収まりません +{{seconds}}秒",
+    "plan_impossible_title": "予測音声は約{{est}}秒、使用可能時間は{{avail}}秒です。調整できる範囲を約{{seconds}}秒超えており、音声が切り詰められます。生成前に文章を短くしてください。",
+    "plan_tight": "余裕が少ない",
+    "plan_tight_title": "予測音声は約{{est}}秒、使用可能時間は{{avail}}秒です。スマートフィットで調整できますが、音声の速度上昇や動画の減速が目立ちます。より自然な結果にするには文章を短くしてください。"
   },
   "timeline": {
     "track_label": "セグメントタイムライン",
@@ -1861,6 +1881,7 @@
     "hint": "8ステップ・高速プレビュー"
   },
   "header": {
+    "speech": "音声",
     "kicker_studio": "スタジオ",
     "kicker_library": "図書館",
     "kicker_preferences": "設定",
@@ -1967,6 +1988,7 @@
     "preview_voice": "プレビュー音声"
   },
   "checkpoint": {
+    "timing_review": "{{count}} 個のセグメントでタイミングの確認が必要です",
     "asr_title": "トランスクリプトの準備完了",
     "asr_cta": "翻訳する",
     "asr_hint": "ASR エラーを今すぐ修正します。厳密なディクショニングにより、後で TTS の試行を節約できます。",
@@ -1977,7 +1999,13 @@
     "done_hint": "タイミングと同期率を確認します。任意の行を微調整し、「Regen Changed」を押すと、部分的に素早くやり直すことができます。",
     "segment_one": "{{count}} セグメント",
     "segment_other": "{{count}} セグメント",
-    "dismiss_title": "閉じる — リロードするまでこのステージでは再表示されません"
+    "dismiss_title": "閉じる — リロードするまでこのステージでは再表示されません",
+    "timing_review_one": "{{count}} 個のセグメントのタイミングを確認してください",
+    "timing_review_other": "{{count}} 個のセグメントでタイミングの確認が必要です",
+    "timing_review_zero": "{{count}} 個のセグメントでタイミングの確認が必要です",
+    "timing_review_two": "{{count}} 個のセグメントでタイミングの確認が必要です",
+    "timing_review_few": "{{count}} 個のセグメントでタイミングの確認が必要です",
+    "timing_review_many": "{{count}} 個のセグメントでタイミングの確認が必要です"
   },
   "compare": {
     "title": "A/B音声比較",
@@ -2077,7 +2105,10 @@
     "voice_previews_checked": "{{when}}に確認",
     "voice_previews_never": "未確認",
     "voice_previews_check": "今すぐ確認",
-    "voice_previews_rejected": "ボイスギャラリーの更新を拒否しました: {{message}}"
+    "voice_previews_rejected": "ボイスギャラリーの更新を拒否しました: {{message}}",
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "内部ツールにはライセンスが必要ですか?",
@@ -2369,7 +2400,10 @@
     "hf_token_saved_fast": "ハグフェイストークンが保存されました — ダウンロードが速くなりました",
     "hf_token_inline_prompt": "無料の Hugging Face トークンでダウンロードを高速化",
     "hf_token_inline_ph": "hf_… トークンを貼り付けます (オプション)",
-    "hf_token_get_short": "1 つ無料で入手 →"
+    "hf_token_get_short": "1 つ無料で入手 →",
+    "hf_token_active_using": "{{source}} に Hugging Face トークンがあります — {{masked}}",
+    "hf_token_replace": "トークンを置き換える…",
+    "hf_token_replace_warning": "このアプリに保存されたトークンを置き換えます。古いトークンは失効しません。"
   },
   "history": {
     "dub_meta": "{{segments}} セグメント · {{duration}} 秒",
@@ -2604,7 +2638,13 @@
   },
   "waveform": {
     "source_missing": "ソース メディアが見つかりません - このファイルは移動または削除された可能性があります。続行するにはビデオを再アップロードしてください。",
-    "load_failed": "このファイルからオーディオをロードできませんでした"
+    "load_failed": "このファイルからオーディオをロードできませんでした",
+    "controls": "再生コントロール",
+    "restart": "最初から再生",
+    "shortcuts": "J/K/L：巻き戻し、再生/一時停止、早送り",
+    "zoom": "ズームレベル",
+    "timeline": "音声波形タイムライン",
+    "loading": "波形を読み込み中…"
   },
   "tts": {
     "routingFallback": "CPU 上で実行 — このエンジンにはマシン上に GPU パスがないため、生成は遅くなります。 {{reason}}",
@@ -2738,5 +2778,9 @@
     "transcript": "聞き取った内容",
     "result_kicker": "変換されたテイク",
     "need_source_and_voice": "先にソースクリップを追加し、変換先の声を選んでください。"
+  },
+  "player": {
+    "pause": "一時停止",
+    "play": "再生"
   }
 }

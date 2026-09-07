@@ -1,3 +1,4 @@
+import { abortableDelay } from '../utils/abortableDelay.ts';
 // Backend base URL.
 //   • VITE_API_URL                → explicit override (any deploy).
 //   • Tauri webview               → the local sidecar (127.0.0.1:<port>).
@@ -12,10 +13,10 @@
 // under `node --experimental-strip-types`, whose ESM resolver requires real
 // file extensions (tsconfig has allowImportingTsExtensions for tsc).
 import {
+  awaitBackendCrashMarker,
   getUnacknowledgedBackendCrash,
   describeCrashExit,
   crashAge,
-  type BackendCrashMarker,
 } from '../utils/backendCrash.ts';
 import { backendLifecycleStage, type BackendLifecycle } from '../utils/backendLifecycle.ts';
 import { scrubText } from '../utils/scrub.js';
@@ -384,7 +385,7 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promis
       if (signal?.aborted || (e as Error)?.name === 'AbortError') throw e;
       lastDetail = String((e as Error)?.message || e);
       if (retryTransport && attempt < TRANSPORT_RETRY_BACKOFF_MS.length) {
-        await new Promise((r) => setTimeout(r, TRANSPORT_RETRY_BACKOFF_MS[attempt]));
+        await abortableDelay(TRANSPORT_RETRY_BACKOFF_MS[attempt], signal);
         continue;
       }
       // The short cascade is exhausted, but the desktop shell may KNOW the
@@ -400,7 +401,7 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promis
         }
         const stage = lastStage.stage;
         if (stage === 'starting') {
-          await new Promise((r) => setTimeout(r, RESTART_WAIT_INTERVAL_MS));
+          await abortableDelay(RESTART_WAIT_INTERVAL_MS, signal);
           continue;
         }
         // `ready` while the transport is failing is a contradiction — the
@@ -410,7 +411,7 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promis
         // marker. 'failed'/'unknown' fall through and error now, so a shell
         // that gave up — or no shell at all — still surfaces promptly.
         if (stage === 'ready' && elapsed < RECONCILE_MS) {
-          await new Promise((r) => setTimeout(r, RECONCILE_INTERVAL_MS));
+          await abortableDelay(RECONCILE_INTERVAL_MS, signal);
           continue;
         }
       }
@@ -429,12 +430,21 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promis
       // watcher, or (browser/dev/Docker) by the backend's own run sentinel —
       // tell the honest story instead of the vague "can't reach" and let
       // BackendCrashNotice raise its "View crash details" affordance.
-      let crash: BackendCrashMarker | null = null;
-      try {
-        crash = await getUnacknowledgedBackendCrash();
-      } catch {
-        /* forensics unavailable — fall through to the generic message */
-      }
+      //
+      // #1802/#1805: asking ONCE, right now, races the shell's ~2 s death
+      // poll and loses — the marker for a backend that just died has usually
+      // not been written yet. We then concluded "no crash" and said so, which
+      // is how a give-up came to assert "it most likely crashed or was killed
+      // mid-request" while carrying no forensics to back it. `streamDropError`
+      // already waits out that poll (#1119); this path never did. The budget
+      // is shorter than the stream path's 8 s because the retry cascade above
+      // has already cost the user a few seconds — two poll intervals is enough
+      // to stop losing the race without turning every failure into a stall.
+      const { crash } = await awaitBackendCrashMarker(getUnacknowledgedBackendCrash, {
+        waitMs: 4_000,
+        intervalMs: 1_000,
+        signal,
+      });
       if (crash) {
         try {
           window.dispatchEvent(new CustomEvent('ov:backend-crashed', { detail: crash }));

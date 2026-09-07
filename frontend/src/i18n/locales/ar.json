@@ -6,7 +6,7 @@
     "clear_confirm": "سيؤدي هذا إلى حذف جميع مشاريع القصص والكتب الصوتية المحفوظة وأي مسودة غير محفوظة نهائيًا حتى يتمكن VoiceStudio من الفتح مجددًا. لا يمكن التراجع عن هذا الإجراء. هل تريد المتابعة؟"
   },
   "backendUnreachable": {
-    "contact_recent": "كان يستجيب قبل {{ago}} ثم توقف عن الاستجابة — على الأرجح أنه انهار أو تم إنهاؤه في منتصف الطلب.",
+    "contact_recent": "كان يستجيب قبل {{ago}} ثم توقّف عن الاستجابة، ولم يُسجَّل أي تعطُّل — لذا قد يكون ما زال يعمل لكنه عالق في مهمة ثقيلة تحتجز المحرّك.",
     "contact_never": "لم يستجب إطلاقًا في هذه الجلسة — ربما لم يبدأ التشغيل أصلًا.",
     "dev": "لا يمكن الوصول إلى خلفية VoiceStudio المحلية. {{contact}} في `bun run dev` تعمل الخلفية بإعادة التحميل التلقائي، فأي تغيير في ملف — بما في ذلك الحفظ أثناء تنفيذ طلب — يعيد تشغيلها ويقطع الاتصال. أعد المحاولة أولًا؛ فإن كان الأمر إعادة تحميل فسينجح. وإن استمر الفشل، فافحص الطرفية التي تشغّل `bun run dev` بحثًا عن تتبّع Python أو رسالة خروج، وكذلك omnivoice.log في مجلد بيانات VoiceStudio.",
     "server": "تعذّر الوصول إلى خادم الواجهة الخلفية لـ VoiceStudio. {{contact}} راجع سجلات الخادم لمعرفة السبب (مثل `docker logs <container>` أو `journalctl`) — ولاحظ أنه إذا كان Docker يقدّم هذه الصفحة، فقد تتوقف الصفحة نفسها مع الواجهة الخلفية.",
@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "فشلت إعادة التعيين: {{message}}",
     "reset_longform_failed": "تعذّر على VoiceStudio مسح المشاريع المحفوظة بأمان. بقيت بيانات مشاريعك دون تغيير؛ حرّر بعض مساحة التخزين أو أعد تشغيل التطبيق، ثم حاول مرة أخرى.",
     "cancel": "إلغاء",
-    "hf_token_also_clear": "امسح أيضًا",
+    "hf_token_also_clear": "احذف أيضًا ملفات الرموز المحفوظة لـ HuggingFace CLI",
     "hf_token_clear_btn": "مسح الرمز",
     "hf_token_clear_confirm": "هل تريد مسح رمز HuggingFace المحفوظ من التطبيق؟",
     "hf_token_clear_dialog": "مسح الرمز",
@@ -334,6 +334,7 @@
     "device_family_cuda": "NVIDIA GPU (CUDA)",
     "device_family_rocm": "AMD GPU (ROCm)",
     "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
     "device_load_failed": "تعذّر تحميل إعداد الجهاز",
@@ -348,7 +349,11 @@
     "generate_timeout_saved": "تم الحفظ. أعد تشغيل VoiceStudio لتفعيل الميزانية الجديدة.",
     "generate_timeout_shadowed_badge": "تم تجاوزها خارجيًا",
     "generate_timeout_shadowed_note": "يوجد متغيّر بيئة خارج VoiceStudio (الصدفة، ملف .env، أو الحاوية) يُحدّد هذه القيمة حاليًا — القيمة المحفوظة هنا تُتجاهل إلى أن تتم إزالة ذلك المتغيّر.",
-    "generate_timeout_shadowed_toast": "تم الحفظ، لكن متغيّر بيئة خارج VoiceStudio يُحدّد هذه القيمة حاليًا — سيستمر استخدامه إلى أن تتم إزالة ذلك المتغيّر."
+    "generate_timeout_shadowed_toast": "تم الحفظ، لكن متغيّر بيئة خارج VoiceStudio يُحدّد هذه القيمة حاليًا — سيستمر استخدامه إلى أن تتم إزالة ذلك المتغيّر.",
+    "hf_token_not_checked": "لم يتم اختباره",
+    "hf_source_app_label": "VoiceStudio (مشفّر، موصى به)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "متغير البيئة"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -539,6 +544,9 @@
     "convert_desc": "قلها مرة واحدة — واسمعها بصوت آخر. من كلام إلى كلام، محليًا بالكامل."
   },
   "clone": {
+    "text_label": "النص",
+    "paste": "لصق",
+    "paste_failed": "تم حظر الوصول إلى الحافظة. الصق مباشرة في حقل النص باستخدام لوحة المفاتيح.",
     "prompt": "موجه",
     "language": "اللغة",
     "steps": "خطوات",
@@ -643,7 +651,8 @@
     "cat_AccentDialect": "لكنة أو لهجة",
     "accent_dialect_hint": "أحدهما فقط، لا كلاهما",
     "reset_to_description": "إعادة الضبط حسب الوصف",
-    "chips_more": "{{count}} أخرى…"
+    "chips_more": "{{count}} أخرى…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "التطبيق",
@@ -823,7 +832,8 @@
     "familyDesc_tts": "يحوّل النص إلى كلام. المحرك النشط هو الذي تستخدمه الاستوديو والدبلجة والمعالجة الدفعية.",
     "familyDesc_asr": "يحوّل الصوت إلى نص للنسخ والدبلجة والتسميات التوضيحية والإملاء.",
     "familyDesc_llm": "مساعد نصي اختياري للترجمة وإعادة الصياغة. يؤدي إيقافه إلى تخطي هذه الخطوات.",
-    "mpsLongText": "يعمل {{engine}} على شريحة Apple Silicon (MPS) هنا، وهذا النص طويل — قد يتجاوز التوليد الحد الزمني. النص الأقصر، أو تقسيمه إلى عدة مقاطع، سيكون أسرع بكثير."
+    "mpsLongText": "يعمل {{engine}} على شريحة Apple Silicon (MPS) هنا، وهذا النص طويل — قد يتجاوز التوليد الحد الزمني. النص الأقصر، أو تقسيمه إلى عدة مقاطع، سيكون أسرع بكثير.",
+    "inMemory": "في الذاكرة"
   },
   "capture": {
     "desc": "تعمل مفاتيح التشغيل السريع العامة فقط في تطبيق سطح المكتب. تستخدم واجهة مستخدم الويب اختصارًا <1>Ctrl+Shift+Space</1> داخل الصفحة أثناء التركيز على النافذة.",
@@ -961,6 +971,9 @@
     "consent_revoked": "تم إلغاء التحقق"
   },
   "dub": {
+    "timing_label": "التوقيت",
+    "timing_concise": "موجز",
+    "timing_stretch_video": "تمديد الفيديو",
     "install_engine_pkg": "تثبيت {{pkg}}",
     "needs_install_short": "يتطلب التثبيت",
     "install_popover_title": "تثبيت هذا المحرك",
@@ -1171,7 +1184,8 @@
     "languages_pending": "قيد الانتظار",
     "live_preview": "معاينة حية",
     "live_preview_title": "استمع إلى السطر أثناء تحريره — يبثّ المقطع المحرَّر تحويل النص إلى كلام بصوت CAST الخاص به بعد توقّف قصير. تشغيل فقط: لا يُحفظ أي شيء، ويظل التصدير يُصيَّر بالجودة الكاملة.",
-    "live_preview_pick_voice": "عيِّن صوت CAST لهذا السطر أو لمتحدثه لسماع المعاينة الحية."
+    "live_preview_pick_voice": "عيِّن صوت CAST لهذا السطر أو لمتحدثه لسماع المعاينة الحية.",
+    "autofit_quality": "ملاءمة تلقائية"
   },
   "glossary": {
     "title": "مسرد",
@@ -1270,7 +1284,13 @@
     "qc_verify": "تحقق",
     "qc_verify_title": "تم سماع ASR للتمرير الثاني: \"{{heard}}\" - أعد الاستماع أو إعادة دبلجة هذا السطر.",
     "live_play_title": "بثّ هذا السطر الآن (معاينة حية)",
-    "live_stop_title": "إيقاف المعاينة الحية"
+    "live_stop_title": "إيقاف المعاينة الحية",
+    "plan_apply": "استخدام صياغة أقصر",
+    "plan_apply_title": "استبدال هذا السطر بالصياغة الأقصر المقترحة: «{{text}}»",
+    "plan_impossible": "لن يتسع +{{seconds}}ث",
+    "plan_impossible_title": "الكلام المتوقع ≈{{est}}ث والمتاح {{avail}}ث. تتجاوز الزيادة قدرة الملاءمة بنحو {{seconds}}ث وسيُقتطع الصوت. اختصر النص قبل التوليد.",
+    "plan_tight": "ملاءمة ضيقة",
+    "plan_tight_title": "الكلام المتوقع ≈{{est}}ث والمتاح {{avail}}ث. يمكن للملاءمة الذكية استيعابه بتسريع مسموع أو إبطاء الفيديو. اختصر النص لنتيجة أفضل."
   },
   "timeline": {
     "track_label": "الخط الزمني للمقاطع",
@@ -1861,6 +1881,7 @@
     "hint": "8 خطوات · معاينة سريعة"
   },
   "header": {
+    "speech": "الكلام",
     "kicker_studio": "استوديو",
     "kicker_library": "مكتبة",
     "kicker_preferences": "التفضيلات",
@@ -1967,6 +1988,7 @@
     "preview_voice": "معاينة الصوت"
   },
   "checkpoint": {
+    "timing_review": "هناك {{count}} مقطعًا بحاجة إلى مراجعة التوقيت",
     "asr_title": "النصوص جاهزة",
     "asr_cta": "ترجمة",
     "asr_hint": "قم بإصلاح أي أخطاء ASR الآن — فالأسلوب المحكم يحفظ محاولات تحويل النص إلى كلام (TTS) لاحقًا.",
@@ -1977,7 +1999,13 @@
     "done_hint": "مراجعة التوقيت ونسب المزامنة. قم بتعديل أي سطر واضغط على \"تم تغيير Regen\" لإعادة جزئية سريعة.",
     "segment_one": "{{count}} المقطع",
     "segment_other": "{{count}} المقاطع",
-    "dismiss_title": "تجاهل — لن يظهر مرة أخرى في هذه المرحلة حتى إعادة التحميل"
+    "dismiss_title": "تجاهل — لن يظهر مرة أخرى في هذه المرحلة حتى إعادة التحميل",
+    "timing_review_one": "يحتاج {{count}} مقطع إلى مراجعة التوقيت",
+    "timing_review_other": "هناك {{count}} مقطعًا بحاجة إلى مراجعة التوقيت",
+    "timing_review_zero": "لا توجد مقاطع تحتاج إلى مراجعة التوقيت",
+    "timing_review_two": "تحتاج {{count}} من المقاطع إلى مراجعة التوقيت",
+    "timing_review_few": "تحتاج {{count}} مقاطع إلى مراجعة التوقيت",
+    "timing_review_many": "يحتاج {{count}} مقطعًا إلى مراجعة التوقيت"
   },
   "compare": {
     "title": "مقارنة صوت أ/ب",
@@ -2077,7 +2105,10 @@
     "voice_previews_checked": "تم التحقق {{when}}",
     "voice_previews_never": "لم يتم التحقق بعد",
     "voice_previews_check": "تحقّق الآن",
-    "voice_previews_rejected": "تم رفض تحديث معرض الأصوات: {{message}}"
+    "voice_previews_rejected": "تم رفض تحديث معرض الأصوات: {{message}}",
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "هل أحتاج إلى ترخيص للأدوات الداخلية؟",
@@ -2369,7 +2400,10 @@
     "hf_token_saved_fast": "تم حفظ رمز Hugging Face - أصبحت التنزيلات الآن أسرع",
     "hf_token_inline_prompt": "قم بتسريع التنزيلات باستخدام رمز Hugging Face المميز المجاني",
     "hf_token_inline_ph": "الصق hf_... الرمز المميز (اختياري)",
-    "hf_token_get_short": "احصل على واحدة مجانًا →"
+    "hf_token_get_short": "احصل على واحدة مجانًا →",
+    "hf_token_active_using": "تم العثور على رمز Hugging Face في {{source}} — {{masked}}",
+    "hf_token_replace": "استبدال الرمز المميز…",
+    "hf_token_replace_warning": "يستبدل هذا الرمز المحفوظ لهذا التطبيق، ولا يُلغي الرمز القديم."
   },
   "history": {
     "dub_meta": "{{segments}} مقطعًا · {{duration}} ث",
@@ -2604,7 +2638,13 @@
   },
   "waveform": {
     "source_missing": "الوسائط المصدر مفقودة - ربما تم نقل هذا الملف أو حذفه. أعد تحميل الفيديو للمتابعة.",
-    "load_failed": "تعذر تحميل الصوت من هذا الملف"
+    "load_failed": "تعذر تحميل الصوت من هذا الملف",
+    "controls": "عناصر التحكم بالتشغيل",
+    "restart": "إعادة التشغيل",
+    "shortcuts": "J/K/L: رجوع، تشغيل/إيقاف مؤقت، تقديم",
+    "zoom": "مستوى التكبير",
+    "timeline": "المخطط الزمني للموجة الصوتية",
+    "loading": "جارٍ تحميل الموجة الصوتية…"
   },
   "tts": {
     "routingFallback": "يعمل على وحدة المعالجة المركزية - لا يحتوي هذا المحرك على مسار GPU على جهازك، لذلك سيكون الإنتاج أبطأ. {{reason}}",
@@ -2738,5 +2778,9 @@
     "transcript": "ما تم سماعه",
     "result_kicker": "اللقطة المحوَّلة",
     "need_source_and_voice": "أضف مقطعًا مصدرًا واختر صوتًا هدفًا أولًا."
+  },
+  "player": {
+    "pause": "إيقاف مؤقت",
+    "play": "تشغيل"
   }
 }

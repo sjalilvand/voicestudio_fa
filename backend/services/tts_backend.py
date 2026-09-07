@@ -566,7 +566,12 @@ def _get_clone_prompt(
 ):
     """Return a cached/precomputed ``VoiceClonePrompt`` for
     (ref_audio, ref_text, preprocess_prompt), or ``None`` to fall back to the
-    inline ref path. Never raises.
+    inline ref path.
+
+    Raises only on a device OOM that survives a cache-drop retry (#1790): the
+    inline path is the same allocation on the same device, so falling back to
+    it after an OOM cannot succeed and has been observed taking the whole
+    process down instead. Every other failure still falls back silently.
 
     ``store=False`` still *reads* the cache (a hit is free) but never inserts:
     it exists for single-use references — a dub's per-segment ref clips are each
@@ -596,10 +601,43 @@ def _get_clone_prompt(
                 ref_audio, ref_text=ref_text, preprocess_prompt=preprocess_prompt
             )
         except Exception as e:  # noqa: BLE001 — fall back, never break synthesis
-            logger.warning(
-                "voice-clone prompt precompute failed; using inline ref: %s", e
-            )
-            return None
+            # #1790/#1777: a GPU OOM is the one failure this fallback cannot
+            # absorb. `generate()`'s inline ref path runs the SAME encode on the
+            # SAME device — the docstring above says so, because producing
+            # identical output is the point — so returning None after an OOM
+            # guarantees a second OOM moments later, on a device with even less
+            # headroom than the first attempt found. Both reporters' backends
+            # then died with a Windows access violation (exit code
+            # -1073741819) seconds after this exact log line, mid-generation on
+            # a GPU that had just refused an 86 MiB allocation.
+            #
+            # An OOM here is also the most recoverable kind: the allocator is
+            # typically holding reserved-but-unallocated blocks (#1790's own
+            # log reports 90 MiB reserved against an 86 MiB request). Drop them
+            # and try once more. If it still will not fit, raise — the failure
+            # layer turns a device OOM into the actionable GPU_OOM message
+            # ("close other GPU-heavy apps or unload models…"), which is a far
+            # better answer than walking into a native fault.
+            from core.failure import is_gpu_oom
+
+            if is_gpu_oom(e):
+                logger.warning(
+                    "voice-clone prompt precompute hit a device OOM (%s) — "
+                    "releasing allocator caches and retrying once", e,
+                )
+                try:
+                    from services.model_manager import free_vram
+                    free_vram()
+                except Exception:  # noqa: BLE001 — reclaim is best-effort
+                    logger.debug("VRAM reclaim before OOM retry failed", exc_info=True)
+                prompt = model.create_voice_clone_prompt(
+                    ref_audio, ref_text=ref_text, preprocess_prompt=preprocess_prompt
+                )
+            else:
+                logger.warning(
+                    "voice-clone prompt precompute failed; using inline ref: %s", e
+                )
+                return None
         if store:
             _prompt_disk_save(key, prompt)
     if not store:
@@ -2298,9 +2336,9 @@ _INSTALL_HINTS: dict[str, str] = {
     "omnivoice-gguf":"Bundled — runs the C++ omnivoice-tts binary in bin/. Quants download lazily from Serveurperso/OmniVoice-GGUF on first generate.",
     "supertonic3":   "uv sync --extra supertonic  (CPU-only ONNX, 31 langs, ~400 MB model on first use; OpenRAIL-M model license)",
     "pockettts":     "uv sync --extra pockettts  (Kyutai, CPU-only, ~100 MB model on first use; MIT code + CC-BY-4.0 weights; HF-gated, review terms and set HF_TOKEN)",
-    "moss-tts-v15":  "git clone OpenMOSS/MOSS-TTS + set OMNIVOICE_MOSS_TTS_V15_DIR  (own venv, transformers==5.0; 8B, ~16 GB weights; CUDA/CPU, no MPS; Apache-2.0)",
+    "moss-tts-v15":  "git clone OpenMOSS/MOSS-TTS + set OMNIVOICE_MOSS_TTS_V15_DIR  (own venv, transformers==5.0; 8B, ~16 GB weights; CUDA/ROCm/XPU/NPU/CPU, no MPS; Apache-2.0)",
     "dots-tts":      "git clone rednote-hilab/dots.tts + set OMNIVOICE_DOTS_TTS_DIR  (own venv, transformers==4.57; 2B, ~9 GB weights; CUDA/CPU, Linux/macOS only — no Windows; Apache-2.0)",
-    "confucius4-tts":"git clone netease-youdao/Confucius4-TTS + set OMNIVOICE_CONFUCIUS4_TTS_DIR  (own Python 3.10 venv; 14-lang cross-lingual zero-shot clone; ~5 GB weights auto-download; CUDA/CPU, no MPS; Apache-2.0)",
+    "confucius4-tts":"git clone netease-youdao/Confucius4-TTS + set OMNIVOICE_CONFUCIUS4_TTS_DIR  (own Python 3.10 venv; 14-lang cross-lingual zero-shot clone; ~5 GB weights auto-download; CUDA/ROCm/XPU/NPU/CPU, no MPS; Apache-2.0)",
 }
 
 
@@ -2371,7 +2409,7 @@ def list_backends() -> list[dict]:
           "one_click_install": bool,                # services.sidecar_install can provision it in-app
           "last_error":     Optional[str],          # cached most-recent failure
           "isolation_mode": "in-process" | "subprocess",
-          "gpu_compat":     list[str],              # subset of {cuda, rocm, mps, xpu, cpu}
+          "gpu_compat":     list[str],              # subset of {cuda, rocm, mps, xpu, npu, cpu}
           "supports_cloning": Optional[bool],       # True/False from the class attr; None when
                                                     #   model-dependent (property, e.g. mlx-audio)
           "effective_device": str,                  # device this engine uses on THIS host

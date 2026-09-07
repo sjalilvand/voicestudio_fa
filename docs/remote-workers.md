@@ -245,6 +245,10 @@ grace window to come back, and if it returns carrying a finished result, that
 result is used — the task is never run twice just because a network blip
 happened. Only when the window expires is the task retried elsewhere.
 
+Each attempt retains the deadline budget granted at dispatch, including after a
+worker disconnect or control-plane restart; changed worker availability cannot
+shorten an in-flight attempt’s execution allowance.
+
 **A worker fails repeatedly.** After three consecutive failures that are
 actually its fault, it is paused for a minute, then automatically given one
 task to prove itself. Repeated trips back off further, up to thirty minutes.

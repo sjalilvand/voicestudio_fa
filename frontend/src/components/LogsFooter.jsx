@@ -32,7 +32,6 @@ import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store';
 import NetworkToggle from './NetworkToggle';
 import ComputeQuickSettings from './ComputeQuickSettings';
-import EngineQuickSwitch from './EngineQuickSwitch';
 import { APP_VERSION, whatsNewPending } from '../utils/appVersion';
 import DonateMomentPopover, { DONATE_POPOVER_AUTO_DISMISS_MS } from './DonateMomentPopover';
 import { DONATION_MOMENT_EVENT, optOutOfDonationMoments } from '../utils/donationMoments';
@@ -257,9 +256,10 @@ export default function LogsFooter() {
     return SOURCES.some((s) => s.id === v) ? v : 'backend';
   });
 
-  // Raw log state per source. Backend / Tauri come from HTTP; frontend
-  // comes from the in-process ring buffer in consoleBuffer.js.
-  const [lines, setLines] = useState({ backend: [], frontend: [], tauri: [] });
+  // Only the local console ring needs state; HTTP logs render from their query.
+  const [frontendLines, setFrontendLines] = useState(() =>
+    getFrontendLogs().map(formatFrontendLine),
+  );
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
 
@@ -285,20 +285,16 @@ export default function LogsFooter() {
   const backendLogs = useSystemLogs(300, true, collapsed ? 45_000 : 10_000);
   const tauriLogs = useTauriLogs(300, true, collapsed ? 45_000 : 10_000);
 
-  // Sync query data into local state for the rendering pipeline
-  useEffect(() => {
-    if (backendLogs.data) {
-      setLines((prev) => ({ ...prev, backend: backendLogs.data.lines || [] }));
-    }
-  }, [backendLogs.data]);
+  const lines = useMemo(
+    () => ({
+      backend: backendLogs.data?.lines || [],
+      frontend: frontendLines,
+      tauri: tauriLogs.data?.lines || [],
+    }),
+    [backendLogs.data, tauriLogs.data, frontendLines],
+  );
 
-  useEffect(() => {
-    if (tauriLogs.data) {
-      setLines((prev) => ({ ...prev, tauri: tauriLogs.data.lines || [] }));
-    }
-  }, [tauriLogs.data]);
-
-  // Skip the setLines (and the re-render it forces) when the console ring
+  // Skip the state update (and the re-render it forces) when the console ring
   // buffer hasn't changed since the last pull — same length + same last
   // timestamp means nothing new arrived.
   const lastFrontendPull = useRef({ len: -1, t: 0 });
@@ -308,10 +304,7 @@ export default function LogsFooter() {
     const seen = lastFrontendPull.current;
     if (raw.length === seen.len && lastT === seen.t) return;
     lastFrontendPull.current = { len: raw.length, t: lastT };
-    setLines((prev) => ({
-      ...prev,
-      frontend: raw.map(formatFrontendLine),
-    }));
+    setFrontendLines(raw.map(formatFrontendLine));
   }, []);
 
   const refreshAll = useCallback(async () => {
@@ -331,7 +324,8 @@ export default function LogsFooter() {
 
   // ── Notifications (shared TanStack Query cache with the header bell) ────
   // Already filtered to what the user hasn't dismissed — badge and tab agree.
-  const { notifications } = useVisibleNotifications();
+  const { notifications, isSuccess: notificationsReady } = useVisibleNotifications();
+  const allSourcesReady = backendLogs.isSuccess && tauriLogs.isSuccess && notificationsReady;
   const dismissNotification = useAppStore((s) => s.dismissNotification);
 
   // ── Donation moment popover (see utils/donationMoments.js) ─────────────
@@ -422,10 +416,16 @@ export default function LogsFooter() {
   // ── Actions ─────────────────────────────────────────────────────────
   const onClear = async () => {
     try {
-      if (active === 'backend') await clearSystemLogs();
-      else if (active === 'tauri') await clearTauriLogs();
-      else if (active === 'frontend') clearFrontendLogs();
-      setLines((prev) => ({ ...prev, [active]: [] }));
+      if (active === 'backend') {
+        await clearSystemLogs();
+        await backendLogs.refetch({ throwOnError: true });
+      } else if (active === 'tauri') {
+        await clearTauriLogs();
+        await tauriLogs.refetch({ throwOnError: true });
+      } else if (active === 'frontend') {
+        clearFrontendLogs();
+        pullFrontend();
+      }
       toast.success(t('logs.log_cleared', { source: active }));
     } catch (e) {
       toast.error(t('logs.clear_failed', { message: e?.message || e }));
@@ -640,7 +640,6 @@ export default function LogsFooter() {
             )}
           </button>
           <ComputeQuickSettings />
-          <EngineQuickSwitch shortcutTarget dropUp />
           <NetworkToggle />
           <button
             type="button"
@@ -772,7 +771,10 @@ export default function LogsFooter() {
 
       {!collapsed && active === 'notifications' && (
         <div className="logs-footer__body flex flex-col gap-[2px] px-[8px] py-[6px] flex-1 min-h-0 overflow-y-auto select-text">
-          {notifications.length === 0 ? (
+          {allSourcesReady &&
+          notifications.length === 0 &&
+          mergedCounts.error === 0 &&
+          mergedCounts.warn === 0 ? (
             <div className="p-[12px] [color:var(--chrome-fg-dim)] not-italic text-[11px] text-center">
               {t('logs.all_clear')}
             </div>

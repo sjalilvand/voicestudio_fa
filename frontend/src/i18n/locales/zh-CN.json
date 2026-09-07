@@ -6,7 +6,7 @@
     "clear_confirm": "这将永久删除所有已保存的故事和有声书项目以及所有未保存的草稿，以便 VoiceStudio 能够重新打开。此操作无法撤销。是否继续？"
   },
   "backendUnreachable": {
-    "contact_recent": "它在 {{ago}}前还在响应，随后停止了响应——很可能是在处理请求时崩溃或被强制终止。",
+    "contact_recent": "它在 {{ago}} 前还有响应，之后停止响应，并且没有记录到崩溃——因此它可能仍在运行，只是卡在了占用引擎的繁重任务上。",
     "contact_never": "本次会话中它从未响应过——可能根本没有启动。",
     "dev": "无法连接本地 VoiceStudio 后端。{{contact}} 在 `bun run dev` 下后端以自动重载方式运行，任何文件改动（包括请求进行中的保存）都会重启它并中断连接。请先重试该操作；如果是重载导致的，重试即可成功。若仍然失败，请查看运行 `bun run dev` 的终端是否有 Python 回溯或退出信息，以及 VoiceStudio 数据文件夹中的 omnivoice.log。",
     "server": "无法连接 VoiceStudio 后端服务器。{{contact}} 请查看服务器日志以找到原因（例如 `docker logs <容器>` 或 `journalctl`）——另外请注意：如果此页面由 Docker 提供，页面本身也可能随后端一起不可用。",
@@ -187,6 +187,9 @@
     "convert_desc": "说一遍,用另一种声音听到。语音到语音,完全本地运行。"
   },
   "clone": {
+    "text_label": "文本",
+    "paste": "粘贴",
+    "paste_failed": "剪贴板访问被阻止。请使用键盘直接粘贴到文本框中。",
     "prompt": "提示词",
     "language": "语言",
     "steps": "步数",
@@ -291,7 +294,8 @@
     "cat_AccentDialect": "口音或方言",
     "accent_dialect_hint": "二选一，不能同时选择",
     "reset_to_description": "按描述重置",
-    "chips_more": "还有 {{count}} 个…"
+    "chips_more": "还有 {{count}} 个…",
+    "cfg": "CFG"
   },
   "settings": {
     "remote_backend_test": "测试连接",
@@ -411,7 +415,7 @@
     "shortcut_reset_failed": "重置失败：{{message}}",
     "reset_longform_failed": "VoiceStudio 无法安全清除已保存的项目。您的项目数据未被更改；请释放一些存储空间或重启应用后再试。",
     "cancel": "取消",
-    "hf_token_also_clear": "同时清除",
+    "hf_token_also_clear": "同时清除已保存的 HuggingFace CLI 令牌文件",
     "hf_token_clear_btn": "清除令牌",
     "hf_token_clear_confirm": "清除“应用”来源的 HuggingFace 令牌？",
     "hf_token_clear_dialog": "清除令牌",
@@ -586,6 +590,7 @@
     "device_family_cuda": "NVIDIA GPU (CUDA)",
     "device_family_rocm": "AMD GPU (ROCm)",
     "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
     "device_load_failed": "无法加载设备设置",
@@ -600,7 +605,11 @@
     "generate_timeout_saved": "已保存。重启 VoiceStudio 以使新预算生效。",
     "generate_timeout_shadowed_badge": "已被外部覆盖",
     "generate_timeout_shadowed_note": "VoiceStudio 之外的一个环境变量（终端、.env 文件或容器）当前正在设置此值——在移除该变量之前，此处保存的值会被忽略。",
-    "generate_timeout_shadowed_toast": "已保存，但 VoiceStudio 之外的一个环境变量当前正在设置此值——在移除该变量之前，将继续使用该值。"
+    "generate_timeout_shadowed_toast": "已保存，但 VoiceStudio 之外的一个环境变量当前正在设置此值——在移除该变量之前，将继续使用该值。",
+    "hf_token_not_checked": "未测试",
+    "hf_source_app_label": "VoiceStudio（已加密，推荐）",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "环境变量"
   },
   "about": {
     "app": "应用",
@@ -782,7 +791,8 @@
     "familyDesc_tts": "将脚本转换为语音。标记为启用的引擎供工作室、配音和批处理使用。",
     "familyDesc_asr": "将音频转换为文本，用于转录、配音、字幕和听写。",
     "familyDesc_llm": "用于翻译和改写的可选文本助手。“关闭”会跳过这些步骤。",
-    "mpsLongText": "{{engine}} 在本机上使用 Apple Silicon（MPS）运行，而这段文本较长——生成可能超出时间预算。缩短文本，或分成几次生成会快得多。"
+    "mpsLongText": "{{engine}} 在本机上使用 Apple Silicon（MPS）运行，而这段文本较长——生成可能超出时间预算。缩短文本，或分成几次生成会快得多。",
+    "inMemory": "已加载到内存"
   },
   "capture": {
     "desc": "全局热键仅在桌面应用中有效。网页界面使用页面内快捷键 <1>Ctrl+Shift+Space</1>（窗口聚焦时可用）。",
@@ -920,6 +930,9 @@
     "consent_revoked": "验证已撤销"
   },
   "dub": {
+    "timing_label": "时间匹配",
+    "timing_concise": "精简",
+    "timing_stretch_video": "延长视频",
     "install_engine_pkg": "安装 {{pkg}}",
     "needs_install_short": "需要安装",
     "install_popover_title": "安装此引擎",
@@ -1130,7 +1143,8 @@
     "languages_pending": "待处理",
     "live_preview": "实时预览",
     "live_preview_title": "边编辑边试听 — 停顿片刻后,所编辑的片段会用其 CAST 音色流式合成语音。仅播放:不会保存任何内容,导出仍按完整质量渲染。",
-    "live_preview_pick_voice": "为该行或其说话人指定一个 CAST 音色,即可收听实时预览。"
+    "live_preview_pick_voice": "为该行或其说话人指定一个 CAST 音色,即可收听实时预览。",
+    "autofit_quality": "自动适配"
   },
   "glossary": {
     "title": "术语表",
@@ -1229,7 +1243,13 @@
     "qc_verify": "验证",
     "qc_verify_title": "第二遍 ASR 听到：“{{heard}}” — 重新聆听或重新配音此台词。",
     "live_play_title": "立即流式播放该行(实时预览)",
-    "live_stop_title": "停止实时预览"
+    "live_stop_title": "停止实时预览",
+    "plan_apply": "使用较短的改写",
+    "plan_apply_title": "将此行替换为建议的较短改写：“{{text}}”",
+    "plan_impossible": "无法容纳 +{{seconds}}秒",
+    "plan_impossible_title": "预计语音约{{est}}秒，可用时间为{{avail}}秒。约有{{seconds}}秒超出任何适配方式的调整范围，音频将被截断。请在生成前缩短文本。",
+    "plan_tight": "勉强适配",
+    "plan_tight_title": "预计语音约{{est}}秒，可用时间为{{avail}}秒。智能适配可以处理，但会明显加快语速或减慢视频。缩短文本可获得更自然的效果。"
   },
   "timeline": {
     "track_label": "片段时间轴",
@@ -1867,6 +1887,7 @@
     "hint": "8 步 · 快速预览"
   },
   "header": {
+    "speech": "语音",
     "kicker_studio": "工作室",
     "kicker_library": "音色库",
     "kicker_preferences": "偏好设置",
@@ -1974,6 +1995,7 @@
     "preview_voice": "预览声音"
   },
   "checkpoint": {
+    "timing_review": "{{count}} 个片段需要检查时间同步",
     "asr_title": "转录已就绪",
     "asr_cta": "翻译",
     "asr_hint": "立即修正所有 ASR 错误——严谨的措辞能省下后续 TTS 的返工。",
@@ -1984,7 +2006,13 @@
     "done_hint": "检查时序和同步比率。调整任意句子并点击“重新生成已改”即可快速部分重做。",
     "segment_one": "{{count}} 段",
     "segment_other": "{{count}} 段",
-    "dismiss_title": "关闭 — 在重新加载之前不会再次出现在该阶段"
+    "dismiss_title": "关闭 — 在重新加载之前不会再次出现在该阶段",
+    "timing_review_one": "{{count}} 个片段需要检查时间",
+    "timing_review_other": "{{count}} 个片段需要检查时间同步",
+    "timing_review_zero": "{{count}} 个片段需要检查时间同步",
+    "timing_review_two": "{{count}} 个片段需要检查时间同步",
+    "timing_review_few": "{{count}} 个片段需要检查时间同步",
+    "timing_review_many": "{{count}} 个片段需要检查时间同步"
   },
   "compare": {
     "title": "A/B 语音比较",
@@ -2084,7 +2112,10 @@
     "voice_previews_checked": "{{when}}检查",
     "voice_previews_never": "尚未检查",
     "voice_previews_check": "立即检查",
-    "voice_previews_rejected": "语音库更新被拒绝：{{message}}"
+    "voice_previews_rejected": "语音库更新被拒绝：{{message}}",
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "我需要内部工具的许可证吗？",
@@ -2376,7 +2407,10 @@
     "hf_token_saved_fast": "Hugging Face 令牌已保存——下载速度更快",
     "hf_token_inline_prompt": "使用免费的 Hugging Face 令牌加快下载速度",
     "hf_token_inline_ph": "粘贴 hf_… 令牌（可选）",
-    "hf_token_get_short": "免费获得一份 →"
+    "hf_token_get_short": "免费获得一份 →",
+    "hf_token_active_using": "在 {{source}} 中找到 Hugging Face 令牌 — {{masked}}",
+    "hf_token_replace": "更换令牌…",
+    "hf_token_replace_warning": "这会替换为此应用保存的令牌，但不会撤销旧令牌。"
   },
   "history": {
     "dub_meta": "{{segments}} 个片段 · {{duration}} 秒",
@@ -2611,7 +2645,13 @@
   },
   "waveform": {
     "source_missing": "源媒体丢失 - 该文件可能已移动或被删除。重新上传视频以继续。",
-    "load_failed": "无法从此文件加载音频"
+    "load_failed": "无法从此文件加载音频",
+    "controls": "播放控制",
+    "restart": "从头播放",
+    "shortcuts": "J/K/L：后退、播放/暂停、前进",
+    "zoom": "缩放级别",
+    "timeline": "音频波形时间轴",
+    "loading": "正在加载波形…"
   },
   "tts": {
     "routingFallback": "在 CPU 上运行——此引擎在你的机器上没有 GPU 路径，因此生成会较慢。{{reason}}",
@@ -2745,5 +2785,9 @@
     "transcript": "识别到的内容",
     "result_kicker": "转换后的音频",
     "need_source_and_voice": "请先添加源音频并选择目标声音。"
+  },
+  "player": {
+    "pause": "暂停",
+    "play": "播放"
   }
 }

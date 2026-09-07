@@ -25,6 +25,8 @@ regexes = [
   '''^hf_QWERTYUIOPasdfghjklZXCVBNM0123456789xyzAB$''',
   # NLLB generation length argument, not the value of a credential.
   '''^max_length=400$''',
+  # Dubbing pane split-position localStorage key, not a credential.
+  '''^omnivoice\.dubSplit\.v1$''',
   # cryptography's Ed25519 private-key type name, not key material.
   '''^Ed25519PrivateKey$''',
 ]

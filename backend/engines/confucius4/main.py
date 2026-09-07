@@ -104,7 +104,7 @@ def _ensure_clone_on_sys_path() -> None:
 
 
 def _load_model(stdout):
-    """Cold-construct the Confucius4 model (CUDA, else CPU — both validated)."""
+    """Cold-construct using an available torch accelerator, with CPU fallback."""
     global _model
     if _model is not None:
         return _model
@@ -115,7 +115,18 @@ def _load_model(stdout):
     import torch
     from confuciustts.cli.inference import ConfuciusTTS  # type: ignore[import-not-found]
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    try:
+        # Existing manually provisioned venvs may predate torch.accelerator.
+        current_accelerator = getattr(getattr(torch, "accelerator", None), "current_accelerator", None)
+        if current_accelerator is None:
+            device = torch.device("cuda") if torch.cuda.is_available() else None
+        else:
+            device = current_accelerator(check_available=True)
+        device = device.type if device is not None else "cpu"  # 'cuda', 'npu', 'mps', 'xpu', 'cpu'
+    except Exception:
+        device = "cpu"  # Broken accelerator drivers must not block CPU loading.
+    if device == "mps":
+        device = "cpu"  # MPS was slower than CPU in the existing validation run
     _send(stdout, {"op": "progress", "stage": "loading_model", "percent": 50})
 
     _model = ConfuciusTTS(config_path=_config_path(), device=device)

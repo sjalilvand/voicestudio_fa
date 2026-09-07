@@ -112,6 +112,13 @@ _FULL_NAME_TO_CODE = {
     "vietnamese": "vi",
     "kazakh": "kz",
     "standard arabic": "ar",
+    # Below: inert for num2words (absent from _NUM2WORDS_LANGS, which reads
+    # digits natively for these scripts), present so _plain_lang_code can
+    # resolve them for the digit-range rule.
+    "korean": "ko",
+    "japanese": "ja",
+    "chinese": "zh",
+    "mandarin chinese": "zh",
 }
 
 # ISO codes whose num2words locale name differs.
@@ -176,6 +183,82 @@ def _num2words_lang(language: Optional[str]) -> Optional[str]:
         if c in _NUM2WORDS_LANGS:
             return c
     return None
+
+
+def _plain_lang_code(language: Optional[str]) -> Optional[str]:
+    """Resolve a request language to a bare ISO code, with no num2words gate.
+
+    :func:`_num2words_lang` answers "may I call num2words for this?" and so
+    returns ``None`` for ko/ja/zh/th/vi. Rules that are not num2words-backed
+    need the code itself, which is what this returns.
+    """
+    if not language:
+        return None
+    s = str(language).strip().lower()
+    if not s or s == "auto":
+        return None
+    code = _FULL_NAME_TO_CODE.get(s)
+    if code:
+        return code
+    m = _ISO_CODE_RE.match(s)
+    if m:
+        return _ISO_ALIASES.get(m.group(1), m.group(1))
+    return None
+
+
+# ── Digit ranges ─────────────────────────────────────────────────────────────
+# "20~30" loses its separator at the engine and reads as ONE number: OmniVoice
+# says "이십삼" (23) for "20~30초". Speak the separator instead. Verified by
+# rendering each form and transcribing it back (ko, OmniVoice):
+#     "20~30초"        → heard "23초"          ✗
+#     "20에서 30초"     → heard "20에서 30초"    ✓
+# Only the tilde family is rewritten — those are unambiguously range marks
+# between digits. An ASCII hyphen is left alone on purpose: it also spells
+# dates, phone numbers and product codes, where "to" would be wrong.
+#: Spacing is part of the form, not decoration: a Korean postposition binds to
+#: the numeral ("20에서 30"), Japanese and Chinese set no spaces at all, and
+#: English needs them on both sides.
+_RANGE_FORM = {
+    "ko": "{a}에서 {b}",
+    "ja": "{a}から{b}",
+    "zh": "{a}到{b}",
+    "en": "{a} to {b}",
+}
+
+#: ASCII tilde, wave dash, fullwidth tilde — Japanese and Korean IMEs emit the
+#: latter two, so all three have to match.
+#:
+#: Match complete signed/decimal endpoints; reject partial numbers and product
+#: codes while allowing adjacent CJK units. Guard all tilde forms so malformed
+#: chains cannot be partially rewritten, including when their separators have
+#: whitespace around them.
+_RANGE_MARKS = "~\u301c\uff5e"
+_RANGE_ENDPOINT = r"[+-]?(?:\d{1,6}(?:\.\d{1,6})?|\.\d{1,6})"
+_NUM_RANGE_RE = re.compile(
+    rf"(?<![\d.,A-Za-z+{_RANGE_MARKS}-])({_RANGE_ENDPOINT})"
+    rf"\s*[{_RANGE_MARKS}]\s*({_RANGE_ENDPOINT})"
+    rf"(?![\d.,A-Za-z+{_RANGE_MARKS}-])"
+)
+
+
+def _speak_number_ranges(text: str, lang: str) -> str:
+    """Speak complete tilde ranges only for languages with a verified form."""
+    form = _RANGE_FORM.get(lang)
+    if not form:
+        return text
+
+    def replace(match: re.Match) -> str:
+        before, after = match.start() - 1, match.end()
+        while before >= 0 and text[before].isspace():
+            before -= 1
+        while after < len(text) and text[after].isspace():
+            after += 1
+        if ((before >= 0 and text[before] in _RANGE_MARKS)
+                or (after < len(text) and text[after] in _RANGE_MARKS)):
+            return match.group(0)
+        return form.format(a=match.group(1), b=match.group(2))
+
+    return _NUM_RANGE_RE.sub(replace, text)
 
 
 # ── Universal safety filters (all languages) ─────────────────────────────────
@@ -487,6 +570,11 @@ def normalize_text(text: str, language: Optional[str] = None) -> str:
     if not text:
         return text or ""
     out = _safety_filters(text)
+    # Runs outside the num2words gate below: ko/ja/zh keep their digits (that
+    # gate returns None for them) but still need the range mark spoken.
+    plain = _plain_lang_code(language)
+    if plain:
+        out = _outside_brackets(out, lambda t: _speak_number_ranges(t, plain))
     lang = _num2words_lang(language)
     if lang:
         if lang in _ABBREV_COMPILED:

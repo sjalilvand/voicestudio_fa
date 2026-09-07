@@ -652,7 +652,11 @@ class Scheduler:
             execution_device=worker.execution_device(
                 task.engine, task.model_id, task.operation
             ),
+            under_provisioned=worker.under_provisioned(
+                task.engine, task.model_id, task.operation
+            ),
         )
+        attempt.deadlines = budget
         attempt.renew_lease(budget.accept_seconds, now=now)
         self._save(task, now=now)
         self._emit("assigned", task)
@@ -1295,7 +1299,13 @@ class Scheduler:
 
     def _budget_for(self, task: Task) -> deadline_policy.Deadlines:
         attempt = task.active_attempt
+        if attempt is not None and attempt.deadlines is not None:
+            return attempt.deadlines
+        # A legacy attempt has no recorded device once its worker is absent.
+        # Cover both configured device classes instead of assuming the shorter
+        # CPU budget; for_task floors an under-provisioned GPU at max(CPU, GPU).
         worker = self.pool.get(attempt.worker_id) if attempt else None
+        unknown_legacy_worker = attempt is not None and worker is None
         return deadline_policy.for_task(
             task.operation,
             text=task.params.get("text"),
@@ -1303,7 +1313,13 @@ class Scheduler:
             input_seconds=float(task.params.get("input_seconds") or 0.0),
             execution_device=(
                 worker.execution_device(task.engine, task.model_id, task.operation)
-                if worker else None
+                if worker else ("cuda" if unknown_legacy_worker else None)
+            ),
+            under_provisioned=unknown_legacy_worker or bool(
+                worker
+                and worker.under_provisioned(
+                    task.engine, task.model_id, task.operation
+                )
             ),
         )
 

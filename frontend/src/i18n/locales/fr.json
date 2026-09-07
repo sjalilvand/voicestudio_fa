@@ -6,7 +6,7 @@
     "clear_confirm": "Cette action supprime définitivement tous les projets Histoires et Livres audio enregistrés ainsi que tout brouillon non enregistré afin que VoiceStudio puisse s’ouvrir à nouveau. Elle est irréversible. Continuer ?"
   },
   "backendUnreachable": {
-    "contact_recent": "Il répondait il y a {{ago}} puis a cessé de répondre — il a très probablement planté ou a été arrêté en pleine requête.",
+    "contact_recent": "Il répondait il y a {{ago}} puis a cessé de répondre, et aucun plantage n'a été enregistré — il est donc peut-être toujours actif, mais bloqué sur une tâche lourde qui monopolise le moteur.",
     "contact_never": "Il n'a pas répondu du tout durant cette session — il n'a peut-être jamais démarré.",
     "dev": "Impossible de joindre le backend VoiceStudio local. {{contact}} Avec `bun run dev`, le backend tourne en rechargement automatique : toute modification de fichier — y compris une sauvegarde pendant une requête en cours — le redémarre et coupe la connexion. Réessayez d'abord l'action ; s'il s'agissait d'un rechargement, cela fonctionnera. Si l'échec persiste, consultez le terminal exécutant `bun run dev` pour un traceback Python ou un message de sortie, et omnivoice.log dans votre dossier de données VoiceStudio.",
     "server": "Impossible de joindre le serveur backend VoiceStudio. {{contact}} Consultez les journaux du serveur pour en trouver la cause (p. ex. `docker logs <conteneur>` ou `journalctl`) — et notez que si Docker sert cette page, la page elle-même peut tomber avec le backend.",
@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "Échec de la réinitialisation : {{message}}",
     "reset_longform_failed": "VoiceStudio n’a pas pu effacer les projets enregistrés en toute sécurité. Les données de vos projets sont restées intactes ; libérez de l’espace ou redémarrez l’application, puis réessayez.",
     "cancel": "Annuler",
-    "hf_token_also_clear": "Effacer aussi",
+    "hf_token_also_clear": "Supprimer aussi les fichiers de jetons enregistrés de HuggingFace CLI",
     "hf_token_clear_btn": "Effacer le jeton",
     "hf_token_clear_confirm": "Effacer le jeton HuggingFace de la source App ?",
     "hf_token_clear_dialog": "Effacer le jeton",
@@ -334,6 +334,7 @@
     "device_family_cuda": "NVIDIA GPU (CUDA)",
     "device_family_rocm": "AMD GPU (ROCm)",
     "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
     "device_load_failed": "Impossible de charger le réglage du périphérique",
@@ -348,7 +349,11 @@
     "generate_timeout_saved": "Enregistré. Redémarrez VoiceStudio pour que le nouveau budget prenne effet.",
     "generate_timeout_shadowed_badge": "Remplacé de l'extérieur",
     "generate_timeout_shadowed_note": "Une variable d'environnement extérieure à VoiceStudio (shell, fichier .env ou conteneur) définit actuellement cette valeur — la valeur enregistrée ici est ignorée tant que cette variable n'est pas supprimée.",
-    "generate_timeout_shadowed_toast": "Enregistré, mais une variable d'environnement extérieure à VoiceStudio définit actuellement cette valeur — elle continuera d'être utilisée tant que cette variable ne sera pas supprimée."
+    "generate_timeout_shadowed_toast": "Enregistré, mais une variable d'environnement extérieure à VoiceStudio définit actuellement cette valeur — elle continuera d'être utilisée tant que cette variable ne sera pas supprimée.",
+    "hf_token_not_checked": "Non testé",
+    "hf_source_app_label": "VoiceStudio (chiffré, recommandé)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "Variable d’environnement"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -539,6 +544,9 @@
     "convert_desc": "Dites-le une fois — écoutez-le avec une autre voix. De la parole à la parole, entièrement en local."
   },
   "clone": {
+    "text_label": "Texte",
+    "paste": "Coller",
+    "paste_failed": "L’accès au presse-papiers est bloqué. Collez directement dans le champ de texte avec le clavier.",
     "prompt": "Invite",
     "language": "Langue",
     "steps": "Étapes",
@@ -643,7 +651,8 @@
     "cat_AccentDialect": "Accent ou dialecte",
     "accent_dialect_hint": "l'un ou l'autre, jamais les deux",
     "reset_to_description": "Réinitialiser selon la description",
-    "chips_more": "{{count}} de plus…"
+    "chips_more": "{{count}} de plus…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "Application",
@@ -823,7 +832,8 @@
     "familyDesc_tts": "Transforme votre script en voix. Studio, Doublage et Traitement par lots utilisent le moteur actif.",
     "familyDesc_asr": "Transforme l’audio en texte pour la transcription, le doublage, les sous-titres et la dictée.",
     "familyDesc_llm": "Assistant textuel facultatif pour la traduction et la réécriture. « Désactivé » ignore ces étapes.",
-    "mpsLongText": "{{engine}} fonctionne ici sur Apple Silicon (MPS) et ce texte est long — la génération risque de dépasser le budget de temps. Un texte plus court, ou découpé en plusieurs prises, sera bien plus rapide."
+    "mpsLongText": "{{engine}} fonctionne ici sur Apple Silicon (MPS) et ce texte est long — la génération risque de dépasser le budget de temps. Un texte plus court, ou découpé en plusieurs prises, sera bien plus rapide.",
+    "inMemory": "En mémoire"
   },
   "capture": {
     "desc": "Les raccourcis clavier globaux ne fonctionnent que dans l'application de bureau. L'interface utilisateur Web utilise un raccourci <1>Ctrl+Shift+Espace</1> sur la page lorsque la fenêtre a le focus.",
@@ -961,6 +971,9 @@
     "consent_revoked": "Vérification révoquée"
   },
   "dub": {
+    "timing_label": "Synchronisation",
+    "timing_concise": "Concis",
+    "timing_stretch_video": "Étirer la vidéo",
     "install_engine_pkg": "Installer {{pkg}}",
     "needs_install_short": "Installation requise",
     "install_popover_title": "Installer ce moteur",
@@ -1171,7 +1184,8 @@
     "languages_pending": "En attente",
     "live_preview": "Aperçu en direct",
     "live_preview_title": "Écoutez une ligne pendant que vous la modifiez : le segment modifié diffuse la synthèse vocale avec sa voix CAST après une courte pause. Lecture seule : rien n'est enregistré et l'export reste rendu en pleine qualité.",
-    "live_preview_pick_voice": "Attribuez une voix CAST à cette ligne ou à son locuteur pour entendre l'aperçu en direct."
+    "live_preview_pick_voice": "Attribuez une voix CAST à cette ligne ou à son locuteur pour entendre l'aperçu en direct.",
+    "autofit_quality": "Ajustement automatique"
   },
   "glossary": {
     "title": "Glossaire",
@@ -1270,7 +1284,13 @@
     "qc_verify": "Vérifier",
     "qc_verify_title": "ASR de deuxième passage entendu : \"{{heard}}\" – réécoutez ou redoublez cette ligne.",
     "live_play_title": "Diffuser cette ligne maintenant (aperçu en direct)",
-    "live_stop_title": "Arrêter l'aperçu en direct"
+    "live_stop_title": "Arrêter l'aperçu en direct",
+    "plan_apply": "Utiliser la version plus courte",
+    "plan_apply_title": "Remplacer cette ligne par la version plus courte proposée : « {{text}} »",
+    "plan_impossible": "Ne tient pas +{{seconds}}s",
+    "plan_impossible_title": "Parole estimée ≈{{est}}s pour {{avail}}s disponibles. Environ {{seconds}}s dépassent les possibilités d’ajustement ; l’audio serait coupé. Raccourcissez le texte avant la génération.",
+    "plan_tight": "Ajustement serré",
+    "plan_tight_title": "Parole estimée ≈{{est}}s pour {{avail}}s disponibles. L’ajustement intelligent peut compenser avec une accélération audible ou un ralentissement vidéo. Raccourcissez le texte pour un meilleur résultat."
   },
   "timeline": {
     "track_label": "Chronologie des segments",
@@ -1861,6 +1881,7 @@
     "hint": "8 étapes · aperçu rapide"
   },
   "header": {
+    "speech": "Parole",
     "kicker_studio": "Atelier",
     "kicker_library": "Bibliothèque",
     "kicker_preferences": "Préférences",
@@ -1967,6 +1988,7 @@
     "preview_voice": "Aperçu de la voix"
   },
   "checkpoint": {
+    "timing_review": "{{count}} segments nécessitent une vérification du minutage",
     "asr_title": "Transcriptions prêtes",
     "asr_cta": "Traduire",
     "asr_hint": "Corrigez toutes les erreurs ASR maintenant : une diction serrée enregistre les tentatives TTS plus tard.",
@@ -1977,7 +1999,13 @@
     "done_hint": "Examinez les ratios de synchronisation et de synchronisation. Ajustez n'importe quelle ligne et appuyez sur \"Regen changé\" pour une restauration partielle rapide.",
     "segment_one": "{{count}} segment",
     "segment_other": "{{count}} segments",
-    "dismiss_title": "Ignorer - ne réapparaîtra pas pour cette étape jusqu'au rechargement"
+    "dismiss_title": "Ignorer - ne réapparaîtra pas pour cette étape jusqu'au rechargement",
+    "timing_review_one": "{{count}} segment nécessite une vérification du minutage",
+    "timing_review_other": "{{count}} segments nécessitent une vérification du minutage",
+    "timing_review_zero": "{{count}} segments nécessitent une vérification du minutage",
+    "timing_review_two": "{{count}} segments nécessitent une vérification du minutage",
+    "timing_review_few": "{{count}} segments nécessitent une vérification du minutage",
+    "timing_review_many": "{{count}} segments nécessitent une vérification du minutage"
   },
   "compare": {
     "title": "Comparaison vocale A/B",
@@ -2077,7 +2105,10 @@
     "voice_previews_checked": "vérifié {{when}}",
     "voice_previews_never": "pas encore vérifié",
     "voice_previews_check": "Vérifier maintenant",
-    "voice_previews_rejected": "Mise à jour de la galerie de voix refusée : {{message}}"
+    "voice_previews_rejected": "Mise à jour de la galerie de voix refusée : {{message}}",
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "Ai-je besoin d’une licence pour les outils internes ?",
@@ -2369,7 +2400,10 @@
     "hf_token_saved_fast": "Jeton Hugging Face enregistré – les téléchargements sont désormais plus rapides",
     "hf_token_inline_prompt": "Accélérez les téléchargements avec un jeton Hugging Face gratuit",
     "hf_token_inline_ph": "Coller le jeton hf_… (facultatif)",
-    "hf_token_get_short": "Obtenez-en un gratuitement →"
+    "hf_token_get_short": "Obtenez-en un gratuitement →",
+    "hf_token_active_using": "Jeton Hugging Face trouvé dans {{source}} — {{masked}}",
+    "hf_token_replace": "Remplacer le jeton…",
+    "hf_token_replace_warning": "Cela remplace le jeton enregistré pour cette application, sans révoquer l’ancien jeton."
   },
   "history": {
     "dub_meta": "{{segments}} segments · {{duration}} s",
@@ -2604,7 +2638,13 @@
   },
   "waveform": {
     "source_missing": "Support source manquant : ce fichier a peut-être été déplacé ou supprimé. Re-téléchargez la vidéo pour continuer.",
-    "load_failed": "Impossible de charger l'audio de ce fichier"
+    "load_failed": "Impossible de charger l'audio de ce fichier",
+    "controls": "Commandes de lecture",
+    "restart": "Recommencer la lecture",
+    "shortcuts": "J/K/L : reculer, lire/pause, avancer",
+    "zoom": "Niveau de zoom",
+    "timeline": "Chronologie de la forme d’onde audio",
+    "loading": "Chargement de la forme d’onde…"
   },
   "tts": {
     "routingFallback": "Fonctionnant sur CPU : ce moteur n'a pas de chemin GPU sur votre machine, la génération sera donc plus lente. {{reason}}",
@@ -2738,5 +2778,9 @@
     "transcript": "Ce qui a été entendu",
     "result_kicker": "Prise convertie",
     "need_source_and_voice": "Ajoutez d'abord un clip source et choisissez une voix cible."
+  },
+  "player": {
+    "pause": "Mettre en pause",
+    "play": "Lire"
   }
 }

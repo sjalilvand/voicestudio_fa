@@ -23,10 +23,12 @@ interpreter, so MOSS runs behind
   8 GB GPUs when quantized; the bf16 Transformers path used here is ~16 GB
   of weights, so a 16 GB+ GPU is the realistic CUDA target. It also runs on
   **CPU** (fp32) — correct but slow.
-- **Device:** CUDA when present, else CPU. **There is no MPS path** —
-  upstream documents only CUDA/CPU and the custom modelling code is
-  untested on Apple Silicon, so VoiceStudio never routes MOSS to MPS. On a
-  Mac it runs on CPU.
+- **Device:** the sidecar uses a runtime-available PyTorch CUDA/ROCm, XPU,
+  or registered NPU backend, otherwise CPU. The isolated engine venv needs the
+  matching torch/vendor integration. A failed accelerator probe falls back to
+  CPU, including in older venvs without the unified accelerator API. MPS still uses CPU. XPU/NPU routing is
+  covered by mocked loader tests; physical-device synthesis has not been
+  validated by this change.
 
 ## Install
 

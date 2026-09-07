@@ -18,6 +18,7 @@ EXPECTED_EXACT_REGEXES = {
     "^hf_QWERTYUIOPasdfghjklZXCVBNM0123456789xyzAB$",
     "^max_length=400$",
     "^Ed25519PrivateKey$",
+    r"^omnivoice\.dubSplit\.v1$",
 }
 
 
@@ -32,3 +33,15 @@ def test_gitleaks_allowlist_contains_only_reviewed_exact_values():
         for regex in allowlist["regexes"]
     )
     assert "rules" not in config
+
+
+def test_dub_storage_key_allowlist_does_not_hide_similar_credentials():
+    config = tomllib.loads((ROOT / ".gitleaks.toml").read_text(encoding="utf-8"))
+    regexes = config["allowlist"]["regexes"]
+    assert any(re.fullmatch(regex, "omnivoice.dubSplit.v1") for regex in regexes)
+    for value in (
+        "omnivoiceXdubSplitXv1",
+        "omnivoice.dubSplit.v1-secret",
+        "secret-omnivoice.dubSplit.v1",
+    ):
+        assert not any(re.fullmatch(regex, value) for regex in regexes)

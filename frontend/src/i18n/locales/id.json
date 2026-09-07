@@ -6,7 +6,7 @@
     "clear_confirm": "Tindakan ini menghapus permanen semua proyek Cerita dan Buku Audio yang tersimpan serta draf yang belum disimpan agar VoiceStudio dapat dibuka kembali. Tindakan ini tidak dapat dibatalkan. Lanjutkan?"
   },
   "backendUnreachable": {
-    "contact_recent": "Backend masih merespons {{ago}} yang lalu lalu berhenti merespons — kemungkinan besar crash atau dihentikan di tengah permintaan.",
+    "contact_recent": "Backend terakhir merespons {{ago}} yang lalu dan kemudian berhenti merespons, dan tidak ada crash yang tercatat — jadi kemungkinan masih hidup tetapi tersangkut pada pekerjaan berat yang menahan engine.",
     "contact_never": "Backend sama sekali belum merespons pada sesi ini — mungkin tidak pernah berhasil dijalankan.",
     "dev": "Tidak dapat menghubungi backend VoiceStudio lokal. {{contact}} Pada `bun run dev` backend berjalan dengan muat-ulang otomatis: setiap perubahan berkas — termasuk menyimpan saat ada permintaan berjalan — membuatnya dimulai ulang dan memutus koneksi. Coba ulangi tindakan dulu; jika itu muat-ulang, akan langsung berhasil. Jika terus gagal, periksa terminal `bun run dev` untuk traceback Python atau pesan keluar, dan omnivoice.log di folder data VoiceStudio Anda.",
     "server": "Tidak dapat menghubungi server backend VoiceStudio. {{contact}} Periksa log server untuk penyebabnya (mis. `docker logs <container>` atau `journalctl`) — dan perlu diketahui, jika Docker menyajikan halaman ini, halaman ini sendiri bisa ikut mati bersama backend.",
@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "Penyetelan ulang gagal: {{message}}",
     "reset_longform_failed": "VoiceStudio tidak dapat menghapus proyek tersimpan dengan aman. Data proyek Anda tidak diubah; kosongkan sebagian ruang penyimpanan atau mulai ulang aplikasi, lalu coba lagi.",
     "cancel": "Batalkan",
-    "hf_token_also_clear": "Hapus juga",
+    "hf_token_also_clear": "Hapus juga berkas token HuggingFace CLI yang tersimpan",
     "hf_token_clear_btn": "Hapus token",
     "hf_token_clear_confirm": "Hapus token HuggingFace dari sumber Aplikasi?",
     "hf_token_clear_dialog": "Hapus token",
@@ -334,6 +334,7 @@
     "device_family_cuda": "NVIDIA GPU (CUDA)",
     "device_family_rocm": "AMD GPU (ROCm)",
     "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
     "device_load_failed": "Gagal memuat pengaturan perangkat",
@@ -348,7 +349,11 @@
     "generate_timeout_saved": "Tersimpan. Mulai ulang VoiceStudio agar anggaran baru berlaku.",
     "generate_timeout_shadowed_badge": "Ditimpa secara eksternal",
     "generate_timeout_shadowed_note": "Variabel lingkungan di luar VoiceStudio (shell, file .env, atau kontainer) saat ini sedang mengatur nilai ini — nilai yang disimpan di sini diabaikan sampai variabel tersebut dihapus.",
-    "generate_timeout_shadowed_toast": "Tersimpan, tetapi variabel lingkungan di luar VoiceStudio saat ini sedang mengatur nilai ini — nilai itu akan terus digunakan sampai variabel tersebut dihapus."
+    "generate_timeout_shadowed_toast": "Tersimpan, tetapi variabel lingkungan di luar VoiceStudio saat ini sedang mengatur nilai ini — nilai itu akan terus digunakan sampai variabel tersebut dihapus.",
+    "hf_token_not_checked": "Belum diuji",
+    "hf_source_app_label": "VoiceStudio (terenkripsi, disarankan)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "Variabel lingkungan"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -539,6 +544,9 @@
     "convert_desc": "Ucapkan sekali — dengar dengan suara lain. Ucapan ke ucapan, sepenuhnya lokal."
   },
   "clone": {
+    "text_label": "Teks",
+    "paste": "Tempel",
+    "paste_failed": "Akses papan klip diblokir. Tempel langsung ke kolom teks menggunakan papan ketik.",
     "prompt": "Cepat",
     "language": "Bahasa",
     "steps": "Langkah-langkah",
@@ -643,7 +651,8 @@
     "cat_AccentDialect": "Aksen atau dialek",
     "accent_dialect_hint": "salah satu saja, tidak keduanya",
     "reset_to_description": "Setel ulang sesuai deskripsi",
-    "chips_more": "{{count}} lainnya…"
+    "chips_more": "{{count}} lainnya…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "Aplikasi",
@@ -823,7 +832,8 @@
     "familyDesc_tts": "Mengubah naskah menjadi suara. Studio, Dubbing, dan Batch menggunakan mesin yang aktif.",
     "familyDesc_asr": "Mengubah audio menjadi teks untuk transkripsi, sulih suara, teks layar, dan dikte.",
     "familyDesc_llm": "Pembantu teks opsional untuk terjemahan dan penulisan ulang. “Nonaktif” akan melewati langkah tersebut.",
-    "mpsLongText": "{{engine}} berjalan di Apple Silicon (MPS) di sini dan teks ini panjang — proses mungkin melampaui batas waktu. Teks lebih pendek, atau membaginya menjadi beberapa bagian, akan jauh lebih cepat."
+    "mpsLongText": "{{engine}} berjalan di Apple Silicon (MPS) di sini dan teks ini panjang — proses mungkin melampaui batas waktu. Teks lebih pendek, atau membaginya menjadi beberapa bagian, akan jauh lebih cepat.",
+    "inMemory": "Dalam memori"
   },
   "capture": {
     "desc": "Tombol pintas global hanya berfungsi di aplikasi desktop. UI web menggunakan pintasan <1>Ctrl+Shift+Space</1> dalam halaman saat jendela memiliki fokus.",
@@ -961,6 +971,9 @@
     "consent_revoked": "Verifikasi dicabut"
   },
   "dub": {
+    "timing_label": "Pengaturan waktu",
+    "timing_concise": "Ringkas",
+    "timing_stretch_video": "Perpanjang video",
     "install_engine_pkg": "Instal {{pkg}}",
     "needs_install_short": "Perlu instalasi",
     "install_popover_title": "Instal mesin ini",
@@ -1171,7 +1184,8 @@
     "languages_pending": "Tertunda",
     "live_preview": "Pratinjau langsung",
     "live_preview_title": "Dengarkan baris saat Anda mengeditnya — segmen yang diedit menstreaming TTS dengan suara CAST-nya setelah jeda singkat. Hanya pemutaran: tidak ada yang disimpan, dan ekspor tetap dirender dalam kualitas penuh.",
-    "live_preview_pick_voice": "Tetapkan suara CAST ke baris ini atau pembicaranya untuk mendengar pratinjau langsung."
+    "live_preview_pick_voice": "Tetapkan suara CAST ke baris ini atau pembicaranya untuk mendengar pratinjau langsung.",
+    "autofit_quality": "Penyesuaian otomatis"
   },
   "glossary": {
     "title": "Glosarium",
@@ -1270,7 +1284,13 @@
     "qc_verify": "Verifikasi",
     "qc_verify_title": "ASR lintasan kedua mendengar: \"{{heard}}\" — dengarkan ulang atau sulih suara ulang baris ini.",
     "live_play_title": "Streaming baris ini sekarang (pratinjau langsung)",
-    "live_stop_title": "Hentikan pratinjau langsung"
+    "live_stop_title": "Hentikan pratinjau langsung",
+    "plan_apply": "Gunakan versi lebih singkat",
+    "plan_apply_title": "Ganti baris ini dengan versi lebih singkat yang disarankan: “{{text}}”",
+    "plan_impossible": "Tidak muat +{{seconds}}d",
+    "plan_impossible_title": "Perkiraan ucapan ≈{{est}}d, waktu tersedia {{avail}}d. Sekitar {{seconds}}d melebihi kemampuan penyesuaian dan audio akan terpotong. Persingkat teks sebelum membuat audio.",
+    "plan_tight": "Hampir tidak muat",
+    "plan_tight_title": "Perkiraan ucapan ≈{{est}}d, waktu tersedia {{avail}}d. Penyesuaian cerdas dapat mengatasinya dengan mempercepat suara secara nyata atau memperlambat video. Persingkat teks untuk hasil lebih baik."
   },
   "timeline": {
     "track_label": "Lini masa segmen",
@@ -1861,6 +1881,7 @@
     "hint": "8 langkah · pratinjau cepat"
   },
   "header": {
+    "speech": "Ucapan",
     "kicker_studio": "Studio",
     "kicker_library": "Perpustakaan",
     "kicker_preferences": "Preferensi",
@@ -1967,6 +1988,7 @@
     "preview_voice": "Pratinjau suara"
   },
   "checkpoint": {
+    "timing_review": "{{count}} segmen perlu peninjauan waktu",
     "asr_title": "Transkrip sudah siap",
     "asr_cta": "Terjemahkan",
     "asr_hint": "Perbaiki kesalahan ASR sekarang — diksi yang ketat akan menghemat upaya TTS nanti.",
@@ -1977,7 +1999,13 @@
     "done_hint": "Tinjau waktu dan rasio sinkronisasi. Sesuaikan baris mana pun dan tekan \"Regen berubah\" untuk pengulangan sebagian yang cepat.",
     "segment_one": "segmen {{count}}",
     "segment_other": "{{count}} segmen",
-    "dismiss_title": "Singkirkan — tidak akan muncul kembali pada tahap ini hingga dimuat ulang"
+    "dismiss_title": "Singkirkan — tidak akan muncul kembali pada tahap ini hingga dimuat ulang",
+    "timing_review_one": "{{count}} segmen perlu tinjauan waktu",
+    "timing_review_other": "{{count}} segmen perlu peninjauan waktu",
+    "timing_review_zero": "{{count}} segmen perlu peninjauan waktu",
+    "timing_review_two": "{{count}} segmen perlu peninjauan waktu",
+    "timing_review_few": "{{count}} segmen perlu peninjauan waktu",
+    "timing_review_many": "{{count}} segmen perlu peninjauan waktu"
   },
   "compare": {
     "title": "Perbandingan Suara A/B",
@@ -2077,7 +2105,10 @@
     "voice_previews_checked": "diperiksa {{when}}",
     "voice_previews_never": "belum diperiksa",
     "voice_previews_check": "Periksa sekarang",
-    "voice_previews_rejected": "Pembaruan galeri suara ditolak: {{message}}"
+    "voice_previews_rejected": "Pembaruan galeri suara ditolak: {{message}}",
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "Apakah saya memerlukan lisensi untuk alat internal?",
@@ -2369,7 +2400,10 @@
     "hf_token_saved_fast": "Token Hugging Face disimpan — pengunduhan kini lebih cepat",
     "hf_token_inline_prompt": "Percepat pengunduhan dengan token Hugging Face gratis",
     "hf_token_inline_ph": "Tempel hf_… token (opsional)",
-    "hf_token_get_short": "Dapatkan satu gratis →"
+    "hf_token_get_short": "Dapatkan satu gratis →",
+    "hf_token_active_using": "Token Hugging Face ditemukan di {{source}} — {{masked}}",
+    "hf_token_replace": "Ganti token…",
+    "hf_token_replace_warning": "Ini mengganti token yang disimpan untuk aplikasi ini. Token lama tidak dicabut."
   },
   "history": {
     "dub_meta": "{{segments}} segmen · {{duration}} dtk",
@@ -2604,7 +2638,13 @@
   },
   "waveform": {
     "source_missing": "Media sumber hilang — file ini mungkin telah dipindahkan atau dihapus. Upload ulang video untuk melanjutkan.",
-    "load_failed": "Tidak dapat memuat audio dari file ini"
+    "load_failed": "Tidak dapat memuat audio dari file ini",
+    "controls": "Kontrol pemutaran",
+    "restart": "Mulai ulang pemutaran",
+    "shortcuts": "J/K/L: mundur, putar/jeda, maju",
+    "zoom": "Tingkat zoom",
+    "timeline": "Linimasa gelombang audio",
+    "loading": "Memuat gelombang…"
   },
   "tts": {
     "routingFallback": "Berjalan pada CPU — mesin ini tidak memiliki jalur GPU pada mesin Anda, sehingga pembuatannya akan lebih lambat. {{reason}}",
@@ -2738,5 +2778,9 @@
     "transcript": "Yang terdengar",
     "result_kicker": "Hasil konversi",
     "need_source_and_voice": "Tambahkan klip sumber dan pilih suara target terlebih dahulu."
+  },
+  "player": {
+    "pause": "Jeda",
+    "play": "Putar"
   }
 }

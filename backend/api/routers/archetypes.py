@@ -57,11 +57,12 @@ _PREVIEW_SEED = 42
 # 32 reliably converges to speech across the gallery's instruct/script space
 # at a one-time (cached) render cost.
 _PREVIEW_NUM_STEP = 32
-# Spectral-flatness floor below which a render is a degenerate tonal artifact
-# rather than speech. Real, mastered speech sits ~0.04–0.07; a tonal buzz
-# collapses to <0.005. 0.015 separates the two with wide margin and sits well
-# below even breathy/whisper voices (which are broadband → high flatness).
-_DEGENERATE_FLATNESS = 0.015
+# Reject near-pure tonal artifacts using mean framed spectral flatness.
+# Calibrated against the tracked speech demos exercised by
+# test_archetype_preview_quality.py: the quietest (Mandarin dubbing, 44.1 kHz)
+# measures ~7.7e-6, while the worst tested tonal buzz measures ~3.3e-9.
+# 1e-7 leaves >10x margin on both sides without rejecting low-flatness speech.
+_DEGENERATE_FLATNESS = 1e-7
 
 
 def _preview_key(a: dict) -> str:
@@ -248,24 +249,46 @@ def _is_blank_audio(audio_tensor) -> bool:
         return False
 
 
+_FLATNESS_FRAME = 1024
+_FLATNESS_HOP = 512
+#: Frames quieter than this fraction of the loudest frame's energy are the gaps
+#: between words, not speech; their spectrum is the noise floor and averaging it
+#: in drags the measurement toward the value of whatever silence sounds like.
+_FLATNESS_FRAME_FLOOR = 1e-4
+
+
 def _spectral_flatness(audio_tensor) -> Optional[float]:
-    """Geometric-mean / arithmetic-mean of the power spectrum.
+    """Mean per-frame geometric-mean / arithmetic-mean of the power spectrum.
 
     ~1.0 for broadband noise, →0 for a pure tone. The degenerate diffusion
-    renders this guards against are near-pure tonal buzzes (flatness <0.005),
-    distinct from both silence (caught by ``_is_blank_audio``) and real speech
-    (~0.04+). Returns ``None`` if it can't be computed so callers don't act on
-    a bad measurement.
+    renders this guards against are near-pure tonal buzzes, distinct from both
+    silence (caught by ``_is_blank_audio``) and real speech. Returns ``None``
+    if it can't be computed so callers don't act on a bad measurement.
+
+    Measured over short frames and averaged — the standard definition. A single
+    FFT of the whole clip (what this used to do) is not the same quantity: its
+    frequency resolution grows with clip length, so speech harmonics carve
+    ever-deeper nulls into the spectrum and the geometric mean collapses. That
+    made the result depend on how long the clip was rather than on what it
+    sounded like, and put real speech below the rejection threshold.
     """
     try:
         import torch
 
         t = audio_tensor if isinstance(audio_tensor, torch.Tensor) else torch.as_tensor(audio_tensor)
-        t = t.detach().to("cpu", dtype=torch.float32).flatten()
-        if t.numel() < 1024 or not torch.isfinite(t).all():
+        t = t.detach().to("cpu", dtype=torch.float32)
+        if t.ndim > 1:
+            t = t.mean(dim=0)
+        t = t.flatten()
+        if t.numel() < _FLATNESS_FRAME or not torch.isfinite(t).all():
             return None
-        spec = torch.fft.rfft(t * torch.hann_window(t.numel())).abs().pow(2) + 1e-12
-        return float(torch.exp(torch.mean(torch.log(spec))) / torch.mean(spec))
+        frames = t.unfold(0, _FLATNESS_FRAME, _FLATNESS_HOP)
+        spec = torch.fft.rfft(frames * torch.hann_window(_FLATNESS_FRAME)).abs().pow(2) + 1e-12
+        energy = spec.sum(dim=1)
+        spec = spec[energy > energy.max() * _FLATNESS_FRAME_FLOOR]
+        if spec.shape[0] == 0:
+            return None
+        return float((torch.exp(spec.log().mean(dim=1)) / spec.mean(dim=1)).mean())
     except Exception:  # never let the checker itself block a render
         return None
 

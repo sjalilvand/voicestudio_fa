@@ -181,3 +181,53 @@ def test_synthesize_calls_generate_and_emits_audio(sc, monkeypatch):
 def test_synthesize_rejects_empty_text(sc):
     with pytest.raises(ValueError, match="text"):
         sc._handle_synthesize({"text": ""}, io.BytesIO())
+
+
+@pytest.mark.parametrize('family,legacy', [(None, False), ('cuda', False), ('xpu', False), ('npu', False), ('mps', False), (None, True), ('cuda', True)])
+def test_load_model_matches_routing(sc, monkeypatch, family, legacy):
+    import sys
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    from core.device_caps import HostCaps
+    from services.engine_routing import resolve_routing
+    from engines.confucius4 import Confucius4Backend
+
+    accelerator = Mock(return_value=SimpleNamespace(type=family) if family else None)
+    monkeypatch.setitem(sys.modules, 'torch', SimpleNamespace(
+        accelerator=SimpleNamespace() if legacy else SimpleNamespace(current_accelerator=accelerator),
+        cuda=SimpleNamespace(is_available=lambda: family == 'cuda'),
+        device=lambda value: SimpleNamespace(type=value),
+    ))
+    constructor = Mock()
+    monkeypatch.setitem(sys.modules, 'confuciustts.cli.inference', SimpleNamespace(ConfuciusTTS=constructor))
+    monkeypatch.setattr(sc, '_model', None)
+    monkeypatch.setattr(sc, '_config_path', lambda: 'fixture.yaml')
+    monkeypatch.setattr(sc, '_ensure_clone_on_sys_path', lambda: None)
+    sc._load_model(io.BytesIO())
+    expected = family if family not in (None, 'mps') else 'cpu'
+    constructor.assert_called_once_with(config_path='fixture.yaml', device=expected)
+    if not legacy:
+        accelerator.assert_called_once_with(check_available=True)
+    caps = HostCaps(family=family or 'cpu', available_families=(family, 'cpu') if family else ('cpu',))
+    assert resolve_routing(Confucius4Backend.gpu_compat, caps)['effective_device'] == expected
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_load_model_falls_back_when_accelerator_probe_raises(sc, monkeypatch, legacy):
+    import sys
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    probe = Mock(side_effect=RuntimeError("accelerator driver unavailable"))
+    monkeypatch.setitem(sys.modules, "torch", SimpleNamespace(
+        accelerator=SimpleNamespace() if legacy else SimpleNamespace(current_accelerator=probe),
+        cuda=SimpleNamespace(is_available=probe),
+    ))
+    constructor = Mock()
+    monkeypatch.setitem(sys.modules, "confuciustts.cli.inference", SimpleNamespace(ConfuciusTTS=constructor))
+    monkeypatch.setattr(sc, "_model", None)
+    monkeypatch.setattr(sc, "_config_path", lambda: "fixture.yaml")
+    monkeypatch.setattr(sc, "_ensure_clone_on_sys_path", lambda: None)
+    sc._load_model(io.BytesIO())
+    constructor.assert_called_once_with(config_path="fixture.yaml", device="cpu")
+    assert probe.call_count == 1

@@ -10,16 +10,84 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- The desktop app builds and opens from a fresh clone again (#1818) — thanks @flutterkage2k!
+- GPUs with less VRAM than the engine needs no longer get half the compute-time budget a CPU gets (#1806) — thanks @VishvakR!
+- Gallery voice previews play again — the quality guard was rejecting good renders as silent (#1819) — thanks @flutterkage2k!
+- Tilde-separated number ranges are spoken clearly without running their endpoints together (#1821) — thanks @flutterkage2k!
+- Voice modes use themed tabs, with Synthesize and Convert pinned below their scrolling forms (#1823)
+- Fix current-user Windows installer validation and nested resource cleanup (#1873)
+
 - Voice cloning now starts with a clear upload-or-record choice, reveals recording and reference details only when needed, and keeps sampling controls under Production Overrides (#1817)
+- The first-run welcome line uses an instruction accepted by OmniVoice and VoiceDesign engines (#1861) — thanks @psiberfunk!
 
 ### Changed
 
+- Casting uses responsive SVG voice cards and searchable speaker menus that stay above surrounding panels (#1823)
+- Dubbing aligns output settings, brings review status forward, and simplifies transcript and glossary editing; Launchpad files and voices reflow into responsive grids (#1823)
+- Transcript segments use three readable rows for text, timing/status and voice controls, with heights that adapt to wrapping (#1823)
+- Dragging the waveform pans horizontally while a click still seeks, keeping the timed transcript aligned (#1823)
+- Bulk segment editing uses searchable voice and language menus, readable language names and a responsive selection toolbar (#1823)
+- Dubbing overlays playback controls on video, combines waveform and transcript in a compact timeline, and removes header/action background fills (#1823)
+- Dubbing uses compact casting, translation and output controls with responsive rows to leave more room for editing (#1823)
+- Export uses grouped format settings, themed track menus and switches, with a pinned filename summary and download action (#1823)
+- Dubbing output settings use icon-labelled switches, themed track and speaker menus, and clearer timing/transcript controls (#1823)
+- Casting voice menus use searchable themed options with SVG preset icons instead of native dropdowns (#1823)
+- Dubbing groups casting and translation controls with readable labels, SVG icons, searchable menus, and compact timeline spacing (#1823)
+- Production Overrides use readable icon-labelled controls and accessible Denoise/Postprocess switches (#1823)
+- Expanded navigation uses a theme-accent tint with subtle static wave gradients (#1823)
+- Convert groups source audio, target voice, and timing options into clearer controls; design choices include theme-matched SVG icons (#1823)
+- The expandable sidebar reveals workspace labels with restrained active states; language menus adapt to multiple columns on wider screens (#1823)
+- Voice design and recording use themed, keyboard-accessible selectors with clearer spacing and labels (#1823)
+- Voice tabs and upload/record controls have subtle SVG motion; Text adds clipboard paste and the upload area fills available height (#1823)
+- The title-bar label cycles through active speech, transcription, and LLM engines; bundled model labels correctly say OmniVoice (#1823)
+- The top-bar Engines panel groups Speech, Transcription, and LLM choices into tabs, with compact memory controls and no duplicate pickers (#1823)
 ### Added
 
 ### Docs
 
 ### Fixed
 
+- Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
+- Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
+- Copying a saved transcription now uses the shared clipboard helper and reports failed copies accurately (#1803) — thanks @tvbht!
+
+- Voice reference preparation reclaims allocator memory before one bounded retry, then reports persistent GPU out-of-memory failures (#1811)
+- `bun run desktop` now opens on a fresh clone: the Vite alias for `@tauri-apps/plugin-dialog` no longer assumes a nested `frontend/node_modules`, which bun's workspace hoisting leaves empty (#1818) — thanks @flutterkage2k!
+
+- Slow backend startups remain running with progress updates, and Retry interrupts startup without stale timeout failures (#1809)
+- Backend connection errors report crashes only when recorded evidence exists, and diagnostic waits honor cancellation (#1810)
+- A CUDA or ROCm GPU with less VRAM than the engine needs now gets the CPU compute-time budget instead of the shorter accelerated one, since it pages to system RAM and renders slower than the CPU would — applied to local generation, voice conversion, and remote worker deadlines alike (#1806) — thanks @VishvakR!
+- Gallery previews no longer fail with "the voice engine returned no audible audio" on perfectly good renders: the degenerate-buzz guard measured spectral flatness over the whole clip (so the value tracked clip length) against a threshold calibrated on a synthetic signal, and rejected real speech in every language tested (#1819) — thanks @flutterkage2k!
+- Speak tilde separators in integer, signed, and decimal ranges in English, Korean, Japanese, and Chinese (#1821) — thanks @flutterkage2k!
+
+- Keep recording and conversion work safe while switching methods, synchronize dubbing language controls, and localize timeline controls and timing warnings (#1841)
+
+- Dubbing playback starts before waveform decoding, automatic cast names are readable, and transcript timestamps have more room (#1823)
+- The title-bar engine button stays compact and stable while cycling labels, with engine names aligned right (#1823)
+- Long dubbing segment errors wrap in a bounded scrollable notice instead of widening the editor (#1823)
+- Voice dropdowns match their field width, use theme accents, and show recent voices only once (#1823)
+- Language menus no longer show a pale frame around their search header (#1823)
+- The notification count stays inside the title bar instead of clipping above the bell (#1823)
+- The workspace engine menu opens beside its button instead of at the opposite edge of the page (#1823)
+- Cloning reuses the dubbing language picker with flags, search, and single selection, opening above the pinned synthesis controls (#1823)
+- The first-run welcome line uses an instruction accepted by OmniVoice and VoiceDesign engines (#1861) — thanks @psiberfunk!
+- The header status dot now honors OS Reduce Motion instead of pulsing regardless (#1862) — thanks @psiberfunk!
+- Onboarding reads Hugging Face tokens locally, preserves Windows CLI logins, and requires successful discovery before replacing saved credentials (#1852) — thanks @psiberfunk!
+- The logs panel no longer reports “All clear” before log retrieval succeeds or while logs contain warnings or errors (#1870) — thanks @motodriver!
+- MOSS accelerator routing and status match runtime selection, with CPU fallback when device probing fails (#1830) — thanks @li-lizhe!
+- Confucius accelerator routing tolerates failed device probes, and dots.tts keeps safe default precision on non-CUDA hosts (#1831) — thanks @li-lizhe!
+- On macOS, the header status dot and kicker no longer render underneath the overlaid traffic lights (#1863) — thanks @psiberfunk!
+- The capture widget can hide after recording and recover from being left visible while idle (#1865) — thanks @psiberfunk!
+
+- macOS retains the shared desktop window sizing, resize limits, and file-drop behavior when native chrome is applied (#1865) — thanks @psiberfunk!
+
+- On macOS, the header no longer shows Windows-style minimize/maximize/close buttons alongside the native traffic lights (#1865) — thanks @psiberfunk!
+
+- Release retries replace their own partially uploaded installers without colliding with existing assets (#1871)
+- Timed-out voice engines finish process cleanup before retrying, and old timeout callbacks cannot kill replacement engines (#1872)
+
+
+- Fast macOS process exits no longer turn a completed shutdown into a permission error (#1809)
 
 ## [0.5.2] — 2026-09-02
 
@@ -59,6 +127,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - RX 6700 XT/gfx1031 over WSL2 ROCDXG is now explicitly unverified until a published end-to-end GPU workload proves the mapped path (#1716)
 
 ### Fixed
+
 
 - The generation compute-time budget is now a Settings control (Performance & Device) instead of an env-var-only setting the timeout error recommended with no UI path — the error copy points there too, and long CPU/MPS renders get an upfront heads-up before they start (#1787)
 - Windows: the backend can now start when the install path contains non-English characters (e.g. a CJK username) on a non-UTF-8 system code page — a new or broken Python environment now builds at an ASCII-safe path automatically (a healthy existing one is never relocated), and a specific error message names the cause and a working fix if the interpreter still crashes in `site` (#1783)

@@ -92,6 +92,7 @@ function addSourceClip() {
 
 beforeEach(() => {
   recordingState.isStartingRecording = false;
+  recordingState.isCleaning = false;
   convertSpeech.mockReset();
   toastAsrModelMissing.mockReset();
   toastModelNotDownloaded.mockReset();
@@ -101,14 +102,64 @@ beforeEach(() => {
 });
 
 describe('ConvertMethodPanel', () => {
+  it('keeps the primary action outside the scrolling form', () => {
+    render(<ConvertMethodPanel t={t} profiles={profiles} />);
+    const action = screen.getByTestId('convert-action-bar');
+    expect(action).toHaveClass('studio-action-bar');
+    expect(screen.getByTestId('convert-form')).not.toContainElement(action);
+    expect(action).toContainElement(screen.getByRole('button', { name: 'convert.convert' }));
+  });
   it('shows microphone startup instead of a duplicate record action', () => {
     recordingState.isStartingRecording = true;
-    render(<ConvertMethodPanel t={t} profiles={profiles} />);
+    const onRecordingBusyChange = vi.fn();
+    const { unmount } = render(
+      <ConvertMethodPanel
+        t={t}
+        profiles={profiles}
+        onRecordingBusyChange={onRecordingBusyChange}
+      />,
+    );
 
     expect(screen.getByRole('status')).toHaveTextContent('Starting…');
     expect(screen.queryByRole('button', { name: 'Record' })).not.toBeInTheDocument();
+    expect(onRecordingBusyChange).toHaveBeenLastCalledWith(true);
+    unmount();
+    expect(onRecordingBusyChange).toHaveBeenLastCalledWith(false);
   });
 
+  it('keeps method switching busy through recording cleanup', () => {
+    const onRecordingBusyChange = vi.fn();
+    recordingState.isCleaning = true;
+    const { rerender } = render(
+      <ConvertMethodPanel
+        t={t}
+        profiles={profiles}
+        onRecordingBusyChange={onRecordingBusyChange}
+      />,
+    );
+    expect(onRecordingBusyChange).toHaveBeenLastCalledWith(true);
+    recordingState.isCleaning = false;
+    rerender(
+      <ConvertMethodPanel
+        t={t}
+        profiles={profiles}
+        onRecordingBusyChange={onRecordingBusyChange}
+      />,
+    );
+    expect(onRecordingBusyChange).toHaveBeenLastCalledWith(false);
+  });
+  it.each(['picker', 'drop'])('reports unsupported audio from %s', (source) => {
+    render(<ConvertMethodPanel t={t} profiles={profiles} />);
+    const file = new File(['text'], 'notes.txt', { type: 'text/plain' });
+    const input = document.getElementById('convert-audio-upload');
+    if (source === 'picker') fireEvent.change(input, { target: { files: [file] } });
+    else
+      fireEvent.drop(document.querySelector('label[for="convert-audio-upload"]'), {
+        dataTransfer: { files: [file] },
+      });
+    expect(toastError).toHaveBeenCalledWith('clone.unsupported_audio');
+    expect(screen.queryByTestId('waveform-convert-source')).not.toBeInTheDocument();
+  });
   it('keeps Convert disabled until a source clip AND a target voice are set', () => {
     render(<ConvertMethodPanel t={t} profiles={profiles} />);
     const button = screen.getByRole('button', { name: 'convert.convert' });
@@ -122,6 +173,38 @@ describe('ConvertMethodPanel', () => {
     expect(button).toBeEnabled();
     expect(screen.queryByText('convert.need_source_and_voice')).toBeNull();
   });
+
+  it.each(['success', 'failure'])(
+    'keeps method switching busy until conversion %s settles',
+    async (outcome) => {
+      let resolveConversion, rejectConversion;
+      convertSpeech.mockImplementation(
+        () =>
+          new Promise((resolve, reject) => {
+            resolveConversion = resolve;
+            rejectConversion = reject;
+          }),
+      );
+      const onRecordingBusyChange = vi.fn();
+      render(
+        <ConvertMethodPanel
+          t={t}
+          profiles={profiles}
+          onRecordingBusyChange={onRecordingBusyChange}
+        />,
+      );
+      addSourceClip();
+      fireEvent.change(screen.getByLabelText('voice-selector'), {
+        target: { value: 'vp-1' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'convert.convert' }));
+      await waitFor(() => expect(convertSpeech).toHaveBeenCalled());
+      expect(onRecordingBusyChange).toHaveBeenLastCalledWith(true);
+      if (outcome === 'success') resolveConversion({ id: 'take', audio_url: '/audio/take.wav' });
+      else rejectConversion(new Error('Conversion failed'));
+      await waitFor(() => expect(onRecordingBusyChange).toHaveBeenLastCalledWith(false));
+    },
+  );
 
   it('previews the source clip with the shared waveform player', () => {
     render(<ConvertMethodPanel t={t} profiles={profiles} />);

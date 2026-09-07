@@ -301,6 +301,9 @@
     "convert_desc": "Say it once — hear it in another voice. Speech to speech, fully local."
   },
   "clone": {
+    "text_label": "Text",
+    "paste": "Paste",
+    "paste_failed": "Clipboard access was blocked. Paste directly into the text field using your keyboard.",
     "prompt": "Prompt",
     "language": "Language",
     "steps": "Steps",
@@ -405,7 +408,8 @@
     "cat_AccentDialect": "Accent or Dialect",
     "accent_dialect_hint": "one or the other, never both",
     "reset_to_description": "Reset to description",
-    "chips_more": "{{count}} more…"
+    "chips_more": "{{count}} more…",
+    "cfg": "CFG"
   },
   "settings": {
     "title": "Settings",
@@ -600,7 +604,7 @@
     "shortcut_reset_failed": "Reset failed: {{message}}",
     "reset_longform_failed": "VoiceStudio couldn’t safely clear saved projects. Your project data was left intact; free some storage or restart the app, then try again.",
     "cancel": "Cancel",
-    "hf_token_also_clear": "Also clear",
+    "hf_token_also_clear": "Also clear saved HuggingFace CLI token files",
     "hf_token_clear_btn": "Clear token",
     "hf_token_clear_confirm": "Clear the App-source HuggingFace token?",
     "hf_token_clear_dialog": "Clear token",
@@ -934,12 +938,14 @@
     "device_family_cuda": "NVIDIA GPU (CUDA)",
     "device_family_rocm": "AMD GPU (ROCm)",
     "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
     "device_load_failed": "Failed to load device setting",
     "generate_timeout_shadowed_badge": "Overridden externally",
     "generate_timeout_shadowed_note": "An environment variable outside VoiceStudio (shell, .env file, or container) is currently setting this — your saved value here is ignored until that variable is removed.",
-    "generate_timeout_shadowed_toast": "Saved, but an environment variable outside VoiceStudio is currently setting this — it will keep being used until that variable is removed."
+    "generate_timeout_shadowed_toast": "Saved, but an environment variable outside VoiceStudio is currently setting this — it will keep being used until that variable is removed.",
+    "hf_token_not_checked": "Not tested"
   },
   "about": {
     "app": "App",
@@ -1203,6 +1209,7 @@
     "dubbed_segments_other": "{{count}} dubbed segments"
   },
   "dub": {
+    "timing_label": "Timing",
     "install_engine_pkg": "Install {{pkg}}",
     "needs_install_short": "Needs install",
     "install_popover_title": "Install this engine",
@@ -2233,7 +2240,7 @@
     "retry_hint": "Try \"Retry\" in Settings → Logs → Backend. If it fails again, \"Clean & Retry\" rebuilds the environment from scratch."
   },
   "backendUnreachable": {
-    "contact_recent": "It was answering {{ago}} ago and then stopped responding — it most likely crashed or was killed mid-request.",
+    "contact_recent": "It was answering {{ago}} ago and then stopped responding, and no crash was recorded — so it may still be alive but wedged on a heavy job that is holding the engine.",
     "contact_never": "It has not answered at all this session — it may never have started.",
     "dev": "Can't reach the local VoiceStudio backend. {{contact}} In `bun run dev` the backend runs with auto-reload, so any file change — including a save while a request was in flight — restarts it and drops the connection. Retry the action first; if it was a reload, it just works. If it keeps failing, check the terminal running `bun run dev` for a Python traceback or an exit banner, and omnivoice.log in your VoiceStudio data folder for the last thing the backend logged.",
     "server": "Can't reach the VoiceStudio backend server. {{contact}} Check the server logs for the cause (e.g. `docker logs <container>` or `journalctl`) — and note that if Docker serves this page, the page itself can go down with the backend.",
@@ -2395,6 +2402,7 @@
     "hint": "8 steps · fast preview"
   },
   "header": {
+    "speech": "Speech",
     "kicker_studio": "Studio",
     "kicker_library": "Library",
     "kicker_preferences": "Preferences",
@@ -2543,7 +2551,13 @@
   },
   "waveform": {
     "source_missing": "Source media missing — this file may have moved or been deleted. Re-upload the video to continue.",
-    "load_failed": "Could not load audio from this file"
+    "load_failed": "Could not load audio from this file",
+    "controls": "Playback controls",
+    "restart": "Restart playback",
+    "shortcuts": "J/K/L: rewind, play/pause, forward",
+    "zoom": "Zoom level",
+    "timeline": "Audio waveform timeline",
+    "loading": "Loading waveform…"
   },
   "player": {
     "now_playing": "Now playing",
@@ -2567,6 +2581,7 @@
     "preview_voice": "Preview voice"
   },
   "checkpoint": {
+    "timing_review": "{{count}} segments need timing review",
     "asr_title": "Transcripts ready",
     "asr_cta": "Translate",
     "asr_hint": "Fix any ASR errors now — tight diction saves TTS attempts later.",
@@ -2577,7 +2592,13 @@
     "done_hint": "Review timing and sync ratios. Tweak any line and hit \"Regen changed\" for a fast partial redo.",
     "segment_one": "{{count}} segment",
     "segment_other": "{{count}} segments",
-    "dismiss_title": "Dismiss — won't reappear for this stage until reload"
+    "dismiss_title": "Dismiss — won't reappear for this stage until reload",
+    "timing_review_one": "{{count}} segment needs timing review",
+    "timing_review_other": "{{count}} segments need timing review",
+    "timing_review_zero": "{{count}} segments need timing review",
+    "timing_review_two": "{{count}} segments need timing review",
+    "timing_review_few": "{{count}} segments need timing review",
+    "timing_review_many": "{{count}} segments need timing review"
   },
   "compare": {
     "title": "A/B Voice Comparison",
@@ -3099,7 +3120,10 @@
     "hf_token_error": "Could not save the token — try again or set it later in Settings → Credentials.",
     "hf_token_inline_prompt": "Speed up downloads with a free Hugging Face token",
     "hf_token_inline_ph": "Paste hf_… token (optional)",
-    "hf_token_get_short": "Get one free →"
+    "hf_token_get_short": "Get one free →",
+    "hf_token_active_using": "Hugging Face token found in {{source}} — {{masked}}",
+    "hf_token_replace": "Replace token…",
+    "hf_token_replace_warning": "This replaces the token saved for this app. It does not revoke the old token."
   },
   "history": {
     "dub_meta": "{{segments}} segs · {{duration}}s",

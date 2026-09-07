@@ -132,8 +132,8 @@ def test_empty_compat_is_defensive_cpu_only():
 
 # ── Contract guarantees ───────────────────────────────────────────────────
 def test_never_emits_n_a():
-    for fam in ("cuda", "rocm", "mps", "xpu", "cpu"):
-        for compat in ((), ("cpu",), ("cuda",), ("cuda", "cpu"), ("mps", "cpu")):
+    for fam in ("cuda", "rocm", "mps", "xpu", "npu", "cpu"):
+        for compat in ((), ("cpu",), ("cuda",), ("cuda", "cpu"), ("mps", "cpu"), ("npu", "cpu")):
             assert resolve_routing(compat, _caps(fam))["routing_status"] != "n/a"
 
 
@@ -197,3 +197,9 @@ def test_header_reason_capped_at_256():
 def test_header_reason_scrubs_home_path():
     out = header_safe_reason("failed at /home/alice/model")
     assert "/home/alice" not in out and "~" in out
+
+
+def test_npu_compatible_engine_uses_accelerated_route():
+    assert resolve_routing(("npu", "cpu"), _caps("npu")) == {
+        "effective_device": "npu", "routing_status": "accelerated", "routing_reason": None,
+    }

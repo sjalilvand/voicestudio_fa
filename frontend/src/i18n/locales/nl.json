@@ -6,7 +6,7 @@
     "clear_confirm": "Hiermee worden alle opgeslagen Verhalen- en Luisterboekprojecten en niet-opgeslagen concepten permanent verwijderd, zodat VoiceStudio opnieuw kan openen. Dit kan niet ongedaan worden gemaakt. Doorgaan?"
   },
   "backendUnreachable": {
-    "contact_recent": "Het reageerde {{ago}} geleden nog en stopte toen met reageren — waarschijnlijk is het midden in een verzoek gecrasht of beëindigd.",
+    "contact_recent": "Het antwoordde {{ago}} geleden nog en reageert sindsdien niet meer, en er is geen crash geregistreerd — het draait dus mogelijk nog, maar hangt op een zware taak die de engine bezet houdt.",
     "contact_never": "Het heeft deze sessie helemaal niet gereageerd — mogelijk is het nooit gestart.",
     "dev": "Kan de lokale VoiceStudio-backend niet bereiken. {{contact}} Bij `bun run dev` draait de backend met automatisch herladen: elke bestandswijziging — ook opslaan terwijl er een verzoek liep — herstart hem en verbreekt de verbinding. Probeer de actie eerst opnieuw; als het een herlaad was, werkt het gewoon. Blijft het mislukken, kijk dan in de terminal met `bun run dev` naar een Python-traceback of een exit-melding, en in omnivoice.log in uw VoiceStudio-gegevensmap.",
     "server": "Kan de VoiceStudio-backendserver niet bereiken. {{contact}} Controleer de serverlogs voor de oorzaak (bijv. `docker logs <container>` of `journalctl`) — en let op: als Docker deze pagina serveert, kan de pagina zelf samen met de backend uitvallen.",
@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "Reset mislukt: {{message}}",
     "reset_longform_failed": "VoiceStudio kon de opgeslagen projecten niet veilig wissen. Je projectgegevens zijn niet gewijzigd; maak opslagruimte vrij of start de app opnieuw en probeer het nogmaals.",
     "cancel": "Annuleer",
-    "hf_token_also_clear": "Ook wissen",
+    "hf_token_also_clear": "Ook opgeslagen HuggingFace CLI-tokenbestanden verwijderen",
     "hf_token_clear_btn": "Token wissen",
     "hf_token_clear_confirm": "De HuggingFace-token uit de app-bron wissen?",
     "hf_token_clear_dialog": "Token wissen",
@@ -334,6 +334,7 @@
     "device_family_cuda": "NVIDIA GPU (CUDA)",
     "device_family_rocm": "AMD GPU (ROCm)",
     "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
     "device_load_failed": "Apparaatinstelling kon niet worden geladen",
@@ -348,7 +349,11 @@
     "generate_timeout_saved": "Opgeslagen. Herstart VoiceStudio om het nieuwe budget toe te passen.",
     "generate_timeout_shadowed_badge": "Extern overschreven",
     "generate_timeout_shadowed_note": "Een omgevingsvariabele buiten VoiceStudio (shell, .env-bestand of container) stelt deze waarde momenteel in — de hier opgeslagen waarde wordt genegeerd totdat die variabele wordt verwijderd.",
-    "generate_timeout_shadowed_toast": "Opgeslagen, maar een omgevingsvariabele buiten VoiceStudio stelt deze waarde momenteel in — die blijft gebruikt worden totdat die variabele wordt verwijderd."
+    "generate_timeout_shadowed_toast": "Opgeslagen, maar een omgevingsvariabele buiten VoiceStudio stelt deze waarde momenteel in — die blijft gebruikt worden totdat die variabele wordt verwijderd.",
+    "hf_token_not_checked": "Niet getest",
+    "hf_source_app_label": "VoiceStudio (versleuteld, aanbevolen)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "Omgevingsvariabele"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -539,6 +544,9 @@
     "convert_desc": "Zeg het één keer — hoor het in een andere stem. Spraak naar spraak, volledig lokaal."
   },
   "clone": {
+    "text_label": "Tekst",
+    "paste": "Plakken",
+    "paste_failed": "Toegang tot het klembord is geblokkeerd. Plak rechtstreeks in het tekstveld met het toetsenbord.",
     "prompt": "Prompt",
     "language": "Taal",
     "steps": "Stappen",
@@ -643,7 +651,8 @@
     "cat_AccentDialect": "Accent of dialect",
     "accent_dialect_hint": "het een of het ander, nooit beide",
     "reset_to_description": "Terugzetten naar beschrijving",
-    "chips_more": "nog {{count}}…"
+    "chips_more": "nog {{count}}…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "App",
@@ -823,7 +832,8 @@
     "familyDesc_tts": "Zet je script om in spraak. Studio, Nasynchronisatie en Batch gebruiken de actieve engine.",
     "familyDesc_asr": "Zet audio om in tekst voor transcriptie, nasynchronisatie, ondertiteling en dicteren.",
     "familyDesc_llm": "Optionele teksthulp voor vertalen en herschrijven. ‘Uit’ slaat deze stappen over.",
-    "mpsLongText": "{{engine}} draait hier op Apple Silicon (MPS) en deze tekst is lang — de generatie overschrijdt mogelijk het tijdsbudget. Kortere tekst, of opsplitsen in meerdere takes, is veel sneller."
+    "mpsLongText": "{{engine}} draait hier op Apple Silicon (MPS) en deze tekst is lang — de generatie overschrijdt mogelijk het tijdsbudget. Kortere tekst, of opsplitsen in meerdere takes, is veel sneller.",
+    "inMemory": "In het geheugen"
   },
   "capture": {
     "desc": "Globale sneltoetsen werken alleen in de desktop-app. De webinterface gebruikt een sneltoets <1>Ctrl+Shift+Spatie</1> op de pagina terwijl het venster focus heeft.",
@@ -961,6 +971,9 @@
     "consent_revoked": "Verificatie ingetrokken"
   },
   "dub": {
+    "timing_label": "Timing",
+    "timing_concise": "Bondig",
+    "timing_stretch_video": "Video uitrekken",
     "install_engine_pkg": "{{pkg}} installeren",
     "needs_install_short": "Installatie vereist",
     "install_popover_title": "Deze engine installeren",
@@ -1171,7 +1184,8 @@
     "languages_pending": "In behandeling",
     "live_preview": "Livevoorbeeld",
     "live_preview_title": "Hoor een regel terwijl je die bewerkt — het bewerkte segment streamt na een korte pauze TTS met zijn CAST-stem. Alleen afspelen: er wordt niets opgeslagen en exporteren rendert nog steeds op volledige kwaliteit.",
-    "live_preview_pick_voice": "Wijs een CAST-stem toe aan deze regel of de spreker om het livevoorbeeld te horen."
+    "live_preview_pick_voice": "Wijs een CAST-stem toe aan deze regel of de spreker om het livevoorbeeld te horen.",
+    "autofit_quality": "Automatisch passend maken"
   },
   "glossary": {
     "title": "Woordenlijst",
@@ -1270,7 +1284,13 @@
     "qc_verify": "Verifieer",
     "qc_verify_title": "Tweede passage ASR hoorde: \"{{heard}}\" — luister of dub deze regel opnieuw.",
     "live_play_title": "Deze regel nu streamen (livevoorbeeld)",
-    "live_stop_title": "Livevoorbeeld stoppen"
+    "live_stop_title": "Livevoorbeeld stoppen",
+    "plan_apply": "Kortere versie gebruiken",
+    "plan_apply_title": "Deze regel vervangen door de voorgestelde kortere versie: “{{text}}”",
+    "plan_impossible": "Past niet +{{seconds}}s",
+    "plan_impossible_title": "Verwachte spraak ≈{{est}}s bij {{avail}}s beschikbare tijd. Ongeveer {{seconds}}s kan niet worden opgevangen; de audio zou worden afgekapt. Kort de tekst in vóór het genereren.",
+    "plan_tight": "Past maar net",
+    "plan_tight_title": "Verwachte spraak ≈{{est}}s bij {{avail}}s beschikbare tijd. Slim passend maken kan dit opvangen door hoorbaar snellere spraak of tragere video. Kort de tekst in voor een beter resultaat."
   },
   "timeline": {
     "track_label": "Segmenttijdlijn",
@@ -1861,6 +1881,7 @@
     "hint": "8 stappen · snelle preview"
   },
   "header": {
+    "speech": "Spraak",
     "kicker_studio": "Studio",
     "kicker_library": "Bibliotheek",
     "kicker_preferences": "Voorkeuren",
@@ -1967,6 +1988,7 @@
     "preview_voice": "Voorbeeldstem"
   },
   "checkpoint": {
+    "timing_review": "{{count}} segmenten vereisen controle van de timing",
     "asr_title": "Afschriften klaar",
     "asr_cta": "Vertalen",
     "asr_hint": "Los eventuele ASR-fouten nu op: strakke dictie bespaart TTS-pogingen later.",
@@ -1977,7 +1999,13 @@
     "done_hint": "Controleer de timing en synchronisatieverhoudingen. Pas een willekeurige regel aan en druk op \"Regen gewijzigd\" voor een snelle gedeeltelijke herhaling.",
     "segment_one": "{{count}} segment",
     "segment_other": "{{count}} segmenten",
-    "dismiss_title": "Afsluiten — verschijnt pas opnieuw in deze fase als u opnieuw laadt"
+    "dismiss_title": "Afsluiten — verschijnt pas opnieuw in deze fase als u opnieuw laadt",
+    "timing_review_one": "{{count}} segment moet op timing worden gecontroleerd",
+    "timing_review_other": "{{count}} segmenten vereisen controle van de timing",
+    "timing_review_zero": "{{count}} segmenten vereisen controle van de timing",
+    "timing_review_two": "{{count}} segmenten vereisen controle van de timing",
+    "timing_review_few": "{{count}} segmenten vereisen controle van de timing",
+    "timing_review_many": "{{count}} segmenten vereisen controle van de timing"
   },
   "compare": {
     "title": "A/B-stemvergelijking",
@@ -2077,7 +2105,10 @@
     "voice_previews_checked": "gecontroleerd {{when}}",
     "voice_previews_never": "nog niet gecontroleerd",
     "voice_previews_check": "Nu controleren",
-    "voice_previews_rejected": "Update van de stemgalerij geweigerd: {{message}}"
+    "voice_previews_rejected": "Update van de stemgalerij geweigerd: {{message}}",
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "Heb ik een licentie nodig voor interne tools?",
@@ -2369,7 +2400,10 @@
     "hf_token_saved_fast": "Knuffelgezicht-token opgeslagen — downloads zijn nu sneller",
     "hf_token_inline_prompt": "Versnel downloads met een gratis Hugging Face-token",
     "hf_token_inline_ph": "Plak het hf_…-token (optioneel)",
-    "hf_token_get_short": "Ontvang er één gratis →"
+    "hf_token_get_short": "Ontvang er één gratis →",
+    "hf_token_active_using": "Hugging Face-token gevonden in {{source}} — {{masked}}",
+    "hf_token_replace": "Token vervangen…",
+    "hf_token_replace_warning": "Dit vervangt het token dat voor deze app is opgeslagen. Het oude token wordt niet ingetrokken."
   },
   "history": {
     "dub_meta": "{{segments}} segmenten · {{duration}} s",
@@ -2604,7 +2638,13 @@
   },
   "waveform": {
     "source_missing": "Bronmedia ontbreken: dit bestand is mogelijk verplaatst of verwijderd. Upload de video opnieuw om door te gaan.",
-    "load_failed": "Kan audio uit dit bestand niet laden"
+    "load_failed": "Kan audio uit dit bestand niet laden",
+    "controls": "Afspeelbediening",
+    "restart": "Afspelen opnieuw starten",
+    "shortcuts": "J/K/L: terug, afspelen/pauze, vooruit",
+    "zoom": "Zoomniveau",
+    "timeline": "Tijdlijn van audiogolfvorm",
+    "loading": "Golfvorm laden…"
   },
   "tts": {
     "routingFallback": "Draait op CPU: deze engine heeft geen GPU-pad op uw machine, dus de generatie zal langzamer zijn. {{reason}}",
@@ -2738,5 +2778,9 @@
     "transcript": "Wat er is gehoord",
     "result_kicker": "Geconverteerde take",
     "need_source_and_voice": "Voeg eerst een bronclip toe en kies een doelstem."
+  },
+  "player": {
+    "pause": "Pauzeren",
+    "play": "Afspelen"
   }
 }

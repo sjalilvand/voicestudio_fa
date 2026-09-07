@@ -147,3 +147,12 @@ There's no "revert update" flow for clients — they'll only see a *newer* versi
 3. Clients auto-update to the "new" v0.2.1 which is actually the old code.
 
 Ugly but it works. Better plan: test with Option B above before publishing the draft.
+
+## Retrying a partially published build
+
+Use GitHub Actions **Re-run failed jobs** for the same release run. On retries,
+the workflow removes only the current version's installers for that job's target
+before Tauri uploads them again. A macOS retry also replaces that architecture's
+versionless updater archive. Other versions, sibling platforms, and updater
+manifests remain intact. Inventory or deletion permission/network failures stop
+the job instead of hiding an upload collision.

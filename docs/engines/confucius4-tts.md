@@ -88,3 +88,13 @@ sr = model.sample_rate  # 22050
 - ✅ **Sidecar logic unit-tested** (`tests/test_confucius4_sidecar.py`):
   language normalization, tensor→PCM (mono/stereo/clip), config-path
   resolution, clone sys.path injection, wire framing, synthesize dispatch.
+
+## Accelerator routing
+
+The sidecar passes a runtime-available CUDA/ROCm, XPU, or registered NPU
+through upstream's device-aware model loading. The engine venv needs a matching
+PyTorch/vendor runtime, also noted in the catalogue install hint. XPU/NPU selection is covered by mocked loader and routing
+tests; this change does not certify synthesis on physical XPU/NPU hardware.
+MPS keeps the existing CPU fallback described in the validation record above.
+If modern accelerator detection or the legacy CUDA probe raises, loading falls
+back to CPU instead of aborting before model construction.

@@ -35,11 +35,11 @@ class _HFTokenBody(BaseModel):
     token: str = Field(..., min_length=1, description="HuggingFace access token")
 
 
-def _state_response() -> dict:
+def _state_response(*, validate: bool = False) -> dict:
     """Return the same shape the React panel renders. Never includes raw token."""
     from services import token_resolver
 
-    s = token_resolver.state()
+    s = token_resolver.state(validate=validate)
     return {
         "active": s["active"],
         "sources": [asdict(row) for row in s["sources"]],
@@ -65,8 +65,7 @@ def save_hf_token(body: _HFTokenBody):
 
 @router.delete("/hf-token")
 def clear_hf_token(also_clear_hf_cli: bool = Query(False)):
-    """Clear the App-source token. Optionally also call huggingface_hub.logout
-    to clear the canonical HF file. Returns the updated cascade state."""
+    """Clear the App token and optionally recognized local Hub token files."""
     from services import token_resolver
     try:
         token_resolver.clear_app_token(also_clear_hf_cli=also_clear_hf_cli)
@@ -82,13 +81,12 @@ def get_hf_token_state(fresh: bool = Query(False)):
 
     ``fresh=1`` drops the resolver's whoami validation cache first so the
     response re-runs whoami for every source — this is what the panel's
-    "Test now" button sends. Plain GETs (panel mounts) keep the 300s cache
-    so repeat Settings visits don't hammer the HF API.
+    "Test now" button sends. Plain GETs only inspect local token presence.
     """
     from services import token_resolver
     if fresh:
         token_resolver.invalidate_cache()
-    return _state_response()
+    return _state_response(validate=fresh)
 
 
 # ── Performance settings (INST-12) ────────────────────────────────────────
@@ -150,7 +148,7 @@ def _compute_device_state() -> dict:
     caps = device_caps.detect_host_caps()
     env_pin = (os.environ.get("OMNIVOICE_DEVICE") or "").strip().lower()
     auto_family = next(
-        (f for f in ("cuda", "rocm", "xpu", "mps") if f in caps.available_families),
+        (f for f in device_caps.ACCELERATOR_PRIORITY if f in caps.available_families),
         "cpu",
     )
     value = device_caps.requested_device_override()

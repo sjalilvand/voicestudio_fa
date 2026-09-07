@@ -6,7 +6,7 @@
     "clear_confirm": "VoiceStudio를 다시 열 수 있도록 저장된 스토리 및 오디오북 프로젝트와 저장하지 않은 초안을 모두 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?"
   },
   "backendUnreachable": {
-    "contact_recent": "{{ago}} 전까지는 응답하다가 응답을 멈췄습니다 — 요청 처리 중에 크래시했거나 강제 종료되었을 가능성이 큽니다.",
+    "contact_recent": "{{ago}} 전까지는 응답하다가 응답을 멈췄으며, 크래시는 기록되지 않았습니다 — 따라서 아직 살아 있지만 엔진을 붙잡고 있는 무거운 작업에서 멈춰 있을 수 있습니다.",
     "contact_never": "이번 세션에서 한 번도 응답하지 않았습니다 — 아예 시작되지 않았을 수 있습니다.",
     "dev": "로컬 VoiceStudio 백엔드에 연결할 수 없습니다. {{contact}} `bun run dev`에서는 백엔드가 자동 리로드로 실행되므로, 파일 변경(요청 도중 저장 포함)이 백엔드를 재시작하고 연결을 끊습니다. 먼저 작업을 다시 시도하세요. 리로드였다면 바로 됩니다. 계속 실패하면 `bun run dev`를 실행한 터미널의 Python 트레이스백이나 종료 메시지, 그리고 VoiceStudio 데이터 폴더의 omnivoice.log를 확인하세요.",
     "server": "VoiceStudio 백엔드 서버에 연결할 수 없습니다. {{contact}} 서버 로그에서 원인을 확인하세요(예: `docker logs <container>` 또는 `journalctl`) — Docker가 이 페이지를 제공하는 경우 백엔드와 함께 페이지 자체가 중단될 수 있습니다.",
@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "재설정 실패: {{message}}",
     "reset_longform_failed": "VoiceStudio에서 저장된 프로젝트를 안전하게 지우지 못했습니다. 프로젝트 데이터는 변경되지 않았습니다. 저장 공간을 확보하거나 앱을 다시 시작한 후 다시 시도하세요.",
     "cancel": "취소",
-    "hf_token_also_clear": "함께 지우기",
+    "hf_token_also_clear": "저장된 HuggingFace CLI 토큰 파일도 삭제",
     "hf_token_clear_btn": "토큰 지우기",
     "hf_token_clear_confirm": "앱 소스 HuggingFace 토큰을 지우시겠습니까?",
     "hf_token_clear_dialog": "토큰 지우기",
@@ -334,6 +334,7 @@
     "device_family_cuda": "NVIDIA GPU (CUDA)",
     "device_family_rocm": "AMD GPU (ROCm)",
     "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
     "device_load_failed": "장치 설정을 불러오지 못했습니다",
@@ -573,7 +574,8 @@
     "generate_timeout_saved": "저장되었습니다. 새 예산을 적용하려면 VoiceStudio를 재시작하세요.",
     "generate_timeout_shadowed_badge": "외부에서 재정의됨",
     "generate_timeout_shadowed_note": "VoiceStudio 외부의 환경 변수(셸, .env 파일 또는 컨테이너)가 현재 이 값을 설정하고 있습니다 — 해당 변수가 제거될 때까지 여기에 저장한 값은 무시됩니다.",
-    "generate_timeout_shadowed_toast": "저장되었지만, VoiceStudio 외부의 환경 변수가 현재 이 값을 설정하고 있습니다 — 해당 변수가 제거될 때까지 계속 사용됩니다."
+    "generate_timeout_shadowed_toast": "저장되었지만, VoiceStudio 외부의 환경 변수가 현재 이 값을 설정하고 있습니다 — 해당 변수가 제거될 때까지 계속 사용됩니다.",
+    "hf_token_not_checked": "테스트 안 함"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -775,6 +777,9 @@
     "convert_desc": "한 번 말하면 다른 목소리로 들립니다. 음성에서 음성으로, 완전히 로컬."
   },
   "clone": {
+    "text_label": "텍스트",
+    "paste": "붙여넣기",
+    "paste_failed": "클립보드 접근이 차단되었습니다. 키보드로 텍스트 입력란에 직접 붙여넣으세요.",
     "prompt": "프롬프트",
     "language": "언어",
     "steps": "단계",
@@ -879,7 +884,8 @@
     "cat_AccentDialect": "억양 또는 방언",
     "accent_dialect_hint": "둘 중 하나만, 동시에는 불가",
     "reset_to_description": "설명에 따라 재설정",
-    "chips_more": "{{count}}개 더 보기…"
+    "chips_more": "{{count}}개 더 보기…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "앱",
@@ -1260,6 +1266,7 @@
     "consent_revoked": "인증이 취소되었습니다."
   },
   "dub": {
+    "timing_label": "타이밍",
     "install_engine_pkg": "{{pkg}} 설치",
     "needs_install_short": "설치 필요",
     "install_popover_title": "이 엔진 설치",
@@ -2189,6 +2196,7 @@
     "hint": "8단계 · 빠른 미리보기"
   },
   "header": {
+    "speech": "음성",
     "kicker_studio": "스튜디오",
     "kicker_library": "라이브러리",
     "kicker_preferences": "환경설정",
@@ -2296,6 +2304,7 @@
     "preview_voice": "음성 미리보기"
   },
   "checkpoint": {
+    "timing_review": "{{count}}개 구간의 타이밍을 검토해야 합니다",
     "asr_title": "전사본 준비됨",
     "asr_cta": "번역",
     "asr_hint": "지금 ASR 오류를 수정하세요 — 표현을 정확히 다듬으면 나중에 TTS 재시도 횟수를 줄일 수 있습니다.",
@@ -2306,7 +2315,13 @@
     "done_hint": "타이밍과 동기화 비율을 검토하세요. 빠른 부분 재실행을 위해 라인을 조정하고 \"변경됨 재생성\"을 눌러보세요.",
     "segment_one": "{{count}} 세그먼트",
     "segment_other": "{{count}} 세그먼트",
-    "dismiss_title": "닫기 — 새로고침할 때까지 이 단계에서는 다시 나타나지 않습니다."
+    "dismiss_title": "닫기 — 새로고침할 때까지 이 단계에서는 다시 나타나지 않습니다.",
+    "timing_review_one": "세그먼트 {{count}}개의 타이밍 검토가 필요합니다",
+    "timing_review_other": "{{count}}개 구간의 타이밍을 검토해야 합니다",
+    "timing_review_zero": "{{count}}개 구간의 타이밍을 검토해야 합니다",
+    "timing_review_two": "{{count}}개 구간의 타이밍을 검토해야 합니다",
+    "timing_review_few": "{{count}}개 구간의 타이밍을 검토해야 합니다",
+    "timing_review_many": "{{count}}개 구간의 타이밍을 검토해야 합니다"
   },
   "compare": {
     "title": "A/B 음성 비교",
@@ -2788,6 +2803,9 @@
     "hf_token_inline_prompt": "무료 Hugging Face 토큰으로 다운로드 속도를 높이세요",
     "hf_token_inline_ph": "hf_… 토큰 붙여넣기(선택 사항)",
     "hf_token_get_short": "하나를 무료로 받으세요 →",
+    "hf_token_active_using": "{{source}}에서 Hugging Face 토큰 발견 — {{masked}}",
+    "hf_token_replace": "토큰 교체…",
+    "hf_token_replace_warning": "이 앱에 저장된 토큰을 교체합니다. 기존 토큰은 폐기되지 않습니다.",
     "lib_install_failed": "설치 실패: {{error}}",
     "lib_retry": "다시 시도"
   },
@@ -3024,7 +3042,13 @@
   },
   "waveform": {
     "source_missing": "소스 미디어 누락 — 이 파일이 이동되었거나 삭제되었을 수 있습니다. 계속하려면 동영상을 다시 업로드하세요.",
-    "load_failed": "이 파일에서 오디오를 로드할 수 없습니다."
+    "load_failed": "이 파일에서 오디오를 로드할 수 없습니다.",
+    "controls": "재생 컨트롤",
+    "restart": "처음부터 재생",
+    "shortcuts": "J/K/L: 되감기, 재생/일시 정지, 앞으로",
+    "zoom": "확대 수준",
+    "timeline": "오디오 파형 타임라인",
+    "loading": "파형 불러오는 중…"
   },
   "tts": {
     "routingFallback": "CPU에서 실행 — 이 엔진은 컴퓨터에 GPU 경로가 없으므로 생성 속도가 느려집니다. {{reason}}",

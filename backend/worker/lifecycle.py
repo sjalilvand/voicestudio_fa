@@ -32,6 +32,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Iterable, Optional
 
+from worker.deadlines import Deadlines
 from worker.clock import resolve
 from worker.errors import ErrorClass, WorkerError
 
@@ -223,6 +224,9 @@ class Attempt:
     progress: float = 0.0
     stage: str = ""
     error: Optional[WorkerError] = None
+
+    # Snapshot the lease policy granted at dispatch, including after restart.
+    deadlines: Optional[Deadlines] = None
 
     def matches(self, *, session_epoch: Optional[int] = None) -> bool:
         """Fence check: reject messages from a superseded session."""

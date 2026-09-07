@@ -523,3 +523,163 @@ def test_generation_proxy_forwards_native_controls_and_seed():
         "class_temperature": 0.8,
         "seed": 321,
     })]
+
+
+def test_timeout_reaps_captured_process_before_recv_returns(monkeypatch):
+    import threading
+
+    class Process:
+        def __init__(self):
+            self.killed = threading.Event()
+            self.reaped = False
+            self.wait_entered = threading.Event()
+            self.release_wait = threading.Event()
+
+        def kill(self):
+            self.killed.set()  # EOF may arrive before the process is reaped.
+
+        def wait(self, timeout):
+            assert timeout is not None
+            self.wait_entered.set()
+            assert self.release_wait.wait(2)
+            self.reaped = True
+            return -9
+
+    proc = Process()
+    backend = OmniVoiceSubprocessBackend()
+    backend._proc = proc
+
+    def recv():
+        assert proc.killed.wait(2)
+        return None
+
+    monkeypatch.setattr(backend, '_recv', recv)
+    returned = threading.Event()
+    results = []
+
+    def receive():
+        results.append(backend._recv_with_timeout(0.01))
+        returned.set()
+
+    reader = threading.Thread(target=receive)
+    reader.start()
+    try:
+        assert proc.wait_entered.wait(2)
+        assert not returned.wait(0.05), "EOF must not release the caller before process cleanup"
+    finally:
+        proc.release_wait.set()
+        reader.join(2)
+        backend._proc = None
+    assert not reader.is_alive()
+    assert returned.is_set()
+    assert results == [None]
+    assert proc.reaped
+
+
+def test_timeout_never_kills_a_replacement_process(monkeypatch):
+    from unittest.mock import Mock
+    import services.subprocess_backend as module
+
+    class ManualTimer:
+        def __init__(self, _timeout, callback, args=()):
+            self.callback = lambda: callback(*args)
+            self.daemon = False
+
+        def start(self):
+            pass
+
+        def cancel(self):
+            pass
+
+        def join(self):
+            pass
+
+    timers = []
+    def timer(*args, **kwargs):
+        result = ManualTimer(*args, **kwargs)
+        timers.append(result)
+        return result
+
+    monkeypatch.setattr(module.threading, 'Timer', timer)
+    backend = OmniVoiceSubprocessBackend()
+    original, replacement = Mock(), Mock()
+    backend._proc = original
+
+    def recv():
+        backend._proc = replacement
+        timers[0].callback()
+        return None
+
+    monkeypatch.setattr(backend, '_recv', recv)
+    try:
+        backend._recv_with_timeout(1)
+        original.kill.assert_called_once()
+        replacement.kill.assert_not_called()
+    finally:
+        backend._proc = None
+
+
+@pytest.mark.parametrize("failure", ["wait", "kill"])
+def test_timeout_quarantine_blocks_reuse_and_retains_cleanup_handle(failure):
+    class StuckProcess:
+        stdin = None
+        def __init__(self):
+            self.exited = False
+            self.kill_calls = 0
+        def poll(self):
+            return 0 if self.exited else None
+        def kill(self):
+            self.kill_calls += 1
+            if failure == "kill" and not self.exited:
+                raise PermissionError("kill failed")
+        def terminate(self):
+            pass
+        def wait(self, timeout):
+            if not self.exited:
+                raise subprocess.TimeoutExpired("stuck-sidecar", timeout)
+            return 0
+
+    backend = OmniVoiceSubprocessBackend()
+    proc = StuckProcess()
+    backend._proc = proc
+    try:
+        backend._timeout_kill(proc)
+        with pytest.raises(RuntimeError, match="still stopping"):
+            backend._spawn()
+        backend.shutdown()
+        # Even after shutdown clears the current slot, ownership survives;
+        # retry must not silently start a second process next to this one.
+        before = proc.kill_calls
+        with pytest.raises(RuntimeError, match="still stopping"):
+            backend._spawn()
+        assert proc.kill_calls > before
+    finally:
+        proc.exited = True
+        backend.shutdown()
+
+
+def test_timeout_quarantine_does_not_clear_or_kill_replacement():
+    from unittest.mock import Mock
+    backend = OmniVoiceSubprocessBackend()
+    original = Mock()
+    original.wait.side_effect = subprocess.TimeoutExpired("old-sidecar", 2)
+    replacement = Mock()
+    replacement.poll.return_value = None
+    backend._proc = replacement
+    try:
+        backend._timeout_kill(original)
+        with pytest.raises(RuntimeError, match="still stopping"):
+            backend._spawn()
+        assert backend._proc is replacement
+        replacement.kill.assert_not_called()
+        # Once the captured owner is reaped, reuse of the healthy replacement
+        # is allowed without starting or terminating another process.
+        original.wait.side_effect = None
+        original.wait.return_value = 0
+        backend._spawn()
+        assert backend._proc is replacement
+        replacement.kill.assert_not_called()
+    finally:
+        original.wait.side_effect = None
+        backend._proc = None
+        backend.shutdown()

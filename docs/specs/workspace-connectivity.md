@@ -158,3 +158,12 @@ One **Export** path for every audio/video asset, surfaced via `<UseInMenu>` → 
 - **OmniDrive as home?** This spec keeps **Launchpad** as home and OmniDrive as the asset library. If you'd rather OmniDrive *be* the landing hub (everything starts from "your stuff"), that's a Launchpad/OmniDrive merge — say so and it folds into A1.
 - **Drag-and-drop vs menu.** v1 ships the `<UseInMenu>` dropdown (discoverable, keyboard-friendly). Drag an asset card onto a rail item is a later additive layer over the same `sendTo`.
 - **`GET /assets` endpoint.** v1 derives assets client-side; promote to a backend read model only if OmniDrive paging needs it.
+
+## Workspace control behavior
+
+Conversion keeps its method tab active until the request settles, including failures.
+Engine quick-switch triggers and expanded choices use the same formatted model name.
+Dubbing fit badges, explanations, shorter-rewrite actions, playback controls,
+and engine residency labels are localized in every supported UI language.
+
+Compact engine-family badges retain the standard TTS, ASR, and LLM abbreviations.

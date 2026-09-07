@@ -6,7 +6,7 @@
     "clear_confirm": "Esto elimina permanentemente todos los proyectos guardados de Historias y Audiolibros y cualquier borrador sin guardar para que VoiceStudio pueda volver a abrirse. No se puede deshacer. ¿Continuar?"
   },
   "backendUnreachable": {
-    "contact_recent": "Estaba respondiendo hace {{ago}} y dejó de responder — lo más probable es que se haya bloqueado o haya sido terminado en mitad de una petición.",
+    "contact_recent": "Respondía hace {{ago}} y luego dejó de responder, y no se registró ningún fallo — así que puede seguir vivo pero atascado en una tarea pesada que mantiene ocupado el motor.",
     "contact_never": "No ha respondido en toda esta sesión — puede que nunca haya llegado a iniciarse.",
     "dev": "No se puede contactar con el backend local de VoiceStudio. {{contact}} Con `bun run dev` el backend se ejecuta con recarga automática: cualquier cambio de archivo — incluido guardar mientras había una petición en curso — lo reinicia y corta la conexión. Reintente la acción primero; si fue una recarga, funcionará. Si sigue fallando, revise la terminal con `bun run dev` por un traceback de Python o un mensaje de salida, y omnivoice.log en su carpeta de datos de VoiceStudio.",
     "server": "No se puede conectar con el servidor backend de VoiceStudio. {{contact}} Revisa los registros del servidor para encontrar la causa (p. ej. `docker logs <contenedor>` o `journalctl`) — y ten en cuenta que si Docker sirve esta página, la propia página puede caerse junto con el backend.",
@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "Error al restablecer: {{message}}",
     "reset_longform_failed": "VoiceStudio no pudo borrar de forma segura los proyectos guardados. Los datos de tus proyectos no se modificaron; libera espacio de almacenamiento o reinicia la aplicación y vuelve a intentarlo.",
     "cancel": "Cancelar",
-    "hf_token_also_clear": "Borrar también",
+    "hf_token_also_clear": "Borrar también los archivos de tokens guardados de HuggingFace CLI",
     "hf_token_clear_btn": "Borrar token",
     "hf_token_clear_confirm": "¿Borrar el token de HuggingFace guardado por la aplicación?",
     "hf_token_clear_dialog": "Borrar token",
@@ -334,6 +334,7 @@
     "device_family_cuda": "NVIDIA GPU (CUDA)",
     "device_family_rocm": "AMD GPU (ROCm)",
     "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
     "device_load_failed": "No se pudo cargar el ajuste del dispositivo",
@@ -348,7 +349,11 @@
     "generate_timeout_saved": "Guardado. Reinicia VoiceStudio para que el nuevo presupuesto surta efecto.",
     "generate_timeout_shadowed_badge": "Anulado externamente",
     "generate_timeout_shadowed_note": "Una variable de entorno externa a VoiceStudio (shell, archivo .env o contenedor) está estableciendo este valor actualmente — el valor guardado aquí se ignora hasta que se elimine esa variable.",
-    "generate_timeout_shadowed_toast": "Guardado, pero una variable de entorno externa a VoiceStudio está estableciendo este valor actualmente — seguirá usándose hasta que se elimine esa variable."
+    "generate_timeout_shadowed_toast": "Guardado, pero una variable de entorno externa a VoiceStudio está estableciendo este valor actualmente — seguirá usándose hasta que se elimine esa variable.",
+    "hf_token_not_checked": "Sin probar",
+    "hf_source_app_label": "VoiceStudio (cifrado, recomendado)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "Variable de entorno"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -539,6 +544,9 @@
     "convert_desc": "Dilo una vez y escúchalo con otra voz. De voz a voz, totalmente local."
   },
   "clone": {
+    "text_label": "Texto",
+    "paste": "Pegar",
+    "paste_failed": "Se bloqueó el acceso al portapapeles. Pega directamente en el campo de texto con el teclado.",
     "prompt": "rápido",
     "language": "Idioma",
     "steps": "Pasos",
@@ -643,7 +651,8 @@
     "cat_AccentDialect": "Acento o dialecto",
     "accent_dialect_hint": "uno u otro, nunca ambos",
     "reset_to_description": "Restablecer según la descripción",
-    "chips_more": "{{count}} más…"
+    "chips_more": "{{count}} más…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "Aplicación",
@@ -823,7 +832,8 @@
     "familyDesc_tts": "Convierte el guion en voz. Studio, Doblaje y Lotes usan el motor marcado como activo.",
     "familyDesc_asr": "Convierte audio en texto para transcripciones, doblaje, subtítulos y dictado.",
     "familyDesc_llm": "Asistente de texto opcional para traducciones y reescrituras. «Desactivado» omite esos pasos.",
-    "mpsLongText": "{{engine}} se ejecuta en Apple Silicon (MPS) aquí y este texto es largo: la generación puede superar el límite de tiempo. Un texto más corto, o dividirlo en varias tomas, será mucho más rápido."
+    "mpsLongText": "{{engine}} se ejecuta en Apple Silicon (MPS) aquí y este texto es largo: la generación puede superar el límite de tiempo. Un texto más corto, o dividirlo en varias tomas, será mucho más rápido.",
+    "inMemory": "En memoria"
   },
   "capture": {
     "desc": "Las teclas de acceso rápido globales solo funcionan en la aplicación de escritorio. La interfaz de usuario web utiliza un acceso directo <1>Ctrl+Shift+Espacio</1> en la página mientras la ventana tiene el foco.",
@@ -961,6 +971,9 @@
     "consent_revoked": "Verificación revocada"
   },
   "dub": {
+    "timing_label": "Sincronización",
+    "timing_concise": "Conciso",
+    "timing_stretch_video": "Estirar vídeo",
     "install_engine_pkg": "Instalar {{pkg}}",
     "needs_install_short": "Requiere instalación",
     "install_popover_title": "Instalar este motor",
@@ -1171,7 +1184,8 @@
     "languages_pending": "Pendiente",
     "live_preview": "Vista previa en vivo",
     "live_preview_title": "Escucha una línea mientras la editas: el segmento editado transmite TTS con su voz de CAST tras una breve pausa. Solo reproducción: no se guarda nada y la exportación se renderiza a calidad completa.",
-    "live_preview_pick_voice": "Asigna una voz de CAST a esta línea o a su hablante para oír la vista previa en vivo."
+    "live_preview_pick_voice": "Asigna una voz de CAST a esta línea o a su hablante para oír la vista previa en vivo.",
+    "autofit_quality": "Ajuste automático"
   },
   "glossary": {
     "title": "Glosario",
@@ -1270,7 +1284,13 @@
     "qc_verify": "verificar",
     "qc_verify_title": "Se escuchó ASR en el segundo paso: \"{{heard}}\": vuelva a escuchar o doblar esta línea.",
     "live_play_title": "Transmitir esta línea ahora (vista previa en vivo)",
-    "live_stop_title": "Detener la vista previa en vivo"
+    "live_stop_title": "Detener la vista previa en vivo",
+    "plan_apply": "Usar versión más corta",
+    "plan_apply_title": "Sustituir esta línea por la versión más corta sugerida: «{{text}}»",
+    "plan_impossible": "No cabe +{{seconds}}s",
+    "plan_impossible_title": "Voz estimada ≈{{est}}s frente a {{avail}}s disponibles. Sobran unos {{seconds}}s que ningún ajuste puede compensar; se recortaría el audio. Acorta el texto antes de generar.",
+    "plan_tight": "Ajuste justo",
+    "plan_tight_title": "Voz estimada ≈{{est}}s frente a {{avail}}s disponibles. El ajuste inteligente puede compensarlo acelerando la voz de forma audible o ralentizando el vídeo. Acorta el texto para mejorar el resultado."
   },
   "timeline": {
     "track_label": "Línea de tiempo de segmentos",
@@ -1861,6 +1881,7 @@
     "hint": "8 pasos · vista previa rápida"
   },
   "header": {
+    "speech": "Voz",
     "kicker_studio": "Estudio",
     "kicker_library": "Biblioteca",
     "kicker_preferences": "Preferencias",
@@ -1967,6 +1988,7 @@
     "preview_voice": "Vista previa de voz"
   },
   "checkpoint": {
+    "timing_review": "{{count}} segmentos necesitan revisión de tiempos",
     "asr_title": "Transcripciones listas",
     "asr_cta": "Traducir",
     "asr_hint": "Corrija cualquier error de ASR ahora: la dicción precisa ahorra intentos de TTS más adelante.",
@@ -1977,7 +1999,13 @@
     "done_hint": "Revise las proporciones de sincronización y sincronización. Modifica cualquier línea y presiona \"Regeneración cambiada\" para una rehacer parcial rápida.",
     "segment_one": "{{count}} segmento",
     "segment_other": "{{count}} segmentos",
-    "dismiss_title": "Descartar: no volverá a aparecer en esta etapa hasta que se vuelva a cargar"
+    "dismiss_title": "Descartar: no volverá a aparecer en esta etapa hasta que se vuelva a cargar",
+    "timing_review_one": "{{count}} segmento necesita revisión de tiempos",
+    "timing_review_other": "{{count}} segmentos necesitan revisión de tiempos",
+    "timing_review_zero": "{{count}} segmentos necesitan revisión de tiempos",
+    "timing_review_two": "{{count}} segmentos necesitan revisión de tiempos",
+    "timing_review_few": "{{count}} segmentos necesitan revisión de tiempos",
+    "timing_review_many": "{{count}} segmentos necesitan revisión de tiempos"
   },
   "compare": {
     "title": "Comparación de voz A/B",
@@ -2077,7 +2105,10 @@
     "voice_previews_checked": "comprobado {{when}}",
     "voice_previews_never": "sin comprobar aún",
     "voice_previews_check": "Comprobar ahora",
-    "voice_previews_rejected": "Actualización de la galería de voces rechazada: {{message}}"
+    "voice_previews_rejected": "Actualización de la galería de voces rechazada: {{message}}",
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "¿Necesito una licencia para herramientas internas?",
@@ -2369,7 +2400,10 @@
     "hf_token_saved_fast": "Token de Hugging Face guardado: las descargas ahora son más rápidas",
     "hf_token_inline_prompt": "Acelere las descargas con un token Hugging Face gratuito",
     "hf_token_inline_ph": "Pegue el token hf_… (opcional)",
-    "hf_token_get_short": "Consigue uno gratis →"
+    "hf_token_get_short": "Consigue uno gratis →",
+    "hf_token_active_using": "Token de Hugging Face encontrado en {{source}} — {{masked}}",
+    "hf_token_replace": "Reemplazar token…",
+    "hf_token_replace_warning": "Esto reemplaza el token guardado para esta aplicación. No revoca el token anterior."
   },
   "history": {
     "dub_meta": "{{segments}} segmentos · {{duration}} s",
@@ -2604,7 +2638,13 @@
   },
   "waveform": {
     "source_missing": "Faltan medios de origen: es posible que este archivo se haya movido o se haya eliminado. Vuelve a subir el vídeo para continuar.",
-    "load_failed": "No se pudo cargar el audio de este archivo"
+    "load_failed": "No se pudo cargar el audio de este archivo",
+    "controls": "Controles de reproducción",
+    "restart": "Reiniciar reproducción",
+    "shortcuts": "J/K/L: retroceder, reproducir/pausar, avanzar",
+    "zoom": "Nivel de zoom",
+    "timeline": "Línea de tiempo de la onda de audio",
+    "loading": "Cargando forma de onda…"
   },
   "tts": {
     "routingFallback": "Ejecutándose en CPU: este motor no tiene una ruta de GPU en su máquina, por lo que la generación será más lenta. {{reason}}",
@@ -2738,5 +2778,9 @@
     "transcript": "Lo que se oyó",
     "result_kicker": "Toma convertida",
     "need_source_and_voice": "Añade primero un clip de origen y elige una voz de destino."
+  },
+  "player": {
+    "pause": "Pausar",
+    "play": "Reproducir"
   }
 }

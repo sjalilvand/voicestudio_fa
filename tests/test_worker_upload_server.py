@@ -808,15 +808,20 @@ async def test_upload_write_does_not_block_revocation_or_publish_after_it(
     real_write_all = server_module._write_all
 
     def blocked_write(handle, data):
+        watchdog.start()
         write_started.set()
-        if not release_write.wait(timeout=2):
+        if not release_write.wait(timeout=10):
             raise TimeoutError("test did not release the result upload write")
         real_write_all(handle, data)
 
     monkeypatch.setattr(server_module, "_write_all", blocked_write)
-    watchdog = Timer(0.5, release_write.set)
-    watchdog.start()
-    started_at = asyncio.get_running_loop().time()
+    watchdog_fired = Event()
+
+    def unblock_stalled_loop():
+        watchdog_fired.set()
+        release_write.set()
+
+    watchdog = Timer(5, unblock_stalled_loop)
     uploading = asyncio.create_task(
         plane.upload(_chunks(_ref(plane, task, attempt, payload=payload), payload))
     )
@@ -826,9 +831,10 @@ async def test_upload_write_does_not_block_revocation_or_publish_after_it(
             await asyncio.sleep(0)
 
     try:
-        await asyncio.wait_for(wait_for_write(), timeout=1)
+        await asyncio.wait_for(wait_for_write(), timeout=10)
         assert plane.servicer.revoke_worker_sessions(plane.worker_id) == 1
-        assert asyncio.get_running_loop().time() - started_at < 0.2
+        assert not watchdog_fired.is_set(), "upload write stalled the event loop"
+        assert not release_write.is_set(), "revocation waited for the upload write"
     finally:
         release_write.set()
         watchdog.cancel()

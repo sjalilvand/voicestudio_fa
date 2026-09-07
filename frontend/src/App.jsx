@@ -1,3 +1,4 @@
+import { firstSoundRequest } from './utils/firstSound';
 import React, {
   useState,
   useRef,
@@ -699,16 +700,10 @@ function App() {
     if (!pending) return;
     (async () => {
       try {
-        const fd = new FormData();
-        fd.append('text', i18n.t('firstrun.first_sound_text'));
-        // Functional model prompt (not user-facing copy) — keeps the demo
-        // voice warm without depending on seeded profiles.
-        fd.append('instruct', 'A warm, friendly narrator voice, medium pace');
-        fd.append('num_step', '16');
-        const res = await apiFetch(`${API}/generate`, {
-          method: 'POST',
-          body: fd,
-        });
+        const res = await apiFetch(
+          `${API}/generate`,
+          firstSoundRequest(i18n.t('firstrun.first_sound_text')),
+        );
         const blob = await res.blob();
         await playBlobAudio(blob, { label: i18n.t('player.generated_audio') });
         toast.success(i18n.t('firstrun.first_sound_done'), { duration: 7000 });

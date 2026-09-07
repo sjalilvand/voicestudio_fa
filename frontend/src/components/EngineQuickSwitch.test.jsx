@@ -39,11 +39,46 @@ function renderPicker(props = {}) {
 }
 
 describe('EngineQuickSwitch', () => {
+  it('embeds engine choices without another popup trigger', async () => {
+    renderPicker({ embedded: true });
+    expect(await screen.findByText('IndexTTS 2')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /active tts:/i })).not.toBeInTheDocument();
+  });
+  it('anchors the prominent menu to the left-hand engine button', async () => {
+    renderPicker({ prominent: true });
+    fireEvent.click(await screen.findByRole('button', { name: /active tts: omnivoice/i }));
+    expect(screen.getByRole('dialog')).toHaveClass('left-0');
+    expect(screen.getByRole('dialog')).not.toHaveClass('right-0');
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     listEngines.mockResolvedValue(inventory());
     listLoadedModels.mockResolvedValue({ models: [{ engine_id: 'omnivoice' }] });
   });
+
+  it.each(['VoiceStudio', 'VoiceStudio TTS', 'VoiceStudio (k2-fsa/OmniVoice)'])(
+    'formats the active name consistently for %s',
+    async (name) => {
+      const data = inventory();
+      data.tts.backends[0].display_name = name;
+      listEngines.mockResolvedValue(data);
+      const expected = name.replace('VoiceStudio', 'OmniVoice');
+      const { unmount } = renderPicker();
+      const trigger = await screen.findByRole('button', {
+        name: `Active TTS: ${expected}`,
+      });
+      expect(trigger).toHaveAttribute('title', `Active TTS: ${expected}`);
+      expect(trigger).toHaveTextContent(expected);
+      fireEvent.click(trigger);
+      expect(screen.getByRole('dialog')).not.toHaveTextContent('VoiceStudio');
+      unmount();
+      renderPicker({ embedded: true });
+      expect(await screen.findByRole('group')).not.toHaveTextContent('VoiceStudio');
+      expect(screen.getByRole('group')).toHaveTextContent('OmniVoice');
+    },
+  );
 
   it('lists only available engines and annotates residency', async () => {
     renderPicker();

@@ -115,3 +115,9 @@ dots.tts runs in a dedicated sidecar venv (it pins `transformers==4.57`,
 which conflicts with the parent's `transformers>=5.3`). For why that adds
 disk and how uv keeps the cost down, see
 [Engine venvs & disk usage](disk-usage.md).
+
+The upstream runtime selects CUDA or CPU internally. Automatic precision follows
+that selection: bfloat16 on CUDA, float32 otherwise, including XPU/NPU/MPS hosts
+where this runtime executes on CPU. `OMNIVOICE_DOTS_TTS_PRECISION` remains an
+explicit override. If the CUDA availability probe raises, the automatic precision
+default stays float32; upstream remains responsible for its device selection.

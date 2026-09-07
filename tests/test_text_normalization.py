@@ -65,6 +65,18 @@ _CHANGE_CASES = [
     ("French", "il a 42 chats", "il a quarante-deux chats"),
     ("French", "Mme Dupont arrive", "Madame Dupont arrive"),
     ("Russian", "у меня 42 кота", "у меня сорок два кота"),
+    # Digit ranges: the tilde has to be SPOKEN or the engine mashes the two
+    # numbers into one ("20~30초" was read as "이십삼"). Spacing is part of the
+    # per-language form — a Korean postposition binds to its numeral, Japanese
+    # and Chinese set no spaces, English needs them.
+    ("Korean", "대략 20~30초짜리", "대략 20에서 30초짜리"),
+    ("Korean", "가격은 20~30만원", "가격은 20에서 30만원"),
+    ("ko", "20~30초", "20에서 30초"),
+    ("Japanese", "20〜30分ぐらい", "20から30分ぐらい"),          # wave dash U+301C
+    ("Japanese", "20～30分ぐらい", "20から30分ぐらい"),          # fullwidth U+FF5E
+    ("Chinese", "大约需要20～30秒", "大约需要20到30秒"),
+    # EN runs the range through num2words afterwards, as it does any digit
+    ("English", "It takes 20~30 seconds", "It takes twenty to thirty seconds"),
     # Universal safety filters (language-independent)
     (None, "hello​ ‍world", "hello world"),
     (None, "too   many\t spaces", "too many spaces"),
@@ -124,6 +136,15 @@ _UNCHANGED_CASES = [
     ("English", "I said no. Fine."),            # the word "no.", not "number"
     ("English", "down main st. Anyway"),        # lowercase "st." is not Saint
     ("German", "es kostet 3,5 Euro"),           # decimal comma: ambiguous
+    # Digit ranges: only the tilde family is a range mark. Everything else that
+    # sits between digits means something other than "to".
+    ("Korean", "대략 20-30초"),                   # ASCII hyphen: also dates/phones
+    ("Korean", "2026-09-05 회의"),                # date
+    ("Korean", "010-1234-5678"),                 # phone number
+    ("Korean", "AB20~30CD"),                     # product code, not a range
+    ("Japanese", "そうですね〜"),                   # tilde not between digits
+    ("Vietnamese", "20~30 giây"),                # no verified spoken form
+    (None, "20~30초"),                           # no language given
     # Unsupported languages keep every digit (num2words unmapped)
     ("Japanese", "42 cats and 3.5 stars at 3:30"),
     ("Thai", "42 cats"),
@@ -428,3 +449,25 @@ def test_longform_cache_key_tracks_normalization_toggle(tmp_path, monkeypatch):
     assert path_on != path_off
     assert not was_cached_off
     assert seen_off == ["Dr. Smith has 2 cats"]  # raw text with the toggle off
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("-20~-10°C", "-20에서 -10°C"),
+    ("0.5~1.0초", "0.5에서 1.0초"),
+    ("1.20~30.5", "1.20에서 30.5"),
+    ("+.5 ~ +1.0", "+.5에서 +1.0"),
+    ("-0.5～+1.25", "-0.5에서 +1.25"),
+])
+def test_complete_signed_decimal_ranges(raw, expected):
+    assert normalize_text(raw, "ko") == expected
+    assert normalize_text(expected, "ko") == expected
+
+
+@pytest.mark.parametrize("raw", [
+    "20~30~40", "20 ~ 30 ~ 40", "20〜30～40", "20 ~ 30～40",
+    "1.2.3~4.5", "1,000~2,000", "--20~-10", "20~++30",
+    "AB-20~30CD", "1234567~20", "20~1234567", "1.1234567~2",
+    "[20~30]", "[0.5~1.0]",
+])
+def test_malformed_or_protected_ranges_remain_unchanged(raw):
+    assert normalize_text(raw, "ko") == raw

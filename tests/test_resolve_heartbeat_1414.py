@@ -210,8 +210,7 @@ def test_spawn_wraps_the_resolution(sb, monkeypatch):
             raise _StopAfterResolution
 
     monkeypatch.setattr(sb, "_heartbeat_while_resolving", _recording_heartbeat)
-    backend = _Backend.__new__(_Backend)
-    backend._proc = None
+    backend = _Backend()
     with pytest.raises(_StopAfterResolution):
         backend._spawn()
     assert resolved_inside.is_set()

@@ -6,7 +6,7 @@
     "clear_confirm": "VoiceStudio'nun yeniden açılabilmesi için kayıtlı tüm Hikâyeler ve Sesli Kitap projeleri ile kaydedilmemiş tüm taslaklar kalıcı olarak silinecek. Bu işlem geri alınamaz. Devam edilsin mi?"
   },
   "backendUnreachable": {
-    "contact_recent": "{{ago}} önce yanıt veriyordu, sonra yanıt vermeyi bıraktı — büyük olasılıkla bir istek sırasında çöktü veya sonlandırıldı.",
+    "contact_recent": "{{ago}} önce yanıt veriyordu, sonra yanıt vermeyi bıraktı ve herhangi bir çökme kaydedilmedi — yani hâlâ çalışıyor ama motoru meşgul eden ağır bir işte takılmış olabilir.",
     "contact_never": "Bu oturumda hiç yanıt vermedi — hiç başlamamış olabilir.",
     "dev": "Yerel VoiceStudio arka ucuna ulaşılamıyor. {{contact}} `bun run dev` ile arka uç otomatik yeniden yükleme ile çalışır: herhangi bir dosya değişikliği — bir istek sürerken kaydetmek dâhil — onu yeniden başlatır ve bağlantıyı koparır. Önce işlemi yeniden deneyin; yeniden yükleme olduysa çalışacaktır. Hata sürerse `bun run dev` çalıştıran terminalde bir Python izini veya çıkış mesajını ve VoiceStudio veri klasörünüzdeki omnivoice.log dosyasını kontrol edin.",
     "server": "VoiceStudio arka uç sunucusuna ulaşılamıyor. {{contact}} Nedenini görmek için sunucu günlüklerini kontrol edin (ör. `docker logs <container>` veya `journalctl`) — ve bu sayfayı Docker sunuyorsa sayfanın kendisinin de arka uçla birlikte kapanabileceğini unutmayın.",
@@ -159,7 +159,7 @@
     "shortcut_reset_failed": "Sıfırlama başarısız oldu: {{message}}",
     "reset_longform_failed": "VoiceStudio kaydedilmiş projeleri güvenli bir şekilde temizleyemedi. Proje verileriniz değiştirilmedi; depolama alanı açın veya uygulamayı yeniden başlatıp tekrar deneyin.",
     "cancel": "İptal",
-    "hf_token_also_clear": "Ayrıca temizle",
+    "hf_token_also_clear": "Kaydedilmiş HuggingFace CLI belirteç dosyalarını da sil",
     "hf_token_clear_btn": "Belirteci temizle",
     "hf_token_clear_confirm": "Uygulama kaynaklı HuggingFace belirteci temizlensin mi?",
     "hf_token_clear_dialog": "Belirteci temizle",
@@ -334,6 +334,7 @@
     "device_family_cuda": "NVIDIA GPU (CUDA)",
     "device_family_rocm": "AMD GPU (ROCm)",
     "device_family_xpu": "Intel GPU (XPU)",
+    "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
     "device_load_failed": "Aygıt ayarı yüklenemedi",
@@ -348,7 +349,11 @@
     "generate_timeout_saved": "Kaydedildi. Yeni bütçenin geçerli olması için VoiceStudio'yu yeniden başlatın.",
     "generate_timeout_shadowed_badge": "Dışarıdan geçersiz kılındı",
     "generate_timeout_shadowed_note": "VoiceStudio dışındaki bir ortam değişkeni (kabuk, .env dosyası veya konteyner) şu anda bu değeri ayarlıyor — o değişken kaldırılana kadar burada kaydedilen değer yok sayılır.",
-    "generate_timeout_shadowed_toast": "Kaydedildi, ancak VoiceStudio dışındaki bir ortam değişkeni şu anda bu değeri ayarlıyor — o değişken kaldırılana kadar kullanılmaya devam edecek."
+    "generate_timeout_shadowed_toast": "Kaydedildi, ancak VoiceStudio dışındaki bir ortam değişkeni şu anda bu değeri ayarlıyor — o değişken kaldırılana kadar kullanılmaya devam edecek.",
+    "hf_token_not_checked": "Test edilmedi",
+    "hf_source_app_label": "VoiceStudio (şifrelenmiş, önerilen)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "Ortam değişkeni"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -539,6 +544,9 @@
     "convert_desc": "Bir kez söyleyin — başka bir sesle duyun. Konuşmadan konuşmaya, tamamen yerel."
   },
   "clone": {
+    "text_label": "Metin",
+    "paste": "Yapıştır",
+    "paste_failed": "Pano erişimi engellendi. Klavyeyi kullanarak doğrudan metin alanına yapıştırın.",
     "prompt": "İstemi",
     "language": "Dil",
     "steps": "Adımlar",
@@ -643,7 +651,8 @@
     "cat_AccentDialect": "Aksan veya lehçe",
     "accent_dialect_hint": "yalnızca biri, asla ikisi birden",
     "reset_to_description": "Açıklamaya göre sıfırla",
-    "chips_more": "{{count}} tane daha…"
+    "chips_more": "{{count}} tane daha…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "Uygulama",
@@ -823,7 +832,8 @@
     "familyDesc_tts": "Metni konuşmaya dönüştürür. Stüdyo, Dublaj ve Toplu İşlem etkin motoru kullanır.",
     "familyDesc_asr": "Sesi; transkripsiyon, dublaj, altyazı ve dikte için metne dönüştürür.",
     "familyDesc_llm": "Çeviri ve yeniden yazma için isteğe bağlı metin yardımcısıdır. “Kapalı” bu adımları atlar.",
-    "mpsLongText": "{{engine}} burada Apple Silicon (MPS) üzerinde çalışıyor ve bu metin uzun — üretim süre bütçesini aşabilir. Daha kısa bir metin ya da birkaç parçaya bölmek çok daha hızlı olacaktır."
+    "mpsLongText": "{{engine}} burada Apple Silicon (MPS) üzerinde çalışıyor ve bu metin uzun — üretim süre bütçesini aşabilir. Daha kısa bir metin ya da birkaç parçaya bölmek çok daha hızlı olacaktır.",
+    "inMemory": "Bellekte"
   },
   "capture": {
     "desc": "Genel kısayol tuşları yalnızca masaüstü uygulamasında çalışır. Web kullanıcı arayüzü, pencere odaktayken sayfa içi <1>Ctrl+Shift+Space</1> kısayolunu kullanır.",
@@ -961,6 +971,9 @@
     "consent_revoked": "Doğrulama iptal edildi"
   },
   "dub": {
+    "timing_label": "Zamanlama",
+    "timing_concise": "Kısa",
+    "timing_stretch_video": "Videoyu uzat",
     "install_engine_pkg": "{{pkg}} yükle",
     "needs_install_short": "Kurulum gerekli",
     "install_popover_title": "Bu motoru yükle",
@@ -1171,7 +1184,8 @@
     "languages_pending": "Bekliyor",
     "live_preview": "Canlı önizleme",
     "live_preview_title": "Bir satırı düzenlerken dinleyin — düzenlenen segment kısa bir duraklamadan sonra CAST sesiyle TTS akışı yapar. Yalnızca oynatma: hiçbir şey kaydedilmez ve dışa aktarma yine tam kalitede işlenir.",
-    "live_preview_pick_voice": "Canlı önizlemeyi duymak için bu satıra veya konuşmacısına bir CAST sesi atayın."
+    "live_preview_pick_voice": "Canlı önizlemeyi duymak için bu satıra veya konuşmacısına bir CAST sesi atayın.",
+    "autofit_quality": "Otomatik sığdır"
   },
   "glossary": {
     "title": "Sözlük",
@@ -1270,7 +1284,13 @@
     "qc_verify": "Doğrula",
     "qc_verify_title": "İkinci geçiş ASR şunu duydu: \"{{heard}}\" — bu satırı yeniden dinleyin veya yeniden dublajlayın.",
     "live_play_title": "Bu satırı şimdi akıt (canlı önizleme)",
-    "live_stop_title": "Canlı önizlemeyi durdur"
+    "live_stop_title": "Canlı önizlemeyi durdur",
+    "plan_apply": "Daha kısa sürümü kullan",
+    "plan_apply_title": "Bu satırı önerilen daha kısa sürümle değiştir: “{{text}}”",
+    "plan_impossible": "Sığmayacak +{{seconds}}sn",
+    "plan_impossible_title": "Tahmini konuşma ≈{{est}}sn, kullanılabilir süre {{avail}}sn. Yaklaşık {{seconds}}sn hiçbir uyarlamayla karşılanamaz ve ses kesilir. Üretmeden önce metni kısaltın.",
+    "plan_tight": "Zar zor sığıyor",
+    "plan_tight_title": "Tahmini konuşma ≈{{est}}sn, kullanılabilir süre {{avail}}sn. Akıllı uyarlama, sesi belirgin biçimde hızlandırarak veya videoyu yavaşlatarak bunu karşılayabilir. Daha iyi sonuç için metni kısaltın."
   },
   "timeline": {
     "track_label": "Segment zaman çizelgesi",
@@ -1861,6 +1881,7 @@
     "hint": "8 adım · hızlı önizleme"
   },
   "header": {
+    "speech": "Konuşma",
     "kicker_studio": "stüdyo",
     "kicker_library": "Kütüphane",
     "kicker_preferences": "Tercihler",
@@ -1967,6 +1988,7 @@
     "preview_voice": "Sesi önizle"
   },
   "checkpoint": {
+    "timing_review": "{{count}} bölümün zamanlaması incelenmeli",
     "asr_title": "Transkriptler hazır",
     "asr_cta": "Çevir",
     "asr_hint": "Tüm ASR hatalarını şimdi düzeltin; sıkı diksiyon, daha sonra TTS denemelerini önler.",
@@ -1977,7 +1999,13 @@
     "done_hint": "Zamanlamayı ve senkronizasyon oranlarını inceleyin. Herhangi bir satırda ince ayar yapın ve hızlı bir kısmi yineleme için \"Yenileme değişti\" tuşuna basın.",
     "segment_one": "{{count}} segmenti",
     "segment_other": "{{count}} segment",
-    "dismiss_title": "Reddet — yeniden yüklenene kadar bu aşamada yeniden görünmeyecek"
+    "dismiss_title": "Reddet — yeniden yüklenene kadar bu aşamada yeniden görünmeyecek",
+    "timing_review_one": "{{count}} bölümün zamanlaması incelenmeli",
+    "timing_review_other": "{{count}} bölümün zamanlaması incelenmeli",
+    "timing_review_zero": "{{count}} bölümün zamanlaması incelenmeli",
+    "timing_review_two": "{{count}} bölümün zamanlaması incelenmeli",
+    "timing_review_few": "{{count}} bölümün zamanlaması incelenmeli",
+    "timing_review_many": "{{count}} bölümün zamanlaması incelenmeli"
   },
   "compare": {
     "title": "A/B Ses Karşılaştırması",
@@ -2077,7 +2105,10 @@
     "voice_previews_checked": "{{when}} kontrol edildi",
     "voice_previews_never": "henüz kontrol edilmedi",
     "voice_previews_check": "Şimdi kontrol et",
-    "voice_previews_rejected": "Ses galerisi güncellemesi reddedildi: {{message}}"
+    "voice_previews_rejected": "Ses galerisi güncellemesi reddedildi: {{message}}",
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "Dahili araçlar için lisansa ihtiyacım var mı?",
@@ -2369,7 +2400,10 @@
     "hf_token_saved_fast": "Hugging Face jetonu kaydedildi; indirme işlemleri artık daha hızlı",
     "hf_token_inline_prompt": "Ücretsiz Hugging Face belirteci ile indirmeleri hızlandırın",
     "hf_token_inline_ph": "hf_… jetonunu yapıştırın (isteğe bağlı)",
-    "hf_token_get_short": "Ücretsiz bir tane alın →"
+    "hf_token_get_short": "Ücretsiz bir tane alın →",
+    "hf_token_active_using": "{{source}} içinde Hugging Face belirteci bulundu — {{masked}}",
+    "hf_token_replace": "Jetonu değiştir…",
+    "hf_token_replace_warning": "Bu uygulama için kaydedilen belirteci değiştirir. Eski belirteci iptal etmez."
   },
   "history": {
     "dub_meta": "{{segments}} segment · {{duration}} sn",
@@ -2604,7 +2638,13 @@
   },
   "waveform": {
     "source_missing": "Kaynak medya eksik — bu dosya taşınmış veya silinmiş olabilir. Devam etmek için videoyu yeniden yükleyin.",
-    "load_failed": "Bu dosyadan ses yüklenemedi"
+    "load_failed": "Bu dosyadan ses yüklenemedi",
+    "controls": "Oynatma kontrolleri",
+    "restart": "Baştan oynat",
+    "shortcuts": "J/K/L: geri, oynat/duraklat, ileri",
+    "zoom": "Yakınlaştırma düzeyi",
+    "timeline": "Ses dalgası zaman çizelgesi",
+    "loading": "Dalga biçimi yükleniyor…"
   },
   "tts": {
     "routingFallback": "CPU üzerinde çalışıyor - bu motorun makinenizde GPU yolu yoktur, bu nedenle üretim daha yavaş olacaktır. {{reason}}",
@@ -2738,5 +2778,9 @@
     "transcript": "Duyulan metin",
     "result_kicker": "Dönüştürülen kayıt",
     "need_source_and_voice": "Önce bir kaynak klip ekleyin ve hedef ses seçin."
+  },
+  "player": {
+    "pause": "Duraklat",
+    "play": "Oynat"
   }
 }

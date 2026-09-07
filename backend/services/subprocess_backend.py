@@ -385,6 +385,10 @@ class SubprocessBackend(TTSBackend):
 
     def __init__(self) -> None:
         self._proc: Optional[subprocess.Popen] = None
+        # A failed bounded reap must retain ownership and forbid reuse. This
+        # lock is separate from _lock: the receive owner joins its watchdog.
+        self._timeout_quarantine: list[subprocess.Popen] = []
+        self._timeout_quarantine_lock = threading.Lock()
         # Single lock serialises spawn + every send/recv pair so two threads
         # can't interleave half-frames on the same pipe.
         self._lock = threading.Lock()
@@ -451,6 +455,10 @@ class SubprocessBackend(TTSBackend):
     def _spawn(self) -> None:
         """Launch the sidecar if not already running. Blocks on the ready
         handshake. Caller must hold self._lock."""
+        if not self._retry_timeout_cleanup():
+            raise RuntimeError(
+                f"{self.id} sidecar is still stopping after a timeout; retry once it exits"
+            )
         if self._proc is not None and self._proc.poll() is None:
             return  # already up
 
@@ -542,6 +550,7 @@ class SubprocessBackend(TTSBackend):
         """Idempotent. Sends {op:shutdown}; falls back to terminate/kill."""
         proc = self._proc
         if proc is None:
+            self._retry_timeout_cleanup()
             return
         try:
             try:
@@ -577,6 +586,7 @@ class SubprocessBackend(TTSBackend):
                         pass
         finally:
             self._proc = None
+            self._retry_timeout_cleanup()
 
     def _force_kill(self) -> None:
         """Internal: kill a sidecar that never reached the ready state."""
@@ -777,38 +787,59 @@ class SubprocessBackend(TTSBackend):
         return msg
 
     def _recv_with_timeout(self, timeout_s: float) -> Optional[dict]:
-        """Recv that aborts if the sidecar goes silent.
+        """Read one frame, finishing timeout cleanup before the caller can retry.
 
-        Implemented by polling the proc for liveness with a deadline. We
-        don't block on a `select` of the pipe because Windows can't select
-        on subprocess pipes — keeping the implementation cross-platform
-        means a simpler polling loop here.
+        A watchdog closes the pipe on timeout; Windows cannot select on pipes.
+        EOF alone does not prove the owned process/supervisor has exited.
         """
         # On Unix we could use selectors; on Windows the pipe is not
         # selectable. Use a watchdog thread that kills the sidecar on
         # timeout — that triggers EOF on stdout, so _recv returns None
         # and the caller raises.
-        watchdog = threading.Timer(timeout_s, self._timeout_kill)
+        proc = self._proc
+        watchdog = threading.Timer(timeout_s, self._timeout_kill, args=(proc,))
         watchdog.daemon = True
         watchdog.start()
         try:
             return self._recv()
         finally:
             watchdog.cancel()
+            # cancel() cannot stop an already-running callback. Finish its
+            # bounded reap before another receive or generation starts.
+            watchdog.join()
             self._touch()  # any reply (or attempt) counts as recent activity
 
-    def _timeout_kill(self) -> None:
-        proc = self._proc
+    def _timeout_kill(self, proc: Optional[subprocess.Popen]) -> None:
+        """Kill only the child this receive captured, then reap its owner."""
         if proc is None:
             return
+        logger.error("[%s] sidecar exceeded recv timeout; killing", self.id)
         try:
-            logger.error(
-                "[%s] sidecar exceeded recv timeout; killing",
-                self.id,
-            )
             proc.kill()
         except Exception:
+            # A raced exit can make kill fail, but its owner still needs reaping.
             pass
+        try:
+            proc.wait(timeout=2)
+        except Exception:
+            # Do not discard a possibly live owner, or replace a newer _proc.
+            with self._timeout_quarantine_lock:
+                if not any(item is proc for item in self._timeout_quarantine):
+                    self._timeout_quarantine.append(proc)
+        else:
+            with self._timeout_quarantine_lock:
+                self._timeout_quarantine = [
+                    item for item in self._timeout_quarantine if item is not proc
+                ]
+
+    def _retry_timeout_cleanup(self) -> bool:
+        """Retry bounded cleanup, retaining every owner that could still be live."""
+        with self._timeout_quarantine_lock:
+            pending = tuple(self._timeout_quarantine)
+        for proc in pending:
+            self._timeout_kill(proc)
+        with self._timeout_quarantine_lock:
+            return not self._timeout_quarantine
 
     # ── stderr drain ───────────────────────────────────────────────────────
 
