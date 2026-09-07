@@ -20,7 +20,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- First-run "Models & engines" no longer pitches a Hugging Face token when one is already active and validated — it names the source instead, and replacing it now takes an explicit "Replace…" click rather than a blind paste-and-Save (#1851)
+- Onboarding recognizes locally saved Hugging Face tokens without contacting Hugging Face, and replacing one requires an explicit click (#1852) — thanks @psiberfunk!
 
 
 ## [0.5.2] — 2026-09-02

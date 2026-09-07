@@ -348,7 +348,8 @@
     "generate_timeout_saved": "Tersimpan. Mulai ulang VoiceStudio agar anggaran baru berlaku.",
     "generate_timeout_shadowed_badge": "Ditimpa secara eksternal",
     "generate_timeout_shadowed_note": "Variabel lingkungan di luar VoiceStudio (shell, file .env, atau kontainer) saat ini sedang mengatur nilai ini — nilai yang disimpan di sini diabaikan sampai variabel tersebut dihapus.",
-    "generate_timeout_shadowed_toast": "Tersimpan, tetapi variabel lingkungan di luar VoiceStudio saat ini sedang mengatur nilai ini — nilai itu akan terus digunakan sampai variabel tersebut dihapus."
+    "generate_timeout_shadowed_toast": "Tersimpan, tetapi variabel lingkungan di luar VoiceStudio saat ini sedang mengatur nilai ini — nilai itu akan terus digunakan sampai variabel tersebut dihapus.",
+    "hf_token_not_checked": "Belum diuji"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2370,9 +2371,9 @@
     "hf_token_inline_prompt": "Percepat pengunduhan dengan token Hugging Face gratis",
     "hf_token_inline_ph": "Tempel hf_… token (opsional)",
     "hf_token_get_short": "Dapatkan satu gratis →",
-    "hf_token_active_using": "Menggunakan token Hugging Face Anda dari {{source}} — {{masked}}",
+    "hf_token_active_using": "Token Hugging Face ditemukan di {{source}} — {{masked}}",
     "hf_token_replace": "Ganti token…",
-    "hf_token_replace_warning": "Ini akan mengganti token di atas — token lama akan berhenti berfungsi."
+    "hf_token_replace_warning": "Ini mengganti token yang disimpan untuk aplikasi ini. Token lama tidak dicabut."
   },
   "history": {
     "dub_meta": "{{segments}} segmen · {{duration}} dtk",

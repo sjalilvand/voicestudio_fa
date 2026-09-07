@@ -1100,7 +1100,7 @@ def asr_backends():
 def hf_token_state():
     """Return the 3-source HF token cascade state for the Settings UI
     (Wave 2 React panel consumes this). Never returns the raw token —
-    only a masked preview, whoami username, and per-source validity.
+    only a masked preview and local presence; no outbound validation.
     """
     from dataclasses import asdict
     from services import token_resolver

@@ -16,7 +16,7 @@ import { Button, Input } from '../ui';
  *
  * Before pitching a token, it checks the resolver state (same endpoint the
  * Settings → API Keys panel uses, `ApiKeysPanel.jsx`) so a user who already
- * has a validated token — from the app store, an env var, or `huggingface-cli
+ * has a locally configured token — from the app store, an env var, or `huggingface-cli
  * login` — sees that instead of a blind "add a token" prompt (#FR-006).
  * Replacing an already-active token is gated behind an explicit "Replace…"
  * click rather than being one blind paste-and-Save away, since Save persists
@@ -111,12 +111,9 @@ export default function HfTokenCard({ className = '' }) {
     env: t('settings.hf_source_env_label', { defaultValue: 'Environment variable' }),
     'hf-cli': t('settings.hf_source_cli_label', { defaultValue: 'HuggingFace CLI' }),
   };
-  const activeRow =
-    tokenState && tokenState.active
-      ? tokenState.sources?.find((r) => r.source === tokenState.active)
-      : null;
+  const activeRow = tokenState?.sources?.find((row) => row.set);
 
-  // A validated token is already active and the user hasn't asked to replace
+  // A token is already configured locally and the user hasn't asked to replace
   // it — show the satisfied state, not the pitch (#FR-006).
   if (activeRow && !replacing) {
     return (
@@ -129,9 +126,9 @@ export default function HfTokenCard({ className = '' }) {
         <Check size={16} className="shrink-0 text-success" aria-hidden="true" />
         <span className="font-semibold text-success">
           {t('firstrun.hf_token_active_using', {
-            source: SOURCE_LABELS[tokenState.active] || tokenState.active,
+            source: SOURCE_LABELS[activeRow.source] || activeRow.source,
             masked: activeRow.masked || '',
-            defaultValue: 'Using your Hugging Face token from {{source}} — {{masked}}',
+            defaultValue: 'Hugging Face token found in {{source}} — {{masked}}',
           })}
         </span>
         <button
@@ -156,15 +153,16 @@ export default function HfTokenCard({ className = '' }) {
       )}
     >
       <Zap size={16} className="shrink-0 text-primary" aria-hidden="true" />
-      <span
-        className={cn('font-semibold', !(replacing && activeRow) && 'max-[560px]:hidden')}
-      >
+      <span className={cn('font-semibold', !(replacing && activeRow) && 'max-[560px]:hidden')}>
         {replacing && activeRow
           ? t(
               'firstrun.hf_token_replace_warning',
-              'This replaces the token above — the old one stops working.',
+              'This replaces the token saved for this app. It does not revoke the old token.',
             )
-          : t('firstrun.hf_token_inline_prompt', 'Speed up downloads with a free Hugging Face token')}
+          : t(
+              'firstrun.hf_token_inline_prompt',
+              'Speed up downloads with a free Hugging Face token',
+            )}
       </span>
       <Input
         size="sm"

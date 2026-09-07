@@ -155,7 +155,7 @@ def test_state_returns_three_rows(fresh_resolver, monkeypatch):
         ENV_TOKEN: {"name": "bob"},
     })
     tr.invalidate_cache()
-    s = tr.state()
+    s = tr.state(validate=True)
     assert "sources" in s
     assert "active" in s
     assert [r.source for r in s["sources"]] == ["app", "env", "hf-cli"]
@@ -252,3 +252,18 @@ def test_resolve_accepts_hugging_face_hub_token_alias(fresh_resolver, monkeypatc
     assert result is not None
     assert result.source == "env"
     assert result.token == ENV_TOKEN
+
+
+def test_state_is_local_by_default(fresh_resolver, monkeypatch):
+    tr = fresh_resolver
+    monkeypatch.setattr(tr, "_READERS", {
+        "app": lambda: APP_TOKEN, "env": lambda: ENV_TOKEN, "hf-cli": lambda: None,
+    })
+    def unexpected_validation(*args):
+        raise AssertionError("local state must never validate against Hugging Face")
+    monkeypatch.setattr(tr, "_validate", unexpected_validation)
+    result = tr.state()
+    assert result["active"] is None
+    assert result["sources"][0].set
+    assert result["sources"][0].whoami_ok is None
+    assert APP_TOKEN not in repr(result)

@@ -46,7 +46,7 @@ class SourceState:
     set: bool
     masked: Optional[str]
     whoami_user: Optional[str]
-    whoami_ok: bool
+    whoami_ok: Optional[bool]
 
 
 # ── module-level cache ────────────────────────────────────────────────────
@@ -184,17 +184,17 @@ def on_401(active_source: Source) -> Optional[ResolvedToken]:
     return resolve(skip=frozenset({active_source}))
 
 
-def state() -> dict:
+def state(*, validate: bool = False) -> dict:
     """Return one SourceState per priority position so the Settings UI can
     render the cascade table. Includes a masked token + whoami result;
-    never includes the raw token."""
+    never includes the raw token. Reads are local unless validation is explicitly requested."""
     rows: list[SourceState] = []
     active: Optional[Source] = None
     for source in _PRIORITY:
         token = _READERS[source]()
         if token:
-            username = _validate(source, token)
-            ok = username is not None
+            username = _validate(source, token) if validate else None
+            ok = (username is not None) if validate else None
             rows.append(SourceState(
                 source=source,
                 set=True,

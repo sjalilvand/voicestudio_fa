@@ -35,11 +35,11 @@ class _HFTokenBody(BaseModel):
     token: str = Field(..., min_length=1, description="HuggingFace access token")
 
 
-def _state_response() -> dict:
+def _state_response(*, validate: bool = False) -> dict:
     """Return the same shape the React panel renders. Never includes raw token."""
     from services import token_resolver
 
-    s = token_resolver.state()
+    s = token_resolver.state(validate=validate)
     return {
         "active": s["active"],
         "sources": [asdict(row) for row in s["sources"]],
@@ -82,13 +82,12 @@ def get_hf_token_state(fresh: bool = Query(False)):
 
     ``fresh=1`` drops the resolver's whoami validation cache first so the
     response re-runs whoami for every source — this is what the panel's
-    "Test now" button sends. Plain GETs (panel mounts) keep the 300s cache
-    so repeat Settings visits don't hammer the HF API.
+    "Test now" button sends. Plain GETs only inspect local token presence.
     """
     from services import token_resolver
     if fresh:
         token_resolver.invalidate_cache()
-    return _state_response()
+    return _state_response(validate=fresh)
 
 
 # ── Performance settings (INST-12) ────────────────────────────────────────

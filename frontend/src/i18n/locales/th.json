@@ -348,7 +348,8 @@
     "generate_timeout_saved": "บันทึกแล้ว รีสตาร์ท VoiceStudio เพื่อให้งบใหม่มีผล",
     "generate_timeout_shadowed_badge": "ถูกแทนที่จากภายนอก",
     "generate_timeout_shadowed_note": "มีตัวแปรสภาพแวดล้อมภายนอก VoiceStudio (เชลล์, ไฟล์ .env หรือคอนเทนเนอร์) กำลังตั้งค่านี้อยู่ — ค่าที่บันทึกไว้ที่นี่จะถูกละเว้นจนกว่าตัวแปรนั้นจะถูกลบออก",
-    "generate_timeout_shadowed_toast": "บันทึกแล้ว แต่มีตัวแปรสภาพแวดล้อมภายนอก VoiceStudio กำลังตั้งค่านี้อยู่ — ค่านั้นจะยังคงถูกใช้งานจนกว่าตัวแปรนั้นจะถูกลบออก"
+    "generate_timeout_shadowed_toast": "บันทึกแล้ว แต่มีตัวแปรสภาพแวดล้อมภายนอก VoiceStudio กำลังตั้งค่านี้อยู่ — ค่านั้นจะยังคงถูกใช้งานจนกว่าตัวแปรนั้นจะถูกลบออก",
+    "hf_token_not_checked": "ยังไม่ได้ทดสอบ"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2370,9 +2371,9 @@
     "hf_token_inline_prompt": "เร่งความเร็วการดาวน์โหลดด้วยโทเค็น Hugging Face ฟรี",
     "hf_token_inline_ph": "วางโทเค็น hf_… (ไม่บังคับ)",
     "hf_token_get_short": "รับฟรีหนึ่งรายการ →",
-    "hf_token_active_using": "กำลังใช้โทเค็น Hugging Face ของคุณจาก {{source}} — {{masked}}",
+    "hf_token_active_using": "พบโทเค็น Hugging Face ใน {{source}} — {{masked}}",
     "hf_token_replace": "แทนที่โทเค็น…",
-    "hf_token_replace_warning": "การดำเนินการนี้จะแทนที่โทเค็นด้านบน — โทเค็นเดิมจะใช้งานไม่ได้อีกต่อไป"
+    "hf_token_replace_warning": "การดำเนินการนี้แทนที่โทเค็นที่บันทึกไว้สำหรับแอปนี้ แต่ไม่เพิกถอนโทเค็นเก่า"
   },
   "history": {
     "dub_meta": "{{segments}} เซกเมนต์ · {{duration}} วินาที",

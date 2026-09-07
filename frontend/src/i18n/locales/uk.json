@@ -348,7 +348,8 @@
     "generate_timeout_saved": "Збережено. Перезапустіть VoiceStudio, щоб новий бюджет набув чинності.",
     "generate_timeout_shadowed_badge": "Перевизначено ззовні",
     "generate_timeout_shadowed_note": "Змінна середовища поза VoiceStudio (оболонка, файл .env або контейнер) наразі задає це значення — збережене тут значення ігнорується, доки цю змінну не видалять.",
-    "generate_timeout_shadowed_toast": "Збережено, але змінна середовища поза VoiceStudio наразі задає це значення — воно продовжуватиме використовуватися, доки цю змінну не видалять."
+    "generate_timeout_shadowed_toast": "Збережено, але змінна середовища поза VoiceStudio наразі задає це значення — воно продовжуватиме використовуватися, доки цю змінну не видалять.",
+    "hf_token_not_checked": "Не перевірено"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2370,9 +2371,9 @@
     "hf_token_inline_prompt": "Прискоріть завантаження за допомогою безкоштовного маркера Hugging Face",
     "hf_token_inline_ph": "Вставте маркер hf_… (необов’язково)",
     "hf_token_get_short": "Отримайте один безкоштовно →",
-    "hf_token_active_using": "Використовується ваш токен Hugging Face із джерела {{source}} — {{masked}}",
+    "hf_token_active_using": "Токен Hugging Face знайдено в {{source}} — {{masked}}",
     "hf_token_replace": "Замінити токен…",
-    "hf_token_replace_warning": "Це замінить токен вище — старий перестане працювати."
+    "hf_token_replace_warning": "Це замінює токен, збережений для цього застосунку. Старий токен не відкликається."
   },
   "history": {
     "dub_meta": "{{segments}} сегментів · {{duration}} с",

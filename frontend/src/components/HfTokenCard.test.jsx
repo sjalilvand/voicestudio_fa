@@ -15,7 +15,7 @@ const STATE_NONE_ACTIVE = {
 
 // Mirrors the live report (#FR-006): `hf-cli` already resolved and validated.
 const STATE_HF_CLI_ACTIVE = {
-  active: 'hf-cli',
+  active: null,
   sources: [
     { source: 'app', set: false, masked: null, whoami_user: null, whoami_ok: false },
     { source: 'env', set: false, masked: null, whoami_user: null, whoami_ok: false },
@@ -23,8 +23,8 @@ const STATE_HF_CLI_ACTIVE = {
       source: 'hf-cli',
       set: true,
       masked: 'hf_…Sfb',
-      whoami_user: 'alice',
-      whoami_ok: true,
+      whoami_user: null,
+      whoami_ok: null,
     },
   ],
 };
@@ -60,10 +60,12 @@ describe('HfTokenCard', () => {
     global.fetch = mockFetchOnce(STATE_NONE_ACTIVE);
     render(<HfTokenCard />);
     await waitFor(() => expect(screen.getByPlaceholderText(/hf_/)).toBeInTheDocument());
-    expect(screen.getByText(/Speed up downloads with a free Hugging Face token/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Speed up downloads with a free Hugging Face token/),
+    ).toBeInTheDocument();
   });
 
-  it('does NOT pitch a new token once one is already active and validated (#FR-006)', async () => {
+  it('does NOT pitch a new token once one is locally configured without validation (#FR-006)', async () => {
     global.fetch = mockFetchOnce(STATE_HF_CLI_ACTIVE);
     render(<HfTokenCard />);
 
@@ -87,9 +89,7 @@ describe('HfTokenCard', () => {
     // Now the field appears, alongside a warning that this overwrites the
     // token above — the deliberate-action gate the fix adds.
     await waitFor(() => expect(screen.getByPlaceholderText(/hf_/)).toBeInTheDocument());
-    expect(
-      screen.getByText(/replaces the token above.*old one stops working/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/replaces the token saved for this app/i)).toBeInTheDocument();
   });
 
   it('keeps the overwrite warning visible on narrow screens (unlike the dismissable pitch)', async () => {
@@ -98,7 +98,7 @@ describe('HfTokenCard', () => {
     await waitFor(() => expect(screen.getByText(/hf_…Sfb/)).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: /replace/i }));
 
-    const warning = await screen.findByText(/replaces the token above.*old one stops working/i);
+    const warning = await screen.findByText(/replaces the token saved for this app/i);
     // The default pitch is allowed to hide at <=560px; the overwrite safety
     // warning must not carry that same responsive-hide class, or a user on a
     // narrow viewport can replace a working token without ever seeing it.
@@ -153,8 +153,6 @@ describe('HfTokenCard', () => {
       expect(postCall[0]).toMatch(/\/system\/set-env$/);
       expect(JSON.parse(postCall[1].body)).toEqual({ key: 'HF_TOKEN', value: 'hf_newtoken123' });
     });
-    await waitFor(() =>
-      expect(screen.getByText(/Hugging Face token saved/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/Hugging Face token saved/)).toBeInTheDocument());
   });
 });

@@ -348,7 +348,8 @@
     "generate_timeout_saved": "保存しました。新しい予算を適用するには VoiceStudio を再起動してください。",
     "generate_timeout_shadowed_badge": "外部から上書きされています",
     "generate_timeout_shadowed_note": "VoiceStudio の外部にある環境変数（シェル、.env ファイル、またはコンテナ）が現在この値を設定しています — その変数が削除されるまで、ここで保存した値は無視されます。",
-    "generate_timeout_shadowed_toast": "保存しましたが、VoiceStudio の外部にある環境変数が現在この値を設定しています — その変数が削除されるまで、その値が使われ続けます。"
+    "generate_timeout_shadowed_toast": "保存しましたが、VoiceStudio の外部にある環境変数が現在この値を設定しています — その変数が削除されるまで、その値が使われ続けます。",
+    "hf_token_not_checked": "未テスト"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2370,9 +2371,9 @@
     "hf_token_inline_prompt": "無料の Hugging Face トークンでダウンロードを高速化",
     "hf_token_inline_ph": "hf_… トークンを貼り付けます (オプション)",
     "hf_token_get_short": "1 つ無料で入手 →",
-    "hf_token_active_using": "{{source}} からの Hugging Face トークンを使用中 — {{masked}}",
+    "hf_token_active_using": "{{source}} に Hugging Face トークンがあります — {{masked}}",
     "hf_token_replace": "トークンを置き換える…",
-    "hf_token_replace_warning": "これにより上記のトークンが置き換えられます。古いトークンは使用できなくなります。"
+    "hf_token_replace_warning": "このアプリに保存されたトークンを置き換えます。古いトークンは失効しません。"
   },
   "history": {
     "dub_meta": "{{segments}} セグメント · {{duration}} 秒",

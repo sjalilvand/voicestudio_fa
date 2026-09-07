@@ -58,6 +58,25 @@ describe('ApiKeysPanel', () => {
     vi.restoreAllMocks();
   });
 
+  it('shows local token presence as untested until Test now is selected', async () => {
+    const local = {
+      active: null,
+      sources: [
+        { source: 'app', set: true, masked: 'hf_…abc', whoami_ok: null, whoami_user: null },
+      ],
+    };
+    const fetchMock = mockFetchSequence(
+      { status: 200, body: local },
+      { status: 200, body: STATE_APP_ACTIVE },
+    );
+    global.fetch = fetchMock;
+    render(<ApiKeysPanel />);
+    expect(await screen.findByText('Not tested')).toBeInTheDocument();
+    expect(screen.queryByText('whoami failed')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Test now' }));
+    await waitFor(() => expect(fetchMock.mock.calls.at(-1)[0]).toContain('?fresh=1'));
+    expect(await screen.findByText('alice')).toBeInTheDocument();
+  });
   it('renders 3 source rows after mount', async () => {
     global.fetch = mockFetchOnce(STATE_THREE_UNSET);
     const { container } = render(<ApiKeysPanel />);

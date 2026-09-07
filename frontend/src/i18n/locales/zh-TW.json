@@ -348,7 +348,8 @@
     "generate_timeout_saved": "已儲存。重新啟動 VoiceStudio 以套用新的預算。",
     "generate_timeout_shadowed_badge": "已被外部覆寫",
     "generate_timeout_shadowed_note": "VoiceStudio 之外的一個環境變數（終端機、.env 檔案或容器）目前正在設定此值 — 在移除該變數之前，此處儲存的值會被忽略。",
-    "generate_timeout_shadowed_toast": "已儲存，但 VoiceStudio 之外的一個環境變數目前正在設定此值 — 在移除該變數之前，將持續使用該值。"
+    "generate_timeout_shadowed_toast": "已儲存，但 VoiceStudio 之外的一個環境變數目前正在設定此值 — 在移除該變數之前，將持續使用該值。",
+    "hf_token_not_checked": "未測試"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2370,9 +2371,9 @@
     "hf_token_inline_prompt": "使用免費的 Hugging Face 令牌加快下載速度",
     "hf_token_inline_ph": "貼上 hf_… 令牌（可選）",
     "hf_token_get_short": "免費獲得一份 →",
-    "hf_token_active_using": "正在使用來自 {{source}} 的 Hugging Face 權杖 — {{masked}}",
+    "hf_token_active_using": "在 {{source}} 中找到 Hugging Face 權杖 — {{masked}}",
     "hf_token_replace": "更換權杖…",
-    "hf_token_replace_warning": "這將取代上方的權杖——舊權杖將停止運作。"
+    "hf_token_replace_warning": "這會取代為此應用程式儲存的權杖，但不會撤銷舊權杖。"
   },
   "history": {
     "dub_meta": "{{segments}} 個片段 · {{duration}} 秒",
