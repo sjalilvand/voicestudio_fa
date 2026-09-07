@@ -45,7 +45,7 @@ $config = @{
     productName = 'VoiceStudio MSI Diagnostic'
     version = '0.0.0'
     identifier = 'com.debpalash.voicestudio.wixdiagnostic'
-    build = @{ beforeBuildCommand = 'python build-assets.py' }
+    build = @{ beforeBuildCommand = @{ script = 'python build-assets.py'; cwd = $fixture } }
     bundle = @{
         active = $true
         targets = @('msi')
