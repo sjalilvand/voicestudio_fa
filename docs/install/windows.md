@@ -297,3 +297,19 @@ See [docs/setup/huggingface-token.md](../setup/huggingface-token.md).
 ## Troubleshooting
 
 Hit a wall? See [docs/install/troubleshooting.md](troubleshooting.md).
+
+### Building the current-user MSI
+
+Build the system MSI first. `scripts/render-per-user-wix.py` requires
+`--system-wxs` pointing to its fully rendered `release/wix/x64/main.wxs`,
+in addition to the canonical `--source` template and `--output` destination.
+The renderer preserves Tauri resource destinations while assigning distinct,
+stable per-user component identities, HKCU registry keypaths, and uninstall
+cleanup for nested resource folders. Missing or unrendered resources fail the
+build. The canonical system installer retains its per-machine authoring.
+
+CI bundles both scopes with a tiny executable, an external helper, and nested
+resources using the CLI version locked in `bun.lock`. The Windows MSI authoring
+job runs after the test suite and preserves verbose WiX logs and rendered XML.
+For focused diagnosis, dispatch CI with `windows_wix_diagnostic=true`; it skips
+the other jobs and never signs, publishes, or installs the fixture bundles.

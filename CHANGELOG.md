@@ -15,6 +15,8 @@ the frozen-backend fallback mirror it for their toolchains.
 - Gallery voice previews play again — the quality guard was rejecting good renders as silent (#1819) — thanks @flutterkage2k!
 - Tilde-separated number ranges are spoken clearly without running their endpoints together (#1821) — thanks @flutterkage2k!
 - Voice modes use themed tabs, with Synthesize and Convert pinned below their scrolling forms (#1823)
+- Fix current-user Windows installer validation and nested resource cleanup (#1873)
+
 - Voice cloning now starts with a clear upload-or-record choice, reveals recording and reference details only when needed, and keeps sampling controls under Production Overrides (#1817)
 - The first-run welcome line uses an instruction accepted by OmniVoice and VoiceDesign engines (#1861) — thanks @psiberfunk!
 
