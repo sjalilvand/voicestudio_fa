@@ -646,7 +646,8 @@
     "cat_AccentDialect": "Aksan veya lehçe",
     "accent_dialect_hint": "yalnızca biri, asla ikisi birden",
     "reset_to_description": "Açıklamaya göre sıfırla",
-    "chips_more": "{{count}} tane daha…"
+    "chips_more": "{{count}} tane daha…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "Uygulama",
@@ -1985,7 +1986,13 @@
     "done_hint": "Zamanlamayı ve senkronizasyon oranlarını inceleyin. Herhangi bir satırda ince ayar yapın ve hızlı bir kısmi yineleme için \"Yenileme değişti\" tuşuna basın.",
     "segment_one": "{{count}} segmenti",
     "segment_other": "{{count}} segment",
-    "dismiss_title": "Reddet — yeniden yüklenene kadar bu aşamada yeniden görünmeyecek"
+    "dismiss_title": "Reddet — yeniden yüklenene kadar bu aşamada yeniden görünmeyecek",
+    "timing_review_one": "{{count}} bölümün zamanlaması incelenmeli",
+    "timing_review_other": "{{count}} bölümün zamanlaması incelenmeli",
+    "timing_review_zero": "{{count}} bölümün zamanlaması incelenmeli",
+    "timing_review_two": "{{count}} bölümün zamanlaması incelenmeli",
+    "timing_review_few": "{{count}} bölümün zamanlaması incelenmeli",
+    "timing_review_many": "{{count}} bölümün zamanlaması incelenmeli"
   },
   "compare": {
     "title": "A/B Ses Karşılaştırması",
@@ -2612,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "Kaynak medya eksik — bu dosya taşınmış veya silinmiş olabilir. Devam etmek için videoyu yeniden yükleyin.",
-    "load_failed": "Bu dosyadan ses yüklenemedi"
+    "load_failed": "Bu dosyadan ses yüklenemedi",
+    "controls": "Oynatma kontrolleri",
+    "restart": "Baştan oynat",
+    "shortcuts": "J/K/L: geri, oynat/duraklat, ileri",
+    "zoom": "Yakınlaştırma düzeyi",
+    "timeline": "Ses dalgası zaman çizelgesi",
+    "loading": "Dalga biçimi yükleniyor…"
   },
   "tts": {
     "routingFallback": "CPU üzerinde çalışıyor - bu motorun makinenizde GPU yolu yoktur, bu nedenle üretim daha yavaş olacaktır. {{reason}}",

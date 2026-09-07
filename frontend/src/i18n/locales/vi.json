@@ -646,7 +646,8 @@
     "cat_AccentDialect": "Giọng hoặc phương ngữ",
     "accent_dialect_hint": "chỉ một trong hai, không cả hai",
     "reset_to_description": "Đặt lại theo mô tả",
-    "chips_more": "{{count}} mục khác…"
+    "chips_more": "{{count}} mục khác…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "ứng dụng",
@@ -1985,7 +1986,13 @@
     "done_hint": "Xem lại tỷ lệ thời gian và đồng bộ hóa. Tinh chỉnh bất kỳ dòng nào và nhấn \"Regen đã thay đổi\" để làm lại một phần nhanh chóng.",
     "segment_one": "Đoạn {{count}}",
     "segment_other": "{{count}} phân đoạn",
-    "dismiss_title": "Loại bỏ - sẽ không xuất hiện lại ở giai đoạn này cho đến khi tải lại"
+    "dismiss_title": "Loại bỏ - sẽ không xuất hiện lại ở giai đoạn này cho đến khi tải lại",
+    "timing_review_one": "{{count}} đoạn cần kiểm tra thời gian",
+    "timing_review_other": "{{count}} đoạn cần kiểm tra thời gian",
+    "timing_review_zero": "{{count}} đoạn cần kiểm tra thời gian",
+    "timing_review_two": "{{count}} đoạn cần kiểm tra thời gian",
+    "timing_review_few": "{{count}} đoạn cần kiểm tra thời gian",
+    "timing_review_many": "{{count}} đoạn cần kiểm tra thời gian"
   },
   "compare": {
     "title": "So sánh giọng nói A/B",
@@ -2612,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "Thiếu phương tiện nguồn — tệp này có thể đã bị di chuyển hoặc bị xóa. Tải lại video lên để tiếp tục.",
-    "load_failed": "Không thể tải âm thanh từ tệp này"
+    "load_failed": "Không thể tải âm thanh từ tệp này",
+    "controls": "Điều khiển phát",
+    "restart": "Phát lại từ đầu",
+    "shortcuts": "J/K/L: lùi, phát/tạm dừng, tiến",
+    "zoom": "Mức thu phóng",
+    "timeline": "Dòng thời gian dạng sóng âm thanh",
+    "loading": "Đang tải dạng sóng…"
   },
   "tts": {
     "routingFallback": "Chạy trên CPU - công cụ này không có đường dẫn GPU trên máy của bạn, do đó quá trình tạo sẽ chậm hơn. {{reason}}",

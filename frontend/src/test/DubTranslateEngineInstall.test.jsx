@@ -6,7 +6,14 @@ import i18n from '../i18n';
 // Heavy children we don't exercise here — keep the render focused on the
 // Engine selector's install affordance.
 vi.mock('../components/WaveformTimeline', () => ({ default: () => <div data-testid="wf" /> }));
-vi.mock('../components/MultiLangPicker', () => ({ default: () => <div data-testid="mlp" /> }));
+vi.mock('../components/MultiLangPicker', () => ({
+  default: ({ single, onChange }) =>
+    single ? (
+      <button onClick={() => onChange([{ lang: 'Auto', code: 'Auto' }])}>Select Auto</button>
+    ) : (
+      <div data-testid="mlp" />
+    ),
+}));
 vi.mock('react-hot-toast', () => ({
   default: { error: vi.fn(), success: vi.fn(), loading: vi.fn() },
 }));
@@ -155,5 +162,25 @@ describe('DubLeftColumn — translation-engine install affordance', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Engine', exact: true }));
     fireEvent.mouseDown(screen.getByRole('option', { name: 'Argos', exact: true }));
     expect(setTranslateProvider).toHaveBeenCalledWith('argos');
+  });
+});
+
+describe('translation language consistency', () => {
+  it('clears the previous ISO code and dialect when Auto is selected', () => {
+    const props = makeProps({ dubLang: 'Chinese', dubLangCode: 'zh', dubDialect: 'zh-CN' });
+    render(<DubLeftColumn {...props} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Select Auto' }));
+    expect(props.setDubLang).toHaveBeenCalledWith('Auto');
+    expect(props.setDubLangCode).toHaveBeenCalledWith('Auto');
+    expect(props.setDubDialect).toHaveBeenCalledWith('');
+  });
+  it('updates the language name when choosing an ISO code', () => {
+    const props = makeProps({ dubDialect: 'zh-CN' });
+    render(<DubLeftColumn {...props} />);
+    fireEvent.click(screen.getByRole('button', { name: t('dub.iso_code') }));
+    fireEvent.mouseDown(screen.getByRole('option', { name: 'en — English' }));
+    expect(props.setDubLang).toHaveBeenCalledWith('English');
+    expect(props.setDubLangCode).toHaveBeenCalledWith('en');
+    expect(props.setDubDialect).toHaveBeenCalledWith('');
   });
 });

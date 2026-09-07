@@ -294,7 +294,8 @@
     "cat_AccentDialect": "口音或方言",
     "accent_dialect_hint": "二选一，不能同时选择",
     "reset_to_description": "按描述重置",
-    "chips_more": "还有 {{count}} 个…"
+    "chips_more": "还有 {{count}} 个…",
+    "cfg": "CFG"
   },
   "settings": {
     "remote_backend_test": "测试连接",
@@ -1992,7 +1993,13 @@
     "done_hint": "检查时序和同步比率。调整任意句子并点击“重新生成已改”即可快速部分重做。",
     "segment_one": "{{count}} 段",
     "segment_other": "{{count}} 段",
-    "dismiss_title": "关闭 — 在重新加载之前不会再次出现在该阶段"
+    "dismiss_title": "关闭 — 在重新加载之前不会再次出现在该阶段",
+    "timing_review_one": "{{count}} 个片段需要检查时间",
+    "timing_review_other": "{{count}} 个片段需要检查时间同步",
+    "timing_review_zero": "{{count}} 个片段需要检查时间同步",
+    "timing_review_two": "{{count}} 个片段需要检查时间同步",
+    "timing_review_few": "{{count}} 个片段需要检查时间同步",
+    "timing_review_many": "{{count}} 个片段需要检查时间同步"
   },
   "compare": {
     "title": "A/B 语音比较",
@@ -2619,7 +2626,13 @@
   },
   "waveform": {
     "source_missing": "源媒体丢失 - 该文件可能已移动或被删除。重新上传视频以继续。",
-    "load_failed": "无法从此文件加载音频"
+    "load_failed": "无法从此文件加载音频",
+    "controls": "播放控制",
+    "restart": "从头播放",
+    "shortcuts": "J/K/L：后退、播放/暂停、前进",
+    "zoom": "缩放级别",
+    "timeline": "音频波形时间轴",
+    "loading": "正在加载波形…"
   },
   "tts": {
     "routingFallback": "在 CPU 上运行——此引擎在你的机器上没有 GPU 路径，因此生成会较慢。{{reason}}",

@@ -103,6 +103,7 @@ test('waveform drag pans both ways without seeking and keeps the transcript alig
   await expect.poll(scrollLeft).toBe(initialScroll + 120);
   expect(await time()).toBe(initialTime);
   await expect.poll(async () => (await segment.boundingBox())!.x).toBeCloseTo(segmentLeft - 120, 0);
+  // The pointer is still at x - 120: moving to x - 60 pans right by 60.
   await page.mouse.down();
   await page.mouse.move(x - 60, y, { steps: 8 });
   await page.mouse.up();

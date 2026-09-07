@@ -92,6 +92,7 @@ function addSourceClip() {
 
 beforeEach(() => {
   recordingState.isStartingRecording = false;
+  recordingState.isCleaning = false;
   convertSpeech.mockReset();
   toastAsrModelMissing.mockReset();
   toastModelNotDownloaded.mockReset();
@@ -126,6 +127,39 @@ describe('ConvertMethodPanel', () => {
     expect(onRecordingBusyChange).toHaveBeenLastCalledWith(false);
   });
 
+  it('keeps method switching busy through recording cleanup', () => {
+    const onRecordingBusyChange = vi.fn();
+    recordingState.isCleaning = true;
+    const { rerender } = render(
+      <ConvertMethodPanel
+        t={t}
+        profiles={profiles}
+        onRecordingBusyChange={onRecordingBusyChange}
+      />,
+    );
+    expect(onRecordingBusyChange).toHaveBeenLastCalledWith(true);
+    recordingState.isCleaning = false;
+    rerender(
+      <ConvertMethodPanel
+        t={t}
+        profiles={profiles}
+        onRecordingBusyChange={onRecordingBusyChange}
+      />,
+    );
+    expect(onRecordingBusyChange).toHaveBeenLastCalledWith(false);
+  });
+  it.each(['picker', 'drop'])('reports unsupported audio from %s', (source) => {
+    render(<ConvertMethodPanel t={t} profiles={profiles} />);
+    const file = new File(['text'], 'notes.txt', { type: 'text/plain' });
+    const input = document.getElementById('convert-audio-upload');
+    if (source === 'picker') fireEvent.change(input, { target: { files: [file] } });
+    else
+      fireEvent.drop(document.querySelector('label[for="convert-audio-upload"]'), {
+        dataTransfer: { files: [file] },
+      });
+    expect(toastError).toHaveBeenCalledWith('clone.unsupported_audio');
+    expect(screen.queryByTestId('waveform-convert-source')).not.toBeInTheDocument();
+  });
   it('keeps Convert disabled until a source clip AND a target voice are set', () => {
     render(<ConvertMethodPanel t={t} profiles={profiles} />);
     const button = screen.getByRole('button', { name: 'convert.convert' });

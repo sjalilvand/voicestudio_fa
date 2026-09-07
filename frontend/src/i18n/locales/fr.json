@@ -646,7 +646,8 @@
     "cat_AccentDialect": "Accent ou dialecte",
     "accent_dialect_hint": "l'un ou l'autre, jamais les deux",
     "reset_to_description": "Réinitialiser selon la description",
-    "chips_more": "{{count}} de plus…"
+    "chips_more": "{{count}} de plus…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "Application",
@@ -1985,7 +1986,13 @@
     "done_hint": "Examinez les ratios de synchronisation et de synchronisation. Ajustez n'importe quelle ligne et appuyez sur \"Regen changé\" pour une restauration partielle rapide.",
     "segment_one": "{{count}} segment",
     "segment_other": "{{count}} segments",
-    "dismiss_title": "Ignorer - ne réapparaîtra pas pour cette étape jusqu'au rechargement"
+    "dismiss_title": "Ignorer - ne réapparaîtra pas pour cette étape jusqu'au rechargement",
+    "timing_review_one": "{{count}} segment nécessite une vérification du minutage",
+    "timing_review_other": "{{count}} segments nécessitent une vérification du minutage",
+    "timing_review_zero": "{{count}} segments nécessitent une vérification du minutage",
+    "timing_review_two": "{{count}} segments nécessitent une vérification du minutage",
+    "timing_review_few": "{{count}} segments nécessitent une vérification du minutage",
+    "timing_review_many": "{{count}} segments nécessitent une vérification du minutage"
   },
   "compare": {
     "title": "Comparaison vocale A/B",
@@ -2612,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "Support source manquant : ce fichier a peut-être été déplacé ou supprimé. Re-téléchargez la vidéo pour continuer.",
-    "load_failed": "Impossible de charger l'audio de ce fichier"
+    "load_failed": "Impossible de charger l'audio de ce fichier",
+    "controls": "Commandes de lecture",
+    "restart": "Recommencer la lecture",
+    "shortcuts": "J/K/L : reculer, lire/pause, avancer",
+    "zoom": "Niveau de zoom",
+    "timeline": "Chronologie de la forme d’onde audio",
+    "loading": "Chargement de la forme d’onde…"
   },
   "tts": {
     "routingFallback": "Fonctionnant sur CPU : ce moteur n'a pas de chemin GPU sur votre machine, la génération sera donc plus lente. {{reason}}",

@@ -408,7 +408,8 @@
     "cat_AccentDialect": "Accent or Dialect",
     "accent_dialect_hint": "one or the other, never both",
     "reset_to_description": "Reset to description",
-    "chips_more": "{{count}} more…"
+    "chips_more": "{{count}} more…",
+    "cfg": "CFG"
   },
   "settings": {
     "title": "Settings",
@@ -2548,7 +2549,13 @@
   },
   "waveform": {
     "source_missing": "Source media missing — this file may have moved or been deleted. Re-upload the video to continue.",
-    "load_failed": "Could not load audio from this file"
+    "load_failed": "Could not load audio from this file",
+    "controls": "Playback controls",
+    "restart": "Restart playback",
+    "shortcuts": "J/K/L: rewind, play/pause, forward",
+    "zoom": "Zoom level",
+    "timeline": "Audio waveform timeline",
+    "loading": "Loading waveform…"
   },
   "player": {
     "now_playing": "Now playing",
@@ -2583,7 +2590,13 @@
     "done_hint": "Review timing and sync ratios. Tweak any line and hit \"Regen changed\" for a fast partial redo.",
     "segment_one": "{{count}} segment",
     "segment_other": "{{count}} segments",
-    "dismiss_title": "Dismiss — won't reappear for this stage until reload"
+    "dismiss_title": "Dismiss — won't reappear for this stage until reload",
+    "timing_review_one": "{{count}} segment needs timing review",
+    "timing_review_other": "{{count}} segments need timing review",
+    "timing_review_zero": "{{count}} segments need timing review",
+    "timing_review_two": "{{count}} segments need timing review",
+    "timing_review_few": "{{count}} segments need timing review",
+    "timing_review_many": "{{count}} segments need timing review"
   },
   "compare": {
     "title": "A/B Voice Comparison",

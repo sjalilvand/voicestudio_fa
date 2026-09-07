@@ -79,7 +79,15 @@ export default function ActionBar({
                 max: 64,
                 step: 1,
               },
-              { label: 'CFG', Icon: Focus, value: cfg, set: setCfg, min: 1, max: 4, step: 0.1 },
+              {
+                label: t('clone.cfg'),
+                Icon: Focus,
+                value: cfg,
+                set: setCfg,
+                min: 1,
+                max: 4,
+                step: 0.1,
+              },
               {
                 label: t('clone.speed'),
                 Icon: Gauge,

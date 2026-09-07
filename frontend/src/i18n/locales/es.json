@@ -646,7 +646,8 @@
     "cat_AccentDialect": "Acento o dialecto",
     "accent_dialect_hint": "uno u otro, nunca ambos",
     "reset_to_description": "Restablecer según la descripción",
-    "chips_more": "{{count}} más…"
+    "chips_more": "{{count}} más…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "Aplicación",
@@ -1985,7 +1986,13 @@
     "done_hint": "Revise las proporciones de sincronización y sincronización. Modifica cualquier línea y presiona \"Regeneración cambiada\" para una rehacer parcial rápida.",
     "segment_one": "{{count}} segmento",
     "segment_other": "{{count}} segmentos",
-    "dismiss_title": "Descartar: no volverá a aparecer en esta etapa hasta que se vuelva a cargar"
+    "dismiss_title": "Descartar: no volverá a aparecer en esta etapa hasta que se vuelva a cargar",
+    "timing_review_one": "{{count}} segmento necesita revisión de tiempos",
+    "timing_review_other": "{{count}} segmentos necesitan revisión de tiempos",
+    "timing_review_zero": "{{count}} segmentos necesitan revisión de tiempos",
+    "timing_review_two": "{{count}} segmentos necesitan revisión de tiempos",
+    "timing_review_few": "{{count}} segmentos necesitan revisión de tiempos",
+    "timing_review_many": "{{count}} segmentos necesitan revisión de tiempos"
   },
   "compare": {
     "title": "Comparación de voz A/B",
@@ -2612,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "Faltan medios de origen: es posible que este archivo se haya movido o se haya eliminado. Vuelve a subir el vídeo para continuar.",
-    "load_failed": "No se pudo cargar el audio de este archivo"
+    "load_failed": "No se pudo cargar el audio de este archivo",
+    "controls": "Controles de reproducción",
+    "restart": "Reiniciar reproducción",
+    "shortcuts": "J/K/L: retroceder, reproducir/pausar, avanzar",
+    "zoom": "Nivel de zoom",
+    "timeline": "Línea de tiempo de la onda de audio",
+    "loading": "Cargando forma de onda…"
   },
   "tts": {
     "routingFallback": "Ejecutándose en CPU: este motor no tiene una ruta de GPU en su máquina, por lo que la generación será más lenta. {{reason}}",

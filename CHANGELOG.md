@@ -40,6 +40,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Keep recording cleanup and clipboard edits safe, synchronize dubbing language controls, and localize timeline controls and timing warnings (#1841)
+
 - Dubbing playback starts before waveform decoding, automatic cast names are readable, and transcript timestamps have more room (#1823)
 - The title-bar engine button stays compact and stable while cycling labels, with engine names aligned right (#1823)
 - Long dubbing segment errors wrap in a bounded scrollable notice instead of widening the editor (#1823)

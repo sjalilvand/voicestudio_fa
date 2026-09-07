@@ -646,7 +646,8 @@
     "cat_AccentDialect": "Accento o dialetto",
     "accent_dialect_hint": "uno o l'altro, mai entrambi",
     "reset_to_description": "Reimposta in base alla descrizione",
-    "chips_more": "altri {{count}}…"
+    "chips_more": "altri {{count}}…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "App",
@@ -1985,7 +1986,13 @@
     "done_hint": "Rivedi i tempi e i rapporti di sincronizzazione. Modifica qualsiasi riga e premi \"Regen change\" per una rapida ripetizione parziale.",
     "segment_one": "{{count}} segmento",
     "segment_other": "{{count}} segmenti",
-    "dismiss_title": "Ignora: non riapparirà per questa fase finché non verrà ricaricato"
+    "dismiss_title": "Ignora: non riapparirà per questa fase finché non verrà ricaricato",
+    "timing_review_one": "{{count}} segmento richiede una revisione dei tempi",
+    "timing_review_other": "{{count}} segmenti richiedono una verifica dei tempi",
+    "timing_review_zero": "{{count}} segmenti richiedono una verifica dei tempi",
+    "timing_review_two": "{{count}} segmenti richiedono una verifica dei tempi",
+    "timing_review_few": "{{count}} segmenti richiedono una verifica dei tempi",
+    "timing_review_many": "{{count}} segmenti richiedono una verifica dei tempi"
   },
   "compare": {
     "title": "Confronto delle voci A/B",
@@ -2612,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "Supporto di origine mancante: questo file potrebbe essere stato spostato o eliminato. Ricarica il video per continuare.",
-    "load_failed": "Impossibile caricare l'audio da questo file"
+    "load_failed": "Impossibile caricare l'audio da questo file",
+    "controls": "Controlli di riproduzione",
+    "restart": "Riavvia riproduzione",
+    "shortcuts": "J/K/L: indietro, riproduci/pausa, avanti",
+    "zoom": "Livello di zoom",
+    "timeline": "Sequenza temporale della forma d’onda audio",
+    "loading": "Caricamento forma d’onda…"
   },
   "tts": {
     "routingFallback": "In esecuzione su CPU: questo motore non ha un percorso GPU sul tuo computer, quindi la generazione sarà più lenta. {{reason}}",

@@ -88,7 +88,7 @@ describe('NavRail — same list, other skin', () => {
     );
     const rail = container.querySelector('.nav-rail');
     expect(rail.className).toContain('pt-[18px]');
-    expect(rail.firstElementChild.className).toContain('gap-[9px]');
+    expect(rail.querySelector('.nav-rail-links').className).toContain('gap-[9px]');
   });
 });
 

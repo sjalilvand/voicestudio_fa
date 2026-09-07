@@ -646,7 +646,8 @@
     "cat_AccentDialect": "Accent eller dialekt",
     "accent_dialect_hint": "det ena eller det andra, aldrig båda",
     "reset_to_description": "Återställ till beskrivning",
-    "chips_more": "{{count}} till…"
+    "chips_more": "{{count}} till…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "App",
@@ -1985,7 +1986,13 @@
     "done_hint": "Granska timing och synkroniseringsförhållanden. Justera vilken linje som helst och tryck på \"Regen ändrad\" för en snabb delvis redo.",
     "segment_one": "{{count}} segment",
     "segment_other": "{{count}} segment",
-    "dismiss_title": "Avvisa — kommer inte att dyka upp igen för det här steget förrän du laddar om"
+    "dismiss_title": "Avvisa — kommer inte att dyka upp igen för det här steget förrän du laddar om",
+    "timing_review_one": "{{count}} segment behöver tidsgranskning",
+    "timing_review_other": "{{count}} segment behöver tidsgranskas",
+    "timing_review_zero": "{{count}} segment behöver tidsgranskas",
+    "timing_review_two": "{{count}} segment behöver tidsgranskas",
+    "timing_review_few": "{{count}} segment behöver tidsgranskas",
+    "timing_review_many": "{{count}} segment behöver tidsgranskas"
   },
   "compare": {
     "title": "A/B-röstjämförelse",
@@ -2612,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "Källmedia saknas – den här filen kan ha flyttats eller tagits bort. Ladda upp videon igen för att fortsätta.",
-    "load_failed": "Det gick inte att ladda ljud från den här filen"
+    "load_failed": "Det gick inte att ladda ljud från den här filen",
+    "controls": "Uppspelningskontroller",
+    "restart": "Starta om uppspelning",
+    "shortcuts": "J/K/L: bakåt, spela/pausa, framåt",
+    "zoom": "Zoomnivå",
+    "timeline": "Tidslinje för ljudvåg",
+    "loading": "Laddar vågform…"
   },
   "tts": {
     "routingFallback": "Körs på CPU — den här motorn har ingen GPU-sökväg på din maskin, så genereringen kommer att gå långsammare. {{reason}}",

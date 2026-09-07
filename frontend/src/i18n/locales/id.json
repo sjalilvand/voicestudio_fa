@@ -646,7 +646,8 @@
     "cat_AccentDialect": "Aksen atau dialek",
     "accent_dialect_hint": "salah satu saja, tidak keduanya",
     "reset_to_description": "Setel ulang sesuai deskripsi",
-    "chips_more": "{{count}} lainnya…"
+    "chips_more": "{{count}} lainnya…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "Aplikasi",
@@ -1985,7 +1986,13 @@
     "done_hint": "Tinjau waktu dan rasio sinkronisasi. Sesuaikan baris mana pun dan tekan \"Regen berubah\" untuk pengulangan sebagian yang cepat.",
     "segment_one": "segmen {{count}}",
     "segment_other": "{{count}} segmen",
-    "dismiss_title": "Singkirkan — tidak akan muncul kembali pada tahap ini hingga dimuat ulang"
+    "dismiss_title": "Singkirkan — tidak akan muncul kembali pada tahap ini hingga dimuat ulang",
+    "timing_review_one": "{{count}} segmen perlu tinjauan waktu",
+    "timing_review_other": "{{count}} segmen perlu peninjauan waktu",
+    "timing_review_zero": "{{count}} segmen perlu peninjauan waktu",
+    "timing_review_two": "{{count}} segmen perlu peninjauan waktu",
+    "timing_review_few": "{{count}} segmen perlu peninjauan waktu",
+    "timing_review_many": "{{count}} segmen perlu peninjauan waktu"
   },
   "compare": {
     "title": "Perbandingan Suara A/B",
@@ -2612,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "Media sumber hilang — file ini mungkin telah dipindahkan atau dihapus. Upload ulang video untuk melanjutkan.",
-    "load_failed": "Tidak dapat memuat audio dari file ini"
+    "load_failed": "Tidak dapat memuat audio dari file ini",
+    "controls": "Kontrol pemutaran",
+    "restart": "Mulai ulang pemutaran",
+    "shortcuts": "J/K/L: mundur, putar/jeda, maju",
+    "zoom": "Tingkat zoom",
+    "timeline": "Linimasa gelombang audio",
+    "loading": "Memuat gelombang…"
   },
   "tts": {
     "routingFallback": "Berjalan pada CPU — mesin ini tidak memiliki jalur GPU pada mesin Anda, sehingga pembuatannya akan lebih lambat. {{reason}}",

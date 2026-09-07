@@ -37,8 +37,6 @@ export default function ScriptPanel({
   const [pasteFailed, setPasteFailed] = useState(false);
   const pasteText = async () => {
     const field = textAreaRef.current;
-    const start = field?.selectionStart ?? text.length;
-    const end = field?.selectionEnd ?? text.length;
     setPasting(true);
     setPasteFailed(false);
     try {
@@ -47,7 +45,10 @@ export default function ScriptPanel({
         // The store setter accepts a string, unlike React's functional setter.
         // Read the current field after the async permission prompt so edits made
         // while clipboard access was pending are retained.
-        const current = textAreaRef.current?.value ?? text;
+        const currentField = textAreaRef.current;
+        const current = currentField?.value ?? text;
+        const start = currentField?.selectionStart ?? current.length;
+        const end = currentField?.selectionEnd ?? current.length;
         setText(current.slice(0, start) + value + current.slice(end));
         setShowDemoCoachmark(false);
         requestAnimationFrame(() => {

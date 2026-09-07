@@ -152,6 +152,15 @@ export default function DubLeftColumn({
   const installCmd =
     activeEngineEntry?.install_command ||
     (activeEngineEntry?.pip_package ? `uv pip install ${activeEngineEntry.pip_package}` : '');
+  const selectLanguage = (
+    code,
+    label = LANG_CODES.find((item) => item.code === code)?.label || code,
+  ) => {
+    setDubLang(label);
+    setDubLangCode(code);
+    if (!dialectMatchesLang(dubDialect, code)) setDubDialect('');
+  };
+
   const copyInstallCmd = async () => {
     if (!installCmd) return;
     const ok = await copyText(installCmd);
@@ -397,7 +406,7 @@ export default function DubLeftColumn({
               )}{' '}
               · {activeEngineEntry?.display_name || translateProvider}
               {activeEngineUnavailable && (
-                <span className="text-[var(--color-error)]"> {t('dub.needs_install_short')}</span>
+                <span className="text-[var(--color-danger)]"> {t('dub.needs_install_short')}</span>
               )}
             </span>
             {dubInstruct && (
@@ -463,14 +472,7 @@ export default function DubLeftColumn({
                   code: LANG_CODES.find((item) => item.label === label)?.code || label,
                 }))}
                 onChange={([item]) => {
-                  setDubLang(item.lang);
-                  const match = LANG_CODES.find(
-                    (lc) => lc.label.toLowerCase() === item.lang.toLowerCase(),
-                  );
-                  if (match) {
-                    setDubLangCode(match.code);
-                    if (!dialectMatchesLang(dubDialect, match.code)) setDubDialect('');
-                  }
+                  selectLanguage(item.code, item.lang);
                 }}
               />
             </div>
@@ -489,8 +491,7 @@ export default function DubLeftColumn({
                   label: lc.code + ' — ' + lc.label,
                 }))}
                 onChange={(code) => {
-                  setDubLangCode(code);
-                  if (!dialectMatchesLang(dubDialect, code)) setDubDialect('');
+                  selectLanguage(code);
                 }}
               />
             </div>

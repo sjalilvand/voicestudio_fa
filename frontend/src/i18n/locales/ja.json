@@ -646,7 +646,8 @@
     "cat_AccentDialect": "アクセントまたは方言",
     "accent_dialect_hint": "どちらか一方のみ、両方は不可",
     "reset_to_description": "説明に基づいてリセット",
-    "chips_more": "他{{count}}件…"
+    "chips_more": "他{{count}}件…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "アプリ",
@@ -1985,7 +1986,13 @@
     "done_hint": "タイミングと同期率を確認します。任意の行を微調整し、「Regen Changed」を押すと、部分的に素早くやり直すことができます。",
     "segment_one": "{{count}} セグメント",
     "segment_other": "{{count}} セグメント",
-    "dismiss_title": "閉じる — リロードするまでこのステージでは再表示されません"
+    "dismiss_title": "閉じる — リロードするまでこのステージでは再表示されません",
+    "timing_review_one": "{{count}} 個のセグメントのタイミングを確認してください",
+    "timing_review_other": "{{count}} 個のセグメントでタイミングの確認が必要です",
+    "timing_review_zero": "{{count}} 個のセグメントでタイミングの確認が必要です",
+    "timing_review_two": "{{count}} 個のセグメントでタイミングの確認が必要です",
+    "timing_review_few": "{{count}} 個のセグメントでタイミングの確認が必要です",
+    "timing_review_many": "{{count}} 個のセグメントでタイミングの確認が必要です"
   },
   "compare": {
     "title": "A/B音声比較",
@@ -2612,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "ソース メディアが見つかりません - このファイルは移動または削除された可能性があります。続行するにはビデオを再アップロードしてください。",
-    "load_failed": "このファイルからオーディオをロードできませんでした"
+    "load_failed": "このファイルからオーディオをロードできませんでした",
+    "controls": "再生コントロール",
+    "restart": "最初から再生",
+    "shortcuts": "J/K/L：巻き戻し、再生/一時停止、早送り",
+    "zoom": "ズームレベル",
+    "timeline": "音声波形タイムライン",
+    "loading": "波形を読み込み中…"
   },
   "tts": {
     "routingFallback": "CPU 上で実行 — このエンジンにはマシン上に GPU パスがないため、生成は遅くなります。 {{reason}}",

@@ -847,14 +847,14 @@ function WaveformTimeline(
     <div
       className={`wfm-controls ${videoSrc ? 'wfm-controls--overlay' : ''}`}
       role="toolbar"
-      aria-label="Playback controls"
+      aria-label={t('waveform.controls')}
     >
       <div className="wfm-controls__group">
         <button
           className={WF_BTN}
           onClick={() => seekTo(0)}
-          title="Restart"
-          aria-label="Restart playback"
+          title={t('waveform.restart')}
+          aria-label={t('waveform.restart')}
         >
           <SkipBack size={11} />
         </button>
@@ -872,7 +872,7 @@ function WaveformTimeline(
         >
           {fmt(currentTime)} / {fmt(duration)}
         </span>
-        <span className="wfm-kbd-hint" title="J/K/L: rewind, play/pause, forward">
+        <span className="wfm-kbd-hint" title={t('waveform.shortcuts')}>
           <Keyboard size={10} />
         </span>
       </div>
@@ -880,7 +880,7 @@ function WaveformTimeline(
         <button
           className={WF_BTN}
           onClick={() => setZoom((z) => Math.max(10, z - 20))}
-          aria-label="Zoom out"
+          aria-label={t('trimmer.zoom_out')}
         >
           <ZoomOut size={11} />
         </button>
@@ -891,12 +891,12 @@ function WaveformTimeline(
           value={zoom}
           onChange={(e) => setZoom(Number(e.target.value))}
           className="!mt-0 !h-[2px] !w-[60px]"
-          aria-label="Zoom level"
+          aria-label={t('waveform.zoom')}
         />
         <button
           className={WF_BTN}
           onClick={() => setZoom((z) => Math.min(300, z + 20))}
-          aria-label="Zoom in"
+          aria-label={t('trimmer.zoom_in')}
         >
           <ZoomIn size={11} />
         </button>
@@ -917,7 +917,7 @@ function WaveformTimeline(
   }
 
   return (
-    <div className="mb-[6px] wfm-layout" role="region" aria-label="Audio waveform timeline">
+    <div className="mb-[6px] wfm-layout" role="region" aria-label={t('waveform.timeline')}>
       {/* Video transport and one compact, aligned waveform/transcript surface. */}
       <div className="wfm-stack">
         {/* Keep the imperative media host separate from React-owned controls. */}
@@ -936,7 +936,7 @@ function WaveformTimeline(
             {!ready && !loadError && (
               <div className="wfm-loading">
                 <Loader className="spinner" size={12} color="#d3869b" />
-                <span className="wfm-loading__text">Loading waveform…</span>
+                <span className="wfm-loading__text">{t('waveform.loading')}</span>
               </div>
             )}
 

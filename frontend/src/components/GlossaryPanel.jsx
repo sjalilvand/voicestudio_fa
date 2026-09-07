@@ -210,8 +210,11 @@ export default function GlossaryPanel({
                       <th>{t('glossary.source')}</th>
                       <th>{t('glossary.target')}</th>
                       <th>{t('glossary.note')}</th>
-                      <th className="w-[60px]" aria-label="auto / manual"></th>
-                      <th className="w-[26px]" aria-label="delete"></th>
+                      <th
+                        className="w-[60px]"
+                        aria-label={`${t('glossary.auto_badge')} / ${t('glossary.manual_badge')}`}
+                      ></th>
+                      <th className="w-[26px]" aria-label={t('common.delete')}></th>
                     </tr>
                   </thead>
                   <tbody>

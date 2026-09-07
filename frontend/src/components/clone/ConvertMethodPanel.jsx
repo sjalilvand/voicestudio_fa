@@ -59,6 +59,12 @@ export default function ConvertMethodPanel({ t, profiles = [], onRecordingBusyCh
 
   const ingestSource = (file) => {
     if (!file) return;
+    if (
+      !(file.type.startsWith('audio/') || /\.(mp3|wav|m4a|flac|ogg|aac|webm)$/i.test(file.name))
+    ) {
+      toast.error(t('clone.unsupported_audio'));
+      return;
+    }
     invalidateInFlight();
     // Re-wrap the picked/dropped File with a metacharacter-free name before it
     // enters state (CodeQL js/xss-through-dom): a file's NAME is DOM-derived
@@ -89,9 +95,9 @@ export default function ConvertMethodPanel({ t, profiles = [], onRecordingBusyCh
   } = useRecording(async (file) => ingestSource(file));
 
   useEffect(() => {
-    onRecordingBusyChange?.(Boolean(isStartingRecording || isRecording));
+    onRecordingBusyChange?.(Boolean(isStartingRecording || isRecording || isCleaning));
     return () => onRecordingBusyChange?.(false);
-  }, [isStartingRecording, isRecording, onRecordingBusyChange]);
+  }, [isStartingRecording, isRecording, isCleaning, onRecordingBusyChange]);
 
   const canConvert = !!sourceFile && !!voiceId && !isConverting;
 
@@ -192,11 +198,7 @@ export default function ConvertMethodPanel({ t, profiles = [], onRecordingBusyCh
               e.preventDefault();
               e.currentTarget.classList.remove('is-dragging');
               const file = e.dataTransfer.files[0];
-              const okType =
-                file &&
-                (file.type.startsWith('audio/') ||
-                  /\.(mp3|wav|m4a|flac|ogg|aac|webm)$/i.test(file.name));
-              if (okType) ingestSource(file);
+              ingestSource(file);
             }}
           >
             <UploadCloud className="text-[var(--chrome-accent)]" size={28} aria-hidden="true" />

@@ -19,6 +19,10 @@ describe('dubbing review controls', () => {
     expect(screen.getByTestId('dub-translation-tracks')).toHaveTextContent(/bn/i);
     expect(screen.getByTestId('dub-translation-tracks').querySelector('button')).not.toBeNull();
   });
+  it('uses singular timing review wording for one segment', () => {
+    render(<CheckpointBanner stage="done" count={1} timingWarnings={1} />);
+    expect(screen.getByText('1 segment needs timing review')).toBeInTheDocument();
+  });
   it('separates generation completion from outstanding timing review', () => {
     render(<CheckpointBanner stage="done" count={353} timingWarnings={12} />);
     expect(screen.getByText('12 segments need timing review')).toBeInTheDocument();

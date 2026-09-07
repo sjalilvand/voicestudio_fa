@@ -39,6 +39,27 @@ describe('ScriptPanel paste', () => {
     fireEvent.click(screen.getByRole('button', { name: 'clone.paste' }));
     await waitFor(() => expect(field).toHaveValue('Hello friend'));
   });
+  it('uses the current selection when clipboard access resolves', async () => {
+    let resolveClipboard;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        readText: () =>
+          new Promise((resolve) => {
+            resolveClipboard = resolve;
+          }),
+      },
+    });
+    useAppStore.getState().setText('Hello world');
+    render(<Harness />);
+    const field = screen.getByRole('textbox');
+    field.setSelectionRange(6, 11);
+    fireEvent.click(screen.getByRole('button', { name: 'clone.paste' }));
+    fireEvent.change(field, { target: { value: 'New greeting' } });
+    field.setSelectionRange(0, 3);
+    resolveClipboard('Fresh');
+    await waitFor(() => expect(field).toHaveValue('Fresh greeting'));
+  });
   it('preserves text and offers keyboard paste when clipboard access fails', async () => {
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,

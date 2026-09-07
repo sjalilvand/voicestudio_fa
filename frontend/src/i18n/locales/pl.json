@@ -646,7 +646,8 @@
     "cat_AccentDialect": "Akcent lub dialekt",
     "accent_dialect_hint": "jedno albo drugie, nigdy oba",
     "reset_to_description": "Przywróć na podstawie opisu",
-    "chips_more": "jeszcze {{count}}…"
+    "chips_more": "jeszcze {{count}}…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "Aplikacja",
@@ -1985,7 +1986,13 @@
     "done_hint": "Przejrzyj współczynniki synchronizacji i synchronizacji. Popraw dowolną linię i naciśnij „Regen zmieniony”, aby szybko wykonać częściowe ponowne wykonanie.",
     "segment_one": "Segment {{count}}",
     "segment_other": "{{count}} segmentów",
-    "dismiss_title": "Odrzuć — nie pojawi się ponownie na tym etapie, dopóki nie zostanie przeładowany"
+    "dismiss_title": "Odrzuć — nie pojawi się ponownie na tym etapie, dopóki nie zostanie przeładowany",
+    "timing_review_one": "{{count}} segment wymaga sprawdzenia czasu",
+    "timing_review_other": "{{count}} segmentów wymaga sprawdzenia synchronizacji",
+    "timing_review_few": "{{count}} segmenty wymagają sprawdzenia czasu",
+    "timing_review_many": "{{count}} segmentów wymaga sprawdzenia czasu",
+    "timing_review_zero": "{{count}} segmentów wymaga sprawdzenia synchronizacji",
+    "timing_review_two": "{{count}} segmentów wymaga sprawdzenia synchronizacji"
   },
   "compare": {
     "title": "Porównanie głosu A/B",
@@ -2612,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "Brak multimediów źródłowych — ten plik mógł zostać przeniesiony lub usunięty. Aby kontynuować, prześlij film ponownie.",
-    "load_failed": "Nie można załadować dźwięku z tego pliku"
+    "load_failed": "Nie można załadować dźwięku z tego pliku",
+    "controls": "Sterowanie odtwarzaniem",
+    "restart": "Odtwórz od początku",
+    "shortcuts": "J/K/L: wstecz, odtwarzaj/pauza, naprzód",
+    "zoom": "Poziom powiększenia",
+    "timeline": "Oś czasu fali dźwiękowej",
+    "loading": "Ładowanie przebiegu fali…"
   },
   "tts": {
     "routingFallback": "Działa na procesorze — ten silnik nie ma ścieżki GPU na twoim komputerze, więc generowanie będzie wolniejsze. {{reason}}",
