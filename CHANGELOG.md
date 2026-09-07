@@ -10,7 +10,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
-- GPUs with less VRAM than the engine needs no longer get half the compute-time budget a CPU gets (#1804)
+- GPUs with less VRAM than the engine needs no longer get half the compute-time budget a CPU gets (#1806) — thanks @VishvakR!
+- Voice cloning now starts with a clear upload-or-record choice, reveals recording and reference details only when needed, and keeps sampling controls under Production Overrides (#1817)
 
 ### Changed
 
@@ -20,7 +21,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- A CUDA or ROCm GPU with less VRAM than the engine needs now gets the CPU compute-time budget instead of the shorter accelerated one, since it pages to system RAM and renders slower than the CPU would — applied to local generation, voice conversion, and remote worker deadlines alike (#1804)
+- A CUDA or ROCm GPU with less VRAM than the engine needs now gets the CPU compute-time budget instead of the shorter accelerated one, since it pages to system RAM and renders slower than the CPU would — applied to local generation, voice conversion, and remote worker deadlines alike (#1806) — thanks @VishvakR!
 
 
 ## [0.5.2] — 2026-09-02
