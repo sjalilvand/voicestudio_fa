@@ -52,6 +52,9 @@ def test_machine_and_per_user_templates_have_distinct_scopes_and_roots():
 def test_per_user_bundle_has_separate_identity_and_no_elevated_update_task():
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
     assert config["productName"].endswith("(Current User)")
+    # The WiX resource snapshot comes from the preceding system build.
+    # Null deletes the inherited hook via Tauri's JSON Merge Patch.
+    assert config["build"]["beforeBuildCommand"] is None
     wix = config["bundle"]["windows"]["wix"]
     assert wix["upgradeCode"] == "f27de3a8-a9dc-4a3d-84bb-e98f1bf82393"
     assert wix["enableElevatedUpdateTask"] is False

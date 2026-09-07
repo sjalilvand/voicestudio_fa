@@ -308,8 +308,15 @@ stable per-user component identities, HKCU registry keypaths, and uninstall
 cleanup for nested resource folders. Missing or unrendered resources fail the
 build. The canonical system installer retains its per-machine authoring.
 
-CI bundles both scopes with a tiny executable, an external helper, and nested
-resources using the CLI version locked in `bun.lock`. The Windows MSI authoring
+The per-user build reuses the system build's frontend output: its config clears
+`beforeBuildCommand` so a second Vite build cannot replace the hashed files
+referenced by the rendered WiX template. Keep using `tauri build` for the
+per-user stage; it still recompiles the shell with its own product configuration.
+
+CI builds both scopes with a tiny executable, an external helper, and nested
+resources using the CLI version locked in `bun.lock`. Its frontend-like build
+hook rotates resource filenames, verifying the per-user build preserves the
+system build's resource snapshot. The Windows MSI authoring
 job runs after the test suite and preserves verbose WiX logs and rendered XML.
 For focused diagnosis, dispatch CI with `windows_wix_diagnostic=true`; it skips
 the other jobs and never signs, publishes, or installs the fixture bundles.
