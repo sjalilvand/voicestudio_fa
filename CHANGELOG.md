@@ -20,7 +20,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- Confucius accelerator routing matches device selection, and dots.tts keeps safe CPU precision on non-CUDA accelerators (#1831) — thanks @li-lizhe!
+- Confucius accelerator routing tolerates failed device probes, and dots.tts keeps safe default precision on non-CUDA hosts (#1831) — thanks @li-lizhe!
 
 
 ## [0.5.2] — 2026-09-02

@@ -210,3 +210,24 @@ def test_load_model_matches_routing(sc, monkeypatch, family, legacy):
         accelerator.assert_called_once_with(check_available=True)
     caps = HostCaps(family=family or 'cpu', available_families=(family, 'cpu') if family else ('cpu',))
     assert resolve_routing(Confucius4Backend.gpu_compat, caps)['effective_device'] == expected
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_load_model_falls_back_when_accelerator_probe_raises(sc, monkeypatch, legacy):
+    import sys
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    probe = Mock(side_effect=RuntimeError("accelerator driver unavailable"))
+    monkeypatch.setitem(sys.modules, "torch", SimpleNamespace(
+        accelerator=SimpleNamespace() if legacy else SimpleNamespace(current_accelerator=probe),
+        cuda=SimpleNamespace(is_available=probe),
+    ))
+    constructor = Mock()
+    monkeypatch.setitem(sys.modules, "confuciustts.cli.inference", SimpleNamespace(ConfuciusTTS=constructor))
+    monkeypatch.setattr(sc, "_model", None)
+    monkeypatch.setattr(sc, "_config_path", lambda: "fixture.yaml")
+    monkeypatch.setattr(sc, "_ensure_clone_on_sys_path", lambda: None)
+    sc._load_model(io.BytesIO())
+    constructor.assert_called_once_with(config_path="fixture.yaml", device="cpu")
+    assert probe.call_count == 1

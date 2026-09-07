@@ -119,4 +119,5 @@ disk and how uv keeps the cost down, see
 The upstream runtime selects CUDA or CPU internally. Automatic precision follows
 that selection: bfloat16 on CUDA, float32 otherwise, including XPU/NPU/MPS hosts
 where this runtime executes on CPU. `OMNIVOICE_DOTS_TTS_PRECISION` remains an
-explicit override.
+explicit override. If the CUDA availability probe raises, the automatic precision
+default stays float32; upstream remains responsible for its device selection.
