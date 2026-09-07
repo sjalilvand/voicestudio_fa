@@ -174,7 +174,7 @@ describe('ApiKeysPanel', () => {
     const previousLanguage = i18n.language;
     await i18n.changeLanguage('ko');
     await waitFor(() => expect(i18n.hasResourceBundle('ko', 'translation')).toBe(true));
-    expect(i18n.t('settings.hf_token_clear_error')).not.toBe('Failed to clear token');
+    expect(i18n.t('common.error')).not.toBe('Something went wrong');
     const fetchMock = mockFetchSequence(
       { status: 200, body: STATE_APP_ACTIVE },
       { status: 500, body: { detail: 'Failed to clear local Hugging Face token files' } },
@@ -191,7 +191,7 @@ describe('ApiKeysPanel', () => {
       fireEvent.click(checkbox);
       const confirm = screen.getByRole('button', { name: i18n.t('settings.hf_token_clear_btn') });
       fireEvent.click(confirm);
-      expect(await screen.findByText(i18n.t('settings.hf_token_clear_error'))).toBeInTheDocument();
+      expect(await screen.findByText(i18n.t('common.error'))).toBeInTheDocument();
       expect(
         screen.queryByText('Failed to clear local Hugging Face token files'),
       ).not.toBeInTheDocument();
@@ -202,7 +202,7 @@ describe('ApiKeysPanel', () => {
       fireEvent.click(confirm);
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
       expect(fetchMock.mock.calls[2][0]).toContain('also_clear_hf_cli=true');
-      expect(screen.queryByText(i18n.t('settings.hf_token_clear_error'))).not.toBeInTheDocument();
+      expect(screen.queryByText(i18n.t('common.error'))).not.toBeInTheDocument();
     } finally {
       unmount();
       await i18n.changeLanguage(previousLanguage);
