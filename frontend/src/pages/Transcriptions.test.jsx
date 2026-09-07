@@ -1,11 +1,13 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { requestDictationCapture, toast } = vi.hoisted(() => ({
+const { requestDictationCapture, copyToClipboard, toast } = vi.hoisted(() => ({
   requestDictationCapture: vi.fn(),
+  copyToClipboard: vi.fn(),
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 
+vi.mock('../utils/copyText', () => ({ copyText: copyToClipboard }));
 vi.mock('../utils/dictationCapture', () => ({ requestDictationCapture }));
 vi.mock('../components/EngineQuickSwitch', () => ({ default: () => null }));
 vi.mock('../hooks/useEffectiveDictationShortcut', () => ({
@@ -19,7 +21,7 @@ vi.mock('../hooks/useEffectiveDictationShortcut', () => ({
 }));
 vi.mock('react-hot-toast', () => ({ toast }));
 
-import TranscriptionsPage, { addTranscription } from './Transcriptions';
+import TranscriptionsPage, { addTranscription, segTimeRange } from './Transcriptions';
 
 describe('Transcriptions capture entry point', () => {
   beforeEach(() => {
@@ -65,5 +67,71 @@ describe('Transcriptions capture entry point', () => {
     });
 
     expect(await screen.findByText('The shared capture path works.')).toBeInTheDocument();
+  });
+});
+
+// #1798: an OpenAI-compatible ASR answering in json/text format returns no
+// timings, and services/asr_backend.py records that honestly as `end: null`
+// rather than inventing a number. The segment list called `.toFixed()` on it
+// unconditionally, which threw during render and took the whole
+// Transcriptions view down — a transcript that merely lacked timings became
+// one the user could not read at all.
+describe('segments without timings (#1798)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('renders a segment whose end is null instead of crashing the view', async () => {
+    addTranscription({
+      text: 'hello from an untimed backend',
+      language: 'en',
+      segments: [{ text: 'hello from an untimed backend', start: 0, end: null }],
+    });
+
+    render(<TranscriptionsPage />);
+    fireEvent.click(await screen.findByText('hello from an untimed backend'));
+
+    // The transcript itself must still be readable — this is the regression:
+    // before the guard, the null `end` threw and nothing rendered at all.
+    expect(screen.getAllByText('hello from an untimed backend').length).toBeGreaterThan(0);
+  });
+
+  it('formats what is known and never prints NaN', () => {
+    expect(segTimeRange({ start: 12, end: 15.55 })).toBe('12.0s – 15.6s');
+    expect(segTimeRange({ start: 0, end: null })).toBe('0.0s');
+    expect(segTimeRange({ start: null, end: 4 })).toBe('4.0s');
+    expect(segTimeRange({ text: 'no timings' })).toBe('');
+    expect(segTimeRange(undefined)).toBe('');
+    expect(segTimeRange({ start: NaN, end: Infinity })).toBe('');
+    expect(segTimeRange({ start: '0', end: {} })).toBe('');
+  });
+});
+
+describe('transcription clipboard', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    toast.success.mockReset();
+    toast.error.mockReset();
+    copyToClipboard.mockReset();
+    addTranscription({ text: 'Copy this transcript.', language: 'en' });
+  });
+
+  it.each([true, false])('reports clipboard result %s accurately', async (copied) => {
+    copyToClipboard.mockResolvedValueOnce(copied);
+    render(<TranscriptionsPage />);
+    fireEvent.click(screen.getByText('Copy this transcript.'));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+    await waitFor(() => expect(copyToClipboard).toHaveBeenCalledWith('Copy this transcript.'));
+    await waitFor(() => expect(copied ? toast.success : toast.error).toHaveBeenCalled());
+    expect(copied ? toast.error : toast.success).not.toHaveBeenCalled();
+  });
+
+  it('reports an unexpected clipboard rejection', async () => {
+    copyToClipboard.mockRejectedValueOnce(new Error('Clipboard unavailable'));
+    render(<TranscriptionsPage />);
+    fireEvent.click(screen.getByText('Copy this transcript.'));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(toast.success).not.toHaveBeenCalled();
   });
 });
