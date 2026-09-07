@@ -297,3 +297,13 @@ See [docs/setup/huggingface-token.md](../setup/huggingface-token.md).
 ## Troubleshooting
 
 Hit a wall? See [docs/install/troubleshooting.md](troubleshooting.md).
+
+### Building the current-user MSI
+
+Build the system MSI first. `scripts/render-per-user-wix.py` requires
+`--system-wxs` pointing to its fully rendered `release/wix/x64/main.wxs`,
+in addition to the canonical `--source` template and `--output` destination.
+The renderer preserves Tauri resource destinations while assigning distinct,
+stable per-user component identities, HKCU registry keypaths, and uninstall
+cleanup for nested resource folders. Missing or unrendered resources fail the
+build. The canonical system installer retains its per-machine authoring.

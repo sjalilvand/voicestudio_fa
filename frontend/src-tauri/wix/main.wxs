@@ -177,7 +177,9 @@
                 <File Id="UpdateTaskUninstaller" Source="uninstall-task.ps1" KeyPath="yes" Checksum="yes"/>
             </Component>
             {{/if}}
+            <!-- BEGIN BUNDLED_RESOURCES -->
             {{resources}}
+            <!-- END BUNDLED_RESOURCES -->
             <Component Id="CMP_UninstallShortcut" Guid="*">
 
                 <Shortcut Id="UninstallShortcut"

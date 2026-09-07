@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import xml.etree.ElementTree as ET
+import pytest
 from pathlib import Path
 
 
@@ -7,6 +9,13 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "frontend/src-tauri/wix/main.wxs"
 SCRIPT = ROOT / "scripts/render-per-user-wix.py"
 CONFIG = ROOT / "frontend/src-tauri/tauri.per-user.conf.json"
+
+
+RESOURCE_FIXTURE = """<!-- BEGIN BUNDLED_RESOURCES -->
+<Component Id="randomRoot" Guid="00000000-0000-0000-0000-000000000001" KeyPath="yes" Win64="$(var.Win64)"><File Id="rootFile" Source="C:/build/README.md" /></Component>
+<Directory Id="randomDir" Name="backend"><Directory Id="nestedDir" Name="data">
+<Component Id="randomNested" Guid="00000000-0000-0000-0000-000000000002" KeyPath="yes" Win64="$(var.Win64)"><File Id="nestedFile" Source="C:/build/a&amp;b.json" /></Component>
+</Directory></Directory><!-- END BUNDLED_RESOURCES -->"""
 
 
 def _renderer():
@@ -19,7 +28,7 @@ def _renderer():
 
 def test_machine_and_per_user_templates_have_distinct_scopes_and_roots():
     machine = SOURCE.read_text(encoding="utf-8")
-    user = _renderer().render(machine)
+    user = _renderer().render(machine, RESOURCE_FIXTURE)
 
     assert 'InstallScope="perMachine"' in machine
     assert 'InstallScope="perUser"' in user
@@ -34,7 +43,7 @@ def test_machine_and_per_user_templates_have_distinct_scopes_and_roots():
     assert '<RegistryKey Root="HKCU" Key="Software\\\\{{manufacturer}}\\\\{{product_name}}">' in user
     assert '<RegistryKey Root="HKCU" Key="Software\\Classes\\\\{{protocol}}">' in user
     assert 'Guid="{{path_component_guid}}"' in machine
-    assert 'Guid="41f6d598-8908-4004-9332-291b64fd38be"' in user
+    assert 'Guid="41f6d598-8908-4004-9332-291b64fd38be"' not in user
 
 
 def test_per_user_bundle_has_separate_identity_and_no_elevated_update_task():
@@ -48,7 +57,7 @@ def test_per_user_bundle_has_separate_identity_and_no_elevated_update_task():
 
 def test_per_user_template_never_contains_webview_install_actions():
     machine = SOURCE.read_text(encoding="utf-8")
-    user = _renderer().render(machine)
+    user = _renderer().render(machine, RESOURCE_FIXTURE)
 
     assert "https://go.microsoft.com/fwlink/p/?LinkId=2124703" in machine
     assert "ALLOWWEBVIEW2BOOTSTRAP" in machine
@@ -80,3 +89,46 @@ def test_release_builds_publishes_and_smokes_as_a_standard_user():
     assert "standard-user uninstall" in smoke
     assert "latest/download/latest-user.json" in updater
     assert "releases/download/preview/latest-user.json" in updater
+
+
+def test_resource_components_use_hkcu_keypaths_and_remove_nested_folders():
+    fragment, refs = _renderer().resource_authoring(RESOURCE_FIXTURE)
+    tree = ET.fromstring("<Root>" + fragment + "</Root>")
+    components = tree.findall(".//Component")
+    for component in components:
+        assert "KeyPath" not in component.attrib
+        registry = component.find("RegistryValue")
+        assert registry is not None
+        assert registry.get("Root") == "HKCU"
+        assert registry.get("KeyPath") == "yes"
+        for file in component.findall("File"):
+            assert file.get("KeyPath") != "yes"
+    assert {node.get("Directory") for node in tree.findall(".//RemoveFolder")} == {
+        node.get("Id") for node in tree.findall(".//Directory")
+    }
+    assert {node.get("Id") for node in ET.fromstring("<Root>" + refs + "</Root>")} == {
+        component.get("Id") for component in components
+    }
+    assert any(file.get("Source") == "C:/build/a&b.json" for file in tree.findall(".//File"))
+
+
+def test_resource_identity_depends_on_destination_not_random_tauri_ids_or_build_root():
+    renderer = _renderer()
+    first, first_refs = renderer.resource_authoring(RESOURCE_FIXTURE)
+    second, second_refs = renderer.resource_authoring(RESOURCE_FIXTURE.replace("random", "other").replace("C:/build/", "D:/runner/"))
+    assert first.replace("C:/build/", "D:/runner/") == second
+    assert first_refs == second_refs
+
+
+@pytest.mark.parametrize("source", ["", "{{resources}}", "<!-- BEGIN BUNDLED_RESOURCES -->{{resources}}<!-- END BUNDLED_RESOURCES -->"])
+def test_missing_or_unrendered_system_resources_fail_closed(source):
+    with pytest.raises(ValueError):
+        _renderer().render(SOURCE.read_text(), source)
+
+
+def test_main_and_helper_files_use_registry_keypaths():
+    rendered = _renderer().render(SOURCE.read_text(), RESOURCE_FIXTURE)
+    assert '<File Id="Path" Source="{{main_binary_path}}" Checksum="yes"/>' in rendered
+    assert '<File Id="Bin_{{ bin.id }}" Source="{{bin.path}}"/>' in rendered
+    assert 'Name="Binary_{{ bin.id }}" Type="integer" Value="1" KeyPath="yes"' in rendered
+    assert 'Guid="{{bin.guid}}"' not in rendered
