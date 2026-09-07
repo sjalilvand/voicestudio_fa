@@ -1,3 +1,4 @@
+import { firstSoundRequest } from './utils/firstSound';
 import React, {
   useState,
   useRef,
@@ -699,26 +700,10 @@ function App() {
     if (!pending) return;
     (async () => {
       try {
-        const fd = new FormData();
-        fd.append('text', i18n.t('firstrun.first_sound_text'));
-        // Functional model prompt (not user-facing copy). Free-text prose
-        // like the old hardcoded string 400ed on every first run: OmniVoice's
-        // `_resolve_instruct` only accepts comma-separated taxonomy tokens
-        // (#1853). Omitting `instruct` isn't safe either — the mlx-audio
-        // Qwen3 VoiceDesign backend *requires* a truthy instruct and raises
-        // when it's missing (`_is_voice_design()` in tts_backend.py), so a
-        // user who picked that engine during onboarding would still get
-        // silence. "middle-aged, low pitch" is the same taxonomy string the
-        // built-in "Narrator" personality uses (backend/core/personalities.py)
-        // — valid vocabulary for OmniVoice, and a non-empty description for
-        // any voice-design engine — so it degrades identically no matter
-        // which engine is active.
-        fd.append('instruct', 'middle-aged, low pitch');
-        fd.append('num_step', '16');
-        const res = await apiFetch(`${API}/generate`, {
-          method: 'POST',
-          body: fd,
-        });
+        const res = await apiFetch(
+          `${API}/generate`,
+          firstSoundRequest(i18n.t('firstrun.first_sound_text')),
+        );
         const blob = await res.blob();
         await playBlobAudio(blob, { label: i18n.t('player.generated_audio') });
         toast.success(i18n.t('firstrun.first_sound_done'), { duration: 7000 });
