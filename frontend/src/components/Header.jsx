@@ -150,15 +150,12 @@ export default function Header({
   // breadcrumb + wordmark normally sit — the tabs already say where you are,
   // and two answers to that question in one bar is one too many.
   const tabsInTitlebar = navStyle === 'tabs';
-  // macOS renders the native traffic-light cluster itself (tauri.conf.json:
-  // decorations:false + titleBarStyle:"Overlay" still overlays OS chrome on
-  // macOS); Windows/Linux draw nothing there, so only they need this custom
-  // row. Without the platform check both sets of controls rendered together
-  // on macOS. Same detection HotkeyTab.jsx / SettingsSearch.jsx already use.
-  const isMacLike =
-    typeof navigator !== 'undefined' && /Mac|iPad|iPhone|iPod/.test(navigator.platform || '');
-  const showWindowControls =
-    typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window && !isMacLike;
+  // The macOS platform config enables decorated overlay chrome. Its native
+  // traffic lights provide the same window actions as our custom desktop row.
+  const isDesktop = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+  const hasMacTrafficLights =
+    isDesktop && typeof navigator !== 'undefined' && /^Mac/.test(navigator.platform || '');
+  const showWindowControls = isDesktop && !hasMacTrafficLights;
   const { t } = useTranslation();
   // Sysinfo is subscribed here (not in App via useAppData) so the 5s poll
   // only re-renders the header chrome, not the whole App tree.

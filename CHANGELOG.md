@@ -20,7 +20,9 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- On macOS, the header no longer shows Windows-style minimize/maximize/close buttons alongside the native traffic lights (#1864) — thanks @psiberfunk!
+- macOS retains the shared desktop window sizing, resize limits, and file-drop behavior when native chrome is applied (#1865) — thanks @psiberfunk!
+
+- On macOS, the header no longer shows Windows-style minimize/maximize/close buttons alongside the native traffic lights (#1865) — thanks @psiberfunk!
 
 
 ## [0.5.2] — 2026-09-02

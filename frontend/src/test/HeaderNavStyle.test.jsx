@@ -22,7 +22,7 @@ const windowActions = vi.hoisted(() => ({
 
 vi.mock('@tauri-apps/api/window', () => ({ getCurrentWindow: () => windowActions }));
 
-const originalPlatform = navigator.platform;
+const originalPlatformDescriptor = Object.getOwnPropertyDescriptor(navigator, 'platform');
 
 function setPlatform(value) {
   Object.defineProperty(navigator, 'platform', { value, configurable: true });
@@ -30,7 +30,11 @@ function setPlatform(value) {
 
 afterEach(() => {
   delete window.__TAURI_INTERNALS__;
-  setPlatform(originalPlatform);
+  if (originalPlatformDescriptor) {
+    Object.defineProperty(navigator, 'platform', originalPlatformDescriptor);
+  } else {
+    delete navigator.platform;
+  }
   vi.clearAllMocks();
 });
 
@@ -77,6 +81,15 @@ describe('Header — rail mode (default)', () => {
     expect(screen.queryByRole('button', { name: 'Minimize window' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Close window' })).toBeNull();
   });
+
+  it.each(['MacIntel', 'Win32', 'Linux x86_64'])(
+    'never offers desktop window actions in a %s browser',
+    (platform) => {
+      setPlatform(platform);
+      renderHeader({});
+      expect(screen.queryByTestId('window-controls')).toBeNull();
+    },
+  );
 });
 
 describe('Header — titlebar tabs mode', () => {
