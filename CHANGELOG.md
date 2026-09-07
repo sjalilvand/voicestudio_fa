@@ -29,6 +29,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - `bun run desktop` now opens on a fresh clone: the Vite alias for `@tauri-apps/plugin-dialog` no longer assumes a nested `frontend/node_modules`, which bun's workspace hoisting leaves empty (#1818) — thanks @flutterkage2k!
 
 - Slow backend startups remain running with progress updates, and Retry can interrupt startup reliably (#1809)
+- Backend connection errors report crashes only when recorded evidence exists, and diagnostic waits honor cancellation (#1810)
 
 ## [0.5.2] — 2026-09-02
 
