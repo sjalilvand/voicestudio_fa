@@ -115,11 +115,9 @@ def _load_runtime(stdout):
     from dots_tts.runtime import DotsTtsRuntime  # type: ignore[import-not-found]
 
     repo = os.environ.get("OMNIVOICE_DOTS_TTS_MODEL", _DEFAULT_REPO)
-    # current_accelerator() returns None on CPU-only builds; MPS is also
-    # excluded because DotsTtsRuntime is untested on MPS (use fp32).
-    accel = torch.accelerator.current_accelerator(check_available=True)
-    accel_type = accel.type if accel is not None else "cpu"
-    default_precision = "bfloat16" if accel_type not in ("cpu", "mps") else "float32"
+    # Match DotsTtsRuntime's own CUDA/CPU selection. Its _check_torch_env
+    # rejects half precision without CUDA, even when an XPU/NPU is available.
+    default_precision = "bfloat16" if torch.cuda.is_available() else "float32"
     precision = os.environ.get("OMNIVOICE_DOTS_TTS_PRECISION", default_precision)
     optimize = os.environ.get("OMNIVOICE_DOTS_TTS_OPTIMIZE", "0") == "1"
 
