@@ -21,6 +21,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Fixed
 
 - MOSS accelerator routing and status match runtime selection, with CPU fallback when device probing fails (#1830) — thanks @li-lizhe!
+- Fast macOS process exits no longer turn a completed shutdown into a permission error (#1809)
 
 
 ## [0.5.2] — 2026-09-02
