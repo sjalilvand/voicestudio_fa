@@ -142,7 +142,6 @@ _UNCHANGED_CASES = [
     ("Korean", "2026-09-05 회의"),                # date
     ("Korean", "010-1234-5678"),                 # phone number
     ("Korean", "AB20~30CD"),                     # product code, not a range
-    ("Korean", "1.20~30.5"),                     # decimals either side
     ("Japanese", "そうですね〜"),                   # tilde not between digits
     ("Vietnamese", "20~30 giây"),                # no verified spoken form
     (None, "20~30초"),                           # no language given
@@ -450,3 +449,25 @@ def test_longform_cache_key_tracks_normalization_toggle(tmp_path, monkeypatch):
     assert path_on != path_off
     assert not was_cached_off
     assert seen_off == ["Dr. Smith has 2 cats"]  # raw text with the toggle off
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("-20~-10°C", "-20에서 -10°C"),
+    ("0.5~1.0초", "0.5에서 1.0초"),
+    ("1.20~30.5", "1.20에서 30.5"),
+    ("+.5 ~ +1.0", "+.5에서 +1.0"),
+    ("-0.5～+1.25", "-0.5에서 +1.25"),
+])
+def test_complete_signed_decimal_ranges(raw, expected):
+    assert normalize_text(raw, "ko") == expected
+    assert normalize_text(expected, "ko") == expected
+
+
+@pytest.mark.parametrize("raw", [
+    "20~30~40", "20 ~ 30 ~ 40", "20〜30～40", "20 ~ 30～40",
+    "1.2.3~4.5", "1,000~2,000", "--20~-10", "20~++30",
+    "AB-20~30CD", "1234567~20", "20~1234567", "1.1234567~2",
+    "[20~30]", "[0.5~1.0]",
+])
+def test_malformed_or_protected_ranges_remain_unchanged(raw):
+    assert normalize_text(raw, "ko") == raw

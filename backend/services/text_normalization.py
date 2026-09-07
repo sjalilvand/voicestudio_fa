@@ -228,23 +228,37 @@ _RANGE_FORM = {
 #: ASCII tilde, wave dash, fullwidth tilde — Japanese and Korean IMEs emit the
 #: latter two, so all three have to match.
 #:
-#: The neighbour guards block digits/decimal marks (so a longer number is never
-#: split) and ASCII letters (so a product code like "AB20~30CD" is left alone),
-#: but deliberately allow everything else: CJK writes its unit right against
-#: the digits — "20~30초", "20〜30分", "20～30秒" — and a \w guard would reject
-#: exactly the cases this rule exists for.
+#: Match complete signed/decimal endpoints; reject partial numbers and product
+#: codes while allowing adjacent CJK units. Guard all tilde forms so malformed
+#: chains cannot be partially rewritten, including when their separators have
+#: whitespace around them.
+_RANGE_MARKS = "~\u301c\uff5e"
+_RANGE_ENDPOINT = r"[+-]?(?:\d{1,6}(?:\.\d{1,6})?|\.\d{1,6})"
 _NUM_RANGE_RE = re.compile(
-    r"(?<![\d.,])(?<![A-Za-z])(\d{1,6})\s*[~\u301c\uff5e]\s*(\d{1,6})"
-    r"(?![\d.,])(?![A-Za-z])"
+    rf"(?<![\d.,A-Za-z+{_RANGE_MARKS}-])({_RANGE_ENDPOINT})"
+    rf"\s*[{_RANGE_MARKS}]\s*({_RANGE_ENDPOINT})"
+    rf"(?![\d.,A-Za-z+{_RANGE_MARKS}-])"
 )
 
 
 def _speak_number_ranges(text: str, lang: str) -> str:
-    """``20~30`` → ``20에서 30``. No-op where the spoken form isn't verified."""
+    """Speak complete tilde ranges only for languages with a verified form."""
     form = _RANGE_FORM.get(lang)
     if not form:
         return text
-    return _NUM_RANGE_RE.sub(lambda m: form.format(a=m.group(1), b=m.group(2)), text)
+
+    def replace(match: re.Match) -> str:
+        before, after = match.start() - 1, match.end()
+        while before >= 0 and text[before].isspace():
+            before -= 1
+        while after < len(text) and text[after].isspace():
+            after += 1
+        if ((before >= 0 and text[before] in _RANGE_MARKS)
+                or (after < len(text) and text[after] in _RANGE_MARKS)):
+            return match.group(0)
+        return form.format(a=match.group(1), b=match.group(2))
+
+    return _NUM_RANGE_RE.sub(replace, text)
 
 
 # ── Universal safety filters (all languages) ─────────────────────────────────
