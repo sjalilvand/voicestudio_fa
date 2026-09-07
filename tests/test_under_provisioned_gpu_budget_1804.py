@@ -26,9 +26,23 @@ import sys
 
 import pytest
 
-from core.device_caps import HostCaps
-from services.engine_routing import _caveat, under_provisioned_vram
-from services.tts_backend import OmniVoiceBackend
+
+@pytest.fixture(autouse=True)
+def clean_app_modules():
+    for name in ("core.config", "core.device_caps", "services.engine_routing",
+                 "services.tts_backend", "services.model_manager"):
+        if name in sys.modules and getattr(sys.modules[name], "__file__", None) is None:
+            sys.modules.pop(name)
+
+
+@pytest.fixture
+def engine():
+    return importlib.import_module("services.tts_backend").OmniVoiceBackend
+
+
+@pytest.fixture
+def floor(engine):
+    return engine.min_vram_gb
 
 
 @pytest.fixture
@@ -36,13 +50,12 @@ def model_manager(monkeypatch):
     for mod_name in ("core.config", "services.model_manager"):
         if getattr(sys.modules.get(mod_name), "__file__", None) is None:
             sys.modules.pop(mod_name, None)
-    import services.model_manager as mm
-    return mm
+    return importlib.import_module("services.model_manager")
 
 
 def _gpu(vram_gb: float, *, family: str = "cuda",
-         name: str = "NVIDIA GeForce GTX 1650") -> HostCaps:
-    return HostCaps(
+         name: str = "NVIDIA GeForce GTX 1650"):
+    return importlib.import_module("core.device_caps").HostCaps(
         family=family,
         available_families=(family, "cpu"),
         device_name=name,
@@ -53,7 +66,7 @@ def _gpu(vram_gb: float, *, family: str = "cuda",
 @pytest.fixture
 def on_host(monkeypatch, model_manager):
     """Pin the host probe and the two budgets to their shipped defaults."""
-    import core.device_caps as caps
+    caps = importlib.import_module("core.device_caps")
 
     def _pin(host):
         monkeypatch.setattr(caps, "detect_host_caps", lambda: host)
@@ -64,54 +77,51 @@ def on_host(monkeypatch, model_manager):
     return _pin
 
 
-FLOOR = OmniVoiceBackend.min_vram_gb  # 6.0
-
-
 # ── the reported bug ─────────────────────────────────────────────────────
 
 
-def test_a_4gb_card_gets_the_cpu_budget_not_half_of_it(on_host):
+def test_a_4gb_card_gets_the_cpu_budget_not_half_of_it(on_host, floor):
     """The regression. A card that pages to system RAM performs like a CPU, so
     it must not be budgeted like a 24 GB one."""
     mm = on_host(_gpu(4.0))
     assert mm.generate_timeout_s(
-        "A short render", execution_device="cuda", min_vram_gb=FLOOR,
+        "A short render", execution_device="cuda", min_vram_gb=floor,
     ) == 600.0
 
 
-def test_the_engine_alone_is_enough_to_derive_the_floor(on_host):
+def test_the_engine_alone_is_enough_to_derive_the_floor(on_host, engine):
     """Callers that pass `engine=` (tts_stream, batch, dub, openai_compat,
     archetypes) need no change — the floor is read off the engine."""
     mm = on_host(_gpu(4.0))
     assert mm.generate_timeout_s(
-        "A short render", execution_device="cuda", engine=OmniVoiceBackend,
+        "A short render", execution_device="cuda", engine=engine,
     ) == 600.0
 
 
-def test_length_scaling_still_applies_on_top_of_the_raised_floor(on_host):
+def test_length_scaling_still_applies_on_top_of_the_raised_floor(on_host, floor):
     """The reporter's longer take (4080 chars ⇒ 372 s before) keeps its bonus;
     the floor moved, the slope did not."""
     mm = on_host(_gpu(4.0))
     assert mm.generate_timeout_s(
-        "x" * 4080, execution_device="cuda", min_vram_gb=FLOOR,
+        "x" * 4080, execution_device="cuda", min_vram_gb=floor,
     ) == 600.0 + (4080 - 1200) / 40.0
 
 
-def test_the_whole_class_not_just_cuda(on_host):
+def test_the_whole_class_not_just_cuda(on_host, floor):
     """ROCm is the other dedicated-VRAM family; the same paging happens there."""
     mm = on_host(_gpu(4.0, family="rocm", name="AMD Radeon RX 6500 XT"))
     assert mm.generate_timeout_s(
-        "A short render", execution_device="rocm", min_vram_gb=FLOOR,
+        "A short render", execution_device="rocm", min_vram_gb=floor,
     ) == 600.0
 
 
 # ── the boundaries it must not cross ─────────────────────────────────────
 
 
-def test_a_large_card_keeps_the_accelerated_budget(on_host):
+def test_a_large_card_keeps_the_accelerated_budget(on_host, floor):
     mm = on_host(_gpu(24.0, name="NVIDIA RTX 4090"))
     assert mm.generate_timeout_s(
-        "A short render", execution_device="cuda", min_vram_gb=FLOOR,
+        "A short render", execution_device="cuda", min_vram_gb=floor,
     ) == 300.0
 
 
@@ -122,40 +132,40 @@ def test_an_engine_with_no_declared_floor_is_never_judged(on_host):
     assert mm.generate_timeout_s("A short render", execution_device="cuda") == 300.0
 
 
-def test_mps_is_not_judged_by_a_cuda_measured_floor(on_host):
+def test_mps_is_not_judged_by_a_cuda_measured_floor(on_host, floor):
     """`HostCaps.vram_gb` on MPS is system RAM / 2 for a UNIFIED pool — an 8 GB
     Mac reports 4.0 and runs this engine fine."""
     mm = on_host(_gpu(4.0, family="mps", name="Apple Silicon (MPS)"))
     assert mm.generate_timeout_s(
-        "A short render", execution_device="mps", min_vram_gb=FLOOR,
+        "A short render", execution_device="mps", min_vram_gb=floor,
     ) == 300.0
 
 
-def test_a_failed_vram_probe_does_not_guess(on_host):
+def test_a_failed_vram_probe_does_not_guess(on_host, floor):
     """vram_gb == 0 means the probe failed, not that the card has no memory."""
     mm = on_host(_gpu(0.0))
     assert mm.generate_timeout_s(
-        "A short render", execution_device="cuda", min_vram_gb=FLOOR,
+        "A short render", execution_device="cuda", min_vram_gb=floor,
     ) == 300.0
 
 
-def test_a_cpu_fallback_render_is_unaffected(on_host):
+def test_a_cpu_fallback_render_is_unaffected(on_host, floor):
     """Routing already sent this one to the CPU; it gets the CPU budget by the
     device branch, and the VRAM branch must not double-apply."""
     mm = on_host(_gpu(4.0))
     assert mm.generate_timeout_s(
-        "A short render", execution_device="cpu", min_vram_gb=FLOOR,
+        "A short render", execution_device="cpu", min_vram_gb=floor,
     ) == 600.0
 
 
 # ── an operator's explicit setting still wins ────────────────────────────
 
 
-def test_an_explicit_universal_budget_is_honoured_verbatim(monkeypatch):
+def test_an_explicit_universal_budget_is_honoured_verbatim(monkeypatch, floor):
     """Same contract the CPU branch has kept since #1787: someone who lowered
     the watchdog to fail fast keeps failing fast, small card or not."""
-    import core.device_caps as caps
-    import services.model_manager as mm_mod
+    caps = importlib.import_module("core.device_caps")
+    mm_mod = importlib.import_module("services.model_manager")
 
     # `monkeypatch.context()` so the environment is restored BEFORE the reload
     # below (CodeRabbit on the PR). Deleting the var by hand and reloading
@@ -166,22 +176,21 @@ def test_an_explicit_universal_budget_is_honoured_verbatim(monkeypatch):
         mm = importlib.reload(mm_mod)
         m.setattr(caps, "detect_host_caps", lambda: _gpu(4.0))
         assert mm.generate_timeout_s(
-            "A short render", execution_device="cuda", min_vram_gb=FLOOR,
+            "A short render", execution_device="cuda", min_vram_gb=floor,
         ) == 123.5
     importlib.reload(mm_mod)
 
 
 def test_a_raised_accelerated_budget_is_never_cut_down_to_the_cpu_one(
-    monkeypatch, model_manager,
-):
+    monkeypatch, model_manager, floor):
     """The floor is a `max`, not an assignment."""
-    import core.device_caps as caps
+    caps = importlib.import_module("core.device_caps")
 
     monkeypatch.setattr(caps, "detect_host_caps", lambda: _gpu(4.0))
     monkeypatch.setattr(model_manager, "GPU_JOB_TIMEOUT_S", 900.0)
     monkeypatch.setattr(model_manager, "CPU_JOB_TIMEOUT_S", 600.0)
     assert model_manager.generate_timeout_s(
-        "A short render", execution_device="cuda", min_vram_gb=FLOOR,
+        "A short render", execution_device="cuda", min_vram_gb=floor,
     ) == 900.0
 
 
@@ -189,26 +198,29 @@ def test_a_raised_accelerated_budget_is_never_cut_down_to_the_cpu_one(
 
 
 @pytest.mark.parametrize(
-    "caps, expected",
+    "vram_gb, family, expected",
     [
-        (_gpu(4.0), True),
-        (_gpu(24.0, name="NVIDIA RTX 4090"), False),
-        (_gpu(0.0), False),
-        (_gpu(4.0, family="mps", name="Apple Silicon (MPS)"), False),
-        (_gpu(4.0, family="rocm", name="AMD Radeon RX 6500 XT"), True),
+        (4.0, "cuda", True),
+        (24.0, "cuda", False),
+        (0.0, "cuda", False),
+        (4.0, "mps", False),
+        (4.0, "rocm", True),
     ],
 )
-def test_the_budget_and_the_caveat_read_the_same_verdict(caps, expected):
+def test_the_budget_and_the_caveat_read_the_same_verdict(vram_gb, family, expected, floor):
     """One predicate, three consumers (caveat, timeout message, budget). Three
     inline copies is how the budget came to disagree with the warning printed
     next to it."""
-    assert under_provisioned_vram(caps, FLOOR) is expected
-    assert bool(_caveat(caps, FLOOR)) is expected
+    caps = _gpu(vram_gb, family=family)
+    routing = importlib.import_module("services.engine_routing")
+    assert routing.under_provisioned_vram(caps, floor) is expected
+    assert bool(routing._caveat(caps, floor)) is expected
 
 
-def test_an_undeclared_floor_and_a_missing_probe_are_both_silent():
+def test_an_undeclared_floor_and_a_missing_probe_are_both_silent(floor):
+    under_provisioned_vram = importlib.import_module("services.engine_routing").under_provisioned_vram
     assert under_provisioned_vram(_gpu(4.0), 0.0) is False
-    assert under_provisioned_vram(None, FLOOR) is False
+    assert under_provisioned_vram(None, floor) is False
 
 
 # ── the remote half: a small card on a WORKER ────────────────────────────
@@ -405,7 +417,7 @@ def test_every_dispatch_that_tells_the_guard_its_floor_tells_the_budget_too():
     )
 
 
-def test_both_budgets_explicit_leaves_the_accelerated_one_in_charge(monkeypatch):
+def test_both_budgets_explicit_leaves_the_accelerated_one_in_charge(monkeypatch, floor):
     """The precedence `docs/performance.md` documents, pinned.
 
     Filling in BOTH Settings rows is the case #1787 had to disambiguate for CPU
@@ -414,8 +426,8 @@ def test_both_budgets_explicit_leaves_the_accelerated_one_in_charge(monkeypatch)
     used verbatim rather than floored — which is what keeps "lower it to fail
     fast everywhere" working.
     """
-    import core.device_caps as caps
-    import services.model_manager as mm_mod
+    caps = importlib.import_module("core.device_caps")
+    mm_mod = importlib.import_module("services.model_manager")
 
     with monkeypatch.context() as m:  # see the note on the test above
         m.setenv("OMNIVOICE_GENERATE_TIMEOUT_S", "200")
@@ -423,10 +435,20 @@ def test_both_budgets_explicit_leaves_the_accelerated_one_in_charge(monkeypatch)
         mm = importlib.reload(mm_mod)
         m.setattr(caps, "detect_host_caps", lambda: _gpu(4.0))
         assert mm.generate_timeout_s(
-            "A short render", execution_device="cuda", min_vram_gb=FLOOR,
+            "A short render", execution_device="cuda", min_vram_gb=floor,
         ) == 200.0
         # …while a CPU dispatch still gets the CPU row it was told it would.
         assert mm.generate_timeout_s(
             "A short render", execution_device="cpu",
         ) == 600.0
     importlib.reload(mm_mod)
+
+
+def test_collection_does_not_bind_replaced_application_modules(monkeypatch):
+    import runpy
+    from types import ModuleType
+
+    with monkeypatch.context() as patch:
+        for name in ("core.device_caps", "services.engine_routing", "services.tts_backend"):
+            patch.setitem(sys.modules, name, ModuleType(name))
+        runpy.run_path(__file__)
