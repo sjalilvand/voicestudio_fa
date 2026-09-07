@@ -1773,7 +1773,17 @@ fn retry_preempts_launch_before_the_readiness_wait_starts() {
     std::env::set_var("OMNIVOICE_TEST_LAUNCH_LOCKED_ENTERED", &entered);
     std::env::set_var("OMNIVOICE_TEST_LAUNCH_LOCKED_RELEASE", &release);
     let bootstrap = t.run_bootstrap();
-    assert!(wait_until(Duration::from_secs(5), || entered.exists()));
+    let entered_launch = wait_until(Duration::from_secs(5), || entered.exists());
+    if !entered_launch {
+        // Release and join before asserting: a timeout must not detach a
+        // bootstrap thread while it still owns the lifecycle mutex.
+        let released = std::fs::write(&release, b"release");
+        t.quit();
+        t.kill_tracked_child();
+        join_with_timeout(bootstrap, Duration::from_secs(10), "launch gate timeout");
+        released.expect("release launch gate after timeout");
+        panic!("bootstrap did not enter the launch gate");
+    }
     app_lib::bootstrap::preempt_backend_wait();
     let handle = t.handle();
     let retry = std::thread::spawn(move || {
