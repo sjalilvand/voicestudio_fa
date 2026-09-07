@@ -1083,17 +1083,26 @@ async def lifespan(app: FastAPI):
     # Retire the run sentinel FIRST, before any bounded wait below (#1895):
     # once uvicorn has begun graceful shutdown the exit is deliberate by
     # definition, so the sentinel has already done its job. This is one
-    # os.remove — comfortably inside any shutdown deadline, including the
-    # desktop shell's 2s grace (bootstrap.rs terminate_process_tree) and
-    # Windows' effectively-zero one (tools.rs force_terminate with no
-    # graceful phase at all) — unlike the ~50s worst-case tail of the
-    # bounded waits and model unload/free_vram()/gc.collect() below. Putting
-    # the deadline-sensitive step first makes correctness independent of how
-    # much of that tail actually runs before a SIGKILL, instead of depending
-    # on the shell-side deadline being long enough to cover it. sentinel_
-    # cleared feeds the truthful "Shutdown: done."/degraded log at the end of
-    # this function; nothing below re-clears the sentinel, so a later
-    # failure can't mask this result.
+    # os.remove, against a ~50s worst-case tail of bounded waits plus model
+    # unload / free_vram() / gc.collect() below. Measured on macOS: a normal
+    # shutdown takes 5.25s end to end, while the desktop shell allows 2s
+    # (bootstrap.rs terminate_process_tree) before SIGKILL — so the old
+    # placement at the very end was killed every time on any run that had
+    # reached a working state. Doing the deadline-sensitive step first makes
+    # correctness independent of how much of that tail runs, instead of
+    # depending on the shell-side deadline being long enough to cover it.
+    #
+    # SCOPE, explicitly: this only helps platforms where lifespan teardown
+    # actually BEGINS. On Windows it does not — tools.rs terminates the job
+    # object with no graceful phase at all, so this line is never reached and
+    # a deliberate quit is still misreported as a crash there. That needs the
+    # shell to signal deliberate intent before the hard kill, which is a
+    # separate Rust-side change and is tracked separately; nothing here
+    # should be read as fixing Windows.
+    #
+    # sentinel_cleared feeds the truthful "Shutdown: done."/degraded log at
+    # the end of this function; nothing below re-clears the sentinel, so a
+    # later failure can't mask this result.
     try:
         sentinel_cleared = run_sentinel.clear_sentinel()
     except Exception:
