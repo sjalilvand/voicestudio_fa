@@ -201,8 +201,8 @@ def test_generate_without_ref_audio_omits_reference(monkeypatch):
     assert "tokens" not in captured
 
 
-@pytest.mark.parametrize('family', [None, 'cuda', 'xpu', 'npu', 'mps'])
-def test_loader_device_matches_routing(monkeypatch, family):
+@pytest.mark.parametrize('family,legacy', [(None, False), ('cuda', False), ('xpu', False), ('npu', False), ('mps', False), (None, True), ('cuda', True)])
+def test_loader_device_matches_routing(monkeypatch, family, legacy):
     """Exercise model + tokenizer placement without importing optional weights."""
     import io
     from types import SimpleNamespace
@@ -214,7 +214,9 @@ def test_loader_device_matches_routing(monkeypatch, family):
     expected = family if family not in (None, 'mps') else 'cpu'
     accelerator = Mock(return_value=SimpleNamespace(type=family) if family else None)
     monkeypatch.setitem(sys.modules, 'torch', SimpleNamespace(
-        accelerator=SimpleNamespace(current_accelerator=accelerator),
+        accelerator=SimpleNamespace() if legacy else SimpleNamespace(current_accelerator=accelerator),
+        cuda=SimpleNamespace(is_available=lambda: family == 'cuda'),
+        device=lambda value: SimpleNamespace(type=value),
         bfloat16='bf16', float32='fp32',
     ))
     processor = Mock()
@@ -231,7 +233,8 @@ def test_loader_device_matches_routing(monkeypatch, family):
     monkeypatch.setattr(main, '_state', None)
     monkeypatch.setattr(main, '_model_source', lambda: ('local-fixture', 'a' * 40))
     state = main._load_model(io.BytesIO())
-    accelerator.assert_called_once_with(check_available=True)
+    if not legacy:
+        accelerator.assert_called_once_with(check_available=True)
     model.to.assert_called_once_with(expected)
     tokenizer.to.assert_called_once_with(expected)
     assert factory.from_pretrained.call_args.kwargs['torch_dtype'] == ('fp32' if expected == 'cpu' else 'bf16')

@@ -157,7 +157,12 @@ def _load_model(stdout):
     repo, revision = _model_source()
     # current_accelerator() returns None on CPU-only builds (no accelerator
     # compiled in) or when no accelerator is available; fall back to "cpu".
-    accel = torch.accelerator.current_accelerator(check_available=True)
+    # Existing manually provisioned venvs may predate torch.accelerator.
+    current_accelerator = getattr(getattr(torch, "accelerator", None), "current_accelerator", None)
+    if current_accelerator is None:
+        accel = torch.device("cuda") if torch.cuda.is_available() else None
+    else:
+        accel = current_accelerator(check_available=True)
     device = accel.type if accel is not None else "cpu"  # 'cuda', 'npu', 'mps', 'xpu', 'cpu'
     if device == "mps":
         device = "cpu"  # MOSS is untested on MPS; fall back to CPU for safety
