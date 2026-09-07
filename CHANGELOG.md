@@ -11,6 +11,7 @@ the frozen-backend fallback mirror it for their toolchains.
 **Highlights**
 
 - The desktop app builds and opens from a fresh clone again (#1818) — thanks @flutterkage2k!
+- GPUs with less VRAM than the engine needs no longer get half the compute-time budget a CPU gets (#1806) — thanks @VishvakR!
 - Voice cloning now starts with a clear upload-or-record choice, reveals recording and reference details only when needed, and keeps sampling controls under Production Overrides (#1817)
 
 ### Changed
@@ -30,6 +31,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Slow backend startups remain running with progress updates, and Retry can interrupt startup reliably (#1809)
 - Backend connection errors report crashes only when recorded evidence exists, and diagnostic waits honor cancellation (#1810)
+- A CUDA or ROCm GPU with less VRAM than the engine needs now gets the CPU compute-time budget instead of the shorter accelerated one, since it pages to system RAM and renders slower than the CPU would — applied to local generation, voice conversion, and remote worker deadlines alike (#1806) — thanks @VishvakR!
+
 
 ## [0.5.2] — 2026-09-02
 

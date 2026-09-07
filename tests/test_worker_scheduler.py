@@ -418,8 +418,8 @@ def test_assignment_deadline_uses_selected_workers_device(monkeypatch):
     _submit(sched)
     assignment = sched.next_assignment(now=1000.0)
 
-    sched._budget_for(assignment.task)
-    assert seen == ["cuda", "cuda"]
+    assert sched._budget_for(assignment.task) is assignment.deadlines
+    assert seen == ["cuda"]  # Keep the granted policy instead of recomputing.
 
 
 def test_cpu_fallback_capability_overrides_machine_cuda(monkeypatch):

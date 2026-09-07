@@ -33,6 +33,7 @@ from core.db import db_conn
 from core.path_security import UnsafePath, resolve_within, safe_filename
 from worker.clock import resolve
 from worker.errors import ErrorClass, WorkerError
+from worker.deadlines import Deadlines
 from worker.lifecycle import Attempt, AttemptState, PriorityClass, Task, TaskState
 
 logger = logging.getLogger("omnivoice.worker")
@@ -67,6 +68,8 @@ def _row_to_attempt(row) -> Attempt:
         state=AttemptState(row["state"]),
         created_at=float(row["created_at"]),
     )
+    if row["deadlines_json"]:
+        attempt.deadlines = Deadlines(**json.loads(row["deadlines_json"]))
     attempt.accepted_at = row["accepted_at"]
     attempt.started_at = row["started_at"]
     attempt.finished_at = row["finished_at"]
@@ -635,12 +638,13 @@ def _upsert_attempts(conn, task: Task) -> None:
             "INSERT INTO remote_task_attempts "
             "(id, task_id, worker_id, session_epoch, attempt_number, state, progress, stage, "
             " error_json, created_at, accepted_at, started_at, finished_at, lease_expires_at, "
-            " grace_expires_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            " grace_expires_at, deadlines_json) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT(id) DO UPDATE SET state=excluded.state, progress=excluded.progress, "
             " stage=excluded.stage, error_json=excluded.error_json, accepted_at=excluded.accepted_at, "
             " started_at=excluded.started_at, finished_at=excluded.finished_at, "
-            " lease_expires_at=excluded.lease_expires_at, grace_expires_at=excluded.grace_expires_at",
+            " lease_expires_at=excluded.lease_expires_at, grace_expires_at=excluded.grace_expires_at, "
+            " deadlines_json=excluded.deadlines_json",
             (
                 attempt.attempt_id,
                 attempt.task_id,
@@ -657,6 +661,7 @@ def _upsert_attempts(conn, task: Task) -> None:
                 attempt.finished_at,
                 attempt.lease_expires_at,
                 attempt.grace_expires_at,
+                json.dumps(attempt.deadlines.to_dict()) if attempt.deadlines else None,
             ),
         )
 

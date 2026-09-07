@@ -274,7 +274,8 @@ _BASE_SCHEMA = """
         started_at REAL,
         finished_at REAL,
         lease_expires_at REAL,
-        grace_expires_at REAL
+        grace_expires_at REAL,
+        deadlines_json TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_remote_attempts_task ON remote_task_attempts(task_id);
     CREATE INDEX IF NOT EXISTS idx_remote_attempts_worker ON remote_task_attempts(worker_id, state);

@@ -36,3 +36,19 @@ def test_remote_schema_upgrades_from_previous_head(tmp_path, monkeypatch):
         } <= tables
         columns = {row[1] for row in conn.execute("PRAGMA table_info(remote_tasks)")}
         assert "pinned_worker_id" in columns
+
+
+def test_attempt_deadlines_upgrade_preserves_existing_attempt(tmp_path, monkeypatch):
+    db_path = tmp_path / "existing-remote.db"
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("CREATE TABLE alembic_version (version_num VARCHAR(64) NOT NULL)")
+        conn.execute("INSERT INTO alembic_version VALUES ('0010_remote_worker_schema')")
+        conn.execute("CREATE TABLE remote_task_attempts (id TEXT PRIMARY KEY, state TEXT)")
+        conn.execute("INSERT INTO remote_task_attempts VALUES ('existing', 'running')")
+    monkeypatch.setenv("OMNIVOICE_DB_PATH", str(db_path))
+    _upgrade(str(db_path))
+    _upgrade(str(db_path))
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute(
+            "SELECT id, state, deadlines_json FROM remote_task_attempts"
+        ).fetchone() == ("existing", "running", None)
