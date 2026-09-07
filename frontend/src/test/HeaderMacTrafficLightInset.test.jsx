@@ -1,21 +1,10 @@
-/**
- * macOS runs the window with decorations:false + titleBarStyle:"Overlay"
- * (tauri.conf.json, applied on every platform) so the OS draws the native
- * traffic-light cluster on top of the web content instead of reserving its
- * own row. Windows/Linux draw nothing there — decorations:false just hides
- * chrome, no controls get overlaid.
- *
- * The header's left block (status dot + kicker) had no inset for that zone
- * at all, so on macOS the traffic lights sat on top of it (#1860). The tabs
- * navStyle already reserves a flat 64px from the window edge for the same
- * cluster (`.header-area--tabs` in index.css) — this pins the rail/breadcrumb
- * mode to the same total, on macOS only, and confirms Windows/Linux are
- * untouched.
- */
+/** macOS native overlay controls need space without shifting browser UI. */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import Header from '../components/Header';
 
@@ -59,8 +48,30 @@ function renderHeader() {
 describe('Header left block — macOS traffic-light inset', () => {
   it('gets the mac inset class on macOS', () => {
     setPlatform('MacIntel');
+    window.__TAURI_INTERNALS__ = {};
     const { container } = renderHeader();
     expect(container.querySelector('.header-area__left--mac-inset')).not.toBeNull();
+  });
+
+  it.each(['MacIntel', 'iPhone', 'iPad'])(
+    'does not reserve native chrome in a %s browser',
+    (platform) => {
+      setPlatform(platform);
+      const { container } = renderHeader();
+      expect(container.querySelector('.header-area__left--mac-inset')).toBeNull();
+    },
+  );
+
+  it('macOS config supplies native overlay controls', () => {
+    const config = JSON.parse(
+      fs.readFileSync(
+        path.resolve(import.meta.dirname, '../../src-tauri/tauri.macos.conf.json'),
+        'utf8',
+      ),
+    );
+    // The platform windows array replaces the base; omitted decorations defaults true.
+    expect(config.app.windows[0].decorations).not.toBe(false);
+    expect(config.app.windows[0].titleBarStyle).toBe('Overlay');
   });
 
   it('does not get the inset on Windows', () => {
