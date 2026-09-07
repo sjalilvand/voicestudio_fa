@@ -22,3 +22,20 @@ def test_precision_matches_runtime_device(monkeypatch, family):
     monkeypatch.delenv('OMNIVOICE_DOTS_TTS_PRECISION', raising=False)
     main._load_runtime(io.BytesIO())
     assert loader.from_pretrained.call_args.kwargs['precision'] == ('bfloat16' if family == 'cuda' else 'float32')
+
+
+@pytest.mark.parametrize("override", [None, "float16"])
+def test_precision_probe_failure_uses_safe_default_or_explicit_override(monkeypatch, override):
+    from engines.dots_tts import main
+
+    probe = Mock(side_effect=RuntimeError("CUDA driver unavailable"))
+    monkeypatch.setitem(sys.modules, "torch", SimpleNamespace(cuda=SimpleNamespace(is_available=probe)))
+    loader = Mock()
+    monkeypatch.setitem(sys.modules, "dots_tts.runtime", SimpleNamespace(DotsTtsRuntime=loader))
+    monkeypatch.setattr(main, "_runtime", None)
+    if override is None:
+        monkeypatch.delenv("OMNIVOICE_DOTS_TTS_PRECISION", raising=False)
+    else:
+        monkeypatch.setenv("OMNIVOICE_DOTS_TTS_PRECISION", override)
+    main._load_runtime(io.BytesIO())
+    assert loader.from_pretrained.call_args.kwargs["precision"] == (override or "float32")
