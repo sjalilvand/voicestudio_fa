@@ -1006,12 +1006,96 @@ pub fn get_effective_dictation_shortcut(
 }
 
 #[tauri::command]
-pub fn request_dictation_capture(app: tauri::AppHandle, action: String) -> Result<(), String> {
+pub async fn request_dictation_capture(
+    app: tauri::AppHandle,
+    action: String,
+) -> Result<(), String> {
     if action != "start" && action != "stop" && action != "toggle" {
         return Err("capture action must be start, stop, or toggle".into());
     }
-    crate::dispatch_dictation_capture(&app, &action);
-    Ok(())
+    let delivery_id = crate::request_dictation_capture_delivery(&app, &action)
+        .ok_or_else(|| "capture request could not be queued".to_string())?;
+    let wait_app = app.clone();
+    let acknowledged = tauri::async_runtime::spawn_blocking(move || {
+        wait_for_capture_delivery(
+            || {
+                let flags = wait_app.state::<AppFlags>();
+                let capture = flags
+                    .capture
+                    .lock()
+                    .map_err(|_| "Dictation capture state lock poisoned".to_string())?;
+                Ok(capture.delivery_pending(delivery_id))
+            },
+            CAPTURE_DELIVERY_TIMEOUT,
+        )
+    })
+    .await
+    .map_err(|error| format!("capture acknowledgement worker failed: {error}"))??;
+    if acknowledged {
+        return Ok(());
+    }
+
+    let flags = app.state::<AppFlags>();
+    let cancelled = flags
+        .capture
+        .lock()
+        .map_err(|_| "Dictation capture state lock poisoned".to_string())?
+        .cancel_delivery(delivery_id);
+    if let Some(event) = cancelled.filter(|event| event.name == "tray-dictate") {
+        flags.output.finish_session(event.payload.session_id);
+    }
+    Err("capture window did not acknowledge the request".into())
+}
+
+const CAPTURE_DELIVERY_TIMEOUT: Duration = Duration::from_secs(2);
+const CAPTURE_DELIVERY_POLL: Duration = Duration::from_millis(20);
+
+fn wait_for_capture_delivery<F>(mut pending: F, timeout: Duration) -> Result<bool, String>
+where
+    F: FnMut() -> Result<bool, String>,
+{
+    let deadline = Instant::now() + timeout;
+    loop {
+        if !pending()? {
+            return Ok(true);
+        }
+        if Instant::now() >= deadline {
+            return Ok(false);
+        }
+        std::thread::sleep(CAPTURE_DELIVERY_POLL);
+    }
+}
+
+#[cfg(test)]
+mod capture_request_tests {
+    use super::wait_for_capture_delivery;
+    use std::time::Duration;
+
+    #[test]
+    fn listener_acknowledgement_completes_the_request() {
+        let mut polls = 0;
+        let acknowledged = wait_for_capture_delivery(
+            || {
+                polls += 1;
+                Ok(polls < 2)
+            },
+            Duration::from_millis(50),
+        )
+        .expect("poll succeeds");
+
+        assert!(acknowledged);
+    }
+
+    #[test]
+    fn missing_listener_acknowledgement_times_out() {
+        let acknowledged = wait_for_capture_delivery(
+            || Ok(true),
+            Duration::from_millis(0),
+        )
+        .expect("poll succeeds");
+
+        assert!(!acknowledged);
+    }
 }
 
 /// Distance from the bottom edge of the work area, in logical pixels — clear of

@@ -34,14 +34,14 @@ describe('Transcriptions capture entry point', () => {
     render(<TranscriptionsPage />);
     expect(screen.getByText(/Super\+Shift\+V/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Start dictation' }).at(-1));
+    fireEvent.click(screen.getByRole('button', { name: 'Start dictation' }));
     await waitFor(() => expect(requestDictationCapture).toHaveBeenCalledWith('start'));
   });
 
   it('reports a capture-controller failure', async () => {
     requestDictationCapture.mockRejectedValueOnce(new Error('event channel unavailable'));
     render(<TranscriptionsPage />);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Start dictation' }).at(-1));
+    fireEvent.click(screen.getByRole('button', { name: 'Start dictation' }));
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
@@ -56,8 +56,20 @@ describe('Transcriptions capture entry point', () => {
       target: { value: '   ' },
     });
 
-    expect(screen.getAllByRole('button', { name: 'Start dictation' })).toHaveLength(2);
+    const button = screen.getByRole('button', { name: 'Start dictation' });
+    expect(button.querySelector(':scope > svg')).toBeInTheDocument();
+    expect(button.querySelector(':scope > span')).toHaveTextContent('Start dictation');
     expect(screen.getByText('No transcriptions yet')).toBeInTheDocument();
+  });
+
+  it('moves the single capture action to the header once history exists', () => {
+    addTranscription({ text: 'Existing transcript.', language: 'en' });
+    render(<TranscriptionsPage />);
+
+    const button = screen.getByRole('button', { name: 'Start dictation' });
+    expect(button.querySelector(':scope > svg')).toBeInTheDocument();
+    expect(button.querySelector(':scope > span')).toHaveTextContent('Start dictation');
+    expect(screen.queryByText('No transcriptions yet')).not.toBeInTheDocument();
   });
 
   it('shows a successful transcript emitted by the shared recorder', async () => {

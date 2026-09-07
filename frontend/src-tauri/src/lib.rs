@@ -109,6 +109,11 @@ pub struct CaptureDispatchState {
     active_registration: Option<u64>,
 }
 
+struct CaptureEnqueue {
+    delivery_id: u64,
+    event: Option<CaptureEvent>,
+}
+
 impl Default for CaptureDispatchState {
     fn default() -> Self {
         Self {
@@ -147,13 +152,21 @@ impl CaptureDispatchState {
             .collect()
     }
 
-    pub(crate) fn enqueue(&mut self, mut event: CaptureEvent) -> Option<CaptureEvent> {
+    fn enqueue(&mut self, mut event: CaptureEvent) -> CaptureEnqueue {
         self.delivery_counter = self.delivery_counter.wrapping_add(1).max(1);
         event.payload.delivery_id = self.delivery_counter;
         self.pending.push_back(event.clone());
-        let registration_id = self.active_registration.filter(|_| self.ready)?;
-        event.payload.registration_id = registration_id;
-        Some(event)
+        let ready_event = self
+            .active_registration
+            .filter(|_| self.ready)
+            .map(|registration_id| {
+                event.payload.registration_id = registration_id;
+                event
+            });
+        CaptureEnqueue {
+            delivery_id: self.delivery_counter,
+            event: ready_event,
+        }
     }
 
     pub(crate) fn acknowledge(&mut self, registration_id: u64, delivery_id: u64) {
@@ -167,6 +180,20 @@ impl CaptureDispatchState {
         {
             self.pending.remove(index);
         }
+    }
+
+    pub(crate) fn delivery_pending(&self, delivery_id: u64) -> bool {
+        self.pending
+            .iter()
+            .any(|event| event.payload.delivery_id == delivery_id)
+    }
+
+    pub(crate) fn cancel_delivery(&mut self, delivery_id: u64) -> Option<CaptureEvent> {
+        let index = self
+            .pending
+            .iter()
+            .position(|event| event.payload.delivery_id == delivery_id)?;
+        self.pending.remove(index)
     }
 
     pub(crate) fn end_registration(&mut self, registration_id: u64) {
@@ -205,10 +232,21 @@ fn dictation_capture_event(action: &str, dictating: bool) -> &'static str {
 }
 
 pub fn dispatch_dictation_capture(app: &tauri::AppHandle, action: &str) {
-    dispatch_dictation_capture_from(app, action, CaptureOrigin::Shortcut);
+    let _ = dispatch_dictation_capture_from(app, action, CaptureOrigin::Shortcut);
 }
 
-fn dispatch_dictation_capture_from(app: &tauri::AppHandle, action: &str, origin: CaptureOrigin) {
+pub(crate) fn request_dictation_capture_delivery(
+    app: &tauri::AppHandle,
+    action: &str,
+) -> Option<u64> {
+    dispatch_dictation_capture_from(app, action, CaptureOrigin::Shortcut)
+}
+
+fn dispatch_dictation_capture_from(
+    app: &tauri::AppHandle,
+    action: &str,
+    origin: CaptureOrigin,
+) -> Option<u64> {
     let flags = app.state::<AppFlags>();
     let event = dictation_capture_event(action, flags.dictating.load(Ordering::SeqCst));
     let session_id = if event == "tray-dictate" {
@@ -217,8 +255,21 @@ fn dispatch_dictation_capture_from(app: &tauri::AppHandle, action: &str, origin:
         session_id
     } else {
         log::warn!("Dictation capture '{action}' ignored — no active output session");
-        return;
+        return None;
     };
+
+    // The recorder lives in the widget WebView. WebKit can suspend that
+    // document while its window is hidden, so an event cannot be relied on to
+    // wake the very listener that must receive it. Preserve the output target
+    // first, then show the non-activating pill before enqueueing/emitting the
+    // start event. The widget's idle reconcile hides it again if capture is
+    // disabled or startup exits early.
+    if event == "tray-dictate" {
+        if let Err(error) = commands::show_dictation_pill(app.clone()) {
+            log::warn!("Dictation capture '{action}' could not wake the capture window: {error}");
+        }
+    }
+
     let capture_event = CaptureEvent {
         name: event,
         payload: DictationCapturePayload {
@@ -229,9 +280,11 @@ fn dispatch_dictation_capture_from(app: &tauri::AppHandle, action: &str, origin:
     };
     let Ok(mut capture) = flags.capture.lock() else {
         log::warn!("Dictation capture state lock poisoned");
-        return;
+        return None;
     };
-    if let Some(capture_event) = capture.enqueue(capture_event) {
+    let enqueued = capture.enqueue(capture_event);
+    let delivery_id = enqueued.delivery_id;
+    if let Some(capture_event) = enqueued.event {
         drop(capture);
         // A press that reaches Rust but produces no recording is otherwise
         // indistinguishable from one the compositor never delivered, so say
@@ -246,6 +299,7 @@ fn dispatch_dictation_capture_from(app: &tauri::AppHandle, action: &str, origin:
             "Dictation capture '{action}' queued — the capture window has not registered yet"
         );
     }
+    Some(delivery_id)
 }
 
 #[cfg(test)]
@@ -297,8 +351,24 @@ mod dictation_capture_tests {
 
         state.acknowledge(stale, delivery_id);
         assert_eq!(state.pending.len(), 1);
+        assert!(state.delivery_pending(delivery_id));
         state.acknowledge(current, delivery_id);
         assert!(state.pending.is_empty());
+        assert!(!state.delivery_pending(delivery_id));
+    }
+
+    #[test]
+    fn timed_out_delivery_can_be_cancelled_without_touching_others() {
+        let mut state = CaptureDispatchState::default();
+        state.enqueue(capture_event("tray-dictate"));
+        state.enqueue(capture_event("tray-dictate-stop"));
+        let first_id = state.pending[0].payload.delivery_id;
+        let second_id = state.pending[1].payload.delivery_id;
+
+        let cancelled = state.cancel_delivery(first_id).expect("delivery exists");
+        assert_eq!(cancelled.payload.session_id, 7);
+        assert!(!state.delivery_pending(first_id));
+        assert!(state.delivery_pending(second_id));
     }
 
     #[test]
@@ -879,12 +949,8 @@ pub fn run() {
                             match event.state {
                                 ShortcutState::Pressed => {
                                     log::info!("Global shortcut pressed: dictation start");
-                                    // The widget window stays hidden until the
-                                    // capture itself reaches a state worth
-                                    // showing — the widget calls
-                                    // `show_dictation_pill` then, so a press
-                                    // that bails early never strands an empty
-                                    // capsule on the desktop.
+                                    // Dispatch preserves the focused target,
+                                    // wakes the recorder WebView, then emits.
                                     dispatch_dictation_capture(app_handle, "start");
                                 }
                                 ShortcutState::Released => {
@@ -1034,9 +1100,17 @@ pub fn run() {
                             // current by the frontend's existing
                             // `set_tray_recording` call on every start and stop.
                             if app.state::<AppFlags>().dictating.load(Ordering::SeqCst) {
-                                dispatch_dictation_capture_from(app, "stop", CaptureOrigin::Tray);
+                                let _ = dispatch_dictation_capture_from(
+                                    app,
+                                    "stop",
+                                    CaptureOrigin::Tray,
+                                );
                             } else {
-                                dispatch_dictation_capture_from(app, "start", CaptureOrigin::Tray);
+                                let _ = dispatch_dictation_capture_from(
+                                    app,
+                                    "start",
+                                    CaptureOrigin::Tray,
+                                );
                             }
                         }
                         "settings" => {
