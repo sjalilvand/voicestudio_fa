@@ -262,17 +262,21 @@ def test_unavailable_npu_does_not_claim_acceleration():
 
 @pytest.mark.parametrize("npu_available,expected", [(True, "cpu"), (False, "privateuseone:0")])
 def test_generic_directml_loader_respects_selected_family(monkeypatch, npu_available, expected):
+    import importlib
     from services import model_manager
 
+    # Other tests reload core modules; patch the same module the loader imports.
+    live_caps = importlib.import_module("core.device_caps")
     torch = _torch_mock()
     torch.npu = types.SimpleNamespace(is_available=lambda: npu_available, get_device_name=lambda i: "NPU")
     modules = {
         "torch": torch,
         "torch_directml": types.SimpleNamespace(device_count=lambda: 1, device=lambda i: "privateuseone:0"),
     }
-    caps = _probe_with(modules)
+    with patch.dict("sys.modules", modules):
+        caps = live_caps.refresh()
     assert caps.family == ("npu" if npu_available else "cpu")
-    monkeypatch.setattr(device_caps, "detect_host_caps", lambda: caps)
+    monkeypatch.setattr(live_caps, "detect_host_caps", lambda: caps)
     monkeypatch.setattr(model_manager, "_lazy_torch", lambda: torch)
     with patch.dict("sys.modules", modules):
         assert model_manager.get_best_device() == expected
