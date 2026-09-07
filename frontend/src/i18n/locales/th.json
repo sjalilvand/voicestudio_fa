@@ -349,7 +349,10 @@
     "generate_timeout_shadowed_badge": "ถูกแทนที่จากภายนอก",
     "generate_timeout_shadowed_note": "มีตัวแปรสภาพแวดล้อมภายนอก VoiceStudio (เชลล์, ไฟล์ .env หรือคอนเทนเนอร์) กำลังตั้งค่านี้อยู่ — ค่าที่บันทึกไว้ที่นี่จะถูกละเว้นจนกว่าตัวแปรนั้นจะถูกลบออก",
     "generate_timeout_shadowed_toast": "บันทึกแล้ว แต่มีตัวแปรสภาพแวดล้อมภายนอก VoiceStudio กำลังตั้งค่านี้อยู่ — ค่านั้นจะยังคงถูกใช้งานจนกว่าตัวแปรนั้นจะถูกลบออก",
-    "hf_token_not_checked": "ยังไม่ได้ทดสอบ"
+    "hf_token_not_checked": "ยังไม่ได้ทดสอบ",
+    "hf_source_app_label": "VoiceStudio (เข้ารหัส แนะนำ)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "ตัวแปรสภาพแวดล้อม"
   },
   "bootstrap": {
     "title": "VoiceStudio",

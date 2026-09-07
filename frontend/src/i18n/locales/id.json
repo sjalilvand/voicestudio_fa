@@ -349,7 +349,10 @@
     "generate_timeout_shadowed_badge": "Ditimpa secara eksternal",
     "generate_timeout_shadowed_note": "Variabel lingkungan di luar VoiceStudio (shell, file .env, atau kontainer) saat ini sedang mengatur nilai ini — nilai yang disimpan di sini diabaikan sampai variabel tersebut dihapus.",
     "generate_timeout_shadowed_toast": "Tersimpan, tetapi variabel lingkungan di luar VoiceStudio saat ini sedang mengatur nilai ini — nilai itu akan terus digunakan sampai variabel tersebut dihapus.",
-    "hf_token_not_checked": "Belum diuji"
+    "hf_token_not_checked": "Belum diuji",
+    "hf_source_app_label": "VoiceStudio (terenkripsi, disarankan)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "Variabel lingkungan"
   },
   "bootstrap": {
     "title": "VoiceStudio",

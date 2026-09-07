@@ -349,7 +349,10 @@
     "generate_timeout_shadowed_badge": "Dışarıdan geçersiz kılındı",
     "generate_timeout_shadowed_note": "VoiceStudio dışındaki bir ortam değişkeni (kabuk, .env dosyası veya konteyner) şu anda bu değeri ayarlıyor — o değişken kaldırılana kadar burada kaydedilen değer yok sayılır.",
     "generate_timeout_shadowed_toast": "Kaydedildi, ancak VoiceStudio dışındaki bir ortam değişkeni şu anda bu değeri ayarlıyor — o değişken kaldırılana kadar kullanılmaya devam edecek.",
-    "hf_token_not_checked": "Test edilmedi"
+    "hf_token_not_checked": "Test edilmedi",
+    "hf_source_app_label": "VoiceStudio (şifrelenmiş, önerilen)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "Ortam değişkeni"
   },
   "bootstrap": {
     "title": "VoiceStudio",

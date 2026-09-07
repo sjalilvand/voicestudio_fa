@@ -349,7 +349,10 @@
     "generate_timeout_shadowed_badge": "Перевизначено ззовні",
     "generate_timeout_shadowed_note": "Змінна середовища поза VoiceStudio (оболонка, файл .env або контейнер) наразі задає це значення — збережене тут значення ігнорується, доки цю змінну не видалять.",
     "generate_timeout_shadowed_toast": "Збережено, але змінна середовища поза VoiceStudio наразі задає це значення — воно продовжуватиме використовуватися, доки цю змінну не видалять.",
-    "hf_token_not_checked": "Не перевірено"
+    "hf_token_not_checked": "Не перевірено",
+    "hf_source_app_label": "VoiceStudio (зашифровано, рекомендовано)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "Змінна середовища"
   },
   "bootstrap": {
     "title": "VoiceStudio",

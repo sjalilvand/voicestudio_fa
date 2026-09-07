@@ -349,7 +349,10 @@
     "generate_timeout_shadowed_badge": "تم تجاوزها خارجيًا",
     "generate_timeout_shadowed_note": "يوجد متغيّر بيئة خارج VoiceStudio (الصدفة، ملف .env، أو الحاوية) يُحدّد هذه القيمة حاليًا — القيمة المحفوظة هنا تُتجاهل إلى أن تتم إزالة ذلك المتغيّر.",
     "generate_timeout_shadowed_toast": "تم الحفظ، لكن متغيّر بيئة خارج VoiceStudio يُحدّد هذه القيمة حاليًا — سيستمر استخدامه إلى أن تتم إزالة ذلك المتغيّر.",
-    "hf_token_not_checked": "لم يتم اختباره"
+    "hf_token_not_checked": "لم يتم اختباره",
+    "hf_source_app_label": "VoiceStudio (مشفّر، موصى به)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "متغير البيئة"
   },
   "bootstrap": {
     "title": "VoiceStudio",

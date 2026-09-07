@@ -20,7 +20,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- Onboarding recognizes locally saved Hugging Face tokens without contacting Hugging Face, and replacing one requires an explicit click (#1852) — thanks @psiberfunk!
+- Onboarding recognizes locally saved Hugging Face tokens without network checks, localizes source labels, and requires a click to replace a token (#1852) — thanks @psiberfunk!
 
 
 ## [0.5.2] — 2026-09-02

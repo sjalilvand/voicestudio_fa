@@ -349,7 +349,10 @@
     "generate_timeout_shadowed_badge": "Åsidosatt externt",
     "generate_timeout_shadowed_note": "En miljövariabel utanför VoiceStudio (skal, .env-fil eller container) anger just nu detta värde — värdet som sparats här ignoreras tills den variabeln tas bort.",
     "generate_timeout_shadowed_toast": "Sparat, men en miljövariabel utanför VoiceStudio anger just nu detta värde — det kommer fortsätta användas tills den variabeln tas bort.",
-    "hf_token_not_checked": "Inte testad"
+    "hf_token_not_checked": "Inte testad",
+    "hf_source_app_label": "VoiceStudio (krypterad, rekommenderas)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "Miljövariabel"
   },
   "bootstrap": {
     "title": "VoiceStudio",

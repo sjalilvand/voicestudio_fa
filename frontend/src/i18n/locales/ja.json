@@ -349,7 +349,10 @@
     "generate_timeout_shadowed_badge": "外部から上書きされています",
     "generate_timeout_shadowed_note": "VoiceStudio の外部にある環境変数（シェル、.env ファイル、またはコンテナ）が現在この値を設定しています — その変数が削除されるまで、ここで保存した値は無視されます。",
     "generate_timeout_shadowed_toast": "保存しましたが、VoiceStudio の外部にある環境変数が現在この値を設定しています — その変数が削除されるまで、その値が使われ続けます。",
-    "hf_token_not_checked": "未テスト"
+    "hf_token_not_checked": "未テスト",
+    "hf_source_app_label": "VoiceStudio（暗号化済み、推奨）",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "環境変数"
   },
   "bootstrap": {
     "title": "VoiceStudio",
