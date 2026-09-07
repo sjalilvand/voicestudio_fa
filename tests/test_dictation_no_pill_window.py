@@ -78,7 +78,7 @@ def test_capture_dispatch_wakes_widget_before_emitting_start(lib_rs: str) -> Non
     )
 
 
-def test_in_page_capture_waits_for_listener_acknowledgement(commands_rs: str) -> None:
+def test_in_page_capture_waits_for_listener_acceptance(commands_rs: str) -> None:
     request = re.search(
         r"pub async fn request_dictation_capture\(.*?\n\}", commands_rs, re.S
     )
@@ -86,8 +86,11 @@ def test_in_page_capture_waits_for_listener_acknowledgement(commands_rs: str) ->
     body = request.group(0)
     assert "request_dictation_capture_delivery" in body
     assert "wait_for_capture_delivery" in body
+    assert "completion_ready" in body
+    assert "take_completion" in body
     assert "cancel_delivery" in body
     assert "capture window did not acknowledge the request" in body
+    assert "dictation capture did not start in time" in body
 
 
 def test_no_computed_window_target_can_resolve_to_the_widget(lib_rs: str) -> None:

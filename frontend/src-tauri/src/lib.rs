@@ -26,7 +26,7 @@ pub mod watch_folder;
 #[cfg(target_os = "linux")]
 pub mod wayland_shortcut;
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::process::Child;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -107,6 +107,12 @@ pub struct CaptureDispatchState {
     registration_counter: u64,
     delivery_counter: u64,
     active_registration: Option<u64>,
+    in_flight: HashMap<u64, CaptureInFlight>,
+}
+
+struct CaptureInFlight {
+    event: CaptureEvent,
+    outcome: Option<Result<(), String>>,
 }
 
 struct CaptureEnqueue {
@@ -122,6 +128,7 @@ impl Default for CaptureDispatchState {
             registration_counter: 0,
             delivery_counter: 0,
             active_registration: None,
+            in_flight: HashMap::new(),
         }
     }
 }
@@ -178,8 +185,46 @@ impl CaptureDispatchState {
             .iter()
             .position(|event| event.payload.delivery_id == delivery_id)
         {
-            self.pending.remove(index);
+            if let Some(event) = self.pending.remove(index) {
+                if event.await_result {
+                    self.in_flight.insert(
+                        delivery_id,
+                        CaptureInFlight {
+                            event,
+                            outcome: None,
+                        },
+                    );
+                }
+            }
         }
+    }
+
+    pub(crate) fn complete(
+        &mut self,
+        registration_id: u64,
+        delivery_id: u64,
+        error: Option<String>,
+    ) {
+        if self.active_registration != Some(registration_id) {
+            return;
+        }
+        if let Some(delivery) = self.in_flight.get_mut(&delivery_id) {
+            delivery.outcome = Some(error.map_or_else(|| Ok(()), Err));
+        }
+    }
+
+    pub(crate) fn completion_ready(&self, delivery_id: u64) -> bool {
+        self.in_flight
+            .get(&delivery_id)
+            .is_some_and(|delivery| delivery.outcome.is_some())
+    }
+
+    pub(crate) fn take_completion(&mut self, delivery_id: u64) -> Option<Result<(), String>> {
+        let ready = self.completion_ready(delivery_id);
+        ready
+            .then(|| self.in_flight.remove(&delivery_id))
+            .flatten()
+            .and_then(|delivery| delivery.outcome)
     }
 
     pub(crate) fn delivery_pending(&self, delivery_id: u64) -> bool {
@@ -189,11 +234,16 @@ impl CaptureDispatchState {
     }
 
     pub(crate) fn cancel_delivery(&mut self, delivery_id: u64) -> Option<CaptureEvent> {
-        let index = self
+        if let Some(index) = self
             .pending
             .iter()
-            .position(|event| event.payload.delivery_id == delivery_id)?;
-        self.pending.remove(index)
+            .position(|event| event.payload.delivery_id == delivery_id)
+        {
+            return self.pending.remove(index);
+        }
+        self.in_flight
+            .remove(&delivery_id)
+            .map(|delivery| delivery.event)
     }
 
     pub(crate) fn end_registration(&mut self, registration_id: u64) {
@@ -216,6 +266,7 @@ pub(crate) struct DictationCapturePayload {
 pub(crate) struct CaptureEvent {
     pub(crate) name: &'static str,
     pub(crate) payload: DictationCapturePayload,
+    await_result: bool,
 }
 
 pub struct TrayHandle {
@@ -232,20 +283,21 @@ fn dictation_capture_event(action: &str, dictating: bool) -> &'static str {
 }
 
 pub fn dispatch_dictation_capture(app: &tauri::AppHandle, action: &str) {
-    let _ = dispatch_dictation_capture_from(app, action, CaptureOrigin::Shortcut);
+    let _ = dispatch_dictation_capture_from(app, action, CaptureOrigin::Shortcut, false);
 }
 
 pub(crate) fn request_dictation_capture_delivery(
     app: &tauri::AppHandle,
     action: &str,
 ) -> Option<u64> {
-    dispatch_dictation_capture_from(app, action, CaptureOrigin::Shortcut)
+    dispatch_dictation_capture_from(app, action, CaptureOrigin::Shortcut, true)
 }
 
 fn dispatch_dictation_capture_from(
     app: &tauri::AppHandle,
     action: &str,
     origin: CaptureOrigin,
+    await_result: bool,
 ) -> Option<u64> {
     let flags = app.state::<AppFlags>();
     let event = dictation_capture_event(action, flags.dictating.load(Ordering::SeqCst));
@@ -277,6 +329,7 @@ fn dispatch_dictation_capture_from(
             delivery_id: 0,
             registration_id: 0,
         },
+        await_result,
     };
     let Ok(mut capture) = flags.capture.lock() else {
         log::warn!("Dictation capture state lock poisoned");
@@ -316,6 +369,7 @@ mod dictation_capture_tests {
                 delivery_id: 0,
                 registration_id: 0,
             },
+            await_result: false,
         }
     }
 
@@ -369,6 +423,31 @@ mod dictation_capture_tests {
         assert_eq!(cancelled.payload.session_id, 7);
         assert!(!state.delivery_pending(first_id));
         assert!(state.delivery_pending(second_id));
+    }
+
+    #[test]
+    fn awaited_delivery_preserves_frontend_rejection_for_the_requester() {
+        let mut state = CaptureDispatchState::default();
+        let registration_id = state.begin_registration();
+        state.mark_registration_ready(registration_id);
+        let mut event = capture_event("tray-dictate");
+        event.await_result = true;
+        let delivery_id = state.enqueue(event).delivery_id;
+
+        state.acknowledge(registration_id, delivery_id);
+        assert!(!state.completion_ready(delivery_id));
+        state.complete(
+            registration_id,
+            delivery_id,
+            Some("Dictation is disabled".into()),
+        );
+        assert!(state.completion_ready(delivery_id));
+
+        assert_eq!(
+            state.take_completion(delivery_id),
+            Some(Err("Dictation is disabled".into()))
+        );
+        assert_eq!(state.take_completion(delivery_id), None);
     }
 
     #[test]
@@ -797,6 +876,7 @@ pub fn run() {
             commands::begin_dictation_capture_registration,
             commands::mark_dictation_capture_ready,
             commands::acknowledge_dictation_capture_delivery,
+            commands::complete_dictation_capture_delivery,
             commands::end_dictation_capture_registration,
             commands::show_dictation_pill,
             commands::get_launch_as_widget,
@@ -1104,12 +1184,14 @@ pub fn run() {
                                     app,
                                     "stop",
                                     CaptureOrigin::Tray,
+                                    false,
                                 );
                             } else {
                                 let _ = dispatch_dictation_capture_from(
                                     app,
                                     "start",
                                     CaptureOrigin::Tray,
+                                    false,
                                 );
                             }
                         }

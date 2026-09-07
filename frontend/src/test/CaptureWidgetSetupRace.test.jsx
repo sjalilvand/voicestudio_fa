@@ -112,8 +112,11 @@ class FakeWS {
 
 function pressShortcut() {
   const handler = eventHandlers['tray-dictate'];
-  if (handler) handler({ payload: { sessionId: 'setup-race-session' } });
-  else eventState.pendingStart = true;
+  if (handler) {
+    handler({
+      payload: { sessionId: 'setup-race-session', deliveryId: 9, registrationId: 1 },
+    });
+  } else eventState.pendingStart = true;
 }
 
 let realWebSocket;
@@ -128,7 +131,7 @@ beforeEach(() => {
     if (cmd === 'mark_dictation_capture_ready' && eventState.pendingStart) {
       eventState.pendingStart = false;
       return eventHandlers['tray-dictate']?.({
-        payload: { sessionId: 'setup-race-session' },
+        payload: { sessionId: 'setup-race-session', deliveryId: 9, registrationId: 1 },
       });
     }
     return undefined;
@@ -136,6 +139,7 @@ beforeEach(() => {
   eventState.pendingStart = false;
   eventUnlisteners.length = 0;
   FakeWS.instances = [];
+  storeState.dictationEnabled = true;
   storeState.dictationModelId = 'sherpa-parakeet-v3';
   realWebSocket = globalThis.WebSocket;
   globalThis.WebSocket = FakeWS;
@@ -192,6 +196,47 @@ describe('CaptureWidget — connect-time asr_model_missing during mic setup', ()
     });
   });
 
+  it('completes an in-page delivery only after microphone startup is accepted', async () => {
+    render(<CaptureWidget />);
+    await waitFor(() => expect(eventHandlers['tray-dictate']).toBeTypeOf('function'));
+
+    await eventHandlers['tray-dictate']({
+      payload: { sessionId: 7, deliveryId: 9, registrationId: 1 },
+    });
+    await waitFor(() => expect(FakeWS.instances.length).toBe(1));
+    expect(invokeMock).not.toHaveBeenCalledWith('complete_dictation_capture_delivery', {
+      registrationId: 1,
+      deliveryId: 9,
+      error: null,
+    });
+
+    micControl.resolve(micStop);
+    await waitFor(() =>
+      expect(invokeMock).toHaveBeenCalledWith('complete_dictation_capture_delivery', {
+        registrationId: 1,
+        deliveryId: 9,
+        error: null,
+      }),
+    );
+  });
+
+  it('rejects an in-page delivery when dictation is disabled', async () => {
+    storeState.dictationEnabled = false;
+    render(<CaptureWidget />);
+    await waitFor(() => expect(eventHandlers['tray-dictate']).toBeTypeOf('function'));
+
+    await eventHandlers['tray-dictate']({
+      payload: { sessionId: 7, deliveryId: 9, registrationId: 1 },
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith('complete_dictation_capture_delivery', {
+      registrationId: 1,
+      deliveryId: 9,
+      error: 'Dictation is disabled',
+    });
+    expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
+  });
+
   it('turns a PCM-fallback socket failure into a terminal error', async () => {
     storeState.dictationModelId = 'whisperx';
     render(<CaptureWidget />);
@@ -238,6 +283,11 @@ describe('CaptureWidget — connect-time asr_model_missing during mic setup', ()
     expect(screen.getByText(/No speech-to-text model/)).toBeInTheDocument();
     expect(screen.queryByText(/Listening/)).not.toBeInTheDocument();
     expect(invokeMock).not.toHaveBeenCalledWith('set_tray_recording', { recording: true });
+    expect(invokeMock).toHaveBeenCalledWith('complete_dictation_capture_delivery', {
+      registrationId: 1,
+      deliveryId: 9,
+      error: 'Dictation could not start',
+    });
   });
 
   it('setup REJECTION after the terminal frame must not clobber it with a mic error', async () => {
