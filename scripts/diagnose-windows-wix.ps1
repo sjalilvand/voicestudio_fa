@@ -69,6 +69,29 @@ try {
         Get-ChildItem "$fixture/target" -Recurse -File |
             Where-Object { $_.Extension -in @('.wxs', '.wxl', '.wixobj', '.wixpdb', '.msi') } |
             Copy-Item -Destination $capture -Force
+        if ($results[$scope] -eq 0) {
+            $rendered = Get-Content "$capture/main.wxs" -Raw
+            if ($rendered.Contains('{{')) { throw "$scope WiX contains unresolved template variables" }
+            [xml]$authoring = $rendered
+            $ns = New-Object System.Xml.XmlNamespaceManager($authoring.NameTable)
+            $ns.AddNamespace('w', 'http://schemas.microsoft.com/wix/2006/wi')
+            $expectedScope = if ($scope -eq 'per-user') { 'perUser' } else { 'perMachine' }
+            if ($authoring.SelectSingleNode('//w:Package', $ns).InstallScope -ne $expectedScope) {
+                throw "$scope MSI has the wrong installation scope"
+            }
+            if ($scope -eq 'per-user') {
+                foreach ($component in $authoring.SelectNodes('//w:Component[w:File]', $ns)) {
+                    $key = $component.SelectSingleNode('w:RegistryValue[@KeyPath="yes"]', $ns)
+                    if ($null -eq $key -or $key.Root -ne 'HKCU' -or -not $key.Key.StartsWith('Software\')) {
+                        throw "Per-user file component lacks a resolved HKCU registry keypath: $($component.Id)"
+                    }
+                    $componentGuid = [guid]::Empty
+                    if (-not [guid]::TryParse($component.Guid, [ref]$componentGuid)) {
+                        throw "Per-user file component lacks an explicit GUID: $($component.Id)"
+                    }
+                }
+            }
+        }
     }
     $results | ConvertTo-Json | Set-Content -Encoding utf8 "$artifacts/results.json"
     if ($results.Values | Where-Object { $_ -ne 0 }) {
