@@ -73,6 +73,33 @@ pub struct OwnedProcessTree {
     job: std::os::windows::io::OwnedHandle,
 }
 
+// Keep the delivery and post-error ownership probe together: the root may
+// exit between any earlier liveness check and either TERM or KILL delivery.
+#[cfg(unix)]
+fn signal_process_group_with(
+    signal: libc::c_int,
+    darwin: bool,
+    send: impl FnOnce(libc::c_int) -> io::Result<()>,
+    root_exited_unreaped: impl FnOnce() -> io::Result<bool>,
+) -> io::Result<()> {
+    match send(signal) {
+        Ok(()) => Ok(()),
+        Err(error) if error.raw_os_error() == Some(libc::ESRCH) => Ok(()),
+        Err(error) if darwin && error.raw_os_error() == Some(libc::EPERM) => {
+            // Darwin can report EPERM when the last signalable member exited
+            // during delivery. Accept only a newly verified unreaped root:
+            // live roots, lost identity and probe failures remain errors.
+            // Callers must still join nested drain before reaping that root.
+            if root_exited_unreaped()? {
+                Ok(())
+            } else {
+                Err(error)
+            }
+        }
+        Err(error) => Err(error),
+    }
+}
+
 impl OwnedProcessTree {
     #[cfg(unix)]
     fn root_exited_unreaped(&self) -> io::Result<bool> {
@@ -141,15 +168,18 @@ impl OwnedProcessTree {
 
     #[cfg(unix)]
     fn signal_group(&self, signal: libc::c_int) -> io::Result<()> {
-        if unsafe { libc::kill(-self.process_group, signal) } == 0 {
-            return Ok(());
-        }
-        let error = io::Error::last_os_error();
-        if error.raw_os_error() == Some(libc::ESRCH) {
-            Ok(())
-        } else {
-            Err(error)
-        }
+        signal_process_group_with(
+            signal,
+            cfg!(target_os = "macos"),
+            |signal| {
+                if unsafe { libc::kill(-self.process_group, signal) } == 0 {
+                    Ok(())
+                } else {
+                    Err(io::Error::last_os_error())
+                }
+            },
+            || self.root_exited_unreaped(),
+        )
     }
 
     fn force_terminate(&mut self) -> io::Result<()> {
@@ -168,27 +198,6 @@ impl OwnedProcessTree {
                 TerminateJobObject(HANDLE(self.job.as_raw_handle()), 1)
                     .map_err(windows_error)?;
             }
-        }
-        self.terminated = true;
-        Ok(())
-    }
-
-    #[cfg(unix)]
-    fn force_terminate_after_root_exit(&mut self) -> io::Result<()> {
-        if self.terminated {
-            return Ok(());
-        }
-        match self.signal_group(libc::SIGKILL) {
-            Ok(()) => {}
-            #[cfg(target_os = "macos")]
-            Err(error) if error.raw_os_error() == Some(libc::EPERM) => {
-                // XNU excludes zombies when iterating an explicit process
-                // group, then reports EPERM when it found no signalable live
-                // member. The unreaped root still reserves this exact group;
-                // the nested-drain join that follows catches any descendant
-                // which actually survived the signal attempt.
-            }
-            Err(error) => return Err(error),
         }
         self.terminated = true;
         Ok(())
@@ -446,7 +455,7 @@ pub fn contained_child_exit(
             Ok(true) => {
                 // Do not reap the root until group cleanup succeeds: the
                 // zombie is what keeps this process-group ID non-reusable.
-                tree.force_terminate_after_root_exit()?;
+                tree.force_terminate()?;
                 tree.wait_nested_drain(nested_drain_timeout())?;
                 let status = child.try_wait()?;
                 return Ok(status);
@@ -495,7 +504,7 @@ pub fn terminate_process_tree(
     #[cfg(unix)]
     match tree.root_exited_unreaped() {
         Ok(true) => {
-            tree.force_terminate_after_root_exit()?;
+            tree.force_terminate()?;
             tree.wait_nested_drain(nested_drain_timeout())?;
             return child.wait();
         }
@@ -522,7 +531,7 @@ pub fn terminate_process_tree(
     while std::time::Instant::now() < deadline {
         #[cfg(unix)]
         if tree.root_exited_unreaped()? {
-            tree.force_terminate_after_root_exit()?;
+            tree.force_terminate()?;
             tree.wait_nested_drain(nested_drain_timeout())?;
             return child.wait();
         }
@@ -1206,6 +1215,64 @@ fn redact_home_prefix(text: &str, home: &str) -> String {
 mod uv_tests {
     use super::*;
     use std::ffi::OsStr;
+
+    #[cfg(unix)]
+    #[test]
+    fn darwin_group_signal_recovers_exit_during_term_or_kill_delivery() {
+        for signal in [libc::SIGTERM, libc::SIGKILL] {
+            let exited = std::cell::Cell::new(false);
+            signal_process_group_with(
+                signal,
+                true,
+                |delivered| {
+                    assert_eq!(delivered, signal);
+                    assert!(!exited.replace(true));
+                    Err(io::Error::from_raw_os_error(libc::EPERM))
+                },
+                || {
+                    assert!(exited.get(), "ownership must be checked after failed delivery");
+                    Ok(true)
+                },
+            )
+            .expect("an exited unreaped root keeps its group reserved until drain completes");
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn darwin_group_signal_rejects_live_reaped_or_unverifiable_roots() {
+        for signal in [libc::SIGTERM, libc::SIGKILL] {
+            for (probe, expected) in [
+                (Ok(false), libc::EPERM),
+                (Err(libc::ECHILD), libc::ECHILD),
+                (Err(libc::EIO), libc::EIO),
+            ] {
+                let error = signal_process_group_with(
+                    signal,
+                    true,
+                    |_| Err(io::Error::from_raw_os_error(libc::EPERM)),
+                    || probe.map_err(io::Error::from_raw_os_error),
+                )
+                .expect_err("only a confirmed unreaped exit can explain Darwin EPERM");
+                assert_eq!(error.raw_os_error(), Some(expected));
+            }
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn group_signal_preserves_other_permission_errors_and_platforms() {
+        for (darwin, errno) in [(false, libc::EPERM), (true, libc::EACCES)] {
+            let error = signal_process_group_with(
+                libc::SIGKILL,
+                darwin,
+                |_| Err(io::Error::from_raw_os_error(errno)),
+                || panic!("unrelated errors must not use the Darwin exit exception"),
+            )
+            .unwrap_err();
+            assert_eq!(error.raw_os_error(), Some(errno));
+        }
+    }
 
     #[cfg(unix)]
     #[test]

@@ -200,3 +200,10 @@ list because Tauri replaces arrays when merging it with the shared config.
 The capture widget remains a separate borderless window created at runtime.
 Its window-scoped Tauri capability permits hiding after recording or idle
 reconciliation on every desktop platform.
+
+### Fast process shutdown
+
+A process that exits while shutdown is signalling it can report a macOS
+permission error. VoiceStudio accepts this only after confirming the original
+process exited without being reaped, then still waits for nested operations to
+drain. Live-process permission errors and lost process ownership remain failures.
