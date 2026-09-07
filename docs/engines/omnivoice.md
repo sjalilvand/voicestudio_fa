@@ -115,3 +115,6 @@ See also: [benchmarks.md](../benchmarks.md),
 A timed-out subprocess is killed and given a bounded wait to exit before the
 request returns, so retrying cannot reuse its closing process. Timeout cleanup
 remains tied to the original child and cannot kill a replacement sidecar.
+If that wait cannot confirm exit, VoiceStudio retains the process for cleanup
+and blocks another attempt until it can be reaped, rather than starting a second
+engine alongside it. A later retry or shutdown retries the bounded cleanup.

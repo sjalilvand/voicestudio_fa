@@ -80,7 +80,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - On macOS, the header no longer shows Windows-style minimize/maximize/close buttons alongside the native traffic lights (#1865) — thanks @psiberfunk!
 
 - Release retries replace their own partially uploaded installers without colliding with existing assets (#1871)
-- Timed-out voice engines finish process cleanup before retrying, and old timeout callbacks cannot kill replacement engines (#730)
+- Timed-out voice engines finish process cleanup before retrying, and old timeout callbacks cannot kill replacement engines (#1872)
 
 
 ## [0.5.2] — 2026-09-02
