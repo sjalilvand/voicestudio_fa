@@ -198,3 +198,5 @@ window sizing, resize limits, and application file-drop behavior match the
 other desktop platforms. The platform configuration repeats the complete window
 list because Tauri replaces arrays when merging it with the shared config.
 The capture widget remains a separate borderless window created at runtime.
+Its window-scoped Tauri capability permits hiding after recording or idle
+reconciliation on every desktop platform.

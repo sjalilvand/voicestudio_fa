@@ -35,3 +35,17 @@ describe('macOS effective window configuration', () => {
     expect(mac.bundle.macOS.minimumSystemVersion).toBe('13.3');
   });
 });
+
+it('allows the capture widget to hide its own window after recording or idle reconciliation', () => {
+  const directory = path.resolve(import.meta.dirname, '../../src-tauri/capabilities');
+  const permissions = fs
+    .readdirSync(directory)
+    .filter((name) => name.endsWith('.json'))
+    .map((name) => JSON.parse(fs.readFileSync(path.join(directory, name), 'utf8')))
+    .filter((capability) => capability.windows?.includes('widget'))
+    .flatMap((capability) => capability.permissions);
+  // core:default includes visibility queries, but not the hide command used
+  // by CaptureWidget's recording completion and stranded-window recovery.
+  expect(permissions).toContain('core:default');
+  expect(permissions).toContain('core:window:allow-hide');
+});
