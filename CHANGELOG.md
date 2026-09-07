@@ -16,6 +16,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Tilde-separated number ranges are spoken clearly without running their endpoints together (#1821) — thanks @flutterkage2k!
 - Voice modes use themed tabs, with Synthesize and Convert pinned below their scrolling forms (#1823)
 - Voice cloning now starts with a clear upload-or-record choice, reveals recording and reference details only when needed, and keeps sampling controls under Production Overrides (#1817)
+- The first-run welcome line uses an instruction accepted by OmniVoice and VoiceDesign engines (#1861) — thanks @psiberfunk!
 
 ### Changed
 
@@ -67,6 +68,8 @@ the frozen-backend fallback mirror it for their toolchains.
 - The notification count stays inside the title bar instead of clipping above the bell (#1823)
 - The workspace engine menu opens beside its button instead of at the opposite edge of the page (#1823)
 - Cloning reuses the dubbing language picker with flags, search, and single selection, opening above the pinned synthesis controls (#1823)
+- The first-run welcome line uses an instruction accepted by OmniVoice and VoiceDesign engines (#1861) — thanks @psiberfunk!
+
 
 ## [0.5.2] — 2026-09-02
 
