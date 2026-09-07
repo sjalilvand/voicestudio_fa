@@ -205,4 +205,25 @@ describe('BootstrapSplash — observed-stage tracking (#1894)', () => {
       expect(venvStep.className).toMatch(/text-fg-muted/);
     });
   });
+
+  it('a retry whose restart stage the poll never sampled still drops the old evidence', () => {
+    // CodeRabbit finding on 5e9538a0: a retry can go failed -> checking ->
+    // starting_backend inside one ~1s sample window, so the poll observes
+    // only failed -> starting_backend. Keying the reset solely off arriving
+    // at a restart stage would leave the FAILED attempt's stages in place and
+    // present them as this attempt's completed work.
+    const { rerender } = render(<BootstrapSplash stage="checking" message={null} />);
+    rerender(<BootstrapSplash stage="downloading_uv" message={null} />);
+    rerender(<BootstrapSplash stage="installing_deps" message={null} />);
+    rerender(<BootstrapSplash stage="failed" message="uv sync failed" />);
+
+    // Retry — and the poll misses `checking` entirely.
+    rerender(<BootstrapSplash stage="starting_backend" message={null} />);
+
+    expect(screen.getByText('Starting backend…')).toBeInTheDocument();
+    // Nothing from the failed attempt may be shown as this attempt's work.
+    expect(screen.queryByText('Downloading uv (Python package manager)…')).toBeNull();
+    expect(screen.queryByText(/first run, 5.10 min/)).toBeNull();
+    expect(screen.queryByText('Installing')).toBeNull();
+  });
 });

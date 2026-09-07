@@ -568,7 +568,17 @@ export function BootstrapSplash({ stage, message }) {
   useEffect(() => {
     const prev = prevStageRef.current;
     prevStageRef.current = stage;
-    const restarted = RESTART_STAGES.has(stage) && !RESTART_STAGES.has(prev);
+    // Two ways a new attempt shows up in the poll. Arriving at a restart
+    // stage is the common one. But the poll can also miss the restart stage
+    // entirely — `failed` -> (retry) -> `checking` -> `starting_backend`
+    // inside one ~1s sample window surfaces as `failed` -> `starting_backend`,
+    // and keying only off restart stages would leave the FAILED attempt's
+    // evidence in place and render its install chrome as this attempt's
+    // completed work. Leaving `failed` at all means a retry began, since
+    // retry_bootstrap/clean_and_retry_bootstrap are the only exits from it.
+    const restarted =
+      (RESTART_STAGES.has(stage) && !RESTART_STAGES.has(prev)) ||
+      (prev === 'failed' && stage !== 'failed');
     if (restarted) {
       if (selfInitiatedRef.current) {
         // beginAttempt() already opened this attempt with an exact boundary.
