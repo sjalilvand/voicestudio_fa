@@ -10,7 +10,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
-- Validate current-user Windows installers under a standard account on hosted runners (#1881)
+- Validate current-user Windows installers under a standard account on hosted runners (#1883)
 
 - The desktop app builds and opens from a fresh clone again (#1818) — thanks @flutterkage2k!
 - GPUs with less VRAM than the engine needs no longer get half the compute-time budget a CPU gets (#1806) — thanks @VishvakR!
