@@ -7,13 +7,15 @@ old silence-only guard missed it (the buzz is loud, not silent) so the garbage
 was cached and served.
 
 These tests cover the fix *without the 5 GB model / a GPU*: they drive the pure
-``_spectral_flatness`` / ``_is_unusable_audio`` helpers with synthetic signals,
-and assert the render constants didn't regress. The real end-to-end render is
-verified manually (spectral flatness back in the speech range + Whisper ASR).
+``_spectral_flatness`` / ``_is_unusable_audio`` helpers with synthetic tones and
+tracked speech demo renders, and assert the render constants did not regress.
 """
 from __future__ import annotations
 
 import math
+from pathlib import Path
+
+import soundfile as sf
 
 import pytest
 
@@ -93,14 +95,9 @@ def test_speech_like_is_usable():
 
 
 # ── Threshold stays between the two things it has to separate ───────────────
-# The original 0.015 was calibrated against `_speech_like()` below, which is two
-# orders of magnitude flatter than real speech, so the threshold landed inside
-# the real-speech range and rejected legitimate previews (Japanese, Korean and
-# English alike — ASR transcribed every one of them correctly).
-#: Flattest REAL render observed, measured on engine output and confirmed to be
-#: speech by transcribing it (VoxCPM2, ko). Re-measure with real renders — never
-#: with a synthetic signal — before changing it.
-MEASURED_SPEECH_FLOOR = 2.0e-4
+# Synthetic broadband speech has much higher flatness than real voiced audio.
+# Measure both sides of the threshold against actual inputs, including the
+# existing demo renders that the old thresholds rejected.
 
 
 def test_tonal_ceiling_is_measured_not_assumed():
@@ -119,17 +116,33 @@ def test_tonal_ceiling_is_measured_not_assumed():
     assert max(tones) * 10 < arch._DEGENERATE_FLATNESS
 
 
-def test_threshold_clears_the_measured_real_speech_floor():
-    """The speech side of the margin cannot be synthesized — that IS the bug.
+_SAMPLES = Path(__file__).resolve().parents[1] / "assets" / "samples"
+_SPEECH_FIXTURES = [
+    "demo_voice.wav",
+    "demo_clone_output.wav",
+    *[f"voice_design/demo_voice_design_{name}.wav" for name in (
+        "audiobook_uk_narrator", "aussie_podcaster", "bedtime_storyteller",
+        "gravelly_villain", "indian_support_agent", "mandarin_sichuan", "us_news_anchor",
+    )],
+    *[f"dictation/{name}.wav" for name in (
+        "en_conversational", "en_technical", "fr_reservation",
+    )],
+    *[f"demo/dubbing/{name}.src.wav" for name in (
+        "source", "dubbed_es", "dubbed_fr", "dubbed_ja", "dubbed_zh",
+    )],
+]
 
-    Shipping a real render as a fixture would add a binary to a suite whose
-    whole point is running without one, so the measurement is recorded in
-    ``MEASURED_SPEECH_FLOOR`` and the assumption behind it is asserted here:
-    the synthetic stand-in sits nowhere near the real floor, which is exactly
-    why it cannot stand in for it.
-    """
-    assert arch._DEGENERATE_FLATNESS < MEASURED_SPEECH_FLOOR / 10
-    assert arch._spectral_flatness(_speech_like()) > MEASURED_SPEECH_FLOOR * 10
+
+@pytest.mark.parametrize("fixture", _SPEECH_FIXTURES)
+def test_real_shipped_speech_clears_quality_floor(fixture):
+    # These are existing tracked demo renders, not synthesized stand-ins or
+    # asserted measurements. Loading PCM needs neither a model nor a network.
+    audio, _sample_rate = sf.read(_SAMPLES / fixture, dtype="float32", always_2d=True)
+    speech = torch.from_numpy(audio.T)
+    flatness = arch._spectral_flatness(speech)
+    assert flatness is not None
+    assert flatness > arch._DEGENERATE_FLATNESS * 10
+    assert arch._is_unusable_audio(speech) is False
 
 
 def test_flatness_is_not_clip_length_dependent():

@@ -57,21 +57,12 @@ _PREVIEW_SEED = 42
 # 32 reliably converges to speech across the gallery's instruct/script space
 # at a one-time (cached) render cost.
 _PREVIEW_NUM_STEP = 32
-# Spectral-flatness floor below which a render is a degenerate tonal artifact
-# rather than speech. Real, mastered speech sits ~0.04–0.07; a tonal buzz
-# collapses to <0.005. 0.015 separates the two with wide margin and sits well
-# below even breathy/whisper voices (which are broadband → high flatness).
-# Reject below this MEAN FRAMED spectral flatness (see _spectral_flatness).
-# Calibrated against measurements, not intuition — the previous 0.015 was set
-# from a synthetic speech stand-in and sat in the middle of the real-speech
-# range, so it rejected most legitimate renders (Japanese/Korean/English
-# previews alike). Measured on this engine's own output:
-#   pure tone 80 Hz          2.6e-10   |  two-tone buzz      3.3e-09
-#   quietest REAL speech     2.0e-04   (VoxCPM2 ko, verified by ASR)
-# 1e-5 sits ~3000x above the tonal cases and ~20x below the quietest real
-# render — wide margin on both sides. Keep it there unless new measurements
-# (not synthetic signals) say otherwise.
-_DEGENERATE_FLATNESS = 1e-5
+# Reject near-pure tonal artifacts using mean framed spectral flatness.
+# Calibrated against the tracked speech demos exercised by
+# test_archetype_preview_quality.py: the quietest (Mandarin dubbing, 44.1 kHz)
+# measures ~7.7e-6, while the worst tested tonal buzz measures ~3.3e-9.
+# 1e-7 leaves >10x margin on both sides without rejecting low-flatness speech.
+_DEGENERATE_FLATNESS = 1e-7
 
 
 def _preview_key(a: dict) -> str:
