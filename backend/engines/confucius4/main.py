@@ -115,7 +115,12 @@ def _load_model(stdout):
     import torch
     from confuciustts.cli.inference import ConfuciusTTS  # type: ignore[import-not-found]
 
-    device = torch.accelerator.current_accelerator(check_available=True)
+    # Existing manually provisioned venvs may predate torch.accelerator.
+    current_accelerator = getattr(getattr(torch, "accelerator", None), "current_accelerator", None)
+    if current_accelerator is None:
+        device = torch.device("cuda") if torch.cuda.is_available() else None
+    else:
+        device = current_accelerator(check_available=True)
     device = device.type if device is not None else "cpu"  # 'cuda', 'npu', 'mps', 'xpu', 'cpu'
     if device == "mps":
         device = "cpu"  # MPS was slower than CPU in the existing validation run
