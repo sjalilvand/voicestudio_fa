@@ -42,3 +42,12 @@ def test_resolve_raises_actionable_without_clone(monkeypatch):
     import pytest
     with pytest.raises(RuntimeError, match="OMNIVOICE_CONFUCIUS4_TTS_DIR"):
         bootstrap.resolve_confucius4_venv()
+
+
+def test_catalog_metadata_does_not_exclude_supported_accelerators():
+    from engines.confucius4 import Confucius4Backend
+    from services.tts_backend import _INSTALL_HINTS
+
+    assert "CUDA/CPU" not in Confucius4Backend.display_name
+    assert "CUDA/CPU" not in _INSTALL_HINTS[Confucius4Backend.id]
+    assert "matching" in _INSTALL_HINTS[Confucius4Backend.id]
