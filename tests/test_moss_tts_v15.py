@@ -54,7 +54,9 @@ def test_install_hint_present():
     assert "OMNIVOICE_MOSS_TTS_V15_DIR" in hint
     assert "OpenMOSS" in hint
     assert "CUDA/CPU" not in hint
-    assert "runtime-available accelerator or CPU" in hint
+    backend = importlib.import_module("engines.moss_tts_v15").MossTTSV15Backend
+    for family in backend.gpu_compat:
+        assert ("ROCm" if family == "rocm" else family.upper()) in hint
 
 
 def test_sidecar_script_ships():
