@@ -20,7 +20,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- Slow backend startups remain running with progress updates, and Retry can interrupt startup reliably (#1809)
+- Slow backend startups remain running with progress updates, and Retry interrupts startup without stale timeout failures (#1809)
 
 ## [0.5.2] — 2026-09-02
 
