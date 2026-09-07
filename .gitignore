@@ -170,3 +170,6 @@ bin/omnivoice-tts-linux-aarch64
 # committed (they ship with the app); the per-language source WAVs are just the
 # inputs scripts/render_dub_demo_audio.py hands to scripts/build_dub_demo.sh.
 backend/assets/samples/demo/dubbing/*.src.wav
+
+# Generated Windows MSI diagnostic logs and installer payloads
+/wix-diagnostic-artifacts/
