@@ -20,6 +20,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 
 ## [0.5.2] — 2026-09-02
 
