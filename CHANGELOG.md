@@ -79,6 +79,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - On macOS, the header no longer shows Windows-style minimize/maximize/close buttons alongside the native traffic lights (#1865) — thanks @psiberfunk!
 
+- Release retries replace their own partially uploaded installers without colliding with existing assets (#1871)
 
 ## [0.5.2] — 2026-09-02
 
