@@ -77,7 +77,11 @@ describe('index.css: widget-scoped .capture-pill shadow fits the 8px gutter', ()
 
     const maxWidthMatch = rule.match(/max-width:\s*(\d+(?:\.\d+)?)px/);
     expect(maxWidthMatch).not.toBeNull();
-    expect(parseFloat(maxWidthMatch[1])).toBeLessThanOrEqual(WINDOW_WIDTH - GUTTER * 2);
+    // Equality, not `<=`: the pill must fill the content box exactly. A
+    // smaller cap would also "fit the gutter" while silently narrowing the
+    // pill and clipping more of the label — the very truncation #1884 is
+    // about. Pin the required width so a future tightening can't pass here.
+    expect(parseFloat(maxWidthMatch[1])).toBe(WINDOW_WIDTH - GUTTER * 2);
   });
 
   // .capture-pill--recording / --transcribing fully override box-shadow
