@@ -201,8 +201,12 @@ def test_generate_without_ref_audio_omits_reference(monkeypatch):
     assert "tokens" not in captured
 
 
-@pytest.mark.parametrize('family,legacy', [(None, False), ('cuda', False), ('xpu', False), ('npu', False), ('mps', False), (None, True), ('cuda', True)])
-def test_loader_device_matches_routing(monkeypatch, family, legacy):
+@pytest.mark.parametrize('family,legacy,probe_raises', [
+    (None, False, False), ('cuda', False, False), ('xpu', False, False),
+    ('npu', False, False), ('mps', False, False), (None, True, False),
+    ('cuda', True, False), (None, False, True), (None, True, True),
+])
+def test_loader_device_matches_routing(monkeypatch, family, legacy, probe_raises):
     """Exercise model + tokenizer placement without importing optional weights."""
     import io
     from types import SimpleNamespace
@@ -213,9 +217,13 @@ def test_loader_device_matches_routing(monkeypatch, family, legacy):
 
     expected = family if family not in (None, 'mps') else 'cpu'
     accelerator = Mock(return_value=SimpleNamespace(type=family) if family else None)
+    cuda_available = Mock(return_value=family == 'cuda')
+    if probe_raises:
+        accelerator.side_effect = RuntimeError('driver initialization failed')
+        cuda_available.side_effect = RuntimeError('driver initialization failed')
     monkeypatch.setitem(sys.modules, 'torch', SimpleNamespace(
         accelerator=SimpleNamespace() if legacy else SimpleNamespace(current_accelerator=accelerator),
-        cuda=SimpleNamespace(is_available=lambda: family == 'cuda'),
+        cuda=SimpleNamespace(is_available=cuda_available),
         device=lambda value: SimpleNamespace(type=value),
         bfloat16='bf16', float32='fp32',
     ))
@@ -240,3 +248,15 @@ def test_loader_device_matches_routing(monkeypatch, family, legacy):
     assert factory.from_pretrained.call_args.kwargs['torch_dtype'] == ('fp32' if expected == 'cpu' else 'bf16')
     caps = HostCaps(family=family or 'cpu', available_families=(family, 'cpu') if family else ('cpu',))
     assert resolve_routing(MossTTSV15Backend.gpu_compat, caps)['effective_device'] == state[2]
+
+
+def test_availability_text_does_not_exclude_declared_devices(monkeypatch):
+    from engines.moss_tts_v15 import MossTTSV15Backend, bootstrap
+
+    assert "CUDA/CPU" not in MossTTSV15Backend.display_name
+    for installed in (False, True):
+        monkeypatch.setattr(bootstrap, "is_moss_tts_v15_installed", lambda: installed)
+        available, reason = MossTTSV15Backend.is_available()
+        assert available is installed
+        assert "CUDA or CPU only" not in reason
+        assert "CUDA when present, else CPU" not in reason

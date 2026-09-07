@@ -20,7 +20,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- MOSS accelerator routing now matches runtime device selection, including native XPU and registered NPU detection (#1830) — thanks @li-lizhe!
+- MOSS accelerator routing and status match runtime selection, with CPU fallback when device probing fails (#1830) — thanks @li-lizhe!
 
 
 ## [0.5.2] — 2026-09-02

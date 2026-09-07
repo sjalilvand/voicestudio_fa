@@ -81,12 +81,12 @@ class MossTTSV15Backend(SubprocessBackend):
 
     id = "moss-tts-v15"
     display_name = (
-        "MOSS-TTS-v1.5 (8B, 31 langs, zero-shot clone, CUDA/CPU, Apache-2.0)"
+        "MOSS-TTS-v1.5 (8B, 31 langs, zero-shot clone, Apache-2.0)"
     )
     supports_voice_design = False  # requires ref audio for timbre cloning
     _DEFAULT_SAMPLE_RATE = 24000
-    # Honest hardware surface: upstream documents CUDA + CPU only. MPS is
-    # undocumented / untested, so we do NOT claim it (cross-platform rule).
+    # Accelerator routing requires its matching runtime in the isolated venv.
+    # MPS remains untested and is deliberately excluded.
     gpu_compat = ("cuda", "rocm", "xpu", "npu", "cpu")
 
     # ── availability ───────────────────────────────────────────────────────
@@ -107,7 +107,7 @@ class MossTTSV15Backend(SubprocessBackend):
             return False, (
                 "MOSS-TTS-v1.5 venv not found. Set OMNIVOICE_MOSS_TTS_V15_DIR "
                 "to your MOSS-TTS clone (the directory containing pyproject.toml) "
-                "and restart VoiceStudio. CUDA or CPU only (no MPS). See "
+                "and restart VoiceStudio. Install the matching PyTorch runtime. See "
                 "docs/engines/moss-tts-v15.md for the full install walk-through."
             )
         if not MOSS_TTS_V15_SIDECAR_SCRIPT.exists():
@@ -115,7 +115,7 @@ class MossTTSV15Backend(SubprocessBackend):
                 "MOSS-TTS-v1.5 sidecar script missing at "
                 f"{MOSS_TTS_V15_SIDECAR_SCRIPT} — reinstall VoiceStudio."
             )
-        return True, "ok (CUDA when present, else CPU)"
+        return True, "ok (runtime-available accelerator or CPU; no MPS)"
 
     @classmethod
     def venv_python(cls):

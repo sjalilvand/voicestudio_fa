@@ -25,7 +25,8 @@ interpreter, so MOSS runs behind
   **CPU** (fp32) — correct but slow.
 - **Device:** the sidecar uses a runtime-available PyTorch CUDA/ROCm, XPU,
   or registered NPU backend, otherwise CPU. The isolated engine venv needs the
-  matching torch/vendor integration. MPS still uses CPU. XPU/NPU routing is
+  matching torch/vendor integration. A failed accelerator probe falls back to
+  CPU, including in older venvs without the unified accelerator API. MPS still uses CPU. XPU/NPU routing is
   covered by mocked loader tests; physical-device synthesis has not been
   validated by this change.
 

@@ -1506,14 +1506,16 @@ def get_best_device():
     # ── DirectML — universal Windows GPU (probe reports this as "cpu") ─
     # Reached only when no torch family was detected (family == "cpu"), which is
     # exactly the DirectML case — the probe classifies DirectML hosts as cpu.
-    try:
-        import torch_directml
-        if torch_directml.device_count() > 0:
-            logger.info("Using DirectML device (GPU %d)", 0)
-            return str(torch_directml.device(0))
-    except ImportError:
-        pass
+    if family == "cpu":
+        try:
+            import torch_directml
+            if torch_directml.device_count() > 0:
+                logger.info("Using DirectML device (GPU %d)", 0)
+                return str(torch_directml.device(0))
+        except ImportError:
+            pass
 
+    # Other families need an explicitly compatible loader (e.g. NPU sidecars).
     return "cpu"
 
 _COMPILE_ERR_MODULE_PREFIXES = ("torch._dynamo", "torch._inductor", "torch.fx", "triton")
