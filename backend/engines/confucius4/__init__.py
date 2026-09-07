@@ -56,7 +56,7 @@ class Confucius4Backend(SubprocessBackend):
 
     id = "confucius4-tts"
     display_name = (
-        "Confucius4-TTS (LLM, 14 langs, cross-lingual zero-shot clone, CUDA/CPU, Apache-2.0)"
+        "Confucius4-TTS (LLM, 14 langs, cross-lingual zero-shot clone, Apache-2.0)"
     )
     supports_voice_design = False  # timbre comes from a reference clip
     # Upstream vocoder rate (config target_sample_rate) — confirmed 22 050 Hz by

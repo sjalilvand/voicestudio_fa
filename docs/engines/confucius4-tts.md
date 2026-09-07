@@ -93,7 +93,7 @@ sr = model.sample_rate  # 22050
 
 The sidecar passes a runtime-available CUDA/ROCm, XPU, or registered NPU
 through upstream's device-aware model loading. The engine venv needs a matching
-PyTorch/vendor runtime. XPU/NPU selection is covered by mocked loader and routing
+PyTorch/vendor runtime, also noted in the catalogue install hint. XPU/NPU selection is covered by mocked loader and routing
 tests; this change does not certify synthesis on physical XPU/NPU hardware.
 MPS keeps the existing CPU fallback described in the validation record above.
 If modern accelerator detection or the legacy CUDA probe raises, loading falls
