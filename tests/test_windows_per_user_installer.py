@@ -1,9 +1,9 @@
 import importlib.util
 import json
 import xml.etree.ElementTree as ET
-import pytest
 from pathlib import Path
 
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "frontend/src-tauri/wix/main.wxs"
@@ -40,7 +40,10 @@ def test_machine_and_per_user_templates_have_distinct_scopes_and_roots():
     assert 'Id="PrevInstallDirNoName" Root="HKCU"' in user
     assert 'Id="PrevInstallDirWithName" Root="HKLM"' in machine
     assert 'Id="PrevInstallDirWithName" Root="HKCU"' in user
-    assert '<RegistryKey Root="HKCU" Key="Software\\\\{{manufacturer}}\\\\{{product_name}}">' in user
+    assert (
+        '<RegistryKey Root="HKCU" Key="Software\\\\{{manufacturer}}\\\\{{product_name}}">'
+        in user
+    )
     assert '<RegistryKey Root="HKCU" Key="Software\\Classes\\\\{{protocol}}">' in user
     assert 'Guid="{{path_component_guid}}"' in machine
     assert 'Guid="41f6d598-8908-4004-9332-291b64fd38be"' not in user
@@ -76,16 +79,18 @@ def test_per_user_template_never_contains_webview_install_actions():
 def test_release_builds_publishes_and_smokes_as_a_standard_user():
     workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     smoke = (ROOT / "scripts/smoke-per-user-msi.ps1").read_text(encoding="utf-8")
-    updater = (ROOT / "frontend/src-tauri/src/updater_channel.rs").read_text(encoding="utf-8")
+    updater = (ROOT / "frontend/src-tauri/src/updater_channel.rs").read_text(
+        encoding="utf-8"
+    )
 
     assert "render-per-user-wix.py" in workflow
     assert "tauri.per-user.conf.json" in workflow
-    assert 'artifact// (Current User)/_Current_User' in workflow
+    assert "artifact// (Current User)/_Current_User" in workflow
     assert "latest-user.json" in workflow
     assert "smoke-per-user-msi.ps1" in workflow
     assert "Start-Process msiexec.exe -Credential" in smoke
-    assert 'if ($LASTEXITCODE -ne 0)' in smoke
-    assert 'if ($createdUser)' in smoke
+    assert "if ($LASTEXITCODE -ne 0)" in smoke
+    assert "if ($createdUser)" in smoke
     assert "standard-user uninstall" in smoke
     assert "latest/download/latest-user.json" in updater
     assert "releases/download/preview/latest-user.json" in updater
@@ -109,18 +114,29 @@ def test_resource_components_use_hkcu_keypaths_and_remove_nested_folders():
     assert {node.get("Id") for node in ET.fromstring("<Root>" + refs + "</Root>")} == {
         component.get("Id") for component in components
     }
-    assert any(file.get("Source") == "C:/build/a&b.json" for file in tree.findall(".//File"))
+    assert any(
+        file.get("Source") == "C:/build/a&b.json" for file in tree.findall(".//File")
+    )
 
 
 def test_resource_identity_depends_on_destination_not_random_tauri_ids_or_build_root():
     renderer = _renderer()
     first, first_refs = renderer.resource_authoring(RESOURCE_FIXTURE)
-    second, second_refs = renderer.resource_authoring(RESOURCE_FIXTURE.replace("random", "other").replace("C:/build/", "D:/runner/"))
+    second, second_refs = renderer.resource_authoring(
+        RESOURCE_FIXTURE.replace("random", "other").replace("C:/build/", "D:/runner/")
+    )
     assert first.replace("C:/build/", "D:/runner/") == second
     assert first_refs == second_refs
 
 
-@pytest.mark.parametrize("source", ["", "{{resources}}", "<!-- BEGIN BUNDLED_RESOURCES -->{{resources}}<!-- END BUNDLED_RESOURCES -->"])
+@pytest.mark.parametrize(
+    "source",
+    [
+        "",
+        "{{resources}}",
+        "<!-- BEGIN BUNDLED_RESOURCES -->{{resources}}<!-- END BUNDLED_RESOURCES -->",
+    ],
+)
 def test_missing_or_unrendered_system_resources_fail_closed(source):
     with pytest.raises(ValueError):
         _renderer().render(SOURCE.read_text(), source)
@@ -130,5 +146,7 @@ def test_main_and_helper_files_use_registry_keypaths():
     rendered = _renderer().render(SOURCE.read_text(), RESOURCE_FIXTURE)
     assert '<File Id="Path" Source="{{main_binary_path}}" Checksum="yes"/>' in rendered
     assert '<File Id="Bin_{{ bin.id }}" Source="{{bin.path}}"/>' in rendered
-    assert 'Name="Binary_{{ bin.id }}" Type="integer" Value="1" KeyPath="yes"' in rendered
+    assert (
+        'Name="Binary_{{ bin.id }}" Type="integer" Value="1" KeyPath="yes"' in rendered
+    )
     assert 'Guid="{{bin.guid}}"' not in rendered

@@ -4,10 +4,9 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path, PureWindowsPath
 import xml.etree.ElementTree as ET
+from pathlib import Path, PureWindowsPath
 from uuid import UUID, uuid5
-
 
 WEBVIEW_ACTIONS_START = "        <!-- BEGIN WEBVIEW_INSTALL_ACTIONS -->"
 WEBVIEW_ACTIONS_END = "        <!-- END WEBVIEW_INSTALL_ACTIONS -->"
@@ -40,10 +39,12 @@ TRANSFORMS = (
         r'<RegistryKey Root="HKCU" Key="Software\Classes\\{{protocol}}">',
     ),
     (
-        '        <!-- Managed-deployment switches. Explicit allow is required for network bootstrap. -->\n'
-        '        <Property Id="ALLOWWEBVIEW2BOOTSTRAP" Secure="yes" />\n'
-        '        <Property Id="DISABLEWEBVIEW2BOOTSTRAP" Secure="yes" />',
-        '        <!-- The current-user bundle never installs or updates WebView2. -->',
+        (
+            "        <!-- Managed-deployment switches. Explicit allow is required for network bootstrap. -->\n"
+            '        <Property Id="ALLOWWEBVIEW2BOOTSTRAP" Secure="yes" />\n'
+            '        <Property Id="DISABLEWEBVIEW2BOOTSTRAP" Secure="yes" />'
+        ),
+        "        <!-- The current-user bundle never installs or updates WebView2. -->",
     ),
     (
         '        <Condition Message="Microsoft Edge WebView2 Runtime is required. Install the Evergreen Standalone Runtime first, or explicitly set ALLOWWEBVIEW2BOOTSTRAP=1."><![CDATA[Installed OR REMOVE OR INSTALLED_WEBVIEW2_VERSION OR (ALLOWWEBVIEW2BOOTSTRAP = "1" AND DISABLEWEBVIEW2BOOTSTRAP <> "1")]]></Condition>',
@@ -58,16 +59,25 @@ USER_NAMESPACE = UUID("f27de3a8-a9dc-4a3d-84bb-e98f1bf82393")
 
 
 def registry_key(name: str) -> ET.Element:
-    return ET.Element("RegistryValue", {
-        "Root": "HKCU", "Key": r"Software\{{@root.manufacturer}}\{{@root.product_name}}\Components",
-        "Name": name, "Type": "integer", "Value": "1", "KeyPath": "yes",
-    })
+    return ET.Element(
+        "RegistryValue",
+        {
+            "Root": "HKCU",
+            "Key": r"Software\{{@root.manufacturer}}\{{@root.product_name}}\Components",
+            "Name": name,
+            "Type": "integer",
+            "Value": "1",
+            "KeyPath": "yes",
+        },
+    )
 
 
 def resource_authoring(system_wxs: str) -> tuple[str, str]:
     """Reuse Tauri's resolved resource destinations, never its random component IDs."""
     if system_wxs.count(RESOURCE_START) != 1 or system_wxs.count(RESOURCE_END) != 1:
-        raise ValueError("system WiX source must contain exactly one marked bundled resource block")
+        raise ValueError(
+            "system WiX source must contain exactly one marked bundled resource block"
+        )
     fragment = system_wxs.split(RESOURCE_START, 1)[1].split(RESOURCE_END, 1)[0]
     if "{{" in fragment:
         raise ValueError("system WiX resources must already be rendered by Tauri")
@@ -80,14 +90,18 @@ def resource_authoring(system_wxs: str) -> tuple[str, str]:
         for child in node:
             if child.tag == "Directory":
                 destination = (*path, child.attrib["Name"])
-                identity = uuid5(USER_NAMESPACE, "directory:" + "/".join(destination).casefold()).hex
+                identity = uuid5(
+                    USER_NAMESPACE, "directory:" + "/".join(destination).casefold()
+                ).hex
                 child.set("Id", "UserDir" + identity)
                 directories.append(child.attrib["Id"])
                 visit(child, destination)
             elif child.tag == "Component":
                 files = child.findall("File")
                 if len(files) != 1:
-                    raise ValueError("expected exactly one file per Tauri resource component")
+                    raise ValueError(
+                        "expected exactly one file per Tauri resource component"
+                    )
                 file = files[0]
                 name = file.get("Name") or PureWindowsPath(file.attrib["Source"]).name
                 destination = "/".join((*path, name)).casefold()
@@ -108,16 +122,26 @@ def resource_authoring(system_wxs: str) -> tuple[str, str]:
 
     visit(tree, ())
     if directories:
-        cleanup = ET.SubElement(tree, "Component", {
-            "Id": "UserResourceDirectoryCleanup",
-            "Guid": str(uuid5(USER_NAMESPACE, "resource-directory-cleanup")),
-            "Win64": "$(var.Win64)",
-        })
+        cleanup = ET.SubElement(
+            tree,
+            "Component",
+            {
+                "Id": "UserResourceDirectoryCleanup",
+                "Guid": str(uuid5(USER_NAMESPACE, "resource-directory-cleanup")),
+                "Win64": "$(var.Win64)",
+            },
+        )
         cleanup.append(registry_key("UserResourceDirectoryCleanup"))
         for directory in directories:
-            ET.SubElement(cleanup, "RemoveFolder", {
-                "Id": "Remove" + directory, "Directory": directory, "On": "uninstall",
-            })
+            ET.SubElement(
+                cleanup,
+                "RemoveFolder",
+                {
+                    "Id": "Remove" + directory,
+                    "Directory": directory,
+                    "On": "uninstall",
+                },
+            )
         refs.append(cleanup.attrib["Id"])
     return (
         "\n".join(ET.tostring(node, encoding="unicode") for node in tree),
@@ -153,17 +177,28 @@ def render(source: str, system_wxs: str) -> str:
     if rendered.count(resource_refs) != 1:
         raise ValueError("expected exactly one Tauri resource reference block")
     rendered = rendered.replace(resource_refs, references)
-    rendered = rendered.replace('Guid="41f6d598-8908-4004-9332-291b64fd38be"',
-                                f'Guid="{uuid5(USER_NAMESPACE, "main-binary-registry-keypath")}"')
+    rendered = rendered.replace(
+        'Guid="41f6d598-8908-4004-9332-291b64fd38be"',
+        f'Guid="{uuid5(USER_NAMESPACE, "main-binary-registry-keypath")}"',
+    )
     rendered = rendered.replace('Guid="{{bin.guid}}"', 'Guid="*"')
     for file_token, key_name in (
-        ('<File Id="Path" Source="{{main_binary_path}}" KeyPath="yes" Checksum="yes"/>', "MainBinary"),
-        ('<File Id="Bin_{{ bin.id }}" Source="{{bin.path}}" KeyPath="yes"/>', "Binary_{{ bin.id }}"),
+        (
+            '<File Id="Path" Source="{{main_binary_path}}" KeyPath="yes" Checksum="yes"/>',
+            "MainBinary",
+        ),
+        (
+            '<File Id="Bin_{{ bin.id }}" Source="{{bin.path}}" KeyPath="yes"/>',
+            "Binary_{{ bin.id }}",
+        ),
     ):
         if rendered.count(file_token) != 1:
             raise ValueError(f"expected exactly one binary file token: {file_token}")
-        rendered = rendered.replace(file_token, file_token.replace(' KeyPath="yes"', '')
-                                    + ET.tostring(registry_key(key_name), encoding="unicode"))
+        rendered = rendered.replace(
+            file_token,
+            file_token.replace(' KeyPath="yes"', "")
+            + ET.tostring(registry_key(key_name), encoding="unicode"),
+        )
     return rendered
 
 
@@ -171,12 +206,21 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--system-wxs", type=Path, required=True,
-                        help="Fully rendered system MSI main.wxs from the preceding Tauri bundle")
+    parser.add_argument(
+        "--system-wxs",
+        type=Path,
+        required=True,
+        help="Fully rendered system MSI main.wxs from the preceding Tauri bundle",
+    )
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(render(args.source.read_text(encoding="utf-8"),
-                                       args.system_wxs.read_text(encoding="utf-8")), encoding="utf-8")
+    args.output.write_text(
+        render(
+            args.source.read_text(encoding="utf-8"),
+            args.system_wxs.read_text(encoding="utf-8"),
+        ),
+        encoding="utf-8",
+    )
 
 
 if __name__ == "__main__":
