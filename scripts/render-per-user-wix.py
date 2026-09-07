@@ -64,7 +64,7 @@ def registry_key(name: str) -> ET.Element:
         "RegistryValue",
         {
             "Root": "HKCU",
-            "Key": r"Software\{{@root.manufacturer}}\{{@root.product_name}}\Components",
+            "Key": r"Software\\{{@root.manufacturer}}\\{{@root.product_name}}\Components",
             "Name": name,
             "Type": "integer",
             "Value": "1",

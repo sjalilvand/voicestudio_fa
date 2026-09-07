@@ -166,3 +166,10 @@ def test_external_binary_guid_is_explicit_and_stable_across_builds():
     assert first_guid == second.split(marker)[1].split(" Win64=")[0]
     assert '(eq bin.id "helper.exe")' in first_guid
     assert 'Guid="*"' not in marker + first_guid
+
+
+def test_registry_key_template_does_not_escape_handlebars_expressions():
+    key = _renderer().registry_key("MainBinary").attrib["Key"]
+    # A single backslash escapes the opening Handlebars delimiter. The canonical
+    # WiX template doubles it so the installed key uses resolved product names.
+    assert key == r"Software\\{{@root.manufacturer}}\\{{@root.product_name}}\Components"
