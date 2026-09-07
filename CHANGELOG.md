@@ -73,6 +73,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Onboarding recognizes locally saved Hugging Face tokens without contacting Hugging Face, and replacing one requires an explicit click (#1852) — thanks @psiberfunk!
 - The logs panel no longer reports “All clear” before log retrieval succeeds or while logs contain warnings or errors (#1870) — thanks @motodriver!
 - MOSS accelerator routing now matches runtime device selection, including native XPU and registered NPU detection (#1830) — thanks @li-lizhe!
+- Confucius accelerator routing matches device selection, and dots.tts keeps safe CPU precision on non-CUDA accelerators (#1831) — thanks @li-lizhe!
 
 
 ## [0.5.2] — 2026-09-02

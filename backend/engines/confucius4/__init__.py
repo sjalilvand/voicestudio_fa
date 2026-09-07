@@ -62,9 +62,9 @@ class Confucius4Backend(SubprocessBackend):
     # Upstream vocoder rate (config target_sample_rate) — confirmed 22 050 Hz by
     # a live run (2026-07-02); still re-read from the sidecar's ready/audio frames.
     _DEFAULT_SAMPLE_RATE = 22050
-    # CUDA fast path + CPU fallback, both exercised (CPU end-to-end validated).
-    # No MPS claim — upstream has no Metal path.
-    gpu_compat = ("cuda", "cpu")
+    # Match device propagation into upstream .to(device). XPU/NPU routing is
+    # contract-tested, not a claim of physical-hardware synthesis validation.
+    gpu_compat = ("cuda", "rocm", "xpu", "npu", "cpu")
 
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
