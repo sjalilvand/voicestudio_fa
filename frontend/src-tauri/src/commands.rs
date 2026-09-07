@@ -12,7 +12,7 @@ use tauri_plugin_dialog::DialogExt;
 
 use crate::config::{load_config, save_config};
 use crate::dictation_shortcut::{update_tray_hint, DictationShortcutManager, ShortcutInfo};
-use crate::{AppFlags, TrayHandle};
+use crate::{AppFlags, CaptureReceiptCancellation, TrayHandle};
 use crate::{TRAY_ICON_DEFAULT, TRAY_ICON_RECORDING};
 
 // ── Native host-path authorization ───────────────────────────────────────
@@ -1016,7 +1016,7 @@ pub async fn request_dictation_capture(
     let delivery_id = crate::request_dictation_capture_delivery(&app, &action)
         .ok_or_else(|| "capture request could not be queued".to_string())?;
     let wait_app = app.clone();
-    let acknowledged = tauri::async_runtime::spawn_blocking(move || {
+    let mut acknowledged = tauri::async_runtime::spawn_blocking(move || {
         wait_for_capture_delivery(
             || {
                 let flags = wait_app.state::<AppFlags>();
@@ -1033,16 +1033,25 @@ pub async fn request_dictation_capture(
     .map_err(|error| format!("capture acknowledgement worker failed: {error}"))??;
     if !acknowledged {
         let flags = app.state::<AppFlags>();
-        let cancelled = flags
+        let timeout_outcome = flags
             .capture
             .lock()
             .map_err(|_| "Dictation capture state lock poisoned".to_string())?
-            .cancel_delivery(delivery_id);
-        if let Some(event) = cancelled.filter(|event| event.name == "tray-dictate") {
-            flags.output.finish_session(event.payload.session_id);
+            .cancel_unreceived_delivery(delivery_id);
+        match timeout_outcome {
+            CaptureReceiptCancellation::Received => acknowledged = true,
+            CaptureReceiptCancellation::Cancelled(event) => {
+                if event.name == "tray-dictate" {
+                    flags.output.finish_session(event.payload.session_id);
+                }
+                return Err("capture window did not acknowledge the request".into());
+            }
+            CaptureReceiptCancellation::Missing => {
+                return Err("capture request disappeared before acknowledgement".into());
+            }
         }
-        return Err("capture window did not acknowledge the request".into());
     }
+    debug_assert!(acknowledged);
 
     let outcome_app = app.clone();
     let completed = tauri::async_runtime::spawn_blocking(move || {
@@ -1071,21 +1080,21 @@ pub async fn request_dictation_capture(
         return completion
             .unwrap_or_else(|| Err("capture request completed without an outcome".into()));
     }
-    if let Some(completion) = flags
-        .capture
-        .lock()
-        .map_err(|_| "Dictation capture state lock poisoned".to_string())?
-        .take_completion(delivery_id)
-    {
+    let (completion, cancelled) = {
+        let mut capture = flags
+            .capture
+            .lock()
+            .map_err(|_| "Dictation capture state lock poisoned".to_string())?;
+        if let Some(completion) = capture.take_completion(delivery_id) {
+            (Some(completion), None)
+        } else {
+            (None, capture.cancel_delivery(delivery_id))
+        }
+    };
+    if let Some(completion) = completion {
         return completion;
     }
-    if let Some(event) = flags
-        .capture
-        .lock()
-        .map_err(|_| "Dictation capture state lock poisoned".to_string())?
-        .cancel_delivery(delivery_id)
-        .filter(|event| event.name == "tray-dictate")
-    {
+    if let Some(event) = cancelled.filter(|event| event.name == "tray-dictate") {
         flags.output.finish_session(event.payload.session_id);
     }
     Err("dictation capture did not start in time".into())
@@ -1291,13 +1300,13 @@ pub fn acknowledge_dictation_capture_delivery(
     app: tauri::AppHandle,
     registration_id: u64,
     delivery_id: u64,
-) {
+) -> bool {
     let flags = app.state::<AppFlags>();
     let Ok(mut capture) = flags.capture.lock() else {
         log::warn!("Dictation capture state lock poisoned");
-        return;
+        return false;
     };
-    capture.acknowledge(registration_id, delivery_id);
+    capture.acknowledge(registration_id, delivery_id)
 }
 
 #[tauri::command]

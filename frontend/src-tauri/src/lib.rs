@@ -115,6 +115,12 @@ struct CaptureInFlight {
     outcome: Option<Result<(), String>>,
 }
 
+pub(crate) enum CaptureReceiptCancellation {
+    Received,
+    Cancelled(CaptureEvent),
+    Missing,
+}
+
 struct CaptureEnqueue {
     delivery_id: u64,
     event: Option<CaptureEvent>,
@@ -176,9 +182,9 @@ impl CaptureDispatchState {
         }
     }
 
-    pub(crate) fn acknowledge(&mut self, registration_id: u64, delivery_id: u64) {
+    pub(crate) fn acknowledge(&mut self, registration_id: u64, delivery_id: u64) -> bool {
         if self.active_registration != Some(registration_id) {
-            return;
+            return false;
         }
         if let Some(index) = self
             .pending
@@ -195,8 +201,10 @@ impl CaptureDispatchState {
                         },
                     );
                 }
+                return true;
             }
         }
+        false
     }
 
     pub(crate) fn complete(
@@ -231,6 +239,25 @@ impl CaptureDispatchState {
         self.pending
             .iter()
             .any(|event| event.payload.delivery_id == delivery_id)
+    }
+
+    pub(crate) fn cancel_unreceived_delivery(
+        &mut self,
+        delivery_id: u64,
+    ) -> CaptureReceiptCancellation {
+        if self.in_flight.contains_key(&delivery_id) {
+            return CaptureReceiptCancellation::Received;
+        }
+        let Some(index) = self
+            .pending
+            .iter()
+            .position(|event| event.payload.delivery_id == delivery_id)
+        else {
+            return CaptureReceiptCancellation::Missing;
+        };
+        self.pending
+            .remove(index)
+            .map_or(CaptureReceiptCancellation::Missing, CaptureReceiptCancellation::Cancelled)
     }
 
     pub(crate) fn cancel_delivery(&mut self, delivery_id: u64) -> Option<CaptureEvent> {
@@ -358,7 +385,8 @@ fn dispatch_dictation_capture_from(
 #[cfg(test)]
 mod dictation_capture_tests {
     use super::{
-        dictation_capture_event, CaptureDispatchState, CaptureEvent, DictationCapturePayload,
+        dictation_capture_event, CaptureDispatchState, CaptureEvent, CaptureReceiptCancellation,
+        DictationCapturePayload,
     };
 
     fn capture_event(name: &'static str) -> CaptureEvent {
@@ -403,10 +431,10 @@ mod dictation_capture_tests {
         assert_eq!(retried[0].payload.delivery_id, delivery_id);
         assert_eq!(retried[0].payload.registration_id, current);
 
-        state.acknowledge(stale, delivery_id);
+        assert!(!state.acknowledge(stale, delivery_id));
         assert_eq!(state.pending.len(), 1);
         assert!(state.delivery_pending(delivery_id));
-        state.acknowledge(current, delivery_id);
+        assert!(state.acknowledge(current, delivery_id));
         assert!(state.pending.is_empty());
         assert!(!state.delivery_pending(delivery_id));
     }
@@ -434,7 +462,7 @@ mod dictation_capture_tests {
         event.await_result = true;
         let delivery_id = state.enqueue(event).delivery_id;
 
-        state.acknowledge(registration_id, delivery_id);
+        assert!(state.acknowledge(registration_id, delivery_id));
         assert!(!state.completion_ready(delivery_id));
         state.complete(
             registration_id,
@@ -448,6 +476,42 @@ mod dictation_capture_tests {
             Some(Err("Dictation is disabled".into()))
         );
         assert_eq!(state.take_completion(delivery_id), None);
+    }
+
+    #[test]
+    fn cancellation_suppresses_an_event_cloned_for_ready_emission() {
+        let mut state = CaptureDispatchState::default();
+        let registration_id = state.begin_registration();
+        state.mark_registration_ready(registration_id);
+        let mut event = capture_event("tray-dictate");
+        event.await_result = true;
+        let enqueued = state.enqueue(event);
+        let emitted = enqueued.event.expect("ready event was cloned");
+
+        assert!(matches!(
+            state.cancel_unreceived_delivery(enqueued.delivery_id),
+            CaptureReceiptCancellation::Cancelled(_)
+        ));
+        assert!(!state.acknowledge(
+            emitted.payload.registration_id,
+            emitted.payload.delivery_id
+        ));
+    }
+
+    #[test]
+    fn listener_receipt_wins_atomically_over_timeout_cancellation() {
+        let mut state = CaptureDispatchState::default();
+        let registration_id = state.begin_registration();
+        state.mark_registration_ready(registration_id);
+        let mut event = capture_event("tray-dictate");
+        event.await_result = true;
+        let delivery_id = state.enqueue(event).delivery_id;
+
+        assert!(state.acknowledge(registration_id, delivery_id));
+        assert!(matches!(
+            state.cancel_unreceived_delivery(delivery_id),
+            CaptureReceiptCancellation::Received
+        ));
     }
 
     #[test]

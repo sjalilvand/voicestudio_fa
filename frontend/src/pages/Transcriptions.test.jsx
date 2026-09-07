@@ -67,6 +67,7 @@ describe('Transcriptions capture entry point', () => {
     render(<TranscriptionsPage />);
 
     const button = screen.getByRole('button', { name: 'Start dictation' });
+    expect(button.closest('.txn-header__right')).toBeInTheDocument();
     expect(button.querySelector(':scope > svg')).toBeInTheDocument();
     expect(button.querySelector(':scope > span')).toHaveTextContent('Start dictation');
     expect(screen.queryByText('No transcriptions yet')).not.toBeInTheDocument();

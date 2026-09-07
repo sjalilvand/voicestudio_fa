@@ -19,8 +19,8 @@ own microphone audio to the versioned WebSocket API. See the
 
 The **Transcriptions** page offers the same recorder as one contextual
 **Start dictation** action: it appears in the empty state before the first
-transcript and moves to the page header once history exists. Desktop starts
-wake the recorder window before dispatch, so a hidden WebView cannot silently
+transcript and moves to the page header once history exists. A desktop start
+wakes the recorder window before dispatch, so a hidden WebView cannot silently
 miss the request. The in-app action confirms listener receipt, then resolves
 only after microphone startup is accepted. Disabled, rejected, timed-out, or
 failed starts are reported back on the page.

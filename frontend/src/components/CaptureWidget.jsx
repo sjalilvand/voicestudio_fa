@@ -717,8 +717,9 @@ export default function CaptureWidget({ onDismiss }) {
         })
           .catch((err) => {
             console.warn('dictation delivery acknowledgement failed:', err);
+            return false;
           })
-          .then(() => true);
+          .then((acknowledged) => acknowledged !== false);
       }
       return true;
     };
