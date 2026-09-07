@@ -12,4 +12,4 @@ def test_first_sound_instruction_passes_runtime_taxonomy_validation():
     # VoiceDesign requires a nonempty description; OmniVoice validates tokens.
     assert instruct.strip()
     assert _resolve_instruct(instruct) == instruct
-    assert _resolve_instruct(instruct, use_zh=True)
+    assert _resolve_instruct(instruct, use_zh=True) == "中年，低音调"
