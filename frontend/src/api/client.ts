@@ -1,3 +1,4 @@
+import { abortableDelay } from '../utils/abortableDelay';
 // Backend base URL.
 //   • VITE_API_URL                → explicit override (any deploy).
 //   • Tauri webview               → the local sidecar (127.0.0.1:<port>).
@@ -384,7 +385,7 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promis
       if (signal?.aborted || (e as Error)?.name === 'AbortError') throw e;
       lastDetail = String((e as Error)?.message || e);
       if (retryTransport && attempt < TRANSPORT_RETRY_BACKOFF_MS.length) {
-        await new Promise((r) => setTimeout(r, TRANSPORT_RETRY_BACKOFF_MS[attempt]));
+        await abortableDelay(TRANSPORT_RETRY_BACKOFF_MS[attempt], signal);
         continue;
       }
       // The short cascade is exhausted, but the desktop shell may KNOW the
@@ -400,7 +401,7 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promis
         }
         const stage = lastStage.stage;
         if (stage === 'starting') {
-          await new Promise((r) => setTimeout(r, RESTART_WAIT_INTERVAL_MS));
+          await abortableDelay(RESTART_WAIT_INTERVAL_MS, signal);
           continue;
         }
         // `ready` while the transport is failing is a contradiction — the
@@ -410,7 +411,7 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promis
         // marker. 'failed'/'unknown' fall through and error now, so a shell
         // that gave up — or no shell at all — still surfaces promptly.
         if (stage === 'ready' && elapsed < RECONCILE_MS) {
-          await new Promise((r) => setTimeout(r, RECONCILE_INTERVAL_MS));
+          await abortableDelay(RECONCILE_INTERVAL_MS, signal);
           continue;
         }
       }
@@ -442,6 +443,7 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promis
       const { crash } = await awaitBackendCrashMarker(getUnacknowledgedBackendCrash, {
         waitMs: 4_000,
         intervalMs: 1_000,
+        signal,
       });
       if (crash) {
         try {

@@ -1,3 +1,4 @@
+import { abortableDelay } from './abortableDelay';
 /**
  * backendCrash — frontend bridge to the desktop shell's crash forensics
  * (#941, src-tauri/src/crash.rs).
@@ -208,21 +209,29 @@ export async function getUnacknowledgedBackendCrash(): Promise<BackendCrashMarke
  */
 export async function awaitBackendCrashMarker(
   getCrash: () => Promise<BackendCrashMarker | null> = getUnacknowledgedBackendCrash,
-  opts: { waitMs?: number; intervalMs?: number; sleep?: (ms: number) => Promise<void> } = {},
+  opts: {
+    waitMs?: number;
+    intervalMs?: number;
+    sleep?: (ms: number) => Promise<void>;
+    signal?: AbortSignal | null;
+  } = {},
 ): Promise<{ crash: BackendCrashMarker | null; unavailable: boolean }> {
   const waitMs = opts.waitMs ?? 8_000;
   const intervalMs = opts.intervalMs ?? 1_000;
-  const sleep = opts.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
+  const sleep = opts.sleep ?? ((ms: number) => abortableDelay(ms, opts.signal));
   const deadline = Date.now() + waitMs;
   for (;;) {
+    opts.signal?.throwIfAborted();
     let crash: BackendCrashMarker | null = null;
     try {
       crash = await getCrash();
     } catch {
+      opts.signal?.throwIfAborted();
       // Forensics unavailable — "no marker" would be a lie, so say so and let
       // the caller keep its own wording rather than assert anything.
       return { crash: null, unavailable: true };
     }
+    opts.signal?.throwIfAborted();
     if (crash) return { crash, unavailable: false };
     if (!inTauri()) return { crash: null, unavailable: false };
     if (Date.now() >= deadline) return { crash: null, unavailable: false };

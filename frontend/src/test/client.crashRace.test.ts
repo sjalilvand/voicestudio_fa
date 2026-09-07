@@ -93,3 +93,30 @@ describe('apiFetch give-up vs. the shell death poll (#1802/#1805)', () => {
     expect(msg).toMatch(/no crash was recorded/i);
   });
 });
+
+describe('canceling diagnostic waits', () => {
+  it.each([
+    [100, 'failed'],
+    [CASCADE_MS + 100, 'failed'],
+    [CASCADE_MS + 100, 'starting'],
+    [CASCADE_MS + 100, 'ready'],
+  ])('honors abort at %i ms in %s', async (abortAt, stage) => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+    invokeMock.mockImplementation(async (cmd: string) =>
+      cmd === 'bootstrap_status' ? { stage } : null,
+    );
+    const { apiFetch } = await import('../api/client');
+    const controller = new AbortController();
+    let settled = false;
+    const result = apiFetch('/generate', { signal: controller.signal }).catch((error) => {
+      settled = true;
+      return error;
+    });
+    await vi.advanceTimersByTimeAsync(Number(abortAt));
+    controller.abort();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(settled).toBe(true);
+    expect(await result).toMatchObject({ name: 'AbortError' });
+  });
+});
