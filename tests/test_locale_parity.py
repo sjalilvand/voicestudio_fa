@@ -113,6 +113,9 @@ _MISSING_BASELINE = {
 #: delivery IS the Wayland default, so leaving it English broke that path for
 #: every non-English Linux user (#1610 review).
 _REQUIRED_IN_EVERY_LOCALE = (
+    "common.error",
+    "bootstrap.retry",
+    "firstrun.hf_token_saved",
     "capture.copied",
     "capture.inserted",
     "capture.pasted",

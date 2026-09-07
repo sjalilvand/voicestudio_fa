@@ -113,7 +113,7 @@ export default function ApiKeysPanel() {
       setAlsoClearCli(false);
       await refresh();
     } catch {
-      setError(t('settings.hf_token_clear_error', { defaultValue: 'Failed to clear token' }));
+      setError(t('common.error', { defaultValue: 'Something went wrong' }));
     } finally {
       setSaving(false);
     }
