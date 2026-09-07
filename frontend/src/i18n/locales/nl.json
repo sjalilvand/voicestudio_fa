@@ -539,6 +539,9 @@
     "convert_desc": "Zeg het één keer — hoor het in een andere stem. Spraak naar spraak, volledig lokaal."
   },
   "clone": {
+    "text_label": "Tekst",
+    "paste": "Plakken",
+    "paste_failed": "Toegang tot het klembord is geblokkeerd. Plak rechtstreeks in het tekstveld met het toetsenbord.",
     "prompt": "Prompt",
     "language": "Taal",
     "steps": "Stappen",
@@ -643,7 +646,8 @@
     "cat_AccentDialect": "Accent of dialect",
     "accent_dialect_hint": "het een of het ander, nooit beide",
     "reset_to_description": "Terugzetten naar beschrijving",
-    "chips_more": "nog {{count}}…"
+    "chips_more": "nog {{count}}…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "App",
@@ -961,6 +965,9 @@
     "consent_revoked": "Verificatie ingetrokken"
   },
   "dub": {
+    "timing_label": "Timing",
+    "timing_concise": "Bondig",
+    "timing_stretch_video": "Video uitrekken",
     "install_engine_pkg": "{{pkg}} installeren",
     "needs_install_short": "Installatie vereist",
     "install_popover_title": "Deze engine installeren",
@@ -1861,6 +1868,7 @@
     "hint": "8 stappen · snelle preview"
   },
   "header": {
+    "speech": "Spraak",
     "kicker_studio": "Studio",
     "kicker_library": "Bibliotheek",
     "kicker_preferences": "Voorkeuren",
@@ -1967,6 +1975,7 @@
     "preview_voice": "Voorbeeldstem"
   },
   "checkpoint": {
+    "timing_review": "{{count}} segmenten vereisen controle van de timing",
     "asr_title": "Afschriften klaar",
     "asr_cta": "Vertalen",
     "asr_hint": "Los eventuele ASR-fouten nu op: strakke dictie bespaart TTS-pogingen later.",
@@ -1977,7 +1986,13 @@
     "done_hint": "Controleer de timing en synchronisatieverhoudingen. Pas een willekeurige regel aan en druk op \"Regen gewijzigd\" voor een snelle gedeeltelijke herhaling.",
     "segment_one": "{{count}} segment",
     "segment_other": "{{count}} segmenten",
-    "dismiss_title": "Afsluiten — verschijnt pas opnieuw in deze fase als u opnieuw laadt"
+    "dismiss_title": "Afsluiten — verschijnt pas opnieuw in deze fase als u opnieuw laadt",
+    "timing_review_one": "{{count}} segment moet op timing worden gecontroleerd",
+    "timing_review_other": "{{count}} segmenten vereisen controle van de timing",
+    "timing_review_zero": "{{count}} segmenten vereisen controle van de timing",
+    "timing_review_two": "{{count}} segmenten vereisen controle van de timing",
+    "timing_review_few": "{{count}} segmenten vereisen controle van de timing",
+    "timing_review_many": "{{count}} segmenten vereisen controle van de timing"
   },
   "compare": {
     "title": "A/B-stemvergelijking",
@@ -2604,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "Bronmedia ontbreken: dit bestand is mogelijk verplaatst of verwijderd. Upload de video opnieuw om door te gaan.",
-    "load_failed": "Kan audio uit dit bestand niet laden"
+    "load_failed": "Kan audio uit dit bestand niet laden",
+    "controls": "Afspeelbediening",
+    "restart": "Afspelen opnieuw starten",
+    "shortcuts": "J/K/L: terug, afspelen/pauze, vooruit",
+    "zoom": "Zoomniveau",
+    "timeline": "Tijdlijn van audiogolfvorm",
+    "loading": "Golfvorm laden…"
   },
   "tts": {
     "routingFallback": "Draait op CPU: deze engine heeft geen GPU-pad op uw machine, dus de generatie zal langzamer zijn. {{reason}}",

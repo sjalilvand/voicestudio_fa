@@ -539,6 +539,9 @@
     "convert_desc": "Diga uma vez — ouça em outra voz. Fala para fala, totalmente local."
   },
   "clone": {
+    "text_label": "Texto",
+    "paste": "Colar",
+    "paste_failed": "O acesso à área de transferência foi bloqueado. Cole diretamente no campo de texto usando o teclado.",
     "prompt": "Alerta",
     "language": "Idioma",
     "steps": "Passos",
@@ -643,7 +646,8 @@
     "cat_AccentDialect": "Sotaque ou dialeto",
     "accent_dialect_hint": "um ou outro, nunca os dois",
     "reset_to_description": "Redefinir conforme a descrição",
-    "chips_more": "mais {{count}}…"
+    "chips_more": "mais {{count}}…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "Aplicativo",
@@ -961,6 +965,9 @@
     "consent_revoked": "Verificação revogada"
   },
   "dub": {
+    "timing_label": "Sincronização",
+    "timing_concise": "Conciso",
+    "timing_stretch_video": "Estender vídeo",
     "install_engine_pkg": "Instalar {{pkg}}",
     "needs_install_short": "Requer instalação",
     "install_popover_title": "Instalar este motor",
@@ -1861,6 +1868,7 @@
     "hint": "8 etapas · visualização rápida"
   },
   "header": {
+    "speech": "Fala",
     "kicker_studio": "Estúdio",
     "kicker_library": "Biblioteca",
     "kicker_preferences": "Preferências",
@@ -1967,6 +1975,7 @@
     "preview_voice": "Visualizar voz"
   },
   "checkpoint": {
+    "timing_review": "{{count}} segmentos precisam de revisão de tempo",
     "asr_title": "Transcrições prontas",
     "asr_cta": "Traduzir",
     "asr_hint": "Corrija quaisquer erros de ASR agora – a dicção precisa salva tentativas de TTS posteriormente.",
@@ -1977,7 +1986,13 @@
     "done_hint": "Revise as proporções de tempo e sincronização. Ajuste qualquer linha e clique em \"Regen alterado\" para um refazer parcial rápido.",
     "segment_one": "segmento {{count}}",
     "segment_other": "{{count}} segmentos",
-    "dismiss_title": "Dispensar – não reaparecerá nesta fase até recarregar"
+    "dismiss_title": "Dispensar – não reaparecerá nesta fase até recarregar",
+    "timing_review_one": "{{count}} segmento precisa de revisão de tempo",
+    "timing_review_other": "{{count}} segmentos precisam de revisão de tempo",
+    "timing_review_zero": "{{count}} segmentos precisam de revisão de tempo",
+    "timing_review_two": "{{count}} segmentos precisam de revisão de tempo",
+    "timing_review_few": "{{count}} segmentos precisam de revisão de tempo",
+    "timing_review_many": "{{count}} segmentos precisam de revisão de tempo"
   },
   "compare": {
     "title": "Comparação de voz A/B",
@@ -2604,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "Mídia de origem ausente — este arquivo pode ter sido movido ou excluído. Reenvie o vídeo para continuar.",
-    "load_failed": "Não foi possível carregar o áudio deste arquivo"
+    "load_failed": "Não foi possível carregar o áudio deste arquivo",
+    "controls": "Controles de reprodução",
+    "restart": "Reiniciar reprodução",
+    "shortcuts": "J/K/L: retroceder, reproduzir/pausar, avançar",
+    "zoom": "Nível de zoom",
+    "timeline": "Linha do tempo da forma de onda",
+    "loading": "Carregando forma de onda…"
   },
   "tts": {
     "routingFallback": "Rodando em CPU — este mecanismo não possui caminho de GPU em sua máquina, então a geração será mais lenta. {{reason}}",

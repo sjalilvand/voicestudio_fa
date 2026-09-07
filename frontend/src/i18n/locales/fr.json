@@ -539,6 +539,9 @@
     "convert_desc": "Dites-le une fois — écoutez-le avec une autre voix. De la parole à la parole, entièrement en local."
   },
   "clone": {
+    "text_label": "Texte",
+    "paste": "Coller",
+    "paste_failed": "L’accès au presse-papiers est bloqué. Collez directement dans le champ de texte avec le clavier.",
     "prompt": "Invite",
     "language": "Langue",
     "steps": "Étapes",
@@ -643,7 +646,8 @@
     "cat_AccentDialect": "Accent ou dialecte",
     "accent_dialect_hint": "l'un ou l'autre, jamais les deux",
     "reset_to_description": "Réinitialiser selon la description",
-    "chips_more": "{{count}} de plus…"
+    "chips_more": "{{count}} de plus…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "Application",
@@ -961,6 +965,9 @@
     "consent_revoked": "Vérification révoquée"
   },
   "dub": {
+    "timing_label": "Synchronisation",
+    "timing_concise": "Concis",
+    "timing_stretch_video": "Étirer la vidéo",
     "install_engine_pkg": "Installer {{pkg}}",
     "needs_install_short": "Installation requise",
     "install_popover_title": "Installer ce moteur",
@@ -1861,6 +1868,7 @@
     "hint": "8 étapes · aperçu rapide"
   },
   "header": {
+    "speech": "Parole",
     "kicker_studio": "Atelier",
     "kicker_library": "Bibliothèque",
     "kicker_preferences": "Préférences",
@@ -1967,6 +1975,7 @@
     "preview_voice": "Aperçu de la voix"
   },
   "checkpoint": {
+    "timing_review": "{{count}} segments nécessitent une vérification du minutage",
     "asr_title": "Transcriptions prêtes",
     "asr_cta": "Traduire",
     "asr_hint": "Corrigez toutes les erreurs ASR maintenant : une diction serrée enregistre les tentatives TTS plus tard.",
@@ -1977,7 +1986,13 @@
     "done_hint": "Examinez les ratios de synchronisation et de synchronisation. Ajustez n'importe quelle ligne et appuyez sur \"Regen changé\" pour une restauration partielle rapide.",
     "segment_one": "{{count}} segment",
     "segment_other": "{{count}} segments",
-    "dismiss_title": "Ignorer - ne réapparaîtra pas pour cette étape jusqu'au rechargement"
+    "dismiss_title": "Ignorer - ne réapparaîtra pas pour cette étape jusqu'au rechargement",
+    "timing_review_one": "{{count}} segment nécessite une vérification du minutage",
+    "timing_review_other": "{{count}} segments nécessitent une vérification du minutage",
+    "timing_review_zero": "{{count}} segments nécessitent une vérification du minutage",
+    "timing_review_two": "{{count}} segments nécessitent une vérification du minutage",
+    "timing_review_few": "{{count}} segments nécessitent une vérification du minutage",
+    "timing_review_many": "{{count}} segments nécessitent une vérification du minutage"
   },
   "compare": {
     "title": "Comparaison vocale A/B",
@@ -2604,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "Support source manquant : ce fichier a peut-être été déplacé ou supprimé. Re-téléchargez la vidéo pour continuer.",
-    "load_failed": "Impossible de charger l'audio de ce fichier"
+    "load_failed": "Impossible de charger l'audio de ce fichier",
+    "controls": "Commandes de lecture",
+    "restart": "Recommencer la lecture",
+    "shortcuts": "J/K/L : reculer, lire/pause, avancer",
+    "zoom": "Niveau de zoom",
+    "timeline": "Chronologie de la forme d’onde audio",
+    "loading": "Chargement de la forme d’onde…"
   },
   "tts": {
     "routingFallback": "Fonctionnant sur CPU : ce moteur n'a pas de chemin GPU sur votre machine, la génération sera donc plus lente. {{reason}}",

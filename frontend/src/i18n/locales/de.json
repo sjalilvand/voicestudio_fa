@@ -539,6 +539,9 @@
     "convert_desc": "Einmal sagen — in einer anderen Stimme hören. Sprache zu Sprache, komplett lokal."
   },
   "clone": {
+    "text_label": "Text",
+    "paste": "Einfügen",
+    "paste_failed": "Der Zugriff auf die Zwischenablage wurde blockiert. Füge den Inhalt mit der Tastatur direkt ins Textfeld ein.",
     "prompt": "Prompt",
     "language": "Sprache",
     "steps": "Schritte",
@@ -643,7 +646,8 @@
     "cat_AccentDialect": "Akzent oder Dialekt",
     "accent_dialect_hint": "eins von beiden, nie beides",
     "reset_to_description": "Auf Beschreibung zurücksetzen",
-    "chips_more": "{{count}} weitere…"
+    "chips_more": "{{count}} weitere…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "App",
@@ -961,6 +965,9 @@
     "consent_revoked": "Verifizierung widerrufen"
   },
   "dub": {
+    "timing_label": "Timing",
+    "timing_concise": "Kurz",
+    "timing_stretch_video": "Video strecken",
     "install_engine_pkg": "{{pkg}} installieren",
     "needs_install_short": "Installation nötig",
     "install_popover_title": "Diese Engine installieren",
@@ -1861,6 +1868,7 @@
     "hint": "8 Schritte · schnelle Vorschau"
   },
   "header": {
+    "speech": "Sprache",
     "kicker_studio": "Studio",
     "kicker_library": "Bibliothek",
     "kicker_preferences": "Präferenzen",
@@ -1967,6 +1975,7 @@
     "preview_voice": "Vorschau der Stimme"
   },
   "checkpoint": {
+    "timing_review": "{{count}} Segmente benötigen eine Timing-Prüfung",
     "asr_title": "Transkripte bereit",
     "asr_cta": "Übersetzen",
     "asr_hint": "Beheben Sie jetzt alle ASR-Fehler – eine straffe Diktion erspart spätere TTS-Versuche.",
@@ -1977,7 +1986,13 @@
     "done_hint": "Überprüfen Sie Timing und Synchronisierungsverhältnisse. Optimieren Sie eine beliebige Zeile und klicken Sie auf „Geändert regenerieren“, um eine teilweise Wiederherstellung durchzuführen.",
     "segment_one": "{{count}}-Segment",
     "segment_other": "{{count}} Segmente",
-    "dismiss_title": "Verwerfen – wird für diese Phase erst wieder angezeigt, wenn es neu geladen wird"
+    "dismiss_title": "Verwerfen – wird für diese Phase erst wieder angezeigt, wenn es neu geladen wird",
+    "timing_review_one": "{{count}} Segment benötigt eine Zeitprüfung",
+    "timing_review_other": "{{count}} Segmente benötigen eine Timing-Prüfung",
+    "timing_review_zero": "{{count}} Segmente benötigen eine Timing-Prüfung",
+    "timing_review_two": "{{count}} Segmente benötigen eine Timing-Prüfung",
+    "timing_review_few": "{{count}} Segmente benötigen eine Timing-Prüfung",
+    "timing_review_many": "{{count}} Segmente benötigen eine Timing-Prüfung"
   },
   "compare": {
     "title": "A/B-Stimmenvergleich",
@@ -2604,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "Quellmedium fehlt – diese Datei wurde möglicherweise verschoben oder gelöscht. Laden Sie das Video erneut hoch, um fortzufahren.",
-    "load_failed": "Audio aus dieser Datei konnte nicht geladen werden"
+    "load_failed": "Audio aus dieser Datei konnte nicht geladen werden",
+    "controls": "Wiedergabesteuerung",
+    "restart": "Wiedergabe neu starten",
+    "shortcuts": "J/K/L: zurück, Wiedergabe/Pause, vorwärts",
+    "zoom": "Zoomstufe",
+    "timeline": "Audio-Wellenform-Zeitleiste",
+    "loading": "Wellenform wird geladen…"
   },
   "tts": {
     "routingFallback": "Läuft auf der CPU – diese Engine verfügt über keinen GPU-Pfad auf Ihrem Computer, daher erfolgt die Generierung langsamer. {{reason}}",

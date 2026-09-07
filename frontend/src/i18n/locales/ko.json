@@ -775,6 +775,9 @@
     "convert_desc": "한 번 말하면 다른 목소리로 들립니다. 음성에서 음성으로, 완전히 로컬."
   },
   "clone": {
+    "text_label": "텍스트",
+    "paste": "붙여넣기",
+    "paste_failed": "클립보드 접근이 차단되었습니다. 키보드로 텍스트 입력란에 직접 붙여넣으세요.",
     "prompt": "프롬프트",
     "language": "언어",
     "steps": "단계",
@@ -879,7 +882,8 @@
     "cat_AccentDialect": "억양 또는 방언",
     "accent_dialect_hint": "둘 중 하나만, 동시에는 불가",
     "reset_to_description": "설명에 따라 재설정",
-    "chips_more": "{{count}}개 더 보기…"
+    "chips_more": "{{count}}개 더 보기…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "앱",
@@ -1260,6 +1264,7 @@
     "consent_revoked": "인증이 취소되었습니다."
   },
   "dub": {
+    "timing_label": "타이밍",
     "install_engine_pkg": "{{pkg}} 설치",
     "needs_install_short": "설치 필요",
     "install_popover_title": "이 엔진 설치",
@@ -2189,6 +2194,7 @@
     "hint": "8단계 · 빠른 미리보기"
   },
   "header": {
+    "speech": "음성",
     "kicker_studio": "스튜디오",
     "kicker_library": "라이브러리",
     "kicker_preferences": "환경설정",
@@ -2296,6 +2302,7 @@
     "preview_voice": "음성 미리보기"
   },
   "checkpoint": {
+    "timing_review": "{{count}}개 구간의 타이밍을 검토해야 합니다",
     "asr_title": "전사본 준비됨",
     "asr_cta": "번역",
     "asr_hint": "지금 ASR 오류를 수정하세요 — 표현을 정확히 다듬으면 나중에 TTS 재시도 횟수를 줄일 수 있습니다.",
@@ -2306,7 +2313,13 @@
     "done_hint": "타이밍과 동기화 비율을 검토하세요. 빠른 부분 재실행을 위해 라인을 조정하고 \"변경됨 재생성\"을 눌러보세요.",
     "segment_one": "{{count}} 세그먼트",
     "segment_other": "{{count}} 세그먼트",
-    "dismiss_title": "닫기 — 새로고침할 때까지 이 단계에서는 다시 나타나지 않습니다."
+    "dismiss_title": "닫기 — 새로고침할 때까지 이 단계에서는 다시 나타나지 않습니다.",
+    "timing_review_one": "세그먼트 {{count}}개의 타이밍 검토가 필요합니다",
+    "timing_review_other": "{{count}}개 구간의 타이밍을 검토해야 합니다",
+    "timing_review_zero": "{{count}}개 구간의 타이밍을 검토해야 합니다",
+    "timing_review_two": "{{count}}개 구간의 타이밍을 검토해야 합니다",
+    "timing_review_few": "{{count}}개 구간의 타이밍을 검토해야 합니다",
+    "timing_review_many": "{{count}}개 구간의 타이밍을 검토해야 합니다"
   },
   "compare": {
     "title": "A/B 음성 비교",
@@ -3024,7 +3037,13 @@
   },
   "waveform": {
     "source_missing": "소스 미디어 누락 — 이 파일이 이동되었거나 삭제되었을 수 있습니다. 계속하려면 동영상을 다시 업로드하세요.",
-    "load_failed": "이 파일에서 오디오를 로드할 수 없습니다."
+    "load_failed": "이 파일에서 오디오를 로드할 수 없습니다.",
+    "controls": "재생 컨트롤",
+    "restart": "처음부터 재생",
+    "shortcuts": "J/K/L: 되감기, 재생/일시 정지, 앞으로",
+    "zoom": "확대 수준",
+    "timeline": "오디오 파형 타임라인",
+    "loading": "파형 불러오는 중…"
   },
   "tts": {
     "routingFallback": "CPU에서 실행 — 이 엔진은 컴퓨터에 GPU 경로가 없으므로 생성 속도가 느려집니다. {{reason}}",

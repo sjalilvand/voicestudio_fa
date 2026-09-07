@@ -539,6 +539,9 @@
     "convert_desc": "說一次,用另一種聲音聽到。語音到語音,完全在本機執行。"
   },
   "clone": {
+    "text_label": "文字",
+    "paste": "貼上",
+    "paste_failed": "剪貼簿存取遭到封鎖。請使用鍵盤直接貼上到文字欄位。",
     "prompt": "提示",
     "language": "語言",
     "steps": "步驟",
@@ -643,7 +646,8 @@
     "cat_AccentDialect": "口音或方言",
     "accent_dialect_hint": "二選一，不能同時選擇",
     "reset_to_description": "依描述重設",
-    "chips_more": "還有 {{count}} 個…"
+    "chips_more": "還有 {{count}} 個…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "應用程式",
@@ -961,6 +965,9 @@
     "consent_revoked": "驗證已撤銷"
   },
   "dub": {
+    "timing_label": "時間匹配",
+    "timing_concise": "精簡",
+    "timing_stretch_video": "延長影片",
     "install_engine_pkg": "安裝 {{pkg}}",
     "needs_install_short": "需要安裝",
     "install_popover_title": "安裝此引擎",
@@ -1861,6 +1868,7 @@
     "hint": "8步·快速預覽"
   },
   "header": {
+    "speech": "語音",
     "kicker_studio": "工作室",
     "kicker_library": "圖書館",
     "kicker_preferences": "偏好設定",
@@ -1967,6 +1975,7 @@
     "preview_voice": "預覽語音"
   },
   "checkpoint": {
+    "timing_review": "{{count}} 個片段需要檢查時間同步",
     "asr_title": "成績單已準備好",
     "asr_cta": "翻譯",
     "asr_hint": "立即修復所有 ASR 錯誤 - 嚴格的措辭可以節省以後的 TTS 嘗試。",
@@ -1977,7 +1986,13 @@
     "done_hint": "檢查時序和同步比率。調整任何線條並點擊“Regen Changed”即可快速部分重做。",
     "segment_one": "{{count}} 段",
     "segment_other": "{{count}} 段",
-    "dismiss_title": "關閉 — 在重新載入之前不會再次出現在該階段"
+    "dismiss_title": "關閉 — 在重新載入之前不會再次出現在該階段",
+    "timing_review_one": "{{count}} 個片段需要檢查時間",
+    "timing_review_other": "{{count}} 個片段需要檢查時間同步",
+    "timing_review_zero": "{{count}} 個片段需要檢查時間同步",
+    "timing_review_two": "{{count}} 個片段需要檢查時間同步",
+    "timing_review_few": "{{count}} 個片段需要檢查時間同步",
+    "timing_review_many": "{{count}} 個片段需要檢查時間同步"
   },
   "compare": {
     "title": "A/B 語音比較",
@@ -2604,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "來源媒體遺失 - 該檔案可能已移動或被刪除。重新上傳影片以繼續。",
-    "load_failed": "無法從此文件加載音頻"
+    "load_failed": "無法從此文件加載音頻",
+    "controls": "播放控制",
+    "restart": "從頭播放",
+    "shortcuts": "J/K/L：後退、播放/暫停、前進",
+    "zoom": "縮放比例",
+    "timeline": "音訊波形時間軸",
+    "loading": "正在載入波形…"
   },
   "tts": {
     "routingFallback": "在 CPU 上運作 — 引擎在您的電腦上沒有 GPU 路徑，因此產生速度會較慢。 {{reason}}",

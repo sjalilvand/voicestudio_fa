@@ -539,6 +539,9 @@
     "convert_desc": "一度話すだけで、別の声に。音声から音声へ、すべてローカルで。"
   },
   "clone": {
+    "text_label": "テキスト",
+    "paste": "貼り付け",
+    "paste_failed": "クリップボードへのアクセスが拒否されました。キーボードでテキスト欄に直接貼り付けてください。",
     "prompt": "プロンプト",
     "language": "言語",
     "steps": "ステップ",
@@ -643,7 +646,8 @@
     "cat_AccentDialect": "アクセントまたは方言",
     "accent_dialect_hint": "どちらか一方のみ、両方は不可",
     "reset_to_description": "説明に基づいてリセット",
-    "chips_more": "他{{count}}件…"
+    "chips_more": "他{{count}}件…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "アプリ",
@@ -961,6 +965,9 @@
     "consent_revoked": "検証が取り消されました"
   },
   "dub": {
+    "timing_label": "タイミング",
+    "timing_concise": "簡潔",
+    "timing_stretch_video": "動画を引き伸ばす",
     "install_engine_pkg": "{{pkg}} をインストール",
     "needs_install_short": "インストールが必要",
     "install_popover_title": "このエンジンをインストール",
@@ -1861,6 +1868,7 @@
     "hint": "8ステップ・高速プレビュー"
   },
   "header": {
+    "speech": "音声",
     "kicker_studio": "スタジオ",
     "kicker_library": "図書館",
     "kicker_preferences": "設定",
@@ -1967,6 +1975,7 @@
     "preview_voice": "プレビュー音声"
   },
   "checkpoint": {
+    "timing_review": "{{count}} 個のセグメントでタイミングの確認が必要です",
     "asr_title": "トランスクリプトの準備完了",
     "asr_cta": "翻訳する",
     "asr_hint": "ASR エラーを今すぐ修正します。厳密なディクショニングにより、後で TTS の試行を節約できます。",
@@ -1977,7 +1986,13 @@
     "done_hint": "タイミングと同期率を確認します。任意の行を微調整し、「Regen Changed」を押すと、部分的に素早くやり直すことができます。",
     "segment_one": "{{count}} セグメント",
     "segment_other": "{{count}} セグメント",
-    "dismiss_title": "閉じる — リロードするまでこのステージでは再表示されません"
+    "dismiss_title": "閉じる — リロードするまでこのステージでは再表示されません",
+    "timing_review_one": "{{count}} 個のセグメントのタイミングを確認してください",
+    "timing_review_other": "{{count}} 個のセグメントでタイミングの確認が必要です",
+    "timing_review_zero": "{{count}} 個のセグメントでタイミングの確認が必要です",
+    "timing_review_two": "{{count}} 個のセグメントでタイミングの確認が必要です",
+    "timing_review_few": "{{count}} 個のセグメントでタイミングの確認が必要です",
+    "timing_review_many": "{{count}} 個のセグメントでタイミングの確認が必要です"
   },
   "compare": {
     "title": "A/B音声比較",
@@ -2604,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "ソース メディアが見つかりません - このファイルは移動または削除された可能性があります。続行するにはビデオを再アップロードしてください。",
-    "load_failed": "このファイルからオーディオをロードできませんでした"
+    "load_failed": "このファイルからオーディオをロードできませんでした",
+    "controls": "再生コントロール",
+    "restart": "最初から再生",
+    "shortcuts": "J/K/L：巻き戻し、再生/一時停止、早送り",
+    "zoom": "ズームレベル",
+    "timeline": "音声波形タイムライン",
+    "loading": "波形を読み込み中…"
   },
   "tts": {
     "routingFallback": "CPU 上で実行 — このエンジンにはマシン上に GPU パスがないため、生成は遅くなります。 {{reason}}",

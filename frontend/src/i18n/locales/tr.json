@@ -539,6 +539,9 @@
     "convert_desc": "Bir kez söyleyin — başka bir sesle duyun. Konuşmadan konuşmaya, tamamen yerel."
   },
   "clone": {
+    "text_label": "Metin",
+    "paste": "Yapıştır",
+    "paste_failed": "Pano erişimi engellendi. Klavyeyi kullanarak doğrudan metin alanına yapıştırın.",
     "prompt": "İstemi",
     "language": "Dil",
     "steps": "Adımlar",
@@ -643,7 +646,8 @@
     "cat_AccentDialect": "Aksan veya lehçe",
     "accent_dialect_hint": "yalnızca biri, asla ikisi birden",
     "reset_to_description": "Açıklamaya göre sıfırla",
-    "chips_more": "{{count}} tane daha…"
+    "chips_more": "{{count}} tane daha…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "Uygulama",
@@ -961,6 +965,9 @@
     "consent_revoked": "Doğrulama iptal edildi"
   },
   "dub": {
+    "timing_label": "Zamanlama",
+    "timing_concise": "Kısa",
+    "timing_stretch_video": "Videoyu uzat",
     "install_engine_pkg": "{{pkg}} yükle",
     "needs_install_short": "Kurulum gerekli",
     "install_popover_title": "Bu motoru yükle",
@@ -1861,6 +1868,7 @@
     "hint": "8 adım · hızlı önizleme"
   },
   "header": {
+    "speech": "Konuşma",
     "kicker_studio": "stüdyo",
     "kicker_library": "Kütüphane",
     "kicker_preferences": "Tercihler",
@@ -1967,6 +1975,7 @@
     "preview_voice": "Sesi önizle"
   },
   "checkpoint": {
+    "timing_review": "{{count}} bölümün zamanlaması incelenmeli",
     "asr_title": "Transkriptler hazır",
     "asr_cta": "Çevir",
     "asr_hint": "Tüm ASR hatalarını şimdi düzeltin; sıkı diksiyon, daha sonra TTS denemelerini önler.",
@@ -1977,7 +1986,13 @@
     "done_hint": "Zamanlamayı ve senkronizasyon oranlarını inceleyin. Herhangi bir satırda ince ayar yapın ve hızlı bir kısmi yineleme için \"Yenileme değişti\" tuşuna basın.",
     "segment_one": "{{count}} segmenti",
     "segment_other": "{{count}} segment",
-    "dismiss_title": "Reddet — yeniden yüklenene kadar bu aşamada yeniden görünmeyecek"
+    "dismiss_title": "Reddet — yeniden yüklenene kadar bu aşamada yeniden görünmeyecek",
+    "timing_review_one": "{{count}} bölümün zamanlaması incelenmeli",
+    "timing_review_other": "{{count}} bölümün zamanlaması incelenmeli",
+    "timing_review_zero": "{{count}} bölümün zamanlaması incelenmeli",
+    "timing_review_two": "{{count}} bölümün zamanlaması incelenmeli",
+    "timing_review_few": "{{count}} bölümün zamanlaması incelenmeli",
+    "timing_review_many": "{{count}} bölümün zamanlaması incelenmeli"
   },
   "compare": {
     "title": "A/B Ses Karşılaştırması",
@@ -2604,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "Kaynak medya eksik — bu dosya taşınmış veya silinmiş olabilir. Devam etmek için videoyu yeniden yükleyin.",
-    "load_failed": "Bu dosyadan ses yüklenemedi"
+    "load_failed": "Bu dosyadan ses yüklenemedi",
+    "controls": "Oynatma kontrolleri",
+    "restart": "Baştan oynat",
+    "shortcuts": "J/K/L: geri, oynat/duraklat, ileri",
+    "zoom": "Yakınlaştırma düzeyi",
+    "timeline": "Ses dalgası zaman çizelgesi",
+    "loading": "Dalga biçimi yükleniyor…"
   },
   "tts": {
     "routingFallback": "CPU üzerinde çalışıyor - bu motorun makinenizde GPU yolu yoktur, bu nedenle üretim daha yavaş olacaktır. {{reason}}",

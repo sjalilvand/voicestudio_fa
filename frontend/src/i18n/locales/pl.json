@@ -539,6 +539,9 @@
     "convert_desc": "Powiedz raz — usłysz innym głosem. Mowa na mowę, w pełni lokalnie."
   },
   "clone": {
+    "text_label": "Tekst",
+    "paste": "Wklej",
+    "paste_failed": "Dostęp do schowka został zablokowany. Wklej bezpośrednio do pola tekstowego za pomocą klawiatury.",
     "prompt": "Podpowiedź",
     "language": "Język",
     "steps": "Kroki",
@@ -643,7 +646,8 @@
     "cat_AccentDialect": "Akcent lub dialekt",
     "accent_dialect_hint": "jedno albo drugie, nigdy oba",
     "reset_to_description": "Przywróć na podstawie opisu",
-    "chips_more": "jeszcze {{count}}…"
+    "chips_more": "jeszcze {{count}}…",
+    "cfg": "CFG"
   },
   "about": {
     "app": "Aplikacja",
@@ -961,6 +965,9 @@
     "consent_revoked": "Weryfikacja odwołana"
   },
   "dub": {
+    "timing_label": "Synchronizacja",
+    "timing_concise": "Zwięźle",
+    "timing_stretch_video": "Wydłuż wideo",
     "install_engine_pkg": "Zainstaluj {{pkg}}",
     "needs_install_short": "Wymaga instalacji",
     "install_popover_title": "Zainstaluj ten silnik",
@@ -1861,6 +1868,7 @@
     "hint": "8 kroków · szybki podgląd"
   },
   "header": {
+    "speech": "Mowa",
     "kicker_studio": "Studio",
     "kicker_library": "Biblioteka",
     "kicker_preferences": "Preferencje",
@@ -1967,6 +1975,7 @@
     "preview_voice": "Podgląd głosu"
   },
   "checkpoint": {
+    "timing_review": "{{count}} segmentów wymaga sprawdzenia synchronizacji",
     "asr_title": "Transkrypcje gotowe",
     "asr_cta": "Przetłumacz",
     "asr_hint": "Napraw teraz wszelkie błędy ASR — ścisła dykcja pozwala uniknąć późniejszych prób TTS.",
@@ -1977,7 +1986,13 @@
     "done_hint": "Przejrzyj współczynniki synchronizacji i synchronizacji. Popraw dowolną linię i naciśnij „Regen zmieniony”, aby szybko wykonać częściowe ponowne wykonanie.",
     "segment_one": "Segment {{count}}",
     "segment_other": "{{count}} segmentów",
-    "dismiss_title": "Odrzuć — nie pojawi się ponownie na tym etapie, dopóki nie zostanie przeładowany"
+    "dismiss_title": "Odrzuć — nie pojawi się ponownie na tym etapie, dopóki nie zostanie przeładowany",
+    "timing_review_one": "{{count}} segment wymaga sprawdzenia czasu",
+    "timing_review_other": "{{count}} segmentów wymaga sprawdzenia synchronizacji",
+    "timing_review_few": "{{count}} segmenty wymagają sprawdzenia czasu",
+    "timing_review_many": "{{count}} segmentów wymaga sprawdzenia czasu",
+    "timing_review_zero": "{{count}} segmentów wymaga sprawdzenia synchronizacji",
+    "timing_review_two": "{{count}} segmentów wymaga sprawdzenia synchronizacji"
   },
   "compare": {
     "title": "Porównanie głosu A/B",
@@ -2604,7 +2619,13 @@
   },
   "waveform": {
     "source_missing": "Brak multimediów źródłowych — ten plik mógł zostać przeniesiony lub usunięty. Aby kontynuować, prześlij film ponownie.",
-    "load_failed": "Nie można załadować dźwięku z tego pliku"
+    "load_failed": "Nie można załadować dźwięku z tego pliku",
+    "controls": "Sterowanie odtwarzaniem",
+    "restart": "Odtwórz od początku",
+    "shortcuts": "J/K/L: wstecz, odtwarzaj/pauza, naprzód",
+    "zoom": "Poziom powiększenia",
+    "timeline": "Oś czasu fali dźwiękowej",
+    "loading": "Ładowanie przebiegu fali…"
   },
   "tts": {
     "routingFallback": "Działa na procesorze — ten silnik nie ma ścieżki GPU na twoim komputerze, więc generowanie będzie wolniejsze. {{reason}}",
