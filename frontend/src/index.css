@@ -883,6 +883,12 @@ html[data-ui-scale-engine='native'] .app-container {
   grid-row: 1;
   cursor: default;
 }
+/* The macOS platform config enables native overlay traffic lights. Complete
+   the header's 16px padding to the same 64px safe area as titlebar tabs.
+   Header applies this only to the native Mac window, never browser content. */
+.header-area__left--mac-inset {
+  padding-left: 48px;
+}
 
 @keyframes flush-slide {
   from { opacity: 0; transform: translateY(-4px); }

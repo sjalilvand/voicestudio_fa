@@ -74,6 +74,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - The logs panel no longer reports “All clear” before log retrieval succeeds or while logs contain warnings or errors (#1870) — thanks @motodriver!
 - MOSS accelerator routing now matches runtime device selection, including native XPU and registered NPU detection (#1830) — thanks @li-lizhe!
 - Confucius accelerator routing matches device selection, and dots.tts keeps safe CPU precision on non-CUDA accelerators (#1831) — thanks @li-lizhe!
+- On macOS, the header status dot and kicker no longer render underneath the overlaid traffic lights (#1863) — thanks @psiberfunk!
 
 
 ## [0.5.2] — 2026-09-02

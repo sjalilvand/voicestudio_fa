@@ -153,7 +153,12 @@ export default function Header({
   // breadcrumb + wordmark normally sit — the tabs already say where you are,
   // and two answers to that question in one bar is one too many.
   const tabsInTitlebar = navStyle === 'tabs';
-  const showWindowControls = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+  const isDesktop = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+  const showWindowControls = isDesktop;
+  // The macOS config replaces the base window with decorated overlay chrome.
+  // Reserve its traffic-light area only inside the desktop webview.
+  const hasMacTrafficLights =
+    isDesktop && typeof navigator !== 'undefined' && /^Mac/.test(navigator.platform || '');
   const { t } = useTranslation();
   // Sysinfo is subscribed here (not in App via useAppData) so the 5s poll
   // only re-renders the header chrome, not the whole App tree.
@@ -300,7 +305,11 @@ export default function Header({
         </div>
       ) : (
         /* Left: view title + breadcrumb */
-        <div className="flex items-center gap-[14px] justify-self-start min-w-0">
+        <div
+          className={`flex items-center gap-[14px] justify-self-start min-w-0 ${
+            hasMacTrafficLights ? 'header-area__left--mac-inset' : ''
+          }`}
+        >
           <div className="inline-flex items-center gap-[6px] h-[var(--chrome-pill-h)] [font-family:var(--font-sans)] max-[961px]:gap-[5px]">
             <span
               className="w-[7px] h-[7px] rounded-full shrink-0 [animation:hqPulse_2.4s_ease-in-out_infinite] motion-reduce:[animation:none] max-[821px]:hidden"
