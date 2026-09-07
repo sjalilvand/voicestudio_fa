@@ -1513,6 +1513,7 @@ def get_best_device():
                 logger.info("Using DirectML device (GPU %d)", 0)
                 return str(torch_directml.device(0))
         except ImportError:
+            # DirectML is optional; an absent package leaves CPU available.
             pass
 
     # Other families need an explicitly compatible loader (e.g. NPU sidecars).
