@@ -53,6 +53,8 @@ def test_install_hint_present():
     hint = _INSTALL_HINTS.get("moss-tts-v15", "")
     assert "OMNIVOICE_MOSS_TTS_V15_DIR" in hint
     assert "OpenMOSS" in hint
+    assert "CUDA/CPU" not in hint
+    assert "runtime-available accelerator or CPU" in hint
 
 
 def test_sidecar_script_ships():
