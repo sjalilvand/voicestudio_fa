@@ -116,7 +116,7 @@ editor, profile previews, and streaming).
 
 | Situation | What you see |
 | --- | --- |
-| The engine declares a VRAM floor above what this GPU has, or routing fell back to CPU | The routing caveat, naming your card, the engine's floor, and the ways around it. A CUDA/ROCm card below the floor is also *budgeted* as the CPU-class hardware it performs like — it gets `OMNIVOICE_CPU_GENERATE_TIMEOUT_S`, not the accelerated one |
+| The engine declares a VRAM floor above what this GPU has, or routing fell back to CPU | The routing caveat, naming your card, the engine's floor, and the ways around it. A CUDA/ROCm card below the floor is also *budgeted* as the CPU-class hardware it performs like — it gets the larger CPU/accelerated base unless `OMNIVOICE_GENERATE_TIMEOUT_S` is explicitly set |
 | The host synthesizes on the CPU **and** the text is over 1200 characters | A heads-up that this generation may exceed the time budget |
 | The host synthesizes on Apple Silicon (MPS) **and** the text is over 1200 characters | The same heads-up — MPS gets the accelerated-host budget (`OMNIVOICE_GENERATE_TIMEOUT_S`), which a long render can still legitimately exceed |
 
@@ -131,7 +131,7 @@ laptop stay quiet.
 | Host | Base budget |
 | --- | --- |
 | Renders on the CPU | `OMNIVOICE_CPU_GENERATE_TIMEOUT_S` |
-| CUDA/ROCm GPU below the engine's declared VRAM floor | `OMNIVOICE_CPU_GENERATE_TIMEOUT_S` (whichever of the two is larger) |
+| CUDA/ROCm GPU below the engine's declared VRAM floor, when `OMNIVOICE_GENERATE_TIMEOUT_S` is not explicitly set | `OMNIVOICE_CPU_GENERATE_TIMEOUT_S` (whichever of the two is larger) |
 | Any other accelerated host, MPS included | `OMNIVOICE_GENERATE_TIMEOUT_S` |
 
 Both rows above can be overridden, and the two vars are independent:
