@@ -1,4 +1,4 @@
-import { abortableDelay } from '../utils/abortableDelay';
+import { abortableDelay } from '../utils/abortableDelay.ts';
 // Backend base URL.
 //   • VITE_API_URL                → explicit override (any deploy).
 //   • Tauri webview               → the local sidecar (127.0.0.1:<port>).
