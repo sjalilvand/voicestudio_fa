@@ -28,6 +28,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Voice reference preparation reclaims allocator memory before one bounded retry, then reports persistent GPU out-of-memory failures (#1811)
 - `bun run desktop` now opens on a fresh clone: the Vite alias for `@tauri-apps/plugin-dialog` no longer assumes a nested `frontend/node_modules`, which bun's workspace hoisting leaves empty (#1818) — thanks @flutterkage2k!
 
+- Slow backend startups remain running with progress updates, and Retry can interrupt startup reliably (#1809)
 
 ## [0.5.2] — 2026-09-02
 
