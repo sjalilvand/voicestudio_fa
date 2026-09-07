@@ -160,14 +160,14 @@ def test_get_hf_token_state_fresh_busts_whoami_cache(fresh_app, monkeypatch):
     # An explicit test fails; ordinary reads must never revalidate.
     r = c.get("/api/settings/hf-token/state?fresh=1")
     env_row = next(s for s in r.json()["sources"] if s["source"] == "env")
-    assert env_row["set"] and not env_row["whoami_ok"]
+    assert env_row["set"] and env_row["whoami_ok"] is False
     first_calls = calls["n"]
 
-    # Network recovers, but a plain GET still serves the cached failure.
+    # Network recovers, but a plain GET only reports unvalidated local presence.
     verdict["ok"] = True
     r = c.get("/api/settings/hf-token/state")
     env_row = next(s for s in r.json()["sources"] if s["source"] == "env")
-    assert not env_row["whoami_ok"], "plain GET must keep the cache (no re-run)"
+    assert env_row["whoami_ok"] is None, "plain GET must not validate"
     assert calls["n"] == first_calls
 
     # "Test now" (fresh=1) drops the cache and re-runs whoami → verified.
@@ -305,3 +305,21 @@ def test_token_state_reads_never_contact_hugging_face(fresh_app, monkeypatch, en
     row = next(row for row in response.json()["sources"] if row["source"] == "env")
     assert row["set"] and row["whoami_ok"] is None
     whoami.assert_not_called()
+
+
+def test_canonical_save_replaces_the_existing_app_source(fresh_app, monkeypatch):
+    import huggingface_hub
+    from services import settings_store, token_resolver
+    settings_store.set_hf_token("hf_old_app")
+    monkeypatch.setenv("HF_TOKEN", "hf_old_env")
+    monkeypatch.setattr(huggingface_hub, "login", lambda **kwargs: None)
+    monkeypatch.setattr(huggingface_hub, "whoami", lambda token: {"name": token})
+    response = _client(fresh_app).post("/api/settings/hf-token", json={"token": SAMPLE_TOKEN})
+    assert response.status_code == 200
+    assert settings_store.get_hf_token() == SAMPLE_TOKEN
+    resolved = token_resolver.resolve()
+    assert resolved.source == "app"
+    assert resolved.token == SAMPLE_TOKEN
+    app_row = next(row for row in response.json()["sources"] if row["source"] == "app")
+    assert app_row["set"] is True
+    assert app_row["whoami_ok"] is None

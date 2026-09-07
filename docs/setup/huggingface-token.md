@@ -122,3 +122,6 @@ Opening onboarding or Settings only reads local token presence and masked previe
 Windows automatically shortens the model cache path while keeping the normal CLI token location. If only a previous VoiceStudio short-cache token exists, the app continues using that file. An existing normal CLI token takes priority; explicit token or cache overrides remain authoritative. Credentials are never copied between these locations.
 
 The CLI row reads only the selected local file, without OAuth refresh or environment-token fallback. **Also clear saved HuggingFace CLI token files** removes both active and stored-token files at recognized automatic locations, so an older app token cannot reappear on restart. Explicit overrides limit clearing to their selected location. Clearing only the app token preserves CLI files; neither action revokes tokens on Hugging Face or changes Git credentials. A file permission failure is reported instead of claiming the files were cleared.
+
+
+If onboarding cannot read token state, it shows an error and **Retry**, keeping token entry hidden until discovery succeeds. **Replace token** writes the encrypted app token through the same endpoint as Settings, so it replaces the highest-priority app credential even when an older one exists. The success message confirms saving only; validation remains a separate explicit action.

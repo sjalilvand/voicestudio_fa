@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Check, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { openExternal } from '../api/external';
-import { apiJson } from '../api/client';
+import { apiJson, apiPost } from '../api/client';
 import { Button, Input } from '../ui';
 
 /**
@@ -11,7 +11,7 @@ import { Button, Input } from '../ui';
  * the wizard's pinned action area, right by the "Waiting for required models…"
  * / Continue button. A free token gives authenticated downloads (faster,
  * higher rate limits, fewer stalls) and unlocks gated models (pyannote
- * diarization). Persisted via the same `set-env` endpoint Settings uses, so
+ * diarization). Persisted via the same encrypted-app-token endpoint Settings uses, so
  * it survives restarts.
  *
  * Before pitching a token, it checks the resolver state (same endpoint the
@@ -20,7 +20,7 @@ import { Button, Input } from '../ui';
  * login` — sees that instead of a blind "add a token" prompt (#FR-006).
  * Replacing an already-active token is gated behind an explicit "Replace…"
  * click rather than being one blind paste-and-Save away, since Save persists
- * via `huggingface_hub.login()`, which overwrites `$HF_HOME/token` outright.
+ * in the app store and the selected local Hub token file.
  *
  * @param {string=} className extra class on the root (e.g. layout pinning).
  */
@@ -34,6 +34,7 @@ export default function HfTokenCard({ className = '' }) {
   // want to flash a false "you have no token" pitch before we actually know.
   const [tokenState, setTokenState] = useState(null);
   const [checkFailed, setCheckFailed] = useState(false);
+  const [checkAttempt, setCheckAttempt] = useState(0);
   // Explicit gate: revealing the paste-a-token form when a token is already
   // active requires this deliberate click, so Save can never blind-clobber a
   // working token.
@@ -44,6 +45,14 @@ export default function HfTokenCard({ className = '' }) {
     (async () => {
       try {
         const data = await apiJson('/system/hf-token/state');
+        if (
+          !Array.isArray(data?.sources) ||
+          data.sources.length !== 3 ||
+          !['app', 'env', 'hf-cli'].every((source) =>
+            data.sources.some((row) => row?.source === source && typeof row.set === 'boolean'),
+          )
+        )
+          throw new Error('Invalid token state');
         if (!cancelled) setTokenState(data);
       } catch {
         if (!cancelled) setCheckFailed(true);
@@ -52,19 +61,14 @@ export default function HfTokenCard({ className = '' }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [checkAttempt]);
 
   const saveHfToken = async () => {
     const value = hfToken.trim();
-    if (!value || hfState === 'saving') return;
+    if (!value || hfState === 'saving' || tokenState == null || checkFailed) return;
     setHfState('saving');
     try {
-      const { apiFetch } = await import('../api/client');
-      await apiFetch('/system/set-env', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'HF_TOKEN', value }),
-      });
+      await apiPost('/api/settings/hf-token', { token: value });
       setHfState('saved');
       setHfToken('');
     } catch {
@@ -82,15 +86,41 @@ export default function HfTokenCard({ className = '' }) {
       >
         <span className="inline-flex items-center gap-1.5 font-semibold text-success">
           <Check size={14} aria-hidden="true" />
-          {t('firstrun.hf_token_saved_fast', 'Hugging Face token saved — downloads are now faster')}
+          {t('firstrun.hf_token_saved', 'Hugging Face token saved')}
         </span>
+      </div>
+    );
+  }
+
+  if (checkFailed) {
+    return (
+      <div
+        className={cn(
+          'flex flex-wrap items-center gap-2 rounded-md bg-danger/10 px-3 py-2 text-sm',
+          className,
+        )}
+      >
+        <span role="alert" className="text-danger">
+          {t('common.error', 'Something went wrong')}
+        </span>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => {
+            setCheckFailed(false);
+            setTokenState(null);
+            setCheckAttempt((attempt) => attempt + 1);
+          }}
+        >
+          {t('bootstrap.retry', 'Retry')}
+        </Button>
       </div>
     );
   }
 
   // Still checking — never flash the "add a token" pitch before we know
   // whether one is already active.
-  if (tokenState == null && !checkFailed) {
+  if (tokenState == null) {
     return (
       <div
         className={cn(
@@ -108,8 +138,12 @@ export default function HfTokenCard({ className = '' }) {
     app: t('settings.hf_source_app_label', {
       defaultValue: 'VoiceStudio (encrypted, recommended)',
     }),
-    env: t('settings.hf_source_env_label', { defaultValue: 'Environment variable' }),
-    'hf-cli': t('settings.hf_source_cli_label', { defaultValue: 'HuggingFace CLI' }),
+    env: t('settings.hf_source_env_label', {
+      defaultValue: 'Environment variable',
+    }),
+    'hf-cli': t('settings.hf_source_cli_label', {
+      defaultValue: 'HuggingFace CLI',
+    }),
   };
   const activeRow = tokenState?.sources?.find((row) => row.set);
 
@@ -142,9 +176,7 @@ export default function HfTokenCard({ className = '' }) {
     );
   }
 
-  // No active token (or the state check failed — fail toward the pre-fix
-  // behavior rather than hiding the card), or the user explicitly chose to
-  // replace an active one.
+  // A successful state read found no token, or replacement was explicit.
   return (
     <div
       className={cn(
@@ -171,7 +203,9 @@ export default function HfTokenCard({ className = '' }) {
         placeholder={t('firstrun.hf_token_inline_ph', 'Paste hf_… token (optional)')}
         value={hfToken}
         autoComplete="off"
+        disabled={hfState === 'saving'}
         onChange={(e) => {
+          if (hfState === 'saving') return;
           setHfToken(e.target.value);
           if (hfState !== 'idle') setHfState('idle');
         }}
@@ -197,6 +231,7 @@ export default function HfTokenCard({ className = '' }) {
         <button
           type="button"
           className="cursor-pointer appearance-none whitespace-nowrap border-0 bg-transparent p-0 text-[0.76rem] text-fg-muted underline hover:no-underline"
+          disabled={hfState === 'saving'}
           onClick={() => {
             setReplacing(false);
             setHfToken('');
