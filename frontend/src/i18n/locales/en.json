@@ -943,7 +943,8 @@
     "device_load_failed": "Failed to load device setting",
     "generate_timeout_shadowed_badge": "Overridden externally",
     "generate_timeout_shadowed_note": "An environment variable outside VoiceStudio (shell, .env file, or container) is currently setting this — your saved value here is ignored until that variable is removed.",
-    "generate_timeout_shadowed_toast": "Saved, but an environment variable outside VoiceStudio is currently setting this — it will keep being used until that variable is removed."
+    "generate_timeout_shadowed_toast": "Saved, but an environment variable outside VoiceStudio is currently setting this — it will keep being used until that variable is removed.",
+    "hf_token_not_checked": "Not tested"
   },
   "about": {
     "app": "App",
@@ -3118,7 +3119,10 @@
     "hf_token_error": "Could not save the token — try again or set it later in Settings → Credentials.",
     "hf_token_inline_prompt": "Speed up downloads with a free Hugging Face token",
     "hf_token_inline_ph": "Paste hf_… token (optional)",
-    "hf_token_get_short": "Get one free →"
+    "hf_token_get_short": "Get one free →",
+    "hf_token_active_using": "Hugging Face token found in {{source}} — {{masked}}",
+    "hf_token_replace": "Replace token…",
+    "hf_token_replace_warning": "This replaces the token saved for this app. It does not revoke the old token."
   },
   "history": {
     "dub_meta": "{{segments}} segs · {{duration}}s",

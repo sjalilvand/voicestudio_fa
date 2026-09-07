@@ -70,9 +70,9 @@ def test_post_hf_token_loopback_succeeds(fresh_app, monkeypatch):
     from services import settings_store
     assert settings_store.get_hf_token() == SAMPLE_TOKEN
 
-    # Response contains the masked active source.
+    # Response reports masked local presence without asserting remote validity.
     body = r.json()
-    assert body["active"] == "app"
+    assert body["active"] is None
     assert any(s["source"] == "app" and s["set"] for s in body["sources"])
 
 
@@ -153,8 +153,8 @@ def test_get_hf_token_state_fresh_busts_whoami_cache(fresh_app, monkeypatch):
 
     c = _client(fresh_app)
 
-    # First load: whoami fails → env row set but not verified; failure cached.
-    r = c.get("/api/settings/hf-token/state")
+    # An explicit test fails; ordinary reads must never revalidate.
+    r = c.get("/api/settings/hf-token/state?fresh=1")
     env_row = next(s for s in r.json()["sources"] if s["source"] == "env")
     assert env_row["set"] and not env_row["whoami_ok"]
     first_calls = calls["n"]
@@ -272,3 +272,20 @@ def test_sonitranslate_module_uses_resolver(monkeypatch, tmp_path):
     assert "token_resolver.resolve" in src
     # And the env injection assigns HF_TOKEN explicitly.
     assert 'env["HF_TOKEN"]' in src or "env['HF_TOKEN']" in src
+
+
+@pytest.mark.parametrize("endpoint", ["/system/hf-token/state", "/api/settings/hf-token/state"])
+def test_token_state_reads_never_contact_hugging_face(fresh_app, monkeypatch, endpoint):
+    import huggingface_hub
+    monkeypatch.setenv("HF_TOKEN", SAMPLE_TOKEN)
+    monkeypatch.setattr(huggingface_hub, "get_token", lambda: None)
+    whoami = MagicMock(side_effect=AssertionError("unexpected outbound validation"))
+    monkeypatch.setattr(huggingface_hub, "whoami", whoami)
+    if endpoint == "/system/hf-token/state":
+        from api.routers.system import router
+        fresh_app.include_router(router)
+    response = _client(fresh_app).get(endpoint)
+    assert response.status_code == 200
+    row = next(row for row in response.json()["sources"] if row["source"] == "env")
+    assert row["set"] and row["whoami_ok"] is None
+    whoami.assert_not_called()

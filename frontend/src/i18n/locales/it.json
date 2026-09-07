@@ -348,7 +348,8 @@
     "generate_timeout_saved": "Salvato. Riavvia VoiceStudio affinché il nuovo budget abbia effetto.",
     "generate_timeout_shadowed_badge": "Sovrascritto esternamente",
     "generate_timeout_shadowed_note": "Una variabile d'ambiente esterna a VoiceStudio (shell, file .env o container) sta attualmente impostando questo valore — il valore salvato qui viene ignorato finché quella variabile non viene rimossa.",
-    "generate_timeout_shadowed_toast": "Salvato, ma una variabile d'ambiente esterna a VoiceStudio sta attualmente impostando questo valore — continuerà a essere usato finché quella variabile non viene rimossa."
+    "generate_timeout_shadowed_toast": "Salvato, ma una variabile d'ambiente esterna a VoiceStudio sta attualmente impostando questo valore — continuerà a essere usato finché quella variabile non viene rimossa.",
+    "hf_token_not_checked": "Non testato"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2384,7 +2385,10 @@
     "hf_token_saved_fast": "Token del volto abbracciato salvato: i download ora sono più veloci",
     "hf_token_inline_prompt": "Velocizza i download con un token Hugging Face gratuito",
     "hf_token_inline_ph": "Incolla il token hf_… (facoltativo)",
-    "hf_token_get_short": "Ottienine uno gratis →"
+    "hf_token_get_short": "Ottienine uno gratis →",
+    "hf_token_active_using": "Token Hugging Face trovato in {{source}} — {{masked}}",
+    "hf_token_replace": "Sostituisci token…",
+    "hf_token_replace_warning": "Questo sostituisce il token salvato per questa app. Non revoca il vecchio token."
   },
   "history": {
     "dub_meta": "{{segments}} segmenti · {{duration}} s",

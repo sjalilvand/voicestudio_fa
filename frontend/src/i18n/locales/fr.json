@@ -348,7 +348,8 @@
     "generate_timeout_saved": "Enregistré. Redémarrez VoiceStudio pour que le nouveau budget prenne effet.",
     "generate_timeout_shadowed_badge": "Remplacé de l'extérieur",
     "generate_timeout_shadowed_note": "Une variable d'environnement extérieure à VoiceStudio (shell, fichier .env ou conteneur) définit actuellement cette valeur — la valeur enregistrée ici est ignorée tant que cette variable n'est pas supprimée.",
-    "generate_timeout_shadowed_toast": "Enregistré, mais une variable d'environnement extérieure à VoiceStudio définit actuellement cette valeur — elle continuera d'être utilisée tant que cette variable ne sera pas supprimée."
+    "generate_timeout_shadowed_toast": "Enregistré, mais une variable d'environnement extérieure à VoiceStudio définit actuellement cette valeur — elle continuera d'être utilisée tant que cette variable ne sera pas supprimée.",
+    "hf_token_not_checked": "Non testé"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2384,7 +2385,10 @@
     "hf_token_saved_fast": "Jeton Hugging Face enregistré – les téléchargements sont désormais plus rapides",
     "hf_token_inline_prompt": "Accélérez les téléchargements avec un jeton Hugging Face gratuit",
     "hf_token_inline_ph": "Coller le jeton hf_… (facultatif)",
-    "hf_token_get_short": "Obtenez-en un gratuitement →"
+    "hf_token_get_short": "Obtenez-en un gratuitement →",
+    "hf_token_active_using": "Jeton Hugging Face trouvé dans {{source}} — {{masked}}",
+    "hf_token_replace": "Remplacer le jeton…",
+    "hf_token_replace_warning": "Cela remplace le jeton enregistré pour cette application, sans révoquer l’ancien jeton."
   },
   "history": {
     "dub_meta": "{{segments}} segments · {{duration}} s",

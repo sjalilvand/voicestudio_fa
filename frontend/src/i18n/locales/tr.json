@@ -348,7 +348,8 @@
     "generate_timeout_saved": "Kaydedildi. Yeni bütçenin geçerli olması için VoiceStudio'yu yeniden başlatın.",
     "generate_timeout_shadowed_badge": "Dışarıdan geçersiz kılındı",
     "generate_timeout_shadowed_note": "VoiceStudio dışındaki bir ortam değişkeni (kabuk, .env dosyası veya konteyner) şu anda bu değeri ayarlıyor — o değişken kaldırılana kadar burada kaydedilen değer yok sayılır.",
-    "generate_timeout_shadowed_toast": "Kaydedildi, ancak VoiceStudio dışındaki bir ortam değişkeni şu anda bu değeri ayarlıyor — o değişken kaldırılana kadar kullanılmaya devam edecek."
+    "generate_timeout_shadowed_toast": "Kaydedildi, ancak VoiceStudio dışındaki bir ortam değişkeni şu anda bu değeri ayarlıyor — o değişken kaldırılana kadar kullanılmaya devam edecek.",
+    "hf_token_not_checked": "Test edilmedi"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2384,7 +2385,10 @@
     "hf_token_saved_fast": "Hugging Face jetonu kaydedildi; indirme işlemleri artık daha hızlı",
     "hf_token_inline_prompt": "Ücretsiz Hugging Face belirteci ile indirmeleri hızlandırın",
     "hf_token_inline_ph": "hf_… jetonunu yapıştırın (isteğe bağlı)",
-    "hf_token_get_short": "Ücretsiz bir tane alın →"
+    "hf_token_get_short": "Ücretsiz bir tane alın →",
+    "hf_token_active_using": "{{source}} içinde Hugging Face belirteci bulundu — {{masked}}",
+    "hf_token_replace": "Jetonu değiştir…",
+    "hf_token_replace_warning": "Bu uygulama için kaydedilen belirteci değiştirir. Eski belirteci iptal etmez."
   },
   "history": {
     "dub_meta": "{{segments}} segment · {{duration}} sn",

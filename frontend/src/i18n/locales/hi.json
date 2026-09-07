@@ -348,7 +348,8 @@
     "generate_timeout_saved": "सेव हो गया। नया बजट लागू करने के लिए VoiceStudio को पुनः आरंभ करें।",
     "generate_timeout_shadowed_badge": "बाहरी रूप से ओवरराइड किया गया",
     "generate_timeout_shadowed_note": "VoiceStudio के बाहर का एक एनवायरनमेंट वेरिएबल (शेल, .env फ़ाइल, या कंटेनर) फ़िलहाल यह मान सेट कर रहा है — यहाँ सेव किया गया मान तब तक अनदेखा किया जाएगा जब तक वह वेरिएबल हटाया न जाए।",
-    "generate_timeout_shadowed_toast": "सेव हो गया, लेकिन VoiceStudio के बाहर का एक एनवायरनमेंट वेरिएबल फ़िलहाल यह मान सेट कर रहा है — जब तक वह वेरिएबल हटाया नहीं जाता, वही इस्तेमाल होता रहेगा।"
+    "generate_timeout_shadowed_toast": "सेव हो गया, लेकिन VoiceStudio के बाहर का एक एनवायरनमेंट वेरिएबल फ़िलहाल यह मान सेट कर रहा है — जब तक वह वेरिएबल हटाया नहीं जाता, वही इस्तेमाल होता रहेगा।",
+    "hf_token_not_checked": "परीक्षण नहीं हुआ"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2384,7 +2385,10 @@
     "hf_token_saved_fast": "हगिंग फेस टोकन सहेजा गया - डाउनलोड अब तेज़ हैं",
     "hf_token_inline_prompt": "निःशुल्क हगिंग फेस टोकन के साथ डाउनलोड की गति बढ़ाएं",
     "hf_token_inline_ph": "hf_...टोकन चिपकाएँ (वैकल्पिक)",
-    "hf_token_get_short": "एक निःशुल्क प्राप्त करें →"
+    "hf_token_get_short": "एक निःशुल्क प्राप्त करें →",
+    "hf_token_active_using": "{{source}} में Hugging Face टोकन मिला — {{masked}}",
+    "hf_token_replace": "टोकन बदलें…",
+    "hf_token_replace_warning": "यह इस ऐप के लिए सहेजे गए टोकन को बदलता है। पुराना टोकन रद्द नहीं होता।"
   },
   "history": {
     "dub_meta": "{{segments}} खंड · {{duration}} सेकंड",

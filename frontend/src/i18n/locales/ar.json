@@ -348,7 +348,8 @@
     "generate_timeout_saved": "تم الحفظ. أعد تشغيل VoiceStudio لتفعيل الميزانية الجديدة.",
     "generate_timeout_shadowed_badge": "تم تجاوزها خارجيًا",
     "generate_timeout_shadowed_note": "يوجد متغيّر بيئة خارج VoiceStudio (الصدفة، ملف .env، أو الحاوية) يُحدّد هذه القيمة حاليًا — القيمة المحفوظة هنا تُتجاهل إلى أن تتم إزالة ذلك المتغيّر.",
-    "generate_timeout_shadowed_toast": "تم الحفظ، لكن متغيّر بيئة خارج VoiceStudio يُحدّد هذه القيمة حاليًا — سيستمر استخدامه إلى أن تتم إزالة ذلك المتغيّر."
+    "generate_timeout_shadowed_toast": "تم الحفظ، لكن متغيّر بيئة خارج VoiceStudio يُحدّد هذه القيمة حاليًا — سيستمر استخدامه إلى أن تتم إزالة ذلك المتغيّر.",
+    "hf_token_not_checked": "لم يتم اختباره"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2384,7 +2385,10 @@
     "hf_token_saved_fast": "تم حفظ رمز Hugging Face - أصبحت التنزيلات الآن أسرع",
     "hf_token_inline_prompt": "قم بتسريع التنزيلات باستخدام رمز Hugging Face المميز المجاني",
     "hf_token_inline_ph": "الصق hf_... الرمز المميز (اختياري)",
-    "hf_token_get_short": "احصل على واحدة مجانًا →"
+    "hf_token_get_short": "احصل على واحدة مجانًا →",
+    "hf_token_active_using": "تم العثور على رمز Hugging Face في {{source}} — {{masked}}",
+    "hf_token_replace": "استبدال الرمز المميز…",
+    "hf_token_replace_warning": "يستبدل هذا الرمز المحفوظ لهذا التطبيق، ولا يُلغي الرمز القديم."
   },
   "history": {
     "dub_meta": "{{segments}} مقطعًا · {{duration}} ث",

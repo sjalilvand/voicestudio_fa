@@ -604,7 +604,8 @@
     "generate_timeout_saved": "已保存。重启 VoiceStudio 以使新预算生效。",
     "generate_timeout_shadowed_badge": "已被外部覆盖",
     "generate_timeout_shadowed_note": "VoiceStudio 之外的一个环境变量（终端、.env 文件或容器）当前正在设置此值——在移除该变量之前，此处保存的值会被忽略。",
-    "generate_timeout_shadowed_toast": "已保存，但 VoiceStudio 之外的一个环境变量当前正在设置此值——在移除该变量之前，将继续使用该值。"
+    "generate_timeout_shadowed_toast": "已保存，但 VoiceStudio 之外的一个环境变量当前正在设置此值——在移除该变量之前，将继续使用该值。",
+    "hf_token_not_checked": "未测试"
   },
   "about": {
     "app": "应用",
@@ -2391,7 +2392,10 @@
     "hf_token_saved_fast": "Hugging Face 令牌已保存——下载速度更快",
     "hf_token_inline_prompt": "使用免费的 Hugging Face 令牌加快下载速度",
     "hf_token_inline_ph": "粘贴 hf_… 令牌（可选）",
-    "hf_token_get_short": "免费获得一份 →"
+    "hf_token_get_short": "免费获得一份 →",
+    "hf_token_active_using": "在 {{source}} 中找到 Hugging Face 令牌 — {{masked}}",
+    "hf_token_replace": "更换令牌…",
+    "hf_token_replace_warning": "这会替换为此应用保存的令牌，但不会撤销旧令牌。"
   },
   "history": {
     "dub_meta": "{{segments}} 个片段 · {{duration}} 秒",

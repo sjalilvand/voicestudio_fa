@@ -348,7 +348,8 @@
     "generate_timeout_saved": "Zapisano. Uruchom ponownie VoiceStudio, aby nowy budżet zaczął obowiązywać.",
     "generate_timeout_shadowed_badge": "Nadpisane zewnętrznie",
     "generate_timeout_shadowed_note": "Zmienna środowiskowa spoza VoiceStudio (powłoka, plik .env lub kontener) obecnie ustawia tę wartość — zapisana tu wartość jest ignorowana, dopóki ta zmienna nie zostanie usunięta.",
-    "generate_timeout_shadowed_toast": "Zapisano, ale zmienna środowiskowa spoza VoiceStudio obecnie ustawia tę wartość — będzie nadal używana, dopóki ta zmienna nie zostanie usunięta."
+    "generate_timeout_shadowed_toast": "Zapisano, ale zmienna środowiskowa spoza VoiceStudio obecnie ustawia tę wartość — będzie nadal używana, dopóki ta zmienna nie zostanie usunięta.",
+    "hf_token_not_checked": "Nie przetestowano"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2384,7 +2385,10 @@
     "hf_token_saved_fast": "Token Przytulonej Twarzy został zapisany — pobieranie jest teraz szybsze",
     "hf_token_inline_prompt": "Przyspiesz pobieranie dzięki darmowemu tokenowi Przytulająca Twarz",
     "hf_token_inline_ph": "Wklej token hf_… (opcjonalnie)",
-    "hf_token_get_short": "Zdobądź jeden za darmo →"
+    "hf_token_get_short": "Zdobądź jeden za darmo →",
+    "hf_token_active_using": "Znaleziono token Hugging Face w {{source}} — {{masked}}",
+    "hf_token_replace": "Zastąp token…",
+    "hf_token_replace_warning": "To zastępuje token zapisany dla tej aplikacji. Nie unieważnia starego tokena."
   },
   "history": {
     "dub_meta": "{{segments}} segmentów · {{duration}} s",

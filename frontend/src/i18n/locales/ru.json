@@ -348,7 +348,8 @@
     "generate_timeout_saved": "Сохранено. Перезапустите VoiceStudio, чтобы новый бюджет вступил в силу.",
     "generate_timeout_shadowed_badge": "Переопределено извне",
     "generate_timeout_shadowed_note": "Переменная окружения вне VoiceStudio (оболочка, файл .env или контейнер) сейчас задаёт это значение — сохранённое здесь значение игнорируется, пока эта переменная не будет удалена.",
-    "generate_timeout_shadowed_toast": "Сохранено, но переменная окружения вне VoiceStudio сейчас задаёт это значение — оно будет использоваться, пока эта переменная не будет удалена."
+    "generate_timeout_shadowed_toast": "Сохранено, но переменная окружения вне VoiceStudio сейчас задаёт это значение — оно будет использоваться, пока эта переменная не будет удалена.",
+    "hf_token_not_checked": "Не проверен"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2384,7 +2385,10 @@
     "hf_token_saved_fast": "Токен Hugging Face сохранен — загрузка теперь происходит быстрее",
     "hf_token_inline_prompt": "Ускорьте загрузку с помощью бесплатного токена Hugging Face.",
     "hf_token_inline_ph": "Вставьте токен hf_… (необязательно)",
-    "hf_token_get_short": "Получите один бесплатно →"
+    "hf_token_get_short": "Получите один бесплатно →",
+    "hf_token_active_using": "Токен Hugging Face найден в {{source}} — {{masked}}",
+    "hf_token_replace": "Заменить токен…",
+    "hf_token_replace_warning": "Это заменяет токен, сохранённый для приложения. Старый токен не отзывается."
   },
   "history": {
     "dub_meta": "{{segments}} сегментов · {{duration}} с",

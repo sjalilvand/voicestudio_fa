@@ -348,7 +348,8 @@
     "generate_timeout_saved": "Sparat. Starta om VoiceStudio för att den nya budgeten ska gälla.",
     "generate_timeout_shadowed_badge": "Åsidosatt externt",
     "generate_timeout_shadowed_note": "En miljövariabel utanför VoiceStudio (skal, .env-fil eller container) anger just nu detta värde — värdet som sparats här ignoreras tills den variabeln tas bort.",
-    "generate_timeout_shadowed_toast": "Sparat, men en miljövariabel utanför VoiceStudio anger just nu detta värde — det kommer fortsätta användas tills den variabeln tas bort."
+    "generate_timeout_shadowed_toast": "Sparat, men en miljövariabel utanför VoiceStudio anger just nu detta värde — det kommer fortsätta användas tills den variabeln tas bort.",
+    "hf_token_not_checked": "Inte testad"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2384,7 +2385,10 @@
     "hf_token_saved_fast": "Hugging Face-token har sparats — nedladdningar går nu snabbare",
     "hf_token_inline_prompt": "Snabba upp nedladdningarna med ett gratis Hugging Face-token",
     "hf_token_inline_ph": "Klistra in hf_… token (valfritt)",
-    "hf_token_get_short": "Få en gratis →"
+    "hf_token_get_short": "Få en gratis →",
+    "hf_token_active_using": "Hugging Face-token hittades i {{source}} — {{masked}}",
+    "hf_token_replace": "Ersätt token…",
+    "hf_token_replace_warning": "Detta ersätter token som sparats för denna app. Den gamla token återkallas inte."
   },
   "history": {
     "dub_meta": "{{segments}} segment · {{duration}} s",

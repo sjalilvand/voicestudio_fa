@@ -1,7 +1,7 @@
 # Hugging Face Token Setup
 
 VoiceStudio uses a single HF token for every model download, license-gate
-check, and `whoami` ping. This page covers the three places VoiceStudio will
+check, and an explicit **Test now** action. This page covers the three places VoiceStudio will
 look for a token and the recommended path for v0.3+.
 
 ## Three sources (cascade)
@@ -17,10 +17,10 @@ call wins:
 3. **HF CLI** — the canonical `~/.cache/huggingface/token` file written by
    `huggingface-cli login`.
 
-The active source is surfaced live in **Settings → API Keys**: each row shows
-set/unset, a masked preview (`hf_…3jw`), the `whoami` username + green check
-when valid, and an **"Active"** badge on whichever source is currently
-serving the cascade.
+On opening **Settings → API Keys**, each row shows local set/unset state and
+a masked preview (`hf_…3jw`). Tokens remain **Not tested** until you select
+**Test now**. That explicit check displays the `whoami` username and a green
+check for valid sources, with an **Active** badge on the highest-priority valid source.
 
 ## Setting via the app (recommended)
 
@@ -32,8 +32,7 @@ serving the cascade.
    key derived per-install from machine-id) and also written to the
    canonical `huggingface_hub` token location so subprocess engines pick it
    up automatically.
-4. The row's `whoami` indicator flips green and the **Active** badge moves to
-   "App".
+4. Select **Test now** to validate the token with Hugging Face. A successful test turns the indicator green and moves the **Active** badge to "App".
 
 > **Known limitation (honest disclosure):** the encryption key is derived
 > per-install from the machine identifier. If you copy `omnivoice_data/`
@@ -105,7 +104,7 @@ process).
 - **HF 401 even though a token is set** — visit the model's HuggingFace page
   and accept the license (see above). The token is fine; the *license* gate
   is separate.
-- **Token row stays red after Save** — the `whoami` call failed. Check the
+- **Token row stays red after Test now** — the `whoami` call failed. Check the
   token is valid at
   [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
   and has at least the "read" scope.
@@ -113,3 +112,5 @@ process).
   the App row. If it's empty, the SQLite store may have been wiped — re-save.
   If it's set but the active source is "Env" or "HF CLI", that's the cascade
   working as intended (App is highest priority).
+
+Opening onboarding or Settings only reads local token presence and masked previews; it does not contact Hugging Face. Untested tokens are shown as **Not tested**, and onboarding reports where a token was found without claiming it is valid. **Test now** explicitly contacts Hugging Face. Replacing a saved token does not revoke the previous token on Hugging Face.

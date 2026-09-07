@@ -348,7 +348,8 @@
     "generate_timeout_saved": "Opgeslagen. Herstart VoiceStudio om het nieuwe budget toe te passen.",
     "generate_timeout_shadowed_badge": "Extern overschreven",
     "generate_timeout_shadowed_note": "Een omgevingsvariabele buiten VoiceStudio (shell, .env-bestand of container) stelt deze waarde momenteel in — de hier opgeslagen waarde wordt genegeerd totdat die variabele wordt verwijderd.",
-    "generate_timeout_shadowed_toast": "Opgeslagen, maar een omgevingsvariabele buiten VoiceStudio stelt deze waarde momenteel in — die blijft gebruikt worden totdat die variabele wordt verwijderd."
+    "generate_timeout_shadowed_toast": "Opgeslagen, maar een omgevingsvariabele buiten VoiceStudio stelt deze waarde momenteel in — die blijft gebruikt worden totdat die variabele wordt verwijderd.",
+    "hf_token_not_checked": "Niet getest"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2384,7 +2385,10 @@
     "hf_token_saved_fast": "Knuffelgezicht-token opgeslagen — downloads zijn nu sneller",
     "hf_token_inline_prompt": "Versnel downloads met een gratis Hugging Face-token",
     "hf_token_inline_ph": "Plak het hf_…-token (optioneel)",
-    "hf_token_get_short": "Ontvang er één gratis →"
+    "hf_token_get_short": "Ontvang er één gratis →",
+    "hf_token_active_using": "Hugging Face-token gevonden in {{source}} — {{masked}}",
+    "hf_token_replace": "Token vervangen…",
+    "hf_token_replace_warning": "Dit vervangt het token dat voor deze app is opgeslagen. Het oude token wordt niet ingetrokken."
   },
   "history": {
     "dub_meta": "{{segments}} segmenten · {{duration}} s",

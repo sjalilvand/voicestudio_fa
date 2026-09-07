@@ -348,7 +348,8 @@
     "generate_timeout_saved": "Đã lưu. Khởi động lại VoiceStudio để ngân sách mới có hiệu lực.",
     "generate_timeout_shadowed_badge": "Bị ghi đè từ bên ngoài",
     "generate_timeout_shadowed_note": "Một biến môi trường bên ngoài VoiceStudio (shell, tệp .env hoặc container) hiện đang đặt giá trị này — giá trị đã lưu ở đây sẽ bị bỏ qua cho đến khi biến đó được gỡ bỏ.",
-    "generate_timeout_shadowed_toast": "Đã lưu, nhưng một biến môi trường bên ngoài VoiceStudio hiện đang đặt giá trị này — giá trị đó sẽ tiếp tục được dùng cho đến khi biến đó được gỡ bỏ."
+    "generate_timeout_shadowed_toast": "Đã lưu, nhưng một biến môi trường bên ngoài VoiceStudio hiện đang đặt giá trị này — giá trị đó sẽ tiếp tục được dùng cho đến khi biến đó được gỡ bỏ.",
+    "hf_token_not_checked": "Chưa kiểm tra"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -2384,7 +2385,10 @@
     "hf_token_saved_fast": "Đã lưu mã thông báo Ôm Mặt - tải xuống hiện nhanh hơn",
     "hf_token_inline_prompt": "Tăng tốc độ tải xuống với mã thông báo Ôm mặt miễn phí",
     "hf_token_inline_ph": "Dán mã thông báo hf_… (tùy chọn)",
-    "hf_token_get_short": "Nhận một cái miễn phí →"
+    "hf_token_get_short": "Nhận một cái miễn phí →",
+    "hf_token_active_using": "Đã tìm thấy token Hugging Face trong {{source}} — {{masked}}",
+    "hf_token_replace": "Thay thế token…",
+    "hf_token_replace_warning": "Thao tác này thay thế token đã lưu cho ứng dụng này. Token cũ không bị thu hồi."
   },
   "history": {
     "dub_meta": "{{segments}} phân đoạn · {{duration}} giây",

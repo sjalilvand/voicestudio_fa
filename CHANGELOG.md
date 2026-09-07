@@ -70,6 +70,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Cloning reuses the dubbing language picker with flags, search, and single selection, opening above the pinned synthesis controls (#1823)
 - The first-run welcome line uses an instruction accepted by OmniVoice and VoiceDesign engines (#1861) — thanks @psiberfunk!
 - The header status dot now honors OS Reduce Motion instead of pulsing regardless (#1862) — thanks @psiberfunk!
+- Onboarding recognizes locally saved Hugging Face tokens without contacting Hugging Face, and replacing one requires an explicit click (#1852) — thanks @psiberfunk!
 
 
 ## [0.5.2] — 2026-09-02
