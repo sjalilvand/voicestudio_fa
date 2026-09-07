@@ -106,12 +106,12 @@ def test_audited_custom_remote_code_requires_both_opt_ins(monkeypatch):
 # ── hardware honesty (cross-platform rule) ─────────────────────────────────
 
 
-def test_gpu_compat_cuda_cpu_no_mps():
+def test_gpu_compat_matches_accelerator_paths_without_mps():
     """MPS is undocumented/untested upstream — we must not claim it."""
     from engines.moss_tts_v15 import MossTTSV15Backend
 
-    assert MossTTSV15Backend.gpu_compat == ("cuda", "cpu"), (
-        f"expected ('cuda', 'cpu'), got {MossTTSV15Backend.gpu_compat!r}"
+    assert MossTTSV15Backend.gpu_compat == ("cuda", "rocm", "xpu", "npu", "cpu"), (
+        f"unexpected device targets: {MossTTSV15Backend.gpu_compat!r}"
     )
 
 
@@ -199,3 +199,41 @@ def test_generate_without_ref_audio_omits_reference(monkeypatch):
     MossTTSV15Backend().generate("just text")
     assert "ref_audio" not in captured
     assert "tokens" not in captured
+
+
+@pytest.mark.parametrize('family', [None, 'cuda', 'xpu', 'npu', 'mps'])
+def test_loader_device_matches_routing(monkeypatch, family):
+    """Exercise model + tokenizer placement without importing optional weights."""
+    import io
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    from engines.moss_tts_v15 import main, MossTTSV15Backend
+    from core.device_caps import HostCaps
+    from services.engine_routing import resolve_routing
+
+    expected = family if family not in (None, 'mps') else 'cpu'
+    accelerator = Mock(return_value=SimpleNamespace(type=family) if family else None)
+    monkeypatch.setitem(sys.modules, 'torch', SimpleNamespace(
+        accelerator=SimpleNamespace(current_accelerator=accelerator),
+        bfloat16='bf16', float32='fp32',
+    ))
+    processor = Mock()
+    processor.model_config.sampling_rate = 24000
+    tokenizer = processor.audio_tokenizer
+    model = Mock()
+    model.to.return_value = model
+    factory = Mock()
+    factory.from_pretrained.return_value = model
+    monkeypatch.setitem(sys.modules, 'transformers', SimpleNamespace(
+        AutoModel=factory,
+        AutoProcessor=SimpleNamespace(from_pretrained=lambda *a, **kw: processor),
+    ))
+    monkeypatch.setattr(main, '_state', None)
+    monkeypatch.setattr(main, '_model_source', lambda: ('local-fixture', 'a' * 40))
+    state = main._load_model(io.BytesIO())
+    accelerator.assert_called_once_with(check_available=True)
+    model.to.assert_called_once_with(expected)
+    tokenizer.to.assert_called_once_with(expected)
+    assert factory.from_pretrained.call_args.kwargs['torch_dtype'] == ('fp32' if expected == 'cpu' else 'bf16')
+    caps = HostCaps(family=family or 'cpu', available_families=(family, 'cpu') if family else ('cpu',))
+    assert resolve_routing(MossTTSV15Backend.gpu_compat, caps)['effective_device'] == state[2]

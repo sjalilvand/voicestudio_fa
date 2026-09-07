@@ -145,7 +145,7 @@ def test_preflight_device_summary(client):
     assert d["gpu_backend"] in {"cuda", "rocm", "mps", "cpu"}
     assert d["gpu_vendor"] in {"nvidia", "amd", "apple", "intel", "unknown", "none"}
     # #21: canonical-probe family + VRAM joined the device summary.
-    assert d["gpu_family"] in {"cuda", "rocm", "mps", "xpu", "cpu"}
+    assert d["gpu_family"] in {"cuda", "rocm", "mps", "xpu", "npu", "cpu"}
     assert isinstance(d["vram_gb"], (int, float))
 
 

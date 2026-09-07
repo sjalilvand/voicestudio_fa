@@ -82,7 +82,7 @@ _REQUIRED_KEYS = {
     "effective_device", "routing_status", "routing_reason",
 }
 _TTS_ASR_STATUSES = {"accelerated", "cpu_fallback", "cpu_only", "unavailable"}
-_VALID_FAMILIES = {"cuda", "rocm", "mps", "xpu", "cpu"}
+_VALID_FAMILIES = {"cuda", "rocm", "mps", "xpu", "npu", "cpu"}
 
 
 def test_engines_response_includes_new_fields(fresh_app):

@@ -109,3 +109,14 @@ def test_env_pin_is_reported_and_wins(fresh_app, monkeypatch):
     r = c.put("/api/settings/compute-device", json={"value": "auto"})
     assert r.status_code == 200
     assert r.json()["value"] == "cpu"
+
+
+def test_auto_summary_reports_registered_npu(fresh_app, monkeypatch):
+    from core import device_caps
+    monkeypatch.setattr(device_caps, 'detect_host_caps', lambda: device_caps.HostCaps(
+        family='npu', available_families=('npu', 'cpu'),
+    ))
+    body = _client(fresh_app).get('/api/settings/compute-device').json()
+    assert body['auto_family'] == body['effective_family'] == 'npu'
+    # Detection does not globally opt unrelated engines into NPU execution.
+    assert 'npu' not in body['choices']

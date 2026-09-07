@@ -35,7 +35,8 @@ import sys
 from dataclasses import dataclass
 from typing import Literal
 
-DeviceFamily = Literal["cuda", "rocm", "mps", "xpu", "cpu"]
+DeviceFamily = Literal["cuda", "rocm", "mps", "xpu", "npu", "cpu"]
+ACCELERATOR_PRIORITY = ("cuda", "rocm", "xpu", "npu", "mps")
 
 # Stable substring stamped onto notes that represent a real kernel-launch risk
 # (arch/driver mismatch) — as opposed to advisory notes (multi-GPU, VRAM query
@@ -533,9 +534,12 @@ def _probe() -> HostCaps:
         # is the whole truth in that case (CodeRabbit, #1425).
         notes.extend(why_no_gpu(torch))
 
-    # ── Intel XPU via IPEX ───────────────────────────────────────────────
+    # Older builds register XPU through IPEX; modern torch exposes it directly.
     try:
         import intel_extension_for_pytorch  # noqa: F401
+    except Exception:
+        pass
+    try:
         if hasattr(torch, "xpu") and torch.xpu.is_available():
             detected.append("xpu")
             if not device_name:
@@ -546,7 +550,21 @@ def _probe() -> HostCaps:
                     pass
             notes.append("XPU VRAM not queried (unreliable across IPEX versions)")
     except Exception:
-        # IPEX absent or XPU probe failed — no XPU on this host.
+        # XPU probe failed — no usable XPU on this host.
+        pass
+
+    # Vendor extensions may register an NPU with torch. Probe only an already
+    # registered backend; never install or import an optional vendor package.
+    try:
+        if hasattr(torch, "npu") and torch.npu.is_available():
+            detected.append("npu")
+            if not device_name:
+                try:
+                    device_name = torch.npu.get_device_name(0)
+                except Exception:
+                    pass
+            notes.append("NPU VRAM not queried")
+    except Exception:
         pass
 
     # ── Apple Silicon MPS ────────────────────────────────────────────────
@@ -579,7 +597,7 @@ def _probe() -> HostCaps:
 
     # Preferred family by priority; cpu when nothing accelerated was detected.
     family: DeviceFamily = "cpu"
-    for pref in ("cuda", "rocm", "xpu", "mps"):
+    for pref in ACCELERATOR_PRIORITY:
         if pref in detected:
             family = pref  # type: ignore[assignment]
             break
