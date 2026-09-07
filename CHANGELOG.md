@@ -91,6 +91,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 
 - Fast macOS process exits no longer turn a completed shutdown into a permission error (#1809)
+- A deliberate, clean quit killed by the desktop shell's short shutdown grace no longer gets reported as a crash on next launch — the run sentinel now clears before the slower shutdown steps instead of after (#1895)
 
 ## [0.5.2] — 2026-09-02
 

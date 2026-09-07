@@ -1080,6 +1080,24 @@ async def lifespan(app: FastAPI):
         app.state.startup_task = asyncio.create_task(_deferred_startup(app))
     yield
     # ── Graceful shutdown (SIGTERM from Tauri, Ctrl+C, etc.) ────────────
+    # Retire the run sentinel FIRST, before any bounded wait below (#1895):
+    # once uvicorn has begun graceful shutdown the exit is deliberate by
+    # definition, so the sentinel has already done its job. This is one
+    # os.remove — comfortably inside any shutdown deadline, including the
+    # desktop shell's 2s grace (bootstrap.rs terminate_process_tree) and
+    # Windows' effectively-zero one (tools.rs force_terminate with no
+    # graceful phase at all) — unlike the ~50s worst-case tail of the
+    # bounded waits and model unload/free_vram()/gc.collect() below. Putting
+    # the deadline-sensitive step first makes correctness independent of how
+    # much of that tail actually runs before a SIGKILL, instead of depending
+    # on the shell-side deadline being long enough to cover it. sentinel_
+    # cleared feeds the truthful "Shutdown: done."/degraded log at the end of
+    # this function; nothing below re-clears the sentinel, so a later
+    # failure can't mask this result.
+    try:
+        sentinel_cleared = run_sentinel.clear_sentinel()
+    except Exception:
+        sentinel_cleared = False
     # May run after a startup that never finished (SIGTERM mid-Phase-A/B), so
     # every handle is read from app.state with a None default and every
     # deferred-phase name is guarded.
@@ -1206,13 +1224,9 @@ async def lifespan(app: FastAPI):
         await close_http_client()
     except Exception:
         pass
-    # Last thing on a clean shutdown: retire the run sentinel so the next
-    # startup doesn't misread this exit as a crash (#1164). If clearing fails,
-    # retain the sentinel and report a degraded shutdown truthfully.
-    try:
-        sentinel_cleared = run_sentinel.clear_sentinel()
-    except Exception:
-        sentinel_cleared = False
+    # Sentinel was already retired at the TOP of this block (#1895) — report
+    # truthfully using that result rather than clearing (or re-checking) it
+    # again here, so a failure in the steps above can't mask it as "done."
     if sentinel_cleared:
         logger.info("Shutdown: done.")
     else:
