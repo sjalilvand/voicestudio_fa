@@ -619,11 +619,18 @@ fn launch_backend_and_wait<R: tauri::Runtime>(
     stage_handle: &Arc<Mutex<BootstrapStage>>,
     first_run_gate: bool,
 ) {
+    // Preserve cancellation arriving while waiting for ownership or preparing launch.
+    let wait_generation = backend_wait_generation();
     let outcome = {
         let state = app.state::<BackendState>();
         let _lifecycle = state.lifecycle.lock().unwrap_or_else(|e| e.into_inner());
-        if backend_stop_requested(app) {
-            log::info!("App is quitting — backend launch cancelled");
+        #[cfg(debug_assertions)]
+        wait_for_tracking_test_gate(
+            "OMNIVOICE_TEST_LAUNCH_LOCKED_ENTERED",
+            "OMNIVOICE_TEST_LAUNCH_LOCKED_RELEASE",
+        );
+        if backend_stop_requested(app) || backend_wait_generation() != wait_generation {
+            log::info!("Backend launch cancelled before preparation");
             LaunchOutcome::Done
         } else {
             match prepare_backend_launch(app, stage_handle) {
@@ -642,10 +649,10 @@ fn launch_backend_and_wait<R: tauri::Runtime>(
                             set_stage(stage_handle, BootstrapStage::AwaitingSetup);
                             LaunchOutcome::Done
                         } else {
-                            spawn_with_supervisor_owner(app, stage_handle)
+                            spawn_with_supervisor_owner(app, stage_handle, wait_generation)
                         }
                     } else {
-                        spawn_with_supervisor_owner(app, stage_handle)
+                        spawn_with_supervisor_owner(app, stage_handle, wait_generation)
                     }
                 }
             }
@@ -663,9 +670,10 @@ fn launch_backend_and_wait<R: tauri::Runtime>(
 fn spawn_with_supervisor_owner<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     stage_handle: &Arc<Mutex<BootstrapStage>>,
+    wait_generation: u64,
 ) -> LaunchOutcome {
     let supervisor_owner = SUPERVISOR_OWNER.fetch_add(1, Ordering::SeqCst) + 1;
-    if spawn_backend_until_ready(app, stage_handle) {
+    if spawn_backend_until_ready(app, stage_handle, wait_generation) {
         LaunchOutcome::SupervisedReady {
             owner: supervisor_owner,
         }
@@ -684,13 +692,11 @@ fn spawn_with_supervisor_owner<R: tauri::Runtime>(
 fn spawn_backend_until_ready<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     stage_handle: &Arc<Mutex<BootstrapStage>>,
+    wait_generation: u64,
 ) -> bool {
     let mut venv_heal_attempted = false;
-    // Snapshot taken AFTER our caller acquired lifecycle ownership, so a bump
-    // that happened before we started is not mistaken for a preemption of us.
-    let wait_generation = backend_wait_generation();
     'bootstrap: loop {
-        if backend_stop_requested(app) {
+        if backend_stop_requested(app) || backend_wait_generation() != wait_generation {
             return false;
         }
         spawn_and_track_backend(app, stage_handle);
@@ -3519,7 +3525,7 @@ mod tests {
         // Retry and Clean & Retry both need. A waiter that cannot be asked to
         // stand down turns a slow start into an app with no way out — strictly
         // worse than the early kill this fix removed. The waiter snapshots the
-        // generation once ownership is held; a later bump means someone else is
+        // generation before ownership is acquired; a later bump means someone else is
         // taking over.
         let snapshot = backend_wait_generation();
         assert_eq!(backend_wait_generation(), snapshot, "nothing changed yet");
