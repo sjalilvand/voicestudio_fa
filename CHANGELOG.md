@@ -22,7 +22,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Voice cloning now starts with a clear upload-or-record choice, reveals recording and reference details only when needed, and keeps sampling controls under Production Overrides (#1817)
 - The first-run welcome line uses an instruction accepted by OmniVoice and VoiceDesign engines (#1861) — thanks @psiberfunk!
-- audio.cpp joins the engine lineup as an opt-in native backend for Breeze-TTS-2 (English + Chinese, clone + voice design, no Python venv)
+- audio.cpp joins the engine lineup as an opt-in native backend for Breeze-TTS-2 (English + Chinese, clone + voice design, no Python venv) (#1891)
 
 ### Changed
 
@@ -49,7 +49,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Docs
 
-- audio.cpp (Breeze-TTS-2) is now a documented opt-in engine: prebuilt binary install, GGUF download, voice modes, and the weights' research/non-commercial terms
+- audio.cpp (Breeze-TTS-2) is now a documented opt-in engine: prebuilt binary install, GGUF download, voice modes, and the weights' research/non-commercial terms (#1891)
 
 ### Fixed
 
@@ -94,7 +94,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 
 - Fast macOS process exits no longer turn a completed shutdown into a permission error (#1809)
-- Model Catalogue engine rows stack into one column on narrow shells instead of clipping actions off-screen (#1841)
+- Model Catalogue engine rows stack into one column on narrow shells instead of clipping actions off-screen (#1891)
 
 
 ## [0.5.2] — 2026-09-02
