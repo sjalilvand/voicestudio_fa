@@ -140,9 +140,11 @@ describe('CaptureWidget — mic permission pre-flight (Tauri)', () => {
     pressShortcut();
 
     const labelEl = await screen.findByText(/Mic access denied/);
-    expect(labelEl.title).toBeTruthy();
-    // Strictly more information than the visible, clipped text.
-    expect(labelEl.title).not.toBe(labelEl.textContent.trim());
+    // Assert the detail itself, not merely "some different string". This
+    // phrase lives only in `errorInfo.message` (capture.mic_hint_linux) and
+    // never in the label, so a regression that fell back to the label — or
+    // any unrelated tooltip — fails here.
+    expect(labelEl.title).toMatch(/audio group/);
   });
 
   it('OS-denied → guided error pill with Open Settings, getUserMedia never called', async () => {
