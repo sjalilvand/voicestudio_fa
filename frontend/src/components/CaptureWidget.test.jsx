@@ -1429,6 +1429,14 @@ describe('CaptureWidget', () => {
     expect(screen.queryByText(/Listening/)).not.toBeInTheDocument();
   });
 
+  it('exposes the full setup label as a title, since the 300px pill clips it', async () => {
+    mocks.holder.a11y = false;
+    render(withI18n(<CaptureWidget />));
+
+    const labelEl = await screen.findByText(/Allow Accessibility/);
+    expect(labelEl.title).toBe(i18n.t('capture.a11y_setup'));
+  });
+
   it('clears the Accessibility setup pill after the native grant changes', async () => {
     vi.useFakeTimers();
     try {

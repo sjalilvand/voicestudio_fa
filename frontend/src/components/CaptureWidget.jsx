@@ -2176,7 +2176,7 @@ export default function CaptureWidget({ onDismiss }) {
       <div className="min-w-0 flex-1 overflow-hidden">
         <span
           className="block overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] font-medium tracking-[0.01em]"
-          title={state === 'error' ? errorInfo?.message || undefined : undefined}
+          title={state === 'error' ? errorInfo?.message || label || undefined : label || undefined}
         >
           {emoji} {label}
         </span>
