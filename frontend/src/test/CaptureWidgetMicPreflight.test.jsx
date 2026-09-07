@@ -126,6 +126,25 @@ describe('CaptureWidget — mic permission pre-flight (Tauri)', () => {
     window.__TAURI_INTERNALS__ = {};
   });
 
+  // #1884: the pill clips its label, so every state that can clip needs a
+  // hover title. This covers the error branch that carries a message — the
+  // title is the detailed message, which is strictly more than the clipped
+  // label shows. The no-message branch falls through to the label and is
+  // covered by the setup-state test in CaptureWidget.test.jsx.
+  it('uses the error detail as the title, not just the clipped label', async () => {
+    stubInvoke({ mic: 'denied' });
+    installGum(async () => {
+      throw notFound();
+    });
+    render(<CaptureWidget />);
+    pressShortcut();
+
+    const labelEl = await screen.findByText(/Mic access denied/);
+    expect(labelEl.title).toBeTruthy();
+    // Strictly more information than the visible, clipped text.
+    expect(labelEl.title).not.toBe(labelEl.textContent.trim());
+  });
+
   it('OS-denied → guided error pill with Open Settings, getUserMedia never called', async () => {
     stubInvoke({ mic: 'denied' });
     const gum = installGum(async () => {
