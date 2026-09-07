@@ -827,7 +827,8 @@
     "familyDesc_tts": "Wandelt Ihr Skript in Sprache um. Studio, Synchronisation und Stapelverarbeitung verwenden den aktiven Engine.",
     "familyDesc_asr": "Transkribiert Audio für Synchronisation, Untertitel und Diktat.",
     "familyDesc_llm": "Optionaler Texthelfer für Übersetzungen und Überarbeitungen. „Aus“ überspringt diese Schritte.",
-    "mpsLongText": "{{engine}} läuft hier auf Apple Silicon (MPS) und dieser Text ist lang — die Generierung überschreitet möglicherweise das Zeitbudget. Kürzerer Text oder eine Aufteilung in mehrere Takes ist deutlich schneller."
+    "mpsLongText": "{{engine}} läuft hier auf Apple Silicon (MPS) und dieser Text ist lang — die Generierung überschreitet möglicherweise das Zeitbudget. Kürzerer Text oder eine Aufteilung in mehrere Takes ist deutlich schneller.",
+    "inMemory": "Im Speicher"
   },
   "capture": {
     "desc": "Globale Hotkeys funktionieren nur in der Desktop-App. Die Web-Benutzeroberfläche verwendet eine In-Page-Verknüpfung <1>Strg+Umschalt+Leertaste</1>, während das Fenster den Fokus hat.",
@@ -1178,7 +1179,8 @@
     "languages_pending": "Ausstehend",
     "live_preview": "Live-Vorschau",
     "live_preview_title": "Zeile beim Bearbeiten anhören — das bearbeitete Segment streamt nach kurzer Pause TTS mit seiner CAST-Stimme. Nur Wiedergabe: nichts wird gespeichert, der Export rendert weiterhin in voller Qualität.",
-    "live_preview_pick_voice": "Weise dieser Zeile oder ihrem Sprecher eine CAST-Stimme zu, um die Live-Vorschau zu hören."
+    "live_preview_pick_voice": "Weise dieser Zeile oder ihrem Sprecher eine CAST-Stimme zu, um die Live-Vorschau zu hören.",
+    "autofit_quality": "Automatisch einpassen"
   },
   "glossary": {
     "title": "Glossar",
@@ -2098,7 +2100,8 @@
     "voice_previews_checked": "geprüft {{when}}",
     "voice_previews_never": "noch nicht geprüft",
     "voice_previews_check": "Jetzt prüfen",
-    "voice_previews_rejected": "Aktualisierung der Stimmgalerie abgelehnt: {{message}}"
+    "voice_previews_rejected": "Aktualisierung der Stimmgalerie abgelehnt: {{message}}",
+    "role_llm": "LLM"
   },
   "enterprise_faq": {
     "q_internal_tools": "Benötige ich eine Lizenz für interne Tools?",
@@ -2765,5 +2768,9 @@
     "transcript": "Erkannter Text",
     "result_kicker": "Konvertierte Aufnahme",
     "need_source_and_voice": "Füge zuerst einen Quellclip hinzu und wähle eine Zielstimme."
+  },
+  "player": {
+    "pause": "Pausieren",
+    "play": "Abspielen"
   }
 }

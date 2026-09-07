@@ -786,7 +786,8 @@
     "familyDesc_tts": "将脚本转换为语音。标记为启用的引擎供工作室、配音和批处理使用。",
     "familyDesc_asr": "将音频转换为文本，用于转录、配音、字幕和听写。",
     "familyDesc_llm": "用于翻译和改写的可选文本助手。“关闭”会跳过这些步骤。",
-    "mpsLongText": "{{engine}} 在本机上使用 Apple Silicon（MPS）运行，而这段文本较长——生成可能超出时间预算。缩短文本，或分成几次生成会快得多。"
+    "mpsLongText": "{{engine}} 在本机上使用 Apple Silicon（MPS）运行，而这段文本较长——生成可能超出时间预算。缩短文本，或分成几次生成会快得多。",
+    "inMemory": "已加载到内存"
   },
   "capture": {
     "desc": "全局热键仅在桌面应用中有效。网页界面使用页面内快捷键 <1>Ctrl+Shift+Space</1>（窗口聚焦时可用）。",
@@ -1137,7 +1138,8 @@
     "languages_pending": "待处理",
     "live_preview": "实时预览",
     "live_preview_title": "边编辑边试听 — 停顿片刻后,所编辑的片段会用其 CAST 音色流式合成语音。仅播放:不会保存任何内容,导出仍按完整质量渲染。",
-    "live_preview_pick_voice": "为该行或其说话人指定一个 CAST 音色,即可收听实时预览。"
+    "live_preview_pick_voice": "为该行或其说话人指定一个 CAST 音色,即可收听实时预览。",
+    "autofit_quality": "自动适配"
   },
   "glossary": {
     "title": "术语表",
@@ -2105,7 +2107,8 @@
     "voice_previews_checked": "{{when}}检查",
     "voice_previews_never": "尚未检查",
     "voice_previews_check": "立即检查",
-    "voice_previews_rejected": "语音库更新被拒绝：{{message}}"
+    "voice_previews_rejected": "语音库更新被拒绝：{{message}}",
+    "role_llm": "LLM"
   },
   "enterprise_faq": {
     "q_internal_tools": "我需要内部工具的许可证吗？",
@@ -2772,5 +2775,9 @@
     "transcript": "识别到的内容",
     "result_kicker": "转换后的音频",
     "need_source_and_voice": "请先添加源音频并选择目标声音。"
+  },
+  "player": {
+    "pause": "暂停",
+    "play": "播放"
   }
 }

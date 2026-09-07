@@ -827,7 +827,8 @@
     "familyDesc_tts": "Chuyển kịch bản thành giọng nói. Studio, Lồng tiếng và Hàng loạt dùng công cụ đang hoạt động.",
     "familyDesc_asr": "Chuyển âm thanh thành văn bản để phiên âm, lồng tiếng, tạo phụ đề và đọc chính tả.",
     "familyDesc_llm": "Trợ lý văn bản tùy chọn cho dịch thuật và viết lại. “Tắt” sẽ bỏ qua các bước này.",
-    "mpsLongText": "{{engine}} chạy trên Apple Silicon (MPS) ở đây và văn bản này dài — quá trình tạo có thể vượt quá giới hạn thời gian. Văn bản ngắn hơn, hoặc chia thành vài phần, sẽ nhanh hơn nhiều."
+    "mpsLongText": "{{engine}} chạy trên Apple Silicon (MPS) ở đây và văn bản này dài — quá trình tạo có thể vượt quá giới hạn thời gian. Văn bản ngắn hơn, hoặc chia thành vài phần, sẽ nhanh hơn nhiều.",
+    "inMemory": "Trong bộ nhớ"
   },
   "capture": {
     "desc": "Phím nóng chung chỉ hoạt động trong ứng dụng máy tính để bàn. Giao diện người dùng web sử dụng phím tắt <1>Ctrl+Shift+Space</1> trong trang trong khi cửa sổ đang có tiêu điểm.",
@@ -1178,7 +1179,8 @@
     "languages_pending": "Đang chờ",
     "live_preview": "Nghe thử trực tiếp",
     "live_preview_title": "Nghe từng dòng ngay khi chỉnh sửa — phân đoạn vừa sửa sẽ stream TTS bằng giọng CAST của nó sau một khoảng dừng ngắn. Chỉ phát lại: không lưu gì cả, và xuất video vẫn kết xuất ở chất lượng đầy đủ.",
-    "live_preview_pick_voice": "Gán giọng CAST cho dòng này hoặc người nói của nó để nghe thử trực tiếp."
+    "live_preview_pick_voice": "Gán giọng CAST cho dòng này hoặc người nói của nó để nghe thử trực tiếp.",
+    "autofit_quality": "Tự động căn chỉnh"
   },
   "glossary": {
     "title": "Thuật ngữ",
@@ -2098,7 +2100,8 @@
     "voice_previews_checked": "đã kiểm tra {{when}}",
     "voice_previews_never": "chưa kiểm tra",
     "voice_previews_check": "Kiểm tra ngay",
-    "voice_previews_rejected": "Bản cập nhật thư viện giọng bị từ chối: {{message}}"
+    "voice_previews_rejected": "Bản cập nhật thư viện giọng bị từ chối: {{message}}",
+    "role_llm": "LLM"
   },
   "enterprise_faq": {
     "q_internal_tools": "Tôi có cần giấy phép cho các công cụ nội bộ không?",
@@ -2765,5 +2768,9 @@
     "transcript": "Nội dung nghe được",
     "result_kicker": "Bản thu đã chuyển đổi",
     "need_source_and_voice": "Hãy thêm clip nguồn và chọn giọng đích trước."
+  },
+  "player": {
+    "pause": "Tạm dừng",
+    "play": "Phát"
   }
 }

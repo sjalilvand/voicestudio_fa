@@ -827,7 +827,8 @@
     "familyDesc_tts": "Zamienia skrypt na mowę. Studio, Dubbing i Przetwarzanie wsadowe używają aktywnego silnika.",
     "familyDesc_asr": "Zamienia dźwięk na tekst do transkrypcji, dubbingu, napisów i dyktowania.",
     "familyDesc_llm": "Opcjonalny pomocnik tekstowy do tłumaczeń i przeredagowywania. „Wył.” pomija te kroki.",
-    "mpsLongText": "{{engine}} działa tutaj na Apple Silicon (MPS), a ten tekst jest długi — generowanie może przekroczyć limit czasu. Krótszy tekst lub podzielenie go na kilka części będzie znacznie szybsze."
+    "mpsLongText": "{{engine}} działa tutaj na Apple Silicon (MPS), a ten tekst jest długi — generowanie może przekroczyć limit czasu. Krótszy tekst lub podzielenie go na kilka części będzie znacznie szybsze.",
+    "inMemory": "W pamięci"
   },
   "capture": {
     "desc": "Globalne skróty klawiszowe działają tylko w aplikacji komputerowej. Interfejs WWW korzysta ze skrótu <1>Ctrl+Shift+Spacja</1> znajdującego się na stronie, gdy okno jest aktywne.",
@@ -1178,7 +1179,8 @@
     "languages_pending": "Oczekujące",
     "live_preview": "Podgląd na żywo",
     "live_preview_title": "Słuchaj linii podczas edycji — edytowany segment po krótkiej pauzie streamuje TTS z przypisanym głosem CAST. Tylko odtwarzanie: nic nie jest zapisywane, a eksport nadal renderuje się w pełnej jakości.",
-    "live_preview_pick_voice": "Przypisz głos CAST tej linii lub jej mówcy, aby usłyszeć podgląd na żywo."
+    "live_preview_pick_voice": "Przypisz głos CAST tej linii lub jej mówcy, aby usłyszeć podgląd na żywo.",
+    "autofit_quality": "Automatyczne dopasowanie"
   },
   "glossary": {
     "title": "Glosariusz",
@@ -2098,7 +2100,8 @@
     "voice_previews_checked": "sprawdzono {{when}}",
     "voice_previews_never": "jeszcze nie sprawdzono",
     "voice_previews_check": "Sprawdź teraz",
-    "voice_previews_rejected": "Odrzucono aktualizację galerii głosów: {{message}}"
+    "voice_previews_rejected": "Odrzucono aktualizację galerii głosów: {{message}}",
+    "role_llm": "LLM"
   },
   "enterprise_faq": {
     "q_internal_tools": "Czy potrzebuję licencji na narzędzia wewnętrzne?",
@@ -2765,5 +2768,9 @@
     "transcript": "Co usłyszano",
     "result_kicker": "Skonwertowane nagranie",
     "need_source_and_voice": "Najpierw dodaj klip źródłowy i wybierz głos docelowy."
+  },
+  "player": {
+    "pause": "Wstrzymaj",
+    "play": "Odtwórz"
   }
 }
