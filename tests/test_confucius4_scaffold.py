@@ -50,4 +50,5 @@ def test_catalog_metadata_does_not_exclude_supported_accelerators():
 
     assert "CUDA/CPU" not in Confucius4Backend.display_name
     assert "CUDA/CPU" not in _INSTALL_HINTS[Confucius4Backend.id]
-    assert "matching" in _INSTALL_HINTS[Confucius4Backend.id]
+    for family in Confucius4Backend.gpu_compat:
+        assert family in _INSTALL_HINTS[Confucius4Backend.id].lower()
