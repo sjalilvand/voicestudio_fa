@@ -295,7 +295,10 @@ export const SPECS = {
     ),
   },
   HeaderStatus: {
-    providers: {},
+    providers: {
+      query: (qc) => qc.setQueryData(queryKeys.sysinfo, { cpu_percent: 0, ram_percent: 0 }),
+      fetch: (url) => (url.endsWith('/sysinfo') ? { cpu_percent: 0, ram_percent: 0 } : undefined),
+    },
     render: () => <Header mode="dub" setMode={() => {}} modelStatus="idle" />,
   },
   Badge: {
