@@ -155,7 +155,7 @@ export default function Header({
   // The macOS config replaces the base window with decorated overlay chrome.
   // Reserve its traffic-light area only inside the desktop webview.
   const hasMacTrafficLights =
-    isDesktop && typeof navigator !== 'undefined' && /^Mac/.test(navigator.platform || '');
+    isDesktop && typeof navigator !== 'undefined' && (navigator.platform || '').startsWith('Mac');
   const { t } = useTranslation();
   // Sysinfo is subscribed here (not in App via useAppData) so the 5s poll
   // only re-renders the header chrome, not the whole App tree.
