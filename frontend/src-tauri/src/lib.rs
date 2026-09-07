@@ -611,6 +611,62 @@ pub fn shutdown_backend_for_exit<R: tauri::Runtime>(app_handle: &tauri::AppHandl
     }
 }
 
+/// Show, unminimize and focus the main window. Shared by the tray's "Show
+/// VoiceStudio" menu item and the macOS `RunEvent::Reopen` handler below (Dock
+/// icon clicked while the main window is hidden), so the two recovery paths
+/// behave identically instead of drifting apart over time.
+fn show_and_focus_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.show();
+        #[cfg(not(target_os = "macos"))]
+        let _ = win.set_skip_taskbar(false);
+        let _ = win.unminimize();
+        let _ = win.set_focus();
+        // Self-recovery: if the webview failed to load the dev/prod URL
+        // earlier (Vite restarted, backend not up yet at first show, etc.)
+        // the window shows a blank `<body></body>` with a "Could not connect
+        // to the server" console error. Reload only when the body is empty
+        // so a healthy window doesn't blink on every show.
+        let _ = win.eval(
+            "if (document.body && document.body.childElementCount === 0) { location.reload(); }",
+        );
+    }
+}
+
+/// Whether a macOS `RunEvent::Reopen` (Dock icon clicked with no visible
+/// windows — Cocoa's `applicationShouldHandleReopen:hasVisibleWindows:`)
+/// should restore the main window. Pure so it's unit-testable — the actual
+/// event only fires inside the real Cocoa event loop and can't be
+/// synthesized under `cargo test` (see the `with_noactivate_style` comment
+/// above for the same rationale). `CloseRequested` (see `on_window_event`
+/// below) hides the main window rather than destroying it, so Cocoa reports
+/// `has_visible_windows: false` once the user has closed it — exactly when
+/// the Dock icon should bring it back. When some window is already visible,
+/// defer to Cocoa's default handling instead of stealing focus.
+///
+/// Only called from the macOS-gated `RunEvent::Reopen` arm below outside of
+/// tests — `#[allow(dead_code)]` elsewhere, same treatment as `is_app_origin`
+/// and `with_noactivate_style` above.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn should_restore_on_reopen(has_visible_windows: bool) -> bool {
+    !has_visible_windows
+}
+
+#[cfg(test)]
+mod reopen_tests {
+    use super::should_restore_on_reopen;
+
+    #[test]
+    fn restores_when_no_window_is_visible() {
+        assert!(should_restore_on_reopen(false));
+    }
+
+    #[test]
+    fn defers_to_cocoa_when_a_window_is_already_visible() {
+        assert!(!should_restore_on_reopen(true));
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // #879: if the previous run requested a WebView cache repair (splash
@@ -983,23 +1039,7 @@ pub fn run() {
                 .on_menu_event(move |app, event| {
                     match event.id().as_ref() {
                         "show" => {
-                            if let Some(win) = app.get_webview_window("main") {
-                                let _ = win.show();
-                                #[cfg(not(target_os = "macos"))]
-                                let _ = win.set_skip_taskbar(false);
-                                let _ = win.set_focus();
-                                // Self-recovery: if the webview failed to load
-                                // the dev/prod URL earlier (Vite restarted,
-                                // backend not up yet at first show, etc.) the
-                                // window shows a blank `<body></body>` with a
-                                // "Could not connect to the server" console
-                                // error. Reload only when the body is empty
-                                // so a healthy window doesn't blink on every
-                                // tray click.
-                                let _ = win.eval(
-                                    "if (document.body && document.body.childElementCount === 0) { location.reload(); }",
-                                );
-                            }
+                            show_and_focus_main_window(app);
                         }
                         "open_studio" => {
                             // Persist the preference (so next launch is studio, not pill)
@@ -1193,12 +1233,31 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
-    app.run(|app_handle, event| {
-        if let tauri::RunEvent::ExitRequested { code, api, .. } = event {
+    app.run(|app_handle, event| match event {
+        tauri::RunEvent::ExitRequested { code, api, .. } => {
             if !persistence_exit::handle_exit_requested(app_handle, code, &api) {
                 return;
             }
             shutdown_backend_for_exit(app_handle);
         }
+        // macOS: clicking the Dock icon while the app has no visible windows
+        // fires this (instead of relaunching) via Cocoa's
+        // `applicationShouldHandleReopen:hasVisibleWindows:`. CloseRequested
+        // (see `on_window_event` above) hides the main window rather than
+        // destroying it, so without this arm the click did nothing — the
+        // process stayed alive with a live Dock icon and the only way back
+        // was the tray's "Show VoiceStudio" item. `show_and_focus_main_window`
+        // is the same sequence that item runs, so both paths behave
+        // identically.
+        #[cfg(target_os = "macos")]
+        tauri::RunEvent::Reopen {
+            has_visible_windows,
+            ..
+        } => {
+            if should_restore_on_reopen(has_visible_windows) {
+                show_and_focus_main_window(app_handle);
+            }
+        }
+        _ => {}
     });
 }
