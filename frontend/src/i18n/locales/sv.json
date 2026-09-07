@@ -2101,7 +2101,9 @@
     "voice_previews_never": "inte kontrollerat än",
     "voice_previews_check": "Kontrollera nu",
     "voice_previews_rejected": "Uppdatering av röstgalleriet avvisades: {{message}}",
-    "role_llm": "LLM"
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "Behöver jag en licens för interna verktyg?",

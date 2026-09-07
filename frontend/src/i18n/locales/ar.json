@@ -2101,7 +2101,9 @@
     "voice_previews_never": "لم يتم التحقق بعد",
     "voice_previews_check": "تحقّق الآن",
     "voice_previews_rejected": "تم رفض تحديث معرض الأصوات: {{message}}",
-    "role_llm": "LLM"
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "هل أحتاج إلى ترخيص للأدوات الداخلية؟",

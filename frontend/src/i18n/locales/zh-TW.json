@@ -2101,7 +2101,9 @@
     "voice_previews_never": "尚未檢查",
     "voice_previews_check": "立即檢查",
     "voice_previews_rejected": "語音庫更新遭拒：{{message}}",
-    "role_llm": "LLM"
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "我需要內部工具的授權嗎？",

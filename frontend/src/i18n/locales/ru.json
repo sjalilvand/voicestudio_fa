@@ -2101,7 +2101,9 @@
     "voice_previews_never": "ещё не проверялось",
     "voice_previews_check": "Проверить сейчас",
     "voice_previews_rejected": "Обновление галереи голосов отклонено: {{message}}",
-    "role_llm": "LLM"
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "Нужна ли мне лицензия на внутренние инструменты?",

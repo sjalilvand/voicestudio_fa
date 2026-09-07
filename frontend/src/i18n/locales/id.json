@@ -2101,7 +2101,9 @@
     "voice_previews_never": "belum diperiksa",
     "voice_previews_check": "Periksa sekarang",
     "voice_previews_rejected": "Pembaruan galeri suara ditolak: {{message}}",
-    "role_llm": "LLM"
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "Apakah saya memerlukan lisensi untuk alat internal?",

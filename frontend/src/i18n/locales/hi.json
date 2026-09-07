@@ -2101,7 +2101,9 @@
     "voice_previews_never": "अभी तक जाँचा नहीं गया",
     "voice_previews_check": "अभी जाँचें",
     "voice_previews_rejected": "वॉइस गैलरी अपडेट अस्वीकृत: {{message}}",
-    "role_llm": "LLM"
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "क्या मुझे आंतरिक उपकरणों के लिए लाइसेंस की आवश्यकता है?",

@@ -2101,7 +2101,9 @@
     "voice_previews_never": "sin comprobar aún",
     "voice_previews_check": "Comprobar ahora",
     "voice_previews_rejected": "Actualización de la galería de voces rechazada: {{message}}",
-    "role_llm": "LLM"
+    "role_llm": "LLM",
+    "role_tts": "TTS",
+    "role_asr": "ASR"
   },
   "enterprise_faq": {
     "q_internal_tools": "¿Necesito una licencia para herramientas internas?",
