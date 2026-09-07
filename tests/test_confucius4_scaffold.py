@@ -6,6 +6,7 @@ on a default install — never importing the (unvalidated) upstream package, nev
 reporting available without a clone. These tests pin exactly that.
 """
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend"))
@@ -48,7 +49,12 @@ def test_catalog_metadata_does_not_exclude_supported_accelerators():
     from engines.confucius4 import Confucius4Backend
     from services.tts_backend import _INSTALL_HINTS
 
-    assert "CUDA/CPU" not in Confucius4Backend.display_name
+    # The catalog label is device-neutral; routing metadata owns hardware claims.
+    assert not re.search(
+        r"\b(?:cuda|rocm|xpu|npu|cpu|mps)\b",
+        Confucius4Backend.display_name,
+        re.IGNORECASE,
+    )
     assert "CUDA/CPU" not in _INSTALL_HINTS[Confucius4Backend.id]
     for family in Confucius4Backend.gpu_compat:
         assert family in _INSTALL_HINTS[Confucius4Backend.id].lower()
