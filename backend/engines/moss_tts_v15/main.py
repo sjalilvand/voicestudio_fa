@@ -159,10 +159,14 @@ def _load_model(stdout):
     # compiled in) or when no accelerator is available; fall back to "cpu".
     # Existing manually provisioned venvs may predate torch.accelerator.
     current_accelerator = getattr(getattr(torch, "accelerator", None), "current_accelerator", None)
-    if current_accelerator is None:
-        accel = torch.device("cuda") if torch.cuda.is_available() else None
-    else:
-        accel = current_accelerator(check_available=True)
+    try:
+        if current_accelerator is None:
+            accel = torch.device("cuda") if torch.cuda.is_available() else None
+        else:
+            accel = current_accelerator(check_available=True)
+    except Exception:
+        # Optional drivers can fail during probing; CPU loading remains usable.
+        accel = None
     device = accel.type if accel is not None else "cpu"  # 'cuda', 'npu', 'mps', 'xpu', 'cpu'
     if device == "mps":
         device = "cpu"  # MOSS is untested on MPS; fall back to CPU for safety

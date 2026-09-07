@@ -12,6 +12,8 @@ from __future__ import annotations
 import types
 from unittest.mock import patch
 
+import pytest
+
 from core import device_caps
 from core.device_caps import DIRECTML_MARKER, KERNEL_RISK_MARKER
 
@@ -256,3 +258,21 @@ def test_unavailable_npu_does_not_claim_acceleration():
     torch.npu = types.SimpleNamespace(is_available=lambda: False)
     caps = _probe_with({'torch': torch, 'intel_extension_for_pytorch': None})
     assert caps.family == 'cpu'
+
+
+@pytest.mark.parametrize("npu_available,expected", [(True, "cpu"), (False, "privateuseone:0")])
+def test_generic_directml_loader_respects_selected_family(monkeypatch, npu_available, expected):
+    from services import model_manager
+
+    torch = _torch_mock()
+    torch.npu = types.SimpleNamespace(is_available=lambda: npu_available, get_device_name=lambda i: "NPU")
+    modules = {
+        "torch": torch,
+        "torch_directml": types.SimpleNamespace(device_count=lambda: 1, device=lambda i: "privateuseone:0"),
+    }
+    caps = _probe_with(modules)
+    assert caps.family == ("npu" if npu_available else "cpu")
+    monkeypatch.setattr(device_caps, "detect_host_caps", lambda: caps)
+    monkeypatch.setattr(model_manager, "_lazy_torch", lambda: torch)
+    with patch.dict("sys.modules", modules):
+        assert model_manager.get_best_device() == expected
