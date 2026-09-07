@@ -1401,6 +1401,42 @@ describe('EngineCompatibilityMatrix', () => {
     }
   });
 
+  it('exposes the phone-tier stacking hooks so narrow shells never clip Catalogue rows', async () => {
+    // jsdom cannot evaluate @container queries, so this guards the contract
+    // the index.css phone tier depends on: every catalogue row carries the
+    // `catalogue-row` marker, each of the five cells carries its
+    // `engine-matrix__cell--*` modifier, the grid lets children shrink below
+    // content size, and the actions cell wraps instead of forcing overflow.
+    render(
+      <EngineCompatibilityMatrix
+        family="tts"
+        catalogueLayout
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
+        apiGetEngineHealth={vi.fn()}
+      />,
+    );
+    await screen.findByText('OmniVoice (test)');
+
+    for (const row of document.querySelectorAll('[data-engine-id]')) {
+      expect(row).toHaveClass('catalogue-row-grid');
+      expect(row).toHaveClass('catalogue-row');
+      expect(row.className).toContain('[&>*]:min-w-0');
+      for (const modifier of [
+        'engine-matrix__cell--name',
+        'engine-matrix__cell--status',
+        'engine-matrix__cell--gpu',
+        'engine-matrix__cell--isolation',
+        'engine-matrix__cell--actions',
+      ]) {
+        expect(row.querySelector(`.${modifier}`)).not.toBeNull();
+      }
+      const actions = row.querySelector('.engine-matrix__cell--actions');
+      expect(actions.className).toMatch(/\bflex-wrap\b/);
+      expect(actions).toHaveClass('min-w-0');
+      expect(actions).toHaveClass('max-w-full');
+    }
+  });
+
   it('header and every row share identical grid column tracks', async () => {
     const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
     render(
