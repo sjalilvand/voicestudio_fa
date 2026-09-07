@@ -91,6 +91,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 
 - Fast macOS process exits no longer turn a completed shutdown into a permission error (#1809)
+- The bootstrap splash no longer shows fabricated first-run install steps on a warm start or repair sync — a step now renders done only once it was actually observed (#1894)
 
 ## [0.5.2] — 2026-09-02
 

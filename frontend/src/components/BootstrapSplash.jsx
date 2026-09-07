@@ -120,6 +120,13 @@ const STEPS = [
   'starting_backend',
 ];
 
+// Stages that only occur when there is actual first-run/repair work to do.
+// `awaiting_setup` renders its own screen (FirstRunSetup) rather than the
+// step list below, but it still counts as "install work observed" (#1894):
+// reaching it means Rust found no venv and is about to do real work, so the
+// journey chrome should already be armed by the time the step list appears.
+const INSTALL_STAGES = ['downloading_uv', 'creating_venv', 'installing_deps', 'awaiting_setup'];
+
 const MAX_LOG_LINES = 200;
 
 /** Scan logs + error message for known failure patterns and return i18n keys
@@ -445,6 +452,10 @@ export function BootstrapSplash({ stage, message }) {
   const [progress, setProgress] = useState(null);
   const [region, setRegionState] = useState('auto');
   const [retrying, setRetrying] = useState(false);
+  // Stages actually seen this session (sticky/monotonic — see the tracking
+  // effect below). Drives "done" ticks and journey visibility off observed
+  // reality instead of list position (#1894).
+  const [observedStages, setObservedStages] = useState(() => new Set([stage]));
   const logRef = useRef(null);
   const prevProgRef = useRef(null); // {bytes, t} — last progress event
   const rateRef = useRef(0); // EMA bytes/sec across events
@@ -454,6 +465,12 @@ export function BootstrapSplash({ stage, message }) {
   const isFailed = stage === 'failed';
   // Retrying an Intel-Mac install can never succeed — don't offer the dead end.
   const isUnrecoverable = isFailed && isUnrecoverableFailure(message, logs);
+  // True once any genuine install stage has been observed this session. On a
+  // warm start the Rust stage jumps straight from `checking` to
+  // `starting_backend` — nothing here ever fires — so the first-run install
+  // chrome (journey rail, "Installing" heading, step list) stays suppressed
+  // instead of fabricating completed work (#1894).
+  const installWorkSeen = INSTALL_STAGES.some((s) => observedStages.has(s));
 
   const handleRetry = async () => {
     if (retrying) return;
@@ -483,6 +500,15 @@ export function BootstrapSplash({ stage, message }) {
       setRetrying(false);
     }
   };
+
+  // Record `stage` as observed the moment it's seen. Sticky/monotonic: the
+  // functional updater bails out (same Set reference) once a stage is
+  // already recorded, so this never un-observes anything and never loops.
+  // `bootstrap_status` is polled ~1/s by useBootstrapStage, so a stage that
+  // actually ran is guaranteed to land here at least once (#1894).
+  useEffect(() => {
+    setObservedStages((prev) => (prev.has(stage) ? prev : new Set(prev).add(stage)));
+  }, [stage]);
 
   // Load persisted region on mount.
   useEffect(() => {
@@ -638,7 +664,10 @@ export function BootstrapSplash({ stage, message }) {
           data-tauri-drag-region
         >
           <Waveform />
-          <JourneyRail t={t} />
+          {/* Suppressed until real install work is observed — otherwise a
+              warm start (or a repair sync) shows "Setup done / Installing
+              active" for work that never happened (#1894). */}
+          {installWorkSeen && <JourneyRail t={t} />}
           <div className="mt-2 flex flex-wrap items-end justify-between gap-6">
             <div className="min-w-0">
               {/* Version rides beside the app name — same masthead across all
@@ -760,9 +789,16 @@ export function BootstrapSplash({ stage, message }) {
           </section>
         ) : (
           <section className="fr-rise flex flex-col gap-2.5" style={{ '--rise': 1 }}>
-            <h2 className="m-0 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-fg-muted">
-              {t('firstrun.installing_title', 'Installing')}
-            </h2>
+            {/* Heading, step list and resume note only make sense once real
+                install work has actually been observed — otherwise a warm
+                start or a repair sync narrates a first-run install that
+                never happened (#1894). The live stage label in the masthead
+                and the progress meter below stay visible either way. */}
+            {installWorkSeen && (
+              <h2 className="m-0 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-fg-muted">
+                {t('firstrun.installing_title', 'Installing')}
+              </h2>
+            )}
             {/* Overall journey meter. */}
             <Progress
               value={overallPct}
@@ -770,61 +806,69 @@ export function BootstrapSplash({ stage, message }) {
               size="md"
               aria-valuenow={Math.round(overallPct)}
             />
-            <ol className="m-0 mt-1 flex list-none flex-col gap-2 p-0">
-              {STEPS.map((s, i) => {
-                const done = i < stepIndex;
-                const activeStep = i === stepIndex;
-                return (
-                  <li
-                    key={s}
-                    className={cn(
-                      'flex min-w-0 items-center gap-2 text-sm',
-                      !done && !activeStep && 'opacity-45',
-                    )}
-                  >
-                    <span
+            {installWorkSeen && (
+              <ol className="m-0 mt-1 flex list-none flex-col gap-2 p-0">
+                {STEPS.map((s, i) => {
+                  const activeStep = i === stepIndex;
+                  // Done only if this stage was actually observed AND it isn't
+                  // the one currently in progress — list POSITION alone lies on
+                  // a warm start or a repair sync, where earlier stages in the
+                  // fixed STEPS order are skipped by Rust entirely (#1894).
+                  const done = !activeStep && observedStages.has(s);
+                  return (
+                    <li
+                      key={s}
                       className={cn(
-                        'h-1.5 w-1.5 shrink-0 rounded-full',
-                        done
-                          ? 'bg-success shadow-[0_0_5px_1px_color-mix(in_srgb,var(--color-success)_50%,transparent)]'
-                          : activeStep
-                            ? 'bg-primary shadow-[0_0_6px_1px_var(--color-brand-glow)] fr-pulse'
-                            : 'bg-fg-subtle/40',
+                        'flex min-w-0 items-center gap-2 text-sm',
+                        !done && !activeStep && 'opacity-45',
                       )}
-                      aria-hidden="true"
-                    />
-                    <span className={cn(activeStep && 'font-semibold', done && 'text-fg-muted')}>
-                      {t(`bootstrap.${s}`, STAGE_LABEL[s])}
-                    </span>
-                    {activeStep && stageProgress && (
-                      <span className="ml-auto whitespace-nowrap font-mono text-[0.64rem] tabular-nums text-fg-muted">
-                        {formatBytes(stageProgress.bytes_done)}
-                        {stageProgress.bytes_total > 0
-                          ? ` / ${formatBytes(stageProgress.bytes_total)}`
-                          : ''}
-                        {pctFromBytes != null ? ` (${pctFromBytes}%)` : ''}
-                        {stageProgress.bytes_total > 0 &&
-                          rateRef.current > 0 &&
-                          stageProgress.bytes_done < stageProgress.bytes_total &&
-                          ` · ${t('firstrun.eta_left', {
-                            eta: formatEta(
-                              (stageProgress.bytes_total - stageProgress.bytes_done) /
-                                rateRef.current,
-                            ),
-                            defaultValue: '~{{eta}} left',
-                          })}`}
+                    >
+                      <span
+                        className={cn(
+                          'h-1.5 w-1.5 shrink-0 rounded-full',
+                          done
+                            ? 'bg-success shadow-[0_0_5px_1px_color-mix(in_srgb,var(--color-success)_50%,transparent)]'
+                            : activeStep
+                              ? 'bg-primary shadow-[0_0_6px_1px_var(--color-brand-glow)] fr-pulse'
+                              : 'bg-fg-subtle/40',
+                        )}
+                        aria-hidden="true"
+                      />
+                      <span className={cn(activeStep && 'font-semibold', done && 'text-fg-muted')}>
+                        {t(`bootstrap.${s}`, STAGE_LABEL[s])}
                       </span>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
-            <p className="m-0 text-xs text-fg-subtle">
-              {t(
-                'firstrun.resume_note',
-                'Interrupted downloads resume automatically — closing the app is safe.',
-              )}
-            </p>
+                      {activeStep && stageProgress && (
+                        <span className="ml-auto whitespace-nowrap font-mono text-[0.64rem] tabular-nums text-fg-muted">
+                          {formatBytes(stageProgress.bytes_done)}
+                          {stageProgress.bytes_total > 0
+                            ? ` / ${formatBytes(stageProgress.bytes_total)}`
+                            : ''}
+                          {pctFromBytes != null ? ` (${pctFromBytes}%)` : ''}
+                          {stageProgress.bytes_total > 0 &&
+                            rateRef.current > 0 &&
+                            stageProgress.bytes_done < stageProgress.bytes_total &&
+                            ` · ${t('firstrun.eta_left', {
+                              eta: formatEta(
+                                (stageProgress.bytes_total - stageProgress.bytes_done) /
+                                  rateRef.current,
+                              ),
+                              defaultValue: '~{{eta}} left',
+                            })}`}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+            {installWorkSeen && (
+              <p className="m-0 text-xs text-fg-subtle">
+                {t(
+                  'firstrun.resume_note',
+                  'Interrupted downloads resume automatically — closing the app is safe.',
+                )}
+              </p>
+            )}
           </section>
         )}
 
