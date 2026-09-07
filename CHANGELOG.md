@@ -20,6 +20,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
 - Copying a saved transcription now uses the shared clipboard helper and reports failed copies accurately (#1803) — thanks @tvbht!
 
 
@@ -62,7 +63,6 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- The Transcriptions view no longer goes blank on a transcript whose segments have no timings — an ASR backend that returns text without timestamps is rendered as text instead of crashing the page (#1798) — thanks @yunaremaia and @tvbht!
 
 - The generation compute-time budget is now a Settings control (Performance & Device) instead of an env-var-only setting the timeout error recommended with no UI path — the error copy points there too, and long CPU/MPS renders get an upfront heads-up before they start (#1787)
 - Windows: the backend can now start when the install path contains non-English characters (e.g. a CJK username) on a non-UTF-8 system code page — a new or broken Python environment now builds at an ASCII-safe path automatically (a healthy existing one is never relocated), and a specific error message names the cause and a working fix if the interpreter still crashes in `site` (#1783)
