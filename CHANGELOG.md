@@ -10,7 +10,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
-- Number ranges are read as ranges — "20~30초" no longer comes out as "23" (#1821)
+- Tilde-separated number ranges are spoken clearly without running their endpoints together (#1821) — thanks @flutterkage2k!
+- Voice cloning now starts with a clear upload-or-record choice, reveals recording and reference details only when needed, and keeps sampling controls under Production Overrides (#1817)
 
 ### Changed
 
@@ -20,7 +21,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- Digit ranges written with a tilde are now spoken: `20~30초` read aloud as "23" because the separator never reached the engine, and the two numbers ran together (#1821)
+- Speak tilde separators in integer, signed, and decimal ranges in English, Korean, Japanese, and Chinese (#1821) — thanks @flutterkage2k!
 
 
 ## [0.5.2] — 2026-09-02
