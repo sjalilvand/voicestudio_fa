@@ -10,6 +10,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- Transcriptions dictation wakes the desktop recorder, presents one contextual start action, and centers its microphone icon with the label (#1902)
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
 
 - The desktop app builds and opens from a fresh clone again (#1818) — thanks @flutterkage2k!
@@ -50,7 +51,6 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- Transcriptions dictation wakes the desktop recorder, presents one contextual start action, and centers its microphone icon with the label (#1902)
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
 - Copying a saved transcription now uses the shared clipboard helper and reports failed copies accurately (#1803) — thanks @tvbht!

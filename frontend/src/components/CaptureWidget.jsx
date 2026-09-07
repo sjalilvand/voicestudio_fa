@@ -745,9 +745,10 @@ export default function CaptureWidget({ onDismiss }) {
         }
         const { listen } = await import('@tauri-apps/api/event');
         unlistenStart = await listen('tray-dictate', async (event) => {
-          const acknowledgement = acknowledgeDelivery(event);
+          let acknowledgement = acknowledgeDelivery(event);
           if (acknowledgement === false) return;
-          if (acknowledgement !== true) await acknowledgement;
+          if (acknowledgement !== true) acknowledgement = await acknowledgement;
+          if (!acknowledgement) return;
           const now = Date.now();
           if (now - nativeEventAtRef.current.start < 150) {
             await completeDelivery(event, 'Duplicate dictation start ignored');
@@ -884,9 +885,10 @@ export default function CaptureWidget({ onDismiss }) {
           await completeDelivery(event, 'Dictation could not start');
         });
         unlistenStop = await listen('tray-dictate-stop', async (event) => {
-          const acknowledgement = acknowledgeDelivery(event);
+          let acknowledgement = acknowledgeDelivery(event);
           if (acknowledgement === false) return;
-          if (acknowledgement !== true) await acknowledgement;
+          if (acknowledgement !== true) acknowledgement = await acknowledgement;
+          if (!acknowledgement) return;
           const now = Date.now();
           if (now - nativeEventAtRef.current.stop < 150) {
             await completeDelivery(event, 'Duplicate dictation stop ignored');

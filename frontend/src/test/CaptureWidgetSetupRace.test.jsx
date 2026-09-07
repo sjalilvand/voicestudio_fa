@@ -196,6 +196,33 @@ describe('CaptureWidget — connect-time asr_model_missing during mic setup', ()
     });
   });
 
+  it('does not start capture when native receipt acknowledgement fails', async () => {
+    invokeMock.mockImplementation(async (cmd) => {
+      if (cmd === 'begin_dictation_capture_registration') return 1;
+      if (cmd === 'check_microphone') return 'granted';
+      if (cmd === 'check_accessibility') return true;
+      if (cmd === 'acknowledge_dictation_capture_delivery') {
+        throw new Error('receipt state unavailable');
+      }
+      return undefined;
+    });
+    render(<CaptureWidget />);
+    await waitFor(() => expect(eventHandlers['tray-dictate']).toBeTypeOf('function'));
+
+    await eventHandlers['tray-dictate']({
+      payload: { sessionId: 7, deliveryId: 9, registrationId: 1 },
+    });
+
+    expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
+    expect(invokeMock).not.toHaveBeenCalledWith('activate_dictation_output_session', {
+      sessionId: 7,
+    });
+    expect(invokeMock).not.toHaveBeenCalledWith(
+      'complete_dictation_capture_delivery',
+      expect.anything(),
+    );
+  });
+
   it('completes an in-page delivery only after microphone startup is accepted', async () => {
     render(<CaptureWidget />);
     await waitFor(() => expect(eventHandlers['tray-dictate']).toBeTypeOf('function'));
