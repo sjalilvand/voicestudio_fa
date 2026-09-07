@@ -1,4 +1,4 @@
-import { abortableDelay } from './abortableDelay';
+import { abortableDelay } from './abortableDelay.ts';
 /**
  * backendCrash — frontend bridge to the desktop shell's crash forensics
  * (#941, src-tauri/src/crash.rs).
