@@ -54,7 +54,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Voice reference preparation reclaims allocator memory before one bounded retry, then reports persistent GPU out-of-memory failures (#1811)
 - `bun run desktop` now opens on a fresh clone: the Vite alias for `@tauri-apps/plugin-dialog` no longer assumes a nested `frontend/node_modules`, which bun's workspace hoisting leaves empty (#1818) — thanks @flutterkage2k!
 
-- Slow backend startups remain running with progress updates, and Retry can interrupt startup reliably (#1809)
+- Slow backend startups remain running with progress updates, and Retry interrupts startup without stale timeout failures (#1809)
 - Backend connection errors report crashes only when recorded evidence exists, and diagnostic waits honor cancellation (#1810)
 - A CUDA or ROCm GPU with less VRAM than the engine needs now gets the CPU compute-time budget instead of the shorter accelerated one, since it pages to system RAM and renders slower than the CPU would — applied to local generation, voice conversion, and remote worker deadlines alike (#1806) — thanks @VishvakR!
 - Gallery previews no longer fail with "the voice engine returned no audible audio" on perfectly good renders: the degenerate-buzz guard measured spectral flatness over the whole clip (so the value tracked clip length) against a threshold calibrated on a synthetic signal, and rejected real speech in every language tested (#1819) — thanks @flutterkage2k!

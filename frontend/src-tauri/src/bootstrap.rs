@@ -894,7 +894,14 @@ fn spawn_backend_until_ready<R: tauri::Runtime>(
                 err_tail
             )
         };
-        set_stage(stage_handle, BootstrapStage::Failed { message: msg });
+        publish_backend_wait_timeout(
+            stage_handle,
+            &LAST_FAILURE,
+            &BACKEND_WAIT_GENERATION,
+            &BACKEND_WAIT_PUBLICATION,
+            wait_generation,
+            msg,
+        );
         return false;
     }
 }
@@ -935,10 +942,32 @@ static BACKEND_KILL_INTENDED: AtomicBool = AtomicBool::new(false);
 /// flow bumps this BEFORE reaching for the lock; the waiting loop sees the
 /// change within one poll, returns, and releases it (Greptile, #1809).
 static BACKEND_WAIT_GENERATION: AtomicU64 = AtomicU64::new(0);
+// Serialize invalidation with the final timeout publication. The lifecycle
+// lock cannot do this: Retry deliberately invalidates before acquiring it.
+static BACKEND_WAIT_PUBLICATION: Mutex<()> = Mutex::new(());
+
+fn publish_backend_wait_timeout(
+    state: &Arc<Mutex<BootstrapStage>>,
+    last_failure: &Mutex<Option<String>>,
+    generation: &AtomicU64,
+    publication: &Mutex<()>,
+    expected_generation: u64,
+    message: String,
+) -> bool {
+    let _publication = publication.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    if generation.load(Ordering::SeqCst) != expected_generation {
+        return false;
+    }
+    set_stage_into(state, last_failure, BootstrapStage::Failed { message });
+    true
+}
 
 /// Ask any in-flight readiness wait to stand down, so this caller can take
 /// lifecycle ownership. Call before locking, never while holding the lock.
 pub fn preempt_backend_wait() {
+    let _publication = BACKEND_WAIT_PUBLICATION
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     BACKEND_WAIT_GENERATION.fetch_add(1, Ordering::SeqCst);
 }
 
@@ -3539,6 +3568,37 @@ mod tests {
         // not immediately cancel itself.
         let theirs = backend_wait_generation();
         assert_eq!(backend_wait_generation(), theirs);
+    }
+
+    #[test]
+    fn retry_after_wait_expiry_does_not_publish_a_stale_timeout() {
+        let generation = AtomicU64::new(7);
+        let publication = Mutex::new(());
+        let state = Arc::new(Mutex::new(BootstrapStage::Checking));
+        let failure = Mutex::new(Some("earlier diagnosis".to_string()));
+        let snapshot = generation.load(Ordering::SeqCst);
+        assert!(!keep_waiting_for_backend(None, Duration::from_secs(301), Duration::from_secs(300)));
+        // Retry invalidates after the loop condition fails, before the old
+        // waiter finishes collecting stderr and publishes its timeout.
+        generation.fetch_add(1, Ordering::SeqCst);
+        assert!(!publish_backend_wait_timeout(
+            &state, &failure, &generation, &publication, snapshot, "stale timeout".into()
+        ));
+        assert!(matches!(*state.lock().unwrap(), BootstrapStage::Checking));
+        assert_eq!(failure.lock().unwrap().as_deref(), Some("earlier diagnosis"));
+    }
+
+    #[test]
+    fn current_wait_expiry_still_publishes_and_retains_its_timeout() {
+        let generation = AtomicU64::new(7);
+        let publication = Mutex::new(());
+        let state = Arc::new(Mutex::new(BootstrapStage::StartingBackend));
+        let failure = Mutex::new(None);
+        assert!(publish_backend_wait_timeout(
+            &state, &failure, &generation, &publication, 7, "current timeout".into()
+        ));
+        assert!(matches!(*state.lock().unwrap(), BootstrapStage::Failed { .. }));
+        assert_eq!(failure.lock().unwrap().as_deref(), Some("current timeout"));
     }
 
     #[test]
