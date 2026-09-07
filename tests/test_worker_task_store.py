@@ -413,3 +413,22 @@ def test_dispatch_budget_survives_reload_without_worker(db):
     loaded = task_store.get(task.task_id)
     assert loaded.active_attempt.deadlines == budget
     assert Scheduler(WorkerPool(), persist=False)._budget_for(loaded) == budget
+
+
+@pytest.mark.parametrize("gpu_seconds", [300, 900])
+def test_legacy_attempt_without_worker_keeps_conservative_execution_budget(db, monkeypatch, gpu_seconds):
+    from services import model_manager
+    from worker.pool import WorkerPool
+    from worker.scheduler import Scheduler
+
+    monkeypatch.setattr(model_manager, "GPU_JOB_TIMEOUT_S", gpu_seconds)
+    monkeypatch.setattr(model_manager, "CPU_JOB_TIMEOUT_S", 600.0)
+    monkeypatch.setattr(model_manager, "_CPU_GENERATE_TIMEOUT_EXPLICIT", True)
+    task = _task()
+    task_store.create(task, now=1000.0)
+    task.assign(worker_id="old-worker", session_epoch=1, now=1001.0)
+    task_store.save(task, now=1002.0)  # legacy NULL deadlines_json
+    loaded = task_store.get(task.task_id)
+    assert loaded.active_attempt.deadlines is None
+    budget = Scheduler(WorkerPool(), persist=False)._budget_for(loaded)
+    assert budget.execution_seconds >= max(gpu_seconds, 600)
