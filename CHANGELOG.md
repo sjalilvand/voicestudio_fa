@@ -10,6 +10,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- Voice cloning now starts with a clear upload-or-record choice, reveals recording and reference details only when needed, and keeps sampling controls under Production Overrides (#1817)
+
 ### Changed
 
 ### Added
