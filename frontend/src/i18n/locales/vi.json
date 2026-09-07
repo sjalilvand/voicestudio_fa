@@ -350,7 +350,10 @@
     "generate_timeout_shadowed_badge": "Bị ghi đè từ bên ngoài",
     "generate_timeout_shadowed_note": "Một biến môi trường bên ngoài VoiceStudio (shell, tệp .env hoặc container) hiện đang đặt giá trị này — giá trị đã lưu ở đây sẽ bị bỏ qua cho đến khi biến đó được gỡ bỏ.",
     "generate_timeout_shadowed_toast": "Đã lưu, nhưng một biến môi trường bên ngoài VoiceStudio hiện đang đặt giá trị này — giá trị đó sẽ tiếp tục được dùng cho đến khi biến đó được gỡ bỏ.",
-    "hf_token_not_checked": "Chưa kiểm tra"
+    "hf_token_not_checked": "Chưa kiểm tra",
+    "hf_source_app_label": "VoiceStudio (được mã hóa, khuyên dùng)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "Biến môi trường"
   },
   "bootstrap": {
     "title": "VoiceStudio",

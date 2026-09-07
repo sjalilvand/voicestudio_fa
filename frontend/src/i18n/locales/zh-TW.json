@@ -350,7 +350,10 @@
     "generate_timeout_shadowed_badge": "已被外部覆寫",
     "generate_timeout_shadowed_note": "VoiceStudio 之外的一個環境變數（終端機、.env 檔案或容器）目前正在設定此值 — 在移除該變數之前，此處儲存的值會被忽略。",
     "generate_timeout_shadowed_toast": "已儲存，但 VoiceStudio 之外的一個環境變數目前正在設定此值 — 在移除該變數之前，將持續使用該值。",
-    "hf_token_not_checked": "未測試"
+    "hf_token_not_checked": "未測試",
+    "hf_source_app_label": "VoiceStudio（已加密，建議）",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "環境變數"
   },
   "bootstrap": {
     "title": "VoiceStudio",

@@ -99,10 +99,10 @@ _ENGINE_AGNOSTIC_KEYS = (
 # Never raise one: if this fails after adding en.json keys, add the keys to
 # every locale (translated) in the same change instead.
 _MISSING_BASELINE = {
-    "ar": 480, "de": 480, "es": 480, "fr": 480, "hi": 480, "id": 480,
-    "it": 480, "ja": 480, "ko": 0, "nl": 480, "pl": 480, "pt": 480,
-    "ru": 480, "sv": 480, "th": 480, "tr": 480, "uk": 480, "vi": 480,
-    "zh-CN": 473, "zh-TW": 480,
+    "ar": 477, "de": 477, "es": 477, "fr": 477, "hi": 477, "id": 477,
+    "it": 477, "ja": 477, "ko": 0, "nl": 477, "pl": 477, "pt": 477,
+    "ru": 477, "sv": 477, "th": 477, "tr": 477, "uk": 477, "vi": 477,
+    "zh-CN": 470, "zh-TW": 477,
 }
 
 #: Keys every locale must carry regardless of the aggregate ratchet above.
@@ -121,6 +121,9 @@ _REQUIRED_IN_EVERY_LOCALE = (
     "models.role_llm",
     "player.pause",
     "player.play",
+    "settings.hf_source_app_label",
+    "settings.hf_source_cli_label",
+    "settings.hf_source_env_label",
 )
 
 

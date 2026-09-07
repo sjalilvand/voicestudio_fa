@@ -350,7 +350,10 @@
     "generate_timeout_shadowed_badge": "Remplacé de l'extérieur",
     "generate_timeout_shadowed_note": "Une variable d'environnement extérieure à VoiceStudio (shell, fichier .env ou conteneur) définit actuellement cette valeur — la valeur enregistrée ici est ignorée tant que cette variable n'est pas supprimée.",
     "generate_timeout_shadowed_toast": "Enregistré, mais une variable d'environnement extérieure à VoiceStudio définit actuellement cette valeur — elle continuera d'être utilisée tant que cette variable ne sera pas supprimée.",
-    "hf_token_not_checked": "Non testé"
+    "hf_token_not_checked": "Non testé",
+    "hf_source_app_label": "VoiceStudio (chiffré, recommandé)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "Variable d’environnement"
   },
   "bootstrap": {
     "title": "VoiceStudio",

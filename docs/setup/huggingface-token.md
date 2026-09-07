@@ -17,6 +17,9 @@ call wins:
 3. **HF CLI** — the canonical `~/.cache/huggingface/token` file written by
    `huggingface-cli login`.
 
+Source labels in onboarding and Settings follow the selected UI language;
+product names such as HuggingFace CLI remain unchanged.
+
 On opening **Settings → API Keys**, each row shows local set/unset state and
 a masked preview (`hf_…3jw`). Tokens remain **Not tested** until you select
 **Test now**. That explicit check displays the `whoami` username and a green

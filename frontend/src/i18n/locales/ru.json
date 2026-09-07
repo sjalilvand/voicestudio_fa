@@ -350,7 +350,10 @@
     "generate_timeout_shadowed_badge": "Переопределено извне",
     "generate_timeout_shadowed_note": "Переменная окружения вне VoiceStudio (оболочка, файл .env или контейнер) сейчас задаёт это значение — сохранённое здесь значение игнорируется, пока эта переменная не будет удалена.",
     "generate_timeout_shadowed_toast": "Сохранено, но переменная окружения вне VoiceStudio сейчас задаёт это значение — оно будет использоваться, пока эта переменная не будет удалена.",
-    "hf_token_not_checked": "Не проверен"
+    "hf_token_not_checked": "Не проверен",
+    "hf_source_app_label": "VoiceStudio (зашифровано, рекомендуется)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "Переменная окружения"
   },
   "bootstrap": {
     "title": "VoiceStudio",

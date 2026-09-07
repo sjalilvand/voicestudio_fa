@@ -350,7 +350,10 @@
     "generate_timeout_shadowed_badge": "बाहरी रूप से ओवरराइड किया गया",
     "generate_timeout_shadowed_note": "VoiceStudio के बाहर का एक एनवायरनमेंट वेरिएबल (शेल, .env फ़ाइल, या कंटेनर) फ़िलहाल यह मान सेट कर रहा है — यहाँ सेव किया गया मान तब तक अनदेखा किया जाएगा जब तक वह वेरिएबल हटाया न जाए।",
     "generate_timeout_shadowed_toast": "सेव हो गया, लेकिन VoiceStudio के बाहर का एक एनवायरनमेंट वेरिएबल फ़िलहाल यह मान सेट कर रहा है — जब तक वह वेरिएबल हटाया नहीं जाता, वही इस्तेमाल होता रहेगा।",
-    "hf_token_not_checked": "परीक्षण नहीं हुआ"
+    "hf_token_not_checked": "परीक्षण नहीं हुआ",
+    "hf_source_app_label": "VoiceStudio (एन्क्रिप्ट किया गया, अनुशंसित)",
+    "hf_source_cli_label": "HuggingFace CLI",
+    "hf_source_env_label": "परिवेश चर"
   },
   "bootstrap": {
     "title": "VoiceStudio",
