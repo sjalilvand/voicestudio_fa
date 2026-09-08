@@ -120,7 +120,13 @@ const STEPS = [
   'starting_backend',
 ];
 
-const MAX_LOG_LINES = 200;
+// How many log lines the <pre> renders. The full run is kept in state (#1847):
+// the counter, the Copy button, the actionable failure hints and the
+// unrecoverable-retry gate all read every line, and only this <pre> is capped —
+// it is a DOM cost, not a retention policy. The array lives for exactly one
+// bootstrap: both retry paths clear it, and App.jsx unmounts the splash the
+// moment the stage flips to 'ready'.
+const VISIBLE_LOG_LINES = 200;
 
 /** Scan logs + error message for known failure patterns and return i18n keys
  *  for actionable hints (resolved with `t(...)` at render — English defaults
@@ -549,8 +555,7 @@ export function BootstrapSplash({ stage, message }) {
             // Deduplicate against backfill by checking the last few lines.
             const lastFew = prev.slice(-5);
             if (lastFew.some((l) => l.stage === s && l.line === line)) return prev;
-            const next = prev.concat([{ stage: s, line, t: Date.now() }]);
-            return next.length > MAX_LOG_LINES ? next.slice(next.length - MAX_LOG_LINES) : next;
+            return prev.concat([{ stage: s, line, t: Date.now() }]);
           });
         });
         unlistenProgress = await listen('bootstrap-progress', (e) => {
@@ -591,6 +596,9 @@ export function BootstrapSplash({ stage, message }) {
     if (isFailed) setLogsOpen(true);
   }, [isFailed]);
 
+  // Serializes the WHOLE run, not the visible tail (#1847). A user filing a
+  // bootstrap bug is asked for this output, and the early lines — which stage
+  // failed first, which mirror was reached — are the ones that scrolled out.
   const handleCopyLogs = () => {
     const logText =
       logs.length === 0
@@ -863,7 +871,10 @@ export function BootstrapSplash({ stage, message }) {
             >
               {logs.length === 0
                 ? t('bootstrap.waiting_output', 'Waiting for output…')
-                : logs.map((l) => `[${l.stage}] ${l.line}`).join('\n')}
+                : logs
+                    .slice(-VISIBLE_LOG_LINES)
+                    .map((l) => `[${l.stage}] ${l.line}`)
+                    .join('\n')}
             </pre>
           )}
         </section>
