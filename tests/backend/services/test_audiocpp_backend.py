@@ -8,6 +8,7 @@ host env is scrubbed of ``OMNIVOICE_AUDIOCPP_*`` overrides per test.
 from __future__ import annotations
 
 import base64
+import errno
 import importlib
 import io
 import json
@@ -209,6 +210,37 @@ def test_materialize_rejects_extensionless_model(tmp_path, app_modules):
 
     with pytest.raises(RuntimeError, match="must be a .gguf file"):
         bootstrap._materialize_gguf_cache_path(model)
+
+
+def test_materialize_cross_filesystem_symlink_links_beside_target(
+    tmp_path, monkeypatch, app_modules,
+):
+    bootstrap = app_modules.bootstrap
+    source_dir = tmp_path / "source"
+    source_dir.mkdir()
+    blob = source_dir / "content-addressed-blob"
+    blob.write_bytes(b"GGUF test payload")
+    link_dir = tmp_path / "link"
+    link_dir.mkdir()
+    snapshot = link_dir / "custom.gguf"
+    snapshot.symlink_to(blob)
+    real_link = os.link
+    calls = 0
+
+    def cross_filesystem_once(source, destination):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise OSError(errno.EXDEV, "cross-device link")
+        return real_link(source, destination)
+
+    monkeypatch.setattr(bootstrap.os, "link", cross_filesystem_once)
+
+    materialized = bootstrap._materialize_gguf_cache_path(snapshot)
+
+    assert materialized.parent == blob.parent
+    assert materialized.suffix == ".gguf"
+    assert os.path.samefile(materialized, blob)
 
 
 def test_file_override_materializes_hf_style_symlink(

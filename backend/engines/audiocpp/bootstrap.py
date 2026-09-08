@@ -23,6 +23,7 @@ VoiceStudio never downloads executable code for this engine.
 """
 from __future__ import annotations
 
+import errno
 import logging
 import os
 import platform
@@ -224,22 +225,37 @@ def _materialize_gguf_cache_path(model_file: Path) -> Path:
     if model_file.suffix.lower() != ".gguf":
         raise RuntimeError(f"audio.cpp model must be a .gguf file: {model_file}")
 
+    def _link(alias: Path) -> Path:
+        try:
+            os.link(resolved, alias)
+        except FileExistsError:
+            if not os.path.samefile(resolved, alias):
+                raise RuntimeError(
+                    f"audio.cpp model alias points at a different file: {alias}"
+                ) from None
+        return alias
+
     alias = model_file.with_name(
         f".{model_file.stem}-{HF_MODEL_REVISION[:12]}.audiocpp.gguf"
     )
     try:
-        os.link(resolved, alias)
-    except FileExistsError:
-        if not os.path.samefile(resolved, alias):
-            raise RuntimeError(
-                f"audio.cpp model alias points at a different file: {alias}"
-            ) from None
+        return _link(alias)
     except OSError as exc:
+        if exc.errno == errno.EXDEV:
+            # An explicit symlink may live on a different filesystem from its
+            # target. Put the suffix-preserving hard link beside the resolved
+            # file so no multi-gigabyte copy is needed.
+            target_alias = resolved.with_name(
+                f".{resolved.name}-{HF_MODEL_REVISION[:12]}.audiocpp.gguf"
+            )
+            try:
+                return _link(target_alias)
+            except OSError as target_exc:
+                exc = target_exc
         raise RuntimeError(
             "audio.cpp cannot materialize the Hugging Face cache symlink as "
             f"a .gguf hard link: {exc}"
         ) from exc
-    return alias
 
 
 def _download_progress_class() -> type:
