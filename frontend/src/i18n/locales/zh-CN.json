@@ -2539,7 +2539,7 @@
     "recovery_hint": "继续时会复用已完成的章节，只合成剩余内容。",
     "resume": "继续",
     "open_chapter_cache": "打开章节缓存",
-    "cache_location_hint": "章节音频缓存：{{cachePath}}",
+    "cache_location_hint": "章节音频缓存：{{cachePath}} · 续传清单：{{manifestPath}}",
     "resume_failed": "无法继续有声读物：{{message}}",
     "open_cache_failed": "无法打开章节缓存",
     "progress_summary": "正在合成第 {{current}}/{{total}} 章",

@@ -2532,7 +2532,7 @@
     "recovery_hint": "Al reanudar se reutilizan los capítulos terminados y solo se sintetiza lo que falta.",
     "resume": "Reanudar",
     "open_chapter_cache": "Abrir caché de capítulos",
-    "cache_location_hint": "Caché de audio de capítulos: {{cachePath}}",
+    "cache_location_hint": "Caché de audio de capítulos: {{cachePath}} · Manifiesto de reanudación: {{manifestPath}}",
     "resume_failed": "No se pudo reanudar el audiolibro: {{message}}",
     "open_cache_failed": "No se pudo abrir la caché de capítulos",
     "progress_summary": "Sintetizando {{current}} de {{total}} capítulos",

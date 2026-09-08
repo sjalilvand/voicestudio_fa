@@ -2532,7 +2532,7 @@
     "recovery_hint": "La ripresa riutilizza i capitoli completati e sintetizza solo ciò che resta.",
     "resume": "Riprendi",
     "open_chapter_cache": "Apri cache dei capitoli",
-    "cache_location_hint": "Cache audio dei capitoli: {{cachePath}}",
+    "cache_location_hint": "Cache audio dei capitoli: {{cachePath}} · Manifest di ripresa: {{manifestPath}}",
     "resume_failed": "Impossibile riprendere l'audiolibro: {{message}}",
     "open_cache_failed": "Impossibile aprire la cache dei capitoli",
     "progress_summary": "Sintesi di {{current}} di {{total}} capitoli",

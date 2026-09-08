@@ -2936,7 +2936,7 @@
     "recovery_hint": "재개하면 완료된 챕터를 재사용하고 남은 부분만 합성합니다.",
     "resume": "재개",
     "open_chapter_cache": "챕터 캐시 열기",
-    "cache_location_hint": "챕터 오디오 캐시: {{cachePath}}",
+    "cache_location_hint": "챕터 오디오 캐시: {{cachePath}} · 재개 매니페스트: {{manifestPath}}",
     "resume_failed": "오디오북을 재개할 수 없습니다: {{message}}",
     "open_cache_failed": "챕터 캐시를 열 수 없습니다",
     "progress_summary": "{{total}}개 챕터 중 {{current}}개 합성 중",

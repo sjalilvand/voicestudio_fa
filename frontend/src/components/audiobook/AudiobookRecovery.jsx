@@ -40,6 +40,9 @@ export default function AudiobookRecovery({ t, generating, onResume }) {
   const cachePath = systemInfo?.outputs_dir
     ? `${systemInfo.outputs_dir.replace(/[\\/]+$/, '')}/longform_cache`
     : '';
+  const manifestPath = systemInfo?.outputs_dir
+    ? `${systemInfo.outputs_dir.replace(/[\\/]+$/, '')}/audiobook_${job?.job_id}/resume.json`
+    : '';
 
   if (!job) return null;
 
@@ -88,7 +91,7 @@ export default function AudiobookRecovery({ t, generating, onResume }) {
           {t('audiobook.recovery_hint')}
         </p>
         <p className="m-[3px_0_0] text-[var(--text-xs)] text-fg-dim">
-          {t('audiobook.cache_location_hint', { cachePath })}
+          {t('audiobook.cache_location_hint', { cachePath, manifestPath })}
         </p>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-[4px]">

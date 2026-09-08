@@ -152,6 +152,7 @@ describe('Audiobook recovery surface (#1911)', () => {
       expect(mocks.reveal).toHaveBeenCalledWith({ path: '/data/outputs/longform_cache' }),
     );
     expect(screen.getByText(/\/data\/outputs\/longform_cache/)).toBeTruthy();
+    expect(screen.getByText(/\/data\/outputs\/audiobook_job-safe-123\/resume\.json/)).toBeTruthy();
   });
 
   it('stays out of the workspace when no resumable audiobook exists', async () => {

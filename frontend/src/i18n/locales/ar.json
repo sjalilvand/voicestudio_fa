@@ -2532,7 +2532,7 @@
     "recovery_hint": "تُعيد الاستئناف استخدام الفصول المكتملة ولا تُنشئ إلا ما تبقى.",
     "resume": "استئناف",
     "open_chapter_cache": "فتح ذاكرة التخزين المؤقت للفصول",
-    "cache_location_hint": "ذاكرة التخزين المؤقت لصوت الفصول: {{cachePath}}",
+    "cache_location_hint": "ذاكرة التخزين المؤقت لصوت الفصول: {{cachePath}} · بيان الاستئناف: {{manifestPath}}",
     "resume_failed": "تعذّر استئناف الكتاب الصوتي: {{message}}",
     "open_cache_failed": "تعذّر فتح ذاكرة التخزين المؤقت للفصول",
     "progress_summary": "جارٍ تركيب {{current}} من {{total}} فصلاً",

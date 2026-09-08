@@ -2532,7 +2532,7 @@
     "recovery_hint": "Продолжение использует готовые главы и синтезирует только оставшиеся.",
     "resume": "Продолжить",
     "open_chapter_cache": "Открыть кэш глав",
-    "cache_location_hint": "Кэш аудио глав: {{cachePath}}",
+    "cache_location_hint": "Кэш аудио глав: {{cachePath}} · Манифест возобновления: {{manifestPath}}",
     "resume_failed": "Не удалось продолжить аудиокнигу: {{message}}",
     "open_cache_failed": "Не удалось открыть кэш глав",
     "progress_summary": "Синтез {{current}} из {{total}} глав",

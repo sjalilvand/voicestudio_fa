@@ -2532,7 +2532,7 @@
     "recovery_hint": "Devam et, tamamlanan bölümleri yeniden kullanır ve yalnızca kalanı sentezler.",
     "resume": "Devam et",
     "open_chapter_cache": "Bölüm önbelleğini aç",
-    "cache_location_hint": "Bölüm sesi önbelleği: {{cachePath}}",
+    "cache_location_hint": "Bölüm sesi önbelleği: {{cachePath}} · Devam bildirimi: {{manifestPath}}",
     "resume_failed": "Sesli kitap sürdürülemedi: {{message}}",
     "open_cache_failed": "Bölüm önbelleği açılamadı",
     "progress_summary": "{{total}} bölümden {{current}} tanesi sentezleniyor",

@@ -2532,7 +2532,7 @@
     "recovery_hint": "Beim Fortsetzen werden fertige Kapitel wiederverwendet und nur der Rest erzeugt.",
     "resume": "Fortsetzen",
     "open_chapter_cache": "Kapitel-Zwischenspeicher öffnen",
-    "cache_location_hint": "Kapitel-Audio-Zwischenspeicher: {{cachePath}}",
+    "cache_location_hint": "Kapitel-Audio-Zwischenspeicher: {{cachePath}} · Fortsetzungsmanifest: {{manifestPath}}",
     "resume_failed": "Das Hörbuch konnte nicht fortgesetzt werden: {{message}}",
     "open_cache_failed": "Der Kapitel-Zwischenspeicher konnte nicht geöffnet werden",
     "progress_summary": "Synthetisiere {{current}} von {{total}} Kapiteln",

@@ -2532,7 +2532,7 @@
     "recovery_hint": "Wznowienie wykorzystuje ukończone rozdziały i syntezuje tylko to, co pozostało.",
     "resume": "Wznów",
     "open_chapter_cache": "Otwórz pamięć podręczną rozdziałów",
-    "cache_location_hint": "Pamięć podręczna dźwięku rozdziałów: {{cachePath}}",
+    "cache_location_hint": "Pamięć podręczna dźwięku rozdziałów: {{cachePath}} · Manifest wznowienia: {{manifestPath}}",
     "resume_failed": "Nie można wznowić książki audio: {{message}}",
     "open_cache_failed": "Nie można otworzyć pamięci podręcznej rozdziałów",
     "progress_summary": "Synteza {{current}} z {{total}} rozdziałów",

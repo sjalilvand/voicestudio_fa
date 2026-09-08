@@ -2532,7 +2532,7 @@
     "recovery_hint": "再開すると完了済みの章を再利用し、残りだけを合成します。",
     "resume": "再開",
     "open_chapter_cache": "章のキャッシュを開く",
-    "cache_location_hint": "章の音声キャッシュ: {{cachePath}}",
+    "cache_location_hint": "章の音声キャッシュ: {{cachePath}} · 再開マニフェスト: {{manifestPath}}",
     "resume_failed": "オーディオブックを再開できませんでした: {{message}}",
     "open_cache_failed": "章のキャッシュを開けませんでした",
     "progress_summary": "{{total}} 章中 {{current}} 章を合成中",

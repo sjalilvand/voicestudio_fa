@@ -2532,7 +2532,7 @@
     "recovery_hint": "Retomar reutiliza os capítulos concluídos e sintetiza apenas o que falta.",
     "resume": "Retomar",
     "open_chapter_cache": "Abrir cache dos capítulos",
-    "cache_location_hint": "Cache de áudio dos capítulos: {{cachePath}}",
+    "cache_location_hint": "Cache de áudio dos capítulos: {{cachePath}} · Manifesto de retomada: {{manifestPath}}",
     "resume_failed": "Não foi possível retomar o audiolivro: {{message}}",
     "open_cache_failed": "Não foi possível abrir o cache dos capítulos",
     "progress_summary": "Sintetizando {{current}} de {{total}} capítulos",

@@ -2532,7 +2532,7 @@
     "recovery_hint": "Hervatten gebruikt voltooide hoofdstukken opnieuw en synthetiseert alleen wat resteert.",
     "resume": "Hervatten",
     "open_chapter_cache": "Hoofdstukcache openen",
-    "cache_location_hint": "Hoofdstukaudiocache: {{cachePath}}",
+    "cache_location_hint": "Hoofdstukaudiocache: {{cachePath}} · Hervattingsmanifest: {{manifestPath}}",
     "resume_failed": "Het luisterboek kon niet worden hervat: {{message}}",
     "open_cache_failed": "De hoofdstukcache kon niet worden geopend",
     "progress_summary": "{{current}} van {{total}} hoofdstukken aan het synthetiseren",

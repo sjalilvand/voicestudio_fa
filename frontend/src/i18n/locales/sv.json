@@ -2532,7 +2532,7 @@
     "recovery_hint": "Fortsätt återanvänder färdiga kapitel och syntetiserar bara det som återstår.",
     "resume": "Fortsätt",
     "open_chapter_cache": "Öppna kapitelcache",
-    "cache_location_hint": "Cache för kapitelljud: {{cachePath}}",
+    "cache_location_hint": "Cache för kapitelljud: {{cachePath}} · Återupptagningsmanifest: {{manifestPath}}",
     "resume_failed": "Det gick inte att fortsätta ljudboken: {{message}}",
     "open_cache_failed": "Det gick inte att öppna kapitelcachen",
     "progress_summary": "Syntetiserar {{current}} av {{total}} kapitel",
