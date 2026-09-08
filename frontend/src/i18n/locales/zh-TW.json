@@ -717,6 +717,7 @@
   },
   "consent": {
     "title": "協助改進 VoiceStudio？",
+    "desc": "匿名且不含內容的使用統計,能協助我們更快修正錯誤——完全可選,預設為關閉。",
     "step_label": "改進 VoiceStudio",
     "body": "匿名且不含內容的使用統計：使用了哪些引擎、生成花費多久，以及錯誤的類型。絕不會傳送你的文字、音訊、檔案或任何可識別你身分的資訊。除非你同意，否則不會傳送任何資料；你可以隨時在 設定 → 隱私 中變更選擇。",
     "learn_more": "究竟會傳送什麼？",
@@ -1553,6 +1554,7 @@
     "open": "打開",
     "install_required_models": "安裝上面所需的模型以繼續。",
     "try_dictation": "試著聽寫",
+    "try_dictation_desc": "完成設定前,按一次快捷鍵確認聽寫功能可以正常運作。",
     "next_try_dictation": "下一步：嘗試聽寫",
     "step_aria": "第 {{num}} 步:{{label}}",
     "step_completed": "已完成",

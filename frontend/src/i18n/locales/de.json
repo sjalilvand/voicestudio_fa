@@ -717,6 +717,7 @@
   },
   "consent": {
     "title": "VoiceStudio verbessern helfen?",
+    "desc": "Anonyme, inhaltsfreie Nutzungsstatistiken, die uns helfen, Fehler schneller zu beheben — völlig optional und standardmäßig deaktiviert.",
     "step_label": "VoiceStudio verbessern",
     "body": "Anonyme, inhaltsfreie Nutzungsstatistiken: welche Engines verwendet werden, wie lange Generierungen dauern und die Art von Fehlern. Niemals Ihr Text, Ihr Audio, Ihre Dateien oder etwas, das Sie identifiziert. Es wird nichts gesendet, solange Sie nicht zustimmen — und Sie können Ihre Entscheidung jederzeit unter Einstellungen → Datenschutz ändern.",
     "learn_more": "Was genau wird gesendet?",
@@ -1553,6 +1554,7 @@
     "open": "Offen",
     "install_required_models": "Installieren Sie die oben genannten erforderlichen Modelle, um fortzufahren.",
     "try_dictation": "Versuchen Sie es mit Diktat",
+    "try_dictation_desc": "Drücke einmal deine Tastenkombination, um sicherzugehen, dass die Diktierfunktion funktioniert, bevor du die Einrichtung abschließt.",
     "next_try_dictation": "Als nächstes: Versuchen Sie es mit dem Diktat",
     "step_aria": "Schritt {{num}}: {{label}}",
     "step_completed": "abgeschlossen",

@@ -717,6 +717,7 @@
   },
   "consent": {
     "title": "Helpen VoiceStudio te verbeteren?",
+    "desc": "Anonieme, inhoudsvrije gebruiksstatistieken die ons helpen bugs sneller op te lossen — volledig optioneel en standaard uitgeschakeld.",
     "step_label": "VoiceStudio verbeteren",
     "body": "Anonieme gebruiksstatistieken zonder inhoud: welke engines worden gebruikt, hoelang generaties duren en het type fouten. Nooit je tekst, je audio, je bestanden of iets dat jou identificeert. Er wordt niets verzonden tenzij je ja zegt, en je kunt je keuze altijd wijzigen in Instellingen → Privacy.",
     "learn_more": "Wat wordt er precies verzonden?",
@@ -1553,6 +1554,7 @@
     "open": "Openen",
     "install_required_models": "Installeer de vereiste modellen hierboven om door te gaan.",
     "try_dictation": "Probeer dicteren",
+    "try_dictation_desc": "Druk één keer op je sneltoets om te controleren of dictee werkt voordat je de installatie voltooit.",
     "next_try_dictation": "Volgende: Probeer dicteren",
     "step_aria": "Stap {{num}}: {{label}}",
     "step_completed": "voltooid",

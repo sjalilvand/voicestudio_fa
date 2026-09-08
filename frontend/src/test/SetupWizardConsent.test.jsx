@@ -75,8 +75,9 @@ describe('SetupWizard analytics consent step', () => {
     expect(await screen.findByText(/Improve VoiceStudio/i)).toBeInTheDocument();
 
     await advancePastModels();
-    // Headline appears (masthead subtitle + section head + card title).
-    expect((await screen.findAllByText(/Help improve VoiceStudio\?/i)).length).toBeGreaterThan(0);
+    // The title renders exactly once (the card's own heading) — the masthead
+    // subtitle and the section head no longer repeat it (#1855).
+    expect(await screen.findAllByText(/Help improve VoiceStudio\?/i)).toHaveLength(1);
     // Two equal-weight choices, no preselected default.
     expect(screen.getByTestId('analytics-consent-yes')).toBeInTheDocument();
     expect(screen.getByTestId('analytics-consent-no')).toBeInTheDocument();
@@ -144,6 +145,10 @@ describe('SetupWizard analytics consent step', () => {
     expect(await screen.findByText(/Enter studio/i)).toBeInTheDocument();
     expect(screen.queryByText(/Help improve VoiceStudio\?/i)).not.toBeInTheDocument();
     expect(apiFetch).not.toHaveBeenCalled();
+    // The dictation step's title renders exactly once (the step-rail label)
+    // — the masthead subtitle no longer repeats it, and the redundant
+    // section head above the demo was removed (#1855).
+    expect(screen.getAllByText(/Try dictation/i)).toHaveLength(1);
   });
 
   it('shows NO consent step when the user was already asked', async () => {

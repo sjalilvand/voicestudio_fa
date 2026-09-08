@@ -717,6 +717,7 @@
   },
   "consent": {
     "title": "Hjälpa till att förbättra VoiceStudio?",
+    "desc": "Anonym användningsstatistik utan innehåll som hjälper oss att fixa buggar snabbare — helt valfritt, avstängt som standard.",
     "step_label": "Förbättra VoiceStudio",
     "body": "Anonym användningsstatistik utan innehåll: vilka motorer som används, hur lång tid genereringar tar och typen av fel. Aldrig din text, ditt ljud, dina filer eller något som identifierar dig. Inget skickas om du inte säger ja, och du kan ändra dig när som helst i Inställningar → Integritet.",
     "learn_more": "Vad skickas egentligen?",
@@ -1553,6 +1554,7 @@
     "open": "Öppna",
     "install_required_models": "Installera de modeller som krävs ovan för att fortsätta.",
     "try_dictation": "Prova diktering",
+    "try_dictation_desc": "Tryck på din genväg en gång för att se att diktering fungerar innan du slutför installationen.",
     "next_try_dictation": "Nästa: Prova diktering",
     "step_aria": "Steg {{num}}: {{label}}",
     "step_completed": "klart",

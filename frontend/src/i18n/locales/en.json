@@ -1020,6 +1020,7 @@
   },
   "consent": {
     "title": "Help improve VoiceStudio?",
+    "desc": "Anonymous, content-free usage stats that help us fix bugs faster — entirely optional, off by default.",
     "step_label": "Improve VoiceStudio",
     "body": "Anonymous, content-free usage stats: which engines are used, how long generations take, and the type of errors. Never your text, your audio, your files, or anything identifying you. Nothing is sent unless you say yes, and you can change your mind anytime in Settings → Privacy.",
     "learn_more": "What exactly is sent?",
@@ -1831,6 +1832,7 @@
     "open": "Open",
     "install_required_models": "Install the required models above to continue.",
     "try_dictation": "Try dictation",
+    "try_dictation_desc": "Press your shortcut once so you know dictation works before you finish setup.",
     "next_try_dictation": "Next: Try dictation",
     "step_aria": "Step {{num}}: {{label}}",
     "step_completed": "completed",
