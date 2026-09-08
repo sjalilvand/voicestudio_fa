@@ -90,6 +90,58 @@ describe('errors thrown by a browser extension', () => {
     expect(toastErrorWithReport).not.toHaveBeenCalled();
   });
 
+  it('reads the origin off the first FRAME, not off a URL in the message', () => {
+    // Greptile: an extension error whose message carries a URL. Scanning the
+    // whole stack matched the message's URL first, reported that as the origin,
+    // and let the extension through the filter — the bug this PR exists to fix,
+    // surviving inside the fix.
+    installGlobalErrorHandlers();
+
+    const err = new Error('Failed to fetch https://example.com/api');
+    err.stack = [
+      'TypeError: Failed to fetch https://example.com/api',
+      '    at Y (chrome-extension://someid/executors/200.js:1:761)',
+    ].join('\n');
+    dispatchUnhandledRejection(err);
+
+    expect(toastErrorWithReport).not.toHaveBeenCalled();
+  });
+
+  it('still reports our error when the MESSAGE quotes an extension URL', () => {
+    // CodeRabbit, the same defect from the other side and the worse half: one
+    // of our own failures that happens to name a chrome-extension:// URL in
+    // its text was suppressed as if an extension had thrown it.
+    installGlobalErrorHandlers();
+
+    const ours = new Error('blocked request to chrome-extension://someid/x.js');
+    ours.stack = [
+      'Error: blocked request to chrome-extension://someid/x.js',
+      '    at loadAsset (http://tauri.localhost/assets/main-app.js:9:1)',
+    ].join('\n');
+    dispatchUnhandledRejection(ours);
+
+    expect(toastErrorWithReport).toHaveBeenCalledOnce();
+    expect(toastErrorWithReport.mock.calls[0][1]).toBe(ours);
+  });
+
+  it('reports rather than guesses when the throw site names no URL', () => {
+    // A native or anonymous first frame leaves the origin unknown. Walking
+    // deeper to find a URL would attribute the error to a frame that did not
+    // throw it, so an unknown origin means "offer the report" — leaving noise
+    // in is cheaper than silencing one of ours.
+    installGlobalErrorHandlers();
+
+    const err = new Error('sort comparator exploded');
+    err.stack = [
+      'TypeError: sort comparator exploded',
+      '    at Array.sort (<anonymous>)',
+      '    at Y (chrome-extension://someid/inject.js:1:1)',
+    ].join('\n');
+    dispatchUnhandledRejection(err);
+
+    expect(toastErrorWithReport).toHaveBeenCalledOnce();
+  });
+
   it('still reports our own error when an extension frame sits below it', () => {
     // The reason this filters on the THROW SITE and not on "any frame mentions
     // an extension": an extension that patches a built-in leaves its frame in

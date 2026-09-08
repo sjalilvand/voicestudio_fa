@@ -37,16 +37,32 @@ const IGNORE_PATTERNS = [
 // straight through to the "Report this bug" action.
 const EXTENSION_URL = /\b(?:chrome|moz|safari-web|safari|ms-browser)-extension:\/\//i;
 
-/** The URL the error came FROM, or '' when the event carries no location. */
+// Whether a stack line is a FRAME rather than the header. V8 writes
+// "TypeError: <message>" first and then "    at fn (url:1:2)"; JSC and
+// SpiderMonkey write "fn@url:1:2" with no header at all. Both frame shapes are
+// recognised, and anything else is the header — which matters because a message
+// can contain a URL of its own, in either direction: an extension error reading
+// "Failed to fetch https://example.com" would otherwise report the message's
+// URL as its origin and escape the filter, and one of OUR errors quoting a
+// `chrome-extension://` URL would otherwise be suppressed as an extension's.
+const FRAME_LINE = /^\s*at\s|@[a-z-]+:\/\//i;
+const FRAME_URL = /[a-z-]+:\/\/[^\s)]+/i;
+
+/** The URL the error came FROM, or '' when the origin cannot be established. */
 function originUrl(error, filename) {
+  // An ErrorEvent names the script directly, which beats parsing a stack.
+  // Only `unhandledrejection` has to fall back to the stack.
   if (typeof filename === 'string' && filename) return filename;
   const stack = typeof error?.stack === 'string' ? error.stack : '';
-  // First frame that names a URL — the throw site. Deliberately not "any frame
-  // mentions an extension": an extension that patches a built-in leaves its
-  // frame in the middle of a stack whose fault is genuinely ours, and dropping
-  // those would silence real bugs.
-  const match = stack.match(/(?:\(|@|\s)((?:[a-z-]+):\/\/[^\s)]+)/i);
-  return match ? match[1] : '';
+  const frame = stack.split('\n').find((line) => FRAME_LINE.test(line));
+  if (!frame) return '';
+  // The FIRST frame only, and '' when it names no URL (a native or anonymous
+  // throw site). Walking deeper to find one would attribute an error to a
+  // frame that did not throw it — and since the only thing this decides is
+  // whether to offer a report, an unknown origin has to mean "offer it".
+  // Silencing one of our own bugs is worse than leaving noise in.
+  const match = frame.match(FRAME_URL);
+  return match ? match[0] : '';
 }
 
 function shouldShow(message, error, filename) {
