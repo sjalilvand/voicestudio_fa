@@ -340,7 +340,19 @@ def _backend_redirect_log_candidates():
     reports". A native death (a Windows access violation, a SIGSEGV) writes
     nothing to the Python log by construction, so this file is the only record
     of it.
+
+    `OMNIVOICE_LOG_DIR` is honoured first, in the same precedence
+    `backend_log_path()` uses. The backend is a child of the shell, so an
+    ambient override reaches both — and a resolver that ignored it would look
+    in the per-OS default while the writer wrote somewhere else, which is the
+    divergence class this file already has one of (see #1782).
     """
+    override = (os.environ.get("OMNIVOICE_LOG_DIR") or "").strip()
+    if override:
+        return [
+            os.path.join(override, "backend.log"),
+            os.path.join(override, "backend_err.log"),
+        ]
     home = os.path.expanduser("~")
     if sys.platform == "darwin":
         base = os.path.join(home, "Library/Logs/OmniVoice")
@@ -366,7 +378,7 @@ def _tauri_log_candidates():
       `com.debpalash.omnivoice-studio` (frontend/src-tauri/tauri.conf.json).
     - backend.rs::backend_log_path() redirects the spawned backend's
       stdout/stderr to `backend.log` / `backend_err.log` under
-      `~/Library/Logs/OmniVoice` (macOS), `$XDG_STATE_HOME/VoiceStudio` falling
+      `~/Library/Logs/OmniVoice` (macOS), `$XDG_STATE_HOME/OmniVoice` falling
       back to `~/.local/state/OmniVoice` (Linux), and
       `%LOCALAPPDATA%\\OmniVoice\\Logs` (Windows). This is where uvicorn
       startup banners and hard-crash tracebacks land — keep all three OS

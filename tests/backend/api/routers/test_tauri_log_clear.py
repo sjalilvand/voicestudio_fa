@@ -133,7 +133,7 @@ def test_the_read_candidate_list_is_unchanged(system_mod, monkeypatch, platform,
     home = "/home/tester"
     monkeypatch.setattr(system_mod.sys, "platform", platform)
     monkeypatch.setattr(os.path, "expanduser", lambda p: p.replace("~", home))
-    for var in ("XDG_DATA_HOME", "XDG_STATE_HOME", "APPDATA", "LOCALAPPDATA"):
+    for var in ("XDG_DATA_HOME", "XDG_STATE_HOME", "APPDATA", "LOCALAPPDATA", "OMNIVOICE_LOG_DIR"):
         monkeypatch.delenv(var, raising=False)
     if platform == "win32":
         monkeypatch.setenv("APPDATA", f"{home}/AppData/Roaming")
@@ -142,3 +142,30 @@ def test_the_read_candidate_list_is_unchanged(system_mod, monkeypatch, platform,
     got = [p.replace("\\", "/") for p in system_mod._tauri_log_candidates()]
 
     assert got == [f"{home}/{suffix.format(bid=bid)}" for suffix in expected]
+
+
+def test_the_backend_redirect_follows_the_writer_s_override(system_mod, monkeypatch, tmp_path):
+    """`OMNIVOICE_LOG_DIR` moves the files, so the resolver has to follow it.
+
+    `backend.rs::backend_log_path()` checks that variable before any per-OS
+    default, and the backend is a child of the shell, so an ambient override
+    reaches both processes. A resolver that ignored it would look in the
+    per-OS default while the writer wrote somewhere else — the same divergence
+    that makes the desktop Logs panel read the wrong file in #1782.
+    """
+    monkeypatch.setenv("OMNIVOICE_LOG_DIR", str(tmp_path))
+
+    assert system_mod._backend_redirect_log_candidates() == [
+        os.path.join(str(tmp_path), "backend.log"),
+        os.path.join(str(tmp_path), "backend_err.log"),
+    ]
+
+
+def test_a_blank_override_falls_back_to_the_default(system_mod, monkeypatch):
+    """Matches the writer's `!dir.trim().is_empty()` guard."""
+    monkeypatch.setenv("OMNIVOICE_LOG_DIR", "   ")
+
+    paths = system_mod._backend_redirect_log_candidates()
+
+    assert paths, "a blank override must not empty the candidate list"
+    assert all("OmniVoice" in p for p in paths)
