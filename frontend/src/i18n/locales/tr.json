@@ -2532,7 +2532,7 @@
     "recovery_hint": "Devam et, tamamlanan bölümleri yeniden kullanır ve yalnızca kalanı sentezler.",
     "resume": "Devam et",
     "open_chapter_cache": "Bölüm önbelleğini aç",
-    "cache_location_hint": "Bölüm sesleri outputs/longform_cache/ içindedir; kesintiye uğrayan her iş outputs/audiobook_<job-id>/ içinde bir resume.json bildirimi tutar.",
+    "cache_location_hint": "Bölüm sesi önbelleği: {{cachePath}}",
     "resume_failed": "Sesli kitap sürdürülemedi: {{message}}",
     "open_cache_failed": "Bölüm önbelleği açılamadı",
     "progress_summary": "{{total}} bölümden {{current}} tanesi sentezleniyor",

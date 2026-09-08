@@ -2532,7 +2532,7 @@
     "recovery_hint": "Продовження повторно використовує готові розділи й синтезує лише те, що залишилося.",
     "resume": "Продовжити",
     "open_chapter_cache": "Відкрити кеш розділів",
-    "cache_location_hint": "Аудіо розділів міститься в outputs/longform_cache/; кожне перерване завдання зберігає маніфест resume.json у outputs/audiobook_<job-id>/.",
+    "cache_location_hint": "Кеш аудіо розділів: {{cachePath}}",
     "resume_failed": "Не вдалося продовжити аудіокнигу: {{message}}",
     "open_cache_failed": "Не вдалося відкрити кеш розділів",
     "progress_summary": "Синтез {{current}} з {{total}} розділів",

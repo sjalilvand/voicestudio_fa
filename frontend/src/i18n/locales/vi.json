@@ -2532,7 +2532,7 @@
     "recovery_hint": "Tiếp tục sẽ dùng lại các chương đã hoàn thành và chỉ tổng hợp phần còn lại.",
     "resume": "Tiếp tục",
     "open_chapter_cache": "Mở bộ nhớ đệm chương",
-    "cache_location_hint": "Âm thanh chương nằm trong outputs/longform_cache/; mỗi tác vụ bị gián đoạn giữ một tệp kê khai resume.json trong outputs/audiobook_<job-id>/.",
+    "cache_location_hint": "Bộ nhớ đệm âm thanh chương: {{cachePath}}",
     "resume_failed": "Không thể tiếp tục sách nói: {{message}}",
     "open_cache_failed": "Không thể mở bộ nhớ đệm chương",
     "progress_summary": "Đang tổng hợp {{current}} trên {{total}} chương",

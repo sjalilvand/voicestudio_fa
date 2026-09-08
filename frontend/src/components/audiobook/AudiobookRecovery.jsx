@@ -46,7 +46,7 @@ export default function AudiobookRecovery({ t, generating, onResume }) {
   const resume = async () => {
     const jobId = job.job_id;
     setHiddenJobId(jobId);
-    const accepted = (await onResume(jobId)) !== false;
+    await onResume(jobId);
     // A resumed render runs under a fresh backend id. If it is stopped or
     // fails, that fresh manifest becomes the next recovery card; if it
     // completes, the inventory is empty. Refresh in every terminal case.
@@ -58,7 +58,7 @@ export default function AudiobookRecovery({ t, generating, onResume }) {
         setHiddenJobId(null);
       }
     } catch {
-      if (!accepted) setHiddenJobId(null);
+      setHiddenJobId(null);
     }
   };
   const openCache = async () => {
@@ -88,7 +88,7 @@ export default function AudiobookRecovery({ t, generating, onResume }) {
           {t('audiobook.recovery_hint')}
         </p>
         <p className="m-[3px_0_0] text-[var(--text-xs)] text-fg-dim">
-          {t('audiobook.cache_location_hint')}
+          {t('audiobook.cache_location_hint', { cachePath })}
         </p>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-[4px]">

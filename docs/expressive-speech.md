@@ -20,7 +20,7 @@ ignores.
 
 ## Recovering an interrupted audiobook
 
-Switching away from the Audiobook tab explicitly interrupts synthesis at a chapter boundary. The Audiobook recovery card lets you resume with its cached chapters, and **Open chapter cache** reveals the chapter audio cache and each interrupted job's resume manifest.
+Switching away from the Audiobook tab explicitly interrupts synthesis at a chapter boundary. The Audiobook recovery card lets you resume with its cached chapters, and **Open chapter cache** reveals the chapter audio cache.
 
 ## Why bracket tags work at all (and when they don't)
 

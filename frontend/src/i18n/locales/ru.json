@@ -2532,7 +2532,7 @@
     "recovery_hint": "Продолжение использует готовые главы и синтезирует только оставшиеся.",
     "resume": "Продолжить",
     "open_chapter_cache": "Открыть кэш глав",
-    "cache_location_hint": "Аудио глав находится в outputs/longform_cache/; каждая прерванная задача хранит манифест resume.json в outputs/audiobook_<job-id>/.",
+    "cache_location_hint": "Кэш аудио глав: {{cachePath}}",
     "resume_failed": "Не удалось продолжить аудиокнигу: {{message}}",
     "open_cache_failed": "Не удалось открыть кэш глав",
     "progress_summary": "Синтез {{current}} из {{total}} глав",

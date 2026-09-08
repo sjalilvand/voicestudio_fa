@@ -2532,7 +2532,7 @@
     "recovery_hint": "Wznowienie wykorzystuje ukończone rozdziały i syntezuje tylko to, co pozostało.",
     "resume": "Wznów",
     "open_chapter_cache": "Otwórz pamięć podręczną rozdziałów",
-    "cache_location_hint": "Dźwięk rozdziałów znajduje się w outputs/longform_cache/; każde przerwane zadanie zachowuje manifest resume.json w outputs/audiobook_<job-id>/.",
+    "cache_location_hint": "Pamięć podręczna dźwięku rozdziałów: {{cachePath}}",
     "resume_failed": "Nie można wznowić książki audio: {{message}}",
     "open_cache_failed": "Nie można otworzyć pamięci podręcznej rozdziałów",
     "progress_summary": "Synteza {{current}} z {{total}} rozdziałów",

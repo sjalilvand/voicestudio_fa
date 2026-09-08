@@ -131,6 +131,19 @@ describe('Audiobook recovery surface (#1911)', () => {
     expect(mocks.jobs).toHaveBeenCalledTimes(2);
   });
 
+  it('restores the recovery card when the post-resume inventory refresh fails', async () => {
+    const onResume = vi.fn().mockImplementation(async () => {
+      mocks.jobs.mockRejectedValueOnce(new Error('inventory offline'));
+      return true;
+    });
+    renderRecovery(onResume);
+
+    fireEvent.click(await screen.findByRole('button', { name: en.audiobook.resume }));
+
+    expect(await screen.findByText('A Long Book')).toBeTruthy();
+    expect(mocks.jobs).toHaveBeenCalledTimes(2);
+  });
+
   it('reveals the server-owned chapter cache through the existing safe seam', async () => {
     renderRecovery();
 
@@ -138,8 +151,7 @@ describe('Audiobook recovery surface (#1911)', () => {
     await waitFor(() =>
       expect(mocks.reveal).toHaveBeenCalledWith({ path: '/data/outputs/longform_cache' }),
     );
-    expect(screen.getByText(/outputs\/longform_cache/)).toBeTruthy();
-    expect(screen.getByText(/resume\.json/)).toBeTruthy();
+    expect(screen.getByText(/\/data\/outputs\/longform_cache/)).toBeTruthy();
   });
 
   it('stays out of the workspace when no resumable audiobook exists', async () => {

@@ -2532,7 +2532,7 @@
     "recovery_hint": "Fortsätt återanvänder färdiga kapitel och syntetiserar bara det som återstår.",
     "resume": "Fortsätt",
     "open_chapter_cache": "Öppna kapitelcache",
-    "cache_location_hint": "Kapitelljudet finns i outputs/longform_cache/; varje avbrutet jobb behåller ett resume.json-manifest i outputs/audiobook_<job-id>/.",
+    "cache_location_hint": "Cache för kapitelljud: {{cachePath}}",
     "resume_failed": "Det gick inte att fortsätta ljudboken: {{message}}",
     "open_cache_failed": "Det gick inte att öppna kapitelcachen",
     "progress_summary": "Syntetiserar {{current}} av {{total}} kapitel",

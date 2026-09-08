@@ -2532,7 +2532,7 @@
     "recovery_hint": "Lanjutkan menggunakan kembali bab yang selesai dan hanya menyintesis sisanya.",
     "resume": "Lanjutkan",
     "open_chapter_cache": "Buka cache bab",
-    "cache_location_hint": "Audio bab berada di outputs/longform_cache/; setiap pekerjaan yang terputus menyimpan manifes resume.json di outputs/audiobook_<job-id>/.",
+    "cache_location_hint": "Cache audio bab: {{cachePath}}",
     "resume_failed": "Tidak dapat melanjutkan buku audio: {{message}}",
     "open_cache_failed": "Tidak dapat membuka cache bab",
     "progress_summary": "Mensintesis {{current}} dari {{total}} bab",

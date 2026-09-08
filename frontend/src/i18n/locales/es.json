@@ -2532,7 +2532,7 @@
     "recovery_hint": "Al reanudar se reutilizan los capítulos terminados y solo se sintetiza lo que falta.",
     "resume": "Reanudar",
     "open_chapter_cache": "Abrir caché de capítulos",
-    "cache_location_hint": "El audio de los capítulos está en outputs/longform_cache/; cada trabajo interrumpido guarda un manifiesto resume.json en outputs/audiobook_<job-id>/.",
+    "cache_location_hint": "Caché de audio de capítulos: {{cachePath}}",
     "resume_failed": "No se pudo reanudar el audiolibro: {{message}}",
     "open_cache_failed": "No se pudo abrir la caché de capítulos",
     "progress_summary": "Sintetizando {{current}} de {{total}} capítulos",

@@ -2532,7 +2532,7 @@
     "recovery_hint": "Reprendre réutilise les chapitres terminés et ne synthétise que ce qui reste.",
     "resume": "Reprendre",
     "open_chapter_cache": "Ouvrir le cache des chapitres",
-    "cache_location_hint": "L'audio des chapitres se trouve dans outputs/longform_cache/ ; chaque tâche interrompue conserve un manifeste resume.json dans outputs/audiobook_<job-id>/.",
+    "cache_location_hint": "Cache audio des chapitres : {{cachePath}}",
     "resume_failed": "Impossible de reprendre le livre audio : {{message}}",
     "open_cache_failed": "Impossible d'ouvrir le cache des chapitres",
     "progress_summary": "Synthèse de {{current}} sur {{total}} chapitres",

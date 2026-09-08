@@ -2532,7 +2532,7 @@
     "recovery_hint": "ทำต่อจะใช้บทที่เสร็จแล้วซ้ำ และสังเคราะห์เฉพาะส่วนที่เหลือ",
     "resume": "ทำต่อ",
     "open_chapter_cache": "เปิดแคชบท",
-    "cache_location_hint": "เสียงของบทอยู่ใน outputs/longform_cache/; งานที่ถูกขัดจังหวะแต่ละงานเก็บไฟล์กำกับ resume.json ไว้ใน outputs/audiobook_<job-id>/.",
+    "cache_location_hint": "แคชเสียงของบท: {{cachePath}}",
     "resume_failed": "ไม่สามารถทำหนังสือเสียงต่อได้: {{message}}",
     "open_cache_failed": "ไม่สามารถเปิดแคชบทได้",
     "progress_summary": "กำลังสังเคราะห์บทที่ {{current}} จาก {{total}} บท",
