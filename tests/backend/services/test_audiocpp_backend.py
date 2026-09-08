@@ -605,6 +605,36 @@ def test_is_available_false_without_binary_gives_reason(app_modules):
     assert "audio-cpp.md" in msg
 
 
+def test_is_available_requires_explicitly_installed_model(
+    tmp_path, monkeypatch, app_modules,
+):
+    bootstrap = app_modules.bootstrap
+    binary = tmp_path / "audiocpp_server"
+    monkeypatch.setattr(bootstrap, "resolve_server_binary", lambda: binary)
+
+    def missing_model():
+        raise RuntimeError(
+            "Breeze-TTS-2 is not installed. Install it from Model Catalogue → Models."
+        )
+
+    monkeypatch.setattr(bootstrap, "resolve_model_file", missing_model)
+
+    ok, msg = app_modules.audiocpp.AudioCPPBackend.is_available()
+
+    assert ok is False
+    assert "Model Catalogue → Models" in msg
+
+
+def test_is_available_requires_binary_and_model(tmp_path, monkeypatch, app_modules):
+    bootstrap = app_modules.bootstrap
+    binary = tmp_path / "audiocpp_server"
+    model = tmp_path / "breeze-tts-2-q8_0.gguf"
+    monkeypatch.setattr(bootstrap, "resolve_server_binary", lambda: binary)
+    monkeypatch.setattr(bootstrap, "resolve_model_file", lambda: model)
+
+    assert app_modules.audiocpp.AudioCPPBackend.is_available() == (True, "ready")
+
+
 def test_install_hint_present(app_modules):
     assert "audiocpp" in app_modules.tts_backend._INSTALL_HINTS
 
