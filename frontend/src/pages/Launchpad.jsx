@@ -494,7 +494,15 @@ export default function Launchpad({
       )}
 
       {/* Show checklist alongside existing projects too, but only when issues exist */}
-      {(profiles.length > 0 || studioProjects.length > 0) && <ReadinessChecklist compact />}
+      {/* Wrapped rather than given the class directly: ReadinessChecklist takes
+          no className, is mounted twice (nested inside the empty state as well
+          as here), and shrink-0 is a fact about THIS parent's flex column, not
+          about the component. */}
+      {(profiles.length > 0 || studioProjects.length > 0) && (
+        <div className="shrink-0">
+          <ReadinessChecklist compact />
+        </div>
+      )}
     </div>
   );
 }

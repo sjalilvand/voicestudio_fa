@@ -36,9 +36,14 @@ import path from 'node:path';
 import i18n from '../i18n';
 import Launchpad from '../pages/Launchpad';
 
-vi.mock('../components/ReadinessChecklist', () => ({ default: () => null }));
+// Needs a react-query provider + live endpoints, so it is stubbed — but with a
+// marker node rather than null, so the test can still find the wrapper the page
+// puts around it.
+vi.mock('../components/ReadinessChecklist', () => ({
+  default: () => <span data-readiness="stub" />,
+}));
 
-const props = {
+const baseProps = {
   profiles: [],
   studioProjects: [],
   dubHistory: [],
@@ -49,7 +54,21 @@ const props = {
   loadProject: vi.fn(),
 };
 
-const renderShell = () =>
+// Both branches of the page, because they render DIFFERENT direct children:
+// empty gives the `flex-1` empty state, populated gives the readiness
+// checklist. Checking only one leaves the other's child unconstrained — which
+// is how the checklist was missed on the first pass, and it is the branch the
+// #1859 reporter was actually in.
+const STATES = {
+  empty: baseProps,
+  populated: {
+    ...baseProps,
+    profiles: [{ id: 'p1', name: 'Test voice' }],
+    studioProjects: [{ id: 's1', name: 'Test project', updated_at: Date.now() }],
+  },
+};
+
+const renderShell = (props) =>
   render(
     <I18nextProvider i18n={i18n}>
       <div className="app-container">
@@ -59,31 +78,48 @@ const renderShell = () =>
   );
 
 describe('Launchpad content blocks defer the shortfall to the scroll container', () => {
-  it('labels every direct child as content or filler', () => {
-    // The invariant, stated so a fourth block cannot be added unlabelled: a
-    // child either protects a height (`shrink-0`) or is deliberately elastic
-    // (`flex-1`). The empty state is the elastic one — it centres a small
-    // waveform in whatever space is left and has no height to lose. Anything
-    // that is neither is the #1859 shape.
-    const { container } = renderShell();
-    const root = container.querySelector('.launchpad');
-    expect(root).toBeTruthy();
+  for (const [state, props] of Object.entries(STATES)) {
+    it(`labels every direct child as content or filler (${state})`, () => {
+      // The invariant, stated so a new block cannot be added unlabelled: a
+      // child either protects a height (`shrink-0`) or is deliberately elastic
+      // (`flex-1`). The empty state is the elastic one — it centres a small
+      // waveform in whatever space is left and has no height to lose. Anything
+      // that is neither is the #1859 shape.
+      const { container } = renderShell(props);
+      const root = container.querySelector('.launchpad');
+      expect(root).toBeTruthy();
 
-    let content = 0;
-    for (const el of root.children) {
-      const cls = el.className || '';
-      if (/\bflex-1\b/.test(cls)) continue;
-      expect(
-        cls,
-        `a .launchpad child that is neither shrink-0 nor flex-1 absorbs the log ` +
-          `panel's shortfall instead of letting the page scroll (#1859): ` +
-          `<${el.tagName.toLowerCase()} class="${cls}">`,
-      ).toMatch(/\bshrink-0\b/);
-      content += 1;
-    }
-    // A refactor that reparents the blocks would otherwise turn this into a
-    // no-op that still passes.
-    expect(content).toBeGreaterThanOrEqual(3);
+      let content = 0;
+      for (const el of root.children) {
+        const cls = el.className || '';
+        if (/\bflex-1\b/.test(cls)) continue;
+        expect(
+          cls,
+          `a .launchpad child that is neither shrink-0 nor flex-1 absorbs the log ` +
+            `panel's shortfall instead of letting the page scroll (#1859): ` +
+            `<${el.tagName.toLowerCase()} class="${cls}">`,
+        ).toMatch(/\bshrink-0\b/);
+        content += 1;
+      }
+      // A refactor that reparents the blocks would otherwise turn this into a
+      // no-op that still passes.
+      expect(content).toBeGreaterThanOrEqual(3);
+    });
+  }
+
+  it('constrains the readiness checklist, which only the populated page mounts', () => {
+    // ReadinessChecklist is mocked out here (it needs react-query and live
+    // endpoints), so this asserts the WRAPPER the page owns rather than the
+    // component's own markup — which is the reason the fix wraps it instead of
+    // reaching into a shared component for a parent-specific layout fact.
+    const { container } = renderShell(STATES.populated);
+    const root = container.querySelector('.launchpad');
+    const wrapper = [...root.children].find((el) => el.querySelector('[data-readiness]'));
+    expect(
+      wrapper,
+      'the checklist branch did not render — fixture no longer populated',
+    ).toBeTruthy();
+    expect(wrapper.className).toMatch(/\bshrink-0\b/);
   });
 
   it('keeps the scroll container the shrink-0 defers to', () => {
