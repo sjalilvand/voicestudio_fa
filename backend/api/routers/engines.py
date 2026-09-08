@@ -589,7 +589,15 @@ def select_engine(req: SelectEngineRequest):
     if not family:
         raise HTTPException(400, f"Unknown family: {req.family}. Expected one of tts/asr/llm.")
     module, pref_key = family
-    available = {b["id"]: b for b in module.list_backends()}
+    # MPS intentionally hides the redundant explicit OmniVoice sidecar from
+    # the picker, but existing scripts and saved preferences may still submit
+    # that supported compatibility id directly.
+    rows = (
+        module.list_backends(include_hidden=True)
+        if req.family == "tts"
+        else module.list_backends()
+    )
+    available = {b["id"]: b for b in rows}
     if req.backend_id not in available:
         raise HTTPException(400, f"Unknown {req.family} backend: {req.backend_id!r}")
     entry = available[req.backend_id]

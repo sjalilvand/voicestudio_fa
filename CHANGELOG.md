@@ -50,6 +50,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Apple Silicon now shows one canonical OmniVoice choice in the engine picker while retaining its automatic crash-isolated sidecar runtime (#1913)
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
 - Copying a saved transcription now uses the shared clipboard helper and reports failed copies accurately (#1803) — thanks @tvbht!
