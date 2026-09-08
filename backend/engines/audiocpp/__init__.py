@@ -155,14 +155,16 @@ class AudioCPPBackend(TTSBackend):
     )
     supports_voice_design = True
     applies_own_mastering = True  # model-decoded 24 kHz studio output
-    gpu_compat = ("cuda", "cpu")
+    # audio.cpp maps our accelerator families to CUDA, HIP, Metal, or Vulkan.
+    # Intel GPUs use Vulkan; NPUs have no supported backend.
+    gpu_compat = ("cuda", "rocm", "mps", "xpu", "cpu")
     runs_out_of_process = True
     # Same marker SubprocessBackend sets: this engine lives in another OS
     # process. Consumers only branch the matrix label and the self-test
     # route (spawn-and-ping instead of in-process synth) — both correct
     # here; nothing assumes the stdio protocol from it.
     _is_subprocess_isolated = True
-    min_vram_gb = 4.0  # Q8_0 3B GGUF ≈ 3.2 GB weights + session workspace
+    min_vram_gb = 6.0  # 4.73 GiB Q8_0 file plus graph/session workspace
 
     _DEFAULT_SAMPLE_RATE = 24000  # Breeze-TTS-2 native rate
 
@@ -282,7 +284,9 @@ class AudioCPPBackend(TTSBackend):
                     f"Set {BACKEND_ENV} to cpu as a fallback."
                 )
             try:
-                with urllib.request.urlopen(url, timeout=5) as resp:
+                # ``url`` is always the hard-coded loopback host plus a
+                # validated integer port; arbitrary schemes are impossible.
+                with urllib.request.urlopen(url, timeout=5) as resp:  # nosec B310
                     if resp.status == 200:
                         logger.info("audio.cpp: server healthy on %s", self._base_url())
                         return
@@ -307,7 +311,9 @@ class AudioCPPBackend(TTSBackend):
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            # ``req`` targets only ``_base_url()`` (127.0.0.1 + validated
+            # integer port), never a caller-provided URL.
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")[:500]

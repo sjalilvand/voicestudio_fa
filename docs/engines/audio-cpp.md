@@ -36,8 +36,8 @@ Notes:
   `ENGINE_ENABLE_CUDA=ON` and point `OMNIVOICE_AUDIOCPP_BIN` at it.
 - The Windows CUDA zips additionally need the matching `cudart` archive
   extracted next to the binaries (upstream packaging, not VoiceStudio).
-- **VRAM:** Q8_0 GGUF ≈ 3.2 GB weights + session workspace; 6 GB+ GPU
-  recommended, 4 GB minimum.
+- **VRAM:** Q8_0 GGUF is ≈ 4.73 GiB plus graph/session workspace; 6 GB+
+  GPU memory is required.
 
 ## Install
 
@@ -54,7 +54,7 @@ Notes:
    ```
 
    Alternatively set `OMNIVOICE_AUDIOCPP_DIR` to the directory containing it.
-3. Restart VoiceStudio. The ~3 GB `breeze-tts-2-q8_0.gguf` downloads from
+3. Restart VoiceStudio. The ~4.73 GiB `breeze-tts-2-q8_0.gguf` downloads from
    `audio-cpp/audio.cpp-gguf` (not gated) into the shared HF cache on first
    generate — resumable, hash-verified.
 4. Pick `audiocpp` in **Model Catalogue → Engines**. The server starts
@@ -78,7 +78,7 @@ All three go through the one speech endpoint — reference presence selects:
 |----------|---------|---------|
 | `OMNIVOICE_AUDIOCPP_BIN` | — | Absolute path to `audiocpp_server`. |
 | `OMNIVOICE_AUDIOCPP_DIR` | — | Directory containing `audiocpp_server`. |
-| `OMNIVOICE_AUDIOCPP_MODEL` | auto-download | GGUF file or directory override. |
+| `OMNIVOICE_AUDIOCPP_MODEL` | pinned auto-download | GGUF file or directory override. |
 | `OMNIVOICE_AUDIOCPP_PACKAGE` | `breeze-tts-2-q8_0.gguf` | Package filename (`…-bf16.gguf` for full precision). |
 | `OMNIVOICE_AUDIOCPP_BACKEND` | `metal` (macOS), `vulkan` (Win/Linux), `cpu` | Server compute backend. |
 | `OMNIVOICE_AUDIOCPP_PORT` | `17860` | Loopback port. |

@@ -49,6 +49,11 @@ GH_REPO = "0xShug0/audio.cpp"
 #: HuggingFace repo serving the GGUF model packages (not gated).
 HF_MODEL_REPO = "audio-cpp/audio.cpp-gguf"
 
+# Immutable repository revision used for the v0.7.2 Breeze-TTS-2 package.
+# Pinning prevents a later upstream file replacement from silently changing
+# the model exercised by this backend.
+HF_MODEL_REVISION = "dc6fecccc2b0c6bdda0a8b2f38fa61394fee0b9c"
+
 #: Model id used in the generated ``server.json`` and in speech requests.
 MODEL_ID = "breeze-tts-2"
 
@@ -102,7 +107,7 @@ _ASSETS: dict[str, tuple[str, str]] = {
     ),
     "linux-x64": (
         "audio-v0.7.2-bin-ubuntu-x64-vulkan.tar.gz",
-        "fee1f978cee76453cf17f00196554bc2ee294645739538af0726a143b6c20de9451b085a45932d9e214e032962c1",
+        "fee1f978cee76453cf17f00196554bc2ee294645739538af0726a143b6a69a23",
     ),
     "darwin-arm64": (
         "audio-v0.7.2-bin-macos-arm64-metal.tar.gz",
@@ -225,6 +230,41 @@ def _download_url(asset: str) -> str:
     return f"https://github.com/{GH_REPO}/releases/download/{VERSION}/{asset}"
 
 
+def _safe_archive_destination(root: Path, member_name: str) -> Path:
+    """Resolve one archive member below ``root`` or reject traversal."""
+    root = root.resolve()
+    destination = (root / member_name).resolve()
+    if destination != root and root not in destination.parents:
+        raise RuntimeError(f"unsafe audio.cpp archive member: {member_name!r}")
+    return destination
+
+
+def _extract_release_archive(archive: Path, filename: str, target: Path) -> None:
+    """Extract an upstream release without links, devices, or traversal."""
+    if filename.endswith(".zip"):
+        with zipfile.ZipFile(archive) as zf:
+            for member in zf.infolist():
+                _safe_archive_destination(target, member.filename)
+                # Unix symlinks are encoded in the upper mode bits.
+                if (member.external_attr >> 16) & 0o170000 == 0o120000:
+                    raise RuntimeError(
+                        f"unsafe audio.cpp archive symlink: {member.filename!r}"
+                    )
+            # Every member was validated for containment and link type above.
+            zf.extractall(target)  # nosec B202
+        return
+
+    with tarfile.open(archive, "r:gz") as tf:
+        members = tf.getmembers()
+        for member in members:
+            _safe_archive_destination(target, member.name)
+            if not (member.isfile() or member.isdir()):
+                raise RuntimeError(
+                    f"unsafe audio.cpp archive member type: {member.name!r}"
+                )
+        tf.extractall(target, members=members, filter="data")
+
+
 def install_default_asset(dest_dir: Optional[Path] = None) -> Path:
     """Download + SHA-verify + extract the platform release asset into
     ``dest_dir`` (default: this package's ``bin/``) and return the server
@@ -245,19 +285,16 @@ def install_default_asset(dest_dir: Optional[Path] = None) -> Path:
     ) as tmp:
         tmp_path = Path(tmp.name)
     try:
-        urllib.request.urlretrieve(_download_url(filename), tmp_path)
+        # URL is assembled only from pinned constants and an allow-listed
+        # release asset name selected above.
+        urllib.request.urlretrieve(_download_url(filename), tmp_path)  # nosec B310
         digest = hashlib.sha256(tmp_path.read_bytes()).hexdigest()
         if digest != want_sha:
             raise RuntimeError(
                 f"audio.cpp asset SHA-256 mismatch for {filename}: "
                 f"got {digest}, want {want_sha}. Refusing to extract."
             )
-        if filename.endswith(".zip"):
-            with zipfile.ZipFile(tmp_path) as zf:
-                zf.extractall(target)
-        else:
-            with tarfile.open(tmp_path, "r:gz") as tf:
-                tf.extractall(target, filter="data")
+        _extract_release_archive(tmp_path, filename, target)
     finally:
         try:
             tmp_path.unlink()
@@ -292,6 +329,40 @@ def package_filename() -> str:
     return os.environ.get(PACKAGE_ENV, "").strip() or DEFAULT_PACKAGE
 
 
+def _materialize_gguf_cache_path(model_file: Path) -> Path:
+    """Return a real ``.gguf`` path when the HF snapshot is a symlink.
+
+    audio.cpp canonicalizes model paths before inspecting the suffix. The
+    Hugging Face cache points the friendly ``.gguf`` snapshot name at an
+    extensionless content-addressed blob, so passing that symlink makes the
+    server reject a valid model. A hard link beside the snapshot keeps the
+    required suffix without copying a multi-gigabyte model or escaping the
+    snapshot's cleanup lifecycle.
+    """
+    resolved = model_file.resolve()
+    if resolved.suffix.lower() == ".gguf":
+        return model_file
+    if model_file.suffix.lower() != ".gguf":
+        raise RuntimeError(f"audio.cpp model must be a .gguf file: {model_file}")
+
+    alias = model_file.with_name(
+        f".{model_file.stem}-{HF_MODEL_REVISION[:12]}.audiocpp.gguf"
+    )
+    try:
+        os.link(resolved, alias)
+    except FileExistsError:
+        if not os.path.samefile(resolved, alias):
+            raise RuntimeError(
+                f"audio.cpp model alias points at a different file: {alias}"
+            ) from None
+    except OSError as exc:
+        raise RuntimeError(
+            "audio.cpp cannot materialize the Hugging Face cache symlink as "
+            f"a .gguf hard link: {exc}"
+        ) from exc
+    return alias
+
+
 def resolve_model_file() -> Path:
     """Resolve the Breeze-TTS-2 GGUF file, downloading it on first use.
 
@@ -321,6 +392,7 @@ def resolve_model_file() -> Path:
 
         return snapshot_download(
             repo_id=HF_MODEL_REPO,
+            revision=HF_MODEL_REVISION,
             allow_patterns=[f"{PACKAGE_DIR}/{package_filename()}"],
         )
 
@@ -333,7 +405,7 @@ def resolve_model_file() -> Path:
             f"Breeze-TTS-2 package {package_filename()} missing after "
             f"download from {HF_MODEL_REPO} — layout changed upstream."
         )
-    return model_file
+    return _materialize_gguf_cache_path(model_file)
 
 
 __all__ = [
@@ -344,6 +416,7 @@ __all__ = [
     "DIR_ENV",
     "FAMILY",
     "HF_MODEL_REPO",
+    "HF_MODEL_REVISION",
     "MODEL_ID",
     "PACKAGE_DIR",
     "PACKAGE_ENV",
@@ -355,6 +428,7 @@ __all__ = [
     "install_default_asset",
     "invalidate",
     "is_installed",
+    "_materialize_gguf_cache_path",
     "package_filename",
     "resolve_model_file",
     "resolve_server_binary",

@@ -8,8 +8,11 @@ host env is scrubbed of ``OMNIVOICE_AUDIOCPP_*`` overrides per test.
 from __future__ import annotations
 
 import base64
+import string
 import io
 import os
+import tarfile
+import zipfile
 
 import pytest
 
@@ -146,6 +149,13 @@ def test_binary_name_exe_on_windows_only():
     assert bootstrap.binary_name("darwin-arm64") == "audiocpp_server"
 
 
+def test_release_assets_have_complete_sha256_pins():
+    for filename, digest in bootstrap._ASSETS.values():
+        assert filename
+        assert len(digest) == 64
+        assert set(digest) <= set(string.hexdigits)
+
+
 def test_server_port_default_and_overrides(monkeypatch):
     assert bootstrap.server_port() == bootstrap.DEFAULT_PORT
     monkeypatch.setenv("OMNIVOICE_AUDIOCPP_PORT", "18081")
@@ -158,6 +168,27 @@ def test_package_filename_default_and_override(monkeypatch):
     assert bootstrap.package_filename() == bootstrap.DEFAULT_PACKAGE
     monkeypatch.setenv("OMNIVOICE_AUDIOCPP_PACKAGE", "breeze-tts-2-bf16.gguf")
     assert bootstrap.package_filename() == "breeze-tts-2-bf16.gguf"
+
+
+def test_materialize_hf_symlink_keeps_gguf_suffix_without_copy(tmp_path):
+    blob = tmp_path / "content-addressed-blob"
+    blob.write_bytes(b"GGUF test payload")
+    snapshot = tmp_path / "breeze-tts-2-q8_0.gguf"
+    snapshot.symlink_to(blob)
+
+    materialized = bootstrap._materialize_gguf_cache_path(snapshot)
+
+    assert materialized.suffix == ".gguf"
+    assert not materialized.is_symlink()
+    assert os.path.samefile(materialized, blob)
+
+
+def test_materialize_rejects_extensionless_model(tmp_path):
+    model = tmp_path / "model-blob"
+    model.write_bytes(b"GGUF test payload")
+
+    with pytest.raises(RuntimeError, match="must be a .gguf file"):
+        bootstrap._materialize_gguf_cache_path(model)
 
 
 def test_default_backend_env_override(monkeypatch):
@@ -179,6 +210,28 @@ def test_resolve_server_binary_prefers_env_bin(tmp_path, monkeypatch):
     fake.write_bytes(b"#!/bin/sh\n")
     monkeypatch.setenv("OMNIVOICE_AUDIOCPP_BIN", str(fake))
     assert bootstrap.resolve_server_binary() == fake
+
+
+def test_release_zip_rejects_path_traversal(tmp_path):
+    archive = tmp_path / "bad.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("../escape", b"nope")
+
+    with pytest.raises(RuntimeError, match="unsafe audio.cpp archive member"):
+        bootstrap._extract_release_archive(archive, archive.name, tmp_path / "out")
+    assert not (tmp_path / "escape").exists()
+
+
+def test_release_tar_rejects_links(tmp_path):
+    archive = tmp_path / "bad.tar.gz"
+    with tarfile.open(archive, "w:gz") as tf:
+        member = tarfile.TarInfo("server-link")
+        member.type = tarfile.SYMTYPE
+        member.linkname = "/etc/passwd"
+        tf.addfile(member)
+
+    with pytest.raises(RuntimeError, match="unsafe audio.cpp archive member type"):
+        bootstrap._extract_release_archive(archive, archive.name, tmp_path / "out")
 
 
 # ── backend protocol + registry ────────────────────────────────────────────
