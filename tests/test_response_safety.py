@@ -88,6 +88,84 @@ def test_engine_health_route_logs_but_does_not_return_private_diagnostic(
     assert "hf_abcdefghijklmnopqrstuvwxyz1234567890" not in result["message"]
 
 
+def test_engine_health_log_names_the_engine_and_failure_class(monkeypatch, caplog):
+    """The withheld line still withholds, but it now says what failed (#1866).
+
+    The response tells the user to "check the backend log for details" and
+    docs/engines/*.md asks a user diagnosing an unavailable engine to copy that
+    engine's log lines. The old line carried neither the engine nor the kind of
+    failure, so a log with several engines probed could not answer either.
+
+    The boundary above is unchanged and deliberately so: the id comes off the
+    resolved registry class rather than the caller, and the failure is a stable
+    class name rather than the exception text — the same shape
+    ``core.public_errors.public_failure`` already logs as ``class=...``.
+    """
+    from api.routers import engines
+
+    class BrokenEngine:
+        id = "broken-engine"
+
+        @classmethod
+        def is_available(cls):
+            raise RuntimeError(_PRIVATE)
+
+    monkeypatch.setattr(engines, "_resolve_engine_class", lambda _engine_id: BrokenEngine)
+    with caplog.at_level(logging.WARNING):
+        engines.engine_health("broken-engine")
+
+    assert "engine=broken-engine" in caplog.text
+    assert "failure=RuntimeError" in caplog.text
+    assert caplog.text.count("\n") == 1  # one record, one line — nothing forged
+    # Still nothing engine-owned: no message text, no path, no token.
+    assert _PRIVATE not in caplog.text
+    assert "/home/alice" not in caplog.text
+    assert "hf_abcdefghijklmnopqrstuvwxyz1234567890" not in caplog.text
+    assert "Traceback" not in caplog.text
+
+
+def test_engine_health_log_flattens_a_newline_bearing_engine_id(monkeypatch, caplog):
+    """The id is registry-authored, but the line is still flattened."""
+    from api.routers import engines
+
+    class ForgedId:
+        id = "evil\nWARNING FORGED ENGINE LOG"
+
+        @classmethod
+        def is_available(cls):
+            return False, "nope"
+
+    monkeypatch.setattr(engines, "_resolve_engine_class", lambda _engine_id: ForgedId)
+    with caplog.at_level(logging.WARNING):
+        engines.engine_health("evil")
+
+    assert "FORGED ENGINE LOG" not in caplog.text
+    assert "engine=evil-WARNING-FORGED-ENGINE-LOG" in caplog.text
+    assert caplog.text.count("\n") == 1
+
+
+def test_engine_health_log_distinguishes_not_available_from_a_raised_probe(
+    monkeypatch, caplog
+):
+    """An optional engine that was never installed did not "fail"."""
+    from api.routers import engines
+
+    class NotInstalled:
+        id = "not-installed"
+
+        @classmethod
+        def is_available(cls):
+            return False, "voxcpm package not installed."
+
+    monkeypatch.setattr(engines, "_resolve_engine_class", lambda _engine_id: NotInstalled)
+    with caplog.at_level(logging.WARNING):
+        engines.engine_health("not-installed")
+
+    assert "engine=not-installed" in caplog.text
+    assert "failure=unavailable" in caplog.text
+    assert "voxcpm package not installed" not in caplog.text
+
+
 def test_tailscale_enable_failure_keeps_service_output_private(monkeypatch, caplog):
     import asyncio
 

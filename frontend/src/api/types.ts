@@ -45,6 +45,10 @@ export interface EngineBackend {
   // Copy-paste-ready `export VAR=...` line for a path-gated opt-in engine
   // (IndexTTS / MOSS-v1.5 / dots.tts / Confucius4), else null/absent.
   setup_snippet?: string | null;
+  // This engine's documentation page (#1866). A registry-authored constant, so
+  // it survives the public-metadata scrub that replaces `reason`/`last_error`.
+  // Absent on legacy payloads.
+  docs_url?: string | null;
   // True when the backend's sidecar provisioner can install this engine
   // in-app (Settings renders an Install button; the manual snippet is
   // demoted to a collapsible fallback). Absent on legacy payloads.

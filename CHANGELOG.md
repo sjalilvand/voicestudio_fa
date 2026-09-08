@@ -50,6 +50,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- An unavailable engine's row now links to that engine's guide, so the generic "check installation and configuration" message has somewhere to send you (#1866) — thanks @psiberfunk!
+- The backend log now records which engine failed a health check and what kind of failure it was, instead of a line that identified neither (#1866) — thanks @psiberfunk!
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
 - Copying a saved transcription now uses the shared clipboard helper and reports failed copies accurately (#1803) — thanks @tvbht!
