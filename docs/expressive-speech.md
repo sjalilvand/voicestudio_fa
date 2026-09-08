@@ -18,6 +18,10 @@ ignores.
 | Emotion ("excited", "sad", graded intensity) | IndexTTS2's emotion controls — Audiobook tab's Production Overrides, or the `/ws/tts` API — or CosyVoice 3 instruct | Opt-in engines only |
 | The same take again | Pin the seed / lock the profile | Default engine |
 
+## Recovering an interrupted audiobook
+
+Switching away from the Audiobook tab explicitly interrupts synthesis at a chapter boundary. The Audiobook recovery card lets you resume with its cached chapters, and **Open chapter cache** reveals the chapter audio cache and each interrupted job's resume manifest.
+
 ## Why bracket tags work at all (and when they don't)
 
 Everything you type in the text box reaches the active engine **verbatim** —

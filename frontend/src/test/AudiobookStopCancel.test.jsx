@@ -33,6 +33,8 @@ const gen = {
   },
 };
 vi.mock('../api/audiobook', () => ({
+  audiobookListJobs: vi.fn().mockResolvedValue({ jobs: [] }),
+  audiobookResume: vi.fn(),
   audiobookPlan: vi.fn(),
   audiobookUploadCover: vi.fn(),
   audiobookPreviewChapter: vi.fn(),
