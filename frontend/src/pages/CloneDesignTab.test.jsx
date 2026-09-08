@@ -96,6 +96,7 @@ function baseProps(overrides = {}) {
     setVdStates: NOOP,
     isGenerating: false,
     generationTime: 0,
+    generationProgress: null,
     applyPreset: NOOP,
     insertTag: NOOP,
     handleSaveProfile: NOOP,
