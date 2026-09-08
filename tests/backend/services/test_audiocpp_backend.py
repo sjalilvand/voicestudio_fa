@@ -16,7 +16,6 @@ import os
 import stat
 import string
 import subprocess
-import threading
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -173,6 +172,13 @@ def test_release_assets_have_complete_sha256_pins(app_modules):
     assert "ubuntu-x64-cpu" in bootstrap._ASSETS["linux-x64"][0]
 
 
+def test_model_catalog_and_backend_share_immutable_revision(app_modules):
+    from services.hf_revisions import revision_for
+
+    bootstrap = app_modules.bootstrap
+    assert revision_for(bootstrap.HF_MODEL_REPO) == bootstrap.HF_MODEL_REVISION
+
+
 def test_server_port_default_and_overrides(monkeypatch, app_modules):
     bootstrap = app_modules.bootstrap
     assert bootstrap.server_port() == bootstrap.DEFAULT_PORT
@@ -298,6 +304,45 @@ def test_directory_override_materializes_hf_style_symlink(
     assert os.path.samefile(resolved, blob)
 
 
+def test_cached_model_resolution_is_strictly_offline(
+    tmp_path, monkeypatch, app_modules,
+):
+    bootstrap = app_modules.bootstrap
+    package_dir = tmp_path / bootstrap.PACKAGE_DIR
+    package_dir.mkdir()
+    model = package_dir / bootstrap.DEFAULT_PACKAGE
+    model.write_bytes(b"GGUF test payload")
+    calls = []
+
+    def cached_snapshot(**kwargs):
+        calls.append(kwargs)
+        return str(tmp_path)
+
+    monkeypatch.setattr("huggingface_hub.snapshot_download", cached_snapshot)
+
+    assert bootstrap.resolve_model_file() == model
+    assert calls == [{
+        "repo_id": bootstrap.HF_MODEL_REPO,
+        "revision": bootstrap.HF_MODEL_REVISION,
+        "allow_patterns": [f"{bootstrap.PACKAGE_DIR}/{bootstrap.DEFAULT_PACKAGE}"],
+        "local_files_only": True,
+    }]
+
+
+def test_missing_cached_model_requires_explicit_install(
+    monkeypatch, app_modules,
+):
+    bootstrap = app_modules.bootstrap
+
+    def cache_miss(**_kwargs):
+        raise OSError("not cached")
+
+    monkeypatch.setattr("huggingface_hub.snapshot_download", cache_miss)
+
+    with pytest.raises(RuntimeError, match="Model Catalogue → Models"):
+        bootstrap.resolve_model_file()
+
+
 def test_resolve_server_binary_missing_gives_install_hint(
     tmp_path, monkeypatch, app_modules,
 ):
@@ -359,26 +404,6 @@ def test_non_executable_explicit_binary_does_not_fall_through(
     with pytest.raises(RuntimeError, match=r"chmod \+x audiocpp_server"):
         bootstrap.resolve_server_binary()
     assert bootstrap.is_installed() is False
-
-
-def test_model_download_progress_heartbeats_owning_pool_thread(
-    monkeypatch, app_modules,
-):
-    model_manager = importlib.import_module("services.model_manager")
-    heartbeats = []
-    monkeypatch.setattr(
-        model_manager,
-        "report_model_load_activity",
-        lambda thread_ident=None: heartbeats.append(thread_ident),
-    )
-
-    progress_cls = app_modules.bootstrap._download_progress_class()
-    progress = progress_cls(total=1, disable=True)
-    progress.update(1)
-    progress.close()
-
-    assert heartbeats
-    assert set(heartbeats) == {threading.get_ident()}
 
 
 # ── backend protocol + registry ────────────────────────────────────────────

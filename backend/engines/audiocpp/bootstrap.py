@@ -28,7 +28,6 @@ import logging
 import os
 import platform
 import sys
-import threading
 from pathlib import Path
 
 logger = logging.getLogger("omnivoice.audiocpp.bootstrap")
@@ -268,39 +267,14 @@ def _materialize_gguf_cache_path(model_file: Path) -> Path:
         ) from exc
 
 
-def _download_progress_class() -> type:
-    """Return a per-download tqdm class that heartbeats the owning job."""
-    from services.model_manager import report_model_load_activity
-    from utils import hf_progress
-
-    owner_ident = threading.get_ident()
-    hf_progress.install()
-    base = hf_progress.tracked_tqdm_class()
-    if base is None:
-        from huggingface_hub.utils.tqdm import tqdm as base
-
-    class ModelDownloadProgress(base):
-        def update(self, n=1):
-            report_model_load_activity(owner_ident)
-            return super().update(n)
-
-        def display(self, msg=None, pos=None):
-            report_model_load_activity(owner_ident)
-            return super().display(msg=msg, pos=pos)
-
-    return ModelDownloadProgress
-
-
 def resolve_model_file() -> Path:
-    """Resolve the Breeze-TTS-2 GGUF file, downloading it on first use.
+    """Resolve an explicitly installed Breeze-TTS-2 GGUF file.
 
     An explicit ``OMNIVOICE_AUDIOCPP_MODEL`` path wins (file or directory
-    containing the package file). Otherwise the package file is fetched
-    from :data:`HF_MODEL_REPO` into the shared HF cache — resumable and
-    hash-verified by ``huggingface_hub``.
+    containing the package file). Otherwise only the local Hugging Face cache
+    is inspected. Downloads must be started explicitly from Model Catalogue →
+    Models, so generation can never silently transfer the 4.73 GiB package.
     """
-    from services.tts_backend import _retry_once_with_fresh_hf_client
-
     override = os.environ.get("OMNIVOICE_AUDIOCPP_MODEL", "").strip()
     if override:
         cand = Path(override)
@@ -315,28 +289,31 @@ def resolve_model_file() -> Path:
             "directory containing one."
         )
 
-    def _download() -> str:
-        from huggingface_hub import snapshot_download
-        from services.model_manager import report_model_load_activity
+    from huggingface_hub import snapshot_download
+    from huggingface_hub.utils import LocalEntryNotFoundError
 
-        report_model_load_activity()
-        return snapshot_download(
-            repo_id=HF_MODEL_REPO,
-            # Full immutable commit SHA declared above; Bandit cannot follow
-            # the module constant through this nested callback.
-            revision=HF_MODEL_REVISION,  # nosec B615
-            allow_patterns=[f"{PACKAGE_DIR}/{package_filename()}"],
-            tqdm_class=_download_progress_class(),
+    try:
+        cached = Path(
+            snapshot_download(
+                repo_id=HF_MODEL_REPO,
+                # Full immutable commit SHA declared above; Bandit cannot follow
+                # the module constant through this call.
+                revision=HF_MODEL_REVISION,  # nosec B615
+                allow_patterns=[f"{PACKAGE_DIR}/{package_filename()}"],
+                local_files_only=True,
+            )
         )
-
-    cached = Path(
-        _retry_once_with_fresh_hf_client(_download, "audio.cpp Breeze-TTS-2")
-    )
+    except (LocalEntryNotFoundError, OSError) as exc:
+        raise RuntimeError(
+            "Breeze-TTS-2 is not installed. Install the audio.cpp Breeze-TTS-2 "
+            "model from Model Catalogue → Models, or set "
+            "OMNIVOICE_AUDIOCPP_MODEL to an existing GGUF file."
+        ) from exc
     model_file = cached / PACKAGE_DIR / package_filename()
     if not model_file.is_file():
         raise RuntimeError(
-            f"Breeze-TTS-2 package {package_filename()} missing after "
-            f"download from {HF_MODEL_REPO} — layout changed upstream."
+            f"Breeze-TTS-2 package {package_filename()} is not completely "
+            "installed. Reinstall it from Model Catalogue → Models."
         )
     return _materialize_gguf_cache_path(model_file)
 
@@ -354,7 +331,6 @@ __all__ = [
     "PACKAGE_ENV",
     "PORT_ENV",
     "VERSION",
-    "_download_progress_class",
     "_materialize_gguf_cache_path",
     "binary_name",
     "default_asset",
