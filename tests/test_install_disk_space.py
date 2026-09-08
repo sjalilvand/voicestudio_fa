@@ -162,3 +162,48 @@ def test_install_preflight_download_and_repair_marker_share_revision(models_mod,
     assert calls[0]["dry_run"] is True
     assert "dry_run" not in calls[1]
     assert remembered and remembered[0][0:2] == (repo_id, expected)
+
+
+def test_install_honors_catalog_allow_patterns(models_mod, monkeypatch, tmp_path):
+    """A multi-package repo downloads only the model variant shown in its row."""
+    download = importlib.import_module("api.routers.setup.download")
+    import asyncio
+    import huggingface_hub
+    from services import hf_revisions
+
+    repo_id = "audio-cpp/audio.cpp-gguf"
+    spec = next(m for m in download.KNOWN_MODELS if m["repo_id"] == repo_id)
+    expected_patterns = spec["allow_patterns"]
+    calls = []
+
+    def fake_snapshot(**kwargs):
+        calls.append(kwargs)
+        return [] if kwargs.get("dry_run") else str(tmp_path)
+
+    def segmented_must_not_run(*_args, **_kwargs):
+        raise AssertionError("filtered model installs must skip whole-repo segmented download")
+
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", fake_snapshot)
+    monkeypatch.setattr(download, "compute_plan", lambda _plan: {
+        "total_bytes": 1, "cached_bytes": 0, "to_download_bytes": 1,
+        "n_files": 1, "n_cached": 0,
+    })
+    monkeypatch.setattr(download, "disk_space_error", lambda *_a, **_k: None)
+    monkeypatch.setattr(download, "_segmented_enabled", lambda: True)
+    monkeypatch.setattr(download, "_xet_active", lambda: False)
+    monkeypatch.setattr(download, "_segmented_snapshot", segmented_must_not_run)
+    monkeypatch.setattr(download, "_validate_snapshot_has_weights", lambda *_a: None)
+    monkeypatch.setattr(hf_revisions, "remember_revision", lambda *_args: None)
+
+    async def run_install():
+        await download.install_model(download.InstallModelRequest(repo_id=repo_id))
+        pending = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+        if pending:
+            await asyncio.gather(*pending)
+
+    asyncio.run(run_install())
+
+    assert len(calls) == 2
+    assert all(call["allow_patterns"] == expected_patterns for call in calls)
+    assert calls[0]["dry_run"] is True
+    assert "dry_run" not in calls[1]
