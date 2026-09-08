@@ -556,7 +556,10 @@ def generate_timeout_s(
     the card. Only the budget ignored it. So an under-provisioned accelerator
     now floors at the CPU budget — the class of hardware it actually performs
     like. ``min_vram_gb`` is the engine's declared floor; callers that pass
-    ``engine`` get it read off the engine automatically.
+    ``engine`` get it read off the engine automatically. Native runtimes pass
+    an explicit ``vram_gb=0`` when their dedicated-memory probe failed; that
+    unknown capacity gets the same conservative CPU-class budget without
+    claiming the card is under-provisioned in user-facing diagnostics.
     """
     base = GPU_JOB_TIMEOUT_S
     try:
@@ -588,7 +591,14 @@ def generate_timeout_s(
         elif not universal_override and family in ("cuda", "rocm", "vulkan"):
             from services.engine_routing import under_provisioned_vram
 
-            if under_provisioned_vram(
+            runtime_family = hardware_family or family
+            unknown_dedicated_vram = (
+                min_vram_gb > 0
+                and runtime_family in ("cuda", "rocm", "xpu", "vulkan")
+                and vram_gb is not None
+                and float(vram_gb or 0.0) <= 0
+            )
+            if unknown_dedicated_vram or under_provisioned_vram(
                 caps, min_vram_gb, family=hardware_family, vram_gb=vram_gb,
             ):
                 # `max`, never a plain assignment: an operator who raised the

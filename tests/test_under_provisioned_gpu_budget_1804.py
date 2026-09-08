@@ -179,6 +179,25 @@ def test_a_failed_vram_probe_does_not_guess(on_host, floor):
     ) == 300.0
 
 
+def test_native_runtime_with_unknown_dedicated_vram_gets_cpu_budget(
+    on_host, floor,
+):
+    """A native runtime's explicit zero means its own VRAM probe failed.
+
+    Keep the warning quiet because capacity is unknown, but allow enough time
+    for a device that may page to system memory instead of assuming fast-GPU
+    performance.
+    """
+    mm = on_host(_gpu(24.0, name="NVIDIA RTX 4090"))
+    assert mm.generate_timeout_s(
+        "A short render",
+        execution_device="vulkan",
+        min_vram_gb=floor,
+        hardware_family="cuda",
+        vram_gb=0.0,
+    ) == 600.0
+
+
 def test_a_cpu_fallback_render_is_unaffected(on_host, floor):
     """Routing already sent this one to the CPU; it gets the CPU budget by the
     device branch, and the VRAM branch must not double-apply."""
