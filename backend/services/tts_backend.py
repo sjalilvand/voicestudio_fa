@@ -2990,8 +2990,10 @@ async def resolve_generation_backend(
         raise ValueError(f"TTS engine '{engine_id}' is not available: {_mask_hf_tokens(msg)}")
 
     from core.device_caps import detect_host_caps
-    from services.engine_routing import runtime_compute_profile
-    routing = runtime_compute_profile(backend_cls, detect_host_caps())
+    from services.engine_routing import runtime_compute_profile_async
+    routing = await runtime_compute_profile_async(
+        backend_cls, detect_host_caps()
+    )
     if routing["routing_status"] == "unavailable":
         raise ValueError(routing["routing_reason"])
 

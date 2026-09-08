@@ -1510,8 +1510,13 @@ async def generate_speech(
         # 4090 from a Mac control plane would be refused by a gate describing
         # a machine that is about to do nothing.
         from core.device_caps import detect_host_caps
-        from services.engine_routing import runtime_compute_profile, routing_notice
-        _routing = runtime_compute_profile(backend_cls, detect_host_caps())
+        from services.engine_routing import (
+            routing_notice,
+            runtime_compute_profile_async,
+        )
+        _routing = await runtime_compute_profile_async(
+            backend_cls, detect_host_caps()
+        )
         _engine_min_vram_gb = _routing["min_vram_gb"]
         _routing_hardware_family = _routing.get("runtime_hardware_family")
         _routing_vram_gb = _routing.get("runtime_vram_gb")

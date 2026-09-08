@@ -211,6 +211,28 @@ def test_unknown_native_gpu_memory_keeps_one_serial_worker_slot(monkeypatch):
     assert entry["derived_concurrency"] == 1
 
 
+def test_unknown_memory_engine_keeps_mixed_worker_serial(monkeypatch):
+    monkeypatch.setattr(
+        "services.tts_backend.list_backends",
+        lambda: [{
+            "id": "unknown-memory",
+            "available": True,
+            "routing_status": "accelerated",
+            "gpu_compat": ["cuda"],
+            "effective_device": "cuda",
+            "execution_evidence": {"runtime_vram_gb": None},
+        }],
+    )
+
+    unknown_memory = capabilities.discover()[0]
+    high_capacity = {"derived_concurrency": 4}
+
+    assert unknown_memory["derived_concurrency"] == 1
+    assert capabilities.max_concurrent_tasks(
+        [unknown_memory, high_capacity]
+    ) == 1
+
+
 def test_cpu_fallback_is_reported_because_capability_is_not_acceleration(monkeypatch):
     monkeypatch.setattr(
         "services.tts_backend.list_backends",

@@ -340,6 +340,50 @@ def test_legacy_capability_without_display_name_still_decodes():
     assert restored["display_name"] == ""
 
 
+def test_protocol_v2_capability_without_backend_inherits_worker_backend():
+    """Pre-backend protocol-v2 peers must retain their GPU routing."""
+    restored = codec.capability_from_pb(
+        pb.ModelCapability(
+            engine=ENGINE,
+            model_id=MODEL,
+            operations=[OP],
+            supported=True,
+            installed=True,
+        ),
+        fallback_backend="vulkan",
+    )
+    pool = WorkerPool()
+    record = registry.RemoteWorker(
+        id="legacy-v2",
+        name="legacy-v2",
+        key_id="legacy-key",
+        public_key=b"0" * 32,
+        capabilities=[restored],
+    )
+    session = identity.Session(
+        token="legacy-token",
+        worker_id=record.id,
+        key_id=record.key_id,
+        epoch=1,
+        issued_at=1.0,
+        expires_at=10_000.0,
+    )
+    worker = pool.connect(
+        record, session=session, epoch=1, backend="vulkan", now=1.0
+    )
+
+    assert worker.execution_device(ENGINE, MODEL, OP) == "vulkan"
+
+
+def test_protocol_v2_cpu_fallback_does_not_inherit_worker_gpu():
+    restored = codec.capability_from_pb(
+        pb.ModelCapability(engine=ENGINE, model_id=MODEL, cpu_fallback=True),
+        fallback_backend="cuda",
+    )
+
+    assert restored["backend"] == "cpu"
+
+
 @pytest.mark.asyncio
 async def test_cancel_is_sent_and_ack_releases_the_parked_slot(tmp_path):
     pool = WorkerPool()

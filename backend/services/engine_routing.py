@@ -14,6 +14,7 @@ carry a home path.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Literal, TypedDict
 
 from core.device_caps import (
@@ -55,6 +56,11 @@ def runtime_compute_profile(engine_or_cls, caps: HostCaps) -> dict:
         "runtime_vram_gb": None,
         "runtime_device_verified": None,
     }
+
+
+async def runtime_compute_profile_async(engine_or_cls, caps: HostCaps) -> dict:
+    """Resolve runtime compute metadata without blocking the event loop."""
+    return await asyncio.to_thread(runtime_compute_profile, engine_or_cls, caps)
 
 
 def under_provisioned_vram(
@@ -274,5 +280,6 @@ def routing_fields(
 __all__ = [
     "RoutingStatus", "RoutingResult", "resolve_routing", "routing_fields",
     "routing_notice", "header_safe_reason", "low_vram_caveat",
-    "runtime_compute_profile", "under_provisioned_vram",
+    "runtime_compute_profile", "runtime_compute_profile_async",
+    "under_provisioned_vram",
 ]

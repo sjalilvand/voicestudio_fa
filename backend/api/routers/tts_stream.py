@@ -174,9 +174,14 @@ async def ws_tts(websocket: WebSocket):
                 # close on `unavailable`, a one-time `routing` frame on
                 # cpu_fallback / accelerated-with-caveat (before any audio).
                 from core.device_caps import detect_host_caps
-                from services.engine_routing import runtime_compute_profile, routing_notice
+                from services.engine_routing import (
+                    routing_notice,
+                    runtime_compute_profile_async,
+                )
                 from core.scrub import scrub_text
-                _routing = runtime_compute_profile(backend, detect_host_caps())
+                _routing = await runtime_compute_profile_async(
+                    backend, detect_host_caps()
+                )
                 if _routing["routing_status"] == "unavailable":
                     await websocket.send_json({
                         "type": "error",

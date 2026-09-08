@@ -110,9 +110,11 @@ def discover(*, include_unavailable: bool = False) -> list[dict]:
                 # an unschedulable capability.
                 "derived_concurrency": 1
                 if (
-                    runtime_vram_gb is not None
-                    and float(runtime_vram_gb or 0.0) <= 0
-                    and routing == "accelerated"
+                    routing == "accelerated"
+                    and (
+                        runtime_vram_gb is None
+                        or float(runtime_vram_gb or 0.0) <= 0
+                    )
                 ) else 0,
                 # Capability is not acceleration: an engine present but routed
                 # to the CPU here should not be preferred for GPU work.

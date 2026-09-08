@@ -308,8 +308,10 @@ async def convert_speech(
             run_on_gpu_pool_guarded,
         )
         from core.device_caps import detect_host_caps
-        from services.engine_routing import runtime_compute_profile
-        compute_profile = runtime_compute_profile(backend, detect_host_caps())
+        from services.engine_routing import runtime_compute_profile_async
+        compute_profile = await runtime_compute_profile_async(
+            backend, detect_host_caps()
+        )
 
         start_time = time.time()
         _render = functools.partial(
