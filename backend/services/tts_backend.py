@@ -2235,6 +2235,13 @@ _LAZY_REGISTRY: dict[str, tuple[str, str]] = {
     # 2026-07-02 (CPU, Apple Silicon; 22.05 kHz output). Gated behind
     # OMNIVOICE_CONFUCIUS4_TTS_DIR so it's inert until enabled.
     "confucius4-tts": ("engines.confucius4", "Confucius4Backend"),
+    # audio.cpp (0xShug0/audio.cpp) — pure-C++ ggml runtime, no Python venv.
+    # v1 serves Breeze-TTS-2 (en+zh, clone+design) through a parent-managed
+    # audiocpp_server over loopback HTTP. Gated behind a server binary
+    # (OMNIVOICE_AUDIOCPP_BIN) so it's inert until enabled. Lazy for the
+    # same import-cycle reason as the entries above (engines.audiocpp
+    # imports services.tts_backend for TTSBackend).
+    "audiocpp": ("engines.audiocpp", "AudioCPPBackend"),
 }
 
 
@@ -2339,6 +2346,7 @@ _INSTALL_HINTS: dict[str, str] = {
     "moss-tts-v15":  "git clone OpenMOSS/MOSS-TTS + set OMNIVOICE_MOSS_TTS_V15_DIR  (own venv, transformers==5.0; 8B, ~16 GB weights; CUDA/ROCm/XPU/NPU/CPU, no MPS; Apache-2.0)",
     "dots-tts":      "git clone rednote-hilab/dots.tts + set OMNIVOICE_DOTS_TTS_DIR  (own venv, transformers==4.57; 2B, ~9 GB weights; CUDA/CPU, Linux/macOS only — no Windows; Apache-2.0)",
     "confucius4-tts":"git clone netease-youdao/Confucius4-TTS + set OMNIVOICE_CONFUCIUS4_TTS_DIR  (own Python 3.10 venv; 14-lang cross-lingual zero-shot clone; ~5 GB weights auto-download; CUDA/ROCm/XPU/NPU/CPU, no MPS; Apache-2.0)",
+    "audiocpp":     "download audio.cpp v0.7.2 CPU prebuilt + set OMNIVOICE_AUDIOCPP_BIN, then explicitly install Breeze-TTS-2 in Model Catalogue → Models  (native GGUF server, no Python; en+zh clone+design; ~4.73 GiB; weights research/non-commercial only)",
 }
 
 
@@ -2973,4 +2981,6 @@ def __getattr__(name: str):  # pragma: no cover - exercised via tests
         return _REGISTRY[name if name in _REGISTRY else None]
     if name == "IndexTTS2Backend":
         return _REGISTRY["indextts2"]
+    if name == "AudioCPPBackend":
+        return _REGISTRY["audiocpp"]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
