@@ -264,8 +264,9 @@ def test_device_parser_accepts_an_empty_description(app_modules):
     assert devices[0].target == "cpu"
 
 
-def test_software_vulkan_uses_cpu_thread_count(app_modules):
+def test_software_vulkan_uses_cpu_thread_count(monkeypatch, app_modules):
     audiocpp = app_modules.audiocpp
+    monkeypatch.setattr(audiocpp, "_cpu_thread_count", lambda: 7)
     cfg = audiocpp.build_server_config(
         model_id="model",
         family="family",
@@ -275,7 +276,7 @@ def test_software_vulkan_uses_cpu_thread_count(app_modules):
         device=0,
         execution_target="cpu",
     )
-    assert cfg["threads"] == 16
+    assert cfg["threads"] == 7
 
 
 def test_explicit_backend_device_is_strict_and_backend_local(app_modules):
