@@ -120,12 +120,17 @@ const STEPS = [
   'starting_backend',
 ];
 
-// How many log lines the <pre> renders. The full run is kept in state (#1847):
-// the counter, the Copy button, the actionable failure hints and the
-// unrecoverable-retry gate all read every line, and only this <pre> is capped —
-// it is a DOM cost, not a retention policy. The array lives for exactly one
-// bootstrap: both retry paths clear it, and App.jsx unmounts the splash the
-// moment the stage flips to 'ready'.
+// How many log lines the <pre> shows. `logs` state holds exactly this tail and
+// nothing more, so the per-event array copy stays bounded no matter how long a
+// bootstrap runs.
+//
+// The FULL run lives in `allLogsRef` instead (#1847). Four consumers need every
+// line — the Activity counter, the Copy button, the actionable failure hints and
+// the unrecoverable-retry gate — and capping the state they read meant a cold
+// install silently destroyed its own early output. A ref rather than state
+// because appending to it is O(1); `totalLines` is what makes a new line
+// re-render. It lives for exactly one bootstrap: both retry paths clear it, and
+// App.jsx unmounts the splash the moment the stage flips to 'ready'.
 const VISIBLE_LOG_LINES = 200;
 
 /** Scan logs + error message for known failure patterns and return i18n keys
@@ -451,6 +456,12 @@ export function BootstrapSplash({ stage, message }) {
   const [progress, setProgress] = useState(null);
   const [region, setRegionState] = useState('auto');
   const [retrying, setRetrying] = useState(false);
+  // Every line of this bootstrap. `logs` above is only the rendered tail.
+  const [totalLines, setTotalLines] = useState(0);
+  const allLogsRef = useRef([]);
+  // Backfill and the live listener can overlap by a few lines at handover.
+  // Dedup guards that seam and nothing else — see the listener.
+  const handoverDoneRef = useRef(false);
   const logRef = useRef(null);
   const prevProgRef = useRef(null); // {bytes, t} — last progress event
   const rateRef = useRef(0); // EMA bytes/sec across events
@@ -459,14 +470,25 @@ export function BootstrapSplash({ stage, message }) {
   const stepIndex = Math.max(0, STEPS.indexOf(stage));
   const isFailed = stage === 'failed';
   // Retrying an Intel-Mac install can never succeed — don't offer the dead end.
-  const isUnrecoverable = isFailed && isUnrecoverableFailure(message, logs);
+  // Reads the full run, not the rendered tail: an Intel-Mac marker printed
+  // early in a long install used to scroll out of the capped array, and the
+  // dead-end detection went with it. Only evaluated once `isFailed`, by which
+  // point no more lines are arriving.
+  const isUnrecoverable = isFailed && isUnrecoverableFailure(message, allLogsRef.current);
+
+  const resetLogs = () => {
+    allLogsRef.current = [];
+    handoverDoneRef.current = false;
+    setTotalLines(0);
+    setLogs([]);
+  };
 
   const handleRetry = async () => {
     if (retrying) return;
     setRetrying(true);
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      setLogs([]);
+      resetLogs();
       await invoke('retry_bootstrap');
     } catch (e) {
       console.error('retry failed', e);
@@ -481,7 +503,7 @@ export function BootstrapSplash({ stage, message }) {
     setRetrying(true);
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      setLogs([]);
+      resetLogs();
       await invoke('clean_and_retry_bootstrap');
     } catch (e) {
       console.error('clean retry failed', e);
@@ -534,13 +556,14 @@ export function BootstrapSplash({ stage, message }) {
         try {
           const buffered = await invoke('get_bootstrap_logs');
           if (!cancelled && Array.isArray(buffered) && buffered.length > 0) {
-            setLogs(
-              buffered.map(({ stage: s, line }) => ({
-                stage: s,
-                line,
-                t: Date.now(),
-              })),
-            );
+            const entries = buffered.map(({ stage: s, line }) => ({
+              stage: s,
+              line,
+              t: Date.now(),
+            }));
+            allLogsRef.current = entries;
+            setTotalLines(entries.length);
+            setLogs(entries.slice(-VISIBLE_LOG_LINES));
           }
         } catch {
           /* command may not exist in older builds */
@@ -551,11 +574,26 @@ export function BootstrapSplash({ stage, message }) {
           const { stage: s, line } = e.payload || {};
           if (!line) return;
           noteBootstrapLogActivity();
+          // Dedup ONLY across the backfill→live seam. The overlap it exists
+          // for can only happen on the first live event; running it for the
+          // whole bootstrap silently dropped legitimate repeats, and installer
+          // output repeats itself constantly. Telling a true repeat from a
+          // replayed one needs a sequence number from the Rust side, so the
+          // window is narrowed to where the ambiguity actually is instead of
+          // guessing for the rest of the run.
+          if (!handoverDoneRef.current) {
+            const seam = allLogsRef.current.slice(-5);
+            if (seam.some((l) => l.stage === s && l.line === line)) return;
+            handoverDoneRef.current = true;
+          }
+          const entry = { stage: s, line, t: Date.now() };
+          allLogsRef.current.push(entry);
+          setTotalLines(allLogsRef.current.length);
           setLogs((prev) => {
-            // Deduplicate against backfill by checking the last few lines.
-            const lastFew = prev.slice(-5);
-            if (lastFew.some((l) => l.stage === s && l.line === line)) return prev;
-            return prev.concat([{ stage: s, line, t: Date.now() }]);
+            const next = prev.concat([entry]);
+            return next.length > VISIBLE_LOG_LINES
+              ? next.slice(next.length - VISIBLE_LOG_LINES)
+              : next;
           });
         });
         unlistenProgress = await listen('bootstrap-progress', (e) => {
@@ -600,10 +638,11 @@ export function BootstrapSplash({ stage, message }) {
   // bootstrap bug is asked for this output, and the early lines — which stage
   // failed first, which mirror was reached — are the ones that scrolled out.
   const handleCopyLogs = () => {
+    const all = allLogsRef.current;
     const logText =
-      logs.length === 0
+      all.length === 0
         ? 'No log output captured.'
-        : logs.map((l) => `[${l.stage}] ${l.line}`).join('\n');
+        : all.map((l) => `[${l.stage}] ${l.line}`).join('\n');
     const full =
       isFailed && message ? `ERROR: ${message}\n\n--- Bootstrap Logs ---\n${logText}` : logText;
     copyText(full)
@@ -729,7 +768,7 @@ export function BootstrapSplash({ stage, message }) {
                 <Lightbulb size={12} /> {t('bootstrap.what_to_try', 'What to try:')}
               </span>
               <ul className="mt-1.5 flex list-disc flex-col gap-1.5 pl-5 text-fg-muted">
-                {detectHints(message, logs).map((key) => (
+                {detectHints(message, allLogsRef.current).map((key) => (
                   <li key={key}>{t(key)}</li>
                 ))}
               </ul>
@@ -841,7 +880,7 @@ export function BootstrapSplash({ stage, message }) {
           <h2 className="m-0 flex items-center font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-fg-muted">
             {t('firstrun.activity_title', 'Activity')}
             <span className="ml-auto tracking-[0.08em] text-fg-subtle">
-              {logs.length > 0 && t('bootstrap.lines', { count: logs.length })}
+              {totalLines > 0 && t('bootstrap.lines', { count: totalLines })}
             </span>
           </h2>
           <div className="flex items-center gap-1.5">
@@ -871,10 +910,7 @@ export function BootstrapSplash({ stage, message }) {
             >
               {logs.length === 0
                 ? t('bootstrap.waiting_output', 'Waiting for output…')
-                : logs
-                    .slice(-VISIBLE_LOG_LINES)
-                    .map((l) => `[${l.stage}] ${l.line}`)
-                    .join('\n')}
+                : logs.map((l) => `[${l.stage}] ${l.line}`).join('\n')}
             </pre>
           )}
         </section>

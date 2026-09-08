@@ -79,6 +79,66 @@ afterEach(() => {
   delete window.__TAURI_INTERNALS__;
 });
 
+describe('retention holds up under a real installer stream', () => {
+  it('keeps a repeated line instead of mistaking it for a replay', async () => {
+    // Installer output repeats constantly ("Downloading…", an identical pip
+    // line per wheel). The dedup window used to run for the whole bootstrap,
+    // so any line matching one of the last five was dropped — the counter
+    // undercounted and Copy lost real output. It now guards only the
+    // backfill→live seam, which is the only place the ambiguity exists.
+    render(<BootstrapSplash stage="installing_deps" />);
+    await waitFor(() => expect(logHandler).toBeTypeOf('function'));
+    await act(async () => {
+      for (const line of ['Downloading…', 'Resolving…', 'Downloading…']) {
+        logHandler({ payload: { stage: 'installing_deps', line } });
+      }
+    });
+
+    await screen.findByText('3 lines');
+    screen.getByRole('button', { name: /Copy/ }).click();
+    await waitFor(() => expect(copied).toHaveLength(1));
+    expect(copied[0].split('\n')).toHaveLength(3);
+  });
+
+  it('still drops the backfill overlap at the seam', async () => {
+    // The narrowing must not give up what the dedup was for: a line already
+    // delivered by get_bootstrap_logs and then re-emitted live is one line.
+    invoke.mockImplementation(async (cmd) =>
+      cmd === 'get_bootstrap_logs'
+        ? [
+            { stage: 'creating_venv', line: 'venv created' },
+            { stage: 'installing_deps', line: 'resolving dependencies' },
+          ]
+        : null,
+    );
+    render(<BootstrapSplash stage="installing_deps" />);
+    await screen.findByText('2 lines');
+    await waitFor(() => expect(logHandler).toBeTypeOf('function'));
+
+    await act(async () => {
+      logHandler({ payload: { stage: 'installing_deps', line: 'resolving dependencies' } });
+      logHandler({ payload: { stage: 'installing_deps', line: 'building wheels' } });
+    });
+
+    // The replay is swallowed, the genuinely new line is not.
+    await screen.findByText('3 lines');
+  });
+
+  it('bounds the per-event copy no matter how long the run gets', async () => {
+    // The retained run is a ref that gets pushed to, so appending is O(1);
+    // the only array copied per event is `logs`, and this pins the property
+    // that keeps it cheap — it never grows past the window, even at 5000
+    // lines. Without that bound the append is O(n²) element copies and the
+    // splash stutters on exactly the verbose installs that need it most.
+    const { container } = render(<BootstrapSplash stage="installing_deps" />);
+    await waitFor(() => expect(logHandler).toBeTypeOf('function'));
+    await stream(5000, 'starting install');
+
+    await screen.findByText('5000 lines');
+    expect(container.querySelector('pre').textContent.split('\n')).toHaveLength(200);
+  });
+});
+
 describe('a bootstrap longer than the visible window', () => {
   it('counts every line instead of freezing at the window size', async () => {
     render(<BootstrapSplash stage="installing_deps" />);
