@@ -1833,6 +1833,7 @@
     "install_required_models": "Install the required models above to continue.",
     "try_dictation": "Try dictation",
     "try_dictation_desc": "Press your shortcut once so you know dictation works before you finish setup.",
+    "dictation_step_label": "Dictation",
     "next_try_dictation": "Next: Try dictation",
     "step_aria": "Step {{num}}: {{label}}",
     "step_completed": "completed",

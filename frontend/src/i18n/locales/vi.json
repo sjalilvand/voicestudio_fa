@@ -1555,6 +1555,7 @@
     "install_required_models": "Cài đặt các mô hình cần thiết ở trên để tiếp tục.",
     "try_dictation": "Thử đọc chính tả",
     "try_dictation_desc": "Nhấn phím tắt của bạn một lần để chắc chắn tính năng đọc chính tả hoạt động trước khi hoàn tất thiết lập.",
+    "dictation_step_label": "Đọc chính tả",
     "next_try_dictation": "Tiếp theo: Thử đọc chính tả",
     "step_aria": "Bước {{num}}: {{label}}",
     "step_completed": "đã hoàn thành",

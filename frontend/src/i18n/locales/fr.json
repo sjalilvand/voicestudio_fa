@@ -1555,6 +1555,7 @@
     "install_required_models": "Installez les modèles requis ci-dessus pour continuer.",
     "try_dictation": "Essayez la dictée",
     "try_dictation_desc": "Appuyez une fois sur votre raccourci pour vérifier que la dictée fonctionne avant de terminer la configuration.",
+    "dictation_step_label": "Dictée",
     "next_try_dictation": "Suivant : Essayez la dictée",
     "step_aria": "Étape {{num}} : {{label}}",
     "step_completed": "terminée",

@@ -1555,6 +1555,7 @@
     "install_required_models": "安裝上面所需的模型以繼續。",
     "try_dictation": "試著聽寫",
     "try_dictation_desc": "完成設定前,按一次快捷鍵確認聽寫功能可以正常運作。",
+    "dictation_step_label": "聽寫",
     "next_try_dictation": "下一步：嘗試聽寫",
     "step_aria": "第 {{num}} 步:{{label}}",
     "step_completed": "已完成",

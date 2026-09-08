@@ -1555,6 +1555,7 @@
     "install_required_models": "Installera de modeller som krävs ovan för att fortsätta.",
     "try_dictation": "Prova diktering",
     "try_dictation_desc": "Tryck på din genväg en gång för att se att diktering fungerar innan du slutför installationen.",
+    "dictation_step_label": "Diktering",
     "next_try_dictation": "Nästa: Prova diktering",
     "step_aria": "Steg {{num}}: {{label}}",
     "step_completed": "klart",

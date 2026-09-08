@@ -1555,6 +1555,7 @@
     "install_required_models": "Devam etmek için yukarıdaki gerekli modelleri yükleyin.",
     "try_dictation": "Dikte etmeyi deneyin",
     "try_dictation_desc": "Kurulumu bitirmeden önce dikteyi çalıştığından emin olmak için kısayolunuza bir kez basın.",
+    "dictation_step_label": "Dikte",
     "next_try_dictation": "Sonraki: Dikteyi deneyin",
     "step_aria": "Adım {{num}}: {{label}}",
     "step_completed": "tamamlandı",

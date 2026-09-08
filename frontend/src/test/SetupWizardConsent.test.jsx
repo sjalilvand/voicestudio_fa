@@ -145,10 +145,14 @@ describe('SetupWizard analytics consent step', () => {
     expect(await screen.findByText(/Enter studio/i)).toBeInTheDocument();
     expect(screen.queryByText(/Help improve VoiceStudio\?/i)).not.toBeInTheDocument();
     expect(apiFetch).not.toHaveBeenCalled();
-    // The dictation step's title renders exactly once (the step-rail label)
-    // — the masthead subtitle no longer repeats it, and the redundant
-    // section head above the demo was removed (#1855).
-    expect(screen.getAllByText(/Try dictation/i)).toHaveLength(1);
+    // The dictation step's rail label renders exactly once, and it's a
+    // distinct string from the demo card's own title — the masthead
+    // subtitle no longer repeats it, the redundant section head above the
+    // demo was removed (#1855), and the rail label itself was made distinct
+    // from the demo's title (#1930). DictationDemo is mocked to null here,
+    // so the rail/card-title distinctness itself is covered by the real
+    // (unmocked) render in SetupWizardDictation.test.jsx.
+    expect(screen.getAllByText('Dictation')).toHaveLength(1);
   });
 
   it('shows NO consent step when the user was already asked', async () => {

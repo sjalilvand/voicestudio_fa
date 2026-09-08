@@ -1858,6 +1858,7 @@
     "install_required_models": "계속하려면 위의 필수 모델을 설치하세요.",
     "try_dictation": "받아쓰기를 시도해보세요",
     "try_dictation_desc": "설정을 마치기 전에 단축키를 한 번 눌러 받아쓰기가 작동하는지 확인하세요.",
+    "dictation_step_label": "받아쓰기",
     "next_try_dictation": "다음: 받아쓰기 사용해 보기",
     "step_aria": "{{num}}단계: {{label}}",
     "step_completed": "완료됨",

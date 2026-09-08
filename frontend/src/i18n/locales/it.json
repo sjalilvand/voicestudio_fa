@@ -1555,6 +1555,7 @@
     "install_required_models": "Installa i modelli richiesti sopra per continuare.",
     "try_dictation": "Prova la dettatura",
     "try_dictation_desc": "Premi la tua scorciatoia una volta per verificare che la dettatura funzioni prima di completare la configurazione.",
+    "dictation_step_label": "Dettatura",
     "next_try_dictation": "Successiva: Prova la dettatura",
     "step_aria": "Passaggio {{num}}: {{label}}",
     "step_completed": "completato",

@@ -297,7 +297,7 @@ export default function SetupWizard({ onReady }) {
     system: t('setup.system_check'),
     models: t('firstrun.stage_models', 'Models & engines'),
     consent: t('consent.step_label', 'Improve VoiceStudio'),
-    dictation: t('setup.try_dictation'),
+    dictation: t('setup.dictation_step_label', 'Dictation'),
   };
 
   return (

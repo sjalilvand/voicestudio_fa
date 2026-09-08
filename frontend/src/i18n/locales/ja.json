@@ -1555,6 +1555,7 @@
     "install_required_models": "続行するには、上記の必要なモデルをインストールしてください。",
     "try_dictation": "ディクテーションを試してみる",
     "try_dictation_desc": "セットアップを完了する前に、ショートカットを一度押してディクテーションが機能することを確認してください。",
+    "dictation_step_label": "ディクテーション",
     "next_try_dictation": "次へ: ディクテーションを試してみる",
     "step_aria": "ステップ {{num}}: {{label}}",
     "step_completed": "完了",

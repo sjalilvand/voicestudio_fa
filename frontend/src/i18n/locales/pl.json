@@ -1555,6 +1555,7 @@
     "install_required_models": "Aby kontynuować, zainstaluj wymagane modele powyżej.",
     "try_dictation": "Spróbuj dyktowania",
     "try_dictation_desc": "Naciśnij swój skrót raz, aby upewnić się, że dyktowanie działa, zanim zakończysz konfigurację.",
+    "dictation_step_label": "Dyktowanie",
     "next_try_dictation": "Dalej: Wypróbuj dyktowanie",
     "step_aria": "Krok {{num}}: {{label}}",
     "step_completed": "ukończono",

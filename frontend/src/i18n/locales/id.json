@@ -1555,6 +1555,7 @@
     "install_required_models": "Instal model yang diperlukan di atas untuk melanjutkan.",
     "try_dictation": "Coba dikte",
     "try_dictation_desc": "Tekan pintasan Anda sekali untuk memastikan dikte berfungsi sebelum menyelesaikan penyiapan.",
+    "dictation_step_label": "Dikte",
     "next_try_dictation": "Berikutnya: Coba dikte",
     "step_aria": "Langkah {{num}}: {{label}}",
     "step_completed": "selesai",

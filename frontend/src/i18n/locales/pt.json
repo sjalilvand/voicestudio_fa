@@ -1555,6 +1555,7 @@
     "install_required_models": "Instale os modelos necessários acima para continuar.",
     "try_dictation": "Experimente o ditado",
     "try_dictation_desc": "Pressione seu atalho uma vez para confirmar que o ditado funciona antes de concluir a configuração.",
+    "dictation_step_label": "Ditado",
     "next_try_dictation": "Próximo: Experimente o ditado",
     "step_aria": "Etapa {{num}}: {{label}}",
     "step_completed": "concluída",

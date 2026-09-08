@@ -1555,6 +1555,7 @@
     "install_required_models": "Installeer de vereiste modellen hierboven om door te gaan.",
     "try_dictation": "Probeer dicteren",
     "try_dictation_desc": "Druk één keer op je sneltoets om te controleren of dictee werkt voordat je de installatie voltooit.",
+    "dictation_step_label": "Dictee",
     "next_try_dictation": "Volgende: Probeer dicteren",
     "step_aria": "Stap {{num}}: {{label}}",
     "step_completed": "voltooid",

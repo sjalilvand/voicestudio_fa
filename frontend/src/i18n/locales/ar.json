@@ -1555,6 +1555,7 @@
     "install_required_models": "قم بتثبيت النماذج المطلوبة أعلاه للمتابعة.",
     "try_dictation": "حاول الإملاء",
     "try_dictation_desc": "اضغط على اختصارك مرة واحدة للتأكد من أن الإملاء يعمل قبل إنهاء الإعداد.",
+    "dictation_step_label": "الإملاء",
     "next_try_dictation": "التالي: حاول الإملاء",
     "step_aria": "الخطوة {{num}}: {{label}}",
     "step_completed": "مكتملة",
