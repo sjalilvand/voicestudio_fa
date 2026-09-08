@@ -242,7 +242,10 @@ def test_mps_picker_hides_redundant_omnivoice_sidecar_but_api_accepts_it(
     fresh_app, monkeypatch
 ):
     """Keep stored/direct compatibility ids valid without advertising a duplicate."""
-    from engines.omnivoice_subprocess import OmniVoiceSubprocessBackend
+    from engines.omnivoice_subprocess import (
+        OmniVoiceMPSSubprocessBackend,
+        OmniVoiceSubprocessBackend,
+    )
     from services import tts_backend
 
     _force_host(monkeypatch, "mps")
@@ -264,6 +267,7 @@ def test_mps_picker_hides_redundant_omnivoice_sidecar_but_api_accepts_it(
         row for row in payload["backends"] if row["id"] == "omnivoice"
     )
     assert canonical["isolation_mode"] == "subprocess"
+    assert tts_backend.get_backend_class("omnivoice") is OmniVoiceMPSSubprocessBackend
 
     response = client.post(
         "/engines/select",
