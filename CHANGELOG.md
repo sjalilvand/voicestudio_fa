@@ -10,6 +10,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- Colab transcription and dubbing now include an explicit ASR model setup step (#1922) — thanks @nidhi-singh02!
+
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
 
 - The desktop app builds and opens from a fresh clone again (#1818) — thanks @flutterkage2k!
