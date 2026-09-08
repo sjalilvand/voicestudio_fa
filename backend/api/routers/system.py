@@ -330,7 +330,20 @@ def _tail_rolling(base: str, tail: int):
     for path in candidates:
         if remaining <= 0:
             break
-        lines, count = _tail_file(path, remaining)
+        try:
+            lines, count = _tail_file(path, remaining)
+        except OSError:
+            # A rollover can rename a candidate between the existence check
+            # above and this open, and the handler holds no lock we can take
+            # from a route. Skip the file rather than 500 the whole panel over
+            # one member of the set — the previous single-file version failed
+            # the request outright in the same situation.
+            #
+            # A roll landing mid-walk can also shift which chunk a file holds,
+            # so a tail taken at that instant may repeat or miss a block. The
+            # panel re-polls every 5s and the next read is clean; buying strict
+            # consistency here would mean reaching into logging's internals.
+            continue
         if count == 0:
             continue
         chunks.append(lines)
@@ -533,7 +546,15 @@ async def clear_system_logs():
     reaches into those files — would have looked like it did nothing at all.
     """
     cleared_any = False
-    targets = [LOG_PATH, *_rotated_log_paths(LOG_PATH), CRASH_LOG_PATH]
+    # The full fixed name set rather than a snapshot of what exists: enumerating
+    # first leaves a window where a rollover creates a backup after the scan and
+    # its history survives a Clear that reported success. Names the handler can
+    # ever write are known up front, so there is nothing to enumerate.
+    targets = [
+        LOG_PATH,
+        *(f"{LOG_PATH}.{i}" for i in range(1, _LOG_BACKUP_COUNT + 1)),
+        CRASH_LOG_PATH,
+    ]
     for p in targets:
         if os.path.exists(p):
             try:

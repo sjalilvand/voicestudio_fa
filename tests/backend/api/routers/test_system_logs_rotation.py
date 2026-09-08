@@ -102,6 +102,50 @@ def test_no_log_at_all_still_reports_absent(system_mod, tmp_path, monkeypatch):
     assert res == {"lines": [], "path": str(tmp_path / "omnivoice.log"), "exists": False}
 
 
+def test_a_file_that_vanishes_mid_walk_does_not_fail_the_panel(
+    system_mod, rolling, monkeypatch
+):
+    """A rollover can rename a candidate between the scan and the open.
+
+    The handler exposes no lock a route can take, so the walk skips the file
+    instead of failing the request. The single-file version 500'd the whole
+    panel in the same situation, so this is strictly better than before.
+    """
+    real_tail = system_mod._tail_file
+
+    def flaky(path, tail):
+        if path.endswith("omnivoice.log.1"):
+            raise FileNotFoundError(path)
+        return real_tail(path, tail)
+
+    monkeypatch.setattr(system_mod, "_tail_file", flaky)
+
+    res = asyncio.run(system_mod.system_logs(tail=200))
+
+    # .1 is gone, so the walk falls through to .2 and still fills the request.
+    assert res["exists"] is True
+    assert len(res["lines"]) == 200
+    assert [os.path.basename(p) for p in res["paths"]] == ["omnivoice.log.2", "omnivoice.log"]
+
+
+def test_clear_covers_a_backup_created_after_the_scan(system_mod, rolling, monkeypatch):
+    """Clear works off the fixed name set, not a snapshot of what exists.
+
+    Enumerating first left a window where a rollover created a backup after the
+    scan and its history survived a Clear that reported success.
+    """
+    monkeypatch.setattr(system_mod, "prefs_delete", lambda _key: None, raising=False)
+    # Stand in for the race: a scan that ran before the rollover would have
+    # reported no backups at all, and the version that trusted it truncated
+    # only the current file while .1 and .2 kept their history.
+    monkeypatch.setattr(system_mod, "_rotated_log_paths", lambda _base: [])
+
+    asyncio.run(system_mod.clear_system_logs())
+
+    for name in ("omnivoice.log", "omnivoice.log.1", "omnivoice.log.2"):
+        assert (rolling / name).stat().st_size == 0, f"{name} survived a Clear that trusted a stale scan"
+
+
 def test_clear_empties_the_backups_too(system_mod, rolling, monkeypatch):
     monkeypatch.setattr(system_mod, "prefs_delete", lambda _key: None, raising=False)
 
