@@ -383,6 +383,8 @@ def test_ambiguous_same_name_gpus_do_not_borrow_device_zero_vram(
         ('CUDA:0 "NVIDIA GTX 1650" [GPU]', "cuda", "NVIDIA GTX 1650"),
         ('HIP:0 "AMD Radeon RX 6500 XT" [GPU]', "rocm", "AMD Radeon RX 6500 XT"),
         ('Vulkan:0 "NVIDIA GTX 1650" [GPU]', "cuda", "NVIDIA GTX 1650"),
+        ('Vulkan:0 "Intel Arc A380" [GPU]', "xpu", "Intel Arc A380"),
+        ('Vulkan:0 "Discrete Graphics" [GPU]', "cpu", "Discrete Graphics"),
     ],
 )
 def test_runtime_profile_preserves_low_vram_caveat_for_native_accelerators(

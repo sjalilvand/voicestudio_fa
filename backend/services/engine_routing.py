@@ -72,7 +72,8 @@ def under_provisioned_vram(
     .generate_timeout_s``). It was written out inline in each of them, which is
     how the budget came to disagree with the warning printed next to it.
 
-    Dedicated-VRAM families ONLY. On MPS, ``HostCaps.vram_gb`` is a heuristic
+    Dedicated-VRAM families ONLY. CUDA, ROCm, XPU, and a native Vulkan device
+    report dedicated memory. On MPS, ``HostCaps.vram_gb`` is a heuristic
     (system RAM / 2, see device_caps) for a UNIFIED memory pool; comparing it
     against a floor measured on discrete CUDA hardware would tell every 8 GB Mac
     its 4 GB "VRAM" is too small for an engine that runs fine there. A VRAM
@@ -81,7 +82,9 @@ def under_provisioned_vram(
     """
     if not min_vram_gb or min_vram_gb <= 0:
         return False
-    if (family or getattr(caps, "family", None)) not in ("cuda", "rocm"):
+    if (family or getattr(caps, "family", None)) not in (
+        "cuda", "rocm", "xpu", "vulkan",
+    ):
         return False
     raw_vram_gb = getattr(caps, "vram_gb", 0.0) if vram_gb is None else vram_gb
     available_vram_gb = float(raw_vram_gb or 0.0)

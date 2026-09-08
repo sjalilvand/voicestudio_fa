@@ -87,7 +87,10 @@ def _device_min_vram_gb(device) -> float:
     return 6.0 if (
         device
         and device.kind == "GPU"
-        and device.hardware_family in {"cuda", "rocm"}
+        and (
+            device.backend == "vulkan"
+            or device.hardware_family in {"cuda", "rocm"}
+        )
     ) else 0.0
 
 

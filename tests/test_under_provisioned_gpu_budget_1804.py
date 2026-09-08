@@ -115,6 +115,19 @@ def test_the_whole_class_not_just_cuda(on_host, floor):
     ) == 600.0
 
 
+@pytest.mark.parametrize("family", ["xpu", "vulkan"])
+def test_other_discrete_gpu_families_get_the_cpu_budget(
+    family, on_host, floor,
+):
+    mm = on_host(_gpu(4.0, family=family, name="Discrete GPU"))
+    assert mm.generate_timeout_s(
+        "A short render",
+        execution_device="vulkan",
+        min_vram_gb=floor,
+        hardware_family=family,
+    ) == 600.0
+
+
 def test_vulkan_on_a_small_dedicated_gpu_gets_the_cpu_budget(on_host, floor):
     mm = on_host(_gpu(4.0))
     assert mm.generate_timeout_s(
