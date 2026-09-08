@@ -8,7 +8,7 @@ audio.cpp (0xShug0/audio.cpp) is a pure-C++ ggml runtime: prebuilt
 
 1. resolves the binary + GGUF model (``bootstrap.py``),
 2. spawns ONE long-lived ``audiocpp_server`` on 127.0.0.1 (lazy model load,
-   so VRAM is only held after the first generate), and
+   so model memory is only held after the first generate), and
 3. speaks its OpenAI-style ``POST /v1/audio/speech`` per generate.
 
 v1 serves the ``breeze_tts`` family only (Breeze-TTS-2, en+zh, voice clone
@@ -32,18 +32,22 @@ import io
 import json
 import logging
 import os
-import subprocess
+import secrets
+
+# Used only for stream constants; spawn_owned performs the process launch.
+import subprocess  # nosec B404
 import threading
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
+from core.contained_subprocess import spawn_owned
 from services.tts_backend import TTSBackend, TTSInputError
 
 if TYPE_CHECKING:
-    import torch  # noqa: F401
+    import torch
 
 logger = logging.getLogger("omnivoice.audiocpp")
 
@@ -54,29 +58,46 @@ ENGINE_ID = "audiocpp"
 #: extracts nothing heavy — the model loads lazily on first generate).
 _HEALTH_TIMEOUT_S = 120.0
 
-#: Per-generate HTTP timeout. Deliberately generous — the GPU-pool generate
-#: budget is the real deadline; this only reaps a wedged server. The first
-#: generate also cold-loads ~3 GB of GGUF.
-_GENERATE_TIMEOUT_S = 900.0
+#: Finish the inner HTTP request before the canonical generation guard can
+#: abandon its worker thread. This leaves enough time to terminate the owned
+#: native process and release its model memory synchronously.
+_TERMINATE_GRACE_S = 5.0
+_TERMINATE_KILL_S = 5.0
+_GENERATE_TIMEOUT_MARGIN_S = (
+    _TERMINATE_GRACE_S + _TERMINATE_KILL_S + 5.0
+)
 
 
 # ── pure request/config builders (unit-tested, no I/O) ──────────────────────
 
 
+def _cpu_thread_count() -> int:
+    """Use up to 16 physical cores, with a stdlib fallback."""
+    try:
+        import psutil
+
+        cores = psutil.cpu_count(logical=False)
+    except (ImportError, OSError):
+        cores = None
+    return min(16, max(1, cores or os.cpu_count() or 1))
+
+
 def build_server_config(
-    *, model_id: str, family: str, model_path: str, backend: str, port: int,
+    *, model_id: str, family: str, model_path: str, port: int,
 ) -> dict:
     """``server.json`` dict for the managed ``audiocpp_server``.
 
-    ``lazy_load`` defers the ~3 GB GGUF load to the first generate;
+    ``lazy_load`` defers the ~4.73 GiB GGUF load to the first generate;
     ``max_loaded_models: 1`` bounds residency to the one model we serve.
     """
     return {
         "host": "127.0.0.1",
         "port": port,
-        "backend": backend,
+        "backend": "cpu",
         "device": 0,
-        "threads": 1,
+        # The pinned CPU runtime scales strongly through 16 workers while
+        # producing byte-identical audio.
+        "threads": _cpu_thread_count(),
         "lazy_load": True,
         "max_loaded_models": 1,
         "models": [
@@ -92,9 +113,9 @@ def build_server_config(
 
 
 def build_speech_payload(
-    *, model_id: str, text: str, ref_audio: Optional[str] = None,
-    ref_text: Optional[str] = None, instructions: Optional[str] = None,
-    guidance_scale: Optional[float] = None, seed: Optional[int] = None,
+    *, model_id: str, text: str, ref_audio: str | None = None,
+    ref_text: str | None = None, instructions: str | None = None,
+    guidance_scale: float | None = None, seed: int | None = None,
 ) -> dict:
     """``POST /v1/audio/speech`` JSON body.
 
@@ -124,11 +145,11 @@ def build_speech_payload(
     return payload
 
 
-def decode_speech_json(obj: dict) -> tuple[int, "object"]:
+def decode_speech_json(obj: dict) -> tuple[int, object]:
     """``(sample_rate, mono float32 numpy)`` from a ``response_format=json``
     speech body. Raises ``ValueError`` on a server error payload."""
     if not isinstance(obj, dict):
-        raise ValueError(f"audio.cpp speech reply is not JSON: {obj!r:.120}")
+        raise TypeError(f"audio.cpp speech reply is not JSON: {obj!r:.120}")
     if "audio" not in obj:
         raise ValueError(f"audio.cpp speech failed: {obj.get('error', obj)!r:.300}")
     import numpy as np
@@ -155,25 +176,24 @@ class AudioCPPBackend(TTSBackend):
     )
     supports_voice_design = True
     applies_own_mastering = True  # model-decoded 24 kHz studio output
-    # audio.cpp maps our accelerator families to CUDA, HIP, Metal, or Vulkan.
-    # Intel GPUs use Vulkan; NPUs have no supported backend.
-    gpu_compat = ("cuda", "rocm", "mps", "xpu", "cpu")
+    # GPU backends remain outside this initial integration until each packaged
+    # runtime path has been measured and proven on its target platform.
+    gpu_compat = ("cpu",)
     runs_out_of_process = True
     # Same marker SubprocessBackend sets: this engine lives in another OS
     # process. Consumers only branch the matrix label and the self-test
     # route (spawn-and-ping instead of in-process synth) — both correct
     # here; nothing assumes the stdio protocol from it.
     _is_subprocess_isolated = True
-    min_vram_gb = 6.0  # 4.73 GiB Q8_0 file plus graph/session workspace
-
     _DEFAULT_SAMPLE_RATE = 24000  # Breeze-TTS-2 native rate
 
     def __init__(self) -> None:
-        self._proc: Optional[subprocess.Popen] = None
-        self._port: Optional[int] = None
+        self._proc: Any | None = None
+        self._port: int | None = None
+        self._server_model_id: str | None = None
         self._sr = self._DEFAULT_SAMPLE_RATE
         self._lock = threading.RLock()
-        self._server_json: Optional[Path] = None
+        self._server_json: Path | None = None
 
     # ── availability ────────────────────────────────────────────────────
 
@@ -181,22 +201,10 @@ class AudioCPPBackend(TTSBackend):
     def is_available(cls) -> tuple[bool, str]:
         from engines.audiocpp import bootstrap
 
-        if not bootstrap.is_installed():
-            slug_asset = bootstrap.default_asset()
-            if slug_asset is None:
-                return False, (
-                    "audio.cpp ships no prebuilt binary for this platform. "
-                    "Build from https://github.com/0xShug0/audio.cpp and set "
-                    f"{bootstrap.BIN_ENV}. See docs/engines/audio-cpp.md."
-                )
-            return False, (
-                "audiocpp_server not installed. Download "
-                f"https://github.com/{bootstrap.GH_REPO}/releases/download/"
-                f"{bootstrap.VERSION}/{slug_asset[0]}, extract it, and set "
-                f"{bootstrap.BIN_ENV} to the audiocpp_server binary "
-                f"(~3 GB Breeze-TTS-2 GGUF downloads on first generate). "
-                "See docs/engines/audio-cpp.md."
-            )
+        try:
+            bootstrap.resolve_server_binary()
+        except RuntimeError as exc:
+            return False, str(exc)
         return True, "ready"
 
     # ── TTSBackend protocol ─────────────────────────────────────────────
@@ -209,7 +217,7 @@ class AudioCPPBackend(TTSBackend):
     def supported_languages(self) -> list[str]:
         return ["en", "zh"]
 
-    def model_identity(self) -> Optional[str]:
+    def model_identity(self) -> str | None:
         from engines.audiocpp import bootstrap
 
         return f"{bootstrap.FAMILY}/{bootstrap.package_filename()}"
@@ -229,13 +237,16 @@ class AudioCPPBackend(TTSBackend):
 
             binary = bootstrap.resolve_server_binary()
             model_file = bootstrap.resolve_model_file()
-            backend = bootstrap.default_backend()
             self._port = bootstrap.server_port()
+            # The random model id is a per-launch challenge. Before sending
+            # speech text or a reference path, _verify_server_identity asks
+            # /v1/models to prove this is the child configured by this process,
+            # not an unrelated listener that pre-bound the loopback port.
+            self._server_model_id = f"{bootstrap.MODEL_ID}-{secrets.token_hex(16)}"
             config = build_server_config(
-                model_id=bootstrap.MODEL_ID,
+                model_id=self._server_model_id,
                 family=bootstrap.FAMILY,
                 model_path=str(model_file),
-                backend=backend,
                 port=self._port,
             )
             from core.config import DATA_DIR
@@ -243,53 +254,57 @@ class AudioCPPBackend(TTSBackend):
             workdir = Path(str(DATA_DIR)) / "audiocpp"
             workdir.mkdir(parents=True, exist_ok=True)
             self._server_json = workdir / "server.json"
-            self._server_json.write_text(json.dumps(config, indent=2))
+            flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+            config_fd = os.open(self._server_json, flags, 0o600)
+            try:
+                if os.name != "nt":
+                    os.fchmod(config_fd, 0o600)
+                with os.fdopen(config_fd, "w", encoding="utf-8") as config_fh:
+                    config_fd = -1
+                    json.dump(config, config_fh, indent=2)
+            finally:
+                if config_fd >= 0:
+                    os.close(config_fd)
             log_path = workdir / "server.log"
             logger.info(
-                "audio.cpp: starting %s (backend=%s, port=%d, model=%s)",
-                binary, backend, self._port, model_file.name,
+                "audio.cpp: starting %s (backend=cpu, port=%d, model=%s)",
+                binary.name, self._port, model_file.name,
             )
-            log_fh = open(log_path, "ab")
-            try:
-                self._proc = subprocess.Popen(
+            with open(log_path, "ab") as log_fh:
+                self._proc = spawn_owned(
                     [str(binary), "--config", str(self._server_json)],
                     stdout=log_fh,
                     stderr=subprocess.STDOUT,
                     stdin=subprocess.DEVNULL,
-                    start_new_session=(os.name != "nt"),
                 )
-            except Exception:
-                log_fh.close()
-                raise
-            # Popen owns the fd now; the parent handle can close.
-            log_fh.close()
             atexit.register(self._terminate_server)
             self._wait_for_health()
 
     def _wait_for_health(self) -> None:
-        assert self._proc is not None and self._port is not None
+        if self._proc is None or self._port is None:
+            raise RuntimeError("managed audio.cpp server was not started")
         deadline = time.monotonic() + _HEALTH_TIMEOUT_S
         last_err = "unknown"
         url = self._base_url() + "/health"
         while time.monotonic() < deadline:
             if self._proc.poll() is not None:
-                from engines.audiocpp.bootstrap import BACKEND_ENV
-
                 raise RuntimeError(
                     "audiocpp_server exited during startup "
                     f"(code {self._proc.returncode}). See the server log next "
                     "to server.json under the app data audiocpp/ directory — "
-                    "common cause: requested backend not in this binary, or "
-                    "the port is taken. "
-                    f"Set {BACKEND_ENV} to cpu as a fallback."
+                    "the managed port may already be in use."
                 )
             try:
                 # ``url`` is always the hard-coded loopback host plus a
                 # validated integer port; arbitrary schemes are impossible.
                 with urllib.request.urlopen(url, timeout=5) as resp:  # nosec B310
                     if resp.status == 200:
-                        logger.info("audio.cpp: server healthy on %s", self._base_url())
-                        return
+                        self._verify_server_identity()
+                        if self._proc.poll() is None:
+                            logger.info(
+                                "audio.cpp: managed server is healthy on loopback"
+                            )
+                            return
                     last_err = f"HTTP {resp.status}"
             except Exception as exc:  # noqa: BLE001 — still starting; retry
                 last_err = f"{type(exc).__name__}: {exc}"
@@ -300,9 +315,42 @@ class AudioCPPBackend(TTSBackend):
             f"{_HEALTH_TIMEOUT_S:.0f}s (last: {last_err})."
         )
 
+    def _get_json(self, path: str, timeout: float = 5.0) -> dict:
+        """GET one loopback JSON endpoint without sending request content."""
+        if self._port is None:
+            raise RuntimeError("managed audio.cpp server port is missing")
+        req = urllib.request.Request(self._base_url() + path, method="GET")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
+            obj = json.loads(resp.read().decode("utf-8"))
+        if not isinstance(obj, dict):
+            raise TypeError("audio.cpp returned an invalid JSON response")
+        return obj
+
+    def _verify_server_identity(self) -> None:
+        """Prove the loopback listener owns this launch's random model id."""
+        if self._proc is None or self._proc.poll() is not None:
+            raise RuntimeError("managed audio.cpp server is not running")
+        expected = self._server_model_id
+        if not expected:
+            raise RuntimeError("managed audio.cpp server identity is missing")
+        obj = self._get_json("/v1/models")
+        data = obj.get("data", [])
+        if not isinstance(data, list):
+            raise TypeError("managed audio.cpp server identity is invalid")
+        model_ids = {
+            item.get("id") for item in data
+            if isinstance(item, dict)
+        }
+        if expected not in model_ids or self._proc.poll() is not None:
+            raise RuntimeError(
+                "loopback listener did not prove managed audio.cpp ownership"
+            )
+
     def _post_json(self, path: str, payload: dict, timeout: float) -> dict:
-        """POST JSON to the managed server, return the decoded JSON body."""
-        assert self._port is not None
+        """Verify child ownership, then POST JSON to the managed server."""
+        if self._port is None:
+            raise RuntimeError("managed audio.cpp server port is missing")
+        self._verify_server_identity()
         body = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
             self._base_url() + path,
@@ -320,24 +368,35 @@ class AudioCPPBackend(TTSBackend):
             raise RuntimeError(
                 f"audio.cpp {path} failed (HTTP {exc.code}): {detail}"
             ) from exc
+        except urllib.error.URLError as exc:
+            if isinstance(exc.reason, TimeoutError):
+                raise TimeoutError("audio.cpp request timed out") from exc
+            raise
 
     def _terminate_server(self) -> None:
         proc, self._proc = self._proc, None
+        self._server_model_id = None
         if proc is None:
             return
         try:
             proc.terminate()
-            proc.wait(timeout=15)
+            proc.wait(timeout=_TERMINATE_GRACE_S)
         except Exception:  # noqa: BLE001 — kill as last resort, never raise
             try:
                 proc.kill()
+                proc.wait(timeout=_TERMINATE_KILL_S)
             except Exception as exc:  # noqa: BLE001 — process is already failing
                 logger.debug("audio.cpp: final server kill failed: %s", exc)
 
     # ── generate ────────────────────────────────────────────────────────
 
-    def generate(self, text: str, **kw) -> "torch.Tensor":
+    def generate(self, text: str, **kw) -> torch.Tensor:
         import torch
+        from services.model_manager import (
+            GENERATE_PROGRESS_GRACE_S,
+            generate_timeout_s,
+            report_generate_progress,
+        )
 
         if not text or not text.strip():
             raise TTSInputError(
@@ -368,12 +427,15 @@ class AudioCPPBackend(TTSBackend):
         if kw.get("speed", 1.0) != 1.0:
             logger.info("audio.cpp: speed is not supported; ignoring.")
 
-        from engines.audiocpp import bootstrap
+        request_started = time.monotonic()
+        request_budget = generate_timeout_s(text, execution_device="cpu")
 
         with self._lock:
             self._ensure_loaded()
+            if not self._server_model_id:
+                raise RuntimeError("managed audio.cpp server identity is missing")
             payload = build_speech_payload(
-                model_id=bootstrap.MODEL_ID,
+                model_id=self._server_model_id,
                 text=text,
                 ref_audio=str(ref_audio) if ref_audio else None,
                 ref_text=ref_text,
@@ -381,9 +443,31 @@ class AudioCPPBackend(TTSBackend):
                 guidance_scale=kw.get("guidance_scale", 1.0),
                 seed=kw.get("seed"),
             )
-            obj = self._post_json(
-                "/v1/audio/speech", payload, timeout=_GENERATE_TIMEOUT_S,
+            # A first-use HF download can legitimately consume the soft CPU
+            # budget. Its progress heartbeats keep the outer guard alive; this
+            # fresh synthesis lease then gives the lazy model load + request a
+            # bounded window. The inner request always expires early enough to
+            # reap the owned server before the outer guard can abandon us.
+            report_generate_progress()
+            soft_remaining = request_budget - (time.monotonic() - request_started)
+            timeout = (
+                max(soft_remaining, GENERATE_PROGRESS_GRACE_S)
+                - _GENERATE_TIMEOUT_MARGIN_S
             )
+            if timeout <= 0:
+                self._terminate_server()
+                raise TimeoutError(
+                    "audio.cpp startup exhausted the generation time budget"
+                )
+            try:
+                obj = self._post_json(
+                    "/v1/audio/speech", payload, timeout=timeout,
+                )
+            except TimeoutError:
+                self._terminate_server()
+                raise RuntimeError(
+                    "audio.cpp generation timed out; its managed server was reset"
+                ) from None
         sr, wav_np = decode_speech_json(obj)
         self._sr = sr
         wav = torch.from_numpy(wav_np).float()

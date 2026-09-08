@@ -5,8 +5,8 @@ prebuilt release binaries — no Python venv, no ``transformers`` pin, so
 none of the dependency-isolation machinery in ``engines._venv_probe`` or
 ``services.subprocess_backend`` applies. The parent instead:
 
-1. locates ``audiocpp_server`` (env var, user dir, or this package's
-   ``bin/`` populated by :func:`install_default_asset`), and
+1. locates a user-installed ``audiocpp_server`` (env var, user dir, or this
+   package's ``bin/``), and
 2. resolves the GGUF model file (explicit path, or a first-use download
    from ``audio-cpp/audio.cpp-gguf`` into the shared HF cache).
 
@@ -15,26 +15,20 @@ Probe order for the server binary (existing installs win, zero migration):
     1. ``${OMNIVOICE_AUDIOCPP_BIN}`` — absolute path to the binary itself.
     2. ``${OMNIVOICE_AUDIOCPP_DIR}/audiocpp_server[.exe]`` — a user-managed
        install dir (e.g. an extracted release zip, or a self-built tree).
-    3. ``backend/engines/audiocpp/bin/audiocpp_server[.exe]`` — VoiceStudio's
-       own copy, populated by :func:`install_default_asset`.
+    3. ``backend/engines/audiocpp/bin/audiocpp_server[.exe]`` — an explicitly
+       installed local copy.
 
-Security: release-asset SHA-256 pins are verified on every install
-(download → hash → compare → extract). ``is_installed()`` is a cheap
-file-existence check — no spawn, no network.
+``is_installed()`` is a cheap file-existence check — no spawn, no network.
+VoiceStudio never downloads executable code for this engine.
 """
 from __future__ import annotations
 
-import hashlib
 import logging
 import os
 import platform
 import sys
-import tarfile
-import tempfile
-import urllib.request
-import zipfile
+import threading
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger("omnivoice.audiocpp.bootstrap")
 
@@ -75,10 +69,6 @@ DIR_ENV = "OMNIVOICE_AUDIOCPP_DIR"
 #: Env var overriding the GGUF package filename (e.g. the bf16 package).
 PACKAGE_ENV = "OMNIVOICE_AUDIOCPP_PACKAGE"
 
-#: Env var overriding the server compute backend
-#: (``cuda`` | ``vulkan`` | ``metal`` | ``cpu``).
-BACKEND_ENV = "OMNIVOICE_AUDIOCPP_BACKEND"
-
 #: Env var overriding the loopback port the managed server binds.
 PORT_ENV = "OMNIVOICE_AUDIOCPP_PORT"
 
@@ -90,18 +80,18 @@ DEFAULT_PORT = 17860
 _PKG_BIN_DIR: Path = Path(__file__).parent / "bin"
 
 # (asset filename, sha256) per platform slug, from the v0.7.2 release.
-# No Linux-CUDA prebuilt exists upstream — Linux CUDA users self-build and
-# point OMNIVOICE_AUDIOCPP_BIN at their binary; the Vulkan prebuilt is the
-# default because it runs on NVIDIA/AMD/Intel GPUs with no cudart sidecar.
-# No linux-aarch64 prebuilt either — that platform is unavailable in v1.
+# VoiceStudio's first integration is CPU-only, so Windows and Linux use the
+# upstream CPU archives. Upstream publishes macOS binaries under the Metal
+# package name; those builds retain the CPU backend selected by VoiceStudio.
+# No linux-aarch64 prebuilt exists, so that platform is unavailable in v1.
 _ASSETS: dict[str, tuple[str, str]] = {
     "windows-x64": (
-        "audio-v0.7.2-bin-windows-x64-vulkan.zip",
-        "15b8232eae740e21e507d87f827a89966de9451b085a45932d9e214e032962c1",
+        "audio-v0.7.2-bin-windows-x64-cpu-portable.zip",
+        "0b1f4bd78c5226ee3fa0eb24d95d603a429439cdf5dab45872d44a87412dd8c1",
     ),
     "linux-x64": (
-        "audio-v0.7.2-bin-ubuntu-x64-vulkan.tar.gz",
-        "fee1f978cee76453cf17f00196554bc2ee294645739538af0726a143b6a69a23",
+        "audio-v0.7.2-bin-ubuntu-x64-cpu.tar.gz",
+        "6f5e43dd7b80e8ddf688ef84b411fadcd1f934d2c83963178bc4e2d9c4f07736",
     ),
     "darwin-arm64": (
         "audio-v0.7.2-bin-macos-arm64-metal.tar.gz",
@@ -129,7 +119,7 @@ def _platform_slug() -> str:
     return f"linux-{machine}"
 
 
-def binary_name(slug: Optional[str] = None) -> str:
+def binary_name(slug: str | None = None) -> str:
     """``audiocpp_server`` filename for ``slug`` (``.exe`` on Windows)."""
     return _BINARY_NAMES.get(slug or _platform_slug(), "audiocpp_server")
 
@@ -147,8 +137,12 @@ def _probe_paths() -> list[Path]:
 
 
 def is_installed() -> bool:
-    """Cheap file-existence check for a usable server binary."""
-    return any(p.is_file() for p in _probe_paths())
+    """Cheap precedence-aware check for a usable server binary."""
+    try:
+        resolve_server_binary()
+    except RuntimeError:
+        return False
+    return True
 
 
 def resolve_server_binary() -> Path:
@@ -156,7 +150,13 @@ def resolve_server_binary() -> Path:
     install instructions when none is found."""
     for cand in _probe_paths():
         if cand.is_file():
-            return cand
+            if os.name == "nt" or os.access(cand, os.X_OK):
+                return cand
+            raise RuntimeError(
+                "audiocpp_server is not executable. Run `chmod +x "
+                "audiocpp_server` on the configured binary, then restart "
+                "VoiceStudio. See docs/engines/audio-cpp.md."
+            )
     slug = _platform_slug()
     asset = _ASSETS.get(slug)
     if asset is None:
@@ -169,7 +169,7 @@ def resolve_server_binary() -> Path:
     raise RuntimeError(
         "audiocpp_server not found. Download "
         f"https://github.com/{GH_REPO}/releases/download/{VERSION}/{asset[0]} "
-        f"({asset[1][:12]}…), extract it, and set {BIN_ENV} to the "
+        f"(SHA-256 {asset[1]}), verify and extract it, and set {BIN_ENV} to the "
         "audiocpp_server binary (or "
         f"{DIR_ENV} to its directory). See docs/engines/audio-cpp.md."
     )
@@ -183,27 +183,10 @@ def invalidate() -> None:
     """
 
 
-def default_asset() -> Optional[tuple[str, str]]:
+def default_asset() -> tuple[str, str] | None:
     """``(filename, sha256)`` of the release asset for this host, or None
     when upstream ships no prebuilt for it."""
     return _ASSETS.get(_platform_slug())
-
-
-def default_backend() -> str:
-    """Compute backend for the managed server.
-
-    Env override wins; otherwise Metal on macOS, Vulkan on Windows/Linux
-    (matching the default prebuilt asset — the release matrix has no Linux
-    CUDA binary), CPU when nothing else applies.
-    """
-    override = os.environ.get(BACKEND_ENV, "").strip().lower()
-    if override:
-        return override
-    if sys.platform == "darwin":
-        return "metal"
-    if sys.platform == "win32" or sys.platform.startswith("linux"):
-        return "vulkan"
-    return "cpu"
 
 
 def server_port() -> int:
@@ -218,104 +201,6 @@ def server_port() -> int:
         except ValueError:
             logger.warning("Ignoring %s=%r: not a number.", PORT_ENV, raw)
     return DEFAULT_PORT
-
-
-def _download_url(asset: str) -> str:
-    return f"https://github.com/{GH_REPO}/releases/download/{VERSION}/{asset}"
-
-
-def _safe_archive_destination(root: Path, member_name: str) -> Path:
-    """Resolve one archive member below ``root`` or reject traversal."""
-    root = root.resolve()
-    destination = (root / member_name).resolve()
-    if destination != root and root not in destination.parents:
-        raise RuntimeError(f"unsafe audio.cpp archive member: {member_name!r}")
-    return destination
-
-
-def _extract_release_archive(archive: Path, filename: str, target: Path) -> None:
-    """Extract an upstream release without links, devices, or traversal."""
-    if filename.endswith(".zip"):
-        with zipfile.ZipFile(archive) as zf:
-            for member in zf.infolist():
-                _safe_archive_destination(target, member.filename)
-                # Unix symlinks are encoded in the upper mode bits.
-                if (member.external_attr >> 16) & 0o170000 == 0o120000:
-                    raise RuntimeError(
-                        f"unsafe audio.cpp archive symlink: {member.filename!r}"
-                    )
-            # Every member was validated for containment and link type above.
-            zf.extractall(target)  # nosec B202
-        return
-
-    with tarfile.open(archive, "r:gz") as tf:
-        members = tf.getmembers()
-        for member in members:
-            _safe_archive_destination(target, member.name)
-            if not (member.isfile() or member.isdir()):
-                raise RuntimeError(
-                    f"unsafe audio.cpp archive member type: {member.name!r}"
-                )
-        tf.extractall(target, members=members, filter="data")
-
-
-def install_default_asset(dest_dir: Optional[Path] = None) -> Path:
-    """Download + SHA-verify + extract the platform release asset into
-    ``dest_dir`` (default: this package's ``bin/``) and return the server
-    binary path. Explicit user action only — never called implicitly."""
-    slug = _platform_slug()
-    asset = _ASSETS.get(slug)
-    if asset is None:
-        raise RuntimeError(
-            f"audio.cpp ships no prebuilt binary for {slug}; build from "
-            f"https://github.com/{GH_REPO} and set {BIN_ENV} instead."
-        )
-    filename, want_sha = asset
-    target = Path(dest_dir) if dest_dir else _PKG_BIN_DIR
-    target.mkdir(parents=True, exist_ok=True)
-    logger.info("audio.cpp: downloading %s (%s)", _download_url(filename), slug)
-    with tempfile.NamedTemporaryFile(
-        prefix="audiocpp_", suffix=Path(filename).suffix, delete=False
-    ) as tmp:
-        tmp_path = Path(tmp.name)
-    try:
-        # URL is assembled only from pinned constants and an allow-listed
-        # release asset name selected above.
-        urllib.request.urlretrieve(_download_url(filename), tmp_path)  # nosec B310
-        digest = hashlib.sha256(tmp_path.read_bytes()).hexdigest()
-        if digest != want_sha:
-            raise RuntimeError(
-                f"audio.cpp asset SHA-256 mismatch for {filename}: "
-                f"got {digest}, want {want_sha}. Refusing to extract."
-            )
-        _extract_release_archive(tmp_path, filename, target)
-    finally:
-        try:
-            tmp_path.unlink()
-        except OSError as exc:
-            logger.debug("Could not remove temporary audio.cpp archive: %s", exc)
-    found = _locate_binary(target)
-    if found is None:
-        raise RuntimeError(
-            f"extracted {filename} but found no {binary_name()} under "
-            f"{target} — layout changed upstream; set {BIN_ENV} manually."
-        )
-    if os.name != "nt":
-        found.chmod(found.stat().st_mode | 0o111)
-    logger.info("audio.cpp: installed %s", found)
-    return found
-
-
-def _locate_binary(root: Path) -> Optional[Path]:
-    """Find the server binary under ``root`` (release zips nest it)."""
-    want = binary_name()
-    direct = root / want
-    if direct.is_file():
-        return direct
-    for cand in sorted(root.rglob(want)):
-        if cand.is_file():
-            return cand
-    return None
 
 
 def package_filename() -> str:
@@ -357,6 +242,29 @@ def _materialize_gguf_cache_path(model_file: Path) -> Path:
     return alias
 
 
+def _download_progress_class() -> type:
+    """Return a per-download tqdm class that heartbeats the owning job."""
+    from services.model_manager import report_model_load_activity
+    from utils import hf_progress
+
+    owner_ident = threading.get_ident()
+    hf_progress.install()
+    base = hf_progress.tracked_tqdm_class()
+    if base is None:
+        from huggingface_hub.utils.tqdm import tqdm as base
+
+    class ModelDownloadProgress(base):
+        def update(self, n=1):
+            report_model_load_activity(owner_ident)
+            return super().update(n)
+
+        def display(self, msg=None, pos=None):
+            report_model_load_activity(owner_ident)
+            return super().display(msg=msg, pos=pos)
+
+    return ModelDownloadProgress
+
+
 def resolve_model_file() -> Path:
     """Resolve the Breeze-TTS-2 GGUF file, downloading it on first use.
 
@@ -371,11 +279,11 @@ def resolve_model_file() -> Path:
     if override:
         cand = Path(override)
         if cand.is_file():
-            return cand
+            return _materialize_gguf_cache_path(cand)
         if cand.is_dir():
             inner = cand / package_filename()
             if inner.is_file():
-                return inner
+                return _materialize_gguf_cache_path(inner)
         raise RuntimeError(
             f"OMNIVOICE_AUDIOCPP_MODEL={override} is not a GGUF file or a "
             "directory containing one."
@@ -383,13 +291,16 @@ def resolve_model_file() -> Path:
 
     def _download() -> str:
         from huggingface_hub import snapshot_download
+        from services.model_manager import report_model_load_activity
 
+        report_model_load_activity()
         return snapshot_download(
             repo_id=HF_MODEL_REPO,
             # Full immutable commit SHA declared above; Bandit cannot follow
             # the module constant through this nested callback.
             revision=HF_MODEL_REVISION,  # nosec B615
             allow_patterns=[f"{PACKAGE_DIR}/{package_filename()}"],
+            tqdm_class=_download_progress_class(),
         )
 
     cached = Path(
@@ -405,7 +316,6 @@ def resolve_model_file() -> Path:
 
 
 __all__ = [
-    "BACKEND_ENV",
     "BIN_ENV",
     "DEFAULT_PACKAGE",
     "DEFAULT_PORT",
@@ -418,13 +328,12 @@ __all__ = [
     "PACKAGE_ENV",
     "PORT_ENV",
     "VERSION",
+    "_download_progress_class",
+    "_materialize_gguf_cache_path",
     "binary_name",
     "default_asset",
-    "default_backend",
-    "install_default_asset",
     "invalidate",
     "is_installed",
-    "_materialize_gguf_cache_path",
     "package_filename",
     "resolve_model_file",
     "resolve_server_binary",

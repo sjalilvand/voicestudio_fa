@@ -1,8 +1,9 @@
 # VoiceStudio — audio.cpp Engine (Breeze-TTS-2)
 
 [audio.cpp](https://github.com/0xShug0/audio.cpp) is a pure-C++ ggml audio
-inference framework (prebuilt binaries for Windows/macOS/Linux, CUDA / HIP /
-Vulkan / Metal / CPU, no Python dependency). VoiceStudio drives its
+inference framework with prebuilt binaries for Windows, macOS, and Linux and
+no Python dependency. VoiceStudio's initial integration runs it on **CPU**.
+VoiceStudio drives its
 `audiocpp_server` over loopback HTTP — v1 serves the **`breeze_tts`**
 family: **Breeze-TTS-2** (BreezeBlue, 3B params, English + Chinese, voice
 clone + voice design + voice direction, 24 kHz).
@@ -24,26 +25,36 @@ clone + voice design + voice direction, 24 kHz).
 
 | Host | Binary | Compute |
 |---|---|---|
-| Windows x64 | prebuilt (Vulkan default; CUDA 12.4/13.3 opt-in) | GPU · CPU |
-| Linux x64 | prebuilt (Vulkan default) | GPU · CPU |
-| macOS arm64 / x64 | prebuilt (Metal) | GPU · CPU |
+| Windows x64 | portable CPU prebuilt | CPU |
+| Linux x64 | CPU prebuilt | CPU |
+| macOS arm64 / x64 | upstream macOS prebuilt | CPU |
 | Linux aarch64 | none upstream | unavailable in v1 |
 
-Notes:
-
-- Upstream ships **no Linux-CUDA prebuilt**. The Vulkan prebuilt runs on
-  NVIDIA/AMD/Intel GPUs; for maximum CUDA speed, self-build audio.cpp with
-  `ENGINE_ENABLE_CUDA=ON` and point `OMNIVOICE_AUDIOCPP_BIN` at it.
-- The Windows CUDA zips additionally need the matching `cudart` archive
-  extracted next to the binaries (upstream packaging, not VoiceStudio).
-- **VRAM:** Q8_0 GGUF is ≈ 4.73 GiB plus graph/session workspace; 6 GB+
-  GPU memory is required.
+GPU acceleration is outside this first integration. It will be enabled only
+after backend selection and physical-device routing are verified per platform.
+The Q8_0 GGUF is approximately 4.73 GiB, plus CPU runtime memory.
 
 ## Install
 
 1. Download the v0.7.2 prebuilt for your platform from
    [audio.cpp releases](https://github.com/0xShug0/audio.cpp/releases/tag/v0.7.2)
-   (CPU/Vulkan ≈ 20–70 MB; Windows CUDA ≈ 270 MB + cudart) and extract it.
+   (use the CPU archive on Windows or Linux) and extract it. VoiceStudio does
+   not download executable code for this engine. The Linux archive does not
+   preserve the executable bit, so run `chmod +x audiocpp_server` after
+   extracting it.
+
+   Verify the archive before extracting it. The pinned SHA-256 checksums are:
+
+   | Archive | SHA-256 |
+   |---|---|
+   | `audio-v0.7.2-bin-windows-x64-cpu-portable.zip` | `0b1f4bd78c5226ee3fa0eb24d95d603a429439cdf5dab45872d44a87412dd8c1` |
+   | `audio-v0.7.2-bin-ubuntu-x64-cpu.tar.gz` | `6f5e43dd7b80e8ddf688ef84b411fadcd1f934d2c83963178bc4e2d9c4f07736` |
+   | `audio-v0.7.2-bin-macos-arm64-metal.tar.gz` | `c01e4f82971bedbe341697e63a9cebd5a5d1f72d5a9bcb51a3191f95ddab7a95` |
+   | `audio-v0.7.2-bin-macos-x64-metal.tar.gz` | `3862270f33439077225324169313f727064f727305b54d8ce920244d75ddcc24` |
+
+   Run `sha256sum <archive>` on Linux, `shasum -a 256 <archive>` on macOS,
+   or `Get-FileHash <archive> -Algorithm SHA256` in PowerShell and compare the
+   complete result with the table.
 2. Set `OMNIVOICE_AUDIOCPP_BIN` to the `audiocpp_server` binary
    (`audiocpp_server.exe` on Windows):
 
@@ -80,7 +91,6 @@ All three go through the one speech endpoint — reference presence selects:
 | `OMNIVOICE_AUDIOCPP_DIR` | — | Directory containing `audiocpp_server`. |
 | `OMNIVOICE_AUDIOCPP_MODEL` | pinned auto-download | GGUF file or directory override. |
 | `OMNIVOICE_AUDIOCPP_PACKAGE` | `breeze-tts-2-q8_0.gguf` | Package filename (`…-bf16.gguf` for full precision). |
-| `OMNIVOICE_AUDIOCPP_BACKEND` | `metal` (macOS), `vulkan` (Win/Linux), `cpu` | Server compute backend. |
 | `OMNIVOICE_AUDIOCPP_PORT` | `17860` | Loopback port. |
 
 ## Common errors
@@ -92,9 +102,9 @@ exact release URL and SHA for your platform.
 
 ### `audiocpp_server exited during startup ...`
 
-Usually a backend the binary wasn't built with, or a taken port. Check the
-`server.log` next to `server.json` in the app data `audiocpp/` directory;
-set `OMNIVOICE_AUDIOCPP_BACKEND=cpu` as a fallback.
+The managed loopback port may be taken. Check `server.log` next to
+`server.json` in the app data `audiocpp/` directory, or set a different
+`OMNIVOICE_AUDIOCPP_PORT` and restart VoiceStudio.
 
 ### `Breeze-TTS-2 package ... missing after download`
 

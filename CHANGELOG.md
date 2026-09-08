@@ -22,7 +22,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Voice cloning now starts with a clear upload-or-record choice, reveals recording and reference details only when needed, and keeps sampling controls under Production Overrides (#1817)
 - The first-run welcome line uses an instruction accepted by OmniVoice and VoiceDesign engines (#1861) — thanks @psiberfunk!
-- audio.cpp joins the engine lineup as an opt-in native backend for Breeze-TTS-2 (English + Chinese, clone + voice design, no Python venv) (#1891)
+- audio.cpp joins the engine lineup as an opt-in CPU backend for Breeze-TTS-2 (English + Chinese, clone + voice design, no Python venv) (#1891)
 
 ### Changed
 
