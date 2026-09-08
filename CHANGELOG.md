@@ -50,6 +50,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- The Backend log tab keeps showing history across a log rollover, instead of going nearly empty until new lines arrive (#1782)
+- Clearing the logs now empties the rotated log files too, so it frees the space it appears to (#1782)
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
 - Copying a saved transcription now uses the shared clipboard helper and reports failed copies accurately (#1803) — thanks @tvbht!

@@ -297,6 +297,53 @@ def _tail_file(path: str, tail: int):
     return all_lines[-tail:], len(all_lines)
 
 
+# Must track main.py's _WindowsSafeRotatingFileHandler(backupCount=3). The
+# handler rolls omnivoice.log at 2 MB into .1/.2/.3, so up to 6 MB of history
+# lives in files this module used to ignore entirely.
+_LOG_BACKUP_COUNT = 3
+
+
+def _rotated_log_paths(base: str) -> list[str]:
+    """Existing `<base>.1 … .N`, newest first."""
+    return [p for p in (f"{base}.{i}" for i in range(1, _LOG_BACKUP_COUNT + 1)) if os.path.exists(p)]
+
+
+def _tail_rolling(base: str, tail: int):
+    """Tail `base`, reaching into its rotated siblings when it runs short.
+
+    A rollover leaves omnivoice.log nearly empty, and the Backend tab then
+    showed a handful of lines — or none — while the failure the user was asked
+    to copy sat in omnivoice.log.1. Reading the current file first keeps the
+    common case at one file read; the backups are only touched when they are
+    the only place the requested lines can come from.
+
+    Returns (lines oldest-first, total lines across the files read, paths read
+    oldest-first). The total counts only the files it had to open — it stops as
+    soon as `tail` is satisfied, so it is "how much is behind these lines",
+    not the size of the whole rotation set.
+    """
+    chunks: list[list[str]] = []
+    paths: list[str] = []
+    total = 0
+    remaining = tail
+    candidates = [p for p in [base, *_rotated_log_paths(base)] if os.path.exists(p)]
+    for path in candidates:
+        if remaining <= 0:
+            break
+        lines, count = _tail_file(path, remaining)
+        if count == 0:
+            continue
+        chunks.append(lines)
+        paths.append(path)
+        total += count
+        remaining -= len(lines)
+    # Files were visited newest-first; the reader wants oldest-first.
+    out: list[str] = []
+    for chunk in reversed(chunks):
+        out.extend(chunk)
+    return out, total, list(reversed(paths))
+
+
 def _tauri_log_candidates():
     """Likely paths for Tauri-side logs, most useful first.
 
@@ -356,12 +403,24 @@ async def system_logs(tail: int = 200):
     except Exception:
         tail = 200
 
-    path = LOG_PATH if os.path.exists(LOG_PATH) else CRASH_LOG_PATH
-    if not os.path.exists(path):
+    if os.path.exists(LOG_PATH) or _rotated_log_paths(LOG_PATH):
+        base = LOG_PATH
+    else:
+        base = CRASH_LOG_PATH
+    if not os.path.exists(base) and not _rotated_log_paths(base):
         return {"lines": [], "path": LOG_PATH, "exists": False}
+    path = base
     try:
-        lines, total = await asyncio.to_thread(_tail_file, path, tail)
-        return {"lines": lines, "path": path, "exists": True, "total_lines": total}
+        lines, total, paths = await asyncio.to_thread(_tail_rolling, base, tail)
+        return {
+            "lines": lines,
+            "path": path,
+            "exists": True,
+            "total_lines": total,
+            # Which files the tail actually came from, oldest first. A bug
+            # report can then say whether it crossed a rollover.
+            "paths": paths,
+        }
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -467,9 +526,15 @@ def _read_from_pos(path: str, pos: int) -> list[str]:
 
 @router.post("/system/logs/clear")
 async def clear_system_logs():
-    """Truncate the rolling runtime log and the crash log (what the Backend tab reads)."""
+    """Truncate the rolling runtime log and the crash log (what the Backend tab reads).
+
+    Includes the rotated siblings. Truncating only omnivoice.log left up to
+    6 MB in .1/.2/.3, so Clear freed almost nothing and — now that the tail
+    reaches into those files — would have looked like it did nothing at all.
+    """
     cleared_any = False
-    for p in (LOG_PATH, CRASH_LOG_PATH):
+    targets = [LOG_PATH, *_rotated_log_paths(LOG_PATH), CRASH_LOG_PATH]
+    for p in targets:
         if os.path.exists(p):
             try:
                 await asyncio.to_thread(_truncate_file, p)
