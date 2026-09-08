@@ -717,7 +717,7 @@
   },
   "consent": {
     "title": "Ajudar a melhorar o VoiceStudio?",
-    "desc": "Estatísticas de uso anônimas e sem conteúdo que nos ajudam a corrigir bugs mais rápido — totalmente opcional, desativado por padrão.",
+    "desc": "Estatísticas de uso anônimas e sem conteúdo que nos ajudam a corrigir bugs mais rápido — totalmente opcionais, desativadas por padrão.",
     "step_label": "Melhorar o VoiceStudio",
     "body": "Estatísticas de uso anônimas e sem conteúdo: quais mecanismos são usados, quanto tempo as gerações levam e o tipo de erros. Nunca o seu texto, o seu áudio, os seus arquivos ou qualquer coisa que o identifique. Nada é enviado a menos que você aceite, e você pode mudar de ideia a qualquer momento em Configurações → Privacidade.",
     "learn_more": "O que exatamente é enviado?",

@@ -717,7 +717,7 @@
   },
   "consent": {
     "title": "Hjälpa till att förbättra VoiceStudio?",
-    "desc": "Anonym användningsstatistik utan innehåll som hjälper oss att fixa buggar snabbare — helt valfritt, avstängt som standard.",
+    "desc": "Anonym användningsstatistik utan innehåll som hjälper oss att fixa buggar snabbare — helt valfri, avstängd som standard.",
     "step_label": "Förbättra VoiceStudio",
     "body": "Anonym användningsstatistik utan innehåll: vilka motorer som används, hur lång tid genereringar tar och typen av fel. Aldrig din text, ditt ljud, dina filer eller något som identifierar dig. Inget skickas om du inte säger ja, och du kan ändra dig när som helst i Inställningar → Integritet.",
     "learn_more": "Vad skickas egentligen?",

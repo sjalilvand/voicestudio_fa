@@ -1554,7 +1554,7 @@
     "open": "Offen",
     "install_required_models": "Installieren Sie die oben genannten erforderlichen Modelle, um fortzufahren.",
     "try_dictation": "Versuchen Sie es mit Diktat",
-    "try_dictation_desc": "Drücke einmal deine Tastenkombination, um sicherzugehen, dass die Diktierfunktion funktioniert, bevor du die Einrichtung abschließt.",
+    "try_dictation_desc": "Drücken Sie einmal Ihre Tastenkombination, um sicherzugehen, dass die Diktierfunktion funktioniert, bevor Sie die Einrichtung abschließen.",
     "dictation_step_label": "Diktat",
     "next_try_dictation": "Als nächstes: Versuchen Sie es mit dem Diktat",
     "step_aria": "Schritt {{num}}: {{label}}",

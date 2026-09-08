@@ -717,7 +717,7 @@
   },
   "consent": {
     "title": "Aider à améliorer VoiceStudio ?",
-    "desc": "Statistiques d'utilisation anonymes et sans contenu qui nous aident à corriger les bugs plus vite — entièrement facultatif, désactivé par défaut.",
+    "desc": "Statistiques d'utilisation anonymes et sans contenu qui nous aident à corriger les bugs plus vite — entièrement facultatives, désactivées par défaut.",
     "step_label": "Améliorer VoiceStudio",
     "body": "Statistiques d'utilisation anonymes, sans contenu : quels moteurs sont utilisés, la durée des générations et le type d'erreurs. Jamais votre texte, votre audio, vos fichiers ni rien qui vous identifie. Rien n'est envoyé sans votre accord, et vous pouvez changer d'avis à tout moment dans Réglages → Confidentialité.",
     "learn_more": "Qu'est-ce qui est envoyé exactement ?",
