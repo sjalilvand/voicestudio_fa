@@ -212,6 +212,24 @@ def test_materialize_rejects_extensionless_model(tmp_path, app_modules):
         bootstrap._materialize_gguf_cache_path(model)
 
 
+def test_materialize_replaces_preexisting_symlink_alias(tmp_path, app_modules):
+    bootstrap = app_modules.bootstrap
+    blob = tmp_path / "content-addressed-blob"
+    blob.write_bytes(b"GGUF test payload")
+    snapshot = tmp_path / "breeze-tts-2-q8_0.gguf"
+    snapshot.symlink_to(blob)
+    alias = snapshot.with_name(
+        f".{snapshot.stem}-{bootstrap.HF_MODEL_REVISION[:12]}.audiocpp.gguf"
+    )
+    alias.symlink_to(blob)
+
+    materialized = bootstrap._materialize_gguf_cache_path(snapshot)
+
+    assert materialized == alias
+    assert not materialized.is_symlink()
+    assert os.path.samefile(materialized, blob)
+
+
 def test_materialize_cross_filesystem_symlink_links_beside_target(
     tmp_path, monkeypatch, app_modules,
 ):
@@ -240,6 +258,7 @@ def test_materialize_cross_filesystem_symlink_links_beside_target(
 
     assert materialized.parent == blob.parent
     assert materialized.suffix == ".gguf"
+    assert not materialized.is_symlink()
     assert os.path.samefile(materialized, blob)
 
 

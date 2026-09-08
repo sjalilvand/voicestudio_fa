@@ -226,14 +226,24 @@ def _materialize_gguf_cache_path(model_file: Path) -> Path:
         raise RuntimeError(f"audio.cpp model must be a .gguf file: {model_file}")
 
     def _link(alias: Path) -> Path:
-        try:
-            os.link(resolved, alias)
-        except FileExistsError:
-            if not os.path.samefile(resolved, alias):
+        for attempt in range(2):
+            try:
+                os.link(resolved, alias)
+            except FileExistsError:
+                if (
+                    not alias.is_symlink()
+                    and alias.is_file()
+                    and os.path.samefile(resolved, alias)
+                ):
+                    return alias
+                if attempt == 0 and alias.is_symlink():
+                    alias.unlink()
+                    continue
                 raise RuntimeError(
                     f"audio.cpp model alias points at a different file: {alias}"
                 ) from None
-        return alias
+            return alias
+        raise RuntimeError(f"audio.cpp model alias could not be created: {alias}")
 
     alias = model_file.with_name(
         f".{model_file.stem}-{HF_MODEL_REVISION[:12]}.audiocpp.gguf"
