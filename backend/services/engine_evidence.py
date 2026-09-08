@@ -91,9 +91,12 @@ def snapshot(
     from core.scrub import scrub_text
 
     runtime_device_name = routing.get("runtime_device_name")
-    public_device_name = scrub_text(
-        runtime_device_name or getattr(caps, "device_name", "")
-    )[:256]
+    device_name = (
+        getattr(caps, "device_name", "")
+        if runtime_device_name is None
+        else runtime_device_name
+    )
+    public_device_name = scrub_text(device_name)[:256]
     return {
         "implementation_variant": f"{engine_cls.__module__}.{engine_cls.__name__}",
         "declared_device_families": list(

@@ -312,6 +312,11 @@ async def convert_speech(
         compute_profile = await runtime_compute_profile_async(
             backend, detect_host_caps()
         )
+        if compute_profile["routing_status"] == "unavailable":
+            raise HTTPException(
+                status_code=400,
+                detail=compute_profile["routing_reason"],
+            )
 
         start_time = time.time()
         _render = functools.partial(

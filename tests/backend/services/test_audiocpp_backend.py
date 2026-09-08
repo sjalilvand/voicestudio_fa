@@ -959,9 +959,96 @@ def test_is_available_requires_binary_and_model(tmp_path, monkeypatch, app_modul
     model = tmp_path / "breeze-tts-2-q8_0.gguf"
     monkeypatch.setattr(bootstrap, "resolve_server_binary", lambda: binary)
     monkeypatch.setattr(bootstrap, "resolve_model_file", lambda: model)
-    monkeypatch.setattr(bootstrap, "resolve_compute_selection", lambda: None)
+    selection = Mock(side_effect=AssertionError("availability probed devices"))
+    monkeypatch.setattr(bootstrap, "resolve_compute_selection", selection)
 
     assert app_modules.audiocpp.AudioCPPBackend.is_available() == (True, "ready")
+    selection.assert_not_called()
+
+
+def test_auto_probe_failure_surfaces_cpu_fallback_through_async_profile(
+    monkeypatch, app_modules,
+):
+    import asyncio
+
+    from core.device_caps import HostCaps
+    from services.engine_routing import runtime_compute_profile_async
+
+    bootstrap = app_modules.bootstrap
+    monkeypatch.setattr(
+        bootstrap,
+        "probe_devices",
+        Mock(side_effect=RuntimeError("device discovery timed out")),
+    )
+    caps = HostCaps(family="cuda", available_families=("cuda", "cpu"))
+
+    loop = asyncio.new_event_loop()
+    try:
+        profile = loop.run_until_complete(
+            runtime_compute_profile_async(
+                app_modules.audiocpp.AudioCPPBackend,
+                caps,
+            )
+        )
+    finally:
+        loop.close()
+
+    assert profile["gpu_compat"] == ("cpu",)
+    assert profile["effective_device"] == "cpu"
+    assert profile["runtime_backend"] == "cpu"
+    assert profile["runtime_device_index"] == 0
+    assert profile["routing_status"] == "cpu_fallback"
+    assert profile["routing_reason"] == (
+        "device discovery timed out; running on CPU"
+    )
+
+
+@pytest.mark.parametrize(
+    ("env_name", "env_value"),
+    [
+        ("OMNIVOICE_AUDIOCPP_BACKEND", "cpu"),
+        ("OMNIVOICE_AUDIOCPP_DEVICE", "0"),
+    ],
+)
+def test_explicit_compute_override_keeps_probe_failure_fatal(
+    env_name, env_value, monkeypatch, app_modules,
+):
+    from core.device_caps import HostCaps
+
+    monkeypatch.setenv(env_name, env_value)
+    monkeypatch.setattr(
+        app_modules.bootstrap,
+        "probe_devices",
+        Mock(side_effect=RuntimeError("device discovery timed out")),
+    )
+    caps = HostCaps(family="cpu", available_families=("cpu",))
+
+    with pytest.raises(RuntimeError, match="device discovery timed out"):
+        app_modules.bootstrap.resolve_compute_selection(caps)
+
+    profile = app_modules.audiocpp.AudioCPPBackend.runtime_compute_profile(caps)
+    assert profile["routing_status"] == "unavailable"
+    assert profile["routing_reason"] == "device discovery timed out"
+
+
+def test_requested_compute_family_keeps_probe_failure_fatal(
+    monkeypatch, app_modules,
+):
+    from core.device_caps import HostCaps
+
+    monkeypatch.setattr(
+        app_modules.bootstrap,
+        "probe_devices",
+        Mock(side_effect=RuntimeError("device discovery timed out")),
+    )
+    caps = HostCaps(
+        family="cuda",
+        available_families=("cuda", "cpu"),
+        requested_family="cuda",
+    )
+
+    with pytest.raises(RuntimeError, match="device discovery timed out"):
+        app_modules.bootstrap.resolve_compute_selection(caps)
 
 
 def test_install_hint_present(app_modules):

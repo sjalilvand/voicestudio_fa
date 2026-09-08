@@ -161,6 +161,22 @@ class _ProbeOutcome:
     error: str | None = None
 
 
+def _cpu_probe_fallback(error: RuntimeError) -> AudioCPPSelection:
+    """A usable automatic fallback when native device discovery fails."""
+    return AudioCPPSelection(
+        AudioCPPDevice(
+            registry="CPU",
+            backend="cpu",
+            index=0,
+            name="Host CPU",
+            kind="CPU",
+            target="cpu",
+            hardware_family="cpu",
+        ),
+        f"{error}; running on CPU",
+    )
+
+
 def _vulkan_hardware_family(name: str) -> str:
     low = name.casefold()
     if any(token in low for token in ("nvidia", "geforce", "quadro", "tesla")):
@@ -489,7 +505,12 @@ def resolve_compute_selection(caps=None) -> AudioCPPSelection:
 
         caps = detect_host_caps()
     requested = getattr(caps, "requested_family", "auto") or "auto"
-    devices = probe_devices()
+    try:
+        devices = probe_devices()
+    except RuntimeError as exc:
+        if backend_override or raw_device or requested != "auto":
+            raise
+        return _cpu_probe_fallback(exc)
     selection = select_device(
         devices,
         requested_family=requested,
@@ -525,7 +546,18 @@ def resolve_compute_selection(caps=None) -> AudioCPPSelection:
 
 def runtime_targets(devices: tuple[AudioCPPDevice, ...] | None = None) -> tuple[str, ...]:
     """Actual compute backends compiled into the selected binary."""
-    found = devices if devices is not None else probe_devices()
+    if devices is not None:
+        found = devices
+    else:
+        try:
+            found = probe_devices()
+        except RuntimeError:
+            if (
+                os.environ.get(BACKEND_ENV, "").strip()
+                or os.environ.get(DEVICE_ENV, "").strip()
+            ):
+                raise
+            return ("cpu",)
     ordered: list[str] = []
     for device in sorted(found, key=_priority):
         if device.target not in ordered:
@@ -680,8 +712,8 @@ __all__ = [
     "BIN_ENV",
     "DEFAULT_PACKAGE",
     "DEFAULT_PORT",
-    "DIR_ENV",
     "DEVICE_ENV",
+    "DIR_ENV",
     "FAMILY",
     "HF_MODEL_REPO",
     "HF_MODEL_REVISION",
@@ -701,6 +733,6 @@ __all__ = [
     "resolve_compute_selection",
     "resolve_model_file",
     "resolve_server_binary",
-    "server_port",
     "runtime_targets",
+    "server_port",
 ]

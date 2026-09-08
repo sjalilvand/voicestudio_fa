@@ -237,7 +237,14 @@ def test_static_gpu_profile_derives_known_memory_before_aggregation(
     monkeypatch,
 ):
     free_bytes = 24 * 1024**3
+    derive_calls = []
+
+    def derive_for_static_gpu(**kwargs):
+        derive_calls.append(kwargs)
+        return 3
+
     monkeypatch.setattr(capabilities, "_free_memory_bytes", lambda _caps: free_bytes)
+    monkeypatch.setattr(capabilities, "derive_concurrency", derive_for_static_gpu)
     monkeypatch.setattr(
         "services.tts_backend.list_backends",
         lambda: [{
@@ -257,7 +264,15 @@ def test_static_gpu_profile_derives_known_memory_before_aggregation(
     assert static_gpu["free_memory_bytes"] == free_bytes
     assert capabilities.max_concurrent_tasks(
         [static_gpu, {"derived_concurrency": 4}]
-    ) == 4
+    ) == 3
+    assert derive_calls == [
+        {
+            "backend": "cuda",
+            "free_memory_bytes": free_bytes,
+            "min_model_bytes": 5 * 1024**3,
+            "compiled": False,
+        }
+    ]
 
 
 def test_cpu_fallback_is_reported_because_capability_is_not_acceleration(monkeypatch):

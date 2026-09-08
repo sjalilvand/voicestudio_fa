@@ -220,7 +220,6 @@ class AudioCPPBackend(TTSBackend):
         try:
             bootstrap.resolve_server_binary()
             bootstrap.resolve_model_file()
-            bootstrap.resolve_compute_selection()
         except RuntimeError as exc:
             return False, str(exc)
         return True, "ready"
@@ -232,8 +231,23 @@ class AudioCPPBackend(TTSBackend):
         from engines.audiocpp import bootstrap
         from services.engine_routing import low_vram_caveat
 
-        selection = bootstrap.resolve_compute_selection(caps)
-        targets = bootstrap.runtime_targets()
+        try:
+            selection = bootstrap.resolve_compute_selection(caps)
+            targets = bootstrap.runtime_targets()
+        except RuntimeError as exc:
+            return {
+                "gpu_compat": cls.gpu_compat,
+                "min_vram_gb": 0.0,
+                "effective_device": "cpu",
+                "routing_status": "unavailable",
+                "routing_reason": str(exc),
+                "runtime_backend": None,
+                "runtime_device_index": None,
+                "runtime_device_name": None,
+                "runtime_hardware_family": None,
+                "runtime_vram_gb": None,
+                "runtime_device_verified": False,
+            }
         selected = selection.device
         accelerated = selected.target != "cpu"
         min_vram_gb = _device_min_vram_gb(selected)

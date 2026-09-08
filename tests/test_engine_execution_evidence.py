@@ -76,6 +76,19 @@ def test_runtime_native_device_name_is_scrubbed_and_capped():
     assert evidence["gpu_architecture"] is None
 
 
+def test_explicitly_empty_runtime_device_name_does_not_report_another_adapter():
+    evidence = _snap(
+        _TorchEngine,
+        {
+            "routing_status": "accelerated",
+            "routing_reason": None,
+            "runtime_device_name": "",
+        },
+    )
+
+    assert evidence["gpu_name"] is None
+
+
 def test_faster_whisper_cpu_fallback_names_reason_and_stage():
     evidence = _snap(
         _FasterWhisper,

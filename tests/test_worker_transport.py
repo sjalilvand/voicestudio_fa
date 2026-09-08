@@ -372,6 +372,7 @@ def test_protocol_v2_capability_without_backend_inherits_worker_backend():
         record, session=session, epoch=1, backend="vulkan", now=1.0
     )
 
+    assert restored["backend"] == "vulkan"
     assert worker.execution_device(ENGINE, MODEL, OP) == "vulkan"
 
 

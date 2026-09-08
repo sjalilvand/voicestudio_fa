@@ -128,6 +128,13 @@ def test_other_discrete_gpu_families_get_the_cpu_budget(
     ) == 600.0
 
 
+def test_xpu_runtime_reaches_dedicated_vram_budget_guard(on_host, floor):
+    mm = on_host(_gpu(4.0, family="xpu", name="Intel Arc"))
+    assert mm.generate_timeout_s(
+        "A short render", execution_device="xpu", min_vram_gb=floor,
+    ) == 600.0
+
+
 def test_vulkan_on_a_small_dedicated_gpu_gets_the_cpu_budget(on_host, floor):
     mm = on_host(_gpu(4.0))
     assert mm.generate_timeout_s(

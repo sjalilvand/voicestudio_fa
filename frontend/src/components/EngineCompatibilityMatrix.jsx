@@ -129,7 +129,6 @@ const GPU_LABEL = {
   cuda: 'CUDA',
   mps: 'MPS',
   rocm: 'ROCm',
-  vulkan: 'Vulkan',
   xpu: 'XPU',
   cpu: 'CPU',
 };
@@ -1197,6 +1196,10 @@ export default function EngineCompatibilityMatrix({
                               b.routing_status &&
                               b.routing_status !== 'unavailable' &&
                               g === b.effective_device;
+                            const deviceLabel =
+                              g === 'vulkan'
+                                ? t('engines.gpuVulkan')
+                                : GPU_LABEL[g] || g.toUpperCase();
                             return (
                               <span
                                 key={g}
@@ -1204,12 +1207,12 @@ export default function EngineCompatibilityMatrix({
                                 title={
                                   isEffective
                                     ? t('engines.routingEffectiveChip', {
-                                        device: GPU_LABEL[g] || g,
+                                        device: deviceLabel,
                                       })
                                     : undefined
                                 }
                               >
-                                {GPU_LABEL[g] || g.toUpperCase()}
+                                {deviceLabel}
                               </span>
                             );
                           })}

@@ -588,7 +588,9 @@ def generate_timeout_s(
         )
         if family == "cpu" and (cpu_explicit or not universal_override):
             base = CPU_JOB_TIMEOUT_S
-        elif not universal_override and family in ("cuda", "rocm", "vulkan"):
+        elif not universal_override and family in (
+            "cuda", "rocm", "vulkan", "xpu",
+        ):
             from services.engine_routing import under_provisioned_vram
 
             runtime_family = hardware_family or family

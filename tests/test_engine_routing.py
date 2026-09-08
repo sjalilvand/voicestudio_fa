@@ -14,7 +14,6 @@ from services.engine_routing import (
     header_safe_reason,
     resolve_routing,
     routing_notice,
-    runtime_compute_profile_async,
 )
 
 
@@ -147,32 +146,40 @@ def test_deterministic_across_calls():
 
 
 def test_runtime_compute_profile_async_keeps_event_loop_responsive():
-    async def exercise():
-        release = threading.Event()
-        order: list[str] = []
+    from services.engine_routing import runtime_compute_profile_async
 
-        class BlockingRuntimeProfile:
-            @classmethod
-            def runtime_compute_profile(cls, caps):
+    release = threading.Event()
+    finished = threading.Event()
+    event_loop_progressed = asyncio.Event()
+    order: list[str] = []
+
+    class BlockingRuntimeProfile:
+        @classmethod
+        def runtime_compute_profile(cls, caps):
+            try:
                 assert release.wait(timeout=1.0)
                 order.append("profile")
                 return {"marker": caps.family}
+            finally:
+                finished.set()
 
-        profile_task = asyncio.create_task(
-            runtime_compute_profile_async(BlockingRuntimeProfile, _caps("cpu")),
-        )
-        await asyncio.sleep(0.01)
+    async def release_after_event_loop_progress():
         order.append("event_loop")
+        event_loop_progressed.set()
         release.set()
-        while not profile_task.done():
-            await asyncio.sleep(0.01)
-
-        assert await profile_task == {"marker": "cpu"}
-        assert order == ["event_loop", "profile"]
 
     loop = asyncio.new_event_loop()
     try:
-        loop.run_until_complete(exercise())
+        profile_task = loop.create_task(
+            runtime_compute_profile_async(BlockingRuntimeProfile, _caps("cpu")),
+        )
+        release_task = loop.create_task(release_after_event_loop_progress())
+        loop.run_until_complete(event_loop_progressed.wait())
+        loop.run_until_complete(release_task)
+        assert finished.wait(timeout=1.0)
+
+        assert loop.run_until_complete(profile_task) == {"marker": "cpu"}
+        assert order == ["event_loop", "profile"]
     finally:
         loop.close()
 
