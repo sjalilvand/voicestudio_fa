@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FolderOpen, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -11,17 +11,22 @@ import { Button } from '../../ui';
 export default function AudiobookRecovery({ t, generating, onResume }) {
   const [jobs, setJobs] = useState([]);
   const [hiddenJobId, setHiddenJobId] = useState(null);
+  const refreshIdRef = useRef(0);
   const { data: systemInfo } = useSystemInfo();
 
   useEffect(() => {
-    let current = true;
+    const refreshId = ++refreshIdRef.current;
     audiobookListJobs()
       .then((result) => {
-        if (current) setJobs(Array.isArray(result?.jobs) ? result.jobs : []);
+        if (refreshId === refreshIdRef.current) {
+          setJobs(Array.isArray(result?.jobs) ? result.jobs : []);
+        }
       })
       .catch(() => {});
     return () => {
-      current = false;
+      // Invalidate any in-flight response so an unmounted recovery card is
+      // never repopulated by a late inventory request.
+      refreshIdRef.current += 1;
     };
   }, []);
 
@@ -41,7 +46,20 @@ export default function AudiobookRecovery({ t, generating, onResume }) {
   const resume = async () => {
     const jobId = job.job_id;
     setHiddenJobId(jobId);
-    if ((await onResume(jobId)) === false) setHiddenJobId(null);
+    const accepted = (await onResume(jobId)) !== false;
+    // A resumed render runs under a fresh backend id. If it is stopped or
+    // fails, that fresh manifest becomes the next recovery card; if it
+    // completes, the inventory is empty. Refresh in every terminal case.
+    const refreshId = ++refreshIdRef.current;
+    try {
+      const result = await audiobookListJobs();
+      if (refreshId === refreshIdRef.current) {
+        setJobs(Array.isArray(result?.jobs) ? result.jobs : []);
+        setHiddenJobId(null);
+      }
+    } catch {
+      if (!accepted) setHiddenJobId(null);
+    }
   };
   const openCache = async () => {
     if (!cachePath) return;

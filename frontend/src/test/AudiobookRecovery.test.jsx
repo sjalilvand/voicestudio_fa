@@ -93,7 +93,7 @@ describe('Audiobook recovery surface (#1911)', () => {
   });
 
   it('shows interrupted work and resumes the selected backend job', async () => {
-    const onResume = vi.fn();
+    const onResume = vi.fn().mockResolvedValue(true);
     renderRecovery(onResume);
 
     expect(await screen.findByRole('heading', { name: en.audiobook.recovery_title })).toBeTruthy();
@@ -102,7 +102,33 @@ describe('Audiobook recovery surface (#1911)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: en.audiobook.resume }));
     expect(onResume).toHaveBeenCalledWith('job-safe-123');
+    mocks.jobs.mockResolvedValue({ jobs: [] });
     await waitFor(() => expect(screen.queryByText('A Long Book')).toBeNull());
+  });
+
+  it('refreshes recovery inventory after an interrupted resumed render', async () => {
+    const onResume = vi.fn().mockImplementation(async () => {
+      mocks.jobs.mockResolvedValue({
+        jobs: [
+          {
+            job_id: 'job-fresh-456',
+            type: 'audiobook',
+            status: 'cancelled',
+            title: 'A Long Book (resumed)',
+            total_chapters: 30,
+            chapters_done: 9,
+            created_at: 2,
+          },
+        ],
+      });
+      return true;
+    });
+    renderRecovery(onResume);
+
+    fireEvent.click(await screen.findByRole('button', { name: en.audiobook.resume }));
+
+    expect(await screen.findByText('A Long Book (resumed)')).toBeTruthy();
+    expect(mocks.jobs).toHaveBeenCalledTimes(2);
   });
 
   it('reveals the server-owned chapter cache through the existing safe seam', async () => {
