@@ -105,6 +105,34 @@ def test_cpu_host_gets_bounded_ten_minute_generate_budget(model_manager, monkeyp
     assert model_manager.generate_timeout_s("A short CPU render") == 600.0
 
 
+def test_router_timeout_alias_preserves_native_device_metadata(
+    model_manager, monkeypatch,
+):
+    from api.routers.generation import _generate_timeout_s
+
+    captured = {}
+
+    def fake_timeout(text, **kwargs):
+        captured.update(kwargs)
+        return 600.0
+
+    monkeypatch.setattr(model_manager, "generate_timeout_s", fake_timeout)
+
+    assert _generate_timeout_s(
+        "test",
+        execution_device="vulkan",
+        min_vram_gb=6.0,
+        hardware_family="cuda",
+        vram_gb=4.0,
+    ) == 600.0
+    assert captured == {
+        "execution_device": "vulkan",
+        "min_vram_gb": 6.0,
+        "hardware_family": "cuda",
+        "vram_gb": 4.0,
+    }
+
+
 def test_accelerated_host_keeps_five_minute_generate_budget(model_manager, monkeypatch):
     import types
     import core.device_caps as caps

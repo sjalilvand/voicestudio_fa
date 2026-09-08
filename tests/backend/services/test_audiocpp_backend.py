@@ -44,6 +44,8 @@ def scrub_audiocpp_env(monkeypatch):
         "OMNIVOICE_AUDIOCPP_DIR",
         "OMNIVOICE_AUDIOCPP_MODEL",
         "OMNIVOICE_AUDIOCPP_PACKAGE",
+        "OMNIVOICE_AUDIOCPP_BACKEND",
+        "OMNIVOICE_AUDIOCPP_DEVICE",
         "OMNIVOICE_AUDIOCPP_PORT",
         "OMNIVOICE_AUDIOCPP_ASSET",
     ):
@@ -76,6 +78,20 @@ def test_build_server_config_is_loopback_lazy_single_model(monkeypatch, app_modu
             "mode": "offline",
         }
     ]
+
+
+def test_build_server_config_wires_backend_local_gpu_index(app_modules):
+    cfg = app_modules.audiocpp.build_server_config(
+        model_id="breeze-tts-2",
+        family="breeze_tts",
+        model_path="/models/breeze.gguf",
+        port=17860,
+        backend="vulkan",
+        device=1,
+    )
+    assert cfg["backend"] == "vulkan"
+    assert cfg["device"] == 1
+    assert cfg["threads"] == 1
 
 
 # ── speech payload builder ─────────────────────────────────────────────────
@@ -162,14 +178,313 @@ def test_binary_name_exe_on_windows_only(app_modules):
     assert bootstrap.binary_name("darwin-arm64") == "audiocpp_server"
 
 
+def test_device_parser_and_auto_selection_prefer_discrete_gpu(app_modules):
+    bootstrap = app_modules.bootstrap
+    devices = bootstrap.parse_device_list("""
+available_devices=3
+Vulkan:0 "AMD Ryzen 9 7950X (RADV RAPHAEL_MENDOCINO)" [IGPU]
+Vulkan:1 "NVIDIA GeForce RTX 4090" [GPU]
+CPU:0 "AMD Ryzen 9 7950X" [CPU]
+select with: --backend <vulkan|cpu> --device <index>
+""")
+    assert devices[1].hardware_family == "cuda"
+    assert bootstrap.runtime_targets(devices) == ("vulkan", "cpu")
+    selected = bootstrap.select_device(devices)
+    assert (selected.device.backend, selected.device.index) == ("vulkan", 1)
+
+
+def test_global_family_matches_gpu_inside_vulkan_registry(app_modules):
+    bootstrap = app_modules.bootstrap
+    devices = bootstrap.parse_device_list("""
+Vulkan:0 "AMD Radeon 780M" [IGPU]
+Vulkan:1 "NVIDIA GeForce RTX 4090" [GPU]
+CPU:0 "Host CPU" [CPU]
+""")
+    selected = bootstrap.select_device(devices, requested_family="cuda")
+    assert selected.device.index == 1
+    assert selected.device.target == "vulkan"
+
+
+def test_preferred_name_does_not_match_nameless_device(app_modules):
+    bootstrap = app_modules.bootstrap
+    devices = bootstrap.parse_device_list(
+        'CUDA:0 [GPU]\nCUDA:1 "NVIDIA GeForce RTX 4090" [GPU]'
+    )
+
+    selected = bootstrap.select_device(
+        devices,
+        requested_family="cuda",
+        preferred_name="NVIDIA GeForce RTX 4090",
+    )
+
+    assert selected.device.index == 1
+
+
+def test_auto_selection_prefers_native_cpu_to_software_or_meta_vulkan(
+    app_modules,
+):
+    bootstrap = app_modules.bootstrap
+    devices = bootstrap.parse_device_list("""
+Vulkan:0 "llvmpipe" [CPU]
+Vulkan:1 "registry metadata" [META]
+CPU:0 "Host CPU" [CPU]
+""")
+
+    assert [device.kind for device in devices] == ["CPU", "META", "CPU"]
+    assert bootstrap.runtime_targets(devices) == ("cpu", "vulkan")
+    selected = bootstrap.select_device(devices)
+    assert selected.device.backend == "cpu"
+    software_vulkan = bootstrap.select_device(
+        devices, backend_override="vulkan", device_override=0,
+    )
+    assert software_vulkan.device.target == "cpu"
+    meta_vulkan = bootstrap.select_device(
+        devices, backend_override="vulkan", device_override=1,
+    )
+    assert meta_vulkan.device.kind == "META"
+    implicit_vulkan = bootstrap.select_device(
+        devices, backend_override="vulkan",
+    )
+    assert implicit_vulkan.device.kind == "META"
+
+
+def test_musa_registry_uses_cuda_routing(app_modules):
+    bootstrap = app_modules.bootstrap
+    devices = bootstrap.parse_device_list('MUSA:0 "Moore Threads GPU" [GPU]')
+
+    assert devices[0].backend == "cuda"
+    assert devices[0].hardware_family == "cuda"
+    assert bootstrap.select_device(devices).device.target == "cuda"
+
+
+def test_device_parser_accepts_an_empty_description(app_modules):
+    devices = app_modules.bootstrap.parse_device_list("CPU:0 [CPU]")
+    assert len(devices) == 1
+    assert devices[0].name == ""
+    assert devices[0].target == "cpu"
+
+
+def test_software_vulkan_uses_cpu_thread_count(monkeypatch, app_modules):
+    audiocpp = app_modules.audiocpp
+    monkeypatch.setattr(audiocpp, "_cpu_thread_count", lambda: 7)
+    cfg = audiocpp.build_server_config(
+        model_id="model",
+        family="family",
+        model_path="model.gguf",
+        port=17860,
+        backend="vulkan",
+        device=0,
+        execution_target="cpu",
+    )
+    assert cfg["threads"] == 7
+
+
+def test_explicit_backend_device_is_strict_and_backend_local(app_modules):
+    bootstrap = app_modules.bootstrap
+    devices = bootstrap.parse_device_list(
+        'Vulkan:0 "GPU" [GPU]\nCPU:0 "CPU" [CPU]'
+    )
+    with pytest.raises(RuntimeError, match="requires"):
+        bootstrap.select_device(devices, device_override=0)
+    with pytest.raises(RuntimeError, match="unavailable"):
+        bootstrap.select_device(
+            devices, backend_override="cuda", device_override=0,
+        )
+    selected = bootstrap.select_device(
+        devices, backend_override="vulkan", device_override=0,
+    )
+    assert selected.device.backend == "vulkan"
+
+
+def test_missing_global_gpu_falls_back_to_cpu_with_reason(app_modules):
+    bootstrap = app_modules.bootstrap
+    devices = bootstrap.parse_device_list('CPU:0 "CPU" [CPU]')
+    selected = bootstrap.select_device(devices, requested_family="cuda")
+    assert selected.device.target == "cpu"
+    assert "running on CPU" in selected.fallback_reason
+
+
+def test_runtime_profile_reports_vulkan_independently_of_torch(
+    monkeypatch, app_modules,
+):
+    from core.device_caps import HostCaps
+
+    devices = app_modules.bootstrap.parse_device_list(
+        'Vulkan:1 "NVIDIA GeForce RTX 4090" [GPU]\nCPU:0 "CPU" [CPU]'
+    )
+    monkeypatch.setattr(app_modules.bootstrap, "probe_devices", lambda: devices)
+    caps = HostCaps(family="cpu", available_families=("cpu",), notes=())
+    profile = app_modules.audiocpp.AudioCPPBackend.runtime_compute_profile(caps)
+    assert profile == {
+        "gpu_compat": ("vulkan", "cpu"),
+        "min_vram_gb": 6.0,
+        "effective_device": "vulkan",
+        "routing_status": "accelerated",
+        "routing_reason": None,
+        "runtime_backend": "vulkan",
+        "runtime_device_index": 1,
+        "runtime_device_name": "NVIDIA GeForce RTX 4090",
+        "runtime_hardware_family": "cuda",
+        "runtime_vram_gb": 0.0,
+        "runtime_device_verified": False,
+    }
+
+
+def test_engine_override_keeps_low_vram_caveat_when_global_device_is_cpu(
+    monkeypatch, app_modules,
+):
+    from core.device_caps import HostCaps
+
+    devices = app_modules.bootstrap.parse_device_list(
+        'Vulkan:0 "NVIDIA GTX 1650" [GPU]\nCPU:0 "CPU" [CPU]'
+    )
+    monkeypatch.setattr(app_modules.bootstrap, "probe_devices", lambda: devices)
+    monkeypatch.setenv("OMNIVOICE_AUDIOCPP_BACKEND", "vulkan")
+    caps = HostCaps(
+        family="cpu",
+        available_families=("cuda", "cpu"),
+        device_name="NVIDIA GTX 1650",
+        vram_gb=4.0,
+        requested_family="cpu",
+    )
+
+    profile = app_modules.audiocpp.AudioCPPBackend.runtime_compute_profile(caps)
+
+    assert profile["runtime_hardware_family"] == "cuda"
+    assert profile["runtime_vram_gb"] == 4.0
+    assert profile["runtime_device_verified"] is True
+    assert "4.0 GB VRAM" in profile["routing_reason"]
+
+
+def test_ambiguous_same_name_gpus_do_not_borrow_device_zero_vram(
+    monkeypatch, app_modules,
+):
+    from core.device_caps import HostCaps
+
+    devices = app_modules.bootstrap.parse_device_list(
+        'CUDA:0 "NVIDIA RTX 4090" [GPU]\n'
+        'CUDA:1 "NVIDIA RTX 4090" [GPU]'
+    )
+    monkeypatch.setattr(app_modules.bootstrap, "probe_devices", lambda: devices)
+    caps = HostCaps(
+        family="cuda",
+        available_families=("cuda", "cpu"),
+        device_name="NVIDIA RTX 4090",
+        vram_gb=24.0,
+    )
+
+    selection = app_modules.bootstrap.resolve_compute_selection(caps)
+
+    assert selection.verified_vram_gb == 0.0
+
+
+@pytest.mark.parametrize(
+    "device_line, family, device_name",
+    [
+        ('CUDA:0 "NVIDIA GTX 1650" [GPU]', "cuda", "NVIDIA GTX 1650"),
+        ('HIP:0 "AMD Radeon RX 6500 XT" [GPU]', "rocm", "AMD Radeon RX 6500 XT"),
+        ('Vulkan:0 "NVIDIA GTX 1650" [GPU]', "cuda", "NVIDIA GTX 1650"),
+        ('Vulkan:0 "Intel Arc A380" [GPU]', "xpu", "Intel Arc A380"),
+        ('Vulkan:0 "Discrete Graphics" [GPU]', "cpu", "Discrete Graphics"),
+    ],
+)
+def test_runtime_profile_preserves_low_vram_caveat_for_native_accelerators(
+    device_line, family, device_name, monkeypatch, app_modules,
+):
+    from core.device_caps import HostCaps
+
+    devices = app_modules.bootstrap.parse_device_list(
+        f'{device_line}\nCPU:0 "CPU" [CPU]'
+    )
+    monkeypatch.setattr(app_modules.bootstrap, "probe_devices", lambda: devices)
+    caps = HostCaps(
+        family=family,
+        available_families=(family, "cpu"),
+        device_name=device_name,
+        vram_gb=4.0,
+    )
+
+    profile = app_modules.audiocpp.AudioCPPBackend.runtime_compute_profile(caps)
+
+    assert profile["routing_status"] == "accelerated"
+    assert profile["min_vram_gb"] == 6.0
+    assert "4.0 GB VRAM" in profile["routing_reason"]
+
+
+@pytest.mark.parametrize(
+    "device_line, family",
+    [
+        ('Metal:0 "Apple Silicon" [GPU]', "mps"),
+        ('Vulkan:0 "AMD Radeon 780M" [IGPU]', "rocm"),
+    ],
+)
+def test_runtime_profile_does_not_apply_discrete_vram_floor_to_unified_memory(
+    device_line, family, monkeypatch, app_modules,
+):
+    from core.device_caps import HostCaps
+
+    devices = app_modules.bootstrap.parse_device_list(
+        f'{device_line}\nCPU:0 "CPU" [CPU]'
+    )
+    monkeypatch.setattr(app_modules.bootstrap, "probe_devices", lambda: devices)
+    caps = HostCaps(
+        family=family,
+        available_families=(family, "cpu"),
+        device_name=devices[0].name,
+        vram_gb=4.0,
+    )
+
+    profile = app_modules.audiocpp.AudioCPPBackend.runtime_compute_profile(caps)
+
+    assert profile["routing_status"] == "accelerated"
+    assert profile["min_vram_gb"] == 0.0
+    assert profile["routing_reason"] is None
+
+
+@pytest.mark.parametrize("output", [
+    "", 'Vulkan:x "GPU" [GPU]', 'CPU:0 "CPU" [ALIEN]',
+    'CPU:0 "CPU" [CPU]\nCPU:0 "CPU" [CPU]',
+])
+def test_device_parser_rejects_ambiguous_or_malformed_output(
+    output, app_modules,
+):
+    with pytest.raises(RuntimeError):
+        app_modules.bootstrap.parse_device_list(output)
+
+
+def test_device_parser_rejects_aliased_backend_duplicate(app_modules):
+    with pytest.raises(RuntimeError, match="duplicate"):
+        app_modules.bootstrap.parse_device_list(
+            'HIP:0 "AMD GPU" [GPU]\nROCm:0 "AMD GPU" [GPU]'
+        )
+
+
+def test_failed_device_probe_is_cached_until_invalidated(
+    monkeypatch, app_modules,
+):
+    bootstrap = app_modules.bootstrap
+    bootstrap.invalidate()
+    run = Mock(return_value=SimpleNamespace(
+        returncode=1, stdout="", stderr="private failure",
+    ))
+    monkeypatch.setattr(bootstrap.subprocess, "run", run)
+
+    for _ in range(2):
+        with pytest.raises(RuntimeError, match="device discovery failed"):
+            bootstrap._probe_devices("/configured/audiocpp_server")
+
+    assert run.call_count == 1
+    bootstrap.invalidate()
+
+
 def test_release_assets_have_complete_sha256_pins(app_modules):
     bootstrap = app_modules.bootstrap
     for filename, digest in bootstrap._ASSETS.values():
         assert filename
         assert len(digest) == 64
         assert set(digest) <= set(string.hexdigits)
-    assert "cpu-portable" in bootstrap._ASSETS["windows-x64"][0]
-    assert "ubuntu-x64-cpu" in bootstrap._ASSETS["linux-x64"][0]
+    assert "windows-x64-vulkan" in bootstrap._ASSETS["windows-x64"][0]
+    assert "ubuntu-x64-vulkan" in bootstrap._ASSETS["linux-x64"][0]
 
 
 def test_model_catalog_and_backend_share_immutable_revision(app_modules):
@@ -471,6 +786,11 @@ def test_server_spawn_uses_contained_owner(tmp_path, monkeypatch, app_modules):
     monkeypatch.setattr(app_modules.bootstrap, "resolve_server_binary", lambda: binary)
     monkeypatch.setattr(app_modules.bootstrap, "resolve_model_file", lambda: model)
     monkeypatch.setattr(app_modules.bootstrap, "server_port", lambda: 17860)
+    devices = app_modules.bootstrap.parse_device_list('CPU:0 "Test CPU" [CPU]')
+    monkeypatch.setattr(
+        app_modules.bootstrap, "resolve_compute_selection",
+        lambda *args, **kwargs: app_modules.bootstrap.select_device(devices),
+    )
     monkeypatch.setattr(
         importlib.import_module("core.config"), "DATA_DIR", tmp_path / "data",
     )
@@ -494,10 +814,14 @@ def test_server_spawn_uses_contained_owner(tmp_path, monkeypatch, app_modules):
 
 def test_generate_timeout_terminates_owned_server(monkeypatch, app_modules):
     backend = app_modules.audiocpp.AudioCPPBackend()
+    devices = app_modules.bootstrap.parse_device_list(
+        'Vulkan:0 "AMD Radeon 780M" [IGPU]'
+    )
 
     def mark_loaded():
         backend._port = 17860
         backend._server_model_id = "breeze-tts-2-private-launch"
+        backend._selection = app_modules.bootstrap.select_device(devices)
 
     monkeypatch.setattr(backend, "_ensure_loaded", mark_loaded)
     monkeypatch.setattr(
@@ -506,10 +830,8 @@ def test_generate_timeout_terminates_owned_server(monkeypatch, app_modules):
     terminate = Mock()
     monkeypatch.setattr(backend, "_terminate_server", terminate)
     model_manager = importlib.import_module("services.model_manager")
-    monkeypatch.setattr(
-        model_manager, "generate_timeout_s",
-        lambda text, execution_device: 100.0,
-    )
+    timeout_budget = Mock(return_value=100.0)
+    monkeypatch.setattr(model_manager, "generate_timeout_s", timeout_budget)
     monkeypatch.setattr(model_manager, "GENERATE_PROGRESS_GRACE_S", 40.0)
     progress = Mock()
     monkeypatch.setattr(model_manager, "report_generate_progress", progress)
@@ -522,6 +844,12 @@ def test_generate_timeout_terminates_owned_server(monkeypatch, app_modules):
         backend.generate("Hello from the timeout test.")
 
     assert backend._post_json.call_args.kwargs["timeout"] == 65.0
+    assert timeout_budget.call_args.kwargs == {
+        "execution_device": "vulkan",
+        "min_vram_gb": 0.0,
+        "hardware_family": "rocm",
+        "vram_gb": 0.0,
+    }
     progress.assert_called_once_with()
     terminate.assert_called_once_with()
 
@@ -546,7 +874,7 @@ def test_generate_uses_progress_lease_after_first_download(
     model_manager = importlib.import_module("services.model_manager")
     monkeypatch.setattr(
         model_manager, "generate_timeout_s",
-        lambda text, execution_device: 100.0,
+        lambda text, **kwargs: 100.0,
     )
     monkeypatch.setattr(model_manager, "GENERATE_PROGRESS_GRACE_S", 40.0)
     progress = Mock()
@@ -631,8 +959,96 @@ def test_is_available_requires_binary_and_model(tmp_path, monkeypatch, app_modul
     model = tmp_path / "breeze-tts-2-q8_0.gguf"
     monkeypatch.setattr(bootstrap, "resolve_server_binary", lambda: binary)
     monkeypatch.setattr(bootstrap, "resolve_model_file", lambda: model)
+    selection = Mock(side_effect=AssertionError("availability probed devices"))
+    monkeypatch.setattr(bootstrap, "resolve_compute_selection", selection)
 
     assert app_modules.audiocpp.AudioCPPBackend.is_available() == (True, "ready")
+    selection.assert_not_called()
+
+
+def test_auto_probe_failure_surfaces_cpu_fallback_through_async_profile(
+    monkeypatch, app_modules,
+):
+    import asyncio
+
+    from core.device_caps import HostCaps
+    from services.engine_routing import runtime_compute_profile_async
+
+    bootstrap = app_modules.bootstrap
+    monkeypatch.setattr(
+        bootstrap,
+        "probe_devices",
+        Mock(side_effect=RuntimeError("device discovery timed out")),
+    )
+    caps = HostCaps(family="cuda", available_families=("cuda", "cpu"))
+
+    loop = asyncio.new_event_loop()
+    try:
+        profile = loop.run_until_complete(
+            runtime_compute_profile_async(
+                app_modules.audiocpp.AudioCPPBackend,
+                caps,
+            )
+        )
+    finally:
+        loop.close()
+
+    assert profile["gpu_compat"] == ("cpu",)
+    assert profile["effective_device"] == "cpu"
+    assert profile["runtime_backend"] == "cpu"
+    assert profile["runtime_device_index"] == 0
+    assert profile["routing_status"] == "cpu_fallback"
+    assert profile["routing_reason"] == (
+        "device discovery timed out; running on CPU"
+    )
+
+
+@pytest.mark.parametrize(
+    ("env_name", "env_value"),
+    [
+        ("OMNIVOICE_AUDIOCPP_BACKEND", "cpu"),
+        ("OMNIVOICE_AUDIOCPP_DEVICE", "0"),
+    ],
+)
+def test_explicit_compute_override_keeps_probe_failure_fatal(
+    env_name, env_value, monkeypatch, app_modules,
+):
+    from core.device_caps import HostCaps
+
+    monkeypatch.setenv(env_name, env_value)
+    monkeypatch.setattr(
+        app_modules.bootstrap,
+        "probe_devices",
+        Mock(side_effect=RuntimeError("device discovery timed out")),
+    )
+    caps = HostCaps(family="cpu", available_families=("cpu",))
+
+    with pytest.raises(RuntimeError, match="device discovery timed out"):
+        app_modules.bootstrap.resolve_compute_selection(caps)
+
+    profile = app_modules.audiocpp.AudioCPPBackend.runtime_compute_profile(caps)
+    assert profile["routing_status"] == "unavailable"
+    assert profile["routing_reason"] == "device discovery timed out"
+
+
+def test_requested_compute_family_keeps_probe_failure_fatal(
+    monkeypatch, app_modules,
+):
+    from core.device_caps import HostCaps
+
+    monkeypatch.setattr(
+        app_modules.bootstrap,
+        "probe_devices",
+        Mock(side_effect=RuntimeError("device discovery timed out")),
+    )
+    caps = HostCaps(
+        family="cuda",
+        available_families=("cuda", "cpu"),
+        requested_family="cuda",
+    )
+
+    with pytest.raises(RuntimeError, match="device discovery timed out"):
+        app_modules.bootstrap.resolve_compute_selection(caps)
 
 
 def test_install_hint_present(app_modules):

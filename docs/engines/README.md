@@ -39,7 +39,7 @@ approval), [Windows](../install/windows.md), [Linux](../install/linux.md),
 | OmniVoice (subprocess) | [omnivoice-subprocess](omnivoice-subprocess.md) | CUDA · MPS · CPU | ✅ | opt-in pick, no install |
 | PocketTTS (Kyutai) | [pockettts](pockettts.md) | CPU (not Intel Mac) | ✅ | `uv sync --extra pockettts` + license |
 | Confucius4-TTS | [confucius4-tts](confucius4-tts.md) | CUDA · CPU | ✅ | clone + env var |
-| audio.cpp (Breeze-TTS-2) | [audio-cpp](audio-cpp.md) | CPU (Win/Linux/macOS) | ✅ + voice design | prebuilt binary + env var (weights research/non-commercial) |
+| audio.cpp (Breeze-TTS-2) | [audio-cpp](audio-cpp.md) | CPU + Vulkan/Metal/CUDA/HIP/ROCm where compiled | ✅ + voice design | prebuilt binary + env var (weights research/non-commercial) |
 
 ## Speech-to-text
 

@@ -822,6 +822,7 @@
     "routingRemote": "Terpencil",
     "routingUnknown": "Tidak diketahui",
     "routingEffectiveChip": "Berjalan pada {{device}} di mesin ini",
+    "gpuVulkan": "Vulkan",
     "routingCaveatTitle": "GPU dipilih, tetapi: {{reason}}",
     "selectCpuFallback": "{{engine}}: berjalan di CPU — {{reason}}",
     "selectWithCaveat": "Beralih ke {{engine}} — {{reason}}",

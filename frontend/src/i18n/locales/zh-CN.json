@@ -779,6 +779,7 @@
     "routingRemote": "远程",
     "routingUnknown": "未知",
     "routingEffectiveChip": "在本机的 {{device}} 上运行",
+    "gpuVulkan": "Vulkan",
     "routingCaveatTitle": "已选择 GPU，但是：{{reason}}",
     "curatedModelLabel": "模型",
     "curatedModelAria": "{{engine}} 的模型",
