@@ -122,6 +122,16 @@ function renderDesignTab(overrides = {}) {
 }
 
 describe('CloneDesignTab — Voice Design panel redesign regressions', () => {
+  it('forwards measurable generation progress to the action bar', () => {
+    renderDesignTab({ isGenerating: true, generationTime: '10.6', generationProgress: 42 });
+
+    const progress = screen.getByRole('progressbar');
+    expect(progress).toHaveAttribute('aria-valuenow', '42');
+    expect(progress.querySelector('[data-slot="progress-indicator"]')).toHaveStyle({
+      width: '42%',
+    });
+  });
+
   it.each([
     ['recording is active', { isRecording: true }],
     ['microphone startup is pending', { isStartingRecording: true }],
