@@ -179,7 +179,17 @@ export default function Launchpad({
       {/* Hero — an eyebrow, one serif line, one sentence. Everything that used
           to compete with it (boxed number pill, filled CTA) is now quiet type;
           a hairline underneath does the separating that a card would have. */}
-      <div className="relative z-[1] mx-auto w-full max-w-[1180px] overflow-hidden px-[44px] pb-[26px] pt-[38px] @max-[900px]/launchpad:px-[20px] @max-[900px]/launchpad:pb-[20px] @max-[900px]/launchpad:pt-[26px]">
+      {/* shrink-0 on all three blocks below (#1859). `.launchpad` is a
+          scrollable flex column, and a flex item shrinks before its container
+          scrolls — so opening the log panel, which shrinks grid row 2, was
+          absorbed by these children instead. The hero is `overflow-hidden`, so
+          it clipped its own heading mid-line, and the deck rode up over it.
+          Measured in Chromium at a 720px window with the panel at 560px: the
+          hero box went 145px → 64px against a 145px natural height, and the
+          deck's top landed 22px ABOVE the h1's bottom. With shrink-0 the hero
+          stays 145px and `.launchpad` scrolls, which is what its
+          `overflow-y: auto` was for. */}
+      <div className="relative z-[1] mx-auto w-full max-w-[1180px] shrink-0 overflow-hidden px-[44px] pb-[26px] pt-[38px] @max-[900px]/launchpad:px-[20px] @max-[900px]/launchpad:pb-[20px] @max-[900px]/launchpad:pt-[26px]">
         {/* The signal-field waveform (the same cover the project wears on the
             web) bleeds in from the right, where the hero has only air — the
             mask ends it well before the text column, and a bottom fade keeps
@@ -252,12 +262,12 @@ export default function Launchpad({
           down to the 900×600 minimum without a viewport @media. `shellNarrow`
           (the app-container's own width class) only tunes how comfortably the
           columns pack. */}
-      <div className="relative z-[1] mx-auto w-full max-w-[1180px] px-[44px] py-[4px] @max-[900px]/launchpad:px-[20px] @max-[640px]/launchpad:px-[12px]">
+      <div className="relative z-[1] mx-auto w-full max-w-[1180px] shrink-0 px-[44px] py-[4px] @max-[900px]/launchpad:px-[20px] @max-[640px]/launchpad:px-[12px]">
         <LaunchpadDeck features={features} narrow={shellNarrow} />
       </div>
 
       <div
-        className="relative z-[1] mx-auto grid w-full max-w-[1180px] [grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr))] gap-6 px-[44px] pt-6 pb-8 @max-[900px]/launchpad:px-[20px] @max-[640px]/launchpad:px-[12px]"
+        className="relative z-[1] mx-auto grid w-full max-w-[1180px] shrink-0 [grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr))] gap-6 px-[44px] pt-6 pb-8 @max-[900px]/launchpad:px-[20px] @max-[640px]/launchpad:px-[12px]"
         data-testid="launchpad-library-grid"
       >
         {/* Demo profile callout */}
