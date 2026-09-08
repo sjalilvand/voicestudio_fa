@@ -119,8 +119,15 @@ function PreflightPanel({ report, loading, onRecheck }) {
             />
             <div className="flex min-w-0 flex-col gap-0.5">
               <span className="text-sm font-semibold">{c.label}</span>
+              {/* dir="rtl" moves the ellipsis to the START of the line so a long
+                  path keeps its tail visible. The text itself must stay in an
+                  isolate: in an RTL paragraph the bidi algorithm places a
+                  LEADING run of numbers or neutrals (a digit, a "/") at the
+                  visual right edge, so "48.0 GB total" renders "GB total 48.0".
+                  <bdi> is dir="auto", so the run is ordered by its own content
+                  and only the ellipsis side follows the rtl box. */}
               <span className="truncate text-xs text-fg-muted" dir="rtl" title={c.detail}>
-                {c.detail}
+                <bdi>{c.detail}</bdi>
               </span>
               {c.fix && c.status !== 'pass' && (
                 <span
