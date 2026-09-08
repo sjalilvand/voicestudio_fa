@@ -205,6 +205,7 @@ class AudioCPPBackend(TTSBackend):
 
         try:
             bootstrap.resolve_server_binary()
+            bootstrap.resolve_model_file()
             bootstrap.resolve_compute_selection()
         except RuntimeError as exc:
             return False, str(exc)

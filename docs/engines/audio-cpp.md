@@ -67,9 +67,10 @@ approximately 4.73 GiB, plus runtime memory.
    ```
 
    Alternatively set `OMNIVOICE_AUDIOCPP_DIR` to the directory containing it.
-3. Restart VoiceStudio. The ~4.73 GiB `breeze-tts-2-q8_0.gguf` downloads from
-   `audio-cpp/audio.cpp-gguf` (not gated) into the shared HF cache on first
-   generate — resumable, hash-verified.
+3. Restart VoiceStudio, open **Model Catalogue → Models**, find
+   **Breeze-TTS-2 Q8_0 for audio.cpp**, review its research/non-commercial
+   license note, and click **Install**. Generation never starts this ~4.73 GiB
+   download automatically.
 4. Pick `audiocpp` in **Model Catalogue → Engines**. The server starts
    lazily on first generate (`server.json` + `server.log` live under the app
    data `audiocpp/` directory).
@@ -91,7 +92,7 @@ All three go through the one speech endpoint — reference presence selects:
 |----------|---------|---------|
 | `OMNIVOICE_AUDIOCPP_BIN` | — | Absolute path to `audiocpp_server`. |
 | `OMNIVOICE_AUDIOCPP_DIR` | — | Directory containing `audiocpp_server`. |
-| `OMNIVOICE_AUDIOCPP_MODEL` | pinned auto-download | GGUF file or directory override. |
+| `OMNIVOICE_AUDIOCPP_MODEL` | Model Catalogue cache | GGUF file or directory override. |
 | `OMNIVOICE_AUDIOCPP_PACKAGE` | `breeze-tts-2-q8_0.gguf` | Package filename (`…-bf16.gguf` for full precision). |
 | `OMNIVOICE_AUDIOCPP_PORT` | `17860` | Loopback port. |
 | `OMNIVOICE_AUDIOCPP_BACKEND` | Settings, then auto | Exact runtime: `cuda`, `hip`/`rocm`, `vulkan`, `metal`, or `cpu`. |
@@ -115,10 +116,11 @@ The managed loopback port may be taken. Check `server.log` next to
 `server.json` in the app data `audiocpp/` directory, or set a different
 `OMNIVOICE_AUDIOCPP_PORT` and restart VoiceStudio.
 
-### `Breeze-TTS-2 package ... missing after download`
+### `Breeze-TTS-2 ... not installed` or `package ... not completely installed`
 
-The upstream `audio.cpp-gguf` layout changed. File an issue with the
-package listing — the allow-list in `bootstrap.py` needs updating.
+Install the model from **Model Catalogue → Models**. If an interrupted install
+left it incomplete, use **Reinstall** there. If the error persists after a
+complete reinstall, file an issue with the package listing.
 
 ---
 

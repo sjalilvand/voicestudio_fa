@@ -470,17 +470,15 @@ GENERATE_PROGRESS_GRACE_S = float(
 _MODEL_LOAD_ACTIVITY: dict = {}
 
 
-def report_model_load_activity(thread_ident: "int | None" = None) -> None:
-    """Record that a pool job is making model-load progress.
+def report_model_load_activity() -> None:
+    """Record that the CURRENT THREAD's job is making model-load progress.
 
     Called by engine code that can prove liveness — e.g. SubprocessBackend
     each time a sidecar progress frame arrives during a cold load. The
     guarded waiter uses it to extend the execution deadline (bounded by
     MODEL_LOAD_EXTRA_TIMEOUT_S) instead of abandoning a healthy download.
-    Callers whose downloader emits progress from helper threads pass the
-    owning pool thread's ident explicitly.
     """
-    _MODEL_LOAD_ACTIVITY[thread_ident or threading.get_ident()] = (
+    _MODEL_LOAD_ACTIVITY[threading.get_ident()] = (
         time.monotonic(), MODEL_LOAD_HEARTBEAT_GRACE_S,
     )
 

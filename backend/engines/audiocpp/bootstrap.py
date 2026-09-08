@@ -7,8 +7,8 @@ none of the dependency-isolation machinery in ``engines._venv_probe`` or
 
 1. locates a user-installed ``audiocpp_server`` (env var, user dir, or this
    package's ``bin/``), and
-2. resolves the GGUF model file (explicit path, or a first-use download
-   from ``audio-cpp/audio.cpp-gguf`` into the shared HF cache).
+2. resolves an explicitly installed GGUF model file from a direct path or
+   the shared Hugging Face cache.
 
 Probe order for the server binary (existing installs win, zero migration):
 
@@ -30,7 +30,6 @@ import os
 import platform
 import subprocess  # nosec B404 -- fixed argv probes a user-selected executable
 import sys
-import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -499,14 +498,24 @@ def _materialize_gguf_cache_path(model_file: Path) -> Path:
         raise RuntimeError(f"audio.cpp model must be a .gguf file: {model_file}")
 
     def _link(alias: Path) -> Path:
-        try:
-            os.link(resolved, alias)
-        except FileExistsError:
-            if not os.path.samefile(resolved, alias):
+        for attempt in range(2):
+            try:
+                os.link(resolved, alias)
+            except FileExistsError:
+                if (
+                    not alias.is_symlink()
+                    and alias.is_file()
+                    and os.path.samefile(resolved, alias)
+                ):
+                    return alias
+                if attempt == 0 and alias.is_symlink():
+                    alias.unlink()
+                    continue
                 raise RuntimeError(
                     f"audio.cpp model alias points at a different file: {alias}"
                 ) from None
-        return alias
+            return alias
+        raise RuntimeError(f"audio.cpp model alias could not be created: {alias}")
 
     alias = model_file.with_name(
         f".{model_file.stem}-{HF_MODEL_REVISION[:12]}.audiocpp.gguf"
@@ -531,39 +540,14 @@ def _materialize_gguf_cache_path(model_file: Path) -> Path:
         ) from exc
 
 
-def _download_progress_class() -> type:
-    """Return a per-download tqdm class that heartbeats the owning job."""
-    from services.model_manager import report_model_load_activity
-    from utils import hf_progress
-
-    owner_ident = threading.get_ident()
-    hf_progress.install()
-    base = hf_progress.tracked_tqdm_class()
-    if base is None:
-        from huggingface_hub.utils.tqdm import tqdm as base
-
-    class ModelDownloadProgress(base):
-        def update(self, n=1):
-            report_model_load_activity(owner_ident)
-            return super().update(n)
-
-        def display(self, msg=None, pos=None):
-            report_model_load_activity(owner_ident)
-            return super().display(msg=msg, pos=pos)
-
-    return ModelDownloadProgress
-
-
 def resolve_model_file() -> Path:
-    """Resolve the Breeze-TTS-2 GGUF file, downloading it on first use.
+    """Resolve an explicitly installed Breeze-TTS-2 GGUF file.
 
     An explicit ``OMNIVOICE_AUDIOCPP_MODEL`` path wins (file or directory
-    containing the package file). Otherwise the package file is fetched
-    from :data:`HF_MODEL_REPO` into the shared HF cache — resumable and
-    hash-verified by ``huggingface_hub``.
+    containing the package file). Otherwise only the local Hugging Face cache
+    is inspected. Downloads must be started explicitly from Model Catalogue →
+    Models, so generation can never silently transfer the 4.73 GiB package.
     """
-    from services.tts_backend import _retry_once_with_fresh_hf_client
-
     override = os.environ.get("OMNIVOICE_AUDIOCPP_MODEL", "").strip()
     if override:
         cand = Path(override)
@@ -578,28 +562,31 @@ def resolve_model_file() -> Path:
             "directory containing one."
         )
 
-    def _download() -> str:
-        from huggingface_hub import snapshot_download
-        from services.model_manager import report_model_load_activity
+    from huggingface_hub import snapshot_download
+    from huggingface_hub.utils import LocalEntryNotFoundError
 
-        report_model_load_activity()
-        return snapshot_download(
-            repo_id=HF_MODEL_REPO,
-            # Full immutable commit SHA declared above; Bandit cannot follow
-            # the module constant through this nested callback.
-            revision=HF_MODEL_REVISION,  # nosec B615
-            allow_patterns=[f"{PACKAGE_DIR}/{package_filename()}"],
-            tqdm_class=_download_progress_class(),
+    try:
+        cached = Path(
+            snapshot_download(
+                repo_id=HF_MODEL_REPO,
+                # Full immutable commit SHA declared above; Bandit cannot follow
+                # the module constant through this call.
+                revision=HF_MODEL_REVISION,  # nosec B615
+                allow_patterns=[f"{PACKAGE_DIR}/{package_filename()}"],
+                local_files_only=True,
+            )
         )
-
-    cached = Path(
-        _retry_once_with_fresh_hf_client(_download, "audio.cpp Breeze-TTS-2")
-    )
+    except (LocalEntryNotFoundError, OSError) as exc:
+        raise RuntimeError(
+            "Breeze-TTS-2 is not installed. Install the audio.cpp Breeze-TTS-2 "
+            "model from Model Catalogue → Models, or set "
+            "OMNIVOICE_AUDIOCPP_MODEL to an existing GGUF file."
+        ) from exc
     model_file = cached / PACKAGE_DIR / package_filename()
     if not model_file.is_file():
         raise RuntimeError(
-            f"Breeze-TTS-2 package {package_filename()} missing after "
-            f"download from {HF_MODEL_REPO} — layout changed upstream."
+            f"Breeze-TTS-2 package {package_filename()} is not completely "
+            "installed. Reinstall it from Model Catalogue → Models."
         )
     return _materialize_gguf_cache_path(model_file)
 
@@ -621,7 +608,6 @@ __all__ = [
     "PACKAGE_ENV",
     "PORT_ENV",
     "VERSION",
-    "_download_progress_class",
     "_materialize_gguf_cache_path",
     "binary_name",
     "default_asset",
