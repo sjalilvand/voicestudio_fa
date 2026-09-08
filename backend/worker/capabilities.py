@@ -74,6 +74,12 @@ def discover(*, include_unavailable: bool = False) -> list[dict]:
         gpu_compat = set(entry.get("gpu_compat") or [])
         repo_ids = repo_ids_for(entry)
         downloaded = _downloaded(repo_ids)
+        runtime_vram_gb = (entry.get("execution_evidence") or {}).get(
+            "runtime_vram_gb"
+        )
+        engine_free_bytes = free_bytes if runtime_vram_gb is None else int(
+            float(runtime_vram_gb or 0.0) * 1024**3
+        )
         discovered.append(
             {
                 "engine": engine_id,
@@ -97,7 +103,17 @@ def discover(*, include_unavailable: bool = False) -> list[dict]:
                 "min_memory_bytes": int(float(entry.get("min_vram_gb") or 0) * 1024**3),
                 "precision": "",
                 "backend": entry.get("effective_device") or family,
-                "free_memory_bytes": free_bytes,
+                "free_memory_bytes": engine_free_bytes,
+                # A native provider that works independently of torch may not
+                # expose memory telemetry. Unknown capacity still gets one
+                # serial slot; zero must not turn a working Vulkan engine into
+                # an unschedulable capability.
+                "derived_concurrency": 1
+                if (
+                    runtime_vram_gb is not None
+                    and float(runtime_vram_gb or 0.0) <= 0
+                    and routing == "accelerated"
+                ) else 0,
                 # Capability is not acceleration: an engine present but routed
                 # to the CPU here should not be preferred for GPU work.
                 "cpu_fallback": routing in ("cpu_fallback", "cpu_only")

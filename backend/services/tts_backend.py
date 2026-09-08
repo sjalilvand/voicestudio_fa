@@ -321,6 +321,8 @@ class TTSBackend(ABC):
             "runtime_device_index": None,
             "runtime_device_name": None,
             "runtime_hardware_family": None,
+            "runtime_vram_gb": None,
+            "runtime_device_verified": None,
         }
 
     #: True when generation allocates in ANOTHER process — a dedicated-venv
@@ -2512,6 +2514,8 @@ def list_backends() -> list[dict]:
                 "runtime_device_index": None,
                 "runtime_device_name": None,
                 "runtime_hardware_family": None,
+                "runtime_vram_gb": None,
+                "runtime_device_verified": None,
             }
         gpu_compat = profile["gpu_compat"]
         # Cloning capability: same descriptor guard as

@@ -330,6 +330,8 @@ async def convert_speech(
                     text,
                     execution_device=compute_profile["effective_device"],
                     min_vram_gb=compute_profile["min_vram_gb"],
+                    hardware_family=compute_profile.get("runtime_hardware_family"),
+                    vram_gb=compute_profile.get("runtime_vram_gb"),
                 ),
                 min_vram_gb=compute_profile["min_vram_gb"],
             )

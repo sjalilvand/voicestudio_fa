@@ -324,6 +324,8 @@ def test_runtime_profile_reports_vulkan_independently_of_torch(
         "runtime_device_index": 1,
         "runtime_device_name": "NVIDIA GeForce RTX 4090",
         "runtime_hardware_family": "cuda",
+        "runtime_vram_gb": 0.0,
+        "runtime_device_verified": False,
     }
 
 
@@ -348,7 +350,31 @@ def test_engine_override_keeps_low_vram_caveat_when_global_device_is_cpu(
     profile = app_modules.audiocpp.AudioCPPBackend.runtime_compute_profile(caps)
 
     assert profile["runtime_hardware_family"] == "cuda"
+    assert profile["runtime_vram_gb"] == 4.0
+    assert profile["runtime_device_verified"] is True
     assert "4.0 GB VRAM" in profile["routing_reason"]
+
+
+def test_ambiguous_same_name_gpus_do_not_borrow_device_zero_vram(
+    monkeypatch, app_modules,
+):
+    from core.device_caps import HostCaps
+
+    devices = app_modules.bootstrap.parse_device_list(
+        'CUDA:0 "NVIDIA RTX 4090" [GPU]\n'
+        'CUDA:1 "NVIDIA RTX 4090" [GPU]'
+    )
+    monkeypatch.setattr(app_modules.bootstrap, "probe_devices", lambda: devices)
+    caps = HostCaps(
+        family="cuda",
+        available_families=("cuda", "cpu"),
+        device_name="NVIDIA RTX 4090",
+        vram_gb=24.0,
+    )
+
+    selection = app_modules.bootstrap.resolve_compute_selection(caps)
+
+    assert selection.verified_vram_gb == 0.0
 
 
 @pytest.mark.parametrize(
@@ -428,6 +454,24 @@ def test_device_parser_rejects_aliased_backend_duplicate(app_modules):
         app_modules.bootstrap.parse_device_list(
             'HIP:0 "AMD GPU" [GPU]\nROCm:0 "AMD GPU" [GPU]'
         )
+
+
+def test_failed_device_probe_is_cached_until_invalidated(
+    monkeypatch, app_modules,
+):
+    bootstrap = app_modules.bootstrap
+    bootstrap.invalidate()
+    run = Mock(return_value=SimpleNamespace(
+        returncode=1, stdout="", stderr="private failure",
+    ))
+    monkeypatch.setattr(bootstrap.subprocess, "run", run)
+
+    for _ in range(2):
+        with pytest.raises(RuntimeError, match="device discovery failed"):
+            bootstrap._probe_devices("/configured/audiocpp_server")
+
+    assert run.call_count == 1
+    bootstrap.invalidate()
 
 
 def test_release_assets_have_complete_sha256_pins(app_modules):
@@ -801,6 +845,7 @@ def test_generate_timeout_terminates_owned_server(monkeypatch, app_modules):
         "execution_device": "vulkan",
         "min_vram_gb": 0.0,
         "hardware_family": "rocm",
+        "vram_gb": 0.0,
     }
     progress.assert_called_once_with()
     terminate.assert_called_once_with()

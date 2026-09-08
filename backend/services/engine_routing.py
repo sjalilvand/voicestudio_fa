@@ -52,6 +52,8 @@ def runtime_compute_profile(engine_or_cls, caps: HostCaps) -> dict:
         "runtime_device_index": None,
         "runtime_device_name": None,
         "runtime_hardware_family": None,
+        "runtime_vram_gb": None,
+        "runtime_device_verified": None,
     }
 
 
@@ -60,6 +62,7 @@ def under_provisioned_vram(
     min_vram_gb: float = 0.0,
     *,
     family: str | None = None,
+    vram_gb: float | None = None,
 ) -> bool:
     """Is this host's DEDICATED VRAM below the engine's declared floor?
 
@@ -80,8 +83,9 @@ def under_provisioned_vram(
         return False
     if (family or getattr(caps, "family", None)) not in ("cuda", "rocm"):
         return False
-    vram_gb = float(getattr(caps, "vram_gb", 0.0) or 0.0)
-    return 0 < vram_gb < float(min_vram_gb)
+    raw_vram_gb = getattr(caps, "vram_gb", 0.0) if vram_gb is None else vram_gb
+    available_vram_gb = float(raw_vram_gb or 0.0)
+    return 0 < available_vram_gb < float(min_vram_gb)
 
 
 def low_vram_caveat(
@@ -89,13 +93,17 @@ def low_vram_caveat(
     min_vram_gb: float = 0.0,
     *,
     family: str | None = None,
+    vram_gb: float | None = None,
 ) -> str | None:
     """User-facing advisory for a known under-provisioned dedicated GPU."""
-    if not under_provisioned_vram(caps, min_vram_gb, family=family):
+    if not under_provisioned_vram(
+        caps, min_vram_gb, family=family, vram_gb=vram_gb,
+    ):
         return None
     device = caps.device_name or (family or caps.family).upper()
+    available_vram_gb = caps.vram_gb if vram_gb is None else vram_gb
     return (
-        f"{device} has {caps.vram_gb:.1f} GB VRAM; this engine wants about "
+        f"{device} has {available_vram_gb:.1f} GB VRAM; this engine wants about "
         f"{min_vram_gb:.0f} GB. It will run, but expect slow generations "
         f"that may time out. Unload other models before generating, keep "
         f"the text short, or pick a lighter engine."

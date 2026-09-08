@@ -317,12 +317,19 @@ def test_apple_capability_stays_serial():
 
 
 def test_capability_round_trips():
-    original = {**_capabilities(resident=True)[0], "display_name": "IndexTTS 2"}
+    original = {
+        **_capabilities(resident=True)[0],
+        "display_name": "IndexTTS 2",
+        "backend": "vulkan",
+        "free_memory_bytes": 4 * 1024**3,
+    }
     restored = codec.capability_from_pb(codec.capability_to_pb(original))
     assert restored["engine"] == original["engine"]
     assert restored["resident"] is True
     assert restored["installed"] is True
     assert restored["display_name"] == "IndexTTS 2"
+    assert restored["backend"] == "vulkan"
+    assert restored["free_memory_bytes"] == 4 * 1024**3
 
 
 def test_legacy_capability_without_display_name_still_decodes():

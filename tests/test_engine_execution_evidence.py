@@ -73,6 +73,7 @@ def test_runtime_native_device_name_is_scrubbed_and_capped():
     assert "/home/alice" not in evidence["gpu_name"]
     assert "hf_abcdefghijklmnopqrstuvwxyz1234567890" not in evidence["gpu_name"]
     assert len(evidence["gpu_name"]) == 256
+    assert evidence["gpu_architecture"] is None
 
 
 def test_faster_whisper_cpu_fallback_names_reason_and_stage():

@@ -240,11 +240,13 @@ class AudioCPPBackend(TTSBackend):
             selected_caps = replace(
                 caps,
                 device_name=selected.name,
+                vram_gb=selection.verified_vram_gb,
             )
             reason = low_vram_caveat(
                 selected_caps,
                 min_vram_gb,
                 family=selected.hardware_family,
+                vram_gb=selection.verified_vram_gb,
             )
         status = "accelerated" if accelerated else (
             "cpu_fallback" if selection.fallback_reason else "cpu_only"
@@ -259,6 +261,8 @@ class AudioCPPBackend(TTSBackend):
             "runtime_device_index": selected.index,
             "runtime_device_name": selected.name,
             "runtime_hardware_family": selected.hardware_family,
+            "runtime_vram_gb": selection.verified_vram_gb,
+            "runtime_device_verified": selection.verified_vram_gb > 0,
         }
 
     # ── TTSBackend protocol ─────────────────────────────────────────────
@@ -499,6 +503,8 @@ class AudioCPPBackend(TTSBackend):
                 execution_device=selected.target if selected else "cpu",
                 min_vram_gb=min_vram_gb,
                 hardware_family=selected.hardware_family if selected else None,
+                vram_gb=self._selection.verified_vram_gb
+                if self._selection else 0.0,
             )
             if not self._server_model_id:
                 raise RuntimeError("managed audio.cpp server identity is missing")

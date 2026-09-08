@@ -152,6 +152,13 @@ class AudioCPPSelection:
 
     device: AudioCPPDevice
     fallback_reason: str | None = None
+    verified_vram_gb: float = 0.0
+
+
+@dataclass(frozen=True)
+class _ProbeOutcome:
+    devices: tuple[AudioCPPDevice, ...] = ()
+    error: str | None = None
 
 
 def _vulkan_hardware_family(name: str) -> str:
@@ -312,7 +319,7 @@ def resolve_server_binary() -> Path:
 
 
 @functools.lru_cache(maxsize=4)
-def _probe_devices(binary: str) -> tuple[AudioCPPDevice, ...]:
+def _probe_device_outcome(binary: str) -> _ProbeOutcome:
     try:
         proc = subprocess.run(  # nosec B603 -- executable is the resolved engine binary
             [binary, "--list-devices"],
@@ -321,20 +328,36 @@ def _probe_devices(binary: str) -> tuple[AudioCPPDevice, ...]:
             timeout=10,
             check=False,
         )
-    except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(
-            "audiocpp_server device discovery timed out after 10 seconds"
-        ) from exc
-    except OSError as exc:
-        raise RuntimeError(
-            f"audiocpp_server device discovery could not start: {type(exc).__name__}"
-        ) from exc
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"audiocpp_server device discovery failed (code {proc.returncode}). "
-            "Check the audio.cpp server log for details."
+    except subprocess.TimeoutExpired:
+        return _ProbeOutcome(
+            error="audiocpp_server device discovery timed out after 10 seconds"
         )
-    return parse_device_list(proc.stdout)
+    except OSError as exc:
+        return _ProbeOutcome(
+            error=(
+                "audiocpp_server device discovery could not start: "
+                f"{type(exc).__name__}"
+            )
+        )
+    if proc.returncode != 0:
+        return _ProbeOutcome(
+            error=(
+                "audiocpp_server device discovery failed "
+                f"(code {proc.returncode}). Check the audio.cpp server log "
+                "for details."
+            )
+        )
+    try:
+        return _ProbeOutcome(devices=parse_device_list(proc.stdout))
+    except RuntimeError as exc:
+        return _ProbeOutcome(error=str(exc))
+
+
+def _probe_devices(binary: str) -> tuple[AudioCPPDevice, ...]:
+    outcome = _probe_device_outcome(binary)
+    if outcome.error:
+        raise RuntimeError(outcome.error)
+    return outcome.devices
 
 
 def probe_devices() -> tuple[AudioCPPDevice, ...]:
@@ -466,13 +489,38 @@ def resolve_compute_selection(caps=None) -> AudioCPPSelection:
 
         caps = detect_host_caps()
     requested = getattr(caps, "requested_family", "auto") or "auto"
-    return select_device(
-        probe_devices(),
+    devices = probe_devices()
+    selection = select_device(
+        devices,
         requested_family=requested,
         backend_override=backend_override,
         device_override=device_override,
         preferred_name=getattr(caps, "device_name", "") or "",
     )
+    # HostCaps measures the preferred accelerator's device 0. Reuse that VRAM
+    # only when the selected native registry has exactly one device with the
+    # same normalized name. Multi-GPU peers with identical names stay unknown.
+    selected_name = " ".join(selection.device.name.casefold().split())
+    host_name = " ".join(
+        str(getattr(caps, "device_name", "") or "").casefold().split()
+    )
+    peers = [
+        device for device in devices
+        if device.backend == selection.device.backend
+        and " ".join(device.name.casefold().split()) == host_name
+    ]
+    if (
+        selected_name
+        and selected_name == host_name
+        and len(peers) == 1
+        and float(getattr(caps, "vram_gb", 0.0) or 0.0) > 0
+    ):
+        return AudioCPPSelection(
+            selection.device,
+            selection.fallback_reason,
+            float(caps.vram_gb),
+        )
+    return selection
 
 
 def runtime_targets(devices: tuple[AudioCPPDevice, ...] | None = None) -> tuple[str, ...]:
@@ -487,7 +535,7 @@ def runtime_targets(devices: tuple[AudioCPPDevice, ...] | None = None) -> tuple[
 
 def invalidate() -> None:
     """Forget cached binary capability discovery after an install change."""
-    _probe_devices.cache_clear()
+    _probe_device_outcome.cache_clear()
 
 
 def default_asset() -> tuple[str, str] | None:

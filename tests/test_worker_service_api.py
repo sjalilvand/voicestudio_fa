@@ -191,6 +191,26 @@ def test_discovery_reports_the_four_states(monkeypatch):
     assert "clone" in entry["operations"]
 
 
+def test_unknown_native_gpu_memory_keeps_one_serial_worker_slot(monkeypatch):
+    monkeypatch.setattr(
+        "services.tts_backend.list_backends",
+        lambda: [{
+            "id": "audiocpp",
+            "available": True,
+            "routing_status": "accelerated",
+            "gpu_compat": ["vulkan", "cpu"],
+            "effective_device": "vulkan",
+            "min_vram_gb": 6.0,
+            "execution_evidence": {"runtime_vram_gb": 0.0},
+        }],
+    )
+
+    entry = capabilities.discover()[0]
+
+    assert entry["free_memory_bytes"] == 0
+    assert entry["derived_concurrency"] == 1
+
+
 def test_cpu_fallback_is_reported_because_capability_is_not_acceleration(monkeypatch):
     monkeypatch.setattr(
         "services.tts_backend.list_backends",

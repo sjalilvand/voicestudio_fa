@@ -256,22 +256,24 @@ def _worker(*, backend: str = "cuda", vram_gb: float = 4.0,
     from worker.capacity import WorkerCapacity
     from worker.pool import ConnectedWorker
     from worker.registry import RemoteWorker
+    from worker.transport.codec import capability_from_pb, capability_to_pb
 
     gb = 1024 ** 3
+    capability = capability_from_pb(capability_to_pb({
+        "engine": "omnivoice",
+        "model_id": "OmniVoice",
+        "operations": ["tts"],
+        "supported": True,
+        "installed": True,
+        "downloaded": True,
+        "backend": backend,
+        "cpu_fallback": cpu_fallback,
+        "min_memory_bytes": int(floor_gb * gb),
+        "free_memory_bytes": int(vram_gb * gb),
+    }))
     record = RemoteWorker(
         id="w1", name="w1", key_id="key-w1", public_key=b"\x00" * 32, priority=50,
-        capabilities=[{
-            "engine": "omnivoice",
-            "model_id": "OmniVoice",
-            "operations": ["tts"],
-            "supported": True,
-            "installed": True,
-            "downloaded": True,
-            "backend": backend,
-            "cpu_fallback": cpu_fallback,
-            "min_memory_bytes": int(floor_gb * gb),
-            "free_memory_bytes": int(vram_gb * gb),
-        }],
+        capabilities=[capability],
         consent_granted_at=1.0, created_at=1.0,
     )
     return ConnectedWorker(

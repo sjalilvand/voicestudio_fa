@@ -103,10 +103,16 @@ def snapshot(
         "actual_execution_provider": provider,
         "actual_execution_device": actual_device,
         "gpu_name": public_device_name or None,
-        "gpu_architecture": _gpu_architecture(
+        "gpu_architecture": None
+        if (
+            routing.get("runtime_hardware_family")
+            and not routing.get("runtime_device_verified")
+        )
+        else _gpu_architecture(
             routing.get("runtime_hardware_family")
             or getattr(caps, "family", "cpu")
         ),
+        "runtime_vram_gb": routing.get("runtime_vram_gb"),
         "precision_or_quantization": precision,
         "cpu_fallback_reason": runtime_fallback_reason or (routing.get("routing_reason") if fallback else None),
         "cpu_fallback_stage": runtime_fallback_stage or ("routing_preflight" if fallback else None),
