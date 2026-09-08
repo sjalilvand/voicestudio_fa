@@ -87,19 +87,18 @@ DEFAULT_PORT = 17860
 #: This package's owned binary dir (probe 3).
 _PKG_BIN_DIR: Path = Path(__file__).parent / "bin"
 
-# (asset filename, sha256) per platform slug, from the v0.7.2 release.
-# VoiceStudio's first integration is CPU-only, so Windows and Linux use the
-# upstream CPU archives. Upstream publishes macOS binaries under the Metal
-# package name; those builds retain the CPU backend selected by VoiceStudio.
-# No linux-aarch64 prebuilt exists, so that platform is unavailable in v1.
+# Recommended (asset filename, sha256) per platform slug, from the v0.7.2
+# release. Windows and Linux use the vendor-neutral Vulkan build, which also
+# exposes the native CPU backend. Upstream publishes the macOS builds under
+# the Metal package name. No linux-aarch64 prebuilt exists in v0.7.2.
 _ASSETS: dict[str, tuple[str, str]] = {
     "windows-x64": (
-        "audio-v0.7.2-bin-windows-x64-cpu-portable.zip",
-        "0b1f4bd78c5226ee3fa0eb24d95d603a429439cdf5dab45872d44a87412dd8c1",
+        "audio-v0.7.2-bin-windows-x64-vulkan.zip",
+        "15b8232eae740e21e507d87f827a89966de9451b085a45932d9e214e032962c1",
     ),
     "linux-x64": (
-        "audio-v0.7.2-bin-ubuntu-x64-cpu.tar.gz",
-        "6f5e43dd7b80e8ddf688ef84b411fadcd1f934d2c83963178bc4e2d9c4f07736",
+        "audio-v0.7.2-bin-ubuntu-x64-vulkan.tar.gz",
+        "fee1f978cee76453cf17f00196554bc2ee294645739538af0726a143b6a69a23",
     ),
     "darwin-arm64": (
         "audio-v0.7.2-bin-macos-arm64-metal.tar.gz",
@@ -117,6 +116,7 @@ _BINARY_NAMES = {"windows-x64": "audiocpp_server.exe"}
 _REGISTRY_BACKENDS = {
     "CPU": "cpu",
     "CUDA": "cuda",
+    "MUSA": "cuda",
     "HIP": "hip",
     "ROCm": "hip",
     "Vulkan": "vulkan",
@@ -165,8 +165,13 @@ def _vulkan_hardware_family(name: str) -> str:
     return "vulkan"
 
 
-def _device_families(registry: str, name: str) -> tuple[str, str]:
-    if registry == "CUDA":
+def _device_families(registry: str, name: str, kind: str) -> tuple[str, str]:
+    # Software adapters such as Vulkan llvmpipe may be listed by a GPU
+    # registry but still execute on the CPU. Keep their runtime backend for
+    # explicit overrides while reporting and routing them as CPU work.
+    if kind == "CPU":
+        return "cpu", "cpu"
+    if registry in {"CUDA", "MUSA"}:
         return "cuda", "cuda"
     if registry in {"HIP", "ROCm"}:
         return "rocm", "rocm"
@@ -192,25 +197,38 @@ def parse_device_list(output: str) -> tuple[AudioCPPDevice, ...]:
         if not colon or registry not in _REGISTRY_BACKENDS:
             continue
         index_text, space, remainder = detail.strip().partition(" ")
-        if not space or not index_text.isdecimal():
-            raise RuntimeError(f"malformed audio.cpp device entry: {line[:160]}")
+        if not space or not index_text.isascii() or not index_text.isdecimal():
+            raise RuntimeError(
+                f"malformed audio.cpp {registry} device entry"
+            )
         index = int(index_text)
-        name_and_kind, marker, kind = remainder.rpartition(" [")
-        if not marker or not kind.endswith("]"):
-            raise RuntimeError(f"malformed audio.cpp device entry: {line[:160]}")
-        name = name_and_kind.strip()
-        if len(name) >= 2 and name[0] == '"' and name[-1] == '"':
-            name = name[1:-1]
-        kind = kind[:-1].strip().upper()
+        remainder = remainder.strip()
+        kind_start = remainder.rfind("[")
+        if kind_start < 0 or not remainder.endswith("]"):
+            raise RuntimeError(
+                f"malformed audio.cpp {registry} device entry"
+            )
+        name_field = remainder[:kind_start].strip()
+        if name_field:
+            if len(name_field) < 2 or name_field[0] != '"' or name_field[-1] != '"':
+                raise RuntimeError(
+                    f"malformed audio.cpp {registry} device entry"
+                )
+            name = name_field[1:-1]
+        else:
+            name = ""
+        kind = remainder[kind_start + 1:-1].strip().upper()
         if kind not in {"CPU", "GPU", "IGPU", "ACCEL", "META"}:
-            raise RuntimeError(f"unknown audio.cpp device kind: {kind[:40]}")
-        key = (registry, index)
+            raise RuntimeError("unknown audio.cpp device kind")
+        # Registry aliases such as HIP/ROCm share one backend-local index
+        # namespace and therefore cannot safely describe different devices.
+        key = (_REGISTRY_BACKENDS[registry], index)
         if key in seen:
             raise RuntimeError(
                 f"duplicate audio.cpp device entry: {registry}:{index}"
             )
         seen.add(key)
-        target, hardware_family = _device_families(registry, name)
+        target, hardware_family = _device_families(registry, name, kind)
         devices.append(AudioCPPDevice(
             registry=registry,
             backend=_REGISTRY_BACKENDS[registry],
@@ -312,10 +330,9 @@ def _probe_devices(binary: str) -> tuple[AudioCPPDevice, ...]:
             f"audiocpp_server device discovery could not start: {type(exc).__name__}"
         ) from exc
     if proc.returncode != 0:
-        detail = (proc.stderr or proc.stdout or "unknown error").strip()[:300]
         raise RuntimeError(
-            f"audiocpp_server device discovery failed (code {proc.returncode}): "
-            f"{detail}"
+            f"audiocpp_server device discovery failed (code {proc.returncode}). "
+            "Check the audio.cpp server log for details."
         )
     return parse_device_list(proc.stdout)
 
@@ -326,7 +343,15 @@ def probe_devices() -> tuple[AudioCPPDevice, ...]:
 
 
 def _priority(device: AudioCPPDevice) -> tuple[int, int]:
-    if device.backend == "cuda":
+    if device.kind == "META":
+        # Tensor-parallel meta devices are valid explicit targets, but their
+        # resource footprint is not safe to choose implicitly over CPU.
+        rank = 8
+    elif device.backend != "cpu" and device.kind == "CPU":
+        # Native CPU is the predictable fallback. Software adapters remain
+        # available to an explicit backend override but never win auto mode.
+        rank = 7
+    elif device.backend == "cuda":
         rank = 0
     elif device.backend == "hip":
         rank = 1
@@ -373,7 +398,13 @@ def select_device(
                 f"audio.cpp backend '{backend_override}'{suffix} is unavailable "
                 f"(available: {available})"
             )
-        return AudioCPPSelection(min(candidates, key=_priority))
+        # An explicit runtime request should still prefer a compute device to
+        # a software adapter when no backend-local index was supplied. META is
+        # valid here because the user explicitly chose this registry.
+        return AudioCPPSelection(min(
+            candidates,
+            key=lambda device: (device.kind == "CPU", _priority(device)),
+        ))
 
     if device_override is not None:
         raise RuntimeError(
@@ -391,8 +422,11 @@ def select_device(
             if preferred:
                 named = [
                     device for device in candidates
-                    if preferred in device.name.casefold()
-                    or device.name.casefold() in preferred
+                    if device.name
+                    and (
+                        preferred in device.name.casefold()
+                        or device.name.casefold() in preferred
+                    )
                 ]
                 if named:
                     candidates = named

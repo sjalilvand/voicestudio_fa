@@ -525,7 +525,7 @@ class GpuPoolBusyError(TimeoutError):
 
 def generate_timeout_s(
     text: "str | None", *, engine: object = None, execution_device: "str | None" = None,
-    min_vram_gb: float = 0.0,
+    min_vram_gb: float = 0.0, hardware_family: "str | None" = None,
 ) -> float:
     """THE wall-clock execution budget for one synthesis job, scaled to input.
 
@@ -569,6 +569,7 @@ def generate_timeout_s(
             profile = runtime_compute_profile(engine, caps)
             family = profile["effective_device"]
             min_vram_gb = profile["min_vram_gb"]
+            hardware_family = profile.get("runtime_hardware_family")
         universal_override = (
             _GENERATE_TIMEOUT_EXPLICIT
             or GPU_JOB_TIMEOUT_S != _CONFIGURED_GPU_JOB_TIMEOUT_S
@@ -582,10 +583,12 @@ def generate_timeout_s(
         )
         if family == "cpu" and (cpu_explicit or not universal_override):
             base = CPU_JOB_TIMEOUT_S
-        elif not universal_override and family in ("cuda", "rocm"):
+        elif not universal_override and family in ("cuda", "rocm", "vulkan"):
             from services.engine_routing import under_provisioned_vram
 
-            if under_provisioned_vram(caps, min_vram_gb):
+            if under_provisioned_vram(
+                caps, min_vram_gb, family=hardware_family,
+            ):
                 # `max`, never a plain assignment: an operator who raised the
                 # accelerated budget above the CPU one must not have it cut.
                 base = max(base, CPU_JOB_TIMEOUT_S)

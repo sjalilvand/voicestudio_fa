@@ -115,6 +115,23 @@ def test_the_whole_class_not_just_cuda(on_host, floor):
     ) == 600.0
 
 
+def test_vulkan_on_a_small_dedicated_gpu_gets_the_cpu_budget(on_host, floor):
+    mm = on_host(_gpu(4.0))
+    assert mm.generate_timeout_s(
+        "A short render", execution_device="vulkan", min_vram_gb=floor,
+    ) == 600.0
+
+
+def test_native_hardware_family_overrides_global_cpu_preference(on_host, floor):
+    mm = on_host(_gpu(4.0, family="cpu", name="NVIDIA GTX 1650"))
+    assert mm.generate_timeout_s(
+        "A short render",
+        execution_device="vulkan",
+        min_vram_gb=floor,
+        hardware_family="cuda",
+    ) == 600.0
+
+
 # ── the boundaries it must not cross ─────────────────────────────────────
 
 
@@ -270,6 +287,7 @@ def _worker(*, backend: str = "cuda", vram_gb: float = 4.0,
     [
         ({}, True),                                   # 4 GB card, 6 GB engine
         ({"backend": "rocm"}, True),                  # whole class
+        ({"backend": "vulkan"}, True),                # native Vulkan wrapper
         ({"vram_gb": 24.0}, False),                   # big card
         ({"floor_gb": 0.0}, False),                   # engine declares no floor
         ({"vram_gb": 0.0}, False),                    # probe failed on the worker
@@ -280,6 +298,11 @@ def _worker(*, backend: str = "cuda", vram_gb: float = 4.0,
 def test_the_worker_decides_from_the_figures_it_advertises(kwargs, expected):
     w = _worker(**kwargs)
     assert w.under_provisioned("omnivoice", "OmniVoice", "tts") is expected
+
+
+def test_worker_preserves_vulkan_as_the_execution_device():
+    w = _worker(backend="vulkan")
+    assert w.execution_device("omnivoice", "OmniVoice", "tts") == "vulkan"
 
 
 def test_an_unknown_capability_is_never_called_under_provisioned():
@@ -310,7 +333,7 @@ def test_a_healthy_remote_worker_is_unchanged():
     )
 
 
-@pytest.mark.parametrize("device", ["cuda", "rocm"])
+@pytest.mark.parametrize("device", ["cuda", "rocm", "vulkan"])
 def test_the_task_deadline_still_covers_the_raised_execution_budget(device):
     """`gpu_gateway._default_deadline` is computed before a worker is bound, so
     it cannot know the card. It already asks for the CPU budget (no

@@ -57,6 +57,24 @@ def test_loaded_rocm_torch_engine_reports_actual_device():
     assert evidence["gpu_name"] == "AMD Radeon RX 6700 XT"
 
 
+def test_runtime_native_device_name_is_scrubbed_and_capped():
+    routing = {
+        "routing_status": "accelerated",
+        "routing_reason": None,
+        "runtime_device_name": (
+            "/home/alice/adapter hf_abcdefghijklmnopqrstuvwxyz1234567890 "
+            + "x" * 300
+        ),
+        "runtime_hardware_family": "cuda",
+    }
+
+    evidence = _snap(_TorchEngine, routing)
+
+    assert "/home/alice" not in evidence["gpu_name"]
+    assert "hf_abcdefghijklmnopqrstuvwxyz1234567890" not in evidence["gpu_name"]
+    assert len(evidence["gpu_name"]) == 256
+
+
 def test_faster_whisper_cpu_fallback_names_reason_and_stage():
     evidence = _snap(
         _FasterWhisper,

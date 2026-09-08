@@ -51,10 +51,16 @@ def runtime_compute_profile(engine_or_cls, caps: HostCaps) -> dict:
         "runtime_backend": None,
         "runtime_device_index": None,
         "runtime_device_name": None,
+        "runtime_hardware_family": None,
     }
 
 
-def under_provisioned_vram(caps: HostCaps, min_vram_gb: float = 0.0) -> bool:
+def under_provisioned_vram(
+    caps: HostCaps,
+    min_vram_gb: float = 0.0,
+    *,
+    family: str | None = None,
+) -> bool:
     """Is this host's DEDICATED VRAM below the engine's declared floor?
 
     The one definition of "under-provisioned", shared by everything that acts
@@ -72,10 +78,28 @@ def under_provisioned_vram(caps: HostCaps, min_vram_gb: float = 0.0) -> bool:
     """
     if not min_vram_gb or min_vram_gb <= 0:
         return False
-    if getattr(caps, "family", None) not in ("cuda", "rocm"):
+    if (family or getattr(caps, "family", None)) not in ("cuda", "rocm"):
         return False
     vram_gb = float(getattr(caps, "vram_gb", 0.0) or 0.0)
     return 0 < vram_gb < float(min_vram_gb)
+
+
+def low_vram_caveat(
+    caps: HostCaps,
+    min_vram_gb: float = 0.0,
+    *,
+    family: str | None = None,
+) -> str | None:
+    """User-facing advisory for a known under-provisioned dedicated GPU."""
+    if not under_provisioned_vram(caps, min_vram_gb, family=family):
+        return None
+    device = caps.device_name or (family or caps.family).upper()
+    return (
+        f"{device} has {caps.vram_gb:.1f} GB VRAM; this engine wants about "
+        f"{min_vram_gb:.0f} GB. It will run, but expect slow generations "
+        f"that may time out. Unload other models before generating, keep "
+        f"the text short, or pick a lighter engine."
+    )
 
 
 def _caveat(caps: HostCaps, min_vram_gb: float = 0.0) -> str | None:
@@ -98,15 +122,7 @@ def _caveat(caps: HostCaps, min_vram_gb: float = 0.0) -> str | None:
     for note in caps.notes:
         if KERNEL_RISK_MARKER in note:
             return f"{caps.family.upper()} selected, but: {note}"
-    if under_provisioned_vram(caps, min_vram_gb):
-        device = caps.device_name or caps.family.upper()
-        return (
-            f"{device} has {caps.vram_gb:.1f} GB VRAM; this engine wants about "
-            f"{min_vram_gb:.0f} GB. It will run, but expect slow generations "
-            f"that may time out. Unload other models before generating, keep "
-            f"the text short, or pick a lighter engine."
-        )
-    return None
+    return low_vram_caveat(caps, min_vram_gb)
 
 
 def resolve_routing(
@@ -246,6 +262,6 @@ def routing_fields(
 
 __all__ = [
     "RoutingStatus", "RoutingResult", "resolve_routing", "routing_fields",
-    "routing_notice", "header_safe_reason", "runtime_compute_profile",
-    "under_provisioned_vram",
+    "routing_notice", "header_safe_reason", "low_vram_caveat",
+    "runtime_compute_profile", "under_provisioned_vram",
 ]

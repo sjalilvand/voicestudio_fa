@@ -320,6 +320,7 @@ class TTSBackend(ABC):
             "runtime_backend": None,
             "runtime_device_index": None,
             "runtime_device_name": None,
+            "runtime_hardware_family": None,
         }
 
     #: True when generation allocates in ANOTHER process — a dedicated-venv
@@ -2368,7 +2369,7 @@ _INSTALL_HINTS: dict[str, str] = {
     "moss-tts-v15":  "git clone OpenMOSS/MOSS-TTS + set OMNIVOICE_MOSS_TTS_V15_DIR  (own venv, transformers==5.0; 8B, ~16 GB weights; CUDA/ROCm/XPU/NPU/CPU, no MPS; Apache-2.0)",
     "dots-tts":      "git clone rednote-hilab/dots.tts + set OMNIVOICE_DOTS_TTS_DIR  (own venv, transformers==4.57; 2B, ~9 GB weights; CUDA/CPU, Linux/macOS only — no Windows; Apache-2.0)",
     "confucius4-tts":"git clone netease-youdao/Confucius4-TTS + set OMNIVOICE_CONFUCIUS4_TTS_DIR  (own Python 3.10 venv; 14-lang cross-lingual zero-shot clone; ~5 GB weights auto-download; CUDA/ROCm/XPU/NPU/CPU, no MPS; Apache-2.0)",
-    "audiocpp":     "download audio.cpp v0.7.2 CPU prebuilt + set OMNIVOICE_AUDIOCPP_BIN, then explicitly install Breeze-TTS-2 in Model Catalogue → Models  (native GGUF server, no Python; en+zh clone+design; ~4.73 GiB; weights research/non-commercial only)",
+    "audiocpp":     "download the matching audio.cpp v0.7.2 prebuilt + set OMNIVOICE_AUDIOCPP_BIN, then explicitly install Breeze-TTS-2 in Model Catalogue → Models  (native CPU/Vulkan/CUDA/Metal GGUF server, no Python; en+zh clone+design; ~4.73 GiB; weights research/non-commercial only)",
 }
 
 
@@ -2495,9 +2496,12 @@ def list_backends() -> list[dict]:
         else:
             isolation = "in-process"
         from services.engine_routing import resolve_routing, runtime_compute_profile
-        if ok:
+        try:
             profile = runtime_compute_profile(cls, caps)
-        else:
+        except Exception:
+            # Runtime-aware native probes remain optional metadata. A broken
+            # provider probe must not take down the engine picker, especially
+            # when availability already explains a missing binary or model.
             compat = tuple(getattr(cls, "gpu_compat", ("cpu",)))
             floor = float(getattr(cls, "min_vram_gb", 0.0) or 0.0)
             profile = {
@@ -2507,6 +2511,7 @@ def list_backends() -> list[dict]:
                 "runtime_backend": None,
                 "runtime_device_index": None,
                 "runtime_device_name": None,
+                "runtime_hardware_family": None,
             }
         gpu_compat = profile["gpu_compat"]
         # Cloning capability: same descriptor guard as
