@@ -2605,7 +2605,9 @@ def active_routing() -> dict | None:
     """
     try:
         active = active_backend_id()
-        for b in list_backends():
+        # The MPS picker intentionally hides the redundant compatibility id,
+        # but routing must still describe a saved or environment-pinned id.
+        for b in list_backends(include_hidden=True):
             if b.get("id") == active:
                 return {
                     "engine": active,

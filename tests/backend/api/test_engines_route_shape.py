@@ -254,12 +254,14 @@ def test_mps_picker_hides_redundant_omnivoice_sidecar_but_api_accepts_it(
     )
 
     client = _client(fresh_app)
-    rows = {row["id"] for row in client.get("/engines/tts").json()["backends"]}
+    payload = client.get("/engines/tts").json()
+    rows = {row["id"] for row in payload["backends"]}
     assert "omnivoice" in rows
     assert "omnivoice-subprocess" not in rows
+    assert payload["active"] == "omnivoice"
 
     canonical = next(
-        row for row in client.get("/engines/tts").json()["backends"] if row["id"] == "omnivoice"
+        row for row in payload["backends"] if row["id"] == "omnivoice"
     )
     assert canonical["isolation_mode"] == "subprocess"
 

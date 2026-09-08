@@ -42,10 +42,26 @@ _FAMILIES = {
 }
 
 
+def _catalogue_active_id(family: str, module) -> str:
+    """Return the active id represented by the public engine catalogue."""
+    active = module.active_backend_id()
+    if family != "tts" or active != "omnivoice-subprocess":
+        return active
+
+    from core.device_caps import detect_host_caps
+
+    try:
+        return "omnivoice" if detect_host_caps().family == "mps" else active
+    except Exception:
+        return active
+
+
 def _family_payload(family: str, module):
     """Public inventory plus whether an environment pin owns this family."""
     return {
-        "active": module.active_backend_id(),
+        # MPS hides the explicit compatibility row, so legacy configs report
+        # the visible canonical equivalent as active to picker consumers.
+        "active": _catalogue_active_id(family, module),
         "env_override": bool(os.environ.get(f"OMNIVOICE_{family.upper()}_BACKEND")),
         "backends": public_backends(module.list_backends()),
     }
