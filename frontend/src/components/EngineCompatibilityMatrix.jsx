@@ -1496,8 +1496,11 @@ export default function EngineCompatibilityMatrix({
                         a fixed string before it reaches here, so the row's own
                         text can only ever be generic. The engine's doc page is
                         the one place that does explain it, and nothing linked
-                        to it. Same "Learn more →" affordance the MCP and
-                        Remote GPU panels use, so no new string is needed. */}
+                        to it. Reuses the `common.learn_more` key InfoHint
+                        already renders for the MCP and Remote GPU panels, so
+                        no new string is needed. No trailing arrow glyph:
+                        InfoHint hardcodes one, and a bare "→" points the
+                        wrong way once the app is in an RTL locale. */}
                       {b.docs_url && (
                         <button
                           type="button"
@@ -1505,7 +1508,7 @@ export default function EngineCompatibilityMatrix({
                           data-testid={`engine-docs-${b.id}`}
                           onClick={() => openExternal(b.docs_url)}
                         >
-                          {t('common.learn_more', 'Learn more')} →
+                          {t('common.learn_more', 'Learn more')}
                         </button>
                       )}
                       {hasDiskDetails &&

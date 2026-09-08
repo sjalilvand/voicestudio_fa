@@ -115,7 +115,7 @@ def test_engine_health_log_names_the_engine_and_failure_class(monkeypatch, caplo
         engines.engine_health("broken-engine")
 
     assert "engine=broken-engine" in caplog.text
-    assert "failure=RuntimeError" in caplog.text
+    assert "probe=raised:RuntimeError" in caplog.text
     assert caplog.text.count("\n") == 1  # one record, one line — nothing forged
     # Still nothing engine-owned: no message text, no path, no token.
     assert _PRIVATE not in caplog.text
@@ -147,7 +147,14 @@ def test_engine_health_log_flattens_a_newline_bearing_engine_id(monkeypatch, cap
 def test_engine_health_log_distinguishes_not_available_from_a_raised_probe(
     monkeypatch, caplog
 ):
-    """An optional engine that was never installed did not "fail"."""
+    """`probe=` says what the probe did, and claims nothing more.
+
+    A probe that returns rather than raises reads `returned-unavailable`
+    whatever the cause — a package that was never installed and a sidecar that
+    died both land here, because SubprocessBackend.health_check() swallows its
+    own exceptions by contract. Telling those apart needs structured failure
+    metadata from the probes, so the field deliberately does not pretend to.
+    """
     from api.routers import engines
 
     class NotInstalled:
@@ -162,7 +169,7 @@ def test_engine_health_log_distinguishes_not_available_from_a_raised_probe(
         engines.engine_health("not-installed")
 
     assert "engine=not-installed" in caplog.text
-    assert "failure=unavailable" in caplog.text
+    assert "probe=returned-unavailable" in caplog.text
     assert "voxcpm package not installed" not in caplog.text
 
 
