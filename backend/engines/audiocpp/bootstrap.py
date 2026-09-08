@@ -28,7 +28,6 @@ import hashlib
 import logging
 import os
 import platform
-import shutil
 import sys
 import tarfile
 import tempfile
@@ -79,11 +78,6 @@ PACKAGE_ENV = "OMNIVOICE_AUDIOCPP_PACKAGE"
 #: Env var overriding the server compute backend
 #: (``cuda`` | ``vulkan`` | ``metal`` | ``cpu``).
 BACKEND_ENV = "OMNIVOICE_AUDIOCPP_BACKEND"
-
-#: Env var overriding the release asset filename (power users, e.g. the
-#: Windows CUDA build — which additionally needs the matching cudart
-#: archive extracted next to the binary).
-ASSET_ENV = "OMNIVOICE_AUDIOCPP_ASSET"
 
 #: Env var overriding the loopback port the managed server binds.
 PORT_ENV = "OMNIVOICE_AUDIOCPP_PORT"
@@ -298,8 +292,8 @@ def install_default_asset(dest_dir: Optional[Path] = None) -> Path:
     finally:
         try:
             tmp_path.unlink()
-        except OSError:
-            pass
+        except OSError as exc:
+            logger.debug("Could not remove temporary audio.cpp archive: %s", exc)
     found = _locate_binary(target)
     if found is None:
         raise RuntimeError(
@@ -392,7 +386,9 @@ def resolve_model_file() -> Path:
 
         return snapshot_download(
             repo_id=HF_MODEL_REPO,
-            revision=HF_MODEL_REVISION,
+            # Full immutable commit SHA declared above; Bandit cannot follow
+            # the module constant through this nested callback.
+            revision=HF_MODEL_REVISION,  # nosec B615
             allow_patterns=[f"{PACKAGE_DIR}/{package_filename()}"],
         )
 

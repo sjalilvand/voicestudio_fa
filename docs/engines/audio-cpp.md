@@ -82,7 +82,6 @@ All three go through the one speech endpoint — reference presence selects:
 | `OMNIVOICE_AUDIOCPP_PACKAGE` | `breeze-tts-2-q8_0.gguf` | Package filename (`…-bf16.gguf` for full precision). |
 | `OMNIVOICE_AUDIOCPP_BACKEND` | `metal` (macOS), `vulkan` (Win/Linux), `cpu` | Server compute backend. |
 | `OMNIVOICE_AUDIOCPP_PORT` | `17860` | Loopback port. |
-| `OMNIVOICE_AUDIOCPP_ASSET` | — | Reserved: release-asset override (not yet wired to auto-install). |
 
 ## Common errors
 

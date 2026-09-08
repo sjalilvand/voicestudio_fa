@@ -331,8 +331,8 @@ class AudioCPPBackend(TTSBackend):
         except Exception:  # noqa: BLE001 — kill as last resort, never raise
             try:
                 proc.kill()
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001 — process is already failing
+                logger.debug("audio.cpp: final server kill failed: %s", exc)
 
     # ── generate ────────────────────────────────────────────────────────
 
