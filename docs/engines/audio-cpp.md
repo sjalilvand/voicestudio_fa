@@ -2,8 +2,8 @@
 
 [audio.cpp](https://github.com/0xShug0/audio.cpp) is a pure-C++ ggml audio
 inference framework with prebuilt binaries for Windows, macOS, and Linux and
-no Python dependency. VoiceStudio's initial integration runs it on **CPU**.
-VoiceStudio drives its
+no Python dependency. VoiceStudio discovers the compute providers compiled
+into the installed binary and selects the best available device. VoiceStudio drives its
 `audiocpp_server` over loopback HTTP — v1 serves the **`breeze_tts`**
 family: **Breeze-TTS-2** (BreezeBlue, 3B params, English + Chinese, voice
 clone + voice design + voice direction, 24 kHz).
@@ -25,14 +25,16 @@ clone + voice design + voice direction, 24 kHz).
 
 | Host | Binary | Compute |
 |---|---|---|
-| Windows x64 | portable CPU prebuilt | CPU |
-| Linux x64 | CPU prebuilt | CPU |
-| macOS arm64 / x64 | upstream macOS prebuilt | CPU |
+| Windows x64 | CPU, Vulkan, CUDA 12.4/13.3 prebuilts | CPU, Vulkan, CUDA |
+| Linux x64 | CPU and Vulkan prebuilts | CPU, Vulkan; CUDA/ROCm from a self-build |
+| macOS arm64 | upstream Metal prebuilt | Metal + CPU |
+| macOS x64 | upstream `metal` archive (Metal disabled by upstream) | CPU |
 | Linux aarch64 | none upstream | unavailable in v1 |
 
-GPU acceleration is outside this first integration. It will be enabled only
-after backend selection and physical-device routing are verified per platform.
-The Q8_0 GGUF is approximately 4.73 GiB, plus CPU runtime memory.
+VoiceStudio runs `audiocpp_server --list-devices` once per installed binary,
+prefers CUDA, ROCm, Metal, then a discrete Vulkan GPU, and keeps CPU as a safe
+fallback. Device numbers are local to each backend registry. The Q8_0 GGUF is
+approximately 4.73 GiB, plus runtime memory.
 
 ## Install
 
@@ -92,6 +94,13 @@ All three go through the one speech endpoint — reference presence selects:
 | `OMNIVOICE_AUDIOCPP_MODEL` | pinned auto-download | GGUF file or directory override. |
 | `OMNIVOICE_AUDIOCPP_PACKAGE` | `breeze-tts-2-q8_0.gguf` | Package filename (`…-bf16.gguf` for full precision). |
 | `OMNIVOICE_AUDIOCPP_PORT` | `17860` | Loopback port. |
+| `OMNIVOICE_AUDIOCPP_BACKEND` | Settings, then auto | Exact runtime: `cuda`, `hip`/`rocm`, `vulkan`, `metal`, or `cpu`. |
+| `OMNIVOICE_AUDIOCPP_DEVICE` | best device | Backend-local non-negative device index; requires `OMNIVOICE_AUDIOCPP_BACKEND`. |
+
+The audio.cpp overrides take precedence over the global Settings compute
+choice. A global CUDA/ROCm choice can match an NVIDIA/AMD GPU exposed through
+Vulkan. An unavailable explicit audio.cpp override is an error; an unavailable
+global preference falls back to CPU and is shown as a routing fallback.
 
 ## Common errors
 

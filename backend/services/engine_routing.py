@@ -31,6 +31,29 @@ class RoutingResult(TypedDict):
     routing_reason: str | None     # raw, pre-scrub
 
 
+def runtime_compute_profile(engine_or_cls, caps: HostCaps) -> dict:
+    """Return one engine's runtime-aware compute contract.
+
+    Native executables may discover providers independently of PyTorch.  They
+    override ``runtime_compute_profile``; all existing engines retain the
+    exact static routing contract.
+    """
+    hook = getattr(engine_or_cls, "runtime_compute_profile", None)
+    if callable(hook):
+        return hook(caps)
+    cls = engine_or_cls if isinstance(engine_or_cls, type) else type(engine_or_cls)
+    compat = tuple(getattr(cls, "gpu_compat", ("cpu",)))
+    floor = float(getattr(cls, "min_vram_gb", 0.0) or 0.0)
+    return {
+        "gpu_compat": compat,
+        "min_vram_gb": floor,
+        **resolve_routing(compat, caps, floor),
+        "runtime_backend": None,
+        "runtime_device_index": None,
+        "runtime_device_name": None,
+    }
+
+
 def under_provisioned_vram(caps: HostCaps, min_vram_gb: float = 0.0) -> bool:
     """Is this host's DEDICATED VRAM below the engine's declared floor?
 
@@ -223,5 +246,6 @@ def routing_fields(
 
 __all__ = [
     "RoutingStatus", "RoutingResult", "resolve_routing", "routing_fields",
-    "routing_notice", "header_safe_reason", "under_provisioned_vram",
+    "routing_notice", "header_safe_reason", "runtime_compute_profile",
+    "under_provisioned_vram",
 ]

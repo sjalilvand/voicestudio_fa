@@ -567,14 +567,10 @@ def generate_timeout_s(
         if not min_vram_gb and engine is not None:
             min_vram_gb = float(getattr(engine, "min_vram_gb", 0.0) or 0.0)
         if execution_device is None and engine is not None:
-            from services.engine_routing import resolve_routing
-            compat = getattr(engine, "gpu_compat", None)
-            if compat is None:
-                compat = getattr(type(engine), "gpu_compat", (family, "cpu"))
-            if tuple(compat) == ("cpu",):
-                family = "cpu"
-            else:
-                family = resolve_routing(compat, caps, min_vram_gb)["effective_device"]
+            from services.engine_routing import runtime_compute_profile
+            profile = runtime_compute_profile(engine, caps)
+            family = profile["effective_device"]
+            min_vram_gb = profile["min_vram_gb"]
         universal_override = (
             _GENERATE_TIMEOUT_EXPLICIT
             or GPU_JOB_TIMEOUT_S != _CONFIGURED_GPU_JOB_TIMEOUT_S

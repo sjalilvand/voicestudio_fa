@@ -1497,11 +1497,9 @@ async def generate_speech(
         # 4090 from a Mac control plane would be refused by a gate describing
         # a machine that is about to do nothing.
         from core.device_caps import detect_host_caps
-        from services.engine_routing import resolve_routing, routing_notice
-        _routing = resolve_routing(
-            getattr(backend_cls, "gpu_compat", ("cpu",)), detect_host_caps(),
-            _engine_min_vram_gb,
-        )
+        from services.engine_routing import runtime_compute_profile, routing_notice
+        _routing = runtime_compute_profile(backend_cls, detect_host_caps())
+        _engine_min_vram_gb = _routing["min_vram_gb"]
         if _routing["routing_status"] == "unavailable":
             # The engine needs an accelerator this host lacks and has no CPU path.
             raise HTTPException(status_code=400, detail=_routing["routing_reason"])

@@ -143,7 +143,9 @@ def _base_execution_seconds(
     control plane, and its hardware is not the worker's.
     """
     target_device = str(execution_device or "cpu").lower()
-    if target_device not in {"cpu", "cuda", "mps", "mlx", "directml", "rocm", "xpu"}:
+    if target_device not in {
+        "cpu", "cuda", "mps", "mlx", "directml", "rocm", "vulkan", "xpu",
+    }:
         target_device = "cpu"
     if under_provisioned and target_device != "cpu":
         return max(

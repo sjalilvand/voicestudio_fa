@@ -307,6 +307,9 @@ async def convert_speech(
             GpuPoolBusyError,
             run_on_gpu_pool_guarded,
         )
+        from core.device_caps import detect_host_caps
+        from services.engine_routing import runtime_compute_profile
+        compute_profile = runtime_compute_profile(backend, detect_host_caps())
 
         start_time = time.time()
         _render = functools.partial(
@@ -324,9 +327,11 @@ async def convert_speech(
                 _render,
                 what="Voice convert",
                 timeout=_generate_timeout_s(
-                    text, min_vram_gb=getattr(type(backend), "min_vram_gb", 0.0),
+                    text,
+                    execution_device=compute_profile["effective_device"],
+                    min_vram_gb=compute_profile["min_vram_gb"],
                 ),
-                min_vram_gb=getattr(type(backend), "min_vram_gb", 0.0),
+                min_vram_gb=compute_profile["min_vram_gb"],
             )
         except GpuPoolBusyError as e:
             raise HTTPException(

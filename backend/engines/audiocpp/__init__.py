@@ -84,6 +84,7 @@ def _cpu_thread_count() -> int:
 
 def build_server_config(
     *, model_id: str, family: str, model_path: str, port: int,
+    backend: str = "cpu", device: int = 0,
 ) -> dict:
     """``server.json`` dict for the managed ``audiocpp_server``.
 
@@ -93,11 +94,11 @@ def build_server_config(
     return {
         "host": "127.0.0.1",
         "port": port,
-        "backend": "cpu",
-        "device": 0,
+        "backend": backend,
+        "device": device,
         # The pinned CPU runtime scales strongly through 16 workers while
         # producing byte-identical audio.
-        "threads": _cpu_thread_count(),
+        "threads": _cpu_thread_count() if backend == "cpu" else 1,
         "lazy_load": True,
         "max_loaded_models": 1,
         "models": [
@@ -176,8 +177,6 @@ class AudioCPPBackend(TTSBackend):
     )
     supports_voice_design = True
     applies_own_mastering = True  # model-decoded 24 kHz studio output
-    # GPU backends remain outside this initial integration until each packaged
-    # runtime path has been measured and proven on its target platform.
     gpu_compat = ("cpu",)
     runs_out_of_process = True
     # Same marker SubprocessBackend sets: this engine lives in another OS
@@ -194,6 +193,9 @@ class AudioCPPBackend(TTSBackend):
         self._sr = self._DEFAULT_SAMPLE_RATE
         self._lock = threading.RLock()
         self._server_json: Path | None = None
+        self._selection = None
+        self._device = None
+        self._provider = None
 
     # ── availability ────────────────────────────────────────────────────
 
@@ -203,9 +205,32 @@ class AudioCPPBackend(TTSBackend):
 
         try:
             bootstrap.resolve_server_binary()
+            bootstrap.resolve_compute_selection()
         except RuntimeError as exc:
             return False, str(exc)
         return True, "ready"
+
+    @classmethod
+    def runtime_compute_profile(cls, caps) -> dict:
+        from engines.audiocpp import bootstrap
+
+        selection = bootstrap.resolve_compute_selection(caps)
+        targets = bootstrap.runtime_targets()
+        selected = selection.device
+        accelerated = selected.backend != "cpu"
+        status = "accelerated" if accelerated else (
+            "cpu_fallback" if selection.fallback_reason else "cpu_only"
+        )
+        return {
+            "gpu_compat": targets,
+            "min_vram_gb": 6.0 if accelerated else 0.0,
+            "effective_device": selected.target,
+            "routing_status": status,
+            "routing_reason": selection.fallback_reason,
+            "runtime_backend": selected.backend,
+            "runtime_device_index": selected.index,
+            "runtime_device_name": selected.name,
+        }
 
     # ── TTSBackend protocol ─────────────────────────────────────────────
 
@@ -236,6 +261,7 @@ class AudioCPPBackend(TTSBackend):
             from engines.audiocpp import bootstrap
 
             binary = bootstrap.resolve_server_binary()
+            selection = bootstrap.resolve_compute_selection()
             model_file = bootstrap.resolve_model_file()
             self._port = bootstrap.server_port()
             # The random model id is a per-launch challenge. Before sending
@@ -248,7 +274,12 @@ class AudioCPPBackend(TTSBackend):
                 family=bootstrap.FAMILY,
                 model_path=str(model_file),
                 port=self._port,
+                backend=selection.device.backend,
+                device=selection.device.index,
             )
+            self._selection = selection
+            self._device = selection.device.target
+            self._provider = selection.device.backend
             from core.config import DATA_DIR
 
             workdir = Path(str(DATA_DIR)) / "audiocpp"
@@ -267,8 +298,9 @@ class AudioCPPBackend(TTSBackend):
                     os.close(config_fd)
             log_path = workdir / "server.log"
             logger.info(
-                "audio.cpp: starting %s (backend=cpu, port=%d, model=%s)",
-                binary.name, self._port, model_file.name,
+                "audio.cpp: starting %s (backend=%s, device=%d, port=%d, model=%s)",
+                binary.name, selection.device.backend, selection.device.index,
+                self._port, model_file.name,
             )
             with open(log_path, "ab") as log_fh:
                 self._proc = spawn_owned(
@@ -428,10 +460,14 @@ class AudioCPPBackend(TTSBackend):
             logger.info("audio.cpp: speed is not supported; ignoring.")
 
         request_started = time.monotonic()
-        request_budget = generate_timeout_s(text, execution_device="cpu")
-
         with self._lock:
             self._ensure_loaded()
+            selected = self._selection.device if self._selection else None
+            request_budget = generate_timeout_s(
+                text,
+                execution_device=selected.target if selected else "cpu",
+                min_vram_gb=6.0 if selected and selected.backend != "cpu" else 0.0,
+            )
             if not self._server_model_id:
                 raise RuntimeError("managed audio.cpp server identity is missing")
             payload = build_speech_payload(

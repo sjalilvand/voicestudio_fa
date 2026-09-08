@@ -45,6 +45,8 @@ def scrub_audiocpp_env(monkeypatch):
         "OMNIVOICE_AUDIOCPP_DIR",
         "OMNIVOICE_AUDIOCPP_MODEL",
         "OMNIVOICE_AUDIOCPP_PACKAGE",
+        "OMNIVOICE_AUDIOCPP_BACKEND",
+        "OMNIVOICE_AUDIOCPP_DEVICE",
         "OMNIVOICE_AUDIOCPP_PORT",
         "OMNIVOICE_AUDIOCPP_ASSET",
     ):
@@ -77,6 +79,20 @@ def test_build_server_config_is_loopback_lazy_single_model(monkeypatch, app_modu
             "mode": "offline",
         }
     ]
+
+
+def test_build_server_config_wires_backend_local_gpu_index(app_modules):
+    cfg = app_modules.audiocpp.build_server_config(
+        model_id="breeze-tts-2",
+        family="breeze_tts",
+        model_path="/models/breeze.gguf",
+        port=17860,
+        backend="vulkan",
+        device=1,
+    )
+    assert cfg["backend"] == "vulkan"
+    assert cfg["device"] == 1
+    assert cfg["threads"] == 1
 
 
 # ── speech payload builder ─────────────────────────────────────────────────
@@ -161,6 +177,92 @@ def test_binary_name_exe_on_windows_only(app_modules):
     assert bootstrap.binary_name("windows-x64") == "audiocpp_server.exe"
     assert bootstrap.binary_name("linux-x64") == "audiocpp_server"
     assert bootstrap.binary_name("darwin-arm64") == "audiocpp_server"
+
+
+def test_device_parser_and_auto_selection_prefer_discrete_gpu(app_modules):
+    bootstrap = app_modules.bootstrap
+    devices = bootstrap.parse_device_list("""
+available_devices=3
+Vulkan:0 "AMD Ryzen 9 7950X (RADV RAPHAEL_MENDOCINO)" [IGPU]
+Vulkan:1 "NVIDIA GeForce RTX 4090" [GPU]
+CPU:0 "AMD Ryzen 9 7950X" [CPU]
+select with: --backend <vulkan|cpu> --device <index>
+""")
+    assert devices[1].hardware_family == "cuda"
+    assert bootstrap.runtime_targets(devices) == ("vulkan", "cpu")
+    selected = bootstrap.select_device(devices)
+    assert (selected.device.backend, selected.device.index) == ("vulkan", 1)
+
+
+def test_global_family_matches_gpu_inside_vulkan_registry(app_modules):
+    bootstrap = app_modules.bootstrap
+    devices = bootstrap.parse_device_list("""
+Vulkan:0 "AMD Radeon 780M" [IGPU]
+Vulkan:1 "NVIDIA GeForce RTX 4090" [GPU]
+CPU:0 "Host CPU" [CPU]
+""")
+    selected = bootstrap.select_device(devices, requested_family="cuda")
+    assert selected.device.index == 1
+    assert selected.device.target == "vulkan"
+
+
+def test_explicit_backend_device_is_strict_and_backend_local(app_modules):
+    bootstrap = app_modules.bootstrap
+    devices = bootstrap.parse_device_list(
+        'Vulkan:0 "GPU" [GPU]\nCPU:0 "CPU" [CPU]'
+    )
+    with pytest.raises(RuntimeError, match="requires"):
+        bootstrap.select_device(devices, device_override=0)
+    with pytest.raises(RuntimeError, match="unavailable"):
+        bootstrap.select_device(
+            devices, backend_override="cuda", device_override=0,
+        )
+    selected = bootstrap.select_device(
+        devices, backend_override="vulkan", device_override=0,
+    )
+    assert selected.device.backend == "vulkan"
+
+
+def test_missing_global_gpu_falls_back_to_cpu_with_reason(app_modules):
+    bootstrap = app_modules.bootstrap
+    devices = bootstrap.parse_device_list('CPU:0 "CPU" [CPU]')
+    selected = bootstrap.select_device(devices, requested_family="cuda")
+    assert selected.device.target == "cpu"
+    assert "running on CPU" in selected.fallback_reason
+
+
+def test_runtime_profile_reports_vulkan_independently_of_torch(
+    monkeypatch, app_modules,
+):
+    from core.device_caps import HostCaps
+
+    devices = app_modules.bootstrap.parse_device_list(
+        'Vulkan:1 "NVIDIA GeForce RTX 4090" [GPU]\nCPU:0 "CPU" [CPU]'
+    )
+    monkeypatch.setattr(app_modules.bootstrap, "probe_devices", lambda: devices)
+    caps = HostCaps(family="cpu", available_families=("cpu",), notes=())
+    profile = app_modules.audiocpp.AudioCPPBackend.runtime_compute_profile(caps)
+    assert profile == {
+        "gpu_compat": ("vulkan", "cpu"),
+        "min_vram_gb": 6.0,
+        "effective_device": "vulkan",
+        "routing_status": "accelerated",
+        "routing_reason": None,
+        "runtime_backend": "vulkan",
+        "runtime_device_index": 1,
+        "runtime_device_name": "NVIDIA GeForce RTX 4090",
+    }
+
+
+@pytest.mark.parametrize("output", [
+    "", 'Vulkan:x "GPU" [GPU]', 'CPU:0 "CPU" [ALIEN]',
+    'CPU:0 "CPU" [CPU]\nCPU:0 "CPU" [CPU]',
+])
+def test_device_parser_rejects_ambiguous_or_malformed_output(
+    output, app_modules,
+):
+    with pytest.raises(RuntimeError):
+        app_modules.bootstrap.parse_device_list(output)
 
 
 def test_release_assets_have_complete_sha256_pins(app_modules):
@@ -427,6 +529,11 @@ def test_server_spawn_uses_contained_owner(tmp_path, monkeypatch, app_modules):
     monkeypatch.setattr(app_modules.bootstrap, "resolve_server_binary", lambda: binary)
     monkeypatch.setattr(app_modules.bootstrap, "resolve_model_file", lambda: model)
     monkeypatch.setattr(app_modules.bootstrap, "server_port", lambda: 17860)
+    devices = app_modules.bootstrap.parse_device_list('CPU:0 "Test CPU" [CPU]')
+    monkeypatch.setattr(
+        app_modules.bootstrap, "resolve_compute_selection",
+        lambda *args, **kwargs: app_modules.bootstrap.select_device(devices),
+    )
     monkeypatch.setattr(
         importlib.import_module("core.config"), "DATA_DIR", tmp_path / "data",
     )
@@ -464,7 +571,7 @@ def test_generate_timeout_terminates_owned_server(monkeypatch, app_modules):
     model_manager = importlib.import_module("services.model_manager")
     monkeypatch.setattr(
         model_manager, "generate_timeout_s",
-        lambda text, execution_device: 100.0,
+            lambda text, **kwargs: 100.0,
     )
     monkeypatch.setattr(model_manager, "GENERATE_PROGRESS_GRACE_S", 40.0)
     progress = Mock()
@@ -502,7 +609,7 @@ def test_generate_uses_progress_lease_after_first_download(
     model_manager = importlib.import_module("services.model_manager")
     monkeypatch.setattr(
         model_manager, "generate_timeout_s",
-        lambda text, execution_device: 100.0,
+            lambda text, **kwargs: 100.0,
     )
     monkeypatch.setattr(model_manager, "GENERATE_PROGRESS_GRACE_S", 40.0)
     progress = Mock()

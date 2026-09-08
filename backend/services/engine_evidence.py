@@ -90,11 +90,13 @@ def snapshot(
             evidence_state = "subprocess_loaded_provider_unreported"
     return {
         "implementation_variant": f"{engine_cls.__module__}.{engine_cls.__name__}",
-        "declared_device_families": list(getattr(engine_cls, "gpu_compat", ("cpu",))),
+        "declared_device_families": list(
+            routing.get("gpu_compat", getattr(engine_cls, "gpu_compat", ("cpu",)))
+        ),
         "evidence_state": evidence_state,
         "actual_execution_provider": provider,
         "actual_execution_device": actual_device,
-        "gpu_name": getattr(caps, "device_name", "") or None,
+        "gpu_name": routing.get("runtime_device_name") or getattr(caps, "device_name", "") or None,
         "gpu_architecture": _gpu_architecture(getattr(caps, "family", "cpu")),
         "precision_or_quantization": precision,
         "cpu_fallback_reason": runtime_fallback_reason or (routing.get("routing_reason") if fallback else None),
