@@ -185,3 +185,17 @@ test("windows stop surfaces a real termination failure", () => {
     /Could not stop process 4242/,
   );
 });
+
+// Win32_Process.Terminate reports failure through ReturnValue, not by throwing:
+// discarding it would report success on an access-denied kill, and the port
+// would still be held.
+test("windows stop fails when Terminate reports a non-zero ReturnValue", () => {
+  const run = (_exe, args) => {
+    assert.match(args.at(-1), /ReturnValue -ne 0/);
+    return { status: 4, stdout: "2" };
+  };
+  assert.throws(
+    () => stopWindowsProcess(4242, false, "windows:whatever", run),
+    /Could not stop process 4242: Terminate returned 2/,
+  );
+});

@@ -142,29 +142,57 @@ def test_small_file_still_single_segment():
 
 
 def test_concurrency_stays_at_num_connections(tmp_path, monkeypatch):
-    """Many bounded segments must not all fire at once."""
+    """Many bounded segments must not all fire at once.
+
+    The handler has to HOLD requests open: a synchronous mock returns before any
+    other task is scheduled, so nothing ever overlaps and the assertion passes
+    without exercising the semaphore at all.
+    """
     monkeypatch.setattr(sd, "_MIN_SEGMENT_BYTES", 16 * 1024)
     monkeypatch.setattr(sd, "_MAX_SEGMENT_BYTES", 32 * 1024)
-    inflight = 0
-    peak = 0
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        nonlocal inflight, peak
-        if request.method == "HEAD":
-            return httpx.Response(200, headers={
-                "content-length": str(len(PAYLOAD)), "accept-ranges": "bytes"})
-        inflight += 1
-        peak = max(peak, inflight)
-        try:
-            lo, hi = request.headers["range"].replace("bytes=", "").split("-")
-            return httpx.Response(206, content=PAYLOAD[int(lo):int(hi) + 1])
-        finally:
-            inflight -= 1
-
+    connections = 4
+    assert len(_plan_segments(len(PAYLOAD), connections)) > connections, (
+        "test needs more segments than connections"
+    )
     dest = str(tmp_path / "m.bin")
-    _download(handler, dest, expected_size=len(PAYLOAD), num_connections=4)
-    assert len(_plan_segments(len(PAYLOAD), 4)) > 4, "test needs more segments than connections"
-    assert peak <= 4
+    state = {"inflight": 0, "peak": 0}
+
+    async def _run():
+        saturated = asyncio.Event()
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "HEAD":
+                return httpx.Response(200, headers={
+                    "content-length": str(len(PAYLOAD)), "accept-ranges": "bytes"})
+            state["inflight"] += 1
+            state["peak"] = max(state["peak"], state["inflight"])
+            try:
+                if state["inflight"] >= connections:
+                    saturated.set()
+                # Hold the range open until the pool fills, so overlap is
+                # observable without sleeping. The timeout keeps an
+                # over-restrictive semaphore a failure instead of a hang.
+                try:
+                    await asyncio.wait_for(saturated.wait(), timeout=1)
+                except asyncio.TimeoutError:
+                    pass
+                lo, hi = request.headers["range"].replace("bytes=", "").split("-")
+                return httpx.Response(206, content=PAYLOAD[int(lo):int(hi) + 1])
+            finally:
+                state["inflight"] -= 1
+
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(handler), follow_redirects=False
+        ) as client:
+            await segmented_download(
+                "https://cdn.example.com/f.bin", dest, client=client,
+                expected_size=len(PAYLOAD), num_connections=connections,
+            )
+
+    asyncio.run(_run())
+    assert state["peak"] == connections, (
+        f"expected exactly {connections} ranges in flight, saw {state['peak']}"
+    )
     with open(dest, "rb") as f:
         assert f.read() == PAYLOAD
 

@@ -381,6 +381,28 @@ def _is_retryable_download_error(exc: BaseException) -> bool:
     return is_hf_connectivity_error(str(exc))
 
 
+def _segmented_retry_plan(
+    exc: BaseException, attempt: int, max_attempts: int
+) -> tuple[bool, bool]:
+    """What to do after the segmented accelerator failed on ``attempt``.
+
+    Returns ``(disable_accelerator, reraise)``.
+
+    A dropped connection is not the accelerator's fault, so the error is
+    re-raised for the outer retry: the next attempt re-enters
+    :func:`_segmented_snapshot`, which resumes from the ``.part`` manifest.
+    Falling straight through to ``snapshot_download`` instead would finish the
+    install from a separate ``.incomplete`` file and strand that manifest — the
+    restart-from-zero this exists to prevent.
+
+    The final attempt is always reserved for the plain path, so the accelerator
+    can never be the reason an install fails outright.
+    """
+    retryable = _is_retryable_download_error(exc)
+    disable = not retryable or attempt >= max_attempts - 1
+    return disable, not disable
+
+
 @router.post("/models/install")
 async def install_model(req: InstallModelRequest):
     """Download one HF repo snapshot; progress goes through the shared
@@ -574,18 +596,18 @@ async def install_model(req: InstallModelRequest):
                         except _InstallCancelled:
                             raise
                         except Exception as _seg_err:
-                            # A dropped connection is not the accelerator's
-                            # fault: keep it for the next attempt, which resumes
-                            # from the .part manifest instead of restarting at
-                            # zero. Anything else means the accelerator can't
-                            # work here — fall back for good.
-                            _segmented_off = not _is_retryable_download_error(_seg_err)
-                            logger.info(
-                                "segmented download for %s failed (%s); falling back to "
-                                "snapshot_download (accelerator %s)",
-                                req.repo_id, _seg_err,
-                                "disabled for this install" if _segmented_off else "kept for retry",
+                            _segmented_off, _seg_reraise = _segmented_retry_plan(
+                                _seg_err, _attempt, _max_attempts
                             )
+                            logger.info(
+                                "segmented download for %s failed (%s); accelerator %s",
+                                req.repo_id, _seg_err,
+                                "disabled for this install — falling back to snapshot_download"
+                                if _segmented_off
+                                else "kept for the next attempt (resumes from its manifest)",
+                            )
+                            if _seg_reraise:
+                                raise
                             _snapshot_path = None
                     if _snapshot_path is None:
                         _snapshot_path = snapshot_download(**dl_kwargs)  # nosec B615 -- immutable revision_for pin

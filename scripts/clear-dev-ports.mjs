@@ -203,7 +203,10 @@ export function stopWindowsProcess(pid, _force, identity, run = spawnSync) {
     `$p = Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}'`,
     "if ($null -eq $p) { exit 0 }",
     `if ($p.CreationDate.ToUniversalTime().ToString('o') -ne '${expected}') { exit 3 }`,
-    "$null = Invoke-CimMethod -InputObject $p -MethodName Terminate",
+    // Terminate reports failure through ReturnValue, not through a thrown
+    // error: discarding it would report success on an access-denied kill.
+    "$r = Invoke-CimMethod -InputObject $p -MethodName Terminate",
+    "if ($r.ReturnValue -ne 0) { Write-Output $r.ReturnValue; exit 4 }",
   ].join("; ");
   const result = run(
     "powershell.exe",
@@ -212,7 +215,13 @@ export function stopWindowsProcess(pid, _force, identity, run = spawnSync) {
   );
   if (result.error) throw result.error;
   // exit 3 == the pid now belongs to a different process; leave it alone.
-  if (result.status !== 0 && result.status !== 3) {
+  if (result.status === 3) return;
+  if (result.status === 4) {
+    throw new Error(
+      `Could not stop process ${pid}: Terminate returned ${String(result.stdout || "").trim()}`,
+    );
+  }
+  if (result.status !== 0) {
     throw new Error(`Could not stop process ${pid}`);
   }
 }
