@@ -73,6 +73,7 @@ export default function CloneDesignTab(props) {
     setVdStates,
     isGenerating,
     generationTime,
+    generationProgress,
     applyPreset,
     insertTag,
     handleSaveProfile,
@@ -595,6 +596,7 @@ export default function CloneDesignTab(props) {
                 isGenerating={isGenerating}
                 handleGenerate={handleGenerate}
                 generationTime={generationTime}
+                generationProgress={generationProgress}
                 wasGeneratingRef={wasGeneratingRef}
               />
             )}

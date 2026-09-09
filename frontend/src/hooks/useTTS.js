@@ -70,6 +70,9 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
   const [pendingTrimFile, setPendingTrimFile] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationTime, setGenerationTime] = useState(0);
+  // Real 0–100 progress when the active delivery path can measure it.
+  // null means the backend has not supplied a meaningful fraction yet.
+  const [generationProgress, setGenerationProgress] = useState(null);
   const timerRef = useRef(null);
   const textAreaRef = useRef(null);
 
@@ -126,13 +129,11 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
     addBreadcrumb(`generate:start (${defineMethod})`);
     setIsGenerating(true);
     setGenerationTime(0);
+    setGenerationProgress(null);
     const st = Date.now();
     timerRef.current = setInterval(() => {
       const elapsed = ((Date.now() - st) / 1000).toFixed(1);
-      setGenerationTime((prev) => {
-        const suffix = /\(\d+%\)$/.exec(String(prev))?.[0];
-        return suffix ? `${elapsed} ${suffix}` : elapsed;
-      });
+      setGenerationTime(elapsed);
     }, 100);
     let abortTimer = null;
     try {
@@ -292,8 +293,7 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
           }
         }
       };
-      const setProgressPct = (pct) =>
-        setGenerationTime((prev) => `${prev.toString().split(' ')[0]} (${pct}%)`);
+      const setProgressPct = (pct) => setGenerationProgress(pct);
 
       // Streaming preview (feat: streaming-tts-preview): playback starts from
       // the FIRST synthesized chunk while the rest is still rendering, via
@@ -355,6 +355,7 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
             'Streaming preview failed mid-stream; falling back to the classic generate:',
             err?.message || err,
           );
+          setGenerationProgress(null);
           addBreadcrumb('generate:stream-fallback');
         }
       }
@@ -410,6 +411,7 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
       if (abortTimer) clearTimeout(abortTimer);
       clearInterval(timerRef.current);
       setIsGenerating(false);
+      setGenerationProgress(null);
     }
   }, [
     text,
@@ -444,6 +446,7 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
     setPendingTrimFile,
     isGenerating,
     generationTime,
+    generationProgress,
     textAreaRef,
     ingestRefAudio,
     insertTag,
