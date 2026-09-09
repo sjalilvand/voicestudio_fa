@@ -80,6 +80,11 @@ export class StreamingPreviewError extends Error {
     this.retryable = opts?.retryable === true;
     this.retryAfter = opts?.retryAfter ?? null;
     this.terminal = opts?.terminal === true;
+    // The backend exception TYPE behind an otherwise generic failure. The
+    // floor message is identical for every unclassified engine failure, so
+    // without this an auto-filed report cannot be told apart from any
+    // other (#1800). Never the exception message — only its class name.
+    this.errorClass = opts?.errorClass || null;
   }
 }
 
@@ -404,6 +409,7 @@ async function _streamGenerateSpeech(
           retryable: ev.retryable === true,
           retryAfter: ev.retry_after ?? null,
           terminal,
+          errorClass: ev.error_class || null,
         });
       }
     };

@@ -308,6 +308,13 @@ _CONTEXT_FREE_HINT_CLASSES = frozenset({
     # a Windows virtual-memory setting rather than a connectivity problem, and
     # the detailed hint we already had for it never reached them.
     "WINDOWS_PAGING_FILE_TOO_SMALL",
+    # Its trigger is a VoiceStudio-authored sentence — "the TTS model cache
+    # for … is incomplete" plus "could not be auto-repaired" / "weights
+    # missing" — so it cannot be produced by an unrelated library. The 500
+    # handler is the surface a corrupt cache actually reaches, and dropping
+    # its hint there would leave the user with no way to know a redownload
+    # is the fix.
+    "MODEL_CACHE_CORRUPT",
 })
 
 
