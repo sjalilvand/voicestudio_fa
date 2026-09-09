@@ -56,6 +56,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
+- Transcribing with an engine that reports no segment end no longer fails with a server error; the null timing is passed through the way the segment list already expects (#1904) — thanks @aeroglu!
 - Copying a saved transcription now uses the shared clipboard helper and reports failed copies accurately (#1803) — thanks @tvbht!
 
 - Voice reference preparation reclaims allocator memory before one bounded retry, then reports persistent GPU out-of-memory failures (#1811)
