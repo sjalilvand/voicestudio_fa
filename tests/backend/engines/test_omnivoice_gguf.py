@@ -521,6 +521,14 @@ def test_is_available_rejects_garbage_binary(monkeypatch, tmp_path):
     assert "not a usable executable" in reason
 
 
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason=(
+        "POSIX exec bits do not exist on Windows: os.access(path, os.X_OK) is "
+        "true for any file that exists, so the assertion below can never fail "
+        "there and the whole module errored on a Windows checkout instead."
+    ),
+)
 def test_is_available_does_not_chmod_placeholder(monkeypatch, tmp_path):
     """The #437 exec-bit self-heal must never bless a placeholder: with no
     manifest present, no SHA check confirmed the file, so chmod +x on an
