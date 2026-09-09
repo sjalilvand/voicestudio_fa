@@ -13,6 +13,8 @@ the frozen-backend fallback mirror it for their toolchains.
 - Transcriptions dictation wakes the desktop recorder, presents one contextual start action, and centers its microphone icon with the label (#1902)
 - Apple Silicon now shows one canonical OmniVoice choice in the engine picker while retaining its automatic crash-isolated sidecar runtime (#1913)
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
+- Model downloads survive a flaky connection instead of restarting from zero (#1940)
+- `bun run dev` recovers on Windows instead of demanding Task Manager (#1941)
 
 - The desktop app builds and opens from a fresh clone again (#1818) — thanks @flutterkage2k!
 - GPUs with less VRAM than the engine needs no longer get half the compute-time budget a CPU gets (#1806) — thanks @VishvakR!
@@ -66,6 +68,12 @@ the frozen-backend fallback mirror it for their toolchains.
 - The first-run Activity log counts every line instead of freezing at 200 while the install is still running, and Copy now hands back the whole run rather than the last 200 lines (#1847) — thanks @psiberfunk!
 - A first-run failure that happened early in a long install keeps its specific advice, instead of falling back to the generic retry hint once the log scrolled past 200 lines (#1847) — thanks @psiberfunk!
 - Opening the log panel no longer clips the Launchpad's heading and slides the feature cards up over it — the page scrolls instead of squashing itself (#1859) — thanks @psiberfunk!
+- Segmented model downloads split files into 16 MB ranges instead of one range per connection, so a dropped connection refetches one range rather than restarting the file (#1940)
+- The download accelerator is kept across retries after a transient network failure and resumes from its manifest, instead of falling back to a from-zero `snapshot_download` (#1940)
+- `dev-backend.mjs` stops the backend by process tree on Windows, so an orphaned uvicorn no longer holds port 3900 and turns a source reload into three phantom crashes (#1941)
+- `clear-dev-ports.mjs` can free a stuck development port on Windows again, bound to the inspected process instance so a recycled pid is never terminated (#1941)
+- Checkout-ownership matching no longer resolves POSIX paths with the host's separator, which made the guard's own test fail on Windows (#1941)
+
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
 - Copying a saved transcription now uses the shared clipboard helper and reports failed copies accurately (#1803) — thanks @tvbht!
