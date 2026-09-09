@@ -97,18 +97,16 @@ def derive_concurrency(
 ) -> int:
     """How many jobs of this model may run at once on this worker.
 
-    Returns 0 when the model cannot run here at all — a capability mismatch,
-    which the scheduler must treat as "send it elsewhere", never as a worker
-    fault.
+    Under-provisioned accelerators remain usable with one serial slot and the
+    longer CPU-class deadline. Zero memory means telemetry is unknown, not
+    that the engine cannot run.
     """
     family = (backend or "").strip().lower()
-    if min_model_bytes and free_memory_bytes < min_model_bytes:
-        return 0
     if compiled:
         # Thread-affinity pinning (#315). One job, always.
         return 1
     if family in _ALWAYS_SERIAL:
-        return 1 if (not min_model_bytes or free_memory_bytes >= min_model_bytes) else 0
+        return 1
     budget = max(min_model_bytes, _VRAM_PER_JOB_BYTES)
     if budget <= 0:
         return 1

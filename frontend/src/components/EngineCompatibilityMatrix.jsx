@@ -142,6 +142,8 @@ const CHIP_DEVICE = {
   cuda: 'text-[#76b900] border-[color:color-mix(in_srgb,#76b900_45%,transparent)] bg-[color:color-mix(in_srgb,#76b900_10%,transparent)]',
   mps: 'text-[#b8b8b8] border-[color:color-mix(in_srgb,#b8b8b8_45%,transparent)] bg-[color:color-mix(in_srgb,#b8b8b8_10%,transparent)]',
   rocm: 'text-[#ed1c24] border-[color:color-mix(in_srgb,#ed1c24_45%,transparent)] bg-[color:color-mix(in_srgb,#ed1c24_10%,transparent)]',
+  vulkan:
+    'text-[#b62e3b] border-[color:color-mix(in_srgb,#b62e3b_45%,transparent)] bg-[color:color-mix(in_srgb,#b62e3b_10%,transparent)]',
   xpu: 'text-[#0071c5] border-[color:color-mix(in_srgb,#0071c5_45%,transparent)] bg-[color:color-mix(in_srgb,#0071c5_10%,transparent)]',
   cpu: 'text-[color:var(--chrome-fg-muted,#888)] border-[color:var(--chrome-border-strong,rgba(255,255,255,0.18))] bg-transparent',
 };
@@ -187,9 +189,11 @@ const ROW_GRID =
 // groups instead of carrying the Settings panel's compressed tracks across a
 // large canvas. The wider action track also lets its controls wrap naturally
 // without clipping. Collapse earlier than the compact matrix because these
-// tracks deliberately have larger minimums.
+// tracks deliberately have larger minimums. `[&>*]:min-w-0` lets every cell
+// shrink below content size so mid-width shells squeeze instead of clipping;
+// phones (<=640px) stack via the `catalogue-row` @container tier in index.css.
 const CATALOGUE_ROW_GRID =
-  'catalogue-row-grid grid items-center gap-x-[16px] px-[16px] ' +
+  'catalogue-row-grid grid items-center gap-x-[16px] px-[16px] [&>*]:min-w-0 ' +
   'grid-cols-[minmax(300px,1.45fr)_128px_minmax(230px,1fr)_112px_minmax(292px,auto)] ' +
   '@max-[1230px]/catalogue-shell:grid-cols-[max-content_max-content_minmax(0,1fr)_max-content]';
 // Per-cell placement for the collapsed (narrow) layout.
@@ -1179,7 +1183,7 @@ export default function EngineCompatibilityMatrix({
                   <div
                     role="cell"
                     className={cn(
-                      'engine-matrix__cell engine-matrix__cell--gpu flex min-w-0 flex-col justify-center gap-[4px]',
+                      'engine-matrix__cell engine-matrix__cell--gpu flex min-w-0 max-w-full flex-col justify-center gap-[4px]',
                       catalogueLayout ? 'overflow-visible' : 'overflow-hidden',
                       cellNarrow.gpu,
                     )}
@@ -1196,6 +1200,10 @@ export default function EngineCompatibilityMatrix({
                               b.routing_status &&
                               b.routing_status !== 'unavailable' &&
                               g === b.effective_device;
+                            const deviceLabel =
+                              g === 'vulkan'
+                                ? t('engines.gpuVulkan')
+                                : GPU_LABEL[g] || g.toUpperCase();
                             return (
                               <span
                                 key={g}
@@ -1203,12 +1211,12 @@ export default function EngineCompatibilityMatrix({
                                 title={
                                   isEffective
                                     ? t('engines.routingEffectiveChip', {
-                                        device: GPU_LABEL[g] || g,
+                                        device: deviceLabel,
                                       })
                                     : undefined
                                 }
                               >
-                                {GPU_LABEL[g] || g.toUpperCase()}
+                                {deviceLabel}
                               </span>
                             );
                           })}
@@ -1284,7 +1292,7 @@ export default function EngineCompatibilityMatrix({
                   <div
                     role="cell"
                     className={cn(
-                      'engine-matrix__cell engine-matrix__cell--actions flex h-full max-h-full flex-wrap content-center items-center justify-end justify-self-end',
+                      'engine-matrix__cell engine-matrix__cell--actions flex h-full max-h-full min-w-0 max-w-full flex-wrap content-center items-center justify-end justify-self-end',
                       catalogueLayout
                         ? 'gap-[8px] overflow-visible py-[8px]'
                         : 'gap-[4px] overflow-hidden py-[4px]',
