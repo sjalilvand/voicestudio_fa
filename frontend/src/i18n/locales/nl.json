@@ -822,6 +822,7 @@
     "routingRemote": "Op afstand",
     "routingUnknown": "Onbekend",
     "routingEffectiveChip": "Draait op {{device}} op deze machine",
+    "gpuVulkan": "Vulkan",
     "routingCaveatTitle": "GPU geselecteerd, maar: {{reason}}",
     "selectCpuFallback": "{{engine}}: draait op de CPU — {{reason}}",
     "selectWithCaveat": "Overgeschakeld naar {{engine}} — {{reason}}",

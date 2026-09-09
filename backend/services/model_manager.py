@@ -525,7 +525,8 @@ class GpuPoolBusyError(TimeoutError):
 
 def generate_timeout_s(
     text: "str | None", *, engine: object = None, execution_device: "str | None" = None,
-    min_vram_gb: float = 0.0,
+    min_vram_gb: float = 0.0, hardware_family: "str | None" = None,
+    vram_gb: "float | None" = None,
 ) -> float:
     """THE wall-clock execution budget for one synthesis job, scaled to input.
 
@@ -555,7 +556,10 @@ def generate_timeout_s(
     the card. Only the budget ignored it. So an under-provisioned accelerator
     now floors at the CPU budget — the class of hardware it actually performs
     like. ``min_vram_gb`` is the engine's declared floor; callers that pass
-    ``engine`` get it read off the engine automatically.
+    ``engine`` get it read off the engine automatically. Native runtimes pass
+    an explicit ``vram_gb=0`` when their dedicated-memory probe failed; that
+    unknown capacity gets the same conservative CPU-class budget without
+    claiming the card is under-provisioned in user-facing diagnostics.
     """
     base = GPU_JOB_TIMEOUT_S
     try:
@@ -565,14 +569,12 @@ def generate_timeout_s(
         if not min_vram_gb and engine is not None:
             min_vram_gb = float(getattr(engine, "min_vram_gb", 0.0) or 0.0)
         if execution_device is None and engine is not None:
-            from services.engine_routing import resolve_routing
-            compat = getattr(engine, "gpu_compat", None)
-            if compat is None:
-                compat = getattr(type(engine), "gpu_compat", (family, "cpu"))
-            if tuple(compat) == ("cpu",):
-                family = "cpu"
-            else:
-                family = resolve_routing(compat, caps, min_vram_gb)["effective_device"]
+            from services.engine_routing import runtime_compute_profile
+            profile = runtime_compute_profile(engine, caps)
+            family = profile["effective_device"]
+            min_vram_gb = profile["min_vram_gb"]
+            hardware_family = profile.get("runtime_hardware_family")
+            vram_gb = profile.get("runtime_vram_gb")
         universal_override = (
             _GENERATE_TIMEOUT_EXPLICIT
             or GPU_JOB_TIMEOUT_S != _CONFIGURED_GPU_JOB_TIMEOUT_S
@@ -586,10 +588,21 @@ def generate_timeout_s(
         )
         if family == "cpu" and (cpu_explicit or not universal_override):
             base = CPU_JOB_TIMEOUT_S
-        elif not universal_override and family in ("cuda", "rocm"):
+        elif not universal_override and family in (
+            "cuda", "rocm", "vulkan", "xpu",
+        ):
             from services.engine_routing import under_provisioned_vram
 
-            if under_provisioned_vram(caps, min_vram_gb):
+            runtime_family = hardware_family or family
+            unknown_dedicated_vram = (
+                min_vram_gb > 0
+                and runtime_family in ("cuda", "rocm", "xpu", "vulkan")
+                and vram_gb is not None
+                and float(vram_gb or 0.0) <= 0
+            )
+            if unknown_dedicated_vram or under_provisioned_vram(
+                caps, min_vram_gb, family=hardware_family, vram_gb=vram_gb,
+            ):
                 # `max`, never a plain assignment: an operator who raised the
                 # accelerated budget above the CPU one must not have it cut.
                 base = max(base, CPU_JOB_TIMEOUT_S)

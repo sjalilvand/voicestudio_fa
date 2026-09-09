@@ -804,7 +804,14 @@ def _oom_friendly_reraise(e):
     ) from e
 
 
-def _generate_timeout_s(text: str, *, execution_device=None, min_vram_gb=0.0) -> float:
+def _generate_timeout_s(
+    text: str,
+    *,
+    execution_device=None,
+    min_vram_gb=0.0,
+    hardware_family=None,
+    vram_gb=None,
+) -> float:
     """Wall-clock budget for one generate, scaled to the request.
 
     Thin alias for the canonical helper, which moved to
@@ -819,7 +826,11 @@ def _generate_timeout_s(text: str, *, execution_device=None, min_vram_gb=0.0) ->
     """
     from services.model_manager import generate_timeout_s
     return generate_timeout_s(
-        text, execution_device=execution_device, min_vram_gb=min_vram_gb,
+        text,
+        execution_device=execution_device,
+        min_vram_gb=min_vram_gb,
+        hardware_family=hardware_family,
+        vram_gb=vram_gb,
     )
 
 
@@ -1441,6 +1452,8 @@ async def generate_speech(
     # local fallback call's timeout device-neutral so the closure is valid
     # without pretending the control plane describes the remote worker.
     _routing = {"effective_device": None}
+    _routing_hardware_family = None
+    _routing_vram_gb = None
 
     if not _remote:
         # Single-active-engine memory discipline: hand back any OTHER resident
@@ -1497,11 +1510,16 @@ async def generate_speech(
         # 4090 from a Mac control plane would be refused by a gate describing
         # a machine that is about to do nothing.
         from core.device_caps import detect_host_caps
-        from services.engine_routing import resolve_routing, routing_notice
-        _routing = resolve_routing(
-            getattr(backend_cls, "gpu_compat", ("cpu",)), detect_host_caps(),
-            _engine_min_vram_gb,
+        from services.engine_routing import (
+            routing_notice,
+            runtime_compute_profile_async,
         )
+        _routing = await runtime_compute_profile_async(
+            backend_cls, detect_host_caps()
+        )
+        _engine_min_vram_gb = _routing["min_vram_gb"]
+        _routing_hardware_family = _routing.get("runtime_hardware_family")
+        _routing_vram_gb = _routing.get("runtime_vram_gb")
         if _routing["routing_status"] == "unavailable":
             # The engine needs an accelerator this host lacks and has no CPU path.
             raise HTTPException(status_code=400, detail=_routing["routing_reason"])
@@ -1725,8 +1743,13 @@ async def generate_speech(
             local=gpu_gateway.LocalCall(
                 _remote_only_local_call(_target_label),
                 what="TTS generate",
-                timeout=_generate_timeout_s(text, execution_device=_routing["effective_device"],
-                                            min_vram_gb=_engine_min_vram_gb),
+                timeout=_generate_timeout_s(
+                    text,
+                    execution_device=_routing["effective_device"],
+                    min_vram_gb=_engine_min_vram_gb,
+                    hardware_family=_routing_hardware_family,
+                    vram_gb=_routing_vram_gb,
+                ),
                 min_vram_gb=_engine_min_vram_gb,
             ),
             remote=_remote_call,
@@ -2020,8 +2043,13 @@ async def generate_speech(
                                 ),
                                 what="TTS generate",
                                 min_vram_gb=_engine_min_vram_gb,
-                                timeout=_generate_timeout_s(text, execution_device=_routing["effective_device"],
-                                                            min_vram_gb=_engine_min_vram_gb),
+                                timeout=_generate_timeout_s(
+                                    text,
+                                    execution_device=_routing["effective_device"],
+                                    min_vram_gb=_engine_min_vram_gb,
+                                    hardware_family=_routing_hardware_family,
+                                    vram_gb=_routing_vram_gb,
+                                ),
                                 on_abandon=release,
                             )
                         )
@@ -2041,8 +2069,13 @@ async def generate_speech(
                                 ),
                                 what="TTS generate",
                                 min_vram_gb=_engine_min_vram_gb,
-                                timeout=_generate_timeout_s(text, execution_device=_routing["effective_device"],
-                                                            min_vram_gb=_engine_min_vram_gb),
+                                timeout=_generate_timeout_s(
+                                    text,
+                                    execution_device=_routing["effective_device"],
+                                    min_vram_gb=_engine_min_vram_gb,
+                                    hardware_family=_routing_hardware_family,
+                                    vram_gb=_routing_vram_gb,
+                                ),
                                 on_abandon=release,
                             )
                         )
@@ -2082,8 +2115,13 @@ async def generate_speech(
                                 # Budget scaled to THIS chunk (#1190) — the flat
                                 # 300s here is what made long streamed renders fail
                                 # even after the v0.3.22 scaled budget shipped.
-                                timeout=_generate_timeout_s(chunk_text, execution_device=_routing["effective_device"],
-                                                            min_vram_gb=_engine_min_vram_gb),
+                                timeout=_generate_timeout_s(
+                                    chunk_text,
+                                    execution_device=_routing["effective_device"],
+                                    min_vram_gb=_engine_min_vram_gb,
+                                    hardware_family=_routing_hardware_family,
+                                    vram_gb=_routing_vram_gb,
+                                ),
                                 on_abandon=release,
                             )
                         )
@@ -2243,8 +2281,13 @@ async def generate_speech(
                     _REMOTE_OP,
                     local=gpu_gateway.LocalCall(
                         _local_render, what="TTS generate",
-                        timeout=_generate_timeout_s(text, execution_device=_routing["effective_device"],
-                                                    min_vram_gb=_engine_min_vram_gb),
+                        timeout=_generate_timeout_s(
+                            text,
+                            execution_device=_routing["effective_device"],
+                            min_vram_gb=_engine_min_vram_gb,
+                            hardware_family=_routing_hardware_family,
+                            vram_gb=_routing_vram_gb,
+                        ),
                         min_vram_gb=_engine_min_vram_gb,
                         on_abandon=release,
                     ),
