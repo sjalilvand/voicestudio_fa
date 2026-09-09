@@ -32,6 +32,54 @@ def _public_routing_reason(status: object, diagnostic: object) -> str:
     return _ROUTING_BY_STATUS.get(status, _ROUTING_UNAVAILABLE)
 
 
+# Categories for WHY an engine is unavailable. The probe's own sentence cannot
+# cross the boundary — it carries exception text, local paths and sometimes
+# credentials — but "Engine unavailable. Check installation and configuration."
+# told the user nothing at all, and "Last error: A previous engine check
+# failed." reads like a crash rather than "you have not installed this yet"
+# (#1866). Classifying the private diagnostic into an owned sentence keeps the
+# boundary intact and still names the kind of problem and the place to fix it.
+_UNAVAILABLE_NOT_INSTALLED = (
+    "This engine's package isn't installed yet. Install it from "
+    "Model Catalogue → Engines."
+)
+_UNAVAILABLE_NEEDS_CONFIG = (
+    "This engine needs to be configured before it can run. Open "
+    "Model Catalogue → Engines to finish setting it up."
+)
+_UNAVAILABLE_FILE_MISSING = (
+    "A file this engine needs is missing or unreadable. Reinstall it from "
+    "Model Catalogue → Engines."
+)
+
+# Matched against the lowered probe text. Ordered most specific first: a
+# missing file often also says "not installed", and the file case has the more
+# useful remedy of the two.
+_UNAVAILABLE_SIGNATURES = (
+    (_UNAVAILABLE_FILE_MISSING, (
+        "file is missing", "file is empty", "file is unreadable",
+        "script missing", "binary", "not found at",
+    )),
+    (_UNAVAILABLE_NEEDS_CONFIG, (
+        "environment variable", "configure a server endpoint", "api key",
+        "unconfigured", "set the", "base url",
+    )),
+    (_UNAVAILABLE_NOT_INSTALLED, (
+        "not installed", "package missing", "not available", "no module named",
+        "import ", "unavailable:", "failed to load",
+    )),
+)
+
+
+def _public_unavailable_reason(diagnostic: object) -> str:
+    """Map a private availability probe to an accurate stable category."""
+    private = diagnostic.lower() if isinstance(diagnostic, str) else ""
+    for public, markers in _UNAVAILABLE_SIGNATURES:
+        if any(marker in private for marker in markers):
+            return public
+    return _UNAVAILABLE
+
+
 def public_backends(entries: list[dict]) -> list[dict]:
     """Copy registry entries while replacing service diagnostics.
 
@@ -46,7 +94,7 @@ def public_backends(entries: list[dict]) -> list[dict]:
     for entry in entries:
         item = dict(entry)
         if item.get("reason") is not None:
-            item["reason"] = _UNAVAILABLE
+            item["reason"] = _public_unavailable_reason(item["reason"])
         if item.get("last_error") is not None:
             item["last_error"] = _PREVIOUS_FAILURE
         if item.get("routing_reason") is not None:

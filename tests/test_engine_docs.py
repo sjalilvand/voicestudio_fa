@@ -80,7 +80,12 @@ def test_docs_url_survives_the_public_metadata_scrub():
     }
     (public,) = public_backends([entry])
 
-    assert public["reason"] == "Engine unavailable. Check installation and configuration."
+    # The reason is still replaced — what matters here is that no private text
+    # survives it. Since #1866 the replacement names the KIND of problem, so
+    # pinning the old generic sentence would fight that on purpose.
+    assert "/home/alice" not in public["reason"]
+    assert "CosyVoice" not in public["reason"]
+    assert "isn't installed yet" in public["reason"]
     assert public["last_error"] == "A previous engine check failed."
     assert "/home/alice" not in public["reason"]
     assert public["docs_url"] == entry["docs_url"]
