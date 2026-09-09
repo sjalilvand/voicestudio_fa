@@ -5,6 +5,12 @@ quirks. Select engines in **Model Catalogue → Engines** (or quick-switch with
 <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>E</kbd>), or pin one with
 `OMNIVOICE_TTS_BACKEND` / `OMNIVOICE_ASR_BACKEND`.
 
+When an engine reports itself unavailable, expand its row's **Why?** panel and
+use **Learn more** to jump straight to that engine's page here. The row's own
+message stays deliberately generic — an availability probe can carry local
+paths or credentials, so it is never shown verbatim — and the page below is
+where the actual requirements and setup steps live.
+
 The compute device (CUDA/ROCm/MPS/CPU) is auto-detected; pin it under
 **Settings → Performance & Device** (or `OMNIVOICE_DEVICE`) if auto-detect
 picks wrong — see [performance](../performance.md).
