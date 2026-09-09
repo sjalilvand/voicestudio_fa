@@ -9,6 +9,8 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- The floating dictation bubble now has pause, resume, stop, and close controls. (#1903)
+- Transcriptions checks model readiness and offers an inline download before recording. (#1903)
 
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
 
@@ -67,6 +69,10 @@ the frozen-backend fallback mirror it for their toolchains.
 - Speak tilde separators in integer, signed, and decimal ranges in English, Korean, Japanese, and Chinese (#1821) — thanks @flutterkage2k!
 
 - Keep recording and conversion work safe while switching methods, synchronize dubbing language controls, and localize timeline controls and timing warnings (#1841)
+- Audiobook is now a Write → Cast → Produce tab workspace matching the voice workspace, with the warnings/progress/result rail pinned below (#1841)
+- Gallery uses a workspace header with zone tabs, hairline section dividers, theme-token cards, and borderless import rows (#1841)
+- Gallery cards reset native button faces, cluster icon actions in the header so Use voice never wraps, and use a roomier grid floor (#1841)
+- Gallery filters gain name search, removable iconified pills with clear-all, and dimension icons on every facet (#1841)
 
 - Dubbing playback starts before waveform decoding, automatic cast names are readable, and transcript timestamps have more room (#1823)
 - The title-bar engine button stays compact and stable while cycling labels, with engine names aligned right (#1823)

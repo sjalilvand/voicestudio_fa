@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Usunąć ten projekt na stałe?"
   },
   "common": {
+    "stop": "Zatrzymaj się",
+    "resume": "Wznów",
+    "paused": "Wstrzymany",
     "open": "Otwórz",
     "cancel": "Anuluj",
     "save": "Zapisz",
@@ -2519,6 +2522,9 @@
     "dismiss": "Odrzuć",
     "output": "Wyjście",
     "title": "Książka audio",
+    "tab_script": "Scenariusz",
+    "tab_voices": "Głosy",
+    "tab_book": "Książka",
     "subtitle": "Napisz lub zaimportuj historię, obsadź każdy głos, a następnie wyeksportuj dopracowany audiobook z prawdziwymi rozdziałami.",
     "script": "Skrypt",
     "script_placeholder": "#Rozdział pierwszy\nDawno, dawno temu… [pauza 500 ms] koniec.\n\n#Rozdział drugi\n[głos:narrator] I tak to trwało.",

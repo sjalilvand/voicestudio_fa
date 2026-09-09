@@ -17,6 +17,14 @@ own microphone audio to the versioned WebSocket API. See the
 3. Put the cursor in a text field, press the shortcut, speak, then release or
    press again.
 
+The **Transcriptions** page offers the same recorder as one contextual
+**Start dictation** action: it appears in the empty state before the first
+transcript and moves to the page header once history exists. A desktop start
+wakes the recorder window before dispatch, so a hidden WebView cannot silently
+miss the request. The in-app action confirms listener receipt, then resolves
+only after microphone startup is accepted. Disabled, rejected, timed-out, or
+failed starts are reported back on the page.
+
 Whisper Tiny is the recommended default on macOS, Windows, and Linux. It
 auto-detects more than 90 languages. Parakeet TDT v3 remains available for its
 25 supported European languages, but it is not selected automatically.
@@ -67,3 +75,13 @@ changes. `dotool` needs direct write access to `/dev/uinput`; `ydotool` 1.0+
 needs a running `ydotoold` with that access and a user-readable socket.
 VoiceStudio checks these prerequisites before selection. Tray-started Wayland
 dictation always stays copy-only.
+
+### Transcriptions model setup
+
+Transcriptions checks the active dictation model before enabling **Start dictation**. If weights are missing, download the recommended model directly on the page; its name, download size, and installation progress are shown. Downloads require an explicit click. Failed downloads can be retried, and model state refreshes when returning from Settings. Once installation is verified, Start dictation becomes available; recording never starts automatically. Existing transcription history remains accessible during setup.
+
+### Floating recording controls
+
+The recording bubble includes **Pause / Resume**, **Stop**, and **Close**. Pause disables microphone tracks, stops sending new audio, and freezes the elapsed recording timer while preserving the session. Resume continues the same session. Stop (or the recording shortcut) finishes and transcribes, including when paused. Close cancels pending recording/transcription and releases the microphone; text already delivered to another app cannot be retracted. Pausing is manual, not triggered by silence or desktop inactivity.
+
+The Transcriptions page displays the effective recording shortcut and the platform paste shortcut. The floating bubble places its live transcript below the controls in a multiline preview, so controls cannot squeeze the text into a few characters.

@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "このプロジェクトを完全に削除しますか？"
   },
   "common": {
+    "stop": "停止",
+    "resume": "再開",
+    "paused": "一時停止中",
     "open": "開く",
     "cancel": "キャンセル",
     "save": "保存",
@@ -2519,6 +2522,9 @@
     "dismiss": "閉じる",
     "output": "出力",
     "title": "オーディオブック",
+    "tab_script": "台本",
+    "tab_voices": "音声",
+    "tab_book": "ブック",
     "subtitle": "物語を書いたり読み込んだり、声を配役して、本格的な章付きオーディオブックを書き出せます。",
     "script": "スクリプト",
     "script_placeholder": "# 第一章\nむかしむかし… [500 ミリ秒停止] 終了。\n\n# 第二章\n[音声:ナレーター] そして、それは続きました。",

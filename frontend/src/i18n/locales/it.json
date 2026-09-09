@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Eliminare definitivamente questo progetto?"
   },
   "common": {
+    "stop": "Fermati",
+    "resume": "Riprendi",
+    "paused": "In pausa",
     "open": "Aperto",
     "cancel": "Annulla",
     "save": "Salva",
@@ -2519,6 +2522,9 @@
     "dismiss": "Ignora",
     "output": "Uscita",
     "title": "Audiolibro",
+    "tab_script": "Copione",
+    "tab_voices": "Voci",
+    "tab_book": "Libro",
     "subtitle": "Scrivi o importa la tua storia, assegna ogni voce e poi esporta un audiolibro rifinito con veri capitoli.",
     "script": "Copione",
     "script_placeholder": "# Capitolo primo\nC'era una volta… [pausa 500ms] fine.\n\n# Capitolo due\n[voce: narratore] E così è continuato.",

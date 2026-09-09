@@ -1,10 +1,15 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { requestDictationCapture, copyToClipboard, toast } = vi.hoisted(() => ({
+const { requestDictationCapture, copyToClipboard, toast, readiness } = vi.hoisted(() => ({
+  readiness: { phase: 'ready', check: vi.fn().mockResolvedValue(true), install: vi.fn() },
   requestDictationCapture: vi.fn(),
   copyToClipboard: vi.fn(),
   toast: { error: vi.fn(), success: vi.fn() },
+}));
+
+vi.mock('../hooks/useDictationReadiness', () => ({
+  useDictationReadiness: () => readiness,
 }));
 
 vi.mock('../utils/copyText', () => ({ copyText: copyToClipboard }));
@@ -25,6 +30,8 @@ import TranscriptionsPage, { addTranscription, segTimeRange } from './Transcript
 
 describe('Transcriptions capture entry point', () => {
   beforeEach(() => {
+    readiness.phase = 'ready';
+    readiness.missing = null;
     localStorage.clear();
     requestDictationCapture.mockReset().mockResolvedValue(undefined);
     toast.error.mockReset();
@@ -32,16 +39,16 @@ describe('Transcriptions capture entry point', () => {
 
   it('shows the effective shortcut and starts the shared recorder from the empty state', async () => {
     render(<TranscriptionsPage />);
-    expect(screen.getByText(/Super\+Shift\+V/)).toBeInTheDocument();
+    expect(screen.getByText('Super+Shift+V', { selector: 'kbd' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Start dictation' }).at(-1));
+    fireEvent.click(screen.getByRole('button', { name: 'Start dictation' }));
     await waitFor(() => expect(requestDictationCapture).toHaveBeenCalledWith('start'));
   });
 
   it('reports a capture-controller failure', async () => {
     requestDictationCapture.mockRejectedValueOnce(new Error('event channel unavailable'));
     render(<TranscriptionsPage />);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Start dictation' }).at(-1));
+    fireEvent.click(screen.getByRole('button', { name: 'Start dictation' }));
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
@@ -56,8 +63,21 @@ describe('Transcriptions capture entry point', () => {
       target: { value: '   ' },
     });
 
-    expect(screen.getAllByRole('button', { name: 'Start dictation' })).toHaveLength(2);
+    const button = screen.getByRole('button', { name: 'Start dictation' });
+    expect(button.querySelector(':scope > svg')).toBeInTheDocument();
+    expect(button.querySelector(':scope > span')).toHaveTextContent('Start dictation');
     expect(screen.getByText('No transcriptions yet')).toBeInTheDocument();
+  });
+
+  it('moves the single capture action to the header once history exists', () => {
+    addTranscription({ text: 'Existing transcript.', language: 'en' });
+    render(<TranscriptionsPage />);
+
+    const button = screen.getByRole('button', { name: 'Start dictation' });
+    expect(button.closest('.txn-header__right')).toBeInTheDocument();
+    expect(button.querySelector(':scope > svg')).toBeInTheDocument();
+    expect(button.querySelector(':scope > span')).toHaveTextContent('Start dictation');
+    expect(screen.queryByText('No transcriptions yet')).not.toBeInTheDocument();
   });
 
   it('shows a successful transcript emitted by the shared recorder', async () => {
@@ -78,6 +98,8 @@ describe('Transcriptions capture entry point', () => {
 // one the user could not read at all.
 describe('segments without timings (#1798)', () => {
   beforeEach(() => {
+    readiness.phase = 'ready';
+    readiness.missing = null;
     localStorage.clear();
   });
 
@@ -109,6 +131,8 @@ describe('segments without timings (#1798)', () => {
 
 describe('transcription clipboard', () => {
   beforeEach(() => {
+    readiness.phase = 'ready';
+    readiness.missing = null;
     localStorage.clear();
     toast.success.mockReset();
     toast.error.mockReset();
@@ -134,4 +158,15 @@ describe('transcription clipboard', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
     expect(toast.success).not.toHaveBeenCalled();
   });
+});
+
+it('blocks recording and offers an explicit sized download when the model is missing', () => {
+  localStorage.clear();
+  readiness.phase = 'missing';
+  readiness.missing = { recommended: { repo_id: 'test/model', label: 'Tiny', size_gb: 0.1 } };
+  render(<TranscriptionsPage />);
+  expect(screen.getByRole('button', { name: 'Start dictation' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Download Tiny (0.1 GB)' }));
+  expect(readiness.install).toHaveBeenCalled();
+  expect(screen.getByText('Super+Shift+V', { selector: 'kbd' })).toBeInTheDocument();
 });

@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "¿Eliminar este proyecto permanentemente?"
   },
   "common": {
+    "stop": "Detener",
+    "resume": "Reanudar",
+    "paused": "En pausa",
     "open": "Abierto",
     "cancel": "Cancelar",
     "save": "Guardar",
@@ -2519,6 +2522,9 @@
     "dismiss": "Descartar",
     "output": "Salida",
     "title": "Audiolibro",
+    "tab_script": "Guion",
+    "tab_voices": "Voces",
+    "tab_book": "Libro",
     "subtitle": "Escribe o importa tu historia, asigna cada voz y exporta un audiolibro pulido con capítulos reales.",
     "script": "Guión",
     "script_placeholder": "# Capítulo uno\nÉrase una vez… [pausa 500ms] el final.\n\n# Capítulo Dos\n[voz:narrador] Y así continuó.",

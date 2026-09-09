@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Hapus proyek ini secara permanen?"
   },
   "common": {
+    "stop": "Berhenti",
+    "resume": "Lanjutkan",
+    "paused": "Dijeda",
     "open": "Buka",
     "cancel": "Batalkan",
     "save": "Simpan",
@@ -2519,6 +2522,9 @@
     "dismiss": "Tutup",
     "output": "Keluaran",
     "title": "Buku Audio",
+    "tab_script": "Naskah",
+    "tab_voices": "Suara",
+    "tab_book": "Buku",
     "subtitle": "Tulis atau impor cerita Anda, pilih suara untuk setiap peran, lalu ekspor buku audio rapi dengan bab sungguhan.",
     "script": "naskah",
     "script_placeholder": "# Bab Satu\nSuatu ketika… [pause 500ms] berakhir.\n\n# Bab Dua\n[suara: narator] Dan hal itu berlanjut.",

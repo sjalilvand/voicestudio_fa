@@ -349,6 +349,7 @@ async def ws_transcribe(websocket: WebSocket):
     audio_chunks: list[bytes] = []
     total_bytes = 0
     last_audio_time = time.monotonic()
+    paused = False
     running = True
     partial_text = ""
     # Track whether the client initiated the disconnect. When True the
@@ -366,7 +367,7 @@ async def ws_transcribe(websocket: WebSocket):
         message as the authoritative result and skip the duplicate HTTP
         POST that used to run on every dictation.
         """
-        nonlocal total_bytes, last_audio_time, running, client_disconnected
+        nonlocal total_bytes, last_audio_time, running, client_disconnected, paused
         try:
             while running:
                 msg = await websocket.receive()
@@ -395,6 +396,10 @@ async def ws_transcribe(websocket: WebSocket):
                         data = aec.process_near_end(payload)
                     audio_chunks.append(data)
                     total_bytes += len(data)
+                    last_audio_time = time.monotonic()
+                    continue
+                if msg.get("text") in ("PAUSE", "RESUME"):
+                    paused = msg["text"] == "PAUSE"
                     last_audio_time = time.monotonic()
                     continue
                 if _is_end_control(msg.get("text")):
@@ -428,6 +433,9 @@ async def ws_transcribe(websocket: WebSocket):
 
             if not running:
                 break
+
+            if paused:
+                continue
 
             # Check silence timeout
             if time.monotonic() - last_audio_time > SILENCE_TIMEOUT_S and total_bytes > MIN_BUFFER_BYTES:

@@ -1,9 +1,9 @@
-"""The dictation widget window must stay hidden, and must stamp its identity.
+"""The dictation widget must stay safe while hidden and wake before capture.
 
 The widget window hosts the recorder (`getUserMedia` + `MediaRecorder` + the
-transcription WebSocket all live in `CaptureWidget.jsx`), so it has to exist —
-but it is never shown (owner decision, 2026-08-07): dictation gives no
-on-screen pill.
+transcription WebSocket all live in `CaptureWidget.jsx`), so it has to exist
+while idle. Some WebView engines suspend that hidden document, however, so a
+start request must wake it before emitting the event it needs to record.
 
 Two things keep that safe, and both are easy to undo by accident:
 
@@ -14,8 +14,9 @@ Two things keep that safe, and both are easy to undo by accident:
    300x64, with an opaque background and no CaptureWidget to hide it again:
    the dark rectangle that could only be cleared by killing the app.
 
-2. Nothing calls `.show()` on it. A re-added show would put that rectangle
-   back on screen for anyone whose window lost the identity race.
+2. Capture dispatch wakes it only through the non-activating pill command,
+   after preserving the output target and before emitting the start event.
+   The widget owns hiding itself again when it is idle.
 
 The frontend half is pinned by
 `frontend/src/test/DictationNoPillWindow.test.jsx`.
@@ -27,11 +28,19 @@ from pathlib import Path
 import pytest
 
 _LIB_RS = Path(__file__).resolve().parents[1] / "frontend" / "src-tauri" / "src" / "lib.rs"
+_COMMANDS_RS = (
+    Path(__file__).resolve().parents[1] / "frontend" / "src-tauri" / "src" / "commands.rs"
+)
 
 
 @pytest.fixture
 def lib_rs() -> str:
     return _LIB_RS.read_text(encoding="utf-8")
+
+
+@pytest.fixture
+def commands_rs() -> str:
+    return _COMMANDS_RS.read_text(encoding="utf-8")
 
 
 def test_widget_window_stamps_its_identity_before_page_scripts(lib_rs: str) -> None:
@@ -47,24 +56,40 @@ def test_widget_window_stamps_its_identity_before_page_scripts(lib_rs: str) -> N
     )
 
 
-def test_nothing_shows_the_widget_window(lib_rs: str) -> None:
-    """No `.show()` may be reachable from a widget window handle.
-
-    Scoped to blocks that bind the widget handle, so an unrelated
-    `main_win.show()` elsewhere in the file doesn't trip this.
-    """
-    offenders = []
-    for match in re.finditer(r'get_webview_window\("widget"\)', lib_rs):
-        # The handle's usable scope: to the end of the enclosing block. Take a
-        # generous window and look for a show on it — cheap and hard to fool.
-        block = lib_rs[match.start() : match.start() + 1200]
-        for show in re.finditer(r"\b(\w+)\.show\(\)|show_pill_noactivate\(", block):
-            offenders.append(show.group(0))
-    assert not offenders, (
-        f"Something shows the dictation widget window again: {offenders}. "
-        "It is a hidden recorder host — showing it is what put an empty "
-        "rectangle on the user's desktop."
+def test_capture_dispatch_wakes_widget_before_emitting_start(lib_rs: str) -> None:
+    """A hidden WebView cannot receive the event that tells it to show itself."""
+    dispatch = re.search(
+        r"fn dispatch_dictation_capture_from\(.*?\n\}", lib_rs, re.S
     )
+    assert dispatch, "Could not locate dictation capture dispatch."
+    body = dispatch.group(0)
+    begin = body.find("begin_session")
+    wake_guard = body.find('if event == "tray-dictate"', begin)
+    wake = body.find("commands::show_dictation_pill")
+    emit = body.find("app.emit")
+    assert -1 not in (begin, wake_guard, wake, emit), (
+        "Capture dispatch must preserve the output target, wake the hidden "
+        "widget, then emit the start event."
+    )
+    assert begin < wake_guard < wake < emit, (
+        "Wake the hidden recorder after preserving the output target and "
+        "before emitting only a start; otherwise macOS can silently drop the "
+        "request or a stop can reopen the pill."
+    )
+
+
+def test_in_page_capture_waits_for_listener_acceptance(commands_rs: str) -> None:
+    request = re.search(
+        r"pub async fn request_dictation_capture\(.*?\n\}", commands_rs, re.S
+    )
+    assert request, "The in-page capture command must remain asynchronous."
+    body = request.group(0)
+    assert "request_dictation_capture_delivery" in body
+    assert "wait_for_capture_delivery" in body
+    assert "completion_ready" in body
+    assert "take_completion_or_cancel" in body
+    assert "capture window did not acknowledge the request" in body
+    assert "dictation capture did not start in time" in body
 
 
 def test_no_computed_window_target_can_resolve_to_the_widget(lib_rs: str) -> None:

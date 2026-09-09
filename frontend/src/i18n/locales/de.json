@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Dieses Projekt dauerhaft löschen?"
   },
   "common": {
+    "stop": "Stopp",
+    "resume": "Fortsetzen",
+    "paused": "Pausiert",
     "open": "Offen",
     "cancel": "Abbrechen",
     "save": "Speichern",
@@ -2519,6 +2522,9 @@
     "dismiss": "Verwerfen",
     "output": "Ausgabe",
     "title": "Hörbuch",
+    "tab_script": "Skript",
+    "tab_voices": "Stimmen",
+    "tab_book": "Buch",
     "subtitle": "Schreiben oder importieren Sie Ihre Geschichte, weisen Sie jeder Rolle eine Stimme zu und exportieren Sie ein fertiges Hörbuch mit echten Kapiteln.",
     "script": "Skript",
     "script_placeholder": "# Kapitel eins\nEs war einmal… [Pause 500 ms] das Ende.\n\n# Kapitel Zwei\n[Stimme:Erzähler] Und so ging es weiter.",

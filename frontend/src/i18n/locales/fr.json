@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Supprimer définitivement ce projet ?"
   },
   "common": {
+    "stop": "Arrêter",
+    "resume": "Reprendre",
+    "paused": "En pause",
     "open": "Ouvert",
     "cancel": "Annuler",
     "save": "Enregistrer",
@@ -2519,6 +2522,9 @@
     "dismiss": "Ignorer",
     "output": "Sortie",
     "title": "Livre audio",
+    "tab_script": "Script",
+    "tab_voices": "Voix",
+    "tab_book": "Livre",
     "subtitle": "Écrivez ou importez votre histoire, attribuez chaque voix, puis exportez un livre audio soigné avec de vrais chapitres.",
     "script": "Scénario",
     "script_placeholder": "# Chapitre un\nIl était une fois… [pause 500ms] la fin.\n\n# Chapitre deux\n[voix:narrateur] Et ainsi de suite.",

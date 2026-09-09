@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Ta bort projektet permanent?"
   },
   "common": {
+    "stop": "Sluta",
+    "resume": "Återuppta",
+    "paused": "Pausad",
     "open": "Öppna",
     "cancel": "Avbryt",
     "save": "Spara",
@@ -2519,6 +2522,9 @@
     "dismiss": "Avfärda",
     "output": "Utdata",
     "title": "Ljudbok",
+    "tab_script": "Manus",
+    "tab_voices": "Röster",
+    "tab_book": "Bok",
     "subtitle": "Skriv eller importera din berättelse, tilldela varje roll en röst och exportera en finslipad ljudbok med riktiga kapitel.",
     "script": "Manus",
     "script_placeholder": "# Kapitel ett\nDet var en gång... [paus 500ms] slutet.\n\n# Kapitel två\n[voice:berättare] Och så fortsatte det.",

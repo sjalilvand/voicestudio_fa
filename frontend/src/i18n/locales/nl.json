@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Dit project permanent verwijderen?"
   },
   "common": {
+    "stop": "Stop",
+    "resume": "Hervatten",
+    "paused": "Gepauzeerd",
     "open": "Openen",
     "cancel": "Annuleer",
     "save": "Opslaan",
@@ -2519,6 +2522,9 @@
     "dismiss": "Sluiten",
     "output": "Uitvoer",
     "title": "Audioboek",
+    "tab_script": "Script",
+    "tab_voices": "Stemmen",
+    "tab_book": "Boek",
     "subtitle": "Schrijf of importeer je verhaal, wijs elke stem toe en exporteer een verzorgd luisterboek met echte hoofdstukken.",
     "script": "Script",
     "script_placeholder": "# Hoofdstuk één\nEr was eens… [pauze 500 ms] het einde.\n\n# Hoofdstuk twee\n[stem:verteller] En zo ging het verder.",

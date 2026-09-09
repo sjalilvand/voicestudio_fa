@@ -114,6 +114,8 @@ function LazyWaveform({ height = 36, className = '', ...rest }) {
 }
 
 export default function WorkspaceHistory({
+  title,
+  clearLabel,
   variant = 'voice', // 'voice' (clone/design synth) | 'dub'
   history = [],
   dubHistory = [],
@@ -140,9 +142,9 @@ export default function WorkspaceHistory({
         type="button"
         className="history-action-btn danger flex-[0_0_auto]"
         onClick={clearHistory}
-        title={t('sidebar.clear_history')}
+        title={clearLabel || t('sidebar.clear_history')}
       >
-        <Trash2 size={10} /> {t('sidebar.clear_history')}
+        <Trash2 size={10} /> {clearLabel || t('sidebar.clear_history')}
       </button>
     ) : null;
 
@@ -161,7 +163,8 @@ export default function WorkspaceHistory({
         <div className="flex-[0_0_auto] flex flex-col gap-[8px] py-[10px] px-[12px]">
           <div className="flex items-center justify-between gap-[6px]">
             <span className="inline-flex items-center gap-[6px] [font-family:var(--chrome-font-mono,var(--font-mono))] text-[0.72rem] font-semibold [letter-spacing:0.04em] uppercase text-[color:var(--chrome-fg-muted)]">
-              <History size={13} /> {t('history.dub_title', { defaultValue: 'Dub history' })}
+              <History size={13} />{' '}
+              {title || t('history.dub_title', { defaultValue: 'Dub history' })}
             </span>
             {clearAllButton(dubHistory.length)}
           </div>
@@ -176,7 +179,13 @@ export default function WorkspaceHistory({
               const inputType = dubInputType(item);
               const MediaIcon = inputType === 'audio' ? AudioWaveform : Film;
               return (
-                <div key={`dub-${item.id}`} className="history-item history-item--dub">
+                <div key={`dub-${item.id}`} className="history-item history-item--dub relative">
+                  <button
+                    type="button"
+                    className="absolute inset-0 z-[1] cursor-pointer rounded-[inherit] border-0 bg-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--chrome-accent)]"
+                    aria-label={`${t('sidebar.open')}: ${item.filename}`}
+                    onClick={() => restoreDubHistory(item)}
+                  />
                   <div className="flex min-w-0 gap-[8px]">
                     <DubMediaPreview item={item} inputType={inputType} />
                     <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
@@ -200,7 +209,7 @@ export default function WorkspaceHistory({
                       </div>
                     </div>
                   </div>
-                  <div className="history-actions">
+                  <div className="history-actions relative z-[2]">
                     <button
                       type="button"
                       className="history-action-btn accent"

@@ -1,7 +1,9 @@
-// Audiobook tab layout — the prod-polish compaction (#1214).
+// Audiobook tab layout — the Write → Cast → Produce workspace redesign.
 //
-// The right-hand settings column is a compact property inspector: essentials
-// stay visible and one optional production tool opens at a time.
+// The inspector rail is gone: Script / Voices / Book tabs (shadcn, manual
+// activation, clone-workspace pill styling) own the column, and the
+// warnings/progress/result/plan status rail only takes space once there is
+// something to show.
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -36,67 +38,86 @@ const withI18n = (node) => (
     <I18nextProvider i18n={i18n}>{node}</I18nextProvider>
   </QueryClientProvider>
 );
-describe('AudiobookTab — compact grouped layout (#1214)', () => {
+
+function tabTrigger(name) {
+  return screen.getByRole('tab', { name });
+}
+
+// Real browsers focus on mousedown and activate on click; fireEvent.click
+// alone skips the focus half, which manual-activation Radix tabs need.
+function switchTab(name) {
+  const tab = tabTrigger(name);
+  fireEvent.mouseDown(tab);
+  fireEvent.click(tab);
+  return tab;
+}
+
+describe('AudiobookTab — Write/Cast/Produce tabs', () => {
   beforeEach(() => {
     localStorage.clear();
     useAppStore.getState().setLastOutput('');
     useAppStore.getState().setScript('');
   });
 
-  it('keeps the primary inputs always visible', () => {
-    const { container } = render(withI18n(<AudiobookTab profiles={[]} />));
-    // Script editor, default voice, language — the three always-on controls.
-    expect(screen.getByLabelText(en.audiobook.script)).toBeTruthy();
-    expect(screen.getByText(en.audiobook.default_voice)).toBeTruthy();
-    expect(screen.getByText(en.audiobook.language)).toBeTruthy();
-    expect(screen.getByLabelText(en.audiobook.format)).toBeTruthy();
-    // Secondary actions stay discoverable through accessible icon labels.
+  it('opens on the Script tab with the manuscript editor', () => {
+    render(withI18n(<AudiobookTab profiles={[]} />));
+    for (const label of [en.audiobook.tab_script, en.audiobook.tab_voices, en.audiobook.tab_book]) {
+      expect(screen.getByRole('tab', { name: new RegExp(label) })).toBeTruthy();
+    }
+    expect(tabTrigger(en.audiobook.tab_script)).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByLabelText(en.audiobook.script, { selector: 'textarea' })).toBeTruthy();
+    // Hero actions stay discoverable through accessible labels.
     expect(screen.getByLabelText(en.audiobook.load_sample)).toBeTruthy();
     expect(screen.getByLabelText(en.audiobook.import)).toBeTruthy();
     expect(screen.getByLabelText(en.audiobook.preview_plan)).toBeTruthy();
     expect(screen.getByText(en.audiobook.create)).toBeTruthy();
     expect(screen.getByRole('heading', { level: 2, name: en.audiobook.title })).toBeTruthy();
-    expect(container.querySelector('[class*="container-name:audiobook-inspector"]')).toBeTruthy();
-    expect(
-      container.querySelector('[class*="@min-[360px]/audiobook-inspector:grid-cols-2"]'),
-    ).toBeTruthy();
   });
 
-  it('groups optional controls into an icon-led tool strip', () => {
+  it('keeps the status rail out of the way until there is something to show', () => {
     render(withI18n(<AudiobookTab profiles={[]} />));
-    for (const title of [
-      en.audiobook.output,
-      en.audiobook.details,
-      en.audiobook.lexicon,
-      en.audiobook.markup_help,
-    ]) {
-      expect(screen.getByRole('button', { name: title })).toBeTruthy();
+    expect(screen.queryByTestId('audiobook-status-rail')).toBeNull();
+  });
+
+  it('shows voices controls only on the Voices tab', () => {
+    render(withI18n(<AudiobookTab profiles={[]} />));
+    expect(screen.queryByText(en.audiobook.default_voice)).toBeNull();
+    switchTab(en.audiobook.tab_voices);
+    expect(tabTrigger(en.audiobook.tab_voices)).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(en.audiobook.default_voice)).toBeTruthy();
+    expect(screen.getByText(en.audiobook.language)).toBeTruthy();
+    expect(screen.getByText(en.audiobook.cast)).toBeTruthy();
+    expect(screen.getByText(en.audiobook.expressive)).toBeTruthy();
+  });
+
+  it('shows production controls only on the Book tab', () => {
+    render(withI18n(<AudiobookTab profiles={[]} />));
+    expect(screen.queryByLabelText(en.audiobook.loudness)).toBeNull();
+    switchTab(en.audiobook.tab_book);
+    expect(screen.getByLabelText(en.audiobook.format)).toBeTruthy();
+    expect(screen.getByLabelText(en.audiobook.loudness)).toBeTruthy();
+    // Details / lexicon / markup fold into collapsible sections.
+    for (const title of [en.audiobook.details, en.audiobook.lexicon, en.audiobook.markup_help]) {
+      expect(screen.getByText(new RegExp(title))).toBeTruthy();
     }
   });
 
-  it('keeps optional panels closed by default', () => {
+  it('persists the workspace tab across visits', () => {
+    const { unmount } = render(withI18n(<AudiobookTab profiles={[]} />));
+    switchTab(en.audiobook.tab_voices);
+    expect(localStorage.getItem('omnivoice.audiobook.tab')).toBe('voices');
+    unmount();
     render(withI18n(<AudiobookTab profiles={[]} />));
-    expect(screen.queryByLabelText(en.audiobook.loudness)).toBeNull();
-    expect(screen.queryByLabelText(en.audiobook.meta_title)).toBeNull();
+    expect(tabTrigger(en.audiobook.tab_voices)).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(en.audiobook.default_voice)).toBeTruthy();
   });
 
-  it('opens Cast by default when the script contains cast tags', () => {
+  it('opens Cast content when the script contains cast tags', () => {
     useAppStore.getState().setScript('# Chapter\n[voice:Mara] Hello');
     render(withI18n(<AudiobookTab profiles={[]} />));
-    expect(screen.getByRole('button', { name: en.audiobook.cast })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    expect(tabTrigger(en.audiobook.tab_voices)).toHaveTextContent(String(1));
+    switchTab(en.audiobook.tab_voices);
     expect(screen.getByLabelText(`${en.audiobook.cast}: Mara`)).toBeTruthy();
-  });
-
-  it('shows only the selected optional panel', () => {
-    render(withI18n(<AudiobookTab profiles={[]} />));
-    fireEvent.click(screen.getByRole('button', { name: en.audiobook.details }));
-    expect(screen.getByLabelText(en.audiobook.meta_title)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: en.audiobook.output }));
-    expect(screen.queryByLabelText(en.audiobook.meta_title)).toBeNull();
-    expect(screen.getByLabelText(en.audiobook.loudness)).toBeTruthy();
   });
 
   it('pairs a persisted output with its render-time script after later edits', () => {

@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Xóa vĩnh viễn dự án này?"
   },
   "common": {
+    "stop": "Dừng lại",
+    "resume": "Tiếp tục",
+    "paused": "Đã tạm dừng",
     "open": "Mở",
     "cancel": "Hủy bỏ",
     "save": "Lưu",
@@ -2519,6 +2522,9 @@
     "dismiss": "Bỏ qua",
     "output": "Đầu ra",
     "title": "Sách nói",
+    "tab_script": "Kịch bản",
+    "tab_voices": "Giọng đọc",
+    "tab_book": "Sách",
     "subtitle": "Viết hoặc nhập câu chuyện, chọn giọng cho từng vai, rồi xuất sách nói hoàn chỉnh với các chương thực sự.",
     "script": "kịch bản",
     "script_placeholder": "# Chương Một\nNgày xửa ngày xưa… [tạm dừng 500ms] đoạn cuối.\n\n# Chương hai\n[giọng:người kể chuyện] Và cứ thế mọi chuyện tiếp tục.",

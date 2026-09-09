@@ -300,7 +300,8 @@ version** reverts to the build the app shipped with.
 
 First update yt-dlp under **Settings → Audio tools**. If YouTube still requires
 your signed-in session, export its cookies in Netscape `cookies.txt` format,
-then choose that file beside the URL field before importing. VoiceStudio uses
+then open **Advanced** on the dubbing import card and choose that file under
+**YouTube sign-in** before importing. VoiceStudio uses
 the export for that import only and makes two best-effort attempts to delete
 its temporary copy.
 

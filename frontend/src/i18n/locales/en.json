@@ -199,6 +199,9 @@
     "dismiss": "Dismiss",
     "output": "Output",
     "title": "Audiobook",
+    "tab_script": "Script",
+    "tab_voices": "Voices",
+    "tab_book": "Book",
     "subtitle": "Write or import your story, cast every voice, then export a polished audiobook with real chapters.",
     "script": "Script",
     "script_placeholder": "# Chapter One\nOnce upon a time… [pause 500ms] the end.\n\n# Chapter Two\n[voice:narrator] And so it continued.",
@@ -2253,6 +2256,9 @@
     "restart_failed": "The voice backend keeps crashing and couldn't be restarted — check the crash notice or Settings → Logs → Backend."
   },
   "common": {
+    "stop": "Stop",
+    "resume": "Resume",
+    "paused": "Paused",
     "open": "Open",
     "cancel": "Cancel",
     "save": "Save",

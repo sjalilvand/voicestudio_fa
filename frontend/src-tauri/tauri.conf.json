@@ -31,8 +31,8 @@
       {
         "label": "widget",
         "title": "Capture",
-        "width": 300,
-        "height": 64,
+        "width": 460,
+        "height": 164,
         "resizable": false,
         "fullscreen": false,
         "transparent": true,

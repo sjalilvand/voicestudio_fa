@@ -704,6 +704,9 @@
     "deleteProjectConfirm": "이 프로젝트를 영구적으로 삭제할까요?"
   },
   "common": {
+    "stop": "중지",
+    "resume": "재개",
+    "paused": "일시 중지됨",
     "open": "열기",
     "cancel": "취소",
     "save": "저장",
@@ -2923,6 +2926,9 @@
     "dismiss": "닫기",
     "output": "출력",
     "title": "오디오북",
+    "tab_script": "대본",
+    "tab_voices": "음성",
+    "tab_book": "책",
     "subtitle": "이야기를 쓰거나 가져오고, 각 배역의 목소리를 정한 다음 실제 챕터가 있는 완성도 높은 오디오북으로 내보내세요.",
     "script": "스크립트",
     "script_placeholder": "# Chapter One\nOnce upon a time… [pause 500ms] the end.\n\n# Chapter Two\n[voice:narrator] And so it continued.",

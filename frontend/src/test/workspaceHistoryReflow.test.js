@@ -67,18 +67,6 @@ describe('workspace narrow-shell reflow (#476 CTA-clipping guard)', () => {
     expect(app).toMatch(/<div className="studio-right">\s*<WorkspaceHistory\s+history=\{history\}/);
   });
 
-  it('gives Dub Projects its own narrower rail than Dub History', () => {
-    expect(app).toMatch(/className="studio-projects">\s*<WorkspaceProjects/);
-    expect(css).toMatch(/\.studio-projects\s*\{[^}]*flex:\s*0 0 240px/s);
-    expect(css).toMatch(/\.studio-right\s*\{[^}]*flex:\s*0 0 340px/s);
-  });
-
-  it('keeps Save unavailable in the idle-only Projects rail', () => {
-    expect(app).toMatch(
-      /dubStep === 'idle'[\s\S]*?className="studio-projects"[\s\S]*?canSave=\{false\}/,
-    );
-  });
-
   it('keeps the Script editor useful without pushing voice setup below the fold', () => {
     expect(indexRaw).toMatch(/\.studio-script-input\s*\{[^}]*min-height:\s*168px/s);
     expect(indexRaw).toMatch(/\.shell-narrow\s+\.studio-script-input[^}]*min-height:\s*144px/s);

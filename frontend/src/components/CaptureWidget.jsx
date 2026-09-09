@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { copyText } from '../utils/copyText';
-import { X, Loader } from 'lucide-react';
+import { X, Loader, Pause, Play, Square } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAppStore } from '../store';
 import { useTranslation } from 'react-i18next';
@@ -374,6 +374,8 @@ export default function CaptureWidget({ onDismiss }) {
   const { t } = useTranslation();
   const [state, setState] = useState('idle'); // idle | setup | recording | transcribing | done | error
   const [transcript, setTranscript] = useState('');
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
   const [duration, setDuration] = useState(0);
   const [captureMode] = useState(() => localStorage.getItem(LS_CAPTURE_MODE) || 'fast');
   const [, setLastEngine] = useState('');
@@ -711,12 +713,30 @@ export default function CaptureWidget({ onDismiss }) {
       const eventRegistrationId = event?.payload?.registrationId;
       if (eventRegistrationId != null && eventRegistrationId !== registrationId) return false;
       if (deliveryId != null) {
-        void tauriInvoke('acknowledge_dictation_capture_delivery', {
+        return tauriInvoke('acknowledge_dictation_capture_delivery', {
           registrationId,
           deliveryId,
-        }).catch((err) => console.warn('dictation delivery acknowledgement failed:', err));
+        })
+          .catch((err) => {
+            console.warn('dictation delivery acknowledgement failed:', err);
+            return false;
+          })
+          .then((acknowledged) => acknowledged !== false);
       }
       return true;
+    };
+    const completeDelivery = async (event, error = null) => {
+      const deliveryId = event?.payload?.deliveryId;
+      if (deliveryId == null) return;
+      try {
+        await tauriInvoke('complete_dictation_capture_delivery', {
+          registrationId,
+          deliveryId,
+          error,
+        });
+      } catch (err) {
+        console.warn('dictation delivery completion failed:', err);
+      }
     };
     (async () => {
       try {
@@ -727,13 +747,20 @@ export default function CaptureWidget({ onDismiss }) {
         }
         const { listen } = await import('@tauri-apps/api/event');
         unlistenStart = await listen('tray-dictate', async (event) => {
-          if (!acknowledgeDelivery(event)) return;
+          let acknowledgement = acknowledgeDelivery(event);
+          if (acknowledgement === false) return;
+          if (acknowledgement !== true) acknowledgement = await acknowledgement;
+          if (!acknowledgement) return;
           const now = Date.now();
-          if (now - nativeEventAtRef.current.start < 150) return;
+          if (now - nativeEventAtRef.current.start < 150) {
+            await completeDelivery(event, 'Duplicate dictation start ignored');
+            return;
+          }
           nativeEventAtRef.current.start = now;
           const sessionId = event?.payload?.sessionId;
           if (!sessionId) {
             hideWidgetWindow();
+            await completeDelivery(event, 'Dictation output session is missing');
             return;
           }
           await ensureDictationPrefsHydrated();
@@ -741,7 +768,8 @@ export default function CaptureWidget({ onDismiss }) {
             // The hotkey is inert, but Rust has already shown the window.
             // Put it back rather than leaving an empty capsule on screen.
             hideWidgetWindow();
-            finishOutputSession(sessionId);
+            await finishOutputSession(sessionId);
+            await completeDelivery(event, 'Dictation is disabled');
             return;
           }
           const sequence = ++nativeStartSequenceRef.current;
@@ -757,6 +785,7 @@ export default function CaptureWidget({ onDismiss }) {
             } catch (err) {
               console.warn('reject dictation output session failed:', err);
             }
+            await completeDelivery(event, 'Dictation is already active');
             return;
           }
           const trackHold = modeRef.current === 'hold';
@@ -781,11 +810,13 @@ export default function CaptureWidget({ onDismiss }) {
             clearPendingHold();
             await finishOutputSession(sessionId);
             hideWidgetWindow();
+            await completeDelivery(event, `Could not activate dictation output: ${err}`);
             return;
           }
           if (cancelled || sequence !== nativeStartSequenceRef.current || !enabledRef.current) {
             clearPendingHold();
             await finishOutputSession(sessionId);
+            await completeDelivery(event, 'Dictation start was cancelled');
             return;
           }
           if (startupWasInFlight) {
@@ -793,8 +824,10 @@ export default function CaptureWidget({ onDismiss }) {
             if (startInFlightRef.current) {
               outputSessionIdRef.current = sessionId;
               pendingNativeStartRef.current = { sessionId, trackHold, sequence };
+              await completeDelivery(event, 'Another dictation start is already in progress');
             } else if (current === 'recording' || current === 'transcribing') {
               outputSessionIdRef.current = sessionId;
+              await completeDelivery(event);
             } else if (
               current === 'idle' ||
               current === 'done' ||
@@ -802,10 +835,14 @@ export default function CaptureWidget({ onDismiss }) {
               current === 'setup'
             ) {
               outputSessionIdRef.current = sessionId;
-              startRecordingRef.current?.(trackHold, sessionId);
+              void Promise.resolve(startRecordingRef.current?.(trackHold, sessionId)).then(
+                (accepted) =>
+                  completeDelivery(event, accepted ? null : 'Dictation could not start'),
+              );
             } else {
               clearPendingHold();
               await finishOutputSession(sessionId);
+              await completeDelivery(event, 'Dictation could not accept this start');
             }
             return;
           }
@@ -814,34 +851,66 @@ export default function CaptureWidget({ onDismiss }) {
             // in System Settings. A missing grant no longer blocks capture:
             // native delivery can truthfully fall back to clipboard-only.
             outputSessionIdRef.current = sessionId;
-            checkAccessibility().then(() => {
-              if (outputSessionIdRef.current !== sessionId) return;
-              startRecordingRef.current?.(modeRef.current === 'hold', sessionId);
+            void checkAccessibility().then(async () => {
+              if (outputSessionIdRef.current !== sessionId) {
+                await completeDelivery(event, 'Dictation output session changed before startup');
+                return;
+              }
+              const accepted = await startRecordingRef.current?.(
+                modeRef.current === 'hold',
+                sessionId,
+              );
+              await completeDelivery(event, accepted ? null : 'Dictation could not start');
             });
             return;
           }
           const idle = s === 'idle' || s === 'done' || s === 'error';
           if (modeRef.current === 'toggle') {
             // Press once to start, again to stop.
-            if (idle) startRecordingRef.current?.(false, sessionId);
-            else if (s === 'recording') stopRecordingRef.current?.();
+            if (idle) {
+              void Promise.resolve(startRecordingRef.current?.(false, sessionId)).then((accepted) =>
+                completeDelivery(event, accepted ? null : 'Dictation could not start'),
+              );
+              return;
+            } else if (s === 'recording') {
+              stopRecordingRef.current?.();
+              await completeDelivery(event);
+              return;
+            }
           } else if (idle) {
             // Hold mode: keydown → start.
-            startRecordingRef.current?.(true, sessionId);
+            void Promise.resolve(startRecordingRef.current?.(true, sessionId)).then((accepted) =>
+              completeDelivery(event, accepted ? null : 'Dictation could not start'),
+            );
+            return;
           }
+          await completeDelivery(event, 'Dictation could not start');
         });
         unlistenStop = await listen('tray-dictate-stop', async (event) => {
-          if (!acknowledgeDelivery(event)) return;
+          let acknowledgement = acknowledgeDelivery(event);
+          if (acknowledgement === false) return;
+          if (acknowledgement !== true) acknowledgement = await acknowledgement;
+          if (!acknowledgement) return;
           const now = Date.now();
-          if (now - nativeEventAtRef.current.stop < 150) return;
+          if (now - nativeEventAtRef.current.stop < 150) {
+            await completeDelivery(event, 'Duplicate dictation stop ignored');
+            return;
+          }
           nativeEventAtRef.current.stop = now;
           await ensureDictationPrefsHydrated();
           // Only hold mode acts on release; toggle ignores it.
+          let accepted = false;
           if (modeRef.current === 'hold' && stateRef.current === 'recording') {
             stopRecordingRef.current?.();
+            accepted = true;
           } else if (modeRef.current === 'hold' && holdStartRef.current === 'starting') {
             holdStartRef.current = 'released';
+            accepted = true;
           }
+          await completeDelivery(
+            event,
+            accepted ? null : 'Dictation is not recording in hold mode',
+          );
         });
         await ensureDictationPrefsHydrated();
         if (cancelled) {
@@ -901,13 +970,17 @@ export default function CaptureWidget({ onDismiss }) {
 
   // Timer while recording
   useEffect(() => {
-    if (state === 'recording') {
-      const t0 = Date.now();
-      timerRef.current = setInterval(() => setDuration(Date.now() - t0), 100);
+    if (state === 'recording' && !paused) {
+      let previous = Date.now();
+      timerRef.current = setInterval(() => {
+        const now = Date.now();
+        setDuration((elapsed) => elapsed + now - previous);
+        previous = now;
+      }, 100);
       return () => clearInterval(timerRef.current);
     }
     clearInterval(timerRef.current);
-  }, [state]);
+  }, [state, paused]);
 
   // Waveform poll: 50 ms ≈ 2–3 worklet frames, so bars visibly move well
   // within ~100 ms of mic start. Only runs while the worklet is feeding us.
@@ -925,6 +998,8 @@ export default function CaptureWidget({ onDismiss }) {
       dismissTimerRef.current = null;
     }
     if (aecModeRef.current || sherpaModeRef.current || pcmModeRef.current) teardownAec();
+    pausedRef.current = false;
+    setPaused(false);
     setState('idle');
     setTranscript('');
     setPartialText('');
@@ -1458,6 +1533,7 @@ export default function CaptureWidget({ onDismiss }) {
               }
             }
             wsPendingRef.current = [];
+            if (pausedRef.current) ws.send('PAUSE');
           };
           ws.onmessage = async (evt) => {
             if (!isCurrent() || wsRef.current !== ws) return;
@@ -1713,7 +1789,7 @@ export default function CaptureWidget({ onDismiss }) {
             return;
           }
           const sendBuf = (buf) => {
-            if (!isCurrent()) return;
+            if (!isCurrent() || pausedRef.current) return;
             const ws = wsRef.current;
             if (ws && ws.readyState === WebSocket.OPEN) {
               try {
@@ -1739,6 +1815,7 @@ export default function CaptureWidget({ onDismiss }) {
             const stopMicCapture = await startMicCapture(
               stream,
               (f) => {
+                if (pausedRef.current) return;
                 waveRef.current.push(f);
                 sendTagged(f, AEC_NEAR);
               },
@@ -1758,6 +1835,7 @@ export default function CaptureWidget({ onDismiss }) {
             const stopMicCapture = await startMicCapture(
               stream,
               (f) => {
+                if (pausedRef.current) return;
                 waveRef.current.push(f);
                 const i16 = floatToInt16(f);
                 sendBuf(i16.buffer.slice(i16.byteOffset, i16.byteOffset + i16.byteLength));
@@ -1788,6 +1866,8 @@ export default function CaptureWidget({ onDismiss }) {
           stopCaptureGraph();
           return;
         }
+        pausedRef.current = false;
+        setPaused(false);
         startTimeRef.current = Date.now();
         setTrayRecording(true);
         setWaveOn(pcmMode);
@@ -1856,11 +1936,11 @@ export default function CaptureWidget({ onDismiss }) {
           // newer non-empty lease without launching a second microphone graph.
           outputSessionIdRef.current = sessionId;
         }
-        return;
+        return false;
       }
       if (inTauri() && !sessionId) {
         hideWidgetWindow();
-        return;
+        return false;
       }
       startInFlightRef.current = true;
       if (sessionId) outputSessionIdRef.current = sessionId;
@@ -1893,9 +1973,25 @@ export default function CaptureWidget({ onDismiss }) {
           }
         }
       }
+      return stateRef.current === 'recording' || stateRef.current === 'transcribing';
     },
     [startRecordingImpl],
   );
+
+  const togglePause = useCallback(() => {
+    if (stateRef.current !== 'recording') return;
+    const next = !pausedRef.current;
+    const recorder = mediaRecorderRef.current;
+    if (recorder?.state === 'recording' && next) recorder.pause();
+    else if (recorder?.state === 'paused' && !next) recorder.resume();
+    pausedRef.current = next;
+    streamRef.current?.getTracks().forEach((track) => {
+      track.enabled = !next;
+    });
+    const ws = wsRef.current;
+    if (ws?.readyState === WebSocket.OPEN) ws.send(next ? 'PAUSE' : 'RESUME');
+    setPaused(next);
+  }, []);
 
   const stopRecording = useCallback(() => {
     const generation = captureGenerationRef.current;
@@ -2112,7 +2208,9 @@ export default function CaptureWidget({ onDismiss }) {
   // ── Pill label ──
   let label = '';
   let emoji = '';
-  if (state === 'setup') {
+  if (state === 'recording' && paused) {
+    label = t('common.paused');
+  } else if (state === 'setup') {
     // One-time Accessibility setup — shown instead of pretending to work.
     emoji = '🔒';
     label = t('capture.a11y_setup');
@@ -2156,9 +2254,13 @@ export default function CaptureWidget({ onDismiss }) {
     state === 'error' && errorInfo?.kind === 'mic' && errorInfo?.deniedByOs && inTauri();
 
   return (
-    <div className={`capture-pill capture-pill--${state}`} role="status" aria-live="polite">
+    <div
+      className={`capture-pill capture-pill--${state === 'recording' && paused ? 'paused' : state}`}
+      role="status"
+      aria-live="polite"
+    >
       {/* Live waveform while the worklet feeds us; pulsing dot otherwise */}
-      {state === 'recording' && waveOn && !modelStatus ? (
+      {state === 'recording' && !paused && waveOn && !modelStatus ? (
         <div className="capture-pill__wave" aria-hidden="true">
           {bars.map((v, i) => (
             <span
@@ -2173,9 +2275,9 @@ export default function CaptureWidget({ onDismiss }) {
       )}
 
       {/* Content */}
-      <div className="min-w-0 flex-1 overflow-hidden">
+      <div className="capture-pill__preview">
         <span
-          className="block overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] font-medium tracking-[0.01em]"
+          className="block text-[14px] leading-[1.5] font-medium"
           title={state === 'error' ? errorInfo?.message || undefined : undefined}
         >
           {emoji} {label}
@@ -2219,6 +2321,39 @@ export default function CaptureWidget({ onDismiss }) {
         </button>
       )}
 
+      {state === 'recording' && (
+        <>
+          <button
+            type="button"
+            className="capture-pill__control"
+            onClick={togglePause}
+            aria-label={t(paused ? 'common.resume' : 'common.pause')}
+            title={t(paused ? 'common.resume' : 'common.pause')}
+          >
+            {paused ? <Play size={14} /> : <Pause size={14} />}
+          </button>
+          <button
+            type="button"
+            className="capture-pill__control"
+            onClick={stopRecording}
+            aria-label={t('common.stop')}
+            title={t('common.stop')}
+          >
+            <Square size={12} />
+          </button>
+        </>
+      )}
+      {(state === 'recording' || state === 'transcribing') && (
+        <button
+          type="button"
+          className="capture-pill__control"
+          onClick={cancelSession}
+          aria-label={t('common.close')}
+          title={t('common.close')}
+        >
+          <X size={14} />
+        </button>
+      )}
       {/* Dismiss — done/error/setup */}
       {(state === 'done' || state === 'error' || state === 'setup') && (
         <button

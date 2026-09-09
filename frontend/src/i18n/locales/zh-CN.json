@@ -87,6 +87,9 @@
     "deleteProjectConfirm": "永久删除此项目？"
   },
   "common": {
+    "stop": "停止",
+    "resume": "恢复",
+    "paused": "已暂停",
     "open": "打开",
     "cancel": "取消",
     "save": "保存",
@@ -2526,6 +2529,9 @@
     "dismiss": "关闭",
     "output": "输出",
     "title": "有声读物",
+    "tab_script": "文稿",
+    "tab_voices": "配音",
+    "tab_book": "书籍",
     "subtitle": "编写或导入故事，为每个角色分配声音，再导出带有真实章节的精致有声书。",
     "script": "脚本",
     "script_placeholder": "#第一章\n从前……[停顿 500 毫秒]结束。\n\n# 第二章\n[声音：旁白] 就这样继续下去。",

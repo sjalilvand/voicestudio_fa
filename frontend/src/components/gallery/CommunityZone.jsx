@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
-import { Loader, Send } from 'lucide-react';
+import { Loader, Send, Store, CloudOff } from 'lucide-react';
 import { useCommunityItems } from '../../api/hooks';
 import { communitySubmitUrl } from '../../api/community';
 import { openExternal } from '../../api/external';
 import ArchetypeCard from './ArchetypeCard';
+import GallerySectionHeader from './GallerySectionHeader';
+import { GALLERY_GRID } from './constants';
 
 const itemKey = (item) => `community:${item._source_repo || item.source || 'default'}:${item.id}`;
 
@@ -36,18 +38,18 @@ export default function CommunityZone({
   };
 
   const submitBtn =
-    'inline-flex items-center gap-[5px] px-[10px] py-[6px] border border-transparent bg-white/[0.03] text-[var(--text-primary)] rounded-[8px] text-[0.7rem] cursor-pointer transition-colors hover:border-[color:var(--accent)] hover:text-[var(--accent)]';
+    'inline-flex items-center gap-[5px] px-[10px] py-[6px] border border-transparent bg-transparent text-[var(--text-secondary)] rounded-[var(--chrome-radius-pill)] text-[0.7rem] cursor-pointer transition-colors hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--color-fg)]';
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
-      <div className="shrink-0 px-[10px] py-[8px] mb-[8px] bg-bg-elev-2 rounded-[8px] text-[0.72rem] text-[var(--text-secondary)] leading-[1.4] flex items-center justify-between gap-[12px] flex-wrap">
-        <span>
+      <div className="mb-[10px] flex shrink-0 flex-wrap items-center justify-between gap-x-[12px] gap-y-[8px]">
+        <p className="m-0 min-w-0 flex-1 text-[0.72rem] leading-[1.5] text-[var(--text-secondary)]">
           {t('gallery.community_explainer', {
             defaultValue:
               'Designed presets and recorded voices shared by the community, loaded from the omnivoice-gallery.',
           })}
-        </span>
-        <div className="flex gap-[6px] shrink-0">
+        </p>
+        <div className="flex shrink-0 gap-[6px]">
           <button className={submitBtn} onClick={() => submit('preset')}>
             <Send size={13} /> {t('gallery.submit_preset', { defaultValue: 'Submit a preset' })}
           </button>
@@ -58,18 +60,27 @@ export default function CommunityZone({
       </div>
 
       {itemsQ.isLoading ? (
-        <div className="flex items-center justify-center p-[24px] text-[var(--text-secondary)]">
+        <div className="flex items-center justify-center gap-[8px] p-[24px] text-[var(--text-secondary)]">
           <Loader className="spin" size={18} />
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center px-[16px] py-[32px] text-[var(--text-secondary)] text-center">
-          {t('gallery.community_empty', {
-            defaultValue:
-              'No community voices loaded yet — connect to the internet and reopen, or be the first to submit one.',
-          })}
+        <div className="flex flex-col items-center justify-center gap-[8px] px-[16px] py-[32px] text-center text-[var(--text-secondary)]">
+          <CloudOff size={20} strokeWidth={1.5} aria-hidden="true" />
+          <span className="max-w-[340px] text-[0.78rem] leading-[1.6]">
+            {t('gallery.community_empty', {
+              defaultValue:
+                'No community voices loaded yet — connect to the internet and reopen, or be the first to submit one.',
+            })}
+          </span>
         </div>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(248px,1fr))] gap-[10px]">
+        <>
+          <GallerySectionHeader
+            icon={<Store size={12} strokeWidth={1.5} aria-hidden="true" />}
+            title={t('gallery.zone_community', { defaultValue: 'Community' })}
+            count={items.length}
+          />
+          <div className={GALLERY_GRID}>
           {items.map((it) => (
             <ArchetypeCard
               key={itemKey(it)}
@@ -90,7 +101,8 @@ export default function CommunityZone({
               materializationLocked={Boolean(materializingId)}
             />
           ))}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Excluir este projeto permanentemente?"
   },
   "common": {
+    "stop": "Pare",
+    "resume": "Retomar",
+    "paused": "Em pausa",
     "open": "Abrir",
     "cancel": "Cancelar",
     "save": "Salvar",
@@ -2519,6 +2522,9 @@
     "dismiss": "Dispensar",
     "output": "Saída",
     "title": "Audiolivro",
+    "tab_script": "Roteiro",
+    "tab_voices": "Vozes",
+    "tab_book": "Livro",
     "subtitle": "Escreva ou importe sua história, escolha cada voz e exporte um audiolivro bem-acabado com capítulos de verdade.",
     "script": "Roteiro",
     "script_placeholder": "# Capítulo Um\nEra uma vez… [pausa de 500ms] o fim.\n\n# Capítulo Dois\n[voz: narrador] E assim continuou.",

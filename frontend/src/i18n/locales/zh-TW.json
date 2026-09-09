@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "要永久刪除此專案嗎？"
   },
   "common": {
+    "stop": "停止",
+    "resume": "繼續",
+    "paused": "已暫停",
     "open": "打開",
     "cancel": "取消",
     "save": "儲存",
@@ -2519,6 +2522,9 @@
     "dismiss": "關閉",
     "output": "輸出",
     "title": "有聲書",
+    "tab_script": "文稿",
+    "tab_voices": "配音",
+    "tab_book": "書籍",
     "subtitle": "撰寫或匯入故事，為每個角色分配聲音，再匯出具備真實章節的精緻有聲書。",
     "script": "腳本",
     "script_placeholder": "#第一章\n從前…[停頓 500 毫秒]結束。\n\n# 第二章\n[聲音：旁白] 就這樣繼續下去。",

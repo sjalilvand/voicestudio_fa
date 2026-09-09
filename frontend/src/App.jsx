@@ -45,7 +45,7 @@ import NavRail from './components/NavRail';
 import TitleTabs from './components/TitleTabs';
 import WorkspaceHistory from './components/WorkspaceHistory';
 import WorkspaceVoices from './components/WorkspaceVoices';
-import WorkspaceProjects from './components/WorkspaceProjects';
+import DubWorkspaceSidebar from './components/DubWorkspaceSidebar';
 import ErrorBoundary from './components/ErrorBoundary';
 import FloatingPill from './components/FloatingPill';
 import GlobalAudioPlayer from './components/GlobalAudioPlayer';
@@ -1577,19 +1577,6 @@ function App() {
           <div
             className={`studio-with-history ${dubStep === 'idle' ? '' : 'studio-with-history--editing'}`}
           >
-            {dubStep === 'idle' && (
-              <div className="studio-projects">
-                <WorkspaceProjects
-                  projects={studioProjects}
-                  activeProjectId={activeProjectId}
-                  canSave={false}
-                  saveProject={saveProject}
-                  loadProject={loadProject}
-                  deleteProject={deleteProject}
-                  renameProject={renameProject}
-                />
-              </div>
-            )}
             <div className="studio-with-history__main">
               <ErrorBoundary name="dub">
                 <Suspense fallback={<LazyFallback />}>
@@ -1653,13 +1640,11 @@ function App() {
                 </Suspense>
               </ErrorBoundary>
             </div>
-            {/* Dub home: the Projects + History landing shows only when no project
-              is being edited. Opening/creating one switches to the full-width
-              editor (dubStep !== 'idle'). */}
-            {dubStep === 'idle' && (
+            {/* Keep the start screen focused after a source or project is selected.
+                The combined library rail is only part of the pristine Dub landing. */}
+            {dubStep === 'idle' && !dubVideoFile && !dubJobId && !activeProjectId && (
               <div className="studio-right">
-                <WorkspaceHistory
-                  variant="dub"
+                <DubWorkspaceSidebar
                   dubHistory={dubHistory}
                   restoreDubHistory={restoreDubHistory}
                   deleteHistory={deleteHistory}

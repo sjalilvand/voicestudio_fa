@@ -1,9 +1,10 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import ArchetypesZone from './ArchetypesZone';
 import ArchetypeCard from './ArchetypeCard';
+import { useArchetypes } from '../../api/hooks';
 
 vi.mock('../../api/hooks', () => ({
   useArchetypeCategories: () => ({
@@ -12,11 +13,11 @@ vi.mock('../../api/hooks', () => ({
       { id: 'social', name: 'Social Media', icon: 'Radio' },
     ],
   }),
-  useArchetypes: (filters) => ({
+  useArchetypes: vi.fn((filters) => ({
     data: filters.featured ? { items: [] } : { items: [], total: 0 },
     isLoading: false,
     isFetching: false,
-  }),
+  })),
 }));
 
 const t = (_key, options = {}) => options.defaultValue || _key;
@@ -132,5 +133,65 @@ describe('ArchetypeCard accessibility', () => {
     });
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Set as Audiobook default' }));
     expect(onUseAsAudiobookDefault).toHaveBeenCalledWith(archetype);
+  });
+});
+
+describe('ArchetypesZone enhanced filters', () => {
+  it('searches the whole catalog by name after a short debounce', async () => {
+    render(<ArchetypesZone {...baseProps} />);
+    const search = screen.getByRole('textbox', { name: 'Search…' });
+    fireEvent.change(search, { target: { value: 'Librarian' } });
+    await waitFor(
+      () => {
+        const calls = vi.mocked(useArchetypes).mock.calls;
+        expect(calls.some(([f]) => f?.q === 'Librarian')).toBe(true);
+      },
+      { timeout: 2000 },
+    );
+  });
+
+  it('clears the search from its inline button', async () => {
+    render(<ArchetypesZone {...baseProps} />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search…' }), {
+      target: { value: 'Librarian' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(screen.getByRole('textbox', { name: 'Search…' })).toHaveValue('');
+  });
+
+  it('shows each active filter as an iconified removable pill', () => {
+    const setFilter = vi.fn();
+    render(<ArchetypesZone {...baseProps} setFilter={setFilter} filters={{ ...baseProps.filters, gender: 'female' }} />);
+    // Pill carries the facet icon + readable label.
+    const pill = screen.getByText('Female').closest('span[class*="rounded-"]');
+    expect(pill.querySelector('svg')).not.toBeNull();
+    // The test t() mock leaves {{term}} uninterpolated — match that literally.
+    fireEvent.click(screen.getByRole('button', { name: 'Remove {{term}}' }));
+    expect(setFilter).toHaveBeenCalledWith('gender', null);
+  });
+
+  it('clears everything from the pills row at once', () => {
+    const setFilter = vi.fn();
+    const resetFilters = vi.fn();
+    render(
+      <ArchetypesZone
+        {...baseProps}
+        setFilter={setFilter}
+        resetFilters={resetFilters}
+        filters={{ ...baseProps.filters, gender: 'female' }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(resetFilters).toHaveBeenCalledOnce();
+  });
+
+  it('iconifies the facet selects in the Filters panel', () => {
+    const { container } = render(<ArchetypesZone {...baseProps} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    // Category + 5 facet selects each sit beside their dimension icon.
+    const icons = container.querySelectorAll(
+      '.border-b span[class*="inline-flex"] > svg',
+    );
+    expect(icons.length).toBeGreaterThanOrEqual(6);
   });
 });
