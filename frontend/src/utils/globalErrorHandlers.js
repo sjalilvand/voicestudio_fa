@@ -45,7 +45,12 @@ const EXTENSION_URL = /\b(?:chrome|moz|safari-web|safari|ms-browser)-extension:\
 // "Failed to fetch https://example.com" would otherwise report the message's
 // URL as its origin and escape the filter, and one of OUR errors quoting a
 // `chrome-extension://` URL would otherwise be suppressed as an extension's.
-const FRAME_LINE = /^\s*at\s|@[a-z-]+:\/\//i;
+// The JSC alternative is anchored: a frame is `fn@url`, and a function name has
+// no spaces, so the `@` must be reachable from the line start through
+// non-whitespace only. Unanchored, a V8 HEADER whose message happens to read
+// `... user@chrome-extension://...` matched as a JSC frame and its message URL
+// was taken as the throw site -- the same false positive one layer down.
+const FRAME_LINE = /^\s*at\s|^\s*\S*@[a-z-]+:\/\//i;
 const FRAME_URL = /[a-z-]+:\/\/[^\s)]+/i;
 
 /** The URL the error came FROM, or '' when the origin cannot be established. */

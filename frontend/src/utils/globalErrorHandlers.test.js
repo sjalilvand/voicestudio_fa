@@ -124,6 +124,36 @@ describe('errors thrown by a browser extension', () => {
     expect(toastErrorWithReport.mock.calls[0][1]).toBe(ours);
   });
 
+  it('does not read a V8 header that happens to contain an @ URL as a frame', () => {
+    // Greptile: the JSC frame alternative was unanchored, so a header reading
+    // `... user@chrome-extension://...` matched as a frame and its message URL
+    // became the origin. Same false positive as the message-URL case, one layer
+    // down, and the earlier test missed it because its message had no `@`.
+    installGlobalErrorHandlers();
+
+    const ours = new Error('blocked request to user@chrome-extension://someid/x.js');
+    ours.stack = [
+      'Error: blocked request to user@chrome-extension://someid/x.js',
+      '    at loadAsset (http://tauri.localhost/assets/main-app.js:9:1)',
+    ].join('\n');
+    dispatchUnhandledRejection(ours);
+
+    expect(toastErrorWithReport).toHaveBeenCalledOnce();
+    expect(toastErrorWithReport.mock.calls[0][1]).toBe(ours);
+  });
+
+  it('still treats a real JSC frame as a frame', () => {
+    // The anchor must not cost the Safari/Firefox stack shape, which has no
+    // header line at all and puts the `@` right after the function name.
+    installGlobalErrorHandlers();
+
+    const err = new Error('jsc shaped stack');
+    err.stack = 'Y@chrome-extension://someid/200.js:1:761';
+    dispatchUnhandledRejection(err);
+
+    expect(toastErrorWithReport).not.toHaveBeenCalled();
+  });
+
   it('reports rather than guesses when the throw site names no URL', () => {
     // A native or anonymous first frame leaves the origin unknown. Walking
     // deeper to find a URL would attribute the error to a frame that did not
