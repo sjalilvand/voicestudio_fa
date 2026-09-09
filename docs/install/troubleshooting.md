@@ -963,6 +963,46 @@ repair is required.
 
 **Linked issue:** [#1590](https://github.com/debpalash/VoiceStudio/issues/1590)
 
+## RTX 50-series (Blackwell, `sm_120`): backend never starts
+
+**Symptom.** The desktop app stays on "starting backend", `/health` returns 503,
+and the backend log ends inside the `ml_imports` phase — often with a native
+crash (exit code `0xffffffff` / `-1073741819`) rather than a Python traceback.
+
+**Cause.** VoiceStudio pins `torch 2.8.0+cu128`, which ships no `sm_120`
+kernels. On an RTX 50-series card `import torch` dies natively, before any
+VoiceStudio code can classify it — which is why the app can only say the
+backend did not start. This is a property of the pinned build, not of your
+driver or your install.
+
+**Fix.** Move to a torch build that has Blackwell kernels. From a source
+checkout, in the project folder:
+
+1. Edit `pyproject.toml` → `[tool.uv] constraint-dependencies` and raise the
+   torch constraint to `torch==2.9.1+cu128` (matching `torchaudio` /
+   `torchvision` for that release).
+2. `uv lock`
+3. `uv sync --all-extras`
+
+Then confirm the card is actually visible:
+
+```bash
+uv run python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_capability())"
+```
+
+`True (12, 0)` means Blackwell is working.
+
+**Note.** torchaudio 2.9 removed `set_audio_backend()`. VoiceStudio's call is
+guarded, so the upgrade above no longer trades one startup crash for another —
+but if you are on a build older than that guard you will see
+`AttributeError: module 'torchaudio' has no attribute 'set_audio_backend'`
+in the same phase. Update VoiceStudio, or delete that line in
+`backend/main.py`.
+
+**Why the pin has not moved.** Raising it for everyone changes the CUDA build
+on every platform, in Docker, and in CI, so it is a deliberate decision rather
+than a patch. Track it in [#1931](https://github.com/debpalash/VoiceStudio/issues/1931).
+
 ## Uninstalling / removing all of VoiceStudio's data
 
 VoiceStudio is fully local — no accounts, no services, nothing to deactivate. To
