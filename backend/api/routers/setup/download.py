@@ -412,6 +412,20 @@ def _segmented_retry_plan(
     return attempt >= max_attempts - 1, True
 
 
+def _segmented_retry_note(disable: bool, reraise: bool) -> str:
+    """How to describe the outcome of :func:`_segmented_retry_plan` in the log.
+
+    Three distinct states, and reading only ``disable`` conflates two of them:
+    the attempt that exhausts the accelerator is disabled AND re-raises, so the
+    fallback starts on the NEXT attempt, not this one.
+    """
+    if not disable:
+        return "kept for the next attempt (resumes from its manifest)"
+    if reraise:
+        return "exhausted — retrying once more, then snapshot_download takes over"
+    return "disabled for this install — falling back to snapshot_download now"
+
+
 @router.post("/models/install")
 async def install_model(req: InstallModelRequest):
     """Download one HF repo snapshot; progress goes through the shared
@@ -626,9 +640,7 @@ async def install_model(req: InstallModelRequest):
                             logger.info(
                                 "segmented download for %s failed (%s); accelerator %s",
                                 req.repo_id, _seg_err,
-                                "disabled for this install — falling back to snapshot_download"
-                                if _segmented_off
-                                else "kept for the next attempt (resumes from its manifest)",
+                                _segmented_retry_note(_segmented_off, _seg_reraise),
                             )
                             if _seg_reraise:
                                 raise

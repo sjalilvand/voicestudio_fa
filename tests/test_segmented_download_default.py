@@ -93,3 +93,28 @@ def test_final_attempt_takes_the_plain_path_without_reraising():
 def test_a_non_network_failure_disables_the_accelerator_at_once():
     """An accelerator that cannot work here must not burn every retry."""
     assert _plan(ValueError("sha256 mismatch"), 1) == (True, False)
+
+
+def _note(disable, reraise):
+    from api.routers.setup.download import _segmented_retry_note
+
+    return _segmented_retry_note(disable, reraise)
+
+
+def test_the_log_does_not_promise_a_fallback_that_has_not_happened_yet():
+    """The exhausting attempt re-raises, so its fallback is next — not now."""
+    assert _note(*_plan(_dropped(), _MAX - 1)) == (
+        "exhausted — retrying once more, then snapshot_download takes over"
+    )
+    assert "now" not in _note(*_plan(_dropped(), _MAX - 1))
+
+    # The branch that really does hand over says so.
+    assert _note(*_plan(_dropped(), _MAX)).endswith("snapshot_download now")
+    assert _note(*_plan(ValueError("sha256 mismatch"), 1)).endswith(
+        "snapshot_download now"
+    )
+
+    # Still accelerating.
+    assert _note(*_plan(_dropped(), 1)) == (
+        "kept for the next attempt (resumes from its manifest)"
+    )
