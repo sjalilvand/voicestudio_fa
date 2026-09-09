@@ -717,6 +717,7 @@
   },
   "consent": {
     "title": "Aiutare a migliorare VoiceStudio?",
+    "desc": "Statistiche di utilizzo anonime e prive di contenuti che ci aiutano a correggere i bug più velocemente — del tutto facoltative, disattivate per impostazione predefinita.",
     "step_label": "Migliora VoiceStudio",
     "body": "Statistiche d'uso anonime e prive di contenuti: quali motori vengono usati, quanto durano le generazioni e il tipo di errori. Mai il tuo testo, il tuo audio, i tuoi file o qualcosa che ti identifichi. Non viene inviato nulla senza il tuo consenso, e puoi cambiare idea in qualsiasi momento in Impostazioni → Privacy.",
     "learn_more": "Cosa viene inviato esattamente?",
@@ -1554,6 +1555,8 @@
     "open": "Aperto",
     "install_required_models": "Installa i modelli richiesti sopra per continuare.",
     "try_dictation": "Prova la dettatura",
+    "try_dictation_desc": "Premi la tua scorciatoia una volta per verificare che la dettatura funzioni prima di completare la configurazione.",
+    "dictation_step_label": "Dettatura",
     "next_try_dictation": "Successiva: Prova la dettatura",
     "step_aria": "Passaggio {{num}}: {{label}}",
     "step_completed": "completato",

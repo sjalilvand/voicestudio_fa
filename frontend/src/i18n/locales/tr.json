@@ -717,6 +717,7 @@
   },
   "consent": {
     "title": "VoiceStudio'un gelişmesine yardım eder misiniz?",
+    "desc": "Hataları daha hızlı düzeltmemize yardımcı olan, anonim ve içerik barındırmayan kullanım istatistikleri — tamamen isteğe bağlı, varsayılan olarak kapalı.",
     "step_label": "VoiceStudio'u geliştir",
     "body": "Anonim, içerik barındırmayan kullanım istatistikleri: hangi motorların kullanıldığı, üretimlerin ne kadar sürdüğü ve hata türleri. Asla metniniz, sesiniz, dosyalarınız veya sizi tanımlayan hiçbir şey gönderilmez. Evet demedikçe hiçbir şey gönderilmez ve kararınızı istediğiniz zaman Ayarlar → Gizlilik'ten değiştirebilirsiniz.",
     "learn_more": "Tam olarak ne gönderiliyor?",
@@ -1554,6 +1555,8 @@
     "open": "Açık",
     "install_required_models": "Devam etmek için yukarıdaki gerekli modelleri yükleyin.",
     "try_dictation": "Dikte etmeyi deneyin",
+    "try_dictation_desc": "Kurulumu bitirmeden önce dikteyi çalıştığından emin olmak için kısayolunuza bir kez basın.",
+    "dictation_step_label": "Dikte",
     "next_try_dictation": "Sonraki: Dikteyi deneyin",
     "step_aria": "Adım {{num}}: {{label}}",
     "step_completed": "tamamlandı",

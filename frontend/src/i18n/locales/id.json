@@ -717,6 +717,7 @@
   },
   "consent": {
     "title": "Bantu meningkatkan VoiceStudio?",
+    "desc": "Statistik penggunaan anonim dan bebas konten yang membantu kami memperbaiki bug lebih cepat — sepenuhnya opsional, nonaktif secara default.",
     "step_label": "Tingkatkan VoiceStudio",
     "body": "Statistik penggunaan anonim tanpa konten: mesin mana yang digunakan, berapa lama proses pembuatan, dan jenis kesalahan. Tidak pernah teks Anda, audio Anda, file Anda, atau apa pun yang mengidentifikasi Anda. Tidak ada yang dikirim kecuali Anda setuju, dan Anda dapat berubah pikiran kapan saja di Pengaturan → Privasi.",
     "learn_more": "Apa saja yang sebenarnya dikirim?",
@@ -1554,6 +1555,8 @@
     "open": "Buka",
     "install_required_models": "Instal model yang diperlukan di atas untuk melanjutkan.",
     "try_dictation": "Coba dikte",
+    "try_dictation_desc": "Tekan pintasan Anda sekali untuk memastikan dikte berfungsi sebelum menyelesaikan penyiapan.",
+    "dictation_step_label": "Dikte",
     "next_try_dictation": "Berikutnya: Coba dikte",
     "step_aria": "Langkah {{num}}: {{label}}",
     "step_completed": "selesai",

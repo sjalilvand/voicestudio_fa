@@ -717,6 +717,7 @@
   },
   "consent": {
     "title": "Pomóc ulepszyć VoiceStudio?",
+    "desc": "Anonimowe statystyki użytkowania bez treści, które pomagają nam szybciej naprawiać błędy — całkowicie opcjonalne, domyślnie wyłączone.",
     "step_label": "Ulepsz VoiceStudio",
     "body": "Anonimowe statystyki użycia bez treści: które silniki są używane, jak długo trwa generowanie i jaki jest typ błędów. Nigdy Twój tekst, dźwięk, pliki ani nic, co Cię identyfikuje. Nic nie jest wysyłane, dopóki nie wyrazisz zgody, a decyzję możesz zmienić w każdej chwili w Ustawienia → Prywatność.",
     "learn_more": "Co dokładnie jest wysyłane?",
@@ -1554,6 +1555,8 @@
     "open": "Otwórz",
     "install_required_models": "Aby kontynuować, zainstaluj wymagane modele powyżej.",
     "try_dictation": "Spróbuj dyktowania",
+    "try_dictation_desc": "Naciśnij swój skrót raz, aby upewnić się, że dyktowanie działa, zanim zakończysz konfigurację.",
+    "dictation_step_label": "Dyktowanie",
     "next_try_dictation": "Dalej: Wypróbuj dyktowanie",
     "step_aria": "Krok {{num}}: {{label}}",
     "step_completed": "ukończono",

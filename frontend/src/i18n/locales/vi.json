@@ -717,6 +717,7 @@
   },
   "consent": {
     "title": "Giúp cải thiện VoiceStudio?",
+    "desc": "Số liệu thống kê sử dụng ẩn danh, không chứa nội dung, giúp chúng tôi sửa lỗi nhanh hơn — hoàn toàn tùy chọn, mặc định tắt.",
     "step_label": "Cải thiện VoiceStudio",
     "body": "Thống kê sử dụng ẩn danh, không chứa nội dung: engine nào được dùng, thời gian tạo mất bao lâu và loại lỗi. Không bao giờ gửi văn bản, âm thanh, tệp của bạn hay bất cứ thứ gì nhận dạng bạn. Không có gì được gửi trừ khi bạn đồng ý, và bạn có thể đổi ý bất cứ lúc nào trong Cài đặt → Quyền riêng tư.",
     "learn_more": "Chính xác thì những gì được gửi?",
@@ -1554,6 +1555,8 @@
     "open": "Mở",
     "install_required_models": "Cài đặt các mô hình cần thiết ở trên để tiếp tục.",
     "try_dictation": "Thử đọc chính tả",
+    "try_dictation_desc": "Nhấn phím tắt của bạn một lần để chắc chắn tính năng đọc chính tả hoạt động trước khi hoàn tất thiết lập.",
+    "dictation_step_label": "Đọc chính tả",
     "next_try_dictation": "Tiếp theo: Thử đọc chính tả",
     "step_aria": "Bước {{num}}: {{label}}",
     "step_completed": "đã hoàn thành",

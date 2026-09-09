@@ -291,14 +291,20 @@ export default function SetupWizard({ onReady }) {
   const STEP_SUBTITLES = {
     system: t('setup.system_check_desc'),
     models: t('setup.install_models_desc'),
-    consent: t('consent.title', 'Help improve VoiceStudio?'),
-    dictation: t('setup.try_dictation'),
+    consent: t(
+      'consent.desc',
+      'Anonymous, content-free usage stats that help us fix bugs faster — entirely optional, off by default.'
+    ),
+    dictation: t(
+      'setup.try_dictation_desc',
+      'Press your shortcut once so you know dictation works before you finish setup.'
+    ),
   };
   const STEP_LABELS = {
     system: t('setup.system_check'),
     models: t('firstrun.stage_models', 'Models & engines'),
     consent: t('consent.step_label', 'Improve VoiceStudio'),
-    dictation: t('setup.try_dictation'),
+    dictation: t('setup.dictation_step_label', 'Dictation'),
   };
 
   return (
@@ -447,7 +453,6 @@ export default function SetupWizard({ onReady }) {
               className="fr-rise flex min-h-0 flex-1 flex-col gap-2.5"
               style={{ '--rise': 1 }}
             >
-              <SectionHead>{t('consent.title', 'Help improve VoiceStudio?')}</SectionHead>
               <div className="min-h-0 flex-1 overflow-y-auto pt-2">
                 <AnalyticsConsentCard onDone={() => setStep(step + 1)} />
               </div>
@@ -471,7 +476,6 @@ export default function SetupWizard({ onReady }) {
               className="fr-rise flex min-h-0 flex-1 flex-col gap-2.5"
               style={{ '--rise': 1 }}
             >
-              <SectionHead>{t('setup.try_dictation')}</SectionHead>
               <div className="max-h-[min(58vh,640px)] min-w-0 overflow-y-auto rounded-lg">
                 <DictationDemo />
               </div>
