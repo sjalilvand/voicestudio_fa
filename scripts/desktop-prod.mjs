@@ -25,6 +25,11 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
 import { desktopRuntimeReady } from "./desktop-runtime-preflight.mjs";
+import {
+  cargoMissingMessage,
+  healToolchainPath,
+  healedPathNotes,
+} from "./desktop-toolchain-path.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const shellScript = join(scriptDir, "desktop-prod.sh");
@@ -32,6 +37,17 @@ const args = process.argv.slice(2);
 const isWindows = process.platform === "win32";
 
 if (!desktopRuntimeReady()) process.exit(1);
+
+// A terminal opened before rustup / uv were installed can't see them even
+// though a fresh terminal would; heal PATH for the bash child exactly like
+// `bun desktop` does, and fail early with the real remedy when Rust is absent
+// (the shell script would otherwise die mid-way in `cargo metadata`).
+const { env: childEnv, added, missing } = healToolchainPath(process.env);
+for (const note of healedPathNotes(added, "desktop-prod")) console.log(note);
+if (missing.includes("cargo") && !args.includes("--skip-build")) {
+  console.error(cargoMissingMessage("`bun desktop-prod`"));
+  process.exit(1);
+}
 
 /** WSL's bash.exe lives under System32 — running the script there would
  *  detect "Linux" and wipe/launch the wrong paths. Never use it. */
@@ -115,10 +131,11 @@ if (isWindows) {
   // Git Bash understands Windows paths, but forward slashes are safest.
   result = spawnSync(bash, [shellScript.replace(/\\/g, "/"), ...args], {
     stdio: "inherit",
+    env: childEnv,
   });
 } else {
   // macOS / Linux: bash is part of the base system.
-  result = spawnSync("bash", [shellScript, ...args], { stdio: "inherit" });
+  result = spawnSync("bash", [shellScript, ...args], { stdio: "inherit", env: childEnv });
 }
 
 if (result.error) {

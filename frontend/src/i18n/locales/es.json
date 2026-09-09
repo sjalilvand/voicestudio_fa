@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "¿Eliminar este proyecto permanentemente?"
   },
   "common": {
+    "stop": "Detener",
+    "resume": "Reanudar",
+    "paused": "En pausa",
     "open": "Abierto",
     "cancel": "Cancelar",
     "save": "Guardar",
@@ -778,6 +781,9 @@
     "retry": "Reintentar",
     "activeEngine": "Activo {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} compatibilidad del motor",
+    "dictation_model": "Modelo de dictado",
+    "dictation_model_hint": "Lo usan el dictado en vivo y este motor al transcribir.",
+    "dictation_not_installed": "No instalado: selecciónalo para descargarlo",
     "active": "activo",
     "whyUnavailable": "Qué necesita",
     "diskDetails": "Detalles de disco",
@@ -2523,6 +2529,9 @@
     "dismiss": "Descartar",
     "output": "Salida",
     "title": "Audiolibro",
+    "tab_script": "Guion",
+    "tab_voices": "Voces",
+    "tab_book": "Libro",
     "subtitle": "Escribe o importa tu historia, asigna cada voz y exporta un audiolibro pulido con capítulos reales.",
     "script": "Guión",
     "script_placeholder": "# Capítulo uno\nÉrase una vez… [pausa 500ms] el final.\n\n# Capítulo Dos\n[voz:narrador] Y así continuó.",
@@ -2722,7 +2731,12 @@
     "message": "No hay ningún modelo de voz a texto instalado — esta función necesita uno para transcribir audio.",
     "download": "Descargar {{label}} ({{size}} GB)",
     "started": "Descargando {{label}} — sigue el progreso en Ajustes → Modelos y vuelve a intentarlo.",
-    "install_failed": "No se pudo iniciar la descarga: {{message}}"
+    "install_failed": "No se pudo iniciar la descarga: {{message}}",
+    "choose": "Elige el modelo que se ajuste a tu trabajo: la precisión, los idiomas y el tamaño de descarga varían. Las descargas solo empiezan al hacer clic.",
+    "group_offline": "Máxima precisión — transcribe cuando dejas de hablar",
+    "group_streaming": "Mínima latencia — texto en vivo mientras hablas",
+    "use": "Usar {{label}}",
+    "installed": "Instalado"
   },
   "model_missing": {
     "message": "Este modelo no está descargado en {{target}}.",

@@ -31,11 +31,11 @@ Nothing studio-grade is on the default surface; everything is one click away.
 ### Full-height pro workflow (2026-08-11)
 
 1. **Start working immediately:** on a pristine install, Stories creates and opens **The Lighthouse at Wits' End** as a normal saved project. Its 2 chapters, 3-character cast, pauses, expressive tags, and voice assignments exercise the real preview, stems, and Generate paths—not a visual mock.
-2. **Set up on the left:** a persistent production rail owns project naming/saving, saved projects, cast-to-voice mapping, global pacing, and stems. Sections collapse independently without covering the manuscript.
+2. **Choose a workspace tab:** Script holds the manuscript, Cast maps characters to voices, Export holds pacing and output options, and Projects handles naming, saving, and opening stories. Tabs share the Clone workspace navigation and support keyboard arrow keys.
 3. **Write in the center:** the full-height manuscript canvas owns import, paste/auto-cast, line and chapter creation, editing, reorder, preview, and per-line direction. Long stories stay fast through `content-visibility`.
-4. **Deliver from the header:** story length, runtime, format, progress, and Generate stay reachable while the manuscript scrolls.
+4. **Deliver from Export:** choose the audio format and reading speed, generate the complete story, or export character stems. Story length and estimated runtime remain visible in the header.
 
-The hierarchy is spatial instead of label-heavy: setup rail → manuscript → output header. The default sample is authored content stored through the same project actions as user work, automatically adopts installed voice profiles, and remains fully editable or deletable.
+The task tabs give the manuscript the full workspace width; project data and unfinished text remain intact when switching tabs. The default sample is authored content stored through the same project actions as user work, automatically adopts installed voice profiles, and remains fully editable or deletable.
 
 ## 3. Interaction model (chosen: line cards)
 

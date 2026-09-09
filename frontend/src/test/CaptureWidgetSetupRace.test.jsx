@@ -8,7 +8,7 @@
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 const { toastMock, eventHandlers, eventState, eventUnlisteners } = vi.hoisted(() => ({
   toastMock: Object.assign(vi.fn(), {
@@ -57,13 +57,14 @@ vi.mock('../utils/asrModelMissing', () => ({
 // Deferred startMicCapture so each test controls WHEN (and HOW — resolve or
 // reject) the mic graph finishes setting up relative to the WS error frame.
 const { micControl, micStop } = vi.hoisted(() => ({
-  micControl: { resolve: null, reject: null },
+  micControl: { resolve: null, reject: null, onFrame: null },
   micStop: vi.fn(async () => {}),
 }));
 vi.mock('../utils/aec/micCapture', () => ({
   startMicCapture: vi.fn(
-    () =>
+    (_stream, onFrame) =>
       new Promise((resolve, reject) => {
+        micControl.onFrame = onFrame;
         micControl.resolve = resolve;
         micControl.reject = reject;
       }),
@@ -348,4 +349,27 @@ describe('CaptureWidget — connect-time asr_model_missing during mic setup', ()
     expect(toastMock.error).not.toHaveBeenCalled();
     expect(invokeMock).not.toHaveBeenCalledWith('set_tray_recording', { recording: true });
   });
+});
+
+it('pauses and resumes the microphone, then closes and releases capture', async () => {
+  const track = { enabled: true, stop: vi.fn() };
+  navigator.mediaDevices.getUserMedia.mockResolvedValue({ getTracks: () => [track] });
+  render(<CaptureWidget />);
+  await waitFor(() => expect(eventHandlers['tray-dictate']).toBeTypeOf('function'));
+  await eventHandlers['tray-dictate']({
+    payload: { sessionId: 7, deliveryId: 9, registrationId: 1 },
+  });
+  await waitFor(() => expect(FakeWS.instances.length).toBe(1));
+  micControl.resolve(micStop);
+  const pause = await screen.findByRole('button', { name: 'Pause' });
+  fireEvent.click(pause);
+  expect(track.enabled).toBe(false);
+  fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+  expect(track.enabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+  await waitFor(() => expect(track.stop).toHaveBeenCalled());
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: 'Resume' })).not.toBeInTheDocument(),
+  );
 });

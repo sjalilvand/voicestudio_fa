@@ -8,6 +8,7 @@ import { notifyEngineSelected } from '../utils/engineSelectToast';
 import { useAppStore } from '../store';
 import { MENU_SURFACE } from './computeTarget';
 import { engineDisplayName } from '../utils/engineDisplayName';
+import DictationModelPicker from './DictationModelPicker';
 
 /**
  * A compact TTS/ASR/LLM picker for chrome that needs to expose the active
@@ -154,45 +155,54 @@ export default function EngineQuickSwitch({
             const warm = residentIds.has(engine.id);
             const displayName = engineDisplayName(engine.display_name);
             const parts = displayName.match(/^(.+?)\s*\((.*)\)$/);
+            // The Sherpa engine is one engine but seven catalogue models; the
+            // model choice lives right under its row so "which dictation
+            // model?" is answerable from the same menu that shows the engine.
+            const nestedPicker =
+              family === 'asr' && engine.id === 'sherpa-onnx-asr' ? (
+                <DictationModelPicker embedded={embedded} />
+              ) : null;
             return (
-              <button
-                key={engine.id}
-                type="button"
-                disabled={isActive || locked || selectMutation.isPending}
-                onClick={() => choose(engine.id)}
-                className={`flex w-full items-center gap-2 rounded-md border-0 px-2 py-3 text-left text-xs text-[color:var(--chrome-fg)] hover:bg-[var(--chrome-hover-bg)] disabled:cursor-default ${embedded && isActive ? 'bg-[var(--chrome-accent-bg)]' : 'bg-transparent'}`}
-              >
-                <span className="w-[12px] shrink-0">
-                  {isActive && <Check size={12} aria-label={t('engines.active')} />}
-                </span>
-                <span
-                  className={
-                    embedded
-                      ? 'min-w-0 flex-1 whitespace-normal break-words'
-                      : 'min-w-0 flex-1 truncate'
-                  }
+              <React.Fragment key={engine.id}>
+                <button
+                  type="button"
+                  disabled={isActive || locked || selectMutation.isPending}
+                  onClick={() => choose(engine.id)}
+                  className={`flex w-full items-center gap-2 rounded-md border-0 px-2 py-3 text-left text-xs text-[color:var(--chrome-fg)] hover:bg-[var(--chrome-hover-bg)] disabled:cursor-default ${embedded && isActive ? 'bg-[var(--chrome-accent-bg)]' : 'bg-transparent'}`}
                 >
-                  {embedded && parts ? (
-                    <>
-                      <span className="block font-medium text-sm">{parts[1]}</span>
-                      <span className="block mt-1 text-xs leading-relaxed text-[var(--chrome-fg-muted)]">
-                        {parts[2]}
-                      </span>
-                    </>
-                  ) : (
-                    displayName
-                  )}
-                </span>
-                <span className="shrink-0 text-[10px] text-[color:var(--chrome-fg-muted)]">
-                  {warm
-                    ? t('engines.inMemory')
-                    : isActive
-                      ? t('engines.active')
-                      : embedded
-                        ? ''
-                        : t('engines.available')}
-                </span>
-              </button>
+                  <span className="w-[12px] shrink-0">
+                    {isActive && <Check size={12} aria-label={t('engines.active')} />}
+                  </span>
+                  <span
+                    className={
+                      embedded
+                        ? 'min-w-0 flex-1 whitespace-normal break-words'
+                        : 'min-w-0 flex-1 truncate'
+                    }
+                  >
+                    {embedded && parts ? (
+                      <>
+                        <span className="block font-medium text-sm">{parts[1]}</span>
+                        <span className="block mt-1 text-xs leading-relaxed text-[var(--chrome-fg-muted)]">
+                          {parts[2]}
+                        </span>
+                      </>
+                    ) : (
+                      displayName
+                    )}
+                  </span>
+                  <span className="shrink-0 text-[10px] text-[color:var(--chrome-fg-muted)]">
+                    {warm
+                      ? t('engines.inMemory')
+                      : isActive
+                        ? t('engines.active')
+                        : embedded
+                          ? ''
+                          : t('engines.available')}
+                  </span>
+                </button>
+                {nestedPicker}
+              </React.Fragment>
             );
           })}
           {switchError && (

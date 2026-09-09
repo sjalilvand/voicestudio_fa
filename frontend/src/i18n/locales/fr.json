@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Supprimer définitivement ce projet ?"
   },
   "common": {
+    "stop": "Arrêter",
+    "resume": "Reprendre",
+    "paused": "En pause",
     "open": "Ouvert",
     "cancel": "Annuler",
     "save": "Enregistrer",
@@ -778,6 +781,9 @@
     "retry": "Réessayer",
     "activeEngine": "Actif {{family}} : {{engine}}",
     "engineCompatLabel": "Compatibilité moteur {{family}}",
+    "dictation_model": "Modèle de dictée",
+    "dictation_model_hint": "Utilisé par la dictée en direct et par ce moteur pour la transcription.",
+    "dictation_not_installed": "Non installé — sélectionnez pour télécharger",
     "active": "actif",
     "whyUnavailable": "Ce qu'il lui faut",
     "diskDetails": "Détails du disque",
@@ -2523,6 +2529,9 @@
     "dismiss": "Ignorer",
     "output": "Sortie",
     "title": "Livre audio",
+    "tab_script": "Script",
+    "tab_voices": "Voix",
+    "tab_book": "Livre",
     "subtitle": "Écrivez ou importez votre histoire, attribuez chaque voix, puis exportez un livre audio soigné avec de vrais chapitres.",
     "script": "Scénario",
     "script_placeholder": "# Chapitre un\nIl était une fois… [pause 500ms] la fin.\n\n# Chapitre deux\n[voix:narrateur] Et ainsi de suite.",
@@ -2722,7 +2731,12 @@
     "message": "Aucun modèle de reconnaissance vocale n'est installé — cette fonction en a besoin pour transcrire l'audio.",
     "download": "Télécharger {{label}} ({{size}} Go)",
     "started": "Téléchargement de {{label}} — suivez la progression dans Réglages → Modèles, puis réessayez.",
-    "install_failed": "Impossible de démarrer le téléchargement : {{message}}"
+    "install_failed": "Impossible de démarrer le téléchargement : {{message}}",
+    "choose": "Choisissez le modèle adapté à votre usage : précision, langues et taille de téléchargement varient. Les téléchargements ne démarrent qu'au clic.",
+    "group_offline": "Meilleure précision — transcrit une fois que vous avez fini de parler",
+    "group_streaming": "Latence minimale — texte en direct pendant que vous parlez",
+    "use": "Utiliser {{label}}",
+    "installed": "Installé"
   },
   "model_missing": {
     "message": "Ce modèle n’est pas téléchargé sur {{target}}.",

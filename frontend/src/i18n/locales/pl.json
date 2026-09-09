@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Usunąć ten projekt na stałe?"
   },
   "common": {
+    "stop": "Zatrzymaj się",
+    "resume": "Wznów",
+    "paused": "Wstrzymany",
     "open": "Otwórz",
     "cancel": "Anuluj",
     "save": "Zapisz",
@@ -778,6 +781,9 @@
     "retry": "Spróbuj ponownie",
     "activeEngine": "Aktywny {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} kompatybilność silnika",
+    "dictation_model": "Model dyktowania",
+    "dictation_model_hint": "Używany przez dyktowanie na żywo i przez ten silnik podczas transkrypcji.",
+    "dictation_not_installed": "Nie zainstalowano — wybierz, aby pobrać",
     "active": "aktywny",
     "whyUnavailable": "Czego potrzebuje",
     "diskDetails": "Szczegóły dysku",
@@ -2523,6 +2529,9 @@
     "dismiss": "Odrzuć",
     "output": "Wyjście",
     "title": "Książka audio",
+    "tab_script": "Scenariusz",
+    "tab_voices": "Głosy",
+    "tab_book": "Książka",
     "subtitle": "Napisz lub zaimportuj historię, obsadź każdy głos, a następnie wyeksportuj dopracowany audiobook z prawdziwymi rozdziałami.",
     "script": "Skrypt",
     "script_placeholder": "#Rozdział pierwszy\nDawno, dawno temu… [pauza 500 ms] koniec.\n\n#Rozdział drugi\n[głos:narrator] I tak to trwało.",
@@ -2722,7 +2731,12 @@
     "message": "Nie zainstalowano modelu zamiany mowy na tekst — ta funkcja wymaga go do transkrypcji dźwięku.",
     "download": "Pobierz {{label}} ({{size}} GB)",
     "started": "Pobieranie {{label}} — postęp znajdziesz w Ustawienia → Modele, potem spróbuj ponownie.",
-    "install_failed": "Nie udało się rozpocząć pobierania: {{message}}"
+    "install_failed": "Nie udało się rozpocząć pobierania: {{message}}",
+    "choose": "Wybierz model dopasowany do Twojej pracy — dokładność, języki i rozmiar pobierania się różnią. Pobieranie zaczyna się dopiero po kliknięciu.",
+    "group_offline": "Najwyższa dokładność — transkrybuje, gdy przestaniesz mówić",
+    "group_streaming": "Najniższe opóźnienie — tekst na żywo podczas mówienia",
+    "use": "Użyj {{label}}",
+    "installed": "Zainstalowany"
   },
   "model_missing": {
     "message": "Ten model nie został pobrany na {{target}}.",

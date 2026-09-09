@@ -9,6 +9,10 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- The floating dictation bubble adds pause, resume, stop, close, and a multiline preview (#1952)
+- Transcriptions checks model readiness and offers an inline download and shortcut hints (#1952)
+- Transcriptions' missing-model prompt lists every dictation model by accuracy vs latency, languages and size, so you install the one that fits — or switch to one already on disk (#1952)
+- The Engines menu's Transcription tab picks the dictation model under Sherpa-ONNX, and that choice now also drives Sherpa transcription (#1952)
 - A failure with no stage attached no longer borrows another stage's advice, so a text-to-speech error stops telling you the video server dropped the download (#1943)
 - A generation failure that the app cannot classify now names the backend error class, so two unrelated faults stop arriving as the same untriageable report (#1800)
 
@@ -33,6 +37,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Changed
 
+- Tauri 2.11.5 with refreshed plugins (dialog, updater, log, opener, positioner, single-instance), React 19.3, TanStack Query 5.102, lucide 1.43, posthog-js 1.428, and the rest of the npm workspace on current minors; jsdom 30, jest-dom 7, concurrently 10, taze 21 (#1952)
+- eslint ignores `src-tauri/`, so a local Tauri build no longer floods `lint:hooks` with parse errors from generated assets (#1952)
 - Casting uses responsive SVG voice cards and searchable speaker menus that stay above surrounding panels (#1823)
 - Dubbing aligns output settings, brings review status forward, and simplifies transcript and glossary editing; Launchpad files and voices reflow into responsive grids (#1823)
 - Transcript segments use three readable rows for text, timing/status and voice controls, with heights that adapt to wrapping (#1823)
@@ -60,6 +66,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1952)
+- `bun desktop-prod` and `bun desktop-fresh` find Rust and uv from a terminal opened before they were installed, as `bun desktop` already did; a missing Rust toolchain fails up front with the install steps (#1952)
 - Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1955)
 - Voice synthesis progress no longer races to a fabricated 95%; it stays indeterminate until the active generation path reports real progress (#1907) — thanks @psiberfunk!
 - Long audiobook chapters now use the same device- and text-length-aware synthesis timeout as other TTS routes (#1910) — thanks @psiberfunk!
@@ -91,6 +99,10 @@ the frozen-backend fallback mirror it for their toolchains.
 - Speak tilde separators in integer, signed, and decimal ranges in English, Korean, Japanese, and Chinese (#1821) — thanks @flutterkage2k!
 
 - Keep recording and conversion work safe while switching methods, synchronize dubbing language controls, and localize timeline controls and timing warnings (#1841)
+- Audiobook is now a Write → Cast → Produce tab workspace matching the voice workspace, with the warnings/progress/result rail pinned below (#1841)
+- Gallery uses a workspace header with zone tabs, hairline section dividers, theme-token cards, and borderless import rows (#1841)
+- Gallery cards reset native button faces, cluster icon actions in the header so Use voice never wraps, and use a roomier grid floor (#1841)
+- Gallery filters gain name search, removable iconified pills with clear-all, and dimension icons on every facet (#1841)
 
 - Dubbing playback starts before waveform decoding, automatic cast names are readable, and transcript timestamps have more room (#1823)
 - The title-bar engine button stays compact and stable while cycling labels, with engine names aligned right (#1823)

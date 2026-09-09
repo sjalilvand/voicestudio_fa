@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { copyText } from '../utils/copyText';
-import { X, Loader } from 'lucide-react';
+import { X, Loader, Pause, Play, Square } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAppStore } from '../store';
 import { useTranslation } from 'react-i18next';
@@ -374,6 +374,8 @@ export default function CaptureWidget({ onDismiss }) {
   const { t } = useTranslation();
   const [state, setState] = useState('idle'); // idle | setup | recording | transcribing | done | error
   const [transcript, setTranscript] = useState('');
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
   const [duration, setDuration] = useState(0);
   const [captureMode] = useState(() => localStorage.getItem(LS_CAPTURE_MODE) || 'fast');
   const [, setLastEngine] = useState('');
@@ -968,13 +970,17 @@ export default function CaptureWidget({ onDismiss }) {
 
   // Timer while recording
   useEffect(() => {
-    if (state === 'recording') {
-      const t0 = Date.now();
-      timerRef.current = setInterval(() => setDuration(Date.now() - t0), 100);
+    if (state === 'recording' && !paused) {
+      let previous = Date.now();
+      timerRef.current = setInterval(() => {
+        const now = Date.now();
+        setDuration((elapsed) => elapsed + now - previous);
+        previous = now;
+      }, 100);
       return () => clearInterval(timerRef.current);
     }
     clearInterval(timerRef.current);
-  }, [state]);
+  }, [state, paused]);
 
   // Waveform poll: 50 ms ≈ 2–3 worklet frames, so bars visibly move well
   // within ~100 ms of mic start. Only runs while the worklet is feeding us.
@@ -992,6 +998,8 @@ export default function CaptureWidget({ onDismiss }) {
       dismissTimerRef.current = null;
     }
     if (aecModeRef.current || sherpaModeRef.current || pcmModeRef.current) teardownAec();
+    pausedRef.current = false;
+    setPaused(false);
     setState('idle');
     setTranscript('');
     setPartialText('');
@@ -1525,6 +1533,7 @@ export default function CaptureWidget({ onDismiss }) {
               }
             }
             wsPendingRef.current = [];
+            if (pausedRef.current) ws.send('PAUSE');
           };
           ws.onmessage = async (evt) => {
             if (!isCurrent() || wsRef.current !== ws) return;
@@ -1780,7 +1789,7 @@ export default function CaptureWidget({ onDismiss }) {
             return;
           }
           const sendBuf = (buf) => {
-            if (!isCurrent()) return;
+            if (!isCurrent() || pausedRef.current) return;
             const ws = wsRef.current;
             if (ws && ws.readyState === WebSocket.OPEN) {
               try {
@@ -1806,6 +1815,7 @@ export default function CaptureWidget({ onDismiss }) {
             const stopMicCapture = await startMicCapture(
               stream,
               (f) => {
+                if (pausedRef.current) return;
                 waveRef.current.push(f);
                 sendTagged(f, AEC_NEAR);
               },
@@ -1825,6 +1835,7 @@ export default function CaptureWidget({ onDismiss }) {
             const stopMicCapture = await startMicCapture(
               stream,
               (f) => {
+                if (pausedRef.current) return;
                 waveRef.current.push(f);
                 const i16 = floatToInt16(f);
                 sendBuf(i16.buffer.slice(i16.byteOffset, i16.byteOffset + i16.byteLength));
@@ -1855,6 +1866,8 @@ export default function CaptureWidget({ onDismiss }) {
           stopCaptureGraph();
           return;
         }
+        pausedRef.current = false;
+        setPaused(false);
         startTimeRef.current = Date.now();
         setTrayRecording(true);
         setWaveOn(pcmMode);
@@ -1964,6 +1977,21 @@ export default function CaptureWidget({ onDismiss }) {
     },
     [startRecordingImpl],
   );
+
+  const togglePause = useCallback(() => {
+    if (stateRef.current !== 'recording') return;
+    const next = !pausedRef.current;
+    const recorder = mediaRecorderRef.current;
+    if (recorder?.state === 'recording' && next) recorder.pause();
+    else if (recorder?.state === 'paused' && !next) recorder.resume();
+    pausedRef.current = next;
+    streamRef.current?.getTracks().forEach((track) => {
+      track.enabled = !next;
+    });
+    const ws = wsRef.current;
+    if (ws?.readyState === WebSocket.OPEN) ws.send(next ? 'PAUSE' : 'RESUME');
+    setPaused(next);
+  }, []);
 
   const stopRecording = useCallback(() => {
     const generation = captureGenerationRef.current;
@@ -2180,7 +2208,9 @@ export default function CaptureWidget({ onDismiss }) {
   // ── Pill label ──
   let label = '';
   let emoji = '';
-  if (state === 'setup') {
+  if (state === 'recording' && paused) {
+    label = t('common.paused');
+  } else if (state === 'setup') {
     // One-time Accessibility setup — shown instead of pretending to work.
     emoji = '🔒';
     label = t('capture.a11y_setup');
@@ -2224,9 +2254,13 @@ export default function CaptureWidget({ onDismiss }) {
     state === 'error' && errorInfo?.kind === 'mic' && errorInfo?.deniedByOs && inTauri();
 
   return (
-    <div className={`capture-pill capture-pill--${state}`} role="status" aria-live="polite">
+    <div
+      className={`capture-pill capture-pill--${state === 'recording' && paused ? 'paused' : state}`}
+      role="status"
+      aria-live="polite"
+    >
       {/* Live waveform while the worklet feeds us; pulsing dot otherwise */}
-      {state === 'recording' && waveOn && !modelStatus ? (
+      {state === 'recording' && !paused && waveOn && !modelStatus ? (
         <div className="capture-pill__wave" aria-hidden="true">
           {bars.map((v, i) => (
             <span
@@ -2241,9 +2275,9 @@ export default function CaptureWidget({ onDismiss }) {
       )}
 
       {/* Content */}
-      <div className="min-w-0 flex-1 overflow-hidden">
+      <div className="capture-pill__preview">
         <span
-          className="block overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] font-medium tracking-[0.01em]"
+          className="block text-[14px] leading-[1.5] font-medium"
           title={state === 'error' ? errorInfo?.message || label || undefined : label || undefined}
         >
           {emoji} {label}
@@ -2287,6 +2321,39 @@ export default function CaptureWidget({ onDismiss }) {
         </button>
       )}
 
+      {state === 'recording' && (
+        <>
+          <button
+            type="button"
+            className="capture-pill__control"
+            onClick={togglePause}
+            aria-label={t(paused ? 'common.resume' : 'common.pause')}
+            title={t(paused ? 'common.resume' : 'common.pause')}
+          >
+            {paused ? <Play size={14} /> : <Pause size={14} />}
+          </button>
+          <button
+            type="button"
+            className="capture-pill__control"
+            onClick={stopRecording}
+            aria-label={t('common.stop')}
+            title={t('common.stop')}
+          >
+            <Square size={12} />
+          </button>
+        </>
+      )}
+      {(state === 'recording' || state === 'transcribing') && (
+        <button
+          type="button"
+          className="capture-pill__control"
+          onClick={cancelSession}
+          aria-label={t('common.close')}
+          title={t('common.close')}
+        >
+          <X size={14} />
+        </button>
+      )}
       {/* Dismiss — done/error/setup */}
       {(state === 'done' || state === 'error' || state === 'setup') && (
         <button

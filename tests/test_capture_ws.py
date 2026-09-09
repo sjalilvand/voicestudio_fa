@@ -287,3 +287,26 @@ def test_capture_preload_ram_guard(monkeypatch):
         raise RuntimeError("no vm info")
     monkeypatch.setattr(psutil, "virtual_memory", _boom)
     assert main._capture_preload_ram_ok()
+
+
+def test_pause_outlasts_silence_timeout_and_resume_keeps_audio(client, monkeypatch):
+    from api.routers import capture_ws as cw
+    monkeypatch.setattr(cw, 'SILENCE_TIMEOUT_S', 0.05)
+    monkeypatch.setattr(cw, 'PARTIAL_INTERVAL_S', 0.01)
+    sizes = []
+
+    async def final(chunks, **kwargs):
+        sizes.append(sum(map(len, chunks)))
+        return {'text': 'kept both parts', 'segments': [], 'language': 'en', 'engine': 'stub'}
+
+    monkeypatch.setattr(cw, '_transcribe_buffer_full', final)
+    with client.websocket_connect('/ws/transcribe') as ws:
+        ws.send_bytes(_audio_chunk())
+        ws.send_text('PAUSE')
+        time.sleep(0.15)
+        ws.send_text('RESUME')
+        ws.send_bytes(_audio_chunk())
+        ws.send_text('EOF')
+        while ws.receive_json().get('type') != 'final':
+            pass
+    assert sizes == [40_000]

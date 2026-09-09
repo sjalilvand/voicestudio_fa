@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "このプロジェクトを完全に削除しますか？"
   },
   "common": {
+    "stop": "停止",
+    "resume": "再開",
+    "paused": "一時停止中",
     "open": "開く",
     "cancel": "キャンセル",
     "save": "保存",
@@ -778,6 +781,9 @@
     "retry": "再試行",
     "activeEngine": "アクティブ {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} エンジンの互換性",
+    "dictation_model": "ディクテーションモデル",
+    "dictation_model_hint": "ライブディクテーションと、このエンジンでの文字起こしに使用されます。",
+    "dictation_not_installed": "未インストール — 選択してダウンロード",
     "active": "アクティブな",
     "whyUnavailable": "必要なもの",
     "diskDetails": "ディスクの詳細",
@@ -2523,6 +2529,9 @@
     "dismiss": "閉じる",
     "output": "出力",
     "title": "オーディオブック",
+    "tab_script": "台本",
+    "tab_voices": "音声",
+    "tab_book": "ブック",
     "subtitle": "物語を書いたり読み込んだり、声を配役して、本格的な章付きオーディオブックを書き出せます。",
     "script": "スクリプト",
     "script_placeholder": "# 第一章\nむかしむかし… [500 ミリ秒停止] 終了。\n\n# 第二章\n[音声:ナレーター] そして、それは続きました。",
@@ -2722,7 +2731,12 @@
     "message": "音声認識モデルがインストールされていません — この機能で文字起こしを行うにはモデルが必要です。",
     "download": "{{label}} をダウンロード（{{size}} GB）",
     "started": "{{label}} をダウンロード中 — 設定 → モデルで進行状況を確認し、完了後にもう一度お試しください。",
-    "install_failed": "ダウンロードを開始できませんでした: {{message}}"
+    "install_failed": "ダウンロードを開始できませんでした: {{message}}",
+    "choose": "用途に合ったモデルを選んでください — 精度、対応言語、ダウンロードサイズが異なります。ダウンロードはクリックしたときにのみ開始します。",
+    "group_offline": "最高精度 — 話し終えてから文字起こし",
+    "group_streaming": "最低遅延 — 話しながらリアルタイムでテキスト表示",
+    "use": "{{label}} を使用",
+    "installed": "インストール済み"
   },
   "model_missing": {
     "message": "このモデルは {{target}} にダウンロードされていません。",

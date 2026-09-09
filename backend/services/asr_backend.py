@@ -1801,9 +1801,7 @@ class SherpaDictationBackend(ASRBackend):
 
     def __init__(self, model_id: str | None = None):
         from services import sherpa_dictation as _sd
-        mid = model_id or os.environ.get(
-            "OMNIVOICE_SHERPA_ASR_MODEL", _sd.DEFAULT_MODEL_ID
-        )
+        mid = model_id or sherpa_engine_model_id()
         spec = _sd.get_spec(mid)
         if spec is None:
             raise ValueError(
@@ -3047,6 +3045,31 @@ def get_sherpa_dictation_backend(model_id: str) -> "SherpaDictationBackend":
         return backend
 
 
+def sherpa_engine_model_id() -> str:
+    """The sherpa model the ``sherpa-onnx-asr`` engine loads when nothing pins
+    one explicitly: env var (power-user pin) → the dictation model the user
+    picked in Settings / the Engines menu → the catalogue default.
+
+    Unlike :func:`dictation_model_id` this ignores ``dictation.enabled`` — a
+    user who turned the hotkey off but chose the Sherpa engine for dub/batch
+    transcription still means *this* model — and never returns None: the
+    engine needs *some* model to construct. A demoted model (decoded nothing
+    on this host) falls through to the default rather than being re-picked.
+    """
+    from services import sherpa_dictation as _sd
+    explicit = os.environ.get("OMNIVOICE_SHERPA_ASR_MODEL")
+    if explicit:
+        return explicit
+    try:
+        from core import prefs
+        mid = prefs.get("dictation.model_id")
+    except Exception:  # noqa: BLE001 — prefs store unavailable → default
+        return _sd.DEFAULT_MODEL_ID
+    if _sd.is_sherpa_model(mid) and not _sd.is_demoted(mid):
+        return _sd.get_spec(mid).id
+    return _sd.DEFAULT_MODEL_ID
+
+
 def dictation_model_id() -> str | None:
     """The selected sherpa dictation model id, or None when dictation is off /
     no sherpa model is chosen. Env var wins (power-user pin), then prefs."""
@@ -3321,9 +3344,7 @@ def _offline_asr_repo(backend_id: str | None = None) -> str | None:
         # Unknown/none → fail open.
         try:
             from services import sherpa_dictation as _sd
-            spec = _sd.get_spec(
-                os.environ.get("OMNIVOICE_SHERPA_ASR_MODEL", _sd.DEFAULT_MODEL_ID)
-            )
+            spec = _sd.get_spec(sherpa_engine_model_id())
             return spec.repo_id if spec is not None else None
         except Exception:  # noqa: BLE001 — preflight must stay best-effort
             return None

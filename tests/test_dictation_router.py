@@ -112,3 +112,24 @@ def test_reset_failure_does_not_persist_new_preferences(monkeypatch):
 
     assert getattr(caught.value, "status_code", None) == 503
     assert store == {dr.PREF_MODE: "toggle"}
+
+@pytest.mark.parametrize('missing', [None, {'error': 'asr_model_missing', 'recommended': {'repo_id': 'test/model'}}])
+def test_readiness_uses_capture_preflight(client, monkeypatch, missing):
+    from services import asr_backend
+    calls = []
+    def probe(**kwargs):
+        calls.append(kwargs)
+        return missing
+    monkeypatch.setattr(asr_backend, 'asr_model_missing_error', probe)
+    response = client.get('/dictation/readiness')
+    assert response.status_code == 200
+    assert response.json() == {'ready': missing is None, 'missing': missing}
+    assert calls == [{'purpose': 'dictation', 'sherpa_model_id': 'sherpa-whisper-tiny'}]
+
+
+def test_readiness_honors_recorder_model_override(client, monkeypatch):
+    from services import asr_backend
+    calls = []
+    monkeypatch.setattr(asr_backend, 'asr_model_missing_error', lambda **kw: calls.append(kw))
+    assert client.get('/dictation/readiness?model_id=sherpa-zipformer-en-20m').status_code == 200
+    assert calls == [{'purpose': 'dictation', 'sherpa_model_id': 'sherpa-zipformer-en-20m'}]

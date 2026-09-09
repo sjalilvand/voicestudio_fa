@@ -86,6 +86,18 @@ def list_dictation_models():
     }
 
 
+@router.get("/dictation/readiness", dependencies=[Depends(require_local)])
+def dictation_readiness(model_id: str | None = None) -> dict:
+    """Check capture's model selection without loading or downloading weights."""
+    from services.asr_backend import asr_model_missing_error
+
+    missing = asr_model_missing_error(
+        purpose="dictation",
+        sherpa_model_id=model_id or _read_prefs()["model_id"],
+    )
+    return {"ready": missing is None, "missing": missing}
+
+
 @router.get("/dictation/prefs", dependencies=[Depends(require_local)])
 def get_dictation_prefs():
     return _read_prefs()

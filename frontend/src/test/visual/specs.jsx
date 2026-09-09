@@ -12,12 +12,16 @@
 
 import React from 'react';
 import DubSegmentTable from '../../components/DubSegmentTable.jsx';
+import DubWorkspaceSidebar from '../../components/DubWorkspaceSidebar.jsx';
 import DubSelectionToolbar from '../../components/dub/DubSelectionToolbar.jsx';
+import IdleSkeleton from '../../components/dub/IdleSkeleton.jsx';
 import i18n from '../../i18n';
 import WaveformTimeline from '../../components/WaveformTimeline.jsx';
 import DubWorkspaceFixture from './DubWorkspaceFixture.jsx';
 import '../../components/dub/DubRightColumn.css';
 import Header from '../../components/Header';
+import StoriesEditor from '../../components/StoriesEditor.jsx';
+import AudiobookTab from '../../pages/AudiobookTab.jsx';
 import { Download, Mic, Search, Sparkles, Trash2 } from 'lucide-react';
 
 import Badge from '../../ui/Badge.jsx';
@@ -199,7 +203,235 @@ function WaveformPanFixture() {
   );
 }
 
+function DubIdleStartFixture() {
+  const [ingestUrl, setIngestUrl] = React.useState('');
+  const [sourceLanguage, setSourceLanguage] = React.useState('auto');
+  const [targetLanguage, setTargetLanguage] = React.useState('es');
+  const [optionalOpen, setOptionalOpen] = React.useState(false);
+  const noop = () => {};
+  return (
+    <div style={{ height: 760, minWidth: 0 }}>
+      <IdleSkeleton
+        t={i18n.t.bind(i18n)}
+        uiLocale="en"
+        dubVideoFile={null}
+        activeProjectName=""
+        dubFilename=""
+        dubError=""
+        dubJobId={null}
+        dubStep="idle"
+        dubFailure={null}
+        asrInstall={null}
+        handleInstallMissingAsr={noop}
+        handleDubRetryTranscribe={noop}
+        handleDubImportSrt={noop}
+        dubLocalBlobUrl={null}
+        dubPrepStage={null}
+        dubPrepProgress={{ percent: null, speedBps: null, etaS: null, stageStartedAt: null }}
+        handleDubAbort={noop}
+        transcribeElapsed={0}
+        transcribeProgress={null}
+        dubDuration={0}
+        dubNumSpeakers={null}
+        setDubNumSpeakers={noop}
+        handleDubUpload={noop}
+        demoDismissed
+        dismissDubDemo={noop}
+        setDubVideoFile={noop}
+        setDubInputType={noop}
+        setDubStep={noop}
+        fileToMediaUrl={async () => ({ audioUrl: null, videoUrl: null })}
+        setDubLocalBlobUrl={noop}
+        ingestUrl={ingestUrl}
+        setIngestUrl={setIngestUrl}
+        onIngestUrl={noop}
+        fetchYtSubs={false}
+        setFetchYtSubs={noop}
+        youtubeCookieFile={null}
+        setYoutubeCookieFile={noop}
+        dubLangCode={targetLanguage}
+        dubSourceLangCode={sourceLanguage}
+        setDubSourceLangCode={setSourceLanguage}
+        setDubLangCode={setTargetLanguage}
+        setDubLang={noop}
+        landingAdvOpen={optionalOpen}
+        setLandingAdvOpen={setOptionalOpen}
+        dubInstruct=""
+        setDubInstruct={noop}
+        onOpenQueue={noop}
+      />
+    </div>
+  );
+}
+
+const DUB_SIDEBAR_PROJECTS = [
+  {
+    id: 'dub-project-1',
+    name: 'Documentary voice-over',
+    updated_at: '2026-09-08T12:00:00Z',
+    duration: 128,
+    video_path: 'documentary.mp4',
+  },
+  {
+    id: 'dub-project-2',
+    name: 'Product launch — Spanish',
+    updated_at: '2026-09-07T12:00:00Z',
+    duration: 64,
+    video_path: 'product-launch.mov',
+  },
+];
+
+const DUB_SIDEBAR_HISTORY = [
+  {
+    id: 'dub-history-1',
+    filename: 'Documentary final.mp4',
+    duration: 128,
+    segments_count: 18,
+    language: 'Spanish',
+    language_code: 'es',
+    job_data: { input_type: 'video' },
+  },
+  {
+    id: 'dub-history-2',
+    filename: 'Interview voice track.wav',
+    duration: 76,
+    segments_count: 9,
+    language: 'French',
+    language_code: 'fr',
+    job_data: { input_type: 'audio' },
+  },
+];
+
+function DubIdleWorkspaceFixture() {
+  const noop = () => {};
+  return (
+    <div className="studio-with-history" style={{ height: 760, minWidth: 0 }}>
+      <div className="studio-with-history__main">
+        <DubIdleStartFixture />
+      </div>
+      <div className="studio-right">
+        <DubWorkspaceSidebar
+          projects={DUB_SIDEBAR_PROJECTS}
+          activeProjectId={null}
+          loadProject={noop}
+          deleteProject={noop}
+          renameProject={noop}
+          dubHistory={DUB_SIDEBAR_HISTORY}
+          restoreDubHistory={noop}
+          deleteHistory={noop}
+          clearHistory={noop}
+        />
+      </div>
+    </div>
+  );
+}
+
+const STORIES_CAST = [
+  { id: 'narrator', name: 'Narrator', color: '#b8bb26', profileId: 'voice-aria' },
+  { id: 'mara', name: 'Mara', color: '#d3869b', profileId: 'voice-mara' },
+  { id: 'cole', name: 'Cole', color: '#83a598', profileId: 'voice-cole' },
+];
+
+const STORIES_TRACKS = [
+  {
+    id: 101,
+    character: 'narrator',
+    text: '# The Signal at Sundown',
+    profileId: null,
+    emotion: null,
+    speed: null,
+    generating: false,
+    audioUrl: null,
+  },
+  {
+    id: 102,
+    character: 'narrator',
+    text: 'The lighthouse had been silent for eleven winters.',
+    profileId: null,
+    emotion: null,
+    speed: null,
+    generating: false,
+    audioUrl: null,
+  },
+  {
+    id: 103,
+    character: 'mara',
+    text: 'Cole, did you hear that? [pause 0.4s] The old radio is calling us.',
+    profileId: null,
+    emotion: null,
+    speed: 0.95,
+    generating: false,
+    audioUrl: null,
+  },
+  {
+    id: 104,
+    character: 'cole',
+    text: 'I heard it. Stay close, and keep the lantern low.',
+    profileId: null,
+    emotion: null,
+    speed: null,
+    generating: false,
+    audioUrl: null,
+  },
+];
+
+const STORIES_PROJECT = {
+  id: 'visual-story',
+  name: 'The Signal at Sundown',
+  cast: STORIES_CAST,
+  tracks: STORIES_TRACKS,
+  updatedAt: 1,
+};
+
 export const SPECS = {
+  AudiobookWorkspace: {
+    width: '100%',
+    providers: {
+      store: {
+        script:
+          '# Chapter One\n\nA light shone across the water.\n\n# Chapter Two\n\nThe boat returned safely.',
+        lastOutput: '',
+      },
+      fetch: () => ({}),
+    },
+    render: () => (
+      <div style={{ height: 800 }}>
+        <AudiobookTab profiles={[]} />
+      </div>
+    ),
+  },
+  DubIdleStart: {
+    width: '100%',
+    providers: {},
+    render: () => <DubIdleStartFixture />,
+  },
+  DubIdleWorkspace: {
+    width: '100%',
+    providers: {},
+    render: () => <DubIdleWorkspaceFixture />,
+  },
+  StoriesWorkspaceLayout: {
+    width: '100%',
+    providers: {
+      store: {
+        cast: STORIES_CAST,
+        storyTracks: STORIES_TRACKS,
+        storyProjects: [STORIES_PROJECT],
+        currentProjectId: STORIES_PROJECT.id,
+      },
+    },
+    render: () => (
+      <div style={{ height: 780, minWidth: 0 }}>
+        <StoriesEditor
+          profiles={[
+            { id: 'voice-aria', name: 'Aria — warm narrator' },
+            { id: 'voice-mara', name: 'Mara — intimate alto' },
+            { id: 'voice-cole', name: 'Cole — steady baritone' },
+          ]}
+        />
+      </div>
+    ),
+  },
   DubWorkspaceLayout: {
     width: '100%',
     providers: {},

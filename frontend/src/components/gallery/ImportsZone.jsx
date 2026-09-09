@@ -27,6 +27,7 @@ import {
   previewVoiceUrl,
 } from '../../api/gallery';
 import AudioTrimmer from '../AudioTrimmer';
+import GallerySectionHeader from './GallerySectionHeader';
 import { apiFetch } from '../../api/client';
 import { askConfirm } from '../../utils/dialog';
 
@@ -265,18 +266,20 @@ export default function ImportsZone({
   };
 
   const voicePlay =
-    'flex items-center justify-center w-[28px] h-[28px] rounded-full border border-transparent bg-bg-elev-1 text-[var(--text-primary)] cursor-pointer flex-shrink-0 hover:bg-[var(--accent)] hover:border-[color:var(--accent)] hover:text-white';
+    'flex items-center justify-center w-[30px] h-[30px] rounded-full border border-transparent bg-[var(--chrome-hover-bg)] text-[var(--text-primary)] cursor-pointer flex-shrink-0 transition-colors hover:bg-[var(--chrome-accent-bg)] hover:text-[var(--chrome-accent)] disabled:cursor-not-allowed disabled:opacity-50';
   const actionBtn =
-    'flex items-center justify-center w-[24px] h-[24px] bg-transparent text-[var(--text-secondary)] rounded-[4px] cursor-pointer hover:bg-bg-elev-2 hover:text-[var(--text-primary)]';
+    'flex items-center justify-center w-[28px] h-[28px] bg-transparent text-[var(--text-secondary)] rounded-[8px] cursor-pointer transition-colors hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--text-primary)]';
+  const dangerBtn =
+    'flex items-center justify-center w-[28px] h-[28px] bg-transparent text-[var(--text-secondary)] rounded-[8px] cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--chrome-severity-err,#cc241d)_12%,transparent)] hover:text-[color:var(--chrome-severity-err,#cc241d)]';
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-      <div className="shrink-0 px-[10px] py-[8px] mb-[8px] bg-bg-elev-2 rounded-[8px] text-[0.72rem] text-[var(--text-secondary)] leading-[1.4]">
+      <p className="m-0 mb-[8px] shrink-0 text-[0.72rem] leading-[1.5] text-[var(--text-secondary)]">
         {t('gallery.import_explainer', {
           defaultValue:
             'Paste a URL you have the rights to (or upload a file), trim the part you need, and save it as a voice. You are responsible for the licensing of anything you import.',
         })}
-      </div>
+      </p>
 
       <div className="shrink-0 flex flex-col gap-[10px]">
         <div className="flex gap-[6px]">
@@ -341,8 +344,8 @@ export default function ImportsZone({
       </div>
 
       {results.length > 0 && (
-        <div className="shrink-0 bg-bg-elev-2 rounded-[8px] max-h-[180px] overflow-hidden flex flex-col">
-          <div className="flex justify-between items-center px-[10px] py-[8px] bg-bg-elev-1 text-[0.75rem] font-medium shrink-0">
+        <div className="shrink-0 rounded-[12px] bg-[color-mix(in_srgb,var(--chrome-fg)_2.5%,transparent)] max-h-[180px] overflow-hidden flex flex-col mb-[8px]">
+          <div className="flex justify-between items-center px-[12px] py-[8px] text-[0.75rem] font-medium shrink-0 text-[var(--text-secondary)]">
             <span>
               {t('gallery.search_results', {
                 defaultValue: '{{count}} results',
@@ -350,8 +353,9 @@ export default function ImportsZone({
               })}
             </span>
             <button
-              className="bg-none border-none text-[var(--text-secondary)] cursor-pointer p-[2px]"
+              className="bg-transparent border border-transparent rounded-[8px] text-[var(--text-secondary)] cursor-pointer p-[4px] transition-colors hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--color-fg)]"
               onClick={() => setResults([])}
+              aria-label={t('common.close', { defaultValue: 'Close' })}
             >
               <X size={14} />
             </button>
@@ -377,31 +381,31 @@ export default function ImportsZone({
         </div>
       )}
 
-      <div className="flex justify-between items-center pb-[8px] shrink-0">
-        <div className="text-[0.85rem] font-medium">
-          {t('gallery.my_imports', { defaultValue: 'My Imports' })}
-          <span className="ml-[6px] px-[7px] py-[1px] rounded-[10px] bg-bg-elev-2 text-[var(--text-secondary)] text-[0.65rem] font-normal">
-            {voices.length}
-          </span>
-        </div>
-      </div>
+      <GallerySectionHeader
+        icon={<Upload size={12} strokeWidth={1.5} aria-hidden="true" />}
+        title={t('gallery.my_imports', { defaultValue: 'My Imports' })}
+        count={voices.length}
+      />
 
       {voicesQ.isLoading ? (
-        <div className="flex items-center justify-center p-[24px] text-[var(--text-secondary)]">
+        <div className="flex items-center justify-center gap-[8px] p-[24px] text-[var(--text-secondary)]">
           <Loader className="spin" size={18} />
         </div>
       ) : voices.length === 0 ? (
-        <div className="flex flex-col items-center justify-center px-[16px] py-[32px] text-[var(--text-secondary)] text-center">
-          {t('gallery.no_imports', {
-            defaultValue: 'Nothing imported yet. Paste a URL above to get started.',
-          })}
+        <div className="flex flex-col items-center justify-center gap-[8px] px-[16px] py-[32px] text-center text-[var(--text-secondary)]">
+          <Upload size={20} strokeWidth={1.5} aria-hidden="true" />
+          <span className="max-w-[300px] text-[0.78rem] leading-[1.6]">
+            {t('gallery.no_imports', {
+              defaultValue: 'Nothing imported yet. Paste a URL above to get started.',
+            })}
+          </span>
         </div>
       ) : (
-        <div className="flex flex-col gap-[4px] overflow-y-auto flex-1 pr-[4px]">
+        <div className="flex flex-col gap-[2px] overflow-y-auto flex-1 pr-[4px]">
           {voices.map((v) => (
             <div
               key={v.id}
-              className="flex items-center gap-[8px] px-[10px] py-[8px] bg-bg-elev-2 rounded-[8px] transition-colors hover:bg-bg-elev-1"
+              className="group flex min-h-[56px] min-w-0 items-center gap-[10px] rounded-[10px] border border-transparent bg-transparent px-[10px] py-[8px] transition-colors hover:bg-[color-mix(in_srgb,var(--chrome-fg)_4%,transparent)]"
             >
               <button
                 className={`${voicePlay} disabled:cursor-not-allowed disabled:opacity-50`}
@@ -479,9 +483,10 @@ export default function ImportsZone({
                   </Menu>
                 ) : null}
                 <button
-                  className="flex items-center justify-center w-[24px] h-[24px] bg-transparent text-[var(--text-secondary)] rounded-[4px] cursor-pointer hover:bg-[#3d1f1f] hover:text-[#fb4934]"
+                  className={dangerBtn}
                   onClick={() => handleDelete(v)}
                   title={t('gallery.delete', { defaultValue: 'Delete' })}
+                  aria-label={t('gallery.delete', { defaultValue: 'Delete' })}
                 >
                   <Trash2 size={14} />
                 </button>

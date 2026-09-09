@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Bu proje kalıcı olarak silinsin mi?"
   },
   "common": {
+    "stop": "Durdur",
+    "resume": "Sürdür",
+    "paused": "Duraklatıldı",
     "open": "Açık",
     "cancel": "İptal",
     "save": "Kaydet",
@@ -778,6 +781,9 @@
     "retry": "Yeniden dene",
     "activeEngine": "Etkin {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} motor uyumluluğu",
+    "dictation_model": "Dikte modeli",
+    "dictation_model_hint": "Canlı dikte ve bu motorun transkripsiyonu tarafından kullanılır.",
+    "dictation_not_installed": "Yüklü değil — indirmek için seçin",
     "active": "aktif",
     "whyUnavailable": "Neye ihtiyacı var",
     "diskDetails": "Disk ayrıntıları",
@@ -2523,6 +2529,9 @@
     "dismiss": "Kapat",
     "output": "Çıktı",
     "title": "Sesli kitap",
+    "tab_script": "Metin",
+    "tab_voices": "Sesler",
+    "tab_book": "Kitap",
     "subtitle": "Hikâyenizi yazın veya içe aktarın, her rolü seslendirin ve gerçek bölümleri olan tamamlanmış bir sesli kitap dışa aktarın.",
     "script": "Senaryo",
     "script_placeholder": "# Birinci Bölüm\nBir varmış bir yokmuş… [500ms durakla] son.\n\n# İkinci Bölüm\n[ses:anlatıcı] Ve böyle devam etti.",
@@ -2722,7 +2731,12 @@
     "message": "Yüklü bir konuşmadan metne modeli yok — bu özellik sesi yazıya dökmek için bir model gerektirir.",
     "download": "{{label}} indir ({{size}} GB)",
     "started": "{{label}} indiriliyor — ilerlemeyi Ayarlar → Modeller'den izleyin, sonra yeniden deneyin.",
-    "install_failed": "İndirme başlatılamadı: {{message}}"
+    "install_failed": "İndirme başlatılamadı: {{message}}",
+    "choose": "İşinize uyan modeli seçin — doğruluk, diller ve indirme boyutu farklılık gösterir. İndirme yalnızca tıkladığınızda başlar.",
+    "group_offline": "En yüksek doğruluk — konuşmayı bitirdikten sonra yazıya döker",
+    "group_streaming": "En düşük gecikme — siz konuşurken canlı metin",
+    "use": "{{label}} kullan",
+    "installed": "Yüklü"
   },
   "model_missing": {
     "message": "Bu model {{target}} üzerine indirilmemiş.",

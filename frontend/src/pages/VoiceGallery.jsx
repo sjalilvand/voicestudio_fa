@@ -6,8 +6,8 @@
 //     upload a file, trim it, save it. The project ships no celebrity catalog.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, Store, Upload } from 'lucide-react';
-import { Segmented } from '../ui';
+import { Sparkles, Store, Upload, LibraryBig } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { archetypePreviewUrl, useArchetypeAsProfile } from '../api/archetypes';
 import { addCommunityItem, communityPreviewUrl } from '../api/community';
 import { previewVoiceUrl } from '../api/gallery';
@@ -218,50 +218,71 @@ export default function VoiceGallery({ clearSelectedProfile = NOOP }) {
   const zoneItems = [
     {
       value: 'archetypes',
-      label: (
-        <span className="inline-flex items-center gap-[5px]">
-          <Sparkles size={14} /> {t('gallery.zone_archetypes', { defaultValue: 'Archetypes' })}
-        </span>
-      ),
+      Icon: Sparkles,
+      label: t('gallery.zone_archetypes', { defaultValue: 'Archetypes' }),
     },
     {
       value: 'community',
-      label: (
-        <span className="inline-flex items-center gap-[5px]">
-          <Store size={14} /> {t('gallery.zone_community', { defaultValue: 'Community' })}
-        </span>
-      ),
+      Icon: Store,
+      label: t('gallery.zone_community', { defaultValue: 'Community' }),
     },
     {
       value: 'imports',
-      label: (
-        <span className="inline-flex items-center gap-[5px]">
-          <Upload size={14} /> {t('gallery.zone_imports', { defaultValue: 'My Imports' })}
-        </span>
-      ),
+      Icon: Upload,
+      label: t('gallery.zone_imports', { defaultValue: 'My Imports' }),
     },
   ];
 
   return (
-    <div className="flex flex-col gap-[12px] p-[12px] h-full overflow-hidden">
-      <div className="shrink-0">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-[1.1rem] font-semibold m-0 text-[var(--text-primary)]">
+    <div
+      data-testid="voice-gallery"
+      className="gallery flex h-full min-h-0 flex-col gap-[10px] overflow-hidden px-[20px] pb-[14px] pt-[16px] [container-type:inline-size] [container-name:gallery] @max-[640px]/gallery:px-[12px]"
+    >
+      <header className="flex shrink-0 flex-wrap items-end justify-between gap-x-[24px] gap-y-[12px]">
+        <div className="flex min-w-0 items-center gap-[12px]">
+          <span
+            className="inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[12px] bg-[color-mix(in_srgb,#fabd2f_11%,transparent)] text-[#fabd2f]"
+            aria-hidden="true"
+          >
+            <LibraryBig size={17} strokeWidth={1.6} />
+          </span>
+          <div className="min-w-0">
+            <h2 className="m-0 truncate [font-family:var(--font-serif)] text-[1.5rem] font-normal leading-tight tracking-[-0.02em] text-[color:var(--chrome-fg)]">
               {t('gallery.title', { defaultValue: 'VoiceStudio Gallery' })}
             </h2>
-            <p className="mt-[2px] mr-0 mb-0 ml-0 text-[0.72rem] text-[var(--text-secondary)]">
+            <p className="m-0 mt-[2px] truncate text-[0.72rem] text-[color:var(--chrome-fg-muted)]">
               {t('gallery.subtitle', {
                 defaultValue: 'Hundreds of ready-made designed voices — pick one and go.',
               })}
             </p>
           </div>
-          <Segmented items={zoneItems} value={zone} onChange={setZone} />
         </div>
-      </div>
+        <Tabs value={zone} onValueChange={setZone} activationMode="manual" className="gap-0">
+          <TabsList
+            aria-label={t('gallery.title', { defaultValue: 'VoiceStudio Gallery' })}
+            className="grid h-auto w-auto grid-cols-3 gap-[3px] rounded-[var(--chrome-radius-pill)] border border-transparent bg-[var(--chrome-bg)] p-[3px]"
+          >
+            {zoneItems.map(({ value, Icon, label }) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                data-gallery-zone={value}
+                className="h-auto min-h-9 min-w-0 cursor-pointer whitespace-nowrap rounded-[var(--chrome-radius-pill)] border border-transparent bg-transparent px-3 py-[6px] text-[0.72rem] font-medium text-[color:var(--chrome-fg-muted)] transition-colors data-[state=active]:border-[var(--chrome-accent-border)] data-[state=active]:bg-[var(--chrome-accent-bg)] data-[state=active]:font-semibold data-[state=active]:text-[color:var(--chrome-accent)] data-[state=active]:shadow-none dark:data-[state=active]:border-[var(--chrome-accent-border)] dark:data-[state=active]:bg-[var(--chrome-accent-bg)] dark:data-[state=active]:text-[color:var(--chrome-accent)] hover:data-[state=inactive]:bg-[var(--chrome-hover-bg)]"
+              >
+                <Icon size={14} aria-hidden="true" />
+                {label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </header>
+      <div
+        className="h-px shrink-0 [background-image:linear-gradient(90deg,color-mix(in_srgb,var(--chrome-fg)_12%,transparent),transparent_70%)]"
+        aria-hidden="true"
+      />
 
       {notice && (
-        <div className="shrink-0 px-[10px] py-[7px] bg-bg-elev-2 border-l-[3px] border-l-[color:var(--accent)] rounded-[6px] text-[0.75rem] text-[var(--text-primary)]">
+        <div className="shrink-0 rounded-[var(--chrome-radius-pill)] bg-[color-mix(in_srgb,var(--chrome-accent)_9%,transparent)] px-[14px] py-[7px] text-[0.75rem] text-[color:var(--chrome-fg)]">
           {notice}
         </div>
       )}
