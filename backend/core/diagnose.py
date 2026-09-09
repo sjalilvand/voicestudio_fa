@@ -28,6 +28,7 @@ import shutil
 import sys
 
 from core.config import DATA_DIR
+from core.device_caps import KERNEL_RISK_MARKER
 from core.scrub import scrub_text
 from core.version import APP_VERSION
 
@@ -230,11 +231,16 @@ def _check_gpu_routing() -> dict:
     host = v.get("host_family", "cpu")
 
     if status == "accelerated":
-        if reason:  # driver/arch caveat — accelerated but at risk
+        if reason and KERNEL_RISK_MARKER in reason:  # driver/arch caveat — at risk
             return _check("gpu_routing", "GPU routing", WARN,
                           f"{engine} -> {dev}: {reason}",
                           "The GPU is selected but may fail at kernel launch — "
                           "update drivers / reinstall torch for this GPU arch.")
+        if reason:  # low-VRAM caveat — not a driver/arch issue
+            return _check("gpu_routing", "GPU routing", WARN,
+                          f"{engine} -> {dev}: {reason}",
+                          "Unload other models before generating, keep the text "
+                          "short, or pick a lighter engine.")
         return _check("gpu_routing", "GPU routing", OK, f"{engine} -> {dev} (accelerated)")
     if status == "cpu_fallback":
         return _check("gpu_routing", "GPU routing", WARN,

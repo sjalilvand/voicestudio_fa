@@ -1909,16 +1909,54 @@ fn apply_uv_http_env(cmd: &mut Command) {
         .env("UV_HTTP_RETRIES", "5");
 }
 
+/// Default Aliyun PyPI simple index for the `china` region preset.
+const CHINA_PYPI_INDEX: &str = "https://mirrors.aliyun.com/pypi/simple/";
+
+/// Resolve the PyPI simple-index URL for `uv` / `uv pip` subprocesses.
+/// Explicit setup-screen override wins; otherwise the `china` region preset
+/// points at Aliyun. Other regions leave the index unset (uv's default PyPI).
+fn resolve_pypi_index_url(region: &str, override_url: Option<&str>) -> Option<String> {
+    if let Some(url) = override_url.map(str::trim).filter(|u| !u.is_empty()) {
+        return Some(url.to_string());
+    }
+    if region == "china" {
+        return Some(CHINA_PYPI_INDEX.to_string());
+    }
+    None
+}
+
+/// Apply `UV_INDEX_URL` when a custom or region-preset PyPI mirror is active.
+/// Must run for *every* `uv` path that may fetch packages — including the
+/// repair sync. Omitting it there left China-region installs hitting
+/// `pypi.org` for build backends (e.g. hatchling) and failing with
+/// `tls handshake eof` while the UI already showed the China (mirror) region.
+fn apply_pypi_index_env<R: tauri::Runtime>(app: &tauri::AppHandle<R>, cmd: &mut Command) {
+    let cfg = crate::config::load_config(app);
+    let region = get_effective_region(app);
+    // Clear any ambient value first. Without this a uv call inherits the
+    // parent process's UV_INDEX_URL whenever resolve_pypi_index_url returns
+    // None, so a stale mirror set in the developer's shell silently outranks
+    // the region the user actually chose.
+    cmd.env_remove("UV_INDEX_URL");
+    if let Some(url) = resolve_pypi_index_url(&region, cfg.mirrors.pypi_index.as_deref()) {
+        cmd.env("UV_INDEX_URL", url);
+    }
+}
+
 /// The one env applicator every `uv` invocation must go through: HTTP
-/// resilience (above) + volume co-location. The latter pins UV_CACHE_DIR /
-/// UV_PYTHON_INSTALL_DIR under the env root when the install is rooted on a
-/// different volume than uv's default cache (D:-drive installs / portable
-/// mode) — otherwise every wheel is downloaded+unpacked on the system drive
-/// and then cross-volume *copied* into the venv, silently requiring the full
-/// install size on C: and ENOSPC-ing installs the user deliberately pointed
-/// at another drive. See `setup::uv_env_overrides_for` for the exact rules.
+/// resilience (above) + volume co-location + PyPI mirror. The latter pins
+/// UV_CACHE_DIR / UV_PYTHON_INSTALL_DIR under the env root when the install
+/// is rooted on a different volume than uv's default cache (D:-drive
+/// installs / portable mode) — otherwise every wheel is downloaded+unpacked
+/// on the system drive and then cross-volume *copied* into the venv,
+/// silently requiring the full install size on C: and ENOSPC-ing installs
+/// the user deliberately pointed at another drive. See
+/// `setup::uv_env_overrides_for` for the exact rules. PyPI index goes here
+/// so first-run, drift, repair, and targeted `uv pip` repairs all honor
+/// the China / custom mirror — not only the happy-path sync.
 fn apply_uv_env<R: tauri::Runtime>(app: &tauri::AppHandle<R>, cmd: &mut Command) {
     apply_uv_http_env(cmd);
+    apply_pypi_index_env(app, cmd);
     for (k, v) in crate::setup::uv_env_overrides(app) {
         cmd.env(k, v);
     }
@@ -2775,13 +2813,8 @@ creating the new environment at an ASCII-safe path instead (#1783)"
                         Ok(uv_path) => {
                             let mut drift_cmd = Command::new(&uv_path);
                             scrub_python_env(&mut drift_cmd); // #144
+                            // apply_uv_env sets UV_INDEX_URL for china / custom mirrors
                             apply_uv_env(app, &mut drift_cmd);
-                            let user_cfg = crate::config::load_config(app);
-                            if let Some(pypi) = user_cfg.mirrors.pypi_index.as_deref() {
-                                drift_cmd.env("UV_INDEX_URL", pypi);
-                            } else if get_effective_region(app) == "china" {
-                                drift_cmd.env("UV_INDEX_URL", "https://mirrors.aliyun.com/pypi/simple/");
-                            }
                             drift_cmd
                                 .args(DRIFT_SYNC_ARGS)
                                 .current_dir(&project_dir);
@@ -3132,12 +3165,7 @@ the existing venv; newly added dependencies may be missing (#307)",
             .args(["sync", "--no-dev", "--verbose"])
             .current_dir(&project_dir);
     }
-    // PyPI index precedence: explicit setup-screen mirror > region preset.
-    if let Some(pypi) = custom_mirrors.pypi_index.as_deref() {
-        sync_cmd.env("UV_INDEX_URL", pypi);
-    } else if get_effective_region(app) == "china" {
-        sync_cmd.env("UV_INDEX_URL", "https://mirrors.aliyun.com/pypi/simple/");
-    }
+    // UV_INDEX_URL (china / custom) applied via apply_uv_env above.
     let mut sync_ok = matches!(run_streaming(app, "installing_deps", &mut sync_cmd), Ok(ref s) if s.success());
 
     // #569: the big cu128 torch wheel (~2.5 GB) is the most common first-run
@@ -3160,13 +3188,9 @@ the existing venv; newly added dependencies may be missing (#307)",
             emit_log(app, "installing_deps", "Retrying the install with the wheels you provided locally…");
             let mut retry = Command::new(&uv_path);
             scrub_python_env(&mut retry);
+            // apply_uv_env sets UV_INDEX_URL for china / custom mirrors
             apply_uv_env(app, &mut retry);
             retry.env("UV_FIND_LINKS", &wheels_dir);
-            if let Some(pypi) = custom_mirrors.pypi_index.as_deref() {
-                retry.env("UV_INDEX_URL", pypi);
-            } else if get_effective_region(app) == "china" {
-                retry.env("UV_INDEX_URL", "https://mirrors.aliyun.com/pypi/simple/");
-            }
             retry.args(["sync", "--no-dev", "--verbose"]).current_dir(&project_dir);
             sync_ok = matches!(run_streaming(app, "installing_deps", &mut retry), Ok(ref s) if s.success());
         }
@@ -3453,6 +3477,32 @@ mod tests {
         assert_eq!(envs.get("UV_HTTP_TIMEOUT").map(String::as_str), Some("120"));
         assert_eq!(envs.get("UV_HTTP_CONNECT_TIMEOUT").map(String::as_str), Some("30"));
         assert_eq!(envs.get("UV_HTTP_RETRIES").map(String::as_str), Some("5"));
+    }
+
+    #[test]
+    fn resolve_pypi_index_url_honors_override_then_china_preset() {
+        // Repair / first-run / drift all share this resolver via apply_uv_env.
+        // China must not fall through to pypi.org (tls handshake eof on
+        // hatchling when the UI already shows the China (mirror) region).
+        assert_eq!(
+            resolve_pypi_index_url("china", None).as_deref(),
+            Some(CHINA_PYPI_INDEX)
+        );
+        assert_eq!(
+            resolve_pypi_index_url("global", None),
+            None,
+            "non-china regions keep uv's default PyPI"
+        );
+        assert_eq!(
+            resolve_pypi_index_url("china", Some("https://example.com/simple/")).as_deref(),
+            Some("https://example.com/simple/"),
+            "explicit override wins over the china preset"
+        );
+        assert_eq!(
+            resolve_pypi_index_url("china", Some("  ")),
+            Some(CHINA_PYPI_INDEX.to_string()),
+            "blank override falls back to the china preset"
+        );
     }
 
     #[test]

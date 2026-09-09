@@ -297,6 +297,142 @@ def _tail_file(path: str, tail: int):
     return all_lines[-tail:], len(all_lines)
 
 
+# Must track main.py's _WindowsSafeRotatingFileHandler(backupCount=3). The
+# handler rolls omnivoice.log at 2 MB into .1/.2/.3, so up to 6 MB of history
+# lives in files this module used to ignore entirely.
+_LOG_BACKUP_COUNT = 3
+
+
+def _rotated_log_paths(base: str) -> list[str]:
+    """Existing `<base>.1 … .N`, newest first."""
+    return [p for p in (f"{base}.{i}" for i in range(1, _LOG_BACKUP_COUNT + 1)) if os.path.exists(p)]
+
+
+def _tail_rolling(base: str, tail: int):
+    """Tail `base`, reaching into its rotated siblings when it runs short.
+
+    A rollover leaves omnivoice.log nearly empty, and the Backend tab then
+    showed a handful of lines — or none — while the failure the user was asked
+    to copy sat in omnivoice.log.1. Reading the current file first keeps the
+    common case at one file read; the backups are only touched when they are
+    the only place the requested lines can come from.
+
+    Returns (lines oldest-first, total lines across the files read, paths read
+    oldest-first). The total counts only the files it had to open — it stops as
+    soon as `tail` is satisfied, so it is "how much is behind these lines",
+    not the size of the whole rotation set.
+    """
+    chunks: list[list[str]] = []
+    paths: list[str] = []
+    total = 0
+    remaining = tail
+    candidates = [p for p in [base, *_rotated_log_paths(base)] if os.path.exists(p)]
+    for path in candidates:
+        if remaining <= 0:
+            break
+        try:
+            lines, count = _tail_file(path, remaining)
+        except FileNotFoundError:
+            # A rollover can rename a candidate between the existence check
+            # above and this open, and the handler holds no lock we can take
+            # from a route. Skip the vanished file rather than 500 the whole
+            # panel over one member of the set — the previous single-file
+            # version failed the request outright in the same situation.
+            #
+            # A roll landing mid-walk can also shift which chunk a file holds,
+            # so a tail taken at that instant may repeat or miss a block. The
+            # panel re-polls every 5s and the next read is clean; buying strict
+            # consistency here would mean reaching into logging's internals.
+            continue
+        except PermissionError as exc:
+            # Windows only, and only the sharing violation: the handler still
+            # holds the file it is rolling. Any other permission failure is a
+            # real misconfiguration and must not be hidden.
+            if os.name == "nt" and getattr(exc, "winerror", None) == 32:
+                continue
+            raise
+        if count == 0:
+            continue
+        chunks.append(lines)
+        paths.append(path)
+        total += count
+        remaining -= len(lines)
+    # Files were visited newest-first; the reader wants oldest-first.
+    out: list[str] = []
+    for chunk in reversed(chunks):
+        out.extend(chunk)
+    return out, total, list(reversed(paths))
+
+def _tauri_plugin_log_candidates():
+    """The `tauri-plugin-log` files — the shell's own log, and the only thing
+    the Tauri tab actually displays.
+
+    Split out from :func:`_tauri_log_candidates` so Clear can touch these and
+    leave the backend stdout/stderr redirect alone. See
+    :func:`clear_tauri_logs`.
+    """
+    home = os.path.expanduser("~")
+    bid = "com.debpalash.omnivoice-studio"
+    if sys.platform == "darwin":
+        return [
+            os.path.join(home, "Library/Logs", bid, "tauri.log"),
+            os.path.join(home, "Library/Logs", bid, "VoiceStudio.log"),
+        ]
+    if sys.platform.startswith("linux"):
+        data_dir = os.environ.get("XDG_DATA_HOME") or os.path.join(home, ".local/share")
+        return [
+            os.path.join(data_dir, bid, "logs", "tauri.log"),
+            os.path.join(home, ".config", bid, "logs", "tauri.log"),
+        ]
+    if sys.platform.startswith("win"):
+        appdata = os.environ.get("APPDATA", home)
+        localappdata = os.environ.get("LOCALAPPDATA") or os.path.join(home, "AppData", "Local")
+        return [
+            os.path.join(localappdata, bid, "logs", "tauri.log"),
+            os.path.join(appdata, bid, "logs", "tauri.log"),
+        ]
+    return []
+
+
+def _backend_redirect_log_candidates():
+    """`backend.log` / `backend_err.log` — the spawned backend's stdout and
+    stderr, written by `src-tauri/src/backend.rs::backend_log_path()`.
+
+    Deliberately NOT cleared by the Tauri tab's Clear button.
+    `open_err_log_for_run()` opens `backend_err.log` **append-only** so "a
+    respawn must not destroy the previous run's evidence" (#1510), rotates it
+    to `.1` rather than truncating, and its spawn diagnostics are described
+    there as "retained in backend_err.log across runs and lands verbatim in bug
+    reports". A native death (a Windows access violation, a SIGSEGV) writes
+    nothing to the Python log by construction, so this file is the only record
+    of it.
+
+    `OMNIVOICE_LOG_DIR` is honoured first, in the same precedence
+    `backend_log_path()` uses. The backend is a child of the shell, so an
+    ambient override reaches both — and a resolver that ignored it would look
+    in the per-OS default while the writer wrote somewhere else, which is the
+    divergence class this file already has one of (see #1782).
+    """
+    override = (os.environ.get("OMNIVOICE_LOG_DIR") or "").strip()
+    if override:
+        return [
+            os.path.join(override, "backend.log"),
+            os.path.join(override, "backend_err.log"),
+        ]
+    home = os.path.expanduser("~")
+    if sys.platform == "darwin":
+        base = os.path.join(home, "Library/Logs/OmniVoice")
+    elif sys.platform.startswith("linux"):
+        state_dir = os.environ.get("XDG_STATE_HOME") or os.path.join(home, ".local/state")
+        base = os.path.join(state_dir, "OmniVoice")
+    elif sys.platform.startswith("win"):
+        localappdata = os.environ.get("LOCALAPPDATA") or os.path.join(home, "AppData", "Local")
+        base = os.path.join(localappdata, "OmniVoice", "Logs")
+    else:
+        return []
+    return [os.path.join(base, "backend.log"), os.path.join(base, "backend_err.log")]
+
+
 def _tauri_log_candidates():
     """Likely paths for Tauri-side logs, most useful first.
 
@@ -308,40 +444,15 @@ def _tauri_log_candidates():
       `com.debpalash.omnivoice-studio` (frontend/src-tauri/tauri.conf.json).
     - backend.rs::backend_log_path() redirects the spawned backend's
       stdout/stderr to `backend.log` / `backend_err.log` under
-      `~/Library/Logs/OmniVoice` (macOS), `$XDG_STATE_HOME/VoiceStudio` falling
+      `~/Library/Logs/OmniVoice` (macOS), `$XDG_STATE_HOME/OmniVoice` falling
       back to `~/.local/state/OmniVoice` (Linux), and
       `%LOCALAPPDATA%\\OmniVoice\\Logs` (Windows). This is where uvicorn
       startup banners and hard-crash tracebacks land — keep all three OS
       shapes listed or sidecar crashes become invisible off-macOS.
     """
-    home = os.path.expanduser("~")
-    bid = "com.debpalash.omnivoice-studio"
-    if sys.platform == "darwin":
-        return [
-            os.path.join(home, "Library/Logs", bid, "tauri.log"),
-            os.path.join(home, "Library/Logs", bid, "VoiceStudio.log"),
-            os.path.join(home, "Library/Logs/OmniVoice/backend.log"),
-            os.path.join(home, "Library/Logs/OmniVoice/backend_err.log"),
-        ]
-    if sys.platform.startswith("linux"):
-        data_dir = os.environ.get("XDG_DATA_HOME") or os.path.join(home, ".local/share")
-        state_dir = os.environ.get("XDG_STATE_HOME") or os.path.join(home, ".local/state")
-        return [
-            os.path.join(data_dir, bid, "logs", "tauri.log"),
-            os.path.join(home, ".config", bid, "logs", "tauri.log"),
-            os.path.join(state_dir, "OmniVoice", "backend.log"),
-            os.path.join(state_dir, "OmniVoice", "backend_err.log"),
-        ]
-    if sys.platform.startswith("win"):
-        appdata = os.environ.get("APPDATA", home)
-        localappdata = os.environ.get("LOCALAPPDATA") or os.path.join(home, "AppData", "Local")
-        return [
-            os.path.join(localappdata, bid, "logs", "tauri.log"),
-            os.path.join(appdata, bid, "logs", "tauri.log"),
-            os.path.join(localappdata, "OmniVoice", "Logs", "backend.log"),
-            os.path.join(localappdata, "OmniVoice", "Logs", "backend_err.log"),
-        ]
-    return []
+    # Composed from the two halves so the read path keeps seeing every file
+    # while Clear can be narrowed to the shell's own log.
+    return _tauri_plugin_log_candidates() + _backend_redirect_log_candidates()
 
 
 @router.get("/system/logs")
@@ -356,12 +467,24 @@ async def system_logs(tail: int = 200):
     except Exception:
         tail = 200
 
-    path = LOG_PATH if os.path.exists(LOG_PATH) else CRASH_LOG_PATH
-    if not os.path.exists(path):
+    if os.path.exists(LOG_PATH) or _rotated_log_paths(LOG_PATH):
+        base = LOG_PATH
+    else:
+        base = CRASH_LOG_PATH
+    if not os.path.exists(base) and not _rotated_log_paths(base):
         return {"lines": [], "path": LOG_PATH, "exists": False}
+    path = base
     try:
-        lines, total = await asyncio.to_thread(_tail_file, path, tail)
-        return {"lines": lines, "path": path, "exists": True, "total_lines": total}
+        lines, total, paths = await asyncio.to_thread(_tail_rolling, base, tail)
+        return {
+            "lines": lines,
+            "path": path,
+            "exists": True,
+            "total_lines": total,
+            # Which files the tail actually came from, oldest first. A bug
+            # report can then say whether it crossed a rollover.
+            "paths": paths,
+        }
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -467,9 +590,23 @@ def _read_from_pos(path: str, pos: int) -> list[str]:
 
 @router.post("/system/logs/clear")
 async def clear_system_logs():
-    """Truncate the rolling runtime log and the crash log (what the Backend tab reads)."""
+    """Truncate the rolling runtime log and the crash log (what the Backend tab reads).
+
+    Includes the rotated siblings. Truncating only omnivoice.log left up to
+    6 MB in .1/.2/.3, so Clear freed almost nothing and — now that the tail
+    reaches into those files — would have looked like it did nothing at all.
+    """
     cleared_any = False
-    for p in (LOG_PATH, CRASH_LOG_PATH):
+    # The full fixed name set rather than a snapshot of what exists: enumerating
+    # first leaves a window where a rollover creates a backup after the scan and
+    # its history survives a Clear that reported success. Names the handler can
+    # ever write are known up front, so there is nothing to enumerate.
+    targets = [
+        LOG_PATH,
+        *(f"{LOG_PATH}.{i}" for i in range(1, _LOG_BACKUP_COUNT + 1)),
+        CRASH_LOG_PATH,
+    ]
+    for p in targets:
         if os.path.exists(p):
             try:
                 await asyncio.to_thread(_truncate_file, p)
@@ -502,10 +639,20 @@ def _truncate_file(path: str):
 
 @router.post("/system/logs/tauri/clear")
 async def clear_tauri_logs():
-    """Truncate whichever Tauri-side log files we know about. OS-level rotation may recreate them."""
+    """Truncate the shell's own log files. OS-level rotation may recreate them.
+
+    The backend stdout/stderr redirect is deliberately excluded. This button
+    lives on a tab that shows `tauri.log`, and truncating `backend_err.log`
+    from it destroyed evidence the user was never shown — the one record of a
+    native death, which writes nothing to the Python log. `backend.rs`'s
+    `open_err_log_for_run()` opens that file append-only precisely so "a
+    respawn must not destroy the previous run's evidence" (#1510) and rotates
+    it to `.1` instead of truncating, so it manages its own size and does not
+    need clearing from here.
+    """
     cleared = []
     failed = 0
-    for p in _tauri_log_candidates():
+    for p in _tauri_plugin_log_candidates():
         if os.path.exists(p):
             try:
                 await asyncio.to_thread(_truncate_file, p)
