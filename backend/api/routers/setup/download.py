@@ -548,6 +548,11 @@ async def install_model(req: InstallModelRequest):
 
             _max_attempts = 5
             _attempt = 0
+            # The accelerator is retried across attempts so its manifest-based
+            # resume actually gets used; it is disabled for the rest of the
+            # install only when it fails for a reason that is NOT transient
+            # network trouble (i.e. the accelerator itself is unusable here).
+            _segmented_off = False
             while True:
                 if req.repo_id in _cancelled:
                     raise _InstallCancelled()
@@ -559,7 +564,7 @@ async def install_model(req: InstallModelRequest):
                     # snapshot_download — the accelerator can never compromise a
                     # correct install.
                     _snapshot_path = None
-                    if _attempt == 1 and _segmented_enabled() and not _xet_active():
+                    if not _segmented_off and _segmented_enabled() and not _xet_active():
                         try:
                             _snapshot_path = _segmented_snapshot(
                                 req.repo_id,
@@ -569,9 +574,17 @@ async def install_model(req: InstallModelRequest):
                         except _InstallCancelled:
                             raise
                         except Exception as _seg_err:
+                            # A dropped connection is not the accelerator's
+                            # fault: keep it for the next attempt, which resumes
+                            # from the .part manifest instead of restarting at
+                            # zero. Anything else means the accelerator can't
+                            # work here — fall back for good.
+                            _segmented_off = not _is_retryable_download_error(_seg_err)
                             logger.info(
-                                "segmented download for %s failed (%s); falling back to snapshot_download",
+                                "segmented download for %s failed (%s); falling back to "
+                                "snapshot_download (accelerator %s)",
                                 req.repo_id, _seg_err,
+                                "disabled for this install" if _segmented_off else "kept for retry",
                             )
                             _snapshot_path = None
                     if _snapshot_path is None:
