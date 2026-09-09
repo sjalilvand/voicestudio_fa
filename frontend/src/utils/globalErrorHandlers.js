@@ -50,7 +50,15 @@ const EXTENSION_URL = /\b(?:chrome|moz|safari-web|safari|ms-browser)-extension:\
 // non-whitespace only. Unanchored, a V8 HEADER whose message happens to read
 // `... user@chrome-extension://...` matched as a JSC frame and its message URL
 // was taken as the throw site -- the same false positive one layer down.
-const FRAME_LINE = /^\s*at\s|^\s*\S*@[a-z-]+:\/\//i;
+// JSC additionally labels three frame kinds with a SPACE in them —
+// `global code@url`, `eval code@url` and `module code@url`. A bare `\S*`
+// before the `@` therefore skips exactly the top-level frame that an injected
+// extension script throws from, so originUrl() found no frame, returned '',
+// and the extension's error still offered "Report this bug" — #1901 unfixed
+// on WKWebView, which is the macOS desktop build and Safari. The three labels
+// are enumerated rather than allowing spaces generally, because a general
+// space would re-open the V8-header false positive the anchoring exists for.
+const FRAME_LINE = /^\s*at\s|^\s*(?:(?:global|eval|module) code|[^\s@]*)@[a-z-]+:\/\//i;
 const FRAME_URL = /[a-z-]+:\/\/[^\s)]+/i;
 
 /** The URL the error came FROM, or '' when the origin cannot be established. */

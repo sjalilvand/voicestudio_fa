@@ -190,4 +190,57 @@ describe('errors thrown by a browser extension', () => {
     expect(toastErrorWithReport).toHaveBeenCalledOnce();
     expect(toastErrorWithReport.mock.calls[0][1]).toBe(ours);
   });
+
+  // WebKit labels its top-level frames "global code@…", "eval code@…" and
+  // "module code@…" — the only frame labels that contain a space. The frame
+  // matcher's anti-header anchoring rejected them, so on WKWebView (the macOS
+  // desktop shell) and Safari an extension's error found no matching frame,
+  // fell through with an unknown origin, and still offered the report — the
+  // exact #1901 behaviour, unfixed on the browser engine that needs it most.
+  it.each(['global code', 'eval code', 'module code'])(
+    'suppresses an extension error thrown from a WebKit "%s" frame',
+    (label) => {
+      installGlobalErrorHandlers();
+
+      // A distinct message per label: shouldShow() throttles by message text,
+      // so reusing one would let the second and third cases pass on the
+      // throttle rather than on the frame match they exist to prove.
+      const err = new Error(`extension threw from ${label}`);
+      err.stack = [
+        `${label}@chrome-extension://someid/executors/200.js:1:9`,
+        'promiseReactionJob@[native code]',
+      ].join('\n');
+      dispatchUnhandledRejection(err);
+
+      expect(toastErrorWithReport).not.toHaveBeenCalled();
+    },
+  );
+
+  it('still reports our own error thrown from a WebKit global frame', () => {
+    // The label must not become a blanket mute: a top-level throw of OURS
+    // carries the same shape and has to keep reaching the user.
+    installGlobalErrorHandlers();
+
+    const ours = new Error('webkit top-level render crash');
+    ours.stack = ['global code@http://tauri.localhost/assets/main-app.js:9:1'].join('\n');
+    dispatchUnhandledRejection(ours);
+
+    expect(toastErrorWithReport).toHaveBeenCalledOnce();
+  });
+
+  it('does not treat a V8 header mentioning an extension URL as a frame', () => {
+    // Regression guard for the anchoring this change had to preserve: the
+    // message text below contains "code@chrome-extension://", and reading it
+    // as a frame would attribute one of our errors to an extension and mute it.
+    installGlobalErrorHandlers();
+
+    const ours = new Error('failed to load code@chrome-extension://someid/x.js');
+    ours.stack = [
+      'TypeError: failed to load code@chrome-extension://someid/x.js',
+      '    at loadThing (http://tauri.localhost/assets/main-app.js:4:1)',
+    ].join('\n');
+    dispatchUnhandledRejection(ours);
+
+    expect(toastErrorWithReport).toHaveBeenCalledOnce();
+  });
 });
