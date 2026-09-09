@@ -10,6 +10,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 - Generating from a one-character input now says the input was too short, instead of quoting a convolution error (#1826)
+- Cloning without a reference clip now says so, instead of naming library parameters you cannot set (#1879)
 - Upgrading torch for an RTX 50-series card no longer trades one startup crash for another, and the upgrade is documented (#1931)
 - A generation timeout now points at the compute-time budget in Settings rather than an environment variable (#1808)
 - An engine you have not installed now says so, instead of reporting a failed check (#1866)
