@@ -9,6 +9,8 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- A failure with no stage attached no longer borrows another stage's advice, so a text-to-speech error stops telling you the video server dropped the download (#1943)
+- A generation failure that the app cannot classify now names the backend error class, so two unrelated faults stop arriving as the same untriageable report (#1800)
 
 - Transcriptions dictation wakes the desktop recorder, presents one contextual start action, and centers its microphone icon with the label (#1902)
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)

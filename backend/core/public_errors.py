@@ -94,6 +94,16 @@ def stream_generation_failure(error: BaseException | object) -> dict[str, object
     replace the failure being diagnosed.
     """
     payload = stream_failure("generation_failed")
+    if isinstance(error, BaseException):
+        # The exception's TYPE NAME, never its message. Two failures that both
+        # render the floor message "Generation failed. Check the selected
+        # engine and try again." are indistinguishable in an auto-filed report,
+        # so every unclassified streaming failure arrives as the same issue and
+        # none of them can be triaged (#1800). A class name is VoiceStudio-safe
+        # by the same reasoning that already puts it on the wire as
+        # `error_class` in the dub routes and on the analytics allowlist: it is
+        # a Python type, not user text, and no substring of `error` is copied.
+        payload["error_class"] = type(error).__name__
     try:
         enriched = public_exception_response(error, fallback=str(payload["detail"]))
     except Exception:
@@ -149,12 +159,31 @@ def public_exception_response(error: BaseException, *, fallback: str) -> dict[st
     Classification may inspect the private diagnostic locally, but response
     values come exclusively from VoiceStudio-owned constants. No substring of
     ``error`` is copied into the payload.
+
+    Every caller is a CONTEXT-FREE surface — the global 500 handler, the
+    streaming generate error frame, the dub GPU-OOM 503 — so the topic is
+    filtered through ``failure._CONTEXT_FREE_HINT_CLASSES`` before its hint is
+    attached. Without that filter a topic whose trigger is a generic phrase
+    stamps a confidently wrong remediation on an unrelated failure: #1943 is a
+    macOS mlx-audio TTS 500 that came back advising the user that "the
+    connection to the video server dropped mid-download", because
+    VIDEO_DOWNLOAD_NETWORK triggers on a bare "timed out" / "connection
+    reset". The allowlist already existed and already named that class as the
+    example of what must not appear here; only :func:`failure.append_hint`
+    honoured it, and this helper replaced ``append_hint`` on the 500 path
+    without carrying the rule across.
+
+    HF_MIRROR_UNREACHABLE is allowed alongside it: its hint is dynamic (it
+    names the configured mirror) and its trigger requires that a mirror is
+    configured at all, so it cannot fire on an unrelated failure (#874).
     """
-    from core.failure import classify, public_hint_for_topic
+    from core.failure import _CONTEXT_FREE_HINT_CLASSES, classify, public_hint_for_topic
 
     try:
         topic = classify(str(error))
-        hint = public_hint_for_topic(topic)
+        if topic and topic not in _CONTEXT_FREE_HINT_CLASSES and topic != "HF_MIRROR_UNREACHABLE":
+            topic = ""
+        hint = public_hint_for_topic(topic) if topic else ""
     except Exception:
         topic = ""
         hint = ""
