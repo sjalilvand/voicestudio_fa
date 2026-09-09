@@ -9,6 +9,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- Cloning without a reference clip now says so, instead of naming library parameters you cannot set (#1879)
 - An engine you have not installed now says so, instead of reporting a failed check (#1866)
 - The Accessibility prompt no longer floats over first-run setup and every other app until you grant it (#1845, #1886)
 - The last onboarding step offers to install a speech-to-text model instead of failing three times when none is installed (#1856)

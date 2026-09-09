@@ -98,6 +98,7 @@ _HINTS: dict[str, str] = {
     "WINDOWS_APP_CONTROL_BLOCKED": "Windows refused to load a file VoiceStudio needs — an Application Control policy (Smart App Control, WDAC, or AppLocker) blocked it. On a personal PC: Windows Security → App & browser control → Smart App Control → Off (Windows only lets you turn it off once — re-enabling requires a Windows reset), then restart VoiceStudio. On a managed/work PC, ask IT to allow the VoiceStudio install folder.",
     "WINDOWS_PAGING_FILE_TOO_SMALL": "Windows ran out of virtual memory while mapping the model into memory — its paging file is smaller than the model needs. This is not the same as your RAM being full, and closing other apps usually won't fix it: Windows has to be allowed to back the mapping. Set a bigger paging file — Settings → System → About → Advanced system settings → Performance → Settings → Advanced → Virtual memory → Change: untick \"Automatically manage\", pick your system drive, choose \"Custom size\" and set both Initial and Maximum to at least 32768 MB (more than the model's size), then OK and restart Windows. A smaller/quantized engine (OmniVoice GGUF, Supertonic-3) also avoids the large mapping entirely.",
     "WINDOWS_UNTRUSTED_MOUNT": "Windows refused to walk a folder on the way to this file because the path crosses a mount point it does not trust (WinError 448). That is a Windows rule about the VOLUME, not about VoiceStudio or the file itself — it turns up on Dev Drives, on mounted VHD/ReFS volumes, and on junctions pointing into another user profile, so retrying the same link cannot help. Point VoiceStudio at a folder on an ordinary local drive instead: Settings → Storage → data directory, or the download/output folder named in the message. If that folder has to stay where it is, trust the volume with `fsutil devdrv trust <drive>:` from an elevated prompt and restart.",
+    "CLONE_REFERENCE_MISSING": "This engine was asked to clone a voice but got no reference audio to clone FROM, and the model folder carries no built-in voice either. Pick a voice profile that has a saved reference clip, or record/upload a few seconds of clean speech as the reference, then generate again. A designed voice with no saved reference cannot be cloned from — synthesize with it directly instead.",
     "MEDIA_TOOL_MISSING": "VoiceStudio's media engine (ffmpeg/ffprobe) wasn't on the system path when a component went looking for it. Open Settings → Audio tools and use Download/Repair to fetch the bundled copy, then retry — a restart picks it up for everything. If you'd rather use a system install, install ffmpeg (macOS: `brew install ffmpeg`; Windows: `winget install Gyan.FFmpeg`; Linux: your package manager) and restart VoiceStudio, or point FFMPEG_PATH / OMNIVOICE_FFPROBE_PATH at the binaries in Settings.",
     "AUDIO_IO_FAILED": "An audio file couldn't be read or written at the OS level. Check the drive isn't full, that the output and temp folders exist and are writable, and that antivirus or OneDrive isn't locking them (add a VoiceStudio exclusion if you use one).",
     "VIDEO_DOWNLOAD_OS_ERROR": "The OS refused a file operation while saving the downloaded video — this is a disk/folder problem, not a network one, so retrying the same link won't help. The download is written to a job folder under your VoiceStudio data directory (Settings → Storage shows the path): check that drive isn't full, that the folder exists and is writable, and that antivirus or a cloud-sync client (OneDrive, Dropbox) isn't locking it — add a VoiceStudio exclusion if you use one. If your data directory sits on a synced or network drive, move it to a local one.",
@@ -313,6 +314,9 @@ _CONTEXT_FREE_HINT_CLASSES = frozenset({
     # point" — both unmistakable, and it reaches the user as a bare
     # download failure with only the OS sentence attached.
     "WINDOWS_UNTRUSTED_MOUNT",
+    # #1879: matched on wording no other failure produces, and it reaches the
+    # user as a bare 400 carrying only the library sentence.
+    "CLONE_REFERENCE_MISSING",
     # Its trigger is a VoiceStudio-authored sentence — "the TTS model cache
     # for … is incomplete" plus "could not be auto-repaired" / "weights
     # missing" — so it cannot be produced by an unrelated library. The 500
@@ -587,6 +591,18 @@ def classify(reason: str) -> str:
     # translates the sentence, with the English phrase as a fallback.
     if "[winerror 448]" in low or "untrusted mount point" in low:
         return "WINDOWS_UNTRUSTED_MOUNT"
+    # #1879: mlx-audio (and the Chatterbox-family models under it) raise a
+    # bare ValueError naming their own parameters — "No conditionals
+    # available. Either provide audio_prompt/audio_prompt_sr ... or ensure
+    # conds.safetensors is in the model directory." The generate route passed
+    # that straight through as the 400 detail, so the user was told to supply
+    # an argument they have no way to name and to check for a file they have
+    # never heard of. What actually happened is "you asked to clone without a
+    # reference clip".
+    if "no conditionals available" in low or (
+        "audio_prompt" in low and "conds.safetensors" in low
+    ):
+        return "CLONE_REFERENCE_MISSING"
     # #1221: libsndfile failed an OS-level audio read/write. Its own wording is
     # a bare "System error.", so match the library name — audio_io already
     # prefixes the target path and free space onto the write-path failures.
