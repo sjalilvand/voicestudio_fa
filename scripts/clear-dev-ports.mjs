@@ -2,7 +2,7 @@
 
 import { spawnSync } from "node:child_process";
 import { readFileSync, readlinkSync } from "node:fs";
-import { dirname, resolve, sep } from "node:path";
+import path, { dirname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DEFAULT_PORTS = [3900, 3901];
@@ -69,7 +69,11 @@ function normalized(value, windows = process.platform === "win32") {
     return String(value || "")
       .replaceAll("/", "\\")
       .toLowerCase();
-  return resolve(String(value || ""));
+  // path.posix, not the host resolver: `windows` is an explicit parameter, so
+  // POSIX normalisation must stay POSIX even when this runs on Windows. The
+  // host resolver turned "/work/VoiceStudio" into "C:\work\VoiceStudio",
+  // which then matched nothing in a POSIX command line.
+  return path.posix.resolve(String(value || ""));
 }
 
 export function belongsToCheckout(
@@ -80,7 +84,7 @@ export function belongsToCheckout(
   checkoutRoot = CHECKOUT_ROOT,
 ) {
   const root = normalized(checkoutRoot, windows);
-  const prefix = `${root}${windows ? "\\" : sep}`;
+  const prefix = `${root}${windows ? "\\" : path.posix.sep}`;
   const ownedPath = (value) => {
     if (!value) return false;
     const path = normalized(value, windows);
