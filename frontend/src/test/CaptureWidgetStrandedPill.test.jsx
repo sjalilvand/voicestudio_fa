@@ -295,3 +295,67 @@ describe('the widget window never strands empty', () => {
     expect(mocks.holder.hide).not.toHaveBeenCalled();
   });
 });
+
+describe('the Accessibility prompt does not own the screen forever', () => {
+  // #1845 / #1886: the pill is created always-on-top and the setup state had
+  // no time limit, so on a clean macOS install it sat over the first-run setup
+  // window — covering the disk-space line and the Start installation button —
+  // and over every other application, until Accessibility was granted or the
+  // user dismissed it by hand. A permission not yet granted does not outrank
+  // what the user is actually doing, and mid-setup they usually cannot grant
+  // it yet anyway.
+  it('hides the pill once its on-screen budget is spent, and keeps polling', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mocks.holder.a11y = false;
+    renderWidget();
+
+    // Settle the mount, where the idle-visibility reconcile legitimately
+    // hides a window that was already open. Measure from there.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    const baseline = mocks.holder.hide.mock.calls.length;
+
+    // Still up a few seconds in — the prompt has something to say.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(mocks.holder.hide.mock.calls.length).toBe(baseline);
+
+    // Past the budget it stops covering the screen.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000);
+    });
+    await waitFor(() => expect(mocks.holder.hide.mock.calls.length).toBeGreaterThan(baseline));
+    const hidesAfterBudget = mocks.holder.hide.mock.calls.length;
+
+    // Hiding is not giving up: granting Accessibility later must still settle
+    // the widget back to idle on its own.
+    mocks.holder.a11y = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    await waitFor(() =>
+      expect(mocks.holder.hide.mock.calls.length).toBeGreaterThan(hidesAfterBudget),
+    );
+  });
+
+  it('hides once, not on every poll', async () => {
+    // The budget check is latched; re-issuing hide() every second would fight
+    // anything that legitimately shows the window again.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mocks.holder.a11y = false;
+    renderWidget();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(25_000);
+    });
+    await waitFor(() => expect(mocks.holder.hide).toHaveBeenCalled());
+    const afterFirst = mocks.holder.hide.mock.calls.length;
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(mocks.holder.hide.mock.calls.length).toBe(afterFirst);
+  });
+});
