@@ -11,23 +11,29 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend"))
 
-from api.routers.setup.download import _segmented_enabled  # noqa: E402
+
+
+def _enabled():
+    """Resolve the app module at run time, not at collection."""
+    from api.routers.setup.download import _segmented_enabled
+
+    return _segmented_enabled()
 
 
 def test_segmented_is_on_by_default(monkeypatch):
     monkeypatch.delenv("OMNIVOICE_SEGMENTED_DOWNLOAD", raising=False)
-    assert _segmented_enabled() is True
+    assert _enabled() is True
 
 
 def test_env_override_can_disable(monkeypatch):
     monkeypatch.setenv("OMNIVOICE_SEGMENTED_DOWNLOAD", "0")
-    assert _segmented_enabled() is False
+    assert _enabled() is False
 
 
 def test_env_override_truthy_keeps_it_on(monkeypatch):
     for val in ("1", "true", "on", "yes"):
         monkeypatch.setenv("OMNIVOICE_SEGMENTED_DOWNLOAD", val)
-        assert _segmented_enabled() is True
+        assert _enabled() is True
 
 
 # The accelerator must be re-entered on the NEXT attempt after a dropped
