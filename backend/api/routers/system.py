@@ -332,18 +332,25 @@ def _tail_rolling(base: str, tail: int):
             break
         try:
             lines, count = _tail_file(path, remaining)
-        except OSError:
+        except FileNotFoundError:
             # A rollover can rename a candidate between the existence check
             # above and this open, and the handler holds no lock we can take
-            # from a route. Skip the file rather than 500 the whole panel over
-            # one member of the set — the previous single-file version failed
-            # the request outright in the same situation.
+            # from a route. Skip the vanished file rather than 500 the whole
+            # panel over one member of the set — the previous single-file
+            # version failed the request outright in the same situation.
             #
             # A roll landing mid-walk can also shift which chunk a file holds,
             # so a tail taken at that instant may repeat or miss a block. The
             # panel re-polls every 5s and the next read is clean; buying strict
             # consistency here would mean reaching into logging's internals.
             continue
+        except PermissionError as exc:
+            # Windows only, and only the sharing violation: the handler still
+            # holds the file it is rolling. Any other permission failure is a
+            # real misconfiguration and must not be hidden.
+            if os.name == "nt" and getattr(exc, "winerror", None) == 32:
+                continue
+            raise
         if count == 0:
             continue
         chunks.append(lines)

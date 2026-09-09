@@ -9,6 +9,10 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- A GPU that is merely short on free memory is no longer told to reinstall its drivers (#1812) — thanks @michaelhuamanflores!
+- An error thrown by a browser extension is filtered on Safari and the macOS app too, not only on Chromium (#1901) — thanks @Chang-Jin-Lee!
+- Choosing the China mirror no longer re-races the network on every dependency step, which cost seconds per step on blocked connections (#1892) — thanks @yuezheng2006!
+- The backend log panel reports a log it cannot read instead of quietly showing less (#1847) — thanks @Chang-Jin-Lee!
 - A failure with no stage attached no longer borrows another stage's advice, so a text-to-speech error stops telling you the video server dropped the download (#1943)
 - A generation failure that the app cannot classify now names the backend error class, so two unrelated faults stop arriving as the same untriageable report (#1800)
 

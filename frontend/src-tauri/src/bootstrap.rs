@@ -1933,6 +1933,11 @@ fn resolve_pypi_index_url(region: &str, override_url: Option<&str>) -> Option<St
 fn apply_pypi_index_env<R: tauri::Runtime>(app: &tauri::AppHandle<R>, cmd: &mut Command) {
     let cfg = crate::config::load_config(app);
     let region = get_effective_region(app);
+    // Clear any ambient value first. Without this a uv call inherits the
+    // parent process's UV_INDEX_URL whenever resolve_pypi_index_url returns
+    // None, so a stale mirror set in the developer's shell silently outranks
+    // the region the user actually chose.
+    cmd.env_remove("UV_INDEX_URL");
     if let Some(url) = resolve_pypi_index_url(&region, cfg.mirrors.pypi_index.as_deref()) {
         cmd.env("UV_INDEX_URL", url);
     }

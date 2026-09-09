@@ -169,3 +169,51 @@ def test_a_blank_override_falls_back_to_the_default(system_mod, monkeypatch):
 
     assert paths, "a blank override must not empty the candidate list"
     assert all("OmniVoice" in p for p in paths)
+
+
+def test_a_padded_override_resolves_the_same_place_the_writer_wrote(
+    system_mod, monkeypatch, tmp_path
+):
+    """A padded `OMNIVOICE_LOG_DIR` must not split the reader from the writer.
+
+    The Python side strips the variable before joining. `backend.rs` trimmed it
+    only for the emptiness guard and then did `PathBuf::from(dir)` on the RAW
+    value, so ` /tmp/logs ` had the shell writing to a directory whose name
+    carried the spaces while this resolver looked in the trimmed one. That is
+    the same reader/writer divergence #1782 is about, reintroduced through the
+    override that exists to control it.
+    """
+    monkeypatch.setenv("OMNIVOICE_LOG_DIR", f"  {tmp_path}  ")
+
+    assert system_mod._backend_redirect_log_candidates() == [
+        os.path.join(str(tmp_path), "backend.log"),
+        os.path.join(str(tmp_path), "backend_err.log"),
+    ]
+
+
+def test_a_vanished_rotated_file_is_skipped_but_a_real_error_is_not(
+    system_mod, monkeypatch, tmp_path
+):
+    """The rotation walk may skip a file that rolled away — nothing else.
+
+    `except OSError: continue` also swallowed PermissionError and genuine I/O
+    failures, so a log the panel could not read rendered as an empty or partly
+    empty panel with no explanation. Only the race the guard exists for is
+    silent now.
+    """
+    base = tmp_path / "omnivoice.log"
+    base.write_text("line one\n", encoding="utf-8")
+
+    def _vanished(path, remaining):
+        raise FileNotFoundError(path)
+
+    monkeypatch.setattr(system_mod, "_tail_file", _vanished)
+    lines, total, paths = system_mod._tail_rolling(str(base), 10)
+    assert (lines, total, paths) == ([], 0, [])
+
+    def _refused(path, remaining):
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(system_mod, "_tail_file", _refused)
+    with pytest.raises(PermissionError):
+        system_mod._tail_rolling(str(base), 10)
