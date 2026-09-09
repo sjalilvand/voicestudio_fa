@@ -13,6 +13,8 @@ the frozen-backend fallback mirror it for their toolchains.
 - A generation failure that the app cannot classify now names the backend error class, so two unrelated faults stop arriving as the same untriageable report (#1800)
 
 - Transcriptions dictation wakes the desktop recorder, presents one contextual start action, and centers its microphone icon with the label (#1902)
+- Colab transcription and dubbing now include an explicit ASR model setup step (#1922) — thanks @nidhi-singh02!
+
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
 
 - The desktop app builds and opens from a fresh clone again (#1818) — thanks @flutterkage2k!
