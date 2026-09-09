@@ -159,12 +159,31 @@ def public_exception_response(error: BaseException, *, fallback: str) -> dict[st
     Classification may inspect the private diagnostic locally, but response
     values come exclusively from VoiceStudio-owned constants. No substring of
     ``error`` is copied into the payload.
+
+    Every caller is a CONTEXT-FREE surface — the global 500 handler, the
+    streaming generate error frame, the dub GPU-OOM 503 — so the topic is
+    filtered through ``failure._CONTEXT_FREE_HINT_CLASSES`` before its hint is
+    attached. Without that filter a topic whose trigger is a generic phrase
+    stamps a confidently wrong remediation on an unrelated failure: #1943 is a
+    macOS mlx-audio TTS 500 that came back advising the user that "the
+    connection to the video server dropped mid-download", because
+    VIDEO_DOWNLOAD_NETWORK triggers on a bare "timed out" / "connection
+    reset". The allowlist already existed and already named that class as the
+    example of what must not appear here; only :func:`failure.append_hint`
+    honoured it, and this helper replaced ``append_hint`` on the 500 path
+    without carrying the rule across.
+
+    HF_MIRROR_UNREACHABLE is allowed alongside it: its hint is dynamic (it
+    names the configured mirror) and its trigger requires that a mirror is
+    configured at all, so it cannot fire on an unrelated failure (#874).
     """
-    from core.failure import classify, public_hint_for_topic
+    from core.failure import _CONTEXT_FREE_HINT_CLASSES, classify, public_hint_for_topic
 
     try:
         topic = classify(str(error))
-        hint = public_hint_for_topic(topic)
+        if topic and topic not in _CONTEXT_FREE_HINT_CLASSES and topic != "HF_MIRROR_UNREACHABLE":
+            topic = ""
+        hint = public_hint_for_topic(topic) if topic else ""
     except Exception:
         topic = ""
         hint = ""
