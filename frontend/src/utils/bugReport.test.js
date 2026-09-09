@@ -117,6 +117,18 @@ describe('buildBugReportUrl', () => {
     expect(body).not.toContain('/Users/alice');
   });
 
+  it('records the backend error class so identical messages differ (#1800)', async () => {
+    const err = new Error('Generation failed. Check the selected engine and try again.');
+    err.errorClass = 'MemoryError';
+    const body = decodeURIComponent(await buildBugReportUrl({ error: err }));
+    expect(body).toContain('Backend error class: MemoryError');
+  });
+
+  it('omits the class line when the failure carries none', async () => {
+    const body = decodeURIComponent(await buildBugReportUrl({ error: new Error('plain failure') }));
+    expect(body).not.toContain('Backend error class');
+  });
+
   it('seeds the title with the error message', async () => {
     const url = await buildBugReportUrl({ error: new Error('synthesis exploded') });
     expect(decodeURIComponent(url)).toContain('[Bug] synthesis exploded');

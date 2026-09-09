@@ -329,6 +329,31 @@ describe('streamGenerateSpeech', () => {
     expect(FakeAudioContext.instances[0].state).toBe('closed');
   });
 
+  it('carries the backend error class from the error frame (#1800)', async () => {
+    // Every unclassified engine failure renders the same floor message, so
+    // the auto-filed reports were byte-identical and none could be triaged.
+    // The class name is the only thing that separates them.
+    apiFetch.mockResolvedValue(
+      ndjsonResponse([
+        startEvent(3),
+        chunkEvent(0),
+        { type: 'error', detail: 'Generation failed.', error_class: 'MemoryError' },
+      ]),
+    );
+    await expect(streamGenerateSpeech(new FormData(), {})).rejects.toMatchObject({
+      errorClass: 'MemoryError',
+    });
+  });
+
+  it('leaves the error class null when the frame omits it', async () => {
+    apiFetch.mockResolvedValue(
+      ndjsonResponse([startEvent(3), chunkEvent(0), { type: 'error', detail: 'boom' }]),
+    );
+    await expect(streamGenerateSpeech(new FormData(), {})).rejects.toMatchObject({
+      errorClass: null,
+    });
+  });
+
   it('carries the retryable marker from a GPU-timeout error frame (#1190)', async () => {
     // A retryable failure means the backend already spent the full budget on
     // this text and the abandoned job still holds the device — useTTS uses

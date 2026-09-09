@@ -94,6 +94,16 @@ def stream_generation_failure(error: BaseException | object) -> dict[str, object
     replace the failure being diagnosed.
     """
     payload = stream_failure("generation_failed")
+    if isinstance(error, BaseException):
+        # The exception's TYPE NAME, never its message. Two failures that both
+        # render the floor message "Generation failed. Check the selected
+        # engine and try again." are indistinguishable in an auto-filed report,
+        # so every unclassified streaming failure arrives as the same issue and
+        # none of them can be triaged (#1800). A class name is VoiceStudio-safe
+        # by the same reasoning that already puts it on the wire as
+        # `error_class` in the dub routes and on the analytics allowlist: it is
+        # a Python type, not user text, and no substring of `error` is copied.
+        payload["error_class"] = type(error).__name__
     try:
         enriched = public_exception_response(error, fallback=str(payload["detail"]))
     except Exception:
