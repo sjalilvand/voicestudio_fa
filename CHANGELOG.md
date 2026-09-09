@@ -101,6 +101,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Fast macOS process exits no longer turn a completed shutdown into a permission error (#1809)
 - The bootstrap splash no longer shows fabricated first-run install steps on a warm start or repair sync — a step now renders done only once it was actually observed (#1894)
+- A deliberate, clean quit killed by the desktop shell's short shutdown grace no longer gets reported as a crash on next launch — the run sentinel now clears before the slower shutdown steps instead of after (#1895)
 - Model Catalogue engine rows stack into one column on narrow shells instead of clipping actions off-screen (#1891)
 
 
