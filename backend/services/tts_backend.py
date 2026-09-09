@@ -300,6 +300,31 @@ class TTSBackend(ABC):
     #: 0 means "no meaningful floor" (CPU-class engines) and never warns.
     min_vram_gb: float = 0.0
 
+    @classmethod
+    def runtime_compute_profile(cls, caps) -> dict:
+        """Resolved compute metadata for this engine on the current host.
+
+        Most engines have one implementation whose static declarations are
+        sufficient. Native adapters may override this single hook when the
+        installed executable determines both the available runtimes and the
+        device actually selected.
+        """
+        from services.engine_routing import resolve_routing
+
+        gpu_compat = tuple(getattr(cls, "gpu_compat", ("cpu",)))
+        min_vram_gb = float(getattr(cls, "min_vram_gb", 0.0) or 0.0)
+        return {
+            "gpu_compat": gpu_compat,
+            "min_vram_gb": min_vram_gb,
+            **resolve_routing(gpu_compat, caps, min_vram_gb),
+            "runtime_backend": None,
+            "runtime_device_index": None,
+            "runtime_device_name": None,
+            "runtime_hardware_family": None,
+            "runtime_vram_gb": None,
+            "runtime_device_verified": None,
+        }
+
     #: True when generation allocates in ANOTHER process — a dedicated-venv
     #: sidecar (SubprocessBackend) or a spawned binary (omnivoice-gguf).
     #: Parent-process accelerator counters cannot see those allocations, so
@@ -2235,6 +2260,13 @@ _LAZY_REGISTRY: dict[str, tuple[str, str]] = {
     # 2026-07-02 (CPU, Apple Silicon; 22.05 kHz output). Gated behind
     # OMNIVOICE_CONFUCIUS4_TTS_DIR so it's inert until enabled.
     "confucius4-tts": ("engines.confucius4", "Confucius4Backend"),
+    # audio.cpp (0xShug0/audio.cpp) — pure-C++ ggml runtime, no Python venv.
+    # v1 serves Breeze-TTS-2 (en+zh, clone+design) through a parent-managed
+    # audiocpp_server over loopback HTTP. Gated behind a server binary
+    # (OMNIVOICE_AUDIOCPP_BIN) so it's inert until enabled. Lazy for the
+    # same import-cycle reason as the entries above (engines.audiocpp
+    # imports services.tts_backend for TTSBackend).
+    "audiocpp": ("engines.audiocpp", "AudioCPPBackend"),
 }
 
 
@@ -2339,6 +2371,7 @@ _INSTALL_HINTS: dict[str, str] = {
     "moss-tts-v15":  "git clone OpenMOSS/MOSS-TTS + set OMNIVOICE_MOSS_TTS_V15_DIR  (own venv, transformers==5.0; 8B, ~16 GB weights; CUDA/ROCm/XPU/NPU/CPU, no MPS; Apache-2.0)",
     "dots-tts":      "git clone rednote-hilab/dots.tts + set OMNIVOICE_DOTS_TTS_DIR  (own venv, transformers==4.57; 2B, ~9 GB weights; CUDA/CPU, Linux/macOS only — no Windows; Apache-2.0)",
     "confucius4-tts":"git clone netease-youdao/Confucius4-TTS + set OMNIVOICE_CONFUCIUS4_TTS_DIR  (own Python 3.10 venv; 14-lang cross-lingual zero-shot clone; ~5 GB weights auto-download; CUDA/ROCm/XPU/NPU/CPU, no MPS; Apache-2.0)",
+    "audiocpp":     "download the matching audio.cpp v0.7.2 prebuilt + set OMNIVOICE_AUDIOCPP_BIN, then explicitly install Breeze-TTS-2 in Model Catalogue → Models  (native CPU/Vulkan/CUDA/Metal GGUF server, no Python; en+zh clone+design; ~4.73 GiB; weights research/non-commercial only)",
 }
 
 
@@ -2409,7 +2442,7 @@ def list_backends() -> list[dict]:
           "one_click_install": bool,                # services.sidecar_install can provision it in-app
           "last_error":     Optional[str],          # cached most-recent failure
           "isolation_mode": "in-process" | "subprocess",
-          "gpu_compat":     list[str],              # subset of {cuda, rocm, mps, xpu, npu, cpu}
+          "gpu_compat":     list[str],              # subset of {cuda, rocm, mps, vulkan, xpu, npu, cpu}
           "supports_cloning": Optional[bool],       # True/False from the class attr; None when
                                                     #   model-dependent (property, e.g. mlx-audio)
           "effective_device": str,                  # device this engine uses on THIS host
@@ -2439,7 +2472,6 @@ def list_backends() -> list[dict]:
     from core.device_caps import detect_host_caps
     from services.engine_disk_usage import disk_summary_for
     from services.engine_evidence import snapshot as execution_snapshot
-    from services.engine_routing import routing_fields
     caps = detect_host_caps()
     installable = _sidecar_installable_ids()
 
@@ -2465,14 +2497,40 @@ def list_backends() -> list[dict]:
             isolation = "subprocess"
         else:
             isolation = "in-process"
-        gpu_compat = getattr(cls, "gpu_compat", ("cpu",))
+        from services.engine_routing import resolve_routing, runtime_compute_profile
+        try:
+            profile = runtime_compute_profile(cls, caps)
+        except Exception:
+            # Runtime-aware native probes remain optional metadata. A broken
+            # provider probe must not take down the engine picker, especially
+            # when availability already explains a missing binary or model.
+            compat = tuple(getattr(cls, "gpu_compat", ("cpu",)))
+            floor = float(getattr(cls, "min_vram_gb", 0.0) or 0.0)
+            profile = {
+                "gpu_compat": compat,
+                "min_vram_gb": floor,
+                **resolve_routing(compat, caps, floor),
+                "runtime_backend": None,
+                "runtime_device_index": None,
+                "runtime_device_name": None,
+                "runtime_hardware_family": None,
+                "runtime_vram_gb": None,
+                "runtime_device_verified": None,
+            }
+        gpu_compat = profile["gpu_compat"]
         # Cloning capability: same descriptor guard as
         # cloning_capable_engine_ids() — a class-level getattr on a *property*
         # (mlx-audio: capability depends on the picked model) returns the
         # descriptor, not a bool, so report None (= model-dependent) there
         # instead of an always-truthy false positive.
         _clone = getattr(cls, "supports_cloning", True)
-        routing = routing_fields(gpu_compat, caps, getattr(cls, "min_vram_gb", 0.0))
+        from core.scrub import scrub_text
+        routing = {
+            "effective_device": profile["effective_device"],
+            "routing_status": profile["routing_status"],
+            "routing_reason": scrub_text(profile["routing_reason"])
+            if profile["routing_reason"] else None,
+        }
         loaded_instance = None
         if _active_instance_id == bid:
             loaded_instance = _active_instance
@@ -2502,7 +2560,7 @@ def list_backends() -> list[dict]:
             "isolation_mode": isolation,
             "gpu_compat": list(gpu_compat),
             # effective_device / routing_status / routing_reason (scrubbed):
-            "min_vram_gb": getattr(cls, "min_vram_gb", 0.0) or None,
+            "min_vram_gb": profile["min_vram_gb"] or None,
             # effective_device / routing_status / routing_reason (scrubbed);
             # the reason now also carries the under-provisioned-GPU caveat.
             **routing,
@@ -2510,7 +2568,7 @@ def list_backends() -> list[dict]:
                 engine_id=bid,
                 engine_cls=cls,
                 instance=loaded_instance,
-                routing=routing,
+                routing={**profile, **routing},
                 caps=caps,
             ),
         })
@@ -2932,10 +2990,9 @@ async def resolve_generation_backend(
         raise ValueError(f"TTS engine '{engine_id}' is not available: {_mask_hf_tokens(msg)}")
 
     from core.device_caps import detect_host_caps
-    from services.engine_routing import resolve_routing
-    routing = resolve_routing(
-        getattr(backend_cls, "gpu_compat", ("cpu",)), detect_host_caps(),
-        getattr(backend_cls, "min_vram_gb", 0.0),
+    from services.engine_routing import runtime_compute_profile_async
+    routing = await runtime_compute_profile_async(
+        backend_cls, detect_host_caps()
     )
     if routing["routing_status"] == "unavailable":
         raise ValueError(routing["routing_reason"])
@@ -2973,4 +3030,6 @@ def __getattr__(name: str):  # pragma: no cover - exercised via tests
         return _REGISTRY[name if name in _REGISTRY else None]
     if name == "IndexTTS2Backend":
         return _REGISTRY["indextts2"]
+    if name == "AudioCPPBackend":
+        return _REGISTRY["audiocpp"]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

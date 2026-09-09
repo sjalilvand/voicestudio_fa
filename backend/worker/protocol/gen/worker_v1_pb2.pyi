@@ -93,7 +93,7 @@ class HostInfo(_message.Message):
     def __init__(self, hostname: _Optional[str] = ..., os: _Optional[str] = ..., arch: _Optional[str] = ..., worker_version: _Optional[str] = ..., cpu_count: _Optional[int] = ..., system_memory_bytes: _Optional[int] = ..., gpus: _Optional[_Iterable[_Union[GpuInfo, _Mapping]]] = ...) -> None: ...
 
 class ModelCapability(_message.Message):
-    __slots__ = ("engine", "model_id", "operations", "supported", "installed", "downloaded", "resident", "min_memory_bytes", "precision", "derived_concurrency", "cpu_fallback", "repo_ids", "display_name")
+    __slots__ = ("engine", "model_id", "operations", "supported", "installed", "downloaded", "resident", "min_memory_bytes", "precision", "derived_concurrency", "cpu_fallback", "repo_ids", "display_name", "backend", "free_memory_bytes")
     ENGINE_FIELD_NUMBER: _ClassVar[int]
     MODEL_ID_FIELD_NUMBER: _ClassVar[int]
     OPERATIONS_FIELD_NUMBER: _ClassVar[int]
@@ -107,6 +107,8 @@ class ModelCapability(_message.Message):
     CPU_FALLBACK_FIELD_NUMBER: _ClassVar[int]
     REPO_IDS_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
+    BACKEND_FIELD_NUMBER: _ClassVar[int]
+    FREE_MEMORY_BYTES_FIELD_NUMBER: _ClassVar[int]
     engine: str
     model_id: str
     operations: _containers.RepeatedScalarFieldContainer[str]
@@ -120,7 +122,9 @@ class ModelCapability(_message.Message):
     cpu_fallback: bool
     repo_ids: _containers.RepeatedScalarFieldContainer[str]
     display_name: str
-    def __init__(self, engine: _Optional[str] = ..., model_id: _Optional[str] = ..., operations: _Optional[_Iterable[str]] = ..., supported: _Optional[bool] = ..., installed: _Optional[bool] = ..., downloaded: _Optional[bool] = ..., resident: _Optional[bool] = ..., min_memory_bytes: _Optional[int] = ..., precision: _Optional[str] = ..., derived_concurrency: _Optional[int] = ..., cpu_fallback: _Optional[bool] = ..., repo_ids: _Optional[_Iterable[str]] = ..., display_name: _Optional[str] = ...) -> None: ...
+    backend: str
+    free_memory_bytes: int
+    def __init__(self, engine: _Optional[str] = ..., model_id: _Optional[str] = ..., operations: _Optional[_Iterable[str]] = ..., supported: _Optional[bool] = ..., installed: _Optional[bool] = ..., downloaded: _Optional[bool] = ..., resident: _Optional[bool] = ..., min_memory_bytes: _Optional[int] = ..., precision: _Optional[str] = ..., derived_concurrency: _Optional[int] = ..., cpu_fallback: _Optional[bool] = ..., repo_ids: _Optional[_Iterable[str]] = ..., display_name: _Optional[str] = ..., backend: _Optional[str] = ..., free_memory_bytes: _Optional[int] = ...) -> None: ...
 
 class RegisterRequest(_message.Message):
     __slots__ = ("envelope", "protocol_version_min", "protocol_version_max", "enrollment_token", "worker_id", "public_key", "challenge_signature", "challenge", "host", "capabilities", "max_concurrent_tasks", "in_flight", "completed_unacked", "key_id", "nonce", "labels", "features")

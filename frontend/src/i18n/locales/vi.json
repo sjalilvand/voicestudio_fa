@@ -822,6 +822,7 @@
     "routingRemote": "Từ xa",
     "routingUnknown": "Không xác định",
     "routingEffectiveChip": "Chạy trên {{device}} trên máy này",
+    "gpuVulkan": "Vulkan",
     "routingCaveatTitle": "Đã chọn GPU nhưng: {{reason}}",
     "selectCpuFallback": "{{engine}}: đang chạy trên CPU — {{reason}}",
     "selectWithCaveat": "Đã chuyển sang {{engine}} — {{reason}}",
