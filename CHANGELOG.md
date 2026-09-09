@@ -9,6 +9,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- A download that fails because the folder sits behind a mount point Windows will not cross now says so, and where to move it (#1957)
 - The floating dictation bubble adds pause, resume, stop, close, and a multiline preview (#1952)
 - Transcriptions checks model readiness and offers an inline download and shortcut hints (#1952)
 - Transcriptions' missing-model prompt lists every dictation model by accuracy vs latency, languages and size, so you install the one that fits — or switch to one already on disk (#1952)
