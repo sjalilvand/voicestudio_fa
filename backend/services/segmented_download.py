@@ -29,6 +29,14 @@ import httpx
 _HF_AUTH_HOSTS = ("huggingface.co", "hf.co")
 _DEFAULT_CONNECTIONS = 8
 _MIN_SEGMENT_BYTES = 4 * 1024 * 1024   # don't split below this — overhead > gain
+# Cap on a single segment. Progress is committed to the manifest only when a
+# whole segment lands, so the segment size is also the MOST bytes a dropped
+# connection can throw away. Sizing segments as size/num_connections made that
+# ~100 MB on an 800 MB blob: on a link that drops every ~50 MB no segment ever
+# completed, the manifest was never written, and every retry restarted from
+# zero (#1224 follow-up). Bounded segments turn the same flaky link into steady
+# forward progress.
+_MAX_SEGMENT_BYTES = 16 * 1024 * 1024
 _READ_CHUNK = 1024 * 1024
 
 
@@ -67,8 +75,16 @@ async def _resolve(client: httpx.AsyncClient, url: str, token: Optional[str], ma
 
 
 def _plan_segments(size: int, num_connections: int) -> list[tuple[int, int]]:
+    """Byte ranges to fetch, each at most ``_MAX_SEGMENT_BYTES``.
+
+    ``num_connections`` controls how many run at once (see the semaphore in
+    :func:`segmented_download`), NOT how many segments exist — a large file is
+    split into many bounded segments so each one commits to the manifest
+    quickly and a dropped connection costs at most one segment.
+    """
     n = max(1, min(num_connections, max(1, size // _MIN_SEGMENT_BYTES)))
     step = -(-size // n)  # ceil
+    step = max(_MIN_SEGMENT_BYTES, min(step, _MAX_SEGMENT_BYTES))
     segs = []
     start = 0
     while start < size:
@@ -143,6 +159,10 @@ async def segmented_download(
             _preallocate(part, size)
             segments = [s for s in _plan_segments(size, num_connections) if s not in done]
             lock = asyncio.Lock()
+            # Segments are bounded, so a big file yields many more of them than
+            # there are connections. The semaphore — not the segment count — is
+            # what keeps concurrency at num_connections.
+            sem = asyncio.Semaphore(max(1, num_connections))
 
             async def _fetch(seg: tuple[int, int]):
                 start, end = seg
@@ -169,8 +189,12 @@ async def segmented_download(
                     done.add(seg)
                     _save_done(part, size, done)
 
+            async def _fetch_limited(seg: tuple[int, int]):
+                async with sem:
+                    await _fetch(seg)
+
             if segments:
-                await asyncio.gather(*(_fetch(s) for s in segments))
+                await asyncio.gather(*(_fetch_limited(s) for s in segments))
 
         # ── verify ──────────────────────────────────────────────────────
         actual = os.path.getsize(part)

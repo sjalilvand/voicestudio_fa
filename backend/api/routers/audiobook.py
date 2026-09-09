@@ -718,6 +718,10 @@ def _remote_chapter_call(chapter, *, engine_id, default_voice, voice_map,
         "expressive": opts.to_manifest(), "watermark": bool(watermark_enabled()),
     }
     signature = hashlib.sha256(json.dumps(params, sort_keys=True, default=str).encode()).hexdigest()
+    # The worker synthesizes from ``spans``, but the gateway and scheduler read
+    # top-level ``text`` to scale the remote execution deadline. Add this after
+    # the signature so existing content-addressed remote cache keys still hit.
+    params["text"] = "\n".join(row["text"] for row in rows)
     wav_path = os.path.join(cache_dir, f"remote-{signature}.wav")
 
     def decode(result):
@@ -739,7 +743,7 @@ async def _run_chapter(chapter, *, operation="audiobook", decision, job, default
                        voice_map, lexicon, cache_dir):
     """Run one chapter through the gateway; local preparation stays lazy."""
     from services import gpu_gateway
-    from services.tts_backend import active_backend_id
+    from services.tts_backend import active_backend_id, get_backend_class
 
     engine_id = active_backend_id()
     remote, remote_cache = _remote_chapter_call(
@@ -753,15 +757,27 @@ async def _run_chapter(chapter, *, operation="audiobook", decision, job, default
         return remote_cache, float(info.duration), True, None
 
     async def prepare_local():
+        from services.model_manager import generate_timeout_s
+
         synth, sr, resolve, local_engine = await _prepare_synth(
             default_voice, language=language, opts=opts, voice_map=voice_map
         )
+        try:
+            timeout_engine = get_backend_class(local_engine)
+        except ValueError:
+            # Tests and third-party integrations may inject a synth under a
+            # non-catalogue id. Keep the canonical host/text policy available;
+            # registered production engines still add their routing metadata.
+            timeout_engine = None
         return gpu_gateway.LocalCall(
             fn=lambda: _render_chapter_cached(
                 chapter, synth, sr, local_engine, resolve, cache_dir, lexicon,
                 language, opts, voice_map,
             ),
             what="Audiobook chapter",
+            timeout=generate_timeout_s(
+                remote.params["text"], engine=timeout_engine
+            ),
         )
 
     return await gpu_gateway.run(

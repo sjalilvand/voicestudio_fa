@@ -5,6 +5,12 @@ quirks. Select engines in **Model Catalogue → Engines** (or quick-switch with
 <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>E</kbd>), or pin one with
 `OMNIVOICE_TTS_BACKEND` / `OMNIVOICE_ASR_BACKEND`.
 
+When an engine reports itself unavailable, expand its row's **Why?** panel and
+use **Learn more** to jump straight to that engine's page here. The row's own
+message stays deliberately generic — an availability probe can carry local
+paths or credentials, so it is never shown verbatim — and the page below is
+where the actual requirements and setup steps live.
+
 The compute device (CUDA/ROCm/MPS/CPU) is auto-detected; pin it under
 **Settings → Performance & Device** (or `OMNIVOICE_DEVICE`) if auto-detect
 picks wrong — see [performance](../performance.md).
@@ -36,7 +42,7 @@ approval), [Windows](../install/windows.md), [Linux](../install/linux.md),
 | Supertonic-3 | [supertonic3](supertonic3.md) | CPU | — (7 preset voices) | `uv sync --extra supertonic` + license |
 | MOSS-TTS-v1.5 (8B) | [moss-tts-v15](moss-tts-v15.md) | CUDA · CPU | ✅ | clone + env var |
 | dots.tts (2B) | [dots-tts](dots-tts.md) | CUDA · CPU (not Windows) | ✅ | clone + env var |
-| OmniVoice (subprocess) | [omnivoice-subprocess](omnivoice-subprocess.md) | CUDA · MPS · CPU | ✅ | opt-in pick, no install |
+| OmniVoice (subprocess) | [omnivoice-subprocess](omnivoice-subprocess.md) | CUDA · MPS · CPU | ✅ | opt-in pick off MPS; automatic via default OmniVoice on MPS |
 | PocketTTS (Kyutai) | [pockettts](pockettts.md) | CPU (not Intel Mac) | ✅ | `uv sync --extra pockettts` + license |
 | Confucius4-TTS | [confucius4-tts](confucius4-tts.md) | CUDA · CPU | ✅ | clone + env var |
 | audio.cpp (Breeze-TTS-2) | [audio-cpp](audio-cpp.md) | CPU + Vulkan/Metal/CUDA/HIP/ROCm where compiled | ✅ + voice design | prebuilt binary + env var (weights research/non-commercial) |

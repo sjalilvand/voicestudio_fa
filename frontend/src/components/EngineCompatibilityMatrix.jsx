@@ -26,6 +26,7 @@ import {
 import { listLoadedModels, unloadLoadedModel } from '../api/system';
 import { useAppStore } from '../store';
 import { copyText } from '../utils/copyText';
+import { openExternal } from '../api/external';
 import { ChevronRight } from 'lucide-react';
 import { Badge, Button, Select, Table, Tabs } from '../ui';
 import { cn } from '@/lib/utils';
@@ -243,6 +244,9 @@ function normalizeEntry(entry) {
       Array.isArray(entry.gpu_compat) && entry.gpu_compat.length > 0 ? entry.gpu_compat : ['cpu'],
     // Copy-paste `export VAR=...` line for a path-gated opt-in engine, or null.
     setup_snippet: entry.setup_snippet || null,
+    // Where to send a user whose engine is unavailable (#1866). Registry
+    // constant, so it is present even when reason/last_error are placeholders.
+    docs_url: entry.docs_url || null,
     // The backend's sidecar provisioner can install this engine in-app —
     // renders an Install button; the manual snippet demotes to a fallback.
     one_click_install: entry.one_click_install === true,
@@ -1495,6 +1499,25 @@ export default function EngineCompatibilityMatrix({
                         >
                           {t('engines.lastError', { error: b.last_error })}
                         </span>
+                      )}
+                      {/* #1866: the reason the backend computed is replaced by
+                        a fixed string before it reaches here, so the row's own
+                        text can only ever be generic. The engine's doc page is
+                        the one place that does explain it, and nothing linked
+                        to it. Reuses the `common.learn_more` key InfoHint
+                        already renders for the MCP and Remote GPU panels, so
+                        no new string is needed. No trailing arrow glyph:
+                        InfoHint hardcodes one, and a bare "→" points the
+                        wrong way once the app is in an RTL locale. */}
+                      {b.docs_url && (
+                        <button
+                          type="button"
+                          className="engine-matrix__docs cursor-pointer self-start border-0 bg-transparent p-0 text-[11px] font-semibold text-[color:var(--chrome-accent)] hover:underline"
+                          data-testid={`engine-docs-${b.id}`}
+                          onClick={() => openExternal(b.docs_url)}
+                        >
+                          {t('common.learn_more', 'Learn more')}
+                        </button>
                       )}
                       {hasDiskDetails &&
                         (() => {

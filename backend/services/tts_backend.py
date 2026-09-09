@@ -2392,6 +2392,51 @@ _SETUP_SNIPPETS: dict[str, str] = {
 }
 
 
+# Per-engine documentation page, as a repo-relative path (#1866). Every one of
+# these docs already exists and several are CI-guarded against the code they
+# describe (e.g. tests/test_cosyvoice_install_docs.py), but nothing in the app
+# linked to them, so the point of failure — an unavailable engine row — was a
+# dead end. Paths rather than URLs so tests/test_engine_docs.py can assert the
+# file is really there; the URL is built once, at read time, from core.links.
+#
+# Keyed on the engine id, so it stays correct when the doc filename does not
+# match the id (indextts2 → indextts.md).
+_ENGINE_DOCS: dict[str, str] = {
+    "omnivoice":            "docs/engines/omnivoice.md",
+    "omnivoice-subprocess": "docs/engines/omnivoice-subprocess.md",
+    "omnivoice-gguf":       "docs/engines/omnivoice-gguf.md",
+    "cosyvoice":            "docs/engines/cosyvoice.md",
+    "kittentts":            "docs/engines/kittentts.md",
+    "mlx-audio":            "docs/engines/mlx-audio.md",
+    "voxcpm2":              "docs/engines/voxcpm2.md",
+    "moss-tts-nano":        "docs/engines/moss-tts-nano.md",
+    "moss-tts-v15":         "docs/engines/moss-tts-v15.md",
+    "dots-tts":             "docs/engines/dots-tts.md",
+    "confucius4-tts":       "docs/engines/confucius4-tts.md",
+    "indextts2":            "docs/engines/indextts.md",
+    "gpt-sovits":           "docs/engines/gpt-sovits.md",
+    "sherpa-onnx":          "docs/engines/sherpa-onnx.md",
+    "supertonic3":          "docs/engines/supertonic3.md",
+    "pockettts":            "docs/engines/pockettts.md",
+    "audiocpp":             "docs/engines/audio-cpp.md",
+}
+
+
+def _engine_docs_url(bid: str) -> str | None:
+    """Public URL of this engine's doc page, or None when it has none.
+
+    VoiceStudio-owned constant either way: the path comes from the registry
+    above and the base from :mod:`core.links`, so no part of it is derived
+    from an engine probe. That is what lets it cross the public boundary
+    intact (see api.public_engine_metadata).
+    """
+    path = _ENGINE_DOCS.get(bid)
+    if not path:
+        return None
+    from core import links
+    return f"{links.PROJECT_REPO_BLOB_MAIN}/{path}"
+
+
 # Short, readable labels for mlx-audio's curated models (#981) — surfaced in
 # the Model Catalogue → Engines model picker so users see more than a bare key.
 # Single-sourced here rather than on MLXAudioBackend.CURATED_MODELS itself so
@@ -2424,8 +2469,15 @@ def _sidecar_installable_ids() -> frozenset[str]:
         return frozenset()
 
 
-def list_backends() -> list[dict]:
-    """Enumerate every registered backend with its availability state.
+def list_backends(*, include_hidden: bool = False) -> list[dict]:
+    """Enumerate the engine catalogue with each backend's availability state.
+
+    On MPS, the canonical ``omnivoice`` id already resolves to the killable
+    OmniVoice sidecar. The explicit ``omnivoice-subprocess`` compatibility id
+    is therefore omitted from the normal catalogue so the picker does not
+    advertise two choices with the same runtime behavior. Internal callers
+    that must validate or preserve a stored compatibility id can pass
+    ``include_hidden=True``.
 
     Per-entry shape (ENGINE-05 + ENGINE-06):
 
@@ -2439,6 +2491,7 @@ def list_backends() -> list[dict]:
                                                     #   e.g. VoxCPM2's >=2.0.3 upgrade hint)
           "install_hint":   Optional[str],
           "setup_snippet":  Optional[str],          # exact `export VAR=...` for path-gated opt-in engines
+          "docs_url":       Optional[str],          # this engine's doc page (registry-authored constant)
           "one_click_install": bool,                # services.sidecar_install can provision it in-app
           "last_error":     Optional[str],          # cached most-recent failure
           "isolation_mode": "in-process" | "subprocess",
@@ -2477,6 +2530,12 @@ def list_backends() -> list[dict]:
 
     out: list[dict] = []
     for bid, cls in _REGISTRY.items():
+        if (
+            not include_hidden
+            and caps.family == "mps"
+            and bid == "omnivoice-subprocess"
+        ):
+            continue
         cls = _effective_backend_class(bid, cls, caps.family)
         try:
             ok, msg = cls.is_available()
@@ -2551,6 +2610,10 @@ def list_backends() -> list[dict]:
             "install_hint": _INSTALL_HINTS.get(bid),
             # Exact `export VAR=...` line for path-gated opt-in engines, or None.
             "setup_snippet": _SETUP_SNIPPETS.get(bid),
+            # This engine's doc page (#1866). Registry-authored constant, so it
+            # survives api.public_engine_metadata and gives an unavailable row
+            # somewhere to send the user.
+            "docs_url": _engine_docs_url(bid),
             # True when services.sidecar_install can provision this engine
             # in-app (Settings renders an Install button instead of leading
             # with the manual setup snippet).
@@ -2650,7 +2713,9 @@ def active_routing() -> dict | None:
     """
     try:
         active = active_backend_id()
-        for b in list_backends():
+        # The MPS picker intentionally hides the redundant compatibility id,
+        # but routing must still describe a saved or environment-pinned id.
+        for b in list_backends(include_hidden=True):
             if b.get("id") == active:
                 return {
                     "engine": active,

@@ -75,8 +75,9 @@ describe('SetupWizard analytics consent step', () => {
     expect(await screen.findByText(/Improve VoiceStudio/i)).toBeInTheDocument();
 
     await advancePastModels();
-    // Headline appears (masthead subtitle + section head + card title).
-    expect((await screen.findAllByText(/Help improve VoiceStudio\?/i)).length).toBeGreaterThan(0);
+    // The title renders exactly once (the card's own heading) — the masthead
+    // subtitle and the section head no longer repeat it (#1855).
+    expect(await screen.findAllByText(/Help improve VoiceStudio\?/i)).toHaveLength(1);
     // Two equal-weight choices, no preselected default.
     expect(screen.getByTestId('analytics-consent-yes')).toBeInTheDocument();
     expect(screen.getByTestId('analytics-consent-no')).toBeInTheDocument();
@@ -144,6 +145,14 @@ describe('SetupWizard analytics consent step', () => {
     expect(await screen.findByText(/Enter studio/i)).toBeInTheDocument();
     expect(screen.queryByText(/Help improve VoiceStudio\?/i)).not.toBeInTheDocument();
     expect(apiFetch).not.toHaveBeenCalled();
+    // The dictation step's rail label renders exactly once, and it's a
+    // distinct string from the demo card's own title — the masthead
+    // subtitle no longer repeats it, the redundant section head above the
+    // demo was removed (#1855), and the rail label itself was made distinct
+    // from the demo's title (#1930). DictationDemo is mocked to null here,
+    // so the rail/card-title distinctness itself is covered by the real
+    // (unmocked) render in SetupWizardDictation.test.jsx.
+    expect(screen.getAllByText('Dictation')).toHaveLength(1);
   });
 
   it('shows NO consent step when the user was already asked', async () => {

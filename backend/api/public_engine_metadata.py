@@ -36,7 +36,11 @@ def public_backends(entries: list[dict]) -> list[dict]:
     """Copy registry entries while replacing service diagnostics.
 
     Availability probes may contain exception text, local paths, tracebacks, or
-    credentials. Installation hints are registry-authored and remain intact.
+    credentials. Registry-authored fields are not probe output and remain
+    intact: ``install_hint``, ``setup_snippet`` and ``docs_url`` are all
+    VoiceStudio-owned constants keyed on the engine id, so an unavailable row
+    still has something actionable to show and somewhere to send the user
+    (#1866) even though ``reason``/``last_error`` are replaced here.
     """
     safe: list[dict] = []
     for entry in entries:

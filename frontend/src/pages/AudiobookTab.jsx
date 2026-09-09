@@ -4,6 +4,7 @@ import { FileText, Users, BookText } from 'lucide-react';
 import {
   audiobookPlan,
   audiobookGenerate,
+  audiobookResume,
   audiobookUploadCover,
   audiobookPreviewChapter,
   audiobookImport,
@@ -23,6 +24,7 @@ import AudiobookHero from '../components/audiobook/AudiobookHero';
 import AudiobookScriptPanel from '../components/audiobook/AudiobookScriptPanel';
 import AudiobookVoicesPanel from '../components/audiobook/AudiobookVoicesPanel';
 import AudiobookBookPanel from '../components/audiobook/AudiobookBookPanel';
+import AudiobookRecovery from '../components/audiobook/AudiobookRecovery';
 import { useAudiobookLexicon } from '../hooks/useAudiobookLexicon';
 import { parseCastNames, validateScript } from '../utils/audiobookScript';
 import { SAMPLE_AUDIOBOOK_SCRIPT } from '../data/sampleAudiobook';
@@ -273,47 +275,8 @@ export default function AudiobookTab({ profiles = [] }) {
     [text, defaultVoice, lex, overrides, language, voiceMapArg],
   );
 
-  const onCreate = useCallback(async () => {
-    setError('');
-    setOutput('');
-    setDone(null);
-    setStopped(false);
-    setChapters([]);
-    chaptersRef.current = [];
-    setAssembling(false);
-    setGenerating(true);
-    abortRef.current = false;
-    // A per-generation AbortController: Stop aborts it, which cancels the fetch
-    // end-to-end so the backend sees the disconnect and stops rendering (#1216).
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-    try {
-      let cover_path = null;
-      if (coverFile) {
-        cover_path = (await audiobookUploadCover(coverFile)).path;
-      }
-      // Only send metadata fields the user actually filled in.
-      const metadata = Object.fromEntries(Object.entries(meta).filter(([, v]) => v && v.trim()));
-      const lexicon = lexDict();
-      const res = await audiobookGenerate(
-        {
-          text,
-          default_voice: defaultVoice || null,
-          format,
-          loudness: loudness === 'off' ? null : loudness,
-          cover_path,
-          metadata: Object.keys(metadata).length ? metadata : null,
-          lexicon: Object.keys(lexicon).length ? lexicon : null,
-          // Multi-voice cast map (#1217): [voice:NAME] → profile id. Absent when
-          // empty, so a single-voice book stays byte-identical to before.
-          voice_map: voiceMapArg,
-          // language pick + expressive/quality overrides + cache opt-out (#1208).
-          // Only non-default values are emitted, so an untouched panel keeps the
-          // request byte-identical to before.
-          ...overridesToRequest(overrides, language),
-        },
-        { signal: controller.signal },
-      );
+  const consumeGeneration = useCallback(
+    async (res, snapshotScript = null) => {
       await consumeLongformStream(
         res,
         (evt) => {
@@ -360,7 +323,8 @@ export default function AudiobookTab({ profiles = [] }) {
           } else if (evt.type === 'stopped') {
             setStopped(true);
           } else if (evt.type === 'done') {
-            setOutputSnapshot(evt.output, text, chaptersRef.current);
+            if (snapshotScript === null) setOutput(evt.output);
+            else setOutputSnapshot(evt.output, snapshotScript, chaptersRef.current);
             setDone({
               cached_chapters: evt.cached_chapters || 0,
               failed_chapters: evt.failed_chapters || [],
@@ -369,10 +333,56 @@ export default function AudiobookTab({ profiles = [] }) {
             setError(evt.error || 'synthesis failed');
           }
         },
-        { isAborted: () => abortRef.current, signal: controller.signal },
+        { isAborted: () => abortRef.current, signal: abortControllerRef.current?.signal },
       );
       // consumeLongformStream returns (never throws) on a caller-initiated stop.
       if (abortRef.current) setStopped(true);
+    },
+    [setOutput, setOutputSnapshot],
+  );
+
+  const onCreate = useCallback(async () => {
+    setError('');
+    setOutput('');
+    setDone(null);
+    setStopped(false);
+    setChapters([]);
+    chaptersRef.current = [];
+    setAssembling(false);
+    setGenerating(true);
+    abortRef.current = false;
+    // A per-generation AbortController: Stop aborts it, which cancels the fetch
+    // end-to-end so the backend sees the disconnect and stops rendering (#1216).
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    try {
+      let cover_path = null;
+      if (coverFile) {
+        cover_path = (await audiobookUploadCover(coverFile)).path;
+      }
+      // Only send metadata fields the user actually filled in.
+      const metadata = Object.fromEntries(Object.entries(meta).filter(([, v]) => v && v.trim()));
+      const lexicon = lexDict();
+      const res = await audiobookGenerate(
+        {
+          text,
+          default_voice: defaultVoice || null,
+          format,
+          loudness: loudness === 'off' ? null : loudness,
+          cover_path,
+          metadata: Object.keys(metadata).length ? metadata : null,
+          lexicon: Object.keys(lexicon).length ? lexicon : null,
+          // Multi-voice cast map (#1217): [voice:NAME] → profile id. Absent when
+          // empty, so a single-voice book stays byte-identical to before.
+          voice_map: voiceMapArg,
+          // language pick + expressive/quality overrides + cache opt-out (#1208).
+          // Only non-default values are emitted, so an untouched panel keeps the
+          // request byte-identical to before.
+          ...overridesToRequest(overrides, language),
+        },
+        { signal: controller.signal },
+      );
+      await consumeGeneration(res, text);
     } catch (e) {
       // A Stop that lands before/around the first byte aborts the fetch →
       // AbortError. Treat every self-initiated abort as "Stopped", not an error.
@@ -394,8 +404,44 @@ export default function AudiobookTab({ profiles = [] }) {
     overrides,
     language,
     voiceMapArg,
-    setOutputSnapshot,
+    consumeGeneration,
   ]);
+
+  const onResume = useCallback(
+    async (jobId) => {
+      let accepted = false;
+      setError('');
+      setOutput('');
+      setDone(null);
+      setStopped(false);
+      setChapters([]);
+      chaptersRef.current = [];
+      setAssembling(false);
+      setGenerating(true);
+      abortRef.current = false;
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      try {
+        const res = await audiobookResume(jobId, { signal: controller.signal });
+        accepted = true;
+        // The manifest contains the original chapter plan, but the endpoint does
+        // not expose its source script. Keep playback, but do not attach whatever
+        // script happens to be open now as misleading synced lyrics.
+        await consumeGeneration(res);
+      } catch (error) {
+        if (abortRef.current || error?.name === 'AbortError') setStopped(true);
+        else {
+          setError(t('audiobook.resume_failed', { message: error?.message || String(error) }));
+        }
+      } finally {
+        setGenerating(false);
+        setAssembling(false);
+        abortControllerRef.current = null;
+      }
+      return accepted;
+    },
+    [consumeGeneration, setOutput, t],
+  );
 
   // Stop = abort the fetch (cancels the request → backend disconnect) AND flip
   // the isAborted flag the stream consumer polls, so the read loop releases too.
@@ -453,6 +499,8 @@ export default function AudiobookTab({ profiles = [] }) {
         onCreate={onCreate}
         onStop={onStop}
       />
+
+      <AudiobookRecovery t={t} generating={generating} onResume={onResume} />
 
       <Tabs
         value={bookTab}

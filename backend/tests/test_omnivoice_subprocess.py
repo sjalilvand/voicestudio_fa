@@ -160,6 +160,96 @@ def test_engine_catalogue_reports_effective_mps_isolation(monkeypatch):
     assert row["isolation_mode"] == "subprocess"
 
 
+def test_mps_catalogue_hides_redundant_explicit_omnivoice_sidecar(monkeypatch):
+    """The picker advertises the canonical id, while legacy callers retain both."""
+    from core.device_caps import HostCaps
+    from services import tts_backend
+
+    monkeypatch.setattr(
+        tts_backend,
+        "_REGISTRY",
+        {
+            "omnivoice": OmniVoiceBackend,
+            "omnivoice-subprocess": OmniVoiceSubprocessBackend,
+        },
+    )
+    monkeypatch.setattr(
+        "core.device_caps.detect_host_caps",
+        lambda: HostCaps(family="mps", available_families=("mps", "cpu")),
+    )
+    monkeypatch.setattr(
+        OmniVoiceSubprocessBackend,
+        "is_available",
+        classmethod(lambda cls: (True, "ready")),
+    )
+
+    picker_ids = {item["id"] for item in list_backends()}
+    assert picker_ids == {"omnivoice"}
+    assert get_backend_class("omnivoice") is OmniVoiceMPSSubprocessBackend
+
+    all_ids = {item["id"] for item in list_backends(include_hidden=True)}
+    assert all_ids == {"omnivoice", "omnivoice-subprocess"}
+    assert get_backend_class("omnivoice-subprocess") is OmniVoiceSubprocessBackend
+
+
+def test_mps_active_routing_preserves_hidden_compatibility_id(monkeypatch):
+    from core.device_caps import HostCaps
+    from services import tts_backend
+
+    monkeypatch.setattr(
+        tts_backend,
+        "_REGISTRY",
+        {"omnivoice-subprocess": OmniVoiceSubprocessBackend},
+    )
+    monkeypatch.setattr(tts_backend, "active_backend_id", lambda: "omnivoice-subprocess")
+    monkeypatch.setattr(
+        "core.device_caps.detect_host_caps",
+        lambda: HostCaps(family="mps", available_families=("mps", "cpu")),
+    )
+    monkeypatch.setattr(
+        OmniVoiceSubprocessBackend,
+        "is_available",
+        classmethod(lambda cls: (True, "ready")),
+    )
+
+    assert tts_backend.active_routing() == {
+        "engine": "omnivoice-subprocess",
+        "available": True,
+        "effective_device": "mps",
+        "routing_status": "accelerated",
+        "routing_reason": None,
+    }
+
+
+@pytest.mark.parametrize("family", ("cuda", "cpu"))
+def test_non_mps_catalogue_keeps_explicit_omnivoice_sidecar(monkeypatch, family):
+    from core.device_caps import HostCaps
+    from services import tts_backend
+
+    monkeypatch.setattr(
+        tts_backend,
+        "_REGISTRY",
+        {
+            "omnivoice": OmniVoiceBackend,
+            "omnivoice-subprocess": OmniVoiceSubprocessBackend,
+        },
+    )
+    monkeypatch.setattr(
+        "core.device_caps.detect_host_caps",
+        lambda: HostCaps(family=family, available_families=(family, "cpu")),
+    )
+    monkeypatch.setattr(
+        OmniVoiceSubprocessBackend,
+        "is_available",
+        classmethod(lambda cls: (True, "ready")),
+    )
+
+    assert {item["id"] for item in list_backends()} == {
+        "omnivoice",
+        "omnivoice-subprocess",
+    }
+
+
 def test_mps_startup_does_not_preload_native_model(monkeypatch):
     from core.device_caps import HostCaps
     from services import model_manager

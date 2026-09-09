@@ -38,7 +38,19 @@ To keep that path **fast** despite Xet being off, the app runs a built-in
 **multi-connection (segmented) downloader on by default** — it fetches each file
 over parallel byte-ranges (IDM/uGet style), so the legacy-LFS path is no longer
 single-stream. It reports real live speed/ETA and **falls back to the normal
-download on any error**, so it can never compromise a correct install. Adding a
+download**, so it can never compromise a correct install.
+
+Ranges are capped at 16 MB each and eight of them are in flight at a time, so a
+completed range is committed to a resume manifest every few seconds. On a
+connection that drops mid-transfer, only the ranges in flight are refetched: the
+attempt is retried and the accelerator resumes from its manifest rather than
+starting the file over. An origin that does not serve ranges at all is handled
+inside the accelerator as a single stream, not as a failure.
+
+The accelerator is disabled for the rest of the install — handing over to the
+plain `snapshot_download` path — when it fails for a reason that is not
+transient network trouble, and on the install's final attempt, so it can never
+be the reason an install fails outright. Adding a
 free Hugging Face token (first-run setup, or Settings → Credentials) makes this
 faster still — authenticated downloads get higher rate limits and fewer stalls.
 To force the old single-stream path, set `OMNIVOICE_SEGMENTED_DOWNLOAD=0`.
