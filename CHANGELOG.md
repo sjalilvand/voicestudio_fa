@@ -10,6 +10,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 - The Accessibility prompt no longer floats over first-run setup and every other app until you grant it (#1845, #1886)
+- The last onboarding step offers to install a speech-to-text model instead of failing three times when none is installed (#1856)
 - A download that fails because the folder sits behind a mount point Windows will not cross now says so, and where to move it (#1957)
 - A GPU that is merely short on free memory is no longer told to reinstall its drivers (#1812) — thanks @michaelhuamanflores!
 - An error thrown by a browser extension is filtered on Safari and the macOS app too, not only on Chromium (#1901) — thanks @Chang-Jin-Lee!

@@ -26,6 +26,8 @@ import { useTranslation } from 'react-i18next';
 import { API, apiFetch } from '../api/client';
 import { asrMissingPayload, toastAsrModelMissing } from '../utils/asrModelMissing';
 import { useEffectiveDictationShortcut } from '../hooks/useEffectiveDictationShortcut';
+import { useDictationReadiness } from '../hooks/useDictationReadiness';
+import AsrModelChooser from './AsrModelChooser';
 import { Button } from '../ui';
 
 // Shared status-pill base; per-state color/bg/border appended below. The gruvbox
@@ -66,6 +68,12 @@ export default function DictationDemo({ embedded = false }) {
   const [hotkeyState, setHotkeyState] = useState('unknown'); // unknown | registered | verified
   const desktop = isTauri();
   const { info: shortcut } = useEffectiveDictationShortcut(desktop);
+  // Transcribing a sample needs a speech-to-text model, and the mandatory-only
+  // install path ships none. Rendering the cards regardless meant the final
+  // onboarding step opened with one hard error per card and invited the user
+  // to press a hotkey that could not work (#1856). Probed for the same reason
+  // the demo already probes for its sample WAVs below.
+  const readiness = useDictationReadiness();
   const [playingId, setPlayingId] = useState(null);
   const [transcripts, setTranscripts] = useState({}); // {scriptId: {state, text, error}}
   // null = probing, true/false once the demo assets are confirmed present.
@@ -222,7 +230,11 @@ export default function DictationDemo({ embedded = false }) {
   // depend on the bundled WAVs, which installs don't always ship. Hiding
   // the whole panel left the wizard's "Try dictation" act completely
   // blank on every such install (#119/#124 follow-up, refined).
-  const showScripts = assetsAvailable !== false;
+  // `checking` still shows the cards: the probe resolves in well under a
+  // second and flashing the install panel first would be worse than a brief
+  // wait. Only a confirmed-missing model swaps them out.
+  const asrMissing = readiness.phase === 'missing';
+  const showScripts = assetsAvailable !== false && !asrMissing;
 
   return (
     <section
@@ -249,6 +261,18 @@ export default function DictationDemo({ embedded = false }) {
       </p>
 
       <audio ref={audioRef} onEnded={() => setPlayingId(null)} preload="none" />
+
+      {asrMissing && (
+        <div className="flex flex-col gap-2 rounded-[8px] border border-border bg-[rgba(0,0,0,0.15)] px-[12px] py-[10px]">
+          <p className="m-0 text-[11px] leading-[1.45] text-fg-muted">{t('asr_missing.message')}</p>
+          <AsrModelChooser
+            fallback={readiness.missing?.recommended}
+            onInstall={readiness.install}
+            onSelect={readiness.select}
+            disabled={readiness.phase === 'installing'}
+          />
+        </div>
+      )}
 
       {showScripts && (
         <div className="dictation-demo__scripts grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-[10px]">
