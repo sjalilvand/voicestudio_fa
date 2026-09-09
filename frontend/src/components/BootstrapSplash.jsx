@@ -131,7 +131,18 @@ const INSTALL_STAGES = ['downloading_uv', 'creating_venv', 'installing_deps', 'a
 // anywhere else means a new attempt began (Retry, or a Rust-side restart).
 const RESTART_STAGES = new Set(['checking', 'awaiting_setup']);
 
-const MAX_LOG_LINES = 200;
+// How many log lines the <pre> shows. `logs` state holds exactly this tail and
+// nothing more, so the per-event array copy stays bounded no matter how long a
+// bootstrap runs.
+//
+// The FULL run lives in `allLogsRef` instead (#1847). Four consumers need every
+// line — the Activity counter, the Copy button, the actionable failure hints and
+// the unrecoverable-retry gate — and capping the state they read meant a cold
+// install silently destroyed its own early output. A ref rather than state
+// because appending to it is O(1); `totalLines` is what makes a new line
+// re-render. It lives for exactly one bootstrap: both retry paths clear it, and
+// App.jsx unmounts the splash the moment the stage flips to 'ready'.
+const VISIBLE_LOG_LINES = 200;
 
 /** Scan logs + error message for known failure patterns and return i18n keys
  *  for actionable hints (resolved with `t(...)` at render — English defaults
@@ -463,6 +474,12 @@ export function BootstrapSplash({ stage, message }) {
   // Wall-clock start of the current attempt. A retry restarts the bootstrap;
   // log lines from the previous attempt must not count toward this one.
   const [attemptStart, setAttemptStart] = useState(0);
+  // Every line of this bootstrap. `logs` above is only the rendered tail.
+  const [totalLines, setTotalLines] = useState(0);
+  const allLogsRef = useRef([]);
+  // Backfill and the live listener can overlap by a few lines at handover.
+  // Dedup guards that seam and nothing else — see the listener.
+  const handoverDoneRef = useRef(false);
   const logRef = useRef(null);
   const prevStageRef = useRef(stage); // previous stage, for restart detection
   // True between a retry WE initiated and the poll catching up to it, so the
@@ -484,17 +501,34 @@ export function BootstrapSplash({ stage, message }) {
   // context, cf. #1847).
   const observedStages = useMemo(() => {
     const seen = new Set(polledStages);
-    for (const entry of logs) {
+    for (const entry of allLogsRef.current) {
       if (entry?.stage && (entry.t ?? 0) >= attemptStart) seen.add(entry.stage);
     }
     return seen;
-  }, [polledStages, logs, attemptStart]);
+    // totalLines is the render signal for allLogsRef, which is a ref and so
+    // cannot itself be a dependency. Reading the full run rather than the
+    // rendered tail is the point: a stage whose only evidence scrolled out of
+    // the capped tail would otherwise read as never having run (#1847).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [polledStages, totalLines, attemptStart]);
 
   const label = t(`bootstrap.${stage}`, STAGE_LABEL[stage]);
   const stepIndex = Math.max(0, STEPS.indexOf(stage));
   const isFailed = stage === 'failed';
   // Retrying an Intel-Mac install can never succeed — don't offer the dead end.
-  const isUnrecoverable = isFailed && isUnrecoverableFailure(message, logs);
+  // Reads the full run, not the rendered tail: an Intel-Mac marker printed
+  // early in a long install used to scroll out of the capped array, and the
+  // dead-end detection went with it. Only evaluated once `isFailed`, by which
+  // point no more lines are arriving.
+  const isUnrecoverable = isFailed && isUnrecoverableFailure(message, allLogsRef.current);
+
+  const resetLogs = () => {
+    allLogsRef.current = [];
+    handoverDoneRef.current = false;
+    setTotalLines(0);
+    setLogs([]);
+  };
+
   // True once any genuine install stage has been observed this session. On a
   // warm start the Rust stage jumps straight from `checking` to
   // `starting_backend` — nothing here ever fires — so the first-run install
@@ -507,10 +541,11 @@ export function BootstrapSplash({ stage, message }) {
   // starts emitting logs for the new attempt immediately, and a boundary
   // stamped at detection time would sit *after* those lines and discard them
   // as belonging to the old attempt — losing exactly the fast-stage evidence
-  // the log union exists to capture.
+  // the log union exists to capture. resetLogs() clears the full-run ref too,
+  // so a retry cannot inherit the previous attempt's lines (#1847 + #1894).
   const beginAttempt = () => {
     selfInitiatedRef.current = true;
-    setLogs([]);
+    resetLogs();
     setPolledStages(new Set());
     setAttemptStart(Date.now());
   };
@@ -639,13 +674,14 @@ export function BootstrapSplash({ stage, message }) {
         try {
           const buffered = await invoke('get_bootstrap_logs');
           if (!cancelled && Array.isArray(buffered) && buffered.length > 0) {
-            setLogs(
-              buffered.map(({ stage: s, line }) => ({
-                stage: s,
-                line,
-                t: Date.now(),
-              })),
-            );
+            const entries = buffered.map(({ stage: s, line }) => ({
+              stage: s,
+              line,
+              t: Date.now(),
+            }));
+            allLogsRef.current = entries;
+            setTotalLines(entries.length);
+            setLogs(entries.slice(-VISIBLE_LOG_LINES));
           }
         } catch {
           /* command may not exist in older builds */
@@ -656,12 +692,26 @@ export function BootstrapSplash({ stage, message }) {
           const { stage: s, line } = e.payload || {};
           if (!line) return;
           noteBootstrapLogActivity();
+          // Dedup ONLY across the backfill→live seam. The overlap it exists
+          // for can only happen on the first live event; running it for the
+          // whole bootstrap silently dropped legitimate repeats, and installer
+          // output repeats itself constantly. Telling a true repeat from a
+          // replayed one needs a sequence number from the Rust side, so the
+          // window is narrowed to where the ambiguity actually is instead of
+          // guessing for the rest of the run.
+          if (!handoverDoneRef.current) {
+            const seam = allLogsRef.current.slice(-5);
+            if (seam.some((l) => l.stage === s && l.line === line)) return;
+            handoverDoneRef.current = true;
+          }
+          const entry = { stage: s, line, t: Date.now() };
+          allLogsRef.current.push(entry);
+          setTotalLines(allLogsRef.current.length);
           setLogs((prev) => {
-            // Deduplicate against backfill by checking the last few lines.
-            const lastFew = prev.slice(-5);
-            if (lastFew.some((l) => l.stage === s && l.line === line)) return prev;
-            const next = prev.concat([{ stage: s, line, t: Date.now() }]);
-            return next.length > MAX_LOG_LINES ? next.slice(next.length - MAX_LOG_LINES) : next;
+            const next = prev.concat([entry]);
+            return next.length > VISIBLE_LOG_LINES
+              ? next.slice(next.length - VISIBLE_LOG_LINES)
+              : next;
           });
         });
         unlistenProgress = await listen('bootstrap-progress', (e) => {
@@ -702,11 +752,15 @@ export function BootstrapSplash({ stage, message }) {
     if (isFailed) setLogsOpen(true);
   }, [isFailed]);
 
+  // Serializes the WHOLE run, not the visible tail (#1847). A user filing a
+  // bootstrap bug is asked for this output, and the early lines — which stage
+  // failed first, which mirror was reached — are the ones that scrolled out.
   const handleCopyLogs = () => {
+    const all = allLogsRef.current;
     const logText =
-      logs.length === 0
+      all.length === 0
         ? 'No log output captured.'
-        : logs.map((l) => `[${l.stage}] ${l.line}`).join('\n');
+        : all.map((l) => `[${l.stage}] ${l.line}`).join('\n');
     const full =
       isFailed && message ? `ERROR: ${message}\n\n--- Bootstrap Logs ---\n${logText}` : logText;
     copyText(full)
@@ -835,7 +889,7 @@ export function BootstrapSplash({ stage, message }) {
                 <Lightbulb size={12} /> {t('bootstrap.what_to_try', 'What to try:')}
               </span>
               <ul className="mt-1.5 flex list-disc flex-col gap-1.5 pl-5 text-fg-muted">
-                {detectHints(message, logs).map((key) => (
+                {detectHints(message, allLogsRef.current).map((key) => (
                   <li key={key}>{t(key)}</li>
                 ))}
               </ul>
@@ -962,7 +1016,7 @@ export function BootstrapSplash({ stage, message }) {
           <h2 className="m-0 flex items-center font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-fg-muted">
             {t('firstrun.activity_title', 'Activity')}
             <span className="ml-auto tracking-[0.08em] text-fg-subtle">
-              {logs.length > 0 && t('bootstrap.lines', { count: logs.length })}
+              {totalLines > 0 && t('bootstrap.lines', { count: totalLines })}
             </span>
           </h2>
           <div className="flex items-center gap-1.5">

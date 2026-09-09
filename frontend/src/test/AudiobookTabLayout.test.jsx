@@ -17,6 +17,8 @@ vi.mock('../api/engines', () => ({
 }));
 vi.mock('../api/generate', () => ({ audioUrl: (f) => `http://test.local/audio/${f}` }));
 vi.mock('../api/audiobook', () => ({
+  audiobookListJobs: vi.fn().mockResolvedValue({ jobs: [] }),
+  audiobookResume: vi.fn(),
   audiobookPlan: vi.fn(),
   audiobookGenerate: vi.fn(),
   audiobookUploadCover: vi.fn(),
