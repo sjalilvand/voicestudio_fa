@@ -8,6 +8,7 @@ import {
   parseSsListeners,
   parseWindowsListeners,
   stopUnixProcess,
+  stopWindowsProcess,
 } from "../../scripts/clear-dev-ports.mjs";
 
 test("parses only requested Windows TCP listeners", () => {
@@ -153,4 +154,34 @@ test("waits for the listener to disappear after force stop", async () => {
     [1234, true],
   ]);
   assert.equal(sleeps, 12);
+});
+
+// Windows auto-stop is allowed again, but only bound to the process INSTANCE:
+// a pid recycled between inspect and kill must never be terminated.
+test("windows stop re-checks the process identity before terminating", () => {
+  const calls = [];
+  const run = (_exe, args) => {
+    calls.push(args.at(-1));
+    return { status: 0 };
+  };
+  stopWindowsProcess(4242, false, "windows:2026-09-08T21:25:58.5000000Z", run);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0], /ProcessId = 4242/);
+  assert.match(calls[0], /2026-09-08T21:25:58\.5000000Z/);
+  assert.match(calls[0], /Invoke-CimMethod -InputObject \$p -MethodName Terminate/);
+  // The identity must be compared before the terminate, never after.
+  assert.ok(calls[0].indexOf("-ne '2026") < calls[0].indexOf("Invoke-CimMethod"));
+});
+
+test("windows stop leaves a recycled pid alone instead of failing the run", () => {
+  assert.doesNotThrow(() =>
+    stopWindowsProcess(4242, false, "windows:whatever", () => ({ status: 3 })),
+  );
+});
+
+test("windows stop surfaces a real termination failure", () => {
+  assert.throws(
+    () => stopWindowsProcess(4242, false, "windows:whatever", () => ({ status: 1 })),
+    /Could not stop process 4242/,
+  );
 });

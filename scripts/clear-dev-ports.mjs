@@ -164,7 +164,9 @@ function inspectWindows(pid) {
   const script = [
     `$p = Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}'`,
     "if ($null -ne $p) {",
-    "  $p | Select-Object ProcessId,ExecutablePath,CommandLine,CreationDate | ConvertTo-Json -Compress",
+    // Started is formatted explicitly (round-trip 'o') so the identity string
+    // is byte-stable and can be re-compared inside the stop script below.
+    "  $p | Select-Object ProcessId,ExecutablePath,CommandLine,@{n='Started';e={$_.CreationDate.ToUniversalTime().ToString('o')}} | ConvertTo-Json -Compress",
     "}",
   ].join("; ");
   const result = spawnSync(
@@ -179,24 +181,54 @@ function inspectWindows(pid) {
   if (!result.stdout.trim()) return null;
   const info = JSON.parse(result.stdout);
   return {
-    identity: `windows:${info.CreationDate}`,
+    identity: `windows:${info.Started}`,
     owned: belongsToCheckout("", info.CommandLine, info.ExecutablePath, true),
   };
+}
+
+/**
+ * Terminate a Windows listener, bound to the process INSTANCE.
+ *
+ * `taskkill /pid` targets a reusable PID, so a pid recycled between inspect and
+ * kill would take an unrelated process down — which is why auto-stop used to be
+ * refused outright on Windows, leaving `bun run dev` permanently stuck behind
+ * "stop it in Task Manager and retry" whenever a backend was orphaned. Fetching
+ * the CIM instance, re-checking its creation timestamp, and terminating THAT
+ * instance in one PowerShell pass closes the race: the terminate acts on the
+ * object the check validated, not on a pid looked up again afterwards.
+ */
+export function stopWindowsProcess(pid, _force, identity, run = spawnSync) {
+  const expected = String(identity || "").replace(/^windows:/, "");
+  const script = [
+    `$p = Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}'`,
+    "if ($null -eq $p) { exit 0 }",
+    `if ($p.CreationDate.ToUniversalTime().ToString('o') -ne '${expected}') { exit 3 }`,
+    "$null = Invoke-CimMethod -InputObject $p -MethodName Terminate",
+  ].join("; ");
+  const result = run(
+    "powershell.exe",
+    ["-NoProfile", "-NonInteractive", "-Command", script],
+    { encoding: "utf8" },
+  );
+  if (result.error) throw result.error;
+  // exit 3 == the pid now belongs to a different process; leave it alone.
+  if (result.status !== 0 && result.status !== 3) {
+    throw new Error(`Could not stop process ${pid}`);
+  }
 }
 
 function systemOperations() {
   const windows = process.platform === "win32";
   return {
-    // Windows taskkill targets a reusable PID, not the inspected process
-    // instance. Refuse automatic termination until it can be handle-bound.
-    canStop: !windows,
+    canStop: true,
     // macOS exposes process start time to ps at one-second resolution. That is
     // sufficient for a graceful stop, but not safe proof for SIGKILL escalation.
     canForce: process.platform !== "darwin",
     listeners: windows ? windowsListeners : unixListeners,
     inspect: windows ? inspectWindows : process.platform === "darwin" ? inspectMac : inspectLinux,
-    stop(pid, force) {
-      stopUnixProcess(pid, force);
+    stop(pid, force, identity) {
+      if (windows) stopWindowsProcess(pid, force, identity);
+      else stopUnixProcess(pid, force);
     },
     sleep(ms) {
       return new Promise((done) => setTimeout(done, ms));
