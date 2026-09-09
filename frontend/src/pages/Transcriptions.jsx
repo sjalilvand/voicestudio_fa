@@ -180,9 +180,11 @@ export default function TranscriptionsPage() {
           </span>
         </div>
         <div className="txn-header__right flex items-center gap-[6px]">
-          <Button size="sm" variant="primary" onClick={startCapture}>
-            <Mic size={13} /> {t('transcriptions.capture')}
-          </Button>
+          {transcriptions.length > 0 && (
+            <Button size="sm" variant="primary" leading={<Mic size={13} />} onClick={startCapture}>
+              {t('transcriptions.capture')}
+            </Button>
+          )}
           <div className="txn-search relative flex items-center">
             <Search
               size={13}
@@ -235,8 +237,13 @@ export default function TranscriptionsPage() {
                 {normalizedSearch ? t('transcriptions.empty_search_desc') : emptyDescription}
               </p>
               {!normalizedSearch && (
-                <Button size="sm" variant="primary" onClick={startCapture}>
-                  <Mic size={13} /> {t('transcriptions.capture')}
+                <Button
+                  size="sm"
+                  variant="primary"
+                  leading={<Mic size={13} />}
+                  onClick={startCapture}
+                >
+                  {t('transcriptions.capture')}
                 </Button>
               )}
             </div>

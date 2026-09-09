@@ -26,7 +26,7 @@ pub mod watch_folder;
 #[cfg(target_os = "linux")]
 pub mod wayland_shortcut;
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::process::Child;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -107,6 +107,29 @@ pub struct CaptureDispatchState {
     registration_counter: u64,
     delivery_counter: u64,
     active_registration: Option<u64>,
+    in_flight: HashMap<u64, CaptureInFlight>,
+}
+
+struct CaptureInFlight {
+    event: CaptureEvent,
+    outcome: Option<Result<(), String>>,
+}
+
+pub(crate) enum CaptureReceiptCancellation {
+    Received,
+    Cancelled(CaptureEvent),
+    Missing,
+}
+
+pub(crate) enum CaptureAcceptanceTimeout {
+    Completed(Result<(), String>),
+    Cancelled(CaptureEvent),
+    Missing,
+}
+
+struct CaptureEnqueue {
+    delivery_id: u64,
+    event: Option<CaptureEvent>,
 }
 
 impl Default for CaptureDispatchState {
@@ -117,6 +140,7 @@ impl Default for CaptureDispatchState {
             registration_counter: 0,
             delivery_counter: 0,
             active_registration: None,
+            in_flight: HashMap::new(),
         }
     }
 }
@@ -147,25 +171,125 @@ impl CaptureDispatchState {
             .collect()
     }
 
-    pub(crate) fn enqueue(&mut self, mut event: CaptureEvent) -> Option<CaptureEvent> {
+    fn enqueue(&mut self, mut event: CaptureEvent) -> CaptureEnqueue {
         self.delivery_counter = self.delivery_counter.wrapping_add(1).max(1);
         event.payload.delivery_id = self.delivery_counter;
         self.pending.push_back(event.clone());
-        let registration_id = self.active_registration.filter(|_| self.ready)?;
-        event.payload.registration_id = registration_id;
-        Some(event)
+        let ready_event = self
+            .active_registration
+            .filter(|_| self.ready)
+            .map(|registration_id| {
+                event.payload.registration_id = registration_id;
+                event
+            });
+        CaptureEnqueue {
+            delivery_id: self.delivery_counter,
+            event: ready_event,
+        }
     }
 
-    pub(crate) fn acknowledge(&mut self, registration_id: u64, delivery_id: u64) {
+    pub(crate) fn acknowledge(&mut self, registration_id: u64, delivery_id: u64) -> bool {
         if self.active_registration != Some(registration_id) {
-            return;
+            return false;
         }
         if let Some(index) = self
             .pending
             .iter()
             .position(|event| event.payload.delivery_id == delivery_id)
         {
-            self.pending.remove(index);
+            if let Some(event) = self.pending.remove(index) {
+                if event.await_result {
+                    self.in_flight.insert(
+                        delivery_id,
+                        CaptureInFlight {
+                            event,
+                            outcome: None,
+                        },
+                    );
+                }
+                return true;
+            }
+        }
+        false
+    }
+
+    pub(crate) fn complete(
+        &mut self,
+        registration_id: u64,
+        delivery_id: u64,
+        error: Option<String>,
+    ) {
+        if self.active_registration != Some(registration_id) {
+            return;
+        }
+        if let Some(delivery) = self.in_flight.get_mut(&delivery_id) {
+            delivery.outcome = Some(error.map_or_else(|| Ok(()), Err));
+        }
+    }
+
+    pub(crate) fn completion_ready(&self, delivery_id: u64) -> bool {
+        self.in_flight
+            .get(&delivery_id)
+            .is_some_and(|delivery| delivery.outcome.is_some())
+    }
+
+    pub(crate) fn take_completion(&mut self, delivery_id: u64) -> Option<Result<(), String>> {
+        let ready = self.completion_ready(delivery_id);
+        ready
+            .then(|| self.in_flight.remove(&delivery_id))
+            .flatten()
+            .and_then(|delivery| delivery.outcome)
+    }
+
+    pub(crate) fn delivery_pending(&self, delivery_id: u64) -> bool {
+        self.pending
+            .iter()
+            .any(|event| event.payload.delivery_id == delivery_id)
+    }
+
+    pub(crate) fn cancel_unreceived_delivery(
+        &mut self,
+        delivery_id: u64,
+    ) -> CaptureReceiptCancellation {
+        if self.in_flight.contains_key(&delivery_id) {
+            return CaptureReceiptCancellation::Received;
+        }
+        let Some(index) = self
+            .pending
+            .iter()
+            .position(|event| event.payload.delivery_id == delivery_id)
+        else {
+            return CaptureReceiptCancellation::Missing;
+        };
+        self.pending
+            .remove(index)
+            .map_or(CaptureReceiptCancellation::Missing, CaptureReceiptCancellation::Cancelled)
+    }
+
+    pub(crate) fn cancel_delivery(&mut self, delivery_id: u64) -> Option<CaptureEvent> {
+        if let Some(index) = self
+            .pending
+            .iter()
+            .position(|event| event.payload.delivery_id == delivery_id)
+        {
+            return self.pending.remove(index);
+        }
+        self.in_flight
+            .remove(&delivery_id)
+            .map(|delivery| delivery.event)
+    }
+
+    pub(crate) fn take_completion_or_cancel(
+        &mut self,
+        delivery_id: u64,
+    ) -> CaptureAcceptanceTimeout {
+        if let Some(completion) = self.take_completion(delivery_id) {
+            CaptureAcceptanceTimeout::Completed(completion)
+        } else {
+            self.cancel_delivery(delivery_id).map_or(
+                CaptureAcceptanceTimeout::Missing,
+                CaptureAcceptanceTimeout::Cancelled,
+            )
         }
     }
 
@@ -189,6 +313,7 @@ pub(crate) struct DictationCapturePayload {
 pub(crate) struct CaptureEvent {
     pub(crate) name: &'static str,
     pub(crate) payload: DictationCapturePayload,
+    await_result: bool,
 }
 
 pub struct TrayHandle {
@@ -205,10 +330,22 @@ fn dictation_capture_event(action: &str, dictating: bool) -> &'static str {
 }
 
 pub fn dispatch_dictation_capture(app: &tauri::AppHandle, action: &str) {
-    dispatch_dictation_capture_from(app, action, CaptureOrigin::Shortcut);
+    let _ = dispatch_dictation_capture_from(app, action, CaptureOrigin::Shortcut, false);
 }
 
-fn dispatch_dictation_capture_from(app: &tauri::AppHandle, action: &str, origin: CaptureOrigin) {
+pub(crate) fn request_dictation_capture_delivery(
+    app: &tauri::AppHandle,
+    action: &str,
+) -> Option<u64> {
+    dispatch_dictation_capture_from(app, action, CaptureOrigin::Shortcut, true)
+}
+
+fn dispatch_dictation_capture_from(
+    app: &tauri::AppHandle,
+    action: &str,
+    origin: CaptureOrigin,
+    await_result: bool,
+) -> Option<u64> {
     let flags = app.state::<AppFlags>();
     let event = dictation_capture_event(action, flags.dictating.load(Ordering::SeqCst));
     let session_id = if event == "tray-dictate" {
@@ -217,8 +354,21 @@ fn dispatch_dictation_capture_from(app: &tauri::AppHandle, action: &str, origin:
         session_id
     } else {
         log::warn!("Dictation capture '{action}' ignored — no active output session");
-        return;
+        return None;
     };
+
+    // The recorder lives in the widget WebView. WebKit can suspend that
+    // document while its window is hidden, so an event cannot be relied on to
+    // wake the very listener that must receive it. Preserve the output target
+    // first, then show the non-activating pill before enqueueing/emitting the
+    // start event. The widget's idle reconcile hides it again if capture is
+    // disabled or startup exits early.
+    if event == "tray-dictate" {
+        if let Err(error) = commands::show_dictation_pill(app.clone()) {
+            log::warn!("Dictation capture '{action}' could not wake the capture window: {error}");
+        }
+    }
+
     let capture_event = CaptureEvent {
         name: event,
         payload: DictationCapturePayload {
@@ -226,12 +376,15 @@ fn dispatch_dictation_capture_from(app: &tauri::AppHandle, action: &str, origin:
             delivery_id: 0,
             registration_id: 0,
         },
+        await_result,
     };
     let Ok(mut capture) = flags.capture.lock() else {
         log::warn!("Dictation capture state lock poisoned");
-        return;
+        return None;
     };
-    if let Some(capture_event) = capture.enqueue(capture_event) {
+    let enqueued = capture.enqueue(capture_event);
+    let delivery_id = enqueued.delivery_id;
+    if let Some(capture_event) = enqueued.event {
         drop(capture);
         // A press that reaches Rust but produces no recording is otherwise
         // indistinguishable from one the compositor never delivered, so say
@@ -246,12 +399,14 @@ fn dispatch_dictation_capture_from(app: &tauri::AppHandle, action: &str, origin:
             "Dictation capture '{action}' queued — the capture window has not registered yet"
         );
     }
+    Some(delivery_id)
 }
 
 #[cfg(test)]
 mod dictation_capture_tests {
     use super::{
-        dictation_capture_event, CaptureDispatchState, CaptureEvent, DictationCapturePayload,
+        dictation_capture_event, CaptureAcceptanceTimeout, CaptureDispatchState, CaptureEvent,
+        CaptureReceiptCancellation, DictationCapturePayload,
     };
 
     fn capture_event(name: &'static str) -> CaptureEvent {
@@ -262,6 +417,7 @@ mod dictation_capture_tests {
                 delivery_id: 0,
                 registration_id: 0,
             },
+            await_result: false,
         }
     }
 
@@ -295,10 +451,108 @@ mod dictation_capture_tests {
         assert_eq!(retried[0].payload.delivery_id, delivery_id);
         assert_eq!(retried[0].payload.registration_id, current);
 
-        state.acknowledge(stale, delivery_id);
+        assert!(!state.acknowledge(stale, delivery_id));
         assert_eq!(state.pending.len(), 1);
-        state.acknowledge(current, delivery_id);
+        assert!(state.delivery_pending(delivery_id));
+        assert!(state.acknowledge(current, delivery_id));
         assert!(state.pending.is_empty());
+        assert!(!state.delivery_pending(delivery_id));
+    }
+
+    #[test]
+    fn timed_out_delivery_can_be_cancelled_without_touching_others() {
+        let mut state = CaptureDispatchState::default();
+        state.enqueue(capture_event("tray-dictate"));
+        state.enqueue(capture_event("tray-dictate-stop"));
+        let first_id = state.pending[0].payload.delivery_id;
+        let second_id = state.pending[1].payload.delivery_id;
+
+        let cancelled = state.cancel_delivery(first_id).expect("delivery exists");
+        assert_eq!(cancelled.payload.session_id, 7);
+        assert!(!state.delivery_pending(first_id));
+        assert!(state.delivery_pending(second_id));
+    }
+
+    #[test]
+    fn awaited_delivery_preserves_frontend_rejection_for_the_requester() {
+        let mut state = CaptureDispatchState::default();
+        let registration_id = state.begin_registration();
+        state.mark_registration_ready(registration_id);
+        let mut event = capture_event("tray-dictate");
+        event.await_result = true;
+        let delivery_id = state.enqueue(event).delivery_id;
+
+        assert!(state.acknowledge(registration_id, delivery_id));
+        assert!(!state.completion_ready(delivery_id));
+        state.complete(
+            registration_id,
+            delivery_id,
+            Some("Dictation is disabled".into()),
+        );
+        assert!(state.completion_ready(delivery_id));
+
+        assert_eq!(
+            state.take_completion(delivery_id),
+            Some(Err("Dictation is disabled".into()))
+        );
+        assert_eq!(state.take_completion(delivery_id), None);
+    }
+
+    #[test]
+    fn cancellation_suppresses_an_event_cloned_for_ready_emission() {
+        let mut state = CaptureDispatchState::default();
+        let registration_id = state.begin_registration();
+        state.mark_registration_ready(registration_id);
+        let mut event = capture_event("tray-dictate");
+        event.await_result = true;
+        let enqueued = state.enqueue(event);
+        let emitted = enqueued.event.expect("ready event was cloned");
+
+        assert!(matches!(
+            state.cancel_unreceived_delivery(enqueued.delivery_id),
+            CaptureReceiptCancellation::Cancelled(_)
+        ));
+        assert!(!state.acknowledge(
+            emitted.payload.registration_id,
+            emitted.payload.delivery_id
+        ));
+    }
+
+    #[test]
+    fn listener_receipt_wins_atomically_over_timeout_cancellation() {
+        let mut state = CaptureDispatchState::default();
+        let registration_id = state.begin_registration();
+        state.mark_registration_ready(registration_id);
+        let mut event = capture_event("tray-dictate");
+        event.await_result = true;
+        let delivery_id = state.enqueue(event).delivery_id;
+
+        assert!(state.acknowledge(registration_id, delivery_id));
+        assert!(matches!(
+            state.cancel_unreceived_delivery(delivery_id),
+            CaptureReceiptCancellation::Received
+        ));
+    }
+
+    #[test]
+    fn completion_at_the_timeout_boundary_wins_over_cancellation() {
+        let mut state = CaptureDispatchState::default();
+        let registration_id = state.begin_registration();
+        state.mark_registration_ready(registration_id);
+        let mut event = capture_event("tray-dictate");
+        event.await_result = true;
+        let delivery_id = state.enqueue(event).delivery_id;
+        state.acknowledge(registration_id, delivery_id);
+        state.complete(registration_id, delivery_id, None);
+
+        assert!(matches!(
+            state.take_completion_or_cancel(delivery_id),
+            CaptureAcceptanceTimeout::Completed(Ok(()))
+        ));
+        assert!(matches!(
+            state.take_completion_or_cancel(delivery_id),
+            CaptureAcceptanceTimeout::Missing
+        ));
     }
 
     #[test]
@@ -611,6 +865,90 @@ pub fn shutdown_backend_for_exit<R: tauri::Runtime>(app_handle: &tauri::AppHandl
     }
 }
 
+/// Show, unminimize and focus the main window. Shared by the tray's "Show
+/// VoiceStudio" menu item and the macOS `RunEvent::Reopen` handler below (Dock
+/// icon clicked while the main window is hidden), so the two recovery paths
+/// behave identically instead of drifting apart over time.
+fn show_and_focus_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.show();
+        #[cfg(not(target_os = "macos"))]
+        let _ = win.set_skip_taskbar(false);
+        let _ = win.unminimize();
+        let _ = win.set_focus();
+        // Self-recovery: if the webview failed to load the dev/prod URL
+        // earlier (Vite restarted, backend not up yet at first show, etc.)
+        // the window shows a blank `<body></body>` with a "Could not connect
+        // to the server" console error. Reload only when the body is empty
+        // so a healthy window doesn't blink on every show.
+        let _ = win.eval(
+            "if (document.body && document.body.childElementCount === 0) { location.reload(); }",
+        );
+    }
+}
+
+/// Whether a macOS `RunEvent::Reopen` (Dock icon clicked — Cocoa's
+/// `applicationShouldHandleReopen:hasVisibleWindows:`) should restore the
+/// main window. Pure so it's unit-testable — the actual event only fires
+/// inside the real Cocoa event loop and can't be synthesized under
+/// `cargo test` (see the `with_noactivate_style` comment above for the same
+/// rationale). `CloseRequested` (see `on_window_event` below) hides the main
+/// window rather than destroying it, so it is merely invisible once the user
+/// has closed it — exactly when the Dock icon should bring it back.
+///
+/// Keyed on the MAIN window specifically, not on Cocoa's `has_visible_windows`
+/// flag. This app owns a second window: the always-on-top dictation pill
+/// (`widget`, built below), which is shown and hidden independently and can
+/// sit on screen for a long time on its own — the Accessibility-setup state
+/// persists until the permission is granted. Keying on "any window visible"
+/// would report `true` from the pill alone and leave the Dock icon dead in
+/// precisely the case this handler exists to fix.
+///
+/// Only called from the macOS-gated `RunEvent::Reopen` arm below outside of
+/// tests — `#[allow(dead_code)]` elsewhere, same treatment as `is_app_origin`
+/// and `with_noactivate_style` above.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn should_restore_on_reopen(main_window_visible: bool, _cocoa_has_visible_windows: bool) -> bool {
+    // Cocoa's aggregate flag is accepted and deliberately ignored. Taking it
+    // as a parameter rather than dropping it at the call site is what lets
+    // the tests below pin the contract: `(main: false, cocoa: true)` — the
+    // pill up, the main window closed — must still restore. An earlier
+    // revision decided on the aggregate alone and left the Dock icon dead in
+    // exactly that state.
+    !main_window_visible
+}
+
+#[cfg(test)]
+mod reopen_tests {
+    use super::should_restore_on_reopen;
+
+    #[test]
+    fn restores_when_the_main_window_is_hidden() {
+        assert!(should_restore_on_reopen(false, false));
+    }
+
+    #[test]
+    fn does_nothing_when_the_main_window_is_already_visible() {
+        assert!(!should_restore_on_reopen(true, true));
+    }
+
+    /// Regression guard: the dictation pill is a separate always-on-top
+    /// window that can be visible while the main window is closed — the
+    /// Accessibility-setup state stays up until the permission is granted.
+    /// An earlier revision keyed this decision on Cocoa's
+    /// `has_visible_windows`, which the pill alone sets to `true`, leaving
+    /// the Dock icon dead in exactly the situation this handler is for.
+    /// The decision must depend only on the main window.
+    #[test]
+    fn restores_even_when_another_window_such_as_the_pill_is_visible() {
+        // Cocoa reports a visible window (the pill) while the main window is
+        // hidden. Passing both values separately is the point: this case is
+        // what distinguishes the main-window rule from the aggregate one, and
+        // it fails if the body ever goes back to `!cocoa_has_visible_windows`.
+        assert!(should_restore_on_reopen(false, true));
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // #879: if the previous run requested a WebView cache repair (splash
@@ -727,6 +1065,7 @@ pub fn run() {
             commands::begin_dictation_capture_registration,
             commands::mark_dictation_capture_ready,
             commands::acknowledge_dictation_capture_delivery,
+            commands::complete_dictation_capture_delivery,
             commands::end_dictation_capture_registration,
             commands::show_dictation_pill,
             commands::get_launch_as_widget,
@@ -879,12 +1218,8 @@ pub fn run() {
                             match event.state {
                                 ShortcutState::Pressed => {
                                     log::info!("Global shortcut pressed: dictation start");
-                                    // The widget window stays hidden until the
-                                    // capture itself reaches a state worth
-                                    // showing — the widget calls
-                                    // `show_dictation_pill` then, so a press
-                                    // that bails early never strands an empty
-                                    // capsule on the desktop.
+                                    // Dispatch preserves the focused target,
+                                    // wakes the recorder WebView, then emits.
                                     dispatch_dictation_capture(app_handle, "start");
                                 }
                                 ShortcutState::Released => {
@@ -983,23 +1318,7 @@ pub fn run() {
                 .on_menu_event(move |app, event| {
                     match event.id().as_ref() {
                         "show" => {
-                            if let Some(win) = app.get_webview_window("main") {
-                                let _ = win.show();
-                                #[cfg(not(target_os = "macos"))]
-                                let _ = win.set_skip_taskbar(false);
-                                let _ = win.set_focus();
-                                // Self-recovery: if the webview failed to load
-                                // the dev/prod URL earlier (Vite restarted,
-                                // backend not up yet at first show, etc.) the
-                                // window shows a blank `<body></body>` with a
-                                // "Could not connect to the server" console
-                                // error. Reload only when the body is empty
-                                // so a healthy window doesn't blink on every
-                                // tray click.
-                                let _ = win.eval(
-                                    "if (document.body && document.body.childElementCount === 0) { location.reload(); }",
-                                );
-                            }
+                            show_and_focus_main_window(app);
                         }
                         "open_studio" => {
                             // Persist the preference (so next launch is studio, not pill)
@@ -1034,9 +1353,19 @@ pub fn run() {
                             // current by the frontend's existing
                             // `set_tray_recording` call on every start and stop.
                             if app.state::<AppFlags>().dictating.load(Ordering::SeqCst) {
-                                dispatch_dictation_capture_from(app, "stop", CaptureOrigin::Tray);
+                                let _ = dispatch_dictation_capture_from(
+                                    app,
+                                    "stop",
+                                    CaptureOrigin::Tray,
+                                    false,
+                                );
                             } else {
-                                dispatch_dictation_capture_from(app, "start", CaptureOrigin::Tray);
+                                let _ = dispatch_dictation_capture_from(
+                                    app,
+                                    "start",
+                                    CaptureOrigin::Tray,
+                                    false,
+                                );
                             }
                         }
                         "settings" => {
@@ -1193,12 +1522,41 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
-    app.run(|app_handle, event| {
-        if let tauri::RunEvent::ExitRequested { code, api, .. } = event {
+    app.run(|app_handle, event| match event {
+        tauri::RunEvent::ExitRequested { code, api, .. } => {
             if !persistence_exit::handle_exit_requested(app_handle, code, &api) {
                 return;
             }
             shutdown_backend_for_exit(app_handle);
         }
+        // macOS: clicking the Dock icon while the app has no visible windows
+        // fires this (instead of relaunching) via Cocoa's
+        // `applicationShouldHandleReopen:hasVisibleWindows:`. CloseRequested
+        // (see `on_window_event` above) hides the main window rather than
+        // destroying it, so without this arm the click did nothing — the
+        // process stayed alive with a live Dock icon and the only way back
+        // was the tray's "Show VoiceStudio" item. `show_and_focus_main_window`
+        // is the same sequence that item runs, so both paths behave
+        // identically.
+        #[cfg(target_os = "macos")]
+        tauri::RunEvent::Reopen {
+            has_visible_windows,
+            ..
+        } => {
+            // Cocoa's `has_visible_windows` is deliberately NOT used: the
+            // dictation pill is a separate always-on-top window that sets it
+            // to `true` on its own. Ask the main window directly instead.
+            // `is_visible()` errors only if the window has gone away, and a
+            // redundant show is harmless next to a Dock icon that stays dead,
+            // so treat an error as "not visible" and restore.
+            let main_visible = app_handle
+                .get_webview_window("main")
+                .map(|win| win.is_visible().unwrap_or(false))
+                .unwrap_or(false);
+            if should_restore_on_reopen(main_visible, has_visible_windows) {
+                show_and_focus_main_window(app_handle);
+            }
+        }
+        _ => {}
     });
 }

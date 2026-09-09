@@ -12,7 +12,7 @@ use tauri_plugin_dialog::DialogExt;
 
 use crate::config::{load_config, save_config};
 use crate::dictation_shortcut::{update_tray_hint, DictationShortcutManager, ShortcutInfo};
-use crate::{AppFlags, TrayHandle};
+use crate::{AppFlags, CaptureAcceptanceTimeout, CaptureReceiptCancellation, TrayHandle};
 use crate::{TRAY_ICON_DEFAULT, TRAY_ICON_RECORDING};
 
 // ── Native host-path authorization ───────────────────────────────────────
@@ -1006,12 +1006,145 @@ pub fn get_effective_dictation_shortcut(
 }
 
 #[tauri::command]
-pub fn request_dictation_capture(app: tauri::AppHandle, action: String) -> Result<(), String> {
+pub async fn request_dictation_capture(
+    app: tauri::AppHandle,
+    action: String,
+) -> Result<(), String> {
     if action != "start" && action != "stop" && action != "toggle" {
         return Err("capture action must be start, stop, or toggle".into());
     }
-    crate::dispatch_dictation_capture(&app, &action);
-    Ok(())
+    let delivery_id = crate::request_dictation_capture_delivery(&app, &action)
+        .ok_or_else(|| "capture request could not be queued".to_string())?;
+    let wait_app = app.clone();
+    let mut acknowledged = tauri::async_runtime::spawn_blocking(move || {
+        wait_for_capture_delivery(
+            || {
+                let flags = wait_app.state::<AppFlags>();
+                let capture = flags
+                    .capture
+                    .lock()
+                    .map_err(|_| "Dictation capture state lock poisoned".to_string())?;
+                Ok(capture.delivery_pending(delivery_id))
+            },
+            CAPTURE_DELIVERY_TIMEOUT,
+        )
+    })
+    .await
+    .map_err(|error| format!("capture acknowledgement worker failed: {error}"))??;
+    if !acknowledged {
+        let flags = app.state::<AppFlags>();
+        let timeout_outcome = flags
+            .capture
+            .lock()
+            .map_err(|_| "Dictation capture state lock poisoned".to_string())?
+            .cancel_unreceived_delivery(delivery_id);
+        match timeout_outcome {
+            CaptureReceiptCancellation::Received => acknowledged = true,
+            CaptureReceiptCancellation::Cancelled(event) => {
+                if event.name == "tray-dictate" {
+                    flags.output.finish_session(event.payload.session_id);
+                }
+                return Err("capture window did not acknowledge the request".into());
+            }
+            CaptureReceiptCancellation::Missing => {
+                return Err("capture request disappeared before acknowledgement".into());
+            }
+        }
+    }
+    debug_assert!(acknowledged);
+
+    let outcome_app = app.clone();
+    let completed = tauri::async_runtime::spawn_blocking(move || {
+        wait_for_capture_delivery(
+            || {
+                let flags = outcome_app.state::<AppFlags>();
+                let capture = flags
+                    .capture
+                    .lock()
+                    .map_err(|_| "Dictation capture state lock poisoned".to_string())?;
+                Ok(!capture.completion_ready(delivery_id))
+            },
+            CAPTURE_ACCEPTANCE_TIMEOUT,
+        )
+    })
+    .await
+    .map_err(|error| format!("capture acceptance worker failed: {error}"))??;
+
+    let flags = app.state::<AppFlags>();
+    if completed {
+        let completion = flags
+            .capture
+            .lock()
+            .map_err(|_| "Dictation capture state lock poisoned".to_string())?
+            .take_completion(delivery_id);
+        return completion
+            .unwrap_or_else(|| Err("capture request completed without an outcome".into()));
+    }
+    let timeout_outcome = flags
+        .capture
+        .lock()
+        .map_err(|_| "Dictation capture state lock poisoned".to_string())?
+        .take_completion_or_cancel(delivery_id);
+    match timeout_outcome {
+        CaptureAcceptanceTimeout::Completed(completion) => return completion,
+        CaptureAcceptanceTimeout::Cancelled(event) if event.name == "tray-dictate" => {
+            flags.output.finish_session(event.payload.session_id);
+        }
+        CaptureAcceptanceTimeout::Cancelled(_) | CaptureAcceptanceTimeout::Missing => {}
+    }
+    Err("dictation capture did not start in time".into())
+}
+
+const CAPTURE_DELIVERY_TIMEOUT: Duration = Duration::from_secs(2);
+const CAPTURE_ACCEPTANCE_TIMEOUT: Duration = Duration::from_secs(60);
+const CAPTURE_DELIVERY_POLL: Duration = Duration::from_millis(20);
+
+fn wait_for_capture_delivery<F>(mut pending: F, timeout: Duration) -> Result<bool, String>
+where
+    F: FnMut() -> Result<bool, String>,
+{
+    let deadline = Instant::now() + timeout;
+    loop {
+        if !pending()? {
+            return Ok(true);
+        }
+        if Instant::now() >= deadline {
+            return Ok(false);
+        }
+        std::thread::sleep(CAPTURE_DELIVERY_POLL);
+    }
+}
+
+#[cfg(test)]
+mod capture_request_tests {
+    use super::wait_for_capture_delivery;
+    use std::time::Duration;
+
+    #[test]
+    fn listener_acknowledgement_completes_the_request() {
+        let mut polls = 0;
+        let acknowledged = wait_for_capture_delivery(
+            || {
+                polls += 1;
+                Ok(polls < 2)
+            },
+            Duration::from_millis(50),
+        )
+        .expect("poll succeeds");
+
+        assert!(acknowledged);
+    }
+
+    #[test]
+    fn missing_listener_acknowledgement_times_out() {
+        let acknowledged = wait_for_capture_delivery(
+            || Ok(true),
+            Duration::from_millis(0),
+        )
+        .expect("poll succeeds");
+
+        assert!(!acknowledged);
+    }
 }
 
 /// Distance from the bottom edge of the work area, in logical pixels — clear of
@@ -1162,13 +1295,28 @@ pub fn acknowledge_dictation_capture_delivery(
     app: tauri::AppHandle,
     registration_id: u64,
     delivery_id: u64,
+) -> bool {
+    let flags = app.state::<AppFlags>();
+    let Ok(mut capture) = flags.capture.lock() else {
+        log::warn!("Dictation capture state lock poisoned");
+        return false;
+    };
+    capture.acknowledge(registration_id, delivery_id)
+}
+
+#[tauri::command]
+pub fn complete_dictation_capture_delivery(
+    app: tauri::AppHandle,
+    registration_id: u64,
+    delivery_id: u64,
+    error: Option<String>,
 ) {
     let flags = app.state::<AppFlags>();
     let Ok(mut capture) = flags.capture.lock() else {
         log::warn!("Dictation capture state lock poisoned");
         return;
     };
-    capture.acknowledge(registration_id, delivery_id);
+    capture.complete(registration_id, delivery_id, error);
 }
 
 #[tauri::command]

@@ -35,6 +35,7 @@ const baseProps = {
   isGenerating: false,
   handleGenerate: setter,
   generationTime: 0,
+  generationProgress: null,
   wasGeneratingRef: { current: false },
 };
 
@@ -96,5 +97,41 @@ describe('ActionBar', () => {
     expect(screen.queryByRole('slider', { name: 'clone.steps' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /clone.production_overrides/ }));
     expect(screen.getByRole('slider', { name: 'clone.steps' })).toBeInTheDocument();
+  });
+
+  it('shows indeterminate progress instead of inventing a percentage from elapsed time', () => {
+    render(
+      <ActionBar
+        {...baseProps}
+        showOverrides={false}
+        setShowOverrides={setter}
+        isGenerating
+        generationTime="10.6"
+        generationProgress={null}
+      />,
+    );
+
+    const progress = screen.getByRole('progressbar');
+    expect(progress).not.toHaveAttribute('aria-valuenow');
+    expect(progress).toHaveAttribute('data-state', 'indeterminate');
+  });
+
+  it('shows determinate progress only when the generation path reports it', () => {
+    render(
+      <ActionBar
+        {...baseProps}
+        showOverrides={false}
+        setShowOverrides={setter}
+        isGenerating
+        generationTime="10.6"
+        generationProgress={42}
+      />,
+    );
+
+    const progress = screen.getByRole('progressbar');
+    expect(progress).toHaveAttribute('aria-valuenow', '42');
+    expect(progress.querySelector('[data-slot="progress-indicator"]')).toHaveStyle({
+      width: '42%',
+    });
   });
 });
