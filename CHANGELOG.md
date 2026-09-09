@@ -9,6 +9,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- Upgrading torch for an RTX 50-series card no longer trades one startup crash for another, and the upgrade is documented (#1931)
 - The Accessibility prompt no longer floats over first-run setup and every other app until you grant it (#1845, #1886)
 - The last onboarding step offers to install a speech-to-text model instead of failing three times when none is installed (#1856)
 - A download that fails because the folder sits behind a mount point Windows will not cross now says so, and where to move it (#1957)
