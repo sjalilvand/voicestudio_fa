@@ -1272,18 +1272,19 @@ function App() {
       </div>
     );
   }
-  if (remoteFailure) {
-    return (
-      <div className="app-bootstrap-scale" style={{ '--ui-scale': effectiveUiScale }}>
-        <RemoteBackendRecovery
-          failure={remoteFailure}
-          onRetry={retryRemoteBackend}
-          onOpenSettings={openRemoteBackendSettings}
-        />
-      </div>
-    );
-  }
-  if (!uiScaleConfigured && backendReady) {
+
+  // Legibility comes before everything the backend gates. UiScaleSetup makes
+  // no backend calls at all — it is a client-side zoom — but it used to wait
+  // for `backendReady`, so on a clean first run the user watched the entire
+  // bootstrap (and answered the macOS Accessibility prompt) at whatever size
+  // the app guessed, and was offered the size control only once all of that
+  // had finished (#1849). Asking first costs one screen and makes the rest of
+  // first-run readable.
+  //
+  // Still after the hydration guard above: `uiScaleConfigured` lives in the
+  // store, and reading it before hydration would flash this screen at someone
+  // who had already set their scale.
+  if (!uiScaleConfigured) {
     return (
       <div className="app-wizard-wrap" style={{ '--ui-scale': effectiveUiScale }}>
         <div data-tauri-drag-region className="app-wizard-dragstrip" />
@@ -1295,6 +1296,17 @@ function App() {
             setUiScalePreviewed={setUiScalePreviewed}
           />
         </Suspense>
+      </div>
+    );
+  }
+  if (remoteFailure) {
+    return (
+      <div className="app-bootstrap-scale" style={{ '--ui-scale': effectiveUiScale }}>
+        <RemoteBackendRecovery
+          failure={remoteFailure}
+          onRetry={retryRemoteBackend}
+          onOpenSettings={openRemoteBackendSettings}
+        />
       </div>
     );
   }
