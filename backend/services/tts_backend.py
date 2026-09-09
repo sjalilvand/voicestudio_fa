@@ -2418,6 +2418,7 @@ _ENGINE_DOCS: dict[str, str] = {
     "sherpa-onnx":          "docs/engines/sherpa-onnx.md",
     "supertonic3":          "docs/engines/supertonic3.md",
     "pockettts":            "docs/engines/pockettts.md",
+    "audiocpp":             "docs/engines/audio-cpp.md",
 }
 
 
