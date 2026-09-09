@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Excluir este projeto permanentemente?"
   },
   "common": {
+    "stop": "Pare",
+    "resume": "Retomar",
+    "paused": "Em pausa",
     "open": "Abrir",
     "cancel": "Cancelar",
     "save": "Salvar",
@@ -778,6 +781,9 @@
     "retry": "Tentar novamente",
     "activeEngine": "Ativo {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} compatibilidade do motor",
+    "dictation_model": "Modelo de ditado",
+    "dictation_model_hint": "Usado pelo ditado ao vivo e por este mecanismo ao transcrever.",
+    "dictation_not_installed": "Não instalado — selecione para baixar",
     "active": "ativo",
     "whyUnavailable": "O que falta",
     "diskDetails": "Detalhes do disco",
@@ -2523,6 +2529,9 @@
     "dismiss": "Dispensar",
     "output": "Saída",
     "title": "Audiolivro",
+    "tab_script": "Roteiro",
+    "tab_voices": "Vozes",
+    "tab_book": "Livro",
     "subtitle": "Escreva ou importe sua história, escolha cada voz e exporte um audiolivro bem-acabado com capítulos de verdade.",
     "script": "Roteiro",
     "script_placeholder": "# Capítulo Um\nEra uma vez… [pausa de 500ms] o fim.\n\n# Capítulo Dois\n[voz: narrador] E assim continuou.",
@@ -2722,7 +2731,12 @@
     "message": "Nenhum modelo de fala para texto está instalado — este recurso precisa de um para transcrever áudio.",
     "download": "Baixar {{label}} ({{size}} GB)",
     "started": "Baixando {{label}} — acompanhe o progresso em Configurações → Modelos e tente novamente.",
-    "install_failed": "Não foi possível iniciar o download: {{message}}"
+    "install_failed": "Não foi possível iniciar o download: {{message}}",
+    "choose": "Escolha o modelo que se ajusta ao seu trabalho — precisão, idiomas e tamanho do download variam. Os downloads só começam ao clicar.",
+    "group_offline": "Melhor precisão — transcreve depois que você para de falar",
+    "group_streaming": "Menor latência — texto ao vivo enquanto você fala",
+    "use": "Usar {{label}}",
+    "installed": "Instalado"
   },
   "model_missing": {
     "message": "Este modelo não foi baixado em {{target}}.",

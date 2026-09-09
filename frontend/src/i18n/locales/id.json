@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Hapus proyek ini secara permanen?"
   },
   "common": {
+    "stop": "Berhenti",
+    "resume": "Lanjutkan",
+    "paused": "Dijeda",
     "open": "Buka",
     "cancel": "Batalkan",
     "save": "Simpan",
@@ -778,6 +781,9 @@
     "retry": "Coba lagi",
     "activeEngine": "Aktif {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} kompatibilitas mesin",
+    "dictation_model": "Model dikte",
+    "dictation_model_hint": "Dipakai oleh dikte langsung dan oleh mesin ini saat mentranskripsi.",
+    "dictation_not_installed": "Belum terpasang — pilih untuk mengunduh",
     "active": "aktif",
     "whyUnavailable": "Apa yang dibutuhkan",
     "diskDetails": "Rincian disk",
@@ -2523,6 +2529,9 @@
     "dismiss": "Tutup",
     "output": "Keluaran",
     "title": "Buku Audio",
+    "tab_script": "Naskah",
+    "tab_voices": "Suara",
+    "tab_book": "Buku",
     "subtitle": "Tulis atau impor cerita Anda, pilih suara untuk setiap peran, lalu ekspor buku audio rapi dengan bab sungguhan.",
     "script": "naskah",
     "script_placeholder": "# Bab Satu\nSuatu ketika… [pause 500ms] berakhir.\n\n# Bab Dua\n[suara: narator] Dan hal itu berlanjut.",
@@ -2722,7 +2731,12 @@
     "message": "Tidak ada model ucapan-ke-teks yang terpasang — fitur ini membutuhkannya untuk mentranskripsi audio.",
     "download": "Unduh {{label}} ({{size}} GB)",
     "started": "Mengunduh {{label}} — pantau progresnya di Pengaturan → Model, lalu coba lagi.",
-    "install_failed": "Tidak dapat memulai unduhan: {{message}}"
+    "install_failed": "Tidak dapat memulai unduhan: {{message}}",
+    "choose": "Pilih model yang sesuai dengan pekerjaan Anda — akurasi, bahasa, dan ukuran unduhan berbeda-beda. Unduhan hanya dimulai saat Anda mengklik.",
+    "group_offline": "Akurasi terbaik — mentranskripsi setelah Anda berhenti bicara",
+    "group_streaming": "Latensi terendah — teks langsung saat Anda berbicara",
+    "use": "Gunakan {{label}}",
+    "installed": "Terpasang"
   },
   "model_missing": {
     "message": "Model ini belum diunduh di {{target}}.",

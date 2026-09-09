@@ -18,30 +18,15 @@
 // @tauri-apps/cli. All extra args are forwarded untouched.
 // ──────────────────────────────────────────────────────────────────────────
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { join, delimiter } from "node:path";
-import { homedir } from "node:os";
 import process from "node:process";
 import { DEV_APP_PROCESS_NAME } from "./desktop-common.mjs";
 import { launchTauriDev } from "./desktop-dev-launch.mjs";
 import { desktopRuntimeReady } from "./desktop-runtime-preflight.mjs";
-
-/** The env's PATH key — Windows uses "Path", others "PATH"; match case-insensitively. */
-function pathKeyOf(env) {
-  return Object.keys(env).find((k) => k.toLowerCase() === "path") ?? "PATH";
-}
-
-/** Is `cargo` resolvable via the given env's PATH? Uses a child that searches
- *  its own PATH (`cmd`/`sh`), which mirrors how the Tauri CLI's Rust resolves
- *  `cargo` downstream — unlike Bun's own launcher resolution, which snapshots
- *  PATH and would give a false negative after we heal it. */
-function cargoResolvable(env) {
-  const probe =
-    process.platform === "win32"
-      ? spawnSync("cmd", ["/c", "cargo --version"], { env, stdio: "ignore" })
-      : spawnSync("sh", ["-c", "command -v cargo"], { env, stdio: "ignore" });
-  return probe.status === 0;
-}
+import {
+  cargoMissingMessage,
+  healToolchainPath,
+  healedPathNotes,
+} from "./desktop-toolchain-path.mjs";
 
 /**
  * Take down a leftover dev app before starting a new one.
@@ -86,35 +71,14 @@ if (!desktopRuntimeReady()) process.exit(1);
 killStaleDevApp();
 
 // Start from the real environment; heal a stale PATH into a *copy* (mutating
-// process.env doesn't reliably propagate to children under Bun).
-const childEnv = { ...process.env };
-const key = pathKeyOf(childEnv);
-
-if (!cargoResolvable(childEnv)) {
-  const cargoBin = join(homedir(), ".cargo", "bin");
-  const cargoExe = join(cargoBin, process.platform === "win32" ? "cargo.exe" : "cargo");
-  if (existsSync(cargoExe)) {
-    childEnv[key] = cargoBin + delimiter + (childEnv[key] ?? "");
-    console.log(
-      `[desktop-dev] added '${cargoBin}' to PATH for this run - cargo is installed but wasn't visible to ` +
-        `this terminal (a stale PATH from before rustup). Open a new terminal to make it permanent.`,
-    );
-  } else {
-    console.error(
-      [
-        "",
-        "❌ `tauri dev` needs Rust/cargo, and none was found.",
-        "",
-        "   Install the Rust toolchain, then reopen your terminal:",
-        "     Windows:      winget install Rust.Rustup",
-        "     macOS/Linux:  https://rustup.rs",
-        "",
-        "   Or download a prebuilt installer from the Releases page (no toolchain needed).",
-        "",
-      ].join("\n"),
-    );
-    process.exit(1);
-  }
+// process.env doesn't reliably propagate to children under Bun). Shared with
+// desktop-prod / desktop-fresh so every launcher fixes the same class of
+// "installed but not on this terminal's PATH" failure.
+const { env: childEnv, added, missing } = healToolchainPath(process.env);
+for (const note of healedPathNotes(added, "desktop-dev")) console.log(note);
+if (missing.includes("cargo")) {
+  console.error(cargoMissingMessage("`tauri dev`"));
+  process.exit(1);
 }
 
 // `frontend/dist` is a required bundle resource even under `tauri dev`.

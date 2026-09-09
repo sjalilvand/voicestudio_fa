@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Xóa vĩnh viễn dự án này?"
   },
   "common": {
+    "stop": "Dừng lại",
+    "resume": "Tiếp tục",
+    "paused": "Đã tạm dừng",
     "open": "Mở",
     "cancel": "Hủy bỏ",
     "save": "Lưu",
@@ -778,6 +781,9 @@
     "retry": "Thử lại",
     "activeEngine": "Đang hoạt động {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} khả năng tương thích động cơ",
+    "dictation_model": "Mô hình đọc chính tả",
+    "dictation_model_hint": "Dùng cho đọc chính tả trực tiếp và cho engine này khi phiên âm.",
+    "dictation_not_installed": "Chưa cài đặt — chọn để tải xuống",
     "active": "hoạt động",
     "whyUnavailable": "Cần những gì",
     "diskDetails": "Chi tiết ổ đĩa",
@@ -2523,6 +2529,9 @@
     "dismiss": "Bỏ qua",
     "output": "Đầu ra",
     "title": "Sách nói",
+    "tab_script": "Kịch bản",
+    "tab_voices": "Giọng đọc",
+    "tab_book": "Sách",
     "subtitle": "Viết hoặc nhập câu chuyện, chọn giọng cho từng vai, rồi xuất sách nói hoàn chỉnh với các chương thực sự.",
     "script": "kịch bản",
     "script_placeholder": "# Chương Một\nNgày xửa ngày xưa… [tạm dừng 500ms] đoạn cuối.\n\n# Chương hai\n[giọng:người kể chuyện] Và cứ thế mọi chuyện tiếp tục.",
@@ -2722,7 +2731,12 @@
     "message": "Chưa cài đặt mô hình chuyển giọng nói thành văn bản — tính năng này cần một mô hình để phiên âm.",
     "download": "Tải xuống {{label}} ({{size}} GB)",
     "started": "Đang tải {{label}} — theo dõi tiến trình trong Cài đặt → Mô hình, sau đó thử lại.",
-    "install_failed": "Không thể bắt đầu tải xuống: {{message}}"
+    "install_failed": "Không thể bắt đầu tải xuống: {{message}}",
+    "choose": "Chọn mô hình phù hợp với công việc của bạn — độ chính xác, ngôn ngữ và dung lượng tải khác nhau. Chỉ tải xuống khi bạn nhấp.",
+    "group_offline": "Chính xác nhất — chuyển thành văn bản sau khi bạn ngừng nói",
+    "group_streaming": "Độ trễ thấp nhất — văn bản trực tiếp khi bạn đang nói",
+    "use": "Dùng {{label}}",
+    "installed": "Đã cài đặt"
   },
   "model_missing": {
     "message": "Mô hình này chưa được tải xuống trên {{target}}.",

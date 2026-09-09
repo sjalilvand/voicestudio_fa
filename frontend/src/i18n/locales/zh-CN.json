@@ -87,6 +87,9 @@
     "deleteProjectConfirm": "永久删除此项目？"
   },
   "common": {
+    "stop": "停止",
+    "resume": "恢复",
+    "paused": "已暂停",
     "open": "打开",
     "cancel": "取消",
     "save": "保存",
@@ -735,6 +738,9 @@
     "retry": "重试",
     "activeEngine": "当前 {{family}}：{{engine}}",
     "engineCompatLabel": "{{family}} 引擎兼容性",
+    "dictation_model": "听写模型",
+    "dictation_model_hint": "用于实时听写，以及此引擎进行转写时。",
+    "dictation_not_installed": "未安装 — 选择以下载",
     "active": "当前",
     "whyUnavailable": "所需条件",
     "diskDetails": "磁盘详情",
@@ -2530,6 +2536,9 @@
     "dismiss": "关闭",
     "output": "输出",
     "title": "有声读物",
+    "tab_script": "文稿",
+    "tab_voices": "配音",
+    "tab_book": "书籍",
     "subtitle": "编写或导入故事，为每个角色分配声音，再导出带有真实章节的精致有声书。",
     "script": "脚本",
     "script_placeholder": "#第一章\n从前……[停顿 500 毫秒]结束。\n\n# 第二章\n[声音：旁白] 就这样继续下去。",
@@ -2729,7 +2738,12 @@
     "message": "尚未安装语音转文字模型 — 此功能需要一个模型来转写音频。",
     "download": "下载 {{label}}（{{size}} GB）",
     "started": "正在下载 {{label}} — 请在 设置 → 模型 中查看进度，完成后重试。",
-    "install_failed": "无法开始下载：{{message}}"
+    "install_failed": "无法开始下载：{{message}}",
+    "choose": "选择适合你工作的模型 — 各模型的准确度、语言和下载大小不同。只有点击后才会开始下载。",
+    "group_offline": "最高准确度 — 停止说话后再转写",
+    "group_streaming": "最低延迟 — 边说边实时出字",
+    "use": "使用 {{label}}",
+    "installed": "已安装"
   },
   "model_missing": {
     "message": "此模型尚未下载到 {{target}}。",

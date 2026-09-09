@@ -56,6 +56,7 @@ import {
   sanitizedEnv,
   tauriBuildArgs,
 } from "./desktop-common.mjs";
+import { healToolchainPath, healedPathNotes } from "./desktop-toolchain-path.mjs";
 
 // ── macOS only ─────────────────────────────────────────────────────────────
 if (process.platform !== "darwin") {
@@ -263,9 +264,13 @@ if (dryRun) {
   rmSync(appBundle, { recursive: true, force: true });
   // #962: invoke the Tauri CLI via the frontend workspace's `tauri` script,
   // not `bunx tauri` (bunx can fetch the unrelated npm `tauri` v1 package).
+  // Same stale-PATH healing as `bun desktop` / `bun desktop-prod`.
+  const { env: buildEnv, added } = healToolchainPath(process.env);
+  for (const note of healedPathNotes(added, "desktop-fresh")) console.log(note);
   const res = spawnSync("bun", ["run", "--cwd", "frontend", ...tauriBuildArgs("darwin")], {
     cwd: repoRoot,
     stdio: "inherit",
+    env: buildEnv,
   });
   if (res.status !== 0) {
     console.error(`\n❌ Build failed (exit ${res.status ?? `signal ${res.signal}`}).`);

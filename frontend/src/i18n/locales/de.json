@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Dieses Projekt dauerhaft löschen?"
   },
   "common": {
+    "stop": "Stopp",
+    "resume": "Fortsetzen",
+    "paused": "Pausiert",
     "open": "Offen",
     "cancel": "Abbrechen",
     "save": "Speichern",
@@ -778,6 +781,9 @@
     "retry": "Versuchen Sie es noch einmal",
     "activeEngine": "Aktiv {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} Motorkompatibilität",
+    "dictation_model": "Diktiermodell",
+    "dictation_model_hint": "Wird vom Live-Diktat und von dieser Engine beim Transkribieren verwendet.",
+    "dictation_not_installed": "Nicht installiert – zum Herunterladen auswählen",
     "active": "aktiv",
     "whyUnavailable": "Was benötigt wird",
     "diskDetails": "Speicherplatzdetails",
@@ -2523,6 +2529,9 @@
     "dismiss": "Verwerfen",
     "output": "Ausgabe",
     "title": "Hörbuch",
+    "tab_script": "Skript",
+    "tab_voices": "Stimmen",
+    "tab_book": "Buch",
     "subtitle": "Schreiben oder importieren Sie Ihre Geschichte, weisen Sie jeder Rolle eine Stimme zu und exportieren Sie ein fertiges Hörbuch mit echten Kapiteln.",
     "script": "Skript",
     "script_placeholder": "# Kapitel eins\nEs war einmal… [Pause 500 ms] das Ende.\n\n# Kapitel Zwei\n[Stimme:Erzähler] Und so ging es weiter.",
@@ -2722,7 +2731,12 @@
     "message": "Es ist kein Sprache-zu-Text-Modell installiert — diese Funktion benötigt eines zum Transkribieren.",
     "download": "{{label}} herunterladen ({{size}} GB)",
     "started": "{{label}} wird heruntergeladen — Fortschritt unter Einstellungen → Modelle, danach erneut versuchen.",
-    "install_failed": "Download konnte nicht gestartet werden: {{message}}"
+    "install_failed": "Download konnte nicht gestartet werden: {{message}}",
+    "choose": "Wähle das Modell, das zu deiner Arbeit passt — Genauigkeit, Sprachen und Downloadgröße unterscheiden sich. Downloads starten erst per Klick.",
+    "group_offline": "Beste Genauigkeit — transkribiert, nachdem du aufhörst zu sprechen",
+    "group_streaming": "Geringste Latenz — Live-Text, während du sprichst",
+    "use": "{{label}} verwenden",
+    "installed": "Installiert"
   },
   "model_missing": {
     "message": "Dieses Modell wurde auf {{target}} nicht heruntergeladen.",

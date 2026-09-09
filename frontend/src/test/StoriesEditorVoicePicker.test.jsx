@@ -78,21 +78,63 @@ describe('StoriesEditor voice pickers (#1220)', () => {
 
   it('cast picker renders VoiceSelector and stores the character voice', () => {
     renderEditor();
-    const castRegion = screen.getByRole('complementary', { name: /Stories/ });
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Cast' }), { button: 0 });
+    const castRegion = screen.getByRole('tabpanel', { name: 'Cast' });
     const trigger = within(castRegion).getByRole('button', { name: /Default/ });
     fireEvent.click(trigger);
     fireEvent.mouseDown(screen.getByText('Aria'));
     expect(useAppStore.getState().cast[0].profileId).toBe('p_clone');
+
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Script' }), { button: 0 });
+    expect(within(screen.getByRole('list')).getByRole('button', { name: /Aria/ })).toBeVisible();
   });
 
-  it('renders a calm writing hierarchy with the project stats and line canvas', () => {
+  it('defaults to Script and renders the project stats and line canvas', () => {
     renderEditor();
     expect(screen.getByRole('heading', { level: 1, name: /Untitled story/ })).toBeInTheDocument();
     expect(screen.getAllByText('1 lines').length).toBeGreaterThan(0);
+    expect(screen.getByRole('tab', { name: 'Script' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('main')).toHaveClass('stories-manuscript');
-    expect(screen.getByRole('complementary')).toHaveClass('stories-sidebar');
     expect(screen.getByRole('list')).toHaveClass('stories-track-list');
     expect(screen.getByRole('listitem')).toHaveClass('stories-line');
+  });
+
+  it('preserves script edits while moving through the workspace tabs', () => {
+    renderEditor();
+    const line = screen.getByDisplayValue('Once upon a time');
+    fireEvent.change(line, { target: { value: 'A revised opening line' } });
+
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Cast' }), { button: 0 });
+    expect(screen.getByRole('tabpanel', { name: 'Cast' })).toBeVisible();
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Export' }), { button: 0 });
+    expect(screen.getByRole('tabpanel', { name: 'Export' })).toBeVisible();
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Script' }), { button: 0 });
+
+    expect(screen.getByDisplayValue('A revised opening line')).toBeVisible();
+    expect(useAppStore.getState().storyTracks[0].text).toBe('A revised opening line');
+  });
+
+  it('supports keyboard navigation across all workspace tabs', async () => {
+    renderEditor();
+    const script = screen.getByRole('tab', { name: 'Script' });
+    const cast = screen.getByRole('tab', { name: 'Cast' });
+    const projects = screen.getByRole('tab', { name: 'Projects' });
+
+    script.focus();
+    fireEvent.keyDown(script, { key: 'ArrowRight' });
+    await waitFor(() => expect(cast).toHaveFocus());
+    expect(script).toHaveAttribute('aria-selected', 'true');
+    expect(cast).toHaveAttribute('aria-selected', 'false');
+
+    fireEvent.keyDown(cast, { key: 'Enter' });
+    expect(cast).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.keyDown(cast, { key: 'End' });
+    await waitFor(() => expect(projects).toHaveFocus());
+    expect(cast).toHaveAttribute('aria-selected', 'true');
+    expect(projects).toHaveAttribute('aria-selected', 'false');
+    fireEvent.keyDown(projects, { key: 'Enter' });
+    expect(projects).toHaveAttribute('aria-selected', 'true');
   });
 
   it('loads a comprehensive working sample by default', async () => {

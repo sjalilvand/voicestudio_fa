@@ -22,6 +22,7 @@ import {
 import { Button, Progress } from '../../ui';
 import { useEffect, useRef } from 'react';
 import WaveformTimeline from '../WaveformTimeline';
+import SearchableSelect from '../SearchableSelect';
 import DubbingDemo from '../DubbingDemo';
 import DubFailureNotice from './DubFailureNotice';
 import PrepOverlay from './PrepOverlay';
@@ -108,52 +109,66 @@ export default function IdleSkeleton({
   onOpenQueue,
 }) {
   const youtubeCookieInputRef = useRef(null);
+  const videoUploadInputRef = useRef(null);
   useEffect(() => {
     if (!youtubeCookieFile && youtubeCookieInputRef.current) {
       youtubeCookieInputRef.current.value = '';
     }
   }, [youtubeCookieFile]);
+
+  const languageOptions = LANG_CODES.map((language) => ({
+    value: language.code,
+    label: `${languageLabel(language.code, uiLocale, language.label)} — ${language.code}`,
+  }));
+  const sourceOptions = [{ value: 'auto', label: t('bootstrap.auto_detect') }, ...languageOptions];
+
+  const isPristineIdle = !dubVideoFile && dubStep === 'idle' && !dubJobId;
+
   return (
-    <div className="flex-1 flex flex-col min-h-0">
-      {/* Header bar */}
-      <div className="flex justify-between items-center px-[12px] py-[5px] shrink-0 bg-[rgba(255,255,255,0.015)] [border:1px_solid_rgba(255,255,255,0.04)] rounded-md mb-[2px]">
-        <div className="label-row dub-head__title">
-          <Film className="label-icon" size={11} />
-          <span className="font-semibold text-[0.85rem] overflow-hidden text-ellipsis whitespace-nowrap text-fg">
-            {dubVideoFile ? dubVideoFile.name : t('dub.video_dubbing_studio')}
-          </span>
-          {dubVideoFile && (
-            <span className="text-fg-muted font-normal whitespace-nowrap text-[0.72rem]">
-              · {(dubVideoFile.size / 1024 / 1024).toFixed(1)} MB
+    <div className={`flex-1 flex flex-col min-h-0${isPristineIdle ? ' dub-start-screen' : ''}`}>
+      {/* Selected source details appear only after choosing media. */}
+      {dubVideoFile && (
+        <div className="flex justify-between items-center px-[12px] py-[5px] shrink-0 bg-[rgba(255,255,255,0.015)] [border:1px_solid_rgba(255,255,255,0.04)] rounded-md mb-[2px]">
+          <div className="label-row dub-head__title">
+            <Film className="label-icon" size={11} />
+            <span className="font-semibold text-[0.85rem] overflow-hidden text-ellipsis whitespace-nowrap text-fg">
+              {dubVideoFile.name}
             </span>
-          )}
-          {activeProjectName && activeProjectName !== dubFilename && (
-            <span className="text-[#b8bb26] ml-[var(--space-3)] whitespace-nowrap text-[0.72rem]">
-              — {activeProjectName}
-            </span>
+            {dubVideoFile && (
+              <span className="text-fg-muted font-normal whitespace-nowrap text-[0.72rem]">
+                · {(dubVideoFile.size / 1024 / 1024).toFixed(1)} MB
+              </span>
+            )}
+            {activeProjectName && activeProjectName !== dubFilename && (
+              <span className="text-[#b8bb26] ml-[var(--space-3)] whitespace-nowrap text-[0.72rem]">
+                — {activeProjectName}
+              </span>
+            )}
+          </div>
+          {!isPristineIdle && (
+            <div className="flex gap-[var(--space-2)] items-center shrink-0">
+              <Button
+                variant="subtle"
+                size="sm"
+                disabled
+                title={t('dub.save')}
+                aria-label={t('dub.save')}
+              >
+                <Save size={12} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled
+                title={t('dub.reset')}
+                aria-label={t('dub.reset')}
+              >
+                <RotateCcw size={12} />
+              </Button>
+            </div>
           )}
         </div>
-        <div className="flex gap-[var(--space-2)] items-center shrink-0">
-          <Button
-            variant="subtle"
-            size="sm"
-            disabled
-            title={t('dub.save')}
-            aria-label={t('dub.save')}
-          >
-            <Save size={12} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled
-            title={t('dub.reset')}
-            aria-label={t('dub.reset')}
-          >
-            <RotateCcw size={12} />
-          </Button>
-        </div>
-      </div>
+      )}
 
       {/* Transcription failure banner — shown in the idle state when a
               job exists but transcription produced zero segments (or threw).
@@ -277,23 +292,14 @@ export default function IdleSkeleton({
                 )}
                 <label className="inline-flex items-center gap-[5px] text-[12px] text-[var(--muted,#a89984)] whitespace-nowrap">
                   <Globe size={13} /> {t('dub.source_language')}
-                  <select
-                    className="input-base text-[0.65rem]"
+                  <SearchableSelect
+                    ariaLabel={t('dub.source_language')}
                     value={dubSourceLangCode}
-                    disabled={
-                      dubStep === 'uploading' ||
-                      dubStep === 'transcribing' ||
-                      dubStep === 'installing-asr'
-                    }
-                    onChange={(event) => setDubSourceLangCode(event.target.value)}
-                  >
-                    <option value="auto">{t('bootstrap.auto_detect')}</option>
-                    {LANG_CODES.map((language) => (
-                      <option key={language.code} value={language.code}>
-                        {languageLabel(language.code, uiLocale, language.label)} — {language.code}
-                      </option>
-                    ))}
-                  </select>
+                    options={sourceOptions}
+                    onChange={setDubSourceLangCode}
+                    menuPortal
+                    disabled={['uploading', 'transcribing', 'installing-asr'].includes(dubStep)}
+                  />
                 </label>
                 <label
                   className="inline-flex items-center gap-[5px] text-[12px] text-[var(--muted,#a89984)] whitespace-nowrap"
@@ -367,232 +373,218 @@ export default function IdleSkeleton({
           ) : dubStep === 'idle' ? (
             <>
               {!demoDismissed && <DubbingDemo onDismiss={dismissDubDemo} />}
-              <label
-                htmlFor="video-upload"
-                className="dub-idle-drop"
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.classList.add('is-dragging');
-                }}
-                onDragLeave={(e) => {
-                  e.currentTarget.classList.remove('is-dragging');
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.classList.remove('is-dragging');
-                  const file = e.dataTransfer.files[0];
-                  if (
-                    file &&
-                    (file.type.startsWith('video/') ||
-                      file.type.startsWith('audio/') ||
-                      /\.(mp3|wav|flac|m4a|aac|ogg|opus|wma)$/i.test(file.name))
-                  ) {
-                    setDubVideoFile(file);
-                    // #119: an audio file → audio-only dubbing (skip video work, output audio).
-                    setDubInputType(
-                      file.type.startsWith('audio/') ||
-                        /\.(mp3|wav|flac|m4a|aac|ogg|opus|wma)$/i.test(file.name)
-                        ? 'audio'
-                        : 'video',
-                    );
-                    setDubStep('idle');
-                    fileToMediaUrl(file, null).then((urls) => setDubLocalBlobUrl(urls));
-                  }
-                }}
-              >
-                <div className="dub-idle-drop__puck">
-                  <UploadCloud color="#d3869b" size={28} />
-                </div>
-                <div className="text-center">
-                  <div className="text-[0.9rem] text-fg font-medium mb-[4px]">
-                    {t('dub.drop_here')}
-                  </div>
-                  <div className="text-[0.7rem] text-[#665c54]">{t('dub.supported_formats')}</div>
-                </div>
+              <div className="dub-start-card">
                 <div
-                  className="flex gap-[6px] items-center px-[10px] py-[6px] mt-[10px] bg-[rgba(255,255,255,0.02)] [border:1px_solid_rgba(255,255,255,0.06)] rounded-[6px] w-[min(420px,80%)]"
-                  onClick={(e) => e.preventDefault()}
+                  className="dub-idle-drop dub-start-drop"
+                  role="group"
+                  aria-labelledby="dub-start-title"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.classList.add('is-dragging');
+                  }}
+                  onDragLeave={(e) => {
+                    e.currentTarget.classList.remove('is-dragging');
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.classList.remove('is-dragging');
+                    const file = e.dataTransfer.files[0];
+                    if (
+                      file &&
+                      (file.type.startsWith('video/') ||
+                        file.type.startsWith('audio/') ||
+                        /\.(mp3|wav|flac|m4a|aac|ogg|opus|wma)$/i.test(file.name))
+                    ) {
+                      setDubVideoFile(file);
+                      // #119: an audio file → audio-only dubbing (skip video work, output audio).
+                      setDubInputType(
+                        file.type.startsWith('audio/') ||
+                          /\.(mp3|wav|flac|m4a|aac|ogg|opus|wma)$/i.test(file.name)
+                          ? 'audio'
+                          : 'video',
+                      );
+                      setDubStep('idle');
+                      fileToMediaUrl(file, null).then((urls) => setDubLocalBlobUrl(urls));
+                    }
+                  }}
                 >
-                  <Link2 size={13} color="#a89984" />
+                  <div className="dub-idle-drop__puck dub-start-mark" aria-hidden="true">
+                    <UploadCloud size={28} />
+                  </div>
+                  <div className="text-center">
+                    <div id="dub-start-title" className="dub-start-title text-fg font-medium">
+                      {t('dub.drop_here')}
+                    </div>
+                    <div className="dub-start-formats text-fg-muted">
+                      {t('dub.supported_formats')}
+                    </div>
+                  </div>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="dub-start-choose"
+                    onClick={() => videoUploadInputRef.current?.click()}
+                    leading={<UploadCloud size={14} aria-hidden="true" />}
+                  >
+                    {t('gallery.upload')}
+                  </Button>
+                </div>
+
+                <div className="dub-start-url">
+                  <Link2 size={15} aria-hidden="true" />
                   <input
-                    type="text"
+                    type="url"
+                    aria-label={t('dub.paste_url')}
                     placeholder={t('dub.paste_url')}
                     value={ingestUrl}
                     onChange={(e) => setIngestUrl(e.target.value)}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        e.stopPropagation();
                         onIngestUrl();
                       }
                     }}
-                    className="flex-1 bg-transparent border-none outline-none text-fg text-[0.75rem]"
+                    className="input-base flex-1"
                   />
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onIngestUrl();
-                    }}
+                    onClick={onIngestUrl}
                     disabled={!ingestUrl.trim()}
                     className={`dub-ingest-row__cta ${ingestUrl.trim() ? 'is-ready' : ''}`}
                   >
                     {t('dub.ingest')}
                   </button>
                 </div>
-                <label
-                  className="flex items-center gap-[6px] mt-[6px] px-[6px] py-[4px] text-[0.62rem] text-fg-muted cursor-pointer rounded-[4px] bg-[rgba(255,255,255,0.02)] hover:text-fg hover:bg-[rgba(255,255,255,0.05)]"
-                  title={t('dub.pull_captions_title')}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    className="m-0 accent-[var(--color-brand)]"
-                    checked={fetchYtSubs}
-                    onChange={(e) => setFetchYtSubs(e.target.checked)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <span>{t('dub.pull_captions')}</span>
-                </label>
-                <div
-                  className="flex items-center gap-[6px] mt-[4px] text-[0.62rem] text-fg-muted"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                >
-                  <span>{t('dub.youtube_auth')}</span>
-                  <input
-                    ref={youtubeCookieInputRef}
-                    type="file"
-                    accept=".txt,text/plain"
-                    aria-label={t('dub.youtube_cookie_file')}
-                    className="max-w-[230px] text-[0.6rem] file:mr-[6px] file:rounded-[4px] file:border-0 file:px-[7px] file:py-[3px] file:bg-[rgba(255,255,255,0.08)] file:text-fg file:cursor-pointer"
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => setYoutubeCookieFile(e.target.files?.[0] || null)}
-                  />
-                  {youtubeCookieFile && (
-                    <button
-                      type="button"
-                      className="text-fg-muted hover:text-fg"
-                      onClick={() => setYoutubeCookieFile(null)}
-                      aria-label={t('dub.remove_cookie_file')}
-                    >
-                      ×
-                    </button>
-                  )}
+
+                <div className="dub-start-languages">
+                  <label className="dub-landing-opts__lang inline-flex min-w-0 text-[var(--chrome-fg-muted)]">
+                    <Globe size={13} aria-hidden="true" />
+                    <span className="text-[0.72rem] font-medium">{t('dub.source_language')}</span>
+                    <SearchableSelect
+                      ariaLabel={t('dub.source_language')}
+                      value={dubSourceLangCode}
+                      options={sourceOptions}
+                      onChange={setDubSourceLangCode}
+                      menuPortal
+                      buttonClassName="input-base dub-start-language-select"
+                    />
+                  </label>
+                  <label className="dub-landing-opts__lang inline-flex min-w-0 text-[var(--chrome-fg-muted)]">
+                    <Globe size={13} aria-hidden="true" />
+                    <span className="text-[0.72rem] font-medium">{t('dub.target_language')}</span>
+                    <SearchableSelect
+                      ariaLabel={t('dub.target_language')}
+                      value={dubLangCode}
+                      options={languageOptions}
+                      onChange={(code) => {
+                        setDubLangCode(code);
+                        const language = LANG_CODES.find((item) => item.code === code);
+                        if (language) setDubLang(language.label);
+                      }}
+                      menuPortal
+                      buttonClassName="input-base dub-start-language-select"
+                    />
+                  </label>
                 </div>
-                {/* Quiet path into the batch dubbing queue — the queue page
-                    itself (many videos × many languages, plus the watch
-                    folder) had no UI entry point anywhere in the app. */}
+
+                <button
+                  type="button"
+                  className="dub-start-advanced"
+                  onClick={() => setLandingAdvOpen((open) => !open)}
+                  aria-expanded={landingAdvOpen}
+                  aria-controls="dub-start-advanced-options"
+                >
+                  <span>{t('dub.advanced')}</span>
+                  {landingAdvOpen ? (
+                    <ChevronUp size={13} aria-hidden="true" />
+                  ) : (
+                    <ChevronDown size={13} aria-hidden="true" />
+                  )}
+                </button>
+
+                <div
+                  id="dub-start-advanced-options"
+                  className="dub-start-options"
+                  hidden={!landingAdvOpen}
+                >
+                  <label className="dub-start-caption-option" title={t('dub.pull_captions_title')}>
+                    <input
+                      type="checkbox"
+                      className="m-0 accent-[var(--color-brand)]"
+                      checked={fetchYtSubs}
+                      onChange={(e) => setFetchYtSubs(e.target.checked)}
+                    />
+                    <FileText size={13} aria-hidden="true" />
+                    <span>{t('dub.pull_captions')}</span>
+                  </label>
+
+                  <div className="dub-start-cookie-option">
+                    <span>{t('dub.youtube_auth')}</span>
+                    <input
+                      ref={youtubeCookieInputRef}
+                      type="file"
+                      accept=".txt,text/plain"
+                      aria-label={t('dub.youtube_cookie_file')}
+                      onChange={(e) => setYoutubeCookieFile(e.target.files?.[0] || null)}
+                    />
+                    {youtubeCookieFile && (
+                      <button
+                        type="button"
+                        className="text-fg-muted hover:text-fg"
+                        onClick={() => setYoutubeCookieFile(null)}
+                        aria-label={t('dub.remove_cookie_file')}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="dub-start-generation-options">
+                    <label className="dub-landing-adv__field" title={t('dub.num_speakers_help')}>
+                      <span>
+                        <Users size={12} aria-hidden="true" /> {t('dub.num_speakers_label')}
+                      </span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={20}
+                        step={1}
+                        className={SPEAKERS_INPUT}
+                        placeholder={t('dub.num_speakers_auto')}
+                        value={dubNumSpeakers ?? ''}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value, 10);
+                          setDubNumSpeakers(
+                            Number.isFinite(value) && value > 0 ? Math.min(value, 20) : null,
+                          );
+                        }}
+                      />
+                    </label>
+                    <label className="dub-landing-adv__field dub-landing-adv__field--grow">
+                      <span>
+                        <UserSquare2 size={12} aria-hidden="true" /> {t('dub.style')}
+                      </span>
+                      <input
+                        type="text"
+                        className="input-base"
+                        placeholder={t('dub.style_placeholder')}
+                        value={dubInstruct}
+                        onChange={(e) => setDubInstruct(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   data-testid="dub-open-batch-queue"
-                  className="mt-[8px] inline-flex cursor-pointer items-center gap-[6px] rounded-[4px] border-0 bg-[rgba(255,255,255,0.02)] px-[8px] py-[4px] text-[0.62rem] text-fg-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-fg"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onOpenQueue?.();
-                  }}
+                  className="dub-start-batch"
+                  onClick={() => onOpenQueue?.()}
                 >
-                  <Activity size={11} aria-hidden="true" />
+                  <Activity size={12} aria-hidden="true" />
                   <span>{t('dub.batch_queue_link')}</span>
                 </button>
-              </label>
-
-              {/* One decision up front: the target language. Everything else
-                    (speakers, style) hides behind Advanced — ElevenLabs-style
-                    flow, VoiceStudio chrome. The pick pre-seeds the editor. */}
-              <div className="flex items-center justify-between gap-[10px] mt-[10px] px-[10px] py-[8px] [border:1px_solid_var(--chrome-border)] rounded-[10px] bg-[var(--chrome-hover-bg)]">
-                <label className="dub-landing-opts__lang inline-flex items-center gap-[7px] min-w-0 text-[var(--chrome-fg-muted)]">
-                  <Globe size={13} />
-                  <span className="text-[0.72rem] font-medium whitespace-nowrap">
-                    {t('dub.source_language')}
-                  </span>
-                  <select
-                    className="input-base text-[0.65rem]"
-                    value={dubSourceLangCode}
-                    onChange={(event) => setDubSourceLangCode(event.target.value)}
-                  >
-                    <option value="auto">{t('bootstrap.auto_detect')}</option>
-                    {LANG_CODES.map((language) => (
-                      <option key={language.code} value={language.code}>
-                        {languageLabel(language.code, uiLocale, language.label)} — {language.code}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="dub-landing-opts__lang inline-flex items-center gap-[7px] min-w-0 text-[var(--chrome-fg-muted)]">
-                  <Globe size={13} />
-                  <span className="text-[0.72rem] font-medium whitespace-nowrap">
-                    {t('dub.target_language', { defaultValue: 'Dub into' })}
-                  </span>
-                  <select
-                    className="input-base text-[0.65rem]"
-                    value={dubLangCode}
-                    onChange={(e) => {
-                      const lc = LANG_CODES.find((l) => l.code === e.target.value);
-                      setDubLangCode(e.target.value);
-                      if (lc) setDubLang(lc.label);
-                    }}
-                  >
-                    {LANG_CODES.map((lc) => (
-                      <option key={lc.code} value={lc.code}>
-                        {languageLabel(lc.code, uiLocale, lc.label)} — {lc.code}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-[5px] px-[10px] py-[5px] text-[0.7rem] text-[var(--chrome-fg-muted)] bg-transparent border border-transparent rounded-[var(--chrome-radius-pill,999px)] cursor-pointer transition-colors hover:text-[var(--chrome-fg)] hover:border-transparent"
-                  onClick={() => setLandingAdvOpen((o) => !o)}
-                  aria-expanded={landingAdvOpen}
-                >
-                  {t('dub.advanced', { defaultValue: 'Advanced' })}
-                  {landingAdvOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-                </button>
               </div>
-              {landingAdvOpen && (
-                <div className="flex flex-wrap items-center gap-[12px] mt-[6px] px-[10px] py-[8px] [border:1px_solid_var(--chrome-border)] rounded-[10px]">
-                  <label
-                    className="dub-landing-adv__field inline-flex items-center gap-[6px] text-[0.7rem] text-[var(--chrome-fg-muted)]"
-                    title={t('dub.num_speakers_help')}
-                  >
-                    <Users size={12} /> {t('dub.num_speakers_label')}
-                    <input
-                      type="number"
-                      min={1}
-                      max={20}
-                      step={1}
-                      className={SPEAKERS_INPUT}
-                      placeholder={t('dub.num_speakers_auto')}
-                      value={dubNumSpeakers ?? ''}
-                      onChange={(e) => {
-                        const v = parseInt(e.target.value, 10);
-                        setDubNumSpeakers(Number.isFinite(v) && v > 0 ? Math.min(v, 20) : null);
-                      }}
-                    />
-                  </label>
-                  <label className="dub-landing-adv__field dub-landing-adv__field--grow inline-flex items-center gap-[6px] text-[0.7rem] text-[var(--chrome-fg-muted)]">
-                    <UserSquare2 size={12} /> {t('dub.style')}
-                    <input
-                      type="text"
-                      className="input-base text-[0.65rem]"
-                      placeholder={t('dub.style_placeholder')}
-                      value={dubInstruct}
-                      onChange={(e) => setDubInstruct(e.target.value)}
-                    />
-                  </label>
-                </div>
-              )}
             </>
           ) : (
             // Any other active pipeline step reaching the no-file path (e.g.
@@ -604,6 +596,7 @@ export default function IdleSkeleton({
           )}
 
           <input
+            ref={videoUploadInputRef}
             type="file"
             accept="video/*,audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.opus,.wma"
             id="video-upload"
@@ -623,10 +616,7 @@ export default function IdleSkeleton({
                   : 'video',
               );
               setDubStep('idle');
-              setDubLocalBlobUrl((prev) => {
-                fileToMediaUrl(file, prev).then((urls) => setDubLocalBlobUrl(urls));
-                return prev;
-              });
+              fileToMediaUrl(file, dubLocalBlobUrl).then((urls) => setDubLocalBlobUrl(urls));
             }}
           />
 
@@ -655,15 +645,21 @@ export default function IdleSkeleton({
                 <div className="label-row">
                   <Globe className="label-icon" size={9} /> {t('dub.language')}
                 </div>
-                <select className="input-base text-[0.65rem]" disabled>
-                  <option>{t('dub.auto')}</option>
-                </select>
+                <SearchableSelect
+                  ariaLabel={t('dub.language')}
+                  value="auto"
+                  options={[{ value: 'auto', label: t('dub.auto') }]}
+                  disabled
+                />
               </div>
               <div className="flex-1 min-w-[80px]">
                 <div className="label-row">{t('dub.iso_code')}</div>
-                <select className="input-base text-[0.65rem]" disabled>
-                  <option>en — {t('dub.original_audio')}</option>
-                </select>
+                <SearchableSelect
+                  ariaLabel={t('dub.iso_code')}
+                  value="en"
+                  options={[{ value: 'en', label: `en — ${t('dub.original_audio')}` }]}
+                  disabled
+                />
               </div>
               <div className="flex-1 min-w-[90px]">
                 <div className="label-row">

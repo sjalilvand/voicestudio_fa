@@ -40,15 +40,70 @@ export default function ArchetypeCard({
   const hasChips = Boolean(accentLabel || a.facets.whisper);
 
   const cardBase =
-    'group relative flex min-h-[168px] flex-col gap-[9px] p-[13px] rounded-[10px] ' +
-    'border border-transparent bg-[rgba(255,255,255,0.026)] ' +
+    'group relative flex min-h-[168px] flex-col gap-[9px] p-[14px] rounded-[12px] ' +
+    'border border-transparent bg-[color-mix(in_srgb,var(--chrome-fg)_3%,transparent)] ' +
     'transition-[transform,box-shadow,background-color] duration-150 ' +
     'hover:-translate-y-px ' +
-    'hover:bg-[rgba(255,255,255,0.042)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.32)] ' +
+    'hover:bg-[color-mix(in_srgb,var(--chrome-fg)_5.5%,transparent)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.32)] ' +
     'motion-reduce:transition-none motion-reduce:hover:translate-y-0';
   const cardState = isPlaying
-    ? 'shadow-[0_0_0_1px_var(--card-accent),0_6px_22px_rgba(0,0,0,0.4)]'
+    ? 'bg-[color-mix(in_srgb,var(--card-accent)_9%,transparent)] shadow-[0_0_0_1px_var(--card-accent),0_6px_22px_rgba(0,0,0,0.4)]'
     : '';
+
+  // No Tailwind preflight in this app (theme + utilities only) — every native
+  // <button> carries the OS face (grey fill, outset border) unless reset, so
+  // each ghost control repeats the border-transparent + bg-transparent reset.
+  const iconBtn =
+    'inline-flex items-center justify-center w-[28px] h-[28px] flex-shrink-0 rounded-[8px] border border-transparent bg-transparent text-[var(--color-fg-muted)] cursor-pointer transition-[opacity,color,background-color] duration-150 hover:bg-[var(--chrome-hover-bg)] disabled:cursor-not-allowed disabled:opacity-30';
+
+  const designerBtn = onDesign ? (
+    <button
+      type="button"
+      className={`${iconBtn} opacity-50 group-hover:opacity-100 focus-visible:opacity-100 hover:text-[var(--card-accent)]`}
+      onClick={() => onDesign(a)}
+      disabled={materializationLocked}
+      title={t('gallery.open_designer', { defaultValue: 'Open in Designer' })}
+      aria-label={t('gallery.open_designer', { defaultValue: 'Open in Designer' })}
+    >
+      <Wand2 size={14} aria-hidden="true" />
+    </button>
+  ) : null;
+  const moreBtn =
+    onUseInStories || onUseAsAudiobookDefault ? (
+      <Menu
+        placement="bottom-end"
+        disabled={materializationLocked}
+        items={[
+          onUseInStories
+            ? {
+                id: 'stories',
+                icon: BookOpen,
+                label: t('gallery.use_in_stories', { defaultValue: 'Use in Stories' }),
+                onSelect: () => onUseInStories(a),
+              }
+            : null,
+          onUseAsAudiobookDefault
+            ? {
+                id: 'audiobook',
+                icon: Headphones,
+                label: t('gallery.set_audiobook_default', {
+                  defaultValue: 'Set as Audiobook default',
+                }),
+                onSelect: () => onUseAsAudiobookDefault(a),
+              }
+            : null,
+        ].filter(Boolean)}
+      >
+        <button
+          type="button"
+          className={`${iconBtn} opacity-50 group-hover:opacity-100 focus-visible:opacity-100 hover:text-[var(--card-accent)]`}
+          aria-label={t('gallery.more_actions', { defaultValue: 'More actions' })}
+          title={t('gallery.more_actions', { defaultValue: 'More actions' })}
+        >
+          <Ellipsis size={15} aria-hidden="true" />
+        </button>
+      </Menu>
+    ) : null;
 
   return (
     <div
@@ -56,33 +111,44 @@ export default function ArchetypeCard({
       className={`${cardBase} ${cardState}`}
       style={{ '--card-accent': color }}
     >
-      {/* Header — the name is the focal point; metadata recedes (smaller, muted). */}
-      <div className="flex items-start gap-[10px]">
-        <ArchetypeAvatar item={a} size={40} />
+      {/* Header — the name is the focal point; metadata recedes (smaller, muted).
+          Icon actions cluster top-right so the bottom row fits Preview + Use. */}
+      <div className="flex items-center gap-[10px]">
+        <ArchetypeAvatar item={a} size={44} />
         <div className="flex-1 min-w-0">
-          <div className="text-[0.82rem] font-semibold leading-tight text-[var(--color-fg)] truncate">
+          <div
+            className="text-[0.82rem] font-semibold leading-tight text-[var(--color-fg)] truncate"
+            title={a.name}
+          >
             {a.name}
           </div>
           {sub && (
-            <div className="text-[0.66rem] text-[var(--color-fg-muted)] mt-[3px] truncate">
+            <div
+              className="text-[0.66rem] text-[var(--color-fg-muted)] mt-[3px] truncate"
+              title={sub}
+            >
               {sub}
             </div>
           )}
         </div>
-        <button
-          type="button"
-          className={`flex-shrink-0 flex items-center justify-center w-[26px] h-[26px] rounded-[7px] cursor-pointer transition-[color,background-color,opacity] hover:bg-[var(--chrome-hover-bg)] ${
-            isFavorite
-              ? 'text-[#fabd2f]'
-              : 'text-[var(--color-fg-subtle)] opacity-70 group-hover:opacity-100 hover:text-[#fabd2f]'
-          }`}
-          onClick={() => onToggleFavorite(favoriteId)}
-          title={t('gallery.favorite', { defaultValue: 'Favorite' })}
-          aria-label={t('gallery.favorite', { defaultValue: 'Favorite' })}
-          aria-pressed={isFavorite}
-        >
-          <Star size={15} fill={isFavorite ? 'currentColor' : 'none'} aria-hidden="true" />
-        </button>
+        <div className="flex shrink-0 items-center gap-[2px]">
+          {designerBtn}
+          {moreBtn}
+          <button
+            type="button"
+            className={`flex items-center justify-center w-[28px] h-[28px] flex-shrink-0 rounded-[8px] border border-transparent bg-transparent cursor-pointer transition-[color,background-color,opacity] hover:bg-[var(--chrome-hover-bg)] ${
+              isFavorite
+                ? 'text-[#fabd2f]'
+                : 'text-[var(--color-fg-subtle)] opacity-70 group-hover:opacity-100 hover:text-[#fabd2f]'
+            }`}
+            onClick={() => onToggleFavorite(favoriteId)}
+            title={t('gallery.favorite', { defaultValue: 'Favorite' })}
+            aria-label={t('gallery.favorite', { defaultValue: 'Favorite' })}
+            aria-pressed={isFavorite}
+          >
+            <Star size={15} fill={isFavorite ? 'currentColor' : 'none'} aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       {/* Chips only render when present — no empty reserved row. Cards without
@@ -105,11 +171,12 @@ export default function ArchetypeCard({
       )}
 
       {/* Actions — quiet Preview (ghost, token hover), confident accent Use voice
-          (tinted → solid accent with inverse text), subtle magic-wand icon. */}
+          (tinted → solid accent with inverse text). Use voice never wraps: the
+          icon cluster lives in the header, so this row always fits. */}
       <div className="mt-auto flex items-center gap-[6px] pt-[9px]">
         <button
           type="button"
-          className="inline-flex items-center gap-[6px] px-[9px] py-[6px] rounded-[6px] bg-transparent text-[var(--color-fg-muted)] text-[0.68rem] cursor-pointer transition-colors hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--color-fg)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex shrink-0 items-center gap-[6px] border border-transparent bg-transparent px-[9px] py-[6px] rounded-[6px] text-[var(--color-fg-muted)] text-[0.68rem] cursor-pointer transition-colors hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--color-fg)] disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => onPreview(a)}
           disabled={previewLocked}
           aria-busy={isLoadingPreview}
@@ -126,7 +193,7 @@ export default function ArchetypeCard({
         </button>
         <button
           type="button"
-          className="flex-1 inline-flex items-center justify-center gap-[6px] px-[10px] py-[6px] rounded-[6px] bg-[color-mix(in_srgb,var(--card-accent)_13%,transparent)] text-[var(--card-accent)] text-[0.7rem] font-semibold cursor-pointer transition-colors hover:bg-[var(--card-accent)] hover:text-[var(--color-fg-inverse)] focus-visible:bg-[var(--card-accent)] focus-visible:text-[var(--color-fg-inverse)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1 inline-flex min-w-0 items-center justify-center gap-[6px] whitespace-nowrap border border-transparent px-[10px] py-[6px] rounded-[6px] bg-[color-mix(in_srgb,var(--card-accent)_13%,transparent)] text-[var(--card-accent)] text-[0.7rem] font-semibold cursor-pointer transition-colors hover:bg-[var(--card-accent)] hover:text-[var(--color-fg-inverse)] focus-visible:bg-[var(--card-accent)] focus-visible:text-[var(--color-fg-inverse)] disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => onUse(a)}
           disabled={materializationLocked}
           aria-busy={isMaterializing}
@@ -138,53 +205,6 @@ export default function ArchetypeCard({
           )}{' '}
           {t('gallery.use_voice', { defaultValue: 'Use voice' })}
         </button>
-        {onDesign ? (
-          <button
-            type="button"
-            className="inline-flex items-center justify-center w-[30px] h-[30px] flex-shrink-0 rounded-[8px] bg-transparent text-[var(--color-fg-muted)] cursor-pointer opacity-50 transition-[opacity,color,background-color] duration-150 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--card-accent)]"
-            onClick={() => onDesign(a)}
-            disabled={materializationLocked}
-            title={t('gallery.open_designer', { defaultValue: 'Open in Designer' })}
-            aria-label={t('gallery.open_designer', { defaultValue: 'Open in Designer' })}
-          >
-            <Wand2 size={14} aria-hidden="true" />
-          </button>
-        ) : null}
-        {onUseInStories || onUseAsAudiobookDefault ? (
-          <Menu
-            placement="bottom-end"
-            disabled={materializationLocked}
-            items={[
-              onUseInStories
-                ? {
-                    id: 'stories',
-                    icon: BookOpen,
-                    label: t('gallery.use_in_stories', { defaultValue: 'Use in Stories' }),
-                    onSelect: () => onUseInStories(a),
-                  }
-                : null,
-              onUseAsAudiobookDefault
-                ? {
-                    id: 'audiobook',
-                    icon: Headphones,
-                    label: t('gallery.set_audiobook_default', {
-                      defaultValue: 'Set as Audiobook default',
-                    }),
-                    onSelect: () => onUseAsAudiobookDefault(a),
-                  }
-                : null,
-            ].filter(Boolean)}
-          >
-            <button
-              type="button"
-              className="inline-flex items-center justify-center w-[30px] h-[30px] flex-shrink-0 rounded-[8px] bg-transparent text-[var(--color-fg-muted)] cursor-pointer opacity-50 transition-[opacity,color,background-color] duration-150 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--card-accent)] disabled:cursor-not-allowed disabled:opacity-30"
-              aria-label={t('gallery.more_actions', { defaultValue: 'More actions' })}
-              title={t('gallery.more_actions', { defaultValue: 'More actions' })}
-            >
-              <Ellipsis size={15} aria-hidden="true" />
-            </button>
-          </Menu>
-        ) : null}
       </div>
     </div>
   );

@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "要永久刪除此專案嗎？"
   },
   "common": {
+    "stop": "停止",
+    "resume": "繼續",
+    "paused": "已暫停",
     "open": "打開",
     "cancel": "取消",
     "save": "儲存",
@@ -778,6 +781,9 @@
     "retry": "重試",
     "activeEngine": "活動 {{family}}：{{engine}}",
     "engineCompatLabel": "{{family}} 引擎相容性",
+    "dictation_model": "聽寫模型",
+    "dictation_model_hint": "用於即時聽寫，以及此引擎進行轉錄時。",
+    "dictation_not_installed": "未安裝 — 選取以下載",
     "active": "活躍的",
     "whyUnavailable": "所需條件",
     "diskDetails": "磁碟詳細資料",
@@ -2523,6 +2529,9 @@
     "dismiss": "關閉",
     "output": "輸出",
     "title": "有聲書",
+    "tab_script": "文稿",
+    "tab_voices": "配音",
+    "tab_book": "書籍",
     "subtitle": "撰寫或匯入故事，為每個角色分配聲音，再匯出具備真實章節的精緻有聲書。",
     "script": "腳本",
     "script_placeholder": "#第一章\n從前…[停頓 500 毫秒]結束。\n\n# 第二章\n[聲音：旁白] 就這樣繼續下去。",
@@ -2722,7 +2731,12 @@
     "message": "尚未安裝語音轉文字模型 — 此功能需要一個模型來轉錄音訊。",
     "download": "下載 {{label}}（{{size}} GB）",
     "started": "正在下載 {{label}} — 請在 設定 → 模型 中查看進度，完成後再試一次。",
-    "install_failed": "無法開始下載：{{message}}"
+    "install_failed": "無法開始下載：{{message}}",
+    "choose": "選擇適合你工作的模型 — 各模型的準確度、語言與下載大小不同。只有點擊後才會開始下載。",
+    "group_offline": "最高準確度 — 停止說話後再轉寫",
+    "group_streaming": "最低延遲 — 邊說邊即時出字",
+    "use": "使用 {{label}}",
+    "installed": "已安裝"
   },
   "model_missing": {
     "message": "此模型尚未下載到 {{target}}。",

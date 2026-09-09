@@ -12,7 +12,7 @@ own microphone audio to the versioned WebSocket API. See the
 
 ## Use it
 
-1. Choose an installed dictation model in the Model Catalogue.
+1. Install a dictation model from the Model Catalogue, then pick it in **Settings → Voice** or from the top-bar Engines menu (**Transcription → Sherpa-ONNX dictation → Dictation model**). The same choice is what the Sherpa-ONNX engine loads for dubbing and batch transcription.
 2. Set the shortcut and hold/toggle behavior in **Settings → Hotkey**.
 3. Put the cursor in a text field, press the shortcut, speak, then release or
    press again.
@@ -75,3 +75,13 @@ changes. `dotool` needs direct write access to `/dev/uinput`; `ydotool` 1.0+
 needs a running `ydotoold` with that access and a user-readable socket.
 VoiceStudio checks these prerequisites before selection. Tray-started Wayland
 dictation always stays copy-only.
+
+### Transcriptions model setup
+
+Transcriptions checks the active dictation model before enabling **Start dictation**. If weights are missing, the page lists every dictation model, grouped by the trade-off you are choosing between — best accuracy (offline, transcribes after you stop) versus lowest latency (streaming, live text while you speak) — with languages and download size on each row, so you install the one that fits your work rather than only the recommended default. A model already on disk can be switched to without a download. The chosen model's name, download size, and installation progress are shown. Downloads require an explicit click. Failed downloads can be retried, and model state refreshes when returning from Settings. Once installation is verified, Start dictation becomes available; recording never starts automatically. Existing transcription history remains accessible during setup.
+
+### Floating recording controls
+
+The recording bubble includes **Pause / Resume**, **Stop**, and **Close**. Pause disables microphone tracks, stops sending new audio, and freezes the elapsed recording timer while preserving the session. Resume continues the same session. Stop (or the recording shortcut) finishes and transcribes, including when paused. Close cancels pending recording/transcription and releases the microphone; text already delivered to another app cannot be retracted. Pausing is manual, not triggered by silence or desktop inactivity.
+
+The Transcriptions page displays the effective recording shortcut and the platform paste shortcut. The floating bubble places its live transcript below the controls in a multiline preview, so controls cannot squeeze the text into a few characters.

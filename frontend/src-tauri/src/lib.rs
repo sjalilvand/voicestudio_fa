@@ -1136,7 +1136,7 @@ pub fn run() {
                     WebviewUrl::App("index.html".into()),
                 )
                 .title("Capture")
-                .inner_size(300.0, 64.0)
+                .inner_size(460.0, 164.0)
                 .resizable(false)
                 .transparent(true)
                 .decorations(false)

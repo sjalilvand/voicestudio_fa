@@ -472,6 +472,9 @@
     "deleteProjectConfirm": "Dit project permanent verwijderen?"
   },
   "common": {
+    "stop": "Stop",
+    "resume": "Hervatten",
+    "paused": "Gepauzeerd",
     "open": "Openen",
     "cancel": "Annuleer",
     "save": "Opslaan",
@@ -778,6 +781,9 @@
     "retry": "Opnieuw proberen",
     "activeEngine": "Actief {{family}}: {{engine}}",
     "engineCompatLabel": "{{family}} motorcompatibiliteit",
+    "dictation_model": "Dicteermodel",
+    "dictation_model_hint": "Gebruikt door live dicteren en door deze engine bij het transcriberen.",
+    "dictation_not_installed": "Niet geïnstalleerd — selecteer om te downloaden",
     "active": "actief",
     "whyUnavailable": "Wat het nodig heeft",
     "diskDetails": "Schijfdetails",
@@ -2523,6 +2529,9 @@
     "dismiss": "Sluiten",
     "output": "Uitvoer",
     "title": "Audioboek",
+    "tab_script": "Script",
+    "tab_voices": "Stemmen",
+    "tab_book": "Boek",
     "subtitle": "Schrijf of importeer je verhaal, wijs elke stem toe en exporteer een verzorgd luisterboek met echte hoofdstukken.",
     "script": "Script",
     "script_placeholder": "# Hoofdstuk één\nEr was eens… [pauze 500 ms] het einde.\n\n# Hoofdstuk twee\n[stem:verteller] En zo ging het verder.",
@@ -2722,7 +2731,12 @@
     "message": "Er is geen spraak-naar-tekstmodel geïnstalleerd — deze functie heeft er een nodig om audio te transcriberen.",
     "download": "{{label}} downloaden ({{size}} GB)",
     "started": "{{label}} wordt gedownload — volg de voortgang in Instellingen → Modellen en probeer het daarna opnieuw.",
-    "install_failed": "Kon de download niet starten: {{message}}"
+    "install_failed": "Kon de download niet starten: {{message}}",
+    "choose": "Kies het model dat bij je werk past — nauwkeurigheid, talen en downloadgrootte verschillen. Downloads starten pas als je klikt.",
+    "group_offline": "Hoogste nauwkeurigheid — transcribeert nadat je stopt met spreken",
+    "group_streaming": "Laagste latentie — live tekst terwijl je spreekt",
+    "use": "{{label}} gebruiken",
+    "installed": "Geïnstalleerd"
   },
   "model_missing": {
     "message": "Dit model is niet gedownload op {{target}}.",

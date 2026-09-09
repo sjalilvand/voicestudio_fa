@@ -161,7 +161,7 @@ describe('DubRightColumn language targets', () => {
       ({ rerender } = render(column(true, setDubLang, setDubLangCode)));
       await Promise.resolve();
     });
-    const language = screen.getByRole('combobox', { name: 'dub.language' });
+    const language = screen.getByRole('button', { name: 'dub.language' });
 
     expect(language).toBeDisabled();
     expect(setDubLangCode).not.toHaveBeenCalled();
@@ -170,9 +170,8 @@ describe('DubRightColumn language targets', () => {
       rerender(column(false, setDubLang, setDubLangCode));
       await Promise.resolve();
     });
-    fireEvent.change(screen.getByRole('combobox', { name: 'dub.language' }), {
-      target: { value: 'es' },
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'dub.language' }));
+    fireEvent.mouseDown(screen.getByRole('option', { name: /Spanish/ }));
     expect(setDubLang).toHaveBeenCalledWith('Spanish');
     expect(setDubLangCode).toHaveBeenCalledWith('es');
   });
