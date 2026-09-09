@@ -15,6 +15,7 @@ _SHA = re.compile(r"[0-9a-f]{40}\Z")
 CURATED_REVISIONS: dict[str, str] = {
     "facebook/nllb-200-distilled-600M": "f8d333a098d19b4fd9a8b18f94170487ad3f821d",
     "k2-fsa/OmniVoice": "c5fdb5ccb189668d56333f77ba2629f4cd7535f4",
+    "audio-cpp/audio.cpp-gguf": "dc6fecccc2b0c6bdda0a8b2f38fa61394fee0b9c",
     "Systran/faster-whisper-large-v3": "edaa852ec7e145841d8ffdb056a99866b5f0a478",
     "mlx-community/whisper-large-v3-mlx": "49e6aa286ad60c14352c404340ded53710378a11",
     "mlx-community/whisper-large-v3-turbo": "a4aaeec0636e6fef84abdcbe3544cb2bf7e9f6fb",

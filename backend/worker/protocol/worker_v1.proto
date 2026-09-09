@@ -168,6 +168,11 @@ message ModelCapability {
   // Human-readable UI label. Never use this as a scheduling or residency key;
   // unlike model_id it may change with ordinary copy edits.
   string display_name = 13;
+  // Per-engine runtime routing. Native engines can select a provider that is
+  // independent of the worker's global torch device.
+  string backend = 14;
+  // Memory measured for that exact selected provider/device; zero is unknown.
+  uint64 free_memory_bytes = 15;
 }
 
 message RegisterRequest {
