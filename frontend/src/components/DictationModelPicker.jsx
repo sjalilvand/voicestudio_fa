@@ -77,7 +77,7 @@ export default function DictationModelPicker({ embedded = false }) {
       aria-label={t('engines.dictation_model')}
       title={t('engines.dictation_model_hint')}
       data-testid="dictation-model-picker"
-      className={`ml-[20px] flex flex-col border-l border-[var(--chrome-border,rgba(255,255,255,0.1))] pl-1 ${embedded ? 'mb-2' : 'mb-1'}`}
+      className={`ml-[20px] flex flex-col border-l border-transparent pl-1 ${embedded ? 'mb-2' : 'mb-1'}`}
     >
       <p className="m-0 px-2 pb-[2px] pt-[2px] text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--chrome-fg-muted)]">
         {t('engines.dictation_model')}
