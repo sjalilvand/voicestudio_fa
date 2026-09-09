@@ -52,11 +52,11 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- Segmented model downloads split files into 16 MB ranges instead of one range per connection, so a dropped connection refetches one range rather than restarting the file (#1224)
-- The download accelerator is kept across retries after a transient network failure and resumes from its manifest, instead of falling back to a from-zero `snapshot_download` (#1224)
-- `dev-backend.mjs` stops the backend by process tree on Windows, so an orphaned uvicorn no longer holds port 3900 and turns a source reload into three phantom crashes (#1690)
-- `clear-dev-ports.mjs` can free a stuck development port on Windows again, bound to the inspected process instance so a recycled pid is never terminated (#1690)
-- Checkout-ownership matching no longer resolves POSIX paths with the host's separator, which made the guard's own test fail on Windows (#1690)
+- Segmented model downloads split files into 16 MB ranges instead of one range per connection, so a dropped connection refetches one range rather than restarting the file (#1940)
+- The download accelerator is kept across retries after a transient network failure and resumes from its manifest, instead of falling back to a from-zero `snapshot_download` (#1940)
+- `dev-backend.mjs` stops the backend by process tree on Windows, so an orphaned uvicorn no longer holds port 3900 and turns a source reload into three phantom crashes (#1941)
+- `clear-dev-ports.mjs` can free a stuck development port on Windows again, bound to the inspected process instance so a recycled pid is never terminated (#1941)
+- Checkout-ownership matching no longer resolves POSIX paths with the host's separator, which made the guard's own test fail on Windows (#1941)
 
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
