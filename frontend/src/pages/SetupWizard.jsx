@@ -293,11 +293,11 @@ export default function SetupWizard({ onReady }) {
     models: t('setup.install_models_desc'),
     consent: t(
       'consent.desc',
-      'Anonymous, content-free usage stats that help us fix bugs faster — entirely optional, off by default.'
+      'Anonymous, content-free usage stats that help us fix bugs faster — entirely optional, off by default.',
     ),
     dictation: t(
       'setup.try_dictation_desc',
-      'Press your shortcut once so you know dictation works before you finish setup.'
+      'Press your shortcut once so you know dictation works before you finish setup.',
     ),
   };
   const STEP_LABELS = {

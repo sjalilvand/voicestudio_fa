@@ -31,7 +31,9 @@ vi.mock('../api/hooks', () => ({
 
 // No analytics destination in this build, so the wizard skips straight from
 // models to dictation — matches SetupWizardConsent.test.jsx's equivalent case.
-const apiJson = vi.fn(() => Promise.resolve({ available: false, prompted: false, opted_in: false }));
+const apiJson = vi.fn(() =>
+  Promise.resolve({ available: false, prompted: false, opted_in: false }),
+);
 const apiFetch = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }));
 vi.mock('../api/client', () => ({
   apiJson: (...a) => apiJson(...a),
