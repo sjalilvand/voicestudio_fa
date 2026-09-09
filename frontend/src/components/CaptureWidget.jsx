@@ -2278,7 +2278,7 @@ export default function CaptureWidget({ onDismiss }) {
       <div className="capture-pill__preview">
         <span
           className="block text-[14px] leading-[1.5] font-medium"
-          title={state === 'error' ? errorInfo?.message || undefined : undefined}
+          title={state === 'error' ? errorInfo?.message || label || undefined : label || undefined}
         >
           {emoji} {label}
         </span>

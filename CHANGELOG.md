@@ -13,7 +13,10 @@ the frozen-backend fallback mirror it for their toolchains.
 - Transcriptions checks model readiness and offers an inline download and shortcut hints (#1952)
 - Transcriptions' missing-model prompt lists every dictation model by accuracy vs latency, languages and size, so you install the one that fits — or switch to one already on disk (#1952)
 - The Engines menu's Transcription tab picks the dictation model under Sherpa-ONNX, and that choice now also drives Sherpa transcription (#1952)
+- A failure with no stage attached no longer borrows another stage's advice, so a text-to-speech error stops telling you the video server dropped the download (#1943)
+- A generation failure that the app cannot classify now names the backend error class, so two unrelated faults stop arriving as the same untriageable report (#1800)
 
+- Transcriptions dictation wakes the desktop recorder, presents one contextual start action, and centers its microphone icon with the label (#1902)
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
 
 - The desktop app builds and opens from a fresh clone again (#1818) — thanks @flutterkage2k!
@@ -62,6 +65,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1952)
 - `bun desktop-prod` and `bun desktop-fresh` find Rust and uv from a terminal opened before they were installed, as `bun desktop` already did; a missing Rust toolchain fails up front with the install steps (#1952)
+- Voice synthesis progress no longer races to a fabricated 95%; it stays indeterminate until the active generation path reports real progress (#1907) — thanks @psiberfunk!
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
 - Copying a saved transcription now uses the shared clipboard helper and reports failed copies accurately (#1803) — thanks @tvbht!
@@ -107,6 +111,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 
 - Fast macOS process exits no longer turn a completed shutdown into a permission error (#1809)
+- The bootstrap splash no longer shows fabricated first-run install steps on a warm start or repair sync — a step now renders done only once it was actually observed (#1894)
 - Model Catalogue engine rows stack into one column on narrow shells instead of clipping actions off-screen (#1891)
 
 

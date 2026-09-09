@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import useTTS from '../hooks/useTTS';
 import { useAppStore } from '../store';
 import { playBlobAudio } from '../utils/media';
 import {
+  StreamingPreviewError,
   resolveRemoteTtsTarget,
   streamGenerateSpeech,
   supportsStreamingPreview,
@@ -127,6 +128,69 @@ describe('useTTS delivery path vs the chosen GPU', () => {
     await runGenerate();
     expect(streamGenerateSpeech).toHaveBeenCalledTimes(1);
     expect(generateSpeech).not.toHaveBeenCalled();
+  });
+
+  it('keeps real stream progress separate from the elapsed timer', async () => {
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    vi.mocked(streamGenerateSpeech).mockImplementationOnce(async (_formData, { onProgress }) => {
+      onProgress(42);
+      await gate;
+      return { id: 'x', audio_path: 'x.wav' };
+    });
+
+    const { result } = renderHook(() => useTTS(hookProps()));
+    let generation;
+    act(() => {
+      generation = result.current.handleGenerate();
+    });
+
+    await waitFor(() => expect(result.current.generationProgress).toBe(42));
+    expect(String(result.current.generationTime)).not.toContain('%');
+
+    await act(async () => {
+      release();
+      await generation;
+    });
+    expect(result.current.generationProgress).toBeNull();
+  });
+
+  it('clears stale stream progress before a classic fallback', async () => {
+    let releaseClassic;
+    const classicGate = new Promise((resolve) => {
+      releaseClassic = resolve;
+    });
+    vi.mocked(streamGenerateSpeech).mockImplementationOnce(async (_formData, { onProgress }) => {
+      onProgress(42);
+      throw new StreamingPreviewError('stream transport dropped');
+    });
+    vi.mocked(generateSpeech).mockImplementationOnce(async () => ({
+      body: {
+        getReader: () => ({
+          read: async () => {
+            await classicGate;
+            return { done: true, value: undefined };
+          },
+        }),
+      },
+      headers: { get: () => null },
+    }));
+
+    const { result } = renderHook(() => useTTS(hookProps()));
+    let generation;
+    act(() => {
+      generation = result.current.handleGenerate();
+    });
+
+    await waitFor(() => expect(generateSpeech).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(result.current.generationProgress).toBeNull());
+
+    await act(async () => {
+      releaseClassic();
+      await generation;
+    });
   });
 
   it('takes the classic path when the resolved target is a worker', async () => {

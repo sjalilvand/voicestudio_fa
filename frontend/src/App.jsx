@@ -399,6 +399,7 @@ function App() {
     setPendingTrimFile,
     isGenerating,
     generationTime,
+    generationProgress,
     textAreaRef,
     ingestRefAudio,
     insertTag,
@@ -1733,6 +1734,7 @@ function App() {
                     setVdStates={setVdStates}
                     isGenerating={isGenerating}
                     generationTime={generationTime}
+                    generationProgress={generationProgress}
                     applyPreset={applyPreset}
                     insertTag={insertTag}
                     handleSelectProfile={handleSelectProfile}

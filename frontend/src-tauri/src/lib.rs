@@ -865,6 +865,90 @@ pub fn shutdown_backend_for_exit<R: tauri::Runtime>(app_handle: &tauri::AppHandl
     }
 }
 
+/// Show, unminimize and focus the main window. Shared by the tray's "Show
+/// VoiceStudio" menu item and the macOS `RunEvent::Reopen` handler below (Dock
+/// icon clicked while the main window is hidden), so the two recovery paths
+/// behave identically instead of drifting apart over time.
+fn show_and_focus_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.show();
+        #[cfg(not(target_os = "macos"))]
+        let _ = win.set_skip_taskbar(false);
+        let _ = win.unminimize();
+        let _ = win.set_focus();
+        // Self-recovery: if the webview failed to load the dev/prod URL
+        // earlier (Vite restarted, backend not up yet at first show, etc.)
+        // the window shows a blank `<body></body>` with a "Could not connect
+        // to the server" console error. Reload only when the body is empty
+        // so a healthy window doesn't blink on every show.
+        let _ = win.eval(
+            "if (document.body && document.body.childElementCount === 0) { location.reload(); }",
+        );
+    }
+}
+
+/// Whether a macOS `RunEvent::Reopen` (Dock icon clicked — Cocoa's
+/// `applicationShouldHandleReopen:hasVisibleWindows:`) should restore the
+/// main window. Pure so it's unit-testable — the actual event only fires
+/// inside the real Cocoa event loop and can't be synthesized under
+/// `cargo test` (see the `with_noactivate_style` comment above for the same
+/// rationale). `CloseRequested` (see `on_window_event` below) hides the main
+/// window rather than destroying it, so it is merely invisible once the user
+/// has closed it — exactly when the Dock icon should bring it back.
+///
+/// Keyed on the MAIN window specifically, not on Cocoa's `has_visible_windows`
+/// flag. This app owns a second window: the always-on-top dictation pill
+/// (`widget`, built below), which is shown and hidden independently and can
+/// sit on screen for a long time on its own — the Accessibility-setup state
+/// persists until the permission is granted. Keying on "any window visible"
+/// would report `true` from the pill alone and leave the Dock icon dead in
+/// precisely the case this handler exists to fix.
+///
+/// Only called from the macOS-gated `RunEvent::Reopen` arm below outside of
+/// tests — `#[allow(dead_code)]` elsewhere, same treatment as `is_app_origin`
+/// and `with_noactivate_style` above.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn should_restore_on_reopen(main_window_visible: bool, _cocoa_has_visible_windows: bool) -> bool {
+    // Cocoa's aggregate flag is accepted and deliberately ignored. Taking it
+    // as a parameter rather than dropping it at the call site is what lets
+    // the tests below pin the contract: `(main: false, cocoa: true)` — the
+    // pill up, the main window closed — must still restore. An earlier
+    // revision decided on the aggregate alone and left the Dock icon dead in
+    // exactly that state.
+    !main_window_visible
+}
+
+#[cfg(test)]
+mod reopen_tests {
+    use super::should_restore_on_reopen;
+
+    #[test]
+    fn restores_when_the_main_window_is_hidden() {
+        assert!(should_restore_on_reopen(false, false));
+    }
+
+    #[test]
+    fn does_nothing_when_the_main_window_is_already_visible() {
+        assert!(!should_restore_on_reopen(true, true));
+    }
+
+    /// Regression guard: the dictation pill is a separate always-on-top
+    /// window that can be visible while the main window is closed — the
+    /// Accessibility-setup state stays up until the permission is granted.
+    /// An earlier revision keyed this decision on Cocoa's
+    /// `has_visible_windows`, which the pill alone sets to `true`, leaving
+    /// the Dock icon dead in exactly the situation this handler is for.
+    /// The decision must depend only on the main window.
+    #[test]
+    fn restores_even_when_another_window_such_as_the_pill_is_visible() {
+        // Cocoa reports a visible window (the pill) while the main window is
+        // hidden. Passing both values separately is the point: this case is
+        // what distinguishes the main-window rule from the aggregate one, and
+        // it fails if the body ever goes back to `!cocoa_has_visible_windows`.
+        assert!(should_restore_on_reopen(false, true));
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // #879: if the previous run requested a WebView cache repair (splash
@@ -1234,23 +1318,7 @@ pub fn run() {
                 .on_menu_event(move |app, event| {
                     match event.id().as_ref() {
                         "show" => {
-                            if let Some(win) = app.get_webview_window("main") {
-                                let _ = win.show();
-                                #[cfg(not(target_os = "macos"))]
-                                let _ = win.set_skip_taskbar(false);
-                                let _ = win.set_focus();
-                                // Self-recovery: if the webview failed to load
-                                // the dev/prod URL earlier (Vite restarted,
-                                // backend not up yet at first show, etc.) the
-                                // window shows a blank `<body></body>` with a
-                                // "Could not connect to the server" console
-                                // error. Reload only when the body is empty
-                                // so a healthy window doesn't blink on every
-                                // tray click.
-                                let _ = win.eval(
-                                    "if (document.body && document.body.childElementCount === 0) { location.reload(); }",
-                                );
-                            }
+                            show_and_focus_main_window(app);
                         }
                         "open_studio" => {
                             // Persist the preference (so next launch is studio, not pill)
@@ -1454,12 +1522,41 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
-    app.run(|app_handle, event| {
-        if let tauri::RunEvent::ExitRequested { code, api, .. } = event {
+    app.run(|app_handle, event| match event {
+        tauri::RunEvent::ExitRequested { code, api, .. } => {
             if !persistence_exit::handle_exit_requested(app_handle, code, &api) {
                 return;
             }
             shutdown_backend_for_exit(app_handle);
         }
+        // macOS: clicking the Dock icon while the app has no visible windows
+        // fires this (instead of relaunching) via Cocoa's
+        // `applicationShouldHandleReopen:hasVisibleWindows:`. CloseRequested
+        // (see `on_window_event` above) hides the main window rather than
+        // destroying it, so without this arm the click did nothing — the
+        // process stayed alive with a live Dock icon and the only way back
+        // was the tray's "Show VoiceStudio" item. `show_and_focus_main_window`
+        // is the same sequence that item runs, so both paths behave
+        // identically.
+        #[cfg(target_os = "macos")]
+        tauri::RunEvent::Reopen {
+            has_visible_windows,
+            ..
+        } => {
+            // Cocoa's `has_visible_windows` is deliberately NOT used: the
+            // dictation pill is a separate always-on-top window that sets it
+            // to `true` on its own. Ask the main window directly instead.
+            // `is_visible()` errors only if the window has gone away, and a
+            // redundant show is harmless next to a Dock icon that stays dead,
+            // so treat an error as "not visible" and restore.
+            let main_visible = app_handle
+                .get_webview_window("main")
+                .map(|win| win.is_visible().unwrap_or(false))
+                .unwrap_or(false);
+            if should_restore_on_reopen(main_visible, has_visible_windows) {
+                show_and_focus_main_window(app_handle);
+            }
+        }
+        _ => {}
     });
 }
