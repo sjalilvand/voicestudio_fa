@@ -2424,8 +2424,15 @@ def _sidecar_installable_ids() -> frozenset[str]:
         return frozenset()
 
 
-def list_backends() -> list[dict]:
-    """Enumerate every registered backend with its availability state.
+def list_backends(*, include_hidden: bool = False) -> list[dict]:
+    """Enumerate the engine catalogue with each backend's availability state.
+
+    On MPS, the canonical ``omnivoice`` id already resolves to the killable
+    OmniVoice sidecar. The explicit ``omnivoice-subprocess`` compatibility id
+    is therefore omitted from the normal catalogue so the picker does not
+    advertise two choices with the same runtime behavior. Internal callers
+    that must validate or preserve a stored compatibility id can pass
+    ``include_hidden=True``.
 
     Per-entry shape (ENGINE-05 + ENGINE-06):
 
@@ -2477,6 +2484,12 @@ def list_backends() -> list[dict]:
 
     out: list[dict] = []
     for bid, cls in _REGISTRY.items():
+        if (
+            not include_hidden
+            and caps.family == "mps"
+            and bid == "omnivoice-subprocess"
+        ):
+            continue
         cls = _effective_backend_class(bid, cls, caps.family)
         try:
             ok, msg = cls.is_available()
@@ -2650,7 +2663,9 @@ def active_routing() -> dict | None:
     """
     try:
         active = active_backend_id()
-        for b in list_backends():
+        # The MPS picker intentionally hides the redundant compatibility id,
+        # but routing must still describe a saved or environment-pinned id.
+        for b in list_backends(include_hidden=True):
             if b.get("id") == active:
                 return {
                     "engine": active,
