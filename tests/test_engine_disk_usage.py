@@ -31,6 +31,14 @@ def test_lightweight_optional_engine_has_weight_estimate_not_fake_package_zero(m
     assert usage["estimate"]["package_download_bytes"] is None
 
 
+def test_audiocpp_exposes_its_filtered_model_download_size(monkeypatch, disk_modules):
+    engine_disk_usage, _ = disk_modules
+    monkeypatch.setattr(engine_disk_usage, "_measure_model_cache", lambda _engine_id: None)
+    usage = engine_disk_usage.disk_usage_for("audiocpp")
+    assert usage["estimate"]["model_download_bytes"] == round(4.73 * 1024**3)
+    assert usage["estimate"]["package_download_bytes"] is None
+
+
 def test_separate_torch_sidecar_uses_installer_build_metadata(monkeypatch, tmp_path, disk_modules):
     engine_disk_usage, SPECS = disk_modules
     spec = SPECS["indextts2"]

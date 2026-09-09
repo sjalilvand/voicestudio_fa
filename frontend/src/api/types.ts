@@ -18,7 +18,7 @@ export type EngineFamily = 'tts' | 'asr' | 'llm';
 // (`effective_device` / `routing_status` / `routing_reason`). They stay
 // optional so the matrix still renders a legacy/older payload that omits them
 // (it gates with `??` / `?.length` and suppresses the routing badge).
-type GPUTarget = 'cuda' | 'mps' | 'rocm' | 'xpu' | 'cpu';
+type GPUTarget = 'cuda' | 'mps' | 'rocm' | 'vulkan' | 'xpu' | 'cpu';
 // Where an engine actually runs on THIS host. `network` is LLM-only (remote).
 type EffectiveDevice = GPUTarget | 'network';
 // `n/a` is LLM-only; resolve_routing only ever returns the first four.

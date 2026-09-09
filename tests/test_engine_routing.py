@@ -6,11 +6,14 @@ from spec §2, plus the cross-OS determinism + never-emits-"n/a" guarantees.
 """
 from __future__ import annotations
 
+import asyncio
+import threading
+
 from core.device_caps import DIRECTML_MARKER, KERNEL_RISK_MARKER, HostCaps
 from services.engine_routing import (
+    header_safe_reason,
     resolve_routing,
     routing_notice,
-    header_safe_reason,
 )
 
 
@@ -140,6 +143,45 @@ def test_never_emits_n_a():
 def test_deterministic_across_calls():
     caps = _caps("rocm")
     assert resolve_routing(("cuda", "cpu"), caps) == resolve_routing(("cuda", "cpu"), caps)
+
+
+def test_runtime_compute_profile_async_keeps_event_loop_responsive():
+    from services.engine_routing import runtime_compute_profile_async
+
+    release = threading.Event()
+    finished = threading.Event()
+    event_loop_progressed = asyncio.Event()
+    order: list[str] = []
+
+    class BlockingRuntimeProfile:
+        @classmethod
+        def runtime_compute_profile(cls, caps):
+            try:
+                assert release.wait(timeout=1.0)
+                order.append("profile")
+                return {"marker": caps.family}
+            finally:
+                finished.set()
+
+    async def release_after_event_loop_progress():
+        order.append("event_loop")
+        event_loop_progressed.set()
+        release.set()
+
+    loop = asyncio.new_event_loop()
+    try:
+        profile_task = loop.create_task(
+            runtime_compute_profile_async(BlockingRuntimeProfile, _caps("cpu")),
+        )
+        release_task = loop.create_task(release_after_event_loop_progress())
+        loop.run_until_complete(event_loop_progressed.wait())
+        loop.run_until_complete(release_task)
+        assert finished.wait(timeout=1.0)
+
+        assert loop.run_until_complete(profile_task) == {"marker": "cpu"}
+        assert order == ["event_loop", "profile"]
+    finally:
+        loop.close()
 
 
 def test_reason_str_for_fallback_and_unavailable_none_for_clean():

@@ -88,14 +88,34 @@ def snapshot(
         evidence_state = "loaded"
         if isolated and provider is None and actual_device is None:
             evidence_state = "subprocess_loaded_provider_unreported"
+    from core.scrub import scrub_text
+
+    runtime_device_name = routing.get("runtime_device_name")
+    device_name = (
+        getattr(caps, "device_name", "")
+        if runtime_device_name is None
+        else runtime_device_name
+    )
+    public_device_name = scrub_text(device_name)[:256]
     return {
         "implementation_variant": f"{engine_cls.__module__}.{engine_cls.__name__}",
-        "declared_device_families": list(getattr(engine_cls, "gpu_compat", ("cpu",))),
+        "declared_device_families": list(
+            routing.get("gpu_compat", getattr(engine_cls, "gpu_compat", ("cpu",)))
+        ),
         "evidence_state": evidence_state,
         "actual_execution_provider": provider,
         "actual_execution_device": actual_device,
-        "gpu_name": getattr(caps, "device_name", "") or None,
-        "gpu_architecture": _gpu_architecture(getattr(caps, "family", "cpu")),
+        "gpu_name": public_device_name or None,
+        "gpu_architecture": None
+        if (
+            routing.get("runtime_hardware_family")
+            and not routing.get("runtime_device_verified")
+        )
+        else _gpu_architecture(
+            routing.get("runtime_hardware_family")
+            or getattr(caps, "family", "cpu")
+        ),
+        "runtime_vram_gb": routing.get("runtime_vram_gb"),
         "precision_or_quantization": precision,
         "cpu_fallback_reason": runtime_fallback_reason or (routing.get("routing_reason") if fallback else None),
         "cpu_fallback_stage": runtime_fallback_stage or ("routing_preflight" if fallback else None),
