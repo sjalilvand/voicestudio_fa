@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 def test_parent_pipe_eof_exits_cleanly():
     from core.parent_liveness import _watch_parent_pipe
 
@@ -176,3 +178,75 @@ def test_windows_watchdog_keeps_blocking_reader_for_non_pipe_stdin(monkeypatch):
     assert pl.arm_desktop_parent_watchdog() is True
     assert started["target"] is pl._watch_parent_pipe
     assert started["args"] == (fake_stdin.buffer, os._exit)
+
+
+# ── Windows integration: the real backend must get past the ML import ────────
+# The deadlock needs the real startup: numpy's OpenBLAS DLL loaded through
+# `import torch` in the startup worker while the desktop watchdog is armed on a
+# piped stdin. Smaller reproductions (a pending read + `import torch` in a bare
+# child) do not trigger it, so this spawns the actual backend exactly as the
+# desktop shell does. It fails on the pre-fix watchdog by timing out in the
+# "ml_imports" step and passes in well under a minute on the fix. Windows-only:
+# CI's backend job runs on Linux, so this is exercised on Windows dev machines.
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="desktop stdin-pipe watchdog deadlock is Windows-only")
+def test_desktop_spawned_backend_gets_past_ml_imports_on_windows(tmp_path):
+    pytest.importorskip("torch")
+    pytest.importorskip("uvicorn")
+    import json
+    import socket
+    import threading
+    import time
+    import urllib.request
+
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+
+    root = Path(__file__).parents[3]
+    env = os.environ.copy()
+    env.update(
+        {
+            "OMNIVOICE_DESKTOP_CONTAINED": "1",  # arms the watchdog on the stdin pipe
+            "OMNIVOICE_PORT": str(port),
+            "OMNIVOICE_DATA_DIR": str(tmp_path / "data"),
+            "OMNIVOICE_CACHE_DIR": str(tmp_path / "hf_cache"),
+            "HF_HUB_OFFLINE": "1",
+            "PYTHONUNBUFFERED": "1",
+            "PYTHONUTF8": "1",
+        }
+    )
+    env.pop("PYTHONPATH", None)
+    child = subprocess.Popen(
+        [sys.executable, "-m", "uvicorn", "main:app", "--app-dir", "backend",
+         "--host", "127.0.0.1", "--port", str(port)],
+        cwd=root,
+        env=env,
+        stdin=subprocess.PIPE,   # the desktop shell keeps this open and never writes
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    for stream in (child.stdout, child.stderr):
+        threading.Thread(target=lambda s=stream: s.read(), daemon=True).start()
+    seen = []
+    try:
+        deadline = time.time() + 180
+        while time.time() < deadline:
+            if child.poll() is not None:
+                pytest.fail(f"backend exited early with {child.returncode}; progress seen: {seen[-3:]}")
+            try:
+                with urllib.request.urlopen(f"http://127.0.0.1:{port}/startup/progress", timeout=2) as resp:
+                    progress = json.load(resp)
+            except (OSError, ValueError):
+                time.sleep(1)
+                continue
+            seen.append((progress.get("status"), progress.get("step")))
+            done = {s["id"] for s in progress.get("steps", []) if s.get("state") == "done"}
+            if progress.get("status") != "starting" or "ml_imports" in done:
+                return
+            time.sleep(1)
+        pytest.fail(f"backend never got past ml_imports in 180s (deadlocked watchdog?); last progress: {seen[-3:]}")
+    finally:
+        child.kill()
+        child.wait()
