@@ -122,6 +122,20 @@ const IDLE_VISIBLE_POLL_MS = 600;
 // Reconcile only while the Accessibility blocker is visible.
 const A11Y_SETUP_RECHECK_MS = 1000;
 
+// How long the Accessibility prompt may hold the always-on-top pill on screen.
+//
+// The pill is created always-on-top, and the setup state had no time limit at
+// all: it sat above every application, including the first-run setup window it
+// was covering, until Accessibility was granted or the user dismissed it by
+// hand (#1845, #1886). A permission the user has not granted yet is not urgent
+// enough to outrank whatever they are actually doing, and on a clean install
+// they are usually mid-setup and cannot grant it yet anyway.
+//
+// Polling does NOT stop when the window hides. The check keeps running, so
+// granting Accessibility later still returns the widget to idle on its own —
+// what expires is the pill's claim on the screen, not the reconciliation.
+const A11Y_SETUP_VISIBLE_MS = 20_000;
+
 // A dictation model id is a sherpa-onnx live model when it carries the
 // `sherpa-` prefix the backend assigns (see services/sherpa_dictation.py). Only
 // then do we open the low-latency raw-PCM streaming path. Other models use a
@@ -652,6 +666,10 @@ export default function CaptureWidget({ onDismiss }) {
     let cancelled = false;
     let timerId;
 
+    // Wall-clock start of this setup episode, so the budget covers the whole
+    // time the prompt has been up rather than one poll interval.
+    const shownAt = Date.now();
+    let hiddenForBudget = false;
     const reconcileAccessibility = async () => {
       const ok = await checkAccessibility();
       if (cancelled || stateRef.current !== 'setup') return;
@@ -660,6 +678,12 @@ export default function CaptureWidget({ onDismiss }) {
         setState('idle');
         await hideWidgetWindow();
         return;
+      }
+      if (!hiddenForBudget && Date.now() - shownAt >= A11Y_SETUP_VISIBLE_MS) {
+        // Stop covering the screen, but stay in `setup` so the label is right
+        // if something shows the window again, and keep polling below.
+        hiddenForBudget = true;
+        await hideWidgetWindow();
       }
       timerId = setTimeout(() => {
         void reconcileAccessibility();
