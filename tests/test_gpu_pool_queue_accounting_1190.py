@@ -205,7 +205,10 @@ def test_timeout_guidance_does_not_claim_capacity_was_restored(mm):
     assert "until it finishes" in msg
     # Actionable for interactive users AND scripted clients.
     assert "restart the backend" in msg
-    assert "OMNIVOICE_GENERATE_TIMEOUT_S" in msg
+    # #1808: the budget moved into Settings → Performance & Device in #1797,
+    # so the remedy names that control now. The env var still works and still
+    # shadows the setting — only which one we point the user at changed.
+    assert "Settings → Performance & Device" in msg
 
 
 # ── Defect 4: every dispatch uses the shared length-scaled budget ───────────

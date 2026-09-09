@@ -1145,7 +1145,7 @@ def _timeout_guidance(
             "compute-bound. For a durable fix try shorter text or a lighter "
             "engine (OmniVoice GGUF and Supertonic-3 are CPU-tuned). If you "
             "expect very long single generations, raise "
-            "OMNIVOICE_GENERATE_TIMEOUT_S."
+            "the compute-time budget in Settings → Performance & Device."
         )
     # #1226/#1222: two users on 4 GB cards were told, generically, that the GPU
     # "is VRAM-starved" — true, but it read as a transient contention problem
@@ -1168,7 +1168,8 @@ def _timeout_guidance(
             f"Supertonic-3 are tuned for small/no GPU) or shorter text; "
             f"Flush caches / Unload the resident model (top toolbar or "
             f"Model Catalogue → Models) frees what little headroom there is. (Raise "
-            f"OMNIVOICE_GENERATE_TIMEOUT_S if you'd rather let long "
+            f"the compute-time budget in Settings → Performance & Device if "
+            f"you'd rather let long "
             f"generations run.)"
         )
     return common + (
@@ -1176,7 +1177,8 @@ def _timeout_guidance(
         "contend for memory). For a durable fix, Flush caches / Unload the "
         "resident model (top toolbar or Model Catalogue → Models) before retrying, "
         "try shorter text, a lighter engine, or set the engine to CPU in "
-        "Model Catalogue → Models. (Raise OMNIVOICE_GENERATE_TIMEOUT_S for very "
+        "Model Catalogue → Models. (Raise the compute-time budget in "
+        "Settings → Performance & Device for very "
         "long single generations.)"
     )
 

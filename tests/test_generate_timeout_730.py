@@ -320,7 +320,10 @@ def test_cpu_host_gets_compute_bound_guidance(monkeypatch):
     assert "VRAM" not in msg
     assert "set the engine to CPU" not in msg
     assert "compute-bound" in msg
-    assert "OMNIVOICE_GENERATE_TIMEOUT_S" in msg
+    # #1808: the budget moved into Settings → Performance & Device in #1797,
+    # so the remedy names that control now. The env var still works and still
+    # shadows the setting — only which one we point the user at changed.
+    assert "Settings → Performance & Device" in msg
 
 
 def test_gpu_host_keeps_vram_guidance(monkeypatch):
