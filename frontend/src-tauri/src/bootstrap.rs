@@ -1929,7 +1929,7 @@ fn resolve_pypi_index_url(region: &str, override_url: Option<&str>) -> Option<St
 /// Must run for *every* `uv` path that may fetch packages — including the
 /// repair sync. Omitting it there left China-region installs hitting
 /// `pypi.org` for build backends (e.g. hatchling) and failing with
-/// `tls handshake eof` while the UI already showed 「中国 (镜像)」.
+/// `tls handshake eof` while the UI already showed the China (mirror) region.
 fn apply_pypi_index_env<R: tauri::Runtime>(app: &tauri::AppHandle<R>, cmd: &mut Command) {
     let cfg = crate::config::load_config(app);
     let region = get_effective_region(app);
@@ -3483,7 +3483,7 @@ mod tests {
     fn resolve_pypi_index_url_honors_override_then_china_preset() {
         // Repair / first-run / drift all share this resolver via apply_uv_env.
         // China must not fall through to pypi.org (tls handshake eof on
-        // hatchling when the UI already shows 「中国 (镜像)」).
+        // hatchling when the UI already shows the China (mirror) region).
         assert_eq!(
             resolve_pypi_index_url("china", None).as_deref(),
             Some(CHINA_PYPI_INDEX)
