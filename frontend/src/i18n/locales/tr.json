@@ -2720,7 +2720,12 @@
     "message": "Yüklü bir konuşmadan metne modeli yok — bu özellik sesi yazıya dökmek için bir model gerektirir.",
     "download": "{{label}} indir ({{size}} GB)",
     "started": "{{label}} indiriliyor — ilerlemeyi Ayarlar → Modeller'den izleyin, sonra yeniden deneyin.",
-    "install_failed": "İndirme başlatılamadı: {{message}}"
+    "install_failed": "İndirme başlatılamadı: {{message}}",
+    "choose": "İşinize uyan modeli seçin — doğruluk, diller ve indirme boyutu farklılık gösterir. İndirme yalnızca tıkladığınızda başlar.",
+    "group_offline": "En yüksek doğruluk — konuşmayı bitirdikten sonra yazıya döker",
+    "group_streaming": "En düşük gecikme — siz konuşurken canlı metin",
+    "use": "{{label}} kullan",
+    "installed": "Yüklü"
   },
   "model_missing": {
     "message": "Bu model {{target}} üzerine indirilmemiş.",

@@ -2720,7 +2720,12 @@
     "message": "Nie zainstalowano modelu zamiany mowy na tekst — ta funkcja wymaga go do transkrypcji dźwięku.",
     "download": "Pobierz {{label}} ({{size}} GB)",
     "started": "Pobieranie {{label}} — postęp znajdziesz w Ustawienia → Modele, potem spróbuj ponownie.",
-    "install_failed": "Nie udało się rozpocząć pobierania: {{message}}"
+    "install_failed": "Nie udało się rozpocząć pobierania: {{message}}",
+    "choose": "Wybierz model dopasowany do Twojej pracy — dokładność, języki i rozmiar pobierania się różnią. Pobieranie zaczyna się dopiero po kliknięciu.",
+    "group_offline": "Najwyższa dokładność — transkrybuje, gdy przestaniesz mówić",
+    "group_streaming": "Najniższe opóźnienie — tekst na żywo podczas mówienia",
+    "use": "Użyj {{label}}",
+    "installed": "Zainstalowany"
   },
   "model_missing": {
     "message": "Ten model nie został pobrany na {{target}}.",

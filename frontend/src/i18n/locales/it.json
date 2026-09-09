@@ -2720,7 +2720,12 @@
     "message": "Nessun modello di riconoscimento vocale è installato — questa funzione ne richiede uno per trascrivere l'audio.",
     "download": "Scarica {{label}} ({{size}} GB)",
     "started": "Download di {{label}} in corso — segui l'avanzamento in Impostazioni → Modelli, poi riprova.",
-    "install_failed": "Impossibile avviare il download: {{message}}"
+    "install_failed": "Impossibile avviare il download: {{message}}",
+    "choose": "Scegli il modello adatto al tuo lavoro: precisione, lingue e dimensione del download variano. I download partono solo al clic.",
+    "group_offline": "Massima precisione — trascrive quando smetti di parlare",
+    "group_streaming": "Latenza minima — testo in tempo reale mentre parli",
+    "use": "Usa {{label}}",
+    "installed": "Installato"
   },
   "model_missing": {
     "message": "Questo modello non è stato scaricato su {{target}}.",

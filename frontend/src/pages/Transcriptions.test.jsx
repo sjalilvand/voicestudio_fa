@@ -1,15 +1,25 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { requestDictationCapture, copyToClipboard, toast, readiness } = vi.hoisted(() => ({
-  readiness: { phase: 'ready', check: vi.fn().mockResolvedValue(true), install: vi.fn() },
+const { requestDictationCapture, copyToClipboard, toast, readiness, apiJson } = vi.hoisted(() => ({
+  readiness: {
+    phase: 'ready',
+    check: vi.fn().mockResolvedValue(true),
+    install: vi.fn(),
+    select: vi.fn(),
+  },
   requestDictationCapture: vi.fn(),
   copyToClipboard: vi.fn(),
   toast: { error: vi.fn(), success: vi.fn() },
+  apiJson: vi.fn(),
 }));
 
 vi.mock('../hooks/useDictationReadiness', () => ({
   useDictationReadiness: () => readiness,
+}));
+vi.mock('../api/client', async (importOriginal) => ({
+  ...(await importOriginal()),
+  apiJson: (...args) => apiJson(...args),
 }));
 
 vi.mock('../utils/copyText', () => ({ copyText: copyToClipboard }));
@@ -160,13 +170,92 @@ describe('transcription clipboard', () => {
   });
 });
 
-it('blocks recording and offers an explicit sized download when the model is missing', () => {
+const CATALOGUE = {
+  models: [
+    {
+      id: 'sherpa-whisper-tiny',
+      repo_id: 'test/model',
+      label: 'Tiny',
+      tag: 'offline',
+      recommended: true,
+      size_gb: 0.1,
+      languages: '90+ languages (auto-detect)',
+      installed: false,
+    },
+    {
+      id: 'sherpa-parakeet-tdt-v2',
+      repo_id: 'test/parakeet',
+      label: 'Parakeet TDT v2',
+      tag: 'offline',
+      size_gb: 0.66,
+      languages: 'English',
+      installed: false,
+    },
+    {
+      id: 'sherpa-zipformer-en-20m',
+      repo_id: 'test/zipformer',
+      label: 'Zipformer Streaming EN',
+      tag: 'streaming',
+      size_gb: 0.044,
+      languages: 'English',
+      installed: true,
+    },
+  ],
+};
+
+it('blocks recording and lets the user pick which model to install when one is missing', async () => {
   localStorage.clear();
   readiness.phase = 'missing';
   readiness.missing = { recommended: { repo_id: 'test/model', label: 'Tiny', size_gb: 0.1 } };
+  readiness.install.mockReset();
+  readiness.select.mockReset();
+  apiJson.mockResolvedValue(CATALOGUE);
   render(<TranscriptionsPage />);
   expect(screen.getByRole('button', { name: 'Start dictation' })).toBeDisabled();
-  fireEvent.click(screen.getByRole('button', { name: 'Download Tiny (0.1 GB)' }));
-  expect(readiness.install).toHaveBeenCalled();
+
+  // Every catalogue model is offered, grouped by the accuracy/latency trade-off,
+  // with languages and size — not just the recommended download.
+  expect(
+    await screen.findByText('Best accuracy — transcribes after you stop speaking'),
+  ).toBeInTheDocument();
+  expect(screen.getByText('Lowest latency — live text while you speak')).toBeInTheDocument();
+  expect(screen.getAllByText('English', { selector: 'span' })).toHaveLength(2);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Download Parakeet TDT v2 (0.66 GB)' }));
+  expect(readiness.install).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 'sherpa-parakeet-tdt-v2', repo_id: 'test/parakeet' }),
+  );
+
+  // A model already on disk is a switch, not a download.
+  fireEvent.click(screen.getByRole('button', { name: 'Use Zipformer Streaming EN' }));
+  expect(readiness.select).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 'sherpa-zipformer-en-20m' }),
+  );
+  expect(readiness.install).toHaveBeenCalledTimes(1);
   expect(screen.getByText('Super+Shift+V', { selector: 'kbd' })).toBeInTheDocument();
+});
+
+it('falls back to the recommended download when the catalogue cannot be read', async () => {
+  localStorage.clear();
+  readiness.phase = 'missing';
+  readiness.missing = { recommended: { repo_id: 'test/model', label: 'Tiny', size_gb: 0.1 } };
+  readiness.install.mockReset();
+  apiJson.mockRejectedValue(new Error('backend restarting'));
+  render(<TranscriptionsPage />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Download Tiny (0.1 GB)' }));
+  expect(readiness.install).toHaveBeenCalledWith(
+    expect.objectContaining({ repo_id: 'test/model', label: 'Tiny' }),
+  );
+});
+
+it('names the model being installed in the progress bar', () => {
+  localStorage.clear();
+  readiness.phase = 'installing';
+  readiness.percent = 40;
+  readiness.missing = { recommended: { repo_id: 'test/model', label: 'Tiny', size_gb: 0.1 } };
+  readiness.target = { repo_id: 'test/parakeet', label: 'Parakeet TDT v2', size_gb: 0.66 };
+  render(<TranscriptionsPage />);
+  expect(screen.getByRole('progressbar')).toHaveAccessibleName(/Parakeet TDT v2/);
+  readiness.target = null;
+  readiness.percent = undefined;
 });

@@ -2720,7 +2720,12 @@
     "message": "尚未安裝語音轉文字模型 — 此功能需要一個模型來轉錄音訊。",
     "download": "下載 {{label}}（{{size}} GB）",
     "started": "正在下載 {{label}} — 請在 設定 → 模型 中查看進度，完成後再試一次。",
-    "install_failed": "無法開始下載：{{message}}"
+    "install_failed": "無法開始下載：{{message}}",
+    "choose": "選擇適合你工作的模型 — 各模型的準確度、語言與下載大小不同。只有點擊後才會開始下載。",
+    "group_offline": "最高準確度 — 停止說話後再轉寫",
+    "group_streaming": "最低延遲 — 邊說邊即時出字",
+    "use": "使用 {{label}}",
+    "installed": "已安裝"
   },
   "model_missing": {
     "message": "此模型尚未下載到 {{target}}。",

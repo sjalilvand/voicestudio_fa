@@ -2720,7 +2720,12 @@
     "message": "Tidak ada model ucapan-ke-teks yang terpasang — fitur ini membutuhkannya untuk mentranskripsi audio.",
     "download": "Unduh {{label}} ({{size}} GB)",
     "started": "Mengunduh {{label}} — pantau progresnya di Pengaturan → Model, lalu coba lagi.",
-    "install_failed": "Tidak dapat memulai unduhan: {{message}}"
+    "install_failed": "Tidak dapat memulai unduhan: {{message}}",
+    "choose": "Pilih model yang sesuai dengan pekerjaan Anda — akurasi, bahasa, dan ukuran unduhan berbeda-beda. Unduhan hanya dimulai saat Anda mengklik.",
+    "group_offline": "Akurasi terbaik — mentranskripsi setelah Anda berhenti bicara",
+    "group_streaming": "Latensi terendah — teks langsung saat Anda berbicara",
+    "use": "Gunakan {{label}}",
+    "installed": "Terpasang"
   },
   "model_missing": {
     "message": "Model ini belum diunduh di {{target}}.",

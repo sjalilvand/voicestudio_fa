@@ -13,6 +13,7 @@ import { Mic, Copy, Trash2, Search, Clock, Languages, FileText, Download } from 
 import { Button } from '../ui';
 import { detectPlatform } from '../utils/micError';
 import { useDictationReadiness } from '../hooks/useDictationReadiness';
+import AsrModelChooser from '../components/AsrModelChooser';
 import { toast } from 'react-hot-toast';
 import { copyText as copyToClipboard } from '../utils/copyText';
 import { toMillis } from '../utils/relativeTime';
@@ -71,6 +72,8 @@ export default function TranscriptionsPage() {
   const { info: shortcut } = useEffectiveDictationShortcut();
   const readiness = useDictationReadiness();
   const checkReadiness = readiness.check;
+  // What the progress bar names: the model the user picked, else the recommended one.
+  const installTarget = readiness.target || readiness.missing?.recommended;
   const [starting, setStarting] = useState(false);
   const captureDisabled = readiness.phase !== 'ready' || starting;
   const emptyDescription = t('transcriptions.empty_desc', { shortcut: shortcut.display });
@@ -250,7 +253,7 @@ export default function TranscriptionsPage() {
               : readiness.phase === 'error'
                 ? t('common.error')
                 : readiness.phase === 'installing'
-                  ? t('dub.install_progress', { engine: readiness.missing?.recommended?.label })
+                  ? t('dub.install_progress', { engine: installTarget?.label })
                   : t('asr_missing.message')}
           </p>
           {readiness.phase === 'installing' ? (
@@ -258,31 +261,25 @@ export default function TranscriptionsPage() {
               className="w-full"
               max={100}
               value={readiness.percent ?? undefined}
-              aria-label={t('dub.install_progress', {
-                engine: readiness.missing?.recommended?.label,
-              })}
+              aria-label={t('dub.install_progress', { engine: installTarget?.label })}
             />
           ) : (
             readiness.phase !== 'checking' && (
-              <div className="flex items-center gap-3">
-                {readiness.missing?.recommended?.repo_id && (
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    leading={<Download size={13} />}
-                    onClick={readiness.install}
-                  >
-                    {t('asr_missing.download', {
-                      label: readiness.missing.recommended.label,
-                      size: readiness.missing.recommended.size_gb,
-                    })}
-                  </Button>
+              <>
+                {readiness.phase === 'missing' && (
+                  <AsrModelChooser
+                    fallback={readiness.missing?.recommended}
+                    onInstall={readiness.install}
+                    onSelect={readiness.select}
+                  />
                 )}
-                <Button size="sm" variant="ghost" onClick={readiness.check}>
-                  {t('common.refresh')}
-                </Button>
-                {readiness.error && <span role="alert">{t('common.error')}</span>}
-              </div>
+                <div className="flex items-center gap-3">
+                  <Button size="sm" variant="ghost" onClick={readiness.check}>
+                    {t('common.refresh')}
+                  </Button>
+                  {readiness.error && <span role="alert">{t('common.error')}</span>}
+                </div>
+              </>
             )
           )}
         </div>

@@ -3218,7 +3218,12 @@
     "message": "No speech-to-text model is installed — this feature needs one to transcribe audio.",
     "download": "Download {{label}} ({{size}} GB)",
     "started": "Downloading {{label}} — watch progress in Settings → Models, then try again.",
-    "install_failed": "Couldn't start the download: {{message}}"
+    "install_failed": "Couldn't start the download: {{message}}",
+    "choose": "Pick the model that fits your work — accuracy, languages and download size differ. Downloads start only when you click.",
+    "group_offline": "Best accuracy — transcribes after you stop speaking",
+    "group_streaming": "Lowest latency — live text while you speak",
+    "use": "Use {{label}}",
+    "installed": "Installed"
   },
   "model_missing": {
     "message": "This model is not downloaded on {{target}}.",

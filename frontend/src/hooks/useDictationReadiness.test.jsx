@@ -1,12 +1,13 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
-const { apiJson, installRecommendedAsr } = vi.hoisted(() => ({
+const { apiJson, installRecommendedAsr, setDictationModelId } = vi.hoisted(() => ({
   apiJson: vi.fn(),
   installRecommendedAsr: vi.fn(),
+  setDictationModelId: vi.fn(),
 }));
 vi.mock('../store', () => ({
   useAppStore: Object.assign((selector) => selector({ dictationModelId: 'sherpa-whisper-tiny' }), {
-    getState: () => ({ dictationModelId: 'sherpa-whisper-tiny' }),
+    getState: () => ({ dictationModelId: 'sherpa-whisper-tiny', setDictationModelId }),
     setState: vi.fn(),
   }),
 }));
@@ -63,4 +64,49 @@ it('refreshes when returning from settings', async () => {
   await waitFor(() => expect(result.current.phase).toBe('missing'));
   act(() => window.dispatchEvent(new Event('focus')));
   await waitFor(() => expect(result.current.phase).toBe('ready'));
+});
+it('installs the model the user picked and names it as the install target', async () => {
+  apiJson.mockResolvedValueOnce({ ready: false, missing }).mockResolvedValue({ ready: true });
+  installRecommendedAsr.mockResolvedValue({
+    repo_id: 'test/parakeet',
+    dictation_id: 'sherpa-parakeet-tdt-v2',
+  });
+  const { result } = renderHook(useDictationReadiness);
+  await waitFor(() => expect(result.current.phase).toBe('missing'));
+  const pick = {
+    id: 'sherpa-parakeet-tdt-v2',
+    repo_id: 'test/parakeet',
+    label: 'Parakeet TDT v2',
+    size_gb: 0.66,
+  };
+  let pending;
+  act(() => {
+    pending = result.current.install(pick);
+  });
+  expect(result.current.phase).toBe('installing');
+  expect(result.current.target).toEqual({
+    repo_id: 'test/parakeet',
+    label: 'Parakeet TDT v2',
+    size_gb: 0.66,
+    dictation_id: 'sherpa-parakeet-tdt-v2',
+  });
+  await act(async () => {
+    await pending;
+  });
+  expect(installRecommendedAsr).toHaveBeenCalledWith(
+    { recommended: expect.objectContaining({ repo_id: 'test/parakeet' }) },
+    expect.any(Object),
+  );
+  expect(result.current.phase).toBe('ready');
+});
+it('switches to a model already on disk without downloading anything', async () => {
+  apiJson.mockResolvedValueOnce({ ready: false, missing }).mockResolvedValue({ ready: true });
+  const { result } = renderHook(useDictationReadiness);
+  await waitFor(() => expect(result.current.phase).toBe('missing'));
+  await act(async () => {
+    await result.current.select({ id: 'sherpa-zipformer-en-20m', installed: true });
+  });
+  expect(setDictationModelId).toHaveBeenCalledWith('sherpa-zipformer-en-20m');
+  expect(installRecommendedAsr).not.toHaveBeenCalled();
+  expect(result.current.phase).toBe('ready');
 });

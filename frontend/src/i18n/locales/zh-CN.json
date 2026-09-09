@@ -2727,7 +2727,12 @@
     "message": "尚未安装语音转文字模型 — 此功能需要一个模型来转写音频。",
     "download": "下载 {{label}}（{{size}} GB）",
     "started": "正在下载 {{label}} — 请在 设置 → 模型 中查看进度，完成后重试。",
-    "install_failed": "无法开始下载：{{message}}"
+    "install_failed": "无法开始下载：{{message}}",
+    "choose": "选择适合你工作的模型 — 各模型的准确度、语言和下载大小不同。只有点击后才会开始下载。",
+    "group_offline": "最高准确度 — 停止说话后再转写",
+    "group_streaming": "最低延迟 — 边说边实时出字",
+    "use": "使用 {{label}}",
+    "installed": "已安装"
   },
   "model_missing": {
     "message": "此模型尚未下载到 {{target}}。",

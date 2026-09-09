@@ -2720,7 +2720,12 @@
     "message": "No hay ningún modelo de voz a texto instalado — esta función necesita uno para transcribir audio.",
     "download": "Descargar {{label}} ({{size}} GB)",
     "started": "Descargando {{label}} — sigue el progreso en Ajustes → Modelos y vuelve a intentarlo.",
-    "install_failed": "No se pudo iniciar la descarga: {{message}}"
+    "install_failed": "No se pudo iniciar la descarga: {{message}}",
+    "choose": "Elige el modelo que se ajuste a tu trabajo: la precisión, los idiomas y el tamaño de descarga varían. Las descargas solo empiezan al hacer clic.",
+    "group_offline": "Máxima precisión — transcribe cuando dejas de hablar",
+    "group_streaming": "Mínima latencia — texto en vivo mientras hablas",
+    "use": "Usar {{label}}",
+    "installed": "Instalado"
   },
   "model_missing": {
     "message": "Este modelo no está descargado en {{target}}.",

@@ -11,6 +11,7 @@ the frozen-backend fallback mirror it for their toolchains.
 **Highlights**
 - The floating dictation bubble adds pause, resume, stop, close, and a multiline preview (#1952)
 - Transcriptions checks model readiness and offers an inline download and shortcut hints (#1952)
+- Transcriptions' missing-model prompt lists every dictation model by accuracy vs latency, languages and size, so you install the one that fits — or switch to one already on disk (#1952)
 - The Engines menu's Transcription tab picks the dictation model under Sherpa-ONNX, and that choice now also drives Sherpa transcription (#1952)
 
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
@@ -30,6 +31,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Changed
 
+- Tauri 2.11.5 with refreshed plugins (dialog, updater, log, opener, positioner, single-instance), React 19.3, TanStack Query 5.102, lucide 1.43, posthog-js 1.428, and the rest of the npm workspace on current minors; jsdom 30, jest-dom 7, concurrently 10, taze 21 (#1952)
+- eslint ignores `src-tauri/`, so a local Tauri build no longer floods `lint:hooks` with parse errors from generated assets (#1952)
 - Casting uses responsive SVG voice cards and searchable speaker menus that stay above surrounding panels (#1823)
 - Dubbing aligns output settings, brings review status forward, and simplifies transcript and glossary editing; Launchpad files and voices reflow into responsive grids (#1823)
 - Transcript segments use three readable rows for text, timing/status and voice controls, with heights that adapt to wrapping (#1823)
@@ -57,6 +60,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1952)
 - `bun desktop-prod` and `bun desktop-fresh` find Rust and uv from a terminal opened before they were installed, as `bun desktop` already did; a missing Rust toolchain fails up front with the install steps (#1952)
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!

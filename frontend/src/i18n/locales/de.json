@@ -2720,7 +2720,12 @@
     "message": "Es ist kein Sprache-zu-Text-Modell installiert — diese Funktion benötigt eines zum Transkribieren.",
     "download": "{{label}} herunterladen ({{size}} GB)",
     "started": "{{label}} wird heruntergeladen — Fortschritt unter Einstellungen → Modelle, danach erneut versuchen.",
-    "install_failed": "Download konnte nicht gestartet werden: {{message}}"
+    "install_failed": "Download konnte nicht gestartet werden: {{message}}",
+    "choose": "Wähle das Modell, das zu deiner Arbeit passt — Genauigkeit, Sprachen und Downloadgröße unterscheiden sich. Downloads starten erst per Klick.",
+    "group_offline": "Beste Genauigkeit — transkribiert, nachdem du aufhörst zu sprechen",
+    "group_streaming": "Geringste Latenz — Live-Text, während du sprichst",
+    "use": "{{label}} verwenden",
+    "installed": "Installiert"
   },
   "model_missing": {
     "message": "Dieses Modell wurde auf {{target}} nicht heruntergeladen.",

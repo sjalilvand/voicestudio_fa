@@ -78,7 +78,7 @@ dictation always stays copy-only.
 
 ### Transcriptions model setup
 
-Transcriptions checks the active dictation model before enabling **Start dictation**. If weights are missing, download the recommended model directly on the page; its name, download size, and installation progress are shown. Downloads require an explicit click. Failed downloads can be retried, and model state refreshes when returning from Settings. Once installation is verified, Start dictation becomes available; recording never starts automatically. Existing transcription history remains accessible during setup.
+Transcriptions checks the active dictation model before enabling **Start dictation**. If weights are missing, the page lists every dictation model, grouped by the trade-off you are choosing between — best accuracy (offline, transcribes after you stop) versus lowest latency (streaming, live text while you speak) — with languages and download size on each row, so you install the one that fits your work rather than only the recommended default. A model already on disk can be switched to without a download. The chosen model's name, download size, and installation progress are shown. Downloads require an explicit click. Failed downloads can be retried, and model state refreshes when returning from Settings. Once installation is verified, Start dictation becomes available; recording never starts automatically. Existing transcription history remains accessible during setup.
 
 ### Floating recording controls
 

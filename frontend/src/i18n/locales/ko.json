@@ -3141,7 +3141,12 @@
     "message": "음성 인식 모델이 설치되어 있지 않습니다 — 이 기능으로 오디오를 전사하려면 모델이 필요합니다.",
     "download": "{{label}} 다운로드 ({{size}} GB)",
     "started": "{{label}} 다운로드 중 — 설정 → 모델에서 진행 상황을 확인한 뒤 다시 시도하세요.",
-    "install_failed": "다운로드를 시작할 수 없습니다: {{message}}"
+    "install_failed": "다운로드를 시작할 수 없습니다: {{message}}",
+    "choose": "작업에 맞는 모델을 선택하세요 — 정확도, 언어, 다운로드 크기가 다릅니다. 다운로드는 클릭할 때만 시작됩니다.",
+    "group_offline": "최고 정확도 — 말을 멈춘 뒤 받아쓰기",
+    "group_streaming": "최저 지연 — 말하는 동안 실시간 텍스트",
+    "use": "{{label}} 사용",
+    "installed": "설치됨"
   },
   "model_missing": {
     "message": "이 모델은 {{target}}에 다운로드되지 않았습니다.",

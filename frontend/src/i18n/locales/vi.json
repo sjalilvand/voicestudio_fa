@@ -2720,7 +2720,12 @@
     "message": "Chưa cài đặt mô hình chuyển giọng nói thành văn bản — tính năng này cần một mô hình để phiên âm.",
     "download": "Tải xuống {{label}} ({{size}} GB)",
     "started": "Đang tải {{label}} — theo dõi tiến trình trong Cài đặt → Mô hình, sau đó thử lại.",
-    "install_failed": "Không thể bắt đầu tải xuống: {{message}}"
+    "install_failed": "Không thể bắt đầu tải xuống: {{message}}",
+    "choose": "Chọn mô hình phù hợp với công việc của bạn — độ chính xác, ngôn ngữ và dung lượng tải khác nhau. Chỉ tải xuống khi bạn nhấp.",
+    "group_offline": "Chính xác nhất — chuyển thành văn bản sau khi bạn ngừng nói",
+    "group_streaming": "Độ trễ thấp nhất — văn bản trực tiếp khi bạn đang nói",
+    "use": "Dùng {{label}}",
+    "installed": "Đã cài đặt"
   },
   "model_missing": {
     "message": "Mô hình này chưa được tải xuống trên {{target}}.",

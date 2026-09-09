@@ -2720,7 +2720,12 @@
     "message": "Er is geen spraak-naar-tekstmodel geïnstalleerd — deze functie heeft er een nodig om audio te transcriberen.",
     "download": "{{label}} downloaden ({{size}} GB)",
     "started": "{{label}} wordt gedownload — volg de voortgang in Instellingen → Modellen en probeer het daarna opnieuw.",
-    "install_failed": "Kon de download niet starten: {{message}}"
+    "install_failed": "Kon de download niet starten: {{message}}",
+    "choose": "Kies het model dat bij je werk past — nauwkeurigheid, talen en downloadgrootte verschillen. Downloads starten pas als je klikt.",
+    "group_offline": "Hoogste nauwkeurigheid — transcribeert nadat je stopt met spreken",
+    "group_streaming": "Laagste latentie — live tekst terwijl je spreekt",
+    "use": "{{label}} gebruiken",
+    "installed": "Geïnstalleerd"
   },
   "model_missing": {
     "message": "Dit model is niet gedownload op {{target}}.",

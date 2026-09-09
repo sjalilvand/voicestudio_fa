@@ -2720,7 +2720,12 @@
     "message": "Nenhum modelo de fala para texto está instalado — este recurso precisa de um para transcrever áudio.",
     "download": "Baixar {{label}} ({{size}} GB)",
     "started": "Baixando {{label}} — acompanhe o progresso em Configurações → Modelos e tente novamente.",
-    "install_failed": "Não foi possível iniciar o download: {{message}}"
+    "install_failed": "Não foi possível iniciar o download: {{message}}",
+    "choose": "Escolha o modelo que se ajusta ao seu trabalho — precisão, idiomas e tamanho do download variam. Os downloads só começam ao clicar.",
+    "group_offline": "Melhor precisão — transcreve depois que você para de falar",
+    "group_streaming": "Menor latência — texto ao vivo enquanto você fala",
+    "use": "Usar {{label}}",
+    "installed": "Instalado"
   },
   "model_missing": {
     "message": "Este modelo não foi baixado em {{target}}.",
