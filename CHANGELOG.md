@@ -11,6 +11,8 @@ the frozen-backend fallback mirror it for their toolchains.
 **Highlights**
 
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
+- Model downloads survive a flaky connection instead of restarting from zero
+- `bun run dev` recovers on Windows instead of demanding Task Manager
 
 - The desktop app builds and opens from a fresh clone again (#1818) — thanks @flutterkage2k!
 - GPUs with less VRAM than the engine needs no longer get half the compute-time budget a CPU gets (#1806) — thanks @VishvakR!
@@ -49,6 +51,12 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Docs
 
 ### Fixed
+
+- Segmented model downloads split files into 16 MB ranges instead of one range per connection, so a dropped connection refetches one range rather than restarting the file (#1224)
+- The download accelerator is kept across retries after a transient network failure and resumes from its manifest, instead of falling back to a from-zero `snapshot_download` (#1224)
+- `dev-backend.mjs` stops the backend by process tree on Windows, so an orphaned uvicorn no longer holds port 3900 and turns a source reload into three phantom crashes (#1690)
+- `clear-dev-ports.mjs` can free a stuck development port on Windows again, bound to the inspected process instance so a recycled pid is never terminated (#1690)
+- Checkout-ownership matching no longer resolves POSIX paths with the host's separator, which made the guard's own test fail on Windows (#1690)
 
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
