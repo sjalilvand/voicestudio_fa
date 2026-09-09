@@ -212,6 +212,7 @@ def test_desktop_spawned_backend_gets_past_ml_imports_on_windows(tmp_path):
             "OMNIVOICE_PORT": str(port),
             "OMNIVOICE_DATA_DIR": str(tmp_path / "data"),
             "OMNIVOICE_CACHE_DIR": str(tmp_path / "hf_cache"),
+            "HF_HUB_CACHE": str(tmp_path / "hf_cache"),  # never the developer's populated cache
             "HF_HUB_OFFLINE": "1",
             "PYTHONUNBUFFERED": "1",
             "PYTHONUTF8": "1",
@@ -241,10 +242,18 @@ def test_desktop_spawned_backend_gets_past_ml_imports_on_windows(tmp_path):
             except (OSError, ValueError):
                 time.sleep(1)
                 continue
-            seen.append((progress.get("status"), progress.get("step")))
+            status = progress.get("status")
+            seen.append((status, progress.get("step")))
             done = {s["id"] for s in progress.get("steps", []) if s.get("state") == "done"}
-            if progress.get("status") != "starting" or "ml_imports" in done:
+            # Positive evidence only: the ML import step finished, or startup is
+            # ready. Any other terminal state is the failure this test exists for.
+            if "ml_imports" in done or status == "ready":
                 return
+            if status != "starting" or progress.get("error"):
+                pytest.fail(
+                    f"backend startup reported status={status!r} error={progress.get('error')!r}; "
+                    f"progress seen: {seen[-3:]}"
+                )
             time.sleep(1)
         pytest.fail(f"backend never got past ml_imports in 180s (deadlocked watchdog?); last progress: {seen[-3:]}")
     finally:
