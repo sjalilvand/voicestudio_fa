@@ -63,6 +63,8 @@ the frozen-backend fallback mirror it for their toolchains.
 - System-check details and storage paths beginning with a number or a slash no longer render with their leading text moved to the end of the line (#1848) — thanks @psiberfunk!
 - An unavailable engine's row now links to that engine's guide, so the generic "check installation and configuration" message has somewhere to send you (#1866) — thanks @psiberfunk!
 - The backend log now records which engine failed a health check and whether its probe raised, instead of a line that identified neither (#1866) — thanks @psiberfunk!
+- The first-run Activity log counts every line instead of freezing at 200 while the install is still running, and Copy now hands back the whole run rather than the last 200 lines (#1847) — thanks @psiberfunk!
+- A first-run failure that happened early in a long install keeps its specific advice, instead of falling back to the generic retry hint once the log scrolled past 200 lines (#1847) — thanks @psiberfunk!
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
 - Copying a saved transcription now uses the shared clipboard helper and reports failed copies accurately (#1803) — thanks @tvbht!
