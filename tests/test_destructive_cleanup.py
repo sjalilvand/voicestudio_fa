@@ -114,6 +114,14 @@ async def test_tauri_log_clear_reports_truncate_failure(monkeypatch, tmp_path, a
     log = tmp_path / "webview.log"
     log.write_text("data", encoding="utf-8")
     monkeypatch.setattr(system, "_tauri_log_candidates", lambda: [str(log)])
+    # Clear now goes through the plugin-log half only, so patching the
+    # composite alone no longer reaches it. Patching both keeps this honest
+    # against the pre-split code too; without it the real resolver is
+    # consulted and the result depends on whether the machine running the
+    # test happens to have a shell log on disk.
+    monkeypatch.setattr(
+        system, "_tauri_plugin_log_candidates", lambda: [str(log)], raising=False
+    )
     monkeypatch.setattr(
         system,
         "_truncate_file",
