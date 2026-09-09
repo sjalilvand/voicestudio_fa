@@ -624,7 +624,19 @@ def _phase_a_build_inner() -> None:
     _startup_progress.begin_step("ml_imports")
     import torchaudio
     warnings.filterwarnings("ignore", category=UserWarning)
-    torchaudio.set_audio_backend("soundfile")
+    # torchaudio 2.9 REMOVED set_audio_backend(); soundfile has been the only
+    # backend since 2.0, so the call was already a no-op there and is simply
+    # absent now. Unguarded it raises AttributeError inside `ml_imports`, and a
+    # failure in that phase takes the whole backend down — the desktop app sits
+    # on "starting backend" forever and /health stays 503.
+    #
+    # That is not a hypothetical version: RTX 50-series (Blackwell, sm_120)
+    # users have no choice but to move off the pinned torch 2.8.0, which has no
+    # sm_120 kernels, and the torch 2.9.x they land on brings torchaudio 2.9
+    # with it. So the one group forced to upgrade hit a hard startup crash for
+    # a line that does nothing (#1931).
+    if hasattr(torchaudio, "set_audio_backend"):
+        torchaudio.set_audio_backend("soundfile")
     from utils import hf_progress
     # HF tqdm patch before any library import that can trigger
     # hf_hub_download (transformers, mlx_whisper, …).
