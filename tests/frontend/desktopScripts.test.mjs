@@ -196,3 +196,104 @@ test('stale-instance cleanup ignores unrelated or empty process names', () => {
   assert.equal(isDevAppProcess(undefined), false);
   assert.equal(isDevAppProcess(null), false);
 });
+
+// ── Stale-PATH healing shared by every desktop launcher ────────────────────
+// `bun desktop` healed a pre-rustup terminal's PATH; `bun desktop-prod` did
+// not and died with "cargo metadata … program not found" on the very next
+// command. The helper is pure and probe-injected so this pins the contract
+// for all launchers without a toolchain on the CI box.
+import {
+  healToolchainPath,
+  healedPathNotes,
+  cargoMissingMessage,
+  pathKeyOf,
+} from '../../scripts/desktop-toolchain-path.mjs';
+
+const winOpts = (overrides) => ({
+  platform: 'win32',
+  home: 'C:\\Users\\dev',
+  ...overrides,
+});
+
+test('healToolchainPath prepends installed-but-invisible tool dirs, never mutates input', () => {
+  const input = { Path: 'C:\\Windows\\System32', HOME: 'x' };
+  const { env, added, missing } = healToolchainPath(
+    input,
+    winOpts({ resolvable: () => false, exists: () => true }),
+  );
+  assert.equal(
+    env.Path,
+    'C:\\Users\\dev\\.local\\bin;C:\\Users\\dev\\.cargo\\bin;C:\\Windows\\System32',
+  );
+  assert.deepEqual(
+    added.map((a) => a.tool),
+    ['cargo', 'uv'],
+  );
+  assert.deepEqual(missing, []);
+  assert.equal(input.Path, 'C:\\Windows\\System32'); // untouched
+  assert.equal(env.HOME, 'x'); // other keys carried over
+});
+
+test('healToolchainPath is a no-op when every tool already resolves', () => {
+  const input = { PATH: '/usr/bin' };
+  const { env, added, missing } = healToolchainPath(input, {
+    platform: 'darwin',
+    home: '/Users/dev',
+    resolvable: () => true,
+    exists: () => {
+      throw new Error('must not probe the filesystem when the tool resolves');
+    },
+  });
+  assert.deepEqual(env, input);
+  assert.deepEqual(added, []);
+  assert.deepEqual(missing, []);
+});
+
+test('healToolchainPath reports tools that are genuinely absent, heals the rest', () => {
+  const { env, added, missing } = healToolchainPath(
+    { PATH: '/usr/bin' },
+    {
+      platform: 'linux',
+      home: '/home/dev',
+      resolvable: () => false,
+      exists: (exe) => exe.endsWith('/.local/bin/uv'), // uv installed, cargo not
+    },
+  );
+  assert.equal(env.PATH, '/home/dev/.local/bin:/usr/bin');
+  assert.deepEqual(added, [{ tool: 'uv', dir: '/home/dev/.local/bin' }]);
+  assert.deepEqual(missing, ['cargo']);
+});
+
+test('healToolchainPath probes the platform-specific executable name', () => {
+  const probed = [];
+  healToolchainPath(
+    { PATH: '' },
+    winOpts({
+      resolvable: () => false,
+      exists: (exe) => {
+        probed.push(exe);
+        return false;
+      },
+    }),
+  );
+  assert.deepEqual(probed, [
+    'C:\\Users\\dev\\.cargo\\bin\\cargo.exe',
+    'C:\\Users\\dev\\.local\\bin\\uv.exe',
+  ]);
+});
+
+test('pathKeyOf matches the PATH key case-insensitively and defaults to PATH', () => {
+  assert.equal(pathKeyOf({ Path: '' }), 'Path');
+  assert.equal(pathKeyOf({ PATH: '' }), 'PATH');
+  assert.equal(pathKeyOf({}), 'PATH');
+});
+
+test('launcher messages name the tag, the permanent remedy, and the install path', () => {
+  const [note] = healedPathNotes([{ tool: 'cargo', dir: '/home/dev/.cargo/bin' }], 'desktop-prod');
+  assert.match(note, /^\[desktop-prod\] added '\/home\/dev\/\.cargo\/bin' to PATH/);
+  assert.match(note, /Open a new terminal/);
+  const msg = cargoMissingMessage('`bun desktop-prod`');
+  assert.match(msg, /`bun desktop-prod` needs Rust\/cargo/);
+  assert.match(msg, /winget install Rust\.Rustup/);
+  assert.match(msg, /rustup\.rs/);
+});

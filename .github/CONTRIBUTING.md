@@ -85,13 +85,19 @@ names: there is no `desktop=prod` (note the **hyphen** in `desktop-prod`).
 
 Requires [Rust](https://rustup.rs/) and platform-specific Tauri dependencies — see the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
 
-After installing Rust with rustup on macOS/Linux, either open a new terminal or
-load Cargo into the current one before starting the desktop app:
+After installing Rust with rustup (or `uv` with its installer), a terminal that
+was already open still has the old `PATH`. The desktop launchers (`bun desktop`,
+`bun desktop-prod`, `bun desktop-fresh`) detect this and add `~/.cargo/bin` /
+`~/.local/bin` for that run, printing a one-line note; to make it permanent,
+open a new terminal, or on macOS/Linux load Cargo into the current one:
 
 ```bash
 source "$HOME/.cargo/env"
 bun desktop
 ```
+
+If Rust is genuinely not installed, the launchers stop up front with the
+install command instead of failing later inside `cargo metadata`.
 
 On Linux, errors such as `Package gdk-3.0 was not found`, `pango.pc` missing,
 or `javascriptcoregtk-4.1` missing mean the native packages above were not

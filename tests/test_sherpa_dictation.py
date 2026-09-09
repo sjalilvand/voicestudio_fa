@@ -460,3 +460,38 @@ def test_capture_backend_falls_back_when_dictation_disabled(monkeypatch):
     # cleanup singleton so other tests start clean
     ab._capture_backend = None
     ab._capture_backend_key = None
+
+
+def test_sherpa_engine_defaults_to_dictation_model_pref(fake_sherpa, no_download, monkeypatch):
+    """The ``sherpa-onnx-asr`` *engine* (dub/batch transcription, and the
+    no-arg constructor) must load the model the user picked for dictation —
+    not silently fall back to Whisper Tiny while the Voice panel / Engines
+    menu shows Parakeet selected. Env pin still wins; a demoted or unknown
+    pref falls through to the catalogue default; ``dictation.enabled`` is
+    irrelevant to the engine."""
+    from services import asr_backend as ab
+    from services import sherpa_dictation as sd
+
+    prefs_store = {"dictation.enabled": False, "dictation.model_id": "sherpa-parakeet-tdt-v3"}
+    from core import prefs as _prefs
+    monkeypatch.setattr(_prefs, "get", lambda k, d=None: prefs_store.get(k, d))
+    monkeypatch.delenv("OMNIVOICE_SHERPA_ASR_MODEL", raising=False)
+    monkeypatch.setattr(sd, "is_demoted", lambda mid: False)
+
+    assert ab.sherpa_engine_model_id() == "sherpa-parakeet-tdt-v3"
+    assert ab.SherpaDictationBackend().spec.id == "sherpa-parakeet-tdt-v3"
+    assert ab._offline_asr_repo("sherpa-onnx-asr") == sd.get_spec("sherpa-parakeet-tdt-v3").repo_id
+
+    # Demoted on this host → default, never the demoted pick.
+    monkeypatch.setattr(sd, "is_demoted", lambda mid: mid == "sherpa-parakeet-tdt-v3")
+    assert ab.sherpa_engine_model_id() == sd.DEFAULT_MODEL_ID
+
+    # Unknown / stale pref → default.
+    monkeypatch.setattr(sd, "is_demoted", lambda mid: False)
+    prefs_store["dictation.model_id"] = "not-a-model"
+    assert ab.sherpa_engine_model_id() == sd.DEFAULT_MODEL_ID
+
+    # Explicit env pin beats the pref.
+    prefs_store["dictation.model_id"] = "sherpa-parakeet-tdt-v3"
+    monkeypatch.setenv("OMNIVOICE_SHERPA_ASR_MODEL", "sherpa-zipformer-en-20m")
+    assert ab.SherpaDictationBackend().spec.id == "sherpa-zipformer-en-20m"

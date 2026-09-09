@@ -11,6 +11,7 @@ the frozen-backend fallback mirror it for their toolchains.
 **Highlights**
 - The floating dictation bubble adds pause, resume, stop, close, and a multiline preview (#1952)
 - Transcriptions checks model readiness and offers an inline download and shortcut hints (#1952)
+- The Engines menu's Transcription tab picks the dictation model under Sherpa-ONNX, and that choice now also drives Sherpa transcription (#1952)
 
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
 
@@ -56,6 +57,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- `bun desktop-prod` and `bun desktop-fresh` find Rust and uv from a terminal opened before they were installed, as `bun desktop` already did; a missing Rust toolchain fails up front with the install steps (#1952)
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
 - Copying a saved transcription now uses the shared clipboard helper and reports failed copies accurately (#1803) — thanks @tvbht!

@@ -12,7 +12,7 @@ own microphone audio to the versioned WebSocket API. See the
 
 ## Use it
 
-1. Choose an installed dictation model in the Model Catalogue.
+1. Install a dictation model from the Model Catalogue, then pick it in **Settings → Voice** or from the top-bar Engines menu (**Transcription → Sherpa-ONNX dictation → Dictation model**). The same choice is what the Sherpa-ONNX engine loads for dubbing and batch transcription.
 2. Set the shortcut and hold/toggle behavior in **Settings → Hotkey**.
 3. Put the cursor in a text field, press the shortcut, speak, then release or
    press again.
