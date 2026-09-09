@@ -4,6 +4,24 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '../i18n';
 
+const { readiness, apiJson } = vi.hoisted(() => ({
+  readiness: {
+    phase: 'ready',
+    missing: null,
+    check: vi.fn().mockResolvedValue(true),
+    install: vi.fn(),
+    select: vi.fn(),
+  },
+  apiJson: vi.fn(),
+}));
+vi.mock('../hooks/useDictationReadiness', () => ({
+  useDictationReadiness: () => readiness,
+}));
+vi.mock('../api/client', async (importOriginal) => ({
+  ...(await importOriginal()),
+  apiJson: (...a) => apiJson(...a),
+}));
+
 import DictationDemo from '../components/DictationDemo';
 
 function withI18n(node) {
@@ -15,6 +33,8 @@ describe('DictationDemo', () => {
 
   beforeEach(() => {
     originalFetch = global.fetch;
+    readiness.phase = 'ready';
+    readiness.missing = null;
   });
 
   afterEach(() => {
@@ -91,5 +111,42 @@ describe('DictationDemo', () => {
     const calls = global.fetch.mock.calls;
     const transcribeCall = calls.find((c) => String(c[0]).endsWith('/transcribe'));
     expect(transcribeCall[1]?.method).toBe('POST');
+  });
+
+  // #1856: the mandatory-only install path ships no speech-to-text model, so
+  // the final onboarding step opened with one hard error per script card and
+  // told the user to press a hotkey that could not transcribe anything. The
+  // step now offers the models instead of failing three times.
+  it('offers the models instead of failing every card when none is installed', async () => {
+    readiness.phase = 'missing';
+    readiness.missing = { recommended: { repo_id: 'r/tiny', label: 'Tiny', size_gb: 0.1 } };
+    apiJson.mockResolvedValue({
+      models: [
+        {
+          id: 'sherpa-whisper-tiny',
+          repo_id: 'r/tiny',
+          label: 'Tiny',
+          tag: 'offline',
+          recommended: true,
+          size_gb: 0.1,
+          languages: '90+ languages',
+          installed: false,
+        },
+      ],
+    });
+    render(withI18n(<DictationDemo />));
+
+    expect(await screen.findByTestId('asr-model-chooser')).toBeInTheDocument();
+    expect(screen.queryByText(/Schedule a meeting with Pat/)).not.toBeInTheDocument();
+  });
+
+  it('keeps the script cards while readiness is still being probed', () => {
+    readiness.phase = 'checking';
+    readiness.missing = null;
+    render(withI18n(<DictationDemo />));
+
+    // A sub-second probe must not flash the install panel over the cards.
+    expect(screen.getByText(/Schedule a meeting with Pat/)).toBeInTheDocument();
+    expect(screen.queryByTestId('asr-model-chooser')).not.toBeInTheDocument();
   });
 });
