@@ -213,6 +213,47 @@ def test_convert_happy_path(client, monkeypatch, clone_profile):
     assert row["profile_id"] == clone_profile
 
 
+def test_convert_rejects_an_unavailable_runtime_profile(
+    client, monkeypatch, clone_profile,
+):
+    base = _make_fake_engine(f"fake-unavailable-{uuid.uuid4().hex[:6]}")
+
+    class UnavailableRuntime(base):
+        @classmethod
+        def runtime_compute_profile(cls, caps):
+            return {
+                "gpu_compat": ("cpu",),
+                "min_vram_gb": 0.0,
+                "effective_device": "cpu",
+                "routing_status": "unavailable",
+                "routing_reason": "configured native device is unavailable",
+                "runtime_hardware_family": None,
+                "runtime_vram_gb": None,
+            }
+
+    asr = _FakeASR({"text": "hello there"})
+    _wire_stubs(monkeypatch, engine_cls=UnavailableRuntime, asr=asr)
+    backend = UnavailableRuntime()
+
+    async def resolve_backend(**_kwargs):
+        return backend
+
+    monkeypatch.setattr(
+        _tts_mod(), "resolve_generation_backend", resolve_backend,
+    )
+
+    async def transcribe_source(*_args, **_kwargs):
+        return {"text": "hello there", "segments": []}
+
+    monkeypatch.setattr(_vc_mod(), "_transcribe_source", transcribe_source)
+
+    res = _post_convert(client, clone_profile, match_duration="0")
+
+    assert res.status_code == 400
+    assert res.json()["detail"] == "configured native device is unavailable"
+    assert UnavailableRuntime.calls == []
+
+
 def test_convert_transcribes_blank_profile_reference_and_persists(
     client, monkeypatch, transcriptless_profile,
 ):

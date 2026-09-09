@@ -825,6 +825,7 @@
     "routingRemote": "Zdalny",
     "routingUnknown": "Nieznany",
     "routingEffectiveChip": "Działa na {{device}} na tym komputerze",
+    "gpuVulkan": "Vulkan",
     "routingCaveatTitle": "Wybrano procesor graficzny, ale: {{reason}}",
     "selectCpuFallback": "{{engine}}: działa na CPU — {{reason}}",
     "selectWithCaveat": "Przełączono na {{engine}} — {{reason}}",

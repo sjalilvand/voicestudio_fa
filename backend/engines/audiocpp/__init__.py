@@ -82,8 +82,22 @@ def _cpu_thread_count() -> int:
     return min(16, max(1, cores or os.cpu_count() or 1))
 
 
+def _device_min_vram_gb(device) -> float:
+    """Dedicated-memory comfort floor for one discovered native device."""
+    return 6.0 if (
+        device
+        and device.kind == "GPU"
+        and (
+            device.backend == "vulkan"
+            or device.hardware_family in {"cuda", "rocm"}
+        )
+    ) else 0.0
+
+
 def build_server_config(
     *, model_id: str, family: str, model_path: str, port: int,
+    backend: str = "cpu", device: int = 0,
+    execution_target: str | None = None,
 ) -> dict:
     """``server.json`` dict for the managed ``audiocpp_server``.
 
@@ -93,11 +107,12 @@ def build_server_config(
     return {
         "host": "127.0.0.1",
         "port": port,
-        "backend": "cpu",
-        "device": 0,
+        "backend": backend,
+        "device": device,
         # The pinned CPU runtime scales strongly through 16 workers while
         # producing byte-identical audio.
-        "threads": _cpu_thread_count(),
+        "threads": _cpu_thread_count()
+        if (execution_target or backend) == "cpu" else 1,
         "lazy_load": True,
         "max_loaded_models": 1,
         "models": [
@@ -176,8 +191,6 @@ class AudioCPPBackend(TTSBackend):
     )
     supports_voice_design = True
     applies_own_mastering = True  # model-decoded 24 kHz studio output
-    # GPU backends remain outside this initial integration until each packaged
-    # runtime path has been measured and proven on its target platform.
     gpu_compat = ("cpu",)
     runs_out_of_process = True
     # Same marker SubprocessBackend sets: this engine lives in another OS
@@ -194,6 +207,9 @@ class AudioCPPBackend(TTSBackend):
         self._sr = self._DEFAULT_SAMPLE_RATE
         self._lock = threading.RLock()
         self._server_json: Path | None = None
+        self._selection = None
+        self._device = None
+        self._provider = None
 
     # ── availability ────────────────────────────────────────────────────
 
@@ -207,6 +223,64 @@ class AudioCPPBackend(TTSBackend):
         except RuntimeError as exc:
             return False, str(exc)
         return True, "ready"
+
+    @classmethod
+    def runtime_compute_profile(cls, caps) -> dict:
+        from dataclasses import replace
+
+        from engines.audiocpp import bootstrap
+        from services.engine_routing import low_vram_caveat
+
+        try:
+            selection = bootstrap.resolve_compute_selection(caps)
+            targets = bootstrap.runtime_targets()
+        except RuntimeError as exc:
+            return {
+                "gpu_compat": cls.gpu_compat,
+                "min_vram_gb": 0.0,
+                "effective_device": "cpu",
+                "routing_status": "unavailable",
+                "routing_reason": str(exc),
+                "runtime_backend": None,
+                "runtime_device_index": None,
+                "runtime_device_name": None,
+                "runtime_hardware_family": None,
+                "runtime_vram_gb": None,
+                "runtime_device_verified": False,
+            }
+        selected = selection.device
+        accelerated = selected.target != "cpu"
+        min_vram_gb = _device_min_vram_gb(selected)
+        dedicated = min_vram_gb > 0
+        reason = selection.fallback_reason
+        if accelerated and dedicated and reason is None:
+            selected_caps = replace(
+                caps,
+                device_name=selected.name,
+                vram_gb=selection.verified_vram_gb,
+            )
+            reason = low_vram_caveat(
+                selected_caps,
+                min_vram_gb,
+                family=selected.hardware_family,
+                vram_gb=selection.verified_vram_gb,
+            )
+        status = "accelerated" if accelerated else (
+            "cpu_fallback" if selection.fallback_reason else "cpu_only"
+        )
+        return {
+            "gpu_compat": targets,
+            "min_vram_gb": min_vram_gb,
+            "effective_device": selected.target,
+            "routing_status": status,
+            "routing_reason": reason,
+            "runtime_backend": selected.backend,
+            "runtime_device_index": selected.index,
+            "runtime_device_name": selected.name,
+            "runtime_hardware_family": selected.hardware_family,
+            "runtime_vram_gb": selection.verified_vram_gb,
+            "runtime_device_verified": selection.verified_vram_gb > 0,
+        }
 
     # ── TTSBackend protocol ─────────────────────────────────────────────
 
@@ -237,6 +311,7 @@ class AudioCPPBackend(TTSBackend):
             from engines.audiocpp import bootstrap
 
             binary = bootstrap.resolve_server_binary()
+            selection = bootstrap.resolve_compute_selection()
             model_file = bootstrap.resolve_model_file()
             self._port = bootstrap.server_port()
             # The random model id is a per-launch challenge. Before sending
@@ -249,7 +324,13 @@ class AudioCPPBackend(TTSBackend):
                 family=bootstrap.FAMILY,
                 model_path=str(model_file),
                 port=self._port,
+                backend=selection.device.backend,
+                device=selection.device.index,
+                execution_target=selection.device.target,
             )
+            self._selection = selection
+            self._device = selection.device.target
+            self._provider = selection.device.backend
             from core.config import DATA_DIR
 
             workdir = Path(str(DATA_DIR)) / "audiocpp"
@@ -268,8 +349,9 @@ class AudioCPPBackend(TTSBackend):
                     os.close(config_fd)
             log_path = workdir / "server.log"
             logger.info(
-                "audio.cpp: starting %s (backend=cpu, port=%d, model=%s)",
-                binary.name, self._port, model_file.name,
+                "audio.cpp: starting %s (backend=%s, device=%d, port=%d, model=%s)",
+                binary.name, selection.device.backend, selection.device.index,
+                self._port, model_file.name,
             )
             with open(log_path, "ab") as log_fh:
                 self._proc = spawn_owned(
@@ -429,10 +511,18 @@ class AudioCPPBackend(TTSBackend):
             logger.info("audio.cpp: speed is not supported; ignoring.")
 
         request_started = time.monotonic()
-        request_budget = generate_timeout_s(text, execution_device="cpu")
-
         with self._lock:
             self._ensure_loaded()
+            selected = self._selection.device if self._selection else None
+            min_vram_gb = _device_min_vram_gb(selected)
+            request_budget = generate_timeout_s(
+                text,
+                execution_device=selected.target if selected else "cpu",
+                min_vram_gb=min_vram_gb,
+                hardware_family=selected.hardware_family if selected else None,
+                vram_gb=self._selection.verified_vram_gb
+                if self._selection else 0.0,
+            )
             if not self._server_model_id:
                 raise RuntimeError("managed audio.cpp server identity is missing")
             payload = build_speech_payload(
@@ -444,11 +534,10 @@ class AudioCPPBackend(TTSBackend):
                 guidance_scale=kw.get("guidance_scale", 1.0),
                 seed=kw.get("seed"),
             )
-            # A first-use HF download can legitimately consume the soft CPU
-            # budget. Its progress heartbeats keep the outer guard alive; this
-            # fresh synthesis lease then gives the lazy model load + request a
-            # bounded window. The inner request always expires early enough to
-            # reap the owned server before the outer guard can abandon us.
+            # Device discovery and server startup can consume part of the soft
+            # budget. This fresh synthesis lease gives the lazy model load and
+            # request a bounded window. The inner request always expires early
+            # enough to reap the owned server before the outer guard abandons us.
             report_generate_progress()
             soft_remaining = request_budget - (time.monotonic() - request_started)
             timeout = (

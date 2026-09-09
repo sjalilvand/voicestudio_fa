@@ -191,6 +191,90 @@ def test_discovery_reports_the_four_states(monkeypatch):
     assert "clone" in entry["operations"]
 
 
+def test_unknown_native_gpu_memory_keeps_one_serial_worker_slot(monkeypatch):
+    monkeypatch.setattr(
+        "services.tts_backend.list_backends",
+        lambda: [{
+            "id": "audiocpp",
+            "available": True,
+            "routing_status": "accelerated",
+            "gpu_compat": ["vulkan", "cpu"],
+            "effective_device": "vulkan",
+            "min_vram_gb": 6.0,
+            "execution_evidence": {"runtime_vram_gb": 0.0},
+        }],
+    )
+
+    entry = capabilities.discover()[0]
+
+    assert entry["free_memory_bytes"] == 0
+    assert entry["derived_concurrency"] == 1
+
+
+def test_unknown_native_memory_keeps_mixed_worker_serial(monkeypatch):
+    monkeypatch.setattr(
+        "services.tts_backend.list_backends",
+        lambda: [{
+            "id": "unknown-memory",
+            "available": True,
+            "routing_status": "accelerated",
+            "gpu_compat": ["cuda"],
+            "effective_device": "cuda",
+            "execution_evidence": {"runtime_vram_gb": 0.0},
+        }],
+    )
+
+    unknown_memory = capabilities.discover()[0]
+    high_capacity = {"derived_concurrency": 4}
+
+    assert unknown_memory["derived_concurrency"] == 1
+    assert capabilities.max_concurrent_tasks(
+        [unknown_memory, high_capacity]
+    ) == 1
+
+
+def test_static_gpu_profile_derives_known_memory_before_aggregation(
+    monkeypatch,
+):
+    free_bytes = 24 * 1024**3
+    derive_calls = []
+
+    def derive_for_static_gpu(**kwargs):
+        derive_calls.append(kwargs)
+        return 3
+
+    monkeypatch.setattr(capabilities, "_free_memory_bytes", lambda _caps: free_bytes)
+    monkeypatch.setattr(capabilities, "derive_concurrency", derive_for_static_gpu)
+    monkeypatch.setattr(
+        "services.tts_backend.list_backends",
+        lambda: [{
+            "id": "static-cuda",
+            "available": True,
+            "routing_status": "accelerated",
+            "gpu_compat": ["cuda"],
+            "effective_device": "cuda",
+            "min_vram_gb": 5.0,
+            "execution_evidence": {"runtime_vram_gb": None},
+        }],
+    )
+
+    static_gpu = capabilities.discover()[0]
+
+    assert static_gpu["derived_concurrency"] == 0
+    assert static_gpu["free_memory_bytes"] == free_bytes
+    assert capabilities.max_concurrent_tasks(
+        [static_gpu, {"derived_concurrency": 4}]
+    ) == 3
+    assert derive_calls == [
+        {
+            "backend": "cuda",
+            "free_memory_bytes": free_bytes,
+            "min_model_bytes": 5 * 1024**3,
+            "compiled": False,
+        }
+    ]
+
+
 def test_cpu_fallback_is_reported_because_capability_is_not_acceleration(monkeypatch):
     monkeypatch.setattr(
         "services.tts_backend.list_backends",

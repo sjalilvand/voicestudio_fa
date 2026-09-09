@@ -2166,6 +2166,7 @@
     "routingRemote": "Remote",
     "routingUnknown": "Unknown",
     "routingEffectiveChip": "Runs on {{device}} on this machine",
+    "gpuVulkan": "Vulkan",
     "routingCaveatTitle": "GPU selected, but: {{reason}}",
     "selectCpuFallback": "{{engine}}: running on CPU — {{reason}}",
     "curatedModelLabel": "Model",

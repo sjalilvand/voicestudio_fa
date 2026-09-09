@@ -825,6 +825,7 @@
     "routingRemote": "Fernbedienung",
     "routingUnknown": "Unbekannt",
     "routingEffectiveChip": "Läuft unter {{device}} auf diesem Computer",
+    "gpuVulkan": "Vulkan",
     "routingCaveatTitle": "GPU ausgewählt, aber: {{reason}}",
     "selectCpuFallback": "{{engine}}: läuft auf der CPU — {{reason}}",
     "selectWithCaveat": "Zu {{engine}} gewechselt — {{reason}}",

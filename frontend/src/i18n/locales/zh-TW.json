@@ -825,6 +825,7 @@
     "routingRemote": "遠端",
     "routingUnknown": "未知",
     "routingEffectiveChip": "在此機器上的 {{device}} 上執行",
+    "gpuVulkan": "Vulkan",
     "routingCaveatTitle": "已選擇 GPU，但是：{{reason}}",
     "selectCpuFallback": "{{engine}}：正在 CPU 上執行 — {{reason}}",
     "selectWithCaveat": "已切換至 {{engine}} — {{reason}}",

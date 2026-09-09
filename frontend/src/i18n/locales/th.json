@@ -825,6 +825,7 @@
     "routingRemote": "ระยะไกล",
     "routingUnknown": "ไม่ทราบ",
     "routingEffectiveChip": "ทำงานบน {{device}} บนเครื่องนี้",
+    "gpuVulkan": "Vulkan",
     "routingCaveatTitle": "เลือก GPU แล้ว แต่: {{reason}}",
     "selectCpuFallback": "{{engine}}: กำลังทำงานบน CPU — {{reason}}",
     "selectWithCaveat": "สลับไปที่ {{engine}} — {{reason}}",

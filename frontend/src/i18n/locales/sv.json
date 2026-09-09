@@ -825,6 +825,7 @@
     "routingRemote": "Fjärrkontroll",
     "routingUnknown": "Okänd",
     "routingEffectiveChip": "Körs på {{device}} på den här maskinen",
+    "gpuVulkan": "Vulkan",
     "routingCaveatTitle": "GPU vald, men: {{reason}}",
     "selectCpuFallback": "{{engine}}: körs på CPU — {{reason}}",
     "selectWithCaveat": "Bytte till {{engine}} — {{reason}}",

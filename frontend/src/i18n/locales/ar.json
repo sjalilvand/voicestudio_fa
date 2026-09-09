@@ -825,6 +825,7 @@
     "routingRemote": "بعيد",
     "routingUnknown": "غير معروف",
     "routingEffectiveChip": "يعمل على {{device}} على هذا الجهاز",
+    "gpuVulkan": "Vulkan",
     "routingCaveatTitle": "تم تحديد وحدة معالجة الرسومات، ولكن: {{reason}}",
     "selectCpuFallback": "{{engine}}: يعمل على المعالج المركزي — {{reason}}",
     "selectWithCaveat": "تم التبديل إلى {{engine}} — {{reason}}",
