@@ -356,6 +356,75 @@ def _tail_rolling(base: str, tail: int):
         out.extend(chunk)
     return out, total, list(reversed(paths))
 
+def _tauri_plugin_log_candidates():
+    """The `tauri-plugin-log` files — the shell's own log, and the only thing
+    the Tauri tab actually displays.
+
+    Split out from :func:`_tauri_log_candidates` so Clear can touch these and
+    leave the backend stdout/stderr redirect alone. See
+    :func:`clear_tauri_logs`.
+    """
+    home = os.path.expanduser("~")
+    bid = "com.debpalash.omnivoice-studio"
+    if sys.platform == "darwin":
+        return [
+            os.path.join(home, "Library/Logs", bid, "tauri.log"),
+            os.path.join(home, "Library/Logs", bid, "VoiceStudio.log"),
+        ]
+    if sys.platform.startswith("linux"):
+        data_dir = os.environ.get("XDG_DATA_HOME") or os.path.join(home, ".local/share")
+        return [
+            os.path.join(data_dir, bid, "logs", "tauri.log"),
+            os.path.join(home, ".config", bid, "logs", "tauri.log"),
+        ]
+    if sys.platform.startswith("win"):
+        appdata = os.environ.get("APPDATA", home)
+        localappdata = os.environ.get("LOCALAPPDATA") or os.path.join(home, "AppData", "Local")
+        return [
+            os.path.join(localappdata, bid, "logs", "tauri.log"),
+            os.path.join(appdata, bid, "logs", "tauri.log"),
+        ]
+    return []
+
+
+def _backend_redirect_log_candidates():
+    """`backend.log` / `backend_err.log` — the spawned backend's stdout and
+    stderr, written by `src-tauri/src/backend.rs::backend_log_path()`.
+
+    Deliberately NOT cleared by the Tauri tab's Clear button.
+    `open_err_log_for_run()` opens `backend_err.log` **append-only** so "a
+    respawn must not destroy the previous run's evidence" (#1510), rotates it
+    to `.1` rather than truncating, and its spawn diagnostics are described
+    there as "retained in backend_err.log across runs and lands verbatim in bug
+    reports". A native death (a Windows access violation, a SIGSEGV) writes
+    nothing to the Python log by construction, so this file is the only record
+    of it.
+
+    `OMNIVOICE_LOG_DIR` is honoured first, in the same precedence
+    `backend_log_path()` uses. The backend is a child of the shell, so an
+    ambient override reaches both — and a resolver that ignored it would look
+    in the per-OS default while the writer wrote somewhere else, which is the
+    divergence class this file already has one of (see #1782).
+    """
+    override = (os.environ.get("OMNIVOICE_LOG_DIR") or "").strip()
+    if override:
+        return [
+            os.path.join(override, "backend.log"),
+            os.path.join(override, "backend_err.log"),
+        ]
+    home = os.path.expanduser("~")
+    if sys.platform == "darwin":
+        base = os.path.join(home, "Library/Logs/OmniVoice")
+    elif sys.platform.startswith("linux"):
+        state_dir = os.environ.get("XDG_STATE_HOME") or os.path.join(home, ".local/state")
+        base = os.path.join(state_dir, "OmniVoice")
+    elif sys.platform.startswith("win"):
+        localappdata = os.environ.get("LOCALAPPDATA") or os.path.join(home, "AppData", "Local")
+        base = os.path.join(localappdata, "OmniVoice", "Logs")
+    else:
+        return []
+    return [os.path.join(base, "backend.log"), os.path.join(base, "backend_err.log")]
+
 
 def _tauri_log_candidates():
     """Likely paths for Tauri-side logs, most useful first.
@@ -368,40 +437,15 @@ def _tauri_log_candidates():
       `com.debpalash.omnivoice-studio` (frontend/src-tauri/tauri.conf.json).
     - backend.rs::backend_log_path() redirects the spawned backend's
       stdout/stderr to `backend.log` / `backend_err.log` under
-      `~/Library/Logs/OmniVoice` (macOS), `$XDG_STATE_HOME/VoiceStudio` falling
+      `~/Library/Logs/OmniVoice` (macOS), `$XDG_STATE_HOME/OmniVoice` falling
       back to `~/.local/state/OmniVoice` (Linux), and
       `%LOCALAPPDATA%\\OmniVoice\\Logs` (Windows). This is where uvicorn
       startup banners and hard-crash tracebacks land — keep all three OS
       shapes listed or sidecar crashes become invisible off-macOS.
     """
-    home = os.path.expanduser("~")
-    bid = "com.debpalash.omnivoice-studio"
-    if sys.platform == "darwin":
-        return [
-            os.path.join(home, "Library/Logs", bid, "tauri.log"),
-            os.path.join(home, "Library/Logs", bid, "VoiceStudio.log"),
-            os.path.join(home, "Library/Logs/OmniVoice/backend.log"),
-            os.path.join(home, "Library/Logs/OmniVoice/backend_err.log"),
-        ]
-    if sys.platform.startswith("linux"):
-        data_dir = os.environ.get("XDG_DATA_HOME") or os.path.join(home, ".local/share")
-        state_dir = os.environ.get("XDG_STATE_HOME") or os.path.join(home, ".local/state")
-        return [
-            os.path.join(data_dir, bid, "logs", "tauri.log"),
-            os.path.join(home, ".config", bid, "logs", "tauri.log"),
-            os.path.join(state_dir, "OmniVoice", "backend.log"),
-            os.path.join(state_dir, "OmniVoice", "backend_err.log"),
-        ]
-    if sys.platform.startswith("win"):
-        appdata = os.environ.get("APPDATA", home)
-        localappdata = os.environ.get("LOCALAPPDATA") or os.path.join(home, "AppData", "Local")
-        return [
-            os.path.join(localappdata, bid, "logs", "tauri.log"),
-            os.path.join(appdata, bid, "logs", "tauri.log"),
-            os.path.join(localappdata, "OmniVoice", "Logs", "backend.log"),
-            os.path.join(localappdata, "OmniVoice", "Logs", "backend_err.log"),
-        ]
-    return []
+    # Composed from the two halves so the read path keeps seeing every file
+    # while Clear can be narrowed to the shell's own log.
+    return _tauri_plugin_log_candidates() + _backend_redirect_log_candidates()
 
 
 @router.get("/system/logs")
@@ -588,10 +632,20 @@ def _truncate_file(path: str):
 
 @router.post("/system/logs/tauri/clear")
 async def clear_tauri_logs():
-    """Truncate whichever Tauri-side log files we know about. OS-level rotation may recreate them."""
+    """Truncate the shell's own log files. OS-level rotation may recreate them.
+
+    The backend stdout/stderr redirect is deliberately excluded. This button
+    lives on a tab that shows `tauri.log`, and truncating `backend_err.log`
+    from it destroyed evidence the user was never shown — the one record of a
+    native death, which writes nothing to the Python log. `backend.rs`'s
+    `open_err_log_for_run()` opens that file append-only precisely so "a
+    respawn must not destroy the previous run's evidence" (#1510) and rotates
+    it to `.1` instead of truncating, so it manages its own size and does not
+    need clearing from here.
+    """
     cleared = []
     failed = 0
-    for p in _tauri_log_candidates():
+    for p in _tauri_plugin_log_candidates():
         if os.path.exists(p):
             try:
                 await asyncio.to_thread(_truncate_file, p)
