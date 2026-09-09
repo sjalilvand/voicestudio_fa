@@ -2412,7 +2412,16 @@ async def generate_speech(
         raise HTTPException(status_code=503, detail=str(e)) from e
     except ValueError as e:
         logger.error("Validation failed: %s", e)
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        # Most ValueErrors here are VoiceStudio's own validation messages and
+        # are exactly what the user should read. A few are raw library text
+        # naming parameters and files the user cannot act on — those get the
+        # owned remedy for their class instead (#1879). Unclassified ones keep
+        # passing through, so this cannot swallow a good message.
+        from core.failure import classify, public_hint_for_topic
+
+        _topic = classify(str(e))
+        _owned = public_hint_for_topic(_topic) if _topic else ""
+        raise HTTPException(status_code=400, detail=_owned or str(e)) from e
     except Exception as e:
         tb = traceback.format_exc()
         logger.error("Inference failed: %s\n%s", e, tb)
