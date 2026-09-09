@@ -1783,6 +1783,7 @@ function App() {
           saveProject={saveProject}
           loadProject={loadProject}
           deleteProject={deleteProject}
+          renameProject={renameProject}
           handleSelectProfile={handleSelectProfile}
           handleDeleteProfile={handleDeleteProfile}
           handleOpenVoiceProfile={openVoiceProfile}

@@ -19,6 +19,7 @@ import {
   Download as DownloadIcon,
   Volume2,
   Search,
+  Pencil,
   X,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -90,6 +91,7 @@ export default function Sidebar(props) {
     saveProject,
     loadProject,
     deleteProject,
+    renameProject,
     handleSelectProfile,
     handleDeleteProfile,
     handleOpenVoiceProfile,
@@ -118,6 +120,25 @@ export default function Sidebar(props) {
 
   const { t } = useTranslation();
   const [sbQuery, setSbQuery] = useState('');
+  // Inline project rename. The Dub landing's own projects panel was retired
+  // when that surface became history-only, which left the rename endpoint with
+  // no caller anywhere in the UI (#1952). Projects now live only in this rail,
+  // so the affordance belongs here.
+  const [editingId, setEditingId] = useState(null);
+  const [draftName, setDraftName] = useState('');
+  const startRename = (proj) => {
+    setEditingId(proj.id);
+    setDraftName(proj.name || '');
+  };
+  const cancelRename = () => {
+    setEditingId(null);
+    setDraftName('');
+  };
+  const commitRename = (proj) => {
+    const next = draftName.trim();
+    if (next && next !== proj.name) renameProject?.(proj.id, next);
+    cancelRename();
+  };
   const qLower = sbQuery.trim().toLowerCase();
   const matchesSearch = (s) => !qLower || (s || '').toLowerCase().includes(qLower);
   const filteredProjects = useMemo(
@@ -302,7 +323,28 @@ export default function Sidebar(props) {
                               {timeAgo(proj.updated_at)}
                             </span>
                           </div>
-                          <div className="history-title">{proj.name}</div>
+                          {editingId === proj.id ? (
+                            <input
+                              className="input-base wv__rename-input"
+                              autoFocus
+                              value={draftName}
+                              aria-label={t('sidebar.rename')}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => setDraftName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.stopPropagation();
+                                  commitRename(proj);
+                                } else if (e.key === 'Escape') {
+                                  e.stopPropagation();
+                                  cancelRename();
+                                }
+                              }}
+                              onBlur={() => commitRename(proj)}
+                            />
+                          ) : (
+                            <div className="history-title">{proj.name}</div>
+                          )}
                           <div className="history-subtitle">
                             {proj.duration ? `${Math.round(proj.duration)}s` : 'audio'}
                             {(() => {
@@ -314,25 +356,63 @@ export default function Sidebar(props) {
                             })()}
                           </div>
                           <div className="history-actions">
-                            <button
-                              className="history-action-btn accent"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                loadProject(proj.id);
-                              }}
-                            >
-                              <FolderOpen size={10} /> {t('sidebar.open')}
-                            </button>
-                            <button
-                              className="history-action-btn danger history-action-icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteProject(proj.id);
-                              }}
-                              title="Delete"
-                            >
-                              <Trash2 size={10} />
-                            </button>
+                            {editingId === proj.id ? (
+                              <>
+                                <button
+                                  className="history-action-btn accent"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    commitRename(proj);
+                                  }}
+                                >
+                                  <Check size={10} /> {t('common.save')}
+                                </button>
+                                <button
+                                  className="history-action-btn history-action-icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    cancelRename();
+                                  }}
+                                  title={t('common.cancel')}
+                                >
+                                  <X size={10} />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  className="history-action-btn accent"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    loadProject(proj.id);
+                                  }}
+                                >
+                                  <FolderOpen size={10} /> {t('sidebar.open')}
+                                </button>
+                                {renameProject && (
+                                  <button
+                                    className="history-action-btn history-action-icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      startRename(proj);
+                                    }}
+                                    title={t('sidebar.rename')}
+                                  >
+                                    <Pencil size={10} />
+                                  </button>
+                                )}
+                                <button
+                                  className="history-action-btn danger history-action-icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteProject(proj.id);
+                                  }}
+                                  title={t('common.delete')}
+                                >
+                                  <Trash2 size={10} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                       ))

@@ -45,11 +45,14 @@ describe('retryInitialLoad (#1158 class)', () => {
   // and the fix is silently inert again (skeptic finding F1).
   it('integration: useAppData wires rethrowing loaders into the retry', async () => {
     const { readFileSync } = await import('node:fs');
-    // jsdom replaces the global URL; Node's fileURLToPath needs a REAL node:
-    // URL instance, so build one from the specifier's pathname directly.
+    // jsdom replaces the global URL, so build a REAL node: URL instance and
+    // hand that to fileURLToPath. Taking `.pathname` instead looks equivalent
+    // but is not on Windows: a file:///C:/… URL's pathname is "/C:/…", which
+    // readFileSync then resolves against the current drive as "C:\C:\…" and
+    // the whole test file fails with ENOENT on every Windows checkout.
     const nodeUrl = await import('node:url');
     const NodeURL = nodeUrl.URL;
-    const hookPath = new NodeURL('../hooks/useAppData.js', import.meta.url).pathname;
+    const hookPath = nodeUrl.fileURLToPath(new NodeURL('../hooks/useAppData.js', import.meta.url));
     const src = readFileSync(hookPath, 'utf8');
     const initialBlock = src.slice(src.indexOf('retryInitialLoad('));
     for (const loader of [

@@ -5165,7 +5165,7 @@ button.dub-stepper__action:focus-visible {
   padding: 24px 16px;
 }
 
-/* Inline project rename (WorkspaceProjects) — fills the card row like the title. */
+/* Inline project rename (Sidebar projects rail) — fills the card row like the title. */
 .wv__rename-input {
   width: 100%;
   font-size: 0.78rem;
