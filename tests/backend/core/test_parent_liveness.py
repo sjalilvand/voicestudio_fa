@@ -53,3 +53,126 @@ def test_desktop_child_exits_when_parent_closes_stdin():
         if child.poll() is None:
             child.kill()
             child.wait()
+
+
+# ── Windows: the watchdog must never leave a read pending on the stdin pipe ──
+# A synchronous ReadFile parked on the desktop-owned stdin pipe (via the C
+# runtime's read() or straight to the kernel) deadlocked the OpenBLAS DLL
+# initializer that `import torch` reaches in the startup worker: every
+# desktop-spawned backend on Windows froze at "Loading ML runtime" while the
+# same command from a terminal (no stdin pipe, no watchdog) started in seconds.
+# A thread that only sleeps is harmless; the pending read is the trigger. The
+# Windows watcher therefore polls PeekNamedPipe and reads only bytes that are
+# already buffered, so no I/O is ever outstanding on that file object.
+
+
+def _peek_sequence(events):
+    """`events` items: int → bytes available; OSError → broken pipe."""
+    it = iter(events)
+
+    def peek(handle):
+        ev = next(it)
+        if isinstance(ev, BaseException):
+            raise ev
+        return (ev, 0)
+
+    return peek
+
+
+def test_windows_watcher_exits_on_broken_pipe_without_blocking_reads():
+    from core.parent_liveness import _watch_parent_pipe_handle
+
+    reads, sleeps, exits = [], [], []
+    _watch_parent_pipe_handle(
+        7,
+        exits.append,
+        peek=_peek_sequence([0, 0, OSError(109, "The pipe has been ended")]),
+        read_file=lambda h, n: reads.append((h, n)),
+        sleep=sleeps.append,
+        interval=0.01,
+    )
+    assert exits == [0]
+    assert reads == []  # nothing buffered → never a read, let alone a pending one
+    assert sleeps == [0.01, 0.01]
+
+
+def test_windows_watcher_drains_only_buffered_bytes_until_eof():
+    from core.parent_liveness import _watch_parent_pipe_handle
+
+    reads, exits = [], []
+    _watch_parent_pipe_handle(
+        7,
+        exits.append,
+        peek=_peek_sequence([3, 0, 1, OSError(109, "The pipe has been ended")]),
+        read_file=lambda h, n: reads.append((h, n)) or (b"x" * n, 0),
+        sleep=lambda s: None,
+    )
+    assert exits == [0]
+    # Reads are sized to exactly what PeekNamedPipe reported, so they return
+    # immediately instead of parking on the pipe.
+    assert reads == [(7, 3), (7, 1)]
+
+
+def test_windows_watchdog_arms_pipe_poller_on_pipe_stdin(monkeypatch):
+    import types
+    import core.parent_liveness as pl
+
+    monkeypatch.setenv("OMNIVOICE_DESKTOP_CONTAINED", "1")
+    monkeypatch.setattr(pl.os, "name", "nt")
+
+    class FakeBuffer:
+        def fileno(self):
+            return 0
+
+    monkeypatch.setattr(pl.sys, "stdin", types.SimpleNamespace(buffer=FakeBuffer()))
+    monkeypatch.setitem(sys.modules, "msvcrt", types.SimpleNamespace(get_osfhandle=lambda fd: 0xABC))
+    monkeypatch.setitem(sys.modules, "_winapi", types.SimpleNamespace(GetFileType=lambda h: 3))
+
+    started = {}
+
+    class FakeThread:
+        def __init__(self, *, target, args, name, daemon):
+            started.update(target=target, args=args, daemon=daemon)
+
+        def start(self):
+            started["started"] = True
+
+    monkeypatch.setattr(pl.threading, "Thread", FakeThread)
+    assert pl.arm_desktop_parent_watchdog() is True
+    assert started["started"] is True
+    assert started["target"] is pl._watch_parent_pipe_handle
+    assert started["args"] == (0xABC, os._exit)
+    assert started["daemon"] is True
+
+
+def test_windows_watchdog_keeps_blocking_reader_for_non_pipe_stdin(monkeypatch):
+    """A file/NUL stdin has no pipe file object to deadlock against, and a
+    blocking read on it returns EOF promptly — keep the shared reader there."""
+    import types
+    import core.parent_liveness as pl
+
+    monkeypatch.setenv("OMNIVOICE_DESKTOP_CONTAINED", "1")
+    monkeypatch.setattr(pl.os, "name", "nt")
+
+    class FakeBuffer:
+        def fileno(self):
+            return 0
+
+    fake_stdin = types.SimpleNamespace(buffer=FakeBuffer())
+    monkeypatch.setattr(pl.sys, "stdin", fake_stdin)
+    monkeypatch.setitem(sys.modules, "msvcrt", types.SimpleNamespace(get_osfhandle=lambda fd: 0xABC))
+    monkeypatch.setitem(sys.modules, "_winapi", types.SimpleNamespace(GetFileType=lambda h: 1))  # FILE_TYPE_DISK
+
+    started = {}
+
+    class FakeThread:
+        def __init__(self, *, target, args, name, daemon):
+            started.update(target=target, args=args)
+
+        def start(self):
+            started["started"] = True
+
+    monkeypatch.setattr(pl.threading, "Thread", FakeThread)
+    assert pl.arm_desktop_parent_watchdog() is True
+    assert started["target"] is pl._watch_parent_pipe
+    assert started["args"] == (fake_stdin.buffer, os._exit)
