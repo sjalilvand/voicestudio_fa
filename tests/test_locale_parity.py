@@ -102,7 +102,7 @@ _MISSING_BASELINE = {
     "ar": 475, "de": 475, "es": 475, "fr": 475, "hi": 475, "id": 475,
     "it": 475, "ja": 475, "ko": 0, "nl": 475, "pl": 475, "pt": 475,
     "ru": 475, "sv": 475, "th": 475, "tr": 475, "uk": 475, "vi": 475,
-    "zh-CN": 468, "zh-TW": 475,
+    "zh-CN": 0, "zh-TW": 475,
 }
 
 #: Keys every locale must carry regardless of the aggregate ratchet above.

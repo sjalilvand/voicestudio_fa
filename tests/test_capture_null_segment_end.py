@@ -77,10 +77,13 @@ def _post(client, **data):
     )
 
 
-@pytest.mark.parametrize("accurate", ["false", "true"])
-def test_null_end_is_passed_through_not_rounded(monkeypatch, accurate):
+# The route picks its engine from a `mode` form field, not an `accurate`
+# flag, so parametrising on `accurate` sent a field the route ignores and ran
+# the default fast path twice. Both engines must pass a null end through.
+@pytest.mark.parametrize("mode", ["fast", "accurate"])
+def test_null_end_is_passed_through_not_rounded(monkeypatch, mode):
     client = _client(monkeypatch, _UntimedBackend)
-    r = _post(client, accurate=accurate)
+    r = _post(client, mode=mode)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["segments"][0]["end"] is None

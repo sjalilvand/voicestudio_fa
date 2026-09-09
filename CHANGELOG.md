@@ -121,6 +121,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Fast macOS process exits no longer turn a completed shutdown into a permission error (#1809)
 - The bootstrap splash no longer shows fabricated first-run install steps on a warm start or repair sync — a step now renders done only once it was actually observed (#1894)
 - Model Catalogue engine rows stack into one column on narrow shells instead of clipping actions off-screen (#1891)
+- Simplified Chinese locale completed: all 486 missing keys translated and the parity ratchet tightened to zero (#1877) — thanks @yearth!
 
 
 ## [0.5.2] — 2026-09-02
