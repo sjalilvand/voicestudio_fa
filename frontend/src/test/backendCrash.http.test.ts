@@ -39,14 +39,15 @@ function okResponse(rec: LastRunCrashRecord | null, acknowledged = false) {
 
 describe('_adaptLastRunCrash — run-sentinel record → CrashMarker shape', () => {
   it('maps the record so the existing crash UI can render it', () => {
-    const marker = _adaptLastRunCrash(record(), false);
+    const sourceRecord = record();
+    const marker = _adaptLastRunCrash(sourceRecord, false);
     expect(marker.exit_code).toBeNull();
     expect(marker.signal).toBeNull();
     // describeCrashExit falls through to exit_desc on a null code+signal.
     expect(describeCrashExit(marker)).toBe('process ended uncleanly (previous run)');
     expect(marker.backend_version).toBe('0.3.23');
     expect(marker.uptime_s).toBe(510);
-    expect(marker.ts).toBe(record().detected_at);
+    expect(marker.ts).toBe(sourceRecord.detected_at);
     expect(marker.acknowledged).toBe(false);
     // The "stderr" evidence carries the last activity + the scrubbed log tail.
     expect(marker.last_stderr).toContain('last activity before the death: transcribe (dub)');

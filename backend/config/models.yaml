@@ -28,6 +28,9 @@
 #                            their own (weights live in referenced sub-repos). Such
 #                            a cache is legitimately tiny, so the truncated-download
 #                            (weights-missing) detector must NOT flag it incomplete.
+#   allow_patterns (optional) — restrict installation to these repository paths.
+#                               Use for multi-package repos so an explicit install
+#                               never downloads unrelated model variants.
 # ─────────────────────────────────────────────────────────────────────────
 
 models:
@@ -39,6 +42,14 @@ models:
     size_gb: 2.4
     required: true
     curated_on: [all]
+
+  - repo_id: "audio-cpp/audio.cpp-gguf"
+    label: "Breeze-TTS-2 Q8_0 for audio.cpp (English + Chinese, clone + design)"
+    role: TTS
+    size_gb: 4.73
+    allow_patterns:
+      - "Breeze-TTS-2-GGUF/breeze-tts-2-q8_0.gguf"
+    note: "Optional audio.cpp model. Research/non-commercial weights and self-hosted outputs; install only after reviewing the license."
 
   # ── ASR (optional — curated per platform) ─────────────────────────────
   # No ASR model is required to boot: TTS-only installs work. Dubbing,

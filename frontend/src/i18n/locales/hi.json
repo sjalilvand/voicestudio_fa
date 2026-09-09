@@ -822,6 +822,7 @@
     "routingRemote": "रिमोट",
     "routingUnknown": "अज्ञात",
     "routingEffectiveChip": "इस मशीन पर {{device}} पर चलता है",
+    "gpuVulkan": "Vulkan",
     "routingCaveatTitle": "GPU चयनित, लेकिन: {{reason}}",
     "selectCpuFallback": "{{engine}}: CPU पर चल रहा है — {{reason}}",
     "selectWithCaveat": "{{engine}} पर स्विच किया गया — {{reason}}",

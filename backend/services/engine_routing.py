@@ -14,6 +14,7 @@ carry a home path.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Literal, TypedDict
 
 from core.device_caps import (
@@ -31,7 +32,44 @@ class RoutingResult(TypedDict):
     routing_reason: str | None     # raw, pre-scrub
 
 
-def under_provisioned_vram(caps: HostCaps, min_vram_gb: float = 0.0) -> bool:
+def runtime_compute_profile(engine_or_cls, caps: HostCaps) -> dict:
+    """Return one engine's runtime-aware compute contract.
+
+    Native executables may discover providers independently of PyTorch.  They
+    override ``runtime_compute_profile``; all existing engines retain the
+    exact static routing contract.
+    """
+    hook = getattr(engine_or_cls, "runtime_compute_profile", None)
+    if callable(hook):
+        return hook(caps)
+    cls = engine_or_cls if isinstance(engine_or_cls, type) else type(engine_or_cls)
+    compat = tuple(getattr(cls, "gpu_compat", ("cpu",)))
+    floor = float(getattr(cls, "min_vram_gb", 0.0) or 0.0)
+    return {
+        "gpu_compat": compat,
+        "min_vram_gb": floor,
+        **resolve_routing(compat, caps, floor),
+        "runtime_backend": None,
+        "runtime_device_index": None,
+        "runtime_device_name": None,
+        "runtime_hardware_family": None,
+        "runtime_vram_gb": None,
+        "runtime_device_verified": None,
+    }
+
+
+async def runtime_compute_profile_async(engine_or_cls, caps: HostCaps) -> dict:
+    """Resolve runtime compute metadata without blocking the event loop."""
+    return await asyncio.to_thread(runtime_compute_profile, engine_or_cls, caps)
+
+
+def under_provisioned_vram(
+    caps: HostCaps,
+    min_vram_gb: float = 0.0,
+    *,
+    family: str | None = None,
+    vram_gb: float | None = None,
+) -> bool:
     """Is this host's DEDICATED VRAM below the engine's declared floor?
 
     The one definition of "under-provisioned", shared by everything that acts
@@ -40,7 +78,8 @@ def under_provisioned_vram(caps: HostCaps, min_vram_gb: float = 0.0) -> bool:
     .generate_timeout_s``). It was written out inline in each of them, which is
     how the budget came to disagree with the warning printed next to it.
 
-    Dedicated-VRAM families ONLY. On MPS, ``HostCaps.vram_gb`` is a heuristic
+    Dedicated-VRAM families ONLY. CUDA, ROCm, XPU, and a native Vulkan device
+    report dedicated memory. On MPS, ``HostCaps.vram_gb`` is a heuristic
     (system RAM / 2, see device_caps) for a UNIFIED memory pool; comparing it
     against a floor measured on discrete CUDA hardware would tell every 8 GB Mac
     its 4 GB "VRAM" is too small for an engine that runs fine there. A VRAM
@@ -49,10 +88,35 @@ def under_provisioned_vram(caps: HostCaps, min_vram_gb: float = 0.0) -> bool:
     """
     if not min_vram_gb or min_vram_gb <= 0:
         return False
-    if getattr(caps, "family", None) not in ("cuda", "rocm"):
+    if (family or getattr(caps, "family", None)) not in (
+        "cuda", "rocm", "xpu", "vulkan",
+    ):
         return False
-    vram_gb = float(getattr(caps, "vram_gb", 0.0) or 0.0)
-    return 0 < vram_gb < float(min_vram_gb)
+    raw_vram_gb = getattr(caps, "vram_gb", 0.0) if vram_gb is None else vram_gb
+    available_vram_gb = float(raw_vram_gb or 0.0)
+    return 0 < available_vram_gb < float(min_vram_gb)
+
+
+def low_vram_caveat(
+    caps: HostCaps,
+    min_vram_gb: float = 0.0,
+    *,
+    family: str | None = None,
+    vram_gb: float | None = None,
+) -> str | None:
+    """User-facing advisory for a known under-provisioned dedicated GPU."""
+    if not under_provisioned_vram(
+        caps, min_vram_gb, family=family, vram_gb=vram_gb,
+    ):
+        return None
+    device = caps.device_name or (family or caps.family).upper()
+    available_vram_gb = caps.vram_gb if vram_gb is None else vram_gb
+    return (
+        f"{device} has {available_vram_gb:.1f} GB VRAM; this engine wants about "
+        f"{min_vram_gb:.0f} GB. It will run, but expect slow generations "
+        f"that may time out. Unload other models before generating, keep "
+        f"the text short, or pick a lighter engine."
+    )
 
 
 def _caveat(caps: HostCaps, min_vram_gb: float = 0.0) -> str | None:
@@ -75,15 +139,7 @@ def _caveat(caps: HostCaps, min_vram_gb: float = 0.0) -> str | None:
     for note in caps.notes:
         if KERNEL_RISK_MARKER in note:
             return f"{caps.family.upper()} selected, but: {note}"
-    if under_provisioned_vram(caps, min_vram_gb):
-        device = caps.device_name or caps.family.upper()
-        return (
-            f"{device} has {caps.vram_gb:.1f} GB VRAM; this engine wants about "
-            f"{min_vram_gb:.0f} GB. It will run, but expect slow generations "
-            f"that may time out. Unload other models before generating, keep "
-            f"the text short, or pick a lighter engine."
-        )
-    return None
+    return low_vram_caveat(caps, min_vram_gb)
 
 
 def resolve_routing(
@@ -223,5 +279,7 @@ def routing_fields(
 
 __all__ = [
     "RoutingStatus", "RoutingResult", "resolve_routing", "routing_fields",
-    "routing_notice", "header_safe_reason", "under_provisioned_vram",
+    "routing_notice", "header_safe_reason", "low_vram_caveat",
+    "runtime_compute_profile", "runtime_compute_profile_async",
+    "under_provisioned_vram",
 ]

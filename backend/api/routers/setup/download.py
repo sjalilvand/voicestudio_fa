@@ -385,7 +385,11 @@ def _is_retryable_download_error(exc: BaseException) -> bool:
 async def install_model(req: InstallModelRequest):
     """Download one HF repo snapshot; progress goes through the shared
     ``/setup/download-stream`` SSE feed."""
-    if req.repo_id not in [m["repo_id"] for m in KNOWN_MODELS]:
+    model_spec = next(
+        (model for model in KNOWN_MODELS if model["repo_id"] == req.repo_id),
+        None,
+    )
+    if model_spec is None:
         raise HTTPException(
             status_code=400,
             detail=(
@@ -393,6 +397,7 @@ async def install_model(req: InstallModelRequest):
                 + ", ".join(m["repo_id"] for m in KNOWN_MODELS)
             ),
         )
+    allow_patterns = list(model_spec.get("allow_patterns") or []) or None
     target = (req.target or "").strip()
     if target != "local":
         from services import gpu_gateway  # noqa: PLC0415
@@ -450,6 +455,8 @@ async def install_model(req: InstallModelRequest):
                 "revision": revision_for(req.repo_id),
                 "max_workers": _download_max_workers(),
             }
+            if allow_patterns:
+                dl_kwargs["allow_patterns"] = allow_patterns
             _tqdm_cls = hf_progress.tracked_tqdm_class()
             if _tqdm_cls is not None:
                 dl_kwargs["tqdm_class"] = _tqdm_cls
@@ -493,6 +500,8 @@ async def install_model(req: InstallModelRequest):
                 "revision": dl_kwargs["revision"],
                 "dry_run": True,
             }
+            if allow_patterns:
+                _preflight_kwargs["allow_patterns"] = allow_patterns
             if _endpoint:
                 _preflight_kwargs["endpoint"] = _endpoint
             try:
@@ -559,7 +568,12 @@ async def install_model(req: InstallModelRequest):
                     # snapshot_download — the accelerator can never compromise a
                     # correct install.
                     _snapshot_path = None
-                    if _attempt == 1 and _segmented_enabled() and not _xet_active():
+                    if (
+                        _attempt == 1
+                        and not allow_patterns
+                        and _segmented_enabled()
+                        and not _xet_active()
+                    ):
                         try:
                             _snapshot_path = _segmented_snapshot(
                                 req.repo_id,
