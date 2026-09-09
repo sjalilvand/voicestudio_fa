@@ -37,9 +37,18 @@ def test_env_override_truthy_keeps_it_on(monkeypatch):
 
 import httpx  # noqa: E402
 
-from api.routers.setup.download import _segmented_retry_plan  # noqa: E402
-
 _MAX = 5
+
+
+def _plan(exc, attempt, max_attempts=_MAX):
+    """Resolve the app module at run time, not at collection.
+
+    A module-level import of an app module goes stale when an earlier test
+    pollutes ``sys.modules``.
+    """
+    from api.routers.setup.download import _segmented_retry_plan
+
+    return _segmented_retry_plan(exc, attempt, max_attempts)
 
 
 def _dropped():
@@ -50,20 +59,31 @@ def _dropped():
 
 def test_dropped_connection_reraises_so_the_next_attempt_resumes():
     for attempt in (1, 2, 3):
-        disable, reraise = _segmented_retry_plan(_dropped(), attempt, _MAX)
+        disable, reraise = _plan(_dropped(), attempt)
         assert reraise is True, f"attempt {attempt} must reach the outer retry"
         assert disable is False, f"attempt {attempt} must keep the accelerator"
 
 
-def test_final_attempt_is_reserved_for_the_plain_path():
+def test_the_accelerator_keeps_the_second_to_last_attempt():
+    """Handover must not start early.
+
+    Disabling AND falling through in the same attempt would abandon the
+    resumable manifest one attempt sooner than needed and restart the file
+    through a separate `.incomplete`.
+    """
+    disable, reraise = _plan(_dropped(), _MAX - 1)
+    assert (disable, reraise) == (True, True), (
+        "the attempt that exhausts the accelerator still re-raises, so the "
+        "plain path starts on the last attempt, not the second-to-last"
+    )
+
+
+def test_final_attempt_takes_the_plain_path_without_reraising():
     """The accelerator can never be the reason an install fails outright."""
-    disable, reraise = _segmented_retry_plan(_dropped(), _MAX - 1, _MAX)
-    assert (disable, reraise) == (True, False)
-    disable, reraise = _segmented_retry_plan(_dropped(), _MAX, _MAX)
-    assert (disable, reraise) == (True, False)
+    assert _plan(_dropped(), _MAX) == (True, False)
+    assert _plan(_dropped(), 1, 1) == (True, False), "single-attempt install"
 
 
 def test_a_non_network_failure_disables_the_accelerator_at_once():
     """An accelerator that cannot work here must not burn every retry."""
-    disable, reraise = _segmented_retry_plan(ValueError("sha256 mismatch"), 1, _MAX)
-    assert (disable, reraise) == (True, False)
+    assert _plan(ValueError("sha256 mismatch"), 1) == (True, False)

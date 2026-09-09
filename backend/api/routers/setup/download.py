@@ -396,11 +396,20 @@ def _segmented_retry_plan(
     restart-from-zero this exists to prevent.
 
     The final attempt is always reserved for the plain path, so the accelerator
-    can never be the reason an install fails outright.
+    can never be the reason an install fails outright. The two flags are
+    decoupled for that handover: the attempt that exhausts the accelerator still
+    re-raises, so the plain path starts on the LAST attempt rather than the
+    second-to-last. Disabling and falling through in the same attempt would
+    abandon the resumable manifest one attempt early and restart through a
+    separate file — which is the failure this whole helper exists to avoid.
     """
-    retryable = _is_retryable_download_error(exc)
-    disable = not retryable or attempt >= max_attempts - 1
-    return disable, not disable
+    if not _is_retryable_download_error(exc):
+        return True, False  # the accelerator cannot work here at all
+    if attempt >= max_attempts:
+        # Nothing left to hand over to: take the plain path now rather than
+        # re-raising out of the loop with no fallback ever tried.
+        return True, False
+    return attempt >= max_attempts - 1, True
 
 
 @router.post("/models/install")
