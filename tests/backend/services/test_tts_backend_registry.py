@@ -140,6 +140,40 @@ def test_list_backends_resilient(registry_sandbox, caplog):
     )
 
 
+def test_unavailable_backend_can_report_installed_runtime_targets(
+    registry_sandbox,
+):
+    class RuntimeKnownButModelMissing(HealthyInProcessBackend):
+        id = "runtime-known"
+        display_name = "Runtime known"
+
+        @classmethod
+        def is_available(cls):
+            return False, "model missing"
+
+        @classmethod
+        def runtime_compute_profile(cls, caps):
+            return {
+                "gpu_compat": ("vulkan", "cpu"),
+                "min_vram_gb": 6.0,
+                "effective_device": "vulkan",
+                "routing_status": "accelerated",
+                "routing_reason": None,
+                "runtime_backend": "vulkan",
+                "runtime_device_index": 1,
+                "runtime_device_name": "Test GPU",
+            }
+
+    registry_sandbox["runtime-known"] = RuntimeKnownButModelMissing
+    entry = next(
+        item for item in list_backends() if item["id"] == "runtime-known"
+    )
+
+    assert entry["available"] is False
+    assert entry["gpu_compat"] == ["vulkan", "cpu"]
+    assert entry["effective_device"] == "vulkan"
+
+
 def test_list_backends_shape(registry_sandbox):
     """Every entry must contain exactly the documented keys — no more, no
     less — EXCEPT mlx-audio, which also carries `curated_models` +

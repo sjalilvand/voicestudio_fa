@@ -23,6 +23,8 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
+from worker.capacity import derive_concurrency
+
 logger = logging.getLogger("omnivoice.worker")
 
 # gpu_compat families that mean "this would run on the CPU here", which is
@@ -74,6 +76,12 @@ def discover(*, include_unavailable: bool = False) -> list[dict]:
         gpu_compat = set(entry.get("gpu_compat") or [])
         repo_ids = repo_ids_for(entry)
         downloaded = _downloaded(repo_ids)
+        runtime_vram_gb = (entry.get("execution_evidence") or {}).get(
+            "runtime_vram_gb"
+        )
+        engine_free_bytes = free_bytes if runtime_vram_gb is None else int(
+            float(runtime_vram_gb or 0.0) * 1024**3
+        )
         discovered.append(
             {
                 "engine": engine_id,
@@ -97,7 +105,17 @@ def discover(*, include_unavailable: bool = False) -> list[dict]:
                 "min_memory_bytes": int(float(entry.get("min_vram_gb") or 0) * 1024**3),
                 "precision": "",
                 "backend": entry.get("effective_device") or family,
-                "free_memory_bytes": free_bytes,
+                "free_memory_bytes": engine_free_bytes,
+                # A native provider that works independently of torch may not
+                # expose memory telemetry. Unknown capacity still gets one
+                # serial slot; zero must not turn a working Vulkan engine into
+                # an unschedulable capability.
+                "derived_concurrency": 1
+                if (
+                    runtime_vram_gb is not None
+                    and float(runtime_vram_gb or 0.0) <= 0
+                    and routing == "accelerated"
+                ) else 0,
                 # Capability is not acceleration: an engine present but routed
                 # to the CPU here should not be preferred for GPU work.
                 "cpu_fallback": routing in ("cpu_fallback", "cpu_only")
@@ -291,9 +309,18 @@ def max_concurrent_tasks(capabilities: Optional[list[dict]] = None) -> int:
     caps = capabilities if capabilities is not None else discover()
     if not caps:
         return 1
-    derived = [int(c.get("derived_concurrency") or 0) for c in caps]
-    positive = [d for d in derived if d > 0]
-    return min(positive) if positive else 1
+    derived: list[int] = []
+    for cap in caps:
+        concurrency = int(cap.get("derived_concurrency") or 0)
+        if concurrency <= 0:
+            concurrency = derive_concurrency(
+                backend=str(cap.get("backend") or ""),
+                free_memory_bytes=int(cap.get("free_memory_bytes") or 0),
+                min_model_bytes=int(cap.get("min_memory_bytes") or 0),
+                compiled=bool(cap.get("compiled")),
+            )
+        derived.append(concurrency)
+    return min(derived)
 
 
 __all__ = [

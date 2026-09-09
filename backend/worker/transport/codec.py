@@ -229,10 +229,27 @@ def capability_to_pb(cap: dict) -> pb.ModelCapability:
         cpu_fallback=bool(cap.get("cpu_fallback")),
         repo_ids=list(cap.get("repo_ids") or []),
         display_name=str(cap.get("display_name") or ""),
+        backend=str(cap.get("backend") or ""),
+        free_memory_bytes=int(cap.get("free_memory_bytes") or 0),
     )
 
 
-def capability_from_pb(message: pb.ModelCapability) -> dict:
+def capability_from_pb(
+    message: pb.ModelCapability, *, fallback_backend: str = ""
+) -> dict:
+    """Decode a capability, including protocol-v2 peers from before backend.
+
+    ``backend`` was added to the existing protocol-v2 message, so an older
+    peer legitimately sends its protobuf default (the empty string).  The
+    host-level GPU backend is the only compatible execution-device signal in
+    that payload.  A capability explicitly marked as a CPU fallback must stay
+    on CPU even when its host also has a GPU.
+    """
+    backend = str(message.backend or "").strip().lower()
+    if message.cpu_fallback:
+        backend = "cpu"
+    elif not backend:
+        backend = str(fallback_backend or "").strip().lower()
     return {
         "engine": message.engine,
         "model_id": message.model_id,
@@ -249,6 +266,8 @@ def capability_from_pb(message: pb.ModelCapability) -> dict:
         "cpu_fallback": message.cpu_fallback,
         "repo_ids": list(message.repo_ids),
         "display_name": message.display_name,
+        "backend": backend,
+        "free_memory_bytes": message.free_memory_bytes,
     }
 
 

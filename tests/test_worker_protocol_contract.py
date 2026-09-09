@@ -280,6 +280,12 @@ def test_concurrency_is_reported_as_derived(proto):
     assert "derived_concurrency" in _message_body(proto, "ModelCapability")
 
 
+def test_capability_carries_per_engine_routing_and_memory(proto):
+    body = _message_body(proto, "ModelCapability")
+    assert "string backend" in body
+    assert "uint64 free_memory_bytes" in body
+
+
 def test_heartbeat_does_not_promise_gpu_utilisation(proto):
     """Unobtainable on Apple without sudo powermetrics and absent on CUDA
     without a new NVML dependency. Slots and queue depth are the load signal."""

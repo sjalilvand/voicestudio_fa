@@ -34,7 +34,7 @@ _HEARTBEAT_MISS_SECONDS = 90.0
 # enough that one slow answer cannot move it.
 _LATENCY_WINDOW = 5
 _KNOWN_EXECUTION_DEVICES = frozenset(
-    {"cpu", "cuda", "mps", "mlx", "directml", "rocm", "xpu"}
+    {"cpu", "cuda", "mps", "mlx", "directml", "rocm", "vulkan", "xpu"}
 )
 
 
@@ -150,7 +150,9 @@ class ConnectedWorker:
         cap = self._capability_for(engine, model_id, operation)
         if cap is None or cap.get("cpu_fallback"):
             return False
-        if str(cap.get("backend") or "").lower() not in ("cuda", "rocm"):
+        if str(cap.get("backend") or "").lower() not in (
+            "cuda", "rocm", "vulkan",
+        ):
             return False
         floor = int(cap.get("min_memory_bytes") or 0)
         have = int(cap.get("free_memory_bytes") or 0)
