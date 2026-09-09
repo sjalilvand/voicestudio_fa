@@ -436,7 +436,12 @@ pub fn backend_log_path() -> PathBuf {
     // harness gives every scenario its own tempdir through this.
     if let Ok(dir) = std::env::var("OMNIVOICE_LOG_DIR") {
         if !dir.trim().is_empty() {
-            let log_dir = PathBuf::from(dir);
+            // Trim here too, not only in the emptiness test above. The Python
+            // reader strips this variable before joining (see
+            // api/routers/system.py::_backend_redirect_log_candidates), so a
+            // padded value had the writer and the reader looking at different
+            // directories — the exact divergence #1925 exists to close.
+            let log_dir = PathBuf::from(dir.trim());
             let _ = fs::create_dir_all(&log_dir);
             return log_dir.join("backend.log");
         }

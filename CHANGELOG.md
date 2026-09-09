@@ -10,6 +10,10 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 - A download that fails because the folder sits behind a mount point Windows will not cross now says so, and where to move it (#1957)
+- A GPU that is merely short on free memory is no longer told to reinstall its drivers (#1812) — thanks @michaelhuamanflores!
+- An error thrown by a browser extension is filtered on Safari and the macOS app too, not only on Chromium (#1901) — thanks @Chang-Jin-Lee!
+- Choosing the China mirror no longer re-races the network on every dependency step, which cost seconds per step on blocked connections (#1892) — thanks @yuezheng2006!
+- The backend log panel reports a log it cannot read instead of quietly showing less (#1847) — thanks @Chang-Jin-Lee!
 - The floating dictation bubble adds pause, resume, stop, close, and a multiline preview (#1952)
 - Transcriptions checks model readiness and offers an inline download and shortcut hints (#1952)
 - Transcriptions' missing-model prompt lists every dictation model by accuracy vs latency, languages and size, so you install the one that fits — or switch to one already on disk (#1952)
@@ -18,6 +22,8 @@ the frozen-backend fallback mirror it for their toolchains.
 - A generation failure that the app cannot classify now names the backend error class, so two unrelated faults stop arriving as the same untriageable report (#1800)
 
 - Transcriptions dictation wakes the desktop recorder, presents one contextual start action, and centers its microphone icon with the label (#1902)
+- Colab transcription and dubbing now include an explicit ASR model setup step (#1922) — thanks @nidhi-singh02!
+
 - Apple Silicon now shows one canonical OmniVoice choice in the engine picker while retaining its automatic crash-isolated sidecar runtime (#1913)
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
 - Model downloads survive a flaky connection instead of restarting from zero (#1940)
@@ -71,6 +77,10 @@ the frozen-backend fallback mirror it for their toolchains.
 - `bun desktop-prod` and `bun desktop-fresh` find Rust and uv from a terminal opened before they were installed, as `bun desktop` already did; a missing Rust toolchain fails up front with the install steps (#1952)
 - Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1955)
 - Voice synthesis progress no longer races to a fabricated 95%; it stays indeterminate until the active generation path reports real progress (#1907) — thanks @psiberfunk!
+- The Backend log tab keeps showing history across a log rollover, instead of going nearly empty until new lines arrive (#1920)
+- Clearing the logs now empties the rotated log files too, so it frees the space it appears to (#1920)
+- An error thrown by a browser extension no longer offers to file itself as a VoiceStudio bug (#1901)
+- Clearing the desktop logs no longer wipes the backend's stderr, which is the only record a native crash leaves behind and is meant to survive a respawn (#1510)
 - Long audiobook chapters now use the same device- and text-length-aware synthesis timeout as other TTS routes (#1910) — thanks @psiberfunk!
 
 - Interrupted audiobook renders can resume cached chapters after tab navigation, and their chapter cache is available from the recovery card (#1911) — thanks @psiberfunk!
@@ -133,6 +143,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Fast macOS process exits no longer turn a completed shutdown into a permission error (#1809)
 - The bootstrap splash no longer shows fabricated first-run install steps on a warm start or repair sync — a step now renders done only once it was actually observed (#1894)
+- A deliberate, clean quit killed by the desktop shell's short shutdown grace no longer gets reported as a crash on next launch — the run sentinel now clears before the slower shutdown steps instead of after (#1895)
 - Model Catalogue engine rows stack into one column on narrow shells instead of clipping actions off-screen (#1891)
 - Simplified Chinese locale completed: all 486 missing keys translated and the parity ratchet tightened to zero (#1877) — thanks @yearth!
 

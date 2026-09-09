@@ -247,7 +247,27 @@ fn pick_region(direct: Option<std::time::Duration>, mirror: Option<std::time::Du
 /// and we stay direct ("global", no proxy hop); on a throttled/blocked network
 /// the mirror answers first (or GitHub times out) and we switch ("restricted").
 /// Both probes run in parallel, so the check costs one timeout, not two.
+/// Cached result of the auto-detection probe, for the life of the process.
+///
+/// The probe costs up to one 4-second timeout and makes two outbound requests.
+/// That was acceptable while it ran once during bootstrap, but the PyPI mirror
+/// applicator now runs for EVERY `uv` invocation (#1892), and with the default
+/// `region = "auto"` each of those re-raced the network. On a blocked or
+/// offline network that is a repeated 4-second stall per uv call, and it
+/// multiplies the outbound calls a local-first app makes without being asked.
+///
+/// The answer cannot meaningfully change mid-session — it describes which way
+/// out of the machine is faster — so racing it again is pure cost. A user who
+/// changes networks restarts the app or picks the region explicitly, both of
+/// which bypass this path.
+static AUTO_REGION: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+/// Race github.com against the ghproxy mirror once, then reuse the verdict.
 pub fn auto_detect_region() -> String {
+    AUTO_REGION.get_or_init(auto_detect_region_uncached).clone()
+}
+
+fn auto_detect_region_uncached() -> String {
     log::info!("Auto-detecting region (racing github.com vs ghproxy mirror)...");
     const PROBE_TIMEOUT: Duration = Duration::from_secs(4);
     // Probe the SAME resource through both paths so the latencies compare fairly.

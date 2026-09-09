@@ -19,6 +19,7 @@ import sys
 from fastapi import APIRouter
 
 from api.schemas import SetupStatusResponse, PreflightResponse
+from core.device_caps import KERNEL_RISK_MARKER
 # MIN_FREE_GB + disk_free_bytes are single-sourced in ``.models`` (the lowest
 # module in the setup import graph) so the wizard gate, the /models header, and
 # the per-install disk guard can't drift apart.
@@ -174,8 +175,8 @@ def _detect_gpu() -> dict:
     return info
 
 
-def _probe_network(host: str = "huggingface.co", port: int = 443, timeout: float = 2.0) -> bool:
-    """Tiny TCP connect test."""
+def _probe_network(host: str = "huggingface.co", port: int = 443, timeout: float = 8.0) -> bool:
+    """Tiny TCP connect test. 8s default — high-latency / China paths often exceed 2–3s."""
     import socket
     try:
         with socket.create_connection((host, port), timeout=timeout):
@@ -498,10 +499,14 @@ def preflight():
         _why = gpu_routing.get("routing_reason")
         if _rs == "accelerated" and not _why:
             r_status, r_detail, r_fix = "pass", f"{_eng} → {_dev} (accelerated)", None
-        elif _rs == "accelerated":  # driver/arch caveat
+        elif _rs == "accelerated" and KERNEL_RISK_MARKER in (_why or ""):
             r_status, r_detail, r_fix = "warn", f"{_eng} → {_dev}: {_why}", (
                 "GPU selected but may fail at kernel launch — update drivers / "
                 "reinstall torch for this GPU architecture.")
+        elif _rs == "accelerated":  # low-VRAM caveat — not a driver/arch issue
+            r_status, r_detail, r_fix = "warn", f"{_eng} → {_dev}: {_why}", (
+                "Unload other models before generating, keep the text short, "
+                "or pick a lighter engine.")
         elif _rs == "cpu_fallback":
             r_status, r_detail, r_fix = "warn", (
                 f"{_eng} runs on CPU here: {_why or 'no GPU path for this host'}"), (
