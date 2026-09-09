@@ -9,8 +9,8 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
-- The floating dictation bubble now has pause, resume, stop, and close controls. (#1903)
-- Transcriptions checks model readiness and offers an inline download before recording. (#1903)
+- The floating dictation bubble adds pause, resume, stop, close, and a multiline preview (#1952)
+- Transcriptions checks model readiness and offers an inline download and shortcut hints (#1952)
 
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
 
