@@ -10,6 +10,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- Transcriptions dictation wakes the desktop recorder, presents one contextual start action, and centers its microphone icon with the label (#1902)
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
 
 - The desktop app builds and opens from a fresh clone again (#1818) — thanks @flutterkage2k!
