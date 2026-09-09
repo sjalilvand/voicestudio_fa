@@ -87,6 +87,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
+- Transcribing with an engine that reports no segment end no longer fails with a server error; the null timing is passed through the way the segment list already expects (#1904) — thanks @aeroglu!
 - Copying a saved transcription now uses the shared clipboard helper and reports failed copies accurately (#1803) — thanks @tvbht!
 
 - Voice reference preparation reclaims allocator memory before one bounded retry, then reports persistent GPU out-of-memory failures (#1811)
@@ -132,6 +133,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Fast macOS process exits no longer turn a completed shutdown into a permission error (#1809)
 - The bootstrap splash no longer shows fabricated first-run install steps on a warm start or repair sync — a step now renders done only once it was actually observed (#1894)
 - Model Catalogue engine rows stack into one column on narrow shells instead of clipping actions off-screen (#1891)
+- Simplified Chinese locale completed: all 486 missing keys translated and the parity ratchet tightened to zero (#1877) — thanks @yearth!
 
 
 ## [0.5.2] — 2026-09-02

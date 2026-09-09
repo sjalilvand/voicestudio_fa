@@ -28,6 +28,17 @@ router = APIRouter()
 logger = logging.getLogger("omnivoice.capture")
 
 
+def _timing(value):
+    """A segment timing, or ``None`` when the engine could not determine one.
+
+    ``dict.get(key, 0)`` hands back a stored ``None`` rather than the default,
+    because the key is present — so rounding it raised and took a transcript
+    that was otherwise fine down with it (#1904). Pass the null through instead:
+    the segment list renders whichever half of the range is known.
+    """
+    return round(value, 2) if isinstance(value, (int, float)) else None
+
+
 def _truthy(value: Optional[str]) -> bool:
     """Parse a multipart form flag. Treats '1'/'true'/'yes'/'on'/'auto'
     (any case) as on; everything else — including None — as off."""
@@ -162,10 +173,15 @@ async def transcribe_audio(
         from services.text_polish import polish_text
         full_text = polish_text(full_text)
 
-        # Calculate audio duration from segments if available
+        # Calculate audio duration from segments if available. A segment whose
+        # timing the engine could not determine carries end=None (sherpa's
+        # _sherpa_result when the sample rate yields no duration, and every
+        # plain-text OpenAI-compatible response), so measure only the ones that
+        # have a number and keep 0.0 when none do.
         duration = 0.0
         if segments:
-            duration = max(s.get("end", 0) for s in segments)
+            ends = [e for e in (s.get("end") for s in segments) if isinstance(e, (int, float))]
+            duration = max(ends) if ends else 0.0
 
         detected_lang = result.get("language", language or "unknown")
 
@@ -194,8 +210,8 @@ async def transcribe_audio(
             "text": full_text,
             "segments": [
                 {
-                    "start": round(s.get("start", 0), 2),
-                    "end": round(s.get("end", 0), 2),
+                    "start": _timing(s.get("start", 0)),
+                    "end": _timing(s.get("end", 0)),
                     "text": s.get("text", "").strip(),
                 }
                 for s in segments

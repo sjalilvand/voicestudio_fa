@@ -55,6 +55,17 @@ from services.text_polish import polish_text
 router = APIRouter()
 logger = logging.getLogger("omnivoice.capture_ws")
 
+
+def _timing(value):
+    """A segment timing, or ``None`` when the engine could not determine one.
+
+    ``dict.get(key, 0)`` returns a stored ``None`` rather than the default, so
+    rounding it raised (#1904). The null is the honest answer here — this module
+    emits it deliberately for un-endpointed utterances — and the segment list
+    renders whichever half of the range is known.
+    """
+    return round(value, 2) if isinstance(value, (int, float)) else None
+
 SPEECH_PROTOCOL = "voicestudio.speech.v1"
 PLATFORM_STREAM_PATH = "/v1/audio/transcriptions/stream"
 
@@ -1195,13 +1206,19 @@ async def _transcribe_buffer_full(
             from services.refinement import collapse_repetitive_artifacts
             full_text = collapse_repetitive_artifacts(full_text)
 
-            duration = max((s.get("end", 0) for s in segments), default=0.0)
+            # end=None means the engine could not determine the timing — this
+            # module writes exactly that in its own streaming payloads, and
+            # sherpa's _sherpa_result does too when the sample rate yields no
+            # duration. Measure only real numbers, and pass the nulls through
+            # rather than rounding them (#1904).
+            ends = [e for e in (s.get("end") for s in segments) if isinstance(e, (int, float))]
+            duration = max(ends) if ends else 0.0
 
             return {
                 "text": full_text,
                 "segments": [
-                    {"start": round(s.get("start", 0), 2),
-                     "end": round(s.get("end", 0), 2),
+                    {"start": _timing(s.get("start", 0)),
+                     "end": _timing(s.get("end", 0)),
                      "text": s.get("text", "").strip()}
                     for s in segments
                 ],
