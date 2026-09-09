@@ -19,6 +19,7 @@ Every engine in the tree owns at least one job. A job has exactly one holder.
 | Fastest CPU render / lowest latency | *open — see #1306* |
 | Best Chinese/Japanese expressiveness | `cosyvoice`, `indextts2` |
 | CPU-realtime English, tiny footprint | `kittentts`, `supertonic3` |
+| Bilingual reference-free voice design and direction | `audiocpp` |
 | Best transcription accuracy | `whisperx`, `faster-whisper` |
 | Fastest Apple-Silicon transcription | `parakeet-mlx`, `mlx-whisper` |
 | Crash isolation for transcription | `faster-whisper-isolated` |
@@ -35,8 +36,11 @@ which is a property of the bar, not a judgement of the contributor.
    does not cover it. Latency, language, hardware envelope or quality tier —
    something a user would choose it *for*.
 2. **Licence clean for commercial use.** Model weights *and* code. No
-   research-only weights, no ambiguous provenance. This is the one that most
-   often ends a proposal, so check it first.
+   research-only weights or ambiguous provenance. The single approved
+   exception is `audiocpp` with Breeze-TTS-2 research/non-commercial weights,
+   approved by the owner on 2026-09-08 for its requested bilingual voice-design
+   and direction workflow. It remains opt-in and discloses the restriction
+   before selection and download; `@debpalash` is its named steward.
 3. **Every platform, or explicitly opt-in.** macOS (Apple Silicon and Intel),
    Windows, Linux. A CPU path is required — an engine that only runs on one
    accelerator is fine, but it must degrade rather than break, and a

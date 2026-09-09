@@ -115,6 +115,43 @@ def test_the_whole_class_not_just_cuda(on_host, floor):
     ) == 600.0
 
 
+@pytest.mark.parametrize("family", ["xpu", "vulkan"])
+def test_other_discrete_gpu_families_get_the_cpu_budget(
+    family, on_host, floor,
+):
+    mm = on_host(_gpu(4.0, family=family, name="Discrete GPU"))
+    assert mm.generate_timeout_s(
+        "A short render",
+        execution_device="vulkan",
+        min_vram_gb=floor,
+        hardware_family=family,
+    ) == 600.0
+
+
+def test_xpu_runtime_reaches_dedicated_vram_budget_guard(on_host, floor):
+    mm = on_host(_gpu(4.0, family="xpu", name="Intel Arc"))
+    assert mm.generate_timeout_s(
+        "A short render", execution_device="xpu", min_vram_gb=floor,
+    ) == 600.0
+
+
+def test_vulkan_on_a_small_dedicated_gpu_gets_the_cpu_budget(on_host, floor):
+    mm = on_host(_gpu(4.0))
+    assert mm.generate_timeout_s(
+        "A short render", execution_device="vulkan", min_vram_gb=floor,
+    ) == 600.0
+
+
+def test_native_hardware_family_overrides_global_cpu_preference(on_host, floor):
+    mm = on_host(_gpu(4.0, family="cpu", name="NVIDIA GTX 1650"))
+    assert mm.generate_timeout_s(
+        "A short render",
+        execution_device="vulkan",
+        min_vram_gb=floor,
+        hardware_family="cuda",
+    ) == 600.0
+
+
 # ── the boundaries it must not cross ─────────────────────────────────────
 
 
@@ -147,6 +184,25 @@ def test_a_failed_vram_probe_does_not_guess(on_host, floor):
     assert mm.generate_timeout_s(
         "A short render", execution_device="cuda", min_vram_gb=floor,
     ) == 300.0
+
+
+def test_native_runtime_with_unknown_dedicated_vram_gets_cpu_budget(
+    on_host, floor,
+):
+    """A native runtime's explicit zero means its own VRAM probe failed.
+
+    Keep the warning quiet because capacity is unknown, but allow enough time
+    for a device that may page to system memory instead of assuming fast-GPU
+    performance.
+    """
+    mm = on_host(_gpu(24.0, name="NVIDIA RTX 4090"))
+    assert mm.generate_timeout_s(
+        "A short render",
+        execution_device="vulkan",
+        min_vram_gb=floor,
+        hardware_family="cuda",
+        vram_gb=0.0,
+    ) == 600.0
 
 
 def test_a_cpu_fallback_render_is_unaffected(on_host, floor):
@@ -239,22 +295,24 @@ def _worker(*, backend: str = "cuda", vram_gb: float = 4.0,
     from worker.capacity import WorkerCapacity
     from worker.pool import ConnectedWorker
     from worker.registry import RemoteWorker
+    from worker.transport.codec import capability_from_pb, capability_to_pb
 
     gb = 1024 ** 3
+    capability = capability_from_pb(capability_to_pb({
+        "engine": "omnivoice",
+        "model_id": "OmniVoice",
+        "operations": ["tts"],
+        "supported": True,
+        "installed": True,
+        "downloaded": True,
+        "backend": backend,
+        "cpu_fallback": cpu_fallback,
+        "min_memory_bytes": int(floor_gb * gb),
+        "free_memory_bytes": int(vram_gb * gb),
+    }))
     record = RemoteWorker(
         id="w1", name="w1", key_id="key-w1", public_key=b"\x00" * 32, priority=50,
-        capabilities=[{
-            "engine": "omnivoice",
-            "model_id": "OmniVoice",
-            "operations": ["tts"],
-            "supported": True,
-            "installed": True,
-            "downloaded": True,
-            "backend": backend,
-            "cpu_fallback": cpu_fallback,
-            "min_memory_bytes": int(floor_gb * gb),
-            "free_memory_bytes": int(vram_gb * gb),
-        }],
+        capabilities=[capability],
         consent_granted_at=1.0, created_at=1.0,
     )
     return ConnectedWorker(
@@ -270,6 +328,7 @@ def _worker(*, backend: str = "cuda", vram_gb: float = 4.0,
     [
         ({}, True),                                   # 4 GB card, 6 GB engine
         ({"backend": "rocm"}, True),                  # whole class
+        ({"backend": "vulkan"}, True),                # native Vulkan wrapper
         ({"vram_gb": 24.0}, False),                   # big card
         ({"floor_gb": 0.0}, False),                   # engine declares no floor
         ({"vram_gb": 0.0}, False),                    # probe failed on the worker
@@ -280,6 +339,11 @@ def _worker(*, backend: str = "cuda", vram_gb: float = 4.0,
 def test_the_worker_decides_from_the_figures_it_advertises(kwargs, expected):
     w = _worker(**kwargs)
     assert w.under_provisioned("omnivoice", "OmniVoice", "tts") is expected
+
+
+def test_worker_preserves_vulkan_as_the_execution_device():
+    w = _worker(backend="vulkan")
+    assert w.execution_device("omnivoice", "OmniVoice", "tts") == "vulkan"
 
 
 def test_an_unknown_capability_is_never_called_under_provisioned():
@@ -310,7 +374,7 @@ def test_a_healthy_remote_worker_is_unchanged():
     )
 
 
-@pytest.mark.parametrize("device", ["cuda", "rocm"])
+@pytest.mark.parametrize("device", ["cuda", "rocm", "vulkan"])
 def test_the_task_deadline_still_covers_the_raised_execution_budget(device):
     """`gpu_gateway._default_deadline` is computed before a worker is bound, so
     it cannot know the card. It already asks for the CPU budget (no

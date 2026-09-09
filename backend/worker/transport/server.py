@@ -851,10 +851,12 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         epoch: int,
     ) -> pb.RegisterResponse:
         session = identity.issue_session(worker_id=worker.id, key_id=worker.key_id, epoch=epoch)
-        capabilities = [codec.capability_from_pb(c) for c in request.capabilities]
         host = codec.host_from_pb(request.host)
-
         backend = host["gpus"][0].get("backend", "") if host.get("gpus") else ""
+        capabilities = [
+            codec.capability_from_pb(c, fallback_backend=backend)
+            for c in request.capabilities
+        ]
         claimed_refs = {
             ref.attempt_id: codec.task_ref(
                 ref.task_id, ref.attempt_id, ref.session_epoch
@@ -2044,7 +2046,14 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
                     session.worker_id,
                 )
                 return
-            caps = [codec.capability_from_pb(c) for c in update.capabilities]
+            worker = self.pool.get(session.worker_id)
+            fallback_backend = (
+                worker.capacity.backend if worker is not None else ""
+            )
+            caps = [
+                codec.capability_from_pb(c, fallback_backend=fallback_backend)
+                for c in update.capabilities
+            ]
             self._queue_capability_update(session, caps)
             return
 

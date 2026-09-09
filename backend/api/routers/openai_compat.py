@@ -325,10 +325,9 @@ async def create_speech(req: SpeechRequest):
 
     # Routing gate (#21 — no silent CPU fallback), identical to REST /generate.
     from core.device_caps import detect_host_caps
-    from services.engine_routing import resolve_routing, routing_notice
-    _routing = resolve_routing(
-        getattr(backend, "gpu_compat", ("cpu",)), detect_host_caps(),
-        getattr(backend, "min_vram_gb", 0.0),
+    from services.engine_routing import routing_notice, runtime_compute_profile_async
+    _routing = await runtime_compute_profile_async(
+        backend, detect_host_caps()
     )
     if _routing["routing_status"] == "unavailable":
         raise HTTPException(status_code=400, detail=_routing["routing_reason"])

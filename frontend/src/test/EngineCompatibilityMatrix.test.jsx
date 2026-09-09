@@ -1,4 +1,6 @@
 import React from 'react';
+import i18next from 'i18next';
+import { I18nextProvider } from 'react-i18next';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
@@ -484,6 +486,43 @@ describe('EngineCompatibilityMatrix', () => {
     expect(within(row).getByText('CUDA').classList.contains('is-effective')).toBe(true);
     // a non-effective chip does not
     expect(within(row).getByText('MPS').classList.contains('is-effective')).toBe(false);
+  });
+
+  it('uses the active locale for the Vulkan chip and effective-device tooltip', async () => {
+    const localizedI18n = i18next.createInstance();
+    await localizedI18n.init({
+      lng: 'es',
+      fallbackLng: false,
+      resources: {
+        es: {
+          translation: {
+            engines: {
+              gpuVulkan: 'Vulkan localizada',
+              routingEffectiveChip: 'Se ejecuta en {{device}}',
+            },
+          },
+        },
+      },
+    });
+    const response = routingResponse();
+    response.tts.backends[0].gpu_compat = ['vulkan'];
+    response.tts.backends[0].effective_device = 'vulkan';
+
+    render(
+      <I18nextProvider i18n={localizedI18n}>
+        <EngineCompatibilityMatrix
+          family="tts"
+          apiListEngines={vi.fn().mockResolvedValue(response)}
+          apiGetEngineHealth={vi.fn()}
+        />
+      </I18nextProvider>,
+    );
+
+    const row = (await screen.findByText('Accel TTS')).closest('[role="row"]');
+    expect(within(row).getByText('Vulkan localizada')).toHaveAttribute(
+      'title',
+      'Se ejecuta en Vulkan localizada',
+    );
   });
 
   it('shows a "CPU fallback" badge for a cpu_fallback engine', async () => {
@@ -1398,6 +1437,42 @@ describe('EngineCompatibilityMatrix', () => {
     for (const row of document.querySelectorAll('[data-engine-id]')) {
       expect(row.className).toContain(track);
       expect(row.className).toContain('@max-[1230px]/catalogue-shell:grid-cols-');
+    }
+  });
+
+  it('exposes the phone-tier stacking hooks so narrow shells never clip Catalogue rows', async () => {
+    // jsdom cannot evaluate @container queries, so this guards the contract
+    // the index.css phone tier depends on: every catalogue row carries the
+    // `catalogue-row` marker, each of the five cells carries its
+    // `engine-matrix__cell--*` modifier, the grid lets children shrink below
+    // content size, and the actions cell wraps instead of forcing overflow.
+    render(
+      <EngineCompatibilityMatrix
+        family="tts"
+        catalogueLayout
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
+        apiGetEngineHealth={vi.fn()}
+      />,
+    );
+    await screen.findByText('OmniVoice (test)');
+
+    for (const row of document.querySelectorAll('[data-engine-id]')) {
+      expect(row).toHaveClass('catalogue-row-grid');
+      expect(row).toHaveClass('catalogue-row');
+      expect(row.className).toContain('[&>*]:min-w-0');
+      for (const modifier of [
+        'engine-matrix__cell--name',
+        'engine-matrix__cell--status',
+        'engine-matrix__cell--gpu',
+        'engine-matrix__cell--isolation',
+        'engine-matrix__cell--actions',
+      ]) {
+        expect(row.querySelector(`.${modifier}`)).not.toBeNull();
+      }
+      const actions = row.querySelector('.engine-matrix__cell--actions');
+      expect(actions.className).toMatch(/\bflex-wrap\b/);
+      expect(actions).toHaveClass('min-w-0');
+      expect(actions).toHaveClass('max-w-full');
     }
   });
 

@@ -822,6 +822,7 @@
     "routingRemote": "リモート",
     "routingUnknown": "不明",
     "routingEffectiveChip": "このマシンの {{device}} で実行されます",
+    "gpuVulkan": "Vulkan",
     "routingCaveatTitle": "GPU が選択されましたが: {{reason}}",
     "selectCpuFallback": "{{engine}}: CPU で実行中 — {{reason}}",
     "selectWithCaveat": "{{engine}} に切り替えました — {{reason}}",
