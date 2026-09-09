@@ -9,6 +9,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- The last onboarding step offers to install a speech-to-text model instead of failing three times when none is installed (#1856)
 - A GPU that is merely short on free memory is no longer told to reinstall its drivers (#1812) — thanks @michaelhuamanflores!
 - An error thrown by a browser extension is filtered on Safari and the macOS app too, not only on Chromium (#1901) — thanks @Chang-Jin-Lee!
 - Choosing the China mirror no longer re-races the network on every dependency step, which cost seconds per step on blocked connections (#1892) — thanks @yuezheng2006!
