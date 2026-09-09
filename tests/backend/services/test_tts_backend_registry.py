@@ -212,6 +212,11 @@ def test_list_backends_shape(registry_sandbox):
         "disk_usage",
         # Sanitized actual-vs-declared provider/device evidence (#1717).
         "execution_evidence",
+        # Public URL of the engine's docs page, or None when it has none
+        # (#1866). The unavailable-engine row uses it for its Learn more link,
+        # so an engine that gains a registry entry without a doc silently
+        # loses that link — tests/test_engine_docs.py guards the mapping.
+        "docs_url",
     }
     mlx_audio_extra = {"curated_models", "active_model_id"}
     for entry in out:

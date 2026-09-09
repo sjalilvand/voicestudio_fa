@@ -125,6 +125,33 @@ export async function audiobookGenerate(
   });
 }
 
+export interface ResumableAudiobookJob {
+  job_id: string;
+  type: 'audiobook' | 'longform';
+  status: string;
+  title: string;
+  total_chapters: number;
+  chapters_done: number;
+  created_at: number | null;
+}
+
+/** List server-owned longform manifests left by interrupted renders. */
+export async function audiobookListJobs(): Promise<{ jobs: ResumableAudiobookJob[] }> {
+  const res = await apiFetch('/audiobook/jobs');
+  return res.json();
+}
+
+/** Resume one trusted server-side manifest and stream the normal audiobook events. */
+export async function audiobookResume(
+  jobId: string,
+  opts: { signal?: AbortSignal } = {},
+): Promise<Response> {
+  return apiFetch(`/audiobook/resume/${encodeURIComponent(jobId)}`, {
+    method: 'POST',
+    signal: opts.signal,
+  });
+}
+
 /** Upload a cover image; returns the server-side path to pass as `cover_path`. */
 export async function audiobookUploadCover(file: File): Promise<{ path: string }> {
   const form = new FormData();

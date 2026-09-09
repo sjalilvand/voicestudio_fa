@@ -189,7 +189,7 @@ def _check_ram() -> dict:
 def _check_engines() -> dict:
     try:
         from services.tts_backend import list_backends, active_backend_id
-        backends = list_backends()
+        backends = list_backends(include_hidden=True)
         active = active_backend_id()
     except Exception as e:
         return _check("engines", "TTS engines", WARN, f"could not enumerate: {e}")
@@ -374,7 +374,12 @@ def run_diagnostics(include_network: bool = True, deep: bool = False) -> dict:
         try:
             module = importlib.import_module(f"services.{family}_backend")
             active = module.active_backend_id()
-            row = next((item for item in module.list_backends() if item.get("id") == active), None)
+            rows = (
+                module.list_backends(include_hidden=True)
+                if family == "tts"
+                else module.list_backends()
+            )
+            row = next((item for item in rows if item.get("id") == active), None)
             if row is not None:
                 engine_execution.append({
                     "family": family,

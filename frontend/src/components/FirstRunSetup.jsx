@@ -146,8 +146,10 @@ function StorageRow({ label, desc, path, need, check, onPick }) {
     >
       <div className="flex min-w-0 flex-1 flex-col gap-0.5" title={desc}>
         <span className="text-sm font-semibold">{label}</span>
+        {/* rtl for a start-side ellipsis; <bdi> keeps the path's own order
+            (see the preflight detail in SetupWizard.jsx for why). */}
         <code className="truncate font-mono text-[0.66rem] text-fg-muted" title={path} dir="rtl">
-          {path}
+          <bdi>{path}</bdi>
         </code>
       </div>
       <div className="flex min-w-[170px] shrink-0 flex-col items-end gap-1">
