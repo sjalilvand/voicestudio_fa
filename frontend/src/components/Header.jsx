@@ -108,6 +108,7 @@ function WaveBars({ color = '#f3a5b6', active }) {
   const heights = [4, 9, 5, 11, 6, 10, 5, 8];
   return (
     <div
+      data-testid="header-wave-bars"
       className={`inline-flex items-center gap-[2px] h-[16px] px-[6px] transition-opacity duration-200 max-[1351px]:hidden ${active ? 'opacity-100' : 'opacity-[0.35]'}`}
       aria-hidden="true"
     >
@@ -373,10 +374,7 @@ export default function Header({
           LogsFooter bar so all app-wide chrome sits together. */}
       <div className="flex items-center justify-end gap-3 justify-self-end min-w-0 overflow-visible">
         <NotificationPanel onNavigate={setMode} />
-        <WaveBars
-          color={view.accent}
-          active={modelStatus === 'ready' || modelStatus === 'loading'}
-        />
+        <WaveBars color={view.accent} active={modelStatus === 'loading'} />
         {sysStats && (
           <div className="flex items-center gap-2 [font-family:var(--chrome-font-mono)] text-[10.5px] text-[var(--chrome-fg-dim)] bg-transparent h-[var(--chrome-pill-h)] whitespace-nowrap shrink-0 tabular-nums slashed-zero">
             {showLiveStats && (
