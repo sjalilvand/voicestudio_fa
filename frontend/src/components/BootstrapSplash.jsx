@@ -120,6 +120,17 @@ const STEPS = [
   'starting_backend',
 ];
 
+// Stages that only occur when there is actual first-run/repair work to do.
+// `awaiting_setup` renders its own screen (FirstRunSetup) rather than the
+// step list below, but it still counts as "install work observed" (#1894):
+// reaching it means Rust found no venv and is about to do real work, so the
+// journey chrome should already be armed by the time the step list appears.
+const INSTALL_STAGES = ['downloading_uv', 'creating_venv', 'installing_deps', 'awaiting_setup'];
+
+// Stages the bootstrap restarts *from*. Arriving at one of these from
+// anywhere else means a new attempt began (Retry, or a Rust-side restart).
+const RESTART_STAGES = new Set(['checking', 'awaiting_setup']);
+
 const MAX_LOG_LINES = 200;
 
 /** Scan logs + error message for known failure patterns and return i18n keys
@@ -445,22 +456,71 @@ export function BootstrapSplash({ stage, message }) {
   const [progress, setProgress] = useState(null);
   const [region, setRegionState] = useState('auto');
   const [retrying, setRetrying] = useState(false);
+  // Stages actually seen during the CURRENT bootstrap attempt (see the
+  // tracking effect below). Drives "done" ticks and journey visibility off
+  // observed reality instead of list position (#1894).
+  const [polledStages, setPolledStages] = useState(() => new Set([stage]));
+  // Wall-clock start of the current attempt. A retry restarts the bootstrap;
+  // log lines from the previous attempt must not count toward this one.
+  const [attemptStart, setAttemptStart] = useState(0);
   const logRef = useRef(null);
+  const prevStageRef = useRef(stage); // previous stage, for restart detection
+  // True between a retry WE initiated and the poll catching up to it, so the
+  // fallback effect below doesn't re-stamp an already-exact attempt boundary.
+  const selfInitiatedRef = useRef(false);
   const prevProgRef = useRef(null); // {bytes, t} — last progress event
   const rateRef = useRef(0); // EMA bytes/sec across events
+
+  // The union of what we polled and what actually logged.
+  //
+  // Neither source alone is complete. `bootstrap_status` is sampled ~1/s, so
+  // a stage that starts and finishes between samples is never polled — on a
+  // fast disk `creating_venv` routinely does. Stage-tagged `bootstrap-log`
+  // lines close that gap: the Rust side emits them as the work happens, so a
+  // line tagged with a stage is proof that stage ran, whether or not the
+  // poll ever saw it. Lines are filtered to the current attempt so a retry
+  // cannot inherit the previous one's evidence (the visible log is left
+  // alone — clearing it on a Rust-side restart would destroy the user's
+  // context, cf. #1847).
+  const observedStages = useMemo(() => {
+    const seen = new Set(polledStages);
+    for (const entry of logs) {
+      if (entry?.stage && (entry.t ?? 0) >= attemptStart) seen.add(entry.stage);
+    }
+    return seen;
+  }, [polledStages, logs, attemptStart]);
 
   const label = t(`bootstrap.${stage}`, STAGE_LABEL[stage]);
   const stepIndex = Math.max(0, STEPS.indexOf(stage));
   const isFailed = stage === 'failed';
   // Retrying an Intel-Mac install can never succeed — don't offer the dead end.
   const isUnrecoverable = isFailed && isUnrecoverableFailure(message, logs);
+  // True once any genuine install stage has been observed this session. On a
+  // warm start the Rust stage jumps straight from `checking` to
+  // `starting_backend` — nothing here ever fires — so the first-run install
+  // chrome (journey rail, "Installing" heading, step list) stays suppressed
+  // instead of fabricating completed work (#1894).
+  const installWorkSeen = INSTALL_STAGES.some((s) => observedStages.has(s));
+
+  // Open a new bootstrap attempt. Called at the moment a retry is INITIATED,
+  // not when the ~1s status poll later reports `checking`: the Rust side
+  // starts emitting logs for the new attempt immediately, and a boundary
+  // stamped at detection time would sit *after* those lines and discard them
+  // as belonging to the old attempt — losing exactly the fast-stage evidence
+  // the log union exists to capture.
+  const beginAttempt = () => {
+    selfInitiatedRef.current = true;
+    setLogs([]);
+    setPolledStages(new Set());
+    setAttemptStart(Date.now());
+  };
 
   const handleRetry = async () => {
     if (retrying) return;
     setRetrying(true);
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      setLogs([]);
+      beginAttempt();
       await invoke('retry_bootstrap');
     } catch (e) {
       console.error('retry failed', e);
@@ -475,7 +535,7 @@ export function BootstrapSplash({ stage, message }) {
     setRetrying(true);
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      setLogs([]);
+      beginAttempt();
       await invoke('clean_and_retry_bootstrap');
     } catch (e) {
       console.error('clean retry failed', e);
@@ -483,6 +543,57 @@ export function BootstrapSplash({ stage, message }) {
       setRetrying(false);
     }
   };
+
+  // Record `stage` as observed the moment it's seen, and reset when a new
+  // attempt begins.
+  //
+  // Sticky WITHIN an attempt: the functional updater bails out (same Set
+  // reference) once a stage is recorded, so it never un-observes and never
+  // loops. But NOT across attempts — a Retry restarts the bootstrap from
+  // `checking`, and what the previous attempt did says nothing about what
+  // this one will do. Without the reset, stages the new attempt skips would
+  // still render as completed, which is the very fabrication this change
+  // exists to remove.
+  //
+  // Retries we initiate call beginAttempt() directly, so their boundary is
+  // exact. This effect is the FALLBACK for a restart begun on the Rust side,
+  // where the stage poll is the only signal we get. There the boundary can
+  // land up to one poll interval late, and log lines from the new attempt in
+  // that window are discarded rather than counted. That is the deliberate
+  // direction to fail in: a discarded line can leave a step showing pending
+  // (conservative, and honest), whereas counting a stale line would render a
+  // step DONE for work this attempt never did — the bug this change exists to
+  // fix. Closing the window entirely needs a Rust-provided attempt id, which
+  // would be a new IPC surface and is deliberately out of scope here.
+  useEffect(() => {
+    const prev = prevStageRef.current;
+    prevStageRef.current = stage;
+    // Two ways a new attempt shows up in the poll. Arriving at a restart
+    // stage is the common one. But the poll can also miss the restart stage
+    // entirely — `failed` -> (retry) -> `checking` -> `starting_backend`
+    // inside one ~1s sample window surfaces as `failed` -> `starting_backend`,
+    // and keying only off restart stages would leave the FAILED attempt's
+    // evidence in place and render its install chrome as this attempt's
+    // completed work. Leaving `failed` at all means a retry began, since
+    // retry_bootstrap/clean_and_retry_bootstrap are the only exits from it.
+    const restarted =
+      (RESTART_STAGES.has(stage) && !RESTART_STAGES.has(prev)) ||
+      (prev === 'failed' && stage !== 'failed');
+    if (restarted) {
+      if (selfInitiatedRef.current) {
+        // beginAttempt() already opened this attempt with an exact boundary.
+        // Re-stamping it here — a poll interval later — would discard the
+        // new attempt's own early log lines, which is the bug this guard
+        // exists to prevent.
+        selfInitiatedRef.current = false;
+      } else {
+        setAttemptStart(Date.now());
+      }
+      setPolledStages(new Set([stage]));
+      return;
+    }
+    setPolledStages((p) => (p.has(stage) ? p : new Set(p).add(stage)));
+  }, [stage]);
 
   // Load persisted region on mount.
   useEffect(() => {
@@ -638,7 +749,10 @@ export function BootstrapSplash({ stage, message }) {
           data-tauri-drag-region
         >
           <Waveform />
-          <JourneyRail t={t} />
+          {/* Suppressed until real install work is observed — otherwise a
+              warm start (or a repair sync) shows "Setup done / Installing
+              active" for work that never happened (#1894). */}
+          {installWorkSeen && <JourneyRail t={t} />}
           <div className="mt-2 flex flex-wrap items-end justify-between gap-6">
             <div className="min-w-0">
               {/* Version rides beside the app name — same masthead across all
@@ -760,9 +874,16 @@ export function BootstrapSplash({ stage, message }) {
           </section>
         ) : (
           <section className="fr-rise flex flex-col gap-2.5" style={{ '--rise': 1 }}>
-            <h2 className="m-0 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-fg-muted">
-              {t('firstrun.installing_title', 'Installing')}
-            </h2>
+            {/* Heading, step list and resume note only make sense once real
+                install work has actually been observed — otherwise a warm
+                start or a repair sync narrates a first-run install that
+                never happened (#1894). The live stage label in the masthead
+                and the progress meter below stay visible either way. */}
+            {installWorkSeen && (
+              <h2 className="m-0 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-fg-muted">
+                {t('firstrun.installing_title', 'Installing')}
+              </h2>
+            )}
             {/* Overall journey meter. */}
             <Progress
               value={overallPct}
@@ -770,61 +891,69 @@ export function BootstrapSplash({ stage, message }) {
               size="md"
               aria-valuenow={Math.round(overallPct)}
             />
-            <ol className="m-0 mt-1 flex list-none flex-col gap-2 p-0">
-              {STEPS.map((s, i) => {
-                const done = i < stepIndex;
-                const activeStep = i === stepIndex;
-                return (
-                  <li
-                    key={s}
-                    className={cn(
-                      'flex min-w-0 items-center gap-2 text-sm',
-                      !done && !activeStep && 'opacity-45',
-                    )}
-                  >
-                    <span
+            {installWorkSeen && (
+              <ol className="m-0 mt-1 flex list-none flex-col gap-2 p-0">
+                {STEPS.map((s, i) => {
+                  const activeStep = i === stepIndex;
+                  // Done only if this stage was actually observed AND it isn't
+                  // the one currently in progress — list POSITION alone lies on
+                  // a warm start or a repair sync, where earlier stages in the
+                  // fixed STEPS order are skipped by Rust entirely (#1894).
+                  const done = !activeStep && observedStages.has(s);
+                  return (
+                    <li
+                      key={s}
                       className={cn(
-                        'h-1.5 w-1.5 shrink-0 rounded-full',
-                        done
-                          ? 'bg-success shadow-[0_0_5px_1px_color-mix(in_srgb,var(--color-success)_50%,transparent)]'
-                          : activeStep
-                            ? 'bg-primary shadow-[0_0_6px_1px_var(--color-brand-glow)] fr-pulse'
-                            : 'bg-fg-subtle/40',
+                        'flex min-w-0 items-center gap-2 text-sm',
+                        !done && !activeStep && 'opacity-45',
                       )}
-                      aria-hidden="true"
-                    />
-                    <span className={cn(activeStep && 'font-semibold', done && 'text-fg-muted')}>
-                      {t(`bootstrap.${s}`, STAGE_LABEL[s])}
-                    </span>
-                    {activeStep && stageProgress && (
-                      <span className="ml-auto whitespace-nowrap font-mono text-[0.64rem] tabular-nums text-fg-muted">
-                        {formatBytes(stageProgress.bytes_done)}
-                        {stageProgress.bytes_total > 0
-                          ? ` / ${formatBytes(stageProgress.bytes_total)}`
-                          : ''}
-                        {pctFromBytes != null ? ` (${pctFromBytes}%)` : ''}
-                        {stageProgress.bytes_total > 0 &&
-                          rateRef.current > 0 &&
-                          stageProgress.bytes_done < stageProgress.bytes_total &&
-                          ` · ${t('firstrun.eta_left', {
-                            eta: formatEta(
-                              (stageProgress.bytes_total - stageProgress.bytes_done) /
-                                rateRef.current,
-                            ),
-                            defaultValue: '~{{eta}} left',
-                          })}`}
+                    >
+                      <span
+                        className={cn(
+                          'h-1.5 w-1.5 shrink-0 rounded-full',
+                          done
+                            ? 'bg-success shadow-[0_0_5px_1px_color-mix(in_srgb,var(--color-success)_50%,transparent)]'
+                            : activeStep
+                              ? 'bg-primary shadow-[0_0_6px_1px_var(--color-brand-glow)] fr-pulse'
+                              : 'bg-fg-subtle/40',
+                        )}
+                        aria-hidden="true"
+                      />
+                      <span className={cn(activeStep && 'font-semibold', done && 'text-fg-muted')}>
+                        {t(`bootstrap.${s}`, STAGE_LABEL[s])}
                       </span>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
-            <p className="m-0 text-xs text-fg-subtle">
-              {t(
-                'firstrun.resume_note',
-                'Interrupted downloads resume automatically — closing the app is safe.',
-              )}
-            </p>
+                      {activeStep && stageProgress && (
+                        <span className="ml-auto whitespace-nowrap font-mono text-[0.64rem] tabular-nums text-fg-muted">
+                          {formatBytes(stageProgress.bytes_done)}
+                          {stageProgress.bytes_total > 0
+                            ? ` / ${formatBytes(stageProgress.bytes_total)}`
+                            : ''}
+                          {pctFromBytes != null ? ` (${pctFromBytes}%)` : ''}
+                          {stageProgress.bytes_total > 0 &&
+                            rateRef.current > 0 &&
+                            stageProgress.bytes_done < stageProgress.bytes_total &&
+                            ` · ${t('firstrun.eta_left', {
+                              eta: formatEta(
+                                (stageProgress.bytes_total - stageProgress.bytes_done) /
+                                  rateRef.current,
+                              ),
+                              defaultValue: '~{{eta}} left',
+                            })}`}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+            {installWorkSeen && (
+              <p className="m-0 text-xs text-fg-subtle">
+                {t(
+                  'firstrun.resume_note',
+                  'Interrupted downloads resume automatically — closing the app is safe.',
+                )}
+              </p>
+            )}
           </section>
         )}
 
