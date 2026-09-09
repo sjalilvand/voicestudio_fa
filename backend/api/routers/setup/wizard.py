@@ -175,8 +175,8 @@ def _detect_gpu() -> dict:
     return info
 
 
-def _probe_network(host: str = "huggingface.co", port: int = 443, timeout: float = 2.0) -> bool:
-    """Tiny TCP connect test."""
+def _probe_network(host: str = "huggingface.co", port: int = 443, timeout: float = 8.0) -> bool:
+    """Tiny TCP connect test. 8s default — high-latency / China paths often exceed 2–3s."""
     import socket
     try:
         with socket.create_connection((host, port), timeout=timeout):
