@@ -151,8 +151,7 @@ export default function ArchetypesZone({
 
   const favSet = useMemo(() => new Set(favorites), [favorites]);
 
-  const categoryName = (id) =>
-    categories.find((c) => c.id === id)?.name || titleCase(id || '');
+  const categoryName = (id) => categories.find((c) => c.id === id)?.name || titleCase(id || '');
   // Active-filter pills: every applied narrowing as a removable chip, so the
   // bar says what it is doing without opening the Filters panel. Clearing a
   // pill clears just that dimension; Clear-all resets everything incl. search.
@@ -375,7 +374,10 @@ export default function ArchetypesZone({
                   type="button"
                   className="flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-full border border-transparent bg-transparent transition-colors hover:bg-[color-mix(in_srgb,var(--chrome-accent)_22%,transparent)]"
                   onClick={pill.clear}
-                  aria-label={t('common.remove', { defaultValue: 'Remove {{term}}', term: pill.label })}
+                  aria-label={t('common.remove', {
+                    defaultValue: 'Remove {{term}}',
+                    term: pill.label,
+                  })}
                 >
                   <X size={10} aria-hidden="true" />
                 </button>

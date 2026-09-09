@@ -161,7 +161,13 @@ describe('ArchetypesZone enhanced filters', () => {
 
   it('shows each active filter as an iconified removable pill', () => {
     const setFilter = vi.fn();
-    render(<ArchetypesZone {...baseProps} setFilter={setFilter} filters={{ ...baseProps.filters, gender: 'female' }} />);
+    render(
+      <ArchetypesZone
+        {...baseProps}
+        setFilter={setFilter}
+        filters={{ ...baseProps.filters, gender: 'female' }}
+      />,
+    );
     // Pill carries the facet icon + readable label.
     const pill = screen.getByText('Female').closest('span[class*="rounded-"]');
     expect(pill.querySelector('svg')).not.toBeNull();
@@ -189,9 +195,7 @@ describe('ArchetypesZone enhanced filters', () => {
     const { container } = render(<ArchetypesZone {...baseProps} />);
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     // Category + 5 facet selects each sit beside their dimension icon.
-    const icons = container.querySelectorAll(
-      '.border-b span[class*="inline-flex"] > svg',
-    );
+    const icons = container.querySelectorAll('.border-b span[class*="inline-flex"] > svg');
     expect(icons.length).toBeGreaterThanOrEqual(6);
   });
 });

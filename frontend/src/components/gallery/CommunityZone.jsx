@@ -81,26 +81,26 @@ export default function CommunityZone({
             count={items.length}
           />
           <div className={GALLERY_GRID}>
-          {items.map((it) => (
-            <ArchetypeCard
-              key={itemKey(it)}
-              a={it}
-              t={t}
-              favoriteId={itemKey(it)}
-              isFavorite={favSet.has(itemKey(it))}
-              isPlaying={playingId === itemKey(it)}
-              isLoadingPreview={loadingPreviewId === itemKey(it)}
-              previewLocked={Boolean(loadingPreviewId)}
-              onToggleFavorite={toggleFavorite}
-              onPreview={onPreview}
-              onUse={onUse}
-              onDesign={it.type === 'preset' && it.instruct ? onDesign : null}
-              onUseInStories={onUseInStories}
-              onUseAsAudiobookDefault={onUseAsAudiobookDefault}
-              isMaterializing={materializingId === it.id}
-              materializationLocked={Boolean(materializingId)}
-            />
-          ))}
+            {items.map((it) => (
+              <ArchetypeCard
+                key={itemKey(it)}
+                a={it}
+                t={t}
+                favoriteId={itemKey(it)}
+                isFavorite={favSet.has(itemKey(it))}
+                isPlaying={playingId === itemKey(it)}
+                isLoadingPreview={loadingPreviewId === itemKey(it)}
+                previewLocked={Boolean(loadingPreviewId)}
+                onToggleFavorite={toggleFavorite}
+                onPreview={onPreview}
+                onUse={onUse}
+                onDesign={it.type === 'preset' && it.instruct ? onDesign : null}
+                onUseInStories={onUseInStories}
+                onUseAsAudiobookDefault={onUseAsAudiobookDefault}
+                isMaterializing={materializingId === it.id}
+                materializationLocked={Boolean(materializingId)}
+              />
+            ))}
           </div>
         </>
       )}

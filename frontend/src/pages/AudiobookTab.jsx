@@ -179,12 +179,15 @@ export default function AudiobookTab({ profiles = [] }) {
     Object.values(meta).filter((value) => value?.trim()).length + (coverPreview ? 1 : 0);
   const lexiconCount = lex.filter((row) => row.word.trim() || row.say.trim()).length;
 
-  const onCoverPick = useCallback((e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setCoverFile(f);
-    setCoverPreview(URL.createObjectURL(f));
-  }, [setCoverFile, setCoverPreview]);
+  const onCoverPick = useCallback(
+    (e) => {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      setCoverFile(f);
+      setCoverPreview(URL.createObjectURL(f));
+    },
+    [setCoverFile, setCoverPreview],
+  );
   const clearCover = useCallback(() => {
     setCoverFile(null);
     if (coverPreview) URL.revokeObjectURL(coverPreview);
