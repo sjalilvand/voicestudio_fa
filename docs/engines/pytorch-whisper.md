@@ -41,12 +41,24 @@ transformers-format Whisper repo works. Weights download on first load — see
 
 ## VRAM preflight
 
-whisper-large-v3-turbo needs roughly 3.2 GiB before generation adds its
-workspace; loading it onto a nearly-full card "succeeds" and then the first
-transcribe OOMs with zero segments. So on CUDA the engine checks free VRAM
-against a 5 GB budget before loading and uses the CPU instead when the card
-is too full (flush the TTS model to restore GPU-speed ASR). Disable with
-`OMNIVOICE_ASR_VRAM_PREFLIGHT=0`.
+Loading a model onto a nearly-full card "succeeds", and then the first
+transcribe runs out of memory with zero segments. So on CUDA the engine
+checks free VRAM before loading and uses the CPU instead when the card is
+too full (flush the TTS model to restore GPU-speed ASR).
+
+The budget follows the model it loads in fp16: the weights, plus about
+1.5 GB of working memory and 0.5 GB of headroom.
+
+| Model | Free VRAM needed |
+|---|---|
+| whisper-large-v3-turbo (default) | 3.6 GB |
+| whisper-large-v3 | 5 GB |
+| medium / small / base / tiny | 3.5 / 2.5 / 2.2 / 2.1 GB |
+| any other model | 5 GB |
+
+A 6 GB card with nothing else loaded runs the default model on the GPU
+([#2041](https://github.com/debpalash/VoiceStudio/issues/2041)). Disable
+the check with `OMNIVOICE_ASR_VRAM_PREFLIGHT=0`.
 
 ## Quirks
 
