@@ -34,6 +34,7 @@ vi.mock('@tauri-apps/api/event', () => ({
     eventUnlisteners.push(unlisten);
     return unlisten;
   }),
+  emit: emitMock,
 }));
 vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => ({ hide: async () => {} }),
@@ -46,7 +47,10 @@ vi.mock('../api/client', () => ({
 }));
 vi.mock('../pages/Transcriptions', () => ({ addTranscription: vi.fn() }));
 
-const { toastAsrMock } = vi.hoisted(() => ({ toastAsrMock: vi.fn() }));
+const { toastAsrMock, emitMock } = vi.hoisted(() => ({
+  toastAsrMock: vi.fn(),
+  emitMock: vi.fn(async () => {}),
+}));
 vi.mock('../utils/asrModelMissing', () => ({
   // Matches the real payload extraction for the WS frame shape.
   asrMissingPayload: (err) =>
@@ -301,7 +305,21 @@ describe('CaptureWidget — connect-time asr_model_missing during mic setup', ()
     await waitFor(() => {
       expect(screen.getByText(/No speech-to-text model/)).toBeInTheDocument();
     });
-    expect(toastAsrMock).toHaveBeenCalled();
+    // In the desktop app this window has no <Toaster>, so a local toast here
+    // rendered nowhere. The install action goes to the main window instead,
+    // carrying the recommendation so it can offer the one-click download.
+    expect(toastAsrMock).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(emitMock).toHaveBeenCalledWith(
+        'dictation-notice',
+        expect.objectContaining({
+          kind: 'asr_missing',
+          missing: expect.objectContaining({
+            recommended: expect.objectContaining({ repo_id: 'x/y' }),
+          }),
+        }),
+      ),
+    );
 
     // Mic graph setup completes AFTER the error — the tail must abort:
     // release the worklet, keep the error state, never flip the tray on.
