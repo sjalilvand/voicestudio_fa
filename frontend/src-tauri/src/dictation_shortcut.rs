@@ -64,7 +64,20 @@ impl DictationShortcutManager {
             Ok(()) => {
                 manager.publish(&app, accelerator, None, "native");
             }
-            Err(error) => log::warn!("Failed to register global shortcut: {error}"),
+            Err(error) => {
+                // Publish the failure instead of only logging it. Whichever
+                // app registers a global shortcut first wins, and the default
+                // collides with 1Password Quick Access on macOS — so for a lot
+                // of installs the hotkey the onboarding screen advertises
+                // silently does nothing. With no publish on this path the
+                // frontend kept reporting whatever accelerator was REQUESTED,
+                // with no way to know the OS never granted it (#1858).
+                //
+                // The accelerator is still published so the UI can name the
+                // shortcut that failed; `backend` carries the outcome.
+                log::warn!("Failed to register global shortcut: {error}");
+                manager.publish(&app, accelerator, None, "unregistered");
+            }
         }
     }
 

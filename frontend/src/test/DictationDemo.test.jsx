@@ -14,6 +14,12 @@ const { readiness, apiJson } = vi.hoisted(() => ({
   },
   apiJson: vi.fn(),
 }));
+const { shortcutInfo } = vi.hoisted(() => ({
+  shortcutInfo: { accelerator: 'CmdOrCtrl+Shift+Space', display: '⌘⇧Space', backend: 'native' },
+}));
+vi.mock('../hooks/useEffectiveDictationShortcut', () => ({
+  useEffectiveDictationShortcut: () => ({ info: shortcutInfo }),
+}));
 vi.mock('../hooks/useDictationReadiness', () => ({
   useDictationReadiness: () => readiness,
 }));
@@ -148,5 +154,45 @@ describe('DictationDemo', () => {
     // A sub-second probe must not flash the install panel over the cards.
     expect(screen.getByText(/Schedule a meeting with Pat/)).toBeInTheDocument();
     expect(screen.queryByTestId('asr-model-chooser')).not.toBeInTheDocument();
+  });
+});
+
+// #1858: whichever app registers a global shortcut first wins, and the default
+// collides with 1Password Quick Access on macOS. Registration failure used to
+// be a Rust-side log line and nothing else — the frontend kept reporting the
+// accelerator that had been REQUESTED, so the onboarding screen advertised a
+// hotkey the OS had refused, with no way for the user to find out.
+describe('DictationDemo — hotkey registration failure', () => {
+  beforeEach(() => {
+    window.__TAURI_INTERNALS__ = {};
+  });
+  afterEach(() => {
+    delete window.__TAURI_INTERNALS__;
+  });
+
+  it('says the shortcut is taken rather than merely unregistered', () => {
+    shortcutInfo.backend = 'unregistered';
+    shortcutInfo.display = '⌘⇧Space';
+    render(withI18n(<DictationDemo />));
+
+    expect(screen.getByText(/Another app already uses this shortcut/i)).toBeInTheDocument();
+    // "No hotkey registered" means "not checked yet" — a different situation.
+    expect(screen.queryByText(/No hotkey registered/i)).not.toBeInTheDocument();
+  });
+
+  it('still names the shortcut that failed', () => {
+    // The user has to know WHICH combination is taken to pick another.
+    shortcutInfo.backend = 'unregistered';
+    shortcutInfo.display = '⌘⇧Space';
+    render(withI18n(<DictationDemo />));
+
+    expect(screen.getByText('⌘⇧Space')).toBeInTheDocument();
+  });
+
+  it('leaves a successfully registered shortcut alone', () => {
+    shortcutInfo.backend = 'native';
+    render(withI18n(<DictationDemo />));
+
+    expect(screen.queryByText(/Another app already uses this shortcut/i)).not.toBeInTheDocument();
   });
 });

@@ -101,9 +101,17 @@ export default function DictationDemo({ embedded = false }) {
 
   useEffect(() => {
     if (!desktop) return;
-    setHotkeyState((current) =>
-      current === 'verified' ? current : shortcut.backend === 'focused' ? 'unknown' : 'registered',
-    );
+    // `unregistered` is its own state, not a flavour of `unknown`: the OS
+    // refused the accelerator, usually because another app already holds it
+    // (the default collides with 1Password Quick Access on macOS). Saying
+    // "no hotkey registered" there would read as "we have not checked yet",
+    // when what the user needs to know is that this specific combination is
+    // taken and they should pick another (#1858).
+    setHotkeyState((current) => {
+      if (shortcut.backend === 'unregistered') return 'unregistered';
+      if (current === 'verified') return current;
+      return shortcut.backend === 'focused' ? 'unknown' : 'registered';
+    });
   }, [desktop, shortcut.backend]);
 
   // Subscribe to dictation events: the moment the user presses their
@@ -201,6 +209,21 @@ export default function DictationDemo({ embedded = false }) {
             className={`${STATUS_BASE} border-transparent bg-[rgba(152,151,26,0.12)] text-[#b8bb26]`}
           >
             <CheckCircle2 size={12} /> {t('demo.dictation_status_ok')}
+          </span>
+        );
+      case 'unregistered':
+        return (
+          <span
+            className={`${STATUS_BASE} border-transparent bg-[rgba(204,36,29,0.12)] text-[#fb4934]`}
+          >
+            <AlertTriangle size={12} />{' '}
+            {t('demo.dictation_status_taken', {
+              defaultValue:
+                'Another app already uses this shortcut — pick a different one in Settings.',
+            })}{' '}
+            <code className="font-mono text-[10px] px-[4px] py-[1px] bg-[rgba(0,0,0,0.3)] rounded-[3px]">
+              {shortcut.display}
+            </code>
           </span>
         );
       case 'registered':
