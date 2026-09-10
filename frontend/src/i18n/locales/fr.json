@@ -354,8 +354,8 @@
     "hf_source_app_label": "VoiceStudio (chiffré, recommandé)",
     "hf_source_cli_label": "HuggingFace CLI",
     "hf_source_env_label": "Variable d’environnement",
-    "theme_auto": "System Auto",
-    "theme_light": "Light"
+    "theme_auto": "Auto (Système)",
+    "theme_light": "Clair"
   },
   "bootstrap": {
     "title": "VoiceStudio",
