@@ -171,7 +171,7 @@ def test_the_sidecar_class_prepares_the_reference_and_trims_the_tail(monkeypatch
 
     import services.audio_dsp as dsp
     from engines.voxcpm2_subprocess import VoxCPM2SubprocessBackend
-    from services import subprocess_backend, tts_backend
+    from services import tts_backend
 
     sent = {}
 
@@ -185,7 +185,10 @@ def test_the_sidecar_class_prepares_the_reference_and_trims_the_tail(monkeypatch
         trimmed["sr"] = sr
         return wav[:, :10]
 
-    monkeypatch.setattr(subprocess_backend.SubprocessBackend, "generate", fake_generate)
+    # Patch the class the engine actually inherits from: other suites purge
+    # `services` from sys.modules, so a fresh import of subprocess_backend
+    # can be a different module than the one the engine subclassed.
+    monkeypatch.setattr(VoxCPM2SubprocessBackend.__bases__[0], "generate", fake_generate)
     monkeypatch.setattr(tts_backend, "_prepare_voxcpm_ref", lambda p: p + ".prepared.wav")
     monkeypatch.setattr(dsp, "trim_trailing_silence", fake_trim)
 
