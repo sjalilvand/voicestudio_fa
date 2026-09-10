@@ -794,24 +794,105 @@ fn mark_pill_noactivate(win: &tauri::WebviewWindow) {
 
 /// Show the pill without granting it foreground activation.
 ///
-/// The only correct way to show it on Windows (#982): a plain `show()` steals
-/// foreground from the app being dictated into, and the paste then lands in the
-/// pill instead of the user's document. `show_dictation_pill` is the call site.
+/// Two steps, and both are load-bearing.
+///
+/// `win.show()` is what tells TAURI the window is visible. Raw `ShowWindow`
+/// alone puts it on screen behind Tauri's back, and Tauri goes on believing it
+/// is hidden — so `isVisible()` answers `false` while the user is looking at
+/// the thing, `hide()` becomes a no-op on a window it thinks is already
+/// hidden, and the capture widget's idle reconcile (which asks `isVisible()`
+/// before deciding to clean up) concludes there is nothing to clean up. The
+/// result is an empty dark rectangle stranded on the desktop after the pill is
+/// dismissed, with no way to remove it short of quitting the app.
+///
+/// `SW_SHOWNOACTIVATE` is what keeps the foreground where it belongs (#982): a
+/// pill that steals focus makes the paste land in the pill instead of the
+/// user's document. `WS_EX_NOACTIVATE` is already on the window from
+/// `mark_pill_noactivate` at creation, which is what makes the `show()` above
+/// safe — the style bit, not the show flag, is what actually refuses
+/// activation. The flag stays anyway: it costs nothing and holds even if the
+/// style bit could not be applied (`hwnd()` can fail).
 #[cfg(target_os = "windows")]
 pub(crate) fn show_pill_noactivate(win: &tauri::WebviewWindow) {
     use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_SHOWNOACTIVATE};
-    let Ok(hwnd) = win.hwnd() else {
-        log::warn!("pill: could not resolve HWND for non-activating show (#982)");
-        return;
-    };
-    unsafe {
-        let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+    show_pill_noactivate_with(
+        || win.show().map_err(|error| error.to_string()),
+        || {
+            let hwnd = win.hwnd().map_err(|_| "no HWND".to_string())?;
+            unsafe {
+                let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+            }
+            Ok(())
+        },
+    )
+}
+
+/// The ordering itself, with both shows as parameters.
+///
+/// Split out so a test can pin the contract that the bug broke: Tauri's own
+/// `show` must run, and it must run FIRST. A native-only show is what left an
+/// empty pill window stranded on the desktop, and neither half can be dropped
+/// — so neither half can be dropped silently either.
+pub(crate) fn show_pill_noactivate_with<T, N>(show_tauri: T, show_native: N)
+where
+    T: FnOnce() -> Result<(), String>,
+    N: FnOnce() -> Result<(), String>,
+{
+    if let Err(error) = show_tauri() {
+        log::warn!("pill: Tauri show failed, visibility state may drift: {error}");
+    }
+    if let Err(error) = show_native() {
+        log::warn!("pill: non-activating show failed ({error}) (#982)");
     }
 }
 
 #[cfg(test)]
 mod pill_noactivate_tests {
-    use super::{with_noactivate_style, WS_EX_NOACTIVATE_BIT};
+    use super::{show_pill_noactivate_with, with_noactivate_style, WS_EX_NOACTIVATE_BIT};
+
+    #[test]
+    fn showing_the_pill_tells_tauri_before_it_tells_windows() {
+        // The bug: only the raw Win32 show ran, so the window went on screen
+        // behind Tauri's back. Tauri then answered `isVisible()` with false
+        // while the user was looking at it, `hide()` did nothing on a window
+        // it believed was already hidden, and the widget's idle reconcile —
+        // which asks `isVisible()` before cleaning up — concluded there was
+        // nothing to clean up. An empty rectangle stayed on the desktop until
+        // the app was quit.
+        use std::cell::RefCell;
+        let order = RefCell::new(Vec::new());
+        show_pill_noactivate_with(
+            || {
+                order.borrow_mut().push("tauri");
+                Ok(())
+            },
+            || {
+                order.borrow_mut().push("native");
+                Ok(())
+            },
+        );
+        assert_eq!(
+            order.into_inner(),
+            ["tauri", "native"],
+            "Tauri's own show must run, and run first"
+        );
+    }
+
+    #[test]
+    fn a_failing_tauri_show_still_puts_the_pill_on_screen() {
+        // Degrading to the old behaviour beats not showing the pill at all:
+        // the user can still see they are being recorded. The drift is logged
+        // rather than silent.
+        let mut native_ran = false;
+        show_pill_noactivate_with(
+            || Err("no window".to_string()),
+            || {
+                native_ran = true;
+                Ok(())
+            },
+        );
+        assert!(native_ran, "the pill must still appear when Tauri's show fails");
+    }
 
     #[test]
     fn adds_noactivate_bit_without_clobbering_existing_style() {
