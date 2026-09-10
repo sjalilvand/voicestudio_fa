@@ -534,23 +534,49 @@ fn read_error_log_tail_at(path: &Path, start: u64, max_lines: usize) -> String {
 /// the #1223 spawn-once flow, so the only race left was this buffered tail.)
 static ERR_LOG_DRAINER: Mutex<Option<std::thread::JoinHandle<()>>> = Mutex::new(None);
 
-/// Wait briefly for the previous run's stderr drainer to flush. A wedged
-/// drainer (pipe held open by an orphaned grandchild) must not block a
-/// respawn forever — after the bound we proceed; the offset then simply
-/// includes whatever the old run still manages to write, which degrades to
-/// attributing too MUCH to the new run, never to destroying evidence.
-fn join_previous_err_drainer(bound: Duration) {
+/// Wait briefly for the stderr drainer to finish writing this run's output.
+///
+/// Two callers, one guarantee: everything the run wrote is on disk before
+/// anyone reads it.
+///
+/// - Before a respawn takes its start offset, so a dying run's buffered tail
+///   cannot be appended past that offset and attributed to the new run
+///   (#1510).
+/// - Before a crash marker captures `last_stderr` (#1850). `wait()` returns
+///   the moment the child exits, but the drainer is a separate thread reading
+///   a pipe: its last lines — the traceback naming the cause — can still be in
+///   flight. Reading the file at that instant captures a tail that stops
+///   BEFORE the death, which is how a crash report arrives with a log ending
+///   a minute early and nothing to diagnose.
+///
+/// A wedged drainer (pipe held open by an orphaned grandchild) must not block
+/// forever. After the bound we proceed and put the handle back, so the next
+/// caller still waits on it rather than detaching it: for a respawn that
+/// degrades to attributing too MUCH to the new run, and for a marker to a
+/// short tail — never to destroyed evidence.
+pub fn settle_err_log(bound: Duration) {
     let handle = ERR_LOG_DRAINER.lock().ok().and_then(|mut g| g.take());
-    if let Some(handle) = handle {
-        let deadline = std::time::Instant::now() + bound;
-        while !handle.is_finished() && std::time::Instant::now() < deadline {
-            std::thread::sleep(Duration::from_millis(20));
-        }
-        if handle.is_finished() {
-            let _ = handle.join();
+    let Some(handle) = handle else { return };
+    let deadline = std::time::Instant::now() + bound;
+    while !handle.is_finished() && std::time::Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    if handle.is_finished() {
+        let _ = handle.join();
+    } else if let Ok(mut guard) = ERR_LOG_DRAINER.lock() {
+        // Still running. Hand it back rather than dropping it on the floor —
+        // dropping detaches the thread and every later caller loses the
+        // ability to wait for this run's output at all.
+        if guard.is_none() {
+            *guard = Some(handle);
         }
     }
 }
+
+/// How long a death path waits for the dying run's final stderr. Bounded so a
+/// wedged pipe cannot stall crash recording, generous enough to cover a
+/// traceback already sitting in the drainer's buffer.
+pub const ERR_LOG_SETTLE: Duration = Duration::from_secs(2);
 
 /// Open backend_err.log for a new run: append-only (a respawn must not
 /// destroy the previous run's evidence), rotated when oversized, with the
@@ -735,7 +761,7 @@ pub(crate) fn spawn_backend<R: tauri::Runtime>(
     // Append + per-run offset, never truncate: the previous run's stderr is
     // crash evidence until someone reads it (#1510). Flush the previous
     // drainer first so old buffered lines land BEFORE this run's offset.
-    join_previous_err_drainer(Duration::from_secs(2));
+    settle_err_log(Duration::from_secs(2));
     let (err_log_file, err_log_start) = open_err_log_for_run(&err_path);
     ERR_LOG_RUN_START.store(err_log_start, std::sync::atomic::Ordering::SeqCst);
     if let Some(ref f) = err_log_file {
@@ -942,6 +968,11 @@ mod tests {
     /// The env-var tests below mutate process-global state; keep them off each
     /// other's toes (cargo runs tests in threads by default).
     static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// `ERR_LOG_DRAINER` is one process-global slot, and three tests install a
+    /// handle into it. Without this they race: one test's settle joins
+    /// another's thread and both assert on a slot they no longer own.
+    static DRAINER_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     #[test]
     fn a_baked_token_reaches_the_spawned_backend() {
@@ -1469,6 +1500,7 @@ mod tests {
 
     #[test]
     fn a_dying_runs_buffered_stderr_flushes_before_the_next_offset() {
+        let _g = DRAINER_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         use std::io::Write;
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("backend_err.log");
@@ -1484,7 +1516,7 @@ mod tests {
         *ERR_LOG_DRAINER.lock().unwrap() = Some(late);
 
         // …must land BEFORE the next run records where its output begins.
-        join_previous_err_drainer(Duration::from_secs(2));
+        settle_err_log(Duration::from_secs(2));
         let (_file, start) = open_err_log_for_run(&path);
         let run2 = read_error_log_tail_at(&path, start, 10);
         assert!(
@@ -1526,5 +1558,61 @@ mod tests {
             rotated.exists(),
             "old evidence must survive rotation in the sibling file"
         );
+    }
+
+    #[test]
+    fn a_crash_tail_waits_for_the_dying_runs_last_words() {
+        let _g = DRAINER_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        // #1850: `wait()` returns the moment the child exits, but the stderr
+        // drainer is a separate thread still reading the pipe. Capturing
+        // `last_stderr` at that instant produced a crash report whose log
+        // stopped a minute before the death — the traceback that named the
+        // cause never made it into the file in time.
+        use std::io::Write;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("backend_err.log");
+        fs::write(&path, "steady state\n").unwrap();
+
+        let p = path.clone();
+        let dying = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(120));
+            let mut f = fs::OpenOptions::new().append(true).open(&p).unwrap();
+            writeln!(f, "Traceback (most recent call last):").unwrap();
+            writeln!(f, "RuntimeError: the actual cause").unwrap();
+        });
+        *ERR_LOG_DRAINER.lock().unwrap() = Some(dying);
+
+        // Without the settle this reads "steady state" and nothing else.
+        settle_err_log(ERR_LOG_SETTLE);
+        let tail = read_error_log_tail_at(&path, 0, 30);
+
+        assert!(
+            tail.contains("RuntimeError: the actual cause"),
+            "the crash marker captured a tail that predates the death: {tail:?}"
+        );
+    }
+
+    #[test]
+    fn a_wedged_drainer_is_handed_back_rather_than_detached() {
+        let _g = DRAINER_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        // The bound exists so an orphaned grandchild holding the pipe cannot
+        // stall crash recording. But giving up must not drop the handle:
+        // every later caller would then have nothing to wait on, and the
+        // respawn-offset guarantee (#1510) would quietly stop holding.
+        let (tx, rx) = std::sync::mpsc::channel::<()>();
+        let wedged = std::thread::spawn(move || {
+            let _ = rx.recv();
+        });
+        *ERR_LOG_DRAINER.lock().unwrap() = Some(wedged);
+
+        settle_err_log(Duration::from_millis(60));
+
+        assert!(
+            ERR_LOG_DRAINER.lock().unwrap().is_some(),
+            "a drainer that outlived the bound was detached instead of retained"
+        );
+        let _ = tx.send(());
+        let handle = ERR_LOG_DRAINER.lock().unwrap().take().unwrap();
+        let _ = handle.join();
     }
 }

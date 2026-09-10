@@ -831,6 +831,9 @@ fn spawn_backend_until_ready<R: tauri::Runtime>(
                     }
                 };
             if let Some((exit_info, real_exit)) = process_dead {
+                // The child is gone; its last stderr may still be in the
+                // drainer. Let it land before anything reads the tail (#1850).
+                crate::backend::settle_err_log(crate::backend::ERR_LOG_SETTLE);
                 let err_tail = crate::backend::read_error_log_tail_for_run(30);
                 // #941: persist the forensics for every true process death —
                 // startup crashes included — unless the app is shutting down
@@ -1444,6 +1447,10 @@ fn supervise_backend<R: tauri::Runtime>(
             attachment_lifecycle = Some(lifecycle);
         }
         let exit_info = exit.description.clone();
+        // Same reason as the startup path: `wait()` beat the drainer to the
+        // punch, so wait for the dying run's final lines before capturing
+        // them (#1850).
+        crate::backend::settle_err_log(crate::backend::ERR_LOG_SETTLE);
         // #941: make the death self-documenting BEFORE any restart attempt —
         // the marker (exit code/signal + stderr tail + uptime) is what turns
         // the next "Can't reach the backend" report into a diagnosable one.
