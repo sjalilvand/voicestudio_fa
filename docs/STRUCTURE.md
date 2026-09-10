@@ -151,12 +151,13 @@ VoiceStudio/
 
 ## Where tests live
 
-Three homes, each with its own runner and its own CI job. The split is deliberate, not drift:
+Three homes, each with its own runner. CI runs all three inside the single `test` job in
+`ci.yml`, as separate steps. The split is deliberate, not drift:
 
 | Home | Runner | Why it's separate |
 |---|---|---|
 | `tests/` | `pytest tests/` — the `testpaths` default | The main suite. Its `conftest.py` points `OMNIVOICE_DATA_DIR` at a throwaway dir so a run can never touch the developer's real app state (#878). |
-| `backend/tests/` | `pytest backend/tests/` — its own CI job | Runs as an isolated session against `backend/`'s bare imports. Its `conftest.py` sets the same hermetic data dir; **never** reintroduce module-level `sys.modules` stubs there — they leak process-wide at collection time and poison mixed runs. |
+| `backend/tests/` | `pytest backend/tests/` — its own pytest session (the `Run pytest (backend/tests, isolated)` step) | Runs as an isolated session against `backend/`'s bare imports. Its `conftest.py` sets the same hermetic data dir; **never** reintroduce module-level `sys.modules` stubs there — they leak process-wide at collection time and poison mixed runs. |
 | `frontend/src/**/*.test.{js,jsx,ts,tsx}` | `bun run test` (vitest, jsdom) | Co-located with the component under test. `frontend/e2e*/` hold the Playwright suites; `tests/frontend/` is the older `node:test` set. |
 
 ## What lives where
@@ -235,6 +236,6 @@ Migrate when adding the second `apps/*` or the second `packages/*`. Not before.
 ## Conventions
 
 - **Filenames:** snake_case for Python, kebab-case or PascalCase for JS/TS components, lowercase for Markdown.
-- **Tests mirror source paths** where a mirror exists: `backend/services/dub_pipeline.py` → `tests/backend/services/test_dub_pipeline*.py` (`tests/backend/` mirrors `api/ core/ engines/ services/`). Cross-cutting suites stay flat as `tests/test_*.py`. A React component's test sits next to the component.
+- **Tests mirror source paths** where a mirror exists: `tests/backend/` mirrors `api/ core/ engines/ services/`, so `backend/services/ffmpeg_utils.py` → `tests/backend/services/test_ffmpeg_utils.py`. Everything else stays flat — `tests/backend/test_*.py` for backend-wide cases, `tests/test_*.py` for cross-cutting ones. A React component's test sits next to the component.
 - **One-off scripts** go into `scripts/` with a descriptive name, not `test_*.py` at the root.
 - **New top-level directories** require a PR that updates *this file*.
