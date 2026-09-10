@@ -95,6 +95,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- The remote-worker loop-responsiveness tests no longer turn a build red over milliseconds of scheduling noise on shared CI hardware (#1990)
+
 - The pronunciation list badges an IPA or CMU entry as not applied yet, so you can see it without running a test (#1949) — thanks @utkarsha741!
 
 - A remote-worker test no longer fails at random on Windows CI: it waited for a background thread by spinning the event loop that thread's work needed (#1990)
