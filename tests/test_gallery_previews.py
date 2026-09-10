@@ -583,7 +583,7 @@ def test_preview_state_is_three_states(client, sandbox, monkeypatch):
     body = client.get(f"/archetypes/{item['id']}/preview/state").json()
     assert body == {
         "source": "no_model",
-        "message": "You're offline and no voice model is downloaded yet — the engine's Weights list in Model Catalogue → Download.",
+        "message": "You're offline and no voice model is downloaded yet — download one from the engine's Weights list in Model Catalogue.",
     }
 
     monkeypatch.setattr("api.routers.archetypes._no_voice_model_downloaded", lambda: False)
@@ -608,7 +608,7 @@ def test_missing_model_gets_an_action_not_a_log_file(client, sandbox, monkeypatc
     monkeypatch.setattr("api.routers.archetypes._render_archetype_wav", _fail)
     monkeypatch.setattr("api.routers.archetypes._no_voice_model_downloaded", lambda: True)
     detail = client.get(f"/archetypes/{item['id']}/preview").json()["detail"]
-    assert "the engine's Weights list in Model Catalogue → Download" in detail
+    assert "one from the engine's Weights list in Model Catalogue" in detail
     assert "Logs" not in detail
 
 

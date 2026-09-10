@@ -2169,6 +2169,7 @@
     "ingest_cancelled": "Importazione annullata",
     "ingest_failed": "Inserimento URL non riuscito: {{message}}",
     "retry_cancelled": "Nuovo tentativo annullato",
+    "transcribe_stream_dropped": "Il flusso di trascrizione si è interrotto prima che arrivasse qualsiasi segmento e non è stato possibile contattare il backend per sapere perché. Controlla il log del backend e, se il modello ASR era ancora in download, i suoi pesi in Catalogo modelli.",
     "transcription_failed": "Trascrizione non riuscita: {{message}}",
     "import_srt_no_job": "Carica o importa prima un video: non esiste un lavoro a cui allegare i sottotitoli.",
     "import_srt_after_speakers": "SRT in coda. Prima verrà completata l’analisi dei parlanti per conservare le voci clonate.",

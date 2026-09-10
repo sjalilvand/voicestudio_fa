@@ -2553,6 +2553,7 @@
     "ingest_cancelled": "수집이 취소되었습니다.",
     "ingest_failed": "URL 수집 실패: {{message}}",
     "retry_cancelled": "재시도가 취소되었습니다.",
+    "transcribe_stream_dropped": "세그먼트가 도착하기 전에 전사 스트림이 종료되었고, 원인을 확인하기 위해 백엔드에 연결할 수도 없었습니다. 백엔드 로그를 확인하고, ASR 모델이 아직 다운로드 중이었다면 모델 카탈로그에서 해당 가중치를 확인하세요.",
     "transcription_failed": "전사 실패: {{message}}",
     "import_srt_no_job": "먼저 비디오를 업로드하거나 처리하십시오. 자막을 첨부할 작업이 없습니다.",
     "import_srt_after_speakers": "SRT가 대기열에 추가되었습니다. 복제된 음성을 유지하기 위해 화자 분석을 먼저 완료합니다.",

@@ -349,7 +349,7 @@ def test_engine_agnostic_labels_name_no_engine(locale):
     """A stage label must not name the engine that happens to implement it.
 
     The dub overlay said "Transcribing with Whisper…" in all 21 languages while
-    ASR is a the engine's Weights list in Model Catalogue choice, so anyone on Parakeet or a transformers
+    ASR is a Model Catalogue choice, so anyone on Parakeet or a transformers
     pipeline was told the wrong engine was running — and a user debugging a slow
     or failing transcription would go read Whisper's docs (#1352, thanks
     @paoloantinori!). The same trap is one line away for any future stage label,

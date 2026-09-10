@@ -2169,6 +2169,7 @@
     "ingest_cancelled": "Besleme iptal edildi",
     "ingest_failed": "URL alımı başarısız oldu: {{message}}",
     "retry_cancelled": "Yeniden deneme iptal edildi",
+    "transcribe_stream_dropped": "Transkripsiyon akışı hiçbir segment gelmeden sona erdi ve nedenini öğrenmek için arka uca ulaşılamadı. Arka uç günlüğünü kontrol edin; ASR modeli hâlâ indiriliyorsa Model kataloğu içindeki ağırlıklarına bakın.",
     "transcription_failed": "Transkripsiyon başarısız oldu: {{message}}",
     "import_srt_no_job": "Önce bir video yükleyin veya alın; altyazı eklenecek bir iş yoktur.",
     "import_srt_after_speakers": "SRT sıraya alındı. Klonlanmış sesleri korumak için önce konuşmacı analizi tamamlanacak.",

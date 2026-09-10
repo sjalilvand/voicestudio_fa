@@ -2169,6 +2169,7 @@
     "ingest_cancelled": "Ingesta cancelada",
     "ingest_failed": "Falló la ingesta de URL: {{message}}",
     "retry_cancelled": "Reintento cancelado",
+    "transcribe_stream_dropped": "La transmisión de la transcripción terminó antes de que llegara ningún segmento y no se pudo contactar con el backend para saber por qué. Revisa el registro del backend y, si el modelo ASR aún se estaba descargando, sus pesos en Catálogo de modelos.",
     "transcription_failed": "Error de transcripción: {{message}}",
     "import_srt_no_job": "Primero cargue o ingiera un video: no hay ningún trabajo al que adjuntar subtítulos.",
     "import_srt_after_speakers": "SRT en cola. Primero finalizará el análisis de hablantes para conservar las voces clonadas.",

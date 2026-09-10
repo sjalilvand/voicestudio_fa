@@ -24,6 +24,13 @@ export function dictationPick(rows, modelId) {
   );
 }
 
+/** A row with a job in flight (download, cancel, removal, or a mutation
+ *  that has not answered yet). Picking it again must not start a second
+ *  install. */
+export function rowWorking(rt) {
+  return Boolean(rt?.rowBusy || rt?.isInstalling || rt?.isDeleting || rt?.showBar);
+}
+
 /**
  * EngineWeights — the downloadable weights of ONE engine, inside its detail
  * panel: one line per model (label, size, state, one action) with the
@@ -51,7 +58,8 @@ export default function EngineWeights({ engineId, models, downloads, t }) {
   const picked = hasDictation ? dictationPick(rows, modelId) : null;
   const pickDictation = (m) => {
     if (m.dictation_id !== picked?.dictation_id) setModelId?.(m.dictation_id);
-    if (!m.installed) downloads.onInstall(m.repo_id);
+    // A row already downloading (or mid-mutation) keeps its one job.
+    if (!m.installed && !rowWorking(downloads.getRowRuntime(m))) downloads.onInstall(m.repo_id);
   };
   return (
     <section className="flex flex-col gap-[4px]" data-testid={`engine-weights-${engineId}`}>
@@ -147,10 +155,11 @@ function WeightRow({ m, downloads, t, dictation }) {
             role="radio"
             aria-checked={dictation.picked}
             onClick={dictation.pick}
+            disabled={rowWorking(rt)}
             title={t('engines.dictation_model_hint')}
             data-testid={`weight-dictation-${m.repo_id}`}
             className={cn(
-              'inline-flex shrink-0 cursor-pointer items-center gap-[4px] rounded-[var(--chrome-radius-pill)] border px-[6px] py-px font-mono text-[10px] font-semibold uppercase tracking-[0.04em] transition-colors',
+              'inline-flex shrink-0 cursor-pointer items-center gap-[4px] rounded-[var(--chrome-radius-pill)] border px-[6px] py-px font-mono text-[10px] font-semibold uppercase tracking-[0.04em] transition-colors disabled:cursor-default disabled:opacity-60',
               dictation.picked
                 ? 'border-primary/40 bg-primary/[0.12] text-primary'
                 : 'border-border bg-transparent text-muted-foreground hover:text-foreground',

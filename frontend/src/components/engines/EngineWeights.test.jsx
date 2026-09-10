@@ -222,3 +222,30 @@ describe('EngineWeights', () => {
     expect(dictationPick(weightsForEngine(MODELS, 'omnivoice'), 'x')).toBeNull();
   });
 });
+
+describe('EngineWeights dictation pick while a download runs', () => {
+  it('never starts a second install, and locks the radio while the row works', () => {
+    useAppStore.setState({
+      dictationModelId: 'sherpa-parakeet-tdt-v3',
+      dictationLoaded: true,
+      setDictationModelId: vi.fn(),
+    });
+    const busy = new Set();
+    const d = downloads({
+      getRowRuntime: (m) => (busy.has(m.repo_id) ? { ...IDLE, rowBusy: true } : IDLE),
+      onInstall: vi.fn((repoId) => busy.add(repoId)),
+    });
+    const view = () => (
+      <EngineWeights engineId="sherpa-onnx-asr" models={MODELS} downloads={d} t={t} />
+    );
+    const { rerender } = render(view());
+    const tiny = () => screen.getByTestId('weight-csukuangfj/sherpa-onnx-whisper-tiny');
+    const radio = within(tiny()).getByRole('radio');
+    fireEvent.click(radio);
+    // A second click before the row re-renders busy: still one job.
+    fireEvent.click(radio);
+    expect(d.onInstall).toHaveBeenCalledTimes(1);
+    rerender(view());
+    expect(within(tiny()).getByRole('radio')).toBeDisabled();
+  });
+});

@@ -2169,6 +2169,7 @@
     "ingest_cancelled": "Đã hủy nhập",
     "ingest_failed": "Nhập URL không thành công: {{message}}",
     "retry_cancelled": "Đã hủy thử lại",
+    "transcribe_stream_dropped": "Luồng phiên âm đã kết thúc trước khi có phân đoạn nào đến, và không thể kết nối tới backend để biết lý do. Hãy kiểm tra nhật ký backend, và trọng số của mô hình ASR trong Danh mục mô hình nếu mô hình vẫn đang tải xuống.",
     "transcription_failed": "Phiên âm không thành công: {{message}}",
     "import_srt_no_job": "Trước tiên hãy tải lên hoặc nhập video — không cần phải đính kèm phụ đề.",
     "import_srt_after_speakers": "Đã xếp SRT vào hàng đợi. Phân tích người nói sẽ hoàn tất trước để giữ nguyên giọng nói nhân bản.",

@@ -219,7 +219,7 @@ def test_license_gate(mock_settings_store):
     # Engines moved out of Settings into the Model Catalogue workspace, so the
     # hint names that; what must not drift is that it names a place the user
     # can actually reach the accept button from.
-    assert "Model Catalogue" in msg and "Engines" in msg, (
+    assert "Model Catalogue" in msg and "Accept" in msg, (
         f"reason should point the user at Model Catalogue: {msg!r}"
     )
     assert "license" in msg.lower()

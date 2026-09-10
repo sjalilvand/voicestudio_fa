@@ -2169,6 +2169,7 @@
     "ingest_cancelled": "Penyerapan dibatalkan",
     "ingest_failed": "Gagal menyerap URL: {{message}}",
     "retry_cancelled": "Coba lagi dibatalkan",
+    "transcribe_stream_dropped": "Aliran transkripsi berakhir sebelum ada segmen yang tiba, dan backend tidak dapat dihubungi untuk menjelaskan alasannya. Periksa log backend, dan bobot model ASR di Katalog model jika model itu masih diunduh.",
     "transcription_failed": "Transkripsi gagal: {{message}}",
     "import_srt_no_job": "Unggah atau serap video terlebih dahulu — tidak ada tugas untuk melampirkan subtitle.",
     "import_srt_after_speakers": "SRT masuk antrean. Analisis pembicara akan diselesaikan lebih dahulu agar suara kloning tetap dipertahankan.",

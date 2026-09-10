@@ -2843,6 +2843,7 @@
     "ingest_cancelled": "Ingest cancelled",
     "ingest_failed": "URL ingest failed: {{message}}",
     "retry_cancelled": "Retry cancelled",
+    "transcribe_stream_dropped": "The transcription stream ended before any segments arrived, and the backend could not be reached to say why. Check the backend log, and the ASR model's weights in Model Catalogue if it was still downloading.",
     "session_expired": "This dub session expired or was cleaned up — re-upload your video to start a new one.",
     "transcription_failed": "Transcription failed: {{message}}",
     "import_srt_no_job": "Upload or ingest a video first — there is no job to attach subtitles to.",

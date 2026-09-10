@@ -2169,6 +2169,7 @@
     "ingest_cancelled": "Przyjmowanie anulowane",
     "ingest_failed": "Pobranie adresu URL nie powiodło się: {{message}}",
     "retry_cancelled": "Ponowna próba anulowana",
+    "transcribe_stream_dropped": "Strumień transkrypcji zakończył się, zanim dotarły jakiekolwiek segmenty, a z backendem nie udało się połączyć, by ustalić przyczynę. Sprawdź dziennik backendu oraz – jeśli model ASR wciąż się pobierał – jego wagi w Katalog modeli.",
     "transcription_failed": "Transkrypcja nie powiodła się: {{message}}",
     "import_srt_no_job": "Najpierw prześlij lub pobierz film — nie ma zadania, do którego można by dołączyć napisy.",
     "import_srt_after_speakers": "Plik SRT dodano do kolejki. Najpierw zakończy się analiza mówców, aby zachować sklonowane głosy.",

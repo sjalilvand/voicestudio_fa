@@ -2169,6 +2169,7 @@
     "ingest_cancelled": "攝取已取消",
     "ingest_failed": "URL 擷取失敗：{{message}}",
     "retry_cancelled": "重試已取消",
+    "transcribe_stream_dropped": "轉寫串流在收到任何片段之前就結束了，且無法連線到後端以查明原因。請查看後端日誌；如果 ASR 模型仍在下載，請在模型庫中查看其權重。",
     "transcription_failed": "轉錄失敗：{{message}}",
     "import_srt_no_job": "首先上传或摄取视频 - 没有附加字幕的作业。",
     "import_srt_after_speakers": "SRT 已加入佇列。系統會先完成說話者分析，以保留複製語音。",

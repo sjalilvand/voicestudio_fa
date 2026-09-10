@@ -1,5 +1,5 @@
 /**
- * the engine Weights list in Model Catalogue → Voice previews.
+ * Settings → Storage → Voice previews.
  *
  * One line and two controls for the pre-rendered voice gallery: a consent
  * toggle and a manual "Check now". The toggle is the *only* thing that ever

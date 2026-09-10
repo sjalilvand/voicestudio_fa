@@ -3108,7 +3108,7 @@ def _parakeet_mlx_installed() -> bool:
     trigger a surprise multi-GB download (the asr_model_missing contract).
     Installed state comes from the same HF-cache helpers the model store uses
     (positive results memoized — see :func:`_repo_installed`), so the answer
-    matches the the engine's Weights list in Model Catalogue install badges. Never raises.
+    matches the Model Catalogue's install badges. Never raises.
     """
     try:
         repo = os.environ.get("ASR_MODEL_PARAKEET_MLX", _PARAKEET_MLX_DEFAULT)
@@ -3448,7 +3448,7 @@ def _repo_installed(repo: str) -> bool:
     """``is_cached`` + ``cache_is_complete`` with a positive-only session memo.
 
     Installed state comes from the same HF-cache helpers the model store uses,
-    so the answer matches the the engine's Weights list in Model Catalogue install badges."""
+    so the answer matches the Model Catalogue's install badges."""
     if repo in _INSTALLED_REPO_MEMO:
         return True
     from api.routers.setup.models import cache_is_complete, get_model_catalog, is_cached
@@ -3474,7 +3474,7 @@ def asr_model_missing_error(*, purpose: str = "transcribe",
     ``sherpa_model_id`` lets the live-dictation WS pass its per-session
     ``?model=`` override. Installed state comes from the same HF-cache helpers
     the model store uses (see :func:`_repo_installed`), so the answer matches
-    the the engine's Weights list in Model Catalogue install badges.
+    the Model Catalogue's install badges.
     ``skip_sherpa`` probes only the non-Sherpa capture fallback; silent-model
     recovery uses it before deciding whether persistent demotion is warranted.
     ``require_installed`` makes unknown/custom selections fail closed for that

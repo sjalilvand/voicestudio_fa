@@ -189,7 +189,7 @@ def _hf_endpoint_host() -> tuple[str, int]:
     """Host/port of the Hugging Face endpoint actually in effect.
 
     Mirror-aware: restricted-network users (e.g. behind the Great Firewall)
-    point HF_ENDPOINT at a mirror via the engine's Weights list in Model Catalogue → Hugging Face
+    point HF_ENDPOINT at a mirror via Settings → Network → Hugging Face
     mirror. Probing hardcoded huggingface.co would fail them even when their
     configured mirror works fine.
     """
@@ -287,7 +287,7 @@ def _network_check() -> dict:
             "id": "network", "label": "Network (configured endpoint)",
             "status": "warn",
             "detail": "The configured Hugging Face endpoint could not be validated.",
-            "fix": "Review the endpoint in the engine's Weights list in Model Catalogue, then re-check.",
+            "fix": "Review the endpoint in Settings → Network, then re-check.",
             "mirror_reachable": False,
         }
     net_ok = _probe_network(net_host, net_port)

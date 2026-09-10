@@ -1167,7 +1167,7 @@ def _timeout_guidance(
             f"The durable fix is a lighter engine (OmniVoice GGUF and "
             f"Supertonic-3 are tuned for small/no GPU) or shorter text; "
             f"Flush caches / Unload the resident model (top toolbar or "
-            f"the engine's Weights list in Model Catalogue) frees what little headroom there is. (Raise "
+            f"Model Catalogue) frees what little headroom there is. (Raise "
             f"the compute-time budget in Settings → Performance & Device if "
             f"you'd rather let long "
             f"generations run.)"
@@ -1175,9 +1175,9 @@ def _timeout_guidance(
     return common + (
         "most often the GPU is VRAM-starved (a resident model and this job "
         "contend for memory). For a durable fix, Flush caches / Unload the "
-        "resident model (top toolbar or the engine's Weights list in Model Catalogue) before retrying, "
+        "resident model (top toolbar or Model Catalogue) before retrying, "
         "try shorter text, a lighter engine, or set the engine to CPU in "
-        "the engine's Weights list in Model Catalogue. (Raise the compute-time budget in "
+        "Model Catalogue. (Raise the compute-time budget in "
         "Settings → Performance & Device for very "
         "long single generations.)"
     )

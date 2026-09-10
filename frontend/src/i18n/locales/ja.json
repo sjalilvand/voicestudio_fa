@@ -2169,6 +2169,7 @@
     "ingest_cancelled": "取り込みがキャンセルされました",
     "ingest_failed": "URL の取り込みに失敗しました: {{message}}",
     "retry_cancelled": "再試行がキャンセルされました",
+    "transcribe_stream_dropped": "セグメントが届く前に文字起こしストリームが終了し、原因を確認するためにバックエンドへ接続することもできませんでした。バックエンドのログを確認し、ASR モデルがまだダウンロード中だった場合は モデルカタログ でその重みを確認してください。",
     "transcription_failed": "転写に失敗しました: {{message}}",
     "import_srt_no_job": "まずビデオをアップロードまたは取り込みます。字幕を付ける作業はありません。",
     "import_srt_after_speakers": "SRTをキューに追加しました。クローン音声を保持するため、先に話者分析を完了します。",
