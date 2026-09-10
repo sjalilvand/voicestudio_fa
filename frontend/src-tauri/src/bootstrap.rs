@@ -838,7 +838,7 @@ fn spawn_backend_until_ready<R: tauri::Runtime>(
                 // The child is gone; its last stderr may still be in the
                 // drainer. Let it land before anything reads the tail (#1850).
                 crate::backend::settle_err_log(crate::backend::ERR_LOG_SETTLE);
-                let err_tail = crate::backend::read_error_log_tail_from(run_start, 30);
+                let err_tail = crate::backend::read_dead_run_tail(run_start, 30);
                 // #941: persist the forensics for every true process death —
                 // startup crashes included — unless the app is shutting down
                 // or a retry flow deliberately killed the child.
@@ -850,7 +850,7 @@ fn spawn_backend_until_ready<R: tauri::Runtime>(
                         crate::crash::record_crash(crate::crash::marker_now(
                             exit,
                             backend_uptime_s(app),
-                            crate::backend::read_error_log_tail_from(
+                            crate::backend::read_dead_run_tail(
                                 run_start,
                                 CRASH_STDERR_TAIL_LINES,
                             ),
@@ -1473,7 +1473,7 @@ fn supervise_backend<R: tauri::Runtime>(
                 crate::crash::record_crash(crate::crash::marker_now(
                     &exit,
                     uptime_s,
-                    crate::backend::read_error_log_tail_from(run_start, CRASH_STDERR_TAIL_LINES),
+                    crate::backend::read_dead_run_tail(run_start, CRASH_STDERR_TAIL_LINES),
                 ));
             } else {
                 log::info!(
@@ -1481,7 +1481,7 @@ fn supervise_backend<R: tauri::Runtime>(
                 );
             }
             if restart_budget_exhausted(&mut restart_times, Instant::now()) {
-                let tail = crate::backend::read_error_log_tail_from(run_start, 30);
+                let tail = crate::backend::read_dead_run_tail(run_start, 30);
                 let msg = format!(
                     "The backend kept {} ({} times in {} min; last stop: {}) and couldn't \
                      be kept running. Use Clean & Retry, or check Settings → Logs → Backend.{}",

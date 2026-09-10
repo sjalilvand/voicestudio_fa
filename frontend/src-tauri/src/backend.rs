@@ -504,27 +504,53 @@ pub fn err_log_run_start() -> u64 {
 /// This is the reader every death path must use: it cannot see another run's
 /// output, so a crash marker carries the dying process's words or nothing.
 pub fn read_error_log_tail_for_run(max_lines: usize) -> String {
-    read_error_log_tail_from(err_log_run_start(), max_lines)
+    read_error_log_tail_range(err_log_run_start(), None, max_lines)
 }
 
-/// Last N lines of the slice that begins at `start`.
+/// Last N lines of one run's slice, `[start, end)`.
 ///
-/// A death path must capture the offset BEFORE it settles the drainers and
-/// read from that (#1850, Greptile): settling can take up to two seconds, and
-/// a Retry arriving in that window installs a new run and moves
-/// `ERR_LOG_RUN_START` past the dying run's output. Reading "the current run"
-/// afterwards would then hand the dead process's crash marker the
-/// REPLACEMENT's healthy startup — the cross-run attribution #1510 exists to
-/// prevent, reintroduced through the wait added to fix the tail.
-pub fn read_error_log_tail_from(start: u64, max_lines: usize) -> String {
+/// A death path pins `start` BEFORE it settles the drainers (#1850, Greptile):
+/// settling can take up to two seconds, and a Retry arriving in that window
+/// installs a new run and moves `ERR_LOG_RUN_START` past the dying run's
+/// output. Reading "the current run" afterwards would hand the dead process's
+/// crash marker the REPLACEMENT's healthy startup — the cross-run attribution
+/// #1510 exists to prevent, reintroduced through the wait that fixed the tail.
+///
+/// `end` closes the other side (CodeRabbit). A start offset with an unbounded
+/// end still does not identify ONE run: the replacement writes below the dying
+/// run's lines, and a tail reads the last N of the file, so the newer run's
+/// startup is exactly what a caller would get. `end` is where the next run's
+/// slice begins, or `None` when no run started in the meantime.
+pub fn read_error_log_tail_range(start: u64, end: Option<u64>, max_lines: usize) -> String {
     let err_path = backend_log_path().with_file_name("backend_err.log");
-    read_error_log_tail_at(&err_path, start, max_lines)
+    read_error_log_slice(&err_path, start, end, max_lines)
+}
+
+/// The run that has just died, read as a closed range.
+///
+/// Call AFTER settling: the end is taken from wherever the current run now
+/// begins, which is either still `start` (nothing replaced it) or the
+/// replacement's offset (which is exactly where this run's slice ends).
+pub fn read_dead_run_tail(start: u64, max_lines: usize) -> String {
+    let now = err_log_run_start();
+    let end = if now > start { Some(now) } else { None };
+    read_error_log_tail_range(start, end, max_lines)
 }
 
 /// Tail of `path` starting at byte `start` (whole file when `start` is 0 or
 /// no longer valid — an externally replaced/shrunk file must degrade to the
 /// old whole-file behaviour, never to a silent empty capture).
 fn read_error_log_tail_at(path: &Path, start: u64, max_lines: usize) -> String {
+    read_error_log_slice(path, start, None, max_lines)
+}
+
+/// `read_error_log_tail_at` with the far end closed too.
+fn read_error_log_slice(
+    path: &Path,
+    start: u64,
+    end: Option<u64>,
+    max_lines: usize,
+) -> String {
     let content = match fs::read_to_string(path) {
         Ok(c) => c,
         Err(_) => return String::new(),
@@ -534,6 +560,16 @@ fn read_error_log_tail_at(path: &Path, start: u64, max_lines: usize) -> String {
         &content[start..]
     } else {
         &content[..]
+    };
+    // An end that is not a usable boundary degrades to "the rest of the file",
+    // matching how an unusable start degrades to the whole file: evidence
+    // beats precision, and a silent empty capture is the one outcome that
+    // helps nobody.
+    let slice = match end.and_then(|e| usize::try_from(e).ok()) {
+        Some(e) if e >= start && e <= content.len() && content.is_char_boundary(e) => {
+            &content[..e - start]
+        }
+        _ => slice,
     };
     let lines: Vec<&str> = slice.lines().collect();
     let from = lines.len().saturating_sub(max_lines);
@@ -560,6 +596,14 @@ fn track_err_drainer(handle: std::thread::JoinHandle<()>) {
     }
 }
 
+/// Serializes a whole settlement. `settle_err_log` takes the handles out of
+/// the list and then waits without holding that lock, so two callers could
+/// otherwise interleave: the second finds an empty list, concludes there is
+/// nothing to wait for, and reads the log while the first is still waiting for
+/// exactly the drainer it needs (CodeRabbit). One settlement at a time makes a
+/// caller that returns a caller for whom the waiting is genuinely done.
+static ERR_LOG_SETTLE_LOCK: Mutex<()> = Mutex::new(());
+
 /// Wait briefly for every outstanding stderr drainer to finish writing.
 ///
 /// Two callers, one guarantee: everything a run wrote is on disk before anyone
@@ -581,6 +625,9 @@ fn track_err_drainer(handle: std::thread::JoinHandle<()>) {
 /// to a short tail. Never to destroyed evidence, and never to a detached
 /// thread nobody can wait for again.
 pub fn settle_err_log(bound: Duration) {
+    let _settling = ERR_LOG_SETTLE_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     let pending: Vec<_> = match ERR_LOG_DRAINERS.lock() {
         Ok(mut guard) => guard.drain(..).collect(),
         Err(_) => return,
@@ -1660,6 +1707,47 @@ run2: healthy startup
             !read_error_log_tail_at(&path, moved_on, 30).contains("the actual cause"),
             "sanity: reading from the new run's offset really does lose it"
         );
+    }
+
+    #[test]
+    fn a_dead_runs_slice_stops_where_the_replacement_begins() {
+        // CodeRabbit: a start offset with an unbounded end does not identify
+        // ONE run. The replacement writes BELOW the dying run's lines, and a
+        // tail reads the last N of the file — so the newer run's healthy
+        // startup is exactly what the dead run's crash marker would get.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("backend_err.log");
+        let run1 = "run1: RuntimeError: the actual cause
+";
+        fs::write(&path, run1).unwrap();
+        let boundary = run1.len() as u64;
+        fs::write(&path, format!("{run1}run2: healthy startup
+run2: listening
+")).unwrap();
+
+        let closed = read_error_log_slice(&path, 0, Some(boundary), 30);
+        assert!(closed.contains("the actual cause"), "{closed}");
+        assert!(!closed.contains("run2"), "the replacement's output leaked in: {closed}");
+
+        // Unbounded, the tail is the replacement — the bug this closes.
+        let open = read_error_log_slice(&path, 0, None, 2);
+        assert!(open.contains("run2"), "sanity: an open end really does read the newer run");
+    }
+
+    #[test]
+    fn an_unusable_end_degrades_to_the_rest_of_the_file() {
+        // Same principle as an unusable start: evidence beats precision, and a
+        // silent empty capture is the one outcome that helps nobody.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("backend_err.log");
+        fs::write(&path, "only line
+").unwrap();
+
+        // Past EOF, and an end that sits before the start — both mean the
+        // caller cannot pin the far side, so the slice runs to the end of the
+        // file. The start is honoured independently either way.
+        assert_eq!(read_error_log_slice(&path, 0, Some(10_000), 10), "only line");
+        assert_eq!(read_error_log_slice(&path, 5, Some(1), 10), "line");
     }
 
     #[test]
