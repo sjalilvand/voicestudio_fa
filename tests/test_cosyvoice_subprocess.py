@@ -233,16 +233,17 @@ def test_a_missing_model_override_is_an_error_not_a_silent_swap(monkeypatch, tmp
 
 
 # The first release of each package that fixes the advisories upstream's pins
-# fall under (OSV, checked 2026-09-10). Raising a pin is fine; going below
-# one of these reintroduces a known vulnerability.
+# fall under, per OSV and GitHub's advisory database (checked 2026-09-10;
+# only GitHub listed the protobuf and transformers ones). Raising a pin is
+# fine; going below one of these reintroduces a known vulnerability.
 _ADVISORY_FLOORS = {
     "diffusers": "0.38.0",
     "hydra-core": "1.3.4",
     "lightning": "2.6.6",
     "modelscope": "1.27.0",
     "onnx": "1.21.0",
-    "protobuf": "4.25.8",
-    "transformers": "4.53.0",
+    "protobuf": "5.29.6",
+    "transformers": "5.10.0",
 }
 
 

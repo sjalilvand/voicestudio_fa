@@ -16,12 +16,13 @@ PYTHON_FLOORS = {
     "msgpack": "1.2.1",
     "nltk": "3.10.0",
     "pillow": "12.3.0",
+    "protobuf": "5.29.6",
     "pydantic-settings": "2.14.2",
     "pygments": "2.20.0",
     "pypdf": "6.15.0",
     "python-multipart": "0.0.31",
     "starlette": "1.3.1",
-    "transformers": "5.5.0",
+    "transformers": "5.10.0",
     "yt-dlp": "2026.7.4",
 }
 CARGO_FLOORS = {"quinn-proto": "0.11.15"}

@@ -14,6 +14,8 @@
 #   affected release: diffusers, hydra-core, lightning, modelscope, onnx,
 #   protobuf and transformers. This exact set was installed on Windows and
 #   passes the installer's import probe (tests pin the advisory floors).
+#   transformers 5 was also checked against CosyVoice's own tokenizer (token
+#   ids identical to 4.57.6) and its cached step-by-step decoding.
 # - Dropped: deepspeed and tensorrt-cu12* (Linux-only acceleration);
 #   onnxruntime-gpu (the onnxruntime below serves every host); pyworld and
 #   pyarrow (not needed to import or run CosyVoice; pyworld has no Python 3.10
