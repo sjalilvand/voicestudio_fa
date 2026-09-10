@@ -85,6 +85,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Docs
 
+- The torch upgrade an RTX 50-series card needs is written down, with the second pin file the resolver checks and the command that proves the kernels are there (#1931)
+
 - Docker quick starts now explain the AMD64-only images and direct Apple Silicon users to the native macOS app (#1921) — thanks @yangfan-yf-yf!
 - audio.cpp (Breeze-TTS-2) is now a documented opt-in engine: prebuilt binary install, explicit GGUF download, voice modes, and the weights' research/non-commercial terms (#1891)
 - `docs/STRUCTURE.md` describes the tree as it is today, and a test now keeps its counts honest (#1981) — thanks @Dawcraft!
