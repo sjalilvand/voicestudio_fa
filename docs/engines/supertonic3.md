@@ -48,9 +48,9 @@ log line.
 ## Behaviour notes
 
 - Output is 44.1 kHz mono.
-- Runs as a long-lived sidecar in the parent Python environment (its
-  dependencies — onnxruntime, numpy, soundfile — already match
-  VoiceStudio's pins); subsequent calls reuse the warm ONNX session.
+- Runs as a long-lived sidecar: from its own environment after a one-click
+  install, otherwise from VoiceStudio's (where `uv sync --extra supertonic`
+  puts it). Subsequent calls reuse the warm ONNX session.
 - `speed` is clamped to 0.7–2.0; quality steps clamp to 5–12.
 - Language is an ISO 639-1 code; Auto engages the SDK's multilingual
   fallback.

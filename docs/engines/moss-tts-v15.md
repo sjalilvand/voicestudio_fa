@@ -37,6 +37,11 @@ Install** does every step below for you. It installs into its own folder under V
 download on first synthesis. On a CPU-only host the button is not offered; use
 the manual install.
 
+The first synthesis downloads the weights, which takes a while on a slow
+connection. The generation stays alive while the download makes progress;
+if a stalled download runs out of time, raise the compute-time budget in
+**Settings → Performance & Device** and try again.
+
 ## Install
 
 MOSS-TTS-v1.5 is **not** bundled (the model is large and the package pins a

@@ -286,3 +286,28 @@ def test_bootstrap_install_names_the_pytorch_cuda_index(monkeypatch, tmp_path):
     assert tuple(pip[i:i + len(UV_PIP_CU128_ARGS)]) == UV_PIP_CU128_ARGS
     venv_python = bootstrap._venv_python_path(tmp_path / ".venv")
     assert pip[pip.index("--python") + 1] == str(venv_python)
+
+
+def test_bootstrap_install_failure_reports_uvs_error_not_a_host_guess(monkeypatch, tmp_path):
+    """The PyTorch index is always supplied now, so blaming "a non-CUDA host"
+    would mislead; uv's own error says what failed."""
+    import subprocess
+
+    from engines.moss_tts_v15 import bootstrap
+
+    def fake_run(argv, **kwargs):
+        if argv[1:3] == ["pip", "install"]:
+            raise subprocess.CalledProcessError(1, argv, stderr=b"resolver: no wheel for torchcodec")
+
+    monkeypatch.setattr(bootstrap, "_ENGINES_VENV_DIR", tmp_path / ".venv")
+    monkeypatch.setattr(bootstrap, "_locate_uv", lambda: "/fake/uv")
+    monkeypatch.setattr(bootstrap, "_uv_env", lambda: None)
+    monkeypatch.setattr(bootstrap.subprocess, "run", fake_run)
+
+    with pytest.raises(RuntimeError) as err:
+        bootstrap._bootstrap_engines_venv(tmp_path / "MOSS-TTS")
+
+    message = str(err.value)
+    assert "resolver: no wheel for torchcodec" in message
+    assert "non-CUDA" not in message
+    assert "docs/engines/moss-tts-v15.md" in message

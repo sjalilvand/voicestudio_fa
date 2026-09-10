@@ -1065,6 +1065,8 @@ def test_torch_index_matches_the_apps_own_pytorch_cuda_index():
 @pytest.mark.parametrize("engine_id", _ALL_SPEC_IDS)
 def test_verify_probe_runs_in_the_engines_venv_and_compiles(monkeypatch, engine_id):
     spec = si.get_spec(engine_id)
+    # The venv, and so the checkout, exist by the time verify runs.
+    si.managed_checkout(spec).mkdir(parents=True)
     ran = []
 
     def fake_run(argv, **kwargs):
@@ -1251,3 +1253,37 @@ def test_a_real_upstream_layout_passes_source_validation(monkeypatch, engine_id)
 
     assert si._job_step(job, "fetch_source")["detail"] == "git clone"
     assert si._source_present(spec, si.managed_checkout(spec))
+
+
+def test_a_failed_dependency_install_is_repaired_not_reported_installed(monkeypatch):
+    """A venv whose dependency install died halfway still has its interpreter.
+    Counting that as installed made a retry answer already_installed, and the
+    engine then failed at its first import."""
+    spec = _mk_spec(repo_url="", tarball_url="", has_source=False)
+    monkeypatch.setitem(si.SPECS, "fake-side", spec)
+    monkeypatch.setattr(si, "_locate_uv", lambda: "/fake/uv")
+    monkeypatch.setattr(si, "disk_free_bytes", lambda p: 100 * _GIB)
+    monkeypatch.setattr("core.prefs.set_", lambda k, v: None)
+    _stub_verify_ok(monkeypatch)
+    argvs = []
+    ok_run = _fake_run_logged(argvs)
+
+    def pip_fails(job, argv, *, timeout, env=None):
+        rc = ok_run(job, argv, timeout=timeout, env=env)
+        return 1 if argv[1:3] == ["pip", "install"] else rc
+
+    # A complete install is healthy.
+    monkeypatch.setattr(si, "_run_logged", ok_run)
+    assert _run(spec)["state"] == "succeeded"
+    assert si._healthy(spec)
+
+    # A reinstall whose dependency step fails is not, though the venv remains.
+    monkeypatch.setattr(si, "_run_logged", pip_fails)
+    assert _run(spec)["state"] == "failed"
+    assert si._venv_python(si.managed_checkout(spec) / ".venv").is_file()
+    assert not si._healthy(spec)
+
+    # And the next run repairs it.
+    monkeypatch.setattr(si, "_run_logged", ok_run)
+    assert _run(spec)["state"] == "succeeded"
+    assert si._healthy(spec)

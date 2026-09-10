@@ -797,9 +797,13 @@ def _healthy(spec: SidecarSpec) -> bool:
         return False
     if not _venv_python(checkout / ".venv").is_file():
         return False
-    if spec.weights_repo_id and not _weights_present(spec):
-        return False
-    return True
+    if spec.weights_repo_id:
+        return _weights_present(spec)
+    # Nothing downloaded after the dependencies proves they finished; only
+    # the marker the import probe writes does. IndexTTS (weights) predates
+    # the marker and keeps its own check, so no existing install is asked
+    # to reinstall.
+    return (checkout / _INSTALL_COMPLETE_MARKER).is_file()
 
 
 def _persist(spec: SidecarSpec) -> None:
@@ -1012,6 +1016,10 @@ def _step_fetch_source(spec: SidecarSpec, job: dict) -> None:
 
 
 _SOURCE_REVISION_MARKER = ".voicestudio_source_revision"
+# Written once the import probe passes. For an engine with no weights
+# download, the venv interpreter existing proves nothing: a dependency
+# install that died halfway leaves one behind.
+_INSTALL_COMPLETE_MARKER = ".voicestudio_install_complete"
 
 
 def _source_layout_ok(spec: SidecarSpec, checkout: Path) -> bool:
@@ -1144,6 +1152,8 @@ def _step_install_deps(spec: SidecarSpec, job: dict) -> None:
     """
     checkout = managed_checkout(spec)
     py = _venv_python(checkout / ".venv")
+    # A reinstall that fails must not leave the previous run's marker.
+    (checkout / _INSTALL_COMPLETE_MARKER).unlink(missing_ok=True)
     uv = _locate_uv()
     _log(job, f"Installing {spec.display_name} into its venv (this can take several minutes) …")
     target = [_expand(arg, checkout) for arg in spec.install_args]
@@ -1199,6 +1209,7 @@ def _step_verify(spec: SidecarSpec, job: dict) -> None:
             "the engine docs.",
         )
     _job_step(job, "verify")["detail"] = f"import {spec.probe_module} OK"
+    (checkout / _INSTALL_COMPLETE_MARKER).write_text(f"{spec.probe_module}\n", encoding="utf-8")
     _log(job, "Venv verified.")
 
 

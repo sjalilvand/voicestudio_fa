@@ -56,8 +56,9 @@ for this model.
 - Output is 24 kHz mono.
 - Six languages, one model per language, chosen by the `language` you
   request; cloning takes a short reference clip.
-- Runs in a crash-isolated sidecar process (parent Python environment): a
-  wedged generation is hard-killed by a watchdog and its memory reclaimed —
+- Runs in a crash-isolated sidecar process: from its own environment after
+  a one-click install, otherwise from VoiceStudio's (where `uv sync --extra
+  pockettts` puts it). A wedged generation is hard-killed by a watchdog and its memory reclaimed —
   something an in-process engine cannot do.
 - The first use downloads the gated weights; the sidecar heartbeats
   progress during the download so the watchdog doesn't fire.
