@@ -82,6 +82,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Docs
 
+- Docker quick starts now explain the AMD64-only images and direct Apple Silicon users to the native macOS app (#1921) — thanks @yangfan-yf-yf!
 - audio.cpp (Breeze-TTS-2) is now a documented opt-in engine: prebuilt binary install, explicit GGUF download, voice modes, and the weights' research/non-commercial terms (#1891)
 
 ### Fixed
