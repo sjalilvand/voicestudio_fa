@@ -2496,6 +2496,7 @@
     "test_result": "Zal worden uitgesproken als:",
     "test_nochange": "Er komen geen overeenkomende vermeldingen overeen - gesproken zoals geschreven.",
     "test_inert": "Opgeslagen maar nog niet toegepast op deze engine: {{terms}}. IPA- en CMU-items worden opgeslagen en gevalideerd, maar alleen respelling wijzigt nu de uitgesproken tekst.",
+    "not_applied_badge": "Nog niet toegepast",
     "load_error": "Kan het uitspraakwoordenboek niet laden.",
     "save_error": "Kan die invoer niet opslaan.",
     "lang_label": "Taalcode (bijvoorbeeld en, de) of laat leeg voor Globaal",

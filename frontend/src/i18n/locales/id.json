@@ -2496,6 +2496,7 @@
     "test_result": "Akan diucapkan sebagai:",
     "test_nochange": "Tidak ada entri yang cocok — diucapkan seperti tertulis.",
     "test_inert": "Tersimpan tetapi belum diterapkan pada mesin ini: {{terms}}. Entri IPA dan CMU disimpan dan divalidasi, tetapi saat ini hanya respelling yang mengubah teks yang diucapkan.",
+    "not_applied_badge": "Belum diterapkan",
     "load_error": "Tidak dapat memuat kamus pengucapan.",
     "save_error": "Tidak dapat menyimpan entri itu.",
     "lang_label": "Kode bahasa (misalnya en, de) atau biarkan kosong untuk Global",
