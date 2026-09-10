@@ -13,6 +13,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - The Model Catalogue is one page: what you use now on top, then each family's engines and weights (#2013)
 - VoxCPM2 installs in one click into its own environment, with the CUDA build of PyTorch on NVIDIA GPUs (#2021)
 - MOSS-TTS-Nano installs in one click into its own environment, pinned to a reviewed upstream commit it works with (#2022)
+- CosyVoice 3 installs in one click into its own environment, with a trimmed dependency set that needs no TensorRT, DeepSpeed or third-party package feed (#2025)
 
 ### Changed
 
