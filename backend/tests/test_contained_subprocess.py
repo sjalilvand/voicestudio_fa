@@ -120,6 +120,7 @@ def test_drain_fd_is_explicitly_inherited_by_wrapper_but_not_operation(monkeypat
             proc.wait(timeout=5)
 
 
+@pytest.mark.skipif(os.name != "posix", reason="Unix drain pipe contract")
 def test_invalid_or_missing_desktop_drain_fd_fails_safe(monkeypatch):
     monkeypatch.setenv("OMNIVOICE_DESKTOP_CONTAINED", "1")
     monkeypatch.setenv("OMNIVOICE_DESKTOP_DRAIN_FD", "not-an-fd")
