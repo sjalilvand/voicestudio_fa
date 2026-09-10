@@ -670,7 +670,13 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
           // guessing for the rest of the run.
           if (!handoverDoneRef.current) {
             const seam = allLogsRef.current.slice(-5);
-            if (seam.some((l) => l.stage === s && l.line === line)) return;
+            // The attempt is part of the identity (#1900, CodeRabbit): the
+            // same stage and the same text from a DIFFERENT attempt is not a
+            // replay of a buffered line, it is this attempt's own evidence.
+            // Matching on stage+line alone dropped it, which can remove the
+            // only proof for a stage the poll never sampled.
+            if (seam.some((l) => l.attempt === (a ?? 0) && l.stage === s && l.line === line))
+              return;
             handoverDoneRef.current = true;
           }
           const entry = { attempt: a ?? 0, stage: s, line, t: Date.now() };

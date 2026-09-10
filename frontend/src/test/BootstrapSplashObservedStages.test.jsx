@@ -267,6 +267,44 @@ describe('BootstrapSplash — observed-stage tracking (#1894)', () => {
     );
   });
 
+  it('keeps a repeated line that belongs to a different attempt', async () => {
+    // CodeRabbit: the backfill→live seam is deduplicated on stage + text, and
+    // installer output repeats itself constantly. Across a restart the same
+    // stage and the same text is not a replayed line — it is the new attempt's
+    // own evidence, and dropping it can remove the only proof for a stage the
+    // poll never samples. The attempt is part of the identity.
+    window.__TAURI_INTERNALS__ = {};
+    const { invoke } = await import('@tauri-apps/api/core');
+    const { listen } = await import('@tauri-apps/api/event');
+    const handlers = {};
+    listen.mockImplementation(async (name, cb) => {
+      handlers[name] = cb;
+      return () => {};
+    });
+    // Attempt 1 already logged this exact line; it is in the backfill buffer.
+    invoke.mockImplementation(async (cmd) =>
+      cmd === 'get_bootstrap_logs'
+        ? [{ attempt: 1, stage: 'creating_venv', line: 'Creating virtualenv at .venv' }]
+        : null,
+    );
+
+    render(<BootstrapSplash stage="installing_deps" message={null} attempt={2} />);
+    await waitFor(() => expect(handlers['bootstrap-log']).toBeTypeOf('function'));
+
+    // Attempt 2 does the same work and says the same thing.
+    await act(async () => {
+      handlers['bootstrap-log']({
+        payload: { attempt: 2, stage: 'creating_venv', line: 'Creating virtualenv at .venv' },
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Creating Python virtual environment…').className).toMatch(
+        /text-fg-muted/,
+      );
+    });
+  });
+
   it('a log line from the previous attempt is not counted as this attempt evidence', async () => {
     // Log lines are the second evidence source, and the one that closes the
     // poll's blind spot — so they carry the attempt too. A `creating_venv`
