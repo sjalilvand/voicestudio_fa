@@ -9,6 +9,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- Quitting on Windows is no longer reported as a crash on the next launch (#1898)
 - Generating from a one-character input now says the input was too short, instead of quoting a convolution error (#1826)
 - First run asks about text size before the install, not after it (#1849)
 - Cloning without a reference clip now says so, instead of naming library parameters you cannot set (#1879)
