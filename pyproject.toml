@@ -37,7 +37,7 @@ dependencies = [
     "torch>=2.4",
     "torchaudio>=2.4",
     "torchvision>=0.19",
-    "transformers>=5.5.0",
+    "transformers>=5.10.0",
     "accelerate",
     "pydub",
     "gradio>=6.15.1",
@@ -202,7 +202,7 @@ dependencies = [
     # first-party hook, so the frozen build needs no spec changes beyond the
     # protobuf runtime already present transitively.
     "grpcio>=1.60",
-    "protobuf>=4.25",
+    "protobuf>=5.29.6",
 ]
 
 [project.optional-dependencies]
