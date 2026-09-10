@@ -355,7 +355,9 @@
     "hf_source_cli_label": "HuggingFace CLI",
     "hf_source_env_label": "Змінна середовища",
     "theme_auto": "Системний",
-    "theme_light": "Світла"
+    "theme_light": "Світла",
+    "reduce_motion": "Зменшити рух",
+    "reduce_motion_desc": "Зупиняє фонові анімації та переходи. Системне налаштування діє саме по собі; це доповнює його."
   },
   "bootstrap": {
     "title": "VoiceStudio",
