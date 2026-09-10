@@ -355,7 +355,9 @@
     "hf_source_cli_label": "HuggingFace CLI",
     "hf_source_env_label": "परिवेश चर",
     "theme_auto": "सिस्टम डिफ़ॉल्ट",
-    "theme_light": "लाइट"
+    "theme_light": "लाइट",
+    "reduce_motion": "गति कम करें",
+    "reduce_motion_desc": "पृष्ठभूमि एनिमेशन और ट्रांज़िशन रोकता है। आपकी सिस्टम सेटिंग स्वयं लागू रहती है; यह उसमें जुड़ता है।"
   },
   "bootstrap": {
     "title": "VoiceStudio",

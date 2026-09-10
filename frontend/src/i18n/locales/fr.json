@@ -355,7 +355,9 @@
     "hf_source_cli_label": "HuggingFace CLI",
     "hf_source_env_label": "Variable d’environnement",
     "theme_auto": "Auto (Système)",
-    "theme_light": "Clair"
+    "theme_light": "Clair",
+    "reduce_motion": "Réduire les animations",
+    "reduce_motion_desc": "Arrête les animations d’arrière-plan et les transitions. Le réglage système reste actif de son côté ; ceci s’y ajoute."
   },
   "bootstrap": {
     "title": "VoiceStudio",
