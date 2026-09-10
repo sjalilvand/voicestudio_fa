@@ -86,6 +86,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Docs
 
+- PowerShell Docker setup now generates the administrator key without requiring Python on the host (#1993) — thanks @yangfan-yf-yf!
 - Docker quick starts now explain the AMD64-only images and direct Apple Silicon users to the native macOS app (#1921) — thanks @yangfan-yf-yf!
 - audio.cpp (Breeze-TTS-2) is now a documented opt-in engine: prebuilt binary install, explicit GGUF download, voice modes, and the weights' research/non-commercial terms (#1891)
 - `docs/STRUCTURE.md` describes the tree as it is today, and a test now keeps its counts honest (#1981) — thanks @Dawcraft!
