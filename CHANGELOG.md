@@ -92,6 +92,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- The isolated backend test session passes on a stock Windows checkout, and CI now runs it there so it stays that way (#1990)
+
 - Windows contributors can run the test suite without Developer Mode: tests that create a symlink now skip instead of failing with `WinError 1314` (#1990)
 
 - Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1952)
