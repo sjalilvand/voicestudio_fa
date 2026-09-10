@@ -425,6 +425,19 @@ export default function PronunciationPanel() {
           )}
         </p>
       )}
+      {testOut?.inert_entries?.length > 0 && (
+        // IPA and CMU entries are validated and stored but not applied yet.
+        // Without this the panel said "no entries match" for a term that DOES
+        // match, which sent the user to re-type an entry that was already
+        // correct (#1949).
+        <p className="perfpanel__help" data-testid="pron-test-inert">
+          {t('pronunciation.test_inert', {
+            terms: testOut.inert_entries.map((e) => e.term).join(', '),
+            defaultValue:
+              'Stored but not applied yet on this engine: {{terms}}. IPA and CMU entries are saved and validated, but only Respelling changes the spoken text today.',
+          })}
+        </p>
+      )}
       {testError && (
         <p className="perfpanel__help" data-testid="pron-test-error">
           {t('pronunciation.test_error')}

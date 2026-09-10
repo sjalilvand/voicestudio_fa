@@ -2941,6 +2941,7 @@
     "test_placeholder": "输入一个句子来预览替换...",
     "test_result": "将被说成：",
     "test_nochange": "没有匹配的条目 — 口头与书面一致。",
+    "test_inert": "已保存但此引擎尚未应用：{{terms}}。IPA 和 CMU 条目会被保存并校验，但目前只有改写拼写会改变朗读文本。",
     "load_error": "无法加载发音词典。",
     "save_error": "无法保存该条目。",
     "lang_label": "语言代码（例如 en、de）或留空表示全局",
