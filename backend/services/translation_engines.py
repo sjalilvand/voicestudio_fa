@@ -17,6 +17,8 @@ from __future__ import annotations
 import asyncio
 import importlib
 import logging
+import functools
+import re
 import os
 import shutil
 import subprocess
@@ -91,6 +93,8 @@ REGISTRY: dict[str, dict] = {
         "probe_module": "openai",
         "category": "llm",
         "needs_key": True,
+        # A core dependency: Settings → LLM Providers uses it too.
+        "builtin": True,
         "notes": (
             "Uses the LLM provider you configure in Settings → LLM Providers "
             "(route it via the 'Dub translation' skill in Settings → LLM Skills): "
@@ -179,6 +183,65 @@ def list_engines() -> list[dict]:
             entry["configured_via"] = via
         out.append(entry)
     return out
+
+
+def _normalize(name: str) -> str:
+    """A distribution name in PEP 503 form (deep_translator == deep-translator)."""
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+@functools.lru_cache(maxsize=1)
+def _app_dependency_names() -> frozenset[str]:
+    """Distribution names VoiceStudio itself requires, normalized.
+
+    Read from the installed package metadata, so it follows the lockfile with
+    no second list to keep in step. Without metadata this guards nothing
+    rather than failing.
+    """
+    try:
+        from importlib.metadata import requires
+
+        reqs = requires("omnivoice") or []
+    except Exception:  # noqa: BLE001
+        return frozenset()
+    names = set()
+    for req in reqs:
+        if "extra ==" in req:
+            continue
+        names.add(_normalize(re.split(r"[\s;<>=!~\[@(]", req, maxsplit=1)[0]))
+    return frozenset(names)
+
+
+def uninstall_blocker(engine_id: str) -> "tuple[int, str] | None":
+    """Why removing this engine's package would break something, or None.
+
+    `pip uninstall` acts on the app's own environment. A package VoiceStudio
+    depends on (openai, argostranslate) would break the app, and a package
+    other translation engines share (deep_translator backs four) would break
+    those engines too.
+    """
+    entry = REGISTRY.get(engine_id)
+    pkg = entry.get("pip_package") if entry else None
+    if not pkg:
+        return None
+    if _normalize(pkg) in _app_dependency_names():
+        return 400, (
+            f"{entry['display_name']} uses {pkg}, which VoiceStudio itself "
+            "depends on. Uninstalling it would break the app."
+        )
+    sharing = [
+        other["display_name"]
+        for other_id, other in REGISTRY.items()
+        if other_id != engine_id
+        and other.get("pip_package")
+        and _normalize(other["pip_package"]) == _normalize(pkg)
+    ]
+    if sharing:
+        return 409, (
+            f"{entry['display_name']} shares {pkg} with {', '.join(sharing)}. "
+            "Uninstalling it would stop those working too."
+        )
+    return None
 
 
 def get_engine(engine_id: str) -> dict | None:

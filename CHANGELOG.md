@@ -9,6 +9,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- Uninstalling a translation engine no longer removes a package VoiceStudio or another engine still needs (#2019)
 - A pronunciation entry that is stored but not applied yet says so, instead of looking like it did not match (#1949)
 - A bare 500 report now names the backend error class, so two unrelated faults stop filing the same issue (#1773)
 - A rejected dubbing source language now names the code it rejected (#1960)
