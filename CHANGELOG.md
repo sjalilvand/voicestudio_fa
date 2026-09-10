@@ -9,6 +9,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- The first-run install log is kept on disk instead of vanishing with the setup screen (#1847)
 - `bun run desktop` reclaims port 3900 from a backend the app itself left running, instead of refusing to start (#1974)
 - A dictation shortcut another app already owns now says so, instead of silently doing nothing (#1858)
 - Quitting on Windows is no longer reported as a crash on the next launch (#1898)

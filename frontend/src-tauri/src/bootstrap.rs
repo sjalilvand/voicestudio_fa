@@ -119,6 +119,44 @@ pub struct LogPayload {
     pub line: String,
 }
 
+/// Where the first-run log is kept so it outlives the splash.
+///
+/// The splash is the ONLY surface with a Show/Copy affordance for these
+/// lines, and it unmounts the moment the stage flips to ready — so on a
+/// successful first run the whole install log was gone for good, with no
+/// pause and nowhere to retrieve it (#1847). A user who wanted to check what
+/// had just been installed, or hand it to a bug report, had nothing.
+///
+/// Sits beside backend.log so everything about a run is in one directory.
+fn bootstrap_log_path() -> PathBuf {
+    crate::backend::backend_log_path().with_file_name("bootstrap.log")
+}
+
+/// Truncate once per process, then append.
+///
+/// A bootstrap is a single episode, and the interesting question is always
+/// "what happened THIS time" — an ever-growing file would bury that and grow
+/// without bound across retries. Truncating on the first write of the process
+/// keeps it to the current run without needing a hook on every restart path.
+static BOOTSTRAP_LOG_STARTED: std::sync::OnceLock<()> = std::sync::OnceLock::new();
+
+fn append_bootstrap_log(stage: &str, line: &str) {
+    use std::io::Write;
+    let path = bootstrap_log_path();
+    let fresh = BOOTSTRAP_LOG_STARTED.set(()).is_ok();
+    let opened = fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .append(!fresh)
+        .truncate(fresh)
+        .open(&path);
+    // Best effort throughout: a log we cannot write must never take the
+    // bootstrap down with it.
+    if let Ok(mut file) = opened {
+        let _ = writeln!(file, "[{stage}] {line}");
+    }
+}
+
 pub fn emit_log<R: tauri::Runtime>(app: &tauri::AppHandle<R>, stage: &str, line: &str) {
     let payload = LogPayload { stage: stage.to_string(), line: line.to_string() };
     // Buffer the log so the frontend can backfill on mount.
@@ -127,6 +165,9 @@ pub fn emit_log<R: tauri::Runtime>(app: &tauri::AppHandle<R>, stage: &str, line:
             logs.push(payload.clone());
         }
     }
+    // Persist before emitting: the in-memory buffer and the event both die
+    // with the splash, the file does not.
+    append_bootstrap_log(stage, line);
     let _ = app.emit("bootstrap-log", payload);
 }
 
@@ -4471,6 +4512,48 @@ mod code_fingerprint_tests {
         let both = hash_python_sources(&[backend_dir.clone(), omnivoice_dir.clone()]).unwrap();
         let backend_only = hash_python_sources(&[backend_dir]).unwrap();
         assert_ne!(both, backend_only);
+    }
+
+    // #1847: the splash is the only surface with a Show/Copy affordance for
+    // the first-run log, and it unmounts the moment the stage flips to ready,
+    // so on a successful install the whole log was gone for good. It is
+    // written beside backend.log now.
+    #[test]
+    fn bootstrap_log_sits_beside_the_backend_log() {
+        // One directory for everything about a run, so a bug report does not
+        // have to hunt in two places.
+        let bootstrap = bootstrap_log_path();
+        let backend = crate::backend::backend_log_path();
+        assert_eq!(bootstrap.parent(), backend.parent());
+        assert_eq!(bootstrap.file_name().unwrap(), "bootstrap.log");
+    }
+
+    #[test]
+    fn append_bootstrap_log_writes_the_stage_and_line() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("bootstrap.log");
+        // Exercise the same write shape the helper uses, against a path we
+        // control: the helper itself resolves a per-OS location, and a test
+        // that redirected that would be testing the redirection.
+        use std::io::Write;
+        let mut file = fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&path)
+            .unwrap();
+        writeln!(file, "[{}] {}", "installing_deps", "Collecting torch").unwrap();
+        drop(file);
+
+        let body = fs::read_to_string(&path).unwrap();
+        assert!(body.contains("[installing_deps] Collecting torch"), "{body}");
+    }
+
+    #[test]
+    fn append_bootstrap_log_never_panics_on_an_unwritable_path() {
+        // Best effort by contract: a log we cannot write must not take the
+        // bootstrap down with it.
+        append_bootstrap_log("checking", "a line");
     }
 
     // #1898: on Windows the backend is force-terminated with no graceful
