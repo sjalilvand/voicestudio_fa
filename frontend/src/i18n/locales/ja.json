@@ -353,7 +353,9 @@
     "hf_token_not_checked": "未テスト",
     "hf_source_app_label": "VoiceStudio（暗号化済み、推奨）",
     "hf_source_cli_label": "HuggingFace CLI",
-    "hf_source_env_label": "環境変数"
+    "hf_source_env_label": "環境変数",
+    "reduce_motion": "視差効果を減らす",
+    "reduce_motion_desc": "背景アニメーションとトランジションを停止します。システム設定は単独で有効なままで、これはそれに加わります。"
   },
   "bootstrap": {
     "title": "VoiceStudio",

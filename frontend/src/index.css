@@ -7630,3 +7630,27 @@ button.dub-stepper__action:focus-visible {
   overflow-wrap: anywhere;
   color: white;
 }
+
+/* ── In-app reduced motion (#1857) ─────────────────────────────────────
+   Settings → Appearance → Reduce motion sets `data-motion="reduce"` on the
+   root. This is the same blanket rule the `prefers-reduced-motion` blocks
+   above apply piecemeal, expressed once: it cannot miss an animation the way
+   a per-component list can, and the header status dot is exactly what that
+   list missed.
+
+   Deliberately NOT merged into the media query. The OS preference must keep
+   working on its own, so a user whose system asks for reduced motion still
+   gets it with this toggle off. The two are additive; either one is enough.
+
+   0.01ms rather than 0: a zero duration skips the `animationend` /
+   `transitionend` events some components wait on, which strands them. A
+   duration this short is imperceptible but still fires. */
+[data-motion='reduce'],
+[data-motion='reduce'] *,
+[data-motion='reduce'] *::before,
+[data-motion='reduce'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

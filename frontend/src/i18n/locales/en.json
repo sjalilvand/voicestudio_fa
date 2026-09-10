@@ -956,7 +956,9 @@
     "generate_timeout_shadowed_badge": "Overridden externally",
     "generate_timeout_shadowed_note": "An environment variable outside VoiceStudio (shell, .env file, or container) is currently setting this — your saved value here is ignored until that variable is removed.",
     "generate_timeout_shadowed_toast": "Saved, but an environment variable outside VoiceStudio is currently setting this — it will keep being used until that variable is removed.",
-    "hf_token_not_checked": "Not tested"
+    "hf_token_not_checked": "Not tested",
+    "reduce_motion": "Reduce motion",
+    "reduce_motion_desc": "Stops background animation and transitions. Your system setting is honoured on its own; this adds to it."
   },
   "about": {
     "app": "App",

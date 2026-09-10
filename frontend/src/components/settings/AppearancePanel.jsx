@@ -94,6 +94,8 @@ export default function AppearancePanel() {
   const setTheme = useAppStore((s) => s.setTheme);
   const font = useAppStore((s) => s.font);
   const setFont = useAppStore((s) => s.setFont);
+  const reduceMotion = useAppStore((s) => s.reduceMotion);
+  const setReduceMotion = useAppStore((s) => s.setReduceMotion);
   const autoPlayPreview = useAppStore((s) => s.autoPlayPreview);
   const setAutoPlayPreview = useAppStore((s) => s.setAutoPlayPreview);
   const showHeaderLiveStats = useAppStore((s) => s.showHeaderLiveStats);
@@ -277,6 +279,21 @@ export default function AppearancePanel() {
             aria-label={t('settings.header_live_stats', {
               defaultValue: 'Show live system metrics in header',
             })}
+          />
+        }
+      />
+
+      <SettingRow
+        title={t('settings.reduce_motion', { defaultValue: 'Reduce motion' })}
+        subtitle={t('settings.reduce_motion_desc', {
+          defaultValue:
+            'Stops background animation and transitions. Your system setting is honoured on its own; this adds to it.',
+        })}
+        control={
+          <SettingsToggle
+            checked={reduceMotion}
+            onChange={setReduceMotion}
+            aria-label={t('settings.reduce_motion', { defaultValue: 'Reduce motion' })}
           />
         }
       />

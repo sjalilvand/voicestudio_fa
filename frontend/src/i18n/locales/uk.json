@@ -353,7 +353,9 @@
     "hf_token_not_checked": "Не перевірено",
     "hf_source_app_label": "VoiceStudio (зашифровано, рекомендовано)",
     "hf_source_cli_label": "HuggingFace CLI",
-    "hf_source_env_label": "Змінна середовища"
+    "hf_source_env_label": "Змінна середовища",
+    "reduce_motion": "Зменшити рух",
+    "reduce_motion_desc": "Зупиняє фонові анімації та переходи. Системне налаштування діє саме по собі; це доповнює його."
   },
   "bootstrap": {
     "title": "VoiceStudio",

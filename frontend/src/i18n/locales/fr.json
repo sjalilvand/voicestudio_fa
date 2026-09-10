@@ -353,7 +353,9 @@
     "hf_token_not_checked": "Non testé",
     "hf_source_app_label": "VoiceStudio (chiffré, recommandé)",
     "hf_source_cli_label": "HuggingFace CLI",
-    "hf_source_env_label": "Variable d’environnement"
+    "hf_source_env_label": "Variable d’environnement",
+    "reduce_motion": "Réduire les animations",
+    "reduce_motion_desc": "Arrête les animations d’arrière-plan et les transitions. Le réglage système reste actif de son côté ; ceci s’y ajoute."
   },
   "bootstrap": {
     "title": "VoiceStudio",

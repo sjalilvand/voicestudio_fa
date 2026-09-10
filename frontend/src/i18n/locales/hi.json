@@ -353,7 +353,9 @@
     "hf_token_not_checked": "परीक्षण नहीं हुआ",
     "hf_source_app_label": "VoiceStudio (एन्क्रिप्ट किया गया, अनुशंसित)",
     "hf_source_cli_label": "HuggingFace CLI",
-    "hf_source_env_label": "परिवेश चर"
+    "hf_source_env_label": "परिवेश चर",
+    "reduce_motion": "गति कम करें",
+    "reduce_motion_desc": "पृष्ठभूमि एनिमेशन और ट्रांज़िशन रोकता है। आपकी सिस्टम सेटिंग स्वयं लागू रहती है; यह उसमें जुड़ता है।"
   },
   "bootstrap": {
     "title": "VoiceStudio",

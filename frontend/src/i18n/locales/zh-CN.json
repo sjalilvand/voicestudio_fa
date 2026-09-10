@@ -840,7 +840,9 @@
     "generate_timeout_shadowed_badge": "已被外部覆盖",
     "generate_timeout_shadowed_note": "VoiceStudio 之外的一个环境变量（终端、.env 文件或容器）当前正在设置此值——在移除该变量之前，此处保存的值会被忽略。",
     "generate_timeout_shadowed_toast": "已保存，但 VoiceStudio 之外的一个环境变量当前正在设置此值——在移除该变量之前，将继续使用该值。",
-    "hf_token_not_checked": "未测试"
+    "hf_token_not_checked": "未测试",
+    "reduce_motion": "减少动效",
+    "reduce_motion_desc": "停止背景动画和过渡效果。系统设置本身仍然生效，此项在其基础上叠加。"
   },
   "about": {
     "app": "应用",
