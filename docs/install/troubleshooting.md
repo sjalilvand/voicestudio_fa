@@ -248,6 +248,70 @@ peak memory footprint that exceeds free VRAM. Windows-only quirk.
 
 **Linked issue:** [#65](https://github.com/debpalash/VoiceStudio/issues/65)
 
+## 5b. RTX 50-series (Blackwell, sm_120): backend crashes during `ml_imports`
+
+**Symptom:** on an RTX 5070 / 5070 Ti / 5080 / 5090, the backend never becomes
+ready. The desktop app sits on "starting backend", `/health` returns 503, and
+`/startup/progress` shows `ml_imports` active. From source you see `import
+torch` die with a native access violation rather than a Python traceback.
+
+**Cause:** VoiceStudio pins `torch 2.8.0`. That build carries no `sm_120`
+kernels, so on a Blackwell card the CUDA initializer faults inside the native
+library. This is not a VoiceStudio bug and no setting works around it — the
+wheel does not contain code for the GPU.
+
+**Fix:** move the whole torch trio to a build with `sm_120` kernels. They must
+move together — upgrading one past the ABI the others were built against gives
+you `RuntimeError: operator torchvision::nms does not exist`, which is the
+next section's problem instead.
+
+Edit **both** pin lists, keeping them identical:
+
+- `[tool.uv] constraint-dependencies` in `pyproject.toml`
+- `deploy/torch-constraints.txt`
+
+```
+torch==2.9.1
+torchaudio==2.9.1
+torchvision==0.24.1
+```
+
+Then relock and reinstall:
+
+```bash
+uv lock
+uv sync
+```
+
+Confirm the GPU is actually usable before relaunching:
+
+```bash
+uv run python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_capability())"
+```
+
+`True (12, 0)` means the kernels are there.
+
+**Why both files:** `constraint-dependencies` governs `uv sync` / `uv lock` /
+`uv run`, and `deploy/torch-constraints.txt` governs the `uv pip install`
+paths (Docker and the Colab notebook), which ignore project-level uv settings.
+`tests/test_torch_constraints_are_applied.py` fails if the two drift, so a
+one-sided edit is caught rather than shipped.
+
+**What you do not have to do:** `torchaudio 2.9` removed `set_audio_backend()`,
+which VoiceStudio used to call unguarded — that turned this upgrade into a
+different hard startup crash (`AttributeError` inside `ml_imports`). It is
+guarded now, so the upgrade path above is clean on a current checkout.
+
+**Keeping the change:** these are the repo's own pins, so a `git pull` that
+touches them will conflict or overwrite. Re-apply after updating until the
+default pin moves — the default cannot move for everyone until the newer torch
+is verified across the older GPUs VoiceStudio supports, since a build that adds
+`sm_120` can drop older architectures.
+
+**Linked issue:** [#1931](https://github.com/debpalash/VoiceStudio/issues/1931)
+— thanks to the reporter for the full diagnosis, including the verification
+commands above.
+
 ## 6. `uv venv` Python download fails (restricted network)
 
 **Symptom:** during first launch, `uv` exits with a network error pulling

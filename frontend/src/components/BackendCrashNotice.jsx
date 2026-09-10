@@ -6,6 +6,7 @@ import { Button, Dialog } from '../ui';
 import {
   acknowledgeBackendCrash,
   crashAge,
+  crashCauseHint,
   describeCrashExit,
   getUnacknowledgedBackendCrash,
   hasCrashEvidence,
@@ -77,6 +78,16 @@ export default function BackendCrashNotice() {
   // backend log instead; a real crash (exit code, signal, or a captured tail)
   // keeps the one-click path.
   const reportable = hasCrashEvidence(marker);
+  // What the exit code and the captured tail actually mean, and what to do
+  // about it (#1927). The classifier already knew — a native fault points at a
+  // GPU driver that disagrees with the bundled CUDA runtime, exit 78 at a port
+  // conflict, an import traceback at a half-built environment — but until now
+  // the only surface that showed it was a dropped stream. A user who opened
+  // this dialog after "Backend died (exit code -1073741819)" got a raw number,
+  // a timestamp and a log they cannot read, with nothing to try. A sentinel
+  // marker is excluded on purpose: it does not know a crash happened at all,
+  // so it has no cause to explain.
+  const cause = sentinel ? '' : crashCauseHint(marker);
 
   return (
     <>
@@ -156,6 +167,7 @@ export default function BackendCrashNotice() {
               ? t('crash.details_intro_unclean', { ago })
               : t('crash.details_intro', { exit, ago })}
           </p>
+          {cause && <p className="m-0 text-[length:var(--text-sm)] text-fg">{cause}</p>}
           {!reportable && (
             <p className="m-0 text-[length:var(--text-sm)] text-fg-muted">
               {t('crash.report_needs_log')}
