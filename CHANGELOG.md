@@ -94,6 +94,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- A remote-worker test no longer fails at random on Windows CI: it waited for a background thread by spinning the event loop that thread's work needed (#1990)
+
 - The isolated backend test session passes on a stock Windows checkout, and CI now runs it there so it stays that way (#1990)
 
 - Windows contributors can run the test suite without Developer Mode: tests that create a symlink now skip instead of failing with `WinError 1314` (#1990)
