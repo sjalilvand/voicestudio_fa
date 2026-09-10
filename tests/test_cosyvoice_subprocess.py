@@ -241,3 +241,14 @@ def test_wetext_uses_the_data_the_install_fetched(monkeypatch, tmp_path):
     sidecar._handle_synthesize({"text": "hi", "ref_audio": "/r.wav"}, io.BytesIO())
 
     assert wetext_module.snapshot_download("pengzhendong/wetext") == str(local)
+
+
+def test_a_missing_model_override_is_an_error_not_a_silent_swap(monkeypatch, tmp_path):
+    """Loading the installed model instead would speak with a model and voice
+    the user did not choose, while model_identity() still named theirs."""
+    calls = []
+    sidecar, _ = _load_sidecar(monkeypatch, tmp_path, calls)
+    monkeypatch.setenv("OMNIVOICE_COSYVOICE_MODEL", str(tmp_path / "moved-away"))
+    with pytest.raises(RuntimeError, match="OMNIVOICE_COSYVOICE_MODEL"):
+        sidecar._handle_synthesize({"text": "hi", "ref_audio": "/r.wav"}, io.BytesIO())
+    assert not any(c[0] == "load" for c in calls)

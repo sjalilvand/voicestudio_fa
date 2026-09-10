@@ -122,9 +122,18 @@ def _checkout() -> str:
 
 def _model_dir(checkout: str) -> str:
     override = os.environ.get("OMNIVOICE_COSYVOICE_MODEL")
-    if override and os.path.isdir(override):
-        return override
-    return os.path.join(checkout, *_MANAGED_MODEL_SUBDIR)
+    if not override:
+        return os.path.join(checkout, *_MANAGED_MODEL_SUBDIR)
+    if not os.path.isdir(override):
+        # Falling back to the installed model would synthesize with a model
+        # and voice the user did not choose, while model_identity() still
+        # named theirs. Say what is wrong instead.
+        raise RuntimeError(
+            f"OMNIVOICE_COSYVOICE_MODEL points at {override}, which is not a "
+            "folder. Point it at a CosyVoice model folder, or clear it to use "
+            "the model the one-click install downloaded."
+        )
+    return override
 
 
 def _use_installed_wetext(checkout: str) -> None:
