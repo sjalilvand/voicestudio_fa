@@ -14,11 +14,20 @@ cloning, and cinematic video dubbing — fully local, with no cloud API keys or 
 
 ![VoiceStudio — the open-source ElevenLabs alternative](https://raw.githubusercontent.com/debpalash/VoiceStudio/main/.github/assets/social-preview.png)
 
-VoiceStudio runs entirely on your own hardware (CUDA / MPS / ROCm / CPU
+VoiceStudio runs entirely on your own hardware (CUDA / ROCm / CPU
 auto-detect) — nothing is sent to the cloud. This image is the **headless
 web-server build**: a FastAPI backend serving a pre-built React UI over HTTP, so
-you can run it on a homelab box, a GPU server, or anywhere Docker runs and open
+you can run it on an AMD64 homelab box or GPU server and open
 the UI in a browser.
+
+**Architecture:** published images are **`linux/amd64` only**; there is no
+native ARM64 image. On Apple Silicon, use the
+[native macOS app](https://github.com/debpalash/VoiceStudio/blob/main/docs/install/macos.md)
+for Apple GPU acceleration; the Linux container cannot access the Mac's Apple
+GPU through MPS or MLX. Other ARM64 hosts need an AMD64 server or CPU emulation,
+which can be much slower. See the
+[architecture requirements](https://github.com/debpalash/VoiceStudio/blob/main/docs/install/docker.md#architecture)
+before pulling an image.
 
 > The Tauri desktop app's auto-updater and update-channel toggle are
 > **desktop-only** and do not apply to this image — to update, pull a newer tag
@@ -136,7 +145,7 @@ are mirrored on GHCR at
 - **📦 Batch Queue** — drop 50 videos and walk away; per-job progress.
 - **🤖 MCP Server** — drive VoiceStudio from Claude, Cursor, or any MCP client.
 - **🛡️ AI Watermark** — invisible AudioSeal (Meta) marking that survives compression.
-- **⚡ GPU Auto-Detect** — CUDA · MPS · ROCm · CPU, with auto-offload on ≤8 GB cards.
+- **⚡ GPU Auto-Detect** — CUDA · ROCm · CPU, with auto-offload on ≤8 GB cards.
 - **🧩 Extensible** — subclass `TTSBackend` to add any engine in ~50 lines.
 
 Multiple TTS engines ship out of the box (IndexTTS, CosyVoice, Supertonic-3, and

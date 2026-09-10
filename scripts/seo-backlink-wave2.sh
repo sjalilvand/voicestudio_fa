@@ -274,7 +274,7 @@ submit "Hacker News"                    "https://news.ycombinator.com/submitlink
 echo ""
 echo "${YELLOW}━━━ 12. Extended Wayback Machine Archives ━━━${NC}"
 EXTRA_PAGES=(
-  "https://github.com/debpalash/VoiceStudio/blob/main/STRUCTURE.md"
+  "https://github.com/debpalash/VoiceStudio/blob/main/docs/STRUCTURE.md"
   "https://github.com/debpalash/VoiceStudio/blob/main/LICENSE"
   "https://github.com/debpalash/VoiceStudio/graphs/contributors"
   "https://github.com/debpalash/VoiceStudio/network/dependents"
