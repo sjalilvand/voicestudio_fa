@@ -1046,7 +1046,7 @@ def test_cuda_index_is_added_only_for_cuda_pinned_specs_on_cuda_hosts(
     si._step_install_deps(spec, si._new_job(engine_id))
     pip = next(a for a in argvs if a[1:3] == ["pip", "install"])
     has_index = _PYTORCH_INDEX in pip
-    assert has_index == (spec.uses_cuda_index and family == "cuda")
+    assert has_index == (family == "cuda" and (spec.uses_cuda_index or bool(spec.torch_pins)))
     if has_index:
         i = pip.index("--extra-index-url")
         assert tuple(pip[i:i + len(UV_PIP_CU128_ARGS)]) == UV_PIP_CU128_ARGS
@@ -1090,11 +1090,11 @@ def test_verify_probe_runs_in_the_engines_venv_and_compiles(monkeypatch, engine_
 @pytest.mark.parametrize(
     ("family", "platform", "machine", "expected"),
     [
-        ("cuda", "linux", "x86_64", {"moss-tts-v15", "dots-tts", "pockettts"}),
-        ("cuda", "win32", "AMD64", {"moss-tts-v15", "pockettts"}),
-        ("cpu", "win32", "AMD64", {"pockettts"}),
-        ("mps", "darwin", "arm64", {"dots-tts", "pockettts"}),
-        # Intel Mac: PyTorch publishes no build PocketTTS can use.
+        ("cuda", "linux", "x86_64", {"moss-tts-v15", "dots-tts", "pockettts", "voxcpm2"}),
+        ("cuda", "win32", "AMD64", {"moss-tts-v15", "pockettts", "voxcpm2"}),
+        ("cpu", "win32", "AMD64", {"pockettts", "voxcpm2"}),
+        ("mps", "darwin", "arm64", {"dots-tts", "pockettts", "voxcpm2"}),
+        # Intel Mac: PyTorch publishes no build PocketTTS or VoxCPM2 can use.
         ("cpu", "darwin", "x86_64", {"dots-tts"}),
     ],
 )
@@ -1216,6 +1216,9 @@ def test_engine_venv_python_needs_a_real_interpreter(monkeypatch, tmp_path):
     py = si._venv_python(tmp_path / ".venv")
     py.parent.mkdir(parents=True)
     py.write_text("#!fake\n")
+    # An interpreter without the marker is a failed or unfinished install.
+    assert si.engine_venv_python("OMNIVOICE_FAKE_SIDE_DIR") is None
+    (tmp_path / si._INSTALL_COMPLETE_MARKER).write_text("x\n", encoding="utf-8")
     assert si.engine_venv_python("OMNIVOICE_FAKE_SIDE_DIR") == py
 
 
@@ -1287,3 +1290,34 @@ def test_a_failed_dependency_install_is_repaired_not_reported_installed(monkeypa
     monkeypatch.setattr(si, "_run_logged", ok_run)
     assert _run(spec)["state"] == "succeeded"
     assert si._healthy(spec)
+
+
+@pytest.mark.parametrize(
+    ("family", "platform", "suffix", "index"),
+    [
+        ("cuda", "win32", "+cu128", "https://download.pytorch.org/whl/cu128"),
+        ("cuda", "linux", "+cu128", "https://download.pytorch.org/whl/cu128"),
+        ("cpu", "win32", "+cpu", "https://download.pytorch.org/whl/cpu"),
+        ("rocm", "linux", "+cpu", "https://download.pytorch.org/whl/cpu"),
+        ("mps", "darwin", "", None),
+    ],
+)
+def test_torch_pins_follow_the_host(monkeypatch, family, platform, suffix, index):
+    """voxcpm leaves torch unpinned, and resolving it with the CUDA index
+    paired PyPI's newest torch (CPU-only on Windows) with a CUDA torchaudio.
+    The spec pins the pair; the host decides which build of it."""
+    spec = si.get_spec("voxcpm2")
+    assert spec.torch_pins
+    argvs = _capture_install_argvs(monkeypatch, family=family)
+    monkeypatch.setattr(si.sys, "platform", platform)
+
+    si._step_install_deps(spec, si._new_job("voxcpm2"))
+
+    pip = next(a for a in argvs if a[1:3] == ["pip", "install"])
+    for pin in spec.torch_pins:
+        assert f"{pin}{suffix}" in pip
+    if index:
+        assert pip.count("--extra-index-url") == 1
+        assert pip[pip.index("--extra-index-url") + 1] == index
+    else:
+        assert "--extra-index-url" not in pip

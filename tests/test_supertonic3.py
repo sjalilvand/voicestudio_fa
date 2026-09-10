@@ -389,7 +389,7 @@ def test_prefers_the_venv_its_one_click_install_made(monkeypatch, tmp_path, mock
     from pathlib import Path
 
     from engines.supertonic3.backend import Supertonic3Backend
-    from services.sidecar_install import _venv_python
+    from services.sidecar_install import _INSTALL_COMPLETE_MARKER, _venv_python
 
     mock_settings_store["supertonic3"] = True
     monkeypatch.delenv("OMNIVOICE_SUPERTONIC3_DIR", raising=False)
@@ -398,6 +398,7 @@ def test_prefers_the_venv_its_one_click_install_made(monkeypatch, tmp_path, mock
     py = _venv_python(tmp_path / ".venv")
     py.parent.mkdir(parents=True)
     py.write_text("#!fake\n")
+    (tmp_path / _INSTALL_COMPLETE_MARKER).write_text("x\n", encoding="utf-8")
     monkeypatch.setenv("OMNIVOICE_SUPERTONIC3_DIR", str(tmp_path))
     assert Supertonic3Backend.venv_python() == py
     # Available without supertonic importable in the app's own environment.
