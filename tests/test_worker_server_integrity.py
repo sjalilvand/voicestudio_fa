@@ -31,6 +31,12 @@ from worker.scheduler import Scheduler
 from worker.transport import codec, server as server_module
 from worker.transport.server import PROTOCOL_VERSION, REQUIRED_FEATURES, WorkerServicer
 
+# How long a test waits for a Control stream to finish ending. These waits
+# only prove the stream ends; the latency assertions stay at 0.2s. Ending
+# runs the real disconnect path, which persists every queued task, and on a
+# slow Windows runner the 64-task case took longer than the 2s it had.
+_CONTROL_EXIT_TIMEOUT_S = 10.0
+
 ENGINE, MODEL, OP = "indextts", "IndexTTS-2", "tts"
 
 
@@ -1464,7 +1470,7 @@ async def test_blocked_reconnect_persistence_does_not_stall_another_worker(
     assert not control.done()
 
     release[1].set()
-    await asyncio.wait_for(control, timeout=2)
+    await asyncio.wait_for(control, timeout=_CONTROL_EXIT_TIMEOUT_S)
 
 
 @pytest.mark.asyncio
@@ -1847,7 +1853,7 @@ async def test_revocation_wakes_and_ends_an_open_control_stream(plane):
 
     assert plane.servicer.revoke_worker_sessions(plane.worker_id) == 1
     plane.scheduler.on_disconnected(plane.worker_id)
-    await asyncio.wait_for(control, timeout=1)
+    await asyncio.wait_for(control, timeout=_CONTROL_EXIT_TIMEOUT_S)
 
     assert session.stream_open is False
     assert plane.pool.get(plane.worker_id) is None
@@ -1894,7 +1900,7 @@ async def test_revocation_cancels_an_assignment_already_blocked_in_control_write
     assert plane.servicer.revoke_worker_sessions(plane.worker_id) == 1
     plane.scheduler.on_disconnected(plane.worker_id)
     release_write.set()
-    await asyncio.wait_for(control, timeout=1)
+    await asyncio.wait_for(control, timeout=_CONTROL_EXIT_TIMEOUT_S)
 
     assert "assignment" not in written
     assert task.active_attempt is not None
