@@ -831,15 +831,22 @@ pub(crate) fn show_pill_noactivate(win: &tauri::WebviewWindow) {
 ///
 /// Split out so a test can pin the contract that the bug broke: Tauri's own
 /// `show` must run, and it must run FIRST. A native-only show is what left an
-/// empty pill window stranded on the desktop, and neither half can be dropped
-/// — so neither half can be dropped silently either.
+/// empty pill window stranded on the desktop.
+///
+/// And when Tauri's show FAILS, the native show must not run at all (Greptile).
+/// Showing it natively anyway puts an always-on-top window on screen that
+/// Tauri believes is hidden — the exact stranded-window bug, reached by a
+/// different door. A pill that does not appear is the lesser failure: the
+/// tray's red dot still says the user is being recorded, and nothing is left
+/// behind that cannot be removed.
 pub(crate) fn show_pill_noactivate_with<T, N>(show_tauri: T, show_native: N)
 where
     T: FnOnce() -> Result<(), String>,
     N: FnOnce() -> Result<(), String>,
 {
     if let Err(error) = show_tauri() {
-        log::warn!("pill: Tauri show failed, visibility state may drift: {error}");
+        log::warn!("pill: Tauri show failed; not showing it natively either, or it could never be hidden: {error}");
+        return;
     }
     if let Err(error) = show_native() {
         log::warn!("pill: non-activating show failed ({error}) (#982)");
@@ -879,10 +886,12 @@ mod pill_noactivate_tests {
     }
 
     #[test]
-    fn a_failing_tauri_show_still_puts_the_pill_on_screen() {
-        // Degrading to the old behaviour beats not showing the pill at all:
-        // the user can still see they are being recorded. The drift is logged
-        // rather than silent.
+    fn a_failing_tauri_show_does_not_fall_back_to_a_native_one() {
+        // Greptile: a native-only show after Tauri's show failed puts an
+        // always-on-top window on screen that Tauri believes is hidden, so
+        // neither dismiss() nor the idle reconcile can ever remove it — the
+        // stranded-window bug again. A pill that does not appear is the lesser
+        // failure; the tray's red dot still signals recording.
         let mut native_ran = false;
         show_pill_noactivate_with(
             || Err("no window".to_string()),
@@ -891,7 +900,7 @@ mod pill_noactivate_tests {
                 Ok(())
             },
         );
-        assert!(native_ran, "the pill must still appear when Tauri's show fails");
+        assert!(!native_ran, "a native show after a failed Tauri show strands an unhidable window");
     }
 
     #[test]
