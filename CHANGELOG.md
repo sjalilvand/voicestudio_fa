@@ -18,6 +18,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Changed
 
 - Model Catalogue is one page: a setup summary (speech, transcription, dictation, language model) on top, one TTS / ASR / LLM switch, and each family's downloadable weights listed under its engines; the separate Models pane and the Settings → Voice → Engines / Models signposts are gone, the models directory and voice previews moved to Settings → Storage and the HF mirror to Network (#2013)
+- CosyVoice 3 installs patched protobuf and transformers releases, clearing five security advisories (#2030, #2031)
 
 ### CI
 
