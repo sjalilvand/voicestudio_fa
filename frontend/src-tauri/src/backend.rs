@@ -416,6 +416,137 @@ pub fn free_port_or_report(port: u16) -> bool {
     false
 }
 
+/// Who is holding the port, as far as an HTTP request can tell (#1933).
+///
+/// The port-conflict failure used to assert "already in use by **another
+/// application**" without asking. That is wrong in the common case: the holder
+/// is usually the user's own orphaned backend from an earlier run, which has
+/// no window to quit — so the message sent them to close a copy of VoiceStudio
+/// they cannot see, and gave them nothing that would work.
+///
+/// The identity check already existed (`running_backend_version`, used to
+/// decide whether to attach to a healthy same-version backend, a far more
+/// consequential decision). It just was not consulted here.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PortHolder {
+    /// Nothing answered — either genuinely free, or a listener that accepts a
+    /// connection but does not respond in time.
+    Unknown,
+    /// A VoiceStudio backend, carrying the version it reports. Empty string
+    /// when it predates the `app_version` field.
+    OurBackend(String),
+    /// Something answered `/system/info` and it was not us.
+    Foreign,
+}
+
+/// Ask the listener on `port` who it is.
+///
+/// Stricter than `running_backend_version`, deliberately. That one accepts a
+/// `/system/info` body containing `model_checkpoint` or `data_dir` — a
+/// substring sniff, which is fine for deciding whether to ATTACH but not for
+/// deciding what to tell a user to kill. This answer ends in a message naming
+/// a process to end, so it requires the `x-omnivoice-backend` marker header
+/// that `backend/main.py` stamps on every response (CodeRabbit). A body alone
+/// can be served by anything; the header is what our backend actually asserts,
+/// and `startup_progress` already gates on it for the same reason.
+pub fn port_holder(port: u16) -> PortHolder {
+    if !port_in_use(port) {
+        return PortHolder::Unknown;
+    }
+    let url = format!("http://127.0.0.1:{}/system/info", port);
+    let Ok(resp) = raw_http_get(&url, Duration::from_millis(500)) else {
+        return PortHolder::Foreign;
+    };
+    let head_end = resp.find("
+
+").unwrap_or(resp.len());
+    if !resp[..head_end].to_ascii_lowercase().contains("x-omnivoice-backend") {
+        // Something is listening but it does not identify as VoiceStudio.
+        // That covers a genuinely foreign app AND one of ours too wedged to
+        // answer — `Foreign` is the conservative reading either way, since it
+        // is the one that never tells a user to kill what is not theirs.
+        return PortHolder::Foreign;
+    }
+    let body = &resp[resp.find("
+
+").map(|i| i + 4).unwrap_or(0)..];
+    if !is_omnivoice_body(body) {
+        return PortHolder::Foreign;
+    }
+    PortHolder::OurBackend(parse_app_version(body).unwrap_or_default())
+}
+
+/// How to find and end the listener on `port`, for the platform this build
+/// runs on. Offered only when the holder identified itself as our own backend.
+///
+/// Two steps, deliberately, and never a one-liner that pipes a lookup straight
+/// into `kill`. `lsof -ti tcp:PORT` matches *connected clients* as well as the
+/// listener, and Windows `findstr :3900` matches `:39001` and established
+/// connections too — so the convenient one-liner can end a process that merely
+/// talks to VoiceStudio, or one that has nothing to do with it. The identity
+/// `port_holder` established is a fact about the moment the message was
+/// written; by the time the user runs a command it has to be re-established,
+/// and only they can do that. So the first command shows exactly one listening
+/// process to look at, and the second ends that pid.
+fn reclaim_command(port: u16) -> String {
+    if cfg!(target_os = "windows") {
+        format!(
+            "Get-NetTCPConnection -LocalPort {port} -State Listen | \
+             Select-Object OwningProcess, @{{n='Name';e={{(Get-Process -Id \
+             $_.OwningProcess).ProcessName}}}}\n\n    \
+             ...then, once you have confirmed it is python or omnivoice:\n\n    \
+             Stop-Process -Id <OwningProcess>"
+        )
+    } else {
+        format!(
+            "lsof -nP -iTCP:{port} -sTCP:LISTEN\n\n    \
+             ...then, once you have confirmed the COMMAND is python or \
+             omnivoice:\n\n    kill <PID>"
+        )
+    }
+}
+
+/// What to tell the user when the port could not be freed.
+///
+/// Pure, so the three wordings are unit-tested without a listener.
+///
+/// Every branch must contain a phrase `BootstrapSplash.detectHints` matches
+/// ("port … in use"), because that is what turns this English Rust string into
+/// the LOCALISED `bootstrap.hint_port` the user actually reads. Pinned by
+/// `frontend/src/test/portInUseHint.test.js`.
+pub fn port_conflict_message(port: u16, holder: &PortHolder, suffix: &str) -> String {
+    let body = match holder {
+        PortHolder::OurBackend(version) if version.is_empty() || same_app_version(version) => {
+            format!(
+                "Port {port} is in use by a VoiceStudio backend from an earlier \
+                 session that never shut down. It has no window to quit, so \
+                 closing VoiceStudio will not release it. End it from a \
+                 terminal:\n\n    {}",
+                reclaim_command(port)
+            )
+        }
+        PortHolder::OurBackend(version) => {
+            format!(
+                "Port {port} is in use by a VoiceStudio backend from version \
+                 {version}, left running by an earlier install. This build is \
+                 {}, so it cannot use that one. Find and end it from a terminal:\n\n    {}",
+                env!("CARGO_PKG_VERSION"),
+                reclaim_command(port)
+            )
+        }
+        PortHolder::Foreign | PortHolder::Unknown => format!(
+            "Port {port} is already in use by another application, and \
+             VoiceStudio could not free it. Quit whatever is using that port \
+             and try again."
+        ),
+    };
+    if suffix.is_empty() {
+        body
+    } else {
+        format!("{body}\n\n{suffix}")
+    }
+}
+
 /// An HTTP response can justify attaching to a healthy same-version backend,
 /// but never grants process ownership. Deliberately refuse orphan cleanup:
 /// signalling a PID discovered through lsof/netstat has an unavoidable reuse
@@ -1645,6 +1776,160 @@ mod tests {
             rotated.exists(),
             "old evidence must survive rotation in the sibling file"
         );
+    }
+
+
+    // ── #1933: name who actually holds the port ───────────────────────────
+
+    #[test]
+    fn our_own_orphan_is_not_reported_as_another_application() {
+        // The report that opened #1933: the holder was the user's own backend
+        // from an earlier run, and the message told them to quit "another
+        // application" — then a copy of VoiceStudio with no window. Nothing in
+        // it would have worked.
+        let msg = port_conflict_message(
+            3900,
+            &PortHolder::OurBackend(env!("CARGO_PKG_VERSION").to_string()),
+            "",
+        );
+
+        assert!(msg.contains("VoiceStudio backend from an earlier session"), "{msg}");
+        assert!(!msg.contains("another application"), "{msg}");
+        // And a way out, not just a diagnosis.
+        assert!(msg.contains("terminal"), "{msg}");
+    }
+
+    #[test]
+    fn a_backend_from_another_version_is_named() {
+        let msg = port_conflict_message(3900, &PortHolder::OurBackend("0.1.0".into()), "");
+
+        assert!(msg.contains("0.1.0"), "the stale version is what identifies it: {msg}");
+        assert!(msg.contains(env!("CARGO_PKG_VERSION")), "{msg}");
+    }
+
+    #[test]
+    fn an_unidentified_listener_keeps_the_conservative_wording() {
+        // Never tell a user to go kill a process that may not be theirs.
+        for holder in [PortHolder::Foreign, PortHolder::Unknown] {
+            let msg = port_conflict_message(3900, &holder, "");
+            assert!(msg.contains("another application"), "{msg}");
+            assert!(!msg.contains("lsof"), "{msg}");
+            assert!(!msg.contains("Get-NetTCPConnection"), "{msg}");
+            assert!(!msg.contains("kill"), "{msg}");
+        }
+    }
+
+    /// A one-shot loopback responder: serves `response` verbatim to the first
+    /// connection, then stops. Enough to answer one `/system/info` probe.
+    fn serve_once(response: String) -> u16 {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            for stream in listener.incoming().take(2) {
+                let Ok(mut stream) = stream else { continue };
+                let mut scratch = [0u8; 1024];
+                let _ = stream.read(&mut scratch);
+                let _ = stream.write_all(response.as_bytes());
+                let _ = stream.flush();
+            }
+        });
+        port
+    }
+
+    #[test]
+    fn a_body_that_merely_looks_like_ours_is_not_treated_as_ours() {
+        // CodeRabbit: running_backend_version accepts a body containing
+        // "model_checkpoint" or "data_dir" — a substring sniff. Fine for
+        // deciding whether to ATTACH; not fine here, where the answer ends in
+        // a message naming a process for the user to kill. Anything can serve
+        // that body. Only our backend stamps x-omnivoice-backend.
+        let body = r#"{"model_checkpoint": "x", "data_dir": "/tmp", "app_version": "9.9.9"}"#;
+        let port = serve_once(format!(
+            "HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: {}
+
+{body}",
+            body.len()
+        ));
+
+        assert_eq!(
+            port_holder(port),
+            PortHolder::Foreign,
+            "an unmarked responder must never be named as our backend"
+        );
+        let msg = port_conflict_message(port, &port_holder(port), "");
+        assert!(!msg.contains("lsof"), "{msg}");
+        assert!(!msg.contains("Get-NetTCPConnection"), "{msg}");
+    }
+
+    #[test]
+    fn the_marker_header_is_what_identifies_our_backend() {
+        let body = r#"{"model_checkpoint": "x", "data_dir": "/tmp", "app_version": "9.9.9"}"#;
+        let port = serve_once(format!(
+            "HTTP/1.1 200 OK
+x-omnivoice-backend: 9.9.9
+Content-Length: {}
+
+{body}",
+            body.len()
+        ));
+
+        assert_eq!(port_holder(port), PortHolder::OurBackend("9.9.9".into()));
+    }
+
+    #[test]
+    fn the_reclaim_guidance_never_pipes_a_lookup_into_kill() {
+        // Greptile, security: the convenient one-liner does not preserve the
+        // identity `port_holder` established. `lsof -ti tcp:3900 | xargs kill`
+        // matches CONNECTED CLIENTS as well as the listener, and Windows
+        // `findstr :3900` matches `:39001` and established connections — so a
+        // user following it can end a process that merely talks to
+        // VoiceStudio, or one unrelated to it. The lookup has to be shown for
+        // a human to check before anything is signalled.
+        let guidance = reclaim_command(3900);
+
+        assert!(
+            !guidance.contains("| xargs kill") && !guidance.contains("|xargs kill"),
+            "a lookup piped straight into kill can end a process nobody identified: {guidance}"
+        );
+        // The listener, not every socket on the port.
+        if cfg!(target_os = "windows") {
+            assert!(guidance.contains("-State Listen"), "{guidance}");
+        } else {
+            assert!(guidance.contains("-sTCP:LISTEN"), "{guidance}");
+        }
+        // And a step where the user confirms what they found.
+        assert!(guidance.contains("confirmed"), "{guidance}");
+    }
+
+    #[test]
+    fn every_wording_still_triggers_the_localised_port_hint() {
+        // detectHints matches /port.*in use/i to swap this English string for
+        // the translated bootstrap.hint_port. An earlier draft of one of these
+        // said "is held by" and silently dropped the translation.
+        for holder in [
+            PortHolder::OurBackend(env!("CARGO_PKG_VERSION").to_string()),
+            PortHolder::OurBackend("0.1.0".into()),
+            PortHolder::Foreign,
+            PortHolder::Unknown,
+        ] {
+            let msg = port_conflict_message(3900, &holder, "").to_lowercase();
+            let port_at = msg.find("port").expect("no 'port' in the message");
+            assert!(
+                msg[port_at..].contains("in use"),
+                "detectHints will not match this, so the user loses the translated hint: {msg}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_caller_suffix_is_appended_not_substituted() {
+        let msg = port_conflict_message(3900, &PortHolder::Foreign, "so the backend can't restart.");
+
+        assert!(msg.contains("another application"), "{msg}");
+        assert!(msg.ends_with("so the backend can't restart."), "{msg}");
     }
 
     #[test]

@@ -1546,9 +1546,22 @@ fn port_conflict_is_named_as_a_port_conflict() {
     join_with_timeout(h, Duration::from_secs(30), "port conflict");
 
     let msg = t.failed_message().expect("stage must be Failed");
+    // The contract is the MATCHER, not one sentence. detectHints turns any
+    // message with "port … in use" into the localised `bootstrap.hint_port`,
+    // and pinning a literal instead made this test fail on a rewording that
+    // still matched perfectly well (#1933). The wording now depends on who
+    // holds the port; what must never change is that the matcher fires.
+    let lowered = msg.to_lowercase();
+    let port_at = lowered.find("port").unwrap_or_else(|| {
+        panic!("diagnosis does not mention a port at all, got: {msg}")
+    });
     assert!(
-        msg.contains("is already in use, so the backend could not"),
-        "diagnosis must carry the detectHints-matchable port phrasing, got: {msg}"
+        lowered[port_at..].contains("in use"),
+        "detectHints will not match this, so the user loses the localised port hint, got: {msg}"
+    );
+    assert!(
+        msg.contains(&app_lib::backend_port().to_string()),
+        "the diagnosis must name the port it is about, got: {msg}"
     );
     let store = t.markers();
     assert_eq!(store.markers.len(), 1, "one real death → one marker");
