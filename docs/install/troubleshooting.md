@@ -963,6 +963,28 @@ repair is required.
 
 **Linked issue:** [#1590](https://github.com/debpalash/VoiceStudio/issues/1590)
 
+
+## Reading the first-run install log after setup finishes
+
+The Activity panel on the first-run screen shows the install as it happens, and
+that screen closes the moment setup succeeds — so it is not where you go
+afterwards to check what was installed, or to attach the log to a bug report.
+
+The same lines are written to **`bootstrap.log`**, beside the backend logs:
+
+| Platform | Location |
+|---|---|
+| macOS | `~/Library/Logs/OmniVoice/bootstrap.log` |
+| Windows | `%LOCALAPPDATA%\OmniVoice\Logs\bootstrap.log` |
+| Linux | `~/.local/state/OmniVoice/bootstrap.log` |
+
+`OMNIVOICE_LOG_DIR` moves it, along with the other logs.
+
+It covers the current run only — it is truncated when a bootstrap starts, so a
+retry replaces the previous attempt rather than appending to it. If you need
+the log from an attempt that has already been superseded, copy it before
+retrying.
+
 ## RTX 50-series (Blackwell, `sm_120`): backend never starts
 
 **Symptom.** The desktop app stays on "starting backend", `/health` returns 503,
