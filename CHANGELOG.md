@@ -98,6 +98,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Windows contributors can run the test suite without Developer Mode: tests that create a symlink now skip instead of failing with `WinError 1314` (#1990)
 - The crash details dialog now says what the exit code means and what to try, instead of showing a raw number and a log (#1927)
+- A crash report now carries the backend's actual last words: the log tail is captured after the dying process's final output lands, not the instant it exits (#1850)
 - A port-3900 conflict now names who is actually holding it, and gives the command that ends an orphaned backend, instead of telling you to quit an app that has no window (#1933) — thanks @Chang-Jin-Lee!
 
 - Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1952)
