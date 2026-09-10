@@ -273,7 +273,19 @@ docker compose -f deploy/docker-compose.yml --profile rocm up -d
 > session before running the same two commands:
 >
 > ```powershell
-> $env:OMNIVOICE_API_KEY = python -c "import secrets; print(secrets.token_urlsafe(32))"
+> $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+> try {
+>     $keyBytes = New-Object byte[] 32
+>     $rng.GetBytes($keyBytes)
+>     # URL-safe, like the `secrets.token_urlsafe` the Bash line uses: the
+>     # key is also accepted as an `?api_key=` query parameter, where a
+>     # raw Base64 `+` decodes to a space and silently mismatches.
+>     $env:OMNIVOICE_API_KEY =
+>         [Convert]::ToBase64String($keyBytes).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+> }
+> finally {
+>     $rng.Dispose()
+> }
 > $env:DOCKER_DEFAULT_PLATFORM = 'linux/amd64'
 > docker compose -f deploy/docker-compose.yml --profile cpu pull
 > docker compose -f deploy/docker-compose.yml --profile cpu up -d
