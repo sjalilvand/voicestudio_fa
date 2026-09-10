@@ -563,8 +563,11 @@ def test_partial_install_is_not_already_installed(monkeypatch):
     py.write_text("#!fake\n")
     assert si._healthy(spec) is False
 
-    # Complete the weights (incl. the completion marker) → healthy flips true.
+    # Complete the weights (incl. the completion marker) and the install
+    # (the marker the import probe writes) → healthy flips true.
     _write_weights(checkout / spec.weights_subdir, complete=True)
+    assert si._healthy(spec) is False
+    (checkout / si._INSTALL_COMPLETE_MARKER).write_text("x\n", encoding="utf-8")
     assert si._healthy(spec) is True
 
 
@@ -678,6 +681,7 @@ def test_healthy_managed_install_reheals_lost_env_var(monkeypatch):
     py.parent.mkdir(parents=True)
     py.write_text("#!fake\n")
     _write_weights(checkout / spec.weights_subdir, complete=True)
+    (checkout / si._INSTALL_COMPLETE_MARKER).write_text("x\n", encoding="utf-8")
     prefs_written = {}
     monkeypatch.setattr("core.prefs.set_", lambda k, v: prefs_written.update({k: v}))
     assert "OMNIVOICE_FAKE_SIDE_DIR" not in os.environ
@@ -1090,12 +1094,12 @@ def test_verify_probe_runs_in_the_engines_venv_and_compiles(monkeypatch, engine_
 @pytest.mark.parametrize(
     ("family", "platform", "machine", "expected"),
     [
-        ("cuda", "linux", "x86_64", {"moss-tts-v15", "dots-tts", "pockettts", "voxcpm2", "moss-tts-nano"}),
-        ("cuda", "win32", "AMD64", {"moss-tts-v15", "pockettts", "voxcpm2", "moss-tts-nano"}),
-        ("cpu", "win32", "AMD64", {"pockettts", "voxcpm2", "moss-tts-nano"}),
-        ("mps", "darwin", "arm64", {"dots-tts", "pockettts", "voxcpm2", "moss-tts-nano"}),
-        # Intel Mac: PyTorch publishes no build PocketTTS, VoxCPM2 or
-        # MOSS-TTS-Nano can use.
+        ("cuda", "linux", "x86_64", {"moss-tts-v15", "dots-tts", "pockettts", "voxcpm2", "moss-tts-nano", "cosyvoice"}),
+        ("cuda", "win32", "AMD64", {"moss-tts-v15", "pockettts", "voxcpm2", "moss-tts-nano", "cosyvoice"}),
+        ("cpu", "win32", "AMD64", {"pockettts", "voxcpm2", "moss-tts-nano", "cosyvoice"}),
+        ("mps", "darwin", "arm64", {"dots-tts", "pockettts", "voxcpm2", "moss-tts-nano", "cosyvoice"}),
+        # Intel Mac: PyTorch publishes no build PocketTTS, VoxCPM2,
+        # MOSS-TTS-Nano or CosyVoice can use.
         ("cpu", "darwin", "x86_64", {"dots-tts"}),
     ],
 )
@@ -1227,6 +1231,8 @@ _UPSTREAM_ROOT_FILES = {
     "dots-tts": ("pyproject.toml", "README.md", "LICENSE", "constraints/recommended.txt"),
     "moss-tts-nano": ("pyproject.toml", "moss_tts_nano_runtime.py", "requirements.txt",
                       "README.md", "LICENSE"),
+    "cosyvoice": ("requirements.txt", "README.md", "LICENSE", "cosyvoice/cli/cosyvoice.py",
+                  "asset/zero_shot_prompt.wav"),
 }
 
 
@@ -1250,6 +1256,8 @@ def test_a_real_upstream_layout_passes_source_validation(monkeypatch, engine_id)
     monkeypatch.setattr(si.shutil, "which", lambda n: "/usr/bin/git" if n == "git" else None)
     monkeypatch.setattr(si, "_run_logged", fake_git)
     monkeypatch.setattr(si, "_fetch_tarball", no_tarball)
+    # Submodule trees come from their own tarballs; not what this test covers.
+    monkeypatch.setattr(si, "_ensure_extra_sources", lambda spec, job, checkout: None)
 
     job = si._new_job(engine_id)
     si._step_fetch_source(spec, job)
@@ -1321,3 +1329,126 @@ def test_torch_pins_follow_the_host(monkeypatch, family, platform, suffix, index
         assert pip[pip.index("--extra-index-url") + 1] == index
     else:
         assert "--extra-index-url" not in pip
+
+
+# ── Submodule trees, partial weights, and optional post-install data ──────
+
+
+def _submodule_tarball() -> bytes:
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+        data = b"x = 1\n"
+        info = tarfile.TarInfo("Sub-abc123/sub/__init__.py")
+        info.size = len(data)
+        tf.addfile(info, io.BytesIO(data))
+    return buf.getvalue()
+
+
+def test_a_submodule_tree_is_fetched_at_its_pinned_revision(monkeypatch):
+    """Neither a depth-1 clone nor GitHub's source tarball includes git
+    submodules, and CosyVoice imports Matcha-TTS from one."""
+    import httpx
+
+    extra = si.ExtraSource(
+        path="third_party/Sub", revision="abc123",
+        tarball_url="https://example.test/sub.tar.gz", required_path="sub/__init__.py",
+    )
+    spec = _mk_spec(extra_sources=(extra,))
+    urls = []
+
+    def fake_stream(method, url, **kw):
+        urls.append(url)
+        return _FakeStream(_submodule_tarball() if url == extra.tarball_url
+                           else _tarball_bytes("fake-side-main"))
+
+    monkeypatch.setattr(si.shutil, "which", lambda n: None)
+    monkeypatch.setattr(httpx, "stream", fake_stream)
+
+    si._step_fetch_source(spec, si._new_job(spec.engine_id))
+    sub = si.managed_checkout(spec) / "third_party" / "Sub"
+    assert (sub / "sub" / "__init__.py").is_file()
+    assert urls == [spec.tarball_url, extra.tarball_url]
+
+    # Present at the pinned revision: nothing is fetched again.
+    urls.clear()
+    si._step_fetch_source(spec, si._new_job(spec.engine_id))
+    assert urls == []
+
+    # At another revision: only the submodule is fetched again.
+    (sub / ".voicestudio_source_revision").write_text("old\n", encoding="utf-8")
+    si._step_fetch_source(spec, si._new_job(spec.engine_id))
+    assert urls == [extra.tarball_url]
+
+
+def test_only_the_listed_weight_files_are_downloaded(monkeypatch):
+    import huggingface_hub
+
+    spec = _mk_spec(
+        weights_repo_id="org/model", weights_revision="rev1", weights_subdir="w",
+        weights_config_names=("m.yaml",), weights_allow_patterns=("m.yaml", "llm.pt"),
+    )
+    seen = {}
+
+    def fake_snapshot(**kw):
+        seen.update(kw)
+        w = Path(kw["local_dir"])
+        w.mkdir(parents=True, exist_ok=True)
+        (w / "m.yaml").write_text("x")
+        (w / "llm.pt").write_bytes(b"\0" * (6 * 1024 * 1024))
+
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", fake_snapshot)
+    monkeypatch.setattr("services.endpoint_race.effective_endpoint", lambda: None)
+    monkeypatch.setattr("services.token_resolver.resolve", lambda: None)
+
+    si._step_fetch_weights(spec, si._new_job(spec.engine_id))
+
+    assert seen["allow_patterns"] == ["m.yaml", "llm.pt"]
+    assert si._weights_present(spec)
+
+
+def test_weights_from_an_earlier_run_do_not_prove_the_dependencies_finished():
+    spec = _mk_spec(weights_repo_id="org/model", weights_revision="r", weights_subdir="w",
+                    weights_config_names=("m.yaml",))
+    checkout = si.managed_checkout(spec)
+    py = si._venv_python(checkout / ".venv")
+    py.parent.mkdir(parents=True)
+    py.write_text("#!fake\n")
+    (checkout / "pyproject.toml").write_text("[project]\n")
+    w = checkout / "w"
+    w.mkdir()
+    (w / "m.yaml").write_text("x")
+    (w / "llm.pt").write_bytes(b"\0" * (6 * 1024 * 1024))
+    (w / si._WEIGHTS_COMPLETE_MARKER).write_text("org/model\nr\n0\n", encoding="utf-8")
+    assert si._weights_present(spec)
+    assert not si._healthy(spec)
+    (checkout / si._INSTALL_COMPLETE_MARKER).write_text("x\n", encoding="utf-8")
+    assert si._healthy(spec)
+    # IndexTTS predates the marker and keeps its weights-only check.
+    assert si.get_spec("indextts2").requires_install_marker is False
+
+
+def test_a_failed_post_install_fetch_does_not_fail_the_install(monkeypatch):
+    spec = _mk_spec(post_install_code="print({checkout_repr})")
+    checkout = si.managed_checkout(spec)
+    checkout.mkdir(parents=True)
+    ran = []
+
+    def fetch_fails(job, argv, *, timeout, env=None):
+        ran.append(argv)
+        return 1
+
+    _stub_verify_ok(monkeypatch)
+    monkeypatch.setattr(si, "_run_logged", fetch_fails)
+    job = si._new_job(spec.engine_id)
+
+    si._step_verify(spec, job)
+
+    assert ran and ran[0][1] == "-c" and repr(str(checkout)) in ran[0][2]
+    assert (checkout / si._INSTALL_COMPLETE_MARKER).is_file()
+    assert any("first synthesis" in line for line in job["log"])
+
+
+def test_cosyvoice_post_install_code_compiles_for_any_checkout_path():
+    spec = si.get_spec("cosyvoice")
+    compile(si._expand(spec.post_install_code, Path("C:/Program Files/x y/CosyVoice")),
+            "<post-install>", "exec")

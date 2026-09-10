@@ -1,0 +1,242 @@
+"""CosyVoice 3 from its own venv: the sidecar, its requirements, and the switch.
+
+The sidecar runs against a fake of upstream's `cosyvoice.cli.cosyvoice`, so
+these tests pin how each request maps onto upstream's inference calls,
+including the v3 system-prompt prefix upstream's own examples use.
+"""
+import importlib.util
+import io
+import json
+import re
+import struct
+import sys
+import types
+from pathlib import Path
+
+import pytest
+import torch
+
+_ROOT = Path(__file__).resolve().parents[1]
+_MAIN = _ROOT / "backend/engines/cosyvoice_subprocess/main.py"
+_REQUIREMENTS = _ROOT / "backend/engines/cosyvoice_subprocess/requirements.txt"
+PREFIX = "You are a helpful assistant.<|endofprompt|>"
+
+
+def _fake_model_class(name, calls, sample_rate=24000):
+    def method(kind):
+        def call(self, *args, **kwargs):
+            calls.append((kind, args, kwargs))
+            return iter([{"tts_speech": torch.full((1, 2400), 0.25)}])
+        return call
+
+    return type(name, (), {
+        "sample_rate": sample_rate,
+        "inference_instruct2": method("instruct2"),
+        "inference_zero_shot": method("zero_shot"),
+        "inference_cross_lingual": method("cross_lingual"),
+        "inference_sft": method("sft"),
+        "list_available_spks": lambda self: ["spk-a"],
+    })
+
+
+def _load_sidecar(monkeypatch, tmp_path, calls, *, model_class="CosyVoice3", sample_rate=24000):
+    checkout = tmp_path / "CosyVoice"
+    (checkout / "pretrained_models" / "Fun-CosyVoice3-0.5B").mkdir(parents=True)
+    (checkout / "asset").mkdir()
+    (checkout / "asset" / "zero_shot_prompt.wav").write_bytes(b"RIFF")
+    monkeypatch.setenv("OMNIVOICE_COSYVOICE_DIR", str(checkout))
+    monkeypatch.delenv("OMNIVOICE_COSYVOICE_MODEL", raising=False)
+
+    cls = _fake_model_class(model_class, calls, sample_rate)
+
+    def AutoModel(**kwargs):
+        calls.append(("load", (), kwargs))
+        return cls()
+
+    cli = types.ModuleType("cosyvoice.cli.cosyvoice")
+    cli.AutoModel = AutoModel
+    monkeypatch.setitem(sys.modules, "cosyvoice", types.ModuleType("cosyvoice"))
+    monkeypatch.setitem(sys.modules, "cosyvoice.cli", types.ModuleType("cosyvoice.cli"))
+    monkeypatch.setitem(sys.modules, "cosyvoice.cli.cosyvoice", cli)
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    spec = importlib.util.spec_from_file_location("_cosy_sidecar_under_test", _MAIN)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module, checkout
+
+
+def _frames(buf):
+    data, out, i = buf.getvalue(), [], 0
+    while i < len(data):
+        (n,) = struct.unpack("!I", data[i:i + 4])
+        out.append(json.loads(data[i + 4:i + 4 + n]))
+        i += 4 + n
+    return out
+
+
+def _last_call(calls):
+    return next(c for c in reversed(calls) if c[0] != "load")
+
+
+def test_loads_the_installed_weights_with_matcha_on_the_path(monkeypatch, tmp_path):
+    calls = []
+    sidecar, checkout = _load_sidecar(monkeypatch, tmp_path, calls)
+    out = io.BytesIO()
+    sidecar._handle_synthesize({"text": "hello", "ref_audio": str(tmp_path / "r.wav")}, out)
+    load = next(c for c in calls if c[0] == "load")
+    assert load[2]["model_dir"] == str(checkout / "pretrained_models" / "Fun-CosyVoice3-0.5B")
+    assert str(checkout / "third_party" / "Matcha-TTS") in sys.path
+    audio = _frames(out)[-1]
+    assert audio["op"] == "audio" and audio["sample_rate"] == 24000 and audio["n_samples"] == 2400
+
+
+def test_a_missing_model_folder_never_reaches_a_modelscope_download(monkeypatch, tmp_path):
+    calls = []
+    sidecar, checkout = _load_sidecar(monkeypatch, tmp_path, calls)
+    import shutil
+    shutil.rmtree(checkout / "pretrained_models")
+    with pytest.raises(RuntimeError, match="model folder is missing"):
+        sidecar._handle_synthesize({"text": "hi"}, io.BytesIO())
+    assert not any(c[0] == "load" for c in calls)
+
+
+def test_v3_zero_shot_prefixes_the_prompt_transcript(monkeypatch, tmp_path):
+    calls = []
+    sidecar, _ = _load_sidecar(monkeypatch, tmp_path, calls)
+    sidecar._handle_synthesize({"text": "hi", "ref_audio": "/r.wav", "ref_text": "hello there"}, io.BytesIO())
+    kind, args, _ = _last_call(calls)
+    assert kind == "zero_shot"
+    assert args == ("hi", PREFIX + "hello there", "/r.wav")
+
+
+def test_v3_instruct_uses_upstreams_system_prompt(monkeypatch, tmp_path):
+    calls = []
+    sidecar, _ = _load_sidecar(monkeypatch, tmp_path, calls)
+    sidecar._handle_synthesize({"text": "hi", "ref_audio": "/r.wav", "instruct": "Speak calmly."}, io.BytesIO())
+    kind, args, _ = _last_call(calls)
+    assert kind == "instruct2"
+    assert args == ("hi", "You are a helpful assistant. Speak calmly.<|endofprompt|>", "/r.wav")
+
+
+def test_v3_cross_lingual_prefixes_the_text_without_v2_language_tags(monkeypatch, tmp_path):
+    calls = []
+    sidecar, _ = _load_sidecar(monkeypatch, tmp_path, calls)
+    sidecar._handle_synthesize({"text": "hi", "ref_audio": "/r.wav", "language": "en"}, io.BytesIO())
+    kind, args, _ = _last_call(calls)
+    assert kind == "cross_lingual"
+    assert args == (PREFIX + "hi", "/r.wav")
+
+
+def test_v3_without_a_clip_speaks_in_upstreams_sample_voice(monkeypatch, tmp_path):
+    """CosyVoice 3 ships no built-in speakers."""
+    calls = []
+    sidecar, checkout = _load_sidecar(monkeypatch, tmp_path, calls)
+    sidecar._handle_synthesize({"text": "hi"}, io.BytesIO())
+    kind, args, _ = _last_call(calls)
+    assert kind == "cross_lingual"
+    assert args == (PREFIX + "hi", str(checkout / "asset" / "zero_shot_prompt.wav"))
+
+
+def test_a_v2_model_keeps_the_in_process_mapping(monkeypatch, tmp_path):
+    calls = []
+    sidecar, _ = _load_sidecar(monkeypatch, tmp_path, calls, model_class="CosyVoice2")
+    sidecar._handle_synthesize({"text": "hi", "ref_audio": "/r.wav", "language": "en"}, io.BytesIO())
+    assert _last_call(calls)[1] == ("<|en|>hi", "/r.wav")
+    sidecar._handle_synthesize({"text": "hi", "ref_audio": "/r.wav", "ref_text": "hello"}, io.BytesIO())
+    assert _last_call(calls)[1] == ("hi", "hello", "/r.wav")
+    sidecar._handle_synthesize({"text": "hi"}, io.BytesIO())
+    assert _last_call(calls)[:2] == ("sft", ("hi", "spk-a"))
+
+
+def test_a_model_folder_override_is_honoured(monkeypatch, tmp_path):
+    calls = []
+    sidecar, _ = _load_sidecar(monkeypatch, tmp_path, calls)
+    other = tmp_path / "my-model"
+    other.mkdir()
+    monkeypatch.setenv("OMNIVOICE_COSYVOICE_MODEL", str(other))
+    sidecar._handle_synthesize({"text": "hi", "ref_audio": "/r.wav"}, io.BytesIO())
+    assert next(c for c in calls if c[0] == "load")[2]["model_dir"] == str(other)
+
+
+def test_output_is_resampled_to_the_reported_rate(monkeypatch, tmp_path):
+    sidecar, _ = _load_sidecar(monkeypatch, tmp_path, [], sample_rate=48000)
+    out = io.BytesIO()
+    sidecar._handle_synthesize({"text": "hi", "ref_audio": "/r.wav"}, out)
+    assert _frames(out)[-1]["n_samples"] == 1200
+
+
+def test_rejects_a_url_reference(monkeypatch, tmp_path):
+    sidecar, _ = _load_sidecar(monkeypatch, tmp_path, [])
+    with pytest.raises(ValueError, match="local file path"):
+        sidecar._handle_synthesize({"text": "hi", "ref_audio": "https://x.test/a.wav"}, io.BytesIO())
+
+
+def test_the_sidecar_imports_nothing_from_the_app():
+    src = _MAIN.read_text(encoding="utf-8")
+    for name in ("services", "core", "engines", "api", "backend", "utils"):
+        assert not re.search(rf"^\s*(from|import) {name}\b", src, re.M), name
+
+
+def test_requirements_drop_what_the_one_click_install_must_not_pull():
+    """No third-party index, no Linux-only acceleration, no web UI stack, and
+    torch left to the installer's per-host pins."""
+    lines = [
+        line.split("#", 1)[0].strip()
+        for line in _REQUIREMENTS.read_text(encoding="utf-8").splitlines()
+    ]
+    reqs = [line for line in lines if line]
+    names = {re.split(r"[=<>!~ ;\[]", r, maxsplit=1)[0].lower() for r in reqs}
+    assert not any(r.startswith("-") for r in reqs), "no index or option lines"
+    for dropped in ("torch", "torchaudio", "deepspeed", "tensorrt-cu12", "onnxruntime-gpu",
+                    "fastapi", "gradio", "uvicorn", "grpcio", "tensorboard"):
+        assert dropped not in names, dropped
+    assert "openai-whisper==20250625" in reqs  # 20231117 cannot build
+    assert all("==" in r for r in reqs), "every requirement stays pinned"
+
+
+def test_the_class_switches_to_the_sidecar_once_its_venv_exists(monkeypatch, tmp_path):
+    from engines.cosyvoice_subprocess import CosyVoiceSubprocessBackend
+    from services import tts_backend
+    from services.sidecar_install import _venv_python
+
+    monkeypatch.setenv("OMNIVOICE_COSYVOICE_DIR", "")
+    monkeypatch.delenv("OMNIVOICE_COSYVOICE_DIR")
+    monkeypatch.delenv("OMNIVOICE_COSYVOICE_MODEL", raising=False)
+    assert tts_backend.get_backend_class("cosyvoice") is tts_backend.CosyVoiceBackend
+
+    py = _venv_python(tmp_path / ".venv")
+    py.parent.mkdir(parents=True)
+    py.write_text("#!fake\n")
+    monkeypatch.setenv("OMNIVOICE_COSYVOICE_DIR", str(tmp_path))
+
+    cls = tts_backend.get_backend_class("cosyvoice")
+    assert cls is CosyVoiceSubprocessBackend
+    assert cls.is_available() == (True, "ready")
+    for attr in ("id", "display_name", "gpu_compat"):
+        assert getattr(cls, attr) == getattr(tts_backend.CosyVoiceBackend, attr), attr
+    backend = cls()
+    assert backend.supported_languages == tts_backend.CosyVoiceBackend().supported_languages
+    assert backend.model_identity() == "Fun-CosyVoice3-0.5B"
+
+
+def test_wetext_uses_the_data_the_install_fetched(monkeypatch, tmp_path):
+    """wetext downloads its data from ModelScope on every Normalizer();
+    after an install that fetched it, the sidecar never goes online for it."""
+    calls = []
+    sidecar, checkout = _load_sidecar(monkeypatch, tmp_path, calls)
+    local = checkout / "pretrained_models" / "wetext"
+    local.mkdir(parents=True)
+
+    def online(*args, **kwargs):
+        raise AssertionError("went to ModelScope")
+
+    wetext_pkg = types.ModuleType("wetext")
+    wetext_module = types.ModuleType("wetext.wetext")
+    wetext_module.snapshot_download = online
+    wetext_pkg.wetext = wetext_module
+    monkeypatch.setitem(sys.modules, "wetext", wetext_pkg)
+    monkeypatch.setitem(sys.modules, "wetext.wetext", wetext_module)
+
+    sidecar._handle_synthesize({"text": "hi", "ref_audio": "/r.wav"}, io.BytesIO())
+
+    assert wetext_module.snapshot_download("pengzhendong/wetext") == str(local)

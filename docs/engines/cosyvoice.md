@@ -1,8 +1,9 @@
 # VoiceStudio: CosyVoice Engine
 
 CosyVoice is an optional multilingual TTS backend for zero-shot voice cloning
-and instructed speech. VoiceStudio currently exposes it as an in-process
-adapter rather than an isolated engine sidecar.
+and instructed speech. A one-click install runs it in its own
+environment and process; an existing source installation keeps
+running in-process.
 
 ## Downloaded weights and an available engine are different states
 
@@ -23,27 +24,44 @@ It then loads the directory named by `OMNIVOICE_COSYVOICE_MODEL`, or defaults
 to `pretrained_models/Fun-CosyVoice3-0.5B`. That path must resolve to the usable
 model directory, not only the parent Hugging Face cache directory.
 
-## Packaged builds
+## One-click install
 
-The current packaged app does not provide a one-click CosyVoice runtime
-installer. Downloading the model weights from Model Catalogue does not install
-the CosyVoice Python runtime or SoX. Re-downloading the weights will not repair
-a missing runtime.
+Click **Install** in **Model Catalogue → Engines → CosyVoice**. VoiceStudio
+gives CosyVoice its own folder under the data directory and its own Python
+3.10 environment, and runs it there in a separate process. The install:
 
-Do not install CosyVoice requirements into an unrelated Python environment.
-VoiceStudio will continue to report the engine unavailable because its backend
-cannot import packages from that environment.
+- clones a reviewed CosyVoice commit and the Matcha-TTS code it depends on;
+- downloads the CosyVoice 3 weights (about 5.4 GB);
+- fetches CosyVoice's text-normalisation data from ModelScope, where upstream
+  publishes it. If that fetch fails, the install still completes and
+  CosyVoice fetches the data on first use, as upstream does.
 
-Use **Model Catalogue > Engines > CosyVoice > Re-check** to inspect the runtime
-reason. If the row remains unavailable, use another engine that reports ready
-or collect the diagnostics below. The packaged release has no supported direct
-CosyVoice runtime installation path today.
+It differs from upstream's own setup:
+
+- **PyTorch 2.7.0.** The CUDA 12.8 build on an NVIDIA GPU, the CPU build on
+  other Windows and Linux machines, the regular build on Apple Silicon.
+  Upstream's 2.3.1 exists only for CUDA 12.1 and cannot run on RTX 50-series
+  GPUs.
+- **Leaner dependencies.** No TensorRT, DeepSpeed or GPU onnxruntime, and no
+  third-party package index. Upstream uses them for extra speed on Linux;
+  synthesis works without them. Nothing needs a compiler, and SoX is not
+  needed.
+- **Only the weights CosyVoice 3 loads.** Not the RL and TensorRT variants
+  that share its repository.
+
+Nothing it installs touches VoiceStudio itself or any other engine, and
+**Uninstall** in the same row removes only that folder. An existing source
+installation keeps working as it is. The button is not offered on Intel
+Macs, where PyTorch 2.7.0 has no build.
+
+CosyVoice 3 has no built-in voices. With no reference clip, it speaks in the
+voice of upstream's own sample prompt.
 
 ## Source builds and existing installations
 
 The upstream CosyVoice project recommends its own Python 3.10 Conda environment
-and SoX. VoiceStudio does not currently bridge that separate interpreter to its
-in-process adapter. Installing upstream dependency pins into VoiceStudio's
+and SoX. The one-click install above gives CosyVoice that separate
+environment. Installing upstream dependency pins into VoiceStudio's
 shared backend environment can also conflict with other engines.
 
 Existing source installations remain usable when the VoiceStudio backend's
