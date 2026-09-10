@@ -382,6 +382,41 @@ struct BackendStopError {
     restart_safe: bool,
 }
 
+/// Record a deliberate stop before the backend is force-terminated.
+///
+/// On Windows the shell terminates the job object with no graceful phase —
+/// a console-less GUI child has no reliable control event — so the backend
+/// never runs its lifespan shutdown and `run_sentinel.clear_sentinel()`
+/// never executes. Every deliberate quit therefore came back on the next
+/// launch as "The backend did not shut down cleanly last run — it likely
+/// crashed or was killed" (#1898). The backend-side fix in #1895 only helps
+/// platforms where teardown actually begins.
+///
+/// The process about to be killed cannot record its own intent, so the shell
+/// records it: retire the sentinel here, immediately before terminating.
+/// Anything that dies WITHOUT passing through this path still leaves its
+/// sentinel behind and is still reported as a crash, which is the property
+/// worth keeping.
+///
+/// Best effort by design. The data directory is read from the running
+/// backend, so if it cannot be reached the file stays and the next launch
+/// reports a crash — the same behaviour as before this change, never worse.
+fn retire_run_sentinel_at(dir: &std::path::Path) {
+    let path = dir.join("run_sentinel.json");
+    match std::fs::remove_file(&path) {
+        Ok(()) => log::info!("Retired run sentinel for a deliberate stop: {}", path.display()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => log::warn!("Could not retire {}: {error}", path.display()),
+    }
+}
+
+fn retire_run_sentinel(port: u16) {
+    match crate::backend::backend_data_dir(port) {
+        Some(dir) => retire_run_sentinel_at(std::path::Path::new(&dir)),
+        None => log::debug!("No advertised data dir; leaving run_sentinel.json in place"),
+    }
+}
+
 fn stop_backend_locked<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
 ) -> Result<(), BackendStopError> {
@@ -426,6 +461,9 @@ fn stop_backend_locked<R: tauri::Runtime>(
             // The unreaped root/process handle and containment handle move
             // together, closing PID-reuse and post-crash descendant races.
             log::info!("Stopping tracked backend tree (root pid {})", child.id());
+            // Before the kill, not after: on Windows the child gets no
+            // chance to clear this itself.
+            retire_run_sentinel(backend_port());
             crate::tools::terminate_process_tree(child, tree, Duration::from_secs(2)).err()
         }
         (None, None) => None,
@@ -4516,5 +4554,42 @@ mod code_fingerprint_tests {
         // Best effort by contract: a log we cannot write must not take the
         // bootstrap down with it.
         append_bootstrap_log("checking", "a line");
+    }
+
+    // #1898: on Windows the backend is force-terminated with no graceful
+    // phase, so it never clears its own run sentinel and every deliberate
+    // quit was reported as a crash on the next launch. The shell retires the
+    // sentinel instead, immediately before the kill.
+    #[test]
+    fn retire_run_sentinel_at_removes_the_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let sentinel = dir.path().join("run_sentinel.json");
+        fs::write(&sentinel, "{}").unwrap();
+
+        retire_run_sentinel_at(dir.path());
+
+        assert!(!sentinel.exists(), "a deliberate stop must retire the sentinel");
+    }
+
+    #[test]
+    fn retire_run_sentinel_at_is_quiet_when_there_is_nothing_to_retire() {
+        // A backend that already cleared it, or never wrote one. Must not
+        // panic or log an error on the ordinary path.
+        let dir = tempfile::tempdir().unwrap();
+        retire_run_sentinel_at(dir.path());
+    }
+
+    #[test]
+    fn retire_run_sentinel_leaves_the_file_when_the_backend_is_unreachable() {
+        // The crash record must survive when we cannot confirm where it
+        // lives: reporting a crash we are unsure about beats silently
+        // erasing evidence of a real one. Nothing listens on this port.
+        let dir = tempfile::tempdir().unwrap();
+        let sentinel = dir.path().join("run_sentinel.json");
+        fs::write(&sentinel, "{}").unwrap();
+
+        retire_run_sentinel(59_999);
+
+        assert!(sentinel.exists(), "an unreachable backend must not erase the sentinel");
     }
 }
