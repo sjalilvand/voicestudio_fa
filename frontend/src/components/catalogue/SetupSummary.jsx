@@ -39,6 +39,8 @@ export function summarizeFamily(family, familyData) {
   const name = entry?.display_name || active || null;
   if (!entry || entry.available === false) return { name, device: null, status: 'setup' };
   const routing = entry.routing_status;
+  // Installed but with no usable device path (select would be refused too).
+  if (routing === 'unavailable') return { name, device: null, status: 'setup' };
   const device =
     routing === 'n/a' ? 'remote' : DEVICE_LABEL[entry.effective_device] || entry.effective_device;
   return {
@@ -128,13 +130,24 @@ export default function SetupSummary({ onChange }) {
   const installRest = async () => {
     if (missing.length === 0) return;
     setInstalling(true);
-    try {
-      await Promise.all(missing.map((m) => installMutation.mutateAsync(m.repo_id)));
-      toast.success(t('models.started_downloading', { count: missing.length }));
-    } catch (e) {
-      toast.error(t('models.install_failed', { message: e?.message || e }));
-    } finally {
-      setInstalling(false);
+    // Every request settles before the button re-enables, so a single early
+    // rejection cannot re-arm the action while sibling installs are still in
+    // flight (which would let the same repo be requested twice).
+    const results = await Promise.allSettled(
+      missing.map((m) => installMutation.mutateAsync(m.repo_id)),
+    );
+    setInstalling(false);
+    const failed = results
+      .map((r, i) => (r.status === 'rejected' ? { repo: missing[i].repo_id, err: r.reason } : null))
+      .filter(Boolean);
+    const started = results.length - failed.length;
+    if (started > 0) toast.success(t('models.started_downloading', { count: started }));
+    if (failed.length > 0) {
+      toast.error(
+        t('models.install_failed', {
+          message: failed.map((f) => `${f.repo}: ${f.err?.message || f.err}`).join(' · '),
+        }),
+      );
     }
   };
 
@@ -158,7 +171,29 @@ export default function SetupSummary({ onChange }) {
               {row.label}
             </dt>
             <dd className="m-0 flex min-w-0 flex-1 flex-wrap items-center gap-x-[8px] text-sm text-muted-foreground">
-              {enginesQuery.isLoading && !engines && row.key !== 'dictation' ? (
+              {(row.key === 'dictation' ? dictationQuery : enginesQuery).isError ? (
+                // A failed fetch must not read as a valid state ("Off", "Needs
+                // setup"): say it failed and offer the retry right here.
+                <>
+                  <span className="text-destructive" data-testid={`setup-error-${row.key}`}>
+                    {t('engines.loadFailed', {
+                      message:
+                        (row.key === 'dictation' ? dictationQuery : enginesQuery).error?.message ||
+                        '',
+                    })}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      (row.key === 'dictation' ? dictationQuery : enginesQuery).refetch()
+                    }
+                    data-testid={`setup-retry-${row.key}`}
+                  >
+                    {t('engines.retry')}
+                  </Button>
+                </>
+              ) : enginesQuery.isLoading && !engines && row.key !== 'dictation' ? (
                 <span>{t('common.loading')}</span>
               ) : (
                 <>

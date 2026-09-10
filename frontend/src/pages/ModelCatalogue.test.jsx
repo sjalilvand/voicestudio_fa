@@ -78,11 +78,16 @@ describe('ModelCatalogue', () => {
     expect(screen.getByTestId('stub-weights')).toHaveTextContent('asr');
   });
 
-  it('LLM engines bring their own weights, so the weights block disappears', () => {
+  it('LLM engines bring their own weights, so the weights block hides — but stays mounted', () => {
     render(<ModelCatalogue />);
     fireEvent.click(screen.getByText('to-llm'));
     expect(screen.getByTestId('stub-engines')).toHaveTextContent('llm');
-    expect(screen.queryByTestId('stub-weights')).toBeNull();
+    // Hidden, not unmounted: the model store keeps its download-progress
+    // state across family switches instead of losing it mid-download.
+    expect(screen.getByTestId('catalogue-weights')).not.toBeVisible();
+    expect(screen.getByTestId('stub-weights')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('change-asr'));
+    expect(screen.getByTestId('catalogue-weights')).toBeVisible();
   });
 
   it('uses the wide workspace shell for data-heavy lists', () => {

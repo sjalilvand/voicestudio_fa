@@ -121,21 +121,23 @@ export default function ModelCatalogue() {
           <EnginesTab initialFamily={family} onFamilyChange={setFamily} catalogueLayout />
         </section>
 
-        {WEIGHT_FAMILIES.includes(family) && (
-          <section
-            data-testid="catalogue-weights"
-            aria-labelledby="catalogue-weights-title"
-            className="mt-[40px] min-w-0"
+        {/* Always mounted: ModelStoreTab owns the download-progress SSE state
+            (progress, errors with Retry/Dismiss), which would be lost if a
+            family switch unmounted it mid-download. LLM merely hides it. */}
+        <section
+          data-testid="catalogue-weights"
+          aria-labelledby="catalogue-weights-title"
+          className="mt-[40px] min-w-0"
+          hidden={!WEIGHT_FAMILIES.includes(family)}
+        >
+          <h2
+            id="catalogue-weights-title"
+            className="m-0 mb-[14px] px-[2px] text-[length:var(--text-lg)] font-semibold text-[color:var(--chrome-fg)]"
           >
-            <h2
-              id="catalogue-weights-title"
-              className="m-0 mb-[14px] px-[2px] text-[length:var(--text-lg)] font-semibold text-[color:var(--chrome-fg)]"
-            >
-              {t('catalogue.weights')}
-            </h2>
-            <ModelStoreTab key={family} family={family} />
-          </section>
-        )}
+            {t('catalogue.weights')}
+          </h2>
+          <ModelStoreTab family={family} />
+        </section>
 
         <footer
           data-testid="catalogue-storage"

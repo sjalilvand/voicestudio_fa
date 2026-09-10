@@ -379,7 +379,7 @@ export default function StorageUsagePanel() {
                     </span>
                     {cat.id === 'hf_cache' && (
                       <SmallButton
-                        onClick={() => openCatalogue()}
+                        onClick={() => openCatalogue('tts')}
                         title={t('settings.storage_manage_models_hint', {
                           defaultValue: 'Reclaim space by removing models in the Model Store',
                         })}

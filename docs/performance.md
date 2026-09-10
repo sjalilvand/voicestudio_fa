@@ -183,7 +183,7 @@ drain, or restart the backend, and then Flush.
   - **Unload all + flush** — the above **plus** fully unloads the resident
     TTS model. Frees the most memory; the next generation pays the ~8 s
     reload.
-- **Model Catalogue → Downloaded weights** — rows whose weights are resident right now show an
+- **Model Catalogue → Downloaded weights** (under the engine's family tab) — rows whose weights are resident right now show an
   "In memory" badge with the same per-model **Unload** button.
 
 **From a script** (the local API on port 3900), the same operations:

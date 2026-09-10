@@ -250,9 +250,16 @@ export const GROUPS = [
         labelKey: 'settings.network',
         defaultLabel: 'Network',
         icon: Wifi,
-        // Only the proxy lives here now (applies immediately) — the
-        // restart-bound FFmpeg override moved to Audio tools below.
-        keywords: ['network', 'proxy', 'http proxy', 'socks'],
+        // Proxy (applies immediately) and the HF download mirror (restart-bound).
+        keywords: [
+          'network',
+          'proxy',
+          'http proxy',
+          'socks',
+          'hugging face mirror',
+          'hf_endpoint',
+          'mirror',
+        ],
         keywordKeys: ['settings.proxy'],
       },
       {
@@ -265,9 +272,6 @@ export const GROUPS = [
         // settingsCategories.test.jsx like Models / Performance / Sharing.
         restart: true,
         keywords: [
-          'hugging face mirror',
-          'hf_endpoint',
-          'mirror',
           'ffmpeg',
           'ffprobe',
           'ffmpeg path',
@@ -426,6 +430,8 @@ export const DEFAULT_CATEGORY = 'appearance';
 export const LEGACY_TAB_MAP = {
   general: 'appearance',
   capture: 'dictation',
+  // The Models category (models directory, HF mirror pointer) folded into Storage.
+  models: 'storage',
 };
 
 /** Resolve any incoming tab/category id to a valid new category id. */

@@ -80,11 +80,11 @@ instead of that dedicated-VRAM floor.
    ```
 
    Alternatively set `OMNIVOICE_AUDIOCPP_DIR` to the directory containing it.
-3. Restart VoiceStudio, open **Model Catalogue → Downloaded weights**, find
+3. Restart VoiceStudio, open **Model Catalogue (TTS tab) → Downloaded weights**, find
    **Breeze-TTS-2 Q8_0 for audio.cpp**, review its research/non-commercial
    license note, and click **Install**. Generation never starts this ~4.73 GiB
    download automatically.
-4. Pick `audiocpp` in **Model Catalogue**. The server starts
+4. Pick `audiocpp` in **Model Catalogue** (TTS tab → **Use**). The server starts
    lazily on first generate (`server.json` + `server.log` live under the app
    data `audiocpp/` directory).
 
@@ -131,7 +131,7 @@ The managed loopback port may be taken. Check `server.log` next to
 
 ### `Breeze-TTS-2 ... not installed` or `package ... not completely installed`
 
-Install the model from **Model Catalogue → Downloaded weights**. If an interrupted install
+Install the model from **Model Catalogue (TTS tab) → Downloaded weights**. If an interrupted install
 left it incomplete, use **Reinstall** there. If the error persists after a
 complete reinstall, file an issue with the package listing.
 

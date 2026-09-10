@@ -277,16 +277,23 @@ export default function ModelStoreTab({ info, family = null }) {
       return;
     }
     setInstallingReco(true);
-    try {
-      // Parallel install — backend /models/install spawns each download on
-      // its own asyncio task so ordering doesn't matter.
-      await Promise.all(missing.map((m) => installMutation.mutateAsync(m.repo_id)));
-      toast.success(t('models.started_downloading', { count: missing.length }));
-    } catch (e) {
-      toast.error(t('models.install_failed', { message: e.message || e }));
-    } finally {
-      setInstallingReco(false);
-    }
+    // Parallel install — backend /models/install spawns each download on
+    // its own asyncio task so ordering doesn't matter. Every request settles
+    // before the buttons re-enable, so one early rejection can't re-arm them
+    // while sibling installs are still starting.
+    const results = await Promise.allSettled(
+      missing.map((m) => installMutation.mutateAsync(m.repo_id)),
+    );
+    setInstallingReco(false);
+    const failed = results.filter((r) => r.status === 'rejected');
+    if (results.length - failed.length > 0)
+      toast.success(t('models.started_downloading', { count: results.length - failed.length }));
+    if (failed.length > 0)
+      toast.error(
+        t('models.install_failed', {
+          message: failed.map((r) => r.reason?.message || r.reason).join(' · '),
+        }),
+      );
   };
 
   // The family's slice of the catalog (all of it when unscoped).

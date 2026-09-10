@@ -67,18 +67,23 @@ export default function RecoBanner({
                 size="sm"
                 onClick={async () => {
                   setInstallingReco(true);
-                  try {
-                    await Promise.all(
-                      requiredMissing.map((m) => installMutation.mutateAsync(m.repo_id)),
-                    );
+                  const results = await Promise.allSettled(
+                    requiredMissing.map((m) => installMutation.mutateAsync(m.repo_id)),
+                  );
+                  setInstallingReco(false);
+                  const failed = results.filter((r) => r.status === 'rejected');
+                  if (results.length - failed.length > 0)
                     toast.success(
-                      t('models.started_downloading_required', { count: requiredMissing.length }),
+                      t('models.started_downloading_required', {
+                        count: results.length - failed.length,
+                      }),
                     );
-                  } catch (e) {
-                    toast.error(t('models.install_failed', { message: e.message || e }));
-                  } finally {
-                    setInstallingReco(false);
-                  }
+                  if (failed.length > 0)
+                    toast.error(
+                      t('models.install_failed', {
+                        message: failed.map((r) => r.reason?.message || r.reason).join(' · '),
+                      }),
+                    );
                 }}
                 disabled={installingReco || anyRowActive}
                 leading={installingReco ? <RefreshCw size={12} className="spinner" /> : null}

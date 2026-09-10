@@ -782,7 +782,7 @@
     "configureProviders": "Cấu hình nhà cung cấp",
     "loading": "Đang tải động cơ…",
     "refresh": "Làm mới",
-    "matrixTitle": "Công cụ",
+    "matrixTitle": "Engine",
     "loadFailed": "Không tải được động cơ: {{message}}",
     "couldNotLoad": "Không thể tải động cơ: {{message}}",
     "retry": "Thử lại",

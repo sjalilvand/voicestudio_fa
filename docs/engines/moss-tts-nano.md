@@ -25,7 +25,7 @@ cd MOSS-TTS-Nano
 uv pip install -e .
 ```
 
-Then select the engine via **Model Catalogue** or
+Then select the engine via **Model Catalogue** (TTS tab → **Use**) or
 `OMNIVOICE_TTS_BACKEND=moss-tts-nano`.
 
 ## Model selection

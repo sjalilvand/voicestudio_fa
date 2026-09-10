@@ -33,6 +33,16 @@ describe('matchCategories — search matching', () => {
     expect(resolveCategoryId('general')).toBe('appearance');
   });
 
+  it('routes the moved panels: mirror searches open Network, models-directory searches open Storage', () => {
+    expect(CATEGORY_BY_ID.models).toBeUndefined();
+    expect(CATEGORY_BY_ID.engines).toBeUndefined();
+    expect(resolveCategoryId('models')).toBe('storage');
+    expect(matchCategories('mirror')).toContain('network');
+    expect(matchCategories('mirror')).not.toContain('audio-tools');
+    expect(matchCategories('hf_endpoint')).toEqual(['network']);
+    expect(matchCategories('models directory')).toContain('storage');
+  });
+
   it('uses the concise VoiceStudio API label', () => {
     expect(CATEGORY_BY_ID.openapi.defaultLabel).toBe('VoiceStudio API');
     expect(en.settings.openapi).toBe('VoiceStudio API');

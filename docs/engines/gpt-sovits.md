@@ -24,7 +24,7 @@ HTTP.
    python api_v2.py -a 127.0.0.1 -p 9880 -c GPT_SoVITS/configs/tts_infer.yaml
    ```
 
-2. Select the engine via **Model Catalogue** or
+2. Select the engine via **Model Catalogue** (TTS tab → **Use**) or
    `OMNIVOICE_TTS_BACKEND=gpt-sovits`.
 
 VoiceStudio marks the engine available only when the server responds

@@ -19,7 +19,7 @@ platforms never reports as available
 pip install mlx-audio
 ```
 
-Then select the engine via **Model Catalogue** or
+Then select the engine via **Model Catalogue** (TTS tab → **Use**) or
 `OMNIVOICE_TTS_BACKEND=mlx-audio`.
 
 ## Model selection

@@ -10,7 +10,7 @@ partials either way.
 ## Selecting it
 
 - Ensure `sherpa-onnx` is installed (`uv add sherpa-onnx` on source installs).
-- Pick a dictation model in the app (Model Catalogue → Downloaded weights lists the
+- Pick a dictation model in the app (Model Catalogue (ASR tab) → Downloaded weights lists the
   selectable set below), or **Model Catalogue**, ASR tab → **Use**, or
   pin `OMNIVOICE_ASR_BACKEND=sherpa-onnx-asr`.
 - `OMNIVOICE_SHERPA_ASR_MODEL` selects the model — default

@@ -782,7 +782,7 @@
     "configureProviders": "設定提供者",
     "loading": "正在載入引擎...",
     "refresh": "重新整理",
-    "matrixTitle": "配音引擎",
+    "matrixTitle": "引擎",
     "loadFailed": "無法載入引擎：{{message}}",
     "couldNotLoad": "無法載入引擎：{{message}}",
     "retry": "重試",

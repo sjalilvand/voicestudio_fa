@@ -30,7 +30,7 @@ TTS model directory.
    export OMNIVOICE_SHERPA_MODEL=/path/to/model-dir
    ```
 
-4. Select the engine via **Model Catalogue** or
+4. Select the engine via **Model Catalogue** (TTS tab → **Use**) or
    `OMNIVOICE_TTS_BACKEND=sherpa-onnx`.
 
 The directory must contain `model.onnx` and `tokens.txt`. Sherpa-ONNX ships

@@ -35,7 +35,7 @@ for this model.
    You also need HuggingFace access to the gated repo (see
    [downloading-models.md](../downloading-models.md) for token setup).
 
-3. Select the engine via **Model Catalogue** or
+3. Select the engine via **Model Catalogue** (TTS tab → **Use**) or
    `OMNIVOICE_TTS_BACKEND=pockettts`.
 
 ## Platform notes

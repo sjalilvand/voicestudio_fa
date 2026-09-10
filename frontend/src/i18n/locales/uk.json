@@ -782,7 +782,7 @@
     "configureProviders": "Налаштувати постачальників",
     "loading": "Завантаження двигунів…",
     "refresh": "Оновити",
-    "matrixTitle": "Движки",
+    "matrixTitle": "Рушії",
     "loadFailed": "Не вдалося завантажити двигуни: {{message}}",
     "couldNotLoad": "Не вдалося завантажити двигуни: {{message}}",
     "retry": "Повторіть спробу",

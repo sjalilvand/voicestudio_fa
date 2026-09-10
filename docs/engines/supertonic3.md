@@ -28,7 +28,7 @@ crashes and cold init never block the rest of VoiceStudio.
    unavailable until you review and accept in **Model Catalogue →
    Supertonic-3**.
 
-3. Select the engine via **Model Catalogue** or
+3. Select the engine via **Model Catalogue** (TTS tab → **Use**) or
    `OMNIVOICE_TTS_BACKEND=supertonic3`.
 
 The first synthesis cold-downloads ~400 MB of model weights, pinned to an

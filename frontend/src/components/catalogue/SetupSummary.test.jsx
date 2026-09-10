@@ -8,16 +8,25 @@ import i18n from '../../i18n';
 vi.mock('react-hot-toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 let enginesData = null;
+let enginesError = null;
+const enginesRefetch = vi.fn();
 let recoData = null;
 const installMutate = vi.fn().mockResolvedValue({});
 vi.mock('../../api/hooks', () => ({
-  useEngines: () => ({ data: enginesData, isLoading: false }),
+  useEngines: () => ({
+    data: enginesData,
+    isLoading: false,
+    isError: !!enginesError,
+    error: enginesError,
+    refetch: enginesRefetch,
+  }),
   useRecommendations: () => ({ data: recoData }),
   useInstallModel: () => ({ mutateAsync: installMutate }),
 }));
 vi.mock('../../api/client', () => ({ apiJson: vi.fn() }));
 
 import { apiJson } from '../../api/client';
+import { toast } from 'react-hot-toast';
 import { useAppStore } from '../../store';
 import SetupSummary, { summarizeDictation, summarizeFamily } from './SetupSummary';
 
@@ -74,6 +83,7 @@ describe('SetupSummary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     enginesData = ENGINES;
+    enginesError = null;
     recoData = null;
     apiJson.mockResolvedValue(DICTATION);
     useAppStore.setState({ dictationModelId: 'sherpa-whisper-tiny', dictationLoaded: true });
@@ -157,6 +167,55 @@ describe('SetupSummary', () => {
     expect(installMutate).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps Install the rest disabled until every request settles, then reports the failures', async () => {
+    recoData = {
+      device: { label: 'M2' },
+      all_installed: false,
+      download_gb_remaining: 3,
+      models: [
+        { repo_id: 'a/fails', installed: false, size_gb: 1 },
+        { repo_id: 'b/slow', installed: false, size_gb: 2 },
+      ],
+    };
+    let resolveSlow;
+    installMutate.mockImplementation((repo) =>
+      repo === 'a/fails'
+        ? Promise.reject(new Error('gated'))
+        : new Promise((resolve) => {
+            resolveSlow = resolve;
+          }),
+    );
+    mount();
+    const btn = screen.getByTestId('setup-install-rest');
+    fireEvent.click(btn);
+    // The first request rejected immediately; the second is still pending, so
+    // the action must stay disabled (a second click would re-request b/slow).
+    await waitFor(() => expect(installMutate).toHaveBeenCalledTimes(2));
+    await Promise.resolve();
+    expect(btn).toBeDisabled();
+    resolveSlow({});
+    await waitFor(() => expect(screen.getByTestId('setup-install-rest')).not.toBeDisabled());
+    expect(toast.success).toHaveBeenCalledWith(t('models.started_downloading', { count: 1 }));
+    expect(toast.error).toHaveBeenCalledWith(
+      t('models.install_failed', { message: 'a/fails: gated' }),
+    );
+  });
+
+  it('shows a failed engines fetch as an error with Retry, never as a configuration state', async () => {
+    enginesData = null;
+    enginesError = new Error('backend down');
+    apiJson.mockRejectedValue(new Error('dictation down'));
+    mount();
+    expect(screen.getByTestId('setup-error-speech')).toHaveTextContent(
+      t('engines.loadFailed', { message: 'backend down' }),
+    );
+    expect(screen.queryByTestId('setup-status-llm')).toBeNull();
+    fireEvent.click(screen.getByTestId('setup-retry-speech'));
+    expect(enginesRefetch).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.getByTestId('setup-error-dictation')).toBeInTheDocument());
+    expect(screen.queryByTestId('setup-status-dictation')).toBeNull();
+  });
+
   it('drops the install button once the preset is complete', () => {
     recoData = {
       device: { label: 'Apple M2 Pro' },
@@ -180,6 +239,22 @@ describe('summarizeFamily / summarizeDictation', () => {
       status: 'ready',
     });
     expect(summarizeFamily('asr', ENGINES.asr).status).toBe('cpu');
+    // Installed but with no usable device path: /engines says available
+    // with routing 'unavailable' (select would be refused) — not Ready.
+    expect(
+      summarizeFamily('tts', {
+        active: 'gpu-only',
+        backends: [
+          {
+            id: 'gpu-only',
+            display_name: 'GPU only',
+            available: true,
+            effective_device: 'cuda',
+            routing_status: 'unavailable',
+          },
+        ],
+      }),
+    ).toEqual({ name: 'GPU only', device: null, status: 'setup' });
     expect(summarizeFamily('llm', ENGINES.llm)).toEqual({
       name: null,
       device: null,

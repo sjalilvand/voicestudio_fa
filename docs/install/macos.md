@@ -157,7 +157,7 @@ without the quarantine step.
 - **Apple Silicon (M-series):** VoiceStudio automatically picks the `mlx-whisper`
   and `mlx-audio` backends where available — these use the Apple Neural Engine
   and Metal Performance Shaders for ~2× the throughput of the CPU path.
-  Installing the **Parakeet TDT v3 (MLX)** model from **Model Catalogue → Downloaded weights**
+  Installing the **Parakeet TDT v3 (MLX)** model from **Model Catalogue** (ASR tab → **Downloaded weights**)
   additionally makes dictation/capture prefer the `parakeet-mlx` engine
   (25 European languages, word timestamps, ~2 GB unified memory) — it is never
   downloaded without that explicit install, and it is only auto-preferred when
