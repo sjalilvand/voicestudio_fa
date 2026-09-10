@@ -493,13 +493,10 @@ fn stop_backend_locked<R: tauri::Runtime>(
     if crate::backend::port_in_use(backend_port())
         && !crate::backend::free_port_or_report(backend_port())
     {
+        // Ask who holds it before saying who holds it (#1933).
+        let holder = crate::backend::port_holder(backend_port());
         return Err(BackendStopError {
-            message: format!(
-                "Port {} is already in use by another application, and VoiceStudio \
-                 could not free it. Quit whatever is using that port (another copy \
-                 of VoiceStudio, or an app that claimed it) and try again.",
-                backend_port()
-            ),
+            message: crate::backend::port_conflict_message(backend_port(), &holder, ""),
             restart_safe: false,
         });
     }
@@ -926,13 +923,14 @@ fn spawn_backend_until_ready<R: tauri::Runtime>(
                     .and_then(|e| e.code)
                     .is_some_and(|c| c == crate::backend::EXIT_PORT_IN_USE)
                 {
-                    format!(
-                        "Port {} is already in use, so the backend could not \
-                         start. Another copy of VoiceStudio — or an app that \
-                         claimed that port — is holding it. Quit it and try \
-                         again; if nothing is visibly running, an orphaned \
-                         backend from a previous session still has the port.",
-                        backend_port()
+                    // Same question, same answer as the other two sites
+                    // (#1933): the holder is usually the user's own orphan,
+                    // and "another copy of VoiceStudio" is not something they
+                    // can quit.
+                    crate::backend::port_conflict_message(
+                        backend_port(),
+                        &crate::backend::port_holder(backend_port()),
+                        "",
                     )
                 } else if err_tail.is_empty() {
                     format!("Backend process exited ({}) — no error output captured", exit_info)
@@ -1567,21 +1565,17 @@ fn supervise_backend<R: tauri::Runtime>(
         if crate::backend::port_in_use(backend_port())
             && !crate::backend::free_port_or_report(backend_port())
         {
+            // Who is actually holding it decides the wording (#1933). The
+            // hint-matching contract lives with the message builder, which is
+            // unit-tested for it.
+            let holder = crate::backend::port_holder(backend_port());
             set_stage(
                 stage_handle,
                 BootstrapStage::Failed {
-                    // Wording note: every one of these must contain a phrase
-                    // `BootstrapSplash.detectHints` matches ("port … in use"),
-                    // because that is what turns an English Rust message into
-                    // the LOCALISED `bootstrap.hint_port` the user actually
-                    // reads. Pinned in frontend/src/test/portInUseHint.test.js
-                    // — an earlier draft of this one said "is held by" and
-                    // silently lost the translated guidance.
-                    message: format!(
-                        "Port {} is still in use by another application and \
-                         VoiceStudio could not free it, so the backend can't \
-                         restart. Quit whatever is using that port and relaunch.",
-                        backend_port()
+                    message: crate::backend::port_conflict_message(
+                        backend_port(),
+                        &holder,
+                        "The backend cannot restart until that port is free.",
                     ),
                 },
             );

@@ -81,31 +81,42 @@ describe('crashCauseHint — port conflict is not a memory problem (#1223)', () 
   });
 });
 
-describe('the Rust failure messages reach the localised hint (#1223)', () => {
-  // These are the two BootstrapStage::Failed messages bootstrap.rs emits when
-  // it cannot free the port. They are English (as every Rust-side failure
-  // message is), but they only need to be MATCHABLE: detectHints turns them
-  // into `bootstrap.hint_port`, which IS localised. If either message is
-  // reworded so the matcher misses it, the user loses the translated guidance
-  // — which is exactly the #1223 failure mode, one layer up.
+describe('the Rust failure messages reach the localised hint (#1223, #1933)', () => {
+  // Every port-conflict failure bootstrap.rs emits now comes from one builder,
+  // `backend::port_conflict_message`, which words it by WHO holds the port
+  // (#1933) — the user's own orphaned backend is not "another application",
+  // and telling them to quit a window that does not exist gave them nothing.
+  //
+  // These are English, as every Rust-side failure message is. They only need
+  // to be MATCHABLE: detectHints turns them into `bootstrap.hint_port`, which
+  // IS localised. A rewording the matcher misses costs the user the translated
+  // guidance — the #1223 failure mode, one layer up. The Rust side pins the
+  // same contract on the builder itself.
   it.each([
     [
-      'take-ownership',
+      'our own orphan',
+      'Port 3900 is in use by a VoiceStudio backend from an earlier session that never shut ' +
+        'down. It has no window to quit, so closing VoiceStudio will not release it. End it ' +
+        'from a terminal:\n\n    lsof -ti tcp:3900 | xargs kill',
+    ],
+    [
+      'a backend from another version',
+      'Port 3900 is in use by a VoiceStudio backend from version 0.1.0, left running by an ' +
+        'earlier install. This build is 0.5.2, so it cannot use that one. End it from a ' +
+        'terminal:\n\n    lsof -ti tcp:3900 | xargs kill',
+    ],
+    [
+      'an unidentified listener',
       'Port 3900 is already in use by another application, and VoiceStudio could not free it. ' +
-        'Quit whatever is using that port (another copy of VoiceStudio, or an app that claimed it) ' +
-        'and try again.',
+        'Quit whatever is using that port and try again.',
     ],
     [
-      'respawn',
-      'Port 3900 is still in use by another application and VoiceStudio could not free it, so the ' +
-        "backend can't restart. Quit whatever is using that port and relaunch.",
+      'with the respawn suffix',
+      'Port 3900 is already in use by another application, and VoiceStudio could not free it. ' +
+        'Quit whatever is using that port and try again.\n\nThe backend cannot restart until ' +
+        'that port is free.',
     ],
-    [
-      'early-exit',
-      'Port 3900 is already in use, so the backend could not start. Another copy of VoiceStudio — ' +
-        'or an app that claimed that port — is holding it.',
-    ],
-  ])('%s message maps to the localised port hint', (_which, message) => {
+  ])('%s maps to the localised port hint', (_which, message) => {
     expect(detectHints(message)).toContain('bootstrap.hint_port');
   });
 });
