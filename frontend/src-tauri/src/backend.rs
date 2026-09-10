@@ -439,20 +439,41 @@ pub enum PortHolder {
     Foreign,
 }
 
-/// Ask the listener on `port` who it is. One HTTP request, the same one
-/// `running_backend_version` makes.
+/// Ask the listener on `port` who it is.
+///
+/// Stricter than `running_backend_version`, deliberately. That one accepts a
+/// `/system/info` body containing `model_checkpoint` or `data_dir` — a
+/// substring sniff, which is fine for deciding whether to ATTACH but not for
+/// deciding what to tell a user to kill. This answer ends in a message naming
+/// a process to end, so it requires the `x-omnivoice-backend` marker header
+/// that `backend/main.py` stamps on every response (CodeRabbit). A body alone
+/// can be served by anything; the header is what our backend actually asserts,
+/// and `startup_progress` already gates on it for the same reason.
 pub fn port_holder(port: u16) -> PortHolder {
     if !port_in_use(port) {
         return PortHolder::Unknown;
     }
-    match running_backend_version(port) {
-        Some(version) => PortHolder::OurBackend(version),
-        // Something is listening but it does not answer as VoiceStudio. That
-        // covers both a genuinely foreign app and one of ours too wedged to
-        // reply — `Foreign` is the conservative reading, since it is the one
-        // that never tells the user to go kill a process that is not theirs.
-        None => PortHolder::Foreign,
+    let url = format!("http://127.0.0.1:{}/system/info", port);
+    let Ok(resp) = raw_http_get(&url, Duration::from_millis(500)) else {
+        return PortHolder::Foreign;
+    };
+    let head_end = resp.find("
+
+").unwrap_or(resp.len());
+    if !resp[..head_end].to_ascii_lowercase().contains("x-omnivoice-backend") {
+        // Something is listening but it does not identify as VoiceStudio.
+        // That covers a genuinely foreign app AND one of ours too wedged to
+        // answer — `Foreign` is the conservative reading either way, since it
+        // is the one that never tells a user to kill what is not theirs.
+        return PortHolder::Foreign;
     }
+    let body = &resp[resp.find("
+
+").map(|i| i + 4).unwrap_or(0)..];
+    if !is_omnivoice_body(body) {
+        return PortHolder::Foreign;
+    }
+    PortHolder::OurBackend(parse_app_version(body).unwrap_or_default())
 }
 
 /// How to find and end the listener on `port`, for the platform this build
@@ -1677,6 +1698,66 @@ mod tests {
             assert!(!msg.contains("Get-NetTCPConnection"), "{msg}");
             assert!(!msg.contains("kill"), "{msg}");
         }
+    }
+
+    /// A one-shot loopback responder: serves `response` verbatim to the first
+    /// connection, then stops. Enough to answer one `/system/info` probe.
+    fn serve_once(response: String) -> u16 {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            for stream in listener.incoming().take(2) {
+                let Ok(mut stream) = stream else { continue };
+                let mut scratch = [0u8; 1024];
+                let _ = stream.read(&mut scratch);
+                let _ = stream.write_all(response.as_bytes());
+                let _ = stream.flush();
+            }
+        });
+        port
+    }
+
+    #[test]
+    fn a_body_that_merely_looks_like_ours_is_not_treated_as_ours() {
+        // CodeRabbit: running_backend_version accepts a body containing
+        // "model_checkpoint" or "data_dir" — a substring sniff. Fine for
+        // deciding whether to ATTACH; not fine here, where the answer ends in
+        // a message naming a process for the user to kill. Anything can serve
+        // that body. Only our backend stamps x-omnivoice-backend.
+        let body = r#"{"model_checkpoint": "x", "data_dir": "/tmp", "app_version": "9.9.9"}"#;
+        let port = serve_once(format!(
+            "HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: {}
+
+{body}",
+            body.len()
+        ));
+
+        assert_eq!(
+            port_holder(port),
+            PortHolder::Foreign,
+            "an unmarked responder must never be named as our backend"
+        );
+        let msg = port_conflict_message(port, &port_holder(port), "");
+        assert!(!msg.contains("lsof"), "{msg}");
+        assert!(!msg.contains("Get-NetTCPConnection"), "{msg}");
+    }
+
+    #[test]
+    fn the_marker_header_is_what_identifies_our_backend() {
+        let body = r#"{"model_checkpoint": "x", "data_dir": "/tmp", "app_version": "9.9.9"}"#;
+        let port = serve_once(format!(
+            "HTTP/1.1 200 OK
+x-omnivoice-backend: 9.9.9
+Content-Length: {}
+
+{body}",
+            body.len()
+        ));
+
+        assert_eq!(port_holder(port), PortHolder::OurBackend("9.9.9".into()));
     }
 
     #[test]
