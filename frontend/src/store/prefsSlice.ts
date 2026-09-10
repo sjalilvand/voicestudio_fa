@@ -269,6 +269,20 @@ export interface PrefsSlice {
   langPromptSeen: boolean;
   setLangPromptSeen: (seen: boolean) => void;
 
+  /**
+   * Force reduced motion regardless of the OS setting.
+   *
+   * The CSS already honours `prefers-reduced-motion` in a dozen places, but
+   * that is the OS switch and nothing else. Someone who wants a calm app
+   * without turning motion off system-wide had no way to ask for it, and
+   * someone whose OS setting is not respected by their environment had no
+   * recourse at all (#1857). This is additive: the media query still applies
+   * on its own, so turning this off never re-enables motion for a user whose
+   * OS asked for less.
+   */
+  reduceMotion: boolean;
+  setReduceMotion: (on: boolean) => void;
+
   theme: ThemeId;
   setTheme: (id: ThemeId) => void;
 
@@ -418,6 +432,16 @@ export const createPrefsSlice: StateCreator<PrefsSlice, [], [], PrefsSlice> = (s
   localeChosen: false,
   langPromptSeen: false,
   setLangPromptSeen: (seen) => set({ langPromptSeen: seen }),
+
+  reduceMotion: false,
+  setReduceMotion: (on) => {
+    set({ reduceMotion: on });
+    if (on) {
+      document.documentElement.setAttribute('data-motion', 'reduce');
+    } else {
+      document.documentElement.removeAttribute('data-motion');
+    }
+  },
 
   theme: 'gruvbox',
   setTheme: (id) => {

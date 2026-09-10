@@ -188,6 +188,7 @@ function App() {
 
   const locale = useAppStore((s) => s.locale);
   const font = useAppStore((s) => s.font);
+  const reduceMotion = useAppStore((s) => s.reduceMotion);
 
   // Hydrate the theme, locale & font so persisted preferences take effect after
   // zustand persist rehydrates (async from localStorage) and when the user
@@ -198,6 +199,14 @@ function App() {
     } else {
       document.documentElement.removeAttribute('data-theme');
     }
+    // Same reason as the theme above: a persisted preference has to be
+    // re-applied after zustand rehydrates, or the toggle reads as on while
+    // the app animates (#1857).
+    if (reduceMotion) {
+      document.documentElement.setAttribute('data-motion', 'reduce');
+    } else {
+      document.documentElement.removeAttribute('data-motion');
+    }
     if (locale) {
       i18n.changeLanguage(locale);
     }
@@ -206,7 +215,7 @@ function App() {
     const fontStack = FONT_STACKS[font];
     if (fontStack) document.documentElement.style.setProperty('--font-sans', fontStack);
     else document.documentElement.style.removeProperty('--font-sans');
-  }, [locale, theme, font]);
+  }, [locale, theme, font, reduceMotion]);
   const mode = useAppStore((s) => s.mode);
   const setMode = useAppStore((s) => s.setMode);
   // "Define voice" method inside the Voice (studio) workspace — replaces the
