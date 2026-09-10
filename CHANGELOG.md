@@ -98,6 +98,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- One-click engine installs no longer inherit VoiceStudio's own PyTorch pin, which made MOSS-TTS-v1.5 and Confucius4 impossible to install (#2024)
 - Uninstalling a translation engine no longer removes a package VoiceStudio or another engine still needs (#2019)
 - Closing the dictation pill on Windows removes it from the screen: an empty dark rectangle used to stay there, always on top, until the app was quit (#2009)
 - The dictation pill on Windows no longer sits inside a bordered card wider than the pill itself (#2009)
