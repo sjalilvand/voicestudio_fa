@@ -11,6 +11,7 @@ the frozen-backend fallback mirror it for their toolchains.
 **Highlights**
 - A pronunciation entry that is stored but not applied yet says so, instead of looking like it did not match (#1949)
 - A bare 500 report now names the backend error class, so two unrelated faults stop filing the same issue (#1773)
+- A rejected dubbing source language now names the code it rejected (#1960)
 - The first-run install log is kept on disk instead of vanishing with the setup screen (#1847)
 - `bun run desktop` reclaims port 3900 from a backend the app itself left running, instead of refusing to start (#1974)
 - A dictation shortcut another app already owns now says so, instead of silently doing nothing (#1858)
@@ -91,6 +92,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Windows contributors can run the test suite without Developer Mode: tests that create a symlink now skip instead of failing with `WinError 1314` (#1990)
 - A port-3900 conflict now names who is actually holding it, and gives the command that ends an orphaned backend, instead of telling you to quit an app that has no window (#1933) — thanks @Chang-Jin-Lee!
 
 - Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1952)

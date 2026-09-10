@@ -334,12 +334,12 @@ def test_clear_temp_removes_only_app_owned_entries(tmp_path):
     assert (tmp / "keep.txt").exists()
 
 
-def test_clear_temp_unlinks_symlinks_without_following(tmp_path):
+def test_clear_temp_unlinks_symlinks_without_following(tmp_path, symlink_or_skip):
     tmp = tmp_path / "tmp"
     target = tmp_path / "precious"
     _write(str(target / "data.bin"), 50)
     os.makedirs(tmp, exist_ok=True)
-    os.symlink(str(target), str(tmp / "omnivoice_link"))
+    symlink_or_skip(str(tmp / "omnivoice_link"), str(target), target_is_directory=True)
 
     res = storage_report.clear_temp(str(tmp))
 
