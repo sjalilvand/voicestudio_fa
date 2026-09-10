@@ -575,7 +575,11 @@ async def preflight(
                 return
             from services.sidecar_install import SPECS  # noqa: PLC0415
 
-            sidecar_repos = {s.weights_repo_id for s in SPECS.values()}
+            # Weights only an engine installer can place are not offered as a
+            # plain download; ones the Model Catalogue also serves still are.
+            sidecar_repos = {
+                s.weights_repo_id for s in SPECS.values() if not s.weights_catalogue_download
+            }
             raise ModelNotDownloaded(
                 engine=engine,
                 repo_ids=repo_ids,

@@ -57,7 +57,7 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, NamedTuple, Optional
 
 from core.config import DATA_DIR
 from core.contained_subprocess import OwnedPopen, WindowsJobPopen, spawn_owned
@@ -86,6 +86,17 @@ _IMPORT_PROBE_TIMEOUT_S = 120
 
 
 # ── Spec ───────────────────────────────────────────────────────────────────
+
+
+class ExtraSource(NamedTuple):
+    """A second pinned source tree fetched into the checkout: an upstream git
+    submodule, which neither a depth-1 clone nor GitHub's source tarball
+    includes. Always fetched as the tarball of its pinned commit."""
+
+    path: str           # where it goes, relative to the checkout
+    revision: str       # reviewed upstream commit
+    tarball_url: str    # GitHub archive of that commit
+    required_path: str  # a file, relative to *path*, proving the tree is there
 
 
 @dataclass(frozen=True)
@@ -155,6 +166,18 @@ class SidecarSpec:
     # pinned pair: `+cu128` on a CUDA host, `+cpu` on other Windows and Linux
     # hosts, plain on macOS.
     torch_pins: tuple[str, ...] = ()
+    # Submodule trees the upstream repository needs (see ExtraSource).
+    extra_sources: tuple[ExtraSource, ...] = ()
+    # Download only these files of the weights repo (huggingface_hub
+    # allow_patterns). Empty downloads the whole repository.
+    weights_allow_patterns: tuple[str, ...] = ()
+    # Require the completion marker the import probe writes. Only IndexTTS,
+    # installed before the marker existed, opts out.
+    requires_install_marker: bool = True
+    # The weights repo is also an ordinary Model Catalogue download that the
+    # engine's in-process path uses (CosyVoice). Otherwise it is one only the
+    # installer can place, and a plain download is not offered for it.
+    weights_catalogue_download: bool = False
     # Can the one-click install work on THIS machine? (ok, reason). Consulted
     # before an Install button is offered and again when an install starts, so
     # a host the upstream does not support never gets a job that can only fail.
@@ -263,6 +286,13 @@ def _in_app_env(module: str) -> Callable[[], bool]:
     return probe
 
 
+# The trimmed CosyVoice requirements ship with the app (see that file for
+# what was dropped from upstream's list and why).
+_COSYVOICE_REQUIREMENTS = str(
+    Path(__file__).resolve().parents[1] / "engines" / "cosyvoice_subprocess" / "requirements.txt"
+)
+
+
 SPECS: dict[str, SidecarSpec] = {
     "indextts2": SidecarSpec(
         engine_id="indextts2",
@@ -294,6 +324,9 @@ SPECS: dict[str, SidecarSpec] = {
         disk_confidence="estimated",
         invalidate=_indextts_invalidate,
         installed_probe=_indextts_installed,
+        # Installed before the completion marker existed; its weights
+        # marker already proves a finished install.
+        requires_install_marker=False,
     ),
     # Pinned to the upstream commits current on 2026-09-10. Weights are not
     # fetched here: each engine downloads them into the shared HF cache on its
@@ -474,6 +507,66 @@ SPECS: dict[str, SidecarSpec] = {
         installed_probe=_in_app_env("moss_tts_nano"),
         host_supported=_no_intel_mac(
             "MOSS-TTS-Nano pins a PyTorch version that has no Intel Mac build."
+        ),
+    ),
+    # A reviewed commit (2026-05-25) plus the Matcha-TTS submodule it imports.
+    # No pyproject: its dependencies come from the trimmed requirements file,
+    # and like upstream's example.py the sidecar puts the checkout and
+    # third_party/Matcha-TTS on sys.path. Only the CosyVoice 3 weights it loads
+    # are downloaded (about 5.4 of 9.8 GB).
+    "cosyvoice": SidecarSpec(
+        engine_id="cosyvoice",
+        display_name="CosyVoice 3",
+        repo_url="https://github.com/FunAudioLLM/CosyVoice.git",
+        tarball_url=(
+            "https://github.com/FunAudioLLM/CosyVoice/archive/"
+            "074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc.tar.gz"
+        ),
+        checkout_dirname="CosyVoice",
+        env_var="OMNIVOICE_COSYVOICE_DIR",
+        probe_module="cosyvoice",
+        probe_code=(
+            "import os, sys; c = {checkout_repr}; "
+            "sys.path[:0] = [c, os.path.join(c, 'third_party', 'Matcha-TTS')]; "
+            "from cosyvoice.cli.cosyvoice import AutoModel"
+        ),
+        source_revision="074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc",
+        source_manifest="requirements.txt",
+        source_required_path="cosyvoice/cli/cosyvoice.py",
+        extra_sources=(
+            ExtraSource(
+                path="third_party/Matcha-TTS",
+                revision="dd9105b34bf2be2230f4aa1e4769fb586a3c824e",
+                tarball_url=(
+                    "https://github.com/shivammehta25/Matcha-TTS/archive/"
+                    "dd9105b34bf2be2230f4aa1e4769fb586a3c824e.tar.gz"
+                ),
+                required_path="matcha/__init__.py",
+            ),
+        ),
+        venv_args=("--python", "3.10"),
+        install_args=("-r", _COSYVOICE_REQUIREMENTS),
+        torch_pins=("torch==2.7.0", "torchaudio==2.7.0"),
+        weights_repo_id="FunAudioLLM/Fun-CosyVoice3-0.5B-2512",
+        weights_revision="29e01c4e8d000f4bcd70751be16fa94bf3d85a18",
+        weights_subdir="pretrained_models/Fun-CosyVoice3-0.5B",
+        weights_config_names=("cosyvoice3.yaml",),
+        # Also a Model Catalogue download, used by the in-process engine and
+        # by remote workers that run it.
+        weights_catalogue_download=True,
+        weights_allow_patterns=(
+            "cosyvoice3.yaml", "config.json", "configuration.json",
+            "campplus.onnx", "speech_tokenizer_v3.onnx",
+            "llm.pt", "flow.pt", "hift.pt", "CosyVoice-BlankEN/*",
+        ),
+        docs_path="docs/engines/cosyvoice.md",
+        # ~0.1 GB source + ~7 GB venv (CUDA torch) + ~5.4 GB weights.
+        required_bytes=14 * _GIB,
+        weights_bytes=6 * _GIB,
+        dependency_bytes=7 * _GIB,
+        installed_probe=_in_app_env("cosyvoice"),
+        host_supported=_no_intel_mac(
+            "CosyVoice 3 needs a PyTorch version that has no Intel Mac build."
         ),
     ),
 }
@@ -881,12 +974,14 @@ def _healthy(spec: SidecarSpec) -> bool:
         return False
     if not _venv_python(checkout / ".venv").is_file():
         return False
-    if spec.weights_repo_id:
-        return _weights_present(spec)
-    # Nothing downloaded after the dependencies proves they finished; only
-    # the marker the import probe writes does. IndexTTS (weights) predates
-    # the marker and keeps its own check, so no existing install is asked
-    # to reinstall.
+    if spec.weights_repo_id and not _weights_present(spec):
+        return False
+    # Weights left by an earlier run do not prove this run's dependencies
+    # finished; only the marker the import probe writes does. IndexTTS
+    # predates the marker and keeps its weights check, so no existing install
+    # is asked to reinstall.
+    if not spec.requires_install_marker:
+        return True
     return (checkout / _INSTALL_COMPLETE_MARKER).is_file()
 
 
@@ -1045,6 +1140,12 @@ def _step_preflight(spec: SidecarSpec, job: dict) -> None:
 
 
 def _step_fetch_source(spec: SidecarSpec, job: dict) -> None:
+    _fetch_main_source(spec, job)
+    if spec.has_source and spec.extra_sources:
+        _ensure_extra_sources(spec, job, managed_checkout(spec))
+
+
+def _fetch_main_source(spec: SidecarSpec, job: dict) -> None:
     step = _job_step(job, "fetch_source")
     checkout = managed_checkout(spec)
     if not spec.has_source:
@@ -1133,22 +1234,23 @@ def _source_present(spec: SidecarSpec, checkout: Path) -> bool:
     return marker == spec.source_revision
 
 
-def _fetch_tarball(spec: SidecarSpec, job: dict, checkout: Path) -> None:
-    """Download + extract the GitHub source tarball (no git required).
+def _download_and_extract(job: dict, url: str, dest: Path, work_root: Path, env_var: str) -> None:
+    """Download a GitHub source tarball and move its one top-level directory
+    to *dest* (no git required).
 
     Extraction is member-validated (no absolute paths / parent escapes) and
     never uses symlinks, so it behaves identically on Windows.
     """
     import httpx
 
-    root = managed_root(spec)
+    root = work_root
     root.mkdir(parents=True, exist_ok=True)
-    _log(job, f"Downloading {spec.tarball_url} …")
+    _log(job, f"Downloading {url} …")
     fd, tmp_tar = tempfile.mkstemp(suffix=".tar.gz", dir=str(root))
     try:
         with os.fdopen(fd, "wb") as out:
             with httpx.stream(
-                "GET", spec.tarball_url, follow_redirects=True,
+                "GET", url, follow_redirects=True,
                 timeout=_TARBALL_TIMEOUT_S,
             ) as resp:
                 resp.raise_for_status()
@@ -1158,7 +1260,7 @@ def _fetch_tarball(spec: SidecarSpec, job: dict, checkout: Path) -> None:
         with tempfile.TemporaryDirectory(dir=str(root)) as tmp_dir:
             with tarfile.open(tmp_tar, "r:gz") as tf:
                 try:
-                    tf.extractall(tmp_dir, filter="data")  # stdlib safe-extract (3.11.4+)
+                    tf.extractall(tmp_dir, members=_members_without_links(tf), filter="data")
                 except TypeError:  # pragma: no cover — pre-filter= interpreters
                     _safe_extract_members(tf, tmp_dir)
             entries = [p for p in Path(tmp_dir).iterdir() if p.is_dir()]
@@ -1166,15 +1268,62 @@ def _fetch_tarball(spec: SidecarSpec, job: dict, checkout: Path) -> None:
                 raise _StepError(
                     f"Unexpected tarball layout ({len(entries)} top-level dirs).",
                     "Re-run the install; if it keeps failing, clone the repository "
-                    f"manually and set {spec.env_var} (see the engine docs).",
+                    f"manually and set {env_var} (see the engine docs).",
                 )
             # os.replace-style move keeps this atomic-ish on the same volume.
-            shutil.move(str(entries[0]), str(checkout))
+            shutil.move(str(entries[0]), str(dest))
     finally:
         try:
             os.unlink(tmp_tar)
         except OSError:
             pass  # temp tarball already gone / locked — harmless leftover
+
+
+def _fetch_tarball(spec: SidecarSpec, job: dict, checkout: Path) -> None:
+    """Download + extract the engine's GitHub source tarball (no git required)."""
+    _download_and_extract(job, spec.tarball_url, checkout, managed_root(spec), spec.env_var)
+
+
+def _extra_source_present(extra: ExtraSource, dest: Path) -> bool:
+    if not (dest / extra.required_path).is_file():
+        return False
+    try:
+        marker = (dest / _SOURCE_REVISION_MARKER).read_text(encoding="utf-8").strip()
+    except OSError:
+        return False
+    return marker == extra.revision
+
+
+def _ensure_extra_sources(spec: SidecarSpec, job: dict, checkout: Path) -> None:
+    for extra in spec.extra_sources:
+        dest = checkout / extra.path
+        if _extra_source_present(extra, dest):
+            continue
+        shutil.rmtree(dest, ignore_errors=True)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        _log(job, f"Fetching {extra.path} at {extra.revision[:8]} …")
+        _download_and_extract(job, extra.tarball_url, dest, managed_root(spec), spec.env_var)
+        if not (dest / extra.required_path).is_file():
+            raise _StepError(
+                f"Fetched {extra.path} has no {extra.required_path}; the download "
+                "appears incomplete or the upstream layout changed.",
+                "Re-run the install; if it keeps failing, see the engine docs.",
+            )
+        (dest / _SOURCE_REVISION_MARKER).write_text(f"{extra.revision}\n", encoding="utf-8")
+
+
+def _members_without_links(tf: "tarfile.TarFile") -> "list[tarfile.TarInfo]":
+    """Every member except links.
+
+    The stdlib "data" filter raises on a link to an absolute path, and the
+    pinned Matcha-TTS tarball (a CosyVoice submodule) ships one: ``data``
+    points at its author's own training-data folder. That aborted the whole
+    fetch. No installer here uses a link from a source tree, symlinks need
+    privileges on Windows, and the pre-3.11.4 path below already drops them,
+    so both paths behave the same. Everything that IS extracted still goes
+    through the "data" filter.
+    """
+    return [m for m in tf.getmembers() if not (m.issym() or m.islnk())]
 
 
 def _safe_extract_members(tf: "tarfile.TarFile", dest: str) -> None:
@@ -1258,11 +1407,20 @@ def _step_install_deps(spec: SidecarSpec, job: dict) -> None:
         env=uv_subprocess_env(Path(DATA_DIR) / "engines"),
     )
     if rc != 0:
-        raise _StepError(
-            f"uv pip install failed (exit {rc}).",
+        hint = (
             "Usually a network hiccup — re-run the install to resume. Behind a "
-            "proxy, set HTTPS_PROXY in Settings → Environment first.",
+            "proxy, set HTTPS_PROXY in Settings → Environment first."
         )
+        if sys.platform == "win32":
+            # Packages built from source (openai-whisper, for CosyVoice) nest
+            # deep build folders under uv's cache; past Windows' 260-character
+            # limit the build fails with "No such file or directory".
+            hint += (
+                " If the log shows \"No such file or directory\" while building a "
+                "package, the path is too long for Windows: turn on Windows "
+                "long-path support (the LongPathsEnabled setting) and re-run."
+            )
+        raise _StepError(f"uv pip install failed (exit {rc}).", hint)
     _job_step(job, "install_deps")["detail"] = "dependencies installed"
 
 
@@ -1392,6 +1550,8 @@ def _step_fetch_weights(spec: SidecarSpec, job: dict) -> None:
         }
         if spec.weights_revision:
             kwargs["revision"] = spec.weights_revision
+        if spec.weights_allow_patterns:
+            kwargs["allow_patterns"] = list(spec.weights_allow_patterns)
         endpoint = endpoint_race.effective_endpoint()
         if endpoint:
             kwargs["endpoint"] = endpoint
