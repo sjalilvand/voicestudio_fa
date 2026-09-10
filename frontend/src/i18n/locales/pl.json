@@ -353,7 +353,9 @@
     "hf_token_not_checked": "Nie przetestowano",
     "hf_source_app_label": "VoiceStudio (zaszyfrowane, zalecane)",
     "hf_source_cli_label": "HuggingFace CLI",
-    "hf_source_env_label": "Zmienna środowiskowa"
+    "hf_source_env_label": "Zmienna środowiskowa",
+    "theme_auto": "Automatyczny systemowy",
+    "theme_light": "Jasny"
   },
   "bootstrap": {
     "title": "VoiceStudio",

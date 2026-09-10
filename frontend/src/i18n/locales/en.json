@@ -695,6 +695,8 @@
     "device": "Device & compute",
     "device_desc": "Live hardware and backend readouts.",
     "network_desc": "Proxy for downloads and model fetches.",
+    "theme_auto": "System Auto",
+    "theme_light": "Light",
     "translation_desc": "How dubbing translates dialogue, and which engine does it.",
     "translate_quality": "Translation quality",
     "translate_quality_desc": "Fast is literal and quick; Cinematic uses the LLM for natural phrasing.",
