@@ -134,6 +134,32 @@ INPUT_PARAM_KEYS: tuple[str, ...] = (
 # task records what was staged for it. The record is what makes the purge
 # exact: an input is deletable only when no surviving task still refers to it.
 INPUTS_DIRNAME = "inputs"
+
+
+def artifact_id_for(name: str) -> str:
+    """The id a staged input is known by, everywhere.
+
+    This is a PROTOCOL identifier, not a local path: it is persisted in
+    ``params_json``, handed to remote workers over gRPC, and matched against
+    what a later sweep finds on disk. ``os.path.join`` made it OS-specific, so
+    a Windows control plane stored and shipped ``inputs\\<sha>.wav`` — which a
+    Linux worker cannot resolve, and which stops matching the moment the same
+    data directory is opened on another OS. Always ``/``; ``resolve_within``
+    already treats both separators as structural, so resolution is unaffected.
+    """
+    return f"{INPUTS_DIRNAME}/{name}"
+
+
+def normalize_artifact_id(artifact_id: str) -> str:
+    """Compare ids written by any host on equal terms.
+
+    Rows staged by a Windows control plane before this was canonicalised carry
+    a backslash. The sweeper decides whether a file on disk is still
+    referenced by comparing ids, so without this an upgraded install would
+    read every legacy row as unreferenced and delete inputs that surviving
+    tasks still point at.
+    """
+    return (artifact_id or "").replace("\\", "/")
 INPUTS_PARAM_KEY = "inputs"
 
 _HASH_CHUNK_BYTES = 1024 * 1024
@@ -292,7 +318,7 @@ def stage_input(
             f"Could not read the task input {source!r}: {exc}"
         ) from exc
 
-    artifact_id = os.path.join(INPUTS_DIRNAME, f"{digest}{_extension(source)}")
+    artifact_id = artifact_id_for(f"{digest}{_extension(source)}")
     try:
         destination = resolve_within(base, artifact_id)
     except UnsafePath as exc:  # pragma: no cover — the id is ours, hex only
@@ -473,7 +499,7 @@ def _referenced_artifacts(conn) -> set[str]:
             continue
         for entry in entries:
             if isinstance(entry, dict) and entry.get("artifact_id"):
-                referenced.add(str(entry["artifact_id"]))
+                referenced.add(normalize_artifact_id(str(entry["artifact_id"])))
     return referenced
 
 
@@ -560,8 +586,7 @@ def purge_artifacts(
     except OSError:
         return removed
     for name in names:
-        artifact_id = os.path.join(INPUTS_DIRNAME, name)
-        if artifact_id in referenced:
+        if artifact_id_for(name) in referenced:
             continue
         path = os.path.join(inputs_dir, name)
         try:
@@ -893,6 +918,8 @@ def purge_finished(
 
 __all__ = [
     "INPUTS_DIRNAME",
+    "artifact_id_for",
+    "normalize_artifact_id",
     "INPUTS_PARAM_KEY",
     "INPUT_PARAM_KEYS",
     "InputStagingError",

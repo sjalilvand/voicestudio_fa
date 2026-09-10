@@ -7,6 +7,8 @@ while the desktop app is closed. Recovery, not burial.
 """
 from __future__ import annotations
 
+import json
+import os
 import sqlite3
 
 import pytest
@@ -80,6 +82,65 @@ def test_persisted_input_params_do_not_contain_user_home_paths(db, tmp_path, mon
     assert str(voice) not in stored
     assert str(tmp_path) not in stored
     assert "inputs/" in stored
+
+
+def test_a_staged_input_id_is_posix_on_every_host(tmp_path, monkeypatch):
+    """The artifact id crosses machines, so it cannot carry an OS separator.
+
+    It is persisted in params_json, shipped to remote workers over gRPC, and
+    matched against a later disk sweep. os.path.join made it host-specific: a
+    Windows control plane produced ``inputs\<sha>.wav``, which a Linux worker
+    cannot resolve and which stops matching the moment the same data directory
+    is opened on another OS.
+    """
+    root = tmp_path / "artifacts"
+    (root / task_store.INPUTS_DIRNAME).mkdir(parents=True)
+    monkeypatch.setattr(task_store, "artifact_root", lambda **_kw: str(root))
+    source = tmp_path / "voice.wav"
+    source.write_bytes(b"voice")
+
+    record = task_store.stage_input(str(source), root=str(root))
+
+    assert "\\" not in record["artifact_id"], record["artifact_id"]
+    assert record["artifact_id"].startswith(f"{task_store.INPUTS_DIRNAME}/")
+    # And it still resolves to the file that was actually written.
+    assert (root / record["artifact_id"]).is_file()
+
+
+def test_a_legacy_windows_id_still_protects_its_input(db, tmp_path, monkeypatch):
+    """An upgraded install must not delete inputs its tasks still point at.
+
+    Rows staged before the id was canonicalised carry a backslash. The sweeper
+    decides "unreferenced" by comparing ids, so matching a legacy row against a
+    freshly built posix id would read every one of them as garbage and delete
+    the file a surviving task depends on.
+    """
+    root = tmp_path / "artifacts"
+    (root / task_store.INPUTS_DIRNAME).mkdir(parents=True)
+    monkeypatch.setattr(task_store, "artifact_root", lambda **_kw: str(root))
+    source = tmp_path / "voice.wav"
+    source.write_bytes(b"voice")
+    record = task_store.stage_input(str(source), root=str(root))
+    staged = root / record["artifact_id"]
+    os.utime(staged, (0, 0))  # older than any cutoff
+
+    # The row exactly as a pre-fix Windows control plane wrote it. Inserted
+    # directly: `create` validates against today's rules, and the point is a
+    # row that predates them.
+    legacy = dict(record, artifact_id=record["artifact_id"].replace("/", "\\"))
+    with sqlite3.connect(db) as conn:
+        conn.execute(
+            "INSERT INTO remote_tasks"
+            " (id, operation, params_json, state, created_at, updated_at)"
+            " VALUES (?, 'tts', ?, 'queued', 1000.0, 1000.0)",
+            ("legacy-1", json.dumps({task_store.INPUTS_PARAM_KEY: [legacy]})),
+        )
+
+    with task_store.db_conn() as conn:
+        referenced = task_store._referenced_artifacts(conn)
+    task_store.purge_artifacts((), referenced, cutoff=1e12, root=str(root))
+
+    assert staged.is_file(), "a legacy-id input that a task still references was deleted"
 
 
 def test_attempts_round_trip(db):

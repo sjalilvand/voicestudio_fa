@@ -96,6 +96,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Fixed
 
 - The remote-worker loop-responsiveness tests no longer turn a build red over milliseconds of scheduling noise on shared CI hardware (#1990)
+- Remote GPU workers work when the machine running VoiceStudio is on Windows: a staged input is now identified the same way on every operating system, instead of with a path only Windows can read (#2005)
 
 - The pronunciation list badges an IPA or CMU entry as not applied yet, so you can see it without running a test (#1949) — thanks @utkarsha741!
 
