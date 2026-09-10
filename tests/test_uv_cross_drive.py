@@ -318,3 +318,57 @@ def test_one_click_install_steps_ignore_the_apps_uv_config(tmp_path, monkeypatch
     assert [step for step, _ in envs] == ["venv", "pip"]
     for step, env in envs:
         assert env is not None and env["UV_NO_CONFIG"] == "1", step
+
+
+# Bootstraps that install with uv. audio.cpp's bootstrap only probes a prebuilt
+# binary, so it has nothing to scan.
+_BOOTSTRAPS = sorted(
+    p for p in (Path(__file__).resolve().parents[1] / "backend" / "engines").glob("*/bootstrap.py")
+    if "_locate_uv(" in p.read_text(encoding="utf-8")
+)
+
+
+def _uv_runs(tree):
+    """(call, env keyword) for every subprocess.run that starts uv, whether
+    the argv list is inline or built in a variable first."""
+    runs = []
+    for func in ast.walk(tree):
+        if not isinstance(func, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        lists = {}
+        for node in ast.walk(func):
+            if isinstance(node, ast.Assign) and isinstance(node.value, ast.List):
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        lists[target.id] = node.value
+        for node in ast.walk(func):
+            if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "run" and isinstance(node.func.value, ast.Name)
+                    and node.func.value.id == "subprocess" and node.args):
+                continue
+            argv = node.args[0]
+            if isinstance(argv, ast.Name):
+                argv = lists.get(argv.id)
+            if (isinstance(argv, ast.List) and argv.elts and isinstance(argv.elts[0], ast.Name)
+                    and argv.elts[0].id == "uv"):
+                env = next((k.value for k in node.keywords if k.arg == "env"), None)
+                runs.append((node, env))
+    return runs
+
+
+@pytest.mark.parametrize("path", _BOOTSTRAPS, ids=lambda p: p.parent.name)
+def test_every_bootstrap_uv_call_gets_the_isolated_env(path):
+    """_uv_env() carrying UV_NO_CONFIG is not enough on its own: a uv call that
+    passed os.environ, or nothing, would bring the app's pins back."""
+    runs = _uv_runs(ast.parse(path.read_text(encoding="utf-8")))
+    assert runs, f"{path}: found no uv subprocess call; the scan no longer matches this file"
+    for call, env in runs:
+        assert (isinstance(env, ast.Call) and isinstance(env.func, ast.Name)
+                and env.func.id == "_uv_env"), (
+            f"{path}:{call.lineno}: uv subprocess must pass env=_uv_env()"
+        )
+
+
+def test_the_bootstrap_scan_covers_every_engine_that_bootstraps_with_uv():
+    names = {p.parent.name for p in _BOOTSTRAPS}
+    assert {"indextts", "moss_tts_v15", "confucius4", "dots_tts"} <= names

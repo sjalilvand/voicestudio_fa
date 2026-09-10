@@ -43,6 +43,29 @@ _UNAVAILABLE_NOT_INSTALLED = (
     "This engine's package isn't installed yet. Install it from "
     "Model Catalogue → Engines."
 )
+# An engine gated behind an in-app license review (Supertonic-3, PocketTTS).
+# The Model Catalogue shows its Accept button only when the reason matches
+# /license not accepted/i (EngineCompatibilityMatrix.reasonMentionsLicense), so
+# this sentence must keep those words: collapsing it into the generic line hid
+# the only way to enable those engines.
+_UNAVAILABLE_LICENSE = (
+    "License not accepted yet. Review and accept it in "
+    "Model Catalogue → Engines to enable this engine."
+)
+# An engine that cannot run on this machine at all: Apple-Silicon-only MLX,
+# PyTorch with no Intel Mac build. "Isn't installed yet" or "check
+# installation" sent people after an install that could never work.
+_UNAVAILABLE_PLATFORM = (
+    "This engine doesn't run on this computer's platform. Its guide lists "
+    "the platforms it supports."
+)
+# Apple Silicon whose PyTorch cannot use the GPU (MPS): the platform is
+# right, the installation is not. MLX-Audio / MLX-Whisper need MPS (#390).
+_UNAVAILABLE_NO_MPS = (
+    "This engine needs Apple's GPU (MPS), and this installation's PyTorch "
+    "can't use it. Updating macOS or reinstalling VoiceStudio usually "
+    "restores it."
+)
 _UNAVAILABLE_NEEDS_CONFIG = (
     "This engine needs to be configured before it can run. Open "
     "Model Catalogue → Engines to finish setting it up."
@@ -73,6 +96,19 @@ _MANUAL_INSTALL_VARIANT = {
 # missing file often also says "not installed", and the file case has the more
 # useful remedy of the two.
 _UNAVAILABLE_SIGNATURES = (
+    # First: its probe text also says "Open Model Catalogue", and the
+    # license is the one gap only the user can close.
+    (_UNAVAILABLE_LICENSE, ("license not accepted",)),
+    # Before the install and file checks: a platform reason often also says
+    # "unavailable" or names a missing wheel, and no install can fix it. Not
+    # "apple silicon only": mlx-audio says that on an M-series Mac too, when
+    # the package is merely missing and installing does help.
+    (_UNAVAILABLE_PLATFORM, (
+        "requires apple silicon", "not supported on this platform",
+        "unavailable on intel macs", "no macos x86_64 wheel",
+        "no windows install", "not supported on windows",
+    )),
+    (_UNAVAILABLE_NO_MPS, ("torch mps unavailable",)),
     (_UNAVAILABLE_FILE_MISSING, (
         "file is missing", "file is empty", "file is unreadable",
         "script missing", "binary", "not found at",

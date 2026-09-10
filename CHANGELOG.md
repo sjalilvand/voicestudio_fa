@@ -9,7 +9,8 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
-- One-click engine installs no longer inherit VoiceStudio's own PyTorch pin, which made MOSS-TTS-v1.5 and Confucius4 impossible to install (#2024)
+- Supertonic-3 and PocketTTS show their license Accept button again, so they can be enabled (#2017)
+- An engine that can't run on your platform says so, instead of telling you to install it (#2018)
 - MOSS-TTS-v1.5, Confucius4-TTS, dots.tts, Supertonic-3 and PocketTTS install in one click, each in its own environment, so switching engines and back never breaks a working one (#2015, #2016)
 - A pronunciation entry that is stored but not applied yet says so, instead of looking like it did not match (#1949)
 - A bare 500 report now names the backend error class, so two unrelated faults stop filing the same issue (#1773)
@@ -97,6 +98,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- One-click engine installs no longer inherit VoiceStudio's own PyTorch pin, which made MOSS-TTS-v1.5 and Confucius4 impossible to install (#2024)
+- Uninstalling a translation engine no longer removes a package VoiceStudio or another engine still needs (#2019)
 - Closing the dictation pill on Windows removes it from the screen: an empty dark rectangle used to stay there, always on top, until the app was quit (#2009)
 - The dictation pill on Windows no longer sits inside a bordered card wider than the pill itself (#2009)
 - Dictation uses the model you picked instead of one remembered from before the backend started, so it stops reporting no speech-to-text model while one is installed — and when none is, the main window offers the download (#2012)
