@@ -256,6 +256,20 @@ docker compose -f deploy/docker-compose.yml --profile gpu up -d
 docker compose -f deploy/docker-compose.yml --profile rocm up -d
 ```
 
+> **ARM64 hosts:** Compose has no per-command `--platform` flag, so the
+> override that works for `docker pull` and `docker run` does not reach it.
+> Export `DOCKER_DEFAULT_PLATFORM=linux/amd64` for the shell you run Compose
+> from, or the image resolves to the ARM64 manifest that does not exist and
+> fails with `no matching manifest for linux/arm64/v8`:
+>
+> ```bash
+> export DOCKER_DEFAULT_PLATFORM=linux/amd64
+> docker compose -f deploy/docker-compose.yml --profile cpu up -d
+> ```
+>
+> Same caveat as above — this is emulation, not native ARM64 support, and only
+> the CPU profile makes sense under it.
+
 The `docker-compose.yml` shipped in `deploy/` defaults to `127.0.0.1:3900`
 on the host. The backend inside the container binds to `0.0.0.0` so the
 host port mapping can forward — the host-side `127.0.0.1` binding is what
