@@ -472,7 +472,17 @@ def test_mps_proxy_survives_fatal_child_exit_and_recovers(stub_sidecar, monkeypa
     try:
         with pytest.raises(RuntimeError, match="backend is still running"):
             b.generate("CRASH")
-        assert b._proc is not None and b._proc.poll() is not None
+        assert b._proc is not None
+        # The child called os._exit; the parent raised the moment its pipe hit
+        # EOF, which is BEFORE the OS has reaped the process. Asserting poll()
+        # on the next line is a race the test happened to win on Linux and lost
+        # every time on Windows. Wait for the death instead of assuming it has
+        # already been observed — the claim is that the child is gone, not that
+        # it is gone within one instruction.
+        deadline = time.monotonic() + 5
+        while b._proc.poll() is None and time.monotonic() < deadline:
+            time.sleep(0.02)
+        assert b._proc.poll() is not None, "the crashed sidecar never died"
         assert b.generate("ok").shape[1] == 24000
     finally:
         b.shutdown()
