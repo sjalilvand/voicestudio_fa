@@ -19,6 +19,10 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Model Catalogue is one page: a setup summary (speech, transcription, dictation, language model) on top, one TTS / ASR / LLM switch, and each family's downloadable weights listed under its engines; the separate Models pane and the Settings → Voice → Engines / Models signposts are gone, the models directory and voice previews moved to Settings → Storage and the HF mirror to Network (#2013)
 
+### Fixed
+
+- Stopping a process on macOS no longer fails with "Operation not permitted" when it was already exiting (#2032)
+
 ### CI
 
 - A tagged release is published only after every platform's installers and checksums are attached, and its notes list all four platforms' checksums (#2029)

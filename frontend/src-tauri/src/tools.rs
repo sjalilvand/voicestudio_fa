@@ -73,14 +73,23 @@ pub struct OwnedProcessTree {
     job: std::os::windows::io::OwnedHandle,
 }
 
+// How long a Darwin EPERM waits for the root's exit to register. XNU stops
+// signalling a process as soon as it starts exiting, but posts NOTE_EXIT only
+// later in the same exit, so a KILL landing in between sees EPERM while the
+// exit probe still reads "alive". The gap is normally microseconds; this
+// bounds the wait for a root that really is alive and unsignalable.
+#[cfg(unix)]
+const DARWIN_EXIT_SETTLE: Duration = Duration::from_millis(250);
+
 // Keep the delivery and post-error ownership probe together: the root may
 // exit between any earlier liveness check and either TERM or KILL delivery.
 #[cfg(unix)]
 fn signal_process_group_with(
     signal: libc::c_int,
     darwin: bool,
+    settle: Duration,
     send: impl FnOnce(libc::c_int) -> io::Result<()>,
-    root_exited_unreaped: impl FnOnce() -> io::Result<bool>,
+    mut root_exited_unreaped: impl FnMut() -> io::Result<bool>,
 ) -> io::Result<()> {
     match send(signal) {
         Ok(()) => Ok(()),
@@ -90,10 +99,15 @@ fn signal_process_group_with(
             // during delivery. Accept only a newly verified unreaped root:
             // live roots, lost identity and probe failures remain errors.
             // Callers must still join nested drain before reaping that root.
-            if root_exited_unreaped()? {
-                Ok(())
-            } else {
-                Err(error)
+            let deadline = std::time::Instant::now() + settle;
+            loop {
+                if root_exited_unreaped()? {
+                    return Ok(());
+                }
+                if std::time::Instant::now() >= deadline {
+                    return Err(error);
+                }
+                std::thread::sleep(Duration::from_millis(1));
             }
         }
         Err(error) => Err(error),
@@ -171,6 +185,7 @@ impl OwnedProcessTree {
         signal_process_group_with(
             signal,
             cfg!(target_os = "macos"),
+            DARWIN_EXIT_SETTLE,
             |signal| {
                 if unsafe { libc::kill(-self.process_group, signal) } == 0 {
                     Ok(())
@@ -1224,6 +1239,7 @@ mod uv_tests {
             signal_process_group_with(
                 signal,
                 true,
+                Duration::ZERO,
                 |delivered| {
                     assert_eq!(delivered, signal);
                     assert!(!exited.replace(true));
@@ -1240,6 +1256,26 @@ mod uv_tests {
 
     #[cfg(unix)]
     #[test]
+    fn darwin_group_signal_waits_for_an_exit_that_registers_after_eperm() {
+        // The flake behind contained_exit_probe_preserves_a_live_child: TERM
+        // started the exit, KILL got EPERM, and NOTE_EXIT had not arrived yet.
+        let probes = std::cell::Cell::new(0);
+        signal_process_group_with(
+            libc::SIGKILL,
+            true,
+            Duration::from_secs(5),
+            |_| Err(io::Error::from_raw_os_error(libc::EPERM)),
+            || {
+                probes.set(probes.get() + 1);
+                Ok(probes.get() >= 3)
+            },
+        )
+        .expect("an exit that registers within the settle window is accepted");
+        assert_eq!(probes.get(), 3);
+    }
+
+    #[cfg(unix)]
+    #[test]
     fn darwin_group_signal_rejects_live_reaped_or_unverifiable_roots() {
         for signal in [libc::SIGTERM, libc::SIGKILL] {
             for (probe, expected) in [
@@ -1250,6 +1286,7 @@ mod uv_tests {
                 let error = signal_process_group_with(
                     signal,
                     true,
+                    Duration::from_millis(20),
                     |_| Err(io::Error::from_raw_os_error(libc::EPERM)),
                     || probe.map_err(io::Error::from_raw_os_error),
                 )
@@ -1266,6 +1303,7 @@ mod uv_tests {
             let error = signal_process_group_with(
                 libc::SIGKILL,
                 darwin,
+                Duration::ZERO,
                 |_| Err(io::Error::from_raw_os_error(errno)),
                 || panic!("unrelated errors must not use the Darwin exit exception"),
             )
