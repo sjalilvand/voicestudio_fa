@@ -97,13 +97,13 @@ describe('the Rust failure messages reach the localised hint (#1223, #1933)', ()
       'our own orphan',
       'Port 3900 is in use by a VoiceStudio backend from an earlier session that never shut ' +
         'down. It has no window to quit, so closing VoiceStudio will not release it. End it ' +
-        'from a terminal:\n\n    lsof -ti tcp:3900 | xargs kill',
+        'Find and end it from a terminal:\n\n    lsof -nP -iTCP:3900 -sTCP:LISTEN',
     ],
     [
       'a backend from another version',
       'Port 3900 is in use by a VoiceStudio backend from version 0.1.0, left running by an ' +
         'earlier install. This build is 0.5.2, so it cannot use that one. End it from a ' +
-        'terminal:\n\n    lsof -ti tcp:3900 | xargs kill',
+        'terminal:\n\n    lsof -nP -iTCP:3900 -sTCP:LISTEN',
     ],
     [
       'an unidentified listener',

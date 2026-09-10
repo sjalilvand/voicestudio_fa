@@ -455,16 +455,33 @@ pub fn port_holder(port: u16) -> PortHolder {
     }
 }
 
-/// The command that ends a listener on `port`, for the platform this build
-/// runs on. Offered only when the holder identified itself as our own backend
-/// — never for a listener we could not identify.
+/// How to find and end the listener on `port`, for the platform this build
+/// runs on. Offered only when the holder identified itself as our own backend.
+///
+/// Two steps, deliberately, and never a one-liner that pipes a lookup straight
+/// into `kill`. `lsof -ti tcp:PORT` matches *connected clients* as well as the
+/// listener, and Windows `findstr :3900` matches `:39001` and established
+/// connections too — so the convenient one-liner can end a process that merely
+/// talks to VoiceStudio, or one that has nothing to do with it. The identity
+/// `port_holder` established is a fact about the moment the message was
+/// written; by the time the user runs a command it has to be re-established,
+/// and only they can do that. So the first command shows exactly one listening
+/// process to look at, and the second ends that pid.
 fn reclaim_command(port: u16) -> String {
     if cfg!(target_os = "windows") {
         format!(
-            "netstat -ano | findstr :{port}    (then: taskkill /PID <the last column> /F)"
+            "Get-NetTCPConnection -LocalPort {port} -State Listen | \
+             Select-Object OwningProcess, @{{n='Name';e={{(Get-Process -Id \
+             $_.OwningProcess).ProcessName}}}}\n\n    \
+             ...then, once you have confirmed it is python or omnivoice:\n\n    \
+             Stop-Process -Id <OwningProcess>"
         )
     } else {
-        format!("lsof -ti tcp:{port} | xargs kill")
+        format!(
+            "lsof -nP -iTCP:{port} -sTCP:LISTEN\n\n    \
+             ...then, once you have confirmed the COMMAND is python or \
+             omnivoice:\n\n    kill <PID>"
+        )
     }
 }
 
@@ -491,7 +508,7 @@ pub fn port_conflict_message(port: u16, holder: &PortHolder, suffix: &str) -> St
             format!(
                 "Port {port} is in use by a VoiceStudio backend from version \
                  {version}, left running by an earlier install. This build is \
-                 {}, so it cannot use that one. End it from a terminal:\n\n    {}",
+                 {}, so it cannot use that one. Find and end it from a terminal:\n\n    {}",
                 env!("CARGO_PKG_VERSION"),
                 reclaim_command(port)
             )
@@ -1657,8 +1674,34 @@ mod tests {
             let msg = port_conflict_message(3900, &holder, "");
             assert!(msg.contains("another application"), "{msg}");
             assert!(!msg.contains("lsof"), "{msg}");
-            assert!(!msg.contains("taskkill"), "{msg}");
+            assert!(!msg.contains("Get-NetTCPConnection"), "{msg}");
+            assert!(!msg.contains("kill"), "{msg}");
         }
+    }
+
+    #[test]
+    fn the_reclaim_guidance_never_pipes_a_lookup_into_kill() {
+        // Greptile, security: the convenient one-liner does not preserve the
+        // identity `port_holder` established. `lsof -ti tcp:3900 | xargs kill`
+        // matches CONNECTED CLIENTS as well as the listener, and Windows
+        // `findstr :3900` matches `:39001` and established connections — so a
+        // user following it can end a process that merely talks to
+        // VoiceStudio, or one unrelated to it. The lookup has to be shown for
+        // a human to check before anything is signalled.
+        let guidance = reclaim_command(3900);
+
+        assert!(
+            !guidance.contains("| xargs kill") && !guidance.contains("|xargs kill"),
+            "a lookup piped straight into kill can end a process nobody identified: {guidance}"
+        );
+        // The listener, not every socket on the port.
+        if cfg!(target_os = "windows") {
+            assert!(guidance.contains("-State Listen"), "{guidance}");
+        } else {
+            assert!(guidance.contains("-sTCP:LISTEN"), "{guidance}");
+        }
+        // And a step where the user confirms what they found.
+        assert!(guidance.contains("confirmed"), "{guidance}");
     }
 
     #[test]
