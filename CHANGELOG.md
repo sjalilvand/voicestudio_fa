@@ -14,7 +14,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### CI
 
-- A tagged release is published only after every platform's installers and checksums are attached, and its notes list all four platforms' checksums (#RELPR)
+- A tagged release is published only after every platform's installers and checksums are attached, and its notes list all four platforms' checksums (#2029)
 
 
 ## [0.5.2] — 2026-09-10
