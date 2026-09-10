@@ -1430,34 +1430,6 @@ def test_weights_from_an_earlier_run_do_not_prove_the_dependencies_finished():
     assert si.get_spec("indextts2").requires_install_marker is False
 
 
-def test_a_failed_post_install_fetch_does_not_fail_the_install(monkeypatch):
-    spec = _mk_spec(post_install_code="print({checkout_repr})")
-    checkout = si.managed_checkout(spec)
-    checkout.mkdir(parents=True)
-    ran = []
-
-    def fetch_fails(job, argv, *, timeout, env=None):
-        ran.append(argv)
-        return 1
-
-    _stub_verify_ok(monkeypatch)
-    monkeypatch.setattr(si, "_run_logged", fetch_fails)
-    job = si._new_job(spec.engine_id)
-
-    si._step_verify(spec, job)
-
-    assert ran and ran[0][1] == "-c" and repr(str(checkout)) in ran[0][2]
-    assert (checkout / si._INSTALL_COMPLETE_MARKER).is_file()
-    assert any("first synthesis" in line for line in job["log"])
-
-
-def test_cosyvoice_post_install_code_compiles_for_any_checkout_path():
-    spec = si.get_spec("cosyvoice")
-    compile(si._expand(spec.post_install_code, Path("C:/Program Files/x y/CosyVoice")),
-            "<post-install>", "exec")
-
-
-
 def _tarball_with_absolute_symlink() -> bytes:
     """Shaped like the pinned Matcha-TTS tarball: a package plus a `data` link
     to a folder on its author's machine."""
@@ -1488,3 +1460,17 @@ def test_a_tarball_with_an_absolute_link_still_extracts(monkeypatch, tmp_path):
 
     assert (dest / "matcha" / "__init__.py").is_file()
     assert not (dest / "data").exists() and not (dest / "data").is_symlink()
+
+
+@pytest.mark.parametrize("platform", ["win32", "linux"])
+def test_a_failed_dependency_install_names_the_windows_path_limit(monkeypatch, platform):
+    """openai-whisper (a CosyVoice dependency) builds from source, and under a
+    long cache path its build fails on Windows' 260-character limit with a
+    bare "No such file or directory"."""
+    spec = _mk_spec()
+    monkeypatch.setattr(si, "_locate_uv", lambda: "/fake/uv")
+    monkeypatch.setattr(si, "_run_logged", lambda job, argv, *, timeout, env=None: 1)
+    monkeypatch.setattr(si.sys, "platform", platform)
+    with pytest.raises(si._StepError) as err:
+        si._step_install_deps(spec, si._new_job(spec.engine_id))
+    assert ("LongPathsEnabled" in err.value.remediation) == (platform == "win32")

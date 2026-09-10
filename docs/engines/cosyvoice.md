@@ -31,10 +31,7 @@ gives CosyVoice its own folder under the data directory and its own Python
 3.10 environment, and runs it there in a separate process. The install:
 
 - clones a reviewed CosyVoice commit and the Matcha-TTS code it depends on;
-- downloads the CosyVoice 3 weights (about 5.4 GB);
-- fetches CosyVoice's text-normalisation data from ModelScope, where upstream
-  publishes it. If that fetch fails, the install still completes and
-  CosyVoice fetches the data on first use, as upstream does.
+- downloads the CosyVoice 3 weights (about 5.4 GB).
 
 It differs from upstream's own setup:
 
@@ -46,6 +43,15 @@ It differs from upstream's own setup:
   third-party package index. Upstream uses them for extra speed on Linux;
   synthesis works without them. Nothing needs a compiler, and SoX is not
   needed.
+- **Patched dependencies.** Where upstream pins a release with a published
+  security advisory (diffusers, hydra-core, lightning, modelscope, onnx,
+  protobuf, transformers), the install uses the fixed release. That set was
+  installed on Windows and passes the install's import check.
+- **No text normaliser.** Upstream's (wetext) downloads its data from
+  ModelScope on every model load, and ModelScope rate-limits those
+  downloads, so a normaliser could half-download and fail silently. The
+  one-click install leaves it out, and CosyVoice reads text as written:
+  spell out numbers, dates and symbols where the pronunciation matters.
 - **Only the weights CosyVoice 3 loads.** Not the RL and TensorRT variants
   that share its repository.
 

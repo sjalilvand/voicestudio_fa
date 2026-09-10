@@ -136,23 +136,6 @@ def _model_dir(checkout: str) -> str:
     return override
 
 
-def _use_installed_wetext(checkout: str) -> None:
-    """Point wetext at the text-normalisation data the installer fetched.
-
-    wetext otherwise downloads it from ModelScope on every Normalizer(). If the
-    install could not fetch it, that download stays as upstream has it, and
-    CosyVoice runs without text normalisation if it fails too.
-    """
-    local = os.path.join(checkout, "pretrained_models", "wetext")
-    if not os.path.isdir(local):
-        return
-    try:
-        import wetext.wetext as wetext_module  # type: ignore[import-not-found]  # noqa: PLC0415
-    except Exception:  # noqa: BLE001
-        return
-    wetext_module.snapshot_download = lambda *args, **kwargs: local
-
-
 def _load_model(stdout):
     global _MODEL
     if _MODEL is not None:
@@ -171,7 +154,6 @@ def _load_model(stdout):
             sys.path.insert(0, path)
     _send(stdout, {"op": "progress", "stage": "loading_model", "percent": 0})
     with _heartbeat(stdout, "loading_model"):
-        _use_installed_wetext(checkout)
         from cosyvoice.cli.cosyvoice import AutoModel  # type: ignore[import-not-found]  # noqa: PLC0415
 
         _MODEL = AutoModel(model_dir=model_dir)

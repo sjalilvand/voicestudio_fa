@@ -178,11 +178,6 @@ class SidecarSpec:
     # engine's in-process path uses (CosyVoice). Otherwise it is one only the
     # installer can place, and a plain download is not offered for it.
     weights_catalogue_download: bool = False
-    # Python run in the engine's venv once the import probe passes, for data
-    # the engine would otherwise fetch on its first synthesis. "{checkout}" and
-    # "{checkout_repr}" are substituted. A failure is logged, not fatal: it
-    # only leaves that fetch to first use, as upstream has it.
-    post_install_code: Optional[str] = None
     # Can the one-click install work on THIS machine? (ok, reason). Consulted
     # before an Install button is offered and again when an install starts, so
     # a host the upstream does not support never gets a job that can only fail.
@@ -563,14 +558,6 @@ SPECS: dict[str, SidecarSpec] = {
             "cosyvoice3.yaml", "config.json", "configuration.json",
             "campplus.onnx", "speech_tokenizer_v3.onnx",
             "llm.pt", "flow.pt", "hift.pt", "CosyVoice-BlankEN/*",
-        ),
-        # CosyVoice's text normaliser (wetext) downloads its data from
-        # ModelScope, where upstream publishes it, on every model load. Fetch
-        # it once during the install; the sidecar points wetext at it.
-        post_install_code=(
-            "import os; from modelscope import snapshot_download; "
-            "snapshot_download('pengzhendong/wetext', "
-            "local_dir=os.path.join({checkout_repr}, 'pretrained_models', 'wetext'))"
         ),
         docs_path="docs/engines/cosyvoice.md",
         # ~0.1 GB source + ~7 GB venv (CUDA torch) + ~5.4 GB weights.
@@ -1325,26 +1312,6 @@ def _ensure_extra_sources(spec: SidecarSpec, job: dict, checkout: Path) -> None:
         (dest / _SOURCE_REVISION_MARKER).write_text(f"{extra.revision}\n", encoding="utf-8")
 
 
-# Generous: the fetch is a small data download, but on a slow or distant
-# mirror it can take a while, and its failure is harmless.
-_POST_INSTALL_TIMEOUT_S = 900
-
-
-def _run_post_install(spec: SidecarSpec, job: dict, py: Path, checkout: Path) -> None:
-    _log(job, "Fetching data the engine would otherwise download on first use …")
-    rc = _run_logged(
-        job,
-        [str(py), "-c", _expand(spec.post_install_code, checkout)],
-        timeout=_POST_INSTALL_TIMEOUT_S,
-    )
-    if rc != 0:
-        _log(
-            job,
-            f"That optional fetch failed (exit {rc}); the engine will try again "
-            "on its first synthesis.",
-        )
-
-
 def _no_links_data_filter(member: "tarfile.TarInfo", path: str):
     """The stdlib "data" filter, except that links are skipped, not fatal.
 
@@ -1441,11 +1408,20 @@ def _step_install_deps(spec: SidecarSpec, job: dict) -> None:
         env=uv_subprocess_env(Path(DATA_DIR) / "engines"),
     )
     if rc != 0:
-        raise _StepError(
-            f"uv pip install failed (exit {rc}).",
+        hint = (
             "Usually a network hiccup — re-run the install to resume. Behind a "
-            "proxy, set HTTPS_PROXY in Settings → Environment first.",
+            "proxy, set HTTPS_PROXY in Settings → Environment first."
         )
+        if sys.platform == "win32":
+            # Packages built from source (openai-whisper, for CosyVoice) nest
+            # deep build folders under uv's cache; past Windows' 260-character
+            # limit the build fails with "No such file or directory".
+            hint += (
+                " If the log shows \"No such file or directory\" while building a "
+                "package, the path is too long for Windows: turn on Windows "
+                "long-path support (the LongPathsEnabled setting) and re-run."
+            )
+        raise _StepError(f"uv pip install failed (exit {rc}).", hint)
     _job_step(job, "install_deps")["detail"] = "dependencies installed"
 
 
@@ -1477,8 +1453,6 @@ def _step_verify(spec: SidecarSpec, job: dict) -> None:
             "partial installs. If it keeps failing, use the manual install in "
             "the engine docs.",
         )
-    if spec.post_install_code:
-        _run_post_install(spec, job, py, checkout)
     _job_step(job, "verify")["detail"] = f"import {spec.probe_module} OK"
     (checkout / _INSTALL_COMPLETE_MARKER).write_text(f"{spec.probe_module}\n", encoding="utf-8")
     _log(job, "Venv verified.")

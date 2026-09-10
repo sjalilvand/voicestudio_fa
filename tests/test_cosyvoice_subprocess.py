@@ -188,7 +188,8 @@ def test_requirements_drop_what_the_one_click_install_must_not_pull():
     names = {re.split(r"[=<>!~ ;\[]", r, maxsplit=1)[0].lower() for r in reqs}
     assert not any(r.startswith("-") for r in reqs), "no index or option lines"
     for dropped in ("torch", "torchaudio", "deepspeed", "tensorrt-cu12", "onnxruntime-gpu",
-                    "fastapi", "gradio", "uvicorn", "grpcio", "tensorboard"):
+                    "fastapi", "gradio", "uvicorn", "grpcio", "tensorboard",
+                    "wetext", "pyarrow", "pyworld"):
         assert dropped not in names, dropped
     assert "openai-whisper==20250625" in reqs  # 20231117 cannot build
     assert all("==" in r for r in reqs), "every requirement stays pinned"
@@ -220,29 +221,6 @@ def test_the_class_switches_to_the_sidecar_once_its_venv_exists(monkeypatch, tmp
     assert backend.model_identity() == "Fun-CosyVoice3-0.5B"
 
 
-def test_wetext_uses_the_data_the_install_fetched(monkeypatch, tmp_path):
-    """wetext downloads its data from ModelScope on every Normalizer();
-    after an install that fetched it, the sidecar never goes online for it."""
-    calls = []
-    sidecar, checkout = _load_sidecar(monkeypatch, tmp_path, calls)
-    local = checkout / "pretrained_models" / "wetext"
-    local.mkdir(parents=True)
-
-    def online(*args, **kwargs):
-        raise AssertionError("went to ModelScope")
-
-    wetext_pkg = types.ModuleType("wetext")
-    wetext_module = types.ModuleType("wetext.wetext")
-    wetext_module.snapshot_download = online
-    wetext_pkg.wetext = wetext_module
-    monkeypatch.setitem(sys.modules, "wetext", wetext_pkg)
-    monkeypatch.setitem(sys.modules, "wetext.wetext", wetext_module)
-
-    sidecar._handle_synthesize({"text": "hi", "ref_audio": "/r.wav"}, io.BytesIO())
-
-    assert wetext_module.snapshot_download("pengzhendong/wetext") == str(local)
-
-
 def test_a_missing_model_override_is_an_error_not_a_silent_swap(monkeypatch, tmp_path):
     """Loading the installed model instead would speak with a model and voice
     the user did not choose, while model_identity() still named theirs."""
@@ -252,3 +230,31 @@ def test_a_missing_model_override_is_an_error_not_a_silent_swap(monkeypatch, tmp
     with pytest.raises(RuntimeError, match="OMNIVOICE_COSYVOICE_MODEL"):
         sidecar._handle_synthesize({"text": "hi", "ref_audio": "/r.wav"}, io.BytesIO())
     assert not any(c[0] == "load" for c in calls)
+
+
+# The first release of each package that fixes the advisories upstream's pins
+# fall under (OSV, checked 2026-09-10). Raising a pin is fine; going below
+# one of these reintroduces a known vulnerability.
+_ADVISORY_FLOORS = {
+    "diffusers": "0.38.0",
+    "hydra-core": "1.3.4",
+    "lightning": "2.6.6",
+    "modelscope": "1.27.0",
+    "onnx": "1.21.0",
+    "protobuf": "4.25.8",
+    "transformers": "4.53.0",
+}
+
+
+def test_requirements_stay_above_the_advisory_fixes():
+    from packaging.version import Version
+
+    pins = {}
+    for line in _REQUIREMENTS.read_text(encoding="utf-8").splitlines():
+        line = line.split("#", 1)[0].strip()
+        if "==" in line:
+            name, version = line.split("==", 1)
+            pins[name.strip().lower()] = version.strip()
+    for name, floor in _ADVISORY_FLOORS.items():
+        assert name in pins, f"{name} is no longer pinned"
+        assert Version(pins[name]) >= Version(floor), f"{name}=={pins[name]} is below {floor}"
