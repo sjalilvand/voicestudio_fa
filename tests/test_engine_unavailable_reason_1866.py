@@ -30,7 +30,6 @@ def _reason(diagnostic):
         "funasr not installed. Install with: uv pip install funasr",
         "kittentts not installed: No module named 'kittentts'",
         "omnivoice package missing: cannot import name",
-        "mlx-whisper unavailable: not supported on this platform",
     ],
 )
 def test_a_missing_package_says_so(diagnostic):
@@ -141,3 +140,44 @@ def test_a_license_gate_keeps_the_words_the_accept_button_needs(diagnostic, one_
     assert m, "EngineCompatibilityMatrix.reasonMentionsLicense changed shape"
     flags = re.I if "i" in m.group(2) else 0
     assert re.search(m.group(1), reason, flags), reason
+
+
+@pytest.mark.parametrize(
+    "diagnostic",
+    [
+        "MLX requires Apple Silicon; this host is win32/AMD64",
+        "MLX requires Apple Silicon; this Mac is Intel",
+        "mlx-whisper unavailable: not supported on this platform",
+        "PocketTTS is unavailable on Intel Macs because its required PyTorch "
+        "version has no macOS x86_64 wheel.",
+    ],
+)
+@pytest.mark.parametrize("one_click", [None, False])
+def test_a_platform_gap_is_not_reported_as_an_install_gap(diagnostic, one_click):
+    """No install can fix these, so neither "isn't installed yet" nor "check
+    installation" is true."""
+    row = {"id": "e", "reason": diagnostic}
+    if one_click is not None:
+        row["one_click_install"] = one_click
+    reason = public_backends([row])[0]["reason"]
+    assert "platform" in reason
+    assert "install" not in reason.lower()
+
+
+def test_the_real_mlx_gate_is_classified_as_a_platform_gap():
+    from core import device_caps
+
+    ok, why = device_caps.mlx_supported()
+    if ok:
+        pytest.skip("this host runs MLX")
+    assert "platform" in _reason(why)
+
+
+def test_a_missing_mlx_package_on_apple_silicon_is_still_an_install_gap():
+    # The same engine on a Mac it does support: there, installing does help.
+    diagnostic = (
+        "mlx-audio unavailable: No module named 'mlx_audio'. This backend is "
+        "Apple Silicon only — available on mac-ARM dev installs; not shipped on "
+        "Linux/Windows/mac-Intel."
+    )
+    assert "isn't installed yet" in _reason(diagnostic)
