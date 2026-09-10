@@ -14,6 +14,10 @@ the frozen-backend fallback mirror it for their toolchains.
 - MOSS-TTS-Nano installs in one click into its own environment, pinned to a reviewed upstream commit it works with (#2022)
 - CosyVoice 3 installs in one click into its own environment, with a trimmed dependency set that needs no TensorRT, DeepSpeed or third-party package feed (#2025)
 
+### Fixed
+
+- Stopping a process on macOS no longer fails with "Operation not permitted" when it was already exiting (#2032)
+
 ### CI
 
 - A tagged release is published only after every platform's installers and checksums are attached, and its notes list all four platforms' checksums (#2029)
