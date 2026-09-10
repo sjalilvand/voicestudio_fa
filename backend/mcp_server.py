@@ -298,6 +298,8 @@ def _backend_budget_s(kind: str, text: str = "") -> float | None:
     budget; this only keeps the tool from giving up first.
     """
     if kind == "transcribe":
+        # run_transcribe_guarded starts this clock when the job is submitted,
+        # so time spent queued in the pool already counts against it.
         return _env_seconds("OMNIVOICE_ASR_TRANSCRIBE_TIMEOUT_S", 300.0)
     if kind == "generate":
         base = max(
@@ -305,7 +307,10 @@ def _backend_budget_s(kind: str, text: str = "") -> float | None:
             _env_seconds("OMNIVOICE_CPU_GENERATE_TIMEOUT_S", 600.0),
         )
         # As model_manager.generate_timeout_s: +1 s per 40 characters past 1200.
-        return base + max(0, len(text or "") - 1200) / 40.0
+        execution = base + max(0, len(text or "") - 1200) / 40.0
+        # A generation first waits in the GPU pool's queue, on its own clock
+        # (model_manager.GPU_QUEUE_TIMEOUT_S), before that budget starts.
+        return _env_seconds("OMNIVOICE_GPU_QUEUE_TIMEOUT_S", 1800.0) + execution
     return None
 
 
