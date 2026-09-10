@@ -98,6 +98,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Windows contributors can run the test suite without Developer Mode: tests that create a symlink now skip instead of failing with `WinError 1314` (#1990)
 - The crash details dialog now says what the exit code means and what to try, instead of showing a raw number and a log (#1927)
+- A crash report now carries the backend's actual last words: the log tail is captured after the dying process's final output lands, not the instant it exits (#1850)
 - The first-run setup screen no longer mislabels a step when the bootstrap restarts itself: Rust now says which attempt each stage and log line belongs to, instead of the screen guessing from a once-a-second poll (#1900)
 
 - Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1952)
