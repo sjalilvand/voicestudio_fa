@@ -9,7 +9,6 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
-- Uninstalling a translation engine no longer removes a package VoiceStudio or another engine still needs (#2019)
 - A pronunciation entry that is stored but not applied yet says so, instead of looking like it did not match (#1949)
 - A bare 500 report now names the backend error class, so two unrelated faults stop filing the same issue (#1773)
 - A rejected dubbing source language now names the code it rejected (#1960)
@@ -96,6 +95,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Uninstalling a translation engine no longer removes a package VoiceStudio or another engine still needs (#2019)
 - Closing the dictation pill on Windows removes it from the screen: an empty dark rectangle used to stay there, always on top, until the app was quit (#2009)
 - The dictation pill on Windows no longer sits inside a bordered card wider than the pill itself (#2009)
 - Dictation uses the model you picked instead of one remembered from before the backend started, so it stops reporting no speech-to-text model while one is installed — and when none is, the main window offers the download (#2012)
