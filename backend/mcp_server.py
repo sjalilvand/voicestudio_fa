@@ -271,19 +271,61 @@ def _write_output(audio_id: str, raw: bytes) -> str:
     return path
 
 
-def _post_timeout_s() -> float:
-    """Seconds the tools wait on a backend POST (OMNIVOICE_MCP_TIMEOUT_S,
-    default 120). A CPU host renders a paragraph in minutes and serializes
-    generations, so an agent behind another render used to hit the fixed
-    budget with an empty-message timeout; the knob follows the backend's own
-    OMNIVOICE_GENERATE_TIMEOUT_S when a deployment raises that."""
-    raw = os.environ.get("OMNIVOICE_MCP_TIMEOUT_S", "").strip()
+# Extra seconds a tool waits past the backend's own budget, so the backend's
+# error (which says what ran out) reaches the agent instead of an empty
+# client-side timeout (#2040).
+_BACKEND_GRACE_S = 30.0
+
+
+def _env_seconds(name: str, default: float) -> float:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
     try:
-        value = float(raw) if raw else 120.0
+        value = float(raw)
     except ValueError:
-        logger.warning("OMNIVOICE_MCP_TIMEOUT_S=%r is not a number; using 120", raw)
-        return 120.0
-    return value if value > 0 else 120.0
+        logger.warning("%s=%r is not a number; using %g", name, raw, default)
+        return default
+    return value if value > 0 else default
+
+
+def _backend_budget_s(kind: str, text: str = "") -> float | None:
+    """The backend's own execution budget for this kind of request, read from
+    the environment variables and defaults the backend itself uses.
+
+    The MCP server cannot see which device the backend runs on, so generation
+    assumes the larger CPU base. The backend still stops a job at its own
+    budget; this only keeps the tool from giving up first.
+    """
+    if kind == "transcribe":
+        # run_transcribe_guarded starts this clock when the job is submitted,
+        # so time spent queued in the pool already counts against it.
+        return _env_seconds("OMNIVOICE_ASR_TRANSCRIBE_TIMEOUT_S", 300.0)
+    if kind == "generate":
+        base = max(
+            _env_seconds("OMNIVOICE_GENERATE_TIMEOUT_S", 300.0),
+            _env_seconds("OMNIVOICE_CPU_GENERATE_TIMEOUT_S", 600.0),
+        )
+        # As model_manager.generate_timeout_s: +1 s per 40 characters past 1200.
+        execution = base + max(0, len(text or "") - 1200) / 40.0
+        # A generation first waits in the GPU pool's queue, on its own clock
+        # (model_manager.GPU_QUEUE_TIMEOUT_S), before that budget starts.
+        return _env_seconds("OMNIVOICE_GPU_QUEUE_TIMEOUT_S", 1800.0) + execution
+    return None
+
+
+def _post_timeout_s(kind: str = "", text: str = "") -> float:
+    """Seconds a tool waits on a backend POST.
+
+    An explicit OMNIVOICE_MCP_TIMEOUT_S wins. Otherwise the tool waits for the
+    backend's own budget for that request plus a grace period, and never less
+    than 120 s. A fixed 120 s used to cut off transcriptions the backend would
+    have finished (its ASR budget is 300 s) with an empty error (#2040).
+    """
+    if os.environ.get("OMNIVOICE_MCP_TIMEOUT_S", "").strip():
+        return _env_seconds("OMNIVOICE_MCP_TIMEOUT_S", 120.0)
+    budget = _backend_budget_s(kind, text)
+    return 120.0 if budget is None else max(120.0, budget + _BACKEND_GRACE_S)
 
 
 def _maybe_number(value):
@@ -397,9 +439,12 @@ def create_mcp_server():
             r.raise_for_status()
             return r.json()
 
-    async def _api_post_form(path: str, data: dict, files: dict | None = None):
+    async def _api_post_form(
+        path: str, data: dict, files: dict | None = None, *, timeout: float | None = None
+    ):
         import httpx
-        async with httpx.AsyncClient(base_url=_api_base(), timeout=_post_timeout_s()) as c:
+        wait = _post_timeout_s() if timeout is None else timeout
+        async with httpx.AsyncClient(base_url=_api_base(), timeout=wait) as c:
             r = await c.post(path, data=data, files=files or {})
             r.raise_for_status()
             return r
@@ -471,7 +516,9 @@ def create_mcp_server():
         if instruct:
             form["instruct"] = instruct
 
-        r = await _api_post_form("/generate", data=form)
+        r = await _api_post_form(
+            "/generate", data=form, timeout=_post_timeout_s("generate", text)
+        )
 
         audio_id = r.headers.get("X-Audio-Id", "unknown")
         gen_time = _maybe_number(r.headers.get("X-Gen-Time", "?"))
@@ -547,6 +594,7 @@ def create_mcp_server():
             "/transcribe", data=data,
             files={"audio": (f"audio{_sniff_audio_ext(raw)}", raw,
                              "application/octet-stream")},
+            timeout=_post_timeout_s("transcribe"),
         )
         return str(r.json())
 
