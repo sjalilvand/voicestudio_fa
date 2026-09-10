@@ -11,6 +11,7 @@ the frozen-backend fallback mirror it for their toolchains.
 **Highlights**
 - A pronunciation entry that is stored but not applied yet says so, instead of looking like it did not match (#1949)
 - A bare 500 report now names the backend error class, so two unrelated faults stop filing the same issue (#1773)
+- A rejected dubbing source language now names the code it rejected (#1960)
 - The first-run install log is kept on disk instead of vanishing with the setup screen (#1847)
 - `bun run desktop` reclaims port 3900 from a backend the app itself left running, instead of refusing to start (#1974)
 - A dictation shortcut another app already owns now says so, instead of silently doing nothing (#1858)
@@ -85,6 +86,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Docs
 
+- The torch upgrade an RTX 50-series card needs is written down, with the second pin file the resolver checks and the command that proves the kernels are there (#1931)
+
 - Docker quick starts now explain the AMD64-only images and direct Apple Silicon users to the native macOS app (#1921) — thanks @yangfan-yf-yf!
 - audio.cpp (Breeze-TTS-2) is now a documented opt-in engine: prebuilt binary install, explicit GGUF download, voice modes, and the weights' research/non-commercial terms (#1891)
 - `docs/STRUCTURE.md` describes the tree as it is today, and a test now keeps its counts honest (#1981) — thanks @Dawcraft!
@@ -92,6 +95,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Fixed
 
 - Windows contributors can run the test suite without Developer Mode: tests that create a symlink now skip instead of failing with `WinError 1314` (#1990)
+- The crash details dialog now says what the exit code means and what to try, instead of showing a raw number and a log (#1927)
 - The first-run setup screen no longer mislabels a step when the bootstrap restarts itself: Rust now says which attempt each stage and log line belongs to, instead of the screen guessing from a once-a-second poll (#1900)
 
 - Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1952)
