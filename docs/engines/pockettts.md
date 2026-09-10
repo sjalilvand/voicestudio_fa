@@ -24,7 +24,13 @@ for this model.
    uv sync --extra pockettts
    ```
 
-   (Or enable it from **Model Catalogue → Engines**.)
+   Or click **Install** in **Model Catalogue → Engines → PocketTTS**. That
+   installs the same pinned package into the engine's own Python environment
+   under VoiceStudio's data directory, with the CPU build of PyTorch, because
+   PocketTTS never uses a GPU. Nothing it installs touches VoiceStudio itself
+   or any other engine, and **Uninstall** in the same row removes only that
+   folder. An install made with `uv sync` keeps working as it is. The button
+   is not offered on Intel Macs (see Platform notes).
 
 2. **Accept the license in-app**
    ([#1306](https://github.com/debpalash/VoiceStudio/issues/1306)). The code

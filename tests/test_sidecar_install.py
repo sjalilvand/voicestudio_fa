@@ -49,6 +49,12 @@ def _clean_state(monkeypatch, tmp_path):
     monkeypatch.delenv("OMNIVOICE_INDEXTTS_DIR", raising=False)
     monkeypatch.delenv("OMNIVOICE_FAKE_SIDE_DIR", raising=False)
     monkeypatch.delenv("OMNIVOICE_DESKTOP_CONTAINED", raising=False)
+    # Set-then-delete: a bare delenv of an unset var records nothing to
+    # restore, so a path an install test persists would leak into later
+    # suites (an engine would then find a venv that no longer exists).
+    for spec in si.SPECS.values():
+        monkeypatch.setenv(spec.env_var, "")
+        monkeypatch.delenv(spec.env_var)
     yield
 
 
@@ -1080,17 +1086,23 @@ def test_verify_probe_runs_in_the_engines_venv_and_compiles(monkeypatch, engine_
 
 
 @pytest.mark.parametrize(
-    ("family", "platform", "expected"),
+    ("family", "platform", "machine", "expected"),
     [
-        ("cuda", "linux", {"indextts2", "moss-tts-v15", "confucius4-tts", "dots-tts"}),
-        ("cuda", "win32", {"indextts2", "moss-tts-v15", "confucius4-tts"}),
-        ("cpu", "win32", {"indextts2", "confucius4-tts"}),
-        ("mps", "darwin", {"indextts2", "confucius4-tts", "dots-tts"}),
+        ("cuda", "linux", "x86_64", {"moss-tts-v15", "dots-tts", "pockettts"}),
+        ("cuda", "win32", "AMD64", {"moss-tts-v15", "pockettts"}),
+        ("cpu", "win32", "AMD64", {"pockettts"}),
+        ("mps", "darwin", "arm64", {"dots-tts", "pockettts"}),
+        # Intel Mac: PyTorch publishes no build PocketTTS can use.
+        ("cpu", "darwin", "x86_64", {"dots-tts"}),
     ],
 )
-def test_installable_engine_ids_follow_the_host(monkeypatch, family, platform, expected):
+def test_installable_engine_ids_follow_the_host(monkeypatch, family, platform, machine, expected):
+    import platform as platform_mod
     monkeypatch.setattr(si, "_host_family", lambda: family)
     monkeypatch.setattr(si.sys, "platform", platform)
+    monkeypatch.setattr(platform_mod, "machine", lambda: machine)
+    # Offered on every host: IndexTTS 2.5, Confucius4, Supertonic-3.
+    expected = set(expected) | {"indextts2", "confucius4-tts", "supertonic3"}
     assert si.installable_engine_ids() == frozenset(expected)
 
 
@@ -1129,3 +1141,77 @@ def test_list_backends_offers_install_only_where_it_can_work(monkeypatch):
     assert rows["confucius4-tts"]["one_click_install"] is True
     assert rows["moss-tts-v15"]["one_click_install"] is False
     assert rows["dots-tts"]["one_click_install"] is False
+
+
+# ── PyPI-package engines (Supertonic-3, PocketTTS) ─────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("engine_id", "package", "env_var"),
+    [
+        ("supertonic3", "supertonic==1.3.1", "OMNIVOICE_SUPERTONIC3_DIR"),
+        ("pockettts", "pocket-tts==2.1.0", "OMNIVOICE_POCKETTTS_DIR"),
+    ],
+)
+def test_pypi_engines_install_the_apps_own_pin_without_fetching_source(
+    monkeypatch, engine_id, package, env_var
+):
+    import tomllib
+    spec = si.get_spec(engine_id)
+    assert spec.env_var == env_var and not spec.has_source
+    # The same pin as the app's optional extra, so the engine runs the same
+    # wheel whether it was installed here or with `uv sync --extra`.
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    extras = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["optional-dependencies"]
+    assert package in {req.split(";")[0].strip() for reqs in extras.values() for req in reqs}
+
+    monkeypatch.delenv(env_var, raising=False)
+    argvs = _capture_install_argvs(monkeypatch, family="cpu")
+    monkeypatch.setattr(si, "disk_free_bytes", lambda p: 100 * _GIB)
+    monkeypatch.setattr(si.shutil, "which", lambda n: None)
+    _stub_verify_ok(monkeypatch)
+    monkeypatch.setattr("core.prefs.set_", lambda k, v: None)
+
+    job = _run(spec)
+
+    assert job["state"] == "succeeded", (job["error"], list(job["log"]))
+    assert not any(os.path.basename(a[0]).startswith("git") for a in argvs)
+    pip = next(a for a in argvs if a[1:3] == ["pip", "install"])
+    assert pip[5] == package
+    assert os.environ[env_var] == str(si.managed_checkout(spec))
+    assert si._healthy(spec)
+
+
+@pytest.mark.parametrize("family", ["cuda", "cpu", "rocm", "mps"])
+def test_pockettts_installs_cpu_torch_on_every_host(monkeypatch, family):
+    from core.torch_indexes import UV_PIP_CPU_ARGS
+    argvs = _capture_install_argvs(monkeypatch, family=family)
+    si._step_install_deps(si.get_spec("pockettts"), si._new_job("pockettts"))
+    pip = next(a for a in argvs if a[1:3] == ["pip", "install"])
+    i = pip.index("--extra-index-url")
+    assert tuple(pip[i:i + len(UV_PIP_CPU_ARGS)]) == UV_PIP_CPU_ARGS
+    assert pip.count("--extra-index-url") == 1
+
+
+def test_an_extra_already_in_the_app_env_counts_as_installed(monkeypatch):
+    """A `uv sync --extra supertonic` install keeps working and is never
+    provisioned over."""
+    import importlib.util as ilu
+    monkeypatch.delenv("OMNIVOICE_SUPERTONIC3_DIR", raising=False)
+    real = ilu.find_spec
+    monkeypatch.setattr(
+        ilu, "find_spec", lambda name, *a: object() if name == "supertonic" else real(name, *a)
+    )
+    assert si.start_install("supertonic3")["status"] == "already_installed"
+    assert "supertonic3" not in si._jobs
+
+
+def test_engine_venv_python_needs_a_real_interpreter(monkeypatch, tmp_path):
+    monkeypatch.delenv("OMNIVOICE_FAKE_SIDE_DIR", raising=False)
+    assert si.engine_venv_python("OMNIVOICE_FAKE_SIDE_DIR") is None
+    monkeypatch.setenv("OMNIVOICE_FAKE_SIDE_DIR", str(tmp_path))
+    assert si.engine_venv_python("OMNIVOICE_FAKE_SIDE_DIR") is None  # no venv yet
+    py = si._venv_python(tmp_path / ".venv")
+    py.parent.mkdir(parents=True)
+    py.write_text("#!fake\n")
+    assert si.engine_venv_python("OMNIVOICE_FAKE_SIDE_DIR") == py

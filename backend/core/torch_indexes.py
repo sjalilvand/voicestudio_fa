@@ -28,3 +28,16 @@ UV_PIP_CU128_ARGS: tuple[str, ...] = (
     "--index-strategy",
     "unsafe-best-match",
 )
+
+PYTORCH_CPU_INDEX_URL = "https://download.pytorch.org/whl/cpu"
+
+# For an engine that runs torch only on the CPU (PocketTTS). On Linux, PyPI's
+# torch is the CUDA build and pulls ~15 NVIDIA packages the engine never uses;
+# this index serves `+cpu` builds for Linux and Windows and the regular build
+# for macOS.
+UV_PIP_CPU_ARGS: tuple[str, ...] = (
+    "--extra-index-url",
+    PYTORCH_CPU_INDEX_URL,
+    "--index-strategy",
+    "unsafe-best-match",
+)

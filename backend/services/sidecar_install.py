@@ -139,6 +139,12 @@ class SidecarSpec:
     # Python that proves the venv works; "{checkout}" / "{checkout_repr}"
     # substituted. None means `import <probe_module>`.
     probe_code: Optional[str] = None
+    # False for an engine that is a PyPI package, not a repository: nothing
+    # is fetched, and the managed root holds only the engine's own venv.
+    has_source: bool = True
+    # Add PyTorch's CPU index on every host, for an engine that only ever
+    # runs torch on the CPU (see core.torch_indexes).
+    cpu_torch_index: bool = False
     # Can the one-click install work on THIS machine? (ok, reason). Consulted
     # before an Install button is offered and again when an install starts, so
     # a host the upstream does not support never gets a job that can only fail.
@@ -211,6 +217,28 @@ def _dots_host() -> tuple[bool, str]:
         "dots.tts publishes no Windows install. Run VoiceStudio on Linux or "
         "macOS, or under WSL2, to use it."
     )
+
+
+def _pockettts_host() -> tuple[bool, str]:
+    import platform
+    if sys.platform == "darwin" and platform.machine().lower() == "x86_64":
+        return False, (
+            "PocketTTS needs a PyTorch version that has no Intel Mac build."
+        )
+    return True, ""
+
+
+def _in_app_env(module: str) -> Callable[[], bool]:
+    """An install made with ``uv sync --extra`` lives in the app's own
+    environment. It counts as installed, so the installer never provisions a
+    second copy over one that works."""
+    def probe() -> bool:
+        import importlib.util
+        try:
+            return importlib.util.find_spec(module) is not None
+        except (ImportError, ValueError):
+            return False
+    return probe
 
 
 SPECS: dict[str, SidecarSpec] = {
@@ -331,6 +359,45 @@ SPECS: dict[str, SidecarSpec] = {
         invalidate=_dots_invalidate,
         installed_probe=_dots_installed,
     ),
+    # PyPI packages rather than repositories: nothing to clone, and the managed
+    # root holds only the engine's own venv. The pins are the app's own
+    # optional extras (a test ties the two together), so the engine runs the
+    # same wheel whichever way it was installed.
+    "supertonic3": SidecarSpec(
+        engine_id="supertonic3",
+        display_name="Supertonic-3",
+        repo_url="",
+        tarball_url="",
+        checkout_dirname="supertonic3",
+        env_var="OMNIVOICE_SUPERTONIC3_DIR",
+        probe_module="supertonic",
+        has_source=False,
+        venv_args=("--python", "3.11"),
+        install_args=("supertonic==1.3.1",),
+        docs_path="docs/engines/supertonic3.md",
+        # onnxruntime + numpy + huggingface_hub, no torch. The ~400 MB of
+        # weights download on first synthesis into the shared HF cache.
+        required_bytes=1 * _GIB,
+        installed_probe=_in_app_env("supertonic"),
+    ),
+    "pockettts": SidecarSpec(
+        engine_id="pockettts",
+        display_name="PocketTTS",
+        repo_url="",
+        tarball_url="",
+        checkout_dirname="pockettts",
+        env_var="OMNIVOICE_POCKETTTS_DIR",
+        probe_module="pocket_tts",
+        has_source=False,
+        venv_args=("--python", "3.11"),
+        install_args=("pocket-tts==2.1.0",),
+        cpu_torch_index=True,
+        docs_path="docs/engines/pockettts.md",
+        # CPU torch + scipy. The gated weights download on first use.
+        required_bytes=3 * _GIB,
+        installed_probe=_in_app_env("pocket_tts"),
+        host_supported=_pockettts_host,
+    ),
 }
 
 
@@ -384,6 +451,20 @@ def managed_root(spec: SidecarSpec) -> Path:
 
 def managed_checkout(spec: SidecarSpec) -> Path:
     return managed_root(spec) / spec.checkout_dirname
+
+
+def engine_venv_python(env_var: str) -> Optional[Path]:
+    """The interpreter of the install *env_var* points at, if it has one.
+
+    For engines that can live in the app's environment or in a venv of their
+    own (PocketTTS, Supertonic-3): they prefer their own, and fall back to the
+    app's interpreter for an install made with ``uv sync --extra``.
+    """
+    env_dir = os.environ.get(env_var)
+    if not env_dir:
+        return None
+    py = _venv_python(Path(env_dir) / ".venv")
+    return py if py.is_file() else None
 
 
 def _legacy_managed_checkouts(spec: SidecarSpec) -> tuple[Path, ...]:
@@ -872,6 +953,11 @@ def _step_preflight(spec: SidecarSpec, job: dict) -> None:
 def _step_fetch_source(spec: SidecarSpec, job: dict) -> None:
     step = _job_step(job, "fetch_source")
     checkout = managed_checkout(spec)
+    if not spec.has_source:
+        checkout.mkdir(parents=True, exist_ok=True)
+        step["state"] = "done"
+        step["detail"] = "PyPI package, no source to fetch"
+        return
     if _source_present(spec, checkout):
         step["state"] = "done"
         step["detail"] = "source already present"
@@ -936,6 +1022,8 @@ def _write_source_marker(spec: SidecarSpec, checkout: Path) -> None:
 
 
 def _source_present(spec: SidecarSpec, checkout: Path) -> bool:
+    if not spec.has_source:
+        return checkout.is_dir()
     if not _source_layout_ok(spec, checkout):
         return False
     if not spec.source_revision:
@@ -1053,7 +1141,10 @@ def _step_install_deps(spec: SidecarSpec, job: dict) -> None:
     uv = _locate_uv()
     _log(job, f"Installing {spec.display_name} into its venv (this can take several minutes) …")
     target = [_expand(arg, checkout) for arg in spec.install_args]
-    if spec.uses_cuda_index and _host_family() == "cuda":
+    if spec.cpu_torch_index:
+        from core.torch_indexes import UV_PIP_CPU_ARGS
+        target += list(UV_PIP_CPU_ARGS)
+    elif spec.uses_cuda_index and _host_family() == "cuda":
         from core.torch_indexes import UV_PIP_CU128_ARGS
         target += list(UV_PIP_CU128_ARGS)
     # Always `--python <this engine's venv>`: the install can only ever land in
