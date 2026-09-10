@@ -129,11 +129,15 @@ def test_retries_a_transient_download_failure_only(monkeypatch):
     assert sidecar._with_retries(flaky) == "model"
     assert len(attempts) == 3
 
+    broken_calls = []
+
     def broken():
+        broken_calls.append(1)
         raise ValueError("bad config")
 
     with pytest.raises(ValueError):
         sidecar._with_retries(broken)
+    assert len(broken_calls) == 1  # a permanent error is not retried
 
 
 def test_the_sidecar_imports_nothing_from_the_app():
@@ -145,7 +149,7 @@ def test_the_sidecar_imports_nothing_from_the_app():
 def test_the_class_switches_to_the_sidecar_once_its_venv_exists(monkeypatch, tmp_path):
     from engines.voxcpm2_subprocess import VoxCPM2SubprocessBackend
     from services import tts_backend
-    from services.sidecar_install import _venv_python
+    from services.sidecar_install import _INSTALL_COMPLETE_MARKER, _venv_python
 
     monkeypatch.setenv("OMNIVOICE_VOXCPM2_DIR", "")
     monkeypatch.delenv("OMNIVOICE_VOXCPM2_DIR")
@@ -154,6 +158,7 @@ def test_the_class_switches_to_the_sidecar_once_its_venv_exists(monkeypatch, tmp
     py = _venv_python(tmp_path / ".venv")
     py.parent.mkdir(parents=True)
     py.write_text("#!fake\n")
+    (tmp_path / _INSTALL_COMPLETE_MARKER).write_text("x\n", encoding="utf-8")
     monkeypatch.setenv("OMNIVOICE_VOXCPM2_DIR", str(tmp_path))
 
     cls = tts_backend.get_backend_class("voxcpm2")
@@ -197,3 +202,29 @@ def test_the_sidecar_class_prepares_the_reference_and_trims_the_tail(monkeypatch
     assert sent["ref_audio"] == "/clip.wav.prepared.wav"
     assert trimmed["sr"] == 48000
     assert tuple(out.shape) == (1, 10)
+
+
+def test_output_is_resampled_to_the_48_khz_the_parent_assumes(monkeypatch):
+    """The parent trims and labels the PCM at a fixed 48 kHz, so a model that
+    reports another rate must be resampled, not passed through."""
+    sidecar = _load_sidecar(monkeypatch, [])
+    sidecar._handle_synthesize({"text": "warm up"}, io.BytesIO())
+    type(sidecar._MODEL).sample_rate = 24000
+    out = io.BytesIO()
+    sidecar._handle_synthesize({"text": "hi"}, out)
+    audio = _frames(out)[-1]
+    assert audio["sample_rate"] == 48000
+    assert audio["n_samples"] == 960  # 480 samples at 24 kHz
+
+
+def test_a_failed_install_leaves_voxcpm2_in_process(monkeypatch, tmp_path):
+    """A venv interpreter without the completion marker (a reinstall that
+    failed partway) must not hide the working in-process engine."""
+    from services import tts_backend
+    from services.sidecar_install import _venv_python
+
+    py = _venv_python(tmp_path / ".venv")
+    py.parent.mkdir(parents=True)
+    py.write_text("#!fake\n")
+    monkeypatch.setenv("OMNIVOICE_VOXCPM2_DIR", str(tmp_path))
+    assert tts_backend.get_backend_class("voxcpm2") is tts_backend.VoxCPM2Backend

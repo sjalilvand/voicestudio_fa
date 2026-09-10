@@ -1221,6 +1221,9 @@ def test_engine_venv_python_needs_a_real_interpreter(monkeypatch, tmp_path):
     py = si._venv_python(tmp_path / ".venv")
     py.parent.mkdir(parents=True)
     py.write_text("#!fake\n")
+    # An interpreter without the marker is a failed or unfinished install.
+    assert si.engine_venv_python("OMNIVOICE_FAKE_SIDE_DIR") is None
+    (tmp_path / si._INSTALL_COMPLETE_MARKER).write_text("x\n", encoding="utf-8")
     assert si.engine_venv_python("OMNIVOICE_FAKE_SIDE_DIR") == py
 
 
