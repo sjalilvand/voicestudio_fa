@@ -88,6 +88,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- The first-run setup screen no longer mislabels a step when the bootstrap restarts itself: Rust now says which attempt each stage and log line belongs to, instead of the screen guessing from a once-a-second poll (#1900)
+
 - Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1952)
 - `bun desktop-prod` and `bun desktop-fresh` find Rust and uv from a terminal opened before they were installed, as `bun desktop` already did; a missing Rust toolchain fails up front with the install steps (#1952)
 - Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1955)

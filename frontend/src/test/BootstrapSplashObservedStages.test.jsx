@@ -21,6 +21,14 @@
  *     unioned in as independent proof a stage ran;
  *   - a Retry restarts the bootstrap, so stages observed during the previous
  *     attempt must not carry over and render as done in the new one.
+ *
+ * #1900 replaced the attempt-boundary GUESS with a fact. The splash used to
+ * infer a restart from the ~1 s stage poll (arriving at `checking`, or leaving
+ * `failed`), which cannot see a restart that begins and passes those stages
+ * inside one sample window — and cannot see a Rust-side restart that never
+ * passes them at all. Rust now stamps an attempt id on the status reply and on
+ * every log line, and the splash scopes evidence by equality on it. The last
+ * three tests here pin that contract.
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -144,16 +152,16 @@ describe('BootstrapSplash — observed-stage tracking (#1894)', () => {
     // Greptile finding on #1896: the observed set was add-only and the splash
     // stays mounted across a Retry, so a stage the FAILED attempt reached
     // would still render done in the new attempt even if that attempt skips
-    // it. Arriving back at `checking` from elsewhere means a new attempt.
-    const { rerender } = render(<BootstrapSplash stage="checking" message={null} />);
-    rerender(<BootstrapSplash stage="downloading_uv" message={null} />);
-    rerender(<BootstrapSplash stage="installing_deps" message={null} />);
-    rerender(<BootstrapSplash stage="failed" message="uv sync failed" />);
+    // it. The restart is Rust's attempt id changing (#1900).
+    const { rerender } = render(<BootstrapSplash stage="checking" message={null} attempt={1} />);
+    rerender(<BootstrapSplash stage="downloading_uv" message={null} attempt={1} />);
+    rerender(<BootstrapSplash stage="installing_deps" message={null} attempt={1} />);
+    rerender(<BootstrapSplash stage="failed" message="uv sync failed" attempt={1} />);
 
-    // Retry: Rust goes back to `checking`, then this attempt finds the venv
-    // healthy and jumps straight to starting_backend.
-    rerender(<BootstrapSplash stage="checking" message={null} />);
-    rerender(<BootstrapSplash stage="starting_backend" message={null} />);
+    // Retry: Rust opens attempt 2, then this attempt finds the venv healthy
+    // and jumps straight to starting_backend.
+    rerender(<BootstrapSplash stage="checking" message={null} attempt={2} />);
+    rerender(<BootstrapSplash stage="starting_backend" message={null} attempt={2} />);
 
     // Nothing from the previous attempt may be presented as this attempt's
     // completed work — so the install chrome is gone entirely again.
@@ -178,25 +186,27 @@ describe('BootstrapSplash — observed-stage tracking (#1894)', () => {
     });
     invoke.mockImplementation(async () => null);
 
-    const { rerender } = render(<BootstrapSplash stage="failed" message="uv sync failed" />);
+    const { rerender } = render(
+      <BootstrapSplash stage="failed" message="uv sync failed" attempt={1} />,
+    );
     await waitFor(() => expect(handlers['bootstrap-log']).toBeTypeOf('function'));
 
-    // User clicks Retry — this opens the new attempt.
+    // User clicks Retry. Rust bumps to attempt 2 inside respawn_backend.
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /^Retry$/ }));
     });
 
     // Rust immediately emits the new attempt's logs, still before the poll
-    // has reported `checking`.
+    // has reported anything — but they are already stamped attempt 2.
     await act(async () => {
       handlers['bootstrap-log']({
-        payload: { stage: 'creating_venv', line: 'Creating virtualenv at .venv' },
+        payload: { attempt: 2, stage: 'creating_venv', line: 'Creating virtualenv at .venv' },
       });
     });
 
     // Only now does the poll catch up, and it never samples creating_venv.
-    rerender(<BootstrapSplash stage="checking" message={null} />);
-    rerender(<BootstrapSplash stage="installing_deps" message={null} />);
+    rerender(<BootstrapSplash stage="checking" message={null} attempt={2} />);
+    rerender(<BootstrapSplash stage="installing_deps" message={null} attempt={2} />);
 
     // The log line proved creating_venv ran in THIS attempt; it must not have
     // been discarded by a boundary stamped after it arrived.
@@ -209,21 +219,92 @@ describe('BootstrapSplash — observed-stage tracking (#1894)', () => {
   it('a retry whose restart stage the poll never sampled still drops the old evidence', () => {
     // CodeRabbit finding on 5e9538a0: a retry can go failed -> checking ->
     // starting_backend inside one ~1s sample window, so the poll observes
-    // only failed -> starting_backend. Keying the reset solely off arriving
-    // at a restart stage would leave the FAILED attempt's stages in place and
-    // present them as this attempt's completed work.
-    const { rerender } = render(<BootstrapSplash stage="checking" message={null} />);
-    rerender(<BootstrapSplash stage="downloading_uv" message={null} />);
-    rerender(<BootstrapSplash stage="installing_deps" message={null} />);
-    rerender(<BootstrapSplash stage="failed" message="uv sync failed" />);
+    // only failed -> starting_backend. The attempt id is stamped by the
+    // producer, so it survives a sample window that swallows the stage.
+    const { rerender } = render(<BootstrapSplash stage="checking" message={null} attempt={1} />);
+    rerender(<BootstrapSplash stage="downloading_uv" message={null} attempt={1} />);
+    rerender(<BootstrapSplash stage="installing_deps" message={null} attempt={1} />);
+    rerender(<BootstrapSplash stage="failed" message="uv sync failed" attempt={1} />);
 
     // Retry — and the poll misses `checking` entirely.
-    rerender(<BootstrapSplash stage="starting_backend" message={null} />);
+    rerender(<BootstrapSplash stage="starting_backend" message={null} attempt={2} />);
 
     expect(screen.getByText('Starting backend…')).toBeInTheDocument();
     // Nothing from the failed attempt may be shown as this attempt's work.
     expect(screen.queryByText('Downloading uv (Python package manager)…')).toBeNull();
     expect(screen.queryByText(/first run, 5.10 min/)).toBeNull();
     expect(screen.queryByText('Installing')).toBeNull();
+  });
+
+  it('a Rust-side restart the poll cannot see at all drops the old evidence', () => {
+    // #1900, the case no amount of stage inference reaches. The supervisor
+    // rebuilds a broken venv on its own: it re-enters `checking` and runs the
+    // whole bootstrap again, with no `failed` stage and no UI-initiated retry.
+    // If the poll samples `installing_deps` on either side of that window, the
+    // stage sequence is `installing_deps` -> `installing_deps` — literally no
+    // signal that anything restarted. The old heuristics kept the previous
+    // attempt's `downloading_uv` and rendered it done for work this attempt
+    // never did. The attempt id changing is the whole signal.
+    const { rerender } = render(
+      <BootstrapSplash stage="downloading_uv" message={null} attempt={1} />,
+    );
+    rerender(<BootstrapSplash stage="installing_deps" message={null} attempt={1} />);
+
+    // Attempt 1 really did download uv, so its step reads as done.
+    expect(screen.getByText('Downloading uv (Python package manager)…').className).toMatch(
+      /text-fg-muted/,
+    );
+
+    // Venv turns out to be broken; Rust quarantines it and starts over. The
+    // poll happens to sample the new attempt at the same stage name, so the
+    // stage sequence carries no evidence of the restart at all.
+    rerender(<BootstrapSplash stage="installing_deps" message={null} attempt={2} />);
+
+    // This attempt has not downloaded uv. Claiming otherwise is the #1894
+    // fabrication, arriving by a route stage inference cannot close.
+    expect(screen.getByText('Downloading uv (Python package manager)…').className).not.toMatch(
+      /text-fg-muted/,
+    );
+  });
+
+  it('a log line from the previous attempt is not counted as this attempt evidence', async () => {
+    // Log lines are the second evidence source, and the one that closes the
+    // poll's blind spot — so they carry the attempt too. A `creating_venv`
+    // line emitted during attempt 1 must not make attempt 2's step list claim
+    // a venv was created, no matter how recently it arrived.
+    window.__TAURI_INTERNALS__ = {};
+    const { listen } = await import('@tauri-apps/api/event');
+    const handlers = {};
+    listen.mockImplementation(async (name, cb) => {
+      handlers[name] = cb;
+      return () => {};
+    });
+
+    const { rerender } = render(
+      <BootstrapSplash stage="installing_deps" message={null} attempt={1} />,
+    );
+    await waitFor(() => expect(handlers['bootstrap-log']).toBeTypeOf('function'));
+
+    await act(async () => {
+      handlers['bootstrap-log']({
+        payload: { attempt: 1, stage: 'creating_venv', line: 'Creating virtualenv at .venv' },
+      });
+    });
+
+    // Proof for attempt 1: the step reads as done.
+    await waitFor(() => {
+      expect(screen.getByText('Creating Python virtual environment…').className).toMatch(
+        /text-fg-muted/,
+      );
+    });
+
+    // Attempt 2 starts, and skips straight past venv creation.
+    rerender(<BootstrapSplash stage="installing_deps" message={null} attempt={2} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Creating Python virtual environment…').className).not.toMatch(
+        /text-fg-muted/,
+      );
+    });
   });
 });

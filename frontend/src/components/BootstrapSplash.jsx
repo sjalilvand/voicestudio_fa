@@ -127,10 +127,6 @@ const STEPS = [
 // journey chrome should already be armed by the time the step list appears.
 const INSTALL_STAGES = ['downloading_uv', 'creating_venv', 'installing_deps', 'awaiting_setup'];
 
-// Stages the bootstrap restarts *from*. Arriving at one of these from
-// anywhere else means a new attempt began (Retry, or a Rust-side restart).
-const RESTART_STAGES = new Set(['checking', 'awaiting_setup']);
-
 // How many log lines the <pre> shows. `logs` state holds exactly this tail and
 // nothing more, so the per-event array copy stays bounded no matter how long a
 // bootstrap runs.
@@ -416,7 +412,7 @@ function ErrorBox({ children }) {
   );
 }
 
-export function BootstrapSplash({ stage, message }) {
+export function BootstrapSplash({ stage, message, attempt = 0 }) {
   const { t } = useTranslation();
   const locale = useAppStore((s) => s.locale);
   const setLocale = useAppStore((s) => s.setLocale);
@@ -471,9 +467,6 @@ export function BootstrapSplash({ stage, message }) {
   // tracking effect below). Drives "done" ticks and journey visibility off
   // observed reality instead of list position (#1894).
   const [polledStages, setPolledStages] = useState(() => new Set([stage]));
-  // Wall-clock start of the current attempt. A retry restarts the bootstrap;
-  // log lines from the previous attempt must not count toward this one.
-  const [attemptStart, setAttemptStart] = useState(0);
   // Every line of this bootstrap. `logs` above is only the rendered tail.
   const [totalLines, setTotalLines] = useState(0);
   const allLogsRef = useRef([]);
@@ -481,10 +474,7 @@ export function BootstrapSplash({ stage, message }) {
   // Dedup guards that seam and nothing else — see the listener.
   const handoverDoneRef = useRef(false);
   const logRef = useRef(null);
-  const prevStageRef = useRef(stage); // previous stage, for restart detection
-  // True between a retry WE initiated and the poll catching up to it, so the
-  // fallback effect below doesn't re-stamp an already-exact attempt boundary.
-  const selfInitiatedRef = useRef(false);
+  const prevAttemptRef = useRef(attempt); // last attempt id Rust reported
   const prevProgRef = useRef(null); // {bytes, t} — last progress event
   const rateRef = useRef(0); // EMA bytes/sec across events
 
@@ -495,14 +485,18 @@ export function BootstrapSplash({ stage, message }) {
   // fast disk `creating_venv` routinely does. Stage-tagged `bootstrap-log`
   // lines close that gap: the Rust side emits them as the work happens, so a
   // line tagged with a stage is proof that stage ran, whether or not the
-  // poll ever saw it. Lines are filtered to the current attempt so a retry
-  // cannot inherit the previous one's evidence (the visible log is left
-  // alone — clearing it on a Rust-side restart would destroy the user's
-  // context, cf. #1847).
+  // poll ever saw it.
+  //
+  // Lines are scoped to the current attempt so a retry cannot inherit the
+  // previous one's evidence. The attempt is the id Rust stamps on both the
+  // status reply and every log line (#1900) — an exact match, rather than a
+  // clock comparison against a boundary this side had to guess at. (The
+  // VISIBLE log is left alone: clearing it on a restart nobody asked for
+  // would destroy the user's context, cf. #1847.)
   const observedStages = useMemo(() => {
     const seen = new Set(polledStages);
     for (const entry of allLogsRef.current) {
-      if (entry?.stage && (entry.t ?? 0) >= attemptStart) seen.add(entry.stage);
+      if (entry?.stage && entry.attempt === attempt) seen.add(entry.stage);
     }
     return seen;
     // totalLines is the render signal for allLogsRef, which is a ref and so
@@ -510,7 +504,7 @@ export function BootstrapSplash({ stage, message }) {
     // rendered tail is the point: a stage whose only evidence scrolled out of
     // the capped tail would otherwise read as never having run (#1847).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [polledStages, totalLines, attemptStart]);
+  }, [polledStages, totalLines, attempt]);
 
   const label = t(`bootstrap.${stage}`, STAGE_LABEL[stage]);
   const stepIndex = Math.max(0, STEPS.indexOf(stage));
@@ -536,18 +530,15 @@ export function BootstrapSplash({ stage, message }) {
   // instead of fabricating completed work (#1894).
   const installWorkSeen = INSTALL_STAGES.some((s) => observedStages.has(s));
 
-  // Open a new bootstrap attempt. Called at the moment a retry is INITIATED,
-  // not when the ~1s status poll later reports `checking`: the Rust side
-  // starts emitting logs for the new attempt immediately, and a boundary
-  // stamped at detection time would sit *after* those lines and discard them
-  // as belonging to the old attempt — losing exactly the fast-stage evidence
-  // the log union exists to capture. resetLogs() clears the full-run ref too,
-  // so a retry cannot inherit the previous attempt's lines (#1847 + #1894).
+  // Clear the splash for a retry the user just asked for. The attempt
+  // BOUNDARY is no longer this side's business (#1900) — Rust bumps its
+  // attempt id inside `respawn_backend`, before the stage moves, and the
+  // reset effect below follows that. What is left here is presentation: empty
+  // the visible log and the polled-stage set so the user watches a fresh run
+  // start, instead of the failed one's output sitting under a spinner.
   const beginAttempt = () => {
-    selfInitiatedRef.current = true;
     resetLogs();
     setPolledStages(new Set());
-    setAttemptStart(Date.now());
   };
 
   const handleRetry = async () => {
@@ -590,45 +581,22 @@ export function BootstrapSplash({ stage, message }) {
   // still render as completed, which is the very fabrication this change
   // exists to remove.
   //
-  // Retries we initiate call beginAttempt() directly, so their boundary is
-  // exact. This effect is the FALLBACK for a restart begun on the Rust side,
-  // where the stage poll is the only signal we get. There the boundary can
-  // land up to one poll interval late, and log lines from the new attempt in
-  // that window are discarded rather than counted. That is the deliberate
-  // direction to fail in: a discarded line can leave a step showing pending
-  // (conservative, and honest), whereas counting a stale line would render a
-  // step DONE for work this attempt never did — the bug this change exists to
-  // fix. Closing the window entirely needs a Rust-provided attempt id, which
-  // would be a new IPC surface and is deliberately out of scope here.
+  // A new attempt is a fact Rust reports, not something this side infers from
+  // a sampled stage (#1900). Every real restart bumps the id — both retry
+  // commands via `respawn_backend`, and the supervisor's own venv rebuild — so
+  // the id changing IS the boundary, whether or not the poll ever sampled the
+  // restart stage. The heuristics this replaces (arriving at
+  // `checking`/`awaiting_setup`, leaving `failed`) could miss a Rust-initiated
+  // restart by up to a poll interval and discard that attempt's earliest
+  // evidence. Equality on an id cannot.
   useEffect(() => {
-    const prev = prevStageRef.current;
-    prevStageRef.current = stage;
-    // Two ways a new attempt shows up in the poll. Arriving at a restart
-    // stage is the common one. But the poll can also miss the restart stage
-    // entirely — `failed` -> (retry) -> `checking` -> `starting_backend`
-    // inside one ~1s sample window surfaces as `failed` -> `starting_backend`,
-    // and keying only off restart stages would leave the FAILED attempt's
-    // evidence in place and render its install chrome as this attempt's
-    // completed work. Leaving `failed` at all means a retry began, since
-    // retry_bootstrap/clean_and_retry_bootstrap are the only exits from it.
-    const restarted =
-      (RESTART_STAGES.has(stage) && !RESTART_STAGES.has(prev)) ||
-      (prev === 'failed' && stage !== 'failed');
-    if (restarted) {
-      if (selfInitiatedRef.current) {
-        // beginAttempt() already opened this attempt with an exact boundary.
-        // Re-stamping it here — a poll interval later — would discard the
-        // new attempt's own early log lines, which is the bug this guard
-        // exists to prevent.
-        selfInitiatedRef.current = false;
-      } else {
-        setAttemptStart(Date.now());
-      }
+    if (prevAttemptRef.current !== attempt) {
+      prevAttemptRef.current = attempt;
       setPolledStages(new Set([stage]));
       return;
     }
     setPolledStages((p) => (p.has(stage) ? p : new Set(p).add(stage)));
-  }, [stage]);
+  }, [stage, attempt]);
 
   // Load persisted region on mount.
   useEffect(() => {
@@ -674,7 +642,8 @@ export function BootstrapSplash({ stage, message }) {
         try {
           const buffered = await invoke('get_bootstrap_logs');
           if (!cancelled && Array.isArray(buffered) && buffered.length > 0) {
-            const entries = buffered.map(({ stage: s, line }) => ({
+            const entries = buffered.map(({ attempt: a, stage: s, line }) => ({
+              attempt: a ?? 0,
               stage: s,
               line,
               t: Date.now(),
@@ -689,7 +658,7 @@ export function BootstrapSplash({ stage, message }) {
 
         // Subscribe to live events for anything new from here on.
         unlistenLog = await listen('bootstrap-log', (e) => {
-          const { stage: s, line } = e.payload || {};
+          const { attempt: a, stage: s, line } = e.payload || {};
           if (!line) return;
           noteBootstrapLogActivity();
           // Dedup ONLY across the backfill→live seam. The overlap it exists
@@ -704,7 +673,7 @@ export function BootstrapSplash({ stage, message }) {
             if (seam.some((l) => l.stage === s && l.line === line)) return;
             handoverDoneRef.current = true;
           }
-          const entry = { stage: s, line, t: Date.now() };
+          const entry = { attempt: a ?? 0, stage: s, line, t: Date.now() };
           allLogsRef.current.push(entry);
           setTotalLines(allLogsRef.current.length);
           setLogs((prev) => {
@@ -1061,19 +1030,21 @@ export function BootstrapSplash({ stage, message }) {
  * returns 'ready' immediately so the splash never mounts.
  */
 export function useBootstrapStage(pollMs = 1000) {
-  const [state, setState] = useState({ stage: 'checking', message: null });
+  // `attempt` is Rust's bootstrap-attempt id (#1900). 0 means "none reported",
+  // which is where the non-Tauri and dev-web short-circuits below settle.
+  const [state, setState] = useState({ stage: 'checking', message: null, attempt: 0 });
 
   useEffect(() => {
     if (typeof window === 'undefined') {
-      setState({ stage: 'ready', message: null });
+      setState({ stage: 'ready', message: null, attempt: 0 });
       return;
     }
     if (!('__TAURI_INTERNALS__' in window)) {
-      setState({ stage: 'ready', message: null });
+      setState({ stage: 'ready', message: null, attempt: 0 });
       return;
     }
     if (import.meta.env.DEV) {
-      setState({ stage: 'ready', message: null });
+      setState({ stage: 'ready', message: null, attempt: 0 });
       return;
     }
 
@@ -1093,7 +1064,7 @@ export function useBootstrapStage(pollMs = 1000) {
         healthUrl: `${getApiBase()}/health`,
         onHealthy: () => {
           if (cancelled) return;
-          setState({ stage: 'ready', message: null });
+          setState({ stage: 'ready', message: null, attempt: 0 });
         },
       });
     };
@@ -1113,11 +1084,11 @@ export function useBootstrapStage(pollMs = 1000) {
       onReadyViaHttp: () => {
         if (cancelled) return;
         httpForcedReady = true;
-        setState({ stage: 'ready', message: null });
+        setState({ stage: 'ready', message: null, attempt: 0 });
       },
       onStuck: () => {
         if (cancelled || httpForcedReady) return;
-        setState({ stage: 'ipc_lost', message: null });
+        setState({ stage: 'ipc_lost', message: null, attempt: 0 });
       },
     });
     // Stall watchdog (#474): if the backend hangs in a non-terminal stage and
@@ -1162,7 +1133,7 @@ export function useBootstrapStage(pollMs = 1000) {
       const tauriInvoke = await invoke();
       if (!tauriInvoke) {
         watchdog.cancel();
-        setState({ stage: 'ready', message: null });
+        setState({ stage: 'ready', message: null, attempt: 0 });
         return;
       }
       const tick = async () => {
@@ -1179,6 +1150,9 @@ export function useBootstrapStage(pollMs = 1000) {
           misses = 0;
           const stage = res.stage || 'ready';
           const message = res.message || null;
+          // Rust's bootstrap-attempt id (#1900). A build that predates the
+          // field reports nothing, which reads as 0 — never a live attempt.
+          const attempt = typeof res.attempt === 'number' ? res.attempt : 0;
           // Reset the stall clock whenever something actually changes.
           const key = `${stage}|${message || ''}`;
           if (key !== lastKey) {
@@ -1191,6 +1165,7 @@ export function useBootstrapStage(pollMs = 1000) {
             if (Date.now() - lastActivity > stallBudgetMs(stage)) {
               // Stuck — surface it as a failure so Retry/logs/hints appear.
               setState({
+                attempt,
                 stage: 'failed',
                 message:
                   (message ? message + '\n\n' : '') +
@@ -1201,10 +1176,10 @@ export function useBootstrapStage(pollMs = 1000) {
               startFailedRecovery();
               return; // stop IPC polling — only /health recovery remains
             }
-            setState({ stage, message });
+            setState({ attempt, stage, message });
             timer = setTimeout(tick, pollMs);
           } else {
-            setState({ stage, message });
+            setState({ attempt, stage, message });
             if (stage === 'failed') startFailedRecovery();
           }
         } catch {
@@ -1221,7 +1196,7 @@ export function useBootstrapStage(pollMs = 1000) {
             // HTTP watchdog too, so it can't flip to 'ipc_lost' underneath
             // the already-mounted main UI (#879).
             watchdog.cancel();
-            setState({ stage: 'ready', message: null });
+            setState({ stage: 'ready', message: null, attempt: 0 });
           }
         }
       };
