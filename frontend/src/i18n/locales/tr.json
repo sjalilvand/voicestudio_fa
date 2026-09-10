@@ -1722,6 +1722,7 @@
     "dictation_lede": "Kısayol tuşuna bastıktan sonra bunlardan birini yüksek sesle okuyun veya paketlenmiş örneği transcriber aracılığıyla göndermek için Tekrar Oynat'a basın, böylece dikte çalışmasını konuşmadan uçtan uca görebilirsiniz.",
     "dictation_status_ok": "Doğrulandı — kısayol tuşu bu makinede çalışıyor",
     "dictation_status_pending": "Test etmek için herhangi bir yerde kısayolunuza basın",
+    "dictation_status_taken": "Bu kısayolu başka bir uygulama kullanıyor — Ayarlar’dan farklı bir tane seçin.",
     "dictation_status_warn": "Kayıtlı kısayol tuşu yok — aşağıdan bir tane ayarlayın",
     "dictation_hear": "Duy",
     "dictation_stop": "Durdur",

@@ -1722,6 +1722,7 @@
     "dictation_lede": "Leggi uno di questi ad alta voce dopo aver premuto il tasto di scelta rapida oppure premi Riproduci per inviare il campione in bundle al trascrittore in modo da poter vedere il lavoro di dettatura end-to-end senza parlare.",
     "dictation_status_ok": "Verificato: il tasto di scelta rapida funziona su questa macchina",
     "dictation_status_pending": "Premi la scorciatoia ovunque per testare",
+    "dictation_status_taken": "Un’altra app usa già questa scorciatoia: scegline un’altra nelle Impostazioni.",
     "dictation_status_warn": "Nessun tasto di scelta rapida registrato: impostane uno di seguito",
     "dictation_hear": "Ascolta",
     "dictation_stop": "Fermati",

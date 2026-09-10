@@ -1989,6 +1989,7 @@
     "dictation_lede": "按下快捷键后朗读其中一句，或点击“重放”将内置示例送入转录器，无需开口即可看到听写的完整流程。",
     "dictation_status_ok": "已验证 — 快捷键在本机可用",
     "dictation_status_pending": "在任意位置按下快捷键以测试",
+    "dictation_status_taken": "该快捷键已被其他应用占用，请在设置中另选一个。",
     "dictation_status_warn": "未注册快捷键 — 请在下方设置",
     "dictation_hear": "试听",
     "dictation_stop": "停止",

@@ -9,6 +9,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- A dictation shortcut another app already owns now says so, instead of silently doing nothing (#1858)
 - Generating from a one-character input now says the input was too short, instead of quoting a convolution error (#1826)
 - First run asks about text size before the install, not after it (#1849)
 - Cloning without a reference clip now says so, instead of naming library parameters you cannot set (#1879)

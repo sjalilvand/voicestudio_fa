@@ -1722,6 +1722,7 @@
     "dictation_lede": "Läs en av dessa högt efter att du har tryckt på din snabbtangent, eller tryck på Replay för att skicka det medföljande provet genom transkriberaren så att du kan se dikteringsarbetet från början till slut utan att tala.",
     "dictation_status_ok": "Verifierad – snabbtangent fungerar på den här maskinen",
     "dictation_status_pending": "Tryck på din genväg var som helst för att testa",
+    "dictation_status_taken": "En annan app använder redan detta kortkommando — välj ett annat i Inställningar.",
     "dictation_status_warn": "Ingen snabbtangent registrerad — ställ in en nedan",
     "dictation_hear": "Hör",
     "dictation_stop": "Sluta",

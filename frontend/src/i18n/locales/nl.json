@@ -1722,6 +1722,7 @@
     "dictation_lede": "Lees een van deze hardop nadat u op uw sneltoets hebt gedrukt, of druk op Opnieuw afspelen om het gebundelde voorbeeld door de transcriber te sturen, zodat u het dicteerwerk van begin tot eind kunt zien zonder te spreken.",
     "dictation_status_ok": "Geverifieerd - sneltoets werkt op deze machine",
     "dictation_status_pending": "Druk ergens op uw snelkoppeling om te testen",
+    "dictation_status_taken": "Een andere app gebruikt deze sneltoets al — kies een andere in Instellingen.",
     "dictation_status_warn": "Geen sneltoets geregistreerd - stel er hieronder een in",
     "dictation_hear": "Hoor",
     "dictation_stop": "Stop",

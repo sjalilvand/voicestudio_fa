@@ -1722,6 +1722,7 @@
     "dictation_lede": "Lea uno de estos en voz alta después de presionar la tecla de acceso rápido, o presione Reproducir para enviar la muestra incluida a través del transcriptor para que pueda ver el dictado de un extremo a otro sin hablar.",
     "dictation_status_ok": "Verificado: la tecla de acceso rápido funciona en esta máquina",
     "dictation_status_pending": "Presione su acceso directo en cualquier lugar para probar",
+    "dictation_status_taken": "Otra aplicación ya usa este atajo: elige otro en Ajustes.",
     "dictation_status_warn": "No hay ninguna tecla de acceso rápido registrada: configure una a continuación",
     "dictation_hear": "escuchar",
     "dictation_stop": "Detener",

@@ -1722,6 +1722,7 @@
     "dictation_lede": "Lisez-en un à haute voix après avoir appuyé sur votre touche de raccourci, ou appuyez sur Replay pour envoyer l'échantillon fourni via le transcripteur afin que vous puissiez voir le travail de dictée de bout en bout sans parler.",
     "dictation_status_ok": "Vérifié – le raccourci clavier fonctionne sur cette machine",
     "dictation_status_pending": "Appuyez n'importe où sur votre raccourci pour tester",
+    "dictation_status_taken": "Une autre application utilise déjà ce raccourci — choisissez-en un autre dans les Réglages.",
     "dictation_status_warn": "Aucun raccourci clavier enregistré – définissez-en un ci-dessous",
     "dictation_hear": "Écoutez",
     "dictation_stop": "Arrêter",

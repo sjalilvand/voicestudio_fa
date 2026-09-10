@@ -1722,6 +1722,7 @@
     "dictation_lede": "Bacalah salah satunya dengan lantang setelah menekan tombol pintas Anda, atau tekan Putar Ulang untuk mengirim sampel yang dibundel melalui transcriber sehingga Anda dapat melihat dikte berfungsi secara menyeluruh tanpa harus berbicara.",
     "dictation_status_ok": "Terverifikasi — tombol pintas berfungsi pada mesin ini",
     "dictation_status_pending": "Tekan pintasan Anda di mana saja untuk menguji",
+    "dictation_status_taken": "Aplikasi lain sudah memakai pintasan ini — pilih yang lain di Pengaturan.",
     "dictation_status_warn": "Tidak ada hotkey yang terdaftar — atur satu di bawah",
     "dictation_hear": "Dengar",
     "dictation_stop": "Berhenti",

@@ -1722,6 +1722,7 @@
     "dictation_lede": "按下熱鍵後大聲朗讀其中一篇，或點擊重播透過轉錄器發送捆綁的樣本，這樣您就可以在不說話的情況下看到端到端的聽寫工作。",
     "dictation_status_ok": "已驗證 — 熱鍵可在本機上使用",
     "dictation_status_pending": "在任何位置按快捷鍵進行測試",
+    "dictation_status_taken": "此快速鍵已被其他應用程式占用，請在設定中另選一個。",
     "dictation_status_warn": "未註冊熱鍵 — 在下方設定一個",
     "dictation_hear": "聽到",
     "dictation_stop": "停止",

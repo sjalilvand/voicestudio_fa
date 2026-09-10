@@ -1722,6 +1722,7 @@
     "dictation_lede": "Đọc to một trong những nội dung này sau khi nhấn phím nóng hoặc nhấn Phát lại để gửi mẫu đi kèm qua trình chuyển mã để bạn có thể xem chính tả hoạt động từ đầu đến cuối mà không cần nói.",
     "dictation_status_ok": "Đã xác minh - phím nóng hoạt động trên máy này",
     "dictation_status_pending": "Nhấn phím tắt của bạn ở bất cứ đâu để kiểm tra",
+    "dictation_status_taken": "Một ứng dụng khác đã dùng phím tắt này — hãy chọn phím khác trong Cài đặt.",
     "dictation_status_warn": "Không có phím nóng nào được đăng ký - đặt một phím nóng bên dưới",
     "dictation_hear": "Nghe",
     "dictation_stop": "Dừng lại",

@@ -1722,6 +1722,7 @@
     "dictation_lede": "Przeczytaj jeden z nich na głos po naciśnięciu klawisza skrótu lub naciśnij przycisk Odtwórz, aby wysłać dołączoną próbkę do narzędzia dokonującego transkrypcji i zobaczyć, jak dyktowanie działa od początku do końca, bez mówienia.",
     "dictation_status_ok": "Zweryfikowano — klawisz skrótu działa na tym komputerze",
     "dictation_status_pending": "Naciśnij skrót w dowolnym miejscu, aby przetestować",
+    "dictation_status_taken": "Inna aplikacja już używa tego skrótu — wybierz inny w Ustawieniach.",
     "dictation_status_warn": "Nie zarejestrowano żadnego klawisza skrótu — ustaw go poniżej",
     "dictation_hear": "Usłysz",
     "dictation_stop": "Zatrzymaj się",
