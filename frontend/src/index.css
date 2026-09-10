@@ -567,7 +567,7 @@
 [data-theme="light"] {
   --color-fg:            #073642;
   --color-fg-muted:      #586e75;
-  --color-fg-subtle:     #657b83;
+  --color-fg-subtle:     #4a5a60;
   --color-fg-inverse:    #fdf6e3;
 
   --color-bg:            #fdf6e3;
@@ -592,7 +592,7 @@
   --chrome-bg:           #eee8d5;
   --chrome-fg:           #073642;
   --chrome-fg-muted:     #586e75;
-  --chrome-fg-dim:       #657b83;
+  --chrome-fg-dim:       #4a5a60;
   --chrome-border:       #d5ccb7;
 
   color-scheme: light;
@@ -605,7 +605,7 @@
   [data-theme="auto"] {
     --color-fg:            #073642;
     --color-fg-muted:      #586e75;
-    --color-fg-subtle:     #657b83;
+    --color-fg-subtle:     #4a5a60;
     --color-fg-inverse:    #fdf6e3;
 
     --color-bg:            #fdf6e3;
@@ -630,7 +630,7 @@
     --chrome-bg:           #eee8d5;
     --chrome-fg:           #073642;
     --chrome-fg-muted:     #586e75;
-    --chrome-fg-dim:       #657b83;
+    --chrome-fg-dim:       #4a5a60;
     --chrome-border:       #d5ccb7;
 
     color-scheme: light;
@@ -7289,6 +7289,20 @@ button.dub-stepper__action:focus-visible {
   white-space: nowrap;
   pointer-events: none;
   max-width: 240px;
+}
+
+/* Override header gradient for light modes */
+[data-theme="light"] .header-area h1 {
+  background: linear-gradient(135deg, var(--chrome-fg) 0%, var(--chrome-fg-muted) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+@media (prefers-color-scheme: light) {
+  [data-theme="auto"] .header-area h1 {
+    background: linear-gradient(135deg, var(--chrome-fg) 0%, var(--chrome-fg-muted) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
