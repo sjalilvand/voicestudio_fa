@@ -9,6 +9,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- The Model Catalogue is one page: what you use now on top, then each family's engines and weights (#2013)
 - A pronunciation entry that is stored but not applied yet says so, instead of looking like it did not match (#1949)
 - A bare 500 report now names the backend error class, so two unrelated faults stop filing the same issue (#1773)
 - A rejected dubbing source language now names the code it rejected (#1960)
@@ -61,6 +62,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Changed
 
+- Model Catalogue is one page: a setup summary (speech, transcription, dictation, language model) on top, one TTS / ASR / LLM switch, and each family's downloadable weights listed under its engines; the separate Models pane and the Settings → Voice → Engines / Models signposts are gone, the models directory and voice previews moved to Settings → Storage and the HF mirror to Network (#2013)
 - Tauri 2.11.5 with refreshed plugins (dialog, updater, log, opener, positioner, single-instance), React 19.3, TanStack Query 5.102, lucide 1.43, posthog-js 1.428, and the rest of the npm workspace on current minors; jsdom 30, jest-dom 7, concurrently 10, taze 21 (#1952)
 - eslint ignores `src-tauri/`, so a local Tauri build no longer floods `lint:hooks` with parse errors from generated assets (#1952)
 - Casting uses responsive SVG voice cards and searchable speaker menus that stay above surrounding panels (#1823)
