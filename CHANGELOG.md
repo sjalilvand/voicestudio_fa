@@ -10,6 +10,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 - A pronunciation entry that is stored but not applied yet says so, instead of looking like it did not match (#1949)
+- A bare 500 report now names the backend error class, so two unrelated faults stop filing the same issue (#1773)
 - A rejected dubbing source language now names the code it rejected (#1960)
 - The first-run install log is kept on disk instead of vanishing with the setup screen (#1847)
 - `bun run desktop` reclaims port 3900 from a backend the app itself left running, instead of refusing to start (#1974)
@@ -85,7 +86,9 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Docs
 
+- Docker quick starts now explain the AMD64-only images and direct Apple Silicon users to the native macOS app (#1921) — thanks @yangfan-yf-yf!
 - audio.cpp (Breeze-TTS-2) is now a documented opt-in engine: prebuilt binary install, explicit GGUF download, voice modes, and the weights' research/non-commercial terms (#1891)
+- `docs/STRUCTURE.md` describes the tree as it is today, and a test now keeps its counts honest (#1981) — thanks @Dawcraft!
 
 ### Fixed
 
