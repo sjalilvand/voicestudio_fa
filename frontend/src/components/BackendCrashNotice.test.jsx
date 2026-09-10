@@ -155,4 +155,57 @@ describe('BackendCrashNotice — sentinel evidence gate (#1375)', () => {
     // so the report path stays even with an empty tail.
     expect(await screen.findByText('Report this bug')).toBeInTheDocument();
   });
+
+  // #1927: the crash details dialog named the exit code and dumped the log,
+  // and stopped there. A Windows access violation reads as
+  // "exit code -1073741819" — a number that means nothing to the person it is
+  // shown to — and the report filed against it had no cause and no next step.
+  // The classifier already knew what it meant; nothing rendered it outside a
+  // dropped stream.
+  it('explains what the exit code means and what to try', async () => {
+    getUnacknowledgedBackendCrash.mockResolvedValue({
+      ...MARKER,
+      exit_code: -1073741819, // STATUS_ACCESS_VIOLATION
+      last_stderr: 'INFO [omnivoice.model] Loading VoiceStudio model on device: cuda',
+    });
+    render(<BackendCrashNotice />);
+    fireEvent.click(await screen.findByRole('button', { name: /view crash details/i }));
+
+    const dialog = await screen.findByRole('dialog');
+    // A native fault is not a memory problem, and the guidance says so.
+    expect(dialog.textContent).toMatch(/compute stack/i);
+    expect(dialog.textContent).toMatch(/GPU driver/i);
+  });
+
+  it('gives a port conflict its own explanation, not the GPU one', async () => {
+    getUnacknowledgedBackendCrash.mockResolvedValue({
+      ...MARKER,
+      exit_code: 78, // EX_CONFIG — the port was already held
+      last_stderr: '',
+    });
+    render(<BackendCrashNotice />);
+    fireEvent.click(await screen.findByRole('button', { name: /view crash details/i }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.textContent).toMatch(/already in use/i);
+    expect(dialog.textContent).not.toMatch(/GPU driver/i);
+  });
+
+  it('offers no cause for a sentinel marker, which cannot know there was one', async () => {
+    getUnacknowledgedBackendCrash.mockResolvedValue({
+      ...MARKER,
+      exit_code: null,
+      signal: null,
+      exit_desc: 'process ended uncleanly (previous run)',
+      uptime_s: 0,
+      last_stderr: '',
+    });
+    render(<BackendCrashNotice />);
+    fireEvent.click(await screen.findByRole('button', { name: /view crash details/i }));
+
+    const dialog = await screen.findByRole('dialog');
+    // Sleep, force-quit and a stopped VM leave this same trace. Explaining a
+    // crash that may not have happened is the #1375 fabrication.
+    expect(dialog.textContent).not.toMatch(/VRAM|GPU driver|compute stack/i);
+  });
 });
