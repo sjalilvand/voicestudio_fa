@@ -374,6 +374,20 @@ def test_a_wrong_first_frame_is_a_protocol_mismatch(monkeypatch, echo_backend):
     assert "it sent op='pong' instead of 'ready'" in msg
 
 
+def test_each_spawn_quotes_only_its_own_stderr(monkeypatch, echo_backend):
+    monkeypatch.setenv("OMNIVOICE_ECHO_TEST_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_ECHO_EXIT_BEFORE_READY", "3")
+    _spawn_expecting_failure(echo_backend)
+    first = echo_backend._stderr_tail
+    monkeypatch.setenv("OMNIVOICE_ECHO_EXIT_BEFORE_READY", "4")
+    msg = _spawn_expecting_failure(echo_backend)
+    assert "exited with code 4" in msg
+    # The first process's drain, still finishing, writes to its own buffer.
+    first.append("a late line from the previous process")
+    assert echo_backend._stderr_tail is not first
+    assert "late line" not in echo_backend._stderr_tail_text()
+
+
 def test_the_quoted_stderr_is_scrubbed_and_bounded(echo_backend):
     echo_backend._stderr_tail.clear()
     echo_backend._stderr_tail.append("loading C:\\Users\\alice\\venv hf_" + "a" * 34)

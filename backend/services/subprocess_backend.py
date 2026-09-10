@@ -533,9 +533,13 @@ class SubprocessBackend(TTSBackend):
         # a full pipe. Lines flow into the root logger; AUTH-05's
         # HFTokenRedactor (already installed in Phase 1) strips token bytes.
         # See T-02-03.
-        self._stderr_tail.clear()
+        # A fresh buffer per process, owned by its drain thread: a previous
+        # process's drain that is still finishing writes to its own buffer,
+        # never into the one this start-up failure will quote.
+        self._stderr_tail = collections.deque(maxlen=_STDERR_TAIL_LINES)
         self._stderr_thread = threading.Thread(
             target=self._drain_stderr, daemon=True,
+            args=(self._stderr_tail,),
             name=f"{self.id}-stderr-drain",
         )
         self._stderr_thread.start()
@@ -916,7 +920,7 @@ class SubprocessBackend(TTSBackend):
 
     # ── stderr drain ───────────────────────────────────────────────────────
 
-    def _drain_stderr(self) -> None:
+    def _drain_stderr(self, tail: Optional[collections.deque] = None) -> None:
         """Pump sidecar stderr lines into the parent logger.
 
         Prefixes each line with `[<engine_id>]`. The HFTokenRedactor filter
@@ -934,7 +938,8 @@ class SubprocessBackend(TTSBackend):
                     line = repr(raw)
                 if line:
                     logger.info("[%s] %s", self.id, line)
-                    self._stderr_tail.append(line)
+                    if tail is not None:
+                        tail.append(line)
         except Exception as exc:
             logger.debug("[%s] stderr drain ended: %s", self.id, exc)
 
