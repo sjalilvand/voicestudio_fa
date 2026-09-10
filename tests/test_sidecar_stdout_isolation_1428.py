@@ -48,6 +48,7 @@ EXPECTED_SIDECARS = {
     ENGINES / "pockettts" / "main.py",
     ENGINES / "voxcpm2_subprocess" / "main.py",
     ENGINES / "moss_tts_nano_subprocess" / "main.py",
+    ENGINES / "cosyvoice_subprocess" / "main.py",
     ENGINES / "supertonic3" / "sidecar.py",
 }
 
