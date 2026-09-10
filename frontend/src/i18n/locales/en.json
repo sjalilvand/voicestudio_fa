@@ -2011,6 +2011,7 @@
     "dictation_lede": "Read one of these aloud after pressing your hotkey, or hit Replay to send the bundled sample through the transcriber so you can see dictation work end-to-end without speaking.",
     "dictation_status_ok": "Verified — hotkey works on this machine",
     "dictation_status_pending": "Press your shortcut anywhere to test",
+    "dictation_status_taken": "Another app already uses this shortcut — pick a different one in Settings.",
     "dictation_status_warn": "No hotkey registered — set one below",
     "dictation_hear": "Hear",
     "dictation_stop": "Stop",

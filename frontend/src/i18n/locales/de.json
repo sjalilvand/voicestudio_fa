@@ -1726,6 +1726,7 @@
     "dictation_lede": "Lesen Sie eines davon vor, nachdem Sie Ihren Hotkey gedrückt haben, oder klicken Sie auf „Wiederholen“, um die gebündelte Probe durch den Transkriptor zu senden, sodass Sie die Diktatarbeit von Anfang bis Ende verfolgen können, ohne zu sprechen.",
     "dictation_status_ok": "Verifiziert – Hotkey funktioniert auf diesem Computer",
     "dictation_status_pending": "Drücken Sie zum Testen an einer beliebigen Stelle Ihre Tastenkombination",
+    "dictation_status_taken": "Eine andere App belegt dieses Tastenkürzel bereits — wähle in den Einstellungen ein anderes.",
     "dictation_status_warn": "Kein Hotkey registriert – legen Sie unten einen fest",
     "dictation_hear": "Hören",
     "dictation_stop": "Stopp",
