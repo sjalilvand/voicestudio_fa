@@ -2657,18 +2657,28 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
     return out
 
 
+# In-process engines that also run from a venv of their own once the
+# one-click installer has made one: engine id -> (sidecar module, class). Each
+# module exposes own_venv_python(); an install made into the app's environment
+# keeps running in-process.
+_OWN_VENV_SIDECARS: dict[str, tuple[str, str]] = {
+    "voxcpm2": ("engines.voxcpm2_subprocess", "VoxCPM2SubprocessBackend"),
+    "moss-tts-nano": ("engines.moss_tts_nano_subprocess", "MossTTSNanoSubprocessBackend"),
+}
+
+
 def _effective_backend_class(
     backend_id: str,
     backend_cls: type[TTSBackend],
     host_family: str | None = None,
 ) -> type[TTSBackend]:
     """Resolve host-specific containment without changing the configured id."""
-    if backend_id == "voxcpm2":
-        # Its own venv (one-click install) runs in a sidecar; an install made
-        # with `pip install voxcpm` keeps running in-process.
-        from engines.voxcpm2_subprocess import VoxCPM2SubprocessBackend, own_venv_python
+    sidecar = _OWN_VENV_SIDECARS.get(backend_id)
+    if sidecar is not None:
+        import importlib
 
-        return VoxCPM2SubprocessBackend if own_venv_python() is not None else backend_cls
+        module = importlib.import_module(sidecar[0])
+        return getattr(module, sidecar[1]) if module.own_venv_python() is not None else backend_cls
     if backend_id != "omnivoice":
         return backend_cls
     if host_family is None:

@@ -1090,11 +1090,12 @@ def test_verify_probe_runs_in_the_engines_venv_and_compiles(monkeypatch, engine_
 @pytest.mark.parametrize(
     ("family", "platform", "machine", "expected"),
     [
-        ("cuda", "linux", "x86_64", {"moss-tts-v15", "dots-tts", "pockettts", "voxcpm2"}),
-        ("cuda", "win32", "AMD64", {"moss-tts-v15", "pockettts", "voxcpm2"}),
-        ("cpu", "win32", "AMD64", {"pockettts", "voxcpm2"}),
-        ("mps", "darwin", "arm64", {"dots-tts", "pockettts", "voxcpm2"}),
-        # Intel Mac: PyTorch publishes no build PocketTTS or VoxCPM2 can use.
+        ("cuda", "linux", "x86_64", {"moss-tts-v15", "dots-tts", "pockettts", "voxcpm2", "moss-tts-nano"}),
+        ("cuda", "win32", "AMD64", {"moss-tts-v15", "pockettts", "voxcpm2", "moss-tts-nano"}),
+        ("cpu", "win32", "AMD64", {"pockettts", "voxcpm2", "moss-tts-nano"}),
+        ("mps", "darwin", "arm64", {"dots-tts", "pockettts", "voxcpm2", "moss-tts-nano"}),
+        # Intel Mac: PyTorch publishes no build PocketTTS, VoxCPM2 or
+        # MOSS-TTS-Nano can use.
         ("cpu", "darwin", "x86_64", {"dots-tts"}),
     ],
 )
@@ -1227,6 +1228,8 @@ _UPSTREAM_ROOT_FILES = {
     "moss-tts-v15": ("pyproject.toml", "README.md", "LICENSE", "MANIFEST.in"),
     "confucius4-tts": ("requirements.txt", "setup.py", "README.md", "LICENSE", "server.py"),
     "dots-tts": ("pyproject.toml", "README.md", "LICENSE", "constraints/recommended.txt"),
+    "moss-tts-nano": ("pyproject.toml", "moss_tts_nano_runtime.py", "requirements.txt",
+                      "README.md", "LICENSE"),
 }
 
 

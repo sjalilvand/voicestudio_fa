@@ -58,12 +58,31 @@ shows unavailable with a "does not expose a usable model class" message,
 pull the latest upstream and re-run `uv pip install -e .`, or open an issue
 with the version you have.
 
+The one-click install is not affected: it pins a reviewed commit
+(`8b7bcc93`, 2026-09-06) and drives the runtime that commit ships.
+
 ## Known limits
 
 - No voice design, no instruct, no speed control — cloning from a reference
   clip only.
 - Quality sits below the large engines; see
   [benchmarks.md](../benchmarks.md).
+
+## One-click install
+
+Click **Install** in **Model Catalogue → Engines → MOSS-TTS-Nano**.
+VoiceStudio clones a reviewed upstream commit into its own folder under the
+data directory, gives it its own Python environment (the CUDA build of
+PyTorch on an NVIDIA GPU), and runs it there in a separate process.
+
+Nothing it installs touches VoiceStudio itself or any other engine, and
+**Uninstall** in the same row removes only that folder. The button is not
+offered on Intel Macs, where the PyTorch version it pins has no build.
+
+The first synthesis downloads the model and its audio tokenizer. The
+generation stays alive while the download makes progress; if a stalled
+download runs out of time, raise the compute-time budget in
+**Settings → Performance & Device** and try again.
 
 ## Troubleshooting
 
