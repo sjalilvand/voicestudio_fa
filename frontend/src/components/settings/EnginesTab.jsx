@@ -9,7 +9,7 @@ import useModelDownloads from './models/useModelDownloads';
 import AsrOpenAICompatPanel from './AsrOpenAICompatPanel';
 import { SETTINGS_SECTION_SURFACE } from './primitives';
 
-/** Model Catalogue → Engines: ONE section, one matrix, a TTS / ASR / LLM tab strip.
+/** Model Catalogue: ONE section, one matrix, a TTS / ASR / LLM tab strip.
  *
  *  The page used to stack three pinned per-family matrices; with every row
  *  free to grow (wrapping names, stacked badges, inline failure prose) a

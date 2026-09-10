@@ -23,7 +23,14 @@ import { cn } from '@/lib/utils';
 import EngineMark from './EngineMark';
 import useEngineInventory, { FORCE_WAIT_TIMEOUT_MS } from './engines/useEngineInventory';
 import EngineDetail from './engines/EngineDetail';
-import { LABEL, LICENSE_DIALOGS, fmtDiskBytes, runsOn, statusOf } from './engines/engineDisplay';
+import {
+  LABEL,
+  LICENSE_DIALOGS,
+  fmtDiskBytes,
+  reasonMentionsLicense,
+  runsOn,
+  statusOf,
+} from './engines/engineDisplay';
 
 export { FORCE_WAIT_TIMEOUT_MS, fmtDiskBytes };
 
@@ -346,12 +353,14 @@ export default function EngineCompatibilityMatrix({
                           size="sm"
                           variant="subtle"
                           onClick={() => inv.selectEngine(b.id)}
-                          aria-label={`Use ${b.display_name}`}
+                          aria-label={t('engines.ariaUse', { engine: b.display_name })}
                         >
                           {t('engines.use')}
                         </Button>
                       )}
-                      {!b.available && b.one_click_install && (
+                      {/* Hidden while a license review is all that is left: the
+                          engine is installed, and Accept (in the panel) is next. */}
+                      {!b.available && b.one_click_install && !reasonMentionsLicense(b.reason) && (
                         <Button
                           size="sm"
                           variant="subtle"

@@ -209,7 +209,7 @@ export default function EngineDetail({
             disabled={!!health?.inflight}
             loading={!!health?.inflight}
             leading={!health?.inflight && <Activity size={11} />}
-            aria-label={`Test ${b.display_name}`}
+            aria-label={t('engines.ariaTest', { engine: b.display_name })}
           >
             {health?.inflight ? t('engines.testing') : t('engines.testEngine')}
           </Button>
@@ -221,7 +221,7 @@ export default function EngineDetail({
             disabled={!!health?.inflight}
             loading={!!health?.inflight}
             leading={!health?.inflight && <RefreshCw size={11} />}
-            aria-label={`Re-check ${b.display_name}`}
+            aria-label={t('engines.ariaRecheck', { engine: b.display_name })}
           >
             {health?.inflight ? t('engines.rechecking') : t('engines.recheck')}
           </Button>
@@ -247,7 +247,7 @@ export default function EngineDetail({
             disabled={!!selfTest?.inflight}
             loading={!!selfTest?.inflight}
             leading={!selfTest?.inflight && <Volume2 size={11} />}
-            aria-label={`Self-test ${b.display_name}`}
+            aria-label={t('engines.ariaSelfTest', { engine: b.display_name })}
           >
             {selfTest?.inflight ? t('engines.selfTesting') : t('engines.selfTest')}
           </Button>
@@ -280,7 +280,7 @@ export default function EngineDetail({
             disabled={inv.unloadingId === b.id}
             loading={inv.unloadingId === b.id}
             title={t('engines.inMemoryTitle')}
-            aria-label={`Unload ${b.display_name}`}
+            aria-label={t('engines.ariaUnload', { engine: b.display_name })}
           >
             {inv.unloadingId === b.id ? t('engines.unloading') : t('engines.unload')}
           </Button>
@@ -301,7 +301,7 @@ export default function EngineDetail({
             size="sm"
             variant="subtle"
             onClick={() => inv.setLicenseDialogFor(b.id)}
-            aria-label={`Review and accept ${b.display_name} license`}
+            aria-label={t('engines.ariaAcceptLicense', { engine: b.display_name })}
           >
             {t('engines.acceptLicense')}
           </Button>

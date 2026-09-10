@@ -77,15 +77,20 @@ The `Desktop Release` workflow fires on tag push. It builds four targets in para
 |---|---|---|
 | macOS Apple Silicon | macos-14 | `.dmg` + updater `.app.tar.gz` |
 | macOS Intel | macos-13 | `.dmg` + updater `.app.tar.gz` |
-| Windows x64 | windows-2022 | `.msi` + `.exe` + updater `.nsis.zip` |
-| Linux x64 | ubuntu-22.04 | `.AppImage` + `.deb` + updater `.AppImage.tar.gz` |
+| Windows x64 | windows-2022 | `.msi`, machine-wide and per-user, each with its updater `.sig` |
+| Linux x64 | ubuntu-22.04 | `.AppImage` + updater `.AppImage.sig` |
 
 Each runner signs the updater payload with the stored `TAURI_SIGNING_PRIVATE_KEY`, merges into a single `latest.json`, and attaches everything to the draft release.
 
 Workflow runtime: **~20-40 minutes** (PyInstaller + four platform builds). Follow progress at:
 `https://github.com/debpalash/VoiceStudio/actions`
 
-When it finishes, the draft release needs manual publishing — GitHub → Releases → **Edit** the draft → **Publish release**. Once published, existing clients detect the update on their next launch.
+The release stays a draft while the platforms build. Once every platform, the
+updater-manifest repair and the uninstall scripts are done, the
+`release-notes-checksums` job writes all four platforms' checksums into the
+notes and publishes it, with no manual step. A failed platform leaves the
+release a draft, so nothing half-built goes public. Existing clients detect
+the update on their next launch.
 
 ## 5b. Deployment channels — all must ship (hard rule, owner-set 2026-07-16)
 
@@ -95,7 +100,7 @@ bug to fix immediately, not backlog.
 
 | Channel | Source | Produced by | How to verify |
 |---|---|---|---|
-| GitHub Release: installers + signed `latest.json` (**Stable** updater channel) | the `vX.Y.Z` tag | `release.yml` on tag push | Release page has dmg (arm+intel), msi/exe, AppImage/deb, `latest.json`; body = the CHANGELOG section (not the auto-generated fallback), followed by per-platform checksums and a **Contributors** avatar strip (owner + every PR author for the tag — the `contributors-strip` job) |
+| GitHub Release: installers + signed `latest.json` (**Stable** updater channel) | the `vX.Y.Z` tag | `release.yml` on tag push | Release page has dmg (arm+intel), msi (machine-wide and per-user), AppImage, `latest.json` and `latest-user.json`; body = the CHANGELOG section (not the auto-generated fallback), followed by per-platform checksums and a **Contributors** avatar strip (owner + every PR author for the tag — the `contributors-strip` job) |
 | **Preview** updater channel (rolling `preview` prerelease) | **`main` only** | `release.yml` nightly cron / manual dispatch | preview `latest.json` uses main's version when it is ahead; otherwise it advances the stable patch, then appends `-N` so it semver-sorts above stable |
 | GHCR CUDA image: `:X.Y.Z`, `:X.Y`, `:stable` | the tag | `docker.yml` on tag push | `docker manifest inspect ghcr.io/debpalash/omnivoice-studio:X.Y.Z` |
 | GHCR ROCm image: `:X.Y.Z-rocm`, `:X.Y-rocm`, `:stable-rocm` | the tag | `docker.yml` on tag push | same, with `-rocm` suffix |
@@ -133,7 +138,7 @@ You should see platform-keyed download URLs + minisign signatures. If that JSON 
 
 **Option B — full end-to-end:**
 1. Install v0.1.0 on a fresh machine (or clean-installed Applications).
-2. Cut v0.2.0 (bump, tag, push, wait for CI, publish draft).
+2. Cut v0.2.0 (bump, tag, push, wait for CI; the workflow publishes the release).
 3. Launch the installed v0.1.0. Within seconds, the dialog should appear.
 4. Accept → app downloads, verifies, replaces, relaunches as v0.2.0.
 

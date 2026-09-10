@@ -2463,8 +2463,11 @@ def _sidecar_installable_ids() -> frozenset[str]:
     button into their matrix rows.
     """
     try:
-        from services.sidecar_install import SPECS
-        return frozenset(SPECS)
+        # Host-aware: an engine whose installer cannot work on THIS machine
+        # (dots.tts on Windows, a CUDA-only install on a CPU host) must not get
+        # an Install button that can only fail.
+        from services.sidecar_install import installable_engine_ids
+        return installable_engine_ids()
     except Exception:  # pragma: no cover — defensive only
         return frozenset()
 
@@ -2654,12 +2657,28 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
     return out
 
 
+# In-process engines that also run from a venv of their own once the
+# one-click installer has made one: engine id -> (sidecar module, class). Each
+# module exposes own_venv_python(); an install made into the app's environment
+# keeps running in-process.
+_OWN_VENV_SIDECARS: dict[str, tuple[str, str]] = {
+    "voxcpm2": ("engines.voxcpm2_subprocess", "VoxCPM2SubprocessBackend"),
+    "moss-tts-nano": ("engines.moss_tts_nano_subprocess", "MossTTSNanoSubprocessBackend"),
+}
+
+
 def _effective_backend_class(
     backend_id: str,
     backend_cls: type[TTSBackend],
     host_family: str | None = None,
 ) -> type[TTSBackend]:
     """Resolve host-specific containment without changing the configured id."""
+    sidecar = _OWN_VENV_SIDECARS.get(backend_id)
+    if sidecar is not None:
+        import importlib
+
+        module = importlib.import_module(sidecar[0])
+        return getattr(module, sidecar[1]) if module.own_venv_python() is not None else backend_cls
     if backend_id != "omnivoice":
         return backend_cls
     if host_family is None:

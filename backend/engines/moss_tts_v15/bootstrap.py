@@ -222,8 +222,7 @@ def _bootstrap_engines_venv(clone_dir: Path) -> Path:
     Runs ``uv venv <engines_venv>`` then ``uv pip install --python
     <engines_venv>/bin/python -e "<clone>[torch-runtime]"``. Verifies the
     result by re-probing the import — a successful uv invocation that still
-    can't import the stack indicates a deeper environment problem (e.g. the
-    ``+cu128`` torch-runtime extra can't resolve on a non-CUDA host) and we
+    can't import the stack indicates a deeper environment problem, and we
     raise with whatever stderr we captured plus a docs pointer.
     """
     uv = _locate_uv()
@@ -254,6 +253,8 @@ def _bootstrap_engines_venv(clone_dir: Path) -> Path:
             f"{exc.stderr.decode('utf-8', errors='replace') if exc.stderr else exc}"
         ) from exc
 
+    from core.torch_indexes import UV_PIP_CU128_ARGS
+
     python_path = _venv_python_path(_ENGINES_VENV_DIR)
     try:
         subprocess.run(
@@ -261,6 +262,10 @@ def _bootstrap_engines_venv(clone_dir: Path) -> Path:
                 uv, "pip", "install",
                 "--python", str(python_path),
                 "-e", f"{clone_dir}[torch-runtime]",
+                # The extra pins torch==2.9.1+cu128, which exists only on
+                # PyTorch's index — without it this could never resolve, on
+                # any host (core.torch_indexes).
+                *UV_PIP_CU128_ARGS,
             ],
             check=True,
             timeout=_UV_PIP_INSTALL_TIMEOUT_S,
@@ -270,9 +275,10 @@ def _bootstrap_engines_venv(clone_dir: Path) -> Path:
     except subprocess.CalledProcessError as exc:
         raise RuntimeError(
             "uv pip install -e failed during MOSS-TTS-v1.5 bootstrap "
-            f"({clone_dir}). On a non-CUDA host the upstream '[torch-runtime]' "
-            "extra (cu128) cannot resolve — set up the venv manually per "
-            "docs/engines/moss-tts-v15.md. Error: "
+            # uv's own error names what failed; the PyTorch index is always
+            # supplied now, so a guess about the host would only mislead.
+            f"({clone_dir}). See docs/engines/moss-tts-v15.md for the manual "
+            "install. Error: "
             f"{exc.stderr.decode('utf-8', errors='replace') if exc.stderr else exc}"
         ) from exc
 

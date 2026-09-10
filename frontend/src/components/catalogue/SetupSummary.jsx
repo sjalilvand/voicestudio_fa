@@ -15,6 +15,7 @@ import { apiJson } from '../../api/client';
 import { useEngines, useInstallModel, useRecommendations } from '../../api/hooks';
 import { useAppStore } from '../../store';
 import { Badge, Button } from '../../ui';
+import { failedInstalls, installFailureMessage } from '../settings/models/installResults';
 
 /**
  * SetupSummary — the Model Catalogue's first screen: what the app will use
@@ -149,15 +150,13 @@ export default function SetupSummary({ onChange }) {
       missing.map((m) => installMutation.mutateAsync(m.repo_id)),
     );
     setInstalling(false);
-    const failed = results
-      .map((r, i) => (r.status === 'rejected' ? { repo: missing[i].repo_id, err: r.reason } : null))
-      .filter(Boolean);
+    const failed = failedInstalls(results, missing);
     const started = results.length - failed.length;
     if (started > 0) toast.success(t('models.started_downloading', { count: started }));
     if (failed.length > 0) {
       toast.error(
         t('models.install_failed', {
-          message: failed.map((f) => `${f.repo}: ${f.err?.message || f.err}`).join(' · '),
+          message: installFailureMessage(failed),
         }),
       );
     }

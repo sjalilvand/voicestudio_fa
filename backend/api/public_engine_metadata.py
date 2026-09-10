@@ -43,6 +43,29 @@ _UNAVAILABLE_NOT_INSTALLED = (
     "This engine's package isn't installed yet. Install it from "
     "Model Catalogue."
 )
+# An engine gated behind an in-app license review (Supertonic-3, PocketTTS).
+# The Model Catalogue shows its Accept button only when the reason matches
+# /license not accepted/i (EngineCompatibilityMatrix.reasonMentionsLicense), so
+# this sentence must keep those words: collapsing it into the generic line hid
+# the only way to enable those engines.
+_UNAVAILABLE_LICENSE = (
+    "License not accepted yet. Review and accept it in "
+    "Model Catalogue to enable this engine."
+)
+# An engine that cannot run on this machine at all: Apple-Silicon-only MLX,
+# PyTorch with no Intel Mac build. "Isn't installed yet" or "check
+# installation" sent people after an install that could never work.
+_UNAVAILABLE_PLATFORM = (
+    "This engine doesn't run on this computer's platform. Its guide lists "
+    "the platforms it supports."
+)
+# Apple Silicon whose PyTorch cannot use the GPU (MPS): the platform is
+# right, the installation is not. MLX-Audio / MLX-Whisper need MPS (#390).
+_UNAVAILABLE_NO_MPS = (
+    "This engine needs Apple's GPU (MPS), and this installation's PyTorch "
+    "can't use it. Updating macOS or reinstalling VoiceStudio usually "
+    "restores it."
+)
 _UNAVAILABLE_NEEDS_CONFIG = (
     "This engine needs to be configured before it can run. Open "
     "Model Catalogue to finish setting it up."
@@ -52,10 +75,40 @@ _UNAVAILABLE_FILE_MISSING = (
     "Model Catalogue."
 )
 
+# The same two cases for an engine the app cannot install for you. "Install it
+# from Model Catalogue" sent people to a page with no Install button
+# for that engine — most of the catalogue — which reads as the app being
+# broken. The row's own guide link (``docs_url``) is the real next step.
+_UNAVAILABLE_NOT_INSTALLED_MANUAL = (
+    "This engine isn't installed yet, and it has no one-click install. "
+    "Its guide lists the install steps."
+)
+_UNAVAILABLE_FILE_MISSING_MANUAL = (
+    "A file this engine needs is missing or unreadable. Its guide lists the "
+    "install steps."
+)
+_MANUAL_INSTALL_VARIANT = {
+    _UNAVAILABLE_NOT_INSTALLED: _UNAVAILABLE_NOT_INSTALLED_MANUAL,
+    _UNAVAILABLE_FILE_MISSING: _UNAVAILABLE_FILE_MISSING_MANUAL,
+}
+
 # Matched against the lowered probe text. Ordered most specific first: a
 # missing file often also says "not installed", and the file case has the more
 # useful remedy of the two.
 _UNAVAILABLE_SIGNATURES = (
+    # First: its probe text also says "Open Model Catalogue", and the
+    # license is the one gap only the user can close.
+    (_UNAVAILABLE_LICENSE, ("license not accepted",)),
+    # Before the install and file checks: a platform reason often also says
+    # "unavailable" or names a missing wheel, and no install can fix it. Not
+    # "apple silicon only": mlx-audio says that on an M-series Mac too, when
+    # the package is merely missing and installing does help.
+    (_UNAVAILABLE_PLATFORM, (
+        "requires apple silicon", "not supported on this platform",
+        "unavailable on intel macs", "no macos x86_64 wheel",
+        "no windows install", "not supported on windows",
+    )),
+    (_UNAVAILABLE_NO_MPS, ("torch mps unavailable",)),
     (_UNAVAILABLE_FILE_MISSING, (
         "file is missing", "file is empty", "file is unreadable",
         "script missing", "binary", "not found at",
@@ -94,7 +147,14 @@ def public_backends(entries: list[dict]) -> list[dict]:
     for entry in entries:
         item = dict(entry)
         if item.get("reason") is not None:
-            item["reason"] = _public_unavailable_reason(item["reason"])
+            reason = _public_unavailable_reason(item["reason"])
+            # Only a row that explicitly says it has NO one-click install gets
+            # the manual wording. Rows without the field (ASR, LLM,
+            # translation — some of which have installers of their own) keep
+            # the line that points at Model Catalogue.
+            if item.get("one_click_install") is False:
+                reason = _MANUAL_INSTALL_VARIANT.get(reason, reason)
+            item["reason"] = reason
         if item.get("last_error") is not None:
             item["last_error"] = _PREVIOUS_FAILURE
         if item.get("routing_reason") is not None:

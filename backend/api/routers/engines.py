@@ -204,6 +204,11 @@ async def uninstall_translation_engine(engine_id: str):
     pkg = entry.get("pip_package")
     if not pkg:
         return {"status": "no_op", "engine": engine_id}
+    # The builtin flag is a promise someone has to remember to make; this
+    # check does not depend on it (#2019).
+    blocked = translation_engines.uninstall_blocker(engine_id)
+    if blocked:
+        raise HTTPException(status_code=blocked[0], detail=blocked[1])
     rc, out = await translation_engines.run_pip(["uninstall", "-y", pkg])
     if rc != 0:
         raise HTTPException(status_code=500, detail=f"pip uninstall {pkg} failed ({rc}): {out[-1000:]}")
@@ -246,6 +251,11 @@ def install_sidecar_engine(engine_id: str):
     from services import sidecar_install
     try:
         return sidecar_install.start_install(engine_id)
+    except sidecar_install.HostUnsupported as exc:
+        # The engine has an installer, but not one that can work on this
+        # machine. 409, not 404: the route is right, the host is the problem,
+        # and the message (a VoiceStudio-owned sentence) says what to do.
+        raise HTTPException(status_code=409, detail=str(exc))
     except KeyError:
         raise HTTPException(
             status_code=404,

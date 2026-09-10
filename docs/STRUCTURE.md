@@ -43,7 +43,8 @@ VoiceStudio/
 │   │                            audio DSP, GPU gateway, engine routing, model lifecycle
 │   ├── engines/                 per-engine adapters: indextts, supertonic3, confucius4,
 │   │                            dots_tts, moss_tts_v15, pockettts, audiocpp,
-│   │                            omnivoice_gguf, omnivoice_subprocess, _asr_sidecar, _echo
+│   │                            omnivoice_gguf, omnivoice_subprocess, _asr_sidecar, _echo,
+│   │                            voxcpm2_subprocess, moss_tts_nano_subprocess
 │   ├── worker/                  remote / distributed workers — scheduler, pool, routing,
 │   │                            breaker, capacity, plus protocol/ and inbound/
 │   ├── mcp_shim/                MCP server entry point (docs/mcp.md)
