@@ -24,7 +24,13 @@ for this model.
    uv sync --extra pockettts
    ```
 
-   (Or enable it from **Model Catalogue → Engines**.)
+   Or click **Install** in **Model Catalogue → Engines → PocketTTS**. That
+   installs the same pinned package into the engine's own Python environment
+   under VoiceStudio's data directory, with the CPU build of PyTorch, because
+   PocketTTS never uses a GPU. Nothing it installs touches VoiceStudio itself
+   or any other engine, and **Uninstall** in the same row removes only that
+   folder. An install made with `uv sync` keeps working as it is. The button
+   is not offered on Intel Macs (see Platform notes).
 
 2. **Accept the license in-app**
    ([#1306](https://github.com/debpalash/VoiceStudio/issues/1306)). The code
@@ -50,8 +56,9 @@ for this model.
 - Output is 24 kHz mono.
 - Six languages, one model per language, chosen by the `language` you
   request; cloning takes a short reference clip.
-- Runs in a crash-isolated sidecar process (parent Python environment): a
-  wedged generation is hard-killed by a watchdog and its memory reclaimed —
+- Runs in a crash-isolated sidecar process: from its own environment after
+  a one-click install, otherwise from VoiceStudio's (where `uv sync --extra
+  pockettts` puts it). A wedged generation is hard-killed by a watchdog and its memory reclaimed —
   something an in-process engine cannot do.
 - The first use downloads the gated weights; the sidecar heartbeats
   progress during the download so the watchdog doesn't fire.

@@ -48,6 +48,15 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("omnivoice.supertonic3")
 
+_VENV_ENV_VAR = "OMNIVOICE_SUPERTONIC3_DIR"
+
+
+def _own_venv_python() -> "Path | None":
+    """The venv the one-click installer made for this engine, if any."""
+    from services.sidecar_install import engine_venv_python
+
+    return engine_venv_python(_VENV_ENV_VAR)
+
 
 # Absolute path to the sidecar script ‑‑ same pattern as IndexTTS's
 # ``INDEXTTS_SIDECAR_SCRIPT``. SubprocessBackend spawns it with the
@@ -80,11 +89,11 @@ class Supertonic3Backend(SubprocessBackend):
 
     @classmethod
     def venv_python(cls) -> Path:
-        """Supertonic-3 lives in the main OmniVoice venv ‑‑ no dedicated
-        venv. ``sys.executable`` is the parent interpreter, which is the
-        same Python that ``uv sync --extra supertonic`` populated.
+        """Its own venv when the one-click installer made one. Otherwise the
+        parent interpreter, the same Python ``uv sync --extra supertonic``
+        populated.
         """
-        return Path(sys.executable)
+        return _own_venv_python() or Path(sys.executable)
 
     @classmethod
     def sidecar_script(cls) -> Path:
@@ -96,14 +105,16 @@ class Supertonic3Backend(SubprocessBackend):
     def is_available(cls) -> tuple[bool, str]:
         # 1. Optional-dep gate (TTS-02). The ``supertonic`` wheel is only
         #    installed when the user opted in via ``--extra supertonic``.
-        try:
-            import supertonic  # type: ignore[import-not-found]  # noqa: F401
-        except ImportError:
-            return False, (
-                "supertonic package not installed. Enable in "
-                "Model Catalogue → Engines (installs `supertonic` via `uv add --optional "
-                "supertonic supertonic==1.3.1`)."
-            )
+        #    Its own venv (made by the one-click installer, which verified the
+        #    import there) or the app's environment (`uv sync --extra`).
+        if _own_venv_python() is None:
+            try:
+                import supertonic  # type: ignore[import-not-found]  # noqa: F401
+            except ImportError:
+                return False, (
+                    "supertonic package not installed. Install it from "
+                    "Model Catalogue → Engines."
+                )
 
         # 2. License acceptance gate (TTS-05). Defence in depth: the
         #    settings_store helper handles the read; we just refuse

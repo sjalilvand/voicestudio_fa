@@ -25,6 +25,18 @@ is an LLM-based multilingual / cross-lingual zero-shot voice-cloning TTS.
 Like IndexTTS-2 / MOSS-TTS-v1.5 / dots.tts, it runs in its **own subprocess venv**
 so its dependency stack never touches the default VoiceStudio interpreter.
 
+## One-click install
+
+**Model Catalogue → Engines → Confucius4-TTS → Install** does the steps below
+for you, on Windows, Linux and macOS. It installs into its own folder under VoiceStudio's data directory, with its own Python environment. Nothing it installs touches VoiceStudio itself or any other engine, so you can switch to it and back without breaking what already worked. **Uninstall** in the same row removes only that folder. On an NVIDIA machine it installs
+the CUDA build of PyTorch; elsewhere it installs the CPU build. The ~5 GB of
+weights still download on first synthesis.
+
+The first synthesis downloads the weights, which takes a while on a slow
+connection. The generation stays alive while the download makes progress;
+if a stalled download runs out of time, raise the compute-time budget in
+**Settings → Performance & Device** and try again.
+
 ## Install
 
 ```bash

@@ -30,6 +30,18 @@ interpreter, so MOSS runs behind
   covered by mocked loader tests; physical-device synthesis has not been
   validated by this change.
 
+## One-click install
+
+On a machine with an NVIDIA GPU, **Model Catalogue → Engines → MOSS-TTS-v1.5 →
+Install** does every step below for you. It installs into its own folder under VoiceStudio's data directory, with its own Python environment. Nothing it installs touches VoiceStudio itself or any other engine, so you can switch to it and back without breaking what already worked. **Uninstall** in the same row removes only that folder. The ~16 GB of weights still
+download on first synthesis. On a CPU-only host the button is not offered; use
+the manual install.
+
+The first synthesis downloads the weights, which takes a while on a slow
+connection. The generation stays alive while the download makes progress;
+if a stalled download runs out of time, raise the compute-time budget in
+**Settings → Performance & Device** and try again.
+
 ## Install
 
 MOSS-TTS-v1.5 is **not** bundled (the model is large and the package pins a
@@ -50,8 +62,12 @@ into an isolated venv on demand.
    ```bash
    cd MOSS-TTS
    uv venv .venv
-   uv pip install -e ".[torch-runtime]"
+   uv pip install -e ".[torch-runtime]"      --extra-index-url https://download.pytorch.org/whl/cu128      --index-strategy unsafe-best-match
    ```
+
+   The extra pins `torch==2.9.1+cu128`, which is published only on PyTorch's
+   own index, so the `--extra-index-url` is required — without it uv reports
+   the requirements as unsatisfiable on every host.
 
    On a **non-CUDA / CPU host** (e.g. Apple Silicon), install plain
    `torch`/`torchaudio`/`transformers==5.0.0` into the venv instead of the

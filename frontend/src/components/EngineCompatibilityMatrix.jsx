@@ -1315,7 +1315,9 @@ export default function EngineCompatibilityMatrix({
                     {/* One-click sidecar install — the guided replacement for
                         the four manual terminal steps. Progress renders in
                         the expansion panel (auto-opened on click). */}
-                    {!b.available && b.one_click_install && (
+                    {/* Hidden while a license review is all that is left: the
+                        engine is installed, and Accept is the next step. */}
+                    {!b.available && b.one_click_install && !reasonMentionsLicense(b.reason) && (
                       <Button
                         size="sm"
                         variant="subtle"

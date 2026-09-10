@@ -2463,8 +2463,11 @@ def _sidecar_installable_ids() -> frozenset[str]:
     button into their matrix rows.
     """
     try:
-        from services.sidecar_install import SPECS
-        return frozenset(SPECS)
+        # Host-aware: an engine whose installer cannot work on THIS machine
+        # (dots.tts on Windows, a CUDA-only install on a CPU host) must not get
+        # an Install button that can only fail.
+        from services.sidecar_install import installable_engine_ids
+        return installable_engine_ids()
     except Exception:  # pragma: no cover — defensive only
         return frozenset()
 
