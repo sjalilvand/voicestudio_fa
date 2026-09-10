@@ -205,5 +205,6 @@ reconciliation on every desktop platform.
 
 A process that exits while shutdown is signalling it can report a macOS
 permission error. VoiceStudio accepts this only after confirming the original
-process exited without being reaped, then still waits for nested operations to
-drain. Live-process permission errors and lost process ownership remain failures.
+process exited without being reaped (macOS can take a moment to report that
+exit, so it waits up to a quarter of a second), then still waits for nested
+operations to drain. Live-process permission errors and lost process ownership remain failures.
