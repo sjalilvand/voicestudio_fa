@@ -137,9 +137,17 @@ def _resolve_pinned_sha() -> str:
         # Final fallback ‑‑ relative import for when the file is invoked
         # via ``python backend/engines/supertonic3/sidecar.py`` rather
         # than via ``python -m backend.engines.supertonic3.sidecar``.
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from engines.supertonic3.constants import PINNED_REVISION_SHA  # type: ignore[import-not-found]
-        return PINNED_REVISION_SHA
+        # Load constants.py by path. Importing it as `engines.supertonic3…`
+        # runs the package __init__, which imports the app's backend, and that
+        # is absent from the engine's own venv (one-click install).
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "_supertonic3_constants", Path(__file__).resolve().with_name("constants.py"),
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)  # type: ignore[union-attr]
+        return module.PINNED_REVISION_SHA
 
 
 # ── model loading (lazy, on first synthesize) ─────────────────────────────

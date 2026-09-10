@@ -11,6 +11,7 @@ the frozen-backend fallback mirror it for their toolchains.
 **Highlights**
 - Supertonic-3 and PocketTTS show their license Accept button again, so they can be enabled (#2017)
 - An engine that can't run on your platform says so, instead of telling you to install it (#2018)
+- MOSS-TTS-v1.5, Confucius4-TTS, dots.tts, Supertonic-3 and PocketTTS install in one click, each in its own environment, so switching engines and back never breaks a working one (#2015, #2016)
 - A pronunciation entry that is stored but not applied yet says so, instead of looking like it did not match (#1949)
 - A bare 500 report now names the backend error class, so two unrelated faults stop filing the same issue (#1773)
 - A rejected dubbing source language now names the code it rejected (#1960)
