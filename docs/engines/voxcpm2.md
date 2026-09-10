@@ -65,6 +65,20 @@ now retried once with a fresh client. See
 - Language coverage is 30 languages; for anything else use the default
   [OmniVoice](omnivoice.md) engine ([languages.md](../languages.md)).
 
+## One-click install
+
+Click **Install** in **Model Catalogue → Engines → VoxCPM2**. VoiceStudio
+puts VoxCPM2 in its own Python environment under its data directory and runs
+it there, in a separate process. It installs the CUDA build of PyTorch on an
+NVIDIA GPU, the CPU build on other Windows and Linux machines, and the
+regular build on Apple Silicon.
+
+Nothing it installs touches VoiceStudio itself or any other engine, and
+**Uninstall** in the same row removes only that folder. An existing
+`pip install voxcpm` setup keeps working as it is. The button is not offered
+on Intel Macs, where no PyTorch build it needs exists. The model weights
+download on first use.
+
 ## Troubleshooting
 
 - Engine shows unavailable: the `voxcpm` package isn't installed — run the

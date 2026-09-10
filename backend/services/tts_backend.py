@@ -2663,6 +2663,12 @@ def _effective_backend_class(
     host_family: str | None = None,
 ) -> type[TTSBackend]:
     """Resolve host-specific containment without changing the configured id."""
+    if backend_id == "voxcpm2":
+        # Its own venv (one-click install) runs in a sidecar; an install made
+        # with `pip install voxcpm` keeps running in-process.
+        from engines.voxcpm2_subprocess import VoxCPM2SubprocessBackend, own_venv_python
+
+        return VoxCPM2SubprocessBackend if own_venv_python() is not None else backend_cls
     if backend_id != "omnivoice":
         return backend_cls
     if host_family is None:

@@ -149,6 +149,12 @@ class SidecarSpec:
     # Add PyTorch's CPU index on every host, for an engine that only ever
     # runs torch on the CPU (see core.torch_indexes).
     cpu_torch_index: bool = False
+    # torch/torchaudio pins for an upstream that leaves torch unpinned. Left
+    # to the resolver, PyPI's newest torch (CPU-only on Windows) pairs with a
+    # CUDA torchaudio from the other index. The host picks the build of the
+    # pinned pair: `+cu128` on a CUDA host, `+cpu` on other Windows and Linux
+    # hosts, plain on macOS.
+    torch_pins: tuple[str, ...] = ()
     # Can the one-click install work on THIS machine? (ok, reason). Consulted
     # before an Install button is offered and again when an install starts, so
     # a host the upstream does not support never gets a job that can only fail.
@@ -204,6 +210,16 @@ def _host_family() -> str:
         return "cpu"
 
 
+def _torch_pin_args(spec: "SidecarSpec") -> list[str]:
+    from core.torch_indexes import UV_PIP_CPU_ARGS, UV_PIP_CU128_ARGS
+
+    if _host_family() == "cuda":
+        return [f"{pin}+cu128" for pin in spec.torch_pins] + list(UV_PIP_CU128_ARGS)
+    if sys.platform in ("win32", "linux"):
+        return [f"{pin}+cpu" for pin in spec.torch_pins] + list(UV_PIP_CPU_ARGS)
+    return list(spec.torch_pins)
+
+
 def _moss_host() -> tuple[bool, str]:
     if _host_family() == "cuda":
         return True, ""
@@ -228,6 +244,15 @@ def _pockettts_host() -> tuple[bool, str]:
     if sys.platform == "darwin" and platform.machine().lower() == "x86_64":
         return False, (
             "PocketTTS needs a PyTorch version that has no Intel Mac build."
+        )
+    return True, ""
+
+
+def _voxcpm2_host() -> tuple[bool, str]:
+    import platform
+    if sys.platform == "darwin" and platform.machine().lower() == "x86_64":
+        return False, (
+            "VoxCPM2 needs a PyTorch version that has no Intel Mac build."
         )
     return True, ""
 
@@ -403,6 +428,28 @@ SPECS: dict[str, SidecarSpec] = {
         required_bytes=3 * _GIB,
         installed_probe=_in_app_env("pocket_tts"),
         host_supported=_pockettts_host,
+    ),
+    # Run in a sidecar from its own venv (engines/voxcpm2_subprocess). voxcpm
+    # leaves torch unpinned, so the pair is pinned here; each build of it was
+    # resolved with voxcpm==2.0.3 on 2026-09-10 (Windows and Linux: +cu128 and
+    # +cpu; Apple Silicon: plain). Weights download on first synthesis.
+    "voxcpm2": SidecarSpec(
+        engine_id="voxcpm2",
+        display_name="VoxCPM2",
+        repo_url="",
+        tarball_url="",
+        checkout_dirname="voxcpm2",
+        env_var="OMNIVOICE_VOXCPM2_DIR",
+        probe_module="voxcpm",
+        has_source=False,
+        venv_args=("--python", "3.11"),
+        install_args=("voxcpm==2.0.3",),
+        torch_pins=("torch==2.11.0", "torchaudio==2.11.0"),
+        docs_path="docs/engines/voxcpm2.md",
+        # CUDA torch (~5 GB unpacked) + transformers.
+        required_bytes=10 * _GIB,
+        installed_probe=_in_app_env("voxcpm"),
+        host_supported=_voxcpm2_host,
     ),
 }
 
@@ -1157,7 +1204,9 @@ def _step_install_deps(spec: SidecarSpec, job: dict) -> None:
     uv = _locate_uv()
     _log(job, f"Installing {spec.display_name} into its venv (this can take several minutes) …")
     target = [_expand(arg, checkout) for arg in spec.install_args]
-    if spec.cpu_torch_index:
+    if spec.torch_pins:
+        target += _torch_pin_args(spec)
+    elif spec.cpu_torch_index:
         from core.torch_indexes import UV_PIP_CPU_ARGS
         target += list(UV_PIP_CPU_ARGS)
     elif spec.uses_cuda_index and _host_family() == "cuda":
