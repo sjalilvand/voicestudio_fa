@@ -2664,6 +2664,7 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
 _OWN_VENV_SIDECARS: dict[str, tuple[str, str]] = {
     "voxcpm2": ("engines.voxcpm2_subprocess", "VoxCPM2SubprocessBackend"),
     "moss-tts-nano": ("engines.moss_tts_nano_subprocess", "MossTTSNanoSubprocessBackend"),
+    "cosyvoice": ("engines.cosyvoice_subprocess", "CosyVoiceSubprocessBackend"),
 }
 
 
