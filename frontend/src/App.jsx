@@ -122,7 +122,11 @@ function App() {
   // publishes progress via the `bootstrap_status` Tauri command. Hook below
   // polls every 1 s; until `ready`, we render BootstrapSplash instead of the
   // normal app shell, so the user sees real progress instead of a hung UI.
-  const { stage: bootstrapStage, message: bootstrapMessage } = useBootstrapStage();
+  const {
+    stage: bootstrapStage,
+    message: bootstrapMessage,
+    attempt: bootstrapAttempt,
+  } = useBootstrapStage();
   // Read once, like api/client.ts. Saving or disabling a remote backend reloads
   // the app, so this value and API's module-level base always move together.
   const [remoteBackend] = useState(() => configuredRemoteBackend());
@@ -1264,7 +1268,11 @@ function App() {
   if (!remoteBackend && bootstrapStage === 'awaiting_setup') {
     return (
       <div className="app-bootstrap-scale" style={{ '--ui-scale': effectiveUiScale }}>
-        <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
+        <BootstrapSplash
+          stage={bootstrapStage}
+          message={bootstrapMessage}
+          attempt={bootstrapAttempt}
+        />
       </div>
     );
   }
@@ -1277,7 +1285,11 @@ function App() {
   if (!setupChecked || !storeHydrated) {
     return (
       <div className="app-bootstrap-scale" style={{ '--ui-scale': effectiveUiScale }}>
-        <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
+        <BootstrapSplash
+          stage={bootstrapStage}
+          message={bootstrapMessage}
+          attempt={bootstrapAttempt}
+        />
       </div>
     );
   }
@@ -1365,7 +1377,11 @@ function App() {
   if (!backendReady) {
     return (
       <div className="app-bootstrap-scale" style={{ '--ui-scale': effectiveUiScale }}>
-        <BootstrapSplash stage={bootstrapStage} message={bootstrapMessage} />
+        <BootstrapSplash
+          stage={bootstrapStage}
+          message={bootstrapMessage}
+          attempt={bootstrapAttempt}
+        />
       </div>
     );
   }

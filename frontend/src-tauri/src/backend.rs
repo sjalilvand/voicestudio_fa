@@ -12,7 +12,7 @@ use std::time::Duration;
 use tauri::Manager;
 
 use crate::bootstrap::{
-    BootstrapStage, emit_log, ensure_venv_ready, set_stage,
+    BootstrapStage, current_attempt, emit_log_for_attempt, ensure_venv_ready, set_stage,
 };
 use crate::config::load_config;
 use crate::tools::{resolve_ffmpeg, resolve_ffprobe};
@@ -997,6 +997,11 @@ pub(crate) fn spawn_backend<R: tauri::Runtime>(
         }
     };
 
+    // The attempt these pumps drain, captured up front: the threads outlive
+    // the run, and a restart must not relabel its trailing output as the new
+    // attempt's evidence (#1900).
+    let pump_attempt = current_attempt();
+
     if let Some(stdout_pipe) = contained.child.stdout.take() {
         let app_clone = app.clone();
         let mut out_file = stdout_file;
@@ -1005,7 +1010,7 @@ pub(crate) fn spawn_backend<R: tauri::Runtime>(
             let reader = BufReader::new(stdout_pipe);
             for line in reader.lines().flatten() {
                 log::info!("[backend_stdout] {}", line);
-                emit_log(&app_clone, "starting_backend", &line);
+                emit_log_for_attempt(&app_clone, pump_attempt, "starting_backend", &line);
                 if let Some(ref mut f) = out_file {
                     let _ = writeln!(f, "{}", line);
                 }
@@ -1023,7 +1028,7 @@ pub(crate) fn spawn_backend<R: tauri::Runtime>(
             let mut log_file = err_log_file;
             for line in reader.lines().flatten() {
                 log::info!("[backend_stderr] {}", line);
-                emit_log(&app_clone, "starting_backend", &line);
+                emit_log_for_attempt(&app_clone, pump_attempt, "starting_backend", &line);
                 if let Some(ref mut f) = log_file {
                     let _ = writeln!(f, "{}", line);
                 }
