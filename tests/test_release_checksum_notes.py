@@ -54,3 +54,12 @@ def test_only_that_job_publishes():
 
 def test_the_contributors_strip_edits_the_notes_after_them():
     assert "needs: [build, release-notes-checksums]" in _job("contributors-strip")
+
+
+def test_a_missing_platform_stops_before_the_notes_or_the_publish():
+    """A release missing one platform's checksums must stay a draft: the job
+    exits before it rewrites the notes or publishes anything."""
+    job = _code(_job("release-notes-checksums"))
+    assert "missing=1" in job
+    gate = job.index('[ "$missing" = 0 ] || exit 1')
+    assert gate < job.index("--notes-file") < job.index("--draft=false")

@@ -138,7 +138,7 @@ You should see platform-keyed download URLs + minisign signatures. If that JSON 
 
 **Option B — full end-to-end:**
 1. Install v0.1.0 on a fresh machine (or clean-installed Applications).
-2. Cut v0.2.0 (bump, tag, push, wait for CI, publish draft).
+2. Cut v0.2.0 (bump, tag, push, wait for CI; the workflow publishes the release).
 3. Launch the installed v0.1.0. Within seconds, the dialog should appear.
 4. Accept → app downloads, verifies, replaces, relaunches as v0.2.0.
 
