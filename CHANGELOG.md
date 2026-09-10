@@ -26,6 +26,8 @@ the frozen-backend fallback mirror it for their toolchains.
 ### CI
 
 - A tagged release is published only after every platform's installers and checksums are attached, and its notes list all four platforms' checksums (#2029)
+- A worker-transport test no longer fails when a slow Windows runner takes over 2 seconds to tear down (#2038)
+
 
 
 ## [0.5.2] — 2026-09-10
