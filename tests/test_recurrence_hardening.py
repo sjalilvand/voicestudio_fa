@@ -194,11 +194,25 @@ def test_generate_timeout_env_floor_respected(monkeypatch):
 def test_user_env_drops_read_only_path(tmp_path, monkeypatch):
     """An existing directory on a read-only mount passes isdir but fails on
     first real use — validation must probe actual write capability."""
-    if hasattr(os, "geteuid") and os.geteuid() == 0:
-        pytest.skip("root writes anywhere; the probe cannot fail")
     ro = tmp_path / "readonly-cache"
     ro.mkdir()
     ro.chmod(0o500)
+    # Verify the premise instead of assuming it. `chmod(0o500)` makes a
+    # directory unwritable on POSIX; on Windows it only toggles a read-only
+    # FILE attribute and does not stop a file being created inside, so the
+    # scenario cannot be built there at all and the probe correctly reports
+    # the directory as usable. Root (and anything holding CAP_DAC_OVERRIDE)
+    # writes through the mode bits for the same reason. Probing for it covers
+    # every such host, including ones no explicit check would name.
+    try:
+        probe = ro / ".writable-probe"
+        probe.touch()
+        probe.unlink()
+    except OSError:
+        pass  # genuinely unwritable — the test can do its work
+    else:
+        ro.chmod(0o700)
+        pytest.skip("this host writes into a mode-0500 directory; no read-only path to test")
     env_file = tmp_path / "env"
     env_file.write_text(f"OMNIVOICE_CACHE_DIR={ro}\n")
     monkeypatch.delenv("OMNIVOICE_CACHE_DIR", raising=False)

@@ -3048,7 +3048,12 @@ async def test_adopted_input_final_is_durable_and_not_swept_as_an_orphan(
     )
     assert final not in store._orphaned_paths
     file_fsync = durability_events.index("file")
-    assert "directory" in durability_events[file_fsync + 1 :]
+    # The directory half of the barrier exists only where the platform has one.
+    # `_fsync_parent_directory` returns immediately without `os.O_DIRECTORY`,
+    # which Windows does not define — so gate on the same condition the product
+    # uses rather than on the OS name, and the two cannot drift apart.
+    if hasattr(os, "O_DIRECTORY"):
+        assert "directory" in durability_events[file_fsync + 1 :]
 
     # Any later write runs the orphan sweep. The adopted final must no longer
     # be a deletion candidate once its durability barrier has succeeded.

@@ -95,6 +95,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Remote GPU workers work when the machine running VoiceStudio is on Windows: a staged input is now identified the same way on every operating system, instead of with a path only Windows can read (#2005)
+
 - The pronunciation list badges an IPA or CMU entry as not applied yet, so you can see it without running a test (#1949) — thanks @utkarsha741!
 
 - A remote-worker test no longer fails at random on Windows CI: it waited for a background thread by spinning the event loop that thread's work needed (#1990)
