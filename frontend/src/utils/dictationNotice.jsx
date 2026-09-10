@@ -20,6 +20,7 @@
 import toast from 'react-hot-toast';
 import i18next from 'i18next';
 import { inTauri, openAccessibilitySettings, openMicrophoneSettings } from './permissions';
+import { toastAsrModelMissing } from './asrModelMissing';
 
 export const DICTATION_NOTICE_EVENT = 'dictation-notice';
 
@@ -51,6 +52,13 @@ export async function listenDictationNotice(handler) {
  * fixes it — the rest are informational, because there is nothing to click.
  */
 export function showDictationNotice(notice) {
+  // No speech model installed: the same one-click download toast every other
+  // ASR surface shows, not a bare label. The widget cannot show it itself —
+  // its window has no <Toaster> in the desktop app.
+  if (notice?.kind === 'asr_missing') {
+    toastAsrModelMissing(notice.missing || {});
+    return;
+  }
   const label = notice?.label;
   if (!label) return; // nothing worth interrupting the user for
   const opener =

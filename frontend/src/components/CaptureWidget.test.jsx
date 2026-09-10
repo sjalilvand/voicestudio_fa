@@ -297,6 +297,57 @@ describe('CaptureWidget', () => {
     expect(ws.url).toContain('model=sherpa-parakeet-tdt-v3');
   });
 
+  // The widget is its own window with its own store, created before the
+  // backend is listening. A failed first load used to be memoized, pinning the
+  // seed model for the life of the app: the main window checked the model the
+  // user picked and said "ready", while the pill asked the server for the seed
+  // and reported "No speech-to-text model is installed" with Parakeet on disk.
+  it('retries a failed prefs load instead of pinning the seed model', async () => {
+    mocks.state.dictationModelId = 'sherpa-whisper-tiny'; // the store's seed
+    let calls = 0;
+    mocks.state.loadDictationPrefs = async () => {
+      calls += 1;
+      if (calls === 1) throw new Error('backend not listening yet');
+      mocks.state.dictationModelId = 'sherpa-parakeet-tdt-v3';
+      return true;
+    };
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    render(withI18n(<CaptureWidget />));
+    await waitFor(() =>
+      expect(
+        mocks.holder.calls.some(([command]) => command === 'mark_dictation_capture_ready'),
+      ).toBe(true),
+    );
+
+    const ws = await startNativeSession('after-startup-failure');
+
+    expect(calls).toBeGreaterThanOrEqual(2);
+    expect(ws.url).toContain('model=sherpa-parakeet-tdt-v3');
+    expect(ws.url).not.toContain('sherpa-whisper-tiny');
+  });
+
+  it('picks up a model changed in another window at the next capture', async () => {
+    mocks.state.dictationModelId = 'sherpa-whisper-tiny';
+    let persisted = 'sherpa-whisper-tiny';
+    mocks.state.loadDictationPrefs = async () => {
+      mocks.state.dictationModelId = persisted;
+      return true;
+    };
+    render(withI18n(<CaptureWidget />));
+    await waitFor(() =>
+      expect(
+        mocks.holder.calls.some(([command]) => command === 'mark_dictation_capture_ready'),
+      ).toBe(true),
+    );
+
+    // The user installs and selects Parakeet from Transcriptions, in the main
+    // window. This window's store is not the one that changed.
+    persisted = 'sherpa-parakeet-tdt-v3';
+
+    const ws = await startNativeSession('after-model-switch');
+    expect(ws.url).toContain('model=sherpa-parakeet-tdt-v3');
+  });
+
   it('releases the exact native listener registration on unmount', async () => {
     const view = render(withI18n(<CaptureWidget />));
     await waitFor(() =>

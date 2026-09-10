@@ -1221,6 +1221,15 @@ pub fn run() {
                 .resizable(false)
                 .transparent(true)
                 .decorations(false)
+                // No window shadow. On Windows, Tauri's default (`true`) gives
+                // an undecorated window a 1px white border and, on Windows 11,
+                // rounded corners — drawn around the WHOLE 460x164 window, not
+                // the pill inside it, which is at most 284px wide. The result
+                // is a visible card framing empty space around the capsule,
+                // there whether the pill is showing or not. The capsule draws
+                // its own edge and shadow in CSS; the window must draw nothing.
+                // (Unsupported on Linux, where it was never the problem.)
+                .shadow(false)
                 .always_on_top(true)
                 .visible(false)
                 .focused(false)
