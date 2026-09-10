@@ -197,7 +197,7 @@ def test_requirements_drop_what_the_one_click_install_must_not_pull():
 def test_the_class_switches_to_the_sidecar_once_its_venv_exists(monkeypatch, tmp_path):
     from engines.cosyvoice_subprocess import CosyVoiceSubprocessBackend
     from services import tts_backend
-    from services.sidecar_install import _venv_python
+    from services.sidecar_install import _INSTALL_COMPLETE_MARKER, _venv_python
 
     monkeypatch.setenv("OMNIVOICE_COSYVOICE_DIR", "")
     monkeypatch.delenv("OMNIVOICE_COSYVOICE_DIR")
@@ -207,6 +207,7 @@ def test_the_class_switches_to_the_sidecar_once_its_venv_exists(monkeypatch, tmp
     py = _venv_python(tmp_path / ".venv")
     py.parent.mkdir(parents=True)
     py.write_text("#!fake\n")
+    (tmp_path / _INSTALL_COMPLETE_MARKER).write_text("x\n", encoding="utf-8")
     monkeypatch.setenv("OMNIVOICE_COSYVOICE_DIR", str(tmp_path))
 
     cls = tts_backend.get_backend_class("cosyvoice")
