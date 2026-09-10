@@ -9,6 +9,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- Supertonic-3 and PocketTTS show their license Accept button again, so they can be enabled (#2017)
 - A pronunciation entry that is stored but not applied yet says so, instead of looking like it did not match (#1949)
 - A bare 500 report now names the backend error class, so two unrelated faults stop filing the same issue (#1773)
 - A rejected dubbing source language now names the code it rejected (#1960)

@@ -106,3 +106,38 @@ def test_the_input_row_is_not_mutated():
     original = {"id": "e", "reason": "voxcpm package not installed."}
     public_backends([original])
     assert original["reason"] == "voxcpm package not installed."
+
+
+@pytest.mark.parametrize(
+    "diagnostic",
+    [
+        # The engines' own wording (Supertonic3Backend / PocketTTSBackend).
+        "Supertonic-3 license not accepted. Open Model Catalogue → Engines → "
+        "Supertonic-3 and click Accept to enable. (MIT code license + OpenRAIL-M "
+        "model license.)",
+        "PocketTTS license not accepted. Open Model Catalogue → Engines → "
+        "PocketTTS and review the MIT code license, CC-BY-4.0 model license, "
+        "and gated-access conditions before enabling it.",
+    ],
+)
+@pytest.mark.parametrize("one_click", [None, True, False])
+def test_a_license_gate_keeps_the_words_the_accept_button_needs(diagnostic, one_click):
+    """The Accept button renders only when the reason matches the matrix's
+    /license not accepted/i. Collapsing the reason into the generic line left
+    Supertonic-3 and PocketTTS with no way to be enabled."""
+    import re
+    from pathlib import Path
+
+    row = {"id": "e", "reason": diagnostic}
+    if one_click is not None:
+        row["one_click_install"] = one_click
+    reason = public_backends([row])[0]["reason"]
+
+    matrix = (
+        Path(__file__).resolve().parents[1]
+        / "frontend/src/components/EngineCompatibilityMatrix.jsx"
+    ).read_text(encoding="utf-8")
+    m = re.search(r"function reasonMentionsLicense\(reason\)[^}]*?return /([^/]+)/(\w*)\.test", matrix, re.S)
+    assert m, "EngineCompatibilityMatrix.reasonMentionsLicense changed shape"
+    flags = re.I if "i" in m.group(2) else 0
+    assert re.search(m.group(1), reason, flags), reason

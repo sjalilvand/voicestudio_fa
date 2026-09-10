@@ -43,6 +43,15 @@ _UNAVAILABLE_NOT_INSTALLED = (
     "This engine's package isn't installed yet. Install it from "
     "Model Catalogue → Engines."
 )
+# An engine gated behind an in-app license review (Supertonic-3, PocketTTS).
+# The Model Catalogue shows its Accept button only when the reason matches
+# /license not accepted/i (EngineCompatibilityMatrix.reasonMentionsLicense), so
+# this sentence must keep those words: collapsing it into the generic line hid
+# the only way to enable those engines.
+_UNAVAILABLE_LICENSE = (
+    "License not accepted yet. Review and accept it in "
+    "Model Catalogue → Engines to enable this engine."
+)
 _UNAVAILABLE_NEEDS_CONFIG = (
     "This engine needs to be configured before it can run. Open "
     "Model Catalogue → Engines to finish setting it up."
@@ -56,6 +65,9 @@ _UNAVAILABLE_FILE_MISSING = (
 # missing file often also says "not installed", and the file case has the more
 # useful remedy of the two.
 _UNAVAILABLE_SIGNATURES = (
+    # First: its probe text also says "Open Model Catalogue", and the
+    # license is the one gap only the user can close.
+    (_UNAVAILABLE_LICENSE, ("license not accepted",)),
     (_UNAVAILABLE_FILE_MISSING, (
         "file is missing", "file is empty", "file is unreadable",
         "script missing", "binary", "not found at",
