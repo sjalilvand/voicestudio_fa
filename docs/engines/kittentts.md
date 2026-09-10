@@ -20,7 +20,7 @@ only — but a much faster and much smaller install.
 pip install kittentts
 ```
 
-Then select the engine via **Model Catalogue → Engines** or
+Then select the engine via **Model Catalogue** (TTS tab → **Use**) or
 `OMNIVOICE_TTS_BACKEND=kittentts`.
 
 ## Voices

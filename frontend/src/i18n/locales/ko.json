@@ -33,13 +33,16 @@
   },
   "catalogue": {
     "title": "모델 카탈로그",
-    "tab_engines": "엔진",
-    "tab_models": "모델",
-    "moved_title": "이제 모델 카탈로그에 있습니다",
-    "moved_engines_body": "음성, 전사, LLM 기본 엔진 선택이 모델 카탈로그 작업 공간으로 이동했습니다.",
-    "moved_models_body": "내려받은 모델을 살펴보고 설치·삭제하는 기능이 모델 카탈로그 작업 공간으로 이동했습니다.",
-    "open_engines": "엔진 열기",
-    "open_models": "모델 열기"
+    "summary_title": "내 설정",
+    "change": "변경",
+    "status_setup": "설정 필요",
+    "status_cpu": "CPU 대체",
+    "status_off": "꺼짐",
+    "weights": "다운로드한 가중치",
+    "storage_link": "저장소 설정",
+    "reco_line": "{{device}} 권장 모델 {{total}}개 중 {{installed}}개 설치됨 · {{remaining}} GB 남음",
+    "install_rest": "나머지 설치",
+    "device_remote": "원격"
   },
   "settings": {
     "remote_backend_test": "연결 테스트",
@@ -1023,7 +1026,7 @@
     "configureProviders": "제공업체 설정",
     "loading": "엔진 로드 중…",
     "refresh": "새로고침",
-    "matrixTitle": "엔진 호환성 매트릭스",
+    "matrixTitle": "엔진",
     "loadFailed": "엔진을 로드하지 못했습니다: {{message}}",
     "couldNotLoad": "엔진을 로드할 수 없습니다: {{message}}",
     "retry": "재시도",

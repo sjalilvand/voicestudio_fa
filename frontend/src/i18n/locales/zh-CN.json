@@ -152,13 +152,16 @@
   },
   "catalogue": {
     "title": "模型库",
-    "tab_engines": "引擎",
-    "tab_models": "模型",
-    "moved_title": "已移至模型库",
-    "moved_engines_body": "选择默认的语音合成、语音转写和大模型引擎已移至“模型库”工作区。",
-    "moved_models_body": "浏览、安装和删除已下载模型已移至“模型库”工作区。",
-    "open_engines": "打开引擎",
-    "open_models": "打开模型"
+    "summary_title": "当前配置",
+    "change": "更改",
+    "status_setup": "需要设置",
+    "status_cpu": "CPU 回退",
+    "status_off": "关闭",
+    "weights": "已下载的模型权重",
+    "storage_link": "存储设置",
+    "reco_line": "{{device}} 的推荐模型已安装 {{installed}}/{{total}} · 还需 {{remaining}} GB",
+    "install_rest": "安装其余模型",
+    "device_remote": "远程"
   },
   "launchpad": {
     "greeting": "你好",
@@ -975,7 +978,7 @@
     "configureProviders": "配置提供商",
     "loading": "加载引擎中…",
     "refresh": "刷新",
-    "matrixTitle": "引擎兼容性矩阵",
+    "matrixTitle": "引擎",
     "loadFailed": "无法加载引擎：{{message}}",
     "couldNotLoad": "无法加载引擎：{{message}}",
     "retry": "重试",

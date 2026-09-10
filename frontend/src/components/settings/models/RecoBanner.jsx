@@ -2,6 +2,7 @@ import React from 'react';
 import { RefreshCw, CheckCircle, Download } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Button } from '../../../ui';
+import { failedInstalls, installFailureMessage } from './installResults';
 
 /**
  * "For your system" banner — the device's curated model preset (GET
@@ -67,18 +68,23 @@ export default function RecoBanner({
                 size="sm"
                 onClick={async () => {
                   setInstallingReco(true);
-                  try {
-                    await Promise.all(
-                      requiredMissing.map((m) => installMutation.mutateAsync(m.repo_id)),
-                    );
+                  const results = await Promise.allSettled(
+                    requiredMissing.map((m) => installMutation.mutateAsync(m.repo_id)),
+                  );
+                  setInstallingReco(false);
+                  const failed = failedInstalls(results, requiredMissing);
+                  if (results.length - failed.length > 0)
                     toast.success(
-                      t('models.started_downloading_required', { count: requiredMissing.length }),
+                      t('models.started_downloading_required', {
+                        count: results.length - failed.length,
+                      }),
                     );
-                  } catch (e) {
-                    toast.error(t('models.install_failed', { message: e.message || e }));
-                  } finally {
-                    setInstallingReco(false);
-                  }
+                  if (failed.length > 0)
+                    toast.error(
+                      t('models.install_failed', {
+                        message: installFailureMessage(failed),
+                      }),
+                    );
                 }}
                 disabled={installingReco || anyRowActive}
                 leading={installingReco ? <RefreshCw size={12} className="spinner" /> : null}

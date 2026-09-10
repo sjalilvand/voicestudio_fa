@@ -33,8 +33,12 @@ export type AppMode =
   | 'settings';
 
 /** Which pane the Model Catalogue workspace opens on. */
-export type CatalogueTab = 'engines' | 'models';
-export type CatalogueTarget = CatalogueTab | { pane?: CatalogueTab; family?: EngineFamily };
+/**
+ * Deep-link target for the Model Catalogue: the engine family to open on. The
+ * page has one axis now (TTS / ASR / LLM) — the old `pane` key is tolerated
+ * and ignored so stale callers keep navigating.
+ */
+export type CatalogueTarget = EngineFamily | { family?: EngineFamily | null; pane?: string };
 
 /**
  * The Voice workspace's "Define voice" method (was the Clone/Design tab
@@ -77,12 +81,9 @@ export interface UiSlice {
    */
   pendingSettingsTab: string | null;
   /**
-   * One-shot hand-off for "open the Model Catalogue on a specific pane" — the
-   * catalogue twin of `pendingSettingsTab`, used by the Settings pointers that
-   * replaced the old Engines / Model Store panels.
+   * One-shot hand-off for "open the Model Catalogue on a specific engine
+   * family" — the catalogue twin of `pendingSettingsTab`.
    */
-  pendingCatalogueTab: CatalogueTab | null;
-  /** Optional engine family to focus after entering the catalogue. */
   pendingCatalogueFamily: EngineFamily | null;
   isSidebarCollapsed: boolean;
   isSidebarProjectsCollapsed: boolean;
@@ -102,12 +103,11 @@ export interface UiSlice {
   setModeBeforeVoice: (mode: AppMode | null) => void;
   setPendingProfileId: (id: string | null) => void;
   setPendingSettingsTab: (tab: string | null) => void;
-  setPendingCatalogueTab: (tab: CatalogueTab | null) => void;
   setPendingCatalogueFamily: (family: EngineFamily | null) => void;
   /** Navigate to Settings on a specific tab in one call. */
   openSettingsTab: (tab: string) => void;
-  /** Navigate to the Model Catalogue on a specific pane in one call. */
-  openCatalogue: (target?: CatalogueTarget) => void;
+  /** Navigate to the Model Catalogue on a specific engine family in one call. */
+  openCatalogue: (target?: CatalogueTarget | null) => void;
   setIsSidebarCollapsed: (collapsed: boolean) => void;
   setIsSidebarProjectsCollapsed: (collapsed: boolean) => void;
   setSidebarTab: (tab: SidebarTab) => void;
@@ -132,7 +132,6 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (set, get) 
   modeBeforeVoice: null,
   pendingProfileId: null,
   pendingSettingsTab: null,
-  pendingCatalogueTab: null,
   pendingCatalogueFamily: null,
   isSidebarCollapsed: false,
   isSidebarProjectsCollapsed: false,
@@ -154,13 +153,11 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (set, get) 
   setModeBeforeVoice: (mode) => set({ modeBeforeVoice: mode }),
   setPendingProfileId: (id) => set({ pendingProfileId: id }),
   setPendingSettingsTab: (tab) => set({ pendingSettingsTab: tab }),
-  setPendingCatalogueTab: (tab) => set({ pendingCatalogueTab: tab }),
   setPendingCatalogueFamily: (family) => set({ pendingCatalogueFamily: family }),
   openSettingsTab: (tab) => set({ pendingSettingsTab: tab, mode: 'settings' }),
-  openCatalogue: (target = 'engines') => {
-    const { pane = 'engines', family = null } =
-      typeof target === 'string' ? { pane: target } : target;
-    set({ pendingCatalogueTab: pane, pendingCatalogueFamily: family, mode: 'catalogue' });
+  openCatalogue: (target = null) => {
+    const family = typeof target === 'string' ? target : (target?.family ?? null);
+    set({ pendingCatalogueFamily: family, mode: 'catalogue' });
   },
   setIsSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
   setIsSidebarProjectsCollapsed: (collapsed) => set({ isSidebarProjectsCollapsed: collapsed }),

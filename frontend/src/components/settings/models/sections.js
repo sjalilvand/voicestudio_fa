@@ -68,3 +68,31 @@ export function groupModels(models, query) {
     };
   });
 }
+
+/** Which catalog sections belong to each engine family (one family's slice of the catalog). */
+export const FAMILY_SECTIONS = {
+  tts: ['tts'],
+  asr: ['asr', 'dictation', 'diarisation'],
+  llm: [],
+};
+
+/**
+ * Pure: narrow the device-wide recommendation preset to one family so the
+ * banner under a family's engines only talks about that family's weights.
+ * Totals are recomputed from the subset; null when nothing applies.
+ */
+export function scopeReco(reco, family) {
+  if (!reco || !family) return reco;
+  const keep = FAMILY_SECTIONS[family] || [];
+  const models = (reco.models || []).filter((m) => keep.includes(modelSectionKey(m)));
+  if (models.length === 0) return null;
+  const missing = models.filter((m) => !m.installed);
+  const gb = (xs) => Math.round(xs.reduce((sum, m) => sum + (m.size_gb || 0), 0) * 10) / 10;
+  return {
+    ...reco,
+    models,
+    all_installed: missing.length === 0,
+    total_gb: gb(models),
+    download_gb_remaining: gb(missing),
+  };
+}

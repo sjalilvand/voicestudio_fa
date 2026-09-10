@@ -35,7 +35,7 @@ import UpdatesPanel from '../components/UpdatesPanel';
 import GeneralTab from '../components/settings/GeneralTab';
 // Engine selection + the model store moved to the Model Catalogue workspace
 // (pages/ModelCatalogue.jsx); these categories now signpost it.
-import CataloguePointer from '../components/settings/CataloguePointer';
+import VoicePreviewsPanel from '../components/settings/VoicePreviewsPanel';
 import HotkeyTab from '../components/settings/HotkeyTab';
 import TranslationTab from '../components/settings/TranslationTab';
 import NetworkTab from '../components/settings/NetworkTab';
@@ -399,20 +399,6 @@ export default function Settings() {
             <GeneralTab />
           </>
         );
-      case 'engines':
-        return <CataloguePointer area="engines" />;
-      case 'models':
-        // What stays here is the storage-shaped remainder: where weights live
-        // on disk and which mirror they come from (both restart-bound, hence
-        // the category's `restart: true`). Browsing / installing / removing
-        // them is the Model Catalogue's Models pane.
-        return (
-          <>
-            <StoragePanel />
-            <HFMirrorPanel />
-            <CataloguePointer area="models" />
-          </>
-        );
       case 'dictation':
         return (
           <>
@@ -436,16 +422,28 @@ export default function Settings() {
           </>
         );
       case 'storage':
+        // Everything disk-shaped in one place: usage, the models directory
+        // (restart-bound), data/output paths, and the voice-preview cache
+        // toggle. Browsing / installing / removing weights is the Model
+        // Catalogue.
         return (
           <>
             <StorageUsagePanel />
+            <StoragePanel />
             <StorageTab />
+            <VoicePreviewsPanel />
           </>
         );
       case 'permissions':
         return <PermissionsPanel />;
       case 'network':
-        return <NetworkTab />;
+        // The HF mirror is a network choice (which host downloads come from).
+        return (
+          <>
+            <NetworkTab />
+            <HFMirrorPanel />
+          </>
+        );
       case 'audio-tools':
         return <AudioToolsPanel />;
       case 'sharing':

@@ -89,7 +89,7 @@ uv pip install --reinstall transformers
 ```
 
 Or, as a quick workaround, switch ASR to **faster-whisper** in
-**Model Catalogue → Models**. If it recurs, add the backend **`.venv`** to your
+**Model Catalogue** (ASR tab → **Use**). If it recurs, add the backend **`.venv`** to your
 antivirus exclusions (see §1). Newer builds classify this error and show the
 reinstall hint directly instead of a bare path + "try restarting".
 
@@ -141,7 +141,7 @@ uv pip install --reinstall pytorch-lightning
 
 If it recurs, add the backend **`.venv`** to your antivirus exclusions (see
 §1). Since this fix landed the app also degrades gracefully: WhisperX is
-marked unavailable (Model Catalogue → Engines shows why, with this repair command)
+marked unavailable (Model Catalogue shows why, with this repair command)
 and dubbing automatically falls through to **faster-whisper** instead of
 failing outright.
 
@@ -205,7 +205,7 @@ itself does not grant access.
    license and prohibited-use conditions, share the requested contact details,
    and accept the conditions.
 2. Open **Settings → API Keys** and save a read token from that same account.
-3. Open **Model Catalogue → Engines**, review and accept the PocketTTS terms locally,
+3. Open **Model Catalogue**, review and accept the PocketTTS terms locally,
    then retry. VoiceStudio stores this acknowledgement only on your machine.
 
 ## 3. Gatekeeper quarantine on macOS
@@ -408,7 +408,7 @@ Intel-Mac wheels, so this entry only applies to historical installs (see
 ## 10. Windows: `Could not locate cudnn_ops_infer64_8.dll` during transcription
 
 **Symptom:** on Windows + NVIDIA, transcription/dubbing fails and the backend
-log shows `Could not locate cudnn_ops_infer64_8.dll`. Model Catalogue → Models shows
+log shows `Could not locate cudnn_ops_infer64_8.dll`. Model Catalogue (ASR tab) shows
 WhisperX or faster-whisper selected.
 
 On builds before this was fixed, the failure looked much worse than a failed
@@ -444,7 +444,7 @@ uv pip install --no-deps --python .venv\Scripts\python.exe --target .venv\Lib\si
 (On Linux the target is `.venv/lib/pythonX.Y/site-packages/cudnn8_compat`.)
 
 Or sidestep cuDNN 8 entirely: switch the ASR backend to **PyTorch Whisper** in
-**Model Catalogue → Models**. It runs on PyTorch's own stack (cuDNN 9, bundled with
+**Model Catalogue** (ASR tab → **Use**). It runs on PyTorch's own stack (cuDNN 9, bundled with
 torch) and needs no cuDNN-8 DLL — it loads its Whisper pipeline on demand (no
 extra env var).
 
@@ -600,12 +600,12 @@ did was `generate:start (audio)`, a dub, or a dictation.
 
 **Fix — reduce ASR load (any one of these):**
 
-1. **Pick a smaller ASR model / engine** in **Model Catalogue → Models** — e.g.
+1. **Pick a smaller ASR model / engine** in **Model Catalogue** (ASR tab: **Use** an engine, then a smaller model under **Downloaded weights**) — e.g.
    faster-whisper **medium** or **small**, instead of large-v3. Biggest win on
    low-VRAM GPUs.
 2. **Free VRAM**: **Flush the TTS model** before dubbing so ASR isn't competing
    for memory (top toolbar → Flush → "Unload all + flush", or per-model from
-   Model Catalogue → Models — see [Flush caches / Unload resident model](../performance.md#flush-caches--unload-resident-model)
+   Model Catalogue → Downloaded weights under the engine's family tab — see [Flush caches / Unload resident model](../performance.md#flush-caches--unload-resident-model)
    for exactly what it frees and the API equivalents for scripts), or
 3. **Run ASR on CPU** (slower but reliable) if your GPU is small.
 4. **Test with a 10-second clip** first — if that returns quickly, it confirms a
@@ -675,7 +675,7 @@ hammering — on a 1-worker machine, concurrent requests serialize by design.
 recovering the underlying hang — the wedged thread keeps its VRAM until the app
 exits. The error message will then recommend switching the ASR engine to
 **Faster-Whisper (crash-isolated subprocess)** (`faster-whisper-isolated`) in
-**Model Catalogue → Engines**: it runs transcription in a separate process that can be
+**Model Catalogue**: it runs transcription in a separate process that can be
 force-killed to reclaim a hung transcribe *and* its VRAM, at a small per-call
 overhead. It reuses your existing faster-whisper install (nothing extra to
 download). VoiceStudio never switches engines automatically — this stays your

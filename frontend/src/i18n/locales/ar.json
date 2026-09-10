@@ -33,13 +33,16 @@
   },
   "catalogue": {
     "title": "كتالوج النماذج",
-    "tab_engines": "المحركات",
-    "tab_models": "النماذج",
-    "moved_title": "أصبح ضمن كتالوج النماذج",
-    "moved_engines_body": "انتقل اختيار المحرك الافتراضي للنطق والتفريغ النصي ونماذج اللغة الكبيرة إلى مساحة عمل كتالوج النماذج.",
-    "moved_models_body": "انتقل تصفح النماذج المنزَّلة وتثبيتها وإزالتها إلى مساحة عمل كتالوج النماذج.",
-    "open_engines": "فتح المحركات",
-    "open_models": "فتح النماذج"
+    "summary_title": "إعدادك",
+    "change": "تغيير",
+    "status_setup": "يحتاج إلى إعداد",
+    "status_cpu": "احتياطي CPU",
+    "status_off": "متوقف",
+    "weights": "الأوزان المنزَّلة",
+    "storage_link": "إعدادات التخزين",
+    "reco_line": "تم تثبيت {{installed}} من {{total}} نماذج موصى بها لـ {{device}} · يتبقى {{remaining}} GB",
+    "install_rest": "تثبيت الباقي",
+    "device_remote": "بعيد"
   },
   "settings": {
     "remote_backend_test": "اختبار الاتصال",
@@ -779,7 +782,7 @@
     "configureProviders": "إعداد مقدمي الخدمة",
     "loading": "جارٍ تحميل المحركات…",
     "refresh": "تحديث",
-    "matrixTitle": "مصفوفة توافق المحرك",
+    "matrixTitle": "المحركات",
     "loadFailed": "فشل تحميل المحركات: {{message}}",
     "couldNotLoad": "لا يمكن تحميل المحركات: {{message}}",
     "retry": "أعد المحاولة",

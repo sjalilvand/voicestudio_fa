@@ -9,7 +9,7 @@ genuinely uses **AMD ROCm** GPUs, so auto-detect picks it on ROCm hosts
 
 ## Selecting it
 
-- **Model Catalogue → Engines**, ASR tab → **Use** on the PyTorch Whisper
+- **Model Catalogue**, ASR tab → **Use** on the PyTorch Whisper
   row, or `OMNIVOICE_ASR_BACKEND=pytorch-whisper`.
 - `OMNIVOICE_ASR_BACKEND=omnivoice` is accepted as a compatibility alias and
   selects this same PyTorch-native ASR path on ROCm hosts.

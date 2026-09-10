@@ -13,7 +13,7 @@ only the process boundary is new.
 
 ## Selecting it
 
-- **Model Catalogue → Engines**, ASR tab → **Use** on the crash-isolated row, or
+- **Model Catalogue**, ASR tab → **Use** on the crash-isolated row, or
 - pin it with `OMNIVOICE_ASR_BACKEND=faster-whisper-isolated`.
 
 It is never picked by auto-detect — it's an explicit opt-in escape hatch.
@@ -56,6 +56,6 @@ Weights download on first load — see
   "sidecar crashed" error and the backend stays up — retry to respawn.
 - **cuDNN 8 is still required on CUDA** — same CTranslate2 requirement as the
   in-process engine. It's checked up front so a missing cuDNN 8 shows as
-  "unavailable" in Model Catalogue → Engines instead of a sidecar that
+  "unavailable" in Model Catalogue instead of a sidecar that
   silently fails every transcribe
   ([#1371](https://github.com/debpalash/VoiceStudio/issues/1371)).
