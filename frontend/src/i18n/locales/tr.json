@@ -353,7 +353,9 @@
     "hf_token_not_checked": "Test edilmedi",
     "hf_source_app_label": "VoiceStudio (şifrelenmiş, önerilen)",
     "hf_source_cli_label": "HuggingFace CLI",
-    "hf_source_env_label": "Ortam değişkeni"
+    "hf_source_env_label": "Ortam değişkeni",
+    "theme_auto": "Sistem Otomatik",
+    "theme_light": "Açık"
   },
   "bootstrap": {
     "title": "VoiceStudio",
