@@ -9,6 +9,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- The first-run install log is kept on disk instead of vanishing with the setup screen (#1847)
 - A Reduce motion switch in Settings, for calm without changing your whole system (#1857)
 - A light theme, and System Auto now follows a light-mode OS instead of staying dark (#1973) — thanks @CoDe-ReDz!
 - Generating from a one-character input now says the input was too short, instead of quoting a convolution error (#1826)
