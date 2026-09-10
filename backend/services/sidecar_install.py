@@ -734,13 +734,20 @@ def _default_uv_cache_root() -> Path:
     return Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "uv"
 
 
-def uv_subprocess_env(cache_parent: Path) -> "dict[str, str] | None":
+def uv_subprocess_env(cache_parent: Path) -> "dict[str, str]":
     """Environment for ``uv`` subprocesses that install into *cache_parent*'s volume.
 
-    Returns ``None`` (inherit the parent environment untouched) when uv's
-    default cache already shares a volume with *cache_parent* or the user
-    pinned both variables themselves. Otherwise returns a copy of
-    ``os.environ`` with the *unset* one(s) of ``UV_CACHE_DIR`` /
+    Always a copy of ``os.environ`` with ``UV_NO_CONFIG=1``: an engine's
+    install resolves its own requirements, never VoiceStudio's. The backend
+    runs inside the app's tree, so uv would otherwise discover the app's
+    ``pyproject.toml`` and apply its ``[tool.uv] constraint-dependencies``
+    (``torch==2.8.0``) to the engine's venv. An engine pinning another torch
+    (MOSS-TTS-v1.5, Confucius4) could then never resolve, and one that pins
+    none got the app's torch instead of its own. Mirrors still apply: they
+    arrive as ``UV_INDEX_URL``, an environment variable, not a config file.
+
+    When uv's default cache is on another volume than *cache_parent*, the
+    copy also places the *unset* one(s) of ``UV_CACHE_DIR`` /
     ``UV_PYTHON_INSTALL_DIR`` placed inside *cache_parent*, so downloads, the
     unpacked wheel cache, managed Pythons, and the venv all stay on the
     target volume — and same-volume hardlink installs work again. The two
@@ -753,17 +760,15 @@ def uv_subprocess_env(cache_parent: Path) -> "dict[str, str] | None":
     pass the directory that should hold the shared ``.uv-cache`` — typically
     the common parent of the engine venvs on that volume.
     """
-    if _same_volume(cache_parent, _default_uv_cache_root()):
-        return None
     env = dict(os.environ)
-    overrode = False
+    env["UV_NO_CONFIG"] = "1"
+    if _same_volume(cache_parent, _default_uv_cache_root()):
+        return env
     if not env.get("UV_CACHE_DIR"):  # explicit user choice always wins
         env["UV_CACHE_DIR"] = str(Path(cache_parent) / ".uv-cache")
-        overrode = True
     if not env.get("UV_PYTHON_INSTALL_DIR"):
         env["UV_PYTHON_INSTALL_DIR"] = str(Path(cache_parent) / ".uv-python")
-        overrode = True
-    return env if overrode else None
+    return env
 
 
 # ── Disk preflight ─────────────────────────────────────────────────────────

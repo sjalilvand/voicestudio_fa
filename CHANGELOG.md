@@ -9,10 +9,18 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
-- MOSS-TTS-v1.5, Confucius4-TTS, dots.tts, Supertonic-3 and PocketTTS install in one click, each in its own environment, so switching engines and back never breaks a working one (#2015, #2016)
+
 - VoxCPM2 installs in one click into its own environment, with the CUDA build of PyTorch on NVIDIA GPUs (#2021)
 - MOSS-TTS-Nano installs in one click into its own environment, pinned to a reviewed upstream commit it works with (#2022)
 - CosyVoice 3 installs in one click into its own environment, with a trimmed dependency set that needs no TensorRT, DeepSpeed or third-party package feed (#2025)
+
+## [0.5.2] — 2026-09-10
+
+**Highlights**
+
+- Supertonic-3 and PocketTTS show their license Accept button again, so they can be enabled (#2017)
+- An engine that can't run on your platform says so, instead of telling you to install it (#2018)
+- MOSS-TTS-v1.5, Confucius4-TTS, dots.tts, Supertonic-3 and PocketTTS install in one click, each in its own environment, so switching engines and back never breaks a working one (#2015, #2016)
 - A pronunciation entry that is stored but not applied yet says so, instead of looking like it did not match (#1949)
 - A bare 500 report now names the backend error class, so two unrelated faults stop filing the same issue (#1773)
 - A rejected dubbing source language now names the code it rejected (#1960)
@@ -41,15 +49,12 @@ the frozen-backend fallback mirror it for their toolchains.
 - The Engines menu's Transcription tab picks the dictation model under Sherpa-ONNX, and that choice now also drives Sherpa transcription (#1952)
 - A failure with no stage attached no longer borrows another stage's advice, so a text-to-speech error stops telling you the video server dropped the download (#1943)
 - A generation failure that the app cannot classify now names the backend error class, so two unrelated faults stop arriving as the same untriageable report (#1800)
-
 - Transcriptions dictation wakes the desktop recorder, presents one contextual start action, and centers its microphone icon with the label (#1902)
 - Colab transcription and dubbing now include an explicit ASR model setup step (#1922) — thanks @nidhi-singh02!
-
 - Apple Silicon now shows one canonical OmniVoice choice in the engine picker while retaining its automatic crash-isolated sidecar runtime (#1913)
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
 - Model downloads survive a flaky connection instead of restarting from zero (#1940)
 - `bun run dev` recovers on Windows instead of demanding Task Manager (#1941)
-
 - The desktop app builds and opens from a fresh clone again (#1818) — thanks @flutterkage2k!
 - GPUs with less VRAM than the engine needs no longer get half the compute-time budget a CPU gets (#1806) — thanks @VishvakR!
 - Gallery voice previews play again — the quality guard was rejecting good renders as silent (#1819) — thanks @flutterkage2k!
@@ -57,11 +62,20 @@ the frozen-backend fallback mirror it for their toolchains.
 - Voice modes use themed tabs, with Synthesize and Convert pinned below their scrolling forms (#1823)
 - Fix current-user Windows installer validation and nested resource cleanup (#1873)
 - Keep generated frontend assets available while building the current-user Windows installer (#1881)
-
 - Voice cloning now starts with a clear upload-or-record choice, reveals recording and reference details only when needed, and keeps sampling controls under Production Overrides (#1817)
 - The first-run welcome line uses an instruction accepted by OmniVoice and VoiceDesign engines (#1861) — thanks @psiberfunk!
 - audio.cpp joins the engine lineup as an opt-in CPU backend for Breeze-TTS-2 (English + Chinese, clone + voice design, explicit Model Catalogue install, no Python venv) (#1891)
 - audio.cpp uses installed native CUDA, HIP, Metal, and Vulkan providers and preserves device routing across remote workers (#1926)
+- Show estimated and measured model, dependency, cache, and temporary disk costs in the engine catalogue (#1718)
+- Preview builds now stay newer than Stable even when automatic post-release version bumps are disabled (#1762)
+- CosyVoice setup guidance now separates downloaded model files from the runtime that makes the engine available (#1761)
+- MCP tools can now keep audio out of agent context by returning files and accepting base-path-confined file inputs (#1760) — thanks @agudmund!
+- Hear a dub line as you type it — an opt-in live preview streams TTS for the edited segment (#1769) — thanks @mvanhorn!
+- Studio gains a Convert method: re-say any clip in one of your saved voices, speech to speech, fully local (#1765) — thanks @mvanhorn!
+- Hardsub video export gains an opt-in karaoke word-highlight caption style (#1764) — thanks @mvanhorn!
+- The batch queue can now watch a folder: new videos dropped into it are dubbed automatically (#1768) — thanks @mvanhorn!
+- The audiobook player now shows the chapter text and highlights the word being narrated (#1766) — thanks @mvanhorn!
+- The dub editor gains a casting board: drag voice chips onto speakers, dropdowns stay in sync (#1767) — thanks @mvanhorn!
 
 ### Changed
 
@@ -86,44 +100,56 @@ the frozen-backend fallback mirror it for their toolchains.
 - Voice tabs and upload/record controls have subtle SVG motion; Text adds clipboard paste and the upload area fills available height (#1823)
 - The title-bar label cycles through active speech, transcription, and LLM engines; bundled model labels correctly say OmniVoice (#1823)
 - The top-bar Engines panel groups Speech, Transcription, and LLM choices into tabs, with compact memory controls and no duplicate pickers (#1823)
+- Voice Design simplified: the 12-row fine-grained block collapses to one summary line with a five-field editor, English accent and Chinese dialect merge into a single field, and the starting-point chips now show 5 with an overflow toggle (#1793)
+
 ### Added
+
+- The audiobook result is now a synced-lyrics player: chapter text follows playback with the current word highlighted and click-to-seek, timed from the render's own chapter durations with a karaoke-style even split — no ASR pass, fully local (#1766) — thanks @mvanhorn!
+- The dub CAST strip expands into a project-level casting board: drag voice chips (clone profiles, design presets, Default) onto speaker rows — or pick from a keyboard listbox — writing the same per-speaker cast fields as the existing dropdowns (#1767) — thanks @mvanhorn!
+- Studio's new Convert method turns a dropped or recorded clip into an existing voice profile's voice, with optional source-duration matching (#1765) — thanks @mvanhorn!
+- Opt-in watch folder on the batch queue: pick a directory once and new videos are auto-enqueued with your last Add-to-queue settings, with pause/stop controls and copy-in-progress protection — files upload as bytes, paths never leave the app (#1768) — thanks @mvanhorn!
+- Hardsub export can now burn karaoke word-highlight captions: an opt-in Line | Karaoke control renders a word-timed ASS sweep from timings persisted at transcription, with an even-split fallback for older jobs and translated tracks, plus a `GET /dub/ass/{job_id}` sidecar (#1764) — thanks @mvanhorn!
+- Windows releases now include an independently updatable per-user MSI that installs and uninstalls without elevation (#1713)
+- Dub segments can now stream live TTS while you edit a translated line — opt-in toggle, existing `/ws/tts` socket, shared generation admission, exports still render at full quality (#1769) — thanks @mvanhorn!
+- Engine status and diagnostic bundles now record loaded execution provider, device, precision, fallback stage, accelerator identity, runtime versions, and parent-process memory visibility (#1717)
 
 ### Docs
 
 - PowerShell Docker setup now generates the administrator key without requiring Python on the host (#1993) — thanks @yangfan-yf-yf!
 - The torch upgrade an RTX 50-series card needs is written down, with the second pin file the resolver checks and the command that proves the kernels are there (#1931)
-
 - Docker quick starts now explain the AMD64-only images and direct Apple Silicon users to the native macOS app (#1921) — thanks @yangfan-yf-yf!
 - audio.cpp (Breeze-TTS-2) is now a documented opt-in engine: prebuilt binary install, explicit GGUF download, voice modes, and the weights' research/non-commercial terms (#1891)
 - `docs/STRUCTURE.md` describes the tree as it is today, and a test now keeps its counts honest (#1981) — thanks @Dawcraft!
+- Local gigastt is now documented as a supported OpenAI-compatible ASR endpoint, with loopback privacy distinguished from remote servers (#1736) — thanks @ekhodzitsky!
+- The CosyVoice guide now states that packaged builds have no one-click runtime installer and records the exact readiness checks exposed by [Discussion 1631](https://github.com/debpalash/VoiceStudio/discussions/1631) (#1761)
+- A production private-API guide now covers pinned containers, root credentials, network isolation, streaming proxies, health checks, upgrades, and benchmark evidence (#1720)
+- RX 6700 XT/gfx1031 over WSL2 ROCDXG is now explicitly unverified until a published end-to-end GPU workload proves the mapped path (#1716)
 
 ### Fixed
 
+- One-click engine installs no longer inherit VoiceStudio's own PyTorch pin, which made MOSS-TTS-v1.5 and Confucius4 impossible to install (#2024)
+- Uninstalling a translation engine no longer removes a package VoiceStudio or another engine still needs (#2019)
+- Closing the dictation pill on Windows removes it from the screen: an empty dark rectangle used to stay there, always on top, until the app was quit (#2009)
+- The dictation pill on Windows no longer sits inside a bordered card wider than the pill itself (#2009)
+- Dictation uses the model you picked instead of one remembered from before the backend started, so it stops reporting no speech-to-text model while one is installed — and when none is, the main window offers the download (#2012)
 - The remote-worker loop-responsiveness tests no longer turn a build red over milliseconds of scheduling noise on shared CI hardware (#1990)
 - Remote GPU workers work when the machine running VoiceStudio is on Windows: a staged input is now identified the same way on every operating system, instead of with a path only Windows can read (#2005)
-
 - The pronunciation list badges an IPA or CMU entry as not applied yet, so you can see it without running a test (#1949) — thanks @utkarsha741!
-
 - A remote-worker test no longer fails at random on Windows CI: it waited for a background thread by spinning the event loop that thread's work needed (#1990)
-
 - The isolated backend test session passes on a stock Windows checkout, and CI now runs it there so it stays that way (#1990)
-
 - Windows contributors can run the test suite without Developer Mode: tests that create a symlink now skip instead of failing with `WinError 1314` (#1990)
 - The crash details dialog now says what the exit code means and what to try, instead of showing a raw number and a log (#1927)
 - A crash report now carries the backend's actual last words: the log tail is captured after the dying process's final output lands, not the instant it exits (#1850)
 - The first-run setup screen no longer mislabels a step when the bootstrap restarts itself: Rust now says which attempt each stage and log line belongs to, instead of the screen guessing from a once-a-second poll (#1900)
 - A port-3900 conflict now names who is actually holding it, and gives the command that ends an orphaned backend, instead of telling you to quit an app that has no window (#1933) — thanks @Chang-Jin-Lee!
-
-- Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1952)
+- Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1952, #1955)
 - `bun desktop-prod` and `bun desktop-fresh` find Rust and uv from a terminal opened before they were installed, as `bun desktop` already did; a missing Rust toolchain fails up front with the install steps (#1952)
-- Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1955)
 - Voice synthesis progress no longer races to a fabricated 95%; it stays indeterminate until the active generation path reports real progress (#1907) — thanks @psiberfunk!
 - The Backend log tab keeps showing history across a log rollover, instead of going nearly empty until new lines arrive (#1920)
 - Clearing the logs now empties the rotated log files too, so it frees the space it appears to (#1920)
 - An error thrown by a browser extension no longer offers to file itself as a VoiceStudio bug (#1901)
 - Clearing the desktop logs no longer wipes the backend's stderr, which is the only record a native crash leaves behind and is meant to survive a respawn (#1510)
 - Long audiobook chapters now use the same device- and text-length-aware synthesis timeout as other TTS routes (#1910) — thanks @psiberfunk!
-
 - Interrupted audiobook renders can resume cached chapters after tab navigation, and their chapter cache is available from the recovery card (#1911) — thanks @psiberfunk!
 - System-check details and storage paths beginning with a number or a slash no longer render with their leading text moved to the end of the line (#1848) — thanks @psiberfunk!
 - An unavailable engine's row now links to that engine's guide, so the generic "check installation and configuration" message has somewhere to send you (#1866) — thanks @psiberfunk!
@@ -136,27 +162,22 @@ the frozen-backend fallback mirror it for their toolchains.
 - `dev-backend.mjs` stops the backend by process tree on Windows, so an orphaned uvicorn no longer holds port 3900 and turns a source reload into three phantom crashes (#1941)
 - `clear-dev-ports.mjs` can free a stuck development port on Windows again, bound to the inspected process instance so a recycled pid is never terminated (#1941)
 - Checkout-ownership matching no longer resolves POSIX paths with the host's separator, which made the guard's own test fail on Windows (#1941)
-
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
 - Transcribing with an engine that reports no segment end no longer fails with a server error; the null timing is passed through the way the segment list already expects (#1904) — thanks @aeroglu!
 - Copying a saved transcription now uses the shared clipboard helper and reports failed copies accurately (#1803) — thanks @tvbht!
-
 - Voice reference preparation reclaims allocator memory before one bounded retry, then reports persistent GPU out-of-memory failures (#1811)
 - `bun run desktop` now opens on a fresh clone: the Vite alias for `@tauri-apps/plugin-dialog` no longer assumes a nested `frontend/node_modules`, which bun's workspace hoisting leaves empty (#1818) — thanks @flutterkage2k!
-
 - Slow backend startups remain running with progress updates, and Retry interrupts startup without stale timeout failures (#1809)
 - Backend connection errors report crashes only when recorded evidence exists, and diagnostic waits honor cancellation (#1810)
 - A CUDA or ROCm GPU with less VRAM than the engine needs now gets the CPU compute-time budget instead of the shorter accelerated one, since it pages to system RAM and renders slower than the CPU would — applied to local generation, voice conversion, and remote worker deadlines alike (#1806) — thanks @VishvakR!
 - Gallery previews no longer fail with "the voice engine returned no audible audio" on perfectly good renders: the degenerate-buzz guard measured spectral flatness over the whole clip (so the value tracked clip length) against a threshold calibrated on a synthetic signal, and rejected real speech in every language tested (#1819) — thanks @flutterkage2k!
 - Speak tilde separators in integer, signed, and decimal ranges in English, Korean, Japanese, and Chinese (#1821) — thanks @flutterkage2k!
-
 - Keep recording and conversion work safe while switching methods, synchronize dubbing language controls, and localize timeline controls and timing warnings (#1841)
 - Audiobook is now a Write → Cast → Produce tab workspace matching the voice workspace, with the warnings/progress/result rail pinned below (#1841)
 - Gallery uses a workspace header with zone tabs, hairline section dividers, theme-token cards, and borderless import rows (#1841)
 - Gallery cards reset native button faces, cluster icon actions in the header so Use voice never wraps, and use a roomier grid floor (#1841)
 - Gallery filters gain name search, removable iconified pills with clear-all, and dimension icons on every facet (#1841)
-
 - Dubbing playback starts before waveform decoding, automatic cast names are readable, and transcript timestamps have more room (#1823)
 - The title-bar engine button stays compact and stable while cycling labels, with engine names aligned right (#1823)
 - Long dubbing segment errors wrap in a bounded scrollable notice instead of widening the editor (#1823)
@@ -173,62 +194,15 @@ the frozen-backend fallback mirror it for their toolchains.
 - Confucius accelerator routing tolerates failed device probes, and dots.tts keeps safe default precision on non-CUDA hosts (#1831) — thanks @li-lizhe!
 - On macOS, the header status dot and kicker no longer render underneath the overlaid traffic lights (#1863) — thanks @psiberfunk!
 - The capture widget can hide after recording and recover from being left visible while idle (#1865) — thanks @psiberfunk!
-
 - macOS retains the shared desktop window sizing, resize limits, and file-drop behavior when native chrome is applied (#1865) — thanks @psiberfunk!
-
 - On macOS, the header no longer shows Windows-style minimize/maximize/close buttons alongside the native traffic lights (#1865) — thanks @psiberfunk!
-
 - Release retries replace their own partially uploaded installers without colliding with existing assets (#1871)
 - Timed-out voice engines finish process cleanup before retrying, and old timeout callbacks cannot kill replacement engines (#1872)
-
-
 - Fast macOS process exits no longer turn a completed shutdown into a permission error (#1809)
 - The bootstrap splash no longer shows fabricated first-run install steps on a warm start or repair sync — a step now renders done only once it was actually observed (#1894)
 - A deliberate, clean quit killed by the desktop shell's short shutdown grace no longer gets reported as a crash on next launch — the run sentinel now clears before the slower shutdown steps instead of after (#1895)
 - Model Catalogue engine rows stack into one column on narrow shells instead of clipping actions off-screen (#1891)
 - Simplified Chinese locale completed: all 486 missing keys translated and the parity ratchet tightened to zero (#1877) — thanks @yearth!
-
-
-## [0.5.2] — 2026-09-02
-
-**Highlights**
-
-- Show estimated and measured model, dependency, cache, and temporary disk costs in the engine catalogue (#1718)
-- Preview builds now stay newer than Stable even when automatic post-release version bumps are disabled (#1762)
-- CosyVoice setup guidance now separates downloaded model files from the runtime that makes the engine available (#1761)
-- MCP tools can now keep audio out of agent context by returning files and accepting base-path-confined file inputs (#1760) — thanks @agudmund!
-- Hear a dub line as you type it — an opt-in live preview streams TTS for the edited segment (#1769) — thanks @mvanhorn!
-- Studio gains a Convert method: re-say any clip in one of your saved voices, speech to speech, fully local (#1765) — thanks @mvanhorn!
-- Hardsub video export gains an opt-in karaoke word-highlight caption style (#1764) — thanks @mvanhorn!
-- The batch queue can now watch a folder: new videos dropped into it are dubbed automatically (#1768) — thanks @mvanhorn!
-- The audiobook player now shows the chapter text and highlights the word being narrated (#1766) — thanks @mvanhorn!
-- The dub editor gains a casting board: drag voice chips onto speakers, dropdowns stay in sync (#1767) — thanks @mvanhorn!
-
-### Changed
-
-- Voice Design simplified: the 12-row fine-grained block collapses to one summary line with a five-field editor, English accent and Chinese dialect merge into a single field, and the starting-point chips now show 5 with an overflow toggle (#1793)
-
-### Added
-
-- The audiobook result is now a synced-lyrics player: chapter text follows playback with the current word highlighted and click-to-seek, timed from the render's own chapter durations with a karaoke-style even split — no ASR pass, fully local (#1766) — thanks @mvanhorn!
-- The dub CAST strip expands into a project-level casting board: drag voice chips (clone profiles, design presets, Default) onto speaker rows — or pick from a keyboard listbox — writing the same per-speaker cast fields as the existing dropdowns (#1767) — thanks @mvanhorn!
-- Studio's new Convert method turns a dropped or recorded clip into an existing voice profile's voice, with optional source-duration matching (#1765) — thanks @mvanhorn!
-- Opt-in watch folder on the batch queue: pick a directory once and new videos are auto-enqueued with your last Add-to-queue settings, with pause/stop controls and copy-in-progress protection — files upload as bytes, paths never leave the app (#1768) — thanks @mvanhorn!
-- Hardsub export can now burn karaoke word-highlight captions: an opt-in Line | Karaoke control renders a word-timed ASS sweep from timings persisted at transcription, with an even-split fallback for older jobs and translated tracks, plus a `GET /dub/ass/{job_id}` sidecar (#1764) — thanks @mvanhorn!
-- Windows releases now include an independently updatable per-user MSI that installs and uninstalls without elevation (#1713)
-- Dub segments can now stream live TTS while you edit a translated line — opt-in toggle, existing `/ws/tts` socket, shared generation admission, exports still render at full quality (#1769) — thanks @mvanhorn!
-- Engine status and diagnostic bundles now record loaded execution provider, device, precision, fallback stage, accelerator identity, runtime versions, and parent-process memory visibility (#1717)
-
-### Docs
-
-- Local gigastt is now documented as a supported OpenAI-compatible ASR endpoint, with loopback privacy distinguished from remote servers (#1736) — thanks @ekhodzitsky!
-- The CosyVoice guide now states that packaged builds have no one-click runtime installer and records the exact readiness checks exposed by [Discussion 1631](https://github.com/debpalash/VoiceStudio/discussions/1631) (#1761)
-- A production private-API guide now covers pinned containers, root credentials, network isolation, streaming proxies, health checks, upgrades, and benchmark evidence (#1720)
-- RX 6700 XT/gfx1031 over WSL2 ROCDXG is now explicitly unverified until a published end-to-end GPU workload proves the mapped path (#1716)
-
-### Fixed
-
-
 - The generation compute-time budget is now a Settings control (Performance & Device) instead of an env-var-only setting the timeout error recommended with no UI path — the error copy points there too, and long CPU/MPS renders get an upfront heads-up before they start (#1787)
 - Windows: the backend can now start when the install path contains non-English characters (e.g. a CJK username) on a non-UTF-8 system code page — a new or broken Python environment now builds at an ASCII-safe path automatically (a healthy existing one is never relocated), and a specific error message names the cause and a working fix if the interpreter still crashes in `site` (#1783)
 - Exports and other native-picker actions no longer 403 with "Invalid or expired desktop authorization" when the desktop app and backend resolve different data directories, e.g. dev mode or a custom data folder (#1781)
