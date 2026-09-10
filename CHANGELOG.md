@@ -94,6 +94,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- The isolated backend test session passes on a stock Windows checkout, and CI now runs it there so it stays that way (#1990)
+
 - Windows contributors can run the test suite without Developer Mode: tests that create a symlink now skip instead of failing with `WinError 1314` (#1990)
 - The crash details dialog now says what the exit code means and what to try, instead of showing a raw number and a log (#1927)
 - A port-3900 conflict now names who is actually holding it, and gives the command that ends an orphaned backend, instead of telling you to quit an app that has no window (#1933) — thanks @Chang-Jin-Lee!
