@@ -37,6 +37,34 @@ from worker.transport.server import REQUIRED_FEATURES, SESSION_METADATA_KEY, Wor
 
 ENGINE, MODEL, OP = "indextts", "IndexTTS-2", "tts"
 
+# ── Loop-responsiveness budgets (#1990 class) ─────────────────────────────
+#
+# Three tests below prove that a blocking filesystem call does NOT stall the
+# gRPC event loop: they park the call on a barrier, then check that the loop
+# still ran their own coroutine promptly.
+#
+# The measurement is a wall clock on a shared CI runner, so the two numbers
+# have to be chosen against each other rather than picked to look tight.
+# BARRIER_HOLD_S is what "stalled" costs: if the loop really were blocked, the
+# waiter could not run until the watchdog released the barrier, so elapsed
+# would be at least that. LOOP_RESPONSIVE_S is the budget, and the gap between
+# them is the headroom.
+#
+# The original budget was 0.2 s against a 0.5 s hold. A loaded Windows runner
+# measured 0.203 and turned main red for three milliseconds of scheduling
+# noise — a red build that said nothing about the product. These values keep
+# the same claim with a gap wide enough to mean something: responsive lands
+# near 0.2, stalled lands at 1.5, and the line sits at 0.75 between them.
+BARRIER_HOLD_S = 1.5
+LOOP_RESPONSIVE_S = 0.75
+# Long enough that the watchdog, not this, is what releases a barrier.
+BARRIER_ABANDON_S = 5.0
+# The waiter's own cap. Above BARRIER_HOLD_S so a genuinely stalled loop is
+# reported by the budget assertion, which names the problem, rather than by a
+# bare TimeoutError that does not.
+BARRIER_REACHED_S = 3.0
+
+
 
 async def _await_event(event, what, timeout=15.0):
     """Block on a threading.Event without spinning the event loop.
@@ -637,12 +665,12 @@ async def test_upload_durability_barrier_does_not_block_the_grpc_loop(
 
     def blocked_replace(source, destination):
         barrier_started.set()
-        if not release_barrier.wait(timeout=2):
+        if not release_barrier.wait(timeout=BARRIER_ABANDON_S):
             raise TimeoutError("test did not release result durability")
         real_replace(source, destination)
 
     monkeypatch.setattr(server_module, "_durable_replace", blocked_replace)
-    watchdog = Timer(0.5, release_barrier.set)
+    watchdog = Timer(BARRIER_HOLD_S, release_barrier.set)
     watchdog.start()
     started_at = asyncio.get_running_loop().time()
     uploading = asyncio.create_task(
@@ -654,9 +682,9 @@ async def test_upload_durability_barrier_does_not_block_the_grpc_loop(
             await asyncio.sleep(0)
 
     try:
-        await asyncio.wait_for(wait_for_barrier(), timeout=1)
+        await asyncio.wait_for(wait_for_barrier(), timeout=BARRIER_REACHED_S)
         elapsed = asyncio.get_running_loop().time() - started_at
-        assert elapsed < 0.2, "result fsync stalled the gRPC event loop"
+        assert elapsed < LOOP_RESPONSIVE_S, "result fsync stalled the gRPC event loop"
     finally:
         release_barrier.set()
         watchdog.cancel()
@@ -678,13 +706,13 @@ async def test_upload_directory_barrier_does_not_block_the_grpc_loop(
         if os.path.abspath(directory) != os.path.abspath(plane.artifact_dir):
             return
         barrier_started.set()
-        if not release_barrier.wait(timeout=2):
+        if not release_barrier.wait(timeout=BARRIER_ABANDON_S):
             raise TimeoutError("test did not release result-directory durability")
 
     monkeypatch.setattr(
         server_module, "_fsync_parent_directory", blocked_parent_fsync
     )
-    watchdog = Timer(0.5, release_barrier.set)
+    watchdog = Timer(BARRIER_HOLD_S, release_barrier.set)
     watchdog.start()
     started_at = asyncio.get_running_loop().time()
     uploading = asyncio.create_task(
@@ -696,9 +724,11 @@ async def test_upload_directory_barrier_does_not_block_the_grpc_loop(
             await asyncio.sleep(0)
 
     try:
-        await asyncio.wait_for(wait_for_barrier(), timeout=1)
+        await asyncio.wait_for(wait_for_barrier(), timeout=BARRIER_REACHED_S)
         elapsed = asyncio.get_running_loop().time() - started_at
-        assert elapsed < 0.2, "result-directory fsync stalled the gRPC event loop"
+        assert (
+            elapsed < LOOP_RESPONSIVE_S
+        ), "result-directory fsync stalled the gRPC event loop"
     finally:
         release_barrier.set()
         watchdog.cancel()
@@ -1632,7 +1662,7 @@ async def test_blocked_download_read_does_not_stall_revocation(
 
         def read(self, size):
             read_started.set()
-            if not release_read.wait(timeout=2):
+            if not release_read.wait(timeout=BARRIER_ABANDON_S):
                 raise TimeoutError("test did not release the input-artifact read")
             return self._handle.read(size)
 
@@ -1655,7 +1685,7 @@ async def test_blocked_download_read_does_not_stall_revocation(
         ),
         _Context(token),
     )
-    watchdog = Timer(0.5, release_read.set)
+    watchdog = Timer(BARRIER_HOLD_S, release_read.set)
     watchdog.start()
     started_at = asyncio.get_running_loop().time()
     fetching = asyncio.create_task(anext(stream))
@@ -1665,9 +1695,9 @@ async def test_blocked_download_read_does_not_stall_revocation(
             await asyncio.sleep(0)
 
     try:
-        await asyncio.wait_for(wait_for_read(), timeout=1)
+        await asyncio.wait_for(wait_for_read(), timeout=BARRIER_REACHED_S)
         assert plane.servicer.revoke_worker_sessions(plane.worker_id) == 1
-        assert asyncio.get_running_loop().time() - started_at < 0.2
+        assert asyncio.get_running_loop().time() - started_at < LOOP_RESPONSIVE_S
     finally:
         release_read.set()
         watchdog.cancel()
