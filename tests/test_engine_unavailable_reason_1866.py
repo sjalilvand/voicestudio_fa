@@ -169,9 +169,23 @@ def test_the_real_mlx_gate_is_classified_as_a_platform_gap():
     from core import device_caps
 
     ok, why = device_caps.mlx_supported()
-    if ok:
-        pytest.skip("this host runs MLX")
+    # Only the non-Apple branch is a platform gap. Apple Silicon without MPS,
+    # or without torch, is not; the literal cases below cover those anywhere.
+    if ok or not why.startswith("MLX requires Apple Silicon"):
+        pytest.skip("this host is Apple Silicon")
     assert "platform" in _reason(why)
+
+
+def test_apple_silicon_without_mps_is_told_what_is_missing():
+    """The platform is right here; the installation's PyTorch is not. Neither
+    the platform sentence nor the generic line says that."""
+    reason = _reason(
+        "Apple Silicon detected but torch MPS unavailable; "
+        "reinstall torch with MPS support"
+    )
+    assert "MPS" in reason
+    assert "platform" not in reason
+    assert "Check installation and configuration" not in reason
 
 
 def test_a_missing_mlx_package_on_apple_silicon_is_still_an_install_gap():

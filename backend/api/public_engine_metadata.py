@@ -59,6 +59,13 @@ _UNAVAILABLE_PLATFORM = (
     "This engine doesn't run on this computer's platform. Its guide lists "
     "the platforms it supports."
 )
+# Apple Silicon whose PyTorch cannot use the GPU (MPS): the platform is
+# right, the installation is not. MLX-Audio / MLX-Whisper need MPS (#390).
+_UNAVAILABLE_NO_MPS = (
+    "This engine needs Apple's GPU (MPS), and this installation's PyTorch "
+    "can't use it. Updating macOS or reinstalling VoiceStudio usually "
+    "restores it."
+)
 _UNAVAILABLE_NEEDS_CONFIG = (
     "This engine needs to be configured before it can run. Open "
     "Model Catalogue → Engines to finish setting it up."
@@ -84,6 +91,7 @@ _UNAVAILABLE_SIGNATURES = (
         "unavailable on intel macs", "no macos x86_64 wheel",
         "no windows install", "not supported on windows",
     )),
+    (_UNAVAILABLE_NO_MPS, ("torch mps unavailable",)),
     (_UNAVAILABLE_FILE_MISSING, (
         "file is missing", "file is empty", "file is unreadable",
         "script missing", "binary", "not found at",
