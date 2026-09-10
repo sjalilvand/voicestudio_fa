@@ -26,6 +26,12 @@ pins `transformers>=5.3` — the same isolation primitive used by
   which VoiceStudio does not auto-wire.
 - **VRAM:** ~9 GB checkpoint; a 12–16 GB CUDA GPU is the realistic target.
 
+## One-click install
+
+On Linux and macOS, **Model Catalogue → Engines → dots.tts → Install** does the
+steps below for you. It installs into its own folder under VoiceStudio's data directory, with its own Python environment. Nothing it installs touches VoiceStudio itself or any other engine, so you can switch to it and back without breaking what already worked. **Uninstall** in the same row removes only that folder. It is not offered on Windows, where upstream
+publishes no install. The ~9 GB checkpoint still downloads on first synthesis.
+
 ## Install
 
 dots.tts is **not** bundled (large checkpoint + conflicting `transformers`).

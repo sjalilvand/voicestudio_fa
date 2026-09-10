@@ -246,6 +246,11 @@ def install_sidecar_engine(engine_id: str):
     from services import sidecar_install
     try:
         return sidecar_install.start_install(engine_id)
+    except sidecar_install.HostUnsupported as exc:
+        # The engine has an installer, but not one that can work on this
+        # machine. 409, not 404: the route is right, the host is the problem,
+        # and the message (a VoiceStudio-owned sentence) says what to do.
+        raise HTTPException(status_code=409, detail=str(exc))
     except KeyError:
         raise HTTPException(
             status_code=404,

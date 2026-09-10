@@ -254,6 +254,8 @@ def _bootstrap_engines_venv(clone_dir: Path) -> Path:
             f"{exc.stderr.decode('utf-8', errors='replace') if exc.stderr else exc}"
         ) from exc
 
+    from core.torch_indexes import UV_PIP_CU128_ARGS
+
     python_path = _venv_python_path(_ENGINES_VENV_DIR)
     try:
         subprocess.run(
@@ -261,6 +263,10 @@ def _bootstrap_engines_venv(clone_dir: Path) -> Path:
                 uv, "pip", "install",
                 "--python", str(python_path),
                 "-e", f"{clone_dir}[torch-runtime]",
+                # The extra pins torch==2.9.1+cu128, which exists only on
+                # PyTorch's index — without it this could never resolve, on
+                # any host (core.torch_indexes).
+                *UV_PIP_CU128_ARGS,
             ],
             check=True,
             timeout=_UV_PIP_INSTALL_TIMEOUT_S,

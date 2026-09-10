@@ -106,3 +106,30 @@ def test_the_input_row_is_not_mutated():
     original = {"id": "e", "reason": "voxcpm package not installed."}
     public_backends([original])
     assert original["reason"] == "voxcpm package not installed."
+
+
+def _reason_for(diagnostic, **row):
+    return public_backends([{"id": "e", "reason": diagnostic, **row}])[0]["reason"]
+
+
+@pytest.mark.parametrize(
+    ("diagnostic", "one_click", "points_at"),
+    [
+        ("voxcpm package not installed.", True, "Model Catalogue"),
+        ("voxcpm package not installed.", False, "guide"),
+        ("file is missing", True, "Model Catalogue"),
+        ("file is missing", False, "guide"),
+    ],
+)
+def test_the_next_step_matches_whether_the_app_can_install_it(diagnostic, one_click, points_at):
+    """Pointing at Model Catalogue for an engine with no Install button sent
+    people to a page that could not help them."""
+    reason = _reason_for(diagnostic, one_click_install=one_click)
+    assert points_at in reason
+    if not one_click:
+        assert "Model Catalogue" not in reason
+
+
+def test_rows_without_the_install_field_keep_the_catalogue_wording():
+    # ASR / LLM / translation rows carry no one_click_install field.
+    assert "Model Catalogue" in _reason_for("transformers not installed")

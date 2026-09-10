@@ -126,6 +126,23 @@ class SidecarSpec:
     invalidate: Callable[[], None] = field(default=lambda: None)
     # Cheap "is a healthy install already present?" probe (file existence only).
     installed_probe: Callable[[], bool] = field(default=lambda: False)
+    # Extra `uv venv` arguments — an interpreter pin for an upstream that
+    # declares one, e.g. ("--python", "3.10").
+    venv_args: tuple[str, ...] = ()
+    # `uv pip install` target, "{checkout}" substituted. Each upstream installs
+    # differently (editable, editable with an extra, a requirements file, a
+    # constraints file); the default is the editable install IndexTTS uses.
+    install_args: tuple[str, ...] = ("-e", "{checkout}")
+    # Add PyTorch's CUDA index on a CUDA host. Plain PyPI torch is CPU-only on
+    # Windows, and `+cuNNN` local-version pins exist nowhere else.
+    uses_cuda_index: bool = False
+    # Python that proves the venv works; "{checkout}" / "{checkout_repr}"
+    # substituted. None means `import <probe_module>`.
+    probe_code: Optional[str] = None
+    # Can the one-click install work on THIS machine? (ok, reason). Consulted
+    # before an Install button is offered and again when an install starts, so
+    # a host the upstream does not support never gets a job that can only fail.
+    host_supported: Callable[[], tuple[bool, str]] = field(default=lambda: (True, ""))
 
 
 def _indextts_invalidate() -> None:
@@ -136,6 +153,64 @@ def _indextts_invalidate() -> None:
 def _indextts_installed() -> bool:
     from engines.indextts.bootstrap import is_indextts_installed
     return is_indextts_installed()
+
+
+def _moss_invalidate() -> None:
+    from engines.moss_tts_v15 import bootstrap
+    bootstrap.invalidate()
+
+
+def _moss_installed() -> bool:
+    from engines.moss_tts_v15.bootstrap import is_moss_tts_v15_installed
+    return is_moss_tts_v15_installed()
+
+
+def _confucius4_invalidate() -> None:
+    from engines.confucius4 import bootstrap
+    bootstrap.invalidate()
+
+
+def _confucius4_installed() -> bool:
+    from engines.confucius4.bootstrap import is_confucius4_installed
+    return is_confucius4_installed()
+
+
+def _dots_invalidate() -> None:
+    from engines.dots_tts import bootstrap
+    bootstrap.invalidate()
+
+
+def _dots_installed() -> bool:
+    from engines.dots_tts.bootstrap import is_dots_tts_installed
+    return is_dots_tts_installed()
+
+
+def _host_family() -> str:
+    """The accelerator family this host runs, or "cpu" when it cannot tell."""
+    try:
+        from core.device_caps import detect_host_caps
+        return str(detect_host_caps().family)
+    except Exception:  # noqa: BLE001 — a probe failure must not break installs
+        return "cpu"
+
+
+def _moss_host() -> tuple[bool, str]:
+    if _host_family() == "cuda":
+        return True, ""
+    return False, (
+        "MOSS-TTS-v1.5's one-click install uses its CUDA build of PyTorch, and "
+        "this machine has no NVIDIA GPU available. Its guide covers a manual "
+        "CPU install."
+    )
+
+
+def _dots_host() -> tuple[bool, str]:
+    if sys.platform != "win32":
+        return True, ""
+    return False, (
+        "dots.tts publishes no Windows install. Run VoiceStudio on Linux or "
+        "macOS, or under WSL2, to use it."
+    )
 
 
 SPECS: dict[str, SidecarSpec] = {
@@ -170,7 +245,122 @@ SPECS: dict[str, SidecarSpec] = {
         invalidate=_indextts_invalidate,
         installed_probe=_indextts_installed,
     ),
+    # Pinned to the upstream commits current on 2026-09-10. Weights are not
+    # fetched here: each engine downloads them into the shared HF cache on its
+    # first synthesis, as its manual install always has.
+    "moss-tts-v15": SidecarSpec(
+        engine_id="moss-tts-v15",
+        display_name="MOSS-TTS-v1.5",
+        repo_url="https://github.com/OpenMOSS/MOSS-TTS.git",
+        tarball_url=(
+            "https://github.com/OpenMOSS/MOSS-TTS/archive/"
+            "934d6826b084c46a0d033402174d5f8ac4ed2519.tar.gz"
+        ),
+        checkout_dirname="MOSS-TTS",
+        env_var="OMNIVOICE_MOSS_TTS_V15_DIR",
+        probe_module="transformers",
+        probe_code="import transformers, torch",
+        source_revision="934d6826b084c46a0d033402174d5f8ac4ed2519",
+        source_required_path="pyproject.toml",
+        venv_args=("--python", "3.11"),
+        install_args=("-e", "{checkout}[torch-runtime]"),
+        uses_cuda_index=True,
+        host_supported=_moss_host,
+        docs_path="docs/engines/moss-tts-v15.md",
+        # ~7 GB CUDA torch venv now, ~16 GB of weights on first synthesis.
+        required_bytes=24 * _GIB,
+        dependency_bytes=8 * _GIB,
+        temporary_free_bytes=8 * _GIB,
+        disk_confidence="estimated",
+        invalidate=_moss_invalidate,
+        installed_probe=_moss_installed,
+    ),
+    "confucius4-tts": SidecarSpec(
+        engine_id="confucius4-tts",
+        display_name="Confucius4-TTS",
+        repo_url="https://github.com/netease-youdao/Confucius4-TTS.git",
+        tarball_url=(
+            "https://github.com/netease-youdao/Confucius4-TTS/archive/"
+            "4fb32c481302d8858c3aec6a1c2a8b4cea8894c0.tar.gz"
+        ),
+        checkout_dirname="Confucius4-TTS",
+        env_var="OMNIVOICE_CONFUCIUS4_TTS_DIR",
+        probe_module="confuciustts",
+        # Upstream is not pip-installable; the package resolves from the
+        # checkout on sys.path, exactly as the engine's sidecar imports it.
+        probe_code="import sys; sys.path.insert(0, {checkout_repr}); import confuciustts",
+        source_revision="4fb32c481302d8858c3aec6a1c2a8b4cea8894c0",
+        source_required_path="requirements.txt",
+        venv_args=("--python", "3.10"),
+        install_args=("-r", "{checkout}/requirements.txt"),
+        # torch==2.7.0: CPU-only from PyPI on Windows; the CUDA index supplies
+        # 2.7.0+cu128, which satisfies the same pin.
+        uses_cuda_index=True,
+        docs_path="docs/engines/confucius4-tts.md",
+        # ~7 GB venv now, ~5 GB of weights on first synthesis.
+        required_bytes=14 * _GIB,
+        dependency_bytes=8 * _GIB,
+        temporary_free_bytes=8 * _GIB,
+        disk_confidence="estimated",
+        invalidate=_confucius4_invalidate,
+        installed_probe=_confucius4_installed,
+    ),
+    "dots-tts": SidecarSpec(
+        engine_id="dots-tts",
+        display_name="dots.tts",
+        repo_url="https://github.com/rednote-hilab/dots.tts.git",
+        tarball_url=(
+            "https://github.com/rednote-hilab/dots.tts/archive/"
+            "32407a55228630475c48ecdb2c4e2c0f9c09e030.tar.gz"
+        ),
+        checkout_dirname="dots.tts",
+        env_var="OMNIVOICE_DOTS_TTS_DIR",
+        probe_module="dots_tts.runtime",
+        source_revision="32407a55228630475c48ecdb2c4e2c0f9c09e030",
+        source_required_path="constraints/recommended.txt",
+        # Upstream requires-python is >=3.10,<3.13.
+        venv_args=("--python", "3.11"),
+        install_args=("-e", "{checkout}", "-c", "{checkout}/constraints/recommended.txt"),
+        host_supported=_dots_host,
+        docs_path="docs/engines/dots-tts.md",
+        # ~7 GB venv now, ~9 GB checkpoint on first synthesis.
+        required_bytes=18 * _GIB,
+        dependency_bytes=8 * _GIB,
+        temporary_free_bytes=8 * _GIB,
+        disk_confidence="estimated",
+        invalidate=_dots_invalidate,
+        installed_probe=_dots_installed,
+    ),
 }
+
+
+class HostUnsupported(RuntimeError):
+    """The one-click install cannot work on this machine. The message is a
+    VoiceStudio-owned sentence from the spec, safe to show the user."""
+
+
+def host_support(spec: SidecarSpec) -> tuple[bool, str]:
+    """Whether *spec*'s install can work here. A probe that raises counts as
+    unsupported: offering a button that fails is worse than not offering it."""
+    try:
+        ok, why = spec.host_supported()
+    except Exception:  # noqa: BLE001
+        return False, (
+            f"Could not check whether {spec.display_name} can be installed on "
+            f"this machine. Its guide ({spec.docs_path}) has the manual steps."
+        )
+    return bool(ok), (why or "")
+
+
+def installable_engine_ids() -> frozenset[str]:
+    """Engines that get an Install button on THIS host."""
+    return frozenset(eid for eid, spec in SPECS.items() if host_support(spec)[0])
+
+
+def _expand(value: str, checkout: Path) -> str:
+    return value.replace("{checkout_repr}", repr(str(checkout))).replace(
+        "{checkout}", str(checkout)
+    )
 
 
 def get_spec(engine_id: str) -> Optional[SidecarSpec]:
@@ -548,6 +738,9 @@ def start_install(engine_id: str) -> dict:
     spec = get_spec(engine_id)
     if spec is None:
         raise KeyError(engine_id)
+    ok, why = host_support(spec)
+    if not ok:
+        raise HostUnsupported(why)
     with _jobs_lock:
         existing = _jobs.get(engine_id)
         if existing and existing["state"] == "running":
@@ -836,8 +1029,8 @@ def _step_create_venv(spec: SidecarSpec, job: dict) -> None:
     # uv_subprocess_env. The cache parent is the shared engines root, so
     # every sidecar engine reuses one cache.
     uv_env = uv_subprocess_env(Path(DATA_DIR) / "engines")
-    rc = _run_logged(job, [uv, "venv", str(venv_dir)], timeout=_UV_VENV_TIMEOUT_S,
-                     env=uv_env)
+    rc = _run_logged(job, [uv, "venv", str(venv_dir), *spec.venv_args],
+                     timeout=_UV_VENV_TIMEOUT_S, env=uv_env)
     if rc != 0 or not py.is_file():
         raise _StepError(
             f"uv venv failed (exit {rc}) at {venv_dir}.",
@@ -859,15 +1052,21 @@ def _step_install_deps(spec: SidecarSpec, job: dict) -> None:
     py = _venv_python(checkout / ".venv")
     uv = _locate_uv()
     _log(job, f"Installing {spec.display_name} into its venv (this can take several minutes) …")
+    target = [_expand(arg, checkout) for arg in spec.install_args]
+    if spec.uses_cuda_index and _host_family() == "cuda":
+        from core.torch_indexes import UV_PIP_CU128_ARGS
+        target += list(UV_PIP_CU128_ARGS)
+    # Always `--python <this engine's venv>`: the install can only ever land in
+    # the venv this engine owns, never the app's interpreter.
     rc = _run_logged(
         job,
-        [uv, "pip", "install", "--python", str(py), "-e", str(checkout)],
+        [uv, "pip", "install", "--python", str(py), *target],
         timeout=_UV_PIP_INSTALL_TIMEOUT_S,
         env=uv_subprocess_env(Path(DATA_DIR) / "engines"),
     )
     if rc != 0:
         raise _StepError(
-            f"uv pip install -e failed (exit {rc}).",
+            f"uv pip install failed (exit {rc}).",
             "Usually a network hiccup — re-run the install to resume. Behind a "
             "proxy, set HTTPS_PROXY in Settings → Environment first.",
         )
@@ -879,8 +1078,13 @@ def _step_verify(spec: SidecarSpec, job: dict) -> None:
     py = _venv_python(checkout / ".venv")
     _log(job, f"Verifying `import {spec.probe_module}` inside the venv …")
     try:
+        probe = (
+            _expand(spec.probe_code, checkout)
+            if spec.probe_code
+            else f"import {spec.probe_module}"
+        )
         proc = subprocess.run(
-            [str(py), "-c", f"import {spec.probe_module}"],
+            [str(py), "-c", probe],
             capture_output=True, timeout=_IMPORT_PROBE_TIMEOUT_S,
         )
     except (subprocess.TimeoutExpired, OSError) as exc:

@@ -52,6 +52,23 @@ _UNAVAILABLE_FILE_MISSING = (
     "Model Catalogue → Engines."
 )
 
+# The same two cases for an engine the app cannot install for you. "Install it
+# from Model Catalogue → Engines" sent people to a page with no Install button
+# for that engine — most of the catalogue — which reads as the app being
+# broken. The row's own guide link (``docs_url``) is the real next step.
+_UNAVAILABLE_NOT_INSTALLED_MANUAL = (
+    "This engine isn't installed yet, and it has no one-click install. "
+    "Its guide lists the install steps."
+)
+_UNAVAILABLE_FILE_MISSING_MANUAL = (
+    "A file this engine needs is missing or unreadable. Its guide lists the "
+    "install steps."
+)
+_MANUAL_INSTALL_VARIANT = {
+    _UNAVAILABLE_NOT_INSTALLED: _UNAVAILABLE_NOT_INSTALLED_MANUAL,
+    _UNAVAILABLE_FILE_MISSING: _UNAVAILABLE_FILE_MISSING_MANUAL,
+}
+
 # Matched against the lowered probe text. Ordered most specific first: a
 # missing file often also says "not installed", and the file case has the more
 # useful remedy of the two.
@@ -94,7 +111,14 @@ def public_backends(entries: list[dict]) -> list[dict]:
     for entry in entries:
         item = dict(entry)
         if item.get("reason") is not None:
-            item["reason"] = _public_unavailable_reason(item["reason"])
+            reason = _public_unavailable_reason(item["reason"])
+            # Only a row that explicitly says it has NO one-click install gets
+            # the manual wording. Rows without the field (ASR, LLM,
+            # translation — some of which have installers of their own) keep
+            # the line that points at Model Catalogue.
+            if item.get("one_click_install") is False:
+                reason = _MANUAL_INSTALL_VARIANT.get(reason, reason)
+            item["reason"] = reason
         if item.get("last_error") is not None:
             item["last_error"] = _PREVIOUS_FAILURE
         if item.get("routing_reason") is not None:

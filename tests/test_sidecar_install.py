@@ -929,3 +929,203 @@ def test_router_uninstall_maps_refusals_to_http_errors(monkeypatch):
     with pytest.raises(HTTPException) as ei:
         engines_router.uninstall_sidecar_engine("fake-side")
     assert ei.value.status_code == 400
+
+
+# ── isolation: switching engines can never corrupt another engine ─────────
+#
+# Every one-click engine owns DATA_DIR/engines/<id>/ — its checkout and its
+# .venv — and switching the active engine only changes a pref. So going back
+# to an engine that worked is safe for exactly as long as no install ever
+# writes outside its own root. These tests pin that for every spec, including
+# ones added later.
+
+_ALL_SPEC_IDS = sorted(si.SPECS)
+_PYTORCH_INDEX = "https://download.pytorch.org/whl/cu128"
+
+
+def _capture_install_argvs(monkeypatch, family="cuda"):
+    argvs = []
+    monkeypatch.setattr(si, "_locate_uv", lambda: "/fake/uv")
+    monkeypatch.setattr(si, "_host_family", lambda: family)
+    monkeypatch.setattr(si, "_run_logged", _fake_run_logged(argvs))
+    return argvs
+
+
+@pytest.mark.parametrize("engine_id", _ALL_SPEC_IDS)
+def test_every_spec_installs_only_into_its_own_venv(monkeypatch, engine_id):
+    spec = si.get_spec(engine_id)
+    argvs = _capture_install_argvs(monkeypatch)
+    job = si._new_job(engine_id)
+
+    si._step_create_venv(spec, job)
+    si._step_install_deps(spec, job)
+
+    assert si.managed_root(spec) == Path(si.DATA_DIR) / "engines" / engine_id
+    venv = si.managed_checkout(spec) / ".venv"
+    venv_cmd = next(a for a in argvs if a[1] == "venv")
+    assert venv_cmd[2] == str(venv)
+    pip = next(a for a in argvs if a[1:3] == ["pip", "install"])
+    # The interpreter uv installs into is this engine's venv — never the app's.
+    assert pip[3:5] == ["--python", str(si._venv_python(venv))]
+    for argv in argvs:
+        assert sys.executable not in argv
+        assert not any(sys.prefix in part for part in argv)
+
+
+def test_managed_roots_never_overlap():
+    roots = {eid: si.managed_root(si.get_spec(eid)) for eid in _ALL_SPEC_IDS}
+    for a, ra in roots.items():
+        for b, rb in roots.items():
+            if a != b:
+                assert ra != rb and ra not in rb.parents and rb not in ra.parents, (a, b)
+
+
+def test_uninstalling_one_engine_leaves_every_other_engine_intact(monkeypatch):
+    for eid in _ALL_SPEC_IDS:
+        py = si._venv_python(si.managed_checkout(si.get_spec(eid)) / ".venv")
+        py.parent.mkdir(parents=True)
+        py.write_text("#!fake\n")
+    monkeypatch.setattr("core.prefs.get", lambda k, d=None: None)
+    monkeypatch.setattr("core.prefs.delete", lambda k: None)
+
+    assert si.uninstall("moss-tts-v15")["status"] == "uninstalled"
+
+    assert not si.managed_root(si.get_spec("moss-tts-v15")).exists()
+    for eid in _ALL_SPEC_IDS:
+        if eid != "moss-tts-v15":
+            spec = si.get_spec(eid)
+            assert si._venv_python(si.managed_checkout(spec) / ".venv").is_file(), eid
+
+
+# ── per-engine install recipes ────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("engine_id", "venv_args", "install_args", "env_var"),
+    [
+        ("moss-tts-v15", ["--python", "3.11"], ["-e", "{c}[torch-runtime]"],
+         "OMNIVOICE_MOSS_TTS_V15_DIR"),
+        ("confucius4-tts", ["--python", "3.10"], ["-r", "{c}/requirements.txt"],
+         "OMNIVOICE_CONFUCIUS4_TTS_DIR"),
+        ("dots-tts", ["--python", "3.11"],
+         ["-e", "{c}", "-c", "{c}/constraints/recommended.txt"],
+         "OMNIVOICE_DOTS_TTS_DIR"),
+    ],
+)
+def test_new_specs_install_recipe(monkeypatch, engine_id, venv_args, install_args, env_var):
+    spec = si.get_spec(engine_id)
+    # The env var must be the one the engine's own bootstrap reads, or the
+    # install lands in a directory the engine never looks at.
+    assert spec.env_var == env_var
+    argvs = _capture_install_argvs(monkeypatch, family="cpu")
+    job = si._new_job(engine_id)
+    si._step_create_venv(spec, job)
+    si._step_install_deps(spec, job)
+
+    checkout = str(si.managed_checkout(spec))
+    venv_cmd = next(a for a in argvs if a[1] == "venv")
+    assert venv_cmd[3:] == venv_args
+    pip = next(a for a in argvs if a[1:3] == ["pip", "install"])
+    assert pip[5:] == [arg.replace("{c}", checkout) for arg in install_args]
+
+
+@pytest.mark.parametrize("family", ["cuda", "cpu", "rocm", "mps"])
+@pytest.mark.parametrize("engine_id", _ALL_SPEC_IDS)
+def test_cuda_index_is_added_only_for_cuda_pinned_specs_on_cuda_hosts(
+    monkeypatch, engine_id, family
+):
+    from core.torch_indexes import UV_PIP_CU128_ARGS
+    spec = si.get_spec(engine_id)
+    argvs = _capture_install_argvs(monkeypatch, family=family)
+    si._step_install_deps(spec, si._new_job(engine_id))
+    pip = next(a for a in argvs if a[1:3] == ["pip", "install"])
+    has_index = _PYTORCH_INDEX in pip
+    assert has_index == (spec.uses_cuda_index and family == "cuda")
+    if has_index:
+        i = pip.index("--extra-index-url")
+        assert tuple(pip[i:i + len(UV_PIP_CU128_ARGS)]) == UV_PIP_CU128_ARGS
+
+
+def test_torch_index_matches_the_apps_own_pytorch_cuda_index():
+    """The sidecar index must be the one the app's own torch comes from."""
+    import tomllib
+    from core.torch_indexes import PYTORCH_CU128_INDEX_URL
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    indexes = tomllib.loads(pyproject.read_text(encoding="utf-8"))["tool"]["uv"]["index"]
+    cuda = next(ix for ix in indexes if ix["name"] == "pytorch-cuda")
+    assert PYTORCH_CU128_INDEX_URL == cuda["url"] == _PYTORCH_INDEX
+
+
+@pytest.mark.parametrize("engine_id", _ALL_SPEC_IDS)
+def test_verify_probe_runs_in_the_engines_venv_and_compiles(monkeypatch, engine_id):
+    spec = si.get_spec(engine_id)
+    ran = []
+
+    def fake_run(argv, **kwargs):
+        ran.append(argv)
+        return SimpleNamespace(returncode=0, stderr=b"", stdout=b"")
+
+    monkeypatch.setattr(si.subprocess, "run", fake_run)
+    si._step_verify(spec, si._new_job(engine_id))
+    checkout = si.managed_checkout(spec)
+    assert ran[0][0] == str(si._venv_python(checkout / ".venv"))
+    code = ran[0][2]
+    compile(code, "<probe>", "exec")  # a Windows path must not break the literal
+    assert "{checkout" not in code
+    if engine_id == "confucius4-tts":
+        assert repr(str(checkout)) in code
+
+
+# ── host gates: no Install button that can only fail ─────────────────────
+
+
+@pytest.mark.parametrize(
+    ("family", "platform", "expected"),
+    [
+        ("cuda", "linux", {"indextts2", "moss-tts-v15", "confucius4-tts", "dots-tts"}),
+        ("cuda", "win32", {"indextts2", "moss-tts-v15", "confucius4-tts"}),
+        ("cpu", "win32", {"indextts2", "confucius4-tts"}),
+        ("mps", "darwin", {"indextts2", "confucius4-tts", "dots-tts"}),
+    ],
+)
+def test_installable_engine_ids_follow_the_host(monkeypatch, family, platform, expected):
+    monkeypatch.setattr(si, "_host_family", lambda: family)
+    monkeypatch.setattr(si.sys, "platform", platform)
+    assert si.installable_engine_ids() == frozenset(expected)
+
+
+def test_a_host_probe_that_raises_counts_as_unsupported():
+    def boom():
+        raise RuntimeError("probe exploded")
+
+    spec = _mk_spec(host_supported=boom)
+    ok, why = si.host_support(spec)
+    assert not ok
+    assert spec.docs_path in why and "exploded" not in why
+
+
+def test_start_install_refuses_an_unsupported_host(monkeypatch):
+    monkeypatch.setattr(si, "_host_family", lambda: "cpu")
+    with pytest.raises(si.HostUnsupported, match="NVIDIA"):
+        si.start_install("moss-tts-v15")
+    assert "moss-tts-v15" not in si._jobs
+
+
+def test_router_maps_unsupported_host_to_409(monkeypatch):
+    from fastapi import HTTPException
+    from api.routers import engines as engines_router
+    monkeypatch.setattr(si.sys, "platform", "win32")
+    with pytest.raises(HTTPException) as ei:
+        engines_router.install_sidecar_engine("dots-tts")
+    assert ei.value.status_code == 409
+    assert "Windows" in ei.value.detail
+
+
+def test_list_backends_offers_install_only_where_it_can_work(monkeypatch):
+    from services import tts_backend
+    monkeypatch.setattr(si, "_host_family", lambda: "cpu")
+    monkeypatch.setattr(si.sys, "platform", "win32")
+    rows = {r["id"]: r for r in tts_backend.list_backends()}
+    assert rows["confucius4-tts"]["one_click_install"] is True
+    assert rows["moss-tts-v15"]["one_click_install"] is False
+    assert rows["dots-tts"]["one_click_install"] is False

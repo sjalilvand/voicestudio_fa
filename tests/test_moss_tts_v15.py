@@ -264,3 +264,25 @@ def test_availability_text_does_not_exclude_declared_devices(monkeypatch):
         assert available is installed
         assert "CUDA or CPU only" not in reason
         assert "CUDA when present, else CPU" not in reason
+
+
+def test_bootstrap_install_names_the_pytorch_cuda_index(monkeypatch, tmp_path):
+    """#2015: the [torch-runtime] extra pins torch==2.9.1+cu128, which exists
+    only on PyTorch's index — without it the install could never resolve."""
+    from core.torch_indexes import UV_PIP_CU128_ARGS
+    from engines.moss_tts_v15 import bootstrap
+
+    ran = []
+    monkeypatch.setattr(bootstrap, "_ENGINES_VENV_DIR", tmp_path / ".venv")
+    monkeypatch.setattr(bootstrap, "_locate_uv", lambda: "/fake/uv")
+    monkeypatch.setattr(bootstrap, "_uv_env", lambda: None)
+    monkeypatch.setattr(bootstrap, "_venv_can_import_moss", lambda p: "yes")
+    monkeypatch.setattr(bootstrap.subprocess, "run", lambda argv, **k: ran.append(argv))
+
+    bootstrap._bootstrap_engines_venv(tmp_path / "MOSS-TTS")
+
+    pip = next(a for a in ran if a[1:3] == ["pip", "install"])
+    i = pip.index("--extra-index-url")
+    assert tuple(pip[i:i + len(UV_PIP_CU128_ARGS)]) == UV_PIP_CU128_ARGS
+    venv_python = bootstrap._venv_python_path(tmp_path / ".venv")
+    assert pip[pip.index("--python") + 1] == str(venv_python)
