@@ -23,6 +23,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Fixed
 
 - Stopping a process on macOS no longer fails with "Operation not permitted" when it was already exiting (#2032)
+- A YouTube link blocked by its "not a bot" check now says how to attach signed-in cookies in Dub, instead of quoting yt-dlp's command-line flags (#2036, #2034)
 
 ### CI
 
