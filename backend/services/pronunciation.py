@@ -222,6 +222,46 @@ def entries_for_language(entries, language: Optional[str]) -> dict[str, str]:
     return merged
 
 
+def inert_entries_for_language(entries, language: str | None) -> list[dict]:
+    """Enabled entries that MATCH the language but cannot be applied yet.
+
+    Settings offers three notations — Respelling, IPA, CMU — and only
+    respelling substitutes text today. IPA and CMU rows save cleanly, are
+    validated, get a badge and can be toggled on, and are then dropped before
+    term matching. Nothing downstream reads them.
+
+    That is Phase 1 behaving as designed; the gap is that it is INVISIBLE.
+    "Test a sentence" reported "No entries match; spoken as written" for a
+    term that does match, which is not a degraded answer but a wrong one, and
+    it sent the user off to re-type an entry that was already correct (#1949).
+
+    docs/specs/01-expressive-tts.md asked for exactly the opposite — such
+    entries "passed through and flagged 'phoneme not honored on this
+    engine' (parity-rule: visible degradation)". This is that flag: the
+    caller can now say WHY nothing happened instead of implying nothing
+    matched.
+    """
+    req_prefix = _lang_prefix(language)
+    out: list[dict] = []
+    for e in entries or []:
+        try:
+            if not int(e["enabled"]):
+                continue
+        except (KeyError, IndexError, TypeError, ValueError):
+            continue
+        term = (e["term"] or "").strip()
+        if not term:
+            continue
+        etype = (e["type"] or "respelling").strip().lower()
+        if etype == "respelling":
+            continue
+        scope = (e["language"] or _ALL_LANG).strip() or _ALL_LANG
+        if scope != _ALL_LANG and (req_prefix is None or scope[:2].lower() != req_prefix):
+            continue
+        out.append({"term": term, "type": etype})
+    return out
+
+
 # ── Inline one-off override:  [[term|replacement]]  /  [[replacement]] ─────────
 #
 # Double brackets are unambiguous against the single-bracket grammar

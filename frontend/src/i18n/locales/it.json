@@ -2494,6 +2494,7 @@
     "test_placeholder": "Digita una frase per visualizzare in anteprima la sostituzione...",
     "test_result": "Verrà parlato come:",
     "test_nochange": "Nessuna voce corrisponde: pronunciata come scritta.",
+    "test_inert": "Salvato ma non ancora applicato su questo motore: {{terms}}. Le voci IPA e CMU vengono salvate e validate, ma oggi solo il respelling cambia il testo pronunciato.",
     "load_error": "Impossibile caricare il dizionario della pronuncia.",
     "save_error": "Impossibile salvare la voce.",
     "lang_label": "Codice della lingua (ad esempio en, de) o lasciare vuoto per Global",

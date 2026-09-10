@@ -2494,6 +2494,7 @@
     "test_placeholder": "Geben Sie einen Satz ein, um eine Vorschau der Ersetzung anzuzeigen ...",
     "test_result": "Wird gesprochen als:",
     "test_nochange": "Keine Einträge stimmen überein – gesprochen wie geschrieben.",
+    "test_inert": "Gespeichert, aber auf dieser Engine noch nicht angewendet: {{terms}}. IPA- und CMU-Einträge werden gespeichert und geprüft, aber nur Respelling ändert derzeit den gesprochenen Text.",
     "load_error": "Das Aussprachewörterbuch konnte nicht geladen werden.",
     "save_error": "Dieser Eintrag konnte nicht gespeichert werden.",
     "lang_label": "Sprachcode (z. B. en, de) oder bei Global leer lassen",

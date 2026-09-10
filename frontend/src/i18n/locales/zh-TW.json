@@ -2494,6 +2494,7 @@
     "test_placeholder": "輸入一個句子來預覽替換...",
     "test_result": "將被說成：",
     "test_nochange": "沒有符合的條目 — 口頭與書面一致。",
+    "test_inert": "已儲存但此引擎尚未套用：{{terms}}。IPA 與 CMU 項目會被儲存並驗證，但目前只有改寫拼字會改變朗讀文字。",
     "load_error": "無法載入發音字典。",
     "save_error": "無法儲存該條目。",
     "lang_label": "語言代碼（例如 en、de）或留空表示全球",

@@ -2494,6 +2494,7 @@
     "test_placeholder": "Wpisz zdanie, aby wyświetlić podgląd podstawienia…",
     "test_result": "Będzie mówiony jako:",
     "test_nochange": "Żadne wpisy nie pasują — mówione tak, jak napisano.",
+    "test_inert": "Zapisane, ale jeszcze nie stosowane w tym silniku: {{terms}}. Wpisy IPA i CMU są zapisywane i sprawdzane, ale obecnie tylko respelling zmienia wymawiany tekst.",
     "load_error": "Nie udało się wczytać słownika wymowy.",
     "save_error": "Nie udało się zapisać tego wpisu.",
     "lang_label": "Kod języka (np. en, de) lub pozostaw puste w przypadku opcji Globalny",

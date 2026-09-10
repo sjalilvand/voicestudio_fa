@@ -2494,6 +2494,7 @@
     "test_placeholder": "Digite uma frase para visualizar a substituição…",
     "test_result": "Será falado como:",
     "test_nochange": "Nenhuma entrada corresponde – falada como escrita.",
+    "test_inert": "Guardado mas ainda não aplicado neste motor: {{terms}}. As entradas IPA e CMU são guardadas e validadas, mas hoje só o respelling altera o texto falado.",
     "load_error": "Não foi possível carregar o dicionário de pronúncia.",
     "save_error": "Não foi possível salvar essa entrada.",
     "lang_label": "Código do idioma (por exemplo, en, de) ou deixe em branco para Global",

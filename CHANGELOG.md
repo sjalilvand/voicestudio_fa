@@ -9,6 +9,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- A pronunciation entry that is stored but not applied yet says so, instead of looking like it did not match (#1949)
 - Quitting on Windows is no longer reported as a crash on the next launch (#1898)
 - A Reduce motion switch in Settings, for calm without changing your whole system (#1857)
 - A light theme, and System Auto now follows a light-mode OS instead of staying dark (#1973) — thanks @CoDe-ReDz!
