@@ -9,6 +9,7 @@ macOS, Linux, and Windows.
 """
 from __future__ import annotations
 
+import collections
 import io
 import os
 import struct
@@ -386,6 +387,36 @@ def test_each_spawn_quotes_only_its_own_stderr(monkeypatch, echo_backend):
     first.append("a late line from the previous process")
     assert echo_backend._stderr_tail is not first
     assert "late line" not in echo_backend._stderr_tail_text()
+
+
+def test_an_error_frame_before_ready_is_quoted_and_scrubbed(monkeypatch, echo_backend):
+    monkeypatch.setenv("OMNIVOICE_ECHO_TEST_MODE", "1")
+    monkeypatch.setenv(
+        "OMNIVOICE_ECHO_ERROR_BEFORE_READY", "import failed in C:\Users\alice\engine"
+    )
+    msg = _spawn_expecting_failure(echo_backend)
+    assert "it reported an error instead: import failed in" in msg
+    assert "alice" not in msg
+
+
+class _LinesProc:
+    def __init__(self, *lines: bytes):
+        self.stderr = io.BytesIO(b"".join(line + b"
+" for line in lines))
+
+
+def test_a_late_drain_reads_its_own_process_not_the_replacement(echo_backend):
+    old, new = _LinesProc(b"old process line"), _LinesProc(b"new process line")
+    old_tail = collections.deque(maxlen=12)
+    # The replacement is already published when the old drain finally runs.
+    echo_backend._proc = new
+    try:
+        echo_backend._drain_stderr(old, old_tail)
+    finally:
+        echo_backend._proc = None
+    assert list(old_tail) == ["old process line"]
+    assert new.stderr.read() == b"new process line
+"  # untouched
 
 
 def test_the_quoted_stderr_is_scrubbed_and_bounded(echo_backend):

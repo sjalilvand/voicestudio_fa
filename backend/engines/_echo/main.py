@@ -30,7 +30,8 @@ parent's "sidecar died mid-generate" recovery path.
 Test-only handshake hooks (only with OMNIVOICE_ECHO_TEST_MODE=1), checked
 before the ready frame: OMNIVOICE_ECHO_EXIT_BEFORE_READY=<code> exits with
 that code, OMNIVOICE_ECHO_STALL_BEFORE_READY=1 sleeps past any test deadline,
-and OMNIVOICE_ECHO_WRONG_READY=1 sends a pong instead of ready (#2026).
+OMNIVOICE_ECHO_ERROR_BEFORE_READY=<message> sends an error frame, and
+OMNIVOICE_ECHO_WRONG_READY=1 sends a pong instead of ready (#2026).
 
 This script is stdlib-only on purpose — no torch, no numpy. The whole point
 of the echo sidecar is that it can spawn under the bare system Python
@@ -118,6 +119,10 @@ def main() -> int:
 
             print("echo: stalling before ready on purpose", file=sys.stderr, flush=True)
             time.sleep(60)
+        error_message = os.environ.get("OMNIVOICE_ECHO_ERROR_BEFORE_READY")
+        if error_message:
+            _send(stdout, {"op": "error", "stage": "startup", "message": error_message})
+            return 1
         if os.environ.get("OMNIVOICE_ECHO_WRONG_READY") == "1":
             _send(stdout, {"op": "pong"})
 

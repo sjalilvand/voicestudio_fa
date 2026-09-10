@@ -539,7 +539,7 @@ class SubprocessBackend(TTSBackend):
         self._stderr_tail = collections.deque(maxlen=_STDERR_TAIL_LINES)
         self._stderr_thread = threading.Thread(
             target=self._drain_stderr, daemon=True,
-            args=(self._stderr_tail,),
+            args=(self._proc, self._stderr_tail),
             name=f"{self.id}-stderr-drain",
         )
         self._stderr_thread.start()
@@ -920,14 +920,21 @@ class SubprocessBackend(TTSBackend):
 
     # ── stderr drain ───────────────────────────────────────────────────────
 
-    def _drain_stderr(self, tail: Optional[collections.deque] = None) -> None:
+    def _drain_stderr(
+        self,
+        proc: Optional[subprocess.Popen] = None,
+        tail: Optional[collections.deque] = None,
+    ) -> None:
         """Pump sidecar stderr lines into the parent logger.
 
         Prefixes each line with `[<engine_id>]`. The HFTokenRedactor filter
         installed at the root logger in Phase 1 redacts any token bytes
         that slip through. See T-02-03.
         """
-        proc = self._proc
+        # Bound at spawn: a drain thread that starts late must still read
+        # its own process, never a replacement published since (#2026).
+        if proc is None:
+            proc = self._proc
         if proc is None or proc.stderr is None:
             return
         try:
