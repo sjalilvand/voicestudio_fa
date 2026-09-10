@@ -84,7 +84,7 @@ def test_low_free_vram_routes_pytorch_whisper_to_cpu(monkeypatch):
     import torch
 
     monkeypatch.setattr("services.model_manager.get_best_device", lambda: "cuda:0")
-    monkeypatch.setattr(torch.cuda, "mem_get_info", lambda: (4 * 1024**3, 24 * 1024**3))
+    monkeypatch.setattr(torch.cuda, "mem_get_info", lambda: (3 * 1024**3, 24 * 1024**3))
 
     assert ab.PyTorchWhisperBackend._pick_device() == "cpu"
 
