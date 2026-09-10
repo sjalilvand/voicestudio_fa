@@ -355,7 +355,9 @@
     "hf_source_cli_label": "HuggingFace CLI",
     "hf_source_env_label": "Ortam değişkeni",
     "theme_auto": "Sistem Otomatik",
-    "theme_light": "Açık"
+    "theme_light": "Açık",
+    "reduce_motion": "Hareketi azalt",
+    "reduce_motion_desc": "Arka plan animasyonlarını ve geçişleri durdurur. Sistem ayarınız kendi başına geçerlidir; bu ona eklenir."
   },
   "bootstrap": {
     "title": "VoiceStudio",

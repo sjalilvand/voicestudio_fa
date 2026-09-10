@@ -355,7 +355,9 @@
     "hf_source_cli_label": "HuggingFace CLI",
     "hf_source_env_label": "Variabel lingkungan",
     "theme_auto": "Otomatis Sistem",
-    "theme_light": "Terang"
+    "theme_light": "Terang",
+    "reduce_motion": "Kurangi gerakan",
+    "reduce_motion_desc": "Menghentikan animasi latar dan transisi. Pengaturan sistem Anda tetap berlaku sendiri; ini menambahnya."
   },
   "bootstrap": {
     "title": "VoiceStudio",
