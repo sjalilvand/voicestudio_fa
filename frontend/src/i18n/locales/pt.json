@@ -1726,6 +1726,7 @@
     "dictation_lede": "Leia um deles em voz alta depois de pressionar a tecla de atalho ou pressione Replay para enviar a amostra agrupada através do transcritor para que você possa ver o trabalho do ditado de ponta a ponta sem falar.",
     "dictation_status_ok": "Verificado – a tecla de atalho funciona nesta máquina",
     "dictation_status_pending": "Pressione seu atalho em qualquer lugar para testar",
+    "dictation_status_taken": "Outra aplicação já usa este atalho — escolha outro nas Definições.",
     "dictation_status_warn": "Nenhuma tecla de atalho registrada – defina uma abaixo",
     "dictation_hear": "Ouça",
     "dictation_stop": "Pare",
