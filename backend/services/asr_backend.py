@@ -1401,7 +1401,15 @@ class PyTorchWhisperBackend(ASRBackend):
         import soundfile as sf
         import torch
         self._ensure_pipe()
-        audio_np, sr = sf.read(audio_path, dtype="float32")
+        # #2039: libsndfile cannot open MP4/M4A (AAC), which /transcribe and
+        # the MCP tool both accept. Those decode through the validated ffmpeg
+        # path, which resamples to 16 kHz properly. Anything soundfile can
+        # read keeps its native rate, so the pipeline's band-limited
+        # resampler does the conversion rather than a linear interpolation.
+        try:
+            audio_np, sr = sf.read(audio_path, dtype="float32")
+        except Exception:
+            audio_np, sr = _decode_audio_16k_mono(audio_path), 16000
         if audio_np.ndim > 1:
             audio_np = audio_np.mean(axis=1)
         bs = 16 if torch.cuda.is_available() else 2
