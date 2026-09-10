@@ -32,7 +32,11 @@ from pydantic import BaseModel
 
 from api.dependencies import require_admin
 from core.db import db_conn
-from services.pronunciation import apply_pronunciation, entries_for_language
+from services.pronunciation import (
+    apply_pronunciation,
+    entries_for_language,
+    inert_entries_for_language,
+)
 
 logger = logging.getLogger("omnivoice.pronunciation")
 router = APIRouter(dependencies=[Depends(require_admin)])
@@ -250,11 +254,18 @@ def test_substitution(req: PronTestRequest):
         ).fetchall()
     substituted = apply_pronunciation(req.text, rows, req.language)
     applied = entries_for_language(rows, req.language)
+    # IPA/CMU rows are validated and stored but not applied yet, so a term that
+    # DOES match can still change nothing. Reporting them separately keeps the
+    # dry run honest — otherwise it says "no entries match", which is wrong and
+    # sends the user to re-type an entry that was already correct (#1949).
+    inert = inert_entries_for_language(rows, req.language)
     return {
         "input": req.text,
         "substituted": substituted,
         "changed": substituted != req.text,
         "applied_terms": sorted(applied.keys(), key=len, reverse=True),
+        # Present but not honoured: [{term, type}, …]. Empty on the happy path.
+        "inert_entries": inert,
     }
 
 

@@ -2495,6 +2495,7 @@
     "test_placeholder": "Skriv en mening för att förhandsgranska ersättningen...",
     "test_result": "Kommer att talas som:",
     "test_nochange": "Inga poster matchar – talat som skrivet.",
+    "test_inert": "Sparat men ännu inte tillämpat i den här motorn: {{terms}}. IPA- och CMU-poster sparas och valideras, men i dag ändrar bara respelling den upplästa texten.",
     "load_error": "Det gick inte att läsa in uttalsordboken.",
     "save_error": "Det gick inte att spara den posten.",
     "lang_label": "Språkkod (t.ex. en, de) eller lämna tomt för Global",

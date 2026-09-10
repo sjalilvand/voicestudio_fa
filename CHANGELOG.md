@@ -9,6 +9,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- A pronunciation entry that is stored but not applied yet says so, instead of looking like it did not match (#1949)
 - A rejected dubbing source language now names the code it rejected (#1960)
 - The first-run install log is kept on disk instead of vanishing with the setup screen (#1847)
 - `bun run desktop` reclaims port 3900 from a backend the app itself left running, instead of refusing to start (#1974)
