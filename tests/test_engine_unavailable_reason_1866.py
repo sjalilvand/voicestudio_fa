@@ -150,6 +150,7 @@ def test_a_license_gate_keeps_the_words_the_accept_button_needs(diagnostic, one_
         "mlx-whisper unavailable: not supported on this platform",
         "PocketTTS is unavailable on Intel Macs because its required PyTorch "
         "version has no macOS x86_64 wheel.",
+        "dots.tts is not supported on Windows — upstream targets Linux and macOS.",
     ],
 )
 @pytest.mark.parametrize("one_click", [None, False])
