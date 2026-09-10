@@ -648,7 +648,8 @@ class WhisperXBackend(ASRBackend):
         logger.warning(
             "whisperx VRAM preflight: %.1f GB free is too little for %s on CUDA "
             "(needs ≥%.1f GB even at int8) — using CPU int8 instead. Free VRAM "
-            "(flush the TTS model, or close other GPU apps) for GPU-speed ASR. (#723)",
+            "(flush the TTS model, or close other GPU apps) for GPU-speed ASR, or "
+            "set OMNIVOICE_ASR_VRAM_PREFLIGHT=0 to skip this check. (#723)",
             free, self._model_name,
             self._CUDA_VRAM_BUDGET_GB["int8"] * scale,
         )
@@ -1292,10 +1293,54 @@ class PyTorchWhisperBackend(ASRBackend):
         # Reuses the `_asr_pipe` attached to the TTS model when available.
         self._pipe = asr_pipe
 
-    # whisper-large-v3-turbo occupies roughly 3.2 GiB before generation adds
-    # its encoder/decoder workspace. Loading it onto a nearly full card works,
-    # then the first transcribe fails with a CUDA OOM and yields zero segments.
-    _CUDA_VRAM_BUDGET_GB = 5.0
+    # Free VRAM needed on CUDA, where _ensure_pipe loads fp16 weights: the
+    # weights (parameters x 2 bytes), the batch-16 decode workspace, and
+    # headroom. Loading onto a nearly full card works, then the first
+    # transcribe fails with a CUDA OOM and yields zero segments, so the device
+    # pick checks this against actually-free VRAM first.
+    #
+    # #2041: this was a flat 5.0 GB for every model, sized for full large-v3.
+    # The default is large-v3-turbo (0.81B parameters, about 1.6 GB in fp16),
+    # so a 6 GB card with nothing else resident reported 5.0 GB free and was
+    # sent to CPU every time, although CUDA transcribed the same audio in 37 s.
+    _CUDA_VRAM_BUDGET_GB = 5.0  # full large-v3, and any model not listed below
+    # fp16 weights (GB) of the OpenAI Whisper checkpoints, by exact repo id.
+    # Anything else, including a fine-tune or a custom repo whose name happens
+    # to contain "small" or "turbo", keeps the conservative 5.0 GB budget.
+    _FP16_WEIGHTS_GB = {
+        "openai/whisper-large-v3-turbo": 1.6,
+        "openai/whisper-large-v3": 3.1,
+        "openai/whisper-large-v2": 3.1,
+        "openai/whisper-large": 3.1,
+        "openai/whisper-medium": 1.5,
+        "openai/whisper-medium.en": 1.5,
+        "openai/whisper-small": 0.5,
+        "openai/whisper-small.en": 0.5,
+        "openai/whisper-base": 0.15,
+        "openai/whisper-base.en": 0.15,
+        "openai/whisper-tiny": 0.08,
+        "openai/whisper-tiny.en": 0.08,
+    }
+    _CUDA_WORKSPACE_GB = 1.5  # batch 16 x 15 s chunks
+    _CUDA_HEADROOM_GB = 0.5
+
+    @classmethod
+    def _cuda_budget_gb(cls, model_name: str) -> float:
+        """Free VRAM (GB) this model needs on CUDA; never above the 5.0 GB
+        that full large-v3 was measured to need."""
+        weights_gb = cls._FP16_WEIGHTS_GB.get((model_name or "").strip().lower())
+        if weights_gb is None:
+            return cls._CUDA_VRAM_BUDGET_GB
+        return min(
+            cls._CUDA_VRAM_BUDGET_GB,
+            weights_gb + cls._CUDA_WORKSPACE_GB + cls._CUDA_HEADROOM_GB,
+        )
+
+    @staticmethod
+    def _model_name() -> str:
+        return os.environ.get(
+            "OMNIVOICE_PYTORCH_ASR_MODEL", "openai/whisper-large-v3-turbo"
+        )
 
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
@@ -1306,7 +1351,7 @@ class PyTorchWhisperBackend(ASRBackend):
             return False, f"transformers not installed: {e}"
 
     @classmethod
-    def _pick_device(cls) -> str:
+    def _pick_device(cls, model_name: str | None = None) -> str:
         from services.model_manager import get_best_device
 
         device = str(get_best_device())
@@ -1321,14 +1366,18 @@ class PyTorchWhisperBackend(ASRBackend):
             free_gb = free / 1024**3
         except Exception:  # noqa: BLE001 — an unavailable probe must not block ASR
             return device
-        if free_gb >= cls._CUDA_VRAM_BUDGET_GB:
+        model_name = model_name or cls._model_name()
+        budget_gb = cls._cuda_budget_gb(model_name)
+        if free_gb >= budget_gb:
             return device
         logger.warning(
             "PyTorch Whisper VRAM preflight: %.1f GB free < %.1f GB needed "
-            "for reliable CUDA transcription — using CPU instead. Close other "
-            "GPU apps or Flush models to restore GPU-speed ASR.",
+            "for %s on CUDA — using CPU instead. Close other GPU apps or Flush "
+            "models to restore GPU-speed ASR, or set "
+            "OMNIVOICE_ASR_VRAM_PREFLIGHT=0 to skip this check.",
             free_gb,
-            cls._CUDA_VRAM_BUDGET_GB,
+            budget_gb,
+            model_name,
         )
         return "cpu"
 
@@ -1351,10 +1400,8 @@ class PyTorchWhisperBackend(ASRBackend):
         # constructor and this path is skipped.
         import torch
         from transformers import pipeline as hf_pipeline
-        model_name = os.environ.get(
-            "OMNIVOICE_PYTORCH_ASR_MODEL", "openai/whisper-large-v3-turbo"
-        )
-        device = self._pick_device()
+        model_name = self._model_name()
+        device = self._pick_device(model_name)
         asr_dtype = torch.float16 if str(device).startswith("cuda") else torch.float32
         logger.info(
             "PyTorchWhisperBackend: loading standalone ASR pipeline %s on %s",
