@@ -2,7 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
-import { Download, RefreshCw } from 'lucide-react';
+import {
+  AudioLines,
+  Captions,
+  Download,
+  MessageSquare,
+  Mic,
+  RefreshCw,
+  Sparkles,
+} from 'lucide-react';
 import { apiJson } from '../../api/client';
 import { useEngines, useInstallModel, useRecommendations } from '../../api/hooks';
 import { useAppStore } from '../../store';
@@ -93,24 +101,28 @@ export default function SetupSummary({ onChange }) {
       {
         key: 'speech',
         family: 'tts',
+        icon: AudioLines,
         label: t('header.speech'),
         ...summarizeFamily('tts', engines?.tts),
       },
       {
         key: 'transcription',
         family: 'asr',
+        icon: Captions,
         label: t('projects.transcription'),
         ...summarizeFamily('asr', engines?.asr),
       },
       {
         key: 'dictation',
         family: 'asr',
+        icon: Mic,
         label: t('settings.dictation'),
         ...summarizeDictation(dictationQuery.data, modelId),
       },
       {
         key: 'llm',
         family: 'llm',
+        icon: MessageSquare,
         label: t('models.role_llm'),
         ...summarizeFamily('llm', engines?.llm),
       },
@@ -166,7 +178,13 @@ export default function SetupSummary({ onChange }) {
             data-testid={`setup-row-${row.key}`}
             className="flex flex-wrap items-center gap-x-[16px] gap-y-[4px] py-[10px]"
           >
-            <dt className="w-[128px] shrink-0 text-sm font-semibold text-foreground">
+            <dt className="flex w-[160px] shrink-0 items-center gap-[10px] text-sm font-semibold text-foreground">
+              <span
+                className="inline-flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[9px] bg-[color-mix(in_srgb,var(--chrome-accent)_11%,transparent)] text-[var(--chrome-accent)]"
+                aria-hidden="true"
+              >
+                <row.icon size={14} strokeWidth={1.8} />
+              </span>
               {row.label}
             </dt>
             <dd className="m-0 flex min-w-0 flex-1 flex-wrap items-center gap-x-[8px] text-sm text-muted-foreground">
@@ -239,6 +257,7 @@ export default function SetupSummary({ onChange }) {
           data-testid="setup-reco"
           className="flex flex-wrap items-center gap-x-[12px] gap-y-[6px] border-t border-border py-[10px] text-xs text-muted-foreground"
         >
+          <Sparkles size={13} className="shrink-0 text-primary" aria-hidden="true" />
           <span className="min-w-0 flex-1">
             {reco.all_installed || missing.length === 0
               ? t('models.reco_installed_for', { device: reco.device?.label })

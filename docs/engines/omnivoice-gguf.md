@@ -35,7 +35,7 @@ Nothing to install: installer and CI builds bundle the binary for your
 platform. Select the engine via **Model Catalogue** (TTS tab → **Use**) or
 `OMNIVOICE_TTS_BACKEND=omnivoice-gguf`. The quant weights download on first
 use (see [downloading-models.md](../downloading-models.md)) — install them
-ahead of time from **Model Catalogue (TTS tab) → Downloaded weights** if you want the first
+ahead of time from **Model Catalogue (TTS tab → the engine's Weights)** if you want the first
 generation to be quick; a long first render is the download, not a hang.
 
 **Source checkouts:** the repo ships zero-byte placeholders in `bin/` — real

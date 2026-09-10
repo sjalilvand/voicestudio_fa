@@ -1,6 +1,6 @@
 """#1866 — an unavailable engine must say what KIND of problem it has.
 
-Model Catalogue → Engines rendered "Engine unavailable. Check installation and
+Model Catalogue rendered "Engine unavailable. Check installation and
 configuration." plus "Last error: A previous engine check failed." for engines
 the user had simply never installed. Neither names a missing package, a missing
 step, or a next action, and the second reads like a crash or a poisoned cache
@@ -40,7 +40,7 @@ def test_a_missing_package_says_so(diagnostic):
     "diagnostic",
     [
         "Set ELEVENLABS_API_KEY environment variable.",
-        "Configure a server endpoint in Model Catalogue → Engines",
+        "Configure a server endpoint in Model Catalogue",
         "unconfigured",
     ],
 )
@@ -111,10 +111,10 @@ def test_the_input_row_is_not_mutated():
     "diagnostic",
     [
         # The engines' own wording (Supertonic3Backend / PocketTTSBackend).
-        "Supertonic-3 license not accepted. Open Model Catalogue → Engines → "
+        "Supertonic-3 license not accepted. Open Model Catalogue → "
         "Supertonic-3 and click Accept to enable. (MIT code license + OpenRAIL-M "
         "model license.)",
-        "PocketTTS license not accepted. Open Model Catalogue → Engines → "
+        "PocketTTS license not accepted. Open Model Catalogue → "
         "PocketTTS and review the MIT code license, CC-BY-4.0 model license, "
         "and gated-access conditions before enabling it.",
     ],
@@ -132,12 +132,14 @@ def test_a_license_gate_keeps_the_words_the_accept_button_needs(diagnostic, one_
         row["one_click_install"] = one_click
     reason = public_backends([row])[0]["reason"]
 
-    matrix = (
+    # The engine list's display helpers own the matcher since the list +
+    # detail split (engines/engineDisplay.js, used by the row and the panel).
+    source = (
         Path(__file__).resolve().parents[1]
-        / "frontend/src/components/EngineCompatibilityMatrix.jsx"
+        / "frontend/src/components/engines/engineDisplay.js"
     ).read_text(encoding="utf-8")
-    m = re.search(r"function reasonMentionsLicense\(reason\)[^}]*?return /([^/]+)/(\w*)\.test", matrix, re.S)
-    assert m, "EngineCompatibilityMatrix.reasonMentionsLicense changed shape"
+    m = re.search(r"function reasonMentionsLicense\(reason\)[^}]*?return /([^/]+)/(\w*)\.test", source, re.S)
+    assert m, "engineDisplay.reasonMentionsLicense changed shape"
     flags = re.I if "i" in m.group(2) else 0
     assert re.search(m.group(1), reason, flags), reason
 

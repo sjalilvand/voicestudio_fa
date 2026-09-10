@@ -103,7 +103,7 @@ class PocketTTSBackend(SubprocessBackend):
             raise RuntimeError(platform_error)
         if not self._license_accepted():
             raise RuntimeError(
-                "PocketTTS license not accepted. Review it in Model Catalogue → Engines."
+                "PocketTTS license not accepted. Review it in Model Catalogue."
             )
         super().__init__()
 
@@ -113,7 +113,7 @@ class PocketTTSBackend(SubprocessBackend):
         # relying on every caller to evict its cached instance.
         if not self._license_accepted():
             raise RuntimeError(
-                "PocketTTS license not accepted. Review it in Model Catalogue → Engines."
+                "PocketTTS license not accepted. Review it in Model Catalogue."
             )
         return super().generate(*args, **kwargs)
 
@@ -123,7 +123,7 @@ class PocketTTSBackend(SubprocessBackend):
         # so revocation while waiting cannot reach the sidecar or return audio.
         if not self._license_accepted():
             raise RuntimeError(
-                "PocketTTS license not accepted. Review it in Model Catalogue → Engines."
+                "PocketTTS license not accepted. Review it in Model Catalogue."
             )
 
     @classmethod
@@ -139,7 +139,7 @@ class PocketTTSBackend(SubprocessBackend):
             except Exception as e:
                 return False, (
                     f"pocket_tts package not installed or failed to import ({e}). "
-                    "Install it from Model Catalogue → Engines."
+                    "Install it from Model Catalogue."
                 )
 
         # The model repository has an additional gated-access agreement and
@@ -147,7 +147,7 @@ class PocketTTSBackend(SubprocessBackend):
         # use behind an explicit local acknowledgement, matching the dialog.
         if not cls._license_accepted():
             return False, (
-                "PocketTTS license not accepted. Open Model Catalogue → Engines → "
+                "PocketTTS license not accepted. Open Model Catalogue → "
                 "PocketTTS and review the MIT code license, CC-BY-4.0 model "
                 "license, and gated-access conditions before enabling it."
             )

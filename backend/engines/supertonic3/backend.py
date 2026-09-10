@@ -113,7 +113,7 @@ class Supertonic3Backend(SubprocessBackend):
             except ImportError:
                 return False, (
                     "supertonic package not installed. Install it from "
-                    "Model Catalogue → Engines."
+                    "Model Catalogue."
                 )
 
         # 2. License acceptance gate (TTS-05). Defence in depth: the
@@ -131,7 +131,7 @@ class Supertonic3Backend(SubprocessBackend):
             accepted = False
         if not accepted:
             return False, (
-                "Supertonic-3 license not accepted. Open Model Catalogue → Engines → "
+                "Supertonic-3 license not accepted. Open Model Catalogue → "
                 "Supertonic-3 and click Accept to enable. "
                 "(MIT code license + OpenRAIL-M model license.)"
             )

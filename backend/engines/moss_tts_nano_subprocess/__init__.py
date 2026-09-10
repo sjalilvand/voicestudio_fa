@@ -44,7 +44,7 @@ class MossTTSNanoSubprocessBackend(SubprocessBackend):
         if own_venv_python() is None:
             return False, (
                 "moss_tts_nano package not installed. Install it from "
-                "Model Catalogue → Engines."
+                "Model Catalogue."
             )
         return True, "ready"
 
@@ -54,7 +54,7 @@ class MossTTSNanoSubprocessBackend(SubprocessBackend):
         if py is None:
             raise RuntimeError(
                 "MOSS-TTS-Nano's environment is missing. Reinstall it from "
-                "Model Catalogue → Engines."
+                "Model Catalogue."
             )
         return py
 

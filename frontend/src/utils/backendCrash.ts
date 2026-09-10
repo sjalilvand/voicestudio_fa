@@ -387,7 +387,7 @@ export function crashCauseHint(
       defaultValue:
         'It was force-killed (signal 9), which usually means the operating system ran out of ' +
         'memory (RAM) and stopped it. Close memory-heavy apps, pick a smaller ASR model in ' +
-        'Model Catalogue → Models, or flush the TTS model before transcribing.',
+        'the engine Weights list in Model Catalogue, or flush the TTS model before transcribing.',
     });
   }
   // Ordered deliberately, between the two explicit-fact branches.
@@ -426,8 +426,8 @@ export function crashCauseHint(
         'It crashed inside the compute stack rather than running out of memory — that points ' +
         'at a GPU driver that does not match the bundled CUDA runtime, or a model file that ' +
         'downloaded incompletely. Update your GPU driver, then re-download the model from ' +
-        'Model Catalogue → Models (it repairs a partial download in place). If it keeps happening, ' +
-        'switch to a crash-isolated engine in Model Catalogue → Engines — "VoiceStudio (subprocess)" ' +
+        'the engine Weights list in Model Catalogue (it repairs a partial download in place). If it keeps happening, ' +
+        'switch to a crash-isolated engine in Model Catalogue — "VoiceStudio (subprocess)" ' +
         'for synthesis, "Faster-Whisper (crash-isolated subprocess)" for transcription. Those ' +
         'run the model in a separate process, so a crash like this takes down that process ' +
         'instead of the whole backend.',
@@ -437,7 +437,7 @@ export function crashCauseHint(
     defaultValue:
       'On smaller GPUs the usual cause is running out of VRAM while loading the ASR model on ' +
       'top of the TTS model: flush the TTS model first, or pick a smaller ASR model in ' +
-      'Model Catalogue → Models.',
+      'the engine Weights list in Model Catalogue.',
   });
 }
 
