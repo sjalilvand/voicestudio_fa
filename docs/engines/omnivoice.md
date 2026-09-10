@@ -103,7 +103,7 @@ The env var overrides the persisted UI choice.
   above — switch to OmniVoice GGUF or close other GPU apps.
 - First generation is slow: the first call downloads multi-GB weights. To
   keep the first render quick, install the model ahead of time from
-  **Model Catalogue (TTS tab) → Downloaded weights** — a long first generate is almost always the
+  **Model Catalogue (TTS tab → the engine's Weights)** — a long first generate is almost always the
   download, not a hang.
 - General install issues: [install/troubleshooting.md](../install/troubleshooting.md).
 

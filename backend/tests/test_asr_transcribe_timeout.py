@@ -55,7 +55,7 @@ def test_slow_transcribe_raises_actionable_timeout():
         msg = str(ei.value)
         # Message must reassure (backend alive) + give concrete remedies.
         assert "backend is running" in msg
-        assert "Model Catalogue → Models" in msg
+        assert "the engine's Weights list in Model Catalogue" in msg
         assert "CPU" in msg
 
     asyncio.run(_go())
@@ -206,7 +206,7 @@ def test_second_consecutive_timeout_recommends_isolated_engine():
         assert "faster-whisper-isolated" not in first  # one timeout ≠ a pattern
         second = await _timeout_once(pool)
         assert "faster-whisper-isolated" in second
-        assert "Model Catalogue → Engines" in second
+        assert "Model Catalogue" in second
         assert "never switches engines automatically" in second
 
     asyncio.run(_go())

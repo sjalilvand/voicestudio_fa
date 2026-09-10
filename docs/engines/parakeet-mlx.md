@@ -15,7 +15,7 @@ Apple Silicon source installs since 0.3.22**.
 - **Model Catalogue**, ASR tab → **Use** on the Parakeet TDT v3
   (MLX) row, or `OMNIVOICE_ASR_BACKEND=parakeet-mlx`.
 - **Dictation prefers it automatically**: once the model weights are
-  installed (Model Catalogue (ASR tab) → Downloaded weights — the auto-pick never triggers a
+  installed (Model Catalogue (ASR tab → the engine's Weights) — the auto-pick never triggers a
   download), live dictation/capture uses it whenever your system language is
   one of the 25 covered European languages. Other languages keep the
   multilingual Whisper engine, so dictation coverage never regresses.

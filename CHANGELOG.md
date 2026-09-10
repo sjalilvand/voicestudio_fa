@@ -18,10 +18,12 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Changed
 
 - Model Catalogue is one page: a setup summary (speech, transcription, dictation, language model) on top, one TTS / ASR / LLM switch, and each family's downloadable weights listed under its engines; the separate Models pane and the Settings → Voice → Engines / Models signposts are gone, the models directory and voice previews moved to Settings → Storage and the HF mirror to Network (#2013)
+- The engine list is one line per engine (engine, device it runs on, status, one action) with a detail panel for everything else; each engine's weights install from its panel, so the separate weights list and recommendation card are gone (#2020)
 
 ### Fixed
 
 - Stopping a process on macOS no longer fails with "Operation not permitted" when it was already exiting (#2032)
+- A YouTube link blocked by its "not a bot" check now says how to attach signed-in cookies in Dub, instead of quoting yt-dlp's command-line flags (#2036, #2034)
 - An engine that fails to start now says whether it timed out, crashed (with its exit code and last output) or answered wrongly, instead of "did not signal ready: None" (#2037, #2026)
 
 ### CI

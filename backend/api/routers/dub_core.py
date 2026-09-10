@@ -732,7 +732,7 @@ _prep_event_helper = dub_pipeline.prep_event  # alias; we keep the module-local 
 #: into one reference, which is how "made up" clone voices happen).
 CLONE_SKIP_HEURISTIC_MSG = (
     "auto voice cloning skipped: speaker labels are gap-based estimates — "
-    "set up diarization (Model Catalogue → Models → pyannote) for per-speaker clones"
+    "set up diarization (Model Catalogue → Other weights → pyannote) for per-speaker clones"
 )
 
 
@@ -1504,7 +1504,7 @@ async def dub_transcribe_stream(
                         f"unavailable, so the ASR engine's built-in speaker "
                         f"turns were used and the detected count may differ "
                         f"from the {num_speakers} you set. Set up diarization "
-                        f"(Model Catalogue → Models → pyannote) to enforce an exact "
+                        f"(Model Catalogue → Other weights → pyannote) to enforce an exact "
                         f"speaker count."
                     )
                 return resplit, {

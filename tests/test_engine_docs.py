@@ -1,6 +1,6 @@
 """Every TTS engine points at a doc page, and that page exists (#1866).
 
-The engine rows in Model Catalogue → Engines cannot explain an unavailable
+The engine rows in Model Catalogue cannot explain an unavailable
 engine themselves: `api.public_engine_metadata.public_backends` replaces the
 computed `reason` and `last_error` with fixed strings before they reach the UI,
 because an availability probe can carry exception text or a local path. The doc

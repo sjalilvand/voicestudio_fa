@@ -435,7 +435,7 @@ async def create_speech(req: SpeechRequest):
             detail=(
                 f"TTS engine '{backend.id}' did not finish loading within its "
                 f"model-load budget — on a first run this usually means the weight "
-                f"download is slow or stalled (check Model Catalogue → Models for "
+                f"download is slow or stalled (check the engine's Weights list in Model Catalogue for "
                 f"progress), not that generation failed. Retry once the model "
                 f"shows as installed."
             ),

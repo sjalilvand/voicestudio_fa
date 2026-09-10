@@ -736,7 +736,7 @@ def _oom_friendly_reraise(e):
     # the OOM catch-all, telling a user with 63 GB of RAM to press Flush. Point
     # at the real fix — set the variable — and never mention memory or Flush.
     # The underlying error already names the exact variable + what to point it
-    # at (and Model Catalogue → Engines shows a copy-paste setup line), so keep it
+    # at (and Model Catalogue shows a copy-paste setup line), so keep it
     # front-and-center. Checked before the OOM branch so a config error can
     # never be mislabeled as memory.
     if _is_config_failure(e):
@@ -745,7 +745,7 @@ def _oom_friendly_reraise(e):
             f"environment variable that isn't configured, so nothing was "
             f"generated. Set it as the underlying error describes (it names the "
             f"exact variable and what to point it at), then restart VoiceStudio — "
-            f"or pick a ready engine in Model Catalogue → Engines. This is a setup "
+            f"or pick a ready engine in Model Catalogue. This is a setup "
             f"problem, not a memory one. Underlying error: {e}"
         ) from e
     # #880 (the class bug): the OOM hint used to be the catch-all fallback,
@@ -1071,7 +1071,7 @@ def _language_rejection_or(e: BaseException, backend, language):
         f"The {engine} engine can't speak{requested}. VoiceStudio offers every "
         f"language its default engine supports, but each engine covers a "
         f"different set — pick one this engine supports, or switch engine in "
-        f"Model Catalogue → Engines (the VoiceStudio engine has the widest coverage) "
+        f"Model Catalogue (the VoiceStudio engine has the widest coverage) "
         f"and generate again. Engine's own message: {e}"
     )
 
@@ -1550,7 +1550,7 @@ async def generate_speech(
                 detail=(
                     f"TTS engine '{engine_id}' did not finish loading within its "
                     f"model-load budget — on a first run this usually means the "
-                    f"weight download is slow or stalled (check Model Catalogue → Models "
+                    f"weight download is slow or stalled (check the engine's Weights list in Model Catalogue "
                     f"for progress), not that generation failed. Retry once the "
                     f"model shows as installed."
                 ),

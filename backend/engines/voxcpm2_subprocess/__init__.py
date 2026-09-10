@@ -50,7 +50,7 @@ class VoxCPM2SubprocessBackend(SubprocessBackend):
     def is_available(cls) -> tuple[bool, str]:
         if own_venv_python() is None:
             return False, (
-                "voxcpm package not installed. Install it from Model Catalogue → Engines."
+                "voxcpm package not installed. Install it from Model Catalogue."
             )
         return True, "ready"
 
@@ -60,7 +60,7 @@ class VoxCPM2SubprocessBackend(SubprocessBackend):
         if py is None:
             raise RuntimeError(
                 "VoxCPM2's environment is missing. Reinstall it from "
-                "Model Catalogue → Engines."
+                "Model Catalogue."
             )
         return py
 
