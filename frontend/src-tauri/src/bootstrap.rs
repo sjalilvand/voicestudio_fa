@@ -48,6 +48,51 @@ pub struct BootstrapState {
     pub logs: Arc<Mutex<Vec<LogPayload>>>,
 }
 
+/// Which bootstrap attempt the current stage and log lines belong to (#1900).
+///
+/// The splash used to *infer* attempt boundaries from the ~1 s status poll:
+/// arriving at `checking`/`awaiting_setup`, or leaving `failed`, meant a new
+/// attempt had begun. Inference from a sampled signal cannot be airtight — a
+/// restart begun on this side, which the UI did not initiate, can be sampled
+/// up to a full interval late, and the new attempt's earliest stage-tagged log
+/// lines are then discarded as the previous attempt's. The consequence was
+/// cosmetic and deliberately conservative (a fast stage shows *pending* though
+/// it ran), but it was a guess.
+///
+/// The producer knows the answer exactly, so it says so: every
+/// `bootstrap_status` reply and every `bootstrap-log` line carries the attempt
+/// it belongs to, and the frontend scopes evidence by equality, not by clock.
+///
+/// **Guarded by the stage mutex.** Every write happens while that lock is held
+/// (`begin_attempt_with`), and `bootstrap_status` reads stage and attempt under
+/// it. Without that discipline a restart landing between the two reads returns
+/// the PREVIOUS attempt's stage stamped with the new attempt's id — and the
+/// splash records `installing_deps` as work this attempt did, which is exactly
+/// the #1894 fabrication the attempt id exists to remove (Greptile).
+///
+/// Starts at 1 so 0 is never a live attempt — a payload carrying no attempt at
+/// all deserializes to 0 and stays distinguishable from the first one.
+static ATTEMPT: AtomicU64 = AtomicU64::new(1);
+
+/// The attempt now in progress. Read without the stage lock by log emission,
+/// which only needs the current value, never a pair.
+pub fn current_attempt() -> u64 {
+    ATTEMPT.load(Ordering::SeqCst)
+}
+
+/// Open a new attempt and move the stage into it, atomically.
+///
+/// Called wherever the bootstrap really restarts: both retry commands funnel
+/// through `respawn_backend`, and the supervisor's automatic venv rebuild
+/// re-enters `Checking` on its own. Taking the stage lock across both writes is
+/// what makes the pair a reader observes always self-consistent.
+pub fn begin_attempt_with(stage: &Arc<Mutex<BootstrapStage>>, next: BootstrapStage) -> u64 {
+    let mut guard = stage.lock().unwrap_or_else(|e| e.into_inner());
+    let id = ATTEMPT.fetch_add(1, Ordering::SeqCst) + 1;
+    *guard = next;
+    id
+}
+
 /// The last `Failed { message }` diagnosis this session, retained after the
 /// stage itself has moved on (#1177).
 ///
@@ -115,6 +160,9 @@ pub fn already_diagnosed(state: &Arc<Mutex<BootstrapStage>>) -> bool {
 
 #[derive(Clone, Serialize)]
 pub struct LogPayload {
+    /// The attempt this line was produced during (#1900). A stage-tagged line
+    /// proves its stage ran — but only for the attempt that emitted it.
+    pub attempt: u64,
     pub stage: String,
     pub line: String,
 }
@@ -157,8 +205,35 @@ fn append_bootstrap_log(stage: &str, line: &str) {
     }
 }
 
+/// Emit a stage-tagged log line for the attempt in progress.
+///
+/// Correct for every caller that runs inside the attempt it is describing —
+/// which is all of them except the output pumps, whose thread outlives the run
+/// it is draining. Those use [`emit_log_for_attempt`].
 pub fn emit_log<R: tauri::Runtime>(app: &tauri::AppHandle<R>, stage: &str, line: &str) {
-    let payload = LogPayload { stage: stage.to_string(), line: line.to_string() };
+    emit_log_for_attempt(app, current_attempt(), stage, line)
+}
+
+/// Emit a log line stamped with the attempt that PRODUCED it, not the one
+/// running when it happened to be read (#1900, CodeRabbit).
+///
+/// An output pump is a thread reading a pipe: it lives as long as the process
+/// it drains, which can outlive the attempt that started it. A restart bumps
+/// the counter, and the dying run's remaining lines — read a moment later —
+/// would be stamped with the NEW attempt and counted as its evidence. The pump
+/// captures its attempt when it starts, so a line is labelled by the work that
+/// wrote it.
+pub fn emit_log_for_attempt<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    attempt: u64,
+    stage: &str,
+    line: &str,
+) {
+    let payload = LogPayload {
+        attempt,
+        stage: stage.to_string(),
+        line: line.to_string(),
+    };
     // Buffer the log so the frontend can backfill on mount.
     if let Some(state) = app.try_state::<BootstrapState>() {
         if let Ok(mut logs) = state.logs.lock() {
@@ -198,11 +273,15 @@ pub fn run_streaming<R: tauri::Runtime>(
     let app_err = app.clone();
     let stage_out = stage.to_string();
     let stage_err = stage.to_string();
+    // The attempt these pumps are draining, captured before either can outlive
+    // it: a restart during a long `uv sync` must not relabel this run's
+    // remaining output as the next attempt's work.
+    let attempt = current_attempt();
     let h_out = std::thread::spawn(move || {
         if let Some(s) = stdout {
             for line in BufReader::new(s).lines().flatten() {
                 log::info!("[{}] {}", stage_out, line);
-                emit_log(&app_out, &stage_out, &line);
+                emit_log_for_attempt(&app_out, attempt, &stage_out, &line);
             }
         }
     });
@@ -210,7 +289,7 @@ pub fn run_streaming<R: tauri::Runtime>(
         if let Some(s) = stderr {
             for line in BufReader::new(s).lines().flatten() {
                 log::info!("[{}] {}", stage_err, line);
-                emit_log(&app_err, &stage_err, &line);
+                emit_log_for_attempt(&app_err, attempt, &stage_err, &line);
             }
         }
     });
@@ -242,13 +321,32 @@ pub fn run_streaming<R: tauri::Runtime>(
 
 // ── Tauri commands ────────────────────────────────────────────────────────
 
+/// A stage together with the attempt that produced it (#1900).
+///
+/// `BootstrapStage` is internally tagged, so flattening it here keeps the wire
+/// shape the frontend already reads — `{ "stage": "checking" }` plus whatever
+/// fields the variant carries — and only adds a sibling `attempt`.
+#[derive(Clone, Serialize, Debug)]
+pub struct BootstrapStatus {
+    pub attempt: u64,
+    #[serde(flatten)]
+    pub stage: BootstrapStage,
+}
+
 #[tauri::command]
-pub fn bootstrap_status(state: tauri::State<'_, BootstrapState>) -> BootstrapStage {
-    state
-        .stage
-        .lock()
-        .map(|g| g.clone())
-        .unwrap_or(BootstrapStage::Checking)
+pub fn bootstrap_status(state: tauri::State<'_, BootstrapState>) -> BootstrapStatus {
+    // Both reads under the stage lock, which every attempt bump also holds
+    // (`begin_attempt_with`). Sampling them separately lets a restart land in
+    // between and return the PREVIOUS attempt's stage stamped with the new
+    // attempt's id — the splash then records `installing_deps` as work this
+    // attempt did, which is the fabrication the id exists to remove.
+    match state.stage.lock() {
+        Ok(guard) => BootstrapStatus { attempt: current_attempt(), stage: guard.clone() },
+        Err(poisoned) => BootstrapStatus {
+            attempt: current_attempt(),
+            stage: poisoned.into_inner().clone(),
+        },
+    }
 }
 
 #[tauri::command]
@@ -309,9 +407,9 @@ pub fn respawn_backend<R: tauri::Runtime>(
     // Before anything reaches for lifecycle ownership: a readiness wait may be
     // holding it while a slow backend starts (#1791).
     preempt_backend_wait();
-    if let Ok(mut guard) = stage.lock() {
-        *guard = BootstrapStage::Checking;
-    }
+    // One lock across the bump and the stage write, so no poll can observe the
+    // old stage paired with the new attempt.
+    begin_attempt_with(&stage, BootstrapStage::Checking);
     if let Ok(mut logs) = logs.lock() {
         logs.clear();
     }
@@ -882,7 +980,11 @@ fn spawn_backend_until_ready<R: tauri::Runtime>(
                             "Backend failed because the Python environment is broken — rebuilding it automatically",
                         );
                         if quarantine_broken_venv(&venv_dir) {
-                            set_stage(stage_handle, BootstrapStage::Checking);
+                            // A restart nobody clicked. Rebuilding the venv
+                            // re-runs the whole bootstrap, so it opens a new
+                            // attempt and says so, instead of leaving the
+                            // splash to infer the boundary from the poll.
+                            begin_attempt_with(stage_handle, BootstrapStage::Checking);
                             continue 'bootstrap;
                         }
                         log::error!(
@@ -4324,14 +4426,17 @@ UnicodeDecodeError: 'gbk' codec can't decode byte 0x80 in position 11: illegal m
     fn failed_command_message_carries_the_newest_relevant_output() {
         let logs = vec![
             LogPayload {
+                attempt: 1,
                 stage: "downloading_uv".into(),
                 line: "unrelated".into(),
             },
             LogPayload {
+                attempt: 1,
                 stage: "installing_deps".into(),
                 line: "resolver context".into(),
             },
             LogPayload {
+                attempt: 1,
                 stage: "installing_deps".into(),
                 line: "actual dependency conflict".into(),
             },
@@ -4600,5 +4705,94 @@ mod code_fingerprint_tests {
         retire_run_sentinel(59_999);
 
         assert!(sentinel.exists(), "an unreachable backend must not erase the sentinel");
+    }
+
+    // ── #1900: the attempt id the splash scopes evidence by ────────────────
+
+    #[test]
+    fn a_status_reply_carries_the_stage_and_its_attempt() {
+        // The wire shape the frontend already reads must survive: `stage` stays
+        // a sibling key at the top level (serde flatten on an internally tagged
+        // enum), with `attempt` added beside it — not nested under it.
+        let status = BootstrapStatus {
+            attempt: 4,
+            stage: BootstrapStage::InstallingDeps,
+        };
+
+        let json = serde_json::to_value(&status).unwrap();
+
+        assert_eq!(json["stage"], "installing_deps");
+        assert_eq!(json["attempt"], 4);
+    }
+
+    #[test]
+    fn a_failed_status_keeps_its_message_alongside_the_attempt() {
+        // The variant's own fields flatten up too, so `message` does not move
+        // and the failure card keeps rendering.
+        let status = BootstrapStatus {
+            attempt: 2,
+            stage: BootstrapStage::Failed { message: "uv sync failed".into() },
+        };
+
+        let json = serde_json::to_value(&status).unwrap();
+
+        assert_eq!(json["stage"], "failed");
+        assert_eq!(json["message"], "uv sync failed");
+        assert_eq!(json["attempt"], 2);
+    }
+
+    /// `ATTEMPT` is one process-global counter and cargo runs tests in
+    /// threads. Without this the three below interleave: one reads the counter
+    /// another just advanced, and asserts on a value it never owned
+    /// (CodeRabbit).
+    static ATTEMPT_LOCK: Mutex<()> = Mutex::new(());
+
+    fn a_stage_slot() -> Arc<Mutex<BootstrapStage>> {
+        Arc::new(Mutex::new(BootstrapStage::InstallingDeps))
+    }
+
+    #[test]
+    fn beginning_an_attempt_moves_the_counter_forward() {
+        // Monotonic and never reused: the frontend scopes by equality, so a
+        // repeated id would let a previous attempt's log lines count toward
+        // the current one — the misattribution this exists to remove.
+        let _g = ATTEMPT_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let slot = a_stage_slot();
+        let before = current_attempt();
+
+        let first = begin_attempt_with(&slot, BootstrapStage::Checking);
+        let second = begin_attempt_with(&slot, BootstrapStage::Checking);
+
+        assert!(first > before, "an attempt must not reuse an earlier id");
+        assert!(second > first, "attempts must keep moving forward");
+        assert_eq!(current_attempt(), second);
+    }
+
+    #[test]
+    fn an_attempt_is_never_zero() {
+        // 0 is reserved for "no attempt stated" — a payload from a build that
+        // predates this field deserializes to it, and must never collide with
+        // a real attempt.
+        let _g = ATTEMPT_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        assert!(current_attempt() >= 1);
+        assert!(begin_attempt_with(&a_stage_slot(), BootstrapStage::Checking) >= 1);
+    }
+
+    #[test]
+    fn a_new_attempt_never_carries_the_previous_stage() {
+        // Greptile P1: the bump and the stage write have to be one atomic
+        // move. Sampled separately, a restart landing between them returns
+        // `installing_deps` stamped with the NEW attempt, and the splash
+        // records an install this attempt never ran.
+        let _g = ATTEMPT_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let slot = a_stage_slot();
+
+        let opened = begin_attempt_with(&slot, BootstrapStage::Checking);
+
+        // Whatever a reader sees after the call, the pair is consistent: the
+        // new attempt's id can only ever come with the new attempt's stage.
+        let stage = slot.lock().unwrap().clone();
+        assert!(matches!(stage, BootstrapStage::Checking), "{stage:?}");
+        assert_eq!(current_attempt(), opened);
     }
 }

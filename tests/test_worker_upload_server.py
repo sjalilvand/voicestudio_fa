@@ -38,6 +38,22 @@ from worker.transport.server import REQUIRED_FEATURES, SESSION_METADATA_KEY, Wor
 ENGINE, MODEL, OP = "indextts", "IndexTTS-2", "tts"
 
 
+async def _await_event(event, what, timeout=15.0):
+    """Block on a threading.Event without spinning the event loop.
+
+    The obvious `while not event.is_set(): await asyncio.sleep(0)` yields to
+    the loop but never sleeps, so it runs the loop flat out on the same thread
+    the awaited work needs to make progress. On a loaded Windows runner that
+    starves the task setting the event and the wait times out with nothing
+    actually wrong — a flake with no signal in it. `to_thread` parks the wait
+    on a worker thread and leaves the loop free, which is both faster and
+    deterministic.
+    """
+    assert await asyncio.to_thread(event.wait, timeout), (
+        f"{what} did not happen within {timeout}s"
+    )
+
+
 def test_artifact_fsync_uses_a_windows_compatible_descriptor(tmp_path, monkeypatch):
     artifact = tmp_path / "artifact.wav"
     artifact.write_bytes(b"audio")
@@ -713,11 +729,7 @@ async def test_revocation_during_result_barrier_cannot_ack_published_bytes(
         plane.upload(_chunks(_ref(plane, task, attempt, payload=payload), payload))
     )
 
-    async def wait_for_barrier():
-        while not barrier_finished.is_set():
-            await asyncio.sleep(0)
-
-    await asyncio.wait_for(wait_for_barrier(), timeout=1)
+    await _await_event(barrier_finished, "the durability barrier")
     assert os.path.isfile(final)
     assert plane.servicer.revoke_worker_sessions(plane.worker_id) == 1
     release_barrier.set()

@@ -94,11 +94,14 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- A remote-worker test no longer fails at random on Windows CI: it waited for a background thread by spinning the event loop that thread's work needed (#1990)
+
 - The isolated backend test session passes on a stock Windows checkout, and CI now runs it there so it stays that way (#1990)
 
 - Windows contributors can run the test suite without Developer Mode: tests that create a symlink now skip instead of failing with `WinError 1314` (#1990)
 - The crash details dialog now says what the exit code means and what to try, instead of showing a raw number and a log (#1927)
 - A crash report now carries the backend's actual last words: the log tail is captured after the dying process's final output lands, not the instant it exits (#1850)
+- The first-run setup screen no longer mislabels a step when the bootstrap restarts itself: Rust now says which attempt each stage and log line belongs to, instead of the screen guessing from a once-a-second poll (#1900)
 - A port-3900 conflict now names who is actually holding it, and gives the command that ends an orphaned backend, instead of telling you to quit an app that has no window (#1933) — thanks @Chang-Jin-Lee!
 
 - Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1952)
