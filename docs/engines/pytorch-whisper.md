@@ -46,15 +46,16 @@ transcribe runs out of memory with zero segments. So on CUDA the engine
 checks free VRAM before loading and uses the CPU instead when the card is
 too full (flush the TTS model to restore GPU-speed ASR).
 
-The budget follows the model it loads in fp16: the weights, plus about
-1.5 GB of working memory and 0.5 GB of headroom.
+For the OpenAI Whisper checkpoints, the budget follows the model it loads in
+fp16: the weights, plus about 1.5 GB of working memory and 0.5 GB of
+headroom. Any other repository, including a fine-tune, keeps 5 GB.
 
 | Model | Free VRAM needed |
 |---|---|
-| whisper-large-v3-turbo (default) | 3.6 GB |
-| whisper-large-v3 | 5 GB |
-| medium / small / base / tiny | 3.5 / 2.5 / 2.2 / 2.1 GB |
-| any other model | 5 GB |
+| `openai/whisper-large-v3-turbo` (default) | 3.6 GB |
+| `openai/whisper-large`, `-large-v2`, `-large-v3` | 5 GB |
+| `openai/whisper-medium` / `-small` / `-base` / `-tiny` (and `.en`) | 3.5 / 2.5 / 2.2 / 2.1 GB |
+| any other repository | 5 GB |
 
 A 6 GB card with nothing else loaded runs the default model on the GPU
 ([#2041](https://github.com/debpalash/VoiceStudio/issues/2041)). Disable

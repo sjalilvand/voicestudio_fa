@@ -1304,10 +1304,23 @@ class PyTorchWhisperBackend(ASRBackend):
     # so a 6 GB card with nothing else resident reported 5.0 GB free and was
     # sent to CPU every time, although CUDA transcribed the same audio in 37 s.
     _CUDA_VRAM_BUDGET_GB = 5.0  # full large-v3, and any model not listed below
-    _FP16_WEIGHTS_GB = (
-        ("turbo", 1.6), ("large", 3.1), ("medium", 1.5),
-        ("small", 0.5), ("base", 0.15), ("tiny", 0.08),
-    )
+    # fp16 weights (GB) of the OpenAI Whisper checkpoints, by exact repo id.
+    # Anything else, including a fine-tune or a custom repo whose name happens
+    # to contain "small" or "turbo", keeps the conservative 5.0 GB budget.
+    _FP16_WEIGHTS_GB = {
+        "openai/whisper-large-v3-turbo": 1.6,
+        "openai/whisper-large-v3": 3.1,
+        "openai/whisper-large-v2": 3.1,
+        "openai/whisper-large": 3.1,
+        "openai/whisper-medium": 1.5,
+        "openai/whisper-medium.en": 1.5,
+        "openai/whisper-small": 0.5,
+        "openai/whisper-small.en": 0.5,
+        "openai/whisper-base": 0.15,
+        "openai/whisper-base.en": 0.15,
+        "openai/whisper-tiny": 0.08,
+        "openai/whisper-tiny.en": 0.08,
+    }
     _CUDA_WORKSPACE_GB = 1.5  # batch 16 x 15 s chunks
     _CUDA_HEADROOM_GB = 0.5
 
@@ -1315,14 +1328,13 @@ class PyTorchWhisperBackend(ASRBackend):
     def _cuda_budget_gb(cls, model_name: str) -> float:
         """Free VRAM (GB) this model needs on CUDA; never above the 5.0 GB
         that full large-v3 was measured to need."""
-        name = (model_name or "").lower()
-        for key, weights_gb in cls._FP16_WEIGHTS_GB:
-            if key in name:
-                return min(
-                    cls._CUDA_VRAM_BUDGET_GB,
-                    weights_gb + cls._CUDA_WORKSPACE_GB + cls._CUDA_HEADROOM_GB,
-                )
-        return cls._CUDA_VRAM_BUDGET_GB
+        weights_gb = cls._FP16_WEIGHTS_GB.get((model_name or "").strip().lower())
+        if weights_gb is None:
+            return cls._CUDA_VRAM_BUDGET_GB
+        return min(
+            cls._CUDA_VRAM_BUDGET_GB,
+            weights_gb + cls._CUDA_WORKSPACE_GB + cls._CUDA_HEADROOM_GB,
+        )
 
     @staticmethod
     def _model_name() -> str:

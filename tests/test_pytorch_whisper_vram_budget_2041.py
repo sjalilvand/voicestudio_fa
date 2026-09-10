@@ -48,3 +48,23 @@ def test_the_fallback_warning_names_the_model_and_the_opt_out(pick):
     pick(1.0)
     assert "OMNIVOICE_ASR_VRAM_PREFLIGHT=0" in pick.warnings[-1]
     assert "whisper-large-v3-turbo" in pick.warnings[-1]
+
+
+@pytest.mark.parametrize(
+    "custom",
+    [
+        "someone/turbo-whisper-xl",
+        "acme/small-talk-asr",
+        "org/database-asr",
+        "openai/whisper-small-finetuned",
+    ],
+)
+def test_a_custom_repo_with_a_size_word_keeps_the_conservative_budget(pick, custom):
+    # Substring matching gave these a reduced budget and could admit a model
+    # that then ran out of VRAM (#2044 review).
+    assert pick(4.5, custom) == "cpu"
+
+
+def test_english_only_checkpoints_and_stray_case_are_recognised(pick):
+    assert pick(3.0, "openai/whisper-small.en") == "cuda:0"
+    assert pick(3.0, " OpenAI/Whisper-Small ") == "cuda:0"
