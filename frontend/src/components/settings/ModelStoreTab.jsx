@@ -18,6 +18,7 @@ import {
 import { makeModelColumns } from './models/columns';
 import { FAMILY_SECTIONS, groupModels, modelSectionKey, scopeReco } from './models/sections';
 import RecoBanner from './models/RecoBanner';
+import { failedInstalls, installFailureMessage } from './models/installResults';
 import ModelSection from './models/ModelSection';
 
 /**
@@ -285,15 +286,11 @@ export default function ModelStoreTab({ info, family = null }) {
       missing.map((m) => installMutation.mutateAsync(m.repo_id)),
     );
     setInstallingReco(false);
-    const failed = results.filter((r) => r.status === 'rejected');
+    const failed = failedInstalls(results, missing);
     if (results.length - failed.length > 0)
       toast.success(t('models.started_downloading', { count: results.length - failed.length }));
     if (failed.length > 0)
-      toast.error(
-        t('models.install_failed', {
-          message: failed.map((r) => r.reason?.message || r.reason).join(' · '),
-        }),
-      );
+      toast.error(t('models.install_failed', { message: installFailureMessage(failed) }));
   };
 
   // The family's slice of the catalog (all of it when unscoped).

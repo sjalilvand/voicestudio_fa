@@ -282,3 +282,26 @@ def test_license_api_accepts_pockettts_and_rejects_unknown(settings_mod, mock_se
 def settings_mod():
     import importlib
     return importlib.import_module("api.routers.settings")
+
+
+def test_prefers_the_venv_its_one_click_install_made(monkeypatch, tmp_path, mock_settings_store):
+    """Its own venv when the installer made one; otherwise the app's
+    interpreter, where `uv sync --extra pockettts` installs it."""
+    from pathlib import Path
+
+    from services.sidecar_install import _INSTALL_COMPLETE_MARKER, _venv_python
+
+    mock_settings_store["pockettts"] = True
+    monkeypatch.delenv("OMNIVOICE_POCKETTTS_DIR", raising=False)
+    assert _backend_cls().venv_python() == Path(sys.executable)
+
+    py = _venv_python(tmp_path / ".venv")
+    py.parent.mkdir(parents=True)
+    py.write_text("#!fake\n")
+    (tmp_path / _INSTALL_COMPLETE_MARKER).write_text("x\n", encoding="utf-8")
+    monkeypatch.setenv("OMNIVOICE_POCKETTTS_DIR", str(tmp_path))
+    assert _backend_cls().venv_python() == py
+    # Available without pocket_tts importable in the app's own environment.
+    monkeypatch.setitem(sys.modules, "pocket_tts", None)
+    if _backend_cls()._platform_error() is None:
+        assert _backend_cls().is_available() == (True, "ready (CPU-only)")

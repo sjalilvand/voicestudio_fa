@@ -369,6 +369,10 @@ function errorLabel(t, info) {
       return t('capture.paste_error');
     case 'mic':
       return t('capture.mic_denied');
+    case 'asr_missing':
+      // Not "Transcription failed: …" — nothing was transcribed or failed; a
+      // model is absent, and the fix is to install one.
+      return t('asr_missing.message');
     default:
       return t('capture.transcription_failed', { message: info?.message || '' });
   }
@@ -421,6 +425,7 @@ export default function CaptureWidget({ onDismiss }) {
   // re-subscribing on every pref change.
   const modeRef = useRef(dictationMode);
   const enabledRef = useRef(dictationEnabled);
+  /** @type {React.MutableRefObject<null | { pending: boolean, ok: boolean, promise: Promise<void> | null }>} */
   const prefsHydrationRef = useRef(null);
   useEffect(() => {
     modeRef.current = dictationMode;
@@ -428,16 +433,42 @@ export default function CaptureWidget({ onDismiss }) {
   useEffect(() => {
     enabledRef.current = dictationEnabled;
   }, [dictationEnabled]);
-  const ensureDictationPrefsHydrated = useCallback(() => {
-    if (!prefsHydrationRef.current) {
-      prefsHydrationRef.current = Promise.resolve()
+  // Load the persisted dictation prefs into THIS window's store.
+  //
+  // The widget is its own window with its own store, created at app start —
+  // usually before the backend is listening. It used to hydrate exactly once
+  // and memoize the promise whether or not the load worked, so a startup
+  // failure pinned the store's seed model (`sherpa-whisper-tiny`) for the life
+  // of the app. The main window, which loaded fine, checked the model the user
+  // actually picked and said "ready"; the widget then asked the server for the
+  // seed, which was not installed, and the pill reported "No speech-to-text
+  // model is installed" with Parakeet sitting on disk. Nothing in the main
+  // window could tell, because the loader marked itself loaded either way.
+  //
+  // So: only a load the backend actually answered is kept. A failed one is
+  // retried by the next caller. And a capture start passes `fresh`, which
+  // re-reads even after a success — the model can be changed from the main
+  // window (Transcriptions, Settings) and this store is not the one that
+  // changed. An in-flight load is always shared rather than duplicated.
+  const ensureDictationPrefsHydrated = useCallback(
+    ({ fresh = false } = {}) => {
+      const current = prefsHydrationRef.current;
+      if (current && (current.pending || (current.ok && !fresh))) return current.promise;
+      const entry = { pending: true, ok: false, promise: null };
+      prefsHydrationRef.current = entry;
+      entry.promise = Promise.resolve()
         .then(() => loadDictationPrefs())
+        .then((loaded) => {
+          // A loader that predates the boolean resolves undefined on success.
+          entry.ok = loaded !== false;
+        })
         .catch((err) => {
           // The store keeps its cross-platform seeds when the backend is not
           // ready. Readiness must still resolve so the native hotkey can work.
           console.warn('dictation prefs hydration failed:', err);
         })
         .then(() => {
+          entry.pending = false;
           // Zustand updates before loadDictationPrefs resolves, but React's
           // selector effects may render later. Synchronise the long-lived
           // native listener refs now so its first event cannot use seed prefs.
@@ -449,9 +480,10 @@ export default function CaptureWidget({ onDismiss }) {
             modeRef.current = prefs.dictationMode;
           }
         });
-    }
-    return prefsHydrationRef.current;
-  }, [loadDictationPrefs]);
+      return entry.promise;
+    },
+    [loadDictationPrefs],
+  );
   // `state` follows the same rule, and for a sharper reason than the prefs do.
   // The tray listener used to depend on [state], so every single state change
   // tore the Tauri listener down and re-attached it through an `await import()`
@@ -787,7 +819,9 @@ export default function CaptureWidget({ onDismiss }) {
             await completeDelivery(event, 'Dictation output session is missing');
             return;
           }
-          await ensureDictationPrefsHydrated();
+          // Fresh: the model may have been changed from the main window
+          // since this store last loaded (see ensureDictationPrefsHydrated).
+          await ensureDictationPrefsHydrated({ fresh: true });
           if (!enabledRef.current) {
             // The hotkey is inert, but Rust has already shown the window.
             // Put it back rather than leaving an empty capsule on screen.
@@ -1708,8 +1742,14 @@ export default function CaptureWidget({ onDismiss }) {
                 stopCaptureGraph();
                 setTrayRecording(false);
                 setModelStatus(null);
-                toastAsrModelMissing(asrMissingPayload(msg));
-                setErrorInfo({ kind: 'transcription', message: t('asr_missing.message') });
+                const missing = asrMissingPayload(msg);
+                // In the desktop app this window has no <Toaster>, so a toast
+                // here rendered nowhere; the main window shows the install
+                // action instead (dictationNotice, kind 'asr_missing'). The
+                // browser build mounts this widget inside the main window,
+                // where the local toast IS the only one.
+                if (!inTauri()) toastAsrModelMissing(missing);
+                setErrorInfo({ kind: 'asr_missing', message: t('asr_missing.message'), missing });
                 setState('error');
                 void finishAttemptOutputSession();
               } else if (sherpaModeRef.current || aecModeRef.current || pcmModeRef.current) {
@@ -2087,8 +2127,8 @@ export default function CaptureWidget({ onDismiss }) {
         const missing = asrMissingPayload(err);
         if (missing) {
           // Typed 409: no ASR model installed → download CTA, not a dead end.
-          toastAsrModelMissing(missing);
-          setErrorInfo({ kind: 'transcription', message: t('asr_missing.message') });
+          if (!inTauri()) toastAsrModelMissing(missing);
+          setErrorInfo({ kind: 'asr_missing', message: t('asr_missing.message'), missing });
           setState('error');
           setTranscript('');
           await finishOutputSession(sessionId);
@@ -2220,6 +2260,9 @@ export default function CaptureWidget({ onDismiss }) {
       // user to the permissions pane sends them somewhere nothing is wrong —
       // the same condition the pill's own mic button carried.
       deniedByOs: !!errorInfo?.deniedByOs,
+      // The install recommendation, so the main window can offer the one-click
+      // download the pill has no room for.
+      missing: errorInfo?.missing,
     });
   }, [state, errorInfo, t]);
 

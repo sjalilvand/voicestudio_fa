@@ -2,6 +2,7 @@ import React from 'react';
 import { RefreshCw, CheckCircle, Download } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Button } from '../../../ui';
+import { failedInstalls, installFailureMessage } from './installResults';
 
 /**
  * "For your system" banner — the device's curated model preset (GET
@@ -71,7 +72,7 @@ export default function RecoBanner({
                     requiredMissing.map((m) => installMutation.mutateAsync(m.repo_id)),
                   );
                   setInstallingReco(false);
-                  const failed = results.filter((r) => r.status === 'rejected');
+                  const failed = failedInstalls(results, requiredMissing);
                   if (results.length - failed.length > 0)
                     toast.success(
                       t('models.started_downloading_required', {
@@ -81,7 +82,7 @@ export default function RecoBanner({
                   if (failed.length > 0)
                     toast.error(
                       t('models.install_failed', {
-                        message: failed.map((r) => r.reason?.message || r.reason).join(' · '),
+                        message: installFailureMessage(failed),
                       }),
                     );
                 }}

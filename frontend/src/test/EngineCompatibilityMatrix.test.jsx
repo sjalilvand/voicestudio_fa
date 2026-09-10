@@ -1920,3 +1920,43 @@ describe('EngineCompatibilityMatrix', () => {
     }
   });
 });
+
+describe('EngineCompatibilityMatrix one-click install', () => {
+  function renderWithRow(reason) {
+    const res = makeEnginesResponse();
+    res.tts.backends.push({
+      id: 'pockettts',
+      display_name: 'PocketTTS (test)',
+      available: false,
+      reason,
+      one_click_install: true,
+      install_hint: '',
+      last_error: null,
+      isolation_mode: 'subprocess',
+      gpu_compat: ['cpu'],
+    });
+    render(
+      <EngineCompatibilityMatrix
+        family="tts"
+        apiListEngines={vi.fn().mockResolvedValue(res)}
+        apiGetEngineHealth={vi.fn()}
+        apiInstallStatus={vi.fn().mockResolvedValue({ state: 'idle' })}
+      />,
+    );
+    return waitFor(() => screen.getByText('PocketTTS (test)'));
+  }
+
+  it('offers Install for an engine that is not installed yet', async () => {
+    await renderWithRow(
+      "This engine's package isn't installed yet. Install it from Model Catalogue → Engines.",
+    );
+    expect(screen.getByTestId('install-pockettts')).toBeInTheDocument();
+  });
+
+  it('offers only the license review once the engine is installed', async () => {
+    await renderWithRow(
+      'License not accepted yet. Review and accept it in Model Catalogue → Engines to enable this engine.',
+    );
+    expect(screen.queryByTestId('install-pockettts')).not.toBeInTheDocument();
+  });
+});
