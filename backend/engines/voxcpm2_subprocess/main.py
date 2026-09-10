@@ -142,6 +142,20 @@ def _sample_rate(model) -> int:
     return VOXCPM2_SAMPLE_RATE
 
 
+def _at_engine_rate(wav, sample_rate: int):
+    """The waveform at VOXCPM2_SAMPLE_RATE. The parent reads the PCM at that
+    fixed rate (it trims the tail and labels the audio with it), so a model
+    reporting another rate is resampled here rather than mislabelled."""
+    if sample_rate == VOXCPM2_SAMPLE_RATE:
+        return wav
+    import torch  # noqa: PLC0415
+    import torchaudio  # noqa: PLC0415
+
+    tensor = torch.as_tensor(wav.detach().cpu() if hasattr(wav, "detach") else wav,
+                             dtype=torch.float32).reshape(-1)
+    return torchaudio.functional.resample(tensor, sample_rate, VOXCPM2_SAMPLE_RATE)
+
+
 def _to_pcm_b64(wav) -> tuple[str, int]:
     """A float waveform in [-1, 1] (numpy or torch) as base64 int16 PCM."""
     import numpy as np  # noqa: PLC0415
@@ -189,11 +203,11 @@ def _handle_synthesize(msg: dict, stdout) -> None:
             prompt_wav_path=ref_audio if ref_text else None,
             prompt_text=ref_text,
         )
-    pcm_b64, n_samples = _to_pcm_b64(wav)
+    pcm_b64, n_samples = _to_pcm_b64(_at_engine_rate(wav, _sample_rate(model)))
     _send(stdout, {
         "op": "audio",
         "audio_pcm_b64": pcm_b64,
-        "sample_rate": _sample_rate(model),
+        "sample_rate": VOXCPM2_SAMPLE_RATE,
         "n_samples": n_samples,
     })
 

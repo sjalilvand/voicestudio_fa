@@ -517,7 +517,14 @@ def engine_venv_python(env_var: str) -> Optional[Path]:
     if not env_dir:
         return None
     py = _venv_python(Path(env_dir) / ".venv")
-    return py if py.is_file() else None
+    # The interpreter alone proves nothing: a reinstall that failed partway
+    # leaves it behind. The completion marker is written only after the
+    # engine's import probe passed in this venv, and removed when a new
+    # dependency step starts, so it is the probe's verdict without running a
+    # multi-second import on every engine-list refresh.
+    if not py.is_file() or not (Path(env_dir) / _INSTALL_COMPLETE_MARKER).is_file():
+        return None
+    return py
 
 
 def _legacy_managed_checkouts(spec: SidecarSpec) -> tuple[Path, ...]:
