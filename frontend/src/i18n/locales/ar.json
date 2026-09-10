@@ -354,6 +354,8 @@
     "hf_source_app_label": "VoiceStudio (مشفّر، موصى به)",
     "hf_source_cli_label": "HuggingFace CLI",
     "hf_source_env_label": "متغير البيئة",
+    "theme_auto": "تلقائي حسب النظام",
+    "theme_light": "فاتح",
     "reduce_motion": "تقليل الحركة",
     "reduce_motion_desc": "يوقف الرسوم المتحركة في الخلفية والانتقالات. إعداد النظام يظل ساريًا بذاته؛ وهذا يضاف إليه."
   },

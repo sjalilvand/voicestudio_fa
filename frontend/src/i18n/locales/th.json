@@ -354,6 +354,8 @@
     "hf_source_app_label": "VoiceStudio (เข้ารหัส แนะนำ)",
     "hf_source_cli_label": "HuggingFace CLI",
     "hf_source_env_label": "ตัวแปรสภาพแวดล้อม",
+    "theme_auto": "อัตโนมัติตามระบบ",
+    "theme_light": "สว่าง",
     "reduce_motion": "ลดการเคลื่อนไหว",
     "reduce_motion_desc": "หยุดแอนิเมชันพื้นหลังและทรานซิชัน การตั้งค่าระบบยังมีผลด้วยตัวเอง ส่วนนี้เพิ่มเข้าไป"
   },

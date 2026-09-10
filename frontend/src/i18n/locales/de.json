@@ -354,6 +354,8 @@
     "hf_source_app_label": "VoiceStudio (verschlüsselt, empfohlen)",
     "hf_source_cli_label": "HuggingFace CLI",
     "hf_source_env_label": "Umgebungsvariable",
+    "theme_auto": "System-Standard",
+    "theme_light": "Hell",
     "reduce_motion": "Bewegung reduzieren",
     "reduce_motion_desc": "Stoppt Hintergrundanimationen und Übergänge. Die Systemeinstellung gilt weiterhin für sich; dies kommt hinzu."
   },

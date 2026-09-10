@@ -354,6 +354,8 @@
     "hf_source_app_label": "VoiceStudio (krypterad, rekommenderas)",
     "hf_source_cli_label": "HuggingFace CLI",
     "hf_source_env_label": "Miljövariabel",
+    "theme_auto": "Systemval",
+    "theme_light": "Ljust",
     "reduce_motion": "Minska rörelse",
     "reduce_motion_desc": "Stoppar bakgrundsanimationer och övergångar. Systeminställningen gäller ändå; det här läggs till."
   },

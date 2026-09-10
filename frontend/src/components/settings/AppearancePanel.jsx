@@ -13,12 +13,19 @@ import { useAppStore, FONT_OPTIONS, FONT_STACKS } from '../../store';
 import { SettingsSection, SettingRow, InfoHint, SettingsToggle } from './primitives';
 
 const THEMES = [
+  {
+    id: 'auto',
+    labelKey: 'settings.theme_auto',
+    defaultLabel: 'System Auto',
+    dot: 'linear-gradient(135deg, #fdf6e3 50%, #1d2021 50%)',
+  },
   { id: 'gruvbox', label: 'Gruvbox', dot: '#d3869b' },
   { id: 'midnight', label: 'Midnight', dot: '#8b5cf6' },
   { id: 'nord', label: 'Nord', dot: '#88c0d0' },
   { id: 'solarized', label: 'Solarized', dot: '#268bd2' },
   { id: 'rose-pine', label: 'Rosé Pine', dot: '#ebbcba' },
   { id: 'catppuccin', label: 'Catppuccin', dot: '#cba6f7' },
+  { id: 'light', labelKey: 'settings.theme_light', defaultLabel: 'Light', dot: '#1d6b9f' },
 ];
 
 /**
@@ -204,8 +211,10 @@ export default function AppearancePanel() {
                 style={{ '--dot-color': th.dot }}
                 onClick={() => setTheme(th.id)}
                 onKeyDown={(e) => radioGroupKeyDown(e, themeIds, theme, setTheme)}
-                title={th.label}
-                aria-label={th.label}
+                title={th.labelKey ? t(th.labelKey, { defaultValue: th.defaultLabel }) : th.label}
+                aria-label={
+                  th.labelKey ? t(th.labelKey, { defaultValue: th.defaultLabel }) : th.label
+                }
                 aria-checked={theme === th.id}
                 role="radio"
                 tabIndex={radioTabIndex(themeIds, theme, th.id)}

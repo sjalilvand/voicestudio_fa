@@ -354,6 +354,8 @@
     "hf_source_app_label": "VoiceStudio (зашифровано, рекомендуется)",
     "hf_source_cli_label": "HuggingFace CLI",
     "hf_source_env_label": "Переменная окружения",
+    "theme_auto": "Системный",
+    "theme_light": "Светлая",
     "reduce_motion": "Уменьшить движение",
     "reduce_motion_desc": "Останавливает фоновые анимации и переходы. Системная настройка действует сама по себе; эта добавляется к ней."
   },

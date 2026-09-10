@@ -354,6 +354,8 @@
     "hf_source_app_label": "VoiceStudio（已加密，建議）",
     "hf_source_cli_label": "HuggingFace CLI",
     "hf_source_env_label": "環境變數",
+    "theme_auto": "系統自動",
+    "theme_light": "淺色",
     "reduce_motion": "減少動態效果",
     "reduce_motion_desc": "停止背景動畫與轉場效果。系統設定本身仍然生效，此項在其基礎上疊加。"
   },
