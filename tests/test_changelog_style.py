@@ -159,14 +159,32 @@ def test_repo_changelog_is_quiet_style():
 # ── linter self-tests: each rule must actually fire ──────────────────────────
 
 
+def _duplicate_versions(text):
+    """Versions with more than one section, read by the app's own parser
+    (core.changelog), which strips whitespace and a leading "v" and skips
+    headings such as [Unreleased], so `[v0.5.2]` and `[0.5.2]` are one version."""
+    from core.changelog import parse_changelog
+
+    versions = [r["version"] for r in parse_changelog(text, limit_versions=10**6)]
+    return sorted({v for v in versions if versions.count(v) > 1})
+
+
 def test_every_version_has_one_section():
     """release.yml publishes the FIRST `## [X.Y.Z]` section as the release
     body and stops at the next heading, so a second section for the same
     version silently drops out of the notes (v0.5.2 was prepared twice)."""
     with open(_REPO_CHANGELOG, encoding="utf-8") as fh:
-        versions = [m.group(1) for line in fh if (m := _HEADING.match(line.rstrip("\n")))]
-    dupes = sorted({v for v in versions if versions.count(v) > 1})
+        dupes = _duplicate_versions(fh.read())
     assert not dupes, f"CHANGELOG.md has more than one section for: {dupes}"
+
+
+def test_duplicate_versions_are_found_however_the_heading_is_written():
+    text = (
+        "# Changelog\n\n## [Unreleased]\n\n## [v0.5.2] — 2026-09-10\n\n- a (#1)\n\n"
+        "## [ 0.5.2 ] — 2026-09-02\n\n- b (#2)\n\n## [0.5.1] — 2026-08-28\n\n- c (#3)\n"
+    )
+    assert _duplicate_versions(text) == ["0.5.2"]
+
 
 _GOOD = """# Changelog
 
