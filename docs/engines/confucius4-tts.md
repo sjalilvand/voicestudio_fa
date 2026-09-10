@@ -27,7 +27,7 @@ so its dependency stack never touches the default VoiceStudio interpreter.
 
 ## One-click install
 
-**Model Catalogue → Engines → Confucius4-TTS → Install** does the steps below
+**Model Catalogue → Confucius4-TTS → Install** does the steps below
 for you, on Windows, Linux and macOS. It installs into its own folder under VoiceStudio's data directory, with its own Python environment. Nothing it installs touches VoiceStudio itself or any other engine, so you can switch to it and back without breaking what already worked. **Uninstall** in the same row removes only that folder. On an NVIDIA machine it installs
 the CUDA build of PyTorch; elsewhere it installs the CPU build. The ~5 GB of
 weights still download on first synthesis.
@@ -68,7 +68,7 @@ Then point VoiceStudio at the clone and restart:
 - **macOS/Linux:** `export OMNIVOICE_CONFUCIUS4_TTS_DIR=/path/to/Confucius4-TTS`
 - **Windows (PowerShell):** `[Environment]::SetEnvironmentVariable("OMNIVOICE_CONFUCIUS4_TTS_DIR","C:\path\to\Confucius4-TTS","User")`
 
-Select **Confucius4-TTS** in Model Catalogue → Engines. The first synthesize triggers
+Select **Confucius4-TTS** in Model Catalogue (TTS tab → **Use**). The first synthesis triggers
 the weight downloads above, then generates.
 
 ### Optional overrides

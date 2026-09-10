@@ -1,160 +1,156 @@
-// Model Catalogue workspace — pane switching, deep-link hand-off, persistence.
+// Model Catalogue workspace — one family axis, deep-link hand-off, persistence.
 //
-// The two panes are mounted stand-ins for the real EnginesTab / ModelStoreTab
-// (both of which have their own suites and both of which hit the network); this
-// suite is about the workspace shell around them.
+// The summary, engine list and weights list are mounted stand-ins for the real
+// components (each has its own suite and hits the network); this suite is
+// about the page around them: one family drives both lists, LLM has no
+// weights, Change on the summary switches the family, and the old two-pane
+// switch is gone.
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 
 vi.mock('../components/settings/EnginesTab', () => ({
-  default: ({ initialFamily, catalogueLayout }) => (
+  default: ({ initialFamily, onFamilyChange, catalogueLayout }) => (
     <div data-testid="stub-engines" data-catalogue-layout={catalogueLayout || undefined}>
       {initialFamily}
+      <button type="button" onClick={() => onFamilyChange('llm')}>
+        to-llm
+      </button>
     </div>
   ),
 }));
 vi.mock('../components/settings/ModelStoreTab', () => ({
-  default: ({ modelBadge, catalogueLayout }) => (
-    <div data-testid="stub-models" data-catalogue-layout={catalogueLayout || undefined}>
-      {modelBadge}
+  default: ({ family }) => <div data-testid="stub-weights">{family}</div>,
+}));
+vi.mock('../components/catalogue/SetupSummary', () => ({
+  default: ({ onChange }) => (
+    <div data-testid="stub-summary">
+      <button type="button" onClick={() => onChange('asr')}>
+        change-asr
+      </button>
     </div>
   ),
 }));
 vi.mock('../api/hooks', () => ({
-  useSystemInfo: () => ({ data: { has_hf_token: false } }),
-  useModelStatus: () => ({ data: { status: 'ready' } }),
+  useModels: () => ({
+    data: {
+      total_installed_bytes: 3 * 1024 ** 3,
+      disk_free_gb: 41,
+      hf_cache_dir: '/Users/dev/.cache/huggingface',
+    },
+  }),
 }));
 
 import { useAppStore } from '../store';
 import ModelCatalogue from './ModelCatalogue';
 
-// Radix Tabs activate on POINTER DOWN, not click — a bare fireEvent.click
-// leaves the pane unchanged and reads as a broken switcher. Drive the tab the
-// way a pointer does.
-const clickTab = (name) => {
-  const tab = screen.getByRole('tab', { name });
-  fireEvent.pointerDown(tab, { button: 0, ctrlKey: false, pointerType: 'mouse' });
-  fireEvent.mouseDown(tab, { button: 0 });
-  fireEvent.click(tab);
-};
-
 describe('ModelCatalogue', () => {
   beforeEach(() => {
     localStorage.clear();
     act(() => {
-      useAppStore.setState({
-        mode: 'catalogue',
-        pendingCatalogueTab: null,
-        pendingCatalogueFamily: null,
-      });
+      useAppStore.setState({ mode: 'catalogue', pendingCatalogueFamily: null });
     });
   });
 
-  it('opens on the Engines pane and switches to Models', () => {
+  it('is one page: summary, then the TTS engines and TTS weights, no pane switch', () => {
     render(<ModelCatalogue />);
-    expect(screen.getByTestId('stub-engines')).toBeInTheDocument();
-    expect(screen.getByRole('tabpanel', { name: 'Engines' })).toBeInTheDocument();
+    expect(screen.getByTestId('stub-summary')).toBeInTheDocument();
+    expect(screen.getByTestId('stub-engines')).toHaveTextContent('tts');
     expect(screen.getByTestId('stub-engines')).toHaveAttribute('data-catalogue-layout', 'true');
-    expect(screen.queryByTestId('stub-models')).toBeNull();
-
-    clickTab('Models');
-    expect(screen.getByTestId('stub-models')).toBeInTheDocument();
-    expect(screen.getByRole('tabpanel', { name: 'Models' })).toBeInTheDocument();
-    expect(screen.getByTestId('stub-models')).toHaveAttribute('data-catalogue-layout', 'true');
-    expect(screen.queryByTestId('stub-engines')).toBeNull();
+    expect(screen.getByTestId('stub-weights')).toHaveTextContent('tts');
+    expect(screen.queryByRole('tab')).toBeNull();
+    // Reading order: summary above engines above weights.
+    const [summary, engines, weights] = ['stub-summary', 'stub-engines', 'stub-weights'].map((id) =>
+      screen.getByTestId(id),
+    );
+    expect(
+      summary.compareDocumentPosition(engines) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      engines.compareDocumentPosition(weights) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
-  it('uses the wide workspace shell for data-heavy catalogue panes', () => {
+  it('Change on the summary switches the family for engines and weights together', () => {
+    render(<ModelCatalogue />);
+    fireEvent.click(screen.getByText('change-asr'));
+    expect(screen.getByTestId('stub-engines')).toHaveTextContent('asr');
+    expect(screen.getByTestId('stub-weights')).toHaveTextContent('asr');
+  });
+
+  it('LLM engines bring their own weights, so the weights block hides — but stays mounted', () => {
+    render(<ModelCatalogue />);
+    fireEvent.click(screen.getByText('to-llm'));
+    expect(screen.getByTestId('stub-engines')).toHaveTextContent('llm');
+    // Hidden, not unmounted: the model store keeps its download-progress
+    // state across family switches instead of losing it mid-download.
+    expect(screen.getByTestId('catalogue-weights')).not.toBeVisible();
+    expect(screen.getByTestId('stub-weights')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('change-asr'));
+    expect(screen.getByTestId('catalogue-weights')).toBeVisible();
+  });
+
+  it('uses the wide workspace shell for data-heavy lists', () => {
     render(<ModelCatalogue />);
     expect(screen.getByTestId('model-catalogue').firstElementChild).toHaveClass('max-w-[1500px]');
   });
 
-  it('associates each tab with its labelled panel', () => {
+  it('remembers the family across visits', () => {
+    const { unmount } = render(<ModelCatalogue />);
+    fireEvent.click(screen.getByText('change-asr'));
+    unmount();
     render(<ModelCatalogue />);
-    const enginesTab = screen.getByRole('tab', { name: 'Engines' });
-    const enginesPanel = screen.getByRole('tabpanel', { name: 'Engines' });
-    expect(enginesTab).toHaveAttribute('aria-controls', enginesPanel.id);
-    expect(enginesPanel).toHaveAttribute('aria-labelledby', enginesTab.id);
-
-    const modelsTab = screen.getByRole('tab', { name: 'Models' });
-    clickTab('Models');
-    const modelsPanel = screen.getByRole('tabpanel', { name: 'Models' });
-    expect(modelsTab).toHaveAttribute('aria-controls', modelsPanel.id);
-    expect(modelsPanel).toHaveAttribute('aria-labelledby', modelsTab.id);
+    expect(screen.getByTestId('stub-engines')).toHaveTextContent('asr');
   });
 
-  it('remembers the pane across visits', () => {
-    const first = render(<ModelCatalogue />);
-    clickTab('Models');
-    first.unmount();
-
+  it('honours a pending family deep-link on first paint and clears it', () => {
+    act(() => useAppStore.setState({ pendingCatalogueFamily: 'llm' }));
     render(<ModelCatalogue />);
-    expect(screen.getByTestId('stub-models')).toBeInTheDocument();
+    expect(screen.getByTestId('stub-engines')).toHaveTextContent('llm');
+    expect(useAppStore.getState().pendingCatalogueFamily).toBeNull();
   });
 
-  it('honours a pending deep-link pane on first paint and clears it', () => {
+  it('switches family when a deep-link arrives while already mounted', () => {
+    render(<ModelCatalogue />);
+    expect(screen.getByTestId('stub-engines')).toHaveTextContent('tts');
     act(() => {
-      useAppStore.setState({ pendingCatalogueTab: 'models' });
+      useAppStore.getState().openCatalogue('asr');
     });
-    render(<ModelCatalogue />);
-    expect(screen.getByTestId('stub-models')).toBeInTheDocument();
-    expect(useAppStore.getState().pendingCatalogueTab).toBeNull();
-  });
-
-  it('switches pane when a deep-link arrives while already mounted', () => {
-    render(<ModelCatalogue />);
-    expect(screen.getByTestId('stub-engines')).toBeInTheDocument();
-
-    act(() => {
-      useAppStore.getState().openCatalogue('models');
-    });
-    expect(screen.getByTestId('stub-models')).toBeInTheDocument();
-    expect(useAppStore.getState().pendingCatalogueTab).toBeNull();
-  });
-
-  it('honours an engine-family deep link and clears it after hand-off', () => {
-    act(() => {
-      useAppStore.getState().openCatalogue({ pane: 'engines', family: 'asr' });
-    });
-    render(<ModelCatalogue />);
     expect(screen.getByTestId('stub-engines')).toHaveTextContent('asr');
     expect(useAppStore.getState().pendingCatalogueFamily).toBeNull();
   });
 
-  it('passes the loaded-model badge down to the model store pane', () => {
-    act(() => {
-      useAppStore.setState({ pendingCatalogueTab: 'models' });
-    });
+  it('shows one storage line and links it to Settings → Storage', () => {
     render(<ModelCatalogue />);
-    // 'ready' status → the ready badge renders inside the models pane.
-    expect(screen.getByTestId('stub-models').textContent).toBeTruthy();
+    const footer = screen.getByTestId('catalogue-storage');
+    expect(footer).toHaveTextContent('41 GB');
+    expect(footer).toHaveTextContent('~/.cache/huggingface');
+    fireEvent.click(screen.getByTestId('catalogue-storage-link'));
+    expect(useAppStore.getState().mode).toBe('settings');
+    expect(useAppStore.getState().pendingSettingsTab).toBe('storage');
   });
 });
 
 describe('openCatalogue', () => {
-  it('navigates to the catalogue workspace on the requested pane', () => {
-    act(() => {
-      useAppStore.setState({ mode: 'settings', pendingCatalogueTab: null });
-      useAppStore.getState().openCatalogue('models');
-    });
+  beforeEach(() => {
+    act(() => useAppStore.setState({ mode: 'studio', pendingCatalogueFamily: null }));
+  });
+
+  it('navigates to the catalogue on the requested family', () => {
+    act(() => useAppStore.getState().openCatalogue('llm'));
     expect(useAppStore.getState().mode).toBe('catalogue');
-    expect(useAppStore.getState().pendingCatalogueTab).toBe('models');
-  });
-
-  it('defaults to the engines pane', () => {
-    act(() => {
-      useAppStore.setState({ pendingCatalogueTab: null });
-      useAppStore.getState().openCatalogue();
-    });
-    expect(useAppStore.getState().pendingCatalogueTab).toBe('engines');
-  });
-
-  it('accepts an object deep link with a family', () => {
-    act(() => {
-      useAppStore.getState().openCatalogue({ pane: 'engines', family: 'llm' });
-    });
-    expect(useAppStore.getState().pendingCatalogueTab).toBe('engines');
     expect(useAppStore.getState().pendingCatalogueFamily).toBe('llm');
+  });
+
+  it('accepts the object form and ignores the retired pane key', () => {
+    act(() => useAppStore.getState().openCatalogue({ pane: 'models', family: 'asr' }));
+    expect(useAppStore.getState().mode).toBe('catalogue');
+    expect(useAppStore.getState().pendingCatalogueFamily).toBe('asr');
+  });
+
+  it('defaults to the last family when called bare', () => {
+    act(() => useAppStore.getState().openCatalogue());
+    expect(useAppStore.getState().mode).toBe('catalogue');
+    expect(useAppStore.getState().pendingCatalogueFamily).toBeNull();
   });
 });

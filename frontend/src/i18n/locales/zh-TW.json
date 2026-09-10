@@ -33,13 +33,16 @@
   },
   "catalogue": {
     "title": "模型庫",
-    "tab_engines": "引擎",
-    "tab_models": "模型",
-    "moved_title": "已移至模型庫",
-    "moved_engines_body": "選擇預設的語音合成、語音轉寫與大型語言模型引擎已移至「模型庫」工作區。",
-    "moved_models_body": "瀏覽、安裝與移除已下載模型已移至「模型庫」工作區。",
-    "open_engines": "開啟引擎",
-    "open_models": "開啟模型"
+    "summary_title": "目前設定",
+    "change": "變更",
+    "status_setup": "需要設定",
+    "status_cpu": "CPU 回退",
+    "status_off": "關閉",
+    "weights": "已下載的模型權重",
+    "storage_link": "儲存設定",
+    "reco_line": "{{device}} 的推薦模型已安裝 {{installed}}/{{total}} · 尚需 {{remaining}} GB",
+    "install_rest": "安裝其餘模型",
+    "device_remote": "遠端"
   },
   "settings": {
     "remote_backend_test": "測試連線",
@@ -779,7 +782,7 @@
     "configureProviders": "設定提供者",
     "loading": "正在載入引擎...",
     "refresh": "重新整理",
-    "matrixTitle": "引擎相容性矩陣",
+    "matrixTitle": "引擎",
     "loadFailed": "無法載入引擎：{{message}}",
     "couldNotLoad": "無法載入引擎：{{message}}",
     "retry": "重試",

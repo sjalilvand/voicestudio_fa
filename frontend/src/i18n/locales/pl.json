@@ -33,13 +33,16 @@
   },
   "catalogue": {
     "title": "Katalog modeli",
-    "tab_engines": "Silniki",
-    "tab_models": "Modele",
-    "moved_title": "Teraz w katalogu modeli",
-    "moved_engines_body": "Wybór domyślnego silnika mowy, transkrypcji i LLM znajduje się teraz w obszarze Katalog modeli.",
-    "moved_models_body": "Przeglądanie, instalowanie i usuwanie pobranych modeli znajduje się teraz w obszarze Katalog modeli.",
-    "open_engines": "Otwórz silniki",
-    "open_models": "Otwórz modele"
+    "summary_title": "Twoja konfiguracja",
+    "change": "Zmień",
+    "status_setup": "Wymaga konfiguracji",
+    "status_cpu": "Tryb awaryjny CPU",
+    "status_off": "Wyłączone",
+    "weights": "Pobrane wagi",
+    "storage_link": "Ustawienia pamięci",
+    "reco_line": "Zainstalowano {{installed}} z {{total}} zalecanych modeli dla {{device}} · pozostało {{remaining}} GB",
+    "install_rest": "Zainstaluj resztę",
+    "device_remote": "Zdalny"
   },
   "settings": {
     "remote_backend_test": "Testuj połączenie",
@@ -779,7 +782,7 @@
     "configureProviders": "Skonfiguruj dostawców",
     "loading": "Ładowanie silników…",
     "refresh": "Odśwież",
-    "matrixTitle": "Matryca kompatybilności silników",
+    "matrixTitle": "Silniki",
     "loadFailed": "Nie udało się załadować silników: {{message}}",
     "couldNotLoad": "Nie można załadować silników: {{message}}",
     "retry": "Spróbuj ponownie",

@@ -33,13 +33,16 @@
   },
   "catalogue": {
     "title": "मॉडल कैटलॉग",
-    "tab_engines": "इंजन",
-    "tab_models": "मॉडल",
-    "moved_title": "अब मॉडल कैटलॉग में",
-    "moved_engines_body": "वाक्, प्रतिलेखन और LLM का डिफ़ॉल्ट इंजन चुनना अब मॉडल कैटलॉग वर्कस्पेस में है।",
-    "moved_models_body": "डाउनलोड किए गए मॉडल देखना, इंस्टॉल करना और हटाना अब मॉडल कैटलॉग वर्कस्पेस में है।",
-    "open_engines": "इंजन खोलें",
-    "open_models": "मॉडल खोलें"
+    "summary_title": "आपका सेटअप",
+    "change": "बदलें",
+    "status_setup": "सेटअप आवश्यक",
+    "status_cpu": "CPU फ़ॉलबैक",
+    "status_off": "बंद",
+    "weights": "डाउनलोड किए गए वेट्स",
+    "storage_link": "स्टोरेज सेटिंग्स",
+    "reco_line": "{{device}} के लिए {{total}} में से {{installed}} अनुशंसित मॉडल इंस्टॉल · {{remaining}} GB शेष",
+    "install_rest": "बाकी इंस्टॉल करें",
+    "device_remote": "रिमोट"
   },
   "settings": {
     "remote_backend_test": "कनेक्शन जाँचें",
@@ -779,7 +782,7 @@
     "configureProviders": "प्रदाता कॉन्फ़िगर करें",
     "loading": "इंजन लोड हो रहे हैं...",
     "refresh": "ताज़ा करें",
-    "matrixTitle": "इंजन अनुकूलता मैट्रिक्स",
+    "matrixTitle": "इंजन",
     "loadFailed": "इंजन लोड करने में विफल: {{message}}",
     "couldNotLoad": "इंजन लोड नहीं हो सका: {{message}}",
     "retry": "पुनः प्रयास करें",

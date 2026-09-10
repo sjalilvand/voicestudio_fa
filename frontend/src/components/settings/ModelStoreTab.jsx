@@ -1,15 +1,13 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Cpu, RefreshCw, KeyRound } from 'lucide-react';
+import { RefreshCw, Search, Zap } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
-import { openExternal } from '../../api/external';
 import { setupDownloadStreamUrl } from '../../api/setup';
 import { listLoadedModels, unloadLoadedModel } from '../../api/system';
 import { useModels, useRecommendations, useInstallModel, useDeleteModel } from '../../api/hooks';
 import { Button } from '../../ui';
-import { SettingsSection, SettingsInput, SETTINGS_SECTION_SURFACE } from './primitives';
+import { Input } from '@/components/ui/input';
 import { askConfirm } from './native';
-import { fmtBytes } from './models/format';
 import { computeRowRuntime } from './models/runtime';
 import {
   downloadKey,
@@ -18,19 +16,24 @@ import {
   isAutoPurgeTerminal,
 } from './models/downloadReducer';
 import { makeModelColumns } from './models/columns';
-import { groupModels } from './models/sections';
+import { FAMILY_SECTIONS, groupModels, modelSectionKey, scopeReco } from './models/sections';
 import RecoBanner from './models/RecoBanner';
+import { failedInstalls, installFailureMessage } from './models/installResults';
 import ModelSection from './models/ModelSection';
-import VoicePreviewsPanel from './VoicePreviewsPanel';
 
 /**
- * Model store — every known HF model, grouped by capability (TTS / ASR /
- * Dictation / Diarisation), with install state and install / reinstall /
- * delete per row. The curated "for your system" preset leads (RecoBanner);
- * platform-incompatible rows collapse behind a per-section toggle. Per-model
- * download progress is pulled from the shared /setup/download-stream SSE.
+ * Model store — the downloadable weights for one engine family (or all of
+ * them when `family` is null), grouped by capability (TTS / ASR offline /
+ * Dictation streaming / Diarisation), with install state and install /
+ * reinstall / delete per row. The curated "for your system" preset leads
+ * (RecoBanner, scoped to the family); platform-incompatible rows collapse
+ * behind a per-section toggle. Per-model download progress is pulled from
+ * the shared /setup/download-stream SSE.
+ *
+ * Storage stats, the HF token and the voice-preview toggle used to sit on
+ * this list; they live in Settings → Storage / Credentials now.
  */
-export default function ModelStoreTab({ info, modelBadge, catalogueLayout = false }) {
+export default function ModelStoreTab({ info, family = null }) {
   const { t } = useTranslation();
   // Role labels — localized (diarization is an on-disk spelling alias for
   // diarisation; both map to the same label).
@@ -51,6 +54,7 @@ export default function ModelStoreTab({ info, modelBadge, catalogueLayout = fals
   const data = modelsQuery.data;
   const loading = modelsQuery.isLoading;
   const reco = recoQuery.data;
+  const familyReco = useMemo(() => scopeReco(reco, family), [reco, family]);
   const installMutation = useInstallModel();
   const deleteMutation = useDeleteModel();
 
@@ -82,36 +86,6 @@ export default function ModelStoreTab({ info, modelBadge, catalogueLayout = fals
     const iv = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(iv);
   }, [hasActive]);
-
-  // HF token inline — compact input in the toolbar
-  const [hfToken, setHfToken] = useState('');
-  const [hfSaved, setHfSaved] = useState(false);
-  const [hfSaving, setHfSaving] = useState(false);
-  const [hfExpanded, setHfExpanded] = useState(false);
-  const saveHfToken = async () => {
-    const value = hfToken.trim();
-    if (!value) return;
-    setHfSaving(true);
-    try {
-      // One canonical token path: persist to the encrypted app store — the SAME
-      // store Settings → Credentials writes AND clears (/api/settings/hf-token).
-      // This toolbar used to POST /system/set-env (env var + HF-CLI file), a
-      // *second* store the Credentials "Clear" button couldn't reach, so a
-      // toolbar-set token silently outlived a Clear (a support-ticket generator).
-      // Now both entry points share one store with one clear path.
-      const { apiPost } = await import('../../api/client');
-      await apiPost('/api/settings/hf-token', { token: value });
-      toast.success(t('models.hf_token_set_toast'));
-      setHfSaved(true);
-      setHfToken('');
-      setHfExpanded(false);
-    } catch (e) {
-      toast.error(t('settings.save_failed', { message: e.message }));
-    } finally {
-      setHfSaving(false);
-    }
-  };
-  const hfTokenSet = hfSaved || info?.has_hf_token;
 
   // Open the progress stream once when the tab mounts; close on unmount.
   useEffect(() => {
@@ -297,26 +271,34 @@ export default function ModelStoreTab({ info, modelBadge, catalogueLayout = fals
   );
 
   const onInstallRecommended = async () => {
-    if (!reco) return;
-    const missing = reco.models.filter((m) => !m.installed);
+    if (!familyReco) return;
+    const missing = familyReco.models.filter((m) => !m.installed);
     if (missing.length === 0) {
       toast.success(t('models.recommended_installed'));
       return;
     }
     setInstallingReco(true);
-    try {
-      // Parallel install — backend /models/install spawns each download on
-      // its own asyncio task so ordering doesn't matter.
-      await Promise.all(missing.map((m) => installMutation.mutateAsync(m.repo_id)));
-      toast.success(t('models.started_downloading', { count: missing.length }));
-    } catch (e) {
-      toast.error(t('models.install_failed', { message: e.message || e }));
-    } finally {
-      setInstallingReco(false);
-    }
+    // Parallel install — backend /models/install spawns each download on
+    // its own asyncio task so ordering doesn't matter. Every request settles
+    // before the buttons re-enable, so one early rejection can't re-arm them
+    // while sibling installs are still starting.
+    const results = await Promise.allSettled(
+      missing.map((m) => installMutation.mutateAsync(m.repo_id)),
+    );
+    setInstallingReco(false);
+    const failed = failedInstalls(results, missing);
+    if (results.length - failed.length > 0)
+      toast.success(t('models.started_downloading', { count: results.length - failed.length }));
+    if (failed.length > 0)
+      toast.error(t('models.install_failed', { message: installFailureMessage(failed) }));
   };
 
-  const allModels = React.useMemo(() => data?.models || [], [data]);
+  // The family's slice of the catalog (all of it when unscoped).
+  const allModels = React.useMemo(() => {
+    const models = data?.models || [];
+    const keep = family ? FAMILY_SECTIONS[family] || [] : null;
+    return keep ? models.filter((m) => keep.includes(modelSectionKey(m))) : models;
+  }, [data, family]);
   // Grouped catalog: TTS / ASR (offline transcription) / Dictation (streaming)
   // / Diarisation, with the search query applied per-section (pure helper —
   // matches the same fields the old global filter did).
@@ -367,202 +349,98 @@ export default function ModelStoreTab({ info, modelBadge, catalogueLayout = fals
   );
 
   if (loading && !data) {
-    if (catalogueLayout) {
-      return (
-        <div className="px-[2px] py-[24px] font-sans text-[var(--text-md)] text-[var(--chrome-fg-dim)]">
-          {t('common.loading')}
-        </div>
-      );
-    }
     return (
-      <SettingsSection icon={Cpu} title={t('settings.models')}>
-        <div className="settings-muted font-sans text-[var(--text-md)] text-[var(--chrome-fg-dim)]">
-          {t('common.loading')}
-        </div>
-      </SettingsSection>
+      <div className="px-[2px] py-[24px] font-sans text-sm text-muted-foreground">
+        {t('common.loading')}
+      </div>
     );
   }
   if (!data) return null;
 
   return (
-    <>
-      <section
-        className={
-          catalogueLayout
-            ? 'flex min-h-0 flex-col'
-            : `${SETTINGS_SECTION_SURFACE} flex min-h-[95%] flex-col`
-        }
-        data-slot="settings-section"
-        data-testid="model-list-panel"
-      >
-        <div
-          className={`flex flex-wrap items-center justify-between gap-[var(--space-3)] font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-xs)] text-[var(--chrome-fg-muted)] max-[580px]:flex-col max-[580px]:items-start ${
-            catalogueLayout
-              ? 'mb-[24px] border-b border-[color-mix(in_srgb,var(--chrome-fg)_8%,transparent)] px-[2px] pb-[18px]'
-              : 'px-[2px] pb-[6px] pt-[2px]'
-          }`}
-        >
-          <div className="inline-flex flex-wrap items-center gap-[var(--space-2)]">
-            <span>
-              <strong className="font-semibold text-[var(--chrome-fg)]">
-                {fmtBytes(data.total_installed_bytes)}
-              </strong>
-            </span>
-            {data.disk_free_gb != null && (
-              <>
-                <span className="text-[var(--chrome-fg-dim)]">·</span>
-                <span title={t('models.disk_free_title')}>
-                  {t('models.disk_free', { size: `${data.disk_free_gb} GB` })}
-                </span>
-              </>
-            )}
-            <span className="text-[var(--chrome-fg-dim)]">·</span>
-            <span title={data.hf_cache_dir}>
-              <code className="font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-xs)] text-[var(--chrome-fg)]">
-                {data.hf_cache_dir?.replace(/^\/Users\/[^/]+/, '~')}
-              </code>
-            </span>
-            {info && <span className="text-[var(--chrome-fg-dim)]">·</span>}
-            {info && <span>{modelBadge}</span>}
-            {info?.fast_download?.xet_enabled && (
-              <>
-                <span className="text-[var(--chrome-fg-dim)]">·</span>
-                <span
-                  className="text-[var(--chrome-accent)]"
-                  title={
-                    t('models.fast_download_title', {
-                      version: info.fast_download.xet_version || 'Xet',
-                    }) ||
-                    `Fast downloads via Xet ${info.fast_download.xet_version || ''} — parallel chunked transfer`
-                  }
-                >
-                  ⚡ {t('models.fast_download_badge') || 'fast download'}
-                </span>
-              </>
-            )}
-          </div>
-          <div className="inline-flex items-center gap-[var(--space-2)]">
-            {/* Compact HF token inline */}
-            {!hfTokenSet && !hfExpanded && (
-              <button
-                className="inline-flex cursor-pointer items-center gap-1 rounded-[var(--chrome-radius-pill)] [border:1px_solid_var(--chrome-border)] bg-transparent px-[var(--space-2)] py-[2px] text-[var(--chrome-fg-muted)] hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--chrome-fg)]"
-                onClick={() => setHfExpanded(true)}
-                title={t('models.hf_set_title')}
-              >
-                <KeyRound size={11} /> {t('models.hf_token_btn')}
-              </button>
-            )}
-            {!hfTokenSet && hfExpanded && (
-              <div className="inline-flex items-center gap-[var(--space-2)]">
-                <input
-                  type="password"
-                  className="min-w-0 rounded-[var(--chrome-radius-pill)] [border:1px_solid_var(--chrome-border)] bg-[var(--chrome-hover-bg)] px-[var(--space-2)] py-[2px] font-[family-name:var(--chrome-font-mono)] text-[length:var(--text-xs)] text-[var(--chrome-fg)] placeholder:text-[var(--chrome-fg-dim)] focus-visible:border-[var(--chrome-accent)] focus-visible:shadow-[var(--focus-ring)] focus-visible:outline-none"
-                  placeholder="hf_xxxxxxxxxxxx"
-                  value={hfToken}
-                  onChange={(e) => setHfToken(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') saveHfToken();
-                    if (e.key === 'Escape') setHfExpanded(false);
-                  }}
-                  autoFocus
-                />
-                <Button
-                  size="sm"
-                  variant="subtle"
-                  onClick={saveHfToken}
-                  disabled={hfSaving || !hfToken.trim()}
-                  loading={hfSaving}
-                >
-                  {t('common.save')}
-                </Button>
-                <a
-                  href="#"
-                  className="text-[var(--chrome-accent)] no-underline hover:underline"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    openExternal('https://huggingface.co/settings/tokens');
-                  }}
-                  title="Open huggingface.co/settings/tokens"
-                >
-                  {t('models.get_token')}→
-                </a>
-              </div>
-            )}
-            {hfTokenSet && (
-              <span className="inline-flex items-center gap-1 text-[var(--chrome-severity-ok)]">
-                <KeyRound size={10} /> ✓
-              </span>
-            )}
-            <Button
-              variant="subtle"
-              size="sm"
-              onClick={reload}
-              loading={loading}
-              leading={<RefreshCw size={11} />}
-            >
-              {t('common.refresh')}
-            </Button>
-          </div>
-        </div>
-
-        <RecoBanner
-          reco={reco}
-          t={t}
-          installMutation={installMutation}
-          installingReco={installingReco}
-          setInstallingReco={setInstallingReco}
-          onInstallRecommended={onInstallRecommended}
-          onInstall={onInstall}
-          getRowRuntime={getRowRuntime}
-          diskFreeGb={data.disk_free_gb}
-        />
-
-        <div
-          className={`${catalogueLayout ? 'my-[24px]' : 'my-[var(--space-2)]'} flex items-center gap-[var(--space-2)] max-[580px]:flex-col max-[580px]:items-stretch`}
-        >
-          <SettingsInput
+    <section className="flex min-h-0 flex-col font-sans" data-testid="model-list-panel">
+      <div className="mb-[18px] flex flex-wrap items-center gap-[10px] px-[2px]">
+        <div className="relative w-full min-w-[160px] max-w-[420px]">
+          <Search
+            size={13}
+            className="pointer-events-none absolute left-[10px] top-1/2 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <Input
             type="search"
-            className="max-w-none flex-1 text-[length:var(--text-xs)] min-w-[120px]"
+            className="h-8 pl-[30px] text-sm"
             placeholder={t('models.search_placeholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             aria-label={t('models.search_label')}
           />
         </div>
-
-        <div className="min-h-0 flex-1" data-testid="model-list-area">
-          {sections.map((group) => (
-            <ModelSection
-              key={group.key}
-              sectionKey={group.key}
-              title={MODEL_SECTION_LABEL[group.key] || group.key}
-              group={group}
-              columns={columns}
-              getRowRuntime={getRowRuntime}
-              t={t}
-            />
-          ))}
-        </div>
-        {/* Global empty state — every section filtered out. Same actionable
-          "Clear filters" affordance the table-level empty state used to carry. */}
-        {sections.length === 0 && allModels.length > 0 && (
-          <div className="models-table__empty">
-            <span>{t('models.no_matches')}</span>
-            <Button
-              size="sm"
-              variant="subtle"
-              className="ml-[8px]"
-              onClick={() => setQuery('')}
-              data-testid="models-clear-filters"
-            >
-              {t('models.clear_filters')}
-            </Button>
-          </div>
+        {info?.fast_download?.xet_enabled && (
+          <span
+            className="inline-flex items-center gap-1 font-mono text-[11px] text-accent"
+            title={
+              t('models.fast_download_title', {
+                version: info.fast_download.xet_version || 'Xet',
+              }) ||
+              `Fast downloads via Xet ${info.fast_download.xet_version || ''} — parallel chunked transfer`
+            }
+          >
+            <Zap size={11} aria-hidden="true" />{' '}
+            {t('models.fast_download_badge') || 'fast download'}
+          </span>
         )}
-      </section>
-      {/* Downloaded previews belong next to downloaded models: same question
-        ("what has this install fetched?"), same tab. */}
-      <VoicePreviewsPanel />
-    </>
+        <span className="flex-1" />
+        <Button
+          variant="subtle"
+          size="sm"
+          onClick={reload}
+          loading={loading}
+          leading={<RefreshCw size={11} />}
+        >
+          {t('common.refresh')}
+        </Button>
+      </div>
+
+      <RecoBanner
+        reco={familyReco}
+        t={t}
+        installMutation={installMutation}
+        installingReco={installingReco}
+        setInstallingReco={setInstallingReco}
+        onInstallRecommended={onInstallRecommended}
+        onInstall={onInstall}
+        getRowRuntime={getRowRuntime}
+        diskFreeGb={data.disk_free_gb}
+      />
+
+      <div className="min-h-0 flex-1" data-testid="model-list-area">
+        {sections.map((group) => (
+          <ModelSection
+            key={group.key}
+            sectionKey={group.key}
+            title={MODEL_SECTION_LABEL[group.key] || group.key}
+            group={group}
+            columns={columns}
+            getRowRuntime={getRowRuntime}
+            t={t}
+          />
+        ))}
+      </div>
+      {/* Global empty state — every section filtered out. Same actionable
+          "Clear filters" affordance the table-level empty state carries. */}
+      {sections.length === 0 && allModels.length > 0 && (
+        <div className="flex items-center gap-2 px-[2px] py-[18px] text-sm text-muted-foreground">
+          <span>{t('models.no_matches')}</span>
+          <Button
+            size="sm"
+            variant="subtle"
+            onClick={() => setQuery('')}
+            data-testid="models-clear-filters"
+          >
+            {t('models.clear_filters')}
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }

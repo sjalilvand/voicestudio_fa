@@ -33,13 +33,16 @@
   },
   "catalogue": {
     "title": "Catálogo de modelos",
-    "tab_engines": "Motores",
-    "tab_models": "Modelos",
-    "moved_title": "Ahora en el catálogo de modelos",
-    "moved_engines_body": "Elegir el motor predeterminado de voz, transcripción y LLM se movió al espacio Catálogo de modelos.",
-    "moved_models_body": "Explorar, instalar y eliminar descargas de modelos se movió al espacio Catálogo de modelos.",
-    "open_engines": "Abrir motores",
-    "open_models": "Abrir modelos"
+    "summary_title": "Tu configuración",
+    "change": "Cambiar",
+    "status_setup": "Requiere configuración",
+    "status_cpu": "Alternativa CPU",
+    "status_off": "Desactivado",
+    "weights": "Pesos descargados",
+    "storage_link": "Ajustes de almacenamiento",
+    "reco_line": "{{installed}} de {{total}} modelos recomendados para {{device}} instalados · faltan {{remaining}} GB",
+    "install_rest": "Instalar el resto",
+    "device_remote": "Remoto"
   },
   "settings": {
     "remote_backend_test": "Probar conexión",
@@ -779,7 +782,7 @@
     "configureProviders": "Configurar proveedores",
     "loading": "Cargando motores…",
     "refresh": "Actualizar",
-    "matrixTitle": "Matriz de compatibilidad de motores",
+    "matrixTitle": "Motores",
     "loadFailed": "No se pudieron cargar los motores: {{message}}",
     "couldNotLoad": "No se pudieron cargar los motores: {{message}}",
     "retry": "Reintentar",

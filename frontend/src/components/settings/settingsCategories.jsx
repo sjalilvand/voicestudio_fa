@@ -91,49 +91,6 @@ export const GROUPS = [
     defaultLabel: 'Voice & Engines',
     items: [
       {
-        id: 'engines',
-        labelKey: 'settings.engines',
-        defaultLabel: 'Engines',
-        icon: Plug,
-        // Engine selection lives in the Model Catalogue workspace now; the
-        // category stays so the old name still finds it (it renders a pointer).
-        keywords: [
-          'engine',
-          'catalogue',
-          'catalog',
-          'model catalogue',
-          'default engine',
-          'tts engine',
-          'indextts',
-          'cosyvoice',
-          'compatibility',
-          'gpu',
-          'asr',
-          'transcription',
-          'whisper',
-          'openai-compatible',
-          'remote asr',
-        ],
-      },
-      {
-        id: 'models',
-        labelKey: 'settings.models',
-        defaultLabel: 'Models',
-        icon: Cpu,
-        restart: true,
-        keywords: [
-          'model',
-          'download',
-          'cache directory',
-          'models directory',
-          'hugging face mirror',
-          'hf_endpoint',
-          'catalogue',
-          'catalog',
-          'model store',
-        ],
-      },
-      {
         id: 'dictation',
         labelKey: 'settings.dictation',
         defaultLabel: 'Dictation',
@@ -231,6 +188,8 @@ export const GROUPS = [
       },
       {
         id: 'storage',
+        // Hosts a restart-bound panel (models directory / HF mirror).
+        restart: true,
         labelKey: 'settings.storage',
         defaultLabel: 'Storage',
         icon: HardDrive,
@@ -251,6 +210,13 @@ export const GROUPS = [
           'free space',
           'disk space',
           'model cache size',
+          'models directory',
+          'cache directory',
+          'model store',
+          'catalogue',
+          'catalog',
+          'download',
+          'voice previews',
           'engine venvs',
           'temp files',
           'clear logs',
@@ -279,12 +245,21 @@ export const GROUPS = [
       },
       {
         id: 'network',
+        // Hosts a restart-bound panel (models directory / HF mirror).
+        restart: true,
         labelKey: 'settings.network',
         defaultLabel: 'Network',
         icon: Wifi,
-        // Only the proxy lives here now (applies immediately) — the
-        // restart-bound FFmpeg override moved to Audio tools below.
-        keywords: ['network', 'proxy', 'http proxy', 'socks'],
+        // Proxy (applies immediately) and the HF download mirror (restart-bound).
+        keywords: [
+          'network',
+          'proxy',
+          'http proxy',
+          'socks',
+          'hugging face mirror',
+          'hf_endpoint',
+          'mirror',
+        ],
         keywordKeys: ['settings.proxy'],
       },
       {
@@ -455,6 +430,8 @@ export const DEFAULT_CATEGORY = 'appearance';
 export const LEGACY_TAB_MAP = {
   general: 'appearance',
   capture: 'dictation',
+  // The Models category (models directory, HF mirror pointer) folded into Storage.
+  models: 'storage',
 };
 
 /** Resolve any incoming tab/category id to a valid new category id. */

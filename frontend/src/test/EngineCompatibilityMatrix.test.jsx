@@ -1153,7 +1153,7 @@ describe('EngineCompatibilityMatrix', () => {
       />,
     );
     await waitFor(() => screen.getByText('OmniVoice (test)'));
-    expect(screen.getByText('Engine Compatibility Matrix')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Engines' })).toBeInTheDocument();
     expect(document.querySelectorAll('.engine-matrix__tab-family').length).toBe(3);
     const labels = document.querySelectorAll('.engine-matrix__tab-label');
     expect(labels).toHaveLength(3);

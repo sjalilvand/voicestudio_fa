@@ -25,7 +25,7 @@ cd MOSS-TTS-Nano
 uv pip install -e .
 ```
 
-Then select the engine via **Model Catalogue → Engines** or
+Then select the engine via **Model Catalogue** (TTS tab → **Use**) or
 `OMNIVOICE_TTS_BACKEND=moss-tts-nano`.
 
 ## Model selection
@@ -70,7 +70,7 @@ The one-click install is not affected: it pins a reviewed commit
 
 ## One-click install
 
-Click **Install** in **Model Catalogue → Engines → MOSS-TTS-Nano**.
+Click **Install** in **Model Catalogue → MOSS-TTS-Nano**.
 VoiceStudio clones a reviewed upstream commit into its own folder under the
 data directory, gives it its own Python environment (the CUDA build of
 PyTorch on an NVIDIA GPU), and runs it there in a separate process.

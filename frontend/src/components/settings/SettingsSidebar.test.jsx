@@ -77,7 +77,7 @@ describe('SettingsSidebar — keyboard navigation', () => {
   it('is a single tab stop: only the active category is tabbable', () => {
     render(<SettingsSidebar active="appearance" onSelect={() => {}} />);
     expect(screen.getByTestId('settings-nav-appearance')).toHaveAttribute('tabindex', '0');
-    expect(screen.getByTestId('settings-nav-engines')).toHaveAttribute('tabindex', '-1');
+    expect(screen.getByTestId('settings-nav-dictation')).toHaveAttribute('tabindex', '-1');
   });
 
   it('ArrowDown/ArrowUp move selection, crossing group boundaries', () => {
@@ -86,12 +86,12 @@ describe('SettingsSidebar — keyboard navigation', () => {
     // the first item of Voice & Engines — arrowing must not stop at the seam.
     render(<SettingsSidebar active="appearance" onSelect={onSelect} />);
     fireEvent.keyDown(nav(), { key: 'ArrowDown' });
-    expect(onSelect).toHaveBeenCalledWith('engines');
+    expect(onSelect).toHaveBeenCalledWith('dictation');
 
     onSelect.mockClear();
-    render(<SettingsSidebar active="models" onSelect={onSelect} />);
+    render(<SettingsSidebar active="pronunciation" onSelect={onSelect} />);
     fireEvent.keyDown(screen.getAllByTestId('settings-nav-scroll')[1], { key: 'ArrowUp' });
-    expect(onSelect).toHaveBeenCalledWith('engines');
+    expect(onSelect).toHaveBeenCalledWith('dictation');
   });
 
   it('Home/End jump to the first and last visible category', () => {

@@ -8,7 +8,7 @@ prefers it wherever CTranslate2 can use the GPU.
 
 ## Selecting it
 
-- **Model Catalogue → Engines**, ASR tab → **Use** on the WhisperX row, or
+- **Model Catalogue**, ASR tab → **Use** on the WhisperX row, or
 - pin it with `OMNIVOICE_ASR_BACKEND=whisperx` (the env var always wins over
   the Settings pick; with neither set, auto-detect chooses per-hardware).
 

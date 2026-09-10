@@ -33,13 +33,16 @@
   },
   "catalogue": {
     "title": "Katalog model",
-    "tab_engines": "Engine",
-    "tab_models": "Model",
-    "moved_title": "Kini di Katalog model",
-    "moved_engines_body": "Pemilihan engine default untuk suara, transkripsi, dan LLM kini ada di ruang kerja Katalog model.",
-    "moved_models_body": "Menjelajahi, memasang, dan menghapus model yang diunduh kini ada di ruang kerja Katalog model.",
-    "open_engines": "Buka engine",
-    "open_models": "Buka model"
+    "summary_title": "Pengaturan Anda",
+    "change": "Ubah",
+    "status_setup": "Perlu penyiapan",
+    "status_cpu": "Fallback CPU",
+    "status_off": "Nonaktif",
+    "weights": "Bobot yang diunduh",
+    "storage_link": "Pengaturan penyimpanan",
+    "reco_line": "{{installed}} dari {{total}} model yang direkomendasikan untuk {{device}} terpasang · sisa {{remaining}} GB",
+    "install_rest": "Pasang sisanya",
+    "device_remote": "Jarak jauh"
   },
   "settings": {
     "remote_backend_test": "Uji koneksi",
@@ -779,7 +782,7 @@
     "configureProviders": "Konfigurasikan penyedia",
     "loading": "Memuat mesin…",
     "refresh": "Segarkan",
-    "matrixTitle": "Matriks Kompatibilitas Mesin",
+    "matrixTitle": "Mesin",
     "loadFailed": "Gagal memuat mesin: {{message}}",
     "couldNotLoad": "Tidak dapat memuat mesin: {{message}}",
     "retry": "Coba lagi",

@@ -218,7 +218,7 @@ export default function EngineQuickSwitch({
               type="button"
               onClick={() => {
                 setOpen(false);
-                useAppStore.getState().openCatalogue({ pane: 'engines', family });
+                useAppStore.getState().openCatalogue({ family });
               }}
               className="mt-[3px] flex items-center gap-[3px] border-0 bg-transparent px-[7px] py-[5px] text-left text-[11px] text-[color:var(--chrome-fg-muted)] hover:text-[color:var(--chrome-fg)]"
             >

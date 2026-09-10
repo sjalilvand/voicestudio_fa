@@ -29,7 +29,7 @@ instead — same model family, no NeMo dependency:
 Only meaningful if you've set up `nemo_toolkit[asr]` in a **separate,
 dedicated Python environment** that runs the backend:
 
-- **Model Catalogue → Engines**, ASR tab → **Use** on the Parakeet TDT row, or
+- **Model Catalogue**, ASR tab → **Use** on the Parakeet TDT row, or
 - `OMNIVOICE_ASR_BACKEND=nemo-parakeet`.
 
 Auto-detect never picks it; it's an explicit opt-in.

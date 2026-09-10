@@ -215,7 +215,7 @@ ROCm container `omnivoice-studio-rocm` (CPU: `omnivoice-studio`, NVIDIA:
 name means torch can see the GPU.) That check alone isn't proof the app is
 using it: **Settings → Performance & Device** shows the device VoiceStudio
 actually resolved.
-**Model Catalogue → Engines** should report both `omnivoice` and
+**Model Catalogue** should report both `omnivoice` and
 `omnivoice-subprocess` as accelerated on ROCm, rather than a CPU-fallback
 warning.
 If it reads `cpu` while the command above prints `True`, the backend log line

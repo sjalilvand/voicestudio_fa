@@ -33,13 +33,16 @@
   },
   "catalogue": {
     "title": "Danh mục mô hình",
-    "tab_engines": "Engine",
-    "tab_models": "Mô hình",
-    "moved_title": "Đã chuyển sang Danh mục mô hình",
-    "moved_engines_body": "Việc chọn engine mặc định cho giọng nói, chuyển lời nói thành văn bản và LLM đã chuyển sang không gian làm việc Danh mục mô hình.",
-    "moved_models_body": "Việc duyệt, cài đặt và xoá mô hình đã tải đã chuyển sang không gian làm việc Danh mục mô hình.",
-    "open_engines": "Mở engine",
-    "open_models": "Mở mô hình"
+    "summary_title": "Thiết lập của bạn",
+    "change": "Thay đổi",
+    "status_setup": "Cần thiết lập",
+    "status_cpu": "Dự phòng CPU",
+    "status_off": "Tắt",
+    "weights": "Trọng số đã tải",
+    "storage_link": "Cài đặt lưu trữ",
+    "reco_line": "Đã cài {{installed}}/{{total}} mô hình đề xuất cho {{device}} · còn {{remaining}} GB",
+    "install_rest": "Cài phần còn lại",
+    "device_remote": "Từ xa"
   },
   "settings": {
     "remote_backend_test": "Kiểm tra kết nối",
@@ -779,7 +782,7 @@
     "configureProviders": "Cấu hình nhà cung cấp",
     "loading": "Đang tải động cơ…",
     "refresh": "Làm mới",
-    "matrixTitle": "Ma trận tương thích động cơ",
+    "matrixTitle": "Engine",
     "loadFailed": "Không tải được động cơ: {{message}}",
     "couldNotLoad": "Không thể tải động cơ: {{message}}",
     "retry": "Thử lại",

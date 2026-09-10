@@ -24,7 +24,7 @@ for this model.
    uv sync --extra pockettts
    ```
 
-   Or click **Install** in **Model Catalogue → Engines → PocketTTS**. That
+   Or click **Install** in **Model Catalogue → PocketTTS**. That
    installs the same pinned package into the engine's own Python environment
    under VoiceStudio's data directory, with the CPU build of PyTorch, because
    PocketTTS never uses a GPU. Nothing it installs touches VoiceStudio itself
@@ -37,11 +37,11 @@ for this model.
    is MIT and the weights are CC-BY-4.0, but the weights are **gated on
    HuggingFace** behind an access agreement with an acceptable-use clause.
    VoiceStudio surfaces this before first use: the engine stays unavailable
-   until you review and accept in **Model Catalogue → Engines → PocketTTS**.
+   until you review and accept in **Model Catalogue → PocketTTS**.
    You also need HuggingFace access to the gated repo (see
    [downloading-models.md](../downloading-models.md) for token setup).
 
-3. Select the engine via **Model Catalogue → Engines** or
+3. Select the engine via **Model Catalogue** (TTS tab → **Use**) or
    `OMNIVOICE_TTS_BACKEND=pockettts`.
 
 ## Platform notes
@@ -84,7 +84,7 @@ for this model.
 ## Troubleshooting
 
 - "pocket_tts package not installed": run the `uv sync` above.
-- "license not accepted": open **Model Catalogue → Engines → PocketTTS**
+- "license not accepted": open **Model Catalogue → PocketTTS**
   and review/accept.
 - Timeouts on a slow connection: raise
   `OMNIVOICE_POCKETTTS_RECV_TIMEOUT_S` for the first (download-heavy) run.

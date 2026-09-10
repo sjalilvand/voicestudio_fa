@@ -31,7 +31,7 @@ pip install "voxcpm>=2.0.3"
 
 That is a version **floor**, not a pin — an older install still works, but
 the engine logs an upgrade hint at load time. Then select the engine via
-**Model Catalogue → Engines** or `OMNIVOICE_TTS_BACKEND=voxcpm2`.
+**Model Catalogue** or `OMNIVOICE_TTS_BACKEND=voxcpm2`.
 
 ## Model selection
 
@@ -67,7 +67,7 @@ now retried once with a fresh client. See
 
 ## One-click install
 
-Click **Install** in **Model Catalogue → Engines → VoxCPM2**. VoiceStudio
+Click **Install** in **Model Catalogue → VoxCPM2**. VoiceStudio
 puts VoxCPM2 in its own Python environment under its data directory and runs
 it there, in a separate process. It installs the CUDA build of PyTorch on an
 NVIDIA GPU, the CPU build on other Windows and Linux machines, and the

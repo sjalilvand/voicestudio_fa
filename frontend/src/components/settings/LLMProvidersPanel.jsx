@@ -236,7 +236,7 @@ export default function LLMProvidersPanel() {
         <button
           type="button"
           className="cursor-pointer border-0 bg-transparent p-0 text-[length:var(--text-xs)] text-[color:var(--chrome-accent)] underline-offset-2 hover:underline"
-          onClick={() => useAppStore.getState().openCatalogue?.({ pane: 'engines', family: 'llm' })}
+          onClick={() => useAppStore.getState().openCatalogue?.({ family: 'llm' })}
           data-testid="llmp-open-catalogue"
         >
           {t('settings.llmp_catalogue_link')}

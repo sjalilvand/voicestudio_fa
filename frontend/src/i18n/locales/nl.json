@@ -33,13 +33,16 @@
   },
   "catalogue": {
     "title": "Modelcatalogus",
-    "tab_engines": "Engines",
-    "tab_models": "Modellen",
-    "moved_title": "Nu in de modelcatalogus",
-    "moved_engines_body": "Het kiezen van de standaard-engine voor spraak, transcriptie en LLM staat nu in de werkruimte Modelcatalogus.",
-    "moved_models_body": "Gedownloade modellen bekijken, installeren en verwijderen staat nu in de werkruimte Modelcatalogus.",
-    "open_engines": "Engines openen",
-    "open_models": "Modellen openen"
+    "summary_title": "Jouw configuratie",
+    "change": "Wijzigen",
+    "status_setup": "Instellen vereist",
+    "status_cpu": "CPU-fallback",
+    "status_off": "Uit",
+    "weights": "Gedownloade gewichten",
+    "storage_link": "Opslaginstellingen",
+    "reco_line": "{{installed}} van {{total}} aanbevolen modellen voor {{device}} geïnstalleerd · nog {{remaining}} GB",
+    "install_rest": "Rest installeren",
+    "device_remote": "Extern"
   },
   "settings": {
     "remote_backend_test": "Verbinding testen",
@@ -779,7 +782,7 @@
     "configureProviders": "Providers configureren",
     "loading": "Motoren laden…",
     "refresh": "Vernieuwen",
-    "matrixTitle": "Motorcompatibiliteitsmatrix",
+    "matrixTitle": "Motoren",
     "loadFailed": "Kan motoren niet laden: {{message}}",
     "couldNotLoad": "Kan motoren niet laden: {{message}}",
     "retry": "Opnieuw proberen",

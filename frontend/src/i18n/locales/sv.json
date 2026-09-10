@@ -33,13 +33,16 @@
   },
   "catalogue": {
     "title": "Modellkatalog",
-    "tab_engines": "Motorer",
-    "tab_models": "Modeller",
-    "moved_title": "Nu i modellkatalogen",
-    "moved_engines_body": "Att välja standardmotor för tal, transkribering och LLM finns nu i arbetsytan Modellkatalog.",
-    "moved_models_body": "Att bläddra bland, installera och ta bort nedladdade modeller finns nu i arbetsytan Modellkatalog.",
-    "open_engines": "Öppna motorer",
-    "open_models": "Öppna modeller"
+    "summary_title": "Din konfiguration",
+    "change": "Ändra",
+    "status_setup": "Behöver konfigureras",
+    "status_cpu": "CPU-reserv",
+    "status_off": "Av",
+    "weights": "Nedladdade vikter",
+    "storage_link": "Lagringsinställningar",
+    "reco_line": "{{installed}} av {{total}} rekommenderade modeller för {{device}} installerade · {{remaining}} GB kvar",
+    "install_rest": "Installera resten",
+    "device_remote": "Fjärr"
   },
   "settings": {
     "remote_backend_test": "Testa anslutningen",
@@ -779,7 +782,7 @@
     "configureProviders": "Konfigurera leverantörer",
     "loading": "Laddar motorer...",
     "refresh": "Uppdatera",
-    "matrixTitle": "Motorkompatibilitetsmatris",
+    "matrixTitle": "Motorer",
     "loadFailed": "Det gick inte att ladda motorer: {{message}}",
     "couldNotLoad": "Kunde inte ladda motorer: {{message}}",
     "retry": "Försök igen",

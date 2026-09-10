@@ -1,48 +1,43 @@
 /**
- * ModelCatalogue — the workspace where engines and model weights are browsed
- * and the app's defaults are chosen.
+ * ModelCatalogue — one page, one axis.
  *
- * Engine picking and the model store used to be two Settings categories, which
- * buried the single most consequential decision in the app (which TTS/ASR/LLM
- * engine runs, and which weights are on disk) three clicks deep, split across
- * two panes that constantly cross-reference each other. This promotes both to a
- * first-class workspace with one pane switch between them; Settings keeps only
- * the genuinely settings-shaped remainder (models directory, HF mirror) and
- * points here for the rest.
+ * Reads top-down the way a user thinks about it:
+ *   1. SetupSummary — what speech, transcription, dictation and the language
+ *      model use right now, one line each, with a Change button.
+ *   2. The engine list for ONE family (TTS / ASR / LLM), the same tested
+ *      EngineCompatibilityMatrix the Engines pane hosted; Change on a summary
+ *      row switches this family and scrolls here.
+ *   3. That family's downloadable weights (the former Models pane, filtered):
+ *      TTS weights under TTS; offline ASR, streaming dictation and diarisation
+ *      under ASR. LLM engines bring their own weights, so nothing renders there.
+ *   4. One storage line pointing at Settings → Storage.
  *
- * Deliberately a COMPOSITION, not a rewrite: the panes mount the existing
- * `EnginesTab` (engine matrix + the OpenAI-compatible ASR config) and
- * `ModelStoreTab` unchanged, so their data contracts, tests and behaviour carry
- * over untouched — the shared engine cache, the same install/delete flows, and
- * the same env-var-wins semantics.
+ * The previous Engines | Models pane switch put the same decision on two axes
+ * (family tabs inside one pane, role sections inside the other), duplicated
+ * dictation in both, and parked storage stats, the HF token and the voice
+ * preview toggle on the model list. Those now live where they belong
+ * (Settings → Storage / Credentials), and there is no pane to pick.
  *
- * `pendingCatalogueTab` is the one-shot deep-link hand-off (mirrors Settings'
- * `pendingSettingsTab`): a caller sets the pane and navigates here, this page
- * consumes it once and clears it so a later plain visit reopens the last pane.
+ * `pendingCatalogueFamily` is the one-shot deep-link hand-off (mirrors
+ * Settings' `pendingSettingsTab`): a caller names a family and navigates
+ * here; this page consumes it once and clears it so a later plain visit
+ * reopens the last family.
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Boxes, CheckCircle, Cpu, HardDriveDownload, RefreshCw } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Boxes } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store';
-import { useModelStatus, useSystemInfo } from '../api/hooks';
-import { Badge, Tabs } from '../ui';
+import { useModels } from '../api/hooks';
+import SetupSummary from '../components/catalogue/SetupSummary';
 import EnginesTab from '../components/settings/EnginesTab';
 import ModelStoreTab from '../components/settings/ModelStoreTab';
+import { fmtBytes } from '../components/settings/models/format';
 
 /** Persisted across visits so the workspace reopens where you left it. */
-const PANE_KEY = 'omnivoice.catalogue.pane';
 const FAMILY_KEY = 'omnivoice.catalogue.engine-family';
-const PANES = ['engines', 'models'];
 const FAMILIES = ['tts', 'asr', 'llm'];
-
-function readStoredPane() {
-  try {
-    const stored = localStorage.getItem(PANE_KEY);
-    return PANES.includes(stored) ? stored : 'engines';
-  } catch {
-    return 'engines';
-  }
-}
+/** Families whose engines load catalogue weights (LLM engines bring their own). */
+const WEIGHT_FAMILIES = ['tts', 'asr'];
 
 function readStoredFamily() {
   try {
@@ -55,27 +50,15 @@ function readStoredFamily() {
 
 export default function ModelCatalogue() {
   const { t } = useTranslation();
-  const pendingCatalogueTab = useAppStore((s) => s.pendingCatalogueTab);
   const pendingCatalogueFamily = useAppStore((s) => s.pendingCatalogueFamily);
-  const setPendingCatalogueTab = useAppStore((s) => s.setPendingCatalogueTab);
   const setPendingCatalogueFamily = useAppStore((s) => s.setPendingCatalogueFamily);
-  // Seed from the deep-link so the first paint is already the requested pane —
-  // seeding from storage and correcting in an effect would flash the wrong one.
-  const [pane, setPaneRaw] = useState(() =>
-    PANES.includes(pendingCatalogueTab) ? pendingCatalogueTab : readStoredPane(),
-  );
+  const openSettingsTab = useAppStore((s) => s.openSettingsTab);
+  // Seed from the deep-link so the first paint is already the requested
+  // family — seeding from storage and correcting in an effect would flash.
   const [family, setFamilyRaw] = useState(() =>
     FAMILIES.includes(pendingCatalogueFamily) ? pendingCatalogueFamily : readStoredFamily(),
   );
 
-  const setPane = useCallback((next) => {
-    setPaneRaw(next);
-    try {
-      localStorage.setItem(PANE_KEY, next);
-    } catch {
-      /* private mode / quota — the pane still switches, it just won't persist */
-    }
-  }, []);
   const setFamily = useCallback((next) => {
     setFamilyRaw(next);
     try {
@@ -85,52 +68,25 @@ export default function ModelCatalogue() {
     }
   }, []);
 
-  // Consume the one-shot deep-link (including a repeat request for the pane
-  // we're already on, which must still clear).
+  // Consume the one-shot deep-link (including a repeat request for the
+  // family we're already on, which must still clear).
   useEffect(() => {
-    if (!pendingCatalogueTab) return;
-    if (PANES.includes(pendingCatalogueTab)) setPane(pendingCatalogueTab);
+    if (!pendingCatalogueFamily) return;
     if (FAMILIES.includes(pendingCatalogueFamily)) setFamily(pendingCatalogueFamily);
-    setPendingCatalogueTab(null);
     setPendingCatalogueFamily(null);
-  }, [
-    pendingCatalogueTab,
-    pendingCatalogueFamily,
-    setPendingCatalogueFamily,
-    setPendingCatalogueTab,
-    setFamily,
-    setPane,
-  ]);
+  }, [pendingCatalogueFamily, setPendingCatalogueFamily, setFamily]);
 
-  const { data: info } = useSystemInfo();
-  const { data: status } = useModelStatus();
-
-  // The loaded-model pill ModelStoreTab renders in its header. Lives here now
-  // that this page — not Settings — hosts the model store.
-  const modelBadge =
-    status?.status === 'ready' ? (
-      <Badge tone="success">
-        <CheckCircle size={11} /> {t('models.ready_badge')}
-      </Badge>
-    ) : status?.status === 'loading' ? (
-      <Badge tone="warn">
-        <RefreshCw size={11} className="spinner" /> {t('models.loading_badge')}
-      </Badge>
-    ) : (
-      <Badge tone="warn">{t('models.idle_badge')}</Badge>
-    );
-
-  // Tabs, not a two-state Segmented: these are two workspaces of a catalogue,
-  // not one setting with an on/off reading, and the room to add a third pane
-  // later is free. Tabs also carry roving tabindex + role="tab" from the
-  // primitive, which the switch had to describe with an aria-label.
-  const paneItems = useMemo(
-    () => [
-      { id: 'engines', label: t('catalogue.tab_engines'), icon: Cpu },
-      { id: 'models', label: t('catalogue.tab_models'), icon: HardDriveDownload },
-    ],
-    [t],
+  const enginesRef = useRef(null);
+  const changeFamily = useCallback(
+    (next) => {
+      setFamily(next);
+      enginesRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    },
+    [setFamily],
   );
+
+  const { data: models } = useModels();
+  const cacheDir = models?.hf_cache_dir?.replace(/^\/Users\/[^/]+/, '~');
 
   return (
     // Same container-query shell as Settings: the app is zoom-scaled, so
@@ -140,48 +96,85 @@ export default function ModelCatalogue() {
       data-testid="model-catalogue"
     >
       <div className="mx-auto box-border w-full max-w-[1500px] px-[34px] pb-[56px] pt-[34px] font-sans @max-[900px]/catalogue-shell:px-[24px] @max-[900px]/catalogue-shell:pb-[36px] @max-[900px]/catalogue-shell:pt-[26px] @max-[560px]/catalogue-shell:px-[14px]">
-        {/* Treat this as a workspace, not a Settings card: one editorial title,
-            one quiet navigation line, then the data surface. */}
-        <header className="mb-[24px] flex flex-wrap items-end justify-between gap-x-[32px] gap-y-[18px] border-b border-[color-mix(in_srgb,var(--chrome-fg)_9%,transparent)] pb-[18px] @max-[560px]/catalogue-shell:flex-col @max-[560px]/catalogue-shell:items-start">
-          <div className="flex items-center gap-[12px]">
-            <span
-              className="inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[12px] bg-[color-mix(in_srgb,var(--chrome-accent)_11%,transparent)] text-[color:var(--chrome-accent)]"
-              aria-hidden="true"
-            >
-              <Boxes size={17} strokeWidth={1.6} />
-            </span>
-            <h1 className="m-0 min-w-0 [font-family:var(--font-serif)] text-[2rem] font-normal leading-none tracking-[-0.025em] text-[color:var(--chrome-fg)] @max-[560px]/catalogue-shell:text-[1.55rem]">
-              {t('catalogue.title')}
-            </h1>
-          </div>
-          <Tabs
-            items={paneItems}
-            value={pane}
-            onChange={setPane}
-            variant="underline"
-            idPrefix="catalogue-pane"
-            aria-label={t('catalogue.title')}
-            data-testid="catalogue-pane-switch"
-          />
+        <header className="mb-[22px] flex items-center gap-[12px]">
+          <span
+            className="inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[12px] bg-[color-mix(in_srgb,var(--chrome-accent)_11%,transparent)] text-[color:var(--chrome-accent)]"
+            aria-hidden="true"
+          >
+            <Boxes size={17} strokeWidth={1.6} />
+          </span>
+          <h1 className="m-0 min-w-0 [font-family:var(--font-serif)] text-[2rem] font-normal leading-none tracking-[-0.025em] text-[color:var(--chrome-fg)] @max-[560px]/catalogue-shell:text-[1.55rem]">
+            {t('catalogue.title')}
+          </h1>
         </header>
 
-        {/* Full-bleed: engine rows and the model table are wide, data-dense
+        <SetupSummary onChange={changeFamily} />
+
+        {/* Full-bleed: engine rows and the weights table are wide, data-dense
             surfaces — a reading-width column would only add horizontal
             scrolling inside them. */}
-        <div
-          key={pane}
-          id={`catalogue-pane-panel-${pane}`}
-          data-testid={`catalogue-pane-${pane}`}
-          role="tabpanel"
-          aria-labelledby={`catalogue-pane-tab-${pane}`}
-          className="min-w-0 [&>*:first-child]:mt-0"
+        <section
+          ref={enginesRef}
+          data-testid="catalogue-engines"
+          className="min-w-0 scroll-mt-[24px] [&>*:first-child]:mt-0"
         >
-          {pane === 'engines' ? (
-            <EnginesTab initialFamily={family} onFamilyChange={setFamily} catalogueLayout />
-          ) : (
-            <ModelStoreTab info={info} modelBadge={modelBadge} catalogueLayout />
+          <EnginesTab initialFamily={family} onFamilyChange={setFamily} catalogueLayout />
+        </section>
+
+        {/* Always mounted: ModelStoreTab owns the download-progress SSE state
+            (progress, errors with Retry/Dismiss), which would be lost if a
+            family switch unmounted it mid-download. LLM merely hides it. */}
+        <section
+          data-testid="catalogue-weights"
+          aria-labelledby="catalogue-weights-title"
+          className="mt-[40px] min-w-0"
+          hidden={!WEIGHT_FAMILIES.includes(family)}
+        >
+          <h2
+            id="catalogue-weights-title"
+            className="m-0 mb-[14px] px-[2px] text-[length:var(--text-lg)] font-semibold text-[color:var(--chrome-fg)]"
+          >
+            {t('catalogue.weights')}
+          </h2>
+          <ModelStoreTab family={family} />
+        </section>
+
+        <footer
+          data-testid="catalogue-storage"
+          className="mt-[40px] flex flex-wrap items-center gap-x-[10px] gap-y-[4px] border-t border-border pt-[14px] font-mono text-[11px] text-muted-foreground"
+        >
+          {models && (
+            <>
+              <span className="text-foreground">
+                {fmtBytes(models.total_installed_bytes) || '0 B'}
+              </span>
+              {models.disk_free_gb != null && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span title={t('models.disk_free_title')}>
+                    {t('models.disk_free', { size: `${models.disk_free_gb} GB` })}
+                  </span>
+                </>
+              )}
+              {cacheDir && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <code className="truncate" title={models.hf_cache_dir}>
+                    {cacheDir}
+                  </code>
+                </>
+              )}
+            </>
           )}
-        </div>
+          <button
+            type="button"
+            className="ml-auto cursor-pointer border-0 bg-transparent p-0 font-mono text-[11px] text-accent hover:underline"
+            onClick={() => openSettingsTab('storage')}
+            data-testid="catalogue-storage-link"
+          >
+            {t('catalogue.storage_link')} →
+          </button>
+        </footer>
       </div>
     </div>
   );
