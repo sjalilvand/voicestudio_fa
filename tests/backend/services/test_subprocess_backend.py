@@ -337,3 +337,48 @@ def test_no_multiprocessing_imports():
 
 def test_max_frame_bytes_is_64mb():
     assert MAX_FRAME_BYTES == 64 * 1024 * 1024
+
+# ── a failed ready handshake names its cause (#2026) ──────────────────────
+
+
+def _spawn_expecting_failure(backend) -> str:
+    with backend._lock:
+        with pytest.raises(RuntimeError) as err:
+            backend._spawn()
+    return str(err.value)
+
+
+def test_an_early_exit_names_its_exit_code_and_stderr(monkeypatch, echo_backend):
+    monkeypatch.setenv("OMNIVOICE_ECHO_TEST_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_ECHO_EXIT_BEFORE_READY", "3")
+    msg = _spawn_expecting_failure(echo_backend)
+    assert "did not signal ready: it exited with code 3 before signalling ready" in msg
+    assert "exiting before ready on purpose" in msg
+    assert "None" not in msg
+
+
+def test_a_deadline_kill_says_it_was_the_deadline(monkeypatch, echo_backend):
+    monkeypatch.setenv("OMNIVOICE_ECHO_TEST_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_ECHO_STALL_BEFORE_READY", "1")
+    echo_backend.spawn_ready_timeout_s = 1.0
+    msg = _spawn_expecting_failure(echo_backend)
+    assert "no ready frame within 1s, so it was stopped" in msg
+    assert "stalling before ready on purpose" in msg
+    assert "exited with code" not in msg
+
+
+def test_a_wrong_first_frame_is_a_protocol_mismatch(monkeypatch, echo_backend):
+    monkeypatch.setenv("OMNIVOICE_ECHO_TEST_MODE", "1")
+    monkeypatch.setenv("OMNIVOICE_ECHO_WRONG_READY", "1")
+    msg = _spawn_expecting_failure(echo_backend)
+    assert "it sent op='pong' instead of 'ready'" in msg
+
+
+def test_the_quoted_stderr_is_scrubbed_and_bounded(echo_backend):
+    echo_backend._stderr_tail.clear()
+    echo_backend._stderr_tail.append("loading C:\\Users\\alice\\venv hf_" + "a" * 34)
+    for i in range(40):
+        echo_backend._stderr_tail.append("x" * 60 + str(i))
+    text = echo_backend._stderr_tail_text()
+    assert "alice" not in text and "hf_aaaa" not in text
+    assert len(text) <= 801
