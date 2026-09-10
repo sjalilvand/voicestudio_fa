@@ -144,6 +144,8 @@ def _drop_invalid_path_keys() -> None:
             logger.warning(
                 "%s from the saved env file points at an unusable path (%s) — "
                 "ignoring it for this run and falling back to the default "
-                "location. Fix or clear it in Model Catalogue → Models.", key, val,
+                "location. For the models folder, choose it again in Settings → "
+                "Storage; otherwise fix or remove the entry in the saved env file.",
+                key, val,
             )
             os.environ.pop(key, None)

@@ -281,7 +281,7 @@ async def _run_batch_pipeline(job_id: str, job: dict):
 
     # ── Engine resolution (issue #312 class) ────────────────────────────
     # Batch used to hardcode VoiceStudio via get_model() regardless of the
-    # engine selected in Model Catalogue → Engines. require_cloning only when a
+    # engine selected in Model Catalogue. require_cloning only when a
     # specific voice is pinned (job["voice_id"]) — an unpinned job is fine on
     # any active engine. Resolved ONCE for the whole job (every language
     # below shares the same active engine); an uncaught ValueError here

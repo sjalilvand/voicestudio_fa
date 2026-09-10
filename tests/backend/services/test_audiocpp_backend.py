@@ -658,7 +658,7 @@ def test_missing_cached_model_requires_explicit_install(
 
     monkeypatch.setattr("huggingface_hub.snapshot_download", cache_miss)
 
-    with pytest.raises(RuntimeError, match="Model Catalogue → Models"):
+    with pytest.raises(RuntimeError, match="the engine's Weights list in Model Catalogue"):
         bootstrap.resolve_model_file()
 
 
@@ -946,7 +946,7 @@ def test_is_available_requires_explicitly_installed_model(
 
     def missing_model():
         raise RuntimeError(
-            "Breeze-TTS-2 is not installed. Install it from Model Catalogue → Models."
+            "Breeze-TTS-2 is not installed. Install it from the engine's Weights list in Model Catalogue."
         )
 
     monkeypatch.setattr(bootstrap, "resolve_model_file", missing_model)
@@ -954,7 +954,7 @@ def test_is_available_requires_explicitly_installed_model(
     ok, msg = app_modules.audiocpp.AudioCPPBackend.is_available()
 
     assert ok is False
-    assert "Model Catalogue → Models" in msg
+    assert "the engine's Weights list in Model Catalogue" in msg
 
 
 def test_is_available_requires_binary_and_model(tmp_path, monkeypatch, app_modules):

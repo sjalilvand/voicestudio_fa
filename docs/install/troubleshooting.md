@@ -600,12 +600,12 @@ did was `generate:start (audio)`, a dub, or a dictation.
 
 **Fix — reduce ASR load (any one of these):**
 
-1. **Pick a smaller ASR model / engine** in **Model Catalogue** (ASR tab: **Use** an engine, then a smaller model under **Downloaded weights**) — e.g.
+1. **Pick a smaller ASR model / engine** in **Model Catalogue** (ASR tab: **Use** an engine, then a smaller model under the engine's **Weights**) — e.g.
    faster-whisper **medium** or **small**, instead of large-v3. Biggest win on
    low-VRAM GPUs.
 2. **Free VRAM**: **Flush the TTS model** before dubbing so ASR isn't competing
    for memory (top toolbar → Flush → "Unload all + flush", or per-model from
-   Model Catalogue → Downloaded weights under the engine's family tab — see [Flush caches / Unload resident model](../performance.md#flush-caches--unload-resident-model)
+   the engine's Weights list in Model Catalogue under the engine's family tab — see [Flush caches / Unload resident model](../performance.md#flush-caches--unload-resident-model)
    for exactly what it frees and the API equivalents for scripts), or
 3. **Run ASR on CPU** (slower but reliable) if your GPU is small.
 4. **Test with a 10-second clip** first — if that returns quickly, it confirms a
