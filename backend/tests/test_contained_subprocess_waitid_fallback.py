@@ -15,6 +15,15 @@ import pytest
 
 from core import contained_subprocess as owned
 
+# This module simulates macOS by deleting os.waitid, then drives the fallback
+# with os.waitpid/os.WNOHANG and start_new_session — POSIX-only APIs that
+# Windows does not have at all (os.WNOHANG raises AttributeError before the
+# first assertion). CI runs this suite on Linux, so nothing is lost by
+# skipping; what is gained is a Windows contributor whose checkout runs green.
+pytestmark = pytest.mark.skipif(
+    os.name != "posix", reason="simulates a POSIX platform without os.waitid"
+)
+
 
 def _make_owned(argv):
     cr, cw = os.pipe()
