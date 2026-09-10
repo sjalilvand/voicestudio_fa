@@ -2496,6 +2496,7 @@
     "test_result": "Şu şekilde konuşulacak:",
     "test_nochange": "Hiçbir giriş eşleşmiyor; yazıldığı gibi konuşuluyor.",
     "test_inert": "Kaydedildi ancak bu motorda henüz uygulanmıyor: {{terms}}. IPA ve CMU girdileri kaydedilip doğrulanır, fakat şu an yalnızca respelling seslendirilen metni değiştirir.",
+    "not_applied_badge": "Henüz uygulanmadı",
     "load_error": "Telaffuz sözlüğü yüklenemedi.",
     "save_error": "Bu giriş kaydedilemedi.",
     "lang_label": "Dil kodu (ör. en, de) veya Global için boş bırakın",

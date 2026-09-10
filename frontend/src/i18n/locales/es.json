@@ -2496,6 +2496,7 @@
     "test_result": "Se hablará como:",
     "test_nochange": "Ninguna entrada coincide: hablada tal como está escrita.",
     "test_inert": "Guardado pero aún no aplicado en este motor: {{terms}}. Las entradas IPA y CMU se guardan y validan, pero hoy solo Respelling cambia el texto hablado.",
+    "not_applied_badge": "Aún no aplicado",
     "load_error": "No se pudo cargar el diccionario de pronunciación.",
     "save_error": "No se pudo guardar esa entrada.",
     "lang_label": "Código de idioma (por ejemplo, en, de) o déjelo en blanco para Global",

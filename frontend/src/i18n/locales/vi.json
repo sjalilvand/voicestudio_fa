@@ -2496,6 +2496,7 @@
     "test_result": "Sẽ được nói như:",
     "test_nochange": "Không có mục nào khớp - nói như viết.",
     "test_inert": "Đã lưu nhưng chưa áp dụng trên engine này: {{terms}}. Mục IPA và CMU được lưu và kiểm tra, nhưng hiện chỉ respelling mới thay đổi văn bản đọc.",
+    "not_applied_badge": "Chưa áp dụng",
     "load_error": "Không thể tải từ điển phát âm.",
     "save_error": "Không thể lưu mục đó.",
     "lang_label": "Mã ngôn ngữ (ví dụ: en, de) hoặc để trống cho Toàn cầu",

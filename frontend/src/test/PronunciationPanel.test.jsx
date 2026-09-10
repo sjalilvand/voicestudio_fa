@@ -325,4 +325,82 @@ describe('PronunciationPanel', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/import/i);
     expect(apiJson).not.toHaveBeenCalledWith('/pronunciation/import', expect.anything());
   });
+
+  // #1949 / #2002: an IPA or CMU row saves, validates and toggles on, then is
+  // dropped before term matching — Phase 1 only substitutes respelling. #1984
+  // said so in the test preview, which the user only sees if they run a test.
+  // The list is where they look at what they saved, so it says so there too.
+  it('badges an entry that is stored but not applied yet', async () => {
+    apiJson.mockResolvedValue([
+      ...ENTRIES,
+      {
+        id: 'e3',
+        term: 'Nginx',
+        replacement: 'ˈɛndʒɪnˈɛks',
+        type: 'ipa',
+        language: '*',
+        scope: '*',
+        enabled: true,
+      },
+      {
+        id: 'e4',
+        term: 'SQL',
+        replacement: 'S IY1 K W AH0 L',
+        type: 'cmu',
+        language: '*',
+        scope: '*',
+        enabled: true,
+      },
+    ]);
+    render(withI18n(<PronunciationPanel />));
+
+    expect(await screen.findByTestId('pron-not-applied-e3')).toHaveTextContent(/not applied/i);
+    expect(screen.getByTestId('pron-not-applied-e4')).toBeInTheDocument();
+    // A respelling row DOES take effect — badging it would be the opposite lie.
+    expect(screen.queryByTestId('pron-not-applied-e1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('pron-not-applied-e2')).not.toBeInTheDocument();
+  });
+
+  // Both review bots, independently: a row the user switched OFF is also not
+  // applied, but for a reason the toggle already shows. Badging it reads as a
+  // defect rather than their own choice, and the backend's inert set excludes
+  // disabled rows for the same reason.
+  it('does not badge an IPA entry the user has switched off', async () => {
+    apiJson.mockResolvedValue([
+      {
+        id: 'e5',
+        term: 'Nginx',
+        replacement: 'ˈɛndʒɪnˈɛks',
+        type: 'ipa',
+        language: '*',
+        scope: '*',
+        enabled: false,
+      },
+    ]);
+    render(withI18n(<PronunciationPanel />));
+
+    expect(await screen.findByText('Nginx')).toBeInTheDocument();
+    expect(screen.queryByTestId('pron-not-applied-e5')).not.toBeInTheDocument();
+  });
+
+  // The type test mirrors the backend's: everything that is not respelling is
+  // inert today. A notation added later must be badged on arrival, not
+  // silently omitted because nobody added it to a list — that omission IS the
+  // invisibility #1949 is about.
+  it('badges an unfamiliar notation rather than assuming it works', async () => {
+    apiJson.mockResolvedValue([
+      {
+        id: 'e6',
+        term: 'Nginx',
+        replacement: 'whatever-comes-next',
+        type: 'sampa',
+        language: '*',
+        scope: '*',
+        enabled: true,
+      },
+    ]);
+    render(withI18n(<PronunciationPanel />));
+
+    expect(await screen.findByTestId('pron-not-applied-e6')).toBeInTheDocument();
+  });
 });
