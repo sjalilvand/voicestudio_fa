@@ -353,7 +353,9 @@
     "hf_token_not_checked": "Chưa kiểm tra",
     "hf_source_app_label": "VoiceStudio (được mã hóa, khuyên dùng)",
     "hf_source_cli_label": "HuggingFace CLI",
-    "hf_source_env_label": "Biến môi trường"
+    "hf_source_env_label": "Biến môi trường",
+    "theme_auto": "Tự động theo hệ thống",
+    "theme_light": "Sáng"
   },
   "bootstrap": {
     "title": "VoiceStudio",
