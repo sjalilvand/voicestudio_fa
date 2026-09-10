@@ -7,6 +7,25 @@ it in a normal browser.
 **Official images:** [`ghcr.io/debpalash/omnivoice-studio`](https://github.com/debpalash/VoiceStudio/pkgs/container/omnivoice-studio)
 and [`palashdeb/omnivoice-studio` on Docker Hub](https://hub.docker.com/r/palashdeb/omnivoice-studio) — same images, same tags.
 
+## Architecture
+
+The published images are **`linux/amd64` (x86-64) only**, including `:stable`,
+`:latest`, and the ROCm variants. There is no native `linux/arm64` image.
+On an ARM64 host, pulling without an explicit platform can fail with
+`no matching manifest for linux/arm64/v8 in the manifest list entries`.
+
+- **Apple Silicon (M-series Macs):** use the [native macOS app](macos.md),
+  which supports Apple GPU acceleration. The Linux container cannot access
+  the Mac's Apple GPU through MPS or MLX.
+- **AMD64 emulation on ARM64 (including Apple Silicon):** if your Docker
+  installation supports it, place `--platform linux/amd64` **before the image
+  name** in both `docker pull` and `docker run` from the CPU instructions
+  below. This is an emulated CPU option, not native
+  ARM64 support; inference can be much slower and is not a GPU workaround.
+  Without emulation, use an AMD64 server for this Docker deployment.
+
+## Image tags
+
 > **Image ↔ version mapping**
 >
 > | Tag | What you get |
