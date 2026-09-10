@@ -1260,8 +1260,8 @@ def _download_and_extract(job: dict, url: str, dest: Path, work_root: Path, env_
         with tempfile.TemporaryDirectory(dir=str(root)) as tmp_dir:
             with tarfile.open(tmp_tar, "r:gz") as tf:
                 try:
-                    tf.extractall(tmp_dir, filter=_no_links_data_filter)  # 3.11.4+
-                except (TypeError, AttributeError):  # pragma: no cover — no filter= / data_filter
+                    tf.extractall(tmp_dir, members=_members_without_links(tf), filter="data")
+                except TypeError:  # pragma: no cover — pre-filter= interpreters
                     _safe_extract_members(tf, tmp_dir)
             entries = [p for p in Path(tmp_dir).iterdir() if p.is_dir()]
             if len(entries) != 1:
@@ -1312,19 +1312,18 @@ def _ensure_extra_sources(spec: SidecarSpec, job: dict, checkout: Path) -> None:
         (dest / _SOURCE_REVISION_MARKER).write_text(f"{extra.revision}\n", encoding="utf-8")
 
 
-def _no_links_data_filter(member: "tarfile.TarInfo", path: str):
-    """The stdlib "data" filter, except that links are skipped, not fatal.
+def _members_without_links(tf: "tarfile.TarFile") -> "list[tarfile.TarInfo]":
+    """Every member except links.
 
-    The "data" filter raises on a link to an absolute path, and the pinned
-    Matcha-TTS tarball (a CosyVoice submodule) ships one: ``data`` points at
-    its author's own training-data folder. That aborted the whole fetch. No
-    installer here uses a link from a source tree, symlinks need privileges
-    on Windows, and the pre-3.11.4 path below already drops them, so both
-    paths now behave the same.
+    The stdlib "data" filter raises on a link to an absolute path, and the
+    pinned Matcha-TTS tarball (a CosyVoice submodule) ships one: ``data``
+    points at its author's own training-data folder. That aborted the whole
+    fetch. No installer here uses a link from a source tree, symlinks need
+    privileges on Windows, and the pre-3.11.4 path below already drops them,
+    so both paths behave the same. Everything that IS extracted still goes
+    through the "data" filter.
     """
-    if member.issym() or member.islnk():
-        return None
-    return tarfile.data_filter(member, path)
+    return [m for m in tf.getmembers() if not (m.issym() or m.islnk())]
 
 
 def _safe_extract_members(tf: "tarfile.TarFile", dest: str) -> None:
