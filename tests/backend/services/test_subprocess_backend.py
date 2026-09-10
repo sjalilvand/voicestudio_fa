@@ -392,7 +392,7 @@ def test_each_spawn_quotes_only_its_own_stderr(monkeypatch, echo_backend):
 def test_an_error_frame_before_ready_is_quoted_and_scrubbed(monkeypatch, echo_backend):
     monkeypatch.setenv("OMNIVOICE_ECHO_TEST_MODE", "1")
     monkeypatch.setenv(
-        "OMNIVOICE_ECHO_ERROR_BEFORE_READY", "import failed in C:\Users\alice\engine"
+        "OMNIVOICE_ECHO_ERROR_BEFORE_READY", "import failed in C:\\Users\\alice\\engine"
     )
     msg = _spawn_expecting_failure(echo_backend)
     assert "it reported an error instead: import failed in" in msg
@@ -401,8 +401,7 @@ def test_an_error_frame_before_ready_is_quoted_and_scrubbed(monkeypatch, echo_ba
 
 class _LinesProc:
     def __init__(self, *lines: bytes):
-        self.stderr = io.BytesIO(b"".join(line + b"
-" for line in lines))
+        self.stderr = io.BytesIO(b"".join(line + b"\n" for line in lines))
 
 
 def test_a_late_drain_reads_its_own_process_not_the_replacement(echo_backend):
@@ -415,8 +414,7 @@ def test_a_late_drain_reads_its_own_process_not_the_replacement(echo_backend):
     finally:
         echo_backend._proc = None
     assert list(old_tail) == ["old process line"]
-    assert new.stderr.read() == b"new process line
-"  # untouched
+    assert new.stderr.read() == b"new process line\n"  # untouched
 
 
 def test_the_quoted_stderr_is_scrubbed_and_bounded(echo_backend):
