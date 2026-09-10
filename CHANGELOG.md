@@ -86,6 +86,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Docs
 
+- PowerShell Docker setup now generates the administrator key without requiring Python on the host (#1993) — thanks @yangfan-yf-yf!
 - The torch upgrade an RTX 50-series card needs is written down, with the second pin file the resolver checks and the command that proves the kernels are there (#1931)
 
 - Docker quick starts now explain the AMD64-only images and direct Apple Silicon users to the native macOS app (#1921) — thanks @yangfan-yf-yf!
