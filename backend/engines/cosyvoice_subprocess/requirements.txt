@@ -45,7 +45,7 @@ omegaconf==2.3.0
 onnx==1.22.0
 onnxruntime==1.18.0
 openai-whisper==20250625
-protobuf==4.25.9
+protobuf==5.29.6
 pydantic==2.7.0
 rich==13.7.1
 soundfile==0.12.1
