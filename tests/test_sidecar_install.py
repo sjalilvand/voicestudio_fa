@@ -1455,3 +1455,36 @@ def test_cosyvoice_post_install_code_compiles_for_any_checkout_path():
     spec = si.get_spec("cosyvoice")
     compile(si._expand(spec.post_install_code, Path("C:/Program Files/x y/CosyVoice")),
             "<post-install>", "exec")
+
+
+
+def _tarball_with_absolute_symlink() -> bytes:
+    """Shaped like the pinned Matcha-TTS tarball: a package plus a `data` link
+    to a folder on its author's machine."""
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+        data = b"x = 1\n"
+        info = tarfile.TarInfo("Matcha-abc/matcha/__init__.py")
+        info.size = len(data)
+        tf.addfile(info, io.BytesIO(data))
+        link = tarfile.TarInfo("Matcha-abc/data")
+        link.type = tarfile.SYMTYPE
+        link.linkname = "/home/someone/Projects/Grad-TTS/data"
+        tf.addfile(link)
+    return buf.getvalue()
+
+
+def test_a_tarball_with_an_absolute_link_still_extracts(monkeypatch, tmp_path):
+    """The stdlib "data" filter raises AbsoluteLinkError on such a link, which
+    aborted the Matcha-TTS fetch and with it the CosyVoice install."""
+    import httpx
+
+    monkeypatch.setattr(httpx, "stream", lambda method, url, **kw: _FakeStream(_tarball_with_absolute_symlink()))
+    dest = tmp_path / "third_party" / "Matcha-TTS"
+    dest.parent.mkdir(parents=True)
+    job = si._new_job("fake-side")
+
+    si._download_and_extract(job, "https://example.test/m.tar.gz", dest, tmp_path, "OMNIVOICE_FAKE_SIDE_DIR")
+
+    assert (dest / "matcha" / "__init__.py").is_file()
+    assert not (dest / "data").exists() and not (dest / "data").is_symlink()
