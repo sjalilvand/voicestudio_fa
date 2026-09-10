@@ -49,5 +49,5 @@ protobuf==5.29.6
 pydantic==2.7.0
 rich==13.7.1
 soundfile==0.12.1
-transformers==4.57.6
+transformers==5.10.1
 x-transformers==2.11.24
