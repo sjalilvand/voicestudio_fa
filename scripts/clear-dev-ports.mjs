@@ -76,6 +76,22 @@ function normalized(value, windows = process.platform === "win32") {
   return path.posix.resolve(String(value || ""));
 }
 
+// The app's own reverse-DNS identity (tauri.conf.json `identifier`). A backend
+// the Tauri shell spawned lives under a per-app directory named after this —
+// `…/com.debpalash.omnivoice-studio/project/.venv/…` — so its path names
+// VoiceStudio as unambiguously as the checkout path does, just from the other
+// direction.
+//
+// Without this the ownership test only recognised a listener running out of
+// the git checkout, so an app-managed backend left holding the port was
+// treated as a stranger and the launcher refused to reclaim it — the run
+// aborted with "Refusing to stop unrelated process" and no way forward
+// except Task Manager (#1974).
+//
+// A reverse-DNS bundle id is specific enough to be safe here: nothing else
+// on the machine carries it, which is the whole point of the namespace.
+export const APP_BUNDLE_ID = "com.debpalash.omnivoice-studio";
+
 export function belongsToCheckout(
   cwd,
   command,
@@ -91,6 +107,11 @@ export function belongsToCheckout(
     return path === root || path.startsWith(prefix);
   };
   if (ownedPath(cwd) || ownedPath(executable)) return true;
+  // App-managed backend: the bundle id appears in the executable path or in
+  // the command line, whichever the platform gave us.
+  for (const value of [cwd, executable, command]) {
+    if (String(value || "").toLowerCase().includes(APP_BUNDLE_ID)) return true;
+  }
   const haystack = windows
     ? String(command || "")
         .replaceAll("/", "\\")
