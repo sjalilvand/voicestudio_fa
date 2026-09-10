@@ -13,7 +13,12 @@ import { useAppStore, FONT_OPTIONS, FONT_STACKS } from '../../store';
 import { SettingsSection, SettingRow, InfoHint, SettingsToggle } from './primitives';
 
 const THEMES = [
-  { id: 'auto', labelKey: 'settings.theme_auto', defaultLabel: 'System Auto', dot: 'linear-gradient(135deg, #fdf6e3 50%, #1d2021 50%)' },
+  {
+    id: 'auto',
+    labelKey: 'settings.theme_auto',
+    defaultLabel: 'System Auto',
+    dot: 'linear-gradient(135deg, #fdf6e3 50%, #1d2021 50%)',
+  },
   { id: 'gruvbox', label: 'Gruvbox', dot: '#d3869b' },
   { id: 'midnight', label: 'Midnight', dot: '#8b5cf6' },
   { id: 'nord', label: 'Nord', dot: '#88c0d0' },
@@ -205,7 +210,9 @@ export default function AppearancePanel() {
                 onClick={() => setTheme(th.id)}
                 onKeyDown={(e) => radioGroupKeyDown(e, themeIds, theme, setTheme)}
                 title={th.labelKey ? t(th.labelKey, { defaultValue: th.defaultLabel }) : th.label}
-                aria-label={th.labelKey ? t(th.labelKey, { defaultValue: th.defaultLabel }) : th.label}
+                aria-label={
+                  th.labelKey ? t(th.labelKey, { defaultValue: th.defaultLabel }) : th.label
+                }
                 aria-checked={theme === th.id}
                 role="radio"
                 tabIndex={radioTabIndex(themeIds, theme, th.id)}
