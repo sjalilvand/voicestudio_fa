@@ -320,8 +320,13 @@ class TestAudioOnlyDubbing:
 
         assert form.status_code == 400
         assert json_response.status_code == 400
-        assert form.json()["detail"] == "Invalid source language code"
-        assert json_response.json()["detail"] == "Invalid source language code"
+        # #1960: the message now NAMES the rejected code, because the bare
+        # sentence could not be triaged from an auto-filed report. Assert the
+        # substance rather than the exact wording, so improving the guidance
+        # again does not fail this test for the wrong reason.
+        for body in (form.json()["detail"], json_response.json()["detail"]):
+            assert "Invalid source language code" in body
+            assert "x-123" in body
 
     def test_upload_accepts_a_registered_source_language(self, app_client, monkeypatch):
         client, dc, _dx, _tmp = app_client
