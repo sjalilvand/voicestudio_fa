@@ -1398,12 +1398,13 @@ class PyTorchWhisperBackend(ASRBackend):
             ) from e
 
     def transcribe(self, audio_path: str, *, word_timestamps: bool = True) -> dict:
-        import soundfile as sf
         import torch
         self._ensure_pipe()
-        audio_np, sr = sf.read(audio_path, dtype="float32")
-        if audio_np.ndim > 1:
-            audio_np = audio_np.mean(axis=1)
+        # #2039: soundfile (libsndfile) cannot open MP4/M4A (AAC), which
+        # /transcribe and the MCP tool both accept. The shared loader tries
+        # soundfile first, falls back to the validated ffmpeg path, and
+        # returns the 16 kHz mono float32 Whisper wants anyway.
+        audio_np, sr = _load_audio_16k_mono_f32(audio_path)
         bs = 16 if torch.cuda.is_available() else 2
         result = self._pipe(
             {"array": audio_np, "sampling_rate": sr},
