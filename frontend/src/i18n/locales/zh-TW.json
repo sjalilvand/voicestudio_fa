@@ -39,7 +39,6 @@
     "status_setup": "需要設定",
     "status_cpu": "CPU 回退",
     "status_off": "關閉",
-    "weights": "已下載的模型權重",
     "storage_link": "儲存設定",
     "reco_line": "{{device}} 的推薦模型已安裝 {{installed}}/{{total}} · 尚需 {{remaining}} GB",
     "install_rest": "安裝其餘模型",

@@ -39,7 +39,6 @@
     "status_setup": "يحتاج إلى إعداد",
     "status_cpu": "احتياطي CPU",
     "status_off": "متوقف",
-    "weights": "الأوزان المنزَّلة",
     "storage_link": "إعدادات التخزين",
     "reco_line": "تم تثبيت {{installed}} من {{total}} نماذج موصى بها لـ {{device}} · يتبقى {{remaining}} GB",
     "install_rest": "تثبيت الباقي",

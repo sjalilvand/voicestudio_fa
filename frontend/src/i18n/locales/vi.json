@@ -39,7 +39,6 @@
     "status_setup": "Cần thiết lập",
     "status_cpu": "Dự phòng CPU",
     "status_off": "Tắt",
-    "weights": "Trọng số đã tải",
     "storage_link": "Cài đặt lưu trữ",
     "reco_line": "Đã cài {{installed}}/{{total}} mô hình đề xuất cho {{device}} · còn {{remaining}} GB",
     "install_rest": "Cài phần còn lại",

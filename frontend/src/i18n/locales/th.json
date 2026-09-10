@@ -39,7 +39,6 @@
     "status_setup": "ต้องตั้งค่า",
     "status_cpu": "สำรองด้วย CPU",
     "status_off": "ปิด",
-    "weights": "น้ำหนักโมเดลที่ดาวน์โหลด",
     "storage_link": "การตั้งค่าพื้นที่เก็บข้อมูล",
     "reco_line": "ติดตั้งแล้ว {{installed}} จาก {{total}} โมเดลที่แนะนำสำหรับ {{device}} · เหลืออีก {{remaining}} GB",
     "install_rest": "ติดตั้งส่วนที่เหลือ",

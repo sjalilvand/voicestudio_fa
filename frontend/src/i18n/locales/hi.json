@@ -39,7 +39,6 @@
     "status_setup": "सेटअप आवश्यक",
     "status_cpu": "CPU फ़ॉलबैक",
     "status_off": "बंद",
-    "weights": "डाउनलोड किए गए वेट्स",
     "storage_link": "स्टोरेज सेटिंग्स",
     "reco_line": "{{device}} के लिए {{total}} में से {{installed}} अनुशंसित मॉडल इंस्टॉल · {{remaining}} GB शेष",
     "install_rest": "बाकी इंस्टॉल करें",

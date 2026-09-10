@@ -39,7 +39,6 @@
     "status_setup": "Потрібне налаштування",
     "status_cpu": "Резерв на CPU",
     "status_off": "Вимкнено",
-    "weights": "Завантажені ваги",
     "storage_link": "Налаштування сховища",
     "reco_line": "Встановлено {{installed}} з {{total}} рекомендованих моделей для {{device}} · залишилось {{remaining}} ГБ",
     "install_rest": "Встановити решту",

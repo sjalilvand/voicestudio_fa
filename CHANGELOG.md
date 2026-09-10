@@ -62,6 +62,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Changed
 
+- The engine list is one line per engine (engine, device it runs on, status, one action) with a detail panel for everything else; each engine's weights install from its panel, so the separate weights list and recommendation card are gone (#2020)
 - Model Catalogue is one page: a setup summary (speech, transcription, dictation, language model) on top, one TTS / ASR / LLM switch, and each family's downloadable weights listed under its engines; the separate Models pane and the Settings → Voice → Engines / Models signposts are gone, the models directory and voice previews moved to Settings → Storage and the HF mirror to Network (#2013)
 - Tauri 2.11.5 with refreshed plugins (dialog, updater, log, opener, positioner, single-instance), React 19.3, TanStack Query 5.102, lucide 1.43, posthog-js 1.428, and the rest of the npm workspace on current minors; jsdom 30, jest-dom 7, concurrently 10, taze 21 (#1952)
 - eslint ignores `src-tauri/`, so a local Tauri build no longer floods `lint:hooks` with parse errors from generated assets (#1952)

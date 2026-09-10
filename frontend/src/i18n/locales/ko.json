@@ -39,7 +39,6 @@
     "status_setup": "설정 필요",
     "status_cpu": "CPU 대체",
     "status_off": "꺼짐",
-    "weights": "다운로드한 가중치",
     "storage_link": "저장소 설정",
     "reco_line": "{{device}} 권장 모델 {{total}}개 중 {{installed}}개 설치됨 · {{remaining}} GB 남음",
     "install_rest": "나머지 설치",

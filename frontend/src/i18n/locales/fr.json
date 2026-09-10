@@ -39,7 +39,6 @@
     "status_setup": "Configuration requise",
     "status_cpu": "Repli CPU",
     "status_off": "Désactivé",
-    "weights": "Poids téléchargés",
     "storage_link": "Paramètres de stockage",
     "reco_line": "{{installed}} des {{total}} modèles recommandés pour {{device}} installés · {{remaining}} Go restants",
     "install_rest": "Installer le reste",

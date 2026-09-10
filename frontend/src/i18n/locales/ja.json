@@ -39,7 +39,6 @@
     "status_setup": "設定が必要",
     "status_cpu": "CPUフォールバック",
     "status_off": "オフ",
-    "weights": "ダウンロード済みの重み",
     "storage_link": "ストレージ設定",
     "reco_line": "{{device}} 向けの推奨モデル {{total}} 件中 {{installed}} 件をインストール済み · 残り {{remaining}} GB",
     "install_rest": "残りをインストール",

@@ -39,7 +39,6 @@
     "status_setup": "Da configurare",
     "status_cpu": "Fallback CPU",
     "status_off": "Disattivato",
-    "weights": "Pesi scaricati",
     "storage_link": "Impostazioni archiviazione",
     "reco_line": "{{installed}} di {{total}} modelli consigliati per {{device}} installati · mancano {{remaining}} GB",
     "install_rest": "Installa il resto",

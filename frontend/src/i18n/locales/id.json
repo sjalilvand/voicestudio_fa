@@ -39,7 +39,6 @@
     "status_setup": "Perlu penyiapan",
     "status_cpu": "Fallback CPU",
     "status_off": "Nonaktif",
-    "weights": "Bobot yang diunduh",
     "storage_link": "Pengaturan penyimpanan",
     "reco_line": "{{installed}} dari {{total}} model yang direkomendasikan untuk {{device}} terpasang · sisa {{remaining}} GB",
     "install_rest": "Pasang sisanya",

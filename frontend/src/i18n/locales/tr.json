@@ -39,7 +39,6 @@
     "status_setup": "Kurulum gerekli",
     "status_cpu": "CPU yedeği",
     "status_off": "Kapalı",
-    "weights": "İndirilen ağırlıklar",
     "storage_link": "Depolama ayarları",
     "reco_line": "{{device}} için önerilen {{total}} modelden {{installed}} tanesi yüklü · {{remaining}} GB kaldı",
     "install_rest": "Kalanları yükle",

@@ -39,7 +39,6 @@
     "status_setup": "Behöver konfigureras",
     "status_cpu": "CPU-reserv",
     "status_off": "Av",
-    "weights": "Nedladdade vikter",
     "storage_link": "Lagringsinställningar",
     "reco_line": "{{installed}} av {{total}} rekommenderade modeller för {{device}} installerade · {{remaining}} GB kvar",
     "install_rest": "Installera resten",

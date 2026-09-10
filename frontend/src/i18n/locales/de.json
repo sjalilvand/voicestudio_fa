@@ -39,7 +39,6 @@
     "status_setup": "Einrichtung nötig",
     "status_cpu": "CPU-Fallback",
     "status_off": "Aus",
-    "weights": "Heruntergeladene Gewichte",
     "storage_link": "Speichereinstellungen",
     "reco_line": "{{installed}} von {{total}} empfohlenen Modellen für {{device}} installiert · noch {{remaining}} GB",
     "install_rest": "Rest installieren",

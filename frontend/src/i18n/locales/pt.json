@@ -39,7 +39,6 @@
     "status_setup": "Requer configuração",
     "status_cpu": "Alternativa CPU",
     "status_off": "Desligado",
-    "weights": "Pesos baixados",
     "storage_link": "Configurações de armazenamento",
     "reco_line": "{{installed}} de {{total}} modelos recomendados para {{device}} instalados · faltam {{remaining}} GB",
     "install_rest": "Instalar o restante",

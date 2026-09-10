@@ -39,7 +39,6 @@
     "status_setup": "Wymaga konfiguracji",
     "status_cpu": "Tryb awaryjny CPU",
     "status_off": "Wyłączone",
-    "weights": "Pobrane wagi",
     "storage_link": "Ustawienia pamięci",
     "reco_line": "Zainstalowano {{installed}} z {{total}} zalecanych modeli dla {{device}} · pozostało {{remaining}} GB",
     "install_rest": "Zainstaluj resztę",

@@ -39,7 +39,6 @@
     "status_setup": "Instellen vereist",
     "status_cpu": "CPU-fallback",
     "status_off": "Uit",
-    "weights": "Gedownloade gewichten",
     "storage_link": "Opslaginstellingen",
     "reco_line": "{{installed}} van {{total}} aanbevolen modellen voor {{device}} geïnstalleerd · nog {{remaining}} GB",
     "install_rest": "Rest installeren",

@@ -177,7 +177,6 @@
     "status_setup": "Needs setup",
     "status_cpu": "CPU fallback",
     "status_off": "Off",
-    "weights": "Downloaded weights",
     "storage_link": "Storage settings",
     "reco_line": "{{installed}} of {{total}} recommended models for {{device}} installed · {{remaining}} GB to go",
     "install_rest": "Install the rest",
