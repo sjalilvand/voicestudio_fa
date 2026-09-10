@@ -510,12 +510,14 @@ def test_package_filename_default_and_override(monkeypatch, app_modules):
     assert bootstrap.package_filename() == "breeze-tts-2-bf16.gguf"
 
 
-def test_materialize_hf_symlink_keeps_gguf_suffix_without_copy(tmp_path, app_modules):
+def test_materialize_hf_symlink_keeps_gguf_suffix_without_copy(
+    tmp_path, app_modules, symlink_or_skip,
+):
     bootstrap = app_modules.bootstrap
     blob = tmp_path / "content-addressed-blob"
     blob.write_bytes(b"GGUF test payload")
     snapshot = tmp_path / "breeze-tts-2-q8_0.gguf"
-    snapshot.symlink_to(blob)
+    symlink_or_skip(snapshot, blob)
 
     materialized = bootstrap._materialize_gguf_cache_path(snapshot)
 
@@ -533,16 +535,18 @@ def test_materialize_rejects_extensionless_model(tmp_path, app_modules):
         bootstrap._materialize_gguf_cache_path(model)
 
 
-def test_materialize_replaces_preexisting_symlink_alias(tmp_path, app_modules):
+def test_materialize_replaces_preexisting_symlink_alias(
+    tmp_path, app_modules, symlink_or_skip,
+):
     bootstrap = app_modules.bootstrap
     blob = tmp_path / "content-addressed-blob"
     blob.write_bytes(b"GGUF test payload")
     snapshot = tmp_path / "breeze-tts-2-q8_0.gguf"
-    snapshot.symlink_to(blob)
+    symlink_or_skip(snapshot, blob)
     alias = snapshot.with_name(
         f".{snapshot.stem}-{bootstrap.HF_MODEL_REVISION[:12]}.audiocpp.gguf"
     )
-    alias.symlink_to(blob)
+    symlink_or_skip(alias, blob)
 
     materialized = bootstrap._materialize_gguf_cache_path(snapshot)
 
@@ -552,7 +556,7 @@ def test_materialize_replaces_preexisting_symlink_alias(tmp_path, app_modules):
 
 
 def test_materialize_cross_filesystem_symlink_links_beside_target(
-    tmp_path, monkeypatch, app_modules,
+    tmp_path, monkeypatch, app_modules, symlink_or_skip,
 ):
     bootstrap = app_modules.bootstrap
     source_dir = tmp_path / "source"
@@ -562,7 +566,7 @@ def test_materialize_cross_filesystem_symlink_links_beside_target(
     link_dir = tmp_path / "link"
     link_dir.mkdir()
     snapshot = link_dir / "custom.gguf"
-    snapshot.symlink_to(blob)
+    symlink_or_skip(snapshot, blob)
     real_link = os.link
     calls = 0
 
@@ -584,13 +588,13 @@ def test_materialize_cross_filesystem_symlink_links_beside_target(
 
 
 def test_file_override_materializes_hf_style_symlink(
-    tmp_path, monkeypatch, app_modules,
+    tmp_path, monkeypatch, app_modules, symlink_or_skip,
 ):
     bootstrap = app_modules.bootstrap
     blob = tmp_path / "blob"
     blob.write_bytes(b"GGUF test payload")
     model = tmp_path / "custom.gguf"
-    model.symlink_to(blob)
+    symlink_or_skip(model, blob)
     monkeypatch.setenv("OMNIVOICE_AUDIOCPP_MODEL", str(model))
 
     resolved = bootstrap.resolve_model_file()
@@ -601,7 +605,7 @@ def test_file_override_materializes_hf_style_symlink(
 
 
 def test_directory_override_materializes_hf_style_symlink(
-    tmp_path, monkeypatch, app_modules,
+    tmp_path, monkeypatch, app_modules, symlink_or_skip,
 ):
     bootstrap = app_modules.bootstrap
     blob = tmp_path / "blob"
@@ -609,7 +613,7 @@ def test_directory_override_materializes_hf_style_symlink(
     model_dir = tmp_path / "models"
     model_dir.mkdir()
     model = model_dir / bootstrap.DEFAULT_PACKAGE
-    model.symlink_to(blob)
+    symlink_or_skip(model, blob)
     monkeypatch.setenv("OMNIVOICE_AUDIOCPP_MODEL", str(model_dir))
 
     resolved = bootstrap.resolve_model_file()
