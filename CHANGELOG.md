@@ -9,6 +9,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- A bare 500 report now names the backend error class, so two unrelated faults stop filing the same issue (#1773)
 - A dictation shortcut another app already owns now says so, instead of silently doing nothing (#1858)
 - Quitting on Windows is no longer reported as a crash on the next launch (#1898)
 - A Reduce motion switch in Settings, for calm without changing your whole system (#1857)

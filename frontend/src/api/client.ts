@@ -236,11 +236,29 @@ if (typeof window !== 'undefined') {
 export class ApiError extends Error {
   status?: number;
   detail?: unknown;
-  constructor(message: string, init: { status?: number; detail?: unknown } = {}) {
+  /**
+   * The backend exception type behind an unclassified failure.
+   *
+   * The 500 handler puts `error_class` in the response body, but nothing
+   * lifted it onto the Error — so the auto bug reporter, which reads the
+   * Error, filed "VoiceStudio hit an internal error; check the backend log"
+   * and nothing else. Every such report looked identical and none could be
+   * triaged (#1773).
+   *
+   * #1956 did this for the streaming path. This is the classic path, which
+   * had been carrying the datum on the wire the whole time.
+   */
+  errorClass?: string;
+  constructor(
+    message: string,
+    init: { status?: number; detail?: unknown; errorClass?: string } = {},
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = init.status;
     this.detail = init.detail;
+    this.errorClass =
+      typeof init.errorClass === 'string' && init.errorClass ? init.errorClass : undefined;
   }
 }
 
@@ -577,9 +595,16 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promis
         typeof detail === 'string'
           ? detail
           : ((detail as { message?: string })?.message ?? JSON.stringify(detail));
+      // The backend names the exception type in `error_class` on its 500s.
+      // Lifting it here is what lets the bug report say which failure it was.
+      const errorClass =
+        detail && typeof detail === 'object'
+          ? (detail as { error_class?: unknown }).error_class
+          : undefined;
       throw new ApiError(`${res.status} ${res.statusText}: ${msg}`, {
         status: res.status,
         detail,
+        errorClass: typeof errorClass === 'string' ? errorClass : undefined,
       });
     }
     return res;
