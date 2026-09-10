@@ -41,15 +41,15 @@ def _public_routing_reason(status: object, diagnostic: object) -> str:
 # boundary intact and still names the kind of problem and the place to fix it.
 _UNAVAILABLE_NOT_INSTALLED = (
     "This engine's package isn't installed yet. Install it from "
-    "Model Catalogue → Engines."
+    "Model Catalogue."
 )
 _UNAVAILABLE_NEEDS_CONFIG = (
     "This engine needs to be configured before it can run. Open "
-    "Model Catalogue → Engines to finish setting it up."
+    "Model Catalogue to finish setting it up."
 )
 _UNAVAILABLE_FILE_MISSING = (
     "A file this engine needs is missing or unreadable. Reinstall it from "
-    "Model Catalogue → Engines."
+    "Model Catalogue."
 )
 
 # Matched against the lowered probe text. Ordered most specific first: a

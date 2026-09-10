@@ -12,8 +12,8 @@ vi.mock('react-hot-toast', () => ({
 }));
 
 // Residency layer defaults (/model/loaded) — mocked so tests that don't
-// inject apiListLoadedModels never hit the network (apiFetch retries with
-// real-timer backoff on a dead transport). Residency tests inject their own.
+// inject apiListLoadedModels never hit the network. Residency tests inject
+// their own.
 vi.mock('../api/system', () => ({
   listLoadedModels: vi.fn().mockResolvedValue({ models: [], count: 0 }),
   unloadLoadedModel: vi.fn(),
@@ -67,56 +67,52 @@ function makeEnginesResponse({ inProcessAvailable = true, inProcessHasLastError 
   };
 }
 
+// ── DOM helpers for the list + detail layout ──────────────────────────────
+// One <tr data-engine-id> per engine; the engine name is a details toggle
+// (`why-toggle-<id>`) that selects the row and opens `engine-detail-<id>`.
+const rowOf = (id) => document.querySelector(`[data-engine-id="${id}"]`);
+const nameOf = (id) => screen.getByTestId(`why-toggle-${id}`);
+const openDetails = (id) => {
+  fireEvent.click(nameOf(id));
+  return screen.getByTestId(`engine-detail-${id}`);
+};
+const waitForRow = (id) => screen.findByTestId(`why-toggle-${id}`);
+
 describe('EngineCompatibilityMatrix', () => {
   beforeEach(() => {
     vi.useRealTimers();
   });
 
   it('formats disk sizes with the active locale', () => {
-    expect(fmtDiskBytes(1.5 * 1024 ** 3, 'unknown', 'de-DE')).toMatch(/^1,50\sGB$/u);
+    expect(fmtDiskBytes(1536 * 1024 * 1024, 'unknown', 'en')).toBe('1.50 GB');
+    expect(fmtDiskBytes(null, 'unknown', 'en')).toBe('unknown');
   });
 
   it('lists available engines first, keeping registration order inside each group', async () => {
-    // The fixture is deliberately interleaved (available, UNavailable,
-    // available). A matrix that renders it in payload order buries a usable
-    // engine under one you cannot select, which is the whole reason to sort:
-    // this list is something you pick FROM.
+    const response = makeEnginesResponse();
+    response.tts.backends = [
+      response.tts.backends[1], // kittentts — unavailable, registered first
+      response.tts.backends[0], // omnivoice — available
+      { ...response.tts.backends[2], available: false }, // indextts2 — unavailable
+    ];
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        activeId="omnivoice"
-        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
+        apiListEngines={vi.fn().mockResolvedValue(response)}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await screen.findByText('OmniVoice (test)');
-
-    const order = Array.from(document.querySelectorAll('.engine-matrix__name')).map(
-      (el) => el.textContent,
+    await waitForRow('omnivoice');
+    const ids = [...document.querySelectorAll('[data-engine-id]')].map((el) =>
+      el.getAttribute('data-engine-id'),
     );
-    expect(order).toEqual(['OmniVoice (test)', 'IndexTTS2 (test)', 'KittenTTS (test)']);
+    expect(ids).toEqual(['omnivoice', 'kittentts', 'indextts2']);
+    // Two captions frame the groups: what you can use, then what to add.
+    expect(screen.getByText('Ready to use')).toBeInTheDocument();
+    expect(screen.getByText('Add more engines')).toBeInTheDocument();
   });
 
-  it("dims an unavailable engine's name without fading its evidence", async () => {
-    // Fading the whole row took the status badge and GPU chips with it — the
-    // two things that say WHY the engine is unavailable.
-    render(
-      <EngineCompatibilityMatrix
-        family="tts"
-        activeId="omnivoice"
-        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
-        apiGetEngineHealth={vi.fn()}
-      />,
-    );
-    const unavailable = await screen.findByText('KittenTTS (test)');
-    const available = screen.getByText('IndexTTS2 (test)');
-
-    expect(unavailable.className).toContain('color-mix');
-    expect(available.className).not.toContain('color-mix');
-    expect(unavailable.closest('.engine-matrix__row').className).not.toContain('opacity-');
-  });
-
-  it('renders one row per backend with the documented columns', async () => {
+  it('renders a semantic table: one row per backend under three columns and an action column', async () => {
     const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
     render(
       <EngineCompatibilityMatrix
@@ -125,25 +121,73 @@ describe('EngineCompatibilityMatrix', () => {
         apiGetEngineHealth={vi.fn()}
       />,
     );
-
-    await waitFor(() => {
-      expect(screen.getByText('OmniVoice (test)')).toBeInTheDocument();
-    });
+    await waitForRow('omnivoice');
     expect(apiListEngines).toHaveBeenCalledTimes(1);
-
-    // Three engine rows, one per registered backend (the column-header row
-    // is role="row" too, so count by the per-engine marker).
+    expect(screen.getByRole('table')).toBeInTheDocument();
     expect(document.querySelectorAll('[data-engine-id]').length).toBe(3);
     expect(screen.getByText('KittenTTS (test)')).toBeInTheDocument();
     expect(screen.getByText('IndexTTS2 (test)')).toBeInTheDocument();
-    // The documented columns are announced as column headers.
     expect(screen.getAllByRole('columnheader').map((el) => el.textContent)).toEqual([
       'Engine',
+      'Runs on',
       'Status',
-      'GPU compat',
-      'Isolation',
       'Actions',
     ]);
+    // Nothing selected yet: the detail slot carries the hint, not a panel.
+    expect(screen.getByTestId('engine-detail-empty')).toBeInTheDocument();
+    expect(screen.queryByTestId('engine-detail-omnivoice')).not.toBeInTheDocument();
+  });
+
+  it('keeps every row to one line: name, device, status phrase, one primary action', async () => {
+    const response = makeEnginesResponse();
+    response.tts.backends[0] = {
+      ...response.tts.backends[0],
+      effective_device: 'cuda',
+      routing_status: 'accelerated',
+    };
+    render(
+      <EngineCompatibilityMatrix
+        family="tts"
+        onSelect={vi.fn()}
+        apiListEngines={vi.fn().mockResolvedValue(response)}
+        apiGetEngineHealth={vi.fn()}
+      />,
+    );
+    await waitForRow('omnivoice');
+    // Active row: device + status, no button (nothing to do).
+    const omni = rowOf('omnivoice');
+    expect(within(omni).getByTestId('runs-on-omnivoice')).toHaveTextContent('CUDA');
+    expect(within(omni).getByText('GPU active')).toBeInTheDocument();
+    expect(within(omni).getByText('active')).toBeInTheDocument();
+    expect(within(omni).queryByRole('button', { name: /use omnivoice/i })).not.toBeInTheDocument();
+    // Available, not active: exactly one primary action — Use.
+    const index = rowOf('indextts2');
+    expect(within(index).getByRole('button', { name: /use indextts2/i })).toBeInTheDocument();
+    expect(
+      within(index).queryByRole('button', { name: /test indextts2/i }),
+    ).not.toBeInTheDocument();
+    // Unavailable, not installable: no button at all; the status says why.
+    const kitten = rowOf('kittentts');
+    expect(within(kitten).queryAllByRole('button')).toHaveLength(1); // the name toggle only
+    expect(within(kitten).getByText('Needs setup')).toBeInTheDocument();
+    // Compat chips, isolation and hints are NOT on the row any more.
+    expect(within(omni).queryByText('MPS')).not.toBeInTheDocument();
+    expect(within(index).queryByText(/runs isolated/i)).not.toBeInTheDocument();
+    expect(within(omni).queryByText('pip install omnivoice')).not.toBeInTheDocument();
+  });
+
+  it("dims an unavailable engine's name while its status stays legible", async () => {
+    render(
+      <EngineCompatibilityMatrix
+        family="tts"
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
+        apiGetEngineHealth={vi.fn()}
+      />,
+    );
+    await waitForRow('kittentts');
+    expect(nameOf('kittentts')).toHaveClass('text-muted-foreground');
+    expect(nameOf('omnivoice')).toHaveClass('text-foreground');
+    expect(within(rowOf('kittentts')).getByText('Needs setup')).toHaveClass('text-muted-foreground');
   });
 
   it('shows separate estimates and measured disk categories on demand', async () => {
@@ -179,9 +223,9 @@ describe('EngineCompatibilityMatrix', () => {
         apiGetDiskUsage={apiGetDiskUsage}
       />,
     );
-
-    await screen.findByText('OmniVoice (test)');
-    fireEvent.click(screen.getByRole('button', { name: 'Disk details' }));
+    await waitForRow('omnivoice');
+    const panel = openDetails('omnivoice');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Disk details' }));
     await waitFor(() => expect(apiGetDiskUsage).toHaveBeenCalledWith('omnivoice'));
     const details = await screen.findByTestId('disk-usage-omnivoice');
     expect(within(details).getByText('Model download')).toBeInTheDocument();
@@ -198,37 +242,24 @@ describe('EngineCompatibilityMatrix', () => {
   it('ignores a disk measurement that finishes after engine data reloads', async () => {
     const response = makeEnginesResponse();
     response.tts.backends[0].disk_usage = {
-      estimate: {
-        model_download_bytes: 2 * 1024 ** 3,
-        confidence: 'estimated',
-      },
+      estimate: { model_download_bytes: 2 * 1024 ** 3, confidence: 'estimated' },
       actual: {},
     };
     let resolveMeasurement;
     const apiGetDiskUsage = vi.fn(() => new Promise((resolve) => (resolveMeasurement = resolve)));
     const apiListEngines = vi.fn().mockResolvedValue(response);
-    const view = render(
-      <EngineCompatibilityMatrix
-        family="tts"
-        reloadToken={0}
-        apiListEngines={apiListEngines}
-        apiGetEngineHealth={vi.fn()}
-        apiGetDiskUsage={apiGetDiskUsage}
-      />,
-    );
-
-    await screen.findByText('OmniVoice (test)');
-    fireEvent.click(screen.getByRole('button', { name: 'Disk details' }));
+    const props = {
+      family: 'tts',
+      apiListEngines,
+      apiGetEngineHealth: vi.fn(),
+      apiGetDiskUsage,
+    };
+    const view = render(<EngineCompatibilityMatrix {...props} reloadToken={0} />);
+    await waitForRow('omnivoice');
+    const panel = openDetails('omnivoice');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Disk details' }));
     await waitFor(() => expect(apiGetDiskUsage).toHaveBeenCalledOnce());
-    view.rerender(
-      <EngineCompatibilityMatrix
-        family="tts"
-        reloadToken={1}
-        apiListEngines={apiListEngines}
-        apiGetEngineHealth={vi.fn()}
-        apiGetDiskUsage={apiGetDiskUsage}
-      />,
-    );
+    view.rerender(<EngineCompatibilityMatrix {...props} reloadToken={1} />);
     await waitFor(() => expect(apiListEngines).toHaveBeenCalledTimes(2));
     await act(async () => {
       resolveMeasurement({
@@ -236,172 +267,111 @@ describe('EngineCompatibilityMatrix', () => {
         actual: { model_bytes: 9 * 1024 ** 3, confidence: 'measured' },
       });
     });
-
     expect(screen.queryByText('9.00 GB')).not.toBeInTheDocument();
   });
 
-  it('shows isolation_mode badge per row (subprocess for IndexTTS, in-process for the others)', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
+  it('names isolation in the detail panel only for subprocess engines', async () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
-
-    const indexRow = screen.getByText('IndexTTS2 (test)').closest('[role="row"]');
-    const omniRow = screen.getByText('OmniVoice (test)').closest('[role="row"]');
-    const kittenRow = screen.getByText('KittenTTS (test)').closest('[role="row"]');
-
-    expect(within(indexRow).getByText('subprocess')).toBeInTheDocument();
-    expect(within(omniRow).getByText('in-process')).toBeInTheDocument();
-    expect(within(kittenRow).getByText('in-process')).toBeInTheDocument();
+    await waitForRow('indextts2');
+    expect(within(openDetails('indextts2')).getByText('Runs isolated')).toBeInTheDocument();
+    expect(within(openDetails('omnivoice')).queryByText('Runs isolated')).not.toBeInTheDocument();
   });
 
-  it('renders GPU compat chips for each backend', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
+  it('renders GPU compat chips for the selected engine in its detail panel', async () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-
-    await waitFor(() => screen.getByText('OmniVoice (test)'));
-
-    const omniRow = screen.getByText('OmniVoice (test)').closest('[role="row"]');
-    expect(within(omniRow).getByText('CUDA')).toBeInTheDocument();
-    expect(within(omniRow).getByText('MPS')).toBeInTheDocument();
-    expect(within(omniRow).getByText('CPU')).toBeInTheDocument();
-
-    const kittenRow = screen.getByText('KittenTTS (test)').closest('[role="row"]');
-    // KittenTTS is CPU-only.
-    expect(within(kittenRow).getByText('CPU')).toBeInTheDocument();
-    expect(within(kittenRow).queryByText('CUDA')).not.toBeInTheDocument();
+    await waitForRow('omnivoice');
+    const omni = openDetails('omnivoice');
+    expect(within(omni).getByText('CUDA')).toBeInTheDocument();
+    expect(within(omni).getByText('MPS')).toBeInTheDocument();
+    expect(within(omni).getByText('CPU')).toBeInTheDocument();
+    const kitten = openDetails('kittentts');
+    expect(within(kitten).getByText('CPU')).toBeInTheDocument();
+    expect(within(kitten).queryByText('CUDA')).not.toBeInTheDocument();
   });
 
-  it('shows the install reason in the expansion panel when a backend is unavailable', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
+  it('shows the install reason in the detail panel when a backend is unavailable', async () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-
-    await waitFor(() => screen.getByText('KittenTTS (test)'));
-    const kittenRow = screen.getByText('KittenTTS (test)').closest('[role="row"]');
-    // The badge text is exactly "Unavailable" (with a leading icon); the
-    // details toggle is "Why unavailable?" — scope to the badge with an
-    // exact match so we don't double-count the toggle.
-    const badge = within(kittenRow).getByText(
-      (_, el) => el?.tagName === 'SPAN' && /^\s*Unavailable\s*$/.test(el.textContent || ''),
-    );
-    expect(badge).toBeInTheDocument();
-    // The failure reason lives in the expansion panel BELOW the row (so the
-    // row itself stays two lines tall) — closed by default, open on toggle.
+    await waitForRow('kittentts');
+    expect(within(rowOf('kittentts')).getByText('Needs setup')).toBeInTheDocument();
     expect(screen.queryByText('kittentts not installed')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('why-toggle-kittentts'));
-    const panel = screen.getByTestId('engine-detail-kittentts');
+    const panel = openDetails('kittentts');
     expect(within(panel).getByText('kittentts not installed')).toBeInTheDocument();
+    expect(within(panel).getByText('pip install kittentts')).toBeInTheDocument();
   });
 
   it('renders a "Last error" line in the open panel when last_error is populated', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-
-    await waitFor(() => screen.getByText('KittenTTS (test)'));
-    fireEvent.click(screen.getByTestId('why-toggle-kittentts'));
+    await waitForRow('kittentts');
+    openDetails('kittentts');
     const lastErrEls = screen.getAllByTestId('last-error');
     expect(lastErrEls.length).toBeGreaterThan(0);
-    // The masked sentinel survives the redactor — confirms the row renders
-    // the cache verbatim and does NOT try to "clean up" the masked string.
+    // The masked sentinel survives the redactor — the cache is rendered verbatim.
     expect(lastErrEls[0].textContent).toMatch(/hf_\*\*\*REDACTED\*\*\*/);
   });
 
   it('clicking Test engine fires getEngineHealth and renders latency_ms', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
-    const apiGetEngineHealth = vi.fn().mockResolvedValue({
-      id: 'indextts2',
-      ok: true,
-      message: 'pong',
-      latency_ms: 1234,
-    });
+    const apiGetEngineHealth = vi
+      .fn()
+      .mockResolvedValue({ id: 'indextts2', ok: true, message: 'pong', latency_ms: 1234 });
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={apiGetEngineHealth}
       />,
     );
-
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
-    const indexRow = screen.getByText('IndexTTS2 (test)').closest('[role="row"]');
-    const testBtn = within(indexRow).getByRole('button', {
-      name: /test indextts2/i,
-    });
-    fireEvent.click(testBtn);
-
-    await waitFor(() => {
-      expect(apiGetEngineHealth).toHaveBeenCalledWith('indextts2');
-    });
-    await waitFor(() => {
-      expect(within(indexRow).getByTestId('health-result-indextts2')).toBeInTheDocument();
-    });
-    expect(within(indexRow).getByText(/1234 ms/)).toBeInTheDocument();
+    await waitForRow('indextts2');
+    const panel = openDetails('indextts2');
+    fireEvent.click(within(panel).getByRole('button', { name: /test indextts2/i }));
+    await waitFor(() => expect(apiGetEngineHealth).toHaveBeenCalledWith('indextts2'));
+    await waitFor(() =>
+      expect(within(panel).getByTestId('health-result-indextts2')).toBeInTheDocument(),
+    );
+    expect(within(panel).getByText(/1234 ms/)).toBeInTheDocument();
   });
 
   it('Test button is disabled while an inflight health request is pending', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
-    // A health request that never resolves so we can observe the inflight state.
     let resolveHealth;
-    const apiGetEngineHealth = vi.fn(
-      () =>
-        new Promise((resolve) => {
-          resolveHealth = resolve;
-        }),
-    );
+    const apiGetEngineHealth = vi.fn(() => new Promise((resolve) => (resolveHealth = resolve)));
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={apiGetEngineHealth}
       />,
     );
-
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
-    const indexRow = screen.getByText('IndexTTS2 (test)').closest('[role="row"]');
-    const testBtn = within(indexRow).getByRole('button', {
-      name: /test indextts2/i,
-    });
+    await waitForRow('indextts2');
+    const panel = openDetails('indextts2');
+    const testBtn = within(panel).getByRole('button', { name: /test indextts2/i });
     fireEvent.click(testBtn);
-
-    await waitFor(() => {
-      expect(testBtn).toBeDisabled();
-    });
-    // Second click while inflight must be a no-op — the spy has been called
-    // exactly once.
-    fireEvent.click(testBtn);
+    await waitFor(() => expect(testBtn).toBeDisabled());
+    fireEvent.click(testBtn); // no-op while inflight
     expect(apiGetEngineHealth).toHaveBeenCalledTimes(1);
-
-    // Release the promise so the test doesn't leak a pending microtask.
-    resolveHealth({
-      id: 'indextts2',
-      ok: true,
-      message: 'pong',
-      latency_ms: 50,
-    });
+    resolveHealth({ id: 'indextts2', ok: true, message: 'pong', latency_ms: 50 });
   });
 
   // ── #21 routing display ────────────────────────────────────────────────
@@ -446,11 +416,7 @@ describe('EngineCompatibilityMatrix', () => {
             routing_reason: 'requires cuda; this host has cpu',
           }),
           // Legacy payload: no routing_* keys → render exactly as before.
-          base({
-            id: 'legacy',
-            display_name: 'Legacy TTS',
-            gpu_compat: ['cpu'],
-          }),
+          base({ id: 'legacy', display_name: 'Legacy TTS', gpu_compat: ['cpu'] }),
         ],
       },
       asr: { active: '', backends: [] },
@@ -470,22 +436,21 @@ describe('EngineCompatibilityMatrix', () => {
     };
   }
 
-  it('highlights the effective device chip + shows an "accelerated" badge', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(routingResponse());
+  it('shows the effective device in the row and highlights its chip in the panel', async () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(routingResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('Accel TTS'));
-    const row = screen.getByText('Accel TTS').closest('[role="row"]');
+    await waitForRow('accel');
+    const row = rowOf('accel');
+    expect(within(row).getByTestId('runs-on-accel')).toHaveTextContent('CUDA');
     expect(within(row).getByText('GPU active')).toBeInTheDocument();
-    // the CUDA chip (effective_device) carries the highlight class
-    expect(within(row).getByText('CUDA').classList.contains('is-effective')).toBe(true);
-    // a non-effective chip does not
-    expect(within(row).getByText('MPS').classList.contains('is-effective')).toBe(false);
+    const panel = openDetails('accel');
+    expect(within(panel).getByText('CUDA').classList.contains('is-effective')).toBe(true);
+    expect(within(panel).getByText('MPS').classList.contains('is-effective')).toBe(false);
   });
 
   it('uses the active locale for the Vulkan chip and effective-device tooltip', async () => {
@@ -507,7 +472,6 @@ describe('EngineCompatibilityMatrix', () => {
     const response = routingResponse();
     response.tts.backends[0].gpu_compat = ['vulkan'];
     response.tts.backends[0].effective_device = 'vulkan';
-
     render(
       <I18nextProvider i18n={localizedI18n}>
         <EngineCompatibilityMatrix
@@ -517,148 +481,137 @@ describe('EngineCompatibilityMatrix', () => {
         />
       </I18nextProvider>,
     );
-
-    const row = (await screen.findByText('Accel TTS')).closest('[role="row"]');
-    expect(within(row).getByText('Vulkan localizada')).toHaveAttribute(
+    await waitForRow('accel');
+    expect(within(rowOf('accel')).getByTestId('runs-on-accel')).toHaveTextContent(
+      'Vulkan localizada',
+    );
+    const panel = openDetails('accel');
+    expect(within(panel).getByText('Vulkan localizada')).toHaveAttribute(
       'title',
       'Se ejecuta en Vulkan localizada',
     );
   });
 
-  it('shows a "CPU fallback" badge for a cpu_fallback engine', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(routingResponse());
+  it('reads "CPU fallback" in the status column for a cpu_fallback engine', async () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(routingResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('Fallback TTS'));
-    const row = screen.getByText('Fallback TTS').closest('[role="row"]');
+    await waitForRow('fallback');
+    const row = rowOf('fallback');
     expect(within(row).getByText('CPU fallback')).toBeInTheDocument();
+    expect(within(row).getByTestId('runs-on-fallback')).toHaveTextContent('CPU');
   });
 
-  it('suppresses the routing badge for an unavailable engine', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(routingResponse());
+  it('reads "Needs setup" for an unavailable engine, never a routing phrase', async () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(routingResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('Unavail TTS'));
-    const row = screen.getByText('Unavail TTS').closest('[role="row"]');
+    await waitForRow('gone');
+    const row = rowOf('gone');
+    expect(within(row).getByText('Needs setup')).toBeInTheDocument();
     expect(within(row).queryByText('GPU active')).not.toBeInTheDocument();
     expect(within(row).queryByText('CPU fallback')).not.toBeInTheDocument();
+    // Runs-on names what it would need, muted.
+    expect(within(row).getByTestId('runs-on-gone')).toHaveTextContent('CUDA');
   });
 
-  it('renders a legacy (no-routing) payload with no routing badge', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(routingResponse());
+  it('renders a legacy (no-routing) payload as plainly Available', async () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(routingResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('Legacy TTS'));
-    const row = screen.getByText('Legacy TTS').closest('[role="row"]');
-    expect(within(row).getByText('CPU')).toBeInTheDocument(); // chip still renders
-    expect(within(row).queryByText('GPU active')).not.toBeInTheDocument(); // no routing badge
-    expect(within(row).queryByText('CPU fallback')).not.toBeInTheDocument();
+    await waitForRow('legacy');
+    const row = rowOf('legacy');
+    expect(within(row).getByText('Available')).toBeInTheDocument();
+    expect(within(row).queryByText('GPU active')).not.toBeInTheDocument();
   });
 
-  it('shows a "Remote" badge (not device chips) for LLM rows', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(routingResponse());
+  it('shows "Remote" (not device chips) for LLM rows', async () => {
     render(
       <EngineCompatibilityMatrix
         family="llm"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(routingResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('Off LLM'));
-    const row = screen.getByText('Off LLM').closest('[role="row"]');
-    expect(within(row).getByText('Remote')).toBeInTheDocument();
+    await waitForRow('off');
+    expect(within(rowOf('off')).getByTestId('runs-on-off')).toHaveTextContent('Remote');
+    const panel = openDetails('off');
+    expect(within(panel).getByText('Remote')).toBeInTheDocument();
+    expect(within(panel).queryByText('CPU')).not.toBeInTheDocument();
   });
 
   it('renders a failure marker when the health route returns ok=false', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
-    const apiGetEngineHealth = vi.fn().mockResolvedValue({
-      id: 'indextts2',
-      ok: false,
-      message: 'spawn failed',
-      latency_ms: 12,
-    });
+    const apiGetEngineHealth = vi
+      .fn()
+      .mockResolvedValue({ id: 'indextts2', ok: false, message: 'spawn failed', latency_ms: 12 });
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={apiGetEngineHealth}
       />,
     );
-
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
-    const indexRow = screen.getByText('IndexTTS2 (test)').closest('[role="row"]');
-    fireEvent.click(within(indexRow).getByRole('button', { name: /test indextts2/i }));
-
-    await waitFor(() => {
-      expect(within(indexRow).getByText(/failed/i)).toBeInTheDocument();
-    });
+    await waitForRow('indextts2');
+    const panel = openDetails('indextts2');
+    fireEvent.click(within(panel).getByRole('button', { name: /test indextts2/i }));
+    await waitFor(() =>
+      expect(within(panel).getByTestId('health-result-indextts2')).toHaveTextContent(/failed/i),
+    );
   });
 
-  // ── P3-A: routing reason is reachable without a hover ──────────────────
-  it('surfaces the routing reason as visible text, not only a hover title', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(routingResponse());
+  it('surfaces the routing reason as visible text in the panel, not only a hover title', async () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(routingResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('Fallback TTS'));
-    const row = screen.getByText('Fallback TTS').closest('[role="row"]');
-    // Visible text (keyboard/touch reachable) — was previously only a badge title.
-    expect(within(row).getByTestId('routing-reason-fallback')).toHaveTextContent(
+    await waitForRow('fallback');
+    expect(within(rowOf('fallback')).getByTestId('runs-on-fallback')).toHaveAttribute(
+      'title',
       'engine has no CUDA path; running on CPU',
     );
-    // A clean accelerated row (no caveat reason) shows no reason line.
-    const accelRow = screen.getByText('Accel TTS').closest('[role="row"]');
-    expect(within(accelRow).queryByTestId('routing-reason-accel')).not.toBeInTheDocument();
+    const panel = openDetails('fallback');
+    expect(within(panel).getByTestId('routing-reason-fallback')).toHaveTextContent(
+      'engine has no CUDA path; running on CPU',
+    );
+    const accel = openDetails('accel');
+    expect(within(accel).queryByTestId('routing-reason-accel')).not.toBeInTheDocument();
   });
 
-  // ── P3-B: in-process health check reads as a liveness/deps check ────────
   it('labels an in-process health check "deps OK" while subprocess shows real ms', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
-    const apiGetEngineHealth = vi.fn().mockResolvedValue({
-      id: 'omnivoice',
-      ok: true,
-      message: 'import ok',
-      latency_ms: 0,
-    });
+    const apiGetEngineHealth = vi
+      .fn()
+      .mockResolvedValue({ id: 'omnivoice', ok: true, message: 'import ok', latency_ms: 0 });
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={apiGetEngineHealth}
       />,
     );
-    await waitFor(() => screen.getByText('OmniVoice (test)'));
-    const omniRow = screen.getByText('OmniVoice (test)').closest('[role="row"]');
-    // Exact match: the row now also has a "Self-test OmniVoice" button, which a
-    // loose /test omnivoice/i would ambiguously also match.
-    fireEvent.click(within(omniRow).getByRole('button', { name: 'Test OmniVoice (test)' }));
-    await waitFor(() => {
-      expect(within(omniRow).getByTestId('health-result-omnivoice')).toHaveTextContent('deps OK');
-    });
-    // The misleading "0 ms" latency is NOT shown for an in-process liveness probe.
-    expect(within(omniRow).queryByText(/0 ms/)).not.toBeInTheDocument();
+    await waitForRow('omnivoice');
+    const panel = openDetails('omnivoice');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Test OmniVoice (test)' }));
+    await waitFor(() =>
+      expect(within(panel).getByTestId('health-result-omnivoice')).toHaveTextContent('deps OK'),
+    );
+    expect(within(panel).queryByText(/0 ms/)).not.toBeInTheDocument();
   });
 
-  // ── P1-B: matrix refreshes after a successful select (no manual Refresh) ─
   it('reflects the new active engine after select resolves, without a manual Refresh', async () => {
     let active = 'omnivoice';
     const resp = () => ({
@@ -692,7 +645,7 @@ describe('EngineCompatibilityMatrix', () => {
     });
     const apiListEngines = vi.fn(async () => resp());
     const onSelect = vi.fn(async (_family, id) => {
-      active = id; // backend now reports the new active engine
+      active = id;
     });
     render(
       <EngineCompatibilityMatrix
@@ -702,23 +655,21 @@ describe('EngineCompatibilityMatrix', () => {
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
-    const indexRow = () => screen.getByText('IndexTTS2 (test)').closest('[role="row"]');
-    // Not active yet.
-    expect(within(indexRow()).queryByText('active')).not.toBeInTheDocument();
-
-    fireEvent.click(within(indexRow()).getByRole('button', { name: /use indextts2/i }));
+    await waitForRow('indextts2');
+    expect(within(rowOf('indextts2')).queryByText('active')).not.toBeInTheDocument();
+    fireEvent.click(within(rowOf('indextts2')).getByRole('button', { name: /use indextts2/i }));
     await waitFor(() => expect(onSelect).toHaveBeenCalledWith('tts', 'indextts2'));
-
-    // Active badge moves to IndexTTS2 after the post-select reload — no manual Refresh.
-    await waitFor(() => {
-      expect(within(indexRow()).getByText('active')).toBeInTheDocument();
-    });
-    // The reload re-fetched the engine list (initial mount + post-select).
+    await waitFor(() => expect(within(rowOf('indextts2')).getByText('active')).toBeInTheDocument());
+    // The Use button leaves the now-active row; the old active row gains one.
+    expect(
+      within(rowOf('indextts2')).queryByRole('button', { name: /use indextts2/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(rowOf('omnivoice')).getByRole('button', { name: /use omnivoice/i }),
+    ).toBeInTheDocument();
     expect(apiListEngines.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
-  // ── P1-A: the license dialog actually mounts on "Accept license" ────────
   it('mounts the Supertonic license dialog when "Accept license" is clicked', async () => {
     const apiListEngines = vi.fn().mockResolvedValue({
       tts: {
@@ -746,19 +697,15 @@ describe('EngineCompatibilityMatrix', () => {
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('Supertonic-3'));
-    // Dialog is not mounted until the button is clicked (state was previously
-    // discarded, so this click did nothing — the regression this guards).
+    await waitForRow('supertonic3');
     expect(screen.queryByText('Supertonic-3 — License Acceptance')).not.toBeInTheDocument();
-
+    const panel = openDetails('supertonic3');
     fireEvent.click(
-      screen.getByRole('button', {
-        name: /review and accept supertonic-3 license/i,
-      }),
+      within(panel).getByRole('button', { name: /review and accept supertonic-3 license/i }),
     );
-    await waitFor(() => {
-      expect(screen.getByText('Supertonic-3 — License Acceptance')).toBeInTheDocument();
-    });
+    await waitFor(() =>
+      expect(screen.getByText('Supertonic-3 — License Acceptance')).toBeInTheDocument(),
+    );
   });
 
   it('mounts the PocketTTS terms dialog from an unavailable engine row', async () => {
@@ -788,12 +735,10 @@ describe('EngineCompatibilityMatrix', () => {
         apiGetEngineHealth={vi.fn()}
       />,
     );
-
-    await waitFor(() => screen.getByText('PocketTTS'));
+    await waitForRow('pockettts');
+    const panel = openDetails('pockettts');
     fireEvent.click(
-      screen.getByRole('button', {
-        name: /review and accept pockettts license/i,
-      }),
+      within(panel).getByRole('button', { name: /review and accept pockettts license/i }),
     );
     await waitFor(() => {
       expect(screen.getByText('PocketTTS License Acceptance')).toBeInTheDocument();
@@ -803,7 +748,6 @@ describe('EngineCompatibilityMatrix', () => {
 
   // ── Real-synthesis self-test (in-process TTS engines) ──────────────────
   it('clicking Self-test runs a real synthesis and renders audio seconds + sample rate', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
     const apiSelfTestEngine = vi.fn().mockResolvedValue({
       id: 'omnivoice',
       ok: true,
@@ -817,25 +761,23 @@ describe('EngineCompatibilityMatrix', () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={vi.fn()}
         apiSelfTestEngine={apiSelfTestEngine}
       />,
     );
-    await waitFor(() => screen.getByText('OmniVoice (test)'));
-    const omniRow = screen.getByText('OmniVoice (test)').closest('[role="row"]');
-    fireEvent.click(within(omniRow).getByRole('button', { name: /self-test omnivoice/i }));
-
+    await waitForRow('omnivoice');
+    const panel = openDetails('omnivoice');
+    fireEvent.click(within(panel).getByRole('button', { name: /self-test omnivoice/i }));
     await waitFor(() => expect(apiSelfTestEngine).toHaveBeenCalledWith('omnivoice'));
-    await waitFor(() => {
-      expect(within(omniRow).getByTestId('selftest-result-omnivoice')).toHaveTextContent(
+    await waitFor(() =>
+      expect(within(panel).getByTestId('selftest-result-omnivoice')).toHaveTextContent(
         '0.82s @ 24 kHz in 820 ms',
-      );
-    });
+      ),
+    );
   });
 
   it('renders a timed-out marker when the self-test outruns the timeout', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
     const apiSelfTestEngine = vi.fn().mockResolvedValue({
       id: 'omnivoice',
       ok: false,
@@ -846,36 +788,34 @@ describe('EngineCompatibilityMatrix', () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={vi.fn()}
         apiSelfTestEngine={apiSelfTestEngine}
       />,
     );
-    await waitFor(() => screen.getByText('OmniVoice (test)'));
-    const omniRow = screen.getByText('OmniVoice (test)').closest('[role="row"]');
-    fireEvent.click(within(omniRow).getByRole('button', { name: /self-test omnivoice/i }));
-    await waitFor(() => {
-      expect(within(omniRow).getByTestId('selftest-result-omnivoice')).toHaveTextContent(
+    await waitForRow('omnivoice');
+    const panel = openDetails('omnivoice');
+    fireEvent.click(within(panel).getByRole('button', { name: /self-test omnivoice/i }));
+    await waitFor(() =>
+      expect(within(panel).getByTestId('selftest-result-omnivoice')).toHaveTextContent(
         'Self-test timed out',
-      );
-    });
+      ),
+    );
   });
 
   it('does not offer Self-test for a subprocess engine (spawn-and-ping only)', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={vi.fn()}
         apiSelfTestEngine={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
-    const indexRow = screen.getByText('IndexTTS2 (test)').closest('[role="row"]');
-    // "Test engine" (liveness) is present; the real-synth "Self-test" is not.
-    expect(within(indexRow).getByRole('button', { name: /test indextts2/i })).toBeInTheDocument();
-    expect(within(indexRow).queryByRole('button', { name: /self-test/i })).not.toBeInTheDocument();
+    await waitForRow('indextts2');
+    const panel = openDetails('indextts2');
+    expect(within(panel).getByRole('button', { name: /test indextts2/i })).toBeInTheDocument();
+    expect(within(panel).queryByRole('button', { name: /self-test/i })).not.toBeInTheDocument();
   });
 
   it('does not offer Self-test on a non-TTS family (ASR)', async () => {
@@ -906,9 +846,9 @@ describe('EngineCompatibilityMatrix', () => {
         apiSelfTestEngine={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('WhisperX (test)'));
-    const row = screen.getByText('WhisperX (test)').closest('[role="row"]');
-    expect(within(row).queryByRole('button', { name: /self-test/i })).not.toBeInTheDocument();
+    await waitForRow('wx');
+    const panel = openDetails('wx');
+    expect(within(panel).queryByRole('button', { name: /self-test/i })).not.toBeInTheDocument();
   });
 
   // ── Setup snippet for path-gated opt-in engines ────────────────────────
@@ -941,9 +881,8 @@ describe('EngineCompatibilityMatrix', () => {
         apiSelfTestEngine={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('IndexTTS-2'));
-    // The snippet lives in the row's expansion panel — open it first.
-    fireEvent.click(screen.getByTestId('why-toggle-indextts2'));
+    await waitForRow('indextts2');
+    openDetails('indextts2');
     const snippet = screen.getByTestId('setup-snippet-indextts2');
     expect(snippet).toHaveTextContent('export OMNIVOICE_INDEXTTS_DIR=/path/to/index-tts');
     expect(
@@ -952,19 +891,16 @@ describe('EngineCompatibilityMatrix', () => {
   });
 
   it('shows no setup snippet for a bundled engine', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={vi.fn()}
         apiSelfTestEngine={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('KittenTTS (test)'));
-    // KittenTTS in the fixture carries no setup_snippet → no snippet block
-    // even with its details panel open.
-    fireEvent.click(screen.getByTestId('why-toggle-kittentts'));
+    await waitForRow('kittentts');
+    openDetails('kittentts');
     expect(screen.queryByTestId('setup-snippet-kittentts')).not.toBeInTheDocument();
   });
 
@@ -989,11 +925,7 @@ describe('EngineCompatibilityMatrix', () => {
                 label: 'Kokoro (default, fast)',
                 repo_id: 'mlx-community/Kokoro-82M-bf16',
               },
-              {
-                key: 'csm',
-                label: 'CSM (voice cloning)',
-                repo_id: 'mlx-community/csm-1b-8bit',
-              },
+              { key: 'csm', label: 'CSM (voice cloning)', repo_id: 'mlx-community/csm-1b-8bit' },
               {
                 key: 'outetts',
                 label: 'OuteTTS',
@@ -1010,21 +942,18 @@ describe('EngineCompatibilityMatrix', () => {
   }
 
   it('renders the curated-model picker for mlx-audio, pre-selected to the active model', async () => {
-    const apiListEngines = vi
-      .fn()
-      .mockResolvedValue(mlxAudioResponse({ activeModelId: 'outetts' }));
     render(
       <EngineCompatibilityMatrix
         family="tts"
         onSelect={vi.fn()}
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(mlxAudioResponse({ activeModelId: 'outetts' }))}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('MLX-Audio (test)'));
+    await waitForRow('mlx-audio');
+    openDetails('mlx-audio');
     const select = screen.getByTestId('curated-model-select-mlx-audio');
     expect(select).toHaveValue('outetts');
-    // All curated models are offered as options.
     expect(
       within(select).getByRole('option', { name: 'Kokoro (default, fast)' }),
     ).toBeInTheDocument();
@@ -1046,48 +975,47 @@ describe('EngineCompatibilityMatrix', () => {
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('MLX-Audio (test)'));
-    const select = screen.getByTestId('curated-model-select-mlx-audio');
-    fireEvent.change(select, { target: { value: 'csm' } });
-
-    await waitFor(() => {
-      expect(onSelect).toHaveBeenCalledWith('tts', 'mlx-audio', 'csm');
+    await waitForRow('mlx-audio');
+    openDetails('mlx-audio');
+    fireEvent.change(screen.getByTestId('curated-model-select-mlx-audio'), {
+      target: { value: 'csm' },
     });
-    // Reloaded after the pick — matrix reflects the new active_model_id.
-    await waitFor(() => {
-      expect(screen.getByTestId('curated-model-select-mlx-audio')).toHaveValue('csm');
-    });
+    await waitFor(() => expect(onSelect).toHaveBeenCalledWith('tts', 'mlx-audio', 'csm'));
+    // Reloaded after the pick — the panel stays open and reflects the new model.
+    await waitFor(() =>
+      expect(screen.getByTestId('curated-model-select-mlx-audio')).toHaveValue('csm'),
+    );
     expect(apiListEngines.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
   it('does not render a curated-model picker for engines without curated_models', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
     render(
       <EngineCompatibilityMatrix
         family="tts"
         onSelect={vi.fn()}
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('OmniVoice (test)'));
+    await waitForRow('omnivoice');
+    openDetails('omnivoice');
     expect(screen.queryByTestId(/curated-model-select-/)).not.toBeInTheDocument();
   });
 
   it('disables the curated-model picker when no onSelect is provided', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(mlxAudioResponse());
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(mlxAudioResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('MLX-Audio (test)'));
+    await waitForRow('mlx-audio');
+    openDetails('mlx-audio');
     expect(screen.getByTestId('curated-model-select-mlx-audio')).toBeDisabled();
   });
 
-  // ── showFamilyTabs={false} — pinned per-family mount (Model Catalogue → Engines) ─
+  // ── Family modes ────────────────────────────────────────────────────────
   function multiFamilyResponse() {
     return {
       tts: {
@@ -1125,103 +1053,109 @@ describe('EngineCompatibilityMatrix', () => {
   }
 
   it('pins to the given family and hides the TTS/ASR/LLM switcher when showFamilyTabs is false', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(multiFamilyResponse());
     render(
       <EngineCompatibilityMatrix
         family="asr"
         showFamilyTabs={false}
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(multiFamilyResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('WhisperX (test)'));
-    // Pinned header names the family instead of the generic matrix title…
+    await waitForRow('whisperx');
     expect(screen.getByText('ASR Engines')).toBeInTheDocument();
-    // …the TTS family never leaks into the pinned table…
     expect(screen.queryByText('OmniVoice (test)')).not.toBeInTheDocument();
-    // …and there is no family switcher to wander off to.
     expect(document.querySelector('.engine-matrix__tab-family')).toBeNull();
   });
 
   it('keeps the family switcher by default (standalone mounts unchanged)', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(multiFamilyResponse());
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(multiFamilyResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('OmniVoice (test)'));
+    await waitForRow('omnivoice');
     expect(screen.getByRole('heading', { name: 'Engines' })).toBeInTheDocument();
     expect(document.querySelectorAll('.engine-matrix__tab-family').length).toBe(3);
-    const labels = document.querySelectorAll('.engine-matrix__tab-label');
-    expect(labels).toHaveLength(3);
-    for (const label of labels) {
+    for (const label of document.querySelectorAll('.engine-matrix__tab-label')) {
       expect(label).toHaveClass('items-center');
-      expect(label).not.toHaveClass('flex-col');
     }
-    expect(document.querySelector('.engine-matrix__tab-active')).toHaveAttribute('translate', 'no');
   });
 
   it('names what each family does in pinned mode (one description line)', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(multiFamilyResponse());
     render(
       <EngineCompatibilityMatrix
         family="asr"
         showFamilyTabs={false}
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(multiFamilyResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('WhisperX (test)'));
+    await waitForRow('whisperx');
     expect(screen.getByTestId('family-desc-asr')).toHaveTextContent(/turns audio into text/i);
   });
 
-  // ── Engine identity mark — one scannable monogram per row ───────────────
-  it('renders a deterministic identity mark on every engine row', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
+  it('forgets the selected row when the family changes', async () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(multiFamilyResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('OmniVoice (test)'));
-    // Monogram derives from the id: "omnivoice" → "OM", "indextts2" → "IN".
+    await waitForRow('omnivoice');
+    openDetails('omnivoice');
+    expect(screen.getByTestId('engine-detail-omnivoice')).toBeInTheDocument();
+    const asrTab = screen.getByRole('tab', { name: /ASR/ });
+    fireEvent.pointerDown(asrTab, { button: 0, pointerType: 'mouse' });
+    fireEvent.mouseDown(asrTab, { button: 0 });
+    fireEvent.click(asrTab);
+    await waitForRow('whisperx');
+    expect(screen.queryByTestId('engine-detail-omnivoice')).not.toBeInTheDocument();
+    expect(screen.getByTestId('engine-detail-empty')).toBeInTheDocument();
+  });
+
+  // ── Engine identity mark ────────────────────────────────────────────────
+  it('renders a deterministic identity mark on every engine row', async () => {
+    render(
+      <EngineCompatibilityMatrix
+        family="tts"
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
+        apiGetEngineHealth={vi.fn()}
+      />,
+    );
+    await waitForRow('omnivoice');
     expect(screen.getByTestId('engine-mark-omnivoice')).toHaveTextContent('OM');
     expect(screen.getByTestId('engine-mark-indextts2')).toHaveTextContent('IN');
     expect(screen.getByTestId('engine-mark-kittentts')).toBeInTheDocument();
-    // Decorative — the name/id are the accessible text.
     expect(screen.getByTestId('engine-mark-omnivoice')).toHaveAttribute('aria-hidden', 'true');
   });
 
   // ── `hint` — available-but-has-advice rows ──────────────────────────────
   function hintResponse() {
     const resp = makeEnginesResponse();
-    // VoiceStudio: available with advice (the VoxCPM2 ">=2.0.3" shape).
     resp.tts.backends[0].hint =
       'installed voxcpm 2.0.1 is older than 2.0.3 — upgrading is recommended';
     return resp;
   }
 
-  it('renders the ok-with-advice hint as a quiet inline line on an available row', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(hintResponse());
+  it('renders the ok-with-advice hint in the panel of an available engine', async () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(hintResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('OmniVoice (test)'));
-    expect(screen.getByTestId('engine-hint-omnivoice')).toHaveTextContent(
+    await waitForRow('omnivoice');
+    // Quiet by design: the row stays one line, the advice waits in the panel.
+    expect(screen.queryByTestId('engine-hint-omnivoice')).not.toBeInTheDocument();
+    const panel = openDetails('omnivoice');
+    expect(within(panel).getByTestId('engine-hint-omnivoice')).toHaveTextContent(
       'installed voxcpm 2.0.1 is older than 2.0.3 — upgrading is recommended',
     );
-    // Rows without advice (or legacy payloads without the field) show none.
-    expect(screen.queryByTestId('engine-hint-indextts2')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('engine-hint-kittentts')).not.toBeInTheDocument();
+    expect(within(openDetails('indextts2')).queryByTestId('engine-hint-indextts2')).toBeNull();
   });
 
   // ── Capability badge — voice cloning ────────────────────────────────────
@@ -1229,20 +1163,18 @@ describe('EngineCompatibilityMatrix', () => {
     const resp = makeEnginesResponse();
     resp.tts.backends[0].supports_cloning = true; // omnivoice
     resp.tts.backends[2].supports_cloning = false; // indextts2 — explicit false
-    // kittentts: field absent (legacy payload) → no badge either.
     return resp;
   }
 
   it('badges voice-cloning-capable engines — and only on explicit true', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(cloningResponse());
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(cloningResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('OmniVoice (test)'));
+    await waitForRow('omnivoice');
     expect(screen.getByTestId('clone-badge-omnivoice')).toHaveTextContent('Voice cloning');
     expect(screen.queryByTestId('clone-badge-indextts2')).not.toBeInTheDocument();
     expect(screen.queryByTestId('clone-badge-kittentts')).not.toBeInTheDocument();
@@ -1251,16 +1183,15 @@ describe('EngineCompatibilityMatrix', () => {
   it('never badges cloning on a non-TTS family (capability is TTS-only)', async () => {
     const resp = multiFamilyResponse();
     resp.asr.backends[0].supports_cloning = true; // hostile/buggy payload
-    const apiListEngines = vi.fn().mockResolvedValue(resp);
     render(
       <EngineCompatibilityMatrix
         family="asr"
         showFamilyTabs={false}
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(resp)}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('WhisperX (test)'));
+    await waitForRow('whisperx');
     expect(screen.queryByTestId('clone-badge-whisperx')).not.toBeInTheDocument();
   });
 
@@ -1285,264 +1216,122 @@ describe('EngineCompatibilityMatrix', () => {
     let loaded = LOADED;
     const apiListLoadedModels = vi.fn(async () => loaded);
     const apiUnloadModel = vi.fn(async () => {
-      loaded = { models: [], count: 0 }; // backend freed it
+      loaded = { models: [], count: 0 };
       return { unloaded: 'sidecar:indextts2', success: true };
     });
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={vi.fn()}
         apiListLoadedModels={apiListLoadedModels}
         apiUnloadModel={apiUnloadModel}
       />,
     );
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
-    const row = () => screen.getByText('IndexTTS2 (test)').closest('[role="row"]');
-    await waitFor(() => {
-      expect(within(row()).getByTestId('resident-indextts2')).toHaveTextContent('In memory');
-    });
-    // Non-resident rows carry neither the chip nor the button.
-    const omniRow = screen.getByText('OmniVoice (test)').closest('[role="row"]');
-    expect(within(omniRow).queryByTestId('resident-omnivoice')).not.toBeInTheDocument();
+    await waitForRow('indextts2');
+    await waitFor(() =>
+      expect(within(rowOf('indextts2')).getByTestId('resident-indextts2')).toHaveTextContent(
+        'In memory',
+      ),
+    );
+    expect(within(rowOf('omnivoice')).queryByTestId('resident-omnivoice')).not.toBeInTheDocument();
+    const panel = openDetails('indextts2');
+    fireEvent.click(within(panel).getByRole('button', { name: /unload indextts2/i }));
+    await waitFor(() => expect(apiUnloadModel).toHaveBeenCalledWith('sidecar:indextts2'));
+    await waitFor(() =>
+      expect(
+        within(rowOf('indextts2')).queryByTestId('resident-indextts2'),
+      ).not.toBeInTheDocument(),
+    );
     expect(
-      within(omniRow).queryByRole('button', { name: /unload omnivoice/i }),
-    ).not.toBeInTheDocument();
-
-    fireEvent.click(within(row()).getByRole('button', { name: /unload indextts2/i }));
-    await waitFor(() => {
-      // Unload targets the /model/loaded id (sidecar:<engine>), not the engine id.
-      expect(apiUnloadModel).toHaveBeenCalledWith('sidecar:indextts2');
-    });
-    // Chip and button clear after the residency refresh.
-    await waitFor(() => {
-      expect(within(row()).queryByTestId('resident-indextts2')).not.toBeInTheDocument();
-    });
-    expect(
-      within(row()).queryByRole('button', { name: /unload indextts2/i }),
+      within(panel).queryByRole('button', { name: /unload indextts2/i }),
     ).not.toBeInTheDocument();
   });
 
   it('offers no Unload when the loaded entry is not unloadable', async () => {
-    const apiListLoadedModels = vi.fn().mockResolvedValue({
-      models: [{ ...LOADED.models[0], unloadable: false }],
-      count: 1,
-    });
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={vi.fn()}
-        apiListLoadedModels={apiListLoadedModels}
+        apiListLoadedModels={vi.fn().mockResolvedValue({
+          models: [{ ...LOADED.models[0], unloadable: false }],
+          count: 1,
+        })}
         apiUnloadModel={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
-    const row = screen.getByText('IndexTTS2 (test)').closest('[role="row"]');
-    await waitFor(() => {
-      expect(within(row).getByTestId('resident-indextts2')).toBeInTheDocument();
-    });
+    await waitForRow('indextts2');
+    await waitFor(() =>
+      expect(within(rowOf('indextts2')).getByTestId('resident-indextts2')).toBeInTheDocument(),
+    );
+    const panel = openDetails('indextts2');
     expect(
-      within(row).queryByRole('button', { name: /unload indextts2/i }),
+      within(panel).queryByRole('button', { name: /unload indextts2/i }),
     ).not.toBeInTheDocument();
   });
 
-  it('renders the matrix normally when the residency probe fails (advisory only)', async () => {
-    const apiListLoadedModels = vi.fn().mockRejectedValue(new Error('backend restarting'));
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
+  it('renders the list normally when the residency probe fails (advisory only)', async () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={vi.fn()}
-        apiListLoadedModels={apiListLoadedModels}
+        apiListLoadedModels={vi.fn().mockRejectedValue(new Error('backend restarting'))}
       />,
     );
-    await waitFor(() => screen.getByText('OmniVoice (test)'));
+    await waitForRow('omnivoice');
     expect(document.querySelectorAll('[data-engine-id]').length).toBe(3);
     expect(screen.queryByTestId('resident-indextts2')).not.toBeInTheDocument();
   });
 
-  // ── Strict two-line row layout ───────────────────────────────────────────
-  it('renders strict two-line rows: fixed height, truncated name with full title', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
+  // ── Selection + detail panel ────────────────────────────────────────────
+  it('selects a row from its name, opens its panel beside the list, and toggles it closed', async () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
-        apiGetEngineHealth={vi.fn()}
-      />,
-    );
-    await waitFor(() => screen.getByText('OmniVoice (test)'));
-
-    for (const row of document.querySelectorAll('[data-engine-id]')) {
-      // Fixed two-line height + clipping — the class pair that stops one
-      // engine from filling a viewport (the marker class is asserted so a
-      // future restyle can't silently drop the constraint).
-      expect(row.classList.contains('is-two-line')).toBe(true);
-      expect(row.className).toMatch(/\bh-16\b/);
-      expect(row.className).toMatch(/\boverflow-hidden\b/);
-      // The display name never wraps: single-line truncation with the full
-      // name reachable via title.
-      const name = row.querySelector('.engine-matrix__name');
-      expect(name.className).toMatch(/\btruncate\b/);
-      expect(name.className).toMatch(/\bwhitespace-nowrap\b/);
-      expect(name).toHaveClass('text-[length:var(--text-sm)]');
-      expect(name).toHaveAttribute('title', name.textContent);
-      expect(row.querySelector('.engine-matrix__id')).toHaveClass('text-[length:var(--text-2xs)]');
-    }
-  });
-
-  it('lets dedicated Catalogue rows grow and moves state badges into metadata', async () => {
-    render(
-      <EngineCompatibilityMatrix
-        family="tts"
-        catalogueLayout
         apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    const name = await screen.findByText('OmniVoice (test)');
-    const row = name.closest('[data-engine-id]');
-
-    expect(row).toHaveClass('catalogue-row');
-    expect(row.className).toMatch(/min-h-\[92px\]/);
-    expect(row).toHaveClass('overflow-visible');
-    expect(row).not.toHaveClass('is-two-line');
-    expect(row).not.toHaveClass('h-16');
-
-    const identityMeta = row.querySelector('.engine-matrix__identity-meta');
-    expect(identityMeta).toHaveClass('flex-wrap');
-    expect(within(identityMeta).getByText(/active/i)).toBeInTheDocument();
-  });
-
-  it('uses the same wider grid tracks for Catalogue headers and rows', async () => {
-    render(
-      <EngineCompatibilityMatrix
-        family="tts"
-        catalogueLayout
-        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
-        apiGetEngineHealth={vi.fn()}
-      />,
-    );
-    await screen.findByText('OmniVoice (test)');
-
-    const headerRow = screen.getAllByRole('columnheader')[0].closest('[role="row"]');
-    expect(headerRow).toHaveClass('catalogue-row-grid');
-    expect(headerRow.className).toContain('@max-[1230px]/catalogue-shell:hidden');
-    const track = headerRow.className.match(/grid-cols-\[[^\]]+\]/)?.[0];
-    expect(track).toBeTruthy();
-    for (const row of document.querySelectorAll('[data-engine-id]')) {
-      expect(row.className).toContain(track);
-      expect(row.className).toContain('@max-[1230px]/catalogue-shell:grid-cols-');
-    }
-  });
-
-  it('exposes the phone-tier stacking hooks so narrow shells never clip Catalogue rows', async () => {
-    // jsdom cannot evaluate @container queries, so this guards the contract
-    // the index.css phone tier depends on: every catalogue row carries the
-    // `catalogue-row` marker, each of the five cells carries its
-    // `engine-matrix__cell--*` modifier, the grid lets children shrink below
-    // content size, and the actions cell wraps instead of forcing overflow.
-    render(
-      <EngineCompatibilityMatrix
-        family="tts"
-        catalogueLayout
-        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
-        apiGetEngineHealth={vi.fn()}
-      />,
-    );
-    await screen.findByText('OmniVoice (test)');
-
-    for (const row of document.querySelectorAll('[data-engine-id]')) {
-      expect(row).toHaveClass('catalogue-row-grid');
-      expect(row).toHaveClass('catalogue-row');
-      expect(row.className).toContain('[&>*]:min-w-0');
-      for (const modifier of [
-        'engine-matrix__cell--name',
-        'engine-matrix__cell--status',
-        'engine-matrix__cell--gpu',
-        'engine-matrix__cell--isolation',
-        'engine-matrix__cell--actions',
-      ]) {
-        expect(row.querySelector(`.${modifier}`)).not.toBeNull();
-      }
-      const actions = row.querySelector('.engine-matrix__cell--actions');
-      expect(actions.className).toMatch(/\bflex-wrap\b/);
-      expect(actions).toHaveClass('min-w-0');
-      expect(actions).toHaveClass('max-w-full');
-    }
-  });
-
-  it('header and every row share identical grid column tracks', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
-    render(
-      <EngineCompatibilityMatrix
-        family="tts"
-        apiListEngines={apiListEngines}
-        apiGetEngineHealth={vi.fn()}
-      />,
-    );
-    await waitFor(() => screen.getByText('OmniVoice (test)'));
-
-    const headerRow = screen.getAllByRole('columnheader')[0].closest('[role="row"]');
-    const track = headerRow.className.match(/grid-cols-\[[^\]]+\]/)?.[0];
-    expect(track).toBeTruthy();
-    for (const row of document.querySelectorAll('[data-engine-id]')) {
-      expect(row.className).toContain(track);
-    }
-  });
-
-  it('opens and closes the details expansion panel below the row', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
-    render(
-      <EngineCompatibilityMatrix
-        family="tts"
-        apiListEngines={apiListEngines}
-        apiGetEngineHealth={vi.fn()}
-      />,
-    );
-    await waitFor(() => screen.getByText('KittenTTS (test)'));
-
-    const toggle = screen.getByTestId('why-toggle-kittentts');
+    await waitForRow('kittentts');
+    const toggle = nameOf('kittentts');
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByTestId('engine-detail-kittentts')).not.toBeInTheDocument();
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
     const panel = screen.getByTestId('engine-detail-kittentts');
-    // The panel is a SIBLING below the row — not inside it — so the row keeps
-    // its fixed two-line height and sibling rows stay aligned.
-    const kittenRow = screen.getByText('KittenTTS (test)').closest('[role="row"]');
-    expect(kittenRow.contains(panel)).toBe(false);
-    expect(kittenRow.nextElementSibling).toBe(panel);
+    expect(toggle).toHaveAttribute('aria-controls', panel.id);
+    expect(rowOf('kittentts')).toHaveAttribute('aria-selected', 'true');
+    // The panel is outside the table (a sibling column), never inside a row.
+    expect(screen.getByRole('table').contains(panel)).toBe(false);
     expect(within(panel).getByText('kittentts not installed')).toBeInTheDocument();
 
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    // Selecting another row swaps the panel; clicking the name again closes it.
+    fireEvent.click(rowOf('omnivoice'));
     expect(screen.queryByTestId('engine-detail-kittentts')).not.toBeInTheDocument();
+    expect(screen.getByTestId('engine-detail-omnivoice')).toBeInTheDocument();
+    fireEvent.click(nameOf('omnivoice'));
+    expect(screen.queryByTestId('engine-detail-omnivoice')).not.toBeInTheDocument();
+    expect(screen.getByTestId('engine-detail-empty')).toBeInTheDocument();
   });
 
-  it('available rows offer no details toggle (hints stay inline on line 2)', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeEnginesResponse());
+  it('every row offers details — available engines too', async () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeEnginesResponse())}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('OmniVoice (test)'));
-    expect(screen.queryByTestId('why-toggle-omnivoice')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('why-toggle-indextts2')).not.toBeInTheDocument();
-    expect(screen.getByTestId('why-toggle-kittentts')).toBeInTheDocument();
+    await waitForRow('omnivoice');
+    for (const id of ['omnivoice', 'indextts2', 'kittentts']) {
+      expect(nameOf(id)).toHaveAttribute('aria-expanded', 'false');
+    }
   });
 
   // ── One-click sidecar install (IndexTTS-2 & friends) ────────────────────
-
-  /** An unavailable, one-click-installable IndexTTS2 row. */
   function makeInstallableResponse() {
     const res = makeEnginesResponse();
     res.tts.backends[2] = {
@@ -1555,7 +1344,6 @@ describe('EngineCompatibilityMatrix', () => {
     return res;
   }
 
-  /** Pre-install status: no job yet (what the on-mount re-attach probe sees). */
   function makeIdleStatus() {
     return {
       engine_id: 'indextts2',
@@ -1596,10 +1384,7 @@ describe('EngineCompatibilityMatrix', () => {
   }
 
   it('installable unavailable rows get an Install button; clicking it starts the job and shows step progress', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeInstallableResponse());
     const apiInstallEngine = vi.fn().mockResolvedValue({ status: 'started', engine: 'indextts2' });
-    // First call = the on-mount re-attach probe (no job yet); later calls =
-    // the post-click status refresh with the running job.
     const apiInstallStatus = vi
       .fn()
       .mockResolvedValueOnce(makeIdleStatus())
@@ -1607,34 +1392,34 @@ describe('EngineCompatibilityMatrix', () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeInstallableResponse())}
         apiGetEngineHealth={vi.fn()}
         apiInstallEngine={apiInstallEngine}
         apiInstallStatus={apiInstallStatus}
       />,
     );
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
-
+    await waitForRow('indextts2');
     const installBtn = screen.getByTestId('install-indextts2');
     expect(installBtn).toHaveTextContent('Install');
     fireEvent.click(installBtn);
-
     await waitFor(() => expect(apiInstallEngine).toHaveBeenCalledWith('indextts2'));
     expect(apiInstallStatus).toHaveBeenCalledWith('indextts2');
-
-    // Clicking auto-opens the detail panel where the progress renders.
+    // Clicking selects the row so the progress renders in its panel.
     const progress = await screen.findByTestId('install-progress-indextts2');
+    expect(screen.getByTestId('engine-detail-indextts2').contains(progress)).toBe(true);
     expect(within(progress).getByText(/Checking uv and disk space/)).toBeInTheDocument();
-    const running = progress.querySelector('[data-install-step="fetch_source"]');
-    expect(running).toHaveAttribute('data-step-state', 'running');
-    // The live log tail is visible while the job runs.
+    expect(progress.querySelector('[data-install-step="fetch_source"]')).toHaveAttribute(
+      'data-step-state',
+      'running',
+    );
     expect(within(progress).getByText(/Cloning https:\/\//)).toBeInTheDocument();
-    // The button reflects the in-flight job.
     expect(screen.getByTestId('install-indextts2')).toHaveTextContent('Installing…');
+    expect(
+      within(rowOf('indextts2')).getByText('Installing…', { selector: 'td' }),
+    ).toBeInTheDocument();
   });
 
   it('a failed job renders the error with its remediation and offers Retry', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeInstallableResponse());
     const apiInstallEngine = vi.fn().mockResolvedValue({ status: 'started', engine: 'indextts2' });
     const apiInstallStatus = vi
       .fn()
@@ -1649,31 +1434,23 @@ describe('EngineCompatibilityMatrix', () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeInstallableResponse())}
         apiGetEngineHealth={vi.fn()}
         apiInstallEngine={apiInstallEngine}
         apiInstallStatus={apiInstallStatus}
       />,
     );
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
+    await waitForRow('indextts2');
     fireEvent.click(screen.getByTestId('install-indextts2'));
-
     const progress = await screen.findByTestId('install-progress-indextts2');
     expect(
       within(progress).getByText(/Not enough disk space .* Free up disk space and retry\./),
     ).toBeInTheDocument();
     expect(screen.getByTestId('install-indextts2')).toHaveTextContent('Retry install');
+    expect(within(rowOf('indextts2')).getByText('failed', { selector: 'td' })).toBeInTheDocument();
   });
 
   it('an Install click during the mount status probe is not silently dropped', async () => {
-    // The regression this pins: refreshInstall serializes per engine, and the
-    // mount re-attach probe holds that slot while its request is in flight. A
-    // click in that window had its status refresh dropped (`return null`), so
-    // the state kept the pre-install 'idle' snapshot, the poller (which only
-    // watches 'running' jobs) never started, and the progress panel never
-    // appeared — no error, no retry, just nothing. On fast machines the probe
-    // wins the race and hides the bug; on a loaded CI runner it flaked.
-    const apiListEngines = vi.fn().mockResolvedValue(makeInstallableResponse());
     const apiInstallEngine = vi.fn().mockResolvedValue({ status: 'started', engine: 'indextts2' });
     let releaseProbe;
     const probeGate = new Promise((resolve) => {
@@ -1681,8 +1458,6 @@ describe('EngineCompatibilityMatrix', () => {
     });
     const apiInstallStatus = vi
       .fn()
-      // Mount probe: hangs until we release it — the race window, held open
-      // deterministically instead of hoping the scheduler reproduces it.
       .mockImplementationOnce(async () => {
         await probeGate;
         return makeIdleStatus();
@@ -1691,27 +1466,21 @@ describe('EngineCompatibilityMatrix', () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeInstallableResponse())}
         apiGetEngineHealth={vi.fn()}
         apiInstallEngine={apiInstallEngine}
         apiInstallStatus={apiInstallStatus}
       />,
     );
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
-    // Click while the probe is still pending…
+    await waitForRow('indextts2');
     fireEvent.click(screen.getByTestId('install-indextts2'));
-    // …and only then let the probe finish.
     releaseProbe();
-
-    const progress = await screen.findByTestId('install-progress-indextts2', {}, { timeout: 3000 });
-    expect(progress).toBeInTheDocument();
+    expect(
+      await screen.findByTestId('install-progress-indextts2', {}, { timeout: 3000 }),
+    ).toBeInTheDocument();
   });
 
   it('two rapid Install clicks never fetch status concurrently', async () => {
-    // Both clicks wake from awaiting the SAME probe promise; without the
-    // re-check loop they'd both proceed and their responses could land out
-    // of order (stale 'running' overwriting 'succeeded' restarts the poller).
-    const apiListEngines = vi.fn().mockResolvedValue(makeInstallableResponse());
     const apiInstallEngine = vi.fn().mockResolvedValue({ status: 'started', engine: 'indextts2' });
     let releaseProbe;
     const probeGate = new Promise((resolve) => {
@@ -1735,29 +1504,21 @@ describe('EngineCompatibilityMatrix', () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeInstallableResponse())}
         apiGetEngineHealth={vi.fn()}
         apiInstallEngine={apiInstallEngine}
         apiInstallStatus={apiInstallStatus}
       />,
     );
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
+    await waitForRow('indextts2');
     fireEvent.click(screen.getByTestId('install-indextts2'));
     fireEvent.click(screen.getByTestId('install-indextts2'));
     releaseProbe();
-
     await screen.findByTestId('install-progress-indextts2', {}, { timeout: 3000 });
-    expect(maxActive).toBe(1); // strictly serialized — never two in flight
+    expect(maxActive).toBe(1);
   });
 
   it('a wedged probe cannot stall the Install click forever, nor clobber it late', async () => {
-    // Two guarantees in one scenario. (1) Bounded wait: the mount probe hangs
-    // (no abort signal exists), so the forced refresh proceeds after
-    // FORCE_WAIT_TIMEOUT_MS instead of trading "silently dropped" for
-    // "silently stuck". (2) Epoch: when the wedged probe finally settles with
-    // its stale pre-install snapshot, that response is discarded — it must
-    // not overwrite the fresh 'running' state and hide the progress panel.
-    const apiListEngines = vi.fn().mockResolvedValue(makeInstallableResponse());
     const apiInstallEngine = vi.fn().mockResolvedValue({ status: 'started', engine: 'indextts2' });
     let releaseProbe;
     const probeGate = new Promise((resolve) => {
@@ -1773,70 +1534,56 @@ describe('EngineCompatibilityMatrix', () => {
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeInstallableResponse())}
         apiGetEngineHealth={vi.fn()}
         apiInstallEngine={apiInstallEngine}
         apiInstallStatus={apiInstallStatus}
       />,
     );
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
-
+    await waitForRow('indextts2');
     vi.useFakeTimers();
     try {
       fireEvent.click(screen.getByTestId('install-indextts2'));
-      // The probe never resolves; the forced wait must give up on its own.
       await vi.advanceTimersByTimeAsync(FORCE_WAIT_TIMEOUT_MS + 50);
     } finally {
       vi.useRealTimers();
     }
     await screen.findByTestId('install-progress-indextts2', {}, { timeout: 3000 });
-
-    // Now the wedged probe finally settles with its stale idle snapshot…
     releaseProbe();
     await new Promise((resolve) => setTimeout(resolve, 30));
-    // …and must NOT have clobbered the running state.
     expect(screen.getByTestId('install-progress-indextts2')).toBeInTheDocument();
   });
 
-  it('already_installed responses skip the job and just reload the matrix', async () => {
+  it('already_installed responses skip the job and just reload the list', async () => {
     const apiListEngines = vi.fn().mockResolvedValue(makeInstallableResponse());
-    const apiInstallEngine = vi
-      .fn()
-      .mockResolvedValue({ status: 'already_installed', engine: 'indextts2' });
-    const apiInstallStatus = vi.fn().mockResolvedValue(makeIdleStatus());
     render(
       <EngineCompatibilityMatrix
         family="tts"
         apiListEngines={apiListEngines}
         apiGetEngineHealth={vi.fn()}
-        apiInstallEngine={apiInstallEngine}
-        apiInstallStatus={apiInstallStatus}
+        apiInstallEngine={vi
+          .fn()
+          .mockResolvedValue({ status: 'already_installed', engine: 'indextts2' })}
+        apiInstallStatus={vi.fn().mockResolvedValue(makeIdleStatus())}
       />,
     );
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
+    await waitForRow('indextts2');
     fireEvent.click(screen.getByTestId('install-indextts2'));
-
-    await waitFor(() => expect(apiListEngines).toHaveBeenCalledTimes(2)); // reload()
-    // No job progress ever rendered — nothing to poll beyond the mount probe.
+    await waitFor(() => expect(apiListEngines).toHaveBeenCalledTimes(2));
     expect(screen.queryByTestId('install-progress-indextts2')).not.toBeInTheDocument();
   });
 
   it('demotes the manual setup snippet to a collapsed fallback on installable rows', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeInstallableResponse());
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeInstallableResponse())}
         apiGetEngineHealth={vi.fn()}
-        // Installable-but-unavailable rows probe install status on mount
-        // (re-attach to an in-flight job) — stub it so no network happens.
         apiInstallStatus={vi.fn().mockResolvedValue(makeIdleStatus())}
       />,
     );
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
-    fireEvent.click(screen.getByTestId('why-toggle-indextts2'));
-
-    // Installable row: snippet lives INSIDE a collapsed <details> fallback.
+    await waitForRow('indextts2');
+    openDetails('indextts2');
     const manual = screen.getByTestId('manual-install-indextts2');
     expect(manual.tagName).toBe('DETAILS');
     expect(manual).not.toHaveAttribute('open');
@@ -1844,19 +1591,16 @@ describe('EngineCompatibilityMatrix', () => {
   });
 
   it('re-attaches to an in-flight install job on mount (no click needed)', async () => {
-    const apiListEngines = vi.fn().mockResolvedValue(makeInstallableResponse());
     const apiInstallStatus = vi.fn().mockResolvedValue(makeInstallStatus('running'));
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(makeInstallableResponse())}
         apiGetEngineHealth={vi.fn()}
         apiInstallStatus={apiInstallStatus}
       />,
     );
-    await waitFor(() => screen.getByText('IndexTTS2 (test)'));
-    // The mount probe found a running job — the button reflects it without
-    // any user interaction (Settings was closed and reopened mid-install).
+    await waitForRow('indextts2');
     await waitFor(() =>
       expect(screen.getByTestId('install-indextts2')).toHaveTextContent('Installing…'),
     );
@@ -1866,16 +1610,15 @@ describe('EngineCompatibilityMatrix', () => {
   it('keeps the setup snippet top-level on rows without a one-click installer', async () => {
     const res = makeEnginesResponse();
     res.tts.backends[1].setup_snippet = 'export OMNIVOICE_SHERPA_MODEL=/m';
-    const apiListEngines = vi.fn().mockResolvedValue(res);
     render(
       <EngineCompatibilityMatrix
         family="tts"
-        apiListEngines={apiListEngines}
+        apiListEngines={vi.fn().mockResolvedValue(res)}
         apiGetEngineHealth={vi.fn()}
       />,
     );
-    await waitFor(() => screen.getByText('KittenTTS (test)'));
-    fireEvent.click(screen.getByTestId('why-toggle-kittentts'));
+    await waitForRow('kittentts');
+    openDetails('kittentts');
     expect(screen.getByTestId('setup-snippet-kittentts')).toBeInTheDocument();
     expect(screen.queryByTestId('manual-install-kittentts')).not.toBeInTheDocument();
     expect(screen.queryByTestId('install-kittentts')).not.toBeInTheDocument();
@@ -1896,8 +1639,6 @@ describe('EngineCompatibilityMatrix', () => {
       effective_device: 'network',
       routing_status: 'n/a',
       routing_reason: null,
-      // The backend's proof that this family entry and the Providers panel
-      // are one system: the row names the endpoint that actually answers.
       hint: 'OrcaRouter · gpt-4o-mini',
     });
     const original = useAppStore.getState().openSettingsTab;
@@ -1911,9 +1652,10 @@ describe('EngineCompatibilityMatrix', () => {
           apiGetEngineHealth={vi.fn()}
         />,
       );
-      await waitFor(() => screen.getByText('OpenAI-compatible'));
-      expect(screen.getByText('OrcaRouter · gpt-4o-mini')).toBeInTheDocument();
-      fireEvent.click(screen.getByTestId('configure-llm-providers'));
+      await waitForRow('openai-compat');
+      const panel = openDetails('openai-compat');
+      expect(within(panel).getByText('OrcaRouter · gpt-4o-mini')).toBeInTheDocument();
+      fireEvent.click(within(panel).getByTestId('configure-llm-providers'));
       expect(openSettingsTab).toHaveBeenCalledWith('llm-providers');
     } finally {
       useAppStore.setState({ openSettingsTab: original });

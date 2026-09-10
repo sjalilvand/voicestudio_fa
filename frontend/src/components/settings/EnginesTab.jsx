@@ -5,6 +5,7 @@ import { addBreadcrumb } from '../../utils/breadcrumbs';
 import { useEngines, useSelectEngine } from '../../api/hooks';
 import { notifyEngineSelected } from '../../utils/engineSelectToast';
 import EngineCompatibilityMatrix from '../EngineCompatibilityMatrix';
+import useModelDownloads from './models/useModelDownloads';
 import AsrOpenAICompatPanel from './AsrOpenAICompatPanel';
 import { SETTINGS_SECTION_SURFACE } from './primitives';
 
@@ -35,6 +36,9 @@ export default function EnginesTab({
   const [family, setFamily] = useState(initialFamily);
   const [configVersion, setConfigVersion] = useState(0);
   const enginesQuery = useEngines();
+  // Catalog rows + install/remove flow for the per-engine weights list in the
+  // detail panel. Residency is the matrix's own probe, so it is skipped here.
+  const downloads = useModelDownloads({ residency: false });
   const selectMutation = useSelectEngine();
   const onAsrConfigSaved = useCallback(() => setConfigVersion((v) => v + 1), []);
   useEffect(() => setFamily(initialFamily), [initialFamily]);
@@ -80,6 +84,8 @@ export default function EnginesTab({
         <EngineCompatibilityMatrix
           family={family}
           sharedEngines={enginesQuery}
+          weights={downloads.models}
+          downloads={downloads}
           onSelect={onSelect}
           onFamilyChange={(next) => {
             setFamily(next);

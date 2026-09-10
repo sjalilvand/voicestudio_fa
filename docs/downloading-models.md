@@ -60,7 +60,7 @@ State is reported at **Settings → About** / `GET /system/info`:
 - `fast_download.xet_installed` — `hf_xet` present (true)
 - `fast_download.xet_active` — whether Xet actually drives downloads (false by
   default, because of `HF_HUB_DISABLE_XET`)
-- the **⚡ fast download** badge in **Model Catalogue → Downloaded weights** (under the TTS or ASR tab) appears only when Xet
+- `GET /system/info` reports `fast_download.xet_enabled` only when Xet
   is *active*.
 
 The backend logs one line at startup, e.g.
@@ -148,7 +148,7 @@ failed download at once. Caveats:
 
 ## Cancelling a download
 
-**Model Catalogue → Downloaded weights** (under the engine's family tab) lets you cancel an in-flight install. Cancellation stops
+the engine's **Weights** list in **Model Catalogue** lets you cancel an in-flight install. Cancellation stops
 further retries and clears the failure cooldown so you can restart
 immediately. A file that's already streaming finishes first — cancellation
 takes effect at the next retry boundary.
@@ -162,6 +162,6 @@ takes effect at the next retry boundary.
   High-performance mode only helps if RAM and bandwidth are plentiful.
 - **"download finished but no model weights were found"** — the download was
   interrupted and left a partial snapshot. Delete the model in
-  **Model Catalogue → Downloaded weights** (under the engine's family tab) and install it again.
+  the engine's **Weights** list in **Model Catalogue** and install it again.
 - **Out of disk** — model sizes are shown in the catalog; free space or change
   the cache location with `HF_HOME` / `HF_HUB_CACHE`.

@@ -7,9 +7,9 @@
  *   2. The engine list for ONE family (TTS / ASR / LLM), the same tested
  *      EngineCompatibilityMatrix the Engines pane hosted; Change on a summary
  *      row switches this family and scrolls here.
- *   3. That family's downloadable weights (the former Models pane, filtered):
- *      TTS weights under TTS; offline ASR, streaming dictation and diarisation
- *      under ASR. LLM engines bring their own weights, so nothing renders there.
+ *   3. Weights no engine owns (pipeline weights such as speaker diarisation)
+ *      for that family. Every other weight is listed under its engine in the
+ *      detail panel. LLM engines bring their own weights, so nothing renders.
  *   4. One storage line pointing at Settings → Storage.
  *
  * The previous Engines | Models pane switch put the same decision on two axes
@@ -126,17 +126,11 @@ export default function ModelCatalogue() {
             family switch unmounted it mid-download. LLM merely hides it. */}
         <section
           data-testid="catalogue-weights"
-          aria-labelledby="catalogue-weights-title"
+          aria-label={t('catalogue.other_weights')}
           className="mt-[40px] min-w-0"
           hidden={!WEIGHT_FAMILIES.includes(family)}
         >
-          <h2
-            id="catalogue-weights-title"
-            className="m-0 mb-[14px] px-[2px] text-[length:var(--text-lg)] font-semibold text-[color:var(--chrome-fg)]"
-          >
-            {t('catalogue.weights')}
-          </h2>
-          <ModelStoreTab family={family} />
+          <ModelStoreTab family={family} title={t('catalogue.other_weights')} />
         </section>
 
         <footer

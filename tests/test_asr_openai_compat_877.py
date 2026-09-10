@@ -108,7 +108,7 @@ def test_unavailable_without_base_url(asr_mod):
     assert ok is False
     # The hint must name where the endpoint is actually configured — the
     # Model Catalogue's Engines pane, not the Settings category it used to be.
-    assert "Model Catalogue → Engines" in msg
+    assert "Model Catalogue" in msg
 
 
 def test_available_once_base_url_configured(asr_mod, ss):

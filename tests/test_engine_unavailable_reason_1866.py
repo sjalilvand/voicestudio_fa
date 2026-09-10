@@ -1,6 +1,6 @@
 """#1866 — an unavailable engine must say what KIND of problem it has.
 
-Model Catalogue → Engines rendered "Engine unavailable. Check installation and
+Model Catalogue rendered "Engine unavailable. Check installation and
 configuration." plus "Last error: A previous engine check failed." for engines
 the user had simply never installed. Neither names a missing package, a missing
 step, or a next action, and the second reads like a crash or a poisoned cache
@@ -41,7 +41,7 @@ def test_a_missing_package_says_so(diagnostic):
     "diagnostic",
     [
         "Set ELEVENLABS_API_KEY environment variable.",
-        "Configure a server endpoint in Model Catalogue → Engines",
+        "Configure a server endpoint in Model Catalogue",
         "unconfigured",
     ],
 )

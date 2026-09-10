@@ -693,14 +693,14 @@ def resolve_model_file() -> Path:
     except (LocalEntryNotFoundError, OSError) as exc:
         raise RuntimeError(
             "Breeze-TTS-2 is not installed. Install the audio.cpp Breeze-TTS-2 "
-            "model from Model Catalogue → Models, or set "
+            "model from the engine's Weights list in Model Catalogue, or set "
             "OMNIVOICE_AUDIOCPP_MODEL to an existing GGUF file."
         ) from exc
     model_file = cached / PACKAGE_DIR / package_filename()
     if not model_file.is_file():
         raise RuntimeError(
             f"Breeze-TTS-2 package {package_filename()} is not completely "
-            "installed. Reinstall it from Model Catalogue → Models."
+            "installed. Reinstall it from the engine's Weights list in Model Catalogue."
         )
     return _materialize_gguf_cache_path(model_file)
 

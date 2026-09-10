@@ -7506,46 +7506,6 @@ button.dub-stepper__action:focus-visible {
   }
 }
 
-/* Model Catalogue engines list — phone tier. The Tailwind collapse at 1230px
-   keeps four columns (status / gpu / isolation / actions side by side), which
-   still overflows ~360px shells: the actions cell alone is 250px+ of buttons
-   and the table clips horizontal overflow. Below 640px stack each catalogue
-   row into one column — identity first, meta chips next, actions last and
-   left-aligned so every control stays reachable without sideways scrolling.
-   Unlayered, so it wins over the layered grid utilities deterministically. */
-@container catalogue-shell (max-width: 640px) {
-  .engine-matrix__table .catalogue-row-grid.catalogue-row {
-    grid-template-columns: minmax(0, 1fr);
-    row-gap: 8px;
-    align-items: start;
-    padding-inline: 12px;
-  }
-  .engine-matrix__table .catalogue-row > [role='cell'] {
-    grid-column: 1 / -1;
-    max-width: 100%;
-  }
-  .engine-matrix__table .catalogue-row > .engine-matrix__cell--name {
-    grid-row: 1;
-  }
-  .engine-matrix__table .catalogue-row > .engine-matrix__cell--status {
-    grid-row: 2;
-    justify-self: start;
-  }
-  .engine-matrix__table .catalogue-row > .engine-matrix__cell--gpu {
-    grid-row: 3;
-    justify-self: start;
-  }
-  .engine-matrix__table .catalogue-row > .engine-matrix__cell--isolation {
-    grid-row: 4;
-    justify-self: start;
-  }
-  .engine-matrix__table .catalogue-row > .engine-matrix__cell--actions {
-    grid-row: 5;
-    justify-self: stretch;
-    justify-content: flex-start;
-  }
-}
-
 /* Dubbing start workspace: a focused import card with nearby language choices. */
 .dub-start-screen .dub-panel-col {
   overflow-y: auto;

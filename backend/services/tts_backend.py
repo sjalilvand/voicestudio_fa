@@ -1318,7 +1318,7 @@ class MossTTSNanoBackend(TTSBackend):
         model_cls = _moss_model_class(moss_tts_nano)
         if model_cls is None:  # pragma: no cover - is_available() gates this
             raise RuntimeError(
-                "moss_tts_nano exposes no usable model class; see Model Catalogue → Engines"
+                "moss_tts_nano exposes no usable model class; see Model Catalogue"
             )
         checkpoint = os.environ.get(
             "OMNIVOICE_MOSS_TTS_MODEL", "OpenMOSS-Team/MOSS-TTS-Nano"
@@ -1635,7 +1635,7 @@ class MLXAudioBackend(TTSBackend):
     def __init__(self):
         self._model = None
         self._sr = 24000  # most mlx-audio engines emit 24 kHz mono
-        # Env var > persisted UI choice (#981 — Model Catalogue → Engines curated-
+        # Env var > persisted UI choice (#981 — Model Catalogue curated-
         # model picker) > default. Mirrors active_backend_id()'s resolution
         # order exactly so power-users can still pin a model without the UI
         # silently undoing it.
@@ -2352,7 +2352,7 @@ _LAST_ERRORS: dict[str, str] = {}
 
 
 
-# Short install hints surfaced as tooltips on the Model Catalogue → Engines UI.
+# Short install hints surfaced as tooltips on the Model Catalogue UI.
 # Helps users understand what pip package to install and where.
 _INSTALL_HINTS: dict[str, str] = {
     "omnivoice":     "pip install omnivoice  (bundled — no extra install needed)",
@@ -2371,7 +2371,7 @@ _INSTALL_HINTS: dict[str, str] = {
     "moss-tts-v15":  "git clone OpenMOSS/MOSS-TTS + set OMNIVOICE_MOSS_TTS_V15_DIR  (own venv, transformers==5.0; 8B, ~16 GB weights; CUDA/ROCm/XPU/NPU/CPU, no MPS; Apache-2.0)",
     "dots-tts":      "git clone rednote-hilab/dots.tts + set OMNIVOICE_DOTS_TTS_DIR  (own venv, transformers==4.57; 2B, ~9 GB weights; CUDA/CPU, Linux/macOS only — no Windows; Apache-2.0)",
     "confucius4-tts":"git clone netease-youdao/Confucius4-TTS + set OMNIVOICE_CONFUCIUS4_TTS_DIR  (own Python 3.10 venv; 14-lang cross-lingual zero-shot clone; ~5 GB weights auto-download; CUDA/ROCm/XPU/NPU/CPU, no MPS; Apache-2.0)",
-    "audiocpp":     "download the matching audio.cpp v0.7.2 prebuilt + set OMNIVOICE_AUDIOCPP_BIN, then explicitly install Breeze-TTS-2 in Model Catalogue → Models  (native CPU/Vulkan/CUDA/Metal GGUF server, no Python; en+zh clone+design; ~4.73 GiB; weights research/non-commercial only)",
+    "audiocpp":     "download the matching audio.cpp v0.7.2 prebuilt + set OMNIVOICE_AUDIOCPP_BIN, then explicitly install Breeze-TTS-2 in the engine's Weights list in Model Catalogue  (native CPU/Vulkan/CUDA/Metal GGUF server, no Python; en+zh clone+design; ~4.73 GiB; weights research/non-commercial only)",
 }
 
 
@@ -2438,7 +2438,7 @@ def _engine_docs_url(bid: str) -> str | None:
 
 
 # Short, readable labels for mlx-audio's curated models (#981) — surfaced in
-# the Model Catalogue → Engines model picker so users see more than a bare key.
+# the Model Catalogue model picker so users see more than a bare key.
 # Single-sourced here rather than on MLXAudioBackend.CURATED_MODELS itself so
 # the class dict stays a plain key → repo-id map (what __init__ needs).
 _MLX_AUDIO_MODEL_LABELS: dict[str, str] = {
@@ -3013,7 +3013,7 @@ def release_idle_engines(
 #
 # dub_generate.py and batch.py used to call services.model_manager.get_model()
 # directly, hardcoding OmniVoice regardless of the engine selected in
-# Model Catalogue → Engines — a SILENT fallback: pick VoxCPM2, dub anyway with
+# Model Catalogue — a SILENT fallback: pick VoxCPM2, dub anyway with
 # OmniVoice, no error. This is the single resolution path both routers now
 # call instead, mirroring generation.py's /generate resolution (engine id →
 # is_available() → routing gate) plus a voice-cloning capability gate that
@@ -3044,7 +3044,7 @@ async def resolve_generation_backend(
     except ValueError as e:
         raise ValueError(
             f"Active TTS engine '{engine_id}' is not a recognized backend ({e}). "
-            "Check Model Catalogue → Engines or the OMNIVOICE_TTS_BACKEND env var."
+            "Check Model Catalogue or the OMNIVOICE_TTS_BACKEND env var."
         ) from e
 
     try:
@@ -3077,7 +3077,7 @@ async def resolve_generation_backend(
             f"The active TTS engine '{engine_id}' doesn't support voice cloning, "
             f"so {cloning_purpose} can't preserve speaker voices. Switch to one "
             f"of: {', '.join(cloning_capable_engine_ids())} in "
-            "Model Catalogue → Engines, or use OmniVoice for this job."
+            "Model Catalogue, or use OmniVoice for this job."
         )
 
     return backend
