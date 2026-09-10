@@ -209,13 +209,13 @@ def test_export_404_when_source_gone(client, outputs_dir, tmp_path, authorize_de
 
 
 def test_export_symlink_inside_outputs_pointing_outside_is_rejected(
-    client, outputs_dir, tmp_path, authorize_destination
+    client, outputs_dir, tmp_path, authorize_destination, symlink_or_skip
 ):
     # A symlink planted in OUTPUTS_DIR must not let /export read arbitrary
     # files: realpath resolves it outside the root, failing containment.
     secret = tmp_path / "secret.txt"
     secret.write_bytes(b"credentials")
-    (outputs_dir / "innocent.wav").symlink_to(secret)
+    symlink_or_skip(outputs_dir / "innocent.wav", secret)
 
     r = client.post("/export", json={
         "source_filename": "innocent.wav",

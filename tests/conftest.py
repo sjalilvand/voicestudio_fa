@@ -570,3 +570,23 @@ def _restore_config_paths_after_reload():
             for const, value in before.items():
                 if isinstance(getattr(mod, const, None), str) and getattr(mod, const) != value:
                     setattr(mod, const, value)
+
+
+# ── Symlinks on a stock Windows checkout ───────────────────────────────────
+# Creating a symlink on Windows needs SeCreateSymbolicLinkPrivilege, which a
+# normal user account does not hold unless Developer Mode is on. Hosted CI
+# runs elevated, so unguarded `Path.symlink_to` / `os.symlink` calls pass
+# there and hand a Windows contributor a suite that fails on their machine
+# for reasons that have nothing to do with their change (WinError 1314). Tests
+# that need a real symlink take this fixture, so the environment that cannot
+# make one skips instead of erroring. Coverage still holds: the full pytest
+# job runs on Linux.
+@pytest.fixture
+def symlink_or_skip():
+    def _make(link, target, *, target_is_directory: bool = False):
+        try:
+            os.symlink(target, link, target_is_directory=target_is_directory)
+        except (OSError, NotImplementedError) as exc:  # pragma: no cover - Windows-only
+            pytest.skip(f"symlinks unavailable in this environment: {exc}")
+
+    return _make
