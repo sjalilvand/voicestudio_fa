@@ -95,6 +95,10 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Closing the dictation pill on Windows removes it from the screen: an empty dark rectangle used to stay there, always on top, until the app was quit (#2009)
+- The dictation pill on Windows no longer sits inside a bordered card wider than the pill itself (#2009)
+- Dictation uses the model you picked instead of one remembered from before the backend started, so it stops reporting no speech-to-text model while one is installed — and when none is, the main window offers the download (#2012)
+
 - The remote-worker loop-responsiveness tests no longer turn a build red over milliseconds of scheduling noise on shared CI hardware (#1990)
 - Remote GPU workers work when the machine running VoiceStudio is on Windows: a staged input is now identified the same way on every operating system, instead of with a path only Windows can read (#2005)
 

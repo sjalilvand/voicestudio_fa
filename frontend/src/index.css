@@ -7705,6 +7705,17 @@ button.dub-stepper__action:focus-visible {
   color: white;
 }
 
+/* An error is a status line, not a transcript: two lines at most. A long
+   message used to wrap into a four-line block that spilled past the capsule's
+   edge. The label's `title` carries the full text, and anything the user must
+   act on also goes to the main window (utils/dictationNotice). */
+.capture-pill--error .capture-pill__preview > span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* ── In-app reduced motion (#1857) ─────────────────────────────────────
    Settings → Appearance → Reduce motion sets `data-motion="reduce"` on the
    root. This is the same blanket rule the `prefers-reduced-motion` blocks
