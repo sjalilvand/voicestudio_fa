@@ -7,7 +7,7 @@ Every folder has a single job. Every file at the root earns its place.
 ```
 VoiceStudio/
 │
-├── README.md / README_CN.md     ⟵ user-facing overview (EN / 中文)
+├── README.md / README_CN.md     ⟵ user-facing overview (English / Chinese)
 ├── CHANGELOG.md                 ⟵ release history; release.yml extracts the tag's section verbatim
 ├── CLAUDE.md / AGENTS.md        ⟵ the working contract for AI agents — keep the two in sync
 ├── LICENSE, LICENSE-NOTICE.md, SPONSORS.md
