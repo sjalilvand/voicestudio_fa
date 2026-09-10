@@ -158,6 +158,16 @@ def test_repo_changelog_is_quiet_style():
 
 # ── linter self-tests: each rule must actually fire ──────────────────────────
 
+
+def test_every_version_has_one_section():
+    """release.yml publishes the FIRST `## [X.Y.Z]` section as the release
+    body and stops at the next heading, so a second section for the same
+    version silently drops out of the notes (v0.5.2 was prepared twice)."""
+    with open(_REPO_CHANGELOG, encoding="utf-8") as fh:
+        versions = [m.group(1) for line in fh if (m := _HEADING.match(line.rstrip("\n")))]
+    dupes = sorted({v for v in versions if versions.count(v) > 1})
+    assert not dupes, f"CHANGELOG.md has more than one section for: {dupes}"
+
 _GOOD = """# Changelog
 
 ## [Unreleased]
