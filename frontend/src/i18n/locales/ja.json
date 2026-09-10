@@ -33,13 +33,16 @@
   },
   "catalogue": {
     "title": "モデルカタログ",
-    "tab_engines": "エンジン",
-    "tab_models": "モデル",
-    "moved_title": "モデルカタログに移動しました",
-    "moved_engines_body": "音声・文字起こし・LLM の既定エンジンの選択は「モデルカタログ」ワークスペースに移動しました。",
-    "moved_models_body": "モデルの閲覧・インストール・削除は「モデルカタログ」ワークスペースに移動しました。",
-    "open_engines": "エンジンを開く",
-    "open_models": "モデルを開く"
+    "summary_title": "現在の設定",
+    "change": "変更",
+    "status_setup": "設定が必要",
+    "status_cpu": "CPUフォールバック",
+    "status_off": "オフ",
+    "weights": "ダウンロード済みの重み",
+    "storage_link": "ストレージ設定",
+    "reco_line": "{{device}} 向けの推奨モデル {{total}} 件中 {{installed}} 件をインストール済み · 残り {{remaining}} GB",
+    "install_rest": "残りをインストール",
+    "device_remote": "リモート"
   },
   "settings": {
     "remote_backend_test": "接続をテスト",
@@ -779,7 +782,7 @@
     "configureProviders": "プロバイダーを設定",
     "loading": "エンジンをロード中…",
     "refresh": "リフレッシュ",
-    "matrixTitle": "エンジン互換性マトリックス",
+    "matrixTitle": "エンジン",
     "loadFailed": "エンジンのロードに失敗しました: {{message}}",
     "couldNotLoad": "エンジンをロードできませんでした: {{message}}",
     "retry": "再試行",

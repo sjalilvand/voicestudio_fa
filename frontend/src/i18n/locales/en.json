@@ -171,13 +171,16 @@
   },
   "catalogue": {
     "title": "Model Catalogue",
-    "tab_engines": "Engines",
-    "tab_models": "Models",
-    "moved_title": "Now in the Model Catalogue",
-    "moved_engines_body": "Choosing the default speech, transcription and LLM engine moved to the Model Catalogue workspace.",
-    "moved_models_body": "Browsing, installing and removing model downloads moved to the Model Catalogue workspace.",
-    "open_engines": "Open Engines",
-    "open_models": "Open Models"
+    "summary_title": "Your setup",
+    "change": "Change",
+    "status_setup": "Needs setup",
+    "status_cpu": "CPU fallback",
+    "status_off": "Off",
+    "weights": "Downloaded weights",
+    "storage_link": "Storage settings",
+    "reco_line": "{{installed}} of {{total}} recommended models for {{device}} installed · {{remaining}} GB to go",
+    "install_rest": "Install the rest",
+    "device_remote": "Remote"
   },
   "audiobook": {
     "cast": "Cast",
@@ -2118,7 +2121,7 @@
     "configureProviders": "Configure providers",
     "loading": "Loading engines…",
     "refresh": "Refresh",
-    "matrixTitle": "Engine Compatibility Matrix",
+    "matrixTitle": "Engines",
     "familyMatrixTitle": "{{family}} Engines",
     "colEngine": "Engine",
     "colGpuCompat": "GPU compat",

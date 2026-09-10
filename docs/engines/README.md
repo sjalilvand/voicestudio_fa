@@ -1,7 +1,7 @@
 # Engine guides
 
 One page per engine: what it's for, what it needs, how to enable it, and its
-quirks. Select engines in **Model Catalogue → Engines** (or quick-switch with
+quirks. Select engines in **Model Catalogue** (or quick-switch with
 <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>E</kbd>), or pin one with
 `OMNIVOICE_TTS_BACKEND` / `OMNIVOICE_ASR_BACKEND`.
 

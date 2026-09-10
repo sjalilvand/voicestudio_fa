@@ -19,7 +19,7 @@ platforms never reports as available
 pip install mlx-audio
 ```
 
-Then select the engine via **Model Catalogue → Engines** or
+Then select the engine via **Model Catalogue** or
 `OMNIVOICE_TTS_BACKEND=mlx-audio`.
 
 ## Model selection
@@ -36,7 +36,7 @@ One backend hosts many models. The curated set:
 | `melotts` | `mlx-community/MeloTTS-English-v3-MLX` | lightweight VITS |
 | `outetts` | `mlx-community/Llama-OuteTTS-1.0-1B-4bit` | LM-based |
 
-Pick a model in the **Model Catalogue → Engines** curated picker
+Pick a model in the **Model Catalogue** curated picker
 ([#981](https://github.com/debpalash/VoiceStudio/issues/981)) or set
 `OMNIVOICE_MLX_AUDIO_MODEL` to either a curated key (`kokoro`) or any full
 HF repo id. The env var overrides the persisted UI choice.

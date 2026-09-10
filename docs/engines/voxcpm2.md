@@ -31,7 +31,7 @@ pip install "voxcpm>=2.0.3"
 
 That is a version **floor**, not a pin — an older install still works, but
 the engine logs an upgrade hint at load time. Then select the engine via
-**Model Catalogue → Engines** or `OMNIVOICE_TTS_BACKEND=voxcpm2`.
+**Model Catalogue** or `OMNIVOICE_TTS_BACKEND=voxcpm2`.
 
 ## Model selection
 

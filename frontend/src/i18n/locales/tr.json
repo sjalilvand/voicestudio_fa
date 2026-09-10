@@ -33,13 +33,16 @@
   },
   "catalogue": {
     "title": "Model kataloğu",
-    "tab_engines": "Motorlar",
-    "tab_models": "Modeller",
-    "moved_title": "Artık model kataloğunda",
-    "moved_engines_body": "Varsayılan ses, deşifre ve LLM motorunu seçme işlemi Model kataloğu çalışma alanına taşındı.",
-    "moved_models_body": "İndirilen modellere göz atma, yükleme ve kaldırma işlemleri Model kataloğu çalışma alanına taşındı.",
-    "open_engines": "Motorları aç",
-    "open_models": "Modelleri aç"
+    "summary_title": "Kurulumunuz",
+    "change": "Değiştir",
+    "status_setup": "Kurulum gerekli",
+    "status_cpu": "CPU yedeği",
+    "status_off": "Kapalı",
+    "weights": "İndirilen ağırlıklar",
+    "storage_link": "Depolama ayarları",
+    "reco_line": "{{device}} için önerilen {{total}} modelden {{installed}} tanesi yüklü · {{remaining}} GB kaldı",
+    "install_rest": "Kalanları yükle",
+    "device_remote": "Uzak"
   },
   "settings": {
     "remote_backend_test": "Bağlantıyı test et",
@@ -779,7 +782,7 @@
     "configureProviders": "Sağlayıcıları yapılandır",
     "loading": "Motorlar yükleniyor…",
     "refresh": "Yenile",
-    "matrixTitle": "Motor Uyumluluk Matrisi",
+    "matrixTitle": "Motorlar",
     "loadFailed": "Motorlar yüklenemedi: {{message}}",
     "couldNotLoad": "Motorlar yüklenemedi: {{message}}",
     "retry": "Yeniden dene",

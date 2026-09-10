@@ -11,7 +11,7 @@ on every Apple Silicon machine
 ## Selecting it
 
 - Nothing to do on Apple Silicon — auto-detect prefers it there.
-- Or explicitly: **Model Catalogue → Engines**, ASR tab → **Use**, or
+- Or explicitly: **Model Catalogue**, ASR tab → **Use**, or
   `OMNIVOICE_ASR_BACKEND=mlx-whisper`.
 
 ## Best at

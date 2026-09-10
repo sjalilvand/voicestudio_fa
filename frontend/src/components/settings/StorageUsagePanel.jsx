@@ -132,7 +132,7 @@ function SmallButton({ children, onClick, title, testId, disabled }) {
 
 export default function StorageUsagePanel() {
   const { t } = useTranslation();
-  const openSettingsTab = useAppStore((s) => s.openSettingsTab);
+  const openCatalogue = useAppStore((s) => s.openCatalogue);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -379,7 +379,7 @@ export default function StorageUsagePanel() {
                     </span>
                     {cat.id === 'hf_cache' && (
                       <SmallButton
-                        onClick={() => openSettingsTab('models')}
+                        onClick={() => openCatalogue()}
                         title={t('settings.storage_manage_models_hint', {
                           defaultValue: 'Reclaim space by removing models in the Model Store',
                         })}

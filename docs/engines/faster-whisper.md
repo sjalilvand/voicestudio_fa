@@ -7,7 +7,7 @@ fallback on non-Apple machines.
 
 ## Selecting it
 
-- **Model Catalogue → Engines**, ASR tab → **Use** on the Faster-Whisper row, or
+- **Model Catalogue**, ASR tab → **Use** on the Faster-Whisper row, or
 - pin it with `OMNIVOICE_ASR_BACKEND=faster-whisper`.
 
 Auto-detect only picks it when [whisperx](whisperx.md) is unavailable.

@@ -228,8 +228,9 @@ vi.mock('../components/settings/models/ModelsTable', () => ({
 }));
 
 import ModelStoreTab from '../components/settings/ModelStoreTab';
+import { scopeReco } from '../components/settings/models/sections';
 
-function mountTab() {
+function mountTab(props = {}) {
   global.EventSource = class {
     constructor() {
       this.onmessage = null;
@@ -238,7 +239,7 @@ function mountTab() {
   };
   return render(
     <I18nextProvider i18n={i18n}>
-      <ModelStoreTab info={{ has_hf_token: true }} modelBadge={null} />
+      <ModelStoreTab info={{ has_hf_token: true }} {...props} />
     </I18nextProvider>,
   );
 }
@@ -251,7 +252,7 @@ describe('Model Store — grouped catalog', () => {
   it('renders role sections in order with localized titles', async () => {
     mountTab();
     await waitFor(() => expect(screen.getByTestId('models-section-tts')).toBeInTheDocument());
-    expect(screen.getByTestId('model-list-panel')).toHaveClass('min-h-[95%]');
+    expect(screen.getByTestId('model-list-panel')).toBeInTheDocument();
     expect(screen.getByTestId('model-list-area')).toHaveClass('flex-1');
     const keys = ['tts', 'asr', 'dictation', 'diarisation'];
     const sections = keys.map((k) => screen.getByTestId(`models-section-${k}`));
@@ -311,5 +312,52 @@ describe('Model Store — grouped catalog', () => {
     fireEvent.click(screen.getByTestId('models-clear-filters'));
     await waitFor(() => expect(visibleLabels().length).toBeGreaterThan(0));
     expect(search).toHaveValue('');
+  });
+});
+
+// ── Family scoping: the catalogue lists one family's weights under its engines ─
+
+describe('Model Store — scoped to one engine family', () => {
+  it('ASR carries offline ASR, streaming dictation and diarisation; TTS only TTS', async () => {
+    mountTab({ family: 'asr' });
+    await waitFor(() => expect(screen.getByTestId('models-section-asr')).toBeInTheDocument());
+    expect(screen.getByTestId('models-section-dictation')).toBeInTheDocument();
+    expect(screen.getByTestId('models-section-diarisation')).toBeInTheDocument();
+    expect(screen.queryByTestId('models-section-tts')).not.toBeInTheDocument();
+    expect(visibleLabels()).not.toContain('VoiceStudio TTS');
+  });
+
+  it('TTS shows only TTS weights and searching within it stays scoped', async () => {
+    mountTab({ family: 'tts' });
+    await waitFor(() => expect(screen.getByTestId('models-section-tts')).toBeInTheDocument());
+    expect(screen.queryByTestId('models-section-asr')).not.toBeInTheDocument();
+    const search = screen.getByRole('searchbox', { name: t('models.search_label') });
+    fireEvent.change(search, { target: { value: 'parakeet' } });
+    // Parakeet is an ASR row — no match inside TTS, so the scoped empty state shows.
+    await waitFor(() => expect(screen.getByText(t('models.no_matches'))).toBeInTheDocument());
+  });
+
+  it('scopeReco narrows the device preset to the family and recomputes totals', () => {
+    const reco = {
+      device: { label: 'M2' },
+      all_installed: false,
+      download_gb_remaining: 5.3,
+      total_gb: 7.7,
+      models: [
+        { repo_id: 'a/tts', role: 'TTS', installed: true, size_gb: 2.4 },
+        { repo_id: 'b/asr', role: 'ASR', installed: false, size_gb: 2.9 },
+        { repo_id: 'c/dict', role: 'ASR', engine: 'sherpa-onnx', installed: false, size_gb: 2.4 },
+      ],
+    };
+    expect(scopeReco(reco, null)).toBe(reco);
+    const tts = scopeReco(reco, 'tts');
+    expect(tts.models.map((m) => m.repo_id)).toEqual(['a/tts']);
+    expect(tts.all_installed).toBe(true);
+    expect(tts.download_gb_remaining).toBe(0);
+    const asr = scopeReco(reco, 'asr');
+    expect(asr.models.map((m) => m.repo_id)).toEqual(['b/asr', 'c/dict']);
+    expect(asr.all_installed).toBe(false);
+    expect(asr.download_gb_remaining).toBe(5.3);
+    expect(scopeReco(reco, 'llm')).toBeNull();
   });
 });

@@ -39,7 +39,7 @@ quantized native binary with a much smaller memory footprint.
 OmniVoice is the default, so normally there is nothing to do. If you switched
 away and want it back:
 
-- **Model Catalogue → Engines**, or
+- **Model Catalogue**, or
 - set `OMNIVOICE_TTS_BACKEND=omnivoice`.
 
 The env var overrides the persisted UI choice.
@@ -103,7 +103,7 @@ The env var overrides the persisted UI choice.
   above — switch to OmniVoice GGUF or close other GPU apps.
 - First generation is slow: the first call downloads multi-GB weights. To
   keep the first render quick, install the model ahead of time from
-  **Model Catalogue → Models** — a long first generate is almost always the
+  **Model Catalogue → Downloaded weights** — a long first generate is almost always the
   download, not a hang.
 - General install issues: [install/troubleshooting.md](../install/troubleshooting.md).
 

@@ -517,9 +517,7 @@ export default function Header({
                         className="flex items-center gap-1 border-0 bg-transparent p-2 text-xs text-[var(--chrome-fg-muted)] cursor-pointer hover:text-[var(--chrome-fg)]"
                         onClick={() => {
                           setFlushOpen(false);
-                          useAppStore
-                            .getState()
-                            .openCatalogue({ pane: 'engines', family: engineFamily });
+                          useAppStore.getState().openCatalogue({ family: engineFamily });
                         }}
                       >
                         {t('header.label_catalogue')} <ChevronRight size={12} />

@@ -19,16 +19,16 @@ crashes and cold init never block the rest of VoiceStudio.
    uv sync --extra supertonic
    ```
 
-   (Or enable it from **Model Catalogue → Engines**, which installs the
+   (Or enable it from **Model Catalogue**, which installs the
    pinned `supertonic` wheel for you.)
 
 2. **Accept the license in-app.** First use is gated behind an explicit
    acceptance dialog: the inference SDK is MIT, but the model weights are
    **OpenRAIL-M**, which carries use restrictions. The engine stays
-   unavailable until you review and accept in **Model Catalogue → Engines →
+   unavailable until you review and accept in **Model Catalogue →
    Supertonic-3**.
 
-3. Select the engine via **Model Catalogue → Engines** or
+3. Select the engine via **Model Catalogue** or
    `OMNIVOICE_TTS_BACKEND=supertonic3`.
 
 The first synthesis cold-downloads ~400 MB of model weights, pinned to an
@@ -66,7 +66,7 @@ log line.
 
 - "supertonic package not installed": run the `uv sync` above or enable
   from the Model Catalogue.
-- "license not accepted": open **Model Catalogue → Engines → Supertonic-3**
+- "license not accepted": open **Model Catalogue → Supertonic-3**
   and accept.
 - Other issues: [install/troubleshooting.md](../install/troubleshooting.md).
 

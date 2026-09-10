@@ -62,8 +62,8 @@ describe('restart flag ↔ RestartBadge lockstep', () => {
   // restart: true, or the sidebar ↻ glyph / header badge contract breaks
   // (that drift is exactly how Network shipped without its glyph).
   const PANEL_CATEGORY = {
-    'StoragePanel.jsx': 'models',
-    'HFMirrorPanel.jsx': 'models',
+    'StoragePanel.jsx': 'storage',
+    'HFMirrorPanel.jsx': 'network',
     'RemoteBackendPanel.jsx': 'sharing',
     'AudioToolsPanel.jsx': 'audio-tools',
     'PerformancePanel.jsx': 'performance',

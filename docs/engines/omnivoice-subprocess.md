@@ -32,7 +32,7 @@ lower call overhead.
 
 ## Selecting it
 
-- **Model Catalogue → Engines** on CUDA, ROCm, or CPU, or
+- **Model Catalogue** on CUDA, ROCm, or CPU, or
 - `OMNIVOICE_TTS_BACKEND=omnivoice-subprocess`
 
 The explicit engine is opt-in on CUDA, ROCm, and CPU. On Apple Silicon it is
