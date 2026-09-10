@@ -9,6 +9,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ## [Unreleased]
 
 **Highlights**
+- One-click engine installs no longer inherit VoiceStudio's own PyTorch pin, which made MOSS-TTS-v1.5 and Confucius4 impossible to install (#NOCFGPR)
 - MOSS-TTS-v1.5, Confucius4-TTS, dots.tts, Supertonic-3 and PocketTTS install in one click, each in its own environment, so switching engines and back never breaks a working one (#2015, #2016)
 - A pronunciation entry that is stored but not applied yet says so, instead of looking like it did not match (#1949)
 - A bare 500 report now names the backend error class, so two unrelated faults stop filing the same issue (#1773)

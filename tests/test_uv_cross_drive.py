@@ -73,12 +73,13 @@ def test_same_volume_false_across_devices(tmp_path, monkeypatch):
 
 # ── uv_subprocess_env ──────────────────────────────────────────────────────
 
-def test_uv_env_is_none_on_the_default_cache_volume(tmp_path, monkeypatch):
-    """Same volume as uv's default cache → inherit env untouched (default
-    installs stay byte-identical)."""
+def test_uv_env_moves_no_cache_on_the_default_cache_volume(tmp_path, monkeypatch):
+    """Same volume as uv's default cache → the cache stays where uv puts it."""
     monkeypatch.delenv("UV_CACHE_DIR", raising=False)
+    monkeypatch.delenv("UV_PYTHON_INSTALL_DIR", raising=False)
     monkeypatch.setattr(si, "_default_uv_cache_root", lambda: tmp_path / "uv")
-    assert si.uv_subprocess_env(tmp_path / "engines") is None
+    env = si.uv_subprocess_env(tmp_path / "engines")
+    assert "UV_CACHE_DIR" not in env and "UV_PYTHON_INSTALL_DIR" not in env
 
 
 def test_uv_env_colocates_cache_on_a_foreign_volume(tmp_path, monkeypatch):
@@ -111,12 +112,14 @@ def test_uv_env_respects_user_pinned_cache_dir(tmp_path, monkeypatch):
     assert env["UV_PYTHON_INSTALL_DIR"] == str(tmp_path / "engines" / ".uv-python")
 
 
-def test_uv_env_is_none_when_both_vars_pinned(tmp_path, monkeypatch):
-    """Both pinned → nothing left to override → inherit env untouched."""
+def test_uv_env_keeps_both_vars_when_both_pinned(tmp_path, monkeypatch):
+    """Both pinned → the user's values stand."""
     monkeypatch.setenv("UV_CACHE_DIR", str(tmp_path / "my-cache"))
     monkeypatch.setenv("UV_PYTHON_INSTALL_DIR", str(tmp_path / "my-pythons"))
     monkeypatch.setattr(si, "_same_volume", lambda a, b: False)
-    assert si.uv_subprocess_env(tmp_path / "engines") is None
+    env = si.uv_subprocess_env(tmp_path / "engines")
+    assert env["UV_CACHE_DIR"] == str(tmp_path / "my-cache")
+    assert env["UV_PYTHON_INSTALL_DIR"] == str(tmp_path / "my-pythons")
 
 
 def test_uv_env_respects_user_pinned_python_dir(tmp_path, monkeypatch):
@@ -244,3 +247,74 @@ def test_every_bootstrap_uv_call_passes_env(path):
         "subprocess calls in _bootstrap_engines_venv without env= "
         f"(cross-drive uv cache class): {offenders}"
     )
+
+
+# ── Engine installs never inherit the app's uv config ─────────────────────
+#
+# The backend runs inside VoiceStudio's tree, so a uv process it starts
+# discovers the app's pyproject.toml and applies its [tool.uv]
+# constraint-dependencies (torch==2.8.0). Resolved that way,
+# torch==2.9.1+cu128 (MOSS-TTS-v1.5) and torch==2.7.0 (Confucius4) are
+# unsatisfiable. Every engine install and bootstrap gets its environment from
+# uv_subprocess_env; these pin that it always opts out of config discovery.
+
+
+@pytest.mark.parametrize("same_volume", [True, False])
+@pytest.mark.parametrize("pinned", [(), ("UV_CACHE_DIR",), ("UV_CACHE_DIR", "UV_PYTHON_INSTALL_DIR")])
+def test_uv_env_always_ignores_the_apps_uv_config(tmp_path, monkeypatch, same_volume, pinned):
+    for var in ("UV_CACHE_DIR", "UV_PYTHON_INSTALL_DIR"):
+        if var in pinned:
+            monkeypatch.setenv(var, str(tmp_path / var.lower()))
+        else:
+            monkeypatch.delenv(var, raising=False)
+    monkeypatch.setattr(si, "_same_volume", lambda a, b: same_volume)
+    env = si.uv_subprocess_env(tmp_path / "engines")
+    assert env["UV_NO_CONFIG"] == "1"
+
+
+def test_uv_env_keeps_the_mirror_setting(tmp_path, monkeypatch):
+    """Region and custom mirrors reach uv as UV_INDEX_URL, which config opt-out
+    leaves alone."""
+    monkeypatch.setenv("UV_INDEX_URL", "https://mirror.example/simple")
+    env = si.uv_subprocess_env(tmp_path / "engines")
+    assert env["UV_INDEX_URL"] == "https://mirror.example/simple"
+
+
+@pytest.mark.parametrize(
+    "module",
+    [
+        "engines.indextts.bootstrap",
+        "engines.moss_tts_v15.bootstrap",
+        "engines.confucius4.bootstrap",
+        "engines.dots_tts.bootstrap",
+    ],
+)
+def test_every_engine_bootstrap_ignores_the_apps_uv_config(module):
+    import importlib
+
+    env = importlib.import_module(module)._uv_env()
+    assert env is not None and env["UV_NO_CONFIG"] == "1", module
+
+
+def test_one_click_install_steps_ignore_the_apps_uv_config(tmp_path, monkeypatch):
+    envs = []
+
+    def capture(job, argv, *, timeout, env=None):
+        envs.append((argv[1], env))
+        if argv[1] == "venv":
+            py = si._venv_python(Path(argv[2]))
+            py.parent.mkdir(parents=True, exist_ok=True)
+            py.write_text("#!fake\n")
+        return 0
+
+    monkeypatch.setattr(si, "DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setattr(si, "_locate_uv", lambda: "/fake/uv")
+    monkeypatch.setattr(si, "_run_logged", capture)
+    spec = si.get_spec("indextts2")
+    si.managed_checkout(spec).mkdir(parents=True)
+    job = si._new_job(spec.engine_id)
+    si._step_create_venv(spec, job)
+    si._step_install_deps(spec, job)
+    assert [step for step, _ in envs] == ["venv", "pip"]
+    for step, env in envs:
+        assert env is not None and env["UV_NO_CONFIG"] == "1", step
