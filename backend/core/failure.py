@@ -107,6 +107,9 @@ _HINTS: dict[str, str] = {
     "SOCKS_PROXY_SUPPORT_MISSING": "A SOCKS proxy is configured in your environment (ALL_PROXY/HTTPS_PROXY=socks5://…) and the backend's HTTP client is missing SOCKS support. Newer VoiceStudio builds ship SOCKS support (the socksio package) — update the app. If you still see this, unset ALL_PROXY/HTTPS_PROXY for VoiceStudio, or run `uv pip install 'httpx[socks]'` in the backend venv, then restart.",
     "SSL_HANDSHAKE_FAILURE": "A corporate or antivirus proxy is intercepting HTTPS traffic and re-signing certificates with its own CA — your OS trusts that CA, but Python's bundled certifi CA list doesn't, so the TLS handshake fails even though the connection reached the server. Newer VoiceStudio builds trust the OS certificate store at startup (the truststore package), which should already fix this — update the app and retry. If you still see this, add an HTTPS-scanning exclusion for VoiceStudio/Python in your antivirus, or ask IT for the proxy's CA bundle and set SSL_CERT_FILE to it, then restart.",
     "UNSUPPORTED_VIDEO_URL": "This link isn't a directly downloadable video. Paste a direct video page (e.g. a youtube.com/watch?v=… or douyin.com/video/<id> link), not a share/profile/feed link — or download the file and drop it in directly.",
+    # #2034: yt-dlp's own advice names CLI flags (--cookies-from-browser)
+    # that a VoiceStudio user has no way to pass.
+    "VIDEO_DOWNLOAD_BOT_CHECK": "YouTube refused this download until it can confirm a signed-in person is asking (its “Sign in to confirm you’re not a bot” check), so retrying the same link won’t help. Sign in to YouTube in your browser, export its cookies as a Netscape cookies.txt file (a cookies.txt browser extension does this), and attach it in Dub with “Choose a cookies.txt export” before importing the link again. The desktop app accepts cookie exports; a browser connection needs HTTPS. Or download the video yourself and upload the file.",
     "VIDEO_DRM_PROTECTED": "The video host only offered VoiceStudio a DRM-protected copy, which can't be downloaded. This is often not a property of the video itself — the host serves a different format set to different clients, and VoiceStudio already retried through every client it has. Try the link again in a minute, or download the video with a browser extension / the host's own download button and drop the file into Dubbing directly.",
     # #1301: distinct from SSL_HANDSHAKE_FAILURE. The handshake did not fail on
     # trust — the connection was CUT while TLS was in progress, so the certifi /
@@ -569,6 +572,11 @@ def classify(reason: str) -> str:
     # download path now escalates the client the way it does for a 403. If
     # every client still says DRM, the video genuinely can't be fetched and the
     # user needs to hear that rather than retry a fourth time.
+    # #2034: YouTube's anti-automation wall. Not transient and not a
+    # player-client format set, so it must reach neither the network retry
+    # nor the 403 client escalation; the remedy is signed-in cookies.
+    if "not a bot" in low and ("sign in" in low or "cookies" in low):
+        return "VIDEO_DOWNLOAD_BOT_CHECK"
     if "drm protected" in low or "drm-protected" in low:
         return "VIDEO_DRM_PROTECTED"
     if (
