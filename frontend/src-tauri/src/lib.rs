@@ -794,24 +794,114 @@ fn mark_pill_noactivate(win: &tauri::WebviewWindow) {
 
 /// Show the pill without granting it foreground activation.
 ///
-/// The only correct way to show it on Windows (#982): a plain `show()` steals
-/// foreground from the app being dictated into, and the paste then lands in the
-/// pill instead of the user's document. `show_dictation_pill` is the call site.
+/// Two steps, and both are load-bearing.
+///
+/// `win.show()` is what tells TAURI the window is visible. Raw `ShowWindow`
+/// alone puts it on screen behind Tauri's back, and Tauri goes on believing it
+/// is hidden — so `isVisible()` answers `false` while the user is looking at
+/// the thing, `hide()` becomes a no-op on a window it thinks is already
+/// hidden, and the capture widget's idle reconcile (which asks `isVisible()`
+/// before deciding to clean up) concludes there is nothing to clean up. The
+/// result is an empty dark rectangle stranded on the desktop after the pill is
+/// dismissed, with no way to remove it short of quitting the app.
+///
+/// `SW_SHOWNOACTIVATE` is what keeps the foreground where it belongs (#982): a
+/// pill that steals focus makes the paste land in the pill instead of the
+/// user's document. `WS_EX_NOACTIVATE` is already on the window from
+/// `mark_pill_noactivate` at creation, which is what makes the `show()` above
+/// safe — the style bit, not the show flag, is what actually refuses
+/// activation. The flag stays anyway: it costs nothing and holds even if the
+/// style bit could not be applied (`hwnd()` can fail).
 #[cfg(target_os = "windows")]
 pub(crate) fn show_pill_noactivate(win: &tauri::WebviewWindow) {
     use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_SHOWNOACTIVATE};
-    let Ok(hwnd) = win.hwnd() else {
-        log::warn!("pill: could not resolve HWND for non-activating show (#982)");
+    show_pill_noactivate_with(
+        || win.show().map_err(|error| error.to_string()),
+        || {
+            let hwnd = win.hwnd().map_err(|_| "no HWND".to_string())?;
+            unsafe {
+                let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+            }
+            Ok(())
+        },
+    )
+}
+
+/// The ordering itself, with both shows as parameters.
+///
+/// Split out so a test can pin the contract that the bug broke: Tauri's own
+/// `show` must run, and it must run FIRST. A native-only show is what left an
+/// empty pill window stranded on the desktop.
+///
+/// And when Tauri's show FAILS, the native show must not run at all (Greptile).
+/// Showing it natively anyway puts an always-on-top window on screen that
+/// Tauri believes is hidden — the exact stranded-window bug, reached by a
+/// different door. A pill that does not appear is the lesser failure: the
+/// tray's red dot still says the user is being recorded, and nothing is left
+/// behind that cannot be removed.
+pub(crate) fn show_pill_noactivate_with<T, N>(show_tauri: T, show_native: N)
+where
+    T: FnOnce() -> Result<(), String>,
+    N: FnOnce() -> Result<(), String>,
+{
+    if let Err(error) = show_tauri() {
+        log::warn!("pill: Tauri show failed; not showing it natively either, or it could never be hidden: {error}");
         return;
-    };
-    unsafe {
-        let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+    }
+    if let Err(error) = show_native() {
+        log::warn!("pill: non-activating show failed ({error}) (#982)");
     }
 }
 
 #[cfg(test)]
 mod pill_noactivate_tests {
-    use super::{with_noactivate_style, WS_EX_NOACTIVATE_BIT};
+    use super::{show_pill_noactivate_with, with_noactivate_style, WS_EX_NOACTIVATE_BIT};
+
+    #[test]
+    fn showing_the_pill_tells_tauri_before_it_tells_windows() {
+        // The bug: only the raw Win32 show ran, so the window went on screen
+        // behind Tauri's back. Tauri then answered `isVisible()` with false
+        // while the user was looking at it, `hide()` did nothing on a window
+        // it believed was already hidden, and the widget's idle reconcile —
+        // which asks `isVisible()` before cleaning up — concluded there was
+        // nothing to clean up. An empty rectangle stayed on the desktop until
+        // the app was quit.
+        use std::cell::RefCell;
+        let order = RefCell::new(Vec::new());
+        show_pill_noactivate_with(
+            || {
+                order.borrow_mut().push("tauri");
+                Ok(())
+            },
+            || {
+                order.borrow_mut().push("native");
+                Ok(())
+            },
+        );
+        assert_eq!(
+            order.into_inner(),
+            ["tauri", "native"],
+            "Tauri's own show must run, and run first"
+        );
+    }
+
+    #[test]
+    fn a_failing_tauri_show_does_not_fall_back_to_a_native_one() {
+        // Greptile: a native-only show after Tauri's show failed puts an
+        // always-on-top window on screen that Tauri believes is hidden, so
+        // neither dismiss() nor the idle reconcile can ever remove it — the
+        // stranded-window bug again. A pill that does not appear is the lesser
+        // failure; the tray's red dot still signals recording.
+        let mut native_ran = false;
+        show_pill_noactivate_with(
+            || Err("no window".to_string()),
+            || {
+                native_ran = true;
+                Ok(())
+            },
+        );
+        assert!(!native_ran, "a native show after a failed Tauri show strands an unhidable window");
+    }
 
     #[test]
     fn adds_noactivate_bit_without_clobbering_existing_style() {
@@ -1140,6 +1230,15 @@ pub fn run() {
                 .resizable(false)
                 .transparent(true)
                 .decorations(false)
+                // No window shadow. On Windows, Tauri's default (`true`) gives
+                // an undecorated window a 1px white border and, on Windows 11,
+                // rounded corners — drawn around the WHOLE 460x164 window, not
+                // the pill inside it, which is at most 284px wide. The result
+                // is a visible card framing empty space around the capsule,
+                // there whether the pill is showing or not. The capsule draws
+                // its own edge and shadow in CSS; the window must draw nothing.
+                // (Unsupported on Linux, where it was never the problem.)
+                .shadow(false)
                 .always_on_top(true)
                 .visible(false)
                 .focused(false)

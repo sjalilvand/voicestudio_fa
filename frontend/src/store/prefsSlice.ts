@@ -235,7 +235,11 @@ export interface PrefsSlice {
   setDictationMode: (mode: DictationMode) => void;
   setDictationModelId: (id: string) => void;
   /** Hydrate from GET /dictation/prefs (called once on app init). */
-  loadDictationPrefs: () => Promise<void>;
+  /** Resolves true when the backend answered, false when the seeds were
+   *  kept because it did not. `dictationLoaded` is set either way (so the
+   *  Settings panel never spins forever); this is how a caller can tell
+   *  the two apart and retry. */
+  loadDictationPrefs: () => Promise<boolean>;
 
   /**
    * Auto-play the output preview as soon as a render finishes (Voice Clone /
@@ -387,11 +391,13 @@ export const createPrefsSlice: StateCreator<PrefsSlice, [], [], PrefsSlice> = (s
     try {
       const p = await apiJson<any>('/dictation/prefs');
       set({ ..._dictationFromPrefs(p), dictationLoaded: true });
+      return true;
     } catch {
       // Backend not ready / older build without the route — keep the seeds and
       // mark loaded so the panel renders defaults rather than a perpetual
       // spinner. A later manual interaction will retry the write-through.
       set({ dictationLoaded: true });
+      return false;
     }
   },
 
