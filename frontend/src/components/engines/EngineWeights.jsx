@@ -1,14 +1,27 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Check, Download, RefreshCw, Trash2, Wrench, X } from 'lucide-react';
+import { useAppStore } from '../../store';
 import { Badge, Button, Progress } from '../../ui';
 import { cn } from '@/lib/utils';
 import { fmtBytes } from '../settings/models/format';
 import { describeProgress } from '../settings/models/progressText';
-import DictationModelPicker from '../DictationModelPicker';
 
 /** The catalogue weights an engine loads (models.yaml `engines:` mapping). */
 export function weightsForEngine(models, engineId) {
   return (models || []).filter((m) => Array.isArray(m.engines) && m.engines.includes(engineId));
+}
+
+/** Which of an engine's weights is the dictation pick (rows carrying a
+ *  `dictation_id`): the stored pref when it names one of them, else the
+ *  curated row, else the first — the same fallback the quick-menu picker uses. */
+export function dictationPick(rows, modelId) {
+  const candidates = rows.filter((m) => m.dictation_id);
+  if (candidates.length === 0) return null;
+  return (
+    candidates.find((m) => m.dictation_id === modelId) ||
+    candidates.find((m) => m.curated) ||
+    candidates[0]
+  );
 }
 
 /**
@@ -18,20 +31,28 @@ export function weightsForEngine(models, engineId) {
  *
  * This is the same install / cancel / remove / reinstall flow the model
  * store drives (useModelDownloads), so a download started here shows the
- * same progress everywhere. The sherpa-onnx dictation engine keeps its own
- * picker: choosing a dictation model is a preference, not just a download.
+ * same progress everywhere. Weights that double as a *preference* — the
+ * sherpa-onnx dictation models, which carry a `dictation_id` — add a
+ * "Dictation" radio per row that writes the same `dictation.model_id` pref
+ * the quick menu and Settings → Voice write, and starts the download when
+ * the pick is not on disk yet.
  */
 export default function EngineWeights({ engineId, models, downloads, t }) {
-  if (!downloads) return null;
-  if (engineId === 'sherpa-onnx-asr') {
-    return (
-      // The picker carries its own "Dictation model" label — no second heading.
-      <section className="flex flex-col" data-testid={`engine-weights-${engineId}`}>
-        <DictationModelPicker />
-      </section>
-    );
-  }
+  const modelId = useAppStore((s) => s.dictationModelId);
+  const setModelId = useAppStore((s) => s.setDictationModelId);
+  const loadPrefs = useAppStore((s) => s.loadDictationPrefs);
+  const dictationLoaded = useAppStore((s) => s.dictationLoaded);
   const rows = weightsForEngine(models, engineId);
+  const hasDictation = rows.some((m) => m.dictation_id);
+  useEffect(() => {
+    if (hasDictation && !dictationLoaded) loadPrefs?.();
+  }, [hasDictation, dictationLoaded, loadPrefs]);
+  if (!downloads) return null;
+  const picked = hasDictation ? dictationPick(rows, modelId) : null;
+  const pickDictation = (m) => {
+    if (m.dictation_id !== picked?.dictation_id) setModelId?.(m.dictation_id);
+    if (!m.installed) downloads.onInstall(m.repo_id);
+  };
   return (
     <section className="flex flex-col gap-[4px]" data-testid={`engine-weights-${engineId}`}>
       <h4 className="m-0 font-mono text-[11px] font-medium uppercase tracking-[var(--chrome-label-track)] text-muted-foreground">
@@ -45,9 +66,26 @@ export default function EngineWeights({ engineId, models, downloads, t }) {
           {t('engines.noWeights')}
         </p>
       ) : (
-        <ul className="m-0 flex list-none flex-col p-0">
+        <ul
+          className="m-0 flex list-none flex-col p-0"
+          role={hasDictation ? 'radiogroup' : undefined}
+          aria-label={hasDictation ? t('engines.dictation_model') : undefined}
+        >
           {rows.map((m) => (
-            <WeightRow key={m.repo_id} m={m} downloads={downloads} t={t} />
+            <WeightRow
+              key={m.repo_id}
+              m={m}
+              downloads={downloads}
+              t={t}
+              dictation={
+                m.dictation_id
+                  ? {
+                      picked: picked?.dictation_id === m.dictation_id,
+                      pick: () => pickDictation(m),
+                    }
+                  : null
+              }
+            />
           ))}
         </ul>
       )}
@@ -55,7 +93,7 @@ export default function EngineWeights({ engineId, models, downloads, t }) {
   );
 }
 
-function WeightRow({ m, downloads, t }) {
+function WeightRow({ m, downloads, t, dictation }) {
   const rt = downloads.getRowRuntime(m);
   const resident = downloads.getResidency?.(m);
   const size = m.installed ? fmtBytes(m.size_on_disk_bytes) : `${m.size_gb} GB`;
@@ -100,6 +138,35 @@ function WeightRow({ m, downloads, t }) {
           <Badge tone="info" size="xs" className="shrink-0" title={t('models.in_memory_title')}>
             {t('models.in_memory')}
           </Badge>
+        )}
+        {dictation && (
+          // The preference lives on the row: which of these the live
+          // dictation hotkey loads. Picking an undownloaded one also installs it.
+          <button
+            type="button"
+            role="radio"
+            aria-checked={dictation.picked}
+            onClick={dictation.pick}
+            title={t('engines.dictation_model_hint')}
+            data-testid={`weight-dictation-${m.repo_id}`}
+            className={cn(
+              'inline-flex shrink-0 cursor-pointer items-center gap-[4px] rounded-[var(--chrome-radius-pill)] border px-[6px] py-px font-mono text-[10px] font-semibold uppercase tracking-[0.04em] transition-colors',
+              dictation.picked
+                ? 'border-primary/40 bg-primary/[0.12] text-primary'
+                : 'border-border bg-transparent text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <span
+              aria-hidden="true"
+              className={cn(
+                'inline-block h-[6px] w-[6px] rounded-full',
+                dictation.picked
+                  ? 'bg-primary'
+                  : 'bg-transparent shadow-[inset_0_0_0_1px_currentColor]',
+              )}
+            />
+            {t('settings.dictation')}
+          </button>
         )}
         <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
           {size}

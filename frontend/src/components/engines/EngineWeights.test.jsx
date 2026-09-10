@@ -2,11 +2,9 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import i18n from '../../i18n';
-import EngineWeights, { weightsForEngine } from './EngineWeights';
+import EngineWeights, { dictationPick, weightsForEngine } from './EngineWeights';
 
-vi.mock('../DictationModelPicker', () => ({
-  default: () => <div data-testid="dictation-model-picker-stub" />,
-}));
+import { useAppStore } from '../../store';
 
 const t = i18n.t.bind(i18n);
 
@@ -39,6 +37,28 @@ const MODELS = [
     engines: [],
   },
   { repo_id: 'legacy/no-mapping', label: 'Legacy', role: 'TTS', size_gb: 1, installed: false },
+  {
+    repo_id: 'csukuangfj/sherpa-onnx-whisper-tiny',
+    label: 'Whisper Tiny',
+    role: 'ASR',
+    size_gb: 0.104,
+    installed: false,
+    curated: true,
+    engine: 'sherpa-onnx',
+    dictation_id: 'sherpa-whisper-tiny',
+    engines: ['sherpa-onnx-asr'],
+  },
+  {
+    repo_id: 'csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8',
+    label: 'Parakeet TDT v3',
+    role: 'ASR',
+    size_gb: 0.67,
+    size_on_disk_bytes: 640 * 1024 ** 2,
+    installed: true,
+    engine: 'sherpa-onnx',
+    dictation_id: 'sherpa-parakeet-tdt-v3',
+    engines: ['sherpa-onnx-asr'],
+  },
 ];
 
 const IDLE = {
@@ -154,10 +174,51 @@ describe('EngineWeights', () => {
     expect(container.querySelector('[data-testid="engine-weights-omnivoice"]')).toBeNull();
   });
 
-  it('hands the sherpa-onnx dictation engine to its own model picker', () => {
-    render(
-      <EngineWeights engineId="sherpa-onnx-asr" models={MODELS} downloads={downloads()} t={t} />,
+  it('gives sherpa dictation weights a Dictation radio next to the normal controls', () => {
+    const setDictationModelId = vi.fn();
+    useAppStore.setState({
+      dictationModelId: 'sherpa-parakeet-tdt-v3',
+      dictationLoaded: true,
+      setDictationModelId,
+    });
+    const d = downloads();
+    render(<EngineWeights engineId="sherpa-onnx-asr" models={MODELS} downloads={d} t={t} />);
+    const group = screen.getByRole('radiogroup', { name: t('engines.dictation_model') });
+    const radios = within(group).getAllByRole('radio');
+    expect(radios).toHaveLength(2);
+    // The stored pref is the checked one; the installed row still has its
+    // remove / reinstall controls, the missing one its Install.
+    const parakeet = screen.getByTestId(
+      'weight-csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8',
     );
-    expect(screen.getByTestId('dictation-model-picker-stub')).toBeInTheDocument();
+    expect(within(parakeet).getByRole('radio')).toHaveAttribute('aria-checked', 'true');
+    expect(within(parakeet).getByRole('button', { name: /delete/i })).toBeInTheDocument();
+    const tiny = screen.getByTestId('weight-csukuangfj/sherpa-onnx-whisper-tiny');
+    expect(within(tiny).getByRole('radio')).toHaveAttribute('aria-checked', 'false');
+    expect(
+      screen.getByTestId('weight-install-csukuangfj/sherpa-onnx-whisper-tiny'),
+    ).toBeInTheDocument();
+    // Picking an undownloaded model writes the pref AND starts its download.
+    fireEvent.click(within(tiny).getByRole('radio'));
+    expect(setDictationModelId).toHaveBeenCalledWith('sherpa-whisper-tiny');
+    expect(d.onInstall).toHaveBeenCalledWith('csukuangfj/sherpa-onnx-whisper-tiny');
+    // Non-dictation engines get no radios at all.
+    render(<EngineWeights engineId="omnivoice" models={MODELS} downloads={downloads()} t={t} />);
+    expect(screen.queryAllByRole('radiogroup')).toHaveLength(1);
+  });
+
+  it('dictationPick falls back to the curated row, then the first, when the pref names none', () => {
+    const rows = weightsForEngine(MODELS, 'sherpa-onnx-asr');
+    expect(dictationPick(rows, 'sherpa-parakeet-tdt-v3').dictation_id).toBe(
+      'sherpa-parakeet-tdt-v3',
+    );
+    expect(dictationPick(rows, 'unknown').dictation_id).toBe('sherpa-whisper-tiny'); // curated
+    expect(
+      dictationPick(
+        rows.filter((m) => !m.curated),
+        'unknown',
+      ).dictation_id,
+    ).toBe('sherpa-parakeet-tdt-v3');
+    expect(dictationPick(weightsForEngine(MODELS, 'omnivoice'), 'x')).toBeNull();
   });
 });
