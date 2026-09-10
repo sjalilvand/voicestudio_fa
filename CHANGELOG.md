@@ -12,6 +12,11 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - VoxCPM2 installs in one click into its own environment, with the CUDA build of PyTorch on NVIDIA GPUs (#2021)
 
+### CI
+
+- A tagged release is published only after every platform's installers and checksums are attached, and its notes list all four platforms' checksums (#RELPR)
+
+
 ## [0.5.2] — 2026-09-10
 
 **Highlights**
