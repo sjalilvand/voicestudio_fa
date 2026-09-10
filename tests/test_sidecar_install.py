@@ -1215,3 +1215,39 @@ def test_engine_venv_python_needs_a_real_interpreter(monkeypatch, tmp_path):
     py.parent.mkdir(parents=True)
     py.write_text("#!fake\n")
     assert si.engine_venv_python("OMNIVOICE_FAKE_SIDE_DIR") == py
+
+
+# The root of each pinned upstream commit, as GitHub lists it (2026-09-10).
+_UPSTREAM_ROOT_FILES = {
+    "moss-tts-v15": ("pyproject.toml", "README.md", "LICENSE", "MANIFEST.in"),
+    "confucius4-tts": ("requirements.txt", "setup.py", "README.md", "LICENSE", "server.py"),
+    "dots-tts": ("pyproject.toml", "README.md", "LICENSE", "constraints/recommended.txt"),
+}
+
+
+@pytest.mark.parametrize("engine_id", sorted(_UPSTREAM_ROOT_FILES))
+def test_a_real_upstream_layout_passes_source_validation(monkeypatch, engine_id):
+    """Confucius4 has no pyproject.toml. Source validation demanded one of every
+    checkout, so its install could never get past fetching the source."""
+    spec = si.get_spec(engine_id)
+
+    def fake_git(job, argv, *, timeout, env=None):
+        if argv[1] == "clone":
+            checkout = Path(argv[-1])
+            for rel in _UPSTREAM_ROOT_FILES[engine_id]:
+                (checkout / rel).parent.mkdir(parents=True, exist_ok=True)
+                (checkout / rel).write_text("x\n")
+        return 0
+
+    def no_tarball(*args, **kwargs):
+        pytest.fail("a valid clone fell back to the source tarball")
+
+    monkeypatch.setattr(si.shutil, "which", lambda n: "/usr/bin/git" if n == "git" else None)
+    monkeypatch.setattr(si, "_run_logged", fake_git)
+    monkeypatch.setattr(si, "_fetch_tarball", no_tarball)
+
+    job = si._new_job(engine_id)
+    si._step_fetch_source(spec, job)
+
+    assert si._job_step(job, "fetch_source")["detail"] == "git clone"
+    assert si._source_present(spec, si.managed_checkout(spec))

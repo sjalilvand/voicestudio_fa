@@ -139,6 +139,10 @@ class SidecarSpec:
     # Python that proves the venv works; "{checkout}" / "{checkout_repr}"
     # substituted. None means `import <probe_module>`.
     probe_code: Optional[str] = None
+    # The file whose presence proves a fetched checkout is the whole
+    # repository. Most upstreams ship a pyproject.toml; Confucius4 ships
+    # only requirements.txt and setup.py.
+    source_manifest: str = "pyproject.toml"
     # False for an engine that is a PyPI package, not a repository: nothing
     # is fetched, and the managed root holds only the engine's own venv.
     has_source: bool = True
@@ -318,7 +322,9 @@ SPECS: dict[str, SidecarSpec] = {
         # checkout on sys.path, exactly as the engine's sidecar imports it.
         probe_code="import sys; sys.path.insert(0, {checkout_repr}); import confuciustts",
         source_revision="4fb32c481302d8858c3aec6a1c2a8b4cea8894c0",
-        source_required_path="requirements.txt",
+        # No pyproject.toml upstream: requirements.txt is its manifest.
+        source_manifest="requirements.txt",
+        source_required_path="setup.py",
         venv_args=("--python", "3.10"),
         install_args=("-r", "{checkout}/requirements.txt"),
         # torch==2.7.0: CPU-only from PyPI on Windows; the CUDA index supplies
@@ -996,7 +1002,7 @@ def _step_fetch_source(spec: SidecarSpec, job: dict) -> None:
     _fetch_tarball(spec, job, checkout)
     if not _source_layout_ok(spec, checkout):
         raise _StepError(
-            f"Fetched source at {checkout} has no pyproject.toml — the download "
+            f"Fetched source at {checkout} has no {spec.source_manifest} — the download "
             "appears incomplete or the upstream layout changed.",
             "Re-run the install; if it keeps failing, clone the repository "
             f"manually and set {spec.env_var} to the clone (see the engine docs).",
@@ -1009,7 +1015,7 @@ _SOURCE_REVISION_MARKER = ".voicestudio_source_revision"
 
 
 def _source_layout_ok(spec: SidecarSpec, checkout: Path) -> bool:
-    if not (checkout / "pyproject.toml").is_file():
+    if not (checkout / spec.source_manifest).is_file():
         return False
     return not spec.source_required_path or (checkout / spec.source_required_path).is_file()
 
