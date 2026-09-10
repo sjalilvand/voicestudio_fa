@@ -353,7 +353,9 @@
     "hf_token_not_checked": "परीक्षण नहीं हुआ",
     "hf_source_app_label": "VoiceStudio (एन्क्रिप्ट किया गया, अनुशंसित)",
     "hf_source_cli_label": "HuggingFace CLI",
-    "hf_source_env_label": "परिवेश चर"
+    "hf_source_env_label": "परिवेश चर",
+    "theme_auto": "सिस्टम डिफ़ॉल्ट",
+    "theme_light": "लाइट"
   },
   "bootstrap": {
     "title": "VoiceStudio",

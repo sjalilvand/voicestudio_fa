@@ -353,7 +353,9 @@
     "hf_token_not_checked": "ยังไม่ได้ทดสอบ",
     "hf_source_app_label": "VoiceStudio (เข้ารหัส แนะนำ)",
     "hf_source_cli_label": "HuggingFace CLI",
-    "hf_source_env_label": "ตัวแปรสภาพแวดล้อม"
+    "hf_source_env_label": "ตัวแปรสภาพแวดล้อม",
+    "theme_auto": "อัตโนมัติตามระบบ",
+    "theme_light": "สว่าง"
   },
   "bootstrap": {
     "title": "VoiceStudio",
