@@ -2495,6 +2495,7 @@
     "test_placeholder": "Tapez une phrase pour prévisualiser la substitution…",
     "test_result": "Sera prononcé comme :",
     "test_nochange": "Aucune entrée ne correspond – prononcée comme écrite.",
+    "test_inert": "Enregistré mais pas encore appliqué sur ce moteur : {{terms}}. Les entrées IPA et CMU sont enregistrées et validées, mais seul le respelling modifie le texte prononcé pour l’instant.",
     "load_error": "Impossible de charger le dictionnaire de prononciation.",
     "save_error": "Impossible d'enregistrer cette entrée.",
     "lang_label": "Code de langue (par exemple en, de) ou laissez vide pour Global",
