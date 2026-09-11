@@ -1,4 +1,7 @@
 <div align="center">
+
+  <h3>NOTE: Electron Rewrite Ongoing: Please dont't create desktop app related issues and pr</h3>
+ 
   <p><img src="docs/logo.png" alt="VoiceStudio logo" width="120" height="120" /></p>
   <h1>VoiceStudio</h1>
   <p>
