@@ -16,14 +16,26 @@ _BOMS = (
     (codecs.BOM_UTF16_BE, "utf-16-be"),
 )
 
+_CP1252_UNDEFINED = "voicestudio-cp1252-undefined"
+
+
+def _undefined_as_latin1(exc: UnicodeDecodeError) -> tuple[str, int]:
+    # Only the offending bytes take their Latin-1 code point — what the
+    # browser's windows-1252 decoder does — so the rest of the file keeps its
+    # curly quotes and dashes.
+    return exc.object[exc.start:exc.end].decode("latin-1"), exc.end
+
+
+codecs.register_error(_CP1252_UNDEFINED, _undefined_as_latin1)
+
 
 def decode_text_upload(data: bytes) -> str:
     """Return the text of ``data``, without its byte-order mark.
 
     A BOM names the encoding. Without one, valid UTF-8 is UTF-8; anything else
-    is read as Windows-1252, the legacy code page such files come from. The
-    five bytes Windows-1252 leaves undefined fall back to Latin-1, so the
-    decode never raises.
+    is read as Windows-1252, the legacy code page such files come from. Each of
+    the five bytes Windows-1252 leaves undefined takes its Latin-1 code point,
+    so the decode never raises.
     """
     for bom, encoding in _BOMS:
         if data.startswith(bom):
@@ -31,8 +43,4 @@ def decode_text_upload(data: bytes) -> str:
     try:
         return data.decode("utf-8")
     except UnicodeDecodeError:
-        pass
-    try:
-        return data.decode("cp1252")
-    except UnicodeDecodeError:
-        return data.decode("latin-1")
+        return data.decode("cp1252", errors=_CP1252_UNDEFINED)

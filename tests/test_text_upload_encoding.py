@@ -72,6 +72,14 @@ def test_bytes_windows_1252_leaves_undefined_still_decode():
     assert decode_text_upload(b"caf\xe9 \x81") == "café \x81"
 
 
+def test_an_undefined_windows_1252_byte_leaves_the_rest_of_the_file_intact():
+    from services.text_upload import decode_text_upload
+
+    # Only the undefined byte takes its Latin-1 value (as the browser's
+    # windows-1252 decoder does); the curly quote beside it stays a quote.
+    assert decode_text_upload(b"It\x92s \x81 caf\xe9") == "It’s \x81 café"
+
+
 def test_decode_text_upload_keeps_valid_utf8_untouched():
     from services.text_upload import decode_text_upload
 
