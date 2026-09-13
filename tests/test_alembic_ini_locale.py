@@ -2,11 +2,10 @@
 
 alembic reads its ini with ``encoding="locale"`` (``alembic.util.compat.
 read_config_parser``). On Python 3.11 that is the Windows ANSI code page even
-with ``PYTHONUTF8=1``, which the desktop shell sets — so on a Chinese, Japanese
-or Korean Windows the em dashes in the ini's comments raised
-``UnicodeDecodeError`` inside ``Config()``, and every startup logged
-"alembic upgrade head skipped" and never ran a migration or took the
-pre-migration backup.
+with ``PYTHONUTF8=1`` — so on a Chinese, Japanese or Korean Windows the em
+dashes in the ini's comments raised ``UnicodeDecodeError`` inside ``Config()``,
+and every startup of a from-source install logged "alembic upgrade head
+skipped" and never ran a migration or took the pre-migration backup.
 """
 from __future__ import annotations
 
