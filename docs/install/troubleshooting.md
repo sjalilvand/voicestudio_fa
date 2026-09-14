@@ -263,14 +263,16 @@ is that on the Windows setups in
 faults inside the native library before Python can raise an error, and moving
 the torch trio to 2.9.x clears it.
 
-Check what your own build actually contains before changing any pins:
+If `import torch` crashes for you, that crash *is* the symptom — skip straight
+to the fix below. Where torch does import, this shows what the build actually
+contains:
 
 ```bash
 uv run python -c "import torch; print(torch.__version__, torch.cuda.get_arch_list())"
 ```
 
-If `sm_120` is in that list the kernels are present, so the crash is elsewhere
-in the native init path. The upgrade below is still the known workaround.
+`sm_120` in that list means the kernels are present and the crash is elsewhere
+in the native init path. Either way the upgrade below is the known workaround.
 
 **Fix:** move the whole torch trio to 2.9.x. They must move together —
 upgrading one past the ABI the others were built against gives you
@@ -318,7 +320,9 @@ guarded now, so the upgrade path above is clean on a current checkout.
 touches them will conflict or overwrite. Re-apply after updating until the
 default pin moves — the default cannot move for everyone until the newer torch
 is verified across the older GPUs VoiceStudio supports, since a newer build can
-drop older architectures — the cu128 wheels already dropped Maxwell and Pascal.
+drop older architectures. Which ones varies by torch release, not by the CUDA
+variant alone: the pinned 2.8.0+cu128 build reports `sm_70` first, while the
+cu128 arch list captured in #1285 still carried `sm_61`.
 
 **Linked issue:** [#1931](https://github.com/debpalash/VoiceStudio/issues/1931)
 — thanks to the reporter for the full diagnosis, including the verification
