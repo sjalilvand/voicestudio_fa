@@ -414,6 +414,62 @@ def test_omnivoice_subprocess_recv_timeout_floors_at_30s(monkeypatch):
     assert OmniVoiceSubprocessBackend().recv_timeout_s == 30.0
 
 
+def test_subprocess_sidecar_timeout_error_message(monkeypatch):
+    """When a sidecar hits its receive timeout, generate() must report the
+    timeout and deadline rather than describing a generic pipe-closed crash (#2103)."""
+    b = _PlainBackend()
+
+    class _FakeProc:
+        def poll(self):
+            return None
+
+    b._proc = _FakeProc()
+    monkeypatch.setattr(b, "_send", lambda msg: None)
+
+    def fake_recv_timeout(timeout_s):
+        b._last_recv_timed_out = True
+        return None
+
+    monkeypatch.setattr(b, "_recv_with_timeout", fake_recv_timeout)
+    monkeypatch.setattr(b, "_reap_unusable_process", lambda proc: None)
+
+    with pytest.raises(RuntimeError) as exc:
+        b.generate("hello")
+    assert "exceeded receive timeout (60s)" in str(exc.value)
+    assert "killed mid-generate" in str(exc.value)
+
+
+def test_subprocess_engine_timeouts_raised():
+    """All large subprocess TTS engines must declare generous timeouts rather
+    than inheriting the 60s class default (#2103)."""
+    from engines.confucius4 import Confucius4Backend
+    from engines.dots_tts import DotsTTSBackend
+    from engines.moss_tts_v15 import MossTTSV15Backend
+    from engines.supertonic3.backend import Supertonic3Backend
+
+    assert Confucius4Backend().recv_timeout_s >= 300.0
+    assert DotsTTSBackend().recv_timeout_s >= 300.0
+    assert MossTTSV15Backend().recv_timeout_s >= 300.0
+    assert Supertonic3Backend().recv_timeout_s >= 300.0
+
+
+def test_subprocess_engine_timeout_env_overrides(monkeypatch):
+    from engines.confucius4 import Confucius4Backend
+    from engines.dots_tts import DotsTTSBackend
+    from engines.moss_tts_v15 import MossTTSV15Backend
+    from engines.supertonic3.backend import Supertonic3Backend
+
+    monkeypatch.setenv("OMNIVOICE_CONFUCIUS4_RECV_TIMEOUT_S", "1200")
+    monkeypatch.setenv("OMNIVOICE_DOTS_TTS_RECV_TIMEOUT_S", "1000")
+    monkeypatch.setenv("OMNIVOICE_MOSS_TTS_V15_RECV_TIMEOUT_S", "1100")
+    monkeypatch.setenv("OMNIVOICE_SUPERTONIC3_RECV_TIMEOUT_S", "500")
+
+    assert Confucius4Backend().recv_timeout_s == 1200.0
+    assert DotsTTSBackend().recv_timeout_s == 1000.0
+    assert MossTTSV15Backend().recv_timeout_s == 1100.0
+    assert Supertonic3Backend().recv_timeout_s == 500.0
+
+
 # ── roundtrip via the stub sidecar ─────────────────────────────────────────
 
 

@@ -796,6 +796,11 @@ class SubprocessBackend(TTSBackend):
                         raise
                 if not reply:
                     self._reap_unusable_process(proc)
+                    if self._last_recv_timed_out:
+                        raise RuntimeError(
+                            f"{self.id} sidecar exceeded receive timeout "
+                            f"({self.recv_timeout_s:g}s); killed mid-generate"
+                        )
                     raise RuntimeError(f"{self.id} sidecar closed pipe mid-generate")
             if reply.get("op") == "error":
                 stage = str(reply.get("stage") or "unknown")

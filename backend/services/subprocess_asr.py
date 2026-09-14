@@ -126,6 +126,12 @@ class SubprocessASRBackend(SubprocessBackend):
                 # EOF can arrive before Windows updates poll(); retire the
                 # stale handle so an immediate retry respawns the sidecar.
                 self.shutdown()
+                if self._last_recv_timed_out:
+                    raise RuntimeError(
+                        f"{self.id} ASR sidecar exceeded receive timeout "
+                        f"({ASR_RECV_TIMEOUT_S:g}s); killed mid-transcription "
+                        f"(device={self._device()}) — retry or raise the timeout."
+                    )
                 # Pipe closed mid-transcription → the child crashed.
                 raise RuntimeError(
                     f"{self.id} ASR sidecar crashed mid-transcription "
