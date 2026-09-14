@@ -102,6 +102,7 @@ class Supertonic3Backend(SubprocessBackend):
 
     @property
     def recv_timeout_s(self) -> float:
+        """Receive timeout in seconds for the Supertonic-3 sidecar process (#2103)."""
         # Supertonic-3 runs ONNX on CPU; cold load downloads ~400MB and long
         # synthesis benefits from more headroom than 60s. OMNIVOICE_SUPERTONIC3_RECV_TIMEOUT_S (#2103).
         try:

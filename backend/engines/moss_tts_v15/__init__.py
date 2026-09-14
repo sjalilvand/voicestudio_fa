@@ -131,6 +131,7 @@ class MossTTSV15Backend(SubprocessBackend):
 
     @property
     def recv_timeout_s(self) -> float:
+        """Receive timeout in seconds for the MOSS-TTS-v1.5 sidecar process (#2103)."""
         # MOSS-TTS-v1.5 is an 8B model; synthesis legitimately outruns the
         # 60s class default. OMNIVOICE_MOSS_TTS_V15_RECV_TIMEOUT_S tunes it (#2103).
         try:

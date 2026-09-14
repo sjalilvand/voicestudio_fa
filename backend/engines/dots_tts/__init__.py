@@ -125,6 +125,7 @@ class DotsTTSBackend(SubprocessBackend):
 
     @property
     def recv_timeout_s(self) -> float:
+        """Receive timeout in seconds for the dots.tts sidecar process (#2103)."""
         # dots.tts is a 2B autoregressive model; synthesis on CPU legitimately
         # outruns the 60s class default. OMNIVOICE_DOTS_TTS_RECV_TIMEOUT_S tunes it (#2103).
         try:

@@ -38,7 +38,7 @@ logger = logging.getLogger("omnivoice.asr.subprocess")
 # A model load + transcription can take a while on CPU for a long clip; give
 # the transcribe round-trip more headroom than the TTS default. Configurable via
 # OMNIVOICE_ASR_RECV_TIMEOUT_S (#2103).
-ASR_RECV_TIMEOUT_S = float(os.environ.get("OMNIVOICE_ASR_RECV_TIMEOUT_S", "600.0"))
+ASR_RECV_TIMEOUT_S = 600.0
 
 
 class SubprocessASRBackend(SubprocessBackend):
@@ -84,7 +84,13 @@ class SubprocessASRBackend(SubprocessBackend):
     @property
     def recv_timeout_s(self) -> float:
         """Wall-clock timeout in seconds waiting for an ASR sidecar response (#2103)."""
-        return float(os.environ.get("OMNIVOICE_ASR_RECV_TIMEOUT_S", ASR_RECV_TIMEOUT_S))
+        try:
+            v = float(os.environ.get("OMNIVOICE_ASR_RECV_TIMEOUT_S", str(ASR_RECV_TIMEOUT_S)))
+        except (ValueError, TypeError):
+            return ASR_RECV_TIMEOUT_S
+        if not math.isfinite(v):
+            return ASR_RECV_TIMEOUT_S
+        return max(30.0, v)
 
     def transcribe(self, audio_path: str, *, word_timestamps: bool = True) -> dict:
         """Transcribe ``audio_path`` in the sidecar. Returns the engine's
@@ -131,11 +137,12 @@ class SubprocessASRBackend(SubprocessBackend):
                     "decode_options": asr_decode_defaults(),
                 })
                 reply = self._recv_with_timeout(timeout_s)
+                timed_out = self._last_recv_timed_out
             if not reply:
                 # EOF can arrive before Windows updates poll(); retire the
                 # stale handle so an immediate retry respawns the sidecar.
                 self.shutdown()
-                if self._last_recv_timed_out:
+                if timed_out:
                     raise RuntimeError(
                         f"{self.id} ASR sidecar exceeded receive timeout "
                         f"({timeout_s:g}s); killed mid-transcription "

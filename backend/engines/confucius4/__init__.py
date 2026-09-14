@@ -103,6 +103,7 @@ class Confucius4Backend(SubprocessBackend):
 
     @property
     def recv_timeout_s(self) -> float:
+        """Receive timeout in seconds for the Confucius4 sidecar process (#2103)."""
         # Confucius4 is an LLM-based TTS (~17x realtime on CPU); synthesis legitimately
         # outruns the 60s class default. OMNIVOICE_CONFUCIUS4_RECV_TIMEOUT_S tunes it (#2103).
         try:

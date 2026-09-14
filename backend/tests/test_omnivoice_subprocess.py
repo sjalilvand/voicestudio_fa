@@ -454,6 +454,7 @@ def test_subprocess_engine_timeouts_raised():
 
 
 def test_subprocess_engine_timeout_env_overrides(monkeypatch):
+    """Subprocess TTS engines honor their engine-specific receive timeout env overrides (#2103)."""
     from engines.confucius4 import Confucius4Backend
     from engines.dots_tts import DotsTTSBackend
     from engines.moss_tts_v15 import MossTTSV15Backend
@@ -471,6 +472,8 @@ def test_subprocess_engine_timeout_env_overrides(monkeypatch):
 
 
 def test_subprocess_asr_recv_timeout_env_override(monkeypatch):
+    """SubprocessASRBackend.recv_timeout_s honors OMNIVOICE_ASR_RECV_TIMEOUT_S
+    and safely rejects non-finite, malformed, zero, or negative inputs (#2103)."""
     from pathlib import Path
     from services.subprocess_asr import SubprocessASRBackend
 
@@ -487,13 +490,29 @@ def test_subprocess_asr_recv_timeout_env_override(monkeypatch):
         def sidecar_script(cls): return Path("fake")
 
     b = _FakeASR()
-    assert b.recv_timeout_s >= 300.0
+    assert b.recv_timeout_s == 600.0
 
+    # Valid override
     monkeypatch.setenv("OMNIVOICE_ASR_RECV_TIMEOUT_S", "750")
     assert b.recv_timeout_s == 750.0
 
+    # Malformed value falls back to default
+    monkeypatch.setenv("OMNIVOICE_ASR_RECV_TIMEOUT_S", "not-a-number")
+    assert b.recv_timeout_s == 600.0
+
+    # Non-finite values fall back to default
+    for invalid in ("nan", "inf", "-inf"):
+        monkeypatch.setenv("OMNIVOICE_ASR_RECV_TIMEOUT_S", invalid)
+        assert b.recv_timeout_s == 600.0
+
+    # Zero or negative values clamped to 30.0 minimum
+    for low in ("0", "-10", "15"):
+        monkeypatch.setenv("OMNIVOICE_ASR_RECV_TIMEOUT_S", low)
+        assert b.recv_timeout_s == 30.0
+
 
 def test_subprocess_asr_timeout_error_message(monkeypatch):
+    """SubprocessASRBackend.transcribe() raises actionable timeout guidance when watchdog fires (#2103)."""
     from pathlib import Path
     from services.subprocess_asr import SubprocessASRBackend
 
@@ -535,14 +554,15 @@ def test_subprocess_asr_timeout_error_message(monkeypatch):
 
 
 def test_generate_timeout_s_coordinates_with_engine_recv_timeout():
-    """Outer generation timeout must not be shorter than the engine sidecar timeout (#2103)."""
+    """Outer generation timeout must coordinate with engine sidecar timeout with bounded grace (#2103)."""
     from services.model_manager import generate_timeout_s
 
     class _SlowEngine:
         recv_timeout_s = 900.0
 
+    # With 900s sidecar timeout, outer budget must include at least 5s grace (>= 905s).
     budget = generate_timeout_s("short text", engine=_SlowEngine())
-    assert budget >= 900.0
+    assert budget >= 905.0
 
     class _FastEngine:
         recv_timeout_s = 60.0
