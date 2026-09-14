@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from core.logging_utils import log_safe
+from core.engine_licenses import LICENSE_GATED_ENGINES
 from api.dependencies import require_admin, require_admin_action
 
 logger = logging.getLogger("omnivoice.api.settings")
@@ -95,6 +96,63 @@ def get_hf_token_state(fresh: bool = Query(False)):
 
 
 _TORCH_COMPILE_KEY = "perf.torch_compile_disabled"
+
+from services.performance_profiles import (
+    _PERFORMANCE_PROFILE_KEY, _PERFORMANCE_TIERS, _PERFORMANCE_FAMILIES,
+    activate_performance_tier,
+    profile_state as _performance_profile_state,
+)
+
+
+class _PerformanceProfileBody(BaseModel):
+    tier: str = Field(..., description="fast | balanced | quality | max")
+    family: str | None = Field(None, description="Engine family, or null to set the global tier")
+
+
+
+
+@router.get("/performance-profile")
+def get_performance_profile():
+    """Return the global speed/quality preference and per-engine overrides."""
+    return _performance_profile_state()
+
+
+@router.put("/performance-profile")
+def set_performance_profile(body: _PerformanceProfileBody):
+    """Persist a performance preference and apply installed Max-capacity picks."""
+    from core import prefs
+
+    tier = body.tier.strip().lower()
+    if tier not in _PERFORMANCE_TIERS:
+        raise HTTPException(status_code=400, detail="Unknown performance tier")
+    family = body.family.strip().lower() if body.family else None
+    if family is not None and family not in _PERFORMANCE_FAMILIES:
+        raise HTTPException(status_code=400, detail="Unknown engine family")
+    state = _performance_profile_state()
+    applicable = state["applicable_families"]
+    if (family is not None and family not in applicable) or (family is None and not applicable):
+        raise HTTPException(status_code=409, detail="The selected engines do not support this performance preset")
+    from core import job_store
+    from api.routers.batch import list_batch_jobs
+    if job_store.list_jobs(status="active", limit=1) or list_batch_jobs(status="active", limit=1):
+        raise HTTPException(status_code=409, detail="Wait for queued or running jobs to finish before changing performance presets")
+    try:
+        if family is None:
+            # One atomic write clears family overrides together with the global
+            # choice, so a crash cannot leave half of a global change persisted.
+            prefs.update_mapping(_PERFORMANCE_PROFILE_KEY, {"global": tier}, replace=True)
+        else:
+            prefs.update_mapping(_PERFORMANCE_PROFILE_KEY, {family: tier})
+    except Exception:
+        logger.exception("set_performance_profile failed")
+        raise HTTPException(status_code=500, detail="Failed to persist performance profile")
+    activations = activate_performance_tier(tier, family)
+    result = _performance_profile_state()
+    if activations:
+        result["runtime_activations"] = activations
+    if tier == "max":
+        result["capacity_activations"] = activations
+    return result
 
 
 class _TorchCompileBody(BaseModel):
@@ -653,7 +711,7 @@ def set_llm_skill(skill_id: str, body: _LLMSkillBody):
 #: Engines that have an in-tree acceptance dialog. Adding a new engine
 #: here means adding a corresponding frontend dialog + a license URLs
 #: dict in its constants module. Until that, the API refuses the write.
-_LICENSE_ALLOWED_ENGINES: frozenset[str] = frozenset({"supertonic3", "pockettts"})
+_LICENSE_ALLOWED_ENGINES = LICENSE_GATED_ENGINES
 
 
 class _LicenseAcceptBody(BaseModel):

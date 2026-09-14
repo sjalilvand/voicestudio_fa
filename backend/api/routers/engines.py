@@ -15,6 +15,7 @@ Environment variables (`OMNIVOICE_TTS_BACKEND`, `OMNIVOICE_ASR_BACKEND`,
 `OMNIVOICE_LLM_BACKEND`) still win over the UI choice so power-users can pin
 a backend without Settings silently undoing it.
 """
+import asyncio
 import logging
 import os
 import threading
@@ -23,10 +24,11 @@ from time import perf_counter
 from fastapi import APIRouter, Depends, HTTPException
 from huggingface_hub import utils as hf_utils
 from huggingface_hub.errors import HFValidationError
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from api.dependencies import require_admin, require_admin_action, require_desktop
 from core import prefs
+from core.engine_licenses import LICENSE_GATED_ENGINES
 from services import tts_backend, asr_backend, llm_backend, translation_engines
 from services.audio_dsp import list_effect_presets
 from api.schemas import EffectPresetsResponse
@@ -58,12 +60,49 @@ def _catalogue_active_id(family: str, module) -> str:
 
 def _family_payload(family: str, module):
     """Public inventory plus whether an environment pin owns this family."""
+    active = _catalogue_active_id(family, module)
+    model = None
+    if family == "asr":
+        model = asr_backend._offline_asr_repo(active)
+    elif family == "llm" and active != "off":
+        model = llm_backend.get_active_llm_backend().model_name
+    elif family == "tts":
+        if active in {"omnivoice", "omnivoice-subprocess"}:
+            from services.model_manager import resolve_omnivoice_checkpoint
+            model = resolve_omnivoice_checkpoint()
+        elif active == "mlx-audio":
+            from core import prefs
+            cls = tts_backend.MLXAudioBackend
+            key = prefs.resolve("mlx_audio_model_id", env="OMNIVOICE_MLX_AUDIO_MODEL", default=cls.DEFAULT_MODEL_KEY)
+            model = cls.CURATED_MODELS.get(key, key)
+        else:
+            instance = getattr(tts_backend, "_active_instance", None)
+            if instance is not None and getattr(tts_backend, "_active_instance_id", None) == active:
+                model = instance.model_identity()
+    backends = public_backends(module.list_backends())
+    if family == "tts":
+        from services import settings_store
+
+        for backend in backends:
+            engine_id = backend.get("id")
+            if engine_id in LICENSE_GATED_ENGINES:
+                backend["license_required"] = True
+                try:
+                    backend["license_accepted"] = settings_store.get_license_accepted(engine_id)
+                except Exception:
+                    logger.warning(
+                        "Could not read license acceptance for %s",
+                        engine_id,
+                        exc_info=True,
+                    )
+                    backend["license_accepted"] = False
     return {
         # MPS hides the explicit compatibility row, so legacy configs report
         # the visible canonical equivalent as active to picker consumers.
-        "active": _catalogue_active_id(family, module),
+        "active": active,
+        "active_model": model,
         "env_override": bool(os.environ.get(f"OMNIVOICE_{family.upper()}_BACKEND")),
-        "backends": public_backends(module.list_backends()),
+        "backends": backends,
     }
 
 def _is_hf_repo_id(value: str) -> bool:
@@ -126,6 +165,90 @@ def list_effects_presets():
     return {"presets": list_effect_presets()}
 
 
+@router.get("/engines/diarisation")
+def diarisation_status():
+    """Describe the selected local diarisation runtime without loading weights."""
+    from services.diarization_runtime import (
+        PYANNOTE,
+        SORTFORMER,
+        selected_backend,
+        sortformer_status,
+    )
+
+    selected = selected_backend()
+    native = selected == SORTFORMER
+    options = []
+    from api.routers.setup.models import KNOWN_MODELS, cache_is_complete, is_cached
+    pyannote_repo = "pyannote/speaker-diarization-3.1"
+    spec = next(model for model in KNOWN_MODELS if model["repo_id"] == pyannote_repo)
+    pyannote_installed = is_cached(pyannote_repo) and cache_is_complete(spec)
+    pyannote_reason = None if pyannote_installed else "Install the pyannote model bundle"
+    options.append({
+        "id": PYANNOTE,
+        "label": "pyannote 3.1",
+        "model": pyannote_repo,
+        "installed": pyannote_installed,
+        "reason": pyannote_reason,
+    })
+
+    native_status = sortformer_status()
+    native_installed = native_status["installed"]
+    native_model = native_status["model"]
+    native_reason = native_status["reason"]
+    options.append({
+        "id": SORTFORMER,
+        "label": "Sortformer v1 (audio.cpp)",
+        "model": native_model,
+        "model_installed": native_status["model_installed"],
+        "runtime_installed": native_status["runtime_installed"],
+        "installed": native_installed,
+        "reason": native_reason,
+    })
+
+    if native:
+        from services.diarization_native import is_running
+        return {"active": SORTFORMER, "label": "Sortformer v1 (audio.cpp)",
+                "model": native_model, "installed": native_installed, "loaded": False,
+                "model_installed": native_status["model_installed"],
+                "runtime_installed": native_status["runtime_installed"],
+                "busy": is_running(), "reason": native_reason, "options": options}
+    from services import model_manager
+    return {"active": PYANNOTE, "label": "pyannote 3.1", "model": pyannote_repo,
+            "installed": pyannote_installed,
+            "loaded": model_manager._diar_pipeline is not None, "reason": pyannote_reason,
+            "options": options}
+
+
+class DiarisationSelection(BaseModel):
+    engine_id: str
+
+
+@router.post("/engines/diarisation/select", dependencies=[Depends(require_admin)])
+def select_diarisation_engine(request: DiarisationSelection):
+    """Persist an installed diarisation runtime; environment overrides still win."""
+    from services.diarization_runtime import SORTFORMER, select_backend, selected_backend
+
+    status = diarisation_status()
+    option = next(
+        (item for item in status["options"] if item["id"] == request.engine_id),
+        None,
+    )
+    if option is None:
+        raise HTTPException(404, "Unknown diarisation engine")
+    if not option["installed"]:
+        raise HTTPException(409, option.get("reason") or "Install this diarisation engine first")
+    select_backend(request.engine_id)
+    if request.engine_id == SORTFORMER:
+        # Native Sortformer is stateless. Release a previously loaded pyannote
+        # pipeline so Engine Ready cannot hide stale accelerator memory.
+        from services import model_manager
+        model_manager.unload_diarization_pipeline()
+    return {
+        "active": selected_backend(),
+        "env_override": bool(os.environ.get("OMNIVOICE_DIARIZATION_BACKEND")),
+    }
+
+
 @router.get("/engines/translation")
 def list_translation_engines():
     """Translation engines with per-engine pip-package availability.
@@ -136,12 +259,73 @@ def list_translation_engines():
     an engine whose Python dependency isn't importable yet.
     """
     return {
+        "active": prefs.get("translation_backend", "argos"),
         "engines": [
             {**entry, "availability_reason": public_unavailability(entry.get("availability_reason"))}
             for entry in translation_engines.list_engines()
         ],
         "sandboxed": translation_engines.is_frozen(),
     }
+
+
+class TranslationSelection(BaseModel):
+    engine_id: str
+
+
+class ArgosPackRequest(BaseModel):
+    source_lang: str | None = None
+    target_langs: list[str] = Field(min_length=1, max_length=32)
+    job_id: str | None = None
+
+
+def _argos_pack_request(request: ArgosPackRequest) -> tuple[str, list[str]]:
+    source = request.source_lang
+    if not source and request.job_id:
+        from api.routers.dub_core import _get_job
+
+        job = _get_job(request.job_id)
+        source = job.get("source_lang") if job else None
+    if not source:
+        raise HTTPException(422, "Transcribe the source before installing its language pack")
+    return source, request.target_langs
+
+
+@router.post("/engines/translation/argos/packs/status")
+def argos_pack_status(request: ArgosPackRequest):
+    source, targets = _argos_pack_request(request)
+    try:
+        return translation_engines.argos_pack_status(source, targets)
+    except (ImportError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/engines/translation/argos/packs/install",
+    dependencies=[Depends(require_admin)],
+)
+async def install_argos_packs(request: ArgosPackRequest):
+    source, targets = _argos_pack_request(request)
+    try:
+        return await asyncio.to_thread(
+            translation_engines.install_argos_packs,
+            source,
+            targets,
+        )
+    except (ImportError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/engines/translation/select", dependencies=[Depends(require_admin)])
+def select_translation_engine(request: TranslationSelection):
+    entry = translation_engines.get_engine(request.engine_id)
+    if not entry:
+        raise HTTPException(404, "Unknown translation engine")
+    if not translation_engines.is_installed(request.engine_id):
+        raise HTTPException(409, "Install this translation engine before selecting it")
+    if not translation_engines.is_ready(request.engine_id):
+        raise HTTPException(409, "Configure this translation provider before selecting it")
+    prefs.set_("translation_backend", request.engine_id)
+    return {"active": request.engine_id}
 
 
 @router.post(
@@ -213,6 +397,32 @@ async def uninstall_translation_engine(engine_id: str):
     if rc != 0:
         raise HTTPException(status_code=500, detail=f"pip uninstall {pkg} failed ({rc}): {out[-1000:]}")
     return {"status": "uninstalled", "engine": engine_id, "package": pkg, "log_tail": out[-800:]}
+
+
+# ── Checksummed native audio.cpp runtime install ───────────────────────────
+
+
+@router.get(
+    "/engines/audiocpp/runtime/install/status",
+    dependencies=[Depends(require_admin)],
+)
+def audiocpp_runtime_install_status():
+    from services import audiocpp_runtime_install
+
+    return audiocpp_runtime_install.status()
+
+
+@router.post(
+    "/engines/audiocpp/runtime/install",
+    dependencies=[Depends(require_admin), Depends(require_desktop)],
+)
+def install_audiocpp_runtime():
+    from services import audiocpp_runtime_install
+
+    try:
+        return audiocpp_runtime_install.start_install()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 # ── One-click sidecar-engine install (IndexTTS-2 & friends) ────────────────
@@ -693,6 +903,23 @@ def select_engine(req: SelectEngineRequest):
                 "Hugging Face repo ID like 'owner/name'.",
             )
         prefs.set_("mlx_audio_model_id", req.model_id)
+    if req.family == "asr" and req.model_id is not None:
+        if req.backend_id not in {"faster-whisper", "faster-whisper-isolated"}:
+            raise HTTPException(400, "This ASR engine does not accept a CTranslate2 model")
+        from api.routers.setup.models import KNOWN_MODELS, is_cached
+
+        model = next((item for item in KNOWN_MODELS if item["repo_id"] == req.model_id), None)
+        compatible = req.model_id.startswith("Systran/faster-") or req.model_id == (
+            "deepdml/faster-whisper-large-v3-turbo-ct2"
+        )
+        if model is None or str(model.get("role", "")).lower() != "asr" or not compatible:
+            raise HTTPException(400, "This model is not compatible with Faster-Whisper")
+        if not is_cached(req.model_id):
+            raise HTTPException(409, "Install this ASR model before selecting it")
+        try:
+            asr_backend.select_faster_whisper_model(req.model_id)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
     prefs.set_(pref_key, req.backend_id)
     return {
         "family": req.family,

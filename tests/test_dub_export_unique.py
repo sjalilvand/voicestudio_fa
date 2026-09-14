@@ -103,6 +103,57 @@ _SUBPROC_ATTR = "create_subprocess_" + "exec"  # dodge overzealous code-scan hoo
 
 
 class TestDubExportUniqueness:
+    def test_media_head_reports_native_type_without_body(self, app_client):
+        client, dc, _dx, tmp = app_client
+        job_id, _ = _seed_job_with_tracks(dc, tmp)
+
+        response = client.head(f"/dub/media/{job_id}")
+
+        assert response.status_code == 200, response.text
+        assert response.headers["content-type"] == "video/mp4"
+        assert response.headers["content-length"] == "16"
+        assert response.headers["accept-ranges"] == "bytes"
+        assert response.content == b""
+
+    def test_preview_head_does_not_start_mux(self, app_client):
+        client, dc, dx, tmp = app_client
+        job_id, job_dir = _seed_job_with_tracks(dc, tmp)
+
+        with patch.object(dx, "run_ffmpeg") as run_ffmpeg:
+            response = client.head(f"/dub/preview-video/{job_id}", params={"lang": "es"})
+
+        assert response.status_code == 200, response.text
+        assert response.headers["content-type"] == "video/mp4"
+        assert response.headers["accept-ranges"] == "bytes"
+        assert response.content == b""
+        run_ffmpeg.assert_not_called()
+        assert not (job_dir / "exports" / "preview_v2_es_bg.mp4").exists()
+
+    def test_preview_is_faststart_and_reuses_immutable_cache(self, app_client):
+        client, dc, dx, tmp = app_client
+        job_id, job_dir = _seed_job_with_tracks(dc, tmp)
+        commands = []
+
+        async def fake_run(cmd, **_kwargs):
+            commands.append(cmd)
+            Path(cmd[-2]).write_bytes(b"\x00FASTSTART")
+            return 0, b"", b""
+
+        with (
+            patch.object(dx, "find_ffmpeg", return_value="ffmpeg"),
+            patch.object(dx, "run_ffmpeg", new=fake_run),
+        ):
+            first = client.get(f"/dub/preview-video/{job_id}", params={"lang": "es"})
+            second = client.get(f"/dub/preview-video/{job_id}", params={"lang": "es"})
+
+        assert first.status_code == 200, first.text
+        assert second.status_code == 200, second.text
+        assert len(commands) == 1
+        assert commands[0][commands[0].index("-movflags") + 1] == "+faststart"
+        assert first.headers["cache-control"] == "private, max-age=31536000, immutable"
+        assert first.headers["accept-ranges"] == "bytes"
+        assert (job_dir / "exports" / "preview_v2_es_bg.mp4").is_file()
+
     def test_original_only_resolves_stale_default_before_retime(self, app_client):
         client, dc, dx, tmp = app_client
         job_id, _ = _seed_job_with_tracks(dc, tmp)

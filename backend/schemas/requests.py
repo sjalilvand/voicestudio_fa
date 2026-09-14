@@ -60,7 +60,9 @@ class DubRequest(BaseModel):
     language: str = "Auto"
     language_code: str = "und"  # ISO 639-1 for ffmpeg metadata (e.g. "es", "fr", "de")
     instruct: str = ""
-    num_step: int = 16
+    # None means "use the shared performance profile". An explicit value is
+    # still authoritative for Production overrides and existing API clients.
+    num_step: Optional[int] = None
     guidance_scale: float = 2.0
     speed: float = 1.0
     # Phase 4.1 — partial regen. Parallel lists by index with `segments`.
@@ -71,7 +73,8 @@ class DubRequest(BaseModel):
     regen_only: Optional[List[str]] = None
     # Fast-preview mode for interactive edits. When true, TTS runs at
     # num_step=8 (~2× faster, ~10-20% quality drop). Client is responsible
-    # for re-rendering preview segs at full quality before final export.
+    # for re-rendering preview segs with the explicit override or shared
+    # performance profile before final export.
     preview: Optional[bool] = False
     # How to handle segs whose TTS audio is longer than its slot (the
     # "ghost lang" overlap bug otherwise). Options:
@@ -150,7 +153,7 @@ class TranslateRequest(BaseModel):
     provider: Optional[str] = None
     source_lang: Optional[str] = None  # ISO 639-1; overrides job detection
     job_id: Optional[str] = None  # Dub job id, used to resolve detected source_lang
-    quality: Optional[str] = "fast"  # "fast" (one-shot) | "cinematic" (reflect→adapt) | "autofit" (cinematic + strict fit-to-slot)
+    quality: Optional[str] = "fast"  # fast | cinematic | autofit | agent (measured render/rewrite loop)
     glossary: Optional[List[dict]] = None  # [{"source": "...", "target": "...", "note": "..."}]
     # Optional regional dialect (BCP-47, e.g. "es-AR", "pt-BR") — #280 item 2.
     # Applied by LLM-backed paths (provider="openai" or quality="cinematic"):
@@ -174,6 +177,25 @@ class TranslateRequest(BaseModel):
     # per-segment suggestion the user applies manually, never auto-applied.
     # No LLM configured / LLM failure → silently no suggestion.
     condense: Optional[bool] = False
+
+
+class AgentFitSegment(BaseModel):
+    """One rendered translation and its measured timing evidence."""
+
+    id: str
+    text: str
+    source_text: Optional[str] = None
+    context_before: Optional[str] = None
+    context_after: Optional[str] = None
+    slot_seconds: float
+    measured_seconds: float
+
+
+class AgentFitRequest(BaseModel):
+    """Revise only rendered lines that missed their exact timeline slot."""
+
+    segments: List[AgentFitSegment]
+    target_lang: str
 
 class ParseSubtitleTextRequest(BaseModel):
     """Raw pasted subtitle text (SRT/VTT-ish) to be parsed into timed cues.

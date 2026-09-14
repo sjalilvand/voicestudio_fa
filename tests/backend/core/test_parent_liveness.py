@@ -143,7 +143,7 @@ def test_windows_watchdog_arms_pipe_poller_on_pipe_stdin(monkeypatch):
     assert pl.arm_desktop_parent_watchdog() is True
     assert started["started"] is True
     assert started["target"] is pl._watch_parent_pipe_handle
-    assert started["args"] == (0xABC, os._exit)
+    assert started["args"] == (0xABC, pl._exit_after_parent_loss)
     assert started["daemon"] is True
 
 
@@ -177,7 +177,7 @@ def test_windows_watchdog_keeps_blocking_reader_for_non_pipe_stdin(monkeypatch):
     monkeypatch.setattr(pl.threading, "Thread", FakeThread)
     assert pl.arm_desktop_parent_watchdog() is True
     assert started["target"] is pl._watch_parent_pipe
-    assert started["args"] == (fake_stdin.buffer, os._exit)
+    assert started["args"] == (fake_stdin.buffer, pl._exit_after_parent_loss)
 
 
 # ── Windows integration: the real backend must get past the ML import ────────
@@ -259,3 +259,18 @@ def test_desktop_spawned_backend_gets_past_ml_imports_on_windows(tmp_path):
     finally:
         child.kill()
         child.wait()
+
+
+def test_parent_loss_retires_crash_sentinel_before_immediate_exit(monkeypatch):
+    from core import parent_liveness as pl
+    from core import run_sentinel
+
+    cleared = []
+    exited = []
+    monkeypatch.setattr(run_sentinel, "clear_sentinel", lambda: cleared.append(True))
+    monkeypatch.setattr(pl.os, "_exit", exited.append)
+
+    pl._exit_after_parent_loss(0)
+
+    assert cleared == [True]
+    assert exited == [0]

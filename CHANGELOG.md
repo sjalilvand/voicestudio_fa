@@ -10,6 +10,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- Electron now ships as a complete cross-platform VoiceStudio desktop app with local-first cloning, production workspaces, model packs, repair agents, native integrations, updates, parity checks, and the shared backend contracts required by those workflows (#1823)
+
 - The Model Catalogue is one page: what you use now on top, then each family's engines and weights (#2013)
 - VoxCPM2 installs in one click into its own environment, with the CUDA build of PyTorch on NVIDIA GPUs (#2021)
 - MOSS-TTS-Nano installs in one click into its own environment, pinned to a reviewed upstream commit it works with (#2022)

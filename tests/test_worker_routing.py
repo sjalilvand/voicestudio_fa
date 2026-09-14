@@ -293,6 +293,8 @@ def test_omitting_the_operation_answers_for_the_target(db, settings):
 
 def test_unknown_operations_are_not_remote(db, settings):
     assert routing.supports_operation("tts") is True
+    assert routing.supports_operation("longform") is True
+    assert routing.supports_operation("batch") is True
     assert routing.supports_operation("dictation") is False
     assert routing.supports_operation("something-new") is False
 
@@ -309,7 +311,10 @@ def test_status_answers_for_the_operation_it_was_asked_about(db, settings):
     assert payload["target"] == worker.id, "the user's choice is not lost"
     assert payload["active"]["remote"] is True
     # What the menu needs to say "gpu2 · TTS only".
-    assert payload["remote_operations"] == ["audiobook", "dub", "dub_segments", "tts"]
+    assert payload["remote_operations"] == [
+        "audiobook", "batch", "batch_segments", "clone", "dub", "dub_segments",
+        "longform", "tts",
+    ]
 
 
 # ── The badge cannot lie ───────────────────────────────────────────────────

@@ -70,6 +70,7 @@ class Operation(str, enum.Enum):
     CLONE = "clone"
     ASR = "asr"
     DUB = "dub"
+    BATCH_SEGMENTS = "batch_segments"
     AUDIOBOOK = "audiobook"
 
     @classmethod
@@ -90,6 +91,7 @@ _PROFILE: dict[Operation, tuple[float, int]] = {
     Operation.TTS: (1.0, 75),
     Operation.CLONE: (2.0, 75),
     Operation.DUB: (12.0, 90),
+    Operation.BATCH_SEGMENTS: (12.0, 90),
     Operation.AUDIOBOOK: (24.0, 90),
 }
 

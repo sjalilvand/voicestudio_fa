@@ -21,6 +21,9 @@ divergent notion of what a worker can do.
 from __future__ import annotations
 
 import logging
+import os
+import shutil
+import subprocess
 from typing import Optional
 
 from worker.capacity import derive_concurrency
@@ -33,8 +36,66 @@ _CPU_ONLY = {"cpu"}
 
 
 def _free_memory_bytes(caps) -> int:
-    vram_gb = float(getattr(caps, "vram_gb", 0) or 0)
-    return int(vram_gb * 1024**3)
+    return _accelerator_memory_bytes(caps)[0]
+
+
+def _accelerator_memory_bytes(caps) -> tuple[int, int]:
+    """Return live free/total accelerator memory, falling back to static VRAM."""
+    fallback = int(float(getattr(caps, "vram_gb", 0) or 0) * 1024**3)
+    family = getattr(caps, "family", "") or ""
+    if family not in {"cuda", "rocm"}:
+        return fallback, fallback
+    try:
+        import torch  # noqa: PLC0415
+
+        free_bytes, total_bytes = torch.cuda.mem_get_info()
+        return max(0, int(free_bytes)), max(0, int(total_bytes))
+    except Exception:
+        logger.debug("Live accelerator memory probe failed", exc_info=True)
+        return fallback, fallback
+
+
+def _nvidia_driver_version() -> str:
+    executable = shutil.which("nvidia-smi")
+    if not executable and os.path.isfile("/usr/lib/wsl/lib/nvidia-smi"):
+        executable = "/usr/lib/wsl/lib/nvidia-smi"
+    try:
+        result = subprocess.run(
+            [
+                executable or "nvidia-smi",
+                "--query-gpu=driver_version",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+        return ""
+    if result.returncode != 0:
+        return ""
+    return next((line.strip() for line in result.stdout.splitlines() if line.strip()), "")
+
+
+def _accelerator_details(caps) -> tuple[str, str]:
+    """Return driver and architecture details without making registration brittle."""
+    family = getattr(caps, "family", "") or ""
+    driver = str(getattr(caps, "driver", "") or "")
+    compute = ""
+    try:
+        import torch  # noqa: PLC0415
+
+        if family == "cuda":
+            major, minor = torch.cuda.get_device_capability(0)
+            compute = f"{major}.{minor}"
+        elif family == "rocm":
+            compute = str(getattr(torch.cuda.get_device_properties(0), "gcnArchName", "") or "")
+    except Exception:
+        logger.debug("Accelerator architecture probe failed", exc_info=True)
+    if family == "cuda" and not driver:
+        driver = _nvidia_driver_version()
+    return driver, compute
 
 
 def discover(*, include_unavailable: bool = False) -> list[dict]:
@@ -228,17 +289,18 @@ def model_id_for(entry: dict) -> str:
 def _operations_for(entry: dict) -> list[str]:
     """Which task kinds this engine can serve.
 
-    Cloning is the one genuine split — an engine that cannot clone must never
-    be handed a clone task, and ``supports_cloning`` is ``None`` when the
-    answer depends on the loaded model, which we treat as "no" rather than
-    risk a task that fails at the last moment.
+    Cloning is the one genuine split: an engine that cannot clone must never
+    be handed a clone or Dubbing task. ``supports_cloning`` is ``None`` when
+    the answer depends on the loaded model; that is treated as "no" instead of
+    risking a task that fails at the last moment.
     """
+
     # Audiobook chapters use the same TTS engine, but are advertised as their
     # own schedulable operation so an older worker cannot accept a task whose
     # chapter assembler it does not implement.
-    operations = ["audiobook", "dub_segments", "tts"]
+    operations = ["audiobook", "batch_segments", "tts"]
     if entry.get("supports_cloning") is True:
-        operations.append("clone")
+        operations.extend(("clone", "dub_segments"))
     return operations
 
 
@@ -276,14 +338,17 @@ def describe_gpus() -> list[dict]:
     if caps is None:
         return []
     family = getattr(caps, "family", "") or ""
+    free_bytes, total_bytes = _accelerator_memory_bytes(caps)
+    driver, compute = _accelerator_details(caps)
     return [
         {
             "vendor": _vendor_for(family),
             "model": getattr(caps, "device_name", "") or "",
             "backend": family,
-            "memory_bytes": _free_memory_bytes(caps),
-            "free_memory_bytes": _free_memory_bytes(caps),
-            "driver_version": getattr(caps, "driver", "") or "",
+            "memory_bytes": total_bytes,
+            "free_memory_bytes": free_bytes,
+            "driver_version": driver,
+            "compute_capability": compute,
         }
     ]
 

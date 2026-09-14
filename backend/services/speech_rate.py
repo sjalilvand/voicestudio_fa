@@ -71,6 +71,11 @@ TOL_HIGH = 1.08
 # Max LLM attempts per segment. Past this we just return the best we got.
 MAX_ATTEMPTS = 3
 
+# Acceptance window for real TTS measurements. One rewrite is made between
+# renders; repeating guesses inside a call would discard the useful evidence.
+MEASURED_TOL_LOW = 0.9
+MEASURED_TOL_HIGH = 1.04
+
 
 def expected_duration(text: str, lang: str = "en") -> float:
     """Rough CPS-based duration estimate. Returns seconds."""
@@ -104,6 +109,118 @@ Reply with ONLY the new line. No quotes, no commentary."""
 # any LLM "expansion" that far would be fabricated dialogue. Skip the expand
 # pass entirely and keep the short line (slot-aware TTS absorbs the silence).
 _MIN_EXPANDABLE_RATIO = 0.15
+
+
+_MEASURED_PROMPT = """\
+You are a dialogue adaptation agent for precise dubbing. Rewrite the translated
+line so the SAME voice can speak it inside the exact target duration. The user
+provides the duration measured from a real render, so use the requested length
+change as a concrete constraint. Preserve meaning, tone, names, numbers,
+technical terms, and the target language. Shorten natural phrasing when long;
+gently expand only when short without inventing facts or dialogue.
+Reply with ONLY the revised line. No quotes or commentary."""
+
+
+def adjust_for_measured_slot(
+    text: str,
+    *,
+    slot_seconds: float,
+    measured_seconds: float,
+    target_lang: str,
+    source_text: Optional[str] = None,
+    context_before: Optional[str] = None,
+    context_after: Optional[str] = None,
+) -> dict:
+    """Make one evidence-based rewrite between real TTS measurements."""
+    text = (text or "").strip()
+    slot = max(0.0, float(slot_seconds or 0.0))
+    measured = max(0.0, float(measured_seconds or 0.0))
+    ratio = measured / slot if slot else 1.0
+    base = {
+        "text": text,
+        "measured_seconds": round(measured, 3),
+        "target_seconds": round(slot, 3),
+        "measured_ratio": round(ratio, 3),
+        "changed": False,
+    }
+    if not text or slot <= 0 or measured <= 0:
+        return {**base, "error": "invalid-timing"}
+    if MEASURED_TOL_LOW <= ratio <= MEASURED_TOL_HIGH:
+        return {**base, "error": "already-fits"}
+    # Leave honest silence for extremely short dialogue instead of inventing
+    # speech merely to fill a long shot.
+    if ratio < 0.45:
+        return {**base, "error": "fit-skip-short"}
+
+    from services import llm_skills
+    llm = llm_skills.skill_backend(_SKILL_ID, active=lambda: get_active_llm_backend())
+    if isinstance(llm, OffBackend):
+        return {**base, "error": "no-llm"}
+
+    desired = max(0.2, min(2.0, slot / measured))
+    user_lines = [
+        f"Target language: {target_lang}",
+        f"Exact target duration: {slot:.2f}s",
+        f"Measured duration of this line: {measured:.2f}s",
+        f"Measured ratio: {ratio:.3f} (1.000 is exact)",
+        f"Requested text-length factor: about {desired:.3f}x",
+        f"Current translated line: {text}",
+    ]
+    if source_text:
+        user_lines.append(f"Source line (meaning authority): {source_text}")
+    if context_before:
+        user_lines.append(f"Previous source line (context only): {context_before}")
+    if context_after:
+        user_lines.append(f"Next source line (context only): {context_after}")
+    try:
+        reply = llm.chat(
+            system=_MEASURED_PROMPT,
+            user="\n".join(user_lines),
+            temperature=0.15,
+        )
+    except Exception:
+        logger.warning("measured slot-fit provider failed")
+        return {**base, "error": "fit-provider-failed"}
+    candidate = (reply or "").strip()
+    if not candidate or candidate == text:
+        return {**base, "error": "fit-unchanged"}
+    ok, reason = refine_output_ok(text, candidate, target_lang)
+    if not ok:
+        logger.warning("measured slot-fit reply rejected (%s)", log_safe(reason))
+        return {**base, "error": "fit-diverged"}
+    return {**base, "text": candidate, "changed": True}
+
+
+async def adjust_for_measured_slot_many(
+    items: Iterable[tuple], *, executor=None, concurrency: Optional[int] = None,
+) -> dict:
+    """Run one bounded measured rewrite per segment, keyed by segment id."""
+    import asyncio
+    import os
+
+    rows = list(items)
+    if not rows:
+        return {}
+    loop = asyncio.get_running_loop()
+    sem = asyncio.Semaphore(concurrency or int(os.environ.get("OMNIVOICE_LLM_CONCURRENCY", "6")))
+
+    async def _one(key, line, slot, measured, lang, source, before, after):
+        async with sem:
+            result = await loop.run_in_executor(
+                executor,
+                lambda: adjust_for_measured_slot(
+                    line,
+                    slot_seconds=slot,
+                    measured_seconds=measured,
+                    target_lang=lang,
+                    source_text=source,
+                    context_before=before,
+                    context_after=after,
+                ),
+            )
+        return key, result
+
+    return dict(await asyncio.gather(*(_one(*row) for row in rows)))
 
 
 def adjust_for_slot(

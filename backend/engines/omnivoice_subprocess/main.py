@@ -34,6 +34,7 @@ import json
 import os
 import struct
 import sys
+import threading
 import traceback
 
 # Mirrors backend/services/subprocess_backend.py::MAX_FRAME_BYTES (T-02-01).
@@ -55,6 +56,8 @@ _GEN_KW_ALLOWLIST = (
 )
 
 _model = None
+_SEND_LOCK = threading.Lock()
+_LOAD_HEARTBEAT_S = 5.0
 
 
 # ── wire protocol ─────────────────────────────────────────────────────────
@@ -62,9 +65,12 @@ _model = None
 
 def _send(stream, obj: dict) -> None:
     body = json.dumps(obj, separators=(",", ":")).encode("utf-8")
-    stream.write(struct.pack("!I", len(body)))
-    stream.write(body)
-    stream.flush()
+    # Progress callbacks and the cold-load heartbeat can write from different
+    # threads. Keep each frame atomic or their header/body pairs can interleave.
+    with _SEND_LOCK:
+        stream.write(struct.pack("!I", len(body)))
+        stream.write(body)
+        stream.flush()
 
 
 def _recv(stream):
@@ -133,11 +139,27 @@ def _load_model(stdout):
     # Forward real HF download/weight progress so the parent's recv loop keeps
     # its watchdog alive across a slow cold load (the parent consumes these
     # {"op": "progress"} frames and re-arms its deadline on each one).
+    progress = {"percent": 0}
+
     def _on_progress(ev):
         pct = ev.get("pct", 0.0)
         if pct:
+            progress["percent"] = min(round(pct * 100), 99)
             _send(stdout, {"op": "progress", "stage": "loading_model",
-                           "percent": min(round(pct * 100), 99)})
+                           "percent": progress["percent"]})
+
+    # Cached checkpoints produce no download callbacks. Loading and moving a
+    # model onto MPS can still exceed the normal generation budget, so keep
+    # both bounded parent watchdogs informed that the child remains alive.
+    stop_heartbeat = threading.Event()
+
+    def _heartbeat():
+        while not stop_heartbeat.wait(_LOAD_HEARTBEAT_S):
+            _send(stdout, {
+                "op": "progress",
+                "stage": "loading_model",
+                "percent": progress["percent"],
+            })
 
     torch = _lazy_torch()
     OmniVoice = _lazy_omnivoice()
@@ -146,11 +168,19 @@ def _load_model(stdout):
     preload_asr = should_preload_tts_asr()
 
     lid = register_listener(_on_progress)
+    heartbeat = threading.Thread(
+        target=_heartbeat,
+        name="omnivoice-load-heartbeat",
+        daemon=True,
+    )
+    heartbeat.start()
     try:
         _model = OmniVoice.from_pretrained(
             checkpoint, device_map=device, dtype=torch.float16, load_asr=preload_asr,
         )
     finally:
+        stop_heartbeat.set()
+        heartbeat.join()
         unregister_listener(lid)
     _send(stdout, {"op": "progress", "stage": "loading_model", "percent": 100})
     return _model

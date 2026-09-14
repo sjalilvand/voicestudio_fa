@@ -5,8 +5,6 @@ import struct
 import logging
 import time
 import asyncio
-import shutil
-import zipfile
 import torch
 import torchaudio
 from fastapi import APIRouter, HTTPException
@@ -16,7 +14,8 @@ from core.config import DUB_DIR, VOICES_DIR, dub_seg_path
 from core.tasks import task_manager
 from schemas.requests import DubRequest
 from services.model_manager import _gpu_pool, run_on_gpu_pool_guarded
-from services.tts_backend import resolve_generation_backend, active_backend_id
+from services.tts_backend import TTSBackend, resolve_generation_backend, active_backend_id
+from services.dub_batching import batch_timeout_s, native_batch_width
 from services import gpu_gateway
 from services.audio_dsp import apply_mastering, normalize_audio, apply_effects_chain, get_effect_chain
 from services.audio_io import atomic_save_wav, _safe_torchaudio_save
@@ -34,6 +33,7 @@ from services.incremental import segment_fingerprint, fit_fingerprint
 from services.fit_planner import UNDERRUN_TOLERANCE, FitParams, plan_fit
 from services.watermark import mark_synthetic
 from services.speaker_clone import auto_profile_id
+from services.segment_bundle import extract_segment_wavs
 from api.routers.dub_core import _get_job, _save_job
 from omnivoice.utils.voice_design import heal_design_instruct
 
@@ -47,6 +47,22 @@ logger = logging.getLogger("omnivoice.dub")
 # in services/speech_rate.py, gap absorption below) keeps us under this
 # in practice — this is only a guard rail.
 MAX_STRETCH_RATIO = 1.8
+
+
+class _RemoteDubBackend:
+    """Sample-rate carrier while Dubbing runs without local TTS weights."""
+
+    sample_rate = 24_000
+
+
+async def _resolve_dub_execution():
+    """Resolve routing without loading local weights for a remote dub."""
+    engine_id = active_backend_id()
+    decision = gpu_gateway.decide("dub_segments")
+    if decision.remote:
+        await gpu_gateway.preflight(engine_id, decision, operation="dub_segments")
+        return engine_id, decision, _RemoteDubBackend()
+    return engine_id, decision, await resolve_generation_backend(require_cloning=True)
 
 
 def _prepare_oom_retry(error: Exception, *, execution_target: str) -> bool:
@@ -461,21 +477,12 @@ def _remote_voice(job: dict, profile_id: str | None, seg_id, voice_match: str,
 def _decode_remote_dub(result: gpu_gateway.RemoteResult) -> dict[int, str]:
     """Extract the worker bundle into a task-scoped directory, path-safely."""
     target = os.path.join(DUB_DIR, ".remote", result.task_id)
-    os.makedirs(target, exist_ok=True)
-    paths: dict[int, str] = {}
-    with zipfile.ZipFile(result.path) as archive:
-        for member in archive.infolist():
-            match = re.fullmatch(r"segments/(\d+)\.wav", member.filename)
-            if not match:
-                raise ValueError(f"unexpected dub artifact member: {member.filename}")
-            index = int(match.group(1))
-            destination = os.path.join(target, f"{index}.wav")
-            partial = f"{destination}.part"
-            with archive.open(member) as source, open(partial, "wb") as output:
-                shutil.copyfileobj(source, output)
-            os.replace(partial, destination)
-            paths[index] = destination
-    return paths
+    try:
+        return extract_segment_wavs(result.path or "", target)
+    except ValueError as exc:
+        # Preserve the established route-specific error wording consumed by
+        # diagnostics and regression tests.
+        raise ValueError(str(exc).replace("segment artifact", "dub artifact")) from exc
 
 
 router = APIRouter()
@@ -491,16 +498,25 @@ async def dub_generate(job_id: str, req: DubRequest):
         )
 
     # ── Engine resolution (issue #312 class) ────────────────────────────────
-    # Dub used to hardcode VoiceStudio via get_model() regardless of the engine
-    # selected in Model Catalogue — a SILENT fallback. Every real dub
-    # segment's ref_audio resolves to either an auto:<speaker>/auto-seg:<id>
-    # clone cut from the source video or a saved voice-profile row (see
-    # `_gen` below), so require_cloning=True: an engine that can't clone
-    # would either mis-clone per segment or fail deep into the job. Checked
-    # ONCE here, before the streaming task starts, so a doomed job fails fast
-    # with one clear message instead of N per-segment ones.
+    # Every rendered segment clones either source speech or a saved profile, so
+    # local execution still requires a cloning-capable engine. Remote execution
+    # validates the selected worker here without loading duplicate local weights;
+    # its local backend is prepared only if gateway fallback actually selects it.
     try:
-        backend = await resolve_generation_backend(require_cloning=True)
+        engine_id, decision, backend = await _resolve_dub_execution()
+    except gpu_gateway.ModelNotDownloaded as e:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "model_not_downloaded",
+                "message": str(e),
+                "engine": e.engine,
+                "repo_ids": e.repo_ids,
+                "target": e.target,
+                "target_label": e.target_label,
+                "downloadable": e.downloadable,
+            },
+        ) from e
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -515,6 +531,14 @@ async def dub_generate(job_id: str, req: DubRequest):
             fallback="The TTS model could not be loaded.",
         )
         raise HTTPException(status_code=503, detail=payload["detail"]) from e
+
+    # Resolve the global profile once for this job. Explicit Production
+    # overrides remain authoritative, while ordinary Dubbing now follows the
+    # same Fast/Balanced/Quality/Max contract as Clone and long-form work.
+    from services.performance_profiles import tts_defaults
+    _profile_defaults = tts_defaults(engine_id)
+    _job_num_step = req.num_step if req.num_step is not None else _profile_defaults.get("num_step", 16)
+    _job_postprocess = _profile_defaults.get("postprocess_output", True)
 
     async def _stream(task_id):
         total = len(req.segments)
@@ -701,11 +725,70 @@ async def dub_generate(job_id: str, req: DubRequest):
         _t_start = time.perf_counter()
         _t_cache = 0.0
         _t_tts = 0.0
+        _batched_audio: dict[int, torch.Tensor] = {}
+        _profile_row_cache: dict[str, object | None] = {}
+        _has_native_batch = (
+            getattr(type(backend), "generate_batch", TTSBackend.generate_batch)
+            is not TTSBackend.generate_batch
+        )
+        _native_batch_width = native_batch_width(backend) if _has_native_batch else 1
+
+        async def _prepare_local_dub():
+            """Load local TTS only when gateway fallback actually needs it."""
+            nonlocal backend, _has_native_batch, _native_batch_width
+            if isinstance(backend, _RemoteDubBackend):
+                backend = await resolve_generation_backend(require_cloning=True)
+                _has_native_batch = (
+                    getattr(type(backend), "generate_batch", TTSBackend.generate_batch)
+                    is not TTSBackend.generate_batch
+                )
+                _native_batch_width = (
+                    native_batch_width(backend) if _has_native_batch else 1
+                )
+            return gpu_gateway.LocalCall(fn=lambda: {})
+
+        def _segment_generation_args(index, segment) -> dict:
+            """Resolve the per-row controls shared by serial and native batches."""
+            current_id = seg_ids[index] if index < len(seg_ids) else f"seg_{index}"
+            duration = segment.end - segment.start
+            profile_id = segment.profile_id or None
+            speed = segment.speed if segment.speed is not None else req.speed
+            language = segment.target_lang or req.language
+            instruct = segment.instruct or req.instruct
+            direction_text = getattr(segment, "direction", None)
+            if direction_text and direction_text.strip():
+                try:
+                    from services.director import parse as _parse_direction
+
+                    direction = _parse_direction(direction_text)
+                    extra = direction.instruct_prompt()
+                    if extra:
+                        instruct = f"{instruct}, {extra}" if instruct else extra
+                    bias = direction.rate_bias()
+                    if (
+                        bias
+                        and abs(bias - 1.0) > 0.01
+                        and strategy == "strict_slot"
+                    ):
+                        speed = (speed or 1.0) * bias
+                except Exception as error:
+                    logger.debug("direction parse skipped for %s: %s", current_id, error)
+            return {
+                "seg_id": current_id,
+                "text": segment.text,
+                "language": language,
+                "instruct": instruct,
+                "duration": duration if strategy == "strict_slot" else None,
+                "num_step": 8 if req.preview else _job_num_step,
+                "guidance_scale": req.guidance_scale,
+                "speed": speed,
+                "profile_id": profile_id,
+                "effect_preset": getattr(segment, "effect_preset", None) or "broadcast",
+            }
 
         # One coarse remote lease for every segment that actually needs fresh
         # synthesis. Assembly, fitting and the separately-pooled RVC pass stay
         # here; the worker returns a single verified bundle of segment WAVs.
-        decision = gpu_gateway.decide("dub_segments")
         if decision.remote:
             remote_rows: list[dict] = []
             remote_refs: list[str | None] = []
@@ -740,7 +823,8 @@ async def dub_generate(job_id: str, req: DubRequest):
                     "ref_text": ref_text, "ref_single_use": ref_single_use,
                     "instruct": seg_instruct,
                     "duration": (seg.end - seg.start) if strategy == "strict_slot" else None,
-                    "num_step": 8 if req.preview else req.num_step,
+                    "num_step": 8 if req.preview else _job_num_step,
+                    "postprocess_output": _job_postprocess,
                     "guidance_scale": req.guidance_scale, "speed": seg_speed,
                     "effect_preset": seg.effect_preset or "broadcast",
                     "seed": seed,
@@ -752,13 +836,13 @@ async def dub_generate(job_id: str, req: DubRequest):
             if remote_rows:
                 states: asyncio.Queue = asyncio.Queue()
                 call = gpu_gateway.RemoteCall(
-                    engine=active_backend_id(), operation="dub_segments",
+                    engine=engine_id, operation="dub_segments",
                     params={"segments": remote_rows, "ref_audio": remote_refs},
                     decode=_decode_remote_dub,
                 )
                 dub_run = gpu_gateway.JobRun("dub_segments")
                 run = asyncio.create_task(gpu_gateway.run(
-                    "dub_segments", local=gpu_gateway.LocalCall(fn=lambda: {}),
+                    "dub_segments", local=gpu_gateway.LocalCall(prepare=_prepare_local_dub),
                     remote=call, decision=decision, job=dub_run,
                     on_state=states.put_nowait,
                 ))
@@ -777,10 +861,33 @@ async def dub_generate(job_id: str, req: DubRequest):
                         continue
                     fraction = float(state.get("progress") or 0.0)
                     yield f"data: {json.dumps({'type': 'progress', 'current': round(fraction * total, 2), 'total': total, 'text': state.get('stage') or state.get('phase')})}\n\n"
-                remote_audio = await run
+                try:
+                    remote_audio = await run
+                except Exception as error:
+                    from core.public_errors import stream_generation_failure
+
+                    detail = stream_generation_failure(error)["detail"]
+                    yield f"data: {json.dumps({'type': 'error', 'error': detail})}\n\n"
+                    return
                 notice = dub_run.notice()
                 if notice is not None:
                     yield f"data: {json.dumps({'type': 'routing_notice', 'status': notice[0], 'reason': notice[1]})}\n\n"
+
+        if remote_audio and isinstance(backend, _RemoteDubBackend):
+            first_remote = next(iter(remote_audio.values()))
+            backend.sample_rate = int(torchaudio.info(first_remote).sample_rate)
+        elif isinstance(backend, _RemoteDubBackend):
+            # Fit-only / cache-only reruns synthesize nothing. Keep the cached
+            # track's native rate when one exists instead of resampling it to
+            # the carrier's conservative 24 kHz default.
+            for cached_id in seg_ids:
+                cached_path = _seg_lang_path(cached_id)
+                if os.path.exists(cached_path):
+                    try:
+                        backend.sample_rate = int(torchaudio.info(cached_path).sample_rate)
+                        break
+                    except Exception:
+                        continue
 
         for i, seg in enumerate(req.segments):
             seg_id = seg_ids[i] if i < len(seg_ids) else f"seg_{i}"
@@ -891,13 +998,14 @@ async def dub_generate(job_id: str, req: DubRequest):
                 continue
 
             def _gen(text, lang, instruct_str, dur_s, nstep, cfg, spd, profile_id, effect_preset,
-                     *, execution_target="local"):
+                     *, execution_target="local", prepare_only=False, current_seg_id=None):
                 # Normalize once at the segment's text→engine choke point
                 # (covers the OOM-retry generate below too, which reuses this
                 # closure's `text`). Pref-gated, idempotent, never raises.
                 from services.text_normalization import normalize_for_tts
                 text = normalize_for_tts(text, lang)
 
+                effective_seg_id = seg_id if current_seg_id is None else current_seg_id
                 ref_audio = None
                 ref_text = None
                 used_seed = None
@@ -928,7 +1036,7 @@ async def dub_generate(job_id: str, req: DubRequest):
                     # CROSS binding (sid != this segment) can only come from an
                     # explicit request — honour its clip unchanged.
                     _consistent_alt = None
-                    if voice_match == "consistent" and sid == str(seg_id):
+                    if voice_match == "consistent" and sid == str(effective_seg_id):
                         _spk_key = _speaker_key_for_segment(job, sid)
                         if _spk_key:
                             _consistent_alt = resolve_consistent_ref(
@@ -969,7 +1077,9 @@ async def dub_generate(job_id: str, req: DubRequest):
                         # editor's Voice dropdown can actually render ("From
                         # Video → Speaker N"). `seg_id` is closed over from
                         # the per-segment loop below.
-                        segment_speaker_key = _speaker_key_for_segment(job, seg_id)
+                        segment_speaker_key = _speaker_key_for_segment(
+                            job, effective_seg_id
+                        )
                         # Legacy jobs may not persist diarized segment rows.
                         # Preserve their established per-line preference; only
                         # suppress it when current metadata proves the user
@@ -978,7 +1088,7 @@ async def dub_generate(job_id: str, req: DubRequest):
                             segment_speaker_key is None or segment_speaker_key == key
                         )
                         seg_ref = (
-                            (job.get("segment_clones") or {}).get(str(seg_id))
+                            (job.get("segment_clones") or {}).get(str(effective_seg_id))
                             if selected_is_segment_speaker
                             else None
                         )
@@ -1003,8 +1113,13 @@ async def dub_generate(job_id: str, req: DubRequest):
                     profile_id = None  # prevent the voice_profiles lookup below
 
                 if profile_id:
-                    with db_conn() as conn:
-                        row = conn.execute("SELECT * FROM voice_profiles WHERE id=?", (profile_id,)).fetchone()
+                    if profile_id not in _profile_row_cache:
+                        with db_conn() as conn:
+                            _profile_row_cache[profile_id] = conn.execute(
+                                "SELECT * FROM voice_profiles WHERE id=?",
+                                (profile_id,),
+                            ).fetchone()
+                    row = _profile_row_cache[profile_id]
                     if row:
                         if row["is_locked"] and row["locked_audio_path"]:
                             ref_audio = os.path.join(VOICES_DIR, row["locked_audio_path"])
@@ -1024,14 +1139,32 @@ async def dub_generate(job_id: str, req: DubRequest):
                                 _vd = None
                             instruct_str = heal_design_instruct(row["instruct"], _vd)
 
-                if used_seed is not None:
+                if used_seed is not None and not prepare_only:
                     torch.manual_seed(used_seed)
 
                 # Last gate before the engine: every resolution branch above
                 # produces a PATH, and none of them can know it still exists.
                 ref_audio = warn_if_ref_missing(
-                    ref_audio, job_id=job_id, seg_id=seg_id, where="dub render",
+                    ref_audio, job_id=job_id, seg_id=effective_seg_id, where="dub render",
                 )
+
+                if prepare_only:
+                    return {
+                        "text": text,
+                        "language": lang if lang != "Auto" else None,
+                        "ref_audio": ref_audio,
+                        "ref_text": ref_text,
+                        "cache_ref": not ref_single_use,
+                        "instruct": instruct_str if instruct_str else None,
+                        "duration": dur_s,
+                        "num_step": nstep,
+                        "guidance_scale": cfg,
+                        "speed": spd,
+                        "denoise": True,
+                        "postprocess_output": _job_postprocess,
+                        "effect_preset": effect_preset or "broadcast",
+                        "seed": used_seed,
+                    }
 
                 try:
                     audio_out = backend.generate(
@@ -1040,7 +1173,7 @@ async def dub_generate(job_id: str, req: DubRequest):
                         cache_ref=not ref_single_use,
                         instruct=instruct_str if instruct_str else None,
                         duration=dur_s, num_step=nstep, guidance_scale=cfg,
-                        speed=spd, denoise=True, postprocess_output=True,
+                        speed=spd, denoise=True, postprocess_output=_job_postprocess,
                     )
                     sr = backend.sample_rate
 
@@ -1081,7 +1214,7 @@ async def dub_generate(job_id: str, req: DubRequest):
                             cache_ref=not ref_single_use,
                             instruct=instruct_str if instruct_str else None,
                             duration=dur_s, num_step=retry_steps, guidance_scale=cfg,
-                            speed=spd, denoise=True, postprocess_output=True,
+                            speed=spd, denoise=True, postprocess_output=_job_postprocess,
                         )
                         sr = backend.sample_rate
 
@@ -1108,6 +1241,134 @@ async def dub_generate(job_id: str, req: DubRequest):
                             f"or switch to CPU in Settings. "
                             f"Underlying error: {retry_err}"
                         ) from retry_err
+
+            async def _prefetch_native_batch(first_index: int) -> None:
+                """Render one bounded batch and retain only its small output window."""
+                if _native_batch_width < 2 or remote_audio:
+                    return
+                batch: list[tuple[int, dict]] = []
+                compatibility = None
+                for candidate_index in range(first_index, len(req.segments)):
+                    candidate = req.segments[candidate_index]
+                    candidate_id = (
+                        seg_ids[candidate_index]
+                        if candidate_index < len(seg_ids)
+                        else f"seg_{candidate_index}"
+                    )
+                    if (
+                        candidate_index in _batched_audio
+                        or candidate.end - candidate.start <= 0.05
+                        or not candidate.text.strip()
+                        or (
+                            regen_only is not None
+                            and candidate_id not in regen_only
+                        )
+                    ):
+                        continue
+                    args = _segment_generation_args(candidate_index, candidate)
+                    try:
+                        prepared = _gen(
+                            args["text"],
+                            args["language"],
+                            args["instruct"],
+                            args["duration"],
+                            args["num_step"],
+                            args["guidance_scale"],
+                            args["speed"],
+                            args["profile_id"],
+                            args["effect_preset"],
+                            prepare_only=True,
+                            current_seg_id=args["seg_id"],
+                        )
+                    except Exception:
+                        if candidate_index == first_index:
+                            raise
+                        break
+                    # Fixed-seed profiles deliberately keep their established
+                    # one-row deterministic RNG contract.
+                    if prepared["seed"] is not None:
+                        if candidate_index == first_index:
+                            return
+                        break
+                    candidate_compatibility = (
+                        prepared["cache_ref"],
+                        bool(prepared["ref_audio"]),
+                        prepared["num_step"],
+                        prepared["guidance_scale"],
+                        prepared["postprocess_output"],
+                    )
+                    if compatibility is None:
+                        compatibility = candidate_compatibility
+                    elif candidate_compatibility != compatibility:
+                        break
+                    batch.append((candidate_index, prepared))
+                    if len(batch) >= _native_batch_width:
+                        break
+                if len(batch) < 2:
+                    return
+
+                def _render_batch() -> list[torch.Tensor]:
+                    prepared_rows = [prepared for _, prepared in batch]
+                    outputs = backend.generate_batch(
+                        [prepared["text"] for prepared in prepared_rows],
+                        language=[prepared["language"] for prepared in prepared_rows],
+                        ref_audio=[prepared["ref_audio"] for prepared in prepared_rows],
+                        ref_text=[prepared["ref_text"] for prepared in prepared_rows],
+                        cache_ref=prepared_rows[0]["cache_ref"],
+                        instruct=[prepared["instruct"] for prepared in prepared_rows],
+                        duration=[prepared["duration"] for prepared in prepared_rows],
+                        num_step=prepared_rows[0]["num_step"],
+                        guidance_scale=prepared_rows[0]["guidance_scale"],
+                        speed=[prepared["speed"] for prepared in prepared_rows],
+                        denoise=True,
+                        postprocess_output=prepared_rows[0]["postprocess_output"],
+                    )
+                    if len(outputs) != len(prepared_rows):
+                        raise RuntimeError(
+                            f"native batch returned {len(outputs)} outputs for "
+                            f"{len(prepared_rows)} segments"
+                        )
+                    rendered = []
+                    for output, prepared in zip(outputs, prepared_rows):
+                        preset = prepared["effect_preset"]
+                        if preset == "raw":
+                            rendered.append(output)
+                            continue
+                        mastered = output
+                        if not getattr(backend, "applies_own_mastering", False):
+                            mastered = apply_mastering(mastered, sample_rate=backend.sample_rate)
+                        effect_chain = get_effect_chain(preset)
+                        if effect_chain:
+                            mastered = apply_effects_chain(
+                                mastered,
+                                sample_rate=backend.sample_rate,
+                                chain=effect_chain,
+                            )
+                        rendered.append(normalize_audio(mastered, target_dBFS=-2.0))
+                    return rendered
+
+                try:
+                    outputs = await run_on_gpu_pool_guarded(
+                        _render_batch,
+                        what="Dub generate batch",
+                        timeout=batch_timeout_s(
+                            [prepared["text"] for _, prepared in batch], backend
+                        ),
+                    )
+                except TimeoutError:
+                    raise
+                except Exception as error:
+                    _prepare_oom_retry(error, execution_target="local")
+                    logger.warning(
+                        "Native dub batch failed for segments %s-%s; falling back: %s",
+                        batch[0][0] + 1,
+                        batch[-1][0] + 1,
+                        error,
+                    )
+                    return
+                _batched_audio.update(
+                    (index, output) for (index, _), output in zip(batch, outputs)
+                )
 
             seg_profile = seg.profile_id or None
             seg_speed = seg.speed if hasattr(seg, 'speed') and seg.speed is not None else req.speed
@@ -1149,8 +1410,8 @@ async def dub_generate(job_id: str, req: DubRequest):
                 # quality for ~2× speed by dropping flow-matching steps.
                 # Client sends `preview=true` when the user is iterating;
                 # before final export the client should re-call without the
-                # flag to restore num_step=req.num_step quality.
-                _num_step = 8 if req.preview else req.num_step
+                # flag to restore the explicit override or shared profile.
+                _num_step = 8 if req.preview else _job_num_step
                 _t_tts_0 = time.perf_counter()
                 seg_effect_preset = getattr(seg, "effect_preset", None) or "broadcast"
 
@@ -1177,14 +1438,19 @@ async def dub_generate(job_id: str, req: DubRequest):
                         import torchaudio.functional as AF
                         audio_tensor = AF.resample(audio_tensor, remote_sr, backend.sample_rate)
                 else:
-                    audio_tensor = await run_on_gpu_pool_guarded(
-                        lambda: _gen(
-                            seg.text, seg_lang, seg_instruct, _dur_for_tts,
-                            _num_step, req.guidance_scale, seg_speed, seg_profile, seg_effect_preset,
-                        ),
-                        what="Dub generate",
-                        timeout=generate_timeout_s(seg.text, engine=backend),
-                    )
+                    if i not in _batched_audio:
+                        await _prefetch_native_batch(i)
+                    if i in _batched_audio:
+                        audio_tensor = _batched_audio.pop(i)
+                    else:
+                        audio_tensor = await run_on_gpu_pool_guarded(
+                            lambda: _gen(
+                                seg.text, seg_lang, seg_instruct, _dur_for_tts,
+                                _num_step, req.guidance_scale, seg_speed, seg_profile, seg_effect_preset,
+                            ),
+                            what="Dub generate",
+                            timeout=generate_timeout_s(seg.text, engine=backend),
+                        )
                 _t_tts += time.perf_counter() - _t_tts_0
 
                 # Check abort immediately after GPU work completes
@@ -1194,6 +1460,10 @@ async def dub_generate(job_id: str, req: DubRequest):
 
                 target_samples = int(seg_duration * backend.sample_rate)
                 current_samples = audio_tensor.shape[-1]
+                # Capture the real spoken duration before strict-slot padding
+                # or trimming. This is the evidence used by Agent timing and
+                # keeps sync badges truthful for every timing strategy.
+                natural_generated_dur = current_samples / backend.sample_rate
 
                 if strategy == "strict_slot":
                     # Legacy: pad short audio + trim long audio so the mix
@@ -1210,7 +1480,7 @@ async def dub_generate(job_id: str, req: DubRequest):
                 # trim, slip, stretch the video, or split audio/video
                 # retiming (smart_fit) to accommodate it.
 
-                generated_dur = audio_tensor.shape[-1] / backend.sample_rate
+                generated_dur = natural_generated_dur
                 sync_ratio = round(generated_dur / max(seg_duration, 0.01), 3)
 
                 sync_scores.append(sync_ratio)

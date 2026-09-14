@@ -53,6 +53,11 @@ export interface EngineBackend {
   // in-app (Settings renders an Install button; the manual snippet is
   // demoted to a collapsible fallback). Absent on legacy payloads.
   one_click_install?: boolean;
+  // Stable public state for engines whose first use needs an explicit local
+  // license acknowledgement. This remains visible when probe details are
+  // redacted from the public catalogue.
+  license_required?: boolean;
+  license_accepted?: boolean;
   last_error?: string | null;
   isolation_mode?: 'in-process' | 'subprocess';
   gpu_compat?: GPUTarget[];
@@ -224,7 +229,9 @@ export interface Profile {
 
 export interface ProfileUsage {
   projects: { project_id: string; project_name: string; segment_count: number }[];
-  total_segments: number;
+  synth_total: number;
+  synth_recent: { id: string; text: string; audio_path: string; created_at: number; generation_time: number | null }[];
+  project_total_segments: number;
 }
 
 // ── Portable persona bundles (.ovsvoice, #29) ──────────────────────────────

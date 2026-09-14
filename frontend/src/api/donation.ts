@@ -84,3 +84,15 @@ export async function loadDonationProgress(
     return BUNDLED_PROGRESS;
   }
 }
+
+export function formatMoney(amount: number, currency: string) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currency || 'USD',
+      maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
+    }).format(amount);
+  } catch {
+    return `$${Math.round(amount)}`;
+  }
+}

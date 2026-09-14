@@ -147,6 +147,11 @@ def test_remote_tts_render_parity_is_a_required_worker_feature():
     assert "remote_tts_render_v1" in REQUIRED_FEATURES
 
 
+def test_remote_model_cancel_is_a_required_worker_feature():
+    """A worker that accepts remote downloads must accept their cancellation."""
+    assert "remote_model_cancel_v1" in REQUIRED_FEATURES
+
+
 # ── Control / data plane separation ────────────────────────────────────────
 
 

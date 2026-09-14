@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "license": "AGPL-3.0-only",
   "private": true,
-  "packageManager": "bun@1.3.14",
+  "packageManager": "bun@1.4.2",
   "scripts": {
     "setup:api": "uv sync && uv run python scripts/setup.py",
     "dev:api": "bun scripts/dev-backend.mjs",
@@ -24,6 +24,7 @@
     "desktop-fresh": "bun scripts/desktop-fresh.mjs",
     "desktop-fresh:run": "bun scripts/desktop-fresh.mjs --skip-build",
     "build": "turbo run build",
+    "check:electron": "bun run --cwd electron typecheck && bun run --cwd electron test && bun run --cwd electron build && node electron/tests/packaging-contract.mjs",
     "start": "turbo run start",
     "test:frontend": "node --test tests/frontend/*.test.mjs",
     "smoke-test": "bash scripts/smoke-test.sh",
@@ -32,7 +33,8 @@
     "deps:check": "taze -r --maturity-period 7"
   },
   "workspaces": [
-    "frontend"
+    "frontend",
+    "electron"
   ],
   "devDependencies": {
     "concurrently": "^10",

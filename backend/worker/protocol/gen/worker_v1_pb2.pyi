@@ -480,6 +480,14 @@ class PrewarmRequest(_message.Message):
     download_if_missing: bool
     def __init__(self, envelope: _Optional[_Union[Envelope, _Mapping]] = ..., engine: _Optional[str] = ..., model_id: _Optional[str] = ..., download_if_missing: _Optional[bool] = ...) -> None: ...
 
+class ModelInstallCancelRequest(_message.Message):
+    __slots__ = ("envelope", "model_id")
+    ENVELOPE_FIELD_NUMBER: _ClassVar[int]
+    MODEL_ID_FIELD_NUMBER: _ClassVar[int]
+    envelope: Envelope
+    model_id: str
+    def __init__(self, envelope: _Optional[_Union[Envelope, _Mapping]] = ..., model_id: _Optional[str] = ...) -> None: ...
+
 class Ping(_message.Message):
     __slots__ = ("envelope", "nonce")
     ENVELOPE_FIELD_NUMBER: _ClassVar[int]
@@ -507,7 +515,7 @@ class Shutdown(_message.Message):
     def __init__(self, envelope: _Optional[_Union[Envelope, _Mapping]] = ..., reason: _Optional[str] = ...) -> None: ...
 
 class ServerMessage(_message.Message):
-    __slots__ = ("assignment", "cancel", "result_ack", "config", "ping", "drain", "shutdown", "prewarm", "registered")
+    __slots__ = ("assignment", "cancel", "result_ack", "config", "ping", "drain", "shutdown", "prewarm", "registered", "model_install_cancel")
     ASSIGNMENT_FIELD_NUMBER: _ClassVar[int]
     CANCEL_FIELD_NUMBER: _ClassVar[int]
     RESULT_ACK_FIELD_NUMBER: _ClassVar[int]
@@ -517,6 +525,7 @@ class ServerMessage(_message.Message):
     SHUTDOWN_FIELD_NUMBER: _ClassVar[int]
     PREWARM_FIELD_NUMBER: _ClassVar[int]
     REGISTERED_FIELD_NUMBER: _ClassVar[int]
+    MODEL_INSTALL_CANCEL_FIELD_NUMBER: _ClassVar[int]
     assignment: TaskAssignment
     cancel: TaskCancel
     result_ack: ResultAckMessage
@@ -526,7 +535,8 @@ class ServerMessage(_message.Message):
     shutdown: Shutdown
     prewarm: PrewarmRequest
     registered: RegisterResponse
-    def __init__(self, assignment: _Optional[_Union[TaskAssignment, _Mapping]] = ..., cancel: _Optional[_Union[TaskCancel, _Mapping]] = ..., result_ack: _Optional[_Union[ResultAckMessage, _Mapping]] = ..., config: _Optional[_Union[ConfigUpdate, _Mapping]] = ..., ping: _Optional[_Union[Ping, _Mapping]] = ..., drain: _Optional[_Union[Drain, _Mapping]] = ..., shutdown: _Optional[_Union[Shutdown, _Mapping]] = ..., prewarm: _Optional[_Union[PrewarmRequest, _Mapping]] = ..., registered: _Optional[_Union[RegisterResponse, _Mapping]] = ...) -> None: ...
+    model_install_cancel: ModelInstallCancelRequest
+    def __init__(self, assignment: _Optional[_Union[TaskAssignment, _Mapping]] = ..., cancel: _Optional[_Union[TaskCancel, _Mapping]] = ..., result_ack: _Optional[_Union[ResultAckMessage, _Mapping]] = ..., config: _Optional[_Union[ConfigUpdate, _Mapping]] = ..., ping: _Optional[_Union[Ping, _Mapping]] = ..., drain: _Optional[_Union[Drain, _Mapping]] = ..., shutdown: _Optional[_Union[Shutdown, _Mapping]] = ..., prewarm: _Optional[_Union[PrewarmRequest, _Mapping]] = ..., registered: _Optional[_Union[RegisterResponse, _Mapping]] = ..., model_install_cancel: _Optional[_Union[ModelInstallCancelRequest, _Mapping]] = ...) -> None: ...
 
 class ArtifactRef(_message.Message):
     __slots__ = ("artifact_id", "task_id", "attempt_id", "filename", "content_type", "size_bytes", "sha256", "session_token")

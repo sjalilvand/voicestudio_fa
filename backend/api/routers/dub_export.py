@@ -15,7 +15,7 @@ from core.http_headers import content_disposition
 from core.logging_utils import log_safe
 from core.path_security import UnsafePath, resolve_within
 from core.tasks import task_manager
-from fastapi import APIRouter, Header, HTTPException, Query, Response
+from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from services.ffmpeg_utils import (
     bed_mix_filter,
@@ -1050,8 +1050,8 @@ _MEDIA_TYPES = {
 }
 
 
-@router.get("/dub/media/{job_id}")
-async def dub_get_media(job_id: str):
+@router.api_route("/dub/media/{job_id}", methods=["GET", "HEAD"])
+async def dub_get_media(job_id: str, request: Request):
     _job_dir_or_400(job_id)
     job = _get_job(job_id)
     if not job:
@@ -1064,7 +1064,15 @@ async def dub_get_media(job_id: str):
     # silent black box. Default to video/mp4 because the ingest pipeline
     # remuxes URL downloads to mp4 (dub_pipeline.yt_download_sync).
     ext = os.path.splitext(video_path)[1].lower()
-    return FileResponse(video_path, media_type=_MEDIA_TYPES.get(ext, "video/mp4"))
+    media_type = _MEDIA_TYPES.get(ext, "video/mp4")
+    headers = {
+        "Cache-Control": "private, max-age=31536000, immutable",
+        "Accept-Ranges": "bytes",
+    }
+    if request.method == "HEAD":
+        headers["Content-Length"] = str(os.path.getsize(video_path))
+        return Response(media_type=media_type, headers=headers)
+    return FileResponse(video_path, media_type=media_type, headers=headers)
 
 # One mux at a time per preview file. Without this, two overlapping requests
 # (e.g. the <video> element remounting right after a re-dub) both ran ffmpeg
@@ -1081,8 +1089,9 @@ def _preview_lock(path: str) -> asyncio.Lock:
     return lock
 
 
-@router.get("/dub/preview-video/{job_id}")
+@router.api_route("/dub/preview-video/{job_id}", methods=["GET", "HEAD"])
 async def dub_preview_video(
+    request: Request,
     job_id: str,
     lang: str = Query(..., description="Language code of the dubbed track to mux in"),
     preserve_bg: bool = Query(True),
@@ -1124,7 +1133,7 @@ async def dub_preview_video(
     os.makedirs(exports_dir, exist_ok=True)
     bg_suffix = "bg" if (preserve_bg and has_bg) else "nobg"
     preview_path = os.path.realpath(
-        os.path.join(exports_dir, f"preview_{lang}_{bg_suffix}.mp4")
+        os.path.join(exports_dir, f"preview_v2_{lang}_{bg_suffix}.mp4")
     )
     if not preview_path.startswith(_base + os.sep):
         raise HTTPException(status_code=400, detail="Invalid path")
@@ -1137,6 +1146,18 @@ async def dub_preview_video(
             and os.path.getsize(preview_path) > 0
             and os.path.getmtime(preview_path) >= track_mtime
         )
+
+    # Vidstack probes extensionless routes with HEAD before choosing a native
+    # provider. Confirm that this preview is valid without starting an ffmpeg
+    # mux; the following GET builds it lazily when needed.
+    if request.method == "HEAD":
+        headers = {
+            "Cache-Control": "private, max-age=31536000, immutable",
+            "Accept-Ranges": "bytes",
+        }
+        if _cache_ok():
+            headers["Content-Length"] = str(os.path.getsize(preview_path))
+        return Response(media_type="video/mp4", headers=headers)
 
     async def _mux_preview():
         # Mux into a temp file and os.replace() into place so a concurrent
@@ -1266,7 +1287,7 @@ async def dub_preview_video(
             cmd += ["-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p"]
         else:
             cmd += ["-c:v", "copy"]
-        cmd += ["-c:a", "aac", "-b:a", "192k"]
+        cmd += ["-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"]
         # `-shortest` would cut the retimed video at the (slightly different)
         # audio length and lose the trailing frame; only use it on the copy path.
         if not stretch_entry and retime_decision is None:
@@ -1311,22 +1332,37 @@ async def dub_preview_video(
         if not _cache_ok():
             await _mux_preview()
 
-    # no-store: the URL is stable across re-dubs, so any HTTP-level caching
-    # in the WebView would keep showing the previous dub after a re-generate
-    # (#281: "edits don't change the result").
+    # The renderer includes the segment-fingerprint revision in the URL, so a
+    # regenerated track gets a fresh cache key. Keep each completed preview:
+    # switching Original/Dub then reuses local ranges instead of re-reading a
+    # multi-hundred-megabyte MP4 from the backend.
     return FileResponse(
         preview_path,
         media_type="video/mp4",
-        headers={"Cache-Control": "no-store"},
+        headers={"Cache-Control": "private, max-age=31536000, immutable", "Accept-Ranges": "bytes"},
     )
 
 
-def _compute_onsets_sync(src_path: str) -> list[float]:
+def _compute_timeline_sync(src_path: str) -> tuple[list[float], list[float]]:
     """Blocking part of onset analysis — runs in a worker thread."""
+    import numpy as np
     import soundfile as sf
     from services.onset_align import detect_speech_onsets
     audio, sr = sf.read(src_path, dtype="float32")
-    return detect_speech_onsets(audio, sr)
+    onsets = detect_speech_onsets(audio, sr)
+    mono = np.asarray(audio, dtype=np.float32)
+    if mono.ndim > 1:
+        mono = mono.mean(axis=1)
+    mono = mono.reshape(-1)
+    if mono.size == 0:
+        return onsets, []
+    bucket_count = min(2048, int(mono.size))
+    bucket_width = max(1, (int(mono.size) + bucket_count - 1) // bucket_count)
+    padded_size = bucket_count * bucket_width
+    if padded_size != mono.size:
+        mono = np.pad(mono, (0, padded_size - int(mono.size)))
+    peaks = np.max(np.abs(mono.reshape(bucket_count, bucket_width)), axis=1)
+    return onsets, [round(float(value), 5) for value in peaks]
 
 
 @router.get("/dub/onsets/{job_id}")
@@ -1365,20 +1401,24 @@ async def dub_get_onsets(job_id: str):
         ):
             with open(cache_path, "r", encoding="utf-8") as f:
                 cached = json.load(f)
-            if isinstance(cached, dict) and isinstance(cached.get("onsets"), list):
+            if (
+                isinstance(cached, dict)
+                and isinstance(cached.get("onsets"), list)
+                and isinstance(cached.get("peaks"), list)
+            ):
                 return cached
     except (OSError, ValueError):
         pass  # unreadable/corrupt cache → recompute below
 
     try:
-        onsets = await asyncio.to_thread(_compute_onsets_sync, src_path)
+        onsets, peaks = await asyncio.to_thread(_compute_timeline_sync, src_path)
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Onset analysis failed: {str(e)[:200]}",
         )
 
-    payload = {"onsets": onsets, "source": source}
+    payload = {"onsets": onsets, "peaks": peaks, "source": source}
     try:
         os.makedirs(os.path.dirname(cache_path), exist_ok=True)
         tmp_path = cache_path + ".tmp"

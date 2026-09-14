@@ -15,6 +15,10 @@ and ships a script that finds and removes them for you (with a dry-run first).
 owns with its real size, lets you opt in (separately) to the shared Hugging Face
 model cache, asks you to type `DELETE`, then removes everything and quits.
 
+The Electron build finishes deletion through its signed desktop helper after the
+window exits, because Chromium keeps parts of its profile directory locked while
+the app is open. The same ownership checks and model-cache opt-in still apply.
+
 This is the right path if you installed the **.dmg / .msi / AppImage** — you
 don't have the repo, so the script below isn't available to you.
 

@@ -210,6 +210,62 @@ async def test_authority_loss_cancels_and_drains_a_blocked_prewarm(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_model_install_cancel_stops_only_the_matching_prewarm(monkeypatch):
+    started = asyncio.Event()
+    cancelled = asyncio.Event()
+    capability = {
+        "engine": "omnivoice",
+        "model_id": "omnivoice:default",
+        "operations": ["tts"],
+        "supported": True,
+        "installed": True,
+        "downloaded": False,
+        "repo_ids": ["k2-fsa/OmniVoice"],
+    }
+    client = _client(lambda: [capability])
+    client.config.capabilities = [capability]
+
+    async def blocked_install(_repo_id):
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+
+    monkeypatch.setattr(client, "_install_catalog_repo", blocked_install)
+    await client._on_server_message(
+        pb.ServerMessage(
+            prewarm=pb.PrewarmRequest(
+                model_id="omnivoice:default", download_if_missing=True
+            )
+        )
+    )
+    await asyncio.wait_for(started.wait(), timeout=1)
+
+    await client._on_server_message(
+        pb.ServerMessage(
+            model_install_cancel=pb.ModelInstallCancelRequest(
+                model_id="omnivoice:default"
+            )
+        )
+    )
+    await asyncio.wait_for(
+        asyncio.gather(*tuple(client._maintenance), return_exceptions=True),
+        timeout=1,
+    )
+    await asyncio.sleep(0)
+
+    assert cancelled.is_set()
+    assert client._prewarms == {}
+    frame = await asyncio.wait_for(client._outbox.get(), timeout=1)
+    assert frame.WhichOneof("payload") == "download_progress"
+    event = json.loads(frame.download_progress.event_json)
+    assert event["repo_id"] == "k2-fsa/OmniVoice"
+    assert event["phase"] == "install_cancelled"
+
+
+@pytest.mark.asyncio
 async def test_authority_loss_waits_for_a_blocking_prewarm_thread(monkeypatch):
     started = threading.Event()
     release = threading.Event()
@@ -408,9 +464,11 @@ async def test_remote_download_without_terminal_progress_times_out(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_control_plane_stamps_authenticated_target_on_progress():
+async def test_control_plane_stamps_authenticated_target_on_progress(monkeypatch):
+    from services import gpu_gateway
     from utils import hf_progress
 
+    monkeypatch.setattr(gpu_gateway, "_remote_downloads", {})
     events = []
     listener_id = hf_progress.register_listener(events.append)
     try:
@@ -430,3 +488,11 @@ async def test_control_plane_stamps_authenticated_target_on_progress():
     finally:
         hf_progress.unregister_listener(listener_id)
     assert events[-1]["target"] == "gpu2"
+    assert gpu_gateway.remote_download_jobs() == [{
+        "repo_id": "k2-fsa/OmniVoice",
+        "target": "gpu2",
+        "state": "downloading",
+        "phase": "aggregate",
+        "bytes_done": 5,
+        "total_bytes": 10,
+    }]

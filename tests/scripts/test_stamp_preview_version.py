@@ -88,3 +88,15 @@ def test_release_workflow_resolves_stable_once_before_the_matrix() -> None:
     assert "STABLE_TAG: ${{ needs.preview-gate.outputs.stable_tag }}" in build_body
     assert "python scripts/stamp-preview-version.py" in workflow
     assert '--stable-tag "$STABLE_TAG"' in workflow
+
+
+def test_electron_publish_contract_recreates_the_stamped_preview_version() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    publish_contract = workflow[workflow.index("  electron-publish-contract:") :]
+
+    assert "STABLE_TAG: ${{ needs.preview-gate.outputs.stable_tag }}" in publish_contract
+    assert 'if [ "$CHANNEL" = "preview" ]; then' in publish_contract
+    assert "python3 scripts/stamp-preview-version.py" in publish_contract
+    assert '--run-number "${{ github.run_number }}"' in publish_contract

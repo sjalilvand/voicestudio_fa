@@ -274,12 +274,19 @@ def describe_host() -> dict:
         from core.version import APP_VERSION  # noqa: PLC0415
     except Exception:
         APP_VERSION = ""
+    try:
+        import psutil  # noqa: PLC0415
+
+        system_memory_bytes = int(psutil.virtual_memory().total)
+    except Exception:
+        system_memory_bytes = 0
     return {
         "hostname": socket.gethostname(),
         "os": {"darwin": "darwin", "win32": "windows"}.get(sys.platform, "linux"),
         "arch": platform.machine(),
         "worker_version": APP_VERSION,
         "cpu_count": os.cpu_count() or 0,
+        "system_memory_bytes": system_memory_bytes,
     }
 
 
@@ -332,6 +339,8 @@ class WorkerClient:
         self._running: dict[str, asyncio.Task] = {}
         self._keepalives: dict[str, asyncio.Task] = {}
         self._maintenance: set[asyncio.Task] = set()
+        self._prewarms: dict[str, asyncio.Task] = {}
+        self._prewarm_cancellations: dict[str, asyncio.Task] = {}
         self._epoch = 0
         self._session_token = ""
         # Negotiated by ConfigUpdate; None means "use the executor's own
@@ -435,6 +444,8 @@ class WorkerClient:
                 *draining, return_exceptions=True
             )
         self._maintenance.clear()
+        self._prewarms.clear()
+        self._prewarm_cancellations.clear()
         for key, task in running:
             if self._running.get(key) is task:
                 self._running.pop(key, None)
@@ -801,15 +812,104 @@ class WorkerClient:
         elif kind == "prewarm":
             if not self._accepting_assignments:
                 return
+            model_id = message.prewarm.model_id
+            existing = self._prewarms.get(model_id)
+            if model_id and existing is not None and not existing.done():
+                return
             task = asyncio.create_task(
                 self._on_prewarm(message.prewarm), name="worker-prewarm"
             )
             self._maintenance.add(task)
+            if model_id:
+                self._prewarms[model_id] = task
             task.add_done_callback(self._maintenance_finished)
+        elif kind == "model_install_cancel":
+            await self._cancel_model_install(message.model_install_cancel)
 
     def _maintenance_finished(self, task: asyncio.Task) -> None:
         self._maintenance.discard(task)
+        for tasks in (self._prewarms, self._prewarm_cancellations):
+            for model_id, current in tuple(tasks.items()):
+                if current is task:
+                    tasks.pop(model_id, None)
         self._maybe_finish_drain()
+
+    async def _cancel_model_install(
+        self, request: pb.ModelInstallCancelRequest
+    ) -> None:
+        """Cancel one explicit catalogue install without blocking control I/O."""
+        model_id = request.model_id.strip()
+        capability = next(
+            (
+                cap
+                for cap in (self.config.capabilities or [])
+                if cap.get("model_id") == model_id
+            ),
+            None,
+        )
+        repo_ids = list((capability or {}).get("repo_ids") or [])
+        if len(repo_ids) != 1:
+            logger.warning("Ignoring model cancellation for unknown model %s", model_id)
+            return
+        repo_id = repo_ids[0]
+        task = self._prewarms.get(model_id)
+        if task is None or task.done():
+            await self._send_model_install_terminal(
+                repo_id,
+                "install_done"
+                if bool((capability or {}).get("downloaded"))
+                else "install_cancelled",
+            )
+            return
+        existing = self._prewarm_cancellations.get(model_id)
+        if existing is not None and not existing.done():
+            return
+        task.cancel()
+        confirmation = asyncio.create_task(
+            self._confirm_model_install_cancel(task, repo_id),
+            name="worker-model-install-cancel",
+        )
+        self._maintenance.add(confirmation)
+        self._prewarm_cancellations[model_id] = confirmation
+        confirmation.add_done_callback(self._maintenance_finished)
+
+    async def _confirm_model_install_cancel(
+        self, task: asyncio.Task, repo_id: str
+    ) -> None:
+        await asyncio.gather(task, return_exceptions=True)
+        capability = next(
+            (
+                cap
+                for cap in (self.config.capabilities or [])
+                if repo_id in (cap.get("repo_ids") or [])
+            ),
+            None,
+        )
+        await self._send_model_install_terminal(
+            repo_id,
+            "install_done"
+            if bool((capability or {}).get("downloaded"))
+            else "install_cancelled",
+        )
+
+    async def _send_model_install_terminal(self, repo_id: str, phase: str) -> None:
+        event = {
+            "repo_id": repo_id,
+            "filename": repo_id,
+            "downloaded": 0,
+            "total": 0,
+            "pct": 0.0,
+            "phase": phase,
+        }
+        await self._send(
+            pb.WorkerMessage(
+                download_progress=pb.DownloadProgress(
+                    event_json=json.dumps(
+                        event, separators=(",", ":"), ensure_ascii=False
+                    )
+                )
+            )
+        )
 
     def _maybe_finish_drain(self) -> None:
         if (
@@ -906,6 +1006,21 @@ class WorkerClient:
 
     async def _on_assignment(self, assignment: pb.TaskAssignment) -> None:
         key = self._key(assignment.ref)
+        # Assignment delivery is at-least-once. A reconnect or a control-stream
+        # retry may repeat the exact same attempt while it is still running or
+        # waiting for its result acknowledgement. Treating that repeat as a
+        # capacity rejection terminalizes the original attempt underneath its
+        # result upload; starting it again spends the GPU twice. Reaffirm the
+        # live claim, or redeliver the result we already hold.
+        if key in self._running:
+            await self._send(
+                pb.WorkerMessage(accepted=pb.TaskAccepted(ref=assignment.ref))
+            )
+            return
+        pending = self._pending.get(key)
+        if pending is not None:
+            await self._send(_result_message(pending), bulk=True)
+            return
         if not self._accepting_assignments or self._stop.is_set():
             await self._send(
                 pb.WorkerMessage(
@@ -1164,7 +1279,8 @@ class WorkerClient:
                 break
             resumed = int(ack.bytes_received)
             if ack.error.code and ack.error.code != "OFFSET_MISMATCH":
-                raise RuntimeError(ack.error.message or "the control plane refused the upload")
+                detail = ack.error.message or "the control plane refused the upload"
+                raise RuntimeError(f"{ack.error.code}: {detail}")
             if resumed < 0 or resumed > len(payload) or resumed == offset:
                 raise RuntimeError(ack.error.message or "the control plane could not resume the upload")
             offset = resumed

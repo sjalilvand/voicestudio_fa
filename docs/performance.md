@@ -268,9 +268,12 @@ but with **operation-count budgets** in
   makes **zero** TTS calls. The zero-decode / zero-rewrite budget activates
   with the natural-rate cached fast path (each cache is then decoded exactly
   once, by the final assembly).
-- **Batch dubbing (native batches)**: N renderable segments at batch width W
+- **Dubbing synthesis (native batches)**: N renderable segments at batch width W
   cost exactly ⌈N/W⌉ `generate_batch` calls and zero per-segment `generate`
-  calls when native batching is enabled.
+  calls when native batching is enabled, in both interactive and queued jobs.
+- **NLLB dubbing translation**: rows sharing a target language render in
+  bounded batches instead of one model forward per subtitle. Mixed targets
+  retain their request order, and a failed batch retries per row.
 
 Updating a budget is a deliberate act: if a change legitimately adds an
 operation to a guarded path, change the expected count in the same PR with a
@@ -279,7 +282,7 @@ comment justifying the new floor. Never loosen a budget just to make CI pass
 
 ## Batch and streaming behavior
 
- Batch dubbing renders several segments in one native forward pass when the
+Interactive and Batch Dubbing render several segments in one native forward pass when the
 selected engine supports it. The width is derived from the host rather than
 fixed, because a wider forward pass needs proportionally more device memory:
 CPU hosts and cards with less than ~2 GB of headroom above the engine's
@@ -287,6 +290,10 @@ single-job requirement stay at one segment, and the width steps up to 2, 4,
 and 8 as headroom allows. `OMNIVOICE_DUB_BATCH_WIDTH` overrides it (1 disables
 batching, 16 is the ceiling). Engines without native batching inherit a
 compatibility fallback that preserves the one-segment behavior.
+
+NLLB similarly groups subtitles by target language and translates four rows
+per forward pass on CPU/MPS or eight on CUDA by default. Set
+`OMNIVOICE_NLLB_BATCH_SIZE=1` to disable it or choose up to 32 explicitly.
 
 Streaming clients also receive measured latency in the `/ws/tts` terminal
  `done` frame: `ttfa_ms` is request-to-first-audio, `gen_time_s` is the
