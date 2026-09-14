@@ -760,6 +760,7 @@ class SubprocessBackend(TTSBackend):
                 try:
                     self._send(msg)
                     reply = self._recv_with_timeout(self.recv_timeout_s)
+                    timed_out = self._last_recv_timed_out
                 except (RuntimeError, OSError):
                     # A broken or malformed protocol stream cannot be reused.
                     # Reap it before releasing the request lock so an immediate

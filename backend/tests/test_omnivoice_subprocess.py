@@ -439,6 +439,29 @@ def test_subprocess_sidecar_timeout_error_message(monkeypatch):
     assert "killed mid-generate" in str(exc.value)
 
 
+def test_subprocess_sidecar_initial_empty_crash_reports_pipe_closed(monkeypatch):
+    """When a sidecar process terminates without timing out, generate() reports pipe closure (#2103)."""
+    b = _PlainBackend()
+
+    class _FakeProc:
+        def poll(self):
+            return None
+
+    b._proc = _FakeProc()
+    monkeypatch.setattr(b, "_send", lambda msg: None)
+
+    def fake_recv_crash(timeout_s):
+        b._last_recv_timed_out = False
+        return None
+
+    monkeypatch.setattr(b, "_recv_with_timeout", fake_recv_crash)
+    monkeypatch.setattr(b, "_reap_unusable_process", lambda proc: None)
+
+    with pytest.raises(RuntimeError) as exc:
+        b.generate("hello")
+    assert "sidecar closed pipe mid-generate" in str(exc.value)
+
+
 def test_subprocess_engine_timeouts_raised():
     """All large subprocess TTS engines must declare generous timeouts rather
     than inheriting the 60s class default (#2103)."""
