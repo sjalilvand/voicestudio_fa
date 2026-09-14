@@ -366,9 +366,10 @@ def test_atomic_save_wav_delegates_to_safe_helper(tmp_path):
 #
 # torchaudio >= 2.9 routes save() through TorchCodec, which needs FFmpeg
 # *shared libraries* on the system. Where those are absent every write raises
-# ImportError — and #1931's cohort (RTX 50-series, forced off the torch 2.8.0
-# pin because it has no sm_120 kernels) lands exactly there. Without the
-# soundfile fallback these three tests raise instead of producing a file.
+# ImportError. #1931 guarded set_audio_backend() against that torchaudio but
+# left save() unprotected; arm64 CUDA hosts reach it unavoidably, since torch
+# 2.8.0 publishes no aarch64 wheel. Without the soundfile fallback these three
+# tests raise instead of producing a file.
 
 
 def _torchcodec_missing(*_a, **_kw):

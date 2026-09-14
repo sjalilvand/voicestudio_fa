@@ -200,11 +200,12 @@ def _safe_torchaudio_save(
     except ImportError as e:
         # torchaudio >= 2.9 routes save() through TorchCodec, which needs
         # FFmpeg *shared libraries* on the system. Where those are absent the
-        # write raises ImportError and every generation fails — including for
-        # the RTX 50-series users of #1931, who have no choice but to move off
-        # the torch 2.8.0 pin. soundfile is already a locked dependency and
-        # the tensor is normalized by this point, so hand it to the audited
-        # sibling helper rather than failing the request.
+        # write raises ImportError and every generation fails. #1931 guarded
+        # set_audio_backend() against that torchaudio but left save() itself
+        # unprotected; arm64 CUDA hosts reach it unavoidably, since torch
+        # 2.8.0 publishes no aarch64 wheel. soundfile is already a locked
+        # dependency and the tensor is normalized by this point, so hand it to
+        # the audited sibling helper rather than failing the request.
         logger.warning(
             "torchaudio.save needs TorchCodec (%s); writing via soundfile", e
         )
