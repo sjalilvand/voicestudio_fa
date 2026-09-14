@@ -230,7 +230,13 @@ export interface Profile {
 export interface ProfileUsage {
   projects: { project_id: string; project_name: string; segment_count: number }[];
   synth_total: number;
-  synth_recent: { id: string; text: string; audio_path: string; created_at: number; generation_time: number | null }[];
+  synth_recent: {
+    id: string;
+    text: string;
+    audio_path: string;
+    created_at: number;
+    generation_time: number | null;
+  }[];
   project_total_segments: number;
 }
 

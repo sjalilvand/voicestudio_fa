@@ -28,7 +28,7 @@ export function evenSplitWords(
   text: string,
   start: number,
   end: number,
-): Array<Omit<AudiobookLyricsWord, "chapterIndex">>;
+): Array<Omit<AudiobookLyricsWord, 'chapterIndex'>>;
 
 export function scriptChapters(script: string): Array<{
   title: string;
@@ -43,7 +43,4 @@ export function buildLyricsTimeline(
   },
 ): AudiobookLyricsTimeline;
 
-export function activeWordIndex(
-  words: AudiobookLyricsWord[],
-  time: number,
-): number;
+export function activeWordIndex(words: AudiobookLyricsWord[], time: number): number;

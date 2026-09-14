@@ -1,4 +1,4 @@
-export type PasteTranslationMode = "timestamped" | "numbered" | "plain";
+export type PasteTranslationMode = 'timestamped' | 'numbered' | 'plain';
 
 export interface PasteTranslationCue {
   start: number;

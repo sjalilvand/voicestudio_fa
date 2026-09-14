@@ -8,7 +8,6 @@ export const EMAIL = 'VoiceStudio@palash.dev';
 export const WEBSITE_URL = 'https://palash.dev';
 export const X_URL = 'https://x.com/idebpalash';
 
-
 export const LICENSE_EMAIL = 'VoiceStudio@palash.dev';
 export const LICENSE_MAILTO =
   'mailto:VoiceStudio@palash.dev?subject=VoiceStudio Commercial License Inquiry' +

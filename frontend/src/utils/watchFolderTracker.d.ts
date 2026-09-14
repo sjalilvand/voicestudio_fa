@@ -1,4 +1,8 @@
-export interface WatchEntry { name: string; size: number; mtime: number }
+export interface WatchEntry {
+  name: string;
+  size: number;
+  mtime: number;
+}
 export const WATCH_POLL_MS: number;
 export function entryKey(entry: WatchEntry): string;
 export function isVideoFile(name: string): boolean;

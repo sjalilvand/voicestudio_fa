@@ -13,7 +13,7 @@ export interface TimelineSegment {
 export function clampSegmentEdit(
   segments: TimelineSegment[],
   index: number,
-  mode: "start" | "end" | "move",
+  mode: 'start' | 'end' | 'move',
   proposed: { start: number; end: number },
   options?: { allowOverlap?: boolean; duration?: number },
 ): { start: number; end: number };

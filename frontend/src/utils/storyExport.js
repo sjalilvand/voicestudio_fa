@@ -129,9 +129,19 @@ export async function exportStoryAudio(tracks, resolveOpts, fetchChunkBlob, onPr
         continue;
       }
       const opts = resolveOpts(tk) || {};
-      for (const span of parseChapterBody(tk.text || '', { defaultVoice: opts.profileId, defaultSpeed: opts.speed })) {
-        if (span.text) plan.push({ type: 'chunk', text: span.text, profileId: span.voice_id, speed: span.speed });
-        if (span.pause_ms_after > 0) plan.push({ type: 'pause', seconds: span.pause_ms_after / 1000 });
+      for (const span of parseChapterBody(tk.text || '', {
+        defaultVoice: opts.profileId,
+        defaultSpeed: opts.speed,
+      })) {
+        if (span.text)
+          plan.push({
+            type: 'chunk',
+            text: span.text,
+            profileId: span.voice_id,
+            speed: span.speed,
+          });
+        if (span.pause_ms_after > 0)
+          plan.push({ type: 'pause', seconds: span.pause_ms_after / 1000 });
       }
     }
     const chunkCount = plan.filter((s) => s.type === 'chunk').length;
