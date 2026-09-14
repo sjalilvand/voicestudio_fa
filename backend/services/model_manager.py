@@ -3074,9 +3074,11 @@ def get_model_status():
         "loaded": is_loaded,
         "loading": is_loading,
         "status": status,
-        "checkpoint": checkpoint,
-        "loaded_at": loaded_at,
     }
+    if checkpoint is not None:
+        result["checkpoint"] = checkpoint
+    if loaded_at is not None:
+        result["loaded_at"] = loaded_at
     # Attach sub-stage detail only while it describes the current resident/load
     # state, or when a failure must remain actionable. A completed model can be
     # unloaded while the last successful "ready" detail remains in memory.
@@ -3612,6 +3614,11 @@ def get_diarization_pipeline(return_error: bool = False):
         return (_diar_pipeline, None) if return_error else _diar_pipeline
     except Exception as e:
         err_class = _classify_diarization_error(e)
+        # Without a token, a missing local bundle means the user must connect
+        # Hugging Face before the explicit install can run. Once installed,
+        # local_pipeline_config succeeds and diarisation remains fully local.
+        if resolved is None and err_class == DIARIZATION_ERR_MISSING:
+            err_class = DIARIZATION_ERR_NO_TOKEN
         logger.exception(
             "Failed to load Pyannote pipeline (class=%s)", err_class,
         )

@@ -67,7 +67,6 @@ OMNI_MESSAGE = [0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1]
 # 30 s bounds each call to tens of MB; the 16-bit message repeats throughout
 # the audio, so per-chunk embedding/detection is equivalent.
 _CHUNK_SECONDS = 30
-_AUDIOSEAL_SAMPLE_RATE = 16_000
 
 
 # AudioSeal vendors moshi's ``@torch_compile_lazy`` on SEANetEncoder.forward,
@@ -162,49 +161,6 @@ def _iter_chunks(audio: torch.Tensor, sample_rate: int):
     for i, start in enumerate(starts):
         end = starts[i + 1] if i + 1 < len(starts) else total
         yield audio[..., start:end]
-
-
-def _audioseal_input(audio: torch.Tensor, sample_rate: int) -> torch.Tensor:
-    """Return audio at the one rate supported by AudioSeal 0.2.
-
-    AudioSeal keeps a legacy ``sample_rate`` argument but deliberately ignores
-    it. Resampling here prevents 24/44.1/48 kHz audio from being interpreted as
-    16 kHz while keeping every model invocation on its native contract.
-    """
-    if sample_rate == _AUDIOSEAL_SAMPLE_RATE:
-        return audio
-    from torchaudio.functional import resample
-
-    return resample(audio, sample_rate, _AUDIOSEAL_SAMPLE_RATE)
-
-
-def _restore_watermark_rate(
-    original: torch.Tensor,
-    native_audio: torch.Tensor,
-    native_marked: torch.Tensor,
-    sample_rate: int,
-) -> torch.Tensor:
-    """Move only AudioSeal's residual back to the source rate.
-
-    A full 16 kHz round trip would unnecessarily band-limit generated speech.
-    Resampling the watermark residual preserves the original waveform and its
-    bandwidth while embedding the signal produced by AudioSeal.
-    """
-    if sample_rate == _AUDIOSEAL_SAMPLE_RATE:
-        return native_marked
-    from torchaudio.functional import resample
-
-    residual = resample(
-        native_marked - native_audio,
-        _AUDIOSEAL_SAMPLE_RATE,
-        sample_rate,
-    )
-    target = original.shape[-1]
-    if residual.shape[-1] < target:
-        residual = torch.nn.functional.pad(residual, (0, target - residual.shape[-1]))
-    elif residual.shape[-1] > target:
-        residual = residual[..., :target]
-    return original + residual
 
 
 def _check_available() -> bool:
@@ -508,18 +464,16 @@ def embed_watermark(
         else:
             audio = waveform
 
-        # AudioSeal 0.2 accepts a legacy sample_rate argument but ignores it.
-        # Run each bounded chunk at its native 16 kHz, then move only the
-        # watermark residual back so higher-rate speech keeps its bandwidth.
+        # AudioSeal operates at 16kHz internally; it handles resampling, but
+        # we need to inform it of the source rate for correct embedding.
         with _eager_audioseal():
-            chunks = []
-            for seg in _iter_chunks(audio, sample_rate):
-                native = _audioseal_input(seg, sample_rate)
-                marked = generator(native, message=msg)
-                chunks.append(
-                    _restore_watermark_rate(seg, native, marked, sample_rate)
-                )
-            watermarked = torch.cat(chunks, dim=-1)
+            watermarked = torch.cat(
+                [
+                    generator(seg, sample_rate=sample_rate, message=msg)
+                    for seg in _iter_chunks(audio, sample_rate)
+                ],
+                dim=-1,
+            )
 
         # Restore original shape
         if len(original_shape) == 2:
@@ -579,10 +533,7 @@ def detect_watermark(
         best_conf, decoded_msg = -1.0, None
         with _eager_audioseal():
             for seg in _iter_chunks(audio, sample_rate):
-                result = detector.detect_watermark(
-                    _audioseal_input(seg, sample_rate),
-                    message_threshold=0.5,
-                )
+                result = detector.detect_watermark(seg, sample_rate=sample_rate, message_threshold=0.5)
                 seg_conf = float(result[0]) if isinstance(result, tuple) else 0.0
                 if seg_conf > best_conf:
                     best_conf = seg_conf

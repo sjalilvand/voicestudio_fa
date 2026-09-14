@@ -290,7 +290,10 @@ def _argos_pack_request(request: ArgosPackRequest) -> tuple[str, list[str]]:
     return source, request.target_langs
 
 
-@router.post("/engines/translation/argos/packs/status")
+@router.post(
+    "/engines/translation/argos/packs/status",
+    dependencies=[Depends(require_admin)],
+)
 def argos_pack_status(request: ArgosPackRequest):
     source, targets = _argos_pack_request(request)
     try:

@@ -1,4 +1,4 @@
-﻿"""Profile usage reads the persisted desktop project schema without double-counting."""
+"""Profile usage reads the persisted desktop project schema without double-counting."""
 import json
 import sqlite3
 from contextlib import contextmanager

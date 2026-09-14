@@ -266,6 +266,7 @@ models:
   - repo_id: "facebook/nllb-200-distilled-600M"
     label: "NLLB-200 distilled 600M (local, 200 languages)"
     role: Translation
+    engines: []
     size_gb: 2.4
     note: "Best fully-local translation quality. Install explicitly before selecting NLLB; translation never downloads these weights in the background."
 

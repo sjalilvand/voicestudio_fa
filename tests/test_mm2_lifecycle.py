@@ -72,8 +72,8 @@ def test_model_status_clears_resident_identity_when_idle(monkeypatch):
 
     assert status["status"] == "idle"
     assert status["loaded"] is False
-    assert status["checkpoint"] is None
-    assert status["loaded_at"] is None
+    assert "checkpoint" not in status
+    assert "loaded_at" not in status
 
 
 def test_switch_unloads_previous_engine(monkeypatch):

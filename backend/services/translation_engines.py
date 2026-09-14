@@ -20,7 +20,6 @@ import logging
 import functools
 import re
 import os
-import re
 import shutil
 import subprocess
 import sys

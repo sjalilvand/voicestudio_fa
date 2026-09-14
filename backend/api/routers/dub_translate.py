@@ -392,16 +392,6 @@ async def dub_translate(req: TranslateRequest):
                 status_code=400,
                 content={"error": "Choose a supported translation engine."},
             )
-        if not translation_engines.is_installed(provider):
-            return JSONResponse(
-                status_code=409,
-                content={"error": "Install the selected translation engine before translating."},
-            )
-        if not translation_engines.is_ready(provider):
-            return JSONResponse(
-                status_code=409,
-                content={"error": "Configure the selected translation provider before translating."},
-            )
         lang_code = TRANSLATE_CODES.get(req.target_lang, req.target_lang)
         api_key = os.environ.get("TRANSLATE_API_KEY", "")
         loop = asyncio.get_running_loop()
