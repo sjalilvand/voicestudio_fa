@@ -317,8 +317,8 @@ guarded now, so the upgrade path above is clean on a current checkout.
 **Keeping the change:** these are the repo's own pins, so a `git pull` that
 touches them will conflict or overwrite. Re-apply after updating until the
 default pin moves — the default cannot move for everyone until the newer torch
-is verified across the older GPUs VoiceStudio supports, since a build that adds
-`sm_120` can drop older architectures.
+is verified across the older GPUs VoiceStudio supports, since a newer build can
+drop older architectures — the cu128 wheels already dropped Maxwell and Pascal.
 
 **Linked issue:** [#1931](https://github.com/debpalash/VoiceStudio/issues/1931)
 — thanks to the reporter for the full diagnosis, including the verification
