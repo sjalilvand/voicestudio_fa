@@ -12,8 +12,8 @@ moving to torch 2.9.1, which brings torchaudio 2.9 with it. Working around one
 problem and then crashing on a line that does nothing is the whole bug.
 
 The pinned torch is not missing sm_120 kernels: 2.8.0 from the cu128 index
-lists sm_120 in get_arch_list(), as CU128_ARCHS in
-tests/test_cuda_arch_compat.py already asserts.
+lists sm_120 in get_arch_list(). CU128_ARCHS in tests/test_cuda_arch_compat.py
+records the same list, captured verbatim from a real cu128 build in #1285.
 
 Checked at the source level because reproducing it needs a real torchaudio 2.9
 in the environment, which the pinned test env does not have. Guarding the

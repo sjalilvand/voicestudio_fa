@@ -12,8 +12,8 @@ which brings torchaudio 2.9 with it. Someone already working around one
 problem then met a hard startup crash on a line that does nothing.
 
 The pin is not missing sm_120 kernels: torch 2.8.0 from the cu128 index lists
-sm_120 in get_arch_list(), as CU128_ARCHS in tests/test_cuda_arch_compat.py
-already asserts.
+sm_120 in get_arch_list(). CU128_ARCHS in tests/test_cuda_arch_compat.py
+records the same list, captured verbatim from a real cu128 build in #1285.
 
 The guard is one `hasattr`. This test is what keeps it: a cleanup pass that
 sees a no-op call and "simplifies" it by deleting the condition would restore

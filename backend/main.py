@@ -637,8 +637,9 @@ def _phase_a_build_inner() -> None:
     # nothing (#1931).
     #
     # The pin is not missing sm_120 kernels: torch 2.8.0 from the cu128 index
-    # lists sm_120 in get_arch_list(), as CU128_ARCHS in
-    # tests/test_cuda_arch_compat.py already asserts.
+    # lists sm_120 in get_arch_list(). CU128_ARCHS in
+    # tests/test_cuda_arch_compat.py records the same list, captured verbatim
+    # from a real cu128 build in #1285.
     if hasattr(torchaudio, "set_audio_backend"):
         torchaudio.set_audio_backend("soundfile")
     from utils import hf_progress
