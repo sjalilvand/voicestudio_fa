@@ -241,11 +241,25 @@ describe('packaged runtime setup', () => {
         return `VOICESTUDIO_CUDNN8_PROBE=${JSON.stringify({ device: 'cuda', sitePackages })}\n`;
       }
       if (args[0] === 'pip') {
-        const libDir = join(sitePackages, 'cudnn8_compat', 'nvidia', 'cudnn', 'bin');
+        const libDir = join(
+          sitePackages,
+          'cudnn8_compat',
+          'nvidia',
+          'cudnn',
+          process.platform === 'win32' ? 'bin' : 'lib',
+        );
         await mkdir(libDir, { recursive: true });
         await Promise.all(
           Array.from({ length: 5 }, (_, index) =>
-            writeFile(join(libDir, `cudnn-${index}64_8.dll`), 'library'),
+            writeFile(
+              join(
+                libDir,
+                process.platform === 'win32'
+                  ? `cudnn-${index}64_8.dll`
+                  : `libcudnn-${index}.so.8`,
+              ),
+              'library',
+            ),
           ),
         );
       }

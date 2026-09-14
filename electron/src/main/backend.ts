@@ -889,7 +889,7 @@ export class BackendSupervisor extends EventEmitter<{
       // Python passes this child-side descriptor to every nested operation.
       // Reading the parent side keeps the ownership channel live and lets
       // Node observe EOF only after the complete backend subtree releases it.
-      const drain = child.stdio[processOptions.drainFd] as NodeJS.ReadableStream | null;
+      const drain = child.stdio?.[processOptions.drainFd] as NodeJS.ReadableStream | null | undefined;
       drain?.on('error', (error: unknown) => {
         if (!isExpectedPipeClose(error)) {
           this.pushLog('err', `Backend drain stream failed: ${errorMessage(error)}`);

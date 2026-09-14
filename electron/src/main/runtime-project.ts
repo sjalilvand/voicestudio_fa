@@ -369,8 +369,8 @@ export async function installRuntime(
     UV_PROJECT_ENVIRONMENT: join(project, '.venv'),
     // Keep immutable downloads beside the replaceable project. Clean & Retry can
     // rebuild a broken venv without paying the multi-gigabyte transfer twice.
-    UV_CACHE_DIR: process.env.UV_CACHE_DIR || join(project, '..', '.uv-cache'),
-    UV_PYTHON_INSTALL_DIR: process.env.UV_PYTHON_INSTALL_DIR || join(project, '..', '.python'),
+    UV_CACHE_DIR: join(project, '..', '.uv-cache'),
+    UV_PYTHON_INSTALL_DIR: join(project, '..', '.python'),
   };
   if (!uv) {
     phase('downloading_uv');
