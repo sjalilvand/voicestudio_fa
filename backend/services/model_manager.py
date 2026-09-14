@@ -610,6 +610,16 @@ def generate_timeout_s(
         # Device probing is advisory here; the configured universal bound is
         # still safe when a platform probe is unavailable during startup.
         pass
+
+    # If the engine specifies its own sidecar receive timeout (e.g. SubprocessBackend
+    # engines like Confucius, Dots, Moss, Supertonic), the outer execution budget
+    # must not cut the sidecar off early (#2103).
+    if engine is not None and hasattr(engine, "recv_timeout_s"):
+        try:
+            base = max(base, float(engine.recv_timeout_s))
+        except (TypeError, ValueError):
+            pass
+
     return base + (max(0, len(text or "") - 1200) / 40.0)
 
 

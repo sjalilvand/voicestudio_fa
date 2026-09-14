@@ -470,6 +470,88 @@ def test_subprocess_engine_timeout_env_overrides(monkeypatch):
     assert Supertonic3Backend().recv_timeout_s == 500.0
 
 
+def test_subprocess_asr_recv_timeout_env_override(monkeypatch):
+    from pathlib import Path
+    from services.subprocess_asr import SubprocessASRBackend
+
+    class _FakeASR(SubprocessASRBackend):
+        id = "fake-asr"
+        display_name = "fake-asr"
+        gpu_compat = ("cuda", "mps", "cpu")
+
+        @classmethod
+        def is_available(cls): return True, "ok"
+        @classmethod
+        def venv_python(cls): return Path(sys.executable)
+        @classmethod
+        def sidecar_script(cls): return Path("fake")
+
+    b = _FakeASR()
+    assert b.recv_timeout_s >= 300.0
+
+    monkeypatch.setenv("OMNIVOICE_ASR_RECV_TIMEOUT_S", "750")
+    assert b.recv_timeout_s == 750.0
+
+
+def test_subprocess_asr_timeout_error_message(monkeypatch):
+    from pathlib import Path
+    from services.subprocess_asr import SubprocessASRBackend
+
+    class _FakeASR(SubprocessASRBackend):
+        id = "fake-asr"
+        display_name = "fake-asr"
+        gpu_compat = ("cuda", "mps", "cpu")
+
+        @classmethod
+        def is_available(cls): return True, "ok"
+        @classmethod
+        def venv_python(cls): return Path(sys.executable)
+        @classmethod
+        def sidecar_script(cls): return Path("fake")
+
+    class _FakeProc:
+        def poll(self): return None
+        def wait(self, timeout=None): return 0
+        def kill(self): pass
+        def terminate(self): pass
+
+    b = _FakeASR()
+    b._proc = _FakeProc()
+    monkeypatch.setattr(b, "_spawn", lambda: None)
+    monkeypatch.setattr(b, "_send", lambda msg: None)
+
+    def fake_recv_timeout(timeout_s):
+        b._last_recv_timed_out = True
+        return None
+
+    monkeypatch.setattr(b, "_recv_with_timeout", fake_recv_timeout)
+    monkeypatch.setattr(b, "shutdown", lambda: None)
+    monkeypatch.setattr("services.model_manager.running_on_gpu_pool", lambda: True)
+
+    with pytest.raises(RuntimeError) as exc:
+        b.transcribe("test.wav")
+    assert "fake-asr ASR sidecar exceeded receive timeout" in str(exc.value)
+    assert "OMNIVOICE_ASR_RECV_TIMEOUT_S" in str(exc.value)
+
+
+def test_generate_timeout_s_coordinates_with_engine_recv_timeout():
+    """Outer generation timeout must not be shorter than the engine sidecar timeout (#2103)."""
+    from services.model_manager import generate_timeout_s
+
+    class _SlowEngine:
+        recv_timeout_s = 900.0
+
+    budget = generate_timeout_s("short text", engine=_SlowEngine())
+    assert budget >= 900.0
+
+    class _FastEngine:
+        recv_timeout_s = 60.0
+
+    # For fast engines, the default GPU/CPU budget still applies as the floor.
+    budget_fast = generate_timeout_s("short text", engine=_FastEngine(), execution_device="cuda")
+    assert budget_fast >= 300.0
+
+
 # ── roundtrip via the stub sidecar ─────────────────────────────────────────
 
 
