@@ -29,6 +29,8 @@ the frozen-backend fallback mirror it for their toolchains.
 - Transcribing an M4A file with PyTorch Whisper works, instead of failing with "Format not recognised" (#2042, #2039)
 - PyTorch Whisper runs on 6 GB NVIDIA cards instead of falling back to CPU, because its memory check now fits the model it loads (#2044, #2041)
 - MCP tools wait as long as the backend does, so a long transcription no longer fails at 120 s with an empty error (#2043, #2040)
+- Generating audio works on torch 2.9 without TorchCodec installed: writes fall back to soundfile instead of failing every request with "TorchCodec is required for save_with_torchcodec" (#1931)
+- Voice cloning, watermarking and the dub pipeline work on torch 2.9 without TorchCodec installed: reference-audio reads fall back instead of raising "TorchCodec is required for load_with_torchcodec" (#1931)
 
 ### CI
 
