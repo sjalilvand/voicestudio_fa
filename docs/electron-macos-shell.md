@@ -11,3 +11,9 @@ sits beside it and opens the device and compute-target menu. The expanded
 sidebar retains the Local device label.
 
 Windows and Linux retain their existing notification and device placement.
+
+The notification control follows workspace headers in document order so their
+native drag regions cannot consume its mouse clicks. On macOS, run
+`node tests/native-bell-repro.mjs` from `electron/` against the dev renderer
+to verify a real system mouse click (requires Swift and Accessibility access).
+Browser automation alone bypasses native titlebar hit testing.

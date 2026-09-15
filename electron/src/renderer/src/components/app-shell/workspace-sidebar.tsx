@@ -85,14 +85,6 @@ export function WorkspaceSidebar() {
   });
   return (
     <>
-      {mac && (
-        <div
-          data-slot="macos-system-notifications"
-          className="app-no-drag fixed top-3.5 right-3.5 z-50"
-        >
-          <SystemNotifications enabled={backend.stage === 'ready'} titlebar />
-        </div>
-      )}
       {compact && (
         <aside
           aria-label={t('clone.saved_profiles')}
