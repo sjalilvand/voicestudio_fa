@@ -135,6 +135,7 @@ export interface DubSession {
   reflectPass?: boolean;
   condenseSuggest?: boolean;
   dialect?: string;
+  translationInstructions?: string;
   jobId: string | null;
   taskId: string | null;
   filename: string;
@@ -251,6 +252,7 @@ const unsubscribeDraft = dubSession.subscribe(() => {
     current.reflectPass !== previousDraft.reflectPass ||
     current.condenseSuggest !== previousDraft.condenseSuggest ||
     current.dialect !== previousDraft.dialect ||
+    current.translationInstructions !== previousDraft.translationInstructions ||
     current.exportOptions !== previousDraft.exportOptions ||
     current.timingStrategy !== previousDraft.timingStrategy ||
     current.voiceMatch !== previousDraft.voiceMatch ||
@@ -300,7 +302,7 @@ export const setDubQuality = (quality: DubSession['quality']) => {
     patch({ quality, ...(quality === 'agent' ? {} : { agentCli: undefined }) });
 };
 export const setDubTranslationOptions = (
-  value: Pick<Partial<DubSession>, 'autoGlossary' | 'reflectPass' | 'condenseSuggest' | 'dialect'>,
+  value: Pick<Partial<DubSession>, 'autoGlossary' | 'reflectPass' | 'condenseSuggest' | 'dialect' | 'translationInstructions'>,
 ) => {
   if (['idle', 'editing', 'done'].includes(dubSession.state.phase) && !dubSession.state.recovery)
     patch(value);
@@ -953,6 +955,7 @@ export async function uploadDub(file: File) {
     reflectPass: current.reflectPass,
     condenseSuggest: current.condenseSuggest,
     dialect: current.dialect,
+    translationInstructions: current.translationInstructions,
     timingStrategy: current.timingStrategy,
     voiceMatch: current.voiceMatch,
     sourceLanguage: current.sourceLanguage,
@@ -1007,6 +1010,7 @@ export async function ingestDubUrl(value: string, cookieFile?: File, fetchSubs =
     reflectPass: current.reflectPass,
     condenseSuggest: current.condenseSuggest,
     dialect: current.dialect,
+    translationInstructions: current.translationInstructions,
     timingStrategy: current.timingStrategy,
     voiceMatch: current.voiceMatch,
     sourceLanguage: current.sourceLanguage,
@@ -1086,6 +1090,7 @@ export async function translateDubWithAgent(
           sourceLanguage: snapshot.sourceLang || snapshot.sourceLanguage || undefined,
           targetLanguage: targetLabel,
           dialect: snapshot.dialect,
+          translationInstructions: snapshot.translationInstructions,
           glossary,
           segments: snapshot.segments.map((segment) => ({
             id: segment.id,
@@ -1181,6 +1186,7 @@ export async function translateDub(
           target_lang: target,
           provider,
           quality: snapshot.quality,
+          translation_instructions: snapshot.translationInstructions,
           auto_glossary: snapshot.autoGlossary ?? true,
           reflect: snapshot.reflectPass ?? true,
           condense: snapshot.condenseSuggest ?? false,
@@ -1416,6 +1422,7 @@ export async function generateDub(
                 sourceLanguage: current.sourceLang || current.sourceLanguage || undefined,
                 targetLanguage: language,
                 dialect: current.dialect,
+                translationInstructions: current.translationInstructions,
                 segments: misses.map((segment) => ({
                   id: segment.id,
                   sourceText: segment.source_text || segment.text,
@@ -1439,7 +1446,7 @@ export async function generateDub(
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               signal,
-              body: JSON.stringify({ target_lang: languageCode, segments: misses }),
+              body: JSON.stringify({ target_lang: languageCode, segments: misses, translation_instructions: current.translationInstructions }),
             });
         if (fitted.segments.some((row) => AGENT_FIT_BLOCKING_ERRORS.has(row.error || '')))
           throw new Error(DUB_AGENT_UNAVAILABLE);
@@ -1710,6 +1717,7 @@ export function discardDubRecovery(): void {
     reflectPass: current.reflectPass,
     condenseSuggest: current.condenseSuggest,
     dialect: current.dialect,
+    translationInstructions: current.translationInstructions,
     timingStrategy: current.timingStrategy,
     voiceMatch: current.voiceMatch,
     sourceLanguage: current.sourceLanguage,

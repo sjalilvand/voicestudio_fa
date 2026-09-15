@@ -2837,5 +2837,9 @@
     "missingSpeech": "Konuşma eksik veya okunamıyor. Dışa aktarmadan önce ilgili bölümü yeniden oluşturun.",
     "timingOverflow": "Konuşma ayrılan süreyi aşıyor. Çeviriyi kısaltın veya kesin zaman aralığını ya da videoyu uzatmayı seçin.",
     "backgroundUnavailable": "Özgün ses korunamadı. Arka plan ayrımını ve diyalog zamanlarını kontrol edip yeniden deneyin veya yalnızca konuşmayı dışa aktarmayı seçin."
+  },
+  "dubStyle": {
+    "label": "Çeviri üslubu talimatları",
+    "help": "Tonu, hedef kitleyi ve uyarlamayı açıklayın; örneğin şakaları koruyun ve deyimleri doğal biçimde aktarın. Projeye kaydedilir, çeviri ve süre düzenlemelerinde kullanılır. Varsayılan üslup için boş bırakın."
   }
 }

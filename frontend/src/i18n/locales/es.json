@@ -2837,5 +2837,9 @@
     "missingSpeech": "Falta audio de voz o no se puede leer. Regenera el segmento afectado antes de exportar.",
     "timingOverflow": "La voz supera su intervalo de tiempo. Acorta la traducción o elige un intervalo estricto o alargar el vídeo.",
     "backgroundUnavailable": "No se pudo conservar el sonido original. Revisa la separación del fondo y los tiempos del diálogo e inténtalo de nuevo, o exporta solo la voz explícitamente."
+  },
+  "dubStyle": {
+    "label": "Instrucciones de estilo de traducción",
+    "help": "Describe el tono, el público y la adaptación, por ejemplo conservar los chistes y adaptar los modismos con naturalidad. Se guarda en el proyecto y se aplica a la traducción y los ajustes de duración. Déjalo vacío para el estilo predeterminado."
   }
 }

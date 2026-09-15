@@ -240,3 +240,18 @@ speech-only export remains available. The preserved bed is cached locally and re
 when source files, dialogue intervals or the language's retiming plan change.
 Separation can still affect sounds overlapping dialogue; exact isolation from a
 single mixed recording is not guaranteed. Correct dialogue boundaries matter.
+
+### Custom translation style
+
+Select **Translate with agent**, then fill in **Translation style prompt** beside
+the translator controls. Describe tone, audience, formality, humor, idiom handling
+and how freely the dialogue should be adapted. For example: “Conversational Bengali
+for a young adult audience. Preserve jokes, adapt idioms naturally, keep names and
+numbers unchanged, and avoid stiff literal phrasing.”
+
+The optional brief is saved with the project and restored after reopening. It applies
+to every selected target language and subsequent agent timing rewrites, using either
+a local CLI agent or the configured LLM. Meaning, timing, glossary and structured
+output requirements remain in effect. Clear the field to restore the default style;
+changing the brief does not retranslate existing segments until you run translation.
+The field accepts up to 5,000 characters and is locked while work is running.

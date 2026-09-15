@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Literal, Optional
 
 from services.audio_dsp import EFFECT_PRESETS
@@ -161,6 +161,7 @@ class TranslateRequest(BaseModel):
     # voseo: "vos sos" instead of "tú eres"). Non-LLM providers (Argos, NLLB,
     # Google) can't honor it; the response then carries dialect_applied=false.
     dialect: Optional[str] = None
+    translation_instructions: Optional[str] = Field(default=None, max_length=5000)
     # Two-stage LLM translation quality (provider="openai" only; MT engines
     # ignore both). None = default ON for the LLM engine.
     #   auto_glossary — one up-front LLM pass over the full transcript extracts
@@ -194,6 +195,7 @@ class AgentFitSegment(BaseModel):
 class AgentFitRequest(BaseModel):
     """Revise only rendered lines that missed their exact timeline slot."""
 
+    translation_instructions: Optional[str] = Field(default=None, max_length=5000)
     segments: List[AgentFitSegment]
     target_lang: str
 

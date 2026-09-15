@@ -169,6 +169,7 @@ export interface DubAgentTranslationRequest {
   sourceLanguage?: string;
   targetLanguage: string;
   dialect?: string;
+  translationInstructions?: string;
   glossary?: Array<{ source: string; target: string; note?: string }>;
   segments: DubAgentTranslationSegment[];
 }

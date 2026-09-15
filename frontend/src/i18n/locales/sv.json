@@ -2837,5 +2837,9 @@
     "missingSpeech": "Tal saknas eller kan inte läsas. Generera det berörda segmentet på nytt före export.",
     "timingOverflow": "Talet överskrider sin tidslucka. Korta översättningen eller välj strikt tidslucka eller sträck ut videon.",
     "backgroundUnavailable": "Originalljudet kunde inte bevaras. Kontrollera bakgrundssepareringen och dialogens tider och försök igen, eller välj att endast exportera tal."
+  },
+  "dubStyle": {
+    "label": "Instruktioner för översättningsstil",
+    "help": "Beskriv ton, målgrupp och anpassning, till exempel bevara skämt och översätta idiom naturligt. Sparas i projektet för översättning och tidsanpassning. Lämna tomt för standardstilen."
   }
 }
