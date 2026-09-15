@@ -835,3 +835,78 @@ class TestTranscribeRoute:
         # At least one segment boundary should land at/near the scene cut.
         near_cut = [s for s in segs if abs(s["end"] - 5.5) < 0.2 or abs(s["start"] - 5.5) < 0.2]
         assert near_cut, f"no segment boundary near scene cut 5.5; got {[(s['start'], s['end']) for s in segs]}"
+
+
+def test_transcribe_stream_pings_while_reference_texts_refine(tmp_path, monkeypatch):
+    """#2108: the work after the last chunk — diarization, clone extraction,
+    one ASR pass per segment to refine its reference text — ran for 19 minutes
+    on an M1 Pro CPU with nothing on the wire. The desktop webview severed the
+    idle stream, the UI reported a drop (blaming a reverse proxy), and the
+    backend went on to finish the job unseen. Every long await in that stretch
+    must keep `ping`ing, at the interval POST_ASR_PING_S."""
+    import asyncio
+    import time
+    from api.routers import dub_core as dc
+    from services import speaker_clone as sc
+
+    job_id = "t_refine_ping"
+    audio = tmp_path / "a.wav"
+    _make_wav(audio, seconds=1.0)
+    dc._dub_jobs[job_id] = {
+        "audio_path": str(audio), "vocals_path": None, "scene_cuts": [],
+    }
+
+    fake_model = MagicMock()
+    fake_model._asr_pipe = MagicMock()
+
+    async def _ok_model():
+        return fake_model
+
+    class _FakeASR:
+        id = "fake"
+        def ensure_loaded(self):
+            pass
+        def transcribe(self, *a, **k):
+            return {"chunks": [{"text": "hi", "timestamp": (0.0, 0.5)}],
+                    "segments": [], "language": "en"}
+        def unload(self):
+            pass
+
+    monkeypatch.setattr(dc, "get_model", _ok_model)
+    monkeypatch.setattr(
+        "services.asr_backend.get_active_asr_backend",
+        lambda *a, **k: _FakeASR(),
+    )
+    monkeypatch.setattr(dc, "offload_tts_for_asr", lambda *a, **k: None)
+    # raising=False: without the fix the constant does not exist, and the test
+    # must then fail on the assertion below, not on this line.
+    monkeypatch.setattr(dc, "POST_ASR_PING_S", 0.02, raising=False)
+    monkeypatch.setattr(
+        sc, "extract_segment_refs",
+        lambda *a, **k: {"0": {"ref_audio_path": "ref.wav", "ref_text": "hi"}},
+    )
+
+    def _slow_refine(refs, _backend):
+        time.sleep(0.3)  # many pings' worth, on the executor thread like the real one
+        return refs
+
+    monkeypatch.setattr(sc, "refine_ref_texts", _slow_refine)
+
+    async def _collect():
+        resp = await dc.dub_transcribe_stream(job_id)
+        parts = []
+        async for chunk in resp.body_iterator:
+            parts.append(chunk.decode() if isinstance(chunk, (bytes, bytearray)) else str(chunk))
+        return "".join(parts)
+
+    try:
+        body = asyncio.run(_collect())
+    finally:
+        dc._dub_jobs.pop(job_id, None)
+
+    last_segments = body.rfind("event: segments")
+    final = body.rfind("event: final")
+    assert final > last_segments >= 0, body
+    quiet_stretch = body[last_segments:final]
+    assert "event: ping" in quiet_stretch, quiet_stretch
+    assert body.rfind("event: done") > final, body
