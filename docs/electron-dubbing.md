@@ -272,3 +272,19 @@ arrives. No fabricated percentage is shown. Errors remain visible, with Retry fo
 failed translation work in the same project. API retries use failed segments when
 available; an incomplete CLI response requires retrying that language. Cancel stops
 the active translation and prevents late results from applying.
+
+### Long timelines and duplicate ASR context
+
+The timeline draws segments at their actual duration. Use Zoom in/out and Fit all
+above it to inspect short lines in long recordings; the zoomed view scrolls
+horizontally. Tiny overview bars cannot be accidentally dragged or resized. Click
+an overlap warning to zoom to the first affected segment. Nested overlaps are
+included in detection; simultaneous speakers are not automatically shifted apart.
+
+After transcription, repeated chunk context is removed only when at least three
+matching words form a substantial prefix at matching timestamps for the same
+speaker. New words beyond that context remain. Stale segment boundaries are aligned
+to their own word timestamps only when those prove that the speech is disjoint.
+Existing translations/renders do not become correct merely by editing source text:
+changed lines must be translated and regenerated. Preserve the prior project when
+repairing an older transcript.
