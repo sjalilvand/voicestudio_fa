@@ -2841,5 +2841,12 @@
   "dubStyle": {
     "label": "Çeviri üslubu talimatları",
     "help": "Tonu, hedef kitleyi ve uyarlamayı açıklayın; örneğin şakaları koruyun ve deyimleri doğal biçimde aktarın. Projeye kaydedilir, çeviri ve süre düzenlemelerinde kullanılır. Varsayılan üslup için boş bırakın."
+  },
+  "dubActivity": {
+    "output": "Çeviriler",
+    "waiting": "Henüz çıktı alınmadı.",
+    "progress": "{{done}} / {{total}} bölüm doğrulandı",
+    "cancelled": "İptal edildi",
+    "fitting": "Zamanlama ayarlanıyor"
   }
 }

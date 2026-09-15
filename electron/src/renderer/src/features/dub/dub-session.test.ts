@@ -1,3 +1,4 @@
+import { translationActivity } from './translation-activity';
 import { ingestDubUrl, isDubUrl } from './dub-session';
 import { expect, it, vi } from 'vitest';
 import { apiJson } from '@/lib/api/client';
@@ -32,17 +33,25 @@ vi.mock('@/lib/api/event-stream', async (load) => ({
 }));
 
 it('translates the current dubbing segments with an installed local CLI agent', async () => {
-  const translate = vi.fn().mockResolvedValue({
+  let logListener: ((event: { requestId: string; text: string }) => void) | undefined;
+  const unsubscribe = vi.fn();
+
+  const translate = vi.fn().mockImplementation(async (request) => {
+    logListener?.({ requestId: 'another-request', text: 'must not appear' });
+    logListener?.({ requestId: request.requestId, text: 'Translating two segments' });
+    return {
     agent: 'codex',
     translations: [
       { id: 'a', text: 'Hola' },
       { id: 'b', text: 'Adiós' },
     ],
-  });
+  }; });
   Object.defineProperty(window, 'voicestudio', {
     configurable: true,
     value: {
-      repair: { translate, stopTranslation: vi.fn().mockResolvedValue(undefined) },
+      repair: { translate, stopTranslation: vi.fn().mockResolvedValue(undefined),
+        onTranslationEvent: (callback: typeof logListener) => { logListener = callback; return unsubscribe; },
+      },
     } as unknown as Window['voicestudio'],
   });
   vi.mocked(apiJson).mockReset();
@@ -64,6 +73,10 @@ it('translates the current dubbing segments with an installed local CLI agent', 
   }));
 
   await expect(translateDubWithAgent('es', 'codex')).resolves.toBe(true);
+  expect(unsubscribe).toHaveBeenCalledOnce();
+  expect(translationActivity.state.runs.at(-1)).toMatchObject({
+    status: 'complete', logs: 'Translating two segments',
+  });
 
   expect(translate).toHaveBeenCalledWith(
     expect.objectContaining({

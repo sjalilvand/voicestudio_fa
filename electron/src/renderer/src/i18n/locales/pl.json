@@ -2583,5 +2583,12 @@
   "dubStyle": {
     "label": "Instrukcje stylu tłumaczenia",
     "help": "Opisz ton, odbiorców i sposób adaptacji, np. zachowanie żartów i naturalne tłumaczenie idiomów. Zapisywane w projekcie i stosowane przy tłumaczeniu oraz dopasowaniu czasu. Pozostaw puste dla stylu domyślnego."
+  },
+  "dubActivity": {
+    "output": "Tłumaczenia",
+    "waiting": "Nie otrzymano jeszcze żadnych wyników.",
+    "progress": "Zweryfikowano {{done}} / {{total}} segmentów",
+    "cancelled": "Anulowano",
+    "fitting": "Dostosowywanie czasu"
   }
 }

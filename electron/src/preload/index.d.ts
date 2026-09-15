@@ -164,6 +164,7 @@ export interface DubAgentTranslationSegment {
   measuredSeconds?: number;
 }
 export interface DubAgentTranslationRequest {
+  requestId?: string;
   agent: RepairAgentId;
   purpose: 'translate' | 'fit';
   sourceLanguage?: string;
@@ -279,6 +280,7 @@ export interface VoiceStudioBridge {
     stop(): Promise<RepairAgentState>;
     translate(request: DubAgentTranslationRequest): Promise<DubAgentTranslationResult>;
     stopTranslation(): Promise<void>;
+    onTranslationEvent(callback: (event: { requestId: string; text: string }) => void): () => void;
     onEvent(callback: (event: RepairAgentEvent) => void): () => void;
   };
   permissions: {

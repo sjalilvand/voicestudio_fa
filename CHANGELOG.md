@@ -27,6 +27,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Dubbing translation shares the agent footer with live logs, validated output, cancellation and contextual retries (#2129)
+
 - Agent dubbing translation saves a custom tone and adaptation prompt and preserves it during timing rewrites (#2129)
 
 - Dubbing preserves original sound outside dialogue and mixes separated background only beneath replacement speech (#2129)

@@ -2579,5 +2579,12 @@
   "dubStyle": {
     "label": "Instruksi gaya terjemahan",
     "help": "Jelaskan nada, audiens, dan gaya adaptasi, misalnya pertahankan lelucon dan sesuaikan idiom secara alami. Disimpan dalam proyek untuk terjemahan dan penyesuaian durasi. Kosongkan untuk gaya bawaan."
+  },
+  "dubActivity": {
+    "output": "Terjemahan",
+    "waiting": "Belum ada keluaran yang diterima.",
+    "progress": "{{done}} / {{total}} segmen divalidasi",
+    "cancelled": "Dibatalkan",
+    "fitting": "Menyesuaikan waktu"
   }
 }

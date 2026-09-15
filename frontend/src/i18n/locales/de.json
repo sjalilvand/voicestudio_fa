@@ -2841,5 +2841,12 @@
   "dubStyle": {
     "label": "Vorgabe für den Übersetzungsstil",
     "help": "Beschreibe Ton, Zielgruppe und Anpassung, etwa Witze erhalten und Redewendungen natürlich übertragen. Wird im Projekt gespeichert und für Übersetzung und Zeitanpassung verwendet. Leer lassen für den Standardstil."
+  },
+  "dubActivity": {
+    "output": "Übersetzungen",
+    "waiting": "Noch keine Ausgabe empfangen.",
+    "progress": "{{done}} / {{total}} Segmente geprüft",
+    "cancelled": "Abgebrochen",
+    "fitting": "Timing anpassen"
   }
 }

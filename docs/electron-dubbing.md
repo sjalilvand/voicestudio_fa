@@ -255,3 +255,20 @@ a local CLI agent or the configured LLM. Meaning, timing, glossary and structure
 output requirements remain in effect. Clear the field to restore the default style;
 changing the brief does not retranslate existing segments until you run translation.
 The field accepts up to 5,000 characters and is locked while work is running.
+
+### Translation activity footer
+
+Translation and timing rewrites use the same footer area as Repair Agent. It opens
+with live CLI stdout/stderr in **Logs**; **Translations** shows original text beside
+validated translated output. Collapse **Details** to keep the status, language,
+elapsed time and Cancel action visible. Output from each language stays available
+until dismissed, the app reloads, or translation starts in another project. Logs are bounded to the
+latest 250,000 characters per run and are not saved into project files.
+
+The counter tracks validated returned segments, not estimated progress. A CLI may
+stream logs while withholding its translation JSON until completion; API-backed
+translation currently returns one response, so its count updates when that response
+arrives. No fabricated percentage is shown. Errors remain visible, with Retry for
+failed translation work in the same project. API retries use failed segments when
+available; an incomplete CLI response requires retrying that language. Cancel stops
+the active translation and prevents late results from applying.

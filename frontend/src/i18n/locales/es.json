@@ -2841,5 +2841,12 @@
   "dubStyle": {
     "label": "Instrucciones de estilo de traducción",
     "help": "Describe el tono, el público y la adaptación, por ejemplo conservar los chistes y adaptar los modismos con naturalidad. Se guarda en el proyecto y se aplica a la traducción y los ajustes de duración. Déjalo vacío para el estilo predeterminado."
+  },
+  "dubActivity": {
+    "output": "Traducciones",
+    "waiting": "Aún no se ha recibido ninguna salida.",
+    "progress": "{{done}} / {{total}} segmentos validados",
+    "cancelled": "Cancelado",
+    "fitting": "Ajustando tiempos"
   }
 }

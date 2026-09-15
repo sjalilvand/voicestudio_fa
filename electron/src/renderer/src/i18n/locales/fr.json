@@ -2581,5 +2581,12 @@
   "dubStyle": {
     "label": "Consignes de style de traduction",
     "help": "Décrivez le ton, le public et l’adaptation, par exemple préserver les blagues et adapter naturellement les expressions. Enregistré dans le projet et utilisé pour la traduction et les ajustements de durée. Laissez vide pour le style par défaut."
+  },
+  "dubActivity": {
+    "output": "Traductions",
+    "waiting": "Aucune sortie reçue pour le moment.",
+    "progress": "{{done}} / {{total}} segments validés",
+    "cancelled": "Annulé",
+    "fitting": "Ajustement du minutage"
   }
 }

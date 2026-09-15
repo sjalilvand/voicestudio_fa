@@ -2581,5 +2581,12 @@
   "dubStyle": {
     "label": "Instruções de estilo de tradução",
     "help": "Descreva o tom, o público e a adaptação, como preservar piadas e adaptar expressões naturalmente. Salvas no projeto para tradução e ajustes de duração. Deixe em branco para usar o estilo padrão."
+  },
+  "dubActivity": {
+    "output": "Traduções",
+    "waiting": "Nenhum resultado recebido ainda.",
+    "progress": "{{done}} / {{total}} segmentos validados",
+    "cancelled": "Cancelado",
+    "fitting": "Ajustando o tempo"
   }
 }

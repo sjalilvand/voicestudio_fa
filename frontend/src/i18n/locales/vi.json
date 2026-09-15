@@ -2841,5 +2841,12 @@
   "dubStyle": {
     "label": "Hướng dẫn phong cách dịch",
     "help": "Mô tả giọng điệu, đối tượng và cách chuyển thể, ví dụ giữ câu đùa và dịch thành ngữ tự nhiên. Được lưu trong dự án, dùng cho dịch và chỉnh thời lượng. Để trống để dùng phong cách mặc định."
+  },
+  "dubActivity": {
+    "output": "Bản dịch",
+    "waiting": "Chưa nhận được đầu ra.",
+    "progress": "Đã xác thực {{done}} / {{total}} đoạn",
+    "cancelled": "Đã hủy",
+    "fitting": "Đang điều chỉnh thời gian"
   }
 }

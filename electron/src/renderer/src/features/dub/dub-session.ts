@@ -1,3 +1,4 @@
+import { startTranslationRun, appendTranslationLog, updateTranslationRun, finishTranslationRun } from './translation-activity';
 import type { DubExportPreferences } from './dub-export';
 import {
   MAX_COOKIE_EXPORT_BYTES,
@@ -1053,6 +1054,7 @@ export async function ingestDubUrl(value: string, cookieFile?: File, fetchSubs =
 async function runLocalTranslationAgent(
   request: DubAgentTranslationRequest,
   signal: AbortSignal,
+  retry?: () => Promise<unknown>,
 ): Promise<DubAgentTranslationResult> {
   const bridge = window.voicestudio?.repair;
   if (!bridge?.translate) throw new Error('LOCAL_TRANSLATION_AGENT_UNAVAILABLE');
@@ -1061,10 +1063,30 @@ async function runLocalTranslationAgent(
     stop();
     throw new DOMException('Cancelled', 'AbortError');
   }
+  const id = startTranslationRun({
+    jobId: dubSession.state.jobId || '', agent: request.agent,
+    target: request.targetLanguage, purpose: request.purpose, retry,
+    rows: request.segments.map((segment) => ({ id: segment.id, source: segment.sourceText })),
+  });
+  const unsubscribe = bridge.onTranslationEvent?.((event) => {
+    if (event.requestId === id) appendTranslationLog(id, event.text);
+  });
   signal.addEventListener('abort', stop, { once: true });
   try {
-    return await bridge.translate(request);
+    const result = await bridge.translate({ ...request, requestId: id });
+    if (signal.aborted) throw new DOMException('Cancelled', 'AbortError');
+    const texts = new Map(result.translations.map((row) => [row.id, row.text]));
+    updateTranslationRun(id, {
+      rows: request.segments.map((segment) => ({ id: segment.id, source: segment.sourceText, text: texts.get(segment.id) })),
+    });
+    finishTranslationRun(id, 'complete');
+    return result;
+  } catch (error) {
+    finishTranslationRun(id, signal.aborted ? 'cancelled' : 'failed',
+      signal.aborted ? undefined : (error instanceof Error ? error.message : String(error)));
+    throw error;
   } finally {
+    unsubscribe?.();
     signal.removeEventListener('abort', stop);
   }
 }
@@ -1100,6 +1122,7 @@ export async function translateDubWithAgent(
           })),
         },
         signal,
+        () => translateDubWithAgent(target, agent, targetLabel),
       );
       const rows = new Map(translated.translations.map((row) => [row.id, row.text]));
       clearDubEditHistory();
@@ -1155,8 +1178,17 @@ export async function translateDub(
   if (!requestedSegments.length) return false;
   const finishActivity = beginAppActivity('translation');
   let agentFallback = false;
+  let activityId: string | undefined;
+  let activityAborted = false;
   try {
     const completed = await run('translating', async (signal) => {
+      activityId = startTranslationRun({
+        jobId: snapshot.jobId!, agent: provider, target, purpose: 'translate',
+        rows: requestedSegments.map((segment) => ({ id: segment.id, source: segment.text_original || segment.text })),
+        retry: () => translateDub(target, provider, { retryFailed: Boolean(dubSession.state.segments.some((s) => s.translate_errors?.[target])) }),
+      });
+      signal.addEventListener('abort', () => { activityAborted = true; }, { once: true });
+
       const glossary = await apiJson<Array<{ source: string; target: string; note?: string }>>(
         `/glossary/${encodeURIComponent(snapshot.jobId!)}`,
         { signal },
@@ -1211,6 +1243,13 @@ export async function translateDub(
           })),
         }),
       });
+      if (signal.aborted) throw new DOMException('Cancelled', 'AbortError');
+      updateTranslationRun(activityId!, {
+        rows: requestedSegments.map((segment) => {
+          const row = translated.translated.find((r) => String(r.id) === segment.id);
+          return { id: segment.id, source: segment.text_original || segment.text, text: row?.error ? undefined : row?.text, error: row?.error };
+        }),
+      });
       const fallback = translated.cinematic_skipped === 'no-llm-configured';
       agentFallback = fallback && snapshot.quality === 'agent';
       const rows = new Map(translated.translated.map((row) => [String(row.id), row]));
@@ -1254,6 +1293,9 @@ export async function translateDub(
       if (translated.translated.some((row) => row.error))
         throw new Error('Some translation segments failed');
     });
+    if (activityId) finishTranslationRun(activityId,
+      activityAborted ? 'cancelled' : completed && !agentFallback ? 'complete' : 'failed',
+      completed && !agentFallback ? undefined : dubSession.state.error || undefined);
     return completed && !agentFallback;
   } finally {
     finishActivity();

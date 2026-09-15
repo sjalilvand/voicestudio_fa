@@ -3322,5 +3322,12 @@
   "dubStyle": {
     "label": "Translation style prompt",
     "help": "Describe tone, audience and adaptation style—for example: conversational Bengali, preserve jokes, adapt idioms naturally. Saved with this project; used for translation and timing rewrites. Leave blank for the default style."
+  },
+  "dubActivity": {
+    "output": "Translations",
+    "waiting": "No output received yet.",
+    "progress": "{{done}} / {{total}} segments validated",
+    "cancelled": "Cancelled",
+    "fitting": "Adjusting timing"
   }
 }

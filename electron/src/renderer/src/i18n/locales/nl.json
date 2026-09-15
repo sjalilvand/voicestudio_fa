@@ -2579,5 +2579,12 @@
   "dubStyle": {
     "label": "Instructies voor vertaalstijl",
     "help": "Beschrijf toon, doelgroep en aanpassing, zoals grappen behouden en uitdrukkingen natuurlijk vertalen. Opgeslagen in dit project voor vertaling en herschrijven op tijdsduur. Laat leeg voor de standaardstijl."
+  },
+  "dubActivity": {
+    "output": "Vertalingen",
+    "waiting": "Nog geen uitvoer ontvangen.",
+    "progress": "{{done}} / {{total}} segmenten gevalideerd",
+    "cancelled": "Geannuleerd",
+    "fitting": "Timing aanpassen"
   }
 }

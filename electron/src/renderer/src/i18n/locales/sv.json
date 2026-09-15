@@ -2579,5 +2579,12 @@
   "dubStyle": {
     "label": "Instruktioner för översättningsstil",
     "help": "Beskriv ton, målgrupp och anpassning, till exempel bevara skämt och översätta idiom naturligt. Sparas i projektet för översättning och tidsanpassning. Lämna tomt för standardstilen."
+  },
+  "dubActivity": {
+    "output": "Översättningar",
+    "waiting": "Ingen utdata har tagits emot ännu.",
+    "progress": "{{done}} / {{total}} segment validerade",
+    "cancelled": "Avbruten",
+    "fitting": "Justerar tidsplacering"
   }
 }

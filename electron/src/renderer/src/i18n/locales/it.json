@@ -2581,5 +2581,12 @@
   "dubStyle": {
     "label": "Istruzioni sullo stile di traduzione",
     "help": "Descrivi tono, pubblico e adattamento, ad esempio mantenere le battute e adattare gli idiomi in modo naturale. Salvate nel progetto e usate per traduzione e riscritture temporali. Lascia vuoto per lo stile predefinito."
+  },
+  "dubActivity": {
+    "output": "Traduzioni",
+    "waiting": "Nessun risultato ricevuto finora.",
+    "progress": "{{done}} / {{total}} segmenti convalidati",
+    "cancelled": "Annullato",
+    "fitting": "Regolazione dei tempi"
   }
 }
