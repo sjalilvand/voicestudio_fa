@@ -27,6 +27,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Workspace sidebars have a working right-edge resize handle, allow 40% more width, remember their size, and keep video controls inside the preview (#2129)
 - Pressing Play while a video is loading starts playback when it is ready instead of reporting playback unavailable (#2129)
 - Video previews show their thumbnail before playback, including the source video in Dub (#2129)
 - Linux and Windows workspace headers consistently expand and collapse the sidebar, with the app logo at the top of the collapsed rail (#2129)

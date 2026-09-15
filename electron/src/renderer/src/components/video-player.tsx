@@ -70,7 +70,7 @@ export const VideoPlayer = memo(function VideoPlayer({
       onPause={onPause}
       onSeeked={onSeeked}
       onCanPlay={onCanPlay}
-      className="group relative overflow-hidden rounded-xl border border-white/10 bg-black text-white shadow-[0_16px_40px_-24px_rgb(0_0_0/85%)]"
+      className="group @container/player relative w-full min-w-0 overflow-hidden rounded-xl border border-white/10 bg-black text-white shadow-[0_16px_40px_-24px_rgb(0_0_0/85%)]"
     >
       <MediaProvider
         loaders={videoLoaders}
@@ -143,7 +143,7 @@ function VideoControls({
   }, [player, time]);
   return (
     <div
-      className={`absolute inset-x-2 bottom-2 z-10 space-y-2 rounded-xl border border-white/10 bg-black/55 px-2.5 pt-8 pb-2 text-white shadow-[0_12px_32px_rgb(0_0_0/38%)] backdrop-blur-xl transition-[opacity,transform] duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 ${paused || waiting ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0'}`}
+      className={`absolute inset-x-2 bottom-2 z-10 space-y-2 rounded-xl border border-white/10 bg-black/55 px-2.5 py-2 text-white shadow-[0_12px_32px_rgb(0_0_0/38%)] backdrop-blur-xl transition-[opacity,transform] duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 ${paused || waiting ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0'}`}
     >
       {(error || failed) && (
         <p role="alert" className="text-xs text-destructive">
@@ -167,7 +167,7 @@ function VideoControls({
           if (player.current) player.current.currentTime = Number(event.currentTarget.value);
         }}
       />
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1 @min-[420px]/player:gap-2">
         <Button
           size="icon-sm"
           variant="ghost"
@@ -236,7 +236,7 @@ function VideoControls({
           max={1}
           step="0.05"
           value={muted ? 0 : volume}
-          className="hidden h-1 w-14 shrink-0 cursor-pointer appearance-none rounded-full bg-white/25 accent-primary [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white sm:block"
+          className="hidden h-1 w-14 shrink-0 cursor-pointer appearance-none rounded-full bg-white/25 accent-primary [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white @min-[420px]/player:block"
           onInput={(event) => {
             if (player.current) {
               player.current.muted = false;
