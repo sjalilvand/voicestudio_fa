@@ -887,12 +887,22 @@ async def _ping_while(fut):
     Every await in the transcribe stream body that can outlast a few seconds
     goes through here so the connection never goes byte-silent. The result
     (or exception) stays on ``fut`` for the caller to read.
+
+    Leaving early — the client disconnected, or the body raised at a `yield` —
+    cancels ``fut`` exactly as a bare ``await fut`` would have, so a wrapped
+    run_transcribe_guarded still runs its abandon path instead of refining on
+    while the stream's finalizer unloads the ASR model under it (greptile P1,
+    #2138). Nothing is awaited in the finally: it also runs under GeneratorExit.
     """
-    while True:
-        done, _ = await asyncio.wait({fut}, timeout=POST_ASR_PING_S)
-        if done:
-            return
-        yield _sse_event("ping", {})
+    try:
+        while True:
+            done, _ = await asyncio.wait({fut}, timeout=POST_ASR_PING_S)
+            if done:
+                return
+            yield _sse_event("ping", {})
+    finally:
+        if not fut.done():
+            fut.cancel()
 _prep_event_helper = dub_pipeline.prep_event  # alias; we keep the module-local _prep_event below for the inline one-liner shape
 
 #: User-facing warning emitted when auto voice cloning is skipped because the

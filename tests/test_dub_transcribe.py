@@ -910,3 +910,41 @@ def test_transcribe_stream_pings_while_reference_texts_refine(tmp_path, monkeypa
     quiet_stretch = body[last_segments:final]
     assert "event: ping" in quiet_stretch, quiet_stretch
     assert body.rfind("event: done") > final, body
+
+
+def test_ping_while_cancels_the_work_when_the_stream_closes_early(monkeypatch):
+    """greptile P1 on #2138: `_ping_while` wraps the work in its own task, so a
+    client disconnect used to cancel only the ping loop — the refine kept
+    running (and run_transcribe_guarded never ran its abandon path) while the
+    stream's finalizer unloaded the ASR model under it. Leaving the helper
+    early must cancel the work, exactly as the bare `await` it replaced did."""
+    import asyncio
+    from api.routers import dub_core as dc
+
+    monkeypatch.setattr(dc, "POST_ASR_PING_S", 0.01)
+
+    async def _scenario():
+        saw_cancel = asyncio.Event()
+
+        async def _work():
+            try:
+                await asyncio.sleep(30)
+            except asyncio.CancelledError:
+                saw_cancel.set()
+                raise
+
+        task = asyncio.ensure_future(_work())
+        pings = dc._ping_while(task)
+        assert (await pings.__anext__()).startswith(b"event: ping")
+        await pings.aclose()  # the client went away mid-refine
+        await asyncio.sleep(0)  # let the cancellation land in the task
+        assert saw_cancel.is_set()
+        assert task.cancelled()
+
+        # The normal path is untouched: finished work is left alone, result intact.
+        done = asyncio.get_running_loop().create_future()
+        done.set_result("refined")
+        assert [p async for p in dc._ping_while(done)] == []
+        assert done.result() == "refined"
+
+    asyncio.run(_scenario())
