@@ -2832,5 +2832,9 @@
   "player": {
     "pause": "Pausa",
     "play": "Spela upp"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Tal saknas eller kan inte läsas. Generera det berörda segmentet på nytt före export.",
+    "timingOverflow": "Talet överskrider sin tidslucka. Korta översättningen eller välj strikt tidslucka eller sträck ut videon."
   }
 }

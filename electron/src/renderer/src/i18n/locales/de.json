@@ -2570,5 +2570,9 @@
     "captured": "{{count}} problematische Protokollzeilen erfasst",
     "contextNotice": "Der ausgewählte Agent erhält diesen Bericht, die aktuelle Ansicht, aktuelle App- und Backend-Protokolle sowie Systemdiagnosen.",
     "complete": "Abgeschlossen"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Sprache fehlt oder ist nicht lesbar. Erzeuge das betroffene Segment vor dem Export erneut.",
+    "timingOverflow": "Die Sprache überschreitet ihr Zeitfenster. Kürze die Übersetzung oder wähle ein festes Zeitfenster oder die Videostreckung."
   }
 }

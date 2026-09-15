@@ -2570,5 +2570,9 @@
     "captured": "已擷取 {{count}} 行問題日誌",
     "contextNotice": "所選代理將收到此報告、目前畫面、最近的應用程式與後端記錄以及系統診斷資訊。",
     "complete": "已完成"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "語音缺失或無法讀取。請在匯出前重新產生受影響的片段。",
+    "timingOverflow": "語音超出分配的時長。請縮短譯文，或選擇嚴格時間區段或延展影片。"
   }
 }

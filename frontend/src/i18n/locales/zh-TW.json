@@ -2832,5 +2832,9 @@
   "player": {
     "pause": "暫停",
     "play": "播放"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "語音缺失或無法讀取。請在匯出前重新產生受影響的片段。",
+    "timingOverflow": "語音超出分配的時長。請縮短譯文，或選擇嚴格時間區段或延展影片。"
   }
 }

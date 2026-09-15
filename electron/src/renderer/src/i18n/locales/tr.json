@@ -2570,5 +2570,9 @@
     "captured": "{{count}} sorunlu günlük satırı yakalandı",
     "contextNotice": "Seçilen aracı bu raporu, mevcut ekranı, son uygulama ve arka uç günlüklerini ve sistem tanılamasını alır.",
     "complete": "Tamamlandı"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Konuşma eksik veya okunamıyor. Dışa aktarmadan önce ilgili bölümü yeniden oluşturun.",
+    "timingOverflow": "Konuşma ayrılan süreyi aşıyor. Çeviriyi kısaltın veya kesin zaman aralığını ya da videoyu uzatmayı seçin."
   }
 }

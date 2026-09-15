@@ -2832,5 +2832,9 @@
   "player": {
     "pause": "Jeda",
     "play": "Putar"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Audio ucapan hilang atau tidak dapat dibaca. Buat ulang segmen terkait sebelum mengekspor.",
+    "timingOverflow": "Ucapan melebihi jatah waktunya. Persingkat terjemahan atau pilih slot ketat atau rentangkan video."
   }
 }

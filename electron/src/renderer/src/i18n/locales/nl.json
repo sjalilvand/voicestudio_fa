@@ -2570,5 +2570,9 @@
     "captured": "{{count}} problematische logregels vastgelegd",
     "contextNotice": "De geselecteerde agent ontvangt dit rapport, het huidige scherm, recente app- en backendlogboeken en systeemdiagnostiek.",
     "complete": "Voltooid"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Spraak ontbreekt of is onleesbaar. Genereer het betreffende segment opnieuw voordat je exporteert.",
+    "timingOverflow": "De spraak overschrijdt het tijdvak. Verkort de vertaling of kies een strikt tijdvak of het uitrekken van de video."
   }
 }

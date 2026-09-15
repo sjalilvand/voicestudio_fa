@@ -2832,5 +2832,9 @@
   "player": {
     "pause": "Mettre en pause",
     "play": "Lire"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "La parole est absente ou illisible. Régénérez le segment concerné avant l’exportation.",
+    "timingOverflow": "La parole dépasse son créneau. Raccourcissez la traduction ou choisissez un créneau strict ou l’étirement vidéo."
   }
 }

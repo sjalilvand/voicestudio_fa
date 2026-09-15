@@ -2832,5 +2832,9 @@
   "player": {
     "pause": "Tạm dừng",
     "play": "Phát"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Lời nói bị thiếu hoặc không đọc được. Hãy tạo lại đoạn bị ảnh hưởng trước khi xuất.",
+    "timingOverflow": "Lời nói vượt quá thời gian được phân bổ. Hãy rút ngắn bản dịch hoặc chọn khung thời gian nghiêm ngặt hay kéo dài video."
   }
 }

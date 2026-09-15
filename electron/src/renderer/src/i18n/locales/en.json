@@ -2570,5 +2570,9 @@
     "captured": "Captured {{count}} problem log lines",
     "contextNotice": "The selected agent receives this report, the current screen, recent app and backend logs, and system diagnostics.",
     "complete": "Complete"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Speech is missing or unreadable. Regenerate the affected segment before exporting.",
+    "timingOverflow": "Speech exceeds its time slot. Shorten the translation or choose Strict Slot or Stretch Video."
   }
 }

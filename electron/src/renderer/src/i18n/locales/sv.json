@@ -2570,5 +2570,9 @@
     "captured": "{{count}} problemrader i loggen samlades in",
     "contextNotice": "Den valda agenten får den här rapporten, den aktuella vyn, aktuella app- och backendloggar samt systemdiagnostik.",
     "complete": "Klart"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Tal saknas eller kan inte läsas. Generera det berörda segmentet på nytt före export.",
+    "timingOverflow": "Talet överskrider sin tidslucka. Korta översättningen eller välj strikt tidslucka eller sträck ut videon."
   }
 }

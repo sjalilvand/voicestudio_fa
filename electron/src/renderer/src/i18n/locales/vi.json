@@ -2570,5 +2570,9 @@
     "captured": "Đã thu thập {{count}} dòng nhật ký có vấn đề",
     "contextNotice": "Tác nhân đã chọn nhận báo cáo này, màn hình hiện tại, nhật ký ứng dụng và backend gần đây cùng thông tin chẩn đoán hệ thống.",
     "complete": "Hoàn thành"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Lời nói bị thiếu hoặc không đọc được. Hãy tạo lại đoạn bị ảnh hưởng trước khi xuất.",
+    "timingOverflow": "Lời nói vượt quá thời gian được phân bổ. Hãy rút ngắn bản dịch hoặc chọn khung thời gian nghiêm ngặt hay kéo dài video."
   }
 }

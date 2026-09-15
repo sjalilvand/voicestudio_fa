@@ -2832,5 +2832,9 @@
   "player": {
     "pause": "Wstrzymaj",
     "play": "Odtwórz"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Brak mowy lub nie można jej odczytać. Przed eksportem wygeneruj ponownie dany segment.",
+    "timingOverflow": "Mowa przekracza przydzielony czas. Skróć tłumaczenie albo wybierz ścisły przedział czasu lub wydłużenie filmu."
   }
 }

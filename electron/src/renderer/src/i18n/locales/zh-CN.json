@@ -2574,5 +2574,9 @@
     "captured": "已捕获 {{count}} 行问题日志",
     "contextNotice": "所选代理将收到此报告、当前界面、最近的应用与后端日志以及系统诊断信息。",
     "complete": "已完成"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "语音缺失或无法读取。请在导出前重新生成受影响的片段。",
+    "timingOverflow": "语音超出分配的时长。请缩短译文，或选择严格时间段或拉伸视频。"
   }
 }

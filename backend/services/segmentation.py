@@ -491,6 +491,35 @@ def _apply_scene_cuts(segments: List[Segment], scene_cuts: Iterable[float]) -> L
             dur_total = remaining.duration
             if dur_total <= 0:
                 break
+            words = remaining.extra.get("words")
+            if isinstance(words, list) and words:
+                # A camera cut is not a word boundary. Character-proportional
+                # splitting assigned words seconds away from their real speech.
+                candidates = [
+                    i for i in range(1, len(words))
+                    if float(words[i - 1]["end"]) <= float(words[i]["start"])
+                    and abs(float(words[i]["start"]) - cut) <= 0.25
+                ]
+                if not candidates:
+                    continue
+                split = min(candidates, key=lambda i: abs(float(words[i]["start"]) - cut))
+                left, right = words[:split], words[split:]
+                left_text = _clean(" ".join(str(w.get("text", w.get("word", ""))) for w in left))
+                right_text = _clean(" ".join(str(w.get("text", w.get("word", ""))) for w in right))
+                left_end, right_start = float(left[-1]["end"]), float(right[0]["start"])
+                if (len(left_text) < MIN_CHARS or len(right_text) < MIN_CHARS
+                        or left_end - remaining.start < MIN_DUR
+                        or remaining.end - right_start < MIN_DUR):
+                    continue
+                out.append(Segment(
+                    start=remaining.start, end=left_end, text=left_text,
+                    speaker_id=remaining.speaker_id, extra={**remaining.extra, "words": left},
+                ))
+                remaining = Segment(
+                    start=right_start, end=remaining.end, text=right_text,
+                    speaker_id=remaining.speaker_id, extra={**remaining.extra, "words": right},
+                )
+                continue
             ratio = (cut - remaining.start) / dur_total
             tentative_split = int(len(remaining.text) * ratio)
             pos = _best_boundary(remaining.text, tentative_split)

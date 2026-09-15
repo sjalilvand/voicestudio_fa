@@ -3313,5 +3313,9 @@
     "transcript": "What it heard",
     "result_kicker": "Converted take",
     "need_source_and_voice": "Add a source clip and pick a target voice first."
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Speech is missing or unreadable. Regenerate the affected segment before exporting.",
+    "timingOverflow": "Speech exceeds its time slot. Shorten the translation or choose Strict Slot or Stretch Video."
   }
 }

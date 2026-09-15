@@ -2832,5 +2832,9 @@
   "player": {
     "pause": "Duraklat",
     "play": "Oynat"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Konuşma eksik veya okunamıyor. Dışa aktarmadan önce ilgili bölümü yeniden oluşturun.",
+    "timingOverflow": "Konuşma ayrılan süreyi aşıyor. Çeviriyi kısaltın veya kesin zaman aralığını ya da videoyu uzatmayı seçin."
   }
 }

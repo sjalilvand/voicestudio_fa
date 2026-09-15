@@ -199,3 +199,27 @@ Below 40rem of workspace width, Dubbing stacks its controls above the editor wit
 Global speed/quality changes preserve explicit Dubbing production steps, including settings restored from projects. Unset steps continue to follow the backend's current preset.
 
 NLLB resolves explicit FLORES language/script codes, unambiguous ISO-639-3 codes and common short aliases, including Traditional Chinese. Unsupported or script-ambiguous source, target or per-segment languages are rejected before model loading instead of silently translating to English.
+
+### Speech integrity and timing
+
+A failed, empty or unreadable speech segment stops generation before a new track
+replaces the previous output. Partial regeneration repairs missing or corrupt
+segment caches, including missing clips outside the requested changed-line list;
+it does not substitute silence and report completion. Auto speaker references
+exclude oversized clips when selecting a shared fallback, so short lines reuse a
+usable reference from their own speaker.
+
+New segment caches retain the full generated speech in every timing mode. Strict
+Slot removes edge silence and fits the complete clip to its original start/end
+with pitch-preserving speed adjustment. Very long or short translations can still
+sound unnaturally fast or slow; shorten or expand the translation for natural
+pacing. Legacy clipped caches require regeneration once, because fitting cannot
+recover discarded words. Explicit legacy Trim and Off options retain their
+respective clipping and overlap behavior.
+
+Concise and Smart Fit stop on unresolved overflow rather than publishing cut-off
+words. Shorten the translation, choose Strict Slot, or allow Stretch Video before
+retrying. Camera-cut segmentation uses nearby timed word boundaries when available
+and skips cuts inside speech that cannot be assigned safely. This improves phrase
+timing; it does not promise phoneme-level lip sync or correct inaccurate source
+transcripts automatically.
