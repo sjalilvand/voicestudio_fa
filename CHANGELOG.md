@@ -27,6 +27,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Video previews show their thumbnail before playback, including the source video in Dub (#2129)
 - Linux and Windows workspace headers consistently expand and collapse the sidebar, with the app logo at the top of the collapsed rail (#2129)
 - Stopping a process on macOS no longer fails with "Operation not permitted" when it was already exiting (#2032)
 - A YouTube link blocked by its "not a bot" check now says how to attach signed-in cookies in Dub, instead of quoting yt-dlp's command-line flags (#2036, #2034)

@@ -11,7 +11,7 @@ import {
   RotateCwIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { MediaPlayerProps } from '@vidstack/react';
+import { Poster, type MediaPlayerProps } from '@vidstack/react';
 import {
   StudioMediaPlayer,
   MediaProvider,
@@ -75,7 +75,12 @@ export const VideoPlayer = memo(function VideoPlayer({
       <MediaProvider
         loaders={videoLoaders}
         className="relative aspect-video [&_[data-remotion-canvas]]:h-full [&_[data-remotion-canvas]]:w-full [&_[data-remotion-container]]:h-full [&_[data-remotion-container]]:w-full [&_video]:h-full [&_video]:w-full [&_iframe]:h-full [&_iframe]:w-full"
-      />
+      >
+        <Poster
+          alt=""
+          className="absolute inset-0 h-full w-full object-contain opacity-0 data-[visible]:opacity-100 data-[hidden]:hidden"
+        />
+      </MediaProvider>
       <VideoControls player={player} source={source} sourceIdentity={sourceIdentity} />
     </StudioMediaPlayer>
   );

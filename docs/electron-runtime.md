@@ -77,3 +77,7 @@ Branding remains in a fixed native title row while onboarding status loads, inst
 On Windows and Linux, the collapsed workspace sidebar shows the VoiceStudio icon at the top. Use the toggle beside the page title to expand the sidebar. macOS retains its existing sidebar control.
 
 Every main workspace header exposes the same sidebar toggle, including pages that automatically collapse the voice library at narrow widths. The control reflects the visible sidebar state and explicitly expands it for the current workspace.
+
+The shared video player renders Vidstack's poster before playback, including the Dub source thumbnail, and hides it once playback starts.
+
+On Linux Wayland systems where Chromium logs `eglCreateImage failed` / `OzoneImageBacking` and video or window contents flicker, launch Electron with `--disable-gpu-compositing`. For source development, run `ELECTRON_CLI_ARGS='["--disable-gpu-compositing"]' bun run dev` from `electron/`. This opt-in uses software window compositing while leaving backend CUDA inference available; it does not disable acceleration for other installations. It requires a full Electron restart, not a renderer reload. A refused connection to port 3903 instead means the development proxy is stopped; restart the Electron development process to restore it.
