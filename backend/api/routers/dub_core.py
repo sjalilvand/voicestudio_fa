@@ -893,7 +893,11 @@ async def _ping_while(fut):
     run_transcribe_guarded still runs its abandon path instead of refining on
     while the stream's finalizer unloads the ASR model under it (greptile P1,
     #2138). Nothing is awaited in the finally: it also runs under GeneratorExit.
+    A failure that lands after we left is still marked retrieved, so it cannot
+    surface later as "exception was never retrieved" (CodeRabbit, #2138) —
+    the same done-callback the TTS-load keepalive uses.
     """
+    fut.add_done_callback(lambda f: f.cancelled() or f.exception())
     try:
         while True:
             done, _ = await asyncio.wait({fut}, timeout=POST_ASR_PING_S)

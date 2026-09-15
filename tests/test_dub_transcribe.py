@@ -942,9 +942,27 @@ def test_ping_while_cancels_the_work_when_the_stream_closes_early(monkeypatch):
         assert task.cancelled()
 
         # The normal path is untouched: finished work is left alone, result intact.
-        done = asyncio.get_running_loop().create_future()
+        loop = asyncio.get_running_loop()
+        done = loop.create_future()
         done.set_result("refined")
         assert [p async for p in dc._ping_while(done)] == []
         assert done.result() == "refined"
+
+        # A failure that lands after the consumer left must not be reported at
+        # garbage collection as "exception was never retrieved" (CodeRabbit).
+        never_retrieved = []
+        loop.set_exception_handler(
+            lambda _l, ctx: never_retrieved.append(ctx.get("message", ""))
+        )
+        late = loop.create_future()
+        pings = dc._ping_while(late)
+        await pings.__anext__()  # suspended at a ping; nobody will call .result()
+        late.set_exception(RuntimeError("late failure"))
+        await pings.aclose()
+        await asyncio.sleep(0)  # let done-callbacks run
+        del pings, late
+        import gc
+        gc.collect()
+        assert not [m for m in never_retrieved if "never retrieved" in m], never_retrieved
 
     asyncio.run(_scenario())
