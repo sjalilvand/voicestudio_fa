@@ -3,15 +3,23 @@ import { CommandPalette } from '@/components/command-palette';
 import { Outlet, useRouterState } from '@tanstack/react-router';
 import { BackendGate } from '../backend-gate';
 import { RepairAgentDock } from './repair-agent-dock';
+import { isMac } from '../bridge';
+import { cn } from '@/lib/utils';
 
 export function AppShell() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
   const settings = pathname.startsWith('/settings');
+  const macWorkspace = isMac() && !settings;
   const SettingsWorkspace = pathname === '/settings/openapi' ? 'div' : 'main';
   return (
-    <div className="app-surface relative flex h-full flex-col bg-background text-foreground">
+    <div
+      className={cn(
+        'app-surface relative flex h-full flex-col bg-background text-foreground',
+        macWorkspace && 'macos-notification-safe-area',
+      )}
+    >
       <div className="flex min-h-0 flex-1">
         {settings ? (
           <>
