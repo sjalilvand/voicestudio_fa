@@ -1961,6 +1961,7 @@ async def dub_generate(job_id: str, req: DubRequest):
             "language_code": lang_code,
             "duration": round(track_dur, 4),
             "timing_strategy": strategy,
+            "source_segments": [{"start": seg.start, "end": seg.end} for seg in req.segments],
         }
 
         # Persist the timing strategy + (for Mode B) the per-segment stretch

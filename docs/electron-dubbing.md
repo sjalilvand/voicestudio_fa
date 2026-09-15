@@ -223,3 +223,20 @@ retrying. Camera-cut segmentation uses nearby timed word boundaries when availab
 and skips cuts inside speech that cannot be assigned safely. This improves phrase
 timing; it does not promise phoneme-level lip sync or correct inaccurate source
 transcripts automatically.
+
+### Preserve sound outside dialogue
+
+Background-preserving previews and audio/video exports keep the original stereo
+sound outside dialogue intervals, including audience reactions, music and ambience.
+Inside those intervals, they mix dubbed speech over the separated background, with
+10 ms transitions contained within the dialogue boundaries. Each generated language
+stores its source intervals; older tracks use their saved project intervals.
+Retimed modes also retime this background to follow the video. Ordinary Strict Slot
+and Concise modes keep the original background timeline.
+
+Original media and a complete separated background are required. A missing or failed
+background mix stops export rather than silently exporting speech alone. Explicit
+speech-only export remains available. The preserved bed is cached locally and rebuilt
+when source files, dialogue intervals or the language's retiming plan change.
+Separation can still affect sounds overlapping dialogue; exact isolation from a
+single mixed recording is not guaranteed. Correct dialogue boundaries matter.

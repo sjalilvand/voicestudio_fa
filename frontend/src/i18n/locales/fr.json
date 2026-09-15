@@ -2835,6 +2835,7 @@
   },
   "dubIntegrity": {
     "missingSpeech": "La parole est absente ou illisible. Régénérez le segment concerné avant l’exportation.",
-    "timingOverflow": "La parole dépasse son créneau. Raccourcissez la traduction ou choisissez un créneau strict ou l’étirement vidéo."
+    "timingOverflow": "La parole dépasse son créneau. Raccourcissez la traduction ou choisissez un créneau strict ou l’étirement vidéo.",
+    "backgroundUnavailable": "Le son original n’a pas pu être préservé. Vérifiez la séparation du fond et les temps du dialogue, puis réessayez, ou exportez explicitement la voix seule."
   }
 }

@@ -27,6 +27,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Dubbing preserves original sound outside dialogue and mixes separated background only beneath replacement speech (#2129)
+
 - Dubbing repairs missing speech caches, rejects incomplete output, avoids oversized speaker references, and fits full speech without early clipping (#2129)
 - Workspace sidebars have a working right-edge resize handle, allow 40% more width, remember their size, and keep video controls inside the preview (#2129)
 - Pressing Play while a video is loading starts playback when it is ready instead of reporting playback unavailable (#2129)

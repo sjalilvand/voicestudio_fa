@@ -2575,6 +2575,7 @@
   },
   "dubIntegrity": {
     "missingSpeech": "Il parlato manca o non è leggibile. Rigenera il segmento interessato prima di esportare.",
-    "timingOverflow": "Il parlato supera il tempo disponibile. Accorcia la traduzione oppure scegli uno slot rigoroso o estendi il video."
+    "timingOverflow": "Il parlato supera il tempo disponibile. Accorcia la traduzione oppure scegli uno slot rigoroso o estendi il video.",
+    "backgroundUnavailable": "Impossibile preservare il suono originale. Controlla la separazione del sottofondo e i tempi del dialogo, poi riprova, oppure esporta esplicitamente solo la voce."
   }
 }

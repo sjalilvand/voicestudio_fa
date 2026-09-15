@@ -3316,6 +3316,7 @@
   },
   "dubIntegrity": {
     "missingSpeech": "Speech is missing or unreadable. Regenerate the affected segment before exporting.",
-    "timingOverflow": "Speech exceeds its time slot. Shorten the translation or choose Strict Slot or Stretch Video."
+    "timingOverflow": "Speech exceeds its time slot. Shorten the translation or choose Strict Slot or Stretch Video.",
+    "backgroundUnavailable": "Original sound could not be preserved. Check background separation and dialogue timing, then retry, or explicitly export speech only."
   }
 }

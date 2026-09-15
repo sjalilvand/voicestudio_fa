@@ -452,7 +452,7 @@ export function DubPage() {
             const revision = fingerprintRevision(session.fingerprintsByLang?.[track]);
             return {
               track,
-              path: `/dub/preview-video/${job}?lang=${encodeURIComponent(track)}${revision ? `&v=${revision}` : ''}`,
+              path: `/dub/preview-video/${job}?mix=surgical2&lang=${encodeURIComponent(track)}${revision ? `&v=${revision}` : ''}`,
             };
           })
         : [],
@@ -469,7 +469,7 @@ export function DubPage() {
         : apiPath(
             preview === 'original'
               ? `/dub/media/${job}`
-              : `/dub/preview-video/${job}?lang=${encodeURIComponent(preview)}${previewRevision ? `&v=${previewRevision}` : ''}`,
+              : `/dub/preview-video/${job}?mix=surgical2&lang=${encodeURIComponent(preview)}${previewRevision ? `&v=${previewRevision}` : ''}`,
           ),
     [job, preview, previewRevision, session.inputType],
   );
