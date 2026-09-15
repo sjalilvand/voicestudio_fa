@@ -11,7 +11,7 @@ import {
   RotateCwIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Poster, type MediaPlayerProps } from '@vidstack/react';
+import { Poster, useMediaRemote, type MediaPlayerProps } from '@vidstack/react';
 import {
   StudioMediaPlayer,
   MediaProvider,
@@ -95,6 +95,7 @@ function VideoControls({
   sourceIdentity: string;
 }) {
   const { t } = useTranslation();
+  const remote = useMediaRemote(player);
   const rangeEnd = useRef<number | null>(null);
   const paused = useMediaState('paused');
   const time = useMediaState('currentTime');
@@ -107,6 +108,18 @@ function VideoControls({
   const error = useMediaState('error');
   const [failed, setFailed] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
+  useEffect(() => {
+    setFailed(false);
+    const current = player.current;
+    const fail = () => setFailed(true);
+    const recover = () => setFailed(false);
+    current?.addEventListener('play-fail', fail);
+    current?.addEventListener('playing', recover);
+    return () => {
+      current?.removeEventListener('play-fail', fail);
+      current?.removeEventListener('playing', recover);
+    };
+  }, [player, sourceIdentity]);
   const seek = usePlaybackSeek(source);
   const progress =
     Number.isFinite(time) && Number.isFinite(duration) && duration > 0
@@ -121,8 +134,8 @@ function VideoControls({
     if (!seek || !player.current) return;
     player.current.currentTime = seek.time;
     rangeEnd.current = seek.end ?? null;
-    if (seek.play) void player.current.play().catch(() => setFailed(true));
-  }, [player, seek]);
+    if (seek.play) remote.play();
+  }, [player, remote, seek]);
   useEffect(() => {
     if (rangeEnd.current == null || time < rangeEnd.current) return;
     rangeEnd.current = null;
@@ -164,8 +177,10 @@ function VideoControls({
           onClick={() => {
             setFailed(false);
             rangeEnd.current = null;
-            if (paused) void player.current?.play().catch(() => setFailed(true));
-            else void player.current?.pause();
+            // Remote requests queue until the provider is ready; the instance
+            // play() method rejects an early click while media is still loading.
+            if (paused) remote.play();
+            else remote.pause();
           }}
         >
           {waiting ? (

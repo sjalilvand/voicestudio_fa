@@ -81,6 +81,8 @@ try {
   const errors = [];
   const vidstackWarnings = [];
   let mediaHeadRequests = 0;
+  let releaseVideo;
+  const videoReady = new Promise((resolve) => { releaseVideo = resolve; });
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
     if (message.type() === 'warning' && message.text().includes('[vidstack]'))
@@ -181,7 +183,8 @@ try {
     await page.route('**/api/dub/thumb/fixture', (route) =>
       route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="teal"/></svg>' }),
     );
-    await page.route('**/api/dub/media/fixture', (route) => {
+    await page.route('**/api/dub/media/fixture', async (route) => {
+      await videoReady;
       if (route.request().method() === 'HEAD') mediaHeadRequests++;
       return route.fulfill({ contentType: 'video/mp4', body: video });
     });
@@ -268,6 +271,8 @@ try {
       return image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0;
     });
     await page.getByRole('button', { name: 'Play', exact: true }).click();
+    await page.waitForTimeout(100);
+    releaseVideo();
     await page.waitForFunction(() => {
       const image = document.querySelector('[data-media-player] img[src*="/dub/thumb/fixture"]');
       return image && getComputedStyle(image).opacity === '0';

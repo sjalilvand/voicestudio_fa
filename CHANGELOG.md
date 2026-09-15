@@ -27,6 +27,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Pressing Play while a video is loading starts playback when it is ready instead of reporting playback unavailable (#2129)
 - Video previews show their thumbnail before playback, including the source video in Dub (#2129)
 - Linux and Windows workspace headers consistently expand and collapse the sidebar, with the app logo at the top of the collapsed rail (#2129)
 - Stopping a process on macOS no longer fails with "Operation not permitted" when it was already exiting (#2032)
