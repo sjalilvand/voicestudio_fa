@@ -1552,6 +1552,7 @@
     "h_ago": "{{count}}h temu"
   },
   "setup": {
+    "ready_desc": "Możesz już utworzyć swój pierwszy głos. Dyktowanie skonfigurujesz teraz lub później w Ustawieniach.",
     "welcome": "Witamy",
     "system_check": "Kontrola systemu",
     "install_models": "Zainstaluj modele",

@@ -1980,6 +1980,7 @@
     "dictation_lede_hotkey_only": "Houd de sneltoets hierboven overal op je bureaublad ingedrukt, spreek, laat los — de tekst belandt in de app met focus. Druk nu om te verifiëren."
   },
   "setup": {
+    "ready_desc": "Je kunt je eerste stem maken. Stel dicteren nu in of later via Instellingen.",
     "system_preflight": "Systeem preflight",
     "system_check_desc": "Onderzoek RAM, schijf, GPU, ffmpeg en netwerk. Blokkers worden vooraf gemarkeerd, zodat u het weet voordat u gaat downloaden.",
     "probing": "Sondeersysteem…",

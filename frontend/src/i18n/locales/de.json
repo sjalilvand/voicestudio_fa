@@ -1552,6 +1552,7 @@
     "h_ago": "Vor {{count}}h"
   },
   "setup": {
+    "ready_desc": "Du kannst jetzt deine erste Stimme erstellen. Die Diktierfunktion kannst du jetzt oder später in den Einstellungen einrichten.",
     "welcome": "Willkommen",
     "system_check": "Systemprüfung",
     "install_models": "Modelle installieren",

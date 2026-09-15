@@ -1980,6 +1980,7 @@
     "dictation_lede_hotkey_only": "Halte das Tastenkürzel oben überall auf dem Desktop gedrückt, sprich und lass los — der Text landet in der fokussierten App. Drücke es jetzt zum Verifizieren."
   },
   "setup": {
+    "ready_desc": "Du kannst jetzt deine erste Stimme erstellen. Die Diktierfunktion kannst du jetzt oder später in den Einstellungen einrichten.",
     "system_preflight": "System-Preflight",
     "system_check_desc": "Prüfen Sie RAM, Festplatte, GPU, ffmpeg und Netzwerk. Blocker werden im Voraus gekennzeichnet, sodass Sie vor dem Herunterladen Bescheid wissen.",
     "probing": "Sondierungssystem…",

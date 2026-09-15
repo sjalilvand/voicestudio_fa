@@ -1552,6 +1552,7 @@
     "h_ago": "{{count}} 小時前"
   },
   "setup": {
+    "ready_desc": "現在可以建立你的第一個聲音了。你可以立即設定語音輸入，也可以稍後在設定中完成。",
     "welcome": "歡迎",
     "system_check": "系統檢查",
     "install_models": "安裝型號",

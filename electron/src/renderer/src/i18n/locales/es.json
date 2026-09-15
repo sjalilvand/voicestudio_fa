@@ -1982,6 +1982,7 @@
     "dictation_lede_hotkey_only": "Mantén pulsado el atajo de arriba en cualquier lugar del escritorio, habla y suéltalo: el texto aparecerá en la app con foco. Púlsalo ahora para verificarlo."
   },
   "setup": {
+    "ready_desc": "Ya puedes crear tu primera voz. Puedes configurar el dictado ahora o más tarde en Ajustes.",
     "system_preflight": "verificación previa del sistema",
     "system_check_desc": "Sondee RAM, disco, GPU, ffmpeg y red. Los bloqueadores se marcan por adelantado para que sepas antes de descargarlos.",
     "probing": "Sistema de sondeo…",

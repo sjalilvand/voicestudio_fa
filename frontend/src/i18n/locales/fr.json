@@ -1552,6 +1552,7 @@
     "h_ago": "Il y a {{count}}h"
   },
   "setup": {
+    "ready_desc": "Vous pouvez créer votre première voix. Configurez la dictée maintenant ou plus tard dans les paramètres.",
     "welcome": "Bienvenue",
     "system_check": "Vérification du système",
     "install_models": "Installer des modèles",

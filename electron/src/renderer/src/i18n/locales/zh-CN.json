@@ -1984,6 +1984,7 @@
     "dictation_lede_hotkey_only": "在桌面任意位置按住上方快捷键说话，松开后文字会输入到当前聚焦的应用中。现在按一下即可验证是否生效。"
   },
   "setup": {
+    "ready_desc": "现在可以创建你的第一个声音了。你可以立即设置语音输入，也可以稍后在设置中完成。",
     "system_preflight": "系统预检",
     "system_check_desc": "检查内存、磁盘、GPU、ffmpeg 和网络。提前发现阻塞项。",
     "probing": "正在检测系统…",

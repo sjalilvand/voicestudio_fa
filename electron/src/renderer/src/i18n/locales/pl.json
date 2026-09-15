@@ -1984,6 +1984,7 @@
     "dictation_lede_hotkey_only": "Przytrzymaj powyższy skrót w dowolnym miejscu pulpitu, mów i puść — tekst trafi do aktywnej aplikacji. Naciśnij teraz, aby zweryfikować."
   },
   "setup": {
+    "ready_desc": "Możesz już utworzyć swój pierwszy głos. Dyktowanie skonfigurujesz teraz lub później w Ustawieniach.",
     "system_preflight": "Wstępna inspekcja systemu",
     "system_check_desc": "Sprawdź pamięć RAM, dysk, procesor graficzny, ffmpeg i sieć. Blokery są oznaczone od razu, więc wiesz o tym przed pobraniem.",
     "probing": "System sondujący…",

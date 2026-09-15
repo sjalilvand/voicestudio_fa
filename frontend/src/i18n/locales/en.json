@@ -1815,6 +1815,7 @@
     "empty_search": "No transcriptions match your search."
   },
   "setup": {
+    "ready_desc": "You’re ready to create your first voice. You can set up dictation now or later in Settings.",
     "welcome": "Welcome",
     "system_check": "System check",
     "install_models": "Install models",

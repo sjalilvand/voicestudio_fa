@@ -1552,6 +1552,7 @@
     "h_ago": "Hace {{count}}h"
   },
   "setup": {
+    "ready_desc": "Ya puedes crear tu primera voz. Puedes configurar el dictado ahora o más tarde en Ajustes.",
     "welcome": "Bienvenido",
     "system_check": "Verificación del sistema",
     "install_models": "Instalar modelos",

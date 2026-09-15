@@ -1552,6 +1552,7 @@
     "h_ago": "{{count}}h fa"
   },
   "setup": {
+    "ready_desc": "Puoi creare la tua prima voce. Configura la dettatura ora o più tardi nelle Impostazioni.",
     "welcome": "Benvenuto",
     "system_check": "Controllo del sistema",
     "install_models": "Installa modelli",

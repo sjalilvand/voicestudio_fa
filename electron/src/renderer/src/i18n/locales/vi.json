@@ -1980,6 +1980,7 @@
     "dictation_lede_hotkey_only": "Giữ phím tắt ở trên tại bất kỳ đâu trên màn hình, nói rồi thả — văn bản sẽ vào ứng dụng đang được chọn. Nhấn ngay để kiểm tra."
   },
   "setup": {
+    "ready_desc": "Bạn đã sẵn sàng tạo giọng nói đầu tiên. Có thể thiết lập nhập liệu bằng giọng nói ngay hoặc sau này trong Cài đặt.",
     "system_preflight": "Đèn chiếu trước hệ thống",
     "system_check_desc": "Thăm dò RAM, đĩa, GPU, ffmpeg và mạng. Trình chặn được gắn cờ trước để bạn biết trước khi tải xuống.",
     "probing": "Hệ thống thăm dò…",

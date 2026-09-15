@@ -1982,6 +1982,7 @@
     "dictation_lede_hotkey_only": "Tieni premuta la scorciatoia qui sopra ovunque sul desktop, parla e rilascia — il testo arriva nell'app attiva. Premila ora per verificarla."
   },
   "setup": {
+    "ready_desc": "Puoi creare la tua prima voce. Configura la dettatura ora o più tardi nelle Impostazioni.",
     "system_preflight": "Verifica preliminare del sistema",
     "system_check_desc": "Analizza RAM, disco, GPU, ffmpeg e rete. I bloccanti vengono contrassegnati in anticipo in modo da saperlo prima del download.",
     "probing": "Sistema di sondaggio...",

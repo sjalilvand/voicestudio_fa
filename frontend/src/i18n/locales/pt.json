@@ -1552,6 +1552,7 @@
     "h_ago": "{{count}}h atrás"
   },
   "setup": {
+    "ready_desc": "Você já pode criar sua primeira voz. Configure o ditado agora ou depois nas Configurações.",
     "welcome": "Bem vindo",
     "system_check": "Verificação do sistema",
     "install_models": "Instalar modelos",

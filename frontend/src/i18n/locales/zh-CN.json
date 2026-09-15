@@ -1807,6 +1807,7 @@
     "h_ago": "{{count}} 小时前"
   },
   "setup": {
+    "ready_desc": "现在可以创建你的第一个声音了。你可以立即设置语音输入，也可以稍后在设置中完成。",
     "welcome": "欢迎",
     "system_check": "系统检查",
     "install_models": "安装模型",

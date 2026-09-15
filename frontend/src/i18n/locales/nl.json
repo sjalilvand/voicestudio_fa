@@ -1552,6 +1552,7 @@
     "h_ago": "{{count}}u geleden"
   },
   "setup": {
+    "ready_desc": "Je kunt je eerste stem maken. Stel dicteren nu in of later via Instellingen.",
     "welcome": "Welkom",
     "system_check": "Systeemcontrole",
     "install_models": "Modellen installeren",

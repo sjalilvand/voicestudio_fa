@@ -1980,6 +1980,7 @@
     "dictation_lede_hotkey_only": "Håll ner kortkommandot ovan var som helst på skrivbordet, tala, släpp — texten hamnar i appen med fokus. Tryck nu för att verifiera."
   },
   "setup": {
+    "ready_desc": "Du kan nu skapa din första röst. Ställ in diktering nu eller senare i Inställningar.",
     "system_preflight": "System preflight",
     "system_check_desc": "Probe RAM, disk, GPU, ffmpeg och nätverk. Blockerare flaggas i förväg så att du vet innan du laddar ner.",
     "probing": "Undersökningssystem...",

@@ -1552,6 +1552,7 @@
     "h_ago": "{{count}}sa önce"
   },
   "setup": {
+    "ready_desc": "İlk sesinizi oluşturmaya hazırsınız. Dikteyi şimdi veya daha sonra Ayarlar’dan yapılandırabilirsiniz.",
     "welcome": "Hoş geldiniz",
     "system_check": "Sistem kontrolü",
     "install_models": "Modelleri yükle",

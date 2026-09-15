@@ -1982,6 +1982,7 @@
     "dictation_lede_hotkey_only": "Segure o atalho acima em qualquer lugar da área de trabalho, fale e solte — o texto cai no app em foco. Pressione agora para verificar."
   },
   "setup": {
+    "ready_desc": "Você já pode criar sua primeira voz. Configure o ditado agora ou depois nas Configurações.",
     "system_preflight": "Comprovação do sistema",
     "system_check_desc": "Teste RAM, disco, GPU, ffmpeg e rede. Os bloqueadores são sinalizados antecipadamente para que você saiba antes de fazer o download.",
     "probing": "Sistema de sondagem…",

@@ -1982,6 +1982,7 @@
     "dictation_lede_hotkey_only": "Maintenez le raccourci ci-dessus n'importe où sur votre bureau, parlez, relâchez — le texte arrive dans l'application active. Appuyez maintenant pour vérifier."
   },
   "setup": {
+    "ready_desc": "Vous pouvez créer votre première voix. Configurez la dictée maintenant ou plus tard dans les paramètres.",
     "system_preflight": "Contrôle en amont du système",
     "system_check_desc": "Sondez la RAM, le disque, le GPU, ffmpeg et le réseau. Les bloqueurs sont signalés à l’avance afin que vous le sachiez avant de télécharger.",
     "probing": "Système de sondage…",

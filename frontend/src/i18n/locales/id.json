@@ -1552,6 +1552,7 @@
     "h_ago": "{{count}}jam yang lalu"
   },
   "setup": {
+    "ready_desc": "Anda siap membuat suara pertama. Atur dikte sekarang atau nanti di Pengaturan.",
     "welcome": "Selamat datang",
     "system_check": "Pemeriksaan sistem",
     "install_models": "Instal model",

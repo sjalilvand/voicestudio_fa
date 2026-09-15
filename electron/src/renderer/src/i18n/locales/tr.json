@@ -1980,6 +1980,7 @@
     "dictation_lede_hotkey_only": "Yukarıdaki kısayolu masaüstünde herhangi bir yerde basılı tutun, konuşun, bırakın — metin odaktaki uygulamaya düşer. Şimdi basıp doğrulayın."
   },
   "setup": {
+    "ready_desc": "İlk sesinizi oluşturmaya hazırsınız. Dikteyi şimdi veya daha sonra Ayarlar’dan yapılandırabilirsiniz.",
     "system_preflight": "Sistem ön kontrolü",
     "system_check_desc": "RAM, disk, GPU, ffmpeg ve ağı araştırın. Engelleyiciler önceden işaretlenir, böylece indirmeden önce bilgi sahibi olursunuz.",
     "probing": "Sondalama sistemi…",

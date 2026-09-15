@@ -1552,6 +1552,7 @@
     "h_ago": "{{count}}h sedan"
   },
   "setup": {
+    "ready_desc": "Du kan nu skapa din första röst. Ställ in diktering nu eller senare i Inställningar.",
     "welcome": "Välkommen",
     "system_check": "Systemkontroll",
     "install_models": "Installera modeller",

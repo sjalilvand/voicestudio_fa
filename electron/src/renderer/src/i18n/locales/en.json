@@ -2029,6 +2029,7 @@
     "dictation_lede_hotkey_only": "Hold the shortcut above anywhere on your desktop, speak, release — the text lands in whatever app has focus. Press it now to verify it works."
   },
   "setup": {
+    "ready_desc": "You’re ready to create your first voice. You can set up dictation now or later in Settings.",
     "system_preflight": "System preflight",
     "system_check_desc": "Probe RAM, disk, GPU, and network. Blockers are flagged upfront so you know before downloading.",
     "probing": "Probing system…",

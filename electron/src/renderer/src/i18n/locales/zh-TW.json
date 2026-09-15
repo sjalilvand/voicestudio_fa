@@ -1980,6 +1980,7 @@
     "dictation_lede_hotkey_only": "在桌面任意位置按住上方快速鍵說話，放開後文字會輸入到目前聚焦的應用程式。現在按一下即可驗證是否生效。"
   },
   "setup": {
+    "ready_desc": "現在可以建立你的第一個聲音了。你可以立即設定語音輸入，也可以稍後在設定中完成。",
     "system_preflight": "系統預檢",
     "system_check_desc": "探測 RAM、磁碟、GPU、ffmpeg 和網路。攔截器會預先標記，以便您在下載前知道。",
     "probing": "探測系統...",

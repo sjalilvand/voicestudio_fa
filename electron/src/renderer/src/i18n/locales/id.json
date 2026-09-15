@@ -1980,6 +1980,7 @@
     "dictation_lede_hotkey_only": "Tahan pintasan di atas di mana saja di desktop, bicara, lepaskan — teks masuk ke aplikasi yang sedang fokus. Tekan sekarang untuk memverifikasi."
   },
   "setup": {
+    "ready_desc": "Anda siap membuat suara pertama. Atur dikte sekarang atau nanti di Pengaturan.",
     "system_preflight": "Pra-penerbangan sistem",
     "system_check_desc": "Selidiki RAM, disk, GPU, ffmpeg, dan jaringan. Pemblokir ditandai terlebih dahulu sehingga Anda mengetahuinya sebelum mengunduh.",
     "probing": "Sistem penyelidikan…",

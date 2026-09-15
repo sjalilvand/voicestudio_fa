@@ -1552,6 +1552,7 @@
     "h_ago": "{{count}}giờ trước"
   },
   "setup": {
+    "ready_desc": "Bạn đã sẵn sàng tạo giọng nói đầu tiên. Có thể thiết lập nhập liệu bằng giọng nói ngay hoặc sau này trong Cài đặt.",
     "welcome": "Chào mừng",
     "system_check": "Kiểm tra hệ thống",
     "install_models": "Cài đặt mô hình",
