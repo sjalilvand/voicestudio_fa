@@ -342,6 +342,7 @@ class WorkerCapacity:
             "resident_models": sorted(self.resident_models),
             "free_memory_bytes": self.free_memory_bytes,
             "cpu_percent": self.cpu_percent,
+            "gpu_utilization_percent": self.gpu_utilization_percent,
         }
 
 

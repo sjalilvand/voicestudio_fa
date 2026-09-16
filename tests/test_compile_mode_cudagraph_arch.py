@@ -19,11 +19,10 @@ from types import SimpleNamespace
 
 import pytest
 
-@pytest.fixture(autouse=True)
-def _current_application_module():
+@pytest.fixture
+def model_manager():
     import importlib
-    global model_manager
-    model_manager = importlib.import_module("services.model_manager")
+    return importlib.import_module("services.model_manager")
 
 
 
@@ -44,7 +43,7 @@ class _FakeCuda:
 
 
 @pytest.fixture(autouse=True)
-def _no_force_env(monkeypatch):
+def _no_force_env(monkeypatch, model_manager):
     monkeypatch.delenv(model_manager._FORCE_CUDAGRAPH_ENV, raising=False)
 
 
@@ -55,19 +54,19 @@ def _fake_torch(monkeypatch, cuda):
 # ── the regression ──────────────────────────────────────────────────────────
 
 
-def test_turing_t4_drops_cudagraph_mode(monkeypatch):
+def test_turing_t4_drops_cudagraph_mode(monkeypatch, model_manager):
     """The exact reporter configuration: Tesla T4, sm_75."""
     _fake_torch(monkeypatch, _FakeCuda((7, 5)))
     assert model_manager._resolve_compile_mode() == "default"
 
 
-def test_volta_also_drops_cudagraph_mode(monkeypatch):
+def test_volta_also_drops_cudagraph_mode(monkeypatch, model_manager):
     """sm_70 is likewise below the Ampere floor (V100, also common on Colab)."""
     _fake_torch(monkeypatch, _FakeCuda((7, 0), name="Tesla V100-SXM2-16GB"))
     assert model_manager._resolve_compile_mode() == "default"
 
 
-def test_downgraded_mode_is_not_a_cudagraph_mode(monkeypatch):
+def test_downgraded_mode_is_not_a_cudagraph_mode(monkeypatch, model_manager):
     """The point of the downgrade: no graph capture, so no #315 pinning either.
 
     Guards the property rather than the string — if the fallback mode is ever
@@ -81,12 +80,12 @@ def test_downgraded_mode_is_not_a_cudagraph_mode(monkeypatch):
 
 
 @pytest.mark.parametrize("capability", [(8, 0), (8, 6), (8, 9), (9, 0), (12, 0)])
-def test_ampere_and_newer_keep_cudagraph_mode(monkeypatch, capability):
+def test_ampere_and_newer_keep_cudagraph_mode(monkeypatch, capability, model_manager):
     _fake_torch(monkeypatch, _FakeCuda(capability, name="NVIDIA RTX (fake)"))
     assert model_manager._resolve_compile_mode() == model_manager._TORCH_COMPILE_MODE
 
 
-def test_force_env_restores_cudagraph_mode(monkeypatch):
+def test_force_env_restores_cudagraph_mode(monkeypatch, model_manager):
     """Operators benchmarking old GPUs can opt back in explicitly."""
     _fake_torch(monkeypatch, _FakeCuda((7, 5)))
     monkeypatch.setenv(model_manager._FORCE_CUDAGRAPH_ENV, "1")
@@ -96,7 +95,7 @@ def test_force_env_restores_cudagraph_mode(monkeypatch):
 # ── fail-open: never lose the optimization to a bad probe ───────────────────
 
 
-def test_capability_probe_error_keeps_configured_mode(monkeypatch):
+def test_capability_probe_error_keeps_configured_mode(monkeypatch, model_manager):
     class _BrokenCuda(_FakeCuda):
         def get_device_capability(self, idx=0):
             raise RuntimeError("driver error")
@@ -105,11 +104,11 @@ def test_capability_probe_error_keeps_configured_mode(monkeypatch):
     assert model_manager._resolve_compile_mode() == model_manager._TORCH_COMPILE_MODE
 
 
-def test_cuda_unavailable_keeps_configured_mode(monkeypatch):
+def test_cuda_unavailable_keeps_configured_mode(monkeypatch, model_manager):
     _fake_torch(monkeypatch, _FakeCuda((7, 5), available=False))
     assert model_manager._resolve_compile_mode() == model_manager._TORCH_COMPILE_MODE
 
 
-def test_missing_torch_keeps_configured_mode(monkeypatch):
+def test_missing_torch_keeps_configured_mode(monkeypatch, model_manager):
     monkeypatch.setitem(sys.modules, "torch", None)
     assert model_manager._resolve_compile_mode() == model_manager._TORCH_COMPILE_MODE

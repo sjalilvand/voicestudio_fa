@@ -41,6 +41,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Keep demo playback aligned across languages, preserve worker GPU metrics, and restrict unsigned releases to owner dispatches (#2157)
+
 - Desktop integration checks cover current dubbing safeguards, navigation, and the linked engine catalog (#2157)
 
 - Tauri and Electron now share native dictation, watch-folder, and Wayland shortcut contracts; focused paste stays ordered and first-run uv stays pinned at 0.12.13 (#2122)

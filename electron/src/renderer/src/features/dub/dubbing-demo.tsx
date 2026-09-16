@@ -60,6 +60,7 @@ export function DubbingDemo({
   const dubbedPlayer = useRef<MediaPlayerInstance>(null);
   const mirroring = useRef(false);
   const activePlayer = useRef<MediaPlayerInstance | null>(null);
+  const pendingDubbedPosition = useRef<number | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -90,7 +91,7 @@ export function DubbingDemo({
     from: MediaPlayerInstance | null,
     to: MediaPlayerInstance | null,
   ) => {
-    if (!synchronized || mirroring.current || !from || !to) return;
+    if (!synchronized || pendingDubbedPosition.current !== null || mirroring.current || !from || !to) return;
     mirroring.current = true;
     try {
       to.currentTime = from.currentTime;
@@ -175,11 +176,17 @@ export function DubbingDemo({
             load="eager"
             src={{ src: apiPath(`${DEMO_BASE}/${video}`), type: 'video/mp4' }}
             source={`${PLAYBACK_GROUP}-${tag}`}
+            onCanPlay={() => {
+              if (channel !== 'B' || pendingDubbedPosition.current === null || !player.current) return;
+              player.current.currentTime = pendingDubbedPosition.current;
+              pendingDubbedPosition.current = null;
+              if (activePlayer.current === player.current) synchronizePosition(player.current, peer.current);
+            }}
             onPlay={() => {
               const incoming = player.current;
               const outgoing = activePlayer.current;
               if (synchronized && incoming && outgoing && incoming !== outgoing) {
-                incoming.currentTime = outgoing.currentTime;
+                incoming.currentTime = pendingDubbedPosition.current ?? outgoing.currentTime;
               }
               activePlayer.current = incoming;
               void peer.current?.pause().catch(() => {});
@@ -251,7 +258,13 @@ export function DubbingDemo({
             size="xs"
             variant={item.code === dubbed.code ? 'secondary' : 'ghost'}
             aria-pressed={item.code === dubbed.code}
-            onClick={() => setLanguage(item.code)}
+            onClick={() => {
+              if (item.code === language) return;
+              pendingDubbedPosition.current = pendingDubbedPosition.current ??
+                (synchronized ? activePlayer.current?.currentTime : undefined) ??
+                dubbedPlayer.current?.currentTime ?? 0;
+              setLanguage(item.code);
+            }}
           >
             {item.label}
           </Button>
