@@ -107,6 +107,7 @@ export function WorkspaceSidebar() {
               mac ? 'min-h-[72px] items-end pb-1' : 'h-12 items-center',
             )}
           >
+            {!mac ? <img src={brandIcon} alt={t('app.name')} className="size-6 shrink-0" /> : (
             <Button
               variant="ghost"
               size="icon-sm"
@@ -120,6 +121,7 @@ export function WorkspaceSidebar() {
             >
               <PanelLeftOpenIcon className="size-5" aria-hidden="true" />
             </Button>
+            )}
           </div>
           <WorkspaceNavigation compact />
           {!mac && <StatusBar compact />}

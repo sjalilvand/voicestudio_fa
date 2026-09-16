@@ -124,7 +124,7 @@ try {
     ).filter(Boolean);
     assert.ok(
       macNotificationBounds &&
-        titlebarActionBounds.every(
+        titlebarActionBounds.length > 0 && titlebarActionBounds.every(
           (bounds) => bounds.x + bounds.width <= macNotificationBounds.x - 12,
         ),
       'macOS titlebar actions must leave space before notifications',

@@ -1552,6 +1552,7 @@
     "h_ago": "{{count}}sa önce"
   },
   "setup": {
+    "ready_desc": "İlk sesinizi oluşturmaya hazırsınız. Dikteyi şimdi veya daha sonra Ayarlar’dan yapılandırabilirsiniz.",
     "welcome": "Hoş geldiniz",
     "system_check": "Sistem kontrolü",
     "install_models": "Modelleri yükle",
@@ -1606,7 +1607,7 @@
     "choose_method": "Nasıl vereceğinizi seçin",
     "choose_method_amount": "${{amount}} ile devam et",
     "goal": {
-      "title": "Claude Max'e fon sağlayın",
+      "title": "VoiceStudio geliştirmelerini destekleyin",
       "of": "arasında",
       "per_month": "/ ay",
       "aria": "{{raised}} / {{goal}} aylık hedef",
@@ -1615,7 +1616,7 @@
       "social_proof": "Yerel yapay zekayı finanse eden {{count}} destekçilerine katılın"
     },
     "postcard": {
-      "title": "Claude Max'e fon sağlayın",
+      "title": "VoiceStudio geliştirmelerini destekleyin",
       "lead_default": "İşe yaradığına sevindim! VoiceStudio ücretsizdir ve tamamen yereldir. Size zaman kazandıracaksa, aylık küçük bir chip-in, arkasındaki Claude Max'e fon sağlar.",
       "lead_first_clone": "İlk ses klonunuz tamamlandı — güzel! VoiceStudio tamamen makinenizde çalışır ve desteğiniz de bu şekilde kalmasını sağlar.",
       "lead_tenth_dub": "On dublaj - açıkça işe koyuyorsunuz. Küçük bir aylık chip-in, bu özellikleri sunan Claude Max'e fon sağlıyor.",
@@ -2831,5 +2832,55 @@
   "player": {
     "pause": "Duraklat",
     "play": "Oynat"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Konuşma eksik veya okunamıyor. Dışa aktarmadan önce ilgili bölümü yeniden oluşturun.",
+    "timingOverflow": "Konuşma ayrılan süreyi aşıyor. Çeviriyi kısaltın veya kesin zaman aralığını ya da videoyu uzatmayı seçin.",
+    "backgroundUnavailable": "Özgün ses korunamadı. Arka plan ayrımını ve diyalog zamanlarını kontrol edip yeniden deneyin veya yalnızca konuşmayı dışa aktarmayı seçin."
+  },
+  "dubStyle": {
+    "label": "Çeviri üslubu talimatları",
+    "help": "Tonu, hedef kitleyi ve uyarlamayı açıklayın; örneğin şakaları koruyun ve deyimleri doğal biçimde aktarın. Projeye kaydedilir, çeviri ve süre düzenlemelerinde kullanılır. Varsayılan üslup için boş bırakın."
+  },
+  "dubActivity": {
+    "output": "Çeviriler",
+    "waiting": "Henüz çıktı alınmadı.",
+    "progress": "{{done}} / {{total}} bölüm doğrulandı",
+    "cancelled": "İptal edildi",
+    "fitting": "Zamanlama ayarlanıyor"
+  },
+  "sponsorSlot": {
+    "book": "Yerinizi ayırtın",
+    "preview": "Sponsor önizlemesi",
+    "message": "Markanız, web siteniz ve mesajınız",
+    "email_app": "E-posta uygulamasını aç",
+    "copy_email": "E-postayı kopyala",
+    "preview_detail": "Logonuz, bağlantınız ve tanıtımınız burada görünebilir."
+  },
+  "supportPlans": {
+    "remove": "Sponsor çubuğunu kaldır",
+    "title": "Ücretsiz ve Pro",
+    "free": "Ücretsiz",
+    "pro": "Pro",
+    "sponsor_bar": "Sponsor çubuğu",
+    "visible": "Görünür",
+    "hideable": "Gizlenebilir",
+    "unavailable": "Pro etkinleştirmesi henüz yapılandırılmadı.",
+    "telemetry": "Telemetri",
+    "opt_in": "İsteğe bağlı, onay ile",
+    "disabled": "Devre dışı",
+    "badge": "Pro rozeti",
+    "advanced": "Gelişmiş araçlar",
+    "standard": "Standart",
+    "included": "Dahil"
+  },
+  "integrationCatalog": {
+    "title": "Entegrasyonlar",
+    "featured": "Öne çıkan",
+    "description": "Entegrasyonları ve öne çıkan iş ortaklarını keşfedin."
+  },
+  "directoryExamples": {
+    "example": "Dizin örneği",
+    "notice": "Yalnızca dizin örnekleri; sponsor veya bağlı entegrasyon değildir."
   }
 }

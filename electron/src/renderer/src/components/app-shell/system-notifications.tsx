@@ -176,7 +176,7 @@ export function SystemNotifications({
       .map((note) => note.title || note.message)
       .filter(Boolean)
       .join('. ') ||
-    t(query.isError ? 'common.error' : query.isPending ? 'preferences.loading' : 'logs.all_clear');
+    t(!enabled ? 'modelSettings.unavailable' : query.isError ? 'common.error' : query.isPending ? 'preferences.loading' : 'logs.all_clear');
   return (
     <Popover>
       <PopoverTrigger
@@ -210,12 +210,15 @@ export function SystemNotifications({
         align={titlebar ? 'end' : 'start'}
         className="max-h-[min(28rem,calc(100vh-2rem))] w-[min(22rem,calc(100vw-2rem))] space-y-1 overflow-y-auto p-1.5"
       >
-        {query.isPending && visible.length === 0 && (
+        {!enabled && visible.length === 0 && (
+          <p className="px-3 py-4 text-center text-xs text-muted-foreground">{t('modelSettings.unavailable')}</p>
+        )}
+        {enabled && query.isPending && visible.length === 0 && (
           <p className="px-3 py-4 text-center text-xs text-muted-foreground">
             {t('preferences.loading')}
           </p>
         )}
-        {!query.isPending && !query.isError && visible.length === 0 && (
+        {enabled && !query.isPending && !query.isError && visible.length === 0 && (
           <p className="px-3 py-4 text-center text-xs text-muted-foreground">
             {t('logs.all_clear')}
           </p>

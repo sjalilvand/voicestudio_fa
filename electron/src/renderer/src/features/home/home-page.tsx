@@ -1,3 +1,4 @@
+import { getBridge, isMac } from '@/components/bridge';
 import { WorkspaceHeader } from '@/components/app-shell/workspace-header';
 import { ProfileAvatar } from '@/components/profile-avatar';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,12 @@ export function HomePage() {
   const { t } = useTranslation();
   const { libraryOpen } = useWorkspace();
   const navigate = useNavigate();
+  const openSite = () => {
+    const bridge = getBridge();
+    const url = 'https://voicestudio.sh/?utm_source=voicestudio&utm_medium=desktop&utm_campaign=home_banner';
+    if (bridge) void bridge.files.openExternal(url);
+    else window.open(url, '_blank', 'noopener,noreferrer');
+  };
   const { data: profiles = [] } = useProfiles();
   const { data: history = [] } = useHistory();
   const { data: exports = [] } = useQuery({
@@ -181,18 +188,19 @@ export function HomePage() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <WorkspaceHeader>
-        {libraryOpen ? (
-          <img src={brandIcon} alt="" className="size-4" />
-        ) : (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t('clone.toggle_sidebar')}
-            onClick={() => setWorkspace({ libraryOpen: true })}
-          >
-            <PanelLeftOpenIcon />
-          </Button>
-        )}
+        {isMac() &&
+          (libraryOpen ? (
+            <img src={brandIcon} alt="" className="size-4" />
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t('clone.toggle_sidebar')}
+              onClick={() => setWorkspace({ libraryOpen: true })}
+            >
+              <PanelLeftOpenIcon />
+            </Button>
+          ))}
         <h1 className="text-sm font-medium">{t('app.name')}</h1>
         <Link
           to="/projects"
@@ -218,6 +226,13 @@ export function HomePage() {
               <h2 className="text-3xl font-semibold tracking-[-0.035em]">{t('app.name')}</h2>
               <p className="mt-3 max-w-lg text-sm leading-6 text-muted-foreground">
                 {t('app.tagline')}
+                <button
+                  type="button"
+                  onClick={openSite}
+                  className="ml-1 text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary"
+                >
+                  voicestudio.sh
+                </button>
               </p>
             </div>
           </section>

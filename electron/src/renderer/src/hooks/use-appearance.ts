@@ -9,11 +9,11 @@ export function parseAppearance(raw: string | null): Appearance {
     const value = JSON.parse(raw ?? '{}');
     return {
       font: value?.font === 'system' ? 'system' : 'inter',
-      glass: value?.glass === true,
+      glass: value?.glass !== false,
       scale: appearanceScales.includes(value?.scale) ? value.scale : 100,
     };
   } catch {
-    return { font: 'inter', scale: 100, glass: false };
+    return { font: 'inter', scale: 100, glass: true };
   }
 }
 let current: Appearance;
