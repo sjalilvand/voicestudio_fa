@@ -37,6 +37,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Tauri and Electron now share native dictation, watch-folder, and Wayland shortcut contracts; focused paste stays ordered and first-run uv stays pinned at 0.12.13 (#2122)
 - Dubbing demos synchronize playheads without simultaneous playback and let you open a sample in the editor (#2131)
+- macOS desktop sidebar clears the traffic lights, uses a narrower collapsed rail, and places notifications and device controls with more space (#2126)
 - Dubbing timelines keep short segments proportional, support zoom, and remove timestamp-confirmed duplicate ASR context (#2129)
 
 - Dubbing translation shares the agent footer with live logs, validated output, cancellation and contextual retries (#2129)
