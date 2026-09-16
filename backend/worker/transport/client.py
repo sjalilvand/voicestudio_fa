@@ -73,6 +73,33 @@ _FALLBACK_MODEL_LOAD_SECONDS = 1800.0
 # see _oversized_result_error for why that has to be a failure and not a retry.
 MAX_MESSAGE_BYTES = 8 * 1024 * 1024
 
+
+def _heartbeat_resources() -> tuple[Optional[float], Optional[int], Optional[float]]:
+    """Sample cheap host telemetry without making a heartbeat depend on CUDA."""
+    cpu_percent = free_memory_bytes = gpu_utilization_percent = None
+    try:
+        import psutil
+
+        cpu_percent = float(psutil.cpu_percent(interval=None))
+    except Exception:
+        logger.debug("Could not sample worker CPU usage", exc_info=True)
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            free_memory_bytes = int(torch.cuda.mem_get_info()[0])
+    except Exception:
+        logger.debug("Could not sample worker free VRAM", exc_info=True)
+    try:
+        import pynvml
+
+        pynvml.nvmlInit()
+        handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+        gpu_utilization_percent = float(pynvml.nvmlDeviceGetUtilizationRates(handle).gpu)
+    except Exception:
+        logger.debug("Could not sample worker GPU usage", exc_info=True)
+    return cpu_percent, free_memory_bytes, gpu_utilization_percent
+
 # Room left for result_json, the ref, and protobuf framing when a payload does
 # ride inline. The inline decision is made on the payload alone, so without a
 # reserve a payload sized exactly at the frame cap would overflow it.
@@ -339,6 +366,11 @@ class WorkerClient:
         self._running: dict[str, asyncio.Task] = {}
         self._keepalives: dict[str, asyncio.Task] = {}
         self._maintenance: set[asyncio.Task] = set()
+        self._telemetry: tuple[Optional[float], Optional[int], Optional[float]] = (None, None, None)
+        # A driver query can hang indefinitely. Keep that one query owned
+        # rather than cancelling its awaiter and starting a fresh thread at
+        # every heartbeat.
+        self._telemetry_task: Optional[asyncio.Task] = None
         self._prewarms: dict[str, asyncio.Task] = {}
         self._prewarm_cancellations: dict[str, asyncio.Task] = {}
         self._epoch = 0
@@ -444,6 +476,7 @@ class WorkerClient:
                 *draining, return_exceptions=True
             )
         self._maintenance.clear()
+        self._telemetry_task = None
         self._prewarms.clear()
         self._prewarm_cancellations.clear()
         for key, task in running:
@@ -683,10 +716,47 @@ class WorkerClient:
     async def _heartbeat_loop(self, interval: float) -> None:
         while True:
             await asyncio.sleep(interval)
+            await self._refresh_telemetry()
             await self._send(self.heartbeat_message())
+
+    async def _refresh_telemetry(self) -> None:
+        """Publish completed samples and retain one non-blocking probe.
+
+        CUDA/NVML calls may wedge in a driver.  A timed ``to_thread`` await
+        only cancels the awaiter, leaving that thread alive; retaining this
+        task prevents later heartbeats from accumulating more blocked probes.
+        """
+        task = self._telemetry_task
+        if task is not None and task.done():
+            try:
+                sampled = task.result()
+            except Exception:
+                logger.debug("Could not sample worker telemetry", exc_info=True)
+            else:
+                # A partial failed sample must not erase an independent last
+                # good value.  Presence on the heartbeat remains honest until
+                # that individual metric can next be measured.
+                self._telemetry = tuple(
+                    current if value is None else value
+                    for current, value in zip(self._telemetry, sampled)
+                )
+            self._telemetry_task = None
+
+        if self._telemetry_task is None:
+            self._telemetry_task = asyncio.create_task(
+                to_thread_and_drain_on_cancel(_heartbeat_resources),
+                name="worker-telemetry-probe",
+            )
+            self._maintenance.add(self._telemetry_task)
+            self._telemetry_task.add_done_callback(self._maintenance.discard)
 
     def heartbeat_message(self) -> pb.WorkerMessage:
         """Build the worker's current liveness/capacity frame."""
+        cpu_percent, free_memory_bytes, gpu_utilization_percent = self._telemetry
+        telemetry = {}
+        if cpu_percent is not None: telemetry["cpu_percent"] = cpu_percent
+        if free_memory_bytes is not None: telemetry["free_memory_bytes"] = free_memory_bytes
+        if gpu_utilization_percent is not None: telemetry["gpu_utilization_percent"] = gpu_utilization_percent
         return pb.WorkerMessage(
             heartbeat=pb.Heartbeat(
                 active_tasks=len(self._running),
@@ -694,6 +764,7 @@ class WorkerClient:
                     0, self.config.max_concurrent_tasks - len(self._running)
                 ),
                 resident_models=self._resident_models(),
+                **telemetry,
             )
         )
 

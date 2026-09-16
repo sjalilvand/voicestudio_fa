@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "Gagal memuat pengaturan perangkat",
     "perf_save_failed": "Gagal menyimpan pengaturan",
     "generate_budget_title": "Anggaran waktu komputasi",

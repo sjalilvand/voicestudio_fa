@@ -79,6 +79,13 @@ function boundedPercent(value: number, total = 100) {
   return Math.max(0, Math.min(100, (value / total) * 100));
 }
 
+function formatBytes(bytes: number) {
+  const gib = Math.max(0, bytes) / 1024 ** 3;
+  return new Intl.NumberFormat(undefined, {
+    style: 'unit', unit: 'gigabyte', maximumFractionDigits: gib >= 10 ? 0 : 1,
+  }).format(gib);
+}
+
 function DeviceMetric({
   Icon,
   label,
@@ -485,7 +492,7 @@ export function StatusBar({
       </div>
       <ComputeTargetChoices data={computeTarget.data} />
       {activeRemoteTarget ? (
-        <div className="space-y-1 rounded-lg border border-border/55 bg-muted/20 px-3 py-2 text-xs">
+        <div className="space-y-3 rounded-lg border border-border/55 bg-muted/20 p-2.5 text-xs">
           <p className="truncate text-foreground/85" title={activeRemoteTarget.endpoint}>
             {activeRemoteTarget.endpoint}
           </p>
@@ -499,6 +506,43 @@ export function StatusBar({
               {activeRemoteTarget.active_tasks}/{activeRemoteTarget.max_tasks}
             </span>
           </div>
+          {activeRemoteTarget.cpu_percent != null && (
+            <DeviceMetric
+              Icon={CpuIcon}
+              label={t('settings.device_family_cpu')}
+              value={`${Math.round(activeRemoteTarget.cpu_percent)}%`}
+              percent={activeRemoteTarget.cpu_percent}
+            />
+          )}
+          {activeRemoteTarget.gpu_name &&
+            (activeRemoteTarget.gpu_utilization_percent != null ||
+              activeRemoteTarget.free_memory_bytes != null) && (
+            <DeviceMetric
+              Icon={MonitorUpIcon}
+              label={t('settings.device_family_gpu')}
+              value={
+                [
+                  activeRemoteTarget.gpu_utilization_percent != null
+                    ? `${Math.round(activeRemoteTarget.gpu_utilization_percent)}%`
+                    : null,
+                  activeRemoteTarget.free_memory_bytes != null
+                    ? `${formatBytes(
+                        activeRemoteTarget.gpu_memory_bytes - activeRemoteTarget.free_memory_bytes,
+                      )} / ${formatBytes(activeRemoteTarget.gpu_memory_bytes)}`
+                    : null,
+                ]
+                  .filter((value): value is string => value != null)
+                  .join(' · ')
+              }
+              percent={boundedPercent(
+                activeRemoteTarget.free_memory_bytes != null
+                  ? activeRemoteTarget.gpu_memory_bytes - activeRemoteTarget.free_memory_bytes
+                  : 0,
+                activeRemoteTarget.gpu_memory_bytes,
+              )}
+              detail={activeRemoteTarget.gpu_name}
+            />
+          )}
         </div>
       ) : deviceUsage.isError ? (
         <button

@@ -203,6 +203,7 @@ dependencies = [
     # protobuf runtime already present transitively.
     "grpcio>=1.60",
     "protobuf>=5.29.6",
+    "nvidia-ml-py>=13.0",
 ]
 
 [project.optional-dependencies]
