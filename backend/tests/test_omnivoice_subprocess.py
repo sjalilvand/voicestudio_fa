@@ -323,12 +323,8 @@ class _PlainBackend(SubprocessBackend):
 
 
 def test_base_default_recv_timeout_covers_a_generation():
-    # Was: "a subclass that does NOT override keeps the conservative default".
-    # That default was the 60s health-check ping budget, and four engines
-    # (confucius4, dots.tts, moss_tts_v15, supertonic3) inherited it as their
-    # *generation* deadline and were killed mid-sentence (#2103). A sidecar
-    # that does not choose now gets a deadline that outlasts the wall-clock
-    # budget its own job was granted.
+    # A sidecar that does not choose gets a deadline that outlasts the
+    # wall-clock budget its own job was granted (#2103).
     assert SubprocessBackend.recv_timeout_s == GENERATE_RECV_TIMEOUT_S == 600.0
     assert _PlainBackend().recv_timeout_s == 600.0
     # The ping budget itself is unchanged: health_check() still wants 60s.

@@ -46,8 +46,7 @@ def _subprocess_backend_classes():
 
 
 def test_ping_budget_and_generate_budget_are_separate_constants():
-    # The bug was one constant serving both roles. A ping must stay fast; a
-    # generation must not be cut off at a ping's deadline.
+    # A ping must stay fast; a generation must not be cut off at a ping's deadline.
     assert RECV_TIMEOUT_S == 60.0
     assert GENERATE_RECV_TIMEOUT_S > RECV_TIMEOUT_S
 
@@ -118,9 +117,7 @@ class _OpinionatedBackend(_SilentBackend):
 
 def test_a_long_passage_raises_the_deadline_past_the_flat_default():
     # generate_timeout_s adds 1s per 40 characters past a 1200-char allowance,
-    # so a long passage is granted more than the flat floor. A constant deadline
-    # would not move with it and would cut off a job still inside its budget --
-    # the same bug as #2103, just at a longer input.
+    # so a long passage is granted more than the flat floor.
     backend = _SilentBackend()
     short = backend._effective_recv_timeout_s("hello")
     long_text = "x" * 200_000
@@ -134,9 +131,8 @@ def test_a_long_passage_raises_the_deadline_past_the_flat_default():
 
 
 def test_an_engine_that_opts_down_keeps_its_own_deadline():
-    # "invert the default so the class value is generous and fast engines opt
-    # down" (#2103). An override is a statement about that model, so deriving
-    # from the budget must not quietly overrule it in either direction.
+    # #2103 asks that fast engines stay able to opt down, so deriving from the
+    # budget must not overrule an override in either direction.
     backend = _OpinionatedBackend()
     assert backend._effective_recv_timeout_s("hello") == 45.0
     assert backend._effective_recv_timeout_s("x" * 200_000) == 45.0

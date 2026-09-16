@@ -115,11 +115,9 @@ RECV_TIMEOUT_S = 60.0
 #: 600s on a CPU one — or the watchdog kills a synthesis the caller still
 #: considers valid, which is #2103. 600s is that CPU floor.
 #:
-#: A floor, not the whole answer: that budget also scales with text length and
-#: can be raised by env, so a long passage is granted more than 600s and a flat
-#: 600s would just move the cliff rather than remove it. _effective_recv_timeout_s
-#: derives the real per-request deadline; this value is what it falls back to
-#: when the budget cannot be computed.
+#: A floor, not the whole answer: that budget also scales with text length, so
+#: _effective_recv_timeout_s derives the real per-request deadline and falls
+#: back to this value when the budget cannot be computed.
 #:
 #: Every engine that overrode the hook picked somewhere in 300s..900s, i.e. at
 #: or above the accelerated budget; only the ones that stayed silent got 60s.
@@ -631,18 +629,14 @@ class SubprocessBackend(TTSBackend):
     def _effective_recv_timeout_s(self, text: str) -> float:
         """This request's silence deadline: never under the budget it was granted.
 
-        ``recv_timeout_s`` is a per-engine constant, but the wall-clock budget
-        a job actually gets is per-request — ``generate_timeout_s`` scales it
-        with text length and lets env raise it, and an under-provisioned
-        accelerator is granted the CPU budget. A constant therefore cannot
-        satisfy "the watchdog must not fire before the caller's own budget
-        expires" on its own; it only moves the cliff to longer inputs.
+        ``recv_timeout_s`` is a per-engine constant, but ``generate_timeout_s``
+        scales the wall-clock budget with text length, so only a per-request
+        deadline can satisfy "the watchdog must not fire before the caller's
+        own budget expires".
 
-        Only for engines that expressed no opinion. An override is a
-        deliberate statement about that model — IndexTTS asks for 900s because
-        its sidecar heartbeats prove liveness (#1611), and #2103 explicitly
-        wants "fast engines opt down" to stay possible — so an engine that
-        chose a value keeps exactly that value, including a smaller one.
+        An engine that overrode the hook keeps exactly its own value, including
+        a smaller one: #1611 asks for more and #2103 asks that opting down stay
+        possible.
         """
         own = self.recv_timeout_s
         for klass in type(self).__mro__:
@@ -842,9 +836,6 @@ class SubprocessBackend(TTSBackend):
                 for k, v in kw.items():
                     if _is_jsonable(v):
                         msg[k] = v
-                # Per-request, not per-engine: the budget this job was granted
-                # scales with text length, so a constant would only move the
-                # cliff to longer inputs (#2103 review).
                 deadline_s = self._effective_recv_timeout_s(text)
                 started_at = time.monotonic()
                 try:
