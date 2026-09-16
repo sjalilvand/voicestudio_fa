@@ -12,7 +12,7 @@ def test_readme_installs_skills_from_the_canonical_repository() -> None:
 
 
 def test_public_skill_surfaces_use_current_identity_and_license() -> None:
-    canonical = (ROOT / "skills/omnivoice/SKILL.md").read_text(encoding="utf-8")
+    canonical = (ROOT / "skills/voicestudio/SKILL.md").read_text(encoding="utf-8")
     claude = (ROOT / ".claude/skills/omnivoice/SKILL.md").read_text(encoding="utf-8")
     launcher = (
         ROOT / ".claude/skills/omnivoice/scripts/start-backend.sh"

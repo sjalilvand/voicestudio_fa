@@ -123,7 +123,7 @@ Appearance and General have direct routes and share a breadcrumb header, searcha
 sidebar, max-w-4xl scroll frame, grouped sections, and consistent setting rows.
 Sidebar active/hover surfaces use the shared T3 theme tokens.
 
-The local palette library includes Signal, Canopy, Current, Hearth, and Orchid, with
+The local palette library includes VoiceStudio Original, Canopy, Current, Hearth, and Orchid, with
 upstream light/dark color definitions with VoiceStudio display names from T3 Code (MIT). Each appearance keeps
 its own selected palette. System mode follows live OS appearance changes; the
 sidebar toggle explicitly switches to light or dark. Choices persist under
@@ -206,3 +206,9 @@ open a form in the browser; they do not publish a voice automatically.
 Saved voice editor > Export persona downloads a portable `.ovsvoice` bundle.
 Include voice clip controls whether the original reference accompanies the
 watermarked preview. Gallery > My Imports accepts the exported bundle again.
+
+Workspace navigation groups Clone, Design, Profiles, and Gallery under Voice;
+Stories and Audiobook under Stories; and single/batch dubbing under Dubbing.
+The current workflow opens automatically. Group buttons can expand or collapse
+without navigating; the compact rail opens the same destinations in a flyout.
+Transcribe, Projects, Tools, and Integrations remain directly accessible.

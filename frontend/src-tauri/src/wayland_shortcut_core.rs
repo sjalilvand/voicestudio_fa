@@ -240,7 +240,7 @@ fn ensure_desktop_identity(identity: &DesktopIdentity) -> Result<(), String> {
         // to manage — packaged entries live in the system dirs handled above.
         log::info!(
             "Wayland portal identity at {} points at a missing program — rewriting",
-            path.display()
+            path.file_name().unwrap_or_default().to_string_lossy()
         );
     }
     if let Some(parent) = path.parent() {
@@ -252,8 +252,8 @@ fn ensure_desktop_identity(identity: &DesktopIdentity) -> Result<(), String> {
         desktop_exec_value(&identity.executable.clone().map(Ok).unwrap_or_else(desktop_exec_path)?)
     );
     std::fs::write(&path, entry)
-        .map_err(|error| format!("could not create {}: {error}", path.display()))?;
-    log::info!("Installed Wayland portal identity at {}", path.display());
+        .map_err(|error| format!("could not create {}: {error}", path.file_name().unwrap_or_default().to_string_lossy()))?;
+    log::info!("Installed Wayland portal identity at {}", path.file_name().unwrap_or_default().to_string_lossy());
     Ok(())
 }
 

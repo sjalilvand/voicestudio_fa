@@ -1,56 +1,42 @@
 ---
 name: oss-maintainer
-description: Run an open-source project's issue/PR/release loop like a careful human maintainer — triage to root cause, absorb community PRs before duplicating them, gate every merge, ship honest releases, and thank the people doing your QA for free.
+description: Triage GitHub issues, review contributor pull requests, diagnose CI, and prepare explicitly requested releases using the target repository's rules. Use for repository maintenance work, not ordinary VoiceStudio audio generation.
 ---
 
-# OSS Maintainer
+# OSS maintenance
 
-You are operating an open-source project's maintenance loop: incoming issues, community PRs, CI, releases, and community channels. These rules are distilled from real maintainer sessions — each one exists because skipping it caused a real failure.
+Read the target repository's AGENTS.md, CLAUDE.md, contribution guide, and release documentation first. Their policies override this general workflow. Installing this skill does not authorize merges, releases, issue closures, or messages to contributors.
 
-## The prime directive
+## Triage and implementation
 
-**The queue has two exit states: absorbed or declined. Never limbo.** Every issue and every community PR ends in one of: a merged fix, a documented decline with reasons, or a close-with-reopen-door. "Awaiting reporter" is a waypoint, not a resting place — if the fix shipped and the reporter has a clear path back in, close it.
+- Inspect current code and existing PRs before duplicating a reported fix. Reuse contributor work where it solves the problem; retain attribution.
+- Reproduce the reported behavior where possible. Separate confirmed failures from diagnosis, and record meaningful limitations in the PR.
+- Fix the cause with the smallest complete change. Test observable behavior where it can regress; do not mistake a source-text assertion for an end-to-end test.
+- Preserve local changes. Use an isolated worktree when branch switching would disturb them.
+- Read existing CI failures and reviewer comments before rerunning work. Diagnose failures before retries; never hide a failing gate behind a successful piped command.
+- Keep user-facing docs and required translations aligned with the implementation.
 
-## Before you write any fix
+## Review and authorized landing
 
-1. **Check the open-PR queue first.** If an issue says "happy to submit a PR" — or the reporter is technically precise — assume the PR may already exist. Run `gh pr list` and search before implementing. Duplicating a contributor's open PR with your own is the single most demoralizing thing a maintainer can do. If you duplicated anyway: own the timeline honestly, credit them, absorb any part of their work that adds value (extra tests, better docs) with `Co-authored-by`.
-2. **Read the actual code, not your memory of it.** Verify the reported line numbers, function names, and claims against the current source. Contributors are often right down to the line — and sometimes they're right about things you already "researched" and got wrong. When a contributor's diagnosis contradicts yours, check the vendored/locked dependency source before defending your version: upstream issue threads often describe old releases.
-3. **Reproduce when possible; say so when you can't.** A fix shipped on diagnosis-strength rather than reproduction must say exactly that in the PR body, with the reporter's confirmation named as the real verification.
+Review the current diff, bot findings, and required checks against current main. Resolve material findings on the PR branch before landing; do not merge first and promise a follow-up. Refresh stale branches using the repository's policy and preserve contributor commits.
 
-## Fix quality bar
+Before an authorized merge, verify required checks are green, the head has not changed, and the PR is mergeable. After landing, inspect main's own runs; investigate regressions immediately. Report remaining blockers without inventing a successful verification.
 
-- **Root-cause fully, then fix the class, not the instance.** If one call site dropped a parameter, grep for every sibling call site. If one error message lied, audit the whole error surface.
-- **Every fix carries a fail-before/pass-after regression test.** If the surrounding code is hard to drive in tests, a source-level contract test (asserting the code's structure) beats no test.
-- **Harden against recurrence.** If a bug class can silently return (a flag someone might remove, a timeout someone might shrink), pin it with a test that names the original incident in its failure message.
-- The smallest correct change that is also recurrence-proof. Extra effort, not extra verbosity.
+## Release preparation
 
-## Merging: gates, not vibes
+Preparing CI or packaging is distinct from publishing. Do not tag, bump versions, enable publishing, or cut a release unless that action is authorized.
 
-- Merge on a **structural check**, evaluated at merge time, never sequentially assumed: required test check = pass AND mergeable = clean. Poll transient unknown states; never merge over an unexplained failure.
-- **Flaky vs. real:** before re-running a failed job, check whether an unrelated concurrent PR hit the *identical* failure signature. Identical-failure-on-unrelated-diff = environment flakiness (re-run once); anything else gets investigated first. If the same flake recurs across 3+ PRs, stop re-running and root-cause the flake itself — intermittent CI failures are usually one leaked piece of global state, and a test-suite guard that resets the leak *and names the polluting test in its warning* turns an unfindable heisenbug into a one-grep fix.
-- **Never trust a piped exit code.** `pytest | tail` exits with tail's status. Capture full output to a file and echo the real `$?` explicitly for anything gating a merge or release.
-- Verify delegated/agent work independently: read the actual diff line-by-line, re-run its tests yourself on a clean branch. Never relay an agent's own success claims as your verification.
-- Actually read your automated reviewers (CodeQL, bot reviews) — pass/fail status is not the review. Real findings hide behind green checkmarks; when one flags a merged PR, act on it as a post-merge follow-up, credited to the reviewer.
-
-## Releases
-
-- **Run the full gates BEFORE mutating any version file.** Bumping versions or regenerating lockfiles while a test suite is mid-run poisons version-consistency tests with mixed state.
-- Version literals live in ONE source of truth; mirrors bump in lockstep, guarded by a test.
-- **The changelog is written for users, before the tag** — a headline paragraph plus grouped entries: bold one-line lead (what the user gets), 1–3 lines of plain-English why, issue/PR refs. Never ship an auto-generated commit dump as release notes. Credit contributors by name in the headline when the release is theirs.
-- After tagging: verify the built release like a skeptic — asset count, not-draft, not-prerelease, and the body actually being your changelog section.
-- A release is also a triage tool: shipped-but-unconfirmed fixes can't get confirmation until users have a build. When several issues wait on "try the next version," cutting the release IS the queue work.
+Use the repository's version source of truth, changelog format, supported platforms, and distribution channels. Validate packaging and workflows without publishing when that is the requested scope. After an authorized release, verify actual artifacts, release notes, updater metadata, and requested registry channels; a green build alone does not prove distribution.
 
 ## Communication
 
-- **Thank every issue and PR author — specifically.** Name what was good: the A/B repro, the line-level diagnosis, the working patch. Generic thanks reads as no thanks.
-- **Lead with the outcome, stay honest.** If you were wrong, say "that was wrong" and what the correct answer is; being corrected by a careful contributor deserves explicit acknowledgment, not quiet edits. If a close was premature, correct the record plainly — don't gloss.
-- Close-with-reopen-door template: state what shipped or why nothing is actionable, then name the exact artifact (log, repro, version) that reopens the conversation, and mean it.
-- Stale reports: test the reported path yourself before closing a description-less issue ("tested the exact code path on the current build — works; reopen with specifics"). A close backed by fresh evidence respects the reporter; a silent stale-close doesn't.
-- Docs are part of the fix: if the change alters anything documented, the doc update ships in the same PR — and a doc that turned out to be *wrong* (e.g., calling something unfixable that a contributor then fixed) gets corrected immediately with credit.
+Lead with the outcome and evidence. Credit concrete contributor work. Do not close stale issues merely because of age, or claim reporter confirmation that has not occurred. For authorized closures, give the resolution and what evidence would justify reopening.
 
-## Judgment defaults
+## VoiceStudio-specific routing
 
-- Old-version reports: ask the reporter to update past the relevant fixes before investigating deeply; close stale-version reports with an update path and reopen door.
-- Report evidence beats theory: a pasted log wins over your best hypothesis. Build the well-evidenced theory, but don't ship code on it until the log confirms — and say which one you're doing.
-- Platform-specific fixes you can't test locally: ship on verified mechanism + CI compile/test for that platform, with the caveat stated in the PR; the reporter is the end-to-end test.
-- When an upstream limitation blocks a fix, document it with links to the upstream issues and a user workaround — and re-verify that claim against current upstream source before writing "unfixable."
+When maintaining debpalash/VoiceStudio, consult its current rules rather than old architecture assumptions:
+- Electron development and packaging: `electron/README.md`, `electron/package.json`, and `.github/workflows/`.
+- Backend contracts: running `/openapi.json`, `backend/api/`, and targeted tests.
+- Release channels and version ownership: `docs/RELEASING.md` and CLAUDE.md. Never infer a version bump from a fix request.
+- Read CodeRabbit/Greptile findings and required CI before merging. Follow main's post-merge CI.
+- Preserve local-first behavior, cross-platform behavior, model-install consent, synthetic-audio marking, and localization requirements.
