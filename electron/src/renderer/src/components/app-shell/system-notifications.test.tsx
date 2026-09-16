@@ -70,7 +70,7 @@ describe('SystemNotifications desktop updates', () => {
     await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith({ to: '/settings/updates' }));
   });
 
-  test('opens while notifications are still loading', async () => {
+  test('shows unavailable instead of endless loading when the backend is offline', async () => {
     mocks.state = {
       status: 'idle',
       currentVersion: '0.5.2',
@@ -83,10 +83,10 @@ describe('SystemNotifications desktop updates', () => {
       </QueryClientProvider>,
     );
 
-    const trigger = await screen.findByRole('button', { name: 'preferences.loading' });
+    const trigger = await screen.findByRole('button', { name: 'modelSettings.unavailable' });
     expect(trigger).toBeEnabled();
     expect(trigger).toHaveClass('app-no-drag');
     fireEvent.click(trigger);
-    expect(await screen.findByText('preferences.loading')).toBeVisible();
+    expect(await screen.findByText('modelSettings.unavailable')).toBeVisible();
   });
 });
