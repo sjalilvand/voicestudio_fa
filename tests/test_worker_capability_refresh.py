@@ -561,4 +561,6 @@ async def test_shutdown_drains_owned_telemetry_probe(monkeypatch):
     release.set()
     await asyncio.wait_for(stopping, 1)
     assert client._telemetry_task is None
+    await client._refresh_telemetry()
+    assert client._telemetry_task is None
     assert not client._maintenance
