@@ -13,16 +13,35 @@ def test_translate_codes_cover_popular_iso():
 
 
 @pytest.mark.parametrize("raw,expected", [
+    # Already-normal ISO 639-1 codes pass through.
     ("zh", "zh"),
+    ("en", "en"),
+    # BCP-47 tags with a region/script suffix strip to the base language.
     ("zh-CN", "zh"),
     ("cmn-Hans", "zh"),
+    # Human / display names from the dub UI's own label list.
     ("Chinese", "zh"),
     ("Chinese (Simplified)", "zh"),
-    ("en", "en"),
+    ("Chinese (Traditional)", "zh"),
+    ("Mandarin", "zh"),
+    # Three-letter ISO 639-2 / bibliographic codes used by some asset pipelines.
+    ("zho", "zh"),
+    # Legacy / deprecated ISO 639-1 codes still seen in older corpora.
+    ("in", "id"),  # Indonesian: pre-1989 code 'in' → modern 'id'.
+    ("iw", "he"),  # Hebrew: pre-1989 code 'iw' → modern 'he'.
+    # ISO 639-2/T for Tagalog, frequently shipped under the 'fil' label.
+    ("fil", "tl"),
 ])
 def test_argos_lang_code_normalizes_names_and_bcp47(raw, expected):
     from services.translation_engines import argos_lang_code
     assert argos_lang_code(raw) == expected
+
+
+@pytest.mark.parametrize("raw", ["", " ", "\t\n"])
+def test_argos_lang_code_rejects_empty_or_whitespace(raw):
+    from services.translation_engines import argos_lang_code
+    with pytest.raises(ValueError, match="Choose a valid source and target language"):
+        argos_lang_code(raw)
 
 
 def test_flores_codes_cover_core_languages():
