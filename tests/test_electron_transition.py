@@ -41,8 +41,10 @@ def test_electron_release_scopes_signing_secrets_and_gates_unsigned_owner_dispat
     jobs = workflow["jobs"]
     assert "CSC_LINK" not in jobs["package"]["env"]
     assert "CSC_KEY_PASSWORD" not in jobs["package"]["env"]
-    scoped = [step for step in jobs["package"]["steps"] if "CSC_LINK" in step.get("env", {})]
+    credentials = {"CSC_LINK", "CSC_KEY_PASSWORD"}
+    scoped = [step for step in jobs["package"]["steps"] if credentials.intersection(step.get("env", {}))]
     assert [step["name"] for step in scoped] == ["Package without publishing"]
+    assert credentials.issubset(scoped[0]["env"])
     guard = next(step for step in jobs["validate"]["steps"] if step.get("name") == "Require an exact version tag")
     assert 'test "$DISPATCH_ACTOR" = "$OWNER" && test "$RERUN_ACTOR" = "$OWNER"' in guard["run"]
     assert guard["env"]["DISPATCH_ACTOR"] == "${{ github.actor }}"
