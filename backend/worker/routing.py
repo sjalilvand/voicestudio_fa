@@ -117,6 +117,13 @@ class Target:
     latency_ms: float = 0.0
     active_tasks: int = 0
     max_tasks: int = 0
+    cpu_percent: Optional[float] = None
+    free_memory_bytes: int = 0
+    system_memory_bytes: int = 0
+    cpu_count: int = 0
+    gpu_name: str = ""
+    gpu_memory_bytes: int = 0
+    gpu_utilization_percent: Optional[float] = None
 
     @property
     def is_local(self) -> bool:
@@ -135,6 +142,13 @@ class Target:
             "latency_ms": round(self.latency_ms, 1),
             "active_tasks": self.active_tasks,
             "max_tasks": self.max_tasks,
+            "cpu_percent": self.cpu_percent,
+            "free_memory_bytes": self.free_memory_bytes,
+            "system_memory_bytes": self.system_memory_bytes,
+            "cpu_count": self.cpu_count,
+            "gpu_name": self.gpu_name,
+            "gpu_memory_bytes": self.gpu_memory_bytes,
+            "gpu_utilization_percent": self.gpu_utilization_percent,
         }
 
 
@@ -192,6 +206,8 @@ def list_targets(control_plane=None) -> list[Target]:
     pool = getattr(control_plane, "pool", None) if control_plane.running else None
     for record in enrolled:
         live = pool.get(record.id) if pool is not None else None
+        host = record.host or {}
+        gpu = (host.get("gpus") or [{}])[0]
         connected = live is not None and not live.stale()
         available, detail = _availability(record, live, pool)
         targets.append(
@@ -207,6 +223,13 @@ def list_targets(control_plane=None) -> list[Target]:
                 latency_ms=live.latency_ms if live else 0.0,
                 active_tasks=live.capacity.active_tasks if live else 0,
                 max_tasks=live.capacity.max_concurrent_tasks if live else 0,
+                cpu_percent=live.capacity.cpu_percent if live else None,
+                free_memory_bytes=live.capacity.free_memory_bytes if live else 0,
+                system_memory_bytes=int(host.get("system_memory_bytes") or 0),
+                cpu_count=int(host.get("cpu_count") or 0),
+                gpu_name=str(gpu.get("model") or ""),
+                gpu_memory_bytes=int(gpu.get("memory_bytes") or 0),
+                gpu_utilization_percent=live.capacity.gpu_utilization_percent if live else None,
             )
         )
     return targets

@@ -18,6 +18,13 @@ export interface ComputeTarget {
   latency_ms: number;
   active_tasks: number;
   max_tasks: number;
+  cpu_percent: number | null;
+  free_memory_bytes: number;
+  system_memory_bytes: number;
+  cpu_count: number;
+  gpu_name: string;
+  gpu_memory_bytes: number;
+  gpu_utilization_percent: number | null;
 }
 
 export interface ComputeTargetState {

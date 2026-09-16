@@ -151,6 +151,8 @@ class WorkerCapacity:
     max_concurrent_tasks: int = 1
     active_tasks: int = 0
     free_memory_bytes: int = 0
+    cpu_percent: Optional[float] = None
+    gpu_utilization_percent: Optional[float] = None
     backend: str = ""
     resident_models: set[str] = field(default_factory=set)
     slots: dict[str, ModelSlot] = field(default_factory=dict)
@@ -287,6 +289,8 @@ class WorkerCapacity:
         available_slots: int,
         resident_models: Optional[set[str]] = None,
         free_memory_bytes: Optional[int] = None,
+        cpu_percent: Optional[float] = None,
+        gpu_utilization_percent: Optional[float] = None,
         now: Optional[float] = None,
     ) -> None:
         """Adopt a heartbeat snapshot. The worker is the source of truth for
@@ -307,6 +311,10 @@ class WorkerCapacity:
             self.resident_models = set(resident_models)
         if free_memory_bytes is not None:
             self.free_memory_bytes = free_memory_bytes
+        if cpu_percent is not None:
+            self.cpu_percent = max(0.0, min(100.0, float(cpu_percent)))
+        if gpu_utilization_percent is not None:
+            self.gpu_utilization_percent = max(0.0, min(100.0, float(gpu_utilization_percent)))
         # Parks are released on a timer, and by the worker restarting — never
         # by the worker's own load report.
         #
@@ -330,6 +338,8 @@ class WorkerCapacity:
             "zombie_tasks": self.zombie_tasks,
             "available_slots": self.available_slots,
             "resident_models": sorted(self.resident_models),
+            "free_memory_bytes": self.free_memory_bytes,
+            "cpu_percent": self.cpu_percent,
         }
 
 

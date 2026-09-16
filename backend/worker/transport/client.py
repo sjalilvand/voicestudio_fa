@@ -73,6 +73,33 @@ _FALLBACK_MODEL_LOAD_SECONDS = 1800.0
 # see _oversized_result_error for why that has to be a failure and not a retry.
 MAX_MESSAGE_BYTES = 8 * 1024 * 1024
 
+
+def _heartbeat_resources() -> tuple[Optional[float], Optional[int], Optional[float]]:
+    """Sample cheap host telemetry without making a heartbeat depend on CUDA."""
+    cpu_percent = free_memory_bytes = gpu_utilization_percent = None
+    try:
+        import psutil
+
+        cpu_percent = float(psutil.cpu_percent(interval=None))
+    except Exception:
+        logger.debug("Could not sample worker CPU usage", exc_info=True)
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            free_memory_bytes = int(torch.cuda.mem_get_info()[0])
+    except Exception:
+        logger.debug("Could not sample worker free VRAM", exc_info=True)
+    try:
+        import pynvml
+
+        pynvml.nvmlInit()
+        handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+        gpu_utilization_percent = float(pynvml.nvmlDeviceGetUtilizationRates(handle).gpu)
+    except Exception:
+        logger.debug("Could not sample worker GPU usage", exc_info=True)
+    return cpu_percent, free_memory_bytes, gpu_utilization_percent
+
 # Room left for result_json, the ref, and protobuf framing when a payload does
 # ride inline. The inline decision is made on the payload alone, so without a
 # reserve a payload sized exactly at the frame cap would overflow it.
@@ -339,6 +366,8 @@ class WorkerClient:
         self._running: dict[str, asyncio.Task] = {}
         self._keepalives: dict[str, asyncio.Task] = {}
         self._maintenance: set[asyncio.Task] = set()
+        self._telemetry: tuple[Optional[float], Optional[int], Optional[float]] = (None, None, None)
+        self._telemetry_task: Optional[asyncio.Task] = None
         self._prewarms: dict[str, asyncio.Task] = {}
         self._prewarm_cancellations: dict[str, asyncio.Task] = {}
         self._epoch = 0
@@ -684,9 +713,22 @@ class WorkerClient:
         while True:
             await asyncio.sleep(interval)
             await self._send(self.heartbeat_message())
+            if self._telemetry_task is None or self._telemetry_task.done():
+                self._telemetry_task = asyncio.create_task(self._refresh_telemetry())
+
+    async def _refresh_telemetry(self) -> None:
+        try:
+            self._telemetry = await asyncio.wait_for(asyncio.to_thread(_heartbeat_resources), timeout=2)
+        except TimeoutError:
+            logger.warning("Worker telemetry sampling timed out")
 
     def heartbeat_message(self) -> pb.WorkerMessage:
         """Build the worker's current liveness/capacity frame."""
+        cpu_percent, free_memory_bytes, gpu_utilization_percent = self._telemetry
+        telemetry = {}
+        if cpu_percent is not None: telemetry["cpu_percent"] = cpu_percent
+        if free_memory_bytes is not None: telemetry["free_memory_bytes"] = free_memory_bytes
+        if gpu_utilization_percent is not None: telemetry["gpu_utilization_percent"] = gpu_utilization_percent
         return pb.WorkerMessage(
             heartbeat=pb.Heartbeat(
                 active_tasks=len(self._running),
@@ -694,6 +736,7 @@ class WorkerClient:
                     0, self.config.max_concurrent_tasks - len(self._running)
                 ),
                 resident_models=self._resident_models(),
+                **telemetry,
             )
         )
 
