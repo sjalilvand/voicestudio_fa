@@ -726,6 +726,8 @@ class WorkerClient:
         only cancels the awaiter, leaving that thread alive; retaining this
         task prevents later heartbeats from accumulating more blocked probes.
         """
+        if not self._accepting_assignments or self._stop.is_set():
+            return
         task = self._telemetry_task
         if task is not None and task.done():
             try:
