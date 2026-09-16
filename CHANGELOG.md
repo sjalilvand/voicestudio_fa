@@ -27,6 +27,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Changed
 
+- README clarifies the Electron transition while keeping desktop contributions welcome (#2153) — thanks @cyberspace-cs!
+
 - Electron first run uses four simple steps with model packs, optional advanced controls and skippable dictation setup (#2129)
 
 - Model Catalogue is one page: a setup summary (speech, transcription, dictation, language model) on top, one TTS / ASR / LLM switch, and each family's downloadable weights listed under its engines; the separate Models pane and the Settings → Voice → Engines / Models signposts are gone, the models directory and voice previews moved to Settings → Storage and the HF mirror to Network (#2013)
