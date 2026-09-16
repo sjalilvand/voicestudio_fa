@@ -320,9 +320,13 @@ describe('REGION_COLORS — opaque JS-pre-blended paint guard (#373, #963)', () 
 });
 
 it('flags every nested overlap, not just consecutive intervals', () => {
-  expect([...detectOverlaps([
-    { id: 'long', start: 0, end: 10 },
-    { id: 'a', start: 1, end: 2 },
-    { id: 'b', start: 3, end: 4 },
-  ])].sort()).toEqual(['a', 'b', 'long']);
+  expect(
+    [
+      ...detectOverlaps([
+        { id: 'long', start: 0, end: 10 },
+        { id: 'a', start: 1, end: 2 },
+        { id: 'b', start: 3, end: 4 },
+      ]),
+    ].sort(),
+  ).toEqual(['a', 'b', 'long']);
 });
