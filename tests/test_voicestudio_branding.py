@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_VERSION = "0.5.2"
+CURRENT_VERSION = json.loads((ROOT / "frontend/package.json").read_text())["version"]
 
 
 def test_current_version_is_in_lockstep_everywhere() -> None:
