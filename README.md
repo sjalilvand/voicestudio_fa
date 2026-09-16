@@ -75,6 +75,8 @@ See [Electron setup](electron/README.md) for prerequisites and backend configura
 
 </details>
 
+> **Electron is the primary desktop app.** The next desktop release ships Electron, with one final Tauri sunset update. Bug reports and contributions remain welcome; include the app version and whether you use Electron or Tauri.
+
 ## Documentation
 
 | Need | Start here |
