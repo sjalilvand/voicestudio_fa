@@ -360,7 +360,10 @@
     "theme_auto": "Системний",
     "theme_light": "Світла",
     "reduce_motion": "Зменшити рух",
-    "reduce_motion_desc": "Зупиняє фонові анімації та переходи. Системне налаштування діє саме по собі; це доповнює його."
+    "reduce_motion_desc": "Зупиняє фонові анімації та переходи. Системне налаштування діє саме по собі; це доповнює його.",
+    "perf_torch_compile": "Вимкнути torch.compile",
+    "perf_torch_compile_note": "Використовує пряме виконання для запобігання помилкам пам’яті Triton.",
+    "perf_torch_compile_hint": "Використовує пряме виконання для запобігання помилкам пам’яті Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",

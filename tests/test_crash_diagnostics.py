@@ -18,7 +18,12 @@ import textwrap
 
 import pytest
 
-from core import crash_diagnostics
+@pytest.fixture(autouse=True)
+def _current_application_module():
+    import importlib
+    global crash_diagnostics
+    crash_diagnostics = importlib.import_module("core.crash_diagnostics")
+
 
 _BACKEND_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend",

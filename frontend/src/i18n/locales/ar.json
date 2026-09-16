@@ -360,7 +360,10 @@
     "theme_auto": "تلقائي حسب النظام",
     "theme_light": "فاتح",
     "reduce_motion": "تقليل الحركة",
-    "reduce_motion_desc": "يوقف الرسوم المتحركة في الخلفية والانتقالات. إعداد النظام يظل ساريًا بذاته؛ وهذا يضاف إليه."
+    "reduce_motion_desc": "يوقف الرسوم المتحركة في الخلفية والانتقالات. إعداد النظام يظل ساريًا بذاته؛ وهذا يضاف إليه.",
+    "perf_torch_compile": "تعطيل torch.compile",
+    "perf_torch_compile_note": "يستخدم التنفيذ المباشر لتجنب أخطاء ذاكرة Triton.",
+    "perf_torch_compile_hint": "يستخدم التنفيذ المباشر لتجنب أخطاء ذاكرة Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",

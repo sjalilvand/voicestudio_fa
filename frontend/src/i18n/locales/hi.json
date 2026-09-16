@@ -360,7 +360,10 @@
     "theme_auto": "सिस्टम डिफ़ॉल्ट",
     "theme_light": "लाइट",
     "reduce_motion": "गति कम करें",
-    "reduce_motion_desc": "पृष्ठभूमि एनिमेशन और ट्रांज़िशन रोकता है। आपकी सिस्टम सेटिंग स्वयं लागू रहती है; यह उसमें जुड़ता है।"
+    "reduce_motion_desc": "पृष्ठभूमि एनिमेशन और ट्रांज़िशन रोकता है। आपकी सिस्टम सेटिंग स्वयं लागू रहती है; यह उसमें जुड़ता है।",
+    "perf_torch_compile": "torch.compile बंद करें",
+    "perf_torch_compile_note": "Triton की मेमोरी त्रुटियों से बचने के लिए सीधे निष्पादन का उपयोग करता है।",
+    "perf_torch_compile_hint": "Triton की मेमोरी त्रुटियों से बचने के लिए सीधे निष्पादन का उपयोग करता है। <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",

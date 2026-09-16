@@ -68,7 +68,9 @@ def _settings_db_path() -> str:
     try:
         from core.config import DB_PATH
 
-        return str(DB_PATH)
+        from core.scrub import scrub_text
+
+        return scrub_text(str(DB_PATH))
     except Exception:
         return "<unknown>"
 

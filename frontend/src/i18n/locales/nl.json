@@ -360,7 +360,10 @@
     "theme_auto": "Systeem auto",
     "theme_light": "Licht",
     "reduce_motion": "Beweging verminderen",
-    "reduce_motion_desc": "Stopt achtergrondanimaties en overgangen. Je systeeminstelling blijft op zichzelf gelden; dit komt daarbij."
+    "reduce_motion_desc": "Stopt achtergrondanimaties en overgangen. Je systeeminstelling blijft op zichzelf gelden; dit komt daarbij.",
+    "perf_torch_compile": "torch.compile uitschakelen",
+    "perf_torch_compile_note": "Gebruikt directe uitvoering om Triton-geheugenfouten te voorkomen.",
+    "perf_torch_compile_hint": "Gebruikt directe uitvoering om Triton-geheugenfouten te voorkomen. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",

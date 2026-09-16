@@ -19,7 +19,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from services import model_manager
+@pytest.fixture(autouse=True)
+def _current_application_module():
+    import importlib
+    global model_manager
+    model_manager = importlib.import_module("services.model_manager")
+
 
 
 class _FakeCuda:

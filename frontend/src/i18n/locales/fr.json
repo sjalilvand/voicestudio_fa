@@ -360,7 +360,10 @@
     "theme_auto": "Auto (Système)",
     "theme_light": "Clair",
     "reduce_motion": "Réduire les animations",
-    "reduce_motion_desc": "Arrête les animations d’arrière-plan et les transitions. Le réglage système reste actif de son côté ; ceci s’y ajoute."
+    "reduce_motion_desc": "Arrête les animations d’arrière-plan et les transitions. Le réglage système reste actif de son côté ; ceci s’y ajoute.",
+    "perf_torch_compile": "Désactiver torch.compile",
+    "perf_torch_compile_note": "Utilise l’exécution directe pour éviter les erreurs de mémoire de Triton.",
+    "perf_torch_compile_hint": "Utilise l’exécution directe pour éviter les erreurs de mémoire de Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",
