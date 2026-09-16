@@ -10,6 +10,14 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- The README is shorter, with a new Electron UI tour and refreshed screenshots (#2129)
+
+- Support pages feature cleaner donation cards, with a workspace support shortcut and sponsor footer with hover cards and email inquiries (#2129)
+
+- Integrations has a dedicated sidebar workspace with featured sponsors, searchable AI providers, and smooth sponsor-strip scrolling (#2129)
+
+- Integrations now covers 100+ automation, communications, MCP, agent, developer, data, and productivity tools with config-driven detail pages (#2129)
+
 - Electron now ships as a complete cross-platform VoiceStudio desktop app with local-first cloning, production workspaces, model packs, repair agents, native integrations, updates, parity checks, and the shared backend contracts required by those workflows (#1823)
 
 - The Model Catalogue is one page: what you use now on top, then each family's engines and weights (#2013)
@@ -19,6 +27,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Changed
 
+- Electron first run uses four simple steps with model packs, optional advanced controls and skippable dictation setup (#2129)
+
 - Model Catalogue is one page: a setup summary (speech, transcription, dictation, language model) on top, one TTS / ASR / LLM switch, and each family's downloadable weights listed under its engines; the separate Models pane and the Settings → Voice → Engines / Models signposts are gone, the models directory and voice previews moved to Settings → Storage and the HF mirror to Network (#2013)
 - The engine list is one line per engine (engine, device it runs on, status, one action) with a detail panel for everything else; each engine's weights install from its panel, so the separate weights list and recommendation card are gone (#2020)
 - CosyVoice 3 installs patched protobuf and transformers releases, clearing five security advisories (#2030, #2031)
@@ -26,6 +36,19 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Fixed
 
 - Dubbing demos synchronize playheads without simultaneous playback and let you open a sample in the editor (#2131)
+- Dubbing timelines keep short segments proportional, support zoom, and remove timestamp-confirmed duplicate ASR context (#2129)
+
+- Dubbing translation shares the agent footer with live logs, validated output, cancellation and contextual retries (#2129)
+
+- Agent dubbing translation saves a custom tone and adaptation prompt and preserves it during timing rewrites (#2129)
+
+- Dubbing preserves original sound outside dialogue and mixes separated background only beneath replacement speech (#2129)
+
+- Dubbing repairs missing speech caches, rejects incomplete output, avoids oversized speaker references, and fits full speech without early clipping (#2129)
+- Workspace sidebars have a working right-edge resize handle, allow 40% more width, remember their size, and keep video controls inside the preview (#2129)
+- Pressing Play while a video is loading starts playback when it is ready instead of reporting playback unavailable (#2129)
+- Video previews show their thumbnail before playback, including the source video in Dub (#2129)
+- Linux and Windows workspace headers consistently expand and collapse the sidebar, with the app logo at the top of the collapsed rail (#2129)
 - Stopping a process on macOS no longer fails with "Operation not permitted" when it was already exiting (#2032)
 - A YouTube link blocked by its "not a bot" check now says how to attach signed-in cookies in Dub, instead of quoting yt-dlp's command-line flags (#2036, #2034)
 - An engine that fails to start now says whether it timed out, crashed (with its exit code and last output) or answered wrongly, instead of "did not signal ready: None" (#2037, #2026)

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { apiJson, apiPath } from '@/lib/api/client';
+import { runRendererTask } from '@/lib/global-error-recovery';
 
 interface DemoManifest {
   source: {
@@ -58,6 +59,7 @@ export function DubbingDemo({
   const sourcePlayer = useRef<MediaPlayerInstance>(null);
   const dubbedPlayer = useRef<MediaPlayerInstance>(null);
   const mirroring = useRef(false);
+  const activePlayer = useRef<MediaPlayerInstance | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -150,7 +152,10 @@ export function DubbingDemo({
                 aria-label={`${t('clone.edit')} ${label}`}
                 onClick={() => {
                   setEditingVideo(true);
-                  void Promise.resolve(onEdit(editableVideo)).finally(() => setEditingVideo(false));
+                  runRendererTask('Edit dubbing demo', async () => {
+                    try { await onEdit(editableVideo); }
+                    finally { setEditingVideo(false); }
+                  });
                 }}
               >
                 {editingVideo ? (
@@ -170,7 +175,19 @@ export function DubbingDemo({
             load="eager"
             src={{ src: apiPath(`${DEMO_BASE}/${video}`), type: 'video/mp4' }}
             source={`${PLAYBACK_GROUP}-${tag}`}
-            onPlay={() => synchronizePosition(player.current, peer.current)}
+            onPlay={() => {
+              const incoming = player.current;
+              const outgoing = activePlayer.current;
+              if (synchronized && incoming && outgoing && incoming !== outgoing) {
+                incoming.currentTime = outgoing.currentTime;
+              }
+              activePlayer.current = incoming;
+              void peer.current?.pause().catch(() => {});
+              synchronizePosition(incoming, peer.current);
+            }}
+            onPause={() => {
+              if (activePlayer.current === player.current) synchronizePosition(player.current, peer.current);
+            }}
             onSeeked={() => synchronizePosition(player.current, peer.current)}
           />
         </div>

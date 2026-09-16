@@ -1911,6 +1911,7 @@
     "test_text": "Witamy — to jest test tego głosu."
   },
   "nav": {
+    "voice": "Głos",
     "clone_short": "Klonuj",
     "workspaces": "Obszary robocze",
     "stories": "Historie",
@@ -1984,6 +1985,7 @@
     "dictation_lede_hotkey_only": "Przytrzymaj powyższy skrót w dowolnym miejscu pulpitu, mów i puść — tekst trafi do aktywnej aplikacji. Naciśnij teraz, aby zweryfikować."
   },
   "setup": {
+    "ready_desc": "Możesz już utworzyć swój pierwszy głos. Dyktowanie skonfigurujesz teraz lub później w Ustawieniach.",
     "system_preflight": "Wstępna inspekcja systemu",
     "system_check_desc": "Sprawdź pamięć RAM, dysk, procesor graficzny, ffmpeg i sieć. Blokery są oznaczone od razu, więc wiesz o tym przed pobraniem.",
     "probing": "System sondujący…",
@@ -2076,7 +2078,7 @@
     "choose_method": "Wybierz sposób dawania",
     "choose_method_amount": "Kontynuuj za pomocą ${{amount}}",
     "goal": {
-      "title": "Fundusz Claude'a Maxa",
+      "title": "Wesprzyj rozwój VoiceStudio",
       "of": "z",
       "per_month": "/ miesiąc",
       "aria": "{{raised}} z {{goal}} celu miesięcznego",
@@ -2085,7 +2087,7 @@
       "social_proof": "Dołącz do {{count}} zwolenników finansujących lokalną sztuczną inteligencję"
     },
     "postcard": {
-      "title": "Fundusz Claude'a Maxa",
+      "title": "Wesprzyj rozwój VoiceStudio",
       "lead_default": "Cieszę się, że to zadziałało! Usługa VoiceStudio jest bezpłatna i w pełni lokalna. Jeśli oszczędzi to Twój czas, niewielka miesięczna wpłata sfinansuje stojącego za nim Claude'a Maxa.",
       "lead_first_clone": "Twój pierwszy klon głosu jest gotowy — świetnie! VoiceStudio działa całkowicie na Twoim komputerze, a dzięki Twojemu wsparciu tak będzie.",
       "lead_tenth_dub": "Dziesięć dubów — wyraźnie to robisz. Niewielki miesięczny wkład finansuje Claude Max, który udostępnia te funkcje.",
@@ -2573,5 +2575,74 @@
     "captured": "Przechwycono {{count}} problematycznych wierszy dziennika",
     "contextNotice": "Wybrany agent otrzyma to zgłoszenie, bieżący ekran, ostatnie dzienniki aplikacji i backendu oraz diagnostykę systemu.",
     "complete": "Zakończono"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Brak mowy lub nie można jej odczytać. Przed eksportem wygeneruj ponownie dany segment.",
+    "timingOverflow": "Mowa przekracza przydzielony czas. Skróć tłumaczenie albo wybierz ścisły przedział czasu lub wydłużenie filmu.",
+    "backgroundUnavailable": "Nie udało się zachować oryginalnego dźwięku. Sprawdź oddzielenie tła i czasy dialogów, a następnie spróbuj ponownie lub wybierz eksport samej mowy."
+  },
+  "dubStyle": {
+    "label": "Instrukcje stylu tłumaczenia",
+    "help": "Opisz ton, odbiorców i sposób adaptacji, np. zachowanie żartów i naturalne tłumaczenie idiomów. Zapisywane w projekcie i stosowane przy tłumaczeniu oraz dopasowaniu czasu. Pozostaw puste dla stylu domyślnego."
+  },
+  "dubActivity": {
+    "output": "Tłumaczenia",
+    "waiting": "Nie otrzymano jeszcze żadnych wyników.",
+    "progress": "Zweryfikowano {{done}} / {{total}} segmentów",
+    "cancelled": "Anulowano",
+    "fitting": "Dostosowywanie czasu"
+  },
+  "sponsorSlot": {
+    "partner_heading": "Zostań partnerem VoiceStudio",
+    "partner_subtitle": "Przedstaw produkt osobom tworzącym z użyciem głosu.",
+    "app_placement": "Obecność w aplikacji",
+    "integration_page": "Strona integracji",
+    "readme_exposure": "Obecność w README",
+    "visibility": "Widoczność",
+    "integration": "Integracja produktu",
+    "installs": "Instalacje bezpośrednie",
+    "distribution": "Dystrybucja dla deweloperów",
+    "partner": "Zweryfikowany partner",
+    "privacy": "Prywatność",
+    "title": "Wyróżnij się w VoiceStudio",
+    "description": "Zwiększ widoczność swojej marki, sponsorując płatne wyróżnione miejsce.",
+    "form": "Formularz Google",
+    "email": "E-mail",
+    "book": "Zarezerwuj miejsce",
+    "preview": "Podgląd sponsora",
+    "footer_brand": "Twoja marka",
+    "footer_book": "Dodaj teraz",
+    "email_template": "Cześć, zespole VoiceStudio,\n\nChcę nawiązać współpracę z VoiceStudio i poznać możliwości wyróżnienia mojej marki.\n\nMarka / produkt:\nStrona internetowa:\nIntegracja lub kampania:\nOdbiorcy / termin:\n\nCzy możecie przesłać dostępne pakiety, ceny, opcje ekspozycji i wymagania techniczne? Rozumiem, że wyróżnione partnerstwo może obejmować stronę dokumentacji, logo w GitHub README, miejsce w stopce aplikacji i wpis w katalogu Integrations.\n\nDziękuję,\n[Imię]\n[Rola / firma]\n[Kontakt]",
+    "message": "Twoja marka, strona i wiadomość",
+    "email_app": "Otwórz pocztę",
+    "copy_email": "Kopiuj e-mail",
+    "preview_detail": "Tutaj mogą pojawić się Twoje logo, link i opis."
+  },
+  "supportPlans": {
+    "remove": "Usuń pasek sponsorów",
+    "title": "Darmowa a Pro",
+    "free": "Darmowa",
+    "pro": "Pro",
+    "get_pro": "Zdobądź Pro",
+    "sponsor_bar": "Pasek sponsorów",
+    "visible": "Widoczny",
+    "hideable": "Można ukryć",
+    "unavailable": "Aktywacja Pro nie została jeszcze skonfigurowana.",
+    "telemetry": "Telemetria",
+    "opt_in": "Opcjonalna, za zgodą",
+    "disabled": "Wyłączona",
+    "badge": "Odznaka Pro",
+    "advanced": "Zaawansowane narzędzia",
+    "standard": "Standardowe",
+    "included": "W zestawie"
+  },
+  "integrationCatalog": {
+    "title": "Integracje",
+    "featured": "Wyróżnione",
+    "description": "Odkryj integracje i wyróżnionych partnerów."
+  },
+  "directoryExamples": {
+    "example": "Przykład katalogowy",
+    "notice": "Wyłącznie przykłady katalogowe — nie sponsorzy ani połączone integracje."
   }
 }

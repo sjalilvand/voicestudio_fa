@@ -12,18 +12,18 @@ describe('theme preferences', () => {
   it('preserves the old appearance and tolerates malformed saved preferences', () => {
     expect(parseThemePreferences('{', 'light')).toEqual({
       mode: 'light',
-      light: 'default',
-      dark: 'default',
+      light: 'signal',
+      dark: 'signal',
     });
     expect(parseThemePreferences('{"mode":"invalid","light":"missing","dark":"current"}')).toEqual({
       mode: 'dark',
-      light: 'default',
+      light: 'signal',
       dark: 'current',
     });
     expect(parseThemePreferences('null')).toEqual({
       mode: 'dark',
-      light: 'default',
-      dark: 'default',
+      light: 'signal',
+      dark: 'signal',
     });
   });
   it('resolves independent halves when the operating system changes', () => {
