@@ -44,6 +44,35 @@ def _ts_to_seconds(h: str, m: str, s: str, ms: str) -> float:
     return int(h) * 3600 + int(m) * 60 + int(s) + int(ms_padded) / 1000.0
 
 
+def _is_index_line(line: str) -> bool:
+    """True when `line` is a bare SubRip cue number.
+
+    Stricter than `str.isdigit()` on purpose: that also accepts non-ASCII
+    numerals (Arabic-Indic "١٩٩٩", Devanagari "२०२६", and the full-width
+    forms), which in a 646-language dubbing app are dialogue, never the
+    ASCII cue indices SubRip actually writes.
+    """
+    stripped = line.strip()
+    return stripped.isascii() and stripped.isdigit()
+
+
+def _uses_index_lines(text: str, first_timing_start: int) -> bool:
+    """Whether this file numbers its cues, decided once from the preamble.
+
+    A SubRip file opens with the first cue's index; an index-less export
+    opens with the timing line itself. Files don't mix the two styles, so
+    one look at what precedes the first timing line settles it for the
+    whole parse — and settling it globally is the point: deciding per-cue
+    means guessing from a body, and a body of "42" is indistinguishable
+    from an index.
+    """
+    head = text[:first_timing_start]
+    for line in reversed(head.split("\n")):
+        if line.strip():
+            return _is_index_line(line)
+    return False
+
+
 @dataclass
 class SrtParseResult:
     segments: list[dict]
@@ -74,6 +103,10 @@ def parse_srt(content: str) -> SrtParseResult:
     # timing line (or end of file). This is robust to missing index
     # numbers and to spec deviations in the blank-line separator.
     matches = list(_TIMING_RE.finditer(text))
+    # Each body is sliced up to the NEXT timing line, which swallows that
+    # cue's index line. Only an indexed file has an index to give back, so
+    # decide that once here instead of guessing from each body.
+    indexed = bool(matches) and _uses_index_lines(text, matches[0].start())
     for i, m in enumerate(matches):
         try:
             start = _ts_to_seconds(m.group(1), m.group(2), m.group(3), m.group(4))
@@ -85,12 +118,19 @@ def parse_srt(content: str) -> SrtParseResult:
             skipped += 1
             continue
         body_start = m.end()
-        body_end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        has_next = i + 1 < len(matches)
+        body_end = matches[i + 1].start() if has_next else len(text)
         body = text[body_start:body_end].strip("\n")
-        # Drop the trailing index number of the NEXT cue (which got eaten
-        # into our body) by trimming trailing digit-only lines.
+        # Give back exactly the one index line the slice above swallowed:
+        # a single line, only when a next cue exists to own it, and only in
+        # a file that indexes its cues at all. Anything looser eats real
+        # dialogue — subtitles are full of numeric-only lines (a year, a
+        # score, a street number, a "3 / 2 / 1" countdown). The old rule
+        # popped *every* trailing digit line unconditionally, so the last
+        # cue of a file ("1999") vanished outright and an index-less export
+        # quietly lost its closing number.
         lines = body.split("\n")
-        while lines and lines[-1].strip().isdigit():
+        if indexed and has_next and lines and _is_index_line(lines[-1]):
             lines.pop()
         cue_text = "\n".join(line.strip() for line in lines if line.strip())
         if not cue_text:
