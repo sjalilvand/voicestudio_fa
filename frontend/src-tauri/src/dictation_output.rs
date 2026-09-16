@@ -1177,6 +1177,7 @@ impl DictationOutput {
                         return Ok(DeliveryOutcome::Copied);
                     }
                     self.schedule_restore(session_id, generation, text.to_owned());
+                    thread::sleep(CLIPBOARD_CONSUME_DELAY);
                     return Ok(DeliveryOutcome::Inserted);
                 }
                 LinuxTool::Ydotool => {
@@ -1188,6 +1189,7 @@ impl DictationOutput {
                         return Ok(DeliveryOutcome::Copied);
                     }
                     self.schedule_restore(session_id, generation, text.to_owned());
+                    thread::sleep(CLIPBOARD_CONSUME_DELAY);
                     return Ok(DeliveryOutcome::Inserted);
                 }
             }

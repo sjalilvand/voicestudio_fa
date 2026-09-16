@@ -398,6 +398,16 @@ fn batch_endpoint(backend_url: &str) -> Result<reqwest::Url, String> {
     Ok(url)
 }
 
+fn validate_upload_authorization(url: &reqwest::Url, authorization: Option<&str>) -> Result<(), String> {
+    let host = url.host_str().unwrap_or("").trim_start_matches('[').trim_end_matches(']');
+    let loopback = host.eq_ignore_ascii_case("localhost")
+        || host.parse::<std::net::IpAddr>().is_ok_and(|ip| ip.is_loopback());
+    if url.scheme() == "http" && !loopback && authorization.is_some_and(|v| !v.is_empty()) {
+        return Err("Credentialed watch-folder uploads require HTTPS outside loopback".into());
+    }
+    Ok(())
+}
+
 /// Stream one settled watched file directly from its pinned OS handle to the
 /// selected backend. Keeping bytes out of WebView IPC avoids an O(file size)
 /// renderer allocation for multi-gigabyte videos.
@@ -416,6 +426,7 @@ pub fn enqueue_to(
     let reader = open_watched_reader(&dir, &name, expected_size, expected_mtime)?;
     let mime = video_mime(&name);
     let url = batch_endpoint(&backend_url)?;
+    validate_upload_authorization(&url, authorization.as_deref())?;
 
     let part = reqwest::blocking::multipart::Part::reader_with_length(reader, expected_size)
         .file_name(name)
@@ -719,5 +730,20 @@ mod tests {
 
         let _ = fs::remove_dir_all(&dir);
         let _ = fs::remove_file(&secret);
+    }
+}
+
+#[cfg(test)]
+mod transport_tests {
+    #[test]
+    fn credentials_require_tls_except_loopback() {
+        for base in ["http://127.0.0.1:3900", "http://[::1]:3900", "http://localhost:3900", "https://gpu.example"] {
+            assert!(super::validate_upload_authorization(&super::batch_endpoint(base).unwrap(), Some("Bearer secret")).is_ok());
+        }
+        for base in ["http://gpu.example", "http://192.168.1.2:3900", "http://localhost.evil.test"] {
+            let url = super::batch_endpoint(base).unwrap();
+            assert!(super::validate_upload_authorization(&url, Some("Bearer secret")).is_err());
+            assert!(super::validate_upload_authorization(&url, None).is_ok());
+        }
     }
 }

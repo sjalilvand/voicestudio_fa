@@ -35,6 +35,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Tauri and Electron now share native dictation, watch-folder, and Wayland shortcut contracts; focused paste stays ordered and first-run uv stays pinned at 0.12.13 (#2122)
 - Dubbing timelines keep short segments proportional, support zoom, and remove timestamp-confirmed duplicate ASR context (#2129)
 
 - Dubbing translation shares the agent footer with live logs, validated output, cancellation and contextual retries (#2129)
