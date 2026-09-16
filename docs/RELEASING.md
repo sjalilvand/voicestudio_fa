@@ -161,3 +161,40 @@ before Tauri uploads them again. A macOS retry also replaces that architecture's
 versionless updater archive. Other versions, sibling platforms, and updater
 manifests remain intact. Inventory or deletion permission/network failures stop
 the job instead of hiding an upload collision.
+
+## Electron transition (next desktop release)
+
+Electron is the primary desktop distribution. electron-release.yml builds Linux
+x64, Windows x64, macOS arm64 and macOS x64, checks packaged startup and updater
+artifacts, then creates a draft. Publishing requires a tag-scoped manual dispatch
+with publish=true. Tag pushes never publish automatically. electron-build.yml
+remains the artifact-only rehearsal; run it before tagging.
+
+Set TAURI_SUNSET_TAG to the final Tauri version tag. Run the manual release.yml
+on that tag first; it rejects other refs. Automatic Tauri builds and scheduled
+previews are retired. Keep the transition release draft until Electron on the
+same tag completes. Electron requires the final signed latest.json and
+latest-user.json assets; subsequent releases copy those feeds without changing
+their immutable sunset payload URLs. Retain the sunset release and its assets.
+
+Write versioned CHANGELOG notes before release. Review all four platform builds,
+checksums, signing requirements and docs/electron-migration.md. Existing Electron
+artifact names and app IDs remain stable for updater compatibility. This pipeline
+ships stable releases; rolling preview publication is paused during transition.
+
+Preparation is not proof of cross-platform packaging, signing, migration, or a
+real installed update hop. Record those results before release. Keep Tauri source
+and shared assets until remaining Electron resource references are relocated.
+No tag, version bump, or publishing is authorized by workflow preparation alone.
+
+Electron signing uses ELECTRON_CSC_LINK and ELECTRON_CSC_KEY_PASSWORD secrets.
+Without them rehearsal/draft artifacts are unsigned or ad-hoc signed. Publishing
+checks macOS signing/notarization and Windows Authenticode signatures by default.
+The owner may explicitly choose the existing unsigned-release policy by dispatching
+with `allow_unsigned=true`; the release notes then disclose OS trust warnings and
+unverified macOS automatic updates. Never select this exception without the owner's
+choice. Tauri's signing keys do not sign Electron packages.
+
+For the transition tag, automatic Electron release jobs are skipped. Build the
+manual Tauri sunset draft first, then dispatch Electron on the same tag after
+its signed updater feeds exist. Later tags build Electron automatically.

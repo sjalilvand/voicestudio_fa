@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useTranslationEngines } from '@/features/settings/translation-settings';
 import { Link } from '@tanstack/react-router';
@@ -77,6 +77,13 @@ interface DeviceUsage {
 function boundedPercent(value: number, total = 100) {
   if (!Number.isFinite(value) || !Number.isFinite(total) || total <= 0) return 0;
   return Math.max(0, Math.min(100, (value / total) * 100));
+}
+
+function formatBytes(bytes: number) {
+  const gib = Math.max(0, bytes) / 1024 ** 3;
+  return new Intl.NumberFormat(undefined, {
+    style: 'unit', unit: 'gigabyte', maximumFractionDigits: gib >= 10 ? 0 : 1,
+  }).format(gib);
 }
 
 function DeviceMetric({
@@ -222,7 +229,15 @@ function EngineTip({
   );
 }
 
-export function StatusBar({ compact = false }: { compact?: boolean }) {
+export function StatusBar({
+  compact = false,
+  inline = false,
+  footerLeading,
+}: {
+  compact?: boolean;
+  inline?: boolean;
+  footerLeading?: ReactNode;
+}) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [deviceOpen, setDeviceOpen] = useState(false);
@@ -477,7 +492,7 @@ export function StatusBar({ compact = false }: { compact?: boolean }) {
       </div>
       <ComputeTargetChoices data={computeTarget.data} />
       {activeRemoteTarget ? (
-        <div className="space-y-1 rounded-lg border border-border/55 bg-muted/20 px-3 py-2 text-xs">
+        <div className="space-y-3 rounded-lg border border-border/55 bg-muted/20 p-2.5 text-xs">
           <p className="truncate text-foreground/85" title={activeRemoteTarget.endpoint}>
             {activeRemoteTarget.endpoint}
           </p>
@@ -491,6 +506,43 @@ export function StatusBar({ compact = false }: { compact?: boolean }) {
               {activeRemoteTarget.active_tasks}/{activeRemoteTarget.max_tasks}
             </span>
           </div>
+          {activeRemoteTarget.cpu_percent != null && (
+            <DeviceMetric
+              Icon={CpuIcon}
+              label={t('settings.device_family_cpu')}
+              value={`${Math.round(activeRemoteTarget.cpu_percent)}%`}
+              percent={activeRemoteTarget.cpu_percent}
+            />
+          )}
+          {activeRemoteTarget.gpu_name &&
+            (activeRemoteTarget.gpu_utilization_percent != null ||
+              activeRemoteTarget.free_memory_bytes != null) && (
+            <DeviceMetric
+              Icon={MonitorUpIcon}
+              label={t('settings.device_family_gpu')}
+              value={
+                [
+                  activeRemoteTarget.gpu_utilization_percent != null
+                    ? `${Math.round(activeRemoteTarget.gpu_utilization_percent)}%`
+                    : null,
+                  activeRemoteTarget.free_memory_bytes != null
+                    ? `${formatBytes(
+                        activeRemoteTarget.gpu_memory_bytes - activeRemoteTarget.free_memory_bytes,
+                      )} / ${formatBytes(activeRemoteTarget.gpu_memory_bytes)}`
+                    : null,
+                ]
+                  .filter((value): value is string => value != null)
+                  .join(' · ')
+              }
+              percent={boundedPercent(
+                activeRemoteTarget.free_memory_bytes != null
+                  ? activeRemoteTarget.gpu_memory_bytes - activeRemoteTarget.free_memory_bytes
+                  : 0,
+                activeRemoteTarget.gpu_memory_bytes,
+              )}
+              detail={activeRemoteTarget.gpu_name}
+            />
+          )}
         </div>
       ) : deviceUsage.isError ? (
         <button
@@ -661,72 +713,88 @@ export function StatusBar({ compact = false }: { compact?: boolean }) {
                   : 'modelSettings.unavailable',
     },
   ];
+  const iconDevicePopover = (
+    <Popover open={deviceOpen} onOpenChange={setDeviceOpen}>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            aria-label={`${deviceLabel}: ${deviceStageText}`}
+            className={cn(engineLinkClass, 'h-7 w-full', !compact && 'justify-start gap-2 px-2')}
+          />
+        }
+      >
+        <CpuIcon className={engineIconClass} aria-hidden="true" />
+        {!compact && <span className="min-w-0 truncate">{deviceLabel}</span>}
+        <span
+          className={cn(
+            compact
+              ? 'absolute inset-x-2 bottom-0.5 h-0.5 rounded-full'
+              : 'ml-auto size-1.5 shrink-0 rounded-full',
+            deviceDot,
+          )}
+          aria-hidden="true"
+        />
+      </PopoverTrigger>
+      {deviceContent}
+    </Popover>
+  );
   if (compact) {
     return (
-      <footer className="shrink-0 border-t border-border/50 px-1.5 py-2 text-muted-foreground">
-        <Popover open={deviceOpen} onOpenChange={setDeviceOpen}>
-          <PopoverTrigger
-            render={
-              <button
-                type="button"
-                aria-label={`${deviceLabel}: ${deviceStageText}`}
-                className={cn(engineLinkClass, 'w-full')}
-              />
-            }
-          >
-            <CpuIcon className={engineIconClass} aria-hidden="true" />
-            <span
-              className={cn('absolute inset-x-2 bottom-0.5 h-0.5 rounded-full', deviceDot)}
-              aria-hidden="true"
-            />
-          </PopoverTrigger>
-          {deviceContent}
-        </Popover>
+      <footer
+        className={cn(
+          'shrink-0 text-muted-foreground',
+          inline ? 'contents' : 'border-t border-border/50 px-1.5 py-2',
+        )}
+      >
+        {iconDevicePopover}
       </footer>
     );
   }
   return (
     <footer className="@container/engines w-full min-w-0 max-w-full border-t border-border/50 px-3 py-1.5 text-[length:var(--text-caption)] text-muted-foreground">
       <div>
-        <div className="flex items-center gap-0.5">
-          <Popover open={deviceOpen} onOpenChange={setDeviceOpen}>
-            <PopoverTrigger
-              render={
-                <button
-                  type="button"
-                  aria-label={`${deviceLabel}: ${deviceStageText}`}
-                  className="group/status flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1 text-left outline-none transition-[background-color,box-shadow,backdrop-filter] duration-150 hover:bg-sidebar-accent/65 hover:backdrop-blur-xl hover:shadow-[inset_0_1px_0_rgb(255_255_255/8%),0_5px_14px_rgb(0_0_0/10%)] hover:ring-1 hover:ring-inset hover:ring-sidebar-border/60 focus-visible:ring-2 focus-visible:ring-ring"
+        {!footerLeading && (
+          <div className="flex items-center gap-0.5">
+            <Popover open={deviceOpen} onOpenChange={setDeviceOpen}>
+              <PopoverTrigger
+                render={
+                  <button
+                    type="button"
+                    aria-label={`${deviceLabel}: ${deviceStageText}`}
+                    className="group/status flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1 text-left outline-none transition-[background-color,box-shadow,backdrop-filter] duration-150 hover:bg-sidebar-accent/65 hover:backdrop-blur-xl hover:shadow-[inset_0_1px_0_rgb(255_255_255/8%),0_5px_14px_rgb(0_0_0/10%)] hover:ring-1 hover:ring-inset hover:ring-sidebar-border/60 focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                }
+              >
+                <span
+                  className={cn('size-1.5 shrink-0 rounded-full', deviceDot)}
+                  aria-hidden="true"
                 />
-              }
+                <CpuIcon className="size-3.5 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 flex-1 truncate" role="status">
+                  {deviceLabel}
+                </span>
+              </PopoverTrigger>
+              {deviceContent}
+            </Popover>
+            <button
+              type="button"
+              aria-label={expanded ? t('paneActions.collapse') : t('modelSettings.models')}
+              aria-expanded={expanded}
+              aria-controls="sidebar-engine-details"
+              onClick={() => setExpanded((value) => !value)}
+              className="flex size-7 shrink-0 items-center justify-center rounded-md outline-none transition-colors hover:bg-sidebar-accent/65 focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <span
-                className={cn('size-1.5 shrink-0 rounded-full', deviceDot)}
+              <ChevronDownIcon
+                className={cn(
+                  'size-3.5 transition-transform duration-150 motion-reduce:transition-none',
+                  expanded && 'rotate-180',
+                )}
                 aria-hidden="true"
               />
-              <CpuIcon className="size-3.5 shrink-0" aria-hidden="true" />
-              <span className="min-w-0 flex-1 truncate" role="status">
-                {deviceLabel}
-              </span>
-            </PopoverTrigger>
-            {deviceContent}
-          </Popover>
-          <button
-            type="button"
-            aria-label={expanded ? t('paneActions.collapse') : t('modelSettings.models')}
-            aria-expanded={expanded}
-            aria-controls="sidebar-engine-details"
-            onClick={() => setExpanded((value) => !value)}
-            className="flex size-7 shrink-0 items-center justify-center rounded-md outline-none transition-colors hover:bg-sidebar-accent/65 focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ChevronDownIcon
-              className={cn(
-                'size-3.5 transition-transform duration-150 motion-reduce:transition-none',
-                expanded && 'rotate-180',
-              )}
-              aria-hidden="true"
-            />
-          </button>
-        </div>
+            </button>
+          </div>
+        )}
         <div
           ref={tipAnchor}
           className="mt-0.5 grid w-full min-w-0 grid-cols-6 gap-1 rounded-lg border border-border/50 bg-sidebar-accent/25 p-1"
@@ -807,6 +875,28 @@ export function StatusBar({ compact = false }: { compact?: boolean }) {
         {status.stage === 'ready' && (
           <div className="mt-1.5">
             <PerformanceProfile tooltipAnchor={tipAnchor} />
+          </div>
+        )}
+        {footerLeading && (
+          <div className="mt-1.5 flex items-center gap-1 border-t border-border/50 pt-1.5">
+            {footerLeading}
+            <div className="min-w-0 flex-1">{iconDevicePopover}</div>
+            <button
+              type="button"
+              aria-label={expanded ? t('paneActions.collapse') : t('modelSettings.models')}
+              aria-expanded={expanded}
+              aria-controls="sidebar-engine-details"
+              onClick={() => setExpanded((value) => !value)}
+              className="ml-auto flex size-7 shrink-0 items-center justify-center rounded-md outline-none transition-colors hover:bg-sidebar-accent/65 focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ChevronDownIcon
+                className={cn(
+                  'size-3.5 transition-transform duration-150 motion-reduce:transition-none',
+                  expanded && 'rotate-180',
+                )}
+                aria-hidden="true"
+              />
+            </button>
           </div>
         )}
       </div>

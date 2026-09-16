@@ -1,9 +1,9 @@
 ---
-name: oss-maintainer
-description: Triage GitHub issues, review contributor pull requests, diagnose CI, and prepare explicitly requested releases using the target repository's rules. Use for repository maintenance work, not ordinary VoiceStudio audio generation.
+name: voicestudio-maintainer
+description: Triage GitHub issues, review contributor pull requests, diagnose CI, and prepare explicitly requested releases for VoiceStudio's Electron desktop app and Python backend. Use for repository maintenance work, not ordinary VoiceStudio audio generation.
 ---
 
-# OSS maintenance
+# VoiceStudio maintenance
 
 Read the target repository's AGENTS.md, CLAUDE.md, contribution guide, and release documentation first. Their policies override this general workflow. Installing this skill does not authorize merges, releases, issue closures, or messages to contributors.
 
@@ -40,3 +40,37 @@ When maintaining debpalash/VoiceStudio, consult its current rules rather than ol
 - Release channels and version ownership: `docs/RELEASING.md` and CLAUDE.md. Never infer a version bump from a fix request.
 - Read CodeRabbit/Greptile findings and required CI before merging. Follow main's post-merge CI.
 - Preserve local-first behavior, cross-platform behavior, model-install consent, synthetic-audio marking, and localization requirements.
+
+## Current development commands
+
+Run from the repository root:
+
+```sh
+bun install
+bun run dev              # Electron + supervised backend
+bun run typecheck        # Electron main, preload, and renderer
+bun run test             # Electron tests
+bun run check:electron   # types, tests, build, packaging contract
+bun run dist             # local installers; publishing disabled
+```
+
+`electron/src/main/` owns lifecycle, IPC, native helpers, and backend supervision;
+`electron/src/preload/` exposes the renderer bridge; `electron/src/renderer/src/`
+contains the React app. Keep privileged filesystem/process work out of the renderer.
+`backend/` supplies the shared Python API; `native/desktop-bridge/` supplies native
+capabilities. `frontend/` still serves the browser UI and legacy Tauri shell: do not
+remove it or rename internal `omnivoice` packages, environment keys, or data paths
+as a branding cleanup.
+
+Electron is the default desktop. Tauri is retained for its final sunset update.
+Use `electron-build.yml` for artifact-only four-platform packaging rehearsals;
+inspect its results for Windows, Linux, macOS Intel, and macOS Apple Silicon.
+Do not dispatch release/publishing workflows to test packaging. Signing, updater
+migration, and successful installation are separate checks from a green build.
+The app version still comes from `frontend/package.json`; do not move or bump it
+without an explicit versioning task.
+
+For backend tests, use the repo's CI dependencies and an empty temporary
+`HF_HUB_CACHE` with `HF_HUB_OFFLINE=1`; installed developer models must not hide
+missing fixtures. Run targeted tests while editing and the required full checks
+before landing. Existing CI failures remain blockers, not implied waivers.

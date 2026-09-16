@@ -3739,6 +3739,15 @@ wheels = [
 ]
 
 [[package]]
+name = "nvidia-ml-py"
+version = "13.610.43"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f0/b5/a8fbc356f768fa5c9cfd646668fd7d34bf55bdd1c6e20754642a64d930d4/nvidia_ml_py-13.610.43.tar.gz", hash = "sha256:65437eb73d68d0c62c931ca4d45038472faff03bd0b8729abba4b899f70d60f2", size = 52109, upload-time = "2026-06-01T18:54:08.829Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/23/45/caa600acfab94560807a20a64b5830d2cd3c3202b7f1328644d70b7d6bd8/nvidia_ml_py-13.610.43-py3-none-any.whl", hash = "sha256:f13c72698edef492f985cc225f14faafe68ae065a2e407f45bdf6f4b9b43fde8", size = 53163, upload-time = "2026-06-01T18:54:07.704Z" },
+]
+
+[[package]]
 name = "nvidia-nccl-cu12"
 version = "2.27.3"
 source = { registry = "https://pypi.org/simple" }
@@ -3777,7 +3786,7 @@ wheels = [
 
 [[package]]
 name = "omnivoice"
-version = "0.5.2"
+version = "0.5.3"
 source = { editable = "." }
 dependencies = [
     { name = "accelerate" },
@@ -3802,6 +3811,7 @@ dependencies = [
     { name = "num2words" },
     { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.12.*' and sys_platform == 'linux') or (python_full_version == '3.12.*' and sys_platform == 'win32')" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version != '3.12.*' and sys_platform == 'linux') or (python_full_version != '3.12.*' and sys_platform == 'win32') or (sys_platform != 'linux' and sys_platform != 'win32')" },
+    { name = "nvidia-ml-py" },
     { name = "openai" },
     { name = "parakeet-mlx", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "pedalboard" },
@@ -3897,6 +3907,7 @@ requires-dist = [
     { name = "mlx-whisper", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'", specifier = ">=0.2.1" },
     { name = "num2words", specifier = ">=0.5.14" },
     { name = "numpy" },
+    { name = "nvidia-ml-py", specifier = ">=13.0" },
     { name = "openai", specifier = ">=1.40" },
     { name = "parakeet-mlx", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'", specifier = ">=0.5.2" },
     { name = "pedalboard", specifier = ">=0.9.14" },
