@@ -1907,6 +1907,7 @@
     "test_text": "안녕하세요. 이 목소리에 대한 테스트입니다."
   },
   "nav": {
+    "voice": "음성",
     "clone_short": "복제",
     "workspaces": "작업 공간",
     "stories": "스토리",
@@ -2588,6 +2589,11 @@
     "fitting": "타이밍 조정 중"
   },
   "sponsorSlot": {
+    "partner_heading": "VoiceStudio와 파트너 되기",
+    "partner_subtitle": "음성으로 만드는 사람들에게 제품을 소개하세요.",
+    "app_placement": "앱 내 노출",
+    "integration_page": "통합 페이지",
+    "readme_exposure": "README 노출",
     "visibility": "가시성",
     "integration": "제품 통합",
     "installs": "직접 설치",

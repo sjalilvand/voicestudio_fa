@@ -12,9 +12,10 @@ const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM
 const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, deviceScaleFactor: 1, colorScheme: 'dark', recordVideo: { dir: '/tmp/voicestudio-readme-video', size: { width: 1440, height: 960 } } });
 await context.addInitScript(() => {
   localStorage.setItem('voicestudio.setup.complete.v1', '1');
-  localStorage.setItem('voicestudio.theme.v2', JSON.stringify({mode:'dark',light:'default',dark:'default'}));
+  localStorage.setItem('voicestudio.theme.v2', JSON.stringify({mode:'dark',light:'signal',dark:'signal'}));
   localStorage.setItem('voicestudio.clone.settings.v1', JSON.stringify({selectedProfileId:'demo0001',text:'Every voice has a story. Bring yours to life with VoiceStudio — created on your machine, in your own way.'}));
   localStorage.setItem('omnivoice.demoClonePrompted', '1');
+  localStorage.setItem('voicestudio.appearance', JSON.stringify({font:'inter',scale:100,glass:true}));
 });
 // Capture only bundled demo voices; never publish personal voices or project history.
 await context.route('**/api/**', async route => {
@@ -37,6 +38,12 @@ try {
   for (const [route, file] of [['/design','voice-design'],['/dub','dubbing'],['/settings/models','models']]) {
     await page.evaluate(route => {location.hash=route;},route);
     await page.waitForTimeout(1800);
+    if (route === '/design') {
+      const fields = page.locator('textarea');
+      await page.getByRole('button', {name:'Narrator',exact:true}).click();
+      if (await fields.count() > 1) await fields.last().fill('Beyond the city lights, a quieter world begins. Every trail holds a story, and every journey starts with a little curiosity.');
+      await page.waitForTimeout(1600);
+    }
     if (route === '/dub') {
       await page.getByRole('button', {name:'Play',exact:true}).first().click();
       await page.waitForTimeout(2200);

@@ -64,6 +64,7 @@
     "toast_flush_failed": "Flush failed: {{message}}"
   },
   "nav": {
+    "voice": "Voice",
     "clone_short": "Clone",
     "clone": "Voice cloning",
     "design": "Voice design",
@@ -2588,6 +2589,11 @@
     "fitting": "Adjusting timing"
   },
   "sponsorSlot": {
+    "partner_heading": "Partner with VoiceStudio",
+    "partner_subtitle": "Put your product in front of people building with voice.",
+    "app_placement": "In-app placement",
+    "integration_page": "Integration page",
+    "readme_exposure": "README exposure",
     "visibility": "Visibility",
     "integration": "Product integration",
     "installs": "Direct installs",

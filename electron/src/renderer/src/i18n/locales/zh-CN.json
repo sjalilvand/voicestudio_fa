@@ -1911,6 +1911,7 @@
     "test_text": "你好——这是对该声音的测试。"
   },
   "nav": {
+    "voice": "声音",
     "clone_short": "克隆",
     "workspaces": "工作区",
     "stories": "故事",
@@ -2592,6 +2593,11 @@
     "fitting": "正在调整时间"
   },
   "sponsorSlot": {
+    "partner_heading": "成为 VoiceStudio 合作伙伴",
+    "partner_subtitle": "让使用语音进行创作的人发现你的产品。",
+    "app_placement": "应用内展示",
+    "integration_page": "集成专页",
+    "readme_exposure": "README 展示",
     "visibility": "品牌曝光",
     "integration": "产品集成",
     "installs": "直接安装",

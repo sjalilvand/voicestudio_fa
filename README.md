@@ -23,7 +23,6 @@
 
 ![A tour of the Electron app: voice cloning, voice design, dubbing, and model management](docs/media/electron/voicestudio.gif)
 
-<p align="center"><sub>Captured from the running Electron preview with the bundled demo voice. Published installers may look different.</sub></p>
 
 ## Create with VoiceStudio
 
@@ -79,7 +78,7 @@ See [Electron setup](electron/README.md) for prerequisites and backend configura
 | Integrations | [Local API](docs/speech-platform.md) · [MCP](docs/mcp.md) · [Examples](examples/README.md) |
 | Development | [Contributing](.github/CONTRIBUTING.md) · [Electron](electron/README.md) · [Changelog](CHANGELOG.md) |
 
-Agent skills: `npx skills add debpalash/VoiceStudio`
+Agent skills: `npx skills add debpalash/VoiceStudio` — choose **voicestudio** for audio workflows or **oss-maintainer** for repository maintenance.
 
 ## Support VoiceStudio
 

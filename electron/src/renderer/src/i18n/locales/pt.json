@@ -1909,6 +1909,7 @@
     "test_text": "Olá - este é um teste desta voz."
   },
   "nav": {
+    "voice": "Voz",
     "clone_short": "Clonar",
     "workspaces": "Áreas de trabalho",
     "stories": "Histórias",
@@ -2590,6 +2591,11 @@
     "fitting": "Ajustando o tempo"
   },
   "sponsorSlot": {
+    "partner_heading": "Seja parceiro do VoiceStudio",
+    "partner_subtitle": "Apresente seu produto a quem cria com voz.",
+    "app_placement": "Destaque no app",
+    "integration_page": "Página de integração",
+    "readme_exposure": "Visibilidade no README",
     "visibility": "Visibilidade",
     "integration": "Integração do produto",
     "installs": "Instalações diretas",

@@ -628,3 +628,28 @@
 html[data-theme-id='heritage'] {
   --glass-light-color: #ad82d9;
 }
+
+/* Keep controls opaque: Glass mode clears the bg-background surface utility. */
+[data-slot='switch'].app-switch {
+  background: color-mix(in srgb, var(--foreground) 32%, var(--background));
+  border-color: color-mix(in srgb, var(--foreground) 55%, var(--background));
+  transition-property: background-color, border-color, box-shadow;
+}
+[data-slot='switch'].app-switch[data-checked] {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+[data-slot='switch-thumb'].app-switch-thumb {
+  background: var(--foreground);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+}
+[data-slot='switch'][data-checked] .app-switch-thumb {
+  background: var(--primary-foreground);
+}
+[data-slot='switch'].app-switch:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slot='switch'].app-switch { transition: none; }
+}

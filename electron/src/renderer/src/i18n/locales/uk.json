@@ -1911,6 +1911,7 @@
     "test_text": "Привіт — це перевірка цього голосу."
   },
   "nav": {
+    "voice": "Голос",
     "clone_short": "Клонувати",
     "workspaces": "Робочі простори",
     "stories": "оповідання",
@@ -2592,6 +2593,11 @@
     "fitting": "Налаштування часу"
   },
   "sponsorSlot": {
+    "partner_heading": "Станьте партнером VoiceStudio",
+    "partner_subtitle": "Представте продукт тим, хто створює за допомогою голосу.",
+    "app_placement": "Розміщення в застосунку",
+    "integration_page": "Сторінка інтеграції",
+    "readme_exposure": "Розміщення в README",
     "visibility": "Видимість",
     "integration": "Інтеграція продукту",
     "installs": "Прямі встановлення",

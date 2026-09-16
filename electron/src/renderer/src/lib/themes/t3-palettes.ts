@@ -124,7 +124,7 @@ export type ThemeDefinition = Readonly<{
 
 export const T3_CHAT_THEME: ThemeDefinition = {
   id: 'signal',
-  label: 'Signal',
+  label: 'VoiceStudio Original',
   appearance: 'light',
   colors: {
     canvas: 'oklch(0.982446 0.010114 325.653)',

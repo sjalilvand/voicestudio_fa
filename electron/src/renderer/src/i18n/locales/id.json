@@ -1907,6 +1907,7 @@
     "test_text": "Halo - ini adalah ujian untuk suara ini."
   },
   "nav": {
+    "voice": "Suara",
     "clone_short": "Klon",
     "workspaces": "Ruang kerja",
     "stories": "Cerita",
@@ -2588,6 +2589,11 @@
     "fitting": "Menyesuaikan waktu"
   },
   "sponsorSlot": {
+    "partner_heading": "Bermitra dengan VoiceStudio",
+    "partner_subtitle": "Perkenalkan produk Anda kepada para kreator berbasis suara.",
+    "app_placement": "Penempatan dalam aplikasi",
+    "integration_page": "Halaman integrasi",
+    "readme_exposure": "Eksposur README",
     "visibility": "Visibilitas",
     "integration": "Integrasi produk",
     "installs": "Instalasi langsung",

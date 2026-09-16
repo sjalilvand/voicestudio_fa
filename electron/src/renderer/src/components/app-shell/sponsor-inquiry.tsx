@@ -2,13 +2,10 @@ import { useState } from 'react';
 import {
   BlocksIcon,
   BookOpenIcon,
-  BadgeCheckIcon,
   CopyIcon,
-  DownloadIcon,
   EyeIcon,
   ExternalLinkIcon,
   MailIcon,
-  ShieldCheckIcon,
   PinIcon,
   XIcon,
 } from 'lucide-react';
@@ -69,57 +66,31 @@ export function SponsorInquiry({
         >
           <XIcon aria-hidden="true" />
         </DialogClose>
-        <div className="flex items-start gap-3">
+        <div className="sponsor-inquiry-heading">
           <span className="sponsor-inquiry-hero-icon" aria-hidden="true">
             <PinIcon />
           </span>
           <div className="grid gap-1">
-            <DialogTitle>{t('sponsorSlot.title')}</DialogTitle>
-            <DialogDescription>{t('sponsorSlot.description')}</DialogDescription>
+            <DialogTitle>{t('sponsorSlot.partner_heading')}</DialogTitle>
+            <DialogDescription>{t('sponsorSlot.partner_subtitle')}</DialogDescription>
           </div>
         </div>
         <div className="sponsor-inquiry-perks">
-          <span>
-            <EyeIcon aria-hidden="true" />
-            <small>{t('sponsorSlot.visibility')}</small>
-          </span>
-          <span>
-            <BlocksIcon aria-hidden="true" />
-            <small>{t('sponsorSlot.integration')}</small>
-          </span>
-          <span>
-            <DownloadIcon aria-hidden="true" />
-            <small>{t('sponsorSlot.installs')}</small>
-          </span>
-          <span>
-            <BookOpenIcon aria-hidden="true" />
-            <small>{t('sponsorSlot.distribution')}</small>
-          </span>
-          <span>
-            <BadgeCheckIcon aria-hidden="true" />
-            <small>{t('sponsorSlot.partner')}</small>
-          </span>
-          <span>
-            <ShieldCheckIcon aria-hidden="true" />
-            <small>{t('sponsorSlot.privacy')}</small>
-          </span>
+          <span><EyeIcon aria-hidden="true" /><small>{t('sponsorSlot.app_placement')}</small></span>
+          <span><BlocksIcon aria-hidden="true" /><small>{t('sponsorSlot.integration_page')}</small></span>
+          <span><BookOpenIcon aria-hidden="true" /><small>{t('sponsorSlot.readme_exposure')}</small></span>
         </div>
-        <div
-          className="sponsor-inquiry-tabs grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-1 rounded-xl p-1"
-          role="tablist"
-          aria-label={t('sponsorSlot.title')}
-        >
-          <Button
-            type="button"
-            size="sm"
-            variant={mode === 'form' ? 'secondary' : 'ghost'}
-            className="sponsor-inquiry-tab"
-            role="tab"
-            aria-selected={mode === 'form'}
-            onClick={() => setMode('form')}
-          >
-            {t('sponsorSlot.form')}
-          </Button>
+        <div className="sponsor-inquiry-methods">
+          <div className="sponsor-inquiry-tabs" role="tablist" aria-label={t('sponsorSlot.partner_heading')}>
+            <Button type="button" size="sm" variant="ghost" className="sponsor-inquiry-tab"
+              role="tab" aria-selected={mode === 'form'} onClick={() => setMode('form')}>
+              {t('sponsorSlot.form')}
+            </Button>
+            <Button type="button" size="sm" variant="ghost" className="sponsor-inquiry-tab"
+              role="tab" aria-selected={mode === 'email'} onClick={() => setMode('email')}>
+              <MailIcon aria-hidden="true" />{t('sponsorSlot.email')}
+            </Button>
+          </div>
           <Button
             type="button"
             variant="ghost"
@@ -137,17 +108,7 @@ export function SponsorInquiry({
             }}
           >
             <ExternalLinkIcon aria-hidden="true" />
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={mode === 'email' ? 'secondary' : 'ghost'}
-            className="sponsor-inquiry-tab"
-            role="tab"
-            aria-selected={mode === 'email'}
-            onClick={() => setMode('email')}
-          >
-            {t('sponsorSlot.email')}
+            <span className="text-xs">{t('network.open_in_browser')}</span>
           </Button>
         </div>
         {mode === 'form' ? (

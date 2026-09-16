@@ -1907,6 +1907,7 @@
     "test_text": "こんにちは — これはこの音声のテストです。"
   },
   "nav": {
+    "voice": "音声",
     "clone_short": "クローン",
     "workspaces": "ワークスペース",
     "stories": "ストーリー",
@@ -2588,6 +2589,11 @@
     "fitting": "タイミングを調整中"
   },
   "sponsorSlot": {
+    "partner_heading": "VoiceStudio のパートナーに",
+    "partner_subtitle": "音声で新しいものを作る人に製品を届けましょう。",
+    "app_placement": "アプリ内掲載",
+    "integration_page": "連携ページ",
+    "readme_exposure": "README 掲載",
     "visibility": "認知度",
     "integration": "製品連携",
     "installs": "直接インストール",

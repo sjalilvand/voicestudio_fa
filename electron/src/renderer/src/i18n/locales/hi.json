@@ -1907,6 +1907,7 @@
     "test_text": "नमस्ते - यह इस आवाज़ का परीक्षण है।"
   },
   "nav": {
+    "voice": "आवाज़",
     "clone_short": "क्लोन",
     "workspaces": "वर्कस्पेस",
     "stories": "कहानियां",
@@ -2588,6 +2589,11 @@
     "fitting": "समय समायोजित हो रहा है"
   },
   "sponsorSlot": {
+    "partner_heading": "VoiceStudio के साथ साझेदारी करें",
+    "partner_subtitle": "अपना उत्पाद आवाज़ से निर्माण करने वालों तक पहुँचाएँ।",
+    "app_placement": "ऐप में स्थान",
+    "integration_page": "इंटीग्रेशन पेज",
+    "readme_exposure": "README में मौजूदगी",
     "visibility": "दृश्यता",
     "integration": "उत्पाद एकीकरण",
     "installs": "सीधे इंस्टॉल",

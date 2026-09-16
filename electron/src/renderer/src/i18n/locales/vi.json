@@ -1907,6 +1907,7 @@
     "test_text": "Xin chào - đây là bài kiểm tra giọng nói này."
   },
   "nav": {
+    "voice": "Giọng nói",
     "clone_short": "Nhân bản",
     "workspaces": "Không gian làm việc",
     "stories": "Truyện",
@@ -2588,6 +2589,11 @@
     "fitting": "Đang điều chỉnh thời gian"
   },
   "sponsorSlot": {
+    "partner_heading": "Hợp tác cùng VoiceStudio",
+    "partner_subtitle": "Giới thiệu sản phẩm đến những người sáng tạo bằng giọng nói.",
+    "app_placement": "Hiển thị trong ứng dụng",
+    "integration_page": "Trang tích hợp",
+    "readme_exposure": "Xuất hiện trong README",
     "visibility": "Khả năng hiển thị",
     "integration": "Tích hợp sản phẩm",
     "installs": "Cài đặt trực tiếp",

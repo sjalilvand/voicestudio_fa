@@ -1907,6 +1907,7 @@
     "test_text": "สวัสดี — นี่คือการทดสอบเสียงนี้"
   },
   "nav": {
+    "voice": "เสียง",
     "clone_short": "โคลน",
     "workspaces": "พื้นที่ทำงาน",
     "stories": "เรื่องราว",
@@ -2588,6 +2589,11 @@
     "fitting": "กำลังปรับเวลา"
   },
   "sponsorSlot": {
+    "partner_heading": "เป็นพันธมิตรกับ VoiceStudio",
+    "partner_subtitle": "แนะนำผลิตภัณฑ์ของคุณให้ผู้ที่สร้างสรรค์ด้วยเสียง",
+    "app_placement": "แสดงในแอป",
+    "integration_page": "หน้าการเชื่อมต่อ",
+    "readme_exposure": "แสดงใน README",
     "visibility": "การมองเห็น",
     "integration": "การผสานรวมผลิตภัณฑ์",
     "installs": "ติดตั้งโดยตรง",

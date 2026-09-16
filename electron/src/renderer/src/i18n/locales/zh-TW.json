@@ -1907,6 +1907,7 @@
     "test_text": "你好——這是對這個聲音的測試。"
   },
   "nav": {
+    "voice": "聲音",
     "clone_short": "複製",
     "workspaces": "工作區",
     "stories": "故事",
@@ -2588,6 +2589,11 @@
     "fitting": "正在調整時間"
   },
   "sponsorSlot": {
+    "partner_heading": "成為 VoiceStudio 合作夥伴",
+    "partner_subtitle": "讓使用語音進行創作的人發現你的產品。",
+    "app_placement": "應用程式內展示",
+    "integration_page": "整合專頁",
+    "readme_exposure": "README 展示",
     "visibility": "品牌曝光",
     "integration": "產品整合",
     "installs": "直接安裝",

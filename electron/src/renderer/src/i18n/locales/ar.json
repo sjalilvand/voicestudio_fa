@@ -1915,6 +1915,7 @@
     "test_text": "مرحبًا – هذا اختبار لهذا الصوت."
   },
   "nav": {
+    "voice": "الصوت",
     "clone_short": "استنساخ",
     "workspaces": "مساحات العمل",
     "stories": "قصص",
@@ -2596,6 +2597,11 @@
     "fitting": "ضبط التوقيت"
   },
   "sponsorSlot": {
+    "partner_heading": "شارك VoiceStudio",
+    "partner_subtitle": "اعرض منتجك أمام من يبنون باستخدام الصوت.",
+    "app_placement": "ظهور داخل التطبيق",
+    "integration_page": "صفحة التكامل",
+    "readme_exposure": "ظهور في README",
     "visibility": "الظهور",
     "integration": "تكامل المنتج",
     "installs": "تثبيت مباشر",

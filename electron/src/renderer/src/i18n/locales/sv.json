@@ -1907,6 +1907,7 @@
     "test_text": "Hej – det här är ett test av denna röst."
   },
   "nav": {
+    "voice": "Röst",
     "clone_short": "Klona",
     "workspaces": "Arbetsytor",
     "stories": "Berättelser",
@@ -2588,6 +2589,11 @@
     "fitting": "Justerar tidsplacering"
   },
   "sponsorSlot": {
+    "partner_heading": "Bli partner med VoiceStudio",
+    "partner_subtitle": "Visa din produkt för dem som skapar med röst.",
+    "app_placement": "Placering i appen",
+    "integration_page": "Integrationssida",
+    "readme_exposure": "Synlighet i README",
     "visibility": "Synlighet",
     "integration": "Produktintegration",
     "installs": "Direkta installationer",

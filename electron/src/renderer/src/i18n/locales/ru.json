@@ -1911,6 +1911,7 @@
     "test_text": "Привет — это тест этого голоса."
   },
   "nav": {
+    "voice": "Голос",
     "clone_short": "Клонировать",
     "workspaces": "Рабочие пространства",
     "stories": "Истории",
@@ -2592,6 +2593,11 @@
     "fitting": "Настройка времени"
   },
   "sponsorSlot": {
+    "partner_heading": "Станьте партнёром VoiceStudio",
+    "partner_subtitle": "Представьте продукт тем, кто создаёт с помощью голоса.",
+    "app_placement": "Размещение в приложении",
+    "integration_page": "Страница интеграции",
+    "readme_exposure": "Размещение в README",
     "visibility": "Видимость",
     "integration": "Интеграция продукта",
     "installs": "Прямые установки",

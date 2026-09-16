@@ -1907,6 +1907,7 @@
     "test_text": "Hallo – dit is een test van deze stem."
   },
   "nav": {
+    "voice": "Stem",
     "clone_short": "Klonen",
     "workspaces": "Werkruimtes",
     "stories": "Verhalen",
@@ -2588,6 +2589,11 @@
     "fitting": "Timing aanpassen"
   },
   "sponsorSlot": {
+    "partner_heading": "Word partner van VoiceStudio",
+    "partner_subtitle": "Bereik mensen die met spraak bouwen.",
+    "app_placement": "Plaatsing in de app",
+    "integration_page": "Integratiepagina",
+    "readme_exposure": "Vermelding in README",
     "visibility": "Zichtbaarheid",
     "integration": "Productintegratie",
     "installs": "Directe installaties",

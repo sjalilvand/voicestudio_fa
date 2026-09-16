@@ -6,6 +6,7 @@ import { SponsorInquiry } from './sponsor-inquiry';
 import {
   ArrowUpRightIcon,
   BlocksIcon,
+  CircleIcon,
   SearchIcon,
   GemIcon,
   PlusIcon,
@@ -265,7 +266,7 @@ export function SponsorFooter() {
             }
           >
             <span aria-hidden="true" className="sponsor-book-mark">
-              <TriangleIcon />
+              <CircleIcon />
               <span className="sponsor-book-question">?</span>
             </span>
             <span className="sponsor-book-copy">

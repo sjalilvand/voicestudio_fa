@@ -128,7 +128,7 @@
   height: 34px;
   flex: 0 0 34px;
   border: 0;
-  border-radius: 0;
+  border-radius: 50%;
   background: transparent;
   color: var(--primary);
   filter: drop-shadow(0 3px 6px color-mix(in srgb, var(--primary) 25%, transparent));
@@ -139,7 +139,7 @@
   z-index: 0;
   inset: 5px 4px 3px;
   content: '';
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  border-radius: 50%;
   background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--primary) 58%, transparent), transparent 65%);
   filter: blur(2px);
   opacity: 0.9;
