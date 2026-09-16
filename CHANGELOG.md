@@ -31,6 +31,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Electron becomes the default source desktop, with artifact-only packaging rehearsals and a separate final Tauri update path (#2157)
 - Installable agent skills use current VoiceStudio names and Electron workflows (#2157)
+- README clarifies the Electron transition while keeping desktop contributions welcome (#2153) — thanks @cyberspace-cs!
 
 - Electron first run uses four simple steps with model packs, optional advanced controls and skippable dictation setup (#2129)
 
