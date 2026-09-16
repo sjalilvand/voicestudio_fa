@@ -20,10 +20,9 @@
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="AGPL-3.0" /></a>
   </p>
 </div>
+<img width="2628" height="1950" alt="screenshot-2026-09-16_17-21-37" src="https://github.com/user-attachments/assets/b474497d-a453-49a3-a2dd-f023ec6b7659" />
 
 ![A tour of the Electron app: voice cloning, voice design, dubbing, and model management](docs/media/electron/voicestudio.gif)
-
-<p align="center"><sub>Captured from the running Electron preview with the bundled demo voice. Published installers may look different.</sub></p>
 
 ## Create with VoiceStudio
 
