@@ -67,7 +67,7 @@ cd electron
 bun run dev
 ```
 
-> **Electron rewrite in progress.** The desktop shell is being rebuilt in `electron/`. Please avoid opening desktop-app-related issues or PRs until the rewrite ships; the Tauri app in `frontend/` remains the supported product.
+> **Electron is the primary desktop app.** The next desktop release ships Electron, with one final Tauri sunset update. Bug reports and contributions remain welcome; include the app version and whether you use Electron or Tauri.
 
 See [Electron setup](electron/README.md) for prerequisites and backend configuration. VoiceStudio is in active development; report bugs through [GitHub Issues](https://github.com/debpalash/VoiceStudio/issues).
 
