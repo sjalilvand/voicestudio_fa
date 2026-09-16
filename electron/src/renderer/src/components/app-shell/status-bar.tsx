@@ -525,7 +525,7 @@ export function StatusBar({
                   activeRemoteTarget.gpu_utilization_percent != null
                     ? `${Math.round(activeRemoteTarget.gpu_utilization_percent)}%`
                     : null,
-                  activeRemoteTarget.free_memory_bytes != null
+                  activeRemoteTarget.free_memory_bytes != null && activeRemoteTarget.gpu_memory_bytes > 0
                     ? `${formatBytes(
                         activeRemoteTarget.gpu_memory_bytes - activeRemoteTarget.free_memory_bytes,
                       )} / ${formatBytes(activeRemoteTarget.gpu_memory_bytes)}`
@@ -535,7 +535,7 @@ export function StatusBar({
                   .join(' · ')
               }
               percent={boundedPercent(
-                activeRemoteTarget.free_memory_bytes != null
+                activeRemoteTarget.free_memory_bytes != null && activeRemoteTarget.gpu_memory_bytes > 0
                   ? activeRemoteTarget.gpu_memory_bytes - activeRemoteTarget.free_memory_bytes
                   : 0,
                 activeRemoteTarget.gpu_memory_bytes,
