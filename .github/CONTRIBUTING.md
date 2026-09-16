@@ -320,7 +320,7 @@ that — the agent recalls the architecture, conventions, and your past findings
 instead of re-reading the tree each time. [**memxt**](https://github.com/debpalash/memxt)
 (100% local, MCP-based, built by this project's maintainer) exists for exactly
 this; any MCP memory server works. Pair it with the repo's agent skill —
-`npx skills add debpalash/omnivoice-studio` — so your agent knows the project's
+`npx skills add debpalash/VoiceStudio` — so your agent knows the project's
 hard rules from the first prompt.
 
 ## Quality gates your PR must pass

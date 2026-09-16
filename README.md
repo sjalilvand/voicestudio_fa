@@ -84,7 +84,7 @@ See [Electron setup](electron/README.md) for prerequisites and backend configura
 | Integrations | [Local API](docs/speech-platform.md) · [MCP](docs/mcp.md) · [Examples](examples/README.md) |
 | Development | [Contributing](.github/CONTRIBUTING.md) · [Electron](electron/README.md) · [Changelog](CHANGELOG.md) |
 
-Agent skills: `npx skills add debpalash/VoiceStudio` — choose **voicestudio** for audio workflows or **oss-maintainer** for repository maintenance.
+Agent skills: `npx skills add debpalash/VoiceStudio` — choose **voicestudio** for audio workflows or **voicestudio-maintainer** for repository maintenance.
 
 ## Sponsors
 

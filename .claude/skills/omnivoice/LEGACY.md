@@ -1,11 +1,6 @@
----
-name: omnivoice
-description: Legacy VoiceStudio skill alias for existing Claude installations. Generate local speech, discover saved voices, and transcribe audio through the running VoiceStudio backend.
----
-
 # VoiceStudio compatibility entry
 
-The current cross-agent package is [voicestudio](../../../skills/voicestudio/SKILL.md).
+The current cross-agent package is [voicestudio](../../../../skills/voicestudio/SKILL.md).
 For new installations use `npx skills add debpalash/VoiceStudio --skill voicestudio`.
 
 Use the running backend at the user's configured address (default
@@ -27,3 +22,8 @@ never disable authentication to make an example work.
 
 Source and current setup documentation:
 https://github.com/debpalash/VoiceStudio
+
+This archived entry is not an installable skill. Existing installations should
+remove the old `omnivoice` / `oss-maintainer` entries and install `voicestudio` /
+`voicestudio-maintainer` from the canonical repository. Legacy helpers remain
+for existing users; the Electron supervisor is the preferred launcher.

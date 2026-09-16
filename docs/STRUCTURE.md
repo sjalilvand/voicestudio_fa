@@ -103,7 +103,7 @@ VoiceStudio/
 │
 ├── .agents/skills/              ⟵ canonical skill copies (vite, fastapi-python), pinned by
 │                                   skills-lock.json — followed by path, never symlinked
-├── skills/                      ⟵ skills this repo publishes (omnivoice, oss-maintainer)
+├── skills/                      ⟵ skills this repo publishes (voicestudio, voicestudio-maintainer)
 │
 ├── infra/                       ⟵ edge/deploy workers (not the Docker deploy path)
 │   └── install-redirect/        voicestudio.sh/install — UA-sniffing installer worker
