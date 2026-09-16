@@ -74,6 +74,17 @@ def _check(root: Path) -> list[str]:
     inv = yaml.safe_load(inv_path.read_text(encoding="utf-8")) or {}
 
     readme = (root / "README.md").read_text(encoding="utf-8")
+    # Keep the complete inventory in a linked catalog when the README is compact.
+    catalog = inv.get("catalog")
+    if catalog:
+        if f"]({catalog})" not in readme:
+            drifts.append(f"README.md must link to catalog `{catalog}`")
+        catalog_path = root / catalog
+        if catalog_path.is_file():
+            readme += "\n" + catalog_path.read_text(encoding="utf-8")
+        else:
+            drifts.append(f"catalog `{catalog}` does not exist")
+
 
     # 1. Features present in README.
     for name in inv.get("features", []):

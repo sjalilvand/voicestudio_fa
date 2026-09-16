@@ -29,7 +29,7 @@
 | Clone a voice or design your own | Dub videos with timed speech | Local API & MCP for agents |
 | Dictate with a floating widget | Stories, audiobooks & batch jobs | Optional remote workers |
 
-Start with **VoiceStudio** (default, powered by k2-fsa/OmniVoice), or choose another engine.
+Start with **VoiceStudio** (default, powered by k2-fsa/OmniVoice), or choose another engine. [Features & engine catalog](docs/feature-catalog.md).
 
 Local workflows run on your hardware. Remote services are optional; usage analytics requires consent.
 

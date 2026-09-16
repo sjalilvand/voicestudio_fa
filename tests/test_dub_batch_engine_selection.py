@@ -71,7 +71,7 @@ def _make_fake_engine(engine_id, *, supports_cloning=True, available=True,
 
         def generate(self, text, **kw) -> torch.Tensor:
             type(self).calls.append((text, kw))
-            return torch.zeros(1, 24000)
+            return torch.full((1, 24000), 0.25)
 
     return _FakeEngine
 
