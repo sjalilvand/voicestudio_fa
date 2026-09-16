@@ -56,7 +56,17 @@ bun install
 bun run dev
 ```
 
-This starts both services:
+This launches Electron with hot reload. Its runtime supervisor manages backend setup
+and startup; do not launch a second backend. See [Electron setup](../electron/README.md).
+
+```bash
+bun run build       # build Electron
+bun run start       # launch the built Electron app
+bun run dist        # package locally without publishing
+bun run dev:web     # legacy browser UI + backend
+```
+
+The legacy browser command starts both services:
 
 | Service | URL | What it does |
 |---------|-----|---|
@@ -71,23 +81,23 @@ cause doesn't scroll away with the terminal. The same death is also reported
 as a crash notice in the UI the next time the backend starts (see
 [docs/install/troubleshooting.md §14c](docs/install/troubleshooting.md)).
 
-### Desktop App (Tauri)
+### Legacy Desktop App (Tauri)
 
 ```bash
-bun run desktop          # dev: hot-reload Tauri shell + backend
-bun run desktop-prod     # production: builds, bundles the backend, then launches
+bun run tauri            # legacy dev: hot-reload Tauri shell + backend
+bun run tauri:desktop-prod # legacy production: builds, bundles the backend, then launches
 ```
 
 Both run `uv sync` first (so the Python backend env is set up) and start the
 backend automatically — you do **not** start it separately. Use the exact script
-names: there is no `desktop=prod` (note the **hyphen** in `desktop-prod`).
-`desktop-prod` is Windows-aware (auto-detects bash/git; see `scripts/desktop-prod.mjs`).
+names: there is no `desktop=prod` (note the **hyphen** in `tauri:desktop-prod`).
+`tauri:desktop-prod` is Windows-aware (auto-detects bash/git; see `scripts/desktop-prod.mjs`).
 
 Requires [Rust](https://rustup.rs/) and platform-specific Tauri dependencies — see the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
 
 After installing Rust with rustup (or `uv` with its installer), a terminal that
-was already open still has the old `PATH`. The desktop launchers (`bun desktop`,
-`bun desktop-prod`, `bun desktop-fresh`) detect this and add `~/.cargo/bin` /
+was already open still has the old `PATH`. The desktop launchers (`bun tauri`,
+`bun tauri:desktop-prod`, `bun tauri:desktop-fresh`) detect this and add `~/.cargo/bin` /
 `~/.local/bin` for that run, printing a one-line note; to make it permanent,
 open a new terminal, or on macOS/Linux load Cargo into the current one:
 

@@ -5,7 +5,6 @@
     <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/28176" alt="VoiceStudio ranking on Trendshift" width="220" height="48" /></a>
   </p>
   <p><strong>Open source voice cloning and workflow engine. Build local.</strong></p>
-  <p>Clone voices, dub videos, dictate, and create audiobooks with local AI.</p>
   <p>
     <a href="https://voicestudio.sh/?utm_source=github&utm_medium=readme&utm_campaign=project">Website</a> ·
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest">Download</a> ·
@@ -20,21 +19,22 @@
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="AGPL-3.0" /></a>
   </p>
 </div>
-<img width="2628" height="1950" alt="screenshot-2026-09-16_17-21-37" src="https://github.com/user-attachments/assets/b474497d-a453-49a3-a2dd-f023ec6b7659" />
 
 ![A tour of the Electron app: voice cloning, voice design, dubbing, and model management](docs/media/electron/voicestudio.gif)
 
-## Create with VoiceStudio
+## Your voice. Your workflow.
 
-- **Clone & design voices** — use a reference recording or describe the voice you imagine.
-- **Dub video** — transcribe, translate, assign speakers, and edit timed speech.
-- **Dictate anywhere** — record, transcribe, and copy text with a floating recording widget.
-- **Tell longer stories** — create multi-voice scripts, audiobooks, and batch jobs.
-- **Choose your models** — manage speech and transcription engines, languages, and compute devices.
+| Create | Produce | Connect |
+| :--- | :--- | :--- |
+| Clone a voice or design your own | Dub videos with timed speech | Local API & MCP for agents |
+| Dictate with a floating widget | Stories, audiobooks & batch jobs | Optional remote workers |
 
 Start with **VoiceStudio** (default, powered by k2-fsa/OmniVoice), or choose another engine.
 
 Local workflows run on your hardware. Remote services are optional; usage analytics requires consent.
+
+<details>
+<summary><strong>Explore the workspaces</strong> · Clone, dub, design & models</summary>
 
 <table>
   <tr>
@@ -49,6 +49,10 @@ Local workflows run on your hardware. Remote services are optional; usage analyt
   <tr><td align="center">Voice design</td><td align="center">Local models</td></tr>
 </table>
 
+<img width="2628" height="1950" alt="VoiceStudio desktop workspace" src="https://github.com/user-attachments/assets/b474497d-a453-49a3-a2dd-f023ec6b7659" />
+
+</details>
+
 ## Get started
 
 Download from [Releases](https://github.com/debpalash/VoiceStudio/releases/latest), then follow your platform guide:
@@ -57,17 +61,19 @@ Download from [Releases](https://github.com/debpalash/VoiceStudio/releases/lates
 
 Open **Voice cloning**, choose a voice or add a clean reference recording, enter your text, and generate. Install the required model when prompted. Hardware needs vary by engine; see [performance](docs/performance.md).
 
-**Run the Electron preview from source:**
+<details>
+<summary><strong>Run the Electron preview from source</strong></summary>
 
 ```bash
 git clone https://github.com/debpalash/VoiceStudio.git
 cd VoiceStudio
 bun install
-cd electron
 bun run dev
 ```
 
-See [Electron setup](electron/README.md) for prerequisites and backend configuration. VoiceStudio is in active development; report bugs through [GitHub Issues](https://github.com/debpalash/VoiceStudio/issues).
+See [Electron setup](electron/README.md) for prerequisites and backend configuration.
+
+</details>
 
 ## Documentation
 
@@ -80,11 +86,13 @@ See [Electron setup](electron/README.md) for prerequisites and backend configura
 
 Agent skills: `npx skills add debpalash/VoiceStudio` — choose **voicestudio** for audio workflows or **oss-maintainer** for repository maintenance.
 
-## Support VoiceStudio
+## Sponsors
 
-[Ko-fi](https://ko-fi.com/debpalash) · [PayPal](https://paypal.me/palashCoder) · [Sponsor the project](SPONSORS.md) · [Partnerships](mailto:partner@voicestudio.sh)
+<a href="https://forms.gle/2PYCvd39hbwijzX37"><img src="docs/media/sponsor-slot.svg" alt="Your brand — apply for a featured VoiceStudio sponsor slot" width="640" /></a>
 
-**Put your brand where people build with voice.** Explore paid placements in the app footer, integrations directory, documentation, and README. [Apply to partner](https://forms.gle/2PYCvd39hbwijzX37) or [email us](mailto:partner@voicestudio.sh).
+**Become a featured partner.** [Apply for a paid placement](https://forms.gle/2PYCvd39hbwijzX37) · [Email us](mailto:partner@voicestudio.sh)
+
+Support development: [Ko-fi](https://ko-fi.com/debpalash) · [PayPal](https://paypal.me/palashCoder) · [Sponsorship details](SPONSORS.md)
 
 ## License & responsible use
 
