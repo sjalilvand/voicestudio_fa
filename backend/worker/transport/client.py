@@ -476,6 +476,7 @@ class WorkerClient:
                 *draining, return_exceptions=True
             )
         self._maintenance.clear()
+        self._telemetry_task = None
         self._prewarms.clear()
         self._prewarm_cancellations.clear()
         for key, task in running:
@@ -746,6 +747,8 @@ class WorkerClient:
                 to_thread_and_drain_on_cancel(_heartbeat_resources),
                 name="worker-telemetry-probe",
             )
+            self._maintenance.add(self._telemetry_task)
+            self._telemetry_task.add_done_callback(self._maintenance.discard)
 
     def heartbeat_message(self) -> pb.WorkerMessage:
         """Build the worker's current liveness/capacity frame."""

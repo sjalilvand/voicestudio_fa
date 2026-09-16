@@ -396,3 +396,8 @@ would disrupt the machine or network, including airplane mode, simultaneous
 downloads, and stopping a worker during an audiobook, are printed as exact
 `MANUAL` steps and are never reported as passed automatically. A failed
 precondition or automated check exits non-zero.
+
+Remote compute targets show available CPU/GPU usage and free VRAM. Unavailable
+metrics are omitted; a transient sampling failure retains the last successful
+reading. Telemetry runs off the control loop with at most one probe per worker
+client; shutdown drains that probe before retiring the client.
