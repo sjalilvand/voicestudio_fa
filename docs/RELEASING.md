@@ -188,3 +188,12 @@ choice. Tauri's signing keys do not sign Electron packages.
 For the transition tag, automatic Electron release jobs are skipped. Build the
 manual Tauri sunset draft first, then dispatch Electron on the same tag after
 its signed updater feeds exist. Later tags build Electron automatically.
+
+
+If a packaging-workflow fix is needed after tagging, keep the release tag
+immutable. Merge and validate the workflow fix on main, then dispatch
+`electron-release.yml` from main with `release_tag=vX.Y.Z`. Validation and every
+packaging/release job check out that exact tag; only the workflow comes from
+main. Empty signing secrets are omitted from the builder environment so drafts
+and explicitly accepted unsigned builds do not interpret the working directory
+as a certificate. Publication still requires `publish=true` and the same guards.
