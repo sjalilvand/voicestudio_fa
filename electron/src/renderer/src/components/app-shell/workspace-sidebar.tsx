@@ -1,78 +1,26 @@
-import { Link, useRouterState } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { PanelLeftIcon, PanelLeftOpenIcon, SettingsIcon } from 'lucide-react';
 import { brandIcon, brandArtwork } from '@/lib/brand';
-import { isMac } from '@/components/bridge';
+import { getBridge, isMac } from '@/components/bridge';
 import { cn } from '@/lib/utils';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { usePaneResize } from '@/hooks/use-pane-resize';
-import { setWorkspace, useWorkspace } from '@/lib/store/workspace';
+import { useWorkspace } from '@/lib/store/workspace';
 import { VoicesSidebar } from '@/features/clone/voices-sidebar';
 import { WorkspaceNavigation } from './workspace-menu';
 import { StatusBar } from './status-bar';
 import { SystemNotifications } from './system-notifications';
 import { useBackendStatus } from '@/hooks/use-backend-status';
-import { useState, useSyncExternalStore } from 'react';
-
-const SECONDARY_ROUTES = new Set([
-  '/stories',
-  '/audiobook',
-  '/tools',
-  '/batch',
-  '/gallery',
-  '/personas',
-  '/projects',
-  '/dub',
-  '/design',
-  '/transcriptions',
-]);
-// A local-controls pane needs enough room for the actual workspace. At the
-// default desktop window, preserve navigation as a rail and restore the full
-// voice library automatically once both it and a local-controls pane leave a
-// useful editing canvas. Browser zoom and Windows display scaling are included
-// in the CSS viewport width, so this threshold also covers high-DPI layouts.
-const COMPACT_QUERY = '(max-width: 1680px)';
-
-function routeHasSecondarySidebar(pathname: string): boolean {
-  const normalized = pathname.replace(/\/+$/, '') || '/';
-  return [...SECONDARY_ROUTES].some(
-    (route) => normalized === route || normalized.startsWith(`${route}/`),
-  );
-}
-
-function routeOwnsVoiceLibrary(pathname: string): boolean {
-  const normalized = pathname.replace(/\/+$/, '') || '/';
-  return normalized === '/personas' || normalized.startsWith('/personas/');
-}
-
-function useCompactViewport(): boolean {
-  return useSyncExternalStore(
-    (notify) => {
-      const query = window.matchMedia(COMPACT_QUERY);
-      query.addEventListener('change', notify);
-      return () => query.removeEventListener('change', notify);
-    },
-    () => window.matchMedia(COMPACT_QUERY).matches,
-    () => false,
-  );
-}
+import { useWorkspaceSidebarState } from './use-workspace-sidebar';
 
 export function WorkspaceSidebar() {
   const backend = useBackendStatus();
+  const showCompactBrand = ['win32', 'linux'].includes(getBridge()?.app.platform ?? '');
   const { t } = useTranslation();
   const { libraryOpen, libraryTab } = useWorkspace();
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const compactViewport = useCompactViewport();
-  const compactContext = `${pathname}:${compactViewport}`;
-  const [expandedContext, setExpandedContext] = useState<string | null>(null);
-  const forceExpanded = expandedContext === compactContext;
-  const ownsVoiceLibrary = routeOwnsVoiceLibrary(pathname);
-  const compact =
-    !libraryOpen ||
-    ((ownsVoiceLibrary || (compactViewport && routeHasSecondarySidebar(pathname))) &&
-      !forceExpanded);
-  const secondaryWorkspace = routeHasSecondarySidebar(pathname);
-  const setLibraryOpen = (libraryOpen: boolean) => setWorkspace({ libraryOpen });
+  const { compact, compactViewport, forceExpanded, secondaryWorkspace, setOpen } =
+    useWorkspaceSidebarState();
   const sidebarResize = usePaneResize({
     storageKey: 'voicestudio.library-width',
     side: 'left',
@@ -90,25 +38,33 @@ export function WorkspaceSidebar() {
           data-slot="compact-main-sidebar"
           className="brand-sidebar relative isolate grid h-dvh min-h-0 w-12 shrink-0 grid-rows-[auto_minmax(0,1fr)_auto_auto] overflow-hidden border-r border-border/50 bg-sidebar"
         >
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t('clone.toggle_sidebar')}
-            aria-expanded={false}
-            onClick={() => {
-              setExpandedContext(compactContext);
-              setLibraryOpen(true);
-            }}
-            className={cn(
-              'workspace-titlebar h-auto w-full shrink-0 rounded-none outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              isMac() && 'pt-5',
-            )}
-          >
-            <PanelLeftOpenIcon className="size-5" aria-hidden="true" />
-          </Button>
+          {showCompactBrand ? (
+            <div className="workspace-titlebar flex w-full shrink-0 items-center justify-center">
+              <img src={brandIcon} alt={t('app.name')} className="size-6 shrink-0" />
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t('clone.toggle_sidebar')}
+              aria-expanded={false}
+              onClick={() => {
+                setOpen(true);
+              }}
+              className={cn(
+                'workspace-titlebar h-auto w-full shrink-0 rounded-none outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                isMac() && 'pt-5',
+              )}
+            >
+              <PanelLeftOpenIcon className="size-5" aria-hidden="true" />
+            </Button>
+          )}
           <WorkspaceNavigation compact />
-          <StatusBar compact />
-          <div className="flex shrink-0 flex-col items-center gap-1 border-t border-border/50 py-2">
+          <div className="flex min-w-0 flex-col items-center">
+            <StatusBar compact />
+            <SystemNotifications enabled={backend.stage === 'ready'} compact />
+          </div>
+          <div className="flex h-[var(--workspace-footer-height)] shrink-0 items-center justify-center border-t border-border/50">
             <Link
               to="/settings"
               aria-label={t('nav.settings')}
@@ -117,7 +73,6 @@ export function WorkspaceSidebar() {
             >
               <SettingsIcon />
             </Link>
-            <SystemNotifications enabled={backend.stage === 'ready'} compact />
           </div>
         </aside>
       )}
@@ -153,8 +108,7 @@ export function WorkspaceSidebar() {
               size="icon-sm"
               aria-label={t('common.close')}
               onClick={() => {
-                setExpandedContext(null);
-                setLibraryOpen(false);
+                setOpen(false);
               }}
             >
               <PanelLeftIcon />
@@ -169,7 +123,7 @@ export function WorkspaceSidebar() {
           <div className="flex min-w-0 shrink-0 flex-col border-t border-border/50">
             <WorkspaceNavigation />
             <StatusBar />
-            <div className="flex items-center justify-between gap-2 border-t border-border/50 px-3 py-2">
+            <div className="flex h-[var(--workspace-footer-height)] items-center justify-between gap-2 border-t border-border/50 px-3">
               <Link to="/settings" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
                 <SettingsIcon />
                 {t('nav.settings')}

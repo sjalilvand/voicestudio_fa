@@ -1907,6 +1907,7 @@
     "test_text": "안녕하세요. 이 목소리에 대한 테스트입니다."
   },
   "nav": {
+    "voice": "음성",
     "clone_short": "복제",
     "workspaces": "작업 공간",
     "stories": "스토리",
@@ -1980,6 +1981,7 @@
     "dictation_lede_hotkey_only": "데스크톱 어디서든 위 단축키를 누른 채 말하고 떼면 포커스된 앱에 텍스트가 입력됩니다. 지금 눌러서 확인해 보세요."
   },
   "setup": {
+    "ready_desc": "첫 음성을 만들 준비가 되었습니다. 받아쓰기는 지금 또는 나중에 설정에서 구성할 수 있습니다.",
     "system_preflight": "시스템 프리플라이트",
     "system_check_desc": "RAM, 디스크, GPU, ffmpeg 및 네트워크를 프로브합니다. 차단기는 미리 표시되어 있으므로 다운로드하기 전에 알 수 있습니다.",
     "probing": "프로빙 시스템…",
@@ -2072,7 +2074,7 @@
     "choose_method": "주는 방법을 선택하세요",
     "choose_method_amount": "${{amount}}로 계속",
     "goal": {
-      "title": "클로드 맥스 기금",
+      "title": "VoiceStudio 개발 지원",
       "of": "중",
       "per_month": "/월",
       "aria": "{{goal}} 월 목표 중 {{raised}}",
@@ -2081,7 +2083,7 @@
       "social_proof": "로컬 AI에 자금을 지원하는 {{count}}명의 후원자와 함께하세요"
     },
     "postcard": {
-      "title": "클로드 맥스 기금",
+      "title": "VoiceStudio 개발 지원",
       "lead_default": "효과가 있어서 다행이에요! VoiceStudio는 무료이며 완전히 로컬입니다. 시간을 절약할 수 있다면 매월 소액의 칩인을 통해 Claude Max에 자금을 지원할 수 있습니다.",
       "lead_first_clone": "첫 번째 음성 복제가 완료되었습니다. 좋습니다! VoiceStudio는 전적으로 귀하의 컴퓨터에서 실행되며 귀하의 지원은 이를 그대로 유지합니다.",
       "lead_tenth_dub": "10개의 더빙이 포함되어 있습니다. 확실히 효과를 발휘하고 계십니다. 이러한 기능을 제공하는 Claude Max에는 매월 소액의 칩인 자금이 지원됩니다.",
@@ -2569,5 +2571,74 @@
     "captured": "문제 로그 {{count}}줄을 수집했습니다",
     "contextNotice": "선택한 에이전트는 이 보고서, 현재 화면, 최근 앱 및 백엔드 로그와 시스템 진단 정보를 받습니다.",
     "complete": "완료"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "음성이 없거나 읽을 수 없습니다. 내보내기 전에 해당 구간을 다시 생성하세요.",
+    "timingOverflow": "음성이 할당된 시간을 초과합니다. 번역을 줄이거나 엄격한 시간 구간 또는 비디오 늘이기를 선택하세요.",
+    "backgroundUnavailable": "원본 소리를 보존할 수 없습니다. 배경음 분리와 대사 타이밍을 확인한 후 다시 시도하거나 음성만 내보내기를 선택하세요."
+  },
+  "dubStyle": {
+    "label": "번역 스타일 지침",
+    "help": "어조, 대상 독자, 각색 방식을 설명하세요. 예: 농담을 살리고 관용구를 자연스럽게 번역하기. 프로젝트에 저장되며 번역과 길이 조정에 사용됩니다. 비워 두면 기본 스타일을 사용합니다."
+  },
+  "dubActivity": {
+    "output": "번역 결과",
+    "waiting": "아직 수신된 출력이 없습니다.",
+    "progress": "{{done}} / {{total}}개 구간 검증됨",
+    "cancelled": "취소됨",
+    "fitting": "타이밍 조정 중"
+  },
+  "sponsorSlot": {
+    "partner_heading": "VoiceStudio와 파트너 되기",
+    "partner_subtitle": "음성으로 만드는 사람들에게 제품을 소개하세요.",
+    "app_placement": "앱 내 노출",
+    "integration_page": "통합 페이지",
+    "readme_exposure": "README 노출",
+    "visibility": "가시성",
+    "integration": "제품 통합",
+    "installs": "직접 설치",
+    "distribution": "개발자 배포",
+    "partner": "검증된 파트너",
+    "privacy": "개인정보 보호",
+    "title": "VoiceStudio에서 브랜드를 소개하세요",
+    "description": "유료 추천 슬롯을 후원하여 브랜드의 노출을 높이세요.",
+    "form": "Google 양식",
+    "email": "이메일",
+    "book": "스폰서 자리 신청",
+    "preview": "스폰서 미리보기",
+    "footer_brand": "내 브랜드",
+    "footer_book": "지금 추가",
+    "email_template": "VoiceStudio 팀께,\n\nVoiceStudio와 파트너십을 맺고 제 브랜드의 주요 노출을 검토하고 싶습니다.\n\n브랜드 / 제품:\n웹사이트:\n연동 또는 캠페인:\n대상 / 일정:\n\n이용 가능한 패키지, 가격, 노출 옵션과 기술 요구사항을 알려주실 수 있을까요? 추천 파트너십에는 문서 페이지, GitHub README 로고, 앱 푸터 슬롯, Integrations 디렉터리 노출이 포함되는 것으로 이해하고 있습니다.\n\n감사합니다.\n[이름]\n[직함 / 회사]\n[연락처]",
+    "message": "브랜드, 웹사이트 및 메시지",
+    "email_app": "이메일 앱 열기",
+    "copy_email": "이메일 주소 복사",
+    "preview_detail": "여기에 로고, 링크 및 소개를 표시할 수 있습니다."
+  },
+  "supportPlans": {
+    "remove": "스폰서 바 제거",
+    "title": "무료와 Pro 비교",
+    "free": "무료",
+    "pro": "Pro",
+    "get_pro": "Pro 받기",
+    "sponsor_bar": "스폰서 바",
+    "visible": "표시됨",
+    "hideable": "숨길 수 있음",
+    "unavailable": "Pro 활성화가 아직 구성되지 않았습니다.",
+    "telemetry": "사용 정보 수집",
+    "opt_in": "선택 사항, 동의 필요",
+    "disabled": "비활성화",
+    "badge": "Pro 배지",
+    "advanced": "고급 도구",
+    "standard": "기본",
+    "included": "포함"
+  },
+  "integrationCatalog": {
+    "title": "연동",
+    "featured": "추천",
+    "description": "연동 기능과 추천 파트너를 살펴보세요."
+  },
+  "directoryExamples": {
+    "example": "디렉터리 예시",
+    "notice": "디렉터리 예시이며 스폰서나 연결된 연동이 아닙니다."
   }
 }
