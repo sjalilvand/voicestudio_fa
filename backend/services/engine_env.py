@@ -17,7 +17,6 @@ from __future__ import annotations
 import importlib.util
 import logging
 import os
-import sys
 from typing import Optional
 
 logger = logging.getLogger("omnivoice.engine_env")
@@ -28,6 +27,51 @@ _TORCH_COMPILE_KEY = "perf.torch_compile_disabled"
 # when the GPU's compute capability is not in this PyTorch build's arch list
 # (e.g. a brand-new architecture running through PTX forward-compat).
 _FORCE_COMPILE_ENV = "OMNIVOICE_FORCE_TORCH_COMPILE"
+
+# #2135: the environment escape hatches that torch itself honours. `main.py`
+# sets TORCH_COMPILE_DISABLE/TORCHDYNAMO_DISABLE on win32, `build_engine_env`
+# injects TORCH_COMPILE_DISABLE into engine subprocesses, and
+# `docs/install/windows.md` tells users to export it — but the in-process gate
+# below never read them, so an operator who set the documented variable still
+# got a compiled model (and, on a cudagraph mode, a native crash they could not
+# turn off). Reading them here makes one knob mean one thing everywhere.
+_COMPILE_DISABLE_ENVS = (
+    "TORCH_COMPILE_DISABLE",
+    "TORCHDYNAMO_DISABLE",
+    "TORCHINDUCTOR_DISABLE",
+)
+
+_TRUTHY = frozenset({"1", "true", "yes", "on"})
+
+
+def _env_compile_disabled() -> Optional[str]:
+    """The name of the first set-and-truthy compile-disable env var, else None.
+
+    Mirrors torch's own reading of these variables so the app's decision and
+    torch's behaviour cannot disagree — the state the reporter in #2135 hit,
+    where the log said "torch.compile applied" while TORCH_COMPILE_DISABLE=1
+    was exported.
+    """
+    for name in _COMPILE_DISABLE_ENVS:
+        if os.environ.get(name, "").strip().lower() in _TRUTHY:
+            return name
+    return None
+
+
+def _settings_db_path() -> str:
+    """The settings DB the compile toggle is actually read from (best-effort).
+
+    Logged alongside the toggle because #2135's reporter had three
+    `omnivoice.db` files on the box and edited one the backend never opened;
+    naming the path turns "the setting doesn't work" into a one-line diagnosis.
+    """
+    try:
+        from core.config import DB_PATH
+
+        return str(DB_PATH)
+    except Exception:
+        return "<unknown>"
+
 
 # #278: set (with a reason) the first time torch.compile — or *running* the
 # compiled model — fails at runtime in this process. Once set, every later
@@ -251,6 +295,15 @@ def should_torch_compile(device: str) -> bool:
     """
     if device != "cuda":
         return False
+    # #2135: honoured before every other gate — an explicit env opt-out is the
+    # user's most direct statement of intent, and it must hold on every
+    # platform (the reporter was on Linux, where this used to be ignored).
+    disabled_by = _env_compile_disabled()
+    if disabled_by is not None:
+        logger.info(
+            "torch.compile skipped: %s is set — using eager mode.", disabled_by,
+        )
+        return False
     if importlib.util.find_spec("triton") is None:
         logger.info("torch.compile skipped: Triton unavailable — using eager mode.")
         return False
@@ -258,8 +311,18 @@ def should_torch_compile(device: str) -> bool:
         from services import settings_store
 
         if settings_store.get_text(_TORCH_COMPILE_KEY, "0") == "1":
-            logger.info("torch.compile skipped: disabled in Settings (Performance).")
+            logger.info(
+                "torch.compile skipped: disabled in Settings (Performance) [%s].",
+                _settings_db_path(),
+            )
             return False
+        # #2135: say which DB answered "not disabled". Without this the only
+        # observable outcome of a toggle that never reached the running
+        # backend is a log line saying compile was applied anyway.
+        logger.debug(
+            "torch.compile: %s not set in %s — compile remains eligible.",
+            _TORCH_COMPILE_KEY, _settings_db_path(),
+        )
     except Exception:
         logger.exception("should_torch_compile: settings read failed; proceeding")
     if _compile_runtime_failure is not None:
@@ -328,19 +391,31 @@ def build_engine_env(
         except Exception:
             logger.exception("build_engine_env: token resolver failed (non-fatal)")
 
-    # INST-12: TORCH_COMPILE_DISABLE on Windows when the user opted in.
-    # The flag is a Windows-only escape hatch — torch.compile OOMs the same
-    # Triton kernel cache differently on macOS/Linux, so injecting on those
-    # platforms would just slow the engine for no gain. (The in-process
-    # should_torch_compile() gate handles the automatic Triton-absence case;
-    # the subprocess var stays user-driven by design — see test_perf_settings.)
-    if sys.platform.startswith("win"):
-        try:
-            from services import settings_store
+    # INST-12 (#65), widened to every platform by #2135: TORCH_COMPILE_DISABLE
+    # when the user opted in. This was win32-only on the theory that
+    # torch.compile only misbehaves on Windows (no Triton wheel). #2135 is the
+    # counter-example — a Linux/CUDA host where compile crashes the engine —
+    # and a Settings toggle that silently does nothing on the user's platform
+    # is worse than no toggle at all. Cost when enabled on Linux/macOS is a
+    # slower engine, which is exactly what the user asked for by enabling it.
+    try:
+        from services import settings_store
 
-            if settings_store.get_text(_TORCH_COMPILE_KEY, "0") == "1":
-                env["TORCH_COMPILE_DISABLE"] = "1"
-        except Exception:
-            logger.exception("build_engine_env: torch_compile_disabled read failed")
+        if settings_store.get_text(_TORCH_COMPILE_KEY, "0") == "1":
+            env["TORCH_COMPILE_DISABLE"] = "1"
+    except Exception:
+        logger.exception("build_engine_env: torch_compile_disabled read failed")
+
+    # #2135: an env opt-out on the parent must reach the child too. Without
+    # this a user who exported TORCH_COMPILE_DISABLE=1 got an eager parent and
+    # a compiled sidecar — the inconsistency that made the flag look ignored.
+    disabled_by = _env_compile_disabled()
+    if disabled_by is not None:
+        if env.get("TORCH_COMPILE_DISABLE") != "1":
+            logger.debug(
+                "build_engine_env: %s is set — disabling torch.compile in the "
+                "engine subprocess too.", disabled_by,
+            )
+        env["TORCH_COMPILE_DISABLE"] = "1"
 
     return env

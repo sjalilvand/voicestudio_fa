@@ -1050,7 +1050,7 @@
     "perf_title": "الأداء",
     "generate_timeout_cpu_note": "تُستخدم عند تشغيل التوليد على المعالج المركزي (CPU). بمجرد حفظها هنا، تحكم دائمًا في توليد فئة المعالج المركزي — بمعزل عن ميزانية المسرَّع أعلاه.",
     "device_family_rocm": "AMD GPU (ROCm)",
-    "perf_torch_compile": "تعطيل torch.compile (Windows)",
+    "perf_torch_compile": "تعطيل torch.compile",
     "generate_timeout_shadowed_note": "يوجد متغيّر بيئة خارج VoiceStudio (الصدفة، ملف .env، أو الحاوية) يُحدّد هذه القيمة حاليًا — القيمة المحفوظة هنا تُتجاهل إلى أن تتم إزالة ذلك المتغيّر.",
     "device_family_cpu": "CPU",
     "device_family_gpu": "GPU",

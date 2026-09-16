@@ -1046,7 +1046,7 @@
     "perf_title": "Продуктивність",
     "generate_timeout_cpu_note": "Використовується, коли генерація виконується на CPU. Після збереження тут це значення завжди керує генерацією на CPU — незалежно від прискореного бюджету вище.",
     "device_family_rocm": "AMD GPU (ROCm)",
-    "perf_torch_compile": "Вимкнути torch.compile (Windows)",
+    "perf_torch_compile": "Вимкнути torch.compile",
     "generate_timeout_shadowed_note": "Змінна середовища поза VoiceStudio (оболонка, файл .env або контейнер) наразі задає це значення — збережене тут значення ігнорується, доки цю змінну не видалять.",
     "device_family_cpu": "CPU",
     "device_family_gpu": "GPU",

@@ -274,10 +274,10 @@ synthesise call. On machines with <16 GB VRAM, that compile step can OOM
 failed`.
 
 **The one-click fix:** open **Settings → Performance** in the app and toggle
-**"Disable torch.compile (Windows)"** on. That sets the
-`TORCH_COMPILE_DISABLE=1` env var on every engine subprocess VoiceStudio spawns,
-which falls back to the eager-mode kernel path. You'll lose a few percent of
-peak throughput in exchange for the engine actually loading.
+**"Disable torch.compile"** on. That sets the `TORCH_COMPILE_DISABLE=1` env var
+on every engine subprocess VoiceStudio spawns and forces the in-process engine
+to eager mode as well. You'll lose a few percent of peak throughput in exchange
+for the engine actually loading.
 
 **From the CLI / from source:** set the env var manually before launching:
 
@@ -286,9 +286,13 @@ $env:TORCH_COMPILE_DISABLE = "1"
 bun run desktop-prod
 ```
 
-This setting is a no-op on macOS and Linux (the OOM is Windows-specific —
-the `torch.compile` kernel cache behaves differently on the other platforms).
-Tracking issue: [#65](https://github.com/debpalash/VoiceStudio/issues/65).
+The OOM this section describes is Windows-specific, but the toggle itself works
+on **every** platform — it used to be greyed out elsewhere, which left Linux and
+macOS users with no way to switch off a `torch.compile` that was breaking their
+engine. Tracking issues:
+[#65](https://github.com/debpalash/VoiceStudio/issues/65) (this OOM) and
+[#2135](https://github.com/debpalash/VoiceStudio/issues/2135) (the same toggle
+on Linux/CUDA).
 
 ## Hugging Face token (optional but recommended)
 

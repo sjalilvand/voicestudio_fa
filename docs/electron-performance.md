@@ -1,10 +1,10 @@
 # Electron compute and performance settings
 
-Settings > Compute device exposes the existing device override, Windows torch.compile workaround, generation time budgets, and hardware readouts.
+Settings > Compute device exposes the existing device override, the torch.compile workaround, generation time budgets, and hardware readouts.
 
 Device choices come from the backend's detected families plus Auto. The chosen preference and currently active family are displayed separately. Environment-pinned choices are disabled, an ignored unavailable override is explained, and a changed preference shows its actual restart requirement. Failed saves keep the last confirmed state. Nothing automatically restarts the backend or changes the active model.
 
-The torch.compile workaround uses the same platform gate as Tauri: Windows can opt in; other platforms retain their working optimization. Generation budgets preserve separate GPU and CPU limits, validate the existing positive/21600-second range, and keep edits during refetches. An externally overridden budget reports that fact instead of implying the saved value will take effect after restart. Hardware RAM/VRAM readouts poll only while this view is mounted.
+The torch.compile workaround matches Tauri: since #2135 it is selectable on every platform, because the compile failures it works around are not Windows-only. Generation budgets preserve separate GPU and CPU limits, validate the existing positive/21600-second range, and keep edits during refetches. An externally overridden budget reports that fact instead of implying the saved value will take effect after restart. Hardware RAM/VRAM readouts poll only while this view is mounted.
 
 During synthesis, the fixed-width primary action polls the existing model-status contract and names the active runtime phase: starting the AI runtime, loading weights, warming speech recognition, optimizing the model, generating, or receiving audio. Model-load percentage and elapsed time share the reserved status line, and the progress track switches from model loading to streamed audio delivery without moving the controls.
 

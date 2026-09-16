@@ -1042,7 +1042,7 @@
     "perf_title": "Leistung",
     "generate_timeout_cpu_note": "Wird verwendet, wenn die Generierung auf der CPU läuft. Einmal hier gespeichert, bestimmt dieser Wert immer die CPU-Generierung — unabhängig vom beschleunigten Budget oben.",
     "device_family_rocm": "AMD GPU (ROCm)",
-    "perf_torch_compile": "torch.compile deaktivieren (Windows)",
+    "perf_torch_compile": "torch.compile deaktivieren",
     "generate_timeout_shadowed_note": "Eine Umgebungsvariable außerhalb von VoiceStudio (Shell, .env-Datei oder Container) legt diesen Wert derzeit fest — der hier gespeicherte Wert wird ignoriert, bis diese Variable entfernt wird.",
     "device_family_cpu": "CPU",
     "device_family_gpu": "GPU",
