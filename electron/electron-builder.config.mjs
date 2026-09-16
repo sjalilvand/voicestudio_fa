@@ -94,10 +94,8 @@ export default {
         'utf8',
       ).match(/<key>NSMicrophoneUsageDescription<\/key>\s*<string>([^<]+)<\/string>/)[1],
     },
-    target: [
-      { target: 'dmg', arch: ['arm64', 'x64'] },
-      { target: 'zip', arch: ['arm64', 'x64'] },
-    ],
+    // The CLI matrix selects one architecture per runner and updater feed.
+    target: ['dmg', 'zip'],
     category: 'public.app-category.productivity',
   },
   linux: {
