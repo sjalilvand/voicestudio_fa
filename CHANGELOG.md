@@ -8,6 +8,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ## [Unreleased]
 
+## [0.5.3] — 2026-09-17
+
 **Highlights**
 
 - The README is shorter, with a new Electron UI tour and refreshed screenshots (#2129)
