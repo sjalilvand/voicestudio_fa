@@ -110,9 +110,9 @@ def test_compatibility_identifiers_stay_stable() -> None:
     ).read_text()
 
 
-def test_source_launch_cleans_idle_ports_quietly() -> None:
+def test_legacy_source_launch_cleans_idle_ports_quietly() -> None:
     scripts = json.loads((ROOT / "package.json").read_text())["scripts"]
-    for name in ("predev", "predesktop"):
+    for name in ("predev:web", "pretauri"):
         command = scripts[name]
         assert "bun scripts/clear-dev-ports.mjs 3900 3901" in command
         assert "|| true" not in command
@@ -124,3 +124,13 @@ def test_icon_rail_has_no_static_section_captions_and_keeps_air_between_items() 
         assert stale_caption not in rail
     assert "pt-[18px]" in rail
     assert "gap-[9px]" in rail
+
+
+def test_electron_launch_preserves_an_existing_backend():
+    scripts = json.loads((ROOT / "package.json").read_text())["scripts"]
+    for name in ("predev", "predesktop"):
+        assert "clear-dev-ports" not in scripts[name]
+        assert "desktop-runtime-preflight" not in scripts[name]
+    assert scripts["dev"] == "bun run --cwd electron dev"
+    assert scripts["desktop-prod:run"] == "bun run start"
+    assert scripts["start"] == "bun run --cwd electron start"
