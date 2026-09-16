@@ -27,6 +27,9 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Changed
 
+- Electron becomes the default source desktop, with artifact-only packaging rehearsals and a separate final Tauri update path (#2157)
+- Installable agent skills use current VoiceStudio names and Electron workflows (#2157)
+
 - Electron first run uses four simple steps with model packs, optional advanced controls and skippable dictation setup (#2129)
 
 - Model Catalogue is one page: a setup summary (speech, transcription, dictation, language model) on top, one TTS / ASR / LLM switch, and each family's downloadable weights listed under its engines; the separate Models pane and the Settings → Voice → Engines / Models signposts are gone, the models directory and voice previews moved to Settings → Storage and the HF mirror to Network (#2013)
@@ -34,6 +37,8 @@ the frozen-backend fallback mirror it for their toolchains.
 - CosyVoice 3 installs patched protobuf and transformers releases, clearing five security advisories (#2030, #2031)
 
 ### Fixed
+
+- Desktop integration checks cover current dubbing safeguards, navigation, and the linked engine catalog (#2157)
 
 - Tauri and Electron now share native dictation, watch-folder, and Wayland shortcut contracts; focused paste stays ordered and first-run uv stays pinned at 0.12.13 (#2122)
 - Dubbing demos synchronize playheads without simultaneous playback and let you open a sample in the editor (#2131)
