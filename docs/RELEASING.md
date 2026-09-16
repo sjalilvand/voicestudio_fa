@@ -191,3 +191,7 @@ Electron signing uses ELECTRON_CSC_LINK and ELECTRON_CSC_KEY_PASSWORD secrets.
 Without them rehearsal/draft artifacts are unsigned or ad-hoc signed. Configure
 and verify platform signing/notarization before distributing to users; Tauri's
 signing keys do not sign Electron packages.
+
+For the transition tag, automatic Electron release jobs are skipped. Build the
+manual Tauri sunset draft first, then dispatch Electron on the same tag after
+its signed updater feeds exist. Later tags build Electron automatically.
