@@ -544,23 +544,36 @@ async def test_control_plane_stamps_authenticated_target_on_progress(monkeypatch
 
 
 @pytest.mark.asyncio
-async def test_shutdown_drains_owned_telemetry_probe(monkeypatch):
+async def test_blocked_telemetry_does_not_block_drain_stop_or_duplicate_on_reconnect(monkeypatch):
     started = threading.Event()
     release = threading.Event()
+    calls = []
+
     def sample():
+        calls.append(threading.current_thread())
         started.set()
         release.wait(5)
         return 1.0, 2, 3.0
+
     monkeypatch.setattr(client_module, "_heartbeat_resources", sample)
     client = _client(lambda: [])
     await client._refresh_telemetry()
     await asyncio.wait_for(asyncio.to_thread(started.wait), 1)
-    stopping = asyncio.create_task(client._cancel_active_work())
-    await asyncio.sleep(0.02)
-    assert not stopping.done()
-    release.set()
-    await asyncio.wait_for(stopping, 1)
-    assert client._telemetry_task is None
-    await client._refresh_telemetry()
-    assert client._telemetry_task is None
-    assert not client._maintenance
+    probe = client._telemetry_task
+    try:
+        client._draining = True
+        client._maybe_finish_drain()
+        assert client._reconnect_requested.is_set()
+        await asyncio.wait_for(client._cancel_active_work(), 0.5)
+        client._accepting_assignments = True
+        await client._refresh_telemetry()
+        assert client._telemetry_task is probe
+        assert len(calls) == 1
+        assert calls[0].daemon
+        await asyncio.wait_for(client.stop(), 0.5)
+        await client._refresh_telemetry()
+        assert client._telemetry_task is probe
+        assert not client._maintenance
+    finally:
+        release.set()
+        await asyncio.wait_for(probe, 1)

@@ -43,6 +43,8 @@ import platform
 import random
 import socket
 import sys
+import threading
+from concurrent.futures import Future
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable, Optional, Protocol
 
@@ -370,7 +372,7 @@ class WorkerClient:
         # A driver query can hang indefinitely. Keep that one query owned
         # rather than cancelling its awaiter and starting a fresh thread at
         # every heartbeat.
-        self._telemetry_task: Optional[asyncio.Task] = None
+        self._telemetry_task: Optional[asyncio.Future] = None
         self._prewarms: dict[str, asyncio.Task] = {}
         self._prewarm_cancellations: dict[str, asyncio.Task] = {}
         self._epoch = 0
@@ -476,7 +478,6 @@ class WorkerClient:
                 *draining, return_exceptions=True
             )
         self._maintenance.clear()
-        self._telemetry_task = None
         self._prewarms.clear()
         self._prewarm_cancellations.clear()
         for key, task in running:
@@ -745,12 +746,22 @@ class WorkerClient:
             self._telemetry_task = None
 
         if self._telemetry_task is None:
-            self._telemetry_task = asyncio.create_task(
-                to_thread_and_drain_on_cancel(_heartbeat_resources),
-                name="worker-telemetry-probe",
-            )
-            self._maintenance.add(self._telemetry_task)
-            self._telemetry_task.add_done_callback(self._maintenance.discard)
+            # Read-only driver probes cannot be interrupted. Keep one across
+            # reconnects, outside assignment drain and the shared executor
+            # (whose shutdown would otherwise wait forever for a wedged driver).
+            result = Future()
+            self._telemetry_task = asyncio.wrap_future(result)
+
+            def sample() -> None:
+                try:
+                    result.set_result(_heartbeat_resources())
+                except Exception:
+                    logger.debug("Could not sample worker telemetry", exc_info=True)
+                    result.set_result((None, None, None))
+
+            threading.Thread(
+                target=sample, name="worker-telemetry-probe", daemon=True,
+            ).start()
 
     def heartbeat_message(self) -> pb.WorkerMessage:
         """Build the worker's current liveness/capacity frame."""

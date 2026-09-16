@@ -400,4 +400,5 @@ precondition or automated check exits non-zero.
 Remote compute targets show available CPU/GPU usage and free VRAM. Unavailable
 metrics are omitted; a transient sampling failure retains the last successful
 reading. Telemetry runs off the control loop with at most one probe per worker
-client; shutdown drains that probe before retiring the client.
+client, retained across reconnects. Read-only probes never block task draining or
+shutdown; a stuck driver probe cannot accumulate more threads.
