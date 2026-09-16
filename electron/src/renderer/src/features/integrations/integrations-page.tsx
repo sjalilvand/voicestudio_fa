@@ -66,10 +66,12 @@ export function IntegrationsPage() {
           <span className="integrations-hero-icon">
             <BlocksIcon aria-hidden="true" />
           </span>
-          <div>
-            <h2>{t('integrationCatalog.title')}</h2>
-            <p>{t('integrationCatalog.description')}</p>
-            <p>{t('directoryExamples.notice')}</p>
+          <div className="integrations-hero-copy">
+            <div className="integrations-hero-title-row">
+              <h2>{t('integrationCatalog.title')}</h2>
+              <p>{t('integrationCatalog.description')}</p>
+            </div>
+            <p className="integrations-hero-notice">{t('directoryExamples.notice')}</p>
           </div>
         </header>
 

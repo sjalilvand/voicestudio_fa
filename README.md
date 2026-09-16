@@ -1,9 +1,10 @@
 <div align="center">
   <img src="docs/logo.png" alt="VoiceStudio" width="88" />
   <h1>VoiceStudio</h1>
-  <p><strong>Your voices. Your stories. Your machine.</strong></p>
+  <p><strong>Open source voice cloning and workflow engine. Build local.</strong></p>
   <p>Clone voices, dub videos, dictate, and create audiobooks with local AI.</p>
   <p>
+    <a href="https://voicestudio.sh/?utm_source=github&utm_medium=readme&utm_campaign=project">Website</a> ·
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest">Download</a> ·
     <a href="#get-started">Get started</a> ·
     <a href="#documentation">Docs</a> ·
@@ -19,7 +20,7 @@
 
 ![A tour of the Electron app: voice cloning, voice design, dubbing, and model management](docs/media/electron/voicestudio.gif)
 
-<p align="center"><sub>The new Electron desktop UI, captured from this branch with the bundled demo voice. Release builds may look different.</sub></p>
+<p align="center"><sub>Captured from the running Electron preview with the bundled demo voice. Published installers may look different.</sub></p>
 
 ## Create with VoiceStudio
 
@@ -39,6 +40,11 @@ Local workflows run on your hardware. Remote services are optional; usage analyt
     <td><img src="docs/media/electron/dubbing.png" alt="Electron video dubbing workspace" width="100%" /></td>
   </tr>
   <tr><td align="center">Voice cloning</td><td align="center">Video dubbing</td></tr>
+  <tr>
+    <td><img src="docs/media/electron/voice-design.png" alt="Describe a voice in the Electron voice design workspace" width="100%" /></td>
+    <td><img src="docs/media/electron/models.png" alt="Install and manage local speech models" width="100%" /></td>
+  </tr>
+  <tr><td align="center">Voice design</td><td align="center">Local models</td></tr>
 </table>
 
 ## Get started
@@ -75,6 +81,8 @@ Agent skills: `npx skills add debpalash/VoiceStudio`
 ## Support VoiceStudio
 
 [Ko-fi](https://ko-fi.com/debpalash) · [PayPal](https://paypal.me/palashCoder) · [Sponsor the project](SPONSORS.md) · [Partnerships](mailto:partner@voicestudio.sh)
+
+**Put your brand where people build with voice.** Explore paid placements in the app footer, integrations directory, documentation, and README. [Apply to partner](https://forms.gle/2PYCvd39hbwijzX37) or [email us](mailto:partner@voicestudio.sh).
 
 ## License & responsible use
 

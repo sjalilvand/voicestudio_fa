@@ -1,7 +1,7 @@
 <div align="center">
   <img src="docs/logo.png" alt="VoiceStudio" width="88" />
   <h1>VoiceStudio</h1>
-  <p><strong>你的声音，你的故事，在你的电脑上创作。</strong></p>
+  <p><strong>开源声音克隆与工作流引擎。在本地构建。</strong></p>
   <p>使用本地 AI 克隆声音、翻译配音、语音听写和制作有声书。</p>
   <p>
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest">下载</a> ·
@@ -32,6 +32,11 @@
     <td><img src="docs/media/electron/dubbing.png" alt="Electron 视频配音工作区" width="100%" /></td>
   </tr>
   <tr><td align="center">声音克隆</td><td align="center">视频配音</td></tr>
+  <tr>
+    <td><img src="docs/media/electron/voice-design.png" alt="Electron 声音设计工作区" width="100%" /></td>
+    <td><img src="docs/media/electron/models.png" alt="本地语音模型管理" width="100%" /></td>
+  </tr>
+  <tr><td align="center">声音设计</td><td align="center">本地模型</td></tr>
 </table>
 
 ## 开始使用
@@ -68,6 +73,8 @@ bun run dev
 ## 支持 VoiceStudio
 
 [Ko-fi](https://ko-fi.com/debpalash) · [PayPal](https://paypal.me/palashCoder) · [赞助项目](SPONSORS.md) · [商务合作](mailto:partner@voicestudio.sh)
+
+**让语音应用开发者看到你的品牌。** 了解应用底部栏、集成目录、文档和 README 的付费展示合作。[申请合作](https://forms.gle/2PYCvd39hbwijzX37)或[发送邮件](mailto:partner@voicestudio.sh)。
 
 ## 许可与负责任使用
 

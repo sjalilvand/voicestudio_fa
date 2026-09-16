@@ -75,6 +75,9 @@
   color: var(--muted-foreground);
 }
 .sponsor-book-tile {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   width: 190px;
   min-width: 190px;
   border: 1px dashed color-mix(in srgb, var(--primary) 48%, var(--border));
@@ -82,9 +85,36 @@
   color: var(--muted-foreground);
   font-size: 12px;
 }
+.sponsor-book-tile::before {
+  position: absolute;
+  z-index: -1;
+  inset: -85% -45%;
+  content: '';
+  opacity: 0;
+  background:
+    radial-gradient(ellipse at 20% 40%, color-mix(in srgb, var(--primary) 30%, transparent), transparent 50%),
+    repeating-radial-gradient(ellipse at 0% 100%, transparent 0 12px, color-mix(in srgb, var(--primary) 22%, transparent) 13px 15px, transparent 16px 28px);
+  transform: translateX(-12%) rotate(-5deg);
+  transition: opacity 180ms ease;
+}
+.sponsor-book-tile > * { position: relative; z-index: 1; }
+.sponsor-book-tile:hover::before,
+.sponsor-book-tile:focus-visible::before {
+  opacity: 1;
+  animation: sponsor-book-waves 1.8s ease-in-out infinite alternate;
+}
+@keyframes sponsor-book-waves {
+  from { transform: translateX(-12%) rotate(-5deg) scale(1); }
+  to { transform: translateX(12%) rotate(5deg) scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sponsor-book-tile::before { transition: none; }
+  .sponsor-book-tile:hover::before,
+  .sponsor-book-tile:focus-visible::before { animation: none; }
+}
 .sponsor-book-tile--combined {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) 15px;
+  grid-template-columns: 34px minmax(0, 1fr) 15px;
   justify-content: initial;
   gap: 8px;
   text-align: center;
@@ -94,15 +124,26 @@
   overflow: visible;
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
   border: 0;
   border-radius: 0;
   background: transparent;
   color: var(--primary);
   filter: drop-shadow(0 3px 6px color-mix(in srgb, var(--primary) 25%, transparent));
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+.sponsor-book-mark::before {
+  position: absolute;
+  z-index: 0;
+  inset: 5px 4px 3px;
+  content: '';
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--primary) 58%, transparent), transparent 65%);
+  filter: blur(2px);
+  opacity: 0.9;
+  transition: opacity 180ms ease, transform 180ms ease;
 }
 .sponsor-book-mark::after {
   position: absolute;
@@ -115,10 +156,10 @@
 .sponsor-book-mark svg {
   position: relative;
   z-index: 1;
-  width: 28px;
-  height: 28px;
-  fill: color-mix(in srgb, var(--primary) 28%, var(--sidebar));
-  stroke-width: 1.4;
+  width: 34px;
+  height: 34px;
+  fill: color-mix(in srgb, var(--primary) 36%, var(--sidebar));
+  stroke-width: 1.7;
   transition: transform 180ms ease;
 }
 .sponsor-book-question {
@@ -128,17 +169,22 @@
   left: 50%;
   width: auto;
   color: var(--foreground);
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 17px;
+  font-weight: 900;
   line-height: 1;
   transform: translate(-50%, -50%);
   text-align: center;
-  text-shadow: 0 1px 4px color-mix(in srgb, var(--background) 65%, transparent);
+  text-shadow: 0 0 5px color-mix(in srgb, var(--primary) 68%, transparent);
   transition: transform 180ms ease;
 }
 .sponsor-book-tile:hover .sponsor-book-mark {
   transform: translateY(-1px) rotate(-4deg) scale(1.04);
   filter: drop-shadow(0 5px 8px color-mix(in srgb, var(--primary) 40%, transparent));
+}
+.sponsor-book-tile:hover .sponsor-book-mark::before {
+  opacity: 1;
+  transform: scale(1.16);
+  animation: sponsor-mark-glow 900ms ease-in-out infinite alternate;
 }
 .sponsor-book-tile:hover .sponsor-book-mark::after {
   opacity: 1;
@@ -154,11 +200,16 @@
   from { transform: translateX(-70%); }
   to { transform: translateX(70%); }
 }
+@keyframes sponsor-mark-glow {
+  from { filter: blur(2px); opacity: 0.7; }
+  to { filter: blur(4px); opacity: 1; }
+}
 @media (prefers-reduced-motion: reduce) {
   .sponsor-book-mark,
   .sponsor-book-mark svg,
   .sponsor-book-question { transition: none; }
-  .sponsor-book-tile:hover .sponsor-book-mark::after { animation: none; }
+  .sponsor-book-tile:hover .sponsor-book-mark::after,
+  .sponsor-book-tile:hover .sponsor-book-mark::before { animation: none; }
 }
 .sponsor-book-copy {
   display: grid;
