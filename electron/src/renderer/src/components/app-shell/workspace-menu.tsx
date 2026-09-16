@@ -12,6 +12,7 @@ import {
   MicIcon,
   UsersRoundIcon,
   ChevronRightIcon,
+  BlocksIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -30,7 +31,8 @@ type Destination = readonly [
     | '/dub'
     | '/design'
     | '/transcriptions'
-    | '/personas',
+    | '/personas'
+    | '/integrations',
   label: string,
   icon: typeof AudioLinesIcon,
   activate?: () => void,
@@ -50,6 +52,7 @@ const compactDestinations: Destination[] = [
   ['/audiobook', 'audiobook.title', BookOpenIcon],
   ['/projects', 'projects.title', FolderIcon],
   ['/tools', 'tools.title', WrenchIcon],
+  ['/integrations', 'integrationCatalog.title', BlocksIcon],
 ];
 
 const laterDestinations: Destination[] = [
@@ -58,6 +61,7 @@ const laterDestinations: Destination[] = [
   ['/audiobook', 'audiobook.title', BookOpenIcon],
   ['/projects', 'projects.title', FolderIcon],
   ['/tools', 'tools.title', WrenchIcon],
+  ['/integrations', 'integrationCatalog.title', BlocksIcon],
 ];
 
 const itemClass =

@@ -1607,7 +1607,7 @@
     "choose_method": "Escolha como dar",
     "choose_method_amount": "Continuar com ${{amount}}",
     "goal": {
-      "title": "Fundo Claude Max",
+      "title": "Apoie o desenvolvimento do VoiceStudio",
       "of": "de",
       "per_month": "/mês",
       "aria": "{{raised}} da meta mensal de {{goal}}",
@@ -1616,7 +1616,7 @@
       "social_proof": "Junte-se a {{count}} apoiadores que financiam IA local"
     },
     "postcard": {
-      "title": "Fundo Claude Max",
+      "title": "Apoie o desenvolvimento do VoiceStudio",
       "lead_default": "Que bom que funcionou! VoiceStudio é gratuito e totalmente local. Se você economizar tempo, uma pequena contribuição mensal financiará Claude Max por trás disso.",
       "lead_first_clone": "Seu primeiro clone de voz está pronto – ótimo! VoiceStudio é executado inteiramente em sua máquina e seu suporte mantém isso assim.",
       "lead_tenth_dub": "Dez dublagens - você está claramente colocando isso para funcionar. Uma pequena contribuição mensal financia o Claude Max que fornece esses recursos.",
@@ -2848,5 +2848,39 @@
     "progress": "{{done}} / {{total}} segmentos validados",
     "cancelled": "Cancelado",
     "fitting": "Ajustando o tempo"
+  },
+  "sponsorSlot": {
+    "book": "Reserve seu espaço",
+    "preview": "Prévia do patrocinador",
+    "message": "Sua marca, site e mensagem",
+    "email_app": "Abrir app de e-mail",
+    "copy_email": "Copiar e-mail",
+    "preview_detail": "Seu logo, link e apresentação podem aparecer aqui."
+  },
+  "supportPlans": {
+    "remove": "Remover barra de patrocinadores",
+    "title": "Grátis vs Pro",
+    "free": "Grátis",
+    "pro": "Pro",
+    "sponsor_bar": "Barra de patrocinadores",
+    "visible": "Visível",
+    "hideable": "Pode ser ocultada",
+    "unavailable": "A ativação do Pro ainda não foi configurada.",
+    "telemetry": "Telemetria",
+    "opt_in": "Opcional, com consentimento",
+    "disabled": "Desativada",
+    "badge": "Selo Pro",
+    "advanced": "Ferramentas avançadas",
+    "standard": "Padrão",
+    "included": "Incluídas"
+  },
+  "integrationCatalog": {
+    "title": "Integrações",
+    "featured": "Destaque",
+    "description": "Descubra integrações e parceiros em destaque."
+  },
+  "directoryExamples": {
+    "example": "Exemplo do diretório",
+    "notice": "Apenas exemplos do diretório — não são patrocinadores nem integrações conectadas."
   }
 }

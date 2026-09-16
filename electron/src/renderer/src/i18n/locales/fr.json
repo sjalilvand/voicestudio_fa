@@ -2075,7 +2075,7 @@
     "choose_method": "Choisissez comment donner",
     "choose_method_amount": "Continuez avec ${{amount}}",
     "goal": {
-      "title": "Fonds Claude Max",
+      "title": "Soutenez le développement de VoiceStudio",
       "of": "de",
       "per_month": "/mois",
       "aria": "{{raised}} sur {{goal}} objectif mensuel",
@@ -2084,7 +2084,7 @@
       "social_proof": "Rejoignez les sympathisants de {{count}} qui financent l'IA locale"
     },
     "postcard": {
-      "title": "Fonds Claude Max",
+      "title": "Soutenez le développement de VoiceStudio",
       "lead_default": "Content que ça ait fonctionné ! VoiceStudio est gratuit et entièrement local. Si cela vous fait gagner du temps, une petite contribution mensuelle finance le Claude Max derrière.",
       "lead_first_clone": "Votre premier clone de voix est terminé – super ! VoiceStudio fonctionne entièrement sur votre ordinateur et votre assistance le maintient ainsi.",
       "lead_tenth_dub": "Dix doublages – vous le mettez clairement à profit. Une petite contribution mensuelle finance le Claude Max qui fournit ces fonctionnalités.",
@@ -2588,5 +2588,52 @@
     "progress": "{{done}} / {{total}} segments validés",
     "cancelled": "Annulé",
     "fitting": "Ajustement du minutage"
+  },
+  "sponsorSlot": {
+    "visibility": "Visibilité",
+    "integration": "Intégration produit",
+    "installs": "Installations directes",
+    "distribution": "Distribution auprès des développeurs",
+    "partner": "Partenaire vérifié",
+    "privacy": "Confidentialité",
+    "title": "Soyez mis en avant sur VoiceStudio",
+    "description": "Donnez de la visibilité à votre marque en sponsorisant un emplacement vedette payant.",
+    "form": "Formulaire Google",
+    "email": "E-mail",
+    "book": "Réservez votre emplacement",
+    "preview": "Aperçu du sponsor",
+    "footer_brand": "Votre marque",
+    "footer_book": "Ajouter maintenant",
+    "email_template": "Bonjour l’équipe VoiceStudio,\n\nJ’aimerais devenir partenaire de VoiceStudio et étudier une mise en avant pour ma marque.\n\nMarque / produit :\nSite web :\nIntégration ou campagne :\nAudience / calendrier :\n\nPourriez-vous partager les offres, tarifs, emplacements et exigences techniques disponibles ? Je comprends qu’un partenariat mis en avant peut inclure une page de documentation, un logo dans le README GitHub, un emplacement dans le pied de l’application et une présence dans le répertoire Integrations.\n\nMerci,\n[Nom]\n[Rôle / entreprise]\n[Contact]",
+    "message": "Votre marque, site web et message",
+    "email_app": "Ouvrir la messagerie",
+    "copy_email": "Copier l’adresse e-mail",
+    "preview_detail": "Votre logo, lien et présentation pourraient apparaître ici."
+  },
+  "supportPlans": {
+    "remove": "Retirer la barre des sponsors",
+    "title": "Gratuit ou Pro",
+    "free": "Gratuit",
+    "pro": "Pro",
+    "sponsor_bar": "Barre des sponsors",
+    "visible": "Visible",
+    "hideable": "Peut être masquée",
+    "unavailable": "L’activation de Pro n’est pas encore configurée.",
+    "telemetry": "Télémétrie",
+    "opt_in": "Facultative, sur consentement",
+    "disabled": "Désactivée",
+    "badge": "Badge Pro",
+    "advanced": "Outils avancés",
+    "standard": "Standard",
+    "included": "Inclus"
+  },
+  "integrationCatalog": {
+    "title": "Intégrations",
+    "featured": "À la une",
+    "description": "Découvrez les intégrations et les partenaires à la une."
+  },
+  "directoryExamples": {
+    "example": "Exemple du répertoire",
+    "notice": "Exemples uniquement : ni sponsors ni intégrations connectées."
   }
 }

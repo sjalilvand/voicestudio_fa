@@ -2073,7 +2073,7 @@
     "choose_method": "Nasıl vereceğinizi seçin",
     "choose_method_amount": "${{amount}} ile devam et",
     "goal": {
-      "title": "Claude Max'e fon sağlayın",
+      "title": "VoiceStudio geliştirmelerini destekleyin",
       "of": "arasında",
       "per_month": "/ ay",
       "aria": "{{raised}} / {{goal}} aylık hedef",
@@ -2082,7 +2082,7 @@
       "social_proof": "Yerel yapay zekayı finanse eden {{count}} destekçilerine katılın"
     },
     "postcard": {
-      "title": "Claude Max'e fon sağlayın",
+      "title": "VoiceStudio geliştirmelerini destekleyin",
       "lead_default": "İşe yaradığına sevindim! VoiceStudio ücretsizdir ve tamamen yereldir. Size zaman kazandıracaksa, aylık küçük bir chip-in, arkasındaki Claude Max'e fon sağlar.",
       "lead_first_clone": "İlk ses klonunuz tamamlandı — güzel! VoiceStudio tamamen makinenizde çalışır ve desteğiniz de bu şekilde kalmasını sağlar.",
       "lead_tenth_dub": "On dublaj - açıkça işe koyuyorsunuz. Küçük bir aylık chip-in, bu özellikleri sunan Claude Max'e fon sağlıyor.",
@@ -2586,5 +2586,52 @@
     "progress": "{{done}} / {{total}} bölüm doğrulandı",
     "cancelled": "İptal edildi",
     "fitting": "Zamanlama ayarlanıyor"
+  },
+  "sponsorSlot": {
+    "visibility": "Görünürlük",
+    "integration": "Ürün entegrasyonu",
+    "installs": "Doğrudan kurulumlar",
+    "distribution": "Geliştirici dağıtımı",
+    "partner": "Doğrulanmış iş ortağı",
+    "privacy": "Gizlilik",
+    "title": "VoiceStudio'da öne çıkın",
+    "description": "Ücretli bir öne çıkan alanı sponsorlayarak markanızın görünürlüğünü artırın.",
+    "form": "Google Formu",
+    "email": "E-posta",
+    "book": "Yerinizi ayırtın",
+    "preview": "Sponsor önizlemesi",
+    "footer_brand": "Markanız",
+    "footer_book": "Şimdi ekle",
+    "email_template": "Merhaba VoiceStudio ekibi,\n\nVoiceStudio ile ortaklık kurmak ve markam için öne çıkan bir yerleşimi değerlendirmek istiyorum.\n\nMarka / ürün:\nWeb sitesi:\nEntegrasyon veya kampanya:\nHedef kitle / zamanlama:\n\nMevcut paketleri, fiyatları, yerleşim seçeneklerini ve teknik gereksinimleri paylaşabilir misiniz? Öne çıkan ortaklığın bir dokümantasyon sayfası, GitHub README logosu, uygulama altbilgisi alanı ve Integrations dizininde yer alabileceğini anlıyorum.\n\nTeşekkürler,\n[Ad]\n[Rol / şirket]\n[İletişim]",
+    "message": "Markanız, web siteniz ve mesajınız",
+    "email_app": "E-posta uygulamasını aç",
+    "copy_email": "E-postayı kopyala",
+    "preview_detail": "Logonuz, bağlantınız ve tanıtımınız burada görünebilir."
+  },
+  "supportPlans": {
+    "remove": "Sponsor çubuğunu kaldır",
+    "title": "Ücretsiz ve Pro",
+    "free": "Ücretsiz",
+    "pro": "Pro",
+    "sponsor_bar": "Sponsor çubuğu",
+    "visible": "Görünür",
+    "hideable": "Gizlenebilir",
+    "unavailable": "Pro etkinleştirmesi henüz yapılandırılmadı.",
+    "telemetry": "Telemetri",
+    "opt_in": "İsteğe bağlı, onay ile",
+    "disabled": "Devre dışı",
+    "badge": "Pro rozeti",
+    "advanced": "Gelişmiş araçlar",
+    "standard": "Standart",
+    "included": "Dahil"
+  },
+  "integrationCatalog": {
+    "title": "Entegrasyonlar",
+    "featured": "Öne çıkan",
+    "description": "Entegrasyonları ve öne çıkan iş ortaklarını keşfedin."
+  },
+  "directoryExamples": {
+    "example": "Dizin örneği",
+    "notice": "Yalnızca dizin örnekleri; sponsor veya bağlı entegrasyon değildir."
   }
 }

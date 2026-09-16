@@ -60,8 +60,11 @@ export function WorkspaceSidebar() {
             </Button>
           )}
           <WorkspaceNavigation compact />
-          <StatusBar compact />
-          <div className="flex shrink-0 flex-col items-center gap-1 border-t border-border/50 py-2">
+          <div className="flex min-w-0 flex-col items-center">
+            <StatusBar compact />
+            <SystemNotifications enabled={backend.stage === 'ready'} compact />
+          </div>
+          <div className="flex h-[var(--workspace-footer-height)] shrink-0 items-center justify-center border-t border-border/50">
             <Link
               to="/settings"
               aria-label={t('nav.settings')}
@@ -70,7 +73,6 @@ export function WorkspaceSidebar() {
             >
               <SettingsIcon />
             </Link>
-            <SystemNotifications enabled={backend.stage === 'ready'} compact />
           </div>
         </aside>
       )}
@@ -121,7 +123,7 @@ export function WorkspaceSidebar() {
           <div className="flex min-w-0 shrink-0 flex-col border-t border-border/50">
             <WorkspaceNavigation />
             <StatusBar />
-            <div className="flex items-center justify-between gap-2 border-t border-border/50 px-3 py-2">
+            <div className="flex h-[var(--workspace-footer-height)] items-center justify-between gap-2 border-t border-border/50 px-3">
               <Link to="/settings" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
                 <SettingsIcon />
                 {t('nav.settings')}

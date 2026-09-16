@@ -282,7 +282,7 @@ export function RepairAgentDock() {
 
   return (
     <AgentDockFrame label={t('repairAgent.title')}>
-      <header className="flex min-h-12 shrink-0 items-center gap-2 border-b border-sidebar-border px-3">
+      <header className="flex min-h-10 shrink-0 items-center gap-2 border-b border-sidebar-border px-3">
         <RepairGlyph className="text-foreground" />
         <div className="w-72 min-w-0 shrink-0">
           <p className="truncate text-sm font-semibold">{t('repairAgent.title')}</p>
@@ -347,7 +347,7 @@ export function RepairAgentDock() {
             ref={terminal}
             role="log"
             aria-live="polite"
-            className="studio-scrollbar min-h-0 min-w-0 flex-1 overflow-auto whitespace-pre-wrap break-words bg-[var(--app-theme-terminal-background,var(--background))] p-4 font-mono text-xs leading-5 text-[var(--app-theme-terminal-foreground,var(--foreground))]"
+            className="studio-scrollbar min-h-0 min-w-0 flex-1 overflow-auto whitespace-pre-wrap break-words bg-[var(--app-theme-terminal-background,var(--background))] p-3 font-mono text-xs leading-5 text-[var(--app-theme-terminal-foreground,var(--foreground))]"
           >
             {output}
           </pre>
@@ -355,7 +355,7 @@ export function RepairAgentDock() {
           <div
             role="status"
             aria-live="polite"
-            className="flex min-h-40 min-w-0 flex-1 flex-col items-center justify-center gap-3 bg-[var(--app-theme-terminal-background,var(--background))] p-8 text-center text-muted-foreground"
+            className="flex min-h-24 min-w-0 flex-1 flex-col items-center justify-center gap-2 bg-[var(--app-theme-terminal-background,var(--background))] p-4 text-center text-muted-foreground"
           >
             <RepairGlyph className="size-7 text-muted-foreground" />
             <p className="max-w-md text-sm leading-5">
@@ -369,7 +369,7 @@ export function RepairAgentDock() {
             </p>
           </div>
         )}
-        <div className="studio-scrollbar flex min-h-0 w-full shrink-0 flex-col gap-2 overflow-y-auto border-t border-sidebar-border bg-sidebar p-4 @3xl:w-[28rem] @3xl:border-l @3xl:border-t-0">
+        <div className="studio-scrollbar flex min-h-0 w-full shrink-0 flex-col gap-1.5 overflow-y-auto border-t border-sidebar-border bg-sidebar p-2.5 @3xl:w-[28rem] @3xl:border-l @3xl:border-t-0">
           {!workspaceAvailable && !appOperation && (
             <Button type="button" variant="outline" onClick={() => void chooseWorkspace()}>
               <FolderOpenIcon />
@@ -436,7 +436,7 @@ export function RepairAgentDock() {
             onChange={(event) => setReport(event.target.value)}
             placeholder={t('repairAgent.placeholder')}
             aria-label={t('repairAgent.placeholder')}
-            className="min-h-24 max-h-36 shrink-0 resize-y rounded-md border border-sidebar-border bg-sidebar-control-surface px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-16 max-h-24 shrink-0 resize-y rounded-md border border-sidebar-border bg-sidebar-control-surface px-3 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
           />
           <p className="flex items-start gap-1.5 text-[10px] leading-4 text-muted-foreground">
             <ShieldCheckIcon className="mt-0.5 size-3 shrink-0" aria-hidden="true" />

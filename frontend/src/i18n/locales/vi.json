@@ -1607,7 +1607,7 @@
     "choose_method": "Chọn cách cho đi",
     "choose_method_amount": "Tiếp tục với ${{amount}}",
     "goal": {
-      "title": "Quỹ Claude Max",
+      "title": "Hỗ trợ phát triển VoiceStudio",
       "of": "của",
       "per_month": "/ tháng",
       "aria": "{{raised}} trong số {{goal}} mục tiêu hàng tháng",
@@ -1616,7 +1616,7 @@
       "social_proof": "Tham gia cùng những người ủng hộ {{count}} tài trợ cho AI địa phương"
     },
     "postcard": {
-      "title": "Quỹ Claude Max",
+      "title": "Hỗ trợ phát triển VoiceStudio",
       "lead_default": "Vui mừng vì nó đã hiệu quả! VoiceStudio là miễn phí và hoàn toàn cục bộ. Nếu việc này giúp bạn tiết kiệm thời gian, một khoản chip-in nhỏ hàng tháng sẽ tài trợ cho Claude Max đằng sau nó.",
       "lead_first_clone": "Bản sao giọng nói đầu tiên của bạn đã hoàn tất - thật tuyệt! VoiceStudio chạy hoàn toàn trên máy của bạn và bộ phận hỗ trợ của bạn sẽ duy trì hoạt động đó.",
       "lead_tenth_dub": "Mười bản lồng tiếng - rõ ràng bạn đang thực hiện nó. Một khoản chip-in nhỏ hàng tháng sẽ tài trợ cho Claude Max cung cấp các tính năng này.",
@@ -2848,5 +2848,39 @@
     "progress": "Đã xác thực {{done}} / {{total}} đoạn",
     "cancelled": "Đã hủy",
     "fitting": "Đang điều chỉnh thời gian"
+  },
+  "sponsorSlot": {
+    "book": "Đặt vị trí của bạn",
+    "preview": "Xem trước nhà tài trợ",
+    "message": "Thương hiệu, trang web và lời nhắn",
+    "email_app": "Mở ứng dụng email",
+    "copy_email": "Sao chép email",
+    "preview_detail": "Logo, liên kết và phần giới thiệu của bạn có thể xuất hiện ở đây."
+  },
+  "supportPlans": {
+    "remove": "Xóa thanh nhà tài trợ",
+    "title": "Miễn phí và Pro",
+    "free": "Miễn phí",
+    "pro": "Pro",
+    "sponsor_bar": "Thanh nhà tài trợ",
+    "visible": "Hiển thị",
+    "hideable": "Có thể ẩn",
+    "unavailable": "Chưa cấu hình kích hoạt Pro.",
+    "telemetry": "Dữ liệu sử dụng",
+    "opt_in": "Tùy chọn, cần đồng ý",
+    "disabled": "Tắt",
+    "badge": "Huy hiệu Pro",
+    "advanced": "Công cụ nâng cao",
+    "standard": "Tiêu chuẩn",
+    "included": "Bao gồm"
+  },
+  "integrationCatalog": {
+    "title": "Tích hợp",
+    "featured": "Nổi bật",
+    "description": "Khám phá các tích hợp và đối tác nổi bật."
+  },
+  "directoryExamples": {
+    "example": "Ví dụ trong danh mục",
+    "notice": "Chỉ là ví dụ trong danh mục, không phải nhà tài trợ hay tích hợp đã kết nối."
   }
 }

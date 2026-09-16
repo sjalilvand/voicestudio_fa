@@ -1607,7 +1607,7 @@
     "choose_method": "Choisissez comment donner",
     "choose_method_amount": "Continuez avec ${{amount}}",
     "goal": {
-      "title": "Fonds Claude Max",
+      "title": "Soutenez le développement de VoiceStudio",
       "of": "de",
       "per_month": "/mois",
       "aria": "{{raised}} sur {{goal}} objectif mensuel",
@@ -1616,7 +1616,7 @@
       "social_proof": "Rejoignez les sympathisants de {{count}} qui financent l'IA locale"
     },
     "postcard": {
-      "title": "Fonds Claude Max",
+      "title": "Soutenez le développement de VoiceStudio",
       "lead_default": "Content que ça ait fonctionné ! VoiceStudio est gratuit et entièrement local. Si cela vous fait gagner du temps, une petite contribution mensuelle finance le Claude Max derrière.",
       "lead_first_clone": "Votre premier clone de voix est terminé – super ! VoiceStudio fonctionne entièrement sur votre ordinateur et votre assistance le maintient ainsi.",
       "lead_tenth_dub": "Dix doublages – vous le mettez clairement à profit. Une petite contribution mensuelle finance le Claude Max qui fournit ces fonctionnalités.",
@@ -2848,5 +2848,39 @@
     "progress": "{{done}} / {{total}} segments validés",
     "cancelled": "Annulé",
     "fitting": "Ajustement du minutage"
+  },
+  "sponsorSlot": {
+    "book": "Réservez votre emplacement",
+    "preview": "Aperçu du sponsor",
+    "message": "Votre marque, site web et message",
+    "email_app": "Ouvrir la messagerie",
+    "copy_email": "Copier l’adresse e-mail",
+    "preview_detail": "Votre logo, lien et présentation pourraient apparaître ici."
+  },
+  "supportPlans": {
+    "remove": "Retirer la barre des sponsors",
+    "title": "Gratuit ou Pro",
+    "free": "Gratuit",
+    "pro": "Pro",
+    "sponsor_bar": "Barre des sponsors",
+    "visible": "Visible",
+    "hideable": "Peut être masquée",
+    "unavailable": "L’activation de Pro n’est pas encore configurée.",
+    "telemetry": "Télémétrie",
+    "opt_in": "Facultative, sur consentement",
+    "disabled": "Désactivée",
+    "badge": "Badge Pro",
+    "advanced": "Outils avancés",
+    "standard": "Standard",
+    "included": "Inclus"
+  },
+  "integrationCatalog": {
+    "title": "Intégrations",
+    "featured": "À la une",
+    "description": "Découvrez les intégrations et les partenaires à la une."
+  },
+  "directoryExamples": {
+    "example": "Exemple du répertoire",
+    "notice": "Exemples uniquement : ni sponsors ni intégrations connectées."
   }
 }

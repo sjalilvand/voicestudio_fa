@@ -10,6 +10,14 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- The README is shorter, with a new Electron UI tour and refreshed screenshots (#2129)
+
+- Support pages feature cleaner donation cards, with a workspace support shortcut and sponsor footer with hover cards and email inquiries (#2129)
+
+- Integrations has a dedicated sidebar workspace with featured sponsors, searchable AI providers, and smooth sponsor-strip scrolling (#2129)
+
+- Integrations now covers 100+ automation, communications, MCP, agent, developer, data, and productivity tools with config-driven detail pages (#2129)
+
 - Electron now ships as a complete cross-platform VoiceStudio desktop app with local-first cloning, production workspaces, model packs, repair agents, native integrations, updates, parity checks, and the shared backend contracts required by those workflows (#1823)
 
 - The Model Catalogue is one page: what you use now on top, then each family's engines and weights (#2013)

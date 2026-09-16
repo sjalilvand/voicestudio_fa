@@ -1607,7 +1607,7 @@
     "choose_method": "選擇如何給予",
     "choose_method_amount": "繼續 ${{amount}}",
     "goal": {
-      "title": "克勞德馬克斯基金",
+      "title": "支持 VoiceStudio 開發",
       "of": "的",
       "per_month": "/月",
       "aria": "{{raised}} 每月目標 {{goal}}",
@@ -1616,7 +1616,7 @@
       "social_proof": "加入資助本地人工智慧的 {{count}} 支持者"
     },
     "postcard": {
-      "title": "克勞德馬克斯基金",
+      "title": "支持 VoiceStudio 開發",
       "lead_default": "很高興這有效！ VoiceStudio 是免費的並且完全本地化。如果可以節省您的時間，每月只需投入一小筆資金即可資助其背後的 Claude Max。",
       "lead_first_clone": "你的第一個聲音克隆已經完成——太好了！ VoiceStudio 完全在您的電腦上運行，並且您的支援使其保持這種狀態。",
       "lead_tenth_dub": "十次配音——你顯然正在讓它發揮作用。每月一小筆資金為 Claude Max 提供這些功能的資金。",
@@ -2848,5 +2848,39 @@
     "progress": "已驗證 {{done}} / {{total}} 個片段",
     "cancelled": "已取消",
     "fitting": "正在調整時間"
+  },
+  "sponsorSlot": {
+    "book": "預訂展示位",
+    "preview": "贊助商展示預覽",
+    "message": "您的品牌、網站和留言",
+    "email_app": "開啟郵件應用程式",
+    "copy_email": "複製信箱",
+    "preview_detail": "這裡可以展示您的標誌、連結和介紹。"
+  },
+  "supportPlans": {
+    "remove": "移除贊助商列",
+    "title": "免費版與 Pro 比較",
+    "free": "免費版",
+    "pro": "Pro",
+    "sponsor_bar": "贊助商列",
+    "visible": "顯示",
+    "hideable": "可隱藏",
+    "unavailable": "尚未設定 Pro 啟用。",
+    "telemetry": "遙測",
+    "opt_in": "可選，需主動同意",
+    "disabled": "已停用",
+    "badge": "Pro 徽章",
+    "advanced": "進階工具",
+    "standard": "標準",
+    "included": "包含"
+  },
+  "integrationCatalog": {
+    "title": "整合",
+    "featured": "精選",
+    "description": "探索整合與精選合作夥伴。"
+  },
+  "directoryExamples": {
+    "example": "目錄範例",
+    "notice": "僅為目錄範例，並非贊助商或已連接的整合。"
   }
 }

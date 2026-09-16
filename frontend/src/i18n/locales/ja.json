@@ -1607,7 +1607,7 @@
     "choose_method": "与え方を選ぶ",
     "choose_method_amount": "${{amount}} に進む",
     "goal": {
-      "title": "クロード・マックス基金",
+      "title": "VoiceStudio の開発を支援",
       "of": "の",
       "per_month": "/月",
       "aria": "月間目標 {{raised}}/{{goal}}",
@@ -1616,7 +1616,7 @@
       "social_proof": "{{count}} サポーターに参加してローカル AI に資金を提供しましょう"
     },
     "postcard": {
-      "title": "クロード・マックス基金",
+      "title": "VoiceStudio の開発を支援",
       "lead_default": "うまくいってよかったです！ VoiceStudio は無料で完全にローカルです。時間を節約できるのであれば、毎月少額のチップインがその背後にいるクロード・マックスに資金を提供します。",
       "lead_first_clone": "最初の音声クローンが完成しました。いいですね! VoiceStudio は完全にマシン上で実行され、サポートがその状態を維持します。",
       "lead_tenth_dub": "10 個のダブが入っています。明らかに効果を発揮しています。これらの機能を提供する Claude Max には、毎月少額のチップインが資金として提供されます。",
@@ -2848,5 +2848,39 @@
     "progress": "{{done}} / {{total}} セグメントを検証済み",
     "cancelled": "キャンセル済み",
     "fitting": "タイミングを調整中"
+  },
+  "sponsorSlot": {
+    "book": "掲載枠を申し込む",
+    "preview": "スポンサーの表示例",
+    "message": "ブランド名・ウェブサイト・メッセージ",
+    "email_app": "メールアプリを開く",
+    "copy_email": "メールアドレスをコピー",
+    "preview_detail": "ここにロゴ、リンク、紹介文を掲載できます。"
+  },
+  "supportPlans": {
+    "remove": "スポンサー欄を非表示にする",
+    "title": "無料版とProの比較",
+    "free": "無料",
+    "pro": "Pro",
+    "sponsor_bar": "スポンサー欄",
+    "visible": "表示",
+    "hideable": "非表示にできます",
+    "unavailable": "Proの有効化はまだ設定されていません。",
+    "telemetry": "テレメトリ",
+    "opt_in": "任意・同意が必要",
+    "disabled": "無効",
+    "badge": "Proバッジ",
+    "advanced": "高度なツール",
+    "standard": "標準",
+    "included": "利用可能"
+  },
+  "integrationCatalog": {
+    "title": "連携",
+    "featured": "注目",
+    "description": "連携機能と注目のパートナーを見つけましょう。"
+  },
+  "directoryExamples": {
+    "example": "掲載例",
+    "notice": "ディレクトリの掲載例です。スポンサーや接続済みの連携ではありません。"
   }
 }

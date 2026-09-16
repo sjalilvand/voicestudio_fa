@@ -10,7 +10,7 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 it('keeps short segments proportional on long recordings and offers zoom', () => {
-  render(<DubTimeline segments={[{id:'a',start:0,end:1,text:'a'},{id:'b',start:2,end:3,text:'b'}]}
+  render(<DubTimeline segments={[{id:'a',start:0,end:1,text:'a',text_original:'a'},{id:'b',start:2,end:3,text:'b',text_original:'b'}]}
     disabled={false} mediaDuration={1980} selectedId={null} onSelect={vi.fn()} />);
   const options = screen.getAllByRole('option');
   expect(parseFloat(options[0].style.width)).toBeCloseTo(100 / 1980, 4);

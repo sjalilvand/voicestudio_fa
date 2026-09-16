@@ -1922,7 +1922,7 @@
     "choose_method": "주는 방법을 선택하세요",
     "choose_method_amount": "${{amount}}로 계속",
     "goal": {
-      "title": "클로드 맥스 기금",
+      "title": "VoiceStudio 개발 지원",
       "of": "중",
       "per_month": "/월",
       "aria": "{{goal}} 월 목표 중 {{raised}}",
@@ -1931,7 +1931,7 @@
       "social_proof": "로컬 AI에 자금을 지원하는 {{count}}명의 후원자와 함께하세요"
     },
     "postcard": {
-      "title": "클로드 맥스 기금",
+      "title": "VoiceStudio 개발 지원",
       "lead_default": "효과가 있어서 다행이에요! VoiceStudio는 무료이며 완전히 로컬입니다. 시간을 절약할 수 있다면 매월 소액의 칩인을 통해 Claude Max에 자금을 지원할 수 있습니다.",
       "lead_first_clone": "첫 번째 음성 복제가 완료되었습니다. 좋습니다! VoiceStudio는 전적으로 귀하의 컴퓨터에서 실행되며 귀하의 지원은 이를 그대로 유지합니다.",
       "lead_tenth_dub": "10개의 더빙이 포함되어 있습니다. 확실히 효과를 발휘하고 계십니다. 이러한 기능을 제공하는 Claude Max에는 매월 소액의 칩인 자금이 지원됩니다.",
@@ -3329,5 +3329,39 @@
     "progress": "{{done}} / {{total}}개 구간 검증됨",
     "cancelled": "취소됨",
     "fitting": "타이밍 조정 중"
+  },
+  "sponsorSlot": {
+    "book": "스폰서 자리 신청",
+    "preview": "스폰서 미리보기",
+    "message": "브랜드, 웹사이트 및 메시지",
+    "email_app": "이메일 앱 열기",
+    "copy_email": "이메일 주소 복사",
+    "preview_detail": "여기에 로고, 링크 및 소개를 표시할 수 있습니다."
+  },
+  "supportPlans": {
+    "remove": "스폰서 바 제거",
+    "title": "무료와 Pro 비교",
+    "free": "무료",
+    "pro": "Pro",
+    "sponsor_bar": "스폰서 바",
+    "visible": "표시됨",
+    "hideable": "숨길 수 있음",
+    "unavailable": "Pro 활성화가 아직 구성되지 않았습니다.",
+    "telemetry": "사용 정보 수집",
+    "opt_in": "선택 사항, 동의 필요",
+    "disabled": "비활성화",
+    "badge": "Pro 배지",
+    "advanced": "고급 도구",
+    "standard": "기본",
+    "included": "포함"
+  },
+  "integrationCatalog": {
+    "title": "연동",
+    "featured": "추천",
+    "description": "연동 기능과 추천 파트너를 살펴보세요."
+  },
+  "directoryExamples": {
+    "example": "디렉터리 예시",
+    "notice": "디렉터리 예시이며 스폰서나 연결된 연동이 아닙니다."
   }
 }

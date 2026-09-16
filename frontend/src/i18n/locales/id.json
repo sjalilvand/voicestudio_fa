@@ -1607,7 +1607,7 @@
     "choose_method": "Pilih cara memberi",
     "choose_method_amount": "Lanjutkan dengan ${{amount}}",
     "goal": {
-      "title": "Dana Claude Max",
+      "title": "Dukung pengembangan VoiceStudio",
       "of": "dari",
       "per_month": "/ bulan",
       "aria": "{{raised}} dari {{goal}} sasaran bulanan",
@@ -1616,7 +1616,7 @@
       "social_proof": "Bergabunglah dengan pendukung {{count}} yang mendanai AI lokal"
     },
     "postcard": {
-      "title": "Dana Claude Max",
+      "title": "Dukung pengembangan VoiceStudio",
       "lead_default": "Senang itu berhasil! VoiceStudio gratis dan sepenuhnya lokal. Jika ini menghemat waktu Anda, chip-in bulanan kecil akan mendanai Claude Max di belakangnya.",
       "lead_first_clone": "Klon suara pertama Anda selesai — bagus! VoiceStudio berjalan sepenuhnya di mesin Anda, dan dukungan Anda menjaganya tetap seperti itu.",
       "lead_tenth_dub": "Sepuluh sulih suara - Anda jelas berhasil. Chip-in bulanan kecil mendanai Claude Max yang mengirimkan fitur-fitur ini.",
@@ -2848,5 +2848,39 @@
     "progress": "{{done}} / {{total}} segmen divalidasi",
     "cancelled": "Dibatalkan",
     "fitting": "Menyesuaikan waktu"
+  },
+  "sponsorSlot": {
+    "book": "Pesan slot Anda",
+    "preview": "Pratinjau sponsor",
+    "message": "Merek, situs web & pesan Anda",
+    "email_app": "Buka aplikasi email",
+    "copy_email": "Salin email",
+    "preview_detail": "Logo, tautan, dan perkenalan Anda bisa tampil di sini."
+  },
+  "supportPlans": {
+    "remove": "Hapus bilah sponsor",
+    "title": "Gratis vs Pro",
+    "free": "Gratis",
+    "pro": "Pro",
+    "sponsor_bar": "Bilah sponsor",
+    "visible": "Terlihat",
+    "hideable": "Dapat disembunyikan",
+    "unavailable": "Aktivasi Pro belum dikonfigurasi.",
+    "telemetry": "Telemetri",
+    "opt_in": "Opsional, dengan persetujuan",
+    "disabled": "Dinonaktifkan",
+    "badge": "Lencana Pro",
+    "advanced": "Alat lanjutan",
+    "standard": "Standar",
+    "included": "Termasuk"
+  },
+  "integrationCatalog": {
+    "title": "Integrasi",
+    "featured": "Unggulan",
+    "description": "Temukan integrasi dan mitra unggulan."
+  },
+  "directoryExamples": {
+    "example": "Contoh direktori",
+    "notice": "Hanya contoh direktori — bukan sponsor atau integrasi yang terhubung."
   }
 }

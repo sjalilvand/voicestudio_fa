@@ -32,7 +32,7 @@ export function TranslationAgentDock() {
     : latest.status === 'cancelled' ? t('dubActivity.cancelled') : t('common.error');
   const busy = ['translating', 'generating', 'transcribing', 'preparing'].includes(session.phase);
   return <AgentDockFrame label={t('dub.translate_with_agent')} expanded={activity.expanded}>
-    <header className="flex min-h-12 shrink-0 items-center gap-2 border-b border-sidebar-border px-3">
+    <header className="flex min-h-10 shrink-0 items-center gap-2 border-b border-sidebar-border px-3">
       <BotIcon className="size-4 shrink-0" />
       <div className="min-w-0 flex-1 text-xs" role="status">
         <p className="truncate font-medium">{status} · {latest.target} · {latest.agent}</p>

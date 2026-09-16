@@ -2073,7 +2073,7 @@
     "choose_method": "Wählen Sie, wie Sie geben möchten",
     "choose_method_amount": "Weiter mit ${{amount}}",
     "goal": {
-      "title": "Fonds Claude Max",
+      "title": "Unterstütze die Entwicklung von VoiceStudio",
       "of": "von",
       "per_month": "/ Monat",
       "aria": "{{raised}} von {{goal}} Monatsziel",
@@ -2082,7 +2082,7 @@
       "social_proof": "Schließen Sie sich den Unterstützern von {{count}} an, die lokale KI finanzieren"
     },
     "postcard": {
-      "title": "Fonds Claude Max",
+      "title": "Unterstütze die Entwicklung von VoiceStudio",
       "lead_default": "Ich bin froh, dass das funktioniert hat! VoiceStudio ist kostenlos und vollständig lokal. Wenn es Ihnen Zeit spart, finanziert ein kleiner monatlicher Chip-In den dahinter stehenden Claude Max.",
       "lead_first_clone": "Ihr erster Sprachklon ist fertig – schön! VoiceStudio läuft vollständig auf Ihrem Computer und Ihr Support sorgt dafür, dass dies auch so bleibt.",
       "lead_tenth_dub": "Nach zehn Dubs – Sie setzen es eindeutig um. Ein kleiner monatlicher Chip-In finanziert den Claude Max, der diese Funktionen bereitstellt.",
@@ -2586,5 +2586,52 @@
     "progress": "{{done}} / {{total}} Segmente geprüft",
     "cancelled": "Abgebrochen",
     "fitting": "Timing anpassen"
+  },
+  "sponsorSlot": {
+    "visibility": "Sichtbarkeit",
+    "integration": "Produktintegration",
+    "installs": "Direkte Installationen",
+    "distribution": "Vertrieb für Entwickler",
+    "partner": "Verifizierter Partner",
+    "privacy": "Datenschutz",
+    "title": "Auf VoiceStudio vorgestellt werden",
+    "description": "Steigern Sie die Sichtbarkeit Ihrer Marke mit einem bezahlten hervorgehobenen Platz.",
+    "form": "Google-Formular",
+    "email": "E-Mail",
+    "book": "Platz anfragen",
+    "preview": "Sponsor-Vorschau",
+    "footer_brand": "Deine Marke",
+    "footer_book": "Jetzt hinzufügen",
+    "email_template": "Hallo VoiceStudio-Team,\n\nich möchte mit VoiceStudio zusammenarbeiten und eine hervorgehobene Platzierung für meine Marke prüfen.\n\nMarke / Produkt:\nWebsite:\nIntegration oder Kampagne:\nZielgruppe / Zeitpunkt:\n\nKönnt ihr verfügbare Pakete, Preise, Platzierungsoptionen und technische Anforderungen teilen? Ich verstehe, dass eine Partnerschaft eine Dokumentationsseite, ein GitHub-README-Logo, einen Platz in der App-Fußzeile und einen Eintrag unter Integrations umfassen kann.\n\nDanke,\n[Name]\n[Rolle / Unternehmen]\n[Kontakt]",
+    "message": "Deine Marke, Website und Nachricht",
+    "email_app": "E-Mail-App öffnen",
+    "copy_email": "E-Mail-Adresse kopieren",
+    "preview_detail": "Hier könnten dein Logo, Link und eine Vorstellung stehen."
+  },
+  "supportPlans": {
+    "remove": "Sponsorenleiste entfernen",
+    "title": "Free und Pro im Vergleich",
+    "free": "Kostenlos",
+    "pro": "Pro",
+    "sponsor_bar": "Sponsorenleiste",
+    "visible": "Sichtbar",
+    "hideable": "Ausblendbar",
+    "unavailable": "Die Pro-Aktivierung ist noch nicht eingerichtet.",
+    "telemetry": "Telemetrie",
+    "opt_in": "Optional, nur mit Zustimmung",
+    "disabled": "Deaktiviert",
+    "badge": "Pro-Abzeichen",
+    "advanced": "Erweiterte Werkzeuge",
+    "standard": "Standard",
+    "included": "Enthalten"
+  },
+  "integrationCatalog": {
+    "title": "Integrationen",
+    "featured": "Hervorgehoben",
+    "description": "Entdecke Integrationen und hervorgehobene Partner."
+  },
+  "directoryExamples": {
+    "example": "Verzeichnisbeispiel",
+    "notice": "Nur Verzeichnisbeispiele — keine Sponsoren oder verbundenen Integrationen."
   }
 }

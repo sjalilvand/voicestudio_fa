@@ -2075,7 +2075,7 @@
     "choose_method": "Scegli come donare",
     "choose_method_amount": "Continua con ${{amount}}",
     "goal": {
-      "title": "Fondo Claude Max",
+      "title": "Sostieni lo sviluppo di VoiceStudio",
       "of": "di",
       "per_month": "/mese",
       "aria": "{{raised}} di {{goal}} obiettivo mensile",
@@ -2084,7 +2084,7 @@
       "social_proof": "Unisciti ai sostenitori di {{count}} che finanziano l'intelligenza artificiale locale"
     },
     "postcard": {
-      "title": "Fondo Claude Max",
+      "title": "Sostieni lo sviluppo di VoiceStudio",
       "lead_default": "Sono contento che abbia funzionato! VoiceStudio è gratuito e completamente locale. Se ti fa risparmiare tempo, un piccolo chip-in mensile finanzia il Claude Max che sta dietro di esso.",
       "lead_first_clone": "Il tuo primo clone vocale è pronto: fantastico! VoiceStudio funziona interamente sul tuo computer e il tuo supporto lo mantiene così.",
       "lead_tenth_dub": "Dieci doppiaggi: lo stai chiaramente mettendo in pratica. Un piccolo chip-in mensile finanzia il Claude Max che fornisce queste funzionalità.",
@@ -2588,5 +2588,52 @@
     "progress": "{{done}} / {{total}} segmenti convalidati",
     "cancelled": "Annullato",
     "fitting": "Regolazione dei tempi"
+  },
+  "sponsorSlot": {
+    "visibility": "Visibilità",
+    "integration": "Integrazione del prodotto",
+    "installs": "Installazioni dirette",
+    "distribution": "Distribuzione per sviluppatori",
+    "partner": "Partner verificato",
+    "privacy": "Privacy",
+    "title": "In evidenza su VoiceStudio",
+    "description": "Aumenta la visibilità del tuo brand sponsorizzando uno spazio in evidenza a pagamento.",
+    "form": "Modulo Google",
+    "email": "Email",
+    "book": "Prenota il tuo spazio",
+    "preview": "Anteprima sponsor",
+    "footer_brand": "Il tuo brand",
+    "footer_book": "Aggiungi ora",
+    "email_template": "Ciao team VoiceStudio,\n\nVorrei collaborare con VoiceStudio e valutare una presenza in evidenza per il mio brand.\n\nBrand / prodotto:\nSito web:\nIntegrazione o campagna:\nPubblico / tempistiche:\n\nPotete condividere pacchetti, prezzi, opzioni di visibilità e requisiti tecnici? Ho capito che una partnership in evidenza può includere una pagina docs, un logo nel README GitHub, uno spazio nel footer dell’app e una presenza nella directory Integrations.\n\nGrazie,\n[Nome]\n[Ruolo / azienda]\n[Contatto]",
+    "message": "Il tuo marchio, sito e messaggio",
+    "email_app": "Apri l’app email",
+    "copy_email": "Copia email",
+    "preview_detail": "Qui potrebbero apparire il tuo logo, link e presentazione."
+  },
+  "supportPlans": {
+    "remove": "Rimuovi barra sponsor",
+    "title": "Gratis o Pro",
+    "free": "Gratis",
+    "pro": "Pro",
+    "sponsor_bar": "Barra sponsor",
+    "visible": "Visibile",
+    "hideable": "Può essere nascosta",
+    "unavailable": "L’attivazione di Pro non è ancora configurata.",
+    "telemetry": "Telemetria",
+    "opt_in": "Facoltativa, con consenso",
+    "disabled": "Disattivata",
+    "badge": "Badge Pro",
+    "advanced": "Strumenti avanzati",
+    "standard": "Standard",
+    "included": "Inclusi"
+  },
+  "integrationCatalog": {
+    "title": "Integrazioni",
+    "featured": "In evidenza",
+    "description": "Scopri integrazioni e partner in evidenza."
+  },
+  "directoryExamples": {
+    "example": "Esempio di catalogo",
+    "notice": "Solo esempi di catalogo: non sponsor né integrazioni collegate."
   }
 }

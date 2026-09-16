@@ -1607,7 +1607,7 @@
     "choose_method": "Välj hur du ska ge",
     "choose_method_amount": "Fortsätt med ${{amount}}",
     "goal": {
-      "title": "Fond Claude Max",
+      "title": "Stöd utvecklingen av VoiceStudio",
       "of": "av",
       "per_month": "/ månad",
       "aria": "{{raised}} av {{goal}} månadsmål",
@@ -1616,7 +1616,7 @@
       "social_proof": "Gå med i {{count}}-supportrar som finansierar lokal AI"
     },
     "postcard": {
-      "title": "Fond Claude Max",
+      "title": "Stöd utvecklingen av VoiceStudio",
       "lead_default": "Kul att det fungerade! VoiceStudio är gratis och helt lokalt. Om det sparar tid, finansierar ett litet månatligt chip-in Claude Max bakom det.",
       "lead_first_clone": "Din första röstklon är klar – trevligt! VoiceStudio körs helt och hållet på din maskin, och din support håller det så.",
       "lead_tenth_dub": "Tio dubbar in — du sätter helt klart igång det. Ett litet månatligt chip-in finansierar Claude Max som levererar dessa funktioner.",
@@ -2848,5 +2848,39 @@
     "progress": "{{done}} / {{total}} segment validerade",
     "cancelled": "Avbruten",
     "fitting": "Justerar tidsplacering"
+  },
+  "sponsorSlot": {
+    "book": "Boka din plats",
+    "preview": "Förhandsvisning för sponsorer",
+    "message": "Ditt varumärke, webbplats och meddelande",
+    "email_app": "Öppna e-postappen",
+    "copy_email": "Kopiera e-postadress",
+    "preview_detail": "Här kan din logotyp, länk och presentation visas."
+  },
+  "supportPlans": {
+    "remove": "Ta bort sponsorfältet",
+    "title": "Gratis jämfört med Pro",
+    "free": "Gratis",
+    "pro": "Pro",
+    "sponsor_bar": "Sponsorfält",
+    "visible": "Synligt",
+    "hideable": "Kan döljas",
+    "unavailable": "Pro-aktivering har inte konfigurerats ännu.",
+    "telemetry": "Telemetri",
+    "opt_in": "Valfritt, med samtycke",
+    "disabled": "Avstängd",
+    "badge": "Pro-märke",
+    "advanced": "Avancerade verktyg",
+    "standard": "Standard",
+    "included": "Ingår"
+  },
+  "integrationCatalog": {
+    "title": "Integrationer",
+    "featured": "Utvald",
+    "description": "Upptäck integrationer och utvalda partner."
+  },
+  "directoryExamples": {
+    "example": "Katalogexempel",
+    "notice": "Endast katalogexempel — inte sponsorer eller anslutna integrationer."
   }
 }

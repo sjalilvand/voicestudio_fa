@@ -1,3 +1,4 @@
+import { SupportShortcut } from '@/components/app-shell/support-shortcut';
 import { SidebarToggle } from '@/components/app-shell/sidebar-toggle';
 import { EditProfile } from './edit-profile';
 import { ProfileAvatar } from '@/components/profile-avatar';
@@ -154,6 +155,7 @@ export function ClonePage() {
               <h1 className="truncate text-sm font-medium">{t('clone.title')}</h1>
             </div>
             <div className="flex shrink-0 items-center gap-1">
+              <SupportShortcut />
               <Button
                 variant="ghost"
                 size="icon-sm"
