@@ -8,6 +8,14 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ## [Unreleased]
 
+**Highlights**
+
+- Electron packaging can recover without changing a release tag
+
+### CI
+
+- Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**
