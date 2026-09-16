@@ -188,9 +188,12 @@ and shared assets until remaining Electron resource references are relocated.
 No tag, version bump, or publishing is authorized by workflow preparation alone.
 
 Electron signing uses ELECTRON_CSC_LINK and ELECTRON_CSC_KEY_PASSWORD secrets.
-Without them rehearsal/draft artifacts are unsigned or ad-hoc signed. Configure
-and verify platform signing/notarization before distributing to users; Tauri's
-signing keys do not sign Electron packages.
+Without them rehearsal/draft artifacts are unsigned or ad-hoc signed. Publishing
+checks macOS signing/notarization and Windows Authenticode signatures by default.
+The owner may explicitly choose the existing unsigned-release policy by dispatching
+with `allow_unsigned=true`; the release notes then disclose OS trust warnings and
+unverified macOS automatic updates. Never select this exception without the owner's
+choice. Tauri's signing keys do not sign Electron packages.
 
 For the transition tag, automatic Electron release jobs are skipped. Build the
 manual Tauri sunset draft first, then dispatch Electron on the same tag after
