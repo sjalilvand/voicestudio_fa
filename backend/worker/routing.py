@@ -118,7 +118,7 @@ class Target:
     active_tasks: int = 0
     max_tasks: int = 0
     cpu_percent: Optional[float] = None
-    free_memory_bytes: int = 0
+    free_memory_bytes: Optional[int] = None
     system_memory_bytes: int = 0
     cpu_count: int = 0
     gpu_name: str = ""
@@ -224,7 +224,7 @@ def list_targets(control_plane=None) -> list[Target]:
                 active_tasks=live.capacity.active_tasks if live else 0,
                 max_tasks=live.capacity.max_concurrent_tasks if live else 0,
                 cpu_percent=live.capacity.cpu_percent if live else None,
-                free_memory_bytes=live.capacity.free_memory_bytes if live else 0,
+                free_memory_bytes=live.capacity.free_memory_bytes if live else None,
                 system_memory_bytes=int(host.get("system_memory_bytes") or 0),
                 cpu_count=int(host.get("cpu_count") or 0),
                 gpu_name=str(gpu.get("model") or ""),

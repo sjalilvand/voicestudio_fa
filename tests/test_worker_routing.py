@@ -140,6 +140,27 @@ def test_connected_worker_target_exposes_heartbeat_telemetry(db, settings):
     assert target["gpu_memory_bytes"] == 24 * 1024**3
 
 
+def test_target_distinguishes_unknown_vram_from_a_full_gpu(db, settings):
+    plane = _Plane()
+    worker = _enroll(
+        "desktop-4090",
+        host={"gpus": [{"model": "NVIDIA RTX 4090", "memory_bytes": 24 * 1024**3}]},
+    )
+    _connect(plane, worker)
+
+    unknown = routing.list_targets(plane)[1].to_dict()
+    assert unknown["free_memory_bytes"] is None
+
+    plane.pool.heartbeat(
+        worker.id,
+        active_tasks=0,
+        available_slots=1,
+        free_memory_bytes=0,
+    )
+    full = routing.list_targets(plane)[1].to_dict()
+    assert full["free_memory_bytes"] == 0
+
+
 @pytest.mark.parametrize(
     "setup,detail",
     [

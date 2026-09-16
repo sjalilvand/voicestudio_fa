@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "장치 설정을 불러오지 못했습니다",
     "perf_save_failed": "설정을 저장하지 못했습니다",
     "audio_tools": "오디오 도구",

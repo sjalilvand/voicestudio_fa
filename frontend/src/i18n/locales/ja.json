@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "デバイス設定を読み込めませんでした",
     "perf_save_failed": "設定を保存できませんでした",
     "generate_budget_title": "計算時間の予算",

@@ -506,23 +506,28 @@ export function StatusBar({ compact = false }: { compact?: boolean }) {
               percent={activeRemoteTarget.cpu_percent}
             />
           )}
-          {activeRemoteTarget.gpu_name && (
+          {activeRemoteTarget.gpu_name &&
+            (activeRemoteTarget.gpu_utilization_percent != null ||
+              activeRemoteTarget.free_memory_bytes != null) && (
             <DeviceMetric
               Icon={MonitorUpIcon}
               label={t('settings.device_family_gpu')}
               value={
-                activeRemoteTarget.gpu_utilization_percent != null
-                  ? `${Math.round(activeRemoteTarget.gpu_utilization_percent)}% · ${formatBytes(
-                      activeRemoteTarget.gpu_memory_bytes - activeRemoteTarget.free_memory_bytes,
-                    )} / ${formatBytes(activeRemoteTarget.gpu_memory_bytes)}`
-                  : activeRemoteTarget.free_memory_bytes > 0
-                  ? `${formatBytes(
-                      activeRemoteTarget.gpu_memory_bytes - activeRemoteTarget.free_memory_bytes,
-                    )} / ${formatBytes(activeRemoteTarget.gpu_memory_bytes)}`
-                  : formatBytes(activeRemoteTarget.gpu_memory_bytes)
+                [
+                  activeRemoteTarget.gpu_utilization_percent != null
+                    ? `${Math.round(activeRemoteTarget.gpu_utilization_percent)}%`
+                    : null,
+                  activeRemoteTarget.free_memory_bytes != null
+                    ? `${formatBytes(
+                        activeRemoteTarget.gpu_memory_bytes - activeRemoteTarget.free_memory_bytes,
+                      )} / ${formatBytes(activeRemoteTarget.gpu_memory_bytes)}`
+                    : null,
+                ]
+                  .filter((value): value is string => value != null)
+                  .join(' · ')
               }
               percent={boundedPercent(
-                activeRemoteTarget.free_memory_bytes > 0
+                activeRemoteTarget.free_memory_bytes != null
                   ? activeRemoteTarget.gpu_memory_bytes - activeRemoteTarget.free_memory_bytes
                   : 0,
                 activeRemoteTarget.gpu_memory_bytes,

@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "Nie udało się wczytać ustawienia urządzenia",
     "perf_save_failed": "Nie udało się zapisać ustawienia",
     "generate_budget_title": "Budżet czasu obliczeń",

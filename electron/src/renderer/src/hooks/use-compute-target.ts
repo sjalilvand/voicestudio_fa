@@ -19,7 +19,7 @@ export interface ComputeTarget {
   active_tasks: number;
   max_tasks: number;
   cpu_percent: number | null;
-  free_memory_bytes: number;
+  free_memory_bytes: number | null;
   system_memory_bytes: number;
   cpu_count: number;
   gpu_name: string;

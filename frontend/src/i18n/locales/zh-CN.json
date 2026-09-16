@@ -822,6 +822,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "无法加载设备设置",
     "perf_save_failed": "无法保存设置",
     "generate_budget_title": "计算时长预算",

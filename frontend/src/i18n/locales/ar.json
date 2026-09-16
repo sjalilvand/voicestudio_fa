@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "تعذّر تحميل إعداد الجهاز",
     "perf_save_failed": "تعذّر حفظ الإعداد",
     "generate_budget_title": "ميزانية زمن الحوسبة",

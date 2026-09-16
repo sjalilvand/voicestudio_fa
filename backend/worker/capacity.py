@@ -150,7 +150,9 @@ class WorkerCapacity:
     worker_id: str
     max_concurrent_tasks: int = 1
     active_tasks: int = 0
-    free_memory_bytes: int = 0
+    # ``None`` means the worker could not query VRAM.  It is distinct from a
+    # real zero-byte reading, which means the device is completely occupied.
+    free_memory_bytes: Optional[int] = None
     cpu_percent: Optional[float] = None
     gpu_utilization_percent: Optional[float] = None
     backend: str = ""

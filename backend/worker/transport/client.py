@@ -367,6 +367,9 @@ class WorkerClient:
         self._keepalives: dict[str, asyncio.Task] = {}
         self._maintenance: set[asyncio.Task] = set()
         self._telemetry: tuple[Optional[float], Optional[int], Optional[float]] = (None, None, None)
+        # A driver query can hang indefinitely. Keep that one query owned
+        # rather than cancelling its awaiter and starting a fresh thread at
+        # every heartbeat.
         self._telemetry_task: Optional[asyncio.Task] = None
         self._prewarms: dict[str, asyncio.Task] = {}
         self._prewarm_cancellations: dict[str, asyncio.Task] = {}
@@ -712,15 +715,37 @@ class WorkerClient:
     async def _heartbeat_loop(self, interval: float) -> None:
         while True:
             await asyncio.sleep(interval)
+            await self._refresh_telemetry()
             await self._send(self.heartbeat_message())
-            if self._telemetry_task is None or self._telemetry_task.done():
-                self._telemetry_task = asyncio.create_task(self._refresh_telemetry())
 
     async def _refresh_telemetry(self) -> None:
-        try:
-            self._telemetry = await asyncio.wait_for(asyncio.to_thread(_heartbeat_resources), timeout=2)
-        except TimeoutError:
-            logger.warning("Worker telemetry sampling timed out")
+        """Publish completed samples and retain one non-blocking probe.
+
+        CUDA/NVML calls may wedge in a driver.  A timed ``to_thread`` await
+        only cancels the awaiter, leaving that thread alive; retaining this
+        task prevents later heartbeats from accumulating more blocked probes.
+        """
+        task = self._telemetry_task
+        if task is not None and task.done():
+            try:
+                sampled = task.result()
+            except Exception:
+                logger.debug("Could not sample worker telemetry", exc_info=True)
+            else:
+                # A partial failed sample must not erase an independent last
+                # good value.  Presence on the heartbeat remains honest until
+                # that individual metric can next be measured.
+                self._telemetry = tuple(
+                    current if value is None else value
+                    for current, value in zip(self._telemetry, sampled)
+                )
+            self._telemetry_task = None
+
+        if self._telemetry_task is None:
+            self._telemetry_task = asyncio.create_task(
+                to_thread_and_drain_on_cancel(_heartbeat_resources),
+                name="worker-telemetry-probe",
+            )
 
     def heartbeat_message(self) -> pb.WorkerMessage:
         """Build the worker's current liveness/capacity frame."""

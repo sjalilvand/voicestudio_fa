@@ -6,6 +6,7 @@ import pytest
 
 from worker.identity import WorkerKeypair
 from worker.protocol.gen import worker_v1_pb2 as pb
+from worker.transport import client as client_module
 from worker.transport.client import WorkerClient, WorkerConfig
 from worker.transport.server import WorkerServicer
 
@@ -17,6 +18,50 @@ def _client(probe):
         execute=lambda _assignment: None,
         capability_probe=probe,
     )
+
+
+@pytest.mark.asyncio
+async def test_blocked_telemetry_probe_is_not_restarted(monkeypatch):
+    """A stuck driver call occupies one worker thread, never one per heartbeat."""
+    started = threading.Event()
+    release = threading.Event()
+    calls = 0
+
+    def sample():
+        nonlocal calls
+        calls += 1
+        started.set()
+        release.wait(5)
+        return 10.0, 20, 30.0
+
+    monkeypatch.setattr(client_module, "_heartbeat_resources", sample)
+    client = _client(lambda: [])
+    await client._refresh_telemetry()
+    await asyncio.wait_for(asyncio.to_thread(started.wait), timeout=1)
+
+    for _ in range(3):
+        await client._refresh_telemetry()
+    assert calls == 1
+
+    release.set()
+    await asyncio.wait_for(client._telemetry_task, timeout=1)
+
+
+@pytest.mark.asyncio
+async def test_partial_telemetry_failure_retains_other_last_good_values(monkeypatch):
+    samples = iter(((10.0, 20, 30.0), (None, None, 40.0)))
+    monkeypatch.setattr(
+        client_module, "_heartbeat_resources", lambda: next(samples, (None, None, None))
+    )
+    client = _client(lambda: [])
+
+    await client._refresh_telemetry()
+    await asyncio.wait_for(client._telemetry_task, timeout=1)
+    await client._refresh_telemetry()
+    await asyncio.wait_for(client._telemetry_task, timeout=1)
+    await client._refresh_telemetry()
+
+    assert client._telemetry == (10.0, 20, 40.0)
 
 
 @pytest.mark.asyncio
