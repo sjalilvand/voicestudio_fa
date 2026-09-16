@@ -12,6 +12,19 @@ def test_translate_codes_cover_popular_iso():
         assert code in TRANSLATE_CODES, f"{code} missing from TRANSLATE_CODES"
 
 
+@pytest.mark.parametrize("raw,expected", [
+    ("zh", "zh"),
+    ("zh-CN", "zh"),
+    ("cmn-Hans", "zh"),
+    ("Chinese", "zh"),
+    ("Chinese (Simplified)", "zh"),
+    ("en", "en"),
+])
+def test_argos_lang_code_normalizes_names_and_bcp47(raw, expected):
+    from services.translation_engines import argos_lang_code
+    assert argos_lang_code(raw) == expected
+
+
 def test_flores_codes_cover_core_languages():
     from api.routers.dub_translate import FLORES_CODES
     for code in ('en', 'de', 'es', 'fr', 'hi', 'ja'):

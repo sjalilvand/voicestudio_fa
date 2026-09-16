@@ -29,7 +29,20 @@ logger = logging.getLogger("omnivoice.translation_engines")
 
 _NLLB_REPO_ID = "facebook/nllb-200-distilled-600M"
 _ARGOS_INSTALL_LOCK = threading.Lock()
-_ARGOS_LANG_ALIASES = {"cmn": "zh"}
+_ARGOS_LANG_ALIASES = {
+    "cmn": "zh",
+    "zho": "zh",
+    "in": "id",
+    "iw": "he",
+    "fil": "tl",
+}
+# Human names (and the UI's own labels) that are not ISO 639-1 tokens.
+_ARGOS_NAME_ALIASES = {
+    "chinese": "zh",
+    "chinese (simplified)": "zh",
+    "chinese (traditional)": "zh",
+    "mandarin": "zh",
+}
 
 
 # Engine ID → registry entry. Keyed by the `provider` string sent from the
@@ -300,8 +313,18 @@ def is_ready(engine_id: str) -> bool:
 
 def argos_lang_code(value: str) -> str:
     """Return the base language token used by Argos package metadata."""
-    code = str(value or "").strip().lower().split("-", 1)[0]
+    raw = str(value or "").strip()
+    if not raw:
+        raise ValueError("Choose a valid source and target language")
+    key = raw.lower()
+    named = _ARGOS_NAME_ALIASES.get(key)
+    if named:
+        return named
+    code = key.split("-", 1)[0]
     code = _ARGOS_LANG_ALIASES.get(code, code)
+    named = _ARGOS_NAME_ALIASES.get(code)
+    if named:
+        return named
     if not re.fullmatch(r"[a-z]{2,3}", code):
         raise ValueError("Choose a valid source and target language")
     return code
