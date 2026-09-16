@@ -1042,7 +1042,7 @@
     "perf_title": "パフォーマンス",
     "generate_timeout_cpu_note": "生成が CPU 上で実行される場合に使用されます。ここで保存すると、この値は上のアクセラレーテッド予算とは関係なく、常に CPU での生成を管理します。",
     "device_family_rocm": "AMD GPU (ROCm)",
-    "perf_torch_compile": "torch.compile を無効にする (Windows)",
+    "perf_torch_compile": "torch.compile を無効にする",
     "generate_timeout_shadowed_note": "VoiceStudio の外部にある環境変数（シェル、.env ファイル、またはコンテナ）が現在この値を設定しています — その変数が削除されるまで、ここで保存した値は無視されます。",
     "device_family_cpu": "CPU",
     "device_family_gpu": "GPU",

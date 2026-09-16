@@ -1042,7 +1042,7 @@
     "perf_title": "ประสิทธิภาพ",
     "generate_timeout_cpu_note": "ใช้เมื่อการสร้างทำงานบน CPU เมื่อบันทึกที่นี่แล้ว ค่านี้จะควบคุมการสร้างบน CPU เสมอ — โดยไม่ขึ้นกับงบแบบเร่งความเร็วด้านบน",
     "device_family_rocm": "AMD GPU (ROCm)",
-    "perf_torch_compile": "ปิดใช้ torch.compile (Windows)",
+    "perf_torch_compile": "ปิดใช้ torch.compile",
     "generate_timeout_shadowed_note": "มีตัวแปรสภาพแวดล้อมภายนอก VoiceStudio (เชลล์, ไฟล์ .env หรือคอนเทนเนอร์) กำลังตั้งค่านี้อยู่ — ค่าที่บันทึกไว้ที่นี่จะถูกละเว้นจนกว่าตัวแปรนั้นจะถูกลบออก",
     "device_family_cpu": "CPU",
     "device_family_gpu": "GPU",

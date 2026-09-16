@@ -1042,7 +1042,7 @@
     "perf_title": "प्रदर्शन",
     "generate_timeout_cpu_note": "जब जनरेशन CPU पर चलता है, तब इस्तेमाल होता है। यहाँ सेव होते ही, यह हमेशा CPU जनरेशन को नियंत्रित करता है — ऊपर के एक्सेलरेटेड बजट से स्वतंत्र।",
     "device_family_rocm": "AMD GPU (ROCm)",
-    "perf_torch_compile": "torch.compile बंद करें (Windows)",
+    "perf_torch_compile": "torch.compile बंद करें",
     "generate_timeout_shadowed_note": "VoiceStudio के बाहर का एक एनवायरनमेंट वेरिएबल (शेल, .env फ़ाइल, या कंटेनर) फ़िलहाल यह मान सेट कर रहा है — यहाँ सेव किया गया मान तब तक अनदेखा किया जाएगा जब तक वह वेरिएबल हटाया न जाए।",
     "device_family_cpu": "CPU",
     "device_family_gpu": "GPU",

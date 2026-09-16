@@ -360,7 +360,10 @@
     "theme_auto": "Automático del sistema",
     "theme_light": "Claro",
     "reduce_motion": "Reducir movimiento",
-    "reduce_motion_desc": "Detiene las animaciones de fondo y las transiciones. Tu ajuste del sistema se respeta por sí solo; esto se suma."
+    "reduce_motion_desc": "Detiene las animaciones de fondo y las transiciones. Tu ajuste del sistema se respeta por sí solo; esto se suma.",
+    "perf_torch_compile": "Desactivar torch.compile",
+    "perf_torch_compile_note": "Usa ejecución directa para evitar errores de memoria de Triton.",
+    "perf_torch_compile_hint": "Usa ejecución directa para evitar errores de memoria de Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",

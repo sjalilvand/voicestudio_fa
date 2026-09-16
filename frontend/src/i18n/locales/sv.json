@@ -360,7 +360,10 @@
     "theme_auto": "Systemval",
     "theme_light": "Ljust",
     "reduce_motion": "Minska rörelse",
-    "reduce_motion_desc": "Stoppar bakgrundsanimationer och övergångar. Systeminställningen gäller ändå; det här läggs till."
+    "reduce_motion_desc": "Stoppar bakgrundsanimationer och övergångar. Systeminställningen gäller ändå; det här läggs till.",
+    "perf_torch_compile": "Inaktivera torch.compile",
+    "perf_torch_compile_note": "Använder direkt körning för att undvika minnesfel i Triton.",
+    "perf_torch_compile_hint": "Använder direkt körning för att undvika minnesfel i Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",
