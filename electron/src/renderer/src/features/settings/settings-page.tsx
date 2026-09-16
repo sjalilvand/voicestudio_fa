@@ -545,12 +545,12 @@ export function SettingsPage() {
                 appearance.update({
                   font: 'inter',
                   scale: 100,
-                  glass: false,
+                  glass: true,
                 });
                 updateTheme({
                   mode: 'dark',
-                  light: 'default',
-                  dark: 'default',
+                  light: 'signal',
+                  dark: 'signal',
                 });
               }}
             >

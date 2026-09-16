@@ -1552,6 +1552,7 @@
     "h_ago": "{{count}}h temu"
   },
   "setup": {
+    "ready_desc": "Możesz już utworzyć swój pierwszy głos. Dyktowanie skonfigurujesz teraz lub później w Ustawieniach.",
     "welcome": "Witamy",
     "system_check": "Kontrola systemu",
     "install_models": "Zainstaluj modele",
@@ -1606,7 +1607,7 @@
     "choose_method": "Wybierz sposób dawania",
     "choose_method_amount": "Kontynuuj za pomocą ${{amount}}",
     "goal": {
-      "title": "Fundusz Claude'a Maxa",
+      "title": "Wesprzyj rozwój VoiceStudio",
       "of": "z",
       "per_month": "/ miesiąc",
       "aria": "{{raised}} z {{goal}} celu miesięcznego",
@@ -1615,7 +1616,7 @@
       "social_proof": "Dołącz do {{count}} zwolenników finansujących lokalną sztuczną inteligencję"
     },
     "postcard": {
-      "title": "Fundusz Claude'a Maxa",
+      "title": "Wesprzyj rozwój VoiceStudio",
       "lead_default": "Cieszę się, że to zadziałało! Usługa VoiceStudio jest bezpłatna i w pełni lokalna. Jeśli oszczędzi to Twój czas, niewielka miesięczna wpłata sfinansuje stojącego za nim Claude'a Maxa.",
       "lead_first_clone": "Twój pierwszy klon głosu jest gotowy — świetnie! VoiceStudio działa całkowicie na Twoim komputerze, a dzięki Twojemu wsparciu tak będzie.",
       "lead_tenth_dub": "Dziesięć dubów — wyraźnie to robisz. Niewielki miesięczny wkład finansuje Claude Max, który udostępnia te funkcje.",
@@ -2831,5 +2832,55 @@
   "player": {
     "pause": "Wstrzymaj",
     "play": "Odtwórz"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Brak mowy lub nie można jej odczytać. Przed eksportem wygeneruj ponownie dany segment.",
+    "timingOverflow": "Mowa przekracza przydzielony czas. Skróć tłumaczenie albo wybierz ścisły przedział czasu lub wydłużenie filmu.",
+    "backgroundUnavailable": "Nie udało się zachować oryginalnego dźwięku. Sprawdź oddzielenie tła i czasy dialogów, a następnie spróbuj ponownie lub wybierz eksport samej mowy."
+  },
+  "dubStyle": {
+    "label": "Instrukcje stylu tłumaczenia",
+    "help": "Opisz ton, odbiorców i sposób adaptacji, np. zachowanie żartów i naturalne tłumaczenie idiomów. Zapisywane w projekcie i stosowane przy tłumaczeniu oraz dopasowaniu czasu. Pozostaw puste dla stylu domyślnego."
+  },
+  "dubActivity": {
+    "output": "Tłumaczenia",
+    "waiting": "Nie otrzymano jeszcze żadnych wyników.",
+    "progress": "Zweryfikowano {{done}} / {{total}} segmentów",
+    "cancelled": "Anulowano",
+    "fitting": "Dostosowywanie czasu"
+  },
+  "sponsorSlot": {
+    "book": "Zarezerwuj miejsce",
+    "preview": "Podgląd sponsora",
+    "message": "Twoja marka, strona i wiadomość",
+    "email_app": "Otwórz pocztę",
+    "copy_email": "Kopiuj e-mail",
+    "preview_detail": "Tutaj mogą pojawić się Twoje logo, link i opis."
+  },
+  "supportPlans": {
+    "remove": "Usuń pasek sponsorów",
+    "title": "Darmowa a Pro",
+    "free": "Darmowa",
+    "pro": "Pro",
+    "sponsor_bar": "Pasek sponsorów",
+    "visible": "Widoczny",
+    "hideable": "Można ukryć",
+    "unavailable": "Aktywacja Pro nie została jeszcze skonfigurowana.",
+    "telemetry": "Telemetria",
+    "opt_in": "Opcjonalna, za zgodą",
+    "disabled": "Wyłączona",
+    "badge": "Odznaka Pro",
+    "advanced": "Zaawansowane narzędzia",
+    "standard": "Standardowe",
+    "included": "W zestawie"
+  },
+  "integrationCatalog": {
+    "title": "Integracje",
+    "featured": "Wyróżnione",
+    "description": "Odkryj integracje i wyróżnionych partnerów."
+  },
+  "directoryExamples": {
+    "example": "Przykład katalogowy",
+    "notice": "Wyłącznie przykłady katalogowe — nie sponsorzy ani połączone integracje."
   }
 }
