@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('@/lib/api/client', () => ({ apiJson: mocks.api, apiPath: (path: string) => path }));
 vi.mock('@/components/video-player', () => ({
-  VideoPlayer: ({ controls, playerRef, onPlay, source }: Record<string, any>) => {
+  VideoPlayer: ({ controls, playerRef, onPlay, onPause, source }: Record<string, any>) => {
     mocks.videoProps.push({ controls, source });
     let player = mocks.players.get(source);
     if (!player) {
@@ -39,6 +39,7 @@ vi.mock('@/components/video-player', () => ({
       <button
         type="button"
         aria-label={source}
+        onDoubleClick={() => { player!.paused = true; onPause?.({}); }}
         onClick={() => {
           player!.paused = false;
           onPlay?.({});
@@ -132,4 +133,29 @@ it('opens the selected dubbed sample in the editor', async () => {
     path: '/demo_audio/demo/dubbing/dubbed_es.mp4',
     filename: 'dubbed_es.mp4',
   });
+});
+
+
+it('continues from the outgoing playhead when switching samples', async () => {
+  mount();
+  const original = await screen.findByRole('button', {name: 'dubbing-demo-comparison-demo.original_tag'});
+  const translated = screen.getByRole('button', {name: 'dubbing-demo-comparison-demo.dubbed_tag'});
+  fireEvent.click(original);
+  const source = mocks.players.get('dubbing-demo-comparison-demo.original_tag')!;
+  const dubbed = mocks.players.get('dubbing-demo-comparison-demo.dubbed_tag')!;
+  source.currentTime = 7.25;
+  fireEvent.click(translated);
+  expect(dubbed.currentTime).toBe(7.25);
+  expect(source.pause).toHaveBeenCalled();
+});
+
+it('copies the final paused position to the other sample', async () => {
+  mount();
+  const original = await screen.findByRole('button', {name: 'dubbing-demo-comparison-demo.original_tag'});
+  fireEvent.click(original);
+  await Promise.resolve();
+  const source = mocks.players.get('dubbing-demo-comparison-demo.original_tag')!;
+  source.currentTime = 5;
+  fireEvent.doubleClick(original);
+  expect(mocks.players.get('dubbing-demo-comparison-demo.dubbed_tag')!.currentTime).toBe(5);
 });
