@@ -22,6 +22,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Include cuDNN 8 compatibility libraries for CTranslate2 in CUDA containers (#2072) — thanks @basil-k-aji-dev!
 
+- Preserve audio reads, writes, and reference amplitude without TorchCodec (#2083) — thanks @Moep90!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**

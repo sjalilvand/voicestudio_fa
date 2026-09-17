@@ -1152,3 +1152,7 @@ remove the app binary itself are in
 ### Pedalboard illegal-instruction crashes
 
 VoiceStudio pins pedalboard to `>=0.9.14,<0.9.21` while [upstream portable-wheel repair #466](https://github.com/spotify/pedalboard/pull/466) remains open. Re-sync the locked environment after updating from a build with newer affected wheels. This keeps the existing effects API floor while avoiding the reported Linux CPU import crash.
+
+### TorchCodec unavailable
+
+When torchaudio requires an unavailable TorchCodec installation, VoiceStudio writes through soundfile and reads reference audio through its FFmpeg fallback. Reference amplitude is normalized using the decoded sample representation, including 8-, 24-, and 32-bit PCM.
