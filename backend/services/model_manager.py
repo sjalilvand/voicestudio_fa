@@ -1,11 +1,12 @@
-import os
-import re
-import sys
-import time
 import asyncio
 import logging
+import math
+import os
 import queue
+import re
+import sys
 import threading
+import time
 from concurrent.futures import Executor, Future, ThreadPoolExecutor
 
 from utils.containment import contain_system_exit
@@ -527,6 +528,7 @@ def generate_timeout_s(
     text: "str | None", *, engine: object = None, execution_device: "str | None" = None,
     min_vram_gb: float = 0.0, hardware_family: "str | None" = None,
     vram_gb: "float | None" = None,
+    _include_sidecar_grace: bool = True,
 ) -> float:
     """THE wall-clock execution budget for one synthesis job, scaled to input.
 
@@ -562,6 +564,7 @@ def generate_timeout_s(
     claiming the card is under-provisioned in user-facing diagnostics.
     """
     base = GPU_JOB_TIMEOUT_S
+    explicit_budget = _GENERATE_TIMEOUT_EXPLICIT or GPU_JOB_TIMEOUT_S != _CONFIGURED_GPU_JOB_TIMEOUT_S
     try:
         from core.device_caps import detect_host_caps
         caps = detect_host_caps()
@@ -588,6 +591,7 @@ def generate_timeout_s(
         )
         if family == "cpu" and (cpu_explicit or not universal_override):
             base = CPU_JOB_TIMEOUT_S
+            explicit_budget = cpu_explicit
         elif not universal_override and family in (
             "cuda", "rocm", "vulkan", "xpu",
         ):
@@ -610,7 +614,23 @@ def generate_timeout_s(
         # Device probing is advisory here; the configured universal bound is
         # still safe when a platform probe is unavailable during startup.
         pass
-    return base + (max(0, len(text or "") - 1200) / 40.0)
+
+    # If the engine specifies its own sidecar receive timeout (e.g. SubprocessBackend
+    # engines like Confucius, Dots, Moss, Supertonic), the outer execution budget
+    # must not cut the sidecar off early (#2103). A bounded 5s grace period ensures
+    # the sidecar's watchdog timer fires and surfaces its actionable timeout error
+    # before the outer pool cancellation cuts it off.
+    sidecar_grace = 0.0
+    if not explicit_budget and engine is not None and hasattr(engine, "recv_timeout_s"):
+        try:
+            sidecar_timeout = float(engine.recv_timeout_s)
+            if math.isfinite(sidecar_timeout) and sidecar_timeout > 0:
+                base = max(base, sidecar_timeout)
+                sidecar_grace = 5.0 if _include_sidecar_grace else 0.0
+        except (TypeError, ValueError):
+            pass  # Invalid optional engine metadata cannot disable the outer guard.
+
+    return base + (max(0, len(text or "") - 1200) / 40.0) + sidecar_grace
 
 
 def _retry_after_estimate(stats: dict) -> float:
@@ -726,6 +746,8 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
     finalizer. Normal completion never calls it. This lets request-owned temp
     files outlive abandoned workers without delaying ordinary requests (#1668).
     """
+    from services.inference_cancellation import InferenceCancellation
+    cancellation = InferenceCancellation()
     loop = asyncio.get_running_loop()
     ex = executor if executor is not None else _get_gpu_pool()
     # Resolved at CALL time, not def time, so monkeypatching/reloading the
@@ -768,7 +790,8 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
         except RuntimeError:
             pass  # loop already closed (caller vanished) — still run the job
         try:
-            return _inner()
+            with cancellation.activate():
+                return _inner()
         finally:
             # Idents are reused by the OS; a stale heartbeat under this ident
             # must not vouch for some future job on the same thread.
@@ -783,6 +806,7 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
     fut = asyncio.wrap_future(concurrent_fut, loop=loop)
 
     def _abandon() -> None:
+        cancellation.cancel()
         # Keep the concurrent future so we can distinguish a job cancelled out
         # of the queue from a thread that Python cannot stop once it has begun.
         cancelled_before_start = concurrent_fut.cancel()
@@ -1565,10 +1589,13 @@ def _is_compile_runtime_failure(exc: BaseException) -> bool:
     """True when an exception originates in the torch.compile stack (Dynamo /
     Inductor / Triton / FX / CUDA-graph trees) rather than in the model itself.
 
-    #278: on GPU architectures Triton doesn't support yet (e.g. Blackwell
-    sm_120), the compiled model dies mid-generation with errors like
-    "Detected that you are using FX to symbolically trace a dynamo-optimized
-    function" or an AssertionError out of torch/_inductor/cudagraph_trees.py.
+    #278: an independent compile-stack failure can surface during generation
+    as an AssertionError out of torch/_inductor/cudagraph_trees.py. An
+    architecture missing from the running torch build's arch list is rejected
+    earlier by should_torch_compile(), before this runtime fallback applies.
+    #278 also quotes "Detected that you are using FX to symbolically trace a
+    dynamo-optimized function"; Dynamo raises that on any device, CPU included,
+    so it is a compile-stack error to catch here but never an arch signal.
     Walks the exception chain and checks (a) the exception type's module,
     (b) the message, (c) the traceback file paths — the cudagraph case is a
     bare AssertionError, so the traceback check is load-bearing.

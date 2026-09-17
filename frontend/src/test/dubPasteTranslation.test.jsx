@@ -7,6 +7,7 @@ import {
   buildPastePlan,
   matchByOverlap,
 } from '../utils/pasteTranslations';
+import { ENCODED, SAMPLE } from './encodedText';
 
 // "Paste translation from an external source": the user transcribes once,
 // translates elsewhere (ChatGPT / DeepL / a human), and pastes the result
@@ -58,6 +59,11 @@ describe('detectPasteMode', () => {
 
   it('detects a VTT paste (dot ms separator, no cue indices)', () => {
     expect(detectPasteMode('WEBVTT\n\n00:00:01.000 --> 00:00:04.500\nHola.\n')).toBe('timestamped');
+  });
+
+  it('detects a VTT paste whose cues have no hours field', () => {
+    // WebVTT allows `mm:ss.ttt`; without this the lines were mapped as plain text.
+    expect(detectPasteMode('WEBVTT\n\n00:01.000 --> 00:04.500\nHola.\n')).toBe('timestamped');
   });
 
   it('detects numbered lines in every common prefix style', () => {
@@ -406,6 +412,20 @@ describe('DubPasteTranslationDialog', () => {
     expect(rows.every((r) => r.getAttribute('data-matched') === 'true')).toBe(true);
   });
 
+  // Windows tools save subtitle files as UTF-16 (Notepad's "Unicode") or in
+  // the Windows-1252 code page; a loaded file must read as the text it holds.
+  it.each(Object.keys(ENCODED))('loads a %s file with its text intact', async (encoding) => {
+    render(
+      <DubPasteTranslationDialog open segments={SEGMENTS} onApply={vi.fn()} onClose={vi.fn()} />,
+    );
+    const input = document.querySelector('input[type="file"]');
+    fireEvent.change(input, {
+      target: { files: [new File([ENCODED[encoding](SAMPLE)], 'translation.txt')] },
+    });
+
+    await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue(SAMPLE));
+  });
+
   it('surfaces a backend parse failure instead of applying a silent no-op', async () => {
     dubApi.dubParseSubtitleText.mockRejectedValue(new Error('No timed cues found'));
     render(
@@ -420,4 +440,12 @@ describe('DubPasteTranslationDialog', () => {
     );
     expect(screen.getByRole('button', { name: /Apply/i })).toBeDisabled();
   });
+});
+
+it('keeps an hourless timestamp embedded in prose as plain text', () => {
+  expect(detectPasteMode('Continue at 01:30.000 --> the finale')).toBe('plain');
+});
+
+it('keeps an incomplete timing line as plain text', () => {
+  expect(detectPasteMode('01:30.000 --> the finale')).toBe('plain');
 });

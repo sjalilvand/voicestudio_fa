@@ -864,7 +864,9 @@
     "familyDesc_asr": "Sesi; transkripsiyon, dublaj, altyazı ve dikte için metne dönüştürür.",
     "familyDesc_llm": "Çeviri ve yeniden yazma için isteğe bağlı metin yardımcısıdır. “Kapalı” bu adımları atlar.",
     "mpsLongText": "{{engine}} burada Apple Silicon (MPS) üzerinde çalışıyor ve bu metin uzun — üretim süre bütçesini aşabilir. Daha kısa bir metin ya da birkaç parçaya bölmek çok daha hızlı olacaktır.",
-    "inMemory": "Bellekte"
+    "inMemory": "Bellekte",
+    "localInstallRequired": "Bu motoru arka uç bilgisayarında localhost veya kurulum kılavuzu üzerinden yükleyin. Uzaktan kurulum devre dışıdır.",
+    "argosRuntimeUnavailable": "Argos çalışma ortamı kullanılamıyor. Arka ucu yeniden yükleyin veya NLLB seçin."
   },
   "capture": {
     "desc": "Genel kısayol tuşları yalnızca masaüstü uygulamasında çalışır. Web kullanıcı arayüzü, pencere odaktayken sayfa içi <1>Ctrl+Shift+Space</1> kısayolunu kullanır.",
@@ -1802,7 +1804,8 @@
     "backend_shutting_down": "VoiceStudio kapanıyor. Uygulamayı yeniden açıp tekrar dene.",
     "crash_broken_env": "Kendi Python bağımlılıklarını yüklerken sonlandı; yani sorun bellek ya da ekran kartınız değil — ortam eksik veya yarım güncellenmiş durumda. Ayarlar → Günlükler → Arka uç bölümündeki \"Temizle ve Yeniden Dene\" seçeneğini kullanın: ortamı sıfırdan yeniden kurar ve seslerinize ya da projelerinize dokunmadan yerinde onarır. Yine de başarısız olursa, çökme ayrıntıları içe aktarılamayan paketin adını verir.",
     "crash_vram_default": "Küçük GPU'larda en yaygın neden, TTS modeli yüklüyken ASR modelini de yüklerken VRAM'in tükenmesidir: önce TTS modelini bellekten kaldırın veya Model kataloğu → Modeller bölümünden daha küçük bir ASR modeli seçin.",
-    "stream_cut_backend_alive": "Akış erken sona erdi ama arka uç hâlâ çalışıyor — yani çökmedi. Sunucu veya konteyner kurulumlarında bunun nedeni genellikle bir ters vekilin (reverse proxy) ya da yük dengeleyicinin bağlantıyı arabelleğe alması veya zaman aşımına uğratmasıdır: bu yol için yanıt arabelleğe almayı kapatın (nginx: proxy_buffering off; X-Accel-Buffering: no) ve okuma zaman aşımını artırın. Masaüstü uygulamasını doğrudan ya da vekil olmadan localhost üzerinde çalıştırmak bunu doğrular."
+    "stream_cut_backend_alive": "Akış erken sona erdi ama arka uç hâlâ çalışıyor — yani çökmedi. Sunucu veya konteyner kurulumlarında bunun nedeni genellikle bir ters vekilin (reverse proxy) ya da yük dengeleyicinin bağlantıyı arabelleğe alması veya zaman aşımına uğratmasıdır: bu yol için yanıt arabelleğe almayı kapatın (nginx: proxy_buffering off; X-Accel-Buffering: no) ve okuma zaman aşımını artırın. Masaüstü uygulamasını doğrudan ya da vekil olmadan localhost üzerinde çalıştırmak bunu doğrular.",
+    "stream_cut_backend_alive_local": "Akış erken sona erdi ancak arka uç hâlâ çalışıyor — yani çökmedi. Uygulama, iş sürerken arka uçla bağlantısını kaybetti; bu, uzun bir adım dakikalarca hiçbir şey göndermediğinde olur ve arka uç genellikle işi yine de tamamlar. Birkaç dakika bekleyip işi geçmişten yeniden açın veya arka ucun ne yaptığını görmek için arka uç günlüğüne (Ayarlar → Günlükler → Arka uç) bakın."
   },
   "keyboard": {
     "title": "Klavye kısayolları",

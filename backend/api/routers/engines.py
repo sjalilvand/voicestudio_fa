@@ -21,12 +21,12 @@ import os
 import threading
 from time import perf_counter
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from huggingface_hub import utils as hf_utils
 from huggingface_hub.errors import HFValidationError
 from pydantic import BaseModel, Field
 
-from api.dependencies import require_admin, require_admin_action, require_desktop
+from api.dependencies import require_admin, require_admin_action, require_desktop, is_loopback
 from core import prefs
 from core.engine_licenses import LICENSE_GATED_ENGINES
 from services import tts_backend, asr_backend, llm_backend, translation_engines
@@ -116,18 +116,29 @@ def _is_hf_repo_id(value: str) -> bool:
     return True
 
 
+def _request_install_capability(payload, request):
+    allowed = bool(request and request.client and is_loopback(request.client.host))
+    result = dict(payload)
+    result["backends"] = [dict(entry) for entry in payload["backends"]]
+    for entry in result["backends"]:
+        if entry.get("one_click_install") and not allowed:
+            entry["one_click_install"] = False
+            entry["local_install_required"] = True
+    return result
+
+
 @router.get("/engines")
-def list_all_engines():
+def list_all_engines(request: Request):
     return {
-        "tts": _family_payload("tts", tts_backend),
+        "tts": _request_install_capability(_family_payload("tts", tts_backend), request),
         "asr": _family_payload("asr", asr_backend),
         "llm": _family_payload("llm", llm_backend),
     }
 
 
 @router.get("/engines/tts")
-def list_tts_backends():
-    return _family_payload("tts", tts_backend)
+def list_tts_backends(request: Request):
+    return _request_install_capability(_family_payload("tts", tts_backend), request)
 
 
 @router.get(
@@ -409,10 +420,10 @@ async def uninstall_translation_engine(engine_id: str):
     "/engines/audiocpp/runtime/install/status",
     dependencies=[Depends(require_admin)],
 )
-def audiocpp_runtime_install_status():
+def audiocpp_runtime_install_status(request: Request):
     from services import audiocpp_runtime_install
 
-    return audiocpp_runtime_install.status()
+    return {**audiocpp_runtime_install.status(), "install_allowed": bool(request.client and is_loopback(request.client.host))}
 
 
 @router.post(
@@ -485,7 +496,7 @@ def install_sidecar_engine(engine_id: str):
     "/engines/sidecar/{engine_id}/install/status",
     dependencies=[Depends(require_admin)],
 )
-def sidecar_install_status(engine_id: str):
+def sidecar_install_status(engine_id: str, request: Request = None):
     """Step-by-step status of the sidecar install job (poll while running).
 
     Shape: ``{engine_id, installed, managed, install_dir, job}`` where job is
@@ -494,7 +505,7 @@ def sidecar_install_status(engine_id: str):
     """
     from services import sidecar_install
     try:
-        return sidecar_install.get_status(engine_id)
+        return {**sidecar_install.get_status(engine_id), "install_allowed": bool(request and request.client and is_loopback(request.client.host))}
     except KeyError:
         raise HTTPException(
             status_code=404,

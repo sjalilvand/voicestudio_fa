@@ -2486,7 +2486,9 @@
     "none_ready_title": "A síntese de voz não está pronta",
     "none_ready_body": "O VoiceStudio pode configurar automaticamente a melhor opção compatível com este dispositivo.",
     "active": "Motor: {{name}}",
-    "none": "Nenhum motor ativo"
+    "none": "Nenhum motor ativo",
+    "localInstallRequired": "Instale este motor no computador do backend pelo localhost ou pelo guia de configuração. A instalação remota está desativada.",
+    "argosRuntimeUnavailable": "O ambiente de execução do Argos está indisponível. Reinstale o backend ou selecione NLLB."
   },
   "performanceProfile": {
     "requiresEngine": "Instale e selecione {{engine}} para ajustar a velocidade e a qualidade.",

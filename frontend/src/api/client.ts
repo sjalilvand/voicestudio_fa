@@ -1,3 +1,4 @@
+import i18n from 'i18next';
 import { abortableDelay } from '../utils/abortableDelay.ts';
 // Backend base URL.
 //   • VITE_API_URL                → explicit override (any deploy).
@@ -592,9 +593,16 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promis
       // human-readable `message` — use it for the Error message instead of
       // letting the object stringify to "[object Object]".
       const msg =
-        typeof detail === 'string'
-          ? detail
-          : ((detail as { message?: string })?.message ?? JSON.stringify(detail));
+        detail &&
+        typeof detail === 'object' &&
+        'code' in detail &&
+        detail.code === 'argos_runtime_unavailable'
+          ? i18n.t('engines.argosRuntimeUnavailable', {
+              defaultValue: 'Argos runtime unavailable. Reinstall the backend or select NLLB.',
+            })
+          : typeof detail === 'string'
+            ? detail
+            : ((detail as { message?: string })?.message ?? JSON.stringify(detail));
       // The backend names the exception type in `error_class` on its 500s.
       // Lifting it here is what lets the bug report say which failure it was.
       const errorClass =

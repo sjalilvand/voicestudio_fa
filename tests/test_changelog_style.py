@@ -33,6 +33,8 @@ _MAX_ENTRY_CHARS = 400
 # Entry subsections whose bullets must carry a `(#N)` ref or a
 # `— thanks @user!` credit. Changed/Docs/CI/License lines are often
 # owner-authored housekeeping without an issue, so only these two.
+# Unreleased CI entries are also checked below; published infrastructure
+# notes remain grandfathered so old releases do not need invented references.
 _REF_REQUIRED_SECTIONS = {"Added", "Fixed"}
 
 # Owner-authored infra entries allowed without a ref/credit (direct-to-main
@@ -111,7 +113,8 @@ def lint_changelog(text):
                         f"({_RULE}): {line[:120]}…"
                     )
                 if (
-                    subsection in _REF_REQUIRED_SECTIONS
+                    (subsection in _REF_REQUIRED_SECTIONS
+                     or (heading == "## [Unreleased]" and subsection == "CI"))
                     and not _REF_AT_END.search(line)
                     and not _CREDIT.search(line)
                     and not any(a in line for a in _REF_ALLOWLIST)
@@ -276,3 +279,9 @@ def test_linter_scopes_by_date_not_position():
     assert len(v) == 2  # missing Highlights + missing ref, 1.0.1 only
     assert all("New-era" in x or "Highlights" in x for x in v)
     assert not any("Old-era" in x for x in v)
+
+
+def test_unreleased_ci_entries_require_a_reference():
+    text = "## [Unreleased]\n\n**Highlights**\n\n- Summary\n\n### CI\n\n- Packaging fix\n"
+    assert any("(#N)" in error for error in lint_changelog(text))
+    assert lint_changelog(text.replace("- Packaging fix", "- Packaging fix (#2157)")) == []

@@ -53,6 +53,7 @@ export interface EngineBackend {
   // in-app (Settings renders an Install button; the manual snippet is
   // demoted to a collapsible fallback). Absent on legacy payloads.
   one_click_install?: boolean;
+  local_install_required?: boolean;
   // Stable public state for engines whose first use needs an explicit local
   // license acknowledgement. This remains visible when probe details are
   // redacted from the public catalogue.

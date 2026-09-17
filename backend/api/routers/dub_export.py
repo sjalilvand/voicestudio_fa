@@ -70,6 +70,13 @@ def _unique_stamp() -> str:
 
 _SAFE_LANG = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 
+#: Seconds of silence on a `/tasks/stream` before a keepalive comment goes out.
+#: A task that is busy but quiet — ffmpeg on a long video, a slow TTS segment,
+#: a job queued behind another — leaves the stream byte-silent, and byte-silent
+#: SSE gets severed by the desktop webview, Chrome's ~5 min cap or a proxy's
+#: idle timeout (#1196, #2108). Comments are invisible to every consumer.
+TASK_STREAM_KEEPALIVE_S = 15.0
+
 
 def _job_dir_or_400(job_id: str) -> str:
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", job_id or ""):
@@ -273,14 +280,21 @@ async def stream_task(task_id: str, after_seq: int = 0):
         await task_manager.add_listener(task_id, q)
         try:
             while True:
-                evt = await q.get()
+                try:
+                    evt = await asyncio.wait_for(q.get(), timeout=TASK_STREAM_KEEPALIVE_S)
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+                    continue
                 if evt is None:
                     break
                 yield evt
         finally:
             await task_manager.remove_listener(task_id, q)
 
-    return StreamingResponse(_reader(), media_type="text/event-stream")
+    return StreamingResponse(
+        _reader(), media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("/jobs")
@@ -1722,11 +1736,8 @@ async def dub_download_audio(
 
 
 def _format_srt_time(seconds):
-    h = int(seconds // 3600)
-    m = int((seconds % 3600) // 60)
-    s = int(seconds % 60)
-    ms = int((seconds % 1) * 1000)
-    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+    from services.srt_parser import format_cue_timestamp
+    return format_cue_timestamp(seconds, ",")
 
 def _pick_subtitle_text(seg: dict, dual: bool) -> str:
     """One line per subtitle cue, unless dual=true and an original exists.
@@ -1810,11 +1821,8 @@ async def dub_export_srt(
     )
 
 def _format_vtt_time(seconds):
-    h = int(seconds // 3600)
-    m = int((seconds % 3600) // 60)
-    s = int(seconds % 60)
-    ms = int((seconds % 1) * 1000)
-    return f"{h:02d}:{m:02d}:{s:02d}.{ms:03d}"
+    from services.srt_parser import format_cue_timestamp
+    return format_cue_timestamp(seconds, ".")
 
 @router.get("/dub/vtt/{job_id}")
 @router.get("/dub/vtt/{job_id}/{filename}")

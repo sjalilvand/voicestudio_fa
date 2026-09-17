@@ -131,6 +131,23 @@ def test_resolve_ffprobe_env_var_with_command_name_resolves_via_which(
     assert ffmpeg_utils.resolve_ffprobe() == str(fake)
 
 
+@pytest.mark.parametrize("runnable", [True, False])
+@pytest.mark.parametrize("binary_name", ["ffmpeg", "ffmpeg.exe"])
+def test_find_ffprobe_preserves_ffmpeg_parent_directory(monkeypatch, tmp_path, binary_name, runnable):
+    from services import ffmpeg_utils
+
+    bindir = tmp_path / "ffmpeg" / "bin"
+    bindir.mkdir(parents=True)
+    ffmpeg = bindir / binary_name
+    ffprobe = bindir / binary_name.replace("ffmpeg", "ffprobe")
+    ffprobe.touch()
+    monkeypatch.setattr(ffmpeg_utils, "resolve_ffprobe", lambda: None)
+    monkeypatch.setattr(ffmpeg_utils, "find_ffmpeg", lambda: str(ffmpeg))
+
+    monkeypatch.setattr(ffmpeg_utils, "_binary_runs", lambda candidate: runnable)
+    assert ffmpeg_utils.find_ffprobe() == (str(ffprobe) if runnable else None)
+
+
 class _ShutilStub:
     """A tiny shim that mimics the parts of shutil ffmpeg_utils touches.
 
@@ -171,3 +188,23 @@ def test_windows_tool_candidates_derive_from_environment(monkeypatch):
     assert any(p.startswith("E:\\Program Files") for p in got)  # env-derived Program Files
     assert "C:\\ffmpeg\\bin\\ffprobe.exe" in got            # conventional fallbacks kept
     assert "D:\\ffmpeg\\bin\\ffprobe.exe" in got
+
+
+def test_binary_probe_rejects_nonzero_exit(monkeypatch):
+    import sys
+    from services import ffmpeg_utils
+    monkeypatch.setattr(ffmpeg_utils, "_BINARY_OK", {})
+    # Python is portable and executable, but rejects FFmpeg's -version flag.
+    assert not ffmpeg_utils._binary_runs(sys.executable)
+
+
+def test_sibling_probe_rejects_nonzero_exit(monkeypatch, tmp_path):
+    import subprocess
+    from services import ffmpeg_utils
+    ffprobe = tmp_path / "ffprobe"
+    ffprobe.touch()
+    monkeypatch.setattr(ffmpeg_utils, "_BINARY_OK", {})
+    monkeypatch.setattr(ffmpeg_utils, "resolve_ffprobe", lambda: None)
+    monkeypatch.setattr(ffmpeg_utils, "find_ffmpeg", lambda: str(tmp_path / "ffmpeg"))
+    monkeypatch.setattr(ffmpeg_utils.subprocess, "run", lambda *a, **kw: subprocess.CompletedProcess(a, 1))
+    assert ffmpeg_utils.find_ffprobe() is None

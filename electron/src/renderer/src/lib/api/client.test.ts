@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   _resetBackendContactForTests,
@@ -18,11 +19,20 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   _resetBackendContactForTests();
 });
 
 describe('errorFromResponse', () => {
+  it('localizes Argos runtime errors and retains diagnostics', async () => {
+    const translate = vi.spyOn(i18next, 't').mockReturnValue('Localized recovery guidance');
+    const detail = { code: 'argos_runtime_unavailable', message: 'Raw native diagnostic' };
+    const err = await errorFromResponse(new Response(JSON.stringify({ detail }), { status: 400 }));
+    expect(err.detail).toBe('Localized recovery guidance');
+    expect(translate).toHaveBeenCalledWith('engines.argosRuntimeUnavailable');
+    expect(err.payload?.detail).toEqual(detail);
+  });
   it('localizes background preservation errors and retains diagnostics', async () => {
     const detail = { code: 'dub_background_unavailable', message: 'Raw diagnostic' };
     const err = await errorFromResponse(new Response(JSON.stringify({ detail }), { status: 409 }));

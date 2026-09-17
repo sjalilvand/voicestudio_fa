@@ -2484,7 +2484,9 @@
     "none_ready_title": "Spraaksynthese is niet gereed",
     "none_ready_body": "VoiceStudio kan automatisch de beste compatibele optie voor dit apparaat instellen.",
     "active": "Engine: {{name}}",
-    "none": "Geen engine actief"
+    "none": "Geen engine actief",
+    "localInstallRequired": "Installeer deze engine op de backendcomputer via localhost of de installatiehandleiding. Installatie op afstand is uitgeschakeld.",
+    "argosRuntimeUnavailable": "De Argos-runtime is niet beschikbaar. Installeer de backend opnieuw of kies NLLB."
   },
   "performanceProfile": {
     "requiresEngine": "Installeer en selecteer {{engine}} om snelheid en kwaliteit af te stellen.",

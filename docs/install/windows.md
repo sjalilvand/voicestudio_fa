@@ -48,7 +48,7 @@ Everything above, plus the toolchain:
   with the **"Desktop development with C++"** workload checked.
 - **Bun** — `powershell -c "irm bun.sh/install.ps1 | iex"`.
 - **FFmpeg** — `winget install Gyan.FFmpeg`.
-- **Rust / Cargo** — `winget install Rust.Rustup` or download `rustup-init.exe` from [rustup.rs](https://rustup.rs/).
+- **Rust / Cargo** — `winget install Rustlang.Rustup` or download `rustup-init.exe` from [rustup.rs](https://rustup.rs/).
   After installing Rustup, close and reopen PowerShell before running `bun run tauri:desktop-prod`.
 
 ## GPU support on Windows
@@ -350,3 +350,6 @@ This test-host preparation does not change installer privileges or user machines
 Verbose MSI logs are printed if installation or removal fails. The Windows CI
 job also rejects an invalid MSI and verifies policy absence, value types, account
 cleanup, and verbose failure logs using Windows PowerShell 5.1.
+
+
+Migration configuration is kept ASCII so Alembic can read it under Windows locale code pages as well as UTF-8. This applies to source installs and direct Alembic commands.
