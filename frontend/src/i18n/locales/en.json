@@ -3306,6 +3306,7 @@
     "none_selected": "No voice selected — describe one, drop audio, or pick below."
   },
   "convert": {
+    "cloning_required": "Choose a ready text-to-speech model that supports voice cloning.",
     "source_kicker": "Source clip",
     "drop_audio": "Drop the clip to convert — or click. WAV, MP3, M4A…",
     "target_voice": "Target voice",
