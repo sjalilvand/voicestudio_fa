@@ -188,7 +188,13 @@ before the token works for downloads.
 3. Retry the job. The token state in **Settings → API Keys** should now show
    the "App" row with a green check next to your username.
 
-**Linked issue:** [#35](https://github.com/debpalash/VoiceStudio/issues/35)
+If the token and license are already valid but an older build still reports
+401 during installation, update VoiceStudio and retry. Settings tokens now
+reach both the fast download path and engine-weight installers; no token
+rotation is needed for that fixed client bug.
+
+**Linked issues:** [#35](https://github.com/debpalash/VoiceStudio/issues/35),
+[#2163](https://github.com/debpalash/VoiceStudio/issues/2163)
 
 ### PocketTTS gated weights
 
@@ -1203,3 +1209,11 @@ Sidecar and audio.cpp runtime installation is restricted to requests from the ba
 Extraction errors show the FFmpeg exit code and the end of its diagnostics, with private paths scrubbed. Use the final error line to distinguish missing audio streams, unsupported inputs, permissions, or disk errors. A version banner alone does not identify the cause; include the final diagnostic and source format when reporting a failure.
 
 Explicit generation budgets remain authoritative. If an outer TTS/ASR guard times out or its caller disconnects, the active sidecar receive kills and reaps its captured child; it cannot terminate a later retry. In-process inference keeps its existing lifetime accounting until the native call returns.
+
+### Voice conversion requires a cloning model
+
+In Electron, voice conversion stays disabled until the active text-to-speech
+model is ready and supports voice cloning. Use the Models link to choose one;
+the source recording and target voice are preserved when returning. Preset-only
+models such as MLX Kokoro cannot clone a target voice. This capability check does
+not download or load model weights.

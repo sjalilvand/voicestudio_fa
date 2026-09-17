@@ -2825,6 +2825,7 @@
     "none_selected": "Keine Stimme ausgewählt — beschreiben Sie eine, legen Sie Audio ab oder wählen Sie unten eine aus."
   },
   "convert": {
+    "cloning_required": "Wähle ein einsatzbereites Sprachsynthesemodell, das Stimmenklonen unterstützt.",
     "source_kicker": "Quellclip",
     "drop_audio": "Clip zum Konvertieren hier ablegen — oder klicken. WAV, MP3, M4A…",
     "target_voice": "Zielstimme",

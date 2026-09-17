@@ -3255,6 +3255,7 @@
     "none_selected": "선택된 음성이 없습니다 — 설명하거나, 오디오를 놓거나, 아래에서 선택하세요."
   },
   "convert": {
+    "cloning_required": "음성 복제를 지원하는 사용 가능한 음성 합성 모델을 선택하세요.",
     "source_kicker": "소스 클립",
     "drop_audio": "변환할 클립을 끌어다 놓거나 클릭하세요. WAV, MP3, M4A…",
     "target_voice": "대상 목소리",

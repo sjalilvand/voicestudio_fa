@@ -2825,6 +2825,7 @@
     "none_selected": "Nessuna voce selezionata — descrivine una, trascina un audio o scegli qui sotto."
   },
   "convert": {
+    "cloning_required": "Scegli un modello di sintesi vocale pronto che supporti la clonazione della voce.",
     "source_kicker": "Clip sorgente",
     "drop_audio": "Trascina qui il clip da convertire — o fai clic. WAV, MP3, M4A…",
     "target_voice": "Voce di destinazione",

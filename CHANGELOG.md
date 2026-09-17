@@ -17,6 +17,8 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Fixed
 
 - Name the voice profile when its saved language is one the active engine can't speak, instead of advising a language picker already set to Auto (#2175, #2156) — thanks @shivsin25!
+- Validate Python dependencies before reusing a desktop runtime and offer setup for incomplete environments (#2176)
+- Check active model cloning support before starting voice conversion (#2147)
 - Accept both valid SIGKILL diagnostics in the desktop lifecycle regression check (#2170)
 
 - Repair CTranslate2 loading safely across ASR and translation, and retain the loaded Whisper model during CPU fallback (#2165) — thanks @guruthechosen!
@@ -103,6 +105,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Transcribing an M4A file with PyTorch Whisper works, instead of failing with "Format not recognised" (#2042, #2039)
 - PyTorch Whisper runs on 6 GB NVIDIA cards instead of falling back to CPU, because its memory check now fits the model it loads (#2044, #2041)
 - MCP tools wait as long as the backend does, so a long transcription no longer fails at 120 s with an empty error (#2043, #2040)
+- Installing a gated model now sends your Hugging Face token on the fast download path too, so pyannote diarisation and gated engine weights stop failing with "401 Unauthorized" when the token is saved in Settings (#2173, #2163)
 - Generating on an older NVIDIA GPU (Tesla T4, and other pre-Ampere cards) no longer kills the backend on the first request — CUDA graphs are not captured below sm_80 (#2135)
 - "Disable torch.compile" in Settings → Performance now works on macOS and Linux, not only Windows; it was greyed out on the platforms that needed it (#2135)
 - Setting `TORCH_COMPILE_DISABLE=1` in the environment now actually disables torch.compile, for the in-process engine and engine subprocesses alike (#2135)

@@ -2239,6 +2239,7 @@
     "tailscale_qr_alt": "Codice QR per l'URL Tailscale"
   },
   "convert": {
+    "cloning_required": "Scegli un modello di sintesi vocale pronto che supporti la clonazione della voce.",
     "source_kicker": "Clip sorgente",
     "drop_audio": "Trascina qui il clip da convertire — o fai clic. WAV, MP3, M4A…",
     "target_voice": "Voce di destinazione",

@@ -2237,6 +2237,7 @@
     "tailscale_qr_alt": "Mã QR cho URL Tailscale"
   },
   "convert": {
+    "cloning_required": "Chọn mô hình chuyển văn bản thành giọng nói sẵn sàng sử dụng và hỗ trợ nhân bản giọng nói.",
     "source_kicker": "Clip nguồn",
     "drop_audio": "Thả clip cần chuyển đổi vào đây — hoặc nhấp. WAV, MP3, M4A…",
     "target_voice": "Giọng đích",

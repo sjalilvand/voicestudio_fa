@@ -2245,6 +2245,7 @@
     "tailscale_qr_alt": "رمز الاستجابة السريعة لعنوان URL لـ Tailscale"
   },
   "convert": {
+    "cloning_required": "اختر نموذجًا جاهزًا لتحويل النص إلى كلام يدعم استنساخ الصوت.",
     "source_kicker": "المقطع المصدر",
     "drop_audio": "أسقط المقطع المراد تحويله — أو انقر. WAV، MP3، M4A…",
     "target_voice": "الصوت الهدف",

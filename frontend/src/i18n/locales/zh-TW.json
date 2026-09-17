@@ -2825,6 +2825,7 @@
     "none_selected": "尚未選擇聲音——描述一個、放入音訊，或從下方挑選。"
   },
   "convert": {
+    "cloning_required": "請選擇已就緒且支援聲音複製的語音合成模型。",
     "source_kicker": "來源音訊",
     "drop_audio": "拖入要轉換的音訊 — 或點擊。WAV、MP3、M4A…",
     "target_voice": "目標聲音",

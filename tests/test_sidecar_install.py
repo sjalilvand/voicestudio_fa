@@ -620,6 +620,64 @@ def test_weights_step_downloads_via_endpoint_autoselect(monkeypatch):
     assert si._weights_present(spec)
 
 
+def test_weights_download_sends_the_bearer_string_not_the_token_record(monkeypatch):
+    """#2163: `token_resolver.resolve()` returns a ResolvedToken record, but
+    snapshot_download takes `token: str | None` and silently ignores a non-str
+    — falling back to huggingface_hub's own ambient token discovery. So gated
+    engine weights 401 for a user whose token lives in VoiceStudio's Settings
+    rather than HF's cache. Every other weights test here stubs resolve() to
+    None, which is exactly why this went unnoticed."""
+    from services.token_resolver import ResolvedToken
+
+    spec = _mk_spec(weights_repo_id="Example/Gated")
+    seen = {}
+
+    def fake_snapshot_download(**kwargs):
+        seen.update(kwargs)
+        Path(kwargs["local_dir"]).mkdir(parents=True, exist_ok=True)
+        (Path(kwargs["local_dir"]) / "config.yaml").write_text("ok\n")
+        (Path(kwargs["local_dir"]) / "w.safetensors").write_bytes(b"\0" * (6 * 1024 * 1024))
+
+    import huggingface_hub
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", fake_snapshot_download)
+    monkeypatch.setattr("services.endpoint_race.effective_endpoint", lambda: None)
+    monkeypatch.setattr(
+        "services.token_resolver.resolve",
+        lambda: ResolvedToken(token="hf_gatedsecret", source="app", username="tester"),
+    )
+
+    job = si._new_job(spec.engine_id)
+    si._job_step(job, "fetch_weights")["state"] = "running"
+    si._step_fetch_weights(spec, job)
+
+    assert seen["token"] == "hf_gatedsecret"
+    assert isinstance(seen["token"], str)
+
+
+def test_weights_download_sends_no_token_when_none_resolves(monkeypatch):
+    # The other half of the contract: no token anywhere must reach
+    # snapshot_download as a real None, never the string "None".
+    spec = _mk_spec(weights_repo_id="Example/Open")
+    seen = {}
+
+    def fake_snapshot_download(**kwargs):
+        seen.update(kwargs)
+        Path(kwargs["local_dir"]).mkdir(parents=True, exist_ok=True)
+        (Path(kwargs["local_dir"]) / "config.yaml").write_text("ok\n")
+        (Path(kwargs["local_dir"]) / "w.safetensors").write_bytes(b"\0" * (6 * 1024 * 1024))
+
+    import huggingface_hub
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", fake_snapshot_download)
+    monkeypatch.setattr("services.endpoint_race.effective_endpoint", lambda: None)
+    monkeypatch.setattr("services.token_resolver.resolve", lambda: None)
+
+    job = si._new_job(spec.engine_id)
+    si._job_step(job, "fetch_weights")["state"] = "running"
+    si._step_fetch_weights(spec, job)
+
+    assert seen["token"] is None
+
+
 def test_weights_revision_is_pinned_and_old_marker_forces_upgrade(monkeypatch):
     spec = _mk_spec(
         weights_repo_id="Example/Weights",

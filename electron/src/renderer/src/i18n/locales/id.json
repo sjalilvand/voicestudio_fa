@@ -2237,6 +2237,7 @@
     "tailscale_qr_alt": "Kode QR untuk URL Tailscale"
   },
   "convert": {
+    "cloning_required": "Pilih model teks ke suara yang siap digunakan dan mendukung kloning suara.",
     "source_kicker": "Klip sumber",
     "drop_audio": "Letakkan klip yang akan dikonversi — atau klik. WAV, MP3, M4A…",
     "target_voice": "Suara target",

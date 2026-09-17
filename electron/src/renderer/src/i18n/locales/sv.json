@@ -2237,6 +2237,7 @@
     "tailscale_qr_alt": "QR-kod för Tailscale URL"
   },
   "convert": {
+    "cloning_required": "Välj en användningsklar talsyntesmodell som stöder röstkloning.",
     "source_kicker": "Källklipp",
     "drop_audio": "Släpp klippet som ska konverteras — eller klicka. WAV, MP3, M4A…",
     "target_voice": "Målröst",

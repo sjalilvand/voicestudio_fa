@@ -2237,6 +2237,7 @@
     "tailscale_qr_alt": "QR-Code für die Tailscale-URL"
   },
   "convert": {
+    "cloning_required": "Wähle ein einsatzbereites Sprachsynthesemodell, das Stimmenklonen unterstützt.",
     "source_kicker": "Quellclip",
     "drop_audio": "Clip zum Konvertieren hier ablegen — oder klicken. WAV, MP3, M4A…",
     "target_voice": "Zielstimme",

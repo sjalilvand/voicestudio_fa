@@ -2825,6 +2825,7 @@
     "none_selected": "Nie wybrano głosu — opisz go, upuść audio albo wybierz poniżej."
   },
   "convert": {
+    "cloning_required": "Wybierz gotowy do użycia model syntezy mowy obsługujący klonowanie głosu.",
     "source_kicker": "Klip źródłowy",
     "drop_audio": "Upuść klip do konwersji — lub kliknij. WAV, MP3, M4A…",
     "target_voice": "Głos docelowy",
