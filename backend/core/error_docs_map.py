@@ -4,7 +4,7 @@ Used by the React ErrorBoundary's "Open docs for this error" button (via the
 TypeScript mirror at `frontend/src/utils/errorDocsMap.ts`) and by the Phase 5
 bug-reporter for "this error has a docs page" links.
 
-The 5-class taxonomy below is the contract — Phase 5 reporter consumes it,
+The error taxonomy below is the contract — Phase 5 reporter consumes it,
 the TS map mirrors it, and `test_error_docs_map.test_keys_match_taxonomy`
 locks the key set. To add a new class:
 
@@ -20,6 +20,8 @@ from core import links
 _BASE = links.PROJECT_REPO_BLOB_MAIN
 
 ERROR_DOCS: dict[str, str] = {
+    "DIARIZATION_LOAD_FAILED": f"{_BASE}/docs/features/diarization.md#troubleshooting",
+    "DIARIZATION_MODEL_MISSING": f"{_BASE}/docs/features/diarization.md#local-installation-and-repair",
     "GATEKEEPER_QUARANTINE":       f"{_BASE}/docs/install/macos.md#gatekeeper-quarantine",
     "APPIMAGE_WEBKIT_WHITESCREEN": f"{_BASE}/docs/install/linux.md#appimage-white-screen-on-fedora-44--ubuntu-2404",
     "PKG_RESOURCES_MISSING":       f"{_BASE}/docs/install/troubleshooting.md#pkg_resources-missing",

@@ -30,7 +30,7 @@ _APPIMAGE_PROCESSES = os.path.join(_ROOT, "scripts", "desktop_prod_processes.py"
 
 # Scripts whose NAME promises a re-launch of an existing build rather than a
 # fresh-install emulation. Add new aliases here when they appear.
-_RELAUNCH_SCRIPTS = ("desktop-prod:run", "desktop-prod:run:pill")
+_RELAUNCH_SCRIPTS = ("tauri:desktop-prod:run", "tauri:desktop-prod:run:pill")
 
 
 def _supported_bash() -> str | None:
@@ -87,12 +87,12 @@ def test_fresh_install_emulation_still_wipes():
     """The other side of the branch: the default must stay a real fresh run,
     otherwise this test would 'pass' by making every script harmless."""
     scripts = _scripts()
-    assert "--keep-data" not in scripts["desktop-prod"], (
+    assert "--keep-data" not in scripts["tauri:desktop-prod"], (
         "desktop-prod is the fresh-install emulation — it must still wipe"
     )
     # `desktop-fresh:run` is deliberately NOT in _RELAUNCH_SCRIPTS: that script
     # is a stricter new-user emulation, so wiping is the point of its name.
-    assert "--keep-data" not in scripts["desktop-fresh:run"]
+    assert "--keep-data" not in scripts["tauri:desktop-fresh:run"]
 
 
 def test_skip_build_does_not_imply_keep_data_in_the_script():

@@ -99,6 +99,14 @@ def test_empty_result_degrades_to_none(monkeypatch):
     assert ab.transcribe_reference("ref.wav") is None
 
 
+def test_missing_selected_models_reuse_an_installed_local_fallback(monkeypatch):
+    fallback = _FakeBackend(result={"text": " recovered locally "})
+    monkeypatch.setattr(ab, "asr_model_missing_error", lambda **_kw: {"error": "missing"})
+    monkeypatch.setattr(ab, "_installed_reference_fallbacks", lambda _selected: [fallback])
+
+    assert ab.transcribe_reference("ref.wav") == "recovered locally"
+
+
 # ── #1032: content-keyed transcript cache ────────────────────────────────────
 
 

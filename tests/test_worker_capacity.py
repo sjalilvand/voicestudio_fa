@@ -318,3 +318,10 @@ def test_latency_tracks_a_link_that_degrades():
 
 def test_latency_for_an_unknown_worker_is_ignored():
     _pool_with_worker().record_latency("nosuch", 5.0)
+
+
+@pytest.mark.parametrize("value", [None, 0.0, 72.5])
+def test_capacity_snapshot_preserves_gpu_utilization(value):
+    capacity = WorkerCapacity(worker_id="gpu", max_concurrent_tasks=1)
+    capacity.gpu_utilization_percent = value
+    assert capacity.to_dict()["gpu_utilization_percent"] == value

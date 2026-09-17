@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import os
 import re
 import uuid
@@ -14,8 +16,21 @@ from core import event_bus
 from core.personalities import get_personalities
 from omnivoice.utils.voice_design import heal_design_instruct, sanitize_instruct
 from core.path_security import UnsafePath, resolve_within
+from core.profile_images import MAX_IMAGE_BYTES, normalize_portrait
+from starlette.datastructures import UploadFile as StarletteUploadFile
 
 router = APIRouter()
+logger = logging.getLogger("omnivoice.profiles")
+
+
+def _profile_record(row):
+    result = dict(row)
+    image_path = _voices_path(f"{result['id']}.portrait.jpg")
+    result["image_url"] = (
+        f"/profiles/{result['id']}/image?v={os.stat(image_path).st_mtime_ns}"
+        if image_path and os.path.isfile(image_path) else None
+    )
+    return result
 
 
 class ProfileUpdate(BaseModel):
@@ -35,7 +50,7 @@ def list_personalities():
 def list_profiles():
     with db_conn() as conn:
         rows = conn.execute("SELECT * FROM voice_profiles ORDER BY created_at DESC").fetchall()
-    return [dict(r) for r in rows]
+    return [_profile_record(r) for r in rows]
 
 _DESIGN_SEED = 42  # deterministic sample render, same as archetype previews
 
@@ -51,6 +66,7 @@ async def create_profile(
     personality: str = Form(""),
     kind: str = Form("clone"),
     vd_states: Optional[str] = Form(None),
+    image: Optional[UploadFile] = File(None),
 ):
     """Create a voice profile (spec: docs/specs/voice-studio-unification.md §5).
 
@@ -60,6 +76,9 @@ async def create_profile(
                     archetype materialization) and stores it as the profile's
                     reference so the voice identity is stable across runs.
     """
+    name = name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="A voice profile needs a name.")
     if kind not in ("clone", "design"):
         raise HTTPException(status_code=422, detail="kind must be 'clone' or 'design'")
     if kind == "clone" and ref_audio is None:
@@ -106,13 +125,38 @@ async def create_profile(
         instruct = sanitize_instruct(instruct)
 
     profile_id = str(uuid.uuid4())[:8]
+    portrait = None
+    if isinstance(image, StarletteUploadFile):
+        portrait = normalize_portrait(await image.read(MAX_IMAGE_BYTES + 1))
+    portrait_path = os.path.join(VOICES_DIR, f"{profile_id}.portrait.jpg")
 
     if kind == "clone":
         ext = os.path.splitext(ref_audio.filename or ".wav")[1]
         audio_filename = f"{profile_id}{ext}"
         audio_path = os.path.join(VOICES_DIR, audio_filename)
+        # Storage can be removed after startup; recover before persisting uploads.
+        os.makedirs(VOICES_DIR, exist_ok=True)
         with open(audio_path, "wb") as f:
             f.write(await ref_audio.read())
+        # A matching transcript defines the boundary between the reference and
+        # the requested line. Saving a blank transcript and waiting until the
+        # first generation made that first take depend on the TTS model's
+        # internal ASR fallback; short lines could then start with stray words
+        # from the reference. Resolve it while the profile is being created so
+        # every synthesis, including the first, uses stable conditioning. This
+        # remains best-effort and local-only: transcribe_reference considers
+        # only already-installed ASR/dictation models.
+        if not ref_text.strip():
+            try:
+                from services.asr_backend import transcribe_reference
+
+                ref_text = (
+                    await asyncio.to_thread(transcribe_reference, audio_path) or ""
+                ).strip()
+            except Exception as exc:  # noqa: BLE001 — profile save remains usable
+                logger.warning(
+                    "reference transcription during profile save failed: %s", exc
+                )
         used_seed = seed
     else:
         # Saving a design profile is a pure persistence operation — it must not
@@ -153,6 +197,10 @@ async def create_profile(
         used_seed = seed if seed is not None else _DESIGN_SEED
 
     try:
+        if portrait:
+            os.makedirs(VOICES_DIR, exist_ok=True)
+            with open(portrait_path, "wb") as out:
+                out.write(portrait)
         with db_conn() as conn:
             conn.execute(
                 "INSERT INTO voice_profiles (id, name, ref_audio_path, ref_text, instruct, "
@@ -162,12 +210,14 @@ async def create_profile(
                  used_seed, personality, kind, vd_states, time.time())
             )
     except Exception:
+        if os.path.exists(portrait_path):
+            os.remove(portrait_path)
         # Clean up orphaned audio file if DB insert fails
         if os.path.exists(audio_path):
             os.remove(audio_path)
         raise
     event_bus.emit("profiles", {"action": "created", "id": profile_id})
-    return {"id": profile_id, "name": name, "kind": kind}
+    return get_profile(profile_id)
 
 @router.get("/profiles/{profile_id}")
 def get_profile(profile_id: str):
@@ -181,14 +231,47 @@ def get_profile(profile_id: str):
             status_code=404,
             detail="That voice profile doesn't exist. It may have been deleted from another tab.",
         )
-    return dict(row)
+    return _profile_record(row)
+
+
+@router.get("/profiles/{profile_id}/image")
+def get_profile_image(profile_id: str):
+    get_profile(profile_id)
+    path = _voices_path(f"{profile_id}.portrait.jpg")
+    if not path or not os.path.isfile(path):
+        raise HTTPException(404, "Profile image not found")
+    return FileResponse(path, media_type="image/jpeg", headers={"Cache-Control": "no-cache"})
+
+
+@router.put("/profiles/{profile_id}/image")
+async def update_profile_image(profile_id: str, image: UploadFile = File(...)):
+    get_profile(profile_id)
+    path = _voices_path(f"{profile_id}.portrait.jpg")
+    if path is None:
+        raise HTTPException(404, "Profile not found")
+    portrait = normalize_portrait(await image.read(MAX_IMAGE_BYTES + 1))
+    os.makedirs(VOICES_DIR, exist_ok=True)
+    with open(path, "wb") as out:
+        out.write(portrait)
+    event_bus.emit("profiles", {"action": "updated", "id": profile_id})
+    return get_profile(profile_id)
 
 
 @router.put("/profiles/{profile_id}")
 def update_profile(profile_id: str, patch: ProfileUpdate):
     """Partial update — only fields set on the payload are changed."""
+    with db_conn() as conn:
+        existing = conn.execute(
+            "SELECT kind FROM voice_profiles WHERE id = ?", (profile_id,),
+        ).fetchone()
+    if not existing:
+        raise HTTPException(
+            status_code=404,
+            detail="That voice profile doesn't exist. It may have been deleted from another tab.",
+        )
     fields = []
     params = []
+    edited_instruct = None
     for col in ("name", "ref_text", "instruct", "language", "personality"):
         val = getattr(patch, col)
         if val is None:
@@ -199,12 +282,22 @@ def update_profile(profile_id: str, patch: ProfileUpdate):
             # Never let an edit persist a validator-rejecting instruct (prose /
             # "[object Object]"); keep only whitelist tags (#550 #571 #594 #596).
             val = sanitize_instruct(val)
+            edited_instruct = val
         fields.append(f"{col} = ?")
         params.append(val.strip() if col in ("name", "language") else val)
+    if edited_instruct is not None and existing["kind"] == "design":
+        # Keep the complete recipe synchronized with the editable instruct.
+        # Otherwise clients restore a stale vd_states snapshot and a successful
+        # style edit has no effect on the next generation.
+        import json
+        from core.describe_voice import instruct_to_vd_states
+
+        fields.append("vd_states = ?")
+        params.append(json.dumps(instruct_to_vd_states(edited_instruct)))
     if not fields:
         raise HTTPException(
             status_code=400,
-            detail="PUT /profiles/{id} body contained no editable fields. Include at least one of: name, language, instruct, description.",
+            detail="PUT /profiles/{id} body contained no editable fields. Include at least one of: name, language, ref_text, instruct, personality.",
         )
     params.append(profile_id)
     with db_conn() as conn:
@@ -221,7 +314,7 @@ def update_profile(profile_id: str, patch: ProfileUpdate):
             "SELECT * FROM voice_profiles WHERE id = ?", (profile_id,),
         ).fetchone()
     event_bus.emit("profiles", {"action": "updated", "id": profile_id})
-    return dict(row)
+    return _profile_record(row)
 
 
 @router.get("/profiles/{profile_id}/usage")
@@ -252,8 +345,14 @@ def get_profile_usage(profile_id: str):
             state = json.loads(r["state_json"] or "{}")
         except Exception:
             continue
-        segs = state.get("segments") or []
-        n = sum(1 for s in segs if s.get("profile_id") == profile_id)
+        if not isinstance(state, dict):
+            continue
+        # Current desktop snapshots use dubSegments. An explicit empty list
+        # supersedes legacy segments retained in an older snapshot.
+        segs = state.get("dubSegments", state.get("segments", []))
+        if not isinstance(segs, list):
+            continue
+        n = sum(1 for s in segs if isinstance(s, dict) and s.get("profile_id") == profile_id)
         if n:
             project_hits.append({
                 "project_id": r["id"],
@@ -539,6 +638,9 @@ def delete_profile(profile_id: str):
                     path = _voices_path(row[col])
                     if path and os.path.exists(path):
                         os.remove(path)
+        portrait_path = _voices_path(f"{profile_id}.portrait.jpg")
+        if portrait_path and os.path.isfile(portrait_path):
+            os.remove(portrait_path)
         # Prevent FOREIGN KEY constraint failure
         conn.execute("UPDATE generation_history SET profile_id = NULL WHERE profile_id=?", (profile_id,))
         conn.execute("DELETE FROM voice_profiles WHERE id=?", (profile_id,))
