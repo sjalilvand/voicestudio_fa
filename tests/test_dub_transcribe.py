@@ -114,6 +114,53 @@ def _seed_job(dc_module, tmp_path: Path, duration: float, scene_cuts=None) -> st
 # Tests
 # ---------------------------------------------------------------------------
 
+def test_completed_transcription_replays_without_running_asr(tmp_path, monkeypatch):
+    """A lost final SSE event must reconnect to the persisted result."""
+    import asyncio
+    from api.routers import dub_core as dc
+
+    job_id = "t_completed_replay"
+    cached = [{
+        "id": 0,
+        "start": 0.0,
+        "end": 1.0,
+        "text": "Already transcribed",
+        "text_original": "Already transcribed",
+        "speaker_id": "Speaker 1",
+    }]
+    dc._dub_jobs[job_id] = {
+        "transcription_complete": True,
+        "segments": cached,
+        "source_lang": "en",
+        "full_transcript": "Already transcribed",
+        "cast_sources": {"Speaker 1": {"duration": 1.0}},
+    }
+
+    def _unexpected_asr(*_args, **_kwargs):
+        raise AssertionError("completed transcription re-entered ASR")
+
+    monkeypatch.setattr(
+        "services.asr_backend.load_active_asr_backend",
+        _unexpected_asr,
+    )
+
+    async def _collect():
+        response = await dc.dub_transcribe_stream(job_id)
+        parts = []
+        async for chunk in response.body_iterator:
+            parts.append(chunk.decode() if isinstance(chunk, (bytes, bytearray)) else str(chunk))
+        return "".join(parts)
+
+    try:
+        body = asyncio.run(_collect())
+    finally:
+        dc._dub_jobs.pop(job_id, None)
+
+    assert "event: final" in body, body
+    assert "Already transcribed" in body, body
+    assert "event: done" in body, body
+
+
 def test_transcribe_stream_surfaces_model_load_failure(tmp_path, monkeypatch):
     """Regression #255: when the model fails to load, the SSE transcribe stream
     must emit a structured `error` event carrying the real cause — not silently

@@ -9,8 +9,8 @@ tests pin the three contracts that fix depends on:
 1. `/startup/progress` (and `/health` 503) answer within seconds of spawn —
    long before full readiness — carrying the `x-omnivoice-backend` marker.
    FAILED before the refactor: nothing listened until import completed.
-2. The startup gate 503s real routes with the `[starting]` marker until
-   ready, and is inert after.
+2. The startup gate 503s work routes with the `[starting]` marker until ready,
+   retains deliberate desktop shutdown, and is inert after.
 3. The #963 ordering invariant (legacy-translate migration strictly before
    the prefs→environ restore, before the yt-dlp overlay) survived the move
    into `_phase_a_build`.
@@ -143,6 +143,37 @@ def test_startup_gate_503s_with_starting_marker_then_goes_inert():
     # (whatever the DB-less test context makes of it) instead of a 503 gate.
     r = client.get("/profiles")
     assert r.status_code != 503
+
+
+def test_shutdown_intent_retires_the_sentinel_during_deferred_startup(tmp_path, monkeypatch):
+    """Desktop quit must stay deliberate while native/ML imports are gated."""
+    from fastapi.testclient import TestClient
+
+    sys.path.insert(0, str(BACKEND_DIR))
+    from core import run_sentinel, startup_progress
+    from main import app
+
+    monkeypatch.setattr(run_sentinel, "SENTINEL_PATH", str(tmp_path / "run_sentinel.json"))
+    monkeypatch.setattr(run_sentinel, "CRASH_RECORD_PATH", str(tmp_path / "last_run_crash.json"))
+    monkeypatch.setattr(run_sentinel, "LOG_PATH", str(tmp_path / "omnivoice.log"))
+    run_sentinel._reset_for_tests()
+    assert run_sentinel.write_sentinel()
+    client = TestClient(
+        app,
+        raise_server_exceptions=False,
+        client=("127.0.0.1", 49152),
+    )
+    try:
+        startup_progress._reset_for_tests()
+        startup_progress.begin_step("native_preload")
+        response = client.post("/system/shutdown-intent")
+        assert response.status_code == 200
+        assert response.json() == {"prepared": True}
+        assert not Path(run_sentinel.SENTINEL_PATH).exists()
+    finally:
+        startup_progress._reset_for_tests()
+        startup_progress.mark_ready()
+        run_sentinel._reset_for_tests()
 
 
 def test_progress_ledger_state_machine():

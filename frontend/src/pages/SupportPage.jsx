@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Coffee,
+  CreditCard,
   Heart,
   ExternalLink,
   ArrowLeft,
@@ -37,8 +39,13 @@ const SUGGESTED_AMOUNTS = [
 ];
 
 const METHODS = [
-  { id: 'kofi', label: 'Ko-fi', url: KOFI_URL, icon: '☕' },
-  { id: 'paypal', label: 'PayPal', url: PAYPAL_URL, icon: '💳' },
+  { id: 'kofi', label: 'Ko-fi', url: KOFI_URL, icon: <Coffee size={21} aria-hidden="true" /> },
+  {
+    id: 'paypal',
+    label: 'PayPal',
+    url: PAYPAL_URL,
+    icon: <CreditCard size={21} aria-hidden="true" />,
+  },
 ];
 
 // Donate/support accent tracks the themed brand token (per-[data-theme]) so the
@@ -60,9 +67,9 @@ function LinkCard({ icon, label, hue, onClick }) {
       type="button"
       onClick={onClick}
       style={{ '--card-hue': hue }}
-      className="flex min-h-10 w-full items-center gap-2.5 overflow-hidden rounded-md border border-border bg-transparent px-3 py-2 text-left transition-colors hover:border-transparent hover:bg-[color-mix(in_srgb,var(--card-hue)_6%,transparent)]"
+      className="group flex min-h-14 w-full items-center gap-3 overflow-hidden rounded-xl border border-border bg-transparent px-3 py-2 text-left motion-safe:transition-all motion-safe:duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0 focus-visible:outline-2 focus-visible:outline-[var(--color-brand)] hover:border-transparent hover:bg-[color-mix(in_srgb,var(--card-hue)_6%,transparent)]"
     >
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-transparent bg-[color-mix(in_srgb,var(--card-hue)_10%,transparent)] text-base">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-transparent bg-[color-mix(in_srgb,var(--card-hue)_10%,transparent)] text-base">
         {icon}
       </span>
       <span className="min-w-0 flex-1 font-mono text-xs font-semibold uppercase tracking-[var(--chrome-label-track)] text-[var(--chrome-fg)]">
@@ -230,12 +237,12 @@ function SupportView() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-4">
-      <header className="flex items-center justify-center gap-3 text-center">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-transparent bg-[color-mix(in_srgb,var(--color-brand)_12%,transparent)]">
+    <div className="flex flex-col gap-7">
+      <header className="flex flex-col items-center justify-center gap-4 py-3 text-center">
+        <span className="group flex size-16 shrink-0 items-center justify-center rounded-2xl border border-transparent bg-[color-mix(in_srgb,var(--color-brand)_12%,transparent)]">
           <Heart
-            size={20}
-            className="text-[var(--color-brand)] [fill:color-mix(in_srgb,var(--color-brand)_35%,transparent)] drop-shadow-[0_0_12px_color-mix(in_srgb,var(--color-brand)_50%,transparent)]"
+            size={30}
+            className="motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:scale-110 motion-safe:group-hover:-rotate-6 text-[var(--color-brand)] [fill:color-mix(in_srgb,var(--color-brand)_35%,transparent)] drop-shadow-[0_0_12px_color-mix(in_srgb,var(--color-brand)_50%,transparent)]"
           />
         </span>
         <h2 className="relative inline-block font-serif text-[1.7rem] font-normal leading-tight tracking-[-0.02em] text-[var(--chrome-fg)]">
@@ -244,9 +251,9 @@ function SupportView() {
         </h2>
       </header>
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))] gap-6">
         <div className="flex min-w-0 flex-col gap-3.5">
-          <Card className="gap-0 rounded-md border-border bg-[color-mix(in_srgb,var(--chrome-accent)_4%,transparent)] p-4 shadow-none">
+          <Card className="gap-0 rounded-2xl border-border bg-[color-mix(in_srgb,var(--chrome-accent)_4%,transparent)] p-4 shadow-none">
             <GoalBar progress={progress} />
           </Card>
 
@@ -272,7 +279,7 @@ function SupportView() {
                         : a.label
                     }
                     onClick={() => setAmount(selected ? null : a.value)}
-                    className={`flex min-h-10 items-center justify-center rounded-md border px-1.5 py-1.5 transition-colors ${
+                    className={`flex min-h-12 items-center justify-center rounded-xl border px-1.5 py-1.5 motion-safe:transition-all motion-safe:duration-200 motion-safe:active:scale-95 ${
                       selected
                         ? 'border-[var(--chrome-accent)] bg-[var(--chrome-accent-bg)]'
                         : `${a.common ? 'border-transparent' : 'border-border'} hover:border-transparent hover:bg-[color-mix(in_srgb,var(--chrome-accent)_7%,transparent)]`
@@ -288,7 +295,7 @@ function SupportView() {
                 type="button"
                 aria-pressed={amount === 'custom'}
                 onClick={() => setAmount(amount === 'custom' ? null : 'custom')}
-                className={`flex min-h-10 items-center justify-center rounded-md border px-1.5 py-1.5 transition-colors ${
+                className={`flex min-h-12 items-center justify-center rounded-xl border px-1.5 py-1.5 motion-safe:transition-all motion-safe:duration-200 motion-safe:active:scale-95 ${
                   amount === 'custom'
                     ? 'border-[var(--chrome-accent)] bg-[var(--chrome-accent-bg)]'
                     : 'border-border hover:border-transparent hover:bg-[color-mix(in_srgb,var(--chrome-accent)_7%,transparent)]'
@@ -471,7 +478,7 @@ export default function SupportPage({ onBack, initialView = 'support' }) {
         id={`support-${view === 'license' ? 'license' : view === 'contact' ? 'contact' : 'give'}`}
         role="tabpanel"
         aria-label={panelLabel}
-        className="relative z-[1] mx-auto flex min-h-0 w-full max-w-[820px] flex-1 flex-col justify-center overflow-y-auto px-6 py-3"
+        className="relative z-[1] mx-auto flex min-h-0 w-full max-w-[900px] flex-1 flex-col overflow-y-auto px-6 py-8"
         key={view}
       >
         {view === 'support' ? (

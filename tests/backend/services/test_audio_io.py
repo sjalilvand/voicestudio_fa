@@ -27,6 +27,18 @@ import torch
 from services.audio_io import _safe_soundfile_write, _safe_torchaudio_save
 
 
+@pytest.mark.parametrize("writer", ["torch", "soundfile"])
+def test_write_recovers_missing_output_directory(tmp_path, writer):
+    target = tmp_path / "removed" / "outputs" / "take.wav"
+    if writer == "torch":
+        _safe_torchaudio_save(str(target), torch.zeros(1, 240), 24000)
+    else:
+        _safe_soundfile_write(str(target), np.zeros(240, dtype=np.float32), 24000)
+    samples, rate = sf.read(target)
+    assert len(samples) == 240
+    assert rate == 24000
+
+
 # ── Helpers ────────────────────────────────────────────────────────────────
 
 

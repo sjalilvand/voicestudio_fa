@@ -284,17 +284,40 @@ def test_touch_activity_without_ownership_never_writes(sentinel_env):
     assert not os.path.exists(run_sentinel.SENTINEL_PATH)
 
 
+def test_idle_shell_exit_is_retained_without_becoming_a_user_warning(sentinel_env):
+    record = {
+        "last_activity": None,
+        "log_tail": [
+            "INFO VoiceStudio model loaded successfully.",
+            "INFO Preload complete - model ready.",
+        ],
+    }
+    assert run_sentinel.warrants_user_notice(record) is False
+
+
+def test_interrupted_work_or_fatal_startup_still_warrants_a_warning(sentinel_env):
+    assert run_sentinel.warrants_user_notice(
+        {"last_activity": {"kind": "generate"}, "log_tail": []}
+    ) is True
+    assert run_sentinel.warrants_user_notice(
+        {"last_activity": None, "log_tail": ["CRITICAL: native runtime failed"]}
+    ) is True
+
+
 # ── Record store semantics (mirrors crash.rs) ──────────────────────────────
 
 
 def _crash_once(kind="generate"):
+    last_activity = None
+    if kind is not None:
+        last_activity = {"ts": time.time() - 5, "kind": kind, "detail": None}
     with open(run_sentinel.SENTINEL_PATH, "w", encoding="utf-8") as f:
         json.dump(
             {
                 "pid": _dead_pid(),
                 "started_at": time.time() - 60,
                 "version": run_sentinel.APP_VERSION,
-                "last_activity": {"ts": time.time() - 5, "kind": kind, "detail": None},
+                "last_activity": last_activity,
             },
             f,
         )
@@ -421,3 +444,15 @@ def test_notification_surfaces_unacked_crash_and_reack(client):
     fresh = [n for n in notes if n["id"].startswith("last-run-crash-")]
     assert len(fresh) == 1
     assert fresh[0]["id"] != crash_notes[0]["id"]
+
+
+def test_notification_keeps_idle_exit_forensics_without_repeated_warning(client):
+    record = _crash_once(kind=None)
+    assert record is not None
+
+    notes = client.get("/system/notifications").json()["notifications"]
+    assert not [n for n in notes if n["id"].startswith("last-run-crash-")]
+
+    details = client.get("/system/last-run-crash").json()
+    assert details["record"]["detected_at"] == record["detected_at"]
+    assert details["acknowledged"] is False

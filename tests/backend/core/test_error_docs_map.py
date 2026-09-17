@@ -43,6 +43,8 @@ def test_all_keys_match_taxonomy():
     """
     from core import error_docs_map
     expected = {
+        "DIARIZATION_MODEL_MISSING",
+        "DIARIZATION_LOAD_FAILED",
         "GATEKEEPER_QUARANTINE",
         "APPIMAGE_WEBKIT_WHITESCREEN",
         "PKG_RESOURCES_MISSING",

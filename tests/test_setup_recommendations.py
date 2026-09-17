@@ -8,6 +8,7 @@ network needed.
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -62,8 +63,23 @@ def test_recommendations_use_selected_worker_install_state(monkeypatch):
 
     payload = setup_models.recommendations()
 
+    assert payload["target"] == "gpu2"
     required = next(row for row in payload["models"] if row["repo_id"] == "k2-fsa/OmniVoice")
     assert required["installed"] is True
+
+
+def test_target_repo_inventory_uses_connected_worker_contract(monkeypatch):
+    from api.routers.setup import models as setup_models
+
+    live = SimpleNamespace(
+        worker_id="gpu2",
+        record=SimpleNamespace(
+            capabilities=[{"downloaded": True, "repo_ids": ["org/model"]}],
+        ),
+    )
+    monkeypatch.setattr(setup_models, "_target_worker", lambda: live)
+
+    assert setup_models._target_repo_inventory() == ("gpu2", {"org/model"})
 
 
 def test_mac_arm_curates_mlx_whisper_not_ct2(client):
