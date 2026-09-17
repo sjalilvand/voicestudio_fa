@@ -96,6 +96,24 @@ def lint_changelog(text):
                 f"block — quiet style opens with a short Highlights bullet "
                 f"list ({_RULE})."
             )
+        # The presentation rule starts with v0.5.4. Published history and the
+        # growing Unreleased section retain their existing cardinality.
+        version = _HEADING.match(heading).group(1)
+        version_parts = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", version)
+        if has_highlights and version_parts and tuple(map(int, version_parts.groups())) >= (0, 5, 4):
+            in_highlights = False
+            highlight_count = 0
+            for _, line in body:
+                if line.strip() == "**Highlights**":
+                    in_highlights = True
+                elif in_highlights and line.startswith("### "):
+                    break
+                elif in_highlights and line.startswith("- "):
+                    highlight_count += 1
+            if not 3 <= highlight_count <= 5:
+                violations.append(
+                    f"{heading}: expected 3–5 Highlight bullets, found {highlight_count}."
+                )
         last_bullet = None  # (lineno, text) of the most recent bullet
         for lineno, line in body:
             if line.startswith("### "):
@@ -285,3 +303,27 @@ def test_unreleased_ci_entries_require_a_reference():
     text = "## [Unreleased]\n\n**Highlights**\n\n- Summary\n\n### CI\n\n- Packaging fix\n"
     assert any("(#N)" in error for error in lint_changelog(text))
     assert lint_changelog(text.replace("- Packaging fix", "- Packaging fix (#2157)")) == []
+
+
+def test_tagged_release_highlights_cardinality_ignores_the_introduction():
+    """New releases enforce 3–5 Highlights without counting intro bullets."""
+    for count in range(7):
+        text = (
+            "## [0.5.4] — 2026-09-17\n\nRelease introduction.\n\n"
+            "- [Download](https://example.com/app)\n\n"
+            "**Highlights**\n\n"
+            + "- A user-visible improvement\n" * count
+            + "\n### Fixed\n\n- A regression fixed (#2179)\n"
+        )
+        violations = lint_changelog(text)
+        if 3 <= count <= 5:
+            assert violations == []
+        else:
+            assert any("3–5 Highlight bullets" in item for item in violations)
+
+
+def test_highlight_cardinality_preserves_published_and_work_in_progress_notes():
+    """The new tagged-release limit must not rewrite historical or draft notes."""
+    for heading in ("## [0.5.3] — 2026-09-17", "## [Unreleased]"):
+        text = heading + "\n\n**Highlights**\n\n- One item\n\n### Fixed\n\n- Fix (#1)\n"
+        assert lint_changelog(text) == []

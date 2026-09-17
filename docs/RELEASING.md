@@ -95,7 +95,7 @@ on that tag with `draft=true`, and wait for its final Tauri installers and signe
 updater feeds. Then dispatch `electron-release.yml` on the same tag. Automatic
 Electron builds are skipped for this tag to avoid racing the Tauri draft.
 Keep the release draft until both builds and their checks have passed.
-See [Electron transition](#electron-transition-next-desktop-release) below for
+See [Electron transition](#electron-desktop-releases) below for
 signing requirements and the explicit owner-only unsigned exception.
 
 ## 5b. Deployment channels — all must ship (hard rule, owner-set 2026-07-16)
