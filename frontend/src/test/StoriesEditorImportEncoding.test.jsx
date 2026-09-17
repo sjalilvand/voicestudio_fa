@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../i18n';
@@ -27,6 +27,11 @@ describe('StoriesEditor import', () => {
       storyProjects: [],
       currentProjectId: null,
     });
+  });
+
+  afterEach(() => {
+    useAppStore.setState(useAppStore.getInitialState(), true);
+    window.localStorage.clear();
   });
 
   it.each(Object.keys(ENCODED))('imports a %s file with its text intact', async (encoding) => {
