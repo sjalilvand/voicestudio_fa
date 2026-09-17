@@ -8,6 +8,14 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ## [Unreleased]
 
+**Highlights**
+
+- Start and generate on Chinese, Japanese and Korean Windows source installs (#2190)
+
+### Fixed
+
+- A source install on Chinese, Japanese or Korean Windows starts, and generation with the built-in engine works, instead of failing on the app's own UTF-8 data files (#2190)
+
 ## [0.5.4] — 2026-09-17
 
 **More reliable setup, generation, and dubbing.** This patch detects incomplete desktop runtimes before startup, repairs them without overwriting an existing Tauri installation, and makes engine failures easier to recover from. It also fixes gated model downloads, subtitle imports, and saved-voice language errors.
