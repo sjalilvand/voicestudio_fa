@@ -17,6 +17,8 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Fixed
 
 - Name the voice profile when its saved language is one the active engine can't speak, instead of advising a language picker already set to Auto (#2175, #2156) — thanks @shivsin25!
+- Accept both valid SIGKILL diagnostics in the desktop lifecycle regression check (#2170)
+
 - Repair CTranslate2 loading safely across ASR and translation, and retain the loaded Whisper model during CPU fallback (#2165) — thanks @guruthechosen!
 - Avoid pedalboard wheels that crash on unsupported CPU instructions (#2080) — thanks @D3nii!
 - Include cuDNN 8 compatibility libraries for CTranslate2 in CUDA containers (#2072) — thanks @basil-k-aji-dev!
