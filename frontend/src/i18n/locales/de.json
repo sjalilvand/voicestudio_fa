@@ -2219,6 +2219,7 @@
     "session_expired": "Diese Dub-Sitzung ist abgelaufen oder wurde bereinigt. Laden Sie Ihr Video erneut hoch, um eine neue zu starten."
   },
   "tts_errors": {
+    "profile_language_rejected": "Automatisch verwendet die Sprache des Stimmprofils ({{language}}), die diese Engine nicht unterstützt. Ändere die Profilsprache, wähle eine unterstützte Sprache oder wechsle die Engine.",
     "enter_text": "Bitte geben Sie Text ein",
     "upload_or_select": "Laden Sie ein Audio hoch oder wählen Sie ein Sprachprofil aus",
     "trim_hint": "Audio ist {{duration}}s – für bestes Klonen auf ≤{{max}}s kürzen",

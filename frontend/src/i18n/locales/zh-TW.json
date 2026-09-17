@@ -2219,6 +2219,7 @@
     "session_expired": "此配音會話已過期或已清理 - 重新上傳您的影片以開始新的影片。"
   },
   "tts_errors": {
+    "profile_language_rejected": "自動模式使用聲音設定檔的語言（{{language}}），但此引擎不支援該語言。請修改設定檔語言、選擇支援的語言或更換引擎。",
     "enter_text": "請輸入文字",
     "upload_or_select": "上傳音訊或選擇語音設定文件",
     "trim_hint": "音訊為 {{duration}}s — 修剪至 ≤{{max}}s 以獲得最佳克隆效果",

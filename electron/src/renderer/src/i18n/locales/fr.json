@@ -2524,6 +2524,7 @@
     "microphone_number": "Microphone {{number}}"
   },
   "tts_errors": {
+    "profile_language_rejected": "Auto utilise la langue du profil vocal ({{language}}), non prise en charge par ce moteur. Modifiez la langue du profil, choisissez une langue compatible ou changez de moteur.",
     "generation_in_progress": "Une génération est déjà en cours — attendez sa fin avant d’en lancer une autre.",
     "error_prefix": "Erreur : {{message}}",
     "ignored_duplicate": "Ignoré (catégorie déjà définie) : {{items}}",

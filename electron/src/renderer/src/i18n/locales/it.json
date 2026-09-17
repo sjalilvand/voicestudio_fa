@@ -2524,6 +2524,7 @@
     "channels_stereo": "Stereo"
   },
   "tts_errors": {
+    "profile_language_rejected": "Auto usa la lingua del profilo vocale ({{language}}), non supportata da questo motore. Modifica la lingua del profilo, scegli una lingua supportata o cambia motore.",
     "generation_in_progress": "È già in corso una generazione: attendi che termini prima di avviarne un’altra.",
     "error_prefix": "Errore: {{message}}",
     "ignored_duplicate": "Ignorato (categoria già impostata): {{items}}",

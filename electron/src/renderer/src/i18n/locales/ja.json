@@ -2522,6 +2522,7 @@
     "recorder_unsupported": "このシステムではマイク音声をエンコードできません。"
   },
   "tts_errors": {
+    "profile_language_rejected": "自動では音声プロファイルの言語（{{language}}）が使われますが、このエンジンは対応していません。プロファイルの言語を変更するか、対応言語または別のエンジンを選択してください。",
     "generation_in_progress": "生成がすでに実行中です。完了してから次の生成を開始してください。",
     "error_prefix": "エラー: {{message}}",
     "ignored_duplicate": "無視 (カテゴリはすでに設定されています): {{items}}",

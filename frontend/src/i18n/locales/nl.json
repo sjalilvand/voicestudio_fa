@@ -2219,6 +2219,7 @@
     "session_expired": "Deze kopieersessie is verlopen of opgeschoond. Upload je video opnieuw om een nieuwe te starten."
   },
   "tts_errors": {
+    "profile_language_rejected": "Automatisch gebruikt de taal van het stemprofiel ({{language}}), die deze engine niet ondersteunt. Wijzig de profieltaal, kies een ondersteunde taal of wissel van engine.",
     "enter_text": "Voer tekst in",
     "upload_or_select": "Upload een audio of selecteer een stemprofiel",
     "trim_hint": "Audio is {{duration}}s — trim tot ≤{{max}}s voor de beste kloonfunctie",

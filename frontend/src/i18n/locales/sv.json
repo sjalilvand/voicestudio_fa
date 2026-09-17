@@ -2219,6 +2219,7 @@
     "session_expired": "Den här dubbsessionen löpte ut eller rensades upp – ladda upp din video igen för att starta en ny."
   },
   "tts_errors": {
+    "profile_language_rejected": "Auto använder röstprofilens språk ({{language}}), som denna motor inte stöder. Ändra profilens språk, välj ett språk som stöds eller byt motor.",
     "enter_text": "Vänligen ange text",
     "upload_or_select": "Ladda upp ett ljud eller välj en röstprofil",
     "trim_hint": "Ljudet är {{duration}}s — trimma till ≤{{max}}s för bästa kloning",

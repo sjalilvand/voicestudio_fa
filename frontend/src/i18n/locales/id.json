@@ -2219,6 +2219,7 @@
     "session_expired": "Sesi sulih suara ini telah habis masa berlakunya atau telah dibersihkan — unggah ulang video Anda untuk memulai yang baru."
   },
   "tts_errors": {
+    "profile_language_rejected": "Otomatis menggunakan bahasa profil suara ({{language}}), yang tidak didukung mesin ini. Ubah bahasa profil, pilih bahasa yang didukung, atau ganti mesin.",
     "enter_text": "Silakan masukkan teks",
     "upload_or_select": "Unggah audio atau pilih profil suara",
     "trim_hint": "Audio adalah {{duration}}s — potong ke ≤{{max}}s untuk kloning terbaik",

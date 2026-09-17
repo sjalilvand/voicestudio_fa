@@ -2219,6 +2219,7 @@
     "session_expired": "Questa sessione di doppiaggio è scaduta o è stata ripulita: ricarica il tuo video per avviarne uno nuovo."
   },
   "tts_errors": {
+    "profile_language_rejected": "Auto usa la lingua del profilo vocale ({{language}}), non supportata da questo motore. Modifica la lingua del profilo, scegli una lingua supportata o cambia motore.",
     "enter_text": "Inserisci il testo",
     "upload_or_select": "Carica un audio o seleziona un profilo vocale",
     "trim_hint": "L'audio è {{duration}}s: taglia a ≤{{max}}s per una migliore clonazione",

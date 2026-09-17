@@ -1,8 +1,11 @@
+import i18n from 'i18next';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   CLONE_MAX_SECONDS,
   REF_HARD_MAX_SECONDS,
   generateClone,
+  generateCloneStreaming,
+  shouldFallbackToClassic,
   parseGenerateHeaders,
   sanitizeInstruct,
   toGenerateForm,
@@ -276,4 +279,32 @@ describe('generateClone', () => {
     await vi.advanceTimersByTimeAsync(21 * 60 * 1000 + 1);
     await assertion;
   });
+});
+
+it('localizes streamed profile language refusals and prevents classic fallback', async () => {
+  const translate = vi.spyOn(i18n, 't').mockReturnValue('Localized profile guidance');
+  try {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              type: 'error',
+              code: 'profile_language_rejected',
+              language: 'Persian',
+              detail: 'English fallback',
+              retryable: false,
+              terminal: true,
+            }) + '\n',
+            { headers: { 'content-type': 'application/x-ndjson' } },
+          ),
+      ),
+    );
+    const error = await generateCloneStreaming(BASE_INPUT).catch((e) => e);
+    expect(error.message).toBe('Localized profile guidance');
+    expect(shouldFallbackToClassic(error)).toBe(false);
+  } finally {
+    translate.mockRestore();
+  }
 });

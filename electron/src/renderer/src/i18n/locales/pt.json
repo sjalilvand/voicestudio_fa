@@ -2524,6 +2524,7 @@
     "channels_mono": "Mono"
   },
   "tts_errors": {
+    "profile_language_rejected": "Automático usa o idioma do perfil de voz ({{language}}), não suportado por este motor. Altere o idioma do perfil, escolha um idioma compatível ou mude de motor.",
     "generation_in_progress": "Já existe uma geração em andamento — aguarde a conclusão antes de iniciar outra.",
     "error_prefix": "Erro: {{message}}",
     "ignored_duplicate": "Ignorado (categoria já definida): {{items}}",

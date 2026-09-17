@@ -2219,6 +2219,7 @@
     "session_expired": "Ta sesja dubowania wygasła lub została wyczyszczona — prześlij film ponownie, aby rozpocząć nową."
   },
   "tts_errors": {
+    "profile_language_rejected": "Tryb automatyczny używa języka profilu głosu ({{language}}), którego ten silnik nie obsługuje. Zmień język profilu, wybierz obsługiwany język lub zmień silnik.",
     "enter_text": "Proszę wpisać tekst",
     "upload_or_select": "Prześlij plik audio lub wybierz profil głosowy",
     "trim_hint": "Dźwięk wynosi {{duration}}s — przytnij do ≤{{max}}s, aby uzyskać najlepsze klonowanie",
