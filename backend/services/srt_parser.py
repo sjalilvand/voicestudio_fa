@@ -106,15 +106,6 @@ def parse_srt(content: str) -> SrtParseResult:
     first_marker = head.split("\n")[-1].strip() if head else ""
     cue_index = int(first_marker) if _is_index_line(first_marker) and len(first_marker) <= 12 else None
     for i, m in enumerate(matches):
-        try:
-            start = _ts_to_seconds(m.group(1), m.group(2), m.group(3), m.group(4))
-            end = _ts_to_seconds(m.group(5), m.group(6), m.group(7), m.group(8))
-        except (ValueError, IndexError):
-            skipped += 1
-            continue
-        if end <= start:
-            skipped += 1
-            continue
         body_start = m.end()
         has_next = i + 1 < len(matches)
         body_end = matches[i + 1].start() if has_next else len(text)
@@ -141,6 +132,15 @@ def parse_srt(content: str) -> SrtParseResult:
                 body = "\n".join(marker_lines[:-1])
                 next_index = expected_index
         cue_index = next_index
+        try:
+            start = _ts_to_seconds(m.group(1), m.group(2), m.group(3), m.group(4))
+            end = _ts_to_seconds(m.group(5), m.group(6), m.group(7), m.group(8))
+        except (ValueError, IndexError):
+            skipped += 1
+            continue
+        if end <= start:
+            skipped += 1
+            continue
         lines = body.strip("\n").split("\n")
         cue_text = "\n".join(line.strip() for line in lines if line.strip())
         if not cue_text:
