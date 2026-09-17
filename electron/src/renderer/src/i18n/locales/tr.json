@@ -2237,6 +2237,7 @@
     "tailscale_qr_alt": "Kuyruk Ölçeği URL'si için QR kodu"
   },
   "convert": {
+    "cloning_required": "Ses klonlamayı destekleyen, kullanıma hazır bir metinden konuşmaya modeli seçin.",
     "source_kicker": "Kaynak klip",
     "drop_audio": "Dönüştürülecek klibi bırakın — veya tıklayın. WAV, MP3, M4A…",
     "target_voice": "Hedef ses",
