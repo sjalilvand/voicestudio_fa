@@ -393,9 +393,11 @@ async def test_lost_result_ack_refetch_keeps_the_committed_inbound_artifact(
     await _until(lambda: not protocol._pending)
 
     assert open(committed, "rb").read() == payload
-    assert inbound.artifacts.open_result(
+    # The ACK removes the pending item before awaiting filesystem cleanup.
+    # Observe completion of that asynchronous operation, not its queue marker.
+    await _until(lambda: inbound.artifacts.open_result(
         artifact_id, key_id=inbound.panel_key_id
-    ) is None
+    ) is None)
     assert inbound.executed == [task.task_id]
 
 
