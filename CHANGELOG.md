@@ -40,7 +40,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Correct the Windows Rustup installation command in tooling and documentation (#2066) — thanks @Rukhaam!
 - Show local setup guidance when remote native engine installation is unavailable (#2166)
 - Show scrubbed native error tails and exit codes for failed dubbing extraction (#2167)
-- Name every language the installed Kokoro table supports when rejecting an unsupported one (#2156) — thanks @raya-mansouri!
+- Name every language the installed Kokoro table supports when rejecting an unsupported one (#2174) — thanks @paranoyouz-collab and @raya-mansouri!
 
 ### CI
 
