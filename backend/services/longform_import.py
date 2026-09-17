@@ -3,14 +3,16 @@ parser understands.
 
 Both helpers are pure (bytes/str in, script-str out) so they're unit-tested
 without a server. EPUB parsing is **stdlib only** (zipfile + ElementTree +
-html.parser) — no new dependency, no network, consistent with the local-first
-guarantee. The output is the same ``# Heading`` + body grammar
+html.parser, plus the shared ``services.text_upload`` decoder) — no new
+dependency, no network, consistent with the local-first guarantee. The output
+is the same ``# Heading`` + body grammar
 :func:`services.audiobook.parse_audiobook_script` already consumes, so import is
 just a front door onto the existing pipeline.
 """
 
 from __future__ import annotations
 
+import codecs
 import io
 import logging
 import posixpath
@@ -18,6 +20,8 @@ import re
 import zipfile
 from html.parser import HTMLParser
 from xml.etree import ElementTree as ET
+
+from services.text_upload import decode_text_upload
 
 # A line that *starts* with a chapter keyword and is short enough to be a title
 # (not a sentence that happens to begin with "Chapter"). Anchored, no ambiguous
@@ -30,8 +34,62 @@ _CHAPTER_TITLE_MAX = 60
 # *uncompressed* bytes read from the archive.
 _EPUB_MAX_ENTRY_BYTES = 25 * 1024 * 1024
 _EPUB_MAX_TOTAL_BYTES = 300 * 1024 * 1024
+# An EPUB document declares its own encoding: XML in the declaration, the XHTML
+# serialisation additionally in a `<meta charset>`. Both sit in the prologue, so
+# only the head of the document is scanned — the patterns never run over a whole
+# book, and neither has overlapping quantifiers (ReDoS-safe).
+_XML_DECL_ENCODING_RE = re.compile(
+    rb"""<\?xml[^>]{0,200}?encoding\s*=\s*["']([A-Za-z0-9_.:+-]{1,40})["']"""
+)
+_META_CHARSET_RE = re.compile(
+    rb"""<meta[^>]{0,400}?charset\s*=\s*["']?\s*([A-Za-z0-9_.:+-]{1,40})""",
+    re.IGNORECASE,
+)
+_DECLARATION_SCAN_BYTES = 1024
+# A byte-order mark outranks any declaration (XML 1.0 §F). `decode_text_upload`
+# already reads the three it can carry and strips it.
+_BOMS = (codecs.BOM_UTF8, codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)
 
 logger = logging.getLogger("omnivoice.longform_import")
+
+
+def _declared_encoding(raw: bytes) -> str | None:
+    """The encoding an EPUB document names for itself, if Python knows it."""
+    head = raw[:_DECLARATION_SCAN_BYTES]
+    for pattern in (_XML_DECL_ENCODING_RE, _META_CHARSET_RE):
+        match = pattern.search(head)
+        if not match:
+            continue
+        name = match.group(1).decode("ascii", "ignore")
+        try:
+            codecs.lookup(name)
+        except LookupError:
+            logger.warning("EPUB entry declares an unknown encoding; guessing instead")
+            continue
+        return name
+    return None
+
+
+def _decode_epub_entry(raw: bytes) -> str:
+    """Decode one EPUB document by the encoding it actually carries.
+
+    UTF-8 is only the *default* for an XML document — a BOM or an
+    ``encoding=``/``charset=`` declaration overrides it, and EPUB 2 books
+    (and Calibre conversions of older HTML) routinely declare ISO-8859-1 or a
+    CJK code page. Decoding those as UTF-8 with ``errors="ignore"`` silently
+    *deleted* every byte their accents, dashes and curly quotes are spelled
+    with, so "Le café était fermé" imported — and was narrated — as "Le caf
+    tait ferm". ``decode_text_upload`` is the same BOM → UTF-8 →
+    Windows-1252 ladder the ``.txt``/``.md`` import branch already uses.
+    """
+    if raw.startswith(_BOMS):
+        return decode_text_upload(raw)
+    declared = _declared_encoding(raw)
+    if declared:
+        # errors="replace": a mis-declared document still imports, the way an
+        # undeclared one does. Nothing here may fail a whole book.
+        return raw.decode(declared, errors="replace")
+    return decode_text_upload(raw)
 
 
 def chapterize_plaintext(text: str) -> str:
@@ -188,7 +246,7 @@ def epub_to_chapter_script(
         except KeyError:
             continue
         total += len(raw)
-        title, body = _html_to_title_body(raw.decode("utf-8", "ignore"))
+        title, body = _html_to_title_body(_decode_epub_entry(raw))
         if not body.strip():
             continue  # nav docs, empty pages
         title = title or f"Chapter {len(blocks) + 1}"
