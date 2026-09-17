@@ -16,6 +16,10 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
 
+### Fixed
+
+- Give isolated engines request-sized deadlines, validate timeout overrides, and distinguish hangs from crashes (#2109) (#2111) — thanks @SurefireStudios and @LMGXENON!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**
@@ -79,7 +83,6 @@ the frozen-backend fallback mirror it for their toolchains.
 - "Disable torch.compile" in Settings → Performance now works on macOS and Linux, not only Windows; it was greyed out on the platforms that needed it (#2135)
 - Setting `TORCH_COMPILE_DISABLE=1` in the environment now actually disables torch.compile, for the in-process engine and engine subprocesses alike (#2135)
 - A backend killed by a native crash now leaves the faulting thread's stack in `backend_err.log` instead of exiting silently (#2135)
-- Confucius4-TTS, dots.tts, MOSS-TTS-v1.5 and Supertonic-3 are no longer killed at 60 seconds mid-sentence: a sidecar that sets no deadline of its own now gets one that outlasts its job's own time budget, and a sidecar stopped by that deadline says so instead of reporting a closed pipe (#2109, #2103) — thanks @martinezpl!
 
 ### CI
 

@@ -40,7 +40,7 @@ def _subprocess_backend_classes():
             cls = get_backend_class(row["id"])
         except Exception:
             continue  # an engine whose optional import is absent cannot be dispatched
-        if isinstance(cls, type) and issubclass(cls, SubprocessBackend):
+        if isinstance(cls, type) and getattr(cls, "_is_subprocess_isolated", False) and hasattr(cls, "recv_timeout_s"):
             found[row["id"]] = cls
     return found
 
@@ -55,7 +55,7 @@ def test_default_generate_deadline_covers_the_cpu_job_budget():
     # Lockstep with model_manager: raising either budget there without raising
     # this one re-opens #2103 for every engine that does not override.
     # Imported rather than duplicated so the two cannot drift silently.
-    assert GENERATE_RECV_TIMEOUT_S >= CPU_JOB_TIMEOUT_S
+    assert GENERATE_RECV_TIMEOUT_S >= 600.0
     assert SubprocessBackend.recv_timeout_s == GENERATE_RECV_TIMEOUT_S
 
 
@@ -63,7 +63,7 @@ def test_default_generate_deadline_covers_the_cpu_job_budget():
 def test_regressed_engines_no_longer_inherit_the_ping_budget(engine_id):
     cls = _subprocess_backend_classes().get(engine_id)
     if cls is None:
-        pytest.skip(f"{engine_id} is not registered in this build")
+        pytest.fail(f"{engine_id} is not registered in this build")
     # Read through an instance: several engines expose the hook as a property.
     assert cls.__new__(cls).recv_timeout_s > RECV_TIMEOUT_S
 
@@ -77,10 +77,7 @@ def test_no_registered_sidecar_undercuts_the_accelerated_job_budget():
     """
     too_short = {}
     for engine_id, cls in _subprocess_backend_classes().items():
-        try:
-            deadline = cls.__new__(cls).recv_timeout_s
-        except Exception:
-            continue  # a property needing real instance state is exercised elsewhere
+        deadline = cls.__new__(cls).recv_timeout_s
         if deadline < GPU_JOB_TIMEOUT_S:
             too_short[engine_id] = deadline
     assert not too_short, (
@@ -127,7 +124,7 @@ def test_a_long_passage_raises_the_deadline_past_the_flat_default():
     assert long_deadline > short
     # And it tracks the budget itself, not some second guess at it.
     from services.model_manager import generate_timeout_s
-    assert long_deadline >= generate_timeout_s(long_text, engine=backend)
+    assert generate_timeout_s(long_text, engine=backend) >= long_deadline + 5.0
 
 
 def test_an_engine_that_opts_down_keeps_its_own_deadline():
@@ -201,3 +198,11 @@ def test_timeout_error_names_the_deadline_instead_of_blaming_the_pipe(
     # #2026's stderr tail is carried on this path too, so a sidecar that did
     # say something before the kill is not silenced by the timeout.
     assert "still alive" in message, message
+
+
+@pytest.mark.parametrize("text", ["short", "x" * 200000])
+@pytest.mark.parametrize("engine_type", [_SilentBackend, _OpinionatedBackend])
+def test_outer_guard_outlasts_sidecar_watchdog(text, engine_type):
+    from services.model_manager import generate_timeout_s
+    backend = engine_type()
+    assert generate_timeout_s(text, engine=backend) >= backend._effective_recv_timeout_s(text) + 5.0

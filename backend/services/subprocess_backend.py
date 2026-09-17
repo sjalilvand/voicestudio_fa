@@ -647,7 +647,7 @@ class SubprocessBackend(TTSBackend):
         try:
             from services.model_manager import generate_timeout_s
 
-            budget = float(generate_timeout_s(text, engine=self))
+            budget = float(generate_timeout_s(text, engine=self, _include_sidecar_grace=False))
         except Exception:
             # Budget probing is advisory: a failure here must not turn a
             # working generate into an error. Fall back to the class floor.
@@ -672,7 +672,8 @@ class SubprocessBackend(TTSBackend):
         reason = (
             f"{self.id} sidecar sent nothing for {deadline_s:g}s "
             f"(elapsed {elapsed_s:.0f}s), so VoiceStudio stopped it. It may "
-            f"simply be slower than that deadline on this host"
+            f"simply be slower than that deadline on this host; retry or increase "
+            f"this engine's receive timeout (see Troubleshooting)."
         )
         tail = self._stderr_tail_text()
         return f"{reason}. Last stderr: {tail}" if tail else reason

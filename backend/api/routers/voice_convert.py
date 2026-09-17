@@ -337,6 +337,7 @@ async def convert_speech(
                 what="Voice convert",
                 timeout=_generate_timeout_s(
                     text,
+                    engine=backend,
                     execution_device=compute_profile["effective_device"],
                     min_vram_gb=compute_profile["min_vram_gb"],
                     hardware_family=compute_profile.get("runtime_hardware_family"),
