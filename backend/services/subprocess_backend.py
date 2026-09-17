@@ -983,13 +983,31 @@ class SubprocessBackend(TTSBackend):
             fired.set()
             self._timeout_kill(proc)
 
-        watchdog = threading.Timer(timeout_s, _on_timeout)
-        watchdog.daemon = True
+        from services.inference_cancellation import current_cancellation
+        cancellation = current_cancellation()
+        stop_watchdog = threading.Event()
+
+        def _watch() -> None:
+            deadline = time.monotonic() + timeout_s
+            while not stop_watchdog.is_set():
+                remaining = deadline - time.monotonic()
+                if remaining <= 0 or (cancellation and cancellation.cancelled.is_set()):
+                    _on_timeout()  # captured process only; never a later retry
+                    return
+                stop_watchdog.wait(min(remaining, 0.05))
+
+        if cancellation is None:
+            watchdog = threading.Timer(timeout_s, _on_timeout)
+            watchdog.daemon = True
+        else:
+            watchdog = threading.Thread(target=_watch, daemon=True)
         watchdog.start()
         try:
             return self._recv()
         finally:
-            watchdog.cancel()
+            stop_watchdog.set()
+            if cancellation is None:
+                watchdog.cancel()
             # cancel() cannot stop an already-running callback. Finish its
             # bounded reap before another receive or generation starts.
             watchdog.join()

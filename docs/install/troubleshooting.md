@@ -1201,3 +1201,5 @@ Sidecar and audio.cpp runtime installation is restricted to requests from the ba
 ### Dubbing extraction fails
 
 Extraction errors show the FFmpeg exit code and the end of its diagnostics, with private paths scrubbed. Use the final error line to distinguish missing audio streams, unsupported inputs, permissions, or disk errors. A version banner alone does not identify the cause; include the final diagnostic and source format when reporting a failure.
+
+Explicit generation budgets remain authoritative. If an outer TTS/ASR guard times out or its caller disconnects, the active sidecar receive kills and reaps its captured child; it cannot terminate a later retry. In-process inference keeps its existing lifetime accounting until the native call returns.

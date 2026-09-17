@@ -564,6 +564,7 @@ def generate_timeout_s(
     claiming the card is under-provisioned in user-facing diagnostics.
     """
     base = GPU_JOB_TIMEOUT_S
+    explicit_budget = _GENERATE_TIMEOUT_EXPLICIT or GPU_JOB_TIMEOUT_S != _CONFIGURED_GPU_JOB_TIMEOUT_S
     try:
         from core.device_caps import detect_host_caps
         caps = detect_host_caps()
@@ -590,6 +591,7 @@ def generate_timeout_s(
         )
         if family == "cpu" and (cpu_explicit or not universal_override):
             base = CPU_JOB_TIMEOUT_S
+            explicit_budget = cpu_explicit
         elif not universal_override and family in (
             "cuda", "rocm", "vulkan", "xpu",
         ):
@@ -619,7 +621,7 @@ def generate_timeout_s(
     # the sidecar's watchdog timer fires and surfaces its actionable timeout error
     # before the outer pool cancellation cuts it off.
     sidecar_grace = 0.0
-    if engine is not None and hasattr(engine, "recv_timeout_s"):
+    if not explicit_budget and engine is not None and hasattr(engine, "recv_timeout_s"):
         try:
             sidecar_timeout = float(engine.recv_timeout_s)
             if math.isfinite(sidecar_timeout) and sidecar_timeout > 0:
@@ -744,6 +746,8 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
     finalizer. Normal completion never calls it. This lets request-owned temp
     files outlive abandoned workers without delaying ordinary requests (#1668).
     """
+    from services.inference_cancellation import InferenceCancellation
+    cancellation = InferenceCancellation()
     loop = asyncio.get_running_loop()
     ex = executor if executor is not None else _get_gpu_pool()
     # Resolved at CALL time, not def time, so monkeypatching/reloading the
@@ -786,7 +790,8 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
         except RuntimeError:
             pass  # loop already closed (caller vanished) — still run the job
         try:
-            return _inner()
+            with cancellation.activate():
+                return _inner()
         finally:
             # Idents are reused by the OS; a stale heartbeat under this ident
             # must not vouch for some future job on the same thread.
@@ -801,6 +806,7 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
     fut = asyncio.wrap_future(concurrent_fut, loop=loop)
 
     def _abandon() -> None:
+        cancellation.cancel()
         # Keep the concurrent future so we can distinguish a job cancelled out
         # of the queue from a thread that Python cannot stop once it has begun.
         cancelled_before_start = concurrent_fut.cancel()

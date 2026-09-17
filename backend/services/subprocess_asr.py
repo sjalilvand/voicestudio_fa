@@ -138,23 +138,23 @@ class SubprocessASRBackend(SubprocessBackend):
                 })
                 reply = self._recv_with_timeout(timeout_s)
                 timed_out = self._last_recv_timed_out
-            if not reply:
-                # EOF can arrive before Windows updates poll(); retire the
-                # stale handle so an immediate retry respawns the sidecar.
-                self.shutdown()
-                if timed_out:
+                if not reply:
+                    # EOF can arrive before Windows updates poll(); retire the
+                    # stale handle so an immediate retry respawns the sidecar.
+                    self.shutdown()
+                    if timed_out:
+                        raise RuntimeError(
+                            f"{self.id} ASR sidecar exceeded receive timeout "
+                            f"({timeout_s:g}s); killed mid-transcription "
+                            f"(device={self._device()}) — retry or raise "
+                            f"OMNIVOICE_ASR_RECV_TIMEOUT_S."
+                        )
+                    # Pipe closed mid-transcription → the child crashed.
                     raise RuntimeError(
-                        f"{self.id} ASR sidecar exceeded receive timeout "
-                        f"({timeout_s:g}s); killed mid-transcription "
-                        f"(device={self._device()}) — retry or raise "
-                        f"OMNIVOICE_ASR_RECV_TIMEOUT_S."
+                        f"{self.id} ASR sidecar crashed mid-transcription "
+                        f"(device={self._device()}); the job failed but the backend "
+                        f"stayed up — retry to respawn a fresh sidecar."
                     )
-                # Pipe closed mid-transcription → the child crashed.
-                raise RuntimeError(
-                    f"{self.id} ASR sidecar crashed mid-transcription "
-                    f"(device={self._device()}); the job failed but the backend "
-                    f"stayed up — retry to respawn a fresh sidecar."
-                )
             if reply.get("op") == "error":
                 raise RuntimeError(
                     f"{self.id} ASR sidecar error (device={self._device()}): "
