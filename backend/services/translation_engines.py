@@ -312,10 +312,18 @@ def is_ready(engine_id: str) -> bool:
 
 
 def argos_lang_code(value: str) -> str:
-    """Return the base language token used by Argos package metadata."""
+    """Return the base language token used by Argos package metadata.
+
+    Accepts ISO 639-1 codes (e.g. ``"zh"``), BCP-47 tags with a region or script
+    suffix (e.g. ``"zh-CN"``, ``"cmn-Hans"``), human names from the dub UI's own
+    label list (e.g. ``"Chinese"``, ``"Mandarin"``), legacy / deprecated ISO
+    639-1 codes still seen in older corpora (``"in"``→``"id"`` for Indonesian,
+    ``"iw"``→``"he"`` for Hebrew), and ISO 639-2/T (e.g. ``"zho"``→``"zh"``,
+    ``"fil"``→``"tl"`` for Tagalog). Empty or whitespace-only input raises
+    ``ValueError`` so the caller sees an actionable error instead of a
+    silently-empty language token.
+    """
     raw = str(value or "").strip()
-    if not raw:
-        raise ValueError("Choose a valid source and target language")
     key = raw.lower()
     named = _ARGOS_NAME_ALIASES.get(key)
     if named:
