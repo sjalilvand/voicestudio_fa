@@ -152,7 +152,7 @@ versionless updater archive. Other versions, sibling platforms, and updater
 manifests remain intact. Inventory or deletion permission/network failures stop
 the job instead of hiding an upload collision.
 
-## Electron transition (next desktop release)
+## Electron desktop releases
 
 Electron is the primary desktop distribution. electron-release.yml builds Linux
 x64, Windows x64, macOS arm64 and macOS x64, checks packaged startup and updater
@@ -167,7 +167,10 @@ same tag completes. Electron requires the final signed latest.json and
 latest-user.json assets; subsequent releases copy those feeds without changing
 their immutable sunset payload URLs. Retain the sunset release and its assets.
 
-Write versioned CHANGELOG notes before release. Review all four platform builds,
+Write versioned CHANGELOG notes before release. The Electron release body uses
+that authored section verbatim, including its introduction and contributor
+credits; describe Tauri migration only when relevant, without announcing another
+Tauri release. Review all four platform builds,
 checksums, signing requirements and docs/electron-migration.md. Existing Electron
 artifact names and app IDs remain stable for updater compatibility. This pipeline
 ships stable releases; rolling preview publication is paused during transition.

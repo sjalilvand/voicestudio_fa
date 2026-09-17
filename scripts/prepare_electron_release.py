@@ -49,11 +49,7 @@ def prepare(assets, tag, sunset_tag=None):
                         Path("CHANGELOG.md").read_text(), re.M | re.S)
     if not section or not section[1].strip():
         raise ValueError("Write versioned CHANGELOG notes before release")
-    notes = ("# VoiceStudio desktop\n\nElectron is the primary desktop app.\n\n"
-             "## Moving from Tauri\n\nTauri receives its final legacy update. Install Electron separately; "
-             "back up your data before removing Tauri. See the migration guide:\n\n"
-             "https://github.com/debpalash/VoiceStudio/blob/main/docs/electron-migration.md\n\n"
-             + section[1].strip() + "\n")
+    notes = section[1].strip() + "\n"
     (assets / "RELEASE_NOTES.md").write_text(notes)
     (assets / "SHA256SUMS.txt").write_text("\n".join(
         f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}" for p in sorted(files)
