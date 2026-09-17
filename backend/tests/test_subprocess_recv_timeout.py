@@ -17,14 +17,6 @@ omission, which is the part #1611 could not do by fixing one engine.
 """
 import pytest
 
-from engines.omnivoice_subprocess import OmniVoiceSubprocessBackend
-from services.model_manager import GPU_JOB_TIMEOUT_S
-from services.subprocess_backend import (
-    GENERATE_RECV_TIMEOUT_S,
-    RECV_TIMEOUT_S,
-    SubprocessBackend,
-)
-from services.tts_backend import get_backend_class, list_backends
 
 
 # The engines named in #2103 that inherited the ping budget. Listed explicitly
@@ -34,6 +26,8 @@ REGRESSED_ENGINE_IDS = ("confucius4-tts", "dots-tts", "moss-tts-v15", "supertoni
 
 def _subprocess_backend_classes():
     """Every SubprocessBackend the registry can hand a user, by id."""
+    from services.tts_backend import get_backend_class
+    from services.tts_backend import list_backends
     found = {}
     for row in list_backends(include_hidden=True):
         try:
@@ -47,6 +41,8 @@ def _subprocess_backend_classes():
 
 def test_ping_budget_and_generate_budget_are_separate_constants():
     # A ping must stay fast; a generation must not be cut off at a ping's deadline.
+    from services.subprocess_backend import GENERATE_RECV_TIMEOUT_S
+    from services.subprocess_backend import RECV_TIMEOUT_S
     assert RECV_TIMEOUT_S == 60.0
     assert GENERATE_RECV_TIMEOUT_S > RECV_TIMEOUT_S
 
@@ -55,12 +51,15 @@ def test_default_generate_deadline_covers_the_cpu_job_budget():
     # Lockstep with model_manager: raising either budget there without raising
     # this one re-opens #2103 for every engine that does not override.
     # Imported rather than duplicated so the two cannot drift silently.
+    from services.subprocess_backend import GENERATE_RECV_TIMEOUT_S
+    from services.subprocess_backend import SubprocessBackend
     assert GENERATE_RECV_TIMEOUT_S >= 600.0
     assert SubprocessBackend.recv_timeout_s == GENERATE_RECV_TIMEOUT_S
 
 
 @pytest.mark.parametrize("engine_id", REGRESSED_ENGINE_IDS)
 def test_regressed_engines_no_longer_inherit_the_ping_budget(engine_id):
+    from services.subprocess_backend import RECV_TIMEOUT_S
     cls = _subprocess_backend_classes().get(engine_id)
     if cls is None:
         pytest.fail(f"{engine_id} is not registered in this build")
@@ -75,6 +74,7 @@ def test_no_registered_sidecar_undercuts_the_accelerated_job_budget():
     now inherits a deadline that already satisfies this; one that overrides it
     with something too small fails here rather than in a user's generation.
     """
+    from services.model_manager import GPU_JOB_TIMEOUT_S
     too_short = {}
     for engine_id, cls in _subprocess_backend_classes().items():
         deadline = cls.__new__(cls).recv_timeout_s
@@ -89,32 +89,35 @@ def test_no_registered_sidecar_undercuts_the_accelerated_job_budget():
 # ── a constant is not enough: the budget scales with the text (#2109 review) ─
 
 
-class _SilentBackend(SubprocessBackend):
-    """A sidecar that expresses no opinion — the shape all four regressions had."""
-    id = "silent"
+def _SilentBackend():
+    from services.subprocess_backend import SubprocessBackend
+    from services.subprocess_backend import SubprocessBackend
+    class SilentBackend(SubprocessBackend):
+        """A sidecar with no custom deadline."""
+        id = "silent"
+        @classmethod
+        def is_available(cls):
+            return True, "ok"
+        @property
+        def sample_rate(self):
+            return 24000
+        @property
+        def supported_languages(self):
+            return ["multi"]
+    return SilentBackend()
 
-    @classmethod
-    def is_available(cls):
-        return True, "ok"
 
-    @property
-    def sample_rate(self):
-        return 24000
-
-    @property
-    def supported_languages(self):
-        return ["multi"]
-
-
-class _OpinionatedBackend(_SilentBackend):
-    """A sidecar that deliberately opts *down*, which #2103 asks to keep working."""
-    id = "opinionated"
-    recv_timeout_s = 45.0
+def _OpinionatedBackend():
+    backend = _SilentBackend()
+    type(backend).id = "opinionated"
+    type(backend).recv_timeout_s = 45.0
+    return backend
 
 
 def test_a_long_passage_raises_the_deadline_past_the_flat_default():
     # generate_timeout_s adds 1s per 40 characters past a 1200-char allowance,
     # so a long passage is granted more than the flat floor.
+    from services.subprocess_backend import GENERATE_RECV_TIMEOUT_S
     backend = _SilentBackend()
     short = backend._effective_recv_timeout_s("hello")
     long_text = "x" * 200_000
@@ -136,6 +139,7 @@ def test_an_engine_that_opts_down_keeps_its_own_deadline():
 
 
 def test_budget_probe_failure_falls_back_instead_of_failing_the_generate(monkeypatch):
+    from services.subprocess_backend import GENERATE_RECV_TIMEOUT_S
     import services.model_manager as mm
 
     def _boom(*a, **kw):
@@ -174,6 +178,7 @@ def test_timeout_error_names_the_deadline_instead_of_blaming_the_pipe(
     VoiceStudio stopped the sidecar on its own deadline — appeared only in the
     backend log, and reporters reasonably concluded the engine had crashed.
     """
+    from engines.omnivoice_subprocess import OmniVoiceSubprocessBackend
     script = tmp_path / "wedging_sidecar.py"
     script.write_text(WEDGING_SIDECAR)
     monkeypatch.setattr(
@@ -218,6 +223,7 @@ def test_explicit_generation_budget_is_authoritative(monkeypatch):
 @pytest.mark.asyncio
 @pytest.mark.parametrize('guard_kind', ['asr', 'tts'])
 async def test_outer_abandonment_terminates_owned_sidecar(tmp_path, monkeypatch, guard_kind):
+    from engines.omnivoice_subprocess import OmniVoiceSubprocessBackend
     import asyncio
     from concurrent.futures import ThreadPoolExecutor
     from services.model_manager import run_on_gpu_pool_guarded
@@ -236,10 +242,8 @@ async def test_outer_abandonment_terminates_owned_sidecar(tmp_path, monkeypatch,
                 work = run_on_gpu_pool_guarded(lambda: backend.generate('hang'), executor=executor, timeout=0.5)
             with pytest.raises(TimeoutError):
                 await work
-            for _ in range(100):
-                if backend._proc is not None and backend._proc.poll() is not None:
-                    break
-                await asyncio.sleep(0.02)
-            assert backend._proc is not None and backend._proc.poll() is not None
+            assert backend._proc is not None
+            await asyncio.wait_for(asyncio.to_thread(backend._proc.wait, timeout=5), timeout=6)
+            assert backend._proc.poll() is not None
         finally:
             backend.shutdown()
