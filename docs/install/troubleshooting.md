@@ -1162,3 +1162,7 @@ When torchaudio requires an unavailable TorchCodec installation, VoiceStudio wri
 Generation has a separate deadline from health checks. Default sidecar deadlines scale with text length and the host execution budget; per-engine timeout overrides remain supported. The outer job guard includes time for sidecar termination and error reporting. A timeout identifies the deadline, while a closed pipe without a timeout indicates a crash.
 
 Per-engine receive overrides include `OMNIVOICE_CONFUCIUS4_RECV_TIMEOUT_S`, `OMNIVOICE_DOTS_TTS_RECV_TIMEOUT_S`, `OMNIVOICE_MOSS_TTS_V15_RECV_TIMEOUT_S`, and `OMNIVOICE_SUPERTONIC3_RECV_TIMEOUT_S` (seconds). Invalid or non-finite values use the default; values below 30 seconds are raised to 30.
+
+### FFprobe alongside FFmpeg
+
+When FFprobe is not on PATH, VoiceStudio also checks beside the selected FFmpeg binary. Parent folders named `ffmpeg` remain unchanged; only the executable name becomes `ffprobe` (or `ffprobe.exe` on Windows).
