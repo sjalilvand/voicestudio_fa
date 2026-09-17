@@ -10,60 +10,36 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
-- Electron packaging can recover without changing a release tag
-- WhisperX, faster-whisper and Argos now load on Linux kernels that reject CTranslate2's executable stack, by clearing the flag in place (#692)
-
-### Fixed
-
-- Argos stopped advertising itself as ready on hosts where its CTranslate2 runtime cannot load; dub translation reports one actionable error instead of a 500 per segment (#692)
-- PyTorch Whisper survives a CUDA out-of-memory mid-transcription by stepping the batch down and finishing on CPU rather than dropping the chunk (#2165)
+- More reliable engine installation, transcription, and sidecar recovery
+- Preserve subtitle text and legacy manuscript encodings across desktop and web
+- Clearer setup guidance and media failure diagnostics
 
 ### Fixed
 
 - Repair CTranslate2 loading safely across ASR and translation, and retain the loaded Whisper model during CPU fallback (#2165) — thanks @guruthechosen!
+- Avoid pedalboard wheels that crash on unsupported CPU instructions (#2080) — thanks @D3nii!
+- Include cuDNN 8 compatibility libraries for CTranslate2 in CUDA containers (#2072) — thanks @basil-k-aji-dev!
+- Preserve audio reads, writes, and reference amplitude without TorchCodec (#2083) — thanks @Moep90!
+- Give isolated engines request-sized deadlines, validate timeout overrides, and distinguish hangs from crashes (#2109) (#2111) — thanks @SurefireStudios and @LMGXENON!
+- Keep dubbing streams alive during quiet steps and delay model cleanup until native refinement ends (#2138) — thanks @denemon!
+- Locate ffprobe beside ffmpeg without changing parent directory names (#2107) — thanks @kapelame!
+- Resample MLX output chunks to the declared rate before joining them (#2106) — thanks @kapelame!
+- Read database migration configuration on Chinese, Japanese, and Korean Windows (#2075) — thanks @kevin9327!
+- Preserve milliseconds and carry rounded subtitle timestamps across second boundaries (#2074) — thanks @kevin9327!
+- Decode UTF-16 and Windows-1252 subtitle and manuscript imports in Electron, web, and backend routes (#2073) — thanks @kevin9327!
+- Preserve numeric subtitle dialogue while recognizing mixed indexed and unindexed cues (#2151) — thanks @shivsin25!
+- Parse pasted WebVTT cues without treating mid-sentence timestamps as subtitle records (#2077) — thanks @kevin9327!
+- Normalize Argos language aliases without silently changing Traditional Chinese to Simplified (#2143, #2152) — thanks @gyanu2507 and @rollroyces!
+- Clarify Blackwell import-crash diagnostics without blaming missing kernels (#2084) — thanks @Moep90!
+- Distinguish architecture preflight rejection from independent compile-stack failures (#2085) — thanks @Moep90!
+- Require the pinned Apple Silicon GGUF build to pass and document runtime preflight conditions (#2115) — thanks @LMGXENON and @martinezpl!
+- Correct the Windows Rustup installation command in tooling and documentation (#2066) — thanks @Rukhaam!
+- Show local setup guidance when remote native engine installation is unavailable (#2166)
+- Show scrubbed native error tails and exit codes for failed dubbing extraction (#2167)
 
 ### CI
 
 - Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
-
-### Fixed
-
-- Avoid pedalboard wheels that crash on unsupported CPU instructions (#2080) — thanks @D3nii!
-
-- Include cuDNN 8 compatibility libraries for CTranslate2 in CUDA containers (#2072) — thanks @basil-k-aji-dev!
-
-- Preserve audio reads, writes, and reference amplitude without TorchCodec (#2083) — thanks @Moep90!
-
-- Give isolated engines request-sized deadlines, validate timeout overrides, and distinguish hangs from crashes (#2109) (#2111) — thanks @SurefireStudios and @LMGXENON!
-
-- Keep dubbing streams alive during quiet steps and delay model cleanup until native refinement ends (#2138) — thanks @denemon!
-
-- Locate ffprobe beside ffmpeg without changing parent directory names (#2107) — thanks @kapelame!
-
-- Resample MLX output chunks to the declared rate before joining them (#2106) — thanks @kapelame!
-
-- Read database migration configuration on Chinese, Japanese, and Korean Windows (#2075) — thanks @kevin9327!
-
-- Preserve milliseconds and carry rounded subtitle timestamps across second boundaries (#2074) — thanks @kevin9327!
-
-- Decode UTF-16 and Windows-1252 subtitle and manuscript imports in Electron, web, and backend routes (#2073) — thanks @kevin9327!
-
-- Preserve numeric subtitle dialogue while recognizing mixed indexed and unindexed cues (#2151) — thanks @shivsin25!
-- Parse pasted WebVTT cues without treating mid-sentence timestamps as subtitle records (#2077) — thanks @kevin9327!
-
-- Normalize Argos language aliases without silently changing Traditional Chinese to Simplified (#2143, #2152) — thanks @gyanu2507 and @rollroyces!
-
-- Clarify Blackwell import-crash diagnostics without blaming missing kernels (#2084) — thanks @Moep90!
-
-- Distinguish architecture preflight rejection from independent compile-stack failures (#2085) — thanks @Moep90!
-
-- Require the pinned Apple Silicon GGUF build to pass and document runtime preflight conditions (#2115) — thanks @LMGXENON and @martinezpl!
-
-- Correct the Windows Rustup installation command in tooling and documentation (#2066) — thanks @Rukhaam!
-
-- Show local setup guidance when remote native engine installation is unavailable (#2166)
-
-- Show scrubbed native error tails and exit codes for failed dubbing extraction (#2167)
 
 ## [0.5.3] — 2026-09-17
 
