@@ -58,6 +58,20 @@ does not update clients already on `v0.2.1`.
 
 ## 5. Cutting a release
 
+Release notes lead with the biggest user-visible change, not README edits or
+packaging internals. For a desktop redesign or migration, include a real UI
+screenshot pinned to the release tag, explain what changed, and give direct
+installer links and migration steps. Keep Highlights to 3–5 bullets, followed
+by concise themed entries. Preserve any installer-trust disclosures.
+
+Verify credits against the previous-tag-to-new-tag commit comparison and the
+included PRs, including contributor branches merged through maintainer branches.
+Add a Contributors section naming every human author and their contribution;
+thank verified bug reporters separately and identify dependency bots separately.
+Do not infer contributors from the existing changelog's `thanks` entries alone.
+Electron publishes the authored version section verbatim, with any required
+installer-trust disclosure appended by the workflow.
+
 1. **CHANGELOG first (hard rule):** make sure `CHANGELOG.md` has a complete,
    user-facing `## [X.Y.Z] — DATE` section (rename `## [Unreleased]`).
    `release.yml` extracts that section verbatim as the GitHub Release body —
@@ -81,7 +95,7 @@ on that tag with `draft=true`, and wait for its final Tauri installers and signe
 updater feeds. Then dispatch `electron-release.yml` on the same tag. Automatic
 Electron builds are skipped for this tag to avoid racing the Tauri draft.
 Keep the release draft until both builds and their checks have passed.
-See [Electron transition](#electron-transition-next-desktop-release) below for
+See [Electron transition](#electron-desktop-releases) below for
 signing requirements and the explicit owner-only unsigned exception.
 
 ## 5b. Deployment channels — all must ship (hard rule, owner-set 2026-07-16)
@@ -152,7 +166,7 @@ versionless updater archive. Other versions, sibling platforms, and updater
 manifests remain intact. Inventory or deletion permission/network failures stop
 the job instead of hiding an upload collision.
 
-## Electron transition (next desktop release)
+## Electron desktop releases
 
 Electron is the primary desktop distribution. electron-release.yml builds Linux
 x64, Windows x64, macOS arm64 and macOS x64, checks packaged startup and updater
@@ -167,7 +181,10 @@ same tag completes. Electron requires the final signed latest.json and
 latest-user.json assets; subsequent releases copy those feeds without changing
 their immutable sunset payload URLs. Retain the sunset release and its assets.
 
-Write versioned CHANGELOG notes before release. Review all four platform builds,
+Write versioned CHANGELOG notes before release. The Electron release body uses
+that authored section verbatim, including its introduction and contributor
+credits; describe Tauri migration only when relevant, without announcing another
+Tauri release. Review all four platform builds,
 checksums, signing requirements and docs/electron-migration.md. Existing Electron
 artifact names and app IDs remain stable for updater compatibility. This pipeline
 ships stable releases; rolling preview publication is paused during transition.
