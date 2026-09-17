@@ -2488,7 +2488,8 @@
     "none_ready_title": "语音合成尚未就绪",
     "none_ready_body": "VoiceStudio 可以自动为此设备设置最佳兼容选项。",
     "active": "引擎：{{name}}",
-    "none": "没有启用的引擎"
+    "none": "没有启用的引擎",
+    "argosRuntimeUnavailable": "Argos 运行时不可用。请重新安装后端或选择 NLLB。"
   },
   "performanceProfile": {
     "requiresEngine": "安装并选择 {{engine}} 以调整速度和质量。",

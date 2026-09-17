@@ -2484,7 +2484,8 @@
     "none_ready_title": "Sprachausgabe ist nicht bereit",
     "none_ready_body": "VoiceStudio kann automatisch die beste kompatible Option für dieses Gerät einrichten.",
     "active": "Engine: {{name}}",
-    "none": "Keine Engine aktiv"
+    "none": "Keine Engine aktiv",
+    "argosRuntimeUnavailable": "Die Argos-Laufzeit ist nicht verfügbar. Installiere das Backend neu oder wähle NLLB."
   },
   "performanceProfile": {
     "requiresEngine": "Installiere und wähle {{engine}}, um Geschwindigkeit und Qualität anzupassen.",

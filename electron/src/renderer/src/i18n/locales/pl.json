@@ -2488,7 +2488,8 @@
     "none_ready_title": "Synteza mowy nie jest gotowa",
     "none_ready_body": "VoiceStudio może automatycznie skonfigurować najlepszą zgodną opcję dla tego urządzenia.",
     "active": "Silnik: {{name}}",
-    "none": "Brak aktywnego silnika"
+    "none": "Brak aktywnego silnika",
+    "argosRuntimeUnavailable": "Środowisko Argos jest niedostępne. Zainstaluj ponownie backend lub wybierz NLLB."
   },
   "performanceProfile": {
     "requiresEngine": "Zainstaluj i wybierz {{engine}}, aby dostosować szybkość i jakość.",

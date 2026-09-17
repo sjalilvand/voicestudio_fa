@@ -2486,7 +2486,8 @@
     "none_ready_title": "La synthèse vocale n’est pas prête",
     "none_ready_body": "VoiceStudio peut configurer automatiquement la meilleure option compatible avec cet appareil.",
     "active": "Moteur : {{name}}",
-    "none": "Aucun moteur actif"
+    "none": "Aucun moteur actif",
+    "argosRuntimeUnavailable": "Le moteur Argos est indisponible. Réinstallez le backend ou sélectionnez NLLB."
   },
   "performanceProfile": {
     "requiresEngine": "Installez et sélectionnez {{engine}} pour régler la vitesse et la qualité.",

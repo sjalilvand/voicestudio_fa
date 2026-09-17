@@ -864,7 +864,8 @@
     "familyDesc_asr": "Sesi; transkripsiyon, dublaj, altyazı ve dikte için metne dönüştürür.",
     "familyDesc_llm": "Çeviri ve yeniden yazma için isteğe bağlı metin yardımcısıdır. “Kapalı” bu adımları atlar.",
     "mpsLongText": "{{engine}} burada Apple Silicon (MPS) üzerinde çalışıyor ve bu metin uzun — üretim süre bütçesini aşabilir. Daha kısa bir metin ya da birkaç parçaya bölmek çok daha hızlı olacaktır.",
-    "inMemory": "Bellekte"
+    "inMemory": "Bellekte",
+    "argosRuntimeUnavailable": "Argos çalışma ortamı kullanılamıyor. Arka ucu yeniden yükleyin veya NLLB seçin."
   },
   "capture": {
     "desc": "Genel kısayol tuşları yalnızca masaüstü uygulamasında çalışır. Web kullanıcı arayüzü, pencere odaktayken sayfa içi <1>Ctrl+Shift+Space</1> kısayolunu kullanır.",

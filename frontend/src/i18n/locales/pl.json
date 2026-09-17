@@ -864,7 +864,8 @@
     "familyDesc_asr": "Zamienia dźwięk na tekst do transkrypcji, dubbingu, napisów i dyktowania.",
     "familyDesc_llm": "Opcjonalny pomocnik tekstowy do tłumaczeń i przeredagowywania. „Wył.” pomija te kroki.",
     "mpsLongText": "{{engine}} działa tutaj na Apple Silicon (MPS), a ten tekst jest długi — generowanie może przekroczyć limit czasu. Krótszy tekst lub podzielenie go na kilka części będzie znacznie szybsze.",
-    "inMemory": "W pamięci"
+    "inMemory": "W pamięci",
+    "argosRuntimeUnavailable": "Środowisko Argos jest niedostępne. Zainstaluj ponownie backend lub wybierz NLLB."
   },
   "capture": {
     "desc": "Globalne skróty klawiszowe działają tylko w aplikacji komputerowej. Interfejs WWW korzysta ze skrótu <1>Ctrl+Shift+Spacja</1> znajdującego się na stronie, gdy okno jest aktywne.",

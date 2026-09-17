@@ -2492,7 +2492,8 @@
     "none_ready_title": "تحويل النص إلى كلام غير جاهز",
     "none_ready_body": "يمكن لـ VoiceStudio إعداد أفضل خيار متوافق مع هذا الجهاز تلقائيًا.",
     "active": "المحرك: {{name}}",
-    "none": "لا يوجد محرك نشط"
+    "none": "لا يوجد محرك نشط",
+    "argosRuntimeUnavailable": "بيئة تشغيل Argos غير متاحة. أعد تثبيت الخادم الخلفي أو اختر NLLB."
   },
   "performanceProfile": {
     "requiresEngine": "ثبّت {{engine}} وحدده لضبط السرعة والجودة.",

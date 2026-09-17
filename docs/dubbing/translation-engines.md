@@ -242,3 +242,5 @@ panels instead so neither editor becomes unusably small.
   backend on Python 3.12+, or run `patchelf --clear-execstack` on the library
   once — and NLLB stays available in the meantime
   ([#692](https://github.com/debpalash/VoiceStudio/issues/692)).
+
+If the Argos native runtime cannot load, both desktop and browser clients show localized recovery guidance: reinstall the backend or select NLLB. The API returns the stable `argos_runtime_unavailable` error code without exposing native library paths.

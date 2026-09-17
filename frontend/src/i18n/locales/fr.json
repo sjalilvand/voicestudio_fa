@@ -864,7 +864,8 @@
     "familyDesc_asr": "Transforme l’audio en texte pour la transcription, le doublage, les sous-titres et la dictée.",
     "familyDesc_llm": "Assistant textuel facultatif pour la traduction et la réécriture. « Désactivé » ignore ces étapes.",
     "mpsLongText": "{{engine}} fonctionne ici sur Apple Silicon (MPS) et ce texte est long — la génération risque de dépasser le budget de temps. Un texte plus court, ou découpé en plusieurs prises, sera bien plus rapide.",
-    "inMemory": "En mémoire"
+    "inMemory": "En mémoire",
+    "argosRuntimeUnavailable": "Le moteur Argos est indisponible. Réinstallez le backend ou sélectionnez NLLB."
   },
   "capture": {
     "desc": "Les raccourcis clavier globaux ne fonctionnent que dans l'application de bureau. L'interface utilisateur Web utilise un raccourci <1>Ctrl+Shift+Espace</1> sur la page lorsque la fenêtre a le focus.",

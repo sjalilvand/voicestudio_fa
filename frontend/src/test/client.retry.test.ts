@@ -1,3 +1,4 @@
+import i18n from 'i18next';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { apiFetch, ApiError } from '../api/client';
 
@@ -7,6 +8,17 @@ import { apiFetch, ApiError } from '../api/client';
 // few times — but never retry an HTTP error (the backend responded) or a
 // deliberate abort, and still surface the actionable error if it stays down.
 describe('apiFetch transport-retry', () => {
+  it('localizes Argos runtime errors without losing recovery metadata', async () => {
+    const detail = { code: 'argos_runtime_unavailable', message: 'Raw native diagnostic' };
+    vi.spyOn(i18n, 't').mockReturnValue('Localized recovery guidance');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail }), { status: 400 })),
+    );
+    const err = await apiFetch('/dub/translate').catch((error) => error);
+    expect(err.message).toContain('Localized recovery guidance');
+    expect(err.detail).toEqual(detail);
+  });
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();

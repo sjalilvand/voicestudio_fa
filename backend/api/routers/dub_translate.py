@@ -810,7 +810,7 @@ async def dub_translate(req: TranslateRequest):
                     + " Switch the Engine dropdown to NLLB (local) or an online "
                     "provider, or reinstall the backend, then retry."
                 )
-                return JSONResponse(status_code=400, content={"error": friendly})
+                return JSONResponse(status_code=400, content={"error": friendly, "detail": {"code": "argos_runtime_unavailable", "message": friendly}})
 
             target_codes = list(dict.fromkeys(
                 seg.target_lang if seg.target_lang else req.target_lang

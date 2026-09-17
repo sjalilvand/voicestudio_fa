@@ -864,7 +864,8 @@
     "familyDesc_asr": "Zet audio om in tekst voor transcriptie, nasynchronisatie, ondertiteling en dicteren.",
     "familyDesc_llm": "Optionele teksthulp voor vertalen en herschrijven. ‘Uit’ slaat deze stappen over.",
     "mpsLongText": "{{engine}} draait hier op Apple Silicon (MPS) en deze tekst is lang — de generatie overschrijdt mogelijk het tijdsbudget. Kortere tekst, of opsplitsen in meerdere takes, is veel sneller.",
-    "inMemory": "In het geheugen"
+    "inMemory": "In het geheugen",
+    "argosRuntimeUnavailable": "De Argos-runtime is niet beschikbaar. Installeer de backend opnieuw of kies NLLB."
   },
   "capture": {
     "desc": "Globale sneltoetsen werken alleen in de desktop-app. De webinterface gebruikt een sneltoets <1>Ctrl+Shift+Spatie</1> op de pagina terwijl het venster focus heeft.",

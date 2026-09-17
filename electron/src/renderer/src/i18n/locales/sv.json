@@ -2484,7 +2484,8 @@
     "none_ready_title": "Talsyntesen är inte redo",
     "none_ready_body": "VoiceStudio kan automatiskt konfigurera det bästa kompatibla alternativet för den här enheten.",
     "active": "Motor: {{name}}",
-    "none": "Ingen motor aktiv"
+    "none": "Ingen motor aktiv",
+    "argosRuntimeUnavailable": "Argos körmiljö är inte tillgänglig. Installera om backend eller välj NLLB."
   },
   "performanceProfile": {
     "requiresEngine": "Installera och välj {{engine}} för att justera hastighet och kvalitet.",

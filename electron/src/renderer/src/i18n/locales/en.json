@@ -114,7 +114,8 @@
     "recheck": "Re-check",
     "rechecking": "Re-checking…",
     "failed": "failed",
-    "latencyMs": "{{ms}} ms"
+    "latencyMs": "{{ms}} ms",
+    "argosRuntimeUnavailable": "Argos runtime unavailable. Reinstall the backend or select NLLB."
   },
   "clone": {
     "title": "Voice cloning",

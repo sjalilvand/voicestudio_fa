@@ -804,3 +804,5 @@ async def test_argos_native_loader_error_does_not_expose_paths(monkeypatch):
     assert response.status_code == 400
     assert private.encode() not in response.body
     assert b'CTranslate2' in response.body and b'reinstall' in response.body
+    import json
+    assert json.loads(response.body)['detail']['code'] == 'argos_runtime_unavailable'
