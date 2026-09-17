@@ -34,6 +34,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Preserve audio reads, writes, and reference amplitude without TorchCodec (#2083) — thanks @Moep90!
 
+- Give isolated engines request-sized deadlines, validate timeout overrides, and distinguish hangs from crashes (#2109) (#2111) — thanks @SurefireStudios and @LMGXENON!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**
