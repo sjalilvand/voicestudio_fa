@@ -40,6 +40,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Locate ffprobe beside ffmpeg without changing parent directory names (#2107) — thanks @kapelame!
 
+- Resample MLX output chunks to the declared rate before joining them (#2106) — thanks @kapelame!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**
