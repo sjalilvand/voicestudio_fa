@@ -8,6 +8,14 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ## [Unreleased]
 
+**Highlights**
+
+- Exported videos carry the visible watermark again (#2192)
+
+### Fixed
+
+- Video export applies the visible watermark, and dubbing reads its visual context, without a separate system ffmpeg install (#2192)
+
 ## [0.5.4] — 2026-09-17
 
 **More reliable setup, generation, and dubbing.** This patch detects incomplete desktop runtimes before startup, repairs them without overwriting an existing Tauri installation, and makes engine failures easier to recover from. It also fixes gated model downloads, subtitle imports, and saved-voice language errors.
