@@ -333,7 +333,7 @@ def argos_lang_code(value: str) -> str:
     named = _ARGOS_NAME_ALIASES.get(key)
     if named:
         return named
-    code = key.split("-", 1)[0]
+    code = parts[0]
     code = _ARGOS_LANG_ALIASES.get(code, code)
     named = _ARGOS_NAME_ALIASES.get(code)
     if named:

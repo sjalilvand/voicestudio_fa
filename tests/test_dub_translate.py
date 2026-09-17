@@ -832,3 +832,33 @@ def test_argos_does_not_silently_change_chinese_script(raw):
     from services.translation_engines import argos_lang_code
     with pytest.raises(ValueError, match="Traditional Chinese.*NLLB"):
         argos_lang_code(raw)
+
+
+@pytest.mark.parametrize("raw", ["zh_CN", "cmn_Hans", "zho_CN"])
+def test_argos_underscore_locales(raw):
+    from services.translation_engines import argos_lang_code
+    assert argos_lang_code(raw) == "zh"
+
+
+@pytest.mark.asyncio
+async def test_argos_batch_retry_reports_unsupported_script(tmp_path, monkeypatch):
+    from api.routers import batch
+    from services import asr_backend, translation_engines
+    from fastapi import HTTPException
+    source = tmp_path / "source.mp4"
+    source.touch()
+    monkeypatch.setattr(batch, "_jobs", {"retry-script": {
+        "status": "failed", "video_path": str(source), "source_lang": "en",
+        "langs": ["zh-TW"], "translation_provider": "argos",
+    }})
+    monkeypatch.setattr(batch, "_batch_voice", lambda value: None)
+    monkeypatch.setattr(asr_backend, "asr_model_missing_error", lambda: None)
+    monkeypatch.setattr(translation_engines, "is_ready", lambda provider: True)
+    def packs(source, targets):
+        for target in targets:
+            translation_engines.argos_lang_code(target)
+    monkeypatch.setattr(translation_engines, "argos_pack_status", packs)
+    with pytest.raises(HTTPException) as err:
+        await batch.retry_batch_job("retry-script")
+    assert err.value.status_code == 422
+    assert "NLLB" in err.value.detail
