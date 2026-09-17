@@ -2,9 +2,13 @@ import { clearConversion } from './conversion-state';
 import { cleanup, fireEvent, render, screen, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, expect, it, vi } from 'vitest';
-const mock = vi.hoisted(() => ({ convert: vi.fn(), ready: true, cloning: true as boolean | null }));
+const mock = vi.hoisted(() => ({ queryError: false, retry: vi.fn(), convert: vi.fn(), ready: true, cloning: true as boolean | null }));
 vi.mock('@/hooks/use-engines', () => ({
   useEngines: () => ({
+    isError: mock.queryError,
+    error: new Error("Engine query failed"),
+    retry: mock.retry,
+    data: mock.queryError ? undefined : {},
     activeTtsReady: mock.ready,
     activeTts: { supports_cloning: mock.cloning },
   }),
@@ -31,6 +35,7 @@ import { ConvertVoice } from './convert-voice';
 afterEach(() => {
   cleanup();
   clearConversion();
+  mock.queryError = false;
   mock.ready = true;
   mock.cloning = true;
   vi.clearAllMocks();
@@ -123,4 +128,17 @@ it('rechecks engine capability when returning from settings without losing input
   mount();
   expect(screen.getByRole('button', { name: 'convert.convert' })).toBeEnabled();
   expect(screen.getByRole('button', { name: 'source.wav' })).toBeInTheDocument();
+});
+
+it('offers retry instead of model guidance when engine lookup fails', () => {
+  mock.queryError = true;
+  mock.ready = false;
+  const { upload } = mount();
+  upload();
+  fireEvent.click(screen.getByRole('button', { name: 'Alpha' }));
+  expect(screen.getByRole('button', { name: 'convert.convert' })).toBeDisabled();
+  expect(screen.queryByText('convert.cloning_required')).not.toBeInTheDocument();
+  expect(screen.getByText('Engine query failed')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'common.retry' }));
+  expect(mock.retry).toHaveBeenCalledOnce();
 });

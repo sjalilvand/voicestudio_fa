@@ -213,7 +213,13 @@ export function ConvertVoice() {
         </label>
         <p className="text-xs text-muted-foreground">{t('convert.match_duration_hint')}</p>
       </div>
-      {!canClone && !busy && (
+      {engines.isError && !engines.data && !busy && (
+        <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <span>{describeError(engines.error)}</span>
+          <Button variant="outline" size="sm" onClick={engines.retry}>{t('common.retry')}</Button>
+        </div>
+      )}
+      {!canClone && !(engines.isError && !engines.data) && !busy && (
         <div
           role="status"
           className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
