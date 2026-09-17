@@ -419,3 +419,7 @@ Two paths are worth persisting across container restarts:
   [Pull and run (AMD GPU / ROCm)](#pull-and-run-amd-gpu--rocm) above for when
   to set one by hand.
 - More entries: [docs/install/troubleshooting.md](troubleshooting.md).
+
+### CTranslate2 compatibility
+
+CUDA images include an isolated cuDNN 8 compatibility library directory for WhisperX and faster-whisper alongside the base PyTorch cuDNN 9 runtime. The image build verifies the compatibility libraries exist. ROCm images skip this NVIDIA-only dependency.
