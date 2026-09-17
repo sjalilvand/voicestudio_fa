@@ -36,6 +36,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Give isolated engines request-sized deadlines, validate timeout overrides, and distinguish hangs from crashes (#2109) (#2111) — thanks @SurefireStudios and @LMGXENON!
 
+- Keep dubbing streams alive during quiet steps and delay model cleanup until native refinement ends (#2138) — thanks @denemon!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**
