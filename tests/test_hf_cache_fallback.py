@@ -24,6 +24,14 @@ def _raise_winerror(*a, **k):
     raise OSError(22, "[WinError 448] The specified network resource is no longer available")
 
 
+class CacheNotFound(Exception):
+    """Test double for huggingface_hub.errors.CacheNotFound."""
+
+
+def _raise_cache_not_found(*a, **k):
+    raise CacheNotFound("Cache directory does not exist")
+
+
 def test_is_cached_falls_back_to_disk_when_scan_raises(tmp_path, monkeypatch):
     repo = _make_fake_cache(tmp_path)
     monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path))
@@ -37,6 +45,19 @@ def test_is_cached_false_for_uncached_repo_when_scan_raises(tmp_path, monkeypatc
     monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path))
     monkeypatch.setattr("huggingface_hub.scan_cache_dir", _raise_winerror)
     assert models.is_cached("not-here/model") is False
+
+
+def test_clean_install_empty_cache_is_not_warned_or_rescanned(tmp_path, monkeypatch, caplog):
+    monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path / "missing"))
+    monkeypatch.setattr("huggingface_hub.scan_cache_dir", _raise_cache_not_found)
+    monkeypatch.setattr(
+        models,
+        "_is_cached_on_disk",
+        lambda _repo: (_ for _ in ()).throw(AssertionError("empty cache must not be rescanned")),
+    )
+
+    assert models.is_cached("org/model") is False
+    assert "scan_cache_dir failed" not in caplog.text
 
 
 def test_disk_scan_reports_size_and_files(tmp_path, monkeypatch):

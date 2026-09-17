@@ -9,6 +9,13 @@ _backend_dir = os.path.dirname(os.path.abspath(__file__))
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
+# #2135: arm fatal-signal tracebacks before anything heavy is imported, so a
+# native crash inside torch/CUDA leaves a named frame in backend_err.log
+# instead of a silently vanished process. See core/crash_diagnostics.py.
+from core.crash_diagnostics import enable_fault_handler  # noqa: E402
+
+enable_fault_handler()
+
 # PyInstaller re-executes this entry module when the frozen backend binary is
 # launched. Nested operation supervisors therefore dispatch here, before math,
 # logging, FastAPI, torch, or any application initialization. Source launches
@@ -274,16 +281,15 @@ logging.basicConfig(
 # inherits the filter, so even handler-formatted output (file, stream,
 # JSON) strips real HF tokens. Cheap (regex on each record) and
 # idempotent — extra calls are no-ops.
-from core.logging_filter import install_redaction_filter  # noqa: E402
+from core.logging_filter import (  # noqa: E402
+    install_access_log_filter,
+    install_asyncio_transport_filter,
+    install_redaction_filter,
+)
+
 install_redaction_filter()
-
-class AsyncioExceptionFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        if record.levelno == logging.WARNING and "socket.send() raised exception" in record.getMessage():
-            return False
-        return True
-
-logging.getLogger("asyncio").addFilter(AsyncioExceptionFilter())
+install_access_log_filter()
+install_asyncio_transport_filter()
 
 # Silence HF Hub unauthenticated warnings unless specifically requested.
 logging.getLogger("huggingface_hub.utils._http").setLevel(logging.ERROR)
@@ -537,8 +543,8 @@ async def _cancel_and_await_tasks(*tasks, timeout: float = 3.0) -> None:
 # mutation, runs in an executor thread (deferred) or inline (eager).
 # Phase A finalize: router/mount registration — mutates the app, so it runs
 # ON the event loop (deferred) with no awaits inside, making it atomic with
-# respect to in-flight requests; the StartupGate keeps everything but
-# /health + /startup/progress out until ready regardless.
+# respect to in-flight requests; the StartupGate keeps work routes out until
+# ready while retaining readiness probes and deliberate desktop shutdown.
 # Phase B: the old lifespan startup body (DB, background services).
 
 _phase_a_built = False
@@ -664,6 +670,7 @@ def _phase_a_build_inner() -> None:
     from api.routers import (
         system,
         profiles,
+        profile_images,
         exports,
         generation,
         dub_core,
@@ -703,7 +710,7 @@ def _phase_a_build_inner() -> None:
     from api.routers import mcp_bindings as _mcp_bindings_router  # noqa: E402
     from api.routers import workers as workers_router  # noqa: E402
     _router_modules.extend([
-        system, profiles, exports, generation, voice_convert, dub_core, dub_generate,
+        system, profiles, profile_images, exports, generation, voice_convert, dub_core, dub_generate,
         dub_export, dub_translate, projects, glossary, engines, tools,
         stories, setup, gallery, archetypes, describe_voice, community,
         batch, watermark, events, capture, capture_ws, speech_platform, dictation,
@@ -877,6 +884,18 @@ async def _phase_b(app: FastAPI) -> None:
         logger.exception("Startup job-sweep failed (non-fatal).")
 
     _startup_progress.begin_step("services_start")
+    # Reapply an explicitly saved speed/quality profile after the local model
+    # inventory is available. Older builds saved the slider but could leave
+    # ASR/Dictation pointing at missing models even when compatible weights
+    # were already installed. This path is local-cache-only and download-free.
+    try:
+        from services.performance_profiles import reconcile_active_profile
+
+        recovered = reconcile_active_profile()
+        if recovered:
+            logger.info("Startup performance selections reconciled: %s", recovered)
+    except Exception:
+        logger.exception("Performance-profile reconciliation failed (non-fatal).")
     # Phase 1 Wave 3 — macOS Gatekeeper quarantine probe (#54). Informational
     # only; we never auto-run `xattr -cr`.
     try:
@@ -918,12 +937,8 @@ async def _phase_b(app: FastAPI) -> None:
                     "Capture ASR preload skipped: <4GB free RAM; "
                     "dictation ASR will load on first use.")
                 return
-            loading_detail = None
-            prev_loading_detail = None
             try:
-                from services.model_manager import _gpu_pool, _loading_detail
-                loading_detail = _loading_detail
-                prev_loading_detail = dict(loading_detail)
+                from services.model_manager import _gpu_pool
                 loop = asyncio.get_running_loop()
                 def _warm():
                     from services.asr_backend import (
@@ -937,20 +952,12 @@ async def _phase_b(app: FastAPI) -> None:
                             "Capture ASR preload skipped: no ASR model installed; "
                             "dictation will offer a download on first use.")
                         return
-                    loading_detail["sub_stage"] = "loading_asr"
-                    loading_detail["detail"] = "Warming up ASR engine…"
                     backend = get_capture_asr_backend()
                     logger.info("Capture ASR backend selected: %s", backend.id)
                     if hasattr(backend, 'warmup'):
-                        loading_detail["detail"] = f"Loading {backend.display_name}…"
                         backend.warmup()
-                    loading_detail["sub_stage"] = "ready"
-                    loading_detail["detail"] = "ASR engine ready"
                 await loop.run_in_executor(_gpu_pool, _warm)
             except Exception as e:
-                if loading_detail is not None and loading_detail.get("sub_stage") == "loading_asr":
-                    loading_detail.clear()
-                    loading_detail.update(prev_loading_detail or {})
                 logger.warning("Capture ASR preload skipped: %s", e)
         app.state.capture_preload_task = asyncio.create_task(_preload_capture_asr())
     else:
@@ -1104,13 +1111,10 @@ async def lifespan(app: FastAPI):
     # correctness independent of how much of that tail runs, instead of
     # depending on the shell-side deadline being long enough to cover it.
     #
-    # SCOPE, explicitly: this only helps platforms where lifespan teardown
-    # actually BEGINS. On Windows it does not — tools.rs terminates the job
-    # object with no graceful phase at all, so this line is never reached and
-    # a deliberate quit is still misreported as a crash there. That needs the
-    # shell to signal deliberate intent before the hard kill, which is a
-    # separate Rust-side change and is tracked separately; nothing here
-    # should be read as fixing Windows.
+    # Desktop shells that must hard-kill a Windows process tree retire the
+    # sentinel through /system/shutdown-intent before termination. This
+    # remains the graceful-path fallback for every platform and direct server
+    # runs.
     #
     # sentinel_cleared feeds the truthful "Shutdown: done."/degraded log at
     # the end of this function; nothing below re-clears the sentinel, so a
@@ -1219,11 +1223,17 @@ async def lifespan(app: FastAPI):
         # Best-effort drain: a failure here must not abort the remaining
         # shutdown steps (model unload, MCP teardown) below.
         logger.warning("Watermark pool drain failed at shutdown", exc_info=True)
-    # Unload the model and free GPU memory
+    # Release every runtime that can retain model memory, then free allocator
+    # caches. This includes alternate TTS engines, dictation and translation;
+    # limiting shutdown to the shared OmniVoice model left those runtimes to
+    # process-exit cleanup and made graceful restarts look like crashes.
     try:
         import services.model_manager as mm
-        if mm.unload_shared_model():
-            logger.info("Shutdown: model unloaded.")
+        from services import model_lifecycle
+
+        released = await model_lifecycle.unload_all()
+        if any(result.get("success") for result in released["results"].values()):
+            logger.info("Shutdown: model runtimes unloaded.")
         # Still unconditional: there are allocator caches to hand back even when
         # no model was resident.
         mm.free_vram()
@@ -1263,6 +1273,23 @@ app = FastAPI(
     docs_url=None,       # Disabled — replaced by Scalar at /docs
     redoc_url=None,      # Disabled — Scalar covers this
 )
+
+
+@app.post("/system/shutdown-intent", include_in_schema=False)
+def prepare_deliberate_shutdown_during_startup(request: Request):
+    """Retire crash forensics even while deferred startup is still gated.
+
+    Electron must hard-kill a Windows process tree after a bounded wait.  The
+    ordinary system router is registered only after native/ML imports finish,
+    so a quit during those imports previously received the startup 503 and left
+    a false crash sentinel behind.  Keep this one tiny control route available
+    from socket bind; its authorization remains identical to the system router.
+    """
+    from api.dependencies import require_admin
+    from core import run_sentinel
+
+    require_admin(request)
+    return {"prepared": run_sentinel.clear_sentinel()}
 
 
 @app.get("/docs", include_in_schema=False)
@@ -1454,13 +1481,17 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 _SHELL_PATHS = {"/", "/index.html", "/favicon.ico", "/health"}
 
-# Paths that answer while the deferred startup is still running.
-_STARTUP_EXEMPT = {"/health", "/startup/progress"}
+# Paths that answer while deferred startup is still running. The shutdown
+# signal must exist before the ordinary system router so a bounded Windows
+# process-tree stop cannot leave a false crash sentinel.
+_STARTUP_EXEMPT = {"/health", "/startup/progress", "/system/shutdown-intent"}
 
 
 class StartupGateMiddleware:
-    """503 everything except /health + /startup/progress until the deferred
-    startup completes. Two jobs: honest not-ready signaling (the [starting]
+    """503 work routes until deferred startup completes.
+
+    Readiness probes and deliberate desktop shutdown remain live. Two jobs:
+    honest not-ready signaling (the [starting]
     marker keeps the UI from offering "Report" for it, same convention as
     [shutting_down]), and route-mutation safety — no request can reach the
     router while _phase_a_finalize is still adding routes, because the ready
@@ -1693,10 +1724,12 @@ def _ui_port() -> int:
         return 3901
 
 
+from core.csrf import DEFAULT_DESKTOP_ORIGINS
+
 _ui = _ui_port()
 _allowed = os.environ.get(
     "OMNIVOICE_ALLOWED_ORIGINS",
-    f"http://localhost:{_ui},http://127.0.0.1:{_ui},tauri://localhost,http://tauri.localhost",
+    f"http://localhost:{_ui},http://127.0.0.1:{_ui}," + ",".join(DEFAULT_DESKTOP_ORIGINS),
 ).split(",")
 
 # Registered FIRST → innermost: the startup gate holds every request except

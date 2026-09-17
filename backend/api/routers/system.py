@@ -15,6 +15,8 @@ from api.dependencies import is_loopback, require_admin, require_admin_action
 from fastapi.responses import FileResponse, StreamingResponse
 import torch
 import shutil
+import subprocess
+import shlex
 
 from core.config import OUTPUTS_DIR, DATA_DIR, CRASH_LOG_PATH, LOG_PATH, IDLE_TIMEOUT_SECONDS
 from core.version import APP_VERSION
@@ -38,6 +40,10 @@ logger = logging.getLogger("omnivoice.api")
 # Cache device checks at module load — they don't change at runtime
 _is_mac = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
 _is_cuda = torch.cuda.is_available()
+try:
+    _is_xpu = hasattr(torch, "xpu") and torch.xpu.is_available()
+except Exception:
+    _is_xpu = False
 # Prime psutil's internal CPU counter so the first non-blocking call returns useful data
 psutil.cpu_percent(interval=None)
 
@@ -51,6 +57,14 @@ def _detect_cpu_model() -> str:
                 for line in f:
                     if line.lower().startswith("model name"):
                         return line.split(":", 1)[1].strip()
+        if sys.platform == "win32":
+            import winreg
+
+            with winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"HARDWARE\DESCRIPTION\System\CentralProcessor\0",
+            ) as key:
+                return str(winreg.QueryValueEx(key, "ProcessorNameString")[0]).strip()
         if sys.platform == "darwin":
             import subprocess
             return subprocess.check_output(
@@ -59,6 +73,77 @@ def _detect_cpu_model() -> str:
         return platform.processor() or ""
     except Exception:
         return platform.processor() or ""
+
+
+def _gpu_name_priority(name: str) -> tuple[int, int]:
+    lowered = name.lower()
+    if any(token in lowered for token in ("remote", "virtual", "basic display")):
+        return (-1, len(name))
+    if any(token in lowered for token in ("nvidia", "radeon", "amd", "intel arc")):
+        return (2, len(name))
+    return (1, len(name))
+
+
+def _detect_os_gpu_name() -> str:
+    """Best-effort display-adapter identity when the active torch build is CPU-only."""
+    try:
+        if sys.platform == "win32":
+            executable = shutil.which("powershell.exe") or shutil.which("powershell")
+            if not executable:
+                return ""
+            result = subprocess.run(
+                [
+                    executable,
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-Command",
+                    "Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=3,
+                check=False,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+            names = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+            return max(names, key=_gpu_name_priority, default="")
+        if sys.platform.startswith("linux"):
+            executable = shutil.which("lspci")
+            if not executable:
+                return ""
+            result = subprocess.run(
+                [executable, "-mm"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=False,
+            )
+            names = []
+            for line in result.stdout.splitlines():
+                parts = shlex.split(line)
+                if len(parts) >= 4 and parts[1] in {"VGA compatible controller", "3D controller"}:
+                    names.append(" ".join(parts[2:4]))
+            return max(names, key=_gpu_name_priority, default="")
+        if sys.platform == "darwin":
+            executable = shutil.which("system_profiler")
+            if not executable:
+                return ""
+            result = subprocess.run(
+                [executable, "SPDisplaysDataType"],
+                capture_output=True,
+                text=True,
+                timeout=3,
+                check=False,
+            )
+            names = [
+                line.split(":", 1)[1].strip()
+                for line in result.stdout.splitlines()
+                if "Chipset Model:" in line
+            ]
+            return max(names, key=_gpu_name_priority, default="")
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return ""
+    return ""
 
 
 def _detect_gpu() -> tuple[str, float]:
@@ -71,11 +156,15 @@ def _detect_gpu() -> tuple[str, float]:
         if _is_cuda:
             props = torch.cuda.get_device_properties(0)
             return torch.cuda.get_device_name(0), round(props.total_memory / (1024 ** 3), 1)
+        if _is_xpu:
+            props = torch.xpu.get_device_properties(0)
+            total_memory = float(getattr(props, "total_memory", 0.0))
+            return torch.xpu.get_device_name(0), round(total_memory / (1024 ** 3), 1)
         if _is_mac:
             return "Apple Silicon (MPS)", 0.0
     except Exception:
         pass
-    return "", 0.0
+    return _detect_os_gpu_name(), 0.0
 
 
 # Static hardware facts, captured once — /system/info is hit on every
@@ -91,6 +180,37 @@ def _disk_free_gb() -> float:
         return round(shutil.disk_usage(DATA_DIR).free / (1024 ** 3), 1)
     except Exception:
         return 0.0
+
+
+def _nvidia_live_stats() -> tuple[float, float, float] | None:
+    """Return GPU%, used VRAM GiB, total VRAM GiB without an optional Python dependency."""
+    executable = shutil.which("nvidia-smi")
+    if not executable:
+        return None
+    try:
+        creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        result = subprocess.run(
+            [
+                executable,
+                "--query-gpu=utilization.gpu,memory.used,memory.total",
+                "--format=csv,noheader,nounits",
+                "--id=0",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=1.5,
+            check=False,
+            creationflags=creationflags,
+        )
+        if result.returncode != 0:
+            return None
+        values = [float(value.strip()) for value in result.stdout.splitlines()[0].split(",")]
+        if len(values) != 3:
+            return None
+        utilization, used_mib, total_mib = values
+        return utilization, used_mib / 1024, total_mib / 1024
+    except (OSError, ValueError, IndexError, subprocess.SubprocessError):
+        return None
 
 
 def _ui_port() -> int:
@@ -185,8 +305,8 @@ def loaded_models():
 @router.post("/model/unload/{model_id}")
 async def unload_model(model_id: str):
     """Unload a specific model by id (MM2-04). Delegates to model_lifecycle;
-    an unknown id maps to HTTP 400. ``tts`` | ``diarization`` |
-    ``sidecar:<id>`` | ``sidecars``."""
+    an unknown id maps to HTTP 400. Supports every id returned by
+    ``GET /model/loaded`` plus the aggregate ``sidecars`` id."""
     from services import model_lifecycle
     try:
         return await model_lifecycle.unload(model_id)
@@ -204,7 +324,18 @@ def system_info():
     try:
         _ffmpeg = find_ffmpeg()
         from services import model_manager as _mm
+        from services import asr_backend as _asr_backend
         from core import prefs as _prefs_mod
+        _asr_engine = _asr_backend.active_backend_id()
+        _asr_model = (
+            _asr_backend._offline_asr_repo(_asr_engine)
+            or os.environ.get("ASR_MODEL")
+            or _asr_engine
+        )
+        _translation_provider = (
+            os.environ.get("TRANSLATE_PROVIDER")
+            or _prefs_mod.get("translation_backend", "argos")
+        )
         return {
             "app_version": APP_VERSION,
             "generate_timeout_s": _mm.GPU_JOB_TIMEOUT_S,
@@ -224,8 +355,8 @@ def system_info():
             "crash_log_path": CRASH_LOG_PATH,
             "idle_timeout_seconds": IDLE_TIMEOUT_SECONDS,
             "model_checkpoint": resolve_omnivoice_checkpoint(),  # #693: show the effective checkpoint, not a leaked raw value
-            "asr_model": os.environ.get("ASR_MODEL", "Systran/faster-whisper-large-v3"),
-            "translate_provider": os.environ.get("TRANSLATE_PROVIDER", "google"),
+            "asr_model": _asr_model,
+            "translate_provider": _translation_provider,
             "has_hf_token": _has_hf_token(),
             "fast_download": _fast_download_status(),
             "device": get_best_device(),
@@ -669,6 +800,7 @@ async def clear_tauri_logs():
 @router.get("/sysinfo", response_model=SysinfoResponse)
 def get_sys_info():
     vram = 0.0
+    total_vram = 0.0
     gpu_active = False
 
     try:
@@ -681,18 +813,38 @@ def get_sys_info():
                 vram = alloc() / (1024**3)
         elif _is_cuda:
             vram = torch.cuda.memory_allocated() / (1024**3)
+            total_vram = torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory / (1024**3)
+        elif _is_xpu:
+            vram = torch.xpu.memory_allocated() / (1024**3)
+            total_vram = float(
+                getattr(torch.xpu.get_device_properties(0), "total_memory", 0.0)
+            ) / (1024**3)
     except Exception:
         pass
         
     if vram > 0.01:
         gpu_active = True
 
+    gpu_utilization = None
+    nvidia_stats = _nvidia_live_stats() if _is_cuda else None
+    if nvidia_stats:
+        gpu_utilization, vram, total_vram = nvidia_stats
+        gpu_active = gpu_active or gpu_utilization > 0 or vram > 0.01
+
     vm = psutil.virtual_memory()
+    cpu_frequency = psutil.cpu_freq()
     return {
         "cpu": psutil.cpu_percent(interval=None),
+        "cpu_model": _CPU_MODEL,
+        "cpu_physical_cores": psutil.cpu_count(logical=False) or 0,
+        "cpu_logical_cores": psutil.cpu_count(logical=True) or 0,
+        "cpu_frequency_ghz": round((cpu_frequency.current if cpu_frequency else 0.0) / 1000, 2),
         "ram": vm.used / (1024**3),
         "total_ram": vm.total / (1024**3),
+        "gpu_name": _GPU_NAME,
+        "gpu_utilization": gpu_utilization,
         "vram": round(vram, 2),
+        "total_vram": round(total_vram, 2),
         "gpu_active": gpu_active
     }
 
@@ -708,12 +860,18 @@ async def flush_memory(unload_model: bool = False):
 
     freed_model = False
     if unload_model:
-        import services.model_manager as mm
-        async with mm._model_lock:
-            # Also drops the clone-prompt side cache, which this path used to
-            # leave resident — an "unload" that kept the encoded reference
-            # tensors belonging to the model it just released (#1495).
-            freed_model = mm.unload_shared_model()
+        from services import model_lifecycle
+
+        # The user-facing action has always promised "Unload all". Route it
+        # through the lifecycle facade so alternate TTS engines, dictation,
+        # diarisation, translation and sidecars are released as well as the
+        # shared OmniVoice model. Individual runtimes still decline while
+        # leased by active work.
+        released = await model_lifecycle.unload_all()
+        freed_model = any(
+            bool(result.get("success"))
+            for result in released.get("results", {}).values()
+        )
 
     # Multi-pass GC to break reference cycles
     gc.collect(generation=2)
@@ -883,7 +1041,7 @@ def system_notifications():
         from core import run_sentinel
 
         rec = run_sentinel.newest_record()
-        if rec is not None and not rec[1]:
+        if rec is not None and not rec[1] and run_sentinel.warrants_user_notice(rec[0]):
             record = rec[0]
             last = record.get("last_activity") or {}
             doing = f" Last activity: {last.get('kind')}." if last.get("kind") else ""

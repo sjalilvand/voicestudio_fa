@@ -33,6 +33,7 @@ from worker.transport.client import (
     WorkerConfig,
     backoff_delay,
     config_from_token,
+    describe_host,
 )
 from worker.transport.server import (
     PROTOCOL_VERSION,
@@ -43,6 +44,14 @@ from worker.transport.server import (
 )
 
 ENGINE, MODEL, OP = "indextts", "IndexTTS-2", "tts"
+
+
+def test_describe_host_reports_system_memory(monkeypatch):
+    import psutil
+
+    monkeypatch.setattr(psutil, "virtual_memory", lambda: SimpleNamespace(total=64 * 1024**3))
+
+    assert describe_host()["system_memory_bytes"] == 64 * 1024**3
 
 
 @pytest.fixture

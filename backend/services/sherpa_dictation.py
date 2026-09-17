@@ -411,6 +411,8 @@ def build_offline_recognizer(spec: SherpaModelSpec, *, download: bool = True):
         return os.path.join(d, spec.files[role])
 
     if spec.kind == "offline-transducer":
+        from services.performance_profiles import dictation_decode_defaults
+
         return sherpa_onnx.OfflineRecognizer.from_transducer(
             encoder=p("encoder"),
             decoder=p("decoder"),
@@ -418,7 +420,7 @@ def build_offline_recognizer(spec: SherpaModelSpec, *, download: bool = True):
             tokens=p("tokens"),
             num_threads=_threads_for(spec),
             provider=_PROVIDER,
-            decoding_method="greedy_search",
+            **dictation_decode_defaults(),
             model_type=spec.model_type or "nemo_transducer",
         )
     if spec.kind == "offline-whisper":
@@ -450,6 +452,8 @@ def build_online_recognizer(spec: SherpaModelSpec, *, download: bool = True):
         return os.path.join(d, spec.files[role])
 
     if spec.kind == "online-transducer":
+        from services.performance_profiles import dictation_decode_defaults
+
         return sherpa_onnx.OnlineRecognizer.from_transducer(
             tokens=p("tokens"),
             encoder=p("encoder"),
@@ -457,7 +461,7 @@ def build_online_recognizer(spec: SherpaModelSpec, *, download: bool = True):
             joiner=p("joiner"),
             num_threads=_threads_for(spec),
             provider=_PROVIDER,
-            decoding_method="greedy_search",
+            **dictation_decode_defaults(),
             enable_endpoint_detection=True,
             rule1_min_trailing_silence=rule1,
             rule2_min_trailing_silence=rule2,

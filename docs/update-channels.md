@@ -1,29 +1,32 @@
 # Update channels (Stable / Preview)
 
-VoiceStudio auto-updates itself in the background. You choose **which
-builds** it offers you with the update channel in **Settings → Updates →
-Update channel**.
+VoiceStudio checks for updates shortly after launch and every six hours while
+it stays open. You choose **which builds** it offers you with the update
+channel in **Settings → Updates → Update channel**.
 
 | Channel | What you get | Who it's for |
 |---------|--------------|--------------|
 | **Stable** (default) | The latest tagged `vX.Y.Z` release. | Everyone. This is the default on every install and every launch. |
 | **Preview** | The latest `main` build (a rolling `preview` prerelease). Newer features, less testing. Falls back to a stable release if one is ahead. | Users who want to try fixes/features before they're tagged, and report issues. |
 
-Switching is instant — the next update check (on launch, or via **Check for
-updates**) uses your chosen channel. Your projects, voices, settings, and any
-in-flight job are untouched; an in-progress dub blocks the install until it
-finishes, and your data lives outside the app bundle, so an update never
-touches it.
+Switching is instant — the next automatic or manual check uses your chosen
+channel. Downloads show transferred size, total size, speed, percentage and
+ETA, and can continue while synthesis, transcription or dubbing work runs.
+VoiceStudio only enables **Restart to update** after the package has downloaded
+and passed the updater's signature/checksum verification, and blocks that
+restart until active work has finished and current drafts are flushed.
 
-There are **no accounts, no telemetry, and no extra network calls** — both
-channels just point the existing signed updater at a different GitHub Releases
-manifest:
+There are **no accounts or updater telemetry**. Stable checks fetch only the
+Stable manifest. Preview checks compare the small Stable and Preview manifests,
+then use whichever has the newer version; package download begins when the user
+asks. Both channels use a different release location:
 
-- Stable → `releases/latest/download/latest.json`
-- Preview → `releases/download/preview/latest.json`
+- Stable → `releases/latest/download/`
+- Preview → `releases/download/preview/`
 
-Both manifests are signed with the same minisign key, so a tampered build is
-rejected regardless of channel.
+The Electron feed publishes a platform/architecture-specific manifest with a
+SHA-512 package checksum; the Tauri feed publishes its signed `latest.json`.
+Each desktop shell rejects a package that fails its integrity check.
 
 ## Your data during updates
 
