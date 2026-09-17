@@ -174,12 +174,12 @@ def _binary_runs(path: str) -> bool:
     if cached is not None:
         return cached
     try:
-        subprocess.run(
+        result = subprocess.run(
             [path, "-version"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             timeout=10, check=False,
         )
-        ok = True
+        ok = result.returncode == 0
     except (OSError, subprocess.TimeoutExpired, subprocess.SubprocessError) as e:
         logger.warning(
             "Rejecting non-runnable ffmpeg/ffprobe candidate %s: %s",
