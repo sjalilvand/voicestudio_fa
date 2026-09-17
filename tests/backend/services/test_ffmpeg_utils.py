@@ -131,8 +131,9 @@ def test_resolve_ffprobe_env_var_with_command_name_resolves_via_which(
     assert ffmpeg_utils.resolve_ffprobe() == str(fake)
 
 
+@pytest.mark.parametrize("runnable", [True, False])
 @pytest.mark.parametrize("binary_name", ["ffmpeg", "ffmpeg.exe"])
-def test_find_ffprobe_preserves_ffmpeg_parent_directory(monkeypatch, tmp_path, binary_name):
+def test_find_ffprobe_preserves_ffmpeg_parent_directory(monkeypatch, tmp_path, binary_name, runnable):
     from services import ffmpeg_utils
 
     bindir = tmp_path / "ffmpeg" / "bin"
@@ -143,7 +144,8 @@ def test_find_ffprobe_preserves_ffmpeg_parent_directory(monkeypatch, tmp_path, b
     monkeypatch.setattr(ffmpeg_utils, "resolve_ffprobe", lambda: None)
     monkeypatch.setattr(ffmpeg_utils, "find_ffmpeg", lambda: str(ffmpeg))
 
-    assert ffmpeg_utils.find_ffprobe() == str(ffprobe)
+    monkeypatch.setattr(ffmpeg_utils, "_binary_runs", lambda candidate: runnable)
+    assert ffmpeg_utils.find_ffprobe() == (str(ffprobe) if runnable else None)
 
 
 class _ShutilStub:

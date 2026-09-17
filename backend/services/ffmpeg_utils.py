@@ -313,7 +313,7 @@ def find_ffprobe():
                 os.path.dirname(ffmpeg_path),
                 os.path.basename(ffmpeg_path).replace("ffmpeg", "ffprobe"),
             )
-            if os.path.isfile(candidate):
+            if os.path.isfile(candidate) and _binary_runs(candidate):
                 return candidate
     except Exception:
         pass
