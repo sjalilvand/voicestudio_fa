@@ -2,11 +2,17 @@ import { clearConversion } from './conversion-state';
 import { cleanup, fireEvent, render, screen, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, expect, it, vi } from 'vitest';
-const mock = vi.hoisted(() => ({ queryError: false, retry: vi.fn(), convert: vi.fn(), ready: true, cloning: true as boolean | null }));
+const mock = vi.hoisted(() => ({
+  queryError: false,
+  retry: vi.fn(),
+  convert: vi.fn(),
+  ready: true,
+  cloning: true as boolean | null,
+}));
 vi.mock('@/hooks/use-engines', () => ({
   useEngines: () => ({
     isError: mock.queryError,
-    error: new Error("Engine query failed"),
+    error: new Error('Engine query failed'),
     retry: mock.retry,
     data: mock.queryError ? undefined : {},
     activeTtsReady: mock.ready,
