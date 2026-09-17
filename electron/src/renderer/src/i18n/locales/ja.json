@@ -2237,6 +2237,7 @@
     "tailscale_qr_alt": "Tailscale URL の QR コード"
   },
   "convert": {
+    "cloning_required": "音声クローンに対応した、使用可能な音声合成モデルを選択してください。",
     "source_kicker": "ソースクリップ",
     "drop_audio": "変換するクリップをドロップ — またはクリック。WAV、MP3、M4A…",
     "target_voice": "変換先の声",
