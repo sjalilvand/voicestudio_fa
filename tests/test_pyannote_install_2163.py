@@ -25,7 +25,6 @@ os.environ.setdefault("OMNIVOICE_DISABLE_FILE_LOG", "1")
 
 import pytest
 
-from services.token_resolver import ResolvedToken
 
 
 PIPELINE = "pyannote/speaker-diarization-3.1"
@@ -45,6 +44,7 @@ def _install_pyannote(download, monkeypatch, tmp_path):
 
     Returns (snapshot_download kwargs per call, emitted SSE events).
     """
+    from services.token_resolver import ResolvedToken
     import huggingface_hub
     from services import hf_revisions, performance_profiles, token_resolver
     from utils import hf_progress

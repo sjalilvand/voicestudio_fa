@@ -55,7 +55,7 @@ def test_config_only_entries_declare_the_files_that_complete_them():
         if not m.get("config_only"):
             continue
         required = m.get("config_required_files")
-        assert required, f"{m['repo_id']}: config_only needs config_required_files"
+        assert isinstance(required, list) and required, f"{m['repo_id']}: config_only needs a nonempty config_required_files list"
         assert all(
             isinstance(name, str) and name.strip() for name in required
         ), f"{m['repo_id']}: blank entry in config_required_files"
@@ -68,7 +68,10 @@ def test_dependency_declarations_are_installable():
         for dependency in m.get("dependencies") or ():
             rid = dependency.get("repo_id")
             assert rid and _REPO_RE.match(rid), f"malformed dependency repo_id: {rid!r}"
-            assert dependency.get("required_files"), (
+            required = dependency.get("required_files")
+            assert isinstance(required, list) and required and all(
+                isinstance(name, str) and name.strip() for name in required
+            ), (
                 f"{m['repo_id']} → {rid}: dependency needs required_files"
             )
 

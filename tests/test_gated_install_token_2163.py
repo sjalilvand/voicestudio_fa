@@ -25,7 +25,6 @@ os.environ.setdefault("OMNIVOICE_DISABLE_FILE_LOG", "1")
 
 import pytest
 
-from services.token_resolver import ResolvedToken
 
 
 @pytest.fixture
@@ -88,6 +87,7 @@ def _drive_segmented(download, monkeypatch, tmp_path, resolved):
 def test_segmented_install_sends_the_bearer_string_to_every_consumer(
     download, monkeypatch, tmp_path
 ):
+    from services.token_resolver import ResolvedToken
     seen = _drive_segmented(
         download,
         monkeypatch,
@@ -122,6 +122,7 @@ def test_a_token_record_would_build_a_broken_authorization_header():
     header; given the record it produces a malformed one that also inlines the
     raw secret. This is the failure #2163 reported as a 401.
     """
+    from services.token_resolver import ResolvedToken
     from services.segmented_download import _auth_headers
 
     url = "https://huggingface.co/pyannote/speaker-diarization-3.1/resolve/main/config.yaml"
