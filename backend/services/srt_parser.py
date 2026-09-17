@@ -86,8 +86,14 @@ def parse_srt(content: str) -> SrtParseResult:
         # example timestamp inside a NOTE/STYLE/REGION cannot become speech.
         blocks = []
         for block in re.split(r"\n[^\S\n]*\n", text):
-            first = block.strip().split("\n", 1)[0].strip()
-            if first in {"STYLE", "REGION"} or re.match(r"NOTE(?:[ \t]|$)", first):
+            lines = block.strip("\n").split("\n")
+            first = lines[0].strip()
+            # WebVTT's block parser gives a timing line in position two
+            # precedence over the identifier (including STYLE/REGION/NOTE).
+            # https://www.w3.org/TR/webvtt1/#file-parsing
+            identifies_cue = len(lines) > 1 and _TIMING_RE.match(lines[1])
+            metadata = first in {"STYLE", "REGION"} or re.match(r"NOTE(?:[ \t]|$)", first)
+            if metadata and not identifies_cue:
                 continue
             blocks.append(block)
         text = "\n\n".join(blocks)
@@ -110,7 +116,7 @@ def parse_srt(content: str) -> SrtParseResult:
         if is_webvtt:
             # The blank separator ends WebVTT dialogue; following identifiers,
             # NOTE/STYLE blocks belong outside the cue, even when numeric.
-            body = re.split(r"\n[^\S\n]*\n", body.lstrip("\n"), maxsplit=1)[0]
+            body = re.split(r"\n[^\S\n]*\n", body, maxsplit=1)[0]
         # An index must directly precede the next timing line. A blank line
         # AFTER a number instead marks that number as preceding dialogue.
         next_index = None
