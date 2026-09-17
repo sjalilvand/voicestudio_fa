@@ -365,3 +365,9 @@ def test_skipped_cue_still_advances_numbering_state():
     result = parse_srt(text)
     assert result.skipped_cues == 1
     assert [cue["text"] for cue in result.segments] == ["First", "Third", "Fourth"]
+
+
+
+def test_numeric_only_cue_after_invalid_cue_is_not_discarded():
+    text = "1\n00:00:01,000 --> 00:00:02,000\nFirst\n\n2\n00:00:04,000 --> 00:00:03,000\nInvalid\n\n3\n00:00:05,000 --> 00:00:06,000\n4\n00:00:07,000 --> 00:00:08,000\nLast"
+    assert [cue["text"] for cue in parse_srt(text).segments] == ["First", "4", "Last"]
