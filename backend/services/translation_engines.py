@@ -39,7 +39,12 @@ REGISTRY: dict[str, dict] = {
         "id": "argos",
         "display_name": "Argos (Local, Fast)",
         "pip_package": "argostranslate",
-        "probe_module": "argostranslate",
+        # `argostranslate.translate`, not the bare package: the translator runs
+        # on CTranslate2, and the bare package imports fine on a host whose
+        # kernel rejects CTranslate2's native library (#692) — so a shallow
+        # probe advertised Argos as ready and every translate 500'd. Probe the
+        # module that actually pulls the native dep (same lesson as #1185).
+        "probe_module": "argostranslate.translate",
         "category": "offline",
         "needs_key": False,
         "builtin": True,
@@ -123,7 +128,19 @@ def is_frozen() -> bool:
 def _probe(entry: dict) -> tuple[bool, str | None]:
     mod = entry.get("probe_module")
     if not mod:
-        return True, None
+       return True, None
+    if mod.startswith("argostranslate"):
+        # Repair CTranslate2's exec-stack request before the import that would
+        # be rejected by it (#692) — otherwise Argos, the default offline
+        # engine, is unusable on kernels that refuse an executable stack.
+        try:
+            from core.execstack import ensure_ctranslate2_loadable
+
+            ok, detail = ensure_ctranslate2_loadable()
+            if not ok:
+                return False, detail
+        except Exception as e:  # noqa: BLE001 — a broken repair must not hide the engine
+            logger.debug("exec-stack repair unavailable (%s) — probing anyway", e)
     try:
         importlib.import_module(mod)
         if entry.get("id") == "nllb":
@@ -141,6 +158,11 @@ def _probe(entry: dict) -> tuple[bool, str | None]:
         return True, None
     except ImportError as e:
         return False, f"import {mod!r} failed: {e}"
+    except Exception as e:  # noqa: BLE001
+        # A native library that refuses to load raises OSError, not ImportError
+        # (#692). An availability probe must report "unusable here", never take
+        # the engine list down with it.
+        return False, f"import {mod!r} failed ({type(e).__name__}): {e}"
 
 
 def install_command(engine: "str | dict | None") -> str | None:
