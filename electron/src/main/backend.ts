@@ -563,6 +563,15 @@ export class BackendSupervisor extends EventEmitter<{
           'Creating a separate Electron runtime; existing environment preserved.',
         );
         this.emitStatus();
+        const fallbackReusable =
+          ((await runtimeReady(backendRoot(), project)) ||
+            (await runtimeCompatible(backendRoot(), project))) &&
+          (await runtimeDependenciesReady(project));
+        if (gen !== this.generation || controller.signal.aborted) return;
+        if (fallbackReusable) {
+          await this.start();
+          return;
+        }
       }
       if (
         configured &&

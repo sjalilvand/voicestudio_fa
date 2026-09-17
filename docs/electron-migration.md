@@ -32,3 +32,7 @@ modifying or taking ownership of the existing environment.
 A new custom runtime destination remains selectable. Setup creates and owns it
 only when that directory does not already exist; existing unowned roots stay
 untouched even if their `project` subdirectory is missing.
+
+Dependency checks ignore inherited `PYTHONPATH` and `PYTHONHOME`, matching backend
+startup. If repair switches away from an unowned environment and a healthy
+Electron runtime already exists, it is reused without reinstalling dependencies.

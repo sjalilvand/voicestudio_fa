@@ -250,6 +250,12 @@ export async function runtimeInstallInterrupted(project: string): Promise<boolea
 
 /** Check the selected interpreter locally before trusting runtime metadata. */
 export async function runtimeDependenciesReady(project: string): Promise<boolean> {
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  delete env.PYTHONHOME;
+  delete env.PYTHONPATH;
+  env.HF_HUB_OFFLINE = '1';
+  env.TRANSFORMERS_OFFLINE = '1';
+  env.PYTHONNOUSERSITE = '1';
   return new Promise((resolve) => {
     execFile(
       runtimePython(project),
@@ -259,12 +265,7 @@ export async function runtimeDependenciesReady(project: string): Promise<boolean
         windowsHide: true,
         timeout: 30_000,
         maxBuffer: 256 * 1024,
-        env: {
-          ...process.env,
-          HF_HUB_OFFLINE: '1',
-          TRANSFORMERS_OFFLINE: '1',
-          PYTHONNOUSERSITE: '1',
-        },
+        env,
       },
       (error) => resolve(!error),
     );

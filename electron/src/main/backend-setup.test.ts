@@ -433,9 +433,7 @@ it.each([true, false])(
     mocks.existingProject = projectExists;
     mocks.existingRoot = true;
     mocks.ready.mockResolvedValue(true);
-    mocks.dependencies.mockImplementation(
-      async (project?: string) => !project?.includes('selected'),
-    );
+    mocks.dependencies.mockResolvedValue(false);
     mocks.install.mockRejectedValue(new Error('offline'));
     vi.stubGlobal(
       'fetch',
@@ -479,5 +477,33 @@ it('installs into a newly selected custom destination that does not yet exist', 
   await supervisor.setupRuntime();
   expect(mocks.install.mock.calls[0][1]).toBe(join(selected, 'project'));
   expect(mocks.runtimeConfig).toEqual({ root: selected, owned: true });
+  await supervisor.shutdown();
+});
+
+it('reuses a healthy default runtime after explicit setup leaves an unowned environment', async () => {
+  const { resolve, join } = await import('node:path');
+  mocks.runtimeConfig = { root: resolve('/selected/VoiceStudio'), owned: false };
+  mocks.existingRoot = true;
+  mocks.ready.mockResolvedValue(true);
+  mocks.dependencies.mockImplementation(async (project?: string) => !project?.includes('selected'));
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => {
+      throw new Error('no backend');
+    }),
+  );
+  vi.stubEnv('OMNIVOICE_BACKEND_CMD', '');
+  vi.stubEnv('VOICESTUDIO_SKIP_BACKEND', '');
+  const supervisor = new BackendSupervisor();
+  await supervisor.start();
+  expect(supervisor.status.stage).toBe('setup_required');
+  const restart = vi.spyOn(supervisor, 'start').mockResolvedValue();
+  await supervisor.setupRuntime();
+  expect(mocks.install).not.toHaveBeenCalled();
+  expect(mocks.dependencies).toHaveBeenCalledWith(
+    join('/private/voicestudio', 'runtime', 'project'),
+  );
+  expect(restart).toHaveBeenCalledOnce();
+  restart.mockRestore();
   await supervisor.shutdown();
 });
