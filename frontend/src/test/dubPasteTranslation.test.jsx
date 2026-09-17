@@ -445,3 +445,7 @@ describe('DubPasteTranslationDialog', () => {
 it('keeps an hourless timestamp embedded in prose as plain text', () => {
   expect(detectPasteMode('Continue at 01:30.000 --> the finale')).toBe('plain');
 });
+
+it('keeps an incomplete timing line as plain text', () => {
+  expect(detectPasteMode('01:30.000 --> the finale')).toBe('plain');
+});
