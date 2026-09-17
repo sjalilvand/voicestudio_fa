@@ -8,6 +8,14 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ## [Unreleased]
 
+**Highlights**
+
+- Import an EPUB that is not UTF-8 without losing its accents (#2191)
+
+### Fixed
+
+- EPUB import reads each chapter in the encoding it declares, so accents, dashes and curly quotes survive instead of being dropped (#2191)
+
 ## [0.5.4] — 2026-09-17
 
 **More reliable setup, generation, and dubbing.** This patch detects incomplete desktop runtimes before startup, repairs them without overwriting an existing Tauri installation, and makes engine failures easier to recover from. It also fixes gated model downloads, subtitle imports, and saved-voice language errors.
