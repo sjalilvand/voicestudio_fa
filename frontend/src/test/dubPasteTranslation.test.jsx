@@ -427,7 +427,6 @@ describe('DubPasteTranslationDialog', () => {
   });
 });
 
-
 it('keeps an hourless timestamp embedded in prose as plain text', () => {
   expect(detectPasteMode('Continue at 01:30.000 --> the finale')).toBe('plain');
 });
