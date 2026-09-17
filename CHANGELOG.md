@@ -59,6 +59,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Require the pinned Apple Silicon GGUF build to pass and document runtime preflight conditions (#2115) — thanks @LMGXENON and @martinezpl!
 
+- Correct the Windows Rustup installation command in tooling and documentation (#2066) — thanks @Rukhaam!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**
