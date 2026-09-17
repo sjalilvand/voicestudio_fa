@@ -15,9 +15,16 @@ class SysinfoResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     cpu: float = Field(description="CPU usage percentage (0–100)")
+    cpu_model: str = ""
+    cpu_physical_cores: int = 0
+    cpu_logical_cores: int = 0
+    cpu_frequency_ghz: float = 0.0
     ram: float = Field(description="Used RAM in GiB")
     total_ram: float = Field(description="Total RAM in GiB")
+    gpu_name: str = ""
+    gpu_utilization: float | None = None
     vram: float = Field(0.0, description="Used VRAM in GiB")
+    total_vram: float = Field(0.0, description="Total VRAM in GiB when reported by the runtime")
     gpu_active: bool = Field(False, description="Whether a GPU is actively used")
 
 
@@ -82,7 +89,7 @@ class ModelStatusResponse(BaseModel):
     status: str = Field(description="idle | loading | ready")
     checkpoint: str | None = None
     loaded_at: str | None = None
-    sub_stage: str | None = Field(None, description="Current loading sub-stage: importing | loading_weights | loading_asr | compiling | ready | error")
+    sub_stage: str | None = Field(None, description="Current TTS loading sub-stage: importing | loading_weights | compiling | ready | error")
     detail: str | None = Field(None, description="Human-readable detail of current loading phase")
     error: str | None = Field(None, description="Error message if loading failed")
 

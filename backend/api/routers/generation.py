@@ -1366,12 +1366,12 @@ async def generate_speech(
     ref_text: Optional[str] = Form(None),
     instruct: Optional[str] = Form(None),
     duration: Optional[float] = Form(None),
-    num_step: int = Form(16),
+    num_step: Optional[int] = Form(None),
     guidance_scale: float = Form(2.0),
     speed: float = Form(1.0),
     t_shift: Optional[float] = Form(None),
     denoise: bool = Form(True),
-    postprocess_output: bool = Form(True),
+    postprocess_output: Optional[bool] = Form(None),
     layer_penalty_factor: Optional[float] = Form(None),
     position_temperature: Optional[float] = Form(None),
     class_temperature: Optional[float] = Form(None),
@@ -1417,6 +1417,13 @@ async def generate_speech(
     )
 
     engine_id = engine or active_backend_id()
+    from services.performance_profiles import tts_defaults
+
+    sampling_defaults = tts_defaults(engine_id)
+    if num_step is None:
+        num_step = sampling_defaults.get("num_step", 16)
+    if postprocess_output is None:
+        postprocess_output = sampling_defaults.get("postprocess_output", True)
     try:
         backend_cls = get_backend_class(engine_id)
     except ValueError:

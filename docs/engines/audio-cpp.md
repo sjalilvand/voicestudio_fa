@@ -42,30 +42,38 @@ instead of that dedicated-VRAM floor.
 
 ## Install
 
-1. Download the v0.7.2 prebuilt for your platform from
-   [audio.cpp releases](https://github.com/0xShug0/audio.cpp/releases/tag/v0.7.2)
+On a supported desktop, install the model from **Settings → Models**, then use
+**Install runtime** on the audio.cpp/Sortformer engine row. VoiceStudio fetches
+the pinned archive, verifies its published size and SHA-256, rejects unsafe
+archive paths, probes its device list, and installs it under the update-surviving
+app-data engine directory. The action is explicit; generation never downloads
+or updates executable code.
+
+For a user-managed runtime:
+
+1. Download the v0.7.4 prebuilt for your platform from
+   [audio.cpp releases](https://github.com/0xShug0/audio.cpp/releases/tag/v0.7.4)
    and extract it. Use the Vulkan archive on Windows or Linux for broad GPU
    support, the CPU archive when Vulkan is unavailable, or the matching CUDA
    archive on Windows for NVIDIA. A Windows CUDA install needs both the
    `bin-…-cuda…` and matching `cudart-…-cuda…` archives extracted into the
-   same directory, as required by upstream. VoiceStudio does not download
-   executable code for this engine. Linux archives do not preserve the
+   same directory, as required by upstream. Linux archives do not preserve the
    executable bit, so run `chmod +x audiocpp_server` after extracting one.
 
    Verify the archive before extracting it. The pinned SHA-256 checksums are:
 
    | Archive | SHA-256 |
    |---|---|
-   | `audio-v0.7.2-bin-windows-x64-cpu-portable.zip` | `0b1f4bd78c5226ee3fa0eb24d95d603a429439cdf5dab45872d44a87412dd8c1` |
-   | `audio-v0.7.2-bin-windows-x64-vulkan.zip` | `15b8232eae740e21e507d87f827a89966de9451b085a45932d9e214e032962c1` |
-   | `audio-v0.7.2-bin-windows-x64-cuda12.4.zip` | `06c426095008022a2984ff1c75de4c9fab463c4201c0ff0a5dc4e14043f52326` |
-   | `audio-v0.7.2-cudart-windows-x64-cuda12.4.zip` | `7115be4d462817ad293f7932a8ac436d51023128e6728af09bba92a85593f393` |
-   | `audio-v0.7.2-bin-windows-x64-cuda13.3.zip` | `f975fec52745807b8c787e826c110acc3424a45156092455e1635604b68ec832` |
-   | `audio-v0.7.2-cudart-windows-x64-cuda13.3.zip` | `9b508f702636a9cdf3bf4dd8e75a86c20a0b87bdc39ca07e714c82f748efc1fa` |
-   | `audio-v0.7.2-bin-ubuntu-x64-cpu.tar.gz` | `6f5e43dd7b80e8ddf688ef84b411fadcd1f934d2c83963178bc4e2d9c4f07736` |
-   | `audio-v0.7.2-bin-ubuntu-x64-vulkan.tar.gz` | `fee1f978cee76453cf17f00196554bc2ee294645739538af0726a143b6a69a23` |
-   | `audio-v0.7.2-bin-macos-arm64-metal.tar.gz` | `c01e4f82971bedbe341697e63a9cebd5a5d1f72d5a9bcb51a3191f95ddab7a95` |
-   | `audio-v0.7.2-bin-macos-x64-metal.tar.gz` | `3862270f33439077225324169313f727064f727305b54d8ce920244d75ddcc24` |
+   | `audio-v0.7.4-bin-windows-x64-cpu-portable.zip` | `d241c56ba78fd3c1b28bf289792fb8ec258d36586b4e0c8d667080ec248c0d2f` |
+   | `audio-v0.7.4-bin-windows-x64-vulkan.zip` | `057332f9e3fb37706a8ecb5075ac1797efcd85fdccd739f7b65761a5920f2828` |
+   | `audio-v0.7.4-bin-windows-x64-cuda12.4.zip` | `83fdd5b6e7bd4362604c10cc88d7d3564ef82030dc1d21c693a62cdcbe2e5e38` |
+   | `audio-v0.7.4-cudart-windows-x64-cuda12.4.zip` | `88d8943a2a8011f02c2a4efa7dbbe258608362615cce51e7f0e0e3a0c62f5a43` |
+   | `audio-v0.7.4-bin-windows-x64-cuda13.3.zip` | `af56012969bcb68f54e6ea14a123e5c6ecd62830c1b2816080eb7f99d985a779` |
+   | `audio-v0.7.4-cudart-windows-x64-cuda13.3.zip` | `c20793d8cc9b7c66ab28ab335aa908c726f2df15832330ddcfdbc837c7670145` |
+   | `audio-v0.7.4-bin-ubuntu-x64-cpu.tar.gz` | `638e6114550c5ea02b96907de400379c8f31bd13325525083f98d158027acc40` |
+   | `audio-v0.7.4-bin-ubuntu-x64-vulkan.tar.gz` | `e0ef3123a9f94e130ad463db0db5a69b65485ef8db1b46edead00c03a86fa787` |
+   | `audio-v0.7.4-bin-macos-arm64-metal.tar.gz` | `639926715b1cb537f82aa31656aabbae5d9a85ac36568c402026968f3072e2b3` |
+   | `audio-v0.7.4-bin-macos-x64-metal.tar.gz` | `bdb797d54dcf8416bd5ac0fac282ce5500dd08843f8f22e20e9fc378ebc24c1f` |
 
    Run `sha256sum <archive>` on Linux, `shasum -a 256 <archive>` on macOS,
    or `Get-FileHash <archive> -Algorithm SHA256` in PowerShell and compare the
@@ -140,3 +148,5 @@ complete reinstall, file an issue with the package listing.
 audio.cpp runs as a managed native server (no Python venv, no
 `transformers` conflict). Only the downloaded GGUF counts toward
 [sidecar disk usage](disk-usage.md).
+
+The catalogue checks the exact Breeze Q8_0 package inside the shared GGUF repository. Other audio.cpp packages do not make Breeze appear installed. Required weight files must also satisfy the normal weight-size floor; empty or truncated placeholders remain incomplete. Broader native model discovery and execution are still pending integration.

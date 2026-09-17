@@ -351,6 +351,29 @@ def test_backend_streaming_flag(fake_sherpa, no_download):
     assert not ab.SherpaDictationBackend(model_id="sherpa-parakeet-tdt-v3").streaming
 
 
+@pytest.mark.parametrize("model_id,is_online", [
+    ("sherpa-parakeet-tdt-v3", False),
+    ("sherpa-zipformer-en-20m", True),
+])
+def test_transducer_performance_profile_controls_decode_search(
+    fake_sherpa, no_download, monkeypatch, model_id, is_online,
+):
+    from services import performance_profiles as profiles
+    from services import sherpa_dictation as sd
+
+    monkeypatch.setattr(profiles, "requested_tier", lambda family: "quality")
+    spec = sd.get_spec(model_id)
+    if is_online:
+        sd.build_online_recognizer(spec)
+        kwargs = fake_sherpa.OnlineRecognizer.last_kwargs
+    else:
+        sd.build_offline_recognizer(spec)
+        kwargs = fake_sherpa.OfflineRecognizer.last_kwargs
+
+    assert kwargs["decoding_method"] == "modified_beam_search"
+    assert kwargs["max_active_paths"] == 4
+
+
 def test_unknown_model_id_raises(fake_sherpa):
     from services import asr_backend as ab
     with pytest.raises(ValueError):
@@ -439,6 +462,27 @@ def test_get_sherpa_dictation_backend_reuses_warm_singleton(fake_sherpa, no_down
     assert b3 is not b1
     assert b3.spec.id == "sherpa-parakeet-tdt-v3"
 
+    ab._capture_backend = None
+    ab._capture_backend_key = None
+
+
+def test_performance_tier_change_rebuilds_warm_dictation_backend(
+    fake_sherpa, no_download, monkeypatch,
+):
+    from core import prefs as _prefs
+    from services import asr_backend as ab
+
+    stored = {"performance_profile": {"dictation": "balanced"}}
+    monkeypatch.setattr(_prefs, "get", lambda key, default=None: stored.get(key, default))
+    ab._capture_backend = None
+    ab._capture_backend_key = None
+
+    balanced = ab.get_sherpa_dictation_backend("sherpa-parakeet-tdt-v3")
+    stored["performance_profile"]["dictation"] = "quality"
+    quality = ab.get_sherpa_dictation_backend("sherpa-parakeet-tdt-v3")
+
+    assert quality is not balanced
+    assert quality.performance_tier == "quality"
     ab._capture_backend = None
     ab._capture_backend_key = None
 

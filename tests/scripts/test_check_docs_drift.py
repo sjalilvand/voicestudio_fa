@@ -168,3 +168,16 @@ def test_real_repo_is_clean(drift_module):
     """The shipped inventory must match the shipped README/registries."""
     repo = Path(__file__).resolve().parents[2]
     assert drift_module.main([], root=repo) == 0
+
+
+def test_linked_catalog_is_checked_and_must_remain_discoverable(drift_module, tmp_path):
+    root = _make_root(tmp_path, inventory='catalog: docs/catalog.md\n' + _INVENTORY,
+                      readme='[Full catalog](docs/catalog.md)')
+    catalog = root / 'docs/catalog.md'
+    catalog.write_text(_README, encoding='utf-8')
+    assert drift_module.main([], root=root) == 0
+    catalog.write_text(_README.replace('Voice Cloning', 'Removed'), encoding='utf-8')
+    assert drift_module.main([], root=root) == 1
+    catalog.write_text(_README, encoding='utf-8')
+    (root / 'README.md').write_text('No catalog link', encoding='utf-8')
+    assert drift_module.main([], root=root) == 1

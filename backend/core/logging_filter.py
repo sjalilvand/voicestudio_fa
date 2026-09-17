@@ -57,6 +57,48 @@ class HFTokenRedactor(logging.Filter):
         return True
 
 
+class RoutineHealthAccessFilter(logging.Filter):
+    """Drop only successful routine liveness access lines.
+
+    The desktop supervisor probes every two seconds. Startup/not-ready responses
+    and every other request remain visible, while the steady-state 200 line no
+    longer consumes the small rotating diagnostic log.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            args = record.args
+            if not isinstance(args, tuple) or len(args) < 5:
+                return True
+            _client, method, path, _http_version, status = args[:5]
+            return not (
+                method == "GET"
+                and str(path).partition("?")[0] == "/health"
+                and int(status) == 200
+            )
+        except (TypeError, ValueError):
+            return True
+
+
+class RoutineAsyncioTransportFilter(logging.Filter):
+    """Drop only expected socket-close noise from asyncio's transport layer."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            message = record.getMessage()
+            if record.levelno == logging.WARNING and "socket.send() raised exception" in message:
+                return False
+            exception = record.exc_info[1] if record.exc_info else None
+            return not (
+                message.startswith(
+                    "Exception in callback _ProactorBasePipeTransport._call_connection_lost"
+                )
+                and isinstance(exception, (BrokenPipeError, ConnectionResetError))
+            )
+        except Exception:
+            return True
+
+
 def install_redaction_filter(root_logger: logging.Logger | None = None) -> None:
     """Attach a single HFTokenRedactor to the root logger and to every
     existing handler. Idempotent — repeated calls do not stack up duplicate
@@ -69,3 +111,17 @@ def install_redaction_filter(root_logger: logging.Logger | None = None) -> None:
     for handler in list(target.handlers):
         if not any(isinstance(f, HFTokenRedactor) for f in handler.filters):
             handler.addFilter(HFTokenRedactor())
+
+
+def install_access_log_filter(logger: logging.Logger | None = None) -> None:
+    """Install the routine-health filter on Uvicorn's access logger once."""
+    target = logger or logging.getLogger("uvicorn.access")
+    if not any(isinstance(item, RoutineHealthAccessFilter) for item in target.filters):
+        target.addFilter(RoutineHealthAccessFilter())
+
+
+def install_asyncio_transport_filter(logger: logging.Logger | None = None) -> None:
+    """Install the expected transport-close filter on asyncio once."""
+    target = logger or logging.getLogger("asyncio")
+    if not any(isinstance(item, RoutineAsyncioTransportFilter) for item in target.filters):
+        target.addFilter(RoutineAsyncioTransportFilter())

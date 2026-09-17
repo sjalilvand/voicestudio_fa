@@ -251,7 +251,7 @@ def test_zero_and_negative_duration_segments_dont_crash(patched_generate):
         {"start": 0.0, "end": 1.0, "text": "0.5:hola"},  # normal → seg_es_0.wav
         {"start": 1.0, "end": 1.0, "text": ""},          # zero duration
         {"start": 2.0, "end": 2.8, "text": "   "},       # positive silence → mix temp
-        {"start": 4.0, "end": 3.5, "text": "boom"},      # negative duration
+        {"start": 4.0, "end": 3.5, "text": ""},      # negative duration
     ]
     parsed = run(_body(segs, timing_strategy="concise"))
 
@@ -349,23 +349,13 @@ def test_smart_fit_fit_options_override(patched_generate):
     run, model, job, job_dir = patched_generate
     job["duration"] = 1.0
     segs = [{"start": 0.0, "end": 1.0, "text": "2.0:texto"}]
-    done = _done(run(_body(
-        segs,
-        timing_strategy="smart_fit",
+    parsed = run(_body(
+        segs, timing_strategy="smart_fit",
         fit_options={"allow_video_retime": False},
-    )))
-    fs = done["fit_status"][0]
-    # Audio-only mode: 1.8× hard cap, residual trimmed; timeline unchanged.
-    assert fs["status"] == "overflow_trimmed"
-    assert fs["audio_rate"] == pytest.approx(1.8, abs=1e-3)
-    assert "video_ratio" not in fs
-    assert fs["overflow_s"] == pytest.approx(2.0 / 1.8 - 1.0, abs=1e-2)
-    n, sr = _track_samples(job_dir)
-    assert n == int(1.0 * sr)
-    assert job["fit_plans"]["es"]["params"]["allow_video_retime"] is False
-    # Different knobs → different fit fingerprint than the defaults.
-    from services.incremental import fit_fingerprint
-    assert job["fit_plans"]["es"]["fit_fp"] != fit_fingerprint({})
+    ))
+    assert any(e.get("error_code") == "dub_timing_overflow" for e in parsed)
+    assert not any(e.get("type") == "done" for e in parsed)
+    assert not (job_dir / "dubbed_es.wav").exists()
 
 
 # ── Strategy-transition guard + fit-only re-mix ────────────────────────
@@ -380,10 +370,12 @@ def test_strict_slot_to_smart_fit_forces_one_full_regen(patched_generate):
 
     # strict_slot run → slot-squeezed WAVs on disk.
     run(_body(segs, timing_strategy="strict_slot"))
-    assert job["seg_wav_kind"] == "slotted"
+    assert job["seg_wav_kind"] == "natural"
+    job["seg_wav_kind"] = "slotted"
+    job["seg_wav_kind_by_lang"]["es"] = "slotted"
     import torchaudio
     wav, _ = torchaudio.load(str(job_dir / "seg_es_0.wav"))
-    assert wav.shape[-1] == int(1.0 * SR)  # squeezed to the 1s slot
+    assert wav.shape[-1] == int(1.5 * SR)  # current caches retain full speech
 
     # smart_fit "re-mix only" request — but the disk WAVs are slotted, so
     # the guard must force a full re-TTS instead of double-compressing.
@@ -414,18 +406,20 @@ def test_strict_slot_to_natural_mode_forces_one_full_regen(
 ):
     """Every natural-rate timing mode needs the slotted-cache guard.
 
-    A strict-slot render destructively trims its durable segment WAVs.  A later
+    A legacy strict-slot render destructively trimmed its durable segment WAVs.  A later
     natural-rate re-mix cannot recover the missing tails from those files, and
     must synthesize once before it may label the cache ``natural``.
     """
     run, model, job, job_dir = patched_generate
     segs = [
-        {"start": 0.0, "end": 1.0, "text": "1.5:uno"},
-        {"start": 2.0, "end": 3.0, "text": "1.5:dos"},
+        {"start": 0.0, "end": 2.0, "text": "1.5:uno"},
+        {"start": 2.0, "end": 4.0, "text": "1.5:dos"},
     ]
 
     run(_body(segs, timing_strategy="strict_slot"))
-    assert job["seg_wav_kind"] == "slotted"
+    assert job["seg_wav_kind"] == "natural"
+    job["seg_wav_kind"] = "slotted"
+    job["seg_wav_kind_by_lang"]["es"] = "slotted"
 
     model.calls.clear()
     run(_body(segs, timing_strategy=natural_strategy, regen_only=[]))
@@ -527,7 +521,7 @@ def test_foreign_rate_natural_cache_keeps_resample_scratch_fallback(
     assert not (job_dir / "seg_mix_0.wav").exists()
 
 
-def test_natural_cache_decode_failure_degrades_to_silence(
+def test_natural_cache_decode_failure_blocks_export(
     patched_generate, monkeypatch,
 ):
     """A valid WAV header must not move a corrupt payload outside recovery."""
@@ -551,8 +545,8 @@ def test_natural_cache_decode_failure_degrades_to_silence(
     parsed = run(_body(segs, timing_strategy="concise", regen_only=[]))
 
     assert model.calls == []
-    assert any(event.get("type") == "warning" for event in parsed)
-    _done(parsed)
+    assert any(event.get("error_code") == "dub_speech_missing" for event in parsed)
+    assert not any(event.get("type") == "done" for event in parsed)
 
 
 def test_rvc_keeps_natural_rate_audio_outside_strict_slot(
@@ -567,7 +561,7 @@ def test_rvc_keeps_natural_rate_audio_outside_strict_slot(
     monkeypatch.setattr(dg, "apply_rvc", lambda _path: None)
 
     run(_body(
-        [{"start": 0.0, "end": 1.0, "text": "1.5:uno"}],
+        [{"start": 0.0, "end": 2.0, "text": "1.5:uno"}],
         timing_strategy="concise",
     ))
 

@@ -1005,13 +1005,11 @@ class FasterWhisperBackend(ASRBackend):
     # CTranslate2: CUDA or CPU (no upstream ROCm/HIP build — see WhisperX note).
     gpu_compat = ("cuda", "cpu")
 
-    def __init__(self):
+    def __init__(self, model_name: str | None = None):
         # Defaulting to the CTranslate2-converted large-v3 repo. Matches
         # KNOWN_MODELS in api/routers/setup.py so the first-run wizard
         # downloads what the backend will actually load.
-        self._model_name = os.environ.get(
-            "ASR_MODEL_FASTER", "Systran/faster-whisper-large-v3"
-        )
+        self._model_name = model_name or faster_whisper_model_id()
         self._model = None  # lazy — first transcribe() loads weights
         # Set by _ensure_model() to the device/compute_type that actually loaded
         # (after the #551 compute_type / #255 OOM→CPU fallback chain).
@@ -1114,10 +1112,13 @@ class FasterWhisperBackend(ASRBackend):
         # faster-whisper returns a generator of Segment objects + an Info
         # struct. Materialise the generator so downstream consumers can
         # index / re-iterate.
+        from services.performance_profiles import asr_decode_defaults
+
         segments_iter, info = self._model.transcribe(
             audio_path,
             word_timestamps=word_timestamps,
             vad_filter=True,  # built-in Silero VAD — cleaner segment starts
+            **asr_decode_defaults(),
         )
         segments = list(segments_iter)
         # Normalise to the shape segment_transcript(...) expects: a dict with
@@ -1864,6 +1865,8 @@ class SherpaDictationBackend(ASRBackend):
                 f"{[s.id for s in _sd.list_specs()]}"
             )
         self._spec = spec
+        from services.performance_profiles import requested_tier
+        self.performance_tier = requested_tier("dictation")
         self._rec = None  # lazy OfflineRecognizer / OnlineRecognizer
         # One backend is shared across live-dictation WS sessions (see
         # get_sherpa_dictation_backend), so guard the one-time recognizer build
@@ -2823,7 +2826,7 @@ class ASRModelMissingError(RuntimeError):
         super().__init__(asr_model_missing_detail(payload))
 
 
-def load_active_asr_backend(*, asr_pipe=None) -> ASRBackend:
+def load_active_asr_backend(*, asr_pipe=None, require_installed: bool = False) -> ASRBackend:
     """:func:`get_active_asr_backend` + eager ``ensure_loaded()``, degrading
     past backends whose deep import chain is broken (#1185).
 
@@ -2852,11 +2855,11 @@ def load_active_asr_backend(*, asr_pipe=None) -> ASRBackend:
     while True:
         backend = get_active_asr_backend(asr_pipe=asr_pipe)
         bid = getattr(backend, "id", "?")
-        if tried:
+        if tried or require_installed:
             # Preflight the SPECIFIC candidate about to load — not the global
             # selection, which can disagree when an asr_pipe steers
             # get_active_asr_backend (Greptile review, #1198).
-            missing = asr_model_missing_error(backend_id=bid)
+            missing = asr_model_missing_error(backend_id=bid, require_installed=require_installed)
             if missing is not None:
                 raise ASRModelMissingError(missing)
         try:
@@ -2931,6 +2934,109 @@ def _ref_audio_fingerprint(audio_path: str) -> str | None:
         return None
 
 
+def _installed_reference_fallbacks(
+    selected: list[ASRBackend],
+) -> list[ASRBackend]:
+    """Return the strongest compatible local fallbacks without changing prefs."""
+    fallbacks: list[ASRBackend] = []
+    selected_repos = {
+        _fw_repo(str(getattr(item, "_model_name", "")))
+        for item in selected
+        if isinstance(item, FasterWhisperBackend)
+    }
+    try:
+        from api.routers.setup.models import (
+            KNOWN_MODELS,
+            _model_supported,
+            _snapshot_dirs,
+            snapshot_is_complete,
+        )
+
+        available, _reason = FasterWhisperBackend.is_available()
+        if available:
+            compatible = sorted(
+                (
+                    model
+                    for model in KNOWN_MODELS
+                    if str(model.get("role", "")).lower() == "asr"
+                    and not model.get("dictation_id")
+                    and (
+                        str(model.get("repo_id", "")).startswith("Systran/faster-")
+                        or model.get("repo_id")
+                        == "deepdml/faster-whisper-large-v3-turbo-ct2"
+                    )
+                    and _model_supported(model)
+                    and model.get("repo_id") not in selected_repos
+                ),
+                key=lambda model: float(model.get("size_gb") or 0),
+                reverse=True,
+            )
+            for model in compatible:
+                snapshots = [
+                    path
+                    for path in _snapshot_dirs(str(model["repo_id"]))
+                    if snapshot_is_complete(model, path)
+                ]
+                if not snapshots:
+                    continue
+                # A concrete complete snapshot cannot trigger a Hub download.
+                snapshot = max(snapshots, key=lambda path: os.path.getmtime(path))
+                backend = FasterWhisperBackend(model_name=snapshot)
+                setattr(backend, "_reference_ephemeral", True)
+                fallbacks.append(backend)
+                break
+    except Exception as exc:  # noqa: BLE001 - optional local fallback
+        logger.warning("reference ASR cache fallback unavailable (%s)", exc)
+
+    try:
+        from services import sherpa_dictation
+
+        selected_sherpa = {
+            item.spec.id
+            for item in selected
+            if isinstance(item, SherpaDictationBackend)
+        }
+        installed = sorted(
+            (
+                spec
+                for spec in sherpa_dictation.list_specs()
+                if spec.id not in selected_sherpa
+                and sherpa_dictation.is_installed(spec)
+            ),
+            key=lambda spec: float(spec.size_gb or 0),
+            reverse=True,
+        )
+        if installed:
+            fallbacks.append(get_sherpa_dictation_backend(installed[0].id))
+    except Exception as exc:  # noqa: BLE001 - optional local fallback
+        logger.warning("reference dictation cache fallback unavailable (%s)", exc)
+    return fallbacks
+
+
+def _transcribe_reference_candidates(
+    candidates: list[ASRBackend], audio_path: str,
+) -> str:
+    for backend in candidates:
+        try:
+            result = backend.transcribe(audio_path, word_timestamps=False) or {}
+            candidate_text = result.get("text") or " ".join(
+                (seg.get("text") or "").strip()
+                for seg in result.get("segments", [])
+            )
+            candidate_text = (candidate_text or "").strip()
+            if candidate_text:
+                return candidate_text
+        except Exception as exc:  # noqa: BLE001 - try the next local engine
+            logger.warning("transcribe_reference: %s failed (%s)", backend.id, exc)
+        finally:
+            if getattr(backend, "_reference_ephemeral", False):
+                try:
+                    backend.unload()
+                except Exception:  # noqa: BLE001 - release is best-effort
+                    logger.warning("reference ASR fallback unload failed", exc_info=True)
+    return ""
+
+
 def transcribe_reference(audio_path: str) -> str | None:
     """Transcribe a voice-clone reference clip with the active ASR backend.
 
@@ -2952,42 +3058,55 @@ def transcribe_reference(audio_path: str) -> str | None:
             if cached is not None:
                 _ref_transcript_cache.move_to_end(fingerprint)
                 return cached
-    # No ASR model installed (TTS-only install): skip quietly instead of
-    # letting the backend auto-download multi-GB weights mid-/generate — this
-    # path is best-effort by contract (the engine's built-in fallback applies).
-    if asr_model_missing_error() is not None:
-        logger.info("transcribe_reference: no ASR model installed — skipping "
-                    "reference auto-transcription (no silent download).")
-        return None
-    try:
-        # `load_*`, not `get_*`: a backend whose shallow probe passes but whose
-        # deep import chain is broken would otherwise be handed back here and
-        # fail at `.transcribe()` below, costing every clone-without-transcript
-        # its reference text even with a healthy engine next in line (#1185).
-        # This path is best-effort, so a genuinely exhausted chain still just
-        # returns None and defers to the model's built-in fallback.
-        backend = load_active_asr_backend()
-    except Exception as e:  # noqa: BLE001 — never let ASR break generation
-        logger.warning("transcribe_reference: no ASR backend available (%s)", e)
-        return None
-    if isinstance(backend, PyTorchWhisperBackend):
-        # The registry fell through to the model-attached pipeline; let the
-        # model load it lazily rather than constructing a second copy here.
-        return None
-    try:
-        result = backend.transcribe(audio_path, word_timestamps=False)
-    except Exception as e:  # noqa: BLE001 — degrade to the model fallback
-        logger.warning(
-            "transcribe_reference: %s failed (%s) — deferring to the model's "
-            "built-in ASR fallback",
-            backend.id, e,
+    # Prefer the selected offline ASR engine. When its selected weights are not
+    # installed, reuse the selected dictation engine if that model is already
+    # local. Short clone references need plain transcription, which dictation
+    # engines provide well. Falling straight through to the TTS model's bundled
+    # fallback produced incomplete reference conditioning for longer clips and
+    # introduced spurious words at the start of short generations. Neither
+    # branch may download weights implicitly.
+    candidates: list[ASRBackend] = []
+    offline_missing = asr_model_missing_error()
+    if offline_missing is None:
+        try:
+            # `load_*`, not `get_*`: a backend whose shallow probe passes but
+            # whose deep import chain is broken must fall through cleanly.
+            backend = load_active_asr_backend()
+            if not isinstance(backend, PyTorchWhisperBackend):
+                candidates.append(backend)
+        except Exception as e:  # noqa: BLE001 — reference ASR is best-effort
+            logger.warning("transcribe_reference: offline ASR unavailable (%s)", e)
+
+    capture_missing = asr_model_missing_error(purpose="dictation")
+    if capture_missing is None:
+        try:
+            capture = get_capture_asr_backend()
+            if not isinstance(capture, PyTorchWhisperBackend) and not any(
+                type(item) is type(capture) and item.id == capture.id
+                for item in candidates
+            ):
+                candidates.append(capture)
+        except Exception as e:  # noqa: BLE001 — reference ASR is best-effort
+            logger.warning("transcribe_reference: dictation ASR unavailable (%s)", e)
+
+    text = _transcribe_reference_candidates(candidates, audio_path)
+    fallbacks: list[ASRBackend] = []
+    if not text:
+        fallbacks = _installed_reference_fallbacks(candidates)
+        text = _transcribe_reference_candidates(fallbacks, audio_path)
+
+    if not candidates and not fallbacks:
+        logger.info(
+            "transcribe_reference: no installed ASR model available — skipping "
+            "reference auto-transcription (no silent download)."
         )
         return None
-    result = result or {}
-    text = result.get("text") or " ".join(
-        (seg.get("text") or "").strip() for seg in result.get("segments", [])
-    )
-    text = (text or "").strip()
+    if not text:
+        logger.warning(
+            "transcribe_reference: installed ASR engines returned no transcript "
+            "— deferring to the model's built-in ASR fallback"
+        )
+        return None
     if text and fingerprint is not None:
         with _ref_transcript_lock:
             _ref_transcript_cache[fingerprint] = text
@@ -3089,10 +3208,14 @@ def get_sherpa_dictation_backend(model_id: str) -> "SherpaDictationBackend":
     :func:`get_capture_asr_backend`. Thread-safe: the recognizer is shared;
     each session creates its own decode stream (see capture_ws)."""
     global _capture_backend, _capture_backend_key
+    from services.performance_profiles import requested_tier
+
+    performance_tier = requested_tier("dictation")
     _touch_capture()  # any handout resets the idle clock
     with _capture_backend_lock:
         if (isinstance(_capture_backend, SherpaDictationBackend)
-                and _capture_backend_key == model_id):
+                and _capture_backend_key == model_id
+                and _capture_backend.performance_tier == performance_tier):
             return _capture_backend
         backend = SherpaDictationBackend(model_id=model_id)
         _capture_backend = backend
@@ -3270,8 +3393,11 @@ def get_capture_asr_backend(*, skip_sherpa: bool = False) -> ASRBackend:
         if sherpa_id:
             ok, _ = SherpaDictationBackend.is_available()
             if ok:
+                from services.performance_profiles import requested_tier
+                performance_tier = requested_tier("dictation")
                 if not (isinstance(_capture_backend, SherpaDictationBackend)
-                        and _capture_backend_key == sherpa_id):
+                        and _capture_backend_key == sherpa_id
+                        and _capture_backend.performance_tier == performance_tier):
                     try:
                         _capture_backend = SherpaDictationBackend(model_id=sherpa_id)
                         _capture_backend_key = sherpa_id
@@ -3346,6 +3472,34 @@ ASR_MODEL_MISSING = "asr_model_missing"
 _PYTORCH_ASR_DEFAULT = "openai/whisper-large-v3-turbo"
 _FASTER_WHISPER_DEFAULT = "Systran/faster-whisper-large-v3"
 
+
+def faster_whisper_model_id() -> str:
+    """Resolve the UI-selected CTranslate2 model, with env pins authoritative."""
+    from core import prefs
+
+    return str(
+        prefs.resolve(
+            "asr_model_faster",
+            env="ASR_MODEL_FASTER",
+            default=_FASTER_WHISPER_DEFAULT,
+        )
+    )
+
+
+def select_faster_whisper_model(repo_id: str) -> None:
+    """Persist and apply a CTranslate2 model selection for this process."""
+    from core import prefs
+
+    if prefs.is_env_shadowed("ASR_MODEL_FASTER"):
+        raise ValueError("ASR_MODEL_FASTER is set outside VoiceStudio")
+    prefs.set_("asr_model_faster", repo_id)
+    # Sidecars inherit the process environment. Updating it here makes the
+    # selection effective immediately as well as after the next app launch.
+    os.environ["ASR_MODEL_FASTER"] = repo_id
+    instance = _ISOLATED_INSTANCES.pop("faster-whisper-isolated", None)
+    if instance is not None:
+        instance.shutdown()
+
 # faster-whisper / WhisperX short model aliases → the HF repo they download.
 # Covers our own defaults plus the documented size aliases; an unrecognized
 # alias returns None and the preflight stays out of the way (never blocks).
@@ -3378,7 +3532,7 @@ def _offline_asr_repo(backend_id: str | None = None) -> str | None:
     if bid == "whisperx":
         return _fw_repo(os.environ.get("ASR_MODEL_WHISPERX", "large-v3"))
     if bid == "faster-whisper":
-        return _fw_repo(os.environ.get("ASR_MODEL_FASTER", _FASTER_WHISPER_DEFAULT))
+        return _fw_repo(faster_whisper_model_id())
     if bid == "faster-whisper-isolated":
         # Mirror the sidecar's own resolution (_asr_sidecar/main.py):
         # ASR_MODEL_FW is a sidecar-only override, otherwise the shared
@@ -3386,7 +3540,7 @@ def _offline_asr_repo(backend_id: str | None = None) -> str | None:
         # download a different repo than the sidecar will load.
         return _fw_repo(
             os.environ.get("ASR_MODEL_FW")
-            or os.environ.get("ASR_MODEL_FASTER")
+            or faster_whisper_model_id()
             or _FASTER_WHISPER_DEFAULT
         )
     if bid == "mlx-whisper":
@@ -3427,7 +3581,7 @@ def _capture_whisper_repo() -> str | None:
         # resolve but our alias table doesn't know) yields None here — FAIL
         # OPEN rather than coerce to the default repo and demand a download
         # of a model the user never picked.
-        return _fw_repo(os.environ.get("ASR_MODEL_FASTER", _FASTER_WHISPER_DEFAULT))
+        return _fw_repo(faster_whisper_model_id())
     return os.environ.get("OMNIVOICE_PYTORCH_ASR_MODEL", _PYTORCH_ASR_DEFAULT)
 
 
@@ -3499,12 +3653,12 @@ def _recommended_asr_model(
 _INSTALLED_REPO_MEMO: set[str] = set()
 
 
-def _repo_installed(repo: str) -> bool:
+def _repo_installed(repo: str, *, refresh: bool = False) -> bool:
     """``is_cached`` + ``cache_is_complete`` with a positive-only session memo.
 
     Installed state comes from the same HF-cache helpers the model store uses,
-    so the answer matches the Model Catalogue's install badges."""
-    if repo in _INSTALLED_REPO_MEMO:
+    so the answer matches the Model Catalogue → Models install badges."""
+    if not refresh and repo in _INSTALLED_REPO_MEMO:
         return True
     from api.routers.setup.models import cache_is_complete, get_model_catalog, is_cached
     meta = get_model_catalog().get(repo) or {"repo_id": repo}
@@ -3582,7 +3736,7 @@ def asr_model_missing_error(*, purpose: str = "transcribe",
             return None  # explicit opt-in engine — can't (and shouldn't) preflight
         from api.routers.setup.models import get_model_catalog
         if require_installed:
-            if _repo_installed(repo):
+            if _repo_installed(repo, refresh=True):
                 return None
             return {
                 "error": ASR_MODEL_MISSING,
@@ -3607,6 +3761,14 @@ def asr_model_missing_error(*, purpose: str = "transcribe",
             ),
         }
     except Exception:  # noqa: BLE001 — preflight is best-effort, never a blocker
+        if require_installed:
+            logger.warning("ASR install preflight failed; refusing implicit download", exc_info=True)
+            return {
+                "error": ASR_MODEL_MISSING,
+                "missing_repo_id": "unverified-local-model",
+                "reason": "verification_failed",
+                "recommended": None,
+            }
         logger.warning("ASR install preflight failed — proceeding without it",
                        exc_info=True)
         return None
@@ -3615,6 +3777,9 @@ def asr_model_missing_error(*, purpose: str = "transcribe",
 def asr_model_missing_detail(payload: dict) -> str:
     """Human-readable (English) fallback message for the typed payload —
     what legacy clients / logs see; the frontend renders its own i18n copy."""
+    if payload.get("reason") == "verification_failed":
+        return ("Could not verify the local speech-to-text model. "
+                "Check Settings > Logs > Backend, then retry. No model was downloaded.")
     rec = payload.get("recommended") or {}
     if rec.get("label"):
         return (

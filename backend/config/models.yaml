@@ -10,7 +10,7 @@
 #   repo_id    (required) — HuggingFace repository ID
 #   engines    (required) — backend ids that load this repo; [] for pipeline weights no single engine owns (they list under "Other weights")
 #   label      (required) — Human-readable display name
-#   role       (required) — TTS | ASR | Diarisation
+#   role       (required) — TTS | ASR | Translation | Diarisation
 #   size_gb    (required) — Approximate download size in GiB
 #   required   (optional) — true if the app needs this model to function.
 #                            Only the TTS model is required: the app boots and
@@ -46,13 +46,18 @@ models:
     curated_on: [all]
 
   - repo_id: "audio-cpp/audio.cpp-gguf"
-    label: "Breeze-TTS-2 Q8_0 for audio.cpp (English + Chinese, clone + design)"
+    label: "audio.cpp native bundle (Breeze-TTS-2 + Sortformer diarisation)"
     role: TTS
     engines: [audiocpp]
-    size_gb: 4.73
+    families: [tts, diarisation]
+    size_gb: 4.98
+    required_files:
+      - "Breeze-TTS-2-GGUF/breeze-tts-2-q8_0.gguf"
+      - "Sortformer-Diar-4spk-v1-GGUF/sortformer-diar-4spk-v1-q8_0.gguf"
     allow_patterns:
       - "Breeze-TTS-2-GGUF/breeze-tts-2-q8_0.gguf"
-    note: "Optional audio.cpp model. Research/non-commercial weights and self-hosted outputs; install only after reviewing the license."
+      - "Sortformer-Diar-4spk-v1-GGUF/sortformer-diar-4spk-v1-q8_0.gguf"
+    note: "Optional audio.cpp bundle for native voice cloning and up-to-four-speaker diarisation. Research/non-commercial weights and self-hosted outputs; install only after reviewing the licenses."
 
   # ── ASR (optional — curated per platform) ─────────────────────────────
   # No ASR model is required to boot: TTS-only installs work. Dubbing,
@@ -256,6 +261,15 @@ models:
     curated_on: [all]
     note: "Recommended cross-platform dictation default (auto-detect). CPU, int8 ONNX. Requires sherpa-onnx."
 
+  # ── Translation ──────────────────────────────────────────────────────
+
+  - repo_id: "facebook/nllb-200-distilled-600M"
+    label: "NLLB-200 distilled 600M (local, 200 languages)"
+    role: Translation
+    engines: []
+    size_gb: 2.4
+    note: "Best fully-local translation quality. Install explicitly before selecting NLLB; translation never downloads these weights in the background."
+
   # ── Diarisation ───────────────────────────────────────────────────────
 
   - repo_id: "pyannote/speaker-diarization-3.1"
@@ -264,7 +278,21 @@ models:
     engines: []
     size_gb: 0.8
     config_only: true  # pipeline repo; real weights live in referenced sub-repos
-    note: "Needs an HF_TOKEN with license accepted."
+    config_required_files: ["config.yaml"]
+    dependencies:
+      - repo_id: "pyannote/segmentation-3.0"
+        required_files: ["pytorch_model.bin"]
+        allow_patterns: ["config.yaml", "pytorch_model.bin"]
+      - repo_id: "pyannote/wespeaker-voxceleb-resnet34-LM"
+        required_files: ["pytorch_model.bin"]
+        allow_patterns: ["config.yaml", "pytorch_model.bin"]
+    gated: true
+    requires_hf_token: true
+    access_url: "https://huggingface.co/pyannote/speaker-diarization-3.1"
+    prerequisite_repo_id: "pyannote/segmentation-3.0"
+    prerequisite_access_url: "https://huggingface.co/pyannote/segmentation-3.0"
+    failure_topic: "PYANNOTE_LICENSE_REQUIRED"
+    note: "Requires access to both pyannote repositories and an HF token."
 
   # ── Optional TTS ──────────────────────────────────────────────────────
 

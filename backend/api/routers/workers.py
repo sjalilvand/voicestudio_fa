@@ -116,6 +116,18 @@ def get_target(op: str = "") -> dict:
     return routing.status(op=op.strip() or None)
 
 
+@router.get("/runtime")
+async def get_runtime(engine: str = "", op: str = "tts") -> dict:
+    """Runtime/model facts for the machine that will execute this operation."""
+    from services import gpu_gateway  # noqa: PLC0415
+
+    return await gpu_gateway.status(
+        engine=engine.strip() or None,
+        op=op.strip() or "tts",
+        control_plane=service.control_plane,
+    )
+
+
 @router.post("/target")
 def set_target(request: TargetRequest) -> dict:
     """Choose where work runs. Exactly one target is active at a time."""

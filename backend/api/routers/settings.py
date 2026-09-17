@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from core.logging_utils import log_safe
+from core.engine_licenses import LICENSE_GATED_ENGINES
 from api.dependencies import require_admin, require_admin_action
 
 logger = logging.getLogger("omnivoice.api.settings")
@@ -96,9 +97,66 @@ def get_hf_token_state(fresh: bool = Query(False)):
 
 _TORCH_COMPILE_KEY = "perf.torch_compile_disabled"
 
+from services.performance_profiles import (
+    _PERFORMANCE_PROFILE_KEY, _PERFORMANCE_TIERS, _PERFORMANCE_FAMILIES,
+    activate_performance_tier,
+    profile_state as _performance_profile_state,
+)
+
+
+class _PerformanceProfileBody(BaseModel):
+    tier: str = Field(..., description="fast | balanced | quality | max")
+    family: str | None = Field(None, description="Engine family, or null to set the global tier")
+
+
+
+
+@router.get("/performance-profile")
+def get_performance_profile():
+    """Return the global speed/quality preference and per-engine overrides."""
+    return _performance_profile_state()
+
+
+@router.put("/performance-profile")
+def set_performance_profile(body: _PerformanceProfileBody):
+    """Persist a performance preference and apply installed Max-capacity picks."""
+    from core import prefs
+
+    tier = body.tier.strip().lower()
+    if tier not in _PERFORMANCE_TIERS:
+        raise HTTPException(status_code=400, detail="Unknown performance tier")
+    family = body.family.strip().lower() if body.family else None
+    if family is not None and family not in _PERFORMANCE_FAMILIES:
+        raise HTTPException(status_code=400, detail="Unknown engine family")
+    state = _performance_profile_state()
+    applicable = state["applicable_families"]
+    if (family is not None and family not in applicable) or (family is None and not applicable):
+        raise HTTPException(status_code=409, detail="The selected engines do not support this performance preset")
+    from core import job_store
+    from api.routers.batch import list_batch_jobs
+    if job_store.list_jobs(status="active", limit=1) or list_batch_jobs(status="active", limit=1):
+        raise HTTPException(status_code=409, detail="Wait for queued or running jobs to finish before changing performance presets")
+    try:
+        if family is None:
+            # One atomic write clears family overrides together with the global
+            # choice, so a crash cannot leave half of a global change persisted.
+            prefs.update_mapping(_PERFORMANCE_PROFILE_KEY, {"global": tier}, replace=True)
+        else:
+            prefs.update_mapping(_PERFORMANCE_PROFILE_KEY, {family: tier})
+    except Exception:
+        logger.exception("set_performance_profile failed")
+        raise HTTPException(status_code=500, detail="Failed to persist performance profile")
+    activations = activate_performance_tier(tier, family)
+    result = _performance_profile_state()
+    if activations:
+        result["runtime_activations"] = activations
+    if tier == "max":
+        result["capacity_activations"] = activations
+    return result
+
 
 class _TorchCompileBody(BaseModel):
-    enabled: bool = Field(..., description="True to set TORCH_COMPILE_DISABLE=1 on engine subprocesses")
+    enabled: bool = Field(..., description="True to disable torch.compile (eager mode) for the engine")
 
 
 def _torch_compile_state() -> dict:
@@ -112,15 +170,21 @@ def _torch_compile_state() -> dict:
 @router.get("/perf/torch-compile-disabled")
 def get_torch_compile_disabled():
     """Return the current torch.compile-disabled toggle + the runtime platform.
-    UI uses the platform to render the toggle disabled (with an explainer)
-    on non-Windows hosts, since the OOM is Windows-specific (issue #65)."""
+
+    `platform` is still reported (clients may show it), but since #2135 the
+    toggle is live on every host: it used to be rendered disabled off Windows
+    on the assumption that only #65's Windows OOM needed it, which left the
+    Linux/CUDA reporter of #2135 with no way to switch off the compile that
+    was killing their backend.
+    """
     return _torch_compile_state()
 
 
 @router.put("/perf/torch-compile-disabled")
 def set_torch_compile_disabled(body: _TorchCompileBody):
     """Persist the toggle. Honoured by `services.engine_env.build_engine_env()`
-    which injects TORCH_COMPILE_DISABLE=1 on Windows when enabled."""
+    (subprocess engines) and `services.engine_env.should_torch_compile()`
+    (in-process), on every platform since #2135."""
     from services import settings_store
 
     try:
@@ -653,7 +717,7 @@ def set_llm_skill(skill_id: str, body: _LLMSkillBody):
 #: Engines that have an in-tree acceptance dialog. Adding a new engine
 #: here means adding a corresponding frontend dialog + a license URLs
 #: dict in its constants module. Until that, the API refuses the write.
-_LICENSE_ALLOWED_ENGINES: frozenset[str] = frozenset({"supertonic3", "pockettts"})
+_LICENSE_ALLOWED_ENGINES = LICENSE_GATED_ENGINES
 
 
 class _LicenseAcceptBody(BaseModel):
