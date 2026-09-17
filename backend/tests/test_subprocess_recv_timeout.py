@@ -200,7 +200,7 @@ def test_timeout_error_names_the_deadline_instead_of_blaming_the_pipe(
     assert "still alive" in message, message
 
 
-@pytest.mark.parametrize("text", ["short", "x" * 200000])
+@pytest.mark.parametrize("text", ["short", "x" * 200000], ids=["short", "long"])
 @pytest.mark.parametrize("engine_type", [_SilentBackend, _OpinionatedBackend])
 def test_outer_guard_outlasts_sidecar_watchdog(text, engine_type):
     from services.model_manager import generate_timeout_s
