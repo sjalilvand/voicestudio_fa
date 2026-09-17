@@ -57,6 +57,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Distinguish architecture preflight rejection from independent compile-stack failures (#2085) — thanks @Moep90!
 
+- Require the pinned Apple Silicon GGUF build to pass and document runtime preflight conditions (#2115) — thanks @LMGXENON and @martinezpl!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**
