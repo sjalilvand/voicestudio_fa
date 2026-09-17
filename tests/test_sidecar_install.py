@@ -1020,6 +1020,13 @@ def test_uninstalling_one_engine_leaves_every_other_engine_intact(monkeypatch):
         ("dots-tts", ["--python", "3.11"],
          ["-e", "{c}", "-c", "{c}/constraints/recommended.txt"],
          "OMNIVOICE_DOTS_TTS_DIR"),
+        # moss-tts-nano installs soundfile alongside the editable install so
+        # torchaudio 2.7's I/O backend is present inside this engine's own
+        # venv — upstream's pyproject pins torchaudio but no backend
+        # (#2100). Without soundfile the engine's first load() crashes with
+        # "Couldn't find appropriate backend to handle uri …".
+        ("moss-tts-nano", ["--python", "3.11"],
+         ["-e", "{c}", "soundfile"], "OMNIVOICE_MOSS_TTS_NANO_DIR"),
     ],
 )
 def test_new_specs_install_recipe(monkeypatch, engine_id, venv_args, install_args, env_var):
@@ -1037,6 +1044,25 @@ def test_new_specs_install_recipe(monkeypatch, engine_id, venv_args, install_arg
     assert venv_cmd[3:] == venv_args
     pip = next(a for a in argvs if a[1:3] == ["pip", "install"])
     assert pip[5:] == [arg.replace("{c}", checkout) for arg in install_args]
+
+
+def test_moss_tts_nano_probe_asserts_an_audio_backend_is_present(monkeypatch):
+    """The moss-tts-nano verify step asserts torchaudio.list_audio_backends()
+    is non-empty — catches a reinstall whose audio read path would crash at
+    first generation (#2100). The probe must compile and reference the
+    assertion so a future refactor cannot silently drop it.
+    """
+    spec = si.get_spec("moss-tts-nano")
+    assert spec.probe_code, (
+        "moss-tts-nano's verify probe must check torchaudio has a backend"
+    )
+    assert "list_audio_backends" in spec.probe_code
+    # The assertion message is allowed to mention a concrete dependency
+    # (soundfile / torchcodec) — that's user-facing guidance, not a probe
+    # requirement. The probe itself must only check the outcome.
+    assert "torchaudio.list_audio_backends()" in spec.probe_code
+    # Compile-check, since probe_code runs through python -c on Windows.
+    compile(spec.probe_code, "<probe>", "exec")
 
 
 @pytest.mark.parametrize("family", ["cuda", "cpu", "rocm", "mps"])

@@ -496,10 +496,21 @@ SPECS: dict[str, SidecarSpec] = {
         checkout_dirname="MOSS-TTS-Nano",
         env_var="OMNIVOICE_MOSS_TTS_NANO_DIR",
         probe_module="moss_tts_nano_runtime",
+        probe_code=(
+            "import moss_tts_nano_runtime, torchaudio; "
+            "assert torchaudio.list_audio_backends(), "
+            "'torchaudio has no I/O backend (install soundfile or torchcodec)'"
+        ),
         source_revision="8b7bcc9341b3b4ef3a3a58ba1338a7d85ff133eb",
         source_required_path="moss_tts_nano_runtime.py",
         docs_path="docs/engines/moss-tts-nano.md",
         venv_args=("--python", "3.11"),
+        # Upstream's pyproject pins torchaudio==2.7.0 but ships no I/O backend
+        # — torchaudio 2.7 dispatches load/save to soundfile/torchcodec, and
+        # the engine cannot read its own bundled reference clip without one
+        # (#2100). Pulling soundfile alongside the editable install keeps
+        # every audio read inside this engine's own venv.
+        install_args=("-e", "{checkout}", "soundfile"),
         uses_cuda_index=True,
         # torch 2.7 (CUDA build on NVIDIA hosts) + transformers + onnxruntime.
         # The model and its audio tokenizer download on first synthesis.
