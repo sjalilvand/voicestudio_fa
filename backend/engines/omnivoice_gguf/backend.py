@@ -188,7 +188,12 @@ def _load_quant_map() -> dict:
     that here so a corrupted JSON can't sneak past the registry).
     """
     p = _PKG_DIR / "quant_map.json"
-    with p.open() as f:
+    # JSON is UTF-8 by definition. A bare open() decodes in the locale code
+    # page instead, and the table's VRAM notes carry em dashes that
+    # cp932/cp936/cp949/cp950 cannot decode — so on a Chinese, Japanese or
+    # Korean Windows picking a quant raised UnicodeDecodeError and every
+    # generation failed with an error the app could not classify.
+    with p.open(encoding="utf-8") as f:
         data = json.load(f)
     meta = data.get("_meta") or {}
     if meta.get("schema_version") != 1:
