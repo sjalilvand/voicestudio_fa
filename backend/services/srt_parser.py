@@ -56,19 +56,6 @@ def _is_index_line(line: str) -> bool:
     return stripped.isascii() and stripped.isdigit()
 
 
-def _uses_index_lines(text: str, first_timing_start: int) -> bool:
-    """Initial numbering hint for lenient files without blank separators.
-
-    Later cue boundaries are also inspected: mixed indexed/unindexed files
-    must not leak index lines or delete numeric dialogue.
-    """
-    head = text[:first_timing_start]
-    for line in reversed(head.split("\n")):
-        if line.strip():
-            return _is_index_line(line)
-    return False
-
-
 @dataclass
 class SrtParseResult:
     segments: list[dict]
@@ -94,6 +81,16 @@ def parse_srt(content: str) -> SrtParseResult:
     text = content.lstrip("﻿").replace("\r\n", "\n").replace("\r", "\n")
 
     is_webvtt = bool(re.match(r"WEBVTT(?:[ \t]|\n|$)", text.lstrip()))
+    if is_webvtt:
+        # Metadata is block-scoped. Filter it BEFORE scanning timings so an
+        # example timestamp inside a NOTE/STYLE/REGION cannot become speech.
+        blocks = []
+        for block in re.split(r"\n[^\S\n]*\n", text):
+            first = block.strip().split("\n", 1)[0].strip()
+            if first in {"STYLE", "REGION"} or re.match(r"NOTE(?:[ \t]|$)", first):
+                continue
+            blocks.append(block)
+        text = "\n\n".join(blocks)
     raw: list[dict] = []
     skipped = 0
     # Find every timing line, slice the cue text from there to the next

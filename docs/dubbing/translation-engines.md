@@ -261,3 +261,5 @@ Argos accepts Chinese/Simplified Chinese names, Mandarin aliases, and language t
 Mixed or malformed SRT files can make a bare number indistinguishable from spoken dialogue. The importer removes numbering only when cue boundaries and sequential numbering support it; ambiguous nonsequential numbers are retained as text to avoid silent data loss. Standard indexed SRT and WebVTT exports avoid this ambiguity.
 
 If the Argos native runtime cannot load, both desktop and browser clients show localized recovery guidance: reinstall the backend or select NLLB. The API returns the stable `argos_runtime_unavailable` error code without exposing native library paths.
+
+WebVTT import excludes NOTE, STYLE, and REGION metadata blocks before parsing timestamps; timing examples in notes never become spoken segments.

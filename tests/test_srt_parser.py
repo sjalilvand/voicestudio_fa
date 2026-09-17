@@ -371,3 +371,16 @@ def test_skipped_cue_still_advances_numbering_state():
 def test_numeric_only_cue_after_invalid_cue_is_not_discarded():
     text = "1\n00:00:01,000 --> 00:00:02,000\nFirst\n\n2\n00:00:04,000 --> 00:00:03,000\nInvalid\n\n3\n00:00:05,000 --> 00:00:06,000\n4\n00:00:07,000 --> 00:00:08,000\nLast"
     assert [cue["text"] for cue in parse_srt(text).segments] == ["First", "4", "Last"]
+
+
+@pytest.mark.parametrize('header', ['NOTE', 'NOTE translator notes', 'NOTE\ttranslator notes', 'STYLE', 'REGION'])
+def test_webvtt_metadata_timestamps_never_become_dialogue(header):
+    text = f'WEBVTT\n\n{header}\n00:00.000 --> 00:02.000\nMetadata only\n\ncue\n00:03.000 --> 00:04.000\nReal dialogue\n'
+    result = parse_srt(text)
+    assert [cue['text'] for cue in result.segments] == ['Real dialogue']
+    assert result.segments[0]['start'] == 3
+
+
+def test_webvtt_note_words_inside_dialogue_are_retained():
+    text = 'WEBVTT\n\n00:01.000 --> 00:02.000\nNOTE this is spoken\nSTYLE\nREGION\n'
+    assert parse_srt(text).segments[0]['text'] == 'NOTE this is spoken\nSTYLE\nREGION'
