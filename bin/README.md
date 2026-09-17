@@ -24,8 +24,9 @@ scripts/build-omnivoice-tts.sh --platform <slug> --commit-sha <40hex>
 See `.github/workflows/build-omnivoice-tts.yml` `build-omnivoice-tts` job
 for the CI matrix that produces these artifacts. Apple Silicon (`macos-14`)
 builds cleanly with `-DGGML_METAL=ON` at the pinned SHA (#2105), enabling
-hardware-accelerated Metal inference without falling back to the in-process
-`VoiceStudioBackend`.
+hardware-accelerated Metal inference when the packaged artifact passes binary
+preflight and macOS permits execution. Missing or blocked binaries retain the
+in-process `VoiceStudioBackend` fallback.
 
 ## Placeholder note
 

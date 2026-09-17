@@ -1,3 +1,4 @@
+import { runRendererTask } from '@/lib/global-error-recovery';
 import { VOICE_AI_DIRECTORY } from '../../../../../../frontend/src/config/voice-ai-directory';
 import './sponsor-footer.css';
 import { useNavigate } from '@tanstack/react-router';
@@ -166,7 +167,7 @@ export function SponsorFooter() {
           type="button"
           className="sponsor-catalog-toggle"
           aria-label={t('integrationCatalog.title')}
-          onClick={() => void navigate({ to: '/integrations' })}
+          onClick={() => runRendererTask('Open integrations', () => navigate({ to: '/integrations' }))}
           title={t('integrationCatalog.title')}
         >
           <BlocksIcon aria-hidden="true" className="size-4" />
@@ -314,7 +315,7 @@ export function SponsorFooter() {
                 aria-label={t('supportPlans.remove')}
                 className={linkClass + ' justify-center px-2'}
                 onClick={() =>
-                  void navigate({ to: '/settings/support', search: { compare: true } })
+                  runRendererTask('Open support', () => navigate({ to: '/settings/support', search: { compare: true } }))
                 }
               />
             }

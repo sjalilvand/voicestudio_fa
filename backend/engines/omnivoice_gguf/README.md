@@ -115,8 +115,9 @@ silently hanging on a Gatekeeper-killed spawn.
 
 The macOS Apple Silicon Metal build compiles cleanly with `-DGGML_METAL=ON`
 at the pinned `omnivoice.cpp` SHA (#2105), enabling GPU-accelerated GGUF
-voice cloning on Apple Silicon out of the box with `VoiceStudioBackend`
-remaining available as an in-process fallback.
+voice cloning when the packaged binary passes preflight and is permitted by
+macOS. Missing binaries, placeholders, or Gatekeeper rejection leave
+`VoiceStudioBackend` available as the in-process fallback.
 
 ## Smoke test
 

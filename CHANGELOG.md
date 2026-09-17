@@ -10,6 +10,20 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- Electron packaging can recover without changing a release tag
+
+### CI
+
+- Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
+
+### CI
+
+- Require the pinned Apple Silicon GGUF build to pass and document runtime preflight conditions (#2115) — thanks @LMGXENON and @martinezpl!
+
+## [0.5.3] — 2026-09-17
+
+**Highlights**
+
 - The README is shorter, with a new Electron UI tour and refreshed screenshots (#2129)
 
 - Support pages feature cleaner donation cards, with a workspace support shortcut and sponsor footer with hover cards and email inquiries (#2129)
@@ -27,6 +41,10 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Changed
 
+- Electron becomes the default source desktop, with artifact-only packaging rehearsals and a separate final Tauri update path (#2157)
+- Installable agent skills use current VoiceStudio names and Electron workflows (#2157)
+- README clarifies the Electron transition while keeping desktop contributions welcome (#2153) — thanks @cyberspace-cs!
+
 - Electron first run uses four simple steps with model packs, optional advanced controls and skippable dictation setup (#2129)
 
 - Model Catalogue is one page: a setup summary (speech, transcription, dictation, language model) on top, one TTS / ASR / LLM switch, and each family's downloadable weights listed under its engines; the separate Models pane and the Settings → Voice → Engines / Models signposts are gone, the models directory and voice previews moved to Settings → Storage and the HF mirror to Network (#2013)
@@ -35,13 +53,36 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
-- Apple Silicon Metal builds of omnivoice.cpp are documented as working clean and verified without continue-on-error in CI (#2105) — thanks @martinezpl!
+- Keep demo playback aligned across languages, preserve worker GPU metrics, and restrict unsigned releases to owner dispatches (#2157)
+
+- Desktop integration checks cover current dubbing safeguards, navigation, and the linked engine catalog (#2157)
+
+- Tauri and Electron now share native dictation, watch-folder, and Wayland shortcut contracts; focused paste stays ordered and first-run uv stays pinned at 0.12.13 (#2122)
+- Dubbing demos synchronize playheads without simultaneous playback and let you open a sample in the editor (#2131)
+- macOS desktop sidebar clears the traffic lights, uses a narrower collapsed rail, and places notifications and device controls with more space (#2126)
+- Dubbing timelines keep short segments proportional, support zoom, and remove timestamp-confirmed duplicate ASR context (#2129)
+
+- Dubbing translation shares the agent footer with live logs, validated output, cancellation and contextual retries (#2129)
+
+- Agent dubbing translation saves a custom tone and adaptation prompt and preserves it during timing rewrites (#2129)
+
+- Dubbing preserves original sound outside dialogue and mixes separated background only beneath replacement speech (#2129)
+
+- Dubbing repairs missing speech caches, rejects incomplete output, avoids oversized speaker references, and fits full speech without early clipping (#2129)
+- Workspace sidebars have a working right-edge resize handle, allow 40% more width, remember their size, and keep video controls inside the preview (#2129)
+- Pressing Play while a video is loading starts playback when it is ready instead of reporting playback unavailable (#2129)
+- Video previews show their thumbnail before playback, including the source video in Dub (#2129)
+- Linux and Windows workspace headers consistently expand and collapse the sidebar, with the app logo at the top of the collapsed rail (#2129)
 - Stopping a process on macOS no longer fails with "Operation not permitted" when it was already exiting (#2032)
 - A YouTube link blocked by its "not a bot" check now says how to attach signed-in cookies in Dub, instead of quoting yt-dlp's command-line flags (#2036, #2034)
 - An engine that fails to start now says whether it timed out, crashed (with its exit code and last output) or answered wrongly, instead of "did not signal ready: None" (#2037, #2026)
 - Transcribing an M4A file with PyTorch Whisper works, instead of failing with "Format not recognised" (#2042, #2039)
 - PyTorch Whisper runs on 6 GB NVIDIA cards instead of falling back to CPU, because its memory check now fits the model it loads (#2044, #2041)
 - MCP tools wait as long as the backend does, so a long transcription no longer fails at 120 s with an empty error (#2043, #2040)
+- Generating on an older NVIDIA GPU (Tesla T4, and other pre-Ampere cards) no longer kills the backend on the first request — CUDA graphs are not captured below sm_80 (#2135)
+- "Disable torch.compile" in Settings → Performance now works on macOS and Linux, not only Windows; it was greyed out on the platforms that needed it (#2135)
+- Setting `TORCH_COMPILE_DISABLE=1` in the environment now actually disables torch.compile, for the in-process engine and engine subprocesses alike (#2135)
+- A backend killed by a native crash now leaves the faulting thread's stack in `backend_err.log` instead of exiting silently (#2135)
 
 ### CI
 
@@ -139,6 +180,8 @@ the frozen-backend fallback mirror it for their toolchains.
 - Voice Design simplified: the 12-row fine-grained block collapses to one summary line with a five-field editor, English accent and Chinese dialect merge into a single field, and the starting-point chips now show 5 with an overflow toggle (#1793)
 
 ### Added
+
+- Remote-worker metrics distinguish unavailable readings from zero and keep probes off the control loop (#2155)
 
 - The audiobook result is now a synced-lyrics player: chapter text follows playback with the current word highlighted and click-to-seek, timed from the render's own chapter durations with a karaoke-style even split — no ASR pass, fully local (#1766) — thanks @mvanhorn!
 - The dub CAST strip expands into a project-level casting board: drag voice chips (clone profiles, design presets, Default) onto speaker rows — or pick from a keyboard listbox — writing the same per-speaker cast fields as the existing dropdowns (#1767) — thanks @mvanhorn!

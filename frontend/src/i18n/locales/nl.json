@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "Apparaatinstelling kon niet worden geladen",
     "perf_save_failed": "Instelling kon niet worden opgeslagen",
     "generate_budget_title": "Rekentijdbudget",
@@ -360,7 +361,10 @@
     "theme_auto": "Systeem auto",
     "theme_light": "Licht",
     "reduce_motion": "Beweging verminderen",
-    "reduce_motion_desc": "Stopt achtergrondanimaties en overgangen. Je systeeminstelling blijft op zichzelf gelden; dit komt daarbij."
+    "reduce_motion_desc": "Stopt achtergrondanimaties en overgangen. Je systeeminstelling blijft op zichzelf gelden; dit komt daarbij.",
+    "perf_torch_compile": "torch.compile uitschakelen",
+    "perf_torch_compile_note": "Gebruikt directe uitvoering om Triton-geheugenfouten te voorkomen.",
+    "perf_torch_compile_hint": "Gebruikt directe uitvoering om Triton-geheugenfouten te voorkomen. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",

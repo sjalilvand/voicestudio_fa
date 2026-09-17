@@ -1793,6 +1793,64 @@ _TORCH_COMPILE_MODE = "reduce-overhead"
 # would not.
 _CUDAGRAPH_COMPILE_MODES = frozenset({"reduce-overhead", "max-autotune"})
 
+# ── #2135: CUDA-graph capture needs Ampere or newer ─────────────────────────
+# On a Turing T4 (sm_75) the cudagraph mode above took the whole backend
+# process down on the first generate — no Python traceback, no HTTP response,
+# just a dead PID (the native capture aborts below the interpreter, so neither
+# the #278 eager fallback nor any `except` can see it). The graph *capture* is
+# the risky part, not Inductor: dropping to the non-cudagraph "default" mode
+# keeps the compiled kernels (and most of the speedup) while removing the
+# crash surface. Ampere (sm_80) is the floor because that is where the app has
+# actual passing evidence; anything older takes the conservative path.
+_CUDAGRAPH_MIN_CAPABILITY = (8, 0)
+# Escape hatch in the other direction, for operators benchmarking on old GPUs.
+_FORCE_CUDAGRAPH_ENV = "OMNIVOICE_FORCE_CUDAGRAPH"
+
+
+def _resolve_compile_mode() -> str:
+    """The ``torch.compile`` mode to use on this GPU (#2135).
+
+    Returns the configured cudagraph mode on Ampere+, and the non-cudagraph
+    ``"default"`` on older architectures where graph capture has been observed
+    to abort the process. Fails *safe* (→ "default") only when we positively
+    identify a pre-Ampere device; any probe error keeps the configured mode so
+    a weird torch build doesn't silently lose the optimization.
+    """
+    if _TORCH_COMPILE_MODE not in _CUDAGRAPH_COMPILE_MODES:
+        return _TORCH_COMPILE_MODE
+    if os.environ.get(_FORCE_CUDAGRAPH_ENV, "").strip().lower() in {"1", "true", "yes", "on"}:
+        logger.warning(
+            "%s=1 — keeping torch.compile mode %r on a GPU where CUDA-graph "
+            "capture is not known-good (#2135).",
+            _FORCE_CUDAGRAPH_ENV, _TORCH_COMPILE_MODE,
+        )
+        return _TORCH_COMPILE_MODE
+    try:
+        import torch
+
+        if not torch.cuda.is_available():
+            return _TORCH_COMPILE_MODE
+        capability = torch.cuda.get_device_capability(0)
+    except Exception:
+        logger.debug("compile-mode capability probe failed; keeping %r",
+                     _TORCH_COMPILE_MODE, exc_info=True)
+        return _TORCH_COMPILE_MODE
+    if tuple(capability) >= _CUDAGRAPH_MIN_CAPABILITY:
+        return _TORCH_COMPILE_MODE
+    try:
+        device_name = torch.cuda.get_device_name(0)
+    except Exception:
+        device_name = "this GPU"
+    logger.info(
+        "torch.compile mode %r downgraded to 'default' on %s (sm_%d%d): CUDA-graph "
+        "capture below sm_%d%d has been seen to abort the backend process (#2135). "
+        "Compiled kernels are still used. Set %s=1 to override.",
+        _TORCH_COMPILE_MODE, device_name, capability[0], capability[1],
+        _CUDAGRAPH_MIN_CAPABILITY[0], _CUDAGRAPH_MIN_CAPABILITY[1],
+        _FORCE_CUDAGRAPH_ENV,
+    )
+    return "default"
+
 _compiled_inference_executor: "ThreadPoolExecutor | None" = None
 _compiled_inference_thread_ident: "int | None" = None
 
@@ -2586,8 +2644,11 @@ def _load_model_sync():
 
             if not flashinfer_applied and should_torch_compile(device):
                 _set_loading("compiling", "Compiling model (torch.compile)…")
+                # #2135: resolved per-GPU — pre-Ampere drops to the
+                # non-cudagraph mode rather than risking a native abort.
+                compile_mode = _resolve_compile_mode()
                 try:
-                    _model.llm = torch.compile(_model.llm, mode=_TORCH_COMPILE_MODE)
+                    _model.llm = torch.compile(_model.llm, mode=compile_mode)
                 except Exception as compile_exc:
                     # #278: compile is an optimization, never a point of
                     # failure — keep the eager model and remember the failure
@@ -2604,7 +2665,7 @@ def _load_model_sync():
                     # archs, #278). Wrap generate so that falls back to eager
                     # instead of failing the generation.
                     _install_compile_fallback(_model)
-                    if _TORCH_COMPILE_MODE in _CUDAGRAPH_COMPILE_MODES:
+                    if compile_mode in _CUDAGRAPH_COMPILE_MODES:
                         # #315: reduce-overhead uses CUDA graphs, whose
                         # captured state is thread-local. Pin all inference to
                         # one dedicated thread so a later render dispatched to
@@ -2615,9 +2676,9 @@ def _load_model_sync():
                         logger.info(
                             "torch.compile mode %r uses CUDA graphs — compiled-model "
                             "inference pinned to a single dedicated thread (#315).",
-                            _TORCH_COMPILE_MODE,
+                            compile_mode,
                         )
-                    logger.info("torch.compile applied.")
+                    logger.info("torch.compile applied (mode=%r).", compile_mode)
         except Exception as e:
             logger.info("torch.compile skipped: %s", e)
 

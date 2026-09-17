@@ -1,3 +1,4 @@
+import { runRendererTask } from '@/lib/global-error-recovery';
 import { BlocksIcon, ExternalLinkIcon, SearchIcon, SparklesIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -142,7 +143,7 @@ export function IntegrationsPage() {
             <button
               type="button"
               key={entry.url}
-              onClick={() => void navigate({ to: '/integrations/$slug', params: { slug: integrationSlug(entry.name) } })}
+              onClick={() => runRendererTask('Open integration', () => navigate({ to: '/integrations/$slug', params: { slug: integrationSlug(entry.name) } }))}
               className="integration-card"
             >
               <div className="integration-card-top">

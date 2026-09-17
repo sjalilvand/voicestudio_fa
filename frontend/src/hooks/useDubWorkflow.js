@@ -1263,11 +1263,12 @@ export default function useDubWorkflow({
                   setDubError(t('dub_workflow.generation_aborted'));
                   toast(t('dub_workflow.dubbing_aborted'), { icon: '⏹' });
                 } else if (evt.type === 'error') {
-                  generationError = evt.error_code === 'dub_speech_missing'
-                    ? t('dubIntegrity.missingSpeech')
-                    : evt.error_code === 'dub_timing_overflow'
-                      ? t('dubIntegrity.timingOverflow')
-                      : evt.reason || evt.error || t('dub_workflow.generation_stream_ended');
+                  generationError =
+                    evt.error_code === 'dub_speech_missing'
+                      ? t('dubIntegrity.missingSpeech')
+                      : evt.error_code === 'dub_timing_overflow'
+                        ? t('dubIntegrity.timingOverflow')
+                        : evt.reason || evt.error || t('dub_workflow.generation_stream_ended');
                   setDubError(generationError);
                 }
               } catch (err) {
@@ -1278,7 +1279,8 @@ export default function useDubWorkflow({
         }
         setDubTaskId(null);
         if (!wasCancelled) {
-          if (!sawDone || generationError) throw new Error(generationError || t('dub_workflow.generation_stream_ended'));
+          if (!sawDone || generationError)
+            throw new Error(generationError || t('dub_workflow.generation_stream_ended'));
           if (dubStep !== 'done') setDubStep('done');
           loadDubHistory();
           loadProjects();

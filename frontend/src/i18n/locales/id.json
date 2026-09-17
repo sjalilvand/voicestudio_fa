@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "Gagal memuat pengaturan perangkat",
     "perf_save_failed": "Gagal menyimpan pengaturan",
     "generate_budget_title": "Anggaran waktu komputasi",
@@ -360,7 +361,10 @@
     "theme_auto": "Otomatis Sistem",
     "theme_light": "Terang",
     "reduce_motion": "Kurangi gerakan",
-    "reduce_motion_desc": "Menghentikan animasi latar dan transisi. Pengaturan sistem Anda tetap berlaku sendiri; ini menambahnya."
+    "reduce_motion_desc": "Menghentikan animasi latar dan transisi. Pengaturan sistem Anda tetap berlaku sendiri; ini menambahnya.",
+    "perf_torch_compile": "Nonaktifkan torch.compile",
+    "perf_torch_compile_note": "Menggunakan eksekusi langsung untuk menghindari kesalahan memori Triton.",
+    "perf_torch_compile_hint": "Menggunakan eksekusi langsung untuk menghindari kesalahan memori Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",

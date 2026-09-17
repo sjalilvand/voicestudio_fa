@@ -42,7 +42,8 @@ export async function browserDownload(url, fallbackName, deps = {}) {
 
   const response = await _fetch(url);
   if (!response.ok) {
-    const body = typeof response.json === 'function' ? await response.json().catch(() => null) : null;
+    const body =
+      typeof response.json === 'function' ? await response.json().catch(() => null) : null;
     if (body?.detail?.code === 'dub_background_unavailable')
       throw new Error(i18next.t('dubIntegrity.backgroundUnavailable'));
     throw new Error('Download failed');
