@@ -1197,3 +1197,7 @@ An architecture accepted by the torch.compile preflight may still encounter inde
 ### Native engine installation from a remote client
 
 Sidecar and audio.cpp runtime installation is restricted to requests from the backend computer's loopback interface. An API key does not bypass this restriction. The catalogue now shows local setup guidance instead of offering a remote install that will be rejected. Open the backend through `localhost` on that computer, or follow the engine's setup guide there. In Docker, bridge-network requests may not be loopback even when the browser runs on the host; use the documented container setup rather than weakening the native-install gate.
+
+### Dubbing extraction fails
+
+Extraction errors show the FFmpeg exit code and the end of its diagnostics, with private paths scrubbed. Use the final error line to distinguish missing audio streams, unsupported inputs, permissions, or disk errors. A version banner alone does not identify the cause; include the final diagnostic and source format when reporting a failure.

@@ -1,0 +1,25 @@
+import json
+from types import SimpleNamespace
+
+import pytest
+from services import dub_pipeline
+
+
+@pytest.mark.asyncio
+async def test_extract_error_preserves_failure_after_long_banner(tmp_path, monkeypatch):
+    stderr = ("ffmpeg version configuration " * 100 + "\n/home/private/media/secret.mp4: No audio stream found").encode()
+    async def run_proc(args):
+        return SimpleNamespace(returncode=1), b"", stderr
+    monkeypatch.setattr(dub_pipeline, "find_ffmpeg", lambda: "ffmpeg")
+    monkeypatch.setattr(dub_pipeline, "run_proc_factory", lambda job: run_proc)
+    events = [event async for event in dub_pipeline.ingest_pipeline(
+        "diagnostic", str(tmp_path), {"kind": "upload", "path": str(tmp_path / "input.mp4")},
+    )]
+    output = "\n".join(events)
+    assert "No audio stream found" in output
+    assert "code 1" in output
+    assert "/home/private/" not in output
+
+
+def test_empty_native_diagnostic_retains_exit_code():
+    assert "code 7" in dub_pipeline._media_process_error("FFmpeg", 7, b"")

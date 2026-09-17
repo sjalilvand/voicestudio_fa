@@ -63,6 +63,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Show local setup guidance when remote native engine installation is unavailable (#2166)
 
+- Show scrubbed native error tails and exit codes for failed dubbing extraction (#2167)
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**
