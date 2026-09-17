@@ -262,6 +262,4 @@ Mixed or malformed SRT files can make a bare number indistinguishable from spoke
 
 If the Argos native runtime cannot load, both desktop and browser clients show localized recovery guidance: reinstall the backend or select NLLB. The API returns the stable `argos_runtime_unavailable` error code without exposing native library paths.
 
-WebVTT import excludes NOTE, STYLE, and REGION metadata blocks before parsing timestamps; timing examples in notes never become spoken segments.
-
 WebVTT import separates metadata blocks from cue identifiers using the [WebVTT block-parsing rules](https://www.w3.org/TR/webvtt1/#file-parsing): a timing line immediately after an identifier makes a cue, even when that identifier is NOTE, STYLE, or REGION. Later timing examples inside metadata are ignored, and empty cues never borrow the next cue’s identifier as dialogue.

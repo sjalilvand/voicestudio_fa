@@ -10,9 +10,9 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
-- More reliable engine installation, transcription, and sidecar recovery
-- Preserve subtitle text and legacy manuscript encodings across desktop and web
-- Clearer setup guidance and media failure diagnostics
+- More reliable engine installation, transcription, and sidecar recovery (#2165, #2109, #2111)
+- Preserve subtitle text and legacy manuscript encodings across desktop and web (#2077, #2151, #2073)
+- Clearer setup guidance and media failure diagnostics (#2166, #2167)
 
 ### Fixed
 
@@ -28,7 +28,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Preserve milliseconds and carry rounded subtitle timestamps across second boundaries (#2074) — thanks @kevin9327!
 - Decode UTF-16 and Windows-1252 subtitle and manuscript imports in Electron, web, and backend routes (#2073) — thanks @kevin9327!
 - Preserve numeric subtitle dialogue while recognizing mixed indexed and unindexed cues (#2151) — thanks @shivsin25!
-- Parse pasted WebVTT cues without treating mid-sentence timestamps as subtitle records (#2077) — thanks @kevin9327!
+- Parse pasted WebVTT cues while separating metadata, identifiers, empty cues, and complete timing lines (#2077) — thanks @kevin9327!
 - Normalize Argos language aliases without silently changing Traditional Chinese to Simplified (#2143, #2152) — thanks @gyanu2507 and @rollroyces!
 - Clarify Blackwell import-crash diagnostics without blaming missing kernels (#2084) — thanks @Moep90!
 - Distinguish architecture preflight rejection from independent compile-stack failures (#2085) — thanks @Moep90!
@@ -42,7 +42,6 @@ the frozen-backend fallback mirror it for their toolchains.
 - Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
 
 - Electron packaging can recover without changing a release tag
-- Parse pasted WebVTT cues while separating metadata, identifiers, empty cues, and complete timing lines (#2077) — thanks @kevin9327!
 
 ## [0.5.3] — 2026-09-17
 
