@@ -100,10 +100,11 @@ def parse_srt(content: str) -> SrtParseResult:
     # timing line (or end of file). This is robust to missing index
     # numbers and to spec deviations in the blank-line separator.
     matches = list(_TIMING_RE.finditer(text))
-    # Each body is sliced up to the NEXT timing line, which swallows that
-    # cue's index line. Only an indexed file has an index to give back, so
-    # decide that once here instead of guessing from each body.
-    indexed = bool(matches) and _uses_index_lines(text, matches[0].start())
+    # A mixed file can stop numbering at any cue. Track each boundary;
+    # never treat an initial index as permission to discard later numbers.
+    head = text[:matches[0].start()].strip() if matches else ""
+    first_marker = head.split("\n")[-1].strip() if head else ""
+    cue_index = int(first_marker) if _is_index_line(first_marker) and len(first_marker) <= 12 else None
     for i, m in enumerate(matches):
         try:
             start = _ts_to_seconds(m.group(1), m.group(2), m.group(3), m.group(4))
@@ -124,6 +125,7 @@ def parse_srt(content: str) -> SrtParseResult:
             body = re.split(r"\n[^\S\n]*\n", body.lstrip("\n"), maxsplit=1)[0]
         # An index must directly precede the next timing line. A blank line
         # AFTER a number instead marks that number as preceding dialogue.
+        next_index = None
         if has_next and not is_webvtt:
             # Inspect lines rather than a backtracking regex on uploaded text.
             # One newline terminates the marker; a second means it is dialogue.
@@ -133,9 +135,12 @@ def parse_srt(content: str) -> SrtParseResult:
             marker = marker_lines[-1].strip(" \t") if marker_lines else ""
             numeric = bool(marker) and marker.isascii() and marker.isdecimal()
             separated = len(marker_lines) > 1 and not marker_lines[-2].strip()
-            expected = marker.lstrip("0") == str(i + 2)
-            if numeric and (indexed or (separated and expected)):
+            expected_index = cue_index + 1 if cue_index is not None else i + 2
+            expected = marker.lstrip("0") == str(expected_index)
+            if numeric and expected and (cue_index is not None or separated):
                 body = "\n".join(marker_lines[:-1])
+                next_index = expected_index
+        cue_index = next_index
         lines = body.strip("\n").split("\n")
         cue_text = "\n".join(line.strip() for line in lines if line.strip())
         if not cue_text:

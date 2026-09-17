@@ -346,3 +346,14 @@ def test_indexless_numeric_dialogue_after_blank_line_is_preserved():
     text = '00:00:01,000 --> 00:00:02,000\nFirst\n\n42\n00:00:03,000 --> 00:00:04,000\nNext'
     segments = parse_srt(text).segments
     assert segments[0]['text'] == 'First\n42'
+
+
+@pytest.mark.parametrize("gap", ["", "\n"])
+def test_initial_index_does_not_remove_later_numeric_dialogue(gap):
+    text = "1\n00:00:01,000 --> 00:00:02,000\nFirst\n\n2\n00:00:03,000 --> 00:00:04,000\nAnswer\n" + gap + "42\n00:00:05,000 --> 00:00:06,000\nLast"
+    assert [cue["text"] for cue in parse_srt(text).segments] == ["First", "Answer\n42", "Last"]
+
+
+def test_nonsequential_ambiguous_number_is_retained_as_dialogue():
+    text = "00:00:01,000 --> 00:00:02,000\nFirst\n\n3\n00:00:03,000 --> 00:00:04,000\nNext"
+    assert parse_srt(text).segments[0]["text"] == "First\n3"
