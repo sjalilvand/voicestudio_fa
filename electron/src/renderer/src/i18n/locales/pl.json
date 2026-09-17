@@ -2525,6 +2525,7 @@
     "channels_stereo": "Stereo"
   },
   "tts_errors": {
+    "profile_language_rejected": "Tryb automatyczny używa języka profilu głosu ({{language}}), którego ten silnik nie obsługuje. Zmień język profilu, wybierz obsługiwany język lub zmień silnik.",
     "generation_in_progress": "Generowanie już trwa — poczekaj na jego zakończenie przed rozpoczęciem kolejnego.",
     "error_prefix": "Błąd: {{message}}",
     "ignored_duplicate": "Ignorowane (kategoria już ustawiona): {{items}}",

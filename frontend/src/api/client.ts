@@ -1,3 +1,4 @@
+import { languageRejectionMessage } from '../utils/languageRejection.ts';
 import i18n from 'i18next';
 import { abortableDelay } from '../utils/abortableDelay.ts';
 // Backend base URL.
@@ -593,7 +594,8 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promis
       // human-readable `message` — use it for the Error message instead of
       // letting the object stringify to "[object Object]".
       const msg =
-        detail &&
+        languageRejectionMessage(detail, i18n.t) ||
+        (detail &&
         typeof detail === 'object' &&
         'code' in detail &&
         detail.code === 'argos_runtime_unavailable'
@@ -602,7 +604,7 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promis
             })
           : typeof detail === 'string'
             ? detail
-            : ((detail as { message?: string })?.message ?? JSON.stringify(detail));
+            : ((detail as { message?: string })?.message ?? JSON.stringify(detail)));
       // The backend names the exception type in `error_class` on its 500s.
       // Lifting it here is what lets the bug report say which failure it was.
       const errorClass =

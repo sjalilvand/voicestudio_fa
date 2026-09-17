@@ -292,6 +292,7 @@
     "recorder_unsupported": "This system cannot encode microphone audio."
   },
   "tts_errors": {
+    "profile_language_rejected": "Auto uses the voice profile’s language ({{language}}), which this engine does not support. Change the profile language, choose a supported language, or switch engines.",
     "enter_text": "Enter some text first.",
     "upload_or_select": "Upload a reference clip or pick a saved voice.",
     "trim_hint": "The clip is {{duration}}s — trim to ≤{{max}}s for best cloning.",

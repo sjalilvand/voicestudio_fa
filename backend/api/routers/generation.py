@@ -1106,6 +1106,19 @@ def _profile_language_rejection_detail(exc: BaseException, language) -> str:
     )
 
 
+def _language_rejection_payload(exc, language, *, from_profile):
+    """Stable, non-retryable error metadata for both response transports."""
+    from core.public_errors import stream_failure
+    failure = stream_failure("invalid_request")
+    failure["terminal"] = True
+    if from_profile:
+        failure.update(
+            code="profile_language_rejected", language=language,
+            detail=_profile_language_rejection_detail(_root_language_error(exc), language),
+        )
+    return failure
+
+
 def _language_rejection_http_error(exc: BaseException, language, *, from_profile):
     """The 400 a refused language deserves, wherever the refusal was raised.
 
@@ -1121,6 +1134,8 @@ def _language_rejection_http_error(exc: BaseException, language, *, from_profile
         _profile_language_rejection_detail(root, language)
         if from_profile else str(exc)
     )
+    if from_profile:
+        detail = {"code": "profile_language_rejected", "language": language, "message": detail}
     return HTTPException(status_code=400, detail=detail)
 
 
@@ -1961,10 +1976,14 @@ async def generate_speech(
                 # holding what is often its only slot until the lease lapses.
                 render.cancel()
                 raise
-            except ValueError:
+            except ValueError as e:
                 logger.error("Remote generation request rejected")
                 from core.public_errors import stream_failure
-                yield _line({"type": "error", **stream_failure("invalid_request")})
+                failure = (
+                    _language_rejection_payload(e, language, from_profile=language_from_profile)
+                    if _is_language_rejection(str(e)) else stream_failure("invalid_request")
+                )
+                yield _line({"type": "error", **failure})
             except gpu_gateway.ModelNotDownloaded as e:
                 logger.warning("Remote model missing on %s", _target_label)
                 from core.public_errors import stream_failure
@@ -1980,13 +1999,16 @@ async def generate_speech(
             except gpu_gateway.RemoteJobFailed as e:
                 logger.error("Remote generate failed on %s", _target_label)
                 from core.public_errors import stream_failure
-                yield _line({
-                    "type": "error",
-                    **stream_failure("generation_failed"),
-                    "retryable": True,
-                    "target_label": e.worker_label or _target_label,
-                    "hint": e.hint,
-                })
+                if _is_language_rejection(str(e)):
+                    yield _line({"type": "error", **_language_rejection_payload(
+                        e, language, from_profile=language_from_profile,
+                    )})
+                else:
+                    yield _line({
+                        "type": "error", **stream_failure("generation_failed"),
+                        "retryable": True, "target_label": e.worker_label or _target_label,
+                        "hint": e.hint,
+                    })
             except Exception as exc:
                 # Mid-job remote failure is NOT quietly redone here: the client
                 # treats a retryable error as "surface it", so the user decides
@@ -2295,10 +2317,14 @@ async def generate_speech(
                 failure = stream_failure("generation_timeout")
                 failure["retry_after"] = 30
                 yield _line({"type": "error", **failure})
-            except ValueError:
+            except ValueError as e:
                 logger.error("Streaming generation request rejected")
                 from core.public_errors import stream_failure
-                yield _line({"type": "error", **stream_failure("invalid_request")})
+                failure = (
+                    _language_rejection_payload(e, language, from_profile=language_from_profile)
+                    if _is_language_rejection(str(e)) else stream_failure("invalid_request")
+                )
+                yield _line({"type": "error", **failure})
             except Exception as exc:
                 # A streaming request answers 200 and carries its failure as an
                 # in-band error frame, so it never reaches the global 500

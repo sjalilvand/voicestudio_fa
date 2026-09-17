@@ -85,3 +85,7 @@ See also: [benchmarks.md](../benchmarks.md),
 
 Consecutive chunks with the same native sample rate are resampled together to
 preserve filter context at chunk boundaries; rate changes start a new group.
+
+Profile language refusals are terminal request errors on both local and remote
+rendering, including streaming. Electron and web show localized guidance that
+Auto inherits the profile language; neither silently retries the same refusal.

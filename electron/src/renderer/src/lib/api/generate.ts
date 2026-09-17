@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+import { languageRejectionMessage } from '../../../../../../frontend/src/utils/languageRejection.ts';
 import { ApiError, apiFetch, isAbortError } from './client';
 import type { CloneGenerateInput, GenerateResult } from './types';
 import { beginAppActivity } from '@/lib/app-activity';
@@ -255,6 +257,9 @@ interface StreamEvent {
   count?: number;
   text?: string[];
   detail?: string;
+  code?: string;
+  language?: string;
+  terminal?: boolean;
   retryable?: boolean;
   percent?: number;
 }
@@ -300,12 +305,15 @@ export async function generateCloneStreaming(
       } else if (event.type === 'done') {
         meta = event;
       } else if (event.type === 'error') {
-        const message = event.detail || 'TTS stream reported an error';
-        const terminal = [
-          '[clone_ref_unusable]',
-          '[clone_ref_too_long]',
-          '[clone_ref_no_speech]',
-        ].some((marker) => message.includes(marker));
+        const message =
+          languageRejectionMessage(event, i18next.t) ||
+          event.detail ||
+          'TTS stream reported an error';
+        const terminal =
+          event.terminal === true ||
+          ['[clone_ref_unusable]', '[clone_ref_too_long]', '[clone_ref_no_speech]'].some((marker) =>
+            message.includes(marker),
+          );
         throw new StreamingPreviewError(message, { retryable: event.retryable, terminal });
       }
     };

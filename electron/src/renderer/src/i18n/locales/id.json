@@ -2521,6 +2521,7 @@
     "channels_stereo": "Stereo"
   },
   "tts_errors": {
+    "profile_language_rejected": "Otomatis menggunakan bahasa profil suara ({{language}}), yang tidak didukung mesin ini. Ubah bahasa profil, pilih bahasa yang didukung, atau ganti mesin.",
     "generation_in_progress": "Pembuatan sedang berjalan — tunggu hingga selesai sebelum memulai yang lain.",
     "error_prefix": "Kesalahan: {{message}}",
     "ignored_duplicate": "Diabaikan (kategori sudah ditetapkan): {{items}}",

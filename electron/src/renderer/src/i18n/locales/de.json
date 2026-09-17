@@ -2521,6 +2521,7 @@
     "channels_stereo": "Stereo"
   },
   "tts_errors": {
+    "profile_language_rejected": "Automatisch verwendet die Sprache des Stimmprofils ({{language}}), die diese Engine nicht unterstützt. Ändere die Profilsprache, wähle eine unterstützte Sprache oder wechsle die Engine.",
     "generation_in_progress": "Eine Generierung läuft bereits – warte, bis sie abgeschlossen ist, bevor du eine weitere startest.",
     "error_prefix": "Fehler: {{message}}",
     "ignored_duplicate": "Ignoriert (Kategorie bereits festgelegt): {{items}}",

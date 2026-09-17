@@ -2219,6 +2219,7 @@
     "session_expired": "Phiên lồng tiếng này đã hết hạn hoặc đã bị xóa - hãy tải lại video của bạn lên để bắt đầu một video mới."
   },
   "tts_errors": {
+    "profile_language_rejected": "Tự động sử dụng ngôn ngữ của hồ sơ giọng nói ({{language}}), nhưng bộ máy này không hỗ trợ. Đổi ngôn ngữ hồ sơ, chọn ngôn ngữ được hỗ trợ hoặc đổi bộ máy.",
     "enter_text": "Vui lòng nhập văn bản",
     "upload_or_select": "Tải lên âm thanh hoặc chọn cấu hình giọng nói",
     "trim_hint": "Âm thanh là {{duration}}s — cắt thành ≤{{max}}s để sao chép tốt nhất",

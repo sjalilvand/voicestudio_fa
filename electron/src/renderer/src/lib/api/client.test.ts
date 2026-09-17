@@ -169,3 +169,23 @@ it('uses a structured error message without losing recovery metadata', async () 
   expect(error.message).toBe(detail.message);
   expect(error.payload?.detail).toEqual(detail);
 });
+
+it('localizes structured profile language failures', async () => {
+  const translate = vi.spyOn(i18next, 't').mockReturnValue('Localized profile guidance');
+  try {
+    const detail = {
+      code: 'profile_language_rejected',
+      language: 'Persian',
+      message: 'English fallback',
+    };
+    const error = await errorFromResponse(
+      new Response(JSON.stringify({ detail }), { status: 400 }),
+    );
+    expect(error.detail).toBe('Localized profile guidance');
+    expect(translate).toHaveBeenCalledWith('tts_errors.profile_language_rejected', {
+      language: 'Persian',
+    });
+  } finally {
+    translate.mockRestore();
+  }
+});
