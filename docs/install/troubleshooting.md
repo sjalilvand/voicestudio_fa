@@ -1188,3 +1188,8 @@ When FFprobe is not on PATH, VoiceStudio also checks beside the selected FFmpeg 
 ### Subtitle and manuscript encodings
 
 Electron and web imports accept UTF-8, UTF-16 with a byte-order mark, and Windows-1252 text. The same decoder rules apply to uploaded subtitles and audiobook manuscripts; legacy punctuation is preserved.
+
+
+### Compile fallback after startup
+
+An architecture accepted by the torch.compile preflight may still encounter independent Dynamo, Inductor, Triton, or CUDA-graph runtime errors. VoiceStudio distinguishes those from GPU memory exhaustion and retries with eager execution; architecture support alone does not guarantee compilation succeeds.

@@ -55,6 +55,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Clarify Blackwell import-crash diagnostics without blaming missing kernels (#2084) — thanks @Moep90!
 
+- Distinguish architecture preflight rejection from independent compile-stack failures (#2085) — thanks @Moep90!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**
