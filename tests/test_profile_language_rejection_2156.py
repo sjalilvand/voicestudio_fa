@@ -276,6 +276,113 @@ def test_generic_rejections_are_still_rewritten_with_engine_context(reason):
     assert "MLX Audio" in str(rewritten)
 
 
+# ── review findings on the first cut of this fix ────────────────────────────
+
+
+def test_a_generic_rejection_is_quoted_once_not_twice(client, monkeypatch, persian_profile):
+    """Greptile P2. `_language_rejection_or` wraps a *generic* rejection with
+    the engine remedy before the handler sees it. Building the profile message
+    from that wrapper repeated both the engine-switch advice and "Engine's own
+    message:" twice — so the profile message is built from the engine's own
+    text, not from the wrapper around it."""
+    class _Generic(_make_refusing_engine("fake-generic-2156")):
+        def generate(self, text, **kw):
+            raise ValueError(
+                "Invalid language code. Supported languages: ar (Arabic), "
+                "da (Danish), de (German)"
+            )
+
+    monkeypatch.setitem(_tts_mod()._REGISTRY, _Generic.id, _Generic)
+
+    res = client.post("/generate", data={
+        "text": "Salam", "profile_id": persian_profile, "engine": _Generic.id,
+    })
+
+    assert res.status_code == 400, res.text
+    detail = res.json()["detail"]
+    assert "voice profile" in detail.lower()
+    assert detail.count("Engine's own message:") == 1
+    assert detail.count("switch engine in Model Catalogue") == 1
+    # The engine's own text survives exactly once.
+    assert detail.count("Invalid language code") == 1
+
+
+def _route_remotely(monkeypatch, failure):
+    """Send the render to a worker, and fail it there with `failure`."""
+    from types import SimpleNamespace
+
+    from services import gpu_gateway
+
+    gen = _gen_mod()
+    monkeypatch.setattr(
+        gen, "_routing_decision",
+        lambda: SimpleNamespace(remote=True, label="gpu-box", reason=""),
+    )
+
+    async def _boom(*_a, **_k):
+        raise failure
+
+    monkeypatch.setattr(gpu_gateway, "run", _boom)
+
+
+def test_a_remote_language_refusal_is_a_400_not_a_retryable_503(
+    client, monkeypatch, persian_profile
+):
+    """Greptile P1. A worker's rejection comes home as RemoteJobFailed, which is
+    caught ahead of the ValueError branch — so the profile-aware 400 never ran
+    and the user was told to retry on this machine, where the same engine
+    refuses the same language."""
+    from services import gpu_gateway
+
+    fake = _make_refusing_engine("fake-remote-2156")
+    monkeypatch.setitem(_tts_mod()._REGISTRY, fake.id, fake)
+    _route_remotely(monkeypatch, gpu_gateway.RemoteJobFailed(
+        KOKORO_REFUSAL, worker_label="gpu-box"))
+
+    res = client.post("/generate", data={
+        "text": "Salam", "profile_id": persian_profile, "engine": fake.id,
+    })
+
+    assert res.status_code == 400, f"{res.status_code}: {res.text}"
+    assert res.headers.get("X-OmniVoice-Retryable") != "true"
+    detail = res.json()["detail"]
+    assert "voice profile" in detail.lower()
+    assert "Run it on this machine instead" not in detail
+
+
+def test_a_remote_non_language_failure_is_still_a_retryable_503(
+    client, monkeypatch, persian_profile
+):
+    """Guard on the same branch: only language refusals change class — a real
+    worker failure keeps its retryable 503 and its 'run it here' offer."""
+    from services import gpu_gateway
+
+    fake = _make_refusing_engine("fake-remote-ok-2156")
+    monkeypatch.setitem(_tts_mod()._REGISTRY, fake.id, fake)
+    _route_remotely(monkeypatch, gpu_gateway.RemoteJobFailed(
+        "CUDA out of memory on the worker", worker_label="gpu-box"))
+
+    res = client.post("/generate", data={
+        "text": "Salam", "profile_id": persian_profile, "engine": fake.id,
+    })
+
+    assert res.status_code == 503, f"{res.status_code}: {res.text}"
+    assert res.headers.get("X-OmniVoice-Retryable") == "true"
+
+
+def test_the_wrapper_keeps_the_engines_own_error_reachable():
+    class _Engine:
+        id = "mlx-audio"
+        display_name = "MLX Audio"
+
+    original = ValueError("Invalid language code. Supported languages: ar (Arabic)")
+    wrapped = _gen_mod()._language_rejection_or(original, _Engine(), "Persian")
+    assert wrapped is not original
+    assert _gen_mod()._root_language_error(wrapped) is original
+    # An unwrapped error is its own root.
+    assert _gen_mod()._root_language_error(original) is original
+
+
 def _row(**over):
     row = {
         "kind": "clone", "instruct": None, "is_locked": 0,

@@ -1106,6 +1106,24 @@ def _profile_language_rejection_detail(exc: BaseException, language) -> str:
     )
 
 
+def _language_rejection_http_error(exc: BaseException, language, *, from_profile):
+    """The 400 a refused language deserves, wherever the refusal was raised.
+
+    A language an engine cannot speak is never retryable — not by waiting, and
+    not by re-running the same request on another machine. Built here so the
+    local (`ValueError`) and remote (`RemoteJobFailed`) handlers cannot drift:
+    #2156 shipped the profile-aware branch on the local path only, and a remote
+    render kept answering with a retryable 503 that offered "run it on this
+    machine instead", which cannot help.
+    """
+    root = _root_language_error(exc)
+    detail = (
+        _profile_language_rejection_detail(root, language)
+        if from_profile else str(exc)
+    )
+    return HTTPException(status_code=400, detail=detail)
+
+
 def _language_rejection_or(e: BaseException, backend, language):
     """``e`` rewritten with engine context when it's a language rejection.
 
@@ -1126,13 +1144,23 @@ def _language_rejection_or(e: BaseException, backend, language):
         type(backend), "id", type(backend).__name__
     )
     requested = f" '{language}'" if language else ""
-    return ValueError(
+    rewritten = ValueError(
         f"The {engine} engine can't speak{requested}. VoiceStudio offers every "
         f"language its default engine supports, but each engine covers a "
         f"different set — pick one this engine supports, or switch engine in "
         f"Model Catalogue (the VoiceStudio engine has the widest coverage) "
         f"and generate again. Engine's own message: {e}"
     )
+    # Keep the engine's own text reachable. #2156's profile message quotes the
+    # engine once; without this it would quote THIS wrapper, repeating both the
+    # engine-switch remedy and "Engine's own message:" twice.
+    rewritten.engine_language_error = e
+    return rewritten
+
+
+def _root_language_error(exc: BaseException) -> BaseException:
+    """The engine's own rejection, unwrapping :func:`_language_rejection_or`."""
+    return getattr(exc, "engine_language_error", exc)
 
 
 def _persist_profile_ref_text(profile_id: str, ref_text: str) -> None:
@@ -2453,6 +2481,15 @@ async def generate_speech(
         # the client can offer "run it on this machine instead" — a resubmit
         # the user chose, with a wait they were told about.
         logger.error("Remote generate failed on %s: %s", _target_label, e)
+        # #2156: a language the engine can't speak is a request problem, not a
+        # worker problem. It travels home as RemoteJobFailed — caught here,
+        # ahead of the ValueError branch below — so without this the user is
+        # told to retry on this machine, where the same engine refuses the same
+        # language. Answer it as the 400 it is, on either path.
+        if _is_language_rejection(str(e)):
+            raise _language_rejection_http_error(
+                e, language, from_profile=language_from_profile
+            ) from e
         raise HTTPException(
             status_code=503,
             detail=f"{e} {e.hint or 'Run it on this machine instead, or pick another GPU.'}",
@@ -2493,9 +2530,8 @@ async def generate_speech(
         # unfollowable, so say where the language actually came from. Only this
         # scope knows that; the engine adapters never see the provenance.
         if language_from_profile and _is_language_rejection(str(e)):
-            raise HTTPException(
-                status_code=400,
-                detail=_profile_language_rejection_detail(e, language),
+            raise _language_rejection_http_error(
+                e, language, from_profile=True
             ) from e
         # Most ValueErrors here are VoiceStudio's own validation messages and
         # are exactly what the user should read. A few are raw library text
