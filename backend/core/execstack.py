@@ -138,7 +138,8 @@ def clear_execstack(path: str) -> tuple[bool, str]:
         # Lock and inspect the same descriptor we write: another process may
         # already have repaired it, or the wheel may have been replaced.
         with _REPAIR_LOCK, open(path, "r+b") as fh:
-            if sys.platform == "linux":
+            # Use host capability, not an emulated target platform.
+            if os.name == "posix":
                 import fcntl
                 fcntl.flock(fh, fcntl.LOCK_EX)
             found = _gnu_stack_flags_offset(fh)
