@@ -188,7 +188,13 @@ before the token works for downloads.
 3. Retry the job. The token state in **Settings → API Keys** should now show
    the "App" row with a green check next to your username.
 
-**Linked issue:** [#35](https://github.com/debpalash/VoiceStudio/issues/35)
+If the token and license are already valid but an older build still reports
+401 during installation, update VoiceStudio and retry. Settings tokens now
+reach both the fast download path and engine-weight installers; no token
+rotation is needed for that fixed client bug.
+
+**Linked issues:** [#35](https://github.com/debpalash/VoiceStudio/issues/35),
+[#2163](https://github.com/debpalash/VoiceStudio/issues/2163)
 
 ### PocketTTS gated weights
 
