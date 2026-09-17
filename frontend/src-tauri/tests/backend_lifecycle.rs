@@ -1702,7 +1702,12 @@ fn sigkill_is_named_as_signal_nine() {
     join_with_timeout(h, Duration::from_secs(120), "sigkill loop");
 
     let msg = t.failed_message().expect("stage must be Failed");
-    assert!(msg.contains("signal 9"), "signal deaths must be named, got: {msg}");
+    // A slow runner can observe this death during readiness instead of in the
+    // supervisor. Both paths identify SIGKILL; only their formatting differs.
+    assert!(
+        msg.contains("signal 9") || msg.contains("signal: 9 (SIGKILL)"),
+        "signal deaths must be named, got: {msg}"
+    );
     let store = t.markers();
     let m = store.markers.last().expect("marker written");
     assert_eq!(m.exit_code, None);
