@@ -17,6 +17,7 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Fixed
 
 - Validate Python dependencies before reusing a desktop runtime and offer setup for incomplete environments (#2176)
+- Accept both valid SIGKILL diagnostics in the desktop lifecycle regression check (#2170)
 
 - Repair CTranslate2 loading safely across ASR and translation, and retain the loaded Whisper model during CPU fallback (#2165) — thanks @guruthechosen!
 - Avoid pedalboard wheels that crash on unsupported CPU instructions (#2080) — thanks @D3nii!
