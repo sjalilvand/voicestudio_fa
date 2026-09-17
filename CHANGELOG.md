@@ -34,7 +34,7 @@ Already using Electron? Install over your existing app and keep your data. If pr
 
 - Forward saved Hugging Face tokens when downloading gated model weights and dependencies (#2173) — thanks @shivsin25!
 - Explain unsupported saved-profile languages consistently in Electron, web, and streaming generation (#2175) — thanks @shivsin25!
-- List every installed Kokoro language and accept its displayed name, including British English (#2174) — thanks @paranoyouz-collab!
+- List every installed Kokoro language and accept its displayed name, including British English (#2174) — thanks @drakeo338!
 
 - Validate Python dependencies before reusing a desktop runtime and offer setup for incomplete environments (#2176)
 - Check active model cloning support before starting voice conversion (#2147)
@@ -79,7 +79,7 @@ Already using Electron? Install over your existing app and keep your data. If pr
 - @gyanu2507 and @rollroyces — Argos language normalization and regression coverage.
 - @kapelame — ffprobe discovery and MLX audio resampling.
 - @kevin9327 — subtitle timing, text encodings, WebVTT, and Windows database migrations.
-- @paranoyouz-collab — Kokoro supported-language reporting.
+- @drakeo338 — Kokoro supported-language reporting.
 - @debpalash — integration, Electron runtime recovery, localization, regression coverage, and release maintenance.
 
 ### Bug reports
