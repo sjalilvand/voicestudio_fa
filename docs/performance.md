@@ -102,9 +102,20 @@ where the runtime check says it can work (a CUDA device with Triton importable
 and a supported GPU architecture) and skipped automatically everywhere else —
 MPS, CPU, and the typical Windows install (Triton ships no Windows wheel).
 The one user-facing control is Settings → Performance → "Disable
-torch.compile" (shown on Windows), for the rare setup where a partial Triton
-install makes the probe pass but the compile attempt itself crash — see
-[Windows install notes](install/windows.md).
+torch.compile", available on every platform, for the setup where the probe
+passes but the compile attempt itself misbehaves — a partial Triton install,
+or a GPU whose compiled kernels crash the engine. Setting
+`TORCH_COMPILE_DISABLE=1` (or `TORCHDYNAMO_DISABLE=1`) in the environment does
+the same thing and is honoured by both the in-process engine and every engine
+subprocess. See [Windows install notes](install/windows.md).
+
+On CUDA the compile **mode** is chosen per GPU: Ampere (sm_80) and newer use
+`reduce-overhead`, which captures CUDA graphs; older cards (Turing/Volta, e.g.
+the Tesla T4) fall back to the plain `default` mode, because graph capture was
+observed to abort the whole backend process there
+([#2135](https://github.com/debpalash/VoiceStudio/issues/2135)). They still get
+compiled Inductor kernels. `OMNIVOICE_FORCE_CUDAGRAPH=1` restores the
+cudagraph mode if you want to benchmark it.
 
 ## Warnings before a slow generation
 
@@ -268,9 +279,12 @@ but with **operation-count budgets** in
   makes **zero** TTS calls. The zero-decode / zero-rewrite budget activates
   with the natural-rate cached fast path (each cache is then decoded exactly
   once, by the final assembly).
-- **Batch dubbing (native batches)**: N renderable segments at batch width W
+- **Dubbing synthesis (native batches)**: N renderable segments at batch width W
   cost exactly ⌈N/W⌉ `generate_batch` calls and zero per-segment `generate`
-  calls when native batching is enabled.
+  calls when native batching is enabled, in both interactive and queued jobs.
+- **NLLB dubbing translation**: rows sharing a target language render in
+  bounded batches instead of one model forward per subtitle. Mixed targets
+  retain their request order, and a failed batch retries per row.
 
 Updating a budget is a deliberate act: if a change legitimately adds an
 operation to a guarded path, change the expected count in the same PR with a
@@ -279,7 +293,7 @@ comment justifying the new floor. Never loosen a budget just to make CI pass
 
 ## Batch and streaming behavior
 
- Batch dubbing renders several segments in one native forward pass when the
+Interactive and Batch Dubbing render several segments in one native forward pass when the
 selected engine supports it. The width is derived from the host rather than
 fixed, because a wider forward pass needs proportionally more device memory:
 CPU hosts and cards with less than ~2 GB of headroom above the engine's
@@ -287,6 +301,10 @@ single-job requirement stay at one segment, and the width steps up to 2, 4,
 and 8 as headroom allows. `OMNIVOICE_DUB_BATCH_WIDTH` overrides it (1 disables
 batching, 16 is the ceiling). Engines without native batching inherit a
 compatibility fallback that preserves the one-segment behavior.
+
+NLLB similarly groups subtitles by target language and translates four rows
+per forward pass on CPU/MPS or eight on CUDA by default. Set
+`OMNIVOICE_NLLB_BATCH_SIZE=1` to disable it or choose up to 32 explicitly.
 
 Streaming clients also receive measured latency in the `/ws/tts` terminal
  `done` frame: `ttfa_ms` is request-to-first-audio, `gen_time_s` is the

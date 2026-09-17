@@ -50,6 +50,32 @@ def test_active_instance_reused_for_same_id(monkeypatch):
     tb.reset_active_backend()
 
 
+def test_model_status_reports_resident_checkpoint_identity(monkeypatch):
+    class _Model:
+        _voicestudio_checkpoint = "k2-fsa/resident-model"
+        _voicestudio_loaded_at = "2026-09-13T12:34:56Z"
+
+    monkeypatch.setattr(mm, "model", _Model())
+
+    status = mm.get_model_status()
+
+    assert status["status"] == "ready"
+    assert status["loaded"] is True
+    assert status["checkpoint"] == "k2-fsa/resident-model"
+    assert status["loaded_at"] == "2026-09-13T12:34:56Z"
+
+
+def test_model_status_clears_resident_identity_when_idle(monkeypatch):
+    monkeypatch.setattr(mm, "model", None)
+
+    status = mm.get_model_status()
+
+    assert status["status"] == "idle"
+    assert status["loaded"] is False
+    assert "checkpoint" not in status
+    assert "loaded_at" not in status
+
+
 def test_switch_unloads_previous_engine(monkeypatch):
     calls = {"unload": 0}
     tb._REGISTRY["fake-mm2"] = _fake_backend(calls)
@@ -250,7 +276,11 @@ def test_cache_is_complete_exempts_config_only_repo(tmp_path, monkeypatch):
     # truncated; the config_only hint must keep it from being flagged incomplete.
     _make_snapshot(tmp_path, "pyannote/speaker-diarization-3.1", {"config.yaml": b"x"})
     assert models.cache_is_complete(
-        {"repo_id": "pyannote/speaker-diarization-3.1", "config_only": True}
+        {
+            "repo_id": "pyannote/speaker-diarization-3.1",
+            "config_only": True,
+            "config_required_files": ["config.yaml"],
+        }
     ) is True
 
 

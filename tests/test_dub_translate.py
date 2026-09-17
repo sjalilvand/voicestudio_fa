@@ -1,5 +1,7 @@
 """Unit tests for dub_translate — no network, pure helpers + monkeypatched translator."""
 import asyncio
+from unittest.mock import AsyncMock
+
 import pytest
 
 
@@ -14,6 +16,115 @@ def test_flores_codes_cover_core_languages():
     from api.routers.dub_translate import FLORES_CODES
     for code in ('en', 'de', 'es', 'fr', 'hi', 'ja'):
         assert code in FLORES_CODES
+
+
+@pytest.mark.parametrize('code,expected', [
+    ('zh-TW', 'zho_Hant'), ('cmn-Hant', 'zho_Hant'), ('bn', 'ben_Beng'),
+    ('tam', 'tam_Taml'), ('zho_Hant', 'zho_Hant'), ('xx', None), ('kas', None),
+])
+def test_nllb_language_resolution(code, expected):
+    from api.routers.dub_translate import _nllb_language
+    assert _nllb_language(code) == expected
+
+
+def test_nllb_batching_scales_with_large_cuda_memory(monkeypatch):
+    from api.routers import dub_translate
+    import torch
+
+    monkeypatch.delenv("OMNIVOICE_NLLB_BATCH_SIZE", raising=False)
+    monkeypatch.setattr(dub_translate, "_nllb_device", "cuda")
+    monkeypatch.setattr(torch.cuda, "mem_get_info", lambda: (20 * 1024**3, 24 * 1024**3))
+
+    assert dub_translate._nllb_batch_size() == 24
+    assert dub_translate._nllb_hypothesis_budget() == 64
+
+
+def test_nllb_stays_warm_only_with_safe_cuda_headroom(monkeypatch):
+    from api.routers import dub_translate
+    import torch
+
+    monkeypatch.delenv("OMNIVOICE_UNLOAD_NLLB", raising=False)
+    monkeypatch.setattr(dub_translate, "_nllb_device", "cuda")
+    monkeypatch.setattr(torch.cuda, "mem_get_info", lambda: (18 * 1024**3, 24 * 1024**3))
+    assert dub_translate._should_unload_nllb() is False
+
+    monkeypatch.setattr(torch.cuda, "mem_get_info", lambda: (6 * 1024**3, 24 * 1024**3))
+    assert dub_translate._should_unload_nllb() is True
+
+    monkeypatch.setenv("OMNIVOICE_UNLOAD_NLLB", "1")
+    assert dub_translate._should_unload_nllb() is True
+
+
+@pytest.mark.asyncio
+async def test_nllb_rejects_unsupported_segment_before_loading(monkeypatch):
+    from api.routers.dub_translate import dub_translate
+    from schemas.requests import TranslateRequest
+    from services import translation_engines
+    monkeypatch.setattr(translation_engines, 'is_installed', lambda _: True)
+    monkeypatch.setattr(translation_engines, 'is_ready', lambda _: True)
+    request = TranslateRequest(provider='nllb', source_lang='en', target_lang='de',
+        segments=[{'id': '1', 'text': 'Hello', 'target_lang': 'unsupported'}])
+    response = await dub_translate(request)
+    assert response.status_code == 400
+    assert b'unsupported_translation_language' in response.body
+
+
+@pytest.mark.asyncio
+async def test_nllb_batches_segments_by_target_language(monkeypatch):
+    """NLLB pays one forward pass per batch while preserving row order/targets."""
+    from api.routers import dub_translate
+    from schemas.requests import TranslateRequest
+    from services import translation_engines
+
+    class FakeTokenizer:
+        src_lang = None
+
+        def __call__(self, texts, **kwargs):
+            assert kwargs["padding"] is True
+            return {"input_ids": list(texts)}
+
+        def convert_tokens_to_ids(self, target):
+            return target
+
+        def batch_decode(self, tokens, **kwargs):
+            return list(tokens)
+
+    class FakeModel:
+        def __init__(self):
+            self.calls = []
+
+        def generate(self, *, input_ids, forced_bos_token_id, **kwargs):
+            self.calls.append((list(input_ids), forced_bos_token_id))
+            return [f"{forced_bos_token_id}:{text}" for text in input_ids]
+
+    model = FakeModel()
+    monkeypatch.setattr(dub_translate, "_nllb_tokenizer", FakeTokenizer())
+    monkeypatch.setattr(dub_translate, "_nllb_model", model)
+    monkeypatch.setattr(dub_translate, "_nllb_device", "cpu")
+    monkeypatch.setattr(translation_engines, "is_installed", lambda _: True)
+    monkeypatch.setattr(translation_engines, "is_ready", lambda _: True)
+    monkeypatch.setenv("OMNIVOICE_NLLB_BATCH_SIZE", "2")
+    monkeypatch.setenv("OMNIVOICE_UNLOAD_NLLB", "0")
+
+    request = TranslateRequest(
+        provider="nllb",
+        source_lang="en",
+        target_lang="de",
+        quality="fast",
+        segments=[
+            {"id": "1", "text": "one"},
+            {"id": "2", "text": "two"},
+            {"id": "3", "text": "tres", "target_lang": "es"},
+            {"id": "4", "text": "four"},
+            {"id": "5", "text": "five"},
+        ],
+    )
+
+    response = await dub_translate.dub_translate(request)
+
+    assert len(model.calls) == 3  # two German batches + one Spanish batch
+    assert [row["id"] for row in response["translated"]] == ["1", "2", "3", "4", "5"]
+    assert response["translated"][2]["text"].startswith("spa_Latn:")
 
 
 def test_resolve_source_lang_priority(monkeypatch):
@@ -228,6 +339,41 @@ async def test_empty_translation_preserves_original(monkeypatch):
     assert 'error' in seg
 
 
+@pytest.mark.asyncio
+async def test_google_rejects_http_200_error_page(monkeypatch):
+    """Provider error HTML must never replace the user's transcript."""
+    from api.routers import dub_translate
+
+    attempts = 0
+
+    class FakeTranslator:
+        def __init__(self, **kwargs):
+            pass
+
+        def translate(self, text):
+            nonlocal attempts
+            attempts += 1
+            return (
+                "Error 500 (Server Error)!! That's an error. "
+                "There was an error. Please try again later."
+            )
+
+    class FakeModule:
+        GoogleTranslator = FakeTranslator
+
+    monkeypatch.setitem(__import__('sys').modules, 'deep_translator', FakeModule)
+
+    req = _FakeReq(
+        segments=[_FakeSeg('s1', 'Keep this transcript')],
+        target_lang='de', provider='google', source_lang='en',
+    )
+    resp = await dub_translate.dub_translate(req)
+    seg = resp['translated'][0]
+    assert attempts == 3
+    assert seg['text'] == 'Keep this transcript'
+    assert seg['error'] == 'translation provider returned invalid output'
+
+
 # ── P0: Cinematic/Autofit must run on the non-deep_translator engines ────────
 # Before this fix the argos/nllb/openai branches returned BEFORE
 # _maybe_cinematic, so picking Cinematic/Autofit on the DEFAULT Argos engine
@@ -366,6 +512,94 @@ def _install_fake_openai(monkeypatch, *, content="hola mundo", raises=None):
 
 
 @pytest.mark.asyncio
+async def test_agent_fit_forwards_exact_render_measurements(monkeypatch):
+    from api.routers import dub_translate
+    from schemas.requests import AgentFitRequest, AgentFitSegment
+    from services import llm_skills, speech_rate
+    from types import SimpleNamespace
+
+    seen = []
+
+    async def _fit_many(items, **_kwargs):
+        seen.extend(items)
+        return {
+            "s1": {
+                "text": "Shorter line.",
+                "changed": True,
+                "measured_seconds": 3.2,
+                "target_seconds": 2.0,
+                "measured_ratio": 1.6,
+            }
+        }
+
+    monkeypatch.setattr(speech_rate, "adjust_for_measured_slot_many", _fit_many)
+    monkeypatch.setattr(
+        llm_skills,
+        "resolve_skill",
+        lambda _skill_id: SimpleNamespace(ready=True, reason=None),
+    )
+    result = await dub_translate.dub_agent_fit(
+        AgentFitRequest(
+            target_lang="en",
+            segments=[
+                AgentFitSegment(
+                    id="s1",
+                    text="A line that rendered too long.",
+                    source_text="A line that rendered too long.",
+                    slot_seconds=2.0,
+                    measured_seconds=3.2,
+                )
+            ],
+        )
+    )
+
+    assert seen[0][2:4] == (2.0, 3.2)
+    assert result["segments"][0]["text"] == "Shorter line."
+    assert result["segments"][0]["changed"] is True
+
+
+@pytest.mark.asyncio
+async def test_agent_fit_rejects_an_unavailable_slot_fitting_skill(monkeypatch):
+    from api.routers import dub_translate
+    from fastapi import HTTPException
+    from schemas.requests import AgentFitRequest, AgentFitSegment
+    from services import llm_skills, speech_rate
+    from types import SimpleNamespace
+
+    fit = AsyncMock()
+    monkeypatch.setattr(speech_rate, "adjust_for_measured_slot_many", fit)
+    monkeypatch.setattr(
+        llm_skills,
+        "resolve_skill",
+        lambda _skill_id: SimpleNamespace(ready=False, reason="no_provider"),
+    )
+
+    with pytest.raises(HTTPException) as caught:
+        await dub_translate.dub_agent_fit(
+            AgentFitRequest(
+                target_lang="es",
+                segments=[
+                    AgentFitSegment(
+                        id="s1",
+                        text="Una línea larga.",
+                        source_text="A long line.",
+                        slot_seconds=1.0,
+                        measured_seconds=2.0,
+                    )
+                ],
+            )
+        )
+
+    assert caught.value.status_code == 409
+    assert caught.value.detail == {
+        "error": "llm_skill_unavailable",
+        "skill": "slot_fitting",
+        "reason": "no_provider",
+    }
+    fit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_openai_autofit_fit_pass_is_budget_bounded(monkeypatch):
     """A slow fit LLM must not spin one adjust_for_slot per segment unbounded:
     the whole translate returns within the budget and unfinished segments
@@ -456,7 +690,7 @@ async def test_openai_uses_provider_configured_in_settings(monkeypatch):
     import types
     from api.routers import dub_translate
     from schemas.requests import TranslateRequest, TranslateSegment
-    from services import llm_skills
+    from services import llm_skills, translation_engines
 
     for var in ("TRANSLATE_API_KEY", "TRANSLATE_BASE_URL", "TRANSLATE_MODEL"):
         monkeypatch.delenv(var, raising=False)
@@ -465,6 +699,7 @@ async def test_openai_uses_provider_configured_in_settings(monkeypatch):
     handle = types.SimpleNamespace(
         client=fake, model="provider-model", provider_id="groq", timeout=7.0)
     monkeypatch.setattr(llm_skills, "resolve_skill_client", lambda sid: handle)
+    monkeypatch.setattr(translation_engines, "is_ready", lambda provider: True)
 
     req = TranslateRequest(
         segments=[TranslateSegment(id="s1", text="Hello")],
@@ -484,7 +719,7 @@ async def test_openai_unconfigured_400_names_llm_providers(monkeypatch):
     import types
     from api.routers import dub_translate
     from schemas.requests import TranslateRequest, TranslateSegment
-    from services import llm_skills
+    from services import llm_skills, translation_engines
 
     for var in ("TRANSLATE_API_KEY", "TRANSLATE_BASE_URL", "TRANSLATE_MODEL"):
         monkeypatch.delenv(var, raising=False)
@@ -492,6 +727,9 @@ async def test_openai_unconfigured_400_names_llm_providers(monkeypatch):
     monkeypatch.setattr(
         llm_skills, "resolve_skill",
         lambda sid: types.SimpleNamespace(reason="no_provider"))
+    # Isolate the branch's actionable response from the registry preflight;
+    # registry readiness has its own contract tests.
+    monkeypatch.setattr(translation_engines, "is_ready", lambda provider: True)
 
     req = TranslateRequest(
         segments=[TranslateSegment(id="s1", text="Hello")],
@@ -508,7 +746,7 @@ async def test_openai_disabled_skill_400_names_llm_skills(monkeypatch):
     import types
     from api.routers import dub_translate
     from schemas.requests import TranslateRequest, TranslateSegment
-    from services import llm_skills
+    from services import llm_skills, translation_engines
 
     for var in ("TRANSLATE_API_KEY", "TRANSLATE_BASE_URL", "TRANSLATE_MODEL"):
         monkeypatch.delenv(var, raising=False)
@@ -516,6 +754,7 @@ async def test_openai_disabled_skill_400_names_llm_skills(monkeypatch):
     monkeypatch.setattr(
         llm_skills, "resolve_skill",
         lambda sid: types.SimpleNamespace(reason="disabled"))
+    monkeypatch.setattr(translation_engines, "is_ready", lambda provider: True)
 
     req = TranslateRequest(
         segments=[TranslateSegment(id="s1", text="Hello")],

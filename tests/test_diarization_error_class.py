@@ -146,6 +146,12 @@ class TestGetDiarizationPipeline:
         # Stub _lazy_torch so it doesn't try to import the real torch.
         monkeypatch.setattr(model_manager, "_lazy_torch", lambda: SimpleNamespace(device=lambda d: d))
 
+        from contextlib import contextmanager
+        @contextmanager
+        def local_config():
+            yield "local-config.yaml"
+        monkeypatch.setattr("services.diarization_local.local_pipeline_config", local_config)
+
         # Inject a fake pyannote.audio module whose Pipeline.from_pretrained
         # raises a 401-equivalent. Use sys.modules patching since
         # `from pyannote.audio import Pipeline` is done inside the function.
@@ -175,6 +181,12 @@ class TestGetDiarizationPipeline:
             lambda skip=frozenset(): ResolvedToken(token="hf_test", source="env", username="testuser"),
         )
         monkeypatch.setattr(model_manager, "_lazy_torch", lambda: SimpleNamespace(device=lambda d: d))
+
+        from contextlib import contextmanager
+        @contextmanager
+        def local_config():
+            yield "local-config.yaml"
+        monkeypatch.setattr("services.diarization_local.local_pipeline_config", local_config)
 
         class FakePipeline:
             @staticmethod

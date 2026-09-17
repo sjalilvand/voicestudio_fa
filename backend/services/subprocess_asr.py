@@ -60,6 +60,11 @@ class SubprocessASRBackend(SubprocessBackend):
     def generate(self, text: str, **kw):  # pragma: no cover - unused
         raise NotImplementedError("ASR sidecar does not synthesize speech")
 
+    def ensure_loaded(self) -> None:
+        """Prove the lazy ASR sidecar is ready for the shared loader."""
+        with self._lock:
+            self._spawn()
+
     # ── ASR surface ────────────────────────────────────────────────────────
     @staticmethod
     def _device() -> str:
@@ -109,13 +114,18 @@ class SubprocessASRBackend(SubprocessBackend):
                 raise TimeoutError("timed out waiting for a free GPU worker")
             with self._lock:
                 self._spawn()
+                from services.performance_profiles import asr_decode_defaults
                 self._send({
                     "op": "transcribe",
                     "audio_path": str(audio_path),
                     "word_timestamps": bool(word_timestamps),
+                    "decode_options": asr_decode_defaults(),
                 })
                 reply = self._recv_with_timeout(ASR_RECV_TIMEOUT_S)
             if not reply:
+                # EOF can arrive before Windows updates poll(); retire the
+                # stale handle so an immediate retry respawns the sidecar.
+                self.shutdown()
                 # Pipe closed mid-transcription → the child crashed.
                 raise RuntimeError(
                     f"{self.id} ASR sidecar crashed mid-transcription "
