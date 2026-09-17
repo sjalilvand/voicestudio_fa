@@ -628,7 +628,7 @@ def generate_timeout_s(
                 base = max(base, sidecar_timeout)
                 sidecar_grace = 5.0 if _include_sidecar_grace else 0.0
         except (TypeError, ValueError):
-            pass
+            pass  # Invalid optional engine metadata cannot disable the outer guard.
 
     return base + (max(0, len(text or "") - 1200) / 40.0) + sidecar_grace
 

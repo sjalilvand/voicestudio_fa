@@ -18,7 +18,7 @@ omission, which is the part #1611 could not do by fixing one engine.
 import pytest
 
 from engines.omnivoice_subprocess import OmniVoiceSubprocessBackend
-from services.model_manager import CPU_JOB_TIMEOUT_S, GPU_JOB_TIMEOUT_S
+from services.model_manager import GPU_JOB_TIMEOUT_S
 from services.subprocess_backend import (
     GENERATE_RECV_TIMEOUT_S,
     RECV_TIMEOUT_S,
