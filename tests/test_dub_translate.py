@@ -31,15 +31,25 @@ def test_translate_codes_cover_popular_iso():
     ("iw", "he"),  # Hebrew: pre-1989 code 'iw' → modern 'he'.
     # ISO 639-2/T for Tagalog, frequently shipped under the 'fil' label.
     ("fil", "tl"),
+    # Leading / trailing whitespace is stripped before lookup, mirroring how
+    # the function tolerates the trailing space some clients append.
+    ("  zh  ", "zh"),
+    ("\ncmn-Hans\t", "zh"),
 ])
 def test_argos_lang_code_normalizes_names_and_bcp47(raw, expected):
     from services.translation_engines import argos_lang_code
     assert argos_lang_code(raw) == expected
 
 
-@pytest.mark.parametrize("raw", ["", " ", "\t\n"])
-def test_argos_lang_code_rejects_empty_or_whitespace(raw):
+@pytest.mark.parametrize("raw", ["", " ", "\t\n", "Chinese ("])
+def test_argos_lang_code_rejects_invalid_inputs(raw):
     from services.translation_engines import argos_lang_code
+    # Two distinct input shapes both fail user-facing validation:
+    #   - empty / whitespace-only -> nothing left after strip() -> regex rejects
+    #   - "Chinese ("             -> looks like a label, not a code -> regex rejects
+    # In both cases the caller should see the actionable error message instead
+    # of a silently-empty language token that would later produce a confusing
+    # "no Argos package available for en -> " failure (the bug #2140 reports).
     with pytest.raises(ValueError, match="Choose a valid source and target language"):
         argos_lang_code(raw)
 
