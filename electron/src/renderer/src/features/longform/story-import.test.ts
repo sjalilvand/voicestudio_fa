@@ -16,3 +16,14 @@ it('splits locally with bounded chunks and stable text order', () => {
   expect(chunks.join(' ')).toBe(text);
   expect(splitIntoChunks('', 500)).toEqual([]);
 });
+
+it('decodes a UTF-16 manuscript before extracting subtitle speech', async () => {
+  const { readTextFile } = await import('../../../../../../frontend/src/utils/readTextFile');
+  const text = '1\n00:00:01,000 --> 00:00:02,000\nCafé — hello';
+  const bytes = new Uint8Array(2 + text.length * 2);
+  bytes.set([0xff, 0xfe]);
+  const view = new DataView(bytes.buffer);
+  for (let i = 0; i < text.length; i++) view.setUint16(2 + i * 2, text.charCodeAt(i), true);
+  const file = { arrayBuffer: async () => bytes.buffer };
+  expect(importToText('captions.srt', await readTextFile(file))).toBe('Café — hello');
+});

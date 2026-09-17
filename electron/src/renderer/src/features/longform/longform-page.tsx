@@ -1,3 +1,4 @@
+import { readTextFile } from '../../../../../../frontend/src/utils/readTextFile';
 import { ProfileAvatar } from '@/components/profile-avatar';
 import {
   BookOpenTextIcon,
@@ -119,7 +120,7 @@ export function LongformPage({ mode }: { mode: Mode }) {
     try {
       let text: string;
       if (mode === 'stories' && /\.(txt|md|srt)$/i.test(file.name))
-        text = importToText(file.name, await file.text());
+        text = importToText(file.name, await readTextFile(file));
       else {
         const body = new FormData();
         body.set('file', file);

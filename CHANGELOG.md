@@ -46,6 +46,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Preserve milliseconds and carry rounded subtitle timestamps across second boundaries (#2074) — thanks @kevin9327!
 
+- Decode UTF-16 and Windows-1252 subtitle and manuscript imports in Electron, web, and backend routes (#2073) — thanks @kevin9327!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**

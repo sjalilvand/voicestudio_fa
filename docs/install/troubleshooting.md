@@ -1166,3 +1166,7 @@ Per-engine receive overrides include `OMNIVOICE_CONFUCIUS4_RECV_TIMEOUT_S`, `OMN
 ### FFprobe alongside FFmpeg
 
 When FFprobe is not on PATH, VoiceStudio also checks beside the selected FFmpeg binary. Parent folders named `ffmpeg` remain unchanged; only the executable name becomes `ffprobe` (or `ffprobe.exe` on Windows).
+
+### Subtitle and manuscript encodings
+
+Electron and web imports accept UTF-8, UTF-16 with a byte-order mark, and Windows-1252 text. The same decoder rules apply to uploaded subtitles and audiobook manuscripts; legacy punctuation is preserved.
