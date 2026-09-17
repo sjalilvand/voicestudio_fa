@@ -425,12 +425,19 @@ def test_mlx_audio_kokoro_rejects_unsupported_language_cleanly(language):
 # that skip.
 
 
+def test_kokoro_resolves_british_english_label(monkeypatch):
+    pipeline = types.ModuleType("mlx_audio.tts.models.kokoro.pipeline")
+    pipeline.ALIASES = {"en-gb": "b"}
+    pipeline.LANG_CODES = {"b": "British English"}
+    monkeypatch.setitem(sys.modules, "mlx_audio.tts.models.kokoro.pipeline", pipeline)
+    assert tts_backend.resolve_kokoro_lang_code("British English") == "b"
+
+
 def test_kokoro_supported_labels_name_a_code_only_an_alias_reaches():
     """A code reached only through an alias is still named.
 
-    British English is `en-gb` -> "b", and no entry in
-    `_KOKORO_ISO_BY_FULL_NAME` produces it. Deriving the supported list from
-    that map alone dropped it, telling users Kokoro cannot do something it can.
+    British English is `en-gb` -> "b". The supported list must include it
+    alongside the other installed language codes.
     """
     aliases = {"en": "a", "en-gb": "b", "es": "e"}
     lang_codes = {"a": "American English", "b": "British English", "e": "es"}

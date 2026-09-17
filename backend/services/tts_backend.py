@@ -1624,6 +1624,7 @@ class KittenTTSBackend(TTSBackend):
 # resolved unchanged by `resolve_kokoro_lang_code()` below.
 _KOKORO_ISO_BY_FULL_NAME = {
     "english": "en",
+    "british english": "en-gb",
     "spanish": "es",
     "french": "fr",
     "hindi": "hi",
@@ -1640,10 +1641,9 @@ def _kokoro_supported_labels(aliases: dict, lang_codes: dict) -> list[str]:
     Derived from the installed package, never from
     ``_KOKORO_ISO_BY_FULL_NAME``: that map exists to translate full names
     *into* Kokoro's codes, and reusing it to describe what Kokoro supports
-    understates the model. British English is reachable as ``en-gb`` and has no
-    entry there, so the old message omitted it — and any language a later
-    mlx-audio adds would be omitted the same way, telling the user to switch
-    engines when they need not.
+    understates the model when a newly supported code has no full-name alias.
+    Read every installed code so new languages remain visible without changing
+    the input-name map.
     """
     labels: dict[str, str] = {}
     # Prefer the full name a caller can actually pass.
