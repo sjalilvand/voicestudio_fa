@@ -206,3 +206,40 @@ def test_outer_guard_outlasts_sidecar_watchdog(text, engine_type):
     from services.model_manager import generate_timeout_s
     backend = engine_type()
     assert generate_timeout_s(text, engine=backend) >= backend._effective_recv_timeout_s(text) + 5.0
+
+
+def test_explicit_generation_budget_is_authoritative(monkeypatch):
+    import services.model_manager as mm
+    monkeypatch.setattr(mm, 'GPU_JOB_TIMEOUT_S', 12.0)
+    monkeypatch.setattr(mm, '_GENERATE_TIMEOUT_EXPLICIT', True)
+    assert mm.generate_timeout_s('short', engine=_SilentBackend(), execution_device='cuda') == 12.0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('guard_kind', ['asr', 'tts'])
+async def test_outer_abandonment_terminates_owned_sidecar(tmp_path, monkeypatch, guard_kind):
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+    from services.model_manager import run_on_gpu_pool_guarded
+    from services.asr_backend import run_transcribe_guarded
+    script = tmp_path / 'wedging_sidecar.py'
+    script.write_text(WEDGING_SIDECAR)
+    monkeypatch.setattr(OmniVoiceSubprocessBackend, 'sidecar_script', classmethod(lambda cls: script))
+    monkeypatch.setattr(OmniVoiceSubprocessBackend, 'recv_timeout_s', property(lambda self: 600.0))
+    backend = OmniVoiceSubprocessBackend()
+    # Guard lifetime is independent of which protocol operation is waiting.
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        try:
+            if guard_kind == 'asr':
+                work = run_transcribe_guarded(executor, lambda: backend.generate('hang'), timeout=0.5)
+            else:
+                work = run_on_gpu_pool_guarded(lambda: backend.generate('hang'), executor=executor, timeout=0.5)
+            with pytest.raises(TimeoutError):
+                await work
+            for _ in range(100):
+                if backend._proc is not None and backend._proc.poll() is not None:
+                    break
+                await asyncio.sleep(0.02)
+            assert backend._proc is not None and backend._proc.poll() is not None
+        finally:
+            backend.shutdown()

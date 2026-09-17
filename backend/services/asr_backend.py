@@ -167,6 +167,8 @@ async def run_transcribe_guarded(executor, fn, *, what: str = "ASR",
     immediately; running work calls it from the worker finalizer. Normal
     completion leaves cleanup with the caller.
     """
+    from services.inference_cancellation import InferenceCancellation
+    cancellation = InferenceCancellation()
     loop = asyncio.get_running_loop()
     # Same SystemExit containment as the TTS pool (#1133 class): an ASR
     # dependency written as a CLI must not be able to shut the backend down.
@@ -192,7 +194,8 @@ async def run_transcribe_guarded(executor, fn, *, what: str = "ASR",
 
     def _job():
         try:
-            return inner()
+            with cancellation.activate():
+                return inner()
         finally:
             with abandon_lock:
                 abandon_state["finished"] = True
@@ -204,6 +207,7 @@ async def run_transcribe_guarded(executor, fn, *, what: str = "ASR",
     fut = asyncio.wrap_future(concurrent_fut, loop=loop)
 
     def _abandon() -> None:
+        cancellation.cancel()
         cancelled_before_start = concurrent_fut.cancel()
         with abandon_lock:
             abandon_state["requested"] = True
