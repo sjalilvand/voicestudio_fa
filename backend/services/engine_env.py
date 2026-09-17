@@ -203,8 +203,8 @@ def _cuda_arch_supported_for_compile() -> "tuple[bool, str]":
     upstream support lands (issue #278): the eager model runs via PTX
     forward-compat, but Inductor/Triton kernel compilation targets the new arch
     directly and fails mid-generation. Blackwell sm_120 was that case; it no
-    longer is on the pinned torch 2.8.0+cu128, where this probe returns
-    supported and compile runs correctly. If the device's arch tag is
+    longer is on the pinned torch 2.8.0+cu128, where this probe can return
+    supported; independent compiler/runtime failures still need eager fallback. If the device's arch tag is
     absent from this build's arch list we treat compile as unsupported and use
     eager. The comparison is delegated to ``core.device_caps.arch_unsupported``
     so it stays CUDA/ROCm-aware — a ROCm build lists ``gfx…`` names, and the

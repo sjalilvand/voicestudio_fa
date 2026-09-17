@@ -1565,10 +1565,10 @@ def _is_compile_runtime_failure(exc: BaseException) -> bool:
     """True when an exception originates in the torch.compile stack (Dynamo /
     Inductor / Triton / FX / CUDA-graph trees) rather than in the model itself.
 
-    #278: on a GPU architecture missing from the running torch build's arch
-    list, the compiled model dies mid-generation with an AssertionError out of
-    torch/_inductor/cudagraph_trees.py. Blackwell sm_120 was the reported case
-    and no longer applies to the pinned torch 2.8.0+cu128, which supports it.
+    #278: an independent compile-stack failure can surface during generation
+    as an AssertionError out of torch/_inductor/cudagraph_trees.py. An
+    architecture missing from the running torch build's arch list is rejected
+    earlier by should_torch_compile(), before this runtime fallback applies.
     #278 also quotes "Detected that you are using FX to symbolically trace a
     dynamo-optimized function"; Dynamo raises that on any device, CPU included,
     so it is a compile-stack error to catch here but never an arch signal.

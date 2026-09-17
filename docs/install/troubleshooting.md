@@ -1148,3 +1148,6 @@ remove the app binary itself are in
 [docs/install/uninstall.md](uninstall.md).
 
 **Linked issue:** [#1089](https://github.com/debpalash/VoiceStudio/issues/1089)
+
+
+An architecture accepted by the torch.compile preflight may still encounter independent Dynamo, Inductor, Triton, or CUDA-graph runtime errors. VoiceStudio distinguishes those from GPU memory exhaustion and retries with eager execution; architecture support alone does not guarantee compilation succeeds.
