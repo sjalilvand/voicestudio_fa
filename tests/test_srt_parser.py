@@ -340,3 +340,9 @@ def test_mixed_indexed_and_unindexed_cues_preserve_numbers(first_index):
 def test_webvtt_numeric_dialogue_is_not_a_cue_identifier():
     text = "WEBVTT\n\n00:01.000 --> 00:02.000\n1999\n\nnext-id\n00:03.000 --> 00:04.000\n42\n"
     assert [cue["text"] for cue in parse_srt(text).segments] == ["1999", "42"]
+
+
+def test_indexless_numeric_dialogue_after_blank_line_is_preserved():
+    text = '00:00:01,000 --> 00:00:02,000\nFirst\n\n42\n00:00:03,000 --> 00:00:04,000\nNext'
+    segments = parse_srt(text).segments
+    assert segments[0]['text'] == 'First\n42'

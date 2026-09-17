@@ -124,12 +124,18 @@ def parse_srt(content: str) -> SrtParseResult:
             body = re.split(r"\n[^\S\n]*\n", body.lstrip("\n"), maxsplit=1)[0]
         # An index must directly precede the next timing line. A blank line
         # AFTER a number instead marks that number as preceding dialogue.
-        marker = re.search(r"(?:^|\n)([ \t]*[0-9]+[ \t]*)\n?[ \t]*\Z", body) if has_next and not is_webvtt else None
-        if marker:
-            before = body[:marker.start(1)]
-            separated = bool(re.search(r"\n[ \t]*\n[ \t]*$", before))
-            if separated or indexed:
-                body = before
+        if has_next and not is_webvtt:
+            # Inspect lines rather than a backtracking regex on uploaded text.
+            # One newline terminates the marker; a second means it is dialogue.
+            marker_lines = body.split("\n")
+            if marker_lines and not marker_lines[-1].strip(" \t"):
+                marker_lines.pop()
+            marker = marker_lines[-1].strip(" \t") if marker_lines else ""
+            numeric = bool(marker) and marker.isascii() and marker.isdecimal()
+            separated = len(marker_lines) > 1 and not marker_lines[-2].strip()
+            expected = marker.lstrip("0") == str(i + 2)
+            if numeric and (indexed or (separated and expected)):
+                body = "\n".join(marker_lines[:-1])
         lines = body.strip("\n").split("\n")
         cue_text = "\n".join(line.strip() for line in lines if line.strip())
         if not cue_text:
