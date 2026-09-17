@@ -16,6 +16,10 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
 
+### Fixed
+
+- Show scrubbed native error tails and exit codes for failed dubbing extraction (#2167)
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**

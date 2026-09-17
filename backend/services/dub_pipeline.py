@@ -64,6 +64,17 @@ from core.logging_utils import log_safe
 
 logger = logging.getLogger("omnivoice.dub_pipeline")
 
+
+def _media_process_error(tool: str, returncode: int, stderr: bytes) -> str:
+    """Keep the actionable end of native diagnostics without leaking paths."""
+    from core.scrub import scrub_text
+    detail = scrub_text(stderr.decode(errors="replace")).strip()
+    tail = detail[-2000:]
+    if len(detail) > 2000:
+        tail = "…" + tail
+    return f"{tool} exited with code {returncode}" + (f": {tail}" if tail else ". No diagnostic output.")
+
+
 # ── Module-level state ──────────────────────────────────────────────────────
 # These used to live in dub_core.py. The router now re-exports them for
 # backward compat during the transition.
@@ -1326,7 +1337,7 @@ async def ingest_pipeline(
                 "-ar", "16000", "-ac", "1", audio_path, "-y",
             ])
             if p.returncode != 0:
-                msg = (stderr.decode(errors="replace") or f"ffmpeg returned exit code {p.returncode}").strip()[:500]
+                msg = _media_process_error("FFmpeg", p.returncode, stderr)
                 raise Exception(msg)
             # Second, FULL-QUALITY extraction for source separation. audio.wav
             # is deliberately 16 kHz mono — that's what ASR wants — but Demucs
@@ -1476,7 +1487,7 @@ async def ingest_pipeline(
                     elif evt[0] == "done":
                         rc, stderr_full = evt[1], evt[2]
                 if rc != 0:
-                    raise Exception(stderr_full.decode(errors="replace")[:500])
+                    raise Exception(_media_process_error("Demucs", rc, stderr_full))
                 # Stems land under the INPUT's basename ("audio_hq" when the
                 # full-quality extraction succeeded, "audio" on its fallback).
                 demucs_out = os.path.join(
