@@ -1,3 +1,4 @@
+import { runRendererTask } from '@/lib/global-error-recovery';
 import {
   ArrowUpRightIcon,
   CheckIcon,
@@ -230,7 +231,7 @@ export function SupportSettings() {
           <p>{t('supportPlans.unavailable')}</p>
           <button
             type="button"
-            onClick={() => void navigate({ to: '/settings/support', search: { compare: true } })}
+            onClick={() => runRendererTask('Open support', () => navigate({ to: '/settings/support', search: { compare: true } }))}
             className="mt-4 flex min-h-11 items-center gap-2 text-sm font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary"
           >
             {t('supportPlans.title')}

@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "Không tải được cài đặt thiết bị",
     "perf_save_failed": "Không lưu được cài đặt",
     "generate_budget_title": "Ngân sách thời gian tính toán",
@@ -360,7 +361,10 @@
     "theme_auto": "Tự động theo hệ thống",
     "theme_light": "Sáng",
     "reduce_motion": "Giảm chuyển động",
-    "reduce_motion_desc": "Dừng hoạt ảnh nền và hiệu ứng chuyển tiếp. Cài đặt hệ thống vẫn có hiệu lực riêng; mục này bổ sung thêm."
+    "reduce_motion_desc": "Dừng hoạt ảnh nền và hiệu ứng chuyển tiếp. Cài đặt hệ thống vẫn có hiệu lực riêng; mục này bổ sung thêm.",
+    "perf_torch_compile": "Tắt torch.compile",
+    "perf_torch_compile_note": "Thực thi trực tiếp để tránh lỗi bộ nhớ Triton.",
+    "perf_torch_compile_hint": "Thực thi trực tiếp để tránh lỗi bộ nhớ Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",

@@ -40,7 +40,12 @@ const SUGGESTED_AMOUNTS = [
 
 const METHODS = [
   { id: 'kofi', label: 'Ko-fi', url: KOFI_URL, icon: <Coffee size={21} aria-hidden="true" /> },
-  { id: 'paypal', label: 'PayPal', url: PAYPAL_URL, icon: <CreditCard size={21} aria-hidden="true" /> },
+  {
+    id: 'paypal',
+    label: 'PayPal',
+    url: PAYPAL_URL,
+    icon: <CreditCard size={21} aria-hidden="true" />,
+  },
 ];
 
 // Donate/support accent tracks the themed brand token (per-[data-theme]) so the

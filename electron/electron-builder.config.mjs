@@ -94,13 +94,13 @@ export default {
         'utf8',
       ).match(/<key>NSMicrophoneUsageDescription<\/key>\s*<string>([^<]+)<\/string>/)[1],
     },
-    target: [
-      { target: 'dmg', arch: ['arm64', 'x64'] },
-      { target: 'zip', arch: ['arm64', 'x64'] },
-    ],
+    // The CLI matrix selects one architecture per runner and updater feed.
+    target: ['dmg', 'zip'],
     category: 'public.app-category.productivity',
   },
   linux: {
+    // Linux targets rewrite ${arch} to x86_64/amd64; feeds use Node's x64.
+    artifactName: 'VoiceStudio-Electron-${version}-linux-x64.${ext}',
     icon: '../frontend/src-tauri/icons/icon.png',
     syncDesktopName: true,
     target: ['AppImage', 'deb'],

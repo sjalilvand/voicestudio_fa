@@ -1,19 +1,11 @@
-# VoiceStudio — Electron shell (preview)
+# VoiceStudio — Electron desktop app
 
-An Electron rewrite of the desktop shell, built page by page. Today it ships
-**Voice cloning** only; the Tauri app in `frontend/` remains the product.
+Electron is the primary desktop app for voice cloning, stories, dubbing,
+transcription, voice design, and workflows. Tauri is retained only for its final
+sunset update; see [migration notes](../docs/electron-migration.md).
 
-Both shells talk to the same local FastAPI backend (`backend/`, port 3900), so
-voices, history and installed engines are shared. Nothing leaves the machine.
-
-The Electron UI follows T3 Code's styling foundation: shadcn Base UI Mira,
-Zinc light surfaces, near-black dark surfaces, blue actions, system fonts,
-compact controls, and translucent popovers/dialogs. Shared palette roles live in
-`src/renderer/src/styles/t3-theme.css`; app geometry and surface utilities live in
-`styles/globals.css`. The palette is adapted from
-[T3 Code](https://github.com/pingdotgg/t3code/blob/main/apps/web/src/index.css)
-under the MIT license (see `T3CODE-LICENSE.txt`).
-Light/dark switching is local; T3's theme editor and theme library are not included.
+The runtime supervisor manages the local FastAPI backend. Network integrations
+and remote workers require configuration; local generation stays on your machine.
 
 ## Stack
 
@@ -28,7 +20,7 @@ Light/dark switching is local; T3's theme editor and theme library are not inclu
 ## Run it
 
 ```sh
-cd electron
+# From the repository root
 bun install
 bun run dev        # electron-vite: main + preload + renderer with HMR
 ```
@@ -57,7 +49,7 @@ app-relative `/api/...`:
 
 ```sh
 bun run typecheck   # tsgo, both projects
-bun run check       # vp: format + lint + types
+bun run check:electron # types, tests, build, packaging contract
 bun run test        # vitest (jsdom)
 bun run build       # electron-vite build → out/
 bun run dist        # + electron-builder → release/

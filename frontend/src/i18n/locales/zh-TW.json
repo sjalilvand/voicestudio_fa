@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "無法載入裝置設定",
     "perf_save_failed": "無法儲存設定",
     "generate_budget_title": "運算時間預算",
@@ -360,7 +361,10 @@
     "theme_auto": "系統自動",
     "theme_light": "淺色",
     "reduce_motion": "減少動態效果",
-    "reduce_motion_desc": "停止背景動畫與轉場效果。系統設定本身仍然生效，此項在其基礎上疊加。"
+    "reduce_motion_desc": "停止背景動畫與轉場效果。系統設定本身仍然生效，此項在其基礎上疊加。",
+    "perf_torch_compile": "停用 torch.compile",
+    "perf_torch_compile_note": "使用即時執行以避免 Triton 記憶體錯誤。",
+    "perf_torch_compile_hint": "使用即時執行以避免 Triton 記憶體錯誤。 <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",

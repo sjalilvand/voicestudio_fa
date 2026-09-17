@@ -7,8 +7,9 @@ from core.tasks import TaskManager, _stream_failure
     'event: error\ndata: {"detail":"segment failed"}\n\n',
 ])
 def test_error_stream_is_terminal(event, monkeypatch):
-    from core import job_store
-    from core import run_sentinel
+    # Patch the modules actually held by TaskManager despite suite reloads.
+    job_store = TaskManager.worker.__globals__["job_store"]
+    run_sentinel = TaskManager.worker.__globals__["run_sentinel"]
     states=[]
     for name in ['create','mark_running','append_event']:
         monkeypatch.setattr(job_store,name,lambda *a,**kw: None)

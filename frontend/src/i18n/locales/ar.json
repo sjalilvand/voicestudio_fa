@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "تعذّر تحميل إعداد الجهاز",
     "perf_save_failed": "تعذّر حفظ الإعداد",
     "generate_budget_title": "ميزانية زمن الحوسبة",
@@ -360,7 +361,10 @@
     "theme_auto": "تلقائي حسب النظام",
     "theme_light": "فاتح",
     "reduce_motion": "تقليل الحركة",
-    "reduce_motion_desc": "يوقف الرسوم المتحركة في الخلفية والانتقالات. إعداد النظام يظل ساريًا بذاته؛ وهذا يضاف إليه."
+    "reduce_motion_desc": "يوقف الرسوم المتحركة في الخلفية والانتقالات. إعداد النظام يظل ساريًا بذاته؛ وهذا يضاف إليه.",
+    "perf_torch_compile": "تعطيل torch.compile",
+    "perf_torch_compile_note": "يستخدم التنفيذ المباشر لتجنب أخطاء ذاكرة Triton.",
+    "perf_torch_compile_hint": "يستخدم التنفيذ المباشر لتجنب أخطاء ذاكرة Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",

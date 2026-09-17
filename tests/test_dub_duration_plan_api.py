@@ -302,7 +302,7 @@ def test_generate_records_natural_durations_for_calibration(patched_generate):
     run(_body(
         [
             {"start": 0.0, "end": 2.0, "text": "1.5:hola"},
-            {"start": 3.0, "end": 4.0, "text": "2.0:adios"},
+            {"start": 3.0, "end": 5.0, "text": "2.0:adios"},
         ],
         timing_strategy="concise",
     ))
@@ -315,8 +315,8 @@ def test_generate_records_natural_durations_for_calibration(patched_generate):
     run(_body(
         [
             {"start": 0.0, "end": 2.0, "text": "1.5:hola"},
-            {"start": 3.0, "end": 4.0, "text": "2.0:adios"},
-            {"start": 4.5, "end": 5.0, "text": "1.0:si"},
+            {"start": 3.0, "end": 5.0, "text": "2.0:adios"},
+            {"start": 5.0, "end": 6.0, "text": "1.0:si"},
         ],
         timing_strategy="smart_fit",
     ))
@@ -324,12 +324,11 @@ def test_generate_records_natural_durations_for_calibration(patched_generate):
     assert calibration_from_job(job, "es") is not None
 
 
-def test_strict_slot_never_records_calibration(patched_generate):
-    """strict_slot pads/trims the audio to the slot — recording those
-    durations would poison the observed chars-per-second."""
+def test_strict_slot_records_duration_before_assembly_fitting(patched_generate):
+    """Calibration uses the complete generated waveform, not the fitted slot."""
     run, job = patched_generate
     run(_body(
         [{"start": 0.0, "end": 2.0, "text": "1.5:hola"}],
         timing_strategy="strict_slot",
     ))
-    assert "seg_natural_durs_by_lang" not in job
+    assert job["seg_natural_durs_by_lang"]["es"]["0"]["dur"] == 1.5

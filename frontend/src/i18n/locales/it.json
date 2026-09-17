@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "Impossibile caricare l'impostazione del dispositivo",
     "perf_save_failed": "Impossibile salvare l'impostazione",
     "generate_budget_title": "Budget di tempo di calcolo",
@@ -360,7 +361,10 @@
     "theme_auto": "Automatico di sistema",
     "theme_light": "Chiaro",
     "reduce_motion": "Riduci le animazioni",
-    "reduce_motion_desc": "Ferma le animazioni di sfondo e le transizioni. L’impostazione di sistema resta valida da sola; questa si aggiunge."
+    "reduce_motion_desc": "Ferma le animazioni di sfondo e le transizioni. L’impostazione di sistema resta valida da sola; questa si aggiunge.",
+    "perf_torch_compile": "Disabilita torch.compile",
+    "perf_torch_compile_note": "Usa l’esecuzione diretta per evitare errori di memoria di Triton.",
+    "perf_torch_compile_hint": "Usa l’esecuzione diretta per evitare errori di memoria di Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",

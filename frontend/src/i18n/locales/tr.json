@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "Aygıt ayarı yüklenemedi",
     "perf_save_failed": "Ayar kaydedilemedi",
     "generate_budget_title": "Hesaplama süresi bütçesi",
@@ -360,7 +361,10 @@
     "theme_auto": "Sistem Otomatik",
     "theme_light": "Açık",
     "reduce_motion": "Hareketi azalt",
-    "reduce_motion_desc": "Arka plan animasyonlarını ve geçişleri durdurur. Sistem ayarınız kendi başına geçerlidir; bu ona eklenir."
+    "reduce_motion_desc": "Arka plan animasyonlarını ve geçişleri durdurur. Sistem ayarınız kendi başına geçerlidir; bu ona eklenir.",
+    "perf_torch_compile": "torch.compile devre dışı",
+    "perf_torch_compile_note": "Triton bellek hatalarını önlemek için doğrudan yürütme kullanır.",
+    "perf_torch_compile_hint": "Triton bellek hatalarını önlemek için doğrudan yürütme kullanır. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",

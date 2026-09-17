@@ -13,7 +13,7 @@ The default backend is `http://localhost:3900`; honor the user's configured addr
 
 1. Check `GET /health`.
 2. Discover the running version's contracts with `GET /openapi.json`, and voices/engines with `GET /v1/audio/voices`. Do not invent profile IDs or infer installed models from a catalog listing.
-3. If unavailable, launch the installed app. For an existing source checkout, follow its Electron README (`bun install`, then `cd electron && bun run dev`). Do not install a second backend or overwrite an existing checkout.
+3. If unavailable, launch the installed app. For an existing source checkout, follow its Electron README (`bun install`, then `bun run dev` from the repository root). Do not install a second backend or overwrite an existing checkout.
 4. Local configurations may permit unauthenticated calls; protected deployments require the configured credentials. Treat 401/403 as authentication failures, not permission to disable auth. Never print tokens or use a placeholder key as if it were a real credential.
 
 ## Generate speech
@@ -60,3 +60,28 @@ The running backend mounts an MCP endpoint at `http://localhost:3900/mcp`. Use t
 For n8n, calling agents, containers, or other hosts, make the backend address reachable from that environment: container `localhost` refers to the container. Keep authentication and explicit remote-routing choices intact. An integration-directory listing does not mean the integration is connected.
 
 On errors, read the response body, distinguish unavailable backend, missing model, unsupported capability, authentication, and busy hardware. Fix the reported condition; do not switch to a hosted provider or download a model without authorization.
+
+## Desktop workflows and readiness
+
+The Electron app includes voice cloning and design, saved profiles and gallery,
+stories/audiobooks, dubbing projects, transcription, tools, and integrations.
+Prefer its existing project and voice identifiers over creating duplicates.
+For desktop automation, inspect the actual UI and current Settings shortcuts;
+do not assume shortcut bindings or microphone permissions are the same on every host.
+
+Before dictation, verify an installed speech-to-text model and a working input
+device. Distinguish recording, paused recording, transcription processing, and
+completed text. Copying a transcript and inserting it into another app are different
+operations; confirm the intended target before typing and preserve clipboard content
+where supported. Never report text delivered just because transcription completed.
+
+For dubbing, inspect missing/failed segments and timing overflow before export.
+Preserve music and non-speech audio when requested; do not silently replace the
+whole soundtrack. Preserve the source and make the output a separate artifact.
+Translation style prompts belong to the selected translation operation, and remote
+agent translation requires the user's configured provider choice.
+
+Use the integrations directory as discovery and setup guidance, not proof of a
+working connector. Verify actual credentials, endpoint reachability, and supported
+operations before describing a connection as ready. Container deployments need
+persistent data volumes and a backend URL reachable by the calling client.

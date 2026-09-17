@@ -53,8 +53,8 @@ that the app already runs the "fast" preset unless you override it via `/generat
 | dtype | `torch.float16` hardcoded for the `omnivoice` engine (`model_manager.py`) — correct for Turing (no bf16 tensor cores this generation). No env var override for this engine specifically (ASR engines have `ASR_COMPUTE_TYPE`; `dots_tts`/`indextts` have their own precision vars; `omnivoice` doesn't). |
 | Attention | `sdpa`, selected automatically since `flash_attn` isn't installed (`_supports_flash_attn_2=True` is declared but the package itself is absent) — safe on T4. |
 | int8 | No int8 path for this engine (ASR's CTranslate2 `int8` and `sherpa-onnx`'s int8 ONNX models are separate/unrelated). |
-| CUDA Graphs | No direct API usage in the app. Reachable indirectly via `torch.compile(mode="reduce-overhead")`, which the app attempts **by default** on this GPU (T4/sm_75 isn't in the framework's compile-exclusion list, unlike newer/Blackwell GPUs). The numbers above were measured with `TORCH_COMPILE_DISABLE=1` for a clean eager baseline. |
-| torch.compile | Attempted by default on T4 (see above) — not evaluated further here. |
+| CUDA Graphs | **Not used on T4 any more (#2135).** Reachable only indirectly via `torch.compile(mode="reduce-overhead")`, which the app used to attempt by default here — and which killed the backend process outright on the first `/generate` (no traceback, no HTTP response). The app now picks the compile mode per GPU and drops to the non-cudagraph `default` mode below sm_80. `OMNIVOICE_FORCE_CUDAGRAPH=1` restores the old behaviour for benchmarking. |
+| torch.compile | Still attempted on T4, in `default` mode — compiled Inductor kernels, no graph capture. Disable entirely with Settings → Performance → "Disable torch.compile" or `TORCH_COMPILE_DISABLE=1`. |
 
 ## VRAM
 
