@@ -357,3 +357,11 @@ def test_initial_index_does_not_remove_later_numeric_dialogue(gap):
 def test_nonsequential_ambiguous_number_is_retained_as_dialogue():
     text = "00:00:01,000 --> 00:00:02,000\nFirst\n\n3\n00:00:03,000 --> 00:00:04,000\nNext"
     assert parse_srt(text).segments[0]["text"] == "First\n3"
+
+
+
+def test_skipped_cue_still_advances_numbering_state():
+    text = "1\n00:00:01,000 --> 00:00:02,000\nFirst\n\n2\n00:00:04,000 --> 00:00:03,000\nInvalid\n\n3\n00:00:05,000 --> 00:00:06,000\nThird\n\n4\n00:00:07,000 --> 00:00:08,000\nFourth"
+    result = parse_srt(text)
+    assert result.skipped_cues == 1
+    assert [cue["text"] for cue in result.segments] == ["First", "Third", "Fourth"]
