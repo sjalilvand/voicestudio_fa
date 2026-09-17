@@ -85,6 +85,8 @@ _HINTS: dict[str, str] = {
     "GATEKEEPER_QUARANTINE": "Clear the macOS quarantine flag (xattr -cr the app), then reopen.",
     "APPIMAGE_WEBKIT_WHITESCREEN": "Launch with WEBKIT_DISABLE_DMABUF_RENDERER=1 set.",
     "HF_AUTH_FAILED": "Set a valid HF_TOKEN in Settings → Hugging Face and retry.",
+    "DIARIZATION_MODEL_MISSING": "Install or repair the selected diarisation model in Settings > Models > Diarisation, then retry transcription.",
+    "DIARIZATION_LOAD_FAILED": "Open Settings > Logs > Backend for the model load error, then retry transcription after correcting it.",
     "PYANNOTE_LICENSE_REQUIRED": "Accept the pyannote model licenses on Hugging Face, then retry.",
     "POCKETTTS_GATED_WEIGHTS": "PocketTTS weights are gated on HuggingFace. Accept the access agreement at huggingface.co/kyutai/pocket-tts, then set HF_TOKEN in Settings → Hugging Face and retry.",
     "COMPUTE_TYPE_UNSUPPORTED": "Your GPU doesn't support float16 — VoiceStudio retried on int8. If transcription still fails, set OMNIVOICE/ASR_COMPUTE_TYPE=int8 or use CPU.",
@@ -404,7 +406,22 @@ def classify(reason: str) -> str:
         or "access conditions" in low
     ) and ("pocket" in low or "kyutai" in low):
         return "POCKETTTS_GATED_WEIGHTS"
-    if "pyannote" in low or ("gated" in low and "model" in low) or "accept the" in low:
+    diarisation = any(marker in low for marker in (
+        "pyannote", "diarization", "diarisation", "sortformer",
+    ))
+    access_failure = any(marker in low for marker in (
+        "gated", "unauthorized", "forbidden", "401", "403",
+        "accept the", "license", "user conditions",
+    ))
+    if diarisation and not access_failure:
+        if any(marker in low for marker in (
+            "files are missing", "files are missing or incomplete",
+            "filenotfounderror", "localentrynotfounderror", "model is missing",
+        )):
+            return "DIARIZATION_MODEL_MISSING"
+        if any(marker in low for marker in ("failed to load", "load failed", "runtime failed")):
+            return "DIARIZATION_LOAD_FAILED"
+    if (diarisation and access_failure) or ("gated" in low and "model" in low) or "accept the" in low:
         return "PYANNOTE_LICENSE_REQUIRED"
     # ASR robustness (#551 / #549): name the class so the no-segments toast is
     # actionable. Place before the generic returns so a compute-type/transformers

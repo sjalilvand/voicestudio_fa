@@ -14,6 +14,7 @@ import logging
 import os
 import sys
 import threading
+import time
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -31,7 +32,7 @@ from utils import download_aggregator
 from .models import (  # noqa: F401
     KNOWN_MODELS,
     invalidate_cache,
-    snapshot_has_weights,
+    snapshot_is_complete,
     disk_space_error,
     _MIN_WEIGHT_BYTES,
     _WEIGHT_FLOORS,
@@ -42,6 +43,9 @@ router = APIRouter()
 
 # Cooldown: prevent rapid re-install after a failure. Maps repo_id → last_fail_time.
 _install_cooldowns: dict[str, float] = {}
+# Last classified failure per repo. The SSE stream carries the same detail live;
+# retaining it here keeps recovery useful after navigation or renderer reconnect.
+_install_failures: dict[str, dict] = {}
 _COOLDOWN_SECS = 60.0
 # Evict cooldown entries older than this so the dict can't grow unbounded across
 # a long-lived process (MM2-06). Anything past the cooldown window is dead state.
@@ -54,6 +58,14 @@ def _sweep_cooldowns(now: float) -> None:
     stale = [k for k, t in _install_cooldowns.items() if (now - t) > _COOLDOWN_TTL_SECS]
     for k in stale:
         _install_cooldowns.pop(k, None)
+        _install_failures.pop(k, None)
+    stale_failures = [
+        repo_id
+        for repo_id, failure in _install_failures.items()
+        if (now - float(failure.get("failed_at") or 0)) > _COOLDOWN_TTL_SECS
+    ]
+    for repo_id in stale_failures:
+        _install_failures.pop(repo_id, None)
 
 
 def clear_install_cooldowns() -> None:
@@ -63,6 +75,7 @@ def clear_install_cooldowns() -> None:
     very next action is "retry the failed download on the new mirror", and a
     429 there would dead-end the wizard's switch-and-retry flow."""
     _install_cooldowns.clear()
+    _install_failures.clear()
 
 # Repo_ids the user asked to cancel (FDL-11). Checked between retry attempts.
 # Note: a single in-flight snapshot_download/Xet fetch is not interruptible
@@ -180,6 +193,28 @@ def _repo_cancelled(repo_id: str) -> bool:
     return repo_id in _cancelled
 
 
+def _create_cache_pointer(blob_path: str, pointer: str) -> None:
+    """Keep the canonical blob while exposing it from the snapshot tree.
+
+    huggingface_hub's ``new_blob=True`` fallback moves the blob into the
+    snapshot when Windows symlinks are unavailable. The next model load then
+    sees a missing blob and downloads the same multi-gigabyte weight again.
+    NTFS hardlinks preserve both cache paths without doubling disk usage; other
+    filesystems fall back to Hugging Face's copy/symlink path.
+    """
+    from huggingface_hub.file_download import _create_symlink
+
+    if os.name == "nt":
+        try:
+            os.link(blob_path, pointer)
+            return
+        except FileExistsError:
+            return
+        except OSError:
+            pass
+    _create_symlink(blob_path, pointer, new_blob=False)
+
+
 def _segmented_snapshot(repo_id: str, *, endpoint: "str | None", revision: str) -> str:
     """Fetch every file of a repo via the segmented downloader into the HF
     cache, mirroring hf_hub_download's blob+snapshot+refs layout so the result
@@ -190,7 +225,7 @@ def _segmented_snapshot(repo_id: str, *, endpoint: "str | None", revision: str) 
     import asyncio as _asyncio
     from huggingface_hub import HfApi, constants as _C
     from huggingface_hub.file_download import (
-        hf_hub_url, get_hf_file_metadata, repo_folder_name, _create_symlink,
+        hf_hub_url, get_hf_file_metadata, repo_folder_name,
     )
     from services.segmented_download import segmented_download
     from services.token_resolver import resolve as _resolve_token
@@ -229,7 +264,7 @@ def _segmented_snapshot(repo_id: str, *, endpoint: "str | None", revision: str) 
                 cancel_check=lambda: _repo_cancelled(repo_id),
             ))
         if not os.path.lexists(pointer):
-            _create_symlink(blob_path, pointer, new_blob=True)
+            _create_cache_pointer(blob_path, pointer)
 
     # refs/main → commit so scan_cache_dir maps the revision correctly.
     ref_path = os.path.join(refs_dir, "main")
@@ -279,10 +314,17 @@ def _validate_snapshot_has_weights(repo_id: str, snapshot_path: str) -> None:
     retry loop and the UI's re-download path can deal with it, instead of at
     first synthesis with an opaque transformers error.
 
-    Delegates the weight check to ``models.snapshot_has_weights`` (single source of
-    the floors); only the install-time error message lives here."""
-    if snapshot_has_weights(snapshot_path):
+    Delegates to ``models.snapshot_is_complete`` so configuration-only pipeline
+    repositories use their declared required files instead of a weight floor."""
+    model = next((m for m in KNOWN_MODELS if m["repo_id"] == repo_id), {"repo_id": repo_id})
+    if snapshot_is_complete(model, snapshot_path):
         return
+    if model.get("config_only"):
+        required = ", ".join(model.get("config_required_files") or ())
+        raise OSError(f"{repo_id}: download is incomplete; required configuration files: {required}")
+    if model.get("required_files"):
+        required = ", ".join(model["required_files"])
+        raise OSError(f"{repo_id}: required model files are missing or incomplete: {required}")
     biggest = 0
     try:
         for root, _dirs, files in os.walk(snapshot_path, followlinks=True):
@@ -345,6 +387,65 @@ class InstallModelRequest(BaseModel):
     repo_id: str
     target: str | None = None
 
+
+@router.get("/models/install/status")
+def model_install_status():
+    """Read local and remote jobs after navigation without starting downloads."""
+    from services import gpu_gateway  # noqa: PLC0415
+
+    now = time.time()
+    _sweep_cooldowns(now)
+    with _active_installs_lock:
+        active = tuple(_active_installs)
+    jobs = []
+    for repo_id in active:
+        aggregate = download_aggregator._get(repo_id)
+        jobs.append(
+            {
+                "repo_id": repo_id,
+                "target": "local",
+                "state": "downloading",
+                **(aggregate.snapshot() if aggregate else {}),
+            }
+        )
+    detailed = set()
+    for repo_id, failure in tuple(_install_failures.items()):
+        failed_at = float(failure.get("failed_at") or 0)
+        if repo_id in active or now - failed_at >= _COOLDOWN_SECS:
+            continue
+        detailed.add(repo_id)
+        cooldown_at = _install_cooldowns.get(repo_id)
+        retry_after = (
+            max(0, int(_COOLDOWN_SECS - (now - cooldown_at) + 0.999))
+            if cooldown_at is not None
+            else 0
+        )
+        jobs.append(
+            {
+                "repo_id": repo_id,
+                "target": "local",
+                "state": "failed",
+                "retry_after_seconds": retry_after,
+                **failure,
+            }
+        )
+    # Preserve status for callers/tests that seed the legacy cooldown map alone.
+    jobs.extend(
+        {
+            "repo_id": repo_id,
+            "target": "local",
+            "state": "failed",
+            "retry_after_seconds": max(
+                0, int(_COOLDOWN_SECS - (now - failed_at) + 0.999)
+            ),
+        }
+        for repo_id, failed_at in tuple(_install_cooldowns.items())
+        if repo_id not in active
+        and repo_id not in detailed
+        and now - failed_at < _COOLDOWN_SECS
+    )
+    jobs.extend(gpu_gateway.remote_download_jobs())
+    return {"jobs": jobs}
 
 
 def _is_retryable_download_error(exc: BaseException) -> bool:
@@ -474,6 +575,9 @@ async def install_model(req: InstallModelRequest):
     loop = asyncio.get_running_loop()
 
     def _do():
+        # Failure handling must work even when imports, token resolution or
+        # revision lookup fail before the heartbeat thread is started.
+        _resolving = threading.Event()
         token = hf_progress.current_repo_id.set(req.repo_id)
         target_token = hf_progress.current_target.set("local")
         hf_progress.emit({
@@ -500,6 +604,10 @@ async def install_model(req: InstallModelRequest):
                 "revision": revision_for(req.repo_id),
                 "max_workers": _download_max_workers(),
             }
+            from services.token_resolver import resolve as resolve_token
+            resolved_token = resolve_token()
+            if resolved_token:
+                dl_kwargs["token"] = resolved_token.token
             if allow_patterns:
                 dl_kwargs["allow_patterns"] = allow_patterns
             _tqdm_cls = hf_progress.tracked_tqdm_class()
@@ -513,9 +621,7 @@ async def install_model(req: InstallModelRequest):
 
             # Emit a 'resolving' heartbeat every 2s while snapshot_download
             # resolves repo metadata (before any tqdm bars appear).
-            import threading
             import time as _t
-            _resolving = threading.Event()
 
             def _heartbeat():
                 _step = 0
@@ -549,8 +655,22 @@ async def install_model(req: InstallModelRequest):
                 _preflight_kwargs["allow_patterns"] = allow_patterns
             if _endpoint:
                 _preflight_kwargs["endpoint"] = _endpoint
+            if resolved_token:
+                _preflight_kwargs["token"] = resolved_token.token
             try:
-                _plan = snapshot_download(**_preflight_kwargs)  # nosec B615 -- immutable revision_for pin
+                _plan = list(snapshot_download(**_preflight_kwargs))  # nosec B615 -- immutable revision_for pin
+                for dependency in model_spec.get("dependencies") or ():
+                    if req.repo_id in _cancelled:
+                        raise _InstallCancelled()
+                    dependency_plan_kwargs = {
+                        **_preflight_kwargs,
+                        "repo_id": dependency["repo_id"],
+                        "revision": revision_for(dependency["repo_id"]),
+                    }
+                    dependency_plan_kwargs.pop("allow_patterns", None)
+                    if dependency.get("allow_patterns"):
+                        dependency_plan_kwargs["allow_patterns"] = dependency["allow_patterns"]
+                    _plan.extend(snapshot_download(**dependency_plan_kwargs))  # nosec B615 -- immutable revision_for pin
                 _summary = compute_plan(_plan)
                 # Disk-space guard (before a single byte flows): the preflight
                 # gives an exact "to download" size, so reject an install that
@@ -568,6 +688,11 @@ async def install_model(req: InstallModelRequest):
                         "phase": "install_error",
                         "error": _disk_err,
                     })
+                    _install_failures[req.repo_id] = {
+                        "failed_at": time.time(),
+                        "error": _disk_err,
+                        "docs_topic": "DISK_SPACE_LOW",
+                    }
                     # A disk-full is not a transient network failure — don't set
                     # a cooldown (freeing space, not waiting, is the fix). The
                     # outer finally still cleans up the aggregator + context.
@@ -584,6 +709,8 @@ async def install_model(req: InstallModelRequest):
                     "phase": "install_plan",
                     **_summary,
                 })
+            except _InstallCancelled:
+                raise
             except Exception as _pf_err:
                 # No preflight (older/gated repo, mirror without dry-run, etc.):
                 # fall back to today's fill-in-as-files-appear behaviour.
@@ -651,6 +778,27 @@ async def install_model(req: InstallModelRequest):
                     from huggingface_hub.constants import HF_HUB_CACHE
                     from services.hf_revisions import remember_revision
                     remember_revision(req.repo_id, dl_kwargs["revision"], HF_HUB_CACHE)
+                    # A pipeline config is not a runnable installation by itself.
+                    # Download its reviewed dependencies only inside this explicit
+                    # install action, retaining the parent cancellation/retry flow.
+                    for dependency in model_spec.get("dependencies") or ():
+                        if req.repo_id in _cancelled:
+                            raise _InstallCancelled()
+                        dependency_id = dependency["repo_id"]
+                        dependency_kwargs = {
+                            **dl_kwargs,
+                            "repo_id": dependency_id,
+                            "revision": revision_for(dependency_id),
+                        }
+                        dependency_kwargs.pop("allow_patterns", None)
+                        if dependency.get("allow_patterns"):
+                            dependency_kwargs["allow_patterns"] = dependency["allow_patterns"]
+                        dependency_path = snapshot_download(**dependency_kwargs)  # nosec B615 -- immutable revision_for pin
+                        if not snapshot_is_complete(dependency, dependency_path):
+                            raise OSError(f"{dependency_id}: required model files are missing or incomplete")
+                        remember_revision(dependency_id, dependency_kwargs["revision"], HF_HUB_CACHE)
+                    if req.repo_id in _cancelled:
+                        raise _InstallCancelled()
                     break
                 except Exception as net_err:
                     # #1224: a truncated body ("peer closed connection without
@@ -714,12 +862,28 @@ async def install_model(req: InstallModelRequest):
                 "phase": "install_done",
             })
             _install_cooldowns.pop(req.repo_id, None)  # success clears any cooldown (MM2-06)
+            _install_failures.pop(req.repo_id, None)
             invalidate_cache()
+            # A saved performance pack owns the desired engine/model policy.
+            # Reconcile after every successful local install so the new model
+            # becomes usable without a restart or a second manual selection.
+            try:
+                from services.performance_profiles import reconcile_active_profile
+
+                activated = reconcile_active_profile()
+                if activated:
+                    logger.info("model install activated performance profile: %s", activated)
+            except Exception:
+                # The model is fully installed even if optional preference
+                # reconciliation fails; readiness refresh and manual selection
+                # remain available instead of misreporting the download.
+                logger.exception("performance profile reconciliation failed after model install")
         except _InstallCancelled:
             _resolving.set()
             logger.info("model install cancelled: %s", req.repo_id)
             # A cancel is user intent, not a failure — don't set a cooldown.
             _install_cooldowns.pop(req.repo_id, None)
+            _install_failures.pop(req.repo_id, None)
             hf_progress.emit({
                 "repo_id": req.repo_id,
                 "filename": req.repo_id,
@@ -730,7 +894,8 @@ async def install_model(req: InstallModelRequest):
             _resolving.set()
             logger.info("model install failed for %s: %s", req.repo_id, e)
             import time as _time_fail
-            _install_cooldowns[req.repo_id] = _time_fail.time()
+            _failed_at = _time_fail.time()
+            _install_cooldowns[req.repo_id] = _failed_at
             # #874: when the install failed because the configured HF mirror is
             # unreachable, name the mirror + the setting instead of leaking the
             # raw connectivity error. #959: likewise for the SOCKS-proxy class
@@ -739,15 +904,41 @@ async def install_model(req: InstallModelRequest):
             # class so the wizard can react structurally (HF_MIRROR_UNREACHABLE
             # raises the inline mirror picker) without string-matching.
             from core.failure import append_hint, classify
+            _error = append_hint(str(e))
+            _docs_topic = classify(str(e))
+            # Gated catalogue entries own their recovery topic. Hugging Face
+            # uses several exception wordings for the same access verdict, so
+            # the UI must not depend on parsing an English 401/403 message.
+            _catalogue_topic = str(model_spec.get("failure_topic") or "")
+            if _catalogue_topic and _docs_topic in {
+                "",
+                "HF_AUTH_FAILED",
+                "PYANNOTE_LICENSE_REQUIRED",
+            }:
+                _docs_topic = _catalogue_topic
+            # Waiting cannot fix an access/token verdict. Let the user accept
+            # the terms or update the token and retry immediately.
+            if _docs_topic in {
+                "HF_AUTH_FAILED",
+                "PYANNOTE_LICENSE_REQUIRED",
+                "POCKETTTS_GATED_WEIGHTS",
+            }:
+                _install_cooldowns.pop(req.repo_id, None)
+            _install_failures[req.repo_id] = {
+                "failed_at": _failed_at,
+                "error": _error,
+                "docs_topic": _docs_topic,
+            }
             hf_progress.emit({
                 "repo_id": req.repo_id,
                 "filename": req.repo_id,
                 "downloaded": 0, "total": 0, "pct": 0.0,
                 "phase": "install_error",
-                "error": append_hint(str(e)),
-                "docs_topic": classify(str(e)),
+                "error": _error,
+                "docs_topic": _docs_topic,
             })
         finally:
+            _resolving.set()
             _cancelled.discard(req.repo_id)
             download_aggregator.finish(req.repo_id, target=target or "local")
             hf_progress.current_repo_id.reset(token)
@@ -762,6 +953,7 @@ async def install_model(req: InstallModelRequest):
         # Admission and task publication are one atomic generation boundary:
         # cancellation can never observe an admitted install without its task.
         _cancelled.discard(req.repo_id)
+        _install_failures.pop(req.repo_id, None)
         try:
             task = loop.create_task(asyncio.to_thread(_do))
             _install_tasks.add(task)
@@ -811,8 +1003,17 @@ async def cancel_install(req: InstallModelRequest):
     in hf_hub 1.7.2, so an already-streaming file finishes; the cancel takes
     effect at the next retry boundary. Clears the cooldown so the user can
     immediately restart."""
+    target = (req.target or "local").strip() or "local"
+    if target != "local":
+        from services import gpu_gateway  # noqa: PLC0415
+
+        try:
+            return await gpu_gateway.cancel_download(req.repo_id, target=target)
+        except gpu_gateway.GatewayError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
     _cancelled.add(req.repo_id)
     _install_cooldowns.pop(req.repo_id, None)
+    _install_failures.pop(req.repo_id, None)
     return {"cancelling": req.repo_id}
 
 

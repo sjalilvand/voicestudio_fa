@@ -73,7 +73,7 @@ def _origin_tuple(value: str | None) -> tuple[str, str, int | None] | None:
     ):
         return None
     scheme = parsed.scheme.lower()
-    if scheme not in {"http", "https", "tauri"}:
+    if scheme not in {"http", "https", "tauri", "app"}:
         return None
     if port is None:
         if scheme == "http":
@@ -82,6 +82,8 @@ def _origin_tuple(value: str | None) -> tuple[str, str, int | None] | None:
             port = 443
     return scheme, parsed.hostname.lower(), port
 
+
+DEFAULT_DESKTOP_ORIGINS = ("tauri://localhost", "http://tauri.localhost", "app://voicestudio")
 
 def configured_allowed_origins() -> frozenset[tuple[str, str, int | None]]:
     raw_port = os.environ.get("OMNIVOICE_UI_PORT", "3901")
@@ -92,7 +94,7 @@ def configured_allowed_origins() -> frozenset[tuple[str, str, int | None]]:
     values = os.environ.get(
         "OMNIVOICE_ALLOWED_ORIGINS",
         f"http://localhost:{ui_port},http://127.0.0.1:{ui_port},"
-        "tauri://localhost,http://tauri.localhost",
+        + ",".join(DEFAULT_DESKTOP_ORIGINS),
     ).split(",")
     return frozenset(
         origin

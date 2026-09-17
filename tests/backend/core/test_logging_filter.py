@@ -88,3 +88,65 @@ def test_install_filter_is_idempotent():
     install_redaction_filter(root)
     redactors = [f for f in root.filters if isinstance(f, HFTokenRedactor)]
     assert len(redactors) == 1
+
+
+def test_routine_health_filter_only_drops_successful_liveness_access_lines():
+    from core.logging_filter import RoutineHealthAccessFilter
+
+    access_filter = RoutineHealthAccessFilter()
+
+    def record(method="GET", path="/health", status=200):
+        return logging.LogRecord(
+            "uvicorn.access",
+            logging.INFO,
+            __file__,
+            1,
+            '%s - "%s %s HTTP/%s" %d',
+            ("127.0.0.1:1234", method, path, "1.1", status),
+            None,
+        )
+
+    assert access_filter.filter(record()) is False
+    assert access_filter.filter(record(path="/health?detail=1")) is False
+    assert access_filter.filter(record(status=503)) is True
+    assert access_filter.filter(record(method="POST")) is True
+    assert access_filter.filter(record(path="/system/info")) is True
+
+
+def test_asyncio_transport_filter_only_drops_expected_pipe_teardown():
+    from core.logging_filter import RoutineAsyncioTransportFilter
+
+    transport_filter = RoutineAsyncioTransportFilter()
+
+    def record(message, error, level=logging.ERROR):
+        return logging.LogRecord(
+            "asyncio",
+            level,
+            __file__,
+            1,
+            message,
+            (),
+            (type(error), error, None),
+        )
+
+    callback = "Exception in callback _ProactorBasePipeTransport._call_connection_lost(None)"
+    assert transport_filter.filter(record(callback, ConnectionResetError(10054, "reset"))) is False
+    assert transport_filter.filter(record(callback, BrokenPipeError(32, "broken pipe"))) is False
+    assert transport_filter.filter(record("Task exception was never retrieved", BrokenPipeError())) is True
+    assert transport_filter.filter(record(callback, RuntimeError("real callback failure"))) is True
+
+
+def test_asyncio_transport_filter_drops_routine_socket_send_warning():
+    from core.logging_filter import RoutineAsyncioTransportFilter
+
+    transport_filter = RoutineAsyncioTransportFilter()
+    record = logging.LogRecord(
+        "asyncio",
+        logging.WARNING,
+        __file__,
+        1,
+        "socket.send() raised exception.",
+        (),
+        None,
+    )
+    assert transport_filter.filter(record) is False

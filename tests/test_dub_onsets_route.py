@@ -77,6 +77,8 @@ def test_prefers_vocals_over_mix(job_env):
     assert res["source"] == "vocals"
     assert len(res["onsets"]) == 1
     assert res["onsets"][0] == pytest.approx(2.0, abs=0.06)
+    assert len(res["peaks"]) > 100
+    assert max(res["peaks"]) > 0.4
 
 
 def test_falls_back_to_mix_when_vocals_missing(job_env):
@@ -102,7 +104,7 @@ def test_caches_onsets_json_and_reuses_it(job_env):
 
     # Poison the cache with a sentinel — the route must serve it verbatim
     # (i.e. no recompute) while the audio mtime is older than the cache.
-    sentinel = {"onsets": [99.9], "source": "mix"}
+    sentinel = {"onsets": [99.9], "peaks": [0.25, 0.5], "source": "mix"}
     cache.write_text(json.dumps(sentinel))
     os.utime(str(mix), (0, 0))  # audio much older than cache
     res2 = _call(job_env["module"], job_env["job_id"])

@@ -217,7 +217,7 @@ GET /history?mode=clone|design&limit=50
 
 - Make `ref_audio` **optional**. Add `kind` (default `clone`) and `vd_states` (JSON string, optional) form fields.
 - Validation:
-  - `kind='clone'` → `ref_audio` required (today's rule).
+  - `kind='clone'` → `ref_audio` required (today's rule). Upload saves recreate the voices storage directory if it is missing, including after startup.
   - `kind='design'` → `vd_states` required; `instruct` is **not** required (an all-Auto design has an empty instruct and is still a valid, saveable voice). The server *opportunistically* renders a sample WAV (reuse the archetype renderer in `archetypes.py`: synth `sample_script` at `_PREVIEW_SEED=42`, store as `ref_audio_path`) and always persists `vd_states` + derived `instruct` + `seed=42`. **The render is non-fatal** (issue #476): if the engine isn't ready the row is saved with `ref_audio_path=NULL` (sample pending) and `GET /profiles/{id}/audio` renders + caches it lazily on first request (returning a precise "model not ready — finish setup / download a model" 503 if the engine is still unavailable).
 - Return `kind` and `vd_states` in the profile payload (and from `GET /profiles`, `GET /profiles/{id}`).
 

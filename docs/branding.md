@@ -11,7 +11,9 @@ spark identifies creation. The product voice is clear, calm, and direct.
 | README mark | `docs/logo.png` and `docs/logo-256.png` |
 | Browser icon | `frontend/public/favicon.svg` |
 | In-app mark | `frontend/src/components/brand/VoiceStudioMark.jsx` |
-| Desktop/platform icons | `frontend/src-tauri/icons/` |
+| Desktop/platform icons (Tauri and Electron) | `frontend/src-tauri/icons/` |
+| Electron sidebar and browser icon | `frontend/public/favicon.svg` via `electron/src/renderer/src/lib/brand.ts` |
+| Shared sidebar/launchpad artwork | `frontend/src/assets/signal-field.webp` |
 
 Regenerate every desktop icon from the canonical vector after changing the
 mark:
@@ -59,3 +61,8 @@ a separately tested migration exists:
 
 Visible copy can explain those compatibility names, but must not silently rename
 them on disk or over the wire.
+
+Electron uses the shared multi-resolution ICO for Windows window/taskbar and tray
+icons, the shared PNG for Linux and macOS runtime icons, and the ICNS for the macOS
+bundle. The tray icon restores the window; closing the app retains its existing
+quit behavior. Installed executable icons are applied when building the installer.

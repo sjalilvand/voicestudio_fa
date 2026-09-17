@@ -73,6 +73,10 @@ while True:
         sys.exit(0)
     elif op == "synthesize":
         t = m.get("text", "")
+        if t == "ERROR":
+            _send({"op": "error", "stage": "synthesize", "message": "bad model",
+                   "traceback": "Traceback: useful child frame"})
+            continue
         if t == "CRASH":
             os._exit(137)
         if t == "HANG":
@@ -532,6 +536,55 @@ def test_generate_does_not_deadlock_when_called_on_gpu_pool_worker(stub_sidecar,
         assert tensor.shape[1] == 24000
     finally:
         b.shutdown()
+
+
+def test_sidecar_traceback_is_preserved_in_backend_log(stub_sidecar, monkeypatch, caplog):
+    _use_stub(monkeypatch, stub_sidecar)
+    b = OmniVoiceSubprocessBackend()
+    try:
+        with caplog.at_level("ERROR"), pytest.raises(
+            RuntimeError, match="sidecar synthesize error: bad model"
+        ):
+            b.generate("ERROR")
+        assert "Traceback: useful child frame" in caplog.text
+    finally:
+        b.shutdown()
+
+
+def test_cached_model_load_emits_periodic_heartbeats(monkeypatch):
+    """A slow cached MPS load has no HF progress events but is still alive."""
+    from engines.omnivoice_subprocess import main as sidecar
+    from services import model_manager
+    from utils import hf_progress
+
+    frames = []
+
+    class FakeTorch:
+        float16 = object()
+
+    class FakeOmniVoice:
+        @classmethod
+        def from_pretrained(cls, *_args, **_kwargs):
+            time.sleep(0.06)
+            return object()
+
+    monkeypatch.setattr(sidecar, "_model", None)
+    monkeypatch.setattr(sidecar, "_LOAD_HEARTBEAT_S", 0.01)
+    monkeypatch.setattr(sidecar, "_send", lambda _stream, frame: frames.append(frame))
+    monkeypatch.setattr(model_manager, "_lazy_torch", lambda: FakeTorch())
+    monkeypatch.setattr(model_manager, "_lazy_omnivoice", lambda: FakeOmniVoice)
+    monkeypatch.setattr(model_manager, "resolve_omnivoice_checkpoint", lambda: "cached")
+    monkeypatch.setattr(model_manager, "get_best_device", lambda: "mps")
+    monkeypatch.setattr(model_manager, "should_preload_tts_asr", lambda: False)
+    monkeypatch.setattr(hf_progress, "register_listener", lambda _listener: 1)
+    monkeypatch.setattr(hf_progress, "unregister_listener", lambda _listener_id: None)
+
+    sidecar._load_model(object())
+
+    loading = [frame for frame in frames if frame.get("stage") == "loading_model"]
+    assert loading[0]["percent"] == 0
+    assert loading[-1]["percent"] == 100
+    assert len(loading) >= 3, "cached model load went silent between 0% and 100%"
 
 
 def test_sidecar_forwards_native_controls_and_applies_seed(monkeypatch):

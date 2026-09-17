@@ -22,6 +22,8 @@ node_modules
 .turbo/
 bun.lockb
 frontend/src-tauri/target/
+electron/.tmp-native-target/
+native/**/target*/
 
 # ─────────────────────────────────────────────────────────────────────────
 #  Secrets & env
@@ -55,6 +57,7 @@ memxt.db-wal
 !.claude/agents/**
 /.cache*
 /.tmp/
+/.tmp-*
 
 # ─────────────────────────────────────────────────────────────────────────
 #  Research clones — upstream repos used as reference, not shipped

@@ -69,6 +69,13 @@ def test_download_progress_is_additive_and_frame_14_stays_reserved():
     assert "reserved 14;" in source
 
 
+def test_model_install_cancel_is_an_additive_server_frame():
+    from worker.protocol.gen import worker_v1_pb2 as pb
+
+    field = pb.ServerMessage.DESCRIPTOR.fields_by_name["model_install_cancel"]
+    assert field.number == 10
+
+
 def test_stub_import_is_relative():
     with open(os.path.join(_GEN_DIR, "worker_v1_pb2_grpc.py"), encoding="utf-8") as fh:
         source = fh.read()

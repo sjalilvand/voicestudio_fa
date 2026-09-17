@@ -480,6 +480,12 @@ class TestAPIEndpoints:
         data = res.json()
         assert "cpu" in data
         assert "ram" in data
+        assert data["cpu_physical_cores"] >= 1
+        assert data["cpu_logical_cores"] >= data["cpu_physical_cores"]
+        assert data["cpu_frequency_ghz"] >= 0
+        assert "gpu_name" in data
+        assert "gpu_utilization" in data
+        assert data["total_vram"] >= 0
 
     def test_dub_tracks(self, client, seeded_job):
         job_id, _ = seeded_job

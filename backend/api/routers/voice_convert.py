@@ -217,7 +217,7 @@ async def convert_speech(
         # clone-less engine with the actionable switch-engine message (→ 400),
         # and a backend mid-shutdown raises ModelLoadInterruptedByShutdown out
         # of the model load → the global 503 [shutting_down] handler.
-        from services.tts_backend import resolve_generation_backend
+        from services.tts_backend import active_backend_id, resolve_generation_backend
         try:
             backend = await resolve_generation_backend(
                 require_cloning=True, cloning_purpose="voice conversion",
@@ -319,14 +319,16 @@ async def convert_speech(
             )
 
         start_time = time.time()
+        from services.performance_profiles import tts_defaults
+        _profile_defaults = tts_defaults(active_backend_id())
         _render = functools.partial(
             _run_backend_inference,
             backend, text, language, cond["ref_audio_path"], cond["ref_text"],
             cond["instruct"],
             None,        # duration — the model picks; match_duration owns pacing
-            16, 2.0,     # num_step / guidance_scale (the /generate defaults)
+            _profile_defaults.get("num_step", 16), 2.0,
             1.0,         # speed
-            True, True,  # denoise / postprocess_output
+            True, _profile_defaults.get("postprocess_output", True),
             used_seed,
         )
         try:
