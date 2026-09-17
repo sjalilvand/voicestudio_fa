@@ -27,11 +27,7 @@ from pathlib import Path
 
 import pytest
 
-from services.subprocess_backend import (
-    RECV_TIMEOUT_S,
-    GENERATE_RECV_TIMEOUT_S,
-    SubprocessBackend,
-)
+from services.subprocess_backend import RECV_TIMEOUT_S, SubprocessBackend
 from services.tts_backend import OmniVoiceBackend, get_backend_class, list_backends
 from engines.omnivoice_subprocess import (
     OmniVoiceMPSSubprocessBackend,
@@ -325,6 +321,7 @@ class _PlainBackend(SubprocessBackend):
 def test_base_default_recv_timeout_covers_a_generation():
     # A sidecar that does not choose gets a deadline that outlasts the
     # wall-clock budget its own job was granted (#2103).
+    from services.subprocess_backend import GENERATE_RECV_TIMEOUT_S
     assert SubprocessBackend.recv_timeout_s == GENERATE_RECV_TIMEOUT_S == 600.0
     assert _PlainBackend().recv_timeout_s == 600.0
     # The ping budget itself is unchanged: health_check() still wants 60s.
