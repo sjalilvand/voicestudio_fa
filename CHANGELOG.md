@@ -16,6 +16,10 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
 
+### Fixed
+
+- Correct the Windows Rustup installation command in tooling and documentation (#2066) — thanks @Rukhaam!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**

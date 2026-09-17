@@ -48,7 +48,7 @@ Everything above, plus the toolchain:
   with the **"Desktop development with C++"** workload checked.
 - **Bun** — `powershell -c "irm bun.sh/install.ps1 | iex"`.
 - **FFmpeg** — `winget install Gyan.FFmpeg`.
-- **Rust / Cargo** — `winget install Rust.Rustup` or download `rustup-init.exe` from [rustup.rs](https://rustup.rs/).
+- **Rust / Cargo** — `winget install Rustlang.Rustup` or download `rustup-init.exe` from [rustup.rs](https://rustup.rs/).
   After installing Rustup, close and reopen PowerShell before running `bun run tauri:desktop-prod`.
 
 ## GPU support on Windows
