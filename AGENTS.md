@@ -29,6 +29,7 @@ Binding for every AI agent (Claude, Codex, Cursor, review bots, …). CLAUDE.md 
 - Local-first: no new required network calls; any HF download gated on installed-ness or explicit user action; all synthetic audio through the `mark_synthetic` chokepoint.
 - Every user-facing string via i18n, present in ALL 21 `frontend/src/i18n/locales/*.json` with real translations.
 - Docs-sync in the same PR. CHANGELOG Unreleased: quiet one-liners ending `(#N)` + `— thanks @user!` for community work, under a short `**Highlights**` list.
+- Tagged release announcements lead with the biggest user-visible change; redesigns need real UI screenshots and migrations need installer links and steps. Verify all contributor credits from the tag comparison and included PRs; list authors and bug reporters separately (see `docs/RELEASING.md`).
 - Versioning: `frontend/package.json` is the single source of truth; never bump without the owner asking.
 - `frontend/package.json` dep changes require regenerating root `bun.lock` (Docker runs `--frozen-lockfile`).
 - Issues: absorb or decline — never defer to a future version. Check the open-PR queue before implementing community-reported fixes.

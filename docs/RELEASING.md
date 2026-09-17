@@ -58,6 +58,20 @@ does not update clients already on `v0.2.1`.
 
 ## 5. Cutting a release
 
+Release notes lead with the biggest user-visible change, not README edits or
+packaging internals. For a desktop redesign or migration, include a real UI
+screenshot pinned to the release tag, explain what changed, and give direct
+installer links and migration steps. Keep Highlights to 3–5 bullets, followed
+by concise themed entries. Preserve any installer-trust disclosures.
+
+Verify credits against the previous-tag-to-new-tag commit comparison and the
+included PRs, including contributor branches merged through maintainer branches.
+Add a Contributors section naming every human author and their contribution;
+thank verified bug reporters separately and identify dependency bots separately.
+Do not infer contributors from the existing changelog's `thanks` entries alone.
+Electron publishes the authored version section verbatim, with any required
+installer-trust disclosure appended by the workflow.
+
 1. **CHANGELOG first (hard rule):** make sure `CHANGELOG.md` has a complete,
    user-facing `## [X.Y.Z] — DATE` section (rename `## [Unreleased]`).
    `release.yml` extracts that section verbatim as the GitHub Release body —
