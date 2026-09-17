@@ -165,6 +165,11 @@ class IsolatedFasterWhisperBackend(SubprocessASRBackend):
 
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
+        from core.execstack import ensure_ctranslate2_loadable
+
+        ok, detail = ensure_ctranslate2_loadable()
+        if not ok:
+            return False, f"faster-whisper cannot load CTranslate2: {detail}"
         try:
             import faster_whisper  # noqa: F401
         except Exception as e:

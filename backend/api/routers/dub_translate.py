@@ -807,8 +807,7 @@ async def dub_translate(req: TranslateRequest):
             except Exception as e:  # noqa: BLE001 — OSError here, not ImportError
                 friendly = (
                     f"The '{provider}' engine's CTranslate2 runtime could not be "
-                    f"loaded in this backend ({type(e).__name__}: {e})."
-                    + ("" if ct2_ok else f" {ct2_detail}")
+                    "loaded in this backend."
                     + " Switch the Engine dropdown to NLLB (local) or an online "
                     "provider, or reinstall the backend, then retry."
                 )

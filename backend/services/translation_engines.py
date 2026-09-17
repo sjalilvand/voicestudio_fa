@@ -128,7 +128,7 @@ def is_frozen() -> bool:
 def _probe(entry: dict) -> tuple[bool, str | None]:
     mod = entry.get("probe_module")
     if not mod:
-       return True, None
+        return True, None
     if mod.startswith("argostranslate"):
         # Repair CTranslate2's exec-stack request before the import that would
         # be rejected by it (#692) — otherwise Argos, the default offline

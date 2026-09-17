@@ -98,7 +98,7 @@ def test_non_elf_and_missing_files_are_not_errors(tmp_path):
     assert changed is False and "unreadable" in detail
 
 
-def test_ensure_is_memoized_and_reports_unrepairable(tmp_path, monkeypatch):
+def test_ensure_rechecks_unrepairable_libraries(tmp_path, monkeypatch):
     lib = _elf(tmp_path / "libctranslate2-test.so.4.4.0", flags=0x7)
     monkeypatch.setattr(execstack.sys, "platform", "linux")
     monkeypatch.setattr(execstack, "ctranslate2_library_paths", lambda: [lib])
@@ -111,12 +111,9 @@ def test_ensure_is_memoized_and_reports_unrepairable(tmp_path, monkeypatch):
     # Actionable: names the library, why, and both ways out.
     assert "executable stack" in detail and "patchelf" in detail and "3.12" in detail
 
-    # Memoized — a second call does not re-probe (the paths lookup would raise).
-    monkeypatch.setattr(
-        execstack, "ctranslate2_library_paths", lambda: pytest.fail("re-probed")
-    )
-    assert execstack.ensure_ctranslate2_loadable() == (ok, detail)
-    execstack.reset_ctranslate2_cache()
+    # An external repair must become visible without a backend restart.
+    _elf(tmp_path / "libctranslate2-test.so.4.4.0", flags=0x6)
+    assert execstack.ensure_ctranslate2_loadable()[0] is True
 
 
 def test_ensure_repairs_then_reports_ok(tmp_path, monkeypatch):
@@ -176,3 +173,43 @@ def test_engine_probe_survives_a_native_load_failure(monkeypatch):
     monkeypatch.setattr(te.importlib, "import_module", boom)
     ok, detail = te._probe({"probe_module": "deep_translator"})
     assert ok is False and "OSError" in detail
+
+
+@pytest.mark.parametrize("bits", [32, 64])
+@pytest.mark.parametrize("length", [16, 31, 45, 63])
+def test_truncated_elf_is_not_an_error(tmp_path, bits, length):
+    path = tmp_path / "short.so"
+    _elf(path, bits=bits)
+    path.write_bytes(path.read_bytes()[:length])
+    before = path.read_bytes()
+    assert execstack.has_execstack(str(path)) is None
+    assert execstack.clear_execstack(str(path))[0] is False
+    assert path.read_bytes() == before
+
+
+def test_install_after_absent_probe_is_detected(tmp_path, monkeypatch):
+    monkeypatch.setattr(execstack.sys, "platform", "linux")
+    libs = []
+    monkeypatch.setattr(execstack, "ctranslate2_library_paths", lambda: libs)
+    assert execstack.ensure_ctranslate2_loadable()[0]
+    libs.append(_elf(tmp_path / "new.so"))
+    assert execstack.ensure_ctranslate2_loadable()[0]
+    assert execstack.has_execstack(libs[0]) is False
+
+
+def test_concurrent_repairs_remain_available(tmp_path, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    lib = _elf(tmp_path / "parallel.so")
+    monkeypatch.setattr(execstack.sys, "platform", "linux")
+    monkeypatch.setattr(execstack, "ctranslate2_library_paths", lambda: [lib])
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(lambda _: execstack.ensure_ctranslate2_loadable(), range(24)))
+    assert all(ok for ok, _ in results)
+    assert execstack.has_execstack(lib) is False
+
+
+def test_isolated_probe_checks_repair_before_import(monkeypatch):
+    from services.subprocess_asr import IsolatedFasterWhisperBackend
+    monkeypatch.setattr(execstack, "ensure_ctranslate2_loadable", lambda: (False, "repair blocked"))
+    ok, detail = IsolatedFasterWhisperBackend.is_available()
+    assert not ok and "repair blocked" in detail

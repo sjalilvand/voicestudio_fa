@@ -784,3 +784,23 @@ async def test_openai_env_fallback_still_works(monkeypatch):
     resp = await dub_translate.dub_translate(req)
     assert resp["translated"][0]["text"] == "hola mundo"
     assert calls and calls[0]["model"] == "env-model"
+
+@pytest.mark.asyncio
+async def test_argos_native_loader_error_does_not_expose_paths(monkeypatch):
+    import builtins
+    from core import execstack
+    from api.routers.dub_translate import dub_translate
+    from schemas.requests import TranslateRequest
+    _install_fake_argos(monkeypatch)
+    private = '/home/private-user/secrets/native/library.so'
+    monkeypatch.setattr(execstack, 'ensure_ctranslate2_loadable', lambda: (False, private))
+    original = builtins.__import__
+    def fail_native(name, *args, **kwargs):
+        if name == 'argostranslate.translate':
+            raise OSError(private)
+        return original(name, *args, **kwargs)
+    monkeypatch.setattr(builtins, '__import__', fail_native)
+    response = await dub_translate(TranslateRequest(provider='argos', source_lang='en', target_lang='es', segments=[{'id':'1','text':'Hello'}]))
+    assert response.status_code == 400
+    assert private.encode() not in response.body
+    assert b'CTranslate2' in response.body and b'reinstall' in response.body

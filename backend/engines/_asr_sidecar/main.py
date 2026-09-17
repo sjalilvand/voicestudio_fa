@@ -84,6 +84,10 @@ def _is_ct_error(msg):
 def _get_model():
     global _model
     if _model is None:
+        from core.execstack import ensure_ctranslate2_loadable
+        ok, detail = ensure_ctranslate2_loadable()
+        if not ok:
+            raise ImportError(f"faster-whisper cannot load CTranslate2: {detail}")
         from faster_whisper import WhisperModel
         # Same weights as in-process faster-whisper: ASR_MODEL_FASTER selects
         # for BOTH variants, ASR_MODEL_FW stays as a sidecar-only override.

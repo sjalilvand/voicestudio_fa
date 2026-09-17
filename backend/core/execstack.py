@@ -29,7 +29,7 @@ from an availability probe: it only rewrites a file when that file would
 otherwise refuse to load.
 
 Everything here is a no-op off Linux (macOS/Windows have no such rejection)
-and never raises — a repair that cannot happen returns a reason, and the
+and handles malformed ELF data — a repair that cannot happen returns a reason, and the
 caller degrades exactly as it did before.
 """
 from __future__ import annotations
@@ -39,6 +39,7 @@ import logging
 import os
 import struct
 import sys
+import threading
 
 logger = logging.getLogger("omnivoice.execstack")
 
@@ -46,9 +47,8 @@ logger = logging.getLogger("omnivoice.execstack")
 _PT_GNU_STACK = 0x6474E551
 _PF_X = 0x1
 
-#: Memoized :func:`ensure_ctranslate2_loadable` result — the repair is
-#: process-wide and idempotent, so probe it once per backend process.
-_CT2_CHECKED: tuple[bool, str] | None = None
+#: Serialize in-process writes; flock also coordinates sidecar processes.
+_REPAIR_LOCK = threading.RLock()
 
 
 def _elf_header(fh) -> tuple[str, int, int, int, bool] | None:
@@ -65,18 +65,20 @@ def _elf_header(fh) -> tuple[str, int, int, int, bool] | None:
         return None
     is_64 = ident[4] == 2
     endian = "<" if ident[5] == 1 else ">"
-    # e_phoff / e_phentsize / e_phnum live at class-dependent offsets.
-    if is_64:
-        fh.seek(0x20)
-        (e_phoff,) = struct.unpack(endian + "Q", fh.read(8))
-        fh.seek(0x36)
-        e_phentsize, e_phnum = struct.unpack(endian + "HH", fh.read(4))
-    else:
-        fh.seek(0x1C)
-        (e_phoff,) = struct.unpack(endian + "I", fh.read(4))
-        fh.seek(0x2A)
-        e_phentsize, e_phnum = struct.unpack(endian + "HH", fh.read(4))
-    if not e_phoff or not e_phentsize or not e_phnum:
+    fh.seek(0, os.SEEK_END)
+    size = fh.tell()
+    header_size = 64 if is_64 else 52
+    if size < header_size:
+        return None
+    fh.seek(0)
+    header = fh.read(header_size)
+    if len(header) != header_size:
+        return None
+    e_phoff = struct.unpack_from(endian + ("Q" if is_64 else "I"), header, 0x20 if is_64 else 0x1C)[0]
+    e_phentsize, e_phnum = struct.unpack_from(endian + "HH", header, 0x36 if is_64 else 0x2A)
+    if (not e_phnum or e_phoff < header_size or
+            e_phentsize < (56 if is_64 else 32) or
+            e_phoff + e_phentsize * e_phnum > size):
         return None
     # p_flags sits at a different offset per class (ELF64 puts it right after
     # p_type; ELF32 puts it last), so the caller needs the class too.
@@ -133,23 +135,24 @@ def clear_execstack(path: str) -> tuple[bool, str]:
     instance) — ``detail`` says which.
     """
     try:
-        with open(path, "rb") as fh:
+        # Lock and inspect the same descriptor we write: another process may
+        # already have repaired it, or the wheel may have been replaced.
+        with _REPAIR_LOCK, open(path, "r+b") as fh:
+            if sys.platform == "linux":
+                import fcntl
+                fcntl.flock(fh, fcntl.LOCK_EX)
             found = _gnu_stack_flags_offset(fh)
-    except OSError as e:
-        return False, f"unreadable ({e.__class__.__name__})"
-    if found is None:
-        return False, "no PT_GNU_STACK segment"
-    offset, flags, endian = found
-    if not flags & _PF_X:
-        return False, "already non-executable"
-    try:
-        with open(path, "r+b") as fh:
+            if found is None:
+                return False, "no PT_GNU_STACK segment"
+            offset, flags, endian = found
+            if not flags & _PF_X:
+                return False, "already non-executable"
             fh.seek(offset)
             fh.write(struct.pack(endian + "I", flags & ~_PF_X))
             fh.flush()
             os.fsync(fh.fileno())
     except OSError as e:
-        return False, f"not writable ({e.__class__.__name__}: {e})"
+        return False, f"unreadable or not writable ({e.__class__.__name__})"
     return True, "cleared PT_GNU_STACK executable bit"
 
 
@@ -190,12 +193,9 @@ def ensure_ctranslate2_loadable() -> tuple[bool, str]:
 
     Returns ``(ok, detail)`` where ``ok`` is False only when a library needs
     the repair and could not get it — the caller should then report its
-    engine unavailable with ``detail`` as the reason. Memoized: the repair is
-    idempotent and process-wide.
+    engine unavailable with ``detail`` as the reason. The repair is idempotent. Re-probe on each call so installation or
+    external repair takes effect without restarting.
     """
-    global _CT2_CHECKED
-    if _CT2_CHECKED is not None:
-        return _CT2_CHECKED
 
     result: tuple[bool, str]
     if sys.platform != "linux":
@@ -220,8 +220,8 @@ def ensure_ctranslate2_loadable() -> tuple[bool, str]:
                         "faster-whisper and Argos translation (#692)",
                         os.path.basename(lib), detail,
                     )
-                else:
-                    blocked.append(f"{lib} ({detail})")
+                elif has_execstack(lib) is not False:
+                    blocked.append(f"{os.path.basename(lib)} ({detail})")
             if blocked:
                 result = (
                     False,
@@ -237,11 +237,8 @@ def ensure_ctranslate2_loadable() -> tuple[bool, str]:
             else:
                 result = (True, "no exec-stack request")
 
-    _CT2_CHECKED = result
     return result
 
 
 def reset_ctranslate2_cache() -> None:
-    """Forget the memoized probe result (tests, and after a reinstall)."""
-    global _CT2_CHECKED
-    _CT2_CHECKED = None
+    """Compatibility hook; recoverable probe results are no longer cached."""

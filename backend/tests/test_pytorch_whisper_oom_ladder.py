@@ -100,3 +100,19 @@ def test_cpu_pipeline_keeps_the_small_batch(audio):
     pipe.device = "cpu"
     PyTorchWhisperBackend(asr_pipe=pipe).transcribe(audio)
     assert pipe.calls == [2]
+
+
+def test_cpu_fallback_preserves_injected_model_and_processor(monkeypatch):
+    import torch
+    from types import SimpleNamespace
+    calls = []
+    model = SimpleNamespace(to=lambda **kw: calls.append(kw))
+    processor = object()
+    pipe = SimpleNamespace(model=model, tokenizer=processor, feature_extractor=processor, device="cuda:0")
+    backend = PyTorchWhisperBackend(asr_pipe=pipe)
+    monkeypatch.setattr(backend, "_model_name", lambda: pytest.fail("must not resolve another checkpoint"))
+    backend._rebuild_on_cpu()
+    assert backend._pipe is pipe and pipe.model is model
+    assert pipe.tokenizer is processor and pipe.feature_extractor is processor
+    assert str(pipe.device) == "cpu"
+    assert calls == [{"device": "cpu", "dtype": torch.float32}]

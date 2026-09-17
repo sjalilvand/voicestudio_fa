@@ -18,6 +18,10 @@ the frozen-backend fallback mirror it for their toolchains.
 - Argos stopped advertising itself as ready on hosts where its CTranslate2 runtime cannot load; dub translation reports one actionable error instead of a 500 per segment (#692)
 - PyTorch Whisper survives a CUDA out-of-memory mid-transcription by stepping the batch down and finishing on CPU rather than dropping the chunk (#2165)
 
+### Fixed
+
+- Repair CTranslate2 loading safely across ASR and translation, and retain the loaded Whisper model during CPU fallback (#2165) — thanks @guruthechosen!
+
 ### CI
 
 - Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)

@@ -1504,23 +1504,17 @@ class PyTorchWhisperBackend(ASRBackend):
         return "out of memory" in str(exc).lower()
 
     def _rebuild_on_cpu(self) -> None:
-        """Drop the CUDA pipeline and rebuild it on CPU (slower, same model)."""
-        self._pipe = None
-        try:
-            import torch
-
-            torch.cuda.empty_cache()
-        except Exception:  # noqa: BLE001 — cache clear is best-effort
-            pass
+        """Move the existing pipeline to CPU without resolving any model files."""
         import torch
-        from transformers import pipeline as hf_pipeline
 
-        self._pipe = hf_pipeline(
-            "automatic-speech-recognition",
-            model=self._model_name(),
-            dtype=torch.float32,
-            device="cpu",
-        )
+        # Keep the loaded checkpoint, tokenizer and feature extractor. Looking
+        # up the default model here could download a different model offline.
+        self._pipe.model.to(device="cpu", dtype=torch.float32)
+        self._pipe.device = torch.device("cpu")
+        try:
+            torch.cuda.empty_cache()
+        except Exception:
+            pass
 
     def transcribe(self, audio_path: str, *, word_timestamps: bool = True) -> dict:
         import soundfile as sf
