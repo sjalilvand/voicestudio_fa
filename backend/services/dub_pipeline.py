@@ -1084,9 +1084,7 @@ def yt_download_sync(
         if sub_langs:
             langs = list(sub_langs)
         else:
-            orig = (info.get("language") or "").strip()
-            manual = list((info.get("subtitles") or {}).keys())
-            langs = sorted({*manual, *([orig] if orig else [])})
+            langs = _default_caption_languages(info)
         if not langs:
             logger.info("No captions available on %s (skipping subtitle pass)", log_safe(url))
         else:
@@ -1113,6 +1111,48 @@ def yt_download_sync(
             base = os.path.splitext(video_path)[0]
             sub_files = sorted(glob.glob(base + ".*.vtt"))
     return video_path, title, sub_files
+
+
+def _default_caption_languages(info: dict) -> list[str]:
+    """Return original-language caption tracks without translated auto-captions.
+
+    Some extractors omit ``language`` even though yt-dlp exposes an original
+    automatic-caption track such as ``en-orig``.  Treat that explicit suffix as
+    source metadata so caption-first ingest still works instead of needlessly
+    loading ASR.  Manual tracks remain eligible because they are authored source
+    material and yt-dlp's ``skip=translated_subs`` guard still applies.
+    """
+    original = str(info.get("language") or "").strip()
+    manual = {
+        str(language).strip()
+        for language in (info.get("subtitles") or {})
+        if str(language).strip()
+    }
+    automatic = {
+        str(language).strip()
+        for language in (info.get("automatic_captions") or {})
+        if str(language).strip()
+    }
+    selected = set(manual)
+    if original:
+        primary = original.split("-", 1)[0]
+        has_source_manual = any(
+            language == original or language.split("-", 1)[0] == primary
+            for language in manual
+        )
+        if not has_source_manual:
+            for candidate in (
+                f"{original}-orig",
+                f"{primary}-orig",
+                original,
+                primary,
+            ):
+                if candidate in automatic:
+                    selected.add(candidate)
+                    break
+    else:
+        selected.update(language for language in automatic if language.endswith("-orig"))
+    return sorted(selected)
 
 
 def parse_vtt_segments(vtt_path: str) -> list[dict]:

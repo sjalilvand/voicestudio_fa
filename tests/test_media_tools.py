@@ -251,6 +251,10 @@ def test_acquired_bundle_joins_the_resolution_chain(mt, monkeypatch):
 
 def test_set_custom_path_persists_via_env_prefs_convention(mt, monkeypatch, tmp_path):
     import core.prefs as prefs
+    from services import ffmpeg_utils
+    # Both acquisition and resolution validate executables. These shell fixtures
+    # are intentionally fake and cannot execute on Windows.
+    monkeypatch.setattr(ffmpeg_utils, "_binary_runs", lambda p: True)
     fake = tmp_path / "myffmpeg"
     fake.write_text("#!/bin/sh\n")
     fake.chmod(0o755)

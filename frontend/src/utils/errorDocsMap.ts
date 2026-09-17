@@ -16,6 +16,8 @@ import { openExternal } from '../api/external';
 const BASE = 'https://github.com/debpalash/VoiceStudio/blob/main';
 
 export const ERROR_DOCS: Record<string, string> = {
+  DIARIZATION_LOAD_FAILED: `${BASE}/docs/features/diarization.md#troubleshooting`,
+  DIARIZATION_MODEL_MISSING: `${BASE}/docs/features/diarization.md#local-installation-and-repair`,
   GATEKEEPER_QUARANTINE: `${BASE}/docs/install/macos.md#gatekeeper-quarantine`,
   APPIMAGE_WEBKIT_WHITESCREEN: `${BASE}/docs/install/linux.md#appimage-white-screen-on-fedora-44--ubuntu-2404`,
   PKG_RESOURCES_MISSING: `${BASE}/docs/install/troubleshooting.md#pkg_resources-missing`,
@@ -36,6 +38,8 @@ export const TRANSLATION_ENGINES_DOCS = `${BASE}/docs/dubbing/translation-engine
 // Adding a class is a contract change; update the Python map at the
 // same time (`backend/core/error_docs_map.py`).
 export const ERROR_CLASS_KEYS = [
+  'DIARIZATION_LOAD_FAILED',
+  'DIARIZATION_MODEL_MISSING',
   'GATEKEEPER_QUARANTINE',
   'APPIMAGE_WEBKIT_WHITESCREEN',
   'PKG_RESOURCES_MISSING',
@@ -61,15 +65,22 @@ export function classifyError(error: unknown): ErrorClass | null {
   ) {
     return 'POCKETTTS_GATED_WEIGHTS';
   }
-  // Issue #78 — pyannote license + diarization are diagnosed separately
-  // from generic HF auth, since the fix instructions are different (click
-  // "Agree" on the model page vs. set/refresh the token). Check this BEFORE
-  // the HF_AUTH_FAILED branch so a message mentioning both "pyannote" and
-  // "401" routes to the more specific deeplink.
+  const diarisation = /pyannote|diari[sz]ation|sortformer/.test(lower);
+  const accessFailure =
+    /gated|unauthorized|forbidden|401|403|accept the|license|user conditions/.test(lower);
+  if (diarisation && !accessFailure) {
+    if (
+      /files are missing|filenotfounderror|localentrynotfounderror|model is missing/.test(lower)
+    ) {
+      return 'DIARIZATION_MODEL_MISSING';
+    }
+    if (/failed to load|load failed|runtime failed/.test(lower)) {
+      return 'DIARIZATION_LOAD_FAILED';
+    }
+  }
   if (
-    /pyannote/.test(lower) ||
+    (diarisation && accessFailure) ||
     /\bgated\b/.test(lower) ||
-    /speaker[- ]?diariz/.test(lower) ||
     /accept.*(license|terms|conditions)/.test(lower)
   ) {
     return 'PYANNOTE_LICENSE_REQUIRED';
@@ -93,7 +104,7 @@ export function classifyError(error: unknown): ErrorClass | null {
   return null;
 }
 
-export function urlFor(errorClass: ErrorClass | null | undefined): string {
+export function urlFor(errorClass: ErrorClass | string | null | undefined): string {
   if (!errorClass) return DEFAULT_DOCS;
   return ERROR_DOCS[errorClass] ?? DEFAULT_DOCS;
 }

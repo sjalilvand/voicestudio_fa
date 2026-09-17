@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import torch  # noqa: F401 — front-load torch during collection (matches
@@ -64,6 +65,15 @@ def test_two_calls_reuse_one_sidecar(asr):
     proc1 = asr._proc.pid
     asr.transcribe("/b.wav")
     assert asr._proc.pid == proc1  # long-lived sidecar, not respawned per call
+
+
+def test_shared_loader_contract_starts_and_reuses_sidecar(asr):
+    """load_active_asr_backend calls ensure_loaded before transcribe."""
+    asr.ensure_loaded()
+    proc = asr._proc.pid
+    result = asr.transcribe("/after-preflight.wav")
+    assert asr._proc.pid == proc
+    assert result["segments"][0]["text"] == "echo:/after-preflight.wav"
 
 
 def test_crash_mid_transcribe_fails_then_respawns(monkeypatch, asr):
@@ -139,3 +149,30 @@ def test_get_active_asr_backend_caches_isolated_singleton(monkeypatch):
 def test_generate_is_not_supported(asr):
     with pytest.raises(NotImplementedError):
         asr.generate("text")
+
+
+def test_sidecar_accepts_max_profile_decode_width(monkeypatch):
+    """The global Max preset sends beam_size/best_of=8 to this child."""
+    from engines._asr_sidecar import main as sidecar
+
+    calls = []
+
+    class FakeModel:
+        def transcribe(self, path, **options):
+            calls.append((path, options))
+            segments = [SimpleNamespace(start=0, end=1, text="heard", words=[])]
+            return segments, SimpleNamespace(language="en")
+
+    monkeypatch.setattr(sidecar, "_get_model", lambda: FakeModel())
+    result = sidecar._transcribe(
+        "/max.wav",
+        False,
+        {"beam_size": 8, "best_of": 8},
+    )
+    assert calls == [
+        (
+            "/max.wav",
+            {"word_timestamps": False, "beam_size": 8, "best_of": 8},
+        )
+    ]
+    assert result["text"] == "heard"

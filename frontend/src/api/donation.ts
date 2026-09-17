@@ -1,5 +1,5 @@
 /**
- * Donation goal data — "Fund Claude Max" goal bar (spec 007, Option B).
+ * Donation goal data — "Support VoiceStudio development" goal bar (spec 007, Option B).
  *
  * Source-of-truth strategy (Option B):
  *   1. A bundled, committed snapshot ships with the app so the goal bar ALWAYS
@@ -82,5 +82,17 @@ export async function loadDonationProgress(
     return normalizeProgress(json) ?? BUNDLED_PROGRESS;
   } catch {
     return BUNDLED_PROGRESS;
+  }
+}
+
+export function formatMoney(amount: number, currency: string) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currency || 'USD',
+      maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
+    }).format(amount);
+  } catch {
+    return `$${Math.round(amount)}`;
   }
 }
