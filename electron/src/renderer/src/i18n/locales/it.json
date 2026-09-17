@@ -2487,7 +2487,8 @@
     "none_ready_body": "VoiceStudio può configurare automaticamente l’opzione compatibile migliore per questo dispositivo.",
     "active": "Motore: {{name}}",
     "none": "Nessun motore attivo",
-    "localInstallRequired": "Installa questo motore sul computer del backend tramite localhost o la guida alla configurazione. L’installazione remota è disabilitata."
+    "localInstallRequired": "Installa questo motore sul computer del backend tramite localhost o la guida alla configurazione. L’installazione remota è disabilitata.",
+    "argosRuntimeUnavailable": "Il runtime di Argos non è disponibile. Reinstalla il backend o seleziona NLLB."
   },
   "performanceProfile": {
     "requiresEngine": "Installa e seleziona {{engine}} per regolare velocità e qualità.",

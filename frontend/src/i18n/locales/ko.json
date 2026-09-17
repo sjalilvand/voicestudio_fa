@@ -1142,7 +1142,8 @@
     "unloadFailed": "언로드하지 못했습니다: {{message}}",
     "unloading": "언로드 중…",
     "mpsLongText": "여기서는 {{engine}}이(가) Apple Silicon(MPS)에서 실행되며 이 텍스트는 길어 생성이 시간 제한을 초과할 수 있습니다. 텍스트를 줄이거나 여러 번에 나누면 훨씬 빠릅니다.",
-    "localInstallRequired": "백엔드 컴퓨터에서 localhost 또는 설정 가이드를 사용하여 이 엔진을 설치하세요. 원격 설치는 비활성화되어 있습니다."
+    "localInstallRequired": "백엔드 컴퓨터에서 localhost 또는 설정 가이드를 사용하여 이 엔진을 설치하세요. 원격 설치는 비활성화되어 있습니다.",
+    "argosRuntimeUnavailable": "Argos 런타임을 사용할 수 없습니다. 백엔드를 다시 설치하거나 NLLB를 선택하세요."
   },
   "capture": {
     "desc": "전역 단축키는 데스크톱 앱에서만 작동합니다. 웹 UI는 창에 포커스가 있는 동안 페이지 내 <1>Ctrl+Shift+Space</1> 단축키를 사용합니다.",

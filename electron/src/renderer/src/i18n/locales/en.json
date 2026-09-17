@@ -115,7 +115,8 @@
     "rechecking": "Re-checking…",
     "failed": "failed",
     "latencyMs": "{{ms}} ms",
-    "localInstallRequired": "Install this engine on the backend computer using localhost or its setup guide. Remote installation is disabled."
+    "localInstallRequired": "Install this engine on the backend computer using localhost or its setup guide. Remote installation is disabled.",
+    "argosRuntimeUnavailable": "Argos runtime unavailable. Reinstall the backend or select NLLB."
   },
   "clone": {
     "title": "Voice cloning",

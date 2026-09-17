@@ -865,7 +865,8 @@
     "familyDesc_llm": "Valfri texthjälp för översättning och omskrivning. ”Av” hoppar över dessa steg.",
     "mpsLongText": "{{engine}} körs på Apple Silicon (MPS) här och den här texten är lång — genereringen kan överskrida tidsbudgeten. Kortare text, eller uppdelad i flera tagningar, går betydligt snabbare.",
     "inMemory": "I minnet",
-    "localInstallRequired": "Installera motorn på backenddatorn via localhost eller installationsguiden. Fjärrinstallation är avstängd."
+    "localInstallRequired": "Installera motorn på backenddatorn via localhost eller installationsguiden. Fjärrinstallation är avstängd.",
+    "argosRuntimeUnavailable": "Argos körmiljö är inte tillgänglig. Installera om backend eller välj NLLB."
   },
   "capture": {
     "desc": "Globala snabbtangenter fungerar bara i skrivbordsappen. Webbgränssnittet använder en genväg <1>Ctrl+Skift+Mellanslag</1> på sidan medan fönstret har fokus.",

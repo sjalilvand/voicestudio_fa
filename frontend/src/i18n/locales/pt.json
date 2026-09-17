@@ -865,7 +865,8 @@
     "familyDesc_llm": "Assistente de texto opcional para tradução e reescrita. “Desativado” ignora essas etapas.",
     "mpsLongText": "{{engine}} é executado em Apple Silicon (MPS) aqui e este texto é longo — a geração pode ultrapassar o limite de tempo. Um texto mais curto, ou dividido em algumas partes, será bem mais rápido.",
     "inMemory": "Na memória",
-    "localInstallRequired": "Instale este motor no computador do backend pelo localhost ou pelo guia de configuração. A instalação remota está desativada."
+    "localInstallRequired": "Instale este motor no computador do backend pelo localhost ou pelo guia de configuração. A instalação remota está desativada.",
+    "argosRuntimeUnavailable": "O ambiente de execução do Argos está indisponível. Reinstale o backend ou selecione NLLB."
   },
   "capture": {
     "desc": "As teclas de atalho globais funcionam apenas no aplicativo de desktop. A IU da web usa um atalho <1>Ctrl+Shift+Space</1> na página enquanto a janela está em foco.",

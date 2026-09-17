@@ -2485,7 +2485,8 @@
     "none_ready_body": "VoiceStudio dapat menyiapkan opsi kompatibel terbaik untuk perangkat ini secara otomatis.",
     "active": "Mesin: {{name}}",
     "none": "Tidak ada mesin aktif",
-    "localInstallRequired": "Instal mesin ini di komputer backend melalui localhost atau panduan penyiapannya. Instalasi jarak jauh dinonaktifkan."
+    "localInstallRequired": "Instal mesin ini di komputer backend melalui localhost atau panduan penyiapannya. Instalasi jarak jauh dinonaktifkan.",
+    "argosRuntimeUnavailable": "Runtime Argos tidak tersedia. Instal ulang backend atau pilih NLLB."
   },
   "performanceProfile": {
     "requiresEngine": "Instal dan pilih {{engine}} untuk menyesuaikan kecepatan dan kualitas.",

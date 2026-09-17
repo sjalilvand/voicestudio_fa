@@ -2485,7 +2485,8 @@
     "none_ready_body": "VoiceStudio bu cihaz için en iyi uyumlu seçeneği otomatik olarak ayarlayabilir.",
     "active": "Motor: {{name}}",
     "none": "Etkin motor yok",
-    "localInstallRequired": "Bu motoru arka uç bilgisayarında localhost veya kurulum kılavuzu üzerinden yükleyin. Uzaktan kurulum devre dışıdır."
+    "localInstallRequired": "Bu motoru arka uç bilgisayarında localhost veya kurulum kılavuzu üzerinden yükleyin. Uzaktan kurulum devre dışıdır.",
+    "argosRuntimeUnavailable": "Argos çalışma ortamı kullanılamıyor. Arka ucu yeniden yükleyin veya NLLB seçin."
   },
   "performanceProfile": {
     "requiresEngine": "Hız ve kaliteyi ayarlamak için {{engine}} yükleyip seçin.",
