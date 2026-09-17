@@ -8,6 +8,14 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ## [Unreleased]
 
+**Highlights**
+
+- Electron packaging can recover without changing a release tag
+
+### CI
+
+- Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**
@@ -40,6 +48,8 @@ the frozen-backend fallback mirror it for their toolchains.
 - CosyVoice 3 installs patched protobuf and transformers releases, clearing five security advisories (#2030, #2031)
 
 ### Fixed
+
+- Keep demo playback aligned across languages, preserve worker GPU metrics, and restrict unsigned releases to owner dispatches (#2157)
 
 - Desktop integration checks cover current dubbing safeguards, navigation, and the linked engine catalog (#2157)
 

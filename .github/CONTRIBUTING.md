@@ -103,7 +103,7 @@ open a new terminal, or on macOS/Linux load Cargo into the current one:
 
 ```bash
 source "$HOME/.cargo/env"
-bun desktop
+bun run tauri
 ```
 
 If Rust is genuinely not installed, the launchers stop up front with the

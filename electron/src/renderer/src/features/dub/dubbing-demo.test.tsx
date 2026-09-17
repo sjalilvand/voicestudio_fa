@@ -1,3 +1,4 @@
+import { useLayoutEffect } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
@@ -18,7 +19,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('@/lib/api/client', () => ({ apiJson: mocks.api, apiPath: (path: string) => path }));
 vi.mock('@/components/video-player', () => ({
-  VideoPlayer: ({ controls, playerRef, onPlay, onPause, source }: Record<string, any>) => {
+  VideoPlayer: ({ controls, playerRef, onPlay, onPause, onCanPlay, source, src }: Record<string, any>) => {
     mocks.videoProps.push({ controls, source });
     let player = mocks.players.get(source);
     if (!player) {
@@ -35,6 +36,10 @@ vi.mock('@/components/video-player', () => ({
       mocks.players.set(source, player);
     }
     playerRef.current = player;
+    useLayoutEffect(() => {
+      player!.currentTime = 0;
+      onCanPlay?.({});
+    }, [src.src]);
     return (
       <button
         type="button"
@@ -158,4 +163,19 @@ it('copies the final paused position to the other sample', async () => {
   source.currentTime = 5;
   fireEvent.doubleClick(original);
   expect(mocks.players.get('dubbing-demo-comparison-demo.dubbed_tag')!.currentTime).toBe(5);
+});
+
+
+it('preserves the active dubbed position when its language source resets', async () => {
+  mount();
+  const translated = await screen.findByRole('button', { name: 'dubbing-demo-comparison-demo.dubbed_tag' });
+  fireEvent.click(translated);
+  await Promise.resolve();
+  const dubbed = mocks.players.get('dubbing-demo-comparison-demo.dubbed_tag')!;
+  const original = mocks.players.get('dubbing-demo-comparison-demo.original_tag')!;
+  dubbed.currentTime = 9.5;
+  fireEvent.click(screen.getByRole('button', { name: 'Français' }));
+  expect(dubbed.currentTime).toBe(9.5);
+  fireEvent.click(translated);
+  expect(original.currentTime).toBe(9.5);
 });
