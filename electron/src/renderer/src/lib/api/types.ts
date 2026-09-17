@@ -66,6 +66,7 @@ export interface EngineBackend {
   setup_snippet?: string | null;
   docs_url?: string | null;
   one_click_install?: boolean;
+  local_install_required?: boolean;
   license_required?: boolean;
   license_accepted?: boolean;
   effective_device?: string;

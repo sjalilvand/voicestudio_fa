@@ -864,7 +864,8 @@
     "familyDesc_asr": "將音訊轉換為文字，用於轉錄、配音、字幕和聽寫。",
     "familyDesc_llm": "用於翻譯和改寫的選用文字助理。「關閉」會略過這些步驟。",
     "mpsLongText": "{{engine}} 在此機器上使用 Apple Silicon（MPS）執行，而這段文字較長 — 生成可能超出時間預算。縮短文字或分成幾次生成會快得多。",
-    "inMemory": "已載入記憶體"
+    "inMemory": "已載入記憶體",
+    "localInstallRequired": "請在後端電腦上透過 localhost 或安裝指南安裝此引擎。遠端安裝已停用。"
   },
   "capture": {
     "desc": "全域熱鍵僅適用於桌面應用程式。當視窗具有焦點時，Web UI 使用頁內 <1>Ctrl+Shift+Space</1> 快速鍵。",

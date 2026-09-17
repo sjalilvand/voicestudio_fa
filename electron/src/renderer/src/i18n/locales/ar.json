@@ -2492,7 +2492,8 @@
     "none_ready_title": "تحويل النص إلى كلام غير جاهز",
     "none_ready_body": "يمكن لـ VoiceStudio إعداد أفضل خيار متوافق مع هذا الجهاز تلقائيًا.",
     "active": "المحرك: {{name}}",
-    "none": "لا يوجد محرك نشط"
+    "none": "لا يوجد محرك نشط",
+    "localInstallRequired": "ثبّت هذا المحرك على جهاز الخادم باستخدام localhost أو دليل الإعداد. التثبيت عن بُعد معطّل."
   },
   "performanceProfile": {
     "requiresEngine": "ثبّت {{engine}} وحدده لضبط السرعة والجودة.",

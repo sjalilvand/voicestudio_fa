@@ -864,7 +864,8 @@
     "familyDesc_asr": "Transkribiert Audio für Synchronisation, Untertitel und Diktat.",
     "familyDesc_llm": "Optionaler Texthelfer für Übersetzungen und Überarbeitungen. „Aus“ überspringt diese Schritte.",
     "mpsLongText": "{{engine}} läuft hier auf Apple Silicon (MPS) und dieser Text ist lang — die Generierung überschreitet möglicherweise das Zeitbudget. Kürzerer Text oder eine Aufteilung in mehrere Takes ist deutlich schneller.",
-    "inMemory": "Im Speicher"
+    "inMemory": "Im Speicher",
+    "localInstallRequired": "Installiere diese Engine auf dem Backend-Rechner über localhost oder die Einrichtungsanleitung. Die Ferninstallation ist deaktiviert."
   },
   "capture": {
     "desc": "Globale Hotkeys funktionieren nur in der Desktop-App. Die Web-Benutzeroberfläche verwendet eine In-Page-Verknüpfung <1>Strg+Umschalt+Leertaste</1>, während das Fenster den Fokus hat.",

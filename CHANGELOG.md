@@ -61,6 +61,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Correct the Windows Rustup installation command in tooling and documentation (#2066) — thanks @Rukhaam!
 
+- Show local setup guidance when remote native engine installation is unavailable (#2166)
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**

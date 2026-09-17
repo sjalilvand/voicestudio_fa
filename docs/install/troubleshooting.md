@@ -1193,3 +1193,7 @@ Electron and web imports accept UTF-8, UTF-16 with a byte-order mark, and Window
 ### Compile fallback after startup
 
 An architecture accepted by the torch.compile preflight may still encounter independent Dynamo, Inductor, Triton, or CUDA-graph runtime errors. VoiceStudio distinguishes those from GPU memory exhaustion and retries with eager execution; architecture support alone does not guarantee compilation succeeds.
+
+### Native engine installation from a remote client
+
+Sidecar and audio.cpp runtime installation is restricted to requests from the backend computer's loopback interface. An API key does not bypass this restriction. The catalogue now shows local setup guidance instead of offering a remote install that will be rejected. Open the backend through `localhost` on that computer, or follow the engine's setup guide there. In Docker, bridge-network requests may not be loopback even when the browser runs on the host; use the documented container setup rather than weakening the native-install gate.

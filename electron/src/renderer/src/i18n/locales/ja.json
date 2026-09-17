@@ -2484,7 +2484,8 @@
     "none_ready_title": "音声合成の準備ができていません",
     "none_ready_body": "VoiceStudio がこのデバイスに最適な互換オプションを自動で設定できます。",
     "active": "エンジン：{{name}}",
-    "none": "有効なエンジンがありません"
+    "none": "有効なエンジンがありません",
+    "localInstallRequired": "バックエンドのコンピューターで localhost またはセットアップガイドを使ってこのエンジンをインストールしてください。リモートインストールは無効です。"
   },
   "performanceProfile": {
     "requiresEngine": "速度と品質を調整するには、{{engine}} をインストールして選択してください。",
