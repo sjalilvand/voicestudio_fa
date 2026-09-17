@@ -42,6 +42,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Resample MLX output chunks to the declared rate before joining them (#2106) — thanks @kapelame!
 
+- Read database migration configuration on Chinese, Japanese, and Korean Windows (#2075) — thanks @kevin9327!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**
