@@ -419,6 +419,82 @@ def test_mlx_audio_kokoro_rejects_unsupported_language_cleanly(language):
     assert "English" in msg  # names what Kokoro DOES support
 
 
+# The label derivation takes the tables as arguments, so it runs on every
+# platform — unlike the resolution tests above, which need the real
+# Apple-Silicon-only package. The bug it guards is invisible on the runners
+# that skip.
+
+
+def test_kokoro_resolves_british_english_label(monkeypatch):
+    pipeline = types.ModuleType("mlx_audio.tts.models.kokoro.pipeline")
+    pipeline.ALIASES = {"en-gb": "b"}
+    pipeline.LANG_CODES = {"b": "British English"}
+    monkeypatch.setitem(sys.modules, "mlx_audio.tts.models.kokoro.pipeline", pipeline)
+    assert tts_backend.resolve_kokoro_lang_code("British English") == "b"
+
+
+def test_kokoro_advertised_labels_round_trip_through_installed_table(monkeypatch):
+    pipeline = types.ModuleType("mlx_audio.tts.models.kokoro.pipeline")
+    pipeline.ALIASES = {"en": "a", "en-gb": "b", "xx": "x"}
+    pipeline.LANG_CODES = {"a": "American English", "b": "British English", "x": "Newly Added Language"}
+    monkeypatch.setitem(sys.modules, "mlx_audio.tts.models.kokoro.pipeline", pipeline)
+    labels = tts_backend._kokoro_supported_labels(pipeline.ALIASES, pipeline.LANG_CODES)
+    assert {tts_backend.resolve_kokoro_lang_code(label) for label in labels} == {"a", "b", "x"}
+
+
+def test_kokoro_supported_labels_name_a_code_only_an_alias_reaches():
+    """A code reached only through an alias is still named.
+
+    British English is `en-gb` -> "b". The supported list must include it
+    alongside the other installed language codes.
+    """
+    aliases = {"en": "a", "en-gb": "b", "es": "e"}
+    lang_codes = {"a": "American English", "b": "British English", "e": "es"}
+    labels = tts_backend._kokoro_supported_labels(aliases, lang_codes)
+    assert "British English" in labels
+    assert "English" in labels  # the full name a caller can pass
+    assert "Spanish" in labels
+
+
+def test_kokoro_supported_labels_track_the_installed_table():
+    """A language a later mlx-audio adds appears without editing our map.
+
+    That is the whole point of reading the vendored table rather than a
+    hardcoded one.
+    """
+    aliases = {"en": "a", "xx": "x"}
+    lang_codes = {"a": "American English", "x": "Newly Added Language"}
+    assert "Newly Added Language" in tts_backend._kokoro_supported_labels(aliases, lang_codes)
+
+
+def test_kokoro_supported_labels_prefer_the_passable_full_name():
+    """The label is the name a caller can actually pass.
+
+    `LANG_CODES` describes Spanish as the ISO tag "es", but "Spanish" is what
+    the frontend sends, so that is the more useful label to print.
+    """
+    labels = tts_backend._kokoro_supported_labels({"es": "e"}, {"e": "es"})
+    assert labels == ["Spanish"]
+
+
+def test_kokoro_supported_labels_skip_codes_the_installed_table_lacks():
+    """An install exposing one language is not described as supporting eight.
+
+    Our map knows eight; the installed table is what decides.
+    """
+    labels = tts_backend._kokoro_supported_labels({"it": "i"}, {"i": "it"})
+    assert labels == ["Italian"]
+
+
+def test_mlx_audio_kokoro_error_names_british_english():
+    """The real message names British English, which it previously omitted."""
+    pytest.importorskip("mlx_audio", reason="mlx-audio is Apple-Silicon-only")
+    with pytest.raises(ValueError) as ei:
+        tts_backend.resolve_kokoro_lang_code("Persian")
+    # Reachable as "en-gb" and previously missing from the message.
+    assert "British English" in str(ei.value)
+
+
 def test_mlx_audio_generate_rejects_unsupported_kokoro_language_before_calling_model():
     pytest.importorskip("mlx_audio", reason="mlx-audio is Apple-Silicon-only")
     backend = tts_backend.MLXAudioBackend()

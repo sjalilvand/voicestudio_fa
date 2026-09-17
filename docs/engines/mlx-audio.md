@@ -89,3 +89,8 @@ preserve filter context at chunk boundaries; rate changes start a new group.
 Profile language refusals are terminal request errors on both local and remote
 rendering, including streaming. Electron and web show localized guidance that
 Auto inherits the profile language; neither silently retries the same refusal.
+
+Kokoro language errors list every language in the installed model’s table.
+“British English” and `en-gb` both select its British English voice pipeline.
+Display names from newer installed Kokoro tables are accepted too, so a language
+advertised by the error message can be selected without updating a hardcoded map.
