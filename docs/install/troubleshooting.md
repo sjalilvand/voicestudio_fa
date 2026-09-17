@@ -1148,3 +1148,7 @@ remove the app binary itself are in
 [docs/install/uninstall.md](uninstall.md).
 
 **Linked issue:** [#1089](https://github.com/debpalash/VoiceStudio/issues/1089)
+
+### FFprobe alongside FFmpeg
+
+When FFprobe is not on PATH, VoiceStudio also checks beside the selected FFmpeg binary. Parent folders named `ffmpeg` remain unchanged; only the executable name becomes `ffprobe` (or `ffprobe.exe` on Windows).
