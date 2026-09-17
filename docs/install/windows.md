@@ -1,5 +1,22 @@
 # VoiceStudio — Install on Windows
 
+## Electron desktop (current)
+
+From the repository root, install Bun and uv, then run:
+
+```sh
+bun install
+bun run dev
+```
+
+Use `bun run desktop-prod` to build and launch Electron, or `bun run dist`
+to create local installers without publishing. The app manages its backend.
+See [Electron setup](../../electron/README.md) and [migration notes](../electron-migration.md).
+
+## Legacy Tauri installation and troubleshooting
+
+The instructions below apply to the sunset Tauri app and existing Tauri installers.
+
 This page is self-contained: follow it top to bottom and you'll end up with a
 working VoiceStudio install on Windows 10 / 11 (x64).
 
@@ -20,7 +37,7 @@ by the app itself on first launch. No toolchain needed.
 Everything above, plus the toolchain:
 
 - **Git for Windows** — `winget install --id Git.Git -e`. Needed for
-  `git clone`, and it includes **Git Bash**, which `bun run desktop-prod`
+  `git clone`, and it includes **Git Bash**, which `bun run tauri:desktop-prod`
   uses to run its build-and-launch script. Without it, `desktop-prod` stops
   with an error telling you to install it.
 - **Python 3.11+** — `winget install Python.Python.3.11` (or download from
@@ -32,7 +49,7 @@ Everything above, plus the toolchain:
 - **Bun** — `powershell -c "irm bun.sh/install.ps1 | iex"`.
 - **FFmpeg** — `winget install Gyan.FFmpeg`.
 - **Rust / Cargo** — `winget install Rust.Rustup` or download `rustup-init.exe` from [rustup.rs](https://rustup.rs/).
-  After installing Rustup, close and reopen PowerShell before running `bun run desktop-prod`.
+  After installing Rustup, close and reopen PowerShell before running `bun run tauri:desktop-prod`.
 
 ## GPU support on Windows
 
@@ -64,17 +81,17 @@ Or manually:
 git clone https://github.com/debpalash/VoiceStudio.git
 cd VoiceStudio
 bun install
-bun run desktop-prod
+bun run tauri:desktop-prod
 ```
 
 The first launch creates the Python venv via `uv`, syncs deps, and downloads
 model weights. The splash screen shows progress.
 
-> **Note:** `bun run desktop-prod` runs a bash script under the hood. You can
+> **Note:** `bun run tauri:desktop-prod` runs a bash script under the hood. You can
 > launch it from PowerShell or cmd as shown — it finds Git Bash automatically
 > (installed with Git for Windows, see Prerequisites). If no Git Bash is
 > found, it prints instructions instead of failing silently. Alternatives
-> that don't need bash: `bun run desktop` (dev mode) or the pre-built MSI
+> that don't need bash: `bun run tauri` (dev mode) or the pre-built MSI
 > below.
 
 ## Install (pre-built MSI)
@@ -274,21 +291,25 @@ synthesise call. On machines with <16 GB VRAM, that compile step can OOM
 failed`.
 
 **The one-click fix:** open **Settings → Performance** in the app and toggle
-**"Disable torch.compile (Windows)"** on. That sets the
-`TORCH_COMPILE_DISABLE=1` env var on every engine subprocess VoiceStudio spawns,
-which falls back to the eager-mode kernel path. You'll lose a few percent of
-peak throughput in exchange for the engine actually loading.
+**"Disable torch.compile"** on. That sets the `TORCH_COMPILE_DISABLE=1` env var
+on every engine subprocess VoiceStudio spawns and forces the in-process engine
+to eager mode as well. You'll lose a few percent of peak throughput in exchange
+for the engine actually loading.
 
 **From the CLI / from source:** set the env var manually before launching:
 
 ```powershell
 $env:TORCH_COMPILE_DISABLE = "1"
-bun run desktop-prod
+bun run tauri:desktop-prod
 ```
 
-This setting is a no-op on macOS and Linux (the OOM is Windows-specific —
-the `torch.compile` kernel cache behaves differently on the other platforms).
-Tracking issue: [#65](https://github.com/debpalash/VoiceStudio/issues/65).
+The OOM this section describes is Windows-specific, but the toggle itself works
+on **every** platform — it used to be greyed out elsewhere, which left Linux and
+macOS users with no way to switch off a `torch.compile` that was breaking their
+engine. Tracking issues:
+[#65](https://github.com/debpalash/VoiceStudio/issues/65) (this OOM) and
+[#2135](https://github.com/debpalash/VoiceStudio/issues/2135) (the same toggle
+on Linux/CUDA).
 
 ## Hugging Face token (optional but recommended)
 

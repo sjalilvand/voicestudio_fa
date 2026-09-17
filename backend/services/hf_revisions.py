@@ -39,6 +39,8 @@ CURATED_REVISIONS: dict[str, str] = {
     "csukuangfj/sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23": "204ad334e2e683fd295359930cc16fc0432a23ac",
     "csukuangfj/sherpa-onnx-whisper-tiny": "65176e2deb88badc814a94058666cadccc29b61c",
     "pyannote/speaker-diarization-3.1": "84fd25912480287da0247647c3d2b4853cb3ee5d",
+    "pyannote/segmentation-3.0": "e66f3d3b9eb0873085418a7b813d3b369bf160bb",
+    "pyannote/wespeaker-voxceleb-resnet34-LM": "837717ddb9ff5507820346191109dc79c958d614",
     "OpenMOSS-Team/MOSS-TTS-Nano-100M": "44502f80dbf9743528fa921cc544d662c685ebec",
     "KittenML/kitten-tts-mini-0.8": "c02725660cea441db4c383af69f1f26f5cd00947",
     "openbmb/VoxCPM2": "bffb3df5a29440629464e5e839f4d214c8714c3d",

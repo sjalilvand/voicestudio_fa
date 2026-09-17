@@ -66,6 +66,31 @@ def test_model_loading_is_optional():
     assert task.state is TaskState.RUNNING
 
 
+def test_model_loading_can_finish_directly_into_result_upload():
+    """The last load report may follow ``started`` with no second start frame."""
+    task = _task()
+    attempt = task.assign(worker_id="w1", session_epoch=1)
+    task.accept(attempt.attempt_id)
+    task.start(attempt.attempt_id)
+    task.model_loading(attempt.attempt_id)
+
+    task.uploading(attempt.attempt_id)
+
+    assert task.state is TaskState.RESULT_UPLOADING
+    assert attempt.state is AttemptState.UPLOADING
+
+
+def test_rejected_task_transition_does_not_mutate_the_attempt():
+    task = _task()
+    attempt = task.assign(worker_id="w1", session_epoch=1)
+
+    with pytest.raises(LifecycleError):
+        task.uploading(attempt.attempt_id)
+
+    assert task.state is TaskState.ASSIGNED
+    assert attempt.state is AttemptState.ASSIGNED
+
+
 def test_illegal_transition_raises():
     task = _task()
     with pytest.raises(LifecycleError):

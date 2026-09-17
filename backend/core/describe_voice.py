@@ -51,6 +51,23 @@ _DIALECTS = set(_VD._INSTRUCT_CATEGORIES[5])  # the 12 Chinese dialect tokens
 # the archetype ``attrs`` shape, so the response drops straight into vdStates.
 CATEGORY_ORDER = ("Gender", "Age", "Pitch", "Style", "EnglishAccent", "ChineseDialect")
 
+
+def instruct_to_vd_states(instruct: str | None) -> dict[str, str]:
+    """Project a saved validator-token instruct onto the complete UI recipe."""
+    attrs = {category: "Auto" for category in CATEGORY_ORDER}
+    sanitized = _VD.sanitize_instruct(instruct)
+    if not sanitized:
+        return attrs
+    for token in sanitized.split(", "):
+        category_index = _VD._instruct_category_index(token)
+        if category_index < 0 or category_index >= len(CATEGORY_ORDER):
+            continue
+        # The first four frontend categories use the English canonical token;
+        # dialects and accents already use their engine-native form.
+        canonical = _VD._INSTRUCT_ZH_TO_EN.get(token, token)
+        attrs[CATEGORY_ORDER[category_index]] = canonical
+    return attrs
+
 # ── Pinyin / romanized names → Chinese-dialect tokens (functional vocabulary) ─
 DIALECT_PINYIN = {
     "henan": "河南话",

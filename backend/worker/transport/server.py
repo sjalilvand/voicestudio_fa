@@ -71,6 +71,7 @@ REQUIRED_FEATURES = frozenset({
     "task_progress_v1",
     "task_inputs_v1",
     "remote_model_download_v1",
+    "remote_model_cancel_v1",
     # A generic backend.generate() call accepts the same wire shape but drops
     # profile conditioning controls. Require the canonical worker render path
     # so an older peer cannot successfully return a different voice.
@@ -456,10 +457,22 @@ class _Upload:
             )
         await to_thread_and_drain_on_cancel(_write_all, self._handle, data)
         if self._discarded or self.session.revoked or self.attempt.state.terminal:
+            logger.warning(
+                "Refusing result upload for task %s attempt %s "
+                "(attempt=%s, session_revoked=%s, discarded=%s, error=%s)",
+                self.attempt.task_id,
+                self.attempt.attempt_id,
+                self.attempt.state.value,
+                self.session.revoked,
+                self._discarded,
+                getattr(self.attempt.error, "code", None),
+            )
             await self.discard_async()
             return _upload_refused(
                 "ATTEMPT_NOT_LIVE",
-                "This attempt stopped accepting a result during upload.",
+                "This attempt stopped accepting a result during upload "
+                f"(attempt={self.attempt.state.value}, "
+                f"error={getattr(self.attempt.error, 'code', None)}).",
                 error_class=pb.ERROR_CLASS_TRANSIENT,
             )
         self._digest.update(data)
@@ -486,10 +499,22 @@ class _Upload:
                 error_class=pb.ERROR_CLASS_TRANSIENT,
             )
         if self._discarded or self.session.revoked or self.attempt.state.terminal:
+            logger.warning(
+                "Refusing result commit for task %s attempt %s "
+                "(attempt=%s, session_revoked=%s, discarded=%s, error=%s)",
+                self.attempt.task_id,
+                self.attempt.attempt_id,
+                self.attempt.state.value,
+                self.session.revoked,
+                self._discarded,
+                getattr(self.attempt.error, "code", None),
+            )
             await self.discard_async()
             return _upload_refused(
                 "ATTEMPT_NOT_LIVE",
-                "This attempt is no longer accepting a result.",
+                "This attempt is no longer accepting a result "
+                f"(attempt={self.attempt.state.value}, "
+                f"error={getattr(self.attempt.error, 'code', None)}).",
                 error_class=pb.ERROR_CLASS_TRANSIENT,
             )
         try:
@@ -509,6 +534,16 @@ class _Upload:
         # running in its thread. It must win before the commit callback spends
         # budget or this RPC licenses the worker to forget its only copy.
         if self._discarded or self.session.revoked or self.attempt.state.terminal:
+            logger.warning(
+                "Refusing result after durable write for task %s attempt %s "
+                "(attempt=%s, session_revoked=%s, discarded=%s, error=%s)",
+                self.attempt.task_id,
+                self.attempt.attempt_id,
+                self.attempt.state.value,
+                self.session.revoked,
+                self._discarded,
+                getattr(self.attempt.error, "code", None),
+            )
             try:
                 os.remove(self.final)
             except OSError:
@@ -517,7 +552,9 @@ class _Upload:
             self._on_finished(self)
             return _upload_refused(
                 "ATTEMPT_NOT_LIVE",
-                "This attempt stopped accepting a result during commit.",
+                "This attempt stopped accepting a result during commit "
+                f"(attempt={self.attempt.state.value}, "
+                f"error={getattr(self.attempt.error, 'code', None)}).",
                 error_class=pb.ERROR_CLASS_TRANSIENT,
             )
         self._on_finished(self)
@@ -2031,7 +2068,9 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
                 active_tasks=active_tasks,
                 available_slots=available_slots,
                 resident_models=set(beat.resident_models),
-                free_memory_bytes=beat.free_memory_bytes,
+                free_memory_bytes=beat.free_memory_bytes if beat.HasField("free_memory_bytes") else None,
+                cpu_percent=beat.cpu_percent if beat.HasField("cpu_percent") else None,
+                gpu_utilization_percent=beat.gpu_utilization_percent if beat.HasField("gpu_utilization_percent") else None,
             )
             self._queue_heartbeat_touch(session)
             return
@@ -2065,8 +2104,10 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
                 # The authenticated session, never the worker payload, is the
                 # authoritative target identity.
                 event["target"] = session.worker_id
+                from services import gpu_gateway  # noqa: PLC0415
                 from utils import hf_progress  # noqa: PLC0415
 
+                gpu_gateway.record_remote_download_progress(session.worker_id, event)
                 hf_progress.emit(event)
             except (TypeError, ValueError, json.JSONDecodeError):
                 logger.warning("Worker %s sent malformed download progress", session.worker_id)
@@ -2723,6 +2764,17 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         )))
         return True
 
+    async def cancel_model_install(self, worker_id: str, *, model_id: str) -> bool:
+        session = self._sessions.get(worker_id)
+        if session is None:
+            return False
+        await session.send(
+            pb.ServerMessage(
+                model_install_cancel=pb.ModelInstallCancelRequest(model_id=model_id)
+            )
+        )
+        return True
+
     def revoke_worker_sessions(self, worker_id: str) -> int:
         """Invalidate every transport generation for a durably revoked worker."""
         sessions = {
@@ -3104,11 +3156,16 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         upload: Optional[_Upload] = None
         try:
             if not self._begin_uploading(attempt):
+                task = self.scheduler.get(attempt.task_id)
                 self._release_artifact_reservation(
                     final, owner=reservation_owner
                 )
                 return None, _upload_refused(
-                    "ATTEMPT_NOT_LIVE", "This attempt is no longer accepting a result."
+                    "ATTEMPT_NOT_LIVE",
+                    "This attempt is no longer accepting a result "
+                    f"(task={getattr(getattr(task, 'state', None), 'value', 'missing')}, "
+                    f"attempt={attempt.state.value}, "
+                    f"error={getattr(attempt.error, 'code', None)}).",
                 ), session
             upload = _Upload(
                 session=session,
@@ -3167,6 +3224,15 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
         """
         task = self.scheduler.get(attempt.task_id)
         if task is None or task.state.terminal or attempt.state.terminal:
+            logger.warning(
+                "Refusing result upload admission for task %s attempt %s "
+                "(task=%s, attempt=%s, error=%s)",
+                attempt.task_id,
+                attempt.attempt_id,
+                getattr(getattr(task, "state", None), "value", "missing"),
+                attempt.state.value,
+                getattr(attempt.error, "code", None),
+            )
             return False
         try:
             task.uploading(attempt.attempt_id, session_epoch=attempt.session_epoch)

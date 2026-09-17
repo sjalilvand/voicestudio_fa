@@ -124,6 +124,67 @@ async def _settle(client: WorkerClient, timeout: float = 10.0) -> None:
     raise AssertionError("the task never finished")
 
 
+@pytest.mark.asyncio
+async def test_duplicate_assignment_reaffirms_one_running_attempt():
+    started = asyncio.Event()
+    release = asyncio.Event()
+    calls = 0
+
+    async def execute(_assignment, **_kwargs):
+        nonlocal calls
+        calls += 1
+        started.set()
+        await release.wait()
+        return {"meta": {"ok": True}, "payload": b"audio"}
+
+    client = _client(execute)
+    wire = _Wire(client)
+    assignment = _assignment()
+    try:
+        await client._on_assignment(assignment)
+        await asyncio.wait_for(started.wait(), timeout=1)
+        await client._on_assignment(assignment)
+        await asyncio.sleep(0.05)
+
+        assert calls == 1
+        assert len(wire.of("accepted")) == 2
+        assert wire.of("rejected") == []
+
+        release.set()
+        await wire.until("result")
+        await _settle(client)
+    finally:
+        release.set()
+        await wire.close()
+
+
+@pytest.mark.asyncio
+async def test_duplicate_assignment_redelivers_an_unacknowledged_result():
+    calls = 0
+
+    async def execute(_assignment, **_kwargs):
+        nonlocal calls
+        calls += 1
+        return {"meta": {"ok": True}, "payload": b"audio"}
+
+    client = _client(execute)
+    wire = _Wire(client)
+    assignment = _assignment()
+    try:
+        await client._on_assignment(assignment)
+        await wire.until("result")
+        await _settle(client)
+
+        await client._on_assignment(assignment)
+        await asyncio.sleep(0.05)
+
+        assert calls == 1
+        assert len(wire.of("result")) == 2
+        assert wire.of("rejected") == []
+    finally:
+        await wire.close()
+
+
 # ── B1: the progress lease is renewed ──────────────────────────────────────
 
 

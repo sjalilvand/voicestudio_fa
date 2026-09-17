@@ -248,6 +248,42 @@ peak memory footprint that exceeds free VRAM. Windows-only quirk.
 
 **Linked issue:** [#65](https://github.com/debpalash/VoiceStudio/issues/65)
 
+## 5a. Backend dies on the first `/generate` (older NVIDIA GPUs, e.g. Tesla T4)
+
+**Symptom:** the backend starts fine, `/health` reports your GPU, the model
+preloads — and then the first generation request returns
+`RemoteDisconnected: Remote end closed connection without response`. Every call
+after it gets `ConnectionRefused`, because the backend process is gone. No
+Python traceback is printed.
+
+**Cause:** `torch.compile(mode="reduce-overhead")` captures CUDA graphs. On
+pre-Ampere cards (Turing sm_75 / Volta sm_70 — the Tesla T4 on Google Colab is
+the common case) that capture can abort the process from inside the native CUDA
+library. It happens below the interpreter, so no `except` in the app can catch
+it and nothing is logged.
+
+**Fix:** update — VoiceStudio now selects the compile mode per GPU and does not
+capture CUDA graphs below sm_80, so this should no longer happen. If you still
+see a crash in the generate path on any GPU, turn compilation off entirely:
+
+- **In the app:** Settings → Performance → **"Disable torch.compile"**.
+- **From the CLI / from source:** `TORCH_COMPILE_DISABLE=1` before launching.
+  This is honoured on every platform and by every engine, in-process or
+  sidecar.
+
+**Getting a traceback:** the backend now arms `faulthandler`, so a native crash
+writes the faulting thread's Python stack to `backend_err.log` on the way down.
+Include that stack when reporting — without it a native crash is unattributable.
+(`OMNIVOICE_DISABLE_FAULTHANDLER=1` turns it off.)
+
+**Extra containment:** to keep a crashing engine from taking the API down with
+it, run the engine in a killable child process — select
+**OmniVoice (subprocess-isolated)** in Settings → Engines, or
+`OMNIVOICE_TTS_BACKEND=omnivoice-subprocess`. The parent then returns an HTTP
+error and respawns the sidecar instead of dying.
+
+**Linked issue:** [#2135](https://github.com/debpalash/VoiceStudio/issues/2135)
+
 ## 5b. RTX 50-series (Blackwell, sm_120): backend crashes during `ml_imports`
 
 **Symptom:** on an RTX 5070 / 5070 Ti / 5080 / 5090, the backend never becomes

@@ -75,6 +75,17 @@ def set_(key: str, value: Any) -> None:
         _save(data)
 
 
+def update_mapping(key: str, changes: dict, *, replace: bool = False) -> None:
+    """Atomically update one preference object without losing concurrent edits."""
+    with _MUTATE_LOCK:
+        data = _load()
+        current = data.get(key)
+        value = dict(current) if isinstance(current, dict) and not replace else {}
+        value.update(changes)
+        data[key] = value
+        _save(data)
+
+
 def delete(key: str) -> None:
     """Remove *key* from prefs.json if present."""
     with _MUTATE_LOCK:

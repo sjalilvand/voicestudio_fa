@@ -135,6 +135,7 @@ class TaskExecutor:
                 "tts": self._run_tts,
                 "clone": self._run_tts,
                 "audiobook": self._run_audiobook,
+                "batch_segments": self._run_dub_segments,
                 "dub_segments": self._run_dub_segments,
             }.get(operation)
             if handler is None:
@@ -176,20 +177,95 @@ class TaskExecutor:
         )
         await report.loading(1.0, "model ready")
         rendered: list[tuple[int, bytes]] = []
-        for index, row in enumerate(rows):
-            row = dict(row)
+        prepared_rows = []
+        for index, source in enumerate(rows):
+            row = dict(source)
             row["ref_audio"] = refs[index] if index < len(refs) else None
-            audio = await self._bounded_thread(
-                self._synthesize_dub_segment,
-                backend,
-                row,
-                timeout=run_budget, code="EXECUTION_TIMEOUT", what=f"Dubbing segment {index + 1}",
+            prepared_rows.append(row)
+
+        # Remote dubbing used to hold one coarse GPU lease but still call the
+        # engine once per line. That bypassed the same native variable-length
+        # batch path used by local dubbing, leaving large GPUs mostly idle.
+        # Group only rows whose scalar generation contract is compatible;
+        # language, reference, duration, speed and instruct remain per-row.
+        try:
+            from services.dub_batching import batch_timeout_s, native_batch_width
+            from services.tts_backend import TTSBackend
+
+            has_native_batch = (
+                getattr(type(backend), "generate_batch", TTSBackend.generate_batch)
+                is not TTSBackend.generate_batch
             )
-            payload, _meta = await self._thread_call(
-                self._encode, audio, row, backend
+            batch_width = native_batch_width(backend) if has_native_batch else 1
+        except Exception:  # noqa: BLE001 - capability probing takes the safe path
+            batch_timeout_s = None
+            batch_width = 1
+
+        index = 0
+        while index < len(prepared_rows):
+            row = prepared_rows[index]
+            batch = [row]
+            if batch_width > 1 and row.get("seed") is None:
+                compatibility = self._dub_batch_compatibility(row)
+                for candidate in prepared_rows[index + 1 : index + batch_width]:
+                    if (
+                        candidate.get("seed") is not None
+                        or self._dub_batch_compatibility(candidate) != compatibility
+                    ):
+                        break
+                    batch.append(candidate)
+
+            audios = None
+            if len(batch) > 1:
+                try:
+                    timeout = (
+                        batch_timeout_s([str(item.get("text") or "") for item in batch], backend)
+                        if batch_timeout_s is not None
+                        else run_budget
+                    )
+                    audios = await self._bounded_thread(
+                        self._synthesize_dub_batch,
+                        backend,
+                        batch,
+                        timeout=min(run_budget, timeout),
+                        code="EXECUTION_TIMEOUT",
+                        what=f"Dubbing segments {index + 1}-{index + len(batch)}",
+                    )
+                except TaskFailure:
+                    raise
+                except Exception as exc:  # native batching is an optimization
+                    logger.warning(
+                        "Native remote dub batch failed for segments %s-%s; falling back: %s",
+                        index + 1,
+                        index + len(batch),
+                        exc,
+                    )
+
+            if audios is None:
+                batch = [row]
+                audios = [
+                    await self._bounded_thread(
+                        self._synthesize_dub_segment,
+                        backend,
+                        row,
+                        timeout=run_budget,
+                        code="EXECUTION_TIMEOUT",
+                        what=f"Dubbing segment {index + 1}",
+                    )
+                ]
+
+            encoded = await asyncio.gather(
+                *(self._thread_call(self._encode, audio, item, backend)
+                  for audio, item in zip(audios, batch))
             )
-            rendered.append((int(row.get("index", index)), payload))
-            await report.progress((index + 1) / len(rows), f"segment {index + 1} of {len(rows)}")
+            for offset, (item, (payload, _meta)) in enumerate(zip(batch, encoded), 1):
+                rendered.append((int(item.get("index", index + offset - 1)), payload))
+                completed = index + offset
+                await report.progress(
+                    completed / len(prepared_rows),
+                    f"segment {completed} of {len(prepared_rows)}",
+                )
+            index += len(batch)
 
         bundle = io.BytesIO()
         with zipfile.ZipFile(bundle, "w", compression=zipfile.ZIP_STORED) as archive:
@@ -221,7 +297,7 @@ class TaskExecutor:
             "num_step": int(row.get("num_step") or 16),
             "guidance_scale": float(row.get("guidance_scale") or 2.0),
             "speed": float(row.get("speed") or 1.0), "denoise": True,
-            "postprocess_output": True,
+            "postprocess_output": bool(row.get("postprocess_output", True)),
         }
         if (
             getattr(backend, "supports_native_omnivoice_controls", False)
@@ -238,6 +314,64 @@ class TaskExecutor:
                 audio = apply_effects_chain(audio, sample_rate=backend.sample_rate, chain=chain)
             audio = normalize_audio(audio, target_dBFS=-2.0)
         return audio
+
+    @staticmethod
+    def _dub_batch_compatibility(row: dict) -> tuple:
+        """Scalar options that a native backend requires to match in a batch."""
+        return (
+            not bool(row.get("ref_single_use")),
+            bool(row.get("ref_audio")),
+            int(row.get("num_step") or 16),
+            float(row.get("guidance_scale") or 2.0),
+            bool(row.get("postprocess_output", True)),
+        )
+
+    @staticmethod
+    def _synthesize_dub_batch(backend, rows: list[dict]):
+        """Worker-side equivalent of local dubbing's native batch path."""
+        from services.audio_dsp import (
+            apply_effects_chain,
+            apply_mastering,
+            get_effect_chain,
+            normalize_audio,
+        )
+        from services.text_normalization import normalize_for_tts
+
+        texts = [normalize_for_tts(row.get("text") or "", row.get("language")) for row in rows]
+        outputs = backend.generate_batch(
+            texts,
+            language=[
+                row.get("language") if row.get("language") != "Auto" else None for row in rows
+            ],
+            ref_audio=[row.get("ref_audio") for row in rows],
+            ref_text=[row.get("ref_text") for row in rows],
+            cache_ref=not bool(rows[0].get("ref_single_use")),
+            instruct=[row.get("instruct") or None for row in rows],
+            duration=[row.get("duration") for row in rows],
+            num_step=int(rows[0].get("num_step") or 16),
+            guidance_scale=float(rows[0].get("guidance_scale") or 2.0),
+            speed=[float(row.get("speed") or 1.0) for row in rows],
+            denoise=True,
+            postprocess_output=bool(rows[0].get("postprocess_output", True)),
+        )
+        if len(outputs) != len(rows):
+            raise RuntimeError(
+                f"native batch returned {len(outputs)} outputs for {len(rows)} segments"
+            )
+        rendered = []
+        for output, row in zip(outputs, rows):
+            preset = row.get("effect_preset") or "broadcast"
+            if preset != "raw":
+                if not getattr(backend, "applies_own_mastering", False):
+                    output = apply_mastering(output, sample_rate=backend.sample_rate)
+                chain = get_effect_chain(preset)
+                if chain:
+                    output = apply_effects_chain(
+                        output, sample_rate=backend.sample_rate, chain=chain
+                    )
+                output = normalize_audio(output, target_dBFS=-2.0)
+            rendered.append(output)
+        return rendered
 
     # ── Operations ────────────────────────────────────────────────────────
 

@@ -303,10 +303,13 @@ def test_dub_abort_false_result_stays_retryable(monkeypatch):
     monkeypatch.setitem(dub_core._dub_jobs, "job-false", job)
     monkeypatch.setattr(dub_core, "_kill_job_procs", lambda _job_id: None)
     monkeypatch.setattr(dub_core.task_manager, "cancel_task", lambda _job_id: False)
-    with pytest.raises(HTTPException) as caught:
-        dub_core.dub_abort("job-false")
-    assert caught.value.status_code == 503
-    assert "aborted" not in job
+    result = dub_core.dub_abort("job-false")
+    assert result == {
+        "aborted": True,
+        "had_active_procs": False,
+        "had_active_task": False,
+    }
+    assert job["aborted"] is True
 
 
 def test_endpoint_pref_read_failure_keeps_manual_mode(monkeypatch):

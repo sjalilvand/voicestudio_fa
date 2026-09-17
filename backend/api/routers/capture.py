@@ -60,7 +60,8 @@ async def transcribe_audio(
         language: Optional language hint (not currently used; auto-detected).
         model: Whisper model size (legacy; ignored in dual-mode architecture).
         mode: 'fast' (default) uses MLX Turbo for speed; 'accurate' uses
-              WhisperX with forced alignment for word-level timing.
+              the selected ASR engine with word-level timing. 'reference' uses
+              the selected ASR engine without word-level timing.
         refine: Opt-in local-LLM cleanup of the final text (disfluencies,
               self-corrections, punctuation) — same pipeline the live
               dictation socket uses. Off by default so MCP/CLI callers don't
@@ -91,7 +92,9 @@ async def transcribe_audio(
         tmp.write(content)
         tmp.close()
 
-        use_accurate = (mode or "").strip().lower() == "accurate"
+        requested_mode = (mode or "").strip().lower()
+        use_accurate = requested_mode == "accurate"
+        use_active_asr = requested_mode in {"accurate", "reference"}
 
         # TTS-only install: no ASR model on disk → typed 409 with a download
         # CTA, BEFORE any backend is constructed (the whisper backends
@@ -99,7 +102,8 @@ async def transcribe_audio(
         from services.asr_backend import asr_model_missing_detail, asr_model_missing_error
         missing = await asyncio.to_thread(
             asr_model_missing_error,
-            purpose="transcribe" if use_accurate else "dictation",
+            purpose="transcribe" if use_active_asr else "dictation",
+            require_installed=requested_mode == "reference",
         )
         if missing is not None:
             raise HTTPException(
@@ -108,7 +112,7 @@ async def transcribe_audio(
             )
 
         def _run():
-            if use_accurate:
+            if use_active_asr:
                 # Accurate mode: full WhisperX with forced alignment —
                 # for when the user explicitly wants word-level timing.
                 # `load_*`, not `get_*`: the selector alone hands back an
@@ -116,8 +120,8 @@ async def transcribe_audio(
                 # chain is broken, which then 500s at `.transcribe()`. The
                 # loader degrades to the next healthy engine (#1185).
                 from services.asr_backend import load_active_asr_backend
-                backend = load_active_asr_backend()
-                result = backend.transcribe(tmp.name, word_timestamps=True)
+                backend = load_active_asr_backend(require_installed=True) if requested_mode == "reference" else load_active_asr_backend()
+                result = backend.transcribe(tmp.name, word_timestamps=use_accurate)
             else:
                 # Fast mode (default): use the fastest available engine
                 # (MLX Turbo on Apple Silicon). Skip word_timestamps for
@@ -125,7 +129,8 @@ async def transcribe_audio(
                 from services.asr_backend import get_capture_asr_backend
                 backend = get_capture_asr_backend()
                 result = backend.transcribe(tmp.name, word_timestamps=False)
-            return result, backend.id
+            sherpa_model_id = getattr(getattr(backend, "spec", None), "id", None)
+            return result, backend.id, sherpa_model_id
 
         from services.model_manager import _gpu_pool
         from services.asr_backend import (
@@ -135,7 +140,7 @@ async def transcribe_audio(
         )
         t0 = time.perf_counter()
         try:
-            result, engine_id = await run_transcribe_guarded(
+            result, engine_id, sherpa_model_id = await run_transcribe_guarded(
                 _gpu_pool, _run, what="Dictation",
             )
         except ASRTimeoutError as e:
@@ -151,6 +156,69 @@ async def transcribe_audio(
                 status_code=409,
                 detail={**e.payload, "message": asr_model_missing_detail(e.payload)},
             )
+
+        # Some sherpa-onnx NeMo-TDT builds load successfully but decode an
+        # entire spoken clip to no tokens. Live dictation already recovers
+        # from that failure; the shared file endpoint must do the same because
+        # it also powers uploaded transcription and automatic profile text.
+        # Retry only through an already-installed fallback, and demote the
+        # silent model only when the second recognizer actually heard words.
+        initial_text = str(result.get("text") or "").strip()
+        if not initial_text and result.get("segments"):
+            initial_text = " ".join(
+                str(segment.get("text") or "")
+                for segment in result["segments"]
+                if isinstance(segment, dict)
+            ).strip()
+        recovered_from = None
+        if not use_active_asr and sherpa_model_id and not initial_text:
+            fallback_missing = await asyncio.to_thread(
+                asr_model_missing_error,
+                purpose="dictation",
+                skip_sherpa=True,
+                require_installed=True,
+            )
+            if fallback_missing is None:
+                def _run_fallback():
+                    from services.asr_backend import get_capture_asr_backend
+
+                    fallback = get_capture_asr_backend(skip_sherpa=True)
+                    return (
+                        fallback.transcribe(tmp.name, word_timestamps=False),
+                        fallback.id,
+                    )
+
+                try:
+                    fallback_result, fallback_engine_id = await run_transcribe_guarded(
+                        _gpu_pool,
+                        _run_fallback,
+                        what="Dictation fallback",
+                    )
+                    fallback_text = str(fallback_result.get("text") or "").strip()
+                    if not fallback_text and fallback_result.get("segments"):
+                        fallback_text = " ".join(
+                            str(segment.get("text") or "")
+                            for segment in fallback_result["segments"]
+                            if isinstance(segment, dict)
+                        ).strip()
+                    if fallback_text:
+                        from services.sherpa_dictation import demote_model
+
+                        await asyncio.to_thread(demote_model, sherpa_model_id)
+                        result = fallback_result
+                        engine_id = fallback_engine_id
+                        recovered_from = sherpa_model_id
+                        logger.warning(
+                            "File transcription recovered from silent dictation model %s "
+                            "through installed engine %s",
+                            sherpa_model_id,
+                            fallback_engine_id,
+                        )
+                except Exception:
+                    logger.exception(
+                        "Installed fallback failed after dictation model %s returned no text",
+                        sherpa_model_id,
+                    )
         elapsed = round(time.perf_counter() - t0, 2)
 
         # Normalize result shape
@@ -202,7 +270,7 @@ async def transcribe_audio(
 
         logger.info(
             "Capture transcription done: engine=%s, elapsed=%.2fs, duration=%.1fs, mode=%s, refined=%s",
-            engine_id, elapsed, duration, "accurate" if use_accurate else "fast",
+            engine_id, elapsed, duration, requested_mode if use_active_asr else "fast",
             refined_text is not None,
         )
 
@@ -223,6 +291,8 @@ async def transcribe_audio(
         }
         if refined_text is not None:
             response["refined_text"] = refined_text
+        if recovered_from is not None:
+            response["model_silent"] = recovered_from
         return response
     finally:
         try:
