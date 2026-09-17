@@ -16,6 +16,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Validate Python dependencies before reusing a desktop runtime and offer setup for incomplete environments (#2176)
+
 - Repair CTranslate2 loading safely across ASR and translation, and retain the loaded Whisper model during CPU fallback (#2165) — thanks @guruthechosen!
 - Avoid pedalboard wheels that crash on unsupported CPU instructions (#2080) — thanks @D3nii!
 - Include cuDNN 8 compatibility libraries for CTranslate2 in CUDA containers (#2072) — thanks @basil-k-aji-dev!

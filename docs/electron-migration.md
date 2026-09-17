@@ -18,3 +18,8 @@ permissions. No automatic installer-to-installer migration is provided.
 
 The final Tauri updater feeds retain signed Tauri payloads at immutable URLs.
 A Tauri updater must never receive an Electron installer.
+
+Electron checks required Python imports before reusing an existing runtime. An
+incomplete environment opens setup instead of repeatedly crashing; installation
+still requires your explicit action. Automatic selection skips broken legacy
+runtimes and uses the Electron runtime location, leaving Tauri data intact.

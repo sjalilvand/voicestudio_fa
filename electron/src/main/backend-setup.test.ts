@@ -2,6 +2,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
 const mocks = vi.hoisted(() => ({
+  dependencies: vi.fn(async () => true),
   ready: vi.fn(async () => false),
   compatible: vi.fn(async () => false),
   interrupted: vi.fn(async () => false),
@@ -15,6 +16,7 @@ vi.mock('electron', () => ({ app: { isPackaged: true, getPath: () => '/private/v
 vi.mock('node:child_process', () => ({ spawn: mocks.spawn, spawnSync: vi.fn() }));
 vi.mock('node:fs/promises', () => ({ rm: mocks.rm }));
 vi.mock('./runtime-project', () => ({
+  runtimeDependenciesReady: mocks.dependencies,
   runtimeReady: mocks.ready,
   runtimeCompatible: mocks.compatible,
   runtimeInstallInterrupted: mocks.interrupted,
@@ -34,6 +36,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
   vi.clearAllMocks();
+  mocks.dependencies.mockResolvedValue(true);
+  mocks.ready.mockResolvedValue(false);
+  mocks.compatible.mockResolvedValue(false);
   mocks.interrupted.mockResolvedValue(false);
   mocks.promoteCaches.mockResolvedValue(undefined);
 });
@@ -364,3 +369,26 @@ it('reserves setup before asynchronous checks and cancels stale preflight', asyn
   expect(mocks.install).not.toHaveBeenCalled();
   expect(supervisor.status.stage).toBe('idle');
 });
+
+it.each(['ready', 'compatible'] as const)(
+  'offers setup instead of spawning a %s runtime with missing dependencies',
+  async (kind) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('no backend');
+      }),
+    );
+    vi.stubEnv('OMNIVOICE_BACKEND_CMD', '');
+    vi.stubEnv('VOICESTUDIO_SKIP_BACKEND', '');
+    mocks[kind].mockResolvedValue(true);
+    mocks.dependencies.mockResolvedValue(false);
+    const supervisor = new BackendSupervisor();
+    await supervisor.start();
+    expect(supervisor.status.stage).toBe('setup_required');
+    expect(mocks.spawn).not.toHaveBeenCalled();
+    expect(mocks.install).not.toHaveBeenCalled();
+    expect(mocks.stage).not.toHaveBeenCalled();
+    await supervisor.shutdown();
+  },
+);

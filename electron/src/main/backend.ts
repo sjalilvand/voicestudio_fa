@@ -2,6 +2,7 @@ import {
   installRuntime,
   promoteLegacyRuntimeCaches,
   runtimeCompatible,
+  runtimeDependenciesReady,
   runtimeInstallInterrupted,
   runtimeReady,
   runtimePython,
@@ -482,11 +483,8 @@ export class BackendSupervisor extends EventEmitter<{
       }
 
       if (app.isPackaged && !parseBackendCmdOverride(process.env.OMNIVOICE_BACKEND_CMD)) {
-        const project = await this.resolveRuntimeProject();
-        if (
-          !(await runtimeReady(backendRoot(), project)) &&
-          !(await runtimeCompatible(backendRoot(), project))
-        ) {
+        const { project, ready } = await this.resolveRuntimeProject();
+        if (!ready) {
           if (gen === this.generation) {
             this.runtimeInterrupted = await runtimeInstallInterrupted(project);
             this.setStage('setup_required');
@@ -537,8 +535,9 @@ export class BackendSupervisor extends EventEmitter<{
     this.setStage('installing', { message: undefined });
     try {
       const reusable =
-        (await runtimeReady(backendRoot(), project)) ||
-        (await runtimeCompatible(backendRoot(), project));
+        ((await runtimeReady(backendRoot(), project)) ||
+          (await runtimeCompatible(backendRoot(), project))) &&
+        (await runtimeDependenciesReady(project));
       if (gen !== this.generation || controller.signal.aborted) return;
       if (reusable) {
         await this.start();
@@ -797,7 +796,7 @@ export class BackendSupervisor extends EventEmitter<{
     this.emitStatus();
   }
 
-  private async resolveRuntimeProject(): Promise<string> {
+  private async resolveRuntimeProject(): Promise<{ project: string; ready: boolean }> {
     const bundle = backendRoot();
     const own = join(defaultRuntimeRoot(), 'project');
     const configuredRoot = storedRuntimeRoot();
@@ -809,15 +808,18 @@ export class BackendSupervisor extends EventEmitter<{
       ...legacyTauriRuntimeProjects(),
     ].filter((candidate): candidate is string => Boolean(candidate));
     for (const project of new Set(candidates.map((candidate) => resolve(candidate)))) {
-      if ((await runtimeReady(bundle, project)) || (await runtimeCompatible(bundle, project))) {
+      if (
+        ((await runtimeReady(bundle, project)) || (await runtimeCompatible(bundle, project))) &&
+        (await runtimeDependenciesReady(project))
+      ) {
         this.runtimeProject = project;
         if (project !== own && project !== configured)
           this.pushLog('out', `Reusing compatible Tauri runtime: ${project}`);
-        return project;
+        return { project, ready: true };
       }
     }
     this.runtimeProject = configured ?? own;
-    return this.runtimeProject;
+    return { project: this.runtimeProject, ready: false };
   }
 
   private emitStatus(): void {
@@ -889,7 +891,10 @@ export class BackendSupervisor extends EventEmitter<{
       // Python passes this child-side descriptor to every nested operation.
       // Reading the parent side keeps the ownership channel live and lets
       // Node observe EOF only after the complete backend subtree releases it.
-      const drain = child.stdio?.[processOptions.drainFd] as NodeJS.ReadableStream | null | undefined;
+      const drain = child.stdio?.[processOptions.drainFd] as
+        | NodeJS.ReadableStream
+        | null
+        | undefined;
       drain?.on('error', (error: unknown) => {
         if (!isExpectedPipeClose(error)) {
           this.pushLog('err', `Backend drain stream failed: ${errorMessage(error)}`);
