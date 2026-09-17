@@ -234,3 +234,6 @@ panels instead so neither editor becomes unusably small.
   from-source checkout.
 - **Installed it but still "needs install"** — restart the backend so Python
   picks up the newly-installed module.
+
+
+SRT and WebVTT exports round each cue timestamp once to the nearest millisecond, including carry into the next second or minute. The OpenAI-compatible transcription exports use the same formatter.

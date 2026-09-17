@@ -16,6 +16,10 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
 
+### Fixed
+
+- Preserve milliseconds and carry rounded subtitle timestamps across second boundaries (#2074) — thanks @kevin9327!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**
@@ -74,7 +78,6 @@ the frozen-backend fallback mirror it for their toolchains.
 - An engine that fails to start now says whether it timed out, crashed (with its exit code and last output) or answered wrongly, instead of "did not signal ready: None" (#2037, #2026)
 - Transcribing an M4A file with PyTorch Whisper works, instead of failing with "Format not recognised" (#2042, #2039)
 - PyTorch Whisper runs on 6 GB NVIDIA cards instead of falling back to CPU, because its memory check now fits the model it loads (#2044, #2041)
-- Exported SRT and VTT subtitles keep each cue's milliseconds, instead of moving many cues 1 ms early (#2074)
 - MCP tools wait as long as the backend does, so a long transcription no longer fails at 120 s with an empty error (#2043, #2040)
 - Generating on an older NVIDIA GPU (Tesla T4, and other pre-Ampere cards) no longer kills the backend on the first request — CUDA graphs are not captured below sm_80 (#2135)
 - "Disable torch.compile" in Settings → Performance now works on macOS and Linux, not only Windows; it was greyed out on the platforms that needed it (#2135)
