@@ -19,6 +19,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   _resetBackendContactForTests();
 });
@@ -30,7 +31,6 @@ describe('errorFromResponse', () => {
     const err = await errorFromResponse(new Response(JSON.stringify({ detail }), { status: 400 }));
     expect(err.detail).toBe('Localized recovery guidance');
     expect(translate).toHaveBeenCalledWith('engines.argosRuntimeUnavailable');
-    translate.mockRestore();
     expect(err.payload?.detail).toEqual(detail);
   });
   it('localizes background preservation errors and retains diagnostics', async () => {
