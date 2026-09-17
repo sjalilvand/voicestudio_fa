@@ -41,6 +41,9 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
 
+- Electron packaging can recover without changing a release tag
+- Parse pasted WebVTT cues while separating metadata, identifiers, empty cues, and complete timing lines (#2077) — thanks @kevin9327!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**

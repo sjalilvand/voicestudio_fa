@@ -375,7 +375,7 @@ def test_numeric_only_cue_after_invalid_cue_is_not_discarded():
 
 @pytest.mark.parametrize('header', ['NOTE', 'NOTE translator notes', 'NOTE\ttranslator notes', 'STYLE', 'REGION'])
 def test_webvtt_metadata_timestamps_never_become_dialogue(header):
-    text = f'WEBVTT\n\n{header}\n00:00.000 --> 00:02.000\nMetadata only\n\ncue\n00:03.000 --> 00:04.000\nReal dialogue\n'
+    text = f'WEBVTT\n\n{header}\nMetadata content\n00:00.000 --> 00:02.000\nMetadata only\n\ncue\n00:03.000 --> 00:04.000\nReal dialogue\n'
     result = parse_srt(text)
     assert [cue['text'] for cue in result.segments] == ['Real dialogue']
     assert result.segments[0]['start'] == 3
@@ -384,3 +384,17 @@ def test_webvtt_metadata_timestamps_never_become_dialogue(header):
 def test_webvtt_note_words_inside_dialogue_are_retained():
     text = 'WEBVTT\n\n00:01.000 --> 00:02.000\nNOTE this is spoken\nSTYLE\nREGION\n'
     assert parse_srt(text).segments[0]['text'] == 'NOTE this is spoken\nSTYLE\nREGION'
+
+
+@pytest.mark.parametrize('identifier', ['STYLE', 'REGION', 'NOTE', 'NOTE identifier'])
+def test_webvtt_metadata_words_can_identify_a_cue(identifier):
+    text = f'WEBVTT\n\n{identifier}\n00:01.000 --> 00:02.000\nSpoken text\n'
+    assert [cue['text'] for cue in parse_srt(text).segments] == ['Spoken text']
+
+
+@pytest.mark.parametrize('gap', ['\n', ' \n', '\n\n'])
+def test_empty_webvtt_cue_does_not_capture_following_identifier(gap):
+    text = f'WEBVTT\n\n00:01.000 --> 00:02.000\n{gap}next-id\n00:03.000 --> 00:04.000\nSpoken text\n'
+    result = parse_srt(text)
+    assert result.skipped_cues == 1
+    assert [cue['text'] for cue in result.segments] == ['Spoken text']
