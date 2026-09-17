@@ -31,6 +31,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Transcribing an M4A file with PyTorch Whisper works, instead of failing with "Format not recognised" (#2042, #2039)
 - PyTorch Whisper runs on 6 GB NVIDIA cards instead of falling back to CPU, because its memory check now fits the model it loads (#2044, #2041)
 - MCP tools wait as long as the backend does, so a long transcription no longer fails at 120 s with an empty error (#2043, #2040)
+- Installing a gated model now sends your Hugging Face token on the fast download path too, so pyannote diarisation and gated engine weights stop failing with "401 Unauthorized" when the token is saved in Settings (#2173, #2163)
 
 ### CI
 

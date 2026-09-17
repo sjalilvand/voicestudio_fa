@@ -43,6 +43,36 @@ def test_every_repo_id_is_well_formed():
         assert rid and _REPO_RE.match(rid), f"malformed repo_id: {rid!r}"
 
 
+def test_config_only_entries_declare_the_files_that_complete_them():
+    """A ``config_only`` repo carries no weights of its own, so the install
+    validator judges it by ``config_required_files`` instead of a weight floor.
+    Declare none and the entry is permanently uninstallable: the completeness
+    check returns False and the install fails with a message whose list of
+    required files is empty. That is the shape #2163 reported, so it is a
+    catalogue invariant rather than something a user should discover.
+    """
+    for m in _models():
+        if not m.get("config_only"):
+            continue
+        required = m.get("config_required_files")
+        assert required, f"{m['repo_id']}: config_only needs config_required_files"
+        assert all(
+            isinstance(name, str) and name.strip() for name in required
+        ), f"{m['repo_id']}: blank entry in config_required_files"
+
+
+def test_dependency_declarations_are_installable():
+    """Every declared dependency needs an id and the files that prove it landed
+    — the installer rejects a dependency snapshot that lacks them."""
+    for m in _models():
+        for dependency in m.get("dependencies") or ():
+            rid = dependency.get("repo_id")
+            assert rid and _REPO_RE.match(rid), f"malformed dependency repo_id: {rid!r}"
+            assert dependency.get("required_files"), (
+                f"{m['repo_id']} → {rid}: dependency needs required_files"
+            )
+
+
 def test_required_fields_present():
     for m in _models():
         for field in ("repo_id", "label", "role"):
