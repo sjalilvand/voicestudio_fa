@@ -234,3 +234,11 @@ panels instead so neither editor becomes unusably small.
   from-source checkout.
 - **Installed it but still "needs install"** — restart the backend so Python
   picks up the newly-installed module.
+- **"The 'argos' engine's CTranslate2 runtime could not be loaded…"** — Argos
+  translates on CTranslate2, and on Linux kernels that refuse an executable
+  stack the CTranslate2 library shipped with Python 3.11 installs (4.4.0) is
+  rejected outright. VoiceStudio repairs that library in place on first use; if
+  it cannot (read-only install), the message names the fix — reinstall the
+  backend on Python 3.12+, or run `patchelf --clear-execstack` on the library
+  once — and NLLB stays available in the meantime
+  ([#692](https://github.com/debpalash/VoiceStudio/issues/692)).
