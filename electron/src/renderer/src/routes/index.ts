@@ -29,6 +29,14 @@ const ProjectsPage = lazyRouteComponent(
   'ProjectsPage',
 );
 const ToolsPage = lazyRouteComponent(() => import('@/features/tools/tools-page'), 'ToolsPage');
+const IntegrationsPage = lazyRouteComponent(
+  () => import('@/features/integrations/integrations-page'),
+  'IntegrationsPage',
+);
+const IntegrationDetailPage = lazyRouteComponent(
+  () => import('@/features/integrations/integration-detail-page'),
+  'IntegrationDetailPage',
+);
 const SettingsPage = lazyRouteComponent(
   () => import('@/features/settings/settings-page'),
   'SettingsPage',
@@ -135,6 +143,16 @@ export const toolsRoute = createRoute({
   path: '/tools',
   component: ToolsPage,
 });
+export const integrationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/integrations',
+  component: IntegrationsPage,
+});
+export const integrationDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/integrations/$slug',
+  component: IntegrationDetailPage,
+});
 export const mediaRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/settings/media',
@@ -208,6 +226,9 @@ export const storageRoute = createRoute({
 export const supportRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/settings/support',
+  validateSearch: (search: Record<string, unknown>): { compare?: boolean } => ({
+    compare: search.compare === true || search.compare === 'true' ? true : undefined,
+  }),
   component: SettingsPage,
 });
 export const updatesRoute = createRoute({
@@ -248,6 +269,8 @@ export const routeTree = rootRoute.addChildren([
   pronunciationRoute,
   mediaRoute,
   toolsRoute,
+  integrationsRoute,
+  integrationDetailRoute,
   batchRoute,
   galleryRoute,
   logsRoute,

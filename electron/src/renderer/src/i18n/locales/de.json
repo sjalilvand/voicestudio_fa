@@ -1042,7 +1042,7 @@
     "perf_title": "Leistung",
     "generate_timeout_cpu_note": "Wird verwendet, wenn die Generierung auf der CPU läuft. Einmal hier gespeichert, bestimmt dieser Wert immer die CPU-Generierung — unabhängig vom beschleunigten Budget oben.",
     "device_family_rocm": "AMD GPU (ROCm)",
-    "perf_torch_compile": "torch.compile deaktivieren (Windows)",
+    "perf_torch_compile": "torch.compile deaktivieren",
     "generate_timeout_shadowed_note": "Eine Umgebungsvariable außerhalb von VoiceStudio (Shell, .env-Datei oder Container) legt diesen Wert derzeit fest — der hier gespeicherte Wert wird ignoriert, bis diese Variable entfernt wird.",
     "device_family_cpu": "CPU",
     "device_family_gpu": "GPU",
@@ -1907,6 +1907,7 @@
     "test_text": "Hallo, dies ist ein Test dieser Stimme."
   },
   "nav": {
+    "voice": "Stimme",
     "clone_short": "Klonen",
     "workspaces": "Arbeitsbereiche",
     "stories": "Geschichten",
@@ -1964,7 +1965,7 @@
     "dictation_replay": "Wiederholung",
     "dictation_transcribing": "Transkribieren…",
     "dubbing_title": "Erleben Sie Synchronisation in Aktion",
-    "dubbing_sync": "Synchronisierte Wiedergabe",
+    "dubbing_sync": "Abspielposition synchronisieren",
     "dubbing_picker": "Versuchen Sie es mit einer anderen Sprache:",
     "dubbing_cta": "Führen Sie dies in Ihrem eigenen Video aus →",
     "dubbing_loading": "Synchronisationsdemo wird geladen…",
@@ -1980,6 +1981,7 @@
     "dictation_lede_hotkey_only": "Halte das Tastenkürzel oben überall auf dem Desktop gedrückt, sprich und lass los — der Text landet in der fokussierten App. Drücke es jetzt zum Verifizieren."
   },
   "setup": {
+    "ready_desc": "Du kannst jetzt deine erste Stimme erstellen. Die Diktierfunktion kannst du jetzt oder später in den Einstellungen einrichten.",
     "system_preflight": "System-Preflight",
     "system_check_desc": "Prüfen Sie RAM, Festplatte, GPU, ffmpeg und Netzwerk. Blocker werden im Voraus gekennzeichnet, sodass Sie vor dem Herunterladen Bescheid wissen.",
     "probing": "Sondierungssystem…",
@@ -2072,7 +2074,7 @@
     "choose_method": "Wählen Sie, wie Sie geben möchten",
     "choose_method_amount": "Weiter mit ${{amount}}",
     "goal": {
-      "title": "Fonds Claude Max",
+      "title": "Unterstütze die Entwicklung von VoiceStudio",
       "of": "von",
       "per_month": "/ Monat",
       "aria": "{{raised}} von {{goal}} Monatsziel",
@@ -2081,7 +2083,7 @@
       "social_proof": "Schließen Sie sich den Unterstützern von {{count}} an, die lokale KI finanzieren"
     },
     "postcard": {
-      "title": "Fonds Claude Max",
+      "title": "Unterstütze die Entwicklung von VoiceStudio",
       "lead_default": "Ich bin froh, dass das funktioniert hat! VoiceStudio ist kostenlos und vollständig lokal. Wenn es Ihnen Zeit spart, finanziert ein kleiner monatlicher Chip-In den dahinter stehenden Claude Max.",
       "lead_first_clone": "Ihr erster Sprachklon ist fertig – schön! VoiceStudio läuft vollständig auf Ihrem Computer und Ihr Support sorgt dafür, dass dies auch so bleibt.",
       "lead_tenth_dub": "Nach zehn Dubs – Sie setzen es eindeutig um. Ein kleiner monatlicher Chip-In finanziert den Claude Max, der diese Funktionen bereitstellt.",
@@ -2569,5 +2571,74 @@
     "captured": "{{count}} problematische Protokollzeilen erfasst",
     "contextNotice": "Der ausgewählte Agent erhält diesen Bericht, die aktuelle Ansicht, aktuelle App- und Backend-Protokolle sowie Systemdiagnosen.",
     "complete": "Abgeschlossen"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Sprache fehlt oder ist nicht lesbar. Erzeuge das betroffene Segment vor dem Export erneut.",
+    "timingOverflow": "Die Sprache überschreitet ihr Zeitfenster. Kürze die Übersetzung oder wähle ein festes Zeitfenster oder die Videostreckung.",
+    "backgroundUnavailable": "Der Originalton konnte nicht erhalten werden. Prüfe Hintergrundtrennung und Dialogzeiten und versuche es erneut, oder exportiere ausdrücklich nur Sprache."
+  },
+  "dubStyle": {
+    "label": "Vorgabe für den Übersetzungsstil",
+    "help": "Beschreibe Ton, Zielgruppe und Anpassung, etwa Witze erhalten und Redewendungen natürlich übertragen. Wird im Projekt gespeichert und für Übersetzung und Zeitanpassung verwendet. Leer lassen für den Standardstil."
+  },
+  "dubActivity": {
+    "output": "Übersetzungen",
+    "waiting": "Noch keine Ausgabe empfangen.",
+    "progress": "{{done}} / {{total}} Segmente geprüft",
+    "cancelled": "Abgebrochen",
+    "fitting": "Timing anpassen"
+  },
+  "sponsorSlot": {
+    "partner_heading": "Partner von VoiceStudio werden",
+    "partner_subtitle": "Erreiche Menschen, die mit Sprache entwickeln.",
+    "app_placement": "Platzierung in der App",
+    "integration_page": "Integrationsseite",
+    "readme_exposure": "Präsenz in der README",
+    "visibility": "Sichtbarkeit",
+    "integration": "Produktintegration",
+    "installs": "Direkte Installationen",
+    "distribution": "Vertrieb für Entwickler",
+    "partner": "Verifizierter Partner",
+    "privacy": "Datenschutz",
+    "title": "Auf VoiceStudio vorgestellt werden",
+    "description": "Steigern Sie die Sichtbarkeit Ihrer Marke mit einem bezahlten hervorgehobenen Platz.",
+    "form": "Google-Formular",
+    "email": "E-Mail",
+    "book": "Platz anfragen",
+    "preview": "Sponsor-Vorschau",
+    "footer_brand": "Deine Marke",
+    "footer_book": "Jetzt hinzufügen",
+    "email_template": "Hallo VoiceStudio-Team,\n\nich möchte mit VoiceStudio zusammenarbeiten und eine hervorgehobene Platzierung für meine Marke prüfen.\n\nMarke / Produkt:\nWebsite:\nIntegration oder Kampagne:\nZielgruppe / Zeitpunkt:\n\nKönnt ihr verfügbare Pakete, Preise, Platzierungsoptionen und technische Anforderungen teilen? Ich verstehe, dass eine Partnerschaft eine Dokumentationsseite, ein GitHub-README-Logo, einen Platz in der App-Fußzeile und einen Eintrag unter Integrations umfassen kann.\n\nDanke,\n[Name]\n[Rolle / Unternehmen]\n[Kontakt]",
+    "message": "Deine Marke, Website und Nachricht",
+    "email_app": "E-Mail-App öffnen",
+    "copy_email": "E-Mail-Adresse kopieren",
+    "preview_detail": "Hier könnten dein Logo, Link und eine Vorstellung stehen."
+  },
+  "supportPlans": {
+    "remove": "Sponsorenleiste entfernen",
+    "title": "Free und Pro im Vergleich",
+    "free": "Kostenlos",
+    "pro": "Pro",
+    "get_pro": "Pro holen",
+    "sponsor_bar": "Sponsorenleiste",
+    "visible": "Sichtbar",
+    "hideable": "Ausblendbar",
+    "unavailable": "Die Pro-Aktivierung ist noch nicht eingerichtet.",
+    "telemetry": "Telemetrie",
+    "opt_in": "Optional, nur mit Zustimmung",
+    "disabled": "Deaktiviert",
+    "badge": "Pro-Abzeichen",
+    "advanced": "Erweiterte Werkzeuge",
+    "standard": "Standard",
+    "included": "Enthalten"
+  },
+  "integrationCatalog": {
+    "title": "Integrationen",
+    "featured": "Hervorgehoben",
+    "description": "Entdecke Integrationen und hervorgehobene Partner."
+  },
+  "directoryExamples": {
+    "example": "Verzeichnisbeispiel",
+    "notice": "Nur Verzeichnisbeispiele — keine Sponsoren oder verbundenen Integrationen."
   }
 }

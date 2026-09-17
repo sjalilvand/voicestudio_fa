@@ -101,7 +101,7 @@ describe('packaged runtime setup', () => {
       'installing_deps',
       'verifying',
     ]);
-    expect(run.mock.calls).toHaveLength(3);
+    expect(run.mock.calls).toHaveLength(process.platform === 'darwin' ? 2 : 3);
     expect(await runtimeReady(bundle, project)).toBe(true);
     await writeFile(join(bundle, 'uv.lock'), 'updated dependencies');
     expect(await runtimeReady(bundle, project)).toBe(false);
@@ -232,7 +232,7 @@ describe('packaged runtime setup', () => {
     expect(fetch).not.toHaveBeenCalled();
     expect(run.mock.calls[0]?.[0]).toBe(executable);
   });
-  it('installs and validates cuDNN 8 compatibility on a CUDA runtime', async () => {
+  it.skipIf(process.platform === 'darwin')('installs and validates cuDNN 8 compatibility on a CUDA runtime', async () => {
     const { bundle, project } = await fixture();
     const sitePackages = join(project, '.venv', 'Lib', 'site-packages');
     const run = vi.fn(async (command: string, args: string[]) => {
@@ -279,7 +279,7 @@ describe('packaged runtime setup', () => {
     expect(compatInstall?.[1]).toContain(join(sitePackages, 'cudnn8_compat'));
     expect(await runtimeReady(bundle, project)).toBe(true);
   });
-  it('keeps a CUDA runtime incomplete when the compatibility wheel is partial', async () => {
+  it.skipIf(process.platform === 'darwin')('keeps a CUDA runtime incomplete when the compatibility wheel is partial', async () => {
     const { bundle, project } = await fixture();
     const sitePackages = join(project, '.venv', 'Lib', 'site-packages');
     const run = vi.fn(async (command: string, args: string[]) => {

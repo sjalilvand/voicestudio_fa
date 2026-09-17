@@ -1,5 +1,22 @@
 # VoiceStudio — Install on macOS
 
+## Electron desktop (current)
+
+From the repository root, install Bun and uv, then run:
+
+```sh
+bun install
+bun run dev
+```
+
+Use `bun run desktop-prod` to build and launch Electron, or `bun run dist`
+to create local installers without publishing. The app manages its backend.
+See [Electron setup](../../electron/README.md) and [migration notes](../electron-migration.md).
+
+## Legacy Tauri installation and troubleshooting
+
+The instructions below apply to the sunset Tauri app and existing Tauri installers.
+
 This page is self-contained: follow it top to bottom and you'll end up with a
 working VoiceStudio install on macOS (Apple Silicon).
 
@@ -36,7 +53,7 @@ Everything above, plus the toolchain:
 - **Python 3.11+** — `brew install python@3.11` (or use `pyenv` / the system Python if you already have ≥3.11).
 - **Bun** — `curl -fsSL https://bun.sh/install | bash`.
 - **Rust / Cargo** — `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` or `brew install rust`.
-  If you use rustup, reopen the terminal or source `"$HOME/.cargo/env"` before running `bun run desktop-prod`.
+  If you use rustup, reopen the terminal or source `"$HOME/.cargo/env"` before running `bun run tauri:desktop-prod`.
 
 FFmpeg/FFprobe and yt-dlp are **not** prerequisites on any install path: the
 app resolves them itself (a static build ships with the Python environment;
@@ -63,7 +80,7 @@ Or manually:
 git clone https://github.com/debpalash/VoiceStudio.git
 cd VoiceStudio
 bun install
-bun run desktop-prod
+bun run tauri:desktop-prod
 ```
 
 The first launch builds the Tauri shell, creates the Python venv via `uv`,

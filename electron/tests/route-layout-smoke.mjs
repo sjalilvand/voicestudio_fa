@@ -15,6 +15,7 @@ const routes = [
   '/batch',
   '/projects',
   '/tools',
+  '/integrations',
   '/settings',
   '/settings/general',
   '/settings/appearance',

@@ -46,6 +46,13 @@ describe('SystemNotifications desktop updates', () => {
   beforeEach(() => {
     mocks.navigate.mockReset();
     mocks.listener = undefined;
+    mocks.state = {
+      status: 'available',
+      currentVersion: '0.5.2',
+      availableVersion: '0.5.3',
+      channel: 'stable',
+      progress: 0,
+    } as UpdateState;
   });
   afterEach(cleanup);
 
@@ -61,5 +68,25 @@ describe('SystemNotifications desktop updates', () => {
     fireEvent.click(trigger);
     fireEvent.click(await screen.findByText('common.open'));
     await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith({ to: '/settings/updates' }));
+  });
+
+  test('shows unavailable instead of endless loading when the backend is offline', async () => {
+    mocks.state = {
+      status: 'idle',
+      currentVersion: '0.5.2',
+      channel: 'stable',
+      progress: 0,
+    } as UpdateState;
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <SystemNotifications enabled={false} titlebar />
+      </QueryClientProvider>,
+    );
+
+    const trigger = await screen.findByRole('button', { name: 'modelSettings.unavailable' });
+    expect(trigger).toBeEnabled();
+    expect(trigger).toHaveClass('app-no-drag');
+    fireEvent.click(trigger);
+    expect(await screen.findByText('modelSettings.unavailable')).toBeVisible();
   });
 });

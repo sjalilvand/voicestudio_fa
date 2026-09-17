@@ -305,6 +305,8 @@ class WorkerPool:
         available_slots: int,
         resident_models: Optional[set[str]] = None,
         free_memory_bytes: Optional[int] = None,
+        cpu_percent: Optional[float] = None,
+        gpu_utilization_percent: Optional[float] = None,
         latency_ms: Optional[float] = None,
         now: Optional[float] = None,
     ) -> Optional[ConnectedWorker]:
@@ -319,6 +321,8 @@ class WorkerPool:
             available_slots=available_slots,
             resident_models=resident_models,
             free_memory_bytes=free_memory_bytes,
+            cpu_percent=cpu_percent,
+            gpu_utilization_percent=gpu_utilization_percent,
         )
         return worker
 
