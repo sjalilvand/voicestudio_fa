@@ -238,3 +238,5 @@ panels instead so neither editor becomes unusably small.
 Paste translation accepts WebVTT files with hourless timestamps. Only timing records at line starts activate timestamp matching; timestamp-like text inside a sentence remains dialogue.
 
 Subtitle import preserves numeric dialogue such as years and countdowns, including files mixing numbered and unnumbered cues. Cue numbers are removed only at identified cue boundaries.
+
+Mixed or malformed SRT files can make a bare number indistinguishable from spoken dialogue. The importer removes numbering only when cue boundaries and sequential numbering support it; ambiguous nonsequential numbers are retained as text to avoid silent data loss. Standard indexed SRT and WebVTT exports avoid this ambiguity.
