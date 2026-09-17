@@ -66,6 +66,12 @@ logger = logging.getLogger("omnivoice.audio_io")
 PathOrBuf = Union[str, "os.PathLike[str]", BinaryIO, io.IOBase]
 
 
+def _ensure_audio_parent(path_or_buf: PathOrBuf) -> None:
+    """Recover app output folders removed after backend initialization."""
+    if isinstance(path_or_buf, (str, os.PathLike)):
+        os.makedirs(os.path.dirname(os.path.abspath(path_or_buf)), exist_ok=True)
+
+
 def _safe_torchaudio_save(
     path_or_buf: PathOrBuf,
     tensor: torch.Tensor,
@@ -156,6 +162,7 @@ def _safe_torchaudio_save(
 
     fmt = (format or "wav").lower()
     try:
+        _ensure_audio_parent(path_or_buf)
         if fmt == "wav":
             torchaudio.save(
                 path_or_buf,
@@ -313,6 +320,7 @@ def _safe_soundfile_write(
     else:
         samples = np.ascontiguousarray(samples)
 
+    _ensure_audio_parent(path)
     sf.write(path, samples, sample_rate, subtype=subtype)
 
 
@@ -334,7 +342,7 @@ def atomic_save_wav(
     publication AND audited tensor normalization.
 
     Args:
-        target_path: Final destination. Parent directory must already exist.
+        target_path: Final destination. Missing parent directories are recreated.
         audio: ``(channels, samples)`` or ``(samples,)`` tensor.
         sample_rate: WAV sample rate in Hz.
         **kwargs: Forwarded to ``_safe_torchaudio_save`` (``format``,
@@ -346,6 +354,7 @@ def atomic_save_wav(
         unlinked on failure so we do not leak ``.tmp`` files in
         ``DUB_DIR``.
     """
+    _ensure_audio_parent(target_path)
     target_dir = os.path.dirname(target_path) or "."
     target_base = os.path.basename(target_path)
     # The temp file must end in ``.wav`` even though it is conceptually a

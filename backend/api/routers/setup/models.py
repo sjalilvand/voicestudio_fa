@@ -15,7 +15,7 @@ import sys
 import time
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Query
 
 logger = logging.getLogger("omnivoice.setup.models")
 router = APIRouter()
@@ -117,7 +117,7 @@ def _target_repo_inventory() -> tuple[str, set[str]] | None:
     for capability in live.record.capabilities or []:
         if capability.get("downloaded"):
             downloaded.update(str(repo) for repo in capability.get("repo_ids") or [])
-    return live.id, downloaded
+    return live.worker_id, downloaded
 
 
 def _current_platform_tags() -> list[str]:
@@ -368,23 +368,44 @@ def _snapshot_dirs(repo_id: str) -> list[str]:
     return dirs
 
 
+def snapshot_is_complete(model: dict, snapshot_path: str) -> bool:
+    """Apply the same catalogue requirements during installation and listing."""
+    config_only = bool(model.get("config_only"))
+    required = tuple(str(name) for name in (
+        model.get("config_required_files") if config_only else model.get("required_files")
+    ) or ())
+    if config_only and not required:
+        return False
+    try:
+        present = all(
+            os.path.isfile(os.path.join(snapshot_path, name))
+            and os.path.getsize(os.path.join(snapshot_path, name)) >= (
+                1 if config_only else _WEIGHT_FLOORS.get(os.path.splitext(name)[1].lower(), 1)
+            )
+            for name in required
+        )
+        return present and (config_only or snapshot_has_weights(snapshot_path))
+    except OSError:
+        return False
+
+
 def cache_is_complete(model: dict) -> bool:
     """True when this model's on-disk cache is usable (not a truncated download).
 
-    Config-only repos (``config_only: true`` in models.yaml — e.g. pyannote's
-    diarisation pipeline, whose real weights live in referenced sub-repos) carry no
-    weight file of their own, so the weight check would false-positive them as
-    incomplete (#622 caveat). They're exempt: cache presence alone means complete.
-    A weight-bearing repo is complete only if at least one of its snapshots has
-    weights; if no snapshot dir is found on disk we can't prove truncation, so we
-    don't downgrade (the size-based caller already decided it's cached).
+    Config-only repos carry no weight file of their own. Their catalogue entry
+    declares the small files that make the pipeline usable, so a README left by a
+    gated 403 is not mistaken for a completed install. A weight-bearing repo is
+    complete only if at least one snapshot has weights; if no snapshot directory
+    is found, the size-based caller's cached result is preserved.
     """
-    if model.get("config_only"):
-        return True
+    for dependency in model.get("dependencies") or ():
+        snapshots = _snapshot_dirs(dependency["repo_id"])
+        if not any(snapshot_is_complete(dependency, path) for path in snapshots):
+            return False
     dirs = _snapshot_dirs(model["repo_id"])
     if not dirs:
         return True
-    return any(snapshot_has_weights(d) for d in dirs)
+    return any(snapshot_is_complete(model, snapshot) for snapshot in dirs)
 
 
 def _is_cached_on_disk(repo_id: str) -> bool:
@@ -449,6 +470,17 @@ def _scan_cache_on_disk() -> dict[str, dict]:
     return out
 
 
+def _cache_dir_missing(exc: Exception) -> bool:
+    """Whether Hugging Face is reporting the normal empty-cache state.
+
+    ``CacheNotFound`` is expected on a clean installation before the first
+    download. Treating it like a damaged Windows cache makes every model probe
+    perform a redundant filesystem fallback and fills the first-run log with
+    warnings. Unexpected scan failures remain visible and recoverable below.
+    """
+    return type(exc).__name__ == "CacheNotFound"
+
+
 def is_cached(repo_id: str) -> bool:
     """Best-effort check: does HF have this repo in its cache on disk?"""
     try:
@@ -459,6 +491,8 @@ def is_cached(repo_id: str) -> bool:
                 return True
         return False
     except Exception as e:
+        if _cache_dir_missing(e):
+            return False
         # scan_cache_dir can raise on Windows (WinError 448 'untrusted mount
         # point'); fall back to a direct disk check so a cached model isn't
         # mistaken for missing and re-downloaded in a loop (#117/#118). Logged
@@ -497,6 +531,62 @@ def invalidate_cache() -> None:
 
 # ── Endpoints ──────────────────────────────────────────────────────────────
 
+@router.get("/models/access/status")
+def model_access_status(repo_id: str = Query(...)):
+    """Check gated Hub access without downloading model files.
+
+    This route runs only after an explicit UI action. It never returns the
+    token or a raw Hub exception; callers need only the per-repository verdict.
+    """
+    model = _catalog.get(repo_id)
+    if model is None:
+        raise HTTPException(status_code=404, detail="Unknown model")
+    if not model.get("gated"):
+        return {
+            "repo_id": repo_id,
+            "token_present": False,
+            "ready": True,
+            "repositories": [],
+        }
+
+    from services import token_resolver
+
+    resolved = token_resolver.resolve()
+    repositories = [repo_id]
+    prerequisite = str(model.get("prerequisite_repo_id") or "").strip()
+    if prerequisite:
+        repositories.append(prerequisite)
+    if not resolved:
+        return {
+            "repo_id": repo_id,
+            "token_present": False,
+            "ready": False,
+            "repositories": [
+                {"repo_id": current, "access": "token_missing"}
+                for current in repositories
+            ],
+        }
+
+    from huggingface_hub import get_hf_file_metadata, hf_hub_url
+
+    results = []
+    for current in repositories:
+        try:
+            url = hf_hub_url(current, filename=".gitattributes")
+            get_hf_file_metadata(url, token=resolved.token)
+            access = "granted"
+        except Exception as exc:  # Hub exception types vary across releases.
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            access = "required" if status in {401, 403, 404} else "unavailable"
+        results.append({"repo_id": current, "access": access})
+    return {
+        "repo_id": repo_id,
+        "token_present": True,
+        "ready": all(item["access"] == "granted" for item in results),
+        "repositories": results,
+    }
+
+
 @router.get("/models")
 def list_models():
     """Catalogue every known model + its on-disk install state.
@@ -532,10 +622,13 @@ def list_models():
                     "nb_files": entry.nb_files,
                 }
         except Exception as e:
-            # WinError-448 fallback (#117/#118): use a direct disk scan so installed
-            # models still show as installed instead of offering a re-download.
-            logger.warning("scan_cache_dir failed (%s); using disk fallback", e)
-            cached_by_repo = _scan_cache_on_disk()
+            if _cache_dir_missing(e):
+                cached_by_repo = {}
+            else:
+                # WinError-448 fallback (#117/#118): use a direct disk scan so installed
+                # models still show as installed instead of offering a re-download.
+                logger.warning("scan_cache_dir failed (%s); using disk fallback", e)
+                cached_by_repo = _scan_cache_on_disk()
 
     out = []
     host_tags = set(platform_tags)
@@ -562,6 +655,7 @@ def list_models():
             "curated": _model_curated(m, host_tags),
         })
     response = {
+        "target": target_key,
         "models": out,
         "total_installed_bytes": sum(m["size_on_disk_bytes"] for m in out),
         "hf_cache_dir": "" if remote_inventory is not None else hf_cache_dir(),
@@ -623,21 +717,21 @@ def recommendations():
         rationale = (
             "NVIDIA preset: VoiceStudio (required) runs standalone. Optional ASR picks "
             "are CUDA-accelerated via CTranslate2 — Whisper large-v3 for dubbing "
-            "(best word timestamps), Turbo for 5× faster transcription, Parakeet TDT "
-            "v3 for live dictation. KittenTTS adds CPU-realtime English."
+            "(best word timestamps) and Turbo for 5× faster transcription. Whisper "
+            "Tiny provides broad-language local dictation. KittenTTS adds CPU-realtime English."
         )
     elif has_rocm:
         rationale = (
             "AMD/ROCm preset: VoiceStudio (required) runs standalone. CTranslate2 has "
             "no ROCm backend, so the PyTorch Whisper large-v3 build is the "
-            "GPU-accelerated ASR route; faster-whisper works on CPU, and Parakeet "
-            "TDT v3 handles live dictation."
+            "GPU-accelerated ASR route; faster-whisper works on CPU, and Whisper Tiny "
+            "provides broad-language local dictation."
         )
     else:
         rationale = (
             "CPU preset: VoiceStudio (required) runs standalone. Optional picks favour "
             "speed on CPU — Whisper large-v3 (int8) for accuracy, Turbo when speed "
-            "matters, Parakeet TDT v3 (int8 ONNX) for live dictation, KittenTTS for "
+            "matters, Whisper Tiny (ONNX) for live dictation, KittenTTS for "
             "instant English TTS."
         )
 
@@ -653,9 +747,12 @@ def recommendations():
                 entry.repo_id for entry in info.repos if entry.size_on_disk > 0
             }
         except Exception as e:
-            # WinError-448 fallback (#117/#118): recommend based on the disk scan.
-            logger.debug("scan_cache_dir failed (%s); using disk fallback", e)
-            cached_ids = set(_scan_cache_on_disk().keys())
+            if _cache_dir_missing(e):
+                cached_ids = set()
+            else:
+                # WinError-448 fallback (#117/#118): recommend based on the disk scan.
+                logger.debug("scan_cache_dir failed (%s); using disk fallback", e)
+                cached_ids = set(_scan_cache_on_disk().keys())
 
     entries = []
     for meta in curated:
@@ -679,6 +776,7 @@ def recommendations():
     all_installed = all(e["installed"] for e in entries)
 
     return {
+        "target": remote_inventory[0] if remote_inventory is not None else "local",
         "device": {
             "os": target_os,
             "arch": target_arch,

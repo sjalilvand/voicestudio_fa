@@ -192,3 +192,10 @@ def test_side_effectful_get_accepts_all_three_browser_proofs():
     connection = _connection(method="GET", fetch_site="same-origin")
 
     assert cookie_csrf_allowed(connection, side_effectful_get=True) is True
+
+def test_electron_origin_is_exact_and_respects_explicit_allowlists(monkeypatch):
+    assert origin_allowed(_connection(origin="app://voicestudio")) is True
+    for origin in ("app://evil", "app://voicestudio.evil", "app://voicestudio:3900", "app://user@voicestudio", "app://voicestudio/path"):
+        assert origin_allowed(_connection(origin=origin)) is False
+    monkeypatch.setenv("OMNIVOICE_ALLOWED_ORIGINS", "https://ui.test")
+    assert origin_allowed(_connection(origin="app://voicestudio")) is False

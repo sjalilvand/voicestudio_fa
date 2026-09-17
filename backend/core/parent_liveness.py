@@ -13,6 +13,23 @@ from typing import Any, BinaryIO, Callable, Optional
 WINDOWS_PIPE_POLL_INTERVAL_S = 0.25
 _FILE_TYPE_PIPE = 3  # winbase.h FILE_TYPE_PIPE
 
+def _exit_after_parent_loss(code: int) -> None:
+    """Retire backend-only crash forensics before the desktop-owned exit.
+
+    Losing the containment pipe means the desktop process ended, including an
+    Electron development reload.  That is not a backend crash: the shell owns
+    this child and the watchdog is deliberately terminating it.  ``os._exit``
+    skips FastAPI lifespan cleanup, so clear the run sentinel here first.  A
+    real backend abort/OOM never reaches this callback and remains detectable
+    on the next start.
+    """
+    try:
+        from core import run_sentinel
+
+        run_sentinel.clear_sentinel()
+    except Exception:
+        pass
+    os._exit(code)
 
 def _watch_parent_pipe(reader: BinaryIO, exit_process: Callable[[int], None]) -> None:
     """Block until the desktop-owned stdin pipe closes, then exit immediately."""
@@ -91,12 +108,12 @@ def arm_desktop_parent_watchdog() -> bool:
     if reader is None:
         return False
     target: Callable[..., None] = _watch_parent_pipe
-    args: tuple = (reader, os._exit)
+    args: tuple = (reader, _exit_after_parent_loss)
     if os.name == "nt":
         handle = _windows_pipe_handle(reader)
         if handle is not None:
             target = _watch_parent_pipe_handle
-            args = (handle, os._exit)
+            args = (handle, _exit_after_parent_loss)
         # A non-pipe stdin (file, NUL) cannot have a read pending against a
         # pipe file object, so the blocking reader stays correct there.
     threading.Thread(

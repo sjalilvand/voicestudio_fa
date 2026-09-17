@@ -50,6 +50,7 @@ function transactionDone(transaction: IDBTransaction): Promise<void> {
 /** Native IndexedDB implementation; no runtime package or network dependency. */
 export function createIndexedDbLongformStore(
   getFactory: () => IDBFactory = () => globalThis.indexedDB,
+  databaseName = LONGFORM_DB_NAME,
 ): LongformDurableStore {
   let databasePromise: Promise<IDBDatabase> | null = null;
 
@@ -75,7 +76,7 @@ export function createIndexedDbLongformStore(
       try {
         const factory = getFactory();
         if (!factory) throw new DOMException('IndexedDB unavailable', 'NotSupportedError');
-        request = factory.open(LONGFORM_DB_NAME, LONGFORM_DB_SCHEMA);
+        request = factory.open(databaseName, LONGFORM_DB_SCHEMA);
       } catch (error) {
         reject(error);
         return;
