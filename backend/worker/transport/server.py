@@ -2068,7 +2068,9 @@ class WorkerServicer(pb_grpc.WorkerServiceServicer):
                 active_tasks=active_tasks,
                 available_slots=available_slots,
                 resident_models=set(beat.resident_models),
-                free_memory_bytes=beat.free_memory_bytes,
+                free_memory_bytes=beat.free_memory_bytes if beat.HasField("free_memory_bytes") else None,
+                cpu_percent=beat.cpu_percent if beat.HasField("cpu_percent") else None,
+                gpu_utilization_percent=beat.gpu_utilization_percent if beat.HasField("gpu_utilization_percent") else None,
             )
             self._queue_heartbeat_touch(session)
             return

@@ -5,12 +5,12 @@ The inventory (``docs/features.yaml``) is the curated truth. This checker
 verifies, without importing any backend module (the engine registries pull
 torch transitively, which the docs-drift CI runner does not have):
 
-  1. every ``features[]`` name appears verbatim in README.md;
+  1. every ``features[]`` name appears verbatim in README.md or its explicitly linked catalog;
   2. ``tts_engines[].id`` is exactly the set of registry keys parsed from
      ``backend/services/tts_backend.py`` (eager ``_REGISTRY`` + lazy
      ``_LAZY_REGISTRY``), both directions;
   3. ``asr_engines[].id`` likewise against ``backend/services/asr_backend.py``;
-  4. every ``readme:`` string appears in README.md;
+  4. every ``readme:`` string appears in README.md or its linked catalog;
   5. every ``doc:`` / ``docs[]`` file exists.
 
 Exit 0 = no drift. Exit 1 = drift; findings go to stderr and, with
@@ -74,6 +74,17 @@ def _check(root: Path) -> list[str]:
     inv = yaml.safe_load(inv_path.read_text(encoding="utf-8")) or {}
 
     readme = (root / "README.md").read_text(encoding="utf-8")
+    # Keep the complete inventory in a linked catalog when the README is compact.
+    catalog = inv.get("catalog")
+    if catalog:
+        if f"]({catalog})" not in readme:
+            drifts.append(f"README.md must link to catalog `{catalog}`")
+        catalog_path = root / catalog
+        if catalog_path.is_file():
+            readme += "\n" + catalog_path.read_text(encoding="utf-8")
+        else:
+            drifts.append(f"catalog `{catalog}` does not exist")
+
 
     # 1. Features present in README.
     for name in inv.get("features", []):

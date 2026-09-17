@@ -469,22 +469,20 @@ function CompileSetting() {
         signal,
       }),
   });
-  const windows = query.data?.platform === 'win32';
+  // #2135: live on every platform. This used to be gated to win32 (matching
+  // the Tauri UI), which left the Linux/CUDA reporter unable to switch off the
+  // torch.compile that was killing their backend.
   return (
     <SettingsSection icon={CpuIcon} title={t('settings.perf_title')}>
       <SettingsRow
         id="torch-compile"
         title={t('settings.perf_torch_compile')}
-        description={
-          query.data
-            ? t(windows ? 'settings.perf_torch_compile_note' : 'settings.perf_torch_compile_na')
-            : undefined
-        }
+        description={query.data ? t('settings.perf_torch_compile_note') : undefined}
       >
         <Switch
           aria-label={t('settings.perf_torch_compile')}
           checked={!!query.data?.enabled}
-          disabled={!windows || action.busy || query.isPending}
+          disabled={action.busy || query.isPending}
           onCheckedChange={(enabled) =>
             void action.run(async () => {
               const state = await apiJson('/api/settings/perf/torch-compile-disabled', {
