@@ -53,6 +53,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Normalize Argos language aliases without silently changing Traditional Chinese to Simplified (#2143, #2152) — thanks @gyanu2507 and @rollroyces!
 
+- Clarify Blackwell import-crash diagnostics without blaming missing kernels (#2084) — thanks @Moep90!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**
