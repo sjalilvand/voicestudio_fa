@@ -15,8 +15,13 @@ def _analyse(frame_path):
 
 
 def test_pillow_runtime_floor_is_declared():
+    # TOML is UTF-8; a bare read_text() decodes in the locale code page, which
+    # cannot read pyproject.toml's em dashes on a Chinese, Japanese or Korean
+    # Windows, so this module could not run there at all.
     project = tomllib.loads(
-        (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text()
+        (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(
+            encoding="utf-8"
+        )
     )
     requirements = [Requirement(item) for item in project["project"]["dependencies"]]
     pillow = next(req for req in requirements if req.name.lower() == "pillow")
