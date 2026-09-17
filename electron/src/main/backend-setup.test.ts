@@ -4,6 +4,7 @@ import { EventEmitter } from 'node:events';
 const mocks = vi.hoisted(() => ({
   runtimeConfig: null as { root: string; owned: boolean } | null,
   existingProject: false,
+  existingRoot: false,
   dependencies: vi.fn(async (_project?: string) => true),
   ready: vi.fn(async () => false),
   compatible: vi.fn(async () => false),
@@ -34,7 +35,11 @@ vi.mock('node:fs', async (importOriginal) => {
     mkdirSync: (...args: Parameters<typeof original.mkdirSync>) =>
       String(args[0]).includes('private') ? undefined : original.mkdirSync(...args),
     existsSync: (path: Parameters<typeof original.existsSync>[0]) =>
-      mocks.existingProject && String(path).includes('selected') ? true : original.existsSync(path),
+      String(path).includes('selected')
+        ? String(path).endsWith('project')
+          ? mocks.existingProject
+          : mocks.existingRoot
+        : original.existsSync(path),
   };
 });
 vi.mock('node:fs/promises', () => ({ rm: mocks.rm }));
@@ -61,6 +66,7 @@ afterEach(() => {
   vi.clearAllMocks();
   mocks.runtimeConfig = null;
   mocks.existingProject = false;
+  mocks.existingRoot = false;
   mocks.dependencies.mockResolvedValue(true);
   mocks.ready.mockResolvedValue(false);
   mocks.compatible.mockResolvedValue(false);
@@ -425,6 +431,7 @@ it.each([true, false])(
     const selected = resolve('/selected/VoiceStudio');
     mocks.runtimeConfig = { root: selected, owned: false };
     mocks.existingProject = projectExists;
+    mocks.existingRoot = true;
     mocks.ready.mockResolvedValue(true);
     mocks.dependencies.mockImplementation(
       async (project?: string) => !project?.includes('selected'),
@@ -453,3 +460,24 @@ it.each([true, false])(
     await supervisor.shutdown();
   },
 );
+
+it('installs into a newly selected custom destination that does not yet exist', async () => {
+  const { resolve, join } = await import('node:path');
+  const selected = resolve('/selected/VoiceStudio');
+  mocks.runtimeConfig = { root: selected, owned: false };
+  mocks.install.mockRejectedValue(new Error('offline'));
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => {
+      throw new Error('no backend');
+    }),
+  );
+  vi.stubEnv('OMNIVOICE_BACKEND_CMD', '');
+  vi.stubEnv('VOICESTUDIO_SKIP_BACKEND', '');
+  const supervisor = new BackendSupervisor();
+  await supervisor.start();
+  await supervisor.setupRuntime();
+  expect(mocks.install.mock.calls[0][1]).toBe(join(selected, 'project'));
+  expect(mocks.runtimeConfig).toEqual({ root: selected, owned: true });
+  await supervisor.shutdown();
+});

@@ -549,7 +549,8 @@ export class BackendSupervisor extends EventEmitter<{
         configured &&
         !configured.owned &&
         samePath(configured.root, runtimeRoot) &&
-        !samePath(runtimeRoot, defaultRuntimeRoot())
+        !samePath(runtimeRoot, defaultRuntimeRoot()) &&
+        existsSync(runtimeRoot)
       ) {
         // An explicit setup action may create a new runtime, but must never
         // take ownership of (or repair in place) another installation's files.

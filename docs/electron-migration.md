@@ -28,3 +28,7 @@ An explicitly selected runtime is not silently replaced during startup. If that
 location contains an incomplete environment Electron does not own, choosing
 setup creates a separate runtime in Electron’s default location instead of
 modifying or taking ownership of the existing environment.
+
+A new custom runtime destination remains selectable. Setup creates and owns it
+only when that directory does not already exist; existing unowned roots stay
+untouched even if their `project` subdirectory is missing.
