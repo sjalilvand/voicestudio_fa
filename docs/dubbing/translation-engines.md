@@ -236,3 +236,5 @@ panels instead so neither editor becomes unusably small.
   picks up the newly-installed module.
 
 Paste translation accepts WebVTT files with hourless timestamps. Only timing records at line starts activate timestamp matching; timestamp-like text inside a sentence remains dialogue.
+
+Subtitle import preserves numeric dialogue such as years and countdowns, including files mixing numbered and unnumbered cues. Cue numbers are removed only at identified cue boundaries.

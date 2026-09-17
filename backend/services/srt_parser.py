@@ -23,9 +23,7 @@ import re
 from dataclasses import dataclass
 
 
-# Captures: HH MM SS sep(`,` or `.`) ms (1-3 digits). The hours are optional:
-# WebVTT allows `mm:ss.ttt`, and .vtt files reach this parser from the paste
-# dialog (the yt-dlp caption parser in dub_pipeline already accepts them).
+# Captures: HH MM SS sep(`,` or `.`) ms (1-3 digits)
 _TS = r"(?:(\d{1,2}):)?([0-5]?\d):([0-5]?\d)[,.](\d{1,3})"
 # Horizontal whitespace only — NEVER plain `\s`, which matches newlines.
 # A timing line lives on ONE line, so `\s*` bought nothing but catastrophic
@@ -38,16 +36,37 @@ _H = r"[^\S\n]*"
 # Whole timing line: `00:00:01,000 --> 00:00:04,500` plus optional trailing
 # cue style hints (X1: Y1: ... ) we just throw away.
 _TIMING_RE = re.compile(rf"^{_H}{_TS}{_H}-->{_H}{_TS}.*$", re.MULTILINE)
-# A WebVTT file starts with this signature line.
-_WEBVTT_RE = re.compile(r"WEBVTT(?:[ \t]|\n|$)")
-# A blank (or whitespace-only) line.
-_BLANK_LINE_RE = re.compile(r"\n[^\S\n]*\n")
 
 
-def _ts_to_seconds(h: "str | None", m: str, s: str, ms: str) -> float:
+def _ts_to_seconds(h: str, m: str, s: str, ms: str) -> float:
     # Pad ms to 3 digits so "5" -> 0.005, "50" -> 0.050.
     ms_padded = (ms + "000")[:3]
     return int(h or 0) * 3600 + int(m) * 60 + int(s) + int(ms_padded) / 1000.0
+
+
+def _is_index_line(line: str) -> bool:
+    """True when `line` is a bare SubRip cue number.
+
+    Stricter than `str.isdigit()` on purpose: that also accepts non-ASCII
+    numerals (Arabic-Indic "١٩٩٩", Devanagari "२०२६", and the full-width
+    forms), which in a 646-language dubbing app are dialogue, never the
+    ASCII cue indices SubRip actually writes.
+    """
+    stripped = line.strip()
+    return stripped.isascii() and stripped.isdigit()
+
+
+def _uses_index_lines(text: str, first_timing_start: int) -> bool:
+    """Initial numbering hint for lenient files without blank separators.
+
+    Later cue boundaries are also inspected: mixed indexed/unindexed files
+    must not leak index lines or delete numeric dialogue.
+    """
+    head = text[:first_timing_start]
+    for line in reversed(head.split("\n")):
+        if line.strip():
+            return _is_index_line(line)
+    return False
 
 
 @dataclass
@@ -74,17 +93,17 @@ def parse_srt(content: str) -> SrtParseResult:
     # Strip BOM and normalise line endings; many editors save SRTs as CRLF.
     text = content.lstrip("﻿").replace("\r\n", "\n").replace("\r", "\n")
 
-    # In WebVTT a cue's text ends at the first blank line; what follows before
-    # the next timing line is that cue's identifier or a NOTE/STYLE block, not
-    # dialogue. SRT keeps its lenient handling of blank lines inside a cue.
-    is_webvtt = bool(_WEBVTT_RE.match(text.lstrip()))
-
+    is_webvtt = bool(re.match(r"WEBVTT(?:[ \t]|\n|$)", text.lstrip()))
     raw: list[dict] = []
     skipped = 0
     # Find every timing line, slice the cue text from there to the next
     # timing line (or end of file). This is robust to missing index
     # numbers and to spec deviations in the blank-line separator.
     matches = list(_TIMING_RE.finditer(text))
+    # Each body is sliced up to the NEXT timing line, which swallows that
+    # cue's index line. Only an indexed file has an index to give back, so
+    # decide that once here instead of guessing from each body.
+    indexed = bool(matches) and _uses_index_lines(text, matches[0].start())
     for i, m in enumerate(matches):
         try:
             start = _ts_to_seconds(m.group(1), m.group(2), m.group(3), m.group(4))
@@ -96,15 +115,22 @@ def parse_srt(content: str) -> SrtParseResult:
             skipped += 1
             continue
         body_start = m.end()
-        body_end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
-        body = text[body_start:body_end].strip("\n")
+        has_next = i + 1 < len(matches)
+        body_end = matches[i + 1].start() if has_next else len(text)
+        body = text[body_start:body_end]
         if is_webvtt:
-            body = _BLANK_LINE_RE.split(body, maxsplit=1)[0]
-        # Drop the trailing index number of the NEXT cue (which got eaten
-        # into our body) by trimming trailing digit-only lines.
-        lines = body.split("\n")
-        while lines and lines[-1].strip().isdigit():
-            lines.pop()
+            # The blank separator ends WebVTT dialogue; following identifiers,
+            # NOTE/STYLE blocks belong outside the cue, even when numeric.
+            body = re.split(r"\n[^\S\n]*\n", body.lstrip("\n"), maxsplit=1)[0]
+        # An index must directly precede the next timing line. A blank line
+        # AFTER a number instead marks that number as preceding dialogue.
+        marker = re.search(r"(?:^|\n)([ \t]*[0-9]+[ \t]*)\n?[ \t]*\Z", body) if has_next and not is_webvtt else None
+        if marker:
+            before = body[:marker.start(1)]
+            separated = bool(re.search(r"\n[ \t]*\n[ \t]*$", before))
+            if separated or indexed:
+                body = before
+        lines = body.strip("\n").split("\n")
         cue_text = "\n".join(line.strip() for line in lines if line.strip())
         if not cue_text:
             skipped += 1
