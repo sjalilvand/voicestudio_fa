@@ -206,7 +206,7 @@ def _safe_torchaudio_save(
                 torchaudio.save(path_or_buf, tensor, sample_rate, format=fmt)
     except (ImportError, RuntimeError) as e:
         if isinstance(e, RuntimeError) and "could not load libtorchcodec" not in str(e).lower():
-            raise  # Unrelated encoder failures must remain visible.
+            raise _describe_write_failure(e, path_or_buf) from e
         # torchaudio >= 2.9 routes save() through TorchCodec, which needs
         # FFmpeg *shared libraries* on the system. Where those are absent the
         # write raises ImportError and every generation fails. #1931 guarded
