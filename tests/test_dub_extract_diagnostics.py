@@ -23,3 +23,10 @@ async def test_extract_error_preserves_failure_after_long_banner(tmp_path, monke
 
 def test_empty_native_diagnostic_retains_exit_code():
     assert "code 7" in dub_pipeline._media_process_error("FFmpeg", 7, b"")
+
+
+@pytest.mark.parametrize("path", ["/mnt/media/private.mp4", "D:\\Media\\private.mp4", "/opt/data/private.mp4"])
+def test_native_error_redacts_non_home_command_paths(path):
+    error = dub_pipeline._media_process_error("FFmpeg", 1, (path + ": Permission denied").encode(), paths=(path,))
+    assert path not in error
+    assert "Permission denied" in error
