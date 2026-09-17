@@ -114,7 +114,8 @@
     "recheck": "Re-check",
     "rechecking": "Re-checking…",
     "failed": "failed",
-    "latencyMs": "{{ms}} ms"
+    "latencyMs": "{{ms}} ms",
+    "localInstallRequired": "Install this engine on the backend computer using localhost or its setup guide. Remote installation is disabled."
   },
   "clone": {
     "title": "Voice cloning",

@@ -864,7 +864,8 @@
     "familyDesc_asr": "Mengubah audio menjadi teks untuk transkripsi, sulih suara, teks layar, dan dikte.",
     "familyDesc_llm": "Pembantu teks opsional untuk terjemahan dan penulisan ulang. “Nonaktif” akan melewati langkah tersebut.",
     "mpsLongText": "{{engine}} berjalan di Apple Silicon (MPS) di sini dan teks ini panjang — proses mungkin melampaui batas waktu. Teks lebih pendek, atau membaginya menjadi beberapa bagian, akan jauh lebih cepat.",
-    "inMemory": "Dalam memori"
+    "inMemory": "Dalam memori",
+    "localInstallRequired": "Instal mesin ini di komputer backend melalui localhost atau panduan penyiapannya. Instalasi jarak jauh dinonaktifkan."
   },
   "capture": {
     "desc": "Tombol pintas global hanya berfungsi di aplikasi desktop. UI web menggunakan pintasan <1>Ctrl+Shift+Space</1> dalam halaman saat jendela memiliki fokus.",

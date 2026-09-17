@@ -363,6 +363,9 @@ export default function EngineDetail({
         </div>
       )}
 
+      {b.local_install_required && !b.available && (
+        <p className="text-xs text-muted-foreground">{t('engines.localInstallRequired')}</p>
+      )}
       {/* Setup snippet: top-level on plain path-gated rows; a collapsed
           "Manual install" fallback on one-click rows (open when the install
           failed — the snippet IS the recovery path then). */}

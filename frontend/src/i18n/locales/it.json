@@ -864,7 +864,8 @@
     "familyDesc_asr": "Trasforma l’audio in testo per trascrizione, doppiaggio, sottotitoli e dettatura.",
     "familyDesc_llm": "Assistente di testo opzionale per traduzioni e riscritture. “Disattivato” salta questi passaggi.",
     "mpsLongText": "{{engine}} qui viene eseguito su Apple Silicon (MPS) e questo testo è lungo: la generazione potrebbe superare il limite di tempo. Un testo più breve, o diviso in più riprese, sarà molto più veloce.",
-    "inMemory": "In memoria"
+    "inMemory": "In memoria",
+    "localInstallRequired": "Installa questo motore sul computer del backend tramite localhost o la guida alla configurazione. L’installazione remota è disabilitata."
   },
   "capture": {
     "desc": "I tasti di scelta rapida globali funzionano solo nell'app desktop. L'interfaccia utente Web utilizza una scorciatoia <1>Ctrl+Shift+Spazio</1> nella pagina mentre la finestra è attiva.",

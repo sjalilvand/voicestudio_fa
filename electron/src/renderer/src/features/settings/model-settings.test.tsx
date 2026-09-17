@@ -107,7 +107,41 @@ it('confirms a diarisation engine selection after the backend accepts it', async
   );
 
   fireEvent.click(await screen.findByRole('button', { name: 'modelSettings.select' }));
-  await waitFor(() =>
-    expect(mock.toast.success).toHaveBeenCalledWith('settings.engine_switched'),
+  await waitFor(() => expect(mock.toast.success).toHaveBeenCalledWith('settings.engine_switched'));
+});
+
+it('explains remote native installation restrictions before a POST', async () => {
+  mock.api.mockImplementation((path: string) =>
+    Promise.resolve(
+      path === '/engines/diarisation'
+        ? {
+            active: 'pyannote',
+            options: [
+              {
+                id: 'audiocpp-sortformer',
+                label: 'Sortformer',
+                model_installed: true,
+                runtime_installed: false,
+                installed: false,
+              },
+            ],
+          }
+        : {
+            installed: false,
+            supported: true,
+            install_allowed: false,
+            job: { state: 'idle', progress: 0 },
+          },
+    ),
   );
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <DiarisationSettings />
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByText('engines.localInstallRequired')).toBeInTheDocument();
+  const button = screen.getByRole('button', { name: 'modelMaintenance.install' });
+  expect(button).toBeDisabled();
+  fireEvent.click(button);
+  expect(mock.api.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
 });
