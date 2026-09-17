@@ -16,6 +16,10 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
 
+### Fixed
+
+- Normalize Argos language aliases without silently changing Traditional Chinese to Simplified (#2143, #2152) — thanks @gyanu2507 and @rollroyces!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**

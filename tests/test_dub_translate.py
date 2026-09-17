@@ -22,7 +22,6 @@ def test_translate_codes_cover_popular_iso():
     # Human / display names from the dub UI's own label list.
     ("Chinese", "zh"),
     ("Chinese (Simplified)", "zh"),
-    ("Chinese (Traditional)", "zh"),
     ("Mandarin", "zh"),
     # Three-letter ISO 639-2 / bibliographic codes used by some asset pipelines.
     ("zho", "zh"),
@@ -826,3 +825,10 @@ async def test_openai_env_fallback_still_works(monkeypatch):
     resp = await dub_translate.dub_translate(req)
     assert resp["translated"][0]["text"] == "hola mundo"
     assert calls and calls[0]["model"] == "env-model"
+
+
+@pytest.mark.parametrize("raw", ["Chinese (Traditional)", "zh-TW", "zh-Hant", "cmn-Hant", "zho_Hant", "zh-HK", "zh-MO"])
+def test_argos_does_not_silently_change_chinese_script(raw):
+    from services.translation_engines import argos_lang_code
+    with pytest.raises(ValueError, match="Traditional Chinese.*NLLB"):
+        argos_lang_code(raw)

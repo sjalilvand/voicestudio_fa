@@ -234,3 +234,5 @@ panels instead so neither editor becomes unusably small.
   from-source checkout.
 - **Installed it but still "needs install"** — restart the backend so Python
   picks up the newly-installed module.
+
+Argos accepts Chinese/Simplified Chinese names, Mandarin aliases, and language tags such as `zh-CN`. Traditional Chinese requests (`zh-TW`, `zh-Hant`, and the display name) are rejected explicitly; select NLLB for Traditional Chinese rather than silently receiving a different script.

@@ -40,7 +40,6 @@ _ARGOS_LANG_ALIASES = {
 _ARGOS_NAME_ALIASES = {
     "chinese": "zh",
     "chinese (simplified)": "zh",
-    "chinese (traditional)": "zh",
     "mandarin": "zh",
 }
 
@@ -325,6 +324,12 @@ def argos_lang_code(value: str) -> str:
     """
     raw = str(value or "").strip()
     key = raw.lower()
+    parts = key.replace("_", "-").split("-")
+    if key == "chinese (traditional)" or (
+        parts[0] in {"zh", "zho", "cmn"} and
+        any(part in {"hant", "tw", "hk", "mo"} for part in parts[1:])
+    ):
+        raise ValueError("Argos does not provide Traditional Chinese; choose NLLB for this script")
     named = _ARGOS_NAME_ALIASES.get(key)
     if named:
         return named
