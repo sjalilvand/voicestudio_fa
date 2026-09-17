@@ -70,6 +70,20 @@ LOG_TAIL_LINES = 40
 #: burst instead of one per request.
 ACTIVITY_THROTTLE_S = 2.0
 
+# An idle desktop process can disappear with its owning shell during an OS
+# shutdown, package replacement, or a forced development relaunch. Keep that
+# forensic record, but do not nag the user unless there is evidence that work
+# was interrupted or the backend itself logged a fatal failure.
+_ACTIONABLE_LOG_MARKERS = (
+    "traceback (most recent call last)",
+    "critical",
+    "fatal error",
+    "out of memory",
+    "memoryerror",
+    "segmentation fault",
+    "access violation",
+)
+
 # In-memory run state. `owns` guards clear_sentinel()/touch_activity() so an
 # instance that skipped writing (another live instance holds the sentinel)
 # can never clobber or delete the other instance's sentinel.
@@ -296,6 +310,24 @@ def _build_crash_record(sentinel: dict, now: float) -> dict:
         "last_activity": last_activity,
         "log_tail": _scrubbed_log_tail(),
     }
+
+
+def warrants_user_notice(record: dict) -> bool:
+    """Whether an unclean record is actionable enough to interrupt the user.
+
+    The record remains available to diagnostics either way. A meaningful
+    activity marker means a generation/transcription/task may have been lost;
+    a strict fatal-log marker catches startup/native crashes that happened
+    before an activity could be recorded. Idle shell-owned exits stay quiet.
+    """
+    activity = record.get("last_activity")
+    if isinstance(activity, dict) and str(activity.get("kind") or "").strip():
+        return True
+    tail = record.get("log_tail")
+    if not isinstance(tail, list):
+        return False
+    joined = "\n".join(str(line).lower() for line in tail[-LOG_TAIL_LINES:])
+    return any(marker in joined for marker in _ACTIONABLE_LOG_MARKERS)
 
 
 def _load_store() -> dict:

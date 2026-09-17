@@ -100,6 +100,29 @@ def test_from_exception_never_produces_an_empty_message():
     assert from_exception(Silent()).message
 
 
+@pytest.mark.parametrize(
+    "message",
+    [
+        "Unsupported instruct items found in cinematic narrator",
+        "Conflicting instruct items: male, female",
+        "Cannot mix English and Chinese in a single instruct",
+    ],
+)
+def test_invalid_voice_direction_is_terminal(message):
+    err = from_exception(ValueError(message))
+
+    assert err.code == "INVALID_TASK_PARAMS"
+    assert err.error_class is ErrorClass.TERMINAL
+    assert err.retryable is False
+
+
+def test_other_value_errors_remain_retryable_when_unclassified():
+    err = from_exception(ValueError("a transient numerical failure"))
+
+    assert err.code == "UNKNOWN"
+    assert err.error_class is ErrorClass.TRANSIENT
+
+
 def test_wire_shape_is_complete():
     payload = WorkerError(
         error_class=ErrorClass.TIMEOUT, code="EXECUTION_TIMEOUT", message="m", hint="h"

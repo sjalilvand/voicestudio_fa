@@ -710,6 +710,81 @@ async def test_status_answers_for_the_remote_host_not_this_one(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_status_filters_models_by_the_surface_operation():
+    class OperationRecord:
+        capabilities = [
+            {
+                "engine": "fixed-voice",
+                "model_id": "fixed-voice:default",
+                "operations": ["audiobook", "batch_segments", "tts"],
+                "supported": True,
+                "installed": True,
+                "downloaded": True,
+            },
+            {
+                "engine": "cloner",
+                "model_id": "cloner:default",
+                "operations": [
+                    "audiobook", "batch_segments", "clone", "dub_segments", "tts"
+                ],
+                "supported": True,
+                "installed": True,
+                "downloaded": True,
+            },
+        ]
+
+    class OperationWorker:
+        record = OperationRecord()
+
+    plane = FakePlane(FakeScheduler(), pool=FakePool(OperationWorker()))
+
+    dub = await gpu_gateway.status(op="dub", decision=REMOTE, control_plane=plane)
+    longform = await gpu_gateway.status(
+        op="longform", decision=REMOTE, control_plane=plane
+    )
+    batch = await gpu_gateway.status(op="batch", decision=REMOTE, control_plane=plane)
+
+    assert [model["engine"] for model in dub["models"]] == ["cloner"]
+    assert [model["engine"] for model in longform["models"]] == [
+        "fixed-voice",
+        "cloner",
+    ]
+    assert [model["engine"] for model in batch["models"]] == [
+        "fixed-voice",
+        "cloner",
+    ]
+
+
+def test_remote_batch_deadline_scales_with_media_duration():
+    short = gpu_gateway._default_deadline(
+        "batch_segments", None, input_seconds=1.0
+    )
+    feature_length = gpu_gateway._default_deadline(
+        "batch_segments", None, input_seconds=3_600.0
+    )
+
+    assert feature_length > short
+
+
+@pytest.mark.asyncio
+async def test_remote_status_uses_authoritative_heartbeat_residency():
+    worker = _Worker()
+
+    class Capacity:
+        @staticmethod
+        def is_resident(engine, model_id):
+            return engine == "indextts" and model_id == "indextts:default"
+
+    worker.capacity = Capacity()
+    plane = FakePlane(FakeScheduler(), pool=FakePool(worker))
+
+    answer = await gpu_gateway.status(decision=REMOTE, control_plane=plane)
+
+    assert answer["models"][0]["resident"] is True
+    assert answer["models"][1]["resident"] is False
+
+
+@pytest.mark.asyncio
 async def test_status_falls_back_when_the_worker_dropped(monkeypatch):
     monkeypatch.setattr(
         gpu_gateway, "_local_capabilities",
@@ -728,6 +803,82 @@ async def test_remote_download_refuses_instead_of_downloading_here():
     with pytest.raises(gpu_gateway.RemoteUnsupported) as excinfo:
         await gpu_gateway.download("k2-fsa/OmniVoice", decision=REMOTE)
     assert "gpu2" in str(excinfo.value)
+
+
+@pytest.mark.asyncio
+async def test_remote_download_starts_on_selected_worker_and_tracks_target(monkeypatch):
+    class Servicer:
+        def __init__(self):
+            self.calls = []
+
+        async def prewarm(self, worker_id, **kwargs):
+            self.calls.append((worker_id, kwargs))
+            return True
+
+    servicer = Servicer()
+    plane = FakePlane(FakeScheduler(), pool=FakePool(CapabilityWorker()))
+    plane.servicer = servicer
+    monkeypatch.setattr(gpu_gateway, "_remote_downloads", {})
+
+    answer = await gpu_gateway.download(
+        "IndexTeam/IndexTTS-2", decision=REMOTE, control_plane=plane
+    )
+
+    assert answer == {
+        "status": "started",
+        "repo_id": "IndexTeam/IndexTTS-2",
+        "target": REMOTE.worker_id,
+    }
+    assert servicer.calls == [
+        (
+            REMOTE.worker_id,
+            {
+                "engine": "indextts",
+                "model_id": "indextts:default",
+                "download_if_missing": True,
+            },
+        )
+    ]
+    assert gpu_gateway.remote_download_jobs() == [
+        {
+            "repo_id": "IndexTeam/IndexTTS-2",
+            "target": REMOTE.worker_id,
+            "state": "downloading",
+            "phase": "starting",
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_remote_download_cancel_targets_the_worker_and_tracks_confirmation(monkeypatch):
+    class Servicer:
+        def __init__(self):
+            self.calls = []
+
+        async def cancel_model_install(self, worker_id, **kwargs):
+            self.calls.append((worker_id, kwargs))
+            return True
+
+    servicer = Servicer()
+    plane = FakePlane(FakeScheduler(), pool=FakePool(CapabilityWorker()))
+    plane.servicer = servicer
+    monkeypatch.setattr(gpu_gateway, "_remote_downloads", {})
+    gpu_gateway.begin_remote_download(REMOTE.worker_id, "IndexTeam/IndexTTS-2")
+
+    answer = await gpu_gateway.cancel_download(
+        "IndexTeam/IndexTTS-2",
+        target=REMOTE.worker_id,
+        control_plane=plane,
+    )
+
+    assert answer == {
+        "cancelling": "IndexTeam/IndexTTS-2",
+        "target": REMOTE.worker_id,
+    }
+    assert servicer.calls == [
+        (REMOTE.worker_id, {"model_id": "indextts:default"})
+    ]
+    assert gpu_gateway.remote_download_jobs()[0]["state"] == "cancelling"
 
 
 @pytest.mark.asyncio

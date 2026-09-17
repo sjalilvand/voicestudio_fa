@@ -188,7 +188,28 @@ def from_reason(reason: str, *, code: Optional[str] = None) -> WorkerError:
 
 
 def from_exception(exc: BaseException, *, code: Optional[str] = None) -> WorkerError:
-    return from_reason(failure.describe_exception(exc), code=code)
+    reason = failure.describe_exception(exc)
+    if code is None and _is_invalid_generation_input(reason):
+        # OmniVoice validates its closed voice-direction vocabulary inside
+        # inference.  The local route already turns these signatures into a
+        # 400; a worker used to call the same deterministic ValueError
+        # UNKNOWN/TRANSIENT and spend the task's retry budget on identical
+        # renders.  Keep the message (it contains the accepted vocabulary),
+        # but stop the fleet after the first attempt.
+        code = "INVALID_TASK_PARAMS"
+    return from_reason(reason, code=code)
+
+
+def _is_invalid_generation_input(reason: str) -> bool:
+    low = (reason or "").lower()
+    return any(
+        signature in low
+        for signature in (
+            "unsupported instruct items",
+            "conflicting instruct items",
+            "in a single instruct",
+        )
+    )
 
 
 def _hint_for(taxonomy_key: str) -> str:

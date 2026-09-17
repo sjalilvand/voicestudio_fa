@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "Geräteeinstellung konnte nicht geladen werden",
     "perf_save_failed": "Einstellung konnte nicht gespeichert werden",
     "generate_budget_title": "Rechenzeit-Budget",
@@ -360,7 +361,10 @@
     "theme_auto": "System-Standard",
     "theme_light": "Hell",
     "reduce_motion": "Bewegung reduzieren",
-    "reduce_motion_desc": "Stoppt Hintergrundanimationen und Übergänge. Die Systemeinstellung gilt weiterhin für sich; dies kommt hinzu."
+    "reduce_motion_desc": "Stoppt Hintergrundanimationen und Übergänge. Die Systemeinstellung gilt weiterhin für sich; dies kommt hinzu.",
+    "perf_torch_compile": "torch.compile deaktivieren",
+    "perf_torch_compile_note": "Verwendet direkte Ausführung, um Triton-Speicherfehler zu vermeiden.",
+    "perf_torch_compile_hint": "Verwendet direkte Ausführung, um Triton-Speicherfehler zu vermeiden. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1552,6 +1556,7 @@
     "h_ago": "Vor {{count}}h"
   },
   "setup": {
+    "ready_desc": "Du kannst jetzt deine erste Stimme erstellen. Die Diktierfunktion kannst du jetzt oder später in den Einstellungen einrichten.",
     "welcome": "Willkommen",
     "system_check": "Systemprüfung",
     "install_models": "Modelle installieren",
@@ -1606,7 +1611,7 @@
     "choose_method": "Wählen Sie, wie Sie geben möchten",
     "choose_method_amount": "Weiter mit ${{amount}}",
     "goal": {
-      "title": "Fonds Claude Max",
+      "title": "Unterstütze die Entwicklung von VoiceStudio",
       "of": "von",
       "per_month": "/ Monat",
       "aria": "{{raised}} von {{goal}} Monatsziel",
@@ -1615,7 +1620,7 @@
       "social_proof": "Schließen Sie sich den Unterstützern von {{count}} an, die lokale KI finanzieren"
     },
     "postcard": {
-      "title": "Fonds Claude Max",
+      "title": "Unterstütze die Entwicklung von VoiceStudio",
       "lead_default": "Ich bin froh, dass das funktioniert hat! VoiceStudio ist kostenlos und vollständig lokal. Wenn es Ihnen Zeit spart, finanziert ein kleiner monatlicher Chip-In den dahinter stehenden Claude Max.",
       "lead_first_clone": "Ihr erster Sprachklon ist fertig – schön! VoiceStudio läuft vollständig auf Ihrem Computer und Ihr Support sorgt dafür, dass dies auch so bleibt.",
       "lead_tenth_dub": "Nach zehn Dubs – Sie setzen es eindeutig um. Ein kleiner monatlicher Chip-In finanziert den Claude Max, der diese Funktionen bereitstellt.",
@@ -2831,5 +2836,55 @@
   "player": {
     "pause": "Pausieren",
     "play": "Abspielen"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Sprache fehlt oder ist nicht lesbar. Erzeuge das betroffene Segment vor dem Export erneut.",
+    "timingOverflow": "Die Sprache überschreitet ihr Zeitfenster. Kürze die Übersetzung oder wähle ein festes Zeitfenster oder die Videostreckung.",
+    "backgroundUnavailable": "Der Originalton konnte nicht erhalten werden. Prüfe Hintergrundtrennung und Dialogzeiten und versuche es erneut, oder exportiere ausdrücklich nur Sprache."
+  },
+  "dubStyle": {
+    "label": "Vorgabe für den Übersetzungsstil",
+    "help": "Beschreibe Ton, Zielgruppe und Anpassung, etwa Witze erhalten und Redewendungen natürlich übertragen. Wird im Projekt gespeichert und für Übersetzung und Zeitanpassung verwendet. Leer lassen für den Standardstil."
+  },
+  "dubActivity": {
+    "output": "Übersetzungen",
+    "waiting": "Noch keine Ausgabe empfangen.",
+    "progress": "{{done}} / {{total}} Segmente geprüft",
+    "cancelled": "Abgebrochen",
+    "fitting": "Timing anpassen"
+  },
+  "sponsorSlot": {
+    "book": "Platz anfragen",
+    "preview": "Sponsor-Vorschau",
+    "message": "Deine Marke, Website und Nachricht",
+    "email_app": "E-Mail-App öffnen",
+    "copy_email": "E-Mail-Adresse kopieren",
+    "preview_detail": "Hier könnten dein Logo, Link und eine Vorstellung stehen."
+  },
+  "supportPlans": {
+    "remove": "Sponsorenleiste entfernen",
+    "title": "Free und Pro im Vergleich",
+    "free": "Kostenlos",
+    "pro": "Pro",
+    "sponsor_bar": "Sponsorenleiste",
+    "visible": "Sichtbar",
+    "hideable": "Ausblendbar",
+    "unavailable": "Die Pro-Aktivierung ist noch nicht eingerichtet.",
+    "telemetry": "Telemetrie",
+    "opt_in": "Optional, nur mit Zustimmung",
+    "disabled": "Deaktiviert",
+    "badge": "Pro-Abzeichen",
+    "advanced": "Erweiterte Werkzeuge",
+    "standard": "Standard",
+    "included": "Enthalten"
+  },
+  "integrationCatalog": {
+    "title": "Integrationen",
+    "featured": "Hervorgehoben",
+    "description": "Entdecke Integrationen und hervorgehobene Partner."
+  },
+  "directoryExamples": {
+    "example": "Verzeichnisbeispiel",
+    "notice": "Nur Verzeichnisbeispiele — keine Sponsoren oder verbundenen Integrationen."
   }
 }

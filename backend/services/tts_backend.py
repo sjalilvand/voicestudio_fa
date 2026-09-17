@@ -542,6 +542,26 @@ def _prompt_disk_load(key: tuple):
         return None
 
 
+def _prompt_cache_evict(key: tuple) -> None:
+    """Discard one prompt from both cache layers. Never raises.
+
+    Transcript-free prompts use a different identity from fully conditioned
+    prompts. Once ASR resolves the transcript, the former must not remain as a
+    viable stale fallback for the same reference clip.
+    """
+    with _prompt_cache_lock:
+        _prompt_cache.pop(key, None)
+    cache_dir = _prompt_disk_dir()
+    if cache_dir is None:
+        return
+    try:
+        os.remove(_prompt_disk_path(cache_dir, key))
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        logger.debug("could not evict stale voice prompt: %s", exc)
+
+
 def _prompt_disk_save(key: tuple, prompt) -> None:
     """Persist ``prompt`` under ``key`` and prune old entries. Never raises."""
     cache_dir = _prompt_disk_dir()
@@ -605,6 +625,29 @@ def _get_clone_prompt(
     Every short segment falling back to its speaker ref then re-encodes it
     (~0.4 s each, measured). Scan-resistance, not a second cache policy.
     """
+    # Resolve transcript-free references through an already-installed ASR
+    # before deriving the cache key. This protects every native OmniVoice
+    # caller (generate, streaming, batch, dub, audiobook and OpenAI-compatible
+    # speech), including routes that do not have a profile row on which to
+    # persist the transcript. Incomplete reference conditioning can destabilize
+    # the reference/target boundary and introduce words in the generated prefix.
+    unresolved_key = None
+    if ref_audio and not ref_text:
+        try:
+            unresolved_key = _clone_prompt_key(
+                ref_audio, None, preprocess_prompt
+            )
+        except Exception:
+            pass
+        try:
+            from services.asr_backend import transcribe_reference
+
+            ref_text = transcribe_reference(ref_audio)
+        except Exception as e:  # noqa: BLE001 — model fallback remains available
+            logger.warning("reference transcript resolution failed: %s", e)
+        if ref_text and unresolved_key is not None:
+            _prompt_cache_evict(unresolved_key)
+
     try:
         key = _clone_prompt_key(ref_audio, ref_text, preprocess_prompt)
     except Exception:
@@ -754,6 +797,27 @@ class OmniVoiceBackend(TTSBackend):
         # The live OmniVoice instance. Reuses the singleton owned by
         # model_manager so memory isn't doubled.
         self._model = model
+
+    @property
+    def execution_device(self) -> str | None:
+        """Actual device of the shared model, for live engine diagnostics."""
+        if self._model is None:
+            return None
+        try:
+            return str(next(self._model.parameters()).device)
+        except Exception:  # noqa: BLE001 - third-party model wrappers vary
+            device = getattr(self._model, "device", None)
+            return str(device) if device is not None else None
+
+    @property
+    def dtype(self) -> str | None:
+        """Actual parameter precision of the shared model when resident."""
+        if self._model is None:
+            return None
+        try:
+            return str(next(self._model.parameters()).dtype)
+        except Exception:  # noqa: BLE001 - diagnostics must remain best effort
+            return None
 
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
@@ -2371,7 +2435,7 @@ _INSTALL_HINTS: dict[str, str] = {
     "moss-tts-v15":  "git clone OpenMOSS/MOSS-TTS + set OMNIVOICE_MOSS_TTS_V15_DIR  (own venv, transformers==5.0; 8B, ~16 GB weights; CUDA/ROCm/XPU/NPU/CPU, no MPS; Apache-2.0)",
     "dots-tts":      "git clone rednote-hilab/dots.tts + set OMNIVOICE_DOTS_TTS_DIR  (own venv, transformers==4.57; 2B, ~9 GB weights; CUDA/CPU, Linux/macOS only — no Windows; Apache-2.0)",
     "confucius4-tts":"git clone netease-youdao/Confucius4-TTS + set OMNIVOICE_CONFUCIUS4_TTS_DIR  (own Python 3.10 venv; 14-lang cross-lingual zero-shot clone; ~5 GB weights auto-download; CUDA/ROCm/XPU/NPU/CPU, no MPS; Apache-2.0)",
-    "audiocpp":     "download the matching audio.cpp v0.7.2 prebuilt + set OMNIVOICE_AUDIOCPP_BIN, then explicitly install Breeze-TTS-2 in the engine's Weights list in Model Catalogue  (native CPU/Vulkan/CUDA/Metal GGUF server, no Python; en+zh clone+design; ~4.73 GiB; weights research/non-commercial only)",
+    "audiocpp":     "download the matching audio.cpp v0.7.4 prebuilt + set OMNIVOICE_AUDIOCPP_BIN, then explicitly install Breeze-TTS-2 in Model Catalogue → Models  (native CPU/Vulkan/CUDA/Metal GGUF server, no Python; en+zh clone+design; ~4.73 GiB; weights research/non-commercial only)",
 }
 
 
@@ -2598,6 +2662,18 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
             loaded_instance = _active_instance
         if loaded_instance is None:
             loaded_instance = _ENGINE_INSTANCES.get(cls)
+        if loaded_instance is None and bid == "omnivoice":
+            # Startup preloads OmniVoice through model_manager directly, before
+            # any generation route needs an adapter instance. Reflect that
+            # shared resident model here instead of contradicting
+            # /model/loaded with a stale `not_loaded` engine state.
+            try:
+                from services import model_manager
+
+                if model_manager.model is not None:
+                    loaded_instance = OmniVoiceBackend(model=model_manager.model)
+            except Exception:  # noqa: BLE001 - catalogue reads never fail on diagnostics
+                pass
         out.append({
             "id": bid,
             "display_name": cls.display_name,

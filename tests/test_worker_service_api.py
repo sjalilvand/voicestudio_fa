@@ -191,6 +191,57 @@ def test_discovery_reports_the_four_states(monkeypatch):
     assert "clone" in entry["operations"]
 
 
+def test_gpu_description_reports_live_cuda_telemetry(monkeypatch):
+    from types import SimpleNamespace
+
+    caps = SimpleNamespace(
+        family="cuda",
+        device_name="NVIDIA RTX 4090",
+        vram_gb=24,
+        driver=None,
+    )
+    monkeypatch.setattr("core.device_caps.detect_host_caps", lambda: caps)
+    monkeypatch.setattr(
+        capabilities,
+        "_accelerator_memory_bytes",
+        lambda _caps: (18 * 1024**3, 24 * 1024**3),
+    )
+    monkeypatch.setattr(
+        capabilities,
+        "_accelerator_details",
+        lambda _caps: ("591.86", "8.9"),
+    )
+
+    assert capabilities.describe_gpus() == [
+        {
+            "vendor": "nvidia",
+            "model": "NVIDIA RTX 4090",
+            "backend": "cuda",
+            "memory_bytes": 24 * 1024**3,
+            "free_memory_bytes": 18 * 1024**3,
+            "driver_version": "591.86",
+            "compute_capability": "8.9",
+        }
+    ]
+
+
+def test_nvidia_driver_probe_finds_wsl_system_binary(monkeypatch):
+    from types import SimpleNamespace
+
+    calls = []
+    monkeypatch.setattr(capabilities.shutil, "which", lambda _name: None)
+    monkeypatch.setattr(capabilities.os.path, "isfile", lambda path: path == "/usr/lib/wsl/lib/nvidia-smi")
+    monkeypatch.setattr(
+        capabilities.subprocess,
+        "run",
+        lambda args, **_kwargs: calls.append(args)
+        or SimpleNamespace(returncode=0, stdout="591.86\n"),
+    )
+
+    assert capabilities._nvidia_driver_version() == "591.86"
+    assert calls[0][0] == "/usr/lib/wsl/lib/nvidia-smi"
+
+
 def test_unknown_native_gpu_memory_keeps_one_serial_worker_slot(monkeypatch):
     monkeypatch.setattr(
         "services.tts_backend.list_backends",
@@ -307,7 +358,32 @@ def test_engines_that_cannot_clone_do_not_advertise_it(monkeypatch):
         "services.tts_backend.list_backends",
         lambda: [{"id": "e", "available": True, "supports_cloning": None, "gpu_compat": ["cuda"]}],
     )
-    assert capabilities.discover()[0]["operations"] == ["audiobook", "dub_segments", "tts"]
+    assert capabilities.discover()[0]["operations"] == [
+        "audiobook",
+        "batch_segments",
+        "tts",
+    ]
+
+
+def test_cloning_engines_advertise_clone_and_dubbing(monkeypatch):
+    monkeypatch.setattr(
+        "services.tts_backend.list_backends",
+        lambda: [
+            {
+                "id": "e",
+                "available": True,
+                "supports_cloning": True,
+                "gpu_compat": ["cuda"],
+            }
+        ],
+    )
+    assert capabilities.discover()[0]["operations"] == [
+        "audiobook",
+        "batch_segments",
+        "tts",
+        "clone",
+        "dub_segments",
+    ]
 
 
 def test_default_concurrency_is_one():
@@ -661,6 +737,25 @@ def test_target_defaults_to_local(client, monkeypatch):
     assert body["targets"][0]["id"] == "local"
 
 
+def test_runtime_status_routes_through_the_selected_compute_target(client, monkeypatch):
+    seen = {}
+
+    async def fake_status(engine=None, *, op="tts", control_plane=None):
+        seen.update(engine=engine, op=op, control_plane=control_plane)
+        return {"target": "worker-1", "remote": True, "models": []}
+
+    monkeypatch.setattr("services.gpu_gateway.status", fake_status)
+    response = client.get("/workers/runtime?op=tts&engine=omnivoice")
+
+    assert response.status_code == 200
+    assert response.json()["target"] == "worker-1"
+    assert seen == {
+        "engine": "omnivoice",
+        "op": "tts",
+        "control_plane": service.control_plane,
+    }
+
+
 def test_choosing_an_unknown_worker_is_refused(client):
     """Otherwise a typo silently parks generation on a target that will never
     resolve, and every job quietly runs locally with no explanation."""
@@ -953,7 +1048,10 @@ def test_the_target_endpoint_answers_per_operation(client, monkeypatch, db):
 
     whole = client.get("/workers/target").json()
     assert whole["op"] == ""
-    assert whole["remote_operations"] == ["audiobook", "dub", "dub_segments", "tts"]
+    assert whole["remote_operations"] == [
+        "audiobook", "batch", "batch_segments", "clone", "dub", "dub_segments",
+        "longform", "tts",
+    ]
 
 
 # ── Config is read from the database, not from the pool's stale copy ───────

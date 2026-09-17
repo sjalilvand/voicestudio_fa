@@ -35,9 +35,9 @@ from pathlib import Path
 
 logger = logging.getLogger("omnivoice.audiocpp.bootstrap")
 
-#: Pinned audio.cpp release. BreezeTTS-2 support landed in 0.7.2 — older
-#: binaries have no ``breeze_tts`` family, so the floor is also the pin.
-VERSION = "v0.7.2"
+#: Pinned audio.cpp release. BreezeTTS-2 support landed in 0.7.2; 0.7.4 adds
+#: the current native fixes and Sortformer v2.1 streaming runtime.
+VERSION = "v0.7.4"
 
 #: GitHub repo serving the prebuilt binaries.
 GH_REPO = "0xShug0/audio.cpp"
@@ -45,7 +45,7 @@ GH_REPO = "0xShug0/audio.cpp"
 #: HuggingFace repo serving the GGUF model packages (not gated).
 HF_MODEL_REPO = "audio-cpp/audio.cpp-gguf"
 
-# Immutable repository revision used for the v0.7.2 Breeze-TTS-2 package.
+# Immutable repository revision used for the Breeze-TTS-2 package.
 # Pinning prevents a later upstream file replacement from silently changing
 # the model exercised by this backend.
 HF_MODEL_REVISION = "dc6fecccc2b0c6bdda0a8b2f38fa61394fee0b9c"
@@ -87,27 +87,33 @@ DEFAULT_PORT = 17860
 #: This package's owned binary dir (probe 3).
 _PKG_BIN_DIR: Path = Path(__file__).parent / "bin"
 
-# Recommended (asset filename, sha256) per platform slug, from the v0.7.2
+# Recommended (asset filename, sha256) per platform slug, from the v0.7.4
 # release. Windows and Linux use the vendor-neutral Vulkan build, which also
 # exposes the native CPU backend. Upstream publishes the macOS builds under
-# the Metal package name. No linux-aarch64 prebuilt exists in v0.7.2.
+# the Metal package name. No linux-aarch64 prebuilt exists in v0.7.4.
 _ASSETS: dict[str, tuple[str, str]] = {
     "windows-x64": (
-        "audio-v0.7.2-bin-windows-x64-vulkan.zip",
-        "15b8232eae740e21e507d87f827a89966de9451b085a45932d9e214e032962c1",
+        "audio-v0.7.4-bin-windows-x64-vulkan.zip",
+        "057332f9e3fb37706a8ecb5075ac1797efcd85fdccd739f7b65761a5920f2828",
     ),
     "linux-x64": (
-        "audio-v0.7.2-bin-ubuntu-x64-vulkan.tar.gz",
-        "fee1f978cee76453cf17f00196554bc2ee294645739538af0726a143b6a69a23",
+        "audio-v0.7.4-bin-ubuntu-x64-vulkan.tar.gz",
+        "e0ef3123a9f94e130ad463db0db5a69b65485ef8db1b46edead00c03a86fa787",
     ),
     "darwin-arm64": (
-        "audio-v0.7.2-bin-macos-arm64-metal.tar.gz",
-        "c01e4f82971bedbe341697e63a9cebd5a5d1f72d5a9bcb51a3191f95ddab7a95",
+        "audio-v0.7.4-bin-macos-arm64-metal.tar.gz",
+        "639926715b1cb537f82aa31656aabbae5d9a85ac36568c402026968f3072e2b3",
     ),
     "darwin-x64": (
-        "audio-v0.7.2-bin-macos-x64-metal.tar.gz",
-        "3862270f33439077225324169313f727064f727305b54d8ce920244d75ddcc24",
+        "audio-v0.7.4-bin-macos-x64-metal.tar.gz",
+        "bdb797d54dcf8416bd5ac0fac282ce5500dd08843f8f22e20e9fc378ebc24c1f",
     ),
+}
+_ASSET_SIZES = {
+    "windows-x64": 56_818_905,
+    "linux-x64": 71_551_673,
+    "darwin-arm64": 25_270_657,
+    "darwin-x64": 26_718_959,
 }
 
 #: Binary filename per platform.
@@ -291,8 +297,21 @@ def _probe_paths() -> list[Path]:
     user_dir = os.environ.get(DIR_ENV, "").strip()
     if user_dir:
         out.append(Path(user_dir) / binary_name())
+    out.append(managed_runtime_dir() / binary_name())
     out.append(_PKG_BIN_DIR / binary_name())
     return out
+
+
+def platform_slug() -> str:
+    """Stable release-platform key used by the managed runtime installer."""
+    return _platform_slug()
+
+
+def managed_runtime_dir() -> Path:
+    """Update-surviving location for the checksummed app-managed runtime."""
+    from core.config import DATA_DIR
+
+    return Path(DATA_DIR) / "engines" / "audio-cpp" / VERSION.lstrip("v") / _platform_slug()
 
 
 def is_installed() -> bool:
@@ -576,6 +595,11 @@ def default_asset() -> tuple[str, str] | None:
     return _ASSETS.get(_platform_slug())
 
 
+def default_asset_size() -> int | None:
+    """Published byte size of this host's pinned release archive."""
+    return _ASSET_SIZES.get(_platform_slug())
+
+
 def server_port() -> int:
     """Loopback port for the managed server (env override or default)."""
     raw = os.environ.get(PORT_ENV, "").strip()
@@ -725,9 +749,12 @@ __all__ = [
     "_materialize_gguf_cache_path",
     "binary_name",
     "default_asset",
+    "default_asset_size",
     "invalidate",
     "is_installed",
+    "managed_runtime_dir",
     "package_filename",
+    "platform_slug",
     "parse_device_list",
     "probe_devices",
     "resolve_compute_selection",

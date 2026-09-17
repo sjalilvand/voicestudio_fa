@@ -206,6 +206,18 @@ def test_a_successful_preload_clears_a_previous_failure(mm, monkeypatch):
         mm._set_loading("", "")
 
 
+def test_unloaded_model_does_not_publish_stale_ready_detail(mm, monkeypatch):
+    """An unload changes residency immediately; the previous successful load
+    detail must not leave clients with both idle and ready states."""
+    monkeypatch.setattr(mm, "model", None, raising=False)
+    mm._set_loading("ready", "Model ready", progress=100)
+    try:
+        status = mm.get_model_status()
+        assert status == {"loaded": False, "loading": False, "status": "idle"}
+    finally:
+        mm._set_loading("", "")
+
+
 def test_preload_oom_status_is_actionable_and_does_not_publish_allocator_details(
     mm, monkeypatch,
 ):

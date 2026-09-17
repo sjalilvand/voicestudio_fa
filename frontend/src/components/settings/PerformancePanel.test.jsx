@@ -55,7 +55,7 @@ describe('PerformancePanel', () => {
     });
   });
 
-  it('renders disabled with badge on non-Windows platforms (darwin)', async () => {
+  it('allows eager fallback on macOS', async () => {
     global.fetch = mockFetchSequence({
       status: 200,
       body: { enabled: false, platform: 'darwin' },
@@ -63,9 +63,9 @@ describe('PerformancePanel', () => {
     render(<PerformancePanel />);
     await waitFor(() => {
       const toggle = screen.getByTestId('torch-compile-toggle');
-      expect(toggle).toBeDisabled();
+      expect(toggle).not.toBeDisabled();
     });
-    expect(screen.getByText(/not needed on this platform/i)).toBeInTheDocument();
+    expect(screen.queryByText(/not needed on this platform/i)).not.toBeInTheDocument();
   });
 
   it('renders every user-facing string through i18n (en fallback)', async () => {
@@ -77,10 +77,10 @@ describe('PerformancePanel', () => {
     await waitFor(() => screen.getByTestId('torch-compile-toggle'));
     // Section title + row label resolve from settings.perf_* keys.
     expect(screen.getByText('Performance')).toBeInTheDocument();
-    expect(screen.getByText(/Disable torch\.compile \(Windows\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Falls back to eager mode/)).toBeInTheDocument();
+    expect(screen.getByText(/Disable torch\.compile/)).toBeInTheDocument();
+    expect(screen.getByText(/Uses eager execution/)).toBeInTheDocument();
     expect(screen.getByTestId('torch-compile-toggle')).toHaveAccessibleName(
-      /Disable torch\.compile \(Windows\)/,
+      /Disable torch\.compile/,
     );
   });
 
@@ -91,7 +91,7 @@ describe('PerformancePanel', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/boom|Failed to load/i);
   });
 
-  it('renders disabled on linux platform', async () => {
+  it('allows eager fallback on Linux', async () => {
     global.fetch = mockFetchSequence({
       status: 200,
       body: { enabled: false, platform: 'linux' },
@@ -99,7 +99,7 @@ describe('PerformancePanel', () => {
     render(<PerformancePanel />);
     await waitFor(() => {
       const toggle = screen.getByTestId('torch-compile-toggle');
-      expect(toggle).toBeDisabled();
+      expect(toggle).not.toBeDisabled();
     });
   });
 

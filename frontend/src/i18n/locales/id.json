@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "Gagal memuat pengaturan perangkat",
     "perf_save_failed": "Gagal menyimpan pengaturan",
     "generate_budget_title": "Anggaran waktu komputasi",
@@ -360,7 +361,10 @@
     "theme_auto": "Otomatis Sistem",
     "theme_light": "Terang",
     "reduce_motion": "Kurangi gerakan",
-    "reduce_motion_desc": "Menghentikan animasi latar dan transisi. Pengaturan sistem Anda tetap berlaku sendiri; ini menambahnya."
+    "reduce_motion_desc": "Menghentikan animasi latar dan transisi. Pengaturan sistem Anda tetap berlaku sendiri; ini menambahnya.",
+    "perf_torch_compile": "Nonaktifkan torch.compile",
+    "perf_torch_compile_note": "Menggunakan eksekusi langsung untuk menghindari kesalahan memori Triton.",
+    "perf_torch_compile_hint": "Menggunakan eksekusi langsung untuk menghindari kesalahan memori Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1552,6 +1556,7 @@
     "h_ago": "{{count}}jam yang lalu"
   },
   "setup": {
+    "ready_desc": "Anda siap membuat suara pertama. Atur dikte sekarang atau nanti di Pengaturan.",
     "welcome": "Selamat datang",
     "system_check": "Pemeriksaan sistem",
     "install_models": "Instal model",
@@ -1606,7 +1611,7 @@
     "choose_method": "Pilih cara memberi",
     "choose_method_amount": "Lanjutkan dengan ${{amount}}",
     "goal": {
-      "title": "Dana Claude Max",
+      "title": "Dukung pengembangan VoiceStudio",
       "of": "dari",
       "per_month": "/ bulan",
       "aria": "{{raised}} dari {{goal}} sasaran bulanan",
@@ -1615,7 +1620,7 @@
       "social_proof": "Bergabunglah dengan pendukung {{count}} yang mendanai AI lokal"
     },
     "postcard": {
-      "title": "Dana Claude Max",
+      "title": "Dukung pengembangan VoiceStudio",
       "lead_default": "Senang itu berhasil! VoiceStudio gratis dan sepenuhnya lokal. Jika ini menghemat waktu Anda, chip-in bulanan kecil akan mendanai Claude Max di belakangnya.",
       "lead_first_clone": "Klon suara pertama Anda selesai — bagus! VoiceStudio berjalan sepenuhnya di mesin Anda, dan dukungan Anda menjaganya tetap seperti itu.",
       "lead_tenth_dub": "Sepuluh sulih suara - Anda jelas berhasil. Chip-in bulanan kecil mendanai Claude Max yang mengirimkan fitur-fitur ini.",
@@ -2831,5 +2836,55 @@
   "player": {
     "pause": "Jeda",
     "play": "Putar"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Audio ucapan hilang atau tidak dapat dibaca. Buat ulang segmen terkait sebelum mengekspor.",
+    "timingOverflow": "Ucapan melebihi jatah waktunya. Persingkat terjemahan atau pilih slot ketat atau rentangkan video.",
+    "backgroundUnavailable": "Suara asli tidak dapat dipertahankan. Periksa pemisahan latar dan waktu dialog, lalu coba lagi, atau pilih ekspor suara saja."
+  },
+  "dubStyle": {
+    "label": "Instruksi gaya terjemahan",
+    "help": "Jelaskan nada, audiens, dan gaya adaptasi, misalnya pertahankan lelucon dan sesuaikan idiom secara alami. Disimpan dalam proyek untuk terjemahan dan penyesuaian durasi. Kosongkan untuk gaya bawaan."
+  },
+  "dubActivity": {
+    "output": "Terjemahan",
+    "waiting": "Belum ada keluaran yang diterima.",
+    "progress": "{{done}} / {{total}} segmen divalidasi",
+    "cancelled": "Dibatalkan",
+    "fitting": "Menyesuaikan waktu"
+  },
+  "sponsorSlot": {
+    "book": "Pesan slot Anda",
+    "preview": "Pratinjau sponsor",
+    "message": "Merek, situs web & pesan Anda",
+    "email_app": "Buka aplikasi email",
+    "copy_email": "Salin email",
+    "preview_detail": "Logo, tautan, dan perkenalan Anda bisa tampil di sini."
+  },
+  "supportPlans": {
+    "remove": "Hapus bilah sponsor",
+    "title": "Gratis vs Pro",
+    "free": "Gratis",
+    "pro": "Pro",
+    "sponsor_bar": "Bilah sponsor",
+    "visible": "Terlihat",
+    "hideable": "Dapat disembunyikan",
+    "unavailable": "Aktivasi Pro belum dikonfigurasi.",
+    "telemetry": "Telemetri",
+    "opt_in": "Opsional, dengan persetujuan",
+    "disabled": "Dinonaktifkan",
+    "badge": "Lencana Pro",
+    "advanced": "Alat lanjutan",
+    "standard": "Standar",
+    "included": "Termasuk"
+  },
+  "integrationCatalog": {
+    "title": "Integrasi",
+    "featured": "Unggulan",
+    "description": "Temukan integrasi dan mitra unggulan."
+  },
+  "directoryExamples": {
+    "example": "Contoh direktori",
+    "notice": "Hanya contoh direktori — bukan sponsor atau integrasi yang terhubung."
   }
 }
