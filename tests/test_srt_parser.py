@@ -374,8 +374,9 @@ def test_numeric_only_cue_after_invalid_cue_is_not_discarded():
 
 
 @pytest.mark.parametrize('header', ['NOTE', 'NOTE translator notes', 'NOTE\ttranslator notes', 'STYLE', 'REGION'])
-def test_webvtt_metadata_timestamps_never_become_dialogue(header):
-    text = f'WEBVTT\n\n{header}\nMetadata content\n00:00.000 --> 00:02.000\nMetadata only\n\ncue\n00:03.000 --> 00:04.000\nReal dialogue\n'
+@pytest.mark.parametrize('separator', ['\n\n', '\n\n \n', '\n \n\n'])
+def test_webvtt_metadata_timestamps_never_become_dialogue(header, separator):
+    text = f'WEBVTT{separator}{header}\nMetadata content\n00:00.000 --> 00:02.000\nMetadata only\n\ncue\n00:03.000 --> 00:04.000\nReal dialogue\n'
     result = parse_srt(text)
     assert [cue['text'] for cue in result.segments] == ['Real dialogue']
     assert result.segments[0]['start'] == 3
