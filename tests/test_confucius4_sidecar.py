@@ -231,3 +231,59 @@ def test_load_model_falls_back_when_accelerator_probe_raises(sc, monkeypatch, le
     sc._load_model(io.BytesIO())
     constructor.assert_called_once_with(config_path="fixture.yaml", device="cpu")
     assert probe.call_count == 1
+
+
+# ── CWD anchoring (#2099) ────────────────────────────────────────────────
+
+
+def test_chdir_anchors_cwd_to_clone_dir(sc, monkeypatch, tmp_path):
+    """Upstream's inference_config.yaml uses './checkpoints/...' relative
+    paths; without chdir they resolve against the parent process and the
+    sidecar crashes with FileNotFoundError on the weights (#2099).
+    """
+    monkeypatch.setenv("OMNIVOICE_CONFUCIUS4_TTS_DIR", str(tmp_path))
+    original = os.getcwd()
+    try:
+        sc._chdir_to_clone_if_available()
+        assert os.path.realpath(os.getcwd()) == os.path.realpath(str(tmp_path))
+    finally:
+        os.chdir(original)
+
+
+def test_chdir_noop_without_clone_dir(sc, monkeypatch):
+    """When the user has not configured a clone, cwd must be left alone."""
+    monkeypatch.delenv("OMNIVOICE_CONFUCIUS4_TTS_DIR", raising=False)
+    original = os.getcwd()
+    sc._chdir_to_clone_if_available()
+    assert os.getcwd() == original
+
+
+def test_chdir_noop_when_clone_dir_missing(sc, monkeypatch, tmp_path):
+    """A bogus clone path must not raise — the model load will fail loudly
+    on its own with a clearer error than 'cwd does not exist'."""
+    monkeypatch.setenv("OMNIVOICE_CONFUCIUS4_TTS_DIR", str(tmp_path / "does-not-exist"))
+    original = os.getcwd()
+    sc._chdir_to_clone_if_available()
+    assert os.getcwd() == original
+
+
+# ── Adapter: ref_audio is required (#2099) ────────────────────────────────
+
+
+def test_adapter_generate_requires_ref_audio(monkeypatch):
+    """The pinned Confucius4 upstream ``generate`` requires ``prompt_wav``;
+    surface that constraint at the adapter boundary so the UI sees a clear
+    message instead of a stack traceback that mentions ``prompt_wav``
+    without saying why.
+    """
+    import os as _os, sys as _sys
+    backend_root = _os.path.join(
+        _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "backend"
+    )
+    if backend_root not in _sys.path:
+        _sys.path.insert(0, backend_root)
+    from engines.confucius4 import Confucius4Backend
+
+    backend = Confucius4Backend()
+    with pytest.raises(RuntimeError, match="prompt_wav"):
+        backend.generate("anything")
