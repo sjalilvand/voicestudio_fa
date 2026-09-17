@@ -16,6 +16,10 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
 
+### Fixed
+
+- Parse pasted WebVTT cues without treating mid-sentence timestamps as subtitle records (#2077) — thanks @kevin9327!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**
@@ -70,7 +74,6 @@ the frozen-backend fallback mirror it for their toolchains.
 - Video previews show their thumbnail before playback, including the source video in Dub (#2129)
 - Linux and Windows workspace headers consistently expand and collapse the sidebar, with the app logo at the top of the collapsed rail (#2129)
 - Stopping a process on macOS no longer fails with "Operation not permitted" when it was already exiting (#2032)
-- A WebVTT file loaded into Paste translation maps its cues, instead of its timing lines, cue labels or notes (#2077)
 - A YouTube link blocked by its "not a bot" check now says how to attach signed-in cookies in Dub, instead of quoting yt-dlp's command-line flags (#2036, #2034)
 - An engine that fails to start now says whether it timed out, crashed (with its exit code and last output) or answered wrongly, instead of "did not signal ready: None" (#2037, #2026)
 - Transcribing an M4A file with PyTorch Whisper works, instead of failing with "Format not recognised" (#2042, #2039)

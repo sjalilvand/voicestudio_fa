@@ -426,3 +426,8 @@ describe('DubPasteTranslationDialog', () => {
     expect(screen.getByRole('button', { name: /Apply/i })).toBeDisabled();
   });
 });
+
+
+it('keeps an hourless timestamp embedded in prose as plain text', () => {
+  expect(detectPasteMode('Continue at 01:30.000 --> the finale')).toBe('plain');
+});

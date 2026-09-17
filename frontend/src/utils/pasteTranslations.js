@@ -26,7 +26,7 @@
 // A timing line, e.g. `00:00:01,000 --> 00:00:04,500` (`.` ms separator,
 // missing leading zeros and WebVTT's hourless `00:01.000` allowed — mirrors
 // backend/services/srt_parser.py).
-const TIMING_RE = /(?:\d{1,2}:)?[0-5]?\d:[0-5]?\d[,.]\d{1,3}\s*-->/;
+const TIMING_RE = /^[^\S\n]*(?:\d{1,2}:)?[0-5]?\d:[0-5]?\d[,.]\d{1,3}[^\S\n]*-->/m;
 
 // `1. text` / `2) text` / `[3] text` / `4 - text` / `5: text`.
 const NUMBERED_RE = /^\s*(?:\[\s*(\d{1,5})\s*\]|\(\s*(\d{1,5})\s*\)|(\d{1,5}))\s*[.):\-—]?\s+(.*)$/;
