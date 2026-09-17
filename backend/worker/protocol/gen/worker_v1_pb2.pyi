@@ -194,20 +194,22 @@ class RegisterResponse(_message.Message):
     def __init__(self, envelope: _Optional[_Union[Envelope, _Mapping]] = ..., worker_id: _Optional[str] = ..., session_token: _Optional[str] = ..., session_epoch: _Optional[int] = ..., protocol_version: _Optional[int] = ..., session_expires_at_unix: _Optional[int] = ..., heartbeat_interval_seconds: _Optional[int] = ..., authoritative_in_flight: _Optional[_Iterable[_Union[TaskRef, _Mapping]]] = ..., error: _Optional[_Union[Error, _Mapping]] = ...) -> None: ...
 
 class Heartbeat(_message.Message):
-    __slots__ = ("envelope", "active_tasks", "available_slots", "resident_models", "free_memory_bytes", "cpu_percent")
+    __slots__ = ("envelope", "active_tasks", "available_slots", "resident_models", "free_memory_bytes", "cpu_percent", "gpu_utilization_percent")
     ENVELOPE_FIELD_NUMBER: _ClassVar[int]
     ACTIVE_TASKS_FIELD_NUMBER: _ClassVar[int]
     AVAILABLE_SLOTS_FIELD_NUMBER: _ClassVar[int]
     RESIDENT_MODELS_FIELD_NUMBER: _ClassVar[int]
     FREE_MEMORY_BYTES_FIELD_NUMBER: _ClassVar[int]
     CPU_PERCENT_FIELD_NUMBER: _ClassVar[int]
+    GPU_UTILIZATION_PERCENT_FIELD_NUMBER: _ClassVar[int]
     envelope: Envelope
     active_tasks: int
     available_slots: int
     resident_models: _containers.RepeatedScalarFieldContainer[str]
     free_memory_bytes: int
     cpu_percent: float
-    def __init__(self, envelope: _Optional[_Union[Envelope, _Mapping]] = ..., active_tasks: _Optional[int] = ..., available_slots: _Optional[int] = ..., resident_models: _Optional[_Iterable[str]] = ..., free_memory_bytes: _Optional[int] = ..., cpu_percent: _Optional[float] = ...) -> None: ...
+    gpu_utilization_percent: float
+    def __init__(self, envelope: _Optional[_Union[Envelope, _Mapping]] = ..., active_tasks: _Optional[int] = ..., available_slots: _Optional[int] = ..., resident_models: _Optional[_Iterable[str]] = ..., free_memory_bytes: _Optional[int] = ..., cpu_percent: _Optional[float] = ..., gpu_utilization_percent: _Optional[float] = ...) -> None: ...
 
 class TaskAccepted(_message.Message):
     __slots__ = ("ref", "envelope")

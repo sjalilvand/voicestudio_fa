@@ -286,3 +286,9 @@ B
         assert seg["id"] == i
         assert seg["text"] == seg["text_original"]
         assert seg["speaker_id"] == "Speaker 1"
+
+
+@pytest.mark.parametrize("first_index", ["", "1\n"])
+def test_mixed_indexed_and_unindexed_cues_preserve_numbers(first_index):
+    text = first_index + "00:00:01,000 --> 00:00:02,000\n42\n\n2\n00:00:03,000 --> 00:00:04,000\n1999\n\n00:00:05,000 --> 00:00:06,000\n3\n2\n1\n"
+    assert [x["text"] for x in parse_srt(text).segments] == ["42", "1999", "3\n2\n1"]

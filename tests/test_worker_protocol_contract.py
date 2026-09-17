@@ -291,11 +291,10 @@ def test_capability_carries_per_engine_routing_and_memory(proto):
     assert "uint64 free_memory_bytes" in body
 
 
-def test_heartbeat_does_not_promise_gpu_utilisation(proto):
-    """Unobtainable on Apple without sudo powermetrics and absent on CUDA
-    without a new NVML dependency. Slots and queue depth are the load signal."""
+def test_heartbeat_optionally_reports_gpu_utilisation(proto):
+    """NVML-capable workers report utilisation; other workers omit it."""
     body = _message_body(proto, "Heartbeat")
-    assert not re.search(r"\bgpu_utilization|gpu_util\b", body)
+    assert "optional double gpu_utilization_percent = 7;" in body
     assert "available_slots" in body
 
 

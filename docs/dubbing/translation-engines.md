@@ -234,3 +234,5 @@ panels instead so neither editor becomes unusably small.
   from-source checkout.
 - **Installed it but still "needs install"** — restart the backend so Python
   picks up the newly-installed module.
+
+Subtitle import preserves numeric dialogue such as years and countdowns, including files mixing numbered and unnumbered cues. Cue numbers are removed only at identified cue boundaries.

@@ -18,6 +18,7 @@ const routes = [
   '/audiobook',
   '/projects',
   '/tools',
+  '/integrations',
   '/settings/general',
   '/settings/appearance',
   '/settings/models',

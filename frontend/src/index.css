@@ -5279,7 +5279,7 @@ button.dub-stepper__action:focus-visible {
 
 /* ═══ from src/components/donate/DonateGoal.css ═══ */
 /* ════════════════════════════════════════════════════════════════════════
-   "Fund Claude Max" goal bar + Pip mascot (spec 007).
+   "Support VoiceStudio development" goal bar + Pip mascot (spec 007).
    Reuses real design tokens from index.css / tokens.css:
    --chrome-*, --space-*, --ease-spring, --font-serif, --chrome-font-mono.
    ════════════════════════════════════════════════════════════════════════ */
@@ -5409,7 +5409,7 @@ button.dub-stepper__action:focus-visible {
 
 /* ═══ from src/components/donate/Postcard.css ═══ */
 /* ════════════════════════════════════════════════════════════════════════
-   "Fund Claude Max" kawaii postcard toast (spec 007, Phase 2).
+   "Support VoiceStudio development" kawaii postcard toast (spec 007, Phase 2).
    Non-blocking — lives in the toast layer, no backdrop, never covers results.
    Uses real tokens: --chrome-*, --space-*, --ease-spring, --z-toast.
    ════════════════════════════════════════════════════════════════════════ */

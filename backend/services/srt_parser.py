@@ -57,14 +57,10 @@ def _is_index_line(line: str) -> bool:
 
 
 def _uses_index_lines(text: str, first_timing_start: int) -> bool:
-    """Whether this file numbers its cues, decided once from the preamble.
+    """Initial numbering hint for lenient files without blank separators.
 
-    A SubRip file opens with the first cue's index; an index-less export
-    opens with the timing line itself. Files don't mix the two styles, so
-    one look at what precedes the first timing line settles it for the
-    whole parse — and settling it globally is the point: deciding per-cue
-    means guessing from a body, and a body of "42" is indistinguishable
-    from an index.
+    Later cue boundaries are also inspected: mixed indexed/unindexed files
+    must not leak index lines or delete numeric dialogue.
     """
     head = text[:first_timing_start]
     for line in reversed(head.split("\n")):
@@ -120,18 +116,16 @@ def parse_srt(content: str) -> SrtParseResult:
         body_start = m.end()
         has_next = i + 1 < len(matches)
         body_end = matches[i + 1].start() if has_next else len(text)
-        body = text[body_start:body_end].strip("\n")
-        # Give back exactly the one index line the slice above swallowed:
-        # a single line, only when a next cue exists to own it, and only in
-        # a file that indexes its cues at all. Anything looser eats real
-        # dialogue — subtitles are full of numeric-only lines (a year, a
-        # score, a street number, a "3 / 2 / 1" countdown). The old rule
-        # popped *every* trailing digit line unconditionally, so the last
-        # cue of a file ("1999") vanished outright and an index-less export
-        # quietly lost its closing number.
-        lines = body.split("\n")
-        if indexed and has_next and lines and _is_index_line(lines[-1]):
-            lines.pop()
+        body = text[body_start:body_end]
+        # An index must directly precede the next timing line. A blank line
+        # AFTER a number instead marks that number as preceding dialogue.
+        marker = re.search(r"(?:^|\n)([ \t]*[0-9]+[ \t]*)\n?[ \t]*\Z", body) if has_next else None
+        if marker:
+            before = body[:marker.start(1)]
+            separated = bool(re.search(r"\n[ \t]*\n[ \t]*$", before))
+            if separated or indexed:
+                body = before
+        lines = body.strip("\n").split("\n")
         cue_text = "\n".join(line.strip() for line in lines if line.strip())
         if not cue_text:
             skipped += 1
