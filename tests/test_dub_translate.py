@@ -12,6 +12,47 @@ def test_translate_codes_cover_popular_iso():
         assert code in TRANSLATE_CODES, f"{code} missing from TRANSLATE_CODES"
 
 
+@pytest.mark.parametrize("raw,expected", [
+    # Already-normal ISO 639-1 codes pass through.
+    ("zh", "zh"),
+    ("en", "en"),
+    # BCP-47 tags with a region/script suffix strip to the base language.
+    ("zh-CN", "zh"),
+    ("cmn-Hans", "zh"),
+    # Human / display names from the dub UI's own label list.
+    ("Chinese", "zh"),
+    ("Chinese (Simplified)", "zh"),
+    ("Mandarin", "zh"),
+    # Three-letter ISO 639-2 / bibliographic codes used by some asset pipelines.
+    ("zho", "zh"),
+    # Legacy / deprecated ISO 639-1 codes still seen in older corpora.
+    ("in", "id"),  # Indonesian: pre-1989 code 'in' → modern 'id'.
+    ("iw", "he"),  # Hebrew: pre-1989 code 'iw' → modern 'he'.
+    # ISO 639-2/T for Tagalog, frequently shipped under the 'fil' label.
+    ("fil", "tl"),
+    # Leading / trailing whitespace is stripped before lookup, mirroring how
+    # the function tolerates the trailing space some clients append.
+    ("  zh  ", "zh"),
+    ("\ncmn-Hans\t", "zh"),
+])
+def test_argos_lang_code_normalizes_names_and_bcp47(raw, expected):
+    from services.translation_engines import argos_lang_code
+    assert argos_lang_code(raw) == expected
+
+
+@pytest.mark.parametrize("raw", ["", " ", "\t\n", "Chinese ("])
+def test_argos_lang_code_rejects_invalid_inputs(raw):
+    from services.translation_engines import argos_lang_code
+    # Two distinct input shapes both fail user-facing validation:
+    #   - empty / whitespace-only -> nothing left after strip() -> regex rejects
+    #   - "Chinese ("             -> looks like a label, not a code -> regex rejects
+    # In both cases the caller should see the actionable error message instead
+    # of a silently-empty language token that would later produce a confusing
+    # "no Argos package available for en -> " failure (the bug #2140 reports).
+    with pytest.raises(ValueError, match="Choose a valid source and target language"):
+        argos_lang_code(raw)
+
+
 def test_flores_codes_cover_core_languages():
     from api.routers.dub_translate import FLORES_CODES
     for code in ('en', 'de', 'es', 'fr', 'hi', 'ja'):
@@ -804,3 +845,40 @@ async def test_argos_native_loader_error_does_not_expose_paths(monkeypatch):
     assert response.status_code == 400
     assert private.encode() not in response.body
     assert b'CTranslate2' in response.body and b'reinstall' in response.body
+
+
+@pytest.mark.parametrize("raw", ["Chinese (Traditional)", "zh-TW", "zh-Hant", "cmn-Hant", "zho_Hant", "zh-HK", "zh-MO"])
+def test_argos_does_not_silently_change_chinese_script(raw):
+    from services.translation_engines import argos_lang_code
+    with pytest.raises(ValueError, match="Traditional Chinese.*NLLB"):
+        argos_lang_code(raw)
+
+
+@pytest.mark.parametrize("raw", ["zh_CN", "cmn_Hans", "zho_CN"])
+def test_argos_underscore_locales(raw):
+    from services.translation_engines import argos_lang_code
+    assert argos_lang_code(raw) == "zh"
+
+
+@pytest.mark.asyncio
+async def test_argos_batch_retry_reports_unsupported_script(tmp_path, monkeypatch):
+    from api.routers import batch
+    from services import asr_backend, translation_engines
+    from fastapi import HTTPException
+    source = tmp_path / "source.mp4"
+    source.touch()
+    monkeypatch.setattr(batch, "_jobs", {"retry-script": {
+        "status": "failed", "video_path": str(source), "source_lang": "en",
+        "langs": ["zh-TW"], "translation_provider": "argos",
+    }})
+    monkeypatch.setattr(batch, "_batch_voice", lambda value: None)
+    monkeypatch.setattr(asr_backend, "asr_model_missing_error", lambda: None)
+    monkeypatch.setattr(translation_engines, "is_ready", lambda provider: True)
+    def packs(source, targets):
+        for target in targets:
+            translation_engines.argos_lang_code(target)
+    monkeypatch.setattr(translation_engines, "argos_pack_status", packs)
+    with pytest.raises(HTTPException) as err:
+        await batch.retry_batch_job("retry-script")
+    assert err.value.status_code == 422
+    assert "NLLB" in err.value.detail

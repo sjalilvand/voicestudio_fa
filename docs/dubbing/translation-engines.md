@@ -254,3 +254,6 @@ SRT and WebVTT exports round each cue timestamp once to the nearest millisecond,
 Paste translation accepts WebVTT files with hourless timestamps. Only timing records at line starts activate timestamp matching; timestamp-like text inside a sentence remains dialogue.
 
 Subtitle import preserves numeric dialogue such as years and countdowns, including files mixing numbered and unnumbered cues. Cue numbers are removed only at identified cue boundaries.
+
+
+Argos accepts Chinese/Simplified Chinese names, Mandarin aliases, and language tags such as `zh-CN`. Traditional Chinese requests (`zh-TW`, `zh-Hant`, and the display name) are rejected explicitly; select NLLB for Traditional Chinese rather than silently receiving a different script.
