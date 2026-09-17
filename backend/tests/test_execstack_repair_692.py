@@ -213,3 +213,24 @@ def test_isolated_probe_checks_repair_before_import(monkeypatch):
     monkeypatch.setattr(execstack, "ensure_ctranslate2_loadable", lambda: (False, "repair blocked"))
     ok, detail = IsolatedFasterWhisperBackend.is_available()
     assert not ok and "repair blocked" in detail
+
+
+def test_repair_uses_host_locking_capability_when_target_platform_is_emulated(tmp_path, monkeypatch):
+    import builtins
+    import os
+    from types import SimpleNamespace
+
+    lib = _elf(tmp_path / 'libctranslate2-test.so', flags=0x7)
+    monkeypatch.setattr(execstack.sys, 'platform', 'linux')
+    monkeypatch.setattr(execstack, 'os', SimpleNamespace(**{**vars(os), 'name': 'nt'}))
+    original_import = builtins.__import__
+
+    def windows_import(name, *args, **kwargs):
+        if name == 'fcntl':
+            raise ModuleNotFoundError('fcntl is unavailable on Windows')
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, '__import__', windows_import)
+    changed, _ = execstack.clear_execstack(lib)
+    assert changed
+    assert execstack.has_execstack(lib) is False
