@@ -8,15 +8,34 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ## [Unreleased]
 
+## [0.5.4] — 2026-09-17
+
+**More reliable setup, generation, and dubbing.** This patch detects incomplete desktop runtimes before startup, repairs them without overwriting an existing Tauri installation, and makes engine failures easier to recover from. It also fixes gated model downloads, subtitle imports, and saved-voice language errors.
+
+**Download**
+
+| Platform | Installer |
+| --- | --- |
+| Windows x64 | [Installer](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-win-x64.exe) |
+| macOS Apple Silicon | [DMG](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-mac-arm64.dmg) |
+| macOS Intel | [DMG](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-mac-x64.dmg) |
+| Linux x64 | [AppImage](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-linux-x64.AppImage) · [deb](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-linux-x64.deb) |
+
+Already using Electron? Install over your existing app and keep your data. Moving from Tauri? Back up your data directory with the app closed, install Electron, then verify your voices and projects before removing Tauri. Follow the [migration guide](https://github.com/debpalash/VoiceStudio/blob/v0.5.4/docs/electron-migration.md). Tauri v0.5.3 remains the final Tauri release; its updater cannot install Electron.
+
 **Highlights**
 
-- More reliable engine installation, transcription, and sidecar recovery (#2165, #2109, #2111)
+- Repair incomplete Electron runtimes and recover gated model downloads (#2179, #2173)
+- More reliable transcription, engine deadlines, and dubbing streams (#2165, #2109, #2111, #2138)
 - Preserve subtitle text and legacy manuscript encodings across desktop and web (#2077, #2151, #2073)
-- Clearer setup guidance and media failure diagnostics (#2166, #2167)
+- Clear language guidance and capability checks before voice generation (#2172, #2174, #2175)
 
 ### Fixed
 
-- Name the voice profile when its saved language is one the active engine can't speak, instead of advising a language picker already set to Auto (#2175, #2156) — thanks @shivsin25!
+- Forward saved Hugging Face tokens when downloading gated model weights and dependencies (#2173) — thanks @shivsin25!
+- Explain unsupported saved-profile languages consistently in Electron, web, and streaming generation (#2175) — thanks @shivsin25!
+- List every installed Kokoro language and accept its displayed name, including British English (#2174) — thanks @paranoyouz-collab!
+
 - Validate Python dependencies before reusing a desktop runtime and offer setup for incomplete environments (#2176)
 - Check active model cloning support before starting voice conversion (#2147)
 - Accept both valid SIGKILL diagnostics in the desktop lifecycle regression check (#2170)
@@ -41,11 +60,31 @@ the frozen-backend fallback mirror it for their toolchains.
 - Correct the Windows Rustup installation command in tooling and documentation (#2066) — thanks @Rukhaam!
 - Show local setup guidance when remote native engine installation is unavailable (#2166)
 - Show scrubbed native error tails and exit codes for failed dubbing extraction (#2167)
-- Name every language the installed Kokoro table supports when rejecting an unsupported one (#2174) — thanks @paranoyouz-collab and @raya-mansouri!
 
 ### CI
 
 - Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
+
+### Contributors
+
+- @D3nii — compatibility with CPUs unsupported by newer pedalboard wheels.
+- @LMGXENON — engine deadlines, timeout diagnostics, and Apple Silicon build documentation.
+- @Moep90 — audio I/O fallbacks and GPU compatibility guidance.
+- @Rukhaam — Windows toolchain setup guidance.
+- @Shivendra-Coherent and @shivsin25 — numeric subtitle dialogue, gated downloads, and profile-language errors.
+- @SurefireStudios — request-sized sidecar generation deadlines.
+- @basil-k-aji-dev — cuDNN compatibility libraries in CUDA containers.
+- @denemon — dubbing stream keepalives and cancellation cleanup.
+- @guruthechosen — CTranslate2 repair and Whisper CPU recovery.
+- @gyanu2507 and @rollroyces — Argos language normalization and regression coverage.
+- @kapelame — ffprobe discovery and MLX audio resampling.
+- @kevin9327 — subtitle timing, text encodings, WebVTT, and Windows database migrations.
+- @paranoyouz-collab — Kokoro supported-language reporting.
+- @debpalash — integration, Electron runtime recovery, localization, regression coverage, and release maintenance.
+
+### Bug reports
+
+- Thanks to @YChhunsann, @martinezpl, @denemon, @adeelahmadsiddique, @TehSmoo, @kmsitcomputer, @raya-mansouri, @infinitete, and @kor1998 for the reports behind the fixes above.
 
 ## [0.5.3] — 2026-09-17
 
