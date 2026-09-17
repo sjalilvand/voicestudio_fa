@@ -75,3 +75,6 @@ See also: [benchmarks.md](../benchmarks.md),
 [languages.md](../languages.md),
 [downloading-models.md](../downloading-models.md),
 [disk usage](disk-usage.md).
+
+Consecutive chunks with the same native sample rate are resampled together to
+preserve filter context at chunk boundaries; rate changes start a new group.

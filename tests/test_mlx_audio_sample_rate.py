@@ -51,3 +51,23 @@ def test_raw_audio_without_rate_metadata_keeps_the_existing_contract(backend):
     audio = _tone(24000)
     backend._model = SimpleNamespace(generate=lambda **kwargs: iter([audio]))
     np.testing.assert_array_equal(backend.generate("Hello")[0].numpy(), audio)
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize("rates", [(44100, 44100), (44100, 44100, 48000, 48000)])
+def test_contiguous_chunks_share_resampling_context(backend, fallback, rates):
+    import torch
+    import torchaudio
+    pieces = [_tone(rate)[:101] for rate in rates]
+    def generate(**kwargs):
+        if fallback and "voice" in kwargs:
+            raise TypeError("unsupported voice")
+        for audio, rate in zip(pieces, rates):
+            yield SimpleNamespace(audio=audio, sample_rate=rate)
+    backend._model = SimpleNamespace(generate=generate)
+    expected = []
+    for start in range(0, len(rates), 2):
+        joined = torch.from_numpy(np.concatenate(pieces[start:start + 2]))
+        expected.append(torchaudio.functional.resample(joined, rates[start], 24000))
+    np.testing.assert_allclose(backend.generate("chunks", voice="speaker")[0].numpy(),
+                               torch.cat(expected).numpy(), atol=1e-6)
