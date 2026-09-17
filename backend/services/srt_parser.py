@@ -125,10 +125,11 @@ def parse_srt(content: str) -> SrtParseResult:
                 marker_lines.pop()
             marker = marker_lines[-1].strip(" \t") if marker_lines else ""
             numeric = bool(marker) and marker.isascii() and marker.isdecimal()
-            separated = len(marker_lines) > 1 and not marker_lines[-2].strip()
+            separated = len(marker_lines) > 2 and not marker_lines[-2].strip()
             expected_index = cue_index + 1 if cue_index is not None else i + 2
             expected = marker.lstrip("0") == str(expected_index)
-            if numeric and expected and (cue_index is not None or separated):
+            has_dialogue = any(line.strip() for line in marker_lines[:-1])
+            if numeric and expected and (has_dialogue or separated) and (cue_index is not None or separated):
                 body = "\n".join(marker_lines[:-1])
                 next_index = expected_index
         cue_index = next_index
