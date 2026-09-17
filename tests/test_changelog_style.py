@@ -1,8 +1,8 @@
 """CHANGELOG.md quiet-style linter — deterministic CI for the release-notes rule.
 
 CLAUDE.md, "Release notes / changelog" (hard rule, owner-restyled 2026-07-17):
-sections are **quiet and scannable** — a short `**Highlights**` bullet list
-first, then `### Changed` / `### Added` / … subsections where each entry is a
+change entries are **quiet and scannable** — an optional tagged-release
+introduction may precede the short `**Highlights**` bullet list, followed by `### Changed` / `### Added` / … subsections where each entry is a
 single one-liner carrying its `(#NNN)` ref and `— thanks @user!` credit where
 applicable. No multi-line paragraphs, no raw commit dumps.
 
