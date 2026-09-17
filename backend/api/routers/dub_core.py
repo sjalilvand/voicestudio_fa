@@ -881,6 +881,30 @@ POST_ASR_PING_S = 5.0
 _sse_event = dub_pipeline.sse_event
 
 
+class _ASRWorkLifetime:
+    """Keep model cleanup behind native work even after its waiter is cancelled."""
+
+    def __init__(self):
+        import threading
+        self._lock = threading.Lock()
+        self._closed = threading.Event()
+
+    def run(self, fn):
+        with self._lock:
+            if self._closed.is_set():
+                raise RuntimeError("Transcription stream has ended")
+            return fn()
+
+    def stop(self):
+        # Reject queued work before it can touch an unloaded model.
+        self._closed.set()
+
+    def cleanup(self, fn):
+        self.stop()
+        with self._lock:
+            return fn()
+
+
 async def _ping_while(fut):
     """Yield `ping` events every POST_ASR_PING_S until ``fut`` settles.
 
@@ -891,8 +915,8 @@ async def _ping_while(fut):
     Leaving early — the client disconnected, or the body raised at a `yield` —
     cancels ``fut`` exactly as a bare ``await fut`` would have, so a wrapped
     run_transcribe_guarded still runs its abandon path instead of refining on
-    while the stream's finalizer unloads the ASR model under it (greptile P1,
-    #2138). Nothing is awaited in the finally: it also runs under GeneratorExit.
+    after disconnection. Native threads are not cancelled by Future.cancel();
+    _ASRWorkLifetime orders model cleanup behind their actual completion. Nothing is awaited in the finally: it also runs under GeneratorExit.
     A failure that lands after we left is still marked retrieved, so it cannot
     surface later as "exception was never retrieved" (CodeRabbit, #2138) —
     the same done-callback the TTS-load keepalive uses.
@@ -1080,6 +1104,7 @@ async def dub_transcribe_stream(
     # _gen_body parks the loaded backend here; the normal unload clears it;
     # gen()'s `finally` unloads whatever is still parked, on EVERY exit.
     _loaded_asr: dict = {"backend": None}
+    _asr_work = _ASRWorkLifetime()
     # Same shape, same reason, for the TTS offload (#1191): offload_tts_for_asr()
     # moves the TTS model to CPU, and only _gen_body's success path moved it
     # back — so an abort/error/disconnect stranded it there, silently making
@@ -1482,7 +1507,7 @@ async def dub_transcribe_stream(
             for _attempt in range(1, _CHUNK_TRANSCRIBE_ATTEMPTS + 1):
                 # Run as a task and poll so pings keep the EventSource alive.
                 task = asyncio.ensure_future(run_transcribe_guarded(
-                    _gpu_pool, _transcribe_chunk,
+                    _gpu_pool, lambda: _asr_work.run(_transcribe_chunk),
                     what=f"Dub chunk {i + 1}/{chunks_n}",
                     timeout=transcribe_timeout_s,
                     timeout_env=transcribe_timeout_env,
@@ -1911,6 +1936,8 @@ async def dub_transcribe_stream(
                 payload["speaker_hint"] = diar_warning["speaker_hint"]
             yield _sse_event("warning", payload)
 
+        from services.segmentation import deduplicate_chunk_segments
+        final_segs = deduplicate_chunk_segments(final_segs)
         job["segments"] = final_segs
 
         # Auto-speaker-clone: sample each detected speaker's voice from the
@@ -1972,7 +1999,7 @@ async def dub_transcribe_stream(
                     try:
                         fut_refine = asyncio.ensure_future(run_transcribe_guarded(
                             _gpu_pool,
-                            lambda: refine_ref_texts(clones, _asr_backend),
+                            lambda: _asr_work.run(lambda: refine_ref_texts(clones, _asr_backend)),
                             what="Dub clone ref-text refine",
                         ))
                         async for _ping in _ping_while(fut_refine):
@@ -2017,7 +2044,7 @@ async def dub_transcribe_stream(
                         try:
                             fut_refine = asyncio.ensure_future(run_transcribe_guarded(
                                 _gpu_pool,
-                                lambda: refine_ref_texts(seg_clones, _asr_backend),
+                                lambda: _asr_work.run(lambda: refine_ref_texts(seg_clones, _asr_backend)),
                                 what="Dub segment ref-text refine",
                             ))
                             async for _ping in _ping_while(fut_refine):
@@ -2077,7 +2104,7 @@ async def dub_transcribe_stream(
         # (CodeRabbit review, #1198 — normal-completion half).
         if _asr_backend:
             try:
-                fut_unload = loop.run_in_executor(_gpu_pool, _asr_backend.unload)
+                fut_unload = loop.run_in_executor(_gpu_pool, lambda: _asr_work.cleanup(_asr_backend.unload))
                 async for _ping in _ping_while(fut_unload):
                     yield _ping
                 fut_unload.result()
@@ -2131,6 +2158,7 @@ async def dub_transcribe_stream(
             yield _sse_event("error", stream_failure("transcription_failed"))
             yield _sse_event("done", {})
         finally:
+            _asr_work.stop()
             # Last-resort VRAM release (see _loaded_asr above): covers crashes,
             # early terminal-error returns, and client disconnects
             # (GeneratorExit bypasses the except, never this finally).
@@ -2156,7 +2184,7 @@ async def dub_transcribe_stream(
                 # (CodeRabbit review, #1198).
                 try:
                     _fut = asyncio.get_running_loop().run_in_executor(
-                        _gpu_pool, _b.unload
+                        _gpu_pool, lambda: _asr_work.cleanup(_b.unload)
                     )
                     # Restore the TTS model only AFTER the ASR weights are
                     # freed — the same ordering the success path enforces, so
@@ -2165,7 +2193,7 @@ async def dub_transcribe_stream(
                 except RuntimeError:
                     # No running loop (interpreter teardown) — best effort.
                     try:
-                        _b.unload()
+                        _asr_work.cleanup(_b.unload)
                     except Exception as e:
                         logger.warning("Failed to unload ASR backend: %s", e)
                     _submit_tts_restore()
@@ -2335,6 +2363,8 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
             raise
         if job.get("aborted"):
             raise HTTPException(status_code=499, detail="Transcription aborted")
+        from services.segmentation import deduplicate_chunk_segments
+        segments_result = deduplicate_chunk_segments(segments_result)
         job["segments"] = segments_result
         source_lang = job.get("source_lang")
         _save_job(job_id, job)

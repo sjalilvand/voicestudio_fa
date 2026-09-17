@@ -966,3 +966,33 @@ def test_ping_while_cancels_the_work_when_the_stream_closes_early(monkeypatch):
         assert not [m for m in never_retrieved if "never retrieved" in m], never_retrieved
 
     asyncio.run(_scenario())
+
+
+def test_stream_cleanup_waits_for_native_work_and_rejects_late_work():
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    from api.routers.dub_core import _ASRWorkLifetime
+    lifetime = _ASRWorkLifetime()
+    started, release, cleaned = threading.Event(), threading.Event(), threading.Event()
+    events = []
+    def native():
+        started.set()
+        assert release.wait(5)
+        events.append("native finished")
+    def cleanup():
+        events.append("unloaded")
+        cleaned.set()
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        work = pool.submit(lifetime.run, native)
+        assert started.wait(5)
+        lifetime.stop()
+        removal = pool.submit(lifetime.cleanup, cleanup)
+        try:
+            assert not cleaned.wait(0.05)
+        finally:
+            release.set()
+        work.result(timeout=5)
+        removal.result(timeout=5)
+    assert events == ["native finished", "unloaded"]
+    with pytest.raises(RuntimeError, match="stream has ended"):
+        lifetime.run(lambda: pytest.fail("late work accessed unloaded model"))

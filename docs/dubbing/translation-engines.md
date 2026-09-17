@@ -234,3 +234,5 @@ panels instead so neither editor becomes unusably small.
   from-source checkout.
 - **Installed it but still "needs install"** — restart the backend so Python
   picks up the newly-installed module.
+
+Dubbing transcription emits keepalives during quiet diarization, reference-refinement, and cleanup steps. Disconnecting stops queued model work; native calls already running retain their model until they finish, then cleanup restores TTS.

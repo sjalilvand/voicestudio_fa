@@ -1,12 +1,17 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-const mock = vi.hoisted(() => ({ open: vi.fn().mockResolvedValue(undefined) }));
+const mock = vi.hoisted(() => ({ open: vi.fn().mockResolvedValue(undefined), navigate: vi.fn() }));
 vi.mock('@/components/bridge', () => ({
   getBridge: () => ({ files: { openExternal: mock.open } }),
 }));
 vi.mock('react-i18next', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-i18next')>()),
   useTranslation: () => ({ t: (key: string) => key }),
+}));
+vi.mock('@tanstack/react-router', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@tanstack/react-router')>()),
+  useSearch: () => ({}),
+  useNavigate: () => mock.navigate,
 }));
 import { SupportSettings } from './support-settings';
 vi.mock('./donation-goal', () => ({ DonationGoal: () => null }));
@@ -36,10 +41,33 @@ it('opens only the explicit destination and applies selected amounts only to Pay
     'href',
     'https://github.com/debpalash/VoiceStudio/issues/new?template=sponsor.yml',
   );
-  const license = new URL(
-    screen.getByRole('link', { name: 'enterprise.request_quote' }).getAttribute('href')!,
+  fireEvent.click(screen.getByRole('button', { name: 'supportPlans.title' }));
+  expect(mock.navigate).toHaveBeenCalledWith({
+    to: '/settings/support',
+    search: { compare: true },
+  });
+});
+
+it('keeps contact and Pro actions visible and lets the donor clear an amount', () => {
+  render(<SupportSettings />);
+  expect(screen.getByRole('button', { name: 'supportPlans.title' })).toBeVisible();
+  expect(screen.getByRole('link', { name: 'contact.security_cta' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'donate.custom' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
   );
-  expect(license.protocol).toBe('mailto:');
-  expect(license.searchParams.get('subject')).toBe('VoiceStudio Commercial License Inquiry');
-  expect(license.searchParams.get('body')).toContain('Use case:');
+  const amount = screen.getByRole('button', { name: '$50' });
+  fireEvent.click(amount);
+  expect(amount).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(amount);
+  expect(amount).toHaveAttribute('aria-pressed', 'false');
+  expect(screen.getByRole('link', { name: 'PayPal' })).toHaveAttribute(
+    'href',
+    'https://paypal.me/palashCoder',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'donate.custom' }));
+  expect(screen.getByRole('link', { name: 'PayPal' })).toHaveAttribute(
+    'href',
+    'https://paypal.me/palashCoder',
+  );
 });

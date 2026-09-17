@@ -156,7 +156,7 @@ def set_performance_profile(body: _PerformanceProfileBody):
 
 
 class _TorchCompileBody(BaseModel):
-    enabled: bool = Field(..., description="True to set TORCH_COMPILE_DISABLE=1 on engine subprocesses")
+    enabled: bool = Field(..., description="True to disable torch.compile (eager mode) for the engine")
 
 
 def _torch_compile_state() -> dict:
@@ -170,15 +170,21 @@ def _torch_compile_state() -> dict:
 @router.get("/perf/torch-compile-disabled")
 def get_torch_compile_disabled():
     """Return the current torch.compile-disabled toggle + the runtime platform.
-    UI uses the platform to render the toggle disabled (with an explainer)
-    on non-Windows hosts, since the OOM is Windows-specific (issue #65)."""
+
+    `platform` is still reported (clients may show it), but since #2135 the
+    toggle is live on every host: it used to be rendered disabled off Windows
+    on the assumption that only #65's Windows OOM needed it, which left the
+    Linux/CUDA reporter of #2135 with no way to switch off the compile that
+    was killing their backend.
+    """
     return _torch_compile_state()
 
 
 @router.put("/perf/torch-compile-disabled")
 def set_torch_compile_disabled(body: _TorchCompileBody):
     """Persist the toggle. Honoured by `services.engine_env.build_engine_env()`
-    which injects TORCH_COMPILE_DISABLE=1 on Windows when enabled."""
+    (subprocess engines) and `services.engine_env.should_torch_compile()`
+    (in-process), on every platform since #2135."""
     from services import settings_store
 
     try:

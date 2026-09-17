@@ -1042,7 +1042,7 @@
     "perf_title": "Prestanda",
     "generate_timeout_cpu_note": "Används när genereringen körs på CPU:n. När den väl sparats här styr detta värde alltid CPU-generering — oberoende av den accelererade budgeten ovan.",
     "device_family_rocm": "AMD GPU (ROCm)",
-    "perf_torch_compile": "Inaktivera torch.compile (Windows)",
+    "perf_torch_compile": "Inaktivera torch.compile",
     "generate_timeout_shadowed_note": "En miljövariabel utanför VoiceStudio (skal, .env-fil eller container) anger just nu detta värde — värdet som sparats här ignoreras tills den variabeln tas bort.",
     "device_family_cpu": "CPU",
     "device_family_gpu": "GPU",
@@ -1907,6 +1907,7 @@
     "test_text": "Hej – det här är ett test av denna röst."
   },
   "nav": {
+    "voice": "Röst",
     "clone_short": "Klona",
     "workspaces": "Arbetsytor",
     "stories": "Berättelser",
@@ -1964,7 +1965,7 @@
     "dictation_replay": "Spela om",
     "dictation_transcribing": "Transkriberar...",
     "dubbing_title": "Se dubbning i aktion",
-    "dubbing_sync": "Synkroniserad uppspelning",
+    "dubbing_sync": "Synka uppspelningsposition",
     "dubbing_picker": "Prova ett annat språk:",
     "dubbing_cta": "Kör detta på din egen video →",
     "dubbing_loading": "Laddar dubbningsdemo...",
@@ -1980,6 +1981,7 @@
     "dictation_lede_hotkey_only": "Håll ner kortkommandot ovan var som helst på skrivbordet, tala, släpp — texten hamnar i appen med fokus. Tryck nu för att verifiera."
   },
   "setup": {
+    "ready_desc": "Du kan nu skapa din första röst. Ställ in diktering nu eller senare i Inställningar.",
     "system_preflight": "System preflight",
     "system_check_desc": "Probe RAM, disk, GPU, ffmpeg och nätverk. Blockerare flaggas i förväg så att du vet innan du laddar ner.",
     "probing": "Undersökningssystem...",
@@ -2072,7 +2074,7 @@
     "choose_method": "Välj hur du ska ge",
     "choose_method_amount": "Fortsätt med ${{amount}}",
     "goal": {
-      "title": "Fond Claude Max",
+      "title": "Stöd utvecklingen av VoiceStudio",
       "of": "av",
       "per_month": "/ månad",
       "aria": "{{raised}} av {{goal}} månadsmål",
@@ -2081,7 +2083,7 @@
       "social_proof": "Gå med i {{count}}-supportrar som finansierar lokal AI"
     },
     "postcard": {
-      "title": "Fond Claude Max",
+      "title": "Stöd utvecklingen av VoiceStudio",
       "lead_default": "Kul att det fungerade! VoiceStudio är gratis och helt lokalt. Om det sparar tid, finansierar ett litet månatligt chip-in Claude Max bakom det.",
       "lead_first_clone": "Din första röstklon är klar – trevligt! VoiceStudio körs helt och hållet på din maskin, och din support håller det så.",
       "lead_tenth_dub": "Tio dubbar in — du sätter helt klart igång det. Ett litet månatligt chip-in finansierar Claude Max som levererar dessa funktioner.",
@@ -2569,5 +2571,74 @@
     "captured": "{{count}} problemrader i loggen samlades in",
     "contextNotice": "Den valda agenten får den här rapporten, den aktuella vyn, aktuella app- och backendloggar samt systemdiagnostik.",
     "complete": "Klart"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Tal saknas eller kan inte läsas. Generera det berörda segmentet på nytt före export.",
+    "timingOverflow": "Talet överskrider sin tidslucka. Korta översättningen eller välj strikt tidslucka eller sträck ut videon.",
+    "backgroundUnavailable": "Originalljudet kunde inte bevaras. Kontrollera bakgrundssepareringen och dialogens tider och försök igen, eller välj att endast exportera tal."
+  },
+  "dubStyle": {
+    "label": "Instruktioner för översättningsstil",
+    "help": "Beskriv ton, målgrupp och anpassning, till exempel bevara skämt och översätta idiom naturligt. Sparas i projektet för översättning och tidsanpassning. Lämna tomt för standardstilen."
+  },
+  "dubActivity": {
+    "output": "Översättningar",
+    "waiting": "Ingen utdata har tagits emot ännu.",
+    "progress": "{{done}} / {{total}} segment validerade",
+    "cancelled": "Avbruten",
+    "fitting": "Justerar tidsplacering"
+  },
+  "sponsorSlot": {
+    "partner_heading": "Bli partner med VoiceStudio",
+    "partner_subtitle": "Visa din produkt för dem som skapar med röst.",
+    "app_placement": "Placering i appen",
+    "integration_page": "Integrationssida",
+    "readme_exposure": "Synlighet i README",
+    "visibility": "Synlighet",
+    "integration": "Produktintegration",
+    "installs": "Direkta installationer",
+    "distribution": "Distribution för utvecklare",
+    "partner": "Verifierad partner",
+    "privacy": "Integritet",
+    "title": "Bli utvald på VoiceStudio",
+    "description": "Öka synligheten för ditt varumärke genom att sponsra en betald utvald plats.",
+    "form": "Google-formulär",
+    "email": "E-post",
+    "book": "Boka din plats",
+    "preview": "Förhandsvisning för sponsorer",
+    "footer_brand": "Ditt varumärke",
+    "footer_book": "Lägg till nu",
+    "email_template": "Hej VoiceStudio-teamet,\n\nJag vill gärna samarbeta med VoiceStudio och undersöka en framhävd placering för mitt varumärke.\n\nVarumärke / produkt:\nWebbplats:\nIntegration eller kampanj:\nMålgrupp / tidplan:\n\nKan ni dela tillgängliga paket, priser, placeringsalternativ och tekniska krav? Jag förstår att ett framhävt partnerskap kan omfatta en dokumentsida, GitHub README-logotyp, en plats i appens sidfot och en post i Integrations-katalogen.\n\nTack,\n[Namn]\n[Roll / företag]\n[Kontakt]",
+    "message": "Ditt varumärke, webbplats och meddelande",
+    "email_app": "Öppna e-postappen",
+    "copy_email": "Kopiera e-postadress",
+    "preview_detail": "Här kan din logotyp, länk och presentation visas."
+  },
+  "supportPlans": {
+    "remove": "Ta bort sponsorfältet",
+    "title": "Gratis jämfört med Pro",
+    "free": "Gratis",
+    "pro": "Pro",
+    "get_pro": "Skaffa Pro",
+    "sponsor_bar": "Sponsorfält",
+    "visible": "Synligt",
+    "hideable": "Kan döljas",
+    "unavailable": "Pro-aktivering har inte konfigurerats ännu.",
+    "telemetry": "Telemetri",
+    "opt_in": "Valfritt, med samtycke",
+    "disabled": "Avstängd",
+    "badge": "Pro-märke",
+    "advanced": "Avancerade verktyg",
+    "standard": "Standard",
+    "included": "Ingår"
+  },
+  "integrationCatalog": {
+    "title": "Integrationer",
+    "featured": "Utvald",
+    "description": "Upptäck integrationer och utvalda partner."
+  },
+  "directoryExamples": {
+    "example": "Katalogexempel",
+    "notice": "Endast katalogexempel — inte sponsorer eller anslutna integrationer."
   }
 }

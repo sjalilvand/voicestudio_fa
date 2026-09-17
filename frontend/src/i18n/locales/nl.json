@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "Apparaatinstelling kon niet worden geladen",
     "perf_save_failed": "Instelling kon niet worden opgeslagen",
     "generate_budget_title": "Rekentijdbudget",
@@ -360,7 +361,10 @@
     "theme_auto": "Systeem auto",
     "theme_light": "Licht",
     "reduce_motion": "Beweging verminderen",
-    "reduce_motion_desc": "Stopt achtergrondanimaties en overgangen. Je systeeminstelling blijft op zichzelf gelden; dit komt daarbij."
+    "reduce_motion_desc": "Stopt achtergrondanimaties en overgangen. Je systeeminstelling blijft op zichzelf gelden; dit komt daarbij.",
+    "perf_torch_compile": "torch.compile uitschakelen",
+    "perf_torch_compile_note": "Gebruikt directe uitvoering om Triton-geheugenfouten te voorkomen.",
+    "perf_torch_compile_hint": "Gebruikt directe uitvoering om Triton-geheugenfouten te voorkomen. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1552,6 +1556,7 @@
     "h_ago": "{{count}}u geleden"
   },
   "setup": {
+    "ready_desc": "Je kunt je eerste stem maken. Stel dicteren nu in of later via Instellingen.",
     "welcome": "Welkom",
     "system_check": "Systeemcontrole",
     "install_models": "Modellen installeren",
@@ -1606,7 +1611,7 @@
     "choose_method": "Kies hoe u wilt geven",
     "choose_method_amount": "Ga verder met ${{amount}}",
     "goal": {
-      "title": "Fonds Claude Max",
+      "title": "Steun de ontwikkeling van VoiceStudio",
       "of": "van",
       "per_month": "/ maand",
       "aria": "{{raised}} van {{goal}} maanddoel",
@@ -1615,7 +1620,7 @@
       "social_proof": "Sluit u aan bij {{count}} supporters die lokale AI financieren"
     },
     "postcard": {
-      "title": "Fonds Claude Max",
+      "title": "Steun de ontwikkeling van VoiceStudio",
       "lead_default": "Fijn dat dat werkte! VoiceStudio is gratis en volledig lokaal. Als het u tijd bespaart, financiert een kleine maandelijkse chip-in de Claude Max erachter.",
       "lead_first_clone": "Je eerste stemkloon is klaar - leuk! VoiceStudio draait volledig op uw machine, en uw ondersteuning zorgt ervoor dat dit zo blijft.",
       "lead_tenth_dub": "Tien dubs erin - je zet het duidelijk aan het werk. Een kleine maandelijkse chip-in financiert de Claude Max die deze functies levert.",
@@ -2832,5 +2837,55 @@
   "player": {
     "pause": "Pauzeren",
     "play": "Afspelen"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Spraak ontbreekt of is onleesbaar. Genereer het betreffende segment opnieuw voordat je exporteert.",
+    "timingOverflow": "De spraak overschrijdt het tijdvak. Verkort de vertaling of kies een strikt tijdvak of het uitrekken van de video.",
+    "backgroundUnavailable": "Het oorspronkelijke geluid kon niet behouden blijven. Controleer de achtergrondscheiding en dialoogtijden en probeer opnieuw, of kies expliciet voor alleen spraak exporteren."
+  },
+  "dubStyle": {
+    "label": "Instructies voor vertaalstijl",
+    "help": "Beschrijf toon, doelgroep en aanpassing, zoals grappen behouden en uitdrukkingen natuurlijk vertalen. Opgeslagen in dit project voor vertaling en herschrijven op tijdsduur. Laat leeg voor de standaardstijl."
+  },
+  "dubActivity": {
+    "output": "Vertalingen",
+    "waiting": "Nog geen uitvoer ontvangen.",
+    "progress": "{{done}} / {{total}} segmenten gevalideerd",
+    "cancelled": "Geannuleerd",
+    "fitting": "Timing aanpassen"
+  },
+  "sponsorSlot": {
+    "book": "Reserveer je plek",
+    "preview": "Sponsorvoorbeeld",
+    "message": "Je merk, website en bericht",
+    "email_app": "E-mailapp openen",
+    "copy_email": "E-mailadres kopiëren",
+    "preview_detail": "Hier kunnen je logo, link en introductie staan."
+  },
+  "supportPlans": {
+    "remove": "Sponsorbalk verwijderen",
+    "title": "Gratis versus Pro",
+    "free": "Gratis",
+    "pro": "Pro",
+    "sponsor_bar": "Sponsorbalk",
+    "visible": "Zichtbaar",
+    "hideable": "Kan worden verborgen",
+    "unavailable": "Pro-activering is nog niet ingesteld.",
+    "telemetry": "Telemetrie",
+    "opt_in": "Optioneel, met toestemming",
+    "disabled": "Uitgeschakeld",
+    "badge": "Pro-badge",
+    "advanced": "Geavanceerde tools",
+    "standard": "Standaard",
+    "included": "Inbegrepen"
+  },
+  "integrationCatalog": {
+    "title": "Integraties",
+    "featured": "Uitgelicht",
+    "description": "Ontdek integraties en uitgelichte partners."
+  },
+  "directoryExamples": {
+    "example": "Directoryvoorbeeld",
+    "notice": "Alleen directoryvoorbeelden — geen sponsors of verbonden integraties."
   }
 }

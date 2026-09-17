@@ -32,7 +32,7 @@ export function parseThemePreferences(
     const id = typeof value === 'string' ? (aliases[value] ?? value) : value;
     return typeof id === 'string' && AVAILABLE_PALETTES.some((theme) => theme.id === id)
       ? id
-      : 'default';
+      : 'signal';
   };
   return {
     mode: ['light', 'dark', 'system'].includes(value.mode ?? '')

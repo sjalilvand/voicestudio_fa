@@ -113,6 +113,54 @@ def test_enrolled_workers_are_listed(db, settings):
     assert targets[1].available is True
 
 
+def test_connected_worker_target_exposes_heartbeat_telemetry(db, settings):
+    plane = _Plane()
+    worker = _enroll(
+        "desktop-4090",
+        host={
+            "cpu_count": 32,
+            "system_memory_bytes": 64 * 1024**3,
+            "gpus": [{"model": "NVIDIA RTX 4090", "memory_bytes": 24 * 1024**3}],
+        },
+    )
+    _connect(plane, worker)
+    plane.pool.heartbeat(
+        worker.id,
+        active_tasks=0,
+        available_slots=1,
+        free_memory_bytes=20 * 1024**3,
+        cpu_percent=37.5,
+    )
+
+    target = routing.list_targets(plane)[1].to_dict()
+
+    assert target["cpu_percent"] == 37.5
+    assert target["free_memory_bytes"] == 20 * 1024**3
+    assert target["gpu_name"] == "NVIDIA RTX 4090"
+    assert target["gpu_memory_bytes"] == 24 * 1024**3
+
+
+def test_target_distinguishes_unknown_vram_from_a_full_gpu(db, settings):
+    plane = _Plane()
+    worker = _enroll(
+        "desktop-4090",
+        host={"gpus": [{"model": "NVIDIA RTX 4090", "memory_bytes": 24 * 1024**3}]},
+    )
+    _connect(plane, worker)
+
+    unknown = routing.list_targets(plane)[1].to_dict()
+    assert unknown["free_memory_bytes"] is None
+
+    plane.pool.heartbeat(
+        worker.id,
+        active_tasks=0,
+        available_slots=1,
+        free_memory_bytes=0,
+    )
+    full = routing.list_targets(plane)[1].to_dict()
+    assert full["free_memory_bytes"] == 0
+
+
 @pytest.mark.parametrize(
     "setup,detail",
     [
