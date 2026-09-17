@@ -34,6 +34,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Normalize Argos language aliases without silently changing Traditional Chinese to Simplified (#2143, #2152) — thanks @gyanu2507 and @rollroyces!
 - Clarify Blackwell import-crash diagnostics without blaming missing kernels (#2084) — thanks @Moep90!
 - Distinguish architecture preflight rejection from independent compile-stack failures (#2085) — thanks @Moep90!
+- Talk to GPT-SoVITS's api_v2 protocol: probe the /tts route, POST JSON with the v2 field names, and report a wrong-protocol server as such instead of "not reachable" (#2102) — thanks @martinezpl!
 - Require the pinned Apple Silicon GGUF build to pass and document runtime preflight conditions (#2115) — thanks @LMGXENON and @martinezpl!
 - Correct the Windows Rustup installation command in tooling and documentation (#2066) — thanks @Rukhaam!
 - Show local setup guidance when remote native engine installation is unavailable (#2166)

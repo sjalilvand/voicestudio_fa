@@ -1,6 +1,8 @@
 """GPT-SoVITS outbound requests stay on loopback or explicit trusted CIDRs."""
 import importlib
+import json
 import socket
+import struct
 
 import pytest
 
@@ -158,7 +160,11 @@ def test_valid_endpoint_is_pinned_to_the_single_validated_dns_answer(
     assert calls == 1
     assert connection.endpoint.ip == "127.0.0.1"
     assert connection.request_args[0] == ("POST", "/?text=hello")
-    assert connection.request_args[1] == {}
+    # open_trusted_endpoint now forwards body/headers explicitly even when
+    # the caller didn't supply either, so http.client can attach Content-Length
+    # for body-less requests without ambiguity. The defaults still mean
+    # "no body, no extra headers".
+    assert connection.request_args[1] == {"body": None, "headers": {}}
     assert response.status == 200
 
 
@@ -201,5 +207,229 @@ def test_gptsovits_availability_uses_valid_configured_endpoint(
         lambda url, **kwargs: calls.append((url, kwargs)) or _ContextResponse(),
     )
 
-    assert GPTSoVITSBackend.is_available() == (True, "ready (server reachable)")
-    assert calls == [("http://127.0.0.1:9880", {"method": "GET", "timeout": 2})]
+    assert GPTSoVITSBackend.is_available() == (True, "ready (api_v2 server reachable)")
+    # Probe targets the api_v2 /tts route — a healthy server returns 200/400/405,
+    # the routing-mismatch branch is exercised separately below.
+    assert calls == [
+        ("http://127.0.0.1:9880", {"method": "GET", "timeout": 2, "path": "tts"})
+    ]
+
+
+def test_gptsovits_routing_mismatch_message_distinguishes_old_protocol(
+    outbound_http, monkeypatch
+):
+    """A 404 from /tts means the server is up but speaks api.py (v1), not api_v2.
+
+    The old adapter folded this into "not reachable", so users running v1
+    could not tell whether their server was stopped or just the wrong
+    version (#2102).
+    """
+    from services.tts_backend import GPTSoVITSBackend
+
+    def raise_404(*_args, **_kwargs):
+        raise OSError("endpoint returned HTTP 404")
+
+    monkeypatch.setenv("OMNIVOICE_GPTSOVITS_URL", "http://127.0.0.1:9880")
+    monkeypatch.setattr(outbound_http, "open_trusted_endpoint", raise_404)
+
+    ok, message = GPTSoVITSBackend.is_available()
+    assert ok is False
+    assert "does not expose api_v2" in message
+    assert "api_v2.py" in message
+    assert "not reachable" not in message
+
+
+def test_gptsovits_connection_refused_message_unchanged(outbound_http, monkeypatch):
+    """A genuine connection failure still reads as 'not reachable'.
+
+    Keeps the two failure modes visibly distinct in the UI: routing
+    mismatch → wrong-protocol advice, network failure → start-server advice.
+    """
+    from services.tts_backend import GPTSoVITSBackend
+
+    def raise_refused(*_args, **_kwargs):
+        raise ConnectionRefusedError("endpoint returned HTTP 0 / Connection refused")
+
+    monkeypatch.setenv("OMNIVOICE_GPTSOVITS_URL", "http://127.0.0.1:9880")
+    monkeypatch.setattr(outbound_http, "open_trusted_endpoint", raise_refused)
+
+    ok, message = GPTSoVITSBackend.is_available()
+    assert ok is False
+    assert "not reachable" in message
+    assert "api_v2.py" in message
+    assert "does not expose api_v2" not in message
+
+
+def test_gptsovits_generate_posts_json_to_tts_with_v2_schema(
+    outbound_http, monkeypatch
+):
+    """The generate path sends api_v2's JSON body to /tts, not v1's query string.
+
+    Regression test for #2102: the adapter previously POSTed a query string
+    at the origin URL with v1 field names (``text_language``, ``refer_wav_path``,
+    ``prompt_language``), which api_v2 silently 404s on. The fix sends JSON
+    to /tts with v2 field names (``text_lang``, ``ref_audio_path``,
+    ``prompt_lang``) and the required v2-only keys (``media_type``,
+    ``text_split_method``, ``streaming_mode``).
+    """
+    import json
+    import io
+    import struct
+
+    from services.tts_backend import GPTSoVITSBackend
+
+    # Minimal valid WAV header + 1 sample so torchaudio.load() succeeds.
+    # 32 kHz mono int16 to match GPTSoVITSBackend.sample_rate so the
+    # resample step is a no-op (the test focuses on the request shape,
+    # not the audio math).
+    riff_size = struct.pack("<I", 36 + 2)  # 36 + data payload size
+    fmt_chunk = struct.pack("<IHHIIHH", 16, 1, 1, 32000, 64000, 2, 16)
+    data_size = struct.pack("<I", 2)
+    wav_header = b"RIFF" + riff_size + b"WAVE" + b"fmt " + fmt_chunk + b"data" + data_size + b"\x00\x00"
+
+    class _ByteResponse:
+        def __init__(self, payload):
+            self._payload = payload
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            return self._payload
+
+        def close(self):
+            pass
+
+    captured = {}
+
+    def fake_open(url, **kwargs):
+        captured["url"] = url
+        captured["kwargs"] = kwargs
+        body = kwargs.get("body")
+        if body is not None:
+            captured["json"] = json.loads(body.decode("utf-8"))
+        captured["content_type"] = kwargs.get("content_type")
+        return _ByteResponse(wav_header)
+
+    monkeypatch.setenv("OMNIVOICE_GPTSOVITS_URL", "http://127.0.0.1:9880")
+    monkeypatch.setattr(outbound_http, "open_trusted_endpoint", fake_open)
+
+    backend = GPTSoVITSBackend()
+    backend.generate(
+        "hello world",
+        ref_audio="/tmp/ref.wav",
+        ref_text="reference text",
+        language="en",
+        speed=1.5,
+    )
+
+    # Path / method / content-type — api_v2 contract.
+    assert captured["url"] == "http://127.0.0.1:9880"
+    assert captured["kwargs"]["method"] == "POST"
+    assert captured["kwargs"]["path"] == "tts"
+    assert captured["content_type"] == "application/json"
+    # v2 field names — none of the v1 names are present.
+    body = captured["json"]
+    assert body["text"] == "hello world"
+    assert body["text_lang"] == "en"
+    assert body["ref_audio_path"] == "/tmp/ref.wav"
+    assert body["prompt_text"] == "reference text"
+    assert body["prompt_lang"] == "en"
+    # v1 names that the old adapter sent — must NOT appear anymore.
+    for legacy in ("text_language", "refer_wav_path", "prompt_language"):
+        assert legacy not in body, f"{legacy!r} is a v1 field, must not leak into v2"
+    # v2-only keys the server requires.
+    assert body["media_type"] == "wav"
+    assert body["text_split_method"] == "cut5"
+    assert body["streaming_mode"] is False
+    # Speed forwarded as float, not stringified.
+    assert body["speed_factor"] == 1.5
+    assert isinstance(body["speed_factor"], float)
+
+
+def test_gptsovits_generate_without_reference_audio_omits_cloning_fields(
+    outbound_http, monkeypatch
+):
+    """Without a reference clip, the cloning-only fields stay absent.
+
+    api_v2 returns 400 when ``ref_audio_path`` is missing for a zero-shot
+    synthesis, but that is the engine's own contract. The adapter's job
+    is to omit the fields entirely so a clean ``text_only`` request
+    reaches the server shaped the way its docs describe, rather than
+    carrying empty strings that v2 might treat as 'present but empty'.
+    """
+    import json
+
+    from services.tts_backend import GPTSoVITSBackend
+
+    class _EmptyResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            return b""
+
+        def close(self):
+            pass
+
+    captured = {}
+
+    def fake_open(url, **kwargs):
+        captured["kwargs"] = kwargs
+        captured["json"] = json.loads(kwargs["body"].decode("utf-8"))
+        return _EmptyResponse()
+
+    monkeypatch.setenv("OMNIVOICE_GPTSOVITS_URL", "http://127.0.0.1:9880")
+    monkeypatch.setattr(outbound_http, "open_trusted_endpoint", fake_open)
+
+    backend = GPTSoVITSBackend()
+    # Patch torchaudio.load at the module level — generate() imports torchaudio
+    # inside the function, so the binding resolves through sys.modules['torchaudio'].
+    import torchaudio
+
+    def fake_load(_buf):
+        import torch
+
+        return torch.zeros(1, 16000), 16000
+
+    monkeypatch.setattr(torchaudio, "load", fake_load)
+
+    backend.generate("just text")
+
+    body = captured["json"]
+    assert body["text"] == "just text"
+    assert body["text_lang"] == "en"
+    assert "ref_audio_path" not in body
+    assert "prompt_text" not in body
+    assert "prompt_lang" not in body
+    # No speed override means no speed_factor key at all.
+    assert "speed_factor" not in body
+
+
+def test_gptsovits_generate_wraps_request_errors_with_server_url(
+    outbound_http, monkeypatch
+):
+    """The user-facing error names the configured server URL, not the path.
+
+    VoiceStudio users typically reach the engine through Settings, where
+    the URL is configurable; without the URL in the error they have to
+    dig through Settings to find out which one failed. The legacy adapter
+    included the URL on the success path but not on the failure path.
+    """
+    from services.tts_backend import GPTSoVITSBackend
+
+    def boom(*_args, **_kwargs):
+        raise OSError("endpoint returned HTTP 500")
+
+    monkeypatch.setenv("OMNIVOICE_GPTSOVITS_URL", "http://gptsovits.lan:9880")
+    monkeypatch.setattr(outbound_http, "open_trusted_endpoint", boom)
+
+    backend = GPTSoVITSBackend()
+    with pytest.raises(RuntimeError, match="gptsovits.lan:9880"):
+        backend.generate("anything")

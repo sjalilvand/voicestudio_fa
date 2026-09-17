@@ -60,6 +60,27 @@ def resolve_trusted_endpoint(url: str) -> ResolvedEndpoint:
     return ResolvedEndpoint(parsed.scheme, parsed.hostname, port, ips[0])
 
 
+# Routes that may be hit at a trusted inference origin. Requests without an
+# explicit ``path`` argument target the origin itself ("/") and never reach a
+# sub-path; requests that do name a sub-path must pick from this allowlist
+# so a misconfigured caller cannot route an arbitrary path at a trusted
+# origin. Add new entries only with a documented, well-known inference route.
+_ALLOWED_SUBPATHS: frozenset[str] = frozenset({"tts"})
+
+
+def _endpoint_path(requested_path: str) -> str:
+    """Validate ``requested_path`` against the trusted sub-path allowlist.
+
+    Returns the URL-encoded path to send. The empty string and ``/`` map to
+    the origin itself; anything else must be in ``_ALLOWED_SUBPATHS``.
+    """
+    if requested_path in {"", "/"}:
+        return "/"
+    if requested_path in _ALLOWED_SUBPATHS:
+        return f"/{requested_path}"
+    raise UnsafeEndpoint("endpoint path is not on the trusted sub-path allowlist")
+
+
 class _PinnedHTTPConnection(http.client.HTTPConnection):
     def __init__(self, endpoint: ResolvedEndpoint, timeout: float):
         super().__init__(endpoint.host, endpoint.port, timeout=timeout)
@@ -89,16 +110,41 @@ def open_trusted_endpoint(
     method: str,
     query: str = "",
     timeout: float,
+    path: str = "",
+    body: bytes | None = None,
+    content_type: str | None = None,
 ) -> http.client.HTTPResponse:
-    """Open one request without redirects, pinned to the validated DNS answer."""
+    """Open one request without redirects, pinned to the validated DNS answer.
+
+    ``path`` defaults to ``""`` (the origin itself) and is restricted to a
+    small allowlist of known inference routes (``/tts`` today); anything else
+    is rejected so a misconfigured caller cannot route an arbitrary path at
+    a trusted origin.
+
+    ``body`` and ``content_type`` are forwarded as-is when supplied. Callers
+    that need JSON should pass the encoded bytes and the matching
+    ``Content-Type`` header (e.g. ``application/json``); the helper does not
+    interpret the body, so it never grows new escape hatches around
+    serialization. Leave both ``None`` for a body-less request.
+    """
     endpoint = resolve_trusted_endpoint(base_url)
     conn_cls = _PinnedHTTPSConnection if endpoint.scheme == "https" else _PinnedHTTPConnection
     conn = conn_cls(endpoint, timeout)
-    target = "/" + (f"?{query}" if query else "")
+    target = _endpoint_path(path)
+    if query:
+        target += f"?{query}"
+    if body is not None and content_type is None:
+        raise UnsafeEndpoint("body supplied without Content-Type")
+    headers: dict[str, str] = {}
+    if content_type is not None:
+        # body may be None here; we still send Content-Length 0 so the server
+        # sees a well-formed request with the announced content type.
+        headers["Content-Type"] = content_type
+        headers["Content-Length"] = str(len(body) if body is not None else 0)
     # Let http.client format the authority from the validated host and port.
     # Supplying the hostname ourselves drops non-default ports and IPv6
     # brackets, which can make Host-aware inference servers misroute requests.
-    conn.request(method, target)
+    conn.request(method, target, body=body, headers=headers)
     response = conn.getresponse()
     # Redirects are never followed: a configured inference origin must answer
     # directly, so a Location header cannot escape the validated connection.

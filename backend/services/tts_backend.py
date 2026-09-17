@@ -2092,13 +2092,35 @@ class GPTSoVITSBackend(TTSBackend):
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
         # GPT-SoVITS runs as an external API server — check if it's reachable.
+        # api_v2 exposes POST /tts; api.py (v1) did not. Probing /tts with GET
+        # lets the server's own FastAPI stack answer — a healthy api_v2
+        # responds with 200/400/405 (the route exists, just for a different
+        # verb or with different inputs), while api.py answers 404 because
+        # the path is unmapped. The two are now distinguishable instead of
+        # both reading as "server not reachable".
         from services.outbound_http import open_trusted_endpoint
         url = os.environ.get("OMNIVOICE_GPTSOVITS_URL", "http://127.0.0.1:9880")
         try:
-            with open_trusted_endpoint(url, method="GET", timeout=2):
+            with open_trusted_endpoint(url, method="GET", path="tts", timeout=2):
                 pass
-            return True, "ready (server reachable)"
+            return True, "ready (api_v2 server reachable)"
+        except OSError as exc:
+            # open_trusted_endpoint wraps HTTP failures as OSError with the
+            # status code in the message; routing mismatches carry a 404.
+            if "HTTP 404" in str(exc):
+                return False, (
+                    f"GPT-SoVITS server at {url} is reachable but does not "
+                    "expose api_v2's /tts route. Start it with: "
+                    "python api_v2.py -a 127.0.0.1 -p 9880 -c "
+                    "GPT_SoVITS/configs/tts_infer.yaml"
+                )
+            return False, (
+                f"GPT-SoVITS server not reachable at {url}. "
+                "Start it with: python api_v2.py -a 127.0.0.1 -p 9880 "
+                "-c GPT_SoVITS/configs/tts_infer.yaml"
+            )
         except Exception:
+            # Connection refused / DNS failure / unsafe endpoint / etc.
             return False, (
                 f"GPT-SoVITS server not reachable at {url}. "
                 "Start it with: python api_v2.py -a 127.0.0.1 -p 9880 "
@@ -2114,7 +2136,7 @@ class GPTSoVITSBackend(TTSBackend):
         return ["zh", "en", "ja", "yue", "ko"]
 
     def generate(self, text: str, **kw) -> torch.Tensor:
-        import urllib.parse
+        import json
         from services.outbound_http import open_trusted_endpoint
 
         ref_audio = kw.get("ref_audio")
@@ -2128,24 +2150,34 @@ class GPTSoVITSBackend(TTSBackend):
         }
         text_lang = lang_map.get(language.lower() if language else "en", "en")
 
-        # Build request params
-        params = {
+        # api_v2 takes a JSON body to /tts (api.py v1 took a query string
+        # at the root URL with different field names). The two protocols do
+        # not share a schema, so sending v1-shaped params to an api_v2
+        # server produces a 404 and a silent failure.
+        body: dict[str, object] = {
             "text": text,
-            "text_language": text_lang,
+            "text_lang": text_lang,
+            "text_split_method": "cut5",
+            "media_type": "wav",
+            "streaming_mode": False,
         }
         if ref_audio:
-            params["refer_wav_path"] = ref_audio
-            params["prompt_text"] = ref_text or ""
-            params["prompt_language"] = text_lang
+            body["ref_audio_path"] = ref_audio
+            body["prompt_text"] = ref_text or ""
+            body["prompt_lang"] = text_lang
 
         speed = kw.get("speed", 1.0)
         if speed != 1.0:
-            params["speed_factor"] = str(speed)
+            body["speed_factor"] = float(speed)
 
-        query = urllib.parse.urlencode(params)
         try:
             with open_trusted_endpoint(
-                self._url, method="POST", query=query, timeout=120
+                self._url,
+                method="POST",
+                path="tts",
+                body=json.dumps(body).encode("utf-8"),
+                content_type="application/json",
+                timeout=120,
             ) as resp:
                 audio_bytes = resp.read()
         except Exception as e:
