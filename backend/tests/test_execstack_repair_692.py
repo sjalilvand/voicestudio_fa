@@ -17,7 +17,6 @@ import struct
 
 import pytest
 
-from core import execstack
 
 _PT_GNU_STACK = 0x6474E551
 _PT_LOAD = 1
@@ -56,6 +55,7 @@ def _elf(path, *, bits=64, endian="<", flags=0x7, phdr_type=_PT_GNU_STACK):
 @pytest.mark.parametrize("bits", [64, 32])
 @pytest.mark.parametrize("endian", ["<", ">"])
 def test_clear_execstack_flips_only_the_x_bit(tmp_path, bits, endian):
+    from core import execstack
     lib = _elf(tmp_path / "libfake.so", bits=bits, endian=endian, flags=0x7)
     assert execstack.has_execstack(lib) is True
 
@@ -73,6 +73,7 @@ def test_clear_execstack_flips_only_the_x_bit(tmp_path, bits, endian):
 
 
 def test_non_executable_stack_is_left_alone(tmp_path):
+    from core import execstack
     lib = _elf(tmp_path / "libok.so", flags=0x6)
     assert execstack.has_execstack(lib) is False
     before = (tmp_path / "libok.so").read_bytes()
@@ -81,12 +82,14 @@ def test_non_executable_stack_is_left_alone(tmp_path):
 
 
 def test_elf_without_gnu_stack_segment(tmp_path):
+    from core import execstack
     lib = _elf(tmp_path / "libnostack.so", phdr_type=_PT_LOAD, flags=0x7)
     assert execstack.has_execstack(lib) is None
     assert execstack.clear_execstack(lib) == (False, "no PT_GNU_STACK segment")
 
 
 def test_non_elf_and_missing_files_are_not_errors(tmp_path):
+    from core import execstack
     text = tmp_path / "notelf.so"
     text.write_bytes(b"#!/bin/sh\necho hi\n")
     assert execstack.has_execstack(str(text)) is None
@@ -99,6 +102,7 @@ def test_non_elf_and_missing_files_are_not_errors(tmp_path):
 
 
 def test_ensure_rechecks_unrepairable_libraries(tmp_path, monkeypatch):
+    from core import execstack
     lib = _elf(tmp_path / "libctranslate2-test.so.4.4.0", flags=0x7)
     monkeypatch.setattr(execstack.sys, "platform", "linux")
     monkeypatch.setattr(execstack, "ctranslate2_library_paths", lambda: [lib])
@@ -117,6 +121,7 @@ def test_ensure_rechecks_unrepairable_libraries(tmp_path, monkeypatch):
 
 
 def test_ensure_repairs_then_reports_ok(tmp_path, monkeypatch):
+    from core import execstack
     lib = _elf(tmp_path / "libctranslate2-test.so.4.4.0", flags=0x7)
     monkeypatch.setattr(execstack.sys, "platform", "linux")
     monkeypatch.setattr(execstack, "ctranslate2_library_paths", lambda: [lib])
@@ -130,6 +135,7 @@ def test_ensure_repairs_then_reports_ok(tmp_path, monkeypatch):
 def test_ensure_is_a_noop_off_linux(tmp_path, monkeypatch):
     """macOS/Windows never reject an exec-stack request — don't touch signed
     bundles looking for a problem that cannot exist there."""
+    from core import execstack
     monkeypatch.setattr(execstack.sys, "platform", "darwin")
     monkeypatch.setattr(
         execstack, "ctranslate2_library_paths", lambda: pytest.fail("probed off Linux")
@@ -178,6 +184,7 @@ def test_engine_probe_survives_a_native_load_failure(monkeypatch):
 @pytest.mark.parametrize("bits", [32, 64])
 @pytest.mark.parametrize("length", [16, 31, 45, 63])
 def test_truncated_elf_is_not_an_error(tmp_path, bits, length):
+    from core import execstack
     path = tmp_path / "short.so"
     _elf(path, bits=bits)
     path.write_bytes(path.read_bytes()[:length])
@@ -188,6 +195,7 @@ def test_truncated_elf_is_not_an_error(tmp_path, bits, length):
 
 
 def test_install_after_absent_probe_is_detected(tmp_path, monkeypatch):
+    from core import execstack
     monkeypatch.setattr(execstack.sys, "platform", "linux")
     libs = []
     monkeypatch.setattr(execstack, "ctranslate2_library_paths", lambda: libs)
@@ -198,6 +206,7 @@ def test_install_after_absent_probe_is_detected(tmp_path, monkeypatch):
 
 
 def test_concurrent_repairs_remain_available(tmp_path, monkeypatch):
+    from core import execstack
     from concurrent.futures import ThreadPoolExecutor
     lib = _elf(tmp_path / "parallel.so")
     monkeypatch.setattr(execstack.sys, "platform", "linux")
@@ -209,6 +218,7 @@ def test_concurrent_repairs_remain_available(tmp_path, monkeypatch):
 
 
 def test_isolated_probe_checks_repair_before_import(monkeypatch):
+    from core import execstack
     from services.subprocess_asr import IsolatedFasterWhisperBackend
     monkeypatch.setattr(execstack, "ensure_ctranslate2_loadable", lambda: (False, "repair blocked"))
     ok, detail = IsolatedFasterWhisperBackend.is_available()
@@ -216,6 +226,7 @@ def test_isolated_probe_checks_repair_before_import(monkeypatch):
 
 
 def test_repair_uses_host_locking_capability_when_target_platform_is_emulated(tmp_path, monkeypatch):
+    from core import execstack
     import builtins
     import os
     from types import SimpleNamespace
