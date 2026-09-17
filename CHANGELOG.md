@@ -16,6 +16,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Validate Python dependencies before reusing a desktop runtime and offer setup for incomplete environments (#2176)
 - Check active model cloning support before starting voice conversion (#2147)
 - Accept both valid SIGKILL diagnostics in the desktop lifecycle regression check (#2170)
 

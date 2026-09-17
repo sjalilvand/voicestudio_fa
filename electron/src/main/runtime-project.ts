@@ -1,3 +1,4 @@
+import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   cp,
@@ -245,6 +246,30 @@ export async function runtimeInstallInterrupted(project: string): Promise<boolea
   } catch {
     return false;
   }
+}
+
+/** Check the selected interpreter locally before trusting runtime metadata. */
+export async function runtimeDependenciesReady(project: string): Promise<boolean> {
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  delete env.PYTHONHOME;
+  delete env.PYTHONPATH;
+  env.HF_HUB_OFFLINE = '1';
+  env.TRANSFORMERS_OFFLINE = '1';
+  env.PYTHONNOUSERSITE = '1';
+  return new Promise((resolve) => {
+    execFile(
+      runtimePython(project),
+      ['-c', 'import fastapi, uvicorn, omnivoice, faster_whisper'],
+      {
+        cwd: project,
+        windowsHide: true,
+        timeout: 30_000,
+        maxBuffer: 256 * 1024,
+        env,
+      },
+      (error) => resolve(!error),
+    );
+  });
 }
 
 export async function runtimeReady(bundle: string, project: string): Promise<boolean> {
