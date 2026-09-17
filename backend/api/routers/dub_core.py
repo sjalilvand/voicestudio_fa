@@ -1920,7 +1920,7 @@ async def dub_transcribe_stream(
                     "heuristic",
                 )
 
-        fut_diar = loop.run_in_executor(_gpu_pool, _diarize)
+        fut_diar = loop.run_in_executor(_gpu_pool, lambda: _asr_work.run(_diarize))
         async for _ping in _ping_while(fut_diar):
             yield _ping
         final_segs, diar_warning, labels_source = fut_diar.result()

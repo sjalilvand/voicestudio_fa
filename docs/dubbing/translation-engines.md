@@ -235,4 +235,4 @@ panels instead so neither editor becomes unusably small.
 - **Installed it but still "needs install"** — restart the backend so Python
   picks up the newly-installed module.
 
-Dubbing transcription emits keepalives during quiet diarization, reference-refinement, and cleanup steps. Disconnecting stops queued model work; native calls already running retain their model until they finish, then cleanup restores TTS.
+Dubbing transcription emits keepalives during quiet diarization, reference-refinement, and cleanup steps. Disconnecting stops queued model work; native calls already running retain their model until they finish, then cleanup restores TTS. Task streams also request that proxies disable buffering so keepalives reach the client promptly.

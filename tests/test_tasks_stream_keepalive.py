@@ -28,6 +28,8 @@ def test_quiet_task_stream_emits_keepalive_comments(monkeypatch):
             "error": None, "cancelled": False,
         }
         resp = await de.stream_task(task_id)
+        assert resp.headers["cache-control"] == "no-cache, no-transform"
+        assert resp.headers["x-accel-buffering"] == "no"
         frames = []
 
         async def _read():
