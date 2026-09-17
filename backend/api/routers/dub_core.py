@@ -886,6 +886,7 @@ class _ASRWorkLifetime:
         import threading
         self._lock = threading.Lock()
         self._closed = threading.Event()
+        self._cleaned = False
 
     def run(self, fn):
         with self._lock:
@@ -900,6 +901,10 @@ class _ASRWorkLifetime:
     def cleanup(self, fn):
         self.stop()
         with self._lock:
+            if self._cleaned:
+                return
+            # Claim cleanup before invoking even a non-idempotent unload.
+            self._cleaned = True
             return fn()
 
 
