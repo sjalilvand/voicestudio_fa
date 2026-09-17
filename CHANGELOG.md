@@ -48,6 +48,9 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Decode UTF-16 and Windows-1252 subtitle and manuscript imports in Electron, web, and backend routes (#2073) — thanks @kevin9327!
 
+- Preserve numeric subtitle dialogue while recognizing mixed indexed and unindexed cues (#2151) — thanks @shivsin25!
+- Parse pasted WebVTT cues without treating mid-sentence timestamps as subtitle records (#2077) — thanks @kevin9327!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**

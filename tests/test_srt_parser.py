@@ -189,3 +189,160 @@ B
         assert seg["id"] == i
         assert seg["text"] == seg["text_original"]
         assert seg["speaker_id"] == "Speaker 1"
+
+
+# -- WebVTT through the same parser (Dub -> Paste translation -> Load file) ---
+
+
+def test_webvtt_cues_without_an_hours_field_are_parsed():
+    # WebVTT allows `mm:ss.ttt`; the paste dialog accepts .vtt files.
+    vtt = "WEBVTT\n\n00:01.000 --> 00:02.500\nHola\n\n01:03.000 --> 01:04.000\nQue tal\n"
+    result = parse_srt(vtt)
+    assert [(s["start"], s["end"], s["text"]) for s in result.segments] == [
+        (1.0, 2.5, "Hola"),
+        (63.0, 64.0, "Que tal"),
+    ]
+
+
+def test_webvtt_identifiers_and_note_blocks_stay_out_of_cue_text():
+    vtt = (
+        "WEBVTT\n\nNOTE made by a translator\n\n"
+        "intro\n00:00:01.000 --> 00:00:02.500 align:start\nHola\n\n"
+        "NOTE check this line\n\n"
+        "cue-2\n00:00:03.000 --> 00:00:04.000\nQue tal\n"
+    )
+    result = parse_srt(vtt)
+    assert [s["text"] for s in result.segments] == ["Hola", "Que tal"]
+
+
+def test_srt_text_after_a_blank_line_inside_a_cue_is_still_kept():
+    # SRT keeps its lenient blank-line handling; only WebVTT has identifiers.
+    srt = "1\n00:00:01,000 --> 00:00:02,000\nFirst\n\nstill first\n2\n00:00:03,000 --> 00:00:04,000\nSecond\n"
+    result = parse_srt(srt)
+    assert [s["text"] for s in result.segments] == ["First\nstill first", "Second"]
+
+
+def test_paste_endpoint_returns_webvtt_cues():
+    from fastapi.testclient import TestClient
+    from main import app
+
+    client = TestClient(app, client=("127.0.0.1", 50000))
+    res = client.post(
+        "/dub/parse-subtitle-text",
+        json={"text": "WEBVTT\n\nintro\n00:01.000 --> 00:02.000\nHola\n\nNOTE x\n\n00:03.000 --> 00:04.000\nAdios\n"},
+    )
+    assert res.status_code == 200, res.text
+    assert [(c["start"], c["text"]) for c in res.json()["segments"]] == [(1.0, "Hola"), (3.0, "Adios")]
+
+def test_keeps_a_final_cue_that_is_only_a_number():
+    # Regression: cue bodies are sliced up to the next timing line, which
+    # swallows that cue's index, and the parser used to claw it back by
+    # popping *every* trailing digit-only line. The last cue has no next
+    # index to pop, so a closing "1999" was mistaken for one — the cue lost
+    # its only line and was dropped as empty. Numeric-only dialogue is
+    # everywhere in subtitles (a year, a score, a street number).
+    srt = """1
+00:00:01,000 --> 00:00:02,000
+The year was
+
+2
+00:00:03,000 --> 00:00:04,000
+1999
+"""
+    result = parse_srt(srt)
+    assert result.skipped_cues == 0
+    assert [s["text"] for s in result.segments] == ["The year was", "1999"]
+
+
+def test_keeps_numeric_dialogue_in_an_index_less_file():
+    # An index-less export has no index lines to strip at all, so a cue
+    # ending in a number kept its text silently truncated — no skip counted,
+    # so the import reported itself as lossless while dropping a line.
+    srt = """00:00:01,000 --> 00:00:02,000
+The answer is
+42
+
+00:00:03,000 --> 00:00:04,000
+Next.
+"""
+    result = parse_srt(srt)
+    assert [s["text"] for s in result.segments] == ["The answer is\n42", "Next."]
+
+
+def test_keeps_numeric_text_when_the_blank_separator_is_missing():
+    # Off-spec file with no blank line between cue text and the next index:
+    # exactly one trailing index line may be reclaimed, never two.
+    srt = """1
+00:00:01,000 --> 00:00:02,000
+100
+2
+00:00:03,000 --> 00:00:04,000
+Hi
+"""
+    result = parse_srt(srt)
+    assert [s["text"] for s in result.segments] == ["100", "Hi"]
+
+
+def test_keeps_a_multi_line_numeric_countdown():
+    # The old `while` loop popped digit lines until it hit a non-digit, so a
+    # "3 / 2 / 1" countdown cue was consumed line by line and then dropped.
+    srt = """1
+00:00:01,000 --> 00:00:02,000
+Ready?
+
+2
+00:00:03,000 --> 00:00:04,000
+3
+2
+1
+"""
+    result = parse_srt(srt)
+    assert [s["text"] for s in result.segments] == ["Ready?", "3\n2\n1"]
+
+
+def test_non_ascii_numerals_are_dialogue_not_cue_indices():
+    # `str.isdigit()` is True for Arabic-Indic and Devanagari numerals, which
+    # SubRip never uses for indices but a 646-language dubbing app sees as
+    # dialogue constantly.
+    srt = """1
+00:00:01,000 --> 00:00:02,000
+١٩٩٩
+
+2
+00:00:03,000 --> 00:00:04,000
+२०२६
+"""
+    result = parse_srt(srt)
+    assert [s["text"] for s in result.segments] == ["١٩٩٩", "२०२६"]
+
+
+def test_still_strips_the_index_line_swallowed_from_the_next_cue():
+    # The guard against over-correcting: a numeric-bodied cue followed by
+    # another must keep its own text and still not leak the next index.
+    srt = """1
+00:00:01,000 --> 00:00:02,000
+1999
+
+2
+00:00:03,000 --> 00:00:04,000
+Next.
+"""
+    result = parse_srt(srt)
+    assert [s["text"] for s in result.segments] == ["1999", "Next."]
+
+
+@pytest.mark.parametrize("first_index", ["", "1\n"])
+def test_mixed_indexed_and_unindexed_cues_preserve_numbers(first_index):
+    text = first_index + "00:00:01,000 --> 00:00:02,000\n42\n\n2\n00:00:03,000 --> 00:00:04,000\n1999\n\n00:00:05,000 --> 00:00:06,000\n3\n2\n1\n"
+    assert [x["text"] for x in parse_srt(text).segments] == ["42", "1999", "3\n2\n1"]
+
+
+def test_webvtt_numeric_dialogue_is_not_a_cue_identifier():
+    text = "WEBVTT\n\n00:01.000 --> 00:02.000\n1999\n\nnext-id\n00:03.000 --> 00:04.000\n42\n"
+    assert [cue["text"] for cue in parse_srt(text).segments] == ["1999", "42"]
+
+
+def test_indexless_numeric_dialogue_after_blank_line_is_preserved():
+    text = '00:00:01,000 --> 00:00:02,000\nFirst\n\n42\n00:00:03,000 --> 00:00:04,000\nNext'
+    segments = parse_srt(text).segments
+    assert segments[0]['text'] == 'First\n42'
