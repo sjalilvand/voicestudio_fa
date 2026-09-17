@@ -54,7 +54,14 @@ HF repo id. The env var overrides the persisted UI choice.
 - Language support is per-model (Kokoro ~8 languages, others vary). An
   unsupported language for Kokoro produces a clear error naming what it
   does support ([#977](https://github.com/debpalash/VoiceStudio/issues/977))
-  — leave language on Auto or switch to a multilingual engine.
+  — pick a language it supports or switch to a multilingual engine.
+- Auto is not an escape hatch from that. With the picker on Auto the request
+  carries no language, and a selected voice profile's saved language fills the
+  gap ([#533](https://github.com/debpalash/VoiceStudio/issues/533)) — so a
+  profile saved as, say, Persian still reaches Kokoro and is still refused. The
+  error names the profile as the source in that case
+  ([#2156](https://github.com/debpalash/VoiceStudio/issues/2156)); change the
+  profile's language, or pick a supported one explicitly for the render.
 
 ## Platform notes
 
