@@ -2237,6 +2237,7 @@
     "tailscale_qr_alt": "รหัส QR สำหรับ Tailscale URL"
   },
   "convert": {
+    "cloning_required": "เลือกโมเดลแปลงข้อความเป็นเสียงที่พร้อมใช้งานและรองรับการโคลนเสียง",
     "source_kicker": "คลิปต้นฉบับ",
     "drop_audio": "วางคลิปที่จะแปลงที่นี่ — หรือคลิก WAV, MP3, M4A…",
     "target_voice": "เสียงปลายทาง",

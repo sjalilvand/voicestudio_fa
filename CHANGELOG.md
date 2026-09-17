@@ -16,6 +16,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Check active model cloning support before starting voice conversion (#2147)
 - Accept both valid SIGKILL diagnostics in the desktop lifecycle regression check (#2170)
 
 - Repair CTranslate2 loading safely across ASR and translation, and retain the loaded Whisper model during CPU fallback (#2165) — thanks @guruthechosen!

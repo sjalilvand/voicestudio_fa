@@ -2824,6 +2824,7 @@
     "none_selected": "Geen stem geselecteerd — beschrijf er een, zet audio neer of kies hieronder."
   },
   "convert": {
+    "cloning_required": "Kies een gebruiksklaar tekst-naar-spraakmodel dat stemmen klonen ondersteunt.",
     "source_kicker": "Bronclip",
     "drop_audio": "Sleep de te converteren clip hierheen — of klik. WAV, MP3, M4A…",
     "target_voice": "Doelstem",

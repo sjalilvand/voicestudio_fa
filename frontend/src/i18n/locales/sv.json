@@ -2824,6 +2824,7 @@
     "none_selected": "Ingen röst vald — beskriv en, släpp ljud eller välj nedan."
   },
   "convert": {
+    "cloning_required": "Välj en användningsklar talsyntesmodell som stöder röstkloning.",
     "source_kicker": "Källklipp",
     "drop_audio": "Släpp klippet som ska konverteras — eller klicka. WAV, MP3, M4A…",
     "target_voice": "Målröst",
